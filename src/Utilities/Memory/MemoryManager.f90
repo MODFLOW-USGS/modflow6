@@ -1871,11 +1871,12 @@ contains
     logical(LGP) :: found
     integer(I4B) :: ipos
     ! -- code
+    found = .false.
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%strsclr)
+      found = .true.
     else
-      found = .false.
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
         if (associated(mt%strsclr, sclr)) then
@@ -1913,11 +1914,12 @@ contains
     ! -- code
     !
     ! -- process optional variables
+    found = .false.
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%astr1d)
+      found = .true.
     else
-      found = .false.
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
         if (associated(mt%astr1d, astr1d)) then
@@ -1956,11 +1958,12 @@ contains
     ! -- code
     !
     ! -- process optional variables
+    found = .false.
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%acharstr1d)
+      found = .true.
     else
-      found = .false.
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
         if (associated(mt%acharstr1d, astr1d)) then
@@ -2095,11 +2098,12 @@ contains
     ! -- code
     !
     ! -- process optional variables
+    found = .false.
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%aint1d)
+      found = .true.
     else
-      found = .false.
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
         if (associated(mt%aint1d, aint)) then
@@ -2136,11 +2140,12 @@ contains
     ! -- code
     !
     ! -- process optional variables
+    found = .false.
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%aint2d)
+      found = .true.
     else
-      found = .false.
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
         if (associated(mt%aint2d, aint)) then
@@ -2177,11 +2182,12 @@ contains
     ! -- code
     !
     ! -- process optional variables
+    found = .false.
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%aint3d)
+      found = .true.
     else
-      found = .false.
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
         if (associated(mt%aint3d, aint)) then
@@ -2218,11 +2224,12 @@ contains
     ! -- code
     !
     ! -- process optional variables
+    found = .false.
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%adbl1d)
+      found = .true.
     else
-      found = .false.
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
         if (associated(mt%adbl1d, adbl)) then
@@ -2259,11 +2266,12 @@ contains
     ! -- code
     !
     ! -- process optional variables
+    found = .false.
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%adbl2d)
+      found = .true.
     else
-      found = .false.
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
         if (associated(mt%adbl2d, adbl)) then
@@ -2300,11 +2308,12 @@ contains
     ! -- code
     !
     ! -- process optional variables
+    found = .false.
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%adbl3d)
+      found = .true.
     else
-      found = .false.
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
         if (associated(mt%adbl3d, adbl)) then

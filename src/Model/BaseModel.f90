@@ -202,8 +202,8 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Strings
-    call mem_deallocate(this%name)
-    call mem_deallocate(this%macronym)
+    call mem_deallocate(this%name, 'NAME', this%memoryPath)
+    call mem_deallocate(this%macronym, 'MACRONYM', this%memoryPath)
     !
     ! -- Scalars
     call mem_deallocate(this%id)
