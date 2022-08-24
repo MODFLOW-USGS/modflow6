@@ -1875,7 +1875,6 @@ contains
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%strsclr)
-      found = .true.
     else
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
@@ -1918,7 +1917,6 @@ contains
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%astr1d)
-      found = .true.
     else
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
@@ -1962,7 +1960,6 @@ contains
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%acharstr1d)
-      found = .true.
     else
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
@@ -2102,7 +2099,6 @@ contains
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%aint1d)
-      found = .true.
     else
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
@@ -2144,7 +2140,6 @@ contains
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%aint2d)
-      found = .true.
     else
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
@@ -2186,7 +2181,6 @@ contains
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%aint3d)
-      found = .true.
     else
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
@@ -2228,7 +2222,6 @@ contains
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%adbl1d)
-      found = .true.
     else
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
@@ -2270,7 +2263,6 @@ contains
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%adbl2d)
-      found = .true.
     else
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
@@ -2312,7 +2304,6 @@ contains
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%adbl3d)
-      found = .true.
     else
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
