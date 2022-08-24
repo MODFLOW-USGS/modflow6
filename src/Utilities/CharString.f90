@@ -41,7 +41,20 @@ contains
   subroutine assign_to_charstring(lhs, rhs)
     class(CharacterStringType), intent(out) :: lhs
     character(len=*), intent(in) :: rhs
-    lhs%charstring = rhs
+    logical :: allocate_charstring
+    allocate_charstring = .false.
+    if (allocated(lhs%charstring)) then
+      if (len(lhs%charstring) <= len(rhs)) then
+        lhs%charstring(:) = rhs
+      else
+        allocate_charstring = .true.
+      end if
+    else
+      allocate_charstring = .true.
+    end if
+    if (allocate_charstring) then
+      lhs%charstring = rhs
+    end if
   end subroutine assign_to_charstring
 
   subroutine assign_from_charstring(lhs, rhs)

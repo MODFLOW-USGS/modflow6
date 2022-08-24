@@ -1025,7 +1025,8 @@ contains
     !
     ! -- allocate text strings
     call mem_allocate(this%auxname, LENAUXNAME, 0, 'AUXNAME', this%memoryPath)
-    call mem_allocate(this%auxname_cst, 0, 'AUXNAME_CST', this%memoryPath)
+    call mem_allocate(this%auxname_cst, LENAUXNAME, 0, 'AUXNAME_CST', &
+                      this%memoryPath)
     !
     ! -- Initialize variables
     this%isadvpak = 0
@@ -1123,12 +1124,12 @@ contains
     if (this%inamedbound /= 0) then
       call mem_allocate(this%boundname, LENBOUNDNAME, this%maxbound, &
                         'BOUNDNAME', this%memoryPath)
-      call mem_allocate(this%boundname_cst, this%maxbound, &
+      call mem_allocate(this%boundname_cst, LENBOUNDNAME, this%maxbound, &
                         'BOUNDNAME_CST', this%memoryPath)
     else
       call mem_allocate(this%boundname, LENBOUNDNAME, 0, &
                         'BOUNDNAME', this%memoryPath)
-      call mem_allocate(this%boundname_cst, 0, &
+      call mem_allocate(this%boundname_cst, LENBOUNDNAME, 0, &
                         'BOUNDNAME_CST', this%memoryPath)
     end if
     !
@@ -1259,7 +1260,7 @@ contains
                       istart, istop, caux, line, this%text)
           call mem_reallocate(this%auxname, LENAUXNAME, this%naux, &
                               'AUXNAME', this%memoryPath)
-          call mem_reallocate(this%auxname_cst, this%naux, &
+          call mem_reallocate(this%auxname_cst, LENAUXNAME, this%naux, &
                               'AUXNAME_CST', this%memoryPath)
           do n = 1, this%naux
             this%auxname(n) = caux(n)

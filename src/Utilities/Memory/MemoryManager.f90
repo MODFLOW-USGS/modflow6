@@ -522,23 +522,29 @@ contains
 
   !> @brief Allocate a 1-dimensional array of deferred-length CharacterStringType
   !<
-  subroutine allocate_charstr1d(acharstr1d, nrow, name, mem_path)
+  subroutine allocate_charstr1d(acharstr1d, ilen, nrow, name, mem_path)
     type(CharacterStringType), dimension(:), &
       pointer, contiguous, intent(inout) :: acharstr1d !< variable for allocation
+    integer(I4B), intent(in) :: ilen !< string length
     integer(I4B), intent(in) :: nrow !< number of strings in array
     character(len=*), intent(in) :: name !< variable name
     character(len=*), intent(in) :: mem_path !< path where the variable is stored
     ! -- local variables
+    character(len=ilen) :: string
     type(MemoryType), pointer :: mt
+    integer(I4B) :: n
     integer(I4B) :: istat
     integer(I4B) :: isize
     ! -- code
+    !
+    ! -- initialize string
+    string = ''
     !
     ! -- check variable name length
     call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- calculate isize
-    isize = nrow ! todo: need to tabulate isize somehow
+    isize = ilen * nrow
     !
     ! -- allocate deferred length string array
     allocate (acharstr1d(nrow), stat=istat, errmsg=errmsg)
@@ -547,6 +553,11 @@ contains
     if (istat /= 0) then
       call allocate_error(name, mem_path, istat, isize)
     end if
+    !
+    ! -- fill deferred length string with empty string
+    do n = 1, nrow
+      acharstr1d(n) = string
+    end do
     !
     ! -- update counter
     nvalues_astr = nvalues_astr + isize
@@ -559,7 +570,7 @@ contains
     mt%isize = isize
     mt%name = name
     mt%path = mem_path
-    write (mt%memtype, "(a,' LEN=',a,' (',i0,')')") 'STRING', 'NA', nrow
+    write (mt%memtype, "(a,' LEN=',i0,' (',i0,')')") 'STRING', ilen, nrow
     !
     ! -- add deferred length character array to the memory manager list
     call memorylist%add(mt)
@@ -1092,21 +1103,26 @@ contains
 
   !> @brief Reallocate a 1-dimensional deferred length string array
   !<
-  subroutine reallocate_charstr1d(astr, nrow, name, mem_path)
-    integer(I4B), intent(in) :: nrow !< number of rows
+  subroutine reallocate_charstr1d(acharstr1d, ilen, nrow, name, mem_path)
     type(CharacterStringType), dimension(:), pointer, contiguous, &
-      intent(inout) :: astr !< the reallocated charstring array
+      intent(inout) :: acharstr1d !< the reallocated charstring array
+    integer(I4B), intent(in) :: ilen !< string length
+    integer(I4B), intent(in) :: nrow !< number of rows
     character(len=*), intent(in) :: name !< variable name
     character(len=*), intent(in) :: mem_path !< path where variable is stored
     ! -- local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
     type(CharacterStringType), dimension(:), allocatable :: astrtemp
+    character(len=ilen) :: string
     integer(I4B) :: istat
     integer(I4B) :: isize
     integer(I4B) :: isize_old
     integer(I4B) :: nrow_old
     integer(I4B) :: n
+    !
+    ! -- Initialize string
+    string = ''
     !
     ! -- Find and assign mt
     call get_from_memorylist(name, mem_path, mt, found)
@@ -1115,13 +1131,13 @@ contains
     if (found) then
       isize_old = mt%isize
       if (isize_old > 0) then
-        nrow_old = size(astr)
+        nrow_old = size(acharstr1d)
       else
         nrow_old = 0
       end if
       !
       ! -- calculate isize (this is incorrect as strings can be variable length)
-      isize = nrow
+      isize = ilen * nrow
       !
       ! -- allocate astrtemp
       allocate (astrtemp(nrow), stat=istat, errmsg=errmsg)
@@ -1131,26 +1147,26 @@ contains
       !
       ! -- copy existing values
       do n = 1, nrow_old
-        astrtemp(n) = astr(n)
+        astrtemp(n) = acharstr1d(n)
       end do
       !
       ! -- fill new values with missing values
-      !cdl do n = nrow_old + 1, nrow
-      !cdl   astrtemp(n) = ''
-      !cdl end do
+      do n = nrow_old + 1, nrow
+        astrtemp(n) = string
+      end do
       !
       ! -- deallocate mt pointer, repoint, recalculate isize
-      deallocate (astr)
+      deallocate (acharstr1d)
       !
       ! -- allocate astr1d
-      allocate (astr(nrow), stat=istat, errmsg=errmsg)
+      allocate (acharstr1d(nrow), stat=istat, errmsg=errmsg)
       if (istat /= 0) then
         call allocate_error(name, mem_path, istat, isize)
       end if
       !
-      ! -- fill the reallocate character array
+      ! -- fill the reallocated character array
       do n = 1, nrow
-        astr(n) = astrtemp(n)
+        acharstr1d(n) = astrtemp(n)
       end do
       !
       ! -- deallocate temporary storage
@@ -1161,7 +1177,7 @@ contains
       mt%nrealloc = mt%nrealloc + 1
       mt%master = .true.
       nvalues_astr = nvalues_astr + isize - isize_old
-      write (mt%memtype, "(a,' LEN=',a,' (',i0,')')") 'STRING', 'NA', nrow
+      write (mt%memtype, "(a,' LEN=',i0,' (',i0,')')") 'STRING', ilen, nrow
     else
       errmsg = "Programming error, variable '"//trim(name)//"' from '"// &
                trim(mem_path)//"' is not defined in the memory manager. Use "// &
