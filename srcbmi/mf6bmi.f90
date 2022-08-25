@@ -24,6 +24,7 @@ module mf6bmi
                            c_f_pointer
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LENMEMPATH, LENVARNAME
+  use CharacterStringModule
   use MemoryManagerModule, only: mem_setptr, get_mem_elem_size, get_isize, &
                                  get_mem_rank, get_mem_shape, get_mem_type, &
                                  memorylist, get_from_memorylist
@@ -514,6 +515,71 @@ contains
 
   end function get_value_int
 
+
+  function get_value_string(c_var_address, c_arr_ptr) result(bmi_status) &
+    bind(C, name="get_value_string")
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_value_string
+    ! -- modules
+    ! -- dummy variables
+    character(kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
+    type(c_ptr), intent(in) :: c_arr_ptr !< pointer to the string array
+    integer(kind=c_int) :: bmi_status !< BMI status code
+    ! -- local variables
+    character(len=LENMEMPATH) :: mem_path
+    character(len=LENVARNAME) :: var_name
+    logical(LGP) :: valid
+    integer(I4B) :: rank
+    character(len=LENMEMTYPE) :: mem_type
+    character(len=:), pointer :: srcstr
+    character(kind=c_char), pointer :: tgtstr(:)    
+    type(CharacterStringType), dimension(:), pointer, contiguous :: srccharstr1d
+    character(kind=c_char), pointer :: tgtstr1d(:,:)
+    integer(I4B) :: i, ilen, nrow, isize
+
+    bmi_status = BMI_SUCCESS
+
+    call split_address(c_var_address, mem_path, var_name, valid)
+    if (.not. valid) then
+      bmi_status = BMI_FAILURE
+      return
+    end if
+
+    ! single string, or array of strings (CharacterStringType)
+    rank = -1
+    call get_mem_rank(var_name, mem_path, rank)
+
+    if (rank == 0) then
+      ! a string scalar: character(len=mt%isize)
+      call mem_setptr(srcstr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, tgtstr, shape=[len(srcstr)+1])
+      tgtstr(1:len(srcstr)+1) = string_to_char_array(srcstr, len(srcstr))
+      
+    else if (rank == 1) then
+      ! an array of strings: character(len=mt%isize/nrow)
+      call mem_setptr(srccharstr1d, var_name, mem_path)
+      if (.not. associated(srccharstr1d)) then
+        write (bmi_last_error, fmt_general_err) 'string type not supported in API'
+        call report_bmi_error(bmi_last_error)
+        bmi_status = BMI_FAILURE
+        return
+      end if
+      call get_isize(var_name, mem_path, isize)
+      nrow = size(srccharstr1d)
+      ilen = isize/nrow
+      call c_f_pointer(c_arr_ptr, tgtstr1d, shape=[ilen + 1, nrow])
+      do i = 1, nrow
+        srcstr = srccharstr1d(i)
+        tgtstr1d(1:ilen+1, i) = string_to_char_array(srcstr, ilen)
+      end do
+    else
+      write (bmi_last_error, fmt_unsupported_rank) trim(var_name)
+      call report_bmi_error(bmi_last_error)
+      bmi_status = BMI_FAILURE
+      return
+    end if
+
+  end function get_value_string
+
   !> @brief Get a pointer to the array of double precision numbers
   !!
   !! The array is located at @p c_var_address. There is no copying of data involved.
@@ -771,6 +837,72 @@ contains
     end if
 
   end function set_value_int
+
+  !> @brief Set new values for a variable of type string
+  !!
+  !! The array pointed to by @p c_arr_ptr can have rank equal to 0 or 1
+  !<
+  function set_value_string(c_var_address, c_arr_ptr) result(bmi_status) &
+    bind(C, name="set_value_string")
+    !DIR$ ATTRIBUTES DLLEXPORT :: set_value_string
+    ! -- modules
+    use MemorySetHandlerModule, only: on_memory_set
+    ! -- dummy variables
+    character(kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
+    type(c_ptr), intent(in) :: c_arr_ptr !< pointer to the integer array
+    integer(kind=c_int) :: bmi_status !< BMI status code
+    ! -- local variables
+    character(len=LENMEMPATH) :: mem_path
+    character(len=LENVARNAME) :: var_name
+    logical(LGP) :: valid
+    integer(I4B) :: rank
+    integer(I4B) :: i, j
+    integer(I4B) :: status
+    character(len=:), pointer :: tgtstr
+    character(kind=c_char), pointer :: srcstr(:)  
+    type(CharacterStringType), dimension(:), pointer, contiguous :: srccharstr1d
+    character(kind=c_char), pointer :: tgtstr1d(:,:)
+
+    bmi_status = BMI_SUCCESS
+
+    call split_address(c_var_address, mem_path, var_name, valid)
+    if (.not. valid) then
+      bmi_status = BMI_FAILURE
+      return
+    end if
+
+    ! convert pointer and copy, using loops to avoid stack overflow
+    rank = -1
+    call get_mem_rank(var_name, mem_path, rank)
+
+    if (rank == 0) then
+      call mem_setptr(tgtstr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, srcstr, shape=[len(tgtstr)+1])
+      tgtstr = char_array_to_string(srcstr, len(tgtstr))
+    ! else if (rank == 1) then
+    !   call mem_setptr(tgt1D_ptr, var_name, mem_path)
+    !   call c_f_pointer(c_arr_ptr, src1D_ptr, shape(tgt1D_ptr))
+    !   do i = 1, size(tgt1D_ptr)
+    !     tgt1D_ptr(i) = src1D_ptr(i)
+    !   end do
+    else
+      write (bmi_last_error, fmt_unsupported_rank) trim(var_name)
+      call report_bmi_error(bmi_last_error)
+      bmi_status = BMI_FAILURE
+      return
+    end if
+
+    ! trigger event:
+    call on_memory_set(var_name, mem_path, status)
+    if (status /= 0) then
+      ! something went terribly wrong here, aborting
+      write (bmi_last_error, fmt_invalid_mem_access) trim(var_name)
+      call report_bmi_error(bmi_last_error)
+      bmi_status = BMI_FAILURE
+      return
+    end if
+
+  end function set_value_string
 
   !> @brief Get the variable type as a string
   !!
