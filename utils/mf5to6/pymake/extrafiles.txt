@@ -5,6 +5,7 @@
 ../../../src/Utilities/TimeSeries/TimeSeries.f90
 ../../../src/Utilities/TimeSeries/TimeSeriesRecord.f90
 ../../../src/Utilities/BlockParser.f90
+../../../src/Utilities/CharString.f90
 ../../../src/Utilities/Constants.f90
 ../../../src/Utilities/SimVariables.f90
 ../../../src/Utilities/compilerversion.F90

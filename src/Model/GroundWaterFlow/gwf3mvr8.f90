@@ -499,7 +499,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use InputOutputModule, only: ubdsv06, ubdsvd
     ! -- dummy
     class(GwfMvrType) :: this
     ! -- locals
@@ -522,7 +521,6 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: kstp, kper, delt, pertim, totim
-    use InputOutputModule, only: ubdsv06, ubdsvd
     ! -- dummy
     class(GwfMvrType) :: this
     integer(I4B), intent(in) :: icbcfl

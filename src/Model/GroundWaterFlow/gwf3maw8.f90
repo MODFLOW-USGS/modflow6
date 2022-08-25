@@ -1214,21 +1214,6 @@ contains
       end select
     end do
     !
-    ! -- set boundname for each connection
-    if (this%inamedbound /= 0) then
-      idx = 0
-      do n = 1, this%nmawwells
-        do j = 1, this%ngwfnodes(n)
-          idx = idx + 1
-          this%boundname(idx) = this%cmawname(n)
-        end do
-      end do
-    else
-      do n = 1, this%nmawwells
-        this%cmawname(n) = ''
-      end do
-    end if
-    !
     ! -- set imap and boundname for each connection
     if (this%inamedbound /= 0) then
       idx = 0
@@ -1239,7 +1224,14 @@ contains
           this%imap(idx) = n
         end do
       end do
+    else
+      do n = 1, this%nmawwells
+        this%cmawname(n) = ''
+      end do
     end if
+    !
+    ! -- copy boundname into boundname_cst
+    call this%copy_boundname()
     !
     ! -- set pointer to gwf iss and gwf hk
     call mem_setptr(this%gwfiss, 'ISS', create_mem_path(this%name_model))
@@ -2715,7 +2707,6 @@ contains
     ! -- modules
     use TdisModule, only: delt
     use ConstantsModule, only: LENBOUNDNAME
-    use InputOutputModule, only: ulasav, ubdsv06
     use BudgetModule, only: BudgetType
     ! -- dummy
     class(MawType), intent(inout) :: this
