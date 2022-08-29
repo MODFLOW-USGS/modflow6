@@ -195,8 +195,8 @@ contains
 
   !> @ brief Get the memory size of a single element of the stored variable
   !!
-  !! Memory size in bytes, returns size = -1 when not found.
-  !<
+  !! Memory size in bytes, returns size = -1 when not found. This is  
+  !< also string length.
   subroutine get_mem_elem_size(name, mem_path, size)
     character(len=*), intent(in) :: name !< variable name
     character(len=*), intent(in) :: mem_path !< path where the variable is stored

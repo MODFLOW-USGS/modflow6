@@ -532,8 +532,9 @@ contains
     character(len=LENMEMTYPE) :: mem_type
     character(len=:), pointer :: srcstr
     character(kind=c_char), pointer :: tgtstr(:)    
-    type(CharacterStringType), dimension(:), pointer, contiguous :: srccharstr1d
+    type(CharacterStringType), dimension(:), pointer, contiguous :: srccharstr1d    
     character(kind=c_char), pointer :: tgtstr1d(:,:)
+    character(:), allocatable :: tempstr
     integer(I4B) :: i, ilen, nrow, isize
 
     bmi_status = BMI_SUCCESS
@@ -551,7 +552,8 @@ contains
     if (rank == 0) then
       ! a string scalar: character(len=mt%isize)
       call mem_setptr(srcstr, var_name, mem_path)
-      call c_f_pointer(c_arr_ptr, tgtstr, shape=[len(srcstr)+1])
+      call get_mem_elem_size(var_name, mem_path, ilen)
+      call c_f_pointer(c_arr_ptr, tgtstr, shape=[ilen+1])
       tgtstr(1:len(srcstr)+1) = string_to_char_array(srcstr, len(srcstr))
       
     else if (rank == 1) then
@@ -563,14 +565,20 @@ contains
         bmi_status = BMI_FAILURE
         return
       end if
+      
+      ! create fortran pointer to C data array
       call get_isize(var_name, mem_path, isize)
-      nrow = size(srccharstr1d)
-      ilen = isize/nrow
-      call c_f_pointer(c_arr_ptr, tgtstr1d, shape=[ilen + 1, nrow])
-      do i = 1, nrow
-        srcstr = srccharstr1d(i)
-        tgtstr1d(1:ilen+1, i) = string_to_char_array(srcstr, ilen)
+      call get_mem_elem_size(var_name, mem_path, ilen)
+      call c_f_pointer(c_arr_ptr, tgtstr1d, shape=[ilen + 1, isize])
+      
+      ! allocate work array to handle CharacterStringType,
+      ! and copy the strings
+      allocate(character(ilen) :: tempstr)
+      do i = 1, isize        
+        tempstr = srccharstr1d(i)
+        tgtstr1d(1:ilen+1, i) = string_to_char_array(tempstr, ilen)
       end do
+      deallocate(tempstr)      
     else
       write (bmi_last_error, fmt_unsupported_rank) trim(var_name)
       call report_bmi_error(bmi_last_error)
