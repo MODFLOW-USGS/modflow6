@@ -89,7 +89,10 @@ module MemoryManagerModule
       setptr_dbl, &
       setptr_dbl1d, &
       setptr_dbl2d, &
-      setptr_dbl3d
+      setptr_dbl3d, &
+      setptr_str, &
+      setptr_str1d, &
+      setptr_charstr1d
   end interface mem_setptr
 
   interface mem_copyptr
@@ -181,6 +184,9 @@ contains
       if (associated(mt%adbl1d)) rank = 1
       if (associated(mt%adbl2d)) rank = 2
       if (associated(mt%adbl3d)) rank = 3
+      if (associated(mt%strsclr)) rank = 0
+      if (associated(mt%astr1d)) rank = 1
+      if (associated(mt%acharstr1d)) rank = 1
     end if
     !
     ! -- return
@@ -189,8 +195,8 @@ contains
 
   !> @ brief Get the memory size of a single element of the stored variable
   !!
-  !! Memory size in bytes, returns size = -1 when not found.
-  !<
+  !! Memory size in bytes, returns size = -1 when not found. This is
+  !< also string length.
   subroutine get_mem_elem_size(name, mem_path, size)
     character(len=*), intent(in) :: name !< variable name
     character(len=*), intent(in) :: mem_path !< path where the variable is stored
@@ -243,6 +249,9 @@ contains
       if (associated(mt%adbl1d)) mem_shape = shape(mt%adbl1d)
       if (associated(mt%adbl2d)) mem_shape = shape(mt%adbl2d)
       if (associated(mt%adbl3d)) mem_shape = shape(mt%adbl3d)
+      if (associated(mt%strsclr)) mem_shape = shape(mt%strsclr)
+      if (associated(mt%astr1d)) mem_shape = shape(mt%astr1d)
+      if (associated(mt%acharstr1d)) mem_shape = shape(mt%acharstr1d)
       ! -- to communicate failure
     else
       mem_shape(1) = -1
@@ -1540,6 +1549,59 @@ contains
     ! -- return
     return
   end subroutine setptr_dbl3d
+
+  !> @brief Set pointer to a string (scalar)
+  !<
+  subroutine setptr_str(asrt, name, mem_path)
+    character(len=:), pointer :: asrt !< pointer to the character string
+    character(len=*), intent(in) :: name !< variable name
+    character(len=*), intent(in) :: mem_path !< path where variable is stored
+    ! -- local
+    type(MemoryType), pointer :: mt
+    logical(LGP) :: found
+    ! -- code
+    call get_from_memorylist(name, mem_path, mt, found)
+    asrt => mt%strsclr
+    !
+    ! -- return
+    return
+  end subroutine setptr_str
+
+  !> @brief Set pointer to a fixed-length string array
+  !<
+  subroutine setptr_str1d(astr1d, name, mem_path)
+    character(len=:), dimension(:), &
+      pointer, contiguous, intent(inout) :: astr1d !< pointer to the string array
+    character(len=*), intent(in) :: name !< variable name
+    character(len=*), intent(in) :: mem_path !< path where variable is stored
+    ! -- local
+    type(MemoryType), pointer :: mt
+    logical(LGP) :: found
+    ! -- code
+    call get_from_memorylist(name, mem_path, mt, found)
+    astr1d => mt%astr1d
+    !
+    ! -- return
+    return
+  end subroutine setptr_str1d
+
+  !> @brief Set pointer to an array of CharacterStringType
+  !<
+  subroutine setptr_charstr1d(acharstr1d, name, mem_path)
+    type(CharacterStringType), dimension(:), pointer, contiguous, &
+      intent(inout) :: acharstr1d !< the reallocated charstring array
+    character(len=*), intent(in) :: name !< variable name
+    character(len=*), intent(in) :: mem_path !< path where variable is stored
+    ! -- local
+    type(MemoryType), pointer :: mt
+    logical(LGP) :: found
+    ! -- code
+    call get_from_memorylist(name, mem_path, mt, found)
+    acharstr1d => mt%acharstr1d
+    !
+    ! -- return
+    return
+  end subroutine setptr_charstr1d
 
   !> @brief Make a copy of a 1-dimensional integer array
   !<

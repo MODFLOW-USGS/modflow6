@@ -363,10 +363,14 @@ contains
 
     ! convert to Fortran strings
     component_name = char_array_to_string(c_component_name, &
-                                          strlen(c_component_name))
+                                          strlen(c_component_name, &
+                                                 LENCOMPONENTNAME + 1))
     subcomponent_name = char_array_to_string(c_subcomponent_name, &
-                                             strlen(c_subcomponent_name))
-    variable_name = char_array_to_string(c_var_name, strlen(c_var_name))
+                                             strlen(c_subcomponent_name, &
+                                                    LENCOMPONENTNAME + 1))
+    variable_name = char_array_to_string(c_var_name, &
+                                         strlen(c_var_name, &
+                                                LENVARNAME + 1))
 
     ! create memory address
     if (subcomponent_name == '') then

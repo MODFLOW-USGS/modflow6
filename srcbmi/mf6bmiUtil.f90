@@ -59,13 +59,14 @@ contains
     character(len=LENVARNAME), intent(out) :: var_name !< name of the variable
     logical(LGP), intent(out) :: success !< false when invalid
     ! -- local variables
-    character(len=LENMEMPATH) :: var_address
+    character(len=LENMEMADDRESS) :: var_address
     logical(LGP) :: valid, found
 
     success = .false.
 
     ! try and split the address string:
-    var_address = char_array_to_string(c_var_address, strlen(c_var_address))
+    var_address = char_array_to_string(c_var_address, &
+                                       strlen(c_var_address, LENMEMADDRESS + 1))
     call split_mem_address(var_address, mem_path, var_name, valid)
     if (.not. valid) then
       write (bmi_last_error, fmt_invalid_var) trim(var_address)
@@ -108,9 +109,10 @@ contains
 
   !> @brief Returns the string length without the trailing null character
   !<
-  pure function strlen(char_array) result(string_length)
+  pure function strlen(char_array, max_len) result(string_length)
     ! -- dummy variables
-    character(c_char), intent(in) :: char_array(LENMEMPATH) !< C-style character string
+    integer(I4B), intent(in) :: max_len
+    character(c_char), intent(in) :: char_array(max_len) !< C-style character string
     integer(I4B) :: string_length !< Fortran string length
     ! -- local variables
     integer(I4B) :: i
