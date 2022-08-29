@@ -65,7 +65,8 @@ contains
     success = .false.
 
     ! try and split the address string:
-    var_address = char_array_to_string(c_var_address, strlen(c_var_address, LENMEMADDRESS + 1))
+    var_address = char_array_to_string(c_var_address, &
+                                       strlen(c_var_address, LENMEMADDRESS + 1))
     call split_mem_address(var_address, mem_path, var_name, valid)
     if (.not. valid) then
       write (bmi_last_error, fmt_invalid_var) trim(var_address)

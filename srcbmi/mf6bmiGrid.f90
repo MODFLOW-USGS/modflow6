@@ -38,7 +38,8 @@ contains
     var_grid = -1
 
     bmi_status = BMI_FAILURE
-    var_address = char_array_to_string(c_var_address, strlen(c_var_address, LENMEMADDRESS + 1))
+    var_address = char_array_to_string(c_var_address, &
+                                       strlen(c_var_address, LENMEMADDRESS + 1))
     model_name = extract_model_name(var_address, success)
     if (.not. success) then
       ! we failed
@@ -130,7 +131,8 @@ contains
     bmi_status = BMI_FAILURE
 
     if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) return
-    grid_type_f = char_array_to_string(grid_type, strlen(grid_type, LENGRIDTYPE + 1))
+    grid_type_f = char_array_to_string(grid_type, &
+                                       strlen(grid_type, LENGRIDTYPE + 1))
     model_name = get_model_name(grid_id)
 
     if (grid_type_f == "rectilinear") then
@@ -194,7 +196,8 @@ contains
     bmi_status = BMI_FAILURE
     ! make sure function is only used for implemented grid_types
     if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) return
-    grid_type_f = char_array_to_string(grid_type, strlen(grid_type, LENGRIDTYPE + 1))
+    grid_type_f = char_array_to_string(grid_type, &
+                                       strlen(grid_type, LENGRIDTYPE + 1))
 
     model_name = get_model_name(grid_id)
     if (grid_type_f == "rectilinear") then
@@ -236,7 +239,8 @@ contains
 
     bmi_status = BMI_FAILURE
     if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) return
-    grid_type_f = char_array_to_string(grid_type, strlen(grid_type, LENGRIDTYPE + 1))
+    grid_type_f = char_array_to_string(grid_type, &
+                                       strlen(grid_type, LENGRIDTYPE + 1))
 
     model_name = get_model_name(grid_id)
     if (grid_type_f == "rectilinear") then
