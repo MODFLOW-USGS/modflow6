@@ -21,7 +21,7 @@ module CharacterStringModule
   !!
   !<
   type :: CharacterStringType
-    !private
+    private
     character(len=:), allocatable :: charstring
   contains
     procedure, pass(lhs) :: assign_to_charstring

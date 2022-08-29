@@ -21,7 +21,8 @@ module MemoryTypeModule
     character(len=LENMEMTYPE) :: memtype !< type (INTEGER or DOUBLE)
     integer(I4B) :: id !< id, not used
     integer(I4B) :: nrealloc = 0 !< number of times reallocated
-    integer(I4B) :: isize !< size of the array
+    integer(I4B) :: isize = -1 !< size of the array, equal to the number of array elements; 1 for scalars
+    integer(I4B) :: element_size = 0 !< byte size of an element; string length
     integer(I4B) :: set_handler_idx = 0 !< index of side effect handler for external access
     logical(LGP) :: master = .true. !< master copy, others point to this one
     character(len=:), pointer :: strsclr => null() !< pointer to the character string

@@ -214,16 +214,7 @@ contains
     !
     ! -- set memory size
     if (found) then
-      select case (mt%memtype(1:index(mt%memtype, ' ')))
-      case ('STRING')
-        size = 1
-      case ('LOGICAL')
-        size = 4
-      case ('INTEGER')
-        size = 4
-      case ('DOUBLE')
-        size = 8
-      end select
+      size = mt%element_size
     end if
     !
     ! -- return
@@ -273,6 +264,7 @@ contains
   !> @ brief Get the number of elements for this variable
   !!
   !! Returns with isize = -1 when not found.
+  !! Return 1 for scalars.
   !<
   subroutine get_isize(name, mem_path, isize)
     character(len=*), intent(in) :: name !< variable name
@@ -398,6 +390,7 @@ contains
     !
     ! -- set memory type
     mt%logicalsclr => sclr
+    mt%element_size = LGP
     mt%isize = 1
     mt%name = name
     mt%path = mem_path
@@ -449,7 +442,8 @@ contains
     !
     ! -- set memory type
     mt%strsclr => sclr
-    mt%isize = ilen
+    mt%element_size = ilen
+    mt%isize = 1
     mt%name = name
     mt%path = mem_path
     write (mt%memtype, "(a,' LEN=',i0)") 'STRING', ilen
@@ -492,7 +486,7 @@ contains
     call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- calculate isize
-    isize = ilen * nrow
+    isize = nrow
     !
     ! -- allocate defined length string array
     allocate (character(len=ilen) :: astr1d(nrow), stat=istat, errmsg=errmsg)
@@ -517,6 +511,7 @@ contains
     ! this does not work with gfortran 11.3 and 12.1
     ! so we have to disable the pointing to astr1d
     ! mt%astr1d => astr1d
+    mt%element_size = ilen
     mt%isize = isize
     mt%name = name
     mt%path = mem_path
@@ -553,7 +548,7 @@ contains
     call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- calculate isize
-    isize = ilen * nrow
+    isize = nrow
     !
     ! -- allocate deferred length string array
     allocate (acharstr1d(nrow), stat=istat, errmsg=errmsg)
@@ -576,6 +571,7 @@ contains
     !
     ! -- set memory type
     mt%acharstr1d => acharstr1d
+    mt%element_size = ilen
     mt%isize = isize
     mt%name = name
     mt%path = mem_path
@@ -616,6 +612,7 @@ contains
     !
     ! -- set memory type
     mt%intsclr => sclr
+    mt%element_size = I4B
     mt%isize = 1
     mt%name = name
     mt%path = mem_path
@@ -661,6 +658,7 @@ contains
     !
     ! -- set memory type
     mt%aint1d => aint
+    mt%element_size = I4B
     mt%isize = isize
     mt%name = name
     mt%path = mem_path
@@ -707,6 +705,7 @@ contains
     !
     ! -- set memory type
     mt%aint2d => aint
+    mt%element_size = I4B
     mt%isize = isize
     mt%name = name
     mt%path = mem_path
@@ -753,6 +752,7 @@ contains
     !
     ! -- set memory type
     mt%aint3d => aint
+    mt%element_size = I4B
     mt%isize = isize
     mt%name = name
     mt%path = mem_path
@@ -794,6 +794,7 @@ contains
     !
     ! -- set memory type
     mt%dblsclr => sclr
+    mt%element_size = DP
     mt%isize = 1
     mt%name = name
     mt%path = mem_path
@@ -839,6 +840,7 @@ contains
     !
     ! -- set memory type
     mt%adbl1d => adbl
+    mt%element_size = DP
     mt%isize = isize
     mt%name = name
     mt%path = mem_path
@@ -885,6 +887,7 @@ contains
     !
     ! -- set memory type
     mt%adbl2d => adbl
+    mt%element_size = DP
     mt%isize = isize
     mt%name = name
     mt%path = mem_path
@@ -932,6 +935,7 @@ contains
     !
     ! -- set memory type
     mt%adbl3d => adbl
+    mt%element_size = DP
     mt%isize = isize
     mt%name = name
     mt%path = mem_path
@@ -969,6 +973,7 @@ contains
     !
     ! -- set memory type
     mt%aint1d => aint
+    mt%element_size = I4B
     mt%isize = isize
     mt%name = name
     mt%path = mem_path
@@ -1010,6 +1015,7 @@ contains
     !
     ! -- set memory type
     mt%adbl1d => adbl
+    mt%element_size = DP
     mt%isize = isize
     mt%name = name
     mt%path = mem_path
@@ -1058,7 +1064,7 @@ contains
       end if
       !
       ! -- calculate isize
-      isize = ilen * nrow
+      isize = nrow
       !
       ! -- allocate astrtemp
       allocate (astrtemp(nrow), stat=istat, errmsg=errmsg)
@@ -1094,6 +1100,7 @@ contains
       deallocate (astrtemp)
       !
       ! -- reset memory manager values
+      mt%element_size = ilen
       mt%isize = isize
       mt%nrealloc = mt%nrealloc + 1
       mt%master = .true.
@@ -1145,8 +1152,8 @@ contains
         nrow_old = 0
       end if
       !
-      ! -- calculate isize (this is incorrect as strings can be variable length)
-      isize = ilen * nrow
+      ! -- calculate isize
+      isize = nrow
       !
       ! -- allocate astrtemp
       allocate (astrtemp(nrow), stat=istat, errmsg=errmsg)
@@ -1182,6 +1189,7 @@ contains
       deallocate (astrtemp)
       !
       ! -- reset memory manager values
+      mt%element_size = ilen
       mt%isize = isize
       mt%nrealloc = mt%nrealloc + 1
       mt%master = .true.
@@ -1233,6 +1241,7 @@ contains
     ! -- deallocate mt pointer, repoint, recalculate isize
     deallocate (mt%aint1d)
     mt%aint1d => aint
+    mt%element_size = I4B
     mt%isize = isize
     mt%nrealloc = mt%nrealloc + 1
     mt%master = .true.
@@ -1281,6 +1290,7 @@ contains
     ! -- deallocate mt pointer, repoint, recalculate isize
     deallocate (mt%aint2d)
     mt%aint2d => aint
+    mt%element_size = I4B
     mt%isize = isize
     mt%nrealloc = mt%nrealloc + 1
     mt%master = .true.
@@ -1326,6 +1336,7 @@ contains
     ! -- deallocate mt pointer, repoint, recalculate isize
     deallocate (mt%adbl1d)
     mt%adbl1d => adbl
+    mt%element_size = DP
     mt%isize = isize
     mt%nrealloc = mt%nrealloc + 1
     mt%master = .true.
@@ -1375,6 +1386,7 @@ contains
     ! -- deallocate mt pointer, repoint, recalculate isize
     deallocate (mt%adbl2d)
     mt%adbl2d => adbl
+    mt%element_size = DP
     mt%isize = isize
     mt%nrealloc = mt%nrealloc + 1
     mt%master = .true.
@@ -1770,6 +1782,7 @@ contains
     end if
     sclr => mt2%intsclr
     mt%intsclr => sclr
+    mt%element_size = I4B
     mt%isize = 1
     write (mt%memtype, "(a,' (',i0,')')") 'INTEGER', mt%isize
     !
@@ -1803,6 +1816,7 @@ contains
     end if
     aint => mt2%aint1d
     mt%aint1d => aint
+    mt%element_size = I4B
     mt%isize = size(aint)
     write (mt%memtype, "(a,' (',i0,')')") 'INTEGER', mt%isize
     !
@@ -1838,6 +1852,7 @@ contains
     end if
     aint => mt2%aint2d
     mt%aint2d => aint
+    mt%element_size = I4B
     mt%isize = size(aint)
     ncol = size(aint, dim=1)
     nrow = size(aint, dim=2)
@@ -1873,6 +1888,7 @@ contains
     end if
     adbl => mt2%adbl1d
     mt%adbl1d => adbl
+    mt%element_size = DP
     mt%isize = size(adbl)
     write (mt%memtype, "(a,' (',i0,')')") 'DOUBLE', mt%isize
     !
@@ -1908,6 +1924,7 @@ contains
     end if
     adbl => mt2%adbl2d
     mt%adbl2d => adbl
+    mt%element_size = DP
     mt%isize = size(adbl)
     ncol = size(adbl, dim=1)
     nrow = size(adbl, dim=2)
@@ -2714,7 +2731,7 @@ contains
           if (cunique(icomp) /= mt%path(1:ilen)) cycle
           if (.not. mt%master) cycle
           if (mt%memtype(1:6) == 'STRING') then
-            nchars = nchars + mt%isize
+            nchars = nchars + mt%isize * mt%element_size
           else if (mt%memtype(1:7) == 'LOGICAL') then
             nlog = nlog + mt%isize
           else if (mt%memtype(1:7) == 'INTEGER') then
@@ -2771,6 +2788,13 @@ contains
     do ipos = 1, memorylist%count()
       mt => memorylist%Get(ipos)
       if (IDEVELOPMODE == 1) then
+        !
+        ! -- check if memory has been deallocated
+        if (mt%mt_associated() .and. mt%element_size == -1) then
+          error_msg = trim(adjustl(mt%path))//' '// &
+                      trim(adjustl(mt%name))//' has invalid element size'
+          call store_error(trim(error_msg))
+        end if
         !
         ! -- check if memory has been deallocated
         if (mt%mt_associated() .and. mt%isize > 0) then
