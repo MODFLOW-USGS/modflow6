@@ -881,13 +881,13 @@ contains
     found = .true.
     select case (obsrv%ObsTypeId)
     case ('RATE')
-      call this%rp_obs_index_byfeature(obsrv)
+      call this%rp_obs_byfeature(obsrv)
     case ('FW-RATE')
-      call this%rp_obs_index_byfeature(obsrv)
+      call this%rp_obs_byfeature(obsrv)
     case ('RATE-TO-MVR')
-      call this%rp_obs_index_byfeature(obsrv)
+      call this%rp_obs_byfeature(obsrv)
     case ('FW-RATE-TO-MVR')
-      call this%rp_obs_index_byfeature(obsrv)
+      call this%rp_obs_byfeature(obsrv)
     case default
       found = .false.
     end select

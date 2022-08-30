@@ -1047,17 +1047,17 @@ contains
     found = .true.
     select case (obsrv%ObsTypeId)
     case ('RAINFALL')
-      call this%rp_obs_index_byfeature(obsrv)
+      call this%rp_obs_byfeature(obsrv)
     case ('EVAPORATION')
-      call this%rp_obs_index_byfeature(obsrv)
+      call this%rp_obs_byfeature(obsrv)
     case ('RUNOFF')
-      call this%rp_obs_index_byfeature(obsrv)
+      call this%rp_obs_byfeature(obsrv)
     case ('EXT-INFLOW')
-      call this%rp_obs_index_byfeature(obsrv)
+      call this%rp_obs_byfeature(obsrv)
     case ('WITHDRAWAL')
-      call this%rp_obs_index_byfeature(obsrv)
+      call this%rp_obs_byfeature(obsrv)
     case ('EXT-OUTFLOW')
-      call this%rp_obs_index_byfeature(obsrv)
+      call this%rp_obs_byfeature(obsrv)
     case default
       found = .false.
     end select

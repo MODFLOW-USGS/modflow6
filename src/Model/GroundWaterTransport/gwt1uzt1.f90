@@ -888,13 +888,13 @@ contains
     found = .true.
     select case (obsrv%ObsTypeId)
     case ('INFILTRATION')
-      call this%rp_obs_index_byfeature(obsrv)
+      call this%rp_obs_byfeature(obsrv)
     case ('REJ-INF')
-      call this%rp_obs_index_byfeature(obsrv)
+      call this%rp_obs_byfeature(obsrv)
     case ('UZET')
-      call this%rp_obs_index_byfeature(obsrv)
+      call this%rp_obs_byfeature(obsrv)
     case ('REJ-INF-TO-MVR')
-      call this%rp_obs_index_byfeature(obsrv)
+      call this%rp_obs_byfeature(obsrv)
     case default
       found = .false.
     end select

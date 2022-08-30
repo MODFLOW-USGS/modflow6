@@ -155,9 +155,9 @@ module GwtAptModule
     procedure :: pak_df_obs
     procedure :: pak_rp_obs
     procedure :: bnd_rp_obs => apt_rp_obs
-    procedure :: rp_obs_index_byfeature
-    procedure :: rp_obs_index_budterm
-    procedure :: rp_obs_index_flowjaface
+    procedure :: rp_obs_byfeature
+    procedure :: rp_obs_budterm
+    procedure :: rp_obs_flowjaface
     procedure :: bnd_bd_obs => apt_bd_obs
     procedure :: pak_bd_obs
     procedure :: get_volumes
@@ -2633,7 +2633,7 @@ contains
     return
   end subroutine pak_rp_obs
 
-  subroutine rp_obs_index_byfeature(this, obsrv)
+  subroutine rp_obs_byfeature(this, obsrv)
     class(GwtAptType), intent(inout) :: this
     type(ObserveType), intent(inout) :: obsrv
     integer(I4B) :: nn1
@@ -2670,9 +2670,9 @@ contains
       call obsrv%AddObsIndex(nn1)
     end if
     return
-  end subroutine rp_obs_index_byfeature
+  end subroutine rp_obs_byfeature
 
-  subroutine rp_obs_index_budterm(this, obsrv, budterm)
+  subroutine rp_obs_budterm(this, obsrv, budterm)
     class(GwtAptType), intent(inout) :: this
     type(ObserveType), intent(inout) :: obsrv
     type(BudgetTermType), intent(in) :: budterm
@@ -2738,9 +2738,9 @@ contains
       end if
     end if
     return
-  end subroutine rp_obs_index_budterm
+  end subroutine rp_obs_budterm
 
-  subroutine rp_obs_index_flowjaface(this, obsrv, budterm)
+  subroutine rp_obs_flowjaface(this, obsrv, budterm)
     class(GwtAptType), intent(inout) :: this
     type(ObserveType), intent(inout) :: obsrv
     type(BudgetTermType), intent(in) :: budterm
@@ -2808,7 +2808,7 @@ contains
       end if
     end if
     return
-  end subroutine rp_obs_index_flowjaface
+  end subroutine rp_obs_flowjaface
 
   subroutine apt_rp_obs(this)
 ! ******************************************************************************
@@ -2832,7 +2832,7 @@ contains
         obsrv => this%obs%pakobs(i)%obsrv
         select case (obsrv%ObsTypeId)
         case ('CONCENTRATION')
-          call this%rp_obs_index_byfeature(obsrv)
+          call this%rp_obs_byfeature(obsrv)
           !
           ! -- catch non-cumulative observation assigned to observation defined
           !    by a boundname that is assigned to more than one element
@@ -2843,12 +2843,12 @@ contains
             call store_error(errmsg)
           end if
         case ('LKT', 'SFT', 'MWT', 'UZT')
-          call this%rp_obs_index_budterm(obsrv, &
-                                         this%flowbudptr%budterm(this%idxbudgwf))
+          call this%rp_obs_budterm(obsrv, &
+                                   this%flowbudptr%budterm(this%idxbudgwf))
         case ('FLOW-JA-FACE')
           if (this%idxbudfjf > 0) then
-            call this%rp_obs_index_flowjaface(obsrv, &
-                                          this%flowbudptr%budterm(this%idxbudfjf))
+            call this%rp_obs_flowjaface(obsrv, &
+                                        this%flowbudptr%budterm(this%idxbudfjf))
           else
             write (errmsg, '(7a)') &
               'Observation ', trim(obsrv%Name), ' of type ', &
@@ -2858,19 +2858,19 @@ contains
             call store_error(errmsg)
           end if
         case ('STORAGE')
-          call this%rp_obs_index_byfeature(obsrv)
+          call this%rp_obs_byfeature(obsrv)
         case ('CONSTANT')
-          call this%rp_obs_index_byfeature(obsrv)
+          call this%rp_obs_byfeature(obsrv)
         case ('FROM-MVR')
-          call this%rp_obs_index_byfeature(obsrv)
+          call this%rp_obs_byfeature(obsrv)
         case ('TO-MVR')
           if (this%text == 'LKT') then
             ! to-mvr is by outlet for LKT
-            call this%rp_obs_index_budterm(obsrv, &
-                                         this%flowbudptr%budterm(this%idxbudtmvr))
+            call this%rp_obs_budterm(obsrv, &
+                                     this%flowbudptr%budterm(this%idxbudtmvr))
           else
             ! For SFT, MWT, and UZT to-mvr is by feature
-            call this%rp_obs_index_byfeature(obsrv)
+            call this%rp_obs_byfeature(obsrv)
           end if
         case default
           !call this%rp_obs_index_byfeature(obsrv)
@@ -3136,7 +3136,7 @@ contains
     ! -- local
     integer(I4B) :: nterms
     character(len=LINELENGTH) :: title
-    character(len=LINELENGTH) :: text
+    character(len=LINELENGTH) :: text_temp
 ! ------------------------------------------------------------------------------
     !
     ! -- setup well head table
@@ -3158,17 +3158,17 @@ contains
       !
       ! -- Go through and set up table budget term
       if (this%inamedbound == 1) then
-        text = 'NAME'
-        call this%dvtab%initialize_column(text, 20, alignment=TABLEFT)
+        text_temp = 'NAME'
+        call this%dvtab%initialize_column(text_temp, 20, alignment=TABLEFT)
       end if
       !
       ! -- feature number
-      text = 'NUMBER'
-      call this%dvtab%initialize_column(text, 10, alignment=TABCENTER)
+      text_temp = 'NUMBER'
+      call this%dvtab%initialize_column(text_temp, 10, alignment=TABCENTER)
       !
       ! -- feature conc
-      text = 'CONC'
-      call this%dvtab%initialize_column(text, 12, alignment=TABCENTER)
+      text_temp = 'CONC'
+      call this%dvtab%initialize_column(text_temp, 12, alignment=TABCENTER)
     end if
     !
     ! -- return
