@@ -2633,9 +2633,15 @@ contains
     return
   end subroutine pak_rp_obs
 
+  !> @brief Prepare observation
+    !!
+    !! Find the indices for this observation assuming
+    !! they are indexed by feature number
+    !!
+  !<
   subroutine rp_obs_byfeature(this, obsrv)
-    class(GwtAptType), intent(inout) :: this
-    type(ObserveType), intent(inout) :: obsrv
+    class(GwtAptType), intent(inout) :: this !< object
+    type(ObserveType), intent(inout) :: obsrv !< observation
     integer(I4B) :: nn1
     integer(I4B) :: j
     logical :: jfound
@@ -2672,10 +2678,17 @@ contains
     return
   end subroutine rp_obs_byfeature
 
+  !> @brief Prepare observation
+    !!
+    !! Find the indices for this observation assuming
+    !! they are first indexed by feature number and
+    !! secondly by a connection number
+    !!
+  !<
   subroutine rp_obs_budterm(this, obsrv, budterm)
-    class(GwtAptType), intent(inout) :: this
-    type(ObserveType), intent(inout) :: obsrv
-    type(BudgetTermType), intent(in) :: budterm
+    class(GwtAptType), intent(inout) :: this !< object
+    type(ObserveType), intent(inout) :: obsrv !< observation
+    type(BudgetTermType), intent(in) :: budterm !< budget term
     integer(I4B) :: nn1
     integer(I4B) :: iconn
     integer(I4B) :: icv
@@ -2740,10 +2753,17 @@ contains
     return
   end subroutine rp_obs_budterm
 
+  !> @brief Prepare observation
+    !!
+    !! Find the indices for this observation assuming
+    !! they are first indexed by a feature number and
+    !! secondly by a second feature number
+    !!
+  !<
   subroutine rp_obs_flowjaface(this, obsrv, budterm)
-    class(GwtAptType), intent(inout) :: this
-    type(ObserveType), intent(inout) :: obsrv
-    type(BudgetTermType), intent(in) :: budterm
+    class(GwtAptType), intent(inout) :: this !< object
+    type(ObserveType), intent(inout) :: obsrv !< observation
+    type(BudgetTermType), intent(in) :: budterm !< budget term
     integer(I4B) :: nn1
     integer(I4B) :: nn2
     integer(I4B) :: icv
