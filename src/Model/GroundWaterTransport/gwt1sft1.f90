@@ -951,9 +951,9 @@ contains
   !<
   subroutine sft_rp_obs(this, obsrv, found)
     ! -- dummy
-    class(GwtSftType), intent(inout) :: this  !< package class
+    class(GwtSftType), intent(inout) :: this !< package class
     type(ObserveType), intent(inout) :: obsrv !< observation object
-    logical, intent(inout) :: found  !< indicate whether observation was found
+    logical, intent(inout) :: found !< indicate whether observation was found
     ! -- local
     !
     found = .true.
@@ -974,7 +974,7 @@ contains
     !
     return
   end subroutine sft_rp_obs
-    
+
   subroutine sft_bd_obs(this, obstypeid, jj, v, found)
 ! ******************************************************************************
 ! sft_bd_obs -- calculate observation value and pass it back to APT

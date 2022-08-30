@@ -873,9 +873,9 @@ contains
   !<
   subroutine mwt_rp_obs(this, obsrv, found)
     ! -- dummy
-    class(GwtMwtType), intent(inout) :: this  !< package class
+    class(GwtMwtType), intent(inout) :: this !< package class
     type(ObserveType), intent(inout) :: obsrv !< observation object
-    logical, intent(inout) :: found  !< indicate whether observation was found
+    logical, intent(inout) :: found !< indicate whether observation was found
     ! -- local
     !
     found = .true.
@@ -894,7 +894,7 @@ contains
     !
     return
   end subroutine mwt_rp_obs
-  
+
   subroutine mwt_bd_obs(this, obstypeid, jj, v, found)
 ! ******************************************************************************
 ! mwt_bd_obs -- calculate observation value and pass it back to APT

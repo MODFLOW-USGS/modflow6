@@ -1039,9 +1039,9 @@ contains
   !<
   subroutine lkt_rp_obs(this, obsrv, found)
     ! -- dummy
-    class(GwtLktType), intent(inout) :: this  !< package class
+    class(GwtLktType), intent(inout) :: this !< package class
     type(ObserveType), intent(inout) :: obsrv !< observation object
-    logical, intent(inout) :: found  !< indicate whether observation was found
+    logical, intent(inout) :: found !< indicate whether observation was found
     ! -- local
     !
     found = .true.

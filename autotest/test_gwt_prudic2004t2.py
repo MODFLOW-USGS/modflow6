@@ -453,11 +453,9 @@ def build_model(idx, dir):
             fname = f"{gwtname}.lkt.obs.{obstype.lower()}.csv"
             obs1 = []
             ncv = 2
-            if obstype == 'TO-MVR':
+            if obstype == "TO-MVR":
                 ncv = 1
-            obs1 = [
-                (f"lkt{i + 1}", obstype, i + 1) for i in range(ncv)
-            ]
+            obs1 = [(f"lkt{i + 1}", obstype, i + 1) for i in range(ncv)]
             obs2 = [
                 (f"blkt{i + 1}", obstype, f"mylake{i + 1}") for i in range(ncv)
             ]
@@ -469,9 +467,11 @@ def build_model(idx, dir):
             nconn = [67, 32]
             fname = f"{gwtname}.lkt.obs.{obstype.lower()}.csv"
             obs1 = [
-                (f"lkt{1}-{iconn + 1}", obstype, 1, iconn + 1) for iconn in range(nconn[0])  # lake 1
+                (f"lkt{1}-{iconn + 1}", obstype, 1, iconn + 1)
+                for iconn in range(nconn[0])  # lake 1
             ] + [
-                (f"lkt{2}-{iconn + 1}", obstype, 2, iconn + 1) for iconn in range(nconn[1])  # lake 2
+                (f"lkt{2}-{iconn + 1}", obstype, 2, iconn + 1)
+                for iconn in range(nconn[1])  # lake 2
             ]
             obs2 = [
                 (f"blkt{i + 1}", obstype, f"mylake{i + 1}") for i in range(ncv)
@@ -526,7 +526,8 @@ def build_model(idx, dir):
                 (f"sft{i + 1}", obstype, i + 1) for i in range(sfrpd.shape[0])
             ]
             obs2 = [
-                (f"bsft{i + 1}", obstype, f"myreach{i + 1}") for i in range(sfrpd.shape[0])
+                (f"bsft{i + 1}", obstype, f"myreach{i + 1}")
+                for i in range(sfrpd.shape[0])
             ]
             sft_obs[fname] = obs1 + obs2
 
@@ -537,9 +538,12 @@ def build_model(idx, dir):
             for id2 in reach_connections:
                 id2 = abs(id2)
                 if id1 != id2:
-                    obs1.append((f"sft{id1 + 1}x{id2 + 1}",  obstype, id1 + 1, id2 + 1))
+                    obs1.append(
+                        (f"sft{id1 + 1}x{id2 + 1}", obstype, id1 + 1, id2 + 1)
+                    )
         obs2 = [
-            (f"bsft{i + 1}", obstype, f"myreach{i + 1}") for i in range(sfrpd.shape[0])
+            (f"bsft{i + 1}", obstype, f"myreach{i + 1}")
+            for i in range(sfrpd.shape[0])
         ]
         sft_obs[fname] = obs1 + obs2
 
@@ -706,16 +710,22 @@ def check_obs(sim):
         conc_ra = gwt.sft.obs.output.obs(f=csvfile).data
         # save a couple entries for comparison with lake
         if ".to-mvr." in csvfile:
-            sft6tomvr = conc_ra[f'BSFT6']
+            sft6tomvr = conc_ra[f"BSFT6"]
         if ".from-mvr." in csvfile:
-            sft7tomvr = conc_ra[f'BSFT7']
+            sft7tomvr = conc_ra[f"BSFT7"]
         success = True
         for ireach in range(38):
-            #print(f"  Checking reach {ireach + 1}")
-            is_same = np.allclose(conc_ra[f'SFT{ireach + 1}'], conc_ra[f'BSFT{ireach + 1}'])
+            # print(f"  Checking reach {ireach + 1}")
+            is_same = np.allclose(
+                conc_ra[f"SFT{ireach + 1}"], conc_ra[f"BSFT{ireach + 1}"]
+            )
             if not is_same:
                 success = False
-                for t, x, y in zip(conc_ra["totim"], conc_ra[f'SFT{ireach + 1}'], conc_ra[f'BSFT{ireach + 1}']):
+                for t, x, y in zip(
+                    conc_ra["totim"],
+                    conc_ra[f"SFT{ireach + 1}"],
+                    conc_ra[f"BSFT{ireach + 1}"],
+                ):
                     print(t, x, y)
 
     # process the sft values and make sure the individual connection rates add up to the boundname rate
@@ -732,8 +742,10 @@ def check_obs(sim):
         if not is_same:
             success = False
             diff = connection_sum - conc_ra[f"BSFT{ireach + 1}"]
-            print(f"Problem with SFT {ireach + 1}; mindiff {diff.min()} and maxdiff {diff.max()}")
-            #for itime, (cs, bsft) in enumerate(zip(connection_sum, conc_ra[f"BSFT{ireach + 1}"])):
+            print(
+                f"Problem with SFT {ireach + 1}; mindiff {diff.min()} and maxdiff {diff.max()}"
+            )
+            # for itime, (cs, bsft) in enumerate(zip(connection_sum, conc_ra[f"BSFT{ireach + 1}"])):
             #    print(itime, cs, bsft)
 
     assert success, "One or more SFT obs checks did not pass"
@@ -747,20 +759,26 @@ def check_obs(sim):
         print(f"Checking csv file: {csvfile}")
         conc_ra = gwt.lkt.obs.output.obs(f=csvfile).data
         if ".from-mvr." in csvfile:
-            lkt1frommvr = conc_ra[f'BLKT1']
+            lkt1frommvr = conc_ra[f"BLKT1"]
         if ".to-mvr." in csvfile:
-            lkt1tomvr = conc_ra[f'BLKT1']
+            lkt1tomvr = conc_ra[f"BLKT1"]
         success = True
         if ".to-mvr." in csvfile:
             numvalues = 1  # outlet
         else:
             numvalues = 2  # lakes
         for ilake in range(numvalues):
-            #print(f"  Checking lake {ilake + 1}")
-            is_same = np.allclose(conc_ra[f'LKT{ilake + 1}'], conc_ra[f'BLKT{ilake + 1}'])
+            # print(f"  Checking lake {ilake + 1}")
+            is_same = np.allclose(
+                conc_ra[f"LKT{ilake + 1}"], conc_ra[f"BLKT{ilake + 1}"]
+            )
             if not is_same:
                 success = False
-                for t, x, y in zip(conc_ra["totim"], conc_ra[f'LKT{ilake + 1}'], conc_ra[f"BLKT{ilake + 1}"]):
+                for t, x, y in zip(
+                    conc_ra["totim"],
+                    conc_ra[f"LKT{ilake + 1}"],
+                    conc_ra[f"BLKT{ilake + 1}"],
+                ):
                     print(t, x, y)
 
     # process the lkt values and make sure the individual connection rates add up to the boundname rate
@@ -771,13 +789,17 @@ def check_obs(sim):
     for ilake in [0, 1]:
         connection_sum = np.zeros(ntimes)
         for column_name in conc_ra.dtype.names:
-            if f"LKT{ilake + 1}" in column_name and column_name.startswith("LKT"):
+            if f"LKT{ilake + 1}" in column_name and column_name.startswith(
+                "LKT"
+            ):
                 connection_sum += conc_ra[column_name]
-        is_same = np.allclose(connection_sum, conc_ra[f'BLKT{ilake + 1}'])
+        is_same = np.allclose(connection_sum, conc_ra[f"BLKT{ilake + 1}"])
         if not is_same:
             success = False
             print(f"Problem with Lake {ilake + 1}")
-            for itime, (cs, blkt) in enumerate(zip(connection_sum, conc_ra[f'BLKT1'])):
+            for itime, (cs, blkt) in enumerate(
+                zip(connection_sum, conc_ra[f"BLKT1"])
+            ):
                 print(itime, cs, blkt)
 
     assert success, "One or more LKT obs checks did not pass"

@@ -2621,18 +2621,18 @@ contains
   !<
   subroutine pak_rp_obs(this, obsrv, found)
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this  !< package class
+    class(GwtAptType), intent(inout) :: this !< package class
     type(ObserveType), intent(inout) :: obsrv !< observation object
-    logical, intent(inout) :: found  !< indicate whether observation was found
+    logical, intent(inout) :: found !< indicate whether observation was found
     ! -- local
     !
     ! -- this routine should never be called
     call store_error('Program error: pak_rp_obs not implemented.', &
-                      terminate=.TRUE.)
+                     terminate=.TRUE.)
     !
     return
   end subroutine pak_rp_obs
-    
+
   subroutine rp_obs_index_byfeature(this, obsrv)
     class(GwtAptType), intent(inout) :: this
     type(ObserveType), intent(inout) :: obsrv
@@ -2653,14 +2653,14 @@ contains
       end do
       if (.not. jfound) then
         write (errmsg, fmterr) trim(obsrv%FeatureName), trim(obsrv%Name), &
-                               trim(this%packName)
+          trim(this%packName)
         call store_error(errmsg)
       end if
     else
       !
       ! -- ensure nn1 is > 0 and < ncv
       if (nn1 < 0 .or. nn1 > this%ncv) then
-        write(errmsg, '(7a, i0, a, i0, a)') &
+        write (errmsg, '(7a, i0, a, i0, a)') &
           'Observation ', trim(obsrv%Name), ' of type ', &
           trim(adjustl(obsrv%ObsTypeId)), ' in package ', &
           trim(this%packName), ' was assigned ID = ', nn1, &
@@ -2697,14 +2697,14 @@ contains
       end do
       if (.not. jfound) then
         write (errmsg, fmterr) trim(obsrv%FeatureName), trim(obsrv%Name), &
-                               trim(this%packName)
+          trim(this%packName)
         call store_error(errmsg)
       end if
     else
       !
       ! -- ensure nn1 is > 0 and < ncv
       if (nn1 < 0 .or. nn1 > this%ncv) then
-        write(errmsg, '(7a, i0, a, i0, a)') &
+        write (errmsg, '(7a, i0, a, i0, a)') &
           'Observation ', trim(obsrv%Name), ' of type ', &
           trim(adjustl(obsrv%ObsTypeId)), ' in package ', &
           trim(this%packName), ' was assigned ID = ', nn1, &
@@ -2722,14 +2722,14 @@ contains
         end if
       end do
       if (idx < 1 .or. idx > budterm%nlist) then
-        write(errmsg, '(7a, i0, a, i0, a)') &
+        write (errmsg, '(7a, i0, a, i0, a)') &
           'Observation ', trim(obsrv%Name), ' of type ', &
           trim(adjustl(obsrv%ObsTypeId)), ' in package ', &
           trim(this%packName), ' specifies iconn = ', iconn, &
           ',  but this is not a valid connection for ID ', nn1, '.'
         call store_error(errmsg)
       else if (budterm%id1(idx) /= nn1) then
-        write(errmsg, '(7a, i0, a, i0, a)') &
+        write (errmsg, '(7a, i0, a, i0, a)') &
           'Observation ', trim(obsrv%Name), ' of type ', &
           trim(adjustl(obsrv%ObsTypeId)), ' in package ', &
           trim(this%packName), ' specifies iconn = ', iconn, &
@@ -2764,14 +2764,14 @@ contains
       end do
       if (.not. jfound) then
         write (errmsg, fmterr) trim(obsrv%FeatureName), trim(obsrv%Name), &
-                               trim(this%packName)
+          trim(this%packName)
         call store_error(errmsg)
       end if
     else
       !
       ! -- ensure nn1 is > 0 and < ncv
       if (nn1 < 0 .or. nn1 > this%ncv) then
-        write(errmsg, '(7a, i0, a, i0, a)') &
+        write (errmsg, '(7a, i0, a, i0, a)') &
           'Observation ', trim(obsrv%Name), ' of type ', &
           trim(adjustl(obsrv%ObsTypeId)), ' in package ', &
           trim(this%packName), ' was assigned ID = ', nn1, &
@@ -2782,7 +2782,7 @@ contains
       !
       ! -- ensure nn2 is > 0 and < ncv
       if (nn2 < 0 .or. nn2 > this%ncv) then
-        write(errmsg, '(7a, i0, a, i0, a)') &
+        write (errmsg, '(7a, i0, a, i0, a)') &
           'Observation ', trim(obsrv%Name), ' of type ', &
           trim(adjustl(obsrv%ObsTypeId)), ' in package ', &
           trim(this%packName), ' was assigned ID2 = ', nn2, &
@@ -2798,7 +2798,7 @@ contains
         end if
       end do
       if (.not. jfound) then
-        write(errmsg, '(7a, i0, a, i0, a)') &
+        write (errmsg, '(7a, i0, a, i0, a)') &
           'Observation ', trim(obsrv%Name), ' of type ', &
           trim(adjustl(obsrv%ObsTypeId)), ' in package ', &
           trim(this%packName), &
@@ -2844,17 +2844,17 @@ contains
           end if
         case ('LKT', 'SFT', 'MWT', 'UZT')
           call this%rp_obs_index_budterm(obsrv, &
-            this%flowbudptr%budterm(this%idxbudgwf))
+                                         this%flowbudptr%budterm(this%idxbudgwf))
         case ('FLOW-JA-FACE')
           if (this%idxbudfjf > 0) then
             call this%rp_obs_index_flowjaface(obsrv, &
-              this%flowbudptr%budterm(this%idxbudfjf))
+                                          this%flowbudptr%budterm(this%idxbudfjf))
           else
-            write(errmsg, '(7a)') &
-            'Observation ', trim(obsrv%Name), ' of type ', &
-            trim(adjustl(obsrv%ObsTypeId)), ' in package ', &
-            trim(this%packName), &
-            ' cannot be processed because there are no flow connections.'
+            write (errmsg, '(7a)') &
+              'Observation ', trim(obsrv%Name), ' of type ', &
+              trim(adjustl(obsrv%ObsTypeId)), ' in package ', &
+              trim(this%packName), &
+              ' cannot be processed because there are no flow connections.'
             call store_error(errmsg)
           end if
         case ('STORAGE')
@@ -2867,7 +2867,7 @@ contains
           if (this%text == 'LKT') then
             ! to-mvr is by outlet for LKT
             call this%rp_obs_index_budterm(obsrv, &
-              this%flowbudptr%budterm(this%idxbudtmvr))
+                                         this%flowbudptr%budterm(this%idxbudtmvr))
           else
             ! For SFT, MWT, and UZT to-mvr is by feature
             call this%rp_obs_index_byfeature(obsrv)
@@ -3115,7 +3115,7 @@ contains
     ! -- return
     return
   end subroutine apt_process_obsID12
-  
+
   subroutine apt_setup_tableobj(this)
 ! ******************************************************************************
 ! apt_setup_tableobj -- Set up the table object that is used to write the apt
