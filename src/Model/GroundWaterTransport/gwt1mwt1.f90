@@ -40,7 +40,9 @@ module GwtMwtModule
   use BndModule, only: BndType, GetBndFromList
   use GwtFmiModule, only: GwtFmiType
   use MawModule, only: MawType
-  use GwtAptModule, only: GwtAptType
+  use ObserveModule, only: ObserveType
+  use GwtAptModule, only: GwtAptType, apt_process_obsID1, &
+                          apt_process_obsID12
 
   implicit none
 
@@ -74,6 +76,7 @@ module GwtMwtModule
     procedure :: mwt_rtmv_term
     procedure :: mwt_frtm_term
     procedure :: pak_df_obs => mwt_df_obs
+    procedure :: pak_rp_obs => mwt_rp_obs
     procedure :: pak_bd_obs => mwt_bd_obs
     procedure :: pak_set_stressperiod => mwt_set_stressperiod
 
@@ -801,7 +804,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use GwtAptModule, only: apt_process_obsID
     ! -- dummy
     class(GwtMwtType) :: this
     ! -- local
@@ -809,28 +811,90 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Store obs type and assign procedure pointer
+    !    for concentration observation type.
+    call this%obs%StoreObsType('concentration', .false., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    !
+    ! -- flow-ja-face not supported for MWT
+    !call this%obs%StoreObsType('flow-ja-face', .true., indx)
+    !this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for from-mvr observation type.
+    call this%obs%StoreObsType('from-mvr', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    !
+    ! -- to-mvr not supported for mwt
+    !call this%obs%StoreObsType('to-mvr', .true., indx)
+    !this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for storage observation type.
+    call this%obs%StoreObsType('storage', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for constant observation type.
+    call this%obs%StoreObsType('constant', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    !
+    ! -- Store obs type and assign procedure pointer
+    !    for observation type: mwt
+    call this%obs%StoreObsType('mwt', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID12
+    !
+    ! -- Store obs type and assign procedure pointer
     !    for rate observation type.
     call this%obs%StoreObsType('rate', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
     !
     ! -- Store obs type and assign procedure pointer
     !    for observation type.
     call this%obs%StoreObsType('fw-rate', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
     !
     ! -- Store obs type and assign procedure pointer
     !    for observation type.
     call this%obs%StoreObsType('rate-to-mvr', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
     !
     ! -- Store obs type and assign procedure pointer
     !    for observation type.
     call this%obs%StoreObsType('fw-rate-to-mvr', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
     !
     return
   end subroutine mwt_df_obs
 
+  !> @brief Process package specific obs
+    !!
+    !! Method to process specific observations for this package.
+    !!
+  !<
+  subroutine mwt_rp_obs(this, obsrv, found)
+    ! -- dummy
+    class(GwtMwtType), intent(inout) :: this  !< package class
+    type(ObserveType), intent(inout) :: obsrv !< observation object
+    logical, intent(inout) :: found  !< indicate whether observation was found
+    ! -- local
+    !
+    found = .true.
+    select case (obsrv%ObsTypeId)
+    case ('RATE')
+      call this%rp_obs_index_byfeature(obsrv)
+    case ('FW-RATE')
+      call this%rp_obs_index_byfeature(obsrv)
+    case ('RATE-TO-MVR')
+      call this%rp_obs_index_byfeature(obsrv)
+    case ('FW-RATE-TO-MVR')
+      call this%rp_obs_index_byfeature(obsrv)
+    case default
+      found = .false.
+    end select
+    !
+    return
+  end subroutine mwt_rp_obs
+  
   subroutine mwt_bd_obs(this, obstypeid, jj, v, found)
 ! ******************************************************************************
 ! mwt_bd_obs -- calculate observation value and pass it back to APT

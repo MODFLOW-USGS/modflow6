@@ -46,6 +46,7 @@ module GwtAptModule
   use BndModule, only: BndType
   use GwtFmiModule, only: GwtFmiType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
+  use BudgetTermModule, only: BudgetTermType
   use TableModule, only: TableType, table_cr
   use ObserveModule, only: ObserveType
   use InputOutputModule, only: extract_idnum_or_bndname
@@ -53,7 +54,9 @@ module GwtAptModule
 
   implicit none
 
-  public GwtAptType, apt_process_obsID
+  public :: GwtAptType
+  public :: apt_process_obsID1
+  public :: apt_process_obsID12
 
   character(len=LENFTYPE) :: ftype = 'APT'
   character(len=16) :: text = '             APT'
@@ -150,7 +153,11 @@ module GwtAptModule
     procedure :: bnd_obs_supported => apt_obs_supported
     procedure :: bnd_df_obs => apt_df_obs
     procedure :: pak_df_obs
+    procedure :: pak_rp_obs
     procedure :: bnd_rp_obs => apt_rp_obs
+    procedure :: rp_obs_index_byfeature
+    procedure :: rp_obs_index_budterm
+    procedure :: rp_obs_index_flowjaface
     procedure :: bnd_bd_obs => apt_bd_obs
     procedure :: pak_bd_obs
     procedure :: get_volumes
@@ -2577,43 +2584,7 @@ contains
     ! -- dummy
     class(GwtAptType) :: this
     ! -- local
-    integer(I4B) :: indx
 ! ------------------------------------------------------------------------------
-    !
-    ! -- Store obs type and assign procedure pointer
-    !    for concentration observation type.
-    call this%obs%StoreObsType('concentration', .false., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
-    !
-    ! -- Store obs type and assign procedure pointer
-    !    for flow between lakes.
-    call this%obs%StoreObsType('flow-ja-face', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
-    !
-    ! -- Store obs type and assign procedure pointer
-    !    for from-mvr observation type.
-    call this%obs%StoreObsType('from-mvr', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
-    !
-    ! -- Store obs type and assign procedure pointer
-    !    for observation type: lkt, sft, mwt, uzt.
-    call this%obs%StoreObsType(trim(adjustl(this%text)), .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
-    !
-    ! -- Store obs type and assign procedure pointer
-    !    for to-mvr observation type.
-    call this%obs%StoreObsType('to-mvr', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
-    !
-    ! -- Store obs type and assign procedure pointer
-    !    for storage observation type.
-    call this%obs%StoreObsType('storage', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
-    !
-    ! -- Store obs type and assign procedure pointer
-    !    for constant observation type.
-    call this%obs%StoreObsType('constant', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- call additional specific observations for lkt, sft, mwt, and uzt
     call this%pak_df_obs()
@@ -2643,6 +2614,202 @@ contains
     return
   end subroutine pak_df_obs
 
+  !> @brief Process package specific obs
+    !!
+    !! Method to process specific observations for this package.
+    !!
+  !<
+  subroutine pak_rp_obs(this, obsrv, found)
+    ! -- dummy
+    class(GwtAptType), intent(inout) :: this  !< package class
+    type(ObserveType), intent(inout) :: obsrv !< observation object
+    logical, intent(inout) :: found  !< indicate whether observation was found
+    ! -- local
+    !
+    ! -- this routine should never be called
+    call store_error('Program error: pak_rp_obs not implemented.', &
+                      terminate=.TRUE.)
+    !
+    return
+  end subroutine pak_rp_obs
+    
+  subroutine rp_obs_index_byfeature(this, obsrv)
+    class(GwtAptType), intent(inout) :: this
+    type(ObserveType), intent(inout) :: obsrv
+    integer(I4B) :: nn1
+    integer(I4B) :: j
+    logical :: jfound
+    character(len=*), parameter :: fmterr = &
+      "('Boundary ', a, ' for observation ', a, &
+      &' is invalid in package ', a)"
+    nn1 = obsrv%NodeNumber
+    if (nn1 == NAMEDBOUNDFLAG) then
+      jfound = .false.
+      do j = 1, this%ncv
+        if (this%featname(j) == obsrv%FeatureName) then
+          jfound = .true.
+          call obsrv%AddObsIndex(j)
+        end if
+      end do
+      if (.not. jfound) then
+        write (errmsg, fmterr) trim(obsrv%FeatureName), trim(obsrv%Name), &
+                               trim(this%packName)
+        call store_error(errmsg)
+      end if
+    else
+      !
+      ! -- ensure nn1 is > 0 and < ncv
+      if (nn1 < 0 .or. nn1 > this%ncv) then
+        write(errmsg, '(7a, i0, a, i0, a)') &
+          'Observation ', trim(obsrv%Name), ' of type ', &
+          trim(adjustl(obsrv%ObsTypeId)), ' in package ', &
+          trim(this%packName), ' was assigned ID = ', nn1, &
+          '.  ID must be >= 1 and <= ', this%ncv, '.'
+        call store_error(errmsg)
+      end if
+      call obsrv%AddObsIndex(nn1)
+    end if
+    return
+  end subroutine rp_obs_index_byfeature
+
+  subroutine rp_obs_index_budterm(this, obsrv, budterm)
+    class(GwtAptType), intent(inout) :: this
+    type(ObserveType), intent(inout) :: obsrv
+    type(BudgetTermType), intent(in) :: budterm
+    integer(I4B) :: nn1
+    integer(I4B) :: iconn
+    integer(I4B) :: icv
+    integer(I4B) :: idx
+    integer(I4B) :: j
+    logical :: jfound
+    character(len=*), parameter :: fmterr = &
+      "('Boundary ', a, ' for observation ', a, &
+      &' is invalid in package ', a)"
+    nn1 = obsrv%NodeNumber
+    if (nn1 == NAMEDBOUNDFLAG) then
+      jfound = .false.
+      do j = 1, budterm%nlist
+        icv = budterm%id1(j)
+        if (this%featname(icv) == obsrv%FeatureName) then
+          jfound = .true.
+          call obsrv%AddObsIndex(j)
+        end if
+      end do
+      if (.not. jfound) then
+        write (errmsg, fmterr) trim(obsrv%FeatureName), trim(obsrv%Name), &
+                               trim(this%packName)
+        call store_error(errmsg)
+      end if
+    else
+      !
+      ! -- ensure nn1 is > 0 and < ncv
+      if (nn1 < 0 .or. nn1 > this%ncv) then
+        write(errmsg, '(7a, i0, a, i0, a)') &
+          'Observation ', trim(obsrv%Name), ' of type ', &
+          trim(adjustl(obsrv%ObsTypeId)), ' in package ', &
+          trim(this%packName), ' was assigned ID = ', nn1, &
+          '.  ID must be >= 1 and <= ', this%ncv, '.'
+        call store_error(errmsg)
+      end if
+      iconn = obsrv%NodeNumber2
+      do j = 1, budterm%nlist
+        if (budterm%id1(j) == nn1) then
+          ! -- Look for the first occurrence of nn1, then set indxbnds
+          !    to the iconn record after that
+          idx = j + iconn - 1
+          call obsrv%AddObsIndex(idx)
+          exit
+        end if
+      end do
+      if (idx < 1 .or. idx > budterm%nlist) then
+        write(errmsg, '(7a, i0, a, i0, a)') &
+          'Observation ', trim(obsrv%Name), ' of type ', &
+          trim(adjustl(obsrv%ObsTypeId)), ' in package ', &
+          trim(this%packName), ' specifies iconn = ', iconn, &
+          ',  but this is not a valid connection for ID ', nn1, '.'
+        call store_error(errmsg)
+      else if (budterm%id1(idx) /= nn1) then
+        write(errmsg, '(7a, i0, a, i0, a)') &
+          'Observation ', trim(obsrv%Name), ' of type ', &
+          trim(adjustl(obsrv%ObsTypeId)), ' in package ', &
+          trim(this%packName), ' specifies iconn = ', iconn, &
+          ',  but this is not a valid connection for ID ', nn1, '.'
+        call store_error(errmsg)
+      end if
+    end if
+    return
+  end subroutine rp_obs_index_budterm
+
+  subroutine rp_obs_index_flowjaface(this, obsrv, budterm)
+    class(GwtAptType), intent(inout) :: this
+    type(ObserveType), intent(inout) :: obsrv
+    type(BudgetTermType), intent(in) :: budterm
+    integer(I4B) :: nn1
+    integer(I4B) :: nn2
+    integer(I4B) :: icv
+    integer(I4B) :: j
+    logical :: jfound
+    character(len=*), parameter :: fmterr = &
+      "('Boundary ', a, ' for observation ', a, &
+      &' is invalid in package ', a)"
+    nn1 = obsrv%NodeNumber
+    if (nn1 == NAMEDBOUNDFLAG) then
+      jfound = .false.
+      do j = 1, budterm%nlist
+        icv = budterm%id1(j)
+        if (this%featname(icv) == obsrv%FeatureName) then
+          jfound = .true.
+          call obsrv%AddObsIndex(j)
+        end if
+      end do
+      if (.not. jfound) then
+        write (errmsg, fmterr) trim(obsrv%FeatureName), trim(obsrv%Name), &
+                               trim(this%packName)
+        call store_error(errmsg)
+      end if
+    else
+      !
+      ! -- ensure nn1 is > 0 and < ncv
+      if (nn1 < 0 .or. nn1 > this%ncv) then
+        write(errmsg, '(7a, i0, a, i0, a)') &
+          'Observation ', trim(obsrv%Name), ' of type ', &
+          trim(adjustl(obsrv%ObsTypeId)), ' in package ', &
+          trim(this%packName), ' was assigned ID = ', nn1, &
+          '.  ID must be >= 1 and <= ', this%ncv, '.'
+        call store_error(errmsg)
+      end if
+      nn2 = obsrv%NodeNumber2
+      !
+      ! -- ensure nn2 is > 0 and < ncv
+      if (nn2 < 0 .or. nn2 > this%ncv) then
+        write(errmsg, '(7a, i0, a, i0, a)') &
+          'Observation ', trim(obsrv%Name), ' of type ', &
+          trim(adjustl(obsrv%ObsTypeId)), ' in package ', &
+          trim(this%packName), ' was assigned ID2 = ', nn2, &
+          '.  ID must be >= 1 and <= ', this%ncv, '.'
+        call store_error(errmsg)
+      end if
+      ! -- Look for nn1 and nn2 in id1 and id2
+      jfound = .false.
+      do j = 1, budterm%nlist
+        if (budterm%id1(j) == nn1 .and. budterm%id2(j) == nn2) then
+          call obsrv%AddObsIndex(j)
+          jfound = .true.
+        end if
+      end do
+      if (.not. jfound) then
+        write(errmsg, '(7a, i0, a, i0, a)') &
+          'Observation ', trim(obsrv%Name), ' of type ', &
+          trim(adjustl(obsrv%ObsTypeId)), ' in package ', &
+          trim(this%packName), &
+          ' specifies a connection between feature ', nn1, &
+          ' feature ', nn2, ', but these features are not connected.'
+        call store_error(errmsg)
+      end if
+    end if
+    return
+  end subroutine rp_obs_index_flowjaface
+
   subroutine apt_rp_obs(this)
 ! ******************************************************************************
 ! apt_rp_obs --
@@ -2650,173 +2817,84 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use TdisModule, only: kper
     ! -- dummy
     class(GwtAptType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i
-    integer(I4B) :: j
-    integer(I4B) :: n
-    integer(I4B) :: nn1
-    integer(I4B) :: nn2
-    integer(I4B) :: idx
-    integer(I4B) :: ntmvr
-    character(len=LENBOUNDNAME) :: bname
-    logical :: jfound
+    logical :: found
     class(ObserveType), pointer :: obsrv => null()
 ! ------------------------------------------------------------------------------
-    ! -- formats
-10  format('Boundary "', a, '" for observation "', a, &
-           '" is invalid in package "', a, '"')
     !
-    do i = 1, this%obs%npakobs
-      obsrv => this%obs%pakobs(i)%obsrv
-      !
-      ! -- indxbnds needs to be reset each stress period because
-      !    list of boundaries can change each stress period.
-      call obsrv%ResetObsIndex()
-      !
-      ! -- get node number 1
-      nn1 = obsrv%NodeNumber
-      if (nn1 == NAMEDBOUNDFLAG) then
-        bname = obsrv%FeatureName
-        if (bname /= '') then
-          ! -- Observation is based on a boundary name.
-          !    Iterate through all features (lak/maw/sfr/uzf) to identify and
-          !    store corresponding index in bound array.
-          jfound = .false.
-          if (obsrv%ObsTypeId == trim(adjustl(this%text))) then
-            do j = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
-              n = this%flowbudptr%budterm(this%idxbudgwf)%id1(j)
-              if (this%boundname(n) == bname) then
-                jfound = .true.
-                call obsrv%AddObsIndex(j)
-              end if
-            end do
-          else if (obsrv%ObsTypeId == 'FLOW-JA-FACE') then
-            do j = 1, this%flowbudptr%budterm(this%idxbudfjf)%nlist
-              n = this%flowbudptr%budterm(this%idxbudfjf)%id1(j)
-              if (this%featname(n) == bname) then
-                jfound = .true.
-                call obsrv%AddObsIndex(j)
-              end if
-            end do
+    if (kper == 1) then
+      do i = 1, this%obs%npakobs
+        obsrv => this%obs%pakobs(i)%obsrv
+        select case (obsrv%ObsTypeId)
+        case ('CONCENTRATION')
+          call this%rp_obs_index_byfeature(obsrv)
+          !
+          ! -- catch non-cumulative observation assigned to observation defined
+          !    by a boundname that is assigned to more than one element
+          if (obsrv%indxbnds_count > 1) then
+            write (errmsg, '(a, a, a)') &
+              'CONCENTRATION for observation', trim(adjustl(obsrv%Name)), &
+              ' must be assigned to a feature with a unique boundname.'
+            call store_error(errmsg)
+          end if
+        case ('LKT', 'SFT', 'MWT', 'UZT')
+          call this%rp_obs_index_budterm(obsrv, &
+            this%flowbudptr%budterm(this%idxbudgwf))
+        case ('FLOW-JA-FACE')
+          if (this%idxbudfjf > 0) then
+            call this%rp_obs_index_flowjaface(obsrv, &
+              this%flowbudptr%budterm(this%idxbudfjf))
           else
-            do j = 1, this%ncv
-              if (this%featname(j) == bname) then
-                jfound = .true.
-                call obsrv%AddObsIndex(j)
-              end if
-            end do
-          end if
-          if (.not. jfound) then
-            write (errmsg, 10) trim(bname), trim(obsrv%Name), trim(this%packName)
+            write(errmsg, '(7a)') &
+            'Observation ', trim(obsrv%Name), ' of type ', &
+            trim(adjustl(obsrv%ObsTypeId)), ' in package ', &
+            trim(this%packName), &
+            ' cannot be processed because there are no flow connections.'
             call store_error(errmsg)
           end if
-        end if
-      else
-        if (obsrv%indxbnds_count == 0) then
-          if (obsrv%ObsTypeId == trim(adjustl(this%text))) then
-            nn2 = obsrv%NodeNumber2
-            ! -- Look for the first occurrence of nn1, then set indxbnds
-            !    to the nn2 record after that
-            do j = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
-              if (this%flowbudptr%budterm(this%idxbudgwf)%id1(j) == nn1) then
-                idx = j + nn2 - 1
-                call obsrv%AddObsIndex(idx)
-                exit
-              end if
-            end do
-            if (this%flowbudptr%budterm(this%idxbudgwf)%id1(idx) /= nn1) then
-              write (errmsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
-                'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-                ' connection number =', nn2, &
-                '(does not correspond to control volume ', nn1, ')'
-              call store_error(errmsg)
-            end if
-          else if (obsrv%ObsTypeId == 'FLOW-JA-FACE') then
-            nn2 = obsrv%NodeNumber2
-            ! -- Look for the first occurrence of nn1, then set indxbnds
-            !    to the nn2 record after that
-            idx = 0
-            do j = 1, this%flowbudptr%budterm(this%idxbudfjf)%nlist
-              if (this%flowbudptr%budterm(this%idxbudfjf)%id1(j) == nn1 .and. &
-                  this%flowbudptr%budterm(this%idxbudfjf)%id2(j) == nn2) then
-                idx = j
-                call obsrv%AddObsIndex(idx)
-                exit
-              end if
-            end do
-            if (idx == 0) then
-              write (errmsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
-                'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-                ' lake number =', nn1, &
-                '(is not connected to lake ', nn2, ')'
-              call store_error(errmsg)
-            end if
+        case ('STORAGE')
+          call this%rp_obs_index_byfeature(obsrv)
+        case ('CONSTANT')
+          call this%rp_obs_index_byfeature(obsrv)
+        case ('FROM-MVR')
+          call this%rp_obs_index_byfeature(obsrv)
+        case ('TO-MVR')
+          if (this%text == 'LKT') then
+            ! to-mvr is by outlet for LKT
+            call this%rp_obs_index_budterm(obsrv, &
+              this%flowbudptr%budterm(this%idxbudtmvr))
           else
-            call obsrv%AddObsIndex(nn1)
+            ! For SFT, MWT, and UZT to-mvr is by feature
+            call this%rp_obs_index_byfeature(obsrv)
           end if
-        else
-          errmsg = 'Programming error in apt_rp_obs'
-          call store_error(errmsg)
-        end if
-      end if
+        case default
+          !call this%rp_obs_index_byfeature(obsrv)
+          found = .false.
+          !
+          ! -- check the child package for any specific obs
+          call this%pak_rp_obs(obsrv, found)
+          !
+          ! -- if none found then terminate with an error
+          if (.not. found) then
+            errmsg = 'Unrecognized observation type "'// &
+                     trim(obsrv%ObsTypeId)//'" for '// &
+                     trim(adjustl(this%text))//' package '// &
+                     trim(this%packName)
+            call store_error(errmsg, terminate=.TRUE.)
+          end if
+        end select
+
+      end do
       !
-      ! -- catch non-cumulative observation assigned to observation defined
-      !    by a boundname that is assigned to more than one element
-      if (obsrv%ObsTypeId == 'CONCENTRATION') then
-        if (obsrv%indxbnds_count > 1) then
-          write (errmsg, '(4x,a,4(1x,a))') &
-            'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-            'for observation', trim(adjustl(obsrv%Name)), &
-            ' must be assigned to a feature with a unique boundname.'
-          call store_error(errmsg)
-        end if
+      ! -- check for errors
+      if (count_errors() > 0) then
+        call store_error_unit(this%obs%inunitobs)
       end if
-      !
-      ! -- check that index values are valid
-      if (obsrv%ObsTypeId == 'TO-MVR' .or. &
-          obsrv%ObsTypeId == 'EXT-OUTFLOW') then
-        ntmvr = this%flowbudptr%budterm(this%idxbudtmvr)%nlist
-        do j = 1, obsrv%indxbnds_count
-          nn1 = obsrv%indxbnds(j)
-          if (nn1 < 1 .or. nn1 > ntmvr) then
-            write (errmsg, '(a, a, i0, a, i0, a)') &
-              trim(adjustl(obsrv%ObsTypeId)), &
-              ' must be > 0 or <= ', ntmvr, &
-              '. (specified value is ', nn1, ').'
-            call store_error(errmsg)
-          end if
-        end do
-      else if (obsrv%ObsTypeId == trim(adjustl(this%text)) .or. &
-               obsrv%ObsTypeId == 'FLOW-JA-FACE') then
-        do j = 1, obsrv%indxbnds_count
-          nn1 = obsrv%indxbnds(j)
-          if (nn1 < 1 .or. nn1 > this%maxbound) then
-            write (errmsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
-              'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-              ' connection number must be > 0 and <=', this%maxbound, &
-              '(specified value is ', nn1, ')'
-            call store_error(errmsg)
-          end if
-        end do
-      else
-        do j = 1, obsrv%indxbnds_count
-          nn1 = obsrv%indxbnds(j)
-          if (nn1 < 1 .or. nn1 > this%ncv) then
-            write (errmsg, '(4x,a,1x,a,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
-              'ERROR:', trim(adjustl(obsrv%ObsTypeId)), &
-              ' control volume must be > 0 and <=', this%ncv, &
-              '(specified value is ', nn1, ')'
-            call store_error(errmsg)
-          end if
-        end do
-      end if
-    end do
-    !
-    ! -- check for errors
-    if (count_errors() > 0) then
-      call store_error_unit(this%obs%inunitobs)
     end if
     !
     return
@@ -2830,6 +2908,7 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
     ! -- dummy
     class(GwtAptType) :: this
     ! -- local
@@ -2866,7 +2945,7 @@ contains
               v = -v
             end if
           case ('FLOW-JA-FACE')
-            n = this%flowbudptr%budterm(this%idxbudgwf)%id1(jj)
+            n = this%flowbudptr%budterm(this%idxbudfjf)%id1(jj)
             if (this%iboundpak(n) /= 0) then
               call this%apt_fjf_term(jj, n1, n2, v)
             end if
@@ -2940,62 +3019,103 @@ contains
     return
   end subroutine pak_bd_obs
 
-  subroutine apt_process_obsID(obsrv, dis, inunitobs, iout)
-! ******************************************************************************
-! apt_process_obsID --
-! -- This procedure is pointed to by ObsDataType%ProcesssIdPtr. It processes
-!    the ID string of an observation definition for LAK package observations.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    ! -- dummy
-    type(ObserveType), intent(inout) :: obsrv
-    class(DisBaseType), intent(in) :: dis
-    integer(I4B), intent(in) :: inunitobs
-    integer(I4B), intent(in) :: iout
-    ! -- local
-    integer(I4B) :: nn1, nn2
-    integer(I4B) :: icol, istart, istop
+  !> @brief Process observation IDs for a package
+    !!
+    !! Method to process observation ID strings for an APT package.
+    !! This processor is only for observation types that support ID1
+    !! and not ID2.
+    !!
+  !<
+  subroutine apt_process_obsID1(obsrv, dis, inunitobs, iout)
+    ! -- dummy variables
+    type(ObserveType), intent(inout) :: obsrv !< Observation object
+    class(DisBaseType), intent(in) :: dis !< Discretization object
+    integer(I4B), intent(in) :: inunitobs !< file unit number for the package observation file
+    integer(I4B), intent(in) :: iout !< model listing file unit number
+    ! -- local variables
+    integer(I4B) :: nn1
+    integer(I4B) :: icol
+    integer(I4B) :: istart
+    integer(I4B) :: istop
     character(len=LINELENGTH) :: strng
     character(len=LENBOUNDNAME) :: bndname
-    ! -- formats
-! ------------------------------------------------------------------------------
     !
+    ! -- initialize local variables
     strng = obsrv%IDstring
-    ! -- Extract lake number from strng and store it.
+    !
+    ! -- Extract reach number from strng and store it.
     !    If 1st item is not an integer(I4B), it should be a
-    !    lake name--deal with it.
+    !    boundary name--deal with it.
     icol = 1
-    ! -- get number or boundary name
+    !
+    ! -- get reach number or boundary name
+    call extract_idnum_or_bndname(strng, icol, istart, istop, nn1, bndname)
+    if (nn1 == NAMEDBOUNDFLAG) then
+      obsrv%FeatureName = bndname
+    end if
+    !
+    ! -- store reach number (NodeNumber)
+    obsrv%NodeNumber = nn1
+    obsrv%NodeNumber2 = 1
+    !
+    ! -- return
+    return
+  end subroutine apt_process_obsID1
+
+  !> @brief Process observation IDs for a package
+    !!
+    !! Method to process observation ID strings for an APT package.
+    !! This processor is for the case where if ID1 is an integer
+    !! then ID2 must be provided.
+    !!
+  !<
+  subroutine apt_process_obsID12(obsrv, dis, inunitobs, iout)
+    ! -- dummy variables
+    type(ObserveType), intent(inout) :: obsrv !< Observation object
+    class(DisBaseType), intent(in) :: dis !< Discretization object
+    integer(I4B), intent(in) :: inunitobs !< file unit number for the package observation file
+    integer(I4B), intent(in) :: iout !< model listing file unit number
+    ! -- local variables
+    integer(I4B) :: nn1
+    integer(I4B) :: iconn
+    integer(I4B) :: icol
+    integer(I4B) :: istart
+    integer(I4B) :: istop
+    character(len=LINELENGTH) :: strng
+    character(len=LENBOUNDNAME) :: bndname
+    !
+    ! -- initialize local variables
+    strng = obsrv%IDstring
+    !
+    ! -- Extract reach number from strng and store it.
+    !    If 1st item is not an integer(I4B), it should be a
+    !    boundary name--deal with it.
+    icol = 1
+    !
+    ! -- get reach number or boundary name
     call extract_idnum_or_bndname(strng, icol, istart, istop, nn1, bndname)
     if (nn1 == NAMEDBOUNDFLAG) then
       obsrv%FeatureName = bndname
     else
-      if (obsrv%ObsTypeId == 'LKT' .or. &
-          obsrv%ObsTypeId == 'SFT' .or. &
-          obsrv%ObsTypeId == 'MWT' .or. &
-          obsrv%ObsTypeId == 'UZT' .or. &
-          obsrv%ObsTypeId == 'FLOW-JA-FACE') then
-        call extract_idnum_or_bndname(strng, icol, istart, istop, nn2, bndname)
-        if (nn2 == NAMEDBOUNDFLAG) then
-          obsrv%FeatureName = bndname
-          ! -- reset nn1
-          nn1 = nn2
-        else
-          obsrv%NodeNumber2 = nn2
-        end if
-        !! -- store connection number (NodeNumber2)
-        !obsrv%NodeNumber2 = nn2
+      call extract_idnum_or_bndname(strng, icol, istart, istop, iconn, bndname)
+      if (len_trim(bndName) < 1 .and. iconn < 0) then
+        write (errmsg, '(a,1x,a,a,1x,a,1x,a)') &
+          'For observation type', trim(adjustl(obsrv%ObsTypeId)), &
+          ', ID given as an integer and not as boundname,', &
+          'but ID2 is missing.  Either change ID to valid', &
+          'boundname or supply valid entry for ID2.'
+        call store_error(errmsg)
       end if
+      obsrv%NodeNumber2 = iconn
     end if
-    ! -- store lake number (NodeNumber)
+    !
+    ! -- store reach number (NodeNumber)
     obsrv%NodeNumber = nn1
     !
+    ! -- return
     return
-  end subroutine apt_process_obsID
-
+  end subroutine apt_process_obsID12
+  
   subroutine apt_setup_tableobj(this)
 ! ******************************************************************************
 ! apt_setup_tableobj -- Set up the table object that is used to write the apt
