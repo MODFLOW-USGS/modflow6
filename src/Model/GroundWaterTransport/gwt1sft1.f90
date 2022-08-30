@@ -969,7 +969,7 @@ contains
     case ('EXT-OUTFLOW')
       call this%rp_obs_byfeature(obsrv)
     case ('TO-MVR')
-        call this%rp_obs_byfeature(obsrv)
+      call this%rp_obs_byfeature(obsrv)
     case default
       found = .false.
     end select
