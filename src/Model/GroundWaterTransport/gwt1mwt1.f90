@@ -41,7 +41,7 @@ module GwtMwtModule
   use GwtFmiModule, only: GwtFmiType
   use MawModule, only: MawType
   use ObserveModule, only: ObserveType
-  use GwtAptModule, only: GwtAptType, apt_process_obsID1, &
+  use GwtAptModule, only: GwtAptType, apt_process_obsID, &
                           apt_process_obsID12
 
   implicit none
@@ -813,7 +813,7 @@ contains
     ! -- Store obs type and assign procedure pointer
     !    for concentration observation type.
     call this%obs%StoreObsType('concentration', .false., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- flow-ja-face not supported for MWT
     !call this%obs%StoreObsType('flow-ja-face', .true., indx)
@@ -822,7 +822,7 @@ contains
     ! -- Store obs type and assign procedure pointer
     !    for from-mvr observation type.
     call this%obs%StoreObsType('from-mvr', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- to-mvr not supported for mwt
     !call this%obs%StoreObsType('to-mvr', .true., indx)
@@ -831,12 +831,12 @@ contains
     ! -- Store obs type and assign procedure pointer
     !    for storage observation type.
     call this%obs%StoreObsType('storage', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for constant observation type.
     call this%obs%StoreObsType('constant', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for observation type: mwt
@@ -846,22 +846,22 @@ contains
     ! -- Store obs type and assign procedure pointer
     !    for rate observation type.
     call this%obs%StoreObsType('rate', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for observation type.
     call this%obs%StoreObsType('fw-rate', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for observation type.
     call this%obs%StoreObsType('rate-to-mvr', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for observation type.
     call this%obs%StoreObsType('fw-rate-to-mvr', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     return
   end subroutine mwt_df_obs

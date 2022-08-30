@@ -40,7 +40,7 @@ module GwtLktModule
   use GwtFmiModule, only: GwtFmiType
   use LakModule, only: LakType
   use ObserveModule, only: ObserveType
-  use GwtAptModule, only: GwtAptType, apt_process_obsID1, &
+  use GwtAptModule, only: GwtAptType, apt_process_obsID, &
                           apt_process_obsID12
 
   implicit none
@@ -967,7 +967,7 @@ contains
     ! -- Store obs type and assign procedure pointer
     !    for concentration observation type.
     call this%obs%StoreObsType('concentration', .false., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for flow between features, such as lake to lake.
@@ -977,22 +977,22 @@ contains
     ! -- Store obs type and assign procedure pointer
     !    for from-mvr observation type.
     call this%obs%StoreObsType('from-mvr', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for to-mvr observation type.
     call this%obs%StoreObsType('to-mvr', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for storage observation type.
     call this%obs%StoreObsType('storage', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for constant observation type.
     call this%obs%StoreObsType('constant', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for observation type: lkt
@@ -1002,32 +1002,32 @@ contains
     ! -- Store obs type and assign procedure pointer
     !    for rainfall observation type.
     call this%obs%StoreObsType('rainfall', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for evaporation observation type.
     call this%obs%StoreObsType('evaporation', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for runoff observation type.
     call this%obs%StoreObsType('runoff', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for inflow observation type.
     call this%obs%StoreObsType('ext-inflow', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for withdrawal observation type.
     call this%obs%StoreObsType('withdrawal', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for ext-outflow observation type.
     call this%obs%StoreObsType('ext-outflow', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     return
   end subroutine lkt_df_obs

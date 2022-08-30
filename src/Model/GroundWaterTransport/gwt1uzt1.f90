@@ -33,7 +33,7 @@ module GwtUztModule
   use GwtFmiModule, only: GwtFmiType
   use UzfModule, only: UzfType
   use ObserveModule, only: ObserveType
-  use GwtAptModule, only: GwtAptType, apt_process_obsID1, &
+  use GwtAptModule, only: GwtAptType, apt_process_obsID, &
                           apt_process_obsID12
 
   implicit none
@@ -819,7 +819,7 @@ contains
     ! -- Store obs type and assign procedure pointer
     !    for concentration observation type.
     call this%obs%StoreObsType('concentration', .false., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for flow between uzt cells.
@@ -829,7 +829,7 @@ contains
     ! -- Store obs type and assign procedure pointer
     !    for from-mvr observation type.
     call this%obs%StoreObsType('from-mvr', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- to-mvr not supported for uzt
     !call this%obs%StoreObsType('to-mvr', .true., indx)
@@ -838,12 +838,12 @@ contains
     ! -- Store obs type and assign procedure pointer
     !    for storage observation type.
     call this%obs%StoreObsType('storage', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for constant observation type.
     call this%obs%StoreObsType('constant', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for observation type: uzt
@@ -853,22 +853,22 @@ contains
     ! -- Store obs type and assign procedure pointer
     !    for observation type.
     call this%obs%StoreObsType('infiltration', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for observation type.
     call this%obs%StoreObsType('rej-inf', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for observation type.
     call this%obs%StoreObsType('uzet', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for observation type.
     call this%obs%StoreObsType('rej-inf-to-mvr', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID1
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     return
   end subroutine uzt_df_obs

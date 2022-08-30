@@ -55,7 +55,7 @@ module GwtAptModule
   implicit none
 
   public :: GwtAptType
-  public :: apt_process_obsID1
+  public :: apt_process_obsID
   public :: apt_process_obsID12
 
   character(len=LENFTYPE) :: ftype = 'APT'
@@ -3026,7 +3026,7 @@ contains
     !! and not ID2.
     !!
   !<
-  subroutine apt_process_obsID1(obsrv, dis, inunitobs, iout)
+  subroutine apt_process_obsID(obsrv, dis, inunitobs, iout)
     ! -- dummy variables
     type(ObserveType), intent(inout) :: obsrv !< Observation object
     class(DisBaseType), intent(in) :: dis !< Discretization object
@@ -3056,11 +3056,15 @@ contains
     !
     ! -- store reach number (NodeNumber)
     obsrv%NodeNumber = nn1
+    !
+    ! -- store NodeNumber2 as 1 so that this can be used
+    !    as the iconn value for SFT.  This works for SFT
+    !    because there is only one reach per GWT connection.
     obsrv%NodeNumber2 = 1
     !
     ! -- return
     return
-  end subroutine apt_process_obsID1
+  end subroutine apt_process_obsID
 
   !> @brief Process observation IDs for a package
     !!
