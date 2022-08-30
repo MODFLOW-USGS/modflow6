@@ -2883,15 +2883,6 @@ contains
           call this%rp_obs_byfeature(obsrv)
         case ('FROM-MVR')
           call this%rp_obs_byfeature(obsrv)
-        case ('TO-MVR')
-          if (this%text == 'LKT') then
-            ! to-mvr is by outlet for LKT
-            call this%rp_obs_budterm(obsrv, &
-                                     this%flowbudptr%budterm(this%idxbudtmvr))
-          else
-            ! For SFT, MWT, and UZT to-mvr is by feature
-            call this%rp_obs_byfeature(obsrv)
-          end if
         case default
           !call this%rp_obs_index_byfeature(obsrv)
           found = .false.

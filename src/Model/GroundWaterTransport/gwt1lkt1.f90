@@ -1058,6 +1058,9 @@ contains
       call this%rp_obs_byfeature(obsrv)
     case ('EXT-OUTFLOW')
       call this%rp_obs_byfeature(obsrv)
+    case ('TO-MVR')
+      call this%rp_obs_budterm(obsrv, &
+                               this%flowbudptr%budterm(this%idxbudtmvr))
     case default
       found = .false.
     end select
