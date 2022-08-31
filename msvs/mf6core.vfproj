@@ -57,12 +57,15 @@
 		<File RelativePath="..\src\Model\Connection\CellWithNbrs.f90"/>
 		<File RelativePath="..\src\Model\Connection\ConnectionBuilder.f90"/>
 		<File RelativePath="..\src\Model\Connection\CsrUtils.f90"/>
+		<File RelativePath="..\src\Model\Connection\DistributedData.f90"/>
 		<File RelativePath="..\src\Model\Connection\GridConnection.f90"/>
 		<File RelativePath="..\src\Model\Connection\GridSorting.f90"/>
 		<File RelativePath="..\src\Model\Connection\GwfGwfConnection.f90"/>
 		<File RelativePath="..\src\Model\Connection\GwfInterfaceModel.f90"/>
 		<File RelativePath="..\src\Model\Connection\GwtGwtConnection.f90"/>
 		<File RelativePath="..\src\Model\Connection\GwtInterfaceModel.f90"/>
+		<File RelativePath="..\src\Model\Connection\InterfaceMap.f90"/>
+		<File RelativePath="..\src\Model\Connection\MappedVariable.f90"/>
 		<File RelativePath="..\src\Model\Connection\qsort_inline.inc"/>
 		<File RelativePath="..\src\Model\Connection\SpatialModelConnection.f90"/></Filter>
 		<Filter Name="Geometry">
@@ -146,8 +149,8 @@
 		<Filter Name="LinearMethods">
 		<File RelativePath="..\src\Solution\LinearMethods\ims8base.f90"/>
 		<File RelativePath="..\src\Solution\LinearMethods\ims8linear.f90"/>
-		<File RelativePath="..\src\Solution\LinearMethods\ims8reordering.f90"/>
-		<File RelativePath="..\src\Solution\LinearMethods\ims8misc.f90"/></Filter>
+		<File RelativePath="..\src\Solution\LinearMethods\ims8misc.f90"/>
+		<File RelativePath="..\src\Solution\LinearMethods\ims8reordering.f90"/></Filter>
 		<File RelativePath="..\src\Solution\BaseSolution.f90"/>
 		<File RelativePath="..\src\Solution\NumericalSolution.f90"/>
 		<File RelativePath="..\src\Solution\SolutionGroup.f90"/></Filter>
@@ -228,6 +231,7 @@
 		<File RelativePath="..\src\Utilities\Table.f90"/>
 		<File RelativePath="..\src\Utilities\TableTerm.f90"/>
 		<File RelativePath="..\src\Utilities\Timer.f90"/>
+		<File RelativePath="..\src\Utilities\VectorInt.f90"/>
 		<File RelativePath="..\src\Utilities\version.f90"/></Filter>
 		<File RelativePath="..\src\mf6core.f90"/>
 		<File RelativePath="..\src\mf6lists.f90"/>
