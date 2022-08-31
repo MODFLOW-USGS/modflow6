@@ -848,7 +848,7 @@ contains
     ! -- Store obs type and assign procedure pointer
     !    for observation type: uzt
     call this%obs%StoreObsType('uzt', .true., indx)
-    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID12
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
     !    for observation type.

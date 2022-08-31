@@ -313,36 +313,41 @@ def build_model(idx, dir):
         (0, "UZET", 100.0),
     ]
 
+    ncv = nlay
     uzt_obs = {}
     for obstype in [
         "CONCENTRATION",
         "STORAGE",
         "CONSTANT",
         "FROM-MVR",
+        "UZT",
         "INFILTRATION",
         "REJ-INF",
         "UZET",
         "REJ-INF-TO-MVR",
     ]:
         fname = f"{gwtname}.uzt.obs.{obstype.lower()}.csv"
-        ncv = nlay
         obs1 = [(f"uzt{i + 1}", obstype, i + 1) for i in range(ncv)]
         obs2 = [(f"buzt{i + 1}", obstype, f"myuzt{i + 1}") for i in range(ncv)]
         uzt_obs[fname] = obs1 + obs2
 
-    # need FLOW-JA-FACE
-
-    obstype = "UZT"
+    obstype = "FLOW-JA-FACE"
     fname = f"{gwtname}.uzt.obs.{obstype.lower()}.csv"
-    ncv = nlay
-    nconn = 1
     obs1 = []
-    for icv in range(ncv):
-        for iconn in range(nconn):
+    for id1 in range(ncv):
+        id2list = []
+        if id1 > 0:
+            id2list.append(id1 - 1)
+        if id1 < ncv - 1:
+            id2list.append(id1 + 1)
+        for id2 in id2list:
             obs1.append(
-                (f"uzt{icv + 1}x{iconn + 1}", obstype, icv + 1, iconn + 1)
+                (f"uzt{id1 + 1}x{id2 + 1}", obstype, id1 + 1, id2 + 1)
             )
-    obs2 = [(f"buzt{i + 1}", obstype, f"myuzt{i + 1}") for i in range(ncv)]
+    obs2 = [
+        (f"buzt{i + 1}", obstype, f"myuzt{i + 1}")
+        for i in range(ncv)
+    ]
     uzt_obs[fname] = obs1 + obs2
 
     # append additional obs attributes to obs dictionary
@@ -452,7 +457,7 @@ def check_obs(sim):
     # boundname or by control volume
     csvfiles = gwt.uzt.obs.output.obs_names
     for csvfile in csvfiles:
-        if ".uzt.csv" in csvfile:
+        if ".flow-ja-face.csv" in csvfile:
             continue
         print(f"Checking csv file: {csvfile}")
         conc_ra = gwt.uzt.obs.output.obs(f=csvfile).data
@@ -483,7 +488,7 @@ def check_obs(sim):
                     print(t, x, y)
 
     # Sum individual iconn uzt rates and compare with total rate
-    csvfile = f"{gwtname}.uzt.obs.uzt.csv"
+    csvfile = f"{gwtname}.uzt.obs.flow-ja-face.csv"
     print(f"Checking csv file: {csvfile}")
     conc_ra = gwt.uzt.obs.output.obs(f=csvfile).data
     ntimes = conc_ra.shape[0]
