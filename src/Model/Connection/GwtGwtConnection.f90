@@ -179,7 +179,7 @@ contains
     this%gwtInterfaceModel%ixt3d = this%iIfaceXt3d
     call this%gwtInterfaceModel%model_df()
 
-    allocate(this%distVars(6))   
+    allocate(this%distVars(7))   
     this%distVars(1) = DistVarType('X', '', this%gwtInterfaceModel%name, &
                                    SYNC_NODES, '', &
                                    (/ BEFORE_AD, BEFORE_CF /))
@@ -197,7 +197,13 @@ contains
                                    (/ BEFORE_AD, BEFORE_CF /))
     this%distVars(6) = DistVarType('GWFFLOWJA', 'FMI', this%gwtInterfaceModel%name, &
                                    SYNC_EXCHANGES, 'GWFSIMVALS', &
-                                   (/ BEFORE_AD, BEFORE_CF /))
+                                   (/ BEFORE_AD, BEFORE_CF /)) 
+    ! fill porosity from mst packages, needed for dsp
+    if (this%gwtModel%indsp > 0 .and. this%gwtModel%inmst > 0) then
+      this%distVars(7) = DistVarType('POROSITY', 'MST', this%gwtInterfaceModel%name, &
+                                     SYNC_NODES, '', &
+                                     (/ BEFORE_AD /))
+    end if
 
     call this%allocate_arrays()
 
@@ -297,26 +303,12 @@ contains
 !> @brief allocate and read/set the connection's data structures
 !<
   subroutine gwtgwtcon_ar(this)
-    class(GwtGwtConnectionType) :: this !< the connection
-    ! local
-    integer(I4B) :: i, idx
-    class(GwtModelType), pointer :: gwtModel
-    class(*), pointer :: modelPtr
+    class(GwtGwtConnectionType) :: this !< the connection    
 
     ! check if we can construct an interface model
     ! NB: only makes sense after the models' allocate&read have been
     ! called, which is why we do it here
     call this%validateConnection()
-
-    ! fill porosity from mst packages, needed for dsp
-    if (this%gwtModel%inmst > 0) then
-      do i = 1, this%neq
-        modelPtr => this%gridConnection%idxToGlobal(i)%model
-        gwtModel => CastAsGwtModel(modelPtr)
-        idx = this%gridConnection%idxToGlobal(i)%index
-        this%gwtInterfaceModel%porosity(i) = gwtModel%mst%porosity(idx)
-      end do
-    end if
 
     ! allocate and read base
     call this%spatialcon_ar()

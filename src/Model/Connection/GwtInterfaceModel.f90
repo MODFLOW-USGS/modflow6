@@ -11,6 +11,7 @@ module GwtInterfaceModelModule
   use GwtDspModule, only: dsp_cr, GwtDspType
   use GwtDspOptionsModule, only: GwtDspOptionsType
   use GwtDspGridDataModule, only: GwtDspGridDataType
+  use GwtMstModule, only: mst_cr
   use GwtObsModule, only: gwt_obs_cr
   use GridConnectionModule
 
@@ -29,8 +30,6 @@ module GwtInterfaceModelModule
     class(GridConnectionType), pointer :: gridConnection => null() !< The grid connection class will provide the interface grid
     class(GwtModelType), private, pointer :: owner => null() !< the real GWT model for which the exchange coefficients
                                                              !! are calculated with this interface model
-
-    real(DP), dimension(:), pointer, contiguous :: porosity => null() !< to be filled with MST porosity
 
   contains
     procedure, pass(this) :: gwtifmod_cr
@@ -123,6 +122,12 @@ contains
     end if
     if (this%indsp > 0) then
       call this%dsp%dsp_df(this%dis, dsp_options)
+      allocate(this%mst)
+      call mem_allocate(this%mst%porosity, this%dis%nodes, &
+                        'POROSITY', create_mem_path(this%name, 'MST'))
+      do i = 1, this%dis%nodes
+        this%mst%porosity(i) = 0.0_DP
+      end do
     end if
 
     ! assign or point model members to dis members
@@ -133,13 +138,9 @@ contains
     !
     ! allocate model arrays, now that neq and nja are assigned
     call this%allocate_arrays()
-    call mem_allocate(this%porosity, this%neq, 'POROSITY', this%memoryPath)
 
     do i = 1, size(this%flowja)
       this%flowja = 0.0_DP
-    end do
-    do i = 1, this%neq
-      this%porosity = 0.0_DP
     end do
 
   end subroutine gwtifmod_df
@@ -161,7 +162,7 @@ contains
       this%dsp%idisp = this%owner%dsp%idisp
       call dspGridData%construct(this%neq)
       call this%setDspGridData(dspGridData)
-      call this%dsp%dsp_ar(this%ibound, this%porosity, dspGridData)
+      call this%dsp%dsp_ar(this%ibound, this%mst%porosity, dspGridData)
     end if
 
   end subroutine gwtifmod_ar
@@ -204,7 +205,6 @@ contains
     ! this
     call mem_deallocate(this%iAdvScheme)
     call mem_deallocate(this%ixt3d)
-    call mem_deallocate(this%porosity)
 
     ! gwt packages
     call this%dis%dis_da()
@@ -216,6 +216,11 @@ contains
     deallocate (this%fmi)
     deallocate (this%adv)
     deallocate (this%dsp)
+
+    if (associated(this%mst)) then
+      call mem_deallocate(this%mst%porosity)
+      deallocate (this%mst)
+    end if
 
     ! gwt scalars
     call mem_deallocate(this%inic)
