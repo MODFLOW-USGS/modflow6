@@ -14,7 +14,7 @@ LKT & evaporation & lakeno or boundname & -- & Simulated evaporation rate from a
 LKT & runoff & lakeno or boundname & -- & Runoff rate applied to a lake or group of lakes multiplied by the runoff concentration. \\
 LKT & ext-inflow & lakeno or boundname & -- & Mass inflow into a lake or group of lakes calculated as the external inflow rate multiplied by the inflow concentration. \\
 LKT & withdrawal & lakeno or boundname & -- & Specified withdrawal rate from a lake or group of lakes multiplied by the simulated lake concentration. \\
-LKT & ext-outflow & outletno or boundname & -- & External outflow from a lake outlet, a lake, or a group of lakes to an external boundary. If boundname is not specified for ID, then the external outflow from a specific lake outlet is observed. In this case, ID is the outlet number outletno.
+LKT & ext-outflow & lakeno or boundname & -- & External outflow from a lake or a group of lakes, through their outlets, to an external boundary.  If the water mover is active, the reported ext-outflow value plus the rate to mover is equal to the total outlet outflow.
 
 %LKT & outlet-inflow & lakeno or boundname & -- & Simulated inflow from upstream lake outlets into a lake or group of lakes. \\
 %LKT & inflow & lakeno or boundname & -- & Sum of specified inflow and simulated inflow from upstream lake outlets into a lake or group of lakes. \\

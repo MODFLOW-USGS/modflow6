@@ -307,19 +307,51 @@ def build_model(idx, dir):
         gwt, sources=sourcerecarray, filename=f"{gwtname}.ssm"
     )
 
-    uztpackagedata = [(iuz, 0.0, f"uzt{iuz + 1}") for iuz in range(nlay)]
+    uztpackagedata = [(iuz, 0.0, f"myuzt{iuz + 1}") for iuz in range(nlay)]
     uztperioddata = [
         (0, "INFILTRATION", 100.0),
         (0, "UZET", 100.0),
     ]
 
-    uzt_obs = {
-        (gwtname + ".uzt.obs.csv",): [
-            (f"uztconc{k + 1}", "CONCENTRATION", k + 1) for k in range(nlay)
-        ],
-    }
+    ncv = nlay
+    uzt_obs = {}
+    for obstype in [
+        "CONCENTRATION",
+        "STORAGE",
+        "CONSTANT",
+        "FROM-MVR",
+        "UZT",
+        "INFILTRATION",
+        "REJ-INF",
+        "UZET",
+        "REJ-INF-TO-MVR",
+    ]:
+        fname = f"{gwtname}.uzt.obs.{obstype.lower()}.csv"
+        obs1 = [(f"uzt{i + 1}", obstype, i + 1) for i in range(ncv)]
+        obs2 = [(f"buzt{i + 1}", obstype, f"myuzt{i + 1}") for i in range(ncv)]
+        uzt_obs[fname] = obs1 + obs2
+
+    obstype = "FLOW-JA-FACE"
+    fname = f"{gwtname}.uzt.obs.{obstype.lower()}.csv"
+    obs1 = []
+    for id1 in range(ncv):
+        id2list = []
+        if id1 > 0:
+            id2list.append(id1 - 1)
+        if id1 < ncv - 1:
+            id2list.append(id1 + 1)
+        for id2 in id2list:
+            obs1.append(
+                (f"uzt{id1 + 1}x{id2 + 1}", obstype, id1 + 1, id2 + 1)
+            )
+    obs2 = [
+        (f"buzt{i + 1}", obstype, f"myuzt{i + 1}")
+        for i in range(ncv)
+    ]
+    uzt_obs[fname] = obs1 + obs2
+
     # append additional obs attributes to obs dictionary
-    uzt_obs["digits"] = 7
+    uzt_obs["digits"] = 15
     uzt_obs["print_input"] = True
     uzt_obs["filename"] = gwtname + ".uzt.obs"
 
@@ -404,6 +436,79 @@ def make_plot(sim, obsvals):
     return
 
 
+def check_obs(sim):
+    print("checking obs...")
+    name = ex[sim.idxsim]
+    ws = exdirs[sim.idxsim]
+    sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
+    gwfname = "gwf_" + name
+    gwtname = "gwt_" + name
+    gwf = sim.get_model(gwfname)
+    gwt = sim.get_model(gwtname)
+
+    ncv = nlay
+
+    # extract uzt concentrations from binary output file
+    conc_uzt = gwt.uzt.output.concentration().get_alldata()
+    ntimes = conc_uzt.shape[0]
+    conc_uzt = conc_uzt.reshape((ntimes, ncv))
+
+    # ensure uzt obs are the same whether specified by
+    # boundname or by control volume
+    csvfiles = gwt.uzt.obs.output.obs_names
+    for csvfile in csvfiles:
+        if ".flow-ja-face.csv" in csvfile:
+            continue
+        print(f"Checking csv file: {csvfile}")
+        conc_ra = gwt.uzt.obs.output.obs(f=csvfile).data
+        success = True
+        # check boundname observations with numeric ID observations
+        for icv in range(ncv):
+            # print(f"  Checking control volume {icv + 1}")
+
+            if ".concentration.csv" in csvfile:
+                is_same = np.allclose(conc_ra[f"BUZT{icv + 1}"], conc_uzt[:, icv])
+                if not is_same:
+                    success = False
+                    print(
+                        "Binary concentrations do not match with observation concentrations for uzt1"
+                    )
+                    print(conc_ra[f"BUZT1"], conc_uzt)
+
+            is_same = np.allclose(
+                conc_ra[f"UZT{icv + 1}"], conc_ra[f"BUZT{icv + 1}"]
+            )
+            if not is_same:
+                success = False
+                for t, x, y in zip(
+                    conc_ra["totim"],
+                    conc_ra[f"UZT{icv + 1}"],
+                    conc_ra[f"BUZT{icv + 1}"],
+                ):
+                    print(t, x, y)
+
+    # Sum individual iconn uzt rates and compare with total rate
+    csvfile = f"{gwtname}.uzt.obs.flow-ja-face.csv"
+    print(f"Checking csv file: {csvfile}")
+    conc_ra = gwt.uzt.obs.output.obs(f=csvfile).data
+    ntimes = conc_ra.shape[0]
+    for iuzt in range(ncv):
+        connection_sum = np.zeros(ntimes)
+        for column_name in conc_ra.dtype.names:
+            if f"UZT{icv + 1}X" in column_name:
+                connection_sum += conc_ra[column_name]
+        is_same = np.allclose(connection_sum, conc_ra[f"BUZT{icv + 1}"])
+        if not is_same:
+            success = False
+            diff = connection_sum - conc_ra[f"BMWTUZT{icv + 1}"]
+            print(
+                f"Problem with UZT {icv + 1}; mindiff {diff.min()} and maxdiff {diff.max()}"
+            )
+
+    assert success, "One or more UZT obs checks did not pass"
+    return
+
+
 def eval_flow(sim):
     print("evaluating flow...")
 
@@ -471,8 +576,11 @@ def eval_flow(sim):
     msg = f"Ending uzf concentrations {c} do not match known concentrations {canswer}"
     assert np.allclose(c, canswer)
 
+    # check observations
+    check_obs(sim)
+
     # Make plot of obs
-    fpth = os.path.join(sim.simpath, gwtname + ".uzt.obs.csv")
+    fpth = os.path.join(sim.simpath, gwtname + ".uzt.obs.concentration.csv")
     try:
         obsvals = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
