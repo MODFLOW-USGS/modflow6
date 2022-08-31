@@ -2884,10 +2884,9 @@ contains
         case ('FROM-MVR')
           call this%rp_obs_byfeature(obsrv)
         case default
-          !call this%rp_obs_index_byfeature(obsrv)
-          found = .false.
           !
           ! -- check the child package for any specific obs
+          found = .false.
           call this%pak_rp_obs(obsrv, found)
           !
           ! -- if none found then terminate with an error
