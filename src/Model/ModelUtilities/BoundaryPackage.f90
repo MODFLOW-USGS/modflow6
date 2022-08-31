@@ -30,6 +30,7 @@ module BndModule
   use BaseDisModule, only: DisBaseType
   use BlockParserModule, only: BlockParserType
   use TableModule, only: TableType, table_cr
+  use CharacterStringModule, only: CharacterStringType
 
   implicit none
 
@@ -49,8 +50,12 @@ module BndModule
     character(len=LENPACKAGENAME) :: text = '' !< text string for package flow term
     character(len=LENAUXNAME), dimension(:), pointer, &
       contiguous :: auxname => null() !< vector of auxname
+    type(CharacterStringType), dimension(:), pointer, &
+      contiguous :: auxname_cst => null() !< copy of vector auxname that can be stored in memory manager
     character(len=LENBOUNDNAME), dimension(:), pointer, &
       contiguous :: boundname => null() !< vector of boundnames
+    type(CharacterStringType), dimension(:), pointer, &
+      contiguous :: boundname_cst => null() !< copy of vector boundname that can be stored in memory manager
     !
     ! -- scalars
     integer(I4B), pointer :: isadvpak => null() !< flag indicating package is advanced (1) or not (0)
@@ -134,6 +139,7 @@ module BndModule
     procedure :: bnd_cq_simtomvr
     procedure :: set_pointers
     procedure :: define_listlabel
+    procedure :: copy_boundname
     procedure, private :: pak_setup_outputtab
     !
     ! -- procedures to support observations
@@ -363,6 +369,9 @@ contains
       !
       ! -- Terminate the block
       call this%parser%terminateblock()
+      !
+      ! -- Copy boundname into boundname_cst
+      call this%copy_boundname()
       !
     else
       write (this%iout, fmtlsp) trim(this%filtyp)
@@ -898,7 +907,9 @@ contains
     call mem_deallocate(this%simtomvr, 'SIMTOMVR', this%memoryPath)
     call mem_deallocate(this%auxvar, 'AUXVAR', this%memoryPath)
     call mem_deallocate(this%boundname, 'BOUNDNAME', this%memoryPath)
+    call mem_deallocate(this%boundname_cst, 'BOUNDNAME_CST', this%memoryPath)
     call mem_deallocate(this%auxname, 'AUXNAME', this%memoryPath)
+    call mem_deallocate(this%auxname_cst, 'AUXNAME_CST', this%memoryPath)
     nullify (this%icelltype)
     !
     ! -- pakmvrobj
@@ -1014,6 +1025,8 @@ contains
     !
     ! -- allocate text strings
     call mem_allocate(this%auxname, LENAUXNAME, 0, 'AUXNAME', this%memoryPath)
+    call mem_allocate(this%auxname_cst, LENAUXNAME, 0, 'AUXNAME_CST', &
+                      this%memoryPath)
     !
     ! -- Initialize variables
     this%isadvpak = 0
@@ -1111,9 +1124,13 @@ contains
     if (this%inamedbound /= 0) then
       call mem_allocate(this%boundname, LENBOUNDNAME, this%maxbound, &
                         'BOUNDNAME', this%memoryPath)
+      call mem_allocate(this%boundname_cst, LENBOUNDNAME, this%maxbound, &
+                        'BOUNDNAME_CST', this%memoryPath)
     else
       call mem_allocate(this%boundname, LENBOUNDNAME, 0, &
                         'BOUNDNAME', this%memoryPath)
+      call mem_allocate(this%boundname_cst, LENBOUNDNAME, 0, &
+                        'BOUNDNAME_CST', this%memoryPath)
     end if
     !
     ! -- Set pointer to ICELLTYPE. For GWF boundary packages,
@@ -1243,8 +1260,11 @@ contains
                       istart, istop, caux, line, this%text)
           call mem_reallocate(this%auxname, LENAUXNAME, this%naux, &
                               'AUXNAME', this%memoryPath)
+          call mem_reallocate(this%auxname_cst, LENAUXNAME, this%naux, &
+                              'AUXNAME_CST', this%memoryPath)
           do n = 1, this%naux
             this%auxname(n) = caux(n)
+            this%auxname_cst(n) = caux(n)
           end do
           deallocate (caux)
         case ('SAVE_FLOWS')
@@ -1485,6 +1505,29 @@ contains
     ! -- return
     return
   end subroutine bnd_options
+
+  !> @ brief Copy boundnames into boundnames_cst
+    !!
+    !!  boundnames_cst is an array of type(CharacterStringType),
+    !!  which can be stored in the MemoryManager.
+    !!
+  !<
+  subroutine copy_boundname(this)
+    ! -- dummy variables
+    class(BndType), intent(inout) :: this !< BndType object
+    integer(I4B) :: i
+    !
+    ! copy from boundname to boundname_cst, which can be
+    ! stored in the memory manager
+    if (this%inamedbound /= 0) then
+      do i = 1, size(this%boundname)
+        this%boundname_cst(i) = this%boundname(i)
+      end do
+    end if
+    !
+    ! -- return
+    return
+  end subroutine copy_boundname
 
   !> @ brief Setup output table for package
     !!

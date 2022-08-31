@@ -20,4 +20,4 @@ formats: all
 python:
   version: 3.8
   install:
-    - requirements: .doc/requirements.rtd.txt
+    - requirements: .build_rtd_docs/requirements.rtd.txt

@@ -769,6 +769,9 @@ contains
       end do
     end if
     !
+    ! -- copy boundname into boundname_cst
+    call this%copy_boundname()
+    !
     ! -- copy igwfnode into nodelist
     do n = 1, this%maxbound
       this%nodelist(n) = this%igwfnode(n)
@@ -2272,7 +2275,6 @@ contains
   !<
   subroutine sfr_cq(this, x, flowja, iadv)
     ! -- modules
-    use InputOutputModule, only: ulasav, ubdsv06
     use BudgetModule, only: BudgetType
     ! -- dummy variables
     class(SfrType), intent(inout) :: this !< SfrType object

@@ -303,7 +303,7 @@ def build_model(idx, dir):
         exgtype="GWT6-GWT6",
         gwfmodelname1=gwf1.name,
         gwfmodelname2=gwf2.name,
-        advscheme=scheme[idx],
+        adv_scheme=scheme[idx],
         nexg=len(gwfgwf_data),
         exgmnamea=gwt1.name,
         exgmnameb=gwt2.name,

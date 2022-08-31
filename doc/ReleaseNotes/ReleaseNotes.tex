@@ -211,6 +211,8 @@ This section describes changes introduced into MODFLOW~6 for the current release
 		\item Corrected a programming error in which the final message would be written twice to the screen and twice to mfsim.lst when the simulation terminated prematurely. 
 		\item Terminate with error if METHOD or METHODS not specified in time series input files.  Prior to this change, the program would continue without an interpolated value for one or more time series records.
 		\item When a GWF Model and a corresponding GWT model are solved in the same simulation, the GWF Model must be solved before the corresponding GWT model.  The GWF Model must also be solved by a different IMS than the GWT Model.  There was not a check for this in previous versions and if these conditions were not met, the solution would often not converge or it would give erroneous results.
+		\item The DISV Package would not raise an error if a model cell was defined as a line.  The program was modified to check for the case where the calculated cell area is equal to zero.  If the calculated cell area is equal to zero, the program terminates with an error.
+		\item When the LAK Package was used with a combination of outlets that routed water to another lake and outlets that did not, then the budget information stored for the LAK Package had uninitialized records for LAK to LAK flows.  These uninitialized records were used by the LKT Package and possibly other programs.  The LAK to LAK budget information was modified to include only valid records.   
 	\end{itemize}
 
 	\underline{INTERNAL FLOW PACKAGES}
@@ -241,12 +243,12 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	%	\item xxx
 	%\end{itemize}
 
-	%\underline{EXCHANGES}
-	%\begin{itemize}
-	%	\item Fixed a bug that occurred when flow and transport models were run simultaneously and auxiliary variable(s), for example CONCENTRATION, and mover were both active in the OPTIONS block of a boundary package (e.g., WEL). When running the flow and transport problems separately, no issues occurred.  The issue only seemed to be a problem when running flow and transport simultaneously because an indexing variable would get out of sync in SSM that reported an error message to the screen and prematurely exited MF6.  Two new autotests added: the first runs GWF & GWT independently while the second runs them simultaneously and would trigger the condition that this bug report aims to fix.
+	\underline{EXCHANGES}
+	\begin{itemize}
+		\item The GWT-GWT Exchange did not work when the XT3D\_OFF option was specified.  Fixed the program so that the XT3D dispersion terms can be shut off for a GWT-GWT Exchange.  GWT-GWT Exchange keywords were renamed from ADVSCHEME, XT3D\_OFF, and XT3D\_RHS to ADV\_SCHEME, DSP\_XT3D\_OFF, and DSP\_XT3D\_OFF, respectively, to more clearly indicate how the keywords relate to the underlying processes.  
 	%	\item xxx
 	%	\item xxx
-	%\end{itemize}
+	\end{itemize}
 
 	
 \end{itemize}

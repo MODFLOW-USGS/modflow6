@@ -5,6 +5,7 @@ module MemoryTypeModule
                              LENVARNAME, MAXMEMRANK, LENMEMTYPE, &
                              TABSTRING, TABINTEGER, &
                              TABCENTER, TABLEFT, TABRIGHT
+  use CharacterStringModule, only: CharacterStringType
   use TableModule, only: TableType
   use MemoryHelperModule, only: create_mem_address
 
@@ -20,7 +21,8 @@ module MemoryTypeModule
     character(len=LENMEMTYPE) :: memtype !< type (INTEGER or DOUBLE)
     integer(I4B) :: id !< id, not used
     integer(I4B) :: nrealloc = 0 !< number of times reallocated
-    integer(I4B) :: isize !< size of the array
+    integer(I4B) :: isize = -1 !< size of the array, equal to the number of array elements; 1 for scalars
+    integer(I4B) :: element_size = 0 !< byte size of an element; string length
     integer(I4B) :: set_handler_idx = 0 !< index of side effect handler for external access
     logical(LGP) :: master = .true. !< master copy, others point to this one
     character(len=:), pointer :: strsclr => null() !< pointer to the character string
@@ -34,6 +36,8 @@ module MemoryTypeModule
     real(DP), dimension(:), pointer, contiguous :: adbl1d => null() !< pointer to 1d double array
     real(DP), dimension(:, :), pointer, contiguous :: adbl2d => null() !< pointer to 2d double array
     real(DP), dimension(:, :, :), pointer, contiguous :: adbl3d => null() !< pointer to 3d double array
+    type(CharacterStringType), dimension(:), pointer, contiguous :: &
+      acharstr1d => null() !< pointer to the 1d character string array
   contains
     procedure :: table_entry
     procedure :: mt_associated
@@ -92,6 +96,7 @@ contains
     if (associated(this%adbl1d)) al = .true.
     if (associated(this%adbl2d)) al = .true.
     if (associated(this%adbl3d)) al = .true.
+    if (associated(this%acharstr1d)) al = .true.
   end function mt_associated
 
 end module MemoryTypeModule

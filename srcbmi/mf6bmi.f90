@@ -24,6 +24,7 @@ module mf6bmi
                            c_f_pointer
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LENMEMPATH, LENVARNAME
+  use CharacterStringModule
   use MemoryManagerModule, only: mem_setptr, get_mem_elem_size, get_isize, &
                                  get_mem_rank, get_mem_shape, get_mem_type, &
                                  memorylist, get_from_memorylist
@@ -439,7 +440,7 @@ contains
 
   !> @brief Copy the integer values of a variable into the array
   !!
-  !! The copied variable us located at @p c_var_address. The caller should
+  !! The copied variable is located at @p c_var_address. The caller should
   !! provide @p c_arr_ptr pointing to an array of the proper shape (the
   !! BMI function get_var_shape() can be used to create it). Multi-dimensional
   !! arrays are supported.
@@ -513,6 +514,84 @@ contains
     end if
 
   end function get_value_int
+
+  !> @brief Copy the string(s) of a variable into the array
+  !!
+  !! The copied variable is located at @p c_var_address. The caller should
+  !! provide @p c_arr_ptr pointing to an array of the proper shape (the
+  !! BMI function get_var_shape() can be used to create it). For strings
+  !! currently scalars and 1d arrays (of CharacterStringType) are
+  !< supported
+  function get_value_string(c_var_address, c_arr_ptr) result(bmi_status) &
+    bind(C, name="get_value_string")
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_value_string
+    ! -- modules
+    ! -- dummy variables
+    character(kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
+    type(c_ptr), intent(in) :: c_arr_ptr !< pointer to the string array
+    integer(kind=c_int) :: bmi_status !< BMI status code
+    ! -- local variables
+    character(len=LENMEMPATH) :: mem_path
+    character(len=LENVARNAME) :: var_name
+    logical(LGP) :: valid
+    integer(I4B) :: rank
+    character(len=:), pointer :: srcstr
+    character(kind=c_char), pointer :: tgtstr(:)
+    type(CharacterStringType), dimension(:), pointer, contiguous :: srccharstr1d
+    character(kind=c_char), pointer :: tgtstr1d(:, :)
+    character(:), allocatable :: tempstr
+    integer(I4B) :: i, ilen, isize
+
+    bmi_status = BMI_SUCCESS
+
+    call split_address(c_var_address, mem_path, var_name, valid)
+    if (.not. valid) then
+      bmi_status = BMI_FAILURE
+      return
+    end if
+
+    ! single string, or array of strings (CharacterStringType)
+    rank = -1
+    call get_mem_rank(var_name, mem_path, rank)
+
+    if (rank == 0) then
+      ! a string scalar
+      call mem_setptr(srcstr, var_name, mem_path)
+      call get_mem_elem_size(var_name, mem_path, ilen)
+      call c_f_pointer(c_arr_ptr, tgtstr, shape=[ilen + 1])
+      tgtstr(1:len(srcstr) + 1) = string_to_char_array(srcstr, len(srcstr))
+
+    else if (rank == 1) then
+      ! an array of strings
+      call mem_setptr(srccharstr1d, var_name, mem_path)
+      if (.not. associated(srccharstr1d)) then
+        write (bmi_last_error, fmt_general_err) 'string type not supported in API'
+        call report_bmi_error(bmi_last_error)
+        bmi_status = BMI_FAILURE
+        return
+      end if
+
+      ! create fortran pointer to C data array
+      call get_isize(var_name, mem_path, isize)
+      call get_mem_elem_size(var_name, mem_path, ilen)
+      call c_f_pointer(c_arr_ptr, tgtstr1d, shape=[ilen + 1, isize])
+
+      ! allocate work array to handle CharacterStringType,
+      ! and copy the strings
+      allocate (character(ilen) :: tempstr)
+      do i = 1, isize
+        tempstr = srccharstr1d(i)
+        tgtstr1d(1:ilen + 1, i) = string_to_char_array(tempstr, ilen)
+      end do
+      deallocate (tempstr)
+    else
+      write (bmi_last_error, fmt_unsupported_rank) trim(var_name)
+      call report_bmi_error(bmi_last_error)
+      bmi_status = BMI_FAILURE
+      return
+    end if
+
+  end function get_value_string
 
   !> @brief Get a pointer to the array of double precision numbers
   !!
@@ -774,10 +853,9 @@ contains
 
   !> @brief Get the variable type as a string
   !!
-  !! The type returned is that of a single element. Currently we
-  !! support 'INTEGER' and 'DOUBLE'.  When the variable cannot
-  !! be found, the string 'UNKNOWN' is assigned.
-  !<
+  !! The type returned is that of a single element.
+  !! When the variable cannot be found, the string
+  !< 'UNKNOWN' is assigned.
   function get_var_type(c_var_address, c_var_type) result(bmi_status) &
     bind(C, name="get_var_type")
     !DIR$ ATTRIBUTES DLLEXPORT :: get_var_type
