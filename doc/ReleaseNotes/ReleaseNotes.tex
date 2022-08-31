@@ -218,7 +218,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	\underline{INTERNAL FLOW PACKAGES}
 	\begin{itemize}
 		\item Corrected programming error in the Time-Variable Hydraulic Conductivity (TVK) Package in which the vertical hydraulic conductivity was not reset properly if the K33OVERK option was invoked in the Node Property Flow (NPF) Package.
-	%	\item xxx
+		\item The Node Property Flow (NPF) Package had an error in how the saturated thickness at the interface between two cells was calculated for a DISU connection that is marked as vertically staggered (IHC = 2).  The calculation was corrected so that the thickness for two confined cells is based on the overlap of the cells rather than the average thickness of the two cells.
 	%	\item xxx
 	\end{itemize}
 
