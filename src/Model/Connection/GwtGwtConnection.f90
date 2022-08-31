@@ -179,30 +179,22 @@ contains
     this%gwtInterfaceModel%ixt3d = this%iIfaceXt3d
     call this%gwtInterfaceModel%model_df()
 
-    allocate(this%distVars(7))   
-    this%distVars(1) = DistVarType('X', '', this%gwtInterfaceModel%name, &
-                                   SYNC_NODES, '', &
-                                   (/ BEFORE_AD, BEFORE_CF /))
-    this%distVars(2) = DistVarType('GWFHEAD', 'FMI', this%gwtInterfaceModel%name, &
-                                   SYNC_NODES, '', &
-                                   (/ BEFORE_AD, BEFORE_CF /))
-    this%distVars(3) = DistVarType('GWFSAT', 'FMI', this%gwtInterfaceModel%name, &
-                                   SYNC_NODES, '', &
-                                   (/ BEFORE_AD, BEFORE_CF /))
-    this%distVars(4) = DistVarType('GWFSPDIS', 'FMI', this%gwtInterfaceModel%name, &
-                                   SYNC_NODES, '', &
-                                   (/ BEFORE_AD, BEFORE_CF /))
-    this%distVars(5) = DistVarType('GWFFLOWJA', 'FMI', this%gwtInterfaceModel%name, &
-                                   SYNC_CONNECTIONS, '', &
-                                   (/ BEFORE_AD, BEFORE_CF /))
-    this%distVars(6) = DistVarType('GWFFLOWJA', 'FMI', this%gwtInterfaceModel%name, &
-                                   SYNC_EXCHANGES, 'GWFSIMVALS', &
-                                   (/ BEFORE_AD, BEFORE_CF /)) 
+    call this%addDistVar('X', '', this%gwtInterfaceModel%name, SYNC_NODES, &
+                         '', (/ BEFORE_AD, BEFORE_CF /))
+    call this%addDistVar('GWFHEAD', 'FMI', this%gwtInterfaceModel%name, SYNC_NODES, &
+                         '', (/ BEFORE_AD, BEFORE_CF /))
+    call this%addDistVar('GWFSAT', 'FMI', this%gwtInterfaceModel%name, SYNC_NODES, &
+                         '', (/ BEFORE_AD, BEFORE_CF /))
+    call this%addDistVar('GWFSPDIS', 'FMI', this%gwtInterfaceModel%name, SYNC_NODES, &
+                         '', (/ BEFORE_AD, BEFORE_CF /))
+    call this%addDistVar('GWFFLOWJA', 'FMI', this%gwtInterfaceModel%name, SYNC_CONNECTIONS, &
+                         '', (/ BEFORE_AD, BEFORE_CF /))
+    call this%addDistVar('GWFFLOWJA', 'FMI', this%gwtInterfaceModel%name, SYNC_EXCHANGES, &
+                         'GWFSIMVALS', (/ BEFORE_AD, BEFORE_CF /)) 
     ! fill porosity from mst packages, needed for dsp
     if (this%gwtModel%indsp > 0 .and. this%gwtModel%inmst > 0) then
-      this%distVars(7) = DistVarType('POROSITY', 'MST', this%gwtInterfaceModel%name, &
-                                     SYNC_NODES, '', &
-                                     (/ BEFORE_AD /))
+      call this%addDistVar('POROSITY', 'MST', this%gwtInterfaceModel%name, SYNC_NODES, &
+                           '', (/ BEFORE_AD /))
     end if
 
     call this%allocate_arrays()
@@ -563,7 +555,6 @@ contains
     ! interface model
     call this%gwtInterfaceModel%model_da()
     deallocate(this%gwtInterfaceModel)
-    deallocate(this%distVars)
 
     ! dealloc base
     call this%spatialcon_da()

@@ -156,13 +156,12 @@ contains
     this%gwfInterfaceModel%npf%ixt3d = this%iXt3dOnExchange
     call this%gwfInterfaceModel%model_df()
 
-    allocate(this%distVars(3))
-    this%distVars(1) = DistVarType('X', '', this%gwfInterfaceModel%name, &
-                                   SYNC_NODES, '', (/ BEFORE_AD, BEFORE_CF /))
-    this%distVars(2) = DistVarType('IBOUND', '', this%gwfInterfaceModel%name, &
-                                   SYNC_NODES, '', (/ BEFORE_AD, BEFORE_CF /))
-    this%distVars(3) = DistVarType('XOLD', '', this%gwfInterfaceModel%name, &
-                                   SYNC_NODES, '', (/  BEFORE_AD, BEFORE_CF /))
+    call this%addDistVar('X', '', this%gwfInterfaceModel%name, &
+                         SYNC_NODES, '', (/ BEFORE_AD, BEFORE_CF /))
+    call this%addDistVar('IBOUND', '', this%gwfInterfaceModel%name, &
+                         SYNC_NODES, '', (/ BEFORE_AD, BEFORE_CF /))
+    call this%addDistVar('XOLD', '', this%gwfInterfaceModel%name, &
+                         SYNC_NODES, '', (/  BEFORE_AD, BEFORE_CF /))
 
     ! point X, RHS, IBOUND to connection
     call this%spatialcon_setmodelptrs()
@@ -459,7 +458,6 @@ contains
 
     call this%gwfInterfaceModel%model_da()
     deallocate(this%gwfInterfaceModel)
-    deallocate(this%distVars)
 
     call this%spatialcon_da()
 

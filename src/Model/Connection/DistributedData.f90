@@ -58,49 +58,51 @@ contains
   subroutine map_variables(this, sol_id, dist_vars, interface_map)
     class(DistributedDataType) :: this
     integer(I4B) :: sol_id
-    type(DistVarType), dimension(:), pointer :: dist_vars
+    type(ListType) :: dist_vars
     type(InterfaceMapType), pointer :: interface_map
     ! local
     integer(I4B) :: i, m, e
+    type(DistVarType), pointer :: distvar
 
     ! loop over variables
-    do i = 1, size(dist_vars)
-      if (dist_vars(i)%map_type == SYNC_NODES) then        
+    do i = 1, dist_vars%Count()
+      distvar => GetDistVarFromList(dist_vars, i)
+      if (distvar%map_type == SYNC_NODES) then        
         ! map node data for all models in this interface
         do m = 1, interface_map%nr_models
           call distributed_data%map_model_data(sol_id, &
-                                              dist_vars(i)%comp_name, &
-                                              dist_vars(i)%subcomp_name, &
-                                              dist_vars(i)%var_name, &
-                                              interface_map%model_names(m), &
-                                              interface_map%node_map(m), &
-                                              dist_vars(i)%sync_stages)
+                                               distvar%comp_name, &
+                                               distvar%subcomp_name, &
+                                               distvar%var_name, &
+                                               interface_map%model_names(m), &
+                                               interface_map%node_map(m), &
+                                               distvar%sync_stages)
         end do
       end if
-      if (dist_vars(i)%map_type == SYNC_CONNECTIONS) then        
+      if (distvar%map_type == SYNC_CONNECTIONS) then        
         ! map connection data for all models in this interface,
         ! this includes connections managed by the exchanges
         do m = 1, interface_map%nr_models
           call distributed_data%map_model_data(sol_id, &
-                                              dist_vars(i)%comp_name, &
-                                              dist_vars(i)%subcomp_name, &
-                                              dist_vars(i)%var_name, &
+                                              distvar%comp_name, &
+                                              distvar%subcomp_name, &
+                                              distvar%var_name, &
                                               interface_map%model_names(m), &
                                               interface_map%connection_map(m), &
-                                              dist_vars(i)%sync_stages)
+                                              distvar%sync_stages)
         end do
       end if
-      if (dist_vars(i)%map_type == SYNC_EXCHANGES) then
+      if (distvar%map_type == SYNC_EXCHANGES) then
         ! map data at the exchanges to the connections in the interface
         do e = 1, interface_map%nr_exchanges
           call distributed_data%map_exg_data(sol_id, &
-                                             dist_vars(i)%comp_name, &
-                                             dist_vars(i)%subcomp_name, &
-                                             dist_vars(i)%var_name, &
+                                             distvar%comp_name, &
+                                             distvar%subcomp_name, &
+                                             distvar%var_name, &
                                              interface_map%exchange_names(e), &
-                                             dist_vars(i)%exg_var_name, &
+                                             distvar%exg_var_name, &
                                              interface_map%exchange_map(e), &
-                                             dist_vars(i)%sync_stages)
+                                             distvar%sync_stages)
         end do
       end if
     end do
@@ -291,6 +293,35 @@ contains
     call this%remote_memory_list%clear()
 
   end subroutine destroy
+
+  function GetDistVarFromList(list, idx) result(res)
+    implicit none
+    type(ListType), intent(inout) :: list
+    integer(I4B), intent(in) :: idx
+    class(DistVarType), pointer :: res
+    ! local
+    class(*), pointer :: obj
+    
+    obj => list%GetItem(idx)
+    res => CastAsDistVar(obj)    
+    return
+
+  end function GetDistVarFromList
+
+  function CastAsDistVar(obj) result(res)
+    implicit none
+    class(*), pointer, intent(inout) :: obj
+    class(DistVarType), pointer :: res
+    
+    res => null()
+    if (.not. associated(obj)) return
+    
+    select type (obj)
+    class is (DistVarType)
+      res => obj
+    end select
+    return
+  end function CastAsDistVar
 
   subroutine print_variables(this)
     class(DistributedDataType) :: this

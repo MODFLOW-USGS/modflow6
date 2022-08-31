@@ -53,7 +53,7 @@ module SpatialModelConnectionModule
     ! these are not in the memory manager
     class(GridConnectionType), pointer :: gridConnection => null() !< facility to build the interface grid connection structure
     integer(I4B), dimension(:), pointer :: mapIdxToSln => null() !< mapping between interface matrix and the solution matrix
-    type(DistVarType), dimension(:), pointer :: distVars => null() !< interface data for synchronization (use in concrete connection)
+    type(ListType) :: distVarList !< list with distributed variables
     type(InterfaceMapType), pointer :: interfaceMap => null() !< a map of the interface into models and exchanges
 
   contains
@@ -77,6 +77,7 @@ module SpatialModelConnectionModule
     procedure, pass(this) :: spatialcon_setmodelptrs
     procedure, pass(this) :: spatialcon_connect
     procedure, pass(this) :: validateConnection
+    procedure, pass(this) :: addDistVar
 
     ! private
     procedure, private, pass(this) :: setupGridConnection
@@ -178,7 +179,7 @@ contains ! module procedures
     ! map distributed model variables for synchronization
     this%interfaceMap => this%gridConnection%getInterfaceMap()
     call distributed_data%map_variables(this%interfaceModel%idsoln, &
-                                        this%distVars, &
+                                        this%distVarList, &
                                         this%interfaceMap)
 
   end subroutine mapVariables
@@ -365,6 +366,7 @@ contains ! module procedures
     call mem_deallocate(this%active)
 
     call this%gridConnection%destroy()
+    call this%distVarList%Clear(destroy=.true.)
     deallocate(this%gridConnection)
     deallocate(this%interfaceMap)
     deallocate(this%mapIdxToSln)
@@ -511,6 +513,34 @@ contains ! module procedures
     end if
 
   end subroutine validateConnection
+
+  subroutine addDistVar(this, var_name, subcomp_name, comp_name, &
+                        map_type, exg_var_name, sync_stages)
+    class(SpatialModelConnectionType) :: this !< this connection
+    character(len=*) :: var_name !< name of variable, e.g. "K11"
+    character(len=*) :: subcomp_name !< subcomponent, e.g. "NPF"
+    character(len=*) :: comp_name !< component, e.g. the model or exchange name
+    integer(I4B) :: map_type !< can be 0 = scalar, 1 = node based, 2 = connection based, 
+                             !! 3 = exchange based (connections crossing model boundaries)
+    character(len=*) :: exg_var_name !< needed for exchange variables, e.g. SIMVALS
+    integer(I4B), dimension(:) :: sync_stages !< when to sync, e.g. (/ STAGE_AD, STAGE_CF /)
+                                              !! which is before AD and CF
+    ! local
+    type(DistVarType), pointer :: distVar => null()
+    class(*), pointer :: obj
+
+    allocate(distVar)
+    distVar%var_name = var_name
+    distVar%subcomp_name = subcomp_name
+    distVar%comp_name = comp_name
+    distVar%map_type = map_type
+    distVar%exg_var_name = exg_var_name
+    distVar%sync_stages = sync_stages
+
+    obj => distVar
+    call this%distVarList%Add(obj)
+
+  end subroutine addDistVar
 
   !> @brief Cast to SpatialModelConnectionType
   !<
