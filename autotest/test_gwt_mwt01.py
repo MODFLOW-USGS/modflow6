@@ -246,9 +246,7 @@ def build_model(idx, dir):
         fname = f"{gwtname}.mwt.obs.{obstype.lower()}.csv"
         ncv = 1
         obs1 = [(f"mwt{i + 1}", obstype, i + 1) for i in range(ncv)]
-        obs2 = [
-            (f"bmwt{i + 1}", obstype, f"mymwt{i + 1}") for i in range(ncv)
-        ]
+        obs2 = [(f"bmwt{i + 1}", obstype, f"mymwt{i + 1}") for i in range(ncv)]
         mwt_obs[fname] = obs1 + obs2
 
     obstype = "MWT"
@@ -258,18 +256,18 @@ def build_model(idx, dir):
     obs1 = []
     for icv in range(ncv):
         for iconn in range(nconn):
-            obs1.append((f"mwt{icv + 1}x{iconn + 1}", obstype, icv + 1, iconn + 1))
-    obs2 = [
-        (f"bmwt{i + 1}", obstype, f"mymwt{i + 1}") for i in range(ncv)
-    ]
+            obs1.append(
+                (f"mwt{icv + 1}x{iconn + 1}", obstype, icv + 1, iconn + 1)
+            )
+    obs2 = [(f"bmwt{i + 1}", obstype, f"mymwt{i + 1}") for i in range(ncv)]
     mwt_obs[fname] = obs1 + obs2
 
-    #mwt_obs = {
+    # mwt_obs = {
     #    (gwtname + ".mwt.obs.csv",): [
     #        ("mwt-1-conc", "CONCENTRATION", 1),
     #        ("mwt-1-rate", "RATE", 1),
     #    ],
-    #}
+    # }
 
     # append additional obs attributes to obs dictionary
     mwt_obs["digits"] = 15
@@ -327,6 +325,7 @@ def build_model(idx, dir):
 
     return sim, None
 
+
 def check_obs(sim):
     print("checking obs...")
     name = ex[sim.idxsim]
@@ -350,13 +349,15 @@ def check_obs(sim):
         conc_ra = gwt.mwt.obs.output.obs(f=csvfile).data
         success = True
         if ".concentration.csv" in csvfile:
-            print("Comparing binary concentrations with observed well concentrations.")
-            is_same = np.allclose(
-                conc_ra[f"BMWT1"], conc_mwt1
+            print(
+                "Comparing binary concentrations with observed well concentrations."
             )
+            is_same = np.allclose(conc_ra[f"BMWT1"], conc_mwt1)
             if not is_same:
                 success = False
-                print('Binary concentrations do not match with observation concentrations for mwt1')
+                print(
+                    "Binary concentrations do not match with observation concentrations for mwt1"
+                )
                 print(conc_ra[f"BMWT1"], conc_mwt1)
         # check boundname observations with numeric ID observations
         for icv in range(1):
@@ -393,6 +394,7 @@ def check_obs(sim):
 
     assert success, "One or more MWT obs checks did not pass"
     return
+
 
 def eval_results(sim):
     print("evaluating results...")
