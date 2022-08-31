@@ -691,7 +691,7 @@ def make_concentration_map(sim):
 
 
 def check_obs(sim):
-    print("making plot of concentration versus time...")
+    print("checking obs...")
     name = ex[sim.idxsim]
     ws = exdirs[sim.idxsim]
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)

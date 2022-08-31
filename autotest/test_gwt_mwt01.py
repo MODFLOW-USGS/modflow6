@@ -231,19 +231,53 @@ def build_model(idx, dir):
         gwt, sources=sourcerecarray, filename=f"{gwtname}.ssm"
     )
 
-    mwt_obs = {
-        (gwtname + ".mwt.obs.csv",): [
-            ("mwt-1-conc", "CONCENTRATION", 1),
-            ("mwt-1-rate", "RATE", 1),
-        ],
-    }
+    mwt_obs = {}
+    for obstype in [
+        "CONCENTRATION",
+        "FROM-MVR",
+        "STORAGE",
+        "CONSTANT",
+        "MWT",
+        "RATE",
+        "FW-RATE",
+        "RATE-TO-MVR",
+        "FW-RATE-TO-MVR",
+    ]:
+        fname = f"{gwtname}.mwt.obs.{obstype.lower()}.csv"
+        ncv = 1
+        obs1 = [(f"mwt{i + 1}", obstype, i + 1) for i in range(ncv)]
+        obs2 = [
+            (f"bmwt{i + 1}", obstype, f"mymwt{i + 1}") for i in range(ncv)
+        ]
+        mwt_obs[fname] = obs1 + obs2
+
+    obstype = "MWT"
+    fname = f"{gwtname}.mwt.obs.{obstype.lower()}.csv"
+    ncv = 1
+    nconn = 3
+    obs1 = []
+    for icv in range(ncv):
+        for iconn in range(nconn):
+            obs1.append((f"mwt{icv + 1}x{iconn + 1}", obstype, icv + 1, iconn + 1))
+    obs2 = [
+        (f"bmwt{i + 1}", obstype, f"mymwt{i + 1}") for i in range(ncv)
+    ]
+    mwt_obs[fname] = obs1 + obs2
+
+    #mwt_obs = {
+    #    (gwtname + ".mwt.obs.csv",): [
+    #        ("mwt-1-conc", "CONCENTRATION", 1),
+    #        ("mwt-1-rate", "RATE", 1),
+    #    ],
+    #}
+
     # append additional obs attributes to obs dictionary
-    mwt_obs["digits"] = 7
+    mwt_obs["digits"] = 15
     mwt_obs["print_input"] = True
     mwt_obs["filename"] = gwtname + ".mwt.obs"
 
     mwtpackagedata = [
-        (0, 0.0, 99.0, 999.0, "mywel"),
+        (0, 0.0, 99.0, 999.0, "mymwt1"),
     ]
     mwtperioddata = [
         (0, "STATUS", "ACTIVE"),
@@ -293,55 +327,89 @@ def build_model(idx, dir):
 
     return sim, None
 
+def check_obs(sim):
+    print("checking obs...")
+    name = ex[sim.idxsim]
+    ws = exdirs[sim.idxsim]
+    sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
+    gwfname = "gwf_" + name
+    gwtname = "gwt_" + name
+    gwf = sim.get_model(gwfname)
+    gwt = sim.get_model(gwtname)
+
+    # extract mwt concentrations from binary output file
+    conc_mwt1 = gwt.mwt.output.concentration().get_alldata().flatten()
+
+    # ensure mwt obs are the same whether specified by
+    # boundname or by reach
+    csvfiles = gwt.mwt.obs.output.obs_names
+    for csvfile in csvfiles:
+        if ".mwt.csv" in csvfile:
+            continue
+        print(f"Checking csv file: {csvfile}")
+        conc_ra = gwt.mwt.obs.output.obs(f=csvfile).data
+        success = True
+        if ".concentration.csv" in csvfile:
+            print("Comparing binary concentrations with observed well concentrations.")
+            is_same = np.allclose(
+                conc_ra[f"BMWT1"], conc_mwt1
+            )
+            if not is_same:
+                success = False
+                print('Binary concentrations do not match with observation concentrations for mwt1')
+                print(conc_ra[f"BMWT1"], conc_mwt1)
+        # check boundname observations with numeric ID observations
+        for icv in range(1):
+            # print(f"  Checking reach {imwt + 1}")
+            is_same = np.allclose(
+                conc_ra[f"MWT{icv + 1}"], conc_ra[f"BMWT{icv + 1}"]
+            )
+            if not is_same:
+                success = False
+                for t, x, y in zip(
+                    conc_ra["totim"],
+                    conc_ra[f"MWT{icv + 1}"],
+                    conc_ra[f"BMWT{icv + 1}"],
+                ):
+                    print(t, x, y)
+
+    # Sum individual iconn mwt rates and compare with total rate
+    csvfile = f"{gwtname}.mwt.obs.mwt.csv"
+    print(f"Checking csv file: {csvfile}")
+    conc_ra = gwt.mwt.obs.output.obs(f=csvfile).data
+    ntimes = conc_ra.shape[0]
+    for imwt in range(1):
+        connection_sum = np.zeros(ntimes)
+        for column_name in conc_ra.dtype.names:
+            if f"MWT{icv + 1}X" in column_name:
+                connection_sum += conc_ra[column_name]
+        is_same = np.allclose(connection_sum, conc_ra[f"BMWT{icv + 1}"])
+        if not is_same:
+            success = False
+            diff = connection_sum - conc_ra[f"BMWT{icv + 1}"]
+            print(
+                f"Problem with MWT {icv + 1}; mindiff {diff.min()} and maxdiff {diff.max()}"
+            )
+
+    assert success, "One or more MWT obs checks did not pass"
+    return
 
 def eval_results(sim):
     print("evaluating results...")
 
-    # ensure lake concentrations were saved
+    # ensure mwt concentrations were saved
     name = ex[sim.idxsim]
     gwtname = "gwt_" + name
     fname = gwtname + ".mwt.bin"
     fname = os.path.join(sim.simpath, fname)
     assert os.path.isfile(fname)
 
-    # load and check the well concentrations
+    # ensure gwt concentrations were saved
     fname = gwtname + ".ucn"
     fname = os.path.join(sim.simpath, fname)
-    cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")
-    cmwt = cobj.get_alldata().flatten()
-    print(cmwt)
-    answer = np.ones(10) * 100.0
-    # assert np.allclose(cmwt, answer), '{} {}'.format(cmwt, answer)
+    assert os.path.isfile(fname)
 
-    # load the aquifer concentrations and make sure all values are correct
-    fname = gwtname + ".ucn"
-    fname = os.path.join(sim.simpath, fname)
-    cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")
-    caq = cobj.get_alldata()
-    # print(caq)
-    answer = np.array(
-        [4.86242795, 27.24270616, 64.55536421, 27.24270616, 4.86242795]
-    )
-    # assert np.allclose(caq[-1].flatten(), answer), '{} {}'.format(caq[-1].flatten(), answer)
-
-    # mwt observation results
-    fpth = os.path.join(sim.simpath, gwtname + ".mwt.obs.csv")
-    try:
-        tc = np.genfromtxt(fpth, names=True, delimiter=",")
-    except:
-        assert False, f'could not load data from "{fpth}"'
-
-    res = tc["MWT1CONC"]
-    print(res)
-    answer = np.ones(10) * 100.0
-    # assert np.allclose(res, answer), '{} {}'.format(res, answer)
-    res = tc["MWT1RATE"]
-    print(res)
-    answer = np.ones(10) * 0.0
-    # assert np.allclose(res, answer), '{} {}'.format(res, answer)
-
-    # uncomment when testing
-    # assert False
+    check_obs(sim)
 
     return
 
