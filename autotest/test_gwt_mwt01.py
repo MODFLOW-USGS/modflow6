@@ -237,7 +237,6 @@ def build_model(idx, dir):
         "FROM-MVR",
         "STORAGE",
         "CONSTANT",
-        "MWT",
         "RATE",
         "FW-RATE",
         "RATE-TO-MVR",
@@ -261,13 +260,6 @@ def build_model(idx, dir):
             )
     obs2 = [(f"bmwt{i + 1}", obstype, f"mymwt{i + 1}") for i in range(ncv)]
     mwt_obs[fname] = obs1 + obs2
-
-    # mwt_obs = {
-    #    (gwtname + ".mwt.obs.csv",): [
-    #        ("mwt-1-conc", "CONCENTRATION", 1),
-    #        ("mwt-1-rate", "RATE", 1),
-    #    ],
-    # }
 
     # append additional obs attributes to obs dictionary
     mwt_obs["digits"] = 15
