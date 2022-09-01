@@ -63,11 +63,13 @@ contains
     class(*), pointer :: obj
     type(CharacterStringType), pointer :: charcont
     !
-    string = ''
     obj => list%GetItem(indx)
     charcont => CastAsCharacterStringType(obj)
     if (associated(charcont)) then
+      allocate (character(len=charcont%strlen()) :: string)
       string = charcont
+    else
+      string = ''
     end if
     !
     return
