@@ -105,7 +105,11 @@ contains
     class(CharacterStringType), intent(in) :: this
     integer :: length
 
-    length = len(this%charstring)
+    if (allocated(this%charstring)) then
+      length = len(this%charstring)
+    else
+      length = 0
+    end if
   end function strlen
 
 end module CharacterStringModule

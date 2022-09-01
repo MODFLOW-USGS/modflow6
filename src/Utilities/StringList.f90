@@ -67,7 +67,7 @@ contains
     charcont => CastAsCharacterStringType(obj)
     if (associated(charcont)) then
       allocate (character(len=charcont%strlen()) :: string)
-      string = charcont
+      string(:) = charcont
     else
       string = ''
     end if
