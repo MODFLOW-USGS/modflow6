@@ -34,7 +34,6 @@ module GwtGwtConnectionModule
     integer(I4B), pointer :: iIfaceAdvScheme => null() !< the advection scheme at the interface:
                                                        !! 0 = upstream, 1 = central, 2 = TVD
     integer(I4B), pointer :: iIfaceXt3d => null() !< XT3D in the interface DSP package: 0 = no, 1 = lhs, 2 = rhs
-    real(DP), dimension(:), pointer, contiguous :: exgflowja => null() !< intercell flows at the interface, coming from GWF interface model
     integer(I4B), pointer :: exgflowSign => null() !< indicates the flow direction of exgflowja
     real(DP), dimension(:), pointer, contiguous :: exgflowjaGwt => null() !< gwt-flowja at the interface (this is a subset of the GWT
                                                                           !! interface model flowja's)

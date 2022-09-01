@@ -385,8 +385,6 @@ contains
                                  'GWFSIMVALS', gwtConn%gwtExchange%memoryPath, &
                                  'SIMVALS', gwfEx%memoryPath)
               end if
-              ! TODO_MJR: this should go after distributed_data module is up and running
-              gwtConn%exgflowja => gwfEx%simvals
 
               !cdl link up mvt to mvr
               if (gwfEx%inmvr > 0) then
@@ -435,9 +433,6 @@ contains
                        'GWFSIMVALS', gwtConn%gwtExchange%memoryPath, &
                        'SIMVALS', gwfConn%gwfExchange%memoryPath)
     end if
-
-    ! TODO_MJR: this should go
-    gwtConn%exgflowja => gwfConn%gwfExchange%simvals
 
     !cdl link up mvt to mvr
     if (gwfConn%gwfExchange%inmvr > 0) then
