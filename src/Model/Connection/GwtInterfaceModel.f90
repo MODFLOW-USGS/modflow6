@@ -36,14 +36,15 @@ module GwtInterfaceModelModule
     procedure :: model_df => gwtifmod_df
     procedure :: model_ar => gwtifmod_ar
     procedure :: model_da => gwtifmod_da
-    procedure :: allocate_scalars
+    procedure, public :: allocate_fmi
+    procedure :: allocate_scalars    
     procedure :: setDspGridData
   end type GwtInterfaceModelType
 
 contains
 
-!> @brief Create the interface model, analogously to what
-!< happens in gwt_cr
+  !> @brief Create the interface model, analogously to what
+  !< happens in gwt_cr
   subroutine gwtifmod_cr(this, name, iout, gridConn)
     class(GwtInterfaceModelType) :: this !< the GWT interface model
     character(len=*), intent(in) :: name !< the interface model's name
@@ -98,8 +99,18 @@ contains
 
   end subroutine allocate_scalars
 
-!> @brief Define the GWT interface model
-!<
+  subroutine allocate_fmi(this)
+    class(GwtInterfaceModelType) :: this !< the GWT interface model
+
+    call mem_allocate(this%fmi%gwfflowja, this%nja, 'GWFFLOWJA', this%fmi%memoryPath)
+    call mem_allocate(this%fmi%gwfhead, this%neq, 'GWFHEAD', this%fmi%memoryPath)
+    call mem_allocate(this%fmi%gwfsat, this%neq, 'GWFSAT', this%fmi%memoryPath)
+    call mem_allocate(this%fmi%gwfspdis, 3, this%neq, 'GWFSPDIS', this%fmi%memoryPath)
+
+  end subroutine allocate_fmi
+
+  !> @brief Define the GWT interface model
+  !<
   subroutine gwtifmod_df(this)
     class(GwtInterfaceModelType) :: this !< the GWT interface model
     ! local
@@ -145,9 +156,9 @@ contains
 
   end subroutine gwtifmod_df
 
-!> @brief Override allocate and read the GWT interface model and its
-!! packages so that we can create stuff from memory instead of input
-!< files
+  !> @brief Override allocate and read the GWT interface model and its
+  !! packages so that we can create stuff from memory instead of input
+  !< files
   subroutine gwtifmod_ar(this)
     class(GwtInterfaceModelType) :: this !< the GWT interface model
     ! local
@@ -167,8 +178,8 @@ contains
 
   end subroutine gwtifmod_ar
 
-!> @brief set dsp grid data from models
-!<
+  !> @brief set dsp grid data from models
+  !<
   subroutine setDspGridData(this, gridData)
     class(GwtInterfaceModelType) :: this !< the GWT interface model
     type(GwtDspGridDataType) :: gridData !< the dsp grid data to be set
@@ -197,8 +208,8 @@ contains
 
   end subroutine setDspGridData
 
-!> @brief Clean up resources
-!<
+  !> @brief Clean up resources
+  !<
   subroutine gwtifmod_da(this)
     class(GwtInterfaceModelType) :: this !< the GWT interface model
 

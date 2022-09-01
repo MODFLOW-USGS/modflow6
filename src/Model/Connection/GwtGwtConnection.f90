@@ -72,14 +72,14 @@ module GwtGwtConnectionModule
     procedure, pass(this), private :: allocate_scalars
     procedure, pass(this), private :: allocate_arrays
     procedure, pass(this), private :: setGridExtent
-    procedure, pass(this), private :: setFlowToExchange
+    procedure, pass(this), private :: setFlowToExchange    
 
   end type GwtGwtConnectionType
 
 contains
 
-!> @brief Basic construction of the connection
-!<
+  !> @brief Basic construction of the connection
+  !<
   subroutine gwtGwtConnection_ctor(this, model, gwtEx)
     use InputOutputModule, only: openfile
     class(GwtGwtConnectionType) :: this !< the connection
@@ -130,8 +130,8 @@ contains
 
   end subroutine gwtGwtConnection_ctor
 
-!> @brief Allocate scalar variables for this connection
-!<
+  !> @brief Allocate scalar variables for this connection
+  !<
   subroutine allocate_scalars(this)
     class(GwtGwtConnectionType) :: this !< the connection
 
@@ -141,14 +141,12 @@ contains
 
   end subroutine allocate_scalars
 
-!> @brief define the GWT-GWT connection
-!<
+  !> @brief define the GWT-GWT connection
+  !<
   subroutine gwtgwtcon_df(this)
-    use ListsModule, only: baseexchangelist
     class(GwtGwtConnectionType) :: this !< the connection
     ! local
     character(len=LENCOMPONENTNAME) :: imName
-    integer(I4B) :: ix
 
     ! determine advection scheme (the GWT-GWT exchange
     ! has been read at this point)
@@ -197,72 +195,32 @@ contains
     end if
 
     call this%allocate_arrays()
+    call this%gwtInterfaceModel%allocate_fmi()
 
     ! connect X, RHS, IBOUND, and flowja
     call this%spatialcon_setmodelptrs()
 
-    ! set up fmi arrays, assignment is equivalent to GWF-GWT
-    this%gwtInterfaceModel%fmi%gwfhead => this%gwfhead
-    call mem_checkin(this%gwtInterfaceModel%fmi%gwfhead, &
-                     'GWFHEAD', this%gwtInterfaceModel%fmi%memoryPath, &
-                     'GWFHEAD', this%memoryPath)
-    this%gwtInterfaceModel%fmi%gwfsat => this%gwfsat
-    call mem_checkin(this%gwtInterfaceModel%fmi%gwfsat, &
-                     'GWFSAT', this%gwtInterfaceModel%fmi%memoryPath, &
-                     'GWFSAT', this%memoryPath)
-    this%gwtInterfaceModel%fmi%gwfspdis => this%gwfspdis
-    call mem_checkin(this%gwtInterfaceModel%fmi%gwfspdis, &
-                     'GWFSPDIS', this%gwtInterfaceModel%fmi%memoryPath, &
-                     'GWFSPDIS', this%memoryPath)
-
-    this%gwtInterfaceModel%fmi%gwfflowja => this%gwfflowja
-    call mem_checkin(this%gwtInterfaceModel%fmi%gwfflowja, &
-                     'GWFFLOWJA', this%gwtInterfaceModel%fmi%memoryPath, &
-                     'GWFFLOWJA', this%memoryPath)
-
     ! connect pointers (used by BUY)
     this%conc => this%gwtInterfaceModel%x
     this%icbound => this%gwtInterfaceModel%ibound
-
-    ! connect exchange to GWF counterpart
-    do ix = 1, baseexchangelist%Count()
-
-    end do
 
     ! add connections from the interface model to solution matrix
     call this%spatialcon_connect()
 
   end subroutine gwtgwtcon_df
 
-!> @brief Allocate array variables for this connection
-!<
+  !> @brief Allocate array variables for this connection
+  !<
   subroutine allocate_arrays(this)
     class(GwtGwtConnectionType) :: this !< the connection
-    ! local
-    integer(I4B) :: i
-
-    call mem_allocate(this%gwfflowja, this%interfaceModel%nja, 'GWFFLOWJA', &
-                      this%memoryPath)
-
-    call mem_allocate(this%gwfhead, this%neq, 'GWFHEAD', this%memoryPath)
-    call mem_allocate(this%gwfsat, this%neq, 'GWFSAT', this%memoryPath)
-    call mem_allocate(this%gwfspdis, 3, this%neq, 'GWFSPDIS', this%memoryPath)
 
     call mem_allocate(this%exgflowjaGwt, this%gridConnection%nrOfBoundaryCells, &
                       'EXGFLOWJAGWT', this%memoryPath)
 
-    do i = 1, size(this%gwfflowja)
-      this%gwfflowja = 0.0_DP
-    end do
-
-    do i = 1, this%neq
-      this%gwfsat = 0.0_DP
-    end do
-
   end subroutine allocate_arrays
 
-!> @brief Set required extent of the interface grid from
-!< the configuration
+  !> @brief Set required extent of the interface grid from
+  !< the configuration
   subroutine setGridExtent(this)
     class(GwtGwtConnectionType) :: this !< the connection
     ! local
@@ -291,8 +249,8 @@ contains
 
   end subroutine setGridExtent
 
-!> @brief allocate and read/set the connection's data structures
-!<
+  !> @brief allocate and read/set the connection's data structures
+  !<
   subroutine gwtgwtcon_ar(this)
     class(GwtGwtConnectionType) :: this !< the connection
 
@@ -320,8 +278,8 @@ contains
 
   end subroutine gwtgwtcon_ar
 
-!> @brief validate this connection prior to constructing
-!< the interface model
+  !> @brief validate this connection prior to constructing
+  !< the interface model
   subroutine validateConnection(this)
     use SimVariablesModule, only: errmsg
     use SimModule, only: count_errors, store_error
@@ -359,8 +317,8 @@ contains
 
   end subroutine validateConnection
 
-!> @brief add connections to the global system for
-!< this connection
+  !> @brief add connections to the global system for
+  !< this connection
   subroutine gwtgwtcon_ac(this, sparse)
     class(GwtGwtConnectionType) :: this !< this connection
     type(sparsematrix), intent(inout) :: sparse !< sparse matrix to store the connections
@@ -393,7 +351,7 @@ contains
 
   end subroutine gwtgwtcon_rp
 
-!> @brief Advance this connection
+  !> @brief Advance this connection
   !<
   subroutine gwtgwtcon_ad(this)
     class(GwtGwtConnectionType) :: this !< this connection
@@ -544,10 +502,6 @@ contains
     call mem_deallocate(this%exgflowSign)
 
     ! arrays
-    call mem_deallocate(this%gwfflowja)
-    call mem_deallocate(this%gwfsat)
-    call mem_deallocate(this%gwfhead)
-    call mem_deallocate(this%gwfspdis)
     call mem_deallocate(this%exgflowjaGwt)
 
     ! interface model
@@ -569,8 +523,8 @@ contains
 
   end subroutine gwtgwtcon_da
 
-!> @brief Cast to GwtGwtConnectionType
-!<
+  !> @brief Cast to GwtGwtConnectionType
+  !<
   function CastAsGwtGwtConnection(obj) result(res)
     implicit none
     class(*), pointer, intent(inout) :: obj !< object to be cast
