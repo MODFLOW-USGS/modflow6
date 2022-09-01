@@ -9,7 +9,7 @@ module SpatialModelConnectionModule
   use DisConnExchangeModule, only: DisConnExchangeType, GetDisConnExchangeFromList
   use MemoryManagerModule, only: mem_allocate, mem_deallocate, mem_checkin
   use MemoryHelperModule, only: create_mem_path
-  use GridConnectionModule, only: GridConnectionType  
+  use GridConnectionModule, only: GridConnectionType
   use InterfaceMapModule
   use DistributedDataModule
   use ListModule, only: ListType
@@ -86,7 +86,7 @@ module SpatialModelConnectionModule
     procedure, private, pass(this) :: allocateScalars
     procedure, private, pass(this) :: allocateArrays
     procedure, private, pass(this) :: createCoefficientMatrix
-    procedure, private, pass(this) :: maskOwnerConnections    
+    procedure, private, pass(this) :: maskOwnerConnections
     procedure, private, pass(this) :: mapVariables
 
   end type SpatialModelConnectionType
@@ -367,10 +367,9 @@ contains ! module procedures
 
     call this%gridConnection%destroy()
     call this%distVarList%Clear(destroy=.true.)
-    deallocate(this%gridConnection)
-    deallocate(this%interfaceMap)
-    deallocate(this%mapIdxToSln)
-
+    deallocate (this%gridConnection)
+    deallocate (this%interfaceMap)
+    deallocate (this%mapIdxToSln)
 
   end subroutine spatialcon_da
 
@@ -520,7 +519,7 @@ contains ! module procedures
     character(len=*) :: var_name !< name of variable, e.g. "K11"
     character(len=*) :: subcomp_name !< subcomponent, e.g. "NPF"
     character(len=*) :: comp_name !< component, e.g. the model or exchange name
-    integer(I4B) :: map_type !< can be 0 = scalar, 1 = node based, 2 = connection based, 
+    integer(I4B) :: map_type !< can be 0 = scalar, 1 = node based, 2 = connection based,
                              !! 3 = exchange based (connections crossing model boundaries)
     character(len=*) :: exg_var_name !< needed for exchange variables, e.g. SIMVALS
     integer(I4B), dimension(:) :: sync_stages !< when to sync, e.g. (/ STAGE_AD, STAGE_CF /)
@@ -529,7 +528,7 @@ contains ! module procedures
     type(DistVarType), pointer :: distVar => null()
     class(*), pointer :: obj
 
-    allocate(distVar)
+    allocate (distVar)
     distVar%var_name = var_name
     distVar%subcomp_name = subcomp_name
     distVar%comp_name = comp_name

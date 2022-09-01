@@ -296,7 +296,7 @@ contains
       ep => GetBaseExchangeFromList(baseexchangelist, ic)
       call ep%exg_ar()
     end do
-    !    
+    !
     ! -- Allocate and read all model connections
     do ic = 1, baseconnectionlist%Count()
       mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)

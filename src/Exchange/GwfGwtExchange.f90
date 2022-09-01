@@ -185,8 +185,8 @@ contains
     ! -- Set pointer to flowja
     gwtmodel%fmi%gwfflowja => gwfmodel%flowja
     call mem_checkin(gwtmodel%fmi%gwfflowja, &
-                    'GWFFLOWJA', gwtmodel%fmi%memoryPath, &
-                    'FLOWJA', gwfmodel%memoryPath)
+                     'GWFFLOWJA', gwtmodel%fmi%memoryPath, &
+                     'FLOWJA', gwfmodel%memoryPath)
 
     !
     ! -- Set the npf flag so that specific discharge is available for
@@ -382,8 +382,8 @@ contains
               if (gwtConn%exchangeIsOwned) then
                 gwtConn%gwtExchange%gwfsimvals => gwfEx%simvals
                 call mem_checkin(gwtConn%gwtExchange%gwfsimvals, &
-                                'GWFSIMVALS', gwtConn%gwtExchange%memoryPath, &
-                                'SIMVALS', gwfEx%memoryPath)
+                                 'GWFSIMVALS', gwtConn%gwtExchange%memoryPath, &
+                                 'SIMVALS', gwfEx%memoryPath)
               end if
               ! TODO_MJR: this should go after distributed_data module is up and running
               gwtConn%exgflowja => gwfEx%simvals
@@ -432,8 +432,8 @@ contains
     if (gwtConn%exchangeIsOwned) then
       gwtConn%gwtExchange%gwfsimvals => gwfConn%gwfExchange%simvals
       call mem_checkin(gwtConn%gwtExchange%gwfsimvals, &
-                      'GWFSIMVALS', gwtConn%gwtExchange%memoryPath, &
-                      'SIMVALS', gwfConn%gwfExchange%memoryPath)
+                       'GWFSIMVALS', gwtConn%gwtExchange%memoryPath, &
+                       'SIMVALS', gwfConn%gwfExchange%memoryPath)
     end if
 
     ! TODO_MJR: this should go

@@ -122,7 +122,7 @@ contains
     end if
     if (this%indsp > 0) then
       call this%dsp%dsp_df(this%dis, dsp_options)
-      allocate(this%mst)
+      allocate (this%mst)
       call mem_allocate(this%mst%porosity, this%dis%nodes, &
                         'POROSITY', create_mem_path(this%name, 'MST'))
       do i = 1, this%dis%nodes

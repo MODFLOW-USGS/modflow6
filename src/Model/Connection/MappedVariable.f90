@@ -1,4 +1,4 @@
-module MappedVariableModule  
+module MappedVariableModule
   use KindModule, only: I4B
   use MemoryTypeModule, only: MemoryType
 
@@ -76,7 +76,7 @@ contains
     class(MappedVariableType) :: this
     ! local
     integer(I4B) :: i
-    
+
     do i = 1, size(this%tgt_idx)
       this%tgt%adbl1d(this%tgt_idx(i)) = this%src%adbl1d(this%src_idx(i))
     end do
@@ -101,7 +101,7 @@ contains
     class(MappedVariableType) :: this
     ! local
     integer(I4B) :: i, k
-    
+
     do i = 1, size(this%tgt_idx)
       do k = 1, size(this%src%adbl2d, dim=1)
         this%tgt%adbl2d(k, this%tgt_idx(i)) = this%src%adbl2d(k, this%src_idx(i))
@@ -117,8 +117,8 @@ contains
 
     do i = 1, size(this%tgt_idx)
       do k = 1, size(this%src%adbl2d, dim=1)
-        this%tgt%adbl2d(k, this%tgt_idx(i)) = this%tgt%adbl2d(k, this%tgt_idx(i)) * &
-                                              this%sign(i)
+        this%tgt%adbl2d(k, this%tgt_idx(i)) = &
+          this%tgt%adbl2d(k, this%tgt_idx(i)) * this%sign(i)
       end do
     end do
 
@@ -133,7 +133,7 @@ contains
 
     select type (obj)
     class is (MappedVariableType)
-        res => obj
+      res => obj
     end select
 
   end function CastAsMappedVariable

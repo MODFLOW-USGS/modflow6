@@ -562,8 +562,8 @@ contains
       call mem_deallocate(this%gwfstrgss)
       call mem_deallocate(this%gwfstrgsy)
       call mem_deallocate(this%gwfspdis)
-    else 
-      ! special treatment, these are from mem_checkin     
+    else
+      ! special treatment, these are from mem_checkin
       call mem_deallocate(this%gwfhead, 'GWFHEAD', this%memoryPath)
       call mem_deallocate(this%gwfsat, 'GWFSAT', this%memoryPath)
       call mem_deallocate(this%gwfspdis, 'GWFSPDIS', this%memoryPath)

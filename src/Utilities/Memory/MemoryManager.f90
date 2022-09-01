@@ -1037,7 +1037,7 @@ contains
   !> @brief Check in an existing 2d double precision array with a new address (name + path)
   !<
   subroutine checkin_dbl2d(adbl2d, name, mem_path, name2, mem_path2)
-    real(DP), dimension(:,:), pointer, contiguous, intent(inout) :: adbl2d !< the existing 2d array
+    real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: adbl2d !< the existing 2d array
     character(len=*), intent(in) :: name !< new variable name
     character(len=*), intent(in) :: mem_path !< new path where variable is stored
     character(len=*), intent(in) :: name2 !< existing variable name
@@ -1053,7 +1053,7 @@ contains
     ! -- set isize
     ncol = size(adbl2d, dim=1)
     nrow = size(adbl2d, dim=2)
-    isize = ncol*nrow
+    isize = ncol * nrow
     !
     ! -- allocate memory type
     allocate (mt)

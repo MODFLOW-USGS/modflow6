@@ -149,7 +149,7 @@ contains
     class(GwtGwtConnectionType) :: this !< the connection
     ! local
     character(len=LENCOMPONENTNAME) :: imName
-    integer(I4B) :: ix    
+    integer(I4B) :: ix
 
     ! determine advection scheme (the GWT-GWT exchange
     ! has been read at this point)
@@ -179,22 +179,22 @@ contains
     this%gwtInterfaceModel%ixt3d = this%iIfaceXt3d
     call this%gwtInterfaceModel%model_df()
 
-    call this%addDistVar('X', '', this%gwtInterfaceModel%name, SYNC_NODES, &
-                         '', (/ BEFORE_AD, BEFORE_CF /))
-    call this%addDistVar('GWFHEAD', 'FMI', this%gwtInterfaceModel%name, SYNC_NODES, &
-                         '', (/ BEFORE_AD /))
-    call this%addDistVar('GWFSAT', 'FMI', this%gwtInterfaceModel%name, SYNC_NODES, &
-                         '', (/ BEFORE_AD /))
-    call this%addDistVar('GWFSPDIS', 'FMI', this%gwtInterfaceModel%name, SYNC_NODES, &
-                         '', (/ BEFORE_AD /))
-    call this%addDistVar('GWFFLOWJA', 'FMI', this%gwtInterfaceModel%name, SYNC_CONNECTIONS, &
-                         '', (/ BEFORE_AD /))
-    call this%addDistVar('GWFFLOWJA', 'FMI', this%gwtInterfaceModel%name, SYNC_EXCHANGES, &
-                         'GWFSIMVALS', (/ BEFORE_AD /)) 
+    call this%addDistVar('X', '', this%gwtInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AD, BEFORE_CF/))
+    call this%addDistVar('GWFHEAD', 'FMI', this%gwtInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AD/))
+    call this%addDistVar('GWFSAT', 'FMI', this%gwtInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AD/))
+    call this%addDistVar('GWFSPDIS', 'FMI', this%gwtInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AD/))
+    call this%addDistVar('GWFFLOWJA', 'FMI', this%gwtInterfaceModel%name, &
+                         SYNC_CONNECTIONS, '', (/BEFORE_AD/))
+    call this%addDistVar('GWFFLOWJA', 'FMI', this%gwtInterfaceModel%name, &
+                         SYNC_EXCHANGES, 'GWFSIMVALS', (/BEFORE_AD/))
     ! fill porosity from mst packages, needed for dsp
     if (this%gwtModel%indsp > 0 .and. this%gwtModel%inmst > 0) then
-      call this%addDistVar('POROSITY', 'MST', this%gwtInterfaceModel%name, SYNC_NODES, &
-                           '', (/ AFTER_AR /))
+      call this%addDistVar('POROSITY', 'MST', this%gwtInterfaceModel%name, &
+                           SYNC_NODES, '', (/AFTER_AR/))
     end if
 
     call this%allocate_arrays()
@@ -206,7 +206,7 @@ contains
     this%gwtInterfaceModel%fmi%gwfhead => this%gwfhead
     call mem_checkin(this%gwtInterfaceModel%fmi%gwfhead, &
                      'GWFHEAD', this%gwtInterfaceModel%fmi%memoryPath, &
-                     'GWFHEAD', this%memoryPath)                        
+                     'GWFHEAD', this%memoryPath)
     this%gwtInterfaceModel%fmi%gwfsat => this%gwfsat
     call mem_checkin(this%gwtInterfaceModel%fmi%gwfsat, &
                      'GWFSAT', this%gwtInterfaceModel%fmi%memoryPath, &
@@ -215,7 +215,7 @@ contains
     call mem_checkin(this%gwtInterfaceModel%fmi%gwfspdis, &
                      'GWFSPDIS', this%gwtInterfaceModel%fmi%memoryPath, &
                      'GWFSPDIS', this%memoryPath)
-                     
+
     this%gwtInterfaceModel%fmi%gwfflowja => this%gwfflowja
     call mem_checkin(this%gwtInterfaceModel%fmi%gwfflowja, &
                      'GWFFLOWJA', this%gwtInterfaceModel%fmi%memoryPath, &
@@ -234,7 +234,7 @@ contains
     call this%spatialcon_connect()
 
   end subroutine gwtgwtcon_df
-  
+
 !> @brief Allocate array variables for this connection
 !<
   subroutine allocate_arrays(this)
@@ -244,7 +244,7 @@ contains
 
     call mem_allocate(this%gwfflowja, this%interfaceModel%nja, 'GWFFLOWJA', &
                       this%memoryPath)
-                      
+
     call mem_allocate(this%gwfhead, this%neq, 'GWFHEAD', this%memoryPath)
     call mem_allocate(this%gwfsat, this%neq, 'GWFSAT', this%memoryPath)
     call mem_allocate(this%gwfspdis, 3, this%neq, 'GWFSPDIS', this%memoryPath)
@@ -295,7 +295,7 @@ contains
 !> @brief allocate and read/set the connection's data structures
 !<
   subroutine gwtgwtcon_ar(this)
-    class(GwtGwtConnectionType) :: this !< the connection    
+    class(GwtGwtConnectionType) :: this !< the connection
 
     ! check if we can construct an interface model
     ! NB: only makes sense after the models' allocate&read have been
@@ -426,7 +426,6 @@ contains
 
   end subroutine gwtgwtcon_cf
 
-
   subroutine gwtgwtcon_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
     class(GwtGwtConnectionType) :: this !< the connection
     integer(I4B), intent(in) :: kiter !< the iteration counter
@@ -554,7 +553,7 @@ contains
 
     ! interface model
     call this%gwtInterfaceModel%model_da()
-    deallocate(this%gwtInterfaceModel)
+    deallocate (this%gwtInterfaceModel)
 
     ! dealloc base
     call this%spatialcon_da()

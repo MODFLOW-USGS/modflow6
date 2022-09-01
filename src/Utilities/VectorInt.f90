@@ -154,9 +154,9 @@ contains ! module routines
     do i = 1, this%size
       if (this%at(i) == val) then
         res = .true.
-        return 
+        return
       end if
-    end do  
+    end do
 
   end function contains
 

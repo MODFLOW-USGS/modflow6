@@ -157,11 +157,11 @@ contains
     call this%gwfInterfaceModel%model_df()
 
     call this%addDistVar('X', '', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/ BEFORE_AD, BEFORE_CF /))
+                         SYNC_NODES, '', (/BEFORE_AD, BEFORE_CF/))
     call this%addDistVar('IBOUND', '', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/ BEFORE_AD, BEFORE_CF /))
+                         SYNC_NODES, '', (/BEFORE_AD, BEFORE_CF/))
     call this%addDistVar('XOLD', '', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/  BEFORE_AD, BEFORE_CF /))
+                         SYNC_NODES, '', (/BEFORE_AD, BEFORE_CF/))
 
     ! point X, RHS, IBOUND to connection
     call this%spatialcon_setmodelptrs()
@@ -454,10 +454,10 @@ contains
     call mem_deallocate(this%iXt3dOnExchange)
 
     ! arrays
-    call mem_deallocate(this%exgflowja)    
+    call mem_deallocate(this%exgflowja)
 
     call this%gwfInterfaceModel%model_da()
-    deallocate(this%gwfInterfaceModel)
+    deallocate (this%gwfInterfaceModel)
 
     call this%spatialcon_da()
 

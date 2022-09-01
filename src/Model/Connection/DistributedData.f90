@@ -27,7 +27,7 @@ module DistributedDataModule
     character(len=LENVARNAME) :: var_name !< name of variable, e.g. "K11"
     character(len=LENCOMPONENTNAME) :: subcomp_name !< subcomponent, e.g. "NPF"
     character(len=LENCOMPONENTNAME) :: comp_name !< component, e.g. the model or exchange name
-    integer(I4B) :: map_type !< can be 0 = scalar, 1 = node based, 2 = connection based, 
+    integer(I4B) :: map_type !< can be 0 = scalar, 1 = node based, 2 = connection based,
                              !! 3 = exchange based (connections crossing model boundaries)
     character(len=LENVARNAME) :: exg_var_name !< needed for exchange variables, e.g. SIMVALS
     integer(I4B), dimension(:), allocatable :: sync_stages !< when to sync, e.g. (/ STAGE_AD, STAGE_CF /)
@@ -48,7 +48,7 @@ module DistributedDataModule
     procedure, private :: map_exg_data
     procedure, private :: print_variables
   end type DistributedDataType
-  
+
   ! HACK: global access
   type(DistributedDataType), public :: distributed_data
 
@@ -66,7 +66,7 @@ contains
     ! loop over variables
     do i = 1, dist_vars%Count()
       distvar => GetDistVarFromList(dist_vars, i)
-      if (distvar%map_type == SYNC_NODES) then        
+      if (distvar%map_type == SYNC_NODES) then
         ! map node data for all models in this interface
         do m = 1, interface_map%nr_models
           call distributed_data%map_model_data(sol_id, &
@@ -78,17 +78,17 @@ contains
                                                distvar%sync_stages)
         end do
       end if
-      if (distvar%map_type == SYNC_CONNECTIONS) then        
+      if (distvar%map_type == SYNC_CONNECTIONS) then
         ! map connection data for all models in this interface,
         ! this includes connections managed by the exchanges
         do m = 1, interface_map%nr_models
           call distributed_data%map_model_data(sol_id, &
-                                              distvar%comp_name, &
-                                              distvar%subcomp_name, &
-                                              distvar%var_name, &
-                                              interface_map%model_names(m), &
-                                              interface_map%connection_map(m), &
-                                              distvar%sync_stages)
+                                               distvar%comp_name, &
+                                               distvar%subcomp_name, &
+                                               distvar%var_name, &
+                                               interface_map%model_names(m), &
+                                               interface_map%connection_map(m), &
+                                               distvar%sync_stages)
         end do
       end if
       if (distvar%map_type == SYNC_EXCHANGES) then
@@ -138,7 +138,8 @@ contains
     else
       src_mem_path = create_mem_path(src_model_name)
     end if
-    call get_from_memorylist(src_var_name, src_mem_path, src_mt, found, check=.false.)
+    call get_from_memorylist(src_var_name, src_mem_path, src_mt, &
+                             found, check=.false.)
     if (.not. found) then
       ! this should branch to MPI synchronized memory,
       ! - create memorytype
@@ -146,10 +147,10 @@ contains
       ! - set up MPI
       ! - create reduced mapping
       ! - ...??
-      write(*,*) "Error, remote memory in DD not supported yet"
+      write (*, *) "Error, remote memory in DD not supported yet"
       call ustop()
     end if
-   
+
     ! get target memory item
     if (len_trim(tgt_comp_name) > 0) then
       tgt_mem_path = create_mem_path(tgt_model_name, tgt_comp_name)
@@ -157,7 +158,7 @@ contains
       tgt_mem_path = create_mem_path(tgt_model_name)
     end if
     call get_from_memorylist(tgt_var_name, tgt_mem_path, tgt_mt, found)
-    
+
     ! loop and set stage bits
     istage = 0
     do i = 1, size(stages)
@@ -165,7 +166,7 @@ contains
     end do
 
     ! create MappedVariable and add to list
-    allocate(mapped_var)
+    allocate (mapped_var)
     mapped_var%controller_id = controller_id
     mapped_var%sync_stage = istage
     mapped_var%src => src_mt
@@ -203,7 +204,8 @@ contains
     character(len=LENMEMPATH) :: src_mem_path, tgt_mem_path
 
     src_mem_path = create_mem_path(src_exg_name)
-    call get_from_memorylist(src_var_name, src_mem_path, src_mt, found, check=.false.)
+    call get_from_memorylist(src_var_name, src_mem_path, &
+                             src_mt, found, check=.false.)
     if (.not. found) then
       ! this should branch to MPI synchronized memory,
       ! - create memorytype
@@ -211,11 +213,11 @@ contains
       ! - set up MPI
       ! - create reduced mapping
       ! - ...??
-      write(*,*) "Error mapping exchange data (remote memory in DD not supported yet):"
-      write(*,*) "  ", src_var_name, "@", src_mem_path
+      write (*, *) "Error: remote memory in DD not supported yet"
+      write (*, *) "  ", src_var_name, "@", src_mem_path
       call ustop()
     end if
-   
+
     ! get target memory item
     if (len_trim(tgt_comp_name) > 0) then
       tgt_mem_path = create_mem_path(tgt_model_name, tgt_comp_name)
@@ -223,7 +225,7 @@ contains
       tgt_mem_path = create_mem_path(tgt_model_name)
     end if
     call get_from_memorylist(tgt_var_name, tgt_mem_path, tgt_mt, found)
-    
+
     ! loop and set stage bits
     istage = 0
     do i = 1, size(stages)
@@ -231,7 +233,7 @@ contains
     end do
 
     ! create MappedVariable and add to list
-    allocate(mapped_var)
+    allocate (mapped_var)
     mapped_var%controller_id = controller_id
     mapped_var%sync_stage = istage
     mapped_var%src => src_mt
@@ -266,7 +268,7 @@ contains
       obj => this%variable_list%GetItem(i)
       var => CastAsMappedVariable(obj)
       if (controller_id > 0 .and. var%controller_id /= controller_id) cycle
-      if (.not. check_stage(var%sync_stage,stage)) cycle
+      if (.not. check_stage(var%sync_stage, stage)) cycle
 
       ! copy data
       call var%sync()
@@ -287,7 +289,7 @@ contains
     class(DistributedDataType) :: this
 
     !call this%print_variables()
-    
+
     call this%variable_list%Clear(destroy=.true.)
     call this%remote_memory_list%clear()
 
@@ -300,9 +302,9 @@ contains
     class(DistVarType), pointer :: res
     ! local
     class(*), pointer :: obj
-    
+
     obj => list%GetItem(idx)
-    res => CastAsDistVar(obj)    
+    res => CastAsDistVar(obj)
     return
 
   end function GetDistVarFromList
@@ -311,10 +313,10 @@ contains
     implicit none
     class(*), pointer, intent(inout) :: obj
     class(DistVarType), pointer :: res
-    
+
     res => null()
     if (.not. associated(obj)) return
-    
+
     select type (obj)
     class is (DistVarType)
       res => obj
@@ -329,11 +331,12 @@ contains
     class(*), pointer :: obj
     class(MappedVariableType), pointer :: var
 
-    write(*,*) "Debug: print variables..."
+    write (*, *) "Debug: print variables..."
     do i = 1, this%variable_list%Count()
       obj => this%variable_list%GetItem(i)
       var => CastAsMappedVariable(obj)
-      write(*,*) trim(var%src%name), " ", trim(var%src%path), " to ", trim(var%tgt%name), " ", trim(var%tgt%path)
+      write (*, *) trim(var%src%name), " ", trim(var%src%path), &
+        " to ", trim(var%tgt%name), " ", trim(var%tgt%path)
     end do
 
   end subroutine print_variables
