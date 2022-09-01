@@ -56,8 +56,6 @@ module GridConnectionModule
     type(CellWithNbrsType), dimension(:), pointer :: connectedCells => null() !< cells on the neighbors side of the primary connection
     type(ListType) :: exchanges !< all relevant exchanges for this connection, up to the required depth
 
-    integer, dimension(:), pointer :: primConnections => null() !< table mapping the index in the boundaryCells/connectedCells
-
     integer(I4B), pointer :: nrOfCells => null() !< the total number of cells in the interface
     type(GlobalCellType), dimension(:), pointer :: idxToGlobal => null() !< a map from interface index to global coordinate
     integer(I4B), dimension(:), pointer, contiguous :: idxToGlobalIdx => null() !< a (flat) map from interface index to global index,
@@ -109,7 +107,6 @@ module GridConnectionModule
     procedure, private, pass(this) :: createConnectionMask
     procedure, private, pass(this) :: maskInternalConnections
     procedure, private, pass(this) :: setMaskOnConnection
-    procedure, private, pass(this) :: createLookupTable
   end type
 
 contains
@@ -131,7 +128,6 @@ contains
 
     allocate (this%boundaryCells(nrOfPrimaries))
     allocate (this%connectedCells(nrOfPrimaries))
-    allocate (this%primConnections(nrOfPrimaries))
     allocate (this%idxToGlobal(2 * nrOfPrimaries))
 
     call this%addToRegionalModels(model)
@@ -436,9 +432,6 @@ contains
 
     ! set the masks on connections
     call this%createConnectionMask()
-
-    ! create lookup table(s)
-    call this%createLookupTable()
 
   end subroutine buildConnections
 
@@ -909,26 +902,6 @@ contains
 
   end subroutine createConnectionMask
 
-  !> @brief Create lookup tables for efficient access
-  !< (this needs the connections object to be available)
-  subroutine createLookupTable(this)
-    use CsrUtilsModule, only: getCSRIndex
-    class(GridConnectionType), intent(inout) :: this !< this grid connection instance
-    ! local
-    integer(I4B) :: i, n1, n2, ipos
-
-    do i = 1, this%nrOfBoundaryCells
-      n1 = this%getInterfaceIndexByIndexModel(this%boundaryCells(i)%cell%index, &
-                                              this%boundaryCells(i)%cell%model)
-      n2 = this%getInterfaceIndexByIndexModel(this%connectedCells(i)%cell%index, &
-                                              this%connectedCells(i)%cell%model)
-
-      ipos = getCSRIndex(n1, n2, this%connections%ia, this%connections%ja)
-      this%primConnections(i) = ipos
-    end do
-
-  end subroutine createLookupTable
-
   !> @brief Recursively mask connections, increasing the level as we go
   !<
   recursive subroutine maskInternalConnections(this, cell, nbrCell, level)
@@ -1125,7 +1098,6 @@ contains
     type(VectorInt) :: modelIds
     type(VectorInt) :: srcIdxTmp, tgtIdxTmp, signTmp
     class(DisConnExchangeType), pointer :: connEx
-    integer(I4B) :: tempIdxs(1)
 
     allocate (interfaceMap)
 
@@ -1280,7 +1252,6 @@ contains
     deallocate (this%idxToGlobal)
     deallocate (this%boundaryCells)
     deallocate (this%connectedCells)
-    deallocate (this%primConnections)
 
     call mem_deallocate(this%idxToGlobalIdx)
 

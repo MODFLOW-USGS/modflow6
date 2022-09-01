@@ -1400,7 +1400,7 @@ contains
     class(NumericalExchangeType), pointer :: cp => null()
     class(NumericalModelType), pointer :: mp => null()
 
-    ! synchronize for CF
+    ! synchronize for AD
     call distributed_data%synchronize(this%id, BEFORE_AD)
 
     ! -- Exchange advance
