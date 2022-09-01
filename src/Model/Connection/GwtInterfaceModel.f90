@@ -117,7 +117,6 @@ contains
     class(*), pointer :: disPtr
     type(GwtAdvOptionsType) :: adv_options
     type(GwtDspOptionsType) :: dsp_options
-    integer(I4B) :: i
 
     this%moffset = 0
     adv_options%iAdvScheme = this%iAdvScheme
@@ -136,9 +135,6 @@ contains
       allocate (this%mst)
       call mem_allocate(this%mst%porosity, this%dis%nodes, &
                         'POROSITY', create_mem_path(this%name, 'MST'))
-      do i = 1, this%dis%nodes
-        this%mst%porosity(i) = 0.0_DP
-      end do
     end if
 
     ! assign or point model members to dis members
@@ -149,10 +145,6 @@ contains
     !
     ! allocate model arrays, now that neq and nja are assigned
     call this%allocate_arrays()
-
-    do i = 1, size(this%flowja)
-      this%flowja = 0.0_DP
-    end do
 
   end subroutine gwtifmod_df
 
