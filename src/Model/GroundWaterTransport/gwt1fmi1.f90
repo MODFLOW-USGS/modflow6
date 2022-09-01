@@ -556,13 +556,15 @@ contains
     call mem_deallocate(this%flowcorrect)
     call mem_deallocate(this%ibdgwfsat0)
     if (this%flows_from_file) then
-      call mem_deallocate(this%gwfflowja)
-      call mem_deallocate(this%gwfsat)
-      call mem_deallocate(this%gwfhead)
       call mem_deallocate(this%gwfstrgss)
       call mem_deallocate(this%gwfstrgsy)
-      call mem_deallocate(this%gwfspdis)
     end if
+    !
+    ! -- special treatment, these could be from mem_checkin
+    call mem_deallocate(this%gwfhead, 'GWFHEAD', this%memoryPath)
+    call mem_deallocate(this%gwfsat, 'GWFSAT', this%memoryPath)
+    call mem_deallocate(this%gwfspdis, 'GWFSPDIS', this%memoryPath)
+    call mem_deallocate(this%gwfflowja, 'GWFFLOWJA', this%memoryPath)
     !
     ! -- deallocate scalars
     call mem_deallocate(this%flows_from_file)

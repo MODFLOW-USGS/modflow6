@@ -11,6 +11,7 @@ module GwtInterfaceModelModule
   use GwtDspModule, only: dsp_cr, GwtDspType
   use GwtDspOptionsModule, only: GwtDspOptionsType
   use GwtDspGridDataModule, only: GwtDspGridDataType
+  use GwtMstModule, only: mst_cr
   use GwtObsModule, only: gwt_obs_cr
   use GridConnectionModule
 
@@ -30,21 +31,20 @@ module GwtInterfaceModelModule
     class(GwtModelType), private, pointer :: owner => null() !< the real GWT model for which the exchange coefficients
                                                              !! are calculated with this interface model
 
-    real(DP), dimension(:), pointer, contiguous :: porosity => null() !< to be filled with MST porosity
-
   contains
     procedure, pass(this) :: gwtifmod_cr
     procedure :: model_df => gwtifmod_df
     procedure :: model_ar => gwtifmod_ar
     procedure :: model_da => gwtifmod_da
+    procedure, public :: allocate_fmi
     procedure :: allocate_scalars
     procedure :: setDspGridData
   end type GwtInterfaceModelType
 
 contains
 
-!> @brief Create the interface model, analogously to what
-!< happens in gwt_cr
+  !> @brief Create the interface model, analogously to what
+  !< happens in gwt_cr
   subroutine gwtifmod_cr(this, name, iout, gridConn)
     class(GwtInterfaceModelType) :: this !< the GWT interface model
     character(len=*), intent(in) :: name !< the interface model's name
@@ -99,15 +99,28 @@ contains
 
   end subroutine allocate_scalars
 
-!> @brief Define the GWT interface model
-!<
+  subroutine allocate_fmi(this)
+    class(GwtInterfaceModelType) :: this !< the GWT interface model
+
+    call mem_allocate(this%fmi%gwfflowja, this%nja, 'GWFFLOWJA', &
+                      this%fmi%memoryPath)
+    call mem_allocate(this%fmi%gwfhead, this%neq, 'GWFHEAD', &
+                      this%fmi%memoryPath)
+    call mem_allocate(this%fmi%gwfsat, this%neq, 'GWFSAT', &
+                      this%fmi%memoryPath)
+    call mem_allocate(this%fmi%gwfspdis, 3, this%neq, 'GWFSPDIS', &
+                      this%fmi%memoryPath)
+
+  end subroutine allocate_fmi
+
+  !> @brief Define the GWT interface model
+  !<
   subroutine gwtifmod_df(this)
     class(GwtInterfaceModelType) :: this !< the GWT interface model
     ! local
     class(*), pointer :: disPtr
     type(GwtAdvOptionsType) :: adv_options
     type(GwtDspOptionsType) :: dsp_options
-    integer(I4B) :: i
 
     this%moffset = 0
     adv_options%iAdvScheme = this%iAdvScheme
@@ -123,6 +136,9 @@ contains
     end if
     if (this%indsp > 0) then
       call this%dsp%dsp_df(this%dis, dsp_options)
+      allocate (this%mst)
+      call mem_allocate(this%mst%porosity, this%dis%nodes, &
+                        'POROSITY', create_mem_path(this%name, 'MST'))
     end if
 
     ! assign or point model members to dis members
@@ -133,20 +149,12 @@ contains
     !
     ! allocate model arrays, now that neq and nja are assigned
     call this%allocate_arrays()
-    call mem_allocate(this%porosity, this%neq, 'POROSITY', this%memoryPath)
-
-    do i = 1, size(this%flowja)
-      this%flowja = 0.0_DP
-    end do
-    do i = 1, this%neq
-      this%porosity = 0.0_DP
-    end do
 
   end subroutine gwtifmod_df
 
-!> @brief Override allocate and read the GWT interface model and its
-!! packages so that we can create stuff from memory instead of input
-!< files
+  !> @brief Override allocate and read the GWT interface model and its
+  !! packages so that we can create stuff from memory instead of input
+  !< files
   subroutine gwtifmod_ar(this)
     class(GwtInterfaceModelType) :: this !< the GWT interface model
     ! local
@@ -161,13 +169,13 @@ contains
       this%dsp%idisp = this%owner%dsp%idisp
       call dspGridData%construct(this%neq)
       call this%setDspGridData(dspGridData)
-      call this%dsp%dsp_ar(this%ibound, this%porosity, dspGridData)
+      call this%dsp%dsp_ar(this%ibound, this%mst%porosity, dspGridData)
     end if
 
   end subroutine gwtifmod_ar
 
-!> @brief set dsp grid data from models
-!<
+  !> @brief set dsp grid data from models
+  !<
   subroutine setDspGridData(this, gridData)
     class(GwtInterfaceModelType) :: this !< the GWT interface model
     type(GwtDspGridDataType) :: gridData !< the dsp grid data to be set
@@ -196,15 +204,14 @@ contains
 
   end subroutine setDspGridData
 
-!> @brief Clean up resources
-!<
+  !> @brief Clean up resources
+  !<
   subroutine gwtifmod_da(this)
     class(GwtInterfaceModelType) :: this !< the GWT interface model
 
     ! this
     call mem_deallocate(this%iAdvScheme)
     call mem_deallocate(this%ixt3d)
-    call mem_deallocate(this%porosity)
 
     ! gwt packages
     call this%dis%dis_da()
@@ -216,6 +223,11 @@ contains
     deallocate (this%fmi)
     deallocate (this%adv)
     deallocate (this%dsp)
+
+    if (associated(this%mst)) then
+      call mem_deallocate(this%mst%porosity)
+      deallocate (this%mst)
+    end if
 
     ! gwt scalars
     call mem_deallocate(this%inic)

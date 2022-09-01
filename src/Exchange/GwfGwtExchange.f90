@@ -148,6 +148,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use MemoryManagerModule, only: mem_checkin
     ! -- dummy
     class(GwfGwtExchangeType) :: this
     ! -- local
@@ -183,6 +184,10 @@ contains
     !
     ! -- Set pointer to flowja
     gwtmodel%fmi%gwfflowja => gwfmodel%flowja
+    call mem_checkin(gwtmodel%fmi%gwfflowja, &
+                     'GWFFLOWJA', gwtmodel%fmi%memoryPath, &
+                     'FLOWJA', gwfmodel%memoryPath)
+
     !
     ! -- Set the npf flag so that specific discharge is available for
     !    transport calculations if dispersion is active
@@ -202,6 +207,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use MemoryManagerModule, only: mem_checkin
     ! -- dummy
     class(GwfGwtExchangeType) :: this
     ! -- local
@@ -244,8 +250,17 @@ contains
     !
     ! -- setup pointers to gwf variables allocated in gwf_ar
     gwtmodel%fmi%gwfhead => gwfmodel%x
+    call mem_checkin(gwtmodel%fmi%gwfhead, &
+                     'GWFHEAD', gwtmodel%fmi%memoryPath, &
+                     'X', gwfmodel%memoryPath)
     gwtmodel%fmi%gwfsat => gwfmodel%npf%sat
+    call mem_checkin(gwtmodel%fmi%gwfsat, &
+                     'GWFSAT', gwtmodel%fmi%memoryPath, &
+                     'SAT', gwfmodel%npf%memoryPath)
     gwtmodel%fmi%gwfspdis => gwfmodel%npf%spdis
+    call mem_checkin(gwtmodel%fmi%gwfspdis, &
+                     'GWFSPDIS', gwtmodel%fmi%memoryPath, &
+                     'SPDIS', gwfmodel%npf%memoryPath)
     !
     ! -- setup pointers to the flow storage rates. GWF strg arrays are
     !    available after the gwf_ar routine is called.
@@ -286,6 +301,7 @@ contains
   subroutine gwfconn2gwtconn(this, gwfModel, gwtModel)
     use SimModule, only: store_error
     use SimVariablesModule, only: iout
+    use MemoryManagerModule, only: mem_checkin
     class(GwfGwtExchangeType) :: this !< this exchange
     type(GwfModelType), pointer :: gwfModel !< the flow model
     type(GwtModelType), pointer :: gwtModel !< the transport model
@@ -363,7 +379,12 @@ contains
                 ' to ', trim(gwfEx%name), ' for GWT model ', &
                 trim(gwtModel%name)
               gwfExIdx = iex
-              gwtConn%exgflowja => gwfEx%simvals
+              if (gwtConn%exchangeIsOwned) then
+                gwtConn%gwtExchange%gwfsimvals => gwfEx%simvals
+                call mem_checkin(gwtConn%gwtExchange%gwfsimvals, &
+                                 'GWFSIMVALS', gwtConn%gwtExchange%memoryPath, &
+                                 'SIMVALS', gwfEx%memoryPath)
+              end if
 
               !cdl link up mvt to mvr
               if (gwfEx%inmvr > 0) then
@@ -400,12 +421,18 @@ contains
   !> @brief Links a GWT connection to its GWF counterpart
   !<
   subroutine link_connections(this, gwtConn, gwfConn)
+    use MemoryManagerModule, only: mem_checkin
     class(GwfGwtExchangeType) :: this !< this exchange
     class(GwtGwtConnectionType), pointer :: gwtConn !< GWT connection
     class(GwfGwfConnectionType), pointer :: gwfConn !< GWF connection
 
     !gwtConn%exgflowja => gwfConn%exgflowja
-    gwtConn%exgflowja => gwfConn%gwfExchange%simvals
+    if (gwtConn%exchangeIsOwned) then
+      gwtConn%gwtExchange%gwfsimvals => gwfConn%gwfExchange%simvals
+      call mem_checkin(gwtConn%gwtExchange%gwfsimvals, &
+                       'GWFSIMVALS', gwtConn%gwtExchange%memoryPath, &
+                       'SIMVALS', gwfConn%gwfExchange%memoryPath)
+    end if
 
     !cdl link up mvt to mvr
     if (gwfConn%gwfExchange%inmvr > 0) then

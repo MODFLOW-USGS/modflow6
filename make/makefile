@@ -6,26 +6,26 @@ include ./makedefaults
 # Define the source file directories
 SOURCEDIR1=../src
 SOURCEDIR2=../src/Exchange
-SOURCEDIR3=../src/Solution
-SOURCEDIR4=../src/Solution/LinearMethods
-SOURCEDIR5=../src/Timing
-SOURCEDIR6=../src/Utilities
-SOURCEDIR7=../src/Utilities/TimeSeries
-SOURCEDIR8=../src/Utilities/Memory
-SOURCEDIR9=../src/Utilities/OutputControl
-SOURCEDIR10=../src/Utilities/Libraries
-SOURCEDIR11=../src/Utilities/Libraries/rcm
-SOURCEDIR12=../src/Utilities/Libraries/blas
-SOURCEDIR13=../src/Utilities/Libraries/sparskit2
-SOURCEDIR14=../src/Utilities/Libraries/daglib
-SOURCEDIR15=../src/Utilities/Libraries/sparsekit
-SOURCEDIR16=../src/Utilities/Observation
-SOURCEDIR17=../src/Model
-SOURCEDIR18=../src/Model/Connection
-SOURCEDIR19=../src/Model/GroundWaterTransport
-SOURCEDIR20=../src/Model/ModelUtilities
-SOURCEDIR21=../src/Model/GroundWaterFlow
-SOURCEDIR22=../src/Model/Geometry
+SOURCEDIR3=../src/Model
+SOURCEDIR4=../src/Model/Geometry
+SOURCEDIR5=../src/Model/ModelUtilities
+SOURCEDIR6=../src/Model/Connection
+SOURCEDIR7=../src/Model/GroundWaterTransport
+SOURCEDIR8=../src/Model/GroundWaterFlow
+SOURCEDIR9=../src/Solution
+SOURCEDIR10=../src/Solution/LinearMethods
+SOURCEDIR11=../src/Timing
+SOURCEDIR12=../src/Utilities
+SOURCEDIR13=../src/Utilities/TimeSeries
+SOURCEDIR14=../src/Utilities/Libraries
+SOURCEDIR15=../src/Utilities/Libraries/rcm
+SOURCEDIR16=../src/Utilities/Libraries/sparsekit
+SOURCEDIR17=../src/Utilities/Libraries/sparskit2
+SOURCEDIR18=../src/Utilities/Libraries/blas
+SOURCEDIR19=../src/Utilities/Libraries/daglib
+SOURCEDIR20=../src/Utilities/Observation
+SOURCEDIR21=../src/Utilities/OutputControl
+SOURCEDIR22=../src/Utilities/Memory
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -149,13 +149,16 @@ $(OBJDIR)/Mover.o \
 $(OBJDIR)/GwfMvrPeriodData.o \
 $(OBJDIR)/ims8misc.o \
 $(OBJDIR)/GwfBuyInputData.o \
+$(OBJDIR)/VectorInt.o \
+$(OBJDIR)/mf6lists.o \
+$(OBJDIR)/InterfaceMap.o \
 $(OBJDIR)/gwf3disu8.o \
 $(OBJDIR)/GridSorting.o \
 $(OBJDIR)/DisConnExchange.o \
 $(OBJDIR)/CsrUtils.o \
+$(OBJDIR)/MappedVariable.o \
 $(OBJDIR)/TransportModel.o \
 $(OBJDIR)/NameFile.o \
-$(OBJDIR)/mf6lists.o \
 $(OBJDIR)/gwt1uzt1.o \
 $(OBJDIR)/gwt1ssm1.o \
 $(OBJDIR)/gwt1src1.o \
@@ -189,6 +192,7 @@ $(OBJDIR)/gwf3drn8.o \
 $(OBJDIR)/gwf3chd8.o \
 $(OBJDIR)/ims8reordering.o \
 $(OBJDIR)/GridConnection.o \
+$(OBJDIR)/DistributedData.o \
 $(OBJDIR)/gwt1.o \
 $(OBJDIR)/gwf3.o \
 $(OBJDIR)/ims8base.o \
@@ -211,7 +215,6 @@ $(OBJDIR)/comarg.o \
 $(OBJDIR)/mf6core.o \
 $(OBJDIR)/BaseGeometry.o \
 $(OBJDIR)/mf6.o \
-$(OBJDIR)/VectorInt.o \
 $(OBJDIR)/StringList.o \
 $(OBJDIR)/MemorySetHandler.o \
 $(OBJDIR)/ilut.o \
