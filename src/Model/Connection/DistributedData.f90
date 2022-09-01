@@ -12,8 +12,7 @@ module DistributedDataModule
   private
 
   ! stages for synchronization
-  integer(I4B), public, parameter :: BEFORE_AR = 0
-  integer(I4B), public, parameter :: BEFORE_DF = 1
+  integer(I4B), public, parameter :: AFTER_AR = 1
   integer(I4B), public, parameter :: BEFORE_AD = 2
   integer(I4B), public, parameter :: BEFORE_CF = 3
   integer(I4B), public, parameter :: BEFORE_FC = 4
@@ -266,7 +265,7 @@ contains
     do i = 1, this%variable_list%Count()
       obj => this%variable_list%GetItem(i)
       var => CastAsMappedVariable(obj)
-      if (.not. var%controller_id == controller_id) cycle
+      if (controller_id > 0 .and. var%controller_id /= controller_id) cycle
       if (.not. check_stage(var%sync_stage,stage)) cycle
 
       ! copy data

@@ -275,6 +275,7 @@ contains
     !!
   !<
   subroutine simulation_ar()
+    use DistributedDataModule
     ! -- local variables
     integer(I4B) :: im
     integer(I4B) :: ic
@@ -295,12 +296,15 @@ contains
       ep => GetBaseExchangeFromList(baseexchangelist, ic)
       call ep%exg_ar()
     end do
-    !
+    !    
     ! -- Allocate and read all model connections
     do ic = 1, baseconnectionlist%Count()
       mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
       call mc%exg_ar()
     end do
+    !
+    ! -- Synchronize
+    call distributed_data%synchronize(0, AFTER_AR)
     !
     ! -- Allocate and read each solution
     do is = 1, basesolutionlist%Count()
