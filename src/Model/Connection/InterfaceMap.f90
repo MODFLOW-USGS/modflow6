@@ -20,6 +20,7 @@ module InterfaceMapModule
     integer(I4B) :: nr_models
     character(len=LENMODELNAME), dimension(:), pointer :: model_names
     integer(I4B) :: nr_exchanges
+    integer(I4B) :: prim_exg_idx
     character(len=LENEXCHANGENAME), dimension(:), pointer :: exchange_names
     type(IndexMapType), dimension(:), pointer :: node_map
     type(IndexMapType), dimension(:), pointer :: connection_map

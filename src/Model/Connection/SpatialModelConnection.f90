@@ -81,7 +81,6 @@ module SpatialModelConnectionModule
 
     ! private
     procedure, private, pass(this) :: setupGridConnection
-    procedure, private, pass(this) :: setExchangeConnections
     procedure, private, pass(this) :: getNrOfConnections
     procedure, private, pass(this) :: allocateScalars
     procedure, private, pass(this) :: allocateArrays
@@ -177,7 +176,7 @@ contains ! module procedures
     class(SpatialModelConnectionType) :: this !< this connection
 
     ! map distributed model variables for synchronization
-    this%interfaceMap => this%gridConnection%getInterfaceMap()
+    call this%gridConnection%getInterfaceMap(this%interfaceMap)
     call distributed_data%map_variables(this%interfaceModel%idsoln, &
                                         this%distVarList, &
                                         this%interfaceMap)
@@ -386,8 +385,8 @@ contains ! module procedures
     class(SpatialModelConnectionType) :: this !< this connection
     ! local
 
-    ! set boundary cells
-    call this%setExchangeConnections()
+    ! connect cells from primary exchange
+    call this%gridConnection%connectPrimaryExchange(this%primaryExchange) 
 
     ! create topology of models
     call this%gridConnection%findModelNeighbors(this%globalExchanges, &
@@ -397,23 +396,6 @@ contains ! module procedures
     call this%gridConnection%extendConnection()
 
   end subroutine setupGridConnection
-
-  !> @brief Set the primary connections from the exchange data
-  !<
-  subroutine setExchangeConnections(this)
-    class(SpatialModelConnectionType) :: this !< this connection
-    ! local
-    integer(I4B) :: iconn
-    type(DisConnExchangeType), pointer :: connEx
-
-    ! set boundary cells
-    connEx => this%primaryExchange
-    do iconn = 1, connEx%nexg
-      call this%gridConnection%connectCell(connEx%nodem1(iconn), connEx%model1, &
-                                           connEx%nodem2(iconn), connEx%model2)
-    end do
-
-  end subroutine setExchangeConnections
 
   !> @brief Allocation of scalars
   !<

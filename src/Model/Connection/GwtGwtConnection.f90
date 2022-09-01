@@ -436,29 +436,21 @@ contains
   !> @brief Set the flows (flowja from interface model) to the
   !< simvals in the exchange, leaving the budget calcution in there
   subroutine setFlowToExchange(this)
+    use InterfaceMapModule
     class(GwtGwtConnectionType) :: this !< this connection
     ! local
     integer(I4B) :: i
-    integer(I4B) :: nIface, mIface, ipos
     class(GwtExchangeType), pointer :: gwtEx
-
-    gwtEx => this%gwtExchange
+    type(IndexMapSgnType), pointer :: map
+    
     if (this%exchangeIsOwned) then
-      do i = 1, gwtEx%nexg
-        gwtEx%simvals(i) = DZERO
+      gwtEx => this%gwtExchange
+      map => this%interfaceMap%exchange_map(this%interfaceMap%prim_exg_idx)
 
-        if (gwtEx%gwtmodel1%ibound(gwtEx%nodem1(i)) /= 0 .and. &
-            gwtEx%gwtmodel2%ibound(gwtEx%nodem2(i)) /= 0) then
-
-          nIface = this%gridConnection%getInterfaceIndex(gwtEx%nodem1(i), &
-                                                         gwtEx%model1)
-          mIface = this%gridConnection%getInterfaceIndex(gwtEx%nodem2(i), &
-                                                         gwtEx%model2)
-          ipos = getCSRIndex(nIface, mIface, this%gwtInterfaceModel%ia, &
-                             this%gwtInterfaceModel%ja)
-          gwtEx%simvals(i) = this%gwtInterfaceModel%flowja(ipos)
-
-        end if
+      ! use (half of) the exchange map in reverse:
+      do i = 1, size(map%src_idx)
+        if (map%sign(i) < 0) cycle ! simvals is defined from exg%m1 => exg%m2
+        gwtEx%simvals(map%src_idx(i)) = this%gwtInterfaceModel%flowja(map%tgt_idx(i))
       end do
     end if
 

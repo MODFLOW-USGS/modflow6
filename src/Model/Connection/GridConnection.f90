@@ -49,6 +49,7 @@ module GridConnectionModule
     integer(I4B) :: exchangeStencilDepth !< stencil size at the interface
 
     class(NumericalModelType), pointer :: model => null() !< the model for which this grid connection exists
+    class(DisConnExchangeType), pointer :: primaryExchange => null() !< pointer to the primary exchange for this interface
 
     integer(I4B), pointer :: nrOfBoundaryCells => null() !< nr of boundary cells with connection to another model
     type(CellWithNbrsType), dimension(:), pointer :: boundaryCells => null() !< cells on our side of the primary connections
@@ -74,8 +75,8 @@ module GridConnectionModule
     ! public
     procedure, pass(this) :: construct
     procedure, private, pass(this) :: allocateScalars
-    procedure, public, pass(this) :: destroy
-    procedure, pass(this) :: connectCell
+    procedure, pass(this) :: destroy
+    procedure, pass(this) :: connectPrimaryExchange
     procedure, pass(this) :: findModelNeighbors
     procedure, pass(this) :: extendConnection
     generic :: getInterfaceIndex => getInterfaceIndexByCell, &
@@ -86,7 +87,8 @@ module GridConnectionModule
     ! 'protected'
     procedure, pass(this) :: isPeriodic
 
-    ! private routines
+    ! private routines    
+    procedure, private, pass(this) :: connectCell
     procedure, private, pass(this) :: buildConnections
     procedure, private, pass(this) :: addNeighbors
     procedure, private, pass(this) :: addNeighborCell
@@ -140,6 +142,25 @@ contains
     this%exchangeStencilDepth = 1
 
   end subroutine construct
+
+  !> @brief Make connections for the primary exchange
+  !<
+  subroutine connectPrimaryExchange(this, primEx)
+    class(GridConnectionType) :: this !< this grid connection
+    class(DisConnExchangeType), pointer :: primEx !< the primary exchange for this connection
+    ! local
+    integer(I4B) :: iconn
+
+    ! store the primary exchange
+    this%primaryExchange => primEx
+
+    ! connect the cells
+    do iconn = 1, primEx%nexg
+      call this%connectCell(primEx%nodem1(iconn), primEx%model1, &
+                                           primEx%nodem2(iconn), primEx%model2)
+    end do
+
+  end subroutine connectPrimaryExchange
 
   !> @brief Connect neighboring cells at the interface by
   !! storing them in the boundary cell and connected cell
@@ -1092,11 +1113,11 @@ contains
 
   !> @brief Build interface map object for outside use,
   !< (caller owns the memory)
-  function getInterfaceMap(this) result(interfaceMap)
+  subroutine getInterfaceMap(this, interfaceMap)
     use BaseModelModule, only: BaseModelType, GetBaseModelFromList
     use VectorIntModule
     class(GridConnectionType) :: this !< this grid connection
-    type(InterfaceMapType), pointer :: interfaceMap
+    type(InterfaceMapType), pointer :: interfaceMap !< a pointer to the map (not allocated yet)
     ! local
     integer(I4B) :: i, j, iloc, jloc
     integer(I4B) :: im, ix, mid, n
@@ -1104,6 +1125,7 @@ contains
     type(VectorInt) :: modelIds
     type(VectorInt) :: srcIdxTmp, tgtIdxTmp, signTmp
     class(DisConnExchangeType), pointer :: connEx
+    integer(I4B) :: tempIdxs(1)
 
     allocate (interfaceMap)
 
@@ -1232,30 +1254,11 @@ contains
 
     end do
 
-  end function getInterfaceMap
+    ! set the primary exchange idx
+    tempIdxs = findloc(interfaceMap%exchange_names, this%primaryExchange%name)
+    interfaceMap%prim_exg_idx = tempIdxs(1)
 
-  !> @brief Helper function to get model names when ids are given
-  !<
-  function get_model_name(id) result(name)
-    use ListsModule, only: basemodellist
-    use BaseModelModule, only: BaseModelType, GetBaseModelFromList
-    use MemoryHelperModule, only: create_mem_path
-    integer(I4B) :: id
-    character(len=LENMODELNAME) :: name
-    ! local
-    class(BaseModelType), pointer :: model
-    integer(I4B) :: im
-
-    name = ''
-    do im = 1, basemodellist%Count()
-      model => GetBaseModelFromList(basemodellist, im)
-      if (model%id == id) then
-        name = model%name
-        return
-      end if
-    end do
-
-  end function get_model_name
+  end subroutine getInterfaceMap
 
   !> @brief Deallocate grid connection resources
   !<
@@ -1310,5 +1313,29 @@ contains
     end do
 
   end function
+
+  !> @brief Helper function to get model names when ids are given
+  !<
+  function get_model_name(id) result(name)
+    use ConstantsModule, only: LENMODELNAME
+    use ListsModule, only: basemodellist
+    use BaseModelModule, only: BaseModelType, GetBaseModelFromList
+    use MemoryHelperModule, only: create_mem_path
+    integer(I4B) :: id
+    character(len=LENMODELNAME) :: name
+    ! local
+    class(BaseModelType), pointer :: model
+    integer(I4B) :: im
+
+    name = ''
+    do im = 1, basemodellist%Count()
+      model => GetBaseModelFromList(basemodellist, im)
+      if (model%id == id) then
+        name = model%name
+        return
+      end if
+    end do
+
+  end function get_model_name
 
 end module GridConnectionModule
