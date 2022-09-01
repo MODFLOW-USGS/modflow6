@@ -1255,8 +1255,14 @@ contains
     end do
 
     ! set the primary exchange idx
-    tempIdxs = findloc(interfaceMap%exchange_names, this%primaryExchange%name)
-    interfaceMap%prim_exg_idx = tempIdxs(1)
+    ! findloc cannot be used until gfortran 9...
+    interfaceMap%prim_exg_idx = -1
+    do i = 1, interfaceMap%nr_exchanges
+      if (interfaceMap%exchange_names(i) == this%primaryExchange%name) then
+        interfaceMap%prim_exg_idx = i
+        exit
+      end if
+    end do
 
   end subroutine getInterfaceMap
 
