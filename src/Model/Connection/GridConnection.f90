@@ -1198,8 +1198,15 @@ contains
       do n = 1, connEx%nexg
         i = this%getInterfaceIndex(connEx%nodem1(n), connEx%model1)
         j = this%getInterfaceIndex(connEx%nodem2(n), connEx%model2)
-        if (i == -1 .or. j == -1) cycle ! not all exchanges are part of the interface
+        if (i == -1 .or. j == -1) cycle ! not all exchange nodes are part of the interface
         ipos = this%connections%getjaindex(i, j)
+        if (ipos == 0) then
+          ! this can typically happen at corner points for a larger 
+          ! stencil (XT3D), when both i and j are included in the
+          ! interface grid as leaf nodes, but their connection is not. 
+          ! (c.f. 'test_gwf_ifmod_mult_exg.py')
+          cycle
+        end if
         call srcIdxTmp%push_back(n)
         call tgtIdxTmp%push_back(ipos)
         call signTmp%push_back(1)
