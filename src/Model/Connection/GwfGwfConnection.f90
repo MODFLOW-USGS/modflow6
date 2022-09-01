@@ -489,7 +489,7 @@ contains
     integer(I4B) :: i
     class(GwfExchangeType), pointer :: gwfEx
     type(IndexMapSgnType), pointer :: map
-    
+
     if (this%exchangeIsOwned) then
       gwfEx => this%gwfExchange
       map => this%interfaceMap%exchange_map(this%interfaceMap%prim_exg_idx)
@@ -497,7 +497,8 @@ contains
       ! use (half of) the exchange map in reverse:
       do i = 1, size(map%src_idx)
         if (map%sign(i) < 0) cycle ! simvals is defined from exg%m1 => exg%m2
-        gwfEx%simvals(map%src_idx(i)) = this%gwfInterfaceModel%flowja(map%tgt_idx(i))
+        gwfEx%simvals(map%src_idx(i)) = &
+          this%gwfInterfaceModel%flowja(map%tgt_idx(i))
       end do
     end if
 

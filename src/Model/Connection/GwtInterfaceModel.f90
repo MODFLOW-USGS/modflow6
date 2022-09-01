@@ -37,7 +37,7 @@ module GwtInterfaceModelModule
     procedure :: model_ar => gwtifmod_ar
     procedure :: model_da => gwtifmod_da
     procedure, public :: allocate_fmi
-    procedure :: allocate_scalars    
+    procedure :: allocate_scalars
     procedure :: setDspGridData
   end type GwtInterfaceModelType
 
@@ -102,10 +102,14 @@ contains
   subroutine allocate_fmi(this)
     class(GwtInterfaceModelType) :: this !< the GWT interface model
 
-    call mem_allocate(this%fmi%gwfflowja, this%nja, 'GWFFLOWJA', this%fmi%memoryPath)
-    call mem_allocate(this%fmi%gwfhead, this%neq, 'GWFHEAD', this%fmi%memoryPath)
-    call mem_allocate(this%fmi%gwfsat, this%neq, 'GWFSAT', this%fmi%memoryPath)
-    call mem_allocate(this%fmi%gwfspdis, 3, this%neq, 'GWFSPDIS', this%fmi%memoryPath)
+    call mem_allocate(this%fmi%gwfflowja, this%nja, 'GWFFLOWJA', &
+                      this%fmi%memoryPath)
+    call mem_allocate(this%fmi%gwfhead, this%neq, 'GWFHEAD', &
+                      this%fmi%memoryPath)
+    call mem_allocate(this%fmi%gwfsat, this%neq, 'GWFSAT', &
+                      this%fmi%memoryPath)
+    call mem_allocate(this%fmi%gwfspdis, 3, this%neq, 'GWFSPDIS', &
+                      this%fmi%memoryPath)
 
   end subroutine allocate_fmi
 

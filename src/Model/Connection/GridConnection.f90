@@ -87,7 +87,7 @@ module GridConnectionModule
     ! 'protected'
     procedure, pass(this) :: isPeriodic
 
-    ! private routines    
+    ! private routines
     procedure, private, pass(this) :: connectCell
     procedure, private, pass(this) :: buildConnections
     procedure, private, pass(this) :: addNeighbors
@@ -157,7 +157,7 @@ contains
     ! connect the cells
     do iconn = 1, primEx%nexg
       call this%connectCell(primEx%nodem1(iconn), primEx%model1, &
-                                           primEx%nodem2(iconn), primEx%model2)
+                            primEx%nodem2(iconn), primEx%model2)
     end do
 
   end subroutine connectPrimaryExchange

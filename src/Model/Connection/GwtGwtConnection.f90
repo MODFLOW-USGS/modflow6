@@ -72,7 +72,7 @@ module GwtGwtConnectionModule
     procedure, pass(this), private :: allocate_scalars
     procedure, pass(this), private :: allocate_arrays
     procedure, pass(this), private :: setGridExtent
-    procedure, pass(this), private :: setFlowToExchange    
+    procedure, pass(this), private :: setFlowToExchange
 
   end type GwtGwtConnectionType
 
@@ -442,7 +442,7 @@ contains
     integer(I4B) :: i
     class(GwtExchangeType), pointer :: gwtEx
     type(IndexMapSgnType), pointer :: map
-    
+
     if (this%exchangeIsOwned) then
       gwtEx => this%gwtExchange
       map => this%interfaceMap%exchange_map(this%interfaceMap%prim_exg_idx)
@@ -450,7 +450,8 @@ contains
       ! use (half of) the exchange map in reverse:
       do i = 1, size(map%src_idx)
         if (map%sign(i) < 0) cycle ! simvals is defined from exg%m1 => exg%m2
-        gwtEx%simvals(map%src_idx(i)) = this%gwtInterfaceModel%flowja(map%tgt_idx(i))
+        gwtEx%simvals(map%src_idx(i)) = &
+          this%gwtInterfaceModel%flowja(map%tgt_idx(i))
       end do
     end if
 
