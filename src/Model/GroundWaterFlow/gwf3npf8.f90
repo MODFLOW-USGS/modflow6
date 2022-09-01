@@ -3694,7 +3694,23 @@ contains
       !
       ! -- if both cells are non-convertible then use average cell thickness
     elseif (ictn == 0 .and. ictm == 0) then
-      res = DHALF * (topn - botn + topm - botm)
+      thksatn = topn - botn
+      thksatm = topm - botm
+      !
+      ! -- If staggered connection, subtract parts of cell that are above and
+      !    below the sill top and bottom elevations
+      if (ihc == 2) then
+        !
+        ! -- Calculate sill_top and sill_bot
+        sill_top = min(topn, topm)
+        sill_bot = max(botn, botm)
+        !
+        ! -- Saturated thickness is sill_top - sill_bot
+        thksatn = max(sill_top - sill_bot, DZERO)
+        thksatm = thksatn
+      end if
+      !
+      res = DHALF * (thksatn + thksatm)
       !
       ! -- At least one of the cells is convertible, so calculate average saturated
       !    thickness
