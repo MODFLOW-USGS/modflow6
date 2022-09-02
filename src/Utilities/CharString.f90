@@ -29,6 +29,7 @@ module CharacterStringModule
     procedure, pass(rhs) :: character_eq_charstring
     procedure, pass(lhs) :: charstring_eq_character
     procedure :: write_unformatted
+    procedure :: strlen
     generic :: assignment(=) => assign_to_charstring, assign_from_charstring
     generic :: operator(==) => character_eq_charstring, charstring_eq_character
     ! not supported by gfortran 5 and 6
@@ -99,5 +100,16 @@ contains
       write (unit, iostat=iostat) this%charstring
     end if
   end subroutine write_unformatted
+
+  function strlen(this) result(length)
+    class(CharacterStringType), intent(in) :: this
+    integer :: length
+
+    if (allocated(this%charstring)) then
+      length = len(this%charstring)
+    else
+      length = 0
+    end if
+  end function strlen
 
 end module CharacterStringModule
