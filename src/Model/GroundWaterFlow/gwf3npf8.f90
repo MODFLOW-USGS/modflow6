@@ -1077,8 +1077,8 @@ contains
     call mem_deallocate(this%ithickstartflag)
     call mem_deallocate(this%icelltype)
     call mem_deallocate(this%k11)
-    call mem_deallocate(this%k22, 'K22', trim(this%memoryPath))
-    call mem_deallocate(this%k33, 'K33', trim(this%memoryPath))
+    call mem_deallocate(this%k22)
+    call mem_deallocate(this%k33)
     call mem_deallocate(this%sat)
     call mem_deallocate(this%condsat)
     call mem_deallocate(this%wetdry)
@@ -1759,9 +1759,10 @@ contains
         write (errmsg, '(a)') 'K33OVERK option specified but K33 not specified.'
         call store_error(errmsg)
       end if
-      write (this%iout, '(1x, a)') 'K33 not provided.  Assuming K33 = K.'
-      call mem_reassignptr(this%k33, 'K33', trim(this%memoryPath), &
-                           'K11', trim(this%memoryPath))
+      write (this%iout, '(1x, a)') 'K33 not provided.  Setting K33 = K.'
+      do n = 1, size(this%k11)
+        this%k33(n) = this%k11(n)
+      end do
     end if
     !
     ! -- set ik22 flag
@@ -1772,9 +1773,10 @@ contains
         write (errmsg, '(a)') 'K22OVERK option specified but K22 not specified.'
         call store_error(errmsg)
       end if
-      write (this%iout, '(1x, a)') 'K22 not provided.  Assuming K22 = K.'
-      call mem_reassignptr(this%k22, 'K22', trim(this%memoryPath), &
-                           'K11', trim(this%memoryPath))
+      write (this%iout, '(1x, a)') 'K22 not provided.  Setting K22 = K.'
+      do n = 1, size(this%k11)
+        this%k22(n) = this%k11(n)
+      end do
     end if
     !
     ! -- Set WETDRY
@@ -1834,8 +1836,7 @@ contains
     else
       ! if not present, then K22 = K11
       this%ik22 = 0
-      call mem_reassignptr(this%k22, 'K22', trim(this%memoryPath), &
-                           'K11', trim(this%memoryPath))
+      call this%dis%fill_grid_array(this%k11, this%k22)
     end if
 
     if (npf_data%ik33 == 1) then
@@ -1844,8 +1845,7 @@ contains
     else
       ! if not present, then K33 = K11
       this%ik33 = 0
-      call mem_reassignptr(this%k33, 'K33', trim(this%memoryPath), &
-                           'K11', trim(this%memoryPath))
+      call this%dis%fill_grid_array(this%k11, this%k33)
     end if
 
     if (npf_data%iwetdry == 1) then
@@ -2637,8 +2637,8 @@ contains
     hy11 = this%k11(n)
     hy22 = this%k11(n)
     hy33 = this%k11(n)
-    if (this%ik22 /= 0) hy22 = this%k22(n)
-    if (this%ik33 /= 0) hy33 = this%k33(n)
+    hy22 = this%k22(n)
+    hy33 = this%k33(n)
     !
     ! -- Calculate effective K based on whether connection is vertical
     !    or horizontal
