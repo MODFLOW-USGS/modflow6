@@ -227,6 +227,10 @@ contains
                        '.  The XT3D option cannot be used with the GNC &
                        &Package.', terminate=.TRUE.)
     end if
+
+    ! -- allocate arrays
+    call this%allocate_arrays(this%dis%nodes, this%dis%njas)
+
     !
     ! -- Return
     return
@@ -292,6 +296,8 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_reallocate
     ! -- dummy
     class(GwfNpftype) :: this !< instance of the NPF package
     type(GwfIcType), pointer, intent(in) :: ic !< initial conditions
@@ -308,8 +314,12 @@ contains
     this%ibound => ibound
     this%hnew => hnew
     !
-    ! -- allocate arrays
-    call this%allocate_arrays(this%dis%nodes, this%dis%njas)
+    if (this%nedges > 0) then
+      call mem_reallocate(this%nodedge, this%nedges, 'NODEDGE', this%memoryPath)
+      call mem_reallocate(this%ihcedge, this%nedges, 'IHCEDGE', this%memoryPath)
+      call mem_reallocate(this%propsedge, 5, this%nedges, 'PROPSEDGE', &
+                          this%memoryPath)
+    end if
     !
     if (.not. present(grid_data)) then
       ! -- read from file, set, and convert/check the input
@@ -1232,22 +1242,18 @@ contains
     !
     ! -- Optional arrays
     call mem_allocate(this%ibotnode, 0, 'IBOTNODE', this%memoryPath)
+    call mem_allocate(this%nodedge, 0, 'NODEDGE', this%memoryPath)
+    call mem_allocate(this%ihcedge, 0, 'IHCEDGE', this%memoryPath)
+    call mem_allocate(this%propsedge, 0, 0, 'PROPSEDGE', this%memoryPath)
     !
     ! -- Specific discharge
     if (this%icalcspdis == 1) then
       call mem_allocate(this%spdis, 3, ncells, 'SPDIS', this%memoryPath)
-      call mem_allocate(this%nodedge, this%nedges, 'NODEDGE', this%memoryPath)
-      call mem_allocate(this%ihcedge, this%nedges, 'IHCEDGE', this%memoryPath)
-      call mem_allocate(this%propsedge, 5, this%nedges, 'PROPSEDGE', &
-                        this%memoryPath)
       do n = 1, ncells
         this%spdis(:, n) = DZERO
       end do
     else
       call mem_allocate(this%spdis, 3, 0, 'SPDIS', this%memoryPath)
-      call mem_allocate(this%nodedge, 0, 'NODEDGE', this%memoryPath)
-      call mem_allocate(this%ihcedge, 0, 'IHCEDGE', this%memoryPath)
-      call mem_allocate(this%propsedge, 0, 0, 'PROPSEDGE', this%memoryPath)
     end if
     !
     ! -- Time-varying property flag arrays

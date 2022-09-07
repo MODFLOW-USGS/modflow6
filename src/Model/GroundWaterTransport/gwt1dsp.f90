@@ -142,6 +142,9 @@ contains
       call this%xt3d%xt3d_df(dis)
     end if
     !
+    ! -- Allocate arrays
+    call this%allocate_arrays(this%dis%nodes)
+    !
     ! -- Return
     return
   end subroutine dsp_df
@@ -223,9 +226,6 @@ contains
     if (this%iout > 0) then
       write (this%iout, fmtdsp) this%inunit
     end if
-    !
-    ! -- Allocate arrays
-    call this%allocate_arrays(this%dis%nodes)
     !
     if (present(grid_data)) then
       ! -- Set dispersion data
