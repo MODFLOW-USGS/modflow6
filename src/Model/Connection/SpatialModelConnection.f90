@@ -78,6 +78,8 @@ module SpatialModelConnectionModule
     procedure, pass(this) :: spatialcon_connect
     procedure, pass(this) :: validateConnection
     procedure, pass(this) :: addDistVar
+    procedure, pass(this) :: mapVariables
+
 
     ! private
     procedure, private, pass(this) :: setupGridConnection
@@ -86,7 +88,6 @@ module SpatialModelConnectionModule
     procedure, private, pass(this) :: allocateArrays
     procedure, private, pass(this) :: createCoefficientMatrix
     procedure, private, pass(this) :: maskOwnerConnections
-    procedure, private, pass(this) :: mapVariables
 
   end type SpatialModelConnectionType
 
@@ -164,9 +165,6 @@ contains ! module procedures
       gc%idxToGlobalIdx(localIdx) = gc%idxToGlobal(localIdx)%index + &
                                     gc%idxToGlobal(localIdx)%model%moffset
     end do
-
-    ! set up mapping for distributed data
-    call this%mapVariables()
 
   end subroutine spatialcon_ar
 

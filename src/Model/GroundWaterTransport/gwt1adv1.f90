@@ -118,9 +118,6 @@ contains
     this%dis => dis
     this%ibound => ibound
     !
-    ! -- Allocate arrays (not needed for adv)
-    !call this%allocate_arrays(dis%nodes)
-    !
     ! -- Return
     return
   end subroutine adv_ar

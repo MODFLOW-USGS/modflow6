@@ -193,7 +193,8 @@ contains
       call this%addDistVar('POROSITY', 'MST', this%gwtInterfaceModel%name, &
                            SYNC_NODES, '', (/AFTER_AR/))
     end if
-
+    call this%mapVariables()
+    
     call this%allocate_arrays()
     call this%gwtInterfaceModel%allocate_fmi()
 

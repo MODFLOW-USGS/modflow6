@@ -158,6 +158,15 @@ contains
                          SYNC_NODES, '', (/BEFORE_AD, BEFORE_CF/))
     call this%addDistVar('XOLD', '', this%gwfInterfaceModel%name, &
                          SYNC_NODES, '', (/BEFORE_AD, BEFORE_CF/))
+    call this%addDistVar('ICELLTYPE', 'NPF', this%gwfInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AR/))                     
+    call this%addDistVar('K11', 'NPF', this%gwfInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AR/))
+    call this%addDistVar('K22', 'NPF', this%gwfInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AR/))
+    call this%addDistVar('K33', 'NPF', this%gwfInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AR/))
+    call this%mapVariables()
 
     ! point X, RHS, IBOUND to connection
     call this%spatialcon_setmodelptrs()

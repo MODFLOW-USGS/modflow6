@@ -1833,26 +1833,26 @@ contains
     type(GwfNpfGridDataType), intent(in) :: npf_data
 
     ! fill grid arrays
-    call this%dis%fill_grid_array(npf_data%icelltype, this%icelltype)
-    call this%dis%fill_grid_array(npf_data%k11, this%k11)
+    ! call this%dis%fill_grid_array(npf_data%icelltype, this%icelltype)
+    ! call this%dis%fill_grid_array(npf_data%k11, this%k11)
 
-    if (npf_data%ik22 == 1) then
-      this%ik22 = 1
-      call this%dis%fill_grid_array(npf_data%k22, this%k22)
-    else
-      ! if not present, then K22 = K11
-      this%ik22 = 0
-      call this%dis%fill_grid_array(this%k11, this%k22)
-    end if
+    ! if (npf_data%ik22 == 1) then
+    !   this%ik22 = 1
+    !   call this%dis%fill_grid_array(npf_data%k22, this%k22)
+    ! else
+    !   ! if not present, then K22 = K11
+    !   this%ik22 = 0
+    !   call this%dis%fill_grid_array(this%k11, this%k22)
+    ! end if
 
-    if (npf_data%ik33 == 1) then
-      this%ik33 = 1
-      call this%dis%fill_grid_array(npf_data%k33, this%k33)
-    else
-      ! if not present, then K33 = K11
-      this%ik33 = 0
-      call this%dis%fill_grid_array(this%k11, this%k33)
-    end if
+    ! if (npf_data%ik33 == 1) then
+    !   this%ik33 = 1
+    !   call this%dis%fill_grid_array(npf_data%k33, this%k33)
+    ! else
+    !   ! if not present, then K33 = K11
+    !   this%ik33 = 0
+    !   call this%dis%fill_grid_array(this%k11, this%k33)
+    ! end if
 
     if (npf_data%iwetdry == 1) then
       call this%dis%fill_grid_array(npf_data%wetdry, this%wetdry)
