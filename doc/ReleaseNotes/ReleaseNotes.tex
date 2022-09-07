@@ -212,13 +212,12 @@ This section describes changes introduced into MODFLOW~6 for the current release
 		\item Terminate with error if METHOD or METHODS not specified in time series input files.  Prior to this change, the program would continue without an interpolated value for one or more time series records.
 		\item When a GWF Model and a corresponding GWT model are solved in the same simulation, the GWF Model must be solved before the corresponding GWT model.  The GWF Model must also be solved by a different IMS than the GWT Model.  There was not a check for this in previous versions and if these conditions were not met, the solution would often not converge or it would give erroneous results.
 		\item The DISV Package would not raise an error if a model cell was defined as a line.  The program was modified to check for the case where the calculated cell area is equal to zero.  If the calculated cell area is equal to zero, the program terminates with an error.
-		\item When the LAK Package was used with a combination of outlets that routed water to another lake and outlets that did not, then the budget information stored for the LAK Package had uninitialized records for LAK to LAK flows.  These uninitialized records were used by the LKT Package and possibly other programs.  The LAK to LAK budget information was modified to include only valid records.   
 	\end{itemize}
 
 	\underline{INTERNAL FLOW PACKAGES}
 	\begin{itemize}
 		\item Corrected programming error in the Time-Variable Hydraulic Conductivity (TVK) Package in which the vertical hydraulic conductivity was not reset properly if the K33OVERK option was invoked in the Node Property Flow (NPF) Package.
-	%	\item xxx
+		\item The Node Property Flow (NPF) Package had an error in how the saturated thickness at the interface between two cells was calculated for a DISU connection that is marked as vertically staggered (IHC = 2).  The calculation was corrected so that the thickness for two confined cells is based on the overlap of the cells rather than the average thickness of the two cells.
 	%	\item xxx
 	\end{itemize}
 
@@ -229,12 +228,13 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	%	\item xxx
 	\end{itemize}
 
-	%\underline{ADVANCED STRESS PACKAGES}
-	%\begin{itemize}
-	%	\item Add new MAW\_FLOW\_REDUCE\_CSV option for the Multi-Aquifer Well (MAW) Package.  If activated, then this option will result in information being written to a comma-separated value file for each multi-aquifer well and for each time step in which the extraction or injection rate is reduced by the program.  Information is not written for multi-aquifer wells in which the extraction or injection rate is equal to the user-specified extraction or injection rate.
+	\underline{ADVANCED STRESS PACKAGES}
+	\begin{itemize}
+		\item When the LAK Package was used with a combination of outlets that routed water to another lake and outlets that did not, then the budget information stored for the LAK Package had uninitialized records for LAK to LAK flows.  These uninitialized records were used by the LKT Package and possibly other programs.  The LAK to LAK budget information was modified to include only valid records.
+		\item There were several problems in the observation utility for the Streamflow Transport (SFT), Lake Transport (LKT), Multi-Aquifer Well Transport (MWT), and Unsaturated Zone Transport (UZT) Packages.  These issues were corrected as well as the descriptions for the observations in the user input and output guide.
 	%	\item xxx
 	%	\item xxx
-	%\end{itemize}
+	\end{itemize}
 
 	%\underline{SOLUTION}
 	%\begin{itemize}

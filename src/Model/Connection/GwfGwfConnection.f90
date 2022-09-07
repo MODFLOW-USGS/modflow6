@@ -1,6 +1,7 @@
 module GwfGwfConnectionModule
   use KindModule, only: I4B, DP, LGP
-  use ConstantsModule, only: DZERO, DONE, DEM6, LENCOMPONENTNAME, LINELENGTH
+  use ConstantsModule, only: DZERO, DONE, DEM6, LENVARNAME, &
+                             LENCOMPONENTNAME, LENMEMPATH, LINELENGTH
   use CsrUtilsModule, only: getCSRIndex
   use SparseModule, only: sparsematrix
   use MemoryManagerModule, only: mem_allocate, mem_deallocate
@@ -17,6 +18,7 @@ module GwfGwfConnectionModule
   use BaseDisModule, only: DisBaseType
   use ConnectionsModule, only: ConnectionsType
   use CellWithNbrsModule, only: GlobalCellType
+  use DistributedDataModule
 
   implicit none
   private
@@ -37,8 +39,6 @@ module GwfGwfConnectionModule
     integer(I4B), pointer :: iXt3dOnExchange => null() !< run XT3D on the interface,
                                                        !! 0 = don't, 1 = matrix, 2 = rhs
     integer(I4B) :: iout = 0 !< the list file for the interface model
-
-    real(DP), dimension(:), pointer, contiguous :: exgflowja => null() !< flowja through exchange faces
 
   contains
     procedure, pass(this) :: gwfGwfConnection_ctor
@@ -61,12 +61,9 @@ module GwfGwfConnectionModule
 
     ! local stuff
     procedure, pass(this), private :: allocateScalars
-    procedure, pass(this), private :: allocate_arrays
     procedure, pass(this), private :: setGridExtent
-    procedure, pass(this), private :: syncInterfaceModel
     procedure, pass(this), private :: validateGwfExchange
     procedure, pass(this), private :: setFlowToExchange
-    procedure, pass(this), private :: saveExchangeFlows
     procedure, pass(this), private :: setNpfEdgeProps
 
   end type GwfGwfConnectionType
@@ -150,18 +147,23 @@ contains
       write (imName, '(a,i0)') 'GWFIM2_', this%gwfExchange%id
     end if
     call this%gwfInterfaceModel%gwfifm_cr(imName, this%iout, this%gridConnection)
-
+    call this%gwfInterfaceModel%set_idsoln(this%gwfModel%idsoln)
     this%gwfInterfaceModel%npf%satomega = this%gwfModel%npf%satomega
     this%gwfInterfaceModel%npf%ixt3d = this%iXt3dOnExchange
     call this%gwfInterfaceModel%model_df()
+
+    call this%addDistVar('X', '', this%gwfInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AD, BEFORE_CF/))
+    call this%addDistVar('IBOUND', '', this%gwfInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AD, BEFORE_CF/))
+    call this%addDistVar('XOLD', '', this%gwfInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AD, BEFORE_CF/))
 
     ! point X, RHS, IBOUND to connection
     call this%spatialcon_setmodelptrs()
 
     ! connect interface model to spatial connection
     call this%spatialcon_connect()
-
-    call this%allocate_arrays()
 
   end subroutine gwfgwfcon_df
 
@@ -191,22 +193,6 @@ contains
     call mem_allocate(this%iXt3dOnExchange, 'IXT3DEXG', this%memoryPath)
 
   end subroutine allocateScalars
-
-  !> @brief allocation of arrays in the connection
-  !<
-  subroutine allocate_arrays(this)
-    use MemoryManagerModule, only: mem_allocate
-    class(GwfGwfConnectionType) :: this !< the connection
-    ! local
-    integer(I4B) :: i
-
-    call mem_allocate(this%exgflowja, this%gridConnection%nrOfBoundaryCells, &
-                      'EXGFLOWJA', this%memoryPath)
-    do i = 1, size(this%exgflowja)
-      this%exgflowja(i) = 0.0_DP
-    end do
-
-  end subroutine allocate_arrays
 
   !> @brief Allocate and read the connection
   !<
@@ -256,9 +242,6 @@ contains
   subroutine gwfgwfcon_ad(this)
     class(GwfGwfConnectionType) :: this !< this connection
 
-    ! copy model data into interface model
-    call this%syncInterfaceModel()
-
     ! this triggers the BUY density calculation
     if (this%gwfInterfaceModel%inbuy > 0) call this%gwfInterfaceModel%buy%buy_ad()
 
@@ -285,36 +268,10 @@ contains
       this%rhs(i) = 0.0_DP
     end do
 
-    ! copy model data into interface model
-    ! (when kiter == 1, this is already done in _ad)
-    if (kiter > 1) call this%syncInterfaceModel()
-
     ! calculate (wetting/drying, saturation)
     call this%gwfInterfaceModel%model_cf(kiter)
 
   end subroutine gwfgwfcon_cf
-
-  !> @brief Synchronize the interface model
-  !! Fills interface model data from the
-  !! contributing GWF models, at the iteration
-  !< level
-  subroutine syncInterfaceModel(this)
-    class(GwfGwfConnectionType) :: this !< this connection
-    ! local
-    integer(I4B) :: icell, idx
-    class(NumericalModelType), pointer :: model
-
-    ! copy head values
-    do icell = 1, this%gridConnection%nrOfCells
-      idx = this%gridConnection%idxToGlobal(icell)%index
-      model => this%gridConnection%idxToGlobal(icell)%model
-
-      this%x(icell) = model%x(idx)
-      this%gwfInterfaceModel%ibound(icell) = model%ibound(idx)
-      this%gwfInterfaceModel%xold(icell) = model%xold(idx)
-    end do
-
-  end subroutine syncInterfaceModel
 
   !> @brief Write the calculated coefficients into the global
   !< system matrix and the rhs
@@ -474,9 +431,6 @@ contains
     ! scalars
     call mem_deallocate(this%iXt3dOnExchange)
 
-    ! arrays
-    call mem_deallocate(this%exgflowja)
-
     call this%gwfInterfaceModel%model_da()
     deallocate (this%gwfInterfaceModel)
 
@@ -508,8 +462,6 @@ contains
 
     call this%setFlowToExchange()
 
-    call this%saveExchangeFlows()
-
     !cdl Could we allow GwfExchange to do this instead, using
     !    simvals?
     ! if needed, we add the edge properties to the model's NPF
@@ -531,55 +483,26 @@ contains
   !> @brief Set the flows (flowja from interface model) to the
   !< simvals in the exchange, leaving the budget calcution in there
   subroutine setFlowToExchange(this)
+    use InterfaceMapModule
     class(GwfGwfConnectionType) :: this !< this connection
     ! local
     integer(I4B) :: i
-    integer(I4B) :: nIface, mIface, ipos
     class(GwfExchangeType), pointer :: gwfEx
+    type(IndexMapSgnType), pointer :: map
 
-    gwfEx => this%gwfExchange
     if (this%exchangeIsOwned) then
-      do i = 1, gwfEx%nexg
-        gwfEx%simvals(i) = DZERO
+      gwfEx => this%gwfExchange
+      map => this%interfaceMap%exchange_map(this%interfaceMap%prim_exg_idx)
 
-        if (gwfEx%gwfmodel1%ibound(gwfEx%nodem1(i)) /= 0 .and. &
-            gwfEx%gwfmodel2%ibound(gwfEx%nodem2(i)) /= 0) then
-
-          nIface = this%gridConnection%getInterfaceIndex(gwfEx%nodem1(i), &
-                                                         gwfEx%model1)
-          mIface = this%gridConnection%getInterfaceIndex(gwfEx%nodem2(i), &
-                                                         gwfEx%model2)
-          ipos = getCSRIndex(nIface, mIface, this%gwfInterfaceModel%ia, &
-                             this%gwfInterfaceModel%ja)
-          gwfEx%simvals(i) = this%gwfInterfaceModel%flowja(ipos)
-
-        end if
+      ! use (half of) the exchange map in reverse:
+      do i = 1, size(map%src_idx)
+        if (map%sign(i) < 0) cycle ! simvals is defined from exg%m1 => exg%m2
+        gwfEx%simvals(map%src_idx(i)) = &
+          this%gwfInterfaceModel%flowja(map%tgt_idx(i))
       end do
     end if
 
   end subroutine setFlowToExchange
-
-  !> @brief Copy interface model flowja between models, to
-  !< the local buffer for reuse by, e.g., GWT
-  subroutine saveExchangeFlows(this)
-    class(GwfGwfConnectionType) :: this !< this connection
-    ! local
-    integer(I4B) :: i, n, m, ipos
-    type(GlobalCellType) :: boundaryCell, connectedCell
-
-    do i = 1, this%gridConnection%nrOfBoundaryCells
-      boundaryCell = this%gridConnection%boundaryCells(i)%cell
-      connectedCell = this%gridConnection%connectedCells(i)%cell
-      n = this%gridConnection%getInterfaceIndex(boundaryCell%index, &
-                                                boundaryCell%model)
-      m = this%gridConnection%getInterfaceIndex(connectedCell%index, &
-                                                connectedCell%model)
-      ipos = getCSRIndex(n, m, this%gwfInterfaceModel%ia, &
-                         this%gwfInterfaceModel%ja)
-      this%exgflowja(i) = this%gwfInterfaceModel%flowja(ipos)
-    end do
-
-  end subroutine saveExchangeFlows
 
   !> @brief Set flowja as edge properties in the model,
   !< so it can be used for e.g. specific discharge calculation

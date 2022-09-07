@@ -16,6 +16,7 @@ module Mf6CoreModule
                                           GetSpatialModelConnectionFromList
   use BaseSolutionModule, only: BaseSolutionType, GetBaseSolutionFromList
   use SolutionGroupModule, only: SolutionGroupType, GetSolutionGroupFromList
+  use DistributedDataModule
   implicit none
 
 contains
@@ -190,6 +191,7 @@ contains
     end do
     call simulation_da()
     call lists_da()
+    call distributed_data%destroy()
     !
     ! -- Write memory usage, elapsed time and terminate
     call mem_write_usage(iout)
@@ -273,6 +275,7 @@ contains
     !!
   !<
   subroutine simulation_ar()
+    use DistributedDataModule
     ! -- local variables
     integer(I4B) :: im
     integer(I4B) :: ic
@@ -299,6 +302,9 @@ contains
       mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
       call mc%exg_ar()
     end do
+    !
+    ! -- Synchronize
+    call distributed_data%synchronize(0, AFTER_AR)
     !
     ! -- Allocate and read each solution
     do is = 1, basesolutionlist%Count()

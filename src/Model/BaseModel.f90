@@ -23,7 +23,6 @@ module BaseModelModule
     integer(I4B), pointer :: iprpak => null() !< integer flag to echo input
     integer(I4B), pointer :: iprflow => null() !< flag to print simulated flows
     integer(I4B), pointer :: ipakcb => null() !< save_flows flag
-    logical, pointer :: single_model_run => null() !< indicate if it is a single model run
   contains
     procedure :: model_df
     procedure :: model_ar
@@ -165,9 +164,8 @@ contains
     character(len=*), intent(in) :: modelname
 ! ------------------------------------------------------------------------------
     !
-    allocate (this%name)
-    allocate (this%macronym)
-    allocate (this%single_model_run)
+    call mem_allocate(this%name, LENMODELNAME, 'NAME', this%memoryPath)
+    call mem_allocate(this%macronym, 3, 'MACRONYM', this%memoryPath)
     call mem_allocate(this%id, 'ID', this%memoryPath)
     call mem_allocate(this%iout, 'IOUT', this%memoryPath)
     call mem_allocate(this%inewton, 'INEWTON', this%memoryPath)
@@ -185,7 +183,6 @@ contains
     this%iprflow = 0
     this%ipakcb = 0
     this%inewton = 0 !default is standard formulation
-    this%single_model_run = .false.
     !
     ! -- return
     return
@@ -205,11 +202,10 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Strings
-    deallocate (this%name)
-    deallocate (this%macronym)
+    call mem_deallocate(this%name, 'NAME', this%memoryPath)
+    call mem_deallocate(this%macronym, 'MACRONYM', this%memoryPath)
     !
     ! -- Scalars
-    deallocate (this%single_model_run)
     call mem_deallocate(this%id)
     call mem_deallocate(this%iout)
     call mem_deallocate(this%inewton)

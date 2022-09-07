@@ -3,7 +3,7 @@ module GwtGwtConnectionModule
   use ConstantsModule, only: LINELENGTH, LENCOMPONENTNAME, DZERO, LENBUDTXT
   use CsrUtilsModule, only: getCSRIndex
   use SimModule, only: ustop
-  use MemoryManagerModule, only: mem_allocate, mem_deallocate
+  use MemoryManagerModule, only: mem_allocate, mem_deallocate, mem_checkin
   use SpatialModelConnectionModule
   use NumericalModelModule
   use GwtModule
@@ -13,6 +13,7 @@ module GwtGwtConnectionModule
   use SparseModule, only: sparsematrix
   use ConnectionsModule, only: ConnectionsType
   use CellWithNbrsModule, only: GlobalCellType
+  use DistributedDataModule
 
   implicit none
   private
@@ -33,7 +34,6 @@ module GwtGwtConnectionModule
     integer(I4B), pointer :: iIfaceAdvScheme => null() !< the advection scheme at the interface:
                                                        !! 0 = upstream, 1 = central, 2 = TVD
     integer(I4B), pointer :: iIfaceXt3d => null() !< XT3D in the interface DSP package: 0 = no, 1 = lhs, 2 = rhs
-    real(DP), dimension(:), pointer, contiguous :: exgflowja => null() !< intercell flows at the interface, coming from GWF interface model
     integer(I4B), pointer :: exgflowSign => null() !< indicates the flow direction of exgflowja
     real(DP), dimension(:), pointer, contiguous :: exgflowjaGwt => null() !< gwt-flowja at the interface (this is a subset of the GWT
                                                                           !! interface model flowja's)
@@ -71,7 +71,6 @@ module GwtGwtConnectionModule
     ! local stuff
     procedure, pass(this), private :: allocate_scalars
     procedure, pass(this), private :: allocate_arrays
-    procedure, pass(this), private :: syncInterfaceModel
     procedure, pass(this), private :: setGridExtent
     procedure, pass(this), private :: setFlowToExchange
 
@@ -79,8 +78,8 @@ module GwtGwtConnectionModule
 
 contains
 
-!> @brief Basic construction of the connection
-!<
+  !> @brief Basic construction of the connection
+  !<
   subroutine gwtGwtConnection_ctor(this, model, gwtEx)
     use InputOutputModule, only: openfile
     class(GwtGwtConnectionType) :: this !< the connection
@@ -131,8 +130,8 @@ contains
 
   end subroutine gwtGwtConnection_ctor
 
-!> @brief Allocate scalar variables for this connection
-!<
+  !> @brief Allocate scalar variables for this connection
+  !<
   subroutine allocate_scalars(this)
     class(GwtGwtConnectionType) :: this !< the connection
 
@@ -142,34 +141,8 @@ contains
 
   end subroutine allocate_scalars
 
-!> @brief Allocate array variables for this connection
-!<
-  subroutine allocate_arrays(this)
-    class(GwtGwtConnectionType) :: this !< the connection
-    ! local
-    integer(I4B) :: i
-
-    call mem_allocate(this%gwfflowja, this%interfaceModel%nja, 'GWFFLOWJA', &
-                      this%memoryPath)
-    call mem_allocate(this%gwfsat, this%neq, 'GWFSAT', this%memoryPath)
-    call mem_allocate(this%gwfhead, this%neq, 'GWFHEAD', this%memoryPath)
-    call mem_allocate(this%gwfspdis, 3, this%neq, 'GWFSPDIS', this%memoryPath)
-
-    call mem_allocate(this%exgflowjaGwt, this%gridConnection%nrOfBoundaryCells, &
-                      'EXGFLOWJAGWT', this%memoryPath)
-
-    do i = 1, size(this%gwfflowja)
-      this%gwfflowja = 0.0_DP
-    end do
-
-    do i = 1, this%neq
-      this%gwfsat = 0.0_DP
-    end do
-
-  end subroutine allocate_arrays
-
-!> @brief define the GWT-GWT connection
-!<
+  !> @brief define the GWT-GWT connection
+  !<
   subroutine gwtgwtcon_df(this)
     class(GwtGwtConnectionType) :: this !< the connection
     ! local
@@ -198,19 +171,34 @@ contains
     call this%gwtInterfaceModel%gwtifmod_cr(imName, &
                                             this%iout, &
                                             this%gridConnection)
+    call this%gwtInterfaceModel%set_idsoln(this%gwtModel%idsoln)
     this%gwtInterfaceModel%iAdvScheme = this%iIfaceAdvScheme
     this%gwtInterfaceModel%ixt3d = this%iIfaceXt3d
     call this%gwtInterfaceModel%model_df()
 
+    call this%addDistVar('X', '', this%gwtInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AD, BEFORE_CF/))
+    call this%addDistVar('GWFHEAD', 'FMI', this%gwtInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AD/))
+    call this%addDistVar('GWFSAT', 'FMI', this%gwtInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AD/))
+    call this%addDistVar('GWFSPDIS', 'FMI', this%gwtInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AD/))
+    call this%addDistVar('GWFFLOWJA', 'FMI', this%gwtInterfaceModel%name, &
+                         SYNC_CONNECTIONS, '', (/BEFORE_AD/))
+    call this%addDistVar('GWFFLOWJA', 'FMI', this%gwtInterfaceModel%name, &
+                         SYNC_EXCHANGES, 'GWFSIMVALS', (/BEFORE_AD/))
+    ! fill porosity from mst packages, needed for dsp
+    if (this%gwtModel%indsp > 0 .and. this%gwtModel%inmst > 0) then
+      call this%addDistVar('POROSITY', 'MST', this%gwtInterfaceModel%name, &
+                           SYNC_NODES, '', (/AFTER_AR/))
+    end if
+
     call this%allocate_arrays()
+    call this%gwtInterfaceModel%allocate_fmi()
 
     ! connect X, RHS, IBOUND, and flowja
     call this%spatialcon_setmodelptrs()
-
-    this%gwtInterfaceModel%fmi%gwfflowja => this%gwfflowja
-    this%gwtInterfaceModel%fmi%gwfsat => this%gwfsat
-    this%gwtInterfaceModel%fmi%gwfhead => this%gwfhead
-    this%gwtInterfaceModel%fmi%gwfspdis => this%gwfspdis
 
     ! connect pointers (used by BUY)
     this%conc => this%gwtInterfaceModel%x
@@ -221,8 +209,18 @@ contains
 
   end subroutine gwtgwtcon_df
 
-!> @brief Set required extent of the interface grid from
-!< the configuration
+  !> @brief Allocate array variables for this connection
+  !<
+  subroutine allocate_arrays(this)
+    class(GwtGwtConnectionType) :: this !< the connection
+
+    call mem_allocate(this%exgflowjaGwt, this%gridConnection%nrOfBoundaryCells, &
+                      'EXGFLOWJAGWT', this%memoryPath)
+
+  end subroutine allocate_arrays
+
+  !> @brief Set required extent of the interface grid from
+  !< the configuration
   subroutine setGridExtent(this)
     class(GwtGwtConnectionType) :: this !< the connection
     ! local
@@ -251,29 +249,15 @@ contains
 
   end subroutine setGridExtent
 
-!> @brief allocate and read/set the connection's data structures
-!<
+  !> @brief allocate and read/set the connection's data structures
+  !<
   subroutine gwtgwtcon_ar(this)
     class(GwtGwtConnectionType) :: this !< the connection
-    ! local
-    integer(I4B) :: i, idx
-    class(GwtModelType), pointer :: gwtModel
-    class(*), pointer :: modelPtr
 
     ! check if we can construct an interface model
     ! NB: only makes sense after the models' allocate&read have been
     ! called, which is why we do it here
     call this%validateConnection()
-
-    ! fill porosity from mst packages, needed for dsp
-    if (this%gwtModel%inmst > 0) then
-      do i = 1, this%neq
-        modelPtr => this%gridConnection%idxToGlobal(i)%model
-        gwtModel => CastAsGwtModel(modelPtr)
-        idx = this%gridConnection%idxToGlobal(i)%index
-        this%gwtInterfaceModel%porosity(i) = gwtModel%mst%porosity(idx)
-      end do
-    end if
 
     ! allocate and read base
     call this%spatialcon_ar()
@@ -294,8 +278,8 @@ contains
 
   end subroutine gwtgwtcon_ar
 
-!> @brief validate this connection prior to constructing
-!< the interface model
+  !> @brief validate this connection prior to constructing
+  !< the interface model
   subroutine validateConnection(this)
     use SimVariablesModule, only: errmsg
     use SimModule, only: count_errors, store_error
@@ -333,8 +317,8 @@ contains
 
   end subroutine validateConnection
 
-!> @brief add connections to the global system for
-!< this connection
+  !> @brief add connections to the global system for
+  !< this connection
   subroutine gwtgwtcon_ac(this, sparse)
     class(GwtGwtConnectionType) :: this !< this connection
     type(sparsematrix), intent(inout) :: sparse !< sparse matrix to store the connections
@@ -367,13 +351,10 @@ contains
 
   end subroutine gwtgwtcon_rp
 
-!> @brief Advance this connection
+  !> @brief Advance this connection
   !<
   subroutine gwtgwtcon_ad(this)
     class(GwtGwtConnectionType) :: this !< this connection
-
-    ! copy model data into interface model
-    call this%syncInterfaceModel()
 
     ! recalculate dispersion ellipse
     if (this%gwtInterfaceModel%indsp > 0) call this%gwtInterfaceModel%dsp%dsp_ad()
@@ -390,10 +371,6 @@ contains
     ! local
     integer(I4B) :: i
 
-    ! copy model data into interface model
-    ! (when kiter == 1, this is already done in _ad)
-    if (kiter > 1) call this%syncInterfaceModel()
-
     ! reset interface system
     do i = 1, this%nja
       this%amat(i) = 0.0_DP
@@ -405,75 +382,6 @@ contains
     call this%gwtInterfaceModel%model_cf(kiter)
 
   end subroutine gwtgwtcon_cf
-
-!> @brief called during advance (*_ad), to copy the data
-!! from the models into the connection's placeholder arrays
-!<
-  subroutine syncInterfaceModel(this)
-    class(GwtGwtConnectionType) :: this !< the connection
-    ! local
-    integer(I4B) :: i, n, m, ipos, iposLoc, idx
-    type(ConnectionsType), pointer :: imCon !< interface model connections
-    type(GlobalCellType), dimension(:), pointer :: toGlobal !< map interface index to global cell
-    type(GlobalCellType), pointer :: boundaryCell, connectedCell
-    class(GwtModelType), pointer :: gwtModel
-    class(*), pointer :: modelPtr
-
-    ! for readability
-    imCon => this%gwtInterfaceModel%dis%con
-    toGlobal => this%gridConnection%idxToGlobal
-
-    ! loop over connections in interface
-    do n = 1, this%neq
-      do ipos = imCon%ia(n) + 1, imCon%ia(n + 1) - 1
-        m = imCon%ja(ipos)
-        if (associated(toGlobal(n)%model, toGlobal(m)%model)) then
-          ! internal connection for a model, copy from its flowja
-          iposLoc = getCSRIndex(toGlobal(n)%index, toGlobal(m)%index, &
-                                toGlobal(n)%model%ia, toGlobal(n)%model%ja)
-          modelPtr => toGlobal(n)%model
-          gwtModel => CastAsGwtModel(modelPtr)
-          this%gwfflowja(ipos) = gwtModel%fmi%gwfflowja(iposLoc)
-        end if
-      end do
-    end do
-
-    ! the flowja for exchange cells
-    do i = 1, this%gridConnection%nrOfBoundaryCells
-      boundaryCell => this%gridConnection%boundaryCells(i)%cell
-      connectedCell => this%gridConnection%connectedCells(i)%cell
-      n = this%gridConnection%getInterfaceIndex(boundaryCell%index, &
-                                                boundaryCell%model)
-      m = this%gridConnection%getInterfaceIndex(connectedCell%index, &
-                                                connectedCell%model)
-      ipos = getCSRIndex(n, m, imCon%ia, imCon%ja)
-      this%gwfflowja(ipos) = this%exgflowja(i) * this%exgflowSign
-      ipos = getCSRIndex(m, n, imCon%ia, imCon%ja)
-      this%gwfflowja(ipos) = -this%exgflowja(i) * this%exgflowSign
-    end do
-
-    ! copy concentrations
-    do i = 1, this%gridConnection%nrOfCells
-      idx = this%gridConnection%idxToGlobal(i)%index
-      this%x(i) = this%gridConnection%idxToGlobal(i)%model%x(idx)
-      this%gwtInterfaceModel%xold(i) = &
-        this%gridConnection%idxToGlobal(i)%model%xold(idx)
-    end do
-
-    ! copy fmi
-    do i = 1, this%gridConnection%nrOfCells
-      idx = this%gridConnection%idxToGlobal(i)%index
-      modelPtr => this%gridConnection%idxToGlobal(i)%model
-      gwtModel => CastAsGwtModel(modelPtr)
-
-      this%gwfsat(i) = gwtModel%fmi%gwfsat(idx)
-      this%gwfhead(i) = gwtModel%fmi%gwfhead(idx)
-      this%gwfspdis(1, i) = gwtModel%fmi%gwfspdis(1, idx)
-      this%gwfspdis(2, i) = gwtModel%fmi%gwfspdis(2, idx)
-      this%gwfspdis(3, i) = gwtModel%fmi%gwfspdis(3, idx)
-    end do
-
-  end subroutine syncInterfaceModel
 
   subroutine gwtgwtcon_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
     class(GwtGwtConnectionType) :: this !< the connection
@@ -528,29 +436,22 @@ contains
   !> @brief Set the flows (flowja from interface model) to the
   !< simvals in the exchange, leaving the budget calcution in there
   subroutine setFlowToExchange(this)
+    use InterfaceMapModule
     class(GwtGwtConnectionType) :: this !< this connection
     ! local
     integer(I4B) :: i
-    integer(I4B) :: nIface, mIface, ipos
     class(GwtExchangeType), pointer :: gwtEx
+    type(IndexMapSgnType), pointer :: map
 
-    gwtEx => this%gwtExchange
     if (this%exchangeIsOwned) then
-      do i = 1, gwtEx%nexg
-        gwtEx%simvals(i) = DZERO
+      gwtEx => this%gwtExchange
+      map => this%interfaceMap%exchange_map(this%interfaceMap%prim_exg_idx)
 
-        if (gwtEx%gwtmodel1%ibound(gwtEx%nodem1(i)) /= 0 .and. &
-            gwtEx%gwtmodel2%ibound(gwtEx%nodem2(i)) /= 0) then
-
-          nIface = this%gridConnection%getInterfaceIndex(gwtEx%nodem1(i), &
-                                                         gwtEx%model1)
-          mIface = this%gridConnection%getInterfaceIndex(gwtEx%nodem2(i), &
-                                                         gwtEx%model2)
-          ipos = getCSRIndex(nIface, mIface, this%gwtInterfaceModel%ia, &
-                             this%gwtInterfaceModel%ja)
-          gwtEx%simvals(i) = this%gwtInterfaceModel%flowja(ipos)
-
-        end if
+      ! use (half of) the exchange map in reverse:
+      do i = 1, size(map%src_idx)
+        if (map%sign(i) < 0) cycle ! simvals is defined from exg%m1 => exg%m2
+        gwtEx%simvals(map%src_idx(i)) = &
+          this%gwtInterfaceModel%flowja(map%tgt_idx(i))
       end do
     end if
 
@@ -594,10 +495,6 @@ contains
     call mem_deallocate(this%exgflowSign)
 
     ! arrays
-    call mem_deallocate(this%gwfflowja)
-    call mem_deallocate(this%gwfsat)
-    call mem_deallocate(this%gwfhead)
-    call mem_deallocate(this%gwfspdis)
     call mem_deallocate(this%exgflowjaGwt)
 
     ! interface model
@@ -619,8 +516,8 @@ contains
 
   end subroutine gwtgwtcon_da
 
-!> @brief Cast to GwtGwtConnectionType
-!<
+  !> @brief Cast to GwtGwtConnectionType
+  !<
   function CastAsGwtGwtConnection(obj) result(res)
     implicit none
     class(*), pointer, intent(inout) :: obj !< object to be cast

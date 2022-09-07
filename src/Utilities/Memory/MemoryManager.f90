@@ -14,6 +14,7 @@ module MemoryManagerModule
   use MemoryListModule, only: MemoryListType
   use MemoryHelperModule, only: mem_check_length, split_mem_path
   use TableModule, only: TableType, table_cr
+  use CharacterStringModule, only: CharacterStringType
 
   implicit none
   private
@@ -47,47 +48,84 @@ module MemoryManagerModule
   integer(I4B) :: iprmem = 0
 
   interface mem_allocate
-    module procedure allocate_logical, &
-      allocate_str, allocate_str1d, &
-      allocate_int, allocate_int1d, allocate_int2d, &
+    module procedure &
+      allocate_logical, &
+      allocate_str, &
+      allocate_str1d, &
+      allocate_int, &
+      allocate_int1d, &
+      allocate_int2d, &
       allocate_int3d, &
-      allocate_dbl, allocate_dbl1d, allocate_dbl2d, &
-      allocate_dbl3d
+      allocate_dbl, &
+      allocate_dbl1d, &
+      allocate_dbl2d, &
+      allocate_dbl3d, &
+      allocate_charstr1d
   end interface mem_allocate
 
   interface mem_checkin
-    module procedure checkin_int1d, &
-      checkin_dbl1d
+    module procedure &
+      checkin_int1d, &
+      checkin_dbl1d, &
+      checkin_dbl2d
   end interface mem_checkin
 
   interface mem_reallocate
-    module procedure reallocate_int1d, reallocate_int2d, reallocate_dbl1d, &
-      reallocate_dbl2d, reallocate_str1d
+    module procedure &
+      reallocate_int1d, &
+      reallocate_int2d, &
+      reallocate_dbl1d, &
+      reallocate_dbl2d, &
+      reallocate_str1d, &
+      reallocate_charstr1d
   end interface mem_reallocate
 
   interface mem_setptr
-    module procedure setptr_logical, &
-      setptr_int, setptr_int1d, setptr_int2d, setptr_int3d, &
-      setptr_dbl, setptr_dbl1d, setptr_dbl2d, setptr_dbl3d
+    module procedure &
+      setptr_logical, &
+      setptr_int, &
+      setptr_int1d, &
+      setptr_int2d, &
+      setptr_int3d, &
+      setptr_dbl, &
+      setptr_dbl1d, &
+      setptr_dbl2d, &
+      setptr_dbl3d, &
+      setptr_str, &
+      setptr_str1d, &
+      setptr_charstr1d
   end interface mem_setptr
 
   interface mem_copyptr
-    module procedure copyptr_int1d, copyptr_int2d, &
-      copyptr_dbl1d, copyptr_dbl2d
+    module procedure &
+      copyptr_int1d, &
+      copyptr_int2d, &
+      copyptr_dbl1d, &
+      copyptr_dbl2d
   end interface mem_copyptr
 
   interface mem_reassignptr
-    module procedure reassignptr_int, &
-      reassignptr_int1d, reassignptr_int2d, &
-      reassignptr_dbl1d, reassignptr_dbl2d
+    module procedure &
+      reassignptr_int, &
+      reassignptr_int1d, &
+      reassignptr_int2d, &
+      reassignptr_dbl1d, &
+      reassignptr_dbl2d
   end interface mem_reassignptr
 
   interface mem_deallocate
-    module procedure deallocate_logical, &
-      deallocate_str, deallocate_str1d, &
-      deallocate_int, deallocate_int1d, deallocate_int2d, &
+    module procedure &
+      deallocate_logical, &
+      deallocate_str, &
+      deallocate_str1d, &
+      deallocate_charstr1d, &
+      deallocate_int, &
+      deallocate_int1d, &
+      deallocate_int2d, &
       deallocate_int3d, &
-      deallocate_dbl, deallocate_dbl1d, deallocate_dbl2d, &
+      deallocate_dbl, &
+      deallocate_dbl1d, &
+      deallocate_dbl2d, &
       deallocate_dbl3d
   end interface mem_deallocate
 
@@ -147,6 +185,9 @@ contains
       if (associated(mt%adbl1d)) rank = 1
       if (associated(mt%adbl2d)) rank = 2
       if (associated(mt%adbl3d)) rank = 3
+      if (associated(mt%strsclr)) rank = 0
+      if (associated(mt%astr1d)) rank = 1
+      if (associated(mt%acharstr1d)) rank = 1
     end if
     !
     ! -- return
@@ -155,8 +196,8 @@ contains
 
   !> @ brief Get the memory size of a single element of the stored variable
   !!
-  !! Memory size in bytes, returns size = -1 when not found.
-  !<
+  !! Memory size in bytes, returns size = -1 when not found. This is
+  !< also string length.
   subroutine get_mem_elem_size(name, mem_path, size)
     character(len=*), intent(in) :: name !< variable name
     character(len=*), intent(in) :: mem_path !< path where the variable is stored
@@ -174,16 +215,7 @@ contains
     !
     ! -- set memory size
     if (found) then
-      select case (mt%memtype(1:index(mt%memtype, ' ')))
-      case ('STRING')
-        size = 1
-      case ('LOGICAL')
-        size = 4
-      case ('INTEGER')
-        size = 4
-      case ('DOUBLE')
-        size = 8
-      end select
+      size = mt%element_size
     end if
     !
     ! -- return
@@ -218,6 +250,9 @@ contains
       if (associated(mt%adbl1d)) mem_shape = shape(mt%adbl1d)
       if (associated(mt%adbl2d)) mem_shape = shape(mt%adbl2d)
       if (associated(mt%adbl3d)) mem_shape = shape(mt%adbl3d)
+      if (associated(mt%strsclr)) mem_shape = shape(mt%strsclr)
+      if (associated(mt%astr1d)) mem_shape = shape(mt%astr1d)
+      if (associated(mt%acharstr1d)) mem_shape = shape(mt%acharstr1d)
       ! -- to communicate failure
     else
       mem_shape(1) = -1
@@ -230,6 +265,7 @@ contains
   !> @ brief Get the number of elements for this variable
   !!
   !! Returns with isize = -1 when not found.
+  !! Return 1 for scalars.
   !<
   subroutine get_isize(name, mem_path, isize)
     character(len=*), intent(in) :: name !< variable name
@@ -338,7 +374,7 @@ contains
     type(MemoryType), pointer :: mt
     ! -- code
     !
-    ! -- check varible name length
+    ! -- check variable name length
     call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- allocate the logical scalar
@@ -355,6 +391,7 @@ contains
     !
     ! -- set memory type
     mt%logicalsclr => sclr
+    mt%element_size = LGP
     mt%isize = 1
     mt%name = name
     mt%path = mem_path
@@ -406,7 +443,8 @@ contains
     !
     ! -- set memory type
     mt%strsclr => sclr
-    mt%isize = ilen
+    mt%element_size = ilen
+    mt%isize = 1
     mt%name = name
     mt%path = mem_path
     write (mt%memtype, "(a,' LEN=',i0)") 'STRING', ilen
@@ -449,7 +487,7 @@ contains
     call mem_check_length(name, LENVARNAME, "variable")
     !
     ! -- calculate isize
-    isize = ilen * nrow
+    isize = nrow
     !
     ! -- allocate defined length string array
     allocate (character(len=ilen) :: astr1d(nrow), stat=istat, errmsg=errmsg)
@@ -471,7 +509,10 @@ contains
     allocate (mt)
     !
     ! -- set memory type
-    mt%astr1d => astr1d
+    ! this does not work with gfortran 11.3 and 12.1
+    ! so we have to disable the pointing to astr1d
+    ! mt%astr1d => astr1d
+    mt%element_size = ilen
     mt%isize = isize
     mt%name = name
     mt%path = mem_path
@@ -483,6 +524,66 @@ contains
     ! -- return
     return
   end subroutine allocate_str1d
+
+  !> @brief Allocate a 1-dimensional array of deferred-length CharacterStringType
+  !<
+  subroutine allocate_charstr1d(acharstr1d, ilen, nrow, name, mem_path)
+    type(CharacterStringType), dimension(:), &
+      pointer, contiguous, intent(inout) :: acharstr1d !< variable for allocation
+    integer(I4B), intent(in) :: ilen !< string length
+    integer(I4B), intent(in) :: nrow !< number of strings in array
+    character(len=*), intent(in) :: name !< variable name
+    character(len=*), intent(in) :: mem_path !< path where the variable is stored
+    ! -- local variables
+    character(len=ilen) :: string
+    type(MemoryType), pointer :: mt
+    integer(I4B) :: n
+    integer(I4B) :: istat
+    integer(I4B) :: isize
+    ! -- code
+    !
+    ! -- initialize string
+    string = ''
+    !
+    ! -- check variable name length
+    call mem_check_length(name, LENVARNAME, "variable")
+    !
+    ! -- calculate isize
+    isize = nrow
+    !
+    ! -- allocate deferred length string array
+    allocate (acharstr1d(nrow), stat=istat, errmsg=errmsg)
+    !
+    ! -- check for error condition
+    if (istat /= 0) then
+      call allocate_error(name, mem_path, istat, isize)
+    end if
+    !
+    ! -- fill deferred length string with empty string
+    do n = 1, nrow
+      acharstr1d(n) = string
+    end do
+    !
+    ! -- update counter
+    nvalues_astr = nvalues_astr + isize
+    !
+    ! -- allocate memory type
+    allocate (mt)
+    !
+    ! -- set memory type
+    mt%acharstr1d => acharstr1d
+    mt%element_size = ilen
+    mt%isize = isize
+    mt%name = name
+    mt%path = mem_path
+    write (mt%memtype, "(a,' LEN=',i0,' (',i0,')')") 'STRING', ilen, nrow
+    !
+    ! -- add deferred length character array to the memory manager list
+    call memorylist%add(mt)
+    !
+    ! -- return
+    return
+  end subroutine allocate_charstr1d
 
   !> @brief Allocate a integer scalar
   !<
@@ -512,6 +613,7 @@ contains
     !
     ! -- set memory type
     mt%intsclr => sclr
+    mt%element_size = I4B
     mt%isize = 1
     mt%name = name
     mt%path = mem_path
@@ -557,6 +659,7 @@ contains
     !
     ! -- set memory type
     mt%aint1d => aint
+    mt%element_size = I4B
     mt%isize = isize
     mt%name = name
     mt%path = mem_path
@@ -603,6 +706,7 @@ contains
     !
     ! -- set memory type
     mt%aint2d => aint
+    mt%element_size = I4B
     mt%isize = isize
     mt%name = name
     mt%path = mem_path
@@ -649,6 +753,7 @@ contains
     !
     ! -- set memory type
     mt%aint3d => aint
+    mt%element_size = I4B
     mt%isize = isize
     mt%name = name
     mt%path = mem_path
@@ -690,6 +795,7 @@ contains
     !
     ! -- set memory type
     mt%dblsclr => sclr
+    mt%element_size = DP
     mt%isize = 1
     mt%name = name
     mt%path = mem_path
@@ -735,6 +841,7 @@ contains
     !
     ! -- set memory type
     mt%adbl1d => adbl
+    mt%element_size = DP
     mt%isize = isize
     mt%name = name
     mt%path = mem_path
@@ -781,6 +888,7 @@ contains
     !
     ! -- set memory type
     mt%adbl2d => adbl
+    mt%element_size = DP
     mt%isize = isize
     mt%name = name
     mt%path = mem_path
@@ -828,6 +936,7 @@ contains
     !
     ! -- set memory type
     mt%adbl3d => adbl
+    mt%element_size = DP
     mt%isize = isize
     mt%name = name
     mt%path = mem_path
@@ -865,6 +974,7 @@ contains
     !
     ! -- set memory type
     mt%aint1d => aint
+    mt%element_size = I4B
     mt%isize = isize
     mt%name = name
     mt%path = mem_path
@@ -906,6 +1016,7 @@ contains
     !
     ! -- set memory type
     mt%adbl1d => adbl
+    mt%element_size = DP
     mt%isize = isize
     mt%name = name
     mt%path = mem_path
@@ -922,6 +1033,49 @@ contains
     ! -- return
     return
   end subroutine checkin_dbl1d
+
+  !> @brief Check in an existing 2d double precision array with a new address (name + path)
+  !<
+  subroutine checkin_dbl2d(adbl2d, name, mem_path, name2, mem_path2)
+    real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: adbl2d !< the existing 2d array
+    character(len=*), intent(in) :: name !< new variable name
+    character(len=*), intent(in) :: mem_path !< new path where variable is stored
+    character(len=*), intent(in) :: name2 !< existing variable name
+    character(len=*), intent(in) :: mem_path2 !< existing path where variable is stored
+    ! -- local
+    type(MemoryType), pointer :: mt
+    integer(I4B) :: ncol, nrow, isize
+    ! -- code
+    !
+    ! -- check the variable name length
+    call mem_check_length(name, LENVARNAME, "variable")
+    !
+    ! -- set isize
+    ncol = size(adbl2d, dim=1)
+    nrow = size(adbl2d, dim=2)
+    isize = ncol * nrow
+    !
+    ! -- allocate memory type
+    allocate (mt)
+    !
+    ! -- set memory type
+    mt%adbl2d => adbl2d
+    mt%isize = isize
+    mt%name = name
+    mt%path = mem_path
+    write (mt%memtype, "(a,' (',i0,',',i0,')')") 'DOUBLE', ncol, nrow
+    !
+    ! -- set master information
+    mt%master = .false.
+    mt%mastername = name2
+    mt%masterPath = mem_path2
+    !
+    ! -- add memory type to the memory list
+    call memorylist%add(mt)
+    !
+    ! -- return
+    return
+  end subroutine checkin_dbl2d
 
   !> @brief Reallocate a 1-dimensional defined length string array
   !<
@@ -954,7 +1108,7 @@ contains
       end if
       !
       ! -- calculate isize
-      isize = ilen * nrow
+      isize = nrow
       !
       ! -- allocate astrtemp
       allocate (astrtemp(nrow), stat=istat, errmsg=errmsg)
@@ -990,13 +1144,14 @@ contains
       deallocate (astrtemp)
       !
       ! -- reset memory manager values
+      mt%element_size = ilen
       mt%isize = isize
       mt%nrealloc = mt%nrealloc + 1
       mt%master = .true.
       nvalues_astr = nvalues_astr + isize - isize_old
       write (mt%memtype, "(a,' LEN=',i0,' (',i0,')')") 'STRING', ilen, nrow
     else
-      errmsg = "Programming error, varible '"//trim(name)//"' from '"// &
+      errmsg = "Programming error, variable '"//trim(name)//"' from '"// &
                trim(mem_path)//"' is not defined in the memory manager. Use "// &
                "mem_allocate instead."
       call store_error(errmsg, terminate=.TRUE.)
@@ -1005,6 +1160,95 @@ contains
     ! -- return
     return
   end subroutine reallocate_str1d
+
+  !> @brief Reallocate a 1-dimensional deferred length string array
+  !<
+  subroutine reallocate_charstr1d(acharstr1d, ilen, nrow, name, mem_path)
+    type(CharacterStringType), dimension(:), pointer, contiguous, &
+      intent(inout) :: acharstr1d !< the reallocated charstring array
+    integer(I4B), intent(in) :: ilen !< string length
+    integer(I4B), intent(in) :: nrow !< number of rows
+    character(len=*), intent(in) :: name !< variable name
+    character(len=*), intent(in) :: mem_path !< path where variable is stored
+    ! -- local
+    type(MemoryType), pointer :: mt
+    logical(LGP) :: found
+    type(CharacterStringType), dimension(:), allocatable :: astrtemp
+    character(len=ilen) :: string
+    integer(I4B) :: istat
+    integer(I4B) :: isize
+    integer(I4B) :: isize_old
+    integer(I4B) :: nrow_old
+    integer(I4B) :: n
+    !
+    ! -- Initialize string
+    string = ''
+    !
+    ! -- Find and assign mt
+    call get_from_memorylist(name, mem_path, mt, found)
+    !
+    ! -- reallocate astr1d
+    if (found) then
+      isize_old = mt%isize
+      if (isize_old > 0) then
+        nrow_old = size(acharstr1d)
+      else
+        nrow_old = 0
+      end if
+      !
+      ! -- calculate isize
+      isize = nrow
+      !
+      ! -- allocate astrtemp
+      allocate (astrtemp(nrow), stat=istat, errmsg=errmsg)
+      if (istat /= 0) then
+        call allocate_error(name, mem_path, istat, isize)
+      end if
+      !
+      ! -- copy existing values
+      do n = 1, nrow_old
+        astrtemp(n) = acharstr1d(n)
+      end do
+      !
+      ! -- fill new values with missing values
+      do n = nrow_old + 1, nrow
+        astrtemp(n) = string
+      end do
+      !
+      ! -- deallocate mt pointer, repoint, recalculate isize
+      deallocate (acharstr1d)
+      !
+      ! -- allocate astr1d
+      allocate (acharstr1d(nrow), stat=istat, errmsg=errmsg)
+      if (istat /= 0) then
+        call allocate_error(name, mem_path, istat, isize)
+      end if
+      !
+      ! -- fill the reallocated character array
+      do n = 1, nrow
+        acharstr1d(n) = astrtemp(n)
+      end do
+      !
+      ! -- deallocate temporary storage
+      deallocate (astrtemp)
+      !
+      ! -- reset memory manager values
+      mt%element_size = ilen
+      mt%isize = isize
+      mt%nrealloc = mt%nrealloc + 1
+      mt%master = .true.
+      nvalues_astr = nvalues_astr + isize - isize_old
+      write (mt%memtype, "(a,' LEN=',i0,' (',i0,')')") 'STRING', ilen, nrow
+    else
+      errmsg = "Programming error, variable '"//trim(name)//"' from '"// &
+               trim(mem_path)//"' is not defined in the memory manager. Use "// &
+               "mem_allocate instead."
+      call store_error(errmsg, terminate=.TRUE.)
+    end if
+    !
+    ! -- return
+    return
+  end subroutine reallocate_charstr1d
 
   !> @brief Reallocate a 1-dimensional integer array
   !<
@@ -1041,6 +1285,7 @@ contains
     ! -- deallocate mt pointer, repoint, recalculate isize
     deallocate (mt%aint1d)
     mt%aint1d => aint
+    mt%element_size = I4B
     mt%isize = isize
     mt%nrealloc = mt%nrealloc + 1
     mt%master = .true.
@@ -1089,6 +1334,7 @@ contains
     ! -- deallocate mt pointer, repoint, recalculate isize
     deallocate (mt%aint2d)
     mt%aint2d => aint
+    mt%element_size = I4B
     mt%isize = isize
     mt%nrealloc = mt%nrealloc + 1
     mt%master = .true.
@@ -1134,6 +1380,7 @@ contains
     ! -- deallocate mt pointer, repoint, recalculate isize
     deallocate (mt%adbl1d)
     mt%adbl1d => adbl
+    mt%element_size = DP
     mt%isize = isize
     mt%nrealloc = mt%nrealloc + 1
     mt%master = .true.
@@ -1183,6 +1430,7 @@ contains
     ! -- deallocate mt pointer, repoint, recalculate isize
     deallocate (mt%adbl2d)
     mt%adbl2d => adbl
+    mt%element_size = DP
     mt%isize = isize
     mt%nrealloc = mt%nrealloc + 1
     mt%master = .true.
@@ -1345,6 +1593,59 @@ contains
     ! -- return
     return
   end subroutine setptr_dbl3d
+
+  !> @brief Set pointer to a string (scalar)
+  !<
+  subroutine setptr_str(asrt, name, mem_path)
+    character(len=:), pointer :: asrt !< pointer to the character string
+    character(len=*), intent(in) :: name !< variable name
+    character(len=*), intent(in) :: mem_path !< path where variable is stored
+    ! -- local
+    type(MemoryType), pointer :: mt
+    logical(LGP) :: found
+    ! -- code
+    call get_from_memorylist(name, mem_path, mt, found)
+    asrt => mt%strsclr
+    !
+    ! -- return
+    return
+  end subroutine setptr_str
+
+  !> @brief Set pointer to a fixed-length string array
+  !<
+  subroutine setptr_str1d(astr1d, name, mem_path)
+    character(len=:), dimension(:), &
+      pointer, contiguous, intent(inout) :: astr1d !< pointer to the string array
+    character(len=*), intent(in) :: name !< variable name
+    character(len=*), intent(in) :: mem_path !< path where variable is stored
+    ! -- local
+    type(MemoryType), pointer :: mt
+    logical(LGP) :: found
+    ! -- code
+    call get_from_memorylist(name, mem_path, mt, found)
+    astr1d => mt%astr1d
+    !
+    ! -- return
+    return
+  end subroutine setptr_str1d
+
+  !> @brief Set pointer to an array of CharacterStringType
+  !<
+  subroutine setptr_charstr1d(acharstr1d, name, mem_path)
+    type(CharacterStringType), dimension(:), pointer, contiguous, &
+      intent(inout) :: acharstr1d !< the reallocated charstring array
+    character(len=*), intent(in) :: name !< variable name
+    character(len=*), intent(in) :: mem_path !< path where variable is stored
+    ! -- local
+    type(MemoryType), pointer :: mt
+    logical(LGP) :: found
+    ! -- code
+    call get_from_memorylist(name, mem_path, mt, found)
+    acharstr1d => mt%acharstr1d
+    !
+    ! -- return
+    return
+  end subroutine setptr_charstr1d
 
   !> @brief Make a copy of a 1-dimensional integer array
   !<
@@ -1525,6 +1826,7 @@ contains
     end if
     sclr => mt2%intsclr
     mt%intsclr => sclr
+    mt%element_size = I4B
     mt%isize = 1
     write (mt%memtype, "(a,' (',i0,')')") 'INTEGER', mt%isize
     !
@@ -1558,6 +1860,7 @@ contains
     end if
     aint => mt2%aint1d
     mt%aint1d => aint
+    mt%element_size = I4B
     mt%isize = size(aint)
     write (mt%memtype, "(a,' (',i0,')')") 'INTEGER', mt%isize
     !
@@ -1593,6 +1896,7 @@ contains
     end if
     aint => mt2%aint2d
     mt%aint2d => aint
+    mt%element_size = I4B
     mt%isize = size(aint)
     ncol = size(aint, dim=1)
     nrow = size(aint, dim=2)
@@ -1628,6 +1932,7 @@ contains
     end if
     adbl => mt2%adbl1d
     mt%adbl1d => adbl
+    mt%element_size = DP
     mt%isize = size(adbl)
     write (mt%memtype, "(a,' (',i0,')')") 'DOUBLE', mt%isize
     !
@@ -1663,6 +1968,7 @@ contains
     end if
     adbl => mt2%adbl2d
     mt%adbl2d => adbl
+    mt%element_size = DP
     mt%isize = size(adbl)
     ncol = size(adbl, dim=1)
     nrow = size(adbl, dim=2)
@@ -1688,11 +1994,11 @@ contains
     logical(LGP) :: found
     integer(I4B) :: ipos
     ! -- code
+    found = .false.
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%strsclr)
     else
-      found = .false.
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
         if (associated(mt%strsclr, sclr)) then
@@ -1716,9 +2022,8 @@ contains
     return
   end subroutine deallocate_str
 
-  !> @brief Deallocate an array of variable-length character strings
+  !> @brief Deallocate an array of defined-length character strings
   !!
-  !! @todo confirm this description versus the previous doc
   !<
   subroutine deallocate_str1d(astr1d, name, mem_path)
     character(len=*), dimension(:), pointer, contiguous, intent(inout) :: astr1d !< array of strings
@@ -1731,11 +2036,11 @@ contains
     ! -- code
     !
     ! -- process optional variables
+    found = .false.
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%astr1d)
     else
-      found = .false.
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
         if (associated(mt%astr1d, astr1d)) then
@@ -1758,6 +2063,50 @@ contains
     ! -- return
     return
   end subroutine deallocate_str1d
+
+  !> @brief Deallocate an array of deferred-length character strings
+  !!
+  !<
+  subroutine deallocate_charstr1d(astr1d, name, mem_path)
+    type(CharacterStringType), dimension(:), pointer, contiguous, &
+      intent(inout) :: astr1d !< array of strings
+    character(len=*), optional, intent(in) :: name !< variable name
+    character(len=*), optional, intent(in) :: mem_path !< path where variable is stored
+    ! -- local
+    type(MemoryType), pointer :: mt
+    logical(LGP) :: found
+    integer(I4B) :: ipos
+    ! -- code
+    !
+    ! -- process optional variables
+    found = .false.
+    if (present(name) .and. present(mem_path)) then
+      call get_from_memorylist(name, mem_path, mt, found)
+      nullify (mt%acharstr1d)
+    else
+      do ipos = 1, memorylist%count()
+        mt => memorylist%Get(ipos)
+        if (associated(mt%acharstr1d, astr1d)) then
+          nullify (mt%acharstr1d)
+          found = .true.
+          exit
+        end if
+      end do
+    end if
+    if (.not. found .and. size(astr1d) > 0) then
+      call store_error('programming error in deallocate_charstr1d', &
+                       terminate=.TRUE.)
+    else
+      if (mt%master) then
+        deallocate (astr1d)
+      else
+        nullify (astr1d)
+      end if
+    end if
+    !
+    ! -- return
+    return
+  end subroutine deallocate_charstr1d
 
   !> @brief Deallocate a logical scalar
   !<
@@ -1869,11 +2218,11 @@ contains
     ! -- code
     !
     ! -- process optional variables
+    found = .false.
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%aint1d)
     else
-      found = .false.
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
         if (associated(mt%aint1d, aint)) then
@@ -1910,11 +2259,11 @@ contains
     ! -- code
     !
     ! -- process optional variables
+    found = .false.
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%aint2d)
     else
-      found = .false.
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
         if (associated(mt%aint2d, aint)) then
@@ -1951,11 +2300,11 @@ contains
     ! -- code
     !
     ! -- process optional variables
+    found = .false.
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%aint3d)
     else
-      found = .false.
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
         if (associated(mt%aint3d, aint)) then
@@ -1992,11 +2341,11 @@ contains
     ! -- code
     !
     ! -- process optional variables
+    found = .false.
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%adbl1d)
     else
-      found = .false.
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
         if (associated(mt%adbl1d, adbl)) then
@@ -2033,11 +2382,11 @@ contains
     ! -- code
     !
     ! -- process optional variables
+    found = .false.
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%adbl2d)
     else
-      found = .false.
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
         if (associated(mt%adbl2d, adbl)) then
@@ -2074,11 +2423,11 @@ contains
     ! -- code
     !
     ! -- process optional variables
+    found = .false.
     if (present(name) .and. present(mem_path)) then
       call get_from_memorylist(name, mem_path, mt, found)
       nullify (mt%adbl3d)
     else
-      found = .false.
       do ipos = 1, memorylist%count()
         mt => memorylist%Get(ipos)
         if (associated(mt%adbl3d, adbl)) then
@@ -2426,7 +2775,7 @@ contains
           if (cunique(icomp) /= mt%path(1:ilen)) cycle
           if (.not. mt%master) cycle
           if (mt%memtype(1:6) == 'STRING') then
-            nchars = nchars + mt%isize
+            nchars = nchars + mt%isize * mt%element_size
           else if (mt%memtype(1:7) == 'LOGICAL') then
             nlog = nlog + mt%isize
           else if (mt%memtype(1:7) == 'INTEGER') then
@@ -2483,6 +2832,13 @@ contains
     do ipos = 1, memorylist%count()
       mt => memorylist%Get(ipos)
       if (IDEVELOPMODE == 1) then
+        !
+        ! -- check if memory has been deallocated
+        if (mt%mt_associated() .and. mt%element_size == -1) then
+          error_msg = trim(adjustl(mt%path))//' '// &
+                      trim(adjustl(mt%name))//' has invalid element size'
+          call store_error(trim(error_msg))
+        end if
         !
         ! -- check if memory has been deallocated
         if (mt%mt_associated() .and. mt%isize > 0) then

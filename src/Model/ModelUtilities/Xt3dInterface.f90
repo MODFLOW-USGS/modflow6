@@ -1321,16 +1321,8 @@ contains
     ! -- Set conductivity tensor for cell.
     ck = DZERO
     ck(1, 1) = this%k11(n)
-    if (this%ik22 == 0) then
-      ck(2, 2) = ck(1, 1)
-    else
-      ck(2, 2) = this%k22(n)
-    end if
-    if (this%ik33 == 0) then
-      ck(3, 3) = ck(1, 1)
-    else
-      ck(3, 3) = this%k33(n)
-    end if
+    ck(2, 2) = this%k22(n)
+    ck(3, 3) = this%k33(n)
     call this%xt3d_fillrmatck(n)
     ck = matmul(this%rmatck, ck)
     ck = matmul(ck, transpose(this%rmatck))

@@ -1796,6 +1796,7 @@ END SUBROUTINE URWORD
     character(len=*), intent(in) :: text
     ! -- local variables
     integer(I4B) :: n, linelen
+    integer(I4B) :: iauxlen
     real(DP) :: rval
 ! ------------------------------------------------------------------------------
     linelen = len(line)
@@ -1807,8 +1808,17 @@ END SUBROUTINE URWORD
     endif
     auxloop: do
       call urword(line, lloc, istart, istop, 1, n, rval, iout, inunit)
-      !if(lloc >= linelen) exit auxloop
       if (istart >= linelen) exit auxloop
+      iauxlen = istop - istart + 1
+      if (iauxlen > LENAUXNAME) then
+        write (errmsg, '(a, a, a, i0, a, i0, a)') &
+          'Found auxiliary variable (', line(istart:istop), &
+          ') with a name of size ', iauxlen, &
+          '. Auxiliary variable names must be len than or equal&
+          & to ', LENAUXNAME, ' characters.'
+        call store_error(errmsg)
+        call store_error_unit(inunit)
+      end if      
       naux = naux + 1
       call ExpandArray(auxname)
       auxname(naux) = line(istart:istop)
@@ -1817,7 +1827,8 @@ END SUBROUTINE URWORD
           trim(adjustl(text)), auxname(naux)
       endif
     enddo auxloop
-
+    !
+    return
   end subroutine urdaux
 
   subroutine print_format(linein, cdatafmp, editdesc, nvaluesp, nwidthp, inunit)

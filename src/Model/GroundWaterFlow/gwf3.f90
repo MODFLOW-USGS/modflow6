@@ -110,7 +110,7 @@ contains
   !! (2) assign values
   !!
   !<
-  subroutine gwf_cr(filename, id, modelname, smr)
+  subroutine gwf_cr(filename, id, modelname)
     ! -- modules
     use ListsModule, only: basemodellist
     use MemoryHelperModule, only: create_mem_path
@@ -138,7 +138,6 @@ contains
     character(len=*), intent(in) :: filename
     integer(I4B), intent(in) :: id
     character(len=*), intent(in) :: modelname
-    logical, optional, intent(in) :: smr
     ! -- local
     integer(I4B) :: indis, indis6, indisu6, indisv6
     integer(I4B) :: ipakid, i, j, iu, ipaknum
@@ -167,7 +166,6 @@ contains
     this%name = modelname
     this%macronym = 'GWF'
     this%id = id
-    if (present(smr)) this%single_model_run = smr
     !
     ! -- Open namefile and set iout
     call namefile_obj%init(this%filename, 0)
@@ -1502,39 +1500,6 @@ contains
                                                 'STO6 ', 'MVR6 ', 'HFB6 ', &
                                                 'GNC6 ', 'OBS6 '/)
 ! ------------------------------------------------------------------------------
-    !
-    if (this%single_model_run) then
-      !
-      ! -- Ensure TDIS6 is present
-      call namefile_obj%get_unitnumber('TDIS6', iu, 1)
-      if (iu == 0) then
-        call store_error('TDIS6 ftype not specified in name file.')
-      end if
-      !
-      ! -- Ensure IMS6 is present
-      call namefile_obj%get_unitnumber('IMS6', iu, 1)
-      if (iu == 0) then
-        call store_error('IMS6 ftype not specified in name file.')
-      end if
-      !
-    else
-      !
-      ! -- Warn if TDIS6 is present
-      call namefile_obj%get_unitnumber('TDIS6', iu, 1)
-      if (iu > 0) then
-        write (this%iout, '(/a)') 'Warning TDIS6 detected in GWF name file.'
-        write (this%iout, *) 'Simulation TDIS file will be used instead.'
-        close (iu)
-      end if
-      !
-      ! -- Warn if SMS8 is present
-      call namefile_obj%get_unitnumber('IMS6', iu, 1)
-      if (iu > 0) then
-        write (this%iout, '(/a)') 'Warning IMS6 detected in GWF name file.'
-        write (this%iout, *) 'Simulation IMS6 file will be used instead.'
-        close (iu)
-      end if
-    end if
     !
     ! -- Check for IC8, DIS(u), and NPF. Stop if not present.
     if (this%inic == 0) then

@@ -54,7 +54,7 @@ module GwfNpfModule
     integer(I4B), pointer :: iwetit => null() !< wetting interval (default is 1)
     integer(I4B), pointer :: ihdwet => null() !< (0 or not 0)
     integer(I4B), pointer :: icellavg => null() !< harmonic(0), logarithmic(1), or arithmetic thick-log K (2)
-    integer(I4B), pointer :: ikmod => null() !< if 1, conductivities get modified from their input values to account for effects such as varying viscosity
+    integer(I4B), pointer :: icellavg => null() !< harmonic(0), logarithmic(1), or arithmetic thick-log K (2)
     real(DP), pointer :: wetfct => null() !< wetting factor
     real(DP), pointer :: hdry => null() !< default is -1.d30
     integer(I4B), dimension(:), pointer, contiguous :: icelltype => null() !< confined (0) or convertible (1)
@@ -311,7 +311,7 @@ contains
     type(GwfVscType), pointer, intent(in) :: vsc !< viscosity package
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: ibound !< model ibound array
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: hnew !< pointer to model head array
-    integer(I4B), intent(in) :: ikmodgwf !< flag to indicate whether conductivities get modified from their input values by a gwf package
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: hnew !< pointer to model head array
     type(GwfNpfGridDataType), optional, intent(in) :: grid_data !< (optional) data structure with NPF grid data
     ! -- local
     ! -- formats
@@ -1079,7 +1079,7 @@ contains
     call mem_deallocate(this%hnoflo)
     call mem_deallocate(this%hdry)
     call mem_deallocate(this%icellavg)
-    call mem_deallocate(this%ikmod)
+    call mem_deallocate(this%icellavg)
     call mem_deallocate(this%iavgkeff)
     call mem_deallocate(this%ik22)
     call mem_deallocate(this%ik33)
@@ -1164,7 +1164,7 @@ contains
     call mem_allocate(this%hnoflo, 'HNOFLO', this%memoryPath)
     call mem_allocate(this%hdry, 'HDRY', this%memoryPath)
     call mem_allocate(this%icellavg, 'ICELLAVG', this%memoryPath)
-    call mem_allocate(this%ikmod, 'IKMOD', this%memoryPath)
+    call mem_allocate(this%icellavg, 'ICELLAVG', this%memoryPath)
     call mem_allocate(this%iavgkeff, 'IAVGKEFF', this%memoryPath)
     call mem_allocate(this%ik22, 'IK22', this%memoryPath)
     call mem_allocate(this%ik33, 'IK33', this%memoryPath)
@@ -1206,7 +1206,7 @@ contains
     this%hnoflo = DHNOFLO !1.d30
     this%hdry = DHDRY !-1.d30
     this%icellavg = 0
-    this%ikmod = 0
+    this%icellavg = 0
     this%iavgkeff = 0
     this%ik22 = 0
     this%ik33 = 0
@@ -1837,9 +1837,10 @@ contains
         write (errmsg, '(a)') 'K33OVERK option specified but K33 not specified.'
         call store_error(errmsg)
       end if
-      write (this%iout, '(1x, a)') 'K33 not provided.  Assuming K33 = K.'
-      call mem_reassignptr(this%k33, 'K33', trim(this%memoryPath), &
-                           'K11', trim(this%memoryPath))
+      write (this%iout, '(1x, a)') 'K33 not provided.  Setting K33 = K.'
+      do n = 1, size(this%k11)
+        this%k33(n) = this%k11(n)
+      end do
     end if
     !
     ! -- set ik22 flag
@@ -1850,9 +1851,10 @@ contains
         write (errmsg, '(a)') 'K22OVERK option specified but K22 not specified.'
         call store_error(errmsg)
       end if
-      write (this%iout, '(1x, a)') 'K22 not provided.  Assuming K22 = K.'
-      call mem_reassignptr(this%k22, 'K22', trim(this%memoryPath), &
-                           'K11', trim(this%memoryPath))
+      write (this%iout, '(1x, a)') 'K22 not provided.  Setting K22 = K.'
+      do n = 1, size(this%k11)
+        this%k22(n) = this%k11(n)
+      end do
     end if
     !
     ! -- Set WETDRY
@@ -1912,8 +1914,7 @@ contains
     else
       ! if not present, then K22 = K11
       this%ik22 = 0
-      call mem_reassignptr(this%k22, 'K22', trim(this%memoryPath), &
-                           'K11', trim(this%memoryPath))
+      call this%dis%fill_grid_array(this%k11, this%k22)
     end if
 
     if (npf_data%ik33 == 1) then
@@ -1922,8 +1923,7 @@ contains
     else
       ! if not present, then K33 = K11
       this%ik33 = 0
-      call mem_reassignptr(this%k33, 'K33', trim(this%memoryPath), &
-                           'K11', trim(this%memoryPath))
+      call this%dis%fill_grid_array(this%k11, this%k33)
     end if
 
     if (npf_data%iwetdry == 1) then
@@ -2715,8 +2715,8 @@ contains
     hy11 = this%k11(n)
     hy22 = this%k11(n)
     hy33 = this%k11(n)
-    if (this%ik22 /= 0) hy22 = this%k22(n)
-    if (this%ik33 /= 0) hy33 = this%k33(n)
+    hy22 = this%k22(n)
+    hy33 = this%k33(n)
     !
     ! -- Calculate effective K based on whether connection is vertical
     !    or horizontal
@@ -3772,7 +3772,23 @@ contains
       !
       ! -- if both cells are non-convertible then use average cell thickness
     elseif (ictn == 0 .and. ictm == 0) then
-      res = DHALF * (topn - botn + topm - botm)
+      thksatn = topn - botn
+      thksatm = topm - botm
+      !
+      ! -- If staggered connection, subtract parts of cell that are above and
+      !    below the sill top and bottom elevations
+      if (ihc == 2) then
+        !
+        ! -- Calculate sill_top and sill_bot
+        sill_top = min(topn, topm)
+        sill_bot = max(botn, botm)
+        !
+        ! -- Saturated thickness is sill_top - sill_bot
+        thksatn = max(sill_top - sill_bot, DZERO)
+        thksatm = thksatn
+      end if
+      !
+      res = DHALF * (thksatn + thksatm)
       !
       ! -- At least one of the cells is convertible, so calculate average saturated
       !    thickness

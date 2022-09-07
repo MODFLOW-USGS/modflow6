@@ -59,6 +59,7 @@
 		<File RelativePath="..\src\Model\Connection\CellWithNbrs.f90"/>
 		<File RelativePath="..\src\Model\Connection\ConnectionBuilder.f90"/>
 		<File RelativePath="..\src\Model\Connection\CsrUtils.f90"/>
+		<File RelativePath="..\src\Model\Connection\DistributedData.f90"/>
 		<File RelativePath="..\src\Model\Connection\GridConnection.f90"/>
 		<File RelativePath="..\src\Model\Connection\GridSorting.f90"/>
 		<File RelativePath="..\src\Model\Connection\GweGweConnection.f90"/>
@@ -67,6 +68,8 @@
 		<File RelativePath="..\src\Model\Connection\GwfInterfaceModel.f90"/>
 		<File RelativePath="..\src\Model\Connection\GwtGwtConnection.f90"/>
 		<File RelativePath="..\src\Model\Connection\GwtInterfaceModel.f90"/>
+		<File RelativePath="..\src\Model\Connection\InterfaceMap.f90"/>
+		<File RelativePath="..\src\Model\Connection\MappedVariable.f90"/>
 		<File RelativePath="..\src\Model\Connection\qsort_inline.inc"/>
 		<File RelativePath="..\src\Model\Connection\SpatialModelConnection.f90"/></Filter>
 		<Filter Name="Geometry">
@@ -208,6 +211,7 @@
 		<File RelativePath="..\src\Utilities\BudgetFileReader.f90"/>
 		<File RelativePath="..\src\Utilities\BudgetObject.f90"/>
 		<File RelativePath="..\src\Utilities\BudgetTerm.f90"/>
+		<File RelativePath="..\src\Utilities\CharString.f90"/>
 		<File RelativePath="..\src\Utilities\comarg.f90"/>
 		<File RelativePath="..\src\Utilities\compilerversion.F90">
 			<FileConfiguration Name="Debug|Win32">
@@ -241,6 +245,7 @@
 		<File RelativePath="..\src\Utilities\Table.f90"/>
 		<File RelativePath="..\src\Utilities\TableTerm.f90"/>
 		<File RelativePath="..\src\Utilities\Timer.f90"/>
+		<File RelativePath="..\src\Utilities\VectorInt.f90"/>
 		<File RelativePath="..\src\Utilities\version.f90"/></Filter>
 		<File RelativePath="..\src\mf6core.f90"/>
 		<File RelativePath="..\src\mf6lists.f90"/>

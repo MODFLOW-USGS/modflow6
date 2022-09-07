@@ -1792,6 +1792,9 @@ contains
       end do
     end if
     !
+    ! -- copy boundname into boundname_cst
+    call this%copy_boundname()
+    !
     ! -- set pointer to gwf iss and gwf hk
     call mem_setptr(this%gwfiss, 'ISS', create_mem_path(this%name_model))
     call mem_setptr(this%gwfk11, 'K11', create_mem_path(this%name_model, 'NPF'))
@@ -5154,8 +5157,6 @@ contains
         else
           obsrv%NodeNumber2 = nn2
         end if
-        !! -- store connection number (NodeNumber2)
-        !obsrv%NodeNumber2 = nn2
       end if
     end if
     ! -- store lake number (NodeNumber)
@@ -6047,6 +6048,14 @@ contains
                                                this%packName, &
                                                maxlist, .false., .false., &
                                                naux, ordered_id1=.false.)
+      !
+      ! -- store to-mvr connection information
+      call this%budobj%budterm(idx)%reset(this%noutlets)
+      q = DZERO
+      do n = 1, this%noutlets
+        n1 = this%lakein(n)
+        call this%budobj%budterm(idx)%update_term(n1, n1, q)
+      end do
     end if
     !
     ! --
