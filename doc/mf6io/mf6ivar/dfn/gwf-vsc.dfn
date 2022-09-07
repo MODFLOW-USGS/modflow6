@@ -55,22 +55,22 @@ description name of the binary output file to write viscosity information.  The 
 
 block options
 name viscosityfuncrecord
-type record viscosity_func formulation a2 a3 a4
+type record thermal_viscosity_func formulation a2 a3 a4
 reader urword
 optional true
 longname
 description
 
 block options
-name viscosity_func
+name thermal_viscosity_func
 type keyword
 shape
 in_record true
 tagged true
 reader urword
 optional false
-longname keyword to specify viscosity formulation
-description may be used for specifying which viscosity formulation to use.  The linear viscosity formulation is the default.
+longname keyword to specify viscosity formulation for the temperature species
+description may be used for specifying which viscosity formulation to use for a species identified by the auxilary name TEMPERATURE. Can be either LINEAR or NONLINEAR. The LINEAR viscosity formulation is the default.
 
 block options
 name formulation

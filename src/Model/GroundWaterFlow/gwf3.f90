@@ -314,7 +314,7 @@ contains
     !
     ! -- Define packages and utility objects
     call this%dis%dis_df()
-    call this%npf%npf_df(this%dis, this%xt3d, this%ingnc)
+    call this%npf%npf_df(this%dis, this%xt3d, this%ingnc, this%invsc)
     call this%oc%oc_df()
     call this%budget%budget_df(niunit, 'VOLUME', 'L**3')
     if (this%inbuy > 0) call this%buy%buy_df(this%dis)
@@ -434,10 +434,10 @@ contains
     !
     ! -- Allocate and read modules attached to model
     if (this%inic > 0) call this%ic%ic_ar(this%x)
-    if (this%innpf > 0) call this%npf%npf_ar(this%ic, this%ibound, this%x,     &
-                                             ikmodgwf)
+    if (this%innpf > 0) call this%npf%npf_ar(this%ic, this%vsc, this%ibound, &
+                                             this%x, ikmodgwf)
+    if (this%invsc > 0) call this%vsc%vsc_ar(this%ibound)
     if (this%inbuy > 0) call this%buy%buy_ar(this%npf, this%ibound)
-    if (this%invsc > 0) call this%vsc%vsc_ar(this%npf, this%ibound)
     if (this%inhfb > 0) call this%hfb%hfb_ar(this%ibound, this%xt3d, this%dis)
     if (this%insto > 0) call this%sto%sto_ar(this%dis, this%ibound)
     if (this%incsub > 0) call this%csub%csub_ar(this%dis, this%ibound)
@@ -537,16 +537,17 @@ contains
     end if
     !
     ! -- Advance
+    if (this%invsc > 0) call this%vsc%vsc_ad()
     if (this%innpf > 0) call this%npf%npf_ad(this%dis%nodes, this%xold, &
                                              this%x, irestore)
     if (this%insto > 0) call this%sto%sto_ad()
     if (this%incsub > 0) call this%csub%csub_ad(this%dis%nodes, this%x)
     if (this%inbuy > 0) call this%buy%buy_ad()
-    if (this%invsc > 0) call this%vsc%vsc_ad()
     if (this%inmvr > 0) call this%mvr%mvr_ad()
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_ad()
+      if (this%invsc > 0) call this%vsc%vsc_ad_bnd(packobj, this%x)
       if (isimcheck > 0) then
         call packobj%bnd_ck()
       end if
@@ -1146,24 +1147,31 @@ contains
     integer(I4B), intent(inout) :: ipflag
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
-
+    !
     ! -- Save compaction to binary file
     if (this%incsub > 0) call this%csub%csub_ot_dv(idvsave, idvprint)
-
+    !
     ! -- save density to binary file
     if (this%inbuy > 0) then
       call this%buy%buy_ot_dv(idvsave)  ! kluge note: do similar for viscosity (or viscosity ratio)?
     end if
-
+    !
+    ! -- save density to binary file
+    if (this%invsc > 0) then
+      call this%vsc%vsc_ot_dv(idvsave)  ! kluge note: do similar for viscosity (or viscosity ratio)?
+    end if
+    !
     ! -- Print advanced package dependent variables
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_ot_dv(idvsave, idvprint)
     end do
-
+    !
     ! -- save head and print head
     call this%oc%oc_ot(ipflag)
-
+    !
+    ! -- Return
+    return
   end subroutine gwf_ot_dv
 
   subroutine gwf_ot_bdsummary(this, ibudfl, ipflag)

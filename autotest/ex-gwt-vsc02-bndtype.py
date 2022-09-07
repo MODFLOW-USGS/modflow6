@@ -31,7 +31,7 @@ figure_size = (6, 4)
 
 # Base simulation and model name and workspace
 
-ws = os.path.join('temp', 'examples', 'vsc-chd-ghb')
+ws = os.path.join('temp', 'examples', 'vsc-ghb-drn')
 
 # Scenario parameters - make sure there is at least one blank line before next item
 
@@ -88,7 +88,7 @@ def build_model(idx, sim_folder, vsc_on,  hydraulic_conductivity):
     print("Building model...{}".format(sim_folder))
 
     # generate names for each model
-    name = "vsc"
+    name = "vsc02"
     gwfname = "gwf-" + name + "-" + str(idx)
     gwtname = "gwt-" + name + "-" + str(idx)
 
@@ -153,7 +153,7 @@ def build_model(idx, sim_folder, vsc_on,  hydraulic_conductivity):
 
     # Instantiating GHB
     ghbcond = hydraulic_conductivity * delv * delc / (0.5 * delr)
-    ghbspd = [[(0, i, ncol - 1), top, ghbcond, initial_temperature] for i in range(nrow)]
+    ghbspd = [[(0, i, 0), top+3, ghbcond, initial_temperature] for i in range(nrow)]
     flopy.mf6.ModflowGwfghb(
         gwf,
         stress_period_data=ghbspd,
@@ -161,12 +161,12 @@ def build_model(idx, sim_folder, vsc_on,  hydraulic_conductivity):
         auxiliary="temperature",
     )
 
-    # Instantiating WEL
-    chdspd = [[(0, i, 0), 2.0, initial_temperature] for i in range(nrow)]
-    flopy.mf6.ModflowGwfchd(
+    # Instantiating DRN
+    drnspd = [[(0, i, ncol - 1), top, 1.2 * ghbcond, initial_temperature] for i in range(nrow)]
+    flopy.mf6.ModflowGwfdrn(
         gwf,
-        stress_period_data=chdspd,
-        pname="CHD-1",
+        stress_period_data=drnspd,
+        pname="DRN-1",
         auxiliary="temperature",
     )
     head_filerecord = "{}.hds".format(name)
@@ -224,8 +224,8 @@ def build_model(idx, sim_folder, vsc_on,  hydraulic_conductivity):
     flopy.mf6.ModflowGwtadv(gwt, scheme="UPSTREAM")
     flopy.mf6.ModflowGwtdsp(gwt, xt3d_off=True, diffc=D_m)
     sourcerecarray = [
-        ("CHD-1", "AUX", "TEMPERATURE"),
         ("GHB-1", "AUX", "TEMPERATURE"),
+        ("DRN-1", "AUX", "TEMPERATURE"),
     ]
     flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray)
     flopy.mf6.ModflowGwtoc(
@@ -302,11 +302,6 @@ def plot_conc(sim, idx):
         fig.savefig(fpth)
     return
 
-
-def plot_results(sim, idx):
-    if config.plotModel:
-        plot_conc(sim, idx)
-    return
 
 
 # Function that wraps all of the steps for each scenario

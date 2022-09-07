@@ -21,6 +21,9 @@ module GwfNpfGridDataModule
     real(DP), dimension(:), pointer, contiguous :: k11 => null() !< same as npf variable
     real(DP), dimension(:), pointer, contiguous :: k22 => null() !< same as npf variable
     real(DP), dimension(:), pointer, contiguous :: k33 => null() !< same as npf variable
+    real(DP), dimension(:), pointer, contiguous :: k11_input => null() !< same as npf variable
+    real(DP), dimension(:), pointer, contiguous :: k22_input => null() !< same as npf variable
+    real(DP), dimension(:), pointer, contiguous :: k33_input => null() !< same as npf variable
     real(DP), dimension(:), pointer, contiguous :: wetdry => null() !< same as npf variable
     real(DP), dimension(:), pointer, contiguous :: angle1 => null() !< same as npf variable
     real(DP), dimension(:), pointer, contiguous :: angle2 => null() !< same as npf variable
@@ -53,6 +56,9 @@ contains
     allocate (this%k11(nodes))
     allocate (this%k22(nodes))
     allocate (this%k33(nodes))
+    allocate (this%k11_input(nodes))
+    allocate (this%k22_input(nodes))
+    allocate (this%k33_input(nodes))
     allocate (this%wetdry(nodes))
     allocate (this%angle1(nodes))
     allocate (this%angle2(nodes))
@@ -63,6 +69,9 @@ contains
       this%k11(i) = DZERO
       this%k22(i) = DZERO
       this%k33(i) = DZERO
+      this%k11_input(i) = DZERO
+      this%k22_input(i) = DZERO
+      this%k33_input(i) = DZERO
       this%wetdry(i) = DZERO
       this%angle1(i) = DZERO
       this%angle2(i) = DZERO
@@ -80,6 +89,9 @@ contains
     deallocate (this%k11)
     deallocate (this%k22)
     deallocate (this%k33)
+    deallocate (this%k11_input)
+    deallocate (this%k22_input)
+    deallocate (this%k33_input)
     deallocate (this%wetdry)
     deallocate (this%angle1)
     deallocate (this%angle2)

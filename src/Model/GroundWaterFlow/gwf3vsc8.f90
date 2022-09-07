@@ -5,12 +5,13 @@ module GwfVscModule
   use KindModule, only: DP, I4B
   use SimModule, only: store_error, store_warning, count_errors
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, &
-                                 mem_deallocate
-  use ConstantsModule, only: DHALF, DZERO, DONE, LENMODELNAME, &
-                             LENAUXNAME, DHNOFLO, MAXCHARLEN, LINELENGTH
+                                 mem_deallocate, mem_setptr
+  use MemoryHelperModule, only: create_mem_path
+  use ConstantsModule, only: DHALF, DZERO, DONE, LENMODELNAME, LENAUXNAME, &
+                             DHNOFLO, MAXCHARLEN, LINELENGTH, LENMEMPATH
+  use TdisModule, only: kper, kstp
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
-  use GwfNpfModule, only: GwfNpfType
   use GwfVscInputDataModule, only: GwfVscInputDataType
   use ListsModule, only: basemodellist
 
@@ -26,15 +27,17 @@ module GwfVscModule
   end type ConcentrationPointer
 
   type, extends(NumericalPackageType) :: GwfVscType
-    type(GwfNpfType), pointer :: npf => null() !< npf object
-    integer(I4B), pointer :: ivisc => null() !< viscosity formulation flag (1:Voss (1984), 2:Pawlowski (1991), 3:Guo and Zhou (2005))
+    integer(I4B), pointer :: thermivisc => null() !< viscosity formulation flag (1:Linear, 2:Nonlinear)
     integer(I4B), pointer :: idxtmpr => null() !< if greater than 0 then an index for identifying whether the "species" array is temperature
     integer(I4B), pointer :: ioutvisc => null() !< unit number for saving viscosity
     integer(I4B), pointer :: ireadconcvsc => null() !< if 1 then visc has been read from this vsc input file   ! kluge note: is this ever really used?
     integer(I4B), pointer :: iconcset => null() !< if 1 then conc points to a gwt (or gwe) model%x array
+    integer(I4B), pointer :: ireadelev => null () !< if 1 then elev has been allocated and filled
+    integer(I4B), dimension(:), pointer :: ivisc => null() !< viscosity formulation flag for each species (1:Linear, 2:Nonlinear)
     real(DP), pointer :: viscref => null() !< reference fluid viscosity
     real(DP), dimension(:), pointer, contiguous :: visc => null() !< viscosity
     real(DP), dimension(:), pointer, contiguous :: concvsc => null() !< concentration (or temperature) array if specified in vsc package    ! kluge note: is this ever really used?
+    real(DP), dimension(:), pointer, contiguous :: elev => null() !< cell center elevation (optional; if not specified, then use (top+bot)/2)
     integer(I4B), dimension(:), pointer :: ibound => null() !< store pointer to ibound
 
     integer(I4B), pointer :: nviscspecies => null() !< number of concentration species used in viscosity equation
@@ -51,11 +54,26 @@ module GwfVscModule
 
     type(ConcentrationPointer), allocatable, dimension(:) :: modelconc !< concentration (or temperature) pointer for each solute (or heat) transport model
 
+    integer(I4B), pointer :: ik22overk => null() !< NPF flag that k22 is specified as anisotropy ratio
+    integer(I4B), pointer :: ik33overk => null() !< NPF flag that k33 is specified as anisotropy ratio
+    real(DP), dimension(:), pointer, contiguous :: k11 => null() !< NPF hydraulic conductivity; if anisotropic, then this is Kx prior to rotation
+    real(DP), dimension(:), pointer, contiguous :: k22 => null() !< NPF hydraulic conductivity; if specified then this is Ky prior to rotation
+    real(DP), dimension(:), pointer, contiguous :: k33 => null() !< NPF hydraulic conductivity; if specified then this is Kz prior to rotation
+    real(DP), dimension(:), pointer, contiguous :: k11_input => null() !< NPF hydraulic conductivity as originally specified by the user
+    real(DP), dimension(:), pointer, contiguous :: k22_input => null() !< NPF hydraulic conductivity as originally specified by the user
+    real(DP), dimension(:), pointer, contiguous :: k33_input => null() !< NPF hydraulic conductivity as originally specified by the user
+    integer(I4B), pointer :: ik22 => null() !< NPF flag that k22 is specified
+    integer(I4B), pointer :: ik33 => null() !< NPF flag that k33 is specified
+    integer(I4B), pointer :: kchangeper => null() ! last stress period in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
+    integer(I4B), pointer :: kchangestp => null() ! last time step in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
+    integer(I4B), dimension(:), pointer, contiguous :: nodekchange => null() ! grid array of flags indicating for each node whether its K (or K22, or K33) value changed (1) at (kchangeper, kchangestp) or not (0)
+  
   contains
     procedure :: vsc_df
     procedure :: vsc_ar
     procedure :: vsc_rp
     procedure :: vsc_ad
+    procedure, public :: vsc_ad_bnd
     procedure :: vsc_ot_dv
     procedure :: vsc_da
     procedure, private :: vsc_calcvisc
@@ -66,6 +84,9 @@ module GwfVscModule
     procedure, private :: read_dimensions
     procedure, private :: read_packagedata
     procedure, private :: set_packagedata
+    procedure, private :: set_npf_pointers
+    procedure, public :: update_k_with_vsc
+    procedure, private :: vsc_set_changed_at
     procedure :: set_concentration_pointer
   end type GwfVscType
 
@@ -82,7 +103,7 @@ contains
 ! ------------------------------------------------------------------------------
 
     ! -- dummy
-    integer(I4B), intent(in) :: ivisc
+    integer(I4B), dimension(:), intent(in) :: ivisc
     real(DP), intent(in) :: viscref
     real(DP), dimension(:), intent(in) :: dviscdc
     real(DP), dimension(:), intent(in) :: cviscref
@@ -101,10 +122,10 @@ contains
     visc = viscref
     
     do i = 1, nviscspec
-      if (ivisc == 1) then
+      if (ivisc(i) == 1) then
         visc = visc + dviscdc(i) * (conc(i) - cviscref(i))    ! kluge note: linear for now
       else 
-        expon = -1 * ((conc(i) - cviscref(i)) / &
+        expon = -1 * a3 * ((conc(i) - cviscref(i)) / &
               ((conc(i) + a4) * (cviscref(i) + a4)))
         mu_t = viscref * a2 ** expon
         ! If a nonlinear correction is applied, then b/c it takes into account
@@ -168,7 +189,7 @@ contains
   !<
   subroutine vsc_df(this, dis, vsc_input)
 ! ******************************************************************************
-! vsc_df -- Allocate and Read
+! vsc_df -- Define
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -220,7 +241,7 @@ contains
     return
   end subroutine vsc_df
 
-  subroutine vsc_ar(this, npf, ibound)
+  subroutine vsc_ar(this, ibound)
 ! ******************************************************************************
 ! vsc_ar -- Allocate and Read
 ! ******************************************************************************
@@ -230,19 +251,52 @@ contains
     ! -- modules
     ! -- dummy
     class(GwfVscType) :: this
-    type(GwfNpfType), pointer, intent(in) :: npf
     integer(I4B), dimension(:), pointer :: ibound
     ! -- local
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
     ! -- store pointers to arguments that were passed in
-    this%npf => npf
     this%ibound => ibound
+    !
+    ! -- Set pointers to npf variables 
+    call this%set_npf_pointers()
     !
     ! -- Return
     return
   end subroutine vsc_ar
+  
+  !> @brief Set pointers to NPF variables
+  !!
+  !! Set array and variable pointers from the NPF
+  !! package for access by VSC.
+  !!
+  !<
+  subroutine set_npf_pointers(this)
+    ! -- dummy variables
+    class(GwfVscType) :: this
+    ! -- local variables
+    character(len=LENMEMPATH) :: npfMemoryPath
+    !
+    ! -- Set pointers to other package variables
+    ! -- NPF
+    npfMemoryPath = create_mem_path(this%name_model, 'NPF')
+    call mem_setptr(this%ik22overk, 'IK22OVERK', npfMemoryPath)
+    call mem_setptr(this%ik33overk, 'IK33OVERK', npfMemoryPath)
+    call mem_setptr(this%k11, 'K11', npfMemoryPath)
+    call mem_setptr(this%k22, 'K22', npfMemoryPath)
+    call mem_setptr(this%k33, 'K33', npfMemoryPath)
+    call mem_setptr(this%k11_input, 'K11_INPUT', npfMemoryPath)
+    call mem_setptr(this%k22_input, 'K22_INPUT', npfMemoryPath)
+    call mem_setptr(this%k33_input, 'K33_INPUT', npfMemoryPath)
+    call mem_setptr(this%ik22, 'IK22', npfMemoryPath)
+    call mem_setptr(this%ik33, 'IK33', npfMemoryPath)
+    call mem_setptr(this%kchangeper, 'KCHANGEPER', npfMemoryPath)
+    call mem_setptr(this%kchangestp, 'KCHANGESTP', npfMemoryPath)
+    call mem_setptr(this%nodekchange, 'NODEKCHANGE', npfMemoryPath)
+    !
+    return
+  end subroutine set_npf_pointers
 
   subroutine vsc_rp(this)
 ! ******************************************************************************
@@ -295,17 +349,164 @@ contains
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    ! -- update viscosity using the last concentration
+    ! -- update viscosity using the latest concentration/temperature
     call this%vsc_calcvisc()
-    !
-    ! -- update kfactor    ! kluge note: need this, and also a vsc_ad_bnd subroutine to update kfactors for boundary packages
     !
     ! -- Return
     return
   end subroutine vsc_ad
+  
+  !> @brief advance the boundary packages when viscosity is active
+  !! 
+  !! Update the conductance values associate with inflow from a boundary
+  !! when VSC package is active.
+  !<
+  subroutine vsc_ad_bnd(this, packobj, hnew)
+    ! -- modules
+    use BndModule, only: BndType
+    ! -- dummy
+    class(GwfVscType) :: this
+    class(BndType), pointer :: packobj
+    real(DP), intent(in), dimension(:) :: hnew
+    ! -- local
+    integer(I4B) :: i, j
+    integer(I4B) :: n, locvisc, locelev
+    integer(I4B), dimension(:), allocatable :: locconc
+    !
+    ! -- initialize
+    locvisc = 0
+    locelev = 0
+    allocate (locconc(this%nviscspecies))
+    locconc(:) = 0
+    !
+    ! -- Add viscosity terms for conductance-dependent boundaries
+    do n = 1, packobj%naux
+      if (packobj%auxname(n) == 'VISCOSITY') then
+        locvisc = n
+      else if (packobj%auxname(n) == 'ELEVATION') then
+        locelev = n
+      end if
+    end do
+    !
+    ! -- find aux columns for concentrations that affect density
+    do i = 1, this%nviscspecies
+      locconc(i) = 0
+      do j = 1, packobj%naux
+        if (this%cauxspeciesname(i) == packobj%auxname(j)) then
+          locconc(i) = j
+          exit
+        end if
+      end do
+      if (locconc(i) == 0) then
+        ! -- one not found, so don't use and mark all as 0
+        locconc(:) = 0
+        exit
+      end if
+    end do
+    !
+    ! -- apply viscosity terms to inflow from boundary based on package type
+    select case (packobj%filtyp)
+    case ('GHB')
+      !
+      ! -- general head boundary
+      call vsc_ad_ghb(packobj, hnew, this%visc, this%viscref, locelev, &
+                      locvisc, locconc, this%dviscdc, this%cviscref, &
+                      this%ivisc, this%a2, this%a3, this%a4, this%ctemp) 
+    !case ('DRN')
+    !  !
+    !  ! -- drain boundary
+    !  call vsc_ad_drn(packobj, hnew, this%viscref)
+    case default
+      !
+      ! -- nothing
+    end select
+    !
+    ! -- deallocate
+    deallocate (locconc)
+    !
+    ! -- Return
+    return
+  end subroutine vsc_ad_bnd
+  
+  !> @brief advance ghb while accounting for viscosity
+  !!
+  !! When flow enters from ghb boundary type, take into account the effects
+  !! of viscosity on the user-specified conductance terms
+  !<
+  subroutine vsc_ad_ghb(packobj, hnew, visc, viscref, locelev, locvisc, &
+                        locconc, dviscdc, cviscref, ivisc, a2, a3, a4, ctemp)
+    ! -- modules
+    use BndModule, only: BndType
+    class(BndType), pointer :: packobj
+    ! -- dummy
+    real(DP), intent(in), dimension(:) :: hnew
+    real(DP), intent(in), dimension(:) :: visc
+    real(DP), intent(in) :: a2, a3, a4
+    real(DP), intent(in) :: viscref
+    integer(I4B), intent(in) :: locelev
+    integer(I4B), intent(in) :: locvisc
+    integer(I4B), dimension(:), intent(in) :: locconc
+    integer(I4B), dimension(:), intent(in) :: ivisc
+    real(DP), dimension(:), intent(in) :: dviscdc
+    real(DP), dimension(:), intent(in) :: cviscref
+    real(DP), dimension(:), intent(inout) :: ctemp
+    ! -- local
+    integer(I4B) :: n
+    integer(I4B) :: node
+    real(DP) :: viscghb
+    real(DP) :: viscratio
+    real(DP) :: hd
+! -------------------------------------------------------------------------------
+    !
+    ! -- Process density terms for each GHB
+    do n = 1, packobj%nbound
+      node = packobj%nodelist(n)
+      ! 
+      ! -- Check if boundary cell is active, cycle if not
+      if (packobj%ibound(node) <= 0) cycle
+      !
+      ! -- calculate the viscosity associcated with the boundary 
+      viscghb = calc_bnd_viscosity(n, locvisc, locconc, viscref, dviscdc, &
+                                  cviscref, ctemp, ivisc, a2, a3, a4, &
+                                  packobj%auxvar)
+      !                            cviscref, ctemp, ivisc, packobj%auxvar)
+      !
+      ! -- get the viscosity ratio 
+      viscratio = update_bnd_cond(viscghb, viscref)
+      !
+      ! -- 
+      
+      !
+      ! -- viscosity
+    end do
+    !
+    ! -- Return
+    return
+  end subroutine vsc_ad_ghb
 
-  function get_bnd_viscosity(n, locvisc, locconc, viscref, dviscdc, cviscref, &
-                           ctemp, auxvar) result(viscbnd)
+  !> @brief apply bnd viscosity to the conductance term
+  !!
+  !! When the viscosity package is active apply the viscosity ratio to the 
+  !! active boundary package's conductance term. 
+  !<
+  function update_bnd_cond(bndvisc, viscref) result(vsc_ratio)
+    ! -- modules
+    ! -- dummy
+    real(DP), intent(in) :: viscref
+    real(DP), intent(in) :: bndvisc
+    ! -- local
+    real(DP) :: vsc_ratio
+! -------------------------------------------------------------------------------
+    !
+    vsc_ratio = viscref / bndvisc
+    !
+    ! -- Return
+    return
+  end function update_bnd_cond
+  
+  function calc_bnd_viscosity(n, locvisc, locconc, viscref, dviscdc, cviscref, &
+!                           ctemp, ivisc, auxvar) result(viscbnd)
+                            ctemp, ivisc, a2, a3, a4, auxvar) result(viscbnd)
 ! ******************************************************************************
 ! get_bnd_viscosity -- Return the viscosity of the boundary package using one of
 !   several different options in the following order of priority:
@@ -320,6 +521,8 @@ contains
     ! -- dummy
     integer(I4B), intent(in) :: n
     integer(I4B), intent(in) :: locvisc
+    real(DP), intent(in) :: a2, a3, a4
+    integer(I4B), dimension(:), intent(in) :: ivisc
     integer(I4B), dimension(:), intent(in) :: locconc
     real(DP), intent(in) :: viscref
     real(DP), dimension(:), intent(in) :: dviscdc
@@ -344,7 +547,7 @@ contains
           ctemp(i) = auxvar(locconc(i), n)
         end if
       end do
-     ! viscbnd = calc_visc_lin(viscref, dviscdc, cviscref, ctemp)
+      viscbnd = calc_visc(ivisc, viscref, dviscdc, cviscref, ctemp, a2, a3, a4)
     else
       ! -- neither of the above, so assign as viscref
       viscbnd = viscref
@@ -352,11 +555,67 @@ contains
     !
     ! -- return
     return
-  end function get_bnd_viscosity
+  end function calc_bnd_viscosity
 
-  subroutine vsc_ot_dv(this, idvfl)    ! kluge note: rename to _vv ?  save viscosity ratio?  do we want this at all?
+  !> @brief hit the hydraulic conductivity values with the ratio mu_o/mu 
+  !!
+  !! This routine called after updating the viscosity values using the latest
+  !! concentration and/or temperature values.  The ratio mu_o/mu, reference 
+  !! viscosity divided by the updated viscosity value, is multiplied by K
+  !! for each cell.
+  !<
+  subroutine update_k_with_vsc(this)
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwfVscType) :: this
+    integer(I4B) :: n
+! ------------------------------------------------------------------------------
+    !
+    ! -- For viscosity-based K's, apply change of K to K11 by starting with
+    !    user-specified K values and not the K's leftover from the last viscosity 
+    !    update.
+    do n = 1, this%dis%nodes
+      this%k11(n) = this%k11_input(n) * (this%viscref / this%visc(n))
+      if (this%ik22 /= 0) then
+        this%k22(n) = this%k22_input(n) * (this%viscref / this%visc(n))
+      end if
+      if (this%ik33 /= 0) then
+        this%k33(n) = this%k33_input(n) * (this%viscref / this%visc(n))
+      end if
+      this%nodekchange(n) = 1
+    end do
+    !
+    ! -- Flag kchange
+    call this%vsc_set_changed_at(kper, kstp)
+    !
+    ! -- return
+    return
+  end subroutine update_k_with_vsc
+
+  !> @brief Mark K changes as having occurred at (kper, kstp)
+  !!
+  !! Procedure called by VSC code when K updated due to viscosity changes.
+  !! K values changed at (kper, kstp).
+  !!
+  !<
+  subroutine vsc_set_changed_at(this, kper, kstp)
+    ! -- dummy variables
+    class(GwfVscType) :: this
+    integer(I4B), intent(in) :: kper
+    integer(I4B), intent(in) :: kstp
+    !
+    this%kchangeper = kper
+    this%kchangestp = kstp
+    !
+    return
+  end subroutine vsc_set_changed_at
+
+  subroutine vsc_ot_dv(this, idvfl)
 ! ******************************************************************************
-! vsc_ot_dv -- Save viscosity array to binary file
+! vsc_ot_dv -- Save calculated viscosity array to binary file
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -414,27 +673,43 @@ contains
     ! -- Deallocate arrays if package was active
     if (this%inunit > 0) then
       call mem_deallocate(this%visc)
+      call mem_deallocate(this%ivisc)
       call mem_deallocate(this%concvsc)
       call mem_deallocate(this%dviscdc)
       call mem_deallocate(this%cviscref)
       call mem_deallocate(this%ctemp)
-      call mem_deallocate(this%a2)
-      call mem_deallocate(this%a3)
-      call mem_deallocate(this%a4)
       deallocate (this%cmodelname)
       deallocate (this%cauxspeciesname)
       deallocate (this%modelconc)
     end if
     !
     ! -- Scalars
-    call mem_deallocate(this%ivisc)
+    call mem_deallocate(this%thermivisc)
     call mem_deallocate(this%idxtmpr)
     call mem_deallocate(this%ioutvisc)
+    call mem_deallocate(this%ireadelev)
     call mem_deallocate(this%ireadconcvsc)
     call mem_deallocate(this%iconcset)
     call mem_deallocate(this%viscref)
-
     call mem_deallocate(this%nviscspecies)
+    call mem_deallocate(this%a2)
+    call mem_deallocate(this%a3)
+    call mem_deallocate(this%a4)
+    !
+    ! -- Nullify pointers to other package variables
+    nullify (this%ik22overk)
+    nullify (this%ik33overk)
+    nullify (this%k11)
+    nullify (this%k22)
+    nullify (this%k33)
+    nullify (this%k11_input)
+    nullify (this%k22_input)
+    nullify (this%k33_input)
+    nullify (this%ik22)
+    nullify (this%ik33)
+    nullify (this%kchangeper)
+    nullify (this%kchangestp)
+    nullify (this%nodekchange)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
@@ -566,6 +841,9 @@ contains
             call store_error(errmsg)
           else
             this%idxtmpr = iviscspec
+            if (this%thermivisc == 2) then
+              this%ivisc(iviscspec) = 2
+            end if
           endif
         end if
       end do
@@ -636,7 +914,8 @@ contains
     integer(I4B) :: i
 ! ------------------------------------------------------------------------------
     !
-    ! -- Calculate the viscosity using the specified concentration array
+    ! -- Calculate the viscosity using the specified concentration and/or 
+    !    temperature arrays
     do n = 1, this%dis%nodes
       do i = 1, this%nviscspecies
         if (this%modelconc(i)%icbund(n) == 0) then
@@ -654,10 +933,11 @@ contains
         !                                          this%
       !else
         ! Concentration
-        this%visc(n) = calc_visc(this%ivisc, this%viscref, this%dviscdc, &
-                                 this%cviscref, this%ctemp, this%a2, &
-                                 this%a3, this%a4)      
+      this%visc(n) = calc_visc(this%ivisc, this%viscref, this%dviscdc, &
+                               this%cviscref, this%ctemp, this%a2, &
+                               this%a3, this%a4)      
       !end if
+      
     end do
     !
     ! -- Return
@@ -682,9 +962,10 @@ contains
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate
-    call mem_allocate(this%ivisc, 'IVISC', this%memoryPath)
+    call mem_allocate(this%thermivisc, 'THERMIVISC', this%memoryPath)
     call mem_allocate(this%idxtmpr, 'IDXTMPR', this%memoryPath)
     call mem_allocate(this%ioutvisc, 'IOUTVISC', this%memoryPath)
+    call mem_allocate(this%ireadelev, 'IREADELEV', this%memoryPath)
     call mem_allocate(this%ireadconcvsc, 'IREADCONCVSC', this%memoryPath)
     call mem_allocate(this%iconcset, 'ICONCSET', this%memoryPath)
     call mem_allocate(this%viscref, 'VISCREF', this%memoryPath)
@@ -695,9 +976,10 @@ contains
     call mem_allocate(this%nviscspecies, 'NVISCSPECIES', this%memoryPath)
     !
     ! -- Initialize
-    this%ivisc = 0
+    this%thermivisc = 0
     this%idxtmpr = 0
     this%ioutvisc = 0
+    this%ireadelev = 0
     this%iconcset = 0
     this%ireadconcvsc = 0
     this%viscref = 1000.d0
@@ -729,6 +1011,7 @@ contains
     ! -- Allocate
     call mem_allocate(this%visc, nodes, 'VISC', this%memoryPath)
     call mem_allocate(this%concvsc, 0, 'CONCVSC', this%memoryPath)
+    call mem_allocate(this%ivisc, this%nviscspecies, 'IVISC', this%memoryPath)
     call mem_allocate(this%dviscdc, this%nviscspecies, 'DRHODC', this%memoryPath)
     call mem_allocate(this%cviscref, this%nviscspecies, 'CRHOREF', this%memoryPath)
     call mem_allocate(this%ctemp, this%nviscspecies, 'CTEMP', this%memoryPath)
@@ -743,6 +1026,7 @@ contains
     !
     ! -- Initialize nviscspecies arrays
     do i = 1, this%nviscspecies
+      this%ivisc(i) = 1
       this%dviscdc(i) = DZERO
       this%cviscref(i) = DZERO
       this%ctemp(i) = DZERO
@@ -815,11 +1099,11 @@ contains
                      'FOLLOWED BY FILEOUT'
             call store_error(errmsg)
           end if
-        case ('VISCOSITY_FUNC')
+        case ('THERMAL_VISCOSITY_FUNC')
           call this%parser%GetStringCaps(keyword2)
-          if (trim(adjustl(keyword2)) == 'LINEAR') this%ivisc = 1
-          if (trim(adjustl(keyword2)) == 'NONLINEAR') this%ivisc = 2
-          select case (this%ivisc)
+          if (trim(adjustl(keyword2)) == 'LINEAR') this%thermivisc = 1
+          if (trim(adjustl(keyword2)) == 'NONLINEAR') this%thermivisc = 2
+          select case (this%thermivisc)
           case (1)
             write (this%iout, fmtlinear)
           case (2)
@@ -851,27 +1135,31 @@ contains
         end select
       end do
       !
-      if (this%ivisc == 1) then
+      if (this%thermivisc == 1) then
         if (this%a2 == 0.0) then
           write(errmsg, '(a)') 'LINEAR OPTION SELECTED FOR VARYING  &
-            &VISCOSITY, BUT A1, A SURROGATE FOR dVISC/dT, SET EQUAL TO 0.0'
+            &VISCOSITY WITH TEMPERTURE, BUT A1, A SURROGATE FOR &
+            &dVISC/dT, SET EQUAL TO 0.0'
           call store_error(errmsg)
         end if
       end if
-      if (this%ivisc > 1) then
+      if (this%thermivisc > 1) then
         if(this%a2 == 0) then
-          write (warnmsg, '(a)') 'A2 SET EQUAL TO ZERO WHICH MAY LEAD TO &
-            &UNINTENDED VALUES FOR VISCOSITY'
+          write (warnmsg, '(a)') 'NONLINEAR OPTION SELECTED FOR &
+            &VARYING VISCOSITY WITH TEMPERATURE, BUT A2 SET EQUAL TO &
+            &ZERO WHICH MAY LEAD TO UNINTENDED VALUES FOR VISCOSITY'
           call store_warning(errmsg)
         end if
         if (this%a3 == 0) then
-          write (warnmsg, '(a)') 'A3 SET EQUAL TO ZERO WHICH MAY LEAD TO &
-            &UNINTENDED VALUES FOR VISCOSITY'
+          write (warnmsg, '(a)') 'NONLINEAR OPTION SELECTED FOR &
+            &VARYING VISCOSITY WITH TEMPERATURE, BUT A3 SET EQUAL TO &
+            &ZERO WHICH MAY LEAD TO UNINTENDED VALUES FOR VISCOSITY'
           call store_warning(warnmsg)
         end if
         if (this%a4 == 0) then
-          write (warnmsg, '(a)') 'A4 SET EQUAL TO ZERO WHICH MAY LEAD TO &
-            &UNINTENDED VALUES FOR VISCOSITY'
+          write (warnmsg, '(a)') 'NONLINEAR OPTION SELECTED FOR &
+            &VARYING VISCOSITY WITH TEMPERATURE, BUT A4 SET EQUAL TO &
+            &ZERO WHICH MAY LEAD TO UNINTENDED VALUES FOR VISCOSITY'
           call store_warning(warnmsg)
         end if
       end if
@@ -890,7 +1178,9 @@ contains
     type(GwfVscInputDataType), intent(in) :: input_data !< the input data to be set
 
     this%viscref = input_data%viscref
-
+    !
+    ! -- Return
+    return
   end subroutine set_options
 
 
