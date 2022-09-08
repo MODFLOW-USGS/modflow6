@@ -98,13 +98,15 @@ In order to compile Fortran source run:
 ### Debugging
 
 Add a `launch.json` in `.vscode` similar to this.
+Most of the time you will want to debug with gdb.
+Only when compiling with ifort on Windows, vsdbg is the preferred debugger.
 
 ```json
 {
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch Modflow Model",
+            "name": "Debug (gdb)",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/bin/mf6.exe",
@@ -122,6 +124,17 @@ Add a `launch.json` in `.vscode` similar to this.
                     "ignoreFailures": true
                 }
             ]
+        }
+        {
+            "name": "Debug (vsdbg)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/mf6.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "/path/to/modflow6/model",
+            "environment": [],
+            "console": "integratedTerminal"
         }
     ]
 }
