@@ -109,7 +109,8 @@ module LoadMfInputModule
     logical(LGP) :: checkfail = .false.
     type(InputParamDefinitionType), pointer :: tmp_ptr
     integer(I4B) :: i
-    character(len=MAXCHARLEN), pointer :: strsclr => null() !< pointer to the character string
+    character(len=:), pointer :: strsclr => null() !< pointer to the character string
+    character(len=MAXCHARLEN), pointer :: idm_str
     logical(LGP), pointer :: logicalsclr => null() !< pointer to the logical
     integer(I4B), pointer :: intsclr => null() !< pointer to the integer
     real(DP), pointer :: dblsclr => null() !< pointer to the double
@@ -177,7 +178,8 @@ module LoadMfInputModule
         case ('STRING')
           if (rank == 0) then
             call mem_setptr(strsclr, tmp_ptr%mf6varname, pModflowInput%memoryPath)
-            call mem_deallocate(strsclr)
+            idm_str = strsclr
+            call mem_deallocate(idm_str)
           !elseif (rank == 1) then
           !  call setptr_charstr1d(acharstr1d, tmp_ptr%mf6varname, pModflowInput%memoryPath)
           !  call mem_deallocate(acharstr1d)
