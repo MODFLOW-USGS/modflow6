@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VisualStudioProject ProjectCreator="Intel Fortran" Keyword="Console Application" Version="11.0" ProjectIdGuid="{E7756A4E-003C-4D3D-B618-CC2BE6D20B04}">
+	<Platforms>
+		<Platform Name="Win32"/>
+		<Platform Name="x64"/></Platforms>
+	<Configurations>
+		<Configuration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" WarnDeclarations="true" WarnUnusedVariables="true" WarnTruncateSource="true" WarnUnalignedData="false" WarnUncalled="true" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateDebugInformation="true" SubSystem="subSystemConsole"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
+		<Configuration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" RuntimeLibrary="rtMultiThreadedDLL"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" SubSystem="subSystemConsole"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
+		<Configuration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" WarnDeclarations="true" WarnUnusedVariables="true" WarnTruncateSource="true" WarnUnalignedData="false" WarnUncalled="true" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateDebugInformation="true" SubSystem="subSystemConsole"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
+		<Configuration Name="Release|x64">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" RuntimeLibrary="rtMultiThreadedDLL"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" SubSystem="subSystemConsole"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration></Configurations>
+	<Files>
+		<Filter Name="Header Files" Filter="fi;fd;h;inc"/>
+		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
+		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
+		<Filter Name="Definition">
+		<File RelativePath="..\..\..\src\Model\Definition\gwfchd.f90"/>
+		<File RelativePath="..\..\..\src\Model\Definition\gwfdis.f90"/>
+		<File RelativePath="..\..\..\src\Model\Definition\gwfic.f90"/>
+		<File RelativePath="..\..\..\src\Model\Definition\gwfnam.f90"/>
+		<File RelativePath="..\..\..\src\Model\Definition\gwfnpf.f90"/>
+		<File RelativePath="..\..\..\src\Model\Definition\gwtnam.f90"/>
+		<File RelativePath="..\..\..\src\Model\Definition\simnam.f90"/>
+		<File RelativePath="..\..\..\src\Model\Definition\simtdis.f90"/>
+		<File RelativePath="..\..\..\src\Model\Definition\slnims.f90"/></Filter>
+		<Filter Name="mf6util">
+		<Filter Name="Memory">
+		<File RelativePath="..\..\..\src\Utilities\Memory\Memory.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\Memory\MemoryHelper.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\Memory\MemoryList.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\Memory\MemoryManager.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\Memory\MemoryManagerExt.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\Memory\MemorySetHandler.f90"/></Filter>
+		<File RelativePath="..\..\..\src\Utilities\ArrayHandlers.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\ArrayReaders.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\BlockParser.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\Budget.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\CharString.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\compilerversion.F90"/>
+		<File RelativePath="..\..\..\src\Utilities\Constants.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\defmacro.F90"/>
+		<File RelativePath="..\..\..\src\Utilities\genericutils.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\InputOutput.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\kind.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\List.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\Message.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\OpenSpec.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\Sim.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\SimVariables.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\sort.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\Table.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\TableTerm.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\version.f90"/></Filter>
+		<File RelativePath="..\..\..\src\Utilities\Idm\idm.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\Idm\idmfilemodflow.f90"/>
+		<File RelativePath="..\src\idmloader.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\Idm\idmlogger.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\Idm\idmtypes.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\Idm\inputdefinition.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\Idm\inputdefinitionselector.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\Idm\loadmfinputfile.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\Idm\structarray.f90"/>
+		<File RelativePath="..\..\..\src\Utilities\Idm\structvector.f90"/></Filter></Files>
+	<Globals/></VisualStudioProject>

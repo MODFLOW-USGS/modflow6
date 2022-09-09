@@ -14,6 +14,7 @@ module SimVariablesModule
   character(len=LINELENGTH) :: simfile = 'mfsim.nam' !< simulation name file
   character(len=LINELENGTH) :: simlstfile = 'mfsim.lst' !< simulation listing file name
   character(len=LINELENGTH) :: simstdout = 'mfsim.stdout' !< name of standard out file if screen output is piped to a file
+  character(len=2) :: idm_mempath_prefix = 'I/'
   character(len=MAXCHARLEN) :: errmsg !< error message string
   character(len=MAXCHARLEN) :: warnmsg !< warning message string
   integer(I4B) :: istdout = output_unit !< unit number for stdout

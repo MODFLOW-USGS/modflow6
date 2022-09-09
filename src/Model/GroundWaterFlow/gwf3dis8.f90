@@ -51,6 +51,9 @@ module GwfDisModule
     procedure :: read_options
     procedure :: read_dimensions
     procedure :: read_mf6_griddata
+    procedure :: source_idm_options
+    procedure :: source_idm_dimensions
+    procedure :: source_idm_mf6_griddata
     procedure :: grid_finalize
     procedure :: write_grb
     procedure :: allocate_scalars
@@ -70,10 +73,15 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use LoadMfInputModule, only: idm_load, set_model_shape
+    use SimVariablesModule, only: idm_mempath_prefix
+    ! -- dummy
     class(DisBaseType), pointer :: dis
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
+    ! -- locals
     type(GwfDisType), pointer :: disnew
 ! ------------------------------------------------------------------------------
     allocate (disnew)
@@ -84,6 +92,20 @@ contains
     !
     ! -- Initialize block parser
     call dis%parser%Initialize(dis%inunit, dis%iout)
+    !
+    ! -- IDM load source parameters
+    call idm_load(dis%parser, &
+                  'DIS6', & ! file type
+                  '', & ! file name
+                  'GWF', & ! component type
+                  'DIS', & ! subcomponent type
+                  name_model, & ! component name
+                  'DIS', & ! subcomponent name
+                  iout)
+    !
+    ! -- IDM set the model shape
+    ! TODO: fix
+    call set_model_shape('DIS6', trim(idm_mempath_prefix)//trim(name_model), trim(idm_mempath_prefix)//trim(name_model)//'/DIS')
     !
     ! -- Return
     return
@@ -190,14 +212,18 @@ contains
 1     format(1X, /1X, 'DIS -- STRUCTURED GRID DISCRETIZATION PACKAGE,', &
              ' VERSION 2 : 3/27/2014 - INPUT READ FROM UNIT ', I0, //)
       !
+      call this%source_idm_options()
+      call this%source_idm_dimensions()
+      call this%source_idm_mf6_griddata()
+      !
       ! -- Read options
-      call this%read_options()
+      !call this%read_options()
       !
       ! -- Read dimensions block
-      call this%read_dimensions()
+      !call this%read_dimensions()
       !
       ! -- Read GRIDDATA block
-      call this%read_mf6_griddata()
+      !call this%read_mf6_griddata()
     end if
     !
     ! -- Final grid initialization
@@ -216,10 +242,20 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
+    use LoadMfInputModule, only: idm_deallocate
     ! -- dummy
     class(GwfDisType) :: this
     ! -- locals
 ! ------------------------------------------------------------------------------
+    !
+    ! -- IDM deallocate
+    call idm_deallocate('DIS6', & ! file type
+                        '', & ! file name
+                        'GWF', & ! component type
+                        'DIS', & ! subcomponent type
+                        this%name_model, & ! component name
+                        'DIS', & ! subcomponent name
+                        this%iout)
     !
     ! -- DisBaseType deallocate
     call this%DisBaseType%dis_da()
@@ -293,7 +329,7 @@ contains
           end if
         case ('NOGRB')
           write (this%iout, '(4x,a)') 'BINARY GRB FILE WILL NOT BE WRITTEN'
-          this%writegrb = .false.
+          this%nogrb = 1
         case ('XORIGIN')
           this%xorigin = this%parser%GetDouble()
           write (this%iout, '(4x,a,1pg24.15)') 'XORIGIN SPECIFIED AS ', &
@@ -528,6 +564,154 @@ contains
     ! -- Return
     return
   end subroutine read_mf6_griddata
+
+  subroutine source_idm_options(this)
+! ******************************************************************************
+! read_options -- Read options
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use KindModule, only: LGP
+    use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENVARNAME
+    use MemoryTypeModule, only: MemoryType
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_mempath_prefix
+    ! -- dummy
+    class(GwfDisType) :: this
+    ! -- locals
+    character(len=LENMEMPATH) :: idmMemoryPath
+    character(len=LINELENGTH) :: errmsg
+    character(len=LENVARNAME), dimension(3) :: lenunits = &
+    [ character(len=LENVARNAME) :: 'FEET', 'METERS', 'CENTIMETERS' ]
+    !
+    ! -- set memory path
+    idmMemoryPath = trim(idm_mempath_prefix)//trim(this%name_model)//'/DIS'
+    !
+    ! -- update defaults with idm sourced values
+    call mem_set_value(this%lenuni, 'LENGTH_UNITS', idmMemoryPath, lenunits)
+    call mem_set_value(this%nogrb, 'NOGRB', idmMemoryPath)
+    call mem_set_value(this%xorigin, 'XORIGIN', idmMemoryPath)
+    call mem_set_value(this%yorigin, 'YORIGIN', idmMemoryPath)
+    call mem_set_value(this%angrot, 'ANGROT', idmMemoryPath)
+    !
+    ! -- log simulation values
+    write (this%iout, '(1x,a)') 'SETTING DISCRETIZATION OPTIONS'
+    write (this%iout, '(4x,a,i1)') 'MODEL LENGTH UNIT [0=UND, 1=FEET, 2=METERS, 3=CENTIMETERS], Value=', this%lenuni
+    write (this%iout, '(4x,a,i1)') 'BINARY GRB FILE [0=GRB, 1=NOGRB], Value=', this%nogrb
+    write (this%iout, '(4x,a,1pg24.15)') 'XORIGIN SPECIFIED AS ', this%xorigin
+    write (this%iout, '(4x,a,1pg24.15)') 'YORIGIN SPECIFIED AS ', this%yorigin
+    write (this%iout, '(4x,a,1pg24.15)') 'ANGROT SPECIFIED AS ', this%angrot
+    write (this%iout, '(1x,a)') 'END DISCRETIZATION OPTIONS'
+  end subroutine source_idm_options
+
+  subroutine source_idm_dimensions(this)
+! ******************************************************************************
+! read_dimensions -- Read dimensions
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    use KindModule, only: LGP
+    use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENVARNAME
+    use MemoryTypeModule, only: MemoryType
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_mempath_prefix
+    ! -- dummy
+    class(GwfDisType) :: this
+    ! -- locals
+    character(len=LENMEMPATH) :: idmMemoryPath
+    character(len=LINELENGTH) :: errmsg
+    integer(I4B) :: i, j, k
+
+    idmMemoryPath = trim(idm_mempath_prefix)//trim(this%name_model)//'/DIS'
+    !
+    ! -- update defaults with idm sourced values
+    call mem_set_value(this%nlay, 'NLAY', idmMemoryPath)
+    call mem_set_value(this%nrow, 'NROW', idmMemoryPath)
+    call mem_set_value(this%ncol, 'NCOL', idmMemoryPath)
+    !
+    ! -- log simulation values
+    write (this%iout, '(1x,a)') 'SETTING DISCRETIZATION DIMENSIONS'
+    write (this%iout, '(4x,a,i7)') 'NLAY = ', this%nlay
+    write (this%iout, '(4x,a,i7)') 'NROW = ', this%nrow
+    write (this%iout, '(4x,a,i7)') 'NCOL = ', this%ncol
+    write (this%iout, '(1x,a)') 'END DISCRETIZATION DIMENSIONS'
+    !
+    ! -- verify dimensions were set
+    if (this%nlay < 1) then
+      call store_error( &
+        'ERROR.  NLAY WAS NOT SPECIFIED OR WAS SPECIFIED INCORRECTLY.')
+      call this%parser%StoreErrorUnit()
+    end if
+    if (this%nrow < 1) then
+      call store_error( &
+        'ERROR.  NROW WAS NOT SPECIFIED OR WAS SPECIFIED INCORRECTLY.')
+      call this%parser%StoreErrorUnit()
+    end if
+    if (this%ncol < 1) then
+      call store_error( &
+        'ERROR.  NCOL WAS NOT SPECIFIED OR WAS SPECIFIED INCORRECTLY.')
+      call this%parser%StoreErrorUnit()
+    end if
+    !
+    ! -- calculate nodesuser
+    this%nodesuser = this%nlay * this%nrow * this%ncol
+    !
+    ! -- Allocate delr, delc, and non-reduced vectors for dis
+    call mem_allocate(this%delr, this%ncol, 'DELR', this%memoryPath)
+    call mem_allocate(this%delc, this%nrow, 'DELC', this%memoryPath)
+    call mem_allocate(this%idomain, this%ncol, this%nrow, this%nlay, 'IDOMAIN', &
+                      this%memoryPath)
+    call mem_allocate(this%top2d, this%ncol, this%nrow, 'TOP2D', this%memoryPath)
+    call mem_allocate(this%bot3d, this%ncol, this%nrow, this%nlay, 'BOT3D', &
+                      this%memoryPath)
+    call mem_allocate(this%cellx, this%ncol, 'CELLX', this%memoryPath)
+    call mem_allocate(this%celly, this%nrow, 'CELLY', this%memoryPath)
+    !
+    ! -- initialize all cells to be active (idomain = 1)
+    do k = 1, this%nlay
+      do i = 1, this%nrow
+        do j = 1, this%ncol
+          this%idomain(j, i, k) = 1
+        end do
+      end do
+    end do
+  end subroutine source_idm_dimensions
+
+  subroutine source_idm_mf6_griddata(this)
+! ******************************************************************************
+! read_mf6_griddata -- Read griddata from a MODFLOW 6 ascii file
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: LENMEMPATH
+    use SimModule, only: count_errors, store_error
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_mempath_prefix
+    ! -- dummy
+    class(GwfDisType) :: this
+    ! -- locals
+    character(len=300) :: ermsg
+    character(len=LENMEMPATH) :: idmMemoryPath
+    ! -- formats
+! ------------------------------------------------------------------------------
+    idmMemoryPath = trim(idm_mempath_prefix)//trim(this%name_model)//'/DIS'
+    !
+    ! -- update defaults with idm sourced values
+    call mem_set_value(this%delr, 'DELR', idmMemoryPath)
+    call mem_set_value(this%delc, 'DELC', idmMemoryPath)
+    call mem_set_value(this%top2d, 'TOP', idmMemoryPath)
+    call mem_set_value(this%bot3d, 'BOTM', idmMemoryPath)
+    call mem_set_value(this%idomain, 'IDOMAIN', idmMemoryPath)
+    !
+    ! -- log simulation values
+    write (this%iout, '(1x,a)') 'SETTING DISCRETIZATION GRIDDATA'
+    write (this%iout, '(1x,a)') 'END DISCRETIZATION GRIDDATA'
+  end subroutine source_idm_mf6_griddata
 
   subroutine grid_finalize(this)
 ! ******************************************************************************

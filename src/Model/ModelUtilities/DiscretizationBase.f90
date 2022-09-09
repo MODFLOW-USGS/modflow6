@@ -32,7 +32,7 @@ module BaseDisModule
     integer(I4B), pointer :: lenuni => null() !< length unit
     integer(I4B), pointer :: ndim => null() !< number of spatial model dimensions (1 for disu grid)
     integer(I4B), pointer :: icondir => null() !< flag indicating if grid has enough info to calculate connection vectors
-    logical, pointer :: writegrb => null() !< write binary grid file
+    integer(I4B), pointer :: nogrb => null() !< don't write binary grid file
     real(DP), pointer :: yorigin => null() !< y-position of the lower-left grid corner (default is 0.)
     real(DP), pointer :: xorigin => null() !< x-position of the lower-left grid corner (default is 0.)
     real(DP), pointer :: angrot => null() !< counter-clockwise rotation angle of the lower-left corner (default is 0.0)
@@ -220,7 +220,7 @@ contains
       end if
     end do
     !
-    if (this%writegrb) call this%write_grb(ict)
+    if (this%nogrb == 0) call this%write_grb(ict)
     !
     ! -- Return
     return
@@ -271,7 +271,7 @@ contains
     call mem_deallocate(this%nodesuser)
     call mem_deallocate(this%ndim)
     call mem_deallocate(this%icondir)
-    call mem_deallocate(this%writegrb)
+    call mem_deallocate(this%nogrb)
     call mem_deallocate(this%xorigin)
     call mem_deallocate(this%yorigin)
     call mem_deallocate(this%angrot)
@@ -589,7 +589,7 @@ contains
     call mem_allocate(this%nodesuser, 'NODESUSER', this%memoryPath)
     call mem_allocate(this%ndim, 'NDIM', this%memoryPath)
     call mem_allocate(this%icondir, 'ICONDIR', this%memoryPath)
-    call mem_allocate(this%writegrb, 'WRITEGRB', this%memoryPath)
+    call mem_allocate(this%nogrb, 'NOGRB', this%memoryPath)
     call mem_allocate(this%xorigin, 'XORIGIN', this%memoryPath)
     call mem_allocate(this%yorigin, 'YORIGIN', this%memoryPath)
     call mem_allocate(this%angrot, 'ANGROT', this%memoryPath)
@@ -605,7 +605,7 @@ contains
     this%nodesuser = 0
     this%ndim = 1
     this%icondir = 1
-    this%writegrb = .true.
+    this%nogrb = 0
     this%xorigin = DZERO
     this%yorigin = DZERO
     this%angrot = DZERO

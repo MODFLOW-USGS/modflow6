@@ -1597,7 +1597,7 @@ contains
   !> @brief Set pointer to a string (scalar)
   !<
   subroutine setptr_str(asrt, name, mem_path)
-    character(len=:), pointer :: asrt !< pointer to the character string
+    character(len=*), pointer :: asrt !< pointer to the character string
     character(len=*), intent(in) :: name !< variable name
     character(len=*), intent(in) :: mem_path !< path where variable is stored
     ! -- local
