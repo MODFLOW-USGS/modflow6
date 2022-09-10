@@ -207,6 +207,7 @@ def build_model(idx, exdir):
         packagedata=uzf_pkdat,
         perioddata=uzf_spd,
         budget_filerecord=f"{name}.uzf.bud",
+        budgetcsv_filerecord=f"{name}.uzf.bud.csv",
         observations=uzf_obs,
         filename=f"{name}.uzf",
     )

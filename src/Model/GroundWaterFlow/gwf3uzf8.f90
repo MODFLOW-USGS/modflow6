@@ -439,12 +439,12 @@ contains
 ! ------------------------------------------------------------------------------
     !
     !
+    found = .true.
     select case (option)
       !case ('PRINT_WATER-CONTENT')
       !  this%iprwcont = 1
       !  write(this%iout,'(4x,a)') trim(adjustl(this%text))// &
       !    ' WATERCONTENT WILL BE PRINTED TO LISTING FILE.'
-      !  found = .true.
     case ('WATER_CONTENT')
       call this%parser%GetStringCaps(keyword)
       if (keyword == 'FILEOUT') then
@@ -453,7 +453,6 @@ contains
         call openfile(this%iwcontout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE', mode_opt=MNORMAL)
         write (this%iout, fmtuzfbin) 'WATER-CONTENT', fname, this%iwcontout
-        found = .true.
       else
         call store_error('OPTIONAL WATER_CONTENT KEYWORD &
                          &MUST BE FOLLOWED BY FILEOUT')
@@ -466,7 +465,6 @@ contains
         call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE', mode_opt=MNORMAL)
         write (this%iout, fmtuzfbin) 'BUDGET', fname, this%ibudgetout
-        found = .true.
       else
         call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
       end if
@@ -490,7 +488,6 @@ contains
         call openfile(this%ipakcsv, this%iout, fname, 'CSV', &
                       filstat_opt='REPLACE', mode_opt=MNORMAL)
         write (this%iout, fmtuzfbin) 'PACKAGE_CONVERGENCE', fname, this%ipakcsv
-        found = .true.
       else
         call store_error('OPTIONAL PACKAGE_CONVERGENCE KEYWORD MUST BE '// &
                          'FOLLOWED BY FILEOUT')
@@ -498,31 +495,24 @@ contains
     case ('SIMULATE_ET')
       this%ietflag = 1 !default
       this%igwetflag = 0
-      found = .true.
       write (this%iout, fmtet)
     case ('LINEAR_GWET')
       this%igwetflag = 1
-      found = .true.
       write (this%iout, fmtgwetlin)
     case ('SQUARE_GWET')
       this%igwetflag = 2
-      found = .true.
       write (this%iout, fmtgwetsquare)
     case ('SIMULATE_GWSEEP')
       this%iseepflag = 1
-      found = .true.
       write (this%iout, fmtgwseepout)
     case ('UNSAT_ETWC')
       this%ietflag = 1
-      found = .true.
       write (this%iout, fmtuzetwc)
     case ('UNSAT_ETAE')
       this%ietflag = 2
-      found = .true.
       write (this%iout, fmtuzetae)
     case ('MOVER')
       this%imover = 1
-      found = .true.
       !
       ! -- right now these are options that are available but may not be available in
       !    the release (or in documentation)
@@ -532,7 +522,6 @@ contains
       write (this%iout, '(4x,a)') &
         'A FINAL CONVERGENCE CHECK OF THE CHANGE IN UZF RECHARGE &
         &WILL NOT BE MADE'
-      found = .true.
       !case('DEV_MAXIMUM_PERCENT_DIFFERENCE')
       !  call this%parser%DevOpt()
       !  r = this%parser%GetDouble()
@@ -543,7 +532,6 @@ contains
       !    write(this%iout, fmtuzfopt) 'INVALID MAXIMUM_PERCENT_DIFFERENCE', r
       !    write(this%iout, fmtuzfopt) 'USING DEFAULT MAXIMUM_PERCENT_DIFFERENCE', this%pdmax
       !  end if
-      !  found = .true.
     case default
       ! -- No options found
       found = .false.
