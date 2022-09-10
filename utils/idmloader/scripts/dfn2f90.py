@@ -345,15 +345,7 @@ class Dfn2F90:
 if __name__ == "__main__":
 
     fnames = [
-        Path("./dfns", "gwf-npf.dfn"),
         Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-dis.dfn"),
-        Path("./dfns", "sim-tdis.dfn"),
-        Path("./dfns", "sln-ims.dfn"),
-        Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-ic.dfn"),
-        Path("./dfns", "gwf-chd.dfn"),
-        Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-nam.dfn"),
-        Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-nam.dfn"),
-        Path("./dfns", "sim-nam.dfn"),
     ]
 
     for dfn in fnames:

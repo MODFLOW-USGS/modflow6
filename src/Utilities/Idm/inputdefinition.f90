@@ -24,7 +24,6 @@ module InputDefinitionModule
     character(len=100) :: blockname = ''
     logical(LGP) :: required = .false.
     logical(LGP) :: aggregate = .false.
-    ! todo: add block_variable attributes in dfns
   end type InputBlockDefinitionType
 
 end module InputDefinitionModule

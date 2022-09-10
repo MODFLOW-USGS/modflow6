@@ -18,12 +18,10 @@ module IdmTypesModule
   type ModflowInputType
     character(len=LENFTYPE) :: file_type
     character(len=MAXCHARLEN) :: file_spec
-    !integer(I4B) :: inunit
     character(len=LENCOMPONENTNAME) :: component_type
     character(len=LENCOMPONENTNAME) :: subcomponent_type
     character(len=LENCOMPONENTNAME) :: component_name
     character(len=LENCOMPONENTNAME) :: subcomponent_name
-    !integer(I4B), dimension(:) :: mshape
     character(len=LENMEMPATH) :: memoryPath
     character(len=LENMEMPATH) :: component
     type(InputBlockDefinitionType), dimension(:), pointer :: p_block_dfns
@@ -34,37 +32,29 @@ module IdmTypesModule
   contains
 
   function ModflowInput(ftype, fspec, component_type, &
-    subcomponent_type, component_name, subcomponent_name) result(pModflowInput)
-    !character(len=LENFTYPE) :: ftype
-    !character(len=MAXCHARLEN) :: fspec
-    !character(len=LENCOMPONENTNAME) :: component_type
-    !character(len=LENCOMPONENTNAME) :: subcomponent_type
-    !character(len=LENCOMPONENTNAME) :: component_name
-    !character(len=LENCOMPONENTNAME) :: subcomponent_name
+    subcomponent_type, component_name, subcomponent_name) result(mf6_input)
     character(len=*), intent(in) :: ftype
     character(len=*), intent(in) :: fspec
-    !integer(I4B), intent(in) :: inunit
     character(len=*), intent(in) :: component_type
     character(len=*), intent(in) :: subcomponent_type
     character(len=*), intent(in) :: component_name
     character(len=*), intent(in) :: subcomponent_name
-    type(ModflowInputType), pointer :: pModflowInput
+    type(ModflowInputType), pointer :: mf6_input
 
-    allocate(pModflowInput)
-    pModflowInput%file_type = trim(ftype)
-    pModflowInput%file_spec = trim(fspec)
-    !pModflowInput%inunit = inunit
-    pModflowInput%component_type = trim(component_type)
-    pModflowInput%subcomponent_type = trim(subcomponent_type)
-    pModflowInput%component_name = trim(component_name)
-    pModflowInput%subcomponent_name = trim(subcomponent_name)
+    allocate(mf6_input)
+    mf6_input%file_type = trim(ftype)
+    mf6_input%file_spec = trim(fspec)
+    mf6_input%component_type = trim(component_type)
+    mf6_input%subcomponent_type = trim(subcomponent_type)
+    mf6_input%component_name = trim(component_name)
+    mf6_input%subcomponent_name = trim(subcomponent_name)
 
-    pModflowInput%memoryPath = create_mem_path(trim(idm_mempath_prefix)//trim(component_name), trim(subcomponent_name))
-    pModflowInput%component = trim(component_type)//'/'//trim(subcomponent_type)
+    mf6_input%memoryPath = create_mem_path(component_name, subcomponent_name, idm_mempath_prefix)
+    mf6_input%component = trim(component_type)//'/'//trim(subcomponent_type)
 
-    pModflowInput%p_block_dfns => block_definitions(pModflowInput%component)
-    pModflowInput%p_aggregate_dfns => aggregate_definitions(pModflowInput%component)
-    pModflowInput%p_param_dfns => param_definitions(pModflowInput%component)
+    mf6_input%p_block_dfns => block_definitions(mf6_input%component)
+    mf6_input%p_aggregate_dfns => aggregate_definitions(mf6_input%component)
+    mf6_input%p_param_dfns => param_definitions(mf6_input%component)
   end function ModflowInput
 
 end module IdmTypesModule

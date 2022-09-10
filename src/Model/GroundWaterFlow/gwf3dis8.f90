@@ -2,13 +2,14 @@ module GwfDisModule
 
   use ArrayReadersModule, only: ReadArray
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LINELENGTH, DHALF, DZERO
+  use ConstantsModule, only: LINELENGTH, DHALF, DZERO, LENMEMPATH, LENVARNAME
   use BaseDisModule, only: DisBaseType
   use InputOutputModule, only: get_node, URWORD, ulasav, ulaprufw, ubdsv1, &
                                ubdsv06
   use SimModule, only: count_errors, store_error, store_error_unit
   use BlockParserModule, only: BlockParserType
   use MemoryManagerModule, only: mem_allocate
+  use MemoryHelperModule, only: create_mem_path
   use TdisModule, only: kstp, kper, pertim, totim, delt
 
   implicit none
@@ -83,6 +84,8 @@ contains
     integer(I4B), intent(in) :: iout
     ! -- locals
     type(GwfDisType), pointer :: disnew
+    character(len=LENMEMPATH) :: idmModelMemoryPath
+    character(len=LENMEMPATH) :: idmDisMemoryPath
 ! ------------------------------------------------------------------------------
     allocate (disnew)
     dis => disnew
@@ -101,11 +104,13 @@ contains
                   'DIS', & ! subcomponent type
                   name_model, & ! component name
                   'DIS', & ! subcomponent name
+                  dis%ndim, & ! dis ndim
                   iout)
     !
     ! -- IDM set the model shape
-    ! TODO: fix
-    call set_model_shape('DIS6', trim(idm_mempath_prefix)//trim(name_model), trim(idm_mempath_prefix)//trim(name_model)//'/DIS')
+    idmModelMemoryPath = create_mem_path(component=name_model, context=idm_mempath_prefix)
+    idmDisMemoryPath = create_mem_path(name_model, 'DIS', idm_mempath_prefix)
+    call set_model_shape('DIS6', idmModelMemoryPath, idmDisMemoryPath)
     !
     ! -- Return
     return
@@ -242,7 +247,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
-    use LoadMfInputModule, only: idm_deallocate
+    use IdmHelperModule, only: idm_deallocate
     ! -- dummy
     class(GwfDisType) :: this
     ! -- locals
@@ -567,14 +572,13 @@ contains
 
   subroutine source_idm_options(this)
 ! ******************************************************************************
-! read_options -- Read options
+! source_idm_options -- update simulation mempath options
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
     use KindModule, only: LGP
-    use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENVARNAME
     use MemoryTypeModule, only: MemoryType
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_mempath_prefix
@@ -582,12 +586,12 @@ contains
     class(GwfDisType) :: this
     ! -- locals
     character(len=LENMEMPATH) :: idmMemoryPath
-    character(len=LINELENGTH) :: errmsg
     character(len=LENVARNAME), dimension(3) :: lenunits = &
     [ character(len=LENVARNAME) :: 'FEET', 'METERS', 'CENTIMETERS' ]
+! ------------------------------------------------------------------------------
     !
     ! -- set memory path
-    idmMemoryPath = trim(idm_mempath_prefix)//trim(this%name_model)//'/DIS'
+    idmMemoryPath = create_mem_path(this%name_model, 'DIS', idm_mempath_prefix)
     !
     ! -- update defaults with idm sourced values
     call mem_set_value(this%lenuni, 'LENGTH_UNITS', idmMemoryPath, lenunits)
@@ -596,25 +600,18 @@ contains
     call mem_set_value(this%yorigin, 'YORIGIN', idmMemoryPath)
     call mem_set_value(this%angrot, 'ANGROT', idmMemoryPath)
     !
-    ! -- log simulation values
-    write (this%iout, '(1x,a)') 'SETTING DISCRETIZATION OPTIONS'
-    write (this%iout, '(4x,a,i1)') 'MODEL LENGTH UNIT [0=UND, 1=FEET, 2=METERS, 3=CENTIMETERS], Value=', this%lenuni
-    write (this%iout, '(4x,a,i1)') 'BINARY GRB FILE [0=GRB, 1=NOGRB], Value=', this%nogrb
-    write (this%iout, '(4x,a,1pg24.15)') 'XORIGIN SPECIFIED AS ', this%xorigin
-    write (this%iout, '(4x,a,1pg24.15)') 'YORIGIN SPECIFIED AS ', this%yorigin
-    write (this%iout, '(4x,a,1pg24.15)') 'ANGROT SPECIFIED AS ', this%angrot
-    write (this%iout, '(1x,a)') 'END DISCRETIZATION OPTIONS'
+    ! -- Return
+    return
   end subroutine source_idm_options
 
   subroutine source_idm_dimensions(this)
 ! ******************************************************************************
-! read_dimensions -- Read dimensions
+! source_idm_dimensions -- update simulation mempath dimensions
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use KindModule, only: LGP
-    use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENVARNAME
     use MemoryTypeModule, only: MemoryType
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_mempath_prefix
@@ -622,22 +619,16 @@ contains
     class(GwfDisType) :: this
     ! -- locals
     character(len=LENMEMPATH) :: idmMemoryPath
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: i, j, k
-
-    idmMemoryPath = trim(idm_mempath_prefix)//trim(this%name_model)//'/DIS'
+! ------------------------------------------------------------------------------
+    !
+    ! -- set memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'DIS', idm_mempath_prefix)
     !
     ! -- update defaults with idm sourced values
     call mem_set_value(this%nlay, 'NLAY', idmMemoryPath)
     call mem_set_value(this%nrow, 'NROW', idmMemoryPath)
     call mem_set_value(this%ncol, 'NCOL', idmMemoryPath)
-    !
-    ! -- log simulation values
-    write (this%iout, '(1x,a)') 'SETTING DISCRETIZATION DIMENSIONS'
-    write (this%iout, '(4x,a,i7)') 'NLAY = ', this%nlay
-    write (this%iout, '(4x,a,i7)') 'NROW = ', this%nrow
-    write (this%iout, '(4x,a,i7)') 'NCOL = ', this%ncol
-    write (this%iout, '(1x,a)') 'END DISCRETIZATION DIMENSIONS'
     !
     ! -- verify dimensions were set
     if (this%nlay < 1) then
@@ -678,28 +669,31 @@ contains
         end do
       end do
     end do
+    !
+    ! -- Return
+    return
   end subroutine source_idm_dimensions
 
   subroutine source_idm_mf6_griddata(this)
 ! ******************************************************************************
-! read_mf6_griddata -- Read griddata from a MODFLOW 6 ascii file
+! source_idm_mf6_griddata -- update simulation mempath griddata
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: LENMEMPATH
     use SimModule, only: count_errors, store_error
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_mempath_prefix
     ! -- dummy
     class(GwfDisType) :: this
     ! -- locals
-    character(len=300) :: ermsg
     character(len=LENMEMPATH) :: idmMemoryPath
     ! -- formats
 ! ------------------------------------------------------------------------------
-    idmMemoryPath = trim(idm_mempath_prefix)//trim(this%name_model)//'/DIS'
+    !
+    ! -- set memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'DIS', idm_mempath_prefix)
     !
     ! -- update defaults with idm sourced values
     call mem_set_value(this%delr, 'DELR', idmMemoryPath)
@@ -708,9 +702,8 @@ contains
     call mem_set_value(this%bot3d, 'BOTM', idmMemoryPath)
     call mem_set_value(this%idomain, 'IDOMAIN', idmMemoryPath)
     !
-    ! -- log simulation values
-    write (this%iout, '(1x,a)') 'SETTING DISCRETIZATION GRIDDATA'
-    write (this%iout, '(1x,a)') 'END DISCRETIZATION GRIDDATA'
+    ! -- Return
+    return
   end subroutine source_idm_mf6_griddata
 
   subroutine grid_finalize(this)

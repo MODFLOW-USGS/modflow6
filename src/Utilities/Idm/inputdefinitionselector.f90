@@ -5,30 +5,9 @@ module InputDefinitionSelectorModule
   use SimModule, only: store_error, store_warning
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
-  use SimNamInputModule, only: sim_nam_param_definitions, &
-                               sim_nam_aggregate_definitions, &
-                               sim_nam_block_definitions
-  use SimTdisInputModule, only: sim_tdis_param_definitions, &
-                                sim_tdis_aggregate_definitions, &
-                                sim_tdis_block_definitions
-  use SlnImsInputModule, only: sln_ims_param_definitions, &
-                               sln_ims_aggregate_definitions, &
-                               sln_ims_block_definitions
-  use GwfNamInputModule, only: gwf_nam_param_definitions, &
-                               gwf_nam_aggregate_definitions, &
-                               gwf_nam_block_definitions
   use GwfDisInputModule, only: gwf_dis_param_definitions, &
                                gwf_dis_aggregate_definitions, &
                                gwf_dis_block_definitions
-  use GwfNpfInputModule, only: gwf_npf_param_definitions, &
-                               gwf_npf_aggregate_definitions, &
-                               gwf_npf_block_definitions
-  use GwfChdInputModule, only: gwf_chd_param_definitions, &
-                               gwf_chd_aggregate_definitions, &
-                               gwf_chd_block_definitions
-  use GwfIcInputModule, only: gwf_ic_param_definitions, &
-                              gwf_ic_aggregate_definitions, &
-                              gwf_ic_block_definitions
 
   implicit none
   private
@@ -45,22 +24,8 @@ module InputDefinitionSelectorModule
     type(InputParamDefinitionType), dimension(:), pointer :: input_definition
 
     select case (component)
-    case ('SIM/NAM')
-      call set_pointer(input_definition, sim_nam_param_definitions)
-    case ('SIM/TDIS')
-      call set_pointer(input_definition, sim_tdis_param_definitions)
-    case ('SLN/IMS')
-      call set_pointer(input_definition, sln_ims_param_definitions)
-    case ('GWF/NAM')
-      call set_pointer(input_definition, gwf_nam_param_definitions)
     case ('GWF/DIS')
       call set_pointer(input_definition, gwf_dis_param_definitions)
-    case ('GWF/NPF')
-      call set_pointer(input_definition, gwf_npf_param_definitions)
-    case ('GWF/CHD')
-      call set_pointer(input_definition, gwf_chd_param_definitions)
-    case ('GWF/IC')
-      call set_pointer(input_definition, gwf_ic_param_definitions)
     case default
       write(warnmsg, '(a,a)') 'IDM Unsupported input type: ', trim(component)
       call store_warning(warnmsg)
@@ -74,22 +39,8 @@ module InputDefinitionSelectorModule
     type(InputParamDefinitionType), dimension(:), pointer :: input_definition
 
     select case (component)
-    case ('SIM/NAM')
-      call set_pointer(input_definition, sim_nam_aggregate_definitions)
-    case ('SIM/TDIS')
-      call set_pointer(input_definition, sim_tdis_aggregate_definitions)
-    case ('SLN/IMS')
-      call set_pointer(input_definition, sln_ims_aggregate_definitions)
-    case ('GWF/NAM')
-      call set_pointer(input_definition, gwf_nam_aggregate_definitions)
     case ('GWF/DIS')
       call set_pointer(input_definition, gwf_dis_aggregate_definitions)
-    case ('GWF/NPF')
-      call set_pointer(input_definition, gwf_npf_aggregate_definitions)
-    case ('GWF/CHD')
-      call set_pointer(input_definition, gwf_chd_aggregate_definitions)
-    case ('GWF/IC')
-      call set_pointer(input_definition, gwf_ic_aggregate_definitions)
     case default
       write(warnmsg, '(a,a)') 'IDM Unsupported input type: ', trim(component)
       call store_warning(warnmsg)
@@ -103,22 +54,8 @@ module InputDefinitionSelectorModule
     type(InputBlockDefinitionType), dimension(:), pointer :: input_definition
 
     select case (component)
-    case ('SIM/NAM')
-      call set_block_pointer(input_definition, sim_nam_block_definitions)
-    case ('SIM/TDIS')
-      call set_block_pointer(input_definition, sim_tdis_block_definitions)
-    case ('SLN/IMS')
-      call set_block_pointer(input_definition, sln_ims_block_definitions)
-    case ('GWF/NAM')
-      call set_block_pointer(input_definition, gwf_nam_block_definitions)
     case ('GWF/DIS')
       call set_block_pointer(input_definition, gwf_dis_block_definitions)
-    case ('GWF/NPF')
-      call set_block_pointer(input_definition, gwf_npf_block_definitions)
-    case ('GWF/CHD')
-      call set_block_pointer(input_definition, gwf_chd_block_definitions)
-    case ('GWF/IC')
-      call set_block_pointer(input_definition, gwf_ic_block_definitions)
     case default
       write(warnmsg, '(a,a)') 'IDM Unsupported input type: ', trim(component)
       call store_warning(warnmsg)
@@ -161,7 +98,7 @@ module InputDefinitionSelectorModule
     end do
 
     if (.not. associated(idt)) then
-      write(errmsg, '(4x,a,a)') 'Unrecognized data tag: ', trim(tagname)
+      write(errmsg, '(4x,a,a)') 'parameter definition not found: ', trim(tagname)
       call store_error(errmsg)
     end if
 
@@ -189,7 +126,7 @@ module InputDefinitionSelectorModule
     end do
 
     if (.not. associated(idt)) then
-      write(errmsg, '(4x,a,a)') 'Aggregate not found: ', trim(blockname)
+      write(errmsg, '(4x,a,a)') 'aggregate definition not found: ', trim(blockname)
       call store_error(errmsg)
     end if
   end function get_aggregate_definition_type

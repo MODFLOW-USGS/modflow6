@@ -69,15 +69,7 @@
 		<File RelativePath="..\src\Model\Connection\qsort_inline.inc"/>
 		<File RelativePath="..\src\Model\Connection\SpatialModelConnection.f90"/></Filter>
 		<Filter Name="Definition">
-		<File RelativePath="..\src\Model\Definition\gwfchd.f90"/>
-		<File RelativePath="..\src\Model\Definition\gwfdis.f90"/>
-		<File RelativePath="..\src\Model\Definition\gwfic.f90"/>
-		<File RelativePath="..\src\Model\Definition\gwfnam.f90"/>
-		<File RelativePath="..\src\Model\Definition\gwfnpf.f90"/>
-		<File RelativePath="..\src\Model\Definition\gwtnam.f90"/>
-		<File RelativePath="..\src\Model\Definition\simnam.f90"/>
-		<File RelativePath="..\src\Model\Definition\simtdis.f90"/>
-		<File RelativePath="..\src\Model\Definition\slnims.f90"/></Filter>
+		<File RelativePath="..\src\Model\Definition\gwfdis.f90"/></Filter>
 		<Filter Name="Geometry">
 		<File RelativePath="..\src\Model\Geometry\BaseGeometry.f90"/>
 		<File RelativePath="..\src\Model\Geometry\CircularGeometry.f90"/>
@@ -255,6 +247,7 @@
 		<File RelativePath="..\src\Utilities\Timer.f90"/>
 		<File RelativePath="..\src\Utilities\VectorInt.f90"/>
 		<File RelativePath="..\src\Utilities\version.f90"/></Filter>
+		<File RelativePath="..\src\Utilities\Idm\idmhelper.f90"/>
 		<File RelativePath="..\src\mf6core.f90"/>
 		<File RelativePath="..\src\mf6lists.f90"/>
 		<File RelativePath="..\src\SimulationCreate.f90"/></Filter></Files>
