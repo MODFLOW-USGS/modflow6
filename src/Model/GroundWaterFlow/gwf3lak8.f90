@@ -3400,12 +3400,12 @@ contains
       &a, /4x, 'OPENED ON UNIT: ', I0)"
 ! ------------------------------------------------------------------------------
     !
+    found = .true.
     select case (option)
     case ('PRINT_STAGE')
       this%iprhed = 1
       write (this%iout, '(4x,a)') trim(adjustl(this%text))// &
         ' STAGES WILL BE PRINTED TO LISTING FILE.'
-      found = .true.
     case ('STAGE')
       call this%parser%GetStringCaps(keyword)
       if (keyword == 'FILEOUT') then
@@ -3414,7 +3414,6 @@ contains
         call openfile(this%istageout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE', mode_opt=MNORMAL)
         write (this%iout, fmtlakbin) 'STAGE', fname, this%istageout
-        found = .true.
       else
         call store_error('OPTIONAL STAGE KEYWORD MUST BE FOLLOWED BY FILEOUT')
       end if
@@ -3426,7 +3425,6 @@ contains
         call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE', mode_opt=MNORMAL)
         write (this%iout, fmtlakbin) 'BUDGET', fname, this%ibudgetout
-        found = .true.
       else
         call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
       end if
@@ -3450,7 +3448,6 @@ contains
         call openfile(this%ipakcsv, this%iout, fname, 'CSV', &
                       filstat_opt='REPLACE', mode_opt=MNORMAL)
         write (this%iout, fmtlakbin) 'PACKAGE_CONVERGENCE', fname, this%ipakcsv
-        found = .true.
       else
         call store_error('OPTIONAL PACKAGE_CONVERGENCE KEYWORD MUST BE '// &
                          'FOLLOWED BY FILEOUT')
@@ -3458,15 +3455,12 @@ contains
     case ('MOVER')
       this%imover = 1
       write (this%iout, '(4x,A)') 'MOVER OPTION ENABLED'
-      found = .true.
     case ('LENGTH_CONVERSION')
       this%convlength = this%parser%GetDouble()
       write (this%iout, fmtlengthconv) this%convlength
-      found = .true.
     case ('TIME_CONVERSION')
       this%convtime = this%parser%GetDouble()
       write (this%iout, fmttimeconv) this%convtime
-      found = .true.
     case ('SURFDEP')
       r = this%parser%GetDouble()
       if (r < DZERO) then
@@ -3474,7 +3468,6 @@ contains
       end if
       this%surfdep = r
       write (this%iout, fmtlakeopt) 'SURFDEP', this%surfdep
-      found = .true.
       !
       ! -- right now these are options that are only available in the
       !    development version and are not included in the documentation.
@@ -3486,26 +3479,22 @@ contains
       write (this%iout, '(4x,a)') &
         'CONDUCTANCE FOR HORIZONTAL CONNECTIONS WILL BE CALCULATED &
         &USING THE GROUNDWATER HEAD'
-      found = .true.
     case ('DEV_MAXIMUM_OUTLET_DEPTH')
       call this%parser%DevOpt()
       this%outdmax = this%parser%GetDouble()
       write (this%iout, fmtoutdmax) this%outdmax
-      found = .true.
     case ('DEV_NO_FINAL_CHECK')
       call this%parser%DevOpt()
       this%iconvchk = 0
       write (this%iout, '(4x,a)') &
         'A FINAL CONVERGENCE CHECK OF THE CHANGE IN LAKE STAGES &
         &WILL NOT BE MADE'
-      found = .true.
     case ('DEV_NO_FINAL_RESIDUAL_CHECK')
       call this%parser%DevOpt()
       this%iconvresidchk = 0
       write (this%iout, '(4x,a)') &
         'A FINAL CONVERGENCE CHECK OF THE CHANGE IN LAKE RESIDUALS &
         &WILL NOT BE MADE'
-      found = .true.
     case ('DEV_MAXIMUM_PERCENT_DIFFERENCE')
       call this%parser%DevOpt()
       r = this%parser%GetDouble()
@@ -3514,7 +3503,6 @@ contains
       end if
       this%pdmax = r
       write (this%iout, fmtlakeopt) 'MAXIMUM_PERCENT_DIFFERENCE', this%pdmax
-      found = .true.
     case default
       !
       ! -- No options found

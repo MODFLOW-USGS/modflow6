@@ -1392,19 +1392,18 @@ contains
       &/4x, 'OPENED ON UNIT: ', I0)"
 ! ------------------------------------------------------------------------------
     !
+    found = .true.
     select case (option)
     case ('FLOW_PACKAGE_NAME')
       call this%parser%GetStringCaps(this%flowpackagename)
       write (this%iout, '(4x,a)') &
         'THIS '//trim(adjustl(this%text))//' PACKAGE CORRESPONDS TO A GWF &
         &PACKAGE WITH THE NAME '//trim(adjustl(this%flowpackagename))
-      found = .true.
     case ('FLOW_PACKAGE_AUXILIARY_NAME')
       call this%parser%GetStringCaps(this%cauxfpconc)
       write (this%iout, '(4x,a)') &
         'SIMULATED CONCENTRATIONS WILL BE COPIED INTO THE FLOW PACKAGE &
         &AUXILIARY VARIABLE WITH THE NAME '//trim(adjustl(this%cauxfpconc))
-      found = .true.
     case ('DEV_NONEXPANDING_MATRIX')
       ! -- use an iterative solution where concentration is not solved
       !    as part of the matrix.  It is instead solved separately with a
@@ -1415,12 +1414,10 @@ contains
       write (this%iout, '(4x,a)') &
         trim(adjustl(this%text))// &
         ' WILL NOT ADD ADDITIONAL ROWS TO THE A MATRIX.'
-      found = .true.
     case ('PRINT_CONCENTRATION')
       this%iprconc = 1
       write (this%iout, '(4x,a)') trim(adjustl(this%text))// &
         ' CONCENTRATIONS WILL BE PRINTED TO LISTING FILE.'
-      found = .true.
     case ('CONCENTRATION')
       call this%parser%GetStringCaps(keyword)
       if (keyword == 'FILEOUT') then
@@ -1430,7 +1427,6 @@ contains
                       form, access, 'REPLACE')
         write (this%iout, fmtaptbin) &
           trim(adjustl(this%text)), 'CONCENTRATION', trim(fname), this%iconcout
-        found = .true.
       else
         call store_error('OPTIONAL CONCENTRATION KEYWORD MUST &
                          &BE FOLLOWED BY FILEOUT')
@@ -1444,7 +1440,6 @@ contains
                       form, access, 'REPLACE')
         write (this%iout, fmtaptbin) trim(adjustl(this%text)), 'BUDGET', &
           trim(fname), this%ibudgetout
-        found = .true.
       else
         call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
       end if
