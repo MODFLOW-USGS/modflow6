@@ -15,6 +15,7 @@ on:
   pull_request:
     branches:
       - develop
+      - input_data_model
 
 env:
   WINDOWS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/18680/w_HPCKit_p_2022.2.0.173_offline.exe
