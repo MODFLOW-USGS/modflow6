@@ -1780,12 +1780,12 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Check for 'FLOWING_WELLS' and set this%iflowingwells
+    found = .true.
     select case (option)
     case ('PRINT_HEAD')
       this%iprhed = 1
       write (this%iout, '(4x,a)') &
         trim(adjustl(this%text))//' heads will be printed to listing file.'
-      found = .true.
     case ('HEAD')
       call this%parser%GetStringCaps(keyword)
       if (keyword == 'FILEOUT') then
@@ -1794,7 +1794,6 @@ contains
         call openfile(this%iheadout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE', mode_opt=MNORMAL)
         write (this%iout, fmtmawbin) 'HEAD', fname, this%iheadout
-        found = .true.
       else
         call store_error('Optional maw stage keyword must be '// &
                          'followed by fileout.')
@@ -1807,7 +1806,6 @@ contains
         call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE', mode_opt=MNORMAL)
         write (this%iout, fmtmawbin) 'BUDGET', fname, this%ibudgetout
-        found = .true.
       else
         call store_error('Optional maw budget keyword must be '// &
                          'followed by fileout.')
@@ -1827,29 +1825,23 @@ contains
     case ('FLOWING_WELLS')
       this%iflowingwells = 1
       write (this%iout, fmtflowingwells)
-      found = .true.
     case ('SHUTDOWN_THETA')
       this%theta = this%parser%GetDouble()
       write (this%iout, fmtshutdown) 'THETA', this%theta
-      found = .true.
     case ('SHUTDOWN_KAPPA')
       this%kappa = this%parser%GetDouble()
       write (this%iout, fmtshutdown) 'KAPPA', this%kappa
-      found = .true.
     case ('MOVER')
       this%imover = 1
       write (this%iout, '(4x,A)') 'MOVER OPTION ENABLED'
-      found = .true.
     case ('NO_WELL_STORAGE')
       this%imawissopt = 1
       write (this%iout, fmtnostoragewells)
-      found = .true.
     case ('FLOW_CORRECTION')
       this%correct_flow = .TRUE.
       write (this%iout, '(4x,a,/,4x,a)') &
         'MAW-GWF FLOW CORRECTIONS WILL BE APPLIED WHEN MAW HEADS ARE BELOW', &
         'OR GWF HEADS IN CONNECTED CELLS ARE BELOW THE CELL BOTTOM.'
-      found = .true.
     case ('MAW_FLOW_REDUCE_CSV')
       call this%parser%GetStringCaps(keyword)
       if (keyword == 'FILEOUT') then
@@ -1870,7 +1862,6 @@ contains
       write (this%iout, '(4x,a)') &
         'EFFECTIVE RADIUS FOR STRUCTURED GRIDS WILL BE CALCULATED &
         &USING PEACEMAN 1983'
-      found = .true.
     case default
       !
       ! -- No options found

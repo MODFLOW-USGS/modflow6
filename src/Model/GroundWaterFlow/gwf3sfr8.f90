@@ -629,12 +629,12 @@ contains
     &'OPENED ON UNIT: ', I0)"
     !
     ! -- Check for SFR options
+    found = .true.
     select case (option)
     case ('PRINT_STAGE')
       this%iprhed = 1
       write (this%iout, '(4x,a)') trim(adjustl(this%text))// &
         ' STAGES WILL BE PRINTED TO LISTING FILE.'
-      found = .true.
     case ('STAGE')
       call this%parser%GetStringCaps(keyword)
       if (keyword == 'FILEOUT') then
@@ -644,7 +644,6 @@ contains
                       form, access, 'REPLACE', MNORMAL)
         write (this%iout, fmtsfrbin) &
           'STAGE', trim(adjustl(fname)), this%istageout
-        found = .true.
       else
         call store_error('Optional stage keyword must &
                          &be followed by fileout.')
@@ -658,7 +657,6 @@ contains
                       form, access, 'REPLACE', MNORMAL)
         write (this%iout, fmtsfrbin) &
           'BUDGET', trim(adjustl(fname)), this%ibudgetout
-        found = .true.
       else
         call store_error('Optional budget keyword must be '// &
                          'followed by fileout.')
@@ -685,7 +683,6 @@ contains
                       filstat_opt='REPLACE', mode_opt=MNORMAL)
         write (this%iout, fmtsfrbin) &
           'PACKAGE_CONVERGENCE', trim(adjustl(fname)), this%ipakcsv
-        found = .true.
       else
         call store_error('Optional package_convergence keyword must be '// &
                          'followed by fileout.')
@@ -693,25 +690,20 @@ contains
     case ('UNIT_CONVERSION')
       this%unitconv = this%parser%GetDouble()
       write (this%iout, fmtunitconv) this%unitconv
-      found = .true.
     case ('MAXIMUM_PICARD_ITERATIONS')
       this%maxsfrpicard = this%parser%GetInteger()
       write (this%iout, fmtpicard) this%maxsfrpicard
-      found = .true.
     case ('MAXIMUM_ITERATIONS')
       this%maxsfrit = this%parser%GetInteger()
       write (this%iout, fmtiter) this%maxsfrit
-      found = .true.
     case ('MAXIMUM_DEPTH_CHANGE')
       r = this%parser%GetDouble()
       this%dmaxchg = r
       this%deps = DP999 * r
       write (this%iout, fmtdmaxchg) this%dmaxchg
-      found = .true.
     case ('MOVER')
       this%imover = 1
       write (this%iout, '(4x,A)') 'MOVER OPTION ENABLED'
-      found = .true.
       !
       ! -- right now these are options that are only available in the
       !    development version and are not included in the documentation.
@@ -724,14 +716,12 @@ contains
         'RELATIVE TO MODEL GRID AND '// &
         'REASONABLE PARAMETERS WILL NOT '// &
         'BE PERFORMED.'
-      found = .true.
     case ('DEV_NO_FINAL_CHECK')
       call this%parser%DevOpt()
       this%iconvchk = 0
       write (this%iout, '(4x,a)') &
         'A FINAL CONVERGENCE CHECK OF THE CHANGE IN STREAM FLOW ROUTING &
         &STAGES AND FLOWS WILL NOT BE MADE'
-      found = .true.
       !
       ! -- no valid options found
     case default

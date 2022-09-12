@@ -232,6 +232,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	\begin{itemize}
 		\item When the LAK Package was used with a combination of outlets that routed water to another lake and outlets that did not, then the budget information stored for the LAK Package had uninitialized records for LAK to LAK flows.  These uninitialized records were used by the LKT Package and possibly other programs.  The LAK to LAK budget information was modified to include only valid records.
 		\item There were several problems in the observation utility for the Streamflow Transport (SFT), Lake Transport (LKT), Multi-Aquifer Well Transport (MWT), and Unsaturated Zone Transport (UZT) Packages.  These issues were corrected as well as the descriptions for the observations in the user input and output guide.
+		\item The BUDGETCSV option for the advanced stress packages would intermittently cause an error due to a variable not being set properly.  The BUDGETCSV option was fixed to work properly.
 	%	\item xxx
 	%	\item xxx
 	\end{itemize}
