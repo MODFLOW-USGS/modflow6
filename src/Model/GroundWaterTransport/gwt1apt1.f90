@@ -140,6 +140,7 @@ module GwtAptModule
     procedure :: bnd_ot_bdsummary => apt_ot_bdsummary
     procedure :: bnd_da => apt_da
     procedure :: allocate_scalars
+    procedure :: apt_allocate_index_arrays
     procedure :: apt_allocate_arrays
     procedure :: find_apt_package
     procedure :: apt_solve
@@ -251,21 +252,11 @@ contains
 ! ------------------------------------------------------------------------------
     !
     !
+    ! -- allocate memory for index arrays
+    call this%apt_allocate_index_arrays()
+    !
+    ! -- store index positions
     if (this%imatrows /= 0) then
-      !
-      ! -- allocate pointers to global matrix
-      allocate (this%idxlocnode(this%ncv))
-      allocate (this%idxpakdiag(this%ncv))
-      allocate (this%idxdglo(this%maxbound))
-      allocate (this%idxoffdglo(this%maxbound))
-      allocate (this%idxsymdglo(this%maxbound))
-      allocate (this%idxsymoffdglo(this%maxbound))
-      n = 0
-      if (this%idxbudfjf /= 0) then
-        n = this%flowbudptr%budterm(this%idxbudfjf)%maxlist
-      end if
-      allocate (this%idxfjfdglo(n))
-      allocate (this%idxfjfoffdglo(n))
       !
       ! -- Find the position of each connection in the global ia, ja structure
       !    and store them in idxglo.  idxglo allows this model to insert or
@@ -321,15 +312,6 @@ contains
           end do fjfsearchloop
         end do
       end if
-    else
-      allocate (this%idxlocnode(0))
-      allocate (this%idxpakdiag(0))
-      allocate (this%idxdglo(0))
-      allocate (this%idxoffdglo(0))
-      allocate (this%idxsymdglo(0))
-      allocate (this%idxsymoffdglo(0))
-      allocate (this%idxfjfdglo(0))
-      allocate (this%idxfjfoffdglo(0))
     end if
     !
     ! -- return
@@ -1152,19 +1134,17 @@ contains
     return
   end subroutine apt_ot_bdsummary
 
+  !> @ brief Allocate scalars
+  !!
+  !! Allocate scalar variables for this package
+  !!
+  !<
   subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwtAptType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- allocate scalars in NumericalPackageType
     call this%BndType%allocate_scalars()
@@ -1207,20 +1187,78 @@ contains
     return
   end subroutine allocate_scalars
 
-  subroutine apt_allocate_arrays(this)
-! ******************************************************************************
-! allocate_arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @ brief Allocate index arrays
+  !!
+  !! Allocate arrays that map to locations in the
+  !! numerical solution
+  !!
+  !<
+  subroutine apt_allocate_index_arrays(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwtAptType), intent(inout) :: this
     ! -- local
     integer(I4B) :: n
-! ------------------------------------------------------------------------------
+
+    if (this%imatrows /= 0) then
+      !
+      ! -- count number of flow-ja-face connections
+      n = 0
+      if (this%idxbudfjf /= 0) then
+        n = this%flowbudptr%budterm(this%idxbudfjf)%maxlist
+      end if
+      !
+      ! -- allocate pointers to global matrix
+      call mem_allocate(this%idxlocnode, this%ncv, 'IDXLOCNODE', &
+                        this%memoryPath)
+      call mem_allocate(this%idxpakdiag, this%ncv, 'IDXPAKDIAG', &
+                        this%memoryPath)
+      call mem_allocate(this%idxdglo, this%maxbound, 'IDXGLO', &
+                        this%memoryPath)
+      call mem_allocate(this%idxoffdglo, this%maxbound, 'IDXOFFDGLO', &
+                        this%memoryPath)
+      call mem_allocate(this%idxsymdglo, this%maxbound, 'IDXSYMDGLO', &
+                        this%memoryPath)
+      call mem_allocate(this%idxsymoffdglo, this%maxbound, 'IDXSYMOFFDGLO', &
+                        this%memoryPath)
+      call mem_allocate(this%idxfjfdglo, n, 'IDXFJFDGLO', &
+                        this%memoryPath)
+      call mem_allocate(this%idxfjfoffdglo, n, 'IDXFJFOFFDGLO', &
+                        this%memoryPath)
+    else
+      call mem_allocate(this%idxlocnode, 0, 'IDXLOCNODE', &
+                        this%memoryPath)
+      call mem_allocate(this%idxpakdiag, 0, 'IDXPAKDIAG', &
+                        this%memoryPath)
+      call mem_allocate(this%idxdglo, 0, 'IDXGLO', &
+                        this%memoryPath)
+      call mem_allocate(this%idxoffdglo, 0, 'IDXOFFDGLO', &
+                        this%memoryPath)
+      call mem_allocate(this%idxsymdglo, 0, 'IDXSYMDGLO', &
+                        this%memoryPath)
+      call mem_allocate(this%idxsymoffdglo, 0, 'IDXSYMOFFDGLO', &
+                        this%memoryPath)
+      call mem_allocate(this%idxfjfdglo, 0, 'IDXFJFDGLO', &
+                        this%memoryPath)
+      call mem_allocate(this%idxfjfoffdglo, 0, 'IDXFJFOFFDGLO', &
+                        this%memoryPath)
+    end if
+    return
+  end subroutine apt_allocate_index_arrays
+
+  !> @ brief Allocate arrays
+  !!
+  !! Allocate package arrays
+  !!
+  !<
+  subroutine apt_allocate_arrays(this)
+    ! -- modules
+    use MemoryManagerModule, only: mem_allocate
+    ! -- dummy
+    class(GwtAptType), intent(inout) :: this
+    ! -- local
+    integer(I4B) :: n
     !
     ! -- call standard BndType allocate scalars
     call this%BndType%allocate_arrays()
@@ -1268,19 +1306,17 @@ contains
     return
   end subroutine apt_allocate_arrays
 
+  !> @ brief Deallocate memory
+  !!
+  !! Deallocate memory associated with this package
+  !!
+  !<
   subroutine apt_da(this)
-! ******************************************************************************
-! apt_da
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(GwtAptType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- deallocate arrays
     call mem_deallocate(this%dbuff)
@@ -1312,14 +1348,14 @@ contains
     end if
     !
     ! -- index pointers
-    deallocate (this%idxlocnode)
-    deallocate (this%idxpakdiag)
-    deallocate (this%idxdglo)
-    deallocate (this%idxoffdglo)
-    deallocate (this%idxsymdglo)
-    deallocate (this%idxsymoffdglo)
-    deallocate (this%idxfjfdglo)
-    deallocate (this%idxfjfoffdglo)
+    call mem_deallocate(this%idxlocnode)
+    call mem_deallocate(this%idxpakdiag)
+    call mem_deallocate(this%idxdglo)
+    call mem_deallocate(this%idxoffdglo)
+    call mem_deallocate(this%idxsymdglo)
+    call mem_deallocate(this%idxsymoffdglo)
+    call mem_deallocate(this%idxfjfdglo)
+    call mem_deallocate(this%idxfjfoffdglo)
     !
     ! -- deallocate scalars
     call mem_deallocate(this%iauxfpconc)
