@@ -12,11 +12,11 @@ module MemoryManagerExtModule
 
   interface mem_set_value
     module procedure mem_set_value_logical, mem_set_value_int, &
-                     mem_set_value_str_mapped_int, &
-                     mem_set_value_int1d, mem_set_value_int2d, &
-                     mem_set_value_int3d, mem_set_value_dbl, &
-                     mem_set_value_dbl1d, mem_set_value_dbl2d, &
-                     mem_set_value_dbl3d
+      mem_set_value_str_mapped_int, &
+      mem_set_value_int1d, mem_set_value_int2d, &
+      mem_set_value_int3d, mem_set_value_dbl, &
+      mem_set_value_dbl1d, mem_set_value_dbl2d, &
+      mem_set_value_dbl3d
   end interface mem_set_value
 
 contains
@@ -51,7 +51,7 @@ contains
 
     call get_from_memorylist(varname, memory_path, mt, found, checkfail)
     if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'LOGICAL') then
-        p_mem = mt%logicalsclr
+      p_mem = mt%logicalsclr
     end if
   end subroutine mem_set_value_logical
 
@@ -116,7 +116,7 @@ contains
   !> @brief Set pointer to value of memory list 2d int array variable
   !<
   subroutine mem_set_value_int2d(p_mem, varname, memory_path)
-    integer(I4B), dimension(:,:), pointer, contiguous, intent(inout) :: p_mem !< pointer to 2d int array
+    integer(I4B), dimension(:, :), pointer, contiguous, intent(inout) :: p_mem !< pointer to 2d int array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: memory_path !< path where variable is stored
     type(MemoryType), pointer :: mt
@@ -141,7 +141,7 @@ contains
   !> @brief Set pointer to value of memory list 3d int array variable
   !<
   subroutine mem_set_value_int3d(p_mem, varname, memory_path)
-    integer(I4B), dimension(:,:,:), pointer, contiguous, intent(inout) :: p_mem !< pointer to 3d int array
+    integer(I4B), dimension(:, :, :), pointer, contiguous, intent(inout) :: p_mem !< pointer to 3d int array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: memory_path !< path where variable is stored
     type(MemoryType), pointer :: mt
@@ -207,7 +207,7 @@ contains
   !> @brief Set pointer to value of memory list 2d dbl array variable
   !<
   subroutine mem_set_value_dbl2d(p_mem, varname, memory_path)
-    real(DP), dimension(:,:), pointer, contiguous, intent(inout) :: p_mem !< pointer to 2d dbl array
+    real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: p_mem !< pointer to 2d dbl array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: memory_path !< path where variable is stored
     type(MemoryType), pointer :: mt
@@ -232,7 +232,7 @@ contains
   !> @brief Set pointer to value of memory list 3d dbl array variable
   !<
   subroutine mem_set_value_dbl3d(p_mem, varname, memory_path)
-    real(DP), dimension(:,:,:), pointer, contiguous, intent(inout) :: p_mem !< pointer to 3d dbl array
+    real(DP), dimension(:, :, :), pointer, contiguous, intent(inout) :: p_mem !< pointer to 3d dbl array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: memory_path !< path where variable is stored
     type(MemoryType), pointer :: mt

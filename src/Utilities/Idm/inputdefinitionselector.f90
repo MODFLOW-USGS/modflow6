@@ -17,17 +17,17 @@ module InputDefinitionSelectorModule
   public :: get_param_definition_type
   public :: get_aggregate_definition_type
 
-  contains
+contains
 
   function param_definitions(component) result(input_definition)
-    character(len=*), intent(in) :: component 
+    character(len=*), intent(in) :: component
     type(InputParamDefinitionType), dimension(:), pointer :: input_definition
 
     select case (component)
     case ('GWF/DIS')
       call set_pointer(input_definition, gwf_dis_param_definitions)
     case default
-      write(warnmsg, '(a,a)') 'IDM Unsupported input type: ', trim(component)
+      write (warnmsg, '(a,a)') 'IDM Unsupported input type: ', trim(component)
       call store_warning(warnmsg)
     end select
 
@@ -42,7 +42,7 @@ module InputDefinitionSelectorModule
     case ('GWF/DIS')
       call set_pointer(input_definition, gwf_dis_aggregate_definitions)
     case default
-      write(warnmsg, '(a,a)') 'IDM Unsupported input type: ', trim(component)
+      write (warnmsg, '(a,a)') 'IDM Unsupported input type: ', trim(component)
       call store_warning(warnmsg)
     end select
 
@@ -57,28 +57,31 @@ module InputDefinitionSelectorModule
     case ('GWF/DIS')
       call set_block_pointer(input_definition, gwf_dis_block_definitions)
     case default
-      write(warnmsg, '(a,a)') 'IDM Unsupported input type: ', trim(component)
+      write (warnmsg, '(a,a)') 'IDM Unsupported input type: ', trim(component)
       call store_warning(warnmsg)
     end select
 
     return
   end function block_definitions
-  
+
   subroutine set_pointer(input_definition, input_definition_target)
     type(InputParamDefinitionType), dimension(:), pointer :: input_definition
-    type(InputParamDefinitionType), dimension(:), target :: input_definition_target
+    type(InputParamDefinitionType), dimension(:), target :: &
+      input_definition_target
     input_definition => input_definition_target
   end subroutine set_pointer
 
   subroutine set_block_pointer(input_definition, input_definition_target)
     type(InputBlockDefinitionType), dimension(:), pointer :: input_definition
-    type(InputBlockDefinitionType), dimension(:), target :: input_definition_target
+    type(InputBlockDefinitionType), dimension(:), target :: &
+      input_definition_target
     input_definition => input_definition_target
   end subroutine set_block_pointer
 
-  function get_param_definition_type(input_definition_types, &
-      component_type, subcomponent_type, tagname) result (idt)
-    type(InputParamDefinitionType), dimension(:), intent(in), target :: input_definition_types
+  function get_param_definition_type(input_definition_types, component_type, &
+                                     subcomponent_type, tagname) result(idt)
+    type(InputParamDefinitionType), dimension(:), intent(in), target :: &
+      input_definition_types
     character(len=*), intent(in) :: component_type
     character(len=*), intent(in) :: subcomponent_type
     character(len=*), intent(in) :: tagname
@@ -98,15 +101,16 @@ module InputDefinitionSelectorModule
     end do
 
     if (.not. associated(idt)) then
-      write(errmsg, '(4x,a,a)') 'parameter definition not found: ', trim(tagname)
+      write (errmsg, '(4x,a,a)') 'parameter definition not found: ', trim(tagname)
       call store_error(errmsg)
     end if
 
   end function get_param_definition_type
 
-  function get_aggregate_definition_type(input_definition_types, &
-      component_type, subcomponent_type, blockname) result (idt)
-    type(InputParamDefinitionType), dimension(:), intent(in), target :: input_definition_types
+  function get_aggregate_definition_type(input_definition_types, component_type, &
+                                         subcomponent_type, blockname) result(idt)
+    type(InputParamDefinitionType), dimension(:), intent(in), target :: &
+      input_definition_types
     character(len=*), intent(in) :: component_type
     character(len=*), intent(in) :: subcomponent_type
     character(len=*), intent(in) :: blockname
@@ -126,7 +130,8 @@ module InputDefinitionSelectorModule
     end do
 
     if (.not. associated(idt)) then
-      write(errmsg, '(4x,a,a)') 'aggregate definition not found: ', trim(blockname)
+      write (errmsg, '(4x,a,a)') 'aggregate definition not found: ', &
+        trim(blockname)
       call store_error(errmsg)
     end if
   end function get_aggregate_definition_type

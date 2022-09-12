@@ -1,5 +1,5 @@
 module IdmHelperModule
-  
+
   use KindModule, only: DP, I4B, LGP
   use SimVariablesModule, only: iout, errmsg
   use InputDefinitionModule, only: InputParamDefinitionType, &
@@ -7,12 +7,12 @@ module IdmHelperModule
   use IdmTypesModule, only: ModflowInputType, ModflowInput
   use MemoryManagerModule, only: get_from_memorylist, mem_setptr, &
                                  mem_deallocate, get_mem_rank
-  
+
   implicit none
   private
   public :: idm_deallocate
 
-  contains
+contains
 
   subroutine idm_deallocate(filetype, filename, component_type, &
                             subcomponent_type, component_name, &
@@ -41,7 +41,8 @@ module IdmHelperModule
                               subcomponent_type, component_name, &
                               subcomponent_name)
 
-    idmMemoryPath = create_mem_path(component=mf6_input%component_name, context=idm_mempath_prefix)
+    idmMemoryPath = create_mem_path(component=mf6_input%component_name, &
+                                    context=idm_mempath_prefix)
     call get_from_memorylist('MODEL_SHAPE', idmMemoryPath, mt, found, checkfail)
     if (found) then
       call mem_setptr(aint1d, 'MODEL_SHAPE', idmMemoryPath)
@@ -50,10 +51,12 @@ module IdmHelperModule
 
     do i = 1, size(mf6_input%p_param_dfns)
       found = .false.
+      rank = -1
       param_dfn => mf6_input%p_param_dfns(i)
-      call get_from_memorylist(param_dfn%mf6varname, mf6_input%memoryPath, mt, found, checkfail)
+
+      call get_from_memorylist(param_dfn%mf6varname, mf6_input%memoryPath, mt, &
+                               found, checkfail)
       if (found) then
-        rank = -1
         call get_mem_rank(param_dfn%mf6varname, mf6_input%memoryPath, rank)
         select case (mt%memtype(1:index(mt%memtype, ' ')))
         case ('LOGICAL')
@@ -87,19 +90,20 @@ module IdmHelperModule
     integer(I4B), dimension(:, :), pointer, contiguous :: aint2d => null() !< pointer to 2d integer array
     integer(I4B), dimension(:, :, :), pointer, contiguous :: aint3d => null() !< pointer to 3d integer array
 
-    if (rank == 0) then
+    select case (rank)
+    case (0)
       call mem_setptr(intsclr, param_dfn%mf6varname, mf6_input%memoryPath)
       call mem_deallocate(intsclr)
-    elseif (rank == 1) then
+    case (1)
       call mem_setptr(aint1d, param_dfn%mf6varname, mf6_input%memoryPath)
       call mem_deallocate(aint1d)
-    elseif (rank == 2) then
+    case (2)
       call mem_setptr(aint2d, param_dfn%mf6varname, mf6_input%memoryPath)
       call mem_deallocate(aint2d)
-    elseif (rank == 3) then
+    case (3)
       call mem_setptr(aint3d, param_dfn%mf6varname, mf6_input%memoryPath)
       call mem_deallocate(aint3d)
-    end if
+    end select
   end subroutine idm_deallocate_int
 
   subroutine idm_deallocate_dbl(param_dfn, mf6_input, rank)
@@ -111,19 +115,20 @@ module IdmHelperModule
     real(DP), dimension(:, :), pointer, contiguous :: adbl2d => null() !< pointer to 2d double array
     real(DP), dimension(:, :, :), pointer, contiguous :: adbl3d => null() !< pointer to 3d double array
 
-    if (rank == 0) then
+    select case (rank)
+    case (0)
       call mem_setptr(dblsclr, param_dfn%mf6varname, mf6_input%memoryPath)
       call mem_deallocate(dblsclr)
-    elseif (rank == 1) then
+    case (1)
       call mem_setptr(adbl1d, param_dfn%mf6varname, mf6_input%memoryPath)
       call mem_deallocate(adbl1d)
-    elseif (rank == 2) then
+    case (2)
       call mem_setptr(adbl2d, param_dfn%mf6varname, mf6_input%memoryPath)
       call mem_deallocate(adbl2d)
-    elseif (rank == 3) then
+    case (3)
       call mem_setptr(adbl3d, param_dfn%mf6varname, mf6_input%memoryPath)
       call mem_deallocate(adbl3d)
-    end if
+    end select
   end subroutine idm_deallocate_dbl
 
   subroutine idm_deallocate_str(param_dfn, mf6_input, rank)
@@ -141,9 +146,9 @@ module IdmHelperModule
       call mem_setptr(strsclr, param_dfn%mf6varname, mf6_input%memoryPath)
       idm_str => strsclr
       call mem_deallocate(idm_str)
-    !elseif (rank == 1) then
-    !  call setptr_charstr1d(acharstr1d, param_dfn%mf6varname, mf6_input%memoryPath)
-    !  call mem_deallocate(acharstr1d)
+      !elseif (rank == 1) then
+      !  call setptr_charstr1d(acharstr1d, param_dfn%mf6varname, mf6_input%memoryPath)
+      !  call mem_deallocate(acharstr1d)
     end if
   end subroutine idm_deallocate_str
 

@@ -6,7 +6,7 @@ module InputDefinitionModule
   private
   public :: InputParamDefinitionType, &
             InputBlockDefinitionType
-  
+
   type InputParamDefinitionType
     character(len=100) :: component_type = ''
     character(len=100) :: subcomponent_type = ''
@@ -15,9 +15,10 @@ module InputDefinitionModule
     character(len=100) :: mf6varname = ''
     character(len=100) :: datatype = ''
     character(len=100) :: shape = ''
-    logical(LGP)       :: required = .false.
-    logical(LGP)       :: in_record = .false.
-    logical(LGP)       :: preserve_case = .false.
+    logical(LGP) :: required = .false.
+    logical(LGP) :: in_record = .false.
+    logical(LGP) :: preserve_case = .false.
+    logical(LGP) :: layered = .false.
   end type InputParamDefinitionType
 
   type InputBlockDefinitionType

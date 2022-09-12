@@ -15,8 +15,8 @@ module StructVectorModule
     logical(LGP) :: preserve_case = .false.
     integer(I4B), dimension(:), pointer, contiguous :: int1d => null()
     real(DP), dimension(:), pointer, contiguous :: dbl1d => null()
-    !character(len=:), dimension(:), pointer, contiguous :: str1d => null()
-    type(CharacterStringType), dimension(:), pointer, contiguous :: str1d => null()
+    type(CharacterStringType), dimension(:), pointer, contiguous :: &
+      str1d => null()
   end type StructVectorType
 
 contains

@@ -161,8 +161,6 @@
 		<File RelativePath="..\src\Timing\tdis.f90"/></Filter>
 		<Filter Name="Utilities">
 		<Filter Name="Idm">
-		<File RelativePath="..\src\Utilities\Idm\idm.f90"/>
-		<File RelativePath="..\src\Utilities\Idm\idmfilemodflow.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\idmlogger.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\idmtypes.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\inputdefinition.f90"/>

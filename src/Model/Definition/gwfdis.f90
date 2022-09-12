@@ -16,7 +16,8 @@ module GwfDisInputModule
       '', &   ! shape
       .false., &   ! required
       .false., &   ! multi-record
-      .false. &   ! preserve case
+      .false., &   ! preserve case
+      .false. &   ! layered
     ), &
     InputParamDefinitionType( &
       'GWF', &   ! component
@@ -28,7 +29,8 @@ module GwfDisInputModule
       '', &   ! shape
       .false., &   ! required
       .false., &   ! multi-record
-      .false. &   ! preserve case
+      .false., &   ! preserve case
+      .false. &   ! layered
     ), &
     InputParamDefinitionType( &
       'GWF', &   ! component
@@ -40,7 +42,8 @@ module GwfDisInputModule
       '', &   ! shape
       .false., &   ! required
       .false., &   ! multi-record
-      .false. &   ! preserve case
+      .false., &   ! preserve case
+      .false. &   ! layered
     ), &
     InputParamDefinitionType( &
       'GWF', &   ! component
@@ -52,7 +55,8 @@ module GwfDisInputModule
       '', &   ! shape
       .false., &   ! required
       .false., &   ! multi-record
-      .false. &   ! preserve case
+      .false., &   ! preserve case
+      .false. &   ! layered
     ), &
     InputParamDefinitionType( &
       'GWF', &   ! component
@@ -64,7 +68,8 @@ module GwfDisInputModule
       '', &   ! shape
       .false., &   ! required
       .false., &   ! multi-record
-      .false. &   ! preserve case
+      .false., &   ! preserve case
+      .false. &   ! layered
     ), &
     InputParamDefinitionType( &
       'GWF', &   ! component
@@ -76,7 +81,8 @@ module GwfDisInputModule
       '', &   ! shape
       .true., &   ! required
       .false., &   ! multi-record
-      .false. &   ! preserve case
+      .false., &   ! preserve case
+      .false. &   ! layered
     ), &
     InputParamDefinitionType( &
       'GWF', &   ! component
@@ -88,7 +94,8 @@ module GwfDisInputModule
       '', &   ! shape
       .true., &   ! required
       .false., &   ! multi-record
-      .false. &   ! preserve case
+      .false., &   ! preserve case
+      .false. &   ! layered
     ), &
     InputParamDefinitionType( &
       'GWF', &   ! component
@@ -100,7 +107,8 @@ module GwfDisInputModule
       '', &   ! shape
       .true., &   ! required
       .false., &   ! multi-record
-      .false. &   ! preserve case
+      .false., &   ! preserve case
+      .false. &   ! layered
     ), &
     InputParamDefinitionType( &
       'GWF', &   ! component
@@ -112,7 +120,8 @@ module GwfDisInputModule
       'NCOL', &   ! shape
       .true., &   ! required
       .false., &   ! multi-record
-      .false. &   ! preserve case
+      .false., &   ! preserve case
+      .false. &   ! layered
     ), &
     InputParamDefinitionType( &
       'GWF', &   ! component
@@ -124,7 +133,8 @@ module GwfDisInputModule
       'NROW', &   ! shape
       .true., &   ! required
       .false., &   ! multi-record
-      .false. &   ! preserve case
+      .false., &   ! preserve case
+      .false. &   ! layered
     ), &
     InputParamDefinitionType( &
       'GWF', &   ! component
@@ -136,7 +146,8 @@ module GwfDisInputModule
       'NCOL, NROW', &   ! shape
       .true., &   ! required
       .false., &   ! multi-record
-      .false. &   ! preserve case
+      .false., &   ! preserve case
+      .false. &   ! layered
     ), &
     InputParamDefinitionType( &
       'GWF', &   ! component
@@ -148,7 +159,8 @@ module GwfDisInputModule
       'NCOL, NROW, NLAY', &   ! shape
       .true., &   ! required
       .false., &   ! multi-record
-      .false. &   ! preserve case
+      .false., &   ! preserve case
+      .true. &   ! layered
     ), &
     InputParamDefinitionType( &
       'GWF', &   ! component
@@ -160,7 +172,8 @@ module GwfDisInputModule
       'NCOL, NROW, NLAY', &   ! shape
       .false., &   ! required
       .false., &   ! multi-record
-      .false. &   ! preserve case
+      .false., &   ! preserve case
+      .true. &   ! layered
     ) &
   ]
 

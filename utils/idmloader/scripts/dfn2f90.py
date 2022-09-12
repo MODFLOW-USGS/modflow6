@@ -247,6 +247,13 @@ class Dfn2F90:
                 else:
                     preserve_case = ".false."
 
+            layered = ".false."
+            if "layered" in v:
+                if v["layered"] == "true":
+                    layered = ".true."
+                else:
+                    layered = ".false."
+
             required_l.append(r)
             tuple_list = [
                 (c, "component"),
@@ -259,6 +266,7 @@ class Dfn2F90:
                 (r, "required"),
                 (inrec, "multi-record"),
                 (preserve_case, "preserve case"),
+                (layered, "layered"),
             ]
 
             # assumes recarray type appears before and member
