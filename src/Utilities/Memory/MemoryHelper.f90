@@ -1,7 +1,7 @@
 module MemoryHelperModule
   use KindModule, only: I4B, LGP
   use ConstantsModule, only: LENMEMPATH, LENMEMSEPARATOR, LENMEMADDRESS, &
-                             LENVARNAME, LENCOMPONENTNAME
+                             LENVARNAME, LENCOMPONENTNAME, LENCONTEXTNAME
   use SimModule, only: store_error
   use SimVariablesModule, only: errmsg
 
@@ -18,18 +18,24 @@ contains
   !!
   !! NB: no need to trim the input parameters
   !<
-  function create_mem_path(component, subcomponent) result(memory_path)
+  function create_mem_path(component, subcomponent, context) result(memory_path)
     character(len=*), intent(in) :: component !< name of the solution, model, or exchange
     character(len=*), intent(in), optional :: subcomponent !< name of the package (optional)
+    character(len=*), intent(in), optional :: context !< name of the context (optional)
     character(len=LENMEMPATH) :: memory_path !< the memory path
 
     call mem_check_length(component, LENCOMPONENTNAME, "solution/model/exchange")
     call mem_check_length(subcomponent, LENCOMPONENTNAME, "package")
+    call mem_check_length(context, LENCONTEXTNAME, "context")
+
+    memory_path = trim(component)
 
     if (present(subcomponent)) then
-      memory_path = trim(component)//memPathSeparator//trim(subcomponent)
-    else
-      memory_path = trim(component)
+      memory_path = trim(memory_path)//memPathSeparator//trim(subcomponent)
+    end if
+
+    if (present(context)) then
+      memory_path = trim(context)//memPathSeparator//trim(memory_path)
     end if
 
   end function create_mem_path
@@ -76,6 +82,14 @@ contains
       var_name = mem_address(idx + 1:)
     end if
 
+    ! remove context specifier if prepended to mempath
+    !if (success) then
+    !  idx = index(mem_path, memPathSeparator, back=.true.)
+    !  if (idx > 0 .and. mem_path(1:2) == '__') then
+    !    mem_path = mem_path(idx + 1:)
+    !  end if
+    !end if
+
   end subroutine split_mem_address
 
   !> @brief Split the memory path into component(s)
@@ -111,6 +125,12 @@ contains
       ! when not found, there apparently is no subcomponent:
       component = mem_path
       subcomponent = ''
+    end if
+
+    ! remove context specifier if prepended to component
+    idx = index(component, memPathSeparator, back=.true.)
+    if (idx > 0 .and. component(1:2) == '__') then
+      component = component(idx + 1:)
     end if
 
   end subroutine split_mem_path
