@@ -43,6 +43,7 @@ def build_model(idx, dir):
         exe_name="mf6",
         sim_ws=ws,
         continue_=False,
+        memory_print_option='ALL',
     )
 
     # number of time steps for period 2 are reduced from 12 * 25 to 25 in
