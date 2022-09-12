@@ -1183,6 +1183,9 @@ contains
     this%idxbudaux = 0
     this%nconcbudssm = 0
     !
+    ! -- set this package as causing asymmetric matrix terms
+    this%iasym = 1
+    !
     ! -- Return
     return
   end subroutine allocate_scalars
@@ -1527,7 +1530,7 @@ contains
     end if
     call this%find_apt_package()
     !
-    ! -- Set dimensions from the GWF LAK package
+    ! -- Set dimensions from the GWF advanced package
     this%ncv = this%flowbudptr%ncv
     this%maxbound = this%flowbudptr%budterm(this%idxbudgwf)%maxlist
     this%nbound = this%maxbound

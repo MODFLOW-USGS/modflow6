@@ -1048,18 +1048,15 @@ contains
     return
   end subroutine gwt_bdentry
 
+  !> @brief return 1 if any package causes the matrix to be asymmetric.
+  !! Otherwise return 0.
+  !<
   function gwt_get_iasym(this) result(iasym)
-! ******************************************************************************
-! gwt_get_iasym -- return 1 if any package causes the matrix to be asymmetric.
-!   Otherwise return 0.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     class(GwtModelType) :: this
     ! -- local
     integer(I4B) :: iasym
-! ------------------------------------------------------------------------------
+    integer(I4B) :: ip
+    class(BndType), pointer :: packobj
     !
     ! -- Start by setting iasym to zero
     iasym = 0
@@ -1068,6 +1065,17 @@ contains
     if (this%inadv > 0) then
       if (this%adv%iasym /= 0) iasym = 1
     end if
+    !
+    ! -- DSP
+    if (this%indsp > 0) then
+      if (this%dsp%ixt3d /= 0) iasym = 1
+    end if
+    !
+    ! -- Check for any packages that introduce matrix asymmetry
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      if (packobj%iasym /= 0) iasym = 1
+    end do
     !
     ! -- return
     return
