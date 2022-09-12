@@ -125,15 +125,15 @@ class Dfn2F90:
         self, blockname, required=False, aggregate=False
     ):
         f90statement = f"    InputBlockDefinitionType( &\n"
-        f90statement += f"      '{blockname}', & ! blockname\n"
+        f90statement += f"    '{blockname}', & ! blockname\n"
         if required:
-            f90statement += f"      .true., & ! required\n"
+            f90statement += f"    .true., & ! required\n"
         else:
-            f90statement += f"      .false., & ! required\n"
+            f90statement += f"    .false., & ! required\n"
         if aggregate:
-            f90statement += f"      .true. & ! aggregate\n"
+            f90statement += f"    .true. & ! aggregate\n"
         else:
-            f90statement += f"      .false. & ! aggregate\n"
+            f90statement += f"    .false. & ! aggregate\n"
         f90statement += f"    ), &"
 
         return f90statement
@@ -147,7 +147,7 @@ class Dfn2F90:
             v = f"'{value}'"
             if value in [".false.", ".true."]:
                 v = f"{value}"
-            f90statement += f"      {v}{comma} &   ! {varname}\n"
+            f90statement += f"    {v}{comma} & ! {varname}\n"
         f90statement += f"    ), &"
 
         return f90statement
@@ -158,13 +158,13 @@ class Dfn2F90:
             self._set_blk_param_strs(b, self.component, self.subcomponent)
 
         if not self._param_str:
-            self._param_str += "    InputParamDefinitionType::, &"
+            self._param_str += "    InputParamDefinitionType ::, &"
 
         if not self._aggregate_str:
-            self._aggregate_str += "    InputParamDefinitionType::, &"
+            self._aggregate_str += "    InputParamDefinitionType ::, &"
 
         if not self._block_str:
-            self._aggregate_str += "    InputBlockDefinitionType::, &"
+            self._aggregate_str += "    InputBlockDefinitionType ::, &"
 
     def _set_blk_param_strs(self, blockname, component, subcomponent):
         print("  processing block params => ", blockname)
@@ -299,7 +299,9 @@ class Dfn2F90:
     def _source_file_header(self, component, subcomponent):
         s = f"module {component.title()}{subcomponent.title()}InputModule" + "\n"
         s += (
-            "  use InputDefinitionModule, only: InputParamDefinitionType, InputBlockDefinitionType"
+            "  use InputDefinitionModule, only: InputParamDefinitionType, &"
+            + "\n"
+            + "                                   InputBlockDefinitionType"
             + "\n"
         )
         s += "  private" + "\n"
@@ -319,30 +321,36 @@ class Dfn2F90:
 
     def _source_params_header(self, component, subcomponent):
         s = (
-            f"  type(InputParamDefinitionType), parameter :: {component.lower()}_{subcomponent.lower()}_param_definitions(*) = &"
+            f"  type(InputParamDefinitionType), parameter :: &"
+            + "\n"
+            + f"    {component.lower()}_{subcomponent.lower()}_param_definitions(*) = &"
             + "\n"
         )
-        s += "  [ &" + "\n"
+        s += "    [ &" + "\n"
         return s
 
     def _source_aggregates_header(self, component, subcomponent):
         s = (
-            f"  type(InputParamDefinitionType), parameter :: {component.lower()}_{subcomponent.lower()}_aggregate_definitions(*) = &"
+            f"  type(InputParamDefinitionType), parameter :: &"
+            + "\n"
+            + f"    {component.lower()}_{subcomponent.lower()}_aggregate_definitions(*) = &"
             + "\n"
         )
-        s += "  [ &" + "\n"
+        s += "    [ &" + "\n"
         return s
 
     def _source_blocks_header(self, component, subcomponent):
         s = (
-            f"  type(InputBlockDefinitionType), parameter :: {component.lower()}_{subcomponent.lower()}_block_definitions(*) = &"
+            f"  type(InputBlockDefinitionType), parameter :: &"
+            + "\n"
+            + f"    {component.lower()}_{subcomponent.lower()}_block_definitions(*) = &"
             + "\n"
         )
-        s += "  [ &" + "\n"
+        s += "    [ &" + "\n"
         return s
 
     def _source_list_footer(self, component, subcomponent):
-        s = "  ]" + "\n"
+        s = "    ]" + "\n"
         return s
 
     def _source_file_footer(self, component, subcomponent):

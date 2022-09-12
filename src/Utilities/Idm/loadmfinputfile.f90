@@ -560,7 +560,8 @@ contains
     end if
   end subroutine update_aggregate_shapes
 
-  subroutine read_grid_array(parser, mshape, array_name, layered, dblarray, intarray)
+  subroutine read_grid_array(parser, mshape, array_name, layered, dblarray, &
+                             intarray)
     type(BlockParserType), intent(inout) :: parser
     integer(I4B), dimension(:), intent(in) :: mshape
     character(len=*), intent(in) :: array_name
