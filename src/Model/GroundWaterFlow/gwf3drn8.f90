@@ -1,8 +1,9 @@
 module DrnModule
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: DZERO, DONE, DTWO, &
-                             LENFTYPE, LENPACKAGENAME, LENAUXNAME, LINELENGTH
-  use MemoryHelperModule, only: create_mem_path
+                             LENFTYPE, LENPACKAGENAME, LENAUXNAME, LINELENGTH, &
+                             LENMEMPATH, LENVARNAME, LENMEMSEPARATOR
+  use MemoryHelperModule, only: create_mem_path, split_mem_address
   use SmoothingModule, only: sQSaturation, sQSaturationDerivative, &
                              sQuadraticSaturation
   use BndModule, only: BndType
@@ -19,6 +20,7 @@ module DrnModule
   !
   character(len=LENFTYPE) :: ftype = 'DRN'
   character(len=LENPACKAGENAME) :: text = '             DRN'
+  character(len=LENMEMSEPARATOR), parameter :: memPathSeparator = '/'
   !
   type, extends(BndType) :: DrnType
 
@@ -65,6 +67,10 @@ contains
     character(len=*), intent(in) :: pakname
     ! -- local
     type(DrnType), pointer :: drnobj
+    character(len=LENMEMPATH) :: vscpath !< if vsc exist, this is path name
+    character(len=LENMEMPATH) :: locmempath !< the memory path for the model
+    character(len=LENVARNAME) :: locvarname !< the package name to check on
+    logical(LGP) :: vscexists !< flag will be true if vsc is active
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
@@ -89,6 +95,13 @@ contains
     packobj%ncolbnd = 2 ! drnelev, conductance
     packobj%iscloc = 2 !sfac applies to conductance
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
+    !
+    ! -- check if vsc package exists and set flag if so
+    vscpath = trim(namemodel)//memPathSeparator//'VSC'
+    call split_mem_address(vscpath, locmempath, locvarname, vscexists)
+    if (vscexists) then
+      packobj%ivsc = 1
+    end if
     !
     ! -- return
     return

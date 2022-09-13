@@ -1,7 +1,8 @@
 module rivmodule
-  use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME
-  use MemoryHelperModule, only: create_mem_path
+  use KindModule, only: DP, I4B, LGP
+  use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME, LENMEMPATH, &
+                             LENVARNAME, LENMEMSEPARATOR
+  use MemoryHelperModule, only: create_mem_path, split_mem_address
   use BndModule, only: BndType
   use ObsModule, only: DefaultObsIdProcessor
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
@@ -15,6 +16,7 @@ module rivmodule
   !
   character(len=LENFTYPE) :: ftype = 'RIV'
   character(len=LENPACKAGENAME) :: text = '             RIV'
+  character(len=LENMEMSEPARATOR), parameter :: memPathSeparator = '/'
   !
   type, extends(BndType) :: RivType
   contains
@@ -51,6 +53,10 @@ contains
     character(len=*), intent(in) :: pakname
     ! -- local
     type(RivType), pointer :: rivobj
+    character(len=LENMEMPATH) :: vscpath !< if vsc exist, this is path name
+    character(len=LENMEMPATH) :: locmempath !< the memory path for the model
+    character(len=LENVARNAME) :: locvarname !< the package name to check on
+    logical(LGP) :: vscexists !< flag will be true if vsc is active
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
@@ -74,6 +80,13 @@ contains
     packobj%ncolbnd = 3 ! stage, conductance, rbot
     packobj%iscloc = 2 !sfac applies to conductance
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
+    !
+    ! -- check if vsc package exists and set flag if so
+    vscpath = trim(namemodel)//memPathSeparator//'VSC'
+    call split_mem_address(vscpath, locmempath, locvarname, vscexists)
+    if (vscexists) then
+      packobj%ivsc = 1
+    end if
     !
     ! -- return
     return

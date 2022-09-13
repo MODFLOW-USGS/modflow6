@@ -388,7 +388,7 @@ contains
       end if
     end do
     !
-    ! -- find aux columns for concentrations that affect density
+    ! -- find aux columns for conc (or temp.) that affect viscosity
     do i = 1, this%nviscspecies
       locconc(i) = 0
       do j = 1, packobj%naux
@@ -406,16 +406,25 @@ contains
     !
     ! -- apply viscosity terms to inflow from boundary based on package type
     select case (packobj%filtyp)
-    case ('GHB')
+    case ('GHB', 'DRN', 'RIV')
       !
       ! -- general head boundary
-      call vsc_ad_ghb(packobj, hnew, this%visc, this%viscref, locelev, &
-                      locvisc, locconc, this%dviscdc, this%cviscref, &
-                      this%ivisc, this%a2, this%a3, this%a4, this%ctemp) 
-    !case ('DRN')
-    !  !
-    !  ! -- drain boundary
-    !  call vsc_ad_drn(packobj, hnew, this%viscref)
+      call vsc_ad_standard_bnd(packobj, hnew, this%visc, this%viscref, &
+                               locelev, locvisc, locconc, this%dviscdc, &
+                               this%cviscref, this%ivisc, this%a2, this%a3, &
+                               this%a4, this%ctemp) 
+    case ('LAK')
+      ! 
+      ! -- lake
+    case ('SFR')
+      !
+      ! -- streamflow routing
+    case ('MAW')
+      !
+      ! -- multi-aquifer well
+    case ('UZF')
+      !
+      ! -- unsaturated-zone flow
     case default
       !
       ! -- nothing
@@ -433,8 +442,9 @@ contains
   !! When flow enters from ghb boundary type, take into account the effects
   !! of viscosity on the user-specified conductance terms
   !<
-  subroutine vsc_ad_ghb(packobj, hnew, visc, viscref, locelev, locvisc, &
-                        locconc, dviscdc, cviscref, ivisc, a2, a3, a4, ctemp)
+  subroutine vsc_ad_standard_bnd(packobj, hnew, visc, viscref, locelev, &
+                                 locvisc, locconc, dviscdc, cviscref, & 
+                                 ivisc, a2, a3, a4, ctemp)
     ! -- modules
     use BndModule, only: BndType
     class(BndType), pointer :: packobj
@@ -467,38 +477,40 @@ contains
       !
       ! -- calculate the viscosity associcated with the boundary 
       viscghb = calc_bnd_viscosity(n, locvisc, locconc, viscref, dviscdc, &
-                                  cviscref, ctemp, ivisc, a2, a3, a4, &
-                                  packobj%auxvar)
-      !                            cviscref, ctemp, ivisc, packobj%auxvar)
+                                   cviscref, ctemp, ivisc, a2, a3, a4, &
+                                   packobj%auxvar)
       !
-      ! -- get the viscosity ratio 
-      viscratio = update_bnd_cond(viscghb, viscref)
+      ! -- update boundary conductance based on viscosity effects
+      packobj%bound(2,n) = update_bnd_cond(viscghb, viscref, &
+                                           packobj%condinput(n))
       !
-      ! -- 
-      
-      !
-      ! -- viscosity
     end do
     !
     ! -- Return
     return
-  end subroutine vsc_ad_ghb
+  end subroutine vsc_ad_standard_bnd
 
   !> @brief apply bnd viscosity to the conductance term
   !!
   !! When the viscosity package is active apply the viscosity ratio to the 
   !! active boundary package's conductance term. 
   !<
-  function update_bnd_cond(bndvisc, viscref) result(vsc_ratio)
+  function update_bnd_cond(bndvisc, viscref, spcfdcond) result(updatedcond)
     ! -- modules
     ! -- dummy
     real(DP), intent(in) :: viscref
     real(DP), intent(in) :: bndvisc
+    real(DP), intent(in) :: spcfdcond
     ! -- local
-    real(DP) :: vsc_ratio
+    real(DP) :: vscratio
+    real(DP) :: updatedcond
+    integer(I4B) :: n
 ! -------------------------------------------------------------------------------
     !
-    vsc_ratio = viscref / bndvisc
+    vscratio = viscref / bndvisc
+    !
+    ! -- calculate new conductance here!!
+    updatedcond = vscratio * spcfdcond
     !
     ! -- Return
     return
