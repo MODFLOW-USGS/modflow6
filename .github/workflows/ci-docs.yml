@@ -53,11 +53,8 @@ jobs:
         run: |
           pytest -v build_mfio_tex.py
 
-      - name: Setup symbolic links on Linux
-        run: |
-          sudo ln -fs /usr/bin/gfortran-10 /usr/local/bin/gfortran
-          sudo ln -fs /usr/bin/gcc-10 /usr/local/bin/gcc
-          sudo ln -fs /usr/bin/g++-10 /usr/local/bin/g++
+      - name: Install gfortran
+        uses: modflowpy/install-gfortran-action@v1
 
       - name: Run-time comparison
         run: |

@@ -36,30 +36,8 @@ jobs:
         run: |
           pip list
 
-      - name: Workaround for windows-2022 v20220626.1 gfortran executable run failures
-        if: runner.os == 'Windows'
-        run: |
-          .github/common/link-gfortranlib5.sh
-
-      - name: Setup symbolic links on Linux
-        if: runner.os == 'Linux'
-        run: |
-          sudo ln -fs /usr/bin/gfortran-10 /usr/local/bin/gfortran
-          sudo ln -fs /usr/bin/gcc-10 /usr/local/bin/gcc
-          sudo ln -fs /usr/bin/g++-10 /usr/local/bin/g++
-
-      - name: Setup symbolic link to gfortran on macOS
-        if: runner.os == 'macOS'
-        run: |
-          sudo ln -fs /usr/local/bin/gfortran-11 /usr/local/bin/gfortran
-          sudo ln -fs /usr/local/bin/gcc-11 /usr/local/bin/gcc
-          sudo ln -fs /usr/local/bin/g++-11 /usr/local/bin/g++
-
-      - name: Print GNU compiler versions
-        run: |
-          gfortran --version
-          gcc --version
-          g++ --version
+      - name: Install gfortran
+        uses: modflowpy/install-gfortran-action@v1
 
       - name: Set and print branch name
         run: |
