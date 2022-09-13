@@ -433,7 +433,7 @@ contains
     ! -- Allocate and read modules attached to model
     if (this%inic > 0) call this%ic%ic_ar(this%x)
     if (this%innpf > 0) call this%npf%npf_ar(this%ic, this%vsc, this%ibound, &
-                                             this%x, ikmodgwf)
+                                             this%x)
     if (this%invsc > 0) call this%vsc%vsc_ar(this%ibound)
     if (this%inbuy > 0) call this%buy%buy_ar(this%npf, this%ibound)
     if (this%inhfb > 0) call this%hfb%hfb_ar(this%ibound, this%xt3d, this%dis)
