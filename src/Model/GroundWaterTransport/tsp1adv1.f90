@@ -451,7 +451,6 @@ contains
           select case (keyword)
           case ('UPSTREAM')
             this%iadvwt = 0
-            this%iasym = 1
             write (this%iout, fmtiadvwt) 'UPSTREAM'
           case ('CENTRAL')
             this%iadvwt = 1
@@ -474,11 +473,6 @@ contains
           call store_error(errmsg, terminate=.TRUE.)
         end select
       end do
-      if (this%iadvwt /= 1) then
-        this%iasym = 1
-        write (this%iout, '(1x,a)') 'SELECTED ADVECTION SCHEME RESULTS IN AN &
-          &ASYMMETRIC MATRIX.'
-      end if
       write (this%iout, '(1x,a)') 'END OF ADVECTION OPTIONS'
     end if
     !
