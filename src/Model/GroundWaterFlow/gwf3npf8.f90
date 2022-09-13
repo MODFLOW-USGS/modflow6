@@ -54,7 +54,6 @@ module GwfNpfModule
     integer(I4B), pointer :: iwetit => null() !< wetting interval (default is 1)
     integer(I4B), pointer :: ihdwet => null() !< (0 or not 0)
     integer(I4B), pointer :: icellavg => null() !< harmonic(0), logarithmic(1), or arithmetic thick-log K (2)
-    integer(I4B), pointer :: icellavg => null() !< harmonic(0), logarithmic(1), or arithmetic thick-log K (2)
     real(DP), pointer :: wetfct => null() !< wetting factor
     real(DP), pointer :: hdry => null() !< default is -1.d30
     integer(I4B), dimension(:), pointer, contiguous :: icelltype => null() !< confined (0) or convertible (1)
@@ -298,7 +297,7 @@ contains
   !! from the input argument (when the optional @param grid_data is passed),
   !! preprocess the input data and call *_ar on xt3d, when active.
   !<
-  subroutine npf_ar(this, ic, vsc, ibound, hnew, ikmodgwf, grid_data)
+  subroutine npf_ar(this, ic, vsc, ibound, hnew, grid_data)
 ! ******************************************************************************
 ! npf_ar -- Allocate and Read
 ! ******************************************************************************
@@ -310,7 +309,6 @@ contains
     type(GwfIcType), pointer, intent(in) :: ic !< initial conditions
     type(GwfVscType), pointer, intent(in) :: vsc !< viscosity package
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: ibound !< model ibound array
-    real(DP), dimension(:), pointer, contiguous, intent(inout) :: hnew !< pointer to model head array
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: hnew !< pointer to model head array
     type(GwfNpfGridDataType), optional, intent(in) :: grid_data !< (optional) data structure with NPF grid data
     ! -- local
@@ -327,9 +325,6 @@ contains
     if (this%invsc /= 0) then
       this%vsc => vsc
     end if
-    !
-    ! -- Set flag to indicate whether conductivities get modified from their input values
-    this%ikmod = ikmodgwf
     !
     ! -- allocate arrays
     call this%allocate_arrays(this%dis%nodes, this%dis%njas)
