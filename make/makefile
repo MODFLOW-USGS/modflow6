@@ -156,7 +156,6 @@ $(OBJDIR)/gwf3npf8.o \
 $(OBJDIR)/GwtAdvOptions.o \
 $(OBJDIR)/MemoryManagerExt.o \
 $(OBJDIR)/loadmfinputfile.o \
-$(OBJDIR)/idmhelper.o \
 $(OBJDIR)/gwf3tvs8.o \
 $(OBJDIR)/GwfStorageUtils.o \
 $(OBJDIR)/Mover.o \

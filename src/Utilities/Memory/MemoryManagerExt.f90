@@ -3,12 +3,12 @@ module MemoryManagerExtModule
   use KindModule, only: DP, LGP, I4B, I8B
   use SimModule, only: store_error
   use MemoryTypeModule, only: MemoryType
-  use MemoryManagerModule, only: get_from_memorylist
+  use MemoryManagerModule, only: memorylist, get_from_memorylist
 
   implicit none
   private
   public :: mem_set_value
-  public :: mempath_has_names
+  public :: memorylist_deallocate
 
   interface mem_set_value
     module procedure mem_set_value_logical, mem_set_value_int, &
@@ -21,23 +21,33 @@ module MemoryManagerExtModule
 
 contains
 
-  function mempath_has_names(memory_path, names_list) result(found)
-    character(len=*), intent(in) :: memory_path !< path where variable is stored
-    character(len=*), dimension(:), intent(in) :: names_list
+  subroutine memorylist_deallocate(component, subcomponent, context)
+    use MemoryHelperModule, only: create_mem_path
+    use ConstantsModule, only: LENMEMPATH
+    character(len=*), intent(in) :: component !< name of the solution, model, or exchange
+    character(len=*), intent(in), optional :: subcomponent !< name of the package (optional)
+    character(len=*), intent(in), optional :: context !< name of the context (optional)
+    character(len=LENMEMPATH) :: memory_path !< the memory path
     type(MemoryType), pointer :: mt
-    logical(LGP) :: found
-    logical(LGP) :: checkfail = .false.
-    integer(I4B) :: i
+    integer(I4B) :: ipos
+    logical(LGP) :: removed
 
-    do i = 1, size(names_list)
-      call get_from_memorylist(names_list(i), memory_path, mt, found, checkfail)
-      if (.not. found) then
-        return
-      end if
+    memory_path = create_mem_path(component, subcomponent, context)
+    removed = .true.
+
+    do while (removed)
+      removed = .false.
+      do ipos = 1, memorylist%count()
+        mt => memorylist%Get(ipos)
+        if (mt%path == memory_path .and. mt%mt_associated()) then
+          call mt%mt_deallocate()
+          call memorylist%remove(ipos, .false.)
+          removed = .true.
+          exit
+        end if
+      end do
     end do
-
-    return
-  end function mempath_has_names
+  end subroutine memorylist_deallocate
 
   !> @brief Set pointer to value of memory list logical variable
   !<

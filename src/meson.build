@@ -110,7 +110,6 @@ modflow_sources = files(
     'Solution' / 'SolutionGroup.f90',
     'Timing' / 'ats.f90',
     'Timing' / 'tdis.f90',
-    'Utilities' / 'Idm' / 'idmhelper.f90',
     'Utilities' / 'Idm' / 'idmlogger.f90',
     'Utilities' / 'Idm' / 'idmtypes.f90',
     'Utilities' / 'Idm' / 'inputdefinition.f90',

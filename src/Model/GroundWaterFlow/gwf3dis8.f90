@@ -234,15 +234,17 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
-    use IdmHelperModule, only: idm_deallocate
+    use MemoryManagerExtModule, only: memorylist_deallocate
+    use SimVariablesModule, only: idm_mempath_prefix
     ! -- dummy
     class(GwfDisType) :: this
     ! -- locals
 ! ------------------------------------------------------------------------------
     !
-    ! -- IDM deallocate
-    call idm_deallocate('DIS6', '', 'GWF', 'DIS', this%name_model, 'DIS', &
-                        this%iout)
+    ! -- Deallocate idm memory
+    call memorylist_deallocate(this%name_model, 'DIS', idm_mempath_prefix)
+    call memorylist_deallocate(component=this%name_model, &
+                               context=idm_mempath_prefix)
     !
     ! -- DisBaseType deallocate
     call this%DisBaseType%dis_da()
