@@ -7,25 +7,27 @@ include ./makedefaults
 SOURCEDIR1=../src
 SOURCEDIR2=../src/Exchange
 SOURCEDIR3=../src/Model
-SOURCEDIR4=../src/Model/Geometry
-SOURCEDIR5=../src/Model/ModelUtilities
-SOURCEDIR6=../src/Model/Connection
-SOURCEDIR7=../src/Model/GroundWaterTransport
-SOURCEDIR8=../src/Model/GroundWaterFlow
-SOURCEDIR9=../src/Solution
-SOURCEDIR10=../src/Solution/LinearMethods
-SOURCEDIR11=../src/Timing
-SOURCEDIR12=../src/Utilities
-SOURCEDIR13=../src/Utilities/TimeSeries
-SOURCEDIR14=../src/Utilities/Libraries
-SOURCEDIR15=../src/Utilities/Libraries/rcm
-SOURCEDIR16=../src/Utilities/Libraries/sparsekit
-SOURCEDIR17=../src/Utilities/Libraries/sparskit2
-SOURCEDIR18=../src/Utilities/Libraries/blas
-SOURCEDIR19=../src/Utilities/Libraries/daglib
-SOURCEDIR20=../src/Utilities/Observation
-SOURCEDIR21=../src/Utilities/OutputControl
-SOURCEDIR22=../src/Utilities/Memory
+SOURCEDIR4=../src/Model/Connection
+SOURCEDIR5=../src/Model/Definition
+SOURCEDIR6=../src/Model/Geometry
+SOURCEDIR7=../src/Model/GroundWaterFlow
+SOURCEDIR8=../src/Model/GroundWaterTransport
+SOURCEDIR9=../src/Model/ModelUtilities
+SOURCEDIR10=../src/Solution
+SOURCEDIR11=../src/Solution/LinearMethods
+SOURCEDIR12=../src/Timing
+SOURCEDIR13=../src/Utilities
+SOURCEDIR14=../src/Utilities/Idm
+SOURCEDIR15=../src/Utilities/Libraries
+SOURCEDIR16=../src/Utilities/Libraries/blas
+SOURCEDIR17=../src/Utilities/Libraries/daglib
+SOURCEDIR18=../src/Utilities/Libraries/rcm
+SOURCEDIR19=../src/Utilities/Libraries/sparsekit
+SOURCEDIR20=../src/Utilities/Libraries/sparskit2
+SOURCEDIR21=../src/Utilities/Memory
+SOURCEDIR22=../src/Utilities/Observation
+SOURCEDIR23=../src/Utilities/OutputControl
+SOURCEDIR24=../src/Utilities/TimeSeries
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -49,7 +51,9 @@ ${SOURCEDIR18} \
 ${SOURCEDIR19} \
 ${SOURCEDIR20} \
 ${SOURCEDIR21} \
-${SOURCEDIR22} 
+${SOURCEDIR22} \
+${SOURCEDIR23} \
+${SOURCEDIR24} 
 
 .SUFFIXES: .f90 .F90 .o
 
@@ -99,12 +103,14 @@ $(OBJDIR)/TimeArraySeriesLink.o \
 $(OBJDIR)/ObsUtility.o \
 $(OBJDIR)/ObsContainer.o \
 $(OBJDIR)/BudgetFileReader.o \
+$(OBJDIR)/inputdefinition.o \
 $(OBJDIR)/TimeArraySeriesManager.o \
 $(OBJDIR)/PackageMover.o \
 $(OBJDIR)/Obs3.o \
 $(OBJDIR)/NumericalPackage.o \
 $(OBJDIR)/Budget.o \
 $(OBJDIR)/BudgetTerm.o \
+$(OBJDIR)/gwfdis.o \
 $(OBJDIR)/BoundaryPackage.o \
 $(OBJDIR)/BaseModel.o \
 $(OBJDIR)/PackageBudget.o \
@@ -115,6 +121,9 @@ $(OBJDIR)/SfrCrossSectionUtils.o \
 $(OBJDIR)/PrintSaveManager.o \
 $(OBJDIR)/Xt3dAlgorithm.o \
 $(OBJDIR)/gwf3tvbase8.o \
+$(OBJDIR)/structvector.o \
+$(OBJDIR)/idmlogger.o \
+$(OBJDIR)/inputdefinitionselector.o \
 $(OBJDIR)/NumericalModel.o \
 $(OBJDIR)/BaseExchange.o \
 $(OBJDIR)/UzfCellGroup.o \
@@ -127,6 +136,8 @@ $(OBJDIR)/Xt3dInterface.o \
 $(OBJDIR)/gwf3tvk8.o \
 $(OBJDIR)/GwfNpfOptions.o \
 $(OBJDIR)/GwfNpfGridData.o \
+$(OBJDIR)/structarray.o \
+$(OBJDIR)/idmtypes.o \
 $(OBJDIR)/CellWithNbrs.o \
 $(OBJDIR)/NumericalExchange.o \
 $(OBJDIR)/Iunit.o \
@@ -143,6 +154,8 @@ $(OBJDIR)/GwtDspOptions.o \
 $(OBJDIR)/GwtDspGridData.o \
 $(OBJDIR)/gwf3npf8.o \
 $(OBJDIR)/GwtAdvOptions.o \
+$(OBJDIR)/MemoryManagerExt.o \
+$(OBJDIR)/loadmfinputfile.o \
 $(OBJDIR)/gwf3tvs8.o \
 $(OBJDIR)/GwfStorageUtils.o \
 $(OBJDIR)/Mover.o \
@@ -155,7 +168,6 @@ $(OBJDIR)/InterfaceMap.o \
 $(OBJDIR)/gwf3disu8.o \
 $(OBJDIR)/GridSorting.o \
 $(OBJDIR)/DisConnExchange.o \
-$(OBJDIR)/CsrUtils.o \
 $(OBJDIR)/MappedVariable.o \
 $(OBJDIR)/TransportModel.o \
 $(OBJDIR)/NameFile.o \
@@ -193,6 +205,7 @@ $(OBJDIR)/gwf3chd8.o \
 $(OBJDIR)/ims8reordering.o \
 $(OBJDIR)/GridConnection.o \
 $(OBJDIR)/DistributedData.o \
+$(OBJDIR)/CsrUtils.o \
 $(OBJDIR)/gwt1.o \
 $(OBJDIR)/gwf3.o \
 $(OBJDIR)/ims8base.o \

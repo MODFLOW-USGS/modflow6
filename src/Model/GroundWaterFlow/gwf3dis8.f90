@@ -2,13 +2,14 @@ module GwfDisModule
 
   use ArrayReadersModule, only: ReadArray
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LINELENGTH, DHALF, DZERO
+  use ConstantsModule, only: LINELENGTH, DHALF, DZERO, LENMEMPATH, LENVARNAME
   use BaseDisModule, only: DisBaseType
   use InputOutputModule, only: get_node, URWORD, ulasav, ulaprufw, ubdsv1, &
                                ubdsv06
   use SimModule, only: count_errors, store_error, store_error_unit
   use BlockParserModule, only: BlockParserType
   use MemoryManagerModule, only: mem_allocate
+  use MemoryHelperModule, only: create_mem_path
   use TdisModule, only: kstp, kper, pertim, totim, delt
 
   implicit none
@@ -48,9 +49,9 @@ module GwfDisModule
     procedure :: connection_vector
     procedure :: connection_normal
     ! -- private
-    procedure :: read_options
-    procedure :: read_dimensions
-    procedure :: read_mf6_griddata
+    procedure :: source_idm_options
+    procedure :: source_idm_dimensions
+    procedure :: source_idm_mf6_griddata
     procedure :: grid_finalize
     procedure :: write_grb
     procedure :: allocate_scalars
@@ -70,11 +71,18 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use LoadMfInputModule, only: idm_load, set_model_shape
+    use SimVariablesModule, only: idm_mempath_prefix
+    ! -- dummy
     class(DisBaseType), pointer :: dis
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
+    ! -- locals
     type(GwfDisType), pointer :: disnew
+    character(len=LENMEMPATH) :: idmModelMemoryPath
+    character(len=LENMEMPATH) :: idmDisMemoryPath
 ! ------------------------------------------------------------------------------
     allocate (disnew)
     dis => disnew
@@ -84,6 +92,16 @@ contains
     !
     ! -- Initialize block parser
     call dis%parser%Initialize(dis%inunit, dis%iout)
+    !
+    ! -- IDM load source parameters
+    call idm_load(dis%parser, 'DIS6', '', 'GWF', 'DIS', name_model, 'DIS', &
+                  dis%ndim, iout)
+    !
+    ! -- IDM set the model shape
+    idmModelMemoryPath = create_mem_path(component=name_model, &
+                                         context=idm_mempath_prefix)
+    idmDisMemoryPath = create_mem_path(name_model, 'DIS', idm_mempath_prefix)
+    call set_model_shape('DIS6', idmModelMemoryPath, idmDisMemoryPath)
     !
     ! -- Return
     return
@@ -190,14 +208,14 @@ contains
 1     format(1X, /1X, 'DIS -- STRUCTURED GRID DISCRETIZATION PACKAGE,', &
              ' VERSION 2 : 3/27/2014 - INPUT READ FROM UNIT ', I0, //)
       !
-      ! -- Read options
-      call this%read_options()
+      ! -- source options
+      call this%source_idm_options()
       !
-      ! -- Read dimensions block
-      call this%read_dimensions()
+      ! -- source dimensions
+      call this%source_idm_dimensions()
       !
-      ! -- Read GRIDDATA block
-      call this%read_mf6_griddata()
+      ! -- source griddata
+      call this%source_idm_mf6_griddata()
     end if
     !
     ! -- Final grid initialization
@@ -216,10 +234,17 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
+    use MemoryManagerExtModule, only: memorylist_deallocate
+    use SimVariablesModule, only: idm_mempath_prefix
     ! -- dummy
     class(GwfDisType) :: this
     ! -- locals
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Deallocate idm memory
+    call memorylist_deallocate(this%name_model, 'DIS', idm_mempath_prefix)
+    call memorylist_deallocate(component=this%name_model, &
+                               context=idm_mempath_prefix)
     !
     ! -- DisBaseType deallocate
     call this%DisBaseType%dis_da()
@@ -244,137 +269,83 @@ contains
     return
   end subroutine dis3d_da
 
-  subroutine read_options(this)
+  subroutine source_idm_options(this)
 ! ******************************************************************************
-! read_options -- Read options
+! source_idm_options -- update simulation mempath options
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
+    use KindModule, only: LGP
+    use MemoryTypeModule, only: MemoryType
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_mempath_prefix
     ! -- dummy
     class(GwfDisType) :: this
     ! -- locals
-    character(len=LINELENGTH) :: errmsg, keyword
-    integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
+    character(len=LENMEMPATH) :: idmMemoryPath
+    character(len=LENVARNAME), dimension(3) :: lenunits = &
+      &[character(len=LENVARNAME) :: 'FEET', 'METERS', 'CENTIMETERS']
 ! ------------------------------------------------------------------------------
     !
-    ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, &
-                              supportOpenClose=.true., blockRequired=.false.)
+    ! -- set memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'DIS', idm_mempath_prefix)
     !
-    ! -- set default options
-    this%lenuni = 0
+    ! -- update defaults with idm sourced values
+    call mem_set_value(this%lenuni, 'LENGTH_UNITS', idmMemoryPath, lenunits)
+    call mem_set_value(this%nogrb, 'NOGRB', idmMemoryPath)
+    call mem_set_value(this%xorigin, 'XORIGIN', idmMemoryPath)
+    call mem_set_value(this%yorigin, 'YORIGIN', idmMemoryPath)
+    call mem_set_value(this%angrot, 'ANGROT', idmMemoryPath)
     !
-    ! -- parse options block if detected
-    if (isfound) then
-      write (this%iout, '(1x,a)') 'PROCESSING DISCRETIZATION OPTIONS'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-        case ('LENGTH_UNITS')
-          call this%parser%GetStringCaps(keyword)
-          if (keyword == 'FEET') then
-            this%lenuni = 1
-            write (this%iout, '(4x,a)') 'MODEL LENGTH UNIT IS FEET'
-          elseif (keyword == 'METERS') then
-            this%lenuni = 2
-            write (this%iout, '(4x,a)') 'MODEL LENGTH UNIT IS METERS'
-          elseif (keyword == 'CENTIMETERS') then
-            this%lenuni = 3
-            write (this%iout, '(4x,a)') 'MODEL LENGTH UNIT IS CENTIMETERS'
-          else
-            write (this%iout, '(4x,a)') 'UNKNOWN UNIT: ', trim(keyword)
-            write (this%iout, '(4x,a)') 'SETTING TO: ', 'UNDEFINED'
-          end if
-        case ('NOGRB')
-          write (this%iout, '(4x,a)') 'BINARY GRB FILE WILL NOT BE WRITTEN'
-          this%writegrb = .false.
-        case ('XORIGIN')
-          this%xorigin = this%parser%GetDouble()
-          write (this%iout, '(4x,a,1pg24.15)') 'XORIGIN SPECIFIED AS ', &
-            this%xorigin
-        case ('YORIGIN')
-          this%yorigin = this%parser%GetDouble()
-          write (this%iout, '(4x,a,1pg24.15)') 'YORIGIN SPECIFIED AS ', &
-            this%yorigin
-        case ('ANGROT')
-          this%angrot = this%parser%GetDouble()
-          write (this%iout, '(4x,a,1pg24.15)') 'ANGROT SPECIFIED AS ', &
-            this%angrot
-        case default
-          write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN DIS OPTION: ', &
-            trim(keyword)
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end select
-      end do
-      write (this%iout, '(1x,a)') 'END OF DISCRETIZATION OPTIONS'
-    else
-      write (this%iout, '(1x,a)') 'NO OPTION BLOCK DETECTED.'
-    end if
-    if (this%lenuni == 0) then
-      write (this%iout, '(1x,a)') 'MODEL LENGTH UNIT IS UNDEFINED'
-    end if
+    ! -- log simulation values
+    write (this%iout, '(1x,a)') 'SETTING DISCRETIZATION OPTIONS'
+    write (this%iout, '(4x,a,i0)') 'MODEL LENGTH UNIT [0=UND, 1=FEET, 2=METERS, &
+      &3=CENTIMETERS] SET AS ', this%lenuni
+    write (this%iout, '(4x,a,i0)') 'BINARY GRB FILE [0=GRB, 1=NOGRB] SET AS ', &
+      this%nogrb
+    write (this%iout, '(4x,a,1pg24.15)') 'XORIGIN = ', this%xorigin
+    write (this%iout, '(4x,a,1pg24.15)') 'YORIGIN = ', this%yorigin
+    write (this%iout, '(4x,a,1pg24.15)') 'ANGROT = ', this%angrot
+    write (this%iout, '(1x,a)') 'END DISCRETIZATION OPTIONS'
     !
     ! -- Return
     return
-  end subroutine read_options
+  end subroutine source_idm_options
 
-  subroutine read_dimensions(this)
+  subroutine source_idm_dimensions(this)
 ! ******************************************************************************
-! read_dimensions -- Read dimensions
+! source_idm_dimensions -- update simulation mempath dimensions
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: LINELENGTH
+    use KindModule, only: LGP
+    use MemoryTypeModule, only: MemoryType
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_mempath_prefix
     ! -- dummy
     class(GwfDisType) :: this
     ! -- locals
-    character(len=LINELENGTH) :: errmsg, keyword
-    integer(I4B) :: ierr
+    character(len=LENMEMPATH) :: idmMemoryPath
     integer(I4B) :: i, j, k
-    logical :: isfound, endOfBlock
 ! ------------------------------------------------------------------------------
     !
-    ! -- get dimensions block
-    call this%parser%GetBlock('DIMENSIONS', isfound, ierr, &
-                              supportOpenClose=.true.)
+    ! -- set memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'DIS', idm_mempath_prefix)
     !
-    ! -- parse dimensions block if detected
-    if (isfound) then
-      write (this%iout, '(1x,a)') 'PROCESSING DISCRETIZATION DIMENSIONS'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-        case ('NLAY')
-          this%nlay = this%parser%GetInteger()
-          write (this%iout, '(4x,a,i7)') 'NLAY = ', this%nlay
-        case ('NROW')
-          this%nrow = this%parser%GetInteger()
-          write (this%iout, '(4x,a,i7)') 'NROW = ', this%nrow
-        case ('NCOL')
-          this%ncol = this%parser%GetInteger()
-          write (this%iout, '(4x,a,i7)') 'NCOL = ', this%ncol
-        case default
-          write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN DIS DIMENSION: ', &
-            trim(keyword)
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end select
-      end do
-      write (this%iout, '(1x,a)') 'END OF DISCRETIZATION DIMENSIONS'
-    else
-      call store_error('ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.')
-      call this%parser%StoreErrorUnit()
-    end if
+    ! -- update defaults with idm sourced values
+    call mem_set_value(this%nlay, 'NLAY', idmMemoryPath)
+    call mem_set_value(this%nrow, 'NROW', idmMemoryPath)
+    call mem_set_value(this%ncol, 'NCOL', idmMemoryPath)
+    !
+    ! -- log simulation values
+    write (this%iout, '(1x,a)') 'SETTING DISCRETIZATION DIMENSIONS'
+    write (this%iout, '(4x,a,i7)') 'NLAY = ', this%nlay
+    write (this%iout, '(4x,a,i7)') 'NROW = ', this%nrow
+    write (this%iout, '(4x,a,i7)') 'NCOL = ', this%ncol
+    write (this%iout, '(1x,a)') 'END DISCRETIZATION DIMENSIONS'
     !
     ! -- verify dimensions were set
     if (this%nlay < 1) then
@@ -418,116 +389,39 @@ contains
     !
     ! -- Return
     return
-  end subroutine read_dimensions
+  end subroutine source_idm_dimensions
 
-  subroutine read_mf6_griddata(this)
+  subroutine source_idm_mf6_griddata(this)
 ! ******************************************************************************
-! read_mf6_griddata -- Read griddata from a MODFLOW 6 ascii file
+! source_idm_mf6_griddata -- update simulation mempath griddata
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: count_errors, store_error
-    use ConstantsModule, only: LINELENGTH, DZERO
-    use MemoryManagerModule, only: mem_allocate
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_mempath_prefix
     ! -- dummy
     class(GwfDisType) :: this
     ! -- locals
-    character(len=LINELENGTH) :: keyword
-    integer(I4B) :: n
-    integer(I4B) :: nvals
-    integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
-    integer(I4B), parameter :: nname = 5
-    logical, dimension(nname) :: lname
-    character(len=24), dimension(nname) :: aname
-    character(len=300) :: ermsg
+    character(len=LENMEMPATH) :: idmMemoryPath
     ! -- formats
-    ! -- data
-    data aname(1)/'                    DELR'/
-    data aname(2)/'                    DELC'/
-    data aname(3)/'TOP ELEVATION OF LAYER 1'/
-    data aname(4)/'  MODEL LAYER BOTTOM EL.'/
-    data aname(5)/'                 IDOMAIN'/
 ! ------------------------------------------------------------------------------
-    do n = 1, size(aname)
-      lname(n) = .false.
-    end do
     !
-    ! -- Read GRIDDATA block
-    call this%parser%GetBlock('GRIDDATA', isfound, ierr)
-    lname(:) = .false.
-    if (isfound) then
-      write (this%iout, '(1x,a)') 'PROCESSING GRIDDATA'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-        case ('DELR')
-          call ReadArray(this%parser%iuactive, this%delr, aname(1), &
-                         this%ndim, this%ncol, this%iout, 0)
-          lname(1) = .true.
-        case ('DELC')
-          call ReadArray(this%parser%iuactive, this%delc, aname(2), &
-                         this%ndim, this%nrow, this%iout, 0)
-          lname(2) = .true.
-        case ('TOP')
-          call ReadArray(this%parser%iuactive, this%top2d(:, :), aname(3), &
-                         this%ndim, this%ncol, this%nrow, this%iout, 0)
-          lname(3) = .true.
-        case ('BOTM')
-          call this%parser%GetStringCaps(keyword)
-          if (keyword .EQ. 'LAYERED') then
-            call ReadArray(this%parser%iuactive, this%bot3d(:, :, :), &
-                           aname(4), this%ndim, this%ncol, this%nrow, &
-                           this%nlay, this%iout, 1, this%nlay)
-          else
-            nvals = this%ncol * this%nrow * this%nlay
-            call ReadArray(this%parser%iuactive, this%bot3d(:, :, :), &
-                           aname(4), this%ndim, nvals, this%iout)
-          end if
-          lname(4) = .true.
-        case ('IDOMAIN')
-          call this%parser%GetStringCaps(keyword)
-          if (keyword .EQ. 'LAYERED') then
-            call ReadArray(this%parser%iuactive, this%idomain, aname(5), &
-                           this%ndim, this%ncol, this%nrow, this%nlay, &
-                           this%iout, 1, this%nlay)
-          else
-            call ReadArray(this%parser%iuactive, this%idomain, aname(5), &
-                           this%ndim, this%nodesuser, 1, 1, this%iout, 0, 0)
-          end if
-          lname(5) = .true.
-        case default
-          write (ermsg, '(4x,a,a)') 'ERROR. UNKNOWN GRIDDATA TAG: ', &
-            trim(keyword)
-          call store_error(ermsg)
-          call this%parser%StoreErrorUnit()
-        end select
-      end do
-      write (this%iout, '(1x,a)') 'END PROCESSING GRIDDATA'
-    else
-      call store_error('ERROR.  REQUIRED GRIDDATA BLOCK NOT FOUND.')
-      call this%parser%StoreErrorUnit()
-    end if
+    ! -- set memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'DIS', idm_mempath_prefix)
     !
-    ! -- Verify all required items were read (IDOMAIN not required)
-    do n = 1, nname - 1
-      if (.not. lname(n)) then
-        write (ermsg, '(1x,a,a)') &
-          'ERROR.  REQUIRED INPUT WAS NOT SPECIFIED: ', aname(n)
-        call store_error(ermsg)
-      end if
-    end do
-    if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
-    end if
+    ! -- update defaults with idm sourced values
+    call mem_set_value(this%delr, 'DELR', idmMemoryPath)
+    call mem_set_value(this%delc, 'DELC', idmMemoryPath)
+    call mem_set_value(this%top2d, 'TOP', idmMemoryPath)
+    call mem_set_value(this%bot3d, 'BOTM', idmMemoryPath)
+    call mem_set_value(this%idomain, 'IDOMAIN', idmMemoryPath)
     !
     ! -- Return
     return
-  end subroutine read_mf6_griddata
+  end subroutine source_idm_mf6_griddata
 
   subroutine grid_finalize(this)
 ! ******************************************************************************

@@ -4,7 +4,7 @@ on:
   push:
     branches: [ master, develop ]
   pull_request:
-    branches: [ develop ]
+    branches: [ develop, input_data_model ]
 
 jobs:
   fortan-format-check:

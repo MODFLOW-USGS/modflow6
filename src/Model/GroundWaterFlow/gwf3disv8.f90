@@ -304,7 +304,7 @@ contains
           end if
         case ('NOGRB')
           write (this%iout, '(4x,a)') 'BINARY GRB FILE WILL NOT BE WRITTEN'
-          this%writegrb = .false.
+          this%nogrb = 1
         case ('XORIGIN')
           this%xorigin = this%parser%GetDouble()
           write (this%iout, '(4x,a,1pg24.15)') 'XORIGIN SPECIFIED AS ', &
