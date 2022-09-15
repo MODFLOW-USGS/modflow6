@@ -2154,7 +2154,7 @@ contains
     ! -- set up budobj
     call budgetobject_cr(this%budobj, this%packName)
     call this%budobj%budgetobject_df(this%ncv, nbudterm, 0, 0, &
-                                     bddim_opt='M')
+                                     bddim_opt='M', ibudcsv=this%ibudcsv)
     idx = 0
     !
     ! -- Go through and set up each budget term
@@ -2376,7 +2376,7 @@ contains
       if (this%iboundpak(n1) /= 0) then
         igwfnode = this%flowbudptr%budterm(this%idxbudgwf)%id2(j)
         q = this%hcof(j) * x(igwfnode) - this%rhs(j)
-        q = -q ! flip sign so relative to lake
+        q = -q ! flip sign so relative to advanced package feature
       end if
       call this%budobj%budterm(idx)%update_term(n1, igwfnode, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
