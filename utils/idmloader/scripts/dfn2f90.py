@@ -6,6 +6,7 @@ from pathlib import Path
 from enum import Enum
 
 MF6_LENVARNAME = 16
+F90_LINELEN = 82
 
 
 class Dfn2F90:
@@ -139,6 +140,8 @@ class Dfn2F90:
         return f90statement
 
     def _construct_f90_param_statement(self, tuple_list):
+        attr_l = []
+        varname_l = []
         f90statement = f"    InputParamDefinitionType( &\n"
         for i, (value, varname) in enumerate(tuple_list):
             comma = ","
@@ -147,7 +150,24 @@ class Dfn2F90:
             v = f"'{value}'"
             if value in [".false.", ".true."]:
                 v = f"{value}"
-            f90statement += f"    {v}{comma} & ! {varname}\n"
+            attr_l.append(f"{v}")
+            varname_l.append(f"{varname}")
+        assert(len(attr_l) == len(varname_l))
+
+        f90statement += "    ! " + ", ".join(varname_l) + "\n"
+
+        line = '    '
+        for i,a in enumerate(attr_l):
+          # 5 == 2 (quotes around var) + 2 (comma and space after var) + 1 (ampersand)
+          if (len(line) + len(a) + 5) <= F90_LINELEN:
+            line += a + ', '
+          else:
+            f90statement += line + "&\n"
+            line = '    ' + a + ', '
+        if len(line) > 4:
+            f90statement += line.rsplit(",", 1)[0] + " &\n"
+        else:
+            f90statement = f90statement.rsplit(",", 1)[0] + " &\n"
         f90statement += f"    ), &"
 
         return f90statement
