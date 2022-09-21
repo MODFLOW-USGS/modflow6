@@ -14,7 +14,8 @@ name print_flows
 type keyword
 reader urword
 optional true
-longname print calculated flows to listing file
+longname keyword to print NPF flows to listing file
+description keyword to indicate that calculated flows between cells will be printed to the listing file for every stress period time step in which ``BUDGET PRINT'' is specified in Output Control. If there is no Output Control option and ``PRINT\_FLOWS'' is specified, then flow rates are printed for the last time step of each stress period.  This option can produce extremely large list files because all cell-by-cell flows are printed.  It should only be used with the NPF Package for models that have a small number of cells.
 mf6internal iprflow
 
 block options

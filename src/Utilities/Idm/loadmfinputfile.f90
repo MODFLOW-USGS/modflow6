@@ -131,21 +131,21 @@ contains
     type(ModflowInputType), pointer, intent(in) :: mf6_input
     character(len=LINELENGTH), intent(in) :: checktag
     integer(I4B), intent(in) :: iout
-    character(len=LINELENGTH) :: tag, fname
+    character(len=LINELENGTH) :: tag, fname_tag
     type(InputParamDefinitionType), pointer :: idt
     integer(I4B) :: isubpkg
 
     do isubpkg = 1, size(mf6_input%subpackages)
       ! check if tag is subpackage file type- if so, process
       if (checktag == mf6_input%subpackages(isubpkg)) then
-        fname = trim(checktag)//'_FILENAME'
+        fname_tag = trim(checktag)//'_FILENAME'
         ! verify FILEIN is next tag but no need to memory load
         call parser%GetStringCaps(tag)
         if (tag == 'FILEIN') then
           idt => get_param_definition_type(mf6_input%p_param_dfns, &
                                            mf6_input%component_type, &
                                            mf6_input%subcomponent_type, &
-                                           fname)
+                                           fname_tag)
           call load_string_type(parser, idt, mf6_input%memoryPath, iout)
         else
           errmsg = 'Subpackage keyword must be followed by "FILEIN" '// &
