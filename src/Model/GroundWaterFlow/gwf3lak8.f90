@@ -4302,8 +4302,11 @@ contains
       if (this%iboundpak(n) == 0) cycle
       rrate = DZERO
       do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
-        rrate = this%simvals(j)
-        this%qleak(j) = -rrate
+        ! simvals is from aquifer perspective, and so it is positive
+        ! for flow into the aquifer.  Need to switch sign for lake
+        ! perspective.
+        rrate = -this%simvals(j)
+        this%qleak(j) = rrate
         call this%lak_accumulate_chterm(n, rrate, chratin, chratout)
       end do
     end do
@@ -5488,9 +5491,9 @@ contains
         !
         ! -- limit withdrawals to lake inflows and lake storage
         call this%lak_calculate_withdrawal(n, this%flwiter(n), wr)
-        this%withr = wr
+        this%withr(n) = wr
         call this%lak_calculate_withdrawal(n, this%flwiter1(n), wr)
-        this%withr1 = wr
+        this%withr1(n) = wr
         !
         ! -- limit evaporation to lake inflows and lake storage
         call this%lak_calculate_evaporation(n, hlak, this%flwiter(n), ev)

@@ -17,14 +17,7 @@ on:
       - develop
 
 env:
-  WINDOWS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/18680/w_HPCKit_p_2022.2.0.173_offline.exe
-  LINUX_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/18679/l_HPCKit_p_2022.2.0.191_offline.sh
-  MACOS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/18681/m_HPCKit_p_2022.2.0.158_offline.dmg
-  WINDOWS_FORTRAN_COMPONENTS: intel.oneapi.win.ifort-compiler
-  LINUX_FORTRAN_COMPONENTS_WEB: intel.oneapi.lin.ifort-compiler
-  MACOS_FORTRAN_COMPONENTS: intel.oneapi.mac.ifort-compiler
   FC: ifort
-  VS_VER: vs2022
 
 jobs:
   test:
@@ -44,61 +37,23 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v2.3.4
 
-      - name: Install Conda environment from environment.yml
+      - name: Install Conda environment
         uses: mamba-org/provision-with-micromamba@main
         with:
             cache-downloads: true
             cache-env: true
 
-      - name: Print python package versions
+      - name: Print Python package versions
         run: |
           pip list
 
-      - name: cache install ifort on linux
-        if: runner.os == 'Linux'
-        id: cache-install-linux
-        uses: actions/cache@v2
-        with:
-          path: |
-            /opt/intel/oneapi
-          key: install-${{ env.LINUX_HPCKIT_URL }}-${{ env.LINUX_FORTRAN_COMPONENTS_WEB }}-compiler-${{ hashFiles('**/.github/intel-scripts/cache_exclude_linux.sh') }}
+      - name: Install ifort
+        uses: modflowpy/install-intelfortran-action@v1
 
-      - name: install ifort on linux
-        if: runner.os == 'Linux' && steps.cache-install-linux.outputs.cache-hit != 'true'
-        run: |
-          .github/intel-scripts/install_linux.sh $LINUX_HPCKIT_URL $LINUX_FORTRAN_COMPONENTS_WEB
-
-      - name: cache install ifort on macos
-        if: runner.os == 'macOS'
-        id: cache-install-macos
-        uses: actions/cache@v2
-        with:
-          path: /opt/intel/oneapi
-          key: install-${{ env.MACOS_HPCKIT_URL }}-${{ env.MACOS_FORTRAN_COMPONENTS }}
-
-      - name: install ifort on macos
-        if: runner.os == 'macOS' && steps.cache-install-macos.outputs.cache-hit != 'true'
-        run: |
-          .github/intel-scripts/install_macos.sh $MACOS_HPCKIT_URL $MACOS_FORTRAN_COMPONENTS
-
-      - name: cache install ifort on windows
-        if: runner.os == 'Windows'
-        id: cache-install-windows
-        uses: actions/cache@v2
-        with:
-          path: C:\Program Files (x86)\Intel\oneAPI
-          key: install-${{ env.WINDOWS_HPCKIT_URL }}-${{ env.WINDOWS_FORTRAN_COMPONENTS }}-compiler-${{ hashFiles('**/.github/intel-scripts/cache_exclude_windows.sh') }}
-
-      - name: install ifort on windows
-        if: runner.os == 'Windows' && steps.cache-install-windows.outputs.cache-hit != 'true'
-        run: |
-          .github/intel-scripts/install_windows.bat $WINDOWS_HPCKIT_URL $WINDOWS_FORTRAN_COMPONENTS
-
-      - name: Test make for MODFLOW 6 programs
+      - name: Test makefiles
         if: runner.os == 'Linux' || runner.os == 'macOS'
         working-directory: ./distribution
         run: |
-          source /opt/intel/oneapi/setvars.sh
           pytest -v -n=auto build_makefiles.py
 
       - name: Set and print branch name
@@ -109,30 +64,29 @@ jobs:
         run: |
           .github/common/get-regression-files.sh
 
-      - name: Check out the correct regression test branch
+      - name: Check out regression test branch
         run: |
           .github/common/checkout-regression-branch.sh
 
-      - name: Update flopy MODFLOW 6 classes
+      - name: Update flopy
         run: |
           .github/common/update-flopy.sh
 
-      - name: Build MODFLOW 6 (Linux or macOS)
-        if: runner.os == 'Linux' || runner.os == 'macOS'
+      - name: Build modflow6
+        if: runner.os != 'Windows'
         run: |
-          source /opt/intel/oneapi/setvars.sh
           meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
           meson install -C builddir
           cd autotest
           pytest -v --durations=0 get_exes.py
 
-      - name: Build MODFLOW 6 (Windows)
+      - name: Build modflow6 (Windows)
         if: runner.os == 'Windows'
-        shell: cmd /C CALL {0}
         run: |
-          call micromamba activate modflow6
-          call ".github/intel-scripts/build_windows.bat"
-          meson setup builddir -Ddebug=false --prefix=%CD% --libdir=bin
+          # activating micromamba environment causes default link.exe to be found instead of MSVC linker
+          export PATH="/C/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.33.31629/bin/Hostx64/x64":$PATH
+          
+          meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
           meson install -C builddir
           cd autotest
           pytest -v --durations=0 get_exes.py
@@ -141,13 +95,3 @@ jobs:
         working-directory: autotest
         run: |
           pytest -v -n=auto --durations=0
-
-      - name: exclude unused files from cache on linux
-        if: runner.os == 'Linux' && steps.cache-install-linux.outputs.cache-hit != 'true'
-        run: |
-          .github/intel-scripts/cache_exclude_linux.sh
-
-      - name: exclude unused files from cache on windows
-        if: runner.os == 'Windows' && steps.cache-install-windows.outputs.cache-hit != 'true'
-        run: |
-          .github/intel-scripts/cache_exclude_windows.sh

@@ -179,10 +179,10 @@ contains
     class(DisConnExchangeType) :: this !< instance of exchange object
     integer(I4B), intent(in) :: iout !< the output file unit
     ! local
-    character(len=LINELENGTH) :: nodestr, node1str, node2str, cellid
+    character(len=20) :: cellid1, cellid2
     character(len=2) :: cnfloat
     integer(I4B) :: lloc, ierr, nerr, iaux
-    integer(I4B) :: iexg, nodem1, nodem2, nodeum1, nodeum2
+    integer(I4B) :: iexg, nodem1, nodem2
     logical :: isfound, endOfBlock
 
     character(len=*), parameter :: fmtexglabel = "(5x, 3a10, 50(a16))"
@@ -216,16 +216,18 @@ contains
         lloc = 1
         !
         ! -- Read and check node 1
-        call this%parser%GetCellid(this%model1%dis%ndim, cellid, &
+        call this%parser%GetCellid(this%model1%dis%ndim, cellid1, &
                                    flag_string=.true.)
-        nodem1 = this%model1%dis%noder_from_cellid(cellid, this%parser%iuactive, &
+        nodem1 = this%model1%dis%noder_from_cellid(cellid1, &
+                                                   this%parser%iuactive, &
                                                    iout, flag_string=.true.)
         this%nodem1(iexg) = nodem1
         !
         ! -- Read and check node 2
-        call this%parser%GetCellid(this%model2%dis%ndim, cellid, &
+        call this%parser%GetCellid(this%model2%dis%ndim, cellid2, &
                                    flag_string=.true.)
-        nodem2 = this%model2%dis%noder_from_cellid(cellid, this%parser%iuactive, &
+        nodem2 = this%model2%dis%noder_from_cellid(cellid2, &
+                                                   this%parser%iuactive, &
                                                    iout, flag_string=.true.)
         this%nodem2(iexg) = nodem2
         !
@@ -243,17 +245,13 @@ contains
         !
         ! -- Write the data to listing file if requested
         if (this%iprpak /= 0) then
-          nodeum1 = this%model1%dis%get_nodeuser(nodem1)
-          call this%model1%dis%nodeu_to_string(nodeum1, node1str)
-          nodeum2 = this%model2%dis%get_nodeuser(nodem2)
-          call this%model2%dis%nodeu_to_string(nodeum2, node2str)
           if (this%inamedbound == 0) then
-            write (iout, fmtexgdata) trim(node1str), trim(node2str), &
+            write (iout, fmtexgdata) trim(cellid1), trim(cellid2), &
               this%ihc(iexg), this%cl1(iexg), this%cl2(iexg), &
               this%hwva(iexg), &
               (this%auxvar(iaux, iexg), iaux=1, this%naux)
           else
-            write (iout, fmtexgdata2) trim(node1str), trim(node2str), &
+            write (iout, fmtexgdata2) trim(cellid1), trim(cellid2), &
               this%ihc(iexg), this%cl1(iexg), this%cl2(iexg), &
               this%hwva(iexg), &
               (this%auxvar(iaux, iexg), iaux=1, this%naux), &
@@ -263,21 +261,19 @@ contains
         !
         ! -- Check to see if nodem1 is outside of active domain
         if (nodem1 <= 0) then
-          call this%model1%dis%nodeu_to_string(nodeum1, nodestr)
           write (errmsg, *) &
             trim(adjustl(this%model1%name))// &
-            ' Cell is outside active grid domain '// &
-            trim(adjustl(nodestr))//'.'
+            ' Cell is outside active grid domain ('// &
+            trim(adjustl(cellid1))//').'
           call store_error(errmsg)
         end if
         !
         ! -- Check to see if nodem2 is outside of active domain
         if (nodem2 <= 0) then
-          call this%model2%dis%nodeu_to_string(nodeum2, nodestr)
           write (errmsg, *) &
             trim(adjustl(this%model2%name))// &
-            ' Cell is outside active grid domain '// &
-            trim(adjustl(nodestr))//'.'
+            ' Cell is outside active grid domain ('// &
+            trim(adjustl(cellid2))//').'
           call store_error(errmsg)
         end if
       end do
