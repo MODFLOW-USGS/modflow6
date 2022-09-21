@@ -132,6 +132,31 @@ module GwfNpfInputModule
     ), &
     InputParamDefinitionType( &
     ! component, subcomponent, block, tag name, fortran variable, type, shape, required, multi-record, preserve case, layered
+    'GWF', 'NPF', 'OPTIONS', 'DEV_NO_NEWTON', 'INEWTON', 'KEYWORD', '', &
+    .false., .false., .false., .false. &
+    ), &
+    InputParamDefinitionType( &
+    ! component, subcomponent, block, tag name, fortran variable, type, shape, required, multi-record, preserve case, layered
+    'GWF', 'NPF', 'OPTIONS', 'DEV_MODFLOWUSG_UPSTREAM_WEIGHTED_SATURATION', &
+    'IUSGNRHC', 'KEYWORD', '', .false., .false., .false., .false. &
+    ), &
+    InputParamDefinitionType( &
+    ! component, subcomponent, block, tag name, fortran variable, type, shape, required, multi-record, preserve case, layered
+    'GWF', 'NPF', 'OPTIONS', 'DEV_MODFLOWNWT_UPSTREAM_WEIGHTING', 'INWTUPW', &
+    'KEYWORD', '', .false., .false., .false., .false. &
+    ), &
+    InputParamDefinitionType( &
+    ! component, subcomponent, block, tag name, fortran variable, type, shape, required, multi-record, preserve case, layered
+    'GWF', 'NPF', 'OPTIONS', 'DEV_MINIMUM_SATURATED_THICKNESS', 'SATMIN', &
+    'DOUBLE', '', .false., .false., .false., .false. &
+    ), &
+    InputParamDefinitionType( &
+    ! component, subcomponent, block, tag name, fortran variable, type, shape, required, multi-record, preserve case, layered
+    'GWF', 'NPF', 'OPTIONS', 'DEV_OMEGA', 'SATOMEGA', 'DOUBLE', '', .false., &
+    .false., .false., .false. &
+    ), &
+    InputParamDefinitionType( &
+    ! component, subcomponent, block, tag name, fortran variable, type, shape, required, multi-record, preserve case, layered
     'GWF', 'NPF', 'GRIDDATA', 'ICELLTYPE', 'ICELLTYPE', 'INTEGER1D', 'NODES', &
     .true., .false., .false., .true. &
     ), &
