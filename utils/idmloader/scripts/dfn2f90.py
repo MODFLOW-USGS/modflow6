@@ -33,7 +33,7 @@ class Dfn2F90:
         self._set_param_strs()
 
     def write_f90(self, odspec=None):
-        fname = Path(odspec, f"{self.component.lower()}{self.subcomponent.lower()}.f90")
+        fname = Path(odspec, f"{self.component.lower()}3{self.subcomponent.lower()}8idm.f90")
         with open(fname, "w") as f:
 
             f.write(self._source_file_header(self.component, self.subcomponent))
@@ -362,11 +362,12 @@ if __name__ == "__main__":
 
     fnames = [
         Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-dis.dfn"),
+        Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-npf.dfn"),
     ]
 
     for dfn in fnames:
         converter = Dfn2F90(dfnfspec=dfn)
-        converter.write_f90(odspec=os.path.join("..", "..", "..", "src", "Model", "Definition"))
+        converter.write_f90(odspec=os.path.join("..", "..", "..", "src", "Model", "GroundWaterFlow"))
         converter.warn()
 
     print("\n...done.")

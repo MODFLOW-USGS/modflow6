@@ -72,8 +72,8 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use LoadMfInputModule, only: idm_load, set_model_shape
-    use SimVariablesModule, only: idm_mempath_prefix
+    use LoadMfInputModule, only: idm_load
+    use ConstantsModule, only: LENPACKAGETYPE
     ! -- dummy
     class(DisBaseType), pointer :: dis
     character(len=*), intent(in) :: name_model
@@ -81,8 +81,6 @@ contains
     integer(I4B), intent(in) :: iout
     ! -- locals
     type(GwfDisType), pointer :: disnew
-    character(len=LENMEMPATH) :: idmModelMemoryPath
-    character(len=LENMEMPATH) :: idmDisMemoryPath
 ! ------------------------------------------------------------------------------
     allocate (disnew)
     dis => disnew
@@ -95,13 +93,7 @@ contains
     !
     ! -- IDM load source parameters
     call idm_load(dis%parser, 'DIS6', '', 'GWF', 'DIS', name_model, 'DIS', &
-                  dis%ndim, iout)
-    !
-    ! -- IDM set the model shape
-    idmModelMemoryPath = create_mem_path(component=name_model, &
-                                         context=idm_mempath_prefix)
-    idmDisMemoryPath = create_mem_path(name_model, 'DIS', idm_mempath_prefix)
-    call set_model_shape('DIS6', idmModelMemoryPath, idmDisMemoryPath)
+                  [character(len=LENPACKAGETYPE) ::], iout)
     !
     ! -- Return
     return
@@ -234,17 +226,17 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
-    use MemoryManagerExtModule, only: memorylist_deallocate
-    use SimVariablesModule, only: idm_mempath_prefix
+    use MemoryManagerExtModule, only: memorylist_remove
+    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfDisType) :: this
     ! -- locals
 ! ------------------------------------------------------------------------------
     !
     ! -- Deallocate idm memory
-    call memorylist_deallocate(this%name_model, 'DIS', idm_mempath_prefix)
-    call memorylist_deallocate(component=this%name_model, &
-                               context=idm_mempath_prefix)
+    call memorylist_remove(this%name_model, 'DIS', idm_context)
+    call memorylist_remove(component=this%name_model, &
+                           context=idm_context)
     !
     ! -- DisBaseType deallocate
     call this%DisBaseType%dis_da()
@@ -280,24 +272,26 @@ contains
     use KindModule, only: LGP
     use MemoryTypeModule, only: MemoryType
     use MemoryManagerExtModule, only: mem_set_value
-    use SimVariablesModule, only: idm_mempath_prefix
+    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfDisType) :: this
     ! -- locals
     character(len=LENMEMPATH) :: idmMemoryPath
     character(len=LENVARNAME), dimension(3) :: lenunits = &
       &[character(len=LENVARNAME) :: 'FEET', 'METERS', 'CENTIMETERS']
+    logical, dimension(5) :: afound
 ! ------------------------------------------------------------------------------
     !
     ! -- set memory path
-    idmMemoryPath = create_mem_path(this%name_model, 'DIS', idm_mempath_prefix)
+    idmMemoryPath = create_mem_path(this%name_model, 'DIS', idm_context)
     !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%lenuni, 'LENGTH_UNITS', idmMemoryPath, lenunits)
-    call mem_set_value(this%nogrb, 'NOGRB', idmMemoryPath)
-    call mem_set_value(this%xorigin, 'XORIGIN', idmMemoryPath)
-    call mem_set_value(this%yorigin, 'YORIGIN', idmMemoryPath)
-    call mem_set_value(this%angrot, 'ANGROT', idmMemoryPath)
+    call mem_set_value(this%lenuni, 'LENGTH_UNITS', idmMemoryPath, lenunits, &
+                       afound(1))
+    call mem_set_value(this%nogrb, 'NOGRB', idmMemoryPath, afound(2))
+    call mem_set_value(this%xorigin, 'XORIGIN', idmMemoryPath, afound(3))
+    call mem_set_value(this%yorigin, 'YORIGIN', idmMemoryPath, afound(4))
+    call mem_set_value(this%angrot, 'ANGROT', idmMemoryPath, afound(5))
     !
     ! -- log simulation values
     write (this%iout, '(1x,a)') 'SETTING DISCRETIZATION OPTIONS'
@@ -324,21 +318,22 @@ contains
     use KindModule, only: LGP
     use MemoryTypeModule, only: MemoryType
     use MemoryManagerExtModule, only: mem_set_value
-    use SimVariablesModule, only: idm_mempath_prefix
+    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfDisType) :: this
     ! -- locals
     character(len=LENMEMPATH) :: idmMemoryPath
     integer(I4B) :: i, j, k
+    logical, dimension(3) :: afound
 ! ------------------------------------------------------------------------------
     !
     ! -- set memory path
-    idmMemoryPath = create_mem_path(this%name_model, 'DIS', idm_mempath_prefix)
+    idmMemoryPath = create_mem_path(this%name_model, 'DIS', idm_context)
     !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%nlay, 'NLAY', idmMemoryPath)
-    call mem_set_value(this%nrow, 'NROW', idmMemoryPath)
-    call mem_set_value(this%ncol, 'NCOL', idmMemoryPath)
+    call mem_set_value(this%nlay, 'NLAY', idmMemoryPath, afound(1))
+    call mem_set_value(this%nrow, 'NROW', idmMemoryPath, afound(2))
+    call mem_set_value(this%ncol, 'NCOL', idmMemoryPath, afound(3))
     !
     ! -- log simulation values
     write (this%iout, '(1x,a)') 'SETTING DISCRETIZATION DIMENSIONS'
@@ -401,23 +396,24 @@ contains
     ! -- modules
     use SimModule, only: count_errors, store_error
     use MemoryManagerExtModule, only: mem_set_value
-    use SimVariablesModule, only: idm_mempath_prefix
+    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfDisType) :: this
     ! -- locals
     character(len=LENMEMPATH) :: idmMemoryPath
+    logical, dimension(5) :: afound
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
     ! -- set memory path
-    idmMemoryPath = create_mem_path(this%name_model, 'DIS', idm_mempath_prefix)
+    idmMemoryPath = create_mem_path(this%name_model, 'DIS', idm_context)
     !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%delr, 'DELR', idmMemoryPath)
-    call mem_set_value(this%delc, 'DELC', idmMemoryPath)
-    call mem_set_value(this%top2d, 'TOP', idmMemoryPath)
-    call mem_set_value(this%bot3d, 'BOTM', idmMemoryPath)
-    call mem_set_value(this%idomain, 'IDOMAIN', idmMemoryPath)
+    call mem_set_value(this%delr, 'DELR', idmMemoryPath, afound(1))
+    call mem_set_value(this%delc, 'DELC', idmMemoryPath, afound(2))
+    call mem_set_value(this%top2d, 'TOP', idmMemoryPath, afound(3))
+    call mem_set_value(this%bot3d, 'BOTM', idmMemoryPath, afound(4))
+    call mem_set_value(this%idomain, 'IDOMAIN', idmMemoryPath, afound(5))
     !
     ! -- Return
     return

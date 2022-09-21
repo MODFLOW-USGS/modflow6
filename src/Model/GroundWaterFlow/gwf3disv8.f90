@@ -2,7 +2,7 @@ module GwfDisvModule
 
   use ArrayReadersModule, only: ReadArray
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LINELENGTH, DZERO, DONE, DHALF
+  use ConstantsModule, only: LINELENGTH, LENMEMPATH, DZERO, DONE, DHALF
   use BaseDisModule, only: DisBaseType
   use InputOutputModule, only: get_node, URWORD, ulasav, ulaprufw, ubdsv1, &
                                ubdsv06
@@ -184,9 +184,14 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryHelperModule, only: create_mem_path
+    use LoadMfInputModule, only: set_model_shape
+    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfDisvType) :: this
     ! -- locals
+    character(len=LENMEMPATH) :: idmModelMemoryPath
 ! ------------------------------------------------------------------------------
     !
     ! -- read data from file
@@ -216,6 +221,11 @@ contains
     ! -- Final grid initialization
     call this%grid_finalize()
     !
+    ! -- IDM set the model shape
+    idmModelMemoryPath = create_mem_path(component=this%name_model, &
+                                         context=idm_context)
+    call set_model_shape(idmModelMemoryPath, this%nlay, this%ncpl, this%nvert)
+    !
     ! -- Return
     return
   end subroutine disv_df
@@ -229,10 +239,16 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
+    use MemoryManagerExtModule, only: memorylist_remove
+    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfDisvType) :: this
     ! -- locals
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Deallocate idm memory
+    call memorylist_remove(component=this%name_model, &
+                           context=idm_context)
     !
     ! -- DisBaseType deallocate
     call this%DisBaseType%dis_da()

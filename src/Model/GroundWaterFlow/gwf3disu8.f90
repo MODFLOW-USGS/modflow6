@@ -2,7 +2,7 @@ module GwfDisuModule
 
   use ArrayReadersModule, only: ReadArray
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: LENMODELNAME, LINELENGTH, DZERO, DONE
+  use ConstantsModule, only: LENMODELNAME, LINELENGTH, LENMEMPATH, DZERO, DONE
   use ConnectionsModule, only: ConnectionsType, iac_to_ia
   use InputOutputModule, only: URWORD, ulasav, ulaprufw, ubdsv1, ubdsv06
   use SimModule, only: count_errors, store_error, store_error_unit
@@ -236,8 +236,12 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    use MemoryHelperModule, only: create_mem_path
+    use LoadMfInputModule, only: set_model_shape
+    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfDisuType) :: this
+    character(len=LENMEMPATH) :: idmModelMemoryPath
 ! ------------------------------------------------------------------------------
     !
     ! -- read data from file
@@ -270,6 +274,11 @@ contains
     ! -- Finalize the grid by creating the connection object and reducing the
     !    grid using IDOMAIN, if necessary
     call this%grid_finalize()
+    !
+    ! -- IDM set the model shape
+    idmModelMemoryPath = create_mem_path(component=this%name_model, &
+                                         context=idm_context)
+    call set_model_shape(idmModelMemoryPath, this%nodesuser)
     !
     ! -- Return
     return
@@ -518,9 +527,15 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
+    use MemoryManagerExtModule, only: memorylist_remove
+    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfDisuType) :: this
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Deallocate idm memory
+    call memorylist_remove(component=this%name_model, &
+                           context=idm_context)
     !
     ! -- scalars
     call mem_deallocate(this%njausr)
