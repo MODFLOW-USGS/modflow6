@@ -20,14 +20,6 @@ on:
   schedule:
     - cron: '0 6 * * *' # run at 6 AM UTC every day
 
-env:
-  WINDOWS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/18680/w_HPCKit_p_2022.2.0.173_offline.exe
-  LINUX_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/irc_nas/18679/l_HPCKit_p_2022.2.0.191_offline.sh
-  MACOS_HPCKIT_URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/18681/m_HPCKit_p_2022.2.0.158_offline.dmg
-  WINDOWS_FORTRAN_COMPONENTS: intel.oneapi.win.ifort-compiler
-  LINUX_FORTRAN_COMPONENTS_WEB: intel.oneapi.lin.ifort-compiler
-  MACOS_FORTRAN_COMPONENTS: intel.oneapi.mac.ifort-compiler
-
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -55,28 +47,14 @@ jobs:
         if: matrix.FC == 'ifort'
         run: |
           echo "FC=ifort" >> $GITHUB_ENV
-          echo "VS_VER=vs2022" >> $GITHUB_ENV
 
-      - name: cache install ifort on linux
+      - name: Install ifort
         if: matrix.FC == 'ifort'
-        id: cache-install-linux
-        uses: actions/cache@v2
-        with:
-          path: |
-            /opt/intel/oneapi
-          key: install-${{ env.LINUX_HPCKIT_URL }}-${{ env.LINUX_FORTRAN_COMPONENTS_WEB }}-compiler-${{ hashFiles('**/.github/intel-scripts/cache_exclude_linux.sh') }}
+        uses: modflowpy/install-intelfortran-action@v1
 
-      - name: install ifort on linux
-        if: matrix.FC == 'ifort' && steps.cache-install-linux.outputs.cache-hit != 'true'
-        run: |
-          .github/intel-scripts/install_linux.sh $LINUX_HPCKIT_URL $LINUX_FORTRAN_COMPONENTS_WEB
-
-      - name: Setup symbolic links on Linux
+      - name: Install gfortran
         if: matrix.FC == 'gfortran'
-        run: |
-          sudo ln -fs /usr/bin/gfortran-10 /usr/local/bin/gfortran
-          sudo ln -fs /usr/bin/gcc-10 /usr/local/bin/gcc
-          sudo ln -fs /usr/bin/g++-10 /usr/local/bin/g++
+        uses: modflowpy/install-gfortran-action@v1
 
       - name: Install additional python packages
         run: |
@@ -109,7 +87,6 @@ jobs:
       - name: activate ifort and build applications
         if: matrix.FC == 'ifort'
         run: |
-          source /opt/intel/oneapi/setvars.sh
           meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
           meson install -C builddir
           cd autotest
@@ -127,8 +104,3 @@ jobs:
         working-directory: autotest
         run: |
           pytest -v -n=auto --durations=0 test_z03_${{ matrix.test_script }}.py
-
-      - name: exclude unused files from cache on linux
-        if: matrix.FC == 'ifort' && steps.cache-install-linux.outputs.cache-hit != 'true'
-        run: |
-          .github/intel-scripts/cache_exclude_linux.sh

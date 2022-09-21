@@ -1,11 +1,10 @@
-# Simple one-layer model with a lak.  Purpose is to test a constant
-# stage and constant concentration lake with a value of 100.  The aquifer
-# starts with a concentration of zero, but the values grow as the lake
-# leaks into the aquifer.
+# Simple one-layer model with a lak.  Purpose is to test a lake
+# with a variable stage and variable concentration.  The lake
+# starts at a concentration of 100. and slowly decreases as
+# fresh groundwater flows into it.  Concentrations in the aquifer
+# should remain at zero.
 
 import os
-import sys
-
 import numpy as np
 import pytest
 
@@ -20,7 +19,7 @@ except:
 from framework import testing_framework
 from simulation import Simulation
 
-ex = ["lkt_01"]
+ex = ["lkt_04"]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
@@ -155,7 +154,7 @@ def build_model(idx, dir):
         (0, 2, (0, 0, 2), "VERTICAL", "None", 10, 10, connlen, connwidth)
     )
     p_data = [
-        (0, "STATUS", "CONSTANT"),
+        (0, "STATUS", "ACTIVE"),
         (0, "STAGE", -0.4),
         (0, "RAINFALL", 0.1),
         (0, "EVAPORATION", 0.2),
@@ -270,13 +269,12 @@ def build_model(idx, dir):
     )
 
     lktpackagedata = [
-        (0, 35.0, 99.0, 999.0, "mylake"),
+        (0, 100.0, 99.0, 999.0, "mylake"),
     ]
     lktperioddata = [
-        (0, "STATUS", "CONSTANT"),
-        (0, "CONCENTRATION", 100.0),
+        (0, "STATUS", "ACTIVE"),
         (0, "RAINFALL", 25.0),
-        (0, "EVAPORATION", 25.0),
+        (0, "EVAPORATION", 0.0),
         (0, "RUNOFF", 25.0),
     ]
 
@@ -310,6 +308,7 @@ def build_model(idx, dir):
         print_concentration=True,
         concentration_filerecord=gwtname + ".lkt.bin",
         budget_filerecord="gwtlak1.bud",
+        budgetcsv_filerecord=f"{gwtname}.lkt.bud.csv",
         packagedata=lktpackagedata,
         lakeperioddata=lktperioddata,
         observations=lkt_obs,
@@ -359,10 +358,28 @@ def eval_csv_information(testsim):
     gwf = sim.get_model(gwfname)
     gwt = sim.get_model(gwtname)
 
+    success = True
+    atol = 0.002
+
+    # Lake budget checks
     lak_budget = gwf.lak.output.budgetcsv().data
     result = lak_budget["PERCENT_DIFFERENCE"]
-    answer = np.zeros(result.shape)
-    assert np.allclose(result, answer), f"Lake package does not have zero mass balance error: {result}"
+    for pd in result:
+        if abs(pd) > atol:
+            success = False
+            print(f"Lake package balance error ({pd}) > tolerance ({atol})")
+
+    # Lake transport budget checks
+    lkt_budget = gwt.lkt.output.budgetcsv().data
+    result = lkt_budget["PERCENT_DIFFERENCE"]
+    for pd in result:
+        if abs(pd) > atol:
+            success = False
+            print(
+                f"Lake transport package balance error ({pd}) > tolerance ({atol})"
+            )
+
+    assert success, f"One or more errors encountered in budget checks"
 
     return
 
@@ -383,17 +400,28 @@ def eval_results(sim):
     # load the lake concentrations and make sure all values are 100.
     cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")
     clak = cobj.get_alldata().flatten()
-    answer = np.ones(10) * 100.0
-    assert np.allclose(clak, answer), f"{clak} {answer}"
+    clak_answer = np.array(
+        [
+            99.6180852,
+            99.23811519,
+            98.86008004,
+            98.48396992,
+            98.10977501,
+            97.73748558,
+            97.36709191,
+            96.99858435,
+            96.63195329,
+            96.26718919,
+        ]
+    )
+    assert np.allclose(clak, clak_answer), f"{clak} {clak_answer}"
 
     # load the aquifer concentrations and make sure all values are correct
     fname = gwtname + ".ucn"
     fname = os.path.join(sim.simpath, fname)
     cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")
     caq = cobj.get_alldata()
-    answer = np.array(
-        [4.86242795, 27.24270616, 64.55536421, 27.24270616, 4.86242795]
-    )
+    answer = np.zeros(5)
     assert np.allclose(
         caq[-1].flatten(), answer
     ), f"{caq[-1].flatten()} {answer}"
@@ -405,7 +433,7 @@ def eval_results(sim):
     except:
         assert False, f'could not load data from "{fpth}"'
     res = tc["LKT1CONC"]
-    answer = np.ones(10) * 100.0
+    answer = clak_answer
     assert np.allclose(res, answer), f"{res} {answer}"
     res = tc["LKT1EXTINFLOW"]
     answer = np.ones(10) * 0.0
@@ -417,28 +445,41 @@ def eval_results(sim):
     answer = np.ones(10) * 2.5
     assert np.allclose(res, answer), f"{res} {answer}"
     res = tc["LKT1EVAP"]
-    answer = np.ones(10) * -5.0
+    answer = np.zeros(10)
     assert np.allclose(res, answer), f"{res} {answer}"
     res = tc["LKT1WDRL"]
-    answer = np.ones(10) * -10.0
+    answer = clak_answer * -0.1
     assert np.allclose(res, answer), f"{res} {answer}"
     res = tc["LKT1STOR"]
-    answer = np.ones(10) * 0.0
+    answer = np.array(
+        [
+            14.92362,
+            14.84762,
+            14.77202,
+            14.69679,
+            14.62196,
+            14.5475,
+            14.47342,
+            14.39972,
+            14.32639,
+            14.25344,
+        ]
+    )
     assert np.allclose(res, answer), f"{res} {answer}"
     res = tc["LKT1CONST"]
-    answer = np.ones(10) * 236.3934
+    answer = np.zeros(10)
     assert np.allclose(res, answer), f"{res} {answer}"
     res = tc["LKT1GWT2"]
-    answer = np.ones(10) * -91.80328
+    answer = np.zeros(10)
     assert np.allclose(res, answer), f"{res} {answer}"
     res = tc["LKT1GWT4"]
-    answer = np.ones(10) * -32.78689
+    answer = np.zeros(10)
     assert np.allclose(res, answer), f"{res} {answer}"
     res = tc["LKT1GWT3"]
-    answer = np.ones(10) * -91.80328
+    answer = np.zeros(10)
     assert np.allclose(res, answer), f"{res} {answer}"
     res = tc["LKT1MYLAKE"]
-    answer = np.ones(10) * -216.3934
+    answer = np.zeros(10)
     assert np.allclose(res, answer), f"{res} {answer}"
 
     # uncomment when testing
