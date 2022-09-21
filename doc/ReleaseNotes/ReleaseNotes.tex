@@ -224,6 +224,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	\underline{STRESS PACKAGES}
 	\begin{itemize}
 		\item The Evapotranspiration (EVT) Package was modified to include a new error check if the segmented evapotranspiration capability is active.  If the number of ET segments is greater than 1, then the user must specify values for PXDP (as well as PETM).  For a cell, PXDP is a one-dimensional array of size NSEG - 1.  Values in this array must be greater than zero and less than one.  Furthermore, the values in PXDP must increase monotonically.  The program now checks for these conditions and terminates with an error if these conditions are not met.  The segmented ET capability can used be used for list-based EVT Package input.  Provided that the PXDP conditions are met, this new error check should have no effect on simulation results.
+		\item The Evapotranspiration (EVT) Package would throw an index error when SURF_RATE_SPECIFIED was specified in the OPTIONS block and NSEG was set equal to 1.  The code now supports this combination of input options.
 	%	\item xxx
 	%	\item xxx
 	\end{itemize}
