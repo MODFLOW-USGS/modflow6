@@ -91,7 +91,7 @@ contains
     character(len=*), intent(in) :: mempath !< variable memory path
     integer(I4B) :: iout
     integer(I4B) :: min_val, max_val
-    
+
     min_val = minval(p_mem)
     max_val = maxval(p_mem)
     if (min_val == max_val) then
@@ -112,7 +112,7 @@ contains
     character(len=*), intent(in) :: mempath !< variable memory path
     integer(I4B) :: iout
     integer(I4B) :: min_val, max_val
-    
+
     min_val = minval(p_mem)
     max_val = maxval(p_mem)
     if (min_val == max_val) then

@@ -182,8 +182,8 @@ contains
       call npfobj%parser%Initialize(inunit, iout)
       !
       ! -- IDM load source parameters
-      !call idm_load(npfobj%parser, 'NPF6', '', 'GWF', 'NPF', npfobj%name_model, &
-      !              'NPF', [character(len=LENPACKAGETYPE) :: 'TVK6'], iout)
+      call idm_load(npfobj%parser, 'NPF6', '', 'GWF', 'NPF', npfobj%name_model, &
+                    'NPF', [character(len=LENPACKAGETYPE) :: 'TVK6'], iout)
     end if
     !
     ! -- Return
@@ -223,10 +223,6 @@ contains
     this%dis => dis
     !
     if (.not. present(npf_options)) then
-      !
-      ! -- move up when ready
-      call idm_load(this%parser, 'NPF6', '', 'GWF', 'NPF', this%name_model, &
-                    'NPF', [character(len=LENPACKAGETYPE) :: 'TVK6'], this%iout)
       !
       ! -- update default option values
       call this%source_idm_options()

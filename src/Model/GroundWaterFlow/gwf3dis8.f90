@@ -419,7 +419,7 @@ contains
     logical, dimension(:), intent(in) :: afound
 
     write (this%iout, '(1x,a)') 'Setting Discretization Dimensions'
-    
+
     if (afound(1)) then
       write (this%iout, '(4x,a,i0)') 'NLAY = ', this%nlay
     end if
@@ -481,7 +481,7 @@ contains
     logical, dimension(:), intent(in) :: afound
 
     write (this%iout, '(1x,a)') 'Setting Discretization Griddata'
-    
+
     if (afound(1)) then
       write (this%iout, '(4x,a)') 'DELR set from input file'
     end if

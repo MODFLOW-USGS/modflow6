@@ -31,6 +31,7 @@ module GwfDisvModule
     type(DisvGeomType) :: cell2 ! cell object used to calculate geometric properties
   contains
     procedure :: dis_df => disv_df
+    procedure :: disv_load
     procedure :: dis_da => disv_da
     procedure :: get_cellxy => get_cellxy_disv
     procedure :: get_dis_type => get_dis_type
@@ -88,8 +89,11 @@ contains
     dis%inunit = inunit
     dis%iout = iout
     !
-    ! -- Initialize block parser
-    call dis%parser%Initialize(dis%inunit, dis%iout)
+    ! -- initialize parser and load the disv input file
+    if (inunit > 0) then
+      call dis%parser%Initialize(dis%inunit, dis%iout)
+      call disnew%disv_load()
+    end if
     !
     ! -- Return
     return
@@ -177,7 +181,7 @@ contains
     return
   end subroutine disv_init_mem
 
-  subroutine disv_df(this)
+  subroutine disv_load(this)
 ! ******************************************************************************
 ! read_from_file -- Allocate and read discretization information
 ! ******************************************************************************
@@ -194,37 +198,50 @@ contains
     character(len=LENMEMPATH) :: idmModelMemoryPath
 ! ------------------------------------------------------------------------------
     !
-    ! -- read data from file
-    if (this%inunit /= 0) then
-      !
-      ! -- Identify package
-      write (this%iout, 1) this%inunit
-1     format(1X, /1X, 'DISV -- VERTEX GRID DISCRETIZATION PACKAGE,', &
-             ' VERSION 1 : 12/23/2015 - INPUT READ FROM UNIT ', I0, //)
-      !
-      ! -- Read options
-      call this%read_options()
-      !
-      ! -- Read dimensions block
-      call this%read_dimensions()
-      !
-      ! -- Read GRIDDATA block
-      call this%read_mf6_griddata()
-      !
-      ! -- Read VERTICES block
-      call this%read_vertices()
-      !
-      ! -- Read CELL2D block
-      call this%read_cell2d()
-    end if
+    ! -- Identify package
+    write (this%iout, 1) this%inunit
+1   format(1X, /1X, 'DISV -- VERTEX GRID DISCRETIZATION PACKAGE,', &
+           ' VERSION 1 : 12/23/2015 - INPUT READ FROM UNIT ', I0, //)
     !
-    ! -- Final grid initialization
-    call this%grid_finalize()
+    ! -- Read options
+    call this%read_options()
+    !
+    ! -- Read dimensions block
+    call this%read_dimensions()
+    !
+    ! -- Read GRIDDATA block
+    call this%read_mf6_griddata()
+    !
+    ! -- Read VERTICES block
+    call this%read_vertices()
+    !
+    ! -- Read CELL2D block
+    call this%read_cell2d()
     !
     ! -- IDM set the model shape
     idmModelMemoryPath = create_mem_path(component=this%name_model, &
                                          context=idm_context)
     call set_model_shape(idmModelMemoryPath, this%nlay, this%ncpl, this%nvert)
+    !
+    ! -- Return
+    return
+  end subroutine disv_load
+
+  subroutine disv_df(this)
+! ******************************************************************************
+! read_from_file -- Allocate and read discretization information
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwfDisvType) :: this
+    ! -- locals
+! ------------------------------------------------------------------------------
+    !
+    ! -- Final grid initialization
+    call this%grid_finalize()
     !
     ! -- Return
     return
