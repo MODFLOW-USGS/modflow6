@@ -2,7 +2,7 @@ module LoadMfInputModule
 
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENVARNAME, MAXCHARLEN
-  use SimVariablesModule, only: iout, errmsg
+  use SimVariablesModule, only: errmsg
   use SimModule, only: store_error
   use BlockParserModule, only: BlockParserType
   use ArrayReadersModule, only: ReadArray

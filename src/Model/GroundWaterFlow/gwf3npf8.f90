@@ -153,6 +153,10 @@ contains
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
+    ! -- formats
+    character(len=*), parameter :: fmtheader = &
+      "(1x, /1x, 'NPF -- NODE PROPERTY FLOW PACKAGE, VERSION 1, 3/30/2015', &
+       &' INPUT READ FROM UNIT ', i0, /)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -169,14 +173,17 @@ contains
     npfobj%iout = iout
     !
     ! -- Check if input file is open
-    if (npfobj%inunit > 0) then
+    if (inunit > 0) then
+      !
+      ! -- Print a message identifying the node property flow package.
+      write (iout, fmtheader) inunit
       !
       ! -- Initialize block parser and read options
-      call npfobj%parser%Initialize(npfobj%inunit, npfobj%iout)
+      call npfobj%parser%Initialize(inunit, iout)
       !
       ! -- IDM load source parameters
       !call idm_load(npfobj%parser, 'NPF6', '', 'GWF', 'NPF', npfobj%name_model, &
-      !              'NPF', [character(len=LENPACKAGETYPE) :: 'TVK6'], npfobj%iout)
+      !              'NPF', [character(len=LENPACKAGETYPE) :: 'TVK6'], iout)
     end if
     !
     ! -- Return
@@ -209,10 +216,6 @@ contains
     integer(I4B), intent(in) :: ingnc !< ghostnodes enabled? (>0 means yes)
     type(GwfNpfOptionsType), optional, intent(in) :: npf_options !< the optional options, for when not constructing from file
     ! -- local
-    ! -- formats
-    character(len=*), parameter :: fmtheader = &
-      "(1x, /1x, 'NPF -- NODE PROPERTY FLOW PACKAGE, VERSION 1, 3/30/2015', &
-       &' INPUT READ FROM UNIT ', i0, //)"
     ! -- data
 ! ------------------------------------------------------------------------------
     !
@@ -220,10 +223,8 @@ contains
     this%dis => dis
     !
     if (.not. present(npf_options)) then
-      ! -- Print a message identifying the node property flow package.
-      write (this%iout, fmtheader) this%inunit
       !
-      ! -- move up to npf_cr once disu/disv use idm
+      ! -- move up when ready
       call idm_load(this%parser, 'NPF6', '', 'GWF', 'NPF', this%name_model, &
                     'NPF', [character(len=LENPACKAGETYPE) :: 'TVK6'], this%iout)
       !

@@ -52,6 +52,9 @@ module GwfDisModule
     procedure :: source_idm_options
     procedure :: source_idm_dimensions
     procedure :: source_idm_mf6_griddata
+    procedure :: log_dis_options
+    procedure :: log_dis_dimensions
+    procedure :: log_dis_griddata
     procedure :: grid_finalize
     procedure :: write_grb
     procedure :: allocate_scalars
@@ -81,6 +84,9 @@ contains
     integer(I4B), intent(in) :: iout
     ! -- locals
     type(GwfDisType), pointer :: disnew
+    character(len=*), parameter :: fmtheader = &
+      "(1X, /1X, 'DIS -- STRUCTURED GRID DISCRETIZATION PACKAGE,', &
+      &' VERSION 2 : 3/27/2014 - INPUT READ FROM UNIT ', I0, /)"
 ! ------------------------------------------------------------------------------
     allocate (disnew)
     dis => disnew
@@ -88,12 +94,21 @@ contains
     dis%inunit = inunit
     dis%iout = iout
     !
-    ! -- Initialize block parser
-    call dis%parser%Initialize(dis%inunit, dis%iout)
-    !
-    ! -- IDM load source parameters
-    call idm_load(dis%parser, 'DIS6', '', 'GWF', 'DIS', name_model, 'DIS', &
-                  [character(len=LENPACKAGETYPE) ::], iout)
+    ! -- if reading from file
+    if (inunit > 0) then
+      !
+      ! -- Identify package
+      if (iout > 0) then
+        write (iout, fmtheader) inunit
+      end if
+      !
+      ! -- Initialize block parser
+      call dis%parser%Initialize(inunit, iout)
+      !
+      ! -- IDM load source parameters
+      call idm_load(dis%parser, 'DIS6', '', 'GWF', 'DIS', name_model, 'DIS', &
+                    [character(len=LENPACKAGETYPE) ::], iout)
+    end if
     !
     ! -- Return
     return
@@ -195,11 +210,6 @@ contains
     ! -- read data from file
     if (this%inunit /= 0) then
       !
-      ! -- Identify package
-      write (this%iout, 1) this%inunit
-1     format(1X, /1X, 'DIS -- STRUCTURED GRID DISCRETIZATION PACKAGE,', &
-             ' VERSION 2 : 3/27/2014 - INPUT READ FROM UNIT ', I0, //)
-      !
       ! -- source options
       call this%source_idm_options()
       !
@@ -261,13 +271,43 @@ contains
     return
   end subroutine dis3d_da
 
+  !> @brief Write user options to list file
+  !<
+  subroutine log_dis_options(this, afound)
+    class(GwfDisType) :: this
+    logical, dimension(:), intent(in) :: afound
+
+    write (this%iout, '(1x,a)') 'Setting Discretization Options'
+
+    if (afound(1)) then
+      write (this%iout, '(4x,a,i0)') 'MODEL LENGTH UNIT [0=UND, 1=FEET, &
+      &2=METERS, 3=CENTIMETERS] SET AS ', this%lenuni
+    end if
+
+    if (afound(2)) then
+      write (this%iout, '(4x,a,i0)') 'BINARY GRB FILE [0=GRB, 1=NOGRB] &
+        &SET AS ', this%nogrb
+    end if
+
+    if (afound(3)) then
+      write (this%iout, '(4x,a,G0)') 'XORIGIN = ', this%xorigin
+    end if
+
+    if (afound(4)) then
+      write (this%iout, '(4x,a,G0)') 'YORIGIN = ', this%yorigin
+    end if
+
+    if (afound(5)) then
+      write (this%iout, '(4x,a,G0)') 'ANGROT = ', this%angrot
+    end if
+
+    write (this%iout, '(1x,a,/)') 'End Setting Discretization Options'
+
+  end subroutine log_dis_options
+
+  !> @brief Copy options from IDM into package
+  !<
   subroutine source_idm_options(this)
-! ******************************************************************************
-! source_idm_options -- update simulation mempath options
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use KindModule, only: LGP
     use MemoryTypeModule, only: MemoryType
@@ -280,7 +320,6 @@ contains
     character(len=LENVARNAME), dimension(3) :: lenunits = &
       &[character(len=LENVARNAME) :: 'FEET', 'METERS', 'CENTIMETERS']
     logical, dimension(5) :: afound
-! ------------------------------------------------------------------------------
     !
     ! -- set memory path
     idmMemoryPath = create_mem_path(this%name_model, 'DIS', idm_context)
@@ -293,28 +332,18 @@ contains
     call mem_set_value(this%yorigin, 'YORIGIN', idmMemoryPath, afound(4))
     call mem_set_value(this%angrot, 'ANGROT', idmMemoryPath, afound(5))
     !
-    ! -- log simulation values
-    write (this%iout, '(1x,a)') 'SETTING DISCRETIZATION OPTIONS'
-    write (this%iout, '(4x,a,i0)') 'MODEL LENGTH UNIT [0=UND, 1=FEET, 2=METERS, &
-      &3=CENTIMETERS] SET AS ', this%lenuni
-    write (this%iout, '(4x,a,i0)') 'BINARY GRB FILE [0=GRB, 1=NOGRB] SET AS ', &
-      this%nogrb
-    write (this%iout, '(4x,a,1pg24.15)') 'XORIGIN = ', this%xorigin
-    write (this%iout, '(4x,a,1pg24.15)') 'YORIGIN = ', this%yorigin
-    write (this%iout, '(4x,a,1pg24.15)') 'ANGROT = ', this%angrot
-    write (this%iout, '(1x,a)') 'END DISCRETIZATION OPTIONS'
+    ! -- log values to list file
+    if (this%iout > 0) then
+      call this%log_dis_options(afound)
+    end if
     !
     ! -- Return
     return
   end subroutine source_idm_options
 
+  !> @brief Copy dimensions from IDM into package
+  !<
   subroutine source_idm_dimensions(this)
-! ******************************************************************************
-! source_idm_dimensions -- update simulation mempath dimensions
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use KindModule, only: LGP
     use MemoryTypeModule, only: MemoryType
     use MemoryManagerExtModule, only: mem_set_value
@@ -325,7 +354,6 @@ contains
     character(len=LENMEMPATH) :: idmMemoryPath
     integer(I4B) :: i, j, k
     logical, dimension(3) :: afound
-! ------------------------------------------------------------------------------
     !
     ! -- set memory path
     idmMemoryPath = create_mem_path(this%name_model, 'DIS', idm_context)
@@ -336,11 +364,9 @@ contains
     call mem_set_value(this%ncol, 'NCOL', idmMemoryPath, afound(3))
     !
     ! -- log simulation values
-    write (this%iout, '(1x,a)') 'SETTING DISCRETIZATION DIMENSIONS'
-    write (this%iout, '(4x,a,i7)') 'NLAY = ', this%nlay
-    write (this%iout, '(4x,a,i7)') 'NROW = ', this%nrow
-    write (this%iout, '(4x,a,i7)') 'NCOL = ', this%ncol
-    write (this%iout, '(1x,a)') 'END DISCRETIZATION DIMENSIONS'
+    if (this%iout > 0) then
+      call this%log_dis_dimensions(afound)
+    end if
     !
     ! -- verify dimensions were set
     if (this%nlay < 1) then
@@ -386,6 +412,30 @@ contains
     return
   end subroutine source_idm_dimensions
 
+  !> @brief Write dimensions to list file
+  !<
+  subroutine log_dis_dimensions(this, afound)
+    class(GwfDisType) :: this
+    logical, dimension(:), intent(in) :: afound
+
+    write (this%iout, '(1x,a)') 'Setting Discretization Dimensions'
+    
+    if (afound(1)) then
+      write (this%iout, '(4x,a,i0)') 'NLAY = ', this%nlay
+    end if
+
+    if (afound(2)) then
+      write (this%iout, '(4x,a,i0)') 'NROW = ', this%nrow
+    end if
+
+    if (afound(3)) then
+      write (this%iout, '(4x,a,i0)') 'NCOL = ', this%ncol
+    end if
+
+    write (this%iout, '(1x,a,/)') 'End Setting Discretization Dimensions'
+
+  end subroutine log_dis_dimensions
+
   subroutine source_idm_mf6_griddata(this)
 ! ******************************************************************************
 ! source_idm_mf6_griddata -- update simulation mempath griddata
@@ -415,9 +465,46 @@ contains
     call mem_set_value(this%bot3d, 'BOTM', idmMemoryPath, afound(4))
     call mem_set_value(this%idomain, 'IDOMAIN', idmMemoryPath, afound(5))
     !
+    ! -- log simulation values
+    if (this%iout > 0) then
+      call this%log_dis_griddata(afound)
+    end if
+    !
     ! -- Return
     return
   end subroutine source_idm_mf6_griddata
+
+  !> @brief Write dimensions to list file
+  !<
+  subroutine log_dis_griddata(this, afound)
+    class(GwfDisType) :: this
+    logical, dimension(:), intent(in) :: afound
+
+    write (this%iout, '(1x,a)') 'Setting Discretization Griddata'
+    
+    if (afound(1)) then
+      write (this%iout, '(4x,a)') 'DELR set from input file'
+    end if
+
+    if (afound(2)) then
+      write (this%iout, '(4x,a)') 'DELC set from input file'
+    end if
+
+    if (afound(3)) then
+      write (this%iout, '(4x,a)') 'TOP set from input file'
+    end if
+
+    if (afound(4)) then
+      write (this%iout, '(4x,a)') 'BOTM set from input file'
+    end if
+
+    if (afound(5)) then
+      write (this%iout, '(4x,a)') 'IDOMAIN set from input file'
+    end if
+
+    write (this%iout, '(1x,a,/)') 'End Setting Discretization Griddata'
+
+  end subroutine log_dis_griddata
 
   subroutine grid_finalize(this)
 ! ******************************************************************************
