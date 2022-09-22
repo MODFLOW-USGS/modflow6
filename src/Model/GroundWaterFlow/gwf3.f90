@@ -457,7 +457,7 @@ contains
       ! -- Read and allocate package
       call packobj%bnd_ar()
       if (this%inbuy > 0) call this%buy%buy_ar_bnd(packobj, this%x)
-!      if (this%invsc > 0) call this%buy%vsc_ar_bnd(packobj, this%x)  ! kluge !
+      if (this%invsc > 0) call this%vsc%vsc_ar_bnd(packobj)  
     end do
     !
     ! -- return

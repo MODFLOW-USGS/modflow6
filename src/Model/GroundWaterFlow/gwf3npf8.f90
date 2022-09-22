@@ -1074,7 +1074,6 @@ contains
     call mem_deallocate(this%hnoflo)
     call mem_deallocate(this%hdry)
     call mem_deallocate(this%icellavg)
-    call mem_deallocate(this%icellavg)
     call mem_deallocate(this%iavgkeff)
     call mem_deallocate(this%ik22)
     call mem_deallocate(this%ik33)
@@ -1159,7 +1158,6 @@ contains
     call mem_allocate(this%hnoflo, 'HNOFLO', this%memoryPath)
     call mem_allocate(this%hdry, 'HDRY', this%memoryPath)
     call mem_allocate(this%icellavg, 'ICELLAVG', this%memoryPath)
-    call mem_allocate(this%icellavg, 'ICELLAVG', this%memoryPath)
     call mem_allocate(this%iavgkeff, 'IAVGKEFF', this%memoryPath)
     call mem_allocate(this%ik22, 'IK22', this%memoryPath)
     call mem_allocate(this%ik33, 'IK33', this%memoryPath)
@@ -1200,7 +1198,6 @@ contains
     this%satomega = DZERO
     this%hnoflo = DHNOFLO !1.d30
     this%hdry = DHDRY !-1.d30
-    this%icellavg = 0
     this%icellavg = 0
     this%iavgkeff = 0
     this%ik22 = 0

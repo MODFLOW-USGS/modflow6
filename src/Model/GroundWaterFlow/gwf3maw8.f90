@@ -158,6 +158,9 @@ module MawModule
     integer(I4B), pointer :: idense
     real(DP), dimension(:, :), pointer, contiguous :: denseterms => null()
     !
+    ! -- viscosity variables
+    real(DP), dimension(:, :), pointer, contiguous :: viscratios => null() !< viscosity ratios (1: maw vsc ratio; 2: gwf vsc ratio)
+    !
     ! -- type bound procedures
   contains
     procedure :: maw_allocate_scalars
@@ -213,6 +216,8 @@ module MawModule
     ! -- MAW reduced flow outputs
     procedure, private :: maw_redflow_csv_init
     procedure, private :: maw_redflow_csv_write
+    ! -- viscosity
+    procedure :: maw_activate_viscosity
   end type MawType
 
 contains
@@ -520,6 +525,9 @@ contains
     !
     ! -- allocate denseterms to size 0
     call mem_allocate(this%denseterms, 3, 0, 'DENSETERMS', this%memoryPath)
+    !
+    ! -- allocate viscratios to size 0
+    call mem_allocate(this%viscratios, 3, 0, 'VISCRATIOS', this%memoryPath)
     !
     ! -- return
     return
@@ -3002,6 +3010,7 @@ contains
     call mem_deallocate(this%qsto)
     call mem_deallocate(this%qconst)
     call mem_deallocate(this%denseterms)
+    call mem_deallocate(this%viscratios)
     call mem_deallocate(this%idxlocnode)
     call mem_deallocate(this%idxdglo)
     call mem_deallocate(this%idxoffdglo)
@@ -3032,6 +3041,7 @@ contains
     call mem_deallocate(this%kappa)
     call mem_deallocate(this%cbcauxitems)
     call mem_deallocate(this%idense)
+    call mem_deallocate(this%viscratios)
     !
     ! -- pointers to gwf variables
     nullify (this%gwfiss)
@@ -4842,6 +4852,36 @@ contains
     return
   end subroutine maw_activate_density
 
+  !> @brief Activate viscosity terms
+    !!
+    !! Method to activate addition of viscosity terms for a MAW package reach.
+    !!
+  !<
+  subroutine maw_activate_viscosity(this)
+    ! -- modules
+    use MemoryManagerModule, only: mem_reallocate
+    ! -- dummy variables
+    class(MawType), intent(inout) :: this !< MawType object
+    ! -- local variables
+    integer(I4B) :: i
+    integer(I4B) :: j
+    !
+    ! -- Set ivsc and reallocate viscratios to be of size MAXBOUND
+    this%ivsc = 1
+    call mem_reallocate(this%viscratios, 3, this%MAXBOUND, 'VISCRATIOS', &
+                        this%memoryPath)
+    do i = 1, this%maxbound
+      do j = 1, 3
+        this%viscratios(j, i) = DZERO
+      end do
+    end do
+    write (this%iout, '(/1x,a)') 'VISCOSITY HAS BEEN ACTIVATED FOR MAW &
+      &PACKAGE: '//trim(adjustl(this%packName))
+    !
+    ! -- return
+    return
+  end subroutine maw_activate_viscosity
+  
   subroutine maw_calculate_density_exchange(this, iconn, hmaw, hgwf, cond, &
                                             bmaw, flow, hcofterm, rhsterm)
 ! ******************************************************************************

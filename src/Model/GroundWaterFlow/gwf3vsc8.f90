@@ -71,6 +71,7 @@ module GwfVscModule
   contains
     procedure :: vsc_df
     procedure :: vsc_ar
+    procedure, public :: vsc_ar_bnd
     procedure :: vsc_rp
     procedure :: vsc_ad
     procedure, public :: vsc_ad_bnd
@@ -266,6 +267,63 @@ contains
     return
   end subroutine vsc_ar
   
+  !> @brief Activate viscosity in advanced packages
+  !!
+  !! Viscosity ar_bnd rountine to activate viscosity in the advanced
+  !! packages.  This routine is called from gwf_ar() as it moves through each
+  !! package
+  !!
+  !<
+  subroutine vsc_ar_bnd(this, packobj)
+  !
+  !    SPECIFICATIONS:
+  ! ----------------------------------------------------------------------------
+    ! -- modules
+    use BndModule, only: BndType
+    use LakModule, only: LakType
+    use SfrModule, only: SfrType
+    use MawModule, only: MawType
+    ! -- dummy
+    class(GwfVscType) :: this
+    class(BndType), pointer :: packobj
+    ! -- local
+  ! ----------------------------------------------------------------------------
+    !
+    ! -- Add density terms based on boundary package type
+    select case (packobj%filtyp)
+    case ('LAK')
+      !
+      ! -- activate viscosity for lake package
+      select type (packobj)
+      type is (LakType)
+        call packobj%lak_activate_viscosity()
+      end select
+
+    case ('SFR')
+      !
+      ! -- activate viscosity for sfr package
+      select type (packobj)
+      type is (SfrType)
+        call packobj%sfr_activate_viscosity()
+      end select
+
+    case ('MAW')
+      !
+      ! -- activate viscosity for maw package
+      select type (packobj)
+      type is (MawType)
+        call packobj%maw_activate_viscosity()
+      end select
+
+    case default
+      !
+      ! -- nothing
+    end select
+    !
+    ! -- Return
+    return
+  end subroutine vsc_ar_bnd
+  
   !> @brief Set pointers to NPF variables
   !!
   !! Set array and variable pointers from the NPF
@@ -408,7 +466,7 @@ contains
     select case (packobj%filtyp)
     case ('GHB', 'DRN', 'RIV')
       !
-      ! -- general head boundary
+      ! -- general head, drain, and river boundary
       call vsc_ad_standard_bnd(packobj, hnew, this%visc, this%viscref, &
                                locelev, locvisc, locconc, this%dviscdc, &
                                this%cviscref, this%ivisc, this%a2, this%a3, &
@@ -419,6 +477,11 @@ contains
     case ('SFR')
       !
       ! -- streamflow routing
+      !  Update 'viscratios' internal to sfr such that they are 
+      !  automatically applied in the SFR calc_cond() routine
+      call vsc_ad_sfr(packobj, this%visc, this%viscref, this%elev, locvisc, &
+                      locconc, this%dviscdc, this%cviscref, this%ivisc, &
+                      this%a2, this%a3, this%a4, this%ctemp)
     case ('MAW')
       !
       ! -- multi-aquifer well
@@ -465,7 +528,6 @@ contains
     integer(I4B) :: node
     real(DP) :: viscghb
     real(DP) :: viscratio
-    real(DP) :: hd
 ! -------------------------------------------------------------------------------
     !
     ! -- Process density terms for each GHB
@@ -489,6 +551,68 @@ contains
     ! -- Return
     return
   end subroutine vsc_ad_standard_bnd
+                                 
+  !> @brief Update sfr-related viscosity ratios
+  !! 
+  !! When the viscosity package is active, update the viscosity ratio that is
+  !! applied to the hydraulic conductivity specified in the SFR package
+  !<
+  subroutine vsc_ad_sfr(packobj, visc, viscref, elev, locvisc, locconc, &
+                        dviscdc, cviscref, ivisc, a2, a3, a4, ctemp)
+    ! -- modules
+    use BndModule, only: BndType
+    use SfrModule, only: SfrType
+    class(BndType), pointer :: packobj
+    ! -- dummy
+    real(DP), intent(in) :: viscref
+    real(DP), intent(in) :: a2, a3, a4
+    integer(I4B), intent(in) :: locvisc
+    integer(I4B), dimension(:), intent(in) :: locconc
+    integer(I4B), dimension(:), intent(in) :: ivisc
+    real(DP), dimension(:), intent(in) :: visc
+    real(DP), dimension(:), intent(in) :: elev
+    real(DP), dimension(:), intent(in) :: dviscdc
+    real(DP), dimension(:), intent(in) :: cviscref
+    real(DP), dimension(:), intent(inout) :: ctemp
+    ! -- local
+    integer(I4B) :: n
+    integer(I4B) :: node
+    real(DP) :: viscsfr
+! -------------------------------------------------------------------------------
+  !
+  ! -- update viscosity ratios for updating hyd. cond (and conductance)
+    select type (packobj)
+    type is (SfrType)
+      do n = 1, packobj%nbound
+        !
+        ! -- get gwf node number
+        node = packobj%nodelist(n)
+        ! 
+        ! -- Check if boundary cell is active, cycle if not
+        if (packobj%ibound(node) <= 0) cycle
+        !
+        ! -- 
+        !
+        ! -- calculate the viscosity associcated with the boundary 
+        viscsfr = calc_bnd_viscosity(n, locvisc, locconc, viscref, dviscdc, &
+                                     cviscref, ctemp, ivisc, a2, a3, a4, &
+                                     packobj%auxvar)
+        !
+        ! -- fill sfr relative viscosity into column 1 of viscratios
+        packobj%viscratios(1, n) = calc_vsc_ratio(viscref, viscsfr)
+        !
+        ! -- fill gwf relative viscosity into column 2 of viscratios
+        packobj%viscratios(2, n) = calc_vsc_ratio(viscref, visc(node))
+        !
+        ! -- fill gwf elevation into column 3 of viscratios
+        !packobj%viscratios(3, n) = elev(node)
+        !
+      end do
+    end select
+    !
+    ! -- Return
+    return
+  end subroutine vsc_ad_sfr
 
   !> @brief apply bnd viscosity to the conductance term
   !!
@@ -507,7 +631,7 @@ contains
     integer(I4B) :: n
 ! -------------------------------------------------------------------------------
     !
-    vscratio = viscref / bndvisc
+    vscratio = calc_vsc_ratio(viscref, bndvisc)
     !
     ! -- calculate new conductance here!!
     updatedcond = vscratio * spcfdcond
@@ -515,6 +639,22 @@ contains
     ! -- Return
     return
   end function update_bnd_cond
+  
+  !> @brief calculate and return the viscosity ratio
+  !<
+  function calc_vsc_ratio(viscref, bndvisc) result(viscratio)
+    ! -- dummy
+    real(DP), intent(in) :: viscref
+    real(DP), intent(in) :: bndvisc
+    ! -- local
+    real(DP) :: viscratio
+! -------------------------------------------------------------------------------
+    !
+    viscratio = viscref / bndvisc
+    !
+    ! -- Return
+    return
+  end function calc_vsc_ratio
   
   function calc_bnd_viscosity(n, locvisc, locconc, viscref, dviscdc, cviscref, &
 !                           ctemp, ivisc, auxvar) result(viscbnd)

@@ -146,6 +146,9 @@ module SfrModule
     integer(I4B), pointer :: idense !< flag indicating if density corrections are active
     real(DP), dimension(:, :), pointer, contiguous :: denseterms => null() !< density terms
     !
+    ! -- viscosity variables
+    real(DP), dimension(:, :), pointer, contiguous :: viscratios => null() !< viscosity ratios (1: sfr vsc ratio; 2: gwf vsc ratio)
+    !
     ! -- type bound procedures
   contains
     procedure :: sfr_allocate_scalars
@@ -208,6 +211,8 @@ module SfrModule
     ! -- density
     procedure :: sfr_activate_density
     procedure, private :: sfr_calculate_density_exchange
+    ! -- viscosity
+    procedure :: sfr_activate_viscosity
   end type SfrType
 
 contains
@@ -292,6 +297,7 @@ contains
     call mem_allocate(this%icheck, 'ICHECK', this%memoryPath)
     call mem_allocate(this%iconvchk, 'ICONVCHK', this%memoryPath)
     call mem_allocate(this%idense, 'IDENSE', this%memoryPath)
+    call mem_allocate(this%ivsc, 'IVSC', this%memoryPath)
     call mem_allocate(this%ianynone, 'IANYNONE', this%memoryPath)
     call mem_allocate(this%ncrossptstot, 'NCROSSPTSTOT', this%memoryPath)
     !
@@ -316,6 +322,7 @@ contains
     this%icheck = 1
     this%iconvchk = 1
     this%idense = 0
+    this%ivsc = 0
     this%ianynone = 0
     this%ncrossptstot = 0
     !
@@ -499,11 +506,14 @@ contains
       this%qauxcbc(i) = DZERO
     end do
     !
-    !-- fill cauxcbc
+    ! -- fill cauxcbc
     this%cauxcbc(1) = 'FLOW-AREA       '
     !
     ! -- allocate denseterms to size 0
     call mem_allocate(this%denseterms, 3, 0, 'DENSETERMS', this%memoryPath)
+    !
+    ! -- allocate viscratios to size 0
+    call mem_allocate(this%viscratios, 3, 0, 'VISCRATIOS', this%memoryPath)
     !
     ! -- return
     return
@@ -2556,6 +2566,7 @@ contains
     call mem_deallocate(this%stage0)
     call mem_deallocate(this%usflow0)
     call mem_deallocate(this%denseterms)
+    call mem_deallocate(this%viscratios)
     !
     ! -- deallocate reach order and connection data
     call mem_deallocate(this%isfrorder)
@@ -2630,6 +2641,7 @@ contains
     call mem_deallocate(this%icheck)
     call mem_deallocate(this%iconvchk)
     call mem_deallocate(this%idense)
+    call mem_deallocate(this%ivsc)
     call mem_deallocate(this%ianynone)
     call mem_deallocate(this%ncrossptstot)
     nullify (this%gwfiss)
@@ -5561,6 +5573,36 @@ contains
     ! -- return
     return
   end subroutine sfr_activate_density
+
+  !> @brief Activate viscosity terms
+    !!
+    !! Method to activate addition of viscosity terms for a SFR package reach.
+    !!
+  !<
+  subroutine sfr_activate_viscosity(this)
+    ! -- modules
+    use MemoryManagerModule, only: mem_reallocate
+    ! -- dummy variables
+    class(SfrType), intent(inout) :: this !< SfrType object
+    ! -- local variables
+    integer(I4B) :: i
+    integer(I4B) :: j
+    !
+    ! -- Set ivsc and reallocate viscratios to be of size MAXBOUND
+    this%ivsc = 1
+    call mem_reallocate(this%viscratios, 3, this%MAXBOUND, 'VISCRATIOS', &
+                        this%memoryPath)
+    do i = 1, this%maxbound
+      do j = 1, 3
+        this%viscratios(j, i) = DZERO
+      end do
+    end do
+    write (this%iout, '(/1x,a)') 'VISCOSITY HAS BEEN ACTIVATED FOR SFR &
+      &PACKAGE: '//trim(adjustl(this%packName))
+    !
+    ! -- return
+    return
+  end subroutine sfr_activate_viscosity
 
   !> @brief Calculate density terms
     !!
