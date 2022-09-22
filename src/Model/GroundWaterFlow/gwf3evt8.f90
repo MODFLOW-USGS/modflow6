@@ -107,7 +107,7 @@ contains
     packobj%iout = iout
     packobj%id = id
     packobj%ibcnum = ibcnum
-    packobj%ncolbnd = 3 ! Assumes NSEG = 1
+    packobj%ncolbnd = 3 ! Assumes NSEG = 1 and SURF_RATE_SPECIFIED=False
     packobj%iscloc = 2 ! sfac applies to max. ET rate
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     ! indxconvertflux is Column index of bound that will be multiplied by
@@ -294,6 +294,11 @@ contains
               else
                 this%ncolbnd = 3 + 2 * (this%nseg - 1)
               end if
+            elseif (this%nseg == 1) then
+              ! if surf_rate_specified is true, will still read petm0
+              if (this%surfratespecified) then
+                this%ncolbnd = this%ncolbnd + 1
+              end if
             end if
           case default
             write (errmsg, '(4x,a,a)') &
@@ -438,7 +443,7 @@ contains
       ! -- Ensure that all required PXDP and PETM arrays
       !    have been defined or redefined.
       if (this%surfratespecified) then
-        if (kpxdp == this%nseg .and. kpxdp == this%nseg) then
+        if (kpxdp == this%nseg .and. kpetm == this%nseg) then
           this%segsdefined = .true.
         end if
       else
