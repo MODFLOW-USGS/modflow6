@@ -21,19 +21,21 @@ module IdmLoggerModule
 
 contains
 
-  subroutine idm_log_header(component, iout)
-    character(len=*), intent(in) :: component !< path where variable is stored
+  subroutine idm_log_header(component, subcomponent, iout)
+    character(len=*), intent(in) :: component !< component name
+    character(len=*), intent(in) :: subcomponent !< subcomponent name
     integer(I4B) :: iout
 
-    write (iout, '(1x,a)') 'IDM parameter input sourcing, component='//component
+    write (iout, '(1x,a)') 'IDM parameter input sourcing of '//trim(component)//&
+      &'/'//trim(subcomponent)
   end subroutine idm_log_header
 
-  subroutine idm_log_close(component, iout)
-    character(len=*), intent(in) :: component !< path where variable is stored
+  subroutine idm_log_close(component, subcomponent, iout)
+    character(len=*), intent(in) :: component !< component name
+    character(len=*), intent(in) :: subcomponent !< subcomponent name
     integer(I4B) :: iout
 
-    write (iout, '(1x,a)') 'IDM parameter input sourcing complete, component='&
-                           &//component
+    write (iout, '(1x,a)') 'IDM parameter input sourcing complete'
   end subroutine idm_log_close
 
   !> @brief Log type specific information

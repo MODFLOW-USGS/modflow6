@@ -68,8 +68,6 @@
 		<File RelativePath="..\src\Model\Connection\MappedVariable.f90"/>
 		<File RelativePath="..\src\Model\Connection\qsort_inline.inc"/>
 		<File RelativePath="..\src\Model\Connection\SpatialModelConnection.f90"/></Filter>
-		<Filter Name="Definition">
-		<File RelativePath="..\src\Model\Definition\gwfdis.f90"/></Filter>
 		<Filter Name="Geometry">
 		<File RelativePath="..\src\Model\Geometry\BaseGeometry.f90"/>
 		<File RelativePath="..\src\Model\Geometry\CircularGeometry.f90"/>
@@ -81,6 +79,7 @@
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3chd8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3csub8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3dis8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3dis8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3disu8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3disv8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3drn8.f90"/>
@@ -92,6 +91,7 @@
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3maw8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3mvr8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3npf8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3npf8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3obs8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3oc8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3rch8.f90"/>

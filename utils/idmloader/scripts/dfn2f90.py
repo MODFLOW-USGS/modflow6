@@ -6,6 +6,7 @@ from pathlib import Path
 from enum import Enum
 
 MF6_LENVARNAME = 16
+F90_LINELEN = 82
 
 
 class Dfn2F90:
@@ -33,7 +34,7 @@ class Dfn2F90:
         self._set_param_strs()
 
     def write_f90(self, odspec=None):
-        fname = Path(odspec, f"{self.component.lower()}{self.subcomponent.lower()}.f90")
+        fname = Path(odspec, f"{self.component.lower()}3{self.subcomponent.lower()}8idm.f90")
         with open(fname, "w") as f:
 
             f.write(self._source_file_header(self.component, self.subcomponent))
@@ -139,6 +140,8 @@ class Dfn2F90:
         return f90statement
 
     def _construct_f90_param_statement(self, tuple_list):
+        attr_l = []
+        varname_l = []
         f90statement = f"    InputParamDefinitionType( &\n"
         for i, (value, varname) in enumerate(tuple_list):
             comma = ","
@@ -147,7 +150,24 @@ class Dfn2F90:
             v = f"'{value}'"
             if value in [".false.", ".true."]:
                 v = f"{value}"
-            f90statement += f"    {v}{comma} & ! {varname}\n"
+            attr_l.append(f"{v}")
+            varname_l.append(f"{varname}")
+        assert(len(attr_l) == len(varname_l))
+
+        f90statement += "    ! " + ", ".join(varname_l) + "\n"
+
+        line = '    '
+        for i,a in enumerate(attr_l):
+          # 5 == 2 (quotes around var) + 2 (comma and space after var) + 1 (ampersand)
+          if (len(line) + len(a) + 5) <= F90_LINELEN:
+            line += a + ', '
+          else:
+            f90statement += line + "&\n"
+            line = '    ' + a + ', '
+        if len(line) > 4:
+            f90statement += line.rsplit(",", 1)[0] + " &\n"
+        else:
+            f90statement = f90statement.rsplit(",", 1)[0] + " &\n"
         f90statement += f"    ), &"
 
         return f90statement
@@ -362,11 +382,12 @@ if __name__ == "__main__":
 
     fnames = [
         Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-dis.dfn"),
+        Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-npf.dfn"),
     ]
 
     for dfn in fnames:
         converter = Dfn2F90(dfnfspec=dfn)
-        converter.write_f90(odspec=os.path.join("..", "..", "..", "src", "Model", "Definition"))
+        converter.write_f90(odspec=os.path.join("..", "..", "..", "src", "Model", "GroundWaterFlow"))
         converter.warn()
 
     print("\n...done.")

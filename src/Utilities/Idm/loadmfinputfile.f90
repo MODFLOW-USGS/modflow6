@@ -25,42 +25,22 @@ module LoadMfInputModule
   public :: set_model_shape
 
   interface idm_load
-    module procedure idm_load_mf6file, idm_load_from_blockparser
+    module procedure idm_load_from_blockparser
   end interface idm_load
 
+  interface set_model_shape
+    module procedure set_model_shape_idm, set_model_shape_disv, &
+      set_model_shape_disu
+  end interface set_model_shape
+
 contains
-
-  subroutine idm_load_mf6file(mf6_input, ndim, iout)
-    type(ModflowInputType), pointer, intent(in) :: mf6_input
-    integer(I4B), pointer, intent(in) :: ndim
-    integer(I4B) :: iout
-    type(BlockParserType) :: parser
-    integer(I4B) :: inunit
-    integer(I4B) :: iblock
-
-    ! ensure aggregate definitions have dimensions
-    call update_aggregate_shapes(mf6_input, iout)
-
-    ! open the file
-    inunit = getunit()
-    call openfile(inunit, 0, mf6_input%file_spec, mf6_input%file_type)
-
-    ! initialize parser
-    call parser%initialize(inunit, iout)
-
-    ! process blocks
-    do iblock = 1, size(mf6_input%p_block_dfns)
-      call parse_block(parser, mf6_input, iblock, ndim, iout)
-    end do
-
-    ! close
-    close (inunit)
-  end subroutine idm_load_mf6file
 
   subroutine idm_load_from_blockparser(parser, filetype, filename, &
                                        component_type, subcomponent_type, &
                                        component_name, subcomponent_name, &
-                                       ndim, iout)
+                                       subpackages, iout)
+    use MemoryManagerModule, only: get_mem_rank
+    use SimVariablesModule, only: idm_context
     type(BlockParserType), intent(inout) :: parser
     character(len=*), intent(in) :: filetype
     character(len=*), intent(in) :: filename
@@ -68,16 +48,30 @@ contains
     character(len=*), intent(in) :: subcomponent_type
     character(len=*), intent(in) :: component_name
     character(len=*), intent(in) :: subcomponent_name
-    integer(I4B), pointer, intent(in) :: ndim
-    integer(I4B) :: iout
-    integer(I4B) :: iblock
+    character(len=*), dimension(:), intent(in) :: subpackages
+    integer(I4B) :: iout, iblock
+    integer(I4B), target :: ndim
     type(ModflowInputType), pointer :: mf6_input
+    character(len=LENMEMPATH) :: componentMemPath
 
     mf6_input => ModflowInput(filetype, filename, component_type, &
                               subcomponent_type, component_name, &
-                              subcomponent_name)
+                              subcomponent_name, subpackages)
 
-    call idm_log_header(mf6_input%component_name, iout)
+    componentMemPath = create_mem_path(component=mf6_input%component_name, &
+                                       context=idm_context)
+
+    call idm_log_header(mf6_input%component_name, mf6_input%subcomponent_name, &
+                        iout)
+
+    ! -- set discretization ndim
+    if (subcomponent_type == 'DIS' .or. &
+        subcomponent_type == 'DISV' .or. &
+        subcomponent_type == 'DISU') then
+      ndim = -1
+    else
+      call get_mem_rank('MODEL_SHAPE', componentMemPath, ndim)
+    end if
 
     ! ensure aggregate definitions have dimensions
     call update_aggregate_shapes(mf6_input, iout)
@@ -85,9 +79,15 @@ contains
     ! process blocks
     do iblock = 1, size(mf6_input%p_block_dfns)
       call parse_block(parser, mf6_input, iblock, ndim, iout)
+      if (ndim == -1 .and. &
+          mf6_input%p_block_dfns(iblock)%blockname == 'DIMENSIONS') then
+        call set_model_shape(mf6_input%file_type, componentMemPath, &
+                             mf6_input%memoryPath)
+      end if
     end do
 
-    call idm_log_close(mf6_input%component_name, iout)
+    call idm_log_close(mf6_input%component_name, mf6_input%subcomponent_name, &
+                       iout)
   end subroutine idm_load_from_blockparser
 
   subroutine parse_block(parser, mf6_input, iblock, ndim, iout)
@@ -126,6 +126,36 @@ contains
     return
   end subroutine parse_block
 
+  subroutine subpackage_check(parser, mf6_input, checktag, iout)
+    type(BlockParserType), intent(inout) :: parser
+    type(ModflowInputType), pointer, intent(in) :: mf6_input
+    character(len=LINELENGTH), intent(in) :: checktag
+    integer(I4B), intent(in) :: iout
+    character(len=LINELENGTH) :: tag, fname_tag
+    type(InputParamDefinitionType), pointer :: idt
+    integer(I4B) :: isubpkg
+
+    do isubpkg = 1, size(mf6_input%subpackages)
+      ! check if tag is subpackage file type- if so, process
+      if (checktag == mf6_input%subpackages(isubpkg)) then
+        fname_tag = trim(checktag)//'_FILENAME'
+        ! verify FILEIN is next tag but no need to memory load
+        call parser%GetStringCaps(tag)
+        if (tag == 'FILEIN') then
+          idt => get_param_definition_type(mf6_input%p_param_dfns, &
+                                           mf6_input%component_type, &
+                                           mf6_input%subcomponent_type, &
+                                           fname_tag)
+          call load_string_type(parser, idt, mf6_input%memoryPath, iout)
+        else
+          errmsg = 'Subpackage keyword must be followed by "FILEIN" '// &
+                   'then by filename.'
+          call store_error(errmsg)
+        end if
+      end if
+    end do
+  end subroutine subpackage_check
+
   recursive subroutine parse_tag(parser, mf6_input, iblock, ndim, iout, &
                                  recursive_call)
     type(BlockParserType), intent(inout) :: parser
@@ -156,6 +186,9 @@ contains
     select case (idt%datatype)
     case ('KEYWORD')
       call load_keyword_type(parser, idt, mf6_input%memoryPath, iout)
+      call subpackage_check(parser, mf6_input, tag, iout)
+      if (mf6_input%p_block_dfns(iblock)%blockname == 'OPTIONS' .and. &
+          idt%tagname(1:4) == 'DEV_') call parser%DevOpt()
     case ('STRING')
       call load_string_type(parser, idt, mf6_input%memoryPath, iout)
     case ('INTEGER')
@@ -281,7 +314,7 @@ contains
   end subroutine load_integer_type
 
   subroutine load_integer1d_type(parser, idt, mf6_input, iout)
-    use SimVariablesModule, only: idm_mempath_prefix
+    use SimVariablesModule, only: idm_context
     type(BlockParserType), intent(inout) :: parser
     type(InputParamDefinitionType), intent(in) :: idt
     type(ModflowInputType), pointer, intent(in) :: mf6_input
@@ -293,7 +326,7 @@ contains
     character(len=LENMEMPATH) :: idmMemoryPath
 
     idmMemoryPath = create_mem_path(component=mf6_input%component_name, &
-                                    context=idm_mempath_prefix)
+                                    context=idm_context)
 
     if (idt%shape == 'NODES') then
       call mem_setptr(mshape, 'MODEL_SHAPE', idmMemoryPath)
@@ -317,15 +350,23 @@ contains
     integer(I4B), pointer, intent(in) :: ndim
     integer(I4B), intent(in) :: iout
     integer(I4B), dimension(:, :, :), pointer, contiguous :: int3d
+    integer(I4B), dimension(:), contiguous, pointer :: mshape
     integer(I4B), pointer :: nsize1
     integer(I4B), pointer :: nsize2
     integer(I4B), pointer :: nsize3
     character(len=LINELENGTH) :: keyword
 
     ! find sizes in memory manager
-    call mem_setptr(nsize1, 'NCOL', memoryPath)
-    call mem_setptr(nsize2, 'NROW', memoryPath)
-    call mem_setptr(nsize3, 'NLAY', memoryPath)
+    if (ndim == -1) then
+      call mem_setptr(nsize1, 'NCOL', memoryPath)
+      call mem_setptr(nsize2, 'NROW', memoryPath)
+      call mem_setptr(nsize3, 'NLAY', memoryPath)
+    else
+      call mem_setptr(mshape, 'MODEL_SHAPE', memoryPath)
+      nsize1 = mshape(0)
+      nsize2 = mshape(1)
+      nsize3 = mshape(2)
+    end if
 
     ! allocate the array using the memory manager
     call mem_allocate(int3d, nsize1, nsize2, nsize3, idt%mf6varname, memoryPath)
@@ -366,7 +407,7 @@ contains
   end subroutine load_double_type
 
   subroutine load_double1d_type(parser, idt, mf6_input, iout)
-    use SimVariablesModule, only: idm_mempath_prefix
+    use SimVariablesModule, only: idm_context
     type(BlockParserType), intent(inout) :: parser
     type(InputParamDefinitionType), intent(in) :: idt
     type(ModflowInputType), pointer, intent(in) :: mf6_input
@@ -378,7 +419,7 @@ contains
     character(len=LENMEMPATH) :: idmMemoryPath
 
     idmMemoryPath = create_mem_path(component=mf6_input%component_name, &
-                                    context=idm_mempath_prefix)
+                                    context=idm_context)
 
     if (idt%shape == 'NODES') then
       call mem_setptr(mshape, 'MODEL_SHAPE', idmMemoryPath)
@@ -403,12 +444,19 @@ contains
     integer(I4B), pointer, intent(in) :: ndim
     integer(I4B), intent(in) :: iout
     real(DP), dimension(:, :), pointer, contiguous :: dbl2d
+    integer(I4B), dimension(:), contiguous, pointer :: mshape
     integer(I4B), pointer :: nsize1
     integer(I4B), pointer :: nsize2
 
     ! find sizes in memory manager
-    call mem_setptr(nsize1, 'NCOL', memoryPath)
-    call mem_setptr(nsize2, 'NROW', memoryPath)
+    if (ndim == -1) then
+      call mem_setptr(nsize1, 'NCOL', memoryPath)
+      call mem_setptr(nsize2, 'NROW', memoryPath)
+    else
+      call mem_setptr(mshape, 'MODEL_SHAPE', memoryPath)
+      nsize1 = mshape(0)
+      nsize2 = mshape(1)
+    end if
 
     ! allocate the array using the memory manager
     call mem_allocate(dbl2d, nsize1, nsize2, idt%mf6varname, memoryPath)
@@ -428,15 +476,23 @@ contains
     integer(I4B), pointer, intent(in) :: ndim
     integer(I4B), intent(in) :: iout
     real(DP), dimension(:, :, :), pointer, contiguous :: dbl3d
+    integer(I4B), dimension(:), contiguous, pointer :: mshape
     integer(I4B), pointer :: nsize1
     integer(I4B), pointer :: nsize2
     integer(I4B), pointer :: nsize3
     character(len=LINELENGTH) :: keyword
 
     ! find sizes in memory manager
-    call mem_setptr(nsize1, 'NCOL', memoryPath)
-    call mem_setptr(nsize2, 'NROW', memoryPath)
-    call mem_setptr(nsize3, 'NLAY', memoryPath)
+    if (ndim == -1) then
+      call mem_setptr(nsize1, 'NCOL', memoryPath)
+      call mem_setptr(nsize2, 'NROW', memoryPath)
+      call mem_setptr(nsize3, 'NLAY', memoryPath)
+    else
+      call mem_setptr(mshape, 'MODEL_SHAPE', memoryPath)
+      nsize1 = mshape(0)
+      nsize2 = mshape(1)
+      nsize3 = mshape(2)
+    end if
 
     ! allocate the array using the memory manager
     call mem_allocate(dbl3d, nsize1, nsize2, nsize3, idt%mf6varname, memoryPath)
@@ -464,7 +520,7 @@ contains
     return
   end subroutine load_double3d_type
 
-  subroutine set_model_shape(ftype, model_mempath, dis_mempath)
+  subroutine set_model_shape_idm(ftype, model_mempath, dis_mempath)
     character(len=*) :: ftype
     character(len=*), intent(in) :: model_mempath
     character(len=*), intent(in) :: dis_mempath
@@ -492,7 +548,29 @@ contains
     end select
 
     return
-  end subroutine set_model_shape
+  end subroutine set_model_shape_idm
+
+  subroutine set_model_shape_disv(model_mempath, nlay, ncpl, nvert)
+    character(len=*), intent(in) :: model_mempath
+    integer(I4B), pointer, intent(in) :: nlay
+    integer(I4B), pointer, intent(in) :: ncpl
+    integer(I4B), pointer, intent(in) :: nvert
+    integer(I4B), dimension(:), pointer, contiguous :: model_shape
+
+    call mem_allocate(model_shape, 2, 'MODEL_SHAPE', model_mempath)
+    model_shape = [nlay, ncpl]
+
+  end subroutine set_model_shape_disv
+
+  subroutine set_model_shape_disu(model_mempath, nodes)
+    character(len=*), intent(in) :: model_mempath
+    integer(I4B), pointer, intent(in) :: nodes
+    integer(I4B), dimension(:), pointer, contiguous :: model_shape
+
+    call mem_allocate(model_shape, 1, 'MODEL_SHAPE', model_mempath)
+    model_shape = [nodes]
+
+  end subroutine set_model_shape_disu
 
   subroutine update_aggregate_shapes(mf6_input, iout)
     type(ModflowInputType), pointer, intent(in) :: mf6_input
@@ -576,6 +654,7 @@ contains
     integer(I4B) :: k1
     integer(I4B) :: k2
     integer(I4B) :: iout
+    character(len=LINELENGTH) :: keyword
 
     ndim = size(mshape)
     if (present(dblarray)) then
@@ -611,7 +690,8 @@ contains
       k2 = ndim1
     end if
 
-    if (layered) then
+    call parser%GetStringCaps(keyword)
+    if (keyword == 'LAYERED' .and. layered) then
 
       ! float array
       if (present(dblarray)) then

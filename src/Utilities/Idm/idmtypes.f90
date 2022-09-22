@@ -2,14 +2,14 @@ module IdmTypesModule
 
   use KindModule, only: I4B, LGP
   use ConstantsModule, only: LENMEMPATH, LENCOMPONENTNAME, LENMEMSEPARATOR, &
-                             LENFTYPE, MAXCHARLEN
+                             LENPACKAGETYPE, LENFTYPE, MAXCHARLEN
   use MemoryHelperModule, only: create_mem_path
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
   use InputDefinitionSelectorModule, only: block_definitions, &
                                            aggregate_definitions, &
                                            param_definitions
-  use SimVariablesModule, only: idm_mempath_prefix
+  use SimVariablesModule, only: idm_context
 
   implicit none
   private
@@ -24,6 +24,7 @@ module IdmTypesModule
     character(len=LENCOMPONENTNAME) :: subcomponent_name
     character(len=LENMEMPATH) :: memoryPath
     character(len=LENMEMPATH) :: component
+    character(len=LENPACKAGETYPE), allocatable, dimension(:) :: subpackages
     type(InputBlockDefinitionType), dimension(:), pointer :: p_block_dfns
     type(InputParamDefinitionType), dimension(:), pointer :: p_aggregate_dfns
     type(InputParamDefinitionType), dimension(:), pointer :: p_param_dfns
@@ -32,7 +33,8 @@ module IdmTypesModule
 contains
 
   function ModflowInput(ftype, fspec, component_type, &
-                        subcomponent_type, component_name, subcomponent_name) &
+                        subcomponent_type, component_name, subcomponent_name, &
+                        subpackages) &
     result(mf6_input)
     character(len=*), intent(in) :: ftype
     character(len=*), intent(in) :: fspec
@@ -40,6 +42,7 @@ contains
     character(len=*), intent(in) :: subcomponent_type
     character(len=*), intent(in) :: component_name
     character(len=*), intent(in) :: subcomponent_name
+    character(len=*), dimension(:), intent(in) :: subpackages
     type(ModflowInputType), pointer :: mf6_input
 
     allocate (mf6_input)
@@ -49,9 +52,11 @@ contains
     mf6_input%subcomponent_type = trim(subcomponent_type)
     mf6_input%component_name = trim(component_name)
     mf6_input%subcomponent_name = trim(subcomponent_name)
+    allocate (mf6_input%subpackages(size(subpackages)))
+    mf6_input%subpackages = subpackages
 
     mf6_input%memoryPath = create_mem_path(component_name, subcomponent_name, &
-                                           idm_mempath_prefix)
+                                           idm_context)
     mf6_input%component = trim(component_type)//'/'//trim(subcomponent_type)
 
     mf6_input%p_block_dfns => block_definitions(mf6_input%component)
