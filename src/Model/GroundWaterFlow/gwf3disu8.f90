@@ -42,6 +42,7 @@ module GwfDisuModule
     logical(LGP) :: readFromFile ! True, when DIS is read from file (almost always)
   contains
     procedure :: dis_df => disu_df
+    procedure :: disu_load
     procedure :: dis_da => disu_da
     procedure :: get_cellxy => get_cellxy_disu
     procedure :: get_dis_type => get_dis_type
@@ -102,8 +103,11 @@ contains
     dis%inunit = inunit
     dis%iout = iout
     !
-    ! -- Initialize block parser
-    call dis%parser%Initialize(dis%inunit, dis%iout)
+    ! -- initialize parser and load the disu input file
+    if (inunit > 0) then
+      call dis%parser%Initialize(inunit, iout)
+      call disnew%disu_load()
+    end if
     !
     ! -- Return
     return
@@ -229,7 +233,7 @@ contains
     return
   end subroutine disu_init_mem
 
-  subroutine disu_df(this)
+  subroutine disu_load(this)
 ! ******************************************************************************
 ! disu_df -- Read discretization information from DISU input file
 ! ******************************************************************************
@@ -244,41 +248,52 @@ contains
     character(len=LENMEMPATH) :: idmModelMemoryPath
 ! ------------------------------------------------------------------------------
     !
-    ! -- read data from file
-    if (this%inunit /= 0) then
-      !
-      ! -- Identify package
-      write (this%iout, 1) this%inunit
-1     format(1X, /1X, 'DISU -- UNSTRUCTURED GRID DISCRETIZATION PACKAGE,', &
-             ' VERSION 2 : 3/27/2014 - INPUT READ FROM UNIT ', I0, //)
-      !
-      call this%read_options()
-      call this%read_dimensions()
-      call this%read_mf6_griddata()
-      call this%read_connectivity()
-      !
-      ! -- If NVERT specified and greater than 0, then read VERTICES and CELL2D
-      if (this%nvert > 0) then
-        call this%read_vertices()
-        call this%read_cell2d()
-      else
-        ! -- connection direction information cannot be calculated
-        this%icondir = 0
-      end if
+    ! -- Identify package
+    write (this%iout, 1) this%inunit
+1   format(1X, /1X, 'DISU -- UNSTRUCTURED GRID DISCRETIZATION PACKAGE,', &
+           ' VERSION 2 : 3/27/2014 - INPUT READ FROM UNIT ', I0, //)
+    !
+    call this%read_options()
+    call this%read_dimensions()
+    call this%read_mf6_griddata()
+    call this%read_connectivity()
+    !
+    ! -- If NVERT specified and greater than 0, then read VERTICES and CELL2D
+    if (this%nvert > 0) then
+      call this%read_vertices()
+      call this%read_cell2d()
+    else
+      ! -- connection direction information cannot be calculated
+      this%icondir = 0
     end if
     !
     ! -- Make some final disu checks on the non-reduced user-provided
     !    input
     call this%disu_ck()
     !
-    ! -- Finalize the grid by creating the connection object and reducing the
-    !    grid using IDOMAIN, if necessary
-    call this%grid_finalize()
-    !
     ! -- IDM set the model shape
     idmModelMemoryPath = create_mem_path(component=this%name_model, &
                                          context=idm_context)
     call set_model_shape(idmModelMemoryPath, this%nodesuser)
+    !
+    ! -- Return
+    return
+  end subroutine disu_load
+
+  subroutine disu_df(this)
+! ******************************************************************************
+! disu_df -- Read discretization information from DISU input file
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwfDisuType) :: this
+! ------------------------------------------------------------------------------
+    !
+    ! -- Finalize the grid by creating the connection object and reducing the
+    !    grid using IDOMAIN, if necessary
+    call this%grid_finalize()
     !
     ! -- Return
     return

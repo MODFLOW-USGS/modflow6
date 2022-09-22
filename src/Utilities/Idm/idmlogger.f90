@@ -1,7 +1,7 @@
 module IdmLoggerModule
 
   use KindModule, only: DP, LGP, I4B, I8B
-  use ConstantsModule, only: MAXMEMRANK
+  use ConstantsModule, only: MAXMEMRANK, LINELENGTH
   use SimModule, only: store_error
   use MemoryManagerModule, only: get_mem_rank, get_mem_shape
 
@@ -24,10 +24,12 @@ contains
   subroutine idm_log_header(component, subcomponent, iout)
     character(len=*), intent(in) :: component !< component name
     character(len=*), intent(in) :: subcomponent !< subcomponent name
-    integer(I4B) :: iout
+    integer(I4B), intent(in) :: iout
 
-    write (iout, '(1x,a)') 'IDM parameter input sourcing of '//trim(component)//&
-      &'/'//trim(subcomponent)
+    if (iout > 0) then
+      write (iout, '(1x,a)') 'Loading input for '//trim(component)//&
+        &'/'//trim(subcomponent)
+    end if
   end subroutine idm_log_header
 
   subroutine idm_log_close(component, subcomponent, iout)
@@ -35,241 +37,166 @@ contains
     character(len=*), intent(in) :: subcomponent !< subcomponent name
     integer(I4B) :: iout
 
-    write (iout, '(1x,a)') 'IDM parameter input sourcing complete'
+    write (iout, '(1x,a,/)') 'Loading input complete...'
   end subroutine idm_log_close
 
   !> @brief Log type specific information
   !<
   subroutine idm_log_var_logical(p_mem, varname, mempath, iout)
-    logical(LGP), pointer, intent(inout) :: p_mem !< pointer to logical scalar
+    logical(LGP), intent(in) :: p_mem !< logical scalar
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
     integer(I4B) :: iout
 
-    write (iout, '(3x,a)') trim(varname)
-    write (iout, '(5x,a,l)') 'VALUE:', p_mem
+    write (iout, '(3x,a, " = ", l)') trim(varname), p_mem
   end subroutine idm_log_var_logical
 
   !> @brief Log type specific information
   !<
   subroutine idm_log_var_int(p_mem, varname, mempath, iout)
-    integer(I4B), pointer, intent(inout) :: p_mem !< pointer to int scalar
+    integer(I4B), intent(in) :: p_mem !< int scalar
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
     integer(I4B) :: iout
 
-    write (iout, '(3x,a)') trim(varname)
-    write (iout, '(5x,a,i3)') 'VALUE:', p_mem
+    write (iout, '(3x,a, " = ", i0)') trim(varname), p_mem
   end subroutine idm_log_var_int
 
   !> @brief Log type specific information
   !<
   subroutine idm_log_var_int1d(p_mem, varname, mempath, iout)
-    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: p_mem !< pointer to 1d int array
+    integer(I4B), dimension(:), contiguous, intent(in) :: p_mem !< 1d int array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
     integer(I4B) :: iout
-    integer(I4B) :: rank
-    integer(I4B), dimension(1) :: mem_shape, varubound, varlbound, varmaxloc, &
-                                  varminloc
+    integer(I4B) :: min_val, max_val
 
-    call get_mem_rank(varname, mempath, rank)
-    call get_mem_shape(varname, mempath, mem_shape)
-    varubound = ubound(p_mem)
-    varlbound = lbound(p_mem)
-    varmaxloc = maxloc(p_mem)
-    varminloc = minloc(p_mem)
-
-    write (iout, '(3x,a)') trim(varname)
-    write (iout, '(5x,a,i0)') 'RANK:', rank
-    write (iout, '(5x,a,i0)') 'SIZE:', size(p_mem)
-    write (iout, "(5x,a,' (',i0,')')") 'SHAPE:', mem_shape(1)
-    write (iout, "(5x,a,' (',i0,')')") 'UBOUND:', varubound(1)
-    write (iout, "(5x,a,' (',i0,')')") 'LBOUND:', varlbound(1)
-    write (iout, *) '    MAXVAL:', maxval(p_mem)
-    write (iout, "(5x,a,' (',i0,')')") 'MAXLOC:', varmaxloc(1)
-    write (iout, *) '    MINVAL:', minval(p_mem)
-    write (iout, "(5x,a,' (',i0,')')") 'MINLOC:', varminloc(1)
+    min_val = minval(p_mem)
+    max_val = maxval(p_mem)
+    if (min_val == max_val) then
+      write (iout, '(3x,a, " = ", i0)') trim(varname), min_val
+    else
+      write (iout, '(3x, a, a, i0, a, i0)') &
+        trim(varname), &
+        ' = variable 1D integer array ranging from ', &
+        min_val, ' to ', max_val
+    end if
   end subroutine idm_log_var_int1d
 
   !> @brief Log type specific information
   !<
   subroutine idm_log_var_int2d(p_mem, varname, mempath, iout)
-    integer(I4B), dimension(:, :), pointer, contiguous, intent(inout) :: p_mem !< pointer to 2d int array
+    integer(I4B), dimension(:, :), contiguous, intent(in) :: p_mem !< 2d int array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
     integer(I4B) :: iout
-    integer(I4B) :: rank
-    integer(I4B), dimension(2) :: mem_shape, varubound, varlbound, varmaxloc, &
-                                  varminloc
+    integer(I4B) :: min_val, max_val
 
-    call get_mem_rank(varname, mempath, rank)
-    call get_mem_shape(varname, mempath, mem_shape)
-    varubound = ubound(p_mem)
-    varlbound = lbound(p_mem)
-    varmaxloc = maxloc(p_mem)
-    varminloc = minloc(p_mem)
-
-    write (iout, '(3x,a)') trim(varname)
-    write (iout, '(5x,a,i0)') 'RANK:', rank
-    write (iout, '(5x,a,i0)') 'SIZE:', size(p_mem)
-    write (iout, "(5x,a,' (',i0,',',i0,')')") 'SHAPE:', mem_shape(1), mem_shape(2)
-    write (iout, "(5x,a,' (',i0,',',i0,')')") 'UBOUND:', varubound(1), &
-      varubound(2)
-    write (iout, "(5x,a,' (',i0,',',i0,')')") 'LBOUND:', varlbound(1), &
-      varlbound(2)
-    write (iout, *) '    MAXVAL:', maxval(p_mem)
-    write (iout, "(5x,a,' (',i0,',',i0,')')") 'MAXLOC:', varmaxloc(1), &
-      varmaxloc(2)
-    write (iout, *) '    MINVAL:', minval(p_mem)
-    write (iout, "(5x,a,' (',i0,',',i0,')')") 'MINLOC:', varminloc(1), &
-      varminloc(2)
+    min_val = minval(p_mem)
+    max_val = maxval(p_mem)
+    if (min_val == max_val) then
+      write (iout, '(3x,a, " = ", i0)') trim(varname), min_val
+    else
+      write (iout, '(3x, a, a, i0, a, i0)') &
+        trim(varname), &
+        ' = variable 2D integer array ranging from ', &
+        min_val, ' to ', max_val
+    end if
   end subroutine idm_log_var_int2d
 
   !> @brief Log type specific information
   !<
   subroutine idm_log_var_int3d(p_mem, varname, mempath, iout)
-    integer(I4B), dimension(:, :, :), pointer, contiguous, intent(inout) :: p_mem !< pointer to 3d int array
+    integer(I4B), dimension(:, :, :), contiguous, intent(in) :: p_mem !< 3d int array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
     integer(I4B) :: iout
-    integer(I4B) :: rank
-    integer(I4B), dimension(MAXMEMRANK) :: mem_shape, varubound, varlbound, &
-                                           varmaxloc, varminloc
+    integer(I4B) :: min_val, max_val
 
-    call get_mem_rank(varname, mempath, rank)
-    call get_mem_shape(varname, mempath, mem_shape)
-    varubound = ubound(p_mem)
-    varlbound = lbound(p_mem)
-    varmaxloc = maxloc(p_mem)
-    varminloc = minloc(p_mem)
-
-    write (iout, '(3x,a)') trim(varname)
-    write (iout, '(5x,a,i0)') 'RANK:', rank
-    write (iout, '(5x,a,i0)') 'SIZE:', size(p_mem)
-    write (iout, "(5x,a,' (',i0,',',i0,',',i0,')')") 'SHAPE:', mem_shape(1), &
-      mem_shape(2), mem_shape(3)
-    write (iout, "(5x,a,' (',i0,',',i0,',',i0,')')") 'UBOUND:', varubound(1), &
-      varubound(2), varubound(3)
-    write (iout, "(5x,a,' (',i0,',',i0,',',i0,')')") 'LBOUND:', varlbound(1), &
-      varlbound(2), varlbound(3)
-    write (iout, *) '    MAXVAL:', maxval(p_mem)
-    write (iout, "(5x,a,' (',i0,',',i0,',',i0,')')") 'MAXLOC:', varmaxloc(1), &
-      varmaxloc(2), varmaxloc(3)
-    write (iout, *) '    MINVAL:', minval(p_mem)
-    write (iout, "(5x,a,' (',i0,',',i0,',',i0,')')") 'MINLOC:', varminloc(1), &
-      varminloc(2), varminloc(3)
+    min_val = minval(p_mem)
+    max_val = maxval(p_mem)
+    if (min_val == max_val) then
+      write (iout, '(3x,a, " = ", i0)') trim(varname), min_val
+    else
+      write (iout, '(3x, a, a, i0, a, i0)') &
+        trim(varname), &
+        ' = variable 3D integer array ranging from ', &
+        min_val, ' to ', max_val
+    end if
   end subroutine idm_log_var_int3d
 
   !> @brief Log type specific information
   !<
   subroutine idm_log_var_dbl(p_mem, varname, mempath, iout)
-    real(DP), pointer, intent(inout) :: p_mem !< pointer to dbl scalar
+    real(DP), intent(in) :: p_mem !< dbl scalar
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
     integer(I4B) :: iout
 
-    write (iout, '(3x,a)') trim(varname)
-    write (iout, '(5x,a,1pg24.15)') 'VALUE:', p_mem
+    write (iout, '(3x,a, " = ", G0)') trim(varname), p_mem
   end subroutine idm_log_var_dbl
 
   !> @brief Log type specific information
   !<
   subroutine idm_log_var_dbl1d(p_mem, varname, mempath, iout)
-    real(DP), dimension(:), pointer, contiguous, intent(inout) :: p_mem !< pointer to 1d real array
+    real(DP), dimension(:), contiguous, intent(in) :: p_mem !< 1d real array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
     integer(I4B) :: iout
-    integer(I4B) :: rank
-    integer(I4B), dimension(1) :: mem_shape, varubound, varlbound, varmaxloc, &
-                                  varminloc
+    real(DP) :: min_val, max_val
 
-    call get_mem_rank(varname, mempath, rank)
-    call get_mem_shape(varname, mempath, mem_shape)
-    varubound = ubound(p_mem)
-    varlbound = lbound(p_mem)
-    varmaxloc = maxloc(p_mem)
-    varminloc = minloc(p_mem)
-
-    write (iout, '(3x,a)') trim(varname)
-    write (iout, '(5x,a,i0)') 'RANK:', rank
-    write (iout, '(5x,a,i0)') 'SIZE:', size(p_mem)
-    write (iout, "(5x,a,' (',i0,')')") 'SHAPE:', mem_shape(1)
-    write (iout, "(5x,a,' (',i0,')')") 'UBOUND:', varubound(1)
-    write (iout, "(5x,a,' (',i0,')')") 'LBOUND:', varlbound(1)
-    write (iout, *) '    MAXVAL:', maxval(p_mem)
-    write (iout, "(5x,a,' (',i0,')')") 'MAXLOC:', varmaxloc(1)
-    write (iout, *) '    MINVAL:', minval(p_mem)
-    write (iout, "(5x,a,' (',i0,')')") 'MINLOC:', varminloc(1)
+    min_val = minval(p_mem)
+    max_val = maxval(p_mem)
+    if (min_val == max_val) then
+      write (iout, '(3x,a, " = ", G0)') trim(varname), min_val
+    else
+      write (iout, '(3x, a, a, G0, a, G0)') &
+        trim(varname), &
+        ' = variable 1D double precision array ranging from ', &
+        min_val, ' to ', max_val
+    end if
   end subroutine idm_log_var_dbl1d
 
   !> @brief Log type specific information
   !<
   subroutine idm_log_var_dbl2d(p_mem, varname, mempath, iout)
-    real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: p_mem !< pointer to 2d dbl array
+    real(DP), dimension(:, :), contiguous, intent(in) :: p_mem !< 2d dbl array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
     integer(I4B) :: iout
-    integer(I4B) :: rank
-    integer(I4B), dimension(2) :: mem_shape, varubound, varlbound, varmaxloc, &
-                                  varminloc
+    real(DP) :: min_val, max_val
 
-    call get_mem_rank(varname, mempath, rank)
-    call get_mem_shape(varname, mempath, mem_shape)
-    varubound = ubound(p_mem)
-    varlbound = lbound(p_mem)
-    varmaxloc = maxloc(p_mem)
-    varminloc = minloc(p_mem)
-
-    write (iout, '(3x,a)') trim(varname)
-    write (iout, '(5x,a,i0)') 'RANK:', rank
-    write (iout, '(5x,a,i0)') 'SIZE:', size(p_mem)
-    write (iout, "(5x,a,' (',i0,',',i0,')')") 'SHAPE:', mem_shape(1), mem_shape(2)
-    write (iout, "(5x,a,' (',i0,',',i0,')')") 'UBOUND:', varubound(1), &
-      varubound(2)
-    write (iout, "(5x,a,' (',i0,',',i0,')')") 'LBOUND:', varlbound(1), &
-      varlbound(2)
-    write (iout, *) '    MAXVAL:', maxval(p_mem)
-    write (iout, "(5x,a,' (',i0,',',i0,')')") 'MAXLOC:', varmaxloc(1), &
-      varmaxloc(2)
-    write (iout, *) '    MINVAL:', minval(p_mem)
-    write (iout, "(5x,a,' (',i0,',',i0,')')") 'MINLOC:', varminloc(1), &
-      varminloc(2)
+    min_val = minval(p_mem)
+    max_val = maxval(p_mem)
+    if (min_val == max_val) then
+      write (iout, '(3x,a, " = ", G0)') trim(varname), min_val
+    else
+      write (iout, '(3x, a, a, G0, a, G0)') &
+        trim(varname), &
+        ' = variable 2D double precision array ranging from ', &
+        min_val, ' to ', max_val
+    end if
   end subroutine idm_log_var_dbl2d
 
   !> @brief Log type specific information
   !<
   subroutine idm_log_var_dbl3d(p_mem, varname, mempath, iout)
-    real(DP), dimension(:, :, :), pointer, contiguous, intent(inout) :: p_mem !< pointer to 3d dbl array
+    real(DP), dimension(:, :, :), contiguous, intent(in) :: p_mem !< 3d dbl array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
     integer(I4B) :: iout
-    integer(I4B) :: rank
-    integer(I4B), dimension(MAXMEMRANK) :: mem_shape, varubound, varlbound, &
-                                           varmaxloc, varminloc
+    real(DP) :: min_val, max_val
 
-    call get_mem_rank(varname, mempath, rank)
-    call get_mem_shape(varname, mempath, mem_shape)
-    varubound = ubound(p_mem)
-    varlbound = lbound(p_mem)
-    varmaxloc = maxloc(p_mem)
-    varminloc = minloc(p_mem)
-
-    write (iout, '(3x,a)') trim(varname)
-    write (iout, '(5x,a,i0)') 'RANK:', rank
-    write (iout, '(5x,a,i0)') 'SIZE:', size(p_mem)
-    write (iout, "(5x,a,' (',i0,',',i0,',',i0,')')") 'SHAPE:', mem_shape(1), &
-      mem_shape(2), mem_shape(3)
-    write (iout, "(5x,a,' (',i0,',',i0,',',i0,')')") 'UBOUND:', varubound(1), &
-      varubound(2), varubound(3)
-    write (iout, "(5x,a,' (',i0,',',i0,',',i0,')')") 'LBOUND:', varlbound(1), &
-      varlbound(2), varlbound(3)
-    write (iout, *) '    MAXVAL:', maxval(p_mem)
-    write (iout, "(5x,a,' (',i0,',',i0,',',i0,')')") 'MAXLOC:', varmaxloc(1), &
-      varmaxloc(2), varmaxloc(3)
-    write (iout, *) '    MINVAL:', minval(p_mem)
-    write (iout, "(5x,a,' (',i0,',',i0,',',i0,')')") 'MINLOC:', varminloc(1), &
-      varminloc(2), varminloc(3)
+    min_val = minval(p_mem)
+    max_val = maxval(p_mem)
+    if (min_val == max_val) then
+      write (iout, '(3x,a, " = ", G0)') trim(varname), min_val
+    else
+      write (iout, '(3x, a, a, G0, a, G0)') &
+        trim(varname), &
+        ' = variable 3D double precision array ranging from ', &
+        min_val, ' to ', max_val
+    end if
   end subroutine idm_log_var_dbl3d
 
 end module IdmLoggerModule
