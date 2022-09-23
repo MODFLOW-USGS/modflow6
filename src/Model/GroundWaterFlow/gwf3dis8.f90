@@ -49,9 +49,9 @@ module GwfDisModule
     procedure :: connection_vector
     procedure :: connection_normal
     ! -- private
-    procedure :: source_idm_options
-    procedure :: source_idm_dimensions
-    procedure :: source_idm_mf6_griddata
+    procedure :: source_dis_options
+    procedure :: source_dis_dimensions
+    procedure :: source_dis_griddata
     procedure :: log_dis_options
     procedure :: log_dis_dimensions
     procedure :: log_dis_griddata
@@ -211,13 +211,13 @@ contains
     if (this%inunit /= 0) then
       !
       ! -- source options
-      call this%source_idm_options()
+      call this%source_dis_options()
       !
       ! -- source dimensions
-      call this%source_idm_dimensions()
+      call this%source_dis_dimensions()
       !
       ! -- source griddata
-      call this%source_idm_mf6_griddata()
+      call this%source_dis_griddata()
     end if
     !
     ! -- Final grid initialization
@@ -307,7 +307,7 @@ contains
 
   !> @brief Copy options from IDM into package
   !<
-  subroutine source_idm_options(this)
+  subroutine source_dis_options(this)
     ! -- modules
     use KindModule, only: LGP
     use MemoryTypeModule, only: MemoryType
@@ -339,11 +339,11 @@ contains
     !
     ! -- Return
     return
-  end subroutine source_idm_options
+  end subroutine source_dis_options
 
   !> @brief Copy dimensions from IDM into package
   !<
-  subroutine source_idm_dimensions(this)
+  subroutine source_dis_dimensions(this)
     use KindModule, only: LGP
     use MemoryTypeModule, only: MemoryType
     use MemoryManagerExtModule, only: mem_set_value
@@ -410,7 +410,7 @@ contains
     !
     ! -- Return
     return
-  end subroutine source_idm_dimensions
+  end subroutine source_dis_dimensions
 
   !> @brief Write dimensions to list file
   !<
@@ -436,9 +436,9 @@ contains
 
   end subroutine log_dis_dimensions
 
-  subroutine source_idm_mf6_griddata(this)
+  subroutine source_dis_griddata(this)
 ! ******************************************************************************
-! source_idm_mf6_griddata -- update simulation mempath griddata
+! source_dis_griddata -- update simulation mempath griddata
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -472,7 +472,7 @@ contains
     !
     ! -- Return
     return
-  end subroutine source_idm_mf6_griddata
+  end subroutine source_dis_griddata
 
   !> @brief Write dimensions to list file
   !<

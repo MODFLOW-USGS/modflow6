@@ -136,10 +136,8 @@ contains
     integer(I4B) :: isubpkg
 
     do isubpkg = 1, size(mf6_input%subpackages)
-      ! check if tag is subpackage file type- if so, process
       if (checktag == mf6_input%subpackages(isubpkg)) then
         fname_tag = trim(checktag)//'_FILENAME'
-        ! verify FILEIN is next tag but no need to memory load
         call parser%GetStringCaps(tag)
         if (tag == 'FILEIN') then
           idt => get_param_definition_type(mf6_input%p_param_dfns, &

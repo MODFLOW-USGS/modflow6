@@ -27,6 +27,13 @@ module GwtDspModule
     real(DP), dimension(:), pointer, contiguous :: atv => null() ! transverse vertical dispersivity
     integer(I4B), pointer :: idiffc => null() ! flag indicating diffusion is active
     integer(I4B), pointer :: idisp => null() ! flag indicating mechanical dispersion is active
+    integer(I4B), pointer :: ialh => null() ! longitudinal horizontal dispersivity data flag
+    integer(I4B), pointer :: ialv => null() ! longitudinal vertical dispersivity data flag
+    integer(I4B), pointer :: iath1 => null() ! transverse horizontal dispersivity data flag
+    integer(I4B), pointer :: iath2 => null() ! transverse horizontal dispersivity data flag
+    integer(I4B), pointer :: iatv => null() ! transverse vertical dispersivity data flag
+    integer(I4B), pointer :: ixt3doff => null() ! xt3d off flag, xt3d is set inactive if 1
+    integer(I4B), pointer :: ixt3drhs => null() ! xt3d rhs flag, xt3d rhs is set active if 1
     integer(I4B), pointer :: ixt3d => null() ! flag indicating xt3d is active
     type(Xt3dType), pointer :: xt3d => null() ! xt3d object
     real(DP), dimension(:), pointer, contiguous :: dispcoef => null() ! disp coefficient (only if xt3d not active)
@@ -54,8 +61,10 @@ module GwtDspModule
     procedure :: dsp_da
     procedure :: allocate_scalars
     procedure :: allocate_arrays
-    procedure, private :: read_options
-    procedure, private :: read_data
+    procedure, private :: source_dsp_options
+    procedure, private :: source_dsp_griddata
+    procedure, private :: log_dsp_options
+    procedure, private :: log_dsp_griddata
     procedure, private :: set_data
     procedure, private :: calcdispellipse
     procedure, private :: calcdispcoef
@@ -71,6 +80,9 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use LoadMfInputModule, only: idm_load
+    use ConstantsModule, only: LENPACKAGETYPE
     ! -- dummy
     type(GwtDspType), pointer :: dspobj
     character(len=*), intent(in) :: name_model
@@ -92,6 +104,17 @@ contains
     dspobj%inunit = inunit
     dspobj%iout = iout
     dspobj%fmi => fmi
+    !
+    ! -- Check if input file is open
+    if (dspobj%inunit > 0) then
+      !
+      ! -- Initialize block parser
+      call dspobj%parser%Initialize(dspobj%inunit, dspobj%iout)
+      !
+      ! -- IDM load source parameters
+      call idm_load(dspobj%parser, 'DSP6', '', 'GWT', 'DSP', dspobj%name_model, &
+                    'DSP', [character(len=LENPACKAGETYPE) ::], iout)
+    end if
     !
     ! -- Return
     return
@@ -129,9 +152,8 @@ contains
       this%ixt3d = dspOptions%ixt3d
     else
       !
-      ! -- Initialize block parser
-      call this%parser%Initialize(this%inunit, this%iout)
-      call this%read_options()
+      ! -- source options
+      call this%source_dsp_options()
     end if
     !
     ! -- xt3d create
@@ -231,8 +253,9 @@ contains
       ! -- Set dispersion data
       call this%set_data(grid_data)
     else
-      ! -- Read dispersion data
-      call this%read_data()
+      !
+      ! -- source dispersion data
+      call this%source_dsp_griddata()
     end if
     !
     ! -- Return
@@ -393,6 +416,13 @@ contains
     ! -- Allocate
     call mem_allocate(this%idiffc, 'IDIFFC', this%memoryPath)
     call mem_allocate(this%idisp, 'IDISP', this%memoryPath)
+    call mem_allocate(this%ialh, 'IALH', this%memoryPath)
+    call mem_allocate(this%ialv, 'IALV', this%memoryPath)
+    call mem_allocate(this%iath1, 'IATH1', this%memoryPath)
+    call mem_allocate(this%iath2, 'IATH2', this%memoryPath)
+    call mem_allocate(this%iatv, 'IATV', this%memoryPath)
+    call mem_allocate(this%ixt3doff, 'IXT3DOFF', this%memoryPath)
+    call mem_allocate(this%ixt3drhs, 'IXT3DRHS', this%memoryPath)
     call mem_allocate(this%ixt3d, 'IXT3D', this%memoryPath)
     call mem_allocate(this%id22, 'ID22', this%memoryPath)
     call mem_allocate(this%id33, 'ID33', this%memoryPath)
@@ -403,6 +433,13 @@ contains
     ! -- Initialize
     this%idiffc = 0
     this%idisp = 0
+    this%ialh = 0
+    this%ialv = 0
+    this%iath1 = 0
+    this%iath2 = 0
+    this%iatv = 0
+    this%ixt3doff = 0
+    this%ixt3drhs = 0
     this%ixt3d = 0
     this%id22 = 1
     this%id33 = 1
@@ -431,12 +468,12 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate
-    call mem_allocate(this%alh, 0, 'ALH', trim(this%memoryPath))
-    call mem_allocate(this%alv, 0, 'ALV', trim(this%memoryPath))
-    call mem_allocate(this%ath1, 0, 'ATH1', trim(this%memoryPath))
-    call mem_allocate(this%ath2, 0, 'ATH2', trim(this%memoryPath))
-    call mem_allocate(this%atv, 0, 'ATV', trim(this%memoryPath))
-    call mem_allocate(this%diffc, 0, 'DIFFC', trim(this%memoryPath))
+    call mem_allocate(this%alh, nodes, 'ALH', trim(this%memoryPath))
+    call mem_allocate(this%alv, nodes, 'ALV', trim(this%memoryPath))
+    call mem_allocate(this%ath1, nodes, 'ATH1', trim(this%memoryPath))
+    call mem_allocate(this%ath2, nodes, 'ATH2', trim(this%memoryPath))
+    call mem_allocate(this%atv, nodes, 'ATV', trim(this%memoryPath))
+    call mem_allocate(this%diffc, nodes, 'DIFFC', trim(this%memoryPath))
     call mem_allocate(this%d11, nodes, 'D11', trim(this%memoryPath))
     call mem_allocate(this%d22, nodes, 'D22', trim(this%memoryPath))
     call mem_allocate(this%d33, nodes, 'D33', trim(this%memoryPath))
@@ -465,10 +502,15 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
+    use MemoryManagerExtModule, only: memorylist_remove
+    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwtDspType) :: this
     ! -- local
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Deallocate input memory
+    call memorylist_remove(this%name_model, 'DSP', idm_context)
     !
     ! -- deallocate arrays
     if (this%inunit /= 0) then
@@ -494,6 +536,13 @@ contains
     ! -- deallocate scalars
     call mem_deallocate(this%idiffc)
     call mem_deallocate(this%idisp)
+    call mem_deallocate(this%ialh)
+    call mem_deallocate(this%ialv)
+    call mem_deallocate(this%iath1)
+    call mem_deallocate(this%iath2)
+    call mem_deallocate(this%iatv)
+    call mem_deallocate(this%ixt3doff)
+    call mem_deallocate(this%ixt3drhs)
     call mem_deallocate(this%ixt3d)
     call mem_deallocate(this%id22)
     call mem_deallocate(this%id33)
@@ -508,207 +557,188 @@ contains
     return
   end subroutine dsp_da
 
-  subroutine read_options(this)
+  !> @brief Write user options to list file
+  !<
+  subroutine log_dsp_options(this, afound)
+    class(GwTDspType) :: this
+    logical, dimension(:), intent(in) :: afound
+
+    write (this%iout, '(1x,a)') 'Setting DSP Options'
+    write (this%iout, '(4x,a,i0)') 'XT3D FORMULATION [0=INACTIVE, 1=ACTIVE, &
+                                   &3=ACTIVE RHS] SET TO: ', this%ixt3d
+    write (this%iout, '(1x,a,/)') 'End Setting DSP Options'
+  end subroutine log_dsp_options
+
+  subroutine source_dsp_options(this)
 ! ******************************************************************************
-! read_options -- Allocate and Read
+! source_dsp_options -- update simulation mempath options
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error
+    !use KindModule, only: LGP
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryTypeModule, only: MemoryType
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_context
+    use ConstantsModule, only: LENMEMPATH
     ! -- dummy
     class(GwtDspType) :: this
-    ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
-    integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
-    ! -- formats
+    ! -- locals
+    character(len=LENMEMPATH) :: idmMemoryPath
+    logical, dimension(2) :: afound
 ! ------------------------------------------------------------------------------
     !
-    ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false., &
-                              supportOpenClose=.true.)
+    ! -- set memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'DSP', idm_context)
     !
-    ! -- parse options block if detected
-    if (isfound) then
-      write (this%iout, '(1x,a)') 'PROCESSING DISPERSION OPTIONS'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-        case ('XT3D_OFF')
-          this%ixt3d = 0
-          write (this%iout, '(4x,a)') &
-            'XT3D FORMULATION HAS BEEN SHUT OFF.'
-        case ('XT3D_RHS')
-          this%ixt3d = 2
-          write (this%iout, '(4x,a)') &
-            'XT3D RIGHT-HAND SIDE FORMULATION IS SELECTED.'
-        case default
-          write (errmsg, '(4x,a,a)') 'UNKNOWN DISPERSION OPTION: ', &
-            trim(keyword)
-          call store_error(errmsg, terminate=.TRUE.)
-        end select
-      end do
-      write (this%iout, '(1x,a)') 'END OF DISPERSION OPTIONS'
+    ! -- update defaults with idm sourced values
+    call mem_set_value(this%ixt3doff, 'XT3D_OFF', idmMemoryPath, afound(1))
+    call mem_set_value(this%ixt3drhs, 'XT3D_RHS', idmMemoryPath, afound(2))
+    !
+    ! -- set xt3d state flag
+    if (afound(1)) this%ixt3d = 0
+    if (afound(2)) this%ixt3d = 2
+    !
+    ! -- log options
+    if (this%iout > 0) then
+      call this%log_dsp_options(afound)
     end if
     !
     ! -- Return
     return
-  end subroutine read_options
+  end subroutine source_dsp_options
 
-  subroutine read_data(this)
+  !> @brief Write dimensions to list file
+  !<
+  subroutine log_dsp_griddata(this, afound)
+    class(GwtDspType) :: this
+    logical, dimension(:), intent(in) :: afound
+
+    write (this%iout, '(1x,a)') 'Setting DSP Griddata'
+
+    if (afound(1)) then
+      write (this%iout, '(4x,a)') 'DIFFC set from input file'
+    end if
+
+    if (afound(2)) then
+      write (this%iout, '(4x,a)') 'ALH set from input file'
+    end if
+
+    if (afound(3)) then
+      write (this%iout, '(4x,a)') 'ALV set from input file'
+    end if
+
+    if (afound(4)) then
+      write (this%iout, '(4x,a)') 'ATH1 set from input file'
+    end if
+
+    if (afound(5)) then
+      write (this%iout, '(4x,a)') 'ATH2 set from input file'
+    end if
+
+    if (afound(6)) then
+      write (this%iout, '(4x,a)') 'ATV set from input file'
+    end if
+
+    write (this%iout, '(1x,a,/)') 'End Setting DSP Griddata'
+
+  end subroutine log_dsp_griddata
+
+  subroutine source_dsp_griddata(this)
 ! ******************************************************************************
-! read_data -- read the dispersion data
+! source_dsp_griddata -- update dsp simulation data from input mempath
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error, count_errors
-    use MemoryManagerModule, only: mem_reallocate, mem_copyptr, mem_reassignptr
+    ! -- modules
+    use SimModule, only: count_errors, store_error
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerModule, only: mem_reallocate, mem_reassignptr
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_context
+    use ConstantsModule, only: LENMEMPATH, LINELENGTH
     ! -- dummy
     class(GwtDsptype) :: this
-    ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
-    character(len=:), allocatable :: line
-    integer(I4B) :: istart, istop, lloc, ierr
-    logical :: isfound, endOfBlock
-    logical, dimension(6) :: lname
-    character(len=24), dimension(6) :: aname
+    ! -- locals
+    character(len=LENMEMPATH) :: idmMemoryPath
+    character(len=LINELENGTH) :: errmsg
+    logical, dimension(6) :: afound
+    integer(I4B), dimension(:), pointer, contiguous :: map
+    integer(I4B) :: idisp
     ! -- formats
-    ! -- data
-    data aname(1)/'   DIFFUSION COEFFICIENT'/
-    data aname(2)/'                     ALH'/
-    data aname(3)/'                     ALV'/
-    data aname(4)/'                    ATH1'/
-    data aname(5)/'                    ATH2'/
-    data aname(6)/'                     ATV'/
 ! ------------------------------------------------------------------------------
     !
-    ! -- initialize
-    lname(:) = .false.
-    isfound = .false.
+    ! -- set memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'DSP', idm_context)
     !
-    ! -- get griddata block
-    call this%parser%GetBlock('GRIDDATA', isfound, ierr)
-    if (isfound) then
-      write (this%iout, '(1x,a)') 'PROCESSING GRIDDATA'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        call this%parser%GetRemainingLine(line)
-        lloc = 1
-        select case (keyword)
-        case ('DIFFC')
-          call mem_reallocate(this%diffc, this%dis%nodes, 'DIFFC', &
-                              trim(this%memoryPath))
-          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                        this%parser%iuactive, this%diffc, &
-                                        aname(1))
-          lname(1) = .true.
-        case ('ALH')
-          call mem_reallocate(this%alh, this%dis%nodes, 'ALH', &
-                              trim(this%memoryPath))
-          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                        this%parser%iuactive, this%alh, &
-                                        aname(2))
-          lname(2) = .true.
-        case ('ALV')
-          call mem_reallocate(this%alv, this%dis%nodes, 'ALV', &
-                              trim(this%memoryPath))
-          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                        this%parser%iuactive, this%alv, &
-                                        aname(3))
-          lname(3) = .true.
-        case ('ATH1')
-          call mem_reallocate(this%ath1, this%dis%nodes, 'ATH1', &
-                              trim(this%memoryPath))
-          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                        this%parser%iuactive, this%ath1, &
-                                        aname(4))
-          lname(4) = .true.
-        case ('ATH2')
-          call mem_reallocate(this%ath2, this%dis%nodes, 'ATH2', &
-                              trim(this%memoryPath))
-          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                        this%parser%iuactive, this%ath2, &
-                                        aname(5))
-          lname(5) = .true.
-        case ('ATV')
-          call mem_reallocate(this%atv, this%dis%nodes, 'ATV', &
-                              trim(this%memoryPath))
-          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                        this%parser%iuactive, this%atv, &
-                                        aname(6))
-          lname(6) = .true.
-        case default
-          write (errmsg, '(4x,a,a)') 'Unknown GRIDDATA tag: ', trim(keyword)
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end select
-      end do
-      write (this%iout, '(1x,a)') 'END PROCESSING GRIDDATA'
-    else
-      write (errmsg, '(1x,a)') 'Required GRIDDATA block not found.'
-      call store_error(errmsg)
-      call this%parser%StoreErrorUnit()
+    ! -- set map
+    map => null()
+    if (this%dis%nodes < this%dis%nodesuser) map => this%dis%nodeuser
+    !
+    ! -- update defaults with idm sourced values
+    call mem_set_value(this%diffc, 'DIFFC', idmMemoryPath, map, afound(1))
+    call mem_set_value(this%alh, 'ALH', idmMemoryPath, map, afound(2))
+    call mem_set_value(this%alv, 'ALV', idmMemoryPath, map, afound(3))
+    call mem_set_value(this%ath1, 'ATH1', idmMemoryPath, map, afound(4))
+    call mem_set_value(this%ath2, 'ATH2', idmMemoryPath, map, afound(5))
+    call mem_set_value(this%atv, 'ATV', idmMemoryPath, map, afound(6))
+    !
+    ! -- set active flags
+    if (afound(1)) this%idiffc = 1
+    if (afound(2)) this%ialh = 1
+    if (afound(3)) this%ialv = 1
+    if (afound(4)) this%iath1 = 1
+    if (afound(5)) this%iath2 = 1
+    if (afound(6)) this%iatv = 1
+    !
+    ! -- reallocate diffc if not found
+    if (.not. afound(1)) then
+      call mem_reallocate(this%diffc, 0, 'DIFFC', trim(this%memoryPath))
     end if
     !
-    if (lname(1)) this%idiffc = 1
-    if (lname(2)) this%idisp = this%idisp + 1
-    if (lname(3)) this%idisp = this%idisp + 1
-    if (lname(4)) this%idisp = this%idisp + 1
-    if (lname(5)) this%idisp = this%idisp + 1
+    ! -- set this%idisp flag
+    do idisp = 2, 5 ! ALH, ALV, ATH1, ATH2
+      if (afound(idisp)) this%idisp = this%idisp + 1
+    end do
     !
-    ! -- if dispersivities are specified, then both alh and ath1 must be included
+    ! -- manage dispersion arrays
     if (this%idisp > 0) then
-      !
-      ! -- make sure alh was specified
-      if (.not. lname(2)) then
+      if (.not. (afound(2) .and. afound(4))) then
         write (errmsg, '(1x,a)') &
-          'IF DISPERSIVITIES ARE SPECIFIED THEN ALH IS REQUIRED.'
+          'IF DISPERSIVITIES ARE SPECIFIED THEN ALH AND ATH1 ARE REQUIRED.'
         call store_error(errmsg)
       end if
-      !
-      ! -- make sure ath1 was specified
-      if (.not. lname(4)) then
-        write (errmsg, '(1x,a)') &
-          'IF DISPERSIVITIES ARE SPECIFIED THEN ATH1 IS REQUIRED.'
-        call store_error(errmsg)
-      end if
-      !
       ! -- If alv not specified then point it to alh
-      if (.not. lname(3)) then
+      if (.not. afound(3)) &
         call mem_reassignptr(this%alv, 'ALV', trim(this%memoryPath), &
                              'ALH', trim(this%memoryPath))
-      end if
-      !
-      ! -- If ath2 not specified then assign it to ath1
-      if (.not. lname(5)) then
+      ! -- If ath2 not specified then point it to ath1
+      if (.not. afound(5)) &
         call mem_reassignptr(this%ath2, 'ATH2', trim(this%memoryPath), &
                              'ATH1', trim(this%memoryPath))
-      end if
-      !
-      ! -- If atv not specified then assign it to ath2
-      if (.not. lname(6)) then
+      ! -- If atv not specified then point it to ath2
+      if (.not. afound(6)) &
         call mem_reassignptr(this%atv, 'ATV', trim(this%memoryPath), &
                              'ATH2', trim(this%memoryPath))
-      end if
+    else
+      call mem_reallocate(this%alh, 0, 'ALH', trim(this%memoryPath))
+      call mem_reallocate(this%alv, 0, 'ALV', trim(this%memoryPath))
+      call mem_reallocate(this%ath1, 0, 'ATH1', trim(this%memoryPath))
+      call mem_reallocate(this%ath2, 0, 'ATH2', trim(this%memoryPath))
+      call mem_reallocate(this%atv, 0, 'ATV', trim(this%memoryPath))
     end if
     !
-    ! -- terminate if errors
-    if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
+    ! -- log griddata
+    if (this%iout > 0) then
+      call this%log_dsp_griddata(afound)
     end if
     !
     ! -- Return
     return
-  end subroutine read_data
+  end subroutine source_dsp_griddata
 
   !< @brief Set the grid data to the package
   !<
@@ -718,19 +748,6 @@ contains
     type(GwtDspGridDataType), intent(in) :: grid_data !< the data structure with DSP grid data
     ! local
     integer(I4B) :: i
-
-    call mem_reallocate(this%diffc, this%dis%nodes, 'DIFFC', &
-                        trim(this%memoryPath))
-    call mem_reallocate(this%alh, this%dis%nodes, 'ALH', &
-                        trim(this%memoryPath))
-    call mem_reallocate(this%alv, this%dis%nodes, 'ALV', &
-                        trim(this%memoryPath))
-    call mem_reallocate(this%ath1, this%dis%nodes, 'ATH1', &
-                        trim(this%memoryPath))
-    call mem_reallocate(this%ath2, this%dis%nodes, 'ATH2', &
-                        trim(this%memoryPath))
-    call mem_reallocate(this%atv, this%dis%nodes, 'ATV', &
-                        trim(this%memoryPath))
 
     do i = 1, this%dis%nodes
       this%diffc(i) = grid_data%diffc(i)

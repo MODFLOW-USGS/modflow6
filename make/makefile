@@ -102,6 +102,7 @@ $(OBJDIR)/TimeArraySeriesLink.o \
 $(OBJDIR)/ObsUtility.o \
 $(OBJDIR)/ObsContainer.o \
 $(OBJDIR)/BudgetFileReader.o \
+$(OBJDIR)/gwt1dspidm.o \
 $(OBJDIR)/gwf3npf8idm.o \
 $(OBJDIR)/gwf3dis8idm.o \
 $(OBJDIR)/TimeArraySeriesManager.o \
