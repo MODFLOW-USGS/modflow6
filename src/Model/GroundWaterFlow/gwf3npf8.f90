@@ -954,7 +954,7 @@ contains
     end if
     !
     ! -- Calculate specific discharge at cell centers and write, if requested
-    if (this%icalcspdis /= 0) then
+    if (this%isavspdis /= 0) then
       if (ibinun /= 0) call this%sav_spdis(ibinun)
     end if
     !
