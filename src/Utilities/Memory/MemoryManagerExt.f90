@@ -91,7 +91,7 @@ contains
     logical(LGP) :: checkfail = .false.
 
     call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'INTEGER') then
+    if (found) then
       p_mem = setval
     end if
   end subroutine mem_set_value_int_setval

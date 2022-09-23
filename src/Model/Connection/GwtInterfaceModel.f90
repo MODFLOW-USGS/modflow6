@@ -83,7 +83,7 @@ contains
     call disu_cr(this%dis, this%name, -1, this%iout)
     call fmi_cr(this%fmi, this%name, 0, this%iout)
     call adv_cr(this%adv, this%name, adv_unit, this%iout, this%fmi)
-    call dsp_cr(this%dsp, this%name, dsp_unit, this%iout, this%fmi)
+    call dsp_cr(this%dsp, this%name, -dsp_unit, this%iout, this%fmi)
     call gwt_obs_cr(this%obs, inobs)
 
   end subroutine gwtifmod_cr

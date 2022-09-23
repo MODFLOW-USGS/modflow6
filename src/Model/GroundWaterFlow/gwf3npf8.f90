@@ -37,6 +37,7 @@ module GwfNpfModule
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
     real(DP), dimension(:), pointer, contiguous :: hnew => null() !< pointer to model xnew
     integer(I4B), pointer :: ixt3d => null() !< xt3d flag (0 is off, 1 is lhs, 2 is rhs)
+    integer(I4B), pointer :: ixt3drhs => null() !< xt3d rhs flag, xt3d rhs is set active if 1
     integer(I4B), pointer :: iperched => null() !< vertical flow corrections if 1
     integer(I4B), pointer :: ivarcv => null() !< CV is function of water table
     integer(I4B), pointer :: idewatcv => null() !< CV may be a discontinuous function of water table
@@ -115,9 +116,10 @@ module GwfNpfModule
     procedure, private :: wdmsg => sgwf_npf_wdmsg
     procedure :: allocate_scalars
     procedure, private :: allocate_arrays
-    procedure, private :: source_idm_options
-    procedure, private :: source_idm_griddata
+    procedure, private :: source_npf_options
+    procedure, private :: source_npf_griddata
     procedure, private :: log_npf_options
+    procedure, private :: log_npf_griddata
     procedure, private :: set_options
     procedure, private :: check_options
     procedure, private :: set_grid_data
@@ -207,8 +209,6 @@ contains
     ! -- modules
     use SimModule, only: store_error
     use Xt3dModule, only: xt3d_cr
-    use LoadMfInputModule, only: idm_load
-    use ConstantsModule, only: LENPACKAGETYPE
     ! -- dummy
     class(GwfNpftype) :: this !< instance of the NPF package
     class(DisBaseType), pointer, intent(inout) :: dis !< the pointer to the discretization
@@ -225,7 +225,7 @@ contains
     if (.not. present(npf_options)) then
       !
       ! -- update default option values
-      call this%source_idm_options()
+      call this%source_npf_options()
     else
       call this%set_options(npf_options)
     end if
@@ -330,7 +330,7 @@ contains
     if (.not. present(grid_data)) then
       !
       ! -- source input grid data
-      call this%source_idm_griddata()
+      call this%source_npf_griddata()
       !
       ! -- convert/check the input
       call this%prepcheck()
@@ -1062,6 +1062,7 @@ contains
     ! -- Scalars
     call mem_deallocate(this%iname)
     call mem_deallocate(this%ixt3d)
+    call mem_deallocate(this%ixt3drhs)
     call mem_deallocate(this%satomega)
     call mem_deallocate(this%hnoflo)
     call mem_deallocate(this%hdry)
@@ -1142,6 +1143,7 @@ contains
     ! -- Allocate scalars
     call mem_allocate(this%iname, 'INAME', this%memoryPath)
     call mem_allocate(this%ixt3d, 'IXT3D', this%memoryPath)
+    call mem_allocate(this%ixt3drhs, 'IXT3DRHS', this%memoryPath)
     call mem_allocate(this%satomega, 'SATOMEGA', this%memoryPath)
     call mem_allocate(this%hnoflo, 'HNOFLO', this%memoryPath)
     call mem_allocate(this%hdry, 'HDRY', this%memoryPath)
@@ -1182,6 +1184,7 @@ contains
     ! -- Initialize value
     this%iname = 8
     this%ixt3d = 0
+    this%ixt3drhs = 0
     this%satomega = DZERO
     this%hnoflo = DHNOFLO !1.d30
     this%hdry = DHDRY !-1.d30
@@ -1312,8 +1315,7 @@ contains
     logical, dimension(:), intent(in) :: afound
 ! ------------------------------------------------------------------------------
     !
-    ! -- log outcomes
-    write (this%iout, '(1x,a)') 'NPF OPTIONS'
+    write (this%iout, '(1x,a)') 'Setting NPF Options'
     if (afound(1)) &
       write (this%iout, '(4x,a)') 'CELL-BY-CELL FLOW INFORMATION WILL BE PRINTED &
                                   &TO LISTING FILE WHENEVER ICBCFL IS NOT ZERO.'
@@ -1368,7 +1370,7 @@ contains
       this%iwetit
     if (afound(23)) write (this%iout, '(4x,a,i5)') 'IHDWET HAS BEEN SET TO: ', &
       this%ihdwet
-    write (this%iout, '(1x,a)') 'END OF NPF OPTIONS'
+    write (this%iout, '(1x,a,/)') 'End Setting NPF Options'
     !
     ! -- Write rewet settings
     write (this%iout, '(1x, a)') 'THE FOLLOWING REWET SETTINGS WILL BE USED.'
@@ -1378,9 +1380,9 @@ contains
 
   end subroutine log_npf_options
 
-  subroutine source_idm_options(this)
+  subroutine source_npf_options(this)
 ! ******************************************************************************
-! source_idm_options -- update simulation options from input mempath
+! source_npf_options -- update simulation options from input mempath
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1397,19 +1399,15 @@ contains
     character(len=LENVARNAME), dimension(3) :: cellavg_method = &
       &[character(len=LENVARNAME) :: 'LOGARITHMIC', 'AMT-LMK', 'AMT-HMK']
     logical, dimension(23) :: afound
-    integer(I4B), pointer :: ixt3drhs => null()
     character(len=LINELENGTH) :: tvk6_filename
 ! ------------------------------------------------------------------------------
-    !
-    ! -- allocate locals
-    allocate (ixt3drhs)
     !
     ! -- set memory path
     idmMemoryPath = create_mem_path(this%name_model, 'NPF', idm_context)
     !
     ! -- update defaults with idm sourced values
     call mem_set_value(this%iprflow, 'IPRFLOW', idmMemoryPath, afound(1))
-    call mem_set_value(this%ipakcb, 'IPAKCB', idmMemoryPath, -1, afound(2))
+    call mem_set_value(this%ipakcb, 'IPAKCB', idmMemoryPath, afound(2))
     call mem_set_value(this%icellavg, 'CELLAVG', idmMemoryPath, cellavg_method, &
                        afound(3))
     call mem_set_value(this%ithickstrt, 'ITHICKSTRT', idmMemoryPath, afound(4))
@@ -1417,13 +1415,13 @@ contains
     call mem_set_value(this%ivarcv, 'IVARCV', idmMemoryPath, afound(6))
     call mem_set_value(this%idewatcv, 'IDEWATCV', idmMemoryPath, afound(7))
     call mem_set_value(this%ixt3d, 'IXT3D', idmMemoryPath, afound(8))
-    call mem_set_value(ixt3drhs, 'IXT3DRHS', idmMemoryPath, afound(9))
+    call mem_set_value(this%ixt3drhs, 'IXT3DRHS', idmMemoryPath, afound(9))
     call mem_set_value(this%isavspdis, 'ISAVSPDIS', idmMemoryPath, afound(10))
     call mem_set_value(this%isavsat, 'ISAVSAT', idmMemoryPath, afound(11))
     call mem_set_value(this%ik22overk, 'IK22OVERK', idmMemoryPath, afound(12))
     call mem_set_value(this%ik33overk, 'IK33OVERK', idmMemoryPath, afound(13))
     call mem_set_value(tvk6_filename, 'TVK6_FILENAME', idmMemoryPath, afound(14))
-    call mem_set_value(this%inewton, 'INEWTON', idmMemoryPath, 0, afound(15))
+    call mem_set_value(this%inewton, 'INEWTON', idmMemoryPath, afound(15))
     call mem_set_value(this%iusgnrhc, 'IUSGNRHC', idmMemoryPath, &
                        afound(16))
     call mem_set_value(this%inwtupw, 'INWTUPW', idmMemoryPath, afound(17))
@@ -1434,28 +1432,36 @@ contains
     call mem_set_value(this%iwetit, 'IWETIT', idmMemoryPath, afound(22))
     call mem_set_value(this%ihdwet, 'IHDWET', idmMemoryPath, afound(23))
     !
-    ! -- handle found side effects
-    if (afound(8) .and. afound(9)) &
-      call mem_set_value(this%ixt3d, 'IXT3D', idmMemoryPath, 2, afound(8))
+    ! -- save flows option active
+    if (afound(2)) this%ipakcb = -1
+    !
+    ! -- xt3d active with rhs
+    if (afound(8) .and. afound(9)) this%ixt3d = 2
+    !
+    ! -- save specific discharge active
     if (afound(10)) this%icalcspdis = this%isavspdis
+    !
+    ! -- TVK6 subpackage file spec provided
     if (afound(14)) then
       this%intvk = GetUnit()
       call openfile(this%intvk, this%iout, tvk6_filename, 'TVK')
       call tvk_cr(this%tvk, this%name_model, this%intvk, this%iout)
     end if
-    if (afound(15)) this%iasym = this%inewton
     !
-    ! -- handle not found side effects
+    ! -- no newton specified
+    if (afound(15)) then
+      this%inewton = 0
+      this%iasym = 0
+    end if
     !
-    ! -- log outcomes
-    call this%log_npf_options(afound)
-    !
-    ! -- cleanup
-    deallocate (ixt3drhs)
+    ! -- log options
+    if (this%iout > 0) then
+      call this%log_npf_options(afound)
+    end if
     !
     ! -- Return
     return
-  end subroutine source_idm_options
+  end subroutine source_npf_options
 
   subroutine set_options(this, options)
     class(GwfNpftype) :: this
@@ -1585,9 +1591,53 @@ contains
     return
   end subroutine check_options
 
-  subroutine source_idm_griddata(this)
+  !> @brief Write dimensions to list file
+  !<
+  subroutine log_npf_griddata(this, afound)
+    class(GwfNpfType) :: this
+    logical, dimension(:), intent(in) :: afound
+
+    write (this%iout, '(1x,a)') 'Setting NPF Griddata'
+
+    if (afound(1)) then
+      write (this%iout, '(4x,a)') 'ICELLTYPE set from input file'
+    end if
+
+    if (afound(2)) then
+      write (this%iout, '(4x,a)') 'K set from input file'
+    end if
+
+    if (afound(3)) then
+      write (this%iout, '(4x,a)') 'K33 set from input file'
+    end if
+
+    if (afound(4)) then
+      write (this%iout, '(4x,a)') 'K22 set from input file'
+    end if
+
+    if (afound(5)) then
+      write (this%iout, '(4x,a)') 'WETDRY set from input file'
+    end if
+
+    if (afound(6)) then
+      write (this%iout, '(4x,a)') 'ANGLE1 set from input file'
+    end if
+
+    if (afound(7)) then
+      write (this%iout, '(4x,a)') 'ANGLE2 set from input file'
+    end if
+
+    if (afound(8)) then
+      write (this%iout, '(4x,a)') 'ANGLE3 set from input file'
+    end if
+
+    write (this%iout, '(1x,a,/)') 'End Setting NPF Griddata'
+
+  end subroutine log_npf_griddata
+
+  subroutine source_npf_griddata(this)
 ! ******************************************************************************
-! source_idm_griddata -- update simulation griddata from input mempath
+! source_npf_griddata -- update simulation griddata from input mempath
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1603,7 +1653,7 @@ contains
     ! -- locals
     character(len=LENMEMPATH) :: idmMemoryPath
     character(len=LINELENGTH) :: errmsg
-    logical, dimension(8) :: afound
+    logical, dimension(10) :: afound
     integer(I4B), dimension(:), pointer, contiguous :: map
     ! -- formats
 ! ------------------------------------------------------------------------------
@@ -1648,9 +1698,9 @@ contains
     !
     ! -- handle not found side effects
     if (.not. afound(3)) call mem_set_value(this%k33, 'K', idmMemoryPath, &
-                                            map, afound(3))
+                                            map, afound(9))
     if (.not. afound(4)) call mem_set_value(this%k22, 'K', idmMemoryPath, &
-                                            map, afound(4))
+                                            map, afound(10))
     if (.not. afound(5)) call mem_reallocate(this%wetdry, 1, 'WETDRY', &
                                              trim(this%memoryPath))
     if (.not. afound(6) .and. this%ixt3d == 0) &
@@ -1660,9 +1710,14 @@ contains
     if (.not. afound(8) .and. this%ixt3d == 0) &
       call mem_reallocate(this%angle3, 1, 'ANGLE3', trim(this%memoryPath))
     !
+    ! -- log griddata
+    if (this%iout > 0) then
+      call this%log_npf_griddata(afound)
+    end if
+    !
     ! -- Return
     return
-  end subroutine source_idm_griddata
+  end subroutine source_npf_griddata
 
   subroutine set_grid_data(this, npf_data)
     use MemoryManagerModule, only: mem_reallocate, mem_reassignptr

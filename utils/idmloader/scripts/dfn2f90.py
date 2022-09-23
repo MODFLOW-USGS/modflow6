@@ -33,8 +33,11 @@ class Dfn2F90:
         self._set_var_d()
         self._set_param_strs()
 
-    def write_f90(self, odspec=None):
-        fname = Path(odspec, f"{self.component.lower()}3{self.subcomponent.lower()}8idm.f90")
+    def write_f90(self, odspec=None, gwf_name=True):
+        if gwf_name:
+            fname = Path(odspec, f"{self.component.lower()}3{self.subcomponent.lower()}8idm.f90")
+        else:
+            fname = Path(odspec, f"{self.component.lower()}1{self.subcomponent.lower()}idm.f90")
         with open(fname, "w") as f:
 
             f.write(self._source_file_header(self.component, self.subcomponent))
@@ -380,14 +383,23 @@ class Dfn2F90:
 
 if __name__ == "__main__":
 
-    fnames = [
+    gwf_fnames = [
         Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-dis.dfn"),
         Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-npf.dfn"),
     ]
 
-    for dfn in fnames:
+    gwt_fnames = [
+        Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-dsp.dfn"),
+    ]
+
+    for dfn in gwf_fnames:
         converter = Dfn2F90(dfnfspec=dfn)
         converter.write_f90(odspec=os.path.join("..", "..", "..", "src", "Model", "GroundWaterFlow"))
+        converter.warn()
+
+    for dfn in gwt_fnames:
+        converter = Dfn2F90(dfnfspec=dfn)
+        converter.write_f90(odspec=os.path.join("..", "..", "..", "src", "Model", "GroundWaterTransport"), gwf_name=False)
         converter.warn()
 
     print("\n...done.")
