@@ -5,49 +5,146 @@ module GwtDspInputModule
   public gwt_dsp_param_definitions
   public gwt_dsp_aggregate_definitions
   public gwt_dsp_block_definitions
+
+  type(InputParamDefinitionType), parameter :: &
+    mf6var_xt3d_off = InputParamDefinitionType &
+    ( &
+    'GWT', & ! component
+    'DSP', & ! subcomponent
+    'OPTIONS', & ! block
+    'XT3D_OFF', & ! tag name
+    'XT3D_OFF', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false. & ! layered
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    mf6var_xt3d_rhs = InputParamDefinitionType &
+    ( &
+    'GWT', & ! component
+    'DSP', & ! subcomponent
+    'OPTIONS', & ! block
+    'XT3D_RHS', & ! tag name
+    'XT3D_RHS', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false. & ! layered
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    mf6var_diffc = InputParamDefinitionType &
+    ( &
+    'GWT', & ! component
+    'DSP', & ! subcomponent
+    'GRIDDATA', & ! block
+    'DIFFC', & ! tag name
+    'DIFFC', & ! fortran variable
+    'DOUBLE1D', & ! type
+    'NODES', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .true. & ! layered
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    mf6var_alh = InputParamDefinitionType &
+    ( &
+    'GWT', & ! component
+    'DSP', & ! subcomponent
+    'GRIDDATA', & ! block
+    'ALH', & ! tag name
+    'ALH', & ! fortran variable
+    'DOUBLE1D', & ! type
+    'NODES', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .true. & ! layered
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    mf6var_alv = InputParamDefinitionType &
+    ( &
+    'GWT', & ! component
+    'DSP', & ! subcomponent
+    'GRIDDATA', & ! block
+    'ALV', & ! tag name
+    'ALV', & ! fortran variable
+    'DOUBLE1D', & ! type
+    'NODES', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .true. & ! layered
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    mf6var_ath1 = InputParamDefinitionType &
+    ( &
+    'GWT', & ! component
+    'DSP', & ! subcomponent
+    'GRIDDATA', & ! block
+    'ATH1', & ! tag name
+    'ATH1', & ! fortran variable
+    'DOUBLE1D', & ! type
+    'NODES', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .true. & ! layered
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    mf6var_ath2 = InputParamDefinitionType &
+    ( &
+    'GWT', & ! component
+    'DSP', & ! subcomponent
+    'GRIDDATA', & ! block
+    'ATH2', & ! tag name
+    'ATH2', & ! fortran variable
+    'DOUBLE1D', & ! type
+    'NODES', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .true. & ! layered
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    mf6var_atv = InputParamDefinitionType &
+    ( &
+    'GWT', & ! component
+    'DSP', & ! subcomponent
+    'GRIDDATA', & ! block
+    'ATV', & ! tag name
+    'ATV', & ! fortran variable
+    'DOUBLE1D', & ! type
+    'NODES', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .true. & ! layered
+    )
+
   type(InputParamDefinitionType), parameter :: &
     gwt_dsp_param_definitions(*) = &
     [ &
-    InputParamDefinitionType( &
-    ! component, subcomponent, block, tag name, fortran variable, type, shape, required, multi-record, preserve case, layered
-    'GWT', 'DSP', 'OPTIONS', 'XT3D_OFF', 'XT3D_OFF', 'KEYWORD', '', .false., &
-    .false., .false., .false. &
-    ), &
-    InputParamDefinitionType( &
-    ! component, subcomponent, block, tag name, fortran variable, type, shape, required, multi-record, preserve case, layered
-    'GWT', 'DSP', 'OPTIONS', 'XT3D_RHS', 'XT3D_RHS', 'KEYWORD', '', .false., &
-    .false., .false., .false. &
-    ), &
-    InputParamDefinitionType( &
-    ! component, subcomponent, block, tag name, fortran variable, type, shape, required, multi-record, preserve case, layered
-    'GWT', 'DSP', 'GRIDDATA', 'DIFFC', 'DIFFC', 'DOUBLE1D', 'NODES', .false., &
-    .false., .false., .true. &
-    ), &
-    InputParamDefinitionType( &
-    ! component, subcomponent, block, tag name, fortran variable, type, shape, required, multi-record, preserve case, layered
-    'GWT', 'DSP', 'GRIDDATA', 'ALH', 'ALH', 'DOUBLE1D', 'NODES', .false., &
-    .false., .false., .true. &
-    ), &
-    InputParamDefinitionType( &
-    ! component, subcomponent, block, tag name, fortran variable, type, shape, required, multi-record, preserve case, layered
-    'GWT', 'DSP', 'GRIDDATA', 'ALV', 'ALV', 'DOUBLE1D', 'NODES', .false., &
-    .false., .false., .true. &
-    ), &
-    InputParamDefinitionType( &
-    ! component, subcomponent, block, tag name, fortran variable, type, shape, required, multi-record, preserve case, layered
-    'GWT', 'DSP', 'GRIDDATA', 'ATH1', 'ATH1', 'DOUBLE1D', 'NODES', .false., &
-    .false., .false., .true. &
-    ), &
-    InputParamDefinitionType( &
-    ! component, subcomponent, block, tag name, fortran variable, type, shape, required, multi-record, preserve case, layered
-    'GWT', 'DSP', 'GRIDDATA', 'ATH2', 'ATH2', 'DOUBLE1D', 'NODES', .false., &
-    .false., .false., .true. &
-    ), &
-    InputParamDefinitionType( &
-    ! component, subcomponent, block, tag name, fortran variable, type, shape, required, multi-record, preserve case, layered
-    'GWT', 'DSP', 'GRIDDATA', 'ATV', 'ATV', 'DOUBLE1D', 'NODES', .false., &
-    .false., .false., .true. &
-    ) &
+    mf6var_xt3d_off, &
+    mf6var_xt3d_rhs, &
+    mf6var_diffc, &
+    mf6var_alh, &
+    mf6var_alv, &
+    mf6var_ath1, &
+    mf6var_ath2, &
+    mf6var_atv &
     ]
 
   type(InputParamDefinitionType), parameter :: &
