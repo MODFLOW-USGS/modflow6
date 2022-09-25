@@ -7,7 +7,7 @@ module GwfDisInputModule
   public gwf_dis_block_definitions
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_length_units = InputParamDefinitionType &
+    gwfdis_length_units = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'DIS', & ! subcomponent
@@ -23,7 +23,7 @@ module GwfDisInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_nogrb = InputParamDefinitionType &
+    gwfdis_nogrb = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'DIS', & ! subcomponent
@@ -39,7 +39,7 @@ module GwfDisInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_xorigin = InputParamDefinitionType &
+    gwfdis_xorigin = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'DIS', & ! subcomponent
@@ -55,7 +55,7 @@ module GwfDisInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_yorigin = InputParamDefinitionType &
+    gwfdis_yorigin = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'DIS', & ! subcomponent
@@ -71,7 +71,7 @@ module GwfDisInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_angrot = InputParamDefinitionType &
+    gwfdis_angrot = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'DIS', & ! subcomponent
@@ -87,7 +87,7 @@ module GwfDisInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_nlay = InputParamDefinitionType &
+    gwfdis_nlay = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'DIS', & ! subcomponent
@@ -103,7 +103,7 @@ module GwfDisInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_nrow = InputParamDefinitionType &
+    gwfdis_nrow = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'DIS', & ! subcomponent
@@ -119,7 +119,7 @@ module GwfDisInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_ncol = InputParamDefinitionType &
+    gwfdis_ncol = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'DIS', & ! subcomponent
@@ -135,7 +135,7 @@ module GwfDisInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_delr = InputParamDefinitionType &
+    gwfdis_delr = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'DIS', & ! subcomponent
@@ -151,7 +151,7 @@ module GwfDisInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_delc = InputParamDefinitionType &
+    gwfdis_delc = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'DIS', & ! subcomponent
@@ -167,7 +167,7 @@ module GwfDisInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_top = InputParamDefinitionType &
+    gwfdis_top = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'DIS', & ! subcomponent
@@ -183,7 +183,7 @@ module GwfDisInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_botm = InputParamDefinitionType &
+    gwfdis_botm = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'DIS', & ! subcomponent
@@ -199,7 +199,7 @@ module GwfDisInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_idomain = InputParamDefinitionType &
+    gwfdis_idomain = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'DIS', & ! subcomponent
@@ -217,19 +217,19 @@ module GwfDisInputModule
   type(InputParamDefinitionType), parameter :: &
     gwf_dis_param_definitions(*) = &
     [ &
-    mf6var_length_units, &
-    mf6var_nogrb, &
-    mf6var_xorigin, &
-    mf6var_yorigin, &
-    mf6var_angrot, &
-    mf6var_nlay, &
-    mf6var_nrow, &
-    mf6var_ncol, &
-    mf6var_delr, &
-    mf6var_delc, &
-    mf6var_top, &
-    mf6var_botm, &
-    mf6var_idomain &
+    gwfdis_length_units, &
+    gwfdis_nogrb, &
+    gwfdis_xorigin, &
+    gwfdis_yorigin, &
+    gwfdis_angrot, &
+    gwfdis_nlay, &
+    gwfdis_nrow, &
+    gwfdis_ncol, &
+    gwfdis_delr, &
+    gwfdis_delc, &
+    gwfdis_top, &
+    gwfdis_botm, &
+    gwfdis_idomain &
     ]
 
   type(InputParamDefinitionType), parameter :: &

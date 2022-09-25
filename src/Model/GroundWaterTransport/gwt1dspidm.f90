@@ -7,7 +7,7 @@ module GwtDspInputModule
   public gwt_dsp_block_definitions
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_xt3d_off = InputParamDefinitionType &
+    gwtdsp_xt3d_off = InputParamDefinitionType &
     ( &
     'GWT', & ! component
     'DSP', & ! subcomponent
@@ -23,7 +23,7 @@ module GwtDspInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_xt3d_rhs = InputParamDefinitionType &
+    gwtdsp_xt3d_rhs = InputParamDefinitionType &
     ( &
     'GWT', & ! component
     'DSP', & ! subcomponent
@@ -39,7 +39,7 @@ module GwtDspInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_diffc = InputParamDefinitionType &
+    gwtdsp_diffc = InputParamDefinitionType &
     ( &
     'GWT', & ! component
     'DSP', & ! subcomponent
@@ -55,7 +55,7 @@ module GwtDspInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_alh = InputParamDefinitionType &
+    gwtdsp_alh = InputParamDefinitionType &
     ( &
     'GWT', & ! component
     'DSP', & ! subcomponent
@@ -71,7 +71,7 @@ module GwtDspInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_alv = InputParamDefinitionType &
+    gwtdsp_alv = InputParamDefinitionType &
     ( &
     'GWT', & ! component
     'DSP', & ! subcomponent
@@ -87,7 +87,7 @@ module GwtDspInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_ath1 = InputParamDefinitionType &
+    gwtdsp_ath1 = InputParamDefinitionType &
     ( &
     'GWT', & ! component
     'DSP', & ! subcomponent
@@ -103,7 +103,7 @@ module GwtDspInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_ath2 = InputParamDefinitionType &
+    gwtdsp_ath2 = InputParamDefinitionType &
     ( &
     'GWT', & ! component
     'DSP', & ! subcomponent
@@ -119,7 +119,7 @@ module GwtDspInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_atv = InputParamDefinitionType &
+    gwtdsp_atv = InputParamDefinitionType &
     ( &
     'GWT', & ! component
     'DSP', & ! subcomponent
@@ -137,14 +137,14 @@ module GwtDspInputModule
   type(InputParamDefinitionType), parameter :: &
     gwt_dsp_param_definitions(*) = &
     [ &
-    mf6var_xt3d_off, &
-    mf6var_xt3d_rhs, &
-    mf6var_diffc, &
-    mf6var_alh, &
-    mf6var_alv, &
-    mf6var_ath1, &
-    mf6var_ath2, &
-    mf6var_atv &
+    gwtdsp_xt3d_off, &
+    gwtdsp_xt3d_rhs, &
+    gwtdsp_diffc, &
+    gwtdsp_alh, &
+    gwtdsp_alv, &
+    gwtdsp_ath1, &
+    gwtdsp_ath2, &
+    gwtdsp_atv &
     ]
 
   type(InputParamDefinitionType), parameter :: &

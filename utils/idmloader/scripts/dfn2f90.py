@@ -158,12 +158,11 @@ class Dfn2F90:
 
         return f90statement
 
-    def _construct_f90_param_statement(self, tuple_list, varname, aggregate=False):
+    def _construct_f90_param_statement(self, tuple_list, basename, varname, aggregate=False):
+        vname = f"{basename.lower()}_{varname.lower()}"
         if aggregate:
-            vname = f"mf6aggregate_{varname.lower()}"
             self._aggregate_varnames.append(vname)
         else:
-            vname = f"mf6var_{varname.lower()}"
             self._param_varnames.append(vname)
         f90statement = f"  type(InputParamDefinitionType), parameter :: &\n"
         f90statement += f"    {vname} = InputParamDefinitionType &\n"
@@ -302,7 +301,7 @@ class Dfn2F90:
             # if necessary
             if aggregate_t:
                 self._aggregate_str += (
-                    self._construct_f90_param_statement(tuple_list, mf6vn, True) + "\n"
+                    self._construct_f90_param_statement(tuple_list, f"{component}{subcomponent}", mf6vn, True) + "\n"
                 )
                 is_aggregate_blk = True
                 if not shape:
@@ -312,7 +311,7 @@ class Dfn2F90:
 
             else:
                 self._param_str += (
-                    self._construct_f90_param_statement(tuple_list, mf6vn) + "\n"
+                    self._construct_f90_param_statement(tuple_list, f"{component}{subcomponent}", mf6vn) + "\n"
                 )
 
         self._block_str += (

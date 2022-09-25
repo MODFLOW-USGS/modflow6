@@ -7,7 +7,7 @@ module GwfNpfInputModule
   public gwf_npf_block_definitions
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_ipakcb = InputParamDefinitionType &
+    gwfnpf_ipakcb = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -23,7 +23,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_iprflow = InputParamDefinitionType &
+    gwfnpf_iprflow = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -39,7 +39,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_cellavg = InputParamDefinitionType &
+    gwfnpf_cellavg = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -55,7 +55,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_ithickstrt = InputParamDefinitionType &
+    gwfnpf_ithickstrt = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -71,7 +71,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_cvoptions = InputParamDefinitionType &
+    gwfnpf_cvoptions = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -87,7 +87,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_ivarcv = InputParamDefinitionType &
+    gwfnpf_ivarcv = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -103,7 +103,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_idewatcv = InputParamDefinitionType &
+    gwfnpf_idewatcv = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -119,7 +119,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_iperched = InputParamDefinitionType &
+    gwfnpf_iperched = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -135,7 +135,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_rewet_record = InputParamDefinitionType &
+    gwfnpf_rewet_record = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -151,7 +151,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_irewet = InputParamDefinitionType &
+    gwfnpf_irewet = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -167,7 +167,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_wetfct = InputParamDefinitionType &
+    gwfnpf_wetfct = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -183,7 +183,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_iwetit = InputParamDefinitionType &
+    gwfnpf_iwetit = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -199,7 +199,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_ihdwet = InputParamDefinitionType &
+    gwfnpf_ihdwet = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -215,7 +215,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_xt3doptions = InputParamDefinitionType &
+    gwfnpf_xt3doptions = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -231,7 +231,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_ixt3d = InputParamDefinitionType &
+    gwfnpf_ixt3d = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -247,7 +247,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_ixt3drhs = InputParamDefinitionType &
+    gwfnpf_ixt3drhs = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -263,7 +263,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_isavspdis = InputParamDefinitionType &
+    gwfnpf_isavspdis = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -279,7 +279,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_isavsat = InputParamDefinitionType &
+    gwfnpf_isavsat = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -295,7 +295,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_ik22overk = InputParamDefinitionType &
+    gwfnpf_ik22overk = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -311,7 +311,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_ik33overk = InputParamDefinitionType &
+    gwfnpf_ik33overk = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -327,7 +327,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_tvk_filerecord = InputParamDefinitionType &
+    gwfnpf_tvk_filerecord = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -343,7 +343,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_tvk6 = InputParamDefinitionType &
+    gwfnpf_tvk6 = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -359,7 +359,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_filein = InputParamDefinitionType &
+    gwfnpf_filein = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -375,7 +375,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_tvk6_filename = InputParamDefinitionType &
+    gwfnpf_tvk6_filename = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -391,7 +391,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_inewton = InputParamDefinitionType &
+    gwfnpf_inewton = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -407,7 +407,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_iusgnrhc = InputParamDefinitionType &
+    gwfnpf_iusgnrhc = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -423,7 +423,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_inwtupw = InputParamDefinitionType &
+    gwfnpf_inwtupw = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -439,7 +439,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_satmin = InputParamDefinitionType &
+    gwfnpf_satmin = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -455,7 +455,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_satomega = InputParamDefinitionType &
+    gwfnpf_satomega = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -471,7 +471,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_icelltype = InputParamDefinitionType &
+    gwfnpf_icelltype = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -487,7 +487,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_k = InputParamDefinitionType &
+    gwfnpf_k = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -503,7 +503,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_k22 = InputParamDefinitionType &
+    gwfnpf_k22 = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -519,7 +519,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_k33 = InputParamDefinitionType &
+    gwfnpf_k33 = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -535,7 +535,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_angle1 = InputParamDefinitionType &
+    gwfnpf_angle1 = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -551,7 +551,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_angle2 = InputParamDefinitionType &
+    gwfnpf_angle2 = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -567,7 +567,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_angle3 = InputParamDefinitionType &
+    gwfnpf_angle3 = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -583,7 +583,7 @@ module GwfNpfInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    mf6var_wetdry = InputParamDefinitionType &
+    gwfnpf_wetdry = InputParamDefinitionType &
     ( &
     'GWF', & ! component
     'NPF', & ! subcomponent
@@ -601,43 +601,43 @@ module GwfNpfInputModule
   type(InputParamDefinitionType), parameter :: &
     gwf_npf_param_definitions(*) = &
     [ &
-    mf6var_ipakcb, &
-    mf6var_iprflow, &
-    mf6var_cellavg, &
-    mf6var_ithickstrt, &
-    mf6var_cvoptions, &
-    mf6var_ivarcv, &
-    mf6var_idewatcv, &
-    mf6var_iperched, &
-    mf6var_rewet_record, &
-    mf6var_irewet, &
-    mf6var_wetfct, &
-    mf6var_iwetit, &
-    mf6var_ihdwet, &
-    mf6var_xt3doptions, &
-    mf6var_ixt3d, &
-    mf6var_ixt3drhs, &
-    mf6var_isavspdis, &
-    mf6var_isavsat, &
-    mf6var_ik22overk, &
-    mf6var_ik33overk, &
-    mf6var_tvk_filerecord, &
-    mf6var_tvk6, &
-    mf6var_filein, &
-    mf6var_tvk6_filename, &
-    mf6var_inewton, &
-    mf6var_iusgnrhc, &
-    mf6var_inwtupw, &
-    mf6var_satmin, &
-    mf6var_satomega, &
-    mf6var_icelltype, &
-    mf6var_k, &
-    mf6var_k22, &
-    mf6var_k33, &
-    mf6var_angle1, &
-    mf6var_angle2, &
-    mf6var_angle3, &
-    mf6var_wetdry &
+    gwfnpf_ipakcb, &
+    gwfnpf_iprflow, &
+    gwfnpf_cellavg, &
+    gwfnpf_ithickstrt, &
+    gwfnpf_cvoptions, &
+    gwfnpf_ivarcv, &
+    gwfnpf_idewatcv, &
+    gwfnpf_iperched, &
+    gwfnpf_rewet_record, &
+    gwfnpf_irewet, &
+    gwfnpf_wetfct, &
+    gwfnpf_iwetit, &
+    gwfnpf_ihdwet, &
+    gwfnpf_xt3doptions, &
+    gwfnpf_ixt3d, &
+    gwfnpf_ixt3drhs, &
+    gwfnpf_isavspdis, &
+    gwfnpf_isavsat, &
+    gwfnpf_ik22overk, &
+    gwfnpf_ik33overk, &
+    gwfnpf_tvk_filerecord, &
+    gwfnpf_tvk6, &
+    gwfnpf_filein, &
+    gwfnpf_tvk6_filename, &
+    gwfnpf_inewton, &
+    gwfnpf_iusgnrhc, &
+    gwfnpf_inwtupw, &
+    gwfnpf_satmin, &
+    gwfnpf_satomega, &
+    gwfnpf_icelltype, &
+    gwfnpf_k, &
+    gwfnpf_k22, &
+    gwfnpf_k33, &
+    gwfnpf_angle1, &
+    gwfnpf_angle2, &
+    gwfnpf_angle3, &
+    gwfnpf_wetdry &
     ]
 
   type(InputParamDefinitionType), parameter :: &
