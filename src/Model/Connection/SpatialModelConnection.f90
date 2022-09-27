@@ -146,24 +146,15 @@ contains ! module procedures
   subroutine spatialcon_ar(this)
     class(SpatialModelConnectionType) :: this !< this connection
     ! local
-    integer(I4B) :: icell, idx, localIdx
+    integer(I4B) :: iface_idx
     class(GridConnectionType), pointer :: gc
-    class(NumericalModelType), pointer :: model
-
-    ! init x and ibound with model data
-    gc => this%gridConnection
-    do icell = 1, gc%nrOfCells
-      idx = gc%idxToGlobal(icell)%index
-      model => gc%idxToGlobal(icell)%model
-      this%interfaceModel%x(icell) = model%x(idx)
-      this%interfaceModel%ibound(icell) = model%ibound(idx)
-    end do
-
+    
     ! fill mapping to global index (which can be
     ! done now because moffset is set in sln_df)
-    do localIdx = 1, gc%nrOfCells
-      gc%idxToGlobalIdx(localIdx) = gc%idxToGlobal(localIdx)%index + &
-                                    gc%idxToGlobal(localIdx)%model%moffset
+    gc => this%gridConnection
+    do iface_idx = 1, gc%nrOfCells
+      gc%idxToGlobalIdx(iface_idx) = gc%idxToGlobal(iface_idx)%index + &
+                                    gc%idxToGlobal(iface_idx)%model%moffset
     end do
 
   end subroutine spatialcon_ar

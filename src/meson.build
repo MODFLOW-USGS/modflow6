@@ -26,6 +26,7 @@ modflow_sources = files(
     'Model' / 'Connection' / 'SpatialModelConnection.f90',
     'Model' / 'Connection' / 'MappedVariable.f90',
     'Model' / 'Connection' / 'DistributedData.f90',
+    'Model' / 'Connection' / 'DistributedModel.f90',
     'Model' / 'Connection' / 'InterfaceMap.f90',
     'Model' / 'Geometry' / 'BaseGeometry.f90',
     'Model' / 'Geometry' / 'CircularGeometry.f90',

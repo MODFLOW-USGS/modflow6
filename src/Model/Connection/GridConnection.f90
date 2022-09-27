@@ -8,10 +8,12 @@ module GridConnectionModule
   use NumericalModelModule
   use GwfDisuModule
   use DisConnExchangeModule
+  use DistributedModelModule, only: DistributedModelType, GetDistModelFromList
   use CellWithNbrsModule
   use ConnectionsModule
   use SparseModule, only: sparsematrix
   use InterfaceMapModule
+  use ListsModule, only: distmodellist
   implicit none
   private
 
@@ -76,9 +78,7 @@ module GridConnectionModule
     procedure, pass(this) :: destroy
     procedure, pass(this) :: connectPrimaryExchange
     procedure, pass(this) :: findModelNeighbors
-    procedure, pass(this) :: extendConnection
-    generic :: getInterfaceIndex => getInterfaceIndexByCell, &
-      getInterfaceIndexByIndexModel
+    procedure, pass(this) :: extendConnection    
     procedure, pass(this) :: getDiscretization
     procedure, pass(this) :: getInterfaceMap
 
@@ -94,6 +94,8 @@ module GridConnectionModule
     procedure, private, pass(this) :: addModelNeighbors
     procedure, private, pass(this) :: addToRegionalModels
     procedure, private, pass(this) :: getRegionalModelOffset
+    generic, private :: getInterfaceIndex => getInterfaceIndexByCell, &
+      getInterfaceIndexByIndexModel
     procedure, private, pass(this) :: getInterfaceIndexByCell
     procedure, private, pass(this) :: getInterfaceIndexByIndexModel
     procedure, private, pass(this) :: registerInterfaceCells
@@ -168,6 +170,8 @@ contains
     class(NumericalModelType), pointer :: model1 !< model of cell 1
     integer(I4B) :: idx2 !< local index cell 2
     class(NumericalModelType), pointer :: model2 !< model of cell 2
+    ! local
+    type(GlobalCellType), pointer :: bnd_cell, conn_cell
 
     this%nrOfBoundaryCells = this%nrOfBoundaryCells + 1
     if (this%nrOfBoundaryCells > size(this%boundaryCells)) then
@@ -176,18 +180,24 @@ contains
       call ustop()
     end if
 
+    ! TODO_MJR: the assignment of the dist. models below
+    ! should replace the model pointers entirely
+    bnd_cell => this%boundaryCells(this%nrOfBoundaryCells)%cell
+    conn_cell => this%connectedCells(this%nrOfBoundaryCells)%cell
     if (associated(model1, this%model)) then
-      this%boundaryCells(this%nrOfBoundaryCells)%cell%index = idx1
-      this%boundaryCells(this%nrOfBoundaryCells)%cell%model => this%model
-
-      this%connectedCells(this%nrOfBoundaryCells)%cell%index = idx2
-      this%connectedCells(this%nrOfBoundaryCells)%cell%model => model2
+      bnd_cell%index = idx1
+      bnd_cell%model => this%model
+      bnd_cell%dmodel => GetDistModelFromList(distmodellist, this%model%id)
+      conn_cell%index = idx2
+      conn_cell%model => model2
+      conn_cell%dmodel => GetDistModelFromList(distmodellist, model2%id)
     else if (associated(model2, this%model)) then
-      this%boundaryCells(this%nrOfBoundaryCells)%cell%index = idx2
-      this%boundaryCells(this%nrOfBoundaryCells)%cell%model => this%model
-
-      this%connectedCells(this%nrOfBoundaryCells)%cell%index = idx1
-      this%connectedCells(this%nrOfBoundaryCells)%cell%model => model1
+      bnd_cell%index = idx2
+      bnd_cell%model => this%model
+      bnd_cell%dmodel => GetDistModelFromList(distmodellist, this%model%id)
+      conn_cell%index = idx1
+      conn_cell%model => model1
+      conn_cell%dmodel => GetDistModelFromList(distmodellist, model1%id)
     else
       write (*, *) 'Error: unable to connect cells outside the model'
       call ustop()
@@ -446,8 +456,12 @@ contains
     logical(LGP) :: interior !< when true, we are adding from the exchange back into the model
     ! local
     integer(I4B) :: nbrIdx, ipos, inbr
-    type(ConnectionsType), pointer :: conn
     integer(I4B) :: newDepth
+
+    ! TODO_MJR, is this how we are going to do this?
+    class(DistributedModelType), pointer :: dist_model_nbr
+    integer(I4B), dimension(:), pointer, contiguous :: ia
+    integer(I4B), dimension(:), pointer, contiguous :: ja
 
     ! if depth == 1, then we are not adding neighbors but use
     ! the boundary and connected cell only
@@ -456,14 +470,18 @@ contains
     end if
     newDepth = depth - 1
 
-    conn => cellNbrs%cell%model%dis%con
-    !ia => getDistModelData(cellNbrs%cell%modelIdx, 'DIS/CON/IA')%aint1d
+    ! access through dist. model:
+    call cellNbrs%cell%dmodel%load(ia, 'CON', 'IA')
+    call cellNbrs%cell%dmodel%load(ja, 'CON', 'JA')
 
     ! find neighbors local to this cell by looping through grid connections
-    do ipos = conn%ia(cellNbrs%cell%index) + 1, &
-      conn%ia(cellNbrs%cell%index + 1) - 1
-      nbrIdx = conn%ja(ipos)
-      call this%addNeighborCell(cellNbrs, nbrIdx, cellNbrs%cell%model, mask)
+    do ipos = ia(cellNbrs%cell%index) + 1, &
+      ia(cellNbrs%cell%index + 1) - 1
+      nbrIdx = ja(ipos)
+      dist_model_nbr => GetDistModelFromList(distmodellist, &
+                                             cellNbrs%cell%model%id)
+      call this%addNeighborCell(cellNbrs, nbrIdx, cellNbrs%cell%model, &
+                                dist_model_nbr, mask)
     end do
 
     ! add remote nbr using the data from the exchanges
@@ -497,6 +515,7 @@ contains
     ! local
     integer(I4B) :: ix, iexg
     type(DisConnExchangeType), pointer :: connEx
+    class(DistributedModelType), pointer :: dist_model_nbr
 
     ! loop over all exchanges
     do ix = 1, this%exchanges%Count()
@@ -507,8 +526,10 @@ contains
         do iexg = 1, connEx%nexg
           if (connEx%nodem1(iexg) == cellNbrs%cell%index) then
             ! we have a link, now add foreign neighbor
+            dist_model_nbr => GetDistModelFromList(distmodellist, connEx%model2%id)
             call this%addNeighborCell(cellNbrs, connEx%nodem2(iexg), &
-                                      connEx%model2, mask)
+                                      connEx%model2, dist_model_nbr, &
+                                      mask)
           end if
         end do
       end if
@@ -517,8 +538,10 @@ contains
         do iexg = 1, connEx%nexg
           if (connEx%nodem2(iexg) == cellNbrs%cell%index) then
             ! we have a link, now add foreign neighbor
+            dist_model_nbr => GetDistModelFromList(distmodellist, connEx%model1%id)
             call this%addNeighborCell(cellNbrs, connEx%nodem1(iexg), &
-                                      connEx%model1, mask)
+                                      connEx%model1, dist_model_nbr, &
+                                      mask)
           end if
         end do
       end if
@@ -529,20 +552,21 @@ contains
 
   !> @brief Add neighboring cell to tree structure
   !<
-  subroutine addNeighborCell(this, cellNbrs, newNbrIdx, nbrModel, mask)
+  subroutine addNeighborCell(this, cellNbrs, newNbrIdx, nbrModel, nbr_dist_model, mask)
     class(GridConnectionType), intent(in) :: this !< this grid connection instance
     type(CellWithNbrsType), intent(inout) :: cellNbrs !< the root cell which to add to
     integer(I4B), intent(in) :: newNbrIdx !< the neigboring cell's index
     class(NumericalModelType), pointer :: nbrModel !< the model where the new neighbor lives
+    class(DistributedModelType), pointer :: nbr_dist_model !< the model where the new neighbor lives
     type(GlobalCellType), optional :: mask !< don't add connections to this cell (optional)
-    ! local
 
     if (present(mask)) then
       if (newNbrIdx == mask%index .and. associated(nbrModel, mask%model)) then
         return
       end if
     end if
-    call cellNbrs%addNbrCell(newNbrIdx, nbrModel)
+    
+    call cellNbrs%addNbrCell(newNbrIdx, nbrModel, nbr_dist_model)
 
   end subroutine addNeighborCell
 

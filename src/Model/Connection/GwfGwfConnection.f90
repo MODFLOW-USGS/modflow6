@@ -153,9 +153,9 @@ contains
     call this%gwfInterfaceModel%model_df()
 
     call this%addDistVar('X', '', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AD, BEFORE_CF/))
+                         SYNC_NODES, '', (/BEFORE_AR, BEFORE_AD, BEFORE_CF/))
     call this%addDistVar('IBOUND', '', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AD, BEFORE_CF/))
+                         SYNC_NODES, '', (/BEFORE_AR, BEFORE_AD, BEFORE_CF/))
     call this%addDistVar('XOLD', '', this%gwfInterfaceModel%name, &
                          SYNC_NODES, '', (/BEFORE_AD, BEFORE_CF/))
     call this%addDistVar('ICELLTYPE', 'NPF', this%gwfInterfaceModel%name, &

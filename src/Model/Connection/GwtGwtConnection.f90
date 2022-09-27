@@ -177,7 +177,9 @@ contains
     call this%gwtInterfaceModel%model_df()
 
     call this%addDistVar('X', '', this%gwtInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AD, BEFORE_CF/))
+                         SYNC_NODES, '', (/BEFORE_AR, BEFORE_AD, BEFORE_CF/))
+    call this%addDistVar('IBOUND', '', this%gwtInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AR/))
     call this%addDistVar('GWFHEAD', 'FMI', this%gwtInterfaceModel%name, &
                          SYNC_NODES, '', (/BEFORE_AD/))
     call this%addDistVar('GWFSAT', 'FMI', this%gwtInterfaceModel%name, &
