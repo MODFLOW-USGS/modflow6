@@ -168,7 +168,7 @@ contains
     class(NumericalPackageType) :: this !< NumericalPackageType object
     !
     ! -- deallocate
-    call mem_deallocate(this%package_type)
+    call mem_deallocate(this%package_type, 'PACKAGE_TYPE', this%memoryPath)
     call mem_deallocate(this%id)
     call mem_deallocate(this%inunit)
     call mem_deallocate(this%iout)
