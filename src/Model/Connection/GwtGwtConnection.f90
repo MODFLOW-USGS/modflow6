@@ -180,6 +180,12 @@ contains
                          SYNC_NODES, '', (/BEFORE_AR, BEFORE_AD, BEFORE_CF/))
     call this%addDistVar('IBOUND', '', this%gwtInterfaceModel%name, &
                          SYNC_NODES, '', (/BEFORE_AR/))
+    call this%addDistVar('TOP', 'DIS', this%gwtInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AR/))
+    call this%addDistVar('BOT', 'DIS', this%gwtInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AR/))
+    call this%addDistVar('AREA', 'DIS', this%gwtInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AR/))
     call this%addDistVar('GWFHEAD', 'FMI', this%gwtInterfaceModel%name, &
                          SYNC_NODES, '', (/BEFORE_AD/))
     call this%addDistVar('GWFSAT', 'FMI', this%gwtInterfaceModel%name, &
@@ -333,8 +339,8 @@ contains
     do ic = 1, this%gridConnection%nrOfBoundaryCells
       boundaryCell = this%gridConnection%boundaryCells(ic)%cell
       connectedCell = this%gridConnection%connectedCells(ic)%cell
-      iglo = boundaryCell%index + boundaryCell%model%moffset
-      jglo = connectedCell%index + connectedCell%model%moffset
+      iglo = boundaryCell%index + boundaryCell%dmodel%moffset
+      jglo = connectedCell%index + connectedCell%dmodel%moffset
       call sparse%addconnection(iglo, jglo, 1)
       call sparse%addconnection(jglo, iglo, 1)
     end do
@@ -402,13 +408,12 @@ contains
     do n = 1, this%neq
       ! We only need the coefficients for our own model
       ! (i.e. rows in the matrix that belong to this%owner):
-      if (.not. associated(this%gridConnection%idxToGlobal(n)%model, &
-                           this%owner)) then
+      if (.not. this%gridConnection%idxToGlobal(n)%dmodel == this%owner) then
         cycle
       end if
 
       nglo = this%gridConnection%idxToGlobal(n)%index + &
-             this%gridConnection%idxToGlobal(n)%model%moffset
+             this%gridConnection%idxToGlobal(n)%dmodel%moffset
       rhssln(nglo) = rhssln(nglo) + this%rhs(n)
 
       do ipos = this%ia(n), this%ia(n + 1) - 1

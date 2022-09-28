@@ -166,6 +166,12 @@ contains
                          SYNC_NODES, '', (/BEFORE_AR/))
     call this%addDistVar('K33', 'NPF', this%gwfInterfaceModel%name, &
                          SYNC_NODES, '', (/BEFORE_AR/))
+    call this%addDistVar('TOP', 'DIS', this%gwfInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AR/))
+    call this%addDistVar('BOT', 'DIS', this%gwfInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AR/))
+    call this%addDistVar('AREA', 'DIS', this%gwfInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AR/))
     call this%mapVariables()
 
     ! point X, RHS, IBOUND to connection
@@ -302,14 +308,13 @@ contains
       ! we cannot check with the mask here, because cross-terms are not
       ! necessarily from primary connections. But, we only need the coefficients
       ! for our own model (i.e. fluxes into cells belonging to this%owner):
-      if (.not. associated(this%gridConnection%idxToGlobal(n)%model, &
-                           this%owner)) then
+      if (.not. this%gridConnection%idxToGlobal(n)%dmodel == this%owner) then
         ! only add connections for own model to global matrix
         cycle
       end if
 
       nglo = this%gridConnection%idxToGlobal(n)%index + &
-             this%gridConnection%idxToGlobal(n)%model%moffset
+             this%gridConnection%idxToGlobal(n)%dmodel%moffset
       rhssln(nglo) = rhssln(nglo) + this%rhs(n)
 
       do ipos = this%ia(n), this%ia(n + 1) - 1
@@ -550,7 +555,7 @@ contains
     ! for flows crossing the boundary, and set flowja for internal
     ! flows affected by the connection.
     do n = 1, this%neq
-      if (.not. associated(toGlobal(n)%model, this%owner)) then
+      if (.not. toGlobal(n)%dmodel == this%owner) then
         ! only add flows to own model
         cycle
       end if
@@ -566,7 +571,7 @@ contains
         m = imCon%ja(ipos)
         mLoc = toGlobal(m)%index
 
-        if (.not. associated(toGlobal(m)%model, this%owner)) then
+        if (.not. toGlobal(m)%dmodel == this%owner) then
           ! boundary connection, set edge properties
           isym = imCon%jas(ipos)
           ihc = imCon%ihc(isym)

@@ -1,3 +1,14 @@
+!> Refactoring issues towards parallel:
+!!
+!! * remove camelCase
+!! * Non-stateless function calling on foreign models:
+!!  - get_cellxy
+!!  - get_nodeuser
+!!  - get_jaindex
+!!  - transform_xy
+!!  - ...?
+!! * Lookup table on region should work of dist. models instead
+!<
 module GridConnectionModule
   use KindModule, only: I4B, DP, LGP
   use SimModule, only: ustop
@@ -95,7 +106,7 @@ module GridConnectionModule
     procedure, private, pass(this) :: addToRegionalModels
     procedure, private, pass(this) :: getRegionalModelOffset
     generic, private :: getInterfaceIndex => getInterfaceIndexByCell, &
-      getInterfaceIndexByIndexModel
+                                             getInterfaceIndexByIndexModel
     procedure, private, pass(this) :: getInterfaceIndexByCell
     procedure, private, pass(this) :: getInterfaceIndexByIndexModel
     procedure, private, pass(this) :: registerInterfaceCells
@@ -471,14 +482,14 @@ contains
     newDepth = depth - 1
 
     ! access through dist. model:
-    call cellNbrs%cell%dmodel%load(ia, 'CON', 'IA')
-    call cellNbrs%cell%dmodel%load(ja, 'CON', 'JA')
+    call cellNbrs%cell%dmodel%load(ia, 'IA', 'CON')
+    call cellNbrs%cell%dmodel%load(ja, 'JA', 'CON')
 
     ! find neighbors local to this cell by looping through grid connections
     do ipos = ia(cellNbrs%cell%index) + 1, &
       ia(cellNbrs%cell%index + 1) - 1
       nbrIdx = ja(ipos)
-      dist_model_nbr => GetDistModelFromList(distmodellist, &
+      dist_model_nbr => GetDistModelFromList(distmodellist, & ! TODO_MJR: temporarily to test dmodels
                                              cellNbrs%cell%model%id)
       call this%addNeighborCell(cellNbrs, nbrIdx, cellNbrs%cell%model, &
                                 dist_model_nbr, mask)
@@ -491,9 +502,8 @@ contains
     do inbr = 1, cellNbrs%nrOfNbrs
 
       ! are we leaving the model through another exchange?
-      if (interior .and. associated(cellNbrs%cell%model, this%model)) then
-        if (.not. associated(cellNbrs%neighbors(inbr)%cell%model, &
-                             this%model)) then
+      if (interior .and. cellNbrs%cell%dmodel == this%model) then
+        if (.not. cellNbrs%neighbors(inbr)%cell%dmodel == this%model) then
           ! decrement by 1, because the connection we are crossing is not
           ! calculated by this interface
           newDepth = newDepth - 1
@@ -522,11 +532,11 @@ contains
       connEx => GetDisConnExchangeFromList(this%exchanges, ix)
 
       ! loop over n-m links in the exchange
-      if (associated(cellNbrs%cell%model, connEx%model1)) then
+      if (cellNbrs%cell%dmodel == connEx%model1) then
         do iexg = 1, connEx%nexg
           if (connEx%nodem1(iexg) == cellNbrs%cell%index) then
             ! we have a link, now add foreign neighbor
-            dist_model_nbr => GetDistModelFromList(distmodellist, connEx%model2%id)
+            dist_model_nbr => GetDistModelFromList(distmodellist, connEx%model2%id) ! TODO_MJR: temp. for testing
             call this%addNeighborCell(cellNbrs, connEx%nodem2(iexg), &
                                       connEx%model2, dist_model_nbr, &
                                       mask)
@@ -534,11 +544,11 @@ contains
         end do
       end if
       ! and the reverse
-      if (associated(cellNbrs%cell%model, connEx%model2)) then
+      if (cellNbrs%cell%dmodel == connEx%model2) then
         do iexg = 1, connEx%nexg
           if (connEx%nodem2(iexg) == cellNbrs%cell%index) then
             ! we have a link, now add foreign neighbor
-            dist_model_nbr => GetDistModelFromList(distmodellist, connEx%model1%id)
+            dist_model_nbr => GetDistModelFromList(distmodellist, connEx%model1%id) ! TODO_MJR: temp. for testing
             call this%addNeighborCell(cellNbrs, connEx%nodem1(iexg), &
                                       connEx%model1, dist_model_nbr, &
                                       mask)
@@ -561,7 +571,7 @@ contains
     type(GlobalCellType), optional :: mask !< don't add connections to this cell (optional)
 
     if (present(mask)) then
-      if (newNbrIdx == mask%index .and. associated(nbrModel, mask%model)) then
+      if (newNbrIdx == mask%index .and. mask%dmodel == nbrModel) then
         return
       end if
     end if
@@ -750,6 +760,8 @@ contains
     type(ConnectionsType), pointer :: conn, connOrig
     integer(I4B) :: n, m, ipos, isym, iposOrig, isymOrig
     type(GlobalCellType), pointer :: ncell, mcell
+    integer(I4B), dimension(:), pointer, contiguous :: jas, ihc
+    real(DP), dimension(:), pointer, contiguous :: hwva, cl1, cl2, anglex
 
     conn => this%connections
 
@@ -761,7 +773,7 @@ contains
         isym = conn%jas(ipos)
         ncell => this%idxToGlobal(n)
         mcell => this%idxToGlobal(m)
-        if (associated(ncell%model, mcell%model)) then
+        if (ncell%dmodel == mcell%dmodel) then
           ! within same model, straight copy
           connOrig => ncell%model%dis%con
           iposOrig = connOrig%getjaindex(ncell%index, mcell%index)
@@ -775,17 +787,26 @@ contains
             call ustop()
           end if
 
-          isymOrig = connOrig%jas(iposOrig)
-          conn%hwva(isym) = connOrig%hwva(isymOrig)
-          conn%ihc(isym) = connOrig%ihc(isymOrig)
+          ! load distributed data from memory
+          ! TODO_MJR: this should probably be cached at some point...
+          call ncell%dmodel%load(jas, 'JAS', 'CON')
+          call ncell%dmodel%load(ihc, 'IHC', 'CON')
+          call ncell%dmodel%load(hwva, 'HWVA', 'CON')
+          call ncell%dmodel%load(cl1, 'CL1', 'CON')
+          call ncell%dmodel%load(cl2, 'CL2', 'CON')
+          call ncell%dmodel%load(anglex, 'ANGLEX', 'CON')
+
+          isymOrig = jas(iposOrig)
+          conn%hwva(isym) = hwva(isymOrig)
+          conn%ihc(isym) = ihc(isymOrig)
           if (ncell%index < mcell%index) then
-            conn%cl1(isym) = connOrig%cl1(isymOrig)
-            conn%cl2(isym) = connOrig%cl2(isymOrig)
-            conn%anglex(isym) = connOrig%anglex(isymOrig)
+            conn%cl1(isym) = cl1(isymOrig)
+            conn%cl2(isym) = cl2(isymOrig)
+            conn%anglex(isym) = anglex(isymOrig)
           else
-            conn%cl1(isym) = connOrig%cl2(isymOrig)
-            conn%cl2(isym) = connOrig%cl1(isymOrig)
-            conn%anglex(isym) = mod(connOrig%anglex(isymOrig) + DPI, DTWOPI)
+            conn%cl1(isym) = cl2(isymOrig)
+            conn%cl2(isym) = cl1(isymOrig)
+            conn%anglex(isym) = mod(anglex(isymOrig) + DPI, DTWOPI)
           end if
         end if
       end do
@@ -938,8 +959,8 @@ contains
 
     ! only set the mask for internal connections, leaving the
     ! others at 0
-    if (associated(cell%cell%model, this%model) .and. &
-        associated(nbrCell%cell%model, this%model)) then
+    if (cell%cell%dmodel == this%model .and. &
+        nbrCell%cell%dmodel == this%model) then
       ! this will set a mask on both diagonal, and both cross terms
       call this%setMaskOnConnection(cell, nbrCell, level)
       call this%setMaskOnConnection(nbrCell, cell, level)
@@ -1072,12 +1093,10 @@ contains
 
     ! fill data
     do icell = 1, nrOfCells
-      idx = this%idxToGlobal(icell)%index
-      model => this%idxToGlobal(icell)%model
-
-      disu%top(icell) = model%dis%top(idx)
-      disu%bot(icell) = model%dis%bot(idx)
-      disu%area(icell) = model%dis%area(idx)
+      idx = this%idxToGlobal(icell)%index  
+      disu%top(icell) = -huge(1.0_DP)
+      disu%bot(icell) = -huge(1.0_DP)
+      disu%area(icell) = -huge(1.0_DP)
     end do
 
     ! grid connections follow from GridConnection:
@@ -1113,6 +1132,7 @@ contains
   subroutine getInterfaceMap(this, interfaceMap)
     use BaseModelModule, only: BaseModelType, GetBaseModelFromList
     use VectorIntModule
+    use CsrUtilsModule
     class(GridConnectionType) :: this !< this grid connection
     type(InterfaceMapType), pointer :: interfaceMap !< a pointer to the map (not allocated yet)
     ! local
@@ -1122,14 +1142,15 @@ contains
     type(VectorInt) :: modelIds
     type(VectorInt) :: srcIdxTmp, tgtIdxTmp, signTmp
     class(DisConnExchangeType), pointer :: connEx
+    integer(I4B), dimension(:), pointer, contiguous :: ia, ja
 
     allocate (interfaceMap)
 
     ! first get the participating models
     call modelIds%init()
     do i = 1, this%nrOfCells
-      if (.not. modelIds%contains(this%idxToGlobal(i)%model%id)) then
-        call modelIds%push_back(this%idxToGlobal(i)%model%id)
+      if (.not. modelIds%contains(this%idxToGlobal(i)%dmodel%id)) then
+        call modelIds%push_back(this%idxToGlobal(i)%dmodel%id)
       end if
     end do
 
@@ -1148,7 +1169,7 @@ contains
 
       ! store the node map for this model
       do i = 1, this%nrOfCells
-        if (mid == this%idxToGlobal(i)%model%id) then
+        if (mid == this%idxToGlobal(i)%dmodel%id) then
           call srcIdxTmp%push_back(this%idxToGlobal(i)%index)
           call tgtIdxTmp%push_back(i)
         end if
@@ -1171,13 +1192,18 @@ contains
 
       ! store the connection map for this model
       do i = 1, this%nrOfCells
-        if (mid /= this%idxToGlobal(i)%model%id) cycle
+        if (mid /= this%idxToGlobal(i)%dmodel%id) cycle
         do ipos = this%connections%ia(i), this%connections%ia(i + 1) - 1
           j = this%connections%ja(ipos)
-          if (mid /= this%idxToGlobal(j)%model%id) cycle
+          if (mid /= this%idxToGlobal(j)%dmodel%id) cycle
+
+          ! i and j are now in same model (mid)
           iloc = this%idxToGlobal(i)%index
           jloc = this%idxToGlobal(j)%index
-          iposModel = this%idxToGlobal(j)%model%dis%con%getjaindex(iloc, jloc)
+          call this%idxToGlobal(i)%dmodel%load(ia, 'IA', 'CON')
+          call this%idxToGlobal(i)%dmodel%load(ja, 'JA', 'CON')
+          iposModel = getCSRIndex(iloc, jloc, ia, ja)
+
           call srcIdxTmp%push_back(iposModel)
           call tgtIdxTmp%push_back(ipos)
         end do
@@ -1293,8 +1319,10 @@ contains
 
     periodic = .false.
     do icell = 1, this%nrOfBoundaryCells
-      if (.not. associated(this%boundaryCells(icell)%cell%model, &
-                           this%connectedCells(icell)%cell%model)) cycle
+      if (.not. this%boundaryCells(icell)%cell%dmodel == &
+                this%connectedCells(icell)%cell%dmodel) then
+        cycle
+      end if
 
       ! one way
       if (this%boundaryCells(icell)%cell%index == n) then

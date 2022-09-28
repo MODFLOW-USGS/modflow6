@@ -46,7 +46,7 @@ contains
     call solutiongrouplist%Clear()
     call baseexchangelist%Clear()
     call baseconnectionlist%Clear()
-    call distmodellist%Clear()
+    call distmodellist%Clear(destroy=.true.)
 
     return
   end subroutine lists_da

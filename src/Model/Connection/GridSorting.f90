@@ -32,21 +32,30 @@ contains
       type(GlobalCellType), pointer :: gcn, gcm
       real(DP) :: xnloc, ynloc, xmloc, ymloc
       real(DP) :: xn, yn, zn, xm, ym, zm
+      real(DP), dimension(:), pointer, contiguous :: dis_top_n, dis_bot_n, &
+                                                     dis_top_m, dis_bot_m
 
       ! get coordinates
       gcn => idxToGlobal(array(n))
       gcm => idxToGlobal(array(m))
 
+      ! load model data
+      ! TODO_MJR: we should probably cache this
+      call gcn%dmodel%load(dis_top_n, 'TOP', 'DIS')
+      call gcn%dmodel%load(dis_bot_n, 'BOT', 'DIS')
+      call gcm%dmodel%load(dis_top_m, 'TOP', 'DIS')
+      call gcm%dmodel%load(dis_bot_m, 'BOT', 'DIS')
+
       ! convert coordinates
       call gcn%model%dis%get_cellxy(gcn%index, xnloc, ynloc)
       call gcn%model%dis%transform_xy(xnloc, ynloc, xn, yn)
-      zn = DHALF * (gcn%model%dis%top(gcn%index) + &
-                    gcn%model%dis%bot(gcn%index))
+      zn = DHALF * (dis_top_n(gcn%index) + &
+                    dis_bot_n(gcn%index))
 
       call gcm%model%dis%get_cellxy(gcm%index, xmloc, ymloc)
       call gcm%model%dis%transform_xy(xmloc, ymloc, xm, ym)
-      zm = DHALF * (gcm%model%dis%top(gcm%index) + &
-                    gcm%model%dis%bot(gcm%index))
+      zm = DHALF * (dis_top_m(gcm%index) + &
+                    dis_bot_m(gcm%index))
 
       ! compare
       if (.not. is_same(zn, zm, 10 * epsilon(zn))) then
