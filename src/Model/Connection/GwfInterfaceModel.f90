@@ -124,7 +124,7 @@ contains
     type(GwfNpfGridDataType) :: npfGridData
 
     call npfGridData%construct(this%dis%nodes)
-    call this%setNpfGridData(npfGridData)
+    !call this%setNpfGridData(npfGridData)
     call this%npf%npf_ar(this%ic, this%ibound, this%x, npfGridData)
     call npfGridData%destroy()
 

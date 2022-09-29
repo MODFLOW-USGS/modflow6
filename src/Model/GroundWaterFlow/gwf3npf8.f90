@@ -337,7 +337,7 @@ contains
     !
     if (present(grid_data)) then
       ! -- set the data block
-      call this%set_grid_data(grid_data)
+      ! call this%set_grid_data(grid_data)
     end if
     !
     ! -- preprocess data
@@ -1787,7 +1787,7 @@ contains
     if (lname(5)) then
       this%iwetdry = 1
     else
-      call mem_reallocate(this%wetdry, 1, 'WETDRY', trim(this%memoryPath))
+      call mem_reallocate(this%wetdry, 0, 'WETDRY', trim(this%memoryPath))
     end if
     !
     ! -- set angle flags
@@ -1795,21 +1795,21 @@ contains
       this%iangle1 = 1
     else
       if (this%ixt3d == 0) then
-        call mem_reallocate(this%angle1, 1, 'ANGLE1', trim(this%memoryPath))
+        call mem_reallocate(this%angle1, 0, 'ANGLE1', trim(this%memoryPath))
       end if
     end if
     if (lname(7)) then
       this%iangle2 = 1
     else
       if (this%ixt3d == 0) then
-        call mem_reallocate(this%angle2, 1, 'ANGLE2', trim(this%memoryPath))
+        call mem_reallocate(this%angle2, 0, 'ANGLE2', trim(this%memoryPath))
       end if
     end if
     if (lname(8)) then
       this%iangle3 = 1
     else
       if (this%ixt3d == 0) then
-        call mem_reallocate(this%angle3, 1, 'ANGLE3', trim(this%memoryPath))
+        call mem_reallocate(this%angle3, 0, 'ANGLE3', trim(this%memoryPath))
       end if
     end if
     !
@@ -1828,63 +1828,8 @@ contains
   subroutine set_grid_data(this, npf_data)
     class(GwfNpfType), intent(inout) :: this
     type(GwfNpfGridDataType), intent(in) :: npf_data
-
-    ! fill grid arrays
-    call this%dis%fill_grid_array(npf_data%icelltype, this%icelltype)
-    call this%dis%fill_grid_array(npf_data%k11, this%k11)
-
-    if (npf_data%ik22 == 1) then
-      this%ik22 = 1
-      call this%dis%fill_grid_array(npf_data%k22, this%k22)
-    else
-      ! if not present, then K22 = K11
-      this%ik22 = 0
-      call this%dis%fill_grid_array(this%k11, this%k22)
-    end if
-
-    if (npf_data%ik33 == 1) then
-      this%ik33 = 1
-      call this%dis%fill_grid_array(npf_data%k33, this%k33)
-    else
-      ! if not present, then K33 = K11
-      this%ik33 = 0
-      call this%dis%fill_grid_array(this%k11, this%k33)
-    end if
-
-    if (npf_data%iwetdry == 1) then
-      call this%dis%fill_grid_array(npf_data%wetdry, this%wetdry)
-    else
-      ! if not present, then compress array
-      this%iwetdry = 0
-      call mem_reallocate(this%wetdry, 1, 'WETDRY', trim(this%memoryPath))
-    end if
-
-    if (npf_data%iangle1 == 1) then
-      this%iangle1 = 1
-      call this%dis%fill_grid_array(npf_data%angle1, this%angle1)
-    else
-      ! if not present, then compress array
-      this%iangle1 = 0
-      call mem_reallocate(this%angle1, 1, 'ANGLE1', trim(this%memoryPath))
-    end if
-
-    if (npf_data%iangle2 == 1) then
-      this%iangle2 = 1
-      call this%dis%fill_grid_array(npf_data%angle2, this%angle2)
-    else
-      ! if not present, then compress array
-      this%iangle2 = 0
-      call mem_reallocate(this%angle2, 1, 'ANGLE2', trim(this%memoryPath))
-    end if
-
-    if (npf_data%iangle3 == 1) then
-      this%iangle3 = 1
-      call this%dis%fill_grid_array(npf_data%angle3, this%angle3)
-    else
-      ! if not present, then compress array
-      this%iangle3 = 0
-      call mem_reallocate(this%angle3, 1, 'ANGLE3', trim(this%memoryPath))
-    end if
+    
+    return
 
   end subroutine set_grid_data
 
