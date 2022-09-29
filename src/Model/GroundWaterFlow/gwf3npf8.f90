@@ -240,10 +240,6 @@ contains
                        '.  The XT3D option cannot be used with the GNC &
                        &Package.', terminate=.TRUE.)
     end if
-
-    ! -- allocate arrays
-    call this%allocate_arrays(this%dis%nodes, this%dis%njas)
-
     !
     ! -- Return
     return
@@ -1833,7 +1829,7 @@ contains
     class(GwfNpfType), intent(inout) :: this
     type(GwfNpfGridDataType), intent(in) :: npf_data
 
-    fill grid arrays
+    ! fill grid arrays
     call this%dis%fill_grid_array(npf_data%icelltype, this%icelltype)
     call this%dis%fill_grid_array(npf_data%k11, this%k11)
 
