@@ -127,11 +127,23 @@ contains
     ! -- Read dispersion options
     if (present(dspOptions)) then
       this%ixt3d = dspOptions%ixt3d
+      !
+      ! -- Allocate only, grid data will not be read from file
+      call this%allocate_arrays(this%dis%nodes)
     else
+      !
+      ! -- Print a message identifying the dispersion package.
+      if (this%iout > 0) then
+        write (this%iout, fmtdsp) this%inunit
+      end if
       !
       ! -- Initialize block parser
       call this%parser%Initialize(this%inunit, this%iout)
       call this%read_options()
+      call this%allocate_arrays(this%dis%nodes)
+      !
+      ! -- Read dispersion data
+      call this%read_data()
     end if
     !
     ! -- xt3d create
@@ -219,20 +231,9 @@ contains
     this%ibound => ibound
     this%porosity => porosity
     !
-    ! -- Print a message identifying the dispersion package.
-    if (this%iout > 0) then
-      write (this%iout, fmtdsp) this%inunit
-    end if
-    !
-    ! -- Allocate arrays
-    call this%allocate_arrays(this%dis%nodes)
-    !
     if (present(grid_data)) then
       ! -- Set dispersion data
       call this%set_data(grid_data)
-    else
-      ! -- Read dispersion data
-      call this%read_data()
     end if
     !
     ! -- Return

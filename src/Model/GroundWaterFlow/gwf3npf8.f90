@@ -15,6 +15,9 @@ module GwfNpfModule
   use BlockParserModule, only: BlockParserType
   use InputOutputModule, only: GetUnit, openfile
   use TvkModule, only: TvkType, tvk_cr
+  use MemoryManagerModule, only: mem_allocate, mem_reallocate, &
+                                 mem_deallocate, mem_setptr, &
+                                 mem_reassignptr
 
   implicit none
 
@@ -210,8 +213,18 @@ contains
       ! -- Initialize block parser and read options
       call this%parser%Initialize(this%inunit, this%iout)
       call this%read_options()
+      !
+      ! -- allocate arrays
+      call this%allocate_arrays(this%dis%nodes, this%dis%njas)
+      !
+      ! -- read from file, set, and convert/check the input
+      call this%read_grid_data()
+      call this%prepcheck()
     else
       call this%set_options(npf_options)
+      !
+      ! -- allocate arrays
+      call this%allocate_arrays(this%dis%nodes, this%dis%njas)
     end if
 
     call this%check_options()
@@ -241,7 +254,6 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use SparseModule, only: sparsematrix
-    use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwfNpftype) :: this
     integer(I4B), intent(in) :: moffset
@@ -264,7 +276,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwfNpftype) :: this
     integer(I4B), intent(in) :: moffset
@@ -299,6 +310,7 @@ contains
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: hnew !< pointer to model head array
     type(GwfNpfGridDataType), optional, intent(in) :: grid_data !< (optional) data structure with NPF grid data
     ! -- local
+    integer(I4B) :: n
     ! -- formats
     ! -- data
 ! ------------------------------------------------------------------------------
@@ -308,14 +320,19 @@ contains
     this%ibound => ibound
     this%hnew => hnew
     !
-    ! -- allocate arrays
-    call this%allocate_arrays(this%dis%nodes, this%dis%njas)
+    if (this%icalcspdis == 1) then
+      call mem_reallocate(this%spdis, 3, this%dis%nodes, 'SPDIS', this%memoryPath)
+      call mem_reallocate(this%nodedge, this%nedges, 'NODEDGE', this%memoryPath)
+      call mem_reallocate(this%ihcedge, this%nedges, 'IHCEDGE', this%memoryPath)
+      call mem_reallocate(this%propsedge, 5, this%nedges, 'PROPSEDGE', &
+                          this%memoryPath)
+      do n = 1, this%dis%nodes
+        this%spdis(:, n) = DZERO
+      end do
+    end if
+
     !
-    if (.not. present(grid_data)) then
-      ! -- read from file, set, and convert/check the input
-      call this%read_grid_data()
-      call this%prepcheck()
-    else
+    if (present(grid_data)) then
       ! -- set the data block
       call this%set_grid_data(grid_data)
     end if
@@ -1022,7 +1039,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(GwfNpftype) :: this
 ! ------------------------------------------------------------------------------
@@ -1106,7 +1122,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use MemoryManagerModule, only: mem_allocate, mem_setptr
     use MemoryHelperModule, only: create_mem_path
     ! -- dummy
     class(GwfNpftype) :: this
@@ -1206,7 +1221,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwfNpftype) :: this
     integer(I4B), intent(in) :: ncells
@@ -1233,22 +1247,11 @@ contains
     ! -- Optional arrays
     call mem_allocate(this%ibotnode, 0, 'IBOTNODE', this%memoryPath)
     !
-    ! -- Specific discharge
-    if (this%icalcspdis == 1) then
-      call mem_allocate(this%spdis, 3, ncells, 'SPDIS', this%memoryPath)
-      call mem_allocate(this%nodedge, this%nedges, 'NODEDGE', this%memoryPath)
-      call mem_allocate(this%ihcedge, this%nedges, 'IHCEDGE', this%memoryPath)
-      call mem_allocate(this%propsedge, 5, this%nedges, 'PROPSEDGE', &
-                        this%memoryPath)
-      do n = 1, ncells
-        this%spdis(:, n) = DZERO
-      end do
-    else
-      call mem_allocate(this%spdis, 3, 0, 'SPDIS', this%memoryPath)
-      call mem_allocate(this%nodedge, 0, 'NODEDGE', this%memoryPath)
-      call mem_allocate(this%ihcedge, 0, 'IHCEDGE', this%memoryPath)
-      call mem_allocate(this%propsedge, 0, 0, 'PROPSEDGE', this%memoryPath)
-    end if
+    ! -- Specific discharge is (re-)allocated when nedges is known
+    call mem_allocate(this%spdis, 3, 0, 'SPDIS', this%memoryPath)
+    call mem_allocate(this%nodedge, 0, 'NODEDGE', this%memoryPath)
+    call mem_allocate(this%ihcedge, 0, 'IHCEDGE', this%memoryPath)
+    call mem_allocate(this%propsedge, 0, 0, 'PROPSEDGE', this%memoryPath)
     !
     ! -- Time-varying property flag arrays
     call mem_allocate(this%nodekchange, ncells, 'NODEKCHANGE', this%memoryPath)
@@ -1685,8 +1688,6 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH, DONE, DPIO180
-    use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_deallocate, &
-                                   mem_reassignptr
     use SimModule, only: store_error, count_errors
     ! -- dummy
     class(GwfNpftype) :: this
@@ -1822,7 +1823,6 @@ contains
   end subroutine read_grid_data
 
   subroutine set_grid_data(this, npf_data)
-    use MemoryManagerModule, only: mem_reallocate, mem_reassignptr
     class(GwfNpfType), intent(inout) :: this
     type(GwfNpfGridDataType), intent(in) :: npf_data
 
@@ -2056,7 +2056,6 @@ contains
   !<
   subroutine preprocess_input(this)
     use ConstantsModule, only: LINELENGTH
-    use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_deallocate
     use SimModule, only: store_error, count_errors
     class(GwfNpfType) :: this !< the instance of the NPF package
     ! local
