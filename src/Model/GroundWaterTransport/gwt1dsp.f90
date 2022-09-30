@@ -7,7 +7,6 @@ module GwtDspModule
   use GwtFmiModule, only: GwtFmiType
   use Xt3dModule, only: Xt3dType, xt3d_cr
   use GwtDspOptionsModule, only: GwtDspOptionsType
-  use GwtDspGridDataModule, only: GwtDspGridDataType
 
   implicit none
   private
@@ -56,7 +55,6 @@ module GwtDspModule
     procedure :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_data
-    procedure, private :: set_data
     procedure, private :: calcdispellipse
     procedure, private :: calcdispcoef
 
@@ -154,9 +152,6 @@ contains
       call this%xt3d%xt3d_df(dis)
     end if
     !
-    ! -- Allocate arrays
-    call this%allocate_arrays(this%dis%nodes)
-    !
     ! -- Return
     return
   end subroutine dsp_df
@@ -209,7 +204,7 @@ contains
     return
   end subroutine dsp_mc
 
-  subroutine dsp_ar(this, ibound, porosity, grid_data)
+  subroutine dsp_ar(this, ibound, porosity)
 ! ******************************************************************************
 ! dsp_ar -- Allocate and Read
 ! ******************************************************************************
@@ -221,8 +216,6 @@ contains
     class(GwtDspType) :: this
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     real(DP), dimension(:), pointer, contiguous :: porosity
-    type(GwtDspGridDataType), optional, intent(in) :: grid_data !< optional data structure with DSP grid data,
-                                                                !! to create the package without input file
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtdsp = &
@@ -233,11 +226,6 @@ contains
     ! -- dsp pointers to arguments that were passed in
     this%ibound => ibound
     this%porosity => porosity
-    !
-    if (present(grid_data)) then
-      ! -- Set dispersion data
-      call this%set_data(grid_data)
-    end if
     !
     ! -- Return
     return
@@ -713,39 +701,6 @@ contains
     ! -- Return
     return
   end subroutine read_data
-
-  !< @brief Set the grid data to the package
-  !<
-  subroutine set_data(this, grid_data)
-    use MemoryManagerModule, only: mem_reallocate
-    class(GwtDspType) :: this !< this DSP package
-    type(GwtDspGridDataType), intent(in) :: grid_data !< the data structure with DSP grid data
-    ! local
-    integer(I4B) :: i
-
-    call mem_reallocate(this%diffc, this%dis%nodes, 'DIFFC', &
-                        trim(this%memoryPath))
-    call mem_reallocate(this%alh, this%dis%nodes, 'ALH', &
-                        trim(this%memoryPath))
-    call mem_reallocate(this%alv, this%dis%nodes, 'ALV', &
-                        trim(this%memoryPath))
-    call mem_reallocate(this%ath1, this%dis%nodes, 'ATH1', &
-                        trim(this%memoryPath))
-    call mem_reallocate(this%ath2, this%dis%nodes, 'ATH2', &
-                        trim(this%memoryPath))
-    call mem_reallocate(this%atv, this%dis%nodes, 'ATV', &
-                        trim(this%memoryPath))
-
-    do i = 1, this%dis%nodes
-      this%diffc(i) = grid_data%diffc(i)
-      this%alh(i) = grid_data%alh(i)
-      this%alv(i) = grid_data%alv(i)
-      this%ath1(i) = grid_data%ath1(i)
-      this%ath2(i) = grid_data%ath2(i)
-      this%atv(i) = grid_data%atv(i)
-    end do
-
-  end subroutine
 
   subroutine calcdispellipse(this)
 ! ******************************************************************************

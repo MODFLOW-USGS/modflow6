@@ -87,7 +87,6 @@ modflow_sources = files(
     'Model' / 'ModelUtilities' / 'GwfStorageUtils.f90',
     'Model' / 'ModelUtilities' / 'GwtAdvOptions.f90',
     'Model' / 'ModelUtilities' / 'GwtDspOptions.f90',
-    'Model' / 'ModelUtilities' / 'GwtDspGridData.f90',
     'Model' / 'ModelUtilities' / 'GwtSpc.f90',
     'Model' / 'ModelUtilities' / 'Mover.f90',
     'Model' / 'ModelUtilities' / 'PackageMover.f90',
