@@ -2,8 +2,8 @@ module GwfDisuModule
 
   use ArrayReadersModule, only: ReadArray
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: LENMODELNAME, LINELENGTH, DZERO, DONE
-  use ConnectionsModule, only: ConnectionsType, iac_to_ia
+  use ConstantsModule, only: LINELENGTH, DZERO, DONE
+  use ConnectionsModule, only: iac_to_ia
   use InputOutputModule, only: URWORD, ulasav, ulaprufw, ubdsv1, ubdsv06
   use SimModule, only: count_errors, store_error, store_error_unit
   use SimVariablesModule, only: errmsg
@@ -17,7 +17,6 @@ module GwfDisuModule
   private
   public :: GwfDisuType
   public :: disu_cr
-  public :: disu_init_mem
   public :: CastAsDisuType
 
   type, extends(DisBaseType) :: GwfDisuType
@@ -109,126 +108,6 @@ contains
     return
   end subroutine disu_cr
 
-  subroutine disu_init_mem(dis, name_model, iout, nodes, nja, &
-                           top, bot, area, iac, ja, ihc, cl12, hwva, angldegx, &
-                           nvert, vertices, cellxy, idomain)
-! ******************************************************************************
-! dis_init_mem -- Create a new unstructured discretization object from memory
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(DisBaseType), pointer :: dis
-    character(len=*), intent(in) :: name_model
-    integer(I4B), intent(in) :: iout
-    integer(I4B), intent(in) :: nodes
-    integer(I4B), intent(in) :: nja
-    real(DP), dimension(:), pointer, contiguous, intent(in) :: top
-    real(DP), dimension(:), pointer, contiguous, intent(in) :: bot
-    real(DP), dimension(:), pointer, contiguous, intent(in) :: area
-    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: iac
-    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: ja
-    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: ihc
-    real(DP), dimension(:), pointer, contiguous, intent(in) :: cl12
-    real(DP), dimension(:), pointer, contiguous, intent(in) :: hwva
-    real(DP), dimension(:), pointer, contiguous, intent(in), optional :: angldegx
-    integer(I4B), intent(in), optional :: nvert
-    integer(I4B), dimension(:, :), pointer, contiguous, intent(in), &
-      optional :: vertices
-    integer(I4B), dimension(:, :), pointer, contiguous, intent(in), &
-      optional :: cellxy
-    integer(I4B), dimension(:), pointer, contiguous, intent(in), &
-      optional :: idomain
-    ! -- local
-    type(GwfDisuType), pointer :: disext
-    integer(I4B) :: n
-    integer(I4B) :: j
-    integer(I4B) :: ival
-    real(DP), dimension(:), pointer, contiguous :: atemp
-! ------------------------------------------------------------------------------
-    allocate (disext)
-    dis => disext
-    call disext%allocate_scalars(name_model)
-    dis%inunit = 0
-    dis%iout = iout
-    !
-    ! -- set dimensions
-    disext%nodes = nodes
-    disext%nja = nja
-    if (present(nvert)) then
-      disext%nvert = nvert
-    end if
-    !
-    ! -- Calculate nodesuser
-    disext%nodesuser = disext%nodes
-    !
-    ! -- Allocate vectors for disu
-    call disext%allocate_arrays()
-    !
-    ! -- fill data
-    do n = 1, disext%nodes
-      disext%top(n) = top(n)
-      disext%bot(n) = bot(n)
-      disext%area(n) = area(n)
-      disext%con%ia(n) = iac(n)
-      if (present(idomain)) then
-        ival = idomain(n)
-      else
-        ival = 1
-      end if
-      disext%idomain(n) = ival
-    end do
-    call iac_to_ia(disext%con%ia)
-    do n = 1, nja
-      disext%con%ja(n) = ja(n)
-    end do
-    if (present(nvert)) then
-      if (present(vertices)) then
-        do n = 1, disext%nvert
-          do j = 1, 2
-            disext%vertices(j, n) = vertices(j, n)
-          end do
-        end do
-        ! -- error
-      else
-      end if
-      if (present(cellxy)) then
-        do n = 1, disext%nodes
-          do j = 1, 2
-            disext%cellxy(j, n) = cellxy(j, n)
-          end do
-        end do
-        ! -- error
-      else
-      end if
-    else
-      ! -- connection direction information cannot be calculated
-      disext%icondir = 0
-    end if
-    !
-    ! -- allocate space for atemp and fill
-    allocate (atemp(nja))
-    if (present(angldegx)) then
-      disext%con%ianglex = 1
-      do n = 1, nja
-        atemp(n) = angldegx(n)
-      end do
-    end if
-    !
-    ! -- finalize connection data
-    call disext%con%con_finalize(ihc, cl12, hwva, atemp)
-    disext%njas = disext%con%njas
-    !
-    ! -- deallocate temp arrays
-    deallocate (atemp)
-    !
-    ! -- Make some final disu checks
-    call disext%disu_ck()
-    !
-    ! -- Return
-    return
-  end subroutine disu_init_mem
-
   subroutine disu_df(this)
 ! ******************************************************************************
 ! disu_df -- Read discretization information from DISU input file
@@ -283,7 +162,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: count_errors, store_error
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwfDisuType) :: this
@@ -623,8 +501,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use MemoryManagerModule, only: mem_allocate
-    use ConstantsModule, only: LINELENGTH
-    use SimModule, only: count_errors, store_error
     implicit none
     class(GwfDisuType) :: this
     character(len=LINELENGTH) :: keyword
@@ -711,8 +587,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use MemoryManagerModule, only: mem_allocate
-    use ConstantsModule, only: LINELENGTH
-    use SimModule, only: count_errors, store_error
     implicit none
     class(GwfDisuType) :: this
     character(len=LINELENGTH) :: keyword
@@ -890,8 +764,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: LINELENGTH, DONE, DHALF, DPIO180, DNODATA
-    use SimModule, only: store_error, count_errors, store_error_unit
+    use ConstantsModule, only: DHALF, DPIO180, DNODATA
     ! -- dummy
     class(GwfDisuType) :: this
     ! -- local
@@ -999,7 +872,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: count_errors, store_error
     ! -- dummy
     class(GwfDisuType) :: this
     integer(I4B) :: i
@@ -1080,8 +952,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: count_errors, store_error
-    use InputOutputModule, only: urword
     use SparseModule, only: sparsematrix
     ! -- dummy
     class(GwfDisuType) :: this
@@ -1343,9 +1213,6 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error
-    implicit none
     class(GwfDisuType), intent(in) :: this
     integer(I4B), intent(in) :: nodeu
     integer(I4B), intent(in) :: icheck
@@ -1383,7 +1250,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: store_error
     ! -- dummy
     class(GwfDisuType) :: this
     integer(I4B), intent(in) :: noden
@@ -1441,7 +1307,6 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DHALF
-    use SimModule, only: store_error
     use DisvGeom, only: line_unit_vector
     ! -- dummy
     class(GwfDisuType) :: this
@@ -1791,9 +1656,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use InputOutputModule, only: urword
-    use SimModule, only: store_error
-    use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwfDisuType), intent(inout) :: this
     character(len=*), intent(inout) :: line
@@ -1843,9 +1705,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use InputOutputModule, only: urword
-    use SimModule, only: store_error
-    use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwfDisuType), intent(inout) :: this
     character(len=*), intent(inout) :: line
