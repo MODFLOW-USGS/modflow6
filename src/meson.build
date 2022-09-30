@@ -83,7 +83,6 @@ modflow_sources = files(
     'Model' / 'ModelUtilities' / 'DisvGeom.f90',
     'Model' / 'ModelUtilities' / 'GwfBuyInputData.f90',
     'Model' / 'ModelUtilities' / 'GwfMvrPeriodData.f90',
-    'Model' / 'ModelUtilities' / 'GwfNpfGridData.f90',
     'Model' / 'ModelUtilities' / 'GwfNpfOptions.f90',
     'Model' / 'ModelUtilities' / 'GwfStorageUtils.f90',
     'Model' / 'ModelUtilities' / 'GwtAdvOptions.f90',

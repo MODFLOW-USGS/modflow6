@@ -7,7 +7,6 @@ module GwfNpfModule
   use SmoothingModule, only: sQuadraticSaturation, &
                              sQuadraticSaturationDerivative
   use NumericalPackageModule, only: NumericalPackageType
-  use GwfNpfGridDataModule, only: GwfNpfGridDataType
   use GwfNpfOptionsModule, only: GwfNpfOptionsType
   use BaseDisModule, only: DisBaseType
   use GwfIcModule, only: GwfIcType
@@ -122,7 +121,6 @@ module GwfNpfModule
     procedure, private :: rewet_options
     procedure, private :: check_options
     procedure, private :: read_grid_data
-    procedure, private :: set_grid_data
     procedure, private :: prepcheck
     procedure, private :: preprocess_input
     procedure, private :: calc_condsat
@@ -292,11 +290,10 @@ contains
 
   !> @brief allocate and read this NPF instance
   !!
-  !! Allocate package arrays, read the grid data either from file or
-  !! from the input argument (when the optional @param grid_data is passed),
-  !! preprocess the input data and call *_ar on xt3d, when active.
+  !! Allocate remaining package arrays, preprocess the input data and 
+  !! call *_ar on xt3d, when active.
   !<
-  subroutine npf_ar(this, ic, ibound, hnew, grid_data)
+  subroutine npf_ar(this, ic, ibound, hnew)
 ! ******************************************************************************
 ! npf_ar -- Allocate and Read
 ! ******************************************************************************
@@ -310,7 +307,6 @@ contains
     type(GwfIcType), pointer, intent(in) :: ic !< initial conditions
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: ibound !< model ibound array
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: hnew !< pointer to model head array
-    type(GwfNpfGridDataType), optional, intent(in) :: grid_data !< (optional) data structure with NPF grid data
     ! -- local
     integer(I4B) :: n
     ! -- formats
@@ -331,13 +327,6 @@ contains
       do n = 1, this%dis%nodes
         this%spdis(:, n) = DZERO
       end do
-    end if
-
-
-    !
-    if (present(grid_data)) then
-      ! -- set the data block
-      ! call this%set_grid_data(grid_data)
     end if
     !
     ! -- preprocess data
@@ -1824,14 +1813,6 @@ contains
     ! -- Return
     return
   end subroutine read_grid_data
-
-  subroutine set_grid_data(this, npf_data)
-    class(GwfNpfType), intent(inout) :: this
-    type(GwfNpfGridDataType), intent(in) :: npf_data
-    
-    return
-
-  end subroutine set_grid_data
 
   subroutine prepcheck(this)
 ! ******************************************************************************

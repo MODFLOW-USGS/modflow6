@@ -153,13 +153,13 @@ contains
     call this%gwfInterfaceModel%model_df()
 
     ! Take these settings from the owning model, TODO_MJR:
-    ! what if the owner has iangle1 but the neighbor doesn't?
+    ! what if the owner iangle1 == 0 but the neighbor doesn't?
     this%gwfInterfaceModel%npf%ik22 = this%gwfModel%npf%ik22
     this%gwfInterfaceModel%npf%ik33 = this%gwfModel%npf%ik33
     this%gwfInterfaceModel%npf%iwetdry = this%gwfModel%npf%iwetdry
     this%gwfInterfaceModel%npf%iangle1 = this%gwfModel%npf%iangle1
     this%gwfInterfaceModel%npf%iangle2 = this%gwfModel%npf%iangle2
-    this%gwfInterfaceModel%npf%iangle3 = this%gwfModel%npf%iangle3    
+    this%gwfInterfaceModel%npf%iangle3 = this%gwfModel%npf%iangle3
 
     call this%addDistVar('X', '', this%gwfInterfaceModel%name, &
                          SYNC_NODES, '', (/BEFORE_AR, BEFORE_AD, BEFORE_CF/))
