@@ -102,6 +102,7 @@ def run_flow_model():
         top=top,
         botm=botm,
         idomain=idomain,
+        length_units="feet"
     )
     idomain = dis.idomain.array
 

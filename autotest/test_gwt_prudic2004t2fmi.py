@@ -513,6 +513,7 @@ def run_transport_model():
         top=top,
         botm=botm,
         idomain=idomain,
+        length_units="feet"
     )
     ic = flopy.mf6.ModflowGwtic(gwt, strt=0.0)
     sto = flopy.mf6.ModflowGwtmst(gwt, porosity=0.3)

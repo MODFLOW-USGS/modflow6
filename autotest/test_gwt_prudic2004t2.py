@@ -100,6 +100,7 @@ def build_model(idx, dir):
         top=top,
         botm=botm,
         idomain=idomain,
+        length_units="feet"
     )
     idomain = dis.idomain.array
 
