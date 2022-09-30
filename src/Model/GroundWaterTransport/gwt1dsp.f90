@@ -139,7 +139,7 @@ contains
       !
       ! -- Initialize block parser
       call this%parser%Initialize(this%inunit, this%iout)
-      call this%read_options()!
+      call this%read_options()
       call this%allocate_arrays(this%dis%nodes)
       !
       ! -- Read dispersion data
@@ -229,7 +229,7 @@ contains
     !
     ! -- dsp pointers to arguments that were passed in
     this%ibound => ibound
-    this%porosity => porosity    
+    this%porosity => porosity
     !
     if (present(grid_data)) then
       ! -- Set dispersion data

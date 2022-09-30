@@ -204,7 +204,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Set a pointer to dis
-    this%dis => dis   
+    this%dis => dis
     !
     if (.not. present(npf_options)) then
       ! -- Print a message identifying the node property flow package.
@@ -217,7 +217,7 @@ contains
       ! -- allocate arrays
       call this%allocate_arrays(this%dis%nodes, this%dis%njas)
       !
-      ! -- read from file, set, and convert/check the input      
+      ! -- read from file, set, and convert/check the input
       call this%read_grid_data()
       call this%prepcheck()
     else
@@ -325,12 +325,11 @@ contains
       call mem_reallocate(this%nodedge, this%nedges, 'NODEDGE', this%memoryPath)
       call mem_reallocate(this%ihcedge, this%nedges, 'IHCEDGE', this%memoryPath)
       call mem_reallocate(this%propsedge, 5, this%nedges, 'PROPSEDGE', &
-                        this%memoryPath)
+                          this%memoryPath)
       do n = 1, this%dis%nodes
         this%spdis(:, n) = DZERO
       end do
     end if
-
 
     !
     if (present(grid_data)) then
@@ -1252,7 +1251,7 @@ contains
     call mem_allocate(this%spdis, 3, 0, 'SPDIS', this%memoryPath)
     call mem_allocate(this%nodedge, 0, 'NODEDGE', this%memoryPath)
     call mem_allocate(this%ihcedge, 0, 'IHCEDGE', this%memoryPath)
-    call mem_allocate(this%propsedge, 0, 0, 'PROPSEDGE', this%memoryPath)    
+    call mem_allocate(this%propsedge, 0, 0, 'PROPSEDGE', this%memoryPath)
     !
     ! -- Time-varying property flag arrays
     call mem_allocate(this%nodekchange, ncells, 'NODEKCHANGE', this%memoryPath)
