@@ -13,7 +13,7 @@ module GwfDisModule
 
   implicit none
   private
-  public dis_cr, dis_init_mem, GwfDisType
+  public dis_cr, GwfDisType
 
   type, extends(DisBaseType) :: GwfDisType
     integer(I4B), pointer :: nlay => null() ! number of layers
@@ -88,85 +88,6 @@ contains
     ! -- Return
     return
   end subroutine dis_cr
-
-  subroutine dis_init_mem(dis, name_model, iout, nlay, nrow, ncol, &
-                          delr, delc, top2d, bot3d, idomain)
-! ******************************************************************************
-! dis_init_mem -- Create a new discretization 3d object from memory
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(DisBaseType), pointer :: dis
-    character(len=*), intent(in) :: name_model
-    integer(I4B), intent(in) :: iout
-    integer(I4B), intent(in) :: nlay
-    integer(I4B), intent(in) :: nrow
-    integer(I4B), intent(in) :: ncol
-    real(DP), dimension(:), pointer, contiguous, intent(in) :: delr
-    real(DP), dimension(:), pointer, contiguous, intent(in) :: delc
-    real(DP), dimension(:, :), pointer, contiguous, intent(in) :: top2d
-    real(DP), dimension(:, :, :), pointer, contiguous, intent(in) :: bot3d
-    integer(I4B), dimension(:, :, :), pointer, contiguous, intent(in), &
-      optional :: idomain
-    ! -- local
-    type(GwfDisType), pointer :: disext
-    integer(I4B) :: i
-    integer(I4B) :: j
-    integer(I4B) :: k
-    integer(I4B) :: ival
-    ! -- local
-! ------------------------------------------------------------------------------
-    allocate (disext)
-    dis => disext
-    call disext%allocate_scalars(name_model)
-    dis%inunit = 0
-    dis%iout = iout
-    !
-    ! -- set dimensions
-    disext%nrow = nrow
-    disext%ncol = ncol
-    disext%nlay = nlay
-    !
-    ! -- calculate nodesuser
-    disext%nodesuser = disext%nlay * disext%nrow * disext%ncol
-    !
-    ! -- Allocate delr, delc, and non-reduced vectors for dis
-    call mem_allocate(disext%delr, disext%ncol, 'DELR', disext%memoryPath)
-    call mem_allocate(disext%delc, disext%nrow, 'DELC', disext%memoryPath)
-    call mem_allocate(disext%idomain, disext%ncol, disext%nrow, disext%nlay, &
-                      'IDOMAIN', disext%memoryPath)
-    call mem_allocate(disext%top2d, disext%ncol, disext%nrow, 'TOP2D', &
-                      disext%memoryPath)
-    call mem_allocate(disext%bot3d, disext%ncol, disext%nrow, disext%nlay, &
-                      'BOT3D', disext%memoryPath)
-    ! -- fill data
-    do i = 1, disext%nrow
-      disext%delc(i) = delc(i)
-    end do
-    do j = 1, disext%ncol
-      disext%delr(j) = delr(j)
-    end do
-    do k = 1, disext%nlay
-      do i = 1, disext%nrow
-        do j = 1, disext%ncol
-          if (k == 1) then
-            disext%top2d(j, i) = top2d(j, i)
-          end if
-          disext%bot3d(j, i, k) = bot3d(j, i, k)
-          if (present(idomain)) then
-            ival = idomain(j, i, k)
-          else
-            ival = 1
-          end if
-          disext%idomain(j, i, k) = ival
-        end do
-      end do
-    end do
-    !
-    ! -- Return
-    return
-  end subroutine dis_init_mem
 
   subroutine dis3d_df(this)
 ! ******************************************************************************

@@ -14,7 +14,7 @@ module GwfDisvModule
 
   implicit none
   private
-  public disv_cr, disv_init_mem, GwfDisvType
+  public disv_cr, GwfDisvType
 
   type, extends(DisBaseType) :: GwfDisvType
     integer(I4B), pointer :: nlay => null() ! number of layers
@@ -27,8 +27,6 @@ module GwfDisvModule
     real(DP), dimension(:, :), pointer, contiguous :: top2d => null() ! top elevations for each cell at top of model (ncpl, 1)
     real(DP), dimension(:, :, :), pointer, contiguous :: bot3d => null() ! bottom elevations for each cell (ncpl, 1, nlay)
     integer(I4B), dimension(:, :, :), pointer, contiguous :: idomain => null() ! idomain (ncpl, 1, nlay)
-    type(DisvGeomType) :: cell1 ! cell object used to calculate geometric properties
-    type(DisvGeomType) :: cell2 ! cell object used to calculate geometric properties
   contains
     procedure :: dis_df => disv_df
     procedure :: dis_da => disv_da
@@ -94,88 +92,6 @@ contains
     ! -- Return
     return
   end subroutine disv_cr
-
-  subroutine disv_init_mem(dis, name_model, iout, nlay, ncpl, &
-                           top2d, bot3d, vertices, cellxy, idomain)
-! ******************************************************************************
-! dis_init_mem -- Create a new discretization by vertices object from memory
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(DisBaseType), pointer :: dis
-    character(len=*), intent(in) :: name_model
-    integer(I4B), intent(in) :: iout
-    integer(I4B), intent(in) :: nlay
-    integer(I4B), intent(in) :: ncpl
-    real(DP), dimension(:, :), pointer, contiguous, intent(in) :: top2d
-    real(DP), dimension(:, :, :), pointer, contiguous, intent(in) :: bot3d
-    integer(I4B), dimension(:, :), pointer, contiguous, intent(in) :: vertices
-    integer(I4B), dimension(:, :), pointer, contiguous, intent(in) :: cellxy
-    integer(I4B), dimension(:, :, :), pointer, contiguous, intent(in), &
-      optional :: idomain
-    ! -- local
-    type(GwfDisvType), pointer :: disext
-    integer(I4B) :: n
-    integer(I4B) :: j
-    integer(I4B) :: k
-    integer(I4B) :: ival
-    ! -- local
-! ------------------------------------------------------------------------------
-    allocate (disext)
-    dis => disext
-    call disext%allocate_scalars(name_model)
-    dis%inunit = 0
-    dis%iout = iout
-    !
-    ! -- set dimensions
-    disext%ncpl = ncpl
-    disext%nlay = nlay
-    !
-    ! -- Calculate nodesuser
-    disext%nodesuser = disext%nlay * disext%ncpl
-    !
-    ! -- Allocate non-reduced vectors for disv
-    call mem_allocate(disext%idomain, disext%ncpl, 1, disext%nlay, 'IDOMAIN', &
-                      disext%memoryPath)
-    call mem_allocate(disext%top2d, disext%ncpl, 1, 'TOP2D', disext%memoryPath)
-    call mem_allocate(disext%bot3d, disext%ncpl, 1, disext%nlay, 'BOT3D', &
-                      disext%memoryPath)
-    !
-    ! -- Allocate vertices array
-    call mem_allocate(disext%vertices, 2, disext%nvert, 'VERTICES', &
-                      disext%memoryPath)
-    call mem_allocate(disext%cellxy, 2, disext%ncpl, 'CELLXY', disext%memoryPath)
-    !
-    ! -- fill data
-    do k = 1, disext%nlay
-      do j = 1, disext%ncpl
-        if (k == 1) then
-          disext%top2d(j, 1) = top2d(j, 1)
-        end if
-        disext%bot3d(j, 1, k) = bot3d(j, 1, k)
-        if (present(idomain)) then
-          ival = idomain(j, 1, k)
-        else
-          ival = 1
-        end if
-        disext%idomain(j, 1, k) = ival
-      end do
-    end do
-    do n = 1, disext%nvert
-      do j = 1, 2
-        disext%vertices(j, n) = vertices(j, n)
-      end do
-    end do
-    do n = 1, disext%ncpl
-      do j = 1, 2
-        disext%cellxy(j, n) = cellxy(j, n)
-      end do
-    end do
-    !
-    ! -- Return
-    return
-  end subroutine disv_init_mem
 
   subroutine disv_df(this)
 ! ******************************************************************************
@@ -661,14 +577,6 @@ contains
     ! -- Build connections
     call this%connect()
     !
-    ! -- Create two cell objects that can be used for geometric processing
-    call this%cell1%init(this%nlay, this%ncpl, this%nodes, this%top, this%bot, &
-                         this%iavert, this%javert, this%vertices, this%cellxy, &
-                         this%nodereduced, this%nodeuser)
-    call this%cell2%init(this%nlay, this%ncpl, this%nodes, this%top, this%bot, &
-                         this%iavert, this%javert, this%vertices, this%cellxy, &
-                         this%nodereduced, this%nodeuser)
-    !
     ! -- Return
     return
   end subroutine grid_finalize
@@ -765,7 +673,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use InputOutputModule, only: urword
     use SparseModule, only: sparsematrix
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -1762,7 +1669,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use InputOutputModule, only: urword
     ! -- dummy
     class(GwfDisvType), intent(inout) :: this
     character(len=*), intent(inout) :: line
@@ -1830,7 +1736,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use InputOutputModule, only: urword
     ! -- dummy
     class(GwfDisvType), intent(inout) :: this
     character(len=*), intent(inout) :: line

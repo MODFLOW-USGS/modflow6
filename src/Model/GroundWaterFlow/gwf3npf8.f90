@@ -1785,7 +1785,7 @@ contains
     if (lname(5)) then
       this%iwetdry = 1
     else
-      call mem_reallocate(this%wetdry, 1, 'WETDRY', trim(this%memoryPath))
+      call mem_reallocate(this%wetdry, 0, 'WETDRY', trim(this%memoryPath))
     end if
     !
     ! -- set angle flags
@@ -1793,21 +1793,21 @@ contains
       this%iangle1 = 1
     else
       if (this%ixt3d == 0) then
-        call mem_reallocate(this%angle1, 1, 'ANGLE1', trim(this%memoryPath))
+        call mem_reallocate(this%angle1, 0, 'ANGLE1', trim(this%memoryPath))
       end if
     end if
     if (lname(7)) then
       this%iangle2 = 1
     else
       if (this%ixt3d == 0) then
-        call mem_reallocate(this%angle2, 1, 'ANGLE2', trim(this%memoryPath))
+        call mem_reallocate(this%angle2, 0, 'ANGLE2', trim(this%memoryPath))
       end if
     end if
     if (lname(8)) then
       this%iangle3 = 1
     else
       if (this%ixt3d == 0) then
-        call mem_reallocate(this%angle3, 1, 'ANGLE3', trim(this%memoryPath))
+        call mem_reallocate(this%angle3, 0, 'ANGLE3', trim(this%memoryPath))
       end if
     end if
     !

@@ -450,6 +450,7 @@ def eval_model(sim):
                     + str(rw + 1)
                     + "; Col: "
                     + str(cl + 1)
+                    + f"{fullrw[cl]} should be less than or equal to {abs(fullrw[cl + 1])}"
                 )
 
     # Confirm that total simulated ET does not exceed potential ET.
