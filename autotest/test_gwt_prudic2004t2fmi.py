@@ -361,6 +361,7 @@ def run_flow_model():
         lak = flopy.mf6.ModflowGwflak(
             gwf,
             time_conversion=86400.000,
+            length_conversion=3.28081,
             print_stage=True,
             print_flows=True,
             stage_filerecord=gwfname + ".lak.bin",
