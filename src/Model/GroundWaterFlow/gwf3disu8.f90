@@ -161,7 +161,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use MemoryManagerModule, only: mem_allocate
+    use MemoryManagerModule, only: mem_allocate, mem_reallocate
     ! -- dummy
     class(GwfDisuType) :: this
     ! -- locals
@@ -238,9 +238,21 @@ contains
       this%top(noder) = this%top1d(node)
       this%bot(noder) = this%bot1d(node)
       this%area(noder) = this%area1d(node)
-      this%xc(noder) = this%cellxy(1, node)
-      this%yc(noder) = this%cellxy(2, node)
     end do
+    !
+    ! -- fill cell center coordinates
+    if (this%nvert > 0) then
+      do node = 1, this%nodesuser
+        noder = node
+        if (this%nodes < this%nodesuser) noder = this%nodereduced(node)
+        if (noder <= 0) cycle
+        this%xc(noder) = this%cellxy(1, node)
+        this%yc(noder) = this%cellxy(2, node)
+      end do
+    else
+      call mem_reallocate(this%xc, 0, 'XC', this%memoryPath)
+      call mem_reallocate(this%yc, 0, 'YC', this%memoryPath)
+    end if
     !
     ! -- create and fill the connections object
     nrsize = 0
