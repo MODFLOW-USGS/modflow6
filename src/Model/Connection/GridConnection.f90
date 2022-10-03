@@ -25,6 +25,7 @@ module GridConnectionModule
   use SparseModule, only: sparsematrix
   use InterfaceMapModule
   use ListsModule, only: distmodellist
+  use CsrUtilsModule
   implicit none
   private
 
@@ -765,6 +766,7 @@ contains
     type(GlobalCellType), pointer :: ncell, mcell
     integer(I4B), dimension(:), pointer, contiguous :: jas, ihc
     real(DP), dimension(:), pointer, contiguous :: hwva, cl1, cl2, anglex
+    integer(I4B), dimension(:), pointer, contiguous :: ia, ja
 
     conn => this%connections
 
@@ -777,9 +779,12 @@ contains
         ncell => this%idxToGlobal(n)
         mcell => this%idxToGlobal(m)
         if (ncell%dmodel == mcell%dmodel) then
+          
           ! within same model, straight copy
-          connOrig => ncell%model%dis%con
-          iposOrig = connOrig%getjaindex(ncell%index, mcell%index)
+          call ncell%dmodel%load(ia, 'IA', 'CON')
+          call ncell%dmodel%load(ja, 'JA', 'CON')
+          iposOrig = getCSRIndex(ncell%index, mcell%index, ia, ja)
+
           if (iposOrig == 0) then
             ! periodic boundary conditions can add connections between cells in
             ! the same model, but they are dealt with through the exchange data
@@ -1134,8 +1139,7 @@ contains
   !< (caller owns the memory)
   subroutine getInterfaceMap(this, interfaceMap)
     use BaseModelModule, only: BaseModelType, GetBaseModelFromList
-    use VectorIntModule
-    use CsrUtilsModule
+    use VectorIntModule    
     class(GridConnectionType) :: this !< this grid connection
     type(InterfaceMapType), pointer :: interfaceMap !< a pointer to the map (not allocated yet)
     ! local
