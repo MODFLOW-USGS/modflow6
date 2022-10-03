@@ -1243,7 +1243,7 @@ contains
     call mem_allocate(this%propsedge, 0, 0, 'PROPSEDGE', this%memoryPath)
     !
     ! -- Specific discharge is (re-)allocated when nedges is known
-      call mem_allocate(this%spdis, 3, 0, 'SPDIS', this%memoryPath)
+    call mem_allocate(this%spdis, 3, 0, 'SPDIS', this%memoryPath)
     !
     ! -- Time-varying property flag arrays
     call mem_allocate(this%nodekchange, ncells, 'NODEKCHANGE', this%memoryPath)
