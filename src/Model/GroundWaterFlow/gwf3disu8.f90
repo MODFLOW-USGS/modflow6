@@ -42,7 +42,6 @@ module GwfDisuModule
   contains
     procedure :: dis_df => disu_df
     procedure :: dis_da => disu_da
-    procedure :: get_cellxy => get_cellxy_disu
     procedure :: get_dis_type => get_dis_type
     procedure :: disu_ck
     procedure :: grid_finalize
@@ -162,7 +161,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use MemoryManagerModule, only: mem_allocate
+    use MemoryManagerModule, only: mem_allocate, mem_reallocate
     ! -- dummy
     class(GwfDisuType) :: this
     ! -- locals
@@ -240,6 +239,20 @@ contains
       this%bot(noder) = this%bot1d(node)
       this%area(noder) = this%area1d(node)
     end do
+    !
+    ! -- fill cell center coordinates
+    if (this%nvert > 0) then
+      do node = 1, this%nodesuser
+        noder = node
+        if (this%nodes < this%nodesuser) noder = this%nodereduced(node)
+        if (noder <= 0) cycle
+        this%xc(noder) = this%cellxy(1, node)
+        this%yc(noder) = this%cellxy(2, node)
+      end do
+    else
+      call mem_reallocate(this%xc, 0, 'XC', this%memoryPath)
+      call mem_reallocate(this%yc, 0, 'YC', this%memoryPath)
+    end if
     !
     ! -- create and fill the connections object
     nrsize = 0
@@ -1333,9 +1346,11 @@ contains
       call store_error(errmsg, terminate=.TRUE.)
     end if
     !
-    ! -- Find xy coords
-    call this%get_cellxy(noden, xn, yn)
-    call this%get_cellxy(nodem, xm, ym)
+    ! -- get xy center coords
+    xn = this%xc(noden)
+    yn = this%yc(noden)
+    xm = this%xc(nodem)
+    ym = this%yc(nodem)
     !
     ! -- Set vector components based on ihc
     if (ihc == 0) then
@@ -1363,30 +1378,6 @@ contains
     ! -- return
     return
   end subroutine connection_vector
-
-  subroutine get_cellxy_disu(this, node, xcell, ycell)
-! ******************************************************************************
-! get_cellxy_disu -- assign xcell and ycell
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfDisuType), intent(in) :: this
-    integer(I4B), intent(in) :: node ! the reduced node number
-    real(DP), intent(out) :: xcell, ycell ! the x,y for the cell
-    ! -- local
-    integer(I4B) :: nu
-! ------------------------------------------------------------------------------
-    !
-    ! -- Convert to user node number (because that's how cell centers are
-    !    stored) and then set xcell and ycell
-    nu = this%get_nodeuser(node)
-    xcell = this%cellxy(1, nu)
-    ycell = this%cellxy(2, nu)
-    !
-    ! -- return
-    return
-  end subroutine get_cellxy_disu
 
   ! return discretization type
   subroutine get_dis_type(this, dis_type)
