@@ -24,6 +24,7 @@ module GridConnectionModule
   use ConnectionsModule
   use SparseModule, only: sparsematrix
   use InterfaceMapModule
+  use BaseDisModule, only: dis_transform_xy
   use ListsModule, only: distmodellist
   use CsrUtilsModule
   implicit none
@@ -1087,7 +1088,7 @@ contains
     ! local
     integer(I4B) :: icell, nrOfCells, idx
     type(NumericalModelType), pointer :: model
-    real(DP) :: x, y, xglo, yglo
+    real(DP) :: xglo, yglo
 
     ! the following is similar to dis_df
     nrOfCells = this%nrOfCells
@@ -1115,13 +1116,17 @@ contains
     do icell = 1, nrOfCells
       idx = this%idxToGlobal(icell)%index
       model => this%idxToGlobal(icell)%model
-      call model%dis%get_cellxy(idx, x, y)
 
       ! we are merging grids with possibly (likely) different origins,
-      ! transform:
-      call model%dis%transform_xy(x, y, xglo, yglo)
+      ! transform to global coordinates:
+      call dis_transform_xy(model%dis%xc(idx), model%dis%yc(idx), &
+                            model%dis%xorigin, model%dis%yorigin, &
+                            model%dis%angrot, xglo, yglo)
+
       disu%cellxy(1, icell) = xglo
+      disu%xc(icell) = xglo
       disu%cellxy(2, icell) = yglo
+      disu%yc(icell) = yglo
     end do
 
     ! if vertices will be needed, it will look like this:

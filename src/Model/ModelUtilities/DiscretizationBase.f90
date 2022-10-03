@@ -19,6 +19,7 @@ module BaseDisModule
 
   private
   public :: DisBaseType
+  public :: dis_transform_xy
 
   type :: DisBaseType
     character(len=LENMEMPATH) :: memoryPath !< path for memory allocation
@@ -33,6 +34,8 @@ module BaseDisModule
     integer(I4B), pointer :: ndim => null() !< number of spatial model dimensions (1 for disu grid)
     integer(I4B), pointer :: icondir => null() !< flag indicating if grid has enough info to calculate connection vectors
     logical, pointer :: writegrb => null() !< write binary grid file
+    real(DP), dimension(:), pointer, contiguous :: xc => null() !< x-coordinate of the cell center
+    real(DP), dimension(:), pointer, contiguous :: yc => null() !< y-coordinate of the cell center
     real(DP), pointer :: yorigin => null() !< y-position of the lower-left grid corner (default is 0.)
     real(DP), pointer :: xorigin => null() !< x-position of the lower-left grid corner (default is 0.)
     real(DP), pointer :: angrot => null() !< counter-clockwise rotation angle of the lower-left corner (default is 0.0)
@@ -74,7 +77,6 @@ module BaseDisModule
     procedure :: noder_from_cellid
     procedure :: connection_normal
     procedure :: connection_vector
-    procedure :: get_cellxy
     procedure :: get_dis_type
     procedure :: supports_layers
     procedure :: allocate_scalars
@@ -102,7 +104,6 @@ module BaseDisModule
     procedure, public :: nlarray_to_nodelist
     procedure, public :: highest_active
     procedure, public :: get_area
-    procedure, public :: transform_xy
 
   end type DisBaseType
 
@@ -281,6 +282,8 @@ contains
     !
     ! -- Arrays
     call mem_deallocate(this%mshape)
+    call mem_deallocate(this%xc)
+    call mem_deallocate(this%yc)
     call mem_deallocate(this%top)
     call mem_deallocate(this%bot)
     call mem_deallocate(this%area)
@@ -506,28 +509,15 @@ contains
     return
   end subroutine connection_vector
 
-  ! return x,y coordinate for a node
-  subroutine get_cellxy(this, node, xcell, ycell)
-    class(DisBaseType), intent(in) :: this
-    integer(I4B), intent(in) :: node
-    real(DP), intent(out) :: xcell, ycell
-
-    ! suppress warning
-    xcell = -999999.0
-    ycell = -999999.0
-
-    call store_error('Program error: get_cellxy not implemented.', &
-                     terminate=.TRUE.)
-
-  end subroutine get_cellxy
-
   !> @brief get the x,y for a node transformed into
   !! 'global coordinates' using xorigin, yorigin, angrot,
   !< analogously to how flopy does this.
-  subroutine transform_xy(this, x, y, xglo, yglo)
-    class(DisBaseType), intent(in) :: this !< this DIS
+  subroutine dis_transform_xy(x, y, xorigin, yorigin, angrot, xglo, yglo)
     real(DP), intent(in) :: x !< the cell-x coordinate to transform
     real(DP), intent(in) :: y !< the cell-y coordinate to transform
+    real(DP), intent(in) :: xorigin !< the cell-y coordinate to transform
+    real(DP), intent(in) :: yorigin !< the cell-y coordinate to transform
+    real(DP), intent(in) :: angrot !< the cell-y coordinate to transform
     real(DP), intent(out) :: xglo !< the global cell-x coordinate
     real(DP), intent(out) :: yglo !< the global cell-y coordinate
     ! local
@@ -537,19 +527,20 @@ contains
     yglo = y
 
     ! first _rotate_ to 'real world'
-    ang = this%angrot * DPIO180
+    ang = angrot * DPIO180
     if (ang /= DZERO) then
       xglo = x * cos(ang) - y * sin(ang)
       yglo = x * sin(ang) + y * cos(ang)
     end if
 
     ! then _translate_
-    xglo = xglo + this%xorigin
-    yglo = yglo + this%yorigin
+    xglo = xglo + xorigin
+    yglo = yglo + yorigin
 
-  end subroutine transform_xy
+  end subroutine dis_transform_xy
 
-  ! return discretization type
+  !> @brief return discretization type
+  !<
   subroutine get_dis_type(this, dis_type)
     class(DisBaseType), intent(in) :: this
     character(len=*), intent(out) :: dis_type
@@ -633,6 +624,8 @@ contains
     !
     ! -- Allocate
     call mem_allocate(this%mshape, this%ndim, 'MSHAPE', this%memoryPath)
+    call mem_allocate(this%xc, this%nodes, 'XC', this%memoryPath)
+    call mem_allocate(this%yc, this%nodes, 'YC', this%memoryPath)
     call mem_allocate(this%top, this%nodes, 'TOP', this%memoryPath)
     call mem_allocate(this%bot, this%nodes, 'BOT', this%memoryPath)
     call mem_allocate(this%area, this%nodes, 'AREA', this%memoryPath)

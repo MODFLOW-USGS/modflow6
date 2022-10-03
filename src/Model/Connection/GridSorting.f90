@@ -3,6 +3,7 @@ module GridSorting
   use ConstantsModule, only: DHALF
   use CellWithNbrsModule, only: GlobalCellType
   use GenericUtilitiesModule, only: is_same
+  use BaseDisModule, only: dis_transform_xy
   implicit none
   private
 
@@ -47,13 +48,23 @@ contains
       call gcm%dmodel%load(dis_bot_m, 'BOT', 'DIS')
 
       ! convert coordinates
-      call gcn%model%dis%get_cellxy(gcn%index, xnloc, ynloc)
-      call gcn%model%dis%transform_xy(xnloc, ynloc, xn, yn)
+      xnloc = gcn%model%dis%xc(gcn%index)
+      ynloc = gcn%model%dis%yc(gcn%index)
+      call dis_transform_xy(xnloc, ynloc, &
+                            gcn%model%dis%xorigin, &
+                            gcn%model%dis%yorigin, &
+                            gcn%model%dis%angrot, &
+                            xn, yn)
       zn = DHALF * (dis_top_n(gcn%index) + &
                     dis_bot_n(gcn%index))
 
-      call gcm%model%dis%get_cellxy(gcm%index, xmloc, ymloc)
-      call gcm%model%dis%transform_xy(xmloc, ymloc, xm, ym)
+      xmloc = gcm%model%dis%xc(gcm%index)
+      ymloc = gcm%model%dis%yc(gcm%index)
+      call dis_transform_xy(xmloc, ymloc, &
+                            gcm%model%dis%xorigin, &
+                            gcm%model%dis%yorigin, &
+                            gcm%model%dis%angrot, &
+                            xm, ym)
       zm = DHALF * (dis_top_m(gcm%index) + &
                     dis_bot_m(gcm%index))
 
