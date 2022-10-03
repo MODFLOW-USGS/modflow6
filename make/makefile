@@ -102,8 +102,11 @@ $(OBJDIR)/TimeArraySeriesLink.o \
 $(OBJDIR)/ObsUtility.o \
 $(OBJDIR)/ObsContainer.o \
 $(OBJDIR)/BudgetFileReader.o \
+$(OBJDIR)/VectorInt.o \
 $(OBJDIR)/gwt1dspidm.o \
 $(OBJDIR)/gwf3npf8idm.o \
+$(OBJDIR)/gwf3disv8idm.o \
+$(OBJDIR)/gwf3disu8idm.o \
 $(OBJDIR)/gwf3dis8idm.o \
 $(OBJDIR)/TimeArraySeriesManager.o \
 $(OBJDIR)/PackageMover.o \
@@ -162,7 +165,6 @@ $(OBJDIR)/Mover.o \
 $(OBJDIR)/GwfMvrPeriodData.o \
 $(OBJDIR)/ims8misc.o \
 $(OBJDIR)/GwfBuyInputData.o \
-$(OBJDIR)/VectorInt.o \
 $(OBJDIR)/mf6lists.o \
 $(OBJDIR)/InterfaceMap.o \
 $(OBJDIR)/gwf3disu8.o \

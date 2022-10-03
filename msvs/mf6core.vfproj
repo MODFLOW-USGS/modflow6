@@ -81,7 +81,9 @@
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3dis8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3dis8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3disu8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3disu8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3disv8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3disv8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3drn8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3evt8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3ghb8.f90"/>

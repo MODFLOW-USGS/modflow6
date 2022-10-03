@@ -28,11 +28,6 @@ module LoadMfInputModule
     module procedure idm_load_from_blockparser
   end interface idm_load
 
-  interface set_model_shape
-    module procedure set_model_shape_idm, set_model_shape_disv, &
-      set_model_shape_disu
-  end interface set_model_shape
-
 contains
 
   subroutine idm_load_from_blockparser(parser, filetype, filename, &
@@ -50,7 +45,7 @@ contains
     character(len=*), intent(in) :: subcomponent_name
     character(len=*), dimension(:), intent(in) :: subpackages
     integer(I4B) :: iout, iblock
-    integer(I4B), target :: ndim
+    integer(I4B), target :: ndim, nvert
     type(ModflowInputType), pointer :: mf6_input
     character(len=LENMEMPATH) :: componentMemPath
 
@@ -69,20 +64,24 @@ contains
         subcomponent_type == 'DISV' .or. &
         subcomponent_type == 'DISU') then
       ndim = -1
+      nvert = -1
     else
       call get_mem_rank('MODEL_SHAPE', componentMemPath, ndim)
     end if
 
-    ! ensure aggregate definitions have dimensions
-    call update_aggregate_shapes(mf6_input, iout)
-
     ! process blocks
     do iblock = 1, size(mf6_input%p_block_dfns)
+      if (subcomponent_type == 'DISU' .and. nvert == 0 .and. &
+          (mf6_input%p_block_dfns(iblock)%blockname == 'VERTICES' .or. &
+           mf6_input%p_block_dfns(iblock)%blockname == 'CELL2D')) &
+        cycle
+
       call parse_block(parser, mf6_input, iblock, ndim, iout)
-      if (ndim == -1 .and. &
-          mf6_input%p_block_dfns(iblock)%blockname == 'DIMENSIONS') then
+
+      if ((mf6_input%p_block_dfns(iblock)%blockname == 'DIMENSIONS') .and. &
+          ndim == -1) then
         call set_model_shape(mf6_input%file_type, componentMemPath, &
-                             mf6_input%memoryPath)
+                             mf6_input%memoryPath, ndim, nvert)
       end if
     end do
 
@@ -101,7 +100,7 @@ contains
     logical(LGP) :: supportOpenClose
     integer(I4B) :: ierr
 
-    supportOpenClose = (mf6_input%p_block_dfns(iblock)%blockname == 'GRIDDATA')
+    supportOpenClose = (mf6_input%p_block_dfns(iblock)%blockname /= 'GRIDDATA')
 
     call parser%GetBlock(mf6_input%p_block_dfns(iblock)%blockname, isblockfound, &
                          ierr, supportOpenClose=supportOpenClose, &
@@ -164,6 +163,11 @@ contains
     logical(LGP), intent(in) :: recursive_call
     character(len=LINELENGTH) :: tag
     type(InputParamDefinitionType), pointer :: idt
+    integer(I4B), dimension(:), contiguous, pointer :: mshape
+
+    if (ndim > 0) then
+      call get_model_shape(mf6_input, mshape)
+    end if
 
     ! read tag name
     call parser%GetStringCaps(tag)
@@ -192,17 +196,17 @@ contains
     case ('INTEGER')
       call load_integer_type(parser, idt, mf6_input%memoryPath, iout)
     case ('INTEGER1D')
-      call load_integer1d_type(parser, idt, mf6_input, iout)
+      call load_integer1d_type(parser, idt, mf6_input, mshape, iout)
     case ('INTEGER3D')
-      call load_integer3d_type(parser, idt, mf6_input%memoryPath, ndim, iout)
+      call load_integer3d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
     case ('DOUBLE')
       call load_double_type(parser, idt, mf6_input%memoryPath, iout)
     case ('DOUBLE1D')
-      call load_double1d_type(parser, idt, mf6_input, iout)
+      call load_double1d_type(parser, idt, mf6_input, mshape, iout)
     case ('DOUBLE2D')
-      call load_double2d_type(parser, idt, mf6_input%memoryPath, ndim, iout)
+      call load_double2d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
     case ('DOUBLE3D')
-      call load_double3d_type(parser, idt, mf6_input%memoryPath, ndim, iout)
+      call load_double3d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
     case default
       write (errmsg, '(4x,a,a)') 'Failure reading data for tag: ', trim(tag)
       call store_error(errmsg)
@@ -233,6 +237,7 @@ contains
     integer(I4B) :: nwords
     character(len=16), dimension(:), allocatable :: words
     type(StructArrayType), pointer :: struct_array
+    character(len=:), allocatable :: parse_str
 
     ! find the data type for this block
     idt => get_aggregate_definition_type(mf6_input%p_aggregate_dfns, &
@@ -242,7 +247,8 @@ contains
 
     ! parse to find the names of the columns in this struct array
     ! ncol is one less than nwords because RECARRAY is first item
-    call parseline(idt%datatype, nwords, words)
+    parse_str = trim(idt%datatype)//' '
+    call parseline(parse_str, nwords, words)
     ncol = nwords - 1
 
     ! use shape to set the max num of rows for this struct array
@@ -251,7 +257,6 @@ contains
     ! create a structured array
     struct_array => constructStructArray(ncol, nrow)
     do icol = 1, ncol
-
       ! set pointer to input definition for this 1d vector
       idt => get_param_definition_type(mf6_input%p_param_dfns, &
                                        mf6_input%component_type, &
@@ -260,8 +265,8 @@ contains
 
       ! allocate a new vector in the memory manager using idt information
       ! and add it to the struct_array in position icol
-      call struct_array%mem_create_vector(icol, idt%datatype, nrow, &
-                                          idt%mf6varname, mf6_input%memoryPath, &
+      call struct_array%mem_create_vector(icol, idt%datatype, idt%mf6varname, &
+                                          mf6_input%memoryPath, idt%shape, &
                                           idt%preserve_case)
     end do
 
@@ -311,23 +316,22 @@ contains
     return
   end subroutine load_integer_type
 
-  subroutine load_integer1d_type(parser, idt, mf6_input, iout)
+  subroutine load_integer1d_type(parser, idt, mf6_input, mshape, iout)
     use SimVariablesModule, only: idm_context
     type(BlockParserType), intent(inout) :: parser
     type(InputParamDefinitionType), intent(in) :: idt
     type(ModflowInputType), pointer, intent(in) :: mf6_input
+    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape
     integer(I4B), intent(in) :: iout
     integer(I4B), dimension(:), pointer, contiguous :: int1d
     integer(I4B), pointer :: nsize1
     integer(I4B) :: nvals
-    integer(I4B), dimension(:), contiguous, pointer :: mshape
     character(len=LENMEMPATH) :: idmMemoryPath
 
     idmMemoryPath = create_mem_path(component=mf6_input%component_name, &
                                     context=idm_context)
 
     if (idt%shape == 'NODES') then
-      call mem_setptr(mshape, 'MODEL_SHAPE', idmMemoryPath)
       nvals = product(mshape)
       call mem_allocate(int1d, nvals, idt%mf6varname, mf6_input%memoryPath)
     else
@@ -341,29 +345,31 @@ contains
     return
   end subroutine load_integer1d_type
 
-  subroutine load_integer3d_type(parser, idt, memoryPath, ndim, iout)
+  subroutine load_integer3d_type(parser, idt, memoryPath, mshape, iout)
     type(BlockParserType), intent(inout) :: parser
     type(InputParamDefinitionType), intent(in) :: idt
     character(len=*), intent(in) :: memoryPath
-    integer(I4B), pointer, intent(in) :: ndim
+    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape
     integer(I4B), intent(in) :: iout
     integer(I4B), dimension(:, :, :), pointer, contiguous :: int3d
-    integer(I4B), dimension(:), contiguous, pointer :: mshape
+    integer(I4B) :: ndim
     integer(I4B), pointer :: nsize1
     integer(I4B), pointer :: nsize2
     integer(I4B), pointer :: nsize3
     character(len=LINELENGTH) :: keyword
 
+    ndim = size(mshape)
+
     ! find sizes in memory manager
-    if (ndim == -1) then
-      call mem_setptr(nsize1, 'NCOL', memoryPath)
-      call mem_setptr(nsize2, 'NROW', memoryPath)
+    if (ndim == 2) then
+      allocate (nsize2)
+      nsize1 => mshape(2) ! NCPL
+      nsize2 = 1
       call mem_setptr(nsize3, 'NLAY', memoryPath)
-    else
-      call mem_setptr(mshape, 'MODEL_SHAPE', memoryPath)
-      nsize1 = mshape(0)
-      nsize2 = mshape(1)
-      nsize3 = mshape(2)
+    elseif (ndim == 3) then
+      nsize1 => mshape(3) ! NCOL
+      nsize2 => mshape(2) ! NROW
+      nsize3 => mshape(1) ! NLAY
     end if
 
     ! allocate the array using the memory manager
@@ -376,16 +382,16 @@ contains
         ! read by layer
         call ReadArray(parser%iuactive, int3d(:, :, :), &
                        idt%mf6varname, ndim, nsize1, nsize2, &
-                       nsize3, 0, 1, nsize3)
+                       nsize3, iout, 1, nsize3)
       else
         ! read full 3d array
         call ReadArray(parser%iuactive, int3d(:, :, :), idt%mf6varname, &
-                       ndim, nsize1 * nsize2 * nsize3, 0)
+                       ndim, nsize1 * nsize2 * nsize3, iout)
       end if
     else
       ! read full 3d array
       call ReadArray(parser%iuactive, int3d(:, :, :), idt%mf6varname, &
-                     ndim, nsize1 * nsize2 * nsize3, 0)
+                     ndim, nsize1 * nsize2 * nsize3, iout)
     end if
 
     call idm_log_var(int3d, idt%mf6varname, memoryPath, iout)
@@ -404,30 +410,29 @@ contains
     return
   end subroutine load_double_type
 
-  subroutine load_double1d_type(parser, idt, mf6_input, iout)
+  subroutine load_double1d_type(parser, idt, mf6_input, mshape, iout)
     use SimVariablesModule, only: idm_context
     type(BlockParserType), intent(inout) :: parser
     type(InputParamDefinitionType), intent(in) :: idt
     type(ModflowInputType), pointer, intent(in) :: mf6_input
+    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape
     integer(I4B), intent(in) :: iout
     real(DP), dimension(:), pointer, contiguous :: dbl1d
     integer(I4B), pointer :: nsize1
     integer(I4B) :: nvals
-    integer(I4B), dimension(:), contiguous, pointer :: mshape
     character(len=LENMEMPATH) :: idmMemoryPath
 
     idmMemoryPath = create_mem_path(component=mf6_input%component_name, &
                                     context=idm_context)
 
     if (idt%shape == 'NODES') then
-      call mem_setptr(mshape, 'MODEL_SHAPE', idmMemoryPath)
       nvals = product(mshape)
       call mem_allocate(dbl1d, nvals, idt%mf6varname, mf6_input%memoryPath)
     else
       call mem_setptr(nsize1, idt%shape, mf6_input%memoryPath)
       call mem_allocate(dbl1d, nsize1, idt%mf6varname, mf6_input%memoryPath)
-      allocate (mshape(1))
-      mshape(1) = nsize1
+      !allocate (mshape(1))
+      !mshape(1) = nsize1
     end if
 
     call read_grid_array(parser, mshape, idt%tagname, idt%layered, dbl1d)
@@ -435,25 +440,27 @@ contains
     return
   end subroutine load_double1d_type
 
-  subroutine load_double2d_type(parser, idt, memoryPath, ndim, iout)
+  subroutine load_double2d_type(parser, idt, memoryPath, mshape, iout)
     type(BlockParserType), intent(inout) :: parser
     type(InputParamDefinitionType), intent(in) :: idt
     character(len=*), intent(in) :: memoryPath
-    integer(I4B), pointer, intent(in) :: ndim
+    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape
     integer(I4B), intent(in) :: iout
     real(DP), dimension(:, :), pointer, contiguous :: dbl2d
-    integer(I4B), dimension(:), contiguous, pointer :: mshape
+    integer(I4B) :: ndim
     integer(I4B), pointer :: nsize1
     integer(I4B), pointer :: nsize2
 
+    ndim = size(mshape)
+
     ! find sizes in memory manager
-    if (ndim == -1) then
-      call mem_setptr(nsize1, 'NCOL', memoryPath)
-      call mem_setptr(nsize2, 'NROW', memoryPath)
-    else
-      call mem_setptr(mshape, 'MODEL_SHAPE', memoryPath)
-      nsize1 = mshape(0)
-      nsize2 = mshape(1)
+    if (ndim == 2) then
+      allocate (nsize2)
+      nsize1 => mshape(2) ! NCPL
+      nsize2 = 1
+    elseif (ndim == 3) then
+      nsize1 => mshape(3) ! NCOL
+      nsize2 => mshape(2) ! NROW
     end if
 
     ! allocate the array using the memory manager
@@ -461,35 +468,37 @@ contains
 
     ! fill the array from the file
     call ReadArray(parser%iuactive, dbl2d, idt%mf6varname, &
-                   ndim, nsize1, nsize2, 0, 0)
+                   ndim, nsize1, nsize2, iout, 0)
 
     call idm_log_var(dbl2d, idt%mf6varname, memoryPath, iout)
     return
   end subroutine load_double2d_type
 
-  subroutine load_double3d_type(parser, idt, memoryPath, ndim, iout)
+  subroutine load_double3d_type(parser, idt, memoryPath, mshape, iout)
     type(BlockParserType), intent(inout) :: parser
     type(InputParamDefinitionType), intent(in) :: idt
     character(len=*), intent(in) :: memoryPath
-    integer(I4B), pointer, intent(in) :: ndim
+    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape
     integer(I4B), intent(in) :: iout
     real(DP), dimension(:, :, :), pointer, contiguous :: dbl3d
-    integer(I4B), dimension(:), contiguous, pointer :: mshape
+    integer(I4B) :: ndim
     integer(I4B), pointer :: nsize1
     integer(I4B), pointer :: nsize2
     integer(I4B), pointer :: nsize3
     character(len=LINELENGTH) :: keyword
 
+    ndim = size(mshape)
+
     ! find sizes in memory manager
-    if (ndim == -1) then
-      call mem_setptr(nsize1, 'NCOL', memoryPath)
-      call mem_setptr(nsize2, 'NROW', memoryPath)
+    if (ndim == 2) then
+      allocate (nsize2)
+      nsize1 => mshape(2) ! NCPL
+      nsize2 = 1
       call mem_setptr(nsize3, 'NLAY', memoryPath)
-    else
-      call mem_setptr(mshape, 'MODEL_SHAPE', memoryPath)
-      nsize1 = mshape(0)
-      nsize2 = mshape(1)
-      nsize3 = mshape(2)
+    elseif (ndim == 3) then
+      nsize1 => mshape(3) ! NCOL
+      nsize2 => mshape(2) ! NROW
+      nsize3 => mshape(1) ! NLAY
     end if
 
     ! allocate the array using the memory manager
@@ -502,30 +511,52 @@ contains
         ! read by layer
         call ReadArray(parser%iuactive, dbl3d(:, :, :), &
                        idt%mf6varname, ndim, nsize1, nsize2, &
-                       nsize3, 0, 1, nsize3)
+                       nsize3, iout, 1, nsize3)
       else
         ! read full 3d array
         call ReadArray(parser%iuactive, dbl3d(:, :, :), idt%mf6varname, &
-                       ndim, nsize1 * nsize2 * nsize3, 0)
+                       ndim, nsize1 * nsize2 * nsize3, iout)
       end if
     else
       ! read full 3d array
       call ReadArray(parser%iuactive, dbl3d(:, :, :), idt%mf6varname, &
-                     ndim, nsize1 * nsize2 * nsize3, 0)
+                     ndim, nsize1 * nsize2 * nsize3, iout)
     end if
 
     call idm_log_var(dbl3d, idt%mf6varname, memoryPath, iout)
     return
   end subroutine load_double3d_type
 
-  subroutine set_model_shape_idm(ftype, model_mempath, dis_mempath)
+  subroutine get_model_shape(mf6_input, mshape)
+    use SimVariablesModule, only: idm_context
+    type(ModflowInputType), pointer, intent(in) :: mf6_input
+    integer(I4B), dimension(:), contiguous, pointer, intent(inout) :: mshape
+    character(len=LENMEMPATH) :: idmMemoryPath
+
+    idmMemoryPath = create_mem_path(component=mf6_input%component_name, &
+                                    context=idm_context)
+
+    call mem_setptr(mshape, 'MODEL_SHAPE', idmMemoryPath)
+
+  end subroutine get_model_shape
+
+  subroutine set_model_shape(ftype, model_mempath, dis_mempath, ndim, nvert)
+    use MemoryTypeModule, only: MemoryType
+    use MemoryManagerModule, only: get_from_memorylist
     character(len=*) :: ftype
     character(len=*), intent(in) :: model_mempath
     character(len=*), intent(in) :: dis_mempath
+    integer(I4B), intent(inout) :: ndim
+    integer(I4B), intent(inout) :: nvert
     integer(I4B), dimension(:), pointer, contiguous :: model_shape
     integer(I4B), pointer :: ndim1
     integer(I4B), pointer :: ndim2
     integer(I4B), pointer :: ndim3
+    logical(LGP) :: found
+    type(MemoryType), pointer :: mt
+    logical(LGP) :: checkfail = .false.
+
+    nvert = -1
 
     select case (ftype)
     case ('DIS6')
@@ -545,96 +576,16 @@ contains
       model_shape = [ndim1]
     end select
 
-    return
-  end subroutine set_model_shape_idm
-
-  subroutine set_model_shape_disv(model_mempath, nlay, ncpl, nvert)
-    character(len=*), intent(in) :: model_mempath
-    integer(I4B), pointer, intent(in) :: nlay
-    integer(I4B), pointer, intent(in) :: ncpl
-    integer(I4B), pointer, intent(in) :: nvert
-    integer(I4B), dimension(:), pointer, contiguous :: model_shape
-
-    call mem_allocate(model_shape, 2, 'MODEL_SHAPE', model_mempath)
-    model_shape = [nlay, ncpl]
-
-  end subroutine set_model_shape_disv
-
-  subroutine set_model_shape_disu(model_mempath, nodes)
-    character(len=*), intent(in) :: model_mempath
-    integer(I4B), pointer, intent(in) :: nodes
-    integer(I4B), dimension(:), pointer, contiguous :: model_shape
-
-    call mem_allocate(model_shape, 1, 'MODEL_SHAPE', model_mempath)
-    model_shape = [nodes]
-
-  end subroutine set_model_shape_disu
-
-  subroutine update_aggregate_shapes(mf6_input, iout)
-    type(ModflowInputType), pointer, intent(in) :: mf6_input
-    integer(I4B), intent(in) :: iout
-    type(BlockParserType) :: parser
-    integer(I4B) :: inunit
-    logical(LGP) :: update_shapes
-    integer(I4B) :: iaggregate, iblock
-    logical(LGP) :: isblockfound, endOfBlock
-    integer(I4B) :: ierr
-    integer(I4B) :: nlines
-    integer(I4B), pointer :: blockshape
-
-    ! check if file needs to be opened
-    update_shapes = .false.
-    do iaggregate = 1, size(mf6_input%p_aggregate_dfns)
-      if (mf6_input%p_aggregate_dfns(iaggregate)%shape == '') then
-        update_shapes = .true.
-        exit
-      end if
-    end do
-
-    ! file has to be read so check all blocks
-    if (update_shapes) then
-      ! set up file parsing
-      inunit = getunit()
-      call openfile(inunit, 0, mf6_input%file_spec, mf6_input%file_type)
-      call parser%initialize(inunit, iout)
-
-      ! check and update shape for each block against aggregate dfn
-      do iblock = 1, size(mf6_input%p_block_dfns)
-        call parser%GetBlock(mf6_input%p_block_dfns(iblock)%blockname, &
-                             isblockfound, ierr)
-
-        if (isblockfound) then
-          nlines = 0
-          do
-            call parser%GetNextLine(endOfBlock)
-            if (endOfBlock) then
-              exit
-            else
-              nlines = nlines + 1
-            end if
-          end do
-
-          do iaggregate = 1, size(mf6_input%p_aggregate_dfns)
-            if (mf6_input%p_aggregate_dfns(iaggregate)%blockname == &
-                mf6_input%p_block_dfns(iblock)%blockname .and. &
-                mf6_input%p_aggregate_dfns(iaggregate)%shape == '') then
-              ! TODO: handle exceeding LENVARNAME
-              mf6_input%p_aggregate_dfns(iaggregate)%shape = &
-                'n'//trim(mf6_input%p_aggregate_dfns(iaggregate)%mf6varname)
-              call mem_allocate(blockshape, &
-                                mf6_input%p_aggregate_dfns(iaggregate)%shape, &
-                                mf6_input%memoryPath)
-              blockshape = nlines
-            end if
-          end do
-
-        end if
-      end do
-
-      ! close file and release resourses
-      call parser%clear()
+    if (ftype == 'DISV6' .or. ftype == 'DISU6') then
+      nvert = 0
+      call get_from_memorylist('NVERT', dis_mempath, mt, found, checkfail)
+      if (found) nvert = mt%intsclr
     end if
-  end subroutine update_aggregate_shapes
+
+    ndim = size(model_shape)
+
+    return
+  end subroutine set_model_shape
 
   subroutine read_grid_array(parser, mshape, array_name, layered, dblarray, &
                              intarray)
@@ -695,14 +646,14 @@ contains
       if (present(dblarray)) then
         call ReadArray(parser%iuactive, dblarray, &
                        array_name, ndim, ndim3, ndim2, &
-                       ndim1, nvals, 0, k1, k2)
+                       ndim1, nvals, iout, k1, k2)
       end if
 
       ! integer array
       if (present(intarray)) then
         call ReadArray(parser%iuactive, intarray, &
                        array_name, ndim, ndim3, ndim2, &
-                       ndim1, nvals, 0, k1, k2)
+                       ndim1, nvals, iout, k1, k2)
       end if
 
     else
@@ -710,13 +661,13 @@ contains
       ! float array
       if (present(dblarray)) then
         call ReadArray(parser%iuactive, dblarray, array_name, &
-                       ndim, nvals, 0, 0)
+                       ndim, nvals, iout, 0)
       end if
 
       ! integer array
       if (present(intarray)) then
         call ReadArray(parser%iuactive, intarray, array_name, &
-                       ndim, nvals, 0, 0)
+                       ndim, nvals, iout, 0)
       end if
 
     end if

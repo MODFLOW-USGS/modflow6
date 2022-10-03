@@ -389,6 +389,8 @@ if __name__ == "__main__":
 
     gwf_dfns = [
         Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-dis.dfn"),
+        Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-disu.dfn"),
+        Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-disv.dfn"),
         Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-npf.dfn"),
     ]
 

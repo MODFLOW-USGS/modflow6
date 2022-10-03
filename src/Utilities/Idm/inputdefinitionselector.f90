@@ -8,6 +8,12 @@ module InputDefinitionSelectorModule
   use GwfDisInputModule, only: gwf_dis_param_definitions, &
                                gwf_dis_aggregate_definitions, &
                                gwf_dis_block_definitions
+  use GwfDisuInputModule, only: gwf_disu_param_definitions, &
+                                gwf_disu_aggregate_definitions, &
+                                gwf_disu_block_definitions
+  use GwfDisvInputModule, only: gwf_disv_param_definitions, &
+                                gwf_disv_aggregate_definitions, &
+                                gwf_disv_block_definitions
   use GwfNpfInputModule, only: gwf_npf_param_definitions, &
                                gwf_npf_aggregate_definitions, &
                                gwf_npf_block_definitions
@@ -32,6 +38,10 @@ contains
     select case (component)
     case ('GWF/DIS')
       call set_pointer(input_definition, gwf_dis_param_definitions)
+    case ('GWF/DISU')
+      call set_pointer(input_definition, gwf_disu_param_definitions)
+    case ('GWF/DISV')
+      call set_pointer(input_definition, gwf_disv_param_definitions)
     case ('GWF/NPF')
       call set_pointer(input_definition, gwf_npf_param_definitions)
     case ('GWT/DSP')
@@ -51,6 +61,10 @@ contains
     select case (component)
     case ('GWF/DIS')
       call set_pointer(input_definition, gwf_dis_aggregate_definitions)
+    case ('GWF/DISU')
+      call set_pointer(input_definition, gwf_disu_aggregate_definitions)
+    case ('GWF/DISV')
+      call set_pointer(input_definition, gwf_disv_aggregate_definitions)
     case ('GWF/NPF')
       call set_pointer(input_definition, gwf_npf_aggregate_definitions)
     case ('GWT/DSP')
@@ -70,6 +84,10 @@ contains
     select case (component)
     case ('GWF/DIS')
       call set_block_pointer(input_definition, gwf_dis_block_definitions)
+    case ('GWF/DISU')
+      call set_block_pointer(input_definition, gwf_disu_block_definitions)
+    case ('GWF/DISV')
+      call set_block_pointer(input_definition, gwf_disv_block_definitions)
     case ('GWF/NPF')
       call set_block_pointer(input_definition, gwf_npf_block_definitions)
     case ('GWT/DSP')
