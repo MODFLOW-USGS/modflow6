@@ -6,9 +6,9 @@ BEGIN OPTIONS
   [PRINT_INPUT]
   [PRINT_FLOWS]
   [SAVE_FLOWS]
-  [ADVSCHEME <advscheme>]
-  [XT3D_OFF]
-  [XT3D_RHS]
+  [ADV_SCHEME <adv_scheme>]
+  [DSP_XT3D_OFF]
+  [DSP_XT3D_RHS]
   [MVT6 FILEIN <mvt6_filename>]
   [OBS6 FILEIN <obs6_filename>]
 END OPTIONS

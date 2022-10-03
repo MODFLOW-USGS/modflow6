@@ -215,7 +215,7 @@ contains
       ! -- allocate arrays
       call this%allocate_arrays(this%dis%nodes, this%dis%njas)
       !
-      ! -- read from file, set, and convert/check the input      
+      ! -- read from file, set, and convert/check the input
       call this%read_grid_data()
       call this%prepcheck()
     else
