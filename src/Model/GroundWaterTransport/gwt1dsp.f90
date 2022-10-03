@@ -142,10 +142,6 @@ contains
       !
       ! -- Read dispersion data
       call this%read_data()
-      call this%allocate_arrays(this%dis%nodes)
-      !
-      ! -- Read dispersion data
-      call this%read_data()
     end if
     !
     ! -- xt3d create
