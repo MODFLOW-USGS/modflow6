@@ -30,7 +30,6 @@ module GwfDisModule
   contains
     procedure :: dis_df => dis3d_df
     procedure :: dis_da => dis3d_da
-    procedure :: get_cellxy => get_cellxy_dis3d
     procedure :: get_dis_type => get_dis_type
     procedure, public :: record_array
     procedure, public :: read_layer_array
@@ -572,6 +571,19 @@ contains
       end do
     end if
     !
+    ! -- fill x,y coordinate arrays
+    this%cellx(1) = DHALF * this%delr(1)
+    this%celly(this%nrow) = DHALF * this%delc(this%nrow)
+    do j = 2, this%ncol
+      this%cellx(j) = this%cellx(j - 1) + DHALF * this%delr(j - 1) + &
+                      DHALF * this%delr(j)
+    end do
+    ! -- row number increases in negative y direction:
+    do i = this%nrow - 1, 1, -1
+      this%celly(i) = this%celly(i + 1) + DHALF * this%delc(i + 1) + &
+                      DHALF * this%delc(i)
+    end do
+    !
     ! -- Move top2d and botm3d into top and bot, and calculate area
     node = 0
     do k = 1, this%nlay
@@ -589,21 +601,10 @@ contains
           this%top(noder) = top
           this%bot(noder) = this%bot3d(j, i, k)
           this%area(noder) = this%delr(j) * this%delc(i)
+          this%xc(noder) = this%cellx(j)
+          this%yc(noder) = this%celly(i)
         end do
       end do
-    end do
-    !
-    ! -- fill x,y coordinate arrays
-    this%cellx(1) = DHALF * this%delr(1)
-    this%celly(this%nrow) = DHALF * this%delc(this%nrow)
-    do j = 2, this%ncol
-      this%cellx(j) = this%cellx(j - 1) + DHALF * this%delr(j - 1) + &
-                      DHALF * this%delr(j)
-    end do
-    ! -- row number increases in negative y direction:
-    do i = this%nrow - 1, 1, -1
-      this%celly(i) = this%celly(i + 1) + DHALF * this%delc(i + 1) + &
-                      DHALF * this%delc(i)
     end do
     !
     ! -- create and fill the connections object
@@ -1345,23 +1346,6 @@ contains
     ! -- return
     return
   end subroutine
-
-  ! return x,y coordinate for a node
-  subroutine get_cellxy_dis3d(this, node, xcell, ycell)
-    use InputOutputModule, only: get_ijk
-    class(GwfDisType), intent(in) :: this
-    integer(I4B), intent(in) :: node ! the reduced node number
-    real(DP), intent(out) :: xcell, ycell ! the x,y for the cell
-    ! local
-    integer(I4B) :: nodeuser, i, j, k
-
-    nodeuser = this%get_nodeuser(node)
-    call get_ijk(nodeuser, this%nrow, this%ncol, this%nlay, i, j, k)
-
-    xcell = this%cellx(j)
-    ycell = this%celly(i)
-
-  end subroutine get_cellxy_dis3d
 
   ! return discretization type
   subroutine get_dis_type(this, dis_type)

@@ -30,7 +30,6 @@ module GwfDisvModule
   contains
     procedure :: dis_df => disv_df
     procedure :: dis_da => disv_da
-    procedure :: get_cellxy => get_cellxy_disv
     procedure :: get_dis_type => get_dis_type
     procedure, public :: record_array
     procedure, public :: read_layer_array
@@ -556,7 +555,8 @@ contains
       end do
     end if
     !
-    ! -- Move top2d and bot3d into top and bot, and calculate area
+    ! -- Move top2d and bot3d into top and bot
+    !    and set x and y center coordinates
     node = 0
     do k = 1, this%nlay
       do j = 1, this%ncpl
@@ -571,6 +571,8 @@ contains
         end if
         this%top(noder) = top
         this%bot(noder) = this%bot3d(j, 1, k)
+        this%xc(noder) = this%cellxy(1, node)
+        this%yc(noder) = this%cellxy(2, node)
       end do
     end do
     !
@@ -1309,23 +1311,6 @@ contains
     ! -- return
     return
   end subroutine connection_vector
-
-  ! return x,y coordinate for a node
-  subroutine get_cellxy_disv(this, node, xcell, ycell)
-    use InputOutputModule, only: get_jk
-    class(GwfDisvType), intent(in) :: this
-    integer(I4B), intent(in) :: node ! the reduced node number
-    real(DP), intent(out) :: xcell, ycell ! the x,y for the cell
-    ! local
-    integer(I4B) :: nodeuser, ncell2d, k
-
-    nodeuser = this%get_nodeuser(node)
-    call get_jk(nodeuser, this%ncpl, this%nlay, ncell2d, k)
-
-    xcell = this%cellxy(1, ncell2d)
-    ycell = this%cellxy(2, ncell2d)
-
-  end subroutine get_cellxy_disv
 
   ! return discretization type
   subroutine get_dis_type(this, dis_type)
