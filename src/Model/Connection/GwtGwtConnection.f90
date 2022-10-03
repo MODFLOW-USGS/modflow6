@@ -186,21 +186,21 @@ contains
                          SYNC_NODES, '', (/BEFORE_AR/))
     call this%addDistVar('AREA', 'DIS', this%gwtInterfaceModel%name, &
                          SYNC_NODES, '', (/BEFORE_AR/))
-    if (this%gwtInterfaceModel%dsp%idiffc > 0) then                     
+    if (this%gwtInterfaceModel%dsp%idiffc > 0) then
       call this%addDistVar('DIFFC', 'DSP', this%gwtInterfaceModel%name, &
-                          SYNC_NODES, '', (/BEFORE_AR/))
+                           SYNC_NODES, '', (/BEFORE_AR/))
     end if
     if (this%gwtInterfaceModel%dsp%idisp > 0) then
       call this%addDistVar('ALH', 'DSP', this%gwtInterfaceModel%name, &
-                          SYNC_NODES, '', (/BEFORE_AR/))
+                           SYNC_NODES, '', (/BEFORE_AR/))
       call this%addDistVar('ALV', 'DSP', this%gwtInterfaceModel%name, &
-                          SYNC_NODES, '', (/BEFORE_AR/))
+                           SYNC_NODES, '', (/BEFORE_AR/))
       call this%addDistVar('ATH1', 'DSP', this%gwtInterfaceModel%name, &
-                          SYNC_NODES, '', (/BEFORE_AR/))
+                           SYNC_NODES, '', (/BEFORE_AR/))
       call this%addDistVar('ATH2', 'DSP', this%gwtInterfaceModel%name, &
-                          SYNC_NODES, '', (/BEFORE_AR/))
+                           SYNC_NODES, '', (/BEFORE_AR/))
       call this%addDistVar('ATV', 'DSP', this%gwtInterfaceModel%name, &
-                          SYNC_NODES, '', (/BEFORE_AR/))
+                           SYNC_NODES, '', (/BEFORE_AR/))
     end if
     call this%addDistVar('GWFHEAD', 'FMI', this%gwtInterfaceModel%name, &
                          SYNC_NODES, '', (/BEFORE_AD/))
@@ -218,7 +218,7 @@ contains
                            SYNC_NODES, '', (/AFTER_AR/))
     end if
     call this%mapVariables()
-    
+
     call this%allocate_arrays()
     call this%gwtInterfaceModel%allocate_fmi()
 

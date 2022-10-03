@@ -184,7 +184,6 @@ contains
 
   end subroutine gwtifmod_ar
 
-
   !> @brief Clean up resources
   !<
   subroutine gwtifmod_da(this)

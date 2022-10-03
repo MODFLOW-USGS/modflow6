@@ -137,7 +137,7 @@ contains
       !
       ! -- Initialize block parser
       call this%parser%Initialize(this%inunit, this%iout)
-      call this%read_options()!
+      call this%read_options()
       call this%allocate_arrays(this%dis%nodes)
       !
       ! -- Read dispersion data

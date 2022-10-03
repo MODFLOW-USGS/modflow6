@@ -118,7 +118,7 @@ contains
   !<
   subroutine gwfifm_ar(this)
     class(GwfInterfaceModelType) :: this !< the GWF interface model
-    
+
     call this%npf%npf_ar(this%ic, this%ibound, this%x)
     if (this%inbuy > 0) call this%buy%buy_ar(this%npf, this%ibound)
 

@@ -31,7 +31,7 @@ module MappedVariableModule
     procedure, private :: sync_dbl1d
     procedure, private :: apply_sgn_dbl1d
     procedure, private :: sync_dbl2d
-    procedure, private :: apply_sgn_dbl2d    
+    procedure, private :: apply_sgn_dbl2d
 
   end type MappedVariableType
 
@@ -47,7 +47,7 @@ contains
       call get_from_memorylist(this%src_name, this%src_path, this%src, found)
       call get_from_memorylist(this%tgt_name, this%tgt_path, this%tgt, found)
     end if
-    
+
     if (this%skip_sync()) return
 
     if (associated(this%tgt%aint1d)) call this%sync_int1d()

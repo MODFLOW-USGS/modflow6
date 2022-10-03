@@ -9,7 +9,7 @@ module DistributedModelModule
   use MemoryHelperModule, only: create_mem_path
   use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList, &
                                   AddNumericalModelToList
-                                  
+
   use ListsModule, only: basemodellist, distmodellist
   implicit none
   private
@@ -34,7 +34,7 @@ module DistributedModelModule
 
     ! private
     procedure, private :: create_local
-    procedure, private :: create_remote    
+    procedure, private :: create_remote
     procedure, private :: load_intsclr
     procedure, private :: load_int1d
     procedure, private :: load_double1d
@@ -42,7 +42,7 @@ module DistributedModelModule
     procedure, private :: equals_num_model
   end type DistributedModelType
 
-  contains
+contains
 
   subroutine add_dist_model(model_index)
     integer :: model_index
@@ -52,7 +52,7 @@ module DistributedModelModule
 
     num_model => GetNumericalModelFromList(basemodellist, model_index)
 
-    allocate(dist_model)
+    allocate (dist_model)
     call dist_model%create_local(num_model)
     call AddDistModelToList(distmodellist, dist_model)
 
@@ -89,7 +89,7 @@ module DistributedModelModule
     class(DistributedModelType) :: this
     integer(I4B), pointer :: intsclr
     character(len=*) :: var_name
-    character(len=*), optional :: subcomp_name    
+    character(len=*), optional :: subcomp_name
     ! local
     type(MemoryType), pointer :: mt
     logical(LGP) :: found
@@ -110,7 +110,7 @@ module DistributedModelModule
     class(DistributedModelType) :: this
     integer(I4B), dimension(:), pointer, contiguous :: aint1d
     character(len=*) :: var_name
-    character(len=*), optional :: subcomp_name    
+    character(len=*), optional :: subcomp_name
     ! local
     character(len=LENMEMPATH) :: mem_path
     type(MemoryType), pointer :: mt
@@ -131,7 +131,7 @@ module DistributedModelModule
     class(DistributedModelType) :: this
     real(DP), dimension(:), pointer, contiguous :: adbl1d
     character(len=*) :: var_name
-    character(len=*), optional :: subcomp_name    
+    character(len=*), optional :: subcomp_name
     ! local
     character(len=LENMEMPATH) :: mem_path
     type(MemoryType), pointer :: mt
@@ -173,7 +173,7 @@ module DistributedModelModule
     if (associated(this%model)) then
       model => this%model
     else
-      write(*,*) 'Error: illegal access to remote memory, abort'
+      write (*, *) 'Error: illegal access to remote memory, abort'
       call ustop()
     end if
 
@@ -199,9 +199,9 @@ module DistributedModelModule
     class(DistributedModelType), pointer, intent(inout) :: model
     ! local
     class(*), pointer :: obj
-    
+
     obj => model
-    call list%Add(obj)    
+    call list%Add(obj)
     return
 
   end subroutine AddDistModelToList
@@ -212,9 +212,9 @@ module DistributedModelModule
     class(DistributedModelType), pointer :: res
     ! local
     class(*), pointer :: obj
-    
+
     obj => list%GetItem(idx)
-    res => CastAsDistModelClass(obj)    
+    res => CastAsDistModelClass(obj)
     return
 
   end function GetDistModelFromList

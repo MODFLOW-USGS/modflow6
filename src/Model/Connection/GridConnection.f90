@@ -89,7 +89,7 @@ module GridConnectionModule
     procedure, pass(this) :: destroy
     procedure, pass(this) :: connectPrimaryExchange
     procedure, pass(this) :: findModelNeighbors
-    procedure, pass(this) :: extendConnection    
+    procedure, pass(this) :: extendConnection
     procedure, pass(this) :: getDiscretization
     procedure, pass(this) :: getInterfaceMap
 
@@ -106,7 +106,7 @@ module GridConnectionModule
     procedure, private, pass(this) :: addToRegionalModels
     procedure, private, pass(this) :: getRegionalModelOffset
     generic, private :: getInterfaceIndex => getInterfaceIndexByCell, &
-                                             getInterfaceIndexByIndexModel
+      getInterfaceIndexByIndexModel
     procedure, private, pass(this) :: getInterfaceIndexByCell
     procedure, private, pass(this) :: getInterfaceIndexByIndexModel
     procedure, private, pass(this) :: registerInterfaceCells
@@ -536,7 +536,8 @@ contains
         do iexg = 1, connEx%nexg
           if (connEx%nodem1(iexg) == cellNbrs%cell%index) then
             ! we have a link, now add foreign neighbor
-            dist_model_nbr => GetDistModelFromList(distmodellist, connEx%model2%id) ! TODO_MJR: temp. for testing
+            dist_model_nbr => GetDistModelFromList(distmodellist, &
+                                                   connEx%model2%id) ! TODO_MJR: temp. for testing
             call this%addNeighborCell(cellNbrs, connEx%nodem2(iexg), &
                                       connEx%model2, dist_model_nbr, &
                                       mask)
@@ -548,7 +549,8 @@ contains
         do iexg = 1, connEx%nexg
           if (connEx%nodem2(iexg) == cellNbrs%cell%index) then
             ! we have a link, now add foreign neighbor
-            dist_model_nbr => GetDistModelFromList(distmodellist, connEx%model1%id) ! TODO_MJR: temp. for testing
+            dist_model_nbr => GetDistModelFromList(distmodellist, &
+                                                   connEx%model1%id) ! TODO_MJR: temp. for testing
             call this%addNeighborCell(cellNbrs, connEx%nodem1(iexg), &
                                       connEx%model1, dist_model_nbr, &
                                       mask)
@@ -562,7 +564,8 @@ contains
 
   !> @brief Add neighboring cell to tree structure
   !<
-  subroutine addNeighborCell(this, cellNbrs, newNbrIdx, nbrModel, nbr_dist_model, mask)
+  subroutine addNeighborCell(this, cellNbrs, newNbrIdx, &
+                             nbrModel, nbr_dist_model, mask)
     class(GridConnectionType), intent(in) :: this !< this grid connection instance
     type(CellWithNbrsType), intent(inout) :: cellNbrs !< the root cell which to add to
     integer(I4B), intent(in) :: newNbrIdx !< the neigboring cell's index
@@ -575,7 +578,7 @@ contains
         return
       end if
     end if
-    
+
     call cellNbrs%addNbrCell(newNbrIdx, nbrModel, nbr_dist_model)
 
   end subroutine addNeighborCell
@@ -1093,7 +1096,7 @@ contains
 
     ! fill data
     do icell = 1, nrOfCells
-      idx = this%idxToGlobal(icell)%index  
+      idx = this%idxToGlobal(icell)%index
       disu%top(icell) = -huge(1.0_DP)
       disu%bot(icell) = -huge(1.0_DP)
       disu%area(icell) = -huge(1.0_DP)
@@ -1320,7 +1323,7 @@ contains
     periodic = .false.
     do icell = 1, this%nrOfBoundaryCells
       if (.not. this%boundaryCells(icell)%cell%dmodel == &
-                this%connectedCells(icell)%cell%dmodel) then
+          this%connectedCells(icell)%cell%dmodel) then
         cycle
       end if
 

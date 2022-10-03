@@ -168,7 +168,7 @@ contains
     call this%addDistVar('XOLD', '', this%gwfInterfaceModel%name, &
                          SYNC_NODES, '', (/BEFORE_AD, BEFORE_CF/))
     call this%addDistVar('ICELLTYPE', 'NPF', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))                     
+                         SYNC_NODES, '', (/BEFORE_AR/))
     call this%addDistVar('K11', 'NPF', this%gwfInterfaceModel%name, &
                          SYNC_NODES, '', (/BEFORE_AR/))
     call this%addDistVar('K22', 'NPF', this%gwfInterfaceModel%name, &
@@ -186,7 +186,7 @@ contains
     if (this%gwfInterfaceModel%npf%iangle3 == 1) then
       call this%addDistVar('ANGLE3', 'NPF', this%gwfInterfaceModel%name, &
                            SYNC_NODES, '', (/BEFORE_AR/))
-    end if                     
+    end if
     if (this%gwfInterfaceModel%npf%iwetdry == 1) then
       call this%addDistVar('WETDRY', 'NPF', this%gwfInterfaceModel%name, &
                            SYNC_NODES, '', (/BEFORE_AR/))
@@ -202,7 +202,7 @@ contains
     if (this%gwfInterfaceModel%npf%ixt3d > 0) then
       this%gwfInterfaceModel%npf%iangle1 = 1
       this%gwfInterfaceModel%npf%iangle2 = 1
-      this%gwfInterfaceModel%npf%iangle3 = 1      
+      this%gwfInterfaceModel%npf%iangle3 = 1
     end if
 
     ! set defaults

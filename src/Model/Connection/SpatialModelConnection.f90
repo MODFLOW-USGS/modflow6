@@ -80,7 +80,6 @@ module SpatialModelConnectionModule
     procedure, pass(this) :: addDistVar
     procedure, pass(this) :: mapVariables
 
-
     ! private
     procedure, private, pass(this) :: setupGridConnection
     procedure, private, pass(this) :: getNrOfConnections
@@ -148,13 +147,13 @@ contains ! module procedures
     ! local
     integer(I4B) :: iface_idx
     class(GridConnectionType), pointer :: gc
-    
+
     ! fill mapping to global index (which can be
     ! done now because moffset is set in sln_df)
     gc => this%gridConnection
     do iface_idx = 1, gc%nrOfCells
       gc%idxToGlobalIdx(iface_idx) = gc%idxToGlobal(iface_idx)%index + &
-                                    gc%idxToGlobal(iface_idx)%dmodel%moffset
+                                     gc%idxToGlobal(iface_idx)%dmodel%moffset
     end do
 
   end subroutine spatialcon_ar
@@ -305,12 +304,12 @@ contains ! module procedures
     integer(I4B), dimension(:), intent(in) :: jasln !< global JA array
     ! local
     integer(I4B) :: m, n, mglo, nglo, ipos, csrIdx
-    logical(LGP) :: isOwnedConnection
+    logical(LGP) :: isOwned
 
     allocate (this%mapIdxToSln(this%nja))
 
     do n = 1, this%neq
-      isOwnedConnection = (this%gridConnection%idxToGlobal(n)%dmodel == this%owner)
+      isOwned = (this%gridConnection%idxToGlobal(n)%dmodel == this%owner)
       do ipos = this%ia(n), this%ia(n + 1) - 1
         m = this%ja(ipos)
         nglo = this%gridConnection%idxToGlobal(n)%index + &
@@ -318,7 +317,7 @@ contains ! module procedures
         mglo = this%gridConnection%idxToGlobal(m)%index + &
                this%gridConnection%idxToGlobal(m)%dmodel%moffset
         csrIdx = getCSRIndex(nglo, mglo, iasln, jasln)
-        if (csrIdx == -1 .and. isOwnedConnection) then
+        if (csrIdx == -1 .and. isOwned) then
           ! this should not be possible
           write (*, *) 'Error: cannot find cell connection in global system'
           call ustop()

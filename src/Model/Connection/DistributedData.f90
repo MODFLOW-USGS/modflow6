@@ -73,7 +73,7 @@ contains
           distvar%map_type == SYNC_CONNECTIONS) then
         ! map data for all models in this interface
         do m = 1, interface_map%nr_models
-          
+
           ! pick the right index map: connection based or node based
           if (distvar%map_type == SYNC_NODES) then
             idx_map => interface_map%node_map(m)
@@ -161,7 +161,7 @@ contains
     integer(I4B), dimension(:), intent(in) :: stages !< array with 1 or multiple stages for synchronization
     ! local
     character(len=LENMEMPATH) :: src_mem_path, tgt_mem_path
-    
+
     src_mem_path = create_mem_path(src_exg_name)
     if (len_trim(tgt_subcomp_name) > 0) then
       tgt_mem_path = create_mem_path(tgt_model_name, tgt_subcomp_name)
@@ -174,13 +174,13 @@ contains
                        src_var_name, src_mem_path, index_map_sgn%src_idx, &
                        index_map_sgn%sign, stages)
 
-  end subroutine map_exg_data  
+  end subroutine map_exg_data
 
   !> @brief Generic mapping between two variables in memory, using
   !! an optional sign conversion
   !<
   subroutine map_data(this, controller_id, tgt_name, tgt_path, tgt_idx, &
-    src_name, src_path, src_idx, sign_array, stages)
+                      src_name, src_path, src_idx, sign_array, stages)
     class(DistributedDataType) :: this
     integer(I4B) :: controller_id
     character(len=*), intent(in) :: tgt_name
@@ -199,7 +199,7 @@ contains
     ! loop and set stage bits
     istage = 0
     do i = 1, size(stages)
-    istage = ibset(istage, stages(i))
+      istage = ibset(istage, stages(i))
     end do
 
     ! create MappedVariable and add to list

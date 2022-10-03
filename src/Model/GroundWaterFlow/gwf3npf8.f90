@@ -290,7 +290,7 @@ contains
 
   !> @brief allocate and read this NPF instance
   !!
-  !! Allocate remaining package arrays, preprocess the input data and 
+  !! Allocate remaining package arrays, preprocess the input data and
   !! call *_ar on xt3d, when active.
   !<
   subroutine npf_ar(this, ic, ibound, hnew)
@@ -323,7 +323,7 @@ contains
       call mem_reallocate(this%nodedge, this%nedges, 'NODEDGE', this%memoryPath)
       call mem_reallocate(this%ihcedge, this%nedges, 'IHCEDGE', this%memoryPath)
       call mem_reallocate(this%propsedge, 5, this%nedges, 'PROPSEDGE', &
-                        this%memoryPath)
+                          this%memoryPath)
       do n = 1, this%dis%nodes
         this%spdis(:, n) = DZERO
       end do
