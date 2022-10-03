@@ -571,8 +571,8 @@ contains
         end if
         this%top(noder) = top
         this%bot(noder) = this%bot3d(j, 1, k)
-        this%xc(noder) = this%cellxy(1, node)
-        this%yc(noder) = this%cellxy(2, node)
+        this%xc(noder) = this%cellxy(1, j)
+        this%yc(noder) = this%cellxy(2, j)
       end do
     end do
     !
