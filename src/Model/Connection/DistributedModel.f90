@@ -28,7 +28,7 @@ module DistributedModelModule
     class(NumericalModelType), private, pointer :: model !< implementation if local, null otherwise
   contains
     generic :: create => create_local, create_remote
-    generic :: load => load_intsclr, load_int1d, load_double1d
+    generic :: load => load_intsclr, load_int1d, load_dblsclr, load_double1d
     generic :: operator(==) => equals_dist_model, equals_num_model
     procedure :: access
 
@@ -37,6 +37,7 @@ module DistributedModelModule
     procedure, private :: create_remote
     procedure, private :: load_intsclr
     procedure, private :: load_int1d
+    procedure, private :: load_dblsclr
     procedure, private :: load_double1d
     procedure, private :: equals_dist_model
     procedure, private :: equals_num_model
@@ -126,6 +127,27 @@ contains
     aint1d => mt%aint1d
 
   end subroutine load_int1d
+
+  subroutine load_dblsclr(this, dblsclr, var_name, subcomp_name)
+    class(DistributedModelType) :: this
+    real(DP), pointer :: dblsclr
+    character(len=*) :: var_name
+    character(len=*), optional :: subcomp_name
+    ! local
+    type(MemoryType), pointer :: mt
+    logical(LGP) :: found
+    character(len=LENMEMPATH) :: mem_path
+
+    if (present(subcomp_name)) then
+      mem_path = create_mem_path(this%name, subcomp_name)
+    else
+      mem_path = create_mem_path(this%name)
+    end if
+
+    call get_from_memorylist(var_name, mem_path, mt, found)
+    dblsclr => mt%dblsclr
+
+  end subroutine load_dblsclr
 
   subroutine load_double1d(this, adbl1d, var_name, subcomp_name)
     class(DistributedModelType) :: this

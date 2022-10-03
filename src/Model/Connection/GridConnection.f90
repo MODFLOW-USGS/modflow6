@@ -1,12 +1,6 @@
 !> Refactoring issues towards parallel:
 !!
 !! * remove camelCase
-!! * Non-stateless function calling on foreign models:
-!!  - get_cellxy
-!!  - get_nodeuser
-!!  - get_jaindex
-!!  - transform_xy
-!!  - ...?
 !! * Lookup table on region should work of dist. models instead
 !<
 module GridConnectionModule
@@ -762,7 +756,7 @@ contains
     use ConstantsModule, only: DPI, DTWOPI
     class(GridConnectionType), intent(inout) :: this !< this grid connection instance
     ! local
-    type(ConnectionsType), pointer :: conn, connOrig
+    type(ConnectionsType), pointer :: conn
     integer(I4B) :: n, m, ipos, isym, iposOrig, isymOrig
     type(GlobalCellType), pointer :: ncell, mcell
     integer(I4B), dimension(:), pointer, contiguous :: jas, ihc
