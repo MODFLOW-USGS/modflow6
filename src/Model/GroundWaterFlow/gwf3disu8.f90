@@ -249,7 +249,7 @@ contains
         this%xc(noder) = this%cellxy(1, node)
         this%yc(noder) = this%cellxy(2, node)
       end do
-    else          
+    else
       call mem_reallocate(this%xc, 0, 'XC', this%memoryPath)
       call mem_reallocate(this%yc, 0, 'YC', this%memoryPath)
     end if
