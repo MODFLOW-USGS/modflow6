@@ -1,7 +1,6 @@
 !> Refactoring issues towards parallel:
 !!
 !! * remove camelCase
-!! * Lookup table on region should work of dist. models instead
 !<
 module GridConnectionModule
   use KindModule, only: I4B, DP, LGP
@@ -164,8 +163,8 @@ contains
 
     ! connect the cells
     do iconn = 1, primEx%nexg
-      call this%connectCell(primEx%nodem1(iconn), primEx%model1, &
-                            primEx%nodem2(iconn), primEx%model2)
+      call this%connectCell(primEx%nodem1(iconn), primEx%dmodel1, &
+                            primEx%nodem2(iconn), primEx%dmodel2)
     end do
 
   end subroutine connectPrimaryExchange
@@ -174,12 +173,12 @@ contains
   !! storing them in the boundary cell and connected cell
   !! arrays
   !<
-  subroutine connectCell(this, idx1, model1, idx2, model2)
+  subroutine connectCell(this, idx1, dist_model1, idx2, dist_model2)
     class(GridConnectionType), intent(in) :: this !< this grid connection
     integer(I4B) :: idx1 !< local index cell 1
-    class(NumericalModelType), pointer :: model1 !< model of cell 1
+    class(DistributedModelType), pointer :: dist_model1 !< model of cell 1
     integer(I4B) :: idx2 !< local index cell 2
-    class(NumericalModelType), pointer :: model2 !< model of cell 2
+    class(DistributedModelType), pointer :: dist_model2 !< model of cell 2
     ! local
     type(GlobalCellType), pointer :: bnd_cell, conn_cell
 
@@ -190,24 +189,18 @@ contains
       call ustop()
     end if
 
-    ! TODO_MJR: the assignment of the dist. models below
-    ! should replace the model pointers entirely
     bnd_cell => this%boundaryCells(this%nrOfBoundaryCells)%cell
     conn_cell => this%connectedCells(this%nrOfBoundaryCells)%cell
-    if (associated(model1, this%model)) then
+    if (dist_model1 == this%model) then
       bnd_cell%index = idx1
-      bnd_cell%model => this%model
-      bnd_cell%dmodel => GetDistModelFromList(distmodellist, this%model%id)
+      bnd_cell%dmodel => dist_model1
       conn_cell%index = idx2
-      conn_cell%model => model2
-      conn_cell%dmodel => GetDistModelFromList(distmodellist, model2%id)
-    else if (associated(model2, this%model)) then
+      conn_cell%dmodel => dist_model2
+    else if (dist_model2 == this%model) then
       bnd_cell%index = idx2
-      bnd_cell%model => this%model
-      bnd_cell%dmodel => GetDistModelFromList(distmodellist, this%model%id)
+      bnd_cell%dmodel => dist_model2
       conn_cell%index = idx1
-      conn_cell%model => model1
-      conn_cell%dmodel => GetDistModelFromList(distmodellist, model1%id)
+      conn_cell%dmodel => dist_model1
     else
       write (*, *) 'Error: unable to connect cells outside the model'
       call ustop()
@@ -478,7 +471,6 @@ contains
     integer(I4B) :: newDepth
 
     ! TODO_MJR, is this how we are going to do this?
-    class(DistributedModelType), pointer :: dist_model_nbr
     integer(I4B), dimension(:), pointer, contiguous :: ia
     integer(I4B), dimension(:), pointer, contiguous :: ja
 
@@ -497,10 +489,7 @@ contains
     do ipos = ia(cellNbrs%cell%index) + 1, &
       ia(cellNbrs%cell%index + 1) - 1
       nbrIdx = ja(ipos)
-      dist_model_nbr => GetDistModelFromList(distmodellist, & ! TODO_MJR: temporarily to test dmodels
-                                             cellNbrs%cell%model%id)
-      call this%addNeighborCell(cellNbrs, nbrIdx, cellNbrs%cell%model, &
-                                dist_model_nbr, mask)
+      call this%addNeighborCell(cellNbrs, nbrIdx, cellNbrs%cell%dmodel, mask)
     end do
 
     ! add remote nbr using the data from the exchanges
@@ -533,35 +522,28 @@ contains
     ! local
     integer(I4B) :: ix, iexg
     type(DisConnExchangeType), pointer :: connEx
-    class(DistributedModelType), pointer :: dist_model_nbr
 
     ! loop over all exchanges
     do ix = 1, this%exchanges%Count()
       connEx => GetDisConnExchangeFromList(this%exchanges, ix)
 
       ! loop over n-m links in the exchange
-      if (cellNbrs%cell%dmodel == connEx%model1) then
+      if (cellNbrs%cell%dmodel == connEx%dmodel1) then
         do iexg = 1, connEx%nexg
           if (connEx%nodem1(iexg) == cellNbrs%cell%index) then
             ! we have a link, now add foreign neighbor
-            dist_model_nbr => GetDistModelFromList(distmodellist, &
-                                                   connEx%model2%id) ! TODO_MJR: temp. for testing
             call this%addNeighborCell(cellNbrs, connEx%nodem2(iexg), &
-                                      connEx%model2, dist_model_nbr, &
-                                      mask)
+                                      connEx%dmodel2, mask)
           end if
         end do
       end if
       ! and the reverse
-      if (cellNbrs%cell%dmodel == connEx%model2) then
+      if (cellNbrs%cell%dmodel == connEx%dmodel2) then
         do iexg = 1, connEx%nexg
           if (connEx%nodem2(iexg) == cellNbrs%cell%index) then
             ! we have a link, now add foreign neighbor
-            dist_model_nbr => GetDistModelFromList(distmodellist, &
-                                                   connEx%model1%id) ! TODO_MJR: temp. for testing
             call this%addNeighborCell(cellNbrs, connEx%nodem1(iexg), &
-                                      connEx%model1, dist_model_nbr, &
-                                      mask)
+                                      connEx%dmodel1, mask)
           end if
         end do
       end if
@@ -572,22 +554,20 @@ contains
 
   !> @brief Add neighboring cell to tree structure
   !<
-  subroutine addNeighborCell(this, cellNbrs, newNbrIdx, &
-                             nbrModel, nbr_dist_model, mask)
+  subroutine addNeighborCell(this, cellNbrs, newNbrIdx, nbr_dist_model, mask)
     class(GridConnectionType), intent(in) :: this !< this grid connection instance
     type(CellWithNbrsType), intent(inout) :: cellNbrs !< the root cell which to add to
     integer(I4B), intent(in) :: newNbrIdx !< the neigboring cell's index
-    class(NumericalModelType), pointer :: nbrModel !< the model where the new neighbor lives
     class(DistributedModelType), pointer :: nbr_dist_model !< the model where the new neighbor lives
     type(GlobalCellType), optional :: mask !< don't add connections to this cell (optional)
 
     if (present(mask)) then
-      if (newNbrIdx == mask%index .and. mask%dmodel == nbrModel) then
+      if (newNbrIdx == mask%index .and. mask%dmodel == nbr_dist_model) then
         return
       end if
     end if
 
-    call cellNbrs%addNbrCell(newNbrIdx, nbrModel, nbr_dist_model)
+    call cellNbrs%addNbrCell(newNbrIdx, nbr_dist_model)
 
   end subroutine addNeighborCell
 
@@ -1093,7 +1073,9 @@ contains
     class(GwfDisuType), pointer :: disu !< the target disu object
     ! local
     integer(I4B) :: icell, nrOfCells, idx
-    type(NumericalModelType), pointer :: model
+    type(DistributedModelType), pointer :: dist_model
+    real(DP), dimension(:), pointer, contiguous :: dis_xc, dis_yc
+    real(DP), pointer :: dis_xorigin, dis_yorigin, dis_angrot
     real(DP) :: xglo, yglo
 
     ! the following is similar to dis_df
@@ -1121,14 +1103,21 @@ contains
     ! copy cell x,y
     do icell = 1, nrOfCells
       idx = this%idxToGlobal(icell)%index
-      model => this%idxToGlobal(icell)%model
+      dist_model => this%idxToGlobal(icell)%dmodel
+
+      call dist_model%load(dis_xc, 'XC', 'DIS')
+      call dist_model%load(dis_yc, 'YC', 'DIS')
+      call dist_model%load(dis_xorigin, 'XORIGIN', 'DIS')
+      call dist_model%load(dis_yorigin, 'YORIGIN', 'DIS')
+      call dist_model%load(dis_angrot, 'ANGROT', 'DIS')
 
       ! we are merging grids with possibly (likely) different origins,
       ! transform to global coordinates:
-      call dis_transform_xy(model%dis%xc(idx), model%dis%yc(idx), &
-                            model%dis%xorigin, model%dis%yorigin, &
-                            model%dis%angrot, xglo, yglo)
+      call dis_transform_xy(dis_xc(idx), dis_yc(idx), &
+                            dis_xorigin, dis_yorigin, &
+                            dis_angrot, xglo, yglo)
 
+      ! NB: usernodes equals internal nodes for interface
       disu%cellxy(1, icell) = xglo
       disu%xc(icell) = xglo
       disu%cellxy(2, icell) = yglo
