@@ -1,4 +1,4 @@
-\begin{thebibliography}{34}
+\begin{thebibliography}{35}
 \providecommand{\natexlab}[1]{#1}
 \expandafter\ifx\csname urlstyle\endcsname\relax
   \providecommand{\doi}[1]{doi:\discretionary{}{}{}#1}\else
@@ -227,6 +227,12 @@ Prudic, D.E., Konikow, L.F., and Banta, E.R., 2004, A New Streamflow-Routing
   (SFR1) Package to simulate stream-aquifer interaction with MODFLOW-2000:
   {U.S. Geological Survey Open File Report 2004--1042, 104 p.}, accessed June
   27, 2017, at \url{https://pubs.er.usgs.gov/publication/ofr20041042}.
+
+\bibitem[{Voss(1984)}]{Voss1984sutra}
+Voss, C.I., 1984, SUTRA---A finite-element simulation model for
+  saturated-unsaturated fluid-density-dependent ground-water flow with energy
+  transport or chemically-reactive single-species solute transport: {U.S.
+  Geological Survey Water-Resources Investigations Report 84--4369, 409 p.}
 
 \bibitem[{Zheng(2010)}]{zheng2010supplemental}
 Zheng, Chunmiao, 2010, MT3DMS v5.3, Supplemental User's Guide: {Technical

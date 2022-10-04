@@ -89,7 +89,7 @@ in_record true
 reader urword
 optional true
 longname coefficient used in nonlinear viscosity function
-description is an empirical parameter specified by the user for calculating viscosity using a nonlinear formulation.  If A2 is not specified, a default value of 10.0 is assigned based on Voss (1984). 
+description is an empirical parameter specified by the user for calculating viscosity using a nonlinear formulation.  If A2 is not specified, a default value of 10.0 is assigned (Voss, 1984). 
 
 block options
 name a3
@@ -98,7 +98,7 @@ in_record true
 reader urword
 optional true
 longname coefficient used in nonlinear viscosity function
-description is an empirical parameter specified by the user for calculating viscosity using a nonlinear formulation.  If A3 is not specified, a default value of 248.37 is assigned based on Voss (1984). 
+description is an empirical parameter specified by the user for calculating viscosity using a nonlinear formulation.  If A3 is not specified, a default value of 248.37 is assigned (Voss, 1984). 
 
 block options
 name a4
@@ -107,7 +107,7 @@ in_record true
 reader urword
 optional true
 longname coefficient used in nonlinear viscosity function
-description is an empirical parameter specified by the user for calculating viscosity using a nonlinear formulation.  If A4 is not specified, a default value of 133.15 is assigned based on Voss (1984). 
+description is an empirical parameter specified by the user for calculating viscosity using a nonlinear formulation.  If A4 is not specified, a default value of 133.15 is assigned (Voss, 1984). 
 
 
 
@@ -151,7 +151,7 @@ tagged false
 in_record true
 reader urword
 longname slope of the line that defines the linear relationship between viscosity and temperature or between viscosity and concentration, depending on the type of species entered on each line.
-description real value that defines the slope of the line defining the linear relationship between viscosity and temperature or between viscosity and concentration, depending on the type of species entered on each line.  If the value of AUXSPECIESNAME entered on a line is TEMPERATURE, this value will be used when VISCOSITY_FUNC is equal to LINEAR (the default) in the OPTIONS block.  When VISCOSITY_FUNC is set to NONLINEAR, a value for DVISCDC must be specified though it is not used.
+description real value that defines the slope of the line defining the linear relationship between viscosity and temperature or between viscosity and concentration, depending on the type of species entered on each line.  If the value of AUXSPECIESNAME entered on a line is TEMPERATURE, this value will be used when VISCOSITY\_FUNC is equal to LINEAR (the default) in the OPTIONS block.  When VISCOSITY\_FUNC is set to NONLINEAR, a value for DVISCDC must be specified though it is not used.
 
 block packagedata
 name cviscref
