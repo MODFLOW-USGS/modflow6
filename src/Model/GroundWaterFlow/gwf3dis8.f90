@@ -13,7 +13,7 @@ module GwfDisModule
 
   implicit none
   private
-  public dis_cr, dis_init_mem, GwfDisType
+  public dis_cr, GwfDisType
 
   type, extends(DisBaseType) :: GwfDisType
     integer(I4B), pointer :: nlay => null() ! number of layers
@@ -30,7 +30,6 @@ module GwfDisModule
   contains
     procedure :: dis_df => dis3d_df
     procedure :: dis_da => dis3d_da
-    procedure :: get_cellxy => get_cellxy_dis3d
     procedure :: get_dis_type => get_dis_type
     procedure, public :: record_array
     procedure, public :: read_layer_array
@@ -88,85 +87,6 @@ contains
     ! -- Return
     return
   end subroutine dis_cr
-
-  subroutine dis_init_mem(dis, name_model, iout, nlay, nrow, ncol, &
-                          delr, delc, top2d, bot3d, idomain)
-! ******************************************************************************
-! dis_init_mem -- Create a new discretization 3d object from memory
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(DisBaseType), pointer :: dis
-    character(len=*), intent(in) :: name_model
-    integer(I4B), intent(in) :: iout
-    integer(I4B), intent(in) :: nlay
-    integer(I4B), intent(in) :: nrow
-    integer(I4B), intent(in) :: ncol
-    real(DP), dimension(:), pointer, contiguous, intent(in) :: delr
-    real(DP), dimension(:), pointer, contiguous, intent(in) :: delc
-    real(DP), dimension(:, :), pointer, contiguous, intent(in) :: top2d
-    real(DP), dimension(:, :, :), pointer, contiguous, intent(in) :: bot3d
-    integer(I4B), dimension(:, :, :), pointer, contiguous, intent(in), &
-      optional :: idomain
-    ! -- local
-    type(GwfDisType), pointer :: disext
-    integer(I4B) :: i
-    integer(I4B) :: j
-    integer(I4B) :: k
-    integer(I4B) :: ival
-    ! -- local
-! ------------------------------------------------------------------------------
-    allocate (disext)
-    dis => disext
-    call disext%allocate_scalars(name_model)
-    dis%inunit = 0
-    dis%iout = iout
-    !
-    ! -- set dimensions
-    disext%nrow = nrow
-    disext%ncol = ncol
-    disext%nlay = nlay
-    !
-    ! -- calculate nodesuser
-    disext%nodesuser = disext%nlay * disext%nrow * disext%ncol
-    !
-    ! -- Allocate delr, delc, and non-reduced vectors for dis
-    call mem_allocate(disext%delr, disext%ncol, 'DELR', disext%memoryPath)
-    call mem_allocate(disext%delc, disext%nrow, 'DELC', disext%memoryPath)
-    call mem_allocate(disext%idomain, disext%ncol, disext%nrow, disext%nlay, &
-                      'IDOMAIN', disext%memoryPath)
-    call mem_allocate(disext%top2d, disext%ncol, disext%nrow, 'TOP2D', &
-                      disext%memoryPath)
-    call mem_allocate(disext%bot3d, disext%ncol, disext%nrow, disext%nlay, &
-                      'BOT3D', disext%memoryPath)
-    ! -- fill data
-    do i = 1, disext%nrow
-      disext%delc(i) = delc(i)
-    end do
-    do j = 1, disext%ncol
-      disext%delr(j) = delr(j)
-    end do
-    do k = 1, disext%nlay
-      do i = 1, disext%nrow
-        do j = 1, disext%ncol
-          if (k == 1) then
-            disext%top2d(j, i) = top2d(j, i)
-          end if
-          disext%bot3d(j, i, k) = bot3d(j, i, k)
-          if (present(idomain)) then
-            ival = idomain(j, i, k)
-          else
-            ival = 1
-          end if
-          disext%idomain(j, i, k) = ival
-        end do
-      end do
-    end do
-    !
-    ! -- Return
-    return
-  end subroutine dis_init_mem
 
   subroutine dis3d_df(this)
 ! ******************************************************************************
@@ -651,6 +571,19 @@ contains
       end do
     end if
     !
+    ! -- fill x,y coordinate arrays
+    this%cellx(1) = DHALF * this%delr(1)
+    this%celly(this%nrow) = DHALF * this%delc(this%nrow)
+    do j = 2, this%ncol
+      this%cellx(j) = this%cellx(j - 1) + DHALF * this%delr(j - 1) + &
+                      DHALF * this%delr(j)
+    end do
+    ! -- row number increases in negative y direction:
+    do i = this%nrow - 1, 1, -1
+      this%celly(i) = this%celly(i + 1) + DHALF * this%delc(i + 1) + &
+                      DHALF * this%delc(i)
+    end do
+    !
     ! -- Move top2d and botm3d into top and bot, and calculate area
     node = 0
     do k = 1, this%nlay
@@ -668,21 +601,10 @@ contains
           this%top(noder) = top
           this%bot(noder) = this%bot3d(j, i, k)
           this%area(noder) = this%delr(j) * this%delc(i)
+          this%xc(noder) = this%cellx(j)
+          this%yc(noder) = this%celly(i)
         end do
       end do
-    end do
-    !
-    ! -- fill x,y coordinate arrays
-    this%cellx(1) = DHALF * this%delr(1)
-    this%celly(this%nrow) = DHALF * this%delc(this%nrow)
-    do j = 2, this%ncol
-      this%cellx(j) = this%cellx(j - 1) + DHALF * this%delr(j - 1) + &
-                      DHALF * this%delr(j)
-    end do
-    ! -- row number increases in negative y direction:
-    do i = this%nrow - 1, 1, -1
-      this%celly(i) = this%celly(i + 1) + DHALF * this%delc(i + 1) + &
-                      DHALF * this%delc(i)
     end do
     !
     ! -- create and fill the connections object
@@ -1424,23 +1346,6 @@ contains
     ! -- return
     return
   end subroutine
-
-  ! return x,y coordinate for a node
-  subroutine get_cellxy_dis3d(this, node, xcell, ycell)
-    use InputOutputModule, only: get_ijk
-    class(GwfDisType), intent(in) :: this
-    integer(I4B), intent(in) :: node ! the reduced node number
-    real(DP), intent(out) :: xcell, ycell ! the x,y for the cell
-    ! local
-    integer(I4B) :: nodeuser, i, j, k
-
-    nodeuser = this%get_nodeuser(node)
-    call get_ijk(nodeuser, this%nrow, this%ncol, this%nlay, i, j, k)
-
-    xcell = this%cellx(j)
-    ycell = this%celly(i)
-
-  end subroutine get_cellxy_dis3d
 
   ! return discretization type
   subroutine get_dis_type(this, dis_type)

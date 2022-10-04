@@ -30,6 +30,7 @@ module NumericalPackageModule
     character(len=LENMEMPATH) :: memoryPathModel = '' !< the location in the memory manager where the variables
                                                                                  !! of the parent model are stored
     character(len=LENFTYPE) :: filtyp = '' !< file type (CHD, DRN, RIV, etc.)
+    character(len=LENFTYPE), pointer :: package_type => null() !< package type (same as filtyp) stored in memory manager
 
     ! -- integers
     integer(I4B), pointer :: id => null() !< consecutive package number in model
@@ -116,6 +117,8 @@ contains
     integer(I4B), pointer :: imodelpakcb => null()
     !
     ! -- allocate scalars
+    call mem_allocate(this%package_type, LENFTYPE, 'PACKAGE_TYPE', &
+                      this%memoryPath)
     call mem_allocate(this%id, 'ID', this%memoryPath)
     call mem_allocate(this%inunit, 'INUNIT', this%memoryPath)
     call mem_allocate(this%iout, 'IOUT', this%memoryPath)
@@ -135,6 +138,7 @@ contains
     call mem_setptr(imodelpakcb, 'IPAKCB', this%memoryPathModel)
     !
     ! -- initialize
+    this%package_type = this%filtyp
     this%id = 0
     this%inunit = 0
     this%iout = 0
@@ -168,6 +172,7 @@ contains
     class(NumericalPackageType) :: this !< NumericalPackageType object
     !
     ! -- deallocate
+    call mem_deallocate(this%package_type, 'PACKAGE_TYPE', this%memoryPath)
     call mem_deallocate(this%id)
     call mem_deallocate(this%inunit)
     call mem_deallocate(this%iout)

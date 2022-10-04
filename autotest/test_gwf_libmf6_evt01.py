@@ -207,6 +207,16 @@ def api_func(exe, idx, model_ws=None):
     well_tag = mf6.get_var_address("BOUND", name, "WEL_0")
     well = mf6.get_value(well_tag)
 
+    # check NPF type
+    package_type_tag = mf6.get_var_address("PACKAGE_TYPE", name, "NPF")
+    package_type = mf6.get_value(package_type_tag)[0]
+    assert package_type == "NPF", f"{package_type} /= NPF"
+
+    # check wel type
+    package_type_tag = mf6.get_var_address("PACKAGE_TYPE", name, "WEL_0")
+    package_type = mf6.get_value(package_type_tag)[0]
+    assert package_type == "WEL", f"{package_type} /= WEL"
+
     twell = np.zeros(ncol, dtype=np.float64)
 
     # model time loop
