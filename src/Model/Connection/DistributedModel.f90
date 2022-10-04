@@ -15,7 +15,7 @@ module DistributedModelModule
   private
 
   public :: add_dist_model
-  public :: GetDistModelFromList
+  public :: GetDistModelFromList, AddDistModelToList
 
   type, public :: DistributedModelType
     integer(I4B) :: id !< universal identifier: id of the model
