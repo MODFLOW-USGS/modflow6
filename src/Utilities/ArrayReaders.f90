@@ -69,7 +69,7 @@ contains
       do j = 1, jj
         iarr(j) = iconst
       end do
-      if (iprn >= 0 .and. iout > 0) then
+      if (iout > 0) then
         if (k > 0) then
           write (iout, 2) trim(aname), iconst, k
         else
@@ -164,7 +164,7 @@ contains
           iarr(j, i) = iconst
         end do
       end do
-      if (iprn >= 0 .and. iout > 0) then
+      if (iout > 0) then
         if (k > 0) then
           write (iout, 2) trim(aname), iconst, k
         else
@@ -323,7 +323,7 @@ contains
       do j = 1, jj
         darr(j) = cnstnt
       end do
-      if (iprn >= 0 .and. iout > 0) then
+      if (iout > 0) then
         if (k > 0) then
           write (iout, 2) trim(aname), cnstnt, k
         else
@@ -419,7 +419,7 @@ contains
           darr(j, i) = cnstnt
         end do
       end do
-      if (iprn >= 0 .and. iout > 0) then
+      if (iout > 0) then
         if (k > 0) then
           write (iout, 2) trim(aname), cnstnt, k
         else
