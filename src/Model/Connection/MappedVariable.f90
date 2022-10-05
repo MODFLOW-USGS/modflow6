@@ -1,6 +1,8 @@
 module MappedVariableModule
-  use KindModule, only: I4B
+  use KindModule, only: I4B, LGP
+  use ConstantsModule, only: LENMEMPATH, LENVARNAME
   use MemoryTypeModule, only: MemoryType
+  use MemoryManagerModule, only: get_from_memorylist
 
   implicit none
   private
@@ -11,13 +13,18 @@ module MappedVariableModule
   type :: MappedVariableType
     integer(I4B) :: controller_id
     integer(I4B) :: sync_stage
-    type(MemoryType), pointer :: src
-    type(MemoryType), pointer :: tgt
-    integer(I4B), dimension(:), pointer :: src_idx
-    integer(I4B), dimension(:), pointer :: tgt_idx
-    integer(I4B), dimension(:), pointer :: sign
+    character(len=LENVARNAME) :: src_name
+    character(len=LENMEMPATH) :: src_path
+    type(MemoryType), pointer :: src !< cached memory item
+    character(len=LENVARNAME) :: tgt_name
+    character(len=LENMEMPATH) :: tgt_path
+    type(MemoryType), pointer :: tgt !< cached memory item
+    integer(I4B), dimension(:), pointer :: src_idx !< source indexes to copy from
+    integer(I4B), dimension(:), pointer :: tgt_idx !< target indexes to copy to
+    integer(I4B), dimension(:), pointer :: sign !< optional sign (or null) to negate copied value
   contains
     procedure :: sync
+    procedure :: skip_sync !< possibility to skip synchronization, e.g. when src variable not allocated and should remain at default
     ! private stuff
     procedure, private :: sync_int1d
     procedure, private :: apply_sgn_int1d
@@ -32,6 +39,16 @@ contains
 
   subroutine sync(this)
     class(MappedVariableType) :: this
+    ! local
+    logical(LGP) :: found
+
+    if (.not. associated(this%src)) then
+      ! cache
+      call get_from_memorylist(this%src_name, this%src_path, this%src, found)
+      call get_from_memorylist(this%tgt_name, this%tgt_path, this%tgt, found)
+    end if
+
+    if (this%skip_sync()) return
 
     if (associated(this%tgt%aint1d)) call this%sync_int1d()
     if (associated(this%tgt%adbl1d)) call this%sync_dbl1d()
@@ -44,6 +61,14 @@ contains
     end if
 
   end subroutine sync
+
+  function skip_sync(this) result(skip)
+    class(MappedVariableType) :: this
+    logical(LGP) :: skip
+
+    skip = (this%src%isize == 0)
+
+  end function skip_sync
 
   !> @brief Copy 1d integer array with map.
   !< TODO_MJR: should this maybe move to the memory manager for more convenient maintenance?

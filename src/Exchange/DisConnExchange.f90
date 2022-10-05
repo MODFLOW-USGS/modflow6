@@ -6,6 +6,7 @@ module DisConnExchangeModule
   use MemoryManagerModule, only: mem_allocate, mem_reallocate
   use BlockParserModule, only: BlockParserType
   use NumericalModelModule, only: NumericalModelType
+  use DistributedModelModule, only: DistributedModelType
   use NumericalExchangeModule, only: NumericalExchangeType
   implicit none
 
@@ -23,6 +24,9 @@ module DisConnExchangeModule
 
     class(NumericalModelType), pointer :: model1 => null() !< model 1
     class(NumericalModelType), pointer :: model2 => null() !< model 2
+    class(DistributedModelType), pointer :: dmodel1 => null() !< distributed model 1
+    class(DistributedModelType), pointer :: dmodel2 => null() !< distributed model 2
+
     integer(I4B), pointer :: nexg => null() !< number of exchanges
     integer(I4B), dimension(:), pointer, contiguous :: nodem1 => null() !< node numbers in model 1
     integer(I4B), dimension(:), pointer, contiguous :: nodem2 => null() !< node numbers in model 2

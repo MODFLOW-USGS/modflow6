@@ -78,6 +78,7 @@ module SpatialModelConnectionModule
     procedure, pass(this) :: spatialcon_connect
     procedure, pass(this) :: validateConnection
     procedure, pass(this) :: addDistVar
+    procedure, pass(this) :: mapVariables
 
     ! private
     procedure, private, pass(this) :: setupGridConnection
@@ -86,7 +87,6 @@ module SpatialModelConnectionModule
     procedure, private, pass(this) :: allocateArrays
     procedure, private, pass(this) :: createCoefficientMatrix
     procedure, private, pass(this) :: maskOwnerConnections
-    procedure, private, pass(this) :: mapVariables
 
   end type SpatialModelConnectionType
 
@@ -145,28 +145,16 @@ contains ! module procedures
   subroutine spatialcon_ar(this)
     class(SpatialModelConnectionType) :: this !< this connection
     ! local
-    integer(I4B) :: icell, idx, localIdx
+    integer(I4B) :: iface_idx
     class(GridConnectionType), pointer :: gc
-    class(NumericalModelType), pointer :: model
-
-    ! init x and ibound with model data
-    gc => this%gridConnection
-    do icell = 1, gc%nrOfCells
-      idx = gc%idxToGlobal(icell)%index
-      model => gc%idxToGlobal(icell)%model
-      this%interfaceModel%x(icell) = model%x(idx)
-      this%interfaceModel%ibound(icell) = model%ibound(idx)
-    end do
 
     ! fill mapping to global index (which can be
     ! done now because moffset is set in sln_df)
-    do localIdx = 1, gc%nrOfCells
-      gc%idxToGlobalIdx(localIdx) = gc%idxToGlobal(localIdx)%index + &
-                                    gc%idxToGlobal(localIdx)%model%moffset
+    gc => this%gridConnection
+    do iface_idx = 1, gc%nrOfCells
+      gc%idxToGlobalIdx(iface_idx) = gc%idxToGlobal(iface_idx)%index + &
+                                     gc%idxToGlobal(iface_idx)%dmodel%moffset
     end do
-
-    ! set up mapping for distributed data
-    call this%mapVariables()
 
   end subroutine spatialcon_ar
 
@@ -240,16 +228,14 @@ contains ! module procedures
     conn => this%interfaceModel%dis%con
     do n = 1, conn%nodes
       ! only for connections internal to the owning model
-      if (.not. associated(this%gridConnection%idxToGlobal(n)%model, &
-                           this%owner)) then
+      if (.not. this%gridConnection%idxToGlobal(n)%dmodel == this%owner) then
         cycle
       end if
       nloc = this%gridConnection%idxToGlobal(n)%index
 
       do ipos = conn%ia(n) + 1, conn%ia(n + 1) - 1
         m = conn%ja(ipos)
-        if (.not. associated(this%gridConnection%idxToGlobal(m)%model, &
-                             this%owner)) then
+        if (.not. this%gridConnection%idxToGlobal(m)%dmodel == this%owner) then
           cycle
         end if
         mloc = this%gridConnection%idxToGlobal(m)%index
@@ -292,17 +278,16 @@ contains ! module procedures
     integer(I4B) :: nglo, mglo
 
     do n = 1, this%neq
-      if (.not. associated(this%gridConnection%idxToGlobal(n)%model, &
-                           this%owner)) then
+      if (.not. this%gridConnection%idxToGlobal(n)%dmodel == this%owner) then
         ! only add connections for own model to global matrix
         cycle
       end if
       nglo = this%gridConnection%idxToGlobal(n)%index + &
-             this%gridConnection%idxToGlobal(n)%model%moffset
+             this%gridConnection%idxToGlobal(n)%dmodel%moffset
       do ipos = this%ia(n) + 1, this%ia(n + 1) - 1
         m = this%ja(ipos)
         mglo = this%gridConnection%idxToGlobal(m)%index + &
-               this%gridConnection%idxToGlobal(m)%model%moffset
+               this%gridConnection%idxToGlobal(m)%dmodel%moffset
 
         call sparse%addconnection(nglo, mglo, 1)
       end do
@@ -319,21 +304,20 @@ contains ! module procedures
     integer(I4B), dimension(:), intent(in) :: jasln !< global JA array
     ! local
     integer(I4B) :: m, n, mglo, nglo, ipos, csrIdx
-    logical(LGP) :: isOwnedConnection
+    logical(LGP) :: isOwned
 
     allocate (this%mapIdxToSln(this%nja))
 
     do n = 1, this%neq
-      isOwnedConnection = associated(this%gridConnection%idxToGlobal(n)%model, &
-                                     this%owner)
+      isOwned = (this%gridConnection%idxToGlobal(n)%dmodel == this%owner)
       do ipos = this%ia(n), this%ia(n + 1) - 1
         m = this%ja(ipos)
         nglo = this%gridConnection%idxToGlobal(n)%index + &
-               this%gridConnection%idxToGlobal(n)%model%moffset
+               this%gridConnection%idxToGlobal(n)%dmodel%moffset
         mglo = this%gridConnection%idxToGlobal(m)%index + &
-               this%gridConnection%idxToGlobal(m)%model%moffset
+               this%gridConnection%idxToGlobal(m)%dmodel%moffset
         csrIdx = getCSRIndex(nglo, mglo, iasln, jasln)
-        if (csrIdx == -1 .and. isOwnedConnection) then
+        if (csrIdx == -1 .and. isOwned) then
           ! this should not be possible
           write (*, *) 'Error: cannot find cell connection in global system'
           call ustop()

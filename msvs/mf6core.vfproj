@@ -58,6 +58,7 @@
 		<File RelativePath="..\src\Model\Connection\ConnectionBuilder.f90"/>
 		<File RelativePath="..\src\Model\Connection\CsrUtils.f90"/>
 		<File RelativePath="..\src\Model\Connection\DistributedData.f90"/>
+		<File RelativePath="..\src\Model\Connection\DistributedModel.f90"/>
 		<File RelativePath="..\src\Model\Connection\GridConnection.f90"/>
 		<File RelativePath="..\src\Model\Connection\GridSorting.f90"/>
 		<File RelativePath="..\src\Model\Connection\GwfGwfConnection.f90"/>
@@ -127,11 +128,9 @@
 		<File RelativePath="..\src\Model\ModelUtilities\DisvGeom.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwfBuyInputData.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwfMvrPeriodData.f90"/>
-		<File RelativePath="..\src\Model\ModelUtilities\GwfNpfGridData.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwfNpfOptions.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwfStorageUtils.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwtAdvOptions.f90"/>
-		<File RelativePath="..\src\Model\ModelUtilities\GwtDspGridData.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwtDspOptions.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwtSpc.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Mover.f90"/>
