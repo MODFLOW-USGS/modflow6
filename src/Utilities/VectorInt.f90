@@ -8,20 +8,20 @@ module VectorIntModule
 
   integer(I4B), parameter :: defaultInitialCapacity = 4
 
-  ! This is a dynamic vector type for integers
+  !> This is a dynamic vector type for integers
   type :: VectorInt
-    integer(I4B), private, allocatable :: values(:) ! the internal array for storage
-    integer(I4B) :: size ! the number of elements (technically this stuff should be unsigned)
-    integer(I4B) :: capacity ! the reserved storage
+    integer(I4B), private, allocatable :: values(:) !< the internal array for storage
+    integer(I4B) :: size !< the number of elements (technically this stuff should be unsigned)
+    integer(I4B) :: capacity !< the reserved storage
   contains
-    procedure, pass(this) :: init ! allocate memory, init size and capacity
-    procedure, pass(this) :: push_back ! adds an element at the end of the vector
-    procedure, pass(this) :: at ! random access, unsafe, no bounds checking
-    procedure, pass(this) :: at_safe ! random access with bounds checking
-    procedure, pass(this) :: clear ! empties the vector, leaves memory unchanged
-    procedure, pass(this) :: shrink_to_fit ! reduces the allocated memory to fit the actual vector size
-    procedure, pass(this) :: destroy ! deletes the memory
-    procedure, pass(this) :: contains ! true when element already present
+    procedure, pass(this) :: init !< allocate memory, init size and capacity
+    procedure, pass(this) :: push_back !< adds an element at the end of the vector
+    procedure, pass(this) :: at !< random access, unsafe, no bounds checking
+    procedure, pass(this) :: at_safe !< random access with bounds checking
+    procedure, pass(this) :: clear !< empties the vector, leaves memory unchanged
+    procedure, pass(this) :: shrink_to_fit !< reduces the allocated memory to fit the actual vector size
+    procedure, pass(this) :: destroy !< deletes the memory
+    procedure, pass(this) :: contains !< true when element already present
     ! private
     procedure, private, pass(this) :: expand
   end type VectorInt

@@ -12,15 +12,17 @@ module GridConnectionModule
   use NumericalModelModule
   use GwfDisuModule
   use DisConnExchangeModule
-  use DistributedModelModule, only: DistributedModelType, GetDistModelFromList, &
-                                    AddDistModelToList
+  use DistributedModelModule, only: DistributedModelType, get_dist_model, &
+                                    AddDistModelToList, GetDistModelFromList
+  use DistributedExchangeModule, only: DistributedExchangeType, get_dist_exg
   use CellWithNbrsModule
   use ConnectionsModule
   use SparseModule, only: sparsematrix
   use InterfaceMapModule
   use BaseDisModule, only: dis_transform_xy
-  use ListsModule, only: distmodellist
+  use ListsModule, only: distmodellist, distexchangelist
   use CsrUtilsModule
+  use VectorIntModule
   implicit none
   private
 
@@ -63,7 +65,7 @@ module GridConnectionModule
     integer(I4B), pointer :: nrOfBoundaryCells => null() !< nr of boundary cells with connection to another model
     type(CellWithNbrsType), dimension(:), pointer :: boundaryCells => null() !< cells on our side of the primary connections
     type(CellWithNbrsType), dimension(:), pointer :: connectedCells => null() !< cells on the neighbors side of the primary connection
-    type(ListType) :: exchanges !< all relevant exchanges for this connection, up to the required depth
+    type(VectorInt), pointer :: haloExchanges !< all exchanges that are potentially part of this interface
 
     integer(I4B), pointer :: nrOfCells => null() !< the total number of cells in the interface
     type(GlobalCellType), dimension(:), pointer :: idxToGlobal => null() !< a map from interface index to global coordinate
@@ -83,8 +85,8 @@ module GridConnectionModule
     procedure, pass(this) :: construct
     procedure, private, pass(this) :: allocateScalars
     procedure, pass(this) :: destroy
+    procedure, pass(this) :: addToRegionalModels    
     procedure, pass(this) :: connectPrimaryExchange
-    procedure, pass(this) :: findModelNeighbors
     procedure, pass(this) :: extendConnection
     procedure, pass(this) :: getDiscretization
     procedure, pass(this) :: getInterfaceMap
@@ -98,8 +100,6 @@ module GridConnectionModule
     procedure, private, pass(this) :: addNeighbors
     procedure, private, pass(this) :: addNeighborCell
     procedure, private, pass(this) :: addRemoteNeighbors
-    procedure, private, pass(this) :: addModelNeighbors
-    procedure, private, pass(this) :: addToRegionalModels
     procedure, private, pass(this) :: getRegionalModelOffset
     generic, private :: getInterfaceIndex => getInterfaceIndexByCell, &
       getInterfaceIndexByIndexModel
@@ -140,13 +140,14 @@ contains
     allocate (this%connectedCells(nrOfPrimaries))
     allocate (this%idxToGlobal(2 * nrOfPrimaries))
 
-    dist_model => GetDistModelFromList(distmodellist, model%id)
+    dist_model => get_dist_model(model%id)
     call this%addToRegionalModels(dist_model)
 
     this%nrOfBoundaryCells = 0
 
     this%internalStencilDepth = 1
     this%exchangeStencilDepth = 1
+    this%haloExchanges => null()
 
   end subroutine construct
 
@@ -207,100 +208,6 @@ contains
     end if
 
   end subroutine connectCell
-
-  !> @brief Create the tree structure with all model nbrs, nbrs-of-nbrs,
-  !< etc. for this model up to the specified depth
-  subroutine findModelNeighbors(this, globalExchanges, depth)
-    class(GridConnectionType), intent(inout) :: this !< this grid connection
-    type(ListType), intent(inout) :: globalExchanges !< list with global exchanges
-    integer(I4B) :: depth !< the maximal number of exchanges between
-                          !! any two models in the topology
-    ! local
-    class(DistributedModelType), pointer :: dist_model
-
-    dist_model => GetDistModelFromList(distmodellist, this%model%id)
-    call this%addModelNeighbors(dist_model, globalExchanges, depth)
-
-  end subroutine findModelNeighbors
-
-  !> @brief Add neighbors and nbrs-of-nbrs to the model tree
-  !<
-  recursive subroutine addModelNeighbors(this, dist_model, &
-                                         globalExchanges, &
-                                         depth, mask)
-    class(GridConnectionType), intent(inout) :: this !< this grid connection
-    class(DistributedModelType), pointer, intent(inout) :: dist_model !< the model to add neighbors for
-    type(ListType), intent(inout) :: globalExchanges !< list with all exchanges
-    integer(I4B) :: depth !< the maximal number of exchanges between
-    class(DistributedModelType), pointer, optional :: mask !< don't add this one as a neighbor
-    ! local
-    integer(I4B) :: i, n
-    class(DisConnExchangeType), pointer :: connEx
-    class(DistributedModelType), pointer :: neighborModel
-    class(DistributedModelType), pointer :: modelMask
-    type(ListType) :: nbrModels
-    class(*), pointer :: objPtr
-    procedure(isEqualIface), pointer :: areEqualMethod
-
-    if (.not. present(mask)) then
-      modelMask => null()
-    else
-      modelMask => mask
-    end if
-
-    ! first find all direct neighbors of the model and add them,
-    ! avoiding duplicates
-    do i = 1, globalExchanges%Count()
-      neighborModel => null()
-      connEx => GetDisConnExchangeFromList(globalExchanges, i)
-      if (connEx%dmodel1 == dist_model) then
-        neighborModel => connEx%dmodel2
-      else if (connEx%dmodel2 == dist_model) then
-        neighborModel => connEx%dmodel1
-      end if
-
-      ! check if there is a neighbor, and it is not masked
-      ! (to prevent back-and-forth connections)
-      if (associated(neighborModel)) then
-
-        ! check if masked
-        if (associated(modelMask)) then
-          if (neighborModel == modelMask) cycle
-        end if
-
-        ! add to neighbors
-        objPtr => neighborModel
-        if (.not. nbrModels%ContainsObject(objPtr, areEqualMethod)) then
-          call nbrModels%Add(objPtr)
-        end if
-
-        ! add to list of regional models
-        call this%addToRegionalModels(neighborModel)
-
-        ! add to list of relevant exchanges
-        objPtr => connEx
-        areEqualMethod => arePointersEqual
-        if (.not. this%exchanges%ContainsObject(objPtr, areEqualMethod)) then
-          call this%exchanges%Add(objPtr)
-        end if
-
-      end if
-    end do
-
-    ! now recurse on the neighbors up to the specified depth
-    depth = depth - 1
-    if (depth == 0) return
-
-    do n = 1, nbrModels%Count()
-      neighborModel => GetDistModelFromList(nbrModels, n)
-      call this%addModelNeighbors(neighborModel, globalExchanges, &
-                                  depth, dist_model)
-    end do
-
-    ! clear list
-    call nbrModels%Clear(destroy=.false.)
-
-  end subroutine addModelNeighbors
 
   !> @brief Add a model to a list of all regional models
   !<
@@ -521,11 +428,15 @@ contains
     type(GlobalCellType), optional :: mask !< a mask to exclude back-and-forth connections
     ! local
     integer(I4B) :: ix, iexg
-    type(DisConnExchangeType), pointer :: connEx
+    class(DistributedExchangeType), pointer :: dist_exg
+    class(DisConnExchangeType), pointer :: connEx
 
     ! loop over all exchanges
-    do ix = 1, this%exchanges%Count()
-      connEx => GetDisConnExchangeFromList(this%exchanges, ix)
+    do ix = 1, this%haloExchanges%size
+
+      dist_exg => get_dist_exg(this%haloExchanges%at(ix))
+      ! TODO_MJR: dist. exchanges should contain dist. models??
+      connEx => dist_exg%access()
 
       ! loop over n-m links in the exchange
       if (cellNbrs%cell%dmodel == connEx%dmodel1) then
@@ -818,13 +729,15 @@ contains
     integer(I4B) :: inx, iexg, ivalAngldegx
     integer(I4B) :: ipos, isym
     integer(I4B) :: nOffset, mOffset, nIfaceIdx, mIfaceIdx
+    class(DistributedExchangeType), pointer :: dist_exg
     class(DisConnExchangeType), pointer :: connEx
     type(ConnectionsType), pointer :: conn
 
     conn => this%connections
 
-    do inx = 1, this%exchanges%Count()
-      connEx => GetDisConnExchangeFromList(this%exchanges, inx)
+    do inx = 1, this%haloExchanges%size
+      dist_exg => get_dist_exg(this%haloExchanges%at(inx))
+      connEx => dist_exg%access()
 
       ivalAngldegx = -1
       if (connEx%naux > 0) then
@@ -1148,6 +1061,7 @@ contains
     integer(I4B) :: ipos, iposModel
     type(VectorInt) :: modelIds
     type(VectorInt) :: srcIdxTmp, tgtIdxTmp, signTmp
+    class(DistributedExchangeType), pointer :: dist_exg
     class(DisConnExchangeType), pointer :: connEx
     integer(I4B), dimension(:), pointer, contiguous :: ia, ja
 
@@ -1232,14 +1146,17 @@ contains
     call modelIds%destroy()
 
     ! for each exchange that is part of this interface
-    interfaceMap%nr_exchanges = this%exchanges%Count()
+    interfaceMap%nr_exchanges = this%haloExchanges%size
     allocate (interfaceMap%exchange_names(interfaceMap%nr_exchanges))
     allocate (interfaceMap%exchange_map(interfaceMap%nr_exchanges))
-    do ix = 1, this%exchanges%Count()
+
+    do ix = 1, this%haloExchanges%size
 
       ! all exchanges in this list should have at
       ! least one relevant connection for this map
-      connEx => GetDisConnExchangeFromList(this%exchanges, ix)
+      ! TODO_MJR: confirm this, really compressed??
+      dist_exg => get_dist_exg(this%haloExchanges%at(ix))
+      connEx => dist_exg%access()
       interfaceMap%exchange_names(ix) = connEx%name
 
       call srcIdxTmp%init()

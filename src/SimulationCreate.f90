@@ -14,7 +14,6 @@ module SimulationCreateModule
                                 GetBaseSolutionFromList
   use SolutionGroupModule, only: SolutionGroupType, AddSolutionGroupToList
   use BaseExchangeModule, only: BaseExchangeType, GetBaseExchangeFromList
-  use DistributedModelModule, only: add_dist_model
   use ListsModule, only: basesolutionlist, basemodellist, &
                          solutiongrouplist, baseexchangelist
   use BaseModelModule, only: GetBaseModelFromList
@@ -250,6 +249,7 @@ contains
     ! -- modules
     use GwfModule, only: gwf_cr
     use GwtModule, only: gwt_cr
+    use DistributedModelModule, only: add_dist_model    
     use ConstantsModule, only: LENMODELNAME
     ! -- dummy
     ! -- local
@@ -308,6 +308,7 @@ contains
     use GwfGwfExchangeModule, only: gwfexchange_create
     use GwfGwtExchangeModule, only: gwfgwt_cr
     use GwtGwtExchangeModule, only: gwtexchange_create
+    use DistributedExchangeModule, only: add_dist_exg
     ! -- dummy
     ! -- local
     integer(I4B) :: ierr
@@ -358,10 +359,12 @@ contains
         select case (keyword)
         case ('GWF6-GWF6')
           call gwfexchange_create(fname, id, m1, m2)
+          call add_dist_exg(id)
         case ('GWF6-GWT6')
           call gwfgwt_cr(fname, id, m1, m2)
         case ('GWT6-GWT6')
           call gwtexchange_create(fname, id, m1, m2)
+          call add_dist_exg(id)
         case default
           write (errmsg, '(4x,a,a)') &
             '****ERROR. UNKNOWN SIMULATION EXCHANGES: ', &

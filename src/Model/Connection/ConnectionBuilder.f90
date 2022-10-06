@@ -22,7 +22,7 @@ module ConnectionBuilderModule
     procedure, pass(this) :: processSolution
     procedure, private, pass(this) :: processExchanges
     procedure, private, pass(this) :: setConnectionsToSolution
-    procedure, private, pass(this) :: assignExchangesToConnections
+    procedure, private, pass(this) :: createModelConnectivity
   end type ConnectionBuilderType
 
 contains
@@ -59,9 +59,8 @@ contains
     write (iout, '(1x,a,i0,a,a)') 'Created ', newConnections%Count(), &
       ' model connections for solution ', trim(solution%name)
 
-    ! set the global exchanges from this solution to
-    ! the model connections
-    call this%assignExchangesToConnections(numSol%exchangelist, newConnections)
+    ! craete the topology of models participating in the interfaces
+    call this%createModelConnectivity(numSol%exchangelist, newConnections)
 
     ! replace numerical exchanges in solution with connections
     call this%setConnectionsToSolution(newConnections, numSol)
@@ -244,48 +243,27 @@ contains
 
   end subroutine setConnectionsToSolution
 
-  !> @brief Add global exchanges from a certain numerical solution
-  !! to the connections.
+  !> @brief Create connectivity of models which contribute to the interface
   !!
-  !! This concerns all exchanges of the proper type. Inside the
-  !! connection it will be used to extend the interface grid with
-  !! the possibility to include cells from models which are indirectly
-  !! connected, through yet another exchange object.
+  !! This takes all exchanges from the numerical solution for which
+  !! the connections are created. The model halo will be used to 
+  !! extend the interface grid to include cells from models which are 
+  !! indirectly connected, through yet another exchange object.
   !<
-  subroutine assignExchangesToConnections(this, exchanges, connections)
+  subroutine createModelConnectivity(this, exchanges, connections)
     class(ConnectionBuilderType) :: this !< the connection builder object
     type(ListType), pointer, intent(in) :: exchanges !< all exchanges in a solution
     type(ListType), intent(inout) :: connections !< all connections that are created for this solution
     ! local
-    integer(I4B) :: iex, iconn
-    class(DisConnExchangeType), pointer :: conEx
+    integer(I4B) :: iconn
     class(SpatialModelConnectionType), pointer :: modelConn
-    class(*), pointer :: exPtr
-    type(ListType) :: keepList
 
-    ! first filter on exchanges of proper type
-    do iex = 1, exchanges%Count()
-      conEx => GetDisConnExchangeFromList(exchanges, iex)
-      if (.not. associated(conEx)) then
-        ! if it is not DisConnExchangeType, we should skip it
-        continue
-      end if
-      exPtr => conEx
-      call keepList%Add(exPtr)
-    end do
-
-    ! now add them to the model connections
+    ! create halo for the model connections
     do iconn = 1, connections%Count()
       modelConn => GetSpatialModelConnectionFromList(connections, iconn)
-      do iex = 1, keepList%Count()
-        exPtr => keepList%GetItem(iex)
-        call modelConn%globalExchanges%Add(exPtr)
-      end do
+      call modelConn%createModelHalo(exchanges)
     end do
 
-    ! clean
-    call keepList%Clear(destroy=.false.)
-
-  end subroutine assignExchangesToConnections
+  end subroutine createModelConnectivity
 
 end module ConnectionBuilderModule

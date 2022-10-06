@@ -8,14 +8,14 @@ module DistributedModelModule
   use MemoryManagerModule, only: get_from_memorylist
   use MemoryHelperModule, only: create_mem_path
   use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList, &
-                                  AddNumericalModelToList
+                                  AddNumericalModelToList                              
 
   use ListsModule, only: basemodellist, distmodellist
   implicit none
   private
 
-  public :: add_dist_model
-  public :: GetDistModelFromList, AddDistModelToList
+  public :: add_dist_model, get_dist_model
+  public :: AddDistModelToList, GetDistModelFromList
 
   type, public :: DistributedModelType
     integer(I4B) :: id !< universal identifier: id of the model
@@ -46,7 +46,7 @@ module DistributedModelModule
 contains
 
   subroutine add_dist_model(model_index)
-    integer :: model_index
+    integer(I4B) :: model_index
     ! local
     class(NumericalModelType), pointer :: num_model
     class(DistributedModelType), pointer :: dist_model
@@ -200,6 +200,17 @@ contains
     end if
 
   end function access
+
+  !> @brief Gets the distributed model structure for
+  !! a particular model id
+  !<
+  function get_dist_model(model_id) result(dist_model)
+    integer(I4B) :: model_id !< the model id
+    class(DistributedModelType), pointer :: dist_model !< the distributed model returned
+
+    dist_model => GetDistModelFromList(distmodellist, model_id)
+
+  end function get_dist_model
 
   function CastAsDistModelClass(obj) result(res)
     class(*), pointer, intent(inout) :: obj

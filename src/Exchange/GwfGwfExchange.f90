@@ -20,7 +20,7 @@ module GwfGwfExchangeModule
   use ListsModule, only: basemodellist, distmodellist
   use DisConnExchangeModule, only: DisConnExchangeType
   use GwfModule, only: GwfModelType
-  use DistributedModelModule, only: DistributedModelType, GetDistModelFromList
+  use DistributedModelModule, only: DistributedModelType, get_dist_model
   use GhostNodeModule, only: GhostNodeType
   use GwfMvrModule, only: GwfMvrType
   use ObserveModule, only: ObserveType
@@ -160,7 +160,7 @@ contains
       exchange%model1 => mb
       exchange%gwfmodel1 => mb
     end select
-    exchange%dmodel1 => GetDistModelFromList(distmodellist, m1id)
+    exchange%dmodel1 => get_dist_model(m1id)
     !
     ! -- set gwfmodel2
     mb => GetBaseModelFromList(basemodellist, m2id)
@@ -169,7 +169,7 @@ contains
       exchange%model2 => mb
       exchange%gwfmodel2 => mb
     end select
-    exchange%dmodel2 => GetDistModelFromList(distmodellist, m2id)
+    exchange%dmodel2 => get_dist_model(m2id)
     !
     ! -- Verify that gwf model1 is of the correct type
     if (.not. associated(exchange%gwfmodel1)) then

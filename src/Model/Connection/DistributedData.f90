@@ -31,8 +31,7 @@ module DistributedDataModule
     integer(I4B) :: map_type !< can be 0 = scalar, 1 = node based, 2 = connection based,
                              !! 3 = exchange based (connections crossing model boundaries)
     character(len=LENVARNAME) :: exg_var_name !< needed for exchange variables, e.g. SIMVALS
-    integer(I4B), dimension(:), allocatable :: sync_stages !< when to sync, e.g. (/ STAGE_AD, STAGE_CF /)
-                                                           !! which is before AD and CF
+    integer(I4B), dimension(:), allocatable :: sync_stages !< when to sync, e.g. (/ BEFORE_AD, BEFORE_CF /)
   end type DistVarType
 
   type, public :: DistributedDataType
@@ -40,7 +39,7 @@ module DistributedDataModule
     type(ListType) :: variable_list !< all distributed variables, NB: not necessarily 1-to-1
                                     !!with list of data items
   contains
-    procedure :: map_variables
+    procedure :: map_dist_vars
     procedure :: get_dist_data
     procedure :: synchronize
     procedure :: destroy
@@ -56,7 +55,7 @@ module DistributedDataModule
 
 contains
 
-  subroutine map_variables(this, sol_id, dist_vars, interface_map)
+  subroutine map_dist_vars(this, sol_id, dist_vars, interface_map)
     class(DistributedDataType) :: this
     integer(I4B) :: sol_id
     type(ListType) :: dist_vars
@@ -105,7 +104,7 @@ contains
       end if
     end do
 
-  end subroutine map_variables
+  end subroutine map_dist_vars
 
   !> @brief Map data from model memory to a target memory entry,
   !! with the specified map. The source and target items have

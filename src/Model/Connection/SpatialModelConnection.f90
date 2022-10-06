@@ -12,7 +12,10 @@ module SpatialModelConnectionModule
   use GridConnectionModule, only: GridConnectionType
   use InterfaceMapModule
   use DistributedDataModule
+  use DistributedModelModule, only: DistributedModelType, get_dist_model
+  use ListsModule, only: distmodellist
   use ListModule, only: ListType
+  use VectorIntModule, only: VectorInt
 
   implicit none
   private
@@ -34,7 +37,8 @@ module SpatialModelConnectionModule
     integer(I4B), pointer :: nrOfConnections => null() !< total nr. of connected cells (primary)
 
     class(DisConnExchangeType), pointer :: primaryExchange => null() !< the exchange for which the interface model is created
-    type(ListType) :: globalExchanges !< all exchanges in the same solution
+    type(VectorInt), pointer :: haloModels !< models that are potentially in the halo of this interface
+    type(VectorInt), pointer :: haloExchanges !< exchanges that are potentially part of the halo of this interface
     integer(I4B), pointer :: internalStencilDepth => null() !< size of the computational stencil for the interior
                                                             !! default = 1, xt3d = 2, ...
     integer(I4B), pointer :: exchangeStencilDepth => null() !< size of the computational stencil at the interface
@@ -79,6 +83,7 @@ module SpatialModelConnectionModule
     procedure, pass(this) :: validateConnection
     procedure, pass(this) :: addDistVar
     procedure, pass(this) :: mapVariables
+    procedure, pass(this) :: createModelHalo
 
     ! private
     procedure, private, pass(this) :: setupGridConnection
@@ -87,6 +92,7 @@ module SpatialModelConnectionModule
     procedure, private, pass(this) :: allocateArrays
     procedure, private, pass(this) :: createCoefficientMatrix
     procedure, private, pass(this) :: maskOwnerConnections
+    procedure, private, pass(this) :: addModelNeighbors
 
   end type SpatialModelConnectionType
 
@@ -110,6 +116,8 @@ contains ! module procedures
     this%primaryExchange => exchange
 
     allocate (this%gridConnection)
+    allocate (this%haloModels)
+    allocate (this%haloExchanges)
     call this%allocateScalars()
 
     this%internalStencilDepth = 1
@@ -121,10 +129,119 @@ contains ! module procedures
 
   end subroutine spatialConnection_ctor
 
+  !> @brief Find all models that might participate in this interface
+  !<
+  subroutine createModelHalo(this, exchanges)
+    class(SpatialModelConnectionType) :: this !< this connection
+    type(ListType) :: exchanges !< all exchanges in the numerical solution
+    ! local
+    integer(I4B) :: i
+    class(DisConnExchangeType), pointer :: dcx
+
+    ! sanity:
+    do i = 1, exchanges%Count()
+      dcx => GetDisConnExchangeFromList(exchanges, i)
+      if (.not. associated(dcx)) then
+        write (*, *) 'Error: global exchange list for connection ', &
+                     trim(this%name), ' is corrupt'
+        call ustop()
+      end if
+      if (dcx%typename /= this%typename) then
+        write (*, *) 'Error: global exchange list for connection ', &
+                     trim(this%name), ' contains wrong type'
+        call ustop()
+      end if
+    end do
+
+    call this%haloModels%init()
+    call this%haloExchanges%init()
+
+    call this%addModelNeighbors(this%owner%id, exchanges, &
+                                this%exchangeStencilDepth)
+
+  end subroutine createModelHalo
+
+  !> @brief Add neighbors and nbrs-of-nbrs to the model tree
+  !<
+  recursive subroutine addModelNeighbors(this, dist_model_id, &
+                                         global_exchanges, &
+                                         depth, mask)
+    class(SpatialModelConnectionType) :: this !< this connection
+    integer(I4B) :: dist_model_id !< the model (id) to add neighbors for
+    type(ListType) :: global_exchanges !< list with all exchanges
+    integer(I4B), value :: depth !< the maximal number of exchanges between
+    integer(I4B), optional :: mask !< don't add this one as a neighbor
+    ! local
+    integer(I4B) :: i, n
+    class(DisConnExchangeType), pointer :: conn_ex
+    integer(I4B) :: neighbor_id
+    integer(I4B) :: model_mask
+    type(VectorInt) :: nbr_models
+
+    if (.not. present(mask)) then
+      model_mask = 0
+    else
+      model_mask = mask
+    end if
+
+    call nbr_models%init()
+
+    ! first find all direct neighbors of the model and add them,
+    ! avoiding duplicates
+    do i = 1, global_exchanges%Count()
+      neighbor_id = -1
+      conn_ex => GetDisConnExchangeFromList(global_exchanges, i)
+      if (conn_ex%dmodel1%id == dist_model_id) then
+        neighbor_id = conn_ex%dmodel2%id
+      else if (conn_ex%dmodel2%id == dist_model_id) then
+        neighbor_id = conn_ex%dmodel1%id
+      end if
+
+      ! check if there is a neighbor, and it is not masked
+      ! (to prevent back-and-forth connections)
+      if (neighbor_id > 0) then
+
+        ! check if masked
+        if (neighbor_id == model_mask) cycle
+
+        if (.not. nbr_models%contains(neighbor_id)) then
+          call nbr_models%push_back(neighbor_id)
+        end if
+
+        if (.not. this%haloModels%contains(neighbor_id)) then
+          call this%haloModels%push_back(neighbor_id)
+        end if
+
+        if (.not. this%haloExchanges%contains(conn_ex%id)) then
+          call this%haloExchanges%push_back(conn_ex%id)
+        end if
+
+      end if
+    end do
+
+    depth = depth - 1
+    if (depth == 0) then
+      call nbr_models%destroy()
+      return
+    end if
+    
+    ! now recurse on the neighbors up to the specified depth
+    do n = 1, nbr_models%size
+      call this%addModelNeighbors(nbr_models%at(n), global_exchanges, &
+                                  depth, dist_model_id)
+    end do
+
+    call nbr_models%destroy()
+
+  end subroutine addModelNeighbors
+
   !> @brief Define this connection, mostly sets up the grid
   !< connection, allocates arrays, and links x,rhs, and ibound
   subroutine spatialcon_df(this)
     class(SpatialModelConnectionType) :: this !< this connection
+    ! local
+    integer(I4B) :: i
+    class(DistributedModelType), pointer :: dist_model
 
     ! create the grid connection data structure
     this%nrOfConnections = this%getNrOfConnections()
@@ -133,6 +250,11 @@ contains ! module procedures
                                        this%name)
     this%gridConnection%internalStencilDepth = this%internalStencilDepth
     this%gridConnection%exchangeStencilDepth = this%exchangeStencilDepth
+    this%gridConnection%haloExchanges => this%haloExchanges
+    do i = 1, this%haloModels%size
+      dist_model => get_dist_model(this%haloModels%at(i))
+      call this%gridConnection%addToRegionalModels(dist_model)
+    end do
     call this%setupGridConnection()
 
     this%neq = this%gridConnection%nrOfCells
@@ -165,7 +287,7 @@ contains ! module procedures
 
     ! map distributed model variables for synchronization
     call this%gridConnection%getInterfaceMap(this%interfaceMap)
-    call distributed_data%map_variables(this%interfaceModel%idsoln, &
+    call distributed_data%map_dist_vars(this%interfaceModel%idsoln, &
                                         this%distVarList, &
                                         this%interfaceMap)
 
@@ -348,6 +470,11 @@ contains ! module procedures
     call mem_deallocate(this%rhs)
     call mem_deallocate(this%active)
 
+    call this%haloModels%destroy()
+    call this%haloExchanges%destroy()
+    deallocate (this%haloModels)
+    deallocate (this%haloExchanges)
+
     call this%gridConnection%destroy()
     call this%distVarList%Clear(destroy=.true.)
     deallocate (this%gridConnection)
@@ -372,8 +499,8 @@ contains ! module procedures
     call this%gridConnection%connectPrimaryExchange(this%primaryExchange)
 
     ! create topology of models
-    call this%gridConnection%findModelNeighbors(this%globalExchanges, &
-                                                this%exchangeStencilDepth)
+    ! call this%gridConnection%findModelNeighbors(this%globalExchanges, &
+    !                                            this%exchangeStencilDepth)
 
     ! now scan for nbr-of-nbrs and create final data structures
     call this%gridConnection%extendConnection()

@@ -115,7 +115,9 @@ contains
     call this%allocateScalars()
 
     this%typename = 'GWF-GWF'
-    this%iXt3dOnExchange = 0
+    
+    ! determine the required size of the interface grid
+    call this%setGridExtent()
 
     allocate (this%gwfInterfaceModel)
     this%interfaceModel => this%gwfInterfaceModel
@@ -131,9 +133,6 @@ contains
     class(GwfGwfConnectionType) :: this !< this connection
     ! local
     character(len=LENCOMPONENTNAME) :: imName !< the interface model's name
-
-    ! determine the required size of the interface grid
-    call this%setGridExtent()
 
     ! this sets up the GridConnection
     call this%spatialcon_df()
