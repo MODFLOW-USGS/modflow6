@@ -1,44 +1,31 @@
 module DistributedModelModule
-  use KindModule, only: I4B, DP, LGP
-  use ConstantsModule, only: LENMODELNAME, LENCOMPONENTNAME, &
-                             LENVARNAME, LENMEMPATH
+  use KindModule, only: I4B, LGP
   use SimModule, only: ustop
   use ListModule, only: ListType
-  use MemoryTypeModule, only: MemoryType
-  use MemoryManagerModule, only: get_from_memorylist
-  use MemoryHelperModule, only: create_mem_path
-  use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList, &
-                                  AddNumericalModelToList                              
-
+  use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
   use ListsModule, only: basemodellist, distmodellist
+  use DistributedBaseModule
   implicit none
   private
 
+  public :: DistributedModelType
   public :: add_dist_model, get_dist_model
   public :: AddDistModelToList, GetDistModelFromList
 
-  type, public :: DistributedModelType
-    integer(I4B) :: id !< universal identifier: id of the model
-    character(len=LENMODELNAME) :: name !< model name
-
-    ! cached variables:
+  type, extends(DistributedBaseType) :: DistributedModelType
+    ! example for cached variables:
     integer(I4B), pointer :: moffset => null()
 
     ! this is strictly private, use access() instead
     class(NumericalModelType), private, pointer :: model !< implementation if local, null otherwise
   contains
     generic :: create => create_local, create_remote
-    generic :: load => load_intsclr, load_int1d, load_dblsclr, load_double1d
     generic :: operator(==) => equals_dist_model, equals_num_model
     procedure :: access
 
     ! private
     procedure, private :: create_local
-    procedure, private :: create_remote
-    procedure, private :: load_intsclr
-    procedure, private :: load_int1d
-    procedure, private :: load_dblsclr
-    procedure, private :: load_double1d
+    procedure, private :: create_remote    
     procedure, private :: equals_dist_model
     procedure, private :: equals_num_model
   end type DistributedModelType
@@ -85,90 +72,6 @@ contains
     ! also connect cache (if we decide to use that)
 
   end subroutine create_remote
-
-  subroutine load_intsclr(this, intsclr, var_name, subcomp_name)
-    class(DistributedModelType) :: this
-    integer(I4B), pointer :: intsclr
-    character(len=*) :: var_name
-    character(len=*), optional :: subcomp_name
-    ! local
-    type(MemoryType), pointer :: mt
-    logical(LGP) :: found
-    character(len=LENMEMPATH) :: mem_path
-
-    if (present(subcomp_name)) then
-      mem_path = create_mem_path(this%name, subcomp_name)
-    else
-      mem_path = create_mem_path(this%name)
-    end if
-
-    call get_from_memorylist(var_name, mem_path, mt, found)
-    intsclr => mt%intsclr
-
-  end subroutine load_intsclr
-
-  subroutine load_int1d(this, aint1d, var_name, subcomp_name)
-    class(DistributedModelType) :: this
-    integer(I4B), dimension(:), pointer, contiguous :: aint1d
-    character(len=*) :: var_name
-    character(len=*), optional :: subcomp_name
-    ! local
-    character(len=LENMEMPATH) :: mem_path
-    type(MemoryType), pointer :: mt
-    logical(LGP) :: found
-
-    if (present(subcomp_name)) then
-      mem_path = create_mem_path(this%name, subcomp_name)
-    else
-      mem_path = create_mem_path(this%name)
-    end if
-
-    call get_from_memorylist(var_name, mem_path, mt, found)
-    aint1d => mt%aint1d
-
-  end subroutine load_int1d
-
-  subroutine load_dblsclr(this, dblsclr, var_name, subcomp_name)
-    class(DistributedModelType) :: this
-    real(DP), pointer :: dblsclr
-    character(len=*) :: var_name
-    character(len=*), optional :: subcomp_name
-    ! local
-    type(MemoryType), pointer :: mt
-    logical(LGP) :: found
-    character(len=LENMEMPATH) :: mem_path
-
-    if (present(subcomp_name)) then
-      mem_path = create_mem_path(this%name, subcomp_name)
-    else
-      mem_path = create_mem_path(this%name)
-    end if
-
-    call get_from_memorylist(var_name, mem_path, mt, found)
-    dblsclr => mt%dblsclr
-
-  end subroutine load_dblsclr
-
-  subroutine load_double1d(this, adbl1d, var_name, subcomp_name)
-    class(DistributedModelType) :: this
-    real(DP), dimension(:), pointer, contiguous :: adbl1d
-    character(len=*) :: var_name
-    character(len=*), optional :: subcomp_name
-    ! local
-    character(len=LENMEMPATH) :: mem_path
-    type(MemoryType), pointer :: mt
-    logical(LGP) :: found
-
-    if (present(subcomp_name)) then
-      mem_path = create_mem_path(this%name, subcomp_name)
-    else
-      mem_path = create_mem_path(this%name)
-    end if
-
-    call get_from_memorylist(var_name, mem_path, mt, found)
-    adbl1d => mt%adbl1d
-
-  end subroutine load_double1d
 
   function equals_dist_model(this, dist_model) result(is_equal)
     class(DistributedModelType), intent(in) :: this

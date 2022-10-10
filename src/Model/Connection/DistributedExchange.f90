@@ -1,19 +1,17 @@
 module DistributedExchangeModule
   use KindModule, only: I4B
-  use ConstantsModule, only: LENEXCHANGENAME
   use ListModule
   use SimModule, only: ustop
   use DisConnExchangeModule
   use ListsModule, only: baseexchangelist, distexchangelist
+  use DistributedBaseModule
   implicit none
   private
 
   public :: DistributedExchangeType
   public :: add_dist_exg, get_dist_exg
 
-  type :: DistributedExchangeType
-    integer(I4B) :: id !< universal identifier: id of the exchange
-    character(len=LENEXCHANGENAME) :: name !< exchangename
+  type, extends(DistributedBaseType) :: DistributedExchangeType
     integer(I4B) :: model1_id !< one model
     integer(I4B) :: model2_id !< other model
 

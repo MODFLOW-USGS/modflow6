@@ -2,6 +2,7 @@ module DisConnExchangeModule
   use KindModule, only: I4B, DP, LGP
   use SimVariablesModule, only: errmsg
   use ConstantsModule, only: LENAUXNAME, LENBOUNDNAME, LINELENGTH
+  use CharacterStringModule
   use ListModule, only: ListType
   use MemoryManagerModule, only: mem_allocate, mem_reallocate
   use BlockParserModule, only: BlockParserType
@@ -40,6 +41,8 @@ module DisConnExchangeModule
 
     character(len=LENAUXNAME), dimension(:), &
       pointer, contiguous :: auxname => null() !< vector of auxname
+    type(CharacterStringType), dimension(:), pointer, &
+      contiguous :: auxname_cst => null() !< copy of vector auxname that can be stored in memory manager
     real(DP), dimension(:, :), pointer, contiguous :: auxvar => null() !< array of auxiliary variable values
     integer(I4B), pointer :: ianglex => null() !< flag indicating anglex was read, if read, ianglex is index in auxvar
     integer(I4B), pointer :: icdist => null() !< flag indicating cdist was read, if read, icdist is index in auxvar
@@ -95,9 +98,12 @@ contains
       call urdaux(this%naux, this%parser%iuactive, iout, lloc, istart, &
                   istop, caux, line, 'GWF_GWF_Exchange')
       call mem_reallocate(this%auxname, LENAUXNAME, this%naux, &
-                          'AUXNAME', trim(this%memoryPath))
+                          'AUXNAME', this%memoryPath)
+      call mem_reallocate(this%auxname_cst, LENAUXNAME, this%naux, &
+                          'AUXNAME_CST', this%memoryPath)
       do n = 1, this%naux
         this%auxname(n) = caux(n)
+        this%auxname_cst(n) = caux(n)
       end do
       deallocate (caux)
       !
@@ -318,7 +324,9 @@ contains
     call mem_allocate(this%inamedbound, 'INAMEDBOUND', this%memoryPath)
 
     call mem_allocate(this%auxname, LENAUXNAME, 0, &
-                      'AUXNAME', trim(this%memoryPath))
+                      'AUXNAME', this%memoryPath)
+    call mem_allocate(this%auxname_cst, LENAUXNAME, 0, &
+                      'AUXNAME_CST', this%memoryPath)                  
 
     this%nexg = 0
     this%naux = 0
@@ -389,7 +397,8 @@ contains
     ! scalars
     call mem_deallocate(this%nexg)
     call mem_deallocate(this%naux)
-    call mem_deallocate(this%auxname, 'AUXNAME', trim(this%memoryPath))
+    call mem_deallocate(this%auxname, 'AUXNAME', this%memoryPath)
+    call mem_deallocate(this%auxname_cst, 'AUXNAME_CST', this%memoryPath)
     call mem_deallocate(this%ianglex)
     call mem_deallocate(this%icdist)
     call mem_deallocate(this%ixt3d)

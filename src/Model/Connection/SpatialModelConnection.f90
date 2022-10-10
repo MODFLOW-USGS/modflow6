@@ -497,11 +497,7 @@ contains ! module procedures
 
     ! connect cells from primary exchange
     call this%gridConnection%connectPrimaryExchange(this%primaryExchange)
-
-    ! create topology of models
-    ! call this%gridConnection%findModelNeighbors(this%globalExchanges, &
-    !                                            this%exchangeStencilDepth)
-
+    
     ! now scan for nbr-of-nbrs and create final data structures
     call this%gridConnection%extendConnection()
 

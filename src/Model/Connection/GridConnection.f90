@@ -6,6 +6,7 @@ module GridConnectionModule
   use KindModule, only: I4B, DP, LGP
   use SimModule, only: ustop
   use ConstantsModule, only: LENMEMPATH, DZERO, DPIO180, LENMODELNAME
+  use CharacterStringModule
   use MemoryManagerModule, only: mem_allocate, mem_deallocate
   use MemoryHelperModule, only: create_mem_path
   use ListModule, only: ListType, isEqualIface, arePointersEqual
@@ -71,11 +72,11 @@ module GridConnectionModule
     type(GlobalCellType), dimension(:), pointer :: idxToGlobal => null() !< a map from interface index to global coordinate
     integer(I4B), dimension(:), pointer, contiguous :: idxToGlobalIdx => null() !< a (flat) map from interface index to global index,
                                                                                 !! stored in mem. mgr. so can be used for debugging
-
-    integer(I4B), dimension(:), pointer :: regionalToInterfaceIdxMap => null() !< (sparse) mapping from regional index to interface ixd
     type(ListType) :: regionalModels !< the models participating in the interface
+    integer(I4B), dimension(:), pointer :: regionalToInterfaceIdxMap => null() !< (sparse) mapping from regional index to interface ixd    
     integer(I4B), dimension(:), pointer :: regionalModelOffset => null() !< the new offset to compactify the range of indices
     integer(I4B), pointer :: indexCount => null() !< counts the number of cells in the interface
+
     type(ConnectionsType), pointer :: connections => null() !< sparse matrix with the connections
     integer(I4B), dimension(:), pointer :: connectionMask => null() !< to mask out connections from the amat coefficient calculation
 
@@ -429,32 +430,35 @@ contains
     ! local
     integer(I4B) :: ix, iexg
     class(DistributedExchangeType), pointer :: dist_exg
-    class(DisConnExchangeType), pointer :: connEx
+    class(DistributedModelType), pointer :: m1, m2
+    integer(I4B), pointer :: nexg
+    integer(I4B), dimension(:), pointer, contiguous :: nodem1, nodem2
 
     ! loop over all exchanges
     do ix = 1, this%haloExchanges%size
 
       dist_exg => get_dist_exg(this%haloExchanges%at(ix))
-      ! TODO_MJR: dist. exchanges should contain dist. models??
-      connEx => dist_exg%access()
+      call dist_exg%load(nexg, 'NEXG')
+      call dist_exg%load(nodem1, 'NODEM1')
+      call dist_exg%load(nodem2, 'NODEM2')
+      m1 => get_dist_model(dist_exg%model1_id)
+      m2 => get_dist_model(dist_exg%model2_id)
 
       ! loop over n-m links in the exchange
-      if (cellNbrs%cell%dmodel == connEx%dmodel1) then
-        do iexg = 1, connEx%nexg
-          if (connEx%nodem1(iexg) == cellNbrs%cell%index) then
+      if (cellNbrs%cell%dmodel == m1) then
+        do iexg = 1, nexg
+          if (nodem1(iexg) == cellNbrs%cell%index) then
             ! we have a link, now add foreign neighbor
-            call this%addNeighborCell(cellNbrs, connEx%nodem2(iexg), &
-                                      connEx%dmodel2, mask)
+            call this%addNeighborCell(cellNbrs, nodem2(iexg), m2, mask)
           end if
         end do
       end if
       ! and the reverse
-      if (cellNbrs%cell%dmodel == connEx%dmodel2) then
-        do iexg = 1, connEx%nexg
-          if (connEx%nodem2(iexg) == cellNbrs%cell%index) then
+      if (cellNbrs%cell%dmodel == m2) then
+        do iexg = 1, nexg
+          if (nodem2(iexg) == cellNbrs%cell%index) then
             ! we have a link, now add foreign neighbor
-            call this%addNeighborCell(cellNbrs, connEx%nodem1(iexg), &
-                                      connEx%dmodel1, mask)
+            call this%addNeighborCell(cellNbrs, nodem1(iexg), m1, mask)
           end if
         end do
       end if
@@ -722,36 +726,56 @@ contains
   !> @brief Fill connection data (ihc, cl1, ...) for
   !< all exchanges
   subroutine fillConnectionDataFromExchanges(this)
-    use ConstantsModule, only: DPI, DTWOPI, DPIO180
+    use ConstantsModule, only: DPI, DTWOPI, DPIO180, LENAUXNAME
     use ArrayHandlersModule, only: ifind
     class(GridConnectionType), intent(inout) :: this !< this grid connection instance
     ! local
-    integer(I4B) :: inx, iexg, ivalAngldegx
+    integer(I4B) :: i, inx, iexg
     integer(I4B) :: ipos, isym
     integer(I4B) :: nOffset, mOffset, nIfaceIdx, mIfaceIdx
+    integer(I4B) :: ivalAngldegx
     class(DistributedExchangeType), pointer :: dist_exg
-    class(DisConnExchangeType), pointer :: connEx
+    class(DistributedModelType), pointer :: m1, m2
+    integer(I4B), pointer :: nexg, naux
+    type(CharacterStringType), dimension(:), pointer :: auxname_cst
+    real(DP), dimension(:,:), pointer, contiguous :: auxvar
+    integer(I4B), dimension(:), pointer, contiguous :: nodem1, nodem2, ihc
+    real(DP), dimension(:), pointer, contiguous :: cl1, cl2, hwva
+
     type(ConnectionsType), pointer :: conn
 
     conn => this%connections
 
     do inx = 1, this%haloExchanges%size
       dist_exg => get_dist_exg(this%haloExchanges%at(inx))
-      connEx => dist_exg%access()
+      ! TODO_MJR: this is begging to be cached, no
+      m1 => get_dist_model(dist_exg%model1_id)
+      m2 => get_dist_model(dist_exg%model2_id)
+      call dist_exg%load(nexg, 'NEXG')
+      call dist_exg%load(naux, 'NAUX')
+      call dist_exg%load(auxname_cst, 'AUXNAME_CST')
+      call dist_exg%load(auxvar, 'AUXVAR')
+      call dist_exg%load(nodem1, 'NODEM1')
+      call dist_exg%load(nodem2, 'NODEM2')
+      call dist_exg%load(ihc, 'IHC')
+      call dist_exg%load(cl1, 'CL1')
+      call dist_exg%load(cl2, 'CL2')
+      call dist_exg%load(hwva, 'HWVA')
 
       ivalAngldegx = -1
-      if (connEx%naux > 0) then
-        ivalAngldegx = ifind(connEx%auxname, 'ANGLDEGX')
-        if (ivalAngldegx > 0) then
+      do i = 1, naux
+        if (auxname_cst(i) == 'ANGLDEGX') then
           conn%ianglex = 1
+          ivalAngldegx = 1
+          exit
         end if
-      end if
+      end do
 
-      nOffset = this%getRegionalModelOffset(connEx%dmodel1)
-      mOffset = this%getRegionalModelOffset(connEx%dmodel2)
-      do iexg = 1, connEx%nexg
-        nIfaceIdx = this%regionalToInterfaceIdxMap(noffset + connEx%nodem1(iexg))
-        mIfaceIdx = this%regionalToInterfaceIdxMap(moffset + connEx%nodem2(iexg))
+      nOffset = this%getRegionalModelOffset(m1)
+      mOffset = this%getRegionalModelOffset(m2)
+      do iexg = 1, nexg
+        nIfaceIdx = this%regionalToInterfaceIdxMap(noffset + nodem1(iexg))
+        mIfaceIdx = this%regionalToInterfaceIdxMap(moffset + nodem2(iexg))
         ! not all nodes from the exchanges are part of the interface grid
         ! (think of exchanges between neigboring models, and their neighbors)
         if (nIFaceIdx == -1 .or. mIFaceIdx == -1) then
@@ -770,21 +794,21 @@ contains
         ! note: cl1 equals L_nm: the length from cell n to the shared
         ! face with cell m (and cl2 analogously for L_mn)
         if (nIfaceIdx < mIfaceIdx) then
-          conn%cl1(isym) = connEx%cl1(iexg)
-          conn%cl2(isym) = connEx%cl2(iexg)
+          conn%cl1(isym) = cl1(iexg)
+          conn%cl2(isym) = cl2(iexg)
           if (ivalAngldegx > 0) then
-            conn%anglex(isym) = connEx%auxvar(ivalAngldegx, iexg) * DPIO180
+            conn%anglex(isym) = auxvar(ivalAngldegx, iexg) * DPIO180
           end if
         else
-          conn%cl1(isym) = connEx%cl2(iexg)
-          conn%cl2(isym) = connEx%cl1(iexg)
+          conn%cl1(isym) = cl2(iexg)
+          conn%cl2(isym) = cl1(iexg)
           if (ivalAngldegx > 0) then
-            conn%anglex(isym) = mod(connEx%auxvar(ivalAngldegx, iexg) + &
-                                    180.0_DP, 360.0_DP) * DPIO180
+            conn%anglex(isym) = mod(auxvar(ivalAngldegx, iexg) + &
+                                180.0_DP, 360.0_DP) * DPIO180
           end if
         end if
-        conn%hwva(isym) = connEx%hwva(iexg)
-        conn%ihc(isym) = connEx%ihc(iexg)
+        conn%hwva(isym) = hwva(iexg)
+        conn%ihc(isym) = ihc(iexg)
 
       end do
     end do
@@ -1062,8 +1086,10 @@ contains
     type(VectorInt) :: modelIds
     type(VectorInt) :: srcIdxTmp, tgtIdxTmp, signTmp
     class(DistributedExchangeType), pointer :: dist_exg
-    class(DisConnExchangeType), pointer :: connEx
     integer(I4B), dimension(:), pointer, contiguous :: ia, ja
+    class(DistributedModelType), pointer :: m1, m2
+    integer(I4B), pointer :: nexg
+    integer(I4B), dimension(:), pointer, contiguous :: nodem1, nodem2
 
     allocate (interfaceMap)
 
@@ -1156,16 +1182,21 @@ contains
       ! least one relevant connection for this map
       ! TODO_MJR: confirm this, really compressed??
       dist_exg => get_dist_exg(this%haloExchanges%at(ix))
-      connEx => dist_exg%access()
-      interfaceMap%exchange_names(ix) = connEx%name
+      m1 => get_dist_model(dist_exg%model1_id)
+      m2 => get_dist_model(dist_exg%model2_id)
+      call dist_exg%load(nexg, 'NEXG')
+      call dist_exg%load(nodem1, 'NODEM1')
+      call dist_exg%load(nodem2, 'NODEM2')
+
+      interfaceMap%exchange_names(ix) = dist_exg%name
 
       call srcIdxTmp%init()
       call tgtIdxTmp%init()
       call signTmp%init()
 
-      do n = 1, connEx%nexg
-        i = this%getInterfaceIndex(connEx%nodem1(n), connEx%dmodel1)
-        j = this%getInterfaceIndex(connEx%nodem2(n), connEx%dmodel2)
+      do n = 1, nexg
+        i = this%getInterfaceIndex(nodem1(n), m1)
+        j = this%getInterfaceIndex(nodem2(n), m2)
         if (i == -1 .or. j == -1) cycle ! not all exchange nodes are part of the interface
         ipos = this%connections%getjaindex(i, j)
         if (ipos == 0) then
@@ -1209,6 +1240,28 @@ contains
         exit
       end if
     end do
+
+    ! TODO_MJR: compress the maps
+    ! sanity check
+    ! do i = 1, interfaceMap%nr_models
+    !   if (size(interfaceMap%node_map(i)%src_idx) == 0) then
+    !     write(*,*) 'Error: empty node map in interface for ', &
+    !                this%primaryExchange%name
+    !     call ustop()
+    !   end if
+    !   if (size(interfaceMap%connection_map(i)%src_idx) == 0) then
+    !     write(*,*) 'Error: empty connection map in interface for ', &
+    !                this%primaryExchange%name
+    !     call ustop()
+    !   end if
+    ! end do
+    ! do i = 1, interfaceMap%nr_exchanges
+    !   if (size(interfaceMap%exchange_map(i)%src_idx) == 0) then
+    !     write(*,*) 'Error: empty exchange map in interface for ', &
+    !                this%primaryExchange%name
+    !     call ustop()
+    !   end if
+    ! end do
 
   end subroutine getInterfaceMap
 

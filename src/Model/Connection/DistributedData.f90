@@ -40,7 +40,6 @@ module DistributedDataModule
                                     !!with list of data items
   contains
     procedure :: map_dist_vars
-    procedure :: get_dist_data
     procedure :: synchronize
     procedure :: destroy
 
@@ -218,14 +217,6 @@ contains
     call this%variable_list%Add(obj)
 
   end subroutine map_data
-
-  function get_dist_data(this) result(dist_data)
-    class(DistributedDataType) :: this
-    type(MemoryType), pointer :: dist_data
-
-    ! get from memory list
-
-  end function get_dist_data
 
   subroutine synchronize(this, controller_id, stage)
     class(DistributedDataType) :: this
