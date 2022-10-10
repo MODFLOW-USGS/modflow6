@@ -2,7 +2,8 @@ module GwfDisvModule
 
   use ArrayReadersModule, only: ReadArray
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LINELENGTH, DZERO, DONE, DHALF
+  use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENVARNAME, DZERO, DONE, &
+                             DHALF
   use BaseDisModule, only: DisBaseType
   use InputOutputModule, only: get_node, URWORD, ulasav, ulaprufw, ubdsv1, &
                                ubdsv06
@@ -10,6 +11,7 @@ module GwfDisvModule
   use DisvGeom, only: DisvGeomType
   use BlockParserModule, only: BlockParserType
   use MemoryManagerModule, only: mem_allocate
+  use MemoryHelperModule, only: create_mem_path
   use TdisModule, only: kstp, kper, pertim, totim, delt
 
   implicit none
@@ -30,6 +32,7 @@ module GwfDisvModule
   contains
     procedure :: dis_df => disv_df
     procedure :: dis_da => disv_da
+    procedure :: disv_load
     procedure :: get_dis_type => get_dis_type
     procedure, public :: record_array
     procedure, public :: read_layer_array
@@ -47,11 +50,15 @@ module GwfDisvModule
     procedure :: supports_layers
     procedure :: get_ncpl
     ! -- private
-    procedure :: read_options
-    procedure :: read_dimensions
-    procedure :: read_vertices
-    procedure :: read_cell2d
-    procedure :: read_mf6_griddata
+    procedure :: source_options
+    procedure :: source_dimensions
+    procedure :: source_griddata
+    procedure :: source_vertices
+    procedure :: source_cell2d
+    procedure :: log_options
+    procedure :: log_dimensions
+    procedure :: log_griddata
+    procedure :: define_cellverts
     procedure :: grid_finalize
     procedure :: connect
     procedure :: write_grb
@@ -73,11 +80,16 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    use IdmMf6FileLoaderModule, only: input_load
+    use ConstantsModule, only: LENPACKAGETYPE
     class(DisBaseType), pointer :: dis
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     type(GwfDisvType), pointer :: disnew
+    character(len=*), parameter :: fmtheader = &
+      "(1X, /1X, 'DISV -- VERTEX GRID DISCRETIZATION PACKAGE,', &
+      &' VERSION 1 : 12/23/2015 - INPUT READ FROM UNIT ', I0, //)"
 ! ------------------------------------------------------------------------------
     allocate (disnew)
     dis => disnew
@@ -85,16 +97,32 @@ contains
     dis%inunit = inunit
     dis%iout = iout
     !
-    ! -- Initialize block parser
-    call dis%parser%Initialize(dis%inunit, dis%iout)
+    ! -- if reading from file
+    if (inunit > 0) then
+      !
+      ! -- Identify package
+      if (iout > 0) then
+        write (iout, fmtheader) inunit
+      end if
+      !
+      ! -- initialize parser and load the disv input file
+      call dis%parser%Initialize(dis%inunit, dis%iout)
+      !
+      ! -- IDM load source parameters
+      call input_load(dis%parser, 'DISV6', 'GWF', 'DISV', name_model, 'DISV', &
+                      [character(len=LENPACKAGETYPE) ::], iout)
+      !
+      ! -- load disv
+      call disnew%disv_load()
+    end if
     !
     ! -- Return
     return
   end subroutine disv_cr
 
-  subroutine disv_df(this)
+  subroutine disv_load(this)
 ! ******************************************************************************
-! read_from_file -- Allocate and read discretization information
+! disv_load -- source input data
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -104,29 +132,37 @@ contains
     ! -- locals
 ! ------------------------------------------------------------------------------
     !
-    ! -- read data from file
-    if (this%inunit /= 0) then
-      !
-      ! -- Identify package
-      write (this%iout, 1) this%inunit
-1     format(1X, /1X, 'DISV -- VERTEX GRID DISCRETIZATION PACKAGE,', &
-             ' VERSION 1 : 12/23/2015 - INPUT READ FROM UNIT ', I0, //)
-      !
-      ! -- Read options
-      call this%read_options()
-      !
-      ! -- Read dimensions block
-      call this%read_dimensions()
-      !
-      ! -- Read GRIDDATA block
-      call this%read_mf6_griddata()
-      !
-      ! -- Read VERTICES block
-      call this%read_vertices()
-      !
-      ! -- Read CELL2D block
-      call this%read_cell2d()
-    end if
+    ! -- source input options
+    call this%source_options()
+    !
+    ! -- source input dimensions
+    call this%source_dimensions()
+    !
+    ! -- source input GRIDDATA
+    call this%source_griddata()
+    !
+    ! -- source VERTICES
+    call this%source_vertices()
+    !
+    ! -- source CELL2D
+    call this%source_cell2d()
+    !
+    ! -- Return
+    return
+  end subroutine disv_load
+
+  subroutine disv_df(this)
+! ******************************************************************************
+! read_from_file -- Allocate and read discretization information
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GwfDisvType) :: this
+    ! -- locals
+! ------------------------------------------------------------------------------
     !
     ! -- Final grid initialization
     call this%grid_finalize()
@@ -144,10 +180,17 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
+    use MemoryManagerExtModule, only: memorylist_remove
+    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfDisvType) :: this
     ! -- locals
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Deallocate idm memory
+    call memorylist_remove(this%name_model, 'DISV', idm_context)
+    call memorylist_remove(component=this%name_model, &
+                           context=idm_context)
     !
     ! -- DisBaseType deallocate
     call this%DisBaseType%dis_da()
@@ -172,135 +215,137 @@ contains
     return
   end subroutine disv_da
 
-  subroutine read_options(this)
+  !> @brief Write user options to list file
+  !<
+  subroutine log_options(this, afound)
+    class(GwfDisvType) :: this
+    logical, dimension(:), intent(in) :: afound
+
+    write (this%iout, '(1x,a)') 'Setting Discretization Options'
+
+    if (afound(1)) then
+      write (this%iout, '(4x,a,i0)') 'MODEL LENGTH UNIT [0=UND, 1=FEET, &
+      &2=METERS, 3=CENTIMETERS] SET AS ', this%lenuni
+    end if
+
+    if (afound(2)) then
+      write (this%iout, '(4x,a,i0)') 'BINARY GRB FILE [0=GRB, 1=NOGRB] &
+        &SET AS ', this%nogrb
+    end if
+
+    if (afound(3)) then
+      write (this%iout, '(4x,a,G0)') 'XORIGIN = ', this%xorigin
+    end if
+
+    if (afound(4)) then
+      write (this%iout, '(4x,a,G0)') 'YORIGIN = ', this%yorigin
+    end if
+
+    if (afound(5)) then
+      write (this%iout, '(4x,a,G0)') 'ANGROT = ', this%angrot
+    end if
+
+    write (this%iout, '(1x,a,/)') 'End Setting Discretization Options'
+
+  end subroutine log_options
+
+  !> @brief Copy options from IDM into package
+  !<
+  subroutine source_options(this)
 ! ******************************************************************************
-! read_options -- Read options
+! source_options -- source options from memory manager input path
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use KindModule, only: LGP
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfDisvType) :: this
     ! -- locals
-    character(len=LINELENGTH) :: errmsg, keyword
-    integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
+    character(len=LENMEMPATH) :: idmMemoryPath
+    character(len=LENVARNAME), dimension(3) :: lenunits = &
+      &[character(len=LENVARNAME) :: 'FEET', 'METERS', 'CENTIMETERS']
+    logical, dimension(5) :: afound
 ! ------------------------------------------------------------------------------
     !
-    ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, &
-                              supportOpenClose=.true., blockRequired=.false.)
+    ! -- set memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'DISV', idm_context)
     !
-    ! -- set default options
-    this%lenuni = 0
+    ! -- update defaults with idm sourced values
+    call mem_set_value(this%lenuni, 'LENGTH_UNITS', idmMemoryPath, lenunits, &
+                       afound(1))
+    call mem_set_value(this%nogrb, 'NOGRB', idmMemoryPath, afound(2))
+    call mem_set_value(this%xorigin, 'XORIGIN', idmMemoryPath, afound(3))
+    call mem_set_value(this%yorigin, 'YORIGIN', idmMemoryPath, afound(4))
+    call mem_set_value(this%angrot, 'ANGROT', idmMemoryPath, afound(5))
     !
-    ! -- parse options block if detected
-    if (isfound) then
-      write (this%iout, '(/,1x,a)') 'PROCESSING DISCRETIZATION OPTIONS'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-        case ('LENGTH_UNITS')
-          call this%parser%GetStringCaps(keyword)
-          if (keyword == 'FEET') then
-            this%lenuni = 1
-            write (this%iout, '(4x,a)') 'MODEL LENGTH UNIT IS FEET'
-          elseif (keyword == 'METERS') then
-            this%lenuni = 2
-            write (this%iout, '(4x,a)') 'MODEL LENGTH UNIT IS METERS'
-          elseif (keyword == 'CENTIMETERS') then
-            this%lenuni = 3
-            write (this%iout, '(4x,a)') 'MODEL LENGTH UNIT IS CENTIMETERS'
-          else
-            write (this%iout, '(4x,a)') 'UNKNOWN UNIT: ', trim(keyword)
-            write (this%iout, '(4x,a)') 'SETTING TO: ', 'UNDEFINED'
-          end if
-        case ('NOGRB')
-          write (this%iout, '(4x,a)') 'BINARY GRB FILE WILL NOT BE WRITTEN'
-          this%writegrb = .false.
-        case ('XORIGIN')
-          this%xorigin = this%parser%GetDouble()
-          write (this%iout, '(4x,a,1pg24.15)') 'XORIGIN SPECIFIED AS ', &
-            this%xorigin
-        case ('YORIGIN')
-          this%yorigin = this%parser%GetDouble()
-          write (this%iout, '(4x,a,1pg24.15)') 'YORIGIN SPECIFIED AS ', &
-            this%yorigin
-        case ('ANGROT')
-          this%angrot = this%parser%GetDouble()
-          write (this%iout, '(4x,a,1pg24.15)') 'ANGROT SPECIFIED AS ', &
-            this%angrot
-        case default
-          write (errmsg, '(4x,a,a)') 'Unknown DIS option: ', &
-            trim(keyword)
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end select
-      end do
-    else
-      write (this%iout, '(1x,a)') 'NO DISV OPTION BLOCK DETECTED.'
-    end if
-    if (this%lenuni == 0) then
-      write (this%iout, '(3x,a)') 'MODEL LENGTH UNIT IS UNDEFINED'
-    end if
-    if (isfound) then
-      write (this%iout, '(1x,a)') 'END OF DISCRETIZATION OPTIONS'
+    ! -- log values to list file
+    if (this%iout > 0) then
+      call this%log_options(afound)
     end if
     !
     ! -- Return
     return
-  end subroutine read_options
+  end subroutine source_options
 
-  subroutine read_dimensions(this)
+  !> @brief Write dimensions to list file
+  !<
+  subroutine log_dimensions(this, afound)
+    class(GwfDisvType) :: this
+    logical, dimension(:), intent(in) :: afound
+
+    write (this%iout, '(1x,a)') 'Setting Discretization Dimensions'
+
+    if (afound(1)) then
+      write (this%iout, '(4x,a,i0)') 'NLAY = ', this%nlay
+    end if
+
+    if (afound(2)) then
+      write (this%iout, '(4x,a,i0)') 'NCPL = ', this%ncpl
+    end if
+
+    if (afound(3)) then
+      write (this%iout, '(4x,a,i0)') 'NVERT = ', this%nvert
+    end if
+
+    write (this%iout, '(1x,a,/)') 'End Setting Discretization Dimensions'
+
+  end subroutine log_dimensions
+
+  !> @brief Copy dimensions from IDM into package
+  !<
+  subroutine source_dimensions(this)
 ! ******************************************************************************
-! read_dimensions -- Read dimensions
+! source_dimensions -- source dimensions from memory manager input path
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    use KindModule, only: LGP
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfDisvType) :: this
     ! -- locals
-    character(len=LINELENGTH) :: errmsg, keyword
-    integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
-    integer(I4B) :: j
-    integer(I4B) :: k
+    character(len=LENMEMPATH) :: idmMemoryPath
+    integer(I4B) :: j, k
+    logical, dimension(3) :: afound
 ! ------------------------------------------------------------------------------
     !
-    ! -- get dimensions block
-    call this%parser%GetBlock('DIMENSIONS', isfound, ierr, &
-                              supportOpenClose=.true.)
+    ! -- set memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'DISV', idm_context)
     !
-    ! -- parse dimensions block if detected
-    if (isfound) then
-      write (this%iout, '(/,1x,a)') 'PROCESSING DISCRETIZATION DIMENSIONS'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-        case ('NLAY')
-          this%nlay = this%parser%GetInteger()
-          write (this%iout, '(3x,a,i0)') 'NLAY = ', this%nlay
-        case ('NCPL')
-          this%ncpl = this%parser%GetInteger()
-          write (this%iout, '(3x,a,i0)') 'NCPL = ', this%ncpl
-        case ('NVERT')
-          this%nvert = this%parser%GetInteger()
-          write (this%iout, '(3x,a,i0)') 'NVERT = ', this%nvert
-        case default
-          write (errmsg, '(4x,a,a)') 'Unknown DISV dimension: ', &
-            trim(keyword)
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end select
-      end do
-    else
-      call store_error('ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.')
-      call this%parser%StoreErrorUnit()
+    ! -- update defaults with idm sourced values
+    call mem_set_value(this%nlay, 'NLAY', idmMemoryPath, afound(1))
+    call mem_set_value(this%ncpl, 'NCPL', idmMemoryPath, afound(2))
+    call mem_set_value(this%nvert, 'NVERT', idmMemoryPath, afound(3))
+    !
+    ! -- log simulation values
+    if (this%iout > 0) then
+      call this%log_dimensions(afound)
     end if
     !
     ! -- verify dimensions were set
@@ -319,7 +364,6 @@ contains
         'NVERT WAS NOT SPECIFIED OR WAS SPECIFIED INCORRECTLY.')
       call this%parser%StoreErrorUnit()
     end if
-    write (this%iout, '(1x,a)') 'END OF DISCRETIZATION DIMENSIONS'
     !
     ! -- Calculate nodesuser
     this%nodesuser = this%nlay * this%ncpl
@@ -344,107 +388,66 @@ contains
     !
     ! -- Return
     return
-  end subroutine read_dimensions
+  end subroutine source_dimensions
 
-  subroutine read_mf6_griddata(this)
+  !> @brief Write griddata found to list file
+  !<
+  subroutine log_griddata(this, afound)
+    class(GwfDisvType) :: this
+    logical, dimension(:), intent(in) :: afound
+
+    write (this%iout, '(1x,a)') 'Setting Discretization Griddata'
+
+    if (afound(1)) then
+      write (this%iout, '(4x,a)') 'TOP set from input file'
+    end if
+
+    if (afound(2)) then
+      write (this%iout, '(4x,a)') 'BOTM set from input file'
+    end if
+
+    if (afound(3)) then
+      write (this%iout, '(4x,a)') 'IDOMAIN set from input file'
+    end if
+
+    write (this%iout, '(1x,a,/)') 'End Setting Discretization Griddata'
+
+  end subroutine log_griddata
+
+  subroutine source_griddata(this)
 ! ******************************************************************************
-! read_mf6_griddata -- Read grid data from a MODFLOW 6 ascii file
+! source_griddata -- source griddata from memory manager input path
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfDisvType) :: this
     ! -- locals
-    character(len=LINELENGTH) :: keyword
-    integer(I4B) :: n
-    integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
-    integer(I4B), parameter :: nname = 3
-    logical, dimension(nname) :: lname
-    character(len=24), dimension(nname) :: aname
-    character(len=300) :: ermsg
+    character(len=LENMEMPATH) :: idmMemoryPath
+    logical, dimension(3) :: afound
     ! -- formats
-    character(len=*), parameter :: fmtdz = &
-      "('ERROR. CELL (',i0,',',i0,') THICKNESS <= 0. ', &
-      &'TOP, BOT: ',2(1pg24.15))"
-    character(len=*), parameter :: fmtnr = &
-      "(/1x, 'THE SPECIFIED IDOMAIN RESULTS IN A REDUCED NUMBER OF CELLS.',&
-      &/1x, 'NUMBER OF USER NODES: ',I0,&
-      &/1X, 'NUMBER OF NODES IN SOLUTION: ', I0, //)"
-    ! -- data
-    data aname(1)/'TOP ELEVATION OF LAYER 1'/
-    data aname(2)/'  MODEL LAYER BOTTOM EL.'/
-    data aname(3)/'                 IDOMAIN'/
 ! ------------------------------------------------------------------------------
     !
-    ! --Read GRIDDATA block
-    call this%parser%GetBlock('GRIDDATA', isfound, ierr)
-    lname(:) = .false.
-    if (isfound) then
-      write (this%iout, '(/,1x,a)') 'PROCESSING GRIDDATA'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-        case ('TOP')
-          call ReadArray(this%parser%iuactive, this%top2d(:, :), &
-                         aname(1), this%ndim, this%ncpl, 1, this%iout, 0)
-          lname(1) = .true.
-        case ('BOTM')
-          call this%parser%GetStringCaps(keyword)
-          if (keyword .EQ. 'LAYERED') then
-            call ReadArray(this%parser%iuactive, &
-                           this%bot3d(:, :, :), aname(2), this%ndim, &
-                           this%ncpl, 1, this%nlay, this%iout, 1, this%nlay)
-          else
-            call ReadArray(this%parser%iuactive, &
-                           this%bot3d(:, :, :), aname(2), &
-                           this%ndim, this%nodesuser, 1, 1, this%iout, 0, 0)
-          end if
-          lname(2) = .true.
-        case ('IDOMAIN')
-          call this%parser%GetStringCaps(keyword)
-          if (keyword .EQ. 'LAYERED') then
-            call ReadArray(this%parser%iuactive, this%idomain, aname(3), &
-                           this%ndim, this%ncpl, 1, this%nlay, this%iout, &
-                           1, this%nlay)
-          else
-            call ReadArray(this%parser%iuactive, this%idomain, aname(3), &
-                           this%ndim, this%nodesuser, 1, 1, this%iout, &
-                           0, 0)
-          end if
-          lname(3) = .true.
-        case default
-          write (ermsg, '(4x,a,a)') 'Unknown GRIDDATA tag: ', &
-            trim(keyword)
-          call store_error(ermsg)
-          call this%parser%StoreErrorUnit()
-        end select
-      end do
-      write (this%iout, '(1x,a)') 'END PROCESSING GRIDDATA'
-    else
-      call store_error('ERROR.  REQUIRED GRIDDATA BLOCK NOT FOUND.')
-      call this%parser%StoreErrorUnit()
-    end if
+    ! -- set memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'DISV', idm_context)
     !
-    ! -- Verify all required items were read (IDOMAIN not required)
-    do n = 1, nname - 1
-      if (.not. lname(n)) then
-        write (ermsg, '(1x,a,a)') &
-          'ERROR.  REQUIRED INPUT WAS NOT SPECIFIED: ', aname(n)
-        call store_error(ermsg)
-      end if
-    end do
-    if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
+    ! -- update defaults with idm sourced values
+    call mem_set_value(this%top2d, 'TOP', idmMemoryPath, afound(1))
+    call mem_set_value(this%bot3d, 'BOTM', idmMemoryPath, afound(2))
+    call mem_set_value(this%idomain, 'IDOMAIN', idmMemoryPath, afound(3))
+    !
+    ! -- log simulation values
+    if (this%iout > 0) then
+      call this%log_griddata(afound)
     end if
     !
     ! -- Return
     return
-  end subroutine read_mf6_griddata
+  end subroutine source_griddata
 
   subroutine grid_finalize(this)
 ! ******************************************************************************
@@ -583,220 +586,158 @@ contains
     return
   end subroutine grid_finalize
 
-  subroutine read_vertices(this)
+  subroutine source_vertices(this)
 ! ******************************************************************************
-! read_vertices -- Read data
+! source_vertices -- source vertex data from memory manager input path
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use MemoryManagerModule, only: mem_setptr
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfDisvType) :: this
+    ! -- local
     integer(I4B) :: i
-    integer(I4B) :: ierr, ival
-    logical :: isfound, endOfBlock
-    real(DP) :: xmin, xmax, ymin, ymax
-    character(len=300) :: ermsg
+    character(len=LENMEMPATH) :: idmMemoryPath
+    real(DP), dimension(:), contiguous, pointer :: vert_x => null()
+    real(DP), dimension(:), contiguous, pointer :: vert_y => null()
     ! -- formats
-    character(len=*), parameter :: fmtvnum = &
-      "('ERROR. VERTEX NUMBER NOT CONSECUTIVE.  LOOKING FOR ',i0,&
-      &' BUT FOUND ', i0)"
-    character(len=*), parameter :: fmtnvert = &
-      &"(3x, 'SUCCESSFULLY READ ',i0,' (X,Y) COORDINATES')"
-    character(len=*), parameter :: fmtcoord = &
-      &"(3x, a,' COORDINATE = ', 1(1pg24.15))"
 ! ------------------------------------------------------------------------------
     !
-    ! -- Calculates nodesuser
-    this%nodesuser = this%nlay * this%ncpl
+    ! -- set memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'DISV', idm_context)
     !
-    ! --Read DISDATA block
-    call this%parser%GetBlock('VERTICES', isfound, ierr, &
-                              supportOpenClose=.true.)
-    if (isfound) then
-      write (this%iout, '(/,1x,a)') 'PROCESSING VERTICES'
+    ! -- set pointers to memory manager input arrays
+    call mem_setptr(vert_x, 'XV', idmMemoryPath)
+    call mem_setptr(vert_y, 'YV', idmMemoryPath)
+    !
+    ! -- set vertices 2d array
+    if (associated(vert_x) .and. associated(vert_y)) then
       do i = 1, this%nvert
-        call this%parser%GetNextLine(endOfBlock)
-        !
-        ! -- vertex number
-        ival = this%parser%GetInteger()
-        if (ival /= i) then
-          write (ermsg, fmtvnum) i, ival
-          call store_error(ermsg)
-          call this%parser%StoreErrorUnit()
-        end if
-        !
-        ! -- x
-        this%vertices(1, i) = this%parser%GetDouble()
-        !
-        ! -- y
-        this%vertices(2, i) = this%parser%GetDouble()
-        !
-        ! -- set min/max coords
-        if (i == 1) then
-          xmin = this%vertices(1, i)
-          xmax = xmin
-          ymin = this%vertices(2, i)
-          ymax = ymin
-        else
-          xmin = min(xmin, this%vertices(1, i))
-          xmax = max(xmax, this%vertices(1, i))
-          ymin = min(ymin, this%vertices(2, i))
-          ymax = max(ymax, this%vertices(2, i))
-        end if
+        this%vertices(1, i) = vert_x(i)
+        this%vertices(2, i) = vert_y(i)
       end do
-      !
-      ! -- Terminate the block
-      call this%parser%terminateblock()
     else
-      call store_error('Required VERTICES block not found.')
-      call this%parser%StoreErrorUnit()
+      call store_error('Required Vertex arrays not found.')
     end if
     !
-    ! -- Write information
-    write (this%iout, fmtnvert) this%nvert
-    write (this%iout, fmtcoord) 'MINIMUM X', xmin
-    write (this%iout, fmtcoord) 'MAXIMUM X', xmax
-    write (this%iout, fmtcoord) 'MINIMUM Y', ymin
-    write (this%iout, fmtcoord) 'MAXIMUM Y', ymax
-    write (this%iout, '(1x,a)') 'END PROCESSING VERTICES'
+    ! -- log
+    if (this%iout > 0) then
+      write (this%iout, '(1x,a)') 'Discretization Vertex data loaded'
+    end if
     !
     ! -- Return
     return
-  end subroutine read_vertices
+  end subroutine source_vertices
 
-  subroutine read_cell2d(this)
-! ******************************************************************************
-! read_cell2d -- Read information describing the two dimensional (x, y)
-!   configuration of each cell.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  subroutine define_cellverts(this, icell2d, ncvert, icvert)
     ! -- modules
     use SparseModule, only: sparsematrix
-    use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwfDisvType) :: this
-    integer(I4B) :: i, j, ivert, ivert1, ncvert
-    integer(I4B) :: ierr, ival
-    logical :: isfound, endOfBlock
-    integer(I4B) :: maxvert, maxvertcell, iuext
-    real(DP) :: xmin, xmax, ymin, ymax
-    character(len=300) :: ermsg
-    integer(I4B), dimension(:), allocatable :: maxnnz
-    type(sparsematrix) :: vertspm
-    ! -- formats
-    character(len=*), parameter :: fmtcnum = &
-      "('ERROR. CELL NUMBER NOT CONSECUTIVE.  LOOKING FOR ',i0,&
-      &' BUT FOUND ', i0)"
-    character(len=*), parameter :: fmtncpl = &
-      &"(3x, 'SUCCESSFULLY READ ',i0,' CELL2D INFORMATION ENTRIES')"
-    character(len=*), parameter :: fmtcoord = &
-      &"(3x, a,' CELL CENTER = ', 1(1pg24.15))"
-    character(len=*), parameter :: fmtmaxvert = &
-      &"(3x, 'MAXIMUM NUMBER OF CELL2D VERTICES IS ',i0,' FOR CELL ', i0)"
+    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: icell2d
+    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: ncvert
+    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: icvert
+    ! -- locals
+    type(sparsematrix) :: vert_spm
+    integer(I4B) :: i, j, ierr
+    integer(I4B) :: icv_idx, startvert, maxnnz = 5
 ! ------------------------------------------------------------------------------
     !
-    ! -- initialize
-    maxvert = 0
-    maxvertcell = 0
+    ! -- initialize sparse matrix
+    call vert_spm%init(this%ncpl, this%nvert, maxnnz)
     !
-    ! -- Initialize estimate of the max number of vertices for each cell
-    !    (using 5 as default) and initialize the sparse matrix, which will
-    !    temporarily store the vertex numbers for each cell.  This will
-    !    be converted to iavert and javert after all cell vertices have
-    !    been read.
-    allocate (maxnnz(this%ncpl))
+    ! -- add sparse matrix connections from input memory paths
+    icv_idx = 1
     do i = 1, this%ncpl
-      maxnnz(i) = 5
-    end do
-    call vertspm%init(this%ncpl, this%nvert, maxnnz)
-    !
-    ! --Read CELL2D block
-    call this%parser%GetBlock('CELL2D', isfound, ierr, supportOpenClose=.true.)
-    if (isfound) then
-      write (this%iout, '(/,1x,a)') 'PROCESSING CELL2D'
-      do i = 1, this%ncpl
-        call this%parser%GetNextLine(endOfBlock)
-        !
-        ! -- cell number
-        ival = this%parser%GetInteger()
-        if (ival /= i) then
-          write (ermsg, fmtcnum) i, ival
-          call store_error(ermsg)
-          call store_error_unit(iuext)
+      if (icell2d(i) /= i) call store_error('ICELL2D input sequence violation.')
+      do j = 1, ncvert(i)
+        call vert_spm%addconnection(i, icvert(icv_idx), 0)
+        if (j == 1) then
+          startvert = icvert(icv_idx)
+        elseif (j == ncvert(i) .and. (icvert(icv_idx) /= startvert)) then
+          call vert_spm%addconnection(i, startvert, 0)
         end if
-        !
-        ! -- Cell x center
-        this%cellxy(1, i) = this%parser%GetDouble()
-        !
-        ! -- Cell y center
-        this%cellxy(2, i) = this%parser%GetDouble()
-        !
-        ! -- Number of vertices for this cell
-        ncvert = this%parser%GetInteger()
-        if (ncvert > maxvert) then
-          maxvert = ncvert
-          maxvertcell = i
-        end if
-        !
-        ! -- Read each vertex number, and then close the polygon if
-        !    the last vertex does not equal the first vertex
-        do j = 1, ncvert
-          ivert = this%parser%GetInteger()
-          call vertspm%addconnection(i, ivert, 0)
-          !
-          ! -- If necessary, repeat the last vertex in order to close the cell
-          if (j == 1) then
-            ivert1 = ivert
-          elseif (j == ncvert) then
-            if (ivert1 /= ivert) then
-              call vertspm%addconnection(i, ivert1, 0)
-            end if
-          end if
-        end do
-        !
-        ! -- set min/max coords
-        if (i == 1) then
-          xmin = this%cellxy(1, i)
-          xmax = xmin
-          ymin = this%cellxy(2, i)
-          ymax = ymin
-        else
-          xmin = min(xmin, this%cellxy(1, i))
-          xmax = max(xmax, this%cellxy(1, i))
-          ymin = min(ymin, this%cellxy(2, i))
-          ymax = max(ymax, this%cellxy(2, i))
-        end if
+        icv_idx = icv_idx + 1
       end do
-      !
-      ! -- Terminate the block
-      call this%parser%terminateblock()
-    else
-      call store_error('Required CELL2D block not found.')
-      call this%parser%StoreErrorUnit()
-    end if
+    end do
     !
-    ! -- Convert vertspm into ia/ja form
+    ! -- allocate and fill iavert and javert
     call mem_allocate(this%iavert, this%ncpl + 1, 'IAVERT', this%memoryPath)
-    call mem_allocate(this%javert, vertspm%nnz, 'JAVERT', this%memoryPath)
-    call vertspm%filliaja(this%iavert, this%javert, ierr)
-    call vertspm%destroy()
-    !
-    ! -- Write information
-    write (this%iout, fmtncpl) this%ncpl
-    write (this%iout, fmtcoord) 'MINIMUM X', xmin
-    write (this%iout, fmtcoord) 'MAXIMUM X', xmax
-    write (this%iout, fmtcoord) 'MINIMUM Y', ymin
-    write (this%iout, fmtcoord) 'MAXIMUM Y', ymax
-    write (this%iout, fmtmaxvert) maxvert, maxvertcell
-    write (this%iout, '(1x,a)') 'END PROCESSING VERTICES'
+    call mem_allocate(this%javert, vert_spm%nnz, 'JAVERT', this%memoryPath)
+    call vert_spm%filliaja(this%iavert, this%javert, ierr)
+    call vert_spm%destroy()
     !
     ! -- Return
     return
-  end subroutine read_cell2d
+  end subroutine define_cellverts
+
+  subroutine source_cell2d(this)
+! ******************************************************************************
+! source_cell2d -- source cell2d data from memory manager input path
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_setptr
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_context
+    ! -- dummy
+    class(GwfDisvType) :: this
+    ! -- locals
+    character(len=LENMEMPATH) :: idmMemoryPath
+    integer(I4B), dimension(:), contiguous, pointer :: icell2d => null()
+    integer(I4B), dimension(:), contiguous, pointer :: ncvert => null()
+    integer(I4B), dimension(:), contiguous, pointer :: icvert => null()
+    real(DP), dimension(:), contiguous, pointer :: cell_x => null()
+    real(DP), dimension(:), contiguous, pointer :: cell_y => null()
+    integer(I4B) :: i
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! -- set memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'DISV', idm_context)
+    !
+    ! -- set pointers to input path ncvert and icvert
+    call mem_setptr(icell2d, 'ICELL2D', idmMemoryPath)
+    call mem_setptr(ncvert, 'NCVERT', idmMemoryPath)
+    call mem_setptr(icvert, 'ICVERT', idmMemoryPath)
+    !
+    ! --
+    if (associated(icell2d) .and. associated(ncvert) &
+        .and. associated(icvert)) then
+      call this%define_cellverts(icell2d, ncvert, icvert)
+    else
+      call store_error('Required cell vertex array(s) [ICELL2D, NCVERT, ICVERT] &
+                       &not found.')
+    end if
+    !
+    ! -- copy cell center idm sourced values to local arrays
+    call mem_setptr(cell_x, 'XC', idmMemoryPath)
+    call mem_setptr(cell_y, 'YC', idmMemoryPath)
+    !
+    ! -- set cell centers
+    if (associated(cell_x) .and. associated(cell_y)) then
+      do i = 1, this%ncpl
+        this%cellxy(1, i) = cell_x(i)
+        this%cellxy(2, i) = cell_y(i)
+      end do
+    else
+      call store_error('Required cell center arrays not found.')
+    end if
+    !
+    ! -- log
+    if (this%iout > 0) then
+      write (this%iout, '(1x,a)') 'Discretization Cell2d data loaded'
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine source_cell2d
 
   subroutine connect(this)
 ! ******************************************************************************
