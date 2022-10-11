@@ -874,7 +874,7 @@ contains
     ! -- Convert iac to ia
     if (associated(iac)) call iac_to_ia(iac, this%iainp)
     !
-    ! -- Set anledegx flag if found
+    ! -- Set angldegx flag if found
     if (afound(5)) this%iangledegx = 1
     !
     ! -- log simulation values
