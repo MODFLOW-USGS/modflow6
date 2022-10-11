@@ -251,6 +251,9 @@ contains
     ! created and added to the numerical solutions
     call connections_cr()
     !
+    ! -- initialize distributed data
+    call init_dist_data()
+    !
     ! -- Define each connection
     do ic = 1, baseconnectionlist%Count()
       mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
@@ -348,6 +351,26 @@ contains
 
     write (iout, '(a)') 'END OF MODEL CONNECTIONS'
   end subroutine connections_cr
+
+  !> @brief Initialize distributed data for the simulation
+  !<
+  subroutine init_dist_data()
+    use DistDataBuilderModule
+    use SimVariablesModule, only: iout
+    type(DistDataBuilderType) :: dd_builder
+    integer(I4B) :: isol
+    class(BaseSolutionType), pointer :: sol
+
+    write (iout, '(/a)') 'SETTING UP DISTRIBUTED DATA'
+
+    do isol = 1, basesolutionlist%Count()
+      sol => GetBaseSolutionFromList(basesolutionlist, isol)
+      call dd_builder%process_solution(sol)
+    end do
+
+    write (iout, '(a)') 'END OF DISTRIBUTED DATA'
+
+  end subroutine init_dist_data
 
   !> @brief Read and prepare time step
     !!

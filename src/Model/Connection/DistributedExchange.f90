@@ -19,6 +19,7 @@ module DistributedExchangeModule
     class(DisConnExchangeType), private, pointer :: exchange !< implementation if local, null otherwise
   contains    
     procedure, private :: create_local
+    procedure :: init_connectivity
     procedure :: access
   end type
 
@@ -48,8 +49,16 @@ module DistributedExchangeModule
     this%model1_id = exchange%model1%id
     this%model2_id = exchange%model2%id
     this%exchange => exchange
+    this%is_local = .true.
 
   end subroutine create_local
+
+  subroutine init_connectivity(this)
+    class(DistributedExchangeType) :: this
+
+    ! TODO_MJR
+
+  end subroutine init_connectivity
 
   function access(this) result(exchange)
     class(DistributedExchangeType) :: this

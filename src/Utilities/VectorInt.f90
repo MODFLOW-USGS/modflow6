@@ -22,8 +22,11 @@ module VectorIntModule
     procedure, pass(this) :: shrink_to_fit !< reduces the allocated memory to fit the actual vector size
     procedure, pass(this) :: destroy !< deletes the memory
     procedure, pass(this) :: contains !< true when element already present
+    procedure, pass(this) :: get_values !< returns a copy of the values
+    generic :: assignment(=) => assign_vec
     ! private
     procedure, private, pass(this) :: expand
+    procedure, private, pass(this) :: assign_vec
   end type VectorInt
 
 contains ! module routines
@@ -57,7 +60,7 @@ contains ! module routines
   end subroutine push_back
 
   function at(this, idx) result(value)
-    class(VectorInt), intent(inout) :: this
+    class(VectorInt), intent(in) :: this
     integer(I4B), intent(in) :: idx
     integer(I4B) :: value
 
@@ -66,7 +69,7 @@ contains ! module routines
   end function at
 
   function at_safe(this, idx) result(value)
-    class(VectorInt), intent(inout) :: this
+    class(VectorInt), intent(in) :: this
     integer(I4B), intent(in) :: idx
     integer(I4B) :: value
 
@@ -142,6 +145,20 @@ contains ! module routines
 
   end subroutine expand
 
+  subroutine assign_vec(this, rhs)
+    class(VectorInt), intent(inout) :: this
+    class(VectorInt), intent(in) :: rhs
+    ! local
+    integer(I4B) :: i
+
+    if (allocated(this%values)) call this%destroy()
+    call this%init(rhs%capacity)
+    do i = 1, rhs%size
+      call this%push_back(rhs%at(i))
+    end do
+
+  end subroutine assign_vec
+
   ! check if the element is already present
   function contains(this, val) result(res)
     class(VectorInt), intent(inout) :: this
@@ -159,5 +176,13 @@ contains ! module routines
     end do
 
   end function contains
+
+  function get_values(this) result(values)
+    class(VectorInt), intent(in) :: this
+    integer(I4B), dimension(:), allocatable :: values
+
+    values = this%values(1:this%size)
+
+  end function get_values
 
 end module VectorIntModule

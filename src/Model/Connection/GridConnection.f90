@@ -357,6 +357,12 @@ contains
 
     ! fill connection data (ihc, cl1, cl2, etc.) using data
     ! from models and exchanges
+    !
+    ! TODO_MJR: this could probably be done as the first step
+    ! in _ar, such that the cl1,cl2,ihc,... arrays only
+    ! need to be synced for models that are actually in the
+    ! interface model
+    !
     call this%fillConnectionDataInternal()
     call this%fillConnectionDataFromExchanges()
 

@@ -2,6 +2,8 @@ module DistributedModelModule
   use KindModule, only: I4B, LGP
   use SimModule, only: ustop
   use ListModule, only: ListType
+  use MemoryManagerModule, only: mem_allocate
+  use MemoryHelperModule, only: create_mem_path
   use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
   use ListsModule, only: basemodellist, distmodellist
   use DistributedBaseModule
@@ -12,17 +14,21 @@ module DistributedModelModule
   public :: add_dist_model, get_dist_model
   public :: AddDistModelToList, GetDistModelFromList
 
+  character(len=7), parameter :: LOCAL_MEM_CTX = '__LOC__'
+
   type, extends(DistributedBaseType) :: DistributedModelType
-    ! example for cached variables:
     integer(I4B), pointer :: moffset => null()
+    integer(I4B), pointer :: nodes => null()
+    integer(I4B), dimension(:), pointer, contiguous :: con_ia => null()
+    integer(I4B), dimension(:), pointer, contiguous :: con_ja => null()
 
     ! this is strictly private, use access() instead
     class(NumericalModelType), private, pointer :: model !< implementation if local, null otherwise
   contains
     generic :: create => create_local, create_remote
+    procedure :: init_connectivity
     generic :: operator(==) => equals_dist_model, equals_num_model
     procedure :: access
-
     ! private
     procedure, private :: create_local
     procedure, private :: create_remote    
@@ -53,6 +59,7 @@ contains
     this%id = model%id
     this%name = model%name
     this%model => model
+    this%is_local = .true.
 
     ! connect cached variables
     call this%load(this%moffset, 'MOFFSET')
@@ -66,12 +73,39 @@ contains
     this%id = m_id
     this%name = 'TBD'
     this%model => null()
+    this%is_local = .false.
 
     ! TODO_MJR: this should prepare a memory space
     ! where the remote data can live, and then
     ! also connect cache (if we decide to use that)
 
   end subroutine create_remote
+
+  subroutine init_connectivity(this)        
+    class(DistributedModelType), intent(inout) :: this
+    ! local
+    integer(I4B) :: n, nja
+    class(NumericalModelType), pointer :: local_model    
+
+    if (.not. this%is_local) then
+      ! something is wrong here
+      write(*,*) 'Cannot set up connectivity, only local supported for now'
+      call ustop()
+    end if
+
+    local_model => this%access()
+    n = local_model%dis%nodes
+    nja = local_model%dis%nja
+
+    ! allocate memory space
+    !call mem_allocate(this%nodes, 'NODES', create_mem_path(this%name, context=LOCAL_MEM_CTX))
+    !call mem_allocate(this%con_ia, n + 1, 'IA', create_mem_path(this%name, 'CON', context=LOCAL_MEM_CTX))
+    !call mem_allocate(this%con_ja, nja, 'JA', create_mem_path(this%name, 'CON', context=LOCAL_MEM_CTX))
+
+    ! add this image to the serial router
+    ! ...
+
+  end subroutine init_connectivity
 
   function equals_dist_model(this, dist_model) result(is_equal)
     class(DistributedModelType), intent(in) :: this

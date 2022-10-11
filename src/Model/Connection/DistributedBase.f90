@@ -11,6 +11,8 @@ module DistributedBaseModule
   type, public :: DistributedBaseType
     integer(I4B) :: id !< universal (global) identifier: id of the component
     character(len=LENCOMPONENTNAME) :: name !< component name
+    character(len=3) :: macronym !< model acronym, e.g. GWT
+    logical(LGP) :: is_local
   contains  
     generic :: load => load_intsclr, load_int1d, load_dblsclr, &
                        load_double1d, load_double2d, load_charstr1d

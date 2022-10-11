@@ -25,6 +25,7 @@ modflow_sources = files(
     'Model' / 'Connection' / 'GwtInterfaceModel.f90',
     'Model' / 'Connection' / 'SpatialModelConnection.f90',
     'Model' / 'Connection' / 'MappedVariable.f90',
+    'Model' / 'Connection' / 'DistributedDataBuilder.f90',
     'Model' / 'Connection' / 'DistributedData.f90',
     'Model' / 'Connection' / 'DistributedBase.f90',
     'Model' / 'Connection' / 'DistributedModel.f90',
