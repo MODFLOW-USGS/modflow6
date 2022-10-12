@@ -318,7 +318,8 @@ contains
       !
       ! -- Get PERIOD block
       call this%parser%GetBlock('PERIOD', isfound, ierr, &
-                                supportOpenClose=.true.)
+                                supportOpenClose=.true., &
+                                blockRequired=.false.)
       if (isfound) then
         !
         ! -- Read ionper and check for increasing period numbers
