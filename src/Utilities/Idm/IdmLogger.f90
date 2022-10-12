@@ -1,9 +1,12 @@
+!> @brief This module contains the Input Data Model Logger Module
+!!
+!! This module contains the subroutines for logging messages
+!! to the list file as the input data model loads model input.
+!!
+!<
 module IdmLoggerModule
 
-  use KindModule, only: DP, LGP, I4B, I8B
-  use ConstantsModule, only: MAXMEMRANK, LINELENGTH
-  use SimModule, only: store_error
-  use MemoryManagerModule, only: get_mem_rank, get_mem_shape
+  use KindModule, only: DP, LGP, I4B
 
   implicit none
   private
@@ -21,6 +24,8 @@ module IdmLoggerModule
 
 contains
 
+  !> @ brief log a header message
+  !<
   subroutine idm_log_header(component, subcomponent, iout)
     character(len=*), intent(in) :: component !< component name
     character(len=*), intent(in) :: subcomponent !< subcomponent name
@@ -32,6 +37,8 @@ contains
     end if
   end subroutine idm_log_header
 
+  !> @ brief log the closing message
+  !<
   subroutine idm_log_close(component, subcomponent, iout)
     character(len=*), intent(in) :: component !< component name
     character(len=*), intent(in) :: subcomponent !< subcomponent name

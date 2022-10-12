@@ -1,8 +1,8 @@
-module IdmTypesModule
+module ModflowInputModule
 
   use KindModule, only: I4B, LGP
-  use ConstantsModule, only: LENMEMPATH, LENCOMPONENTNAME, LENMEMSEPARATOR, &
-                             LENPACKAGETYPE, LENFTYPE, MAXCHARLEN
+  use ConstantsModule, only: LENMEMPATH, LENCOMPONENTNAME, &
+                             LENPACKAGETYPE, LENFTYPE
   use MemoryHelperModule, only: create_mem_path
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
@@ -61,4 +61,4 @@ contains
     mf6_input%p_param_dfns => param_definitions(mf6_input%component)
   end function ModflowInput
 
-end module IdmTypesModule
+end module ModflowInputModule

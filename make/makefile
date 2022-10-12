@@ -120,7 +120,7 @@ $(OBJDIR)/BoundaryPackage.o \
 $(OBJDIR)/BaseModel.o \
 $(OBJDIR)/BudgetTerm.o \
 $(OBJDIR)/StructArray.o \
-$(OBJDIR)/IdmTypes.o \
+$(OBJDIR)/ModflowInput.o \
 $(OBJDIR)/NumericalModel.o \
 $(OBJDIR)/mf6lists.o \
 $(OBJDIR)/PackageBudget.o \

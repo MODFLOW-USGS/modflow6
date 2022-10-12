@@ -165,10 +165,10 @@
 		<Filter Name="Idm">
 		<File RelativePath="..\src\Utilities\Idm\IdmLogger.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\IdmMf6FileLoader.f90"/>
-		<File RelativePath="..\src\Utilities\Idm\IdmTypes.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\InputDefinition.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\InputDefinitionSelector.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\LoadMf6FileType.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\ModflowInput.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\StructArray.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\StructVector.f90"/></Filter>
 		<Filter Name="Libraries">

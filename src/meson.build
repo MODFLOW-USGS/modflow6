@@ -115,7 +115,7 @@ modflow_sources = files(
     'Timing' / 'tdis.f90',
     'Utilities' / 'Idm' / 'IdmLogger.f90',
     'Utilities' / 'Idm' / 'IdmMf6FileLoader.f90',
-    'Utilities' / 'Idm' / 'IdmTypes.f90',
+    'Utilities' / 'Idm' / 'ModflowInput.f90',
     'Utilities' / 'Idm' / 'InputDefinition.f90',
     'Utilities' / 'Idm' / 'InputDefinitionSelector.f90',
     'Utilities' / 'Idm' / 'LoadMf6FileType.f90',

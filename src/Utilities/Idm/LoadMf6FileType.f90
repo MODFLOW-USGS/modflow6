@@ -14,7 +14,7 @@ module LoadMf6FileTypeModule
                                            block_definitions, &
                                            get_param_definition_type, &
                                            get_aggregate_definition_type
-  use IdmTypesModule, only: ModflowInputType, ModflowInput
+  use ModflowInputModule, only: ModflowInputType, ModflowInput
   use MemoryManagerModule, only: mem_allocate, mem_setptr
   use MemoryHelperModule, only: create_mem_path
   use IdmLoggerModule, only: idm_log_var, idm_log_header, idm_log_close
