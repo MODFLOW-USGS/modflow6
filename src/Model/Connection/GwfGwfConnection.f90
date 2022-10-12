@@ -152,12 +152,64 @@ contains
     this%gwfInterfaceModel%npf%ixt3d = this%iXt3dOnExchange
     call this%gwfInterfaceModel%model_df()
 
+    ! Take these settings from the owning model, TODO_MJR:
+    ! what if the owner iangle1 == 0 but the neighbor doesn't?
+    this%gwfInterfaceModel%npf%ik22 = this%gwfModel%npf%ik22
+    this%gwfInterfaceModel%npf%ik33 = this%gwfModel%npf%ik33
+    this%gwfInterfaceModel%npf%iwetdry = this%gwfModel%npf%iwetdry
+    this%gwfInterfaceModel%npf%iangle1 = this%gwfModel%npf%iangle1
+    this%gwfInterfaceModel%npf%iangle2 = this%gwfModel%npf%iangle2
+    this%gwfInterfaceModel%npf%iangle3 = this%gwfModel%npf%iangle3
+
     call this%addDistVar('X', '', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AD, BEFORE_CF/))
+                         SYNC_NODES, '', (/BEFORE_AR, BEFORE_AD, BEFORE_CF/))
     call this%addDistVar('IBOUND', '', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AD, BEFORE_CF/))
+                         SYNC_NODES, '', (/BEFORE_AR, BEFORE_AD, BEFORE_CF/))
     call this%addDistVar('XOLD', '', this%gwfInterfaceModel%name, &
                          SYNC_NODES, '', (/BEFORE_AD, BEFORE_CF/))
+    call this%addDistVar('ICELLTYPE', 'NPF', this%gwfInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AR/))
+    call this%addDistVar('K11', 'NPF', this%gwfInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AR/))
+    call this%addDistVar('K22', 'NPF', this%gwfInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AR/))
+    call this%addDistVar('K33', 'NPF', this%gwfInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AR/))
+    if (this%gwfInterfaceModel%npf%iangle1 == 1) then
+      call this%addDistVar('ANGLE1', 'NPF', this%gwfInterfaceModel%name, &
+                           SYNC_NODES, '', (/BEFORE_AR/))
+    end if
+    if (this%gwfInterfaceModel%npf%iangle2 == 1) then
+      call this%addDistVar('ANGLE2', 'NPF', this%gwfInterfaceModel%name, &
+                           SYNC_NODES, '', (/BEFORE_AR/))
+    end if
+    if (this%gwfInterfaceModel%npf%iangle3 == 1) then
+      call this%addDistVar('ANGLE3', 'NPF', this%gwfInterfaceModel%name, &
+                           SYNC_NODES, '', (/BEFORE_AR/))
+    end if
+    if (this%gwfInterfaceModel%npf%iwetdry == 1) then
+      call this%addDistVar('WETDRY', 'NPF', this%gwfInterfaceModel%name, &
+                           SYNC_NODES, '', (/BEFORE_AR/))
+    end if
+    call this%addDistVar('TOP', 'DIS', this%gwfInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AR/))
+    call this%addDistVar('BOT', 'DIS', this%gwfInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AR/))
+    call this%addDistVar('AREA', 'DIS', this%gwfInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AR/))
+    call this%mapVariables()
+
+    if (this%gwfInterfaceModel%npf%ixt3d > 0) then
+      this%gwfInterfaceModel%npf%iangle1 = 1
+      this%gwfInterfaceModel%npf%iangle2 = 1
+      this%gwfInterfaceModel%npf%iangle3 = 1
+    end if
+
+    ! set defaults
+    ! TODO_MJR: loop this
+    this%gwfInterfaceModel%npf%angle1 = 0.0_DP
+    this%gwfInterfaceModel%npf%angle2 = 0.0_DP
+    this%gwfInterfaceModel%npf%angle3 = 0.0_DP
 
     ! point X, RHS, IBOUND to connection
     call this%spatialcon_setmodelptrs()
@@ -293,14 +345,13 @@ contains
       ! we cannot check with the mask here, because cross-terms are not
       ! necessarily from primary connections. But, we only need the coefficients
       ! for our own model (i.e. fluxes into cells belonging to this%owner):
-      if (.not. associated(this%gridConnection%idxToGlobal(n)%model, &
-                           this%owner)) then
+      if (.not. this%gridConnection%idxToGlobal(n)%dmodel == this%owner) then
         ! only add connections for own model to global matrix
         cycle
       end if
 
       nglo = this%gridConnection%idxToGlobal(n)%index + &
-             this%gridConnection%idxToGlobal(n)%model%moffset
+             this%gridConnection%idxToGlobal(n)%dmodel%moffset
       rhssln(nglo) = rhssln(nglo) + this%rhs(n)
 
       do ipos = this%ia(n), this%ia(n + 1) - 1
@@ -541,7 +592,7 @@ contains
     ! for flows crossing the boundary, and set flowja for internal
     ! flows affected by the connection.
     do n = 1, this%neq
-      if (.not. associated(toGlobal(n)%model, this%owner)) then
+      if (.not. toGlobal(n)%dmodel == this%owner) then
         ! only add flows to own model
         cycle
       end if
@@ -557,7 +608,7 @@ contains
         m = imCon%ja(ipos)
         mLoc = toGlobal(m)%index
 
-        if (.not. associated(toGlobal(m)%model, this%owner)) then
+        if (.not. toGlobal(m)%dmodel == this%owner) then
           ! boundary connection, set edge properties
           isym = imCon%jas(ipos)
           ihc = imCon%ihc(isym)

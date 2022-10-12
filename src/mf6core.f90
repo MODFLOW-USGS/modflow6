@@ -297,6 +297,9 @@ contains
       call ep%exg_ar()
     end do
     !
+    ! -- Synchronize
+    call distributed_data%synchronize(0, BEFORE_AR)
+    !
     ! -- Allocate and read all model connections
     do ic = 1, baseconnectionlist%Count()
       mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)

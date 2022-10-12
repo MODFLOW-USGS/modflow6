@@ -684,7 +684,7 @@ contains
         else
           write (errmsg, '(a,1x,i0,1x,a)') &
             'CONDEQN for well', n, &
-            "must be 'CONDUCTANCE', 'THIEM', 'MEAN', or 'SKIN'."
+            "must be 'CUMULATIVE', 'THIEM', 'MEAN', or 'SKIN'."
         end if
         wellieqn(n) = ieqn
         !
@@ -1980,7 +1980,8 @@ contains
       !
       ! -- get period block
       call this%parser%GetBlock('PERIOD', isfound, ierr, &
-                                supportOpenClose=.true.)
+                                supportOpenClose=.true., &
+                                blockRequired=.false.)
       if (isfound) then
         !
         ! -- read ionper and check for increasing period numbers

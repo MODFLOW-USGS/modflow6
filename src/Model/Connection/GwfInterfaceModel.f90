@@ -12,7 +12,6 @@ module GwfInterfaceModelModule
   use GwfDisuModule
   use GwfNpfModule
   use GwfNpfOptionsModule
-  use GwfNpfGridDataModule
   use GwfBuyInputDataModule
   use GwfOcModule
   implicit none
@@ -37,7 +36,6 @@ module GwfInterfaceModelModule
 
     ! private
     procedure, private, pass(this) :: setNpfOptions
-    procedure, private, pass(this) :: setNpfGridData
     procedure, private, pass(this) :: setBuyData
   end type
 
@@ -96,7 +94,7 @@ contains
     ! define NPF package
     call npfOptions%construct()
     call this%setNpfOptions(npfOptions)
-    call this%npf%npf_df(this%dis, this%xt3d, 0, 0, npfOptions)
+    call this%npf%npf_df(this%dis, this%xt3d, 0, npfOptions)
     call npfOptions%destroy()
 
     ! define BUY package
@@ -120,15 +118,8 @@ contains
   !<
   subroutine gwfifm_ar(this)
     class(GwfInterfaceModelType) :: this !< the GWF interface model
-    ! local
-    type(GwfNpfGridDataType) :: npfGridData
-    integer(I4B), target :: ikmod = 0    ! kluge
 
-    call npfGridData%construct(this%dis%nodes)
-    call this%setNpfGridData(npfGridData)
-    call this%npf%npf_ar(this%ic, this%vsc, this%ibound, this%x, npfGridData)   ! kluge note: added local "ikmod" as a placeholder; speak to Martijn about integrating VSC
-    call npfGridData%destroy()
-
+    call this%npf%npf_ar(this%ic, this%ibound, this%x)
     if (this%inbuy > 0) call this%buy%buy_ar(this%npf, this%ibound)
 
   end subroutine gwfifm_ar
@@ -189,78 +180,6 @@ contains
     npfOptions%ihdwet = this%owner%npf%ihdwet
 
   end subroutine setNpfOptions
-
-  !> @brief Loop over the interface grid and fill the structure
-  !! with NPF grid data, copied from the models that participate
-  !! in this interface
-  !<
-  subroutine setNpfGridData(this, npfGridData)
-    class(GwfInterfaceModelType) :: this !< the interface model
-    type(GwfNpfGridDataType) :: npfGridData !< grid data to be set
-    ! local
-    integer(I4B) :: icell, idx
-    class(*), pointer :: modelPtr
-    class(GwfModelType), pointer :: gwfModel
-
-    ! TODO_MJR: deal with inhomogeneity, for now, we assume
-    ! that we can just take the owning model's settings...
-    npfGridData%ik22 = this%owner%npf%ik22
-    npfGridData%ik33 = this%owner%npf%ik33
-    npfGridData%iwetdry = this%owner%npf%iwetdry
-    npfGridData%iangle1 = this%owner%npf%iangle1
-    npfGridData%iangle2 = this%owner%npf%iangle2
-    npfGridData%iangle3 = this%owner%npf%iangle3
-    if (this%npf%ixt3d > 0) then
-      npfGridData%iangle1 = 1
-      npfGridData%iangle2 = 1
-      npfGridData%iangle3 = 1
-    end if
-
-    do icell = 1, this%gridConnection%nrOfCells
-      idx = this%gridConnection%idxToGlobal(icell)%index
-      modelPtr => this%gridConnection%idxToGlobal(icell)%model
-      gwfModel => CastAsGwfModel(modelPtr)
-
-      npfGridData%icelltype(icell) = gwfModel%npf%icelltype(idx)
-      npfGridData%k11(icell) = gwfModel%npf%k11(idx)
-      npfGridData%k22(icell) = gwfModel%npf%k22(idx)
-      npfGridData%k33(icell) = gwfModel%npf%k33(idx)
-
-      ! the K rotation angles, or default (0.0)
-      if (npfGridData%iangle1 == 1) then
-        if (gwfModel%npf%iangle1 == 1) then
-          npfGridData%angle1(icell) = gwfModel%npf%angle1(idx)
-        else
-          npfGridData%angle1(icell) = DZERO
-        end if
-      end if
-      if (npfGridData%iangle2 == 1) then
-        if (gwfModel%npf%iangle2 == 1) then
-          npfGridData%angle2(icell) = gwfModel%npf%angle2(idx)
-        else
-          npfGridData%angle2(icell) = DZERO
-        end if
-      end if
-      if (npfGridData%iangle3 == 1) then
-        if (gwfModel%npf%iangle3 == 1) then
-          npfGridData%angle3(icell) = gwfModel%npf%angle3(idx)
-        else
-          npfGridData%angle3(icell) = DZERO
-        end if
-      end if
-
-      ! wetdry parameter, TODO_MJR: where is it ever set to 1??
-      if (npfGridData%iwetdry == 1) then
-        if (gwfModel%npf%iwetdry == 1) then
-          npfGridData%wetdry(icell) = gwfModel%npf%wetdry(idx)
-        else
-          npfGridData%wetdry(icell) = DZERO
-        end if
-      end if
-
-    end do
-
-  end subroutine setNpfGridData
 
   !> @brief Sets the BUY input data from the models that
   !! make up this interface. We adopt everything from the

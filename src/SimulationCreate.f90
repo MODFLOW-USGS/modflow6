@@ -1,6 +1,6 @@
 module SimulationCreateModule
 
-  use KindModule, only: DP, I4B, write_kindinfo
+  use KindModule, only: DP, I4B, LGP, write_kindinfo
   use ConstantsModule, only: LINELENGTH, LENMODELNAME, LENBIGLINE, DZERO
   use SimVariablesModule, only: simfile, simlstfile, iout
   use GenericUtilitiesModule, only: sim_message, write_centered
@@ -14,6 +14,7 @@ module SimulationCreateModule
                                 GetBaseSolutionFromList
   use SolutionGroupModule, only: SolutionGroupType, AddSolutionGroupToList
   use BaseExchangeModule, only: BaseExchangeType, GetBaseExchangeFromList
+  use DistributedModelModule, only: add_dist_model
   use ListsModule, only: basesolutionlist, basemodellist, &
                          solutiongrouplist, baseexchangelist
   use BaseModelModule, only: GetBaseModelFromList
@@ -249,7 +250,6 @@ contains
     ! -- modules
     use GwfModule, only: gwf_cr
     use GwtModule, only: gwt_cr
-    use GweModule, only: gwe_cr
     use ConstantsModule, only: LENMODELNAME
     ! -- dummy
     ! -- local
@@ -276,14 +276,12 @@ contains
           call parser%GetString(fname)
           call add_model(im, 'GWF6', mname)
           call gwf_cr(fname, im, modelname(im))
+          call add_dist_model(im)
         case ('GWT6')
           call parser%GetString(fname)
           call add_model(im, 'GWT6', mname)
           call gwt_cr(fname, im, modelname(im))
-        case ('GWE6')
-            call parser%GetString(fname)
-            call add_model(im, 'GWE6', mname)
-            call gwe_cr(fname, im, modelname(im))
+          call add_dist_model(im)
         case default
           write (errmsg, '(4x,a,a)') &
             '****ERROR. UNKNOWN SIMULATION MODEL: ', &
@@ -310,7 +308,6 @@ contains
     use GwfGwfExchangeModule, only: gwfexchange_create
     use GwfGwtExchangeModule, only: gwfgwt_cr
     use GwtGwtExchangeModule, only: gwtexchange_create
-    use GwfGweExchangeModule, only: gwfgwe_cr
     ! -- dummy
     ! -- local
     integer(I4B) :: ierr
@@ -365,8 +362,6 @@ contains
           call gwfgwt_cr(fname, id, m1, m2)
         case ('GWT6-GWT6')
           call gwtexchange_create(fname, id, m1, m2)
-        case ('GWF6-GWE6')
-          call gwfgwe_cr(fname, id, m1, m2)
         case default
           write (errmsg, '(4x,a,a)') &
             '****ERROR. UNKNOWN SIMULATION EXCHANGES: ', &
@@ -408,6 +403,7 @@ contains
     integer(I4B) :: isgpsoln
     integer(I4B) :: sgid
     integer(I4B) :: mid
+    logical(LGP) :: blockRequired
     character(len=LINELENGTH) :: errmsg
     character(len=LENBIGLINE) :: keyword
     character(len=LINELENGTH) :: fname, mname
@@ -426,8 +422,11 @@ contains
     !Read through the simulation name file and process each SOLUTION_GROUP
     sgploop: do
       !
+      blockRequired = .false.
+      if (isgp == 0) blockRequired = .true.
       call parser%GetBlock('SOLUTIONGROUP', isfound, ierr, &
-                           supportOpenClose=.true.)
+                           supportOpenClose=.true., &
+                           blockRequired=blockRequired)
       if (ierr /= 0) exit sgploop
       if (.not. isfound) exit sgploop
       isgp = isgp + 1

@@ -18,10 +18,11 @@ module GwtGwtExchangeModule
                              TABCENTER, TABLEFT, LENAUXNAME, DNODATA, &
                              LENMODELNAME
   use ListModule, only: ListType
-  use ListsModule, only: basemodellist
+  use ListsModule, only: basemodellist, distmodellist
   use DisConnExchangeModule, only: DisConnExchangeType
   use GwtModule, only: GwtModelType
-  use TspMvtModule, only: TspMvtType
+  use DistributedModelModule, only: GetDistModelFromList
+  use GwtMvtModule, only: GwtMvtType
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
   use SimModule, only: count_errors, store_error, &
@@ -64,7 +65,7 @@ module GwtGwtExchangeModule
     !
     ! -- Mover transport package
     integer(I4B), pointer :: inmvt => null() !< unit number for mover transport (0 if off)
-    type(TspMvtType), pointer :: mvt => null() !< water mover object
+    type(GwtMvtType), pointer :: mvt => null() !< water mover object
     !
     ! -- Observation package
     integer(I4B), pointer :: inobs => null() !< unit number for GWT-GWT observations
@@ -153,6 +154,7 @@ contains
       exchange%model1 => mb
       exchange%gwtmodel1 => mb
     end select
+    exchange%dmodel1 => GetDistModelFromList(distmodellist, m1id)
     !
     ! -- set gwtmodel2
     mb => GetBaseModelFromList(basemodellist, m2id)
@@ -161,6 +163,7 @@ contains
       exchange%model2 => mb
       exchange%gwtmodel2 => mb
     end select
+    exchange%dmodel2 => GetDistModelFromList(distmodellist, m2id)
     !
     ! -- Verify that gwt model1 is of the correct type
     if (.not. associated(exchange%gwtmodel1)) then
@@ -932,7 +935,7 @@ contains
   !<
   subroutine read_mvt(this, iout)
     ! -- modules
-    use TspMvtModule, only: mvt_cr
+    use GwtMvtModule, only: mvt_cr
     ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
     integer(I4B), intent(in) :: iout

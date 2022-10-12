@@ -366,7 +366,16 @@ module InputOutputModule
     mainloop: do
       lloc = 1
       call u9rdcom(iin, iout, line, ierr)
-      if (ierr < 0) exit
+      if (ierr < 0) then
+        if (blockRequiredLocal) then
+          ermsg = 'Required block "' // trim(ctag) // &
+                  '" not found.  Found end of file instead.'
+          call store_error(ermsg)
+          call store_error_unit(iuext)
+        end if
+        ! block not found so exit
+        exit
+      end if
       call urword(line, lloc, istart, istop, 1, ival, rval, iin, iout)
       if (line(istart:istop) == 'BEGIN') then
         call urword(line, lloc, istart, istop, 1, ival, rval, iin, iout)

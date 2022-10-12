@@ -17,9 +17,10 @@ module GwfGwfExchangeModule
   use ConstantsModule, only: LENBOUNDNAME, NAMEDBOUNDFLAG, LINELENGTH, &
                              TABCENTER, TABLEFT, LENAUXNAME, DNODATA
   use ListModule, only: ListType
-  use ListsModule, only: basemodellist
+  use ListsModule, only: basemodellist, distmodellist
   use DisConnExchangeModule, only: DisConnExchangeType
   use GwfModule, only: GwfModelType
+  use DistributedModelModule, only: DistributedModelType, GetDistModelFromList
   use GhostNodeModule, only: GhostNodeType
   use GwfMvrModule, only: GwfMvrType
   use ObserveModule, only: ObserveType
@@ -159,6 +160,7 @@ contains
       exchange%model1 => mb
       exchange%gwfmodel1 => mb
     end select
+    exchange%dmodel1 => GetDistModelFromList(distmodellist, m1id)
     !
     ! -- set gwfmodel2
     mb => GetBaseModelFromList(basemodellist, m2id)
@@ -167,6 +169,7 @@ contains
       exchange%model2 => mb
       exchange%gwfmodel2 => mb
     end select
+    exchange%dmodel2 => GetDistModelFromList(distmodellist, m2id)
     !
     ! -- Verify that gwf model1 is of the correct type
     if (.not. associated(exchange%gwfmodel1)) then

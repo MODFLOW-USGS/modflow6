@@ -1,6 +1,6 @@
 module GwtInterfaceModelModule
   use KindModule, only: I4B, DP
-  use MemoryManagerModule, only: mem_allocate, mem_deallocate
+  use MemoryManagerModule, only: mem_allocate, mem_deallocate, mem_reallocate
   use MemoryHelperModule, only: create_mem_path
   use NumericalModelModule, only: NumericalModelType
   use GwtModule, only: GwtModelType, CastAsGwtModel
@@ -10,7 +10,6 @@ module GwtInterfaceModelModule
   use TspAdvOptionsModule, only: TspAdvOptionsType
   use GwtDspModule, only: dsp_cr, GwtDspType
   use GwtDspOptionsModule, only: GwtDspOptionsType
-  use GwtDspGridDataModule, only: GwtDspGridDataType
   use GwtMstModule, only: mst_cr
   use TspObsModule, only: tsp_obs_cr
   use GridConnectionModule
@@ -40,7 +39,6 @@ module GwtInterfaceModelModule
     procedure :: model_da => gwtifmod_da
     procedure, public :: allocate_fmi
     procedure :: allocate_scalars
-    procedure :: setDspGridData
   end type GwtInterfaceModelType
 
 contains
@@ -137,7 +135,25 @@ contains
       call this%adv%adv_df(adv_options)
     end if
     if (this%indsp > 0) then
+      this%dsp%idiffc = this%owner%dsp%idiffc
+      this%dsp%idisp = this%owner%dsp%idisp
       call this%dsp%dsp_df(this%dis, dsp_options)
+      if (this%dsp%idiffc > 0) then
+        call mem_reallocate(this%dsp%diffc, this%dis%nodes, 'DIFFC', &
+                            trim(this%dsp%memoryPath))
+      end if
+      if (this%dsp%idisp > 0) then
+        call mem_reallocate(this%dsp%alh, this%dis%nodes, 'ALH', &
+                            trim(this%dsp%memoryPath))
+        call mem_reallocate(this%dsp%alv, this%dis%nodes, 'ALV', &
+                            trim(this%dsp%memoryPath))
+        call mem_reallocate(this%dsp%ath1, this%dis%nodes, 'ATH1', &
+                            trim(this%dsp%memoryPath))
+        call mem_reallocate(this%dsp%ath2, this%dis%nodes, 'ATH2', &
+                            trim(this%dsp%memoryPath))
+        call mem_reallocate(this%dsp%atv, this%dis%nodes, 'ATV', &
+                            trim(this%dsp%memoryPath))
+      end if
       allocate (this%mst)
       call mem_allocate(this%mst%porosity, this%dis%nodes, &
                         'POROSITY', create_mem_path(this%name, 'MST'))
@@ -159,52 +175,16 @@ contains
   !< files
   subroutine gwtifmod_ar(this)
     class(GwtInterfaceModelType) :: this !< the GWT interface model
-    ! local
-    type(GwtDspGridDataType) :: dspGridData
 
     call this%fmi%fmi_ar(this%ibound)
     if (this%inadv > 0) then
       call this%adv%adv_ar(this%dis, this%ibound)
     end if
     if (this%indsp > 0) then
-      this%dsp%idiffc = this%owner%dsp%idiffc
-      this%dsp%idisp = this%owner%dsp%idisp
-      call dspGridData%construct(this%neq)
-      call this%setDspGridData(dspGridData)
-      call this%dsp%dsp_ar(this%ibound, this%mst%porosity, dspGridData)
+      call this%dsp%dsp_ar(this%ibound, this%mst%porosity)
     end if
 
   end subroutine gwtifmod_ar
-
-  !> @brief set dsp grid data from models
-  !<
-  subroutine setDspGridData(this, gridData)
-    class(GwtInterfaceModelType) :: this !< the GWT interface model
-    type(GwtDspGridDataType) :: gridData !< the dsp grid data to be set
-    ! local
-    integer(I4B) :: i, idx
-    class(GwtModelType), pointer :: gwtModel
-    class(*), pointer :: modelPtr
-
-    do i = 1, this%neq
-      modelPtr => this%gridConnection%idxToGlobal(i)%model
-      gwtModel => CastAsGwtModel(modelPtr)
-      idx = this%gridConnection%idxToGlobal(i)%index
-
-      if (this%dsp%idiffc > 0) then
-        gridData%diffc(i) = gwtModel%dsp%diffc(idx)
-      end if
-      if (this%dsp%idisp > 0) then
-        gridData%alh(i) = gwtModel%dsp%alh(idx)
-        gridData%alv(i) = gwtModel%dsp%alv(idx)
-        gridData%ath1(i) = gwtModel%dsp%ath1(idx)
-        gridData%ath2(i) = gwtModel%dsp%ath2(idx)
-        gridData%atv(i) = gwtModel%dsp%atv(idx)
-      end if
-
-    end do
-
-  end subroutine setDspGridData
 
   !> @brief Clean up resources
   !<
