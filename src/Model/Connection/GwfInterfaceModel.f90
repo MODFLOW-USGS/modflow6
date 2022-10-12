@@ -94,7 +94,7 @@ contains
     ! define NPF package
     call npfOptions%construct()
     call this%setNpfOptions(npfOptions)
-    call this%npf%npf_df(this%dis, this%xt3d, 0, npfOptions)
+    call this%npf%npf_df(this%dis, this%xt3d, 0, 0, npfOptions)
     call npfOptions%destroy()
 
     ! define BUY package
