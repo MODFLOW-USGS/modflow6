@@ -250,29 +250,12 @@ contains
   end function check_stage
 
   subroutine destroy(this)
-    use ListsModule, only: distexchangelist, distmodellist
-    use DistributedModelModule
-    use DistributedExchangeModule
     class(DistributedDataType) :: this
-    ! local
-    integer(I4B) :: im, ie
-    class(DistributedModelType), pointer :: dmod
-    class(DistributedExchangeType), pointer :: dexg
 
     !call this%print_variables()
 
     call this%variable_list%Clear(destroy=.true.)
     call this%remote_memory_list%clear()
-
-    ! TODO_MJR: find a better place to do this!!
-    do im = 1, distmodellist%Count()
-      dmod => GetDistModelFromList(distmodellist, im)
-      call dmod%deallocate()
-    end do
-    do ie = 1, distexchangelist%Count()
-      dexg => GetDistExchangeFromList(distexchangelist, ie)
-      call dexg%deallocate()
-    end do
 
   end subroutine destroy
 

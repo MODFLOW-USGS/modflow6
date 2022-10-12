@@ -18,7 +18,7 @@ module GwtGwtExchangeModule
                              TABCENTER, TABLEFT, LENAUXNAME, DNODATA, &
                              LENMODELNAME
   use ListModule, only: ListType
-  use ListsModule, only: basemodellist, distmodellist
+  use ListsModule, only: basemodellist
   use DisConnExchangeModule, only: DisConnExchangeType
   use GwtModule, only: GwtModelType
   use DistributedModelModule, only: get_dist_model

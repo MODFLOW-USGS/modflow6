@@ -16,6 +16,8 @@ module Mf6CoreModule
                                           GetSpatialModelConnectionFromList
   use BaseSolutionModule, only: BaseSolutionType, GetBaseSolutionFromList
   use SolutionGroupModule, only: SolutionGroupType, GetSolutionGroupFromList
+  use Mf6DistributedModule
+  ! TODO_MJR: this one will go
   use DistributedDataModule
   implicit none
 
@@ -190,7 +192,9 @@ contains
       deallocate (sgp)
     end do
     call simulation_da()
-    call distributed_data%destroy()  
+    call dd_finalize()
+    ! TODO_MJR: this one will go
+    call distributed_data%destroy()
     call lists_da()
     !
     ! -- Write memory usage, elapsed time and terminate

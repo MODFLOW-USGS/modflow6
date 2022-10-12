@@ -7,6 +7,12 @@ external_libraries = files(
 )
 
 modflow_sources = files(
+    'Distributed' / 'mf6dist.f90',
+    'Distributed' / 'mf6distlists.f90',
+    'Distributed' / 'DistributedDataBuilder.f90',
+    'Distributed' / 'DistributedBase.f90',
+    'Distributed' / 'DistributedModel.f90',
+    'Distributed' / 'DistributedExchange.f90',
     'Exchange' / 'BaseExchange.f90',
     'Exchange' / 'DisConnExchange.f90',
     'Exchange' / 'GhostNode.f90',
@@ -25,11 +31,7 @@ modflow_sources = files(
     'Model' / 'Connection' / 'GwtInterfaceModel.f90',
     'Model' / 'Connection' / 'SpatialModelConnection.f90',
     'Model' / 'Connection' / 'MappedVariable.f90',
-    'Model' / 'Connection' / 'DistributedDataBuilder.f90',
     'Model' / 'Connection' / 'DistributedData.f90',
-    'Model' / 'Connection' / 'DistributedBase.f90',
-    'Model' / 'Connection' / 'DistributedModel.f90',
-    'Model' / 'Connection' / 'DistributedExchange.f90',
     'Model' / 'Connection' / 'InterfaceMap.f90',
     'Model' / 'Geometry' / 'BaseGeometry.f90',
     'Model' / 'Geometry' / 'CircularGeometry.f90',

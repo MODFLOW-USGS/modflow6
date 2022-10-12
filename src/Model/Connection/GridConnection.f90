@@ -21,7 +21,6 @@ module GridConnectionModule
   use SparseModule, only: sparsematrix
   use InterfaceMapModule
   use BaseDisModule, only: dis_transform_xy
-  use ListsModule, only: distmodellist, distexchangelist
   use CsrUtilsModule
   use VectorIntModule
   implicit none

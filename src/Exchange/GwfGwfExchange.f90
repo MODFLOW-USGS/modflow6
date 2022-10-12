@@ -17,7 +17,7 @@ module GwfGwfExchangeModule
   use ConstantsModule, only: LENBOUNDNAME, NAMEDBOUNDFLAG, LINELENGTH, &
                              TABCENTER, TABLEFT, LENAUXNAME, DNODATA
   use ListModule, only: ListType
-  use ListsModule, only: basemodellist, distmodellist
+  use ListsModule, only: basemodellist
   use DisConnExchangeModule, only: DisConnExchangeType
   use GwfModule, only: GwfModelType
   use DistributedModelModule, only: DistributedModelType, get_dist_model

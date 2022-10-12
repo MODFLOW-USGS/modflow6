@@ -13,7 +13,6 @@ module SpatialModelConnectionModule
   use InterfaceMapModule
   use DistributedDataModule
   use DistributedModelModule, only: DistributedModelType, get_dist_model
-  use ListsModule, only: distmodellist
   use ListModule, only: ListType
   use VectorIntModule, only: VectorInt
 

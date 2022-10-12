@@ -5,7 +5,8 @@ module DistributedModelModule
   use MemoryManagerModule, only: mem_allocate, mem_deallocate
   use MemoryHelperModule, only: create_mem_path
   use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
-  use ListsModule, only: basemodellist, distmodellist
+  use ListsModule, only: basemodellist
+  use DistListsModule, only: distmodellist
   use DistributedBaseModule
   implicit none
   private
@@ -63,6 +64,8 @@ contains
     this%model => model
     this%is_local = .true.
 
+    call this%load(this%moffset, 'MOFFSET')
+
     this%moffset => this%model%moffset
     !call mem_allocate(this%moffset, 'MOFFSET', create_mem_path(this%name, context=LOCAL_MEM_CTX))
     call mem_allocate(this%dis_nodes, 'NODES', create_mem_path(this%name, 'DIS', context=LOCAL_MEM_CTX))
@@ -95,8 +98,7 @@ contains
       call ustop()
     end if
 
-    ! TODO_MJR: this should go after routing has been impl.  
-    !this%moffset = this%model%moffset  
+    ! TODO_MJR: this should go after routing has been impl.
     this%dis_nodes = this%model%dis%nodes
     this%dis_nja = this%model%dis%nja
 

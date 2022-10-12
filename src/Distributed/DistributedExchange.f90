@@ -3,7 +3,8 @@ module DistributedExchangeModule
   use ListModule
   use SimModule, only: ustop
   use DisConnExchangeModule
-  use ListsModule, only: baseexchangelist, distexchangelist
+  use ListsModule, only: baseexchangelist
+  use DistListsModule, only: distexchangelist
   use DistributedBaseModule
   implicit none
   private
