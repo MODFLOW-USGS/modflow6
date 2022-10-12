@@ -321,7 +321,8 @@ contains
       ! When reading a list, OPEN/CLOSE is handled by list reader,
       ! so supportOpenClose needs to be false in call the GetBlock.
       ! When reading as arrays, set supportOpenClose as desired.
-      call this%parser%GetBlock('PERIOD', isfound, ierr)
+      call this%parser%GetBlock('PERIOD', isfound, ierr, &
+                                blockRequired=.false.)
       if (isfound) then
         !
         ! -- read ionper and check for increasing period numbers

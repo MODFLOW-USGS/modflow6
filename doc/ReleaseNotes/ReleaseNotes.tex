@@ -212,6 +212,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 		\item Terminate with error if METHOD or METHODS not specified in time series input files.  Prior to this change, the program would continue without an interpolated value for one or more time series records.
 		\item When a GWF Model and a corresponding GWT model are solved in the same simulation, the GWF Model must be solved before the corresponding GWT model.  The GWF Model must also be solved by a different IMS than the GWT Model.  There was not a check for this in previous versions and if these conditions were not met, the solution would often not converge or it would give erroneous results.
 		\item The DISV Package would not raise an error if a model cell was defined as a line.  The program was modified to check for the case where the calculated cell area is equal to zero.  If the calculated cell area is equal to zero, the program terminates with an error.
+		\item When searching for a required block in an input file, the program would not terminate with a sensible error message if the end of file was found instead of the required block.  Program now indicates that the required block was not found.
 	\end{itemize}
 
 	\underline{INTERNAL FLOW PACKAGES}

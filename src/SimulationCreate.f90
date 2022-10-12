@@ -1,6 +1,6 @@
 module SimulationCreateModule
 
-  use KindModule, only: DP, I4B, write_kindinfo
+  use KindModule, only: DP, I4B, LGP, write_kindinfo
   use ConstantsModule, only: LINELENGTH, LENMODELNAME, LENBIGLINE, DZERO
   use SimVariablesModule, only: simfile, simlstfile, iout
   use GenericUtilitiesModule, only: sim_message, write_centered
@@ -403,6 +403,7 @@ contains
     integer(I4B) :: isgpsoln
     integer(I4B) :: sgid
     integer(I4B) :: mid
+    logical(LGP) :: blockRequired
     character(len=LINELENGTH) :: errmsg
     character(len=LENBIGLINE) :: keyword
     character(len=LINELENGTH) :: fname, mname
@@ -421,8 +422,11 @@ contains
     !Read through the simulation name file and process each SOLUTION_GROUP
     sgploop: do
       !
+      blockRequired = .false.
+      if (isgp == 0) blockRequired = .true.
       call parser%GetBlock('SOLUTIONGROUP', isfound, ierr, &
-                           supportOpenClose=.true.)
+                           supportOpenClose=.true., &
+                           blockRequired=blockRequired)
       if (ierr /= 0) exit sgploop
       if (.not. isfound) exit sgploop
       isgp = isgp + 1
