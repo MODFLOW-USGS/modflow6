@@ -2,7 +2,7 @@ module DistributedModelModule
   use KindModule, only: I4B, LGP
   use SimModule, only: ustop
   use ListModule, only: ListType
-  use MemoryManagerModule, only: mem_allocate
+  use MemoryManagerModule, only: mem_allocate, mem_deallocate
   use MemoryHelperModule, only: create_mem_path
   use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
   use ListsModule, only: basemodellist, distmodellist
@@ -18,7 +18,8 @@ module DistributedModelModule
 
   type, extends(DistributedBaseType) :: DistributedModelType
     integer(I4B), pointer :: moffset => null()
-    integer(I4B), pointer :: nodes => null()
+    integer(I4B), pointer :: dis_nodes => null()
+    integer(I4B), pointer :: dis_nja => null()
     integer(I4B), dimension(:), pointer, contiguous :: con_ia => null()
     integer(I4B), dimension(:), pointer, contiguous :: con_ja => null()
 
@@ -28,6 +29,7 @@ module DistributedModelModule
     generic :: create => create_local, create_remote
     procedure :: init_connectivity
     generic :: operator(==) => equals_dist_model, equals_num_model
+    procedure :: deallocate
     procedure :: access
     ! private
     procedure, private :: create_local
@@ -61,8 +63,10 @@ contains
     this%model => model
     this%is_local = .true.
 
-    ! connect cached variables
-    call this%load(this%moffset, 'MOFFSET')
+    this%moffset => this%model%moffset
+    !call mem_allocate(this%moffset, 'MOFFSET', create_mem_path(this%name, context=LOCAL_MEM_CTX))
+    call mem_allocate(this%dis_nodes, 'NODES', create_mem_path(this%name, 'DIS', context=LOCAL_MEM_CTX))
+    call mem_allocate(this%dis_nja, 'NJA', create_mem_path(this%name, 'DIS', context=LOCAL_MEM_CTX))
 
   end subroutine create_local
 
@@ -82,10 +86,8 @@ contains
   end subroutine create_remote
 
   subroutine init_connectivity(this)        
+    use NumericalModelModule
     class(DistributedModelType), intent(inout) :: this
-    ! local
-    integer(I4B) :: n, nja
-    class(NumericalModelType), pointer :: local_model    
 
     if (.not. this%is_local) then
       ! something is wrong here
@@ -93,14 +95,14 @@ contains
       call ustop()
     end if
 
-    local_model => this%access()
-    n = local_model%dis%nodes
-    nja = local_model%dis%nja
+    ! TODO_MJR: this should go after routing has been impl.  
+    !this%moffset = this%model%moffset  
+    this%dis_nodes = this%model%dis%nodes
+    this%dis_nja = this%model%dis%nja
 
     ! allocate memory space
-    !call mem_allocate(this%nodes, 'NODES', create_mem_path(this%name, context=LOCAL_MEM_CTX))
-    !call mem_allocate(this%con_ia, n + 1, 'IA', create_mem_path(this%name, 'CON', context=LOCAL_MEM_CTX))
-    !call mem_allocate(this%con_ja, nja, 'JA', create_mem_path(this%name, 'CON', context=LOCAL_MEM_CTX))
+    call mem_allocate(this%con_ia, this%dis_nodes + 1, 'IA', create_mem_path(this%name, 'CON', context=LOCAL_MEM_CTX))
+    call mem_allocate(this%con_ja, this%dis_nja, 'JA', create_mem_path(this%name, 'CON', context=LOCAL_MEM_CTX))
 
     ! add this image to the serial router
     ! ...
@@ -124,6 +126,19 @@ contains
     is_equal = (this%id == num_model%id)
 
   end function equals_num_model
+
+  subroutine deallocate(this)
+    class(DistributedModelType) :: this
+
+    !call mem_deallocate(this%moffset)
+    call mem_deallocate(this%dis_nodes)    
+    call mem_deallocate(this%dis_nja)
+    if (associated(this%con_ia)) then
+      call mem_deallocate(this%con_ia)
+      call mem_deallocate(this%con_ja)
+    end if
+
+  end subroutine deallocate
 
   function access(this) result(model)
     class(DistributedModelType) :: this

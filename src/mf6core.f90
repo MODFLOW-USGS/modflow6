@@ -190,8 +190,8 @@ contains
       deallocate (sgp)
     end do
     call simulation_da()
+    call distributed_data%destroy()  
     call lists_da()
-    call distributed_data%destroy()
     !
     ! -- Write memory usage, elapsed time and terminate
     call mem_write_usage(iout)

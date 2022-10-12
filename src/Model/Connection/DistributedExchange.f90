@@ -10,6 +10,7 @@ module DistributedExchangeModule
 
   public :: DistributedExchangeType
   public :: add_dist_exg, get_dist_exg
+  public :: GetDistExchangeFromList
 
   type, extends(DistributedBaseType) :: DistributedExchangeType
     integer(I4B) :: model1_id !< one model
@@ -20,6 +21,7 @@ module DistributedExchangeModule
   contains    
     procedure, private :: create_local
     procedure :: init_connectivity
+    procedure :: deallocate
     procedure :: access
   end type
 
@@ -59,6 +61,10 @@ module DistributedExchangeModule
     ! TODO_MJR
 
   end subroutine init_connectivity
+
+  subroutine deallocate(this)
+    class(DistributedExchangeType) :: this
+  end subroutine deallocate
 
   function access(this) result(exchange)
     class(DistributedExchangeType) :: this
