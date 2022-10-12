@@ -358,6 +358,7 @@ contains
     call mem_allocate(this%bditems, 'BDITEMS', this%memoryPath)
     call mem_allocate(this%cbcauxitems, 'CBCAUXITEMS', this%memoryPath)
     call mem_allocate(this%idense, 'IDENSE', this%memoryPath)
+    call mem_allocate(this%ivsc, 'IVSC', this%memoryPath)
     !
     ! -- Set values
     this%iprhed = 0
@@ -380,6 +381,7 @@ contains
     this%bditems = 11
     this%cbcauxitems = 1
     this%idense = 0
+    this%ivsc = 0
     !
     ! -- return
     return
@@ -2346,9 +2348,11 @@ contains
     real(DP) :: botl
     real(DP) :: sat
     real(DP) :: wa
+    real(DP) :: vscratio
     ! -- formats
 ! ------------------------------------------------------------------------------
     cond = DZERO
+    vscratio = DONE
     topl = this%telev(iconn)
     botl = this%belev(iconn)
     call this%lak_calculate_cond_head(iconn, stage, head, vv)
@@ -2378,7 +2382,18 @@ contains
       end if
       sat = wa
     end if
-    cond = sat * this%satcond(iconn)
+    !
+    ! -- account for viscosity effects (if vsc active)
+    if (this%ivsc == 1) then
+      ! flow from lake to aquifer
+      if (stage > head) then
+        vscratio = this%viscratios(1, iconn)
+      ! flow from aquifer to lake
+      else if (head > stage) then
+        vscratio = this%viscratios(2, iconn)
+      end if
+    end if
+    cond = sat * this%satcond(iconn) * vscratio
     !
     ! -- return
     return
@@ -6399,7 +6414,7 @@ contains
     ! -- return
     return
   end subroutine lak_activate_viscosity
-
+  
   subroutine lak_calculate_density_exchange(this, iconn, stage, head, cond, &
                                             botl, flow, gwfhcof, gwfrhs)
 ! ******************************************************************************

@@ -304,6 +304,7 @@ contains
     call mem_allocate(this%kappa, 'KAPPA', this%memoryPath)
     call mem_allocate(this%cbcauxitems, 'CBCAUXITEMS', this%memoryPath)
     call mem_allocate(this%idense, 'IDENSE', this%memoryPath)
+    call mem_allocate(this%ivsc, 'IVSC', this%memoryPath)
     !
     ! -- Set values
     this%correct_flow = .FALSE.
@@ -323,6 +324,7 @@ contains
     this%kappa = DEM4
     this%cbcauxitems = 1
     this%idense = 0
+    this%ivsc = 0
     !
     ! -- return
     return
@@ -3041,6 +3043,7 @@ contains
     call mem_deallocate(this%kappa)
     call mem_deallocate(this%cbcauxitems)
     call mem_deallocate(this%idense)
+    call mem_deallocate(this%ivsc)
     call mem_deallocate(this%viscratios)
     !
     ! -- pointers to gwf variables
@@ -3867,10 +3870,12 @@ contains
     real(DP) :: hbar
     real(DP) :: drterm
     real(DP) :: dhbarterm
+    real(DP) :: vscratio
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize terms
     cterm = DZERO
+    vscratio = DONE
     icflow = 0
     if (present(term2)) then
       inewton = 1
@@ -3886,9 +3891,19 @@ contains
     tmaw = this%topscrn(jpos)
     bmaw = this%botscrn(jpos)
     !
+    ! -- if vsc active, select appropriate viscosity ratio 
+    if (this%ivsc == 1) then
+      ! flow out of well (flow is negative)
+      if (flow < 0) then
+        vscratio = this%viscratios(1, igwfnode)
+      else if (flow > 0) then
+        vscratio = this%viscratios(2, igwfnode)
+      end if
+    end if
+    !
     ! -- calculate saturation
     call this%maw_calculate_saturation(n, j, igwfnode, sat)
-    cmaw = this%satcond(jpos) * sat
+    cmaw = this%satcond(jpos) * vscratio * sat
     !
     ! -- set upstream head, term, and term2 if returning newton terms
     if (inewton == 1) then
@@ -3937,14 +3952,14 @@ contains
         ! -- maw is upstream
         if (hmaw > hgwf) then
           hbar = sQuadratic0sp(hgwf, en, this%satomega)
-          term = drterm * this%satcond(jpos) * (hbar - hmaw)
+          term = drterm * this%satcond(jpos) * vscratio * (hbar - hmaw)
           dhbarterm = sQuadratic0spDerivative(hgwf, en, this%satomega)
           term2 = cmaw * (dhbarterm - DONE)
           !
           ! -- gwf is upstream
         else
           hbar = sQuadratic0sp(hmaw, en, this%satomega)
-          term = -drterm * this%satcond(jpos) * (hgwf - hbar)
+          term = -drterm * this%satcond(jpos) * vscratio * (hgwf - hbar)
           dhbarterm = sQuadratic0spDerivative(hmaw, en, this%satomega)
           term2 = cmaw * (DONE - dhbarterm)
         end if
@@ -3953,7 +3968,7 @@ contains
       !
       ! -- flow is not corrected, so calculate term for newton formulation
       if (inewton /= 0) then
-        term = drterm * this%satcond(jpos) * (hgwf - hmaw)
+        term = drterm * this%satcond(jpos) * vscratio * (hgwf - hmaw)
       end if
     end if
     !
@@ -4174,12 +4189,24 @@ contains
     real(DP) :: bmaw
     real(DP) :: htmp
     real(DP) :: hv
+    real(DP) :: vscratio
     ! -- format
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize qnet and htmp
     qnet = DZERO
+    vscratio = DONE
     htmp = this%shutofflevel(n)
+    !
+    ! -- if vsc active, select appropriate viscosity ratio 
+    if (this%ivsc == 1) then
+      ! flow out of well (flow is negative)
+      if (qnet < 0) then
+        vscratio = this%viscratios(1, igwfnode)
+      else if (qnet > 0) then
+        vscratio = this%viscratios(2, igwfnode)
+      end if
+    end if
     !
     ! -- calculate discharge to flowing wells
     if (this%iflowingwells > 0) then
@@ -4187,7 +4214,7 @@ contains
         bt = this%fwelev(n)
         tp = bt + this%fwrlen(n)
         scale = sQSaturation(tp, bt, htmp)
-        cfw = scale * this%fwcond(n)
+        cfw = scale * this%fwcond(n) * this%viscratios(2, n)
         this%ifwdischarge(n) = 0
         if (cfw > DZERO) then
           this%ifwdischarge(n) = 1
@@ -4212,7 +4239,7 @@ contains
       jpos = this%get_jpos(n, j)
       igwfnode = this%get_gwfnode(n, j)
       call this%maw_calculate_saturation(n, j, igwfnode, sat)
-      cmaw = this%satcond(jpos) * sat
+      cmaw = this%satcond(jpos) * vscratio * sat
       hgwf = this%xnew(igwfnode)
       bmaw = this%botscrn(jpos)
       hv = htmp

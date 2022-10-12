@@ -172,7 +172,7 @@ def build_model(idx, sim_folder='vsc_wSFR'):
         gwf,
         viscref=viscref,
         viscosity_filerecord=vsc_filerecord,
-        viscosityfuncrecord=[('nonlinear', 10.0, 248.37, 133.16)],
+        viscosityfuncrecord=[('nonlinear', 10.0, 248.37, 133.15)],
         nviscspecies=len(vsc_pd),
         packagedata=vsc_pd,
         pname='vsc',

@@ -474,6 +474,11 @@ contains
     case ('LAK')
       ! 
       ! -- lake
+      !  Update 'viscratios' internal to lak such that they are 
+      !  automatically applied in the LAK calc_cond() routine
+      call vsc_ad_lak(packobj, this%visc, this%viscref, this%elev, locvisc, &
+                      locconc, this%dviscdc, this%cviscref, this%ivisc, &
+                      this%a2, this%a3, this%a4, this%ctemp)
     case ('SFR')
       !
       ! -- streamflow routing
@@ -613,7 +618,131 @@ contains
     ! -- Return
     return
   end subroutine vsc_ad_sfr
+                        
+  !> @brief Update lak-related viscosity ratios
+  !! 
+  !! When the viscosity package is active, update the viscosity ratio that is
+  !! applied to the lakebed conductance calculated in the LAK package
+  !<
+  subroutine vsc_ad_lak(packobj, visc, viscref, elev, locvisc, locconc, &
+                        dviscdc, cviscref, ivisc, a2, a3, a4, ctemp)
+    ! -- modules
+    use BndModule, only: BndType
+    use LakModule, only: LakType
+    class(BndType), pointer :: packobj
+    ! -- dummy
+    real(DP), intent(in) :: viscref
+    real(DP), intent(in) :: a2, a3, a4
+    integer(I4B), intent(in) :: locvisc
+    integer(I4B), dimension(:), intent(in) :: locconc
+    integer(I4B), dimension(:), intent(in) :: ivisc
+    real(DP), dimension(:), intent(in) :: visc
+    real(DP), dimension(:), intent(in) :: elev
+    real(DP), dimension(:), intent(in) :: dviscdc
+    real(DP), dimension(:), intent(in) :: cviscref
+    real(DP), dimension(:), intent(inout) :: ctemp
+    ! -- local
+    integer(I4B) :: n
+    integer(I4B) :: node
+    real(DP) :: visclak
+! -------------------------------------------------------------------------------
+  !
+  ! -- update viscosity ratios for updating hyd. cond (and conductance)
+    select type (packobj)
+    type is (LakType)
+      do n = 1, packobj%nbound
+        !
+        ! -- get gwf node number
+        node = packobj%nodelist(n)
+        ! 
+        ! -- Check if boundary cell is active, cycle if not
+        if (packobj%ibound(node) <= 0) cycle
+        !
+        ! -- 
+        !
+        ! -- calculate the viscosity associcated with the boundary 
+        visclak = calc_bnd_viscosity(n, locvisc, locconc, viscref, dviscdc, &
+                                     cviscref, ctemp, ivisc, a2, a3, a4, &
+                                     packobj%auxvar)
+        !
+        ! -- fill lak relative viscosity into column 1 of viscratios
+        packobj%viscratios(1, n) = calc_vsc_ratio(viscref, visclak)
+        !
+        ! -- fill gwf relative viscosity into column 2 of viscratios
+        packobj%viscratios(2, n) = calc_vsc_ratio(viscref, visc(node))
+        !
+        ! -- fill gwf elevation into column 3 of viscratios
+        !packobj%viscratios(3, n) = elev(node)
+        !
+      end do
+    end select
+    !
+    ! -- Return
+    return
+  end subroutine vsc_ad_lak
 
+  !> @brief Update maw-related viscosity ratios
+  !! 
+  !! When the viscosity package is active, update the viscosity ratio that is
+  !! applied to the conductance calculated in the MAW package
+  !<
+  subroutine vsc_ad_maw(packobj, visc, viscref, elev, locvisc, locconc, &
+                        dviscdc, cviscref, ivisc, a2, a3, a4, ctemp)
+    ! -- modules
+    use BndModule, only: BndType
+    use MawModule, only: MawType
+    class(BndType), pointer :: packobj
+    ! -- dummy
+    real(DP), intent(in) :: viscref
+    real(DP), intent(in) :: a2, a3, a4
+    integer(I4B), intent(in) :: locvisc
+    integer(I4B), dimension(:), intent(in) :: locconc
+    integer(I4B), dimension(:), intent(in) :: ivisc
+    real(DP), dimension(:), intent(in) :: visc
+    real(DP), dimension(:), intent(in) :: elev
+    real(DP), dimension(:), intent(in) :: dviscdc
+    real(DP), dimension(:), intent(in) :: cviscref
+    real(DP), dimension(:), intent(inout) :: ctemp
+    ! -- local
+    integer(I4B) :: n
+    integer(I4B) :: node
+    real(DP) :: viscmaw
+! -------------------------------------------------------------------------------
+  !
+  ! -- update viscosity ratios for updating hyd. cond (and conductance)
+    select type (packobj)
+    type is (MawType)
+      do n = 1, packobj%nbound
+        !
+        ! -- get gwf node number
+        node = packobj%nodelist(n)
+        ! 
+        ! -- Check if boundary cell is active, cycle if not
+        if (packobj%ibound(node) <= 0) cycle
+        !
+        ! -- 
+        !
+        ! -- calculate the viscosity associcated with the boundary 
+        viscmaw = calc_bnd_viscosity(n, locvisc, locconc, viscref, dviscdc, &
+                                     cviscref, ctemp, ivisc, a2, a3, a4, &
+                                     packobj%auxvar)
+        !
+        ! -- fill lak relative viscosity into column 1 of viscratios
+        packobj%viscratios(1, n) = calc_vsc_ratio(viscref, viscmaw)
+        !
+        ! -- fill gwf relative viscosity into column 2 of viscratios
+        packobj%viscratios(2, n) = calc_vsc_ratio(viscref, visc(node))
+        !
+        ! -- fill gwf elevation into column 3 of viscratios
+        !packobj%viscratios(3, n) = elev(node)
+        !
+      end do
+    end select
+    !
+    ! -- Return
+    return
+  end subroutine vsc_ad_maw
+                        
   !> @brief apply bnd viscosity to the conductance term
   !!
   !! When the viscosity package is active apply the viscosity ratio to the 
