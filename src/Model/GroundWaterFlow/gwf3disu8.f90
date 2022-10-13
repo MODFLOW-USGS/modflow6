@@ -124,7 +124,8 @@ contains
       ! -- initialize parser and load the disu input file
       call dis%parser%Initialize(inunit, iout)
       !
-      ! -- IDM load source parameters
+      ! -- Use the input data model routines to load the input data
+      !    into memory
       call input_load(dis%parser, 'DISU6', 'GWF', 'DISU', name_model, 'DISU', &
                       [character(len=LENPACKAGETYPE) ::], iout)
       !
@@ -138,7 +139,7 @@ contains
 
   subroutine disu_load(this)
 ! ******************************************************************************
-! disu_df -- Read discretization information from DISU input file
+! disu_load -- transfer data into this discretization object
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:

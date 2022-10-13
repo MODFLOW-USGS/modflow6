@@ -104,7 +104,8 @@ contains
       ! -- Initialize block parser
       call dis%parser%Initialize(inunit, iout)
       !
-      ! -- IDM load source parameters
+      ! -- Use the input data model routines to load the input data
+      !    into memory
       call input_load(dis%parser, 'DIS6', 'GWF', 'DIS', name_model, 'DIS', &
                       [character(len=LENPACKAGETYPE) ::], iout)
     end if
@@ -115,7 +116,7 @@ contains
 
   subroutine dis3d_df(this)
 ! ******************************************************************************
-! read_from_file -- Allocate and read discretization information
+! dis3d_df -- Define
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -127,7 +128,7 @@ contains
     ! -- locals
 ! ------------------------------------------------------------------------------
     !
-    ! -- read data from file
+    ! -- Transfer the data from the memory manager into this package object
     if (this%inunit /= 0) then
       !
       ! -- source input options
@@ -191,40 +192,6 @@ contains
     return
   end subroutine dis3d_da
 
-  !> @brief Write user options to list file
-  !<
-  subroutine log_options(this, afound)
-    class(GwfDisType) :: this
-    logical, dimension(:), intent(in) :: afound
-
-    write (this%iout, '(1x,a)') 'Setting Discretization Options'
-
-    if (afound(1)) then
-      write (this%iout, '(4x,a,i0)') 'MODEL LENGTH UNIT [0=UND, 1=FEET, &
-      &2=METERS, 3=CENTIMETERS] SET AS ', this%lenuni
-    end if
-
-    if (afound(2)) then
-      write (this%iout, '(4x,a,i0)') 'BINARY GRB FILE [0=GRB, 1=NOGRB] &
-        &SET AS ', this%nogrb
-    end if
-
-    if (afound(3)) then
-      write (this%iout, '(4x,a,G0)') 'XORIGIN = ', this%xorigin
-    end if
-
-    if (afound(4)) then
-      write (this%iout, '(4x,a,G0)') 'YORIGIN = ', this%yorigin
-    end if
-
-    if (afound(5)) then
-      write (this%iout, '(4x,a,G0)') 'ANGROT = ', this%angrot
-    end if
-
-    write (this%iout, '(1x,a,/)') 'End Setting Discretization Options'
-
-  end subroutine log_options
-
   !> @brief Copy options from IDM into package
   !<
   subroutine source_options(this)
@@ -260,6 +227,40 @@ contains
     ! -- Return
     return
   end subroutine source_options
+
+  !> @brief Write user options to list file
+  !<
+  subroutine log_options(this, afound)
+    class(GwfDisType) :: this
+    logical, dimension(:), intent(in) :: afound
+
+    write (this%iout, '(1x,a)') 'Setting Discretization Options'
+
+    if (afound(1)) then
+      write (this%iout, '(4x,a,i0)') 'MODEL LENGTH UNIT [0=UND, 1=FEET, &
+      &2=METERS, 3=CENTIMETERS] SET AS ', this%lenuni
+    end if
+
+    if (afound(2)) then
+      write (this%iout, '(4x,a,i0)') 'BINARY GRB FILE [0=GRB, 1=NOGRB] &
+        &SET AS ', this%nogrb
+    end if
+
+    if (afound(3)) then
+      write (this%iout, '(4x,a,G0)') 'XORIGIN = ', this%xorigin
+    end if
+
+    if (afound(4)) then
+      write (this%iout, '(4x,a,G0)') 'YORIGIN = ', this%yorigin
+    end if
+
+    if (afound(5)) then
+      write (this%iout, '(4x,a,G0)') 'ANGROT = ', this%angrot
+    end if
+
+    write (this%iout, '(1x,a,/)') 'End Setting Discretization Options'
+
+  end subroutine log_options
 
   !> @brief Copy dimensions from IDM into package
   !<

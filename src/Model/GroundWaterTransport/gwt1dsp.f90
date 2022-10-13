@@ -118,7 +118,8 @@ contains
       ! -- Initialize block parser
       call dspobj%parser%Initialize(dspobj%inunit, dspobj%iout)
       !
-      ! -- IDM load source parameters
+      ! -- Use the input data model routines to load the input data
+      !    into memory
       call input_load(dspobj%parser, 'DSP6', 'GWT', 'DSP', dspobj%name_model, &
                       'DSP', [character(len=LENPACKAGETYPE) ::], iout)
     end if
@@ -129,7 +130,7 @@ contains
 
   subroutine dsp_df(this, dis, dspOptions)
 ! ******************************************************************************
-! dsp_df -- Allocate and Read
+! dsp_df -- Define
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:

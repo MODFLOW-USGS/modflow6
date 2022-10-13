@@ -108,7 +108,8 @@ contains
       ! -- initialize parser and load the disv input file
       call dis%parser%Initialize(dis%inunit, dis%iout)
       !
-      ! -- IDM load source parameters
+      ! -- Use the input data model routines to load the input data
+      !    into memory
       call input_load(dis%parser, 'DISV6', 'GWF', 'DISV', name_model, 'DISV', &
                       [character(len=LENPACKAGETYPE) ::], iout)
       !
@@ -122,7 +123,7 @@ contains
 
   subroutine disv_load(this)
 ! ******************************************************************************
-! disv_load -- source input data
+! disv_load -- transfer data into this discretization object
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -132,19 +133,11 @@ contains
     ! -- locals
 ! ------------------------------------------------------------------------------
     !
-    ! -- source input options
+    ! -- source input data
     call this%source_options()
-    !
-    ! -- source input dimensions
     call this%source_dimensions()
-    !
-    ! -- source input GRIDDATA
     call this%source_griddata()
-    !
-    ! -- source VERTICES
     call this%source_vertices()
-    !
-    ! -- source CELL2D
     call this%source_cell2d()
     !
     ! -- Return
@@ -153,7 +146,7 @@ contains
 
   subroutine disv_df(this)
 ! ******************************************************************************
-! read_from_file -- Allocate and read discretization information
+! disv_df -- Define
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -215,40 +208,6 @@ contains
     return
   end subroutine disv_da
 
-  !> @brief Write user options to list file
-  !<
-  subroutine log_options(this, afound)
-    class(GwfDisvType) :: this
-    logical, dimension(:), intent(in) :: afound
-
-    write (this%iout, '(1x,a)') 'Setting Discretization Options'
-
-    if (afound(1)) then
-      write (this%iout, '(4x,a,i0)') 'MODEL LENGTH UNIT [0=UND, 1=FEET, &
-      &2=METERS, 3=CENTIMETERS] SET AS ', this%lenuni
-    end if
-
-    if (afound(2)) then
-      write (this%iout, '(4x,a,i0)') 'BINARY GRB FILE [0=GRB, 1=NOGRB] &
-        &SET AS ', this%nogrb
-    end if
-
-    if (afound(3)) then
-      write (this%iout, '(4x,a,G0)') 'XORIGIN = ', this%xorigin
-    end if
-
-    if (afound(4)) then
-      write (this%iout, '(4x,a,G0)') 'YORIGIN = ', this%yorigin
-    end if
-
-    if (afound(5)) then
-      write (this%iout, '(4x,a,G0)') 'ANGROT = ', this%angrot
-    end if
-
-    write (this%iout, '(1x,a,/)') 'End Setting Discretization Options'
-
-  end subroutine log_options
-
   !> @brief Copy options from IDM into package
   !<
   subroutine source_options(this)
@@ -291,29 +250,39 @@ contains
     return
   end subroutine source_options
 
-  !> @brief Write dimensions to list file
+  !> @brief Write user options to list file
   !<
-  subroutine log_dimensions(this, afound)
+  subroutine log_options(this, afound)
     class(GwfDisvType) :: this
     logical, dimension(:), intent(in) :: afound
 
-    write (this%iout, '(1x,a)') 'Setting Discretization Dimensions'
+    write (this%iout, '(1x,a)') 'Setting Discretization Options'
 
     if (afound(1)) then
-      write (this%iout, '(4x,a,i0)') 'NLAY = ', this%nlay
+      write (this%iout, '(4x,a,i0)') 'MODEL LENGTH UNIT [0=UND, 1=FEET, &
+      &2=METERS, 3=CENTIMETERS] SET AS ', this%lenuni
     end if
 
     if (afound(2)) then
-      write (this%iout, '(4x,a,i0)') 'NCPL = ', this%ncpl
+      write (this%iout, '(4x,a,i0)') 'BINARY GRB FILE [0=GRB, 1=NOGRB] &
+        &SET AS ', this%nogrb
     end if
 
     if (afound(3)) then
-      write (this%iout, '(4x,a,i0)') 'NVERT = ', this%nvert
+      write (this%iout, '(4x,a,G0)') 'XORIGIN = ', this%xorigin
     end if
 
-    write (this%iout, '(1x,a,/)') 'End Setting Discretization Dimensions'
+    if (afound(4)) then
+      write (this%iout, '(4x,a,G0)') 'YORIGIN = ', this%yorigin
+    end if
 
-  end subroutine log_dimensions
+    if (afound(5)) then
+      write (this%iout, '(4x,a,G0)') 'ANGROT = ', this%angrot
+    end if
+
+    write (this%iout, '(1x,a,/)') 'End Setting Discretization Options'
+
+  end subroutine log_options
 
   !> @brief Copy dimensions from IDM into package
   !<
@@ -390,29 +359,29 @@ contains
     return
   end subroutine source_dimensions
 
-  !> @brief Write griddata found to list file
+  !> @brief Write dimensions to list file
   !<
-  subroutine log_griddata(this, afound)
+  subroutine log_dimensions(this, afound)
     class(GwfDisvType) :: this
     logical, dimension(:), intent(in) :: afound
 
-    write (this%iout, '(1x,a)') 'Setting Discretization Griddata'
+    write (this%iout, '(1x,a)') 'Setting Discretization Dimensions'
 
     if (afound(1)) then
-      write (this%iout, '(4x,a)') 'TOP set from input file'
+      write (this%iout, '(4x,a,i0)') 'NLAY = ', this%nlay
     end if
 
     if (afound(2)) then
-      write (this%iout, '(4x,a)') 'BOTM set from input file'
+      write (this%iout, '(4x,a,i0)') 'NCPL = ', this%ncpl
     end if
 
     if (afound(3)) then
-      write (this%iout, '(4x,a)') 'IDOMAIN set from input file'
+      write (this%iout, '(4x,a,i0)') 'NVERT = ', this%nvert
     end if
 
-    write (this%iout, '(1x,a,/)') 'End Setting Discretization Griddata'
+    write (this%iout, '(1x,a,/)') 'End Setting Discretization Dimensions'
 
-  end subroutine log_griddata
+  end subroutine log_dimensions
 
   subroutine source_griddata(this)
 ! ******************************************************************************
@@ -448,6 +417,30 @@ contains
     ! -- Return
     return
   end subroutine source_griddata
+
+  !> @brief Write griddata found to list file
+  !<
+  subroutine log_griddata(this, afound)
+    class(GwfDisvType) :: this
+    logical, dimension(:), intent(in) :: afound
+
+    write (this%iout, '(1x,a)') 'Setting Discretization Griddata'
+
+    if (afound(1)) then
+      write (this%iout, '(4x,a)') 'TOP set from input file'
+    end if
+
+    if (afound(2)) then
+      write (this%iout, '(4x,a)') 'BOTM set from input file'
+    end if
+
+    if (afound(3)) then
+      write (this%iout, '(4x,a)') 'IDOMAIN set from input file'
+    end if
+
+    write (this%iout, '(1x,a,/)') 'End Setting Discretization Griddata'
+
+  end subroutine log_griddata
 
   subroutine grid_finalize(this)
 ! ******************************************************************************
