@@ -10,6 +10,7 @@ module GwfNpfModule
   use GwfNpfOptionsModule, only: GwfNpfOptionsType
   use BaseDisModule, only: DisBaseType
   use GwfIcModule, only: GwfIcType
+  use GwfVscModule, only: GwfVscType
   use Xt3dModule, only: Xt3dType
   use BlockParserModule, only: BlockParserType
   use InputOutputModule, only: GetUnit, openfile
@@ -32,6 +33,7 @@ module GwfNpfModule
   type, extends(NumericalPackageType) :: GwfNpfType
 
     type(GwfIcType), pointer :: ic => null() !< initial conditions object
+    type(GwfVscType), pointer :: vsc => null() !< viscosity object
     type(Xt3dType), pointer :: xt3d => null() !< xt3d pointer
     integer(I4B), pointer :: iname => null() !< length of variable names
     character(len=24), dimension(:), pointer :: aname => null() !< variable names
@@ -63,6 +65,9 @@ module GwfNpfModule
     real(DP), dimension(:), pointer, contiguous :: k11 => null() !< hydraulic conductivity; if anisotropic, then this is Kx prior to rotation
     real(DP), dimension(:), pointer, contiguous :: k22 => null() !< hydraulic conductivity; if specified then this is Ky prior to rotation
     real(DP), dimension(:), pointer, contiguous :: k33 => null() !< hydraulic conductivity; if specified then this is Kz prior to rotation
+    real(DP), dimension(:), pointer, contiguous :: k11_input => null() !< hydraulic conductivity originally specified by user prior to TVK or VSC modification
+    real(DP), dimension(:), pointer, contiguous :: k22_input => null() !< hydraulic conductivity originally specified by user prior to TVK or VSC modification
+    real(DP), dimension(:), pointer, contiguous :: k33_input => null() !< hydraulic conductivity originally specified by user prior to TVK or VSC modification
     integer(I4B), pointer :: iavgkeff => null() !< effective conductivity averaging (0: harmonic, 1: arithmetic)
     integer(I4B), pointer :: ik22 => null() !< flag that k22 is specified
     integer(I4B), pointer :: ik33 => null() !< flag that k33 is specified
@@ -90,7 +95,9 @@ module GwfNpfModule
     real(DP), dimension(:, :), pointer, contiguous :: propsedge => null() !< edge properties (Q, area, nx, ny, distance)
     !
     integer(I4B), pointer :: intvk => null() ! TVK (time-varying K) unit number (0 if unused)
+    integer(I4B), pointer :: invsc => null() ! VSC (viscosity) unit number (0 if unused); viscosity leads to time-varying K's
     type(TvkType), pointer :: tvk => null() ! TVK object
+    !type(GwfVscType), pointer :: vsc => null() ! VSC object
     integer(I4B), pointer :: kchangeper => null() ! last stress period in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
     integer(I4B), pointer :: kchangestp => null() ! last time step in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
     integer(I4B), dimension(:), pointer, contiguous :: nodekchange => null() ! grid array of flags indicating for each node whether its K (or K22, or K33) value changed (1) at (kchangeper, kchangestp) or not (0)
@@ -115,6 +122,7 @@ module GwfNpfModule
     procedure, private :: wd => sgwf_npf_wetdry
     procedure, private :: wdmsg => sgwf_npf_wdmsg
     procedure :: allocate_scalars
+    procedure, private :: store_original_k_arrays
     procedure, private :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: set_options
@@ -147,7 +155,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    type(GwfNpftype), pointer :: npfobj
+    type(GwfNpfType), pointer :: npfobj
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
@@ -177,7 +185,7 @@ contains
   !! should be passed. A consistency check is performed, and finally
   !! xt3d_df is called, when enabled.
   !<
-  subroutine npf_df(this, dis, xt3d, ingnc, npf_options)
+  subroutine npf_df(this, dis, xt3d, ingnc, invsc, npf_options)
 ! ******************************************************************************
 ! npf_df -- Define
 ! ******************************************************************************
@@ -192,6 +200,7 @@ contains
     class(DisBaseType), pointer, intent(inout) :: dis !< the pointer to the discretization
     type(Xt3dType), pointer :: xt3d !< the pointer to the XT3D 'package'
     integer(I4B), intent(in) :: ingnc !< ghostnodes enabled? (>0 means yes)
+    integer(I4B), intent(in) :: invsc !< viscosity enabled? (>0 means yes)
     type(GwfNpfOptionsType), optional, intent(in) :: npf_options !< the optional options, for when not constructing from file
     ! -- local
     ! -- formats
@@ -203,6 +212,9 @@ contains
     !
     ! -- Set a pointer to dis
     this%dis => dis
+    !
+    ! -- Set flag signifying whether vsc is active
+    if (invsc > 0) this%invsc = invsc
     !
     if (.not. present(npf_options)) then
       ! -- Print a message identifying the node property flow package.
@@ -293,7 +305,7 @@ contains
   !! Allocate remaining package arrays, preprocess the input data and
   !! call *_ar on xt3d, when active.
   !<
-  subroutine npf_ar(this, ic, ibound, hnew)
+  subroutine npf_ar(this, ic, vsc, ibound, hnew)
 ! ******************************************************************************
 ! npf_ar -- Allocate and Read
 ! ******************************************************************************
@@ -305,6 +317,7 @@ contains
     ! -- dummy
     class(GwfNpftype) :: this !< instance of the NPF package
     type(GwfIcType), pointer, intent(in) :: ic !< initial conditions
+    type(GwfVscType), pointer, intent(in) :: vsc !< viscosity package
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: ibound !< model ibound array
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: hnew !< pointer to model head array
     ! -- local
@@ -327,6 +340,19 @@ contains
       do n = 1, this%dis%nodes
         this%spdis(:, n) = DZERO
       end do
+    end if
+    !
+    ! -- Store pointer to VSC if active
+    if (this%invsc /= 0) then
+      this%vsc => vsc
+    end if
+
+    !
+    ! -- allocate arrays to store original user input in case TVK/VSC modify them
+    if (this%invsc > 0) then 
+      ! Need to allocate arrays that will store the original K values so 
+      ! that the current K11 etc. carry the "real" K's that are updated 
+      call this%store_original_k_arrays(this%dis%nodes, this%dis%njas)
     end if
     !
     ! -- preprocess data
@@ -406,6 +432,12 @@ contains
     ! -- TVK
     if (this%intvk /= 0) then
       call this%tvk%ad()
+    end if
+    !
+    ! -- VSC
+    ! -- Hit the TVK-updated K's with VSC correction before calling/updating condsat
+    if (this%invsc /= 0) then
+      call this%vsc%update_k_with_vsc()
     end if
     !
     ! -- If any K values have changed, we need to update CONDSAT or XT3D arrays
@@ -1077,6 +1109,7 @@ contains
     call mem_deallocate(this%ik22overk)
     call mem_deallocate(this%ik33overk)
     call mem_deallocate(this%intvk)
+    call mem_deallocate(this%invsc)
     call mem_deallocate(this%kchangeper)
     call mem_deallocate(this%kchangestp)
     !
@@ -1087,6 +1120,9 @@ contains
     call mem_deallocate(this%k11)
     call mem_deallocate(this%k22)
     call mem_deallocate(this%k33)
+    call mem_deallocate(this%k11_input)   ! , 'K11_INPUT', trim(this%memoryPath)
+    call mem_deallocate(this%k22_input)   ! , 'K22_INPUT', trim(this%memoryPath)
+    call mem_deallocate(this%k33_input)   ! , 'K33_INPUT', trim(this%memoryPath)
     call mem_deallocate(this%sat)
     call mem_deallocate(this%condsat)
     call mem_deallocate(this%wetdry)
@@ -1155,6 +1191,7 @@ contains
     call mem_allocate(this%nedges, 'NEDGES', this%memoryPath)
     call mem_allocate(this%lastedge, 'LASTEDGE', this%memoryPath)
     call mem_allocate(this%intvk, 'INTVK', this%memoryPath)
+    call mem_allocate(this%invsc, 'INVSC', this%memoryPath)
     call mem_allocate(this%kchangeper, 'KCHANGEPER', this%memoryPath)
     call mem_allocate(this%kchangestp, 'KCHANGESTP', this%memoryPath)
     !
@@ -1195,6 +1232,7 @@ contains
     this%nedges = 0
     this%lastedge = 0
     this%intvk = 0
+    this%invsc = 0
     this%kchangeper = 0
     this%kchangestp = 0
     !
@@ -1205,6 +1243,35 @@ contains
     return
   end subroutine allocate_scalars
 
+  subroutine store_original_k_arrays(this, ncells, njas)
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_allocate
+    ! -- dummy
+    class(GwfNpftype) :: this
+    integer(I4B), intent(in) :: ncells
+    integer(I4B), intent(in) :: njas
+    ! -- local
+    integer(I4B) :: n
+! ------------------------------------------------------------------------------
+    !
+    ! -- Retain copy of user-specified K arrays 
+    do n = 1, ncells
+      this%k11_input(n) = this%k11(n)
+      if (this%ik22 /= 0) then
+        this%k22_input(n) = this%k22(n)
+      end if
+      if (this%ik33 /= 0) then
+        this%k33_input(n) = this%k33(n)
+      end if
+    end do
+    !
+    ! -- Return
+    return
+  end subroutine store_original_k_arrays
+  
   subroutine allocate_arrays(this, ncells, njas)
 ! ******************************************************************************
 ! allocate_arrays -- Allocate npf arrays
@@ -1231,6 +1298,9 @@ contains
     ! -- Optional arrays dimensioned to full size initially
     call mem_allocate(this%k22, ncells, 'K22', this%memoryPath)
     call mem_allocate(this%k33, ncells, 'K33', this%memoryPath)
+    call mem_allocate(this%k11_input, ncells, 'K11_INPUT', this%memoryPath)
+    call mem_allocate(this%k22_input, ncells, 'K22_INPUT', this%memoryPath)
+    call mem_allocate(this%k33_input, ncells, 'K33_INPUT', this%memoryPath)
     call mem_allocate(this%wetdry, ncells, 'WETDRY', this%memoryPath)
     call mem_allocate(this%angle1, ncells, 'ANGLE1', this%memoryPath)
     call mem_allocate(this%angle2, ncells, 'ANGLE2', this%memoryPath)
