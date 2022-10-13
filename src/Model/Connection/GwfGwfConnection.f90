@@ -18,7 +18,7 @@ module GwfGwfConnectionModule
   use BaseDisModule, only: DisBaseType
   use ConnectionsModule, only: ConnectionsType
   use CellWithNbrsModule, only: GlobalCellType
-  use DistributedDataModule
+  use DistVariableModule
 
   implicit none
   private
@@ -160,43 +160,30 @@ contains
     this%gwfInterfaceModel%npf%iangle2 = this%gwfModel%npf%iangle2
     this%gwfInterfaceModel%npf%iangle3 = this%gwfModel%npf%iangle3
 
-    call this%addDistVar('X', '', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR, BEFORE_AD, BEFORE_CF/))
-    call this%addDistVar('IBOUND', '', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR, BEFORE_AD, BEFORE_CF/))
-    call this%addDistVar('XOLD', '', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AD, BEFORE_CF/))
-    call this%addDistVar('ICELLTYPE', 'NPF', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))
-    call this%addDistVar('K11', 'NPF', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))
-    call this%addDistVar('K22', 'NPF', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))
-    call this%addDistVar('K33', 'NPF', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))
+    call this%addDistVar('X', '', SYNC_NODES, &
+                         (/BEFORE_AR, BEFORE_AD, BEFORE_CF/))
+    call this%addDistVar('IBOUND', '', SYNC_NODES, &
+                         (/BEFORE_AR, BEFORE_AD, BEFORE_CF/))
+    call this%addDistVar('XOLD', '', SYNC_NODES, (/BEFORE_AD, BEFORE_CF/))
+    call this%addDistVar('ICELLTYPE', 'NPF', SYNC_NODES, (/BEFORE_AR/))
+    call this%addDistVar('K11', 'NPF', SYNC_NODES, (/BEFORE_AR/))
+    call this%addDistVar('K22', 'NPF', SYNC_NODES, (/BEFORE_AR/))
+    call this%addDistVar('K33', 'NPF', SYNC_NODES, (/BEFORE_AR/))
     if (this%gwfInterfaceModel%npf%iangle1 == 1) then
-      call this%addDistVar('ANGLE1', 'NPF', this%gwfInterfaceModel%name, &
-                           SYNC_NODES, '', (/BEFORE_AR/))
+      call this%addDistVar('ANGLE1', 'NPF', SYNC_NODES, (/BEFORE_AR/))
     end if
     if (this%gwfInterfaceModel%npf%iangle2 == 1) then
-      call this%addDistVar('ANGLE2', 'NPF', this%gwfInterfaceModel%name, &
-                           SYNC_NODES, '', (/BEFORE_AR/))
+      call this%addDistVar('ANGLE2', 'NPF', SYNC_NODES, (/BEFORE_AR/))
     end if
     if (this%gwfInterfaceModel%npf%iangle3 == 1) then
-      call this%addDistVar('ANGLE3', 'NPF', this%gwfInterfaceModel%name, &
-                           SYNC_NODES, '', (/BEFORE_AR/))
+      call this%addDistVar('ANGLE3', 'NPF', SYNC_NODES, (/BEFORE_AR/))
     end if
     if (this%gwfInterfaceModel%npf%iwetdry == 1) then
-      call this%addDistVar('WETDRY', 'NPF', this%gwfInterfaceModel%name, &
-                           SYNC_NODES, '', (/BEFORE_AR/))
+      call this%addDistVar('WETDRY', 'NPF', SYNC_NODES, (/BEFORE_AR/))
     end if
-    call this%addDistVar('TOP', 'DIS', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))
-    call this%addDistVar('BOT', 'DIS', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))
-    call this%addDistVar('AREA', 'DIS', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))
-    call this%mapVariables()
+    call this%addDistVar('TOP', 'DIS', SYNC_NODES, (/BEFORE_AR/))
+    call this%addDistVar('BOT', 'DIS', SYNC_NODES, (/BEFORE_AR/))
+    call this%addDistVar('AREA', 'DIS', SYNC_NODES, (/BEFORE_AR/))
 
     if (this%gwfInterfaceModel%npf%ixt3d > 0) then
       this%gwfInterfaceModel%npf%iangle1 = 1

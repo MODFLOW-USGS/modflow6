@@ -23,10 +23,8 @@ module VectorIntModule
     procedure, pass(this) :: destroy !< deletes the memory
     procedure, pass(this) :: contains !< true when element already present
     procedure, pass(this) :: get_values !< returns a copy of the values
-    generic :: assignment(=) => assign_vec
     ! private
     procedure, private, pass(this) :: expand
-    procedure, private, pass(this) :: assign_vec
   end type VectorInt
 
 contains ! module routines
@@ -144,20 +142,6 @@ contains ! module routines
     this%capacity = this%capacity + increment
 
   end subroutine expand
-
-  subroutine assign_vec(this, rhs)
-    class(VectorInt), intent(inout) :: this
-    class(VectorInt), intent(in) :: rhs
-    ! local
-    integer(I4B) :: i
-
-    if (allocated(this%values)) call this%destroy()
-    call this%init(rhs%capacity)
-    do i = 1, rhs%size
-      call this%push_back(rhs%at(i))
-    end do
-
-  end subroutine assign_vec
 
   ! check if the element is already present
   function contains(this, val) result(res)

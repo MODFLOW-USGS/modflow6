@@ -13,7 +13,7 @@ module GwtGwtConnectionModule
   use SparseModule, only: sparsematrix
   use ConnectionsModule, only: ConnectionsType
   use CellWithNbrsModule, only: GlobalCellType
-  use DistributedDataModule
+  use DistVariableModule
 
   implicit none
   private
@@ -176,48 +176,32 @@ contains
     this%gwtInterfaceModel%ixt3d = this%iIfaceXt3d
     call this%gwtInterfaceModel%model_df()
 
-    call this%addDistVar('X', '', this%gwtInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR, BEFORE_AD, BEFORE_CF/))
-    call this%addDistVar('IBOUND', '', this%gwtInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))
-    call this%addDistVar('TOP', 'DIS', this%gwtInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))
-    call this%addDistVar('BOT', 'DIS', this%gwtInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))
-    call this%addDistVar('AREA', 'DIS', this%gwtInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))
+    call this%addDistVar('X', '', SYNC_NODES, &
+                         (/BEFORE_AR, BEFORE_AD, BEFORE_CF/))
+    call this%addDistVar('IBOUND', '', SYNC_NODES, (/BEFORE_AR/))
+    call this%addDistVar('TOP', 'DIS', SYNC_NODES, (/BEFORE_AR/))
+    call this%addDistVar('BOT', 'DIS', SYNC_NODES, (/BEFORE_AR/))
+    call this%addDistVar('AREA', 'DIS', SYNC_NODES, (/BEFORE_AR/))
     if (this%gwtInterfaceModel%dsp%idiffc > 0) then
-      call this%addDistVar('DIFFC', 'DSP', this%gwtInterfaceModel%name, &
-                           SYNC_NODES, '', (/BEFORE_AR/))
+      call this%addDistVar('DIFFC', 'DSP', SYNC_NODES, (/BEFORE_AR/))
     end if
     if (this%gwtInterfaceModel%dsp%idisp > 0) then
-      call this%addDistVar('ALH', 'DSP', this%gwtInterfaceModel%name, &
-                           SYNC_NODES, '', (/BEFORE_AR/))
-      call this%addDistVar('ALV', 'DSP', this%gwtInterfaceModel%name, &
-                           SYNC_NODES, '', (/BEFORE_AR/))
-      call this%addDistVar('ATH1', 'DSP', this%gwtInterfaceModel%name, &
-                           SYNC_NODES, '', (/BEFORE_AR/))
-      call this%addDistVar('ATH2', 'DSP', this%gwtInterfaceModel%name, &
-                           SYNC_NODES, '', (/BEFORE_AR/))
-      call this%addDistVar('ATV', 'DSP', this%gwtInterfaceModel%name, &
-                           SYNC_NODES, '', (/BEFORE_AR/))
+      call this%addDistVar('ALH', 'DSP', SYNC_NODES, (/BEFORE_AR/))
+      call this%addDistVar('ALV', 'DSP', SYNC_NODES, (/BEFORE_AR/))
+      call this%addDistVar('ATH1', 'DSP', SYNC_NODES, (/BEFORE_AR/))
+      call this%addDistVar('ATH2', 'DSP', SYNC_NODES, (/BEFORE_AR/))
+      call this%addDistVar('ATV', 'DSP', SYNC_NODES, (/BEFORE_AR/))
     end if
-    call this%addDistVar('GWFHEAD', 'FMI', this%gwtInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AD/))
-    call this%addDistVar('GWFSAT', 'FMI', this%gwtInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AD/))
-    call this%addDistVar('GWFSPDIS', 'FMI', this%gwtInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AD/))
-    call this%addDistVar('GWFFLOWJA', 'FMI', this%gwtInterfaceModel%name, &
-                         SYNC_CONNECTIONS, '', (/BEFORE_AD/))
-    call this%addDistVar('GWFFLOWJA', 'FMI', this%gwtInterfaceModel%name, &
-                         SYNC_EXCHANGES, 'GWFSIMVALS', (/BEFORE_AD/))
+    call this%addDistVar('GWFHEAD', 'FMI', SYNC_NODES, (/BEFORE_AD/))
+    call this%addDistVar('GWFSAT', 'FMI', SYNC_NODES, (/BEFORE_AD/))
+    call this%addDistVar('GWFSPDIS', 'FMI', SYNC_NODES, (/BEFORE_AD/))
+    call this%addDistVar('GWFFLOWJA', 'FMI', SYNC_CONNECTIONS, (/BEFORE_AD/))
+    call this%addDistVar('GWFFLOWJA', 'FMI', SYNC_EXCHANGES, (/BEFORE_AD/), &
+                         exg_var_name = 'GWFSIMVALS')
     ! fill porosity from mst packages, needed for dsp
     if (this%gwtModel%indsp > 0 .and. this%gwtModel%inmst > 0) then
-      call this%addDistVar('POROSITY', 'MST', this%gwtInterfaceModel%name, &
-                           SYNC_NODES, '', (/AFTER_AR/))
+      call this%addDistVar('POROSITY', 'MST', SYNC_NODES, (/AFTER_AR/))
     end if
-    call this%mapVariables()
 
     call this%allocate_arrays()
     call this%gwtInterfaceModel%allocate_fmi()

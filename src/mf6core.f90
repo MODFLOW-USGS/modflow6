@@ -17,8 +17,6 @@ module Mf6CoreModule
   use BaseSolutionModule, only: BaseSolutionType, GetBaseSolutionFromList
   use SolutionGroupModule, only: SolutionGroupType, GetSolutionGroupFromList
   use Mf6DistributedModule
-  ! TODO_MJR: this one will go
-  use DistributedDataModule
   implicit none
 
 contains
@@ -193,8 +191,6 @@ contains
     end do
     call simulation_da()
     call dd_finalize()
-    ! TODO_MJR: this one will go
-    call distributed_data%destroy()
     call lists_da()
     !
     ! -- Write memory usage, elapsed time and terminate
@@ -256,13 +252,16 @@ contains
     call connections_cr()
     !
     ! -- initialize distributed data
-    call init_dist_data()
+    call dd_before_df()
     !
     ! -- Define each connection
     do ic = 1, baseconnectionlist%Count()
       mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
       call mc%exg_df()
     end do
+    !
+    ! -- synchronize
+    call dd_after_df()
     !
     ! -- Define each solution
     do is = 1, basesolutionlist%Count()
@@ -282,7 +281,7 @@ contains
     !!
   !<
   subroutine simulation_ar()
-    use DistributedDataModule
+    use DistVariableModule
     ! -- local variables
     integer(I4B) :: im
     integer(I4B) :: ic
@@ -305,7 +304,7 @@ contains
     end do
     !
     ! -- Synchronize
-    call distributed_data%synchronize(0, BEFORE_AR)
+    call dd_before_ar()
     !
     ! -- Allocate and read all model connections
     do ic = 1, baseconnectionlist%Count()
@@ -314,7 +313,7 @@ contains
     end do
     !
     ! -- Synchronize
-    call distributed_data%synchronize(0, AFTER_AR)
+    call dd_after_ar()
     !
     ! -- Allocate and read each solution
     do is = 1, basesolutionlist%Count()
@@ -355,26 +354,6 @@ contains
 
     write (iout, '(a)') 'END OF MODEL CONNECTIONS'
   end subroutine connections_cr
-
-  !> @brief Initialize distributed data for the simulation
-  !<
-  subroutine init_dist_data()
-    use DistDataBuilderModule
-    use SimVariablesModule, only: iout
-    type(DistDataBuilderType) :: dd_builder
-    integer(I4B) :: isol
-    class(BaseSolutionType), pointer :: sol
-
-    write (iout, '(/a)') 'SETTING UP DISTRIBUTED DATA'
-
-    do isol = 1, basesolutionlist%Count()
-      sol => GetBaseSolutionFromList(basesolutionlist, isol)
-      call dd_builder%process_solution(sol)
-    end do
-
-    write (iout, '(a)') 'END OF DISTRIBUTED DATA'
-
-  end subroutine init_dist_data
 
   !> @brief Read and prepare time step
     !!

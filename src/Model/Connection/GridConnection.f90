@@ -79,6 +79,8 @@ module GridConnectionModule
     type(ConnectionsType), pointer :: connections => null() !< sparse matrix with the connections
     integer(I4B), dimension(:), pointer :: connectionMask => null() !< to mask out connections from the amat coefficient calculation
 
+    type(InterfaceMapType), pointer :: interfaceMap => null() !< defining map for the interface
+
   contains
 
     ! public
@@ -89,7 +91,7 @@ module GridConnectionModule
     procedure, pass(this) :: connectPrimaryExchange
     procedure, pass(this) :: extendConnection
     procedure, pass(this) :: getDiscretization
-    procedure, pass(this) :: getInterfaceMap
+    procedure, pass(this) :: buildInterfaceMap
 
     ! 'protected'
     procedure, pass(this) :: isPeriodic
@@ -1077,13 +1079,11 @@ contains
 
   end subroutine getDiscretization
 
-  !> @brief Build interface map object for outside use,
-  !< (caller owns the memory)
-  subroutine getInterfaceMap(this, interfaceMap)
+  !> @brief Build interface map object for outside use
+  subroutine buildInterfaceMap(this)
     use BaseModelModule, only: BaseModelType, GetBaseModelFromList
     use VectorIntModule
     class(GridConnectionType) :: this !< this grid connection
-    type(InterfaceMapType), pointer :: interfaceMap !< a pointer to the map (not allocated yet)
     ! local
     integer(I4B) :: i, j, iloc, jloc
     integer(I4B) :: im, ix, mid, n
@@ -1095,8 +1095,11 @@ contains
     class(DistributedModelType), pointer :: m1, m2
     integer(I4B), pointer :: nexg
     integer(I4B), dimension(:), pointer, contiguous :: nodem1, nodem2
+    type(InterfaceMapType), pointer :: imap
 
-    allocate (interfaceMap)
+    allocate (this%interfaceMap)
+    imap => this%interfaceMap
+
 
     ! first get the participating models
     call modelIds%init()
@@ -1107,15 +1110,15 @@ contains
     end do
 
     ! allocate space
-    interfaceMap%nr_models = modelIds%size
-    allocate (interfaceMap%model_names(modelIds%size))
-    allocate (interfaceMap%node_map(modelIds%size))
-    allocate (interfaceMap%connection_map(modelIds%size))
+    imap%nr_models = modelIds%size
+    allocate (imap%model_names(modelIds%size))
+    allocate (imap%node_map(modelIds%size))
+    allocate (imap%connection_map(modelIds%size))
 
     ! for each model part of this interface, ...
     do im = 1, modelIds%size
       mid = modelIds%at(im)
-      interfaceMap%model_names(im) = get_model_name(mid)
+      imap%model_names(im) = get_model_name(mid)
       call srcIdxTmp%init()
       call tgtIdxTmp%init()
 
@@ -1128,11 +1131,11 @@ contains
       end do
 
       ! and copy into interface map
-      allocate (interfaceMap%node_map(im)%src_idx(srcIdxTmp%size))
-      allocate (interfaceMap%node_map(im)%tgt_idx(tgtIdxTmp%size))
+      allocate (imap%node_map(im)%src_idx(srcIdxTmp%size))
+      allocate (imap%node_map(im)%tgt_idx(tgtIdxTmp%size))
       do i = 1, srcIdxTmp%size
-        interfaceMap%node_map(im)%src_idx(i) = srcIdxTmp%at(i)
-        interfaceMap%node_map(im)%tgt_idx(i) = tgtIdxTmp%at(i)
+        imap%node_map(im)%src_idx(i) = srcIdxTmp%at(i)
+        imap%node_map(im)%tgt_idx(i) = tgtIdxTmp%at(i)
       end do
 
       call srcIdxTmp%destroy()
@@ -1162,11 +1165,11 @@ contains
       end do
 
       ! copy into interface map
-      allocate (interfaceMap%connection_map(im)%src_idx(srcIdxTmp%size))
-      allocate (interfaceMap%connection_map(im)%tgt_idx(tgtIdxTmp%size))
+      allocate (imap%connection_map(im)%src_idx(srcIdxTmp%size))
+      allocate (imap%connection_map(im)%tgt_idx(tgtIdxTmp%size))
       do i = 1, srcIdxTmp%size
-        interfaceMap%connection_map(im)%src_idx(i) = srcIdxTmp%at(i)
-        interfaceMap%connection_map(im)%tgt_idx(i) = tgtIdxTmp%at(i)
+        imap%connection_map(im)%src_idx(i) = srcIdxTmp%at(i)
+        imap%connection_map(im)%tgt_idx(i) = tgtIdxTmp%at(i)
       end do
 
       call srcIdxTmp%destroy()
@@ -1177,9 +1180,9 @@ contains
     call modelIds%destroy()
 
     ! for each exchange that is part of this interface
-    interfaceMap%nr_exchanges = this%haloExchanges%size
-    allocate (interfaceMap%exchange_names(interfaceMap%nr_exchanges))
-    allocate (interfaceMap%exchange_map(interfaceMap%nr_exchanges))
+    imap%nr_exchanges = this%haloExchanges%size
+    allocate (imap%exchange_names(imap%nr_exchanges))
+    allocate (imap%exchange_map(imap%nr_exchanges))
 
     do ix = 1, this%haloExchanges%size
 
@@ -1193,7 +1196,7 @@ contains
       call dist_exg%load(nodem1, 'NODEM1')
       call dist_exg%load(nodem2, 'NODEM2')
 
-      interfaceMap%exchange_names(ix) = dist_exg%name
+      imap%exchange_names(ix) = dist_exg%name
 
       call srcIdxTmp%init()
       call tgtIdxTmp%init()
@@ -1221,13 +1224,13 @@ contains
         call signTmp%push_back(-1)
       end do
 
-      allocate (interfaceMap%exchange_map(ix)%src_idx(srcIdxTmp%size))
-      allocate (interfaceMap%exchange_map(ix)%tgt_idx(tgtIdxTmp%size))
-      allocate (interfaceMap%exchange_map(ix)%sign(signTmp%size))
+      allocate (imap%exchange_map(ix)%src_idx(srcIdxTmp%size))
+      allocate (imap%exchange_map(ix)%tgt_idx(tgtIdxTmp%size))
+      allocate (imap%exchange_map(ix)%sign(signTmp%size))
       do i = 1, srcIdxTmp%size
-        interfaceMap%exchange_map(ix)%src_idx(i) = srcIdxTmp%at(i)
-        interfaceMap%exchange_map(ix)%tgt_idx(i) = tgtIdxTmp%at(i)
-        interfaceMap%exchange_map(ix)%sign(i) = signTmp%at(i)
+        imap%exchange_map(ix)%src_idx(i) = srcIdxTmp%at(i)
+        imap%exchange_map(ix)%tgt_idx(i) = tgtIdxTmp%at(i)
+        imap%exchange_map(ix)%sign(i) = signTmp%at(i)
       end do
 
       call srcIdxTmp%destroy()
@@ -1238,10 +1241,10 @@ contains
 
     ! set the primary exchange idx
     ! findloc cannot be used until gfortran 9...
-    interfaceMap%prim_exg_idx = -1
-    do i = 1, interfaceMap%nr_exchanges
-      if (interfaceMap%exchange_names(i) == this%primaryExchange%name) then
-        interfaceMap%prim_exg_idx = i
+    imap%prim_exg_idx = -1
+    do i = 1, imap%nr_exchanges
+      if (imap%exchange_names(i) == this%primaryExchange%name) then
+        imap%prim_exg_idx = i
         exit
       end if
     end do
@@ -1268,7 +1271,7 @@ contains
     !   end if
     ! end do
 
-  end subroutine getInterfaceMap
+  end subroutine buildInterfaceMap
 
   !> @brief Deallocate grid connection resources
   !<

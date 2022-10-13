@@ -1,4 +1,4 @@
-module MappedVariableModule
+module MappedMemoryModule
   use KindModule, only: I4B, LGP
   use ConstantsModule, only: LENMEMPATH, LENVARNAME
   use MemoryTypeModule, only: MemoryType
@@ -7,10 +7,10 @@ module MappedVariableModule
   implicit none
   private
 
-  public :: CastAsMappedVariable
-  public :: MappedVariableType
+  public :: CastAsMappedData
+  public :: MappedMemoryType
 
-  type :: MappedVariableType
+  type :: MappedMemoryType
     integer(I4B) :: controller_id
     integer(I4B) :: sync_stage
     character(len=LENVARNAME) :: src_name
@@ -33,12 +33,12 @@ module MappedVariableModule
     procedure, private :: sync_dbl2d
     procedure, private :: apply_sgn_dbl2d
 
-  end type MappedVariableType
+  end type MappedMemoryType
 
 contains
 
   subroutine sync(this)
-    class(MappedVariableType) :: this
+    class(MappedMemoryType) :: this
     ! local
     logical(LGP) :: found
 
@@ -63,7 +63,7 @@ contains
   end subroutine sync
 
   function skip_sync(this) result(skip)
-    class(MappedVariableType) :: this
+    class(MappedMemoryType) :: this
     logical(LGP) :: skip
 
     skip = (this%src%isize == 0)
@@ -73,7 +73,7 @@ contains
   !> @brief Copy 1d integer array with map.
   !< TODO_MJR: should this maybe move to the memory manager for more convenient maintenance?
   subroutine sync_int1d(this)
-    class(MappedVariableType) :: this
+    class(MappedMemoryType) :: this
     ! local
     integer(I4B) :: i
 
@@ -84,7 +84,7 @@ contains
   end subroutine sync_int1d
 
   subroutine apply_sgn_int1d(this)
-    class(MappedVariableType) :: this
+    class(MappedMemoryType) :: this
     ! local
     integer(I4B) :: i
 
@@ -98,7 +98,7 @@ contains
   !> @brief Copy 1d double array with map.
   !<
   subroutine sync_dbl1d(this)
-    class(MappedVariableType) :: this
+    class(MappedMemoryType) :: this
     ! local
     integer(I4B) :: i
 
@@ -109,7 +109,7 @@ contains
   end subroutine sync_dbl1d
 
   subroutine apply_sgn_dbl1d(this)
-    class(MappedVariableType) :: this
+    class(MappedMemoryType) :: this
     ! local
     integer(I4B) :: i
 
@@ -123,7 +123,7 @@ contains
   !> @brief Copy 2d double array with map.
   !< NB: only dim=2 is mapped.
   subroutine sync_dbl2d(this)
-    class(MappedVariableType) :: this
+    class(MappedMemoryType) :: this
     ! local
     integer(I4B) :: i, k
 
@@ -136,7 +136,7 @@ contains
   end subroutine sync_dbl2d
 
   subroutine apply_sgn_dbl2d(this)
-    class(MappedVariableType) :: this
+    class(MappedMemoryType) :: this
     ! local
     integer(I4B) :: i, k
 
@@ -149,18 +149,18 @@ contains
 
   end subroutine apply_sgn_dbl2d
 
-  function CastAsMappedVariable(obj) result(res)
+  function CastAsMappedData(obj) result(res)
     implicit none
     class(*), pointer, intent(inout) :: obj
-    class(MappedVariableType), pointer :: res
+    class(MappedMemoryType), pointer :: res
 
     res => null()
 
     select type (obj)
-    class is (MappedVariableType)
+    class is (MappedMemoryType)
       res => obj
     end select
 
-  end function CastAsMappedVariable
+  end function CastAsMappedData
 
-end module MappedVariableModule
+end module MappedMemoryModule

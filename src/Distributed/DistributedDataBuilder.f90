@@ -12,30 +12,18 @@ module DistDataBuilderModule
   private
 
   public :: DistDataBuilderType
+  public :: connect_halo
 
   type :: DistDataBuilderType
     contains
-    procedure :: process_solution
-    procedure, private :: process_exchanges
+    procedure :: connect_halo
   end type
 
   contains
 
-  subroutine process_solution(this, sol)
+  subroutine connect_halo(this, num_sol)
     class(DistDataBuilderType) :: this
-    class(BaseSolutionType), pointer :: sol
-
-    select type(sol)
-    class is (NumericalSolutionType)
-      call this%process_exchanges(sol%id, sol%exchangelist)
-    end select
-
-  end subroutine process_solution
-
-  subroutine process_exchanges(this, sol_id, exchanges)
-    class(DistDataBuilderType) :: this
-    integer(I4B) :: sol_id
-    type(ListType), pointer :: exchanges
+    class(NumericalSolutionType), pointer :: num_sol
     ! local
     integer(I4B) :: ix, im, ihx
     integer(I4B) :: model_id, exg_id
@@ -46,28 +34,27 @@ module DistDataBuilderModule
     class(DistributedExchangeType), pointer :: dist_exg
     
     ! aggregate solution halo
-    do ix = 1, exchanges%Count()
-      mod_conn => GetSpatialModelConnectionFromList(exchanges, ix)
+    call halo_models_ns%init()
+    call halo_exg_ns%init()
+
+    do ix = 1, num_sol%exchangelist%Count()
+      mod_conn => GetSpatialModelConnectionFromList(num_sol%exchangelist, ix)
       if (.not. associated(mod_conn)) cycle
 
-      if (ix == 1) then
-        halo_models_ns = mod_conn%haloModels
-        halo_exg_ns = mod_conn%haloExchanges
-      else
-        ! extend
-        do im = 1, mod_conn%haloModels%size
-          model_id = mod_conn%haloModels%at(im)
-          if (.not. halo_models_ns%contains(model_id)) then
-            call halo_models_ns%push_back(model_id)
-          end if                    
-        end do
-        do ihx = 1, mod_conn%haloExchanges%size
-          exg_id = mod_conn%haloExchanges%at(ihx)
-          if (.not. halo_exg_ns%contains(exg_id)) then
-            call halo_exg_ns%push_back(exg_id)
-          end if
-        end do
-      end if
+      ! extend
+      do im = 1, mod_conn%haloModels%size
+        model_id = mod_conn%haloModels%at(im)
+        if (.not. halo_models_ns%contains(model_id)) then
+          call halo_models_ns%push_back(model_id)
+        end if                    
+      end do
+      do ihx = 1, mod_conn%haloExchanges%size
+        exg_id = mod_conn%haloExchanges%at(ihx)
+        if (.not. halo_exg_ns%contains(exg_id)) then
+          call halo_exg_ns%push_back(exg_id)
+        end if
+      end do
+
     end do
 
     ! prepare distributed models/exchanges
@@ -99,6 +86,9 @@ module DistDataBuilderModule
     ! add interface model variables
     !model_conn%interfaceMap
 
-  end subroutine process_exchanges
+    call halo_models_ns%destroy()
+    call halo_exg_ns%destroy()
+
+  end subroutine connect_halo
 
 end module DistDataBuilderModule
