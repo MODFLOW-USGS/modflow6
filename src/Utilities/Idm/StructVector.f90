@@ -20,7 +20,7 @@ module StructVectorModule
   !! This derived type is used in the StructArrayType to
   !! store any type of vector.
   !!
-  !<          
+  !<
   type StructVectorType
     character(len=LENVARNAME) :: varname
     character(len=LENMEMPATH) :: memoryPath

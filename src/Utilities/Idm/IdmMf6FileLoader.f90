@@ -15,14 +15,14 @@ module IdmMf6FileLoaderModule
   private
   public :: input_load
 
-  !> @brief derived type for storing package loader 
+  !> @brief derived type for storing package loader
   !!
   !! This derived type is used to store a pointer to a
   !! package load procedure.  This could be used to write
   !! a custom package loader as a way to override the
   !! generic_mf6_load routine.
   !!
-  !<          
+  !<
   type :: PackageLoad
     procedure(IPackageLoad), nopass, pointer, public :: load_package => null() !< procedure pointer to the load routine
   end type PackageLoad
@@ -73,8 +73,8 @@ contains
     type(PackageLoad) :: pkgloader
 
     mf6_input = getModflowInput(filetype, component_type, &
-                             subcomponent_type, component_name, &
-                             subcomponent_name, subpackages)
+                                subcomponent_type, component_name, &
+                                subcomponent_name, subpackages)
     !
     ! -- set mf6 parser based package loader by file type
     select case (filetype)

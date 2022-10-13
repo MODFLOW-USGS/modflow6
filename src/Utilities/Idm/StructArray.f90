@@ -1,6 +1,6 @@
 !> @brief This module contains the StructArrayModule
 !!
-!! This module contains the routines for reading a 
+!! This module contains the routines for reading a
 !! structured list, which consists of a separate vector
 !! for each column in the list.
 !!
@@ -17,8 +17,6 @@ module StructArrayModule
   use MemoryManagerModule, only: mem_setptr
   use BlockParserModule, only: BlockParserType
 
-
-
   implicit none
   private
   public :: StructArrayType
@@ -26,11 +24,11 @@ module StructArrayModule
 
   !> @brief derived type for structured array
   !!
-  !! This derived type is used to read and store a 
+  !! This derived type is used to read and store a
   !! list that consists of multiple one-dimensional
   !! vectors.
   !!
-  !<          
+  !<
   type StructArrayType
     integer(I4B) :: ncol
     integer(I4B) :: nrow

@@ -3,7 +3,7 @@
 !! This module contains a helper object and function
 !! for accessing the ModflowInput, which is a
 !! description of the structure of a modflow input
-!! file.  
+!! file.
 !!
 !<
 module ModflowInputModule
@@ -30,7 +30,7 @@ module ModflowInputModule
   !! aggregate definitions (structarrays), and individual
   !! parameter definitions.
   !!
-  !<          
+  !<
   type ModflowInputType
     character(len=LENFTYPE) :: file_type
     character(len=LENCOMPONENTNAME) :: component_type
@@ -50,8 +50,8 @@ contains
   !> @brief function to return ModflowInputType
   !<
   function getModflowInput(ftype, component_type, &
-                        subcomponent_type, component_name, subcomponent_name, &
-                        subpackages) &
+                           subcomponent_type, component_name, subcomponent_name, &
+                           subpackages) &
     result(mf6_input)
     character(len=*), intent(in) :: ftype !< file type to load, such as DIS6, DISV6, NPF6
     character(len=*), intent(in) :: component_type !< component type, such as GWF or GWT

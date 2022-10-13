@@ -52,14 +52,14 @@ contains
     character(len=*), dimension(:), intent(in) :: subpackages !< array of subpackage types, such as ["TVK6", "OBS6"]
     integer(I4B), intent(in) :: iout !< unit number for output
     integer(I4B) :: iblock !< consecutive block number as defined in definition file
-    type(ModflowInputType) :: mf6_input !< ModflowInputType 
+    type(ModflowInputType) :: mf6_input !< ModflowInputType
     character(len=LENMEMPATH) :: componentMemPath
     integer(I4B), dimension(:), contiguous, pointer :: mshape => null()
     !
     ! -- construct input object
     mf6_input = getModflowInput(filetype, component_type, &
-                             subcomponent_type, component_name, &
-                             subcomponent_name, subpackages)
+                                subcomponent_type, component_name, &
+                                subcomponent_name, subpackages)
     !
     ! -- model shape memory path
     componentMemPath = create_mem_path(component=mf6_input%component_name, &
@@ -96,7 +96,7 @@ contains
     use MemoryTypeModule, only: MemoryType
     use MemoryManagerModule, only: get_from_memorylist
     type(BlockParserType), intent(inout) :: parser !< block parser
-    type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType 
+    type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType
     integer(I4B), intent(in) :: iblock !< consecutive block number as defined in definition file
     integer(I4B), dimension(:), contiguous, pointer, intent(inout) :: mshape !< model shape
     integer(I4B), intent(in) :: iout !< unit number for output
@@ -153,7 +153,7 @@ contains
   !<
   subroutine subpackage_check(parser, mf6_input, checktag, iout)
     type(BlockParserType), intent(inout) :: parser !< block parser
-    type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType 
+    type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType
     character(len=LINELENGTH), intent(in) :: checktag !< subpackage string, such as TVK6
     integer(I4B), intent(in) :: iout !< unit number for output
     character(len=LINELENGTH) :: tag, fname_tag
@@ -189,7 +189,7 @@ contains
   recursive subroutine parse_tag(parser, mf6_input, iblock, mshape, iout, &
                                  recursive_call)
     type(BlockParserType), intent(inout) :: parser !< block parser
-    type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType 
+    type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType
     integer(I4B), intent(in) :: iblock !< consecutive block number as defined in definition file
     integer(I4B), dimension(:), contiguous, pointer, intent(inout) :: mshape !< model shape
     integer(I4B), intent(in) :: iout !< unit number for output
@@ -269,7 +269,7 @@ contains
     use StructArrayModule, only: StructArrayType, constructStructArray, &
                                  destructStructArray
     type(BlockParserType), intent(inout) :: parser !< block parser
-    type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType 
+    type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType
     integer(I4B), intent(in) :: iblock !< consecutive block number as defined in definition file
     integer(I4B), dimension(:), contiguous, pointer, intent(inout) :: mshape !< model shape
     integer(I4B), intent(in) :: iout !< unit number for output
