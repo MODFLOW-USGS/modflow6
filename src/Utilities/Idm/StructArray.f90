@@ -1,23 +1,40 @@
+!> @brief This module contains the StructArrayModule
+!!
+!! This module contains the routines for reading a 
+!! structured list, which consists of a separate vector
+!! for each column in the list.
+!!
+!<
 module StructArrayModule
 
   use KindModule, only: I4B, DP, LGP
-  use ConstantsModule, only: DNODATA, MAXCHARLEN, LINELENGTH
+  use ConstantsModule, only: DNODATA, LINELENGTH
   use StructVectorModule, only: StructVectorType
   use MemoryManagerModule, only: mem_allocate
   use CharacterStringModule, only: CharacterStringType
   use VectorIntModule, only: VectorInt
+  use IdmLoggerModule, only: idm_log_var
+  use MemoryManagerModule, only: mem_setptr
+  use BlockParserModule, only: BlockParserType
+
+
 
   implicit none
   private
   public :: StructArrayType
   public :: constructStructArray, destructStructArray
 
+  !> @brief derived type for structured array
+  !!
+  !! This derived type is used to read and store a 
+  !! list that consists of multiple one-dimensional
+  !! vectors.
+  !!
+  !<          
   type StructArrayType
-
     integer(I4B) :: ncol
     integer(I4B) :: nrow
     type(StructVectorType), dimension(:), allocatable :: struct_vector_1d
-
   contains
     procedure :: mem_create_vector
     procedure :: add_vector_int1d
@@ -32,10 +49,12 @@ module StructArrayModule
 
 contains
 
+  !> @brief constructor for a struct_array
+  !<
   function constructStructArray(ncol, nrow) result(struct_array)
-    integer(I4B), intent(in) :: ncol
-    integer(I4B), intent(in) :: nrow
-    type(StructArrayType), pointer :: struct_array
+    integer(I4B), intent(in) :: ncol !< number of columns in the StructArrayType
+    integer(I4B), intent(in) :: nrow !< number of rows in the StructArrayType
+    type(StructArrayType), pointer :: struct_array !< new StructArrayType
 
     allocate (struct_array)
     struct_array%ncol = ncol
@@ -43,23 +62,27 @@ contains
     allocate (struct_array%struct_vector_1d(ncol))
   end function constructStructArray
 
+  !> @brief destructor for a struct_array
+  !<
   subroutine destructStructArray(struct_array)
-    type(StructArrayType), pointer, intent(inout) :: struct_array
+    type(StructArrayType), pointer, intent(inout) :: struct_array !< StructArrayType to destroy
 
     deallocate (struct_array%struct_vector_1d)
     deallocate (struct_array)
     nullify (struct_array)
   end subroutine destructStructArray
 
+  !> @brief create new vector in StructArrayType
+  !<
   subroutine mem_create_vector(this, icol, vartype, name, memoryPath, &
                                varname_shape, preserve_case)
-    class(StructArrayType) :: this
-    integer(I4B), intent(in) :: icol
-    character(len=*), intent(in) :: vartype
-    character(len=*), intent(in) :: name
-    character(len=*), intent(in) :: memoryPath
-    character(len=*), intent(in) :: varname_shape
-    logical(LGP), optional, intent(in) :: preserve_case
+    class(StructArrayType) :: this !< StructArrayType
+    integer(I4B), intent(in) :: icol !< column to create
+    character(len=*), intent(in) :: vartype !< type of column to create
+    character(len=*), intent(in) :: name !< name of the column to create
+    character(len=*), intent(in) :: memoryPath !< memory path for storing the vector
+    character(len=*), intent(in) :: varname_shape !< shape
+    logical(LGP), optional, intent(in) :: preserve_case !< flag indicating whether or not to preserve case
     integer(I4B), dimension(:), pointer, contiguous :: int1d
     real(DP), dimension(:), pointer, contiguous :: dbl1d
     type(CharacterStringType), dimension(:), pointer, contiguous :: cstr1d
@@ -95,12 +118,14 @@ contains
     return
   end subroutine mem_create_vector
 
+  !> @brief add int1d to StructArrayType
+  !<
   subroutine add_vector_int1d(this, varname, memoryPath, icol, int1d)
-    class(StructArrayType) :: this
-    character(len=*), intent(in) :: varname
-    character(len=*), intent(in) :: memoryPath
-    integer(I4B), intent(in) :: icol
-    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: int1d
+    class(StructArrayType) :: this !< StructArrayType
+    character(len=*), intent(in) :: varname !< name of the variable
+    character(len=*), intent(in) :: memoryPath !< memory path to vector
+    integer(I4B), intent(in) :: icol !< column of the vector
+    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: int1d !< vector to add
     type(StructVectorType) :: sv
     sv%varname = varname
     sv%memoryPath = memoryPath
@@ -110,12 +135,14 @@ contains
     return
   end subroutine add_vector_int1d
 
+  !> @brief add dbl1d to StructArrayType
+  !<
   subroutine add_vector_dbl1d(this, varname, memoryPath, icol, dbl1d)
-    class(StructArrayType) :: this
-    character(len=*), intent(in) :: varname
-    character(len=*), intent(in) :: memoryPath
-    integer(I4B), intent(in) :: icol
-    real(DP), dimension(:), pointer, contiguous, intent(in) :: dbl1d
+    class(StructArrayType) :: this !< StructArrayType
+    character(len=*), intent(in) :: varname !< name of the variable
+    character(len=*), intent(in) :: memoryPath !< memory path to vector
+    integer(I4B), intent(in) :: icol !< column of the vector
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: dbl1d !< vector to add
     type(StructVectorType) :: sv
     sv%varname = varname
     sv%memoryPath = memoryPath
@@ -125,11 +152,13 @@ contains
     return
   end subroutine add_vector_dbl1d
 
+  !> @brief add str1d to StructArrayType
+  !<
   subroutine add_vector_str1d(this, icol, str1d, preserve_case)
-    class(StructArrayType) :: this
-    integer(I4B), intent(in) :: icol
+    class(StructArrayType) :: this !< StructArrayType
+    integer(I4B), intent(in) :: icol !< column of the vector
     type(CharacterStringType), dimension(:), pointer, contiguous, intent(in) :: &
-      str1d
+      str1d !< vector to add
     logical(LGP), intent(in) :: preserve_case
     type(StructVectorType) :: sv
     sv%memtype = 3
@@ -139,15 +168,16 @@ contains
     return
   end subroutine add_vector_str1d
 
+  !> @brief add VectorInt to StructArrayType
+  !<
   subroutine add_vector_intvector(this, varname, memoryPath, varname_shape, &
                                   icol, intvector)
-    use MemoryManagerModule, only: mem_setptr
-    class(StructArrayType) :: this
-    character(len=*), intent(in) :: varname
-    character(len=*), intent(in) :: memoryPath
-    character(len=*), intent(in) :: varname_shape
-    integer(I4B), intent(in) :: icol
-    type(VectorInt), pointer, intent(in) :: intvector
+    class(StructArrayType) :: this !< StructArrayType
+    character(len=*), intent(in) :: varname !< name of the variable
+    character(len=*), intent(in) :: memoryPath !< memory path to vector
+    character(len=*), intent(in) :: varname_shape !< shape of variable
+    integer(I4B), intent(in) :: icol !< column of the vector
+    type(VectorInt), pointer, intent(in) :: intvector !< vector to add
     type(StructVectorType) :: sv
 
     call intvector%init()
@@ -161,8 +191,10 @@ contains
     return
   end subroutine add_vector_intvector
 
+  !> @brief load integer vector into StructArrayType
+  !<
   subroutine load_intvector(this)
-    class(StructArrayType) :: this
+    class(StructArrayType) :: this !< StructArrayType
     integer(I4B) :: i, j
     integer(I4B), dimension(:), pointer, contiguous :: p_intvector
     ! -- if an allocatable vector has been read, add to MemoryManager
@@ -183,11 +215,11 @@ contains
     return
   end subroutine load_intvector
 
+  !> @brief log information about the StructArrayType
+  !<
   subroutine log_structarray_vars(this, iout)
-    use IdmLoggerModule, only: idm_log_var
-    use MemoryManagerModule, only: mem_setptr
-    class(StructArrayType) :: this
-    integer(I4B), intent(in) :: iout
+    class(StructArrayType) :: this !< StructArrayType
+    integer(I4B), intent(in) :: iout !< unit number for output
     integer(I4B) :: j
     integer(I4B), dimension(:), pointer, contiguous :: int1d
     !
@@ -213,13 +245,12 @@ contains
     return
   end subroutine log_structarray_vars
 
+  !> @brief read from the block parser to fill the StructArrayType
+  !<
   subroutine read_from_parser(this, parser, iout)
-    use BlockParserModule, only: BlockParserType
-    use IdmLoggerModule, only: idm_log_var
-    use InputOutputModule, only: parseline
-    class(StructArrayType) :: this
-    type(BlockParserType) :: parser
-    integer(I4B), intent(in) :: iout
+    class(StructArrayType) :: this !< StructArrayType
+    type(BlockParserType) :: parser !< block parser to read from
+    integer(I4B), intent(in) :: iout !< unit number for output
     logical(LGP) :: endOfBlock
     integer(I4B) :: i, j, k
     integer(I4B) :: intval, numval

@@ -1,3 +1,9 @@
+!> @brief This module contains the StructVectorModule
+!!
+!! This module contains a generic type for storing
+!! different types of vectors.
+!!
+!<
 module StructVectorModule
 
   use KindModule, only: I4B, DP, LGP
@@ -9,6 +15,12 @@ module StructVectorModule
   private
   public :: StructVectorType
 
+  !> @brief derived type for generic vector
+  !!
+  !! This derived type is used in the StructArrayType to
+  !! store any type of vector.
+  !!
+  !<          
   type StructVectorType
     character(len=LENVARNAME) :: varname
     character(len=LENMEMPATH) :: memoryPath

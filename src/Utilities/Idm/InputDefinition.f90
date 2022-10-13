@@ -1,3 +1,9 @@
+!> @brief This module contains the InputDefinitionModule
+!!
+!! This module contains helper objects for storing
+!! information about how to read modflow input files.
+!!
+!<
 module InputDefinitionModule
 
   use KindModule, only: LGP
@@ -7,6 +13,12 @@ module InputDefinitionModule
   public :: InputParamDefinitionType, &
             InputBlockDefinitionType
 
+  !> @brief derived type for storing input definition
+  !!
+  !! This derived type is used to store information for
+  !! each modflow input record
+  !!
+  !<          
   type InputParamDefinitionType
     character(len=100) :: component_type = ''
     character(len=100) :: subcomponent_type = ''
@@ -21,6 +33,12 @@ module InputDefinitionModule
     logical(LGP) :: layered = .false.
   end type InputParamDefinitionType
 
+  !> @brief derived type for storing block information
+  !!
+  !! This derived type is used to store information for
+  !! how to read a modflow block
+  !!
+  !<          
   type InputBlockDefinitionType
     character(len=100) :: blockname = ''
     logical(LGP) :: required = .false.

@@ -9,12 +9,20 @@ module IdmMf6FileLoaderModule
 
   use KindModule, only: DP, I4B, LGP
   use BlockParserModule, only: BlockParserType
-  use ModflowInputModule, only: ModflowInputType, ModflowInput
+  use ModflowInputModule, only: ModflowInputType, getModflowInput
 
   implicit none
   private
   public :: input_load
 
+  !> @brief derived type for storing package loader 
+  !!
+  !! This derived type is used to store a pointer to a
+  !! package load procedure.  This could be used to write
+  !! a custom package loader as a way to override the
+  !! generic_mf6_load routine.
+  !!
+  !<          
   type :: PackageLoad
     procedure(IPackageLoad), nopass, pointer, public :: load_package => null() !< procedure pointer to the load routine
   end type PackageLoad
@@ -24,9 +32,9 @@ module IdmMf6FileLoaderModule
       use KindModule, only: DP, I4B
       use BlockParserModule, only: BlockParserType
       use ModflowInputModule, only: ModflowInputType
-      type(BlockParserType), intent(inout) :: parser
-      type(ModflowInputType), pointer, intent(in) :: mf6_input
-      integer(I4B), intent(in) :: iout
+      type(BlockParserType), intent(inout) :: parser !< block parser
+      type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType object that describes the input
+      integer(I4B), intent(in) :: iout !< unit number for output
     end subroutine IPackageLoad
   end interface
 
@@ -37,8 +45,8 @@ contains
   subroutine generic_mf6_load(parser, mf6_input, iout)
     use LoadMf6FileTypeModule, only: idm_load
     type(BlockParserType), intent(inout) :: parser !< block parser
-    type(ModflowInputType), pointer, intent(in) :: mf6_input !< ModflowInputType object that describes the input
-    integer(I4B), intent(in) :: iout
+    type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType object that describes the input
+    integer(I4B), intent(in) :: iout !< unit number for output
 
     call idm_load(parser, mf6_input%file_type, &
                   mf6_input%component_type, mf6_input%subcomponent_type, &
@@ -60,13 +68,13 @@ contains
     character(len=*), intent(in) :: component_name !< component name, such as MYGWFMODEL
     character(len=*), intent(in) :: subcomponent_name !< subcomponent name, such as MYWELLPACKAGE
     character(len=*), dimension(:), intent(in) :: subpackages !< array of subpackage types, such as ["TVK6", "OBS6"]
-    integer(I4B), intent(in) :: iout
-    type(ModflowInputType), pointer :: mf6_input
+    integer(I4B), intent(in) :: iout !< unit number for output
+    type(ModflowInputType) :: mf6_input
     type(PackageLoad) :: pkgloader
 
-    mf6_input => ModflowInput(filetype, component_type, &
-                              subcomponent_type, component_name, &
-                              subcomponent_name, subpackages)
+    mf6_input = getModflowInput(filetype, component_type, &
+                             subcomponent_type, component_name, &
+                             subcomponent_name, subpackages)
     !
     ! -- set mf6 parser based package loader by file type
     select case (filetype)

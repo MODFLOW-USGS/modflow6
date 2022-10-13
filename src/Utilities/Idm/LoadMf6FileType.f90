@@ -1,20 +1,23 @@
+!> @brief This module contains the LoadMf6FileTypeModule
+!!
+!! This module contains the input data model routines for
+!! loading the data from a MODFLOW 6 input file using the
+!! block parser.
+!!
+!<
 module LoadMf6FileTypeModule
 
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENVARNAME, MAXCHARLEN
+  use ConstantsModule, only: LINELENGTH, LENMEMPATH
   use SimVariablesModule, only: errmsg
   use SimModule, only: store_error
   use BlockParserModule, only: BlockParserType
   use ArrayReadersModule, only: ReadArray
   use InputOutputModule, only: parseline
-  use InputDefinitionModule, only: InputParamDefinitionType, &
-                                   InputBlockDefinitionType
-  use InputDefinitionSelectorModule, only: param_definitions, &
-                                           aggregate_definitions, &
-                                           block_definitions, &
-                                           get_param_definition_type, &
+  use InputDefinitionModule, only: InputParamDefinitionType
+  use InputDefinitionSelectorModule, only: get_param_definition_type, &
                                            get_aggregate_definition_type
-  use ModflowInputModule, only: ModflowInputType, ModflowInput
+  use ModflowInputModule, only: ModflowInputType, getModflowInput
   use MemoryManagerModule, only: mem_allocate, mem_setptr
   use MemoryHelperModule, only: create_mem_path
   use IdmLoggerModule, only: idm_log_var, idm_log_header, idm_log_close
@@ -29,28 +32,34 @@ module LoadMf6FileTypeModule
 
 contains
 
+  !> @brief procedure to load a file
+  !!
+  !! Use parser to load information from an input file into the __INPUT__
+  !! memory context location of the memory manager.
+  !!
+  !<
   subroutine idm_load_from_blockparser(parser, filetype, &
                                        component_type, subcomponent_type, &
                                        component_name, subcomponent_name, &
                                        subpackages, iout)
     use SimVariablesModule, only: idm_context
-    type(BlockParserType), intent(inout) :: parser
-    character(len=*), intent(in) :: filetype
-    character(len=*), intent(in) :: component_type
-    character(len=*), intent(in) :: subcomponent_type
-    character(len=*), intent(in) :: component_name
-    character(len=*), intent(in) :: subcomponent_name
-    character(len=*), dimension(:), intent(in) :: subpackages
-    integer(I4B), intent(in) :: iout
-    integer(I4B) :: iblock
-    type(ModflowInputType), pointer :: mf6_input
+    type(BlockParserType), intent(inout) :: parser !< block parser
+    character(len=*), intent(in) :: filetype !< file type to load, such as DIS6, DISV6, NPF6
+    character(len=*), intent(in) :: component_type !< component type, such as GWF or GWT
+    character(len=*), intent(in) :: subcomponent_type !< subcomponent type, such as DIS or NPF
+    character(len=*), intent(in) :: component_name !< component name, such as MYGWFMODEL
+    character(len=*), intent(in) :: subcomponent_name !< subcomponent name, such as MYWELLPACKAGE
+    character(len=*), dimension(:), intent(in) :: subpackages !< array of subpackage types, such as ["TVK6", "OBS6"]
+    integer(I4B), intent(in) :: iout !< unit number for output
+    integer(I4B) :: iblock !< consecutive block number as defined in definition file
+    type(ModflowInputType) :: mf6_input !< ModflowInputType 
     character(len=LENMEMPATH) :: componentMemPath
     integer(I4B), dimension(:), contiguous, pointer :: mshape => null()
     !
     ! -- construct input object
-    mf6_input => ModflowInput(filetype, component_type, &
-                              subcomponent_type, component_name, &
-                              subcomponent_name, subpackages)
+    mf6_input = getModflowInput(filetype, component_type, &
+                             subcomponent_type, component_name, &
+                             subcomponent_name, subpackages)
     !
     ! -- model shape memory path
     componentMemPath = create_mem_path(component=mf6_input%component_name, &
@@ -77,14 +86,20 @@ contains
                        mf6_input%subcomponent_name, iout)
   end subroutine idm_load_from_blockparser
 
+  !> @brief procedure to load a block
+  !!
+  !! Use parser to load information from a block into the __INPUT__
+  !! memory context location of the memory manager.
+  !!
+  !<
   subroutine parse_block(parser, mf6_input, iblock, mshape, iout)
     use MemoryTypeModule, only: MemoryType
     use MemoryManagerModule, only: get_from_memorylist
-    type(BlockParserType), intent(inout) :: parser
-    type(ModflowInputType), pointer, intent(in) :: mf6_input
-    integer(I4B), intent(in) :: iblock
-    integer(I4B), dimension(:), contiguous, pointer, intent(inout) :: mshape
-    integer(I4B), intent(in) :: iout
+    type(BlockParserType), intent(inout) :: parser !< block parser
+    type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType 
+    integer(I4B), intent(in) :: iblock !< consecutive block number as defined in definition file
+    integer(I4B), dimension(:), contiguous, pointer, intent(inout) :: mshape !< model shape
+    integer(I4B), intent(in) :: iout !< unit number for output
     logical(LGP) :: isblockfound
     logical(LGP) :: endOfBlock
     logical(LGP) :: supportOpenClose
@@ -129,13 +144,20 @@ contains
     return
   end subroutine parse_block
 
+  !> @brief check subpackage
+  !!
+  !! Check and make sure that the subpackage is valid for
+  !! this input file and load the filename of the subpackage
+  !! into the memory manager.
+  !!
+  !<
   subroutine subpackage_check(parser, mf6_input, checktag, iout)
-    type(BlockParserType), intent(inout) :: parser
-    type(ModflowInputType), pointer, intent(in) :: mf6_input
-    character(len=LINELENGTH), intent(in) :: checktag
-    integer(I4B), intent(in) :: iout
+    type(BlockParserType), intent(inout) :: parser !< block parser
+    type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType 
+    character(len=LINELENGTH), intent(in) :: checktag !< subpackage string, such as TVK6
+    integer(I4B), intent(in) :: iout !< unit number for output
     character(len=LINELENGTH) :: tag, fname_tag
-    type(InputParamDefinitionType), pointer :: idt
+    type(InputParamDefinitionType), pointer :: idt !< input data type object describing this record
     integer(I4B) :: isubpkg
 
     do isubpkg = 1, size(mf6_input%subpackages)
@@ -157,16 +179,23 @@ contains
     end do
   end subroutine subpackage_check
 
+  !> @brief load an individual input record into memory
+  !!
+  !! Load an individual input record into the memory
+  !! manager.  Allow for recursive calls in the case that multiple
+  !! tags are on a single line.
+  !!
+  !<
   recursive subroutine parse_tag(parser, mf6_input, iblock, mshape, iout, &
                                  recursive_call)
-    type(BlockParserType), intent(inout) :: parser
-    type(ModflowInputType), pointer, intent(in) :: mf6_input
-    integer(I4B), intent(in) :: iblock
-    integer(I4B), dimension(:), contiguous, pointer, intent(inout) :: mshape
-    integer(I4B), intent(in) :: iout
-    logical(LGP), intent(in) :: recursive_call
+    type(BlockParserType), intent(inout) :: parser !< block parser
+    type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType 
+    integer(I4B), intent(in) :: iblock !< consecutive block number as defined in definition file
+    integer(I4B), dimension(:), contiguous, pointer, intent(inout) :: mshape !< model shape
+    integer(I4B), intent(in) :: iout !< unit number for output
+    logical(LGP), intent(in) :: recursive_call !< true if recursive call
     character(len=LINELENGTH) :: tag
-    type(InputParamDefinitionType), pointer :: idt
+    type(InputParamDefinitionType), pointer :: idt !< input data type object describing this record
     !
     ! -- read tag name
     call parser%GetStringCaps(tag)
@@ -228,15 +257,23 @@ contains
     return
   end subroutine parse_tag
 
+  !> @brief parse a structured array record into memory manager
+  !!
+  !! A structarray is similar to a numpy recarray.  It it used to
+  !! load a list of data in which each column in the list may be a
+  !! different type.  Each column in the list is stored as a 1d
+  !! vector.
+  !!
+  !<
   subroutine parse_structarray_block(parser, mf6_input, iblock, mshape, iout)
     use StructArrayModule, only: StructArrayType, constructStructArray, &
                                  destructStructArray
-    type(BlockParserType), intent(inout) :: parser
-    type(ModflowInputType), pointer, intent(in) :: mf6_input
-    integer(I4B), intent(in) :: iblock
-    integer(I4B), dimension(:), contiguous, pointer, intent(inout) :: mshape
-    integer(I4B), intent(in) :: iout
-    type(InputParamDefinitionType), pointer :: idt
+    type(BlockParserType), intent(inout) :: parser !< block parser
+    type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType 
+    integer(I4B), intent(in) :: iblock !< consecutive block number as defined in definition file
+    integer(I4B), dimension(:), contiguous, pointer, intent(inout) :: mshape !< model shape
+    integer(I4B), intent(in) :: iout !< unit number for output
+    type(InputParamDefinitionType), pointer :: idt !< input data type object describing this record
     integer(I4B), pointer :: nrow
     integer(I4B) :: icol
     integer(I4B) :: ncol
@@ -286,11 +323,13 @@ contains
     return
   end subroutine parse_structarray_block
 
+  !> @brief load type keyword
+  !<
   subroutine load_keyword_type(parser, idt, memoryPath, iout)
-    type(BlockParserType), intent(inout) :: parser
-    type(InputParamDefinitionType), intent(in) :: idt
-    character(len=*), intent(in) :: memoryPath
-    integer(I4B), intent(in) :: iout
+    type(BlockParserType), intent(inout) :: parser !< block parser
+    type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
+    character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
+    integer(I4B), intent(in) :: iout !< unit number for output
     integer(I4B), pointer :: intvar
     call mem_allocate(intvar, idt%mf6varname, memoryPath)
     intvar = 1
@@ -298,11 +337,13 @@ contains
     return
   end subroutine load_keyword_type
 
+  !> @brief load type string
+  !<
   subroutine load_string_type(parser, idt, memoryPath, iout)
-    type(BlockParserType), intent(inout) :: parser
-    type(InputParamDefinitionType), intent(in) :: idt
-    character(len=*), intent(in) :: memoryPath
-    integer(I4B), intent(in) :: iout
+    type(BlockParserType), intent(inout) :: parser !< block parser
+    type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
+    character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
+    integer(I4B), intent(in) :: iout !< unit number for output
     character(len=LINELENGTH), pointer :: cstr
     integer(I4B) :: ilen
     ilen = LINELENGTH
@@ -311,11 +352,13 @@ contains
     return
   end subroutine load_string_type
 
+  !> @brief load type integer
+  !<
   subroutine load_integer_type(parser, idt, memoryPath, iout)
-    type(BlockParserType), intent(inout) :: parser
-    type(InputParamDefinitionType), intent(in) :: idt
-    character(len=*), intent(in) :: memoryPath
-    integer(I4B), intent(in) :: iout
+    type(BlockParserType), intent(inout) :: parser !< block parser
+    type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
+    character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
+    integer(I4B), intent(in) :: iout !< unit number for output
     integer(I4B), pointer :: intvar
     call mem_allocate(intvar, idt%mf6varname, memoryPath)
     intvar = parser%GetInteger()
@@ -323,12 +366,14 @@ contains
     return
   end subroutine load_integer_type
 
+  !> @brief load type 1d integer
+  !<
   subroutine load_integer1d_type(parser, idt, memoryPath, mshape, iout)
-    type(BlockParserType), intent(inout) :: parser
-    type(InputParamDefinitionType), intent(in) :: idt
-    character(len=*), intent(in) :: memoryPath
-    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape
-    integer(I4B), intent(in) :: iout
+    type(BlockParserType), intent(inout) :: parser !< block parser
+    type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
+    character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
+    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape !< model shape
+    integer(I4B), intent(in) :: iout !< unit number for output
     integer(I4B), dimension(:), pointer, contiguous :: int1d
     integer(I4B), pointer :: nsize1
     integer(I4B) :: nvals
@@ -347,12 +392,14 @@ contains
     return
   end subroutine load_integer1d_type
 
+  !> @brief load type 3d integer
+  !<
   subroutine load_integer3d_type(parser, idt, memoryPath, mshape, iout)
-    type(BlockParserType), intent(inout) :: parser
-    type(InputParamDefinitionType), intent(in) :: idt
-    character(len=*), intent(in) :: memoryPath
-    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape
-    integer(I4B), intent(in) :: iout
+    type(BlockParserType), intent(inout) :: parser !< block parser
+    type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
+    character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
+    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape !< model shape
+    integer(I4B), intent(in) :: iout !< unit number for output
     integer(I4B), dimension(:, :, :), pointer, contiguous :: int3d
     integer(I4B) :: ndim
     integer(I4B) :: nsize1, nsize2, nsize3
@@ -397,11 +444,13 @@ contains
     return
   end subroutine load_integer3d_type
 
+  !> @brief load type double
+  !<
   subroutine load_double_type(parser, idt, memoryPath, iout)
-    type(BlockParserType), intent(inout) :: parser
-    type(InputParamDefinitionType), intent(in) :: idt
-    character(len=*), intent(in) :: memoryPath
-    integer(I4B), intent(in) :: iout
+    type(BlockParserType), intent(inout) :: parser !< block parser
+    type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
+    character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
+    integer(I4B), intent(in) :: iout !< unit number for output
     real(DP), pointer :: dblvar
     call mem_allocate(dblvar, idt%mf6varname, memoryPath)
     dblvar = parser%GetDouble()
@@ -409,12 +458,14 @@ contains
     return
   end subroutine load_double_type
 
+  !> @brief load type 1d double
+  !<
   subroutine load_double1d_type(parser, idt, memoryPath, mshape, iout)
-    type(BlockParserType), intent(inout) :: parser
-    type(InputParamDefinitionType), intent(in) :: idt
-    character(len=*), intent(in) :: memoryPath
-    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape
-    integer(I4B), intent(in) :: iout
+    type(BlockParserType), intent(inout) :: parser !< block parser
+    type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
+    character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
+    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape !< model shape
+    integer(I4B), intent(in) :: iout !< unit number for output
     real(DP), dimension(:), pointer, contiguous :: dbl1d
     integer(I4B), pointer :: nsize1
     integer(I4B) :: nvals
@@ -432,12 +483,14 @@ contains
     return
   end subroutine load_double1d_type
 
+  !> @brief load type 2d double
+  !<
   subroutine load_double2d_type(parser, idt, memoryPath, mshape, iout)
-    type(BlockParserType), intent(inout) :: parser
-    type(InputParamDefinitionType), intent(in) :: idt
-    character(len=*), intent(in) :: memoryPath
-    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape
-    integer(I4B), intent(in) :: iout
+    type(BlockParserType), intent(inout) :: parser !< block parser
+    type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
+    character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
+    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape !< model shape
+    integer(I4B), intent(in) :: iout !< unit number for output
     real(DP), dimension(:, :), pointer, contiguous :: dbl2d
     integer(I4B) :: ndim
     integer(I4B) :: nsize1, nsize2
@@ -464,12 +517,14 @@ contains
     return
   end subroutine load_double2d_type
 
+  !> @brief load type 3d double
+  !<
   subroutine load_double3d_type(parser, idt, memoryPath, mshape, iout)
-    type(BlockParserType), intent(inout) :: parser
-    type(InputParamDefinitionType), intent(in) :: idt
-    character(len=*), intent(in) :: memoryPath
-    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape
-    integer(I4B), intent(in) :: iout
+    type(BlockParserType), intent(inout) :: parser !< block parser
+    type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
+    character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
+    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape !< model shape
+    integer(I4B), intent(in) :: iout !< unit number for output
     real(DP), dimension(:, :, :), pointer, contiguous :: dbl3d
     integer(I4B) :: ndim
     integer(I4B) :: nsize1, nsize2, nsize3
@@ -514,6 +569,13 @@ contains
     return
   end subroutine load_double3d_type
 
+  !> @brief routine for setting the model shape
+  !!
+  !! The model shape must be set in the memory manager because
+  !! individual packages need to know the shape of the arrays
+  !! to read.
+  !!
+  !<
   subroutine set_model_shape(ftype, model_mempath, dis_mempath, model_shape)
     use MemoryTypeModule, only: MemoryType
     use MemoryManagerModule, only: get_from_memorylist
@@ -546,10 +608,12 @@ contains
     return
   end subroutine set_model_shape
 
+  !> @brief read an array that is the size of the model grid
+  !<
   subroutine read_grid_array(parser, mshape, array_name, layered, dblarray, &
                              intarray)
-    type(BlockParserType), intent(inout) :: parser
-    integer(I4B), dimension(:), intent(in) :: mshape
+    type(BlockParserType), intent(inout) :: parser !< block parser
+    integer(I4B), dimension(:), intent(in) :: mshape !< model shape
     character(len=*), intent(in) :: array_name
     logical(LGP), intent(in) :: layered
     real(DP), dimension(:), optional, intent(inout) :: dblarray
@@ -561,7 +625,7 @@ contains
     integer(I4B) :: ndim3
     integer(I4B) :: k1
     integer(I4B) :: k2
-    integer(I4B) :: iout
+    integer(I4B) :: iout !< unit number for output
     character(len=LINELENGTH) :: keyword
 
     ndim = size(mshape)
