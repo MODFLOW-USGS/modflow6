@@ -43,6 +43,8 @@ module ModflowInputModule
     type(InputBlockDefinitionType), dimension(:), pointer :: p_block_dfns
     type(InputParamDefinitionType), dimension(:), pointer :: p_aggregate_dfns
     type(InputParamDefinitionType), dimension(:), pointer :: p_param_dfns
+  contains
+    procedure :: destroy
   end type ModflowInputType
 
 contains
@@ -61,7 +63,6 @@ contains
     character(len=*), dimension(:), intent(in) :: subpackages !< array of subpackage types, such as ["TVK6", "OBS6"]
     type(ModflowInputType) :: mf6_input
 
-    !allocate (mf6_input)
     mf6_input%file_type = trim(ftype)
     mf6_input%component_type = trim(component_type)
     mf6_input%subcomponent_type = trim(subcomponent_type)
@@ -78,5 +79,15 @@ contains
     mf6_input%p_aggregate_dfns => aggregate_definitions(mf6_input%component)
     mf6_input%p_param_dfns => param_definitions(mf6_input%component)
   end function getModflowInput
+
+  !> @brief function to release ModflowInputType allocated memory
+  !<
+  subroutine destroy(this)
+    class(ModflowInputType) :: this !< ModflowInputType
+
+    if (allocated(this%subpackages)) then
+      deallocate (this%subpackages)
+    end if
+  end subroutine destroy
 
 end module ModflowInputModule

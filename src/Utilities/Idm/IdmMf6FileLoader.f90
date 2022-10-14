@@ -81,8 +81,12 @@ contains
     case default
       pkgloader%load_package => generic_mf6_load
     end select
-
+    !
+    ! -- invoke the selected load routine
     call pkgloader%load_package(parser, mf6_input, iout)
+    !
+    ! -- release allocated memory
+    call mf6_input%destroy()
   end subroutine input_load
 
 end module IdmMf6FileLoaderModule

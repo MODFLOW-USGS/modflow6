@@ -84,6 +84,9 @@ contains
     ! -- close logging statement
     call idm_log_close(mf6_input%component_name, &
                        mf6_input%subcomponent_name, iout)
+    !
+    ! -- release allocated memory
+    call mf6_input%destroy()
   end subroutine idm_load_from_blockparser
 
   !> @brief procedure to load a block

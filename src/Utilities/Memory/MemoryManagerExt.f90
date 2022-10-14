@@ -41,6 +41,7 @@ contains
         mt => memorylist%Get(ipos)
         if (mt%path == memory_path .and. mt%mt_associated()) then
           call mt%mt_deallocate()
+          deallocate (mt)
           call memorylist%remove(ipos, .false.)
           removed = .true.
           exit
