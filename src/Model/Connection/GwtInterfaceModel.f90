@@ -5,13 +5,13 @@ module GwtInterfaceModelModule
   use NumericalModelModule, only: NumericalModelType
   use GwtModule, only: GwtModelType, CastAsGwtModel
   use GwfDisuModule, only: disu_cr, CastAsDisuType
-  use GwtFmiModule, only: fmi_cr, GwtFmiType
-  use GwtAdvModule, only: adv_cr, GwtAdvType
-  use GwtAdvOptionsModule, only: GwtAdvOptionsType
+  use TspFmiModule, only: fmi_cr, TspFmiType
+  use TspAdvModule, only: adv_cr, TspAdvType
+  use TspAdvOptionsModule, only: TspAdvOptionsType
   use GwtDspModule, only: dsp_cr, GwtDspType
   use GwtDspOptionsModule, only: GwtDspOptionsType
   use GwtMstModule, only: mst_cr
-  use GwtObsModule, only: gwt_obs_cr
+  use TspObsModule, only: tsp_obs_cr
   use GridConnectionModule
 
   implicit none
@@ -29,6 +29,8 @@ module GwtInterfaceModelModule
     class(GridConnectionType), pointer :: gridConnection => null() !< The grid connection class will provide the interface grid
     class(GwtModelType), private, pointer :: owner => null() !< the real GWT model for which the exchange coefficients
                                                              !! are calculated with this interface model
+
+    real(DP), dimension(:), pointer, contiguous :: porosity => null() !< to be filled with MST porosity
 
   contains
     procedure, pass(this) :: gwtifmod_cr
@@ -117,7 +119,7 @@ contains
     class(GwtInterfaceModelType) :: this !< the GWT interface model
     ! local
     class(*), pointer :: disPtr
-    type(GwtAdvOptionsType) :: adv_options
+    type(TspAdvOptionsType) :: adv_options
     type(GwtDspOptionsType) :: dsp_options
 
     this%moffset = 0
