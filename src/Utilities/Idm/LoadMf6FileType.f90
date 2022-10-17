@@ -13,6 +13,8 @@ module LoadMf6FileTypeModule
   use SimModule, only: store_error
   use BlockParserModule, only: BlockParserType
   use ArrayReadersModule, only: ReadArray
+  use Double1dReaderModule, only: read_dbl1d
+  use Integer1dReaderModule, only: read_int1d
   use InputOutputModule, only: parseline
   use InputDefinitionModule, only: InputParamDefinitionType
   use InputDefinitionSelectorModule, only: get_param_definition_type, &
@@ -686,14 +688,17 @@ contains
 
       ! float array
       if (present(dblarray)) then
-        call ReadArray(parser%iuactive, dblarray, array_name, &
-                       ndim, nvals, iout, 0)
+        !call ReadArray(parser%iuactive, dblarray, array_name, &
+        !               ndim, nvals, iout, 0)
+
+        call read_dbl1d(parser, dblarray, array_name)
       end if
 
       ! integer array
       if (present(intarray)) then
-        call ReadArray(parser%iuactive, intarray, array_name, &
-                       ndim, nvals, iout, 0)
+        !call ReadArray(parser%iuactive, intarray, array_name, &
+        !               ndim, nvals, iout, 0)
+        call read_int1d(parser, intarray, array_name)
       end if
 
     end if
