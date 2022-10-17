@@ -37,8 +37,11 @@ modflow_sources = files(
     'Model' / 'GroundWaterFlow' / 'gwf3chd8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3csub8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3dis8.f90',
+    'Model' / 'GroundWaterFlow' / 'gwf3dis8idm.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3disu8.f90',
+    'Model' / 'GroundWaterFlow' / 'gwf3disu8idm.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3disv8.f90',
+    'Model' / 'GroundWaterFlow' / 'gwf3disv8idm.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3drn8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3evt8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3ghb8.f90',
@@ -48,6 +51,7 @@ modflow_sources = files(
     'Model' / 'GroundWaterFlow' / 'gwf3maw8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3mvr8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3npf8.f90',
+    'Model' / 'GroundWaterFlow' / 'gwf3npf8idm.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3obs8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3oc8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3rch8.f90',
@@ -64,6 +68,7 @@ modflow_sources = files(
     'Model' / 'GroundWaterTransport' / 'gwt1apt1.f90',
     'Model' / 'GroundWaterTransport' / 'gwt1cnc1.f90',
     'Model' / 'GroundWaterTransport' / 'gwt1dsp.f90',
+    'Model' / 'GroundWaterTransport' / 'gwt1dspidm.f90',
     'Model' / 'GroundWaterTransport' / 'gwt1fmi1.f90',
     'Model' / 'GroundWaterTransport' / 'gwt1ic1.f90',
     'Model' / 'GroundWaterTransport' / 'gwt1ist1.f90',
@@ -108,10 +113,19 @@ modflow_sources = files(
     'Solution' / 'SolutionGroup.f90',
     'Timing' / 'ats.f90',
     'Timing' / 'tdis.f90',
+    'Utilities' / 'Idm' / 'IdmLogger.f90',
+    'Utilities' / 'Idm' / 'IdmMf6FileLoader.f90',
+    'Utilities' / 'Idm' / 'ModflowInput.f90',
+    'Utilities' / 'Idm' / 'InputDefinition.f90',
+    'Utilities' / 'Idm' / 'InputDefinitionSelector.f90',
+    'Utilities' / 'Idm' / 'LoadMf6FileType.f90',
+    'Utilities' / 'Idm' / 'StructArray.f90',
+    'Utilities' / 'Idm' / 'StructVector.f90',
     'Utilities' / 'Memory' / 'Memory.f90',
     'Utilities' / 'Memory' / 'MemoryHelper.f90',
     'Utilities' / 'Memory' / 'MemoryList.f90',
     'Utilities' / 'Memory' / 'MemoryManager.f90',
+    'Utilities' / 'Memory' / 'MemoryManagerExt.f90',
     'Utilities' / 'Memory' / 'MemorySetHandler.f90',
     'Utilities' / 'Observation' / 'Obs3.f90',
     'Utilities' / 'Observation' / 'ObsContainer.f90',
@@ -175,4 +189,4 @@ mf6_external = static_library('mf6_external', external_libraries)
 
 mf6core = static_library('mf6core', modflow_sources, link_with: [mf6_external])
 
-executable('mf6', 'mf6.f90', link_with: [mf6core], install: true)
+mf6exe = executable('mf6', 'mf6.f90', link_with: [mf6core], install: true)

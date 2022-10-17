@@ -41,6 +41,7 @@ module MemoryTypeModule
   contains
     procedure :: table_entry
     procedure :: mt_associated
+    procedure :: mt_deallocate
   end type
 
 contains
@@ -98,5 +99,69 @@ contains
     if (associated(this%adbl3d)) al = .true.
     if (associated(this%acharstr1d)) al = .true.
   end function mt_associated
+
+  subroutine mt_deallocate(this)
+    class(MemoryType) :: this
+
+    if (associated(this%strsclr)) then
+      if (this%master) deallocate (this%strsclr)
+      nullify (this%strsclr)
+    end if
+
+    if (associated(this%logicalsclr)) then
+      if (this%master) deallocate (this%logicalsclr)
+      nullify (this%logicalsclr)
+    end if
+
+    if (associated(this%intsclr)) then
+      if (this%master) deallocate (this%intsclr)
+      nullify (this%intsclr)
+    end if
+
+    if (associated(this%dblsclr)) then
+      if (this%master) deallocate (this%dblsclr)
+      nullify (this%dblsclr)
+    end if
+
+    if (associated(this%astr1d)) then
+      if (this%master) deallocate (this%astr1d)
+      nullify (this%astr1d)
+    end if
+
+    if (associated(this%aint1d)) then
+      if (this%master) deallocate (this%aint1d)
+      nullify (this%aint1d)
+    end if
+
+    if (associated(this%aint2d)) then
+      if (this%master) deallocate (this%aint2d)
+      nullify (this%aint2d)
+    end if
+
+    if (associated(this%aint3d)) then
+      if (this%master) deallocate (this%aint3d)
+      nullify (this%aint3d)
+    end if
+
+    if (associated(this%adbl1d)) then
+      if (this%master) deallocate (this%adbl1d)
+      nullify (this%adbl1d)
+    end if
+
+    if (associated(this%adbl2d)) then
+      if (this%master) deallocate (this%adbl2d)
+      nullify (this%adbl2d)
+    end if
+
+    if (associated(this%adbl3d)) then
+      if (this%master) deallocate (this%adbl3d)
+      nullify (this%adbl3d)
+    end if
+
+    if (associated(this%acharstr1d)) then
+      if (this%master) deallocate (this%acharstr1d)
+      nullify (this%acharstr1d)
+    end if
+  end subroutine mt_deallocate
 
 end module MemoryTypeModule

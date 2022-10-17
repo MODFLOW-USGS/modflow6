@@ -1320,7 +1320,7 @@ contains
     return
   end subroutine set_mask
 
-  subroutine iac_to_ia(ia)
+  subroutine iac_to_ia(iac, ia)
 ! ******************************************************************************
 ! iac_to_ia -- convert an iac array into an ia array
 ! ******************************************************************************
@@ -1328,15 +1328,21 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
+    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: iac
     integer(I4B), dimension(:), contiguous, intent(inout) :: ia
     ! -- local
     integer(I4B) :: n, nodes
 ! ------------------------------------------------------------------------------
     !
     ! -- Convert iac to ia
-    nodes = size(ia) - 1
-    do n = 2, nodes + 1
-      ia(n) = ia(n) + ia(n - 1)
+    nodes = size(iac)
+    ia(1) = iac(1)
+    do n = 2, size(ia) ! size(ia) == size(iac) + 1
+      if (n < size(ia)) then
+        ia(n) = iac(n) + ia(n - 1)
+      else
+        ia(n) = ia(n) + ia(n - 1)
+      end if
     end do
     do n = nodes + 1, 2, -1
       ia(n) = ia(n - 1) + 1

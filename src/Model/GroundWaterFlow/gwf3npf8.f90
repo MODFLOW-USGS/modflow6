@@ -3,7 +3,8 @@ module GwfNpfModule
   use ConstantsModule, only: DZERO, DEM9, DEM8, DEM7, DEM6, DEM2, &
                              DHALF, DP9, DONE, DTWO, &
                              DLNLOW, DLNHIGH, &
-                             DHNOFLO, DHDRY, DEM10
+                             DHNOFLO, DHDRY, DEM10, &
+                             LENMEMPATH, LENVARNAME, LINELENGTH
   use SmoothingModule, only: sQuadraticSaturation, &
                              sQuadraticSaturationDerivative
   use NumericalPackageModule, only: NumericalPackageType
@@ -40,6 +41,7 @@ module GwfNpfModule
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
     real(DP), dimension(:), pointer, contiguous :: hnew => null() !< pointer to model xnew
     integer(I4B), pointer :: ixt3d => null() !< xt3d flag (0 is off, 1 is lhs, 2 is rhs)
+    integer(I4B), pointer :: ixt3drhs => null() !< xt3d rhs flag, xt3d rhs is set active if 1
     integer(I4B), pointer :: iperched => null() !< vertical flow corrections if 1
     integer(I4B), pointer :: ivarcv => null() !< CV is function of water table
     integer(I4B), pointer :: idewatcv => null() !< CV may be a discontinuous function of water table
@@ -124,11 +126,12 @@ module GwfNpfModule
     procedure :: allocate_scalars
     procedure, private :: store_original_k_arrays
     procedure, private :: allocate_arrays
-    procedure, private :: read_options
+    procedure, private :: source_options
+    procedure, private :: source_griddata
+    procedure, private :: log_options
+    procedure, private :: log_griddata
     procedure, private :: set_options
-    procedure, private :: rewet_options
     procedure, private :: check_options
-    procedure, private :: read_grid_data
     procedure, private :: prepcheck
     procedure, private :: preprocess_input
     procedure, private :: calc_condsat
@@ -154,11 +157,17 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use IdmMf6FileLoaderModule, only: input_load
+    use ConstantsModule, only: LENPACKAGETYPE
     ! -- dummy
     type(GwfNpfType), pointer :: npfobj
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
+    ! -- formats
+    character(len=*), parameter :: fmtheader = &
+      "(1x, /1x, 'NPF -- NODE PROPERTY FLOW PACKAGE, VERSION 1, 3/30/2015', &
+       &' INPUT READ FROM UNIT ', i0, /)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -173,6 +182,21 @@ contains
     ! -- Set variables
     npfobj%inunit = inunit
     npfobj%iout = iout
+    !
+    ! -- Check if input file is open
+    if (inunit > 0) then
+      !
+      ! -- Print a message identifying the node property flow package.
+      write (iout, fmtheader) inunit
+      !
+      ! -- Initialize block parser and read options
+      call npfobj%parser%Initialize(inunit, iout)
+      !
+      ! -- Use the input data model routines to load the input data
+      !    into memory
+      call input_load(npfobj%parser, 'NPF6', 'GWF', 'NPF', npfobj%name_model, &
+                      'NPF', [character(len=LENPACKAGETYPE) :: 'TVK6'], iout)
+    end if
     !
     ! -- Return
     return
@@ -203,10 +227,6 @@ contains
     integer(I4B), intent(in) :: invsc !< viscosity enabled? (>0 means yes)
     type(GwfNpfOptionsType), optional, intent(in) :: npf_options !< the optional options, for when not constructing from file
     ! -- local
-    ! -- formats
-    character(len=*), parameter :: fmtheader = &
-      "(1x, /1x, 'NPF -- NODE PROPERTY FLOW PACKAGE, VERSION 1, 3/30/2015', &
-       &' INPUT READ FROM UNIT ', i0, //)"
     ! -- data
 ! ------------------------------------------------------------------------------
     !
@@ -217,18 +237,15 @@ contains
     if (invsc > 0) this%invsc = invsc
     !
     if (.not. present(npf_options)) then
-      ! -- Print a message identifying the node property flow package.
-      write (this%iout, fmtheader) this%inunit
       !
-      ! -- Initialize block parser and read options
-      call this%parser%Initialize(this%inunit, this%iout)
-      call this%read_options()
+      ! -- source options
+      call this%source_options()
       !
       ! -- allocate arrays
       call this%allocate_arrays(this%dis%nodes, this%dis%njas)
       !
-      ! -- read from file, set, and convert/check the input
-      call this%read_grid_data()
+      ! -- source griddata, set, and convert/check the input
+      call this%source_griddata()
       call this%prepcheck()
     else
       call this%set_options(npf_options)
@@ -1063,9 +1080,14 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use MemoryManagerExtModule, only: memorylist_remove
+    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfNpftype) :: this
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Deallocate input memory
+    call memorylist_remove(this%name_model, 'NPF', idm_context)
     !
     ! -- TVK
     if (this%intvk /= 0) then
@@ -1078,6 +1100,7 @@ contains
     ! -- Scalars
     call mem_deallocate(this%iname)
     call mem_deallocate(this%ixt3d)
+    call mem_deallocate(this%ixt3drhs)
     call mem_deallocate(this%satomega)
     call mem_deallocate(this%hnoflo)
     call mem_deallocate(this%hdry)
@@ -1161,6 +1184,7 @@ contains
     ! -- Allocate scalars
     call mem_allocate(this%iname, 'INAME', this%memoryPath)
     call mem_allocate(this%ixt3d, 'IXT3D', this%memoryPath)
+    call mem_allocate(this%ixt3drhs, 'IXT3DRHS', this%memoryPath)
     call mem_allocate(this%satomega, 'SATOMEGA', this%memoryPath)
     call mem_allocate(this%hnoflo, 'HNOFLO', this%memoryPath)
     call mem_allocate(this%hdry, 'HDRY', this%memoryPath)
@@ -1202,6 +1226,7 @@ contains
     ! -- Initialize value
     this%iname = 8
     this%ixt3d = 0
+    this%ixt3drhs = 0
     this%satomega = DZERO
     this%hnoflo = DHNOFLO !1.d30
     this%hdry = DHDRY !-1.d30
@@ -1338,181 +1363,200 @@ contains
     return
   end subroutine allocate_arrays
 
-  subroutine read_options(this)
+  subroutine log_options(this, afound)
 ! ******************************************************************************
-! read_options -- Read the options
+! log_options -- log npf options sourced from the input mempath
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
+    use KindModule, only: LGP
+    ! -- dummy
+    class(GwfNpftype) :: this
+    ! -- locals
+    logical, dimension(:), intent(in) :: afound
+! ------------------------------------------------------------------------------
+    !
+    write (this%iout, '(1x,a)') 'Setting NPF Options'
+    if (afound(1)) &
+      write (this%iout, '(4x,a)') 'CELL-BY-CELL FLOW INFORMATION WILL BE PRINTED &
+                                  &TO LISTING FILE WHENEVER ICBCFL IS NOT ZERO.'
+    if (afound(2)) &
+      write (this%iout, '(4x,a)') 'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED &
+                                  &TO BINARY FILE WHENEVER ICBCFL IS NOT ZERO.'
+    if (afound(3)) &
+      write (this%iout, '(4x,a,i0)') 'ALTERNATIVE CELL AVERAGING [1=LOGARITHMIC, &
+                                     &2=AMT-LMK, 3=AMT-HMK] SET TO: ', &
+                                     this%icellavg
+    if (afound(4)) write (this%iout, '(4x,a)') 'THICKSTRT OPTION HAS BEEN &
+                                               &ACTIVATED.'
+    if (afound(5)) write (this%iout, '(4x,a)') 'VERTICAL FLOW WILL BE ADJUSTED &
+                                               &FOR PERCHED CONDITIONS.'
+    if (afound(6)) write (this%iout, '(4x,a)') 'VERTICAL CONDUCTANCE VARIES WITH &
+                                               &WATER TABLE.'
+    if (afound(7)) write (this%iout, '(4x,a)') 'VERTICAL CONDUCTANCE ACCOUNTS &
+                                               &FOR DEWATERED PORTION OF AN &
+                                               &UNDERLYING CELL.'
+    if (afound(8)) write (this%iout, '(4x,a)') 'XT3D FORMULATION IS SELECTED.'
+    if (afound(9)) write (this%iout, '(4x,a)') 'XT3D RHS FORMULATION IS SELECTED.'
+    if (afound(10)) &
+      write (this%iout, '(4x,a)') 'SPECIFIC DISCHARGE WILL BE CALCULATED AT CELL &
+                                  &CENTERS AND WRITTEN TO DATA-SPDIS IN BUDGET &
+                                  &FILE WHEN REQUESTED.'
+    if (afound(11)) &
+      write (this%iout, '(4x,a)') 'SATURATION WILL BE WRITTEN TO DATA-SAT IN &
+                                  &BUDGET FILE WHEN REQUESTED.'
+    if (afound(12)) &
+      write (this%iout, '(4x,a)') 'VALUES SPECIFIED FOR K22 ARE ANISOTROPY &
+                                  &RATIOS AND WILL BE MULTIPLIED BY K BEFORE &
+                                  &BEING USED IN CALCULATIONS.'
+    if (afound(13)) &
+      write (this%iout, '(4x,a)') 'VALUES SPECIFIED FOR K33 ARE ANISOTROPY &
+                                  &RATIOS AND WILL BE MULTIPLIED BY K BEFORE &
+                                  &BEING USED IN CALCULATIONS.'
+    if (afound(15)) write (this%iout, '(4x,a)') 'NEWTON-RAPHSON method disabled &
+                                                &for unconfined cells'
+    if (afound(16)) write (this%iout, '(4x,a)') 'MODFLOW-USG saturation &
+                                                &calculation method will be used'
+    if (afound(17)) write (this%iout, '(4x,a)') 'MODFLOW-NWT upstream weighting &
+                                                &method will be used '
+    if (afound(18)) &
+      write (this%iout, '(4x,a,1pg15.6)') 'MINIMUM SATURATED THICKNESS HAS BEEN &
+                                          &SET TO: ', this%satmin
+    if (afound(19)) &
+      write (this%iout, '(4x,a,1pg15.6)') 'SATURATION OMEGA: ', this%satomega
+    if (afound(20)) write (this%iout, '(4x,a)') 'REWETTING IS ACTIVE.'
+    if (afound(21)) write (this%iout, '(4x,a,1pg15.6)') 'WETTING FACTOR HAS BEEN &
+                                                        &SET TO: ', this%wetfct
+    if (afound(22)) write (this%iout, '(4x,a,i5)') 'IWETIT HAS BEEN SET TO: ', &
+      this%iwetit
+    if (afound(23)) write (this%iout, '(4x,a,i5)') 'IHDWET HAS BEEN SET TO: ', &
+      this%ihdwet
+    write (this%iout, '(1x,a,/)') 'End Setting NPF Options'
+    !
+    ! -- Write rewet settings
+    write (this%iout, '(1x, a)') 'THE FOLLOWING REWET SETTINGS WILL BE USED.'
+    write (this%iout, '(4x, a,1pg15.6)') '  WETFCT = ', this%wetfct
+    write (this%iout, '(4x, a,i0)') '  IWETIT = ', this%iwetit
+    write (this%iout, '(4x, a,i0)') '  IHDWET = ', this%ihdwet
+
+  end subroutine log_options
+
+  subroutine source_options(this)
+! ******************************************************************************
+! source_options -- update simulation options from input mempath
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use KindModule, only: LGP
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_context
+    ! -- dummy
+    class(GwfNpftype) :: this
+    ! -- locals
+    character(len=LENMEMPATH) :: idmMemoryPath
+    character(len=LENVARNAME), dimension(3) :: cellavg_method = &
+      &[character(len=LENVARNAME) :: 'LOGARITHMIC', 'AMT-LMK', 'AMT-HMK']
+    logical, dimension(23) :: afound
+    character(len=LINELENGTH) :: tvk6_filename
+! ------------------------------------------------------------------------------
+    !
+    ! -- set memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'NPF', idm_context)
+    !
+    ! -- update defaults with idm sourced values
+    call mem_set_value(this%iprflow, 'IPRFLOW', idmMemoryPath, afound(1))
+    call mem_set_value(this%ipakcb, 'IPAKCB', idmMemoryPath, afound(2))
+    call mem_set_value(this%icellavg, 'CELLAVG', idmMemoryPath, cellavg_method, &
+                       afound(3))
+    call mem_set_value(this%ithickstrt, 'ITHICKSTRT', idmMemoryPath, afound(4))
+    call mem_set_value(this%iperched, 'IPERCHED', idmMemoryPath, afound(5))
+    call mem_set_value(this%ivarcv, 'IVARCV', idmMemoryPath, afound(6))
+    call mem_set_value(this%idewatcv, 'IDEWATCV', idmMemoryPath, afound(7))
+    call mem_set_value(this%ixt3d, 'IXT3D', idmMemoryPath, afound(8))
+    call mem_set_value(this%ixt3drhs, 'IXT3DRHS', idmMemoryPath, afound(9))
+    call mem_set_value(this%isavspdis, 'ISAVSPDIS', idmMemoryPath, afound(10))
+    call mem_set_value(this%isavsat, 'ISAVSAT', idmMemoryPath, afound(11))
+    call mem_set_value(this%ik22overk, 'IK22OVERK', idmMemoryPath, afound(12))
+    call mem_set_value(this%ik33overk, 'IK33OVERK', idmMemoryPath, afound(13))
+    call mem_set_value(tvk6_filename, 'TVK6_FILENAME', idmMemoryPath, afound(14))
+    call mem_set_value(this%inewton, 'INEWTON', idmMemoryPath, afound(15))
+    call mem_set_value(this%iusgnrhc, 'IUSGNRHC', idmMemoryPath, &
+                       afound(16))
+    call mem_set_value(this%inwtupw, 'INWTUPW', idmMemoryPath, afound(17))
+    call mem_set_value(this%satmin, 'SATMIN', idmMemoryPath, afound(18))
+    call mem_set_value(this%satomega, 'SATOMEGA', idmMemoryPath, afound(19))
+    call mem_set_value(this%irewet, 'IREWET', idmMemoryPath, afound(20))
+    call mem_set_value(this%wetfct, 'WETFCT', idmMemoryPath, afound(21))
+    call mem_set_value(this%iwetit, 'IWETIT', idmMemoryPath, afound(22))
+    call mem_set_value(this%ihdwet, 'IHDWET', idmMemoryPath, afound(23))
+    !
+    ! -- save flows option active
+    if (afound(2)) this%ipakcb = -1
+    !
+    ! -- xt3d active with rhs
+    if (afound(8) .and. afound(9)) this%ixt3d = 2
+    !
+    ! -- save specific discharge active
+    if (afound(10)) this%icalcspdis = this%isavspdis
+    !
+    ! -- TVK6 subpackage file spec provided
+    if (afound(14)) then
+      this%intvk = GetUnit()
+      call openfile(this%intvk, this%iout, tvk6_filename, 'TVK')
+      call tvk_cr(this%tvk, this%name_model, this%intvk, this%iout)
+    end if
+    !
+    ! -- no newton specified
+    if (afound(15)) then
+      this%inewton = 0
+      this%iasym = 0
+    end if
+    !
+    ! -- log options
+    if (this%iout > 0) then
+      call this%log_options(afound)
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine source_options
+
+  subroutine set_options(this, options)
+    class(GwfNpftype) :: this
+    type(GwfNpfOptionsType), intent(in) :: options
+
+    this%icellavg = options%icellavg
+    this%ithickstrt = options%ithickstrt
+    this%iperched = options%iperched
+    this%ivarcv = options%ivarcv
+    this%idewatcv = options%idewatcv
+    this%irewet = options%irewet
+    this%wetfct = options%wetfct
+    this%iwetit = options%iwetit
+    this%ihdwet = options%ihdwet
+
+  end subroutine set_options
+
+  subroutine check_options(this)
+! ******************************************************************************
+! check_options -- Check for conflicting NPF options
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
     use SimModule, only: store_error, count_errors
-    implicit none
+    use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwfNpftype) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword, fname
-    integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
-    ! -- formats
-    character(len=*), parameter :: fmtiprflow = &
-      "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE PRINTED TO LISTING FILE &
-      &WHENEVER ICBCFL IS NOT ZERO.')"
-    character(len=*), parameter :: fmtisvflow = &
-      "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED TO BINARY FILE &
-      &WHENEVER ICBCFL IS NOT ZERO.')"
-    character(len=*), parameter :: fmtcellavg = &
-      &"(4x,'ALTERNATIVE CELL AVERAGING HAS BEEN SET TO ', a)"
-    character(len=*), parameter :: fmtnct = &
-      &"(1x, 'Negative cell thickness at cell: ', a)"
-    ! -- data
+    character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
-    !
-    ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, &
-                              supportOpenClose=.true., blockRequired=.false.)
-    !
-    ! -- parse options block if detected
-    if (isfound) then
-      write (this%iout, '(1x,a)') 'PROCESSING NPF OPTIONS'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-        case ('PRINT_FLOWS')
-          this%iprflow = 1
-          write (this%iout, fmtiprflow)
-        case ('SAVE_FLOWS')
-          this%ipakcb = -1
-          write (this%iout, fmtisvflow)
-        case ('ALTERNATIVE_CELL_AVERAGING')
-          call this%parser%GetStringCaps(keyword)
-          select case (keyword)
-          case ('LOGARITHMIC')
-            this%icellavg = 1
-            write (this%iout, fmtcellavg) 'LOGARITHMIC'
-          case ('AMT-LMK')
-            this%icellavg = 2
-            write (this%iout, fmtcellavg) 'AMT-LMK'
-          case ('AMT-HMK')
-            this%icellavg = 3
-            write (this%iout, fmtcellavg) 'AMT-HMK'
-          case default
-            write (errmsg, '(4x,a,a)') 'UNKNOWN CELL AVERAGING METHOD: ', &
-              keyword
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
-          end select
-          write (this%iout, '(4x,a,a)') &
-            'CELL AVERAGING METHOD HAS BEEN SET TO: ', keyword
-        case ('THICKSTRT')
-          this%ithickstrt = 1
-          write (this%iout, '(4x,a)') 'THICKSTRT OPTION HAS BEEN ACTIVATED.'
-        case ('PERCHED')
-          this%iperched = 1
-          write (this%iout, '(4x,a)') &
-            'VERTICAL FLOW WILL BE ADJUSTED FOR PERCHED CONDITIONS.'
-        case ('VARIABLECV')
-          this%ivarcv = 1
-          write (this%iout, '(4x,a)') &
-            'VERTICAL CONDUCTANCE VARIES WITH WATER TABLE.'
-          call this%parser%GetStringCaps(keyword)
-          if (keyword == 'DEWATERED') then
-            this%idewatcv = 1
-            write (this%iout, '(4x,a)') &
-              'VERTICAL CONDUCTANCE ACCOUNTS FOR DEWATERED PORTION OF '// &
-              'AN UNDERLYING CELL.'
-          end if
-        case ('REWET')
-          call this%rewet_options()
-        case ('XT3D')
-          this%ixt3d = 1
-          write (this%iout, '(4x,a)') &
-            'XT3D FORMULATION IS SELECTED.'
-          call this%parser%GetStringCaps(keyword)
-          if (keyword == 'RHS') then
-            this%ixt3d = 2
-          end if
-        case ('SAVE_SPECIFIC_DISCHARGE')
-          this%icalcspdis = 1
-          this%isavspdis = 1
-          write (this%iout, '(4x,a)') &
-            'SPECIFIC DISCHARGE WILL BE CALCULATED AT CELL CENTERS '// &
-            'AND WRITTEN TO DATA-SPDIS IN BUDGET FILE WHEN REQUESTED.'
-        case ('SAVE_SATURATION')
-          this%isavsat = 1
-          write (this%iout, '(4x,a)') &
-            'SATURATION WILL BE WRITTEN TO DATA-SAT IN BUDGET FILE '// &
-            'WHEN REQUESTED.'
-        case ('K22OVERK')
-          this%ik22overk = 1
-          write (this%iout, '(4x,a)') &
-            'VALUES SPECIFIED FOR K22 ARE ANISOTROPY RATIOS AND '// &
-            'WILL BE MULTIPLIED BY K BEFORE BEING USED IN CALCULATIONS.'
-        case ('K33OVERK')
-          this%ik33overk = 1
-          write (this%iout, '(4x,a)') &
-            'VALUES SPECIFIED FOR K33 ARE ANISOTROPY RATIOS AND '// &
-            'WILL BE MULTIPLIED BY K BEFORE BEING USED IN CALCULATIONS.'
-        case ('TVK6')
-          if (this%intvk /= 0) then
-            errmsg = 'Multiple TVK6 keywords detected in OPTIONS block.'// &
-                     ' Only one TVK6 entry allowed.'
-            call store_error(errmsg, terminate=.TRUE.)
-          end if
-          call this%parser%GetStringCaps(keyword)
-          if (trim(adjustl(keyword)) /= 'FILEIN') then
-            errmsg = 'TVK6 keyword must be followed by "FILEIN" '// &
-                     'then by filename.'
-            call store_error(errmsg, terminate=.TRUE.)
-          end if
-          call this%parser%GetString(fname)
-          this%intvk = GetUnit()
-          call openfile(this%intvk, this%iout, fname, 'TVK')
-          call tvk_cr(this%tvk, this%name_model, this%intvk, this%iout)
-          !
-          ! -- The following are options that are only available in the
-          !    development version and are not included in the documentation.
-          !    These options are only available when IDEVELOPMODE in
-          !    constants module is set to 1
-        case ('DEV_NO_NEWTON')
-          call this%parser%DevOpt()
-          this%inewton = 0
-          write (this%iout, '(4x,a)') &
-            'NEWTON-RAPHSON method disabled for unconfined cells'
-          this%iasym = 0
-        case ('DEV_MODFLOWUSG_UPSTREAM_WEIGHTED_SATURATION')
-          call this%parser%DevOpt()
-          this%iusgnrhc = 1
-          write (this%iout, '(4x,a)') &
-            'MODFLOW-USG saturation calculation method will be used '
-        case ('DEV_MODFLOWNWT_UPSTREAM_WEIGHTING')
-          call this%parser%DevOpt()
-          this%inwtupw = 1
-          write (this%iout, '(4x,a)') &
-            'MODFLOW-NWT upstream weighting method will be used '
-        case ('DEV_MINIMUM_SATURATED_THICKNESS')
-          call this%parser%DevOpt()
-          this%satmin = this%parser%GetDouble()
-          write (this%iout, '(4x,a,1pg15.6)') &
-            'MINIMUM SATURATED THICKNESS HAS BEEN SET TO: ', &
-            this%satmin
-        case ('DEV_OMEGA')
-          call this%parser%DevOpt()
-          this%satomega = this%parser%GetDouble()
-          write (this%iout, '(4x,a,1pg15.6)') &
-            'SATURATION OMEGA: ', this%satomega
-
-        case default
-          write (errmsg, '(4x,a,a)') 'Unknown NPF option: ', trim(keyword)
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end select
-      end do
-      write (this%iout, '(1x,a)') 'END OF NPF OPTIONS'
-    end if
     ! -- check if this%iusgnrhc has been enabled for a model that is not using
     !    the Newton-Raphson formulation
     if (this%iusgnrhc > 0 .and. this%inewton == 0) then
@@ -1558,137 +1602,6 @@ contains
     if (this%inewton > 0) then
       this%satomega = DEM6
     end if
-    !
-    ! -- terminate if errors encountered in options block
-    if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
-    end if
-    !
-    ! -- Return
-    return
-  end subroutine read_options
-
-  subroutine set_options(this, options)
-    class(GwfNpftype) :: this
-    type(GwfNpfOptionsType), intent(in) :: options
-
-    this%icellavg = options%icellavg
-    this%ithickstrt = options%ithickstrt
-    this%iperched = options%iperched
-    this%ivarcv = options%ivarcv
-    this%idewatcv = options%idewatcv
-    this%irewet = options%irewet
-    this%wetfct = options%wetfct
-    this%iwetit = options%iwetit
-    this%ihdwet = options%ihdwet
-
-  end subroutine set_options
-
-  subroutine rewet_options(this)
-! ******************************************************************************
-! rewet_options -- Set rewet options
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use SimModule, only: store_error
-    use ConstantsModule, only: LINELENGTH
-    ! -- dummy
-    class(GwfNpftype) :: this
-    ! -- local
-    integer(I4B) :: ival
-    character(len=LINELENGTH) :: keyword, errmsg
-    logical, dimension(3) :: lfound = .false.
-! ------------------------------------------------------------------------------
-    !
-    ! -- If rewet already set, then terminate with error
-    if (this%irewet == 1) then
-      write (errmsg, '(a)') 'ERROR WITH NPF REWET OPTION.  REWET WAS '// &
-        'ALREADY SET.  REMOVE DUPLICATE REWET ENTRIES '// &
-        'FROM NPF OPTIONS BLOCK.'
-      call store_error(errmsg)
-      call this%parser%StoreErrorUnit()
-    end if
-    this%irewet = 1
-    write (this%iout, '(4x,a)') 'REWETTING IS ACTIVE.'
-    !
-    ! -- Parse rewet options
-    do
-      call this%parser%GetStringCaps(keyword)
-      if (keyword == '') exit
-      select case (keyword)
-      case ('WETFCT')
-        this%wetfct = this%parser%GetDouble()
-        write (this%iout, '(4x,a,1pg15.6)') &
-          'WETTING FACTOR HAS BEEN SET TO: ', this%wetfct
-        lfound(1) = .true.
-      case ('IWETIT')
-        if (.not. lfound(1)) then
-          write (errmsg, '(4x,a)') &
-            'NPF rewetting flags must be specified in order. '// &
-            'Found iwetit but wetfct not specified.'
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end if
-        ival = this%parser%GetInteger()
-        if (ival <= 0) ival = 1
-        this%iwetit = ival
-        write (this%iout, '(4x,a,i5)') 'IWETIT HAS BEEN SET TO: ', &
-          this%iwetit
-        lfound(2) = .true.
-      case ('IHDWET')
-        if (.not. lfound(2)) then
-          write (errmsg, '(4x,a)') &
-            'NPF rewetting flags must be specified in order. '// &
-            'Found ihdwet but iwetit not specified.'
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end if
-        this%ihdwet = this%parser%GetInteger()
-        write (this%iout, '(4x,a,i5)') 'IHDWET HAS BEEN SET TO: ', &
-          this%ihdwet
-        lfound(3) = .true.
-      case default
-        write (errmsg, '(4x,a,a)') 'Unknown NPF rewet option: ', trim(keyword)
-        call store_error(errmsg)
-        call this%parser%StoreErrorUnit()
-      end select
-    end do
-    !
-    if (.not. lfound(3)) then
-      write (errmsg, '(4x,a)') &
-        '****ERROR. NPF REWETTING FLAGS MUST BE SPECIFIED IN ORDER. '// &
-        'DID NOT FIND IHDWET AS LAST REWET SETTING.'
-      call store_error(errmsg)
-      call this%parser%StoreErrorUnit()
-    end if
-    !
-    ! -- Write rewet settings
-    write (this%iout, '(4x, a)') 'THE FOLLOWING REWET SETTINGS WILL BE USED.'
-    write (this%iout, '(6x, a,1pg15.6)') '  WETFCT = ', this%wetfct
-    write (this%iout, '(6x, a,i0)') '  IWETIT = ', this%iwetit
-    write (this%iout, '(6x, a,i0)') '  IHDWET = ', this%ihdwet
-    !
-    ! -- Return
-    return
-  end subroutine rewet_options
-
-  subroutine check_options(this)
-! ******************************************************************************
-! check_options -- Check for conflicting NPF options
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use SimModule, only: store_error, count_errors
-    use ConstantsModule, only: LINELENGTH
-    ! -- dummy
-    class(GwfNpftype) :: this
-    ! -- local
-    character(len=LINELENGTH) :: errmsg
-! ------------------------------------------------------------------------------
     !
     if (this%inewton > 0) then
       if (this%iperched > 0) then
@@ -1741,148 +1654,149 @@ contains
     return
   end subroutine check_options
 
-  subroutine read_grid_data(this)
+  !> @brief Write dimensions to list file
+  !<
+  subroutine log_griddata(this, afound)
+    class(GwfNpfType) :: this
+    logical, dimension(:), intent(in) :: afound
+
+    write (this%iout, '(1x,a)') 'Setting NPF Griddata'
+
+    if (afound(1)) then
+      write (this%iout, '(4x,a)') 'ICELLTYPE set from input file'
+    end if
+
+    if (afound(2)) then
+      write (this%iout, '(4x,a)') 'K set from input file'
+    end if
+
+    if (afound(3)) then
+      write (this%iout, '(4x,a)') 'K33 set from input file'
+    end if
+
+    if (afound(4)) then
+      write (this%iout, '(4x,a)') 'K22 set from input file'
+    end if
+
+    if (afound(5)) then
+      write (this%iout, '(4x,a)') 'WETDRY set from input file'
+    end if
+
+    if (afound(6)) then
+      write (this%iout, '(4x,a)') 'ANGLE1 set from input file'
+    end if
+
+    if (afound(7)) then
+      write (this%iout, '(4x,a)') 'ANGLE2 set from input file'
+    end if
+
+    if (afound(8)) then
+      write (this%iout, '(4x,a)') 'ANGLE3 set from input file'
+    end if
+
+    write (this%iout, '(1x,a,/)') 'End Setting NPF Griddata'
+
+  end subroutine log_griddata
+
+  subroutine source_griddata(this)
 ! ******************************************************************************
-! read_grid_data -- read the npf data block
+! source_griddata -- update simulation griddata from input mempath
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: LINELENGTH, DONE, DPIO180
-    use SimModule, only: store_error, count_errors
+    use SimModule, only: count_errors, store_error
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerModule, only: mem_reallocate
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfNpftype) :: this
-    ! -- local
+    ! -- locals
+    character(len=LENMEMPATH) :: idmMemoryPath
     character(len=LINELENGTH) :: errmsg
-    integer(I4B) :: n, ierr
-    logical :: isfound
-    logical, dimension(8) :: lname
-    character(len=24), dimension(:), pointer :: aname
-    character(len=24), dimension(8) :: varinames
+    logical, dimension(10) :: afound
+    integer(I4B), dimension(:), pointer, contiguous :: map
     ! -- formats
-    character(len=*), parameter :: fmtiprflow = &
-      "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE PRINTED TO LISTING FILE &
-      &WHENEVER ICBCFL IS NOT ZERO.')"
-    character(len=*), parameter :: fmtisvflow = &
-      "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED TO BINARY FILE &
-      &WHENEVER ICBCFL IS NOT ZERO.')"
-    character(len=*), parameter :: fmtnct = &
-      &"(1x, 'Negative cell thickness at cell: ', a)"
-    ! -- data
-    !data aname(1) /'               ICELLTYPE'/
-    !data aname(2) /'                       K'/
-    !data aname(3) /'                     K33'/
-    !data aname(4) /'                     K22'/
-    !data aname(5) /'                  WETDRY'/
-    !data aname(6) /'                  ANGLE1'/
-    !data aname(7) /'                  ANGLE2'/
-    !data aname(8) /'                  ANGLE3'/
 ! ------------------------------------------------------------------------------
     !
-    ! -- Initialize
-    aname => this%aname
-    do n = 1, size(aname)
-      varinames(n) = adjustl(aname(n))
-      lname(n) = .false.
-    end do
-    varinames(2) = 'K11                     '
+    ! -- set memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'NPF', idm_context)
     !
-    ! -- Read all of the arrays in the GRIDDATA block using the get_block_data
-    !    method, which is part of NumericalPackageType
-    call this%parser%GetBlock('GRIDDATA', isfound, ierr)
-    if (isfound) then
-      write (this%iout, '(1x,a)') 'PROCESSING GRIDDATA'
-      call this%get_block_data(aname, lname, varinames)
-    else
-      write (errmsg, '(1x,a)') 'Required GRIDDATA block not found.'
-      call store_error(errmsg)
-      call this%parser%StoreErrorUnit()
-    end if
+    ! -- set map
+    map => null()
+    if (this%dis%nodes < this%dis%nodesuser) map => this%dis%nodeuser
     !
-    ! -- Check for ICELLTYPE
-    if (.not. lname(1)) then
-      write (errmsg, '(a, a, a)') 'Error in GRIDDATA block: ', &
-        trim(adjustl(aname(1))), ' not found.'
+    ! -- update defaults with idm sourced values
+    call mem_set_value(this%icelltype, 'ICELLTYPE', idmMemoryPath, map, &
+                       afound(1))
+    call mem_set_value(this%k11, 'K', idmMemoryPath, map, afound(2))
+    call mem_set_value(this%k33, 'K33', idmMemoryPath, map, afound(3))
+    call mem_set_value(this%k22, 'K22', idmMemoryPath, map, afound(4))
+    call mem_set_value(this%wetdry, 'WETDRY', idmMemoryPath, map, afound(5))
+    call mem_set_value(this%angle1, 'ANGLE1', idmMemoryPath, map, afound(6))
+    call mem_set_value(this%angle2, 'ANGLE2', idmMemoryPath, map, afound(7))
+    call mem_set_value(this%angle3, 'ANGLE3', idmMemoryPath, map, afound(8))
+    !
+    ! -- ensure ICELLTYPE was found
+    if (.not. afound(1)) then
+      write (errmsg, '(a)') 'Error in GRIDDATA block: ICELLTYPE not found.'
       call store_error(errmsg)
     end if
     !
-    ! -- Check for K
-    if (.not. lname(2)) then
-      write (errmsg, '(a, a, a)') 'Error in GRIDDATA block: ', &
-        trim(adjustl(aname(2))), ' not found.'
+    ! -- ensure K was found
+    if (.not. afound(2)) then
+      write (errmsg, '(a)') 'Error in GRIDDATA block: K not found.'
       call store_error(errmsg)
     end if
     !
-    ! -- set ik33 flag
-    if (lname(3)) then
-      this%ik33 = 1
-    else
-      if (this%ik33overk /= 0) then
-        write (errmsg, '(a)') 'K33OVERK option specified but K33 not specified.'
-        call store_error(errmsg)
-      end if
+    ! -- set error if ik33overk set with no k33
+    if (.not. afound(3) .and. this%ik33overk /= 0) then
+      write (errmsg, '(a)') 'K33OVERK option specified but K33 not specified.'
+      call store_error(errmsg)
+    end if
+    !
+    ! -- set error if ik22overk set with no k22
+    if (.not. afound(4) .and. this%ik22overk /= 0) then
+      write (errmsg, '(a)') 'K22OVERK option specified but K22 not specified.'
+      call store_error(errmsg)
+    end if
+    !
+    ! -- handle found side effects
+    if (afound(3)) this%ik33 = 1
+    if (afound(4)) this%ik22 = 1
+    if (afound(5)) this%iwetdry = 1
+    if (afound(6)) this%iangle1 = 1
+    if (afound(7)) this%iangle2 = 1
+    if (afound(8)) this%iangle3 = 1
+    !
+    ! -- handle not found side effects
+    if (.not. afound(3)) then
       write (this%iout, '(1x, a)') 'K33 not provided.  Setting K33 = K.'
-      do n = 1, size(this%k11)
-        this%k33(n) = this%k11(n)
-      end do
+      call mem_set_value(this%k33, 'K', idmMemoryPath, map, afound(9))
     end if
-    !
-    ! -- set ik22 flag
-    if (lname(4)) then
-      this%ik22 = 1
-    else
-      if (this%ik22overk /= 0) then
-        write (errmsg, '(a)') 'K22OVERK option specified but K22 not specified.'
-        call store_error(errmsg)
-      end if
+    if (.not. afound(4)) then
       write (this%iout, '(1x, a)') 'K22 not provided.  Setting K22 = K.'
-      do n = 1, size(this%k11)
-        this%k22(n) = this%k11(n)
-      end do
+      call mem_set_value(this%k22, 'K', idmMemoryPath, map, afound(10))
     end if
+    if (.not. afound(5)) call mem_reallocate(this%wetdry, 1, 'WETDRY', &
+                                             trim(this%memoryPath))
+    if (.not. afound(6) .and. this%ixt3d == 0) &
+      call mem_reallocate(this%angle1, 1, 'ANGLE1', trim(this%memoryPath))
+    if (.not. afound(7) .and. this%ixt3d == 0) &
+      call mem_reallocate(this%angle2, 1, 'ANGLE2', trim(this%memoryPath))
+    if (.not. afound(8) .and. this%ixt3d == 0) &
+      call mem_reallocate(this%angle3, 1, 'ANGLE3', trim(this%memoryPath))
     !
-    ! -- Set WETDRY
-    if (lname(5)) then
-      this%iwetdry = 1
-    else
-      call mem_reallocate(this%wetdry, 0, 'WETDRY', trim(this%memoryPath))
+    ! -- log griddata
+    if (this%iout > 0) then
+      call this%log_griddata(afound)
     end if
-    !
-    ! -- set angle flags
-    if (lname(6)) then
-      this%iangle1 = 1
-    else
-      if (this%ixt3d == 0) then
-        call mem_reallocate(this%angle1, 0, 'ANGLE1', trim(this%memoryPath))
-      end if
-    end if
-    if (lname(7)) then
-      this%iangle2 = 1
-    else
-      if (this%ixt3d == 0) then
-        call mem_reallocate(this%angle2, 0, 'ANGLE2', trim(this%memoryPath))
-      end if
-    end if
-    if (lname(8)) then
-      this%iangle3 = 1
-    else
-      if (this%ixt3d == 0) then
-        call mem_reallocate(this%angle3, 0, 'ANGLE3', trim(this%memoryPath))
-      end if
-    end if
-    !
-    ! -- terminate if read errors encountered
-    if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
-    end if
-    !
-    ! -- Final NPFDATA message
-    write (this%iout, '(1x,a)') 'END PROCESSING GRIDDATA'
     !
     ! -- Return
     return
-  end subroutine read_grid_data
+  end subroutine source_griddata
 
   subroutine prepcheck(this)
 ! ******************************************************************************
