@@ -27,6 +27,7 @@ module ArrayReaderBaseModule
   contains
 
     procedure :: read_array
+    procedure :: reset_reader
     procedure :: read_control_record
     procedure :: set_constant  ! must be overriden
     procedure :: fill_constant  ! must be overriden
@@ -48,22 +49,25 @@ module ArrayReaderBaseModule
     ! read control record
     call this%read_control_record()
 
-    ! constant
+    ! fill array
     if (this%isConstant) then
       call this%fill_constant()
-    end if
-
-    ! internal
-    if (this%isInternal) then
+    else if (this%isInternal) then
       call this%fill_internal()
-    end if
-
-    ! open/close
-    if (this%isOpenClose) then
+    else if  (this%isOpenClose) then
       call this%fill_open_close()
     end if
 
   end subroutine read_array
+
+  subroutine reset_reader(this)
+    class(ArrayReaderBaseType) :: this
+    this%iprn = 0
+    this%isConstant = .false.
+    this%isInternal = .false.
+    this%isOpenClose = .false.
+    this%isBinary = .false.
+  end subroutine reset_reader
 
   subroutine read_control_record(this)
     class(ArrayReaderBaseType) :: this

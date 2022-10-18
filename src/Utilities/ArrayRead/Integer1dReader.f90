@@ -9,16 +9,17 @@ module Integer1dReaderModule
 
   implicit none
   private
-  public :: read_int1d
+  public :: read_int1d, read_int1d_layered
 
   type, extends(ArrayReaderBaseType) :: Integer1dReaderType
 
-    integer(I4B) :: constant_array_value = 1
+    integer(I4B) :: constant_array_value = 0
     integer(I4B) :: factor = 1
     integer(I4B), dimension(:), contiguous, pointer :: int1d => null()
 
   contains
 
+    procedure :: reset_reader
     procedure :: set_constant  ! must be overriden
     procedure :: fill_constant  ! must be overriden
     procedure :: read_ascii ! must be overriden
@@ -46,6 +47,44 @@ module Integer1dReaderModule
 
   end subroutine read_int1d
 
+  subroutine read_int1d_layered(parser, int1d, aname, nlay, layer_shape)
+    use Integer2dReaderModule, only: read_int2d
+    ! -- dummy
+    type(BlockParserType), intent(in), target :: parser
+    integer(I4B), dimension(:), contiguous, target :: int1d
+    character(len=*), intent(in) :: aname
+    integer(I4B), intent(in) :: nlay
+    integer(I4B), dimension(:), intent(in) :: layer_shape
+    ! -- local
+    integer(I4B) :: k
+    integer(I4B) :: ncpl, nrow, ncol
+    integer(I4B) :: index_start, index_stop
+    integer(I4B), dimension(:, :), contiguous, pointer :: int2d_ptr
+
+    ncpl = product(layer_shape)
+    index_start = 1
+    do k = 1, nlay
+      index_stop = index_start + ncpl - 1
+      if (size(layer_shape) == 2) then
+        ncol = layer_shape(1)
+        nrow = layer_shape(2)
+        int2d_ptr(1:ncol, 1:nrow) => int1d(index_start:index_stop)
+        call read_int2d(parser, int2d_ptr, aname)
+      else
+        call read_int1d(parser, int1d(index_start:index_stop), aname)
+      end if
+      index_start = index_stop + 1
+    end do
+
+  end subroutine read_int1d_layered
+
+  subroutine reset_reader(this)
+    class(Integer1dReaderType) :: this
+    call this%ArrayReaderBaseType%reset_reader()
+    this%constant_array_value = 0
+    this%factor = 1
+  end subroutine reset_reader
+
   subroutine set_constant(this)
     class(Integer1dReaderType) :: this
     this%constant_array_value = this%parser%GetInteger()
@@ -65,7 +104,8 @@ module Integer1dReaderModule
     integer(I4B) :: nvals
     integer(I4B) :: istat
     nvals = size(this%int1d)
-    read (this%input_unit, *, iostat=istat, iomsg=errmsg) (this%int1d(i), i=1, nvals)
+    read (this%input_unit, *, iostat=istat, iomsg=errmsg) &
+      (this%int1d(i), i = 1, size(this%int1d))
     if (istat /= 0) then
       errmsg = 'Error reading data for array ' // trim(this%array_name) // '.  ' // trim(errmsg)
       call store_error(errmsg)
@@ -79,7 +119,8 @@ module Integer1dReaderModule
     integer(I4B) :: nvals
     integer(I4B) :: istat
     call read_binary_header(this%input_unit, this%iout, this%array_name, nvals)
-    read (this%input_unit, iostat=istat, iomsg=errmsg) (this%int1d(i), i=1, nvals)
+    read (this%input_unit, iostat=istat, iomsg=errmsg) &
+      (this%int1d(i), i = 1, size(this%int1d))
     if (istat /= 0) then
       errmsg = 'Error reading data for array ' // trim(this%array_name) // '.  ' // trim(errmsg)
       call store_error(errmsg)

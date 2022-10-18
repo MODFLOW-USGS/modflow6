@@ -13,8 +13,8 @@ module LoadMf6FileTypeModule
   use SimModule, only: store_error
   use BlockParserModule, only: BlockParserType
   use ArrayReadersModule, only: ReadArray
-  use Double1dReaderModule, only: read_dbl1d
-  use Integer1dReaderModule, only: read_int1d
+  use Double1dReaderModule, only: read_dbl1d, read_dbl1d_layered
+  use Integer1dReaderModule, only: read_int1d, read_int1d_layered
   use InputOutputModule, only: parseline
   use InputDefinitionModule, only: InputParamDefinitionType
   use InputDefinitionSelectorModule, only: get_param_definition_type, &
@@ -625,12 +625,9 @@ contains
     integer(I4B), dimension(:), optional, intent(inout) :: intarray
     integer(I4B) :: nvals
     integer(I4B) :: ndim
-    integer(I4B) :: ndim1
-    integer(I4B) :: ndim2
-    integer(I4B) :: ndim3
-    integer(I4B) :: k1
-    integer(I4B) :: k2
     integer(I4B) :: iout !< unit number for output
+    integer(I4B) :: nlay
+    integer(I4B), dimension(:), allocatable :: layer_shape
     character(len=LINELENGTH) :: keyword
 
     ndim = size(mshape)
@@ -644,27 +641,23 @@ contains
 
     ! disu
     if (ndim == 1) then
-      ndim1 = mshape(1) ! nodesuser
-      ndim2 = 1 ! none
-      ndim3 = 1 ! none
-      k1 = 0
-      k2 = 0
+      nlay = 1
+      allocate(layer_shape(1))
+      layer_shape(1) = mshape(1)
 
       ! disv
     else if (ndim == 2) then
-      ndim1 = mshape(1) ! nlay
-      ndim2 = 1 ! none
-      ndim3 = mshape(2) ! ncpl
-      k1 = 1
-      k2 = ndim1
+      nlay = mshape(1)
+      allocate(layer_shape(1))
+      layer_shape(1) = mshape(2)
 
       ! dis
     else if (ndim == 3) then
-      ndim1 = mshape(1) ! nlay
-      ndim2 = mshape(2) ! nrow
-      ndim3 = mshape(3) ! ncol
-      k1 = 1
-      k2 = ndim1
+      nlay = mshape(1)
+      allocate(layer_shape(2))
+      layer_shape(1) = mshape(3) ! ncol
+      layer_shape(2) = mshape(2) ! nrow
+
     end if
 
     call parser%GetStringCaps(keyword)
@@ -672,32 +665,23 @@ contains
 
       ! float array
       if (present(dblarray)) then
-        call ReadArray(parser%iuactive, dblarray, &
-                       array_name, ndim, ndim3, ndim2, &
-                       ndim1, nvals, iout, k1, k2)
+        call read_dbl1d_layered(parser, dblarray, array_name, nlay, layer_shape)
       end if
 
       ! integer array
       if (present(intarray)) then
-        call ReadArray(parser%iuactive, intarray, &
-                       array_name, ndim, ndim3, ndim2, &
-                       ndim1, nvals, iout, k1, k2)
+        call read_int1d_layered(parser, intarray, array_name, nlay, layer_shape)
       end if
 
     else
 
       ! float array
       if (present(dblarray)) then
-        !call ReadArray(parser%iuactive, dblarray, array_name, &
-        !               ndim, nvals, iout, 0)
-
         call read_dbl1d(parser, dblarray, array_name)
       end if
 
       ! integer array
       if (present(intarray)) then
-        !call ReadArray(parser%iuactive, intarray, array_name, &
-        !               ndim, nvals, iout, 0)
         call read_int1d(parser, intarray, array_name)
       end if
 

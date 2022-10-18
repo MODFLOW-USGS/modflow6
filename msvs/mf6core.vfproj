@@ -162,6 +162,12 @@
 		<File RelativePath="..\src\Timing\ats.f90"/>
 		<File RelativePath="..\src\Timing\tdis.f90"/></Filter>
 		<Filter Name="Utilities">
+		<Filter Name="ArrayRead">
+		<File RelativePath="..\src\Utilities\ArrayRead\ArrayReaderBase.f90"/>
+		<File RelativePath="..\src\Utilities\ArrayRead\Double1dReader.f90"/>
+		<File RelativePath="..\src\Utilities\ArrayRead\Double2dReader.f90"/>
+		<File RelativePath="..\src\Utilities\ArrayRead\Integer1dReader.f90"/>
+		<File RelativePath="..\src\Utilities\ArrayRead\Integer2dReader.f90"/></Filter>
 		<Filter Name="Idm">
 		<File RelativePath="..\src\Utilities\Idm\IdmLogger.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\IdmMf6FileLoader.f90"/>
@@ -184,10 +190,6 @@
 		<File RelativePath="..\src\Utilities\Memory\MemoryManager.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemoryManagerExt.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemorySetHandler.f90"/></Filter>
-		<Filter Name="ArrayRead">
-		<File RelativePath="..\src\Utilities\ArrayRead\ArrayReaderBase.f90"/>
-		<File RelativePath="..\src\Utilities\ArrayRead\Double1dReader.f90"/>
-		<File RelativePath="..\src\Utilities\ArrayRead\Integer1dReader.f90"/></Filter>
 		<Filter Name="Observation">
 		<File RelativePath="..\src\Utilities\Observation\Obs3.f90"/>
 		<File RelativePath="..\src\Utilities\Observation\ObsContainer.f90"/>
