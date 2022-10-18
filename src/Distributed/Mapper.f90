@@ -35,8 +35,7 @@ module MapperModule
 
   end subroutine init
 
-  !> @brief Add distributed interface variables as memory
-  !! mapped items to this mapper
+  !> @brief Add distributed interface variables as memory mapped items
   !<
   subroutine add_dist_vars(this, sol_id, var_list, interface_map)    
     class(MapperType) :: this

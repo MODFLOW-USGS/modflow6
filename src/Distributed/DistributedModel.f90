@@ -1,5 +1,5 @@
 module DistributedModelModule
-  use KindModule, only: I4B, LGP
+  use KindModule, only: I4B, LGP, DP
   use SimModule, only: ustop
   use ListModule, only: ListType
   use MemoryManagerModule, only: mem_allocate, mem_deallocate
@@ -8,41 +8,72 @@ module DistributedModelModule
   use ListsModule, only: basemodellist
   use DistListsModule, only: distmodellist
   use DistributedBaseModule
+  use SimStagesModule
   implicit none
   private
 
   public :: DistributedModelType
   public :: add_dist_model, get_dist_model
   public :: AddDistModelToList, GetDistModelFromList
-
-  character(len=7), parameter :: LOCAL_MEM_CTX = '__LOC__'
+  
+  integer(I4B), public, parameter :: MAP_TYPE_NA = 1
+  integer(I4B), public, parameter :: MAP_TYPE_NODE = 2
+  integer(I4B), public, parameter :: MAP_TYPE_CONN = 3
 
   type, extends(DistributedBaseType) :: DistributedModelType
+    ! variables always available
     integer(I4B), pointer :: moffset => null()
+    
+    ! == geometrical/connection data needed to build interface grid == 
+    ! DIS:
     integer(I4B), pointer :: dis_nodes => null()
     integer(I4B), pointer :: dis_nja => null()
-    integer(I4B), dimension(:), pointer, contiguous :: con_ia => null()
-    integer(I4B), dimension(:), pointer, contiguous :: con_ja => null()
+    integer(I4B), pointer :: dis_njas => null()
+    real(DP), pointer :: dis_xorigin => null()
+    real(DP), pointer :: dis_yorigin => null()
+    real(DP), pointer :: dis_angrot => null()
+    real(DP), dimension(:), pointer, contiguous :: dis_xc => null()
+    real(DP), dimension(:), pointer, contiguous :: dis_yc => null()
+    real(DP), dimension(:), pointer, contiguous :: dis_top => null()
+    real(DP), dimension(:), pointer, contiguous :: dis_bot => null()
+
+    ! CON:
+    integer(I4B), dimension(:), pointer, contiguous :: con_ia => null() ! in full
+    integer(I4B), dimension(:), pointer, contiguous :: con_ja => null() ! in full
+    integer(I4B), dimension(:), pointer, contiguous :: con_jas => null()
+    integer(I4B), dimension(:), pointer, contiguous :: con_ihc => null()
+    real(DP), dimension(:), pointer, contiguous :: con_hwva => null()
+    real(DP), dimension(:), pointer, contiguous :: con_cl1 => null()
+    real(DP), dimension(:), pointer, contiguous :: con_cl2 => null()
+    real(DP), dimension(:), pointer, contiguous :: con_anglex => null()
+
+    ! GWF model data
+
+    ! GWT model data
 
     ! this is strictly private, use access() instead
     class(NumericalModelType), private, pointer :: model !< implementation if local, null otherwise
   contains
-    generic :: create => create_local, create_remote
+    procedure :: create
     procedure :: init_connectivity
+    procedure :: init_interface  
+    procedure :: get_src_map
+
     generic :: operator(==) => equals_dist_model, equals_num_model
-    procedure :: deallocate
+    procedure :: destroy
     procedure :: access
-    ! private
-    procedure, private :: create_local
-    procedure, private :: create_remote    
+    ! private    
+    procedure, private :: init_gwf_interface
+    procedure, private :: init_gwt_interface  
     procedure, private :: equals_dist_model
     procedure, private :: equals_num_model
   end type DistributedModelType
 
 contains
 
-  subroutine add_dist_model(model_index)
+  subroutine add_dist_model(model_index, model_name)
     integer(I4B) :: model_index
+    character(len=*) :: model_name
     ! local
     class(NumericalModelType), pointer :: num_model
     class(DistributedModelType), pointer :: dist_model
@@ -50,67 +81,136 @@ contains
     num_model => GetNumericalModelFromList(basemodellist, model_index)
 
     allocate (dist_model)
-    call dist_model%create_local(num_model)
+    call dist_model%create(num_model, model_index, model_name)
     call AddDistModelToList(distmodellist, dist_model)
 
   end subroutine add_dist_model
 
-  subroutine create_local(this, model)
+  subroutine create(this, model, m_id, m_name)
     class(DistributedModelType) :: this
     class(NumericalModelType), pointer :: model
-
-    this%id = model%id
-    this%name = model%name
-    this%model => model
-    this%is_local = .true.
-
-    call this%load(this%moffset, 'MOFFSET')
-
-    this%moffset => this%model%moffset
-    !call mem_allocate(this%moffset, 'MOFFSET', create_mem_path(this%name, context=LOCAL_MEM_CTX))
-    call mem_allocate(this%dis_nodes, 'NODES', create_mem_path(this%name, 'DIS', context=LOCAL_MEM_CTX))
-    call mem_allocate(this%dis_nja, 'NJA', create_mem_path(this%name, 'DIS', context=LOCAL_MEM_CTX))
-
-  end subroutine create_local
-
-  subroutine create_remote(this, m_id)
-    class(DistributedModelType) :: this
     integer(I4B) :: m_id
+    character(len=*) :: m_name
+    
+    this%id = model%id
+    this%name = m_name
+    this%model => model
 
-    this%id = m_id
-    this%name = 'TBD'
-    this%model => null()
-    this%is_local = .false.
+    if (associated(model)) then
+      this%is_local = .true.
+      call this%load(this%moffset, 'MOFFSET')
+      call this%load(this%dis_nodes, 'NODES', 'DIS')
+      call this%load(this%dis_nja, 'NJA', 'DIS')
+      call this%load(this%dis_njas, 'NJAS', 'DIS')
+    else
+      this%is_local = .false.
 
-    ! TODO_MJR: this should prepare a memory space
-    ! where the remote data can live, and then
-    ! also connect cache (if we decide to use that)
+      call mem_allocate(this%moffset, 'MOFFSET', create_mem_path(this%name, context=LOCAL_MEM_CTX))
+      call this%add_remote_mem('MOFFSET', this%name, '', STG_INIT, MAP_TYPE_NA)
+      call mem_allocate(this%dis_nodes, 'NODES', create_mem_path(this%name, 'DIS', LOCAL_MEM_CTX))
+      call this%add_remote_mem('NODES', this%name, 'DIS', STG_INIT, MAP_TYPE_NA)
+      call mem_allocate(this%dis_nja, 'NJA', create_mem_path(this%name, 'DIS', LOCAL_MEM_CTX))
+      call this%add_remote_mem('NJA', this%name, 'DIS', STG_INIT, MAP_TYPE_NA)
+      call mem_allocate(this%dis_njas, 'NJAS', create_mem_path(this%name, 'DIS', LOCAL_MEM_CTX))
+      call this%add_remote_mem('NJAS', this%name, 'DIS', STG_INIT, MAP_TYPE_NA)
+    end if
 
-  end subroutine create_remote
-
-  subroutine init_connectivity(this)        
+  end subroutine create
+  
+  subroutine init_connectivity(this)
     use NumericalModelModule
     class(DistributedModelType), intent(inout) :: this
 
-    if (.not. this%is_local) then
-      ! something is wrong here
-      write(*,*) 'Cannot set up connectivity, only local supported for now'
-      call ustop()
+    if (this%is_local) then
+
+      call this%load(this%dis_xorigin, 'XORIGIN', 'DIS')
+      call this%load(this%dis_yorigin, 'YORIGIN', 'DIS')
+      call this%load(this%dis_angrot, 'ANGROT', 'DIS')
+      call this%load(this%dis_xc, 'XC', 'DIS')
+      call this%load(this%dis_yc, 'YC', 'DIS')
+      call this%load(this%dis_top, 'TOP', 'DIS')
+      call this%load(this%dis_bot, 'BOT', 'DIS')
+
+      call this%load(this%con_ia, 'IA', 'CON')
+      call this%load(this%con_ja, 'JA', 'CON')
+      call this%load(this%con_jas, 'JAS', 'CON')
+      call this%load(this%con_ihc, 'IHC', 'CON')
+      call this%load(this%con_hwva, 'HWVA', 'CON')
+      call this%load(this%con_cl1, 'CL1', 'CON')
+      call this%load(this%con_cl2, 'CL2', 'CON')
+      call this%load(this%con_anglex, 'ANGLEX', 'CON')
+
+    else
+
+      call mem_allocate(this%dis_xorigin, 'XORIGIN', create_mem_path(this%name, 'DIS', LOCAL_MEM_CTX))
+      call this%add_remote_mem('XORIGIN', this%name, 'DIS', STG_BEFORE_DF, MAP_TYPE_NA)
+      call mem_allocate(this%dis_yorigin, 'YORIGIN', create_mem_path(this%name, 'DIS', LOCAL_MEM_CTX))
+      call this%add_remote_mem('YORIGIN', this%name, 'DIS', STG_BEFORE_DF, MAP_TYPE_NA)
+      call mem_allocate(this%dis_angrot, 'ANGROT', create_mem_path(this%name, 'DIS', LOCAL_MEM_CTX))
+      call this%add_remote_mem('ANGROT', this%name, 'DIS', STG_BEFORE_DF, MAP_TYPE_NA)
+      call mem_allocate(this%dis_xc, this%dis_nodes, 'XC', create_mem_path(this%name, 'DIS', LOCAL_MEM_CTX))
+      call this%add_remote_mem('XC', this%name, 'DIS', STG_BEFORE_DF, MAP_TYPE_NA)
+      call mem_allocate(this%dis_yc, this%dis_nodes, 'YC', create_mem_path(this%name, 'DIS', LOCAL_MEM_CTX))
+      call this%add_remote_mem('YC', this%name, 'DIS', STG_BEFORE_DF, MAP_TYPE_NA)
+      call mem_allocate(this%dis_top, this%dis_nodes, 'TOP', create_mem_path(this%name, 'DIS', LOCAL_MEM_CTX))
+      call this%add_remote_mem('TOP', this%name, 'DIS', STG_BEFORE_DF, MAP_TYPE_NA)
+      call mem_allocate(this%dis_bot, this%dis_nodes, 'BOT', create_mem_path(this%name, 'DIS', LOCAL_MEM_CTX))
+      call this%add_remote_mem('BOT', this%name, 'DIS', STG_BEFORE_DF, MAP_TYPE_NA)
+
+      call mem_allocate(this%con_ia, this%dis_nodes + 1, 'IA', create_mem_path(this%name, 'CON', LOCAL_MEM_CTX))
+      call this%add_remote_mem('IA', this%name, 'CON', STG_BEFORE_DF, MAP_TYPE_NA)
+      call mem_allocate(this%con_ja, this%dis_nja, 'JA', create_mem_path(this%name, 'CON', LOCAL_MEM_CTX))
+      call this%add_remote_mem('JA', this%name, 'CON', STG_BEFORE_DF, MAP_TYPE_NA)
+      call mem_allocate(this%con_jas, this%dis_nja, 'JAS', create_mem_path(this%name, 'CON', LOCAL_MEM_CTX))
+      call this%add_remote_mem('JAS', this%name, 'CON', STG_BEFORE_DF, MAP_TYPE_NA)
+      call mem_allocate(this%con_ihc, this%dis_njas, 'IHC', create_mem_path(this%name, 'CON', LOCAL_MEM_CTX))
+      call this%add_remote_mem('IHC', this%name, 'CON', STG_BEFORE_DF, MAP_TYPE_NA)
+      call mem_allocate(this%con_hwva, this%dis_njas, 'HWVA', create_mem_path(this%name, 'CON', LOCAL_MEM_CTX))
+      call this%add_remote_mem('HWVA', this%name, 'CON', STG_BEFORE_DF, MAP_TYPE_NA)
+      call mem_allocate(this%con_cl1, this%dis_njas, 'CL1', create_mem_path(this%name, 'CON', LOCAL_MEM_CTX))
+      call this%add_remote_mem('CL1', this%name, 'CON', STG_BEFORE_DF, MAP_TYPE_NA)
+      call mem_allocate(this%con_cl2, this%dis_njas, 'CL2', create_mem_path(this%name, 'CON', LOCAL_MEM_CTX))
+      call this%add_remote_mem('CL2', this%name, 'CON', STG_BEFORE_DF, MAP_TYPE_NA)
+      call mem_allocate(this%con_anglex, this%dis_njas, 'ANGLEX', create_mem_path(this%name, 'CON', LOCAL_MEM_CTX))
+      call this%add_remote_mem('ANGLEX', this%name, 'CON', STG_BEFORE_DF, MAP_TYPE_NA)
+
     end if
-
-    ! TODO_MJR: this should go after routing has been impl.
-    this%dis_nodes = this%model%dis%nodes
-    this%dis_nja = this%model%dis%nja
-
-    ! allocate memory space
-    call mem_allocate(this%con_ia, this%dis_nodes + 1, 'IA', create_mem_path(this%name, 'CON', context=LOCAL_MEM_CTX))
-    call mem_allocate(this%con_ja, this%dis_nja, 'JA', create_mem_path(this%name, 'CON', context=LOCAL_MEM_CTX))
-
-    ! add this image to the serial router
-    ! ...
 
   end subroutine init_connectivity
 
+  function get_src_map(this, map_type) result(src_map)
+    class(DistributedModelType) :: this
+    integer(I4B) :: map_type
+    integer(I4B), dimension(:), pointer :: src_map
+
+    src_map => null()
+    if (map_type == MAP_TYPE_NODE) then
+      src_map => this%src_map_node
+    else if (map_type == MAP_TYPE_CONN) then
+      src_map => this%src_map_conn
+    end if
+
+  end function get_src_map
+
+  subroutine init_interface(this)
+    class(DistributedModelType), intent(inout) :: this
+
+    if (this%macronym == 'GWF') then
+      call this%init_gwf_interface()
+    else if (this%macronym == 'GWT') then
+      call this%init_gwt_interface()
+    end if
+
+  end subroutine init_interface
+
+  subroutine init_gwf_interface(this)
+    class(DistributedModelType), intent(inout) :: this
+  end subroutine init_gwf_interface
+
+  subroutine init_gwt_interface(this)
+    class(DistributedModelType), intent(inout) :: this
+  end subroutine init_gwt_interface
+  
   function equals_dist_model(this, dist_model) result(is_equal)
     class(DistributedModelType), intent(in) :: this
     class(DistributedModelType), intent(in) :: dist_model
@@ -129,18 +229,43 @@ contains
 
   end function equals_num_model
 
-  subroutine deallocate(this)
+  subroutine destroy(this)
     class(DistributedModelType) :: this
 
-    !call mem_deallocate(this%moffset)
-    call mem_deallocate(this%dis_nodes)    
-    call mem_deallocate(this%dis_nja)
-    if (associated(this%con_ia)) then
-      call mem_deallocate(this%con_ia)
-      call mem_deallocate(this%con_ja)
+    call this%DistributedBaseType%destroy()
+
+    if (.not. this%is_local) then
+
+      ! these are always available:
+      call mem_deallocate(this%moffset)
+      call mem_deallocate(this%dis_nodes)
+      call mem_deallocate(this%dis_nja)
+      call mem_deallocate(this%dis_njas)
+
+      ! these when the model was not local and
+      ! a candidate for the halo
+      if (associated(this%con_ia)) then
+        call mem_deallocate(this%dis_xorigin)
+        call mem_deallocate(this%dis_yorigin)
+        call mem_deallocate(this%dis_angrot)
+        call mem_deallocate(this%dis_xc)
+        call mem_deallocate(this%dis_yc)
+        call mem_deallocate(this%dis_top)
+        call mem_deallocate(this%dis_bot)
+
+        call mem_deallocate(this%con_ia)
+        call mem_deallocate(this%con_ja)
+        call mem_deallocate(this%con_jas)
+        call mem_deallocate(this%con_ihc)
+        call mem_deallocate(this%con_hwva)
+        call mem_deallocate(this%con_cl1)
+        call mem_deallocate(this%con_cl2)
+        call mem_deallocate(this%con_anglex)
+      end if
+
     end if
 
-  end subroutine deallocate
+  end subroutine destroy
 
   function access(this) result(model)
     class(DistributedModelType) :: this

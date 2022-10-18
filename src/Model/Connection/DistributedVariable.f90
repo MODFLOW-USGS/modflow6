@@ -9,13 +9,6 @@ module DistVariableModule
 
   public :: GetDistVarFromList
 
-  ! stages for synchronization
-  integer(I4B), public, parameter :: BEFORE_AR = 1
-  integer(I4B), public, parameter :: AFTER_AR = 2
-  integer(I4B), public, parameter :: BEFORE_AD = 3
-  integer(I4B), public, parameter :: BEFORE_CF = 4
-  integer(I4B), public, parameter :: BEFORE_FC = 5
-
   ! types of variables
   integer(I4B), public, parameter :: SYNC_SCALAR = 0
   integer(I4B), public, parameter :: SYNC_NODES = 1

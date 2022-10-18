@@ -13,9 +13,8 @@ module GridConnectionModule
   use NumericalModelModule
   use GwfDisuModule
   use DisConnExchangeModule
-  use DistributedModelModule, only: DistributedModelType, get_dist_model, &
-                                    AddDistModelToList, GetDistModelFromList
-  use DistributedExchangeModule, only: DistributedExchangeType, get_dist_exg
+  use DistributedModelModule
+  use DistributedExchangeModule
   use CellWithNbrsModule
   use ConnectionsModule
   use SparseModule, only: sparsematrix
@@ -244,7 +243,7 @@ contains
     integer(I4B) :: icell
     integer(I4B) :: imod, regionSize, offset
     class(DistributedModelType), pointer :: dist_model
-    integer(I4B), pointer :: nr_nodes
+    !integer(I4B), pointer :: nr_nodes
 
     ! we need (stencildepth-1) extra cells for the interior
     remoteDepth = this%exchangeStencilDepth
@@ -271,10 +270,9 @@ contains
     offset = 0
     do imod = 1, this%regionalModels%Count()
       dist_model => GetDistModelFromList(this%regionalModels, imod)
-      call dist_model%load(nr_nodes, 'NODES', 'DIS')
-      regionSize = regionSize + nr_nodes
+      regionSize = regionSize + dist_model%dis_nodes
       this%regionalModelOffset(imod) = offset
-      offset = offset + nr_nodes
+      offset = offset + dist_model%dis_nodes
     end do
     ! init to -1, meaning 'interface index was not assigned yet'
     allocate (this%regionalToInterfaceIdxMap(regionSize))
@@ -397,8 +395,8 @@ contains
     newDepth = depth - 1
 
     ! access through dist. model:
-    call cellNbrs%cell%dmodel%load(ia, 'IA', 'CON')
-    call cellNbrs%cell%dmodel%load(ja, 'JA', 'CON')
+    ia => cellNbrs%cell%dmodel%con_ia
+    ja => cellNbrs%cell%dmodel%con_ja
 
     ! find neighbors local to this cell by looping through grid connections
     do ipos = ia(cellNbrs%cell%index) + 1, &
@@ -673,9 +671,8 @@ contains
     type(ConnectionsType), pointer :: conn
     integer(I4B) :: n, m, ipos, isym, iposOrig, isymOrig
     type(GlobalCellType), pointer :: ncell, mcell
-    integer(I4B), dimension(:), pointer, contiguous :: jas, ihc
-    real(DP), dimension(:), pointer, contiguous :: hwva, cl1, cl2, anglex
-    integer(I4B), dimension(:), pointer, contiguous :: ia, ja
+    class(DistributedModelType), pointer :: dm
+
 
     conn => this%connections
 
@@ -689,10 +686,11 @@ contains
         mcell => this%idxToGlobal(m)
         if (ncell%dmodel == mcell%dmodel) then
 
+          ! for readibility
+          dm => ncell%dmodel
+
           ! within same model, straight copy
-          call ncell%dmodel%load(ia, 'IA', 'CON')
-          call ncell%dmodel%load(ja, 'JA', 'CON')
-          iposOrig = getCSRIndex(ncell%index, mcell%index, ia, ja)
+          iposOrig = getCSRIndex(ncell%index, mcell%index, dm%con_ia, dm%con_ja)
 
           if (iposOrig == 0) then
             ! periodic boundary conditions can add connections between cells in
@@ -704,26 +702,17 @@ contains
             call ustop()
           end if
 
-          ! load distributed data from memory
-          ! TODO_MJR: this should probably be cached at some point...
-          call ncell%dmodel%load(jas, 'JAS', 'CON')
-          call ncell%dmodel%load(ihc, 'IHC', 'CON')
-          call ncell%dmodel%load(hwva, 'HWVA', 'CON')
-          call ncell%dmodel%load(cl1, 'CL1', 'CON')
-          call ncell%dmodel%load(cl2, 'CL2', 'CON')
-          call ncell%dmodel%load(anglex, 'ANGLEX', 'CON')
-
-          isymOrig = jas(iposOrig)
-          conn%hwva(isym) = hwva(isymOrig)
-          conn%ihc(isym) = ihc(isymOrig)
+          isymOrig = dm%con_jas(iposOrig)
+          conn%hwva(isym) = dm%con_hwva(isymOrig)
+          conn%ihc(isym) = dm%con_ihc(isymOrig)
           if (ncell%index < mcell%index) then
-            conn%cl1(isym) = cl1(isymOrig)
-            conn%cl2(isym) = cl2(isymOrig)
-            conn%anglex(isym) = anglex(isymOrig)
+            conn%cl1(isym) = dm%con_cl1(isymOrig)
+            conn%cl2(isym) = dm%con_cl2(isymOrig)
+            conn%anglex(isym) = dm%con_anglex(isymOrig)
           else
-            conn%cl1(isym) = cl2(isymOrig)
-            conn%cl2(isym) = cl1(isymOrig)
-            conn%anglex(isym) = mod(anglex(isymOrig) + DPI, DTWOPI)
+            conn%cl1(isym) = dm%con_cl2(isymOrig)
+            conn%cl2(isym) = dm%con_cl1(isymOrig)
+            conn%anglex(isym) = mod(dm%con_anglex(isymOrig) + DPI, DTWOPI)
           end if
         end if
       end do
@@ -1018,8 +1007,6 @@ contains
     ! local
     integer(I4B) :: icell, nrOfCells, idx
     type(DistributedModelType), pointer :: dist_model
-    real(DP), dimension(:), pointer, contiguous :: dis_xc, dis_yc
-    real(DP), pointer :: dis_xorigin, dis_yorigin, dis_angrot
     real(DP) :: xglo, yglo
 
     ! the following is similar to dis_df
@@ -1049,17 +1036,11 @@ contains
       idx = this%idxToGlobal(icell)%index
       dist_model => this%idxToGlobal(icell)%dmodel
 
-      call dist_model%load(dis_xc, 'XC', 'DIS')
-      call dist_model%load(dis_yc, 'YC', 'DIS')
-      call dist_model%load(dis_xorigin, 'XORIGIN', 'DIS')
-      call dist_model%load(dis_yorigin, 'YORIGIN', 'DIS')
-      call dist_model%load(dis_angrot, 'ANGROT', 'DIS')
-
       ! we are merging grids with possibly (likely) different origins,
       ! transform to global coordinates:
-      call dis_transform_xy(dis_xc(idx), dis_yc(idx), &
-                            dis_xorigin, dis_yorigin, &
-                            dis_angrot, xglo, yglo)
+      call dis_transform_xy(dist_model%dis_xc(idx), dist_model%dis_yc(idx), &
+                            dist_model%dis_xorigin, dist_model%dis_yorigin, &
+                            dist_model%dis_angrot, xglo, yglo)
 
       ! NB: usernodes equals internal nodes for interface
       disu%cellxy(1, icell) = xglo
@@ -1091,7 +1072,6 @@ contains
     type(VectorInt) :: modelIds
     type(VectorInt) :: srcIdxTmp, tgtIdxTmp, signTmp
     class(DistributedExchangeType), pointer :: dist_exg
-    integer(I4B), dimension(:), pointer, contiguous :: ia, ja
     class(DistributedModelType), pointer :: m1, m2
     integer(I4B), pointer :: nexg
     integer(I4B), dimension(:), pointer, contiguous :: nodem1, nodem2
@@ -1155,10 +1135,9 @@ contains
           ! i and j are now in same model (mid)
           iloc = this%idxToGlobal(i)%index
           jloc = this%idxToGlobal(j)%index
-          call this%idxToGlobal(i)%dmodel%load(ia, 'IA', 'CON')
-          call this%idxToGlobal(i)%dmodel%load(ja, 'JA', 'CON')
-          iposModel = getCSRIndex(iloc, jloc, ia, ja)
-
+          iposModel = getCSRIndex(iloc, jloc, &
+                                  this%idxToGlobal(i)%dmodel%con_ia, &
+                                  this%idxToGlobal(i)%dmodel%con_ja)
           call srcIdxTmp%push_back(iposModel)
           call tgtIdxTmp%push_back(ipos)
         end do

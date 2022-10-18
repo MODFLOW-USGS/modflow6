@@ -276,12 +276,12 @@ contains
           call parser%GetString(fname)
           call add_model(im, 'GWF6', mname)
           call gwf_cr(fname, im, modelname(im))
-          call add_dist_model(im)
+          call add_dist_model(im, modelname(im))
         case ('GWT6')
           call parser%GetString(fname)
           call add_model(im, 'GWT6', mname)
           call gwt_cr(fname, im, modelname(im))
-          call add_dist_model(im)
+          call add_dist_model(im, modelname(im))
         case default
           write (errmsg, '(4x,a,a)') &
             '****ERROR. UNKNOWN SIMULATION MODEL: ', &
@@ -359,12 +359,12 @@ contains
         select case (keyword)
         case ('GWF6-GWF6')
           call gwfexchange_create(fname, id, m1, m2)
-          call add_dist_exg(id)
+          call add_dist_exg(id, m1, m2)
         case ('GWF6-GWT6')
           call gwfgwt_cr(fname, id, m1, m2)
         case ('GWT6-GWT6')
           call gwtexchange_create(fname, id, m1, m2)
-          call add_dist_exg(id)
+          call add_dist_exg(id, m1, m2)
         case default
           write (errmsg, '(4x,a,a)') &
             '****ERROR. UNKNOWN SIMULATION EXCHANGES: ', &

@@ -43,24 +43,23 @@ contains
       gcn => idxToGlobal(array(n))
       gcm => idxToGlobal(array(m))
 
-      ! load model data
-      ! TODO_MJR: we should probably cache this
+      ! get model data
       ! for n:
-      call gcn%dmodel%load(dis_top_n, 'TOP', 'DIS')
-      call gcn%dmodel%load(dis_bot_n, 'BOT', 'DIS')
-      call gcn%dmodel%load(dis_xc_n, 'XC', 'DIS')
-      call gcn%dmodel%load(dis_yc_n, 'YC', 'DIS')
-      call gcn%dmodel%load(xorigin_n, 'XORIGIN', 'DIS')
-      call gcn%dmodel%load(yorigin_n, 'YORIGIN', 'DIS')
-      call gcn%dmodel%load(angrot_n, 'ANGROT', 'DIS')
+      dis_top_n => gcn%dmodel%dis_top
+      dis_bot_n => gcn%dmodel%dis_bot
+      dis_xc_n => gcn%dmodel%dis_xc
+      dis_yc_n => gcn%dmodel%dis_yc
+      xorigin_n => gcn%dmodel%dis_xorigin
+      yorigin_n => gcn%dmodel%dis_yorigin
+      angrot_n => gcn%dmodel%dis_angrot
       ! for m:
-      call gcm%dmodel%load(dis_top_m, 'TOP', 'DIS')
-      call gcm%dmodel%load(dis_bot_m, 'BOT', 'DIS')
-      call gcm%dmodel%load(dis_xc_m, 'XC', 'DIS')
-      call gcm%dmodel%load(dis_yc_m, 'YC', 'DIS')
-      call gcm%dmodel%load(xorigin_m, 'XORIGIN', 'DIS')
-      call gcm%dmodel%load(yorigin_m, 'YORIGIN', 'DIS')
-      call gcm%dmodel%load(angrot_m, 'ANGROT', 'DIS')
+      dis_top_m => gcm%dmodel%dis_top
+      dis_bot_m => gcm%dmodel%dis_bot
+      dis_xc_m => gcm%dmodel%dis_xc
+      dis_yc_m => gcm%dmodel%dis_yc
+      xorigin_m => gcm%dmodel%dis_xorigin
+      yorigin_m => gcm%dmodel%dis_yorigin
+      angrot_m => gcm%dmodel%dis_angrot
 
       ! convert coordinates
       call dis_transform_xy(dis_xc_n(gcn%index), dis_yc_n(gcn%index), &

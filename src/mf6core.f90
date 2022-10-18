@@ -74,6 +74,9 @@ contains
     ! -- create
     call simulation_cr()
 
+    ! -- init distributed data
+    call dd_init()
+
     ! -- define
     call simulation_df()
 
@@ -251,7 +254,7 @@ contains
     ! created and added to the numerical solutions
     call connections_cr()
     !
-    ! -- initialize distributed data
+    ! -- synchronize
     call dd_before_df()
     !
     ! -- Define each connection

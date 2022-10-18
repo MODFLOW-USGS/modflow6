@@ -1,5 +1,5 @@
 module DistributedExchangeModule
-  use KindModule, only: I4B
+  use KindModule, only: I4B, DP
   use ListModule
   use SimModule, only: ustop
   use DisConnExchangeModule
@@ -17,10 +17,23 @@ module DistributedExchangeModule
     integer(I4B) :: model1_id !< one model
     integer(I4B) :: model2_id !< other model
 
+    ! nexg*      
+    ! nodem1*,nodem2*
+    ! naux,auxname_cst,auxvar
+    integer(I4B), pointer :: nexg => null()
+    integer(I4B), dimension(:), pointer, contiguous :: nodem1 => null()
+    integer(I4B), dimension(:), pointer, contiguous :: nodem2 => null()
+    integer(I4B), pointer :: ianglex => null()
+    integer(I4B), dimension(:), pointer, contiguous :: ihc => null()
+    real(DP), dimension(:), pointer, contiguous :: cl1 => null()
+    real(DP), dimension(:), pointer, contiguous :: cl2 => null()
+    real(DP), dimension(:), pointer, contiguous :: hwva => null()
+    real(DP), dimension(:), pointer, contiguous :: anglex => null() ! TODO_MJR: this doesn't exist yet in the exchanges
+
     ! this is strictly private, use access() instead
     class(DisConnExchangeType), private, pointer :: exchange !< implementation if local, null otherwise
   contains    
-    procedure, private :: create_local
+    procedure :: create
     procedure :: init_connectivity
     procedure :: deallocate
     procedure :: access
@@ -28,38 +41,48 @@ module DistributedExchangeModule
 
   contains  
 
-  subroutine add_dist_exg(exg_index)
-    integer(I4B) :: exg_index
+  subroutine add_dist_exg(exg_id, model1_id, model2_id)
+    integer(I4B) :: exg_id
+    integer(I4B) :: model1_id
+    integer(I4B) :: model2_id
     ! local
     class(DisConnExchangeType), pointer :: exchange
     class(DistributedExchangeType), pointer :: dist_exchange
 
-    exchange => GetDisConnExchangeFromList(baseexchangelist, exg_index)
+    exchange => GetDisConnExchangeFromList(baseexchangelist, exg_id)
     
     allocate(dist_exchange)
-    call dist_exchange%create_local(exchange)
-
+    call dist_exchange%create(exchange, exg_id, model1_id, model2_id)
     call AddDistExchangeToList(distexchangelist, dist_exchange)
 
   end subroutine add_dist_exg
 
-  subroutine create_local(this, exchange)
+  subroutine create(this, exchange, exchange_id, m1_id, m2_id)
     class(DistributedExchangeType) :: this
-    class(DisConnExchangeType), pointer :: exchange
+    class(DisConnExchangeType), pointer :: exchange    
+    integer(I4B) :: exchange_id
+    integer(I4B) :: m1_id
+    integer(I4B) :: m2_id
 
-    this%id = exchange%id
-    this%name = exchange%name
-    this%model1_id = exchange%model1%id
-    this%model2_id = exchange%model2%id
+    this%id = exchange_id
+    this%model1_id = m1_id
+    this%model2_id = m2_id
     this%exchange => exchange
-    this%is_local = .true.
 
-  end subroutine create_local
+    if (associated(exchange)) then
+      this%is_local = .true.      
+    else
+      this%is_local = .false.
+    end if
+
+  end subroutine create
 
   subroutine init_connectivity(this)
     class(DistributedExchangeType) :: this
 
-    ! TODO_MJR
+    if (this%is_local) then
+      
+    end if
 
   end subroutine init_connectivity
 

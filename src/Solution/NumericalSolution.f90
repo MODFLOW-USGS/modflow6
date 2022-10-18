@@ -27,6 +27,7 @@ module NumericalSolutionModule
                                      GetNumericalExchangeFromList
   use SparseModule, only: sparsematrix
   use SimVariablesModule, only: iout, isim_mode
+  use SimStagesModule
   use BlockParserModule, only: BlockParserType
   use IMSLinearModule
 
@@ -1403,7 +1404,6 @@ contains
   !!
   !<
   subroutine prepareSolve(this)
-    use DistVariableModule, only: BEFORE_AD
     ! -- dummy variables
     class(NumericalSolutionType) :: this !< NumericalSolutionType instance
     ! -- local variables
@@ -1413,7 +1413,7 @@ contains
     class(NumericalModelType), pointer :: mp => null()
 
     ! synchronize for AD
-    call this%synchronize(BEFORE_AD)
+    call this%synchronize(STG_BEFORE_AD)
 
     ! -- Exchange advance
     do ic = 1, this%exchangelist%Count()
@@ -1905,7 +1905,6 @@ contains
 
   ! helper routine to calculate coefficients and setup the solution matrix
   subroutine sln_buildsystem(this, kiter, inewton)
-    use DistVariableModule, only: BEFORE_CF, BEFORE_FC
     class(NumericalSolutionType) :: this
     integer(I4B), intent(in) :: kiter
     integer(I4B), intent(in) :: inewton
@@ -1919,7 +1918,7 @@ contains
     call this%sln_reset()
 
     ! synchronize for CF
-    call this%synchronize(BEFORE_CF)
+    call this%synchronize(STG_BEFORE_CF)
 
     !
     ! -- Calculate the matrix terms for each exchange
@@ -1935,7 +1934,7 @@ contains
     end do
 
     ! synchronize for FC
-    call this%synchronize(BEFORE_FC)
+    call this%synchronize(STG_BEFORE_FC)
 
     !
     ! -- Add exchange coefficients to the solution

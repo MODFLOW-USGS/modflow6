@@ -56,7 +56,7 @@ module SpatialModelConnectionModule
     ! these are not in the memory manager
     class(GridConnectionType), pointer :: gridConnection => null() !< facility to build the interface grid connection structure
     integer(I4B), dimension(:), pointer :: mapIdxToSln => null() !< mapping between interface matrix and the solution matrix
-    type(ListType) :: distVarList !< list with distributed variables
+    type(ListType) :: ifaceDistVars !< list with distributed variables for this interface
     type(InterfaceMapType), pointer :: interfaceMap => null() !< a map of the interface into models and exchanges
 
   contains
@@ -461,7 +461,7 @@ contains ! module procedures
     deallocate (this%haloExchanges)
 
     call this%gridConnection%destroy()
-    call this%distVarList%Clear(destroy=.true.)
+    call this%ifaceDistVars%Clear(destroy=.true.)
     deallocate (this%gridConnection)
     deallocate (this%interfaceMap)
     deallocate (this%mapIdxToSln)
@@ -616,7 +616,7 @@ contains ! module procedures
     distVar%exg_var_name = exg_var_name
 
     obj => distVar
-    call this%distVarList%Add(obj)
+    call this%ifaceDistVars%Add(obj)
 
   end subroutine addDistVar
 
