@@ -3,7 +3,7 @@ module GweGweConnectionModule
   use ConstantsModule, only: LINELENGTH, LENCOMPONENTNAME, DZERO, LENBUDTXT
   use CsrUtilsModule, only: getCSRIndex
   use SimModule, only: ustop
-  use MemoryManagerModule, only: mem_allocate, mem_deallocate
+  use MemoryManagerModule, only: mem_allocate, mem_deallocate, mem_checkin
   use SpatialModelConnectionModule
   use NumericalModelModule
   use GweModule
@@ -13,6 +13,7 @@ module GweGweConnectionModule
   use SparseModule, only: sparsematrix
   use ConnectionsModule, only: ConnectionsType
   use CellWithNbrsModule, only: GlobalCellType
+  use DistributedDataModule
 
   implicit none
   private
@@ -28,14 +29,13 @@ module GweGweConnectionModule
     type(GweModelType), pointer :: gweModel => null() !< the model for which this connection exists
     type(GweExchangeType), pointer :: gweExchange => null() !< the primary exchange, cast to GWE-GWE
     logical(LGP) :: exchangeIsOwned !< there are two connections (in serial) for an exchange,
-                                                                          !! one of them needs to manage/own the exchange (e.g. clean up)
+                                    !! one of them needs to manage/own the exchange (e.g. clean up)
     type(GweInterfaceModelType), pointer :: gweInterfaceModel => null() !< the interface model
     integer(I4B), pointer :: iIfaceAdvScheme => null() !< the advection scheme at the interface:
-                                                                          !! 0 = upstream, 1 = central, 2 = TVD
+                                                       !! 0 = upstream, 1 = central, 2 = TVD
     integer(I4B), pointer :: iIfaceXt3d => null() !< XT3D in the interface DSP package: 0 = no, 1 = lhs, 2 = rhs
-    real(DP), dimension(:), pointer, contiguous :: exgflowja => null() !< intercell flows at the interface, coming from GWF interface model
     integer(I4B), pointer :: exgflowSign => null() !< indicates the flow direction of exgflowja
-    real(DP), dimension(:), pointer, contiguous :: exgflowjaGwt => null() !< gwe-flowja at the interface (this is a subset of the GWE
+    real(DP), dimension(:), pointer, contiguous :: exgflowjaGwe => null() !< gwe-flowja at the interface (this is a subset of the GWT
                                                                           !! interface model flowja's)
 
     real(DP), dimension(:), pointer, contiguous :: gwfflowja => null() !< gwfflowja for the interface model
@@ -71,7 +71,6 @@ module GweGweConnectionModule
     ! local stuff
     procedure, pass(this), private :: allocate_scalars
     procedure, pass(this), private :: allocate_arrays
-    procedure, pass(this), private :: syncInterfaceModel
     procedure, pass(this), private :: setGridExtent
     procedure, pass(this), private :: setFlowToExchange
 
@@ -85,7 +84,7 @@ contains
     use InputOutputModule, only: openfile
     class(GweGweConnectionType) :: this !< the connection
     class(NumericalModelType), pointer :: model !< the model owning this connection,
-                                                  !! this must be a GweModelType
+                                                !! this must be a GweModelType
     class(DisConnExchangeType), pointer :: gweEx !< the GWE-GWE exchange the interface model is created for
     ! local
     character(len=LINELENGTH) :: fname
@@ -116,7 +115,8 @@ contains
     end if
 
     ! first call base constructor
-    call this%SpatialModelConnectionType%spatialConnection_ctor(model, gweEx, &
+    call this%SpatialModelConnectionType%spatialConnection_ctor(model,&
+                                                                gweEx, &
                                                                 name)
 
     call this%allocate_scalars()
@@ -140,32 +140,6 @@ contains
     call mem_allocate(this%exgflowSign, 'EXGFLOWSIGN', this%memoryPath)
 
   end subroutine allocate_scalars
-
-!> @brief Allocate array variables for this connection
-!<
-  subroutine allocate_arrays(this)
-    class(GweGweConnectionType) :: this !< the connection
-    ! local
-    integer(I4B) :: i
-
-    call mem_allocate(this%gwfflowja, this%interfaceModel%nja, 'GWFFLOWJA', &
-                      this%memoryPath)
-    call mem_allocate(this%gwfsat, this%neq, 'GWFSAT', this%memoryPath)
-    call mem_allocate(this%gwfhead, this%neq, 'GWFHEAD', this%memoryPath)
-    call mem_allocate(this%gwfspdis, 3, this%neq, 'GWFSPDIS', this%memoryPath)
-
-    call mem_allocate(this%exgflowjaGwt, this%gridConnection%nrOfBoundaryCells, &
-                      'EXGFLOWJAGWE', this%memoryPath)
-
-    do i = 1, size(this%gwfflowja)
-      this%gwfflowja = 0.0_DP
-    end do
-
-    do i = 1, this%neq
-      this%gwfsat = 0.0_DP
-    end do
-
-  end subroutine allocate_arrays
 
 !> @brief define the GWE-GWE connection
 !<
@@ -194,21 +168,62 @@ contains
     else
       write (imName, '(a,i0)') 'GWEIM2_', this%gweExchange%id
     end if
-    call this%gweInterfaceModel%gweifmod_cr(imName, this%iout, &
+    call this%gweInterfaceModel%gweifmod_cr(imName, &
+                                            this%iout, &
                                             this%gridConnection)
+    call this%gweInterfaceModel%set_idsoln(this%gweModel%idsoln)
     this%gweInterfaceModel%iAdvScheme = this%iIfaceAdvScheme
     this%gweInterfaceModel%ixt3d = this%iIfaceXt3d
     call this%gweInterfaceModel%model_df()
 
+    call this%addDistVar('X', '', this%gweInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AR, BEFORE_AD, BEFORE_CF/))
+    call this%addDistVar('IBOUND', '', this%gweInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AR/))
+    call this%addDistVar('TOP', 'DIS', this%gweInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AR/))
+    call this%addDistVar('BOT', 'DIS', this%gweInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AR/))
+    call this%addDistVar('AREA', 'DIS', this%gweInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AR/))
+    if (this%gweInterfaceModel%dsp%idiffc > 0) then
+      call this%addDistVar('DIFFC', 'DSP', this%gweInterfaceModel%name, &
+                           SYNC_NODES, '', (/BEFORE_AR/))
+    end if
+    if (this%gweInterfaceModel%dsp%idisp > 0) then
+      call this%addDistVar('ALH', 'DSP', this%gweInterfaceModel%name, &
+                           SYNC_NODES, '', (/BEFORE_AR/))
+      call this%addDistVar('ALV', 'DSP', this%gweInterfaceModel%name, &
+                           SYNC_NODES, '', (/BEFORE_AR/))
+      call this%addDistVar('ATH1', 'DSP', this%gweInterfaceModel%name, &
+                           SYNC_NODES, '', (/BEFORE_AR/))
+      call this%addDistVar('ATH2', 'DSP', this%gweInterfaceModel%name, &
+                           SYNC_NODES, '', (/BEFORE_AR/))
+      call this%addDistVar('ATV', 'DSP', this%gweInterfaceModel%name, &
+                           SYNC_NODES, '', (/BEFORE_AR/))
+    end if
+    call this%addDistVar('GWFHEAD', 'FMI', this%gweInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AD/))
+    call this%addDistVar('GWFSAT', 'FMI', this%gweInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AD/))
+    call this%addDistVar('GWFSPDIS', 'FMI', this%gweInterfaceModel%name, &
+                         SYNC_NODES, '', (/BEFORE_AD/))
+    call this%addDistVar('GWFFLOWJA', 'FMI', this%gweInterfaceModel%name, &
+                         SYNC_CONNECTIONS, '', (/BEFORE_AD/))
+    call this%addDistVar('GWFFLOWJA', 'FMI', this%gweInterfaceModel%name, &
+                         SYNC_EXCHANGES, 'GWFSIMVALS', (/BEFORE_AD/))
+    ! fill porosity from mst packages, needed for dsp
+    if (this%gweModel%indsp > 0 .and. this%gweModel%inmst > 0) then
+      call this%addDistVar('POROSITY', 'MST', this%gweInterfaceModel%name, &
+                           SYNC_NODES, '', (/AFTER_AR/))
+    end if
+    call this%mapVariables()
+    
     call this%allocate_arrays()
+    call this%gweInterfaceModel%allocate_fmi()
 
     ! connect X, RHS, IBOUND, and flowja
     call this%spatialcon_setmodelptrs()
-
-    this%gweInterfaceModel%fmi%gwfflowja => this%gwfflowja
-    this%gweInterfaceModel%fmi%gwfsat => this%gwfsat
-    this%gweInterfaceModel%fmi%gwfhead => this%gwfhead
-    this%gweInterfaceModel%fmi%gwfspdis => this%gwfspdis
 
     ! connect pointers (used by BUY)
     this%conc => this%gweInterfaceModel%x
@@ -219,8 +234,18 @@ contains
 
   end subroutine gwegwecon_df
 
-!> @brief Set required extent of the interface grid from
-!< the configuration
+  !> @brief Allocate array variables for this connection
+  !<
+  subroutine allocate_arrays(this)
+    class(GweGweConnectionType) :: this !< the connection
+
+    call mem_allocate(this%exgflowjaGwe, this%gridConnection%nrOfBoundaryCells, &
+                      'EXGFLOWJAGWT', this%memoryPath)
+
+  end subroutine allocate_arrays
+
+  !> @brief Set required extent of the interface grid from
+  !< the configuration
   subroutine setGridExtent(this)
     class(GweGweConnectionType) :: this !< the connection
     ! local
@@ -253,25 +278,11 @@ contains
 !<
   subroutine gwegwecon_ar(this)
     class(GweGweConnectionType) :: this !< the connection
-    ! local
-    integer(I4B) :: i, idx
-    class(GweModelType), pointer :: gweModel
-    class(*), pointer :: modelPtr
 
     ! check if we can construct an interface model
     ! NB: only makes sense after the models' allocate&read have been
     ! called, which is why we do it here
     call this%validateConnection()
-
-    ! fill porosity from mst packages, needed for dsp
-    if (this%gweModel%inmst > 0) then
-      do i = 1, this%neq
-        modelPtr => this%gridConnection%idxToGlobal(i)%model
-        gweModel => CastAsGweModel(modelPtr)
-        idx = this%gridConnection%idxToGlobal(i)%index
-        this%gweInterfaceModel%porosity(i) = gweModel%mst%porosity(idx)
-      end do
-    end if
 
     ! allocate and read base
     call this%spatialcon_ar()
@@ -344,8 +355,8 @@ contains
     do ic = 1, this%gridConnection%nrOfBoundaryCells
       boundaryCell = this%gridConnection%boundaryCells(ic)%cell
       connectedCell = this%gridConnection%connectedCells(ic)%cell
-      iglo = boundaryCell%index + boundaryCell%model%moffset
-      jglo = connectedCell%index + connectedCell%model%moffset
+      iglo = boundaryCell%index + boundaryCell%dmodel%moffset
+      jglo = connectedCell%index + connectedCell%dmodel%moffset
       call sparse%addconnection(iglo, jglo, 1)
       call sparse%addconnection(jglo, iglo, 1)
     end do
@@ -365,13 +376,10 @@ contains
 
   end subroutine gwegwecon_rp
 
-!> @brief Advance this connection
+  !> @brief Advance this connection
   !<
   subroutine gwegwecon_ad(this)
     class(GweGweConnectionType) :: this !< this connection
-
-    ! copy model data into interface model
-    call this%syncInterfaceModel()
 
     ! recalculate dispersion ellipse
     if (this%gweInterfaceModel%indsp > 0) call this%gweInterfaceModel%dsp%dsp_ad()
@@ -388,10 +396,6 @@ contains
     ! local
     integer(I4B) :: i
 
-    ! copy model data into interface model
-    ! (when kiter == 1, this is already done in _ad)
-    if (kiter > 1) call this%syncInterfaceModel()
-
     ! reset interface system
     do i = 1, this%nja
       this%amat(i) = 0.0_DP
@@ -403,75 +407,6 @@ contains
     call this%gweInterfaceModel%model_cf(kiter)
 
   end subroutine gwegwecon_cf
-
-!> @brief called during advance (*_ad), to copy the data
-!! from the models into the connection's placeholder arrays
-!<
-  subroutine syncInterfaceModel(this)
-    class(GweGweConnectionType) :: this !< the connection
-    ! local
-    integer(I4B) :: i, n, m, ipos, iposLoc, idx
-    type(ConnectionsType), pointer :: imCon !< interface model connections
-    type(GlobalCellType), dimension(:), pointer :: toGlobal !< map interface index to global cell
-    type(GlobalCellType), pointer :: boundaryCell, connectedCell
-    class(GweModelType), pointer :: gweModel
-    class(*), pointer :: modelPtr
-
-    ! for readability
-    imCon => this%gweInterfaceModel%dis%con
-    toGlobal => this%gridConnection%idxToGlobal
-
-    ! loop over connections in interface
-    do n = 1, this%neq
-      do ipos = imCon%ia(n) + 1, imCon%ia(n + 1) - 1
-        m = imCon%ja(ipos)
-        if (associated(toGlobal(n)%model, toGlobal(m)%model)) then
-          ! internal connection for a model, copy from its flowja
-          iposLoc = getCSRIndex(toGlobal(n)%index, toGlobal(m)%index, &
-                                toGlobal(n)%model%ia, toGlobal(n)%model%ja)
-          modelPtr => toGlobal(n)%model
-          gweModel => CastAsGweModel(modelPtr)
-          this%gwfflowja(ipos) = gweModel%fmi%gwfflowja(iposLoc)
-        end if
-      end do
-    end do
-
-    ! the flowja for exchange cells
-    do i = 1, this%gridConnection%nrOfBoundaryCells
-      boundaryCell => this%gridConnection%boundaryCells(i)%cell
-      connectedCell => this%gridConnection%connectedCells(i)%cell
-      n = this%gridConnection%getInterfaceIndex(boundaryCell%index, &
-                                                boundaryCell%model)
-      m = this%gridConnection%getInterfaceIndex(connectedCell%index, &
-                                                connectedCell%model)
-      ipos = getCSRIndex(n, m, imCon%ia, imCon%ja)
-      this%gwfflowja(ipos) = this%exgflowja(i) * this%exgflowSign
-      ipos = getCSRIndex(m, n, imCon%ia, imCon%ja)
-      this%gwfflowja(ipos) = -this%exgflowja(i) * this%exgflowSign
-    end do
-
-    ! copy concentrations
-    do i = 1, this%gridConnection%nrOfCells
-      idx = this%gridConnection%idxToGlobal(i)%index
-      this%x(i) = this%gridConnection%idxToGlobal(i)%model%x(idx)
-      this%gweInterfaceModel%xold(i) = &
-        this%gridConnection%idxToGlobal(i)%model%xold(idx)
-    end do
-
-    ! copy fmi
-    do i = 1, this%gridConnection%nrOfCells
-      idx = this%gridConnection%idxToGlobal(i)%index
-      modelPtr => this%gridConnection%idxToGlobal(i)%model
-      gweModel => CastAsGweModel(modelPtr)
-
-      this%gwfsat(i) = gweModel%fmi%gwfsat(idx)
-      this%gwfhead(i) = gweModel%fmi%gwfhead(idx)
-      this%gwfspdis(1, i) = gweModel%fmi%gwfspdis(1, idx)
-      this%gwfspdis(2, i) = gweModel%fmi%gwfspdis(2, idx)
-      this%gwfspdis(3, i) = gweModel%fmi%gwfspdis(3, idx)
-    end do
-
-  end subroutine syncInterfaceModel
 
   subroutine gwegwecon_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
     class(GweGweConnectionType) :: this !< the connection
@@ -489,13 +424,12 @@ contains
     do n = 1, this%neq
       ! We only need the coefficients for our own model
       ! (i.e. rows in the matrix that belong to this%owner):
-      if (.not. associated(this%gridConnection%idxToGlobal(n)%model, &
-                           this%owner)) then
+      if (.not. this%gridConnection%idxToGlobal(n)%dmodel == this%owner) then
         cycle
       end if
 
       nglo = this%gridConnection%idxToGlobal(n)%index + &
-             this%gridConnection%idxToGlobal(n)%model%moffset
+             this%gridConnection%idxToGlobal(n)%dmodel%moffset
       rhssln(nglo) = rhssln(nglo) + this%rhs(n)
 
       do ipos = this%ia(n), this%ia(n + 1) - 1
@@ -526,27 +460,22 @@ contains
   !> @brief Set the flows (flowja from interface model) to the
   !< simvals in the exchange, leaving the budget calcution in there
   subroutine setFlowToExchange(this)
+    use InterfaceMapModule
     class(GweGweConnectionType) :: this !< this connection
     ! local
     integer(I4B) :: i
-    integer(I4B) :: nIface, mIface, ipos
     class(GweExchangeType), pointer :: gweEx
+    type(IndexMapSgnType), pointer :: map
 
-    gweEx => this%gweExchange
     if (this%exchangeIsOwned) then
-      do i = 1, gweEx%nexg
-        gweEx%simvals(i) = DZERO
-
-        if (gweEx%gwemodel1%ibound(gweEx%nodem1(i)) /= 0 .and. &
-            gweEx%gwemodel2%ibound(gweEx%nodem2(i)) /= 0) then
-          nIface = this%gridConnection%getInterfaceIndex(gweEx%nodem1(i), &
-                                                         gweEx%model1)
-          mIface = this%gridConnection%getInterfaceIndex(gweEx%nodem2(i), &
-                                                         gweEx%model2)
-          ipos = getCSRIndex(nIface, mIface, this%gweInterfaceModel%ia, &
-                             this%gweInterfaceModel%ja)
-          gweEx%simvals(i) = this%gweInterfaceModel%flowja(ipos)
-        end if
+      gweEx => this%gweExchange
+      map => this%interfaceMap%exchange_map(this%interfaceMap%prim_exg_idx)
+          
+      ! use (half of) the exchnage map in reverse:
+      do i = 1, size(map%src_idx)
+        if (map%sign(i) < 0) cycle ! simvals is defined from exg%m1 => exg%m2
+        gweEx%simvals(map%src_idx(i)) = &
+          this%gweInterfaceModel%flowja(map%tgt_idx(i))
       end do
     end if
 
@@ -590,11 +519,7 @@ contains
     call mem_deallocate(this%exgflowSign)
 
     ! arrays
-    call mem_deallocate(this%gwfflowja)
-    call mem_deallocate(this%gwfsat)
-    call mem_deallocate(this%gwfhead)
-    call mem_deallocate(this%gwfspdis)
-    call mem_deallocate(this%exgflowjaGwt)
+    call mem_deallocate(this%exgflowjaGwe)
 
     ! interface model
     call this%gweInterfaceModel%model_da()

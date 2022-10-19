@@ -250,6 +250,7 @@ contains
     ! -- modules
     use GwfModule, only: gwf_cr
     use GwtModule, only: gwt_cr
+    use GweModule, only: gwe_cr
     use ConstantsModule, only: LENMODELNAME
     ! -- dummy
     ! -- local
@@ -282,6 +283,11 @@ contains
           call add_model(im, 'GWT6', mname)
           call gwt_cr(fname, im, modelname(im))
           call add_dist_model(im)
+        case ('GWE6')
+          call parser%GetString(fname)
+          call add_model(im, 'GWE6', mname)
+          call gwe_cr(fname, im, modelname(im))
+          call add_dist_model(im)
         case default
           write (errmsg, '(4x,a,a)') &
             '****ERROR. UNKNOWN SIMULATION MODEL: ', &
@@ -308,6 +314,7 @@ contains
     use GwfGwfExchangeModule, only: gwfexchange_create
     use GwfGwtExchangeModule, only: gwfgwt_cr
     use GwtGwtExchangeModule, only: gwtexchange_create
+    use GwfGweExchangeModule, only: gwfgwe_cr
     ! -- dummy
     ! -- local
     integer(I4B) :: ierr
@@ -362,6 +369,8 @@ contains
           call gwfgwt_cr(fname, id, m1, m2)
         case ('GWT6-GWT6')
           call gwtexchange_create(fname, id, m1, m2)
+        case ('GWF6-GWE6')
+          call gwfgwe_cr(fname, id, m1, m2)
         case default
           write (errmsg, '(4x,a,a)') &
             '****ERROR. UNKNOWN SIMULATION EXCHANGES: ', &

@@ -18,9 +18,10 @@ module GweGweExchangeModule
                              TABCENTER, TABLEFT, LENAUXNAME, DNODATA, &
                              LENMODELNAME
   use ListModule, only: ListType
-  use ListsModule, only: basemodellist
+  use ListsModule, only: basemodellist, distmodellist
   use DisConnExchangeModule, only: DisConnExchangeType
   use GweModule, only: GweModelType
+  use DistributedModelModule, only: GetDistModelFromList
   use TspMvtModule, only: TspMvtType
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
@@ -49,6 +50,7 @@ module GweGweExchangeModule
     ! -- names of the GWF models that are connected by this exchange
     character(len=LENMODELNAME) :: gwfmodelname1 = '' !< name of gwfmodel that corresponds to gwtmodel1
     character(len=LENMODELNAME) :: gwfmodelname2 = '' !< name of gwfmodel that corresponds to gwtmodel2
+    real(DP), dimension(:), pointer, contiguous :: gwfsimvals => null() !< simulated gwf flow rate for each exchange
     !
     ! -- pointers to gwt models
     type(GweModelType), pointer :: gwemodel1 => null() !< pointer to GWT Model 1
@@ -152,6 +154,7 @@ contains
       exchange%model1 => mb
       exchange%gwemodel1 => mb
     end select
+    exchange%dmodel1 => GetDistModelFromList(distmodellist, m1id)
     !
     ! -- set gwtmodel2
     mb => GetBaseModelFromList(basemodellist, m2id)
@@ -160,6 +163,7 @@ contains
       exchange%model2 => mb
       exchange%gwemodel2 => mb
     end select
+    exchange%dmodel2 => GetDistModelFromList(distmodellist, m2id)
     !
     ! -- Verify that gwt model1 is of the correct type
     if (.not. associated(exchange%gwemodel1)) then
@@ -520,10 +524,14 @@ contains
     !
     ! -- If cell-by-cell flows will be saved as a list, write header.
     if (ibinun1 /= 0) then
-      call this%gwemodel1%dis%record_srcdst_list_header( &
-        budtxt(1), this%gwemodel1%name, this%name, &
-        this%gwemodel2%name, this%name, this%naux, this%auxname, &
-        ibinun1, this%nexg, this%gwemodel1%iout)
+      call this%gwemodel1%dis%record_srcdst_list_header(budtxt(1), &
+                                                        this%gwemodel1%name, &
+                                                        this%name, &
+                                                        this%gwemodel2%name, & 
+                                                        this%name, &
+                                                        this%naux, this%auxname, &
+                                                        ibinun1, this%nexg, &
+                                                        this%gwemodel1%iout)
     end if
     !
     ! Initialize accumulators
@@ -596,10 +604,14 @@ contains
     !
     ! -- If cell-by-cell flows will be saved as a list, write header.
     if (ibinun2 /= 0) then
-      call this%gwemodel2%dis%record_srcdst_list_header( &
-        budtxt(1), this%gwemodel2%name, this%name, this%gwemodel1%name, &
-        this%name, this%naux, this%auxname, ibinun2, this%nexg, &
-        this%gwemodel2%iout)
+      call this%gwemodel2%dis%record_srcdst_list_header(budtxt(1),  &
+                                                        this%gwemodel2%name, &
+                                                        this%name, &
+                                                        this%gwemodel1%name, &
+                                                        this%name, &
+                                                        this%naux, this%auxname, &
+                                                        ibinun2, this%nexg, &
+                                                        this%gwemodel2%iout)
     end if
     !
     ! Initialize accumulators
@@ -873,8 +885,7 @@ contains
       inobs = GetUnit()
       call openfile(inobs, iout, this%obs%inputFilename, 'OBS')
       this%obs%inUnitObs = inobs
-    case ('ADVSCHEME')
-      !cdl todo: change to ADV_SCHEME?
+    case ('ADV_SCHEME')
       call this%parser%GetStringCaps(subkey)
       select case (subkey)
       case ('UPSTREAM')
@@ -890,14 +901,27 @@ contains
       end select
       write (iout, '(4x,a,a)') &
         'CELL AVERAGING METHOD HAS BEEN SET TO: ', trim(subkey)
-    case ('XT3D_OFF')
-      !cdl todo: change to DSP_XT3D_OFF?
+    case ('DSP_XT3D_OFF')
       this%ixt3d = 0
       write (iout, '(4x,a)') 'XT3D FORMULATION HAS BEEN SHUT OFF.'
-    case ('XT3D_RHS')
-      !cdl todo: change to DSP_XT3D_RHS?
+    case ('DSP_XT3D_RHS')
       this%ixt3d = 2
       write (iout, '(4x,a)') 'XT3D RIGHT-HAND SIDE FORMULATION IS SELECTED.'
+    case ('ADVSCHEME')
+      errmsg = 'ADVSCHEME is no longer a valid keyword.  Use ADV_SCHEME &
+        &instead.'
+      call store_error(errmsg)
+      call this%parser%StoreErrorUnit()
+    case ('XT3D_OFF')
+      errmsg = 'XT3D_OFF is no longer a valid keyword.  Use DSP_XT3D_OFF &
+        &instead.'
+      call store_error(errmsg)
+      call this%parser%StoreErrorUnit()
+    case ('XT3D_RHS')
+      errmsg = 'XT3D_RHS is no longer a valid keyword.  Use DSP_XT3D_RHS &
+        &instead.'
+      call store_error(errmsg)
+      call this%parser%StoreErrorUnit()
     case default
       parsed = .false.
     end select
@@ -986,6 +1010,7 @@ contains
     ! -- arrays
     call mem_deallocate(this%cond)
     call mem_deallocate(this%simvals)
+    call mem_deallocate(this%gwfsimvals, 'GWFSIMVALS', this%memoryPath) ! linked memory
     !
     ! -- output table objects
     if (associated(this%outputtab1)) then
@@ -1212,12 +1237,24 @@ contains
   end function gwe_gwe_connects_model
 
   !> @brief Should interface model be used for this exchange
+  !!
+  !! For now this always returns true, since we do not support
+  !! a classic-style two-point flux approximation for GWT-GWT.
+  !! If we ever add logic to support a simpler non-interface
+  !! model flux calculation, then logic should be added here to
+  !! set the return accordingly.
   !<
   function use_interface_model(this) result(useIM)
     class(GweExchangeType) :: this !<  GwtExchangeType
     logical(LGP) :: useIM !< true when interface model should be used
 
-    useIM = (this%ixt3d > 0)
+    ! if support is added in the future for simpler flow calcuation,
+    ! then set useIM as follows
+    !useIM = (this%ixt3d > 0)
+
+    ! For now set useIM to .true. since the interface model approach
+    ! must currently be used for any GWT-GWT exchange.
+    useIM = .true.
 
   end function
 

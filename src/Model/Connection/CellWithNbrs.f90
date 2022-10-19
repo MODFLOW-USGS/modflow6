@@ -60,7 +60,6 @@ contains
 
     this%neighbors(nbrCnt + 1)%cell%index = index
     this%neighbors(nbrCnt + 1)%cell%dmodel => dist_model
-
     this%nrOfNbrs = nbrCnt + 1
 
   end subroutine addNbrCell

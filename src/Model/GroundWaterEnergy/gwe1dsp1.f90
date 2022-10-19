@@ -7,7 +7,6 @@ module GweDspModule
   use TspFmiModule, only: TspFmiType
   use Xt3dModule, only: Xt3dType, xt3d_cr
   use GweDspOptionsModule, only: GweDspOptionsType
-  use GweDspGridDataModule, only: GweDspGridDataType
 
   implicit none
   private
@@ -63,7 +62,6 @@ module GweDspModule
     procedure :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_data
-    procedure, private :: set_data
     procedure, private :: calcdispellipse
     procedure, private :: calcdispcoef
 
@@ -201,7 +199,7 @@ contains
     return
   end subroutine dsp_mc
 
-  subroutine dsp_ar(this, ibound, porosity, cpw, rhow, grid_data)
+  subroutine dsp_ar(this, ibound, porosity, cpw, rhow)
 ! ******************************************************************************
 ! dsp_ar -- Allocate and Read
 ! ******************************************************************************
@@ -215,8 +213,6 @@ contains
     real(DP), dimension(:), pointer, contiguous :: porosity
     real(DP), dimension(:), pointer, contiguous :: cpw
     real(DP), dimension(:), pointer, contiguous :: rhow
-    type(GweDspGridDataType), optional, intent(in) :: grid_data !< optional data structure with DSP grid data,
-                                                                !! to create the package without input file
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtdsp = &
@@ -229,22 +225,6 @@ contains
     this%porosity => porosity
     this%cpw => cpw
     this%rhow => rhow
-    !
-    ! -- Print a message identifying the dispersion package.
-    if (this%iout > 0) then
-      write (this%iout, fmtdsp) this%inunit
-    end if
-    !
-    ! -- Allocate arrays
-    call this%allocate_arrays(this%dis%nodes)
-    !
-    if (present(grid_data)) then
-      ! -- Set dispersion data
-      call this%set_data(grid_data)
-    else
-      ! -- Read dispersion data
-      call this%read_data()
-    end if
     !
     ! -- Return
     return
@@ -750,47 +730,6 @@ contains
     ! -- Return
     return
   end subroutine read_data
-
-  !< @brief Set the grid data to the package
-  !<
-  subroutine set_data(this, grid_data)
-    use MemoryManagerModule, only: mem_reallocate
-    class(GweDspType) :: this !< this DSP package
-    type(GweDspGridDataType), intent(in) :: grid_data !< the data structure with DSP grid data
-    ! local
-    integer(I4B) :: i
-
-    call mem_reallocate(this%diffc, this%dis%nodes, 'DIFFC', &
-                        trim(this%memoryPath))
-    call mem_reallocate(this%alh, this%dis%nodes, 'ALH', &
-                        trim(this%memoryPath))
-    call mem_reallocate(this%alv, this%dis%nodes, 'ALV', &
-                        trim(this%memoryPath))
-    call mem_reallocate(this%ath1, this%dis%nodes, 'ATH1', &
-                        trim(this%memoryPath))
-    call mem_reallocate(this%ath2, this%dis%nodes, 'ATH2', &
-                        trim(this%memoryPath))
-    call mem_reallocate(this%atv, this%dis%nodes, 'ATV', &
-                        trim(this%memoryPath))
-    call mem_reallocate(this%ktw, this%dis%nodes, 'KTW', &
-                        trim(this%memoryPath))
-    call mem_reallocate(this%kts, this%dis%nodes, 'KTS', &
-                        trim(this%memoryPath))
-
-    do i = 1, this%dis%nodes
-      this%diffc(i) = grid_data%diffc(i)
-      this%alh(i) = grid_data%alh(i)
-      this%alv(i) = grid_data%alv(i)
-      this%ath1(i) = grid_data%ath1(i)
-      this%ath2(i) = grid_data%ath2(i)
-      this%atv(i) = grid_data%atv(i)
-      this%ktw(i) = grid_data%ktw(i)
-      this%kts(i) = grid_data%kts(i)
-      this%cpw(i) = grid_data%cpw(i) ! TODO: May need to check that mst is active
-      this%rhow(i) = grid_data%rhow(i)
-    end do
-
-  end subroutine
 
   subroutine calcdispellipse(this)
 ! ******************************************************************************

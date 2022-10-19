@@ -1,6 +1,6 @@
 module GweInterfaceModelModule
   use KindModule, only: I4B, DP
-  use MemoryManagerModule, only: mem_allocate, mem_deallocate
+  use MemoryManagerModule, only: mem_allocate, mem_deallocate, mem_reallocate
   use MemoryHelperModule, only: create_mem_path
   use NumericalModelModule, only: NumericalModelType
   use GweModule, only: GweModelType, CastAsGweModel
@@ -10,7 +10,7 @@ module GweInterfaceModelModule
   use TspAdvOptionsModule, only: TspAdvOptionsType
   use GweDspModule, only: dsp_cr, GweDspType
   use GweDspOptionsModule, only: GweDspOptionsType
-  use GweDspGridDataModule, only: GweDspGridDataType
+  use GweMstModule, only: mst_cr
   use TspObsModule, only: tsp_obs_cr
   use GridConnectionModule
 
@@ -37,8 +37,8 @@ module GweInterfaceModelModule
     procedure :: model_df => gweifmod_df
     procedure :: model_ar => gweifmod_ar
     procedure :: model_da => gweifmod_da
+    procedure, public :: allocate_fmi
     procedure :: allocate_scalars
-    procedure :: setDspGridData
   end type GweInterfaceModelType
 
 contains
@@ -83,7 +83,7 @@ contains
     call disu_cr(this%dis, this%name, -1, this%iout)
     call fmi_cr(this%fmi, this%name, 0, this%iout)
     call adv_cr(this%adv, this%name, adv_unit, this%iout, this%fmi)
-    call dsp_cr(this%dsp, this%name, dsp_unit, this%iout, this%fmi)
+    call dsp_cr(this%dsp, this%name, -dsp_unit, this%iout, this%fmi)
     call tsp_obs_cr(this%obs, inobs)
 
   end subroutine gweifmod_cr
@@ -99,6 +99,20 @@ contains
 
   end subroutine allocate_scalars
 
+  subroutine allocate_fmi(this)
+    class(GweInterfaceModelType) :: this !< the GWT interface model
+
+    call mem_allocate(this%fmi%gwfflowja, this%nja, 'GWFFLOWJA', &
+                      this%fmi%memoryPath)
+    call mem_allocate(this%fmi%gwfhead, this%neq, 'GWFHEAD', &
+                      this%fmi%memoryPath)
+    call mem_allocate(this%fmi%gwfsat, this%neq, 'GWFSAT', &
+                      this%fmi%memoryPath)
+    call mem_allocate(this%fmi%gwfspdis, 3, this%neq, 'GWFSPDIS', &
+                      this%fmi%memoryPath)
+
+  end subroutine allocate_fmi
+  
 !> @brief Define the GWE interface model
 !<
   subroutine gweifmod_df(this)
@@ -107,7 +121,6 @@ contains
     class(*), pointer :: disPtr
     type(TspAdvOptionsType) :: adv_options
     type(GweDspOptionsType) :: dsp_options
-    integer(I4B) :: i
 
     this%moffset = 0
     adv_options%iAdvScheme = this%iAdvScheme
@@ -122,7 +135,32 @@ contains
       call this%adv%adv_df(adv_options)
     end if
     if (this%indsp > 0) then
+      this%dsp%idiffc = this%owner%dsp%idiffc
+      this%dsp%idisp = this%owner%dsp%idisp
       call this%dsp%dsp_df(this%dis, dsp_options)
+      if (this%dsp%idiffc > 0) then
+        call mem_reallocate(this%dsp%diffc, this%dis%nodes, 'DIFFC', &
+                            trim(this%dsp%memoryPath))
+      end if
+      if (this%dsp%idisp > 0) then
+        call mem_reallocate(this%dsp%alh, this%dis%nodes, 'ALH', &
+                            trim(this%dsp%memoryPath))
+        call mem_reallocate(this%dsp%alv, this%dis%nodes, 'ALV', &
+                            trim(this%dsp%memoryPath))
+        call mem_reallocate(this%dsp%ath1, this%dis%nodes, 'ATH1', &
+                            trim(this%dsp%memoryPath))
+        call mem_reallocate(this%dsp%ath2, this%dis%nodes, 'ATH2', &
+                            trim(this%dsp%memoryPath))
+        call mem_reallocate(this%dsp%atv, this%dis%nodes, 'ATV', &
+                            trim(this%dsp%memoryPath))
+        call mem_reallocate(this%dsp%ktw, this%dis%nodes, 'KTW', &
+                            trim(this%dsp%memoryPath))
+        call mem_reallocate(this%dsp%kts, this%dis%nodes, 'KTS', &
+                            trim(this%dsp%memoryPath))
+      end if
+      allocate (this%mst)
+      call mem_allocate(this%mst%porosity, this%dis%nodes, &
+                        'POROSITY', create_mem_path(this%name, 'MST'))
     end if
 
     ! assign or point model members to dis members
@@ -133,14 +171,6 @@ contains
     !
     ! allocate model arrays, now that neq and nja are assigned
     call this%allocate_arrays()
-    call mem_allocate(this%porosity, this%neq, 'POROSITY', this%memoryPath)
-
-    do i = 1, size(this%flowja)
-      this%flowja = 0.0_DP
-    end do
-    do i = 1, this%neq
-      this%porosity = 0.0_DP
-    end do
 
   end subroutine gweifmod_df
 
@@ -149,53 +179,17 @@ contains
 !< files
   subroutine gweifmod_ar(this)
     class(GweInterfaceModelType) :: this !< the GWE interface model
-    ! local
-    type(GweDspGridDataType) :: dspGridData
 
     call this%fmi%fmi_ar(this%ibound)
     if (this%inadv > 0) then
       call this%adv%adv_ar(this%dis, this%ibound)
     end if
     if (this%indsp > 0) then
-      this%dsp%idiffc = this%owner%dsp%idiffc
-      this%dsp%idisp = this%owner%dsp%idisp
-      call dspGridData%construct(this%neq)
-      call this%setDspGridData(dspGridData)
       call this%dsp%dsp_ar(this%ibound, this%porosity, this%dsp%cpw, &
-                           this%dsp%rhow, dspGridData)
+                           this%dsp%rhow)
     end if
 
   end subroutine gweifmod_ar
-
-!> @brief set dsp grid data from models
-!<
-  subroutine setDspGridData(this, gridData)
-    class(GweInterfaceModelType) :: this !< the GWE interface model
-    type(GweDspGridDataType) :: gridData !< the dsp grid data to be set
-    ! local
-    integer(I4B) :: i, idx
-    class(GweModelType), pointer :: gweModel
-    class(*), pointer :: modelPtr
-
-    do i = 1, this%neq
-      modelPtr => this%gridConnection%idxToGlobal(i)%model
-      gweModel => CastAsGweModel(modelPtr)
-      idx = this%gridConnection%idxToGlobal(i)%index
-
-      if (this%dsp%idiffc > 0) then
-        gridData%diffc(i) = gweModel%dsp%diffc(idx)
-      end if
-      if (this%dsp%idisp > 0) then
-        gridData%alh(i) = gweModel%dsp%alh(idx)
-        gridData%alv(i) = gweModel%dsp%alv(idx)
-        gridData%ath1(i) = gweModel%dsp%ath1(idx)
-        gridData%ath2(i) = gweModel%dsp%ath2(idx)
-        gridData%atv(i) = gweModel%dsp%atv(idx)
-      end if
-
-    end do
-
-  end subroutine setDspGridData
 
 !> @brief Clean up resources
 !<
@@ -205,7 +199,6 @@ contains
     ! this
     call mem_deallocate(this%iAdvScheme)
     call mem_deallocate(this%ixt3d)
-    call mem_deallocate(this%porosity)
 
     ! gwe packages
     call this%dis%dis_da()
@@ -217,6 +210,11 @@ contains
     deallocate (this%fmi)
     deallocate (this%adv)
     deallocate (this%dsp)
+    
+    if (associated(this%mst)) then
+      call mem_deallocate(this%mst%porosity)
+      deallocate (this%mst)
+    end if
 
     ! gwe scalars
     call mem_deallocate(this%inic)

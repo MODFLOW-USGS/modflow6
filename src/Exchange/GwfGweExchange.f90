@@ -148,6 +148,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use MemoryManagerModule, only: mem_checkin
     ! -- dummy
     class(GwfGweExchangeType) :: this
     ! -- local
@@ -171,8 +172,22 @@ contains
       gwemodel => mb
     end select
     !
+    ! -- Check to make sure that flow is solved before transport and in a
+    !    different IMS solution
+    if (gwfmodel%idsoln >= gwemodel%idsoln) then
+      write (errmsg, '(3a)') 'Problem with GWF-GWE exchange ', trim(this%name), &
+        '.  The GWF model must be solved by a different IMS than the GWE model. &
+        &Furthermore, the IMS specified for GWF must be listed in mfsim.nam &
+        &before the IMS for GWE.'
+      call store_error(errmsg, terminate=.true.)
+    end if
+    !
     ! -- Set pointer to flowja
     gwemodel%fmi%gwfflowja => gwfmodel%flowja
+    call mem_checkin(gwemodel%fmi%gwfflowja, &
+                     'GWFFLOWJA', gwemodel%fmi%memoryPath, &
+                     'FLOWJA', gwfmodel%memoryPath)
+    
     !
     ! -- Set the npf flag so that specific discharge is available for
     !    transport calculations if dispersion is active
@@ -192,6 +207,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use MemoryManagerModule, only: mem_checkin
     ! -- dummy
     class(GwfGweExchangeType) :: this
     ! -- local
@@ -234,8 +250,17 @@ contains
     !
     ! -- setup pointers to gwf variables allocated in gwf_ar
     gwemodel%fmi%gwfhead => gwfmodel%x
+    call mem_checkin(gwemodel%fmi%gwfhead, &
+                     'GWFHEAD', gwemodel%fmi%memoryPath, &
+                     'X', gwfmodel%memoryPath)
     gwemodel%fmi%gwfsat => gwfmodel%npf%sat
+    call mem_checkin(gwemodel%fmi%gwfsat, &
+                     'GWFSAT', gwemodel%fmi%memoryPath, &
+                     'SAT', gwfmodel%npf%memoryPath)
     gwemodel%fmi%gwfspdis => gwfmodel%npf%spdis
+    call mem_checkin(gwemodel%fmi%gwfspdis, &
+                     'GWFSPDIS', gwemodel%fmi%memoryPath, &
+                     'SPDIS', gwfmodel%npf%memoryPath)
     !
     ! -- setup pointers to the flow storage rates. GWF strg arrays are
     !    available after the gwf_ar routine is called.
@@ -250,11 +275,13 @@ contains
       end if
     end if
     !
-    ! -- Set a pointer to conc
+    ! -- Set a pointer to conc in buy
     if (gwfmodel%inbuy > 0) then
       call gwfmodel%buy%set_concentration_pointer(gwemodel%name, gwemodel%x, &
                                                   gwemodel%ibound)
     end if
+    !
+    ! -- Set a pointer to conc (which could be a temperature) in vsc
     if (gwfmodel%invsc > 0) then
       call gwfmodel%vsc%set_concentration_pointer(gwemodel%name, gwemodel%x, &
                                                   gwemodel%ibound, 1)
@@ -280,6 +307,7 @@ contains
   subroutine gwfconn2gweconn(this, gwfModel, gweModel)
     use SimModule, only: store_error
     use SimVariablesModule, only: iout
+    use MemoryManagerModule, only: mem_checkin
     class(GwfGweExchangeType) :: this !< this exchange
     type(GwfModelType), pointer :: gwfModel !< the flow model
     type(GweModelType), pointer :: gweModel !< the transport model
@@ -357,7 +385,13 @@ contains
                 ' to ', trim(gwfEx%name), ' for GWE model ', &
                 trim(gweModel%name)
               gwfExIdx = iex
-              gweConn%exgflowja => gwfEx%simvals
+              if (gweConn%exchangeIsOwned) then
+                gweConn%gweExchange%gwfsimvals => gwfEx%simvals
+                call mem_checkin(gweConn%gweExchange%gwfsimvals, &
+                                 'GWFSIMVALS', gweConn%gweExchange%memoryPath, &
+                                 'SIMVALS', gwfEx%memoryPath)
+              end if
+
 
               !cdl link up mvt to mvr
               if (gwfEx%inmvr > 0) then
@@ -394,12 +428,18 @@ contains
   !> @brief Links a GWE connection to its GWF counterpart
   !<
   subroutine link_connections(this, gweConn, gwfConn)
+    use MemoryManagerModule, only: mem_checkin
     class(GwfGweExchangeType) :: this !< this exchange
     class(GweGweConnectionType), pointer :: gweConn !< GWE connection
     class(GwfGwfConnectionType), pointer :: gwfConn !< GWF connection
 
     !gweConn%exgflowja => gwfConn%exgflowja
-    gweConn%exgflowja => gwfConn%gwfExchange%simvals
+    if (gweConn%exchangeIsOwned) then
+      gweConn%gweExchange%gwfsimvals => gwfConn%gwfExchange%simvals
+      call mem_checkin(gweConn%gweExchange%gwfsimvals, &
+                       'GWFSIMVALS', gweConn%gweExchange%memoryPath, &
+                       'SIMVALS', gwfConn%gwfExchange%memoryPath)
+    end if
 
     !cdl link up mvt to mvr
     if (gwfConn%gwfExchange%inmvr > 0) then
