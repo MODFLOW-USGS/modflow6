@@ -20,8 +20,8 @@ module Integer1dReaderModule
   contains
 
     procedure :: reset_reader
-    procedure :: set_constant  ! must be overriden
-    procedure :: fill_constant  ! must be overriden
+    procedure :: set_constant ! must be overriden
+    procedure :: fill_constant ! must be overriden
     procedure :: read_ascii ! must be overriden
     procedure :: read_binary ! must be overriden
     procedure :: set_factor ! must be overriden
@@ -29,7 +29,7 @@ module Integer1dReaderModule
 
   end type Integer1dReaderType
 
-  contains
+contains
 
   subroutine read_int1d(parser, int1d, aname)
     ! -- dummy
@@ -105,9 +105,10 @@ module Integer1dReaderModule
     integer(I4B) :: istat
     nvals = size(this%int1d)
     read (this%input_unit, *, iostat=istat, iomsg=errmsg) &
-      (this%int1d(i), i = 1, size(this%int1d))
+      (this%int1d(i), i=1, size(this%int1d))
     if (istat /= 0) then
-      errmsg = 'Error reading data for array ' // trim(this%array_name) // '.  ' // trim(errmsg)
+      errmsg = 'Error reading data for array '//trim(this%array_name)// &
+               '.  '//trim(errmsg)
       call store_error(errmsg)
       call store_error_unit(this%input_unit)
     end if
@@ -120,9 +121,10 @@ module Integer1dReaderModule
     integer(I4B) :: istat
     call read_binary_header(this%input_unit, this%iout, this%array_name, nvals)
     read (this%input_unit, iostat=istat, iomsg=errmsg) &
-      (this%int1d(i), i = 1, size(this%int1d))
+      (this%int1d(i), i=1, size(this%int1d))
     if (istat /= 0) then
-      errmsg = 'Error reading data for array ' // trim(this%array_name) // '.  ' // trim(errmsg)
+      errmsg = 'Error reading data for array '//trim(this%array_name)// &
+               '.  '//trim(errmsg)
       call store_error(errmsg)
       call store_error_unit(this%input_unit)
     end if
@@ -139,9 +141,8 @@ module Integer1dReaderModule
     if (this%factor /= 0) then
       do i = 1, size(this%int1d)
         this%int1d(i) = this%int1d(i) * this%factor
-      enddo
+      end do
     end if
   end subroutine apply_factor
-
 
 end module Integer1dReaderModule

@@ -29,8 +29,8 @@ module ArrayReaderBaseModule
     procedure :: read_array
     procedure :: reset_reader
     procedure :: read_control_record
-    procedure :: set_constant  ! must be overriden
-    procedure :: fill_constant  ! must be overriden
+    procedure :: set_constant ! must be overriden
+    procedure :: fill_constant ! must be overriden
     procedure :: fill_internal
     procedure :: fill_open_close
     procedure :: read_ascii ! must be overriden
@@ -41,7 +41,7 @@ module ArrayReaderBaseModule
 
   end type ArrayReaderBaseType
 
-  contains
+contains
 
   subroutine read_array(this)
     class(ArrayReaderBaseType) :: this
@@ -54,7 +54,7 @@ module ArrayReaderBaseModule
       call this%fill_constant()
     else if (this%isInternal) then
       call this%fill_internal()
-    else if  (this%isOpenClose) then
+    else if (this%isOpenClose) then
       call this%fill_open_close()
     end if
 
@@ -92,7 +92,7 @@ module ArrayReaderBaseModule
       this%filename = trim(string)
     case default
       write (errmsg, *) 'Error reading control record for '// &
-                        trim(adjustl(this%array_name)) // '.  &
+                        trim(adjustl(this%array_name))//'.  &
                         & Use CONSTANT, INTERNAL, or OPEN/CLOSE.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
@@ -103,7 +103,7 @@ module ArrayReaderBaseModule
       do
         call this%parser%GetStringCaps(keyword)
         if (keyword == '') exit
-        select case(keyword)
+        select case (keyword)
         case ('FACTOR')
           call this%set_factor()
         case ('IPRN')
@@ -143,10 +143,10 @@ module ArrayReaderBaseModule
       call this%read_binary()
     else
       call this%read_ascii()
-    endif
+    end if
     close (this%input_unit)
     call this%apply_factor()
-end subroutine fill_open_close
+  end subroutine fill_open_close
 
   subroutine read_ascii(this)
     class(ArrayReaderBaseType) :: this
@@ -176,12 +176,11 @@ end subroutine fill_open_close
     use OpenSpecModule, only: FORM, ACCESS
     class(ArrayReaderBaseType) :: this
     if (this%isBinary) then
-      call openfile(this%input_unit, this%iout, this%filename, 'OPEN/CLOSE', fmtarg_opt=FORM, &
-                    accarg_opt=ACCESS)
+      call openfile(this%input_unit, this%iout, this%filename, &
+                    'OPEN/CLOSE', fmtarg_opt=FORM, accarg_opt=ACCESS)
     else
       call openfile(this%input_unit, this%iout, this%filename, 'OPEN/CLOSE')
-    endif
+    end if
   end subroutine open_file
-
 
 end module ArrayReaderBaseModule

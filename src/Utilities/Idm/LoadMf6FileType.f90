@@ -642,19 +642,19 @@ contains
     ! disu
     if (ndim == 1) then
       nlay = 1
-      allocate(layer_shape(1))
+      allocate (layer_shape(1))
       layer_shape(1) = mshape(1)
 
       ! disv
     else if (ndim == 2) then
       nlay = mshape(1)
-      allocate(layer_shape(1))
+      allocate (layer_shape(1))
       layer_shape(1) = mshape(2)
 
       ! dis
     else if (ndim == 3) then
       nlay = mshape(1)
-      allocate(layer_shape(2))
+      allocate (layer_shape(2))
       layer_shape(1) = mshape(3) ! ncol
       layer_shape(2) = mshape(2) ! nrow
 

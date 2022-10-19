@@ -21,8 +21,8 @@ module Integer2dReaderModule
   contains
 
     procedure :: reset_reader
-    procedure :: set_constant  ! must be overriden
-    procedure :: fill_constant  ! must be overriden
+    procedure :: set_constant ! must be overriden
+    procedure :: fill_constant ! must be overriden
     procedure :: read_ascii ! must be overriden
     procedure :: read_binary ! must be overriden
     procedure :: set_factor ! must be overriden
@@ -30,7 +30,7 @@ module Integer2dReaderModule
 
   end type Integer2dReaderType
 
-  contains
+contains
 
   subroutine read_int2d(parser, int2d, aname)
     ! -- dummy
@@ -76,10 +76,11 @@ module Integer2dReaderModule
     integer(I4B) :: istat
     do i = 1, size(this%int2d, dim=2)
       read (this%input_unit, *, iostat=istat, iomsg=errmsg) &
-        (this%int2d(j, i), j = 1, size(this%int2d, dim=1))
+        (this%int2d(j, i), j=1, size(this%int2d, dim=1))
     end do
     if (istat /= 0) then
-      errmsg = 'Error reading data for array ' // trim(this%array_name) // '.  ' // trim(errmsg)
+      errmsg = 'Error reading data for array '//trim(this%array_name)// &
+               '.  '//trim(errmsg)
       call store_error(errmsg)
       call store_error_unit(this%input_unit)
     end if
@@ -92,9 +93,11 @@ module Integer2dReaderModule
     integer(I4B) :: istat
     call read_binary_header(this%input_unit, this%iout, this%array_name, nvals)
     read (this%input_unit, iostat=istat, iomsg=errmsg) &
-      ((this%int2d(j, i), j = 1, size(this%int2d, dim=1)), i = 1, size(this%int2d, dim=2))
+      ((this%int2d(j, i), j=1, size(this%int2d, dim=1)), &
+       i=1, size(this%int2d, dim=2))
     if (istat /= 0) then
-      errmsg = 'Error reading data for array ' // trim(this%array_name) // '.  ' // trim(errmsg)
+      errmsg = 'Error reading data for array '//trim(this%array_name)// &
+               '.  '//trim(errmsg)
       call store_error(errmsg)
       call store_error_unit(this%input_unit)
     end if
@@ -102,7 +105,7 @@ module Integer2dReaderModule
 
   subroutine set_factor(this)
     class(Integer2dReaderType) :: this
-    this%factor = this%parser%GetDouble()
+    this%factor = this%parser%GetInteger()
   end subroutine set_factor
 
   subroutine apply_factor(this)
@@ -112,10 +115,9 @@ module Integer2dReaderModule
       do i = 1, size(this%int2d, dim=2)
         do j = 1, size(this%int2d, dim=1)
           this%int2d(j, i) = this%int2d(j, i) * this%factor
-        enddo
+        end do
       end do
     end if
   end subroutine apply_factor
-
 
 end module Integer2dReaderModule

@@ -22,8 +22,8 @@ module Double1dReaderModule
   contains
 
     procedure :: reset_reader
-    procedure :: set_constant  ! must be overriden
-    procedure :: fill_constant  ! must be overriden
+    procedure :: set_constant ! must be overriden
+    procedure :: fill_constant ! must be overriden
     procedure :: read_ascii ! must be overriden
     procedure :: read_binary ! must be overriden
     procedure :: set_factor ! must be overriden
@@ -31,7 +31,7 @@ module Double1dReaderModule
 
   end type Double1dReaderType
 
-  contains
+contains
 
   subroutine read_dbl1d(parser, dbl1d, aname)
     ! -- dummy
@@ -105,9 +105,10 @@ module Double1dReaderModule
     integer(I4B) :: i
     integer(I4B) :: istat
     read (this%input_unit, *, iostat=istat, iomsg=errmsg) &
-      (this%dbl1d(i), i = 1, size(this%dbl1d))
+      (this%dbl1d(i), i=1, size(this%dbl1d))
     if (istat /= 0) then
-      errmsg = 'Error reading data for array ' // trim(this%array_name) // '.  ' // trim(errmsg)
+      errmsg = 'Error reading data for array '//trim(this%array_name)// &
+               '.  '//trim(errmsg)
       call store_error(errmsg)
       call store_error_unit(this%input_unit)
     end if
@@ -120,9 +121,10 @@ module Double1dReaderModule
     integer(I4B) :: istat
     call read_binary_header(this%input_unit, this%iout, this%array_name, nvals)
     read (this%input_unit, iostat=istat, iomsg=errmsg) &
-      (this%dbl1d(i), i = 1, size(this%dbl1d))
+      (this%dbl1d(i), i=1, size(this%dbl1d))
     if (istat /= 0) then
-      errmsg = 'Error reading data for array ' // trim(this%array_name) // '.  ' // trim(errmsg)
+      errmsg = 'Error reading data for array '//trim(this%array_name)// &
+               '.  '//trim(errmsg)
       call store_error(errmsg)
       call store_error_unit(this%input_unit)
     end if
@@ -139,9 +141,8 @@ module Double1dReaderModule
     if (this%factor /= DZERO) then
       do i = 1, size(this%dbl1d)
         this%dbl1d(i) = this%dbl1d(i) * this%factor
-      enddo
+      end do
     end if
   end subroutine apply_factor
-
 
 end module Double1dReaderModule

@@ -21,8 +21,8 @@ module Double2dReaderModule
   contains
 
     procedure :: reset_reader
-    procedure :: set_constant  ! must be overriden
-    procedure :: fill_constant  ! must be overriden
+    procedure :: set_constant ! must be overriden
+    procedure :: fill_constant ! must be overriden
     procedure :: read_ascii ! must be overriden
     procedure :: read_binary ! must be overriden
     procedure :: set_factor ! must be overriden
@@ -30,7 +30,7 @@ module Double2dReaderModule
 
   end type Double2dReaderType
 
-  contains
+contains
 
   subroutine read_dbl2d(parser, dbl2d, aname)
     ! -- dummy
@@ -76,10 +76,11 @@ module Double2dReaderModule
     integer(I4B) :: istat
     do i = 1, size(this%dbl2d, dim=2)
       read (this%input_unit, *, iostat=istat, iomsg=errmsg) &
-        (this%dbl2d(j, i), j = 1, size(this%dbl2d, dim=1))
+        (this%dbl2d(j, i), j=1, size(this%dbl2d, dim=1))
     end do
     if (istat /= 0) then
-      errmsg = 'Error reading data for array ' // trim(this%array_name) // '.  ' // trim(errmsg)
+      errmsg = 'Error reading data for array '//trim(this%array_name)// &
+               '.  '//trim(errmsg)
       call store_error(errmsg)
       call store_error_unit(this%input_unit)
     end if
@@ -92,9 +93,11 @@ module Double2dReaderModule
     integer(I4B) :: istat
     call read_binary_header(this%input_unit, this%iout, this%array_name, nvals)
     read (this%input_unit, iostat=istat, iomsg=errmsg) &
-      ((this%dbl2d(j, i), j = 1, size(this%dbl2d, dim=1)), i = 1, size(this%dbl2d, dim=2))
+      ((this%dbl2d(j, i), j=1, size(this%dbl2d, dim=1)), &
+       i=1, size(this%dbl2d, dim=2))
     if (istat /= 0) then
-      errmsg = 'Error reading data for array ' // trim(this%array_name) // '.  ' // trim(errmsg)
+      errmsg = 'Error reading data for array '//trim(this%array_name)// &
+               '.  '//trim(errmsg)
       call store_error(errmsg)
       call store_error_unit(this%input_unit)
     end if
@@ -112,10 +115,9 @@ module Double2dReaderModule
       do i = 1, size(this%dbl2d, dim=2)
         do j = 1, size(this%dbl2d, dim=1)
           this%dbl2d(j, i) = this%dbl2d(j, i) * this%factor
-        enddo
+        end do
       end do
     end if
   end subroutine apply_factor
-
 
 end module Double2dReaderModule
