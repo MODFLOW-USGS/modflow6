@@ -6,27 +6,28 @@ include ./makedefaults
 # Define the source file directories
 SOURCEDIR1=../src
 SOURCEDIR2=../src/Exchange
-SOURCEDIR3=../src/Model
-SOURCEDIR4=../src/Model/Connection
-SOURCEDIR5=../src/Model/Geometry
-SOURCEDIR6=../src/Model/GroundWaterFlow
-SOURCEDIR7=../src/Model/GroundWaterTransport
-SOURCEDIR8=../src/Model/ModelUtilities
-SOURCEDIR9=../src/Solution
-SOURCEDIR10=../src/Solution/LinearMethods
-SOURCEDIR11=../src/Timing
-SOURCEDIR12=../src/Utilities
-SOURCEDIR13=../src/Utilities/Idm
-SOURCEDIR14=../src/Utilities/Libraries
-SOURCEDIR15=../src/Utilities/Libraries/blas
+SOURCEDIR3=../src/Solution
+SOURCEDIR4=../src/Solution/LinearMethods
+SOURCEDIR5=../src/Timing
+SOURCEDIR6=../src/Utilities
+SOURCEDIR7=../src/Utilities/Idm
+SOURCEDIR8=../src/Utilities/TimeSeries
+SOURCEDIR9=../src/Utilities/Memory
+SOURCEDIR10=../src/Utilities/OutputControl
+SOURCEDIR11=../src/Utilities/ArrayRead
+SOURCEDIR12=../src/Utilities/Libraries
+SOURCEDIR13=../src/Utilities/Libraries/rcm
+SOURCEDIR14=../src/Utilities/Libraries/blas
+SOURCEDIR15=../src/Utilities/Libraries/sparskit2
 SOURCEDIR16=../src/Utilities/Libraries/daglib
-SOURCEDIR17=../src/Utilities/Libraries/rcm
-SOURCEDIR18=../src/Utilities/Libraries/sparsekit
-SOURCEDIR19=../src/Utilities/Libraries/sparskit2
-SOURCEDIR20=../src/Utilities/Memory
-SOURCEDIR21=../src/Utilities/Observation
-SOURCEDIR22=../src/Utilities/OutputControl
-SOURCEDIR23=../src/Utilities/TimeSeries
+SOURCEDIR17=../src/Utilities/Libraries/sparsekit
+SOURCEDIR18=../src/Utilities/Observation
+SOURCEDIR19=../src/Model
+SOURCEDIR20=../src/Model/Connection
+SOURCEDIR21=../src/Model/GroundWaterTransport
+SOURCEDIR22=../src/Model/ModelUtilities
+SOURCEDIR23=../src/Model/GroundWaterFlow
+SOURCEDIR24=../src/Model/Geometry
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -51,7 +52,8 @@ ${SOURCEDIR19} \
 ${SOURCEDIR20} \
 ${SOURCEDIR21} \
 ${SOURCEDIR22} \
-${SOURCEDIR23} 
+${SOURCEDIR23} \
+${SOURCEDIR24} 
 
 .SUFFIXES: .f90 .F90 .o
 
@@ -107,6 +109,7 @@ $(OBJDIR)/gwf3npf8idm.o \
 $(OBJDIR)/gwf3disv8idm.o \
 $(OBJDIR)/gwf3disu8idm.o \
 $(OBJDIR)/gwf3dis8idm.o \
+$(OBJDIR)/ArrayReaderBase.o \
 $(OBJDIR)/TimeArraySeriesManager.o \
 $(OBJDIR)/PackageMover.o \
 $(OBJDIR)/Obs3.o \
@@ -116,11 +119,15 @@ $(OBJDIR)/BudgetFileReader.o \
 $(OBJDIR)/StructVector.o \
 $(OBJDIR)/IdmLogger.o \
 $(OBJDIR)/InputDefinitionSelector.o \
+$(OBJDIR)/Integer2dReader.o \
+$(OBJDIR)/Double2dReader.o \
 $(OBJDIR)/BoundaryPackage.o \
 $(OBJDIR)/BaseModel.o \
 $(OBJDIR)/BudgetTerm.o \
 $(OBJDIR)/StructArray.o \
 $(OBJDIR)/ModflowInput.o \
+$(OBJDIR)/Integer1dReader.o \
+$(OBJDIR)/Double1dReader.o \
 $(OBJDIR)/NumericalModel.o \
 $(OBJDIR)/mf6lists.o \
 $(OBJDIR)/PackageBudget.o \
