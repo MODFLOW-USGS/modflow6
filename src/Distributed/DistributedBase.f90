@@ -4,13 +4,17 @@ module DistributedBaseModule
   use CharacterStringModule  
   use MemoryTypeModule, only: MemoryType
   use MemoryHelperModule, only: create_mem_path
-  use MemoryManagerModule, only: get_from_memorylist
+  use MemoryManagerModule, only: get_from_memorylist, mem_allocate
   use ListModule
   use RemoteMemoryModule
   implicit none
   private
 
   character(len=7), public, parameter :: LOCAL_MEM_CTX = '__LOC__'
+  
+  integer(I4B), public, parameter :: MAP_TYPE_NA = 1
+  integer(I4B), public, parameter :: MAP_TYPE_NODE = 2
+  integer(I4B), public, parameter :: MAP_TYPE_CONN = 3
   
   type, public :: DistributedBaseType
     integer(I4B) :: id !< universal (global) identifier: id of the component
@@ -38,16 +42,17 @@ module DistributedBaseModule
     procedure, private :: load_double1d
     procedure, private :: load_double2d
     procedure, private :: load_charstr1d
+    procedure, private :: get_local_mem_path
   end type DistributedBaseType
 
 contains
 
-subroutine add_remote_mem(this, var_name, component, subcomponent, stage, map_type)
+subroutine add_remote_mem(this, var_name, component, subcomponent, stages, map_type)
   class(DistributedBaseType) :: this
   character(len=*) :: var_name
   character(len=*) :: component
   character(len=*) :: subcomponent
-  integer(I4B) :: stage
+  integer(I4B), dimension(:) :: stages
   integer(I4B) :: map_type
   ! local
   character(len=LENMEMPATH) :: local_mem_path
@@ -70,7 +75,7 @@ subroutine add_remote_mem(this, var_name, component, subcomponent, stage, map_ty
   allocate(remote_mt)
   remote_mt%var_name = var_name
   remote_mt%mem_path = remote_mem_path
-  remote_mt%stage = stage
+  remote_mt%stages = stages
   remote_mt%map_type = map_type
   remote_mt%local_mt => local_mt
 
@@ -79,131 +84,170 @@ subroutine add_remote_mem(this, var_name, component, subcomponent, stage, map_ty
 
 end subroutine add_remote_mem
 
-subroutine load_intsclr(this, intsclr, var_name, subcomp_name)
+subroutine load_intsclr(this, intsclr, var_name, subcomp_name, sync_stages, map_type)
   class(DistributedBaseType) :: this
   integer(I4B), pointer :: intsclr
   character(len=*) :: var_name
-  character(len=*), optional :: subcomp_name
+  character(len=*) :: subcomp_name
+  integer(I4B), dimension(:) :: sync_stages
+  integer(I4B) :: map_type
   ! local
   type(MemoryType), pointer :: mt
   logical(LGP) :: found
   character(len=LENMEMPATH) :: mem_path
 
-  if (present(subcomp_name)) then
-    mem_path = create_mem_path(this%name, subcomp_name)
+  mem_path = this%get_local_mem_path(subcomp_name)
+  if (this%is_local) then
+    call get_from_memorylist(var_name, mem_path, mt, found)
+    intsclr => mt%intsclr
   else
-    mem_path = create_mem_path(this%name)
+    call mem_allocate(intsclr, var_name, mem_path)
+    call this%add_remote_mem(var_name, this%name, subcomp_name, sync_stages, map_type)
   end if
-
-  call get_from_memorylist(var_name, mem_path, mt, found)
-  intsclr => mt%intsclr
 
 end subroutine load_intsclr
 
-subroutine load_int1d(this, aint1d, var_name, subcomp_name)
+subroutine load_int1d(this, aint1d, nrow, var_name, subcomp_name, sync_stages, map_type)
   class(DistributedBaseType) :: this
   integer(I4B), dimension(:), pointer, contiguous :: aint1d
+  integer(I4B) :: nrow
   character(len=*) :: var_name
-  character(len=*), optional :: subcomp_name
+  character(len=*) :: subcomp_name
+  integer(I4B), dimension(:) :: sync_stages
+  integer(I4B) :: map_type
   ! local
   character(len=LENMEMPATH) :: mem_path
   type(MemoryType), pointer :: mt
   logical(LGP) :: found
 
-  if (present(subcomp_name)) then
-    mem_path = create_mem_path(this%name, subcomp_name)
+  mem_path = this%get_local_mem_path(subcomp_name)
+  if (this%is_local) then
+    call get_from_memorylist(var_name, mem_path, mt, found)
+    aint1d => mt%aint1d
   else
-    mem_path = create_mem_path(this%name)
+    call mem_allocate(aint1d, nrow, var_name, mem_path)
+    call this%add_remote_mem(var_name, this%name, subcomp_name, sync_stages, map_type)
   end if
-
-  call get_from_memorylist(var_name, mem_path, mt, found)
-  aint1d => mt%aint1d
 
 end subroutine load_int1d
 
-subroutine load_dblsclr(this, dblsclr, var_name, subcomp_name)
+subroutine load_dblsclr(this, dblsclr, var_name, subcomp_name, sync_stages, map_type)
   class(DistributedBaseType) :: this
   real(DP), pointer :: dblsclr
   character(len=*) :: var_name
-  character(len=*), optional :: subcomp_name
+  character(len=*) :: subcomp_name
+  integer(I4B), dimension(:) :: sync_stages
+  integer(I4B) :: map_type
   ! local
   type(MemoryType), pointer :: mt
   logical(LGP) :: found
   character(len=LENMEMPATH) :: mem_path
 
-  if (present(subcomp_name)) then
-    mem_path = create_mem_path(this%name, subcomp_name)
+  mem_path = this%get_local_mem_path(subcomp_name)
+  if (this%is_local) then
+    call get_from_memorylist(var_name, mem_path, mt, found)
+    dblsclr => mt%dblsclr
   else
-    mem_path = create_mem_path(this%name)
+    call mem_allocate(dblsclr, var_name, mem_path)
+    call this%add_remote_mem(var_name, this%name, subcomp_name, sync_stages, map_type)
   end if
-
-  call get_from_memorylist(var_name, mem_path, mt, found)
-  dblsclr => mt%dblsclr
 
 end subroutine load_dblsclr
 
-subroutine load_double1d(this, adbl1d, var_name, subcomp_name)
+subroutine load_double1d(this, adbl1d, nrow, var_name, subcomp_name, sync_stages, map_type)
   class(DistributedBaseType) :: this
   real(DP), dimension(:), pointer, contiguous :: adbl1d
+  integer(I4B) :: nrow
   character(len=*) :: var_name
-  character(len=*), optional :: subcomp_name
+  character(len=*) :: subcomp_name
+  integer(I4B), dimension(:) :: sync_stages
+  integer(I4B) :: map_type
   ! local
   character(len=LENMEMPATH) :: mem_path
   type(MemoryType), pointer :: mt
   logical(LGP) :: found
 
-  if (present(subcomp_name)) then
-    mem_path = create_mem_path(this%name, subcomp_name)
+  mem_path = this%get_local_mem_path(subcomp_name)
+  if (this%is_local) then
+    call get_from_memorylist(var_name, mem_path, mt, found)
+    adbl1d => mt%adbl1d
   else
-    mem_path = create_mem_path(this%name)
+    call mem_allocate(adbl1d, nrow, var_name, mem_path)
+    call this%add_remote_mem(var_name, this%name, subcomp_name, sync_stages, map_type)
   end if
-
-  call get_from_memorylist(var_name, mem_path, mt, found)
-  adbl1d => mt%adbl1d
 
 end subroutine load_double1d
 
-subroutine load_double2d(this, adbl2d, var_name, subcomp_name)
+subroutine load_double2d(this, adbl2d, nrow, ncol, var_name, subcomp_name, sync_stages, map_type)
   class(DistributedBaseType) :: this
   real(DP), dimension(:,:), pointer, contiguous :: adbl2d
+  integer(I4B) :: nrow
+  integer(I4B) :: ncol
   character(len=*) :: var_name
-  character(len=*), optional :: subcomp_name
+  character(len=*) :: subcomp_name
+  integer(I4B), dimension(:) :: sync_stages
+  integer(I4B) :: map_type
   ! local
   character(len=LENMEMPATH) :: mem_path
   type(MemoryType), pointer :: mt
   logical(LGP) :: found
 
-  if (present(subcomp_name)) then
-    mem_path = create_mem_path(this%name, subcomp_name)
+  mem_path = this%get_local_mem_path(subcomp_name)
+  if (this%is_local) then
+    call get_from_memorylist(var_name, mem_path, mt, found)
+    adbl2d => mt%adbl2d
   else
-    mem_path = create_mem_path(this%name)
+    call mem_allocate(adbl2d, nrow, ncol, var_name, mem_path)
+    call this%add_remote_mem(var_name, this%name, subcomp_name, sync_stages, map_type)
   end if
-
-  call get_from_memorylist(var_name, mem_path, mt, found)
-  adbl2d => mt%adbl2d
 
 end subroutine load_double2d
 
-subroutine load_charstr1d(this, acharstr1d, var_name, subcomp_name)
+subroutine load_charstr1d(this, acharstr1d, ilen, nrow, var_name, subcomp_name, sync_stages, map_type)
   class(DistributedBaseType) :: this
-  type(CharacterStringType), dimension(:), pointer :: acharstr1d
+  type(CharacterStringType), dimension(:), pointer, contiguous :: acharstr1d
+  integer(I4B) :: ilen
+  integer(I4B) :: nrow
   character(len=*) :: var_name
-  character(len=*), optional :: subcomp_name
+  character(len=*) :: subcomp_name
+  integer(I4B), dimension(:) :: sync_stages
+  integer(I4B) :: map_type
   ! local
   character(len=LENMEMPATH) :: mem_path
   type(MemoryType), pointer :: mt
   logical(LGP) :: found
 
-  if (present(subcomp_name)) then
-    mem_path = create_mem_path(this%name, subcomp_name)
+  mem_path = this%get_local_mem_path(subcomp_name)
+  if (this%is_local) then
+    call get_from_memorylist(var_name, mem_path, mt, found)
+    acharstr1d => mt%acharstr1d
   else
-    mem_path = create_mem_path(this%name)
+    call mem_allocate(acharstr1d, ilen, nrow, var_name, mem_path)
+    call this%add_remote_mem(var_name, this%name, subcomp_name, sync_stages, map_type)
   end if
 
-  call get_from_memorylist(var_name, mem_path, mt, found)
-  acharstr1d => mt%acharstr1d
-
 end subroutine load_charstr1d
+
+function get_local_mem_path(this, subcomp_name) result(loc_mem_path)
+  class(DistributedBaseType) :: this
+  character(len=*) :: subcomp_name
+  character(len=LENMEMPATH) :: loc_mem_path
+
+  if (this%is_local) then
+    if (subcomp_name == '') then
+      loc_mem_path = create_mem_path(this%name)
+    else 
+      loc_mem_path = create_mem_path(this%name, subcomp_name)
+    end if
+  else
+    if (subcomp_name == '') then
+      loc_mem_path = create_mem_path(this%name, LOCAL_MEM_CTX)
+    else 
+      loc_mem_path = create_mem_path(this%name, subcomp_name, LOCAL_MEM_CTX)
+    end if
+  end if
+
+end function get_local_mem_path
 
 subroutine destroy(this)
   class(DistributedBaseType) :: this

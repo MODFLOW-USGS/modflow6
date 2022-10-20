@@ -2,10 +2,12 @@ module MapperModule
   use KindModule, only: I4B, LGP
   use ConstantsModule, only: LENVARNAME, LENMEMPATH  
   use MemoryHelperModule, only: create_mem_path
+  use IndexMapModule
   use InterfaceMapModule
   use DistVariableModule
   use MappedMemoryModule
   use ListModule
+  use DistListsModule, only: distmodellist
   implicit none
   private
 

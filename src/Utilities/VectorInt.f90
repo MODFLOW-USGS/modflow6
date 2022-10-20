@@ -16,6 +16,9 @@ module VectorIntModule
   contains
     procedure, pass(this) :: init !< allocate memory, init size and capacity
     procedure, pass(this) :: push_back !< adds an element at the end of the vector
+    procedure, pass(this) :: push_back_unique !< adds an element at the end of the vector, if not present yet
+    procedure, pass(this) :: add_array !< adds elements of array at the end of the vector
+    procedure, pass(this) :: add_array_unique !< adds elements of array at the end of the vector, if not present yet
     procedure, pass(this) :: at !< random access, unsafe, no bounds checking
     procedure, pass(this) :: at_safe !< random access with bounds checking
     procedure, pass(this) :: clear !< empties the vector, leaves memory unchanged
@@ -56,6 +59,42 @@ contains ! module routines
     this%values(this%size) = newValue
 
   end subroutine push_back
+
+  subroutine push_back_unique(this, newValue)
+    class(VectorInt), intent(inout) :: this
+    integer(I4B) :: newValue
+
+    if (.not. this%contains(newValue)) then
+      call this%push_back(newValue)
+    end if
+
+  end subroutine push_back_unique
+
+  subroutine add_array(this, array)
+    class(VectorInt), intent(inout) :: this
+    integer(I4B), dimension(:), pointer, contiguous :: array
+    ! local
+    integer(I4B) :: i
+
+    do i = 1, size(array)
+      call this%push_back(array(i))
+    end do
+
+  end subroutine add_array
+
+  subroutine add_array_unique(this, array)
+    class(VectorInt), intent(inout) :: this
+    integer(I4B), dimension(:), pointer, contiguous :: array
+    ! local
+    integer(I4B) :: i
+
+    do i = 1, size(array)
+      if (.not. this%contains(array(i))) then
+        call this%push_back(array(i))
+      end if
+    end do
+
+  end subroutine add_array_unique
 
   function at(this, idx) result(value)
     class(VectorInt), intent(in) :: this

@@ -6,6 +6,8 @@ module DistributedExchangeModule
   use ListsModule, only: baseexchangelist
   use DistListsModule, only: distexchangelist
   use DistributedBaseModule
+  use IndexMapModule
+  use SimStagesModule
   implicit none
   private
 
@@ -17,9 +19,6 @@ module DistributedExchangeModule
     integer(I4B) :: model1_id !< one model
     integer(I4B) :: model2_id !< other model
 
-    ! nexg*      
-    ! nodem1*,nodem2*
-    ! naux,auxname_cst,auxvar
     integer(I4B), pointer :: nexg => null()
     integer(I4B), dimension(:), pointer, contiguous :: nodem1 => null()
     integer(I4B), dimension(:), pointer, contiguous :: nodem2 => null()
@@ -35,6 +34,7 @@ module DistributedExchangeModule
   contains    
     procedure :: create
     procedure :: init_connectivity
+    procedure :: setup_remote_memory
     procedure :: deallocate
     procedure :: access
   end type
@@ -68,23 +68,31 @@ module DistributedExchangeModule
     this%model1_id = m1_id
     this%model2_id = m2_id
     this%exchange => exchange
+    this%is_local = associated(exchange)
 
-    if (associated(exchange)) then
-      this%is_local = .true.      
+    if (this%is_local) then
+      this%name = exchange%name     
     else
-      this%is_local = .false.
+      this%name = 'undefined'
     end if
+
+    call this%load(this%nexg, 'NEXG', '', (/STG_INIT/), MAP_TYPE_NA)
 
   end subroutine create
 
   subroutine init_connectivity(this)
     class(DistributedExchangeType) :: this
-
-    if (this%is_local) then
-      
-    end if
+    
+    call this%load(this%nodem1, this%nexg, 'NODEM1', '', (/STG_BEFORE_DF/), MAP_TYPE_NA)
+    call this%load(this%nodem2, this%nexg, 'NODEM2', '', (/STG_BEFORE_DF/), MAP_TYPE_NA)
 
   end subroutine init_connectivity
+
+  subroutine setup_remote_memory(this, exchange_map)
+    class(DistributedExchangeType) :: this
+    type(IndexMapSgnType) :: exchange_map
+    ! not sure if we should do something here
+  end subroutine setup_remote_memory
 
   subroutine deallocate(this)
     class(DistributedExchangeType) :: this

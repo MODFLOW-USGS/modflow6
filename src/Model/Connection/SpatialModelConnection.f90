@@ -37,7 +37,7 @@ module SpatialModelConnectionModule
 
     class(DisConnExchangeType), pointer :: primaryExchange => null() !< the exchange for which the interface model is created
     type(VectorInt), pointer :: haloModels !< models that are potentially in the halo of this interface
-    type(VectorInt), pointer :: haloExchanges !< exchanges that are potentially part of the halo of this interface
+    type(VectorInt), pointer :: haloExchanges !< exchanges that are potentially part of the halo of this interface (includes primary)
     integer(I4B), pointer :: internalStencilDepth => null() !< size of the computational stencil for the interior
                                                             !! default = 1, xt3d = 2, ...
     integer(I4B), pointer :: exchangeStencilDepth => null() !< size of the computational stencil at the interface

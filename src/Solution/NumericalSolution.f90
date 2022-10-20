@@ -132,6 +132,7 @@ module NumericalSolutionModule
     type(TableType), pointer :: outertab => null() !< Picard iteration table object
     !
     ! -- for synchronization of exchanges
+    class(*), pointer :: synchronize_ctx => null()
     procedure(synchronize_iface), pointer :: synchronize => null()
 
   contains
@@ -178,11 +179,12 @@ module NumericalSolutionModule
   end type NumericalSolutionType
 
   abstract interface
-    subroutine synchronize_iface(solution, stage)
+    subroutine synchronize_iface(solution, stage, ctx)
       import NumericalSolutionType
       import I4B
       class(NumericalSolutionType) :: solution
       integer(I4B) :: stage
+      class(*), pointer :: ctx
     end subroutine synchronize_iface
   end interface
 
@@ -1413,7 +1415,7 @@ contains
     class(NumericalModelType), pointer :: mp => null()
 
     ! synchronize for AD
-    call this%synchronize(STG_BEFORE_AD)
+    call this%synchronize(STG_BEFORE_AD, this%synchronize_ctx)
 
     ! -- Exchange advance
     do ic = 1, this%exchangelist%Count()
@@ -1918,7 +1920,7 @@ contains
     call this%sln_reset()
 
     ! synchronize for CF
-    call this%synchronize(STG_BEFORE_CF)
+    call this%synchronize(STG_BEFORE_CF, this%synchronize_ctx)
 
     !
     ! -- Calculate the matrix terms for each exchange
@@ -1934,7 +1936,7 @@ contains
     end do
 
     ! synchronize for FC
-    call this%synchronize(STG_BEFORE_FC)
+    call this%synchronize(STG_BEFORE_FC, this%synchronize_ctx)
 
     !
     ! -- Add exchange coefficients to the solution

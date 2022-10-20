@@ -1073,13 +1073,10 @@ contains
     type(VectorInt) :: srcIdxTmp, tgtIdxTmp, signTmp
     class(DistributedExchangeType), pointer :: dist_exg
     class(DistributedModelType), pointer :: m1, m2
-    integer(I4B), pointer :: nexg
-    integer(I4B), dimension(:), pointer, contiguous :: nodem1, nodem2
     type(InterfaceMapType), pointer :: imap
 
     allocate (this%interfaceMap)
     imap => this%interfaceMap
-
 
     ! first get the participating models
     call modelIds%init()
@@ -1089,15 +1086,13 @@ contains
       end if
     end do
 
-    ! allocate space
-    imap%nr_models = modelIds%size
-    allocate (imap%model_names(modelIds%size))
-    allocate (imap%node_map(modelIds%size))
-    allocate (imap%connection_map(modelIds%size))
+    ! initialize the map
+    call imap%init(modelIds%size, this%haloExchanges%size)
 
     ! for each model part of this interface, ...
     do im = 1, modelIds%size
       mid = modelIds%at(im)
+      imap%model_ids(im) = mid
       imap%model_names(im) = get_model_name(mid)
       call srcIdxTmp%init()
       call tgtIdxTmp%init()
@@ -1159,10 +1154,6 @@ contains
     call modelIds%destroy()
 
     ! for each exchange that is part of this interface
-    imap%nr_exchanges = this%haloExchanges%size
-    allocate (imap%exchange_names(imap%nr_exchanges))
-    allocate (imap%exchange_map(imap%nr_exchanges))
-
     do ix = 1, this%haloExchanges%size
 
       ! all exchanges in this list should have at
@@ -1171,19 +1162,17 @@ contains
       dist_exg => get_dist_exg(this%haloExchanges%at(ix))
       m1 => get_dist_model(dist_exg%model1_id)
       m2 => get_dist_model(dist_exg%model2_id)
-      call dist_exg%load(nexg, 'NEXG')
-      call dist_exg%load(nodem1, 'NODEM1')
-      call dist_exg%load(nodem2, 'NODEM2')
 
+      imap%exchange_ids(ix) = dist_exg%id
       imap%exchange_names(ix) = dist_exg%name
 
       call srcIdxTmp%init()
       call tgtIdxTmp%init()
       call signTmp%init()
 
-      do n = 1, nexg
-        i = this%getInterfaceIndex(nodem1(n), m1)
-        j = this%getInterfaceIndex(nodem2(n), m2)
+      do n = 1, dist_exg%nexg
+        i = this%getInterfaceIndex(dist_exg%nodem1(n), m1)
+        j = this%getInterfaceIndex(dist_exg%nodem2(n), m2)
         if (i == -1 .or. j == -1) cycle ! not all exchange nodes are part of the interface
         ipos = this%connections%getjaindex(i, j)
         if (ipos == 0) then

@@ -15,22 +15,39 @@ module Mf6DistributedModule
   use ListsModule, only: basesolutionlist
   use BaseSolutionModule, only: BaseSolutionType, GetBaseSolutionFromList  
   use RouterModule, only: RouterType
-  use MapperModule, only: MapperType
+  use MapperModule, only: MapperType  
+  use InterfaceMapModule
   implicit none
   private
+  
+  type, public :: Mf6DistributedDataType
 
-  public :: dd_init, dd_finalize  
-  public :: dd_before_df, dd_after_df
-  public :: dd_before_ar, dd_after_ar
+    type(RouterType) :: router
+    type(MapperType) :: mapper
 
-  type(RouterType) :: router
-  type(MapperType) :: mapper
+  contains
+
+    procedure :: dd_init
+    procedure :: dd_before_df
+    procedure :: dd_after_df
+    procedure :: dd_before_ar
+    procedure :: dd_after_ar
+    procedure :: dd_finalize
+    
+    procedure, private :: reduce_map
+
+  end type Mf6DistributedDataType
+
+  type(Mf6DistributedDataType), public :: mf6_dist_data !< this is global now, but could be part of 
+                                                        !! a simulation object in the future
 
 contains
 
   !> @brief Initialize the distributed simulation
   !<
-  subroutine dd_init()
+  subroutine dd_init(this)
+    class(Mf6DistributedDataType) :: this
+    ! local
     integer(I4B) :: isol, nsol
     class(BaseSolutionType), pointer :: sol
 
@@ -44,16 +61,17 @@ contains
       end select
     end do
 
-    call router%init(nsol)
-    call mapper%init()
+    call this%router%init(nsol)
+    call this%mapper%init()
 
-    call router%route(STG_INIT)
+    call this%router%route(STG_INIT)
 
   end subroutine dd_init
 
   !> @brief Performs linking and synchronization before
   !< the DF on connections
-  subroutine dd_before_df()
+  subroutine dd_before_df(this)
+    class(Mf6DistributedDataType), target :: this
     ! local
     class(BaseSolutionType), pointer :: sol
     integer(I4B) ::isol
@@ -62,79 +80,124 @@ contains
       sol => GetBaseSolutionFromList(basesolutionlist, isol)
       select type (sol)
       class is (NumericalSolutionType)
-        call router%add_solution(sol)
-        sol%synchronize => dd_solution_sync
-        
+        call this%router%add_solution(sol)
+        sol%synchronize => dd_solution_sync   
+        sol%synchronize_ctx => this
       end select
     end do
 
-    call router%init_connectivity()
-    call router%route(STG_BEFORE_DF)
+    call this%router%init_connectivity()
+    call this%router%route(STG_BEFORE_DF)
 
   end subroutine dd_before_df
 
   !> @brief Called after DF on connections, which is when
   !! the interface model grid has been constructed
   !<
-  subroutine dd_after_df()
+  subroutine dd_after_df(this)
     use ListsModule, only: baseconnectionlist
-    integer(I4B) :: iconn
+    class(Mf6DistributedDataType) :: this
+    ! local
+    integer(I4B) :: isol, iconn
+    class(BaseSolutionType), pointer :: sol
+    class(InterfaceMapType), pointer :: merged_map
     class(SpatialModelConnectionType), pointer :: conn
+  
+    ! merge the interface maps to determine all nodes in the interface
+    call this%router%create_interface_map()
 
-    ! map the variables for the interface models
+    ! map the interface data
     do iconn = 1, baseconnectionlist%Count()
       conn => GetSpatialModelConnectionFromList(baseconnectionlist, iconn)
-      call mapper%add_dist_vars(conn%owner%idsoln, &
+      
+      ! for all remote models we need to remap into the reduced memory space
+      call this%reduce_map(conn%interfaceMap, &
+                           this%router%interface_maps(conn%owner%idsoln))
+      
+      ! add the variables with the updated map
+      call this%mapper%add_dist_vars(conn%owner%idsoln, &
                                 conn%ifaceDistVars, &
                                 conn%interfaceMap)
     end do
 
-    ! interface grid is known
-    ! - get the map: src_i => tgt_i
-    ! - aggregate
-    ! - split: map1: src_i => i, map2: i => tgt_i
-    ! - pass map1 to router
-    ! - pass map2 to interface filler
+    ! use the final maps to initialize the data structures and,
+    ! when remote, decompose the maps
+    call this%router%init_interface()
+
 
   end subroutine dd_after_df
+  
+  subroutine reduce_map(this, map, merged_map)
+    class(Mf6DistributedDataType) :: this
+    type(InterfaceMapType) :: map ! map to reduce
+    type(InterfaceMapType) :: merged_map ! full interface map (for a solution)
+    ! local
+    integer(I4B) :: im, i, m_idx
+    integer(I4B) :: orig_idx, reduced_idx
+    class(DistributedModelType), pointer :: dist_model
+
+    ! reduction means remapping the source indexes 
+    ! into the distributed model or exchange memory buffer
+    do im = 1, map%nr_models
+      ! only when remote model
+      dist_model => get_dist_model(map%model_ids(im))
+      if (dist_model%is_local) cycle
+
+      m_idx = findloc(merged_map%model_ids, map%model_ids(im), dim=1)      
+      do i = 1, size(map%node_map(im)%src_idx)
+        orig_idx = map%node_map(im)%src_idx(i)        
+        reduced_idx = findloc(merged_map%node_map(m_idx)%src_idx, orig_idx, dim=1)
+        map%node_map(im)%src_idx(i) = reduced_idx
+      end do
+    end do
+
+  end subroutine reduce_map
 
   !> @brief Called before AR on connections
   !<
-  subroutine dd_before_ar()
+  subroutine dd_before_ar(this)
+    class(Mf6DistributedDataType) :: this
 
-    call mapper%scatter(0, STG_BEFORE_AR)
+    call this%mapper%scatter(0, STG_BEFORE_AR)
 
   end subroutine dd_before_ar
 
   !> @brief Called after AR on connections
   !<
-  subroutine dd_after_ar()
+  subroutine dd_after_ar(this)
+    class(Mf6DistributedDataType) :: this
 
-    call mapper%scatter(0, STG_AFTER_AR)
+    call this%mapper%scatter(0, STG_AFTER_AR)
 
   end subroutine dd_after_ar
 
   !> @brief Synchronizes from within numerical solution (delegate)
   !<
-  subroutine dd_solution_sync(num_sol, stage)
+  subroutine dd_solution_sync(num_sol, stage, ctx)
     class(NumericalSolutionType) :: num_sol
     integer(I4B) :: stage
+    class(*), pointer :: ctx
 
-    call mapper%scatter(num_sol%id, stage)
+    select type (ctx)
+    class is (Mf6DistributedDataType)
+      call ctx%mapper%scatter(num_sol%id, stage)
+    end select
 
   end subroutine dd_solution_sync
 
   !> @brief clean up
   !<
-  subroutine dd_finalize()
+  subroutine dd_finalize(this)
     use DistributedModelModule, only: GetDistModelFromList
     use DistributedExchangeModule, only: GetDistExchangeFromList
+    class(Mf6DistributedDataType) :: this
+    ! local
     integer(I4B) :: i
     class(DistributedModelType), pointer :: dist_mod
     class(DistributedExchangeType), pointer :: dist_exg
 
-    call router%destroy()
-    call mapper%destroy()
+    call this%router%destroy()
+    call this%mapper%destroy()
 
     do i = 1, distmodellist%Count()
       dist_mod => GetDistModelFromList(distmodellist, i)

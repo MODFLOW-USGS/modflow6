@@ -8,7 +8,7 @@ module RemoteMemoryModule
   type, public :: RemoteMemoryType
     character(len=LENVARNAME) :: var_name
     character(len=LENMEMPATH) :: mem_path
-    integer(I4B) :: stage
+    integer(I4B), dimension(:), allocatable :: stages
     integer(I4B) :: map_type
     type(MemoryType), pointer :: local_mt
   end type RemoteMemoryType

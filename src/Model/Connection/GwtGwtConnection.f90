@@ -445,7 +445,7 @@ contains
   !> @brief Set the flows (flowja from interface model) to the
   !< simvals in the exchange, leaving the budget calcution in there
   subroutine setFlowToExchange(this)
-    use InterfaceMapModule
+    use IndexMapModule
     class(GwtGwtConnectionType) :: this !< this connection
     ! local
     integer(I4B) :: i

@@ -2,7 +2,9 @@ module RouterModule
   use KindModule, only: I4B, LGP
   use SimStagesModule
   use VectorIntModule
-  use NumericalSolutionModule, only: NumericalSolutionType
+  use ListsModule, only: basesolutionlist
+  use NumericalSolutionModule, only: NumericalSolutionType, &
+                                     GetNumericalSolutionFromList
   use DistributedModelModule
   use MemoryTypeModule, only: MemoryType
   use MemoryManagerModule, only: get_from_memorylist
@@ -10,6 +12,7 @@ module RouterModule
   use DistributedExchangeModule
   use SpatialModelConnectionModule, only: SpatialModelConnectionType, &
                                           GetSpatialModelConnectionFromList
+  use InterfaceMapModule
   implicit none
   private
 
@@ -17,12 +20,16 @@ module RouterModule
 
   type :: RouterType
     integer(I4B) :: nr_solutions
-    type(VectorInt), dimension(:), pointer :: halo_models
-    type(VectorInt), dimension(:), pointer :: halo_exchanges
+    integer(I4B), dimension(:), pointer :: solution_ids => null()
+    type(VectorInt), dimension(:), pointer :: model_ids => null()
+    type(VectorInt), dimension(:), pointer :: exchange_ids => null()
+    class(InterfaceMapType), dimension(:), pointer :: interface_maps => null()
   contains
     procedure :: init
     procedure :: add_solution
     procedure :: init_connectivity
+    procedure :: create_interface_map
+    procedure :: init_interface
     procedure :: route
     procedure :: destroy
 
@@ -37,8 +44,10 @@ module RouterModule
     ! local
     integer(I4B) :: n_sol
 
-    allocate(this%halo_models(n_sol))
-    allocate(this%halo_exchanges(n_sol))
+    allocate(this%solution_ids(n_sol))
+    allocate(this%model_ids(n_sol))
+    allocate(this%exchange_ids(n_sol))
+    allocate(this%interface_maps(n_sol))
 
     this%nr_solutions = 0
 
@@ -55,26 +64,27 @@ module RouterModule
     class(SpatialModelConnectionType), pointer :: mod_conn
 
     isol = this%nr_solutions + 1
+    this%solution_ids(isol) = num_sol%id
 
-    call this%halo_models(isol)%init()
-    call this%halo_exchanges(isol)%init()
+    call this%model_ids(isol)%init()
+    call this%exchange_ids(isol)%init()
 
     do ix = 1, num_sol%exchangelist%Count()
       mod_conn => GetSpatialModelConnectionFromList(num_sol%exchangelist, ix)
       if (.not. associated(mod_conn)) cycle
 
+      ! add primary model for this connection
+      model_id = mod_conn%owner%id
+      call this%model_ids(isol)%push_back_unique(model_id)
+
       ! extend
       do im = 1, mod_conn%haloModels%size
         model_id = mod_conn%haloModels%at(im)
-        if (.not. this%halo_models(isol)%contains(model_id)) then
-          call this%halo_models(isol)%push_back(model_id)
-        end if                    
+        call this%model_ids(isol)%push_back_unique(model_id)
       end do
       do ihx = 1, mod_conn%haloExchanges%size
         exg_id = mod_conn%haloExchanges%at(ihx)
-        if (.not. this%halo_exchanges(isol)%contains(exg_id)) then
-          call this%halo_exchanges(isol)%push_back(exg_id)
-        end if
+        call this%exchange_ids(isol)%push_back_unique(exg_id)
       end do
     end do
     
@@ -91,17 +101,91 @@ module RouterModule
     
     ! prepare for connection data
     do isol = 1, this%nr_solutions
-      do imod = 1, this%halo_models(isol)%size
-        dist_model => get_dist_model(this%halo_models(isol)%at(imod))
+      do imod = 1, this%model_ids(isol)%size
+        dist_model => get_dist_model(this%model_ids(isol)%at(imod))
         call dist_model%init_connectivity()
       end do
-      do iexg = 1, this%halo_exchanges(isol)%size
-        dist_exg => get_dist_exg(this%halo_exchanges(isol)%at(iexg))
+      do iexg = 1, this%exchange_ids(isol)%size
+        dist_exg => get_dist_exg(this%exchange_ids(isol)%at(iexg))
         call dist_exg%init_connectivity()
       end do
     end do
 
   end subroutine init_connectivity
+
+  subroutine create_interface_map(this)
+    class(RouterType) :: this
+    ! local
+    class(NumericalSolutionType), pointer :: num_sol
+    integer(I4B) :: isol, sol_idx
+    integer(I4B) :: iexg
+    class(SpatialModelConnectionType), pointer :: conn
+    type(VectorInt) :: models, exchanges
+
+    do isol = 1, this%nr_solutions
+      ! this index should always match a numerical solution
+      sol_idx = this%solution_ids(isol)
+      num_sol => GetNumericalSolutionFromList(basesolutionlist, sol_idx)
+
+      ! first count nr. of unique models and exchanges in the
+      ! interface maps to allocate memory for the combined map
+      call models%init()
+      call exchanges%init()
+      do iexg = 1, num_sol%exchangelist%Count()
+        conn => GetSpatialModelConnectionFromList(num_sol%exchangelist, iexg)
+        if (.not. associated(conn)) cycle
+        ! collect unique models
+        call models%add_array_unique(conn%interfaceMap%model_ids)
+        call exchanges%add_array_unique(conn%interfaceMap%exchange_ids)
+      end do
+
+      ! initialize the merged map for this solution    
+      sol_idx = findloc(this%solution_ids, num_sol%id, dim=1)
+      call this%interface_maps(sol_idx)%init(models%size, exchanges%size)    
+      call models%destroy()
+      call exchanges%destroy()
+
+      ! add the map data
+      do iexg = 1, num_sol%exchangelist%Count()
+        conn => GetSpatialModelConnectionFromList(num_sol%exchangelist, iexg)
+        if (.not. associated(conn)) cycle
+          ! add another map to the router map
+          call this%interface_maps(sol_idx)%add(conn%interfaceMap)
+      end do
+
+    end do
+
+  end subroutine create_interface_map
+
+  subroutine init_interface(this)
+    class(RouterType) :: this
+    ! local
+    integer(I4B) :: isol, imod, iexg
+    integer(I4B) :: model_id, exchange_id
+    class(DistributedModelType), pointer :: dist_model
+    class(DistributedExchangeType), pointer :: dist_exg
+    class(InterfaceMapType), pointer :: iface_map
+
+    ! for each solution ...
+    do isol = 1, this%nr_solutions
+      iface_map => this%interface_maps(isol)
+      ! loop over all models that are part of this solution's interface      
+      do imod = 1, iface_map%nr_models
+        model_id = iface_map%model_ids(imod)
+        dist_model => get_dist_model(model_id)        
+        call dist_model%setup_remote_memory(iface_map%node_map(imod), &
+                                        iface_map%connection_map(imod))
+      end do
+
+      do iexg = 1, iface_map%nr_exchanges
+        exchange_id = iface_map%exchange_ids(iexg)
+        dist_exg => get_dist_exg(exchange_id)
+        call dist_exg%setup_remote_memory(iface_map%exchange_map(iexg))
+      end do
+
+    end do
+
+  end subroutine init_interface
 
   ! TODO_MJR: rename
   subroutine route(this, stage)
@@ -114,12 +198,11 @@ module RouterModule
     integer(I4B), dimension(:), pointer :: src_idx
 
     do isol = 1, this%nr_solutions
-      do imod = 1, this%halo_models(isol)%size
-        dist_model => get_dist_model(this%halo_models(isol)%at(imod))
+      do imod = 1, this%model_ids(isol)%size
+        dist_model => get_dist_model(this%model_ids(isol)%at(imod))
         do imem = 1, dist_model%remote_mem_items%Count()
           rmt_mem => dist_model%get_rmt_mem(imem)
-          if (rmt_mem%stage == stage) then
-
+          if (findloc(rmt_mem%stages, stage) > 0) then
             if (rmt_mem%map_type == MAP_TYPE_NA) then
               call this%route_item_nomap(rmt_mem)
             else
@@ -191,11 +274,11 @@ module RouterModule
     integer(I4B) :: i
 
     do i = 1, this%nr_solutions
-      call this%halo_models(i)%destroy()
-      call this%halo_exchanges(i)%destroy()
+      call this%model_ids(i)%destroy()
+      call this%exchange_ids(i)%destroy()
     end do
-    deallocate(this%halo_models)
-    deallocate(this%halo_exchanges)
+    deallocate(this%model_ids)
+    deallocate(this%exchange_ids)
 
   end subroutine destroy
   
