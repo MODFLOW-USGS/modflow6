@@ -2,12 +2,13 @@ module DistributedModelModule
   use KindModule, only: I4B, LGP, DP
   use SimModule, only: ustop
   use ListModule, only: ListType
-  use MemoryManagerModule, only: mem_allocate, mem_deallocate
+  use MemoryManagerModule, only: mem_allocate, mem_deallocate, mem_reallocate
   use MemoryHelperModule, only: create_mem_path
   use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
   use ListsModule, only: basemodellist
   use DistListsModule, only: distmodellist
   use DistributedBaseModule
+  use RemoteMemoryModule
   use SimStagesModule
   use IndexMapModule
   implicit none
@@ -33,6 +34,7 @@ module DistributedModelModule
     real(DP), dimension(:), pointer, contiguous :: dis_yc => null()
     real(DP), dimension(:), pointer, contiguous :: dis_top => null()
     real(DP), dimension(:), pointer, contiguous :: dis_bot => null()
+    real(DP), dimension(:), pointer, contiguous :: dis_area => null()
 
     ! CON:
     integer(I4B), dimension(:), pointer, contiguous :: con_ia => null() ! in full
@@ -48,13 +50,13 @@ module DistributedModelModule
     real(DP), private, dimension(:), pointer, contiguous :: x => null()
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null()
     real(DP), private, dimension(:), pointer, contiguous :: x_old => null()
-    integer(I4B), dimension(:), pointer, contiguous :: icelltype => null()
 
     ! GWF model data
     integer(I4B), pointer :: npf_iangle1
     integer(I4B), pointer :: npf_iangle2
     integer(I4B), pointer :: npf_iangle3
-    integer(I4B), pointer :: npf_iwetdry
+    integer(I4B), pointer :: npf_iwetdry    
+    integer(I4B), dimension(:), pointer, contiguous :: npf_icelltype => null()
     real(DP), private, dimension(:), pointer, contiguous :: npf_k11 => null()
     real(DP), private, dimension(:), pointer, contiguous :: npf_k22 => null()
     real(DP), private, dimension(:), pointer, contiguous :: npf_k33 => null()
@@ -85,9 +87,10 @@ module DistributedModelModule
 
 contains
 
-  subroutine add_dist_model(model_index, model_name)
+  subroutine add_dist_model(model_index, model_name, macronym)
     integer(I4B) :: model_index
-    character(len=*) :: model_name
+    character(len=*) :: model_name    
+    character(len=3) :: macronym
     ! local
     class(NumericalModelType), pointer :: num_model
     class(DistributedModelType), pointer :: dist_model
@@ -95,26 +98,35 @@ contains
     num_model => GetNumericalModelFromList(basemodellist, model_index)
 
     allocate (dist_model)
-    call dist_model%create(num_model, model_index, model_name)
+    call dist_model%create(num_model, model_index, model_name, macronym)
     call AddDistModelToList(distmodellist, dist_model)
 
   end subroutine add_dist_model
 
-  subroutine create(this, model, m_id, m_name)
+  subroutine create(this, model, m_id, m_name, macronym)
     class(DistributedModelType) :: this
     class(NumericalModelType), pointer :: model
     integer(I4B) :: m_id
     character(len=*) :: m_name
+    character(len=3) :: macronym
     
     this%id = model%id
     this%name = m_name
     this%model => model
-    this%is_local = associated(model)
+    this%is_local = .false.!associated(model)
+    this%macronym = macronym
 
-    call this%load(this%moffset, 'MOFFSET', '', (/STG_INIT/), MAP_TYPE_NA)
-    call this%load(this%dis_nodes, 'NODES', 'DIS', (/STG_INIT/), MAP_TYPE_NA)
-    call this%load(this%dis_nja, 'NJA', 'DIS', (/STG_INIT/), MAP_TYPE_NA)
-    call this%load(this%dis_njas, 'NJAS', 'DIS', (/STG_INIT/), MAP_TYPE_NA)
+    call this%load(this%moffset, 'MOFFSET', '', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
+    call this%load(this%dis_nodes, 'NODES', 'DIS', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
+    call this%load(this%dis_nja, 'NJA', 'DIS', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
+    call this%load(this%dis_njas, 'NJAS', 'DIS', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
+
+    if (this%macronym == 'GWF') then
+      call this%load(this%npf_iangle1, 'IANGLE1', 'NPF', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
+      call this%load(this%npf_iangle2, 'IANGLE2', 'NPF', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
+      call this%load(this%npf_iangle3, 'IANGLE3', 'NPF', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
+      call this%load(this%npf_iwetdry, 'IWETDRY', 'NPF', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
+    end if
 
   end subroutine create
   
@@ -159,6 +171,8 @@ contains
     class(DistributedModelType), intent(inout) :: this
     type(IndexMapType) :: node_map
     type(IndexMapType) :: connection_map
+    ! local
+    type(RemoteMemoryType), pointer :: rmt_mem
 
     ! nothing to be done for local models (no routing)
     if (this%is_local) return
@@ -166,6 +180,18 @@ contains
     this%src_map_node => node_map%src_idx
     this%src_map_conn => connection_map%src_idx
 
+    ! reset local memory for reduced arrays
+    if (.not. this%is_local) then
+      call mem_reallocate(this%dis_top, size(this%src_map_node), 'TOP', this%get_local_mem_path('DIS'))
+      rmt_mem => this%get_rmt_mem('TOP', 'DIS')
+      rmt_mem%map_type = MAP_TYPE_NODE
+      rmt_mem%stages = (/STG_BEFORE_AR/)
+      call mem_reallocate(this%dis_bot, size(this%src_map_node), 'BOT', this%get_local_mem_path('DIS'))
+      rmt_mem => this%get_rmt_mem('BOT', 'DIS')
+      rmt_mem%map_type = MAP_TYPE_NODE
+      rmt_mem%stages = (/STG_BEFORE_AR/)
+    end if
+    
     if (this%macronym == 'GWF') then
       call this%init_gwf_rmt_mem()
     else if (this%macronym == 'GWT') then
@@ -180,9 +206,28 @@ contains
     integer(I4B) :: nr_iface_nodes
 
     nr_iface_nodes = size(this%src_map_node)
+    call this%load(this%x, nr_iface_nodes, 'X', '', (/STG_BEFORE_AR, STG_BEFORE_AD, STG_BEFORE_CF/), MAP_TYPE_NODE)
+    call this%load(this%ibound, nr_iface_nodes, 'IBOUND', '', (/STG_BEFORE_AR, STG_BEFORE_AD, STG_BEFORE_CF/), MAP_TYPE_NODE)
+    call this%load(this%x_old, nr_iface_nodes, 'XOLD', '',  (/STG_BEFORE_AD, STG_BEFORE_CF/), MAP_TYPE_NODE)
+
+    call this%load(this%npf_icelltype, nr_iface_nodes, 'ICELLTYPE', 'NPF', (/STG_BEFORE_AR/), MAP_TYPE_NODE)
     call this%load(this%npf_k11, nr_iface_nodes, 'K11', 'NPF', (/STG_BEFORE_AR/), MAP_TYPE_NODE)
     call this%load(this%npf_k22, nr_iface_nodes, 'K22', 'NPF', (/STG_BEFORE_AR/), MAP_TYPE_NODE)
     call this%load(this%npf_k33, nr_iface_nodes, 'K33', 'NPF', (/STG_BEFORE_AR/), MAP_TYPE_NODE)
+    if (this%npf_iangle1 > 0) then
+      call this%load(this%npf_angle1, nr_iface_nodes, 'ANGLE1', 'NPF', (/STG_BEFORE_AR/), MAP_TYPE_NODE)
+    end if
+    if (this%npf_iangle2 > 0) then
+      call this%load(this%npf_angle2, nr_iface_nodes, 'ANGLE2', 'NPF', (/STG_BEFORE_AR/), MAP_TYPE_NODE)
+    end if
+    if (this%npf_iangle3 > 0) then
+      call this%load(this%npf_angle3, nr_iface_nodes, 'ANGLE3', 'NPF', (/STG_BEFORE_AR/), MAP_TYPE_NODE)
+    end if
+    if (this%npf_iwetdry > 0) then
+      call this%load(this%npf_wetdry, nr_iface_nodes, 'WETDRY', 'NPF', (/STG_BEFORE_AR/), MAP_TYPE_NODE)
+    end if
+
+    call this%load(this%dis_area, nr_iface_nodes, 'AREA', 'DIS', (/STG_BEFORE_AR/), MAP_TYPE_NODE)
 
   end subroutine init_gwf_rmt_mem
 
@@ -215,14 +260,7 @@ contains
 
     call this%DistributedBaseType%destroy()
 
-    if (.not. this%is_local) then
-
-      ! these are always available:
-      call mem_deallocate(this%moffset)
-      call mem_deallocate(this%dis_nodes)
-      call mem_deallocate(this%dis_nja)
-      call mem_deallocate(this%dis_njas)
-
+    if (.not. this%is_local) then      
       ! these when the model was not local and
       ! a candidate for the halo
       if (associated(this%con_ia)) then
@@ -244,6 +282,38 @@ contains
         call mem_deallocate(this%con_anglex)
       end if
 
+      if (associated(this%npf_icelltype)) then        
+        call mem_deallocate(this%npf_icelltype)
+        call mem_deallocate(this%npf_k11)
+        call mem_deallocate(this%npf_k22)
+        call mem_deallocate(this%npf_k33)
+        if (this%npf_iwetdry > 0) call mem_deallocate(this%npf_wetdry)
+        if (this%npf_iangle1 > 0) call mem_deallocate(this%npf_angle1)
+        if (this%npf_iangle2 > 0) call mem_deallocate(this%npf_angle2)
+        if (this%npf_iangle3 > 0) call mem_deallocate(this%npf_angle3)
+      end if
+
+      if (associated(this%dis_area)) call mem_deallocate(this%dis_area)
+
+      if (associated(this%x)) then
+        call mem_deallocate(this%x)
+        call mem_deallocate(this%x_old)
+        call mem_deallocate(this%ibound)
+      end if
+
+      ! scalars:
+      call mem_deallocate(this%moffset)
+      call mem_deallocate(this%dis_nodes)
+      call mem_deallocate(this%dis_nja)
+      call mem_deallocate(this%dis_njas)
+      
+      if (this%macronym == 'GWF') then
+        call mem_deallocate(this%npf_iwetdry)
+        call mem_deallocate(this%npf_iangle1)
+        call mem_deallocate(this%npf_iangle2)
+        call mem_deallocate(this%npf_iangle3)
+      end if
+      
     end if
 
   end subroutine destroy

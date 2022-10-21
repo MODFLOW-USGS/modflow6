@@ -64,8 +64,6 @@ contains
     call this%router%init(nsol)
     call this%mapper%init()
 
-    call this%router%route(STG_INIT)
-
   end subroutine dd_init
 
   !> @brief Performs linking and synchronization before
@@ -86,7 +84,9 @@ contains
       end select
     end do
 
+    call this%router%route(STG_BEFORE_INIT)
     call this%router%init_connectivity()
+    
     call this%router%route(STG_BEFORE_DF)
 
   end subroutine dd_before_df
@@ -122,7 +122,6 @@ contains
     ! when remote, decompose the maps
     call this%router%init_interface()
 
-
   end subroutine dd_after_df
   
   subroutine reduce_map(this, map, merged_map)
@@ -156,6 +155,7 @@ contains
   subroutine dd_before_ar(this)
     class(Mf6DistributedDataType) :: this
 
+    call this%router%route(STG_BEFORE_AR)
     call this%mapper%scatter(0, STG_BEFORE_AR)
 
   end subroutine dd_before_ar

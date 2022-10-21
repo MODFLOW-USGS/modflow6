@@ -32,8 +32,9 @@ module DistributedBaseModule
     generic :: load => load_intsclr, load_int1d, load_dblsclr, &
                        load_double1d, load_double2d, load_charstr1d
                        
-    procedure :: get_rmt_mem
+    generic :: get_rmt_mem => get_rmt_mem_idx, get_rmt_mem_name
     procedure :: destroy
+    procedure :: get_local_mem_path
 
     ! private
     procedure, private :: load_intsclr
@@ -42,7 +43,8 @@ module DistributedBaseModule
     procedure, private :: load_double1d
     procedure, private :: load_double2d
     procedure, private :: load_charstr1d
-    procedure, private :: get_local_mem_path
+    procedure, private :: get_rmt_mem_idx
+    procedure, private :: get_rmt_mem_name
   end type DistributedBaseType
 
 contains
@@ -241,9 +243,9 @@ function get_local_mem_path(this, subcomp_name) result(loc_mem_path)
     end if
   else
     if (subcomp_name == '') then
-      loc_mem_path = create_mem_path(this%name, LOCAL_MEM_CTX)
+      loc_mem_path = create_mem_path(this%name, context=LOCAL_MEM_CTX)
     else 
-      loc_mem_path = create_mem_path(this%name, subcomp_name, LOCAL_MEM_CTX)
+      loc_mem_path = create_mem_path(this%name, subcomp_name, context=LOCAL_MEM_CTX)
     end if
   end if
 
@@ -256,7 +258,7 @@ subroutine destroy(this)
   
 end subroutine destroy
 
-function get_rmt_mem(this, idx) result(remote_mem)
+function get_rmt_mem_idx(this, idx) result(remote_mem)
   class(DistributedBaseType) :: this
   integer(I4B) :: idx
   class(RemoteMemoryType), pointer :: remote_mem
@@ -269,6 +271,31 @@ function get_rmt_mem(this, idx) result(remote_mem)
     remote_mem => obj
   end select
 
-end function get_rmt_mem
+end function get_rmt_mem_idx
+
+function get_rmt_mem_name(this, var_name, subcomp_name) result(remote_mem)
+  class(DistributedBaseType) :: this
+  character(len=*) :: var_name
+  character(len=*) :: subcomp_name
+  class(RemoteMemoryType), pointer :: remote_mem
+  ! local
+  integer(I4B) :: i
+  character(len=LENMEMPATH) :: mem_path
+  class(RemoteMemoryType), pointer :: rmt
+
+  remote_mem => null()
+  mem_path = this%get_local_mem_path(subcomp_name)
+  do i = 1, this%remote_mem_items%Count()
+    rmt => this%get_rmt_mem_idx(i)
+    if (rmt%local_mt%name == var_name) then
+      if (rmt%local_mt%path == mem_path) then
+        remote_mem => rmt
+        return
+      end if
+    end if
+  end do
+
+end function get_rmt_mem_name
+
 
 end module DistributedBaseModule

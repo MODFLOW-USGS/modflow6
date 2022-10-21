@@ -3,11 +3,12 @@ module MapperModule
   use ConstantsModule, only: LENVARNAME, LENMEMPATH  
   use MemoryHelperModule, only: create_mem_path
   use IndexMapModule
+  use DistributedModelModule
+  use DistributedExchangeModule
   use InterfaceMapModule
   use DistVariableModule
   use MappedMemoryModule
   use ListModule
-  use DistListsModule, only: distmodellist
   implicit none
   private
 
@@ -69,7 +70,7 @@ module MapperModule
                                    distvar%comp_name, &
                                    distvar%subcomp_name, &
                                    distvar%var_name, &
-                                   interface_map%model_names(m), &
+                                   interface_map%model_ids(m), &
                                    idx_map, &
                                    distvar%sync_stages)
         end do
@@ -80,7 +81,7 @@ module MapperModule
                                  distvar%comp_name, &
                                  distvar%subcomp_name, &
                                  distvar%var_name, &
-                                 interface_map%exchange_names(e), &
+                                 interface_map%exchange_ids(e), &
                                  distvar%exg_var_name, &
                                  interface_map%exchange_map(e), &
                                  distvar%sync_stages)
@@ -94,7 +95,7 @@ module MapperModule
   !! with the specified map. The source and target items have
   !< the same name and (optionally) subcomponent name.
   subroutine map_model_data(this, controller_id, tgt_model_name, &
-                            tgt_subcomp_name, tgt_var_name, src_model_name, &
+                            tgt_subcomp_name, tgt_var_name, src_model_id, &
                             index_map, stages)
     use SimModule, only: ustop
     use MemoryManagerModule, only: get_from_memorylist
@@ -103,18 +104,20 @@ module MapperModule
     character(len=*), intent(in) :: tgt_model_name
     character(len=*), intent(in) :: tgt_subcomp_name
     character(len=*), intent(in) :: tgt_var_name
-    character(len=*), intent(in) :: src_model_name
+    integer(I4B), intent(in) :: src_model_id
     type(IndexMapType), intent(in) :: index_map
     integer(I4B), dimension(:), intent(in) :: stages !< array with 1 or multiple stages for synchronization
     ! local
     character(len=LENVARNAME) :: src_var_name
     character(len=LENMEMPATH) :: src_mem_path, tgt_mem_path
+    class(DistributedModelType), pointer :: dist_model
+
+    dist_model => get_dist_model(src_model_id) 
+    src_mem_path = dist_model%get_local_mem_path(tgt_subcomp_name)   
 
     if (len_trim(tgt_subcomp_name) > 0) then
-      src_mem_path = create_mem_path(src_model_name, tgt_subcomp_name)
       tgt_mem_path = create_mem_path(tgt_model_name, tgt_subcomp_name)
     else
-      src_mem_path = create_mem_path(src_model_name)
       tgt_mem_path = create_mem_path(tgt_model_name)
     end if
 
@@ -129,7 +132,7 @@ module MapperModule
   !> @brief Map memory from a Exchange to the specified memory entry,
   !< using the index map
   subroutine map_exg_data(this, controller_id, tgt_model_name, &
-                          tgt_subcomp_name, tgt_var_name, src_exg_name, &
+                          tgt_subcomp_name, tgt_var_name, src_exg_id, &
                           src_var_name, index_map_sgn, stages)
     use SimModule, only: ustop
     use MemoryManagerModule, only: get_from_memorylist
@@ -138,14 +141,17 @@ module MapperModule
     character(len=*), intent(in) :: tgt_model_name
     character(len=*), intent(in) :: tgt_subcomp_name
     character(len=*), intent(in) :: tgt_var_name
-    character(len=*), intent(in) :: src_exg_name
+    integer(I4B), intent(in) :: src_exg_id
     character(len=*), intent(in) :: src_var_name
     type(IndexMapSgnType), intent(in) :: index_map_sgn
     integer(I4B), dimension(:), intent(in) :: stages !< array with 1 or multiple stages for synchronization
     ! local
     character(len=LENMEMPATH) :: src_mem_path, tgt_mem_path
+    class(DistributedExchangeType), pointer :: dist_exg
 
-    src_mem_path = create_mem_path(src_exg_name)
+    dist_exg => get_dist_exg(src_exg_id)
+    src_mem_path = dist_exg%get_local_mem_path('')
+
     if (len_trim(tgt_subcomp_name) > 0) then
       tgt_mem_path = create_mem_path(tgt_model_name, tgt_subcomp_name)
     else

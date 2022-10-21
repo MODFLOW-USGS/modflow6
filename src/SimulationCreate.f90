@@ -276,12 +276,12 @@ contains
           call parser%GetString(fname)
           call add_model(im, 'GWF6', mname)
           call gwf_cr(fname, im, modelname(im))
-          call add_dist_model(im, modelname(im))
+          call add_dist_model(im, modelname(im), 'GWF')
         case ('GWT6')
           call parser%GetString(fname)
           call add_model(im, 'GWT6', mname)
           call gwt_cr(fname, im, modelname(im))
-          call add_dist_model(im, modelname(im))
+          call add_dist_model(im, modelname(im), 'GWT')
         case default
           write (errmsg, '(4x,a,a)') &
             '****ERROR. UNKNOWN SIMULATION MODEL: ', &

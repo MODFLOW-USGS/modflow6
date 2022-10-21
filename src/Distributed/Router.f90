@@ -263,6 +263,9 @@ module RouterModule
       end do
     else if (associated(mt%adbl1d)) then
       do i = 1, size(mt%adbl1d)
+        if (src_idx(i) > size(rmt_mt%adbl1d)) then
+          write(*,*) 'oops'
+        end if
         mt%adbl1d(i) = rmt_mt%adbl1d(src_idx(i))
       end do
     end if
