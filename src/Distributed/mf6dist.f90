@@ -98,9 +98,7 @@ contains
     use ListsModule, only: baseconnectionlist
     class(Mf6DistributedDataType) :: this
     ! local
-    integer(I4B) :: isol, iconn
-    class(BaseSolutionType), pointer :: sol
-    class(InterfaceMapType), pointer :: merged_map
+    integer(I4B) :: iconn
     class(SpatialModelConnectionType), pointer :: conn
   
     ! merge the interface maps to determine all nodes in the interface

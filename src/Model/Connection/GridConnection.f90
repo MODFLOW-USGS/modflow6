@@ -436,34 +436,29 @@ contains
     integer(I4B) :: ix, iexg
     class(DistributedExchangeType), pointer :: dist_exg
     class(DistributedModelType), pointer :: m1, m2
-    integer(I4B), pointer :: nexg
-    integer(I4B), dimension(:), pointer, contiguous :: nodem1, nodem2
 
     ! loop over all exchanges
     do ix = 1, this%haloExchanges%size
 
       dist_exg => get_dist_exg(this%haloExchanges%at(ix))
-      call dist_exg%load(nexg, 'NEXG')
-      call dist_exg%load(nodem1, 'NODEM1')
-      call dist_exg%load(nodem2, 'NODEM2')
       m1 => get_dist_model(dist_exg%model1_id)
       m2 => get_dist_model(dist_exg%model2_id)
 
       ! loop over n-m links in the exchange
       if (cellNbrs%cell%dmodel == m1) then
-        do iexg = 1, nexg
-          if (nodem1(iexg) == cellNbrs%cell%index) then
+        do iexg = 1, dist_exg%nexg
+          if (dist_exg%nodem1(iexg) == cellNbrs%cell%index) then
             ! we have a link, now add foreign neighbor
-            call this%addNeighborCell(cellNbrs, nodem2(iexg), m2, mask)
+            call this%addNeighborCell(cellNbrs, dist_exg%nodem2(iexg), m2, mask)
           end if
         end do
       end if
       ! and the reverse
       if (cellNbrs%cell%dmodel == m2) then
-        do iexg = 1, nexg
-          if (nodem2(iexg) == cellNbrs%cell%index) then
+        do iexg = 1, dist_exg%nexg
+          if (dist_exg%nodem2(iexg) == cellNbrs%cell%index) then
             ! we have a link, now add foreign neighbor
-            call this%addNeighborCell(cellNbrs, nodem1(iexg), m1, mask)
+            call this%addNeighborCell(cellNbrs, dist_exg%nodem1(iexg), m1, mask)
           end if
         end do
       end if
@@ -722,56 +717,32 @@ contains
   !> @brief Fill connection data (ihc, cl1, ...) for
   !< all exchanges
   subroutine fillConnectionDataFromExchanges(this)
-    use ConstantsModule, only: DPI, DTWOPI, DPIO180, LENAUXNAME
-    use ArrayHandlersModule, only: ifind
+    use ConstantsModule, only: DPIO180
     class(GridConnectionType), intent(inout) :: this !< this grid connection instance
     ! local
-    integer(I4B) :: i, inx, iexg
+    integer(I4B) :: inx, iexg
     integer(I4B) :: ipos, isym
     integer(I4B) :: nOffset, mOffset, nIfaceIdx, mIfaceIdx
-    integer(I4B) :: ivalAngldegx
     class(DistributedExchangeType), pointer :: dist_exg
     class(DistributedModelType), pointer :: m1, m2
-    integer(I4B), pointer :: nexg, naux
-    type(CharacterStringType), dimension(:), pointer :: auxname_cst
-    real(DP), dimension(:,:), pointer, contiguous :: auxvar
-    integer(I4B), dimension(:), pointer, contiguous :: nodem1, nodem2, ihc
-    real(DP), dimension(:), pointer, contiguous :: cl1, cl2, hwva
-
     type(ConnectionsType), pointer :: conn
 
     conn => this%connections
-
+    
     do inx = 1, this%haloExchanges%size
       dist_exg => get_dist_exg(this%haloExchanges%at(inx))
-      ! TODO_MJR: this is begging to be cached, no
       m1 => get_dist_model(dist_exg%model1_id)
       m2 => get_dist_model(dist_exg%model2_id)
-      call dist_exg%load(nexg, 'NEXG')
-      call dist_exg%load(naux, 'NAUX')
-      call dist_exg%load(auxname_cst, 'AUXNAME_CST')
-      call dist_exg%load(auxvar, 'AUXVAR')
-      call dist_exg%load(nodem1, 'NODEM1')
-      call dist_exg%load(nodem2, 'NODEM2')
-      call dist_exg%load(ihc, 'IHC')
-      call dist_exg%load(cl1, 'CL1')
-      call dist_exg%load(cl2, 'CL2')
-      call dist_exg%load(hwva, 'HWVA')
 
-      ivalAngldegx = -1
-      do i = 1, naux
-        if (auxname_cst(i) == 'ANGLDEGX') then
-          conn%ianglex = 1
-          ivalAngldegx = 1
-          exit
-        end if
-      end do
+      if (dist_exg%ianglex > 0) then
+        conn%ianglex = 1
+      end if
 
       nOffset = this%getRegionalModelOffset(m1)
       mOffset = this%getRegionalModelOffset(m2)
-      do iexg = 1, nexg
-        nIfaceIdx = this%regionalToInterfaceIdxMap(noffset + nodem1(iexg))
-        mIfaceIdx = this%regionalToInterfaceIdxMap(moffset + nodem2(iexg))
+      do iexg = 1, dist_exg%nexg
+        nIfaceIdx = this%regionalToInterfaceIdxMap(noffset + dist_exg%nodem1(iexg))
+        mIfaceIdx = this%regionalToInterfaceIdxMap(moffset + dist_exg%nodem2(iexg))
         ! not all nodes from the exchanges are part of the interface grid
         ! (think of exchanges between neigboring models, and their neighbors)
         if (nIFaceIdx == -1 .or. mIFaceIdx == -1) then
@@ -790,21 +761,21 @@ contains
         ! note: cl1 equals L_nm: the length from cell n to the shared
         ! face with cell m (and cl2 analogously for L_mn)
         if (nIfaceIdx < mIfaceIdx) then
-          conn%cl1(isym) = cl1(iexg)
-          conn%cl2(isym) = cl2(iexg)
-          if (ivalAngldegx > 0) then
-            conn%anglex(isym) = auxvar(ivalAngldegx, iexg) * DPIO180
+          conn%cl1(isym) = dist_exg%cl1(iexg)
+          conn%cl2(isym) = dist_exg%cl2(iexg)
+          if (dist_exg%ianglex > 0) then
+            conn%anglex(isym) = dist_exg%auxvar(dist_exg%ianglex, iexg) * DPIO180
           end if
         else
-          conn%cl1(isym) = cl2(iexg)
-          conn%cl2(isym) = cl1(iexg)
-          if (ivalAngldegx > 0) then
-            conn%anglex(isym) = mod(auxvar(ivalAngldegx, iexg) + &
-                                180.0_DP, 360.0_DP) * DPIO180
+          conn%cl1(isym) = dist_exg%cl2(iexg)
+          conn%cl2(isym) = dist_exg%cl1(iexg)
+          if (dist_exg%ianglex > 0) then
+            conn%anglex(isym) = mod(dist_exg%auxvar(dist_exg%ianglex, iexg) &
+                                    + 180.0_DP, 360.0_DP) * DPIO180
           end if
         end if
-        conn%hwva(isym) = hwva(iexg)
-        conn%ihc(isym) = ihc(iexg)
+        conn%hwva(isym) = dist_exg%hwva(iexg)
+        conn%ihc(isym) = dist_exg%ihc(iexg)
 
       end do
     end do

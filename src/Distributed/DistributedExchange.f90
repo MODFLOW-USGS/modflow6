@@ -20,6 +20,7 @@ module DistributedExchangeModule
     integer(I4B) :: model2_id !< other model
 
     integer(I4B), pointer :: nexg => null()
+    integer(I4B), pointer :: naux => null()
     integer(I4B), dimension(:), pointer, contiguous :: nodem1 => null()
     integer(I4B), dimension(:), pointer, contiguous :: nodem2 => null()
     integer(I4B), pointer :: ianglex => null()
@@ -27,7 +28,7 @@ module DistributedExchangeModule
     real(DP), dimension(:), pointer, contiguous :: cl1 => null()
     real(DP), dimension(:), pointer, contiguous :: cl2 => null()
     real(DP), dimension(:), pointer, contiguous :: hwva => null()
-    real(DP), dimension(:), pointer, contiguous :: anglex => null() ! TODO_MJR: this doesn't exist yet in the exchanges
+    real(DP), dimension(:,:), pointer, contiguous :: auxvar => null()
 
     ! this is strictly private, use access() instead
     class(DisConnExchangeType), private, pointer :: exchange !< implementation if local, null otherwise
@@ -77,6 +78,8 @@ module DistributedExchangeModule
     end if
 
     call this%load(this%nexg, 'NEXG', '', (/STG_INIT/), MAP_TYPE_NA)
+    call this%load(this%naux, 'NAUX', '', (/STG_INIT/), MAP_TYPE_NA)
+    call this%load(this%ianglex, 'IANGLEX', '', (/STG_INIT/), MAP_TYPE_NA)
 
   end subroutine create
 
@@ -85,6 +88,13 @@ module DistributedExchangeModule
     
     call this%load(this%nodem1, this%nexg, 'NODEM1', '', (/STG_BEFORE_DF/), MAP_TYPE_NA)
     call this%load(this%nodem2, this%nexg, 'NODEM2', '', (/STG_BEFORE_DF/), MAP_TYPE_NA)
+    call this%load(this%ihc, this%nexg, 'IHC', '', (/STG_BEFORE_DF/), MAP_TYPE_NA)
+    call this%load(this%cl1, this%nexg, 'CL1', '', (/STG_BEFORE_DF/), MAP_TYPE_NA)
+    call this%load(this%cl2, this%nexg, 'CL2', '', (/STG_BEFORE_DF/), MAP_TYPE_NA)
+    call this%load(this%hwva, this%nexg, 'HWVA', '', (/STG_BEFORE_DF/), MAP_TYPE_NA)
+    if (this%naux > 0) then
+      call this%load(this%auxvar, this%nexg, this%naux, 'AUXVAR', '', (/STG_BEFORE_DF/), MAP_TYPE_NA)
+    end if
 
   end subroutine init_connectivity
 

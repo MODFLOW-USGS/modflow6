@@ -5,11 +5,12 @@ module RouterModule
   use ListsModule, only: basesolutionlist
   use NumericalSolutionModule, only: NumericalSolutionType, &
                                      GetNumericalSolutionFromList
-  use DistributedModelModule
+  use DistributedBaseModule
+  use DistributedModelModule  
+  use DistributedExchangeModule
   use MemoryTypeModule, only: MemoryType
   use MemoryManagerModule, only: get_from_memorylist
   use RemoteMemoryModule
-  use DistributedExchangeModule
   use SpatialModelConnectionModule, only: SpatialModelConnectionType, &
                                           GetSpatialModelConnectionFromList
   use InterfaceMapModule
@@ -202,7 +203,7 @@ module RouterModule
         dist_model => get_dist_model(this%model_ids(isol)%at(imod))
         do imem = 1, dist_model%remote_mem_items%Count()
           rmt_mem => dist_model%get_rmt_mem(imem)
-          if (findloc(rmt_mem%stages, stage) > 0) then
+          if (findloc(rmt_mem%stages, stage, dim=1) > 0) then
             if (rmt_mem%map_type == MAP_TYPE_NA) then
               call this%route_item_nomap(rmt_mem)
             else
