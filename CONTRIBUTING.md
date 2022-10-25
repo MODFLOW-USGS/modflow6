@@ -141,18 +141,13 @@ To ensure consistency throughout the source code, keep these rules in mind as yo
 ## <a name="format"></a> Format Rules
 
 Fortran souce code format rules are met by running the
-[fprettify formatter](https://github.com/pseewald/fprettify) while specifying the [MODFLOW 6
-fprettify configuration](https://github.com/MODFLOW-USGS/modflow6/blob/develop/distribution/.fprettify.yaml).
-The tool can be run from the command line or integrated into a
-[VSCode](https://github.com/MODFLOW-USGS/modflow6/blob/develop/.vscode/README.md) or Visual Studio environment.
+[fprettify formatter](https://github.com/pseewald/fprettify) while specifying the [MODFLOW 6 fprettify configuration](https://github.com/MODFLOW-USGS/modflow6/blob/develop/distribution/.fprettify.yaml). `fprettify` is included in the Conda `environment.yml` and can be run on the command line or integrated into a [VSCode](https://github.com/MODFLOW-USGS/modflow6/blob/develop/.vscode/README.md) or Visual Studio environment.
 
-The format configuration file reflects the current minimum standard for Fortran source
-formatting.  The main goal, however, is consistent and readable Fortran source code and as such
-pay particular attention to consistency within and across files.  As the formatting tool may at
-times shift code in unexpected ways, check for formatting consistency after running.
+The configuration file reflects the current minimum standard for Fortran source
+formatting.  The main goal, however, is consistent and readable Fortran source code and as such pay particular attention to consistency within and across files. As the formatting tool may at times shift code in unexpected ways, check for formatting consistency after running.
 
 An example run of the command line tool from the MODFLOW 6 root directory:
-`fprettify -c ./distribution/.fprettify.yaml ./utils/zonebudget/src/zbud6.f90`
+`fprettify -c .fprettify.yaml ./utils/zonebudget/src/zbud6.f90`
 
 When run in this way, the tool will modify the file in place and generate no output if successful. The
 tool will write stderr warnings when unable to complete formatting. In general, these warnings (e.g.

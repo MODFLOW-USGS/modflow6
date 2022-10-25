@@ -38,7 +38,6 @@ contains
     character(len=LINELENGTH) :: cexe
     character(len=LENBIGLINE) :: compiler
     character(len=20) :: cdate
-    character(len=17) :: ctyp
     character(len=LENBIGLINE) :: coptions
     logical :: ltyp
     logical :: lexist
@@ -74,15 +73,6 @@ contains
     write (header, '(a,4(1x,a),a)') &
       trim(adjustl(cexe)), '- MODFLOW', &
       trim(adjustl(VERSION)), '(compiled', trim(adjustl(cdate)), ')'
-    !
-    ! -- set ctyp
-    if (IDEVELOPMODE == 1) then
-      ctyp = 'Release Candidate'
-      ltyp = .TRUE.
-    else
-      ctyp = 'Release'
-      ltyp = .FALSE.
-    end if
     !
     ! -- check for silent option
     do iarg = 1, icountcmd
@@ -153,7 +143,7 @@ contains
       case ('-V', '--VERSION')
         lstop = .TRUE.
         write (line, '(2a,2(1x,a))') &
-          trim(adjustl(cexe)), ':', trim(adjustl(VERSION)), ctyp
+          trim(adjustl(cexe)), ':', trim(adjustl(VERSION))
         call write_message(line, skipbefore=1, skipafter=1)
       case ('-DEV', '--DEVELOP')
         lstop = .TRUE.

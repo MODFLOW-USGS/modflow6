@@ -5,33 +5,55 @@ on:
       - master
       - develop
       - ci-diagnose*
+    paths-ignore:
+      - '.github/workflows/release.yml'
   pull_request:
     branches:
       - master
       - develop
+    paths-ignore:
+      - '.github/workflows/release.yml'
 jobs:
   rtd_build:
-    runs-on: ubuntu-latest
+    name: Build ReadTheDocs
+    runs-on: ubuntu-22.04
     defaults:
       run:
         shell: bash -l {0}
     env:
+      GCC_V: 12
       working-directory: .build_rtd_docs
       distribution-directory: distribution
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout modflow6
+        uses: actions/checkout@v3
+        with:
+          path: modflow6
+
+      - name: Checkout modflow6-examples
+        uses: actions/checkout@v3
+        with:
+          repository: MODFLOW-USGS/modflow6-examples
+          path: modflow6-examples
+
+      - name: Checkout usgslatex
+        uses: actions/checkout@v3
+        with:
+          repository: MODFLOW-USGS/usgslatex
+          path: usgslatex
 
       - name: Install Conda environment from environment.yml
         uses: mamba-org/provision-with-micromamba@main
         with:
-            cache-downloads: true
-            cache-env: true
+          environment-file: modflow6/environment.yml
+          cache-downloads: true
+          cache-env: true
 
       - name: Install additional packages for Sphinx using pip
+        working-directory: modflow6/.build_rtd_docs
         run: |
           pip install -r requirements.rtd.txt
-        working-directory: ${{env.working-directory}}
 
       - name: Print python package versions
         run: |
@@ -42,70 +64,93 @@ jobs:
           sudo apt-get update
           sudo apt install texlive-latex-extra texlive-science texlive-font-utils
 
-      - name: Clone USGS LaTeX repo
-        run: |
-          git clone https://github.com/MODFLOW-USGS/usgslatex.git usgslatex
-
       - name: Install USGS LaTeX style files and Univers font
-        working-directory: ./usgslatex/usgsLaTeX
+        working-directory: usgslatex/usgsLaTeX
         run: |
           sudo ./install.sh --all-users
 
       - name: Test building files from dfn's for LaTeX
-        working-directory: autotest
+        working-directory: modflow6/autotest
         run: |
           pytest -v build_mfio_tex.py
 
-      - name: Install gfortran
-        uses: modflowpy/install-gfortran-action@v1
+      - name: Setup GNU Fortran ${{ env.GCC_V }}
+        uses: awvwgk/setup-fortran@main
+        with:
+          compiler: gcc
+          version: ${{ env.GCC_V }}
 
-      - name: Run-time comparison
+      - name: Cache modflow6 examples
+        id: cache-examples
+        uses: actions/cache@v3
+        with:
+          path: modflow6-examples/examples
+          key: modflow6-examples-${{ hashFiles('modflow6-examples/scripts/**') }}
+
+      - name: Install extra Python packages
+        if: steps.cache-examples.outputs.cache-hit != 'true'
+        working-directory: modflow6-examples/etc
         run: |
-          python evaluate_run_times.py
-        working-directory: ${{env.distribution-directory}}
+          pip install -r requirements.pip.txt
+          pip install -r requirements.usgs.txt
 
-      - name: run sphinx
+      - name: Build example models
+        if: steps.cache-examples.outputs.cache-hit != 'true'
+        working-directory: modflow6-examples/etc
+        run: |
+          python ci_build_files.py
+          ls -lh ../examples/
+
+      - name: Run benchmarks
+        working-directory: modflow6/distribution
+        run: python benchmark.py
+
+      - name: Run sphinx
+        working-directory: modflow6/.build_rtd_docs
         run: |
           make html
-        working-directory: ${{env.working-directory}}
 
-      - name: Output run-time file if not triggering rtd build
-        if: github.repository_owner == 'MODFLOW-USGS' && github.event_name != 'push'
+      - name: Show results
+        working-directory: modflow6/distribution
         run: |
           cat run-time-comparison.md
-        working-directory: ${{env.distribution-directory}}
 
-      # Create an artifact of the processed files.
-      - uses: actions/upload-artifact@v2.2.3
+      - name: Upload comparison
+        uses: actions/upload-artifact@v3
+        with:
+          name: run-time-comparison
+          path: modflow6/distribution/run-time-comparison.md
+
+      - name: Upload results
+        uses: actions/upload-artifact@v3
         with:
           name: rtd-files-for-${{ github.sha }}
           path: |
-            ${{env.working-directory}}/index.rst
-            ${{env.working-directory}}/mf6io.rst
-            ${{env.working-directory}}/_mf6run/
-            ${{env.working-directory}}/_mf6io/
-            ${{env.working-directory}}/_static/
+            modflow6/.build_rtd_docs/
+            modflow6/.build_rtd_docs/index.rst
+            modflow6/.build_rtd_docs/mf6io.rst
+            modflow6/.build_rtd_docs/_mf6run/
+            modflow6/.build_rtd_docs/_mf6io/
+            modflow6/.build_rtd_docs/_static/
 
-  # trigger rtd if "rtd_build" job was successful
   rtd_trigger:
     name: rtd-trigger
     needs: rtd_build
-    runs-on: ubuntu-latest
-
+    runs-on: ubuntu-22.04
     if: github.repository_owner == 'MODFLOW-USGS' && github.event_name == 'push'
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v2.3.4
+        uses: actions/checkout@v3
 
       - name: Trigger RTDs build on push to repo branches
-        uses: dfm/rtds-action@v1.0.3
+        uses: dfm/rtds-action@v1
         with:
           webhook_url: ${{ secrets.MF6_RTDS_WEBHOOK_URL }}
           webhook_token: ${{ secrets.MF6_RTDS_WEBHOOK_TOKEN }}
           commit_ref: ${{ github.ref }}
 
   doxygen_build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       working-directory: .build_rtd_docs
       distribution-directory: distribution
@@ -116,7 +161,7 @@ jobs:
         shell: bash -l {0}
 
     steps:
-      - uses: actions/checkout@v2.3.4
+      - uses: actions/checkout@v3
 
       - name: Print branch name
         run: |
@@ -139,7 +184,7 @@ jobs:
 
       - name: update MODFLOW 6 version
         run: |
-          python make_release.py
+          python update_version.py
         working-directory: ${{env.distribution-directory}}
 
       - name: update MODFLOW 6 version in Doxyfile
