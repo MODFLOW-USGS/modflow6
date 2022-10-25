@@ -34,6 +34,7 @@ modflow_sources = files(
     'Model' / 'GroundWaterFlow' / 'gwf3.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3api8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3buy8.f90',
+    'Model' / 'GroundWaterFlow' / 'gwf3vsc8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3chd8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3csub8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3dis8.f90',
@@ -90,6 +91,7 @@ modflow_sources = files(
     'Model' / 'ModelUtilities' / 'GwfMvrPeriodData.f90',
     'Model' / 'ModelUtilities' / 'GwfNpfOptions.f90',
     'Model' / 'ModelUtilities' / 'GwfStorageUtils.f90',
+    'Model' / 'ModelUtilities' / 'GwfVscInputData.f90,'
     'Model' / 'ModelUtilities' / 'GwtAdvOptions.f90',
     'Model' / 'ModelUtilities' / 'GwtDspOptions.f90',
     'Model' / 'ModelUtilities' / 'GwtSpc.f90',
