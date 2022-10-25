@@ -35,12 +35,11 @@ module GwfVscModule
     integer(I4B), dimension(:), pointer :: ivisc => null() !< viscosity formulation flag for each species (1:Linear, 2:Nonlinear)
     real(DP), pointer :: viscref => null() !< reference fluid viscosity
     real(DP), dimension(:), pointer, contiguous :: visc => null() !< viscosity
-    real(DP), dimension(:), pointer, contiguous :: concvsc => null() !< concentration (or temperature) array if specified in vsc package    ! kluge note: is this ever really used?
     real(DP), dimension(:), pointer, contiguous :: elev => null() !< cell center elevation (optional; if not specified, then use (top+bot)/2)
     integer(I4B), dimension(:), pointer :: ibound => null() !< store pointer to ibound
 
     integer(I4B), pointer :: nviscspecies => null() !< number of concentration species used in viscosity equation
-    real(DP), dimension(:), pointer, contiguous :: dviscdc => null() !< change in viscosity with change in concentration   ! kluge note: parameters will depend on formula; linear for now
+    real(DP), dimension(:), pointer, contiguous :: dviscdc => null() !< linear change in viscosity with change in concentration 
     real(DP), dimension(:), pointer, contiguous :: cviscref => null() !< reference concentration used in viscosity equation
     real(DP), dimension(:), pointer, contiguous :: ctemp => null() !< temporary array of size (nviscspec) to pass to calc_visc_x
     character(len=LENMODELNAME), dimension(:), allocatable :: cmodelname !< names of gwt (or gwe) models used in viscosity equation
@@ -123,11 +122,13 @@ contains
 
     do i = 1, nviscspec
       if (ivisc(i) == 1) then
-        visc = visc + dviscdc(i) * (conc(i) - cviscref(i)) ! kluge note: linear for now
+        visc = visc + dviscdc(i) * (conc(i) - cviscref(i)) 
       else
         expon = -1 * a3 * ((conc(i) - cviscref(i)) / &
                            ((conc(i) + a4) * (cviscref(i) + a4)))
         mu_t = viscref * a2**expon
+        ! Order matters!! (This assumes we apply the temperature correction after
+        ! accounting for solute concentrations)
         ! If a nonlinear correction is applied, then b/c it takes into account
         ! viscref, need to subtract it in this case
         ! At most, there will only ever be 1 nonlinear correction
@@ -135,16 +136,6 @@ contains
       end if
       ! end if
     end do
-
-    ! NOTES (from in-person meeting with Alden)
-    ! Order matters!! (This assumes we apply the temperature correction after
-    ! accounting for solute concentrations)
-    ! REMEMBER: idxtmpr
-    ! For the case i == idxtmpr
-    ! special multiplicative eqn here that leverages idxtmpr
-    ! - check to make sure that idxtmpr is not zero b/c that means there
-    !   is no temperature (remember to initialize idxtmpr to 0)
-
     !
     ! -- return
     return
@@ -201,7 +192,7 @@ contains
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtvsc = &
-      "(1x,/1x,'VSC -- VISCOSITY PACKAGE, VERSION 1, 9/30/2023', &
+      "(1x,/1x,'VSC -- VISCOSITY PACKAGE, VERSION 1, 10/30/2022', &
       &' INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
     !
@@ -944,7 +935,6 @@ contains
     if (this%inunit > 0) then
       call mem_deallocate(this%visc)
       call mem_deallocate(this%ivisc)
-      call mem_deallocate(this%concvsc)
       call mem_deallocate(this%dviscdc)
       call mem_deallocate(this%cviscref)
       call mem_deallocate(this%ctemp)
@@ -1194,18 +1184,9 @@ contains
         end if
       end do
       !
-      ! -- Call function corresponding to (1) temperature or (2) concentration
-      !if (i == this%idxtmpr) then
-      ! Temperature
-      !this%visc(n) = this%visc(n) + calc_visc_t(this%viscref, this%dviscdc, &
-      !                                          this%cviscref, this%ctemp, &
-      !                                          this%
-      !else
-      ! Concentration
       this%visc(n) = calc_visc(this%ivisc, this%viscref, this%dviscdc, &
                                this%cviscref, this%ctemp, this%a2, &
                                this%a3, this%a4)
-      !end if
 
     end do
     !
@@ -1277,7 +1258,6 @@ contains
     !
     ! -- Allocate
     call mem_allocate(this%visc, nodes, 'VISC', this%memoryPath)
-    call mem_allocate(this%concvsc, 0, 'CONCVSC', this%memoryPath)
     call mem_allocate(this%ivisc, this%nviscspecies, 'IVISC', this%memoryPath)
     call mem_allocate(this%dviscdc, this%nviscspecies, 'DRHODC', &
                       this%memoryPath)
@@ -1329,13 +1309,13 @@ contains
     logical :: isfound, endOfBlock
     ! -- formats
     character(len=*), parameter :: fmtfileout = &
-      "(x, 'VSC', 1x, a, 1x, 'WILL BE SAVED TO FILE: ', &
+      "(1x, 'VSC', 1x, a, 1x, 'WILL BE SAVED TO FILE: ', &
       &a, /4x, 'OPENED ON UNIT: ', I7)"
     character(len=*), parameter :: fmtlinear = &
-      "(/,x,'VISCOSITY WILL VARY LINEARLY WITH TEMPERATURE &
+      "(/,1x,'VISCOSITY WILL VARY LINEARLY WITH TEMPERATURE &
       &CHANGE ')"
     character(len=*), parameter :: fmtnonlinear = &
-      "(/,x,'VISCOSITY WILL VARY NON-LINEARLY WITH TEMPERATURE &
+      "(/,1x,'VISCOSITY WILL VARY NON-LINEARLY WITH TEMPERATURE &
       &CHANGE ')"
 ! ------------------------------------------------------------------------------
     !
@@ -1384,9 +1364,9 @@ contains
             this%a4 = this%parser%GetDouble()
             !
             ! -- Write viscosity function selection to lst file
-            write (this%iout, '(/,x,a,a,a)') 'CONSTANTS USED IN ', &
+            write (this%iout, '(/,1x,a,a,a)') 'CONSTANTS USED IN ', &
               trim(keyword2), ' VISCOSITY FORMULATION ARE '
-            write (this%iout, '(x,a)') &
+            write (this%iout, '(1x,a)') &
               '              A2,              A3,              A4'
             line = ' '
             write (c16, '(g15.6)') this%a2
@@ -1436,7 +1416,7 @@ contains
       end if
     end if
     !
-    write (this%iout, '(/,x,a)') 'END OF VSC OPTIONS'
+    write (this%iout, '(/,1x,a)') 'END OF VSC OPTIONS'
     !
     ! -- Return
     return
