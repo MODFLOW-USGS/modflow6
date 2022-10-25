@@ -94,7 +94,7 @@ contains
     ! define NPF package
     call npfOptions%construct()
     call this%setNpfOptions(npfOptions)
-    call this%npf%npf_df(this%dis, this%xt3d, 0, npfOptions)
+    call this%npf%npf_df(this%dis, this%xt3d, 0, 0, npfOptions)
     call npfOptions%destroy()
 
     ! define BUY package
@@ -119,7 +119,7 @@ contains
   subroutine gwfifm_ar(this)
     class(GwfInterfaceModelType) :: this !< the GWF interface model
 
-    call this%npf%npf_ar(this%ic, this%ibound, this%x)
+    call this%npf%npf_ar(this%ic, this%vsc, this%ibound, this%x)
     if (this%inbuy > 0) call this%buy%buy_ar(this%npf, this%ibound)
 
   end subroutine gwfifm_ar

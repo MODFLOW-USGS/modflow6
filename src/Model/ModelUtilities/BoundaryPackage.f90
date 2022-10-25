@@ -80,8 +80,12 @@ module BndModule
     real(DP), dimension(:), pointer, contiguous :: simtomvr => null() !< simulated to mover values
     !
     ! -- water mover flag and object
-    integer(I4B), pointer :: imover => null() !< flag indicating of the mover is active in the package
+    integer(I4B), pointer :: imover => null() !< flag indicating if the mover is active in the package
     type(PackageMoverType), pointer :: pakmvrobj => null() !< mover object for package
+    !
+    ! -- viscosity flag and safe-copy of conductance array
+    integer(I4B), pointer :: ivsc => null() !< flag indicating if viscosity is active in the model
+    real(DP), dimension(:), pointer, contiguous :: condinput => null() !< stores user-specified conductance values
     !
     ! -- timeseries
     type(TimeSeriesManagerType), pointer :: TsManager => null() !< time series manager
@@ -151,6 +155,9 @@ module BndModule
     !
     ! -- procedure to support time series
     procedure, public :: bnd_rp_ts
+    !
+    ! -- procedure to backup user-specified conductance
+    procedure, private :: bnd_store_user_cond
     !
   end type BndType
 
@@ -361,6 +368,12 @@ contains
                               this%boundname, this%listlabel, &
                               this%packName, this%tsManager, this%iscloc)
       this%nbound = nlist
+      !
+      ! -- save user-specified conductance if vsc package is active
+      if (this%ivsc == 1) then
+        call this%bnd_store_user_cond(nlist, this%nodelist, this%bound, &
+                                      this%condinput)
+      end if
       !
       ! Define the tsLink%Text value(s) appropriately.
       ! E.g. for WEL package, entry 1, assign tsLink%Text = 'Q'
@@ -902,6 +915,7 @@ contains
     call mem_deallocate(this%nodelist, 'NODELIST', this%memoryPath)
     call mem_deallocate(this%noupdateauxvar, 'NOUPDATEAUXVAR', this%memoryPath)
     call mem_deallocate(this%bound, 'BOUND', this%memoryPath)
+    call mem_deallocate(this%condinput, 'CONDINPUT', this%memoryPath)
     call mem_deallocate(this%hcof, 'HCOF', this%memoryPath)
     call mem_deallocate(this%rhs, 'RHS', this%memoryPath)
     call mem_deallocate(this%simvals, 'SIMVALS', this%memoryPath)
@@ -958,6 +972,7 @@ contains
     call mem_deallocate(this%imover)
     call mem_deallocate(this%npakeq)
     call mem_deallocate(this%ioffset)
+    call mem_deallocate(this%ivsc)
     !
     ! -- deallocate methods on objects
     call this%obs%obs_da()
@@ -1016,6 +1031,9 @@ contains
     ! -- allocate the object and assign values to object variables
     call mem_allocate(this%imover, 'IMOVER', this%memoryPath)
     !
+    ! -- allocate flag for determining if vsc active
+    call mem_allocate(this%ivsc, 'IVSC', this%memoryPath)
+    !
     ! -- allocate scalars for packages that add rows to the matrix (e.g. MAW)
     call mem_allocate(this%npakeq, 'NPAKEQ', this%memoryPath)
     call mem_allocate(this%ioffset, 'IOFFSET', this%memoryPath)
@@ -1043,6 +1061,7 @@ contains
     this%imover = 0
     this%npakeq = 0
     this%ioffset = 0
+    this%ivsc = 0
     !
     ! -- Set pointer to model inewton variable
     call mem_setptr(imodelnewton, 'INEWTON', create_mem_path(this%name_model))
@@ -1091,6 +1110,17 @@ contains
     ! -- Allocate the bound array
     call mem_allocate(this%bound, this%ncolbnd, this%maxbound, 'BOUND', &
                       this%memoryPath)
+    !
+    !-- Allocate array for storing user-specified conductances if vsc active
+    if (this%ivsc == 1) then
+      call mem_allocate(this%condinput, this%maxbound, 'CONDINPUT', &
+                        this%memoryPath)
+      do i = 1, this%maxbound
+        this%condinput(i) = DZERO
+      end do
+    else
+      call mem_allocate(this%condinput, 0, 'CONDINPUT', this%memoryPath)
+    end if
     !
     ! -- Allocate hcof and rhs
     call mem_allocate(this%hcof, this%maxbound, 'HCOF', this%memoryPath)
@@ -1471,6 +1501,47 @@ contains
     ! -- return
     return
   end subroutine bnd_read_dimensions
+
+  !> @ brief Store user-specified conductances when vsc is active
+    !!
+    !!  VSC will update boundary package conductance values.  Because
+    !!  viscosity can change every stress period, but user-specified
+    !!  conductances may not, the base user-input should be stored in
+    !!  backup array so that viscosity-updated conductances may be
+    !!  recalculated every stress period/time step
+    !!
+  !<
+  subroutine bnd_store_user_cond(this, nlist, nodelist, rlist, condinput)
+    ! -- modules
+    use SimModule, only: store_error
+    ! -- dummy variables
+    class(BndType), intent(inout) :: this !< BndType object
+    integer(I4B), intent(in) :: nlist
+    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: nodelist
+    real(DP), dimension(:, :), pointer, contiguous, intent(in) :: rlist
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: condinput
+    ! -- local variables
+    integer(I4B) :: l
+    integer(I4B) :: nodeu, noder
+    character(len=LINELENGTH) :: nodestr
+    !
+    ! -- store backup copy of conductance values
+    do l = 1, nlist
+      nodeu = nodelist(l)
+      noder = this%dis%get_nodenumber(nodeu, 0)
+      if (noder <= 0) then
+        call this%dis%nodeu_to_string(nodeu, nodestr)
+        write (errmsg, *) &
+          ' Cell is outside active grid domain: '// &
+          trim(adjustl(nodestr))
+        call store_error(errmsg)
+      end if
+      condinput(l) = rlist(2, l)
+    end do
+    !
+    ! -- return
+    return
+  end subroutine
 
   !> @ brief Read initial parameters for package
     !!

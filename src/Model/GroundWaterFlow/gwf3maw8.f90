@@ -158,6 +158,9 @@ module MawModule
     integer(I4B), pointer :: idense
     real(DP), dimension(:, :), pointer, contiguous :: denseterms => null()
     !
+    ! -- viscosity variables
+    real(DP), dimension(:, :), pointer, contiguous :: viscratios => null() !< viscosity ratios (1: maw vsc ratio; 2: gwf vsc ratio)
+    !
     ! -- type bound procedures
   contains
     procedure :: maw_allocate_scalars
@@ -213,6 +216,8 @@ module MawModule
     ! -- MAW reduced flow outputs
     procedure, private :: maw_redflow_csv_init
     procedure, private :: maw_redflow_csv_write
+    ! -- viscosity
+    procedure :: maw_activate_viscosity
   end type MawType
 
 contains
@@ -318,6 +323,7 @@ contains
     this%kappa = DEM4
     this%cbcauxitems = 1
     this%idense = 0
+    this%ivsc = 0
     !
     ! -- return
     return
@@ -520,6 +526,9 @@ contains
     !
     ! -- allocate denseterms to size 0
     call mem_allocate(this%denseterms, 3, 0, 'DENSETERMS', this%memoryPath)
+    !
+    ! -- allocate viscratios to size 0
+    call mem_allocate(this%viscratios, 2, 0, 'VISCRATIOS', this%memoryPath)
     !
     ! -- return
     return
@@ -3003,6 +3012,7 @@ contains
     call mem_deallocate(this%qsto)
     call mem_deallocate(this%qconst)
     call mem_deallocate(this%denseterms)
+    call mem_deallocate(this%viscratios)
     call mem_deallocate(this%idxlocnode)
     call mem_deallocate(this%idxdglo)
     call mem_deallocate(this%idxoffdglo)
@@ -3033,6 +3043,7 @@ contains
     call mem_deallocate(this%kappa)
     call mem_deallocate(this%cbcauxitems)
     call mem_deallocate(this%idense)
+    call mem_deallocate(this%viscratios)
     !
     ! -- pointers to gwf variables
     nullify (this%gwfiss)
@@ -3858,10 +3869,12 @@ contains
     real(DP) :: hbar
     real(DP) :: drterm
     real(DP) :: dhbarterm
+    real(DP) :: vscratio
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize terms
     cterm = DZERO
+    vscratio = DONE
     icflow = 0
     if (present(term2)) then
       inewton = 1
@@ -3877,9 +3890,19 @@ contains
     tmaw = this%topscrn(jpos)
     bmaw = this%botscrn(jpos)
     !
+    ! -- if vsc active, select appropriate viscosity ratio
+    if (this%ivsc == 1) then
+      ! flow out of well (flow is negative)
+      if (flow < 0) then
+        vscratio = this%viscratios(1, igwfnode)
+      else if (flow > 0) then
+        vscratio = this%viscratios(2, igwfnode)
+      end if
+    end if
+    !
     ! -- calculate saturation
     call this%maw_calculate_saturation(n, j, igwfnode, sat)
-    cmaw = this%satcond(jpos) * sat
+    cmaw = this%satcond(jpos) * vscratio * sat
     !
     ! -- set upstream head, term, and term2 if returning newton terms
     if (inewton == 1) then
@@ -3928,14 +3951,14 @@ contains
         ! -- maw is upstream
         if (hmaw > hgwf) then
           hbar = sQuadratic0sp(hgwf, en, this%satomega)
-          term = drterm * this%satcond(jpos) * (hbar - hmaw)
+          term = drterm * this%satcond(jpos) * vscratio * (hbar - hmaw)
           dhbarterm = sQuadratic0spDerivative(hgwf, en, this%satomega)
           term2 = cmaw * (dhbarterm - DONE)
           !
           ! -- gwf is upstream
         else
           hbar = sQuadratic0sp(hmaw, en, this%satomega)
-          term = -drterm * this%satcond(jpos) * (hgwf - hbar)
+          term = -drterm * this%satcond(jpos) * vscratio * (hgwf - hbar)
           dhbarterm = sQuadratic0spDerivative(hmaw, en, this%satomega)
           term2 = cmaw * (DONE - dhbarterm)
         end if
@@ -3944,7 +3967,7 @@ contains
       !
       ! -- flow is not corrected, so calculate term for newton formulation
       if (inewton /= 0) then
-        term = drterm * this%satcond(jpos) * (hgwf - hmaw)
+        term = drterm * this%satcond(jpos) * vscratio * (hgwf - hmaw)
       end if
     end if
     !
@@ -4165,12 +4188,24 @@ contains
     real(DP) :: bmaw
     real(DP) :: htmp
     real(DP) :: hv
+    real(DP) :: vscratio
     ! -- format
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize qnet and htmp
     qnet = DZERO
+    vscratio = DONE
     htmp = this%shutofflevel(n)
+    !
+    ! -- if vsc active, select appropriate viscosity ratio
+    if (this%ivsc == 1) then
+      ! flow out of well (flow is negative)
+      if (qnet < 0) then
+        vscratio = this%viscratios(1, igwfnode)
+      else if (qnet > 0) then
+        vscratio = this%viscratios(2, igwfnode)
+      end if
+    end if
     !
     ! -- calculate discharge to flowing wells
     if (this%iflowingwells > 0) then
@@ -4178,7 +4213,7 @@ contains
         bt = this%fwelev(n)
         tp = bt + this%fwrlen(n)
         scale = sQSaturation(tp, bt, htmp)
-        cfw = scale * this%fwcond(n)
+        cfw = scale * this%fwcond(n) * this%viscratios(2, n)
         this%ifwdischarge(n) = 0
         if (cfw > DZERO) then
           this%ifwdischarge(n) = 1
@@ -4203,7 +4238,7 @@ contains
       jpos = this%get_jpos(n, j)
       igwfnode = this%get_gwfnode(n, j)
       call this%maw_calculate_saturation(n, j, igwfnode, sat)
-      cmaw = this%satcond(jpos) * sat
+      cmaw = this%satcond(jpos) * vscratio * sat
       hgwf = this%xnew(igwfnode)
       bmaw = this%botscrn(jpos)
       hv = htmp
@@ -4842,6 +4877,36 @@ contains
     ! -- return
     return
   end subroutine maw_activate_density
+
+  !> @brief Activate viscosity terms
+    !!
+    !! Method to activate addition of viscosity terms for a MAW package reach.
+    !!
+  !<
+  subroutine maw_activate_viscosity(this)
+    ! -- modules
+    use MemoryManagerModule, only: mem_reallocate
+    ! -- dummy variables
+    class(MawType), intent(inout) :: this !< MawType object
+    ! -- local variables
+    integer(I4B) :: i
+    integer(I4B) :: j
+    !
+    ! -- Set ivsc and reallocate viscratios to be of size MAXBOUND
+    this%ivsc = 1
+    call mem_reallocate(this%viscratios, 2, this%MAXBOUND, 'VISCRATIOS', &
+                        this%memoryPath)
+    do i = 1, this%maxbound
+      do j = 1, 2
+        this%viscratios(j, i) = DZERO
+      end do
+    end do
+    write (this%iout, '(/1x,a)') 'VISCOSITY HAS BEEN ACTIVATED FOR MAW &
+      &PACKAGE: '//trim(adjustl(this%packName))
+    !
+    ! -- return
+    return
+  end subroutine maw_activate_viscosity
 
   subroutine maw_calculate_density_exchange(this, iconn, hmaw, hgwf, cond, &
                                             bmaw, flow, hcofterm, rhsterm)

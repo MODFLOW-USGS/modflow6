@@ -1,12 +1,14 @@
 module DrnModule
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: DZERO, DONE, DTWO, &
-                             LENFTYPE, LENPACKAGENAME, LENAUXNAME, LINELENGTH
-  use MemoryHelperModule, only: create_mem_path
+                             LENFTYPE, LENPACKAGENAME, LENAUXNAME, LINELENGTH, &
+                             LENMEMPATH, LENVARNAME, LENMEMSEPARATOR
+  use MemoryHelperModule, only: create_mem_path, split_mem_address
   use SmoothingModule, only: sQSaturation, sQSaturationDerivative, &
                              sQuadraticSaturation
   use BndModule, only: BndType
   use ObsModule, only: DefaultObsIdProcessor
+  use TdisModule, only: delt, totimc
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
   !
@@ -18,6 +20,7 @@ module DrnModule
   !
   character(len=LENFTYPE) :: ftype = 'DRN'
   character(len=LENPACKAGENAME) :: text = '             DRN'
+  character(len=LENMEMSEPARATOR), parameter :: memPathSeparator = '/'
   !
   type, extends(BndType) :: DrnType
 
@@ -27,6 +30,7 @@ module DrnModule
   contains
     procedure :: allocate_scalars => drn_allocate_scalars
     procedure :: bnd_options => drn_options
+    procedure :: bnd_ad => drn_ad
     procedure :: bnd_ck => drn_ck
     procedure :: bnd_cf => drn_cf
     procedure :: bnd_fc => drn_fc
@@ -63,6 +67,10 @@ contains
     character(len=*), intent(in) :: pakname
     ! -- local
     type(DrnType), pointer :: drnobj
+    character(len=LENMEMPATH) :: vscpath !< if vsc exist, this is path name
+    character(len=LENMEMPATH) :: locmempath !< the memory path for the model
+    character(len=LENVARNAME) :: locvarname !< the package name to check on
+    logical(LGP) :: vscexists !< flag will be true if vsc is active
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
@@ -88,9 +96,46 @@ contains
     packobj%iscloc = 2 !sfac applies to conductance
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
+    ! -- check if vsc package exists and set flag if so
+    vscpath = trim(namemodel)//memPathSeparator//'VSC'
+    call split_mem_address(vscpath, locmempath, locvarname, vscexists)
+    if (vscexists) then
+      packobj%ivsc = 1
+    end if
+    !
     ! -- return
     return
   end subroutine drn_create
+
+  !> @ brief Advance the drain boundary package
+  !!
+  !!  Advance data in the drain boundary package. Overides the bnd_ad()
+  !!  routine in the bndType parent class. The method advances time
+  !!  series and observation data as well as updates the user-specified
+  !!  conductance based on changes in viscosity when water enters from
+  !!  the boundary
+  !<
+  subroutine drn_ad(this)
+    ! -- dummy variables
+    class(DrnType) :: this !< DrnType object
+    ! -- local variables
+    real(DP) :: begintime, endtime
+    !
+    ! -- Initialize time variables
+    begintime = totimc
+    endtime = begintime + delt
+    !
+    ! -- Advance the time series managers
+    call this%TsManager%ad()
+    call this%TasManager%ad()
+    !
+    ! -- For each observation, push simulated value and corresponding
+    !    simulation time from "current" to "preceding" and reset
+    !    "current" value.
+    call this%obs%obs_ad()
+    !
+    return
+  end subroutine drn_ad
 
   subroutine drn_da(this)
 ! ******************************************************************************
