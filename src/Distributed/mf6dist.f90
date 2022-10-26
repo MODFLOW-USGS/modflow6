@@ -79,7 +79,7 @@ contains
       select type (sol)
       class is (NumericalSolutionType)
         call this%router%add_solution(sol)
-        sol%synchronize => dd_solution_sync   
+        sol%synchronize => dd_solution_sync
         sol%synchronize_ctx => this
       end select
     end do
@@ -110,7 +110,7 @@ contains
       
       ! for all remote models we need to remap into the reduced memory space
       call this%reduce_map(conn%interfaceMap, &
-                           this%router%interface_maps(conn%owner%idsoln))
+                           this%router%interface_maps(conn%owner%idsoln))            
       
       ! add the variables with the updated map
       call this%mapper%add_dist_vars(conn%owner%idsoln, &
@@ -146,6 +146,11 @@ contains
         reduced_idx = findloc(merged_map%node_map(m_idx)%src_idx, orig_idx, dim=1)
         map%node_map(im)%src_idx(i) = reduced_idx
       end do
+      do i = 1, size(map%connection_map(im)%src_idx)
+        orig_idx = map%connection_map(im)%src_idx(i)
+        reduced_idx = findloc(merged_map%connection_map(m_idx)%src_idx, orig_idx, dim=1)
+        map%connection_map(im)%src_idx(i) = reduced_idx
+      end do
     end do
 
   end subroutine reduce_map
@@ -165,6 +170,7 @@ contains
   subroutine dd_after_ar(this)
     class(Mf6DistributedDataType) :: this
 
+    call this%router%route(STG_AFTER_AR)
     call this%mapper%scatter(0, STG_AFTER_AR)
 
   end subroutine dd_after_ar
@@ -178,6 +184,7 @@ contains
 
     select type (ctx)
     class is (Mf6DistributedDataType)
+      call ctx%router%route(num_sol%id, stage)
       call ctx%mapper%scatter(num_sol%id, stage)
     end select
 

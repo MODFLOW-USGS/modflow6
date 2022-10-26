@@ -31,9 +31,12 @@ module RouterModule
     procedure :: init_connectivity
     procedure :: create_interface_map
     procedure :: init_interface
-    procedure :: route
+    generic :: route => route_all, route_by_id
     procedure :: destroy
 
+    procedure, private :: route_all
+    procedure, private :: route_by_id
+    procedure, private :: route_solution
     procedure, private :: route_item_map
     procedure, private :: route_item_nomap
   end type RouterType
@@ -188,37 +191,60 @@ module RouterModule
 
   end subroutine init_interface
 
-  ! TODO_MJR: rename
-  subroutine route(this, stage)
+  subroutine route_by_id(this, solution_id, stage)
+    class(RouterType) :: this
+    integer(I4B) :: solution_id
+    integer(I4B) :: stage
+    ! local
+    integer(I4B) :: isol
+
+    isol = findloc(this%solution_ids, solution_id, dim=1)
+    call this%route_solution(isol, stage)
+
+  end subroutine route_by_id
+
+  
+  subroutine route_all(this, stage)
     class(RouterType) :: this
     integer(I4B) :: stage
     ! local
-    integer(I4B) :: isol, imod, imem
+    integer(I4B) :: isol
+
+    do isol = 1, this%nr_solutions
+      call this%route_solution(isol, stage)
+    end do
+
+  end subroutine route_all
+
+  subroutine route_solution(this, isol, stage)
+    class(RouterType) :: this
+    integer(I4B) :: isol
+    integer(I4B) :: stage
+    ! local
+    integer(I4B) :: imod, imem
     class(DistributedModelType), pointer :: dist_model
     class(RemoteMemoryType), pointer :: rmt_mem
     integer(I4B), dimension(:), pointer :: src_idx
-
-    do isol = 1, this%nr_solutions
-      do imod = 1, this%model_ids(isol)%size
-        dist_model => get_dist_model(this%model_ids(isol)%at(imod))
-        do imem = 1, dist_model%remote_mem_items%Count()
-          rmt_mem => dist_model%get_rmt_mem(imem)
-          if (findloc(rmt_mem%stages, stage, dim=1) > 0) then
-            if (rmt_mem%map_type == MAP_TYPE_NA) then
-              call this%route_item_nomap(rmt_mem)
-            else
-              src_idx => dist_model%get_src_map(rmt_mem%map_type)
-              call this%route_item_map(rmt_mem, src_idx)
-            end if
-
+    
+    do imod = 1, this%model_ids(isol)%size
+      dist_model => get_dist_model(this%model_ids(isol)%at(imod))
+      do imem = 1, dist_model%remote_mem_items%Count()
+        rmt_mem => dist_model%get_rmt_mem(imem)
+        if (findloc(rmt_mem%stages, stage, dim=1) > 0) then
+          if (rmt_mem%map_type == MAP_TYPE_NA) then
+            call this%route_item_nomap(rmt_mem)
+          else
+            src_idx => dist_model%get_src_map(rmt_mem%map_type)
+            call this%route_item_map(rmt_mem, src_idx)
           end if
-        end do
+        end if
       end do
     end do
 
-  end subroutine route
+  end subroutine route_solution
 
   subroutine route_item_nomap(this, rmt_mem)
+    use SimModule, only: ustop
     class(RouterType) :: this
     class(RemoteMemoryType), pointer :: rmt_mem
     ! local
@@ -241,11 +267,15 @@ module RouterModule
       do i = 1, size(mt%adbl1d)
         mt%adbl1d(i) = rmt_mt%adbl1d(i)
       end do
+    else
+      write(*,*) 'Error: memory type ', trim(mt%memtype), ' not supported in router'
+      call ustop()
     end if
 
   end subroutine route_item_nomap
 
   subroutine route_item_map(this, rmt_mem, src_idx)
+    use SimModule, only: ustop
     class(RouterType) :: this
     class(RemoteMemoryType), pointer :: rmt_mem
     integer(I4B), dimension(:), pointer :: src_idx
@@ -253,7 +283,7 @@ module RouterModule
     type(MemoryType), pointer :: mt
     type(MemoryType), pointer :: rmt_mt
     logical(LGP) :: found
-    integer(I4B) :: i
+    integer(I4B) :: i, j
 
     mt => rmt_mem%local_mt
     call get_from_memorylist(rmt_mem%var_name, rmt_mem%mem_path, rmt_mt, found)
@@ -263,11 +293,17 @@ module RouterModule
       end do
     else if (associated(mt%adbl1d)) then
       do i = 1, size(mt%adbl1d)
-        if (src_idx(i) > size(rmt_mt%adbl1d)) then
-          write(*,*) 'oops'
-        end if
         mt%adbl1d(i) = rmt_mt%adbl1d(src_idx(i))
       end do
+    else if (associated(mt%adbl2d)) then
+      do i = 1, size(mt%adbl2d, dim=2)
+        do j = 1, size(mt%adbl2d, dim=1)
+          mt%adbl2d(j,i) = rmt_mt%adbl2d(j, src_idx(i))
+        end do
+      end do
+    else
+      write(*,*) 'Error: memory type ', trim(mt%memtype), ' not supported in router'
+      call ustop()
     end if
     
   end subroutine route_item_map

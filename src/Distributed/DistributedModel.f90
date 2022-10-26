@@ -52,10 +52,10 @@ module DistributedModelModule
     real(DP), private, dimension(:), pointer, contiguous :: x_old => null()
 
     ! GWF model data
-    integer(I4B), pointer :: npf_iangle1
-    integer(I4B), pointer :: npf_iangle2
-    integer(I4B), pointer :: npf_iangle3
-    integer(I4B), pointer :: npf_iwetdry    
+    integer(I4B), pointer :: npf_iangle1 => null()
+    integer(I4B), pointer :: npf_iangle2 => null()
+    integer(I4B), pointer :: npf_iangle3 => null()
+    integer(I4B), pointer :: npf_iwetdry => null()
     integer(I4B), dimension(:), pointer, contiguous :: npf_icelltype => null()
     real(DP), private, dimension(:), pointer, contiguous :: npf_k11 => null()
     real(DP), private, dimension(:), pointer, contiguous :: npf_k22 => null()
@@ -66,6 +66,23 @@ module DistributedModelModule
     real(DP), private, dimension(:), pointer, contiguous :: npf_wetdry => null()
 
     ! GWT model data
+    integer(I4B), pointer :: indsp => null()
+    integer(I4B), pointer :: inmst => null()    
+    integer(I4B), pointer :: dsp_idiffc => null()
+    integer(I4B), pointer :: dsp_idisp => null()
+    real(DP), private, dimension(:), pointer, contiguous :: dsp_diffc => null()
+    real(DP), private, dimension(:), pointer, contiguous :: dsp_alh => null()
+    real(DP), private, dimension(:), pointer, contiguous :: dsp_alv => null()
+    real(DP), private, dimension(:), pointer, contiguous :: dsp_ath1 => null()
+    real(DP), private, dimension(:), pointer, contiguous :: dsp_ath2 => null()
+    real(DP), private, dimension(:), pointer, contiguous :: dsp_atv => null()
+
+    real(DP), private, dimension(:), pointer, contiguous :: fmi_gwfhead => null()
+    real(DP), private, dimension(:), pointer, contiguous :: fmi_gwfsat => null()
+    real(DP), private, dimension(:,:), pointer, contiguous :: fmi_gwfspdis => null()
+    real(DP), private, dimension(:), pointer, contiguous :: fmi_gwfflowja => null()
+
+    real(DP), private, dimension(:), pointer, contiguous :: mst_porosity => null()
 
     ! this is strictly private, use access() instead
     class(NumericalModelType), private, pointer :: model !< implementation if local, null otherwise
@@ -113,10 +130,10 @@ contains
     this%id = model%id
     this%name = m_name
     this%model => model
-    this%is_local = .false.!associated(model)
+    this%is_local = associated(model)
     this%macronym = macronym
 
-    call this%load(this%moffset, 'MOFFSET', '', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
+    call this%load(this%moffset, 'MOFFSET', '', (/STG_BEFORE_AC/), MAP_TYPE_NA)
     call this%load(this%dis_nodes, 'NODES', 'DIS', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
     call this%load(this%dis_nja, 'NJA', 'DIS', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
     call this%load(this%dis_njas, 'NJAS', 'DIS', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
@@ -126,6 +143,13 @@ contains
       call this%load(this%npf_iangle2, 'IANGLE2', 'NPF', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
       call this%load(this%npf_iangle3, 'IANGLE3', 'NPF', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
       call this%load(this%npf_iwetdry, 'IWETDRY', 'NPF', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
+    end if
+
+    if (this%macronym == 'GWT') then
+      call this%load(this%dsp_idiffc, 'IDIFFC', 'DSP', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
+      call this%load(this%dsp_idisp, 'IDISP', 'DSP', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
+      call this%load(this%indsp, 'INDSP', '', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
+      call this%load(this%inmst, 'INMST', '', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
     end if
 
   end subroutine create
@@ -173,20 +197,24 @@ contains
     type(IndexMapType) :: connection_map
     ! local
     type(RemoteMemoryType), pointer :: rmt_mem
+    integer(I4B) :: nr_iface_nodes
 
     ! nothing to be done for local models (no routing)
     if (this%is_local) return
 
     this%src_map_node => node_map%src_idx
     this%src_map_conn => connection_map%src_idx
+    nr_iface_nodes = size(this%src_map_node)
+
+    call this%load(this%dis_area, nr_iface_nodes, 'AREA', 'DIS', (/STG_BEFORE_AR/), MAP_TYPE_NODE)
 
     ! reset local memory for reduced arrays
     if (.not. this%is_local) then
-      call mem_reallocate(this%dis_top, size(this%src_map_node), 'TOP', this%get_local_mem_path('DIS'))
+      call mem_reallocate(this%dis_top, nr_iface_nodes, 'TOP', this%get_local_mem_path('DIS'))
       rmt_mem => this%get_rmt_mem('TOP', 'DIS')
       rmt_mem%map_type = MAP_TYPE_NODE
       rmt_mem%stages = (/STG_BEFORE_AR/)
-      call mem_reallocate(this%dis_bot, size(this%src_map_node), 'BOT', this%get_local_mem_path('DIS'))
+      call mem_reallocate(this%dis_bot, nr_iface_nodes, 'BOT', this%get_local_mem_path('DIS'))
       rmt_mem => this%get_rmt_mem('BOT', 'DIS')
       rmt_mem%map_type = MAP_TYPE_NODE
       rmt_mem%stages = (/STG_BEFORE_AR/)
@@ -216,6 +244,8 @@ contains
     call this%load(this%npf_k33, nr_iface_nodes, 'K33', 'NPF', (/STG_BEFORE_AR/), MAP_TYPE_NODE)
     if (this%npf_iangle1 > 0) then
       call this%load(this%npf_angle1, nr_iface_nodes, 'ANGLE1', 'NPF', (/STG_BEFORE_AR/), MAP_TYPE_NODE)
+    else if (.not. this%is_local) then
+      call this%load(this%npf_angle1, 0, 'ANGLE1', 'NPF', (/STG_NEVER/), MAP_TYPE_NODE)
     end if
     if (this%npf_iangle2 > 0) then
       call this%load(this%npf_angle2, nr_iface_nodes, 'ANGLE2', 'NPF', (/STG_BEFORE_AR/), MAP_TYPE_NODE)
@@ -227,13 +257,38 @@ contains
       call this%load(this%npf_wetdry, nr_iface_nodes, 'WETDRY', 'NPF', (/STG_BEFORE_AR/), MAP_TYPE_NODE)
     end if
 
-    call this%load(this%dis_area, nr_iface_nodes, 'AREA', 'DIS', (/STG_BEFORE_AR/), MAP_TYPE_NODE)
-
   end subroutine init_gwf_rmt_mem
 
   subroutine init_gwt_rmt_mem(this)
     class(DistributedModelType), intent(inout) :: this
+    ! local
+    integer(I4B) :: nr_iface_nodes
+    integer(I4B) :: nr_iface_conns
 
+    nr_iface_nodes = size(this%src_map_node)
+    call this%load(this%x, nr_iface_nodes, 'X', '', (/STG_BEFORE_AR, STG_BEFORE_AD, STG_BEFORE_CF/), MAP_TYPE_NODE)
+    call this%load(this%ibound, nr_iface_nodes, 'IBOUND', '', (/STG_BEFORE_AR/), MAP_TYPE_NODE)
+
+    if (this%dsp_idiffc > 0) then
+      call this%load(this%dsp_diffc, nr_iface_nodes, 'DIFFC', 'DSP', (/STG_BEFORE_AR/), MAP_TYPE_NODE)
+    end if
+    if (this%dsp_idisp > 0) then
+      call this%load(this%dsp_alh, nr_iface_nodes, 'ALH', 'DSP', (/STG_BEFORE_AR/), MAP_TYPE_NODE)
+      call this%load(this%dsp_alv, nr_iface_nodes, 'ALV', 'DSP', (/STG_BEFORE_AR/), MAP_TYPE_NODE)
+      call this%load(this%dsp_ath1, nr_iface_nodes, 'ATH1', 'DSP', (/STG_BEFORE_AR/), MAP_TYPE_NODE)
+      call this%load(this%dsp_ath2, nr_iface_nodes, 'ATH2', 'DSP', (/STG_BEFORE_AR/), MAP_TYPE_NODE)
+      call this%load(this%dsp_atv, nr_iface_nodes, 'ATV', 'DSP', (/STG_BEFORE_AR/), MAP_TYPE_NODE)
+    end if
+
+    nr_iface_conns = size(this%src_map_conn)
+    call this%load(this%fmi_gwfhead, nr_iface_nodes, 'GWFHEAD', 'FMI', (/STG_BEFORE_AD/), MAP_TYPE_NODE)
+    call this%load(this%fmi_gwfsat, nr_iface_nodes, 'GWFSAT', 'FMI', (/STG_BEFORE_AD/), MAP_TYPE_NODE)
+    call this%load(this%fmi_gwfspdis, 3, nr_iface_nodes, 'GWFSPDIS', 'FMI', (/STG_BEFORE_AD/), MAP_TYPE_NODE)
+    call this%load(this%fmi_gwfflowja, nr_iface_conns, 'GWFFLOWJA', 'FMI', (/STG_BEFORE_AD/), MAP_TYPE_CONN)
+
+    if (this%indsp > 0 .and. this%inmst > 0) then
+      call this%load(this%mst_porosity, nr_iface_nodes, 'POROSITY', 'MST', (/STG_AFTER_AR/), MAP_TYPE_NODE)
+    end if
 
   end subroutine init_gwt_rmt_mem
   
@@ -295,12 +350,6 @@ contains
 
       if (associated(this%dis_area)) call mem_deallocate(this%dis_area)
 
-      if (associated(this%x)) then
-        call mem_deallocate(this%x)
-        call mem_deallocate(this%x_old)
-        call mem_deallocate(this%ibound)
-      end if
-
       ! scalars:
       call mem_deallocate(this%moffset)
       call mem_deallocate(this%dis_nodes)
@@ -308,10 +357,51 @@ contains
       call mem_deallocate(this%dis_njas)
       
       if (this%macronym == 'GWF') then
+        ! these only when ...
+        if (associated(this%x)) then
+          call mem_deallocate(this%x)
+          call mem_deallocate(this%x_old)
+          call mem_deallocate(this%ibound)
+        end if
+
         call mem_deallocate(this%npf_iwetdry)
         call mem_deallocate(this%npf_iangle1)
         call mem_deallocate(this%npf_iangle2)
         call mem_deallocate(this%npf_iangle3)
+      end if
+
+      if (this%macronym == 'GWT') then
+        ! only when ...
+        if (associated(this%x)) then
+          call mem_deallocate(this%x)
+          call mem_deallocate(this%ibound)
+
+          call mem_deallocate(this%fmi_gwfhead)
+          call mem_deallocate(this%fmi_gwfsat)
+          call mem_deallocate(this%fmi_gwfflowja)
+          call mem_deallocate(this%fmi_gwfspdis)
+
+          if (this%dsp_idisp > 0) then
+            call mem_deallocate(this%dsp_alh)
+            call mem_deallocate(this%dsp_alv)
+            call mem_deallocate(this%dsp_ath1)
+            call mem_deallocate(this%dsp_ath2)
+            call mem_deallocate(this%dsp_atv)
+          end if
+
+          if (this%dsp_idiffc > 0) then
+            call mem_deallocate(this%dsp_diffc)
+          end if
+
+          if (this%indsp > 0 .and. this%inmst > 0) then
+            call mem_deallocate(this%mst_porosity)
+          end if
+        end if
+
+        call mem_deallocate(this%indsp)
+        call mem_deallocate(this%inmst)
+        call mem_deallocate(this%dsp_idiffc)
+        call mem_deallocate(this%dsp_idisp)
       end if
       
     end if

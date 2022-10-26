@@ -125,6 +125,6 @@ contains
     end do
     deallocate(this%exchange_map)
     
-  end subroutine destroy
+  end subroutine destroy  
 
 end module InterfaceMapModule

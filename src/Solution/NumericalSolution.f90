@@ -2300,7 +2300,10 @@ contains
       call mp%model_ac(this%sparse)
     end do
     !
-    ! -- Add the cross terms to sparse
+    ! -- synchronize before AC
+    call this%synchronize(STG_BEFORE_AC, this%synchronize_ctx)
+    !
+    ! -- Add the cross terms to sparse    
     do ic = 1, this%exchangelist%Count()
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
       call cp%exg_ac(this%sparse)
