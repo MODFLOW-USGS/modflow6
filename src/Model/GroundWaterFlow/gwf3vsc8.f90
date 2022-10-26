@@ -524,7 +524,6 @@ contains
     integer(I4B) :: n
     integer(I4B) :: node
     real(DP) :: viscghb
-    real(DP) :: viscratio
 ! -------------------------------------------------------------------------------
     !
     ! -- Process density terms for each GHB
@@ -737,7 +736,6 @@ contains
     ! -- local
     real(DP) :: vscratio
     real(DP) :: updatedcond
-    integer(I4B) :: n
 ! -------------------------------------------------------------------------------
     !
     vscratio = calc_vsc_ratio(viscref, bndvisc)
@@ -1042,11 +1040,9 @@ contains
     ! -- dummy
     class(GwfVscType) :: this
     ! -- local
-    character(len=LINELENGTH) :: warnmsg, errmsg
+    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: line
-    character(len=LENMODELNAME) :: mname
     integer(I4B) :: ierr
-    integer(I4B) :: im
     integer(I4B) :: iviscspec
     logical :: isfound, endOfBlock
     logical :: blockrequired
@@ -1303,7 +1299,6 @@ contains
     character(len=LINELENGTH) :: warnmsg, errmsg, keyword, keyword2
     character(len=MAXCHARLEN) :: fname
     character(len=LINELENGTH) :: line
-    character(len=10) :: c10
     character(len=16) :: c16
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
