@@ -2,7 +2,8 @@ module rivmodule
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME, LENMEMPATH, &
                              LENVARNAME, LENMEMSEPARATOR
-  use MemoryHelperModule, only: create_mem_path, split_mem_address
+  use MemoryHelperModule, only: create_mem_path, split_mem_address, &
+                                memPathSeparator
   use BndModule, only: BndType
   use ObsModule, only: DefaultObsIdProcessor
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
@@ -16,7 +17,6 @@ module rivmodule
   !
   character(len=LENFTYPE) :: ftype = 'RIV'
   character(len=LENPACKAGENAME) :: text = '             RIV'
-  character(len=LENMEMSEPARATOR), parameter :: memPathSeparator = '/'
   !
   type, extends(BndType) :: RivType
   contains

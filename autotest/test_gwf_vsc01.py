@@ -3,38 +3,35 @@
 # Uses constant head and general-head boundaries on the left and right
 # sides of the model domain, respectively, to drive flow from left to
 # right.  Tests that head-dependent boundary conditions are properly
-# # accounting for viscosity when VSC is active.
+# accounting for viscosity when VSC is active.
 #
-
-# ### VSC Problem Setup
 
 # Imports
 
 import os
 import sys
-import matplotlib.pyplot as plt
-import flopy
+
 import numpy as np
+import pytest
 
-# Append to system path to include the common subdirectory
+try:
+    import flopy
+except:
+    msg = "Error. FloPy package is not available.\n"
+    msg += "Try installing using the following command:\n"
+    msg += " pip install flopy"
+    raise Exception(msg)
 
-sys.path.append(os.path.join("..", "common"))
+from framework import testing_framework
+from simulation import Simulation
 
-# Import common functionality
-
-import config
-from figspecs import USGSFigure
-
-mf6exe = os.path.abspath(config.mf6_exe)
-
-# Scenario parameters - make sure there is at least one blank line before next item
-
-hyd_cond = [1205.49396942506, 864.0]  # Hydraulic conductivity ($m d^{-1}$)
-parameters = {
-    "no-vsc01-bnd": {"vsc_on": False, "hydraulic_conductivity": hyd_cond[0]},
-    "vsc01-bnd": {"vsc_on": True, "hydraulic_conductivity": hyd_cond[1]},
-    "no-vsc01-k": {"vsc_on": False, "hydraulic_conductivity": hyd_cond[1]},
-}
+hyd_cond = [1205.49396942506, 864.0]  # Hydraulic conductivity (m/d)
+ex = ["no-vsc01-bnd", "vsc01-bnd", "no-vsc01-k"]
+viscosity_on = [False, True, False]
+hydraulic_conductivity = [hyd_cond[0], hyd_cond[1], hyd_cond[1]]
+exdirs = []
+for s in ex:
+    exdirs.append(os.path.join("temp", s))
 
 # Model units
 
@@ -71,30 +68,34 @@ botm = [top - k * delv for k in range(1, nlay + 1)]
 nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-10, 1e-6, 0.97
 
-
-# ### Functions to build, write, run, and plot models
 #
 # MODFLOW 6 flopy GWF simulation object (sim) is returned
 #
 
 
-def build_model(key, vsc_on, hydraulic_conductivity):
-    print("Building model...{}".format(key))
-
+def build_model(idx, dir):
     # Base simulation and model name and workspace
-    ws = os.path.join("temp", "examples", key)
+    ws = dir
+    name = ex[idx]
+
+    print("Building model...{}".format(name))
 
     # generate names for each model
-    name = "vsc01"
-    gwfname = "gwf-" + key
-    gwtname = "gwt-" + key
+    gwfname = "gwf-" + name
+    gwtname = "gwt-" + name
 
-    sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=ws, exe_name=mf6exe)
+    sim = flopy.mf6.MFSimulation(
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
+    )
+
+    # Instantiating time discretization
     tdis_ds = ((perlen, nstp, 1.0),)
     flopy.mf6.ModflowTdis(
         sim, nper=nper, perioddata=tdis_ds, time_units=time_units
     )
     gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname, save_flows=True)
+
+    # Instantiating solver
     ims = flopy.mf6.ModflowIms(
         sim,
         print_option="ALL",
@@ -111,6 +112,8 @@ def build_model(key, vsc_on, hydraulic_conductivity):
         filename="{}.ims".format(gwfname),
     )
     sim.register_ims_package(ims, [gwfname])
+
+    # Instantiating DIS
     flopy.mf6.ModflowGwfdis(
         gwf,
         length_units=length_units,
@@ -122,15 +125,18 @@ def build_model(key, vsc_on, hydraulic_conductivity):
         top=top,
         botm=botm,
     )
+
+    # Instantiating NPF
     flopy.mf6.ModflowGwfnpf(
         gwf,
         save_specific_discharge=True,
         icelltype=0,
-        k=hydraulic_conductivity,
+        k=hydraulic_conductivity[idx],
     )
     flopy.mf6.ModflowGwfic(gwf, strt=0.0)
 
-    if vsc_on:
+    # Instantiating VSC
+    if viscosity_on[idx]:
         # Instantiate viscosity (VSC) package
         vsc_filerecord = "{}.vsc.bin".format(gwfname)
         vsc_pd = [(0, 0.0, 20.0, gwtname, "temperature")]
@@ -146,7 +152,7 @@ def build_model(key, vsc_on, hydraulic_conductivity):
         )
 
     # Instantiating GHB
-    ghbcond = hydraulic_conductivity * delv * delc / (0.5 * delr)
+    ghbcond = hydraulic_conductivity[idx] * delv * delc / (0.5 * delr)
     ghbspd = [
         [(0, i, ncol - 1), top, ghbcond, initial_temperature]
         for i in range(nrow)
@@ -168,8 +174,8 @@ def build_model(key, vsc_on, hydraulic_conductivity):
     )
 
     # Instatiating OC
-    head_filerecord = "{}.hds".format(key)
-    budget_filerecord = "{}.bud".format(key)
+    head_filerecord = "{}.hds".format(gwfname)
+    budget_filerecord = "{}.bud".format(gwfname)
     flopy.mf6.ModflowGwfoc(
         gwf,
         head_filerecord=head_filerecord,
@@ -180,6 +186,8 @@ def build_model(key, vsc_on, hydraulic_conductivity):
     # Setup the GWT model for simulating heat transport
     # -------------------------------------------------
     gwt = flopy.mf6.ModflowGwt(sim, modelname=gwtname)
+
+    # Instantiating solver for GWT
     imsgwt = flopy.mf6.ModflowIms(
         sim,
         print_option="ALL",
@@ -196,6 +204,8 @@ def build_model(key, vsc_on, hydraulic_conductivity):
         filename="{}.ims".format(gwtname),
     )
     sim.register_ims_package(imsgwt, [gwtname])
+
+    # Instantiating DIS for GWT
     flopy.mf6.ModflowGwtdis(
         gwt,
         length_units=length_units,
@@ -208,6 +218,7 @@ def build_model(key, vsc_on, hydraulic_conductivity):
         botm=botm,
     )
 
+    # Instantiating MST for GWT
     flopy.mf6.ModflowGwtmst(
         gwt,
         porosity=porosity,
@@ -218,18 +229,23 @@ def build_model(key, vsc_on, hydraulic_conductivity):
         filename="{}.mst".format(gwtname),
     )
 
+    # Instantiating IC for GWT
     flopy.mf6.ModflowGwtic(gwt, strt=initial_temperature)
 
+    # Instantiating ADV for GWT
     flopy.mf6.ModflowGwtadv(gwt, scheme="UPSTREAM")
 
+    # Instantiating DSP for GWT
     flopy.mf6.ModflowGwtdsp(gwt, xt3d_off=True, diffc=D_m)
 
+    # Instantiating SSM for GWT
     sourcerecarray = [
         ("CHD-1", "AUX", "TEMPERATURE"),
         ("GHB-1", "AUX", "TEMPERATURE"),
     ]
     flopy.mf6.ModflowGwtssm(gwt, sources=sourcerecarray)
 
+    # Instantiating OC for GWT
     flopy.mf6.ModflowGwtoc(
         gwt,
         concentration_filerecord="{}.ucn".format(gwtname),
@@ -237,130 +253,118 @@ def build_model(key, vsc_on, hydraulic_conductivity):
         printrecord=[("CONCENTRATION", "LAST"), ("BUDGET", "LAST")],
     )
 
+    # Instantiating GWF/GWT Exchange
     flopy.mf6.ModflowGwfgwt(
         sim, exgtype="GWF6-GWT6", exgmnamea=gwfname, exgmnameb=gwtname
     )
 
-    return sim
+    return sim, None
 
 
-# Function to write and run model files
-def write_and_run_model(sim, key, silent=True):
-    sim.write_simulation(silent=silent)
+def eval_results(sim):
+    print("evaluating results...")
 
-    success, buff = sim.run_simulation(silent=False)
-    errmsg = f"simulation did not terminate successfully\n{buff}"
-    assert success, errmsg
+    # read flow results from model
+    name = ex[sim.idxsim]
+    gwfname = "gwf-" + name
 
-    # digest model budgets
-    simpath = sim.simulation_data.mfpath.get_sim_path()
-
-    modbud = key + ".bud"
-    fpth = os.path.join(simpath, modbud)
-    budobj = flopy.utils.CellBudgetFile(fpth, precision="double")
+    fname = gwfname + ".bud"
+    fname = os.path.join(sim.simpath, fname)
+    assert os.path.isfile(fname)
+    budobj = flopy.utils.CellBudgetFile(fname, precision="double")
     outbud = budobj.get_data(text="             GHB")
 
-    return outbud[-1]
+    if sim.idxsim == 0:
+        no_vsc_bud_last = np.array(outbud[-1].tolist())
+        np.savetxt(
+            os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod1reslt.txt"),
+            no_vsc_bud_last,
+        )
+
+    elif sim.idxsim == 1:
+        with_vsc_bud_last = np.array(outbud[-1].tolist())
+        np.savetxt(
+            os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod2reslt.txt"),
+            with_vsc_bud_last,
+        )
+
+    elif sim.idxsim == 2:
+        no_vsc_low_k_bud_last = np.array(outbud[-1].tolist())
+        np.savetxt(
+            os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod3reslt.txt"),
+            no_vsc_low_k_bud_last,
+        )
+
+    # if all 3 models have run, check relative results
+    if sim.idxsim == 2:
+        f1 = os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod1reslt.txt")
+        if os.path.isfile(f1):
+            no_vsc_bud_last = np.loadtxt(f1)
+            os.remove(f1)
+
+        f2 = os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod2reslt.txt")
+        if os.path.isfile(f2):
+            with_vsc_bud_last = np.loadtxt(f2)
+            os.remove(f2)
+
+        f3 = os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod3reslt.txt")
+        if os.path.isfile(f3):
+            no_vsc_low_k_bud_last = np.loadtxt(f3)
+            os.remove(f3)
+
+        model1_exit = no_vsc_bud_last[:, 2].sum()
+        model2_exit = with_vsc_bud_last[:, 2].sum()
+        model3_exit = no_vsc_low_k_bud_last[:, 2].sum()
+
+        # Ensure models 1 & 2 give nearly identical results
+        assert np.allclose(model1_exit, model2_exit, atol=1e-3), (
+            "Flow in models "
+            + exdirs[0]
+            + " and "
+            + exdirs[1]
+            + " should be equal, but are not."
+        )
+
+        # Ensure the flow leaving model 3 is less than what leaves model 2
+        assert abs(model2_exit) > abs(model3_exit), (
+            "Exit flow from model "
+            + exdirs[1]
+            + " should be greater than flow existing "
+            + exdirs[2]
+            + ", but it is not."
+        )
 
 
-def confirm_run_results(
-    modname1, modname2, modname3, no_vsc_bud, with_vsc_bud, low_k_bud
-):
+# - No need to change any code below
+@pytest.mark.parametrize(
+    "idx, dir",
+    list(enumerate(exdirs)),
+)
+def test_mf6model(idx, dir):
+    # initialize testing framework
+    test = testing_framework()
 
-    # Sum up total flow leaving the model through the GHB boundary
-    no_vsc_bud_last = np.array(no_vsc_bud.tolist())
-    no_with_vsc_bud_last = np.array(with_vsc_bud.tolist())
-    no_low_k_bud_last = np.array(low_k_bud.tolist())
+    # build the model
+    test.build_mf6_models(build_model, idx, dir)
 
-    model1_exit = no_vsc_bud_last[:, 2].sum()
-    model2_exit = no_with_vsc_bud_last[:, 2].sum()
-    model3_exit = no_low_k_bud_last[:, 2].sum()
-
-    # Ensure models 1 & 2 give nearly identical results
-    assert np.allclose(model1_exit, model2_exit, atol=1e-3), (
-        "VSC results not right between models: "
-        + modname1
-        + " and "
-        + modname2
-    )
-
-    # Ensure the flow leaving model 3 is less than that which leaves model 2
-    assert abs(model2_exit) > abs(model3_exit), (
-        "VSC results not right between models: "
-        + modname2
-        + " and "
-        + modname3
-    )
+    # run the test model
+    test.run_mf6(Simulation(dir, exfunc=eval_results, idxsim=idx))
 
 
-def scenario(idx, silent=True):
-    # Three model runs that test model flows with and without
-    # viscosity active
+def main():
+    # initialize testing framework
+    test = testing_framework()
 
-    # Model Run 1 (Fake the effects of viscosity with pre-specified K)
-    # Model Run 2 (Account for the effects of viscosity)
-    # Model Run 3 (Ensure that base K scenario results in less flow)
-    # ---------------------------------------------------------
-    key = list(parameters.keys())[idx]
-    parameter_dict = parameters[key]
-    sim = build_model(key, **parameter_dict)
-    cbc_bud = write_and_run_model(sim, key, silent=silent)
+    # run the test model
+    for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
+        sim = Simulation(dir, exfunc=eval_results, idxsim=idx)
+        test.run_mf6(sim)
 
-    return key, cbc_bud
-
-
-# nosetest - exclude block from this nosetest to the next nosetest
-def test_01():
-    # Compare model runs with and without viscosity package active
-    # Model 1 - no viscosity, but with elevated K's that mimic viscosity
-    #           adjusted K values.
-    modname1, bnd_scen1_bud = scenario(0)
-
-    # Model 2 - include viscosity
-    modname2, bnd_scen2_bud = scenario(1)
-
-    # Model 3 - no viscosity with basecase K, flows should be reduced
-    modname3, bnd_scen3_bud = scenario(2)
-
-    # Flow through model should be the same in models 1 & 2 based on
-    # specified K's.  That is, the second model's adjusted K should
-    # be equal to the pre-specified K in model 1.  The third model uses
-    # the base K of 864 m/d without simulating viscosity effects and
-    # should result in less flow through the model.
-    confirm_run_results(
-        modname1,
-        modname2,
-        modname3,
-        bnd_scen1_bud,
-        bnd_scen2_bud,
-        bnd_scen3_bud,
-    )
-
-
-# nosetest end
 
 if __name__ == "__main__":
-    # Compare model runs with and without viscosity package active
-    # Model 1 - no viscosity, but with elevated K's that mimic viscosity
-    #           adjusted K values.
-    modname1, bnd_scen1_bud = scenario(0)
+    # print message
+    print(f"standalone run of {os.path.basename(__file__)}")
 
-    # Model 2 - include viscosity
-    modname2, bnd_scen2_bud = scenario(1)
-
-    # Model 3 - no viscosity with basecase K, flows should be reduced
-    modname3, bnd_scen3_bud = scenario(2)
-
-    # Flow through model should be the same in models 1 & 2 based on
-    # specified K's.  That is, the second model's adjusted K should
-    # be equal to the pre-specified K in model 1.  The third model uses
-    # the base K of 864 m/d without simulating viscosity effects and
-    # should result in less flow through the model.
-    confirm_run_results(
-        modname1,
-        modname2,
-        modname3,
-        bnd_scen1_bud,
-        bnd_scen2_bud,
-        bnd_scen3_bud,
-    )
+    # run main routine
+    main()

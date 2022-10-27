@@ -28,15 +28,13 @@ except:
     raise Exception(msg)
 
 from framework import testing_framework
-import config
+from simulation import Simulation
 
-mf6exe = os.path.abspath(config.mf6_exe)
-
-# Setup scenario input
-parameters = {
-    "no-vsc04-lak": {"viscosity_on": False},
-    "vsc04-lak": {"viscosity_on": True},
-}
+ex = ["no-vsc04-lak", "vsc04-lak"]
+viscosity_on = [False, True]
+exdirs = []
+for s in ex:
+    exdirs.append(os.path.join("temp", s))
 
 # Model units
 length_units = "m"
@@ -171,21 +169,27 @@ leftTemp = 30.0  # Temperature of inflow from left constant head ($C$)
 # Viscosity related parameters
 tviscref = 20.0
 
+#
 # MODFLOW 6 flopy GWF & GWT simulation object (sim) is returned
 #
-def build_model(key, viscosity_on=False):
+
+
+def build_model(idx, dir):
     global lak_lkup_dict
-    print("Building model...{}".format(key))
 
     # Base simulation and model name and workspace
-    ws = os.path.join("temp", "examples", key)
+    ws = dir
+    name = ex[idx]
+
+    print("Building model...{}".format(name))
 
     # generate names for each model
-    name = "vsc04"
-    gwfname = "gwf-" + key
-    gwtname = "gwt-" + key
+    gwfname = "gwf-" + name
+    gwtname = "gwt-" + name
 
-    sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=ws, exe_name=mf6exe)
+    sim = flopy.mf6.MFSimulation(
+        sim_name=name, sim_ws=ws, exe_name="mf6", version="mf6"
+    )
 
     tdis_rc = []
     for i in range(len(nstp)):
@@ -199,6 +203,7 @@ def build_model(key, viscosity_on=False):
         sim, modelname=gwfname, save_flows=True, newtonoptions="newton"
     )
 
+    # Instantiating solver
     ims = flopy.mf6.ModflowIms(
         sim,
         print_option="ALL",
@@ -254,7 +259,7 @@ def build_model(key, viscosity_on=False):
     flopy.mf6.ModflowGwfic(gwf, strt=strthd)
 
     # Instantiate viscosity package
-    if viscosity_on:
+    if viscosity_on[idx]:
         vsc_filerecord = "{}.vsc.bin".format(gwfname)
         vsc_pd = [(0, 0.0, tviscref, gwtname, "TEMPERATURE")]
         flopy.mf6.ModflowGwfvsc(
@@ -466,7 +471,7 @@ def build_model(key, viscosity_on=False):
         filename="{}.lak".format(gwfname),
     )
 
-    # pull in th etabfile defining the lake stage, vol, & surface area
+    # pull in the tabfile defining the lake stage, vol, & surface area
     fname = os.path.join("data", "vsc04-laktab", "stg-vol-surfarea.csv")
     tabinput = []
     with open(fname, "r") as f:
@@ -544,6 +549,8 @@ def build_model(key, viscosity_on=False):
         scheme = "TVD"
     else:
         raise Exception()
+
+    # Instantiate advection package
     flopy.mf6.ModflowGwtadv(
         gwt, scheme=scheme, filename="{}.adv".format(gwtname)
     )
@@ -605,7 +612,7 @@ def build_model(key, viscosity_on=False):
         filename="{}.lkt".format(gwtname),
     )
 
-    # GWF GWT exchange
+    # GWF-GWT exchange
     flopy.mf6.ModflowGwfgwt(
         sim,
         exgtype="GWF6-GWT6",
@@ -614,109 +621,121 @@ def build_model(key, viscosity_on=False):
         filename=f"{name}.gwfgwt",
     )
 
-    return sim
+    return sim, None
 
 
-def write_and_run_model(sim, key, silent=True):
-    sim.write_simulation(silent=silent)
+def eval_results(sim):
+    print("evaluating results...")
 
-    success, buff = sim.run_simulation(silent=False)
-    errmsg = f"simulation did not terminate successfully\n{buff}"
-    assert success, errmsg
+    # read flow results from model
+    name = ex[sim.idxsim]
+    gwfname = "gwf-" + name
 
-    # slurp in sfr cell-by-cell budgets
-    simpath = sim.simulation_data.mfpath.get_sim_path()
+    fname = gwfname + ".lak.bud"
+    fname = os.path.join(sim.simpath, fname)
+    assert os.path.isfile(fname)
+    budobj = flopy.utils.CellBudgetFile(fname, precision="double")
+    outbud = budobj.get_data(text="             GWF")
 
-    lakbud = "gwf-" + key + ".lak.bud"
-    fpth = os.path.join(simpath, lakbud)
-    budobj = flopy.utils.CellBudgetFile(fpth, precision="double")
-    bud = budobj.get_data(text="             GWF")
+    if sim.idxsim == 0:
+        no_vsc_bud_last = np.array(outbud[-1].tolist())
+        np.savetxt(
+            os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod1reslt.txt"),
+            no_vsc_bud_last,
+        )
 
-    return bud[-1]
+    elif sim.idxsim == 1:
+        with_vsc_bud_last = np.array(outbud[-1].tolist())
+        np.savetxt(
+            os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod2reslt.txt"),
+            with_vsc_bud_last,
+        )
 
+    # if both models have run, check relative results
+    if sim.idxsim == 1:
+        f1 = os.path.join(os.path.dirname(exdirs[0]), "mod1reslt.txt")
+        if os.path.isfile(f1):
+            no_vsc_bud_last = np.loadtxt(f1)
+            os.remove(f1)
 
-def scenario(idx, silent=True):
-    # Two model runs to check relative flows w/ and w/o VSC
+        f2 = os.path.join(os.path.dirname(exdirs[1]), "mod2reslt.txt")
+        if os.path.isfile(f2):
+            with_vsc_bud_last = np.loadtxt(f2)
+            os.remove(f2)
 
-    # Model Run 1 (Do not account for the effects of viscosity)
-    # Model Run 2 (Account for the effects of viscosity)
-    # ---------------------------------------------------------
-    key = list(parameters.keys())[idx]
-    parameter_dict = parameters[key]
-    sim = build_model(key, **parameter_dict)
-    lak_cbc_bud = write_and_run_model(sim, key, silent=silent)
+        # talley some flows on the left and right sides of the lake for comparison
+        # test
+        no_vsc_bud_np = np.array(no_vsc_bud_last.tolist())
+        with_vsc_bud_np = np.array(with_vsc_bud_last.tolist())
 
-    return lak_cbc_bud
+        left_chk_no_vsc = []
+        right_chk_no_vsc = []
+        left_chk_with_vsc = []
+        right_chk_with_vsc = []
 
+        for idx in np.arange(no_vsc_bud_np.shape[0]):
+            k, i, j = lak_lkup_dict[idx]
 
-def confirm_run_results(no_vsc_bud, with_vsc_bud):
-    # talley some flows on the left and right sides of the lake for comparison
-    # test
-    no_vsc_bud_np = np.array(no_vsc_bud.tolist())
-    with_vsc_bud_np = np.array(with_vsc_bud.tolist())
+            # left side of lake
+            if j < 7:
+                if no_vsc_bud_np[idx, 2] > 0 and with_vsc_bud_np[idx, 2] > 0:
+                    left_chk_no_vsc.append(no_vsc_bud_np[idx, 2])
+                    left_chk_with_vsc.append(with_vsc_bud_np[idx, 2])
 
-    left_chk_no_vsc = []
-    right_chk_no_vsc = []
-    left_chk_with_vsc = []
-    right_chk_with_vsc = []
+            # right side of lake
+            if j > 9:
+                if no_vsc_bud_np[idx, 2] < 0 and with_vsc_bud_np[idx, 2] < 0:
+                    right_chk_no_vsc.append(no_vsc_bud_np[idx, 2])
+                    right_chk_with_vsc.append(with_vsc_bud_np[idx, 2])
 
-    for idx in np.arange(no_vsc_bud_np.shape[0]):
-        k, i, j = lak_lkup_dict[idx]
+        # Check that all the flows entering the lak in the 'with vsc' model are greater
+        # than their 'no vsc' counterpart
+        assert np.greater(
+            np.array(left_chk_with_vsc), np.array(left_chk_no_vsc)
+        ).all(), (
+            "Lake inflow did no increase with VSC turned on and should have."
+        )
 
-        # left side of lake
-        if j < 7:
-            if no_vsc_bud_np[idx, 2] > 0 and with_vsc_bud_np[idx, 2] > 0:
-                left_chk_no_vsc.append(no_vsc_bud_np[idx, 2])
-                left_chk_with_vsc.append(with_vsc_bud_np[idx, 2])
-
-        # right side of lake
-        if j > 9:
-            if no_vsc_bud_np[idx, 2] < 0 and with_vsc_bud_np[idx, 2] < 0:
-                right_chk_no_vsc.append(no_vsc_bud_np[idx, 2])
-                right_chk_with_vsc.append(with_vsc_bud_np[idx, 2])
-
-    # Check that all the flows entering the lak in the 'with vsc' model are greater
-    # than their 'no vsc' counterpart
-    assert np.greater(
-        np.array(left_chk_with_vsc), np.array(left_chk_no_vsc)
-    ).all(), "Lake inflow did no increase with VSC turned on and should have."
-
-    # Check that all the flows leaving the lak in the 'with vsc' model are less
-    # than their 'no vsc' counterpart (keep in mind values are negative, which
-    # affects how the comparison is made)
-    assert np.greater(
-        np.array(right_chk_with_vsc), np.array(right_chk_no_vsc)
-    ).all(), "Lake outflow did no decrease with VSC turned on and should have."
-
-
-# nosetest - exclude block from this nosetest to the next nosetest
-def test_01():
-    # Compare model runs with and without viscosity package active
-    # Model 1 - no viscosity
-    lak_scen1_bud = scenario(0, silent=False)
-
-    # Model 2 - include viscosity
-    lak_scen2_bud = scenario(1, silent=False)
-
-    # GW discharge into left side of lake should increase owing to hot
-    # groundwater.  GW discharge out of the right side of the lake should
-    # increase owing to cold lake water.
-    confirm_run_results(lak_scen1_bud, lak_scen2_bud)
+        # Check that all the flows leaving the lak in the 'with vsc' model are less
+        # than their 'no vsc' counterpart (keep in mind values are negative, which
+        # affects how the comparison is made)
+        assert np.greater(
+            np.array(right_chk_with_vsc), np.array(right_chk_no_vsc)
+        ).all(), (
+            "Lake outflow did no decrease with VSC turned on and should have."
+        )
 
 
-# nosetest end
+# - No need to change any code below
+@pytest.mark.parametrize(
+    "idx, dir",
+    list(enumerate(exdirs)),
+)
+def test_mf6model(idx, dir):
+    # initialize testing framework
+    test = testing_framework()
+
+    # build the model
+    test.build_mf6_models(build_model, idx, dir)
+
+    # run the test model
+    test.run_mf6(Simulation(dir, exfunc=eval_results, idxsim=idx))
+
+
+def main():
+    # initialize testing framework
+    test = testing_framework()
+
+    # run the test model
+    for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
+        sim = Simulation(dir, exfunc=eval_results, idxsim=idx)
+        test.run_mf6(sim)
+
 
 if __name__ == "__main__":
-    # ### Adapted from Merritt & Konikow (2000) example problem 1.
+    # print message
+    print(f"standalone run of {os.path.basename(__file__)}")
 
-    # Compare model runs with and without viscosity package active
-    # Model 1 - no viscosity
-    lak_scen1_bud = scenario(0)
-
-    # Model 2 - include viscosity
-    lak_scen2_bud = scenario(1)
-
-    # GW discharge into left side of lake should increase owing to hot
-    # groundwater.  GW discharge out of the right side of the lake should
-    # increase owing to cold lake water.
-    confirm_run_results(lak_scen1_bud, lak_scen2_bud)
+    # run main routine
+    main()

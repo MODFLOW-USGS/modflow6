@@ -1,37 +1,36 @@
 # Scenario envisioned by this test is a river running through a V-shaped
 # valley that loses water to the aquifer at the upper end until it goes
-# dry, then begins to gain flow again at the lower reaches.  River water
+# dry, then begins to gain flow again in the lower reaches.  River water
 # enters the simulation at 8 deg C.  Aquifer water starts out at 35 deg C.
 # Reference viscosity temperature is 20 deg C.  With the VSC package active,
 # the simulation should predict less loss of river water to the aquifer
 # and more discharge of gw to the stream, compared to the same simulation
 # with the VSC package inactive.
 
-import sys
-import math
-from io import StringIO
+# Imports
+
 import os
-import shutil
+import sys
+
 import numpy as np
-from subprocess import check_output
-import flopy
+import pytest
 
-# Append to system path to include the common subdirectory
+try:
+    import flopy
+except:
+    msg = "Error. FloPy package is not available.\n"
+    msg += "Try installing using the following command:\n"
+    msg += " pip install flopy"
+    raise Exception(msg)
 
-sys.path.append(os.path.join("..", "common"))
+from framework import testing_framework
+from simulation import Simulation
 
-# Import common functionality
-
-import config
-from figspecs import USGSFigure
-
-mf6exe = os.path.abspath(config.mf6_exe)
-
-# Setup scenario input
-parameters = {
-    "no-vsc-sfr01": {"viscosity_on": False},
-    "vsc-sfr01": {"viscosity_on": True},
-}
+ex = ["no-vsc-sfr01", "vsc-sfr01"]
+viscosity_on = [False, True]
+exdirs = []
+for s in ex:
+    exdirs.append(os.path.join("temp", s))
 
 # Equation for determining land surface elevation with a stream running down the middle
 def topElev_sfrCentered(x, y):
@@ -97,22 +96,26 @@ D_m = K_therm / (porosity * rho_water * C_p_w)
 rhob = (1 - porosity) * rho_solids  # Bulk density ($kg/m^3$)
 K_d = C_s / (rho_water * C_p_w)  # Partitioning coefficient ($m^3/kg$)
 
-
+#
 # MODFLOW 6 flopy GWF & GWT simulation object (sim) is returned
 #
-def build_model(key, viscosity_on=False):
-    print("Building model...{}".format(key))
 
+def build_model(idx, dir):
     # Base simulation and model name and workspace
-    ws = os.path.join("temp", "examples", key)
+    ws = dir
+    name = ex[idx]
+
+    print("Building model...{}".format(name))
 
     # generate names for each model
-    name = "vsc03"
-    gwfname = "gwf-" + key
-    gwtname = "gwt-" + key
+    gwfname = "gwf-" + name
+    gwtname = "gwt-" + name
 
-    sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=ws, exe_name=mf6exe)
+    sim = flopy.mf6.MFSimulation(
+        sim_name=name, sim_ws=ws, exe_name="mf6", version="mf6"
+    )
 
+    # Instantiating time discretization
     tdis_rc = []
     for i in range(len(nstp)):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
@@ -125,6 +128,7 @@ def build_model(key, viscosity_on=False):
         sim, modelname=gwfname, save_flows=True, newtonoptions="newton"
     )
 
+    # Instantiating solver
     ims = flopy.mf6.ModflowIms(
         sim,
         print_option="ALL",
@@ -178,7 +182,7 @@ def build_model(key, viscosity_on=False):
     flopy.mf6.ModflowGwfic(gwf, strt=strthd)
 
     # Instantiate viscosity package
-    if viscosity_on:
+    if viscosity_on[idx]:
         vsc_filerecord = "{}.vsc.bin".format(gwfname)
         vsc_pd = [(0, 0.0, 20.0, gwtname, "TEMPERATURE")]
         flopy.mf6.ModflowGwfvsc(
@@ -330,7 +334,10 @@ def build_model(key, viscosity_on=False):
     )
 
     # Setup the GWT model for simulating heat transport
+    # -------------------------------------------------
     gwt = flopy.mf6.ModflowGwt(sim, modelname=gwtname)
+
+    # Instantiating solver for GWT
     imsgwt = flopy.mf6.ModflowIms(
         sim,
         print_option="ALL",
@@ -347,6 +354,8 @@ def build_model(key, viscosity_on=False):
         filename="{}.ims".format(gwtname),
     )
     sim.register_ims_package(imsgwt, [gwtname])
+
+    # Instantiating DIS for GWT
     flopy.mf6.ModflowGwtdis(
         gwt,
         length_units=length_units,
@@ -429,84 +438,92 @@ def build_model(key, viscosity_on=False):
         filename="{}.gwfgwt".format(gwtname),
     )
 
-    return sim
+    return sim, None
 
 
-# Function to write model files
-def write_and_run_model(sim, key, silent=True):
-    sim.write_simulation(silent=silent)
+def eval_results(sim):
+    print("evaluating results...")
 
-    success, buff = sim.run_simulation(silent=False)
-    errmsg = f"simulation did not terminate successfully\n{buff}"
-    assert success, errmsg
+    # read flow results from model
+    name = ex[sim.idxsim]
+    gwfname = "gwf-" + name
 
-    # slurp in sfr cell-by-cell budgets
-    simpath = sim.simulation_data.mfpath.get_sim_path()
+    fname = gwfname + ".sfr.cbc"
+    fname = os.path.join(sim.simpath, fname)
+    assert os.path.isfile(fname)
+    budobj = flopy.utils.CellBudgetFile(fname, precision="double")
+    outbud = budobj.get_data(text="             GWF")
 
-    sfrbud = "gwf-" + key + ".sfr.cbc"
-    fpth = os.path.join(simpath, sfrbud)
-    budobj = flopy.utils.CellBudgetFile(fpth, precision="double")
-    bud = budobj.get_data(text="             GWF")
+    if sim.idxsim == 0:
+        no_vsc_bud_last = np.array(outbud[-1].tolist())
+        np.savetxt(
+            os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod1reslt.txt"),
+            no_vsc_bud_last,
+        )
 
-    return bud[-1]
+    elif sim.idxsim == 1:
+        with_vsc_bud_last = np.array(outbud[-1].tolist())
+        np.savetxt(
+            os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod2reslt.txt"),
+            with_vsc_bud_last,
+        )
 
+    # if both models have run, check relative results
+    if sim.idxsim == 1:
+        f1 = os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod1reslt.txt")
+        if os.path.isfile(f1):
+            no_vsc_bud_last = np.loadtxt(f1)
+            os.remove(f1)
 
-def scenario(idx, silent=True):
-    # Two model runs to check relative flows w/ and w/o VSC
+        f2 = os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod2reslt.txt")
+        if os.path.isfile(f2):
+            with_vsc_bud_last = np.loadtxt(f2)
+            os.remove(f2)
 
-    # Model Run 1 (Do not account for the effects of viscosity)
-    # Model Run 2 (Account for the effects of viscosity)
-    # ---------------------------------------------------------
-    key = list(parameters.keys())[idx]
-    parameter_dict = parameters[key]
-    sim = build_model(key, **parameter_dict)
-    sfr_rbr_bud = write_and_run_model(sim, key, silent=silent)
+        # sum up total losses and total gains in the first 10 reaches
+        # and the last 10 reaches
+        for i in np.arange(10):
+            # upper reaches
+            assert abs(no_vsc_bud_last[i, 2]) > abs(
+                with_vsc_bud_last[i, 2]
+            ), "GW/SW not as expected in upper reaches of viscosity w/ sfr example"
 
-    return sfr_rbr_bud
-
-
-def confirm_run_results(no_vsc_bud, with_vsc_bud):
-    # sum up total losses and total gains in the first 10 reaches
-    # and the last 10 reaches
-    for i in np.arange(10):
-        # upper reaches
-        assert abs(no_vsc_bud[i][2]) > abs(
-            with_vsc_bud[i][2]
-        ), "GW/SW not as expected"
-
-        # lower reaches
-        assert abs(no_vsc_bud[-(i + 1)][2]) < abs(
-            with_vsc_bud[-(i + 1)][2]
-        ), "GW/SW not as expected"
-
-
-def test_01():
-    # Compare model runs with and without viscosity package active
-    # Model 1 - no viscosity
-    sfr_scen1_bud = scenario(0, silent=False)
-
-    # Model 2 - include viscosity
-    sfr_scen2_bud = scenario(1, silent=False)
-
-    # Seepage from upper SFR reaches should decrease owing to cold
-    # stream water.  GW discharge back to lower SFR reaches should
-    # increase owing to hot groundwater
-    confirm_changes(sfr_scen1_bud, sfr_scen2_bud)
+            # lower reaches
+            assert abs(no_vsc_bud_last[-(i + 1), 2]) < abs(
+                with_vsc_bud_last[-(i + 1), 2]
+            ), "GW/SW not as expected in lower reaches of viscosity w/ sfr example"
 
 
-# nosetest end
+# - No need to change any code below
+@pytest.mark.parametrize(
+    "idx, dir",
+    list(enumerate(exdirs)),
+)
+def test_mf6model(idx, dir):
+    # initialize testing framework
+    test = testing_framework()
+
+    # build the model
+    test.build_mf6_models(build_model, idx, dir)
+
+    # run the test model
+    test.run_mf6(Simulation(dir, exfunc=eval_results, idxsim=idx))
+
+
+def main():
+    # initialize testing framework
+    test = testing_framework()
+
+    # run the test model
+    for idx, dir in enumerate(exdirs):
+        test.build_mf6_models(build_model, idx, dir)
+        sim = Simulation(dir, exfunc=eval_results, idxsim=idx)
+        test.run_mf6(sim)
+
 
 if __name__ == "__main__":
-    # ### V-shaped, linear river valley model
+    # print message
+    print(f"standalone run of {os.path.basename(__file__)}")
 
-    # Compare model runs with and without viscosity package active
-    # Model 1 - no viscosity
-    sfr_scen1_bud = scenario(0)
-
-    # Model 2 - include viscosity
-    sfr_scen2_bud = scenario(1)
-
-    # Seepage from upper SFR reaches should decrease owing to cold
-    # stream water.  GW discharge back to lower SFR reaches should
-    # increase owing to hot groundwater
-    confirm_run_results(sfr_scen1_bud, sfr_scen2_bud)
+    # run main routine
+    main()

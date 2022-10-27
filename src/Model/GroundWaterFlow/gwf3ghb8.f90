@@ -2,7 +2,8 @@ module ghbmodule
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME, LENMEMPATH, &
                              LENVARNAME, LENMEMSEPARATOR
-  use MemoryHelperModule, only: create_mem_path, split_mem_address
+  use MemoryHelperModule, only: create_mem_path, split_mem_address, &
+                                memPathSeparator
   use BndModule, only: BndType
   use ObsModule, only: DefaultObsIdProcessor
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
@@ -16,7 +17,6 @@ module ghbmodule
   !
   character(len=LENFTYPE) :: ftype = 'GHB'
   character(len=LENPACKAGENAME) :: text = '             GHB'
-  character(len=LENMEMSEPARATOR), parameter :: memPathSeparator = '/'
   !
   type, extends(BndType) :: GhbType
 

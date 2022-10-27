@@ -3,7 +3,8 @@ module DrnModule
   use ConstantsModule, only: DZERO, DONE, DTWO, &
                              LENFTYPE, LENPACKAGENAME, LENAUXNAME, LINELENGTH, &
                              LENMEMPATH, LENVARNAME, LENMEMSEPARATOR
-  use MemoryHelperModule, only: create_mem_path, split_mem_address
+  use MemoryHelperModule, only: create_mem_path, split_mem_address, &
+                                memPathSeparator
   use SmoothingModule, only: sQSaturation, sQSaturationDerivative, &
                              sQuadraticSaturation
   use BndModule, only: BndType
@@ -20,7 +21,6 @@ module DrnModule
   !
   character(len=LENFTYPE) :: ftype = 'DRN'
   character(len=LENPACKAGENAME) :: text = '             DRN'
-  character(len=LENMEMSEPARATOR), parameter :: memPathSeparator = '/'
   !
   type, extends(BndType) :: DrnType
 
