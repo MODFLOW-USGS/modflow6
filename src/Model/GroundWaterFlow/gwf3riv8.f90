@@ -81,13 +81,6 @@ contains
     packobj%iscloc = 2 !sfac applies to conductance
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
-    ! -- check if vsc package exists and set flag if so
-    vscpath = trim(namemodel)//memPathSeparator//'VSC'
-    call split_mem_address(vscpath, locmempath, locvarname, vscexists)
-    if (vscexists) then
-      packobj%ivsc = 1
-    end if
-    !
     ! -- return
     return
   end subroutine riv_create

@@ -29,7 +29,7 @@ module GwfVscModule
   type, extends(NumericalPackageType) :: GwfVscType
     integer(I4B), pointer :: thermivisc => null() !< viscosity formulation flag (1:Linear, 2:Nonlinear)
     integer(I4B), pointer :: idxtmpr => null() !< if greater than 0 then an index for identifying whether the "species" array is temperature
-    integer(I4B), pointer :: ioutvisc => null() !< unit number for saving viscosity 
+    integer(I4B), pointer :: ioutvisc => null() !< unit number for saving viscosity
     integer(I4B), pointer :: iconcset => null() !< if 1 then conc points to a gwt (or gwe) model%x array
     integer(I4B), pointer :: ireadelev => null() !< if 1 then elev has been allocated and filled
     integer(I4B), dimension(:), pointer, contiguous :: ivisc => null() !< viscosity formulation flag for each species (1:Linear, 2:Nonlinear)
@@ -39,7 +39,7 @@ module GwfVscModule
     integer(I4B), dimension(:), pointer :: ibound => null() !< store pointer to ibound
 
     integer(I4B), pointer :: nviscspecies => null() !< number of concentration species used in viscosity equation
-    real(DP), dimension(:), pointer, contiguous :: dviscdc => null() !< linear change in viscosity with change in concentration 
+    real(DP), dimension(:), pointer, contiguous :: dviscdc => null() !< linear change in viscosity with change in concentration
     real(DP), dimension(:), pointer, contiguous :: cviscref => null() !< reference concentration used in viscosity equation
     real(DP), dimension(:), pointer, contiguous :: ctemp => null() !< temporary array of size (nviscspec) to pass to calc_visc_x
     character(len=LENMODELNAME), dimension(:), allocatable :: cmodelname !< names of gwt (or gwe) models used in viscosity equation
@@ -122,7 +122,7 @@ contains
 
     do i = 1, nviscspec
       if (ivisc(i) == 1) then
-        visc = visc + dviscdc(i) * (conc(i) - cviscref(i)) 
+        visc = visc + dviscdc(i) * (conc(i) - cviscref(i))
       else
         expon = -1 * a3 * ((conc(i) - cviscref(i)) / &
                            ((conc(i) + a4) * (cviscref(i) + a4)))
@@ -269,6 +269,9 @@ contains
     ! ----------------------------------------------------------------------------
     ! -- modules
     use BndModule, only: BndType
+    use DrnModule, only: DrnType
+    use GhbModule, only: GhbType
+    use RivModule, only: RivType
     use LakModule, only: LakType
     use SfrModule, only: SfrType
     use MawModule, only: MawType
@@ -280,6 +283,27 @@ contains
     !
     ! -- Add density terms based on boundary package type
     select case (packobj%filtyp)
+    case ('DRN')
+      !
+      ! -- activate viscosity for the drain package
+      select type (packobj)
+      type is (DrnType)
+        call packobj%bnd_activate_viscosity()
+      end select
+    case ('GHB')
+      !
+      ! -- activate viscosity for the drain package
+      select type (packobj)
+      type is (GhbType)
+        call packobj%bnd_activate_viscosity()
+      end select
+    case ('RIV')
+      !
+      ! -- activate viscosity for the drain package
+      select type (packobj)
+      type is (RivType)
+        call packobj%bnd_activate_viscosity()
+      end select
     case ('LAK')
       !
       ! -- activate viscosity for lake package
