@@ -1,8 +1,7 @@
 module DrnModule
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: DZERO, DONE, DTWO, &
-                             LENFTYPE, LENPACKAGENAME, LENAUXNAME, LINELENGTH, &
-                             LENMEMPATH, LENVARNAME, LENMEMSEPARATOR
+  use ConstantsModule, only: DZERO, DONE, DTWO, LENFTYPE, LENPACKAGENAME, &
+                             LENAUXNAME, LINELENGTH, LENMEMSEPARATOR
   use MemoryHelperModule, only: create_mem_path, split_mem_address, &
                                 memPathSeparator
   use SmoothingModule, only: sQSaturation, sQSaturationDerivative, &
@@ -67,10 +66,6 @@ contains
     character(len=*), intent(in) :: pakname
     ! -- local
     type(DrnType), pointer :: drnobj
-    character(len=LENMEMPATH) :: vscpath !< if vsc exist, this is path name
-    character(len=LENMEMPATH) :: locmempath !< the memory path for the model
-    character(len=LENVARNAME) :: locvarname !< the package name to check on
-    logical(LGP) :: vscexists !< flag will be true if vsc is active
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables

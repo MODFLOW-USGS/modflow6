@@ -1,7 +1,6 @@
 module rivmodule
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME, LENMEMPATH, &
-                             LENVARNAME, LENMEMSEPARATOR
+  use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME, LENMEMSEPARATOR
   use MemoryHelperModule, only: create_mem_path, split_mem_address, &
                                 memPathSeparator
   use BndModule, only: BndType
@@ -53,10 +52,6 @@ contains
     character(len=*), intent(in) :: pakname
     ! -- local
     type(RivType), pointer :: rivobj
-    character(len=LENMEMPATH) :: vscpath !< if vsc exist, this is path name
-    character(len=LENMEMPATH) :: locmempath !< the memory path for the model
-    character(len=LENVARNAME) :: locvarname !< the package name to check on
-    logical(LGP) :: vscexists !< flag will be true if vsc is active
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
