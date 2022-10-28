@@ -243,6 +243,7 @@ class Dfn2F90:
                 shape = v["shape"]
                 shape = shape.replace("(", "")
                 shape = shape.replace(")", "")
+                shape = shape.replace(",", "")
                 shape = shape.upper()
                 shapelist = shape.strip().split()
             ndim = len(shapelist)

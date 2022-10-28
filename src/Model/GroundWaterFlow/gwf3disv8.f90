@@ -26,9 +26,9 @@ module GwfDisvModule
     real(DP), dimension(:, :), pointer, contiguous :: cellxy => null() ! cell center stored as 2d array of x and y
     integer(I4B), dimension(:), pointer, contiguous :: iavert => null() ! cell vertex pointer ia array
     integer(I4B), dimension(:), pointer, contiguous :: javert => null() ! cell vertex pointer ja array
-    real(DP), dimension(:, :), pointer, contiguous :: top2d => null() ! top elevations for each cell at top of model (ncpl, 1)
-    real(DP), dimension(:, :, :), pointer, contiguous :: bot3d => null() ! bottom elevations for each cell (ncpl, 1, nlay)
-    integer(I4B), dimension(:, :, :), pointer, contiguous :: idomain => null() ! idomain (ncpl, 1, nlay)
+    real(DP), dimension(:), pointer, contiguous :: top1d => null() ! top elevations for each cell at top of model (ncpl)
+    real(DP), dimension(:, :), pointer, contiguous :: bot2d => null() ! bottom elevations for each cell (ncpl, nlay)
+    integer(I4B), dimension(:, :), pointer, contiguous :: idomain => null() ! idomain (ncpl, nlay)
   contains
     procedure :: dis_df => disv_df
     procedure :: dis_da => disv_da
@@ -200,8 +200,8 @@ contains
     call mem_deallocate(this%cellxy)
     call mem_deallocate(this%iavert)
     call mem_deallocate(this%javert)
-    call mem_deallocate(this%top2d)
-    call mem_deallocate(this%bot3d)
+    call mem_deallocate(this%top1d)
+    call mem_deallocate(this%bot2d)
     call mem_deallocate(this%idomain)
     !
     ! -- Return
@@ -338,10 +338,10 @@ contains
     this%nodesuser = this%nlay * this%ncpl
     !
     ! -- Allocate non-reduced vectors for disv
-    call mem_allocate(this%idomain, this%ncpl, 1, this%nlay, 'IDOMAIN', &
+    call mem_allocate(this%idomain, this%ncpl, this%nlay, 'IDOMAIN', &
                       this%memoryPath)
-    call mem_allocate(this%top2d, this%ncpl, 1, 'TOP2D', this%memoryPath)
-    call mem_allocate(this%bot3d, this%ncpl, 1, this%nlay, 'BOT3D', &
+    call mem_allocate(this%top1d, this%ncpl, 'TOP1D', this%memoryPath)
+    call mem_allocate(this%bot2d, this%ncpl, this%nlay, 'BOT2D', &
                       this%memoryPath)
     !
     ! -- Allocate vertices array
@@ -351,7 +351,7 @@ contains
     ! -- initialize all cells to be active (idomain = 1)
     do k = 1, this%nlay
       do j = 1, this%ncpl
-        this%idomain(j, 1, k) = 1
+        this%idomain(j, k) = 1
       end do
     end do
     !
@@ -405,8 +405,8 @@ contains
     idmMemoryPath = create_mem_path(this%name_model, 'DISV', idm_context)
     !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%top2d, 'TOP', idmMemoryPath, afound(1))
-    call mem_set_value(this%bot3d, 'BOTM', idmMemoryPath, afound(2))
+    call mem_set_value(this%top1d, 'TOP', idmMemoryPath, afound(1))
+    call mem_set_value(this%bot2d, 'BOTM', idmMemoryPath, afound(2))
     call mem_set_value(this%idomain, 'IDOMAIN', idmMemoryPath, afound(3))
     !
     ! -- log simulation values
@@ -472,7 +472,7 @@ contains
     this%nodes = 0
     do k = 1, this%nlay
       do j = 1, this%ncpl
-        if (this%idomain(j, 1, k) > 0) this%nodes = this%nodes + 1
+        if (this%idomain(j, k) > 0) this%nodes = this%nodes + 1
       end do
     end do
     !
@@ -487,16 +487,16 @@ contains
     ! -- Check cell thicknesses
     do k = 1, this%nlay
       do j = 1, this%ncpl
-        if (this%idomain(j, 1, k) == 0) cycle
-        if (this%idomain(j, 1, k) > 0) then
+        if (this%idomain(j, k) == 0) cycle
+        if (this%idomain(j, k) > 0) then
           if (k > 1) then
-            top = this%bot3d(j, 1, k - 1)
+            top = this%bot2d(j, k - 1)
           else
-            top = this%top2d(j, 1)
+            top = this%top1d(j)
           end if
-          dz = top - this%bot3d(j, 1, k)
+          dz = top - this%bot2d(j, k)
           if (dz <= DZERO) then
-            write (ermsg, fmt=fmtdz) k, j, top, this%bot3d(j, 1, k)
+            write (ermsg, fmt=fmtdz) k, j, top, this%bot2d(j, k)
             call store_error(ermsg)
           end if
         end if
@@ -523,10 +523,10 @@ contains
       noder = 1
       do k = 1, this%nlay
         do j = 1, this%ncpl
-          if (this%idomain(j, 1, k) > 0) then
+          if (this%idomain(j, k) > 0) then
             this%nodereduced(node) = noder
             noder = noder + 1
-          elseif (this%idomain(j, 1, k) < 0) then
+          elseif (this%idomain(j, k) < 0) then
             this%nodereduced(node) = -1
           else
             this%nodereduced(node) = 0
@@ -542,7 +542,7 @@ contains
       noder = 1
       do k = 1, this%nlay
         do j = 1, this%ncpl
-          if (this%idomain(j, 1, k) > 0) then
+          if (this%idomain(j, k) > 0) then
             this%nodeuser(noder) = node
             noder = noder + 1
           end if
@@ -551,7 +551,7 @@ contains
       end do
     end if
     !
-    ! -- Move top2d and bot3d into top and bot
+    ! -- Move top1d and bot2d into top and bot
     !    and set x and y center coordinates
     node = 0
     do k = 1, this%nlay
@@ -561,12 +561,12 @@ contains
         if (this%nodes < this%nodesuser) noder = this%nodereduced(node)
         if (noder <= 0) cycle
         if (k > 1) then
-          top = this%bot3d(j, 1, k - 1)
+          top = this%bot2d(j, k - 1)
         else
-          top = this%top2d(j, 1)
+          top = this%top1d(j)
         end if
         this%top(noder) = top
-        this%bot(noder) = this%bot3d(j, 1, k)
+        this%bot(noder) = this%bot2d(j, k)
         this%xc(noder) = this%cellxy(1, j)
         this%yc(noder) = this%cellxy(2, j)
       end do
@@ -937,8 +937,8 @@ contains
     write (iunit) this%xorigin ! xorigin
     write (iunit) this%yorigin ! yorigin
     write (iunit) this%angrot ! angrot
-    write (iunit) this%top2d ! top
-    write (iunit) this%bot3d ! botm
+    write (iunit) this%top1d ! top
+    write (iunit) this%bot2d ! botm
     write (iunit) this%vertices ! vertices
     write (iunit) (this%cellxy(1, i), i=1, this%ncpl) ! cellx
     write (iunit) (this%cellxy(2, i), i=1, this%ncpl) ! celly
