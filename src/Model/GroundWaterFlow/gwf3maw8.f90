@@ -3043,7 +3043,6 @@ contains
     call mem_deallocate(this%kappa)
     call mem_deallocate(this%cbcauxitems)
     call mem_deallocate(this%idense)
-    call mem_deallocate(this%viscratios)
     !
     ! -- pointers to gwf variables
     nullify (this%gwfiss)

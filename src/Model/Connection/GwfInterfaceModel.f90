@@ -147,6 +147,7 @@ contains
     call mem_deallocate(this%inobs)
     call mem_deallocate(this%innpf)
     call mem_deallocate(this%inbuy)
+    call mem_deallocate(this%invsc)
     call mem_deallocate(this%insto)
     call mem_deallocate(this%incsub)
     call mem_deallocate(this%inmvr)
