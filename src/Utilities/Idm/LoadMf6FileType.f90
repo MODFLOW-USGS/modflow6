@@ -745,15 +745,8 @@ contains
     character(len=16), dimension(:), allocatable :: array_shape_string
     character(len=:), allocatable :: shape_string_copy
 
-    ! remove commas from strg
-    shape_string_copy = trim(shape_string)//' '
-    do i = 1, len_trim(shape_string_copy)
-      if (shape_string_copy(i:i) == ',') then
-        shape_string_copy(i:i) = ' '
-      end if
-    end do
-
     ! parse the string into multiple words
+    shape_string_copy = trim(shape_string)//' '
     call ParseLine(shape_string_copy, ndim, array_shape_string)
     allocate (array_shape(ndim))
 

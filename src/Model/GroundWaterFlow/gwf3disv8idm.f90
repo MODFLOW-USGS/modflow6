@@ -159,7 +159,7 @@ module GwfDisvInputModule
     'BOTM', & ! tag name
     'BOTM', & ! fortran variable
     'DOUBLE2D', & ! type
-    'NCPL, NLAY', & ! shape
+    'NCPL NLAY', & ! shape
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -175,7 +175,7 @@ module GwfDisvInputModule
     'IDOMAIN', & ! tag name
     'IDOMAIN', & ! fortran variable
     'INTEGER2D', & ! type
-    'NCPL, NLAY', & ! shape
+    'NCPL NLAY', & ! shape
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
