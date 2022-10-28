@@ -508,7 +508,7 @@ contains
       call read_int3d_layered(parser, int3d, idt%mf6varname, nlay, &
                               layer_shape)
     else
-      int1d_ptr(1:nsize1*nsize2*nsize3) => int3d(:, :, :)
+      int1d_ptr(1:nsize1 * nsize2 * nsize3) => int3d(:, :, :)
       call read_int1d(parser, int1d_ptr, idt%mf6varname)
     end if
 
@@ -660,7 +660,7 @@ contains
       call read_dbl3d_layered(parser, dbl3d, idt%mf6varname, nlay, &
                               layer_shape)
     else
-      dbl1d_ptr(1:nsize1*nsize2*nsize3) => dbl3d(:, :, :)
+      dbl1d_ptr(1:nsize1 * nsize2 * nsize3) => dbl3d(:, :, :)
       call read_dbl1d(parser, dbl1d_ptr, idt%mf6varname)
     end if
 
@@ -746,7 +746,7 @@ contains
     character(len=:), allocatable :: shape_string_copy
 
     ! remove commas from strg
-    shape_string_copy = trim(shape_string) // ' '
+    shape_string_copy = trim(shape_string)//' '
     do i = 1, len_trim(shape_string_copy)
       if (shape_string_copy(i:i) == ',') then
         shape_string_copy(i:i) = ' '

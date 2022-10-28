@@ -15,7 +15,7 @@ module LayeredArrayReaderModule
   public :: read_int2d_layered
   public :: read_int3d_layered
 
-  contains
+contains
 
   subroutine read_dbl1d_layered(parser, dbl1d, aname, nlay, layer_shape)
     ! -- dummy
