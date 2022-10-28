@@ -166,6 +166,7 @@ $(OBJDIR)/Mover.o \
 $(OBJDIR)/GwfMvrPeriodData.o \
 $(OBJDIR)/ims8misc.o \
 $(OBJDIR)/GwfBuyInputData.o \
+$(OBJDIR)/GwfVscInputData.o \
 $(OBJDIR)/InterfaceMap.o \
 $(OBJDIR)/gwf3disu8.o \
 $(OBJDIR)/GridSorting.o \
@@ -204,6 +205,7 @@ $(OBJDIR)/GhostNode.o \
 $(OBJDIR)/gwf3ghb8.o \
 $(OBJDIR)/gwf3evt8.o \
 $(OBJDIR)/gwf3drn8.o \
+$(OBJDIR)/gwf3vsc8.o \
 $(OBJDIR)/gwf3chd8.o \
 $(OBJDIR)/ims8reordering.o \
 $(OBJDIR)/GridConnection.o \
