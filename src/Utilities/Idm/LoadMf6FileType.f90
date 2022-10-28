@@ -12,9 +12,16 @@ module LoadMf6FileTypeModule
   use SimVariablesModule, only: errmsg
   use SimModule, only: store_error
   use BlockParserModule, only: BlockParserType
-  use ArrayReadersModule, only: ReadArray
-  use Double1dReaderModule, only: read_dbl1d, read_dbl1d_layered
-  use Integer1dReaderModule, only: read_int1d, read_int1d_layered
+  use LayeredArrayReaderModule, only: read_dbl1d_layered, &
+                                      read_dbl2d_layered, &
+                                      read_dbl3d_layered, &
+                                      read_int1d_layered, &
+                                      read_int2d_layered, &
+                                      read_int3d_layered
+  use Double1dReaderModule, only: read_dbl1d
+  use Double2dReaderModule, only: read_dbl2d
+  use Integer1dReaderModule, only: read_int1d
+  use Integer2dReaderModule, only: read_int2d
   use InputOutputModule, only: parseline
   use InputDefinitionModule, only: InputParamDefinitionType
   use InputDefinitionSelectorModule, only: get_param_definition_type, &
@@ -75,7 +82,7 @@ contains
     do iblock = 1, size(mf6_input%p_block_dfns)
       call parse_block(parser, mf6_input, iblock, mshape, iout)
       !
-      ! -- set model shape if discretion dimensions have been read
+      ! -- set model shape if discretization dimensions have been read
       if (mf6_input%p_block_dfns(iblock)%blockname == 'DIMENSIONS' .and. &
           filetype(1:3) == 'DIS') then
         call set_model_shape(mf6_input%file_type, componentMemPath, &
@@ -236,6 +243,8 @@ contains
       call load_integer_type(parser, idt, mf6_input%memoryPath, iout)
     case ('INTEGER1D')
       call load_integer1d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
+    case ('INTEGER2D')
+      call load_integer2d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
     case ('INTEGER3D')
       call load_integer3d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
     case ('DOUBLE')
@@ -380,22 +389,85 @@ contains
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape !< model shape
     integer(I4B), intent(in) :: iout !< unit number for output
     integer(I4B), dimension(:), pointer, contiguous :: int1d
-    integer(I4B), pointer :: nsize1
+    !integer(I4B), pointer :: nsize1
+    integer(I4B) :: nlay
     integer(I4B) :: nvals
+    integer(I4B), dimension(:), allocatable :: array_shape
+    integer(I4B), dimension(:), allocatable :: layer_shape
+    character(len=LINELENGTH) :: keyword
 
+    ! Check if it is a full grid sized array (NODES)
     if (idt%shape == 'NODES') then
       nvals = product(mshape)
-      call mem_allocate(int1d, nvals, idt%mf6varname, memoryPath)
     else
-      call mem_setptr(nsize1, idt%shape, memoryPath)
-      call mem_allocate(int1d, nsize1, idt%mf6varname, memoryPath)
+      call get_shape_from_string(idt%shape, array_shape, memoryPath)
+      nvals = array_shape(1)
     end if
 
-    call read_grid_array(parser, mshape, idt%tagname, idt%layered, intarray=int1d)
+    ! allocate memory for the array
+    call mem_allocate(int1d, nvals, idt%mf6varname, memoryPath)
 
+    ! check to see if the user specified "LAYERED" input
+    keyword = ''
+    if (idt%layered) then
+      call parser%GetStringCaps(keyword)
+    end if
+
+    ! read the array from the input file
+    if (keyword == 'LAYERED' .and. idt%layered) then
+      call get_layered_shape(mshape, nlay, layer_shape)
+      call read_int1d_layered(parser, int1d, idt%mf6varname, nlay, layer_shape)
+    else
+      call read_int1d(parser, int1d, idt%mf6varname)
+    end if
+
+    ! log information on the loaded array to the list file
     call idm_log_var(int1d, idt%mf6varname, memoryPath, iout)
     return
   end subroutine load_integer1d_type
+
+  !> @brief load type 2d integer
+  !<
+  subroutine load_integer2d_type(parser, idt, memoryPath, mshape, iout)
+    type(BlockParserType), intent(inout) :: parser !< block parser
+    type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
+    character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
+    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape !< model shape
+    integer(I4B), intent(in) :: iout !< unit number for output
+    integer(I4B), dimension(:, :), pointer, contiguous :: int2d
+    integer(I4B) :: nlay
+    integer(I4B) :: nsize1, nsize2
+    integer(I4B), dimension(:), allocatable :: array_shape
+    integer(I4B), dimension(:), allocatable :: layer_shape
+    character(len=LINELENGTH) :: keyword
+
+    ! determine the array shape from the input data defintion (idt%shape),
+    ! which looks like "NCOL, NROW, NLAY"
+    call get_shape_from_string(idt%shape, array_shape, memoryPath)
+    nsize1 = array_shape(1)
+    nsize2 = array_shape(2)
+
+    ! create a new 3d memory managed variable
+    call mem_allocate(int2d, nsize1, nsize2, idt%mf6varname, memoryPath)
+
+    ! check to see if the user specified "LAYERED" input
+    keyword = ''
+    if (idt%layered) then
+      call parser%GetStringCaps(keyword)
+    end if
+
+    ! read the array from the input file
+    if (keyword == 'LAYERED' .and. idt%layered) then
+      call get_layered_shape(mshape, nlay, layer_shape)
+      call read_int2d_layered(parser, int2d, idt%mf6varname, nlay, layer_shape)
+    else
+      call read_int2d(parser, int2d, idt%mf6varname)
+    end if
+
+    ! log information on the loaded array to the list file
+    call idm_log_var(int2d, idt%mf6varname, memoryPath, iout)
+    return
+  end subroutine load_integer2d_type
 
   !> @brief load type 3d integer
   !<
@@ -406,46 +478,43 @@ contains
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape !< model shape
     integer(I4B), intent(in) :: iout !< unit number for output
     integer(I4B), dimension(:, :, :), pointer, contiguous :: int3d
-    integer(I4B) :: ndim
+    integer(I4B) :: nlay
     integer(I4B) :: nsize1, nsize2, nsize3
+    integer(I4B), dimension(:), allocatable :: array_shape
+    integer(I4B), dimension(:), allocatable :: layer_shape
     character(len=LINELENGTH) :: keyword
+    integer(I4B), dimension(:), pointer, contiguous :: int1d_ptr
 
-    ndim = size(mshape)
+    ! determine the array shape from the input data defintion (idt%shape),
+    ! which looks like "NCOL, NROW, NLAY"
+    call get_shape_from_string(idt%shape, array_shape, memoryPath)
+    nsize1 = array_shape(1)
+    nsize2 = array_shape(2)
+    nsize3 = array_shape(3)
 
-    ! set sizes
-    if (ndim == 2) then
-      nsize1 = mshape(2) ! NCPL
-      nsize2 = 1
-      nsize3 = mshape(1)
-    elseif (ndim == 3) then
-      nsize1 = mshape(3) ! NCOL
-      nsize2 = mshape(2) ! NROW
-      nsize3 = mshape(1) ! NLAY
-    end if
+    ! create a new 3d memory managed variable
+    call mem_allocate(int3d, nsize1, nsize2, nsize3, idt%mf6varname, &
+                      memoryPath)
 
-    ! allocate the array using the memory manager
-    call mem_allocate(int3d, nsize1, nsize2, nsize3, idt%mf6varname, memoryPath)
-
-    ! fill the array from the file
-    if (idt%blockname == 'GRIDDATA') then
+    ! check to see if the user specified "LAYERED" input
+    keyword = ''
+    if (idt%layered) then
       call parser%GetStringCaps(keyword)
-      if (keyword == 'LAYERED') then
-        ! read by layer
-        call ReadArray(parser%iuactive, int3d(:, :, :), &
-                       idt%mf6varname, ndim, nsize1, nsize2, &
-                       nsize3, iout, 1, nsize3)
-      else
-        ! read full 3d array
-        call ReadArray(parser%iuactive, int3d(:, :, :), idt%mf6varname, &
-                       ndim, nsize1 * nsize2 * nsize3, iout)
-      end if
-    else
-      ! read full 3d array
-      call ReadArray(parser%iuactive, int3d(:, :, :), idt%mf6varname, &
-                     ndim, nsize1 * nsize2 * nsize3, iout)
     end if
 
+    ! read the array from the input file
+    if (keyword == 'LAYERED' .and. idt%layered) then
+      call get_layered_shape(mshape, nlay, layer_shape)
+      call read_int3d_layered(parser, int3d, idt%mf6varname, nlay, &
+                              layer_shape)
+    else
+      int1d_ptr(1:nsize1*nsize2*nsize3) => int3d(:, :, :)
+      call read_int1d(parser, int1d_ptr, idt%mf6varname)
+    end if
+
+    ! log information on the loaded array to the list file
     call idm_log_var(int3d, idt%mf6varname, memoryPath, iout)
+
     return
   end subroutine load_integer3d_type
 
@@ -472,18 +541,39 @@ contains
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape !< model shape
     integer(I4B), intent(in) :: iout !< unit number for output
     real(DP), dimension(:), pointer, contiguous :: dbl1d
-    integer(I4B), pointer :: nsize1
+    !integer(I4B), pointer :: nsize1
+    integer(I4B) :: nlay
     integer(I4B) :: nvals
+    integer(I4B), dimension(:), allocatable :: array_shape
+    integer(I4B), dimension(:), allocatable :: layer_shape
+    character(len=LINELENGTH) :: keyword
 
+    ! Check if it is a full grid sized array (NODES)
     if (idt%shape == 'NODES') then
       nvals = product(mshape)
-      call mem_allocate(dbl1d, nvals, idt%mf6varname, memoryPath)
     else
-      call mem_setptr(nsize1, idt%shape, memoryPath)
-      call mem_allocate(dbl1d, nsize1, idt%mf6varname, memoryPath)
+      call get_shape_from_string(idt%shape, array_shape, memoryPath)
+      nvals = array_shape(1)
     end if
 
-    call read_grid_array(parser, mshape, idt%tagname, idt%layered, dbl1d)
+    ! allocate memory for the array
+    call mem_allocate(dbl1d, nvals, idt%mf6varname, memoryPath)
+
+    ! check to see if the user specified "LAYERED" input
+    keyword = ''
+    if (idt%layered) then
+      call parser%GetStringCaps(keyword)
+    end if
+
+    ! read the array from the input file
+    if (keyword == 'LAYERED' .and. idt%layered) then
+      call get_layered_shape(mshape, nlay, layer_shape)
+      call read_dbl1d_layered(parser, dbl1d, idt%mf6varname, nlay, layer_shape)
+    else
+      call read_dbl1d(parser, dbl1d, idt%mf6varname)
+    end if
+
+    ! log information on the loaded array to the list file
     call idm_log_var(dbl1d, idt%mf6varname, memoryPath, iout)
     return
   end subroutine load_double1d_type
@@ -497,27 +587,36 @@ contains
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape !< model shape
     integer(I4B), intent(in) :: iout !< unit number for output
     real(DP), dimension(:, :), pointer, contiguous :: dbl2d
-    integer(I4B) :: ndim
+    integer(I4B) :: nlay
     integer(I4B) :: nsize1, nsize2
+    integer(I4B), dimension(:), allocatable :: array_shape
+    integer(I4B), dimension(:), allocatable :: layer_shape
+    character(len=LINELENGTH) :: keyword
 
-    ndim = size(mshape)
+    ! determine the array shape from the input data defintion (idt%shape),
+    ! which looks like "NCOL, NROW, NLAY"
+    call get_shape_from_string(idt%shape, array_shape, memoryPath)
+    nsize1 = array_shape(1)
+    nsize2 = array_shape(2)
 
-    ! set sizes
-    if (ndim == 2) then
-      nsize1 = mshape(2) ! NCPL
-      nsize2 = 1
-    elseif (ndim == 3) then
-      nsize1 = mshape(3) ! NCOL
-      nsize2 = mshape(2) ! NROW
-    end if
-
-    ! allocate the array using the memory manager
+    ! create a new 3d memory managed variable
     call mem_allocate(dbl2d, nsize1, nsize2, idt%mf6varname, memoryPath)
 
-    ! fill the array from the file
-    call ReadArray(parser%iuactive, dbl2d, idt%mf6varname, &
-                   ndim, nsize1, nsize2, iout, 0)
+    ! check to see if the user specified "LAYERED" input
+    keyword = ''
+    if (idt%layered) then
+      call parser%GetStringCaps(keyword)
+    end if
 
+    ! read the array from the input file
+    if (keyword == 'LAYERED' .and. idt%layered) then
+      call get_layered_shape(mshape, nlay, layer_shape)
+      call read_dbl2d_layered(parser, dbl2d, idt%mf6varname, nlay, layer_shape)
+    else
+      call read_dbl2d(parser, dbl2d, idt%mf6varname)
+    end if
+
+    ! log information on the loaded array to the list file
     call idm_log_var(dbl2d, idt%mf6varname, memoryPath, iout)
     return
   end subroutine load_double2d_type
@@ -531,46 +630,43 @@ contains
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: mshape !< model shape
     integer(I4B), intent(in) :: iout !< unit number for output
     real(DP), dimension(:, :, :), pointer, contiguous :: dbl3d
-    integer(I4B) :: ndim
+    integer(I4B) :: nlay
     integer(I4B) :: nsize1, nsize2, nsize3
+    integer(I4B), dimension(:), allocatable :: array_shape
+    integer(I4B), dimension(:), allocatable :: layer_shape
     character(len=LINELENGTH) :: keyword
+    real(DP), dimension(:), pointer, contiguous :: dbl1d_ptr
 
-    ndim = size(mshape)
+    ! determine the array shape from the input data defintion (idt%shape),
+    ! which looks like "NCOL, NROW, NLAY"
+    call get_shape_from_string(idt%shape, array_shape, memoryPath)
+    nsize1 = array_shape(1)
+    nsize2 = array_shape(2)
+    nsize3 = array_shape(3)
 
-    ! set sizes
-    if (ndim == 2) then
-      nsize1 = mshape(2) ! NCPL
-      nsize2 = 1
-      nsize3 = mshape(1)
-    elseif (ndim == 3) then
-      nsize1 = mshape(3) ! NCOL
-      nsize2 = mshape(2) ! NROW
-      nsize3 = mshape(1) ! NLAY
-    end if
+    ! create a new 3d memory managed variable
+    call mem_allocate(dbl3d, nsize1, nsize2, nsize3, idt%mf6varname, &
+                      memoryPath)
 
-    ! allocate the array using the memory manager
-    call mem_allocate(dbl3d, nsize1, nsize2, nsize3, idt%mf6varname, memoryPath)
-
-    ! fill the array from the file
-    if (idt%blockname == 'GRIDDATA') then
+    ! check to see if the user specified "LAYERED" input
+    keyword = ''
+    if (idt%layered) then
       call parser%GetStringCaps(keyword)
-      if (keyword == 'LAYERED') then
-        ! read by layer
-        call ReadArray(parser%iuactive, dbl3d(:, :, :), &
-                       idt%mf6varname, ndim, nsize1, nsize2, &
-                       nsize3, iout, 1, nsize3)
-      else
-        ! read full 3d array
-        call ReadArray(parser%iuactive, dbl3d(:, :, :), idt%mf6varname, &
-                       ndim, nsize1 * nsize2 * nsize3, iout)
-      end if
-    else
-      ! read full 3d array
-      call ReadArray(parser%iuactive, dbl3d(:, :, :), idt%mf6varname, &
-                     ndim, nsize1 * nsize2 * nsize3, iout)
     end if
 
+    ! read the array from the input file
+    if (keyword == 'LAYERED' .and. idt%layered) then
+      call get_layered_shape(mshape, nlay, layer_shape)
+      call read_dbl3d_layered(parser, dbl3d, idt%mf6varname, nlay, &
+                              layer_shape)
+    else
+      dbl1d_ptr(1:nsize1*nsize2*nsize3) => dbl3d(:, :, :)
+      call read_dbl1d(parser, dbl1d_ptr, idt%mf6varname)
+    end if
+
+    ! log information on the loaded array to the list file
     call idm_log_var(dbl3d, idt%mf6varname, memoryPath, iout)
+
     return
   end subroutine load_double3d_type
 
@@ -613,81 +709,60 @@ contains
     return
   end subroutine set_model_shape
 
-  !> @brief read an array that is the size of the model grid
-  !<
-  subroutine read_grid_array(parser, mshape, array_name, layered, dblarray, &
-                             intarray)
-    type(BlockParserType), intent(inout) :: parser !< block parser
-    integer(I4B), dimension(:), intent(in) :: mshape !< model shape
-    character(len=*), intent(in) :: array_name
-    logical(LGP), intent(in) :: layered
-    real(DP), dimension(:), optional, intent(inout) :: dblarray
-    integer(I4B), dimension(:), optional, intent(inout) :: intarray
-    integer(I4B) :: nvals
+  subroutine get_layered_shape(mshape, nlay, layer_shape)
+    integer(I4B), dimension(:), intent(in) :: mshape
+    integer(I4B), intent(out) :: nlay
+    integer(I4B), dimension(:), allocatable, intent(out) :: layer_shape
     integer(I4B) :: ndim
-    integer(I4B) :: iout !< unit number for output
-    integer(I4B) :: nlay
-    integer(I4B), dimension(:), allocatable :: layer_shape
-    character(len=LINELENGTH) :: keyword
 
     ndim = size(mshape)
-    if (present(dblarray)) then
-      nvals = size(dblarray)
-    end if
-    if (present(intarray)) then
-      nvals = size(intarray)
-    end if
-    iout = 0
+    nlay = 0
 
-    ! disu
-    if (ndim == 1) then
+    if (ndim == 1) then ! disu
       nlay = 1
       allocate (layer_shape(1))
       layer_shape(1) = mshape(1)
-
-      ! disv
-    else if (ndim == 2) then
+    else if (ndim == 2) then ! disv
       nlay = mshape(1)
       allocate (layer_shape(1))
       layer_shape(1) = mshape(2)
-
-      ! dis
-    else if (ndim == 3) then
+    else if (ndim == 3) then ! disu
       nlay = mshape(1)
       allocate (layer_shape(2))
       layer_shape(1) = mshape(3) ! ncol
       layer_shape(2) = mshape(2) ! nrow
-
     end if
 
-    call parser%GetStringCaps(keyword)
-    if (keyword == 'LAYERED' .and. layered) then
+  end subroutine get_layered_shape
 
-      ! float array
-      if (present(dblarray)) then
-        call read_dbl1d_layered(parser, dblarray, array_name, nlay, layer_shape)
+  subroutine get_shape_from_string(shape_string, array_shape, memoryPath)
+    character(len=*), intent(in) :: shape_string
+    integer(I4B), dimension(:), allocatable, intent(inout) :: array_shape
+    character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
+    integer(I4B) :: ndim
+    integer(I4B) :: i
+    integer(I4B), pointer :: int_ptr
+    character(len=16), dimension(:), allocatable :: array_shape_string
+    character(len=:), allocatable :: shape_string_copy
+
+    ! remove commas from strg
+    shape_string_copy = trim(shape_string) // ' '
+    do i = 1, len_trim(shape_string_copy)
+      if (shape_string_copy(i:i) == ',') then
+        shape_string_copy(i:i) = ' '
       end if
+    end do
 
-      ! integer array
-      if (present(intarray)) then
-        call read_int1d_layered(parser, intarray, array_name, nlay, layer_shape)
-      end if
+    ! parse the string into multiple words
+    call ParseLine(shape_string_copy, ndim, array_shape_string)
+    allocate (array_shape(ndim))
 
-    else
+    ! find shape in memory manager and put into array_shape
+    do i = 1, ndim
+      call mem_setptr(int_ptr, array_shape_string(i), memoryPath)
+      array_shape(i) = int_ptr
+    end do
 
-      ! float array
-      if (present(dblarray)) then
-        call read_dbl1d(parser, dblarray, array_name)
-      end if
-
-      ! integer array
-      if (present(intarray)) then
-        call read_int1d(parser, intarray, array_name)
-      end if
-
-    end if
-
-    return
-  end subroutine read_grid_array
+  end subroutine get_shape_from_string
 
 end module LoadMf6FileTypeModule

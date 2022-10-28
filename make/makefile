@@ -100,6 +100,7 @@ $(OBJDIR)/TimeArraySeries.o \
 $(OBJDIR)/ObsOutputList.o \
 $(OBJDIR)/Observe.o \
 $(OBJDIR)/InputDefinition.o \
+$(OBJDIR)/ArrayReaderBase.o \
 $(OBJDIR)/TimeArraySeriesLink.o \
 $(OBJDIR)/ObsUtility.o \
 $(OBJDIR)/ObsContainer.o \
@@ -109,7 +110,7 @@ $(OBJDIR)/gwf3npf8idm.o \
 $(OBJDIR)/gwf3disv8idm.o \
 $(OBJDIR)/gwf3disu8idm.o \
 $(OBJDIR)/gwf3dis8idm.o \
-$(OBJDIR)/ArrayReaderBase.o \
+$(OBJDIR)/Integer2dReader.o \
 $(OBJDIR)/TimeArraySeriesManager.o \
 $(OBJDIR)/PackageMover.o \
 $(OBJDIR)/Obs3.o \
@@ -119,15 +120,15 @@ $(OBJDIR)/BudgetFileReader.o \
 $(OBJDIR)/StructVector.o \
 $(OBJDIR)/IdmLogger.o \
 $(OBJDIR)/InputDefinitionSelector.o \
-$(OBJDIR)/Integer2dReader.o \
+$(OBJDIR)/Integer1dReader.o \
 $(OBJDIR)/Double2dReader.o \
+$(OBJDIR)/Double1dReader.o \
 $(OBJDIR)/BoundaryPackage.o \
 $(OBJDIR)/BaseModel.o \
 $(OBJDIR)/BudgetTerm.o \
 $(OBJDIR)/StructArray.o \
 $(OBJDIR)/ModflowInput.o \
-$(OBJDIR)/Integer1dReader.o \
-$(OBJDIR)/Double1dReader.o \
+$(OBJDIR)/LayeredArrayReader.o \
 $(OBJDIR)/NumericalModel.o \
 $(OBJDIR)/mf6lists.o \
 $(OBJDIR)/PackageBudget.o \
