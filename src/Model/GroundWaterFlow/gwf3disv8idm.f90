@@ -142,8 +142,8 @@ module GwfDisvInputModule
     'GRIDDATA', & ! block
     'TOP', & ! tag name
     'TOP', & ! fortran variable
-    'DOUBLE2D', & ! type
-    'NCPL, 1', & ! shape
+    'DOUBLE1D', & ! type
+    'NCPL', & ! shape
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -158,8 +158,8 @@ module GwfDisvInputModule
     'GRIDDATA', & ! block
     'BOTM', & ! tag name
     'BOTM', & ! fortran variable
-    'DOUBLE3D', & ! type
-    'NCPL, 1, NLAY', & ! shape
+    'DOUBLE2D', & ! type
+    'NCPL NLAY', & ! shape
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -174,8 +174,8 @@ module GwfDisvInputModule
     'GRIDDATA', & ! block
     'IDOMAIN', & ! tag name
     'IDOMAIN', & ! fortran variable
-    'INTEGER3D', & ! type
-    'NCPL, 1, NLAY', & ! shape
+    'INTEGER2D', & ! type
+    'NCPL NLAY', & ! shape
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

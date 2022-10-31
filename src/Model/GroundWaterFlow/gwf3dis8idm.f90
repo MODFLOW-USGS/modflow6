@@ -175,7 +175,7 @@ module GwfDisInputModule
     'TOP', & ! tag name
     'TOP', & ! fortran variable
     'DOUBLE2D', & ! type
-    'NCOL, NROW', & ! shape
+    'NCOL NROW', & ! shape
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -191,7 +191,7 @@ module GwfDisInputModule
     'BOTM', & ! tag name
     'BOTM', & ! fortran variable
     'DOUBLE3D', & ! type
-    'NCOL, NROW, NLAY', & ! shape
+    'NCOL NROW NLAY', & ! shape
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -207,7 +207,7 @@ module GwfDisInputModule
     'IDOMAIN', & ! tag name
     'IDOMAIN', & ! fortran variable
     'INTEGER3D', & ! type
-    'NCOL, NROW, NLAY', & ! shape
+    'NCOL NROW NLAY', & ! shape
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

@@ -14,12 +14,20 @@ module ArrayReadersModule
 
   private
   public :: ReadArray
+  public :: read_binary_header
 
   interface ReadArray
-    module procedure read_array_int1d, read_array_int2d, read_array_int3d, &
-      read_array_dbl1d, read_array_dbl2d, read_array_dbl3d, &
-      read_array_dbl1d_layered, read_array_int1d_layered, &
-      read_array_dbl3d_all, read_array_int3d_all
+    module procedure &
+      read_array_int1d, &
+      read_array_int2d, &
+      read_array_int3d, &
+      read_array_dbl1d, &
+      read_array_dbl2d, &
+      read_array_dbl3d, &
+      read_array_dbl1d_layered, &
+      read_array_int1d_layered, &
+      read_array_dbl3d_all, &
+      read_array_int3d_all
   end interface ReadArray
 
   ! Integer readers
