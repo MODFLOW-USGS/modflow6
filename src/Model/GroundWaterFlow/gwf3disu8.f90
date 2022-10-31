@@ -553,35 +553,36 @@ contains
 
   !> @brief Write user options to list file
   !<
-  subroutine log_options(this, afound)
+  subroutine log_options(this, found)
+    use GwfDisuInputModule, only: GwfDisuParamFoundType
     class(GwfDisuType) :: this
-    logical, dimension(:), intent(in) :: afound
+    type(GwfDisuParamFoundType), intent(in) :: found
 
     write (this%iout, '(1x,a)') 'Setting Discretization Options'
 
-    if (afound(1)) then
+    if (found%length_units) then
       write (this%iout, '(4x,a,i0)') 'MODEL LENGTH UNIT [0=UND, 1=FEET, &
       &2=METERS, 3=CENTIMETERS] SET AS ', this%lenuni
     end if
 
-    if (afound(2)) then
+    if (found%nogrb) then
       write (this%iout, '(4x,a,i0)') 'BINARY GRB FILE [0=GRB, 1=NOGRB] &
         &SET AS ', this%nogrb
     end if
 
-    if (afound(3)) then
+    if (found%xorigin) then
       write (this%iout, '(4x,a,G0)') 'XORIGIN = ', this%xorigin
     end if
 
-    if (afound(4)) then
+    if (found%yorigin) then
       write (this%iout, '(4x,a,G0)') 'YORIGIN = ', this%yorigin
     end if
 
-    if (afound(5)) then
+    if (found%angrot) then
       write (this%iout, '(4x,a,G0)') 'ANGROT = ', this%angrot
     end if
 
-    if (afound(6)) then
+    if (found%voffsettol) then
       write (this%iout, '(4x,a,G0)') 'VERTICAL_OFFSET_TOLERANCE = ', &
         this%voffsettol
     end if
@@ -604,13 +605,14 @@ contains
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
+    use GwfDisuInputModule, only: GwfDisuParamFoundType
     ! -- dummy
     class(GwfDisuType) :: this
     ! -- locals
     character(len=LENMEMPATH) :: idmMemoryPath
     character(len=LENVARNAME), dimension(3) :: lenunits = &
       &[character(len=LENVARNAME) :: 'FEET', 'METERS', 'CENTIMETERS']
-    logical, dimension(6) :: afound
+    type(GwfDisuParamFoundType) :: found
 ! ------------------------------------------------------------------------------
     !
     ! -- set memory path
@@ -618,16 +620,17 @@ contains
     !
     ! -- update defaults with idm sourced values
     call mem_set_value(this%lenuni, 'LENGTH_UNITS', idmMemoryPath, lenunits, &
-                       afound(1))
-    call mem_set_value(this%nogrb, 'NOGRB', idmMemoryPath, afound(2))
-    call mem_set_value(this%xorigin, 'XORIGIN', idmMemoryPath, afound(3))
-    call mem_set_value(this%yorigin, 'YORIGIN', idmMemoryPath, afound(4))
-    call mem_set_value(this%angrot, 'ANGROT', idmMemoryPath, afound(5))
-    call mem_set_value(this%voffsettol, 'VOFFSETTOL', idmMemoryPath, afound(6))
+                       found%length_units)
+    call mem_set_value(this%nogrb, 'NOGRB', idmMemoryPath, found%nogrb)
+    call mem_set_value(this%xorigin, 'XORIGIN', idmMemoryPath, found%xorigin)
+    call mem_set_value(this%yorigin, 'YORIGIN', idmMemoryPath, found%yorigin)
+    call mem_set_value(this%angrot, 'ANGROT', idmMemoryPath, found%angrot)
+    call mem_set_value(this%voffsettol, 'VOFFSETTOL', idmMemoryPath, &
+                       found%voffsettol)
     !
     ! -- log values to list file
     if (this%iout > 0) then
-      call this%log_options(afound)
+      call this%log_options(found)
     end if
     !
     ! -- Return
@@ -636,21 +639,22 @@ contains
 
   !> @brief Write dimensions to list file
   !<
-  subroutine log_dimensions(this, afound)
+  subroutine log_dimensions(this, found)
+    use GwfDisuInputModule, only: GwfDisuParamFoundType
     class(GwfDisuType) :: this
-    logical, dimension(:), intent(in) :: afound
+    type(GwfDisuParamFoundType), intent(in) :: found
 
     write (this%iout, '(1x,a)') 'Setting Discretization Dimensions'
 
-    if (afound(1)) then
+    if (found%nodes) then
       write (this%iout, '(4x,a,i0)') 'NODES = ', this%nodesuser
     end if
 
-    if (afound(2)) then
+    if (found%nja) then
       write (this%iout, '(4x,a,i0)') 'NJA = ', this%njausr
     end if
 
-    if (afound(3)) then
+    if (found%nvert) then
       write (this%iout, '(4x,a,i0)') 'NVERT = ', this%nvert
     end if
 
@@ -671,25 +675,26 @@ contains
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
+    use GwfDisuInputModule, only: GwfDisuParamFoundType
     ! -- dummy
     class(GwfDisuType) :: this
     ! -- locals
     character(len=LENMEMPATH) :: idmMemoryPath
     integer(I4B) :: n
-    logical, dimension(3) :: afound
+    type(GwfDisuParamFoundType) :: found
 ! ------------------------------------------------------------------------------
     !
     ! -- set memory path
     idmMemoryPath = create_mem_path(this%name_model, 'DISU', idm_context)
     !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%nodesuser, 'NODES', idmMemoryPath, afound(1))
-    call mem_set_value(this%njausr, 'NJA', idmMemoryPath, afound(2))
-    call mem_set_value(this%nvert, 'NVERT', idmMemoryPath, afound(3))
+    call mem_set_value(this%nodesuser, 'NODES', idmMemoryPath, found%nodes)
+    call mem_set_value(this%njausr, 'NJA', idmMemoryPath, found%nja)
+    call mem_set_value(this%nvert, 'NVERT', idmMemoryPath, found%nvert)
     !
     ! -- log simulation values
     if (this%iout > 0) then
-      call this%log_dimensions(afound)
+      call this%log_dimensions(found)
     end if
     !
     ! -- verify dimensions were set
@@ -738,25 +743,26 @@ contains
 
   !> @brief Write griddata found to list file
   !<
-  subroutine log_griddata(this, afound)
+  subroutine log_griddata(this, found)
+    use GwfDisuInputModule, only: GwfDisuParamFoundType
     class(GwfDisuType) :: this
-    logical, dimension(:), intent(in) :: afound
+    type(GwfDisuParamFoundType), intent(in) :: found
 
     write (this%iout, '(1x,a)') 'Setting Discretization Griddata'
 
-    if (afound(1)) then
+    if (found%top) then
       write (this%iout, '(4x,a)') 'TOP set from input file'
     end if
 
-    if (afound(2)) then
+    if (found%bot) then
       write (this%iout, '(4x,a)') 'BOT set from input file'
     end if
 
-    if (afound(3)) then
+    if (found%area) then
       write (this%iout, '(4x,a)') 'AREA set from input file'
     end if
 
-    if (afound(4)) then
+    if (found%idomain) then
       write (this%iout, '(4x,a)') 'IDOMAIN set from input file'
     end if
 
@@ -775,11 +781,12 @@ contains
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
+    use GwfDisuInputModule, only: GwfDisuParamFoundType
     ! -- dummy
     class(GwfDisuType) :: this
     ! -- locals
     character(len=LENMEMPATH) :: idmMemoryPath
-    logical, dimension(4) :: afound
+    type(GwfDisuParamFoundType) :: found
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
@@ -787,14 +794,14 @@ contains
     idmMemoryPath = create_mem_path(this%name_model, 'DISU', idm_context)
     !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%top1d, 'TOP', idmMemoryPath, afound(1))
-    call mem_set_value(this%bot1d, 'BOT', idmMemoryPath, afound(2))
-    call mem_set_value(this%area1d, 'AREA', idmMemoryPath, afound(3))
-    call mem_set_value(this%idomain, 'IDOMAIN', idmMemoryPath, afound(4))
+    call mem_set_value(this%top1d, 'TOP', idmMemoryPath, found%top)
+    call mem_set_value(this%bot1d, 'BOT', idmMemoryPath, found%bot)
+    call mem_set_value(this%area1d, 'AREA', idmMemoryPath, found%area)
+    call mem_set_value(this%idomain, 'IDOMAIN', idmMemoryPath, found%idomain)
     !
     ! -- log simulation values
     if (this%iout > 0) then
-      call this%log_griddata(afound)
+      call this%log_griddata(found)
     end if
     !
     ! -- Return
@@ -803,9 +810,10 @@ contains
 
   !> @brief Write griddata found to list file
   !<
-  subroutine log_connectivity(this, afound, iac)
+  subroutine log_connectivity(this, found, iac)
+    use GwfDisuInputModule, only: GwfDisuParamFoundType
     class(GwfDisuType) :: this
-    logical, dimension(:), intent(in) :: afound
+    type(GwfDisuParamFoundType), intent(in) :: found
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: iac
 
     write (this%iout, '(1x,a)') 'Setting Discretization Connectivity'
@@ -814,23 +822,23 @@ contains
       write (this%iout, '(4x,a)') 'IAC set from input file'
     end if
 
-    if (afound(1)) then
+    if (found%ja) then
       write (this%iout, '(4x,a)') 'JA set from input file'
     end if
 
-    if (afound(2)) then
+    if (found%ihc) then
       write (this%iout, '(4x,a)') 'IHC set from input file'
     end if
 
-    if (afound(3)) then
+    if (found%cl12) then
       write (this%iout, '(4x,a)') 'CL12 set from input file'
     end if
 
-    if (afound(4)) then
+    if (found%hwva) then
       write (this%iout, '(4x,a)') 'HWVA set from input file'
     end if
 
-    if (afound(5)) then
+    if (found%angldegx) then
       write (this%iout, '(4x,a)') 'ANGLDEGX set from input file'
     end if
 
@@ -850,11 +858,12 @@ contains
     use MemoryManagerModule, only: mem_setptr
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
+    use GwfDisuInputModule, only: GwfDisuParamFoundType
     ! -- dummy
     class(GwfDisuType) :: this
     ! -- locals
     character(len=LENMEMPATH) :: idmMemoryPath
-    logical, dimension(5) :: afound
+    type(GwfDisuParamFoundType) :: found
     integer(I4B), dimension(:), contiguous, pointer :: iac => null()
     ! -- formats
 ! ------------------------------------------------------------------------------
@@ -863,11 +872,12 @@ contains
     idmMemoryPath = create_mem_path(this%name_model, 'DISU', idm_context)
     !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%jainp, 'JA', idmMemoryPath, afound(1))
-    call mem_set_value(this%ihcinp, 'IHC', idmMemoryPath, afound(2))
-    call mem_set_value(this%cl12inp, 'CL12', idmMemoryPath, afound(3))
-    call mem_set_value(this%hwvainp, 'HWVA', idmMemoryPath, afound(4))
-    call mem_set_value(this%angldegxinp, 'ANGLDEGX', idmMemoryPath, afound(5))
+    call mem_set_value(this%jainp, 'JA', idmMemoryPath, found%ja)
+    call mem_set_value(this%ihcinp, 'IHC', idmMemoryPath, found%ihc)
+    call mem_set_value(this%cl12inp, 'CL12', idmMemoryPath, found%cl12)
+    call mem_set_value(this%hwvainp, 'HWVA', idmMemoryPath, found%hwva)
+    call mem_set_value(this%angldegxinp, 'ANGLDEGX', idmMemoryPath, &
+                       found%angldegx)
     !
     ! -- set pointer to iac input array
     call mem_setptr(iac, 'IAC', idmMemoryPath)
@@ -876,11 +886,11 @@ contains
     if (associated(iac)) call iac_to_ia(iac, this%iainp)
     !
     ! -- Set angldegx flag if found
-    if (afound(5)) this%iangledegx = 1
+    if (found%angldegx) this%iangledegx = 1
     !
     ! -- log simulation values
     if (this%iout > 0) then
-      call this%log_connectivity(afound, iac)
+      call this%log_connectivity(found, iac)
     end if
     !
     ! -- Return

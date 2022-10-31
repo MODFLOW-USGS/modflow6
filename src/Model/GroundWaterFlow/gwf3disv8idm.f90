@@ -5,6 +5,29 @@ module GwfDisvInputModule
   public gwf_disv_param_definitions
   public gwf_disv_aggregate_definitions
   public gwf_disv_block_definitions
+  public GwfDisvParamFoundType
+
+  type GwfDisvParamFoundType
+    logical :: length_units = .false.
+    logical :: nogrb = .false.
+    logical :: xorigin = .false.
+    logical :: yorigin = .false.
+    logical :: angrot = .false.
+    logical :: nlay = .false.
+    logical :: ncpl = .false.
+    logical :: nvert = .false.
+    logical :: top = .false.
+    logical :: botm = .false.
+    logical :: idomain = .false.
+    logical :: iv = .false.
+    logical :: xv = .false.
+    logical :: yv = .false.
+    logical :: icell2d = .false.
+    logical :: xc = .false.
+    logical :: yc = .false.
+    logical :: ncvert = .false.
+    logical :: icvert = .false.
+  end type GwfDisvParamFoundType
 
   type(InputParamDefinitionType), parameter :: &
     gwfdisv_length_units = InputParamDefinitionType &

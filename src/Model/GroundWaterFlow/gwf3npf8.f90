@@ -1293,7 +1293,7 @@ contains
     return
   end subroutine allocate_arrays
 
-  subroutine log_options(this, afound)
+  subroutine log_options(this, found)
 ! ******************************************************************************
 ! log_options -- log npf options sourced from the input mempath
 ! ******************************************************************************
@@ -1302,67 +1302,74 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use KindModule, only: LGP
+    use GwfNpfInputModule, only: GwfNpfParamFoundType
     ! -- dummy
     class(GwfNpftype) :: this
     ! -- locals
-    logical, dimension(:), intent(in) :: afound
+    type(GwfNpfParamFoundType), intent(in) :: found
 ! ------------------------------------------------------------------------------
     !
     write (this%iout, '(1x,a)') 'Setting NPF Options'
-    if (afound(1)) &
+    if (found%iprflow) &
       write (this%iout, '(4x,a)') 'CELL-BY-CELL FLOW INFORMATION WILL BE PRINTED &
                                   &TO LISTING FILE WHENEVER ICBCFL IS NOT ZERO.'
-    if (afound(2)) &
+    if (found%ipakcb) &
       write (this%iout, '(4x,a)') 'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED &
                                   &TO BINARY FILE WHENEVER ICBCFL IS NOT ZERO.'
-    if (afound(3)) &
+    if (found%cellavg) &
       write (this%iout, '(4x,a,i0)') 'ALTERNATIVE CELL AVERAGING [1=LOGARITHMIC, &
                                      &2=AMT-LMK, 3=AMT-HMK] SET TO: ', &
                                      this%icellavg
-    if (afound(4)) write (this%iout, '(4x,a)') 'THICKSTRT OPTION HAS BEEN &
-                                               &ACTIVATED.'
-    if (afound(5)) write (this%iout, '(4x,a)') 'VERTICAL FLOW WILL BE ADJUSTED &
-                                               &FOR PERCHED CONDITIONS.'
-    if (afound(6)) write (this%iout, '(4x,a)') 'VERTICAL CONDUCTANCE VARIES WITH &
-                                               &WATER TABLE.'
-    if (afound(7)) write (this%iout, '(4x,a)') 'VERTICAL CONDUCTANCE ACCOUNTS &
-                                               &FOR DEWATERED PORTION OF AN &
-                                               &UNDERLYING CELL.'
-    if (afound(8)) write (this%iout, '(4x,a)') 'XT3D FORMULATION IS SELECTED.'
-    if (afound(9)) write (this%iout, '(4x,a)') 'XT3D RHS FORMULATION IS SELECTED.'
-    if (afound(10)) &
+    if (found%ithickstrt) &
+      write (this%iout, '(4x,a)') 'THICKSTRT OPTION HAS BEEN ACTIVATED.'
+    if (found%iperched) &
+      write (this%iout, '(4x,a)') 'VERTICAL FLOW WILL BE ADJUSTED FOR PERCHED &
+                                  &CONDITIONS.'
+    if (found%ivarcv) &
+      write (this%iout, '(4x,a)') 'VERTICAL CONDUCTANCE VARIES WITH WATER TABLE.'
+    if (found%idewatcv) &
+      write (this%iout, '(4x,a)') 'VERTICAL CONDUCTANCE ACCOUNTS FOR DEWATERED &
+                                  &PORTION OF AN UNDERLYING CELL.'
+    if (found%ixt3d) write (this%iout, '(4x,a)') 'XT3D FORMULATION IS SELECTED.'
+    if (found%ixt3drhs) &
+      write (this%iout, '(4x,a)') 'XT3D RHS FORMULATION IS SELECTED.'
+    if (found%isavspdis) &
       write (this%iout, '(4x,a)') 'SPECIFIC DISCHARGE WILL BE CALCULATED AT CELL &
                                   &CENTERS AND WRITTEN TO DATA-SPDIS IN BUDGET &
                                   &FILE WHEN REQUESTED.'
-    if (afound(11)) &
+    if (found%isavsat) &
       write (this%iout, '(4x,a)') 'SATURATION WILL BE WRITTEN TO DATA-SAT IN &
                                   &BUDGET FILE WHEN REQUESTED.'
-    if (afound(12)) &
+    if (found%ik22overk) &
       write (this%iout, '(4x,a)') 'VALUES SPECIFIED FOR K22 ARE ANISOTROPY &
                                   &RATIOS AND WILL BE MULTIPLIED BY K BEFORE &
                                   &BEING USED IN CALCULATIONS.'
-    if (afound(13)) &
+    if (found%ik33overk) &
       write (this%iout, '(4x,a)') 'VALUES SPECIFIED FOR K33 ARE ANISOTROPY &
                                   &RATIOS AND WILL BE MULTIPLIED BY K BEFORE &
                                   &BEING USED IN CALCULATIONS.'
-    if (afound(15)) write (this%iout, '(4x,a)') 'NEWTON-RAPHSON method disabled &
-                                                &for unconfined cells'
-    if (afound(16)) write (this%iout, '(4x,a)') 'MODFLOW-USG saturation &
-                                                &calculation method will be used'
-    if (afound(17)) write (this%iout, '(4x,a)') 'MODFLOW-NWT upstream weighting &
-                                                &method will be used '
-    if (afound(18)) &
+    if (found%inewton) &
+      write (this%iout, '(4x,a)') 'NEWTON-RAPHSON method disabled for unconfined &
+                                  &cells'
+    if (found%iusgnrhc) &
+      write (this%iout, '(4x,a)') 'MODFLOW-USG saturation calculation method &
+                                  &will be used'
+    if (found%inwtupw) &
+      write (this%iout, '(4x,a)') 'MODFLOW-NWT upstream weighting method will be &
+                                  &used'
+    if (found%satmin) &
       write (this%iout, '(4x,a,1pg15.6)') 'MINIMUM SATURATED THICKNESS HAS BEEN &
                                           &SET TO: ', this%satmin
-    if (afound(19)) &
+    if (found%satomega) &
       write (this%iout, '(4x,a,1pg15.6)') 'SATURATION OMEGA: ', this%satomega
-    if (afound(20)) write (this%iout, '(4x,a)') 'REWETTING IS ACTIVE.'
-    if (afound(21)) write (this%iout, '(4x,a,1pg15.6)') 'WETTING FACTOR HAS BEEN &
-                                                        &SET TO: ', this%wetfct
-    if (afound(22)) write (this%iout, '(4x,a,i5)') 'IWETIT HAS BEEN SET TO: ', &
-      this%iwetit
-    if (afound(23)) write (this%iout, '(4x,a,i5)') 'IHDWET HAS BEEN SET TO: ', &
-      this%ihdwet
+    if (found%irewet) write (this%iout, '(4x,a)') 'REWETTING IS ACTIVE.'
+    if (found%wetfct) &
+      write (this%iout, '(4x,a,1pg15.6)') 'WETTING FACTOR HAS BEEN SET TO: ', &
+      this%wetfct
+    if (found%iwetit) &
+      write (this%iout, '(4x,a,i5)') 'IWETIT HAS BEEN SET TO: ', this%iwetit
+    if (found%ihdwet) &
+      write (this%iout, '(4x,a,i5)') 'IHDWET HAS BEEN SET TO: ', this%ihdwet
     write (this%iout, '(1x,a,/)') 'End Setting NPF Options'
     !
     ! -- Write rewet settings
@@ -1385,13 +1392,14 @@ contains
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
+    use GwfNpfInputModule, only: GwfNpfParamFoundType
     ! -- dummy
     class(GwfNpftype) :: this
     ! -- locals
     character(len=LENMEMPATH) :: idmMemoryPath
     character(len=LENVARNAME), dimension(3) :: cellavg_method = &
       &[character(len=LENVARNAME) :: 'LOGARITHMIC', 'AMT-LMK', 'AMT-HMK']
-    logical, dimension(23) :: afound
+    type(GwfNpfParamFoundType) :: found
     character(len=LINELENGTH) :: tvk6_filename
 ! ------------------------------------------------------------------------------
     !
@@ -1399,57 +1407,62 @@ contains
     idmMemoryPath = create_mem_path(this%name_model, 'NPF', idm_context)
     !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%iprflow, 'IPRFLOW', idmMemoryPath, afound(1))
-    call mem_set_value(this%ipakcb, 'IPAKCB', idmMemoryPath, afound(2))
+    call mem_set_value(this%iprflow, 'IPRFLOW', idmMemoryPath, found%iprflow)
+    call mem_set_value(this%ipakcb, 'IPAKCB', idmMemoryPath, found%ipakcb)
     call mem_set_value(this%icellavg, 'CELLAVG', idmMemoryPath, cellavg_method, &
-                       afound(3))
-    call mem_set_value(this%ithickstrt, 'ITHICKSTRT', idmMemoryPath, afound(4))
-    call mem_set_value(this%iperched, 'IPERCHED', idmMemoryPath, afound(5))
-    call mem_set_value(this%ivarcv, 'IVARCV', idmMemoryPath, afound(6))
-    call mem_set_value(this%idewatcv, 'IDEWATCV', idmMemoryPath, afound(7))
-    call mem_set_value(this%ixt3d, 'IXT3D', idmMemoryPath, afound(8))
-    call mem_set_value(this%ixt3drhs, 'IXT3DRHS', idmMemoryPath, afound(9))
-    call mem_set_value(this%isavspdis, 'ISAVSPDIS', idmMemoryPath, afound(10))
-    call mem_set_value(this%isavsat, 'ISAVSAT', idmMemoryPath, afound(11))
-    call mem_set_value(this%ik22overk, 'IK22OVERK', idmMemoryPath, afound(12))
-    call mem_set_value(this%ik33overk, 'IK33OVERK', idmMemoryPath, afound(13))
-    call mem_set_value(tvk6_filename, 'TVK6_FILENAME', idmMemoryPath, afound(14))
-    call mem_set_value(this%inewton, 'INEWTON', idmMemoryPath, afound(15))
+                       found%cellavg)
+    call mem_set_value(this%ithickstrt, 'ITHICKSTRT', idmMemoryPath, &
+                       found%ithickstrt)
+    call mem_set_value(this%iperched, 'IPERCHED', idmMemoryPath, found%iperched)
+    call mem_set_value(this%ivarcv, 'IVARCV', idmMemoryPath, found%ivarcv)
+    call mem_set_value(this%idewatcv, 'IDEWATCV', idmMemoryPath, found%idewatcv)
+    call mem_set_value(this%ixt3d, 'IXT3D', idmMemoryPath, found%ixt3d)
+    call mem_set_value(this%ixt3drhs, 'IXT3DRHS', idmMemoryPath, found%ixt3drhs)
+    call mem_set_value(this%isavspdis, 'ISAVSPDIS', idmMemoryPath, &
+                       found%isavspdis)
+    call mem_set_value(this%isavsat, 'ISAVSAT', idmMemoryPath, found%isavsat)
+    call mem_set_value(this%ik22overk, 'IK22OVERK', idmMemoryPath, &
+                       found%ik22overk)
+    call mem_set_value(this%ik33overk, 'IK33OVERK', idmMemoryPath, &
+                       found%ik33overk)
+    call mem_set_value(tvk6_filename, 'TVK6_FILENAME', idmMemoryPath, &
+                       found%tvk6_filename)
+    call mem_set_value(this%inewton, 'INEWTON', idmMemoryPath, found%inewton)
     call mem_set_value(this%iusgnrhc, 'IUSGNRHC', idmMemoryPath, &
-                       afound(16))
-    call mem_set_value(this%inwtupw, 'INWTUPW', idmMemoryPath, afound(17))
-    call mem_set_value(this%satmin, 'SATMIN', idmMemoryPath, afound(18))
-    call mem_set_value(this%satomega, 'SATOMEGA', idmMemoryPath, afound(19))
-    call mem_set_value(this%irewet, 'IREWET', idmMemoryPath, afound(20))
-    call mem_set_value(this%wetfct, 'WETFCT', idmMemoryPath, afound(21))
-    call mem_set_value(this%iwetit, 'IWETIT', idmMemoryPath, afound(22))
-    call mem_set_value(this%ihdwet, 'IHDWET', idmMemoryPath, afound(23))
+                       found%iusgnrhc)
+    call mem_set_value(this%inwtupw, 'INWTUPW', idmMemoryPath, found%inwtupw)
+    call mem_set_value(this%satmin, 'SATMIN', idmMemoryPath, found%satmin)
+    call mem_set_value(this%satomega, 'SATOMEGA', idmMemoryPath, found%satomega)
+    call mem_set_value(this%irewet, 'IREWET', idmMemoryPath, found%irewet)
+    call mem_set_value(this%wetfct, 'WETFCT', idmMemoryPath, found%wetfct)
+    call mem_set_value(this%iwetit, 'IWETIT', idmMemoryPath, found%iwetit)
+    call mem_set_value(this%ihdwet, 'IHDWET', idmMemoryPath, found%ihdwet)
     !
     ! -- save flows option active
-    if (afound(2)) this%ipakcb = -1
+    if (found%ipakcb) this%ipakcb = -1
     !
     ! -- xt3d active with rhs
-    if (afound(8) .and. afound(9)) this%ixt3d = 2
+    if (found%ixt3d .and. found%ixt3drhs) this%ixt3d = 2
     !
     ! -- save specific discharge active
-    if (afound(10)) this%icalcspdis = this%isavspdis
+    if (found%isavspdis) this%icalcspdis = this%isavspdis
     !
     ! -- TVK6 subpackage file spec provided
-    if (afound(14)) then
+    if (found%tvk6_filename) then
       this%intvk = GetUnit()
       call openfile(this%intvk, this%iout, tvk6_filename, 'TVK')
       call tvk_cr(this%tvk, this%name_model, this%intvk, this%iout)
     end if
     !
     ! -- no newton specified
-    if (afound(15)) then
+    if (found%inewton) then
       this%inewton = 0
       this%iasym = 0
     end if
     !
     ! -- log options
     if (this%iout > 0) then
-      call this%log_options(afound)
+      call this%log_options(found)
     end if
     !
     ! -- Return
@@ -1586,41 +1599,42 @@ contains
 
   !> @brief Write dimensions to list file
   !<
-  subroutine log_griddata(this, afound)
+  subroutine log_griddata(this, found)
+    use GwfNpfInputModule, only: GwfNpfParamFoundType
     class(GwfNpfType) :: this
-    logical, dimension(:), intent(in) :: afound
+    type(GwfNpfParamFoundType), intent(in) :: found
 
     write (this%iout, '(1x,a)') 'Setting NPF Griddata'
 
-    if (afound(1)) then
+    if (found%icelltype) then
       write (this%iout, '(4x,a)') 'ICELLTYPE set from input file'
     end if
 
-    if (afound(2)) then
+    if (found%k) then
       write (this%iout, '(4x,a)') 'K set from input file'
     end if
 
-    if (afound(3)) then
+    if (found%k33) then
       write (this%iout, '(4x,a)') 'K33 set from input file'
     end if
 
-    if (afound(4)) then
+    if (found%k22) then
       write (this%iout, '(4x,a)') 'K22 set from input file'
     end if
 
-    if (afound(5)) then
+    if (found%wetdry) then
       write (this%iout, '(4x,a)') 'WETDRY set from input file'
     end if
 
-    if (afound(6)) then
+    if (found%angle1) then
       write (this%iout, '(4x,a)') 'ANGLE1 set from input file'
     end if
 
-    if (afound(7)) then
+    if (found%angle2) then
       write (this%iout, '(4x,a)') 'ANGLE2 set from input file'
     end if
 
-    if (afound(8)) then
+    if (found%angle3) then
       write (this%iout, '(4x,a)') 'ANGLE3 set from input file'
     end if
 
@@ -1641,12 +1655,14 @@ contains
     use MemoryManagerModule, only: mem_reallocate
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
+    use GwfNpfInputModule, only: GwfNpfParamFoundType
     ! -- dummy
     class(GwfNpftype) :: this
     ! -- locals
     character(len=LENMEMPATH) :: idmMemoryPath
     character(len=LINELENGTH) :: errmsg
-    logical, dimension(10) :: afound
+    type(GwfNpfParamFoundType) :: found
+    logical, dimension(2) :: afound
     integer(I4B), dimension(:), pointer, contiguous :: map
     ! -- formats
 ! ------------------------------------------------------------------------------
@@ -1660,68 +1676,68 @@ contains
     !
     ! -- update defaults with idm sourced values
     call mem_set_value(this%icelltype, 'ICELLTYPE', idmMemoryPath, map, &
-                       afound(1))
-    call mem_set_value(this%k11, 'K', idmMemoryPath, map, afound(2))
-    call mem_set_value(this%k33, 'K33', idmMemoryPath, map, afound(3))
-    call mem_set_value(this%k22, 'K22', idmMemoryPath, map, afound(4))
-    call mem_set_value(this%wetdry, 'WETDRY', idmMemoryPath, map, afound(5))
-    call mem_set_value(this%angle1, 'ANGLE1', idmMemoryPath, map, afound(6))
-    call mem_set_value(this%angle2, 'ANGLE2', idmMemoryPath, map, afound(7))
-    call mem_set_value(this%angle3, 'ANGLE3', idmMemoryPath, map, afound(8))
+                       found%icelltype)
+    call mem_set_value(this%k11, 'K', idmMemoryPath, map, found%k)
+    call mem_set_value(this%k33, 'K33', idmMemoryPath, map, found%k33)
+    call mem_set_value(this%k22, 'K22', idmMemoryPath, map, found%k22)
+    call mem_set_value(this%wetdry, 'WETDRY', idmMemoryPath, map, found%wetdry)
+    call mem_set_value(this%angle1, 'ANGLE1', idmMemoryPath, map, found%angle1)
+    call mem_set_value(this%angle2, 'ANGLE2', idmMemoryPath, map, found%angle2)
+    call mem_set_value(this%angle3, 'ANGLE3', idmMemoryPath, map, found%angle3)
     !
     ! -- ensure ICELLTYPE was found
-    if (.not. afound(1)) then
+    if (.not. found%icelltype) then
       write (errmsg, '(a)') 'Error in GRIDDATA block: ICELLTYPE not found.'
       call store_error(errmsg)
     end if
     !
     ! -- ensure K was found
-    if (.not. afound(2)) then
+    if (.not. found%k) then
       write (errmsg, '(a)') 'Error in GRIDDATA block: K not found.'
       call store_error(errmsg)
     end if
     !
     ! -- set error if ik33overk set with no k33
-    if (.not. afound(3) .and. this%ik33overk /= 0) then
+    if (.not. found%k33 .and. this%ik33overk /= 0) then
       write (errmsg, '(a)') 'K33OVERK option specified but K33 not specified.'
       call store_error(errmsg)
     end if
     !
     ! -- set error if ik22overk set with no k22
-    if (.not. afound(4) .and. this%ik22overk /= 0) then
+    if (.not. found%k22 .and. this%ik22overk /= 0) then
       write (errmsg, '(a)') 'K22OVERK option specified but K22 not specified.'
       call store_error(errmsg)
     end if
     !
     ! -- handle found side effects
-    if (afound(3)) this%ik33 = 1
-    if (afound(4)) this%ik22 = 1
-    if (afound(5)) this%iwetdry = 1
-    if (afound(6)) this%iangle1 = 1
-    if (afound(7)) this%iangle2 = 1
-    if (afound(8)) this%iangle3 = 1
+    if (found%k33) this%ik33 = 1
+    if (found%k22) this%ik22 = 1
+    if (found%wetdry) this%iwetdry = 1
+    if (found%angle1) this%iangle1 = 1
+    if (found%angle2) this%iangle2 = 1
+    if (found%angle3) this%iangle3 = 1
     !
     ! -- handle not found side effects
-    if (.not. afound(3)) then
+    if (.not. found%k33) then
       write (this%iout, '(1x, a)') 'K33 not provided.  Setting K33 = K.'
-      call mem_set_value(this%k33, 'K', idmMemoryPath, map, afound(9))
+      call mem_set_value(this%k33, 'K', idmMemoryPath, map, afound(1))
     end if
-    if (.not. afound(4)) then
+    if (.not. found%k22) then
       write (this%iout, '(1x, a)') 'K22 not provided.  Setting K22 = K.'
-      call mem_set_value(this%k22, 'K', idmMemoryPath, map, afound(10))
+      call mem_set_value(this%k22, 'K', idmMemoryPath, map, afound(2))
     end if
-    if (.not. afound(5)) call mem_reallocate(this%wetdry, 1, 'WETDRY', &
-                                             trim(this%memoryPath))
-    if (.not. afound(6) .and. this%ixt3d == 0) &
+    if (.not. found%wetdry) call mem_reallocate(this%wetdry, 1, 'WETDRY', &
+                                                trim(this%memoryPath))
+    if (.not. found%angle1 .and. this%ixt3d == 0) &
       call mem_reallocate(this%angle1, 1, 'ANGLE1', trim(this%memoryPath))
-    if (.not. afound(7) .and. this%ixt3d == 0) &
+    if (.not. found%angle2 .and. this%ixt3d == 0) &
       call mem_reallocate(this%angle2, 1, 'ANGLE2', trim(this%memoryPath))
-    if (.not. afound(8) .and. this%ixt3d == 0) &
+    if (.not. found%angle3 .and. this%ixt3d == 0) &
       call mem_reallocate(this%angle3, 1, 'ANGLE3', trim(this%memoryPath))
     !
     ! -- log griddata
     if (this%iout > 0) then
-      call this%log_griddata(afound)
+      call this%log_griddata(found)
     end if
     !
     ! -- Return

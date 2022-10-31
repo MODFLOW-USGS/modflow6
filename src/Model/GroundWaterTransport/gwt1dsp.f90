@@ -551,9 +551,10 @@ contains
 
   !> @brief Write user options to list file
   !<
-  subroutine log_options(this, afound)
+  subroutine log_options(this, found)
+    use GwtDspInputModule, only: GwtDspParamFoundType
     class(GwTDspType) :: this
-    logical, dimension(:), intent(in) :: afound
+    type(GwtDspParamFoundType), intent(in) :: found
 
     write (this%iout, '(1x,a)') 'Setting DSP Options'
     write (this%iout, '(4x,a,i0)') 'XT3D FORMULATION [0=INACTIVE, 1=ACTIVE, &
@@ -575,27 +576,28 @@ contains
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
     use ConstantsModule, only: LENMEMPATH
+    use GwtDspInputModule, only: GwtDspParamFoundType
     ! -- dummy
     class(GwtDspType) :: this
     ! -- locals
     character(len=LENMEMPATH) :: idmMemoryPath
-    logical, dimension(2) :: afound
+    type(GwtDspParamFoundType) :: found
 ! ------------------------------------------------------------------------------
     !
     ! -- set memory path
     idmMemoryPath = create_mem_path(this%name_model, 'DSP', idm_context)
     !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%ixt3doff, 'XT3D_OFF', idmMemoryPath, afound(1))
-    call mem_set_value(this%ixt3drhs, 'XT3D_RHS', idmMemoryPath, afound(2))
+    call mem_set_value(this%ixt3doff, 'XT3D_OFF', idmMemoryPath, found%xt3d_off)
+    call mem_set_value(this%ixt3drhs, 'XT3D_RHS', idmMemoryPath, found%xt3d_rhs)
     !
     ! -- set xt3d state flag
-    if (afound(1)) this%ixt3d = 0
-    if (afound(2)) this%ixt3d = 2
+    if (found%xt3d_off) this%ixt3d = 0
+    if (found%xt3d_rhs) this%ixt3d = 2
     !
     ! -- log options
     if (this%iout > 0) then
-      call this%log_options(afound)
+      call this%log_options(found)
     end if
     !
     ! -- Return
@@ -604,33 +606,34 @@ contains
 
   !> @brief Write dimensions to list file
   !<
-  subroutine log_griddata(this, afound)
+  subroutine log_griddata(this, found)
+    use GwtDspInputModule, only: GwtDspParamFoundType
     class(GwtDspType) :: this
-    logical, dimension(:), intent(in) :: afound
+    type(GwtDspParamFoundType), intent(in) :: found
 
     write (this%iout, '(1x,a)') 'Setting DSP Griddata'
 
-    if (afound(1)) then
+    if (found%diffc) then
       write (this%iout, '(4x,a)') 'DIFFC set from input file'
     end if
 
-    if (afound(2)) then
+    if (found%alh) then
       write (this%iout, '(4x,a)') 'ALH set from input file'
     end if
 
-    if (afound(3)) then
+    if (found%alv) then
       write (this%iout, '(4x,a)') 'ALV set from input file'
     end if
 
-    if (afound(4)) then
+    if (found%ath1) then
       write (this%iout, '(4x,a)') 'ATH1 set from input file'
     end if
 
-    if (afound(5)) then
+    if (found%ath2) then
       write (this%iout, '(4x,a)') 'ATH2 set from input file'
     end if
 
-    if (afound(6)) then
+    if (found%atv) then
       write (this%iout, '(4x,a)') 'ATV set from input file'
     end if
 
@@ -652,14 +655,14 @@ contains
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
     use ConstantsModule, only: LENMEMPATH, LINELENGTH
+    use GwtDspInputModule, only: GwtDspParamFoundType
     ! -- dummy
     class(GwtDsptype) :: this
     ! -- locals
     character(len=LENMEMPATH) :: idmMemoryPath
     character(len=LINELENGTH) :: errmsg
-    logical, dimension(6) :: afound
+    type(GwtDspParamFoundType) :: found
     integer(I4B), dimension(:), pointer, contiguous :: map
-    integer(I4B) :: idisp
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
@@ -671,48 +674,49 @@ contains
     if (this%dis%nodes < this%dis%nodesuser) map => this%dis%nodeuser
     !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%diffc, 'DIFFC', idmMemoryPath, map, afound(1))
-    call mem_set_value(this%alh, 'ALH', idmMemoryPath, map, afound(2))
-    call mem_set_value(this%alv, 'ALV', idmMemoryPath, map, afound(3))
-    call mem_set_value(this%ath1, 'ATH1', idmMemoryPath, map, afound(4))
-    call mem_set_value(this%ath2, 'ATH2', idmMemoryPath, map, afound(5))
-    call mem_set_value(this%atv, 'ATV', idmMemoryPath, map, afound(6))
+    call mem_set_value(this%diffc, 'DIFFC', idmMemoryPath, map, found%diffc)
+    call mem_set_value(this%alh, 'ALH', idmMemoryPath, map, found%alh)
+    call mem_set_value(this%alv, 'ALV', idmMemoryPath, map, found%alv)
+    call mem_set_value(this%ath1, 'ATH1', idmMemoryPath, map, found%ath1)
+    call mem_set_value(this%ath2, 'ATH2', idmMemoryPath, map, found%ath2)
+    call mem_set_value(this%atv, 'ATV', idmMemoryPath, map, found%atv)
     !
     ! -- set active flags
-    if (afound(1)) this%idiffc = 1
-    if (afound(2)) this%ialh = 1
-    if (afound(3)) this%ialv = 1
-    if (afound(4)) this%iath1 = 1
-    if (afound(5)) this%iath2 = 1
-    if (afound(6)) this%iatv = 1
+    if (found%diffc) this%idiffc = 1
+    if (found%alh) this%ialh = 1
+    if (found%alv) this%ialv = 1
+    if (found%ath1) this%iath1 = 1
+    if (found%ath2) this%iath2 = 1
+    if (found%atv) this%iatv = 1
     !
     ! -- reallocate diffc if not found
-    if (.not. afound(1)) then
+    if (.not. found%diffc) then
       call mem_reallocate(this%diffc, 0, 'DIFFC', trim(this%memoryPath))
     end if
     !
     ! -- set this%idisp flag
-    do idisp = 2, 5 ! ALH, ALV, ATH1, ATH2
-      if (afound(idisp)) this%idisp = this%idisp + 1
-    end do
+    if (found%alh) this%idisp = this%idisp + 1
+    if (found%alv) this%idisp = this%idisp + 1
+    if (found%ath1) this%idisp = this%idisp + 1
+    if (found%ath2) this%idisp = this%idisp + 1
     !
     ! -- manage dispersion arrays
     if (this%idisp > 0) then
-      if (.not. (afound(2) .and. afound(4))) then
+      if (.not. (found%alh .and. found%ath1)) then
         write (errmsg, '(1x,a)') &
           'IF DISPERSIVITIES ARE SPECIFIED THEN ALH AND ATH1 ARE REQUIRED.'
         call store_error(errmsg)
       end if
       ! -- If alv not specified then point it to alh
-      if (.not. afound(3)) &
+      if (.not. found%alv) &
         call mem_reassignptr(this%alv, 'ALV', trim(this%memoryPath), &
                              'ALH', trim(this%memoryPath))
       ! -- If ath2 not specified then point it to ath1
-      if (.not. afound(5)) &
+      if (.not. found%ath2) &
         call mem_reassignptr(this%ath2, 'ATH2', trim(this%memoryPath), &
                              'ATH1', trim(this%memoryPath))
       ! -- If atv not specified then point it to ath2
-      if (.not. afound(6)) &
+      if (.not. found%atv) &
         call mem_reassignptr(this%atv, 'ATV', trim(this%memoryPath), &
                              'ATH2', trim(this%memoryPath))
     else
@@ -725,7 +729,7 @@ contains
     !
     ! -- log griddata
     if (this%iout > 0) then
-      call this%log_griddata(afound)
+      call this%log_griddata(found)
     end if
     !
     ! -- Return

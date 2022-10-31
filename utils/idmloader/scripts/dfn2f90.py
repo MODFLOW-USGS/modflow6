@@ -45,6 +45,13 @@ class Dfn2F90:
             # file header
             f.write(self._source_file_header(self.component, self.subcomponent))
 
+            # found type
+            f.write(f"  type {self.component.capitalize()}{self.subcomponent.capitalize()}ParamFoundType\n")
+            for var in self._param_varnames:
+              varname = var.split(f"{self.component.lower()}{self.subcomponent.lower()}_")[1]
+              f.write(f"    logical :: {varname} = .false.\n")
+            f.write(f"  end type {self.component.capitalize()}{self.subcomponent.capitalize()}ParamFoundType\n\n")
+
             # params
             if len(self._param_varnames):
                 f.write(self._param_str)
@@ -343,6 +350,10 @@ class Dfn2F90:
         )
         s += (
             f"  public {component.lower()}_{subcomponent.lower()}_block_definitions"
+            + "\n"
+        )
+        s += (
+            f"  public {component.capitalize()}{subcomponent.capitalize()}ParamFoundType"
             + "\n\n"
         )
         return s

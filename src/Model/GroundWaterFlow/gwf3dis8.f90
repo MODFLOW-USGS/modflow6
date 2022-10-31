@@ -200,28 +200,29 @@ contains
     use MemoryTypeModule, only: MemoryType
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
+    use GwfDisInputModule, only: GwfDisParamFoundType
     ! -- dummy
     class(GwfDisType) :: this
     ! -- locals
     character(len=LENMEMPATH) :: idmMemoryPath
     character(len=LENVARNAME), dimension(3) :: lenunits = &
       &[character(len=LENVARNAME) :: 'FEET', 'METERS', 'CENTIMETERS']
-    logical, dimension(5) :: afound
+    type(GwfDisParamFoundType) :: found
     !
     ! -- set memory path
     idmMemoryPath = create_mem_path(this%name_model, 'DIS', idm_context)
     !
     ! -- update defaults with idm sourced values
     call mem_set_value(this%lenuni, 'LENGTH_UNITS', idmMemoryPath, lenunits, &
-                       afound(1))
-    call mem_set_value(this%nogrb, 'NOGRB', idmMemoryPath, afound(2))
-    call mem_set_value(this%xorigin, 'XORIGIN', idmMemoryPath, afound(3))
-    call mem_set_value(this%yorigin, 'YORIGIN', idmMemoryPath, afound(4))
-    call mem_set_value(this%angrot, 'ANGROT', idmMemoryPath, afound(5))
+                       found%length_units)
+    call mem_set_value(this%nogrb, 'NOGRB', idmMemoryPath, found%nogrb)
+    call mem_set_value(this%xorigin, 'XORIGIN', idmMemoryPath, found%xorigin)
+    call mem_set_value(this%yorigin, 'YORIGIN', idmMemoryPath, found%yorigin)
+    call mem_set_value(this%angrot, 'ANGROT', idmMemoryPath, found%angrot)
     !
     ! -- log values to list file
     if (this%iout > 0) then
-      call this%log_options(afound)
+      call this%log_options(found)
     end if
     !
     ! -- Return
@@ -230,31 +231,32 @@ contains
 
   !> @brief Write user options to list file
   !<
-  subroutine log_options(this, afound)
+  subroutine log_options(this, found)
+    use GwfDisInputModule, only: GwfDisParamFoundType
     class(GwfDisType) :: this
-    logical, dimension(:), intent(in) :: afound
+    type(GwfDisParamFoundType), intent(in) :: found
 
     write (this%iout, '(1x,a)') 'Setting Discretization Options'
 
-    if (afound(1)) then
+    if (found%length_units) then
       write (this%iout, '(4x,a,i0)') 'MODEL LENGTH UNIT [0=UND, 1=FEET, &
       &2=METERS, 3=CENTIMETERS] SET AS ', this%lenuni
     end if
 
-    if (afound(2)) then
+    if (found%nogrb) then
       write (this%iout, '(4x,a,i0)') 'BINARY GRB FILE [0=GRB, 1=NOGRB] &
         &SET AS ', this%nogrb
     end if
 
-    if (afound(3)) then
+    if (found%xorigin) then
       write (this%iout, '(4x,a,G0)') 'XORIGIN = ', this%xorigin
     end if
 
-    if (afound(4)) then
+    if (found%yorigin) then
       write (this%iout, '(4x,a,G0)') 'YORIGIN = ', this%yorigin
     end if
 
-    if (afound(5)) then
+    if (found%angrot) then
       write (this%iout, '(4x,a,G0)') 'ANGROT = ', this%angrot
     end if
 
@@ -269,24 +271,25 @@ contains
     use MemoryTypeModule, only: MemoryType
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
+    use GwfDisInputModule, only: GwfDisParamFoundType
     ! -- dummy
     class(GwfDisType) :: this
     ! -- locals
     character(len=LENMEMPATH) :: idmMemoryPath
     integer(I4B) :: i, j, k
-    logical, dimension(3) :: afound
+    type(GwfDisParamFoundType) :: found
     !
     ! -- set memory path
     idmMemoryPath = create_mem_path(this%name_model, 'DIS', idm_context)
     !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%nlay, 'NLAY', idmMemoryPath, afound(1))
-    call mem_set_value(this%nrow, 'NROW', idmMemoryPath, afound(2))
-    call mem_set_value(this%ncol, 'NCOL', idmMemoryPath, afound(3))
+    call mem_set_value(this%nlay, 'NLAY', idmMemoryPath, found%nlay)
+    call mem_set_value(this%nrow, 'NROW', idmMemoryPath, found%nrow)
+    call mem_set_value(this%ncol, 'NCOL', idmMemoryPath, found%ncol)
     !
     ! -- log simulation values
     if (this%iout > 0) then
-      call this%log_dimensions(afound)
+      call this%log_dimensions(found)
     end if
     !
     ! -- verify dimensions were set
@@ -335,21 +338,22 @@ contains
 
   !> @brief Write dimensions to list file
   !<
-  subroutine log_dimensions(this, afound)
+  subroutine log_dimensions(this, found)
+    use GwfDisInputModule, only: GwfDisParamFoundType
     class(GwfDisType) :: this
-    logical, dimension(:), intent(in) :: afound
+    type(GwfDisParamFoundType), intent(in) :: found
 
     write (this%iout, '(1x,a)') 'Setting Discretization Dimensions'
 
-    if (afound(1)) then
+    if (found%nlay) then
       write (this%iout, '(4x,a,i0)') 'NLAY = ', this%nlay
     end if
 
-    if (afound(2)) then
+    if (found%nrow) then
       write (this%iout, '(4x,a,i0)') 'NROW = ', this%nrow
     end if
 
-    if (afound(3)) then
+    if (found%ncol) then
       write (this%iout, '(4x,a,i0)') 'NCOL = ', this%ncol
     end if
 
@@ -367,11 +371,12 @@ contains
     ! -- modules
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
+    use GwfDisInputModule, only: GwfDisParamFoundType
     ! -- dummy
     class(GwfDisType) :: this
     ! -- locals
     character(len=LENMEMPATH) :: idmMemoryPath
-    logical, dimension(5) :: afound
+    type(GwfDisParamFoundType) :: found
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
@@ -379,15 +384,15 @@ contains
     idmMemoryPath = create_mem_path(this%name_model, 'DIS', idm_context)
     !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%delr, 'DELR', idmMemoryPath, afound(1))
-    call mem_set_value(this%delc, 'DELC', idmMemoryPath, afound(2))
-    call mem_set_value(this%top2d, 'TOP', idmMemoryPath, afound(3))
-    call mem_set_value(this%bot3d, 'BOTM', idmMemoryPath, afound(4))
-    call mem_set_value(this%idomain, 'IDOMAIN', idmMemoryPath, afound(5))
+    call mem_set_value(this%delr, 'DELR', idmMemoryPath, found%delr)
+    call mem_set_value(this%delc, 'DELC', idmMemoryPath, found%delc)
+    call mem_set_value(this%top2d, 'TOP', idmMemoryPath, found%top)
+    call mem_set_value(this%bot3d, 'BOTM', idmMemoryPath, found%botm)
+    call mem_set_value(this%idomain, 'IDOMAIN', idmMemoryPath, found%idomain)
     !
     ! -- log simulation values
     if (this%iout > 0) then
-      call this%log_griddata(afound)
+      call this%log_griddata(found)
     end if
     !
     ! -- Return
@@ -396,29 +401,30 @@ contains
 
   !> @brief Write dimensions to list file
   !<
-  subroutine log_griddata(this, afound)
+  subroutine log_griddata(this, found)
+    use GwfDisInputModule, only: GwfDisParamFoundType
     class(GwfDisType) :: this
-    logical, dimension(:), intent(in) :: afound
+    type(GwfDisParamFoundType), intent(in) :: found
 
     write (this%iout, '(1x,a)') 'Setting Discretization Griddata'
 
-    if (afound(1)) then
+    if (found%delr) then
       write (this%iout, '(4x,a)') 'DELR set from input file'
     end if
 
-    if (afound(2)) then
+    if (found%delc) then
       write (this%iout, '(4x,a)') 'DELC set from input file'
     end if
 
-    if (afound(3)) then
+    if (found%top) then
       write (this%iout, '(4x,a)') 'TOP set from input file'
     end if
 
-    if (afound(4)) then
+    if (found%botm) then
       write (this%iout, '(4x,a)') 'BOTM set from input file'
     end if
 
-    if (afound(5)) then
+    if (found%idomain) then
       write (this%iout, '(4x,a)') 'IDOMAIN set from input file'
     end if
 

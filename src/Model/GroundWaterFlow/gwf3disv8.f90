@@ -221,13 +221,14 @@ contains
     use KindModule, only: LGP
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
+    use GwfDisvInputModule, only: GwfDisvParamFoundType
     ! -- dummy
     class(GwfDisvType) :: this
     ! -- locals
     character(len=LENMEMPATH) :: idmMemoryPath
     character(len=LENVARNAME), dimension(3) :: lenunits = &
       &[character(len=LENVARNAME) :: 'FEET', 'METERS', 'CENTIMETERS']
-    logical, dimension(5) :: afound
+    type(GwfDisvParamFoundType) :: found
 ! ------------------------------------------------------------------------------
     !
     ! -- set memory path
@@ -235,15 +236,15 @@ contains
     !
     ! -- update defaults with idm sourced values
     call mem_set_value(this%lenuni, 'LENGTH_UNITS', idmMemoryPath, lenunits, &
-                       afound(1))
-    call mem_set_value(this%nogrb, 'NOGRB', idmMemoryPath, afound(2))
-    call mem_set_value(this%xorigin, 'XORIGIN', idmMemoryPath, afound(3))
-    call mem_set_value(this%yorigin, 'YORIGIN', idmMemoryPath, afound(4))
-    call mem_set_value(this%angrot, 'ANGROT', idmMemoryPath, afound(5))
+                       found%length_units)
+    call mem_set_value(this%nogrb, 'NOGRB', idmMemoryPath, found%nogrb)
+    call mem_set_value(this%xorigin, 'XORIGIN', idmMemoryPath, found%xorigin)
+    call mem_set_value(this%yorigin, 'YORIGIN', idmMemoryPath, found%yorigin)
+    call mem_set_value(this%angrot, 'ANGROT', idmMemoryPath, found%angrot)
     !
     ! -- log values to list file
     if (this%iout > 0) then
-      call this%log_options(afound)
+      call this%log_options(found)
     end if
     !
     ! -- Return
@@ -252,31 +253,32 @@ contains
 
   !> @brief Write user options to list file
   !<
-  subroutine log_options(this, afound)
+  subroutine log_options(this, found)
+    use GwfDisvInputModule, only: GwfDisvParamFoundType
     class(GwfDisvType) :: this
-    logical, dimension(:), intent(in) :: afound
+    type(GwfDisvParamFoundType), intent(in) :: found
 
     write (this%iout, '(1x,a)') 'Setting Discretization Options'
 
-    if (afound(1)) then
+    if (found%length_units) then
       write (this%iout, '(4x,a,i0)') 'MODEL LENGTH UNIT [0=UND, 1=FEET, &
       &2=METERS, 3=CENTIMETERS] SET AS ', this%lenuni
     end if
 
-    if (afound(2)) then
+    if (found%nogrb) then
       write (this%iout, '(4x,a,i0)') 'BINARY GRB FILE [0=GRB, 1=NOGRB] &
         &SET AS ', this%nogrb
     end if
 
-    if (afound(3)) then
+    if (found%xorigin) then
       write (this%iout, '(4x,a,G0)') 'XORIGIN = ', this%xorigin
     end if
 
-    if (afound(4)) then
+    if (found%yorigin) then
       write (this%iout, '(4x,a,G0)') 'YORIGIN = ', this%yorigin
     end if
 
-    if (afound(5)) then
+    if (found%angrot) then
       write (this%iout, '(4x,a,G0)') 'ANGROT = ', this%angrot
     end if
 
@@ -296,25 +298,26 @@ contains
     use KindModule, only: LGP
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
+    use GwfDisvInputModule, only: GwfDisvParamFoundType
     ! -- dummy
     class(GwfDisvType) :: this
     ! -- locals
     character(len=LENMEMPATH) :: idmMemoryPath
     integer(I4B) :: j, k
-    logical, dimension(3) :: afound
+    type(GwfDisvParamFoundType) :: found
 ! ------------------------------------------------------------------------------
     !
     ! -- set memory path
     idmMemoryPath = create_mem_path(this%name_model, 'DISV', idm_context)
     !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%nlay, 'NLAY', idmMemoryPath, afound(1))
-    call mem_set_value(this%ncpl, 'NCPL', idmMemoryPath, afound(2))
-    call mem_set_value(this%nvert, 'NVERT', idmMemoryPath, afound(3))
+    call mem_set_value(this%nlay, 'NLAY', idmMemoryPath, found%nlay)
+    call mem_set_value(this%ncpl, 'NCPL', idmMemoryPath, found%ncpl)
+    call mem_set_value(this%nvert, 'NVERT', idmMemoryPath, found%nvert)
     !
     ! -- log simulation values
     if (this%iout > 0) then
-      call this%log_dimensions(afound)
+      call this%log_dimensions(found)
     end if
     !
     ! -- verify dimensions were set
@@ -361,21 +364,22 @@ contains
 
   !> @brief Write dimensions to list file
   !<
-  subroutine log_dimensions(this, afound)
+  subroutine log_dimensions(this, found)
+    use GwfDisvInputModule, only: GwfDisvParamFoundType
     class(GwfDisvType) :: this
-    logical, dimension(:), intent(in) :: afound
+    type(GwfDisvParamFoundType), intent(in) :: found
 
     write (this%iout, '(1x,a)') 'Setting Discretization Dimensions'
 
-    if (afound(1)) then
+    if (found%nlay) then
       write (this%iout, '(4x,a,i0)') 'NLAY = ', this%nlay
     end if
 
-    if (afound(2)) then
+    if (found%ncpl) then
       write (this%iout, '(4x,a,i0)') 'NCPL = ', this%ncpl
     end if
 
-    if (afound(3)) then
+    if (found%nvert) then
       write (this%iout, '(4x,a,i0)') 'NVERT = ', this%nvert
     end if
 
@@ -393,11 +397,12 @@ contains
     ! -- modules
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
+    use GwfDisvInputModule, only: GwfDisvParamFoundType
     ! -- dummy
     class(GwfDisvType) :: this
     ! -- locals
     character(len=LENMEMPATH) :: idmMemoryPath
-    logical, dimension(3) :: afound
+    type(GwfDisvParamFoundType) :: found
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
@@ -405,13 +410,13 @@ contains
     idmMemoryPath = create_mem_path(this%name_model, 'DISV', idm_context)
     !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%top1d, 'TOP', idmMemoryPath, afound(1))
-    call mem_set_value(this%bot2d, 'BOTM', idmMemoryPath, afound(2))
-    call mem_set_value(this%idomain, 'IDOMAIN', idmMemoryPath, afound(3))
+    call mem_set_value(this%top1d, 'TOP', idmMemoryPath, found%top)
+    call mem_set_value(this%bot2d, 'BOTM', idmMemoryPath, found%botm)
+    call mem_set_value(this%idomain, 'IDOMAIN', idmMemoryPath, found%idomain)
     !
     ! -- log simulation values
     if (this%iout > 0) then
-      call this%log_griddata(afound)
+      call this%log_griddata(found)
     end if
     !
     ! -- Return
@@ -420,21 +425,22 @@ contains
 
   !> @brief Write griddata found to list file
   !<
-  subroutine log_griddata(this, afound)
+  subroutine log_griddata(this, found)
+    use GwfDisvInputModule, only: GwfDisvParamFoundType
     class(GwfDisvType) :: this
-    logical, dimension(:), intent(in) :: afound
+    type(GwfDisvParamFoundType), intent(in) :: found
 
     write (this%iout, '(1x,a)') 'Setting Discretization Griddata'
 
-    if (afound(1)) then
+    if (found%top) then
       write (this%iout, '(4x,a)') 'TOP set from input file'
     end if
 
-    if (afound(2)) then
+    if (found%botm) then
       write (this%iout, '(4x,a)') 'BOTM set from input file'
     end if
 
-    if (afound(3)) then
+    if (found%idomain) then
       write (this%iout, '(4x,a)') 'IDOMAIN set from input file'
     end if
 
