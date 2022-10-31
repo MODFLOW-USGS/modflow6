@@ -472,7 +472,7 @@ def build_model(idx, dir):
     )
 
     # pull in the tabfile defining the lake stage, vol, & surface area
-    fname = os.path.join("data", "vsc04-laktab", "stg-vol-surfarea.csv")
+    fname = os.path.join("data", "vsc04-laktab", "stg-vol-surfarea.dat")
     tabinput = []
     with open(fname, "r") as f:
         # peel off the hdr line
