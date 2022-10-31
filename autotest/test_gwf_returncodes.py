@@ -19,7 +19,7 @@ mf6_exe = os.path.abspath(targets.target_dict["mf6"])
 name = "gwf_ret_codes01"
 base_ws = os.path.join("temp", name)
 if not os.path.isdir(base_ws):
-    os.makedirs(base_ws)
+    os.makedirs(base_ws, exist_ok=True)
 app = "mf6"
 if sys.platform.lower() == "win32":
     app += ".exe"

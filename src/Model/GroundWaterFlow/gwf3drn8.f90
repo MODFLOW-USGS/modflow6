@@ -1,9 +1,8 @@
 module DrnModule
-  use KindModule, only: DP, I4B, LGP
+  use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, DONE, DTWO, LENFTYPE, LENPACKAGENAME, &
-                             LENAUXNAME, LINELENGTH, LENMEMSEPARATOR
-  use MemoryHelperModule, only: create_mem_path, split_mem_address, &
-                                memPathSeparator
+                             LENAUXNAME, LINELENGTH
+  use MemoryHelperModule, only: create_mem_path
   use SmoothingModule, only: sQSaturation, sQSaturationDerivative, &
                              sQuadraticSaturation
   use BndModule, only: BndType

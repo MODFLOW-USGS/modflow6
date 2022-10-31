@@ -1,8 +1,7 @@
 module rivmodule
-  use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME, LENMEMSEPARATOR
-  use MemoryHelperModule, only: create_mem_path, split_mem_address, &
-                                memPathSeparator
+  use KindModule, only: DP, I4B
+  use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME
+  use MemoryHelperModule, only: create_mem_path
   use BndModule, only: BndType
   use ObsModule, only: DefaultObsIdProcessor
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
