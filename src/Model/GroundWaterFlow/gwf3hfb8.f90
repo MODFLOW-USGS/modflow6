@@ -3,6 +3,7 @@ module GwfHfbModule
 
   use KindModule, only: DP, I4B
   use Xt3dModule, only: Xt3dType
+  use GwfVscModule, only: GwfVscType
   use NumericalPackageModule, only: NumericalPackageType
   use BlockParserModule, only: BlockParserType
   use BaseDisModule, only: DisBaseType
@@ -14,27 +15,34 @@ module GwfHfbModule
   public :: hfb_cr
 
   type, extends(NumericalPackageType) :: GwfHfbType
-    integer(I4B), pointer :: maxhfb => null() !max number of hfb's
-    integer(I4B), pointer :: nhfb => null() !number of hfb's
-    integer(I4B), dimension(:), pointer, contiguous :: noden => null() !first cell
-    integer(I4B), dimension(:), pointer, contiguous :: nodem => null() !second cell
-    integer(I4B), dimension(:), pointer, contiguous :: idxloc => null() !position in model ja
-    real(DP), dimension(:), pointer, contiguous :: hydchr => null() !hydraulic characteristic of the barrier
-    real(DP), dimension(:), pointer, contiguous :: csatsav => null() !value of condsat prior to hfb modification
-    real(DP), dimension(:), pointer, contiguous :: condsav => null() !saved conductance of combined npf and hfb
-    type(Xt3dType), pointer :: xt3d => null() !pointer to xt3d object
+
+    type(GwfVscType), pointer :: vsc => null() !< viscosity object
+    integer(I4B), pointer :: maxhfb => null() !< max number of hfb's
+    integer(I4B), pointer :: nhfb => null() !< number of hfb's
+    integer(I4B), dimension(:), pointer, contiguous :: noden => null() !< first cell
+    integer(I4B), dimension(:), pointer, contiguous :: nodem => null() !< second cell
+    integer(I4B), dimension(:), pointer, contiguous :: idxloc => null() !< position in model ja
+    real(DP), dimension(:), pointer, contiguous :: hydchr => null() !< hydraulic characteristic of the barrier
+    real(DP), dimension(:), pointer, contiguous :: csatsav => null() !< value of condsat prior to hfb modification
+    real(DP), dimension(:), pointer, contiguous :: condsav => null() !< saved conductance of combined npf and hfb
+    type(Xt3dType), pointer :: xt3d => null() !< pointer to xt3d object
     !
-    integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !pointer to model ibound
-    integer(I4B), dimension(:), pointer, contiguous :: icelltype => null() !pointer to model icelltype
-    integer(I4B), dimension(:), pointer, contiguous :: ihc => null() !pointer to model ihc
-    integer(I4B), dimension(:), pointer, contiguous :: ia => null() !pointer to model ia
-    integer(I4B), dimension(:), pointer, contiguous :: ja => null() !pointer to model ja
-    integer(I4B), dimension(:), pointer, contiguous :: jas => null() !pointer to model jas
-    integer(I4B), dimension(:), pointer, contiguous :: isym => null() !pointer to model isym
-    real(DP), dimension(:), pointer, contiguous :: condsat => null() !pointer to model condsat
-    real(DP), dimension(:), pointer, contiguous :: top => null() !pointer to model top
-    real(DP), dimension(:), pointer, contiguous :: bot => null() !pointer to model bot
-    real(DP), dimension(:), pointer, contiguous :: hwva => null() !pointer to model hwva
+    integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
+    integer(I4B), dimension(:), pointer, contiguous :: icelltype => null() !< pointer to model icelltype
+    integer(I4B), dimension(:), pointer, contiguous :: ihc => null() !< pointer to model ihc
+    integer(I4B), dimension(:), pointer, contiguous :: ia => null() !< pointer to model ia
+    integer(I4B), dimension(:), pointer, contiguous :: ja => null() !< pointer to model ja
+    integer(I4B), dimension(:), pointer, contiguous :: jas => null() !< pointer to model jas
+    integer(I4B), dimension(:), pointer, contiguous :: isym => null() !< pointer to model isym
+    real(DP), dimension(:), pointer, contiguous :: condsat => null() !< pointer to model condsat
+    real(DP), dimension(:), pointer, contiguous :: top => null() !< pointer to model top
+    real(DP), dimension(:), pointer, contiguous :: bot => null() !< pointer to model bot
+    real(DP), dimension(:), pointer, contiguous :: hwva => null() !< pointer to model hwva
+    real(DP), dimension(:), pointer, contiguous :: hnew => null() !< pointer to model xnew
+    !
+    ! -- viscosity flag
+    integer(I4B), pointer :: ivsc => null() !< flag indicating if viscosity is active in the model
+
   contains
     procedure :: hfb_ar
     procedure :: hfb_rp
@@ -49,6 +57,8 @@ module GwfHfbModule
     procedure, private :: check_data
     procedure, private :: condsat_reset
     procedure, private :: condsat_modify
+    procedure, private :: get_visc_ratio
+
   end type GwfHfbType
 
 contains
@@ -87,7 +97,7 @@ contains
     return
   end subroutine hfb_cr
 
-  subroutine hfb_ar(this, ibound, xt3d, dis)
+  subroutine hfb_ar(this, ibound, xt3d, dis, invsc, vsc, hnew)
 ! ******************************************************************************
 ! hfb_ar -- Allocate and read
 ! ******************************************************************************
@@ -101,7 +111,11 @@ contains
     class(GwfHfbType) :: this
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     type(Xt3dType), pointer :: xt3d
-    class(DisBaseType), pointer, intent(inout) :: dis
+    class(DisBaseType), pointer, intent(inout) :: dis !< discretization package
+    integer(I4B), pointer :: invsc !< indicates if viscosity package is active
+    type(GwfVscType), pointer, intent(in) :: vsc !< viscosity package
+    real(DP), dimension(:), pointer, contiguous, intent(inout) :: hnew !< pointer to model head array
+    ! -- local
     ! -- formats
     character(len=*), parameter :: fmtheader = &
       "(1x, /1x, 'HFB -- HORIZONTAL FLOW BARRIER PACKAGE, VERSION 8, ', &
@@ -115,6 +129,7 @@ contains
     this%dis => dis
     this%ibound => ibound
     this%xt3d => xt3d
+    this%hnew => hnew
 
     call mem_setptr(this%icelltype, 'ICELLTYPE', &
                     create_mem_path(this%name_model, 'NPF'))
@@ -132,6 +147,16 @@ contains
     call this%read_options()
     call this%read_dimensions()
     call this%allocate_arrays()
+    !
+    ! --  If vsc package active, set ivsc
+    if (invsc /= 0) then
+      this%ivsc = 1
+      this%vsc => vsc
+      !
+      ! -- Notify user via listing file viscosity accounted for by HFB package
+      write (this%iout, '(/1x,a,a)') 'VISCOSITY ACTIVE IN ', &
+        trim(this%filtyp)//' PACKAGE CALCULATIONS: '//trim(adjustl(this%packName))
+    end if
     !
     ! -- return
     return
@@ -201,7 +226,7 @@ contains
     return
   end subroutine hfb_rp
 
-  subroutine hfb_fc(this, kiter, njasln, amat, idxglo, rhs, hnew)
+  subroutine hfb_fc(this, kiter, njasln, amat, idxglo, rhs)
 ! ******************************************************************************
 ! hfb_fc -- Fill amatsln for the following conditions:
 !   1.  Not Newton, and
@@ -213,7 +238,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: DHALF, DZERO
+    use ConstantsModule, only: DHALF, DZERO, DONE
     ! -- dummy
     class(GwfHfbType) :: this
     integer(I4B) :: kiter
@@ -221,18 +246,21 @@ contains
     real(DP), dimension(njasln), intent(inout) :: amat
     integer(I4B), intent(in), dimension(:) :: idxglo
     real(DP), intent(inout), dimension(:) :: rhs
-    real(DP), intent(inout), dimension(:) :: hnew
     ! -- local
     integer(I4B) :: nodes, nja
-    integer(I4B) :: ihfb, n, m
+    integer(I4B) :: ihfb
+    integer(I4B) :: n, m
     integer(I4B) :: ipos
     integer(I4B) :: idiag, isymcon
     integer(I4B) :: ixt3d
     real(DP) :: cond, condhfb, aterm
     real(DP) :: fawidth, faheight
     real(DP) :: topn, topm, botn, botm
+    real(DP) :: viscratio
 ! ------------------------------------------------------------------------------
     !
+    ! -- initialize variables
+    viscratio = DONE
     nodes = this%dis%nodes
     nja = this%dis%con%nja
     if (associated(this%xt3d%ixt3d)) then
@@ -248,7 +276,10 @@ contains
         m = max(this%noden(ihfb), this%nodem(ihfb))
         ! -- Skip if either cell is inactive.
         if (this%ibound(n) == 0 .or. this%ibound(m) == 0) cycle
-  !!!      if(this%icelltype(n) == 1 .or. this%icelltype(m) == 1) then
+        !!! if(this%icelltype(n) == 1 .or. this%icelltype(m) == 1) then
+        if (this%ivsc /= 0) then
+          call this%get_visc_ratio(n, m, viscratio)
+        end if
         ! -- Compute scale factor for hfb correction
         if (this%hydchr(ihfb) > DZERO) then
           if (this%inewton == 0) then
@@ -258,10 +289,10 @@ contains
             botn = this%bot(n)
             botm = this%bot(m)
             if (this%icelltype(n) == 1) then
-              if (hnew(n) < topn) topn = hnew(n)
+              if (this%hnew(n) < topn) topn = this%hnew(n)
             end if
             if (this%icelltype(m) == 1) then
-              if (hnew(m) < topm) topm = hnew(m)
+              if (this%hnew(m) < topm) topm = this%hnew(m)
             end if
             if (this%ihc(this%jas(ipos)) == 2) then
               faheight = min(topn, topm) - max(botn, botm)
@@ -269,16 +300,17 @@ contains
               faheight = DHALF * ((topn - botn) + (topm - botm))
             end if
             fawidth = this%hwva(this%jas(ipos))
-            condhfb = this%hydchr(ihfb) * fawidth * faheight
+            condhfb = (this%hydchr(ihfb) * viscratio) * &
+                      fawidth * faheight
           else
-            condhfb = this%hydchr(ihfb)
+            condhfb = this%hydchr(ihfb) * viscratio
           end if
         else
           condhfb = this%hydchr(ihfb)
         end if
         ! -- Make hfb corrections for xt3d
         call this%xt3d%xt3d_fhfb(kiter, nodes, nja, njasln, amat, idxglo, &
-                                 rhs, hnew, n, m, condhfb)
+                                 rhs, this%hnew, n, m, condhfb)
       end do
       !
     else
@@ -291,7 +323,13 @@ contains
           n = this%noden(ihfb)
           m = this%nodem(ihfb)
           if (this%ibound(n) == 0 .or. this%ibound(m) == 0) cycle
-          if (this%icelltype(n) == 1 .or. this%icelltype(m) == 1) then
+          !
+          if (this%ivsc /= 0) then
+            call this%get_visc_ratio(n, m, viscratio)
+          end if
+          !
+          if (this%icelltype(n) == 1 .or. this%icelltype(m) == 1 .or. &
+              this%ivsc /= 0) then
             !
             ! -- Calculate hfb conductance
             topn = this%top(n)
@@ -299,10 +337,10 @@ contains
             botn = this%bot(n)
             botm = this%bot(m)
             if (this%icelltype(n) == 1) then
-              if (hnew(n) < topn) topn = hnew(n)
+              if (this%hnew(n) < topn) topn = this%hnew(n)
             end if
             if (this%icelltype(m) == 1) then
-              if (hnew(m) < topm) topm = hnew(m)
+              if (this%hnew(m) < topm) topm = this%hnew(m)
             end if
             if (this%ihc(this%jas(ipos)) == 2) then
               faheight = min(topn, topm) - max(botn, botm)
@@ -311,7 +349,8 @@ contains
             end if
             if (this%hydchr(ihfb) > DZERO) then
               fawidth = this%hwva(this%jas(ipos))
-              condhfb = this%hydchr(ihfb) * fawidth * faheight
+              condhfb = (this%hydchr(ihfb) * viscratio) * &
+                        fawidth * faheight
               cond = aterm * condhfb / (aterm + condhfb)
             else
               cond = -aterm * this%hydchr(ihfb)
@@ -341,7 +380,7 @@ contains
     return
   end subroutine hfb_fc
 
-  subroutine hfb_cq(this, hnew, flowja)
+  subroutine hfb_cq(this, flowja)
 ! ******************************************************************************
 ! hfb_cq -- flowja will automatically include the effects of the hfb
 !   for confined and newton cases when xt3d is not used.  This method
@@ -351,10 +390,9 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: DHALF, DZERO
+    use ConstantsModule, only: DHALF, DZERO, DONE
     ! -- dummy
     class(GwfHfbType) :: this
-    real(DP), intent(inout), dimension(:) :: hnew
     real(DP), intent(inout), dimension(:) :: flowja
     ! -- local
     integer(I4B) :: ihfb, n, m
@@ -365,8 +403,12 @@ contains
     real(DP) :: condhfb
     real(DP) :: fawidth, faheight
     real(DP) :: topn, topm, botn, botm
+    real(DP) :: viscratio
 ! ------------------------------------------------------------------------------
 !
+    ! -- initialize viscratio
+    viscratio = DONE
+    !
     if (associated(this%xt3d%ixt3d)) then
       ixt3d = this%xt3d%ixt3d
     else
@@ -380,7 +422,11 @@ contains
         m = max(this%noden(ihfb), this%nodem(ihfb))
         ! -- Skip if either cell is inactive.
         if (this%ibound(n) == 0 .or. this%ibound(m) == 0) cycle
-  !!!      if(this%icelltype(n) == 1 .or. this%icelltype(m) == 1) then
+        !!! if(this%icelltype(n) == 1 .or. this%icelltype(m) == 1) then
+        if (this%ivsc /= 0) then
+          call this%get_visc_ratio(n, m, viscratio)
+        end if
+        !
         ! -- Compute scale factor for hfb correction
         if (this%hydchr(ihfb) > DZERO) then
           if (this%inewton == 0) then
@@ -390,10 +436,10 @@ contains
             botn = this%bot(n)
             botm = this%bot(m)
             if (this%icelltype(n) == 1) then
-              if (hnew(n) < topn) topn = hnew(n)
+              if (this%hnew(n) < topn) topn = this%hnew(n)
             end if
             if (this%icelltype(m) == 1) then
-              if (hnew(m) < topm) topm = hnew(m)
+              if (this%hnew(m) < topm) topm = this%hnew(m)
             end if
             if (this%ihc(this%jas(ipos)) == 2) then
               faheight = min(topn, topm) - max(botn, botm)
@@ -401,7 +447,8 @@ contains
               faheight = DHALF * ((topn - botn) + (topm - botm))
             end if
             fawidth = this%hwva(this%jas(ipos))
-            condhfb = this%hydchr(ihfb) * fawidth * faheight
+            condhfb = (this%hydchr(ihfb) * viscratio) * &
+                      fawidth * faheight
           else
             condhfb = this%hydchr(ihfb)
           end if
@@ -409,7 +456,7 @@ contains
           condhfb = this%hydchr(ihfb)
         end if
         ! -- Make hfb corrections for xt3d
-        call this%xt3d%xt3d_flowjahfb(n, m, hnew, flowja, condhfb)
+        call this%xt3d%xt3d_flowjahfb(n, m, this%hnew, flowja, condhfb)
       end do
       !
     else
@@ -420,10 +467,13 @@ contains
           n = this%noden(ihfb)
           m = this%nodem(ihfb)
           if (this%ibound(n) == 0 .or. this%ibound(m) == 0) cycle
-          if (this%icelltype(n) == 1 .or. this%icelltype(m) == 1) then
+          if (this%icelltype(n) == 1 .or. this%icelltype(m) == 1 .or. &
+              this%ivsc /= 0) then
             ipos = this%dis%con%getjaindex(n, m)
+            !
+            ! -- condsav already accnts for visc adjustment
             cond = this%condsav(ihfb)
-            qnm = cond * (hnew(m) - hnew(n))
+            qnm = cond * (this%hnew(m) - this%hnew(n))
             flowja(ipos) = qnm
             ipos = this%dis%con%getjaindex(m, n)
             flowja(ipos) = -qnm
@@ -437,6 +487,40 @@ contains
     ! -- return
     return
   end subroutine hfb_cq
+
+  !> @brief Calculate the viscosity ratio
+  !!
+  !! Calculate the viscosity ratio applied to the hydraulic characteristic
+  !! provided by the user.  The viscosity ratio is applicable only
+  !! when the hydraulic characteristic is specified as positive and will not
+  !! be applied when the hydchr is negative
+  !<
+  subroutine get_visc_ratio(this, n, m, hfbviscratio)
+    ! -- modules
+    use ConstantsModule, only: DONE
+    ! -- dummy
+    class(GwfHfbType) :: this
+    integer(I4B), intent(in) :: n, m
+    real(DP), intent(inout) :: hfbviscratio
+    ! -- local
+    real(DP) :: gwhdm, gwhdn, viscratio
+    integer(I4B) :: cellid
+! ------------------------------------------------------------------------------
+!
+    viscratio = DONE
+    gwhdm = this%hnew(m)
+    gwhdn = this%hnew(n)
+    if (gwhdm > gwhdn) then
+      cellid = m
+    else if (gwhdn >= gwhdm) then
+      cellid = n
+    end if
+    call this%vsc%set_hfb_visc(cellid, viscratio)
+    hfbviscratio = viscratio
+    !
+    ! -- return
+    return
+  end subroutine get_visc_ratio
 
   subroutine hfb_da(this)
 ! ******************************************************************************
@@ -465,6 +549,7 @@ contains
       call mem_deallocate(this%idxloc)
       call mem_deallocate(this%csatsav)
       call mem_deallocate(this%condsav)
+      call mem_deallocate(this%ivsc)
     end if
     !
     ! -- deallocate parent
@@ -484,6 +569,8 @@ contains
     this%top => null()
     this%bot => null()
     this%hwva => null()
+    this%hnew => null()
+    this%vsc => null()
     !
     ! -- return
     return
@@ -509,9 +596,13 @@ contains
     call mem_allocate(this%maxhfb, 'MAXHFB', this%memoryPath)
     call mem_allocate(this%nhfb, 'NHFB', this%memoryPath)
     !
+    ! -- allocate flag for determining if vsc active
+    call mem_allocate(this%ivsc, 'IVSC', this%memoryPath)
+    !
     ! -- initialize
     this%maxhfb = 0
     this%nhfb = 0
+    this%ivsc = 0
     !
     ! -- return
     return
@@ -838,7 +929,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: DHALF, DZERO
+    use ConstantsModule, only: DHALF, DZERO, DONE
     ! -- dummy
     class(GwfHfbType) :: this
     ! -- local
@@ -847,14 +938,23 @@ contains
     real(DP) :: cond, condhfb
     real(DP) :: fawidth, faheight
     real(DP) :: topn, topm, botn, botm
+    real(DP) :: viscratio
 ! ------------------------------------------------------------------------------
     !
     do ihfb = 1, this%nhfb
+      ! -- initialize variable
+      viscratio = DONE
+      !
       ipos = this%idxloc(ihfb)
       cond = this%condsat(this%jas(ipos))
       this%csatsav(ihfb) = cond
       n = this%noden(ihfb)
       m = this%nodem(ihfb)
+      ! -- account for viscosity when active
+      if (this%ivsc /= 0) then
+        call this%get_visc_ratio(n, m, viscratio)
+      end if
+      !
       if (this%inewton == 1 .or. &
           (this%icelltype(n) == 0 .and. this%icelltype(m) == 0)) then
         !
@@ -870,7 +970,8 @@ contains
         end if
         if (this%hydchr(ihfb) > DZERO) then
           fawidth = this%hwva(this%jas(ipos))
-          condhfb = this%hydchr(ihfb) * fawidth * faheight
+          condhfb = this%hydchr(ihfb) * viscratio * &
+                    fawidth * faheight
           cond = cond * condhfb / (cond + condhfb)
         else
           cond = -cond * this%hydchr(ihfb)

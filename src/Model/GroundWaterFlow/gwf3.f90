@@ -427,7 +427,8 @@ contains
                                              this%x)
     if (this%invsc > 0) call this%vsc%vsc_ar(this%ibound)
     if (this%inbuy > 0) call this%buy%buy_ar(this%npf, this%ibound)
-    if (this%inhfb > 0) call this%hfb%hfb_ar(this%ibound, this%xt3d, this%dis)
+    if (this%inhfb > 0) call this%hfb%hfb_ar(this%ibound, this%xt3d, this%dis, &
+                                             this%invsc, this%vsc, this%x)
     if (this%insto > 0) call this%sto%sto_ar(this%dis, this%ibound)
     if (this%incsub > 0) call this%csub%csub_ar(this%dis, this%ibound)
     if (this%inmvr > 0) call this%mvr%mvr_ar()
@@ -604,7 +605,7 @@ contains
     if (this%inbuy > 0) call this%buy%buy_fc(kiter, njasln, amatsln, &
                                              this%idxglo, this%rhs, this%x)
     if (this%inhfb > 0) call this%hfb%hfb_fc(kiter, njasln, amatsln, &
-                                             this%idxglo, this%rhs, this%x)
+                                             this%idxglo, this%rhs)
     if (this%ingnc > 0) call this%gnc%gnc_fc(kiter, amatsln)
     ! -- storage
     if (this%insto > 0) then
@@ -925,7 +926,7 @@ contains
     end do
     if (this%innpf > 0) call this%npf%npf_cq(this%x, this%flowja)
     if (this%inbuy > 0) call this%buy%buy_cq(this%x, this%flowja)
-    if (this%inhfb > 0) call this%hfb%hfb_cq(this%x, this%flowja)
+    if (this%inhfb > 0) call this%hfb%hfb_cq(this%flowja)
     if (this%ingnc > 0) call this%gnc%gnc_cq(this%flowja)
     if (this%insto > 0) call this%sto%sto_cq(this%flowja, this%x, this%xold)
     if (this%incsub > 0) call this%csub%csub_cq(this%dis%nodes, this%x, &

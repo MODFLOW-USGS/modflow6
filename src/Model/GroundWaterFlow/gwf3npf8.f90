@@ -99,7 +99,6 @@ module GwfNpfModule
     integer(I4B), pointer :: intvk => null() ! TVK (time-varying K) unit number (0 if unused)
     integer(I4B), pointer :: invsc => null() ! VSC (viscosity) unit number (0 if unused); viscosity leads to time-varying K's
     type(TvkType), pointer :: tvk => null() ! TVK object
-    !type(GwfVscType), pointer :: vsc => null() ! VSC object
     integer(I4B), pointer :: kchangeper => null() ! last stress period in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
     integer(I4B), pointer :: kchangestp => null() ! last time step in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
     integer(I4B), dimension(:), pointer, contiguous :: nodekchange => null() ! grid array of flags indicating for each node whether its K (or K22, or K33) value changed (1) at (kchangeper, kchangestp) or not (0)
@@ -1095,6 +1094,11 @@ contains
     if (this%intvk /= 0) then
       call this%tvk%da()
       deallocate (this%tvk)
+    end if
+    !
+    ! -- VSC
+    if (this%invsc /= 0) then
+      nullify (this%vsc)
     end if
     !
     ! -- Strings

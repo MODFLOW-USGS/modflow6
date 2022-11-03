@@ -86,6 +86,7 @@ module GwfVscModule
     procedure, private :: set_npf_pointers
     procedure, public :: update_k_with_vsc
     procedure, private :: vsc_set_changed_at
+    procedure, public :: set_hfb_visc
     procedure :: set_concentration_pointer
   end type GwfVscType
 
@@ -788,7 +789,6 @@ contains
   end function calc_vsc_ratio
 
   function calc_bnd_viscosity(n, locvisc, locconc, viscref, dviscdc, cviscref, &
-                              !                           ctemp, ivisc, auxvar) result(viscbnd)
                               ctemp, ivisc, a2, a3, a4, auxvar) result(viscbnd)
 ! ******************************************************************************
 ! get_bnd_viscosity -- Return the viscosity of the boundary package using one of
@@ -839,6 +839,32 @@ contains
     ! -- return
     return
   end function calc_bnd_viscosity
+
+  !> @brief Account for viscosity in horizontal flow barriers
+  !!
+  !! Will return the viscosity associated with the upgradient node (cell)
+  !! to the HFB package for adjusting the hydraulic characteristic (hydchr)
+  !! of the barrier
+  !<
+  subroutine set_hfb_visc(this, cellid, hfbviscratio)
+    ! -- dummy variables
+    class(GwfVscType) :: this
+    integer(I4B), intent(in) :: cellid
+    ! -- return
+    real(DP), intent(inout) :: hfbviscratio
+    ! -- local
+    real(DP) :: visc
+! ------------------------------------------------------------------------------
+    !
+    ! -- Retrieve viscosity for the passed node number
+    visc = this%visc(cellid)
+    !
+    ! -- Calculate the viscosity ratio for the
+    hfbviscratio = calc_vsc_ratio(this%viscref, visc)
+    !
+    ! -- return
+    return
+  end subroutine set_hfb_visc
 
   !> @brief hit the hydraulic conductivity values with the ratio mu_o/mu
   !!
