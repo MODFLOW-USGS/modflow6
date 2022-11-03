@@ -261,13 +261,13 @@ contains
     write (this%iout, '(1x,a)') 'Setting Discretization Options'
 
     if (found%length_units) then
-      write (this%iout, '(4x,a,i0)') 'MODEL LENGTH UNIT [0=UND, 1=FEET, &
-      &2=METERS, 3=CENTIMETERS] SET AS ', this%lenuni
+      write (this%iout, '(4x,a,i0)') 'Model length unit [0=UND, 1=FEET, &
+      &2=METERS, 3=CENTIMETERS] set as ', this%lenuni
     end if
 
     if (found%nogrb) then
-      write (this%iout, '(4x,a,i0)') 'BINARY GRB FILE [0=GRB, 1=NOGRB] &
-        &SET AS ', this%nogrb
+      write (this%iout, '(4x,a,i0)') 'Binary grid file [0=GRB, 1=NOGRB] &
+        &set as ', this%nogrb
     end if
 
     if (found%xorigin) then
@@ -323,17 +323,17 @@ contains
     ! -- verify dimensions were set
     if (this%nlay < 1) then
       call store_error( &
-        'NLAY WAS NOT SPECIFIED OR WAS SPECIFIED INCORRECTLY.')
+        'NLAY was not specified or was specified incorrectly.')
       call this%parser%StoreErrorUnit()
     end if
     if (this%ncpl < 1) then
       call store_error( &
-        'NCPL WAS NOT SPECIFIED OR WAS SPECIFIED INCORRECTLY.')
+        'NCPL was not specified or was specified incorrectly.')
       call this%parser%StoreErrorUnit()
     end if
     if (this%nvert < 1) then
       call store_error( &
-        'NVERT WAS NOT SPECIFIED OR WAS SPECIFIED INCORRECTLY.')
+        'NVERT was not specified or was specified incorrectly.')
       call this%parser%StoreErrorUnit()
     end if
     !
@@ -465,12 +465,12 @@ contains
     character(len=300) :: ermsg
     ! -- formats
     character(len=*), parameter :: fmtdz = &
-      "('ERROR. CELL (',i0,',',i0,') THICKNESS <= 0. ', &
+      "('CELL (',i0,',',i0,') THICKNESS <= 0. ', &
       &'TOP, BOT: ',2(1pg24.15))"
     character(len=*), parameter :: fmtnr = &
-      "(/1x, 'THE SPECIFIED IDOMAIN RESULTS IN A REDUCED NUMBER OF CELLS.',&
-      &/1x, 'NUMBER OF USER NODES: ',I7,&
-      &/1X, 'NUMBER OF NODES IN SOLUTION: ', I7, //)"
+      "(/1x, 'The specified IDOMAIN results in a reduced number of cells.',&
+      &/1x, 'Number of user nodes: ',I0,&
+      &/1X, 'Number of nodes in solution: ', I0, //)"
     ! -- data
 ! ------------------------------------------------------------------------------
     !
@@ -484,9 +484,9 @@ contains
     !
     ! -- Check to make sure nodes is a valid number
     if (this%nodes == 0) then
-      call store_error('MODEL DOES NOT HAVE ANY ACTIVE NODES.')
-      call store_error('MAKE SURE IDOMAIN ARRAY HAS SOME VALUES GREATER &
-        &THAN ZERO.')
+      call store_error('Model does not have any active nodes. &
+                       &Ensure idomain array has some values greater &
+                       &than zero.')
       call this%parser%StoreErrorUnit()
     end if
     !
