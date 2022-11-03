@@ -540,6 +540,7 @@ contains
     ! -- Scalars
     call mem_deallocate(this%maxhfb)
     call mem_deallocate(this%nhfb)
+    call mem_deallocate(this%ivsc)
     !
     ! -- Arrays
     if (this%inunit > 0) then
@@ -549,7 +550,6 @@ contains
       call mem_deallocate(this%idxloc)
       call mem_deallocate(this%csatsav)
       call mem_deallocate(this%condsav)
-      call mem_deallocate(this%ivsc)
     end if
     !
     ! -- deallocate parent
