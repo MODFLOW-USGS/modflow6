@@ -219,7 +219,7 @@ def idomain_runtime_error():
         returncode, buff = run_mf6([mf6_exe], ws)
         msg = f"could not run {sim.name}"
         if returncode != 0:
-            err_str = "IDOMAIN ARRAY HAS SOME VALUES GREATER THAN ZERO"
+            err_str = "Ensure IDOMAIN array has some"
             err = any(err_str in s for s in buff)
             if err:
                 clean(ws)

@@ -226,7 +226,7 @@ contains
     ! -- Check to make sure nodes is a valid number
     if (this%nodes == 0) then
       call store_error('Model does not have any active nodes. &
-                       &Ensure idomain array has some values greater &
+                       &Ensure IDOMAIN array has some values greater &
                        &than zero.')
       call this%parser%StoreErrorUnit()
     end if
