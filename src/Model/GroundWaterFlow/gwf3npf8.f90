@@ -1365,13 +1365,13 @@ contains
       write (this%iout, '(4x,a)') 'Rewetting is active.'
     if (found%wetfct) &
       write (this%iout, '(4x,a,1pg15.6)') &
-        'Wetting factor (WETFCT) has been set to: ', this%wetfct
+      'Wetting factor (WETFCT) has been set to: ', this%wetfct
     if (found%iwetit) &
       write (this%iout, '(4x,a,i5)') &
-        'Wetting iteration interval (IWETIT) has been set to: ', this%iwetit
+      'Wetting iteration interval (IWETIT) has been set to: ', this%iwetit
     if (found%ihdwet) &
       write (this%iout, '(4x,a,i5)') &
-        'Head rewet equation (IHDWET) has been set to: ', this%ihdwet
+      'Head rewet equation (IHDWET) has been set to: ', this%ihdwet
     write (this%iout, '(1x,a,/)') 'End Setting NPF Options'
 
   end subroutine log_options
