@@ -375,7 +375,6 @@ contains
   subroutine npf_rp(this)
     implicit none
     class(GwfNpfType) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- TVK
     if (this%intvk /= 0) then
