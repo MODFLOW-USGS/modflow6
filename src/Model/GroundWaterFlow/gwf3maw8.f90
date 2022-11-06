@@ -1690,7 +1690,6 @@ contains
     integer(I4B) :: n
     integer(I4B) :: j
     integer(I4B) :: ii
-    integer(I4B) :: jj
     integer(I4B) :: iglo
     integer(I4B) :: jglo
     integer(I4B) :: ipos

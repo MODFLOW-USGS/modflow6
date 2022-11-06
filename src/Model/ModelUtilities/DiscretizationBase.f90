@@ -173,7 +173,7 @@ contains
     integer(I4B), dimension(:), intent(inout) :: idxglo
     class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
-    integer(I4B) :: i, j, ipos, ipossln, iglo, jglo
+    integer(I4B) :: i, j, ipos, iglo, jglo
 ! ------------------------------------------------------------------------------
     !
     do i = 1, this%nodes

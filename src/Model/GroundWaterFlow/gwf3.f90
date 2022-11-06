@@ -747,7 +747,7 @@ contains
     integer(I4B) :: iptct
     integer(I4B) :: n
     integer(I4B) :: jrow
-    integer(I4B) :: j, jj
+    integer(I4B) :: j
     real(DP) :: v
     real(DP) :: resid
     real(DP) :: ptcdelem1

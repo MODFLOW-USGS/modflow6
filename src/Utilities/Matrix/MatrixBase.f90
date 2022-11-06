@@ -18,6 +18,8 @@ module MatrixModule
     procedure(set_value_pos_if), deferred :: set_value_pos
     procedure(add_value_pos_if), deferred :: add_value_pos
     procedure(add_diag_value_if), deferred :: add_diag_value
+    procedure(zero_entries_if), deferred :: zero_entries
+    procedure(zero_entries_offdiag_if), deferred :: zero_entries_offdiag
 
     procedure(get_first_col_pos_if), deferred :: get_first_col_pos
     procedure(get_last_col_pos_if), deferred :: get_last_col_pos
@@ -38,6 +40,7 @@ module MatrixModule
       import MatrixBaseType
       class(MatrixBaseType) :: this
     end subroutine
+
     function get_value_pos_if(this, ipos) result(value)
       import MatrixBaseType, I4B, DP
       class(MatrixBaseType) :: this
@@ -63,7 +66,6 @@ module MatrixModule
       integer(I4B) :: ipos
       real(DP) :: value
     end subroutine
-
     subroutine add_value_pos_if(this, ipos, value)
       import MatrixBaseType, I4B, DP
       class(MatrixBaseType) :: this
@@ -75,6 +77,14 @@ module MatrixModule
       class(MatrixBaseType) :: this
       integer(I4B) :: irow
       real(DP) :: value
+    end subroutine
+    subroutine zero_entries_if(this)
+      import MatrixBaseType
+      class(MatrixBaseType) :: this
+    end subroutine
+    subroutine zero_entries_offdiag_if(this)
+      import MatrixBaseType
+      class(MatrixBaseType) :: this
     end subroutine
     function get_first_col_pos_if(this, irow) result(first_col_pos)
       import MatrixBaseType, I4B

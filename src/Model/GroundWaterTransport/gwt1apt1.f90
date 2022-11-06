@@ -246,7 +246,7 @@ contains
     integer(I4B), intent(in) :: moffset
     class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
-    integer(I4B) :: n, j, jj, iglo, jglo
+    integer(I4B) :: n, j, iglo, jglo
     integer(I4B) :: ipos
     ! -- format
 ! ------------------------------------------------------------------------------

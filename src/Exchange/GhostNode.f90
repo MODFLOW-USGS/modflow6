@@ -203,7 +203,7 @@ contains
     class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     character(len=LINELENGTH) :: errmsg
-    integer(I4B) :: noden, nodem, ipos, j, ignc, jidx, nodej
+    integer(I4B) :: noden, nodem, ipos, ignc, jidx, nodej
     ! -- formats
     character(len=*), parameter :: fmterr = &
       "('GHOST NODE ERROR.  Cell ', i0, ' in model ', a, &

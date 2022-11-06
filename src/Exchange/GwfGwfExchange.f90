@@ -371,7 +371,7 @@ contains
     class(GwfExchangeType) :: this !<  GwfExchangeType
     class(MatrixBaseType), pointer :: matrix_sln !< the system matrix
     ! -- local
-    integer(I4B) :: n, iglo, jglo, ipos
+    integer(I4B) :: n, iglo, jglo
     !
     ! -- map exchange connections
     do n = 1, this%nexg
@@ -573,8 +573,7 @@ contains
     integer(I4B), optional, intent(in) :: inwtflag
     ! -- local
     integer(I4B) :: inwt, iexg
-    integer(I4B) :: i, nodem1sln, nodem2sln, idiagsln
-    integer(I4B) :: njasln
+    integer(I4B) :: i, nodem1sln, nodem2sln
     !
     ! -- calculate the conductance for each exchange connection
     call this%condcalc()
