@@ -4,6 +4,7 @@ module Xt3dModule
   use ConstantsModule, only: DZERO, DHALF, DONE, LENMEMPATH
   use BaseDisModule, only: DisBaseType
   use MemoryHelperModule, only: create_mem_path
+  use MatrixModule
   implicit none
 
   public Xt3dType
@@ -208,7 +209,7 @@ contains
     return
   end subroutine xt3d_ac
 
-  subroutine xt3d_mc(this, moffset, iasln, jasln)
+  subroutine xt3d_mc(this, moffset, matrix_sln)
 ! ******************************************************************************
 ! xt3d_mc -- Map connections and construct iax, jax, and idxglox
 ! ******************************************************************************
@@ -220,10 +221,10 @@ contains
     ! -- dummy
     class(Xt3dType) :: this
     integer(I4B), intent(in) :: moffset
-    integer(I4B), dimension(:), intent(in) :: iasln
-    integer(I4B), dimension(:), intent(in) :: jasln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
-    integer(I4B) :: i, j, iglo, jglo, jjg, niax, njax, ipos
+    integer(I4B) :: i, j, iglo, jglo, niax, njax, ipos
+    integer(I4B) :: ipos_sln, icol_first, icol_last
     integer(I4B) :: jj_xt3d
     integer(I4B) :: igfirstnod, iglastnod
     logical :: isextnbr
@@ -254,13 +255,13 @@ contains
         !
         ! -- calculate global node number
         iglo = i + moffset
-        !
-        ! -- loop over neighbors in global matrix
-        do jjg = iasln(iglo), iasln(iglo + 1) - 1
+        icol_first = matrix_sln%get_first_col_pos(iglo)
+        icol_last = matrix_sln%get_last_col_pos(iglo)
+        do ipos_sln = icol_first, icol_last
           !
           ! -- if jglo is in a different model, then it cannot be an extended
           !    neighbor, so skip over it
-          jglo = jasln(jjg)
+          jglo = matrix_sln%get_column(ipos_sln)
           if (jglo < igfirstnod .or. jglo > iglastnod) then
             cycle
           end if
@@ -279,8 +280,8 @@ contains
           !
           ! -- if an extended neighbor, add it to jax and idxglox
           if (isextnbr) then
-            this%jax(ipos) = jasln(jjg) - moffset
-            this%idxglox(ipos) = jjg
+            this%jax(ipos) = matrix_sln%get_column(ipos_sln) - moffset
+            this%idxglox(ipos) = ipos_sln
             ipos = ipos + 1
           end if
         end do
@@ -405,7 +406,7 @@ contains
     return
   end subroutine xt3d_ar
 
-  subroutine xt3d_fc(this, kiter, njasln, amat, idxglo, rhs, hnew)
+  subroutine xt3d_fc(this, kiter, matrix_sln, idxglo, rhs, hnew)
 ! ******************************************************************************
 ! xt3d_fc -- Formulate
 ! ******************************************************************************
@@ -417,8 +418,7 @@ contains
     ! -- dummy
     class(Xt3dType) :: this
     integer(I4B) :: kiter
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amat
+    class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in), dimension(:) :: idxglo
     real(DP), intent(inout), dimension(:) :: rhs
     real(DP), intent(inout), dimension(:) :: hnew
@@ -447,10 +447,10 @@ contains
     nja = this%dis%con%nja
     if (this%lamatsaved) then
       do i = 1, this%dis%con%nja
-        amat(idxglo(i)) = amat(idxglo(i)) + this%amatpc(i)
+        call matrix_sln%add_value_pos(idxglo(i), this%amatpc(i))
       end do
       do i = 1, this%numextnbrs
-        amat(this%idxglox(i)) = amat(this%idxglox(i)) + this%amatpcx(i)
+        call matrix_sln%add_value_pos(this%idxglox(i), this%amatpcx(i))
       end do
     end if
     !
@@ -515,19 +515,19 @@ contains
           chat1j = chat1j * ar01
         end if
         ! -- Contribute to rows for cells 0 and 1.
-        amat(idxglo(ii00)) = amat(idxglo(ii00)) - chat01
-        amat(idxglo(ii01)) = amat(idxglo(ii01)) + chat01
-        amat(idxglo(ii11)) = amat(idxglo(ii11)) - chat01
-        amat(idxglo(ii10)) = amat(idxglo(ii10)) + chat01
+        call matrix_sln%add_value_pos(idxglo(ii00), -chat01)
+        call matrix_sln%add_value_pos(idxglo(ii01), chat01)
+        call matrix_sln%add_value_pos(idxglo(ii11), -chat01)
+        call matrix_sln%add_value_pos(idxglo(ii10), chat01)
         if (this%ixt3d == 1) then
-          call this%xt3d_amat_nbrs(nodes, n, ii00, nnbr0, nja, njasln, &
-                                   inbr0, amat, idxglo, chati0)
-          call this%xt3d_amat_nbrnbrs(nodes, n, m, ii01, nnbr1, nja, njasln, &
-                                      inbr1, amat, idxglo, chat1j)
-          call this%xt3d_amat_nbrs(nodes, m, ii11, nnbr1, nja, njasln, &
-                                   inbr1, amat, idxglo, chat1j)
-          call this%xt3d_amat_nbrnbrs(nodes, m, n, ii10, nnbr0, nja, njasln, &
-                                      inbr0, amat, idxglo, chati0)
+          call this%xt3d_amat_nbrs(nodes, n, ii00, nnbr0, nja, matrix_sln, &
+                                   inbr0, idxglo, chati0)
+          call this%xt3d_amat_nbrnbrs(nodes, n, m, ii01, nnbr1, nja, matrix_sln, &
+                                      inbr1, idxglo, chat1j)
+          call this%xt3d_amat_nbrs(nodes, m, ii11, nnbr1, nja, matrix_sln, &
+                                   inbr1, idxglo, chat1j)
+          call this%xt3d_amat_nbrnbrs(nodes, m, n, ii10, nnbr0, nja, matrix_sln, &
+                                      inbr0, idxglo, chati0)
         else
           call this%xt3d_rhs(nodes, n, m, nnbr0, inbr0, chati0, hnew, rhs)
           call this%xt3d_rhs(nodes, m, n, nnbr1, inbr1, chat1j, hnew, rhs)
@@ -626,7 +626,7 @@ contains
     return
   end subroutine xt3d_fcpc
 
-  subroutine xt3d_fhfb(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew, &
+  subroutine xt3d_fhfb(this, kiter, nodes, nja, matrix_sln, idxglo, rhs, hnew, &
                        n, m, condhfb)
 ! ******************************************************************************
 ! xt3d_fhfb -- Formulate HFB correction
@@ -641,9 +641,8 @@ contains
     integer(I4B) :: kiter
     integer(I4B), intent(in) :: nodes
     integer(I4B), intent(in) :: nja
-    integer(I4B), intent(in) :: njasln
+    class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B) :: n, m
-    real(DP), dimension(njasln), intent(inout) :: amat
     integer(I4B), intent(in), dimension(nja) :: idxglo
     real(DP), intent(inout), dimension(nodes) :: rhs
     real(DP), intent(inout), dimension(nodes) :: hnew
@@ -728,19 +727,19 @@ contains
       chat1j = chat1j * ar01
     end if
     ! -- Contribute to rows for cells 0 and 1.
-    amat(idxglo(ii00)) = amat(idxglo(ii00)) - chat01
-    amat(idxglo(ii01)) = amat(idxglo(ii01)) + chat01
-    amat(idxglo(ii11)) = amat(idxglo(ii11)) - chat01
-    amat(idxglo(ii10)) = amat(idxglo(ii10)) + chat01
+    call matrix_sln%add_value_pos(idxglo(ii00), -chat01)
+    call matrix_sln%add_value_pos(idxglo(ii01), chat01)
+    call matrix_sln%add_value_pos(idxglo(ii11), -chat01)
+    call matrix_sln%add_value_pos(idxglo(ii10), chat01)
     if (this%ixt3d == 1) then
-      call this%xt3d_amat_nbrs(nodes, n, ii00, nnbr0, nja, njasln, &
-                               inbr0, amat, idxglo, chati0)
-      call this%xt3d_amat_nbrnbrs(nodes, n, m, ii01, nnbr1, nja, njasln, &
-                                  inbr1, amat, idxglo, chat1j)
-      call this%xt3d_amat_nbrs(nodes, m, ii11, nnbr1, nja, njasln, &
-                               inbr1, amat, idxglo, chat1j)
-      call this%xt3d_amat_nbrnbrs(nodes, m, n, ii10, nnbr0, nja, njasln, &
-                                  inbr0, amat, idxglo, chati0)
+      call this%xt3d_amat_nbrs(nodes, n, ii00, nnbr0, nja, matrix_sln, &
+                               inbr0, idxglo, chati0)
+      call this%xt3d_amat_nbrnbrs(nodes, n, m, ii01, nnbr1, nja, matrix_sln, &
+                                  inbr1, idxglo, chat1j)
+      call this%xt3d_amat_nbrs(nodes, m, ii11, nnbr1, nja, matrix_sln, &
+                               inbr1, idxglo, chat1j)
+      call this%xt3d_amat_nbrnbrs(nodes, m, n, ii10, nnbr0, nja, matrix_sln, &
+                                  inbr0, idxglo, chati0)
     else
       call this%xt3d_rhs(nodes, n, m, nnbr0, inbr0, chati0, hnew, rhs)
       call this%xt3d_rhs(nodes, m, n, nnbr1, inbr1, chat1j, hnew, rhs)
@@ -750,7 +749,7 @@ contains
     return
   end subroutine xt3d_fhfb
 
-  subroutine xt3d_fn(this, kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+  subroutine xt3d_fn(this, kiter, nodes, nja, matrix_sln, idxglo, rhs, hnew)
 ! ******************************************************************************
 ! xt3d_fn -- Fill Newton terms for xt3d
 ! ******************************************************************************
@@ -764,8 +763,7 @@ contains
     integer(I4B) :: kiter
     integer(I4B), intent(in) :: nodes
     integer(I4B), intent(in) :: nja
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amat
+    class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in), dimension(nja) :: idxglo
     real(DP), intent(inout), dimension(nodes) :: rhs
     real(DP), intent(inout), dimension(nodes) :: hnew
@@ -826,18 +824,18 @@ contains
         ! fill Jacobian for n being the upstream node
         if (iups == n) then
           ! fill in row of n
-          amat(idxglo(ii00)) = amat(idxglo(ii00)) + term
+          call matrix_sln%add_value_pos(idxglo(ii00), term)
           rhs(n) = rhs(n) + term * hnew(n)
           ! fill in row of m
-          amat(idxglo(ii10)) = amat(idxglo(ii10)) - term
+          call matrix_sln%add_value_pos(idxglo(ii10), -term)
           rhs(m) = rhs(m) - term * hnew(n)
           ! fill Jacobian for m being the upstream node
         else
           ! fill in row of n
-          amat(idxglo(ii01)) = amat(idxglo(ii01)) + term
+          call matrix_sln%add_value_pos(idxglo(ii01), term)
           rhs(n) = rhs(n) + term * hnew(m)
           ! fill in row of m
-          amat(idxglo(ii11)) = amat(idxglo(ii11)) - term
+          call matrix_sln%add_value_pos(idxglo(ii11), -term)
           rhs(m) = rhs(m) - term * hnew(m)
         end if
       end do
@@ -1488,7 +1486,7 @@ contains
   end subroutine xt3d_areas
 
   subroutine xt3d_amat_nbrs(this, nodes, n, idiag, nnbr, nja, &
-                            njasln, inbr, amat, idxglo, chat)
+                            matrix_sln, inbr, idxglo, chat)
 ! ******************************************************************************
 ! xt3d_amat_nbrs -- Add contributions from neighbors to amat.
 ! ******************************************************************************
@@ -1499,10 +1497,10 @@ contains
     ! -- dummy
     class(Xt3dType) :: this
     integer(I4B), intent(in) :: nodes
-    integer(I4B) :: n, idiag, nnbr, nja, njasln
+    integer(I4B) :: n, idiag, nnbr, nja
+    class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), dimension(this%nbrmax) :: inbr
     integer(I4B), intent(in), dimension(nja) :: idxglo
-    real(DP), dimension(njasln), intent(inout) :: amat
     real(DP), dimension(this%nbrmax) :: chat
     ! -- local
     integer(I4B) :: iil, iii
@@ -1511,8 +1509,8 @@ contains
     do iil = 1, nnbr
       if (inbr(iil) .ne. 0) then
         iii = this%dis%con%ia(n) + iil
-        amat(idxglo(idiag)) = amat(idxglo(idiag)) - chat(iil)
-        amat(idxglo(iii)) = amat(idxglo(iii)) + chat(iil)
+        call matrix_sln%add_value_pos(idxglo(idiag), -chat(iil))
+        call matrix_sln%add_value_pos(idxglo(iii), chat(iil))
       end if
     end do
     !
@@ -1520,7 +1518,7 @@ contains
   end subroutine xt3d_amat_nbrs
 
   subroutine xt3d_amat_nbrnbrs(this, nodes, n, m, ii01, nnbr, nja, &
-                               njasln, inbr, amat, idxglo, chat)
+                               matrix_sln, inbr, idxglo, chat)
 ! ******************************************************************************
 ! xt3d_amat_nbrnbrs -- Add contributions from neighbors of neighbor to amat.
 ! ******************************************************************************
@@ -1531,10 +1529,10 @@ contains
     ! -- dummy
     class(Xt3dType) :: this
     integer(I4B), intent(in) :: nodes
-    integer(I4B) :: n, m, ii01, nnbr, nja, njasln
+    integer(I4B) :: n, m, ii01, nnbr, nja
+    class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), dimension(this%nbrmax) :: inbr
     integer(I4B), intent(in), dimension(nja) :: idxglo
-    real(DP), dimension(njasln), intent(inout) :: amat
     real(DP), dimension(this%nbrmax) :: chat
     ! -- local
     integer(I4B) :: iil, iii, jjj, iixjjj, iijjj
@@ -1542,15 +1540,15 @@ contains
     !
     do iil = 1, nnbr
       if (inbr(iil) .ne. 0) then
-        amat(idxglo(ii01)) = amat(idxglo(ii01)) + chat(iil)
+        call matrix_sln%add_value_pos(idxglo(ii01), chat(iil))
         iii = this%dis%con%ia(m) + iil
         jjj = this%dis%con%ja(iii)
         call this%xt3d_get_iinmx(n, jjj, iixjjj)
         if (iixjjj .ne. 0) then
-          amat(this%idxglox(iixjjj)) = amat(this%idxglox(iixjjj)) - chat(iil)
+          call matrix_sln%add_value_pos(this%idxglox(iixjjj), -chat(iil))
         else
           call this%xt3d_get_iinm(n, jjj, iijjj)
-          amat(idxglo(iijjj)) = amat(idxglo(iijjj)) - chat(iil)
+          call matrix_sln%add_value_pos(idxglo(iijjj), -chat(iil))
         end if
       end if
     end do

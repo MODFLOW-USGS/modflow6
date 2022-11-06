@@ -29,6 +29,7 @@ module GwfGwfExchangeModule
   use SimVariablesModule, only: errmsg
   use BlockParserModule, only: BlockParserType
   use TableModule, only: TableType, table_cr
+  use MatrixModule
 
   implicit none
 
@@ -363,13 +364,12 @@ contains
   !! Map the connections in the global matrix
   !!
   !<
-  subroutine gwf_gwf_mc(this, iasln, jasln)
+  subroutine gwf_gwf_mc(this, matrix_sln)
     ! -- modules
     use SparseModule, only: sparsematrix
     ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
-    integer(I4B), dimension(:), intent(in) :: iasln
-    integer(I4B), dimension(:), intent(in) :: jasln
+    class(MatrixBaseType), pointer :: matrix_sln !< the system matrix
     ! -- local
     integer(I4B) :: n, iglo, jglo, ipos
     !
@@ -377,25 +377,13 @@ contains
     do n = 1, this%nexg
       iglo = this%nodem1(n) + this%gwfmodel1%moffset
       jglo = this%nodem2(n) + this%gwfmodel2%moffset
-      ! -- find jglobal value in row iglo and store in idxglo
-      do ipos = iasln(iglo), iasln(iglo + 1) - 1
-        if (jglo == jasln(ipos)) then
-          this%idxglo(n) = ipos
-          exit
-        end if
-      end do
-      ! -- find and store symmetric location
-      do ipos = iasln(jglo), iasln(jglo + 1) - 1
-        if (iglo == jasln(ipos)) then
-          this%idxsymglo(n) = ipos
-          exit
-        end if
-      end do
+      this%idxglo(n) = matrix_sln%get_position(iglo, jglo)
+      this%idxsymglo(n) = matrix_sln%get_position(jglo, iglo)
     end do
     !
     ! -- map gnc connections
     if (this%ingnc > 0) then
-      call this%gnc%gnc_mc(iasln, jasln)
+      call this%gnc%gnc_mc(matrix_sln)
     end if
     !
     ! -- Return
@@ -573,16 +561,15 @@ contains
   !! Calculate conductance and fill coefficient matrix
   !!
   !<
-  subroutine gwf_gwf_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
+  subroutine gwf_gwf_fc(this, kiter, matrix_sln, rhs_sln, inwtflag)
     ! -- modules
     use ConstantsModule, only: DHALF
     use GwfNpfModule, only: hcond, vcond
     ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
     integer(I4B), intent(in) :: kiter
-    integer(I4B), dimension(:), intent(in) :: iasln
-    real(DP), dimension(:), intent(inout) :: amatsln
-    real(DP), dimension(:), intent(inout) :: rhssln
+    class(MatrixBaseType), pointer :: matrix_sln
+    real(DP), dimension(:), intent(inout) :: rhs_sln
     integer(I4B), optional, intent(in) :: inwtflag
     ! -- local
     integer(I4B) :: inwt, iexg
@@ -602,19 +589,18 @@ contains
     !
     ! -- Put this%cond into amatsln
     do i = 1, this%nexg
-      amatsln(this%idxglo(i)) = this%cond(i)
-      amatsln(this%idxsymglo(i)) = this%cond(i)
+      call matrix_sln%set_value_pos(this%idxglo(i), this%cond(i))
+      call matrix_sln%set_value_pos(this%idxsymglo(i), this%cond(i))
+
       nodem1sln = this%nodem1(i) + this%gwfmodel1%moffset
       nodem2sln = this%nodem2(i) + this%gwfmodel2%moffset
-      idiagsln = iasln(nodem1sln)
-      amatsln(idiagsln) = amatsln(idiagsln) - this%cond(i)
-      idiagsln = iasln(nodem2sln)
-      amatsln(idiagsln) = amatsln(idiagsln) - this%cond(i)
+      call matrix_sln%add_diag_value(nodem1sln, -this%cond(i))
+      call matrix_sln%add_diag_value(nodem2sln, -this%cond(i))
     end do
     !
     ! -- Fill the gnc terms in the solution matrix
     if (this%ingnc > 0) then
-      call this%gnc%gnc_fc(kiter, amatsln)
+      call this%gnc%gnc_fc(kiter, matrix_sln)
     end if
     !
     ! -- Call mvr fc routine
@@ -626,14 +612,13 @@ contains
       if (inwtflag == 0) inwt = 0
     end if
     if (inwt /= 0) then
-      call this%exg_fn(kiter, iasln, amatsln)
+      call this%exg_fn(kiter, matrix_sln)
     end if
     !
     ! -- Ghost node Newton-Raphson
     if (this%ingnc > 0) then
       if (inwt /= 0) then
-        njasln = size(amatsln)
-        call this%gnc%gnc_fn(kiter, njasln, amatsln, this%condsat, &
+        call this%gnc%gnc_fn(kiter, matrix_sln, this%condsat, &
                              ihc_opt=this%ihc, ivarcv_opt=this%ivarcv, &
                              ictm1_opt=this%gwfmodel1%npf%icelltype, &
                              ictm2_opt=this%gwfmodel2%npf%icelltype)
@@ -649,21 +634,19 @@ contains
   !! Fill amatsln with Newton terms
   !!
   !<
-  subroutine gwf_gwf_fn(this, kiter, iasln, amatsln)
+  subroutine gwf_gwf_fn(this, kiter, matrix_sln)
     ! -- modules
     use SmoothingModule, only: sQuadraticSaturationDerivative
     ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
     integer(I4B), intent(in) :: kiter
-    integer(I4B), dimension(:), intent(in) :: iasln
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     logical :: nisup
     integer(I4B) :: iexg
     integer(I4B) :: n, m
     integer(I4B) :: nodensln, nodemsln
     integer(I4B) :: ibdn, ibdm
-    integer(I4B) :: idiagnsln, idiagmsln
     real(DP) :: topn, topm
     real(DP) :: botn, botm
     real(DP) :: topup, botup
@@ -728,17 +711,15 @@ contains
         ! -- compute terms
         consterm = -cond * (hup - hdn)
         derv = sQuadraticSaturationDerivative(topup, botup, hup)
-        idiagnsln = iasln(nodensln)
-        idiagmsln = iasln(nodemsln)
         if (nisup) then
           !
           ! -- fill jacobian with n being upstream
           term = consterm * derv
           this%gwfmodel1%rhs(n) = this%gwfmodel1%rhs(n) + term * hn
           this%gwfmodel2%rhs(m) = this%gwfmodel2%rhs(m) - term * hn
-          amatsln(idiagnsln) = amatsln(idiagnsln) + term
+          call matrix_sln%add_diag_value(nodensln, term)
           if (ibdm > 0) then
-            amatsln(this%idxsymglo(iexg)) = amatsln(this%idxsymglo(iexg)) - term
+            call matrix_sln%add_value_pos(this%idxsymglo(iexg), -term)
           end if
         else
           !
@@ -746,9 +727,9 @@ contains
           term = -consterm * derv
           this%gwfmodel1%rhs(n) = this%gwfmodel1%rhs(n) + term * hm
           this%gwfmodel2%rhs(m) = this%gwfmodel2%rhs(m) - term * hm
-          amatsln(idiagmsln) = amatsln(idiagmsln) - term
+          call matrix_sln%add_diag_value(nodemsln, -term)
           if (ibdn > 0) then
-            amatsln(this%idxglo(iexg)) = amatsln(this%idxglo(iexg)) + term
+            call matrix_sln%add_value_pos(this%idxglo(iexg), term)
           end if
         end if
       end if

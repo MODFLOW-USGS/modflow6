@@ -13,6 +13,7 @@ module GwfBuyModule
   use BaseDisModule, only: DisBaseType
   use GwfNpfModule, only: GwfNpfType
   use GwfBuyInputDataModule, only: GwfBuyInputDataType
+  use MatrixModule
 
   implicit none
 
@@ -937,7 +938,7 @@ contains
     return
   end subroutine buy_cf_maw
 
-  subroutine buy_fc(this, kiter, njasln, amat, idxglo, rhs, hnew)
+  subroutine buy_fc(this, kiter, matrix_sln, idxglo, rhs, hnew)
 ! ******************************************************************************
 ! buy_fc -- Fill coefficients
 ! ******************************************************************************
@@ -947,8 +948,7 @@ contains
     ! -- dummy
     class(GwfBuyType) :: this
     integer(I4B) :: kiter
-    integer, intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amat
+    class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in), dimension(:) :: idxglo
     real(DP), dimension(:), intent(inout) :: rhs
     real(DP), intent(inout), dimension(:) :: hnew
@@ -976,8 +976,8 @@ contains
         !
         ! -- Add terms to rhs, diagonal, and off diagonal
         rhs(n) = rhs(n) - rhsterm
-        amat(idxglo(idiag)) = amat(idxglo(idiag)) - amatnn
-        amat(idxglo(ipos)) = amat(idxglo(ipos)) + amatnm
+        call matrix_sln%add_value_pos(idxglo(idiag), -amatnn)
+        call matrix_sln%add_value_pos(idxglo(ipos), amatnn)
       end do
     end do
     !

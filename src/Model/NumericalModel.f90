@@ -7,6 +7,7 @@ module NumericalModelModule
   use SparseModule, only: sparsematrix
   use TimeArraySeriesManagerModule, only: TimeArraySeriesManagerType
   use ListModule, only: ListType
+  use MatrixModule
 
   implicit none
   private
@@ -87,10 +88,9 @@ contains
     type(sparsematrix), intent(inout) :: sparse
   end subroutine model_ac
 
-  subroutine model_mc(this, iasln, jasln)
+  subroutine model_mc(this, matrix_sln)
     class(NumericalModelType) :: this
-    integer(I4B), dimension(:), intent(in) :: iasln
-    integer(I4B), dimension(:), intent(in) :: jasln
+    class(MatrixBaseType), pointer :: matrix_sln
   end subroutine model_mc
 
   subroutine model_ar(this)
@@ -110,11 +110,10 @@ contains
     integer(I4B), intent(in) :: kiter
   end subroutine model_cf
 
-  subroutine model_fc(this, kiter, amatsln, njasln, inwtflag)
+  subroutine model_fc(this, kiter, matrix_sln, inwtflag)
     class(NumericalModelType) :: this
     integer(I4B), intent(in) :: kiter
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in) :: inwtflag
   end subroutine model_fc
 
@@ -124,26 +123,21 @@ contains
     iptc = 0
   end subroutine model_ptcchk
 
-  subroutine model_ptc(this, kiter, neqsln, njasln, &
-                       ia, ja, x, rhs, amatsln, iptc, ptcf)
+  subroutine model_ptc(this, kiter, neqsln, matrix, x, rhs, iptc, ptcf)
     class(NumericalModelType) :: this
     integer(I4B), intent(in) :: kiter
     integer(I4B), intent(in) :: neqsln
-    integer(I4B), intent(in) :: njasln
-    integer(I4B), dimension(neqsln + 1), intent(in) :: ia
-    integer(I4B), dimension(njasln), intent(in) :: ja
+    class(MatrixBaseType), pointer :: matrix
     real(DP), dimension(neqsln), intent(in) :: x
     real(DP), dimension(neqsln), intent(in) :: rhs
-    real(DP), dimension(njasln), intent(in) :: amatsln
     integer(I4B), intent(inout) :: iptc
     real(DP), intent(inout) :: ptcf
   end subroutine model_ptc
 
-  subroutine model_nr(this, kiter, amatsln, njasln, inwtflag)
+  subroutine model_nr(this, kiter, matrix, inwtflag)
     class(NumericalModelType) :: this
     integer(I4B), intent(in) :: kiter
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix
     integer(I4B), intent(in) :: inwtflag
   end subroutine model_nr
 

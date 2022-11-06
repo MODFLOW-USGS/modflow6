@@ -18,6 +18,7 @@ module GwtSsmModule
   use GwtFmiModule, only: GwtFmiType
   use TableModule, only: TableType, table_cr
   use GwtSpcModule, only: GwtSpcType
+  use MatrixModule
 
   implicit none
   public :: GwtSsmType
@@ -401,11 +402,11 @@ contains
   !! updating the a matrix and right-hand side vector.
   !!
   !<
-  subroutine ssm_fc(this, amatsln, idxglo, rhs)
+  subroutine ssm_fc(this, matrix_sln, idxglo, rhs)
     ! -- modules
     ! -- dummy
     class(GwtSsmType) :: this
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in), dimension(:) :: idxglo
     real(DP), intent(inout), dimension(:) :: rhs
     ! -- local
@@ -430,7 +431,7 @@ contains
         if (n <= 0) cycle
         call this%ssm_term(ip, i, rhsval=rhsval, hcofval=hcofval)
         idiag = idxglo(this%dis%con%ia(n))
-        amatsln(idiag) = amatsln(idiag) + hcofval
+        call matrix_sln%add_value_pos(idiag, hcofval)
         rhs(n) = rhs(n) + rhsval
         !
       end do

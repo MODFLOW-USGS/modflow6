@@ -12,6 +12,7 @@ module GwtFmiModule
   use HeadFileReaderModule, only: HeadFileReaderType
   use PackageBudgetModule, only: PackageBudgetType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr_bfr
+  use MatrixModule
 
   implicit none
   private
@@ -376,9 +377,9 @@ contains
     return
   end subroutine fmi_ad
 
-  subroutine fmi_fc(this, nodes, cold, nja, njasln, amatsln, idxglo, rhs)
+  subroutine fmi_fc(this, nodes, cold, nja, matrix_sln, idxglo, rhs)
 ! ******************************************************************************
-! fmi_fc -- Calculate coefficients and fill amat and rhs
+! fmi_fc -- Calculate coefficients and fill matrix and rhs
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -390,12 +391,11 @@ contains
     integer, intent(in) :: nodes
     real(DP), intent(in), dimension(nodes) :: cold
     integer(I4B), intent(in) :: nja
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in), dimension(nja) :: idxglo
     real(DP), intent(inout), dimension(nodes) :: rhs
     ! -- local
-    integer(I4B) :: n, ipos, idiag
+    integer(I4B) :: n, idiag
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate the flow imbalance error and make a correction for it
@@ -404,9 +404,8 @@ contains
       ! -- Correct the transport solution for the flow imbalance by adding
       !    the flow residual to the diagonal
       do n = 1, nodes
-        idiag = idxglo(this%dis%con%ia(n))
-        ipos = this%dis%con%ia(n)
-        amatsln(idiag) = amatsln(idiag) - this%gwfflowja(ipos)
+        idiag = this%dis%con%ia(n)
+        call matrix_sln%add_value_pos(idxglo(idiag), -this%gwfflowja(idiag))
       end do
     end if
     !

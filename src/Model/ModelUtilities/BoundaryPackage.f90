@@ -31,6 +31,7 @@ module BndModule
   use BlockParserModule, only: BlockParserType
   use TableModule, only: TableType, table_cr
   use CharacterStringModule, only: CharacterStringType
+  use MatrixModule
 
   implicit none
 
@@ -245,12 +246,11 @@ contains
     !!  MAW package. Base implementation that must be extended.
     !!
   !<
-  subroutine bnd_mc(this, moffset, iasln, jasln)
+  subroutine bnd_mc(this, moffset, matrix_sln)
     ! -- dummy variables
     class(BndType), intent(inout) :: this !< BndType object
     integer(I4B), intent(in) :: moffset !< solution matrix model offset
-    integer(I4B), dimension(:), intent(in) :: iasln !< solution CRS row pointers
-    integer(I4B), dimension(:), intent(in) :: jasln !< solution CRS column pointers
+    class(MatrixBaseType), pointer :: matrix_sln !< global system matrix
     !
     ! -- return
     return
@@ -456,13 +456,13 @@ contains
     !!  a specific boundary package.
     !!
   !<
-  subroutine bnd_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine bnd_fc(this, rhs, ia, idxglo, matrix_sln)
     ! -- dummy variables
     class(BndType) :: this !< BndType object
     real(DP), dimension(:), intent(inout) :: rhs !< right-hand side vector for model
     integer(I4B), dimension(:), intent(in) :: ia !< solution CRS row pointers
     integer(I4B), dimension(:), intent(in) :: idxglo !< mapping vector for model (local) to solution (global)
-    real(DP), dimension(:), intent(inout) :: amatsln !< solution coefficient matrix
+    class(MatrixBaseType), pointer :: matrix_sln !< solution coefficient matrix
     ! -- local variables
     integer(I4B) :: i
     integer(I4B) :: n
@@ -473,7 +473,7 @@ contains
       n = this%nodelist(i)
       rhs(n) = rhs(n) + this%rhs(i)
       ipos = ia(n)
-      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
+      call matrix_sln%add_value_pos(idxglo(ipos), this%hcof(i))
     end do
     !
     ! -- return
@@ -488,13 +488,13 @@ contains
     !!  package needs to add Newton-Raphson terms.
     !!
   !<
-  subroutine bnd_fn(this, rhs, ia, idxglo, amatsln)
+  subroutine bnd_fn(this, rhs, ia, idxglo, matrix_sln)
     ! -- dummy variables
     class(BndType) :: this !< BndType object
     real(DP), dimension(:), intent(inout) :: rhs !< right-hand side vector for model
     integer(I4B), dimension(:), intent(in) :: ia !< solution CRS row pointers
     integer(I4B), dimension(:), intent(in) :: idxglo !< mapping vector for model (local) to solution (global)
-    real(DP), dimension(:), intent(inout) :: amatsln !< solution coefficient matrix
+    class(MatrixBaseType), pointer :: matrix_sln !< solution coefficient matrix
     !
     ! -- No addition terms for Newton-Raphson with constant conductance
     !    boundary conditions

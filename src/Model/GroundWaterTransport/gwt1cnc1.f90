@@ -8,6 +8,7 @@ module GwtCncModule
   use ObserveModule, only: ObserveType
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
+  use MatrixModule
   !
   implicit none
   !
@@ -244,7 +245,7 @@ contains
     return
   end subroutine cnc_ck
 
-  subroutine cnc_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine cnc_fc(this, rhs, ia, idxglo, matrix_sln)
 ! **************************************************************************
 ! cnc_fc -- Override bnd_fc and do nothing
 ! **************************************************************************
@@ -256,7 +257,7 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
 ! --------------------------------------------------------------------------
     !

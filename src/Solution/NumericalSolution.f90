@@ -30,6 +30,8 @@ module NumericalSolutionModule
   use BlockParserModule, only: BlockParserType
   use IMSLinearModule
   use DistributedDataModule
+  use MatrixModule
+  use SparseMatrixModule
 
   implicit none
   private
@@ -130,6 +132,9 @@ module NumericalSolutionModule
     ! -- table objects
     type(TableType), pointer :: innertab => null() !< inner iteration table object
     type(TableType), pointer :: outertab => null() !< Picard iteration table object
+    !
+    ! -- sparse matrix to replace amat
+    class(MatrixBaseType), pointer :: system_matrix
 
   contains
     procedure :: sln_df
@@ -195,6 +200,7 @@ contains
     type(NumericalSolutionType), pointer :: solution => null()
     class(BaseSolutionType), pointer :: solbase => null()
     character(len=LENSOLUTIONNAME) :: solutionname
+    class(SparseMatrixType), pointer :: matrix_impl
     !
     ! -- Create a new solution and add it to the basesolutionlist container
     allocate (solution)
@@ -205,6 +211,9 @@ contains
     solution%memoryPath = create_mem_path(solutionname)
     allocate (solution%modellist)
     allocate (solution%exchangelist)
+    !
+    allocate(matrix_impl)
+    solution%system_matrix => matrix_impl
     !
     call solution%allocate_scalars()
     !
@@ -354,7 +363,6 @@ contains
     this%convnmod = this%modellist%Count()
     !
     ! -- allocate arrays
-    call mem_allocate(this%ia, this%neq + 1, 'IA', this%memoryPath)
     call mem_allocate(this%x, this%neq, 'X', this%memoryPath)
     call mem_allocate(this%rhs, this%neq, 'RHS', this%memoryPath)
     call mem_allocate(this%active, this%neq, 'IACTIVE', this%memoryPath)
@@ -860,9 +868,8 @@ contains
       call this%imslinear%imslinear_allocate(this%name, this%parser, IOUT, &
                                              this%iprims, this%mxiter, &
                                              ifdparam, imslinear, &
-                                             this%neq, this%nja, this%ia, &
-                                             this%ja, this%amat, this%rhs, &
-                                             this%x, this%nitermax)
+                                             this%neq, this%system_matrix, &
+                                             this%rhs, this%x, this%nitermax)
       WRITE (IOUT, *)
       if (imslinear .eq. 1) then
         this%isymmetric = 1
@@ -1145,6 +1152,7 @@ contains
     call this%exchangelist%Clear()
     deallocate (this%modellist)
     deallocate (this%exchangelist)
+    deallocate (this%system_matrix)
     !
     ! -- character arrays
     deallocate (this%caccel)
@@ -1164,9 +1172,6 @@ contains
     end if
     !
     ! -- arrays
-    call mem_deallocate(this%ja)
-    call mem_deallocate(this%amat)
-    call mem_deallocate(this%ia)
     call mem_deallocate(this%x)
     call mem_deallocate(this%rhs)
     call mem_deallocate(this%active)
@@ -1195,7 +1200,6 @@ contains
     call mem_deallocate(this%ttsoln)
     call mem_deallocate(this%isymmetric)
     call mem_deallocate(this%neq)
-    call mem_deallocate(this%nja)
     call mem_deallocate(this%dvclose)
     call mem_deallocate(this%bigchold)
     call mem_deallocate(this%bigch)
@@ -1531,27 +1535,19 @@ contains
     call this%sln_buildsystem(kiter, inewton=1)
 
     !
-    ! -- Add exchange Newton-Raphson terms to solution
-    do ic = 1, this%exchangelist%Count()
-      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_nr(kiter, this%ia, this%amat)
-    end do
-    !
     ! -- Calculate pseudo-transient continuation factor for each model
     iptc = 0
     ptcf = DZERO
     do im = 1, this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_ptc(kiter, this%neq, this%nja, &
-                        this%ia, this%ja, this%x, &
-                        this%rhs, this%amat, &
-                        iptc, ptcf)
+      call mp%model_ptc(kiter, this%neq, this%system_matrix, &
+                        this%x, this%rhs, iptc, ptcf)
     end do
     !
     ! -- Add model Newton-Raphson terms to solution
     do im = 1, this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_nr(kiter, this%amat, this%nja, 1)
+      call mp%model_nr(kiter, this%system_matrix, 1)
     end do
     call code_timer(1, ttform, this%ttform)
     !
@@ -1928,13 +1924,13 @@ contains
     ! -- Add exchange coefficients to the solution
     do ic = 1, this%exchangelist%Count()
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_fc(kiter, this%ia, this%amat, this%rhs, inewton)
+      call cp%exg_fc(kiter, this%system_matrix, this%rhs, inewton)
     end do
     !
     ! -- Add model coefficients to the solution
     do im = 1, this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_fc(kiter, this%amat, this%nja, inewton)
+      call mp%model_fc(kiter, this%system_matrix, inewton)
     end do
 
   end subroutine sln_buildsystem
@@ -2278,7 +2274,6 @@ contains
     class(NumericalExchangeType), pointer :: cp => null()
     integer(I4B) :: im
     integer(I4B) :: ic
-    integer(I4B) :: ierror
     !
     ! -- Add internal model connections to sparse
     do im = 1, this%modellist%Count()
@@ -2294,11 +2289,8 @@ contains
     !
     ! -- The number of non-zero array values are now known so
     ! -- ia and ja can be created from sparse. then destroy sparse
-    this%nja = this%sparse%nnz
-    call mem_allocate(this%ja, this%nja, 'JA', this%name)
-    call mem_allocate(this%amat, this%nja, 'AMAT', this%name)
     call this%sparse%sort()
-    call this%sparse%filliaja(this%ia, this%ja, ierror)
+    call this%system_matrix%create(this%sparse, this%name)
     call this%sparse%destroy()
     !
     ! -- Create mapping arrays for each model.  Mapping assumes
@@ -2306,13 +2298,13 @@ contains
     ! -- however, rows do not need to be sorted.
     do im = 1, this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_mc(this%ia, this%ja)
+      call mp%model_mc(this%system_matrix)
     end do
     !
     ! -- Create arrays for mapping exchange connections to global solution
     do ic = 1, this%exchangelist%Count()
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_mc(this%ia, this%ja)
+      call cp%exg_mc(this%system_matrix)
     end do
     !
     ! -- return
