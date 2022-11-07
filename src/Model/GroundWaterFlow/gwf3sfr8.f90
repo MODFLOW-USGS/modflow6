@@ -4043,7 +4043,7 @@ contains
           if (hsfr > htmp) then
             ! strm stg > gw head
             vscratio = this%viscratios(1, n)
-          else if (htmp > hsfr) then
+          else
             vscratio = this%viscratios(2, n)
           end if
         end if
@@ -5593,7 +5593,8 @@ contains
 
   !> @brief Activate viscosity terms
     !!
-    !! Method to activate addition of viscosity terms for a SFR package reach.
+    !! Method to activate addition of viscosity terms for exhange 
+    !! with groundwater along a SFR package reach.
     !!
   !<
   subroutine sfr_activate_viscosity(this)
@@ -5611,7 +5612,7 @@ contains
                         this%memoryPath)
     do i = 1, this%maxbound
       do j = 1, 2
-        this%viscratios(j, i) = DZERO
+        this%viscratios(j, i) = DONE
       end do
     end do
     write (this%iout, '(/1x,a)') 'VISCOSITY HAS BEEN ACTIVATED FOR SFR &

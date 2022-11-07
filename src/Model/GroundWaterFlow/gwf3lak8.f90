@@ -2388,7 +2388,7 @@ contains
       if (stage > head) then
         vscratio = this%viscratios(1, iconn)
         ! flow from aquifer to lake
-      else if (head > stage) then
+      else 
         vscratio = this%viscratios(2, iconn)
       end if
     end if
@@ -6404,7 +6404,7 @@ contains
                         this%memoryPath)
     do i = 1, this%maxbound
       do j = 1, 2
-        this%viscratios(j, i) = DZERO
+        this%viscratios(j, i) = DONE
       end do
     end do
     write (this%iout, '(/1x,a)') 'VISCOSITY HAS BEEN ACTIVATED FOR LAK &

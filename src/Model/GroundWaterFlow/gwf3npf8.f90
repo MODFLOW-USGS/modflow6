@@ -1171,13 +1171,13 @@ contains
     return
   end subroutine npf_da
 
+  !> @ brief Allocate scalars
+  !!
+  !! Allocate and initialize scalars for the VSC package. The base model
+  !! allocate scalars method is also called.
+  !!
+  !<
   subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars -- Allocate scalar pointer variables
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryHelperModule, only: create_mem_path
     ! -- dummy
@@ -1274,10 +1274,19 @@ contains
     return
   end subroutine allocate_scalars
 
+  !> @ brief Stores a backup copy of hydraulic conductivity when the VSC 
+  !!         package is activate
+  !!
+  !! The K arrays (K11, etc.) get multiplied by the viscosity ratio 
+  !! so that subsequent uses of K already take into account the effect
+  !! of viscosity. Thus the original user-specified K array values are 
+  !! lost unless they are backed up in k11input, for example.  In a new
+  !! stress period/time step, the values in k11input are multiplied by 
+  !! the viscosity ratio, not k11 since it contains viscosity-adjusted
+  !! hydraulic conductivity values.
+  !!
+  !<
   subroutine store_original_k_arrays(this, ncells, njas)
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -1291,12 +1300,8 @@ contains
     ! -- Retain copy of user-specified K arrays
     do n = 1, ncells
       this%k11input(n) = this%k11(n)
-      if (this%ik22 /= 0) then
-        this%k22input(n) = this%k22(n)
-      end if
-      if (this%ik33 /= 0) then
-        this%k33input(n) = this%k33(n)
-      end if
+      this%k22input(n) = this%k22(n)
+      this%k33input(n) = this%k33(n)
     end do
     !
     ! -- Return

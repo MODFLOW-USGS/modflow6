@@ -1,6 +1,6 @@
 module ghbmodule
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME, LENMEMSEPARATOR
+  use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME
   use MemoryHelperModule, only: create_mem_path
   use BndModule, only: BndType
   use ObsModule, only: DefaultObsIdProcessor
@@ -17,7 +17,6 @@ module ghbmodule
   character(len=LENPACKAGENAME) :: text = '             GHB'
   !
   type, extends(BndType) :: GhbType
-
   contains
     procedure :: bnd_options => ghb_options
     procedure :: bnd_ck => ghb_ck

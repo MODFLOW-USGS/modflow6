@@ -3894,7 +3894,7 @@ contains
       ! flow out of well (flow is negative)
       if (flow < 0) then
         vscratio = this%viscratios(1, igwfnode)
-      else if (flow > 0) then
+      else
         vscratio = this%viscratios(2, igwfnode)
       end if
     end if
@@ -4201,7 +4201,7 @@ contains
       ! flow out of well (flow is negative)
       if (qnet < 0) then
         vscratio = this%viscratios(1, igwfnode)
-      else if (qnet > 0) then
+      else
         vscratio = this%viscratios(2, igwfnode)
       end if
     end if
@@ -4897,7 +4897,7 @@ contains
                         this%memoryPath)
     do i = 1, this%maxbound
       do j = 1, 2
-        this%viscratios(j, i) = DZERO
+        this%viscratios(j, i) = DONE
       end do
     end do
     write (this%iout, '(/1x,a)') 'VISCOSITY HAS BEEN ACTIVATED FOR MAW &
