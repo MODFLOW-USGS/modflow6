@@ -395,7 +395,7 @@ contains
     integer(I4B), intent(in), dimension(nja) :: idxglo
     real(DP), intent(inout), dimension(nodes) :: rhs
     ! -- local
-    integer(I4B) :: n, idiag
+    integer(I4B) :: n, idiag, idiag_sln
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate the flow imbalance error and make a correction for it
@@ -404,8 +404,9 @@ contains
       ! -- Correct the transport solution for the flow imbalance by adding
       !    the flow residual to the diagonal
       do n = 1, nodes
-        idiag = this%dis%con%ia(n)
-        call matrix_sln%add_value_pos(idxglo(idiag), -this%gwfflowja(idiag))
+        idiag = this%dis%con%ia(n)        
+        idiag_sln = idxglo(idiag)
+        call matrix_sln%add_value_pos(idiag_sln, -this%gwfflowja(idiag))
       end do
     end if
     !

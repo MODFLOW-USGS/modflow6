@@ -2383,7 +2383,7 @@ contains
         ! -- Dirichlet boundary or no-flow cell
       else
         call this%system_matrix%set_diag_value(n, DONE)
-        call this%system_matrix%zero_entries_offdiag()
+        call this%system_matrix%zero_row_offdiag(n)
         this%rhs(n) = this%x(n)
       end if
     end do
@@ -2398,7 +2398,6 @@ contains
             jcol = this%system_matrix%get_column(ipos)
             if (jcol == n) cycle
             if (this%active(jcol) < 0) then
-
               this%rhs(n) = this%rhs(n) - &
                             (this%system_matrix%get_value_pos(ipos) * this%x(jcol))
               call this%system_matrix%set_value_pos(ipos, DZERO)

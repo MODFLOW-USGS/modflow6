@@ -26,7 +26,7 @@ module SparseMatrixModule
     procedure :: add_value_pos => spm_add_value_pos
     procedure :: add_diag_value => spm_add_diag_value
     procedure :: zero_entries => spm_zero_entries
-    procedure :: zero_entries_offdiag => spm_zero_entries_offdiag
+    procedure :: zero_row_offdiag => spm_zero_row_offdiag
 
     procedure :: get_first_col_pos => spm_get_first_col_pos
     procedure :: get_last_col_pos => spm_get_last_col_pos
@@ -223,17 +223,16 @@ contains
 
   !> @brief Set all off-diagonal entries in the matrix to zero
   !<
-  subroutine spm_zero_entries_offdiag(this)
+  subroutine spm_zero_row_offdiag(this, irow)
     class(SparseMatrixType) :: this
+    integer(I4B) :: irow
     ! local
-    integer(I4B) :: irow, ipos
+    integer(I4B) :: ipos
 
-    do irow = 1, this%nrow
-      do ipos = this%ia(irow) + 1, this%ia(irow + 1) - 1
-        this%amat(ipos) = DZERO
-      end do
+    do ipos = this%ia(irow) + 1, this%ia(irow + 1) - 1
+      this%amat(ipos) = DZERO
     end do
 
-  end subroutine spm_zero_entries_offdiag
+  end subroutine spm_zero_row_offdiag
 
 end module SparseMatrixModule

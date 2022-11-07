@@ -108,7 +108,8 @@ contains ! module procedures
     this%owner => model
     this%primaryExchange => exchange
 
-    allocate (this%gridConnection)
+    allocate(this%gridConnection)
+    allocate(this%matrix)
     call this%allocateScalars()
 
     this%internalStencilDepth = 1

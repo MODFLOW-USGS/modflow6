@@ -894,7 +894,7 @@ contains
         ipossymd = this%idxsymdglo(j)
         ipossymoffd = this%idxsymoffdglo(j)
         call matrix_sln%add_value_pos(ipossymd, -(DONE - omega) * qbnd)
-        call matrix_sln%add_value_pos(ipossymoffd, - omega * qbnd)
+        call matrix_sln%add_value_pos(ipossymoffd, -omega * qbnd)
       end if
     end do
     !

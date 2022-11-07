@@ -416,8 +416,10 @@ contains
     ! local
     integer(I4B) :: n, nglo
     integer(I4B) :: icol_start, icol_end, ipos
+    class(MatrixBaseType), pointer :: matrix_base
 
-    call this%gwtInterfaceModel%model_fc(kiter, matrix_sln, inwtflag)
+    matrix_base => this%matrix
+    call this%gwtInterfaceModel%model_fc(kiter, matrix_base, inwtflag)
 
     ! map back to solution matrix
     do n = 1, this%neq
