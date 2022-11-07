@@ -5593,7 +5593,7 @@ contains
 
   !> @brief Activate viscosity terms
     !!
-    !! Method to activate addition of viscosity terms for exhange 
+    !! Method to activate addition of viscosity terms for exhange
     !! with groundwater along a SFR package reach.
     !!
   !<

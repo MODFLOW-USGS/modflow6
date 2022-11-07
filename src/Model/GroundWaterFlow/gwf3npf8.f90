@@ -1274,14 +1274,14 @@ contains
     return
   end subroutine allocate_scalars
 
-  !> @ brief Stores a backup copy of hydraulic conductivity when the VSC 
+  !> @ brief Stores a backup copy of hydraulic conductivity when the VSC
   !!         package is activate
   !!
-  !! The K arrays (K11, etc.) get multiplied by the viscosity ratio 
+  !! The K arrays (K11, etc.) get multiplied by the viscosity ratio
   !! so that subsequent uses of K already take into account the effect
-  !! of viscosity. Thus the original user-specified K array values are 
+  !! of viscosity. Thus the original user-specified K array values are
   !! lost unless they are backed up in k11input, for example.  In a new
-  !! stress period/time step, the values in k11input are multiplied by 
+  !! stress period/time step, the values in k11input are multiplied by
   !! the viscosity ratio, not k11 since it contains viscosity-adjusted
   !! hydraulic conductivity values.
   !!

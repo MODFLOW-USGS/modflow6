@@ -2388,7 +2388,7 @@ contains
       if (stage > head) then
         vscratio = this%viscratios(1, iconn)
         ! flow from aquifer to lake
-      else 
+      else
         vscratio = this%viscratios(2, iconn)
       end if
     end if

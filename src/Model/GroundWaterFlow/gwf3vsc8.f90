@@ -228,7 +228,7 @@ contains
   !> @ brief Allocate and read method for viscosity package
   !!
   !!  Generic method to allocate and read static data for the viscosity
-  !!  package available within the GWF model type. 
+  !!  package available within the GWF model type.
   !!
   !<
   subroutine vsc_ar(this, ibound)
@@ -396,8 +396,8 @@ contains
 
   !> @ brief Advance the viscosity package
   !!
-  !!  Advance data in the VSC package. The method sets or 
-  !!  advances time series, time array series, and observation 
+  !!  Advance data in the VSC package. The method sets or
+  !!  advances time series, time array series, and observation
   !!  data.
   !!
   !<
@@ -733,7 +733,7 @@ contains
     return
   end subroutine vsc_ad_maw
 
-  !> @brief Apply viscosity to the conductance term 
+  !> @brief Apply viscosity to the conductance term
   !!
   !! When the viscosity package is active apply the viscosity ratio to the
   !! active boundary package's conductance term.
@@ -823,7 +823,7 @@ contains
     ! -- return
     return
   end function calc_bnd_viscosity
-                              
+
   !> @brief Calculate the viscosity ratio
   !!
   !! Calculate the viscosity ratio applied to the hydraulic characteristic
@@ -853,7 +853,7 @@ contains
     !
     ! -- return
     return
-  end subroutine get_visc_ratio                    
+  end subroutine get_visc_ratio
 
   !> @brief Account for viscosity in the aquiferhorizontal flow barriers
   !!
@@ -1030,7 +1030,7 @@ contains
     return
   end subroutine vsc_da
 
-  !> @ brief Read dimensions 
+  !> @ brief Read dimensions
   !!
   !! Read dimensions for the viscosity package
   !!
@@ -1213,7 +1213,7 @@ contains
 
   !> @brief Calculate fluid viscosity
   !!
-  !! Calculates fluid viscosity based on concentration or 
+  !! Calculates fluid viscosity based on concentration or
   !! temperature
   !!
   !<
@@ -1344,7 +1344,7 @@ contains
     return
   end subroutine allocate_arrays
 
-  !> @ brief Read Options block 
+  !> @ brief Read Options block
   !!
   !! Reads the options block inside the VSC package.
   !!
@@ -1491,7 +1491,7 @@ contains
 
   !> @ brief Set pointers to concentration(s)
   !!
-  !! Pass in a gwt model name, concentration array, and ibound, 
+  !! Pass in a gwt model name, concentration array, and ibound,
   !! and store a pointer to these in the VSC package so that
   !! viscosity can be calculated from them.  This routine is called
   !! from the gwfgwt exchange in the exg_ar() method.
