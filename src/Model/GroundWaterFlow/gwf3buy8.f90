@@ -977,7 +977,7 @@ contains
         ! -- Add terms to rhs, diagonal, and off diagonal
         rhs(n) = rhs(n) - rhsterm
         call matrix_sln%add_value_pos(idxglo(idiag), -amatnn)
-        call matrix_sln%add_value_pos(idxglo(ipos), amatnn)
+        call matrix_sln%add_value_pos(idxglo(ipos), amatnm)
       end do
     end do
     !
