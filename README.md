@@ -5,9 +5,9 @@ This is the development repository for the USGS MODFLOW 6 Hydrologic Model. The 
 
 ### Version 6.4.0 release candidate
 
-[![tests - ifort](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-tests-ifort.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-tests-ifort.yml)
-[![tests - gfortran - latest version](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-tests-gfortran-latest.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-tests-gfortran-latest.yml)
-[![tests - gfortran - previous versions](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-tests-gfortran-previous.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci-tests-gfortran-previous.yml)
+[![MODFLOW 6 continuous integration](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci.yml)
+[![MODFLOW 6 documentation](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/docs.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/docs.yml)
+[![MODFLOW 6 large models](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/large.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/large.yml)
 
 [![MODFLOW 6 intel nightly build](https://github.com/MODFLOW-USGS/modflow6-nightly-build/actions/workflows/nightly-build-intel.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6-nightly-build/actions/workflows/nightly-build-intel.yml)
 [![MODFLOW 6 nightly build](https://github.com/MODFLOW-USGS/modflow6-nightly-build/actions/workflows/nightly-build.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6-nightly-build/actions/workflows/nightly-build.yml)
