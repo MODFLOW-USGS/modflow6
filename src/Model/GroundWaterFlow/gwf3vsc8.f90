@@ -1358,8 +1358,6 @@ contains
     ! -- local
     character(len=LINELENGTH) :: warnmsg, errmsg, keyword, keyword2
     character(len=MAXCHARLEN) :: fname
-    character(len=LINELENGTH) :: line
-    character(len=16) :: c16
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- formats
