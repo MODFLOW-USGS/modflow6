@@ -375,7 +375,6 @@ contains
   subroutine npf_rp(this)
     implicit none
     class(GwfNpfType) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- TVK
     if (this%intvk /= 0) then
@@ -1311,43 +1310,43 @@ contains
     !
     write (this%iout, '(1x,a)') 'Setting NPF Options'
     if (found%iprflow) &
-      write (this%iout, '(4x,a)') 'CELL-BY-CELL FLOW INFORMATION WILL BE PRINTED &
-                                  &TO LISTING FILE WHENEVER ICBCFL IS NOT ZERO.'
+      write (this%iout, '(4x,a)') 'Cell-by-cell flow information will be printed &
+                                  &to listing file whenever ICBCFL is not zero.'
     if (found%ipakcb) &
-      write (this%iout, '(4x,a)') 'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED &
-                                  &TO BINARY FILE WHENEVER ICBCFL IS NOT ZERO.'
+      write (this%iout, '(4x,a)') 'Cell-by-cell flow information will be saved &
+                                  &to binary file whenever ICBCFL is not zero.'
     if (found%cellavg) &
-      write (this%iout, '(4x,a,i0)') 'ALTERNATIVE CELL AVERAGING [1=LOGARITHMIC, &
-                                     &2=AMT-LMK, 3=AMT-HMK] SET TO: ', &
+      write (this%iout, '(4x,a,i0)') 'Alternative cell averaging [1=logarithmic, &
+                                     &2=AMT-LMK, 3=AMT-HMK] set to: ', &
                                      this%icellavg
     if (found%ithickstrt) &
-      write (this%iout, '(4x,a)') 'THICKSTRT OPTION HAS BEEN ACTIVATED.'
+      write (this%iout, '(4x,a)') 'THICKSTRT option has been activated.'
     if (found%iperched) &
-      write (this%iout, '(4x,a)') 'VERTICAL FLOW WILL BE ADJUSTED FOR PERCHED &
-                                  &CONDITIONS.'
+      write (this%iout, '(4x,a)') 'Vertical flow will be adjusted for perched &
+                                  &conditions.'
     if (found%ivarcv) &
-      write (this%iout, '(4x,a)') 'VERTICAL CONDUCTANCE VARIES WITH WATER TABLE.'
+      write (this%iout, '(4x,a)') 'Vertical conductance varies with water table.'
     if (found%idewatcv) &
-      write (this%iout, '(4x,a)') 'VERTICAL CONDUCTANCE ACCOUNTS FOR DEWATERED &
-                                  &PORTION OF AN UNDERLYING CELL.'
-    if (found%ixt3d) write (this%iout, '(4x,a)') 'XT3D FORMULATION IS SELECTED.'
+      write (this%iout, '(4x,a)') 'Vertical conductance accounts for dewatered &
+                                  &portion of an underlying cell.'
+    if (found%ixt3d) write (this%iout, '(4x,a)') 'XT3D formulation is selected.'
     if (found%ixt3drhs) &
-      write (this%iout, '(4x,a)') 'XT3D RHS FORMULATION IS SELECTED.'
+      write (this%iout, '(4x,a)') 'XT3D RHS formulation is selected.'
     if (found%isavspdis) &
-      write (this%iout, '(4x,a)') 'SPECIFIC DISCHARGE WILL BE CALCULATED AT CELL &
-                                  &CENTERS AND WRITTEN TO DATA-SPDIS IN BUDGET &
-                                  &FILE WHEN REQUESTED.'
+      write (this%iout, '(4x,a)') 'Specific discharge will be calculated at cell &
+                                  &centers and written to DATA-SPDIS in budget &
+                                  &file when requested.'
     if (found%isavsat) &
-      write (this%iout, '(4x,a)') 'SATURATION WILL BE WRITTEN TO DATA-SAT IN &
-                                  &BUDGET FILE WHEN REQUESTED.'
+      write (this%iout, '(4x,a)') 'Saturation will be written to DATA-SAT in &
+                                  &budget file when requested.'
     if (found%ik22overk) &
-      write (this%iout, '(4x,a)') 'VALUES SPECIFIED FOR K22 ARE ANISOTROPY &
-                                  &RATIOS AND WILL BE MULTIPLIED BY K BEFORE &
-                                  &BEING USED IN CALCULATIONS.'
+      write (this%iout, '(4x,a)') 'Values specified for K22 are anisotropy &
+                                  &ratios and will be multiplied by K before &
+                                  &being used in calculations.'
     if (found%ik33overk) &
-      write (this%iout, '(4x,a)') 'VALUES SPECIFIED FOR K33 ARE ANISOTROPY &
-                                  &RATIOS AND WILL BE MULTIPLIED BY K BEFORE &
-                                  &BEING USED IN CALCULATIONS.'
+      write (this%iout, '(4x,a)') 'Values specified for K33 are anisotropy &
+                                  &ratios and will be multiplied by K before &
+                                  &being used in calculations.'
     if (found%inewton) &
       write (this%iout, '(4x,a)') 'NEWTON-RAPHSON method disabled for unconfined &
                                   &cells'
@@ -1358,25 +1357,22 @@ contains
       write (this%iout, '(4x,a)') 'MODFLOW-NWT upstream weighting method will be &
                                   &used'
     if (found%satmin) &
-      write (this%iout, '(4x,a,1pg15.6)') 'MINIMUM SATURATED THICKNESS HAS BEEN &
-                                          &SET TO: ', this%satmin
+      write (this%iout, '(4x,a,1pg15.6)') 'Minimum saturated thickness has been &
+                                          &set to: ', this%satmin
     if (found%satomega) &
-      write (this%iout, '(4x,a,1pg15.6)') 'SATURATION OMEGA: ', this%satomega
-    if (found%irewet) write (this%iout, '(4x,a)') 'REWETTING IS ACTIVE.'
+      write (this%iout, '(4x,a,1pg15.6)') 'Saturation omega: ', this%satomega
+    if (found%irewet) &
+      write (this%iout, '(4x,a)') 'Rewetting is active.'
     if (found%wetfct) &
-      write (this%iout, '(4x,a,1pg15.6)') 'WETTING FACTOR HAS BEEN SET TO: ', &
-      this%wetfct
+      write (this%iout, '(4x,a,1pg15.6)') &
+      'Wetting factor (WETFCT) has been set to: ', this%wetfct
     if (found%iwetit) &
-      write (this%iout, '(4x,a,i5)') 'IWETIT HAS BEEN SET TO: ', this%iwetit
+      write (this%iout, '(4x,a,i5)') &
+      'Wetting iteration interval (IWETIT) has been set to: ', this%iwetit
     if (found%ihdwet) &
-      write (this%iout, '(4x,a,i5)') 'IHDWET HAS BEEN SET TO: ', this%ihdwet
+      write (this%iout, '(4x,a,i5)') &
+      'Head rewet equation (IHDWET) has been set to: ', this%ihdwet
     write (this%iout, '(1x,a,/)') 'End Setting NPF Options'
-    !
-    ! -- Write rewet settings
-    write (this%iout, '(1x, a)') 'THE FOLLOWING REWET SETTINGS WILL BE USED.'
-    write (this%iout, '(4x, a,1pg15.6)') '  WETFCT = ', this%wetfct
-    write (this%iout, '(4x, a,i0)') '  IWETIT = ', this%iwetit
-    write (this%iout, '(4x, a,i0)') '  IHDWET = ', this%ihdwet
 
   end subroutine log_options
 
@@ -1616,10 +1612,14 @@ contains
 
     if (found%k33) then
       write (this%iout, '(4x,a)') 'K33 set from input file'
+    else
+      write (this%iout, '(4x,a)') 'K33 not provided.  Setting K33 = K.'
     end if
 
     if (found%k22) then
       write (this%iout, '(4x,a)') 'K22 set from input file'
+    else
+      write (this%iout, '(4x,a)') 'K22 not provided.  Setting K22 = K.'
     end if
 
     if (found%wetdry) then
@@ -1670,7 +1670,7 @@ contains
     ! -- set memory path
     idmMemoryPath = create_mem_path(this%name_model, 'NPF', idm_context)
     !
-    ! -- set map
+    ! -- set map to convert user input data into reduced data
     map => null()
     if (this%dis%nodes < this%dis%nodesuser) map => this%dis%nodeuser
     !
@@ -1719,11 +1719,9 @@ contains
     !
     ! -- handle not found side effects
     if (.not. found%k33) then
-      write (this%iout, '(1x, a)') 'K33 not provided.  Setting K33 = K.'
       call mem_set_value(this%k33, 'K', idmMemoryPath, map, afound(1))
     end if
     if (.not. found%k22) then
-      write (this%iout, '(1x, a)') 'K22 not provided.  Setting K22 = K.'
       call mem_set_value(this%k22, 'K', idmMemoryPath, map, afound(2))
     end if
     if (.not. found%wetdry) call mem_reallocate(this%wetdry, 1, 'WETDRY', &

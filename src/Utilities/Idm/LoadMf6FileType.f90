@@ -396,7 +396,8 @@ contains
     integer(I4B), dimension(:), allocatable :: layer_shape
     character(len=LINELENGTH) :: keyword
 
-    ! Check if it is a full grid sized array (NODES)
+    ! Check if it is a full grid sized array (NODES), otherwise use
+    ! idt%shape to construct shape from variables in memoryPath
     if (idt%shape == 'NODES') then
       nvals = product(mshape)
     else

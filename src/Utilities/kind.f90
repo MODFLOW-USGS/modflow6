@@ -40,21 +40,21 @@ contains
       tiny(rdum)
     write (iout, '(2x,a,1pg15.6)') 'HUGE (largest value): ', huge(rdum)
     write (iout, '(2x,a,i0)') 'PRECISION: ', precision(rdum)
-    write (iout, '(2x,a,i0)') 'BIT SIZE: ', bit_size(irdum)
+    write (iout, '(2x,a,i0)') 'SIZE IN BITS: ', bit_size(irdum)
 
     write (iout, '(/a)') 'Integer Variables'
     write (iout, '(2x,a,i0)') 'KIND: ', I4B
     write (iout, '(2x,a,i0)') 'HUGE (largest value): ', huge(idum)
-    write (iout, '(2x,a,i0)') 'BIT SIZE: ', bit_size(idum)
+    write (iout, '(2x,a,i0)') 'SIZE IN BITS: ', bit_size(idum)
 
     write (iout, '(/a)') 'Long Integer Variables'
     write (iout, '(2x,a,i0)') 'KIND: ', I8B
     write (iout, '(2x,a,i0)') 'HUGE (largest value): ', huge(long_idum)
-    write (iout, '(2x,a,i0)') 'BIT SIZE: ', bit_size(long_idum)
+    write (iout, '(2x,a,i0)') 'SIZE IN BITS: ', bit_size(long_idum)
 
     write (iout, '(/a)') 'Logical Variables'
     write (iout, '(2x,a,i0)') 'KIND: ', LGP
-    write (iout, '(2x,a,i0)') 'BIT SIZE: ', bit_size(ldum)
+    write (iout, '(2x,a,i0)') 'SIZE IN BITS: ', bit_size(ldum)
     !
     ! -- Return
     return
