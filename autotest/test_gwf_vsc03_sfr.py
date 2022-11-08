@@ -100,6 +100,7 @@ K_d = C_s / (rho_water * C_p_w)  # Partitioning coefficient ($m^3/kg$)
 # MODFLOW 6 flopy GWF & GWT simulation object (sim) is returned
 #
 
+
 def build_model(idx, dir):
     # Base simulation and model name and workspace
     ws = dir
@@ -189,7 +190,10 @@ def build_model(idx, dir):
             gwf,
             viscref=viscref,
             viscosity_filerecord=vsc_filerecord,
-            viscosityfuncrecord=[("nonlinear", 10.0, 248.37, 133.15)],
+            thermal_formulation="nonlinear",
+            thermal_a2=10.0,
+            thermal_a3=248.37,
+            thermal_a4=133.16,
             nviscspecies=len(vsc_pd),
             packagedata=vsc_pd,
             pname="vsc",

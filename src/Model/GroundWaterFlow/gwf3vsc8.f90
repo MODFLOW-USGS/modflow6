@@ -1260,7 +1260,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: DZERO
+    use ConstantsModule, only: DZERO, DTEN, DEP3
     ! -- dummy
     class(GwfVscType) :: this
     ! -- local
@@ -1288,10 +1288,10 @@ contains
     this%ioutvisc = 0
     this%ireadelev = 0
     this%iconcset = 0
-    this%viscref = 1000.d0
-    this%A2 = DZERO
-    this%A3 = DZERO
-    this%A4 = DZERO
+    this%viscref = DEP3
+    this%A2 = DTEN
+    this%A3 = 248.37_DP
+    this%A4 = 133.15_DP
     !
     this%nviscspecies = 0
     !
@@ -1405,7 +1405,7 @@ contains
                      'followed by FILEOUT'
             call store_error(errmsg)
           end if
-        case ('THERMAL_VISCOSITY_FUNC')
+        case ('THERMAL_FORMULATION')
           call this%parser%GetStringCaps(keyword2)
           if (trim(adjustl(keyword2)) == 'LINEAR') this%thermivisc = 1
           if (trim(adjustl(keyword2)) == 'NONLINEAR') this%thermivisc = 2
@@ -1414,25 +1414,40 @@ contains
             write (this%iout, fmtlinear)
           case (2)
             write (this%iout, fmtnonlinear)
-            this%a2 = this%parser%GetDouble()
-            this%a3 = this%parser%GetDouble()
-            this%a4 = this%parser%GetDouble()
-            !
-            ! -- Write viscosity function selection to lst file
-            write (this%iout, '(/,1x,a,a,a)') 'Constants used in ', &
-              trim(keyword2), ' viscosity formulation are '
-            write (this%iout, '(1x,a)') &
-              '              A2,              A3,              A4'
-            line = ' '
-            write (c16, '(g15.6)') this%a2
-            line = trim(line)//' '//adjustr(c16)
-            write (c16, '(g15.6)') this%a3
-            line = trim(line)//' '//adjustr(c16)
-            write (c16, '(g15.6)') this%a4
-            line = trim(line)//' '//adjustr(c16)
-            write (this%iout, '(a)') trim(line)
-
           end select
+        case ('THERMAL_A2')
+          this%a2 = this%parser%GetDouble()
+          if (this%thermivisc == 2) then
+            write (this%iout, '(4x,a,1pg15.6)') &
+              'A2 in nonlinear viscosity formulation has been set to: ', &
+              this%a2
+          else
+            write (this%iout, '(4x,a,/,4x,a,/,4x,a)') 'THERMAL_A2 specified by user &
+              &in VSC Package input file. LINEAR viscosity ', 'formulation also &
+              &specified. THERMAL_A2 will not affect ', 'viscosity calculations.'
+          end if
+        case ('THERMAL_A3')
+          this%a3 = this%parser%GetDouble()
+          if (this%thermivisc == 2) then
+            write (this%iout, '(4x,a,1pg15.6)') &
+              'A3 in nonlinear viscosity formulation has been set to: ', &
+              this%a3
+          else
+            write (this%iout, '(4x,a,/,4x,a,/,4x,a)') 'THERMAL_A3 specified by user &
+              &in VSC Package input file. LINEAR viscosity ', 'formulation also &
+              &specified. THERMAL_A3 will not affect ', 'viscosity calculations.'
+          end if
+        case ('THERMAL_A4')
+          this%a4 = this%parser%GetDouble()
+          if (this%thermivisc == 2) then
+            write (this%iout, '(4x,a,1pg15.6)') &
+              'A4 in nonlinear viscosity formulation has been set to: ', &
+              this%a4
+          else
+            write (this%iout, '(4x,a,/,4x,a,/,4x,a)') 'THERMAL_A4 specified by user &
+              &in VSC Package input file. LINEAR viscosity ', 'formulation also &
+              &specified. THERMAL_A4 will not affect ', 'viscosity calculations.'
+          end if
         case default
           write (errmsg, '(4x,a,a)') '**Error. Unknown VSC option: ', &
             trim(keyword)
