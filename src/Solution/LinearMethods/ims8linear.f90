@@ -111,7 +111,7 @@ CONTAINS
     use MemoryManagerModule, only: mem_allocate
     use MemoryHelperModule, only: create_mem_path
     use SimModule, only: store_error, count_errors, &
-                         deprecation_warning                         
+                         deprecation_warning
     ! -- dummy variables
     CLASS(ImsLinearDataType), INTENT(INOUT) :: this !< ImsLinearDataType instance
     CHARACTER(LEN=LENSOLUTIONNAME), INTENT(IN) :: NAME !< solution name
@@ -145,7 +145,7 @@ CONTAINS
     integer(I4B) :: iwlu
     integer(I4B) :: iwk
     !
-    select type(matrix)
+    select type (matrix)
     class is (SparseMatrixType)
       sparse_matrix => matrix
     end select

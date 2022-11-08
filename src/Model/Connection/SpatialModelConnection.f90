@@ -108,8 +108,8 @@ contains ! module procedures
     this%owner => model
     this%primaryExchange => exchange
 
-    allocate(this%gridConnection)
-    allocate(this%matrix)
+    allocate (this%gridConnection)
+    allocate (this%matrix)
     call this%allocateScalars()
 
     this%internalStencilDepth = 1
@@ -280,8 +280,6 @@ contains ! module procedures
     integer(I4B) :: icol_start, icol_end
     integer(I4B) :: nglo, mglo
 
-
-
     do n = 1, this%neq
       if (.not. this%gridConnection%idxToGlobal(n)%dmodel == this%owner) then
         ! only add connections for own model to global matrix
@@ -353,7 +351,7 @@ contains ! module procedures
     call mem_deallocate(this%active)
 
     call this%matrix%destroy()
-    deallocate(this%matrix)
+    deallocate (this%matrix)
 
     call this%gridConnection%destroy()
     call this%distVarList%Clear(destroy=.true.)

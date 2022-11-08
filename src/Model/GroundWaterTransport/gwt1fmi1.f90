@@ -404,7 +404,7 @@ contains
       ! -- Correct the transport solution for the flow imbalance by adding
       !    the flow residual to the diagonal
       do n = 1, nodes
-        idiag = this%dis%con%ia(n)        
+        idiag = this%dis%con%ia(n)
         idiag_sln = idxglo(idiag)
         call matrix_sln%add_value_pos(idiag_sln, -this%gwfflowja(idiag))
       end do

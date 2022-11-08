@@ -20,7 +20,6 @@ module GwfNpfModule
                                  mem_reassignptr
   use MatrixModule
 
-
   implicit none
 
   private

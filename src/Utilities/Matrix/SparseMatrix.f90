@@ -2,7 +2,7 @@ module SparseMatrixModule
   use KindModule, only: I4B, DP
   use ConstantsModule, only: DZERO
   use MatrixModule
-  use SparseModule, only: sparsematrix  
+  use SparseModule, only: sparsematrix
   use MemoryManagerModule, only: mem_allocate, mem_deallocate
   implicit none
   private
@@ -40,7 +40,6 @@ module SparseMatrixModule
 
 contains
 
-
   subroutine spm_create(this, sparse, mem_path)
     class(SparseMatrixType) :: this
     type(sparsematrix) :: sparse
@@ -49,9 +48,9 @@ contains
     integer(I4B) :: ierror
 
     this%memory_path = mem_path
-    
+
     call this%allocate_scalars()
-    
+
     this%nrow = sparse%nrow
     this%ncol = sparse%ncol
     this%nja = sparse%nnz
@@ -187,7 +186,7 @@ contains
     integer(I4B) :: ipos_diag
 
     ipos_diag = this%ia(irow)
-    
+
   end function spm_get_position_diag
 
   subroutine allocate_scalars(this)

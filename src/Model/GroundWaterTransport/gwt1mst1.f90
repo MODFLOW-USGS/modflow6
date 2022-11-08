@@ -17,7 +17,7 @@ module GwtMstModule
   use MatrixModule
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
-  use GwtFmiModule, only: GwtFmiType  
+  use GwtFmiModule, only: GwtFmiType
 
   implicit none
   public :: GwtMstType

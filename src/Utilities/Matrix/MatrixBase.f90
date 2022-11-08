@@ -104,8 +104,8 @@ module MatrixModule
       class(MatrixBaseType) :: this
       integer(I4B) :: ipos
       integer(I4B) :: icol
-    end function 
-    
+    end function
+
     !> @brief Get position index for this (irow,icol) element
     !! in the matrix for direct access with the other routines
     !< Returns -1 when not found.

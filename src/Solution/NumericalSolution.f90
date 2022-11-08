@@ -207,7 +207,7 @@ contains
     allocate (solution%modellist)
     allocate (solution%exchangelist)
     !
-    allocate(matrix_impl)
+    allocate (matrix_impl)
     solution%system_matrix => matrix_impl
     !
     call solution%allocate_scalars()
@@ -2399,7 +2399,8 @@ contains
             if (jcol == n) cycle
             if (this%active(jcol) < 0) then
               this%rhs(n) = this%rhs(n) - &
-                            (this%system_matrix%get_value_pos(ipos) * this%x(jcol))
+                            (this%system_matrix%get_value_pos(ipos) * &
+                             this%x(jcol))
               call this%system_matrix%set_value_pos(ipos, DZERO)
             end if
 
@@ -2493,7 +2494,7 @@ contains
           diagval = abs(this%system_matrix%get_diag_value(n))
           bnorm = bnorm + this%rhs(n) * this%rhs(n)
           if (diagval < diagmin) diagmin = diagval
-          call this%system_matrix%add_diag_value(n,  -ptcval)
+          call this%system_matrix%add_diag_value(n, -ptcval)
           this%rhs(n) = this%rhs(n) - ptcval * this%x(n)
         end if
       end do
