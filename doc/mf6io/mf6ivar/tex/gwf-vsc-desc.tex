@@ -5,21 +5,19 @@
 \begin{description}
 \item \texttt{viscref}---fluid reference viscosity used in the equation of state.  This value is set to 1.0 if not specified as an option.
 
+\item \texttt{thermal\_formulation}---may be used for specifying which viscosity formulation to use for a species identified by the auxilary name TEMPERATURE. Can be either LINEAR or NONLINEAR. The LINEAR viscosity formulation is the default.
+
+\item \texttt{thermal\_a2}---is an empirical parameter specified by the user for calculating viscosity using a nonlinear formulation.  If A2 is not specified, a default value of 10.0 is assigned (Voss, 1984).
+
+\item \texttt{thermal\_a3}---is an empirical parameter specified by the user for calculating viscosity using a nonlinear formulation.  If A3 is not specified, a default value of 248.37 is assigned (Voss, 1984).
+
+\item \texttt{thermal\_a4}---is an empirical parameter specified by the user for calculating viscosity using a nonlinear formulation.  If A4 is not specified, a default value of 133.15 is assigned (Voss, 1984).
+
 \item \texttt{VISCOSITY}---keyword to specify that record corresponds to viscosity.
 
 \item \texttt{FILEOUT}---keyword to specify that an output filename is expected next.
 
 \item \texttt{viscosityfile}---name of the binary output file to write viscosity information.  The viscosity file has the same format as the head file.  Viscosity values will be written to the viscosity file whenever heads are written to the binary head file.  The settings for controlling head output are contained in the Output Control option.
-
-\item \texttt{THERMAL\_VISCOSITY\_FUNC}---may be used for specifying which viscosity formulation to use for a species identified by the auxilary name TEMPERATURE. Can be either LINEAR or NONLINEAR. The LINEAR viscosity formulation is the default.
-
-\item \texttt{formulation}---may be used for specifying which viscosity formulation to use.  The linear viscosity formulation is the default.
-
-\item \texttt{a2}---is an empirical parameter specified by the user for calculating viscosity using a nonlinear formulation.  If A2 is not specified, a default value of 10.0 is assigned (Voss, 1984).
-
-\item \texttt{a3}---is an empirical parameter specified by the user for calculating viscosity using a nonlinear formulation.  If A3 is not specified, a default value of 248.37 is assigned (Voss, 1984).
-
-\item \texttt{a4}---is an empirical parameter specified by the user for calculating viscosity using a nonlinear formulation.  If A4 is not specified, a default value of 133.15 is assigned (Voss, 1984).
 
 \end{description}
 \item \textbf{Block: DIMENSIONS}
