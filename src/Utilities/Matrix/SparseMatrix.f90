@@ -74,7 +74,7 @@ contains
     call mem_deallocate(this%amat)
 
   end subroutine spm_destroy
-
+  
   function spm_get_value_pos(this, ipos) result(value)
     class(SparseMatrixType) :: this
     integer(I4B) :: ipos

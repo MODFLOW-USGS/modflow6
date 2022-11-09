@@ -32,7 +32,9 @@ module NumericalSolutionModule
   use IMSLinearModule
   use DistributedDataModule
   use MatrixModule
-  use SparseMatrixModule
+  use SparseMatrixModule ! TODO_MJR: this should be hidden in a factory method
+  use VectorBaseModule
+  use SeqVectorModule ! TODO_MJR: this should be hidden in a factory method
 
   implicit none
   private
@@ -53,8 +55,10 @@ module NumericalSolutionModule
     integer(I4B), pointer :: isymmetric => null() !< flag indicating if matrix symmetry is required
     integer(I4B), pointer :: neq => null() !< number of equations
     class(MatrixBaseType), pointer :: system_matrix !< sparse A-matrix for the system of equations
-    real(DP), dimension(:), pointer, contiguous :: rhs => null() !< right-hand side vector
-    real(DP), dimension(:), pointer, contiguous :: x => null() !< dependent-variable vector
+    class(VectorBaseType), pointer :: vec_rhs !< the right-hand side vector
+    class(VectorBaseType), pointer :: vec_x !< the dependent-variable vector
+    real(DP), dimension(:), pointer, contiguous :: rhs => null() !< right-hand side vector values
+    real(DP), dimension(:), pointer, contiguous :: x => null() !< dependent-variable vector values
     integer(I4B), dimension(:), pointer, contiguous :: active => null() !< active cell array
     real(DP), dimension(:), pointer, contiguous :: xtemp => null() !< temporary vector for previous dependent-variable iterate
     type(BlockParserType) :: parser !< block parser object
@@ -195,7 +199,7 @@ contains
     type(NumericalSolutionType), pointer :: solution => null()
     class(BaseSolutionType), pointer :: solbase => null()
     character(len=LENSOLUTIONNAME) :: solutionname
-    class(SparseMatrixType), pointer :: matrix_impl
+    !class(SparseMatrixType), pointer :: matrix_impl
     !
     ! -- Create a new solution and add it to the basesolutionlist container
     allocate (solution)
@@ -207,8 +211,8 @@ contains
     allocate (solution%modellist)
     allocate (solution%exchangelist)
     !
-    allocate (matrix_impl)
-    solution%system_matrix => matrix_impl
+    !allocate (matrix_impl)
+    !solution%system_matrix => matrix_impl
     !
     call solution%allocate_scalars()
     !
@@ -356,8 +360,6 @@ contains
     this%convnmod = this%modellist%Count()
     !
     ! -- allocate arrays
-    call mem_allocate(this%x, this%neq, 'X', this%memoryPath)
-    call mem_allocate(this%rhs, this%neq, 'RHS', this%memoryPath)
     call mem_allocate(this%active, this%neq, 'IACTIVE', this%memoryPath)
     call mem_allocate(this%xtemp, this%neq, 'XTEMP', this%memoryPath)
     call mem_allocate(this%dxold, this%neq, 'DXOLD', this%memoryPath)
@@ -384,7 +386,6 @@ contains
     !
     ! -- initialize allocated arrays
     do i = 1, this%neq
-      this%x(i) = DZERO
       this%xtemp(i) = DZERO
       this%dxold(i) = DZERO
       this%active(i) = 1 !default is active
@@ -427,6 +428,8 @@ contains
     class(NumericalModelType), pointer :: mp => null()
     integer(I4B) :: i
     integer(I4B), allocatable, dimension(:) :: rowmaxnnz
+    class(SparseMatrixType), pointer :: matrix_impl
+    class(SeqVectorType), pointer :: vec_x_impl, vec_rhs_impl
     !
     ! -- calculate and set offsets
     do i = 1, this%modellist%Count()
@@ -438,6 +441,19 @@ contains
     !
     ! -- Allocate and initialize solution arrays
     call this%allocate_arrays()
+
+    allocate (matrix_impl) ! TODO_MJR: hide this factory method or derived solution
+    this%system_matrix => matrix_impl
+    allocate (vec_x_impl)
+    this%vec_x => vec_x_impl
+    allocate (vec_rhs_impl)
+    this%vec_rhs => vec_rhs_impl
+
+    call this%vec_x%create(this%neq, 'X', this%memoryPath)
+    this%x => this%vec_x%get_array()
+    call this%vec_rhs%create(this%neq, 'RHS', this%memoryPath)
+    this%rhs => this%vec_rhs%get_array()
+
     !
     ! -- Go through each model and point x, ibound, and rhs to solution
     do i = 1, this%modellist%Count()
@@ -1145,8 +1161,14 @@ contains
     call this%exchangelist%Clear()
     deallocate (this%modellist)
     deallocate (this%exchangelist)
+
     call this%system_matrix%destroy()
     deallocate (this%system_matrix)
+    call this%vec_x%destroy()
+    deallocate(this%vec_x)
+    call this%vec_rhs%destroy()
+    deallocate(this%vec_rhs)
+
     !
     ! -- character arrays
     deallocate (this%caccel)
@@ -1165,9 +1187,7 @@ contains
       nullify (this%outertab)
     end if
     !
-    ! -- arrays
-    call mem_deallocate(this%x)
-    call mem_deallocate(this%rhs)
+    ! -- arrays    
     call mem_deallocate(this%active)
     call mem_deallocate(this%xtemp)
     call mem_deallocate(this%dxold)

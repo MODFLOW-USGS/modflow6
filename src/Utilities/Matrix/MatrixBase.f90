@@ -40,7 +40,6 @@ module MatrixModule
       import MatrixBaseType
       class(MatrixBaseType) :: this
     end subroutine
-
     function get_value_pos_if(this, ipos) result(value)
       import MatrixBaseType, I4B, DP
       class(MatrixBaseType) :: this

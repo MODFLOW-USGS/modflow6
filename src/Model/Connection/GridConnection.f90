@@ -1139,15 +1139,15 @@ contains
   !< (caller owns the memory)
   subroutine getInterfaceMap(this, interfaceMap)
     use BaseModelModule, only: BaseModelType, GetBaseModelFromList
-    use VectorIntModule
+    use STLVecIntModule
     class(GridConnectionType) :: this !< this grid connection
     type(InterfaceMapType), pointer :: interfaceMap !< a pointer to the map (not allocated yet)
     ! local
     integer(I4B) :: i, j, iloc, jloc
     integer(I4B) :: im, ix, mid, n
     integer(I4B) :: ipos, iposModel
-    type(VectorInt) :: modelIds
-    type(VectorInt) :: srcIdxTmp, tgtIdxTmp, signTmp
+    type(STLVecInt) :: modelIds
+    type(STLVecInt) :: srcIdxTmp, tgtIdxTmp, signTmp
     class(DisConnExchangeType), pointer :: connEx
     integer(I4B), dimension(:), pointer, contiguous :: ia, ja
 

@@ -153,6 +153,8 @@ modflow_sources = files(
     'Utilities' / 'TimeSeries' / 'TimeSeriesLink.f90',
     'Utilities' / 'TimeSeries' / 'TimeSeriesManager.f90',
     'Utilities' / 'TimeSeries' / 'TimeSeriesRecord.f90',
+    'Utilities' / 'Vector' / 'VectorBase.f90',
+    'Utilities' / 'Vector' / 'SeqVector.f90',
     'Utilities' / 'ArrayHandlers.f90',
     'Utilities' / 'ArrayReaders.f90',
     'Utilities' / 'BlockParser.f90',
@@ -181,17 +183,25 @@ modflow_sources = files(
     'Utilities' / 'SimVariables.f90',
     'Utilities' / 'SmoothingFunctions.f90',
     'Utilities' / 'sort.f90',
-    'Utilities' / 'Sparse.f90',
+    'Utilities' / 'Sparse.f90',    
+    'Utilities' / 'STLVecInt.f90',
     'Utilities' / 'StringList.f90',
     'Utilities' / 'Table.f90',
     'Utilities' / 'TableTerm.f90',
     'Utilities' / 'Timer.f90',
-    'Utilities' / 'VectorInt.f90',
     'Utilities' / 'version.f90',
     'mf6core.f90',
     'mf6lists.f90',
     'SimulationCreate.f90'
 )
+
+modflow_petsc_sources = files(
+  'Utilities' / 'Vector' / 'PetscVector.f90'
+)
+
+if false
+  modflow_sources += modflow_petsc_sources
+endif
 
 mf6_external = static_library('mf6_external', external_libraries)
 

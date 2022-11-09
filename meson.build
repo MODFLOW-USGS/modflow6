@@ -89,6 +89,12 @@ add_project_arguments(fc.get_supported_arguments(compile_args), language: 'fortr
 add_project_link_arguments(fc.get_supported_arguments(link_args), language: 'fortran')
 
 mpi = dependency('mpi', language : 'fortran', required : false)
+if system == 'windows'
+  dependencies = [ ]
+else  
+  petsc = dependency('PETSc', required : false)
+  dependencies = [ petsc, mpi ]
+endif
 
 subdir('src')
 subdir('srcbmi')
