@@ -892,7 +892,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: DHALF, DZERO, DONE
+    use ConstantsModule, only: DHALF, DZERO
     ! -- dummy
     class(GwfHfbType) :: this
     ! -- local
@@ -901,22 +901,14 @@ contains
     real(DP) :: cond, condhfb
     real(DP) :: fawidth, faheight
     real(DP) :: topn, topm, botn, botm
-    real(DP) :: viscratio
 ! ------------------------------------------------------------------------------
     !
     do ihfb = 1, this%nhfb
-      ! -- initialize variable
-      viscratio = DONE
-      !
       ipos = this%idxloc(ihfb)
       cond = this%condsat(this%jas(ipos))
       this%csatsav(ihfb) = cond
       n = this%noden(ihfb)
       m = this%nodem(ihfb)
-      ! -- account for viscosity when active
-      if (this%ivsc /= 0) then
-!        call this%get_visc_ratio(n, m, hnew(n), hnew(m), viscratio)
-      end if
       !
       if (this%inewton == 1 .or. &
           (this%icelltype(n) == 0 .and. this%icelltype(m) == 0)) then
@@ -933,7 +925,7 @@ contains
         end if
         if (this%hydchr(ihfb) > DZERO) then
           fawidth = this%hwva(this%jas(ipos))
-          condhfb = this%hydchr(ihfb) * viscratio * &
+          condhfb = this%hydchr(ihfb) * &
                     fawidth * faheight
           cond = cond * condhfb / (cond + condhfb)
         else
