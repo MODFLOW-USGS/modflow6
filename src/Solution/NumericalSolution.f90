@@ -31,10 +31,11 @@ module NumericalSolutionModule
   use BlockParserModule, only: BlockParserType
   use IMSLinearModule
   use DistributedDataModule
-  use MatrixModule
-  use SparseMatrixModule ! TODO_MJR: this should be hidden in a factory method
+  use MatrixBaseModule
   use VectorBaseModule
-  use SeqVectorModule ! TODO_MJR: this should be hidden in a factory method
+  use LinearSolverBaseModule
+  use LinearSolverFactory, only: create_linear_solver
+  use SparseMatrixModule ! TODO_MJR: temporary
 
   implicit none
   private
@@ -46,6 +47,7 @@ module NumericalSolutionModule
   type, extends(BaseSolutionType) :: NumericalSolutionType
     character(len=LENMEMPATH) :: memoryPath !< the path for storing solution variables in the memory manager
     character(len=LINELENGTH) :: fname !< input file name
+    character(len=16) :: solver_mode !< the type of solve: sequential, parallel, mayve block, etc.
     type(ListType), pointer :: modellist !< list of models in solution
     type(ListType), pointer :: exchangelist !< list of exchanges in solution
     integer(I4B), pointer :: id !< solution number
@@ -54,6 +56,7 @@ module NumericalSolutionModule
     real(DP), pointer :: ttsoln !< timer - total solution time
     integer(I4B), pointer :: isymmetric => null() !< flag indicating if matrix symmetry is required
     integer(I4B), pointer :: neq => null() !< number of equations
+    class(LinearSolverBaseType), pointer :: linear_solver !< the linear solver for this solution
     class(MatrixBaseType), pointer :: system_matrix !< sparse A-matrix for the system of equations
     class(VectorBaseType), pointer :: vec_rhs !< the right-hand side vector
     class(VectorBaseType), pointer :: vec_x !< the dependent-variable vector
@@ -199,7 +202,6 @@ contains
     type(NumericalSolutionType), pointer :: solution => null()
     class(BaseSolutionType), pointer :: solbase => null()
     character(len=LENSOLUTIONNAME) :: solutionname
-    !class(SparseMatrixType), pointer :: matrix_impl
     !
     ! -- Create a new solution and add it to the basesolutionlist container
     allocate (solution)
@@ -210,9 +212,6 @@ contains
     solution%memoryPath = create_mem_path(solutionname)
     allocate (solution%modellist)
     allocate (solution%exchangelist)
-    !
-    !allocate (matrix_impl)
-    !solution%system_matrix => matrix_impl
     !
     call solution%allocate_scalars()
     !
@@ -428,8 +427,6 @@ contains
     class(NumericalModelType), pointer :: mp => null()
     integer(I4B) :: i
     integer(I4B), allocatable, dimension(:) :: rowmaxnnz
-    class(SparseMatrixType), pointer :: matrix_impl
-    class(SeqVectorType), pointer :: vec_x_impl, vec_rhs_impl
     !
     ! -- calculate and set offsets
     do i = 1, this%modellist%Count()
@@ -442,16 +439,12 @@ contains
     ! -- Allocate and initialize solution arrays
     call this%allocate_arrays()
 
-    allocate (matrix_impl) ! TODO_MJR: hide this factory method or derived solution
-    this%system_matrix => matrix_impl
-    allocate (vec_x_impl)
-    this%vec_x => vec_x_impl
-    allocate (vec_rhs_impl)
-    this%vec_rhs => vec_rhs_impl
-
-    call this%vec_x%create(this%neq, 'X', this%memoryPath)
+    this%solver_mode = 'SEQ'
+    this%linear_solver => create_linear_solver(this%solver_mode)
+    this%system_matrix => this%linear_solver%create_matrix()
+    this%vec_x => this%system_matrix%create_vector(this%neq, 'X', this%memoryPath)
     this%x => this%vec_x%get_array()
-    call this%vec_rhs%create(this%neq, 'RHS', this%memoryPath)
+    this%vec_rhs => this%system_matrix%create_vector(this%neq, 'RHS', this%memoryPath)
     this%rhs => this%vec_rhs%get_array()
 
     !
@@ -2307,7 +2300,7 @@ contains
     ! -- The number of non-zero array values are now known so
     ! -- ia and ja can be created from sparse. then destroy sparse
     call this%sparse%sort()
-    call this%system_matrix%create(this%sparse, this%name)
+    call this%system_matrix%init(this%sparse, this%name)
     call this%sparse%destroy()
     !
     ! -- Create mapping arrays for each model.  Mapping assumes

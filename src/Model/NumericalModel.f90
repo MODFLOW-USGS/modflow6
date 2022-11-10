@@ -7,7 +7,7 @@ module NumericalModelModule
   use SparseModule, only: sparsematrix
   use TimeArraySeriesManagerModule, only: TimeArraySeriesManagerType
   use ListModule, only: ListType
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
   private

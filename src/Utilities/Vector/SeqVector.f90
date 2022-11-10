@@ -2,7 +2,7 @@ module SeqVectorModule
   use KindModule, only: I4B, DP
   use ConstantsModule, only: DZERO
   use MemoryManagerModule, only: mem_allocate, mem_deallocate
-  use VectorBaseModule  
+  use VectorBaseModule
   implicit none
   private
 
@@ -14,6 +14,7 @@ module SeqVectorModule
     procedure :: destroy => sqv_destroy
     procedure :: get_array => sqv_get_array
     procedure :: zero_entries => sqv_zero_entries
+    procedure :: print => sqv_print
   end type SeqVectorType
 
 contains
@@ -63,5 +64,12 @@ contains
     end do
 
   end subroutine sqv_zero_entries
+
+  subroutine sqv_print(this)
+    class(SeqVectorType) :: this !< this vector
+
+    write(*,*) this%array
+
+  end subroutine sqv_print
 
 end module SeqVectorModule

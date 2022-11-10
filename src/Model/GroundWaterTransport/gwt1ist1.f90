@@ -22,7 +22,7 @@ module GwtIstModule
   use GwtFmiModule, only: GwtFmiType
   use GwtMstModule, only: GwtMstType, get_zero_order_decay
   use OutputControlDataModule, only: OutputControlDataType
-  use MatrixModule
+  use MatrixBaseModule
   !
   implicit none
   !

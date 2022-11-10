@@ -14,7 +14,7 @@ module GwtGwtConnectionModule
   use ConnectionsModule, only: ConnectionsType
   use CellWithNbrsModule, only: GlobalCellType
   use DistributedDataModule
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
   private

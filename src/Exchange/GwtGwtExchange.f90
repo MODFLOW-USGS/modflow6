@@ -30,7 +30,7 @@ module GwtGwtExchangeModule
   use SimVariablesModule, only: errmsg
   use BlockParserModule, only: BlockParserType
   use TableModule, only: TableType, table_cr
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
 

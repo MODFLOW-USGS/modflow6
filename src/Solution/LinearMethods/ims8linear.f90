@@ -12,7 +12,7 @@ MODULE IMSLinearModule
                                  ims_base_scale, ims_base_pcu, &
                                  ims_base_residual
   use BlockParserModule, only: BlockParserType
-  use MatrixModule
+  use MatrixBaseModule
   use SparseMatrixModule
 
   IMPLICIT NONE

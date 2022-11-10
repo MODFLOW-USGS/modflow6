@@ -37,7 +37,7 @@ module SfrModule
                                            get_cross_section_area, &
                                            get_mannings_section
   use dag_module, only: dag
-  use MatrixModule
+  use MatrixBaseModule
   !
   implicit none
   !

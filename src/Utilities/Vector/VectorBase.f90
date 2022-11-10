@@ -10,6 +10,8 @@ module VectorBaseModule
     procedure(get_array_if), deferred :: get_array
 
     procedure(zero_entries_if), deferred :: zero_entries
+
+    procedure(print_if), deferred :: print
   end type VectorBaseType
 
   abstract interface
@@ -33,6 +35,10 @@ module VectorBaseModule
       import VectorBaseType
       class(VectorBaseType) :: this
     end subroutine
+    subroutine print_if(this)
+      import VectorBaseType
+      class(VectorBaseType) :: this
+    end subroutine print_if
   end interface
 
 end module VectorBaseModule

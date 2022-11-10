@@ -26,7 +26,7 @@ module UzfModule
   use SimModule, only: count_errors, store_error, store_error_unit
   use BlockParserModule, only: BlockParserType
   use TableModule, only: TableType, table_cr
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
 

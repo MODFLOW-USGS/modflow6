@@ -21,7 +21,7 @@ module GwfModule
   use GwfObsModule, only: GwfObsType, gwf_obs_cr
   use SimModule, only: count_errors, store_error
   use BaseModelModule, only: BaseModelType
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
 

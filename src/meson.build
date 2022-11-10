@@ -109,6 +109,8 @@ modflow_sources = files(
     'Solution' / 'LinearMethods' / 'ims8reordering.f90',
     'Solution' / 'LinearMethods' / 'ims8misc.f90',
     'Solution' / 'BaseSolution.f90',
+    'Solution' / 'LinearSolverBase.f90',
+    'Solution' / 'LinearSolverFactory.F90',
     'Solution' / 'NumericalSolution.f90',
     'Solution' / 'SolutionGroup.f90',
     'Timing' / 'ats.f90',
@@ -196,15 +198,17 @@ modflow_sources = files(
 )
 
 modflow_petsc_sources = files(
-  'Utilities' / 'Vector' / 'PetscVector.f90'
+  'Utilities' / 'Vector' / 'PetscVector.F90',
+  'Utilities' / 'Matrix' / 'PetscMatrix.F90',
+  'Solution' / 'PETSc' / 'PetscSolver.F90'
 )
 
-if false
+if with_petsc
   modflow_sources += modflow_petsc_sources
 endif
 
 mf6_external = static_library('mf6_external', external_libraries)
 
-mf6core = static_library('mf6core', modflow_sources, link_with: [mf6_external])
+mf6core = static_library('mf6core', modflow_sources,  dependencies: dependencies, link_with: [mf6_external])
 
-mf6exe = executable('mf6', 'mf6.f90', link_with: [mf6core], install: true)
+mf6exe = executable('mf6', 'mf6.f90', link_with: [mf6core],  dependencies: dependencies, install: true)

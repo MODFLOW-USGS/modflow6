@@ -13,7 +13,7 @@ module SpatialModelConnectionModule
   use InterfaceMapModule
   use DistributedDataModule
   use ListModule, only: ListType
-  use MatrixModule
+  use MatrixBaseModule
   use SparseMatrixModule
 
   implicit none
@@ -439,7 +439,7 @@ contains ! module procedures
     type(sparsematrix), intent(inout) :: sparse !< the sparse matrix with the cell connections
 
     call sparse%sort()
-    call this%matrix%create(sparse, this%memoryPath)
+    call this%matrix%init(sparse, this%memoryPath)
 
   end subroutine createCoefficientMatrix
 

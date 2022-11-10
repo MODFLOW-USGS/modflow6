@@ -18,7 +18,7 @@ module GwfNpfModule
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, &
                                  mem_deallocate, mem_setptr, &
                                  mem_reassignptr
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
 

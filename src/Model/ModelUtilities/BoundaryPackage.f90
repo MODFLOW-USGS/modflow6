@@ -31,7 +31,7 @@ module BndModule
   use BlockParserModule, only: BlockParserType
   use TableModule, only: TableType, table_cr
   use CharacterStringModule, only: CharacterStringType
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
 

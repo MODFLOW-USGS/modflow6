@@ -14,7 +14,7 @@ module BaseDisModule
   use MemoryHelperModule, only: create_mem_path
   use TdisModule, only: kstp, kper, pertim, totim, delt
   use TimeSeriesManagerModule, only: TimeSeriesManagerType
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
 

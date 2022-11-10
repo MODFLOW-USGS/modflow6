@@ -6,7 +6,7 @@ module GwtAdvModule
   use BaseDisModule, only: DisBaseType
   use GwtFmiModule, only: GwtFmiType
   use GwtAdvOptionsModule, only: GwtAdvOptionsType
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
   private

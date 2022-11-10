@@ -1,15 +1,17 @@
-module MatrixModule
+module MatrixBaseModule
   use ConstantsModule, only: LENMEMPATH
   use KindModule, only: I4B, DP
   use SparseModule, only: sparsematrix
+  use VectorBaseModule
   implicit none
   private
 
   type, public, abstract :: MatrixBaseType
     character(len=LENMEMPATH) :: memory_path
   contains
-    procedure(create_if), deferred :: create
+    procedure(init_if), deferred :: init
     procedure(destroy_if), deferred :: destroy
+    procedure(create_vector_if), deferred :: create_vector
 
     procedure(get_value_pos_if), deferred :: get_value_pos
     procedure(get_diag_value_if), deferred :: get_diag_value
@@ -26,11 +28,11 @@ module MatrixModule
     procedure(get_column_if), deferred :: get_column
     procedure(get_position_if), deferred :: get_position
     procedure(get_position_diag_if), deferred :: get_position_diag
-
+    
   end type MatrixBaseType
 
   abstract interface
-    subroutine create_if(this, sparse, mem_path)
+    subroutine init_if(this, sparse, mem_path)
       import MatrixBaseType, sparsematrix
       class(MatrixBaseType) :: this
       type(sparsematrix) :: sparse
@@ -40,6 +42,14 @@ module MatrixModule
       import MatrixBaseType
       class(MatrixBaseType) :: this
     end subroutine
+    function create_vector_if(this, n, name, mem_path) result(vec)
+      import MatrixBaseType, VectorBaseType, I4B
+      class(MatrixBaseType) :: this
+      integer(I4B) :: n
+      character(len=*) :: name
+      character(len=*) :: mem_path
+      class(VectorBaseType), pointer :: vec      
+    end function
     function get_value_pos_if(this, ipos) result(value)
       import MatrixBaseType, I4B, DP
       class(MatrixBaseType) :: this
@@ -104,10 +114,6 @@ module MatrixModule
       integer(I4B) :: ipos
       integer(I4B) :: icol
     end function
-
-    !> @brief Get position index for this (irow,icol) element
-    !! in the matrix for direct access with the other routines
-    !< Returns -1 when not found.
     function get_position_if(this, irow, icol) result(ipos)
       import MatrixBaseType, I4B
       class(MatrixBaseType) :: this
@@ -123,4 +129,4 @@ module MatrixModule
     end function
   end interface
 
-end module MatrixModule
+end module MatrixBaseModule

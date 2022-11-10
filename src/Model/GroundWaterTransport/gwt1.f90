@@ -25,7 +25,7 @@ module GwtModule
   use GwtOcModule, only: GwtOcType
   use GwtObsModule, only: GwtObsType
   use BudgetModule, only: BudgetType
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
 
