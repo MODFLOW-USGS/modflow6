@@ -368,9 +368,12 @@ contains
     if (this%invsc > 0) then
       !
       ! -- Reallocate arrays that store user-input values.
-      call mem_reallocate(this%k11input, this%dis%nodes, 'K11INPUT', this%memoryPath)
-      call mem_reallocate(this%k22input, this%dis%nodes, 'K22INPUT', this%memoryPath)
-      call mem_reallocate(this%k33input, this%dis%nodes, 'K33INPUT', this%memoryPath)
+      call mem_reallocate(this%k11input, this%dis%nodes, 'K11INPUT', &
+                          this%memoryPath)
+      call mem_reallocate(this%k22input, this%dis%nodes, 'K22INPUT', &
+                          this%memoryPath)
+      call mem_reallocate(this%k33input, this%dis%nodes, 'K33INPUT', &
+                          this%memoryPath)
       ! Allocate arrays that will store the original K values.  When VSC active,
       ! the current Kxx arrays carry the viscosity-adjusted K values.
       ! This approach leverages existing functionality that makes use of K.
