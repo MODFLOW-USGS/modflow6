@@ -366,10 +366,14 @@ contains
     !
     ! -- allocate arrays to store original user input in case TVK/VSC modify them
     if (this%invsc > 0) then
-      ! Need to allocate arrays that will store the original K values so
-      ! that the current K11 etc. carry the "real" K's that are updated by the
-      ! vscratio. This approach leverages existing functionality that makes use
-      ! of K.
+      !
+      ! -- Reallocate arrays that store user-input values.
+      call mem_reallocate(this%k11input, this%dis%nodes, 'K11INPUT', this%memoryPath)
+      call mem_reallocate(this%k22input, this%dis%nodes, 'K22INPUT', this%memoryPath)
+      call mem_reallocate(this%k33input, this%dis%nodes, 'K33INPUT', this%memoryPath)
+      ! Allocate arrays that will store the original K values.  When VSC active,
+      ! the current Kxx arrays carry the viscosity-adjusted K values.
+      ! This approach leverages existing functionality that makes use of K.
       call this%store_original_k_arrays(this%dis%nodes, this%dis%njas)
     end if
     !
@@ -1274,7 +1278,7 @@ contains
     return
   end subroutine allocate_scalars
 
-  !> @ brief Stores a backup copy of hydraulic conductivity when the VSC
+  !> @ brief Store backup copy of hydraulic conductivity when the VSC
   !!         package is activate
   !!
   !! The K arrays (K11, etc.) get multiplied by the viscosity ratio
@@ -1334,9 +1338,6 @@ contains
     ! -- Optional arrays dimensioned to full size initially
     call mem_allocate(this%k22, ncells, 'K22', this%memoryPath)
     call mem_allocate(this%k33, ncells, 'K33', this%memoryPath)
-    call mem_allocate(this%k11input, ncells, 'K11INPUT', this%memoryPath)
-    call mem_allocate(this%k22input, ncells, 'K22INPUT', this%memoryPath)
-    call mem_allocate(this%k33input, ncells, 'K33INPUT', this%memoryPath)
     call mem_allocate(this%wetdry, ncells, 'WETDRY', this%memoryPath)
     call mem_allocate(this%angle1, ncells, 'ANGLE1', this%memoryPath)
     call mem_allocate(this%angle2, ncells, 'ANGLE2', this%memoryPath)
@@ -1347,6 +1348,11 @@ contains
     call mem_allocate(this%nodedge, 0, 'NODEDGE', this%memoryPath)
     call mem_allocate(this%ihcedge, 0, 'IHCEDGE', this%memoryPath)
     call mem_allocate(this%propsedge, 0, 0, 'PROPSEDGE', this%memoryPath)
+    !
+    ! -- Optional arrays only needed when vsc package is active
+    call mem_allocate(this%k11input, 0, 'K11INPUT', this%memoryPath)
+    call mem_allocate(this%k22input, 0, 'K22INPUT', this%memoryPath)
+    call mem_allocate(this%k33input, 0, 'K33INPUT', this%memoryPath)
     !
     ! -- Specific discharge is (re-)allocated when nedges is known
     call mem_allocate(this%spdis, 3, 0, 'SPDIS', this%memoryPath)
