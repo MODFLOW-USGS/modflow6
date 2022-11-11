@@ -5,8 +5,9 @@ module LinearSolverFactory
   use SparseMatrixModule
   use VectorBaseModule
 
-#if defined(WITH_PETSC)
-  use PetscSolverModule
+  use ImsLinearSolverModule
+#if defined(__WITH_PETSC__)
+  use PetscSolverModule, only: create_petsc_solver
 #endif
 
   implicit none
@@ -25,10 +26,10 @@ contains
     solver => null()
 
     if (solver_mode == 'SEQ') then
-      solver => null() ! not yet...
+      solver => create_ims_solver()
       return
     else if (solver_mode == 'PAR') then
-#if defined(WITH_PETSC)
+#if defined(__WITH_PETSC__)
       solver => create_petsc_solver()
 #endif
     else

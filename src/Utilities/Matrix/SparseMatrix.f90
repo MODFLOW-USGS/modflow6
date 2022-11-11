@@ -36,6 +36,7 @@ module SparseMatrixModule
     procedure :: get_column => spm_get_column
     procedure :: get_position => spm_get_position
     procedure :: get_position_diag => spm_get_position_diag
+    procedure :: get_aij => spm_get_aij
 
     procedure :: allocate_scalars
     procedure :: allocate_arrays
@@ -252,5 +253,17 @@ contains
     end do
 
   end subroutine spm_zero_row_offdiag
+
+  subroutine spm_get_aij(this, ia, ja, amat)
+    class(SparseMatrixType) :: this
+    integer(I4B), dimension(:), pointer, contiguous :: ia
+    integer(I4B), dimension(:), pointer, contiguous :: ja
+    real(DP), dimension(:), pointer, contiguous :: amat
+
+    ia => this%ia
+    ja => this%ja
+    amat => this%amat
+
+  end subroutine spm_get_aij
 
 end module SparseMatrixModule

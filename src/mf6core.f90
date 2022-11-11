@@ -6,8 +6,10 @@
 !!
 !<
 module Mf6CoreModule
+#if defined(__WITH_PETSC__)
 #include <petsc/finclude/petscksp.h>
   use petscksp
+#endif
   use KindModule, only: I4B, LGP
   use ListsModule, only: basesolutionlist, solutiongrouplist, &
                          basemodellist, baseexchangelist, &
@@ -69,11 +71,13 @@ contains
   subroutine Mf6Initialize()
     ! -- modules
     use SimulationCreateModule, only: simulation_cr
-    PetscErrorCode :: ierr
+    integer :: ierr
     !
     ! -- initialize petsc/mpi
+#if defined(__WITH_PETSC__)
     call PetscInitialize(ierr)
     CHKERRQ(ierr)
+#endif
     !
     ! -- print banner and info to screen
     call printInfo()
@@ -138,7 +142,7 @@ contains
     class(BaseModelType), pointer :: mp => null()
     class(BaseExchangeType), pointer :: ep => null()
     class(SpatialModelConnectionType), pointer :: mc => null()
-    PetscErrorCode :: ierr
+    integer :: ierr
     !
     ! -- FINAL PROCESSING (FP)
     ! -- Final processing for each model
@@ -202,8 +206,10 @@ contains
     call distributed_data%destroy()
     !
     ! -- cleanup petsc/mpi
+#if defined(__WITH_PETSC__)
     call PetscFinalize(ierr)
     CHKERRQ(ierr)
+#endif
     !
     ! -- Write memory usage, elapsed time and terminate
     call mem_write_usage(iout)

@@ -13,7 +13,6 @@ MODULE IMSLinearModule
                                  ims_base_residual
   use BlockParserModule, only: BlockParserType
   use MatrixBaseModule
-  use SparseMatrixModule
 
   IMPLICIT NONE
   private
@@ -129,7 +128,6 @@ CONTAINS
     integer(I4B), INTENT(IN), OPTIONAL :: LFINDBLOCK !< flag indicating if the linear block is present (1) or missing (0)
 
     ! -- local variables
-    class(SparseMatrixType), pointer :: sparse_matrix => null()
     LOGICAL :: lreaddata
     character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: warnmsg
@@ -144,11 +142,6 @@ CONTAINS
     integer(I4B) :: ijw
     integer(I4B) :: iwlu
     integer(I4B) :: iwk
-    !
-    select type (matrix)
-    class is (SparseMatrixType)
-      sparse_matrix => matrix
-    end select
     !
     ! -- SET LREADDATA
     IF (PRESENT(LFINDBLOCK)) THEN
@@ -167,10 +160,9 @@ CONTAINS
     ! -- SET POINTERS TO SOLUTION STORAGE
     this%IPRIMS => IPRIMS
     this%NEQ => NEQ
-    this%NJA => sparse_matrix%nja
-    this%IA => sparse_matrix%ia
-    this%JA => sparse_matrix%ja
-    this%AMAT => sparse_matrix%amat
+    call matrix%get_aij(this%IA, this%JA, this%AMAT)    
+    call mem_allocate(this%NJA, 'NJA', this%memoryPath)
+    this%NJA = size(this%AMAT)
     this%RHS => RHS
     this%X => X
     !
@@ -780,6 +772,7 @@ CONTAINS
     call mem_deallocate(this%njlu)
     call mem_deallocate(this%njw)
     call mem_deallocate(this%nwlu)
+    call mem_deallocate(this%NJA)
     !
     ! -- nullify pointers
     nullify (this%iprims)

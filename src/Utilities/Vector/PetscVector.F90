@@ -8,7 +8,7 @@ module PetscVectorModule
   private
 
   type, public, extends(VectorBaseType) :: PetscVectorType
-    real(DP), dimension(:), pointer, contiguous :: array
+    real(DP), dimension(:), pointer, contiguous :: array => null()
     Vec :: vec_impl
   contains
     procedure :: create => petsc_vec_create

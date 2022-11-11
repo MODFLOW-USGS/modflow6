@@ -1,14 +1,21 @@
-module PetscMatrixModule  
+module PetscMatrixModule
+#include <petsc/finclude/petscksp.h>
+  use petscksp
   use KindModule, only: I4B, DP
   use SparseModule, only: sparsematrix
+  use MemoryManagerModule, only: mem_allocate, mem_deallocate
   use MatrixBaseModule
+  use SparseMatrixModule
   use VectorBaseModule
   use PetscVectorModule
   implicit none
   private
 
   type, public, extends(MatrixBaseType) :: PetscMatrixType
-
+    Mat :: petsc_mat_impl
+    integer(I4B), dimension(:), pointer, contiguous :: ia_petsc
+    integer(I4B), dimension(:), pointer, contiguous :: ja_petsc
+    class(SparseMatrixType), pointer :: spm_impl
   contains
     procedure :: init => petsc_mat_init
     procedure :: destroy => petsc_mat_destroy
@@ -29,6 +36,9 @@ module PetscMatrixModule
     procedure :: get_column => petsc_mat_get_column
     procedure :: get_position => petsc_mat_get_position
     procedure :: get_position_diag => petsc_mat_get_position_diag
+
+    procedure :: get_aij => petsc_mat_get_aij
+
   end type PetscMatrixType
 
 contains
@@ -38,18 +48,40 @@ contains
     type(sparsematrix) :: sparse
     character(len=*) :: mem_path
     ! local
-    integer(I4B) :: ierror
+    PetscErrorCode :: ierr
 
     this%memory_path = mem_path
 
-    ! ... TODO_MJR
+    allocate (this%spm_impl)
+    call this%spm_impl%init(sparse, mem_path)
 
-    call this%zero_entries()
+    allocate (this%ia_petsc(size(this%spm_impl%ia)))
+    allocate (this%ja_petsc(size(this%spm_impl%ja)))
+    this%ia_petsc = this%spm_impl%ia - 1
+    this%ja_petsc = this%spm_impl%ja - 1
+
+    call MatCreateSeqAIJWithArrays(PETSC_COMM_WORLD, &
+                                   this%spm_impl%nrow, this%spm_impl%ncol, &
+                                   this%ia_petsc, this%ja_petsc, &
+                                   this%spm_impl%amat, this%petsc_mat_impl, &
+                                   ierr)
+    CHKERRQ(ierr)
 
   end subroutine petsc_mat_init
 
   subroutine petsc_mat_destroy(this)
     class(PetscMatrixType) :: this
+    ! local
+    PetscErrorCode :: ierr
+
+    call this%spm_impl%destroy()
+    deallocate (this%spm_impl)
+
+    deallocate (this%ia_petsc)
+    deallocate (this%ja_petsc)
+
+    call MatDestroy(this%petsc_mat_impl, ierr)
+    CHKERRQ(ierr)
 
   end subroutine petsc_mat_destroy
 
@@ -73,12 +105,16 @@ contains
     integer(I4B) :: ipos
     real(DP) :: value
 
+    value = this%spm_impl%get_value_pos(ipos)
+
   end function petsc_mat_get_value_pos
 
   function petsc_mat_get_diag_value(this, irow) result(diag_value)
     class(PetscMatrixType) :: this
     integer(I4B) :: irow
     real(DP) :: diag_value
+
+    diag_value = this%spm_impl%get_diag_value(irow)
 
   end function petsc_mat_get_diag_value
 
@@ -87,12 +123,16 @@ contains
     integer(I4B) :: irow
     real(DP) :: diag_value
 
+    call this%spm_impl%set_diag_value(irow, diag_value)
+
   end subroutine petsc_mat_set_diag_value
 
   subroutine petsc_mat_set_value_pos(this, ipos, value)
     class(PetscMatrixType) :: this
     integer(I4B) :: ipos
     real(DP) :: value
+
+    call this%spm_impl%set_value_pos(ipos, value)
 
   end subroutine petsc_mat_set_value_pos
 
@@ -101,12 +141,16 @@ contains
     integer(I4B) :: ipos
     real(DP) :: value
 
+    call this%spm_impl%add_value_pos(ipos, value)
+
   end subroutine petsc_mat_add_value_pos
 
   subroutine petsc_mat_add_diag_value(this, irow, value)
     class(PetscMatrixType) :: this
     integer(I4B) :: irow
     real(DP) :: value
+
+    call this%spm_impl%add_diag_value(irow, value)
 
   end subroutine petsc_mat_add_diag_value
 
@@ -115,6 +159,8 @@ contains
     integer(I4B) :: irow
     integer(I4B) :: first_col_pos
 
+    first_col_pos = this%spm_impl%get_first_col_pos(irow)
+
   end function petsc_mat_get_first_col_pos
 
   function petsc_mat_get_last_col_pos(this, irow) result(last_col_pos)
@@ -122,12 +168,16 @@ contains
     integer(I4B) :: irow
     integer(I4B) :: last_col_pos
 
+    last_col_pos = this%spm_impl%get_last_col_pos(irow)
+
   end function petsc_mat_get_last_col_pos
 
   function petsc_mat_get_column(this, ipos) result(icol)
     class(PetscMatrixType) :: this
     integer(I4B) :: ipos
     integer(I4B) :: icol
+
+    icol = this%spm_impl%get_column(ipos)
 
   end function petsc_mat_get_column
 
@@ -141,6 +191,8 @@ contains
     integer(I4B) :: icol
     integer(I4B) :: ipos
 
+    ipos = this%spm_impl%get_position(irow, icol)
+
   end function petsc_mat_get_position
 
   function petsc_mat_get_position_diag(this, irow) result(ipos_diag)
@@ -148,14 +200,16 @@ contains
     integer(I4B) :: irow
     integer(I4B) :: ipos_diag
 
+    ipos_diag = this%spm_impl%get_position_diag(irow)
+
   end function petsc_mat_get_position_diag
 
   !> @brief Set all entries in the matrix to zero
   !<
   subroutine petsc_mat_zero_entries(this)
     class(PetscMatrixType) :: this
-    ! local
-    integer(I4B) :: i
+
+    call this%spm_impl%zero_entries()
 
   end subroutine petsc_mat_zero_entries
 
@@ -165,6 +219,20 @@ contains
     class(PetscMatrixType) :: this
     integer(I4B) :: irow
 
+    call this%spm_impl%zero_row_offdiag(irow)
+
   end subroutine petsc_mat_zero_row_offdiag
+
+  subroutine petsc_mat_get_aij(this, ia, ja, amat)
+    class(PetscMatrixType) :: this
+    integer(I4B), dimension(:), pointer, contiguous :: ia
+    integer(I4B), dimension(:), pointer, contiguous :: ja
+    real(DP), dimension(:), pointer, contiguous :: amat
+
+    ia => this%spm_impl%ia
+    ja => this%spm_impl%ja
+    amat => this%spm_impl%amat
+
+  end subroutine petsc_mat_get_aij
 
 end module PetscMatrixModule

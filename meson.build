@@ -87,20 +87,20 @@ elif fc_id == 'intel'
   link_args += '-static-intel'
 endif
 
-add_project_arguments(fc.get_supported_arguments(compile_args), language: 'fortran')
-add_project_link_arguments(fc.get_supported_arguments(link_args), language: 'fortran')
-
 mpi = dependency('mpi', language : 'fortran', required : false)
 petsc = dependency('PETSc', required : false)
 
 dependencies = [  ]
 if petsc.found()
-  compile_args += '-DWITH_PETSC'
+  compile_args += '-D__WITH_PETSC__'
   with_petsc = true
   dependencies = [ petsc, mpi ]
 else
   with_petsc = false
 endif
+
+add_project_arguments(fc.get_supported_arguments(compile_args), language: 'fortran')
+add_project_link_arguments(fc.get_supported_arguments(link_args), language: 'fortran')
 
 subdir('src')
 subdir('srcbmi')

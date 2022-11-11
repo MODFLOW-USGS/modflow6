@@ -1,5 +1,6 @@
 module ImsLinearSolverModule
   use LinearSolverBaseModule
+  use MatrixBaseModule
   use SparseMatrixModule
   implicit none
   private

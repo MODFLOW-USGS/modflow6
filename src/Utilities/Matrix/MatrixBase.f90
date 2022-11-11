@@ -28,6 +28,8 @@ module MatrixBaseModule
     procedure(get_column_if), deferred :: get_column
     procedure(get_position_if), deferred :: get_position
     procedure(get_position_diag_if), deferred :: get_position_diag
+
+    procedure(get_aij_if), deferred :: get_aij
     
   end type MatrixBaseType
 
@@ -127,6 +129,13 @@ module MatrixBaseModule
       integer(I4B) :: irow
       integer(I4B) :: ipos_diag
     end function
+    subroutine get_aij_if(this, ia, ja, amat)
+      import MatrixBaseType, I4B, DP
+      class(MatrixBaseType) :: this
+      integer(I4B), dimension(:), pointer, contiguous :: ia
+      integer(I4B), dimension(:), pointer, contiguous :: ja
+      real(DP), dimension(:), pointer, contiguous :: amat
+    end subroutine
   end interface
 
 end module MatrixBaseModule

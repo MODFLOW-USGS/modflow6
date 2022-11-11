@@ -108,6 +108,7 @@ modflow_sources = files(
     'Solution' / 'LinearMethods' / 'ims8linear.f90',
     'Solution' / 'LinearMethods' / 'ims8reordering.f90',
     'Solution' / 'LinearMethods' / 'ims8misc.f90',
+    'Solution' / 'LinearMethods' / 'ImsLinearSolver.f90',
     'Solution' / 'BaseSolution.f90',
     'Solution' / 'LinearSolverBase.f90',
     'Solution' / 'LinearSolverFactory.F90',
