@@ -313,6 +313,22 @@ def eval_results(sim):
     budobj = flopy.utils.CellBudgetFile(fname, precision="double")
     outbud = budobj.get_data(text="    FLOW-JA-FACE")[-1].squeeze()
 
+    # Establish known answer for the "with viscosity" variant:
+    stored_ans = np.array(
+        [
+            [4, 5, 131.03196884892344],
+            [14, 15, 133.1834658429856],
+            [24, 25, 139.31716925610493],
+            [34, 35, 156.14497435040056],
+            [44, 45, 209.1055337693415],
+            [54, 55, 36.91267872240113],
+            [64, 65, 46.16474722642168],
+            [74, 75, 51.2708505192076],
+            [84, 85, 54.04369740428511],
+            [94, 95, 55.27469944201896],
+        ]
+    )
+
     # Look at flow entering the left face for the cells in the 6th (1-based) column
     cells = [gwf.modelgrid.get_node([(0, i, 5)])[0] for i in np.arange(nrow)]
 
@@ -327,73 +343,38 @@ def eval_results(sim):
 
     if sim.idxsim == 0:
         no_vsc_bud_last = np.array(vals_to_store)
-        np.savetxt(
-            os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod1reslt.txt"),
-            no_vsc_bud_last,
+
+        # Ensure with and without VSC simulations give nearly identical flow results
+        # for each cell-to-cell exchange between columns 5 and 6
+        assert np.allclose(
+            no_vsc_bud_last[:, 2], stored_ans[:, 2], atol=1e-3
+        ), (
+            "Flow in models "
+            + exdirs[0]
+            + " and the established answer should be approximately "
+            "equal, but are not."
         )
 
     elif sim.idxsim == 1:
         with_vsc_bud_last = np.array(vals_to_store)
-        np.savetxt(
-            os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod2reslt.txt"),
-            with_vsc_bud_last,
+
+        assert np.allclose(
+            with_vsc_bud_last[:, 2], stored_ans[:, 2], atol=1e-3
+        ), (
+            "Flow in models "
+            + exdirs[1]
+            + " and the established answer should be approximately "
+            "equal, but are not."
         )
 
     elif sim.idxsim == 2:
         no_vsc_low_k_bud_last = np.array(vals_to_store)
-        np.savetxt(
-            os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod3reslt.txt"),
-            no_vsc_low_k_bud_last,
-        )
-
-    elif sim.idxsim == 3:
-        with_vscoff_bud_last = np.array(vals_to_store)
-        np.savetxt(
-            os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod4reslt.txt"),
-            with_vscoff_bud_last,
-        )
-
-    # if all 4 models have run, check relative results
-    if sim.idxsim == 2:
-        f1 = os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod1reslt.txt")
-        if os.path.isfile(f1):
-            no_vsc_bud_last = np.loadtxt(f1)
-            os.remove(f1)
-
-        f2 = os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod2reslt.txt")
-        if os.path.isfile(f2):
-            with_vsc_bud_last = np.loadtxt(f2)
-            os.remove(f2)
-
-        f3 = os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod3reslt.txt")
-        if os.path.isfile(f3):
-            no_vsc_low_k_bud_last = np.loadtxt(f3)
-            os.remove(f3)
-
-        # model1_exit = no_vsc_bud_last[:, 2].sum()
-        # model2_exit = with_vsc_bud_last[:, 2].sum()
-        # model3_exit = no_vsc_low_k_bud_last[:, 2].sum()
-
-        # Ensure models 1 & 2 give nearly identical flow results
-        # for each cell-to-cell exchange between columns 5 and 6
-        assert np.allclose(
-            no_vsc_bud_last[:, 2], with_vsc_bud_last[:, 2], atol=1e-3
-        ), (
-            "Flow in models "
-            + exdirs[0]
-            + " and "
-            + exdirs[1]
-            + " should be approximately equal, but are not."
-        )
 
         # Ensure the cell-to-cell flow between columns 5 and 6 in model
-        # 3 is less than what's in model 2
-        assert np.less(
-            no_vsc_low_k_bud_last[:, 2], with_vsc_bud_last[:, 2]
-        ).all(), (
-            "Exit flow from model "
-            + exdirs[1]
-            + " should be greater than flow existing "
+        # 3 is less than what's in the "with viscosity" model
+        assert np.less(no_vsc_low_k_bud_last[:, 2], stored_ans[:, 2]).all(), (
+            "Exit flow from model the established answer "
+            "should be greater than flow existing "
             + exdirs[2]
             + ", but it is not."
         )

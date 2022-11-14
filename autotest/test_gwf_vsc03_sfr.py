@@ -458,44 +458,87 @@ def eval_results(sim):
     budobj = flopy.utils.CellBudgetFile(fname, precision="double")
     outbud = budobj.get_data(text="             GWF")
 
+    # Establish known answer:
+    stored_ans_up = np.array(
+        [
+            -381.07448455,
+            -380.78732368,
+            -380.49858508,
+            -380.20823421,
+            -379.91623521,
+            -379.62255085,
+            -379.32714247,
+            -379.02996987,
+            -378.73099123,
+            -378.43016302,
+        ]
+    )
+
+    stored_ans_dn = np.array(
+        [
+            87.34154005,
+            92.49173569,
+            98.11443969,
+            104.34176415,
+            111.36392723,
+            119.46886139,
+            129.12349417,
+            141.16795665,
+            157.38797791,
+            182.65575269,
+        ]
+    )
+
     if sim.idxsim == 0:
+        # convert np.array to list
         no_vsc_bud_last = np.array(outbud[-1].tolist())
-        np.savetxt(
-            os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod1reslt.txt"),
-            no_vsc_bud_last,
-        )
-
-    elif sim.idxsim == 1:
-        with_vsc_bud_last = np.array(outbud[-1].tolist())
-        np.savetxt(
-            os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod2reslt.txt"),
-            with_vsc_bud_last,
-        )
-
-    # if both models have run, check relative results
-    if sim.idxsim == 1:
-        f1 = os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod1reslt.txt")
-        if os.path.isfile(f1):
-            no_vsc_bud_last = np.loadtxt(f1)
-            os.remove(f1)
-
-        f2 = os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod2reslt.txt")
-        if os.path.isfile(f2):
-            with_vsc_bud_last = np.loadtxt(f2)
-            os.remove(f2)
 
         # sum up total losses and total gains in the first 10 reaches
         # and the last 10 reaches
         for i in np.arange(10):
             # upper reaches
-            assert abs(no_vsc_bud_last[i, 2]) > abs(
-                with_vsc_bud_last[i, 2]
-            ), "GW/SW not as expected in upper reaches of viscosity w/ sfr example"
+            assert np.allclose(
+                abs(no_vsc_bud_last[i, 2]), abs(stored_ans_up[i]), atol=1e-4
+            ), (
+                "GW/SW not as expected in upper reaches of viscosity test "
+                "problem that uses SFR.  This test keeps viscosity inactive "
+                "prior to activating VSC Package in next variant of this test "
+                "problem."
+            )
 
             # lower reaches
-            assert abs(no_vsc_bud_last[-(i + 1), 2]) < abs(
+            assert np.allclose(
+                abs(no_vsc_bud_last[-(i + 1), 2]),
+                abs(stored_ans_dn[-(i + 1)]),
+                atol=1e-4,
+            ), (
+                "GW/SW not as expected in lower reaches of viscosity test "
+                "problem that uses SFR.  This test keeps viscosity inactive "
+                "prior to activating VSC Package in next variant of this test "
+                " problem."
+            )
+
+    elif sim.idxsim == 1:
+        with_vsc_bud_last = np.array(outbud[-1].tolist())
+
+        # sum up total losses and total gains in the first 10 reaches
+        # and the last 10 reaches
+        for i in np.arange(10):
+            # upper reaches
+            assert abs(stored_ans_up[i]) > abs(with_vsc_bud_last[i, 2]), (
+                "GW/SW not as expected in upper reaches of viscosity test "
+                "problem that uses SFR.  This test activates the VSC package that "
+                "should elicit a known relative change in the GW/SW exchange"
+            )
+
+            # lower reaches
+            assert abs(stored_ans_dn[-(i + 1)]) < abs(
                 with_vsc_bud_last[-(i + 1), 2]
-            ), "GW/SW not as expected in lower reaches of viscosity w/ sfr example"
+            ), (
+                "GW/SW not as expected in lower reaches of viscosity test "
+                "problem that uses SFR.  This test activates the VSC package that "
+                "should elicit a known relative change in the GW/SW exchange"
+            )
 
 
 # - No need to change any code below

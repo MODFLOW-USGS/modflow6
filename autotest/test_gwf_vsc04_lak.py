@@ -475,7 +475,7 @@ def build_model(idx, dir):
     )
 
     # pull in the tabfile defining the lake stage, vol, & surface area
-    fname = os.path.join("data", "vsc04-laktab", "stg-vol-surfarea.dat")
+    fname = os.path.join("data", "vsc04-laktab", "stg-vol-surfarea.csv")
     tabinput = []
     with open(fname, "r") as f:
         # peel off the hdr line
@@ -640,55 +640,133 @@ def eval_results(sim):
     budobj = flopy.utils.CellBudgetFile(fname, precision="double")
     outbud = budobj.get_data(text="             GWF")
 
+    # Establish known answer:
+    stored_ans = np.array(
+        [
+            [1.0, 9.20e1, 7.34424130e-01, 1.15181189e06],
+            [1.0, 1.08e2, 2.44117249e00, 1.15181189e06],
+            [1.0, 3.98e2, 2.19216490e01, 1.15181189e06],
+            [1.0, 9.30e1, -6.78268488e-02, 1.15181189e06],
+            [1.0, 3.99e2, 3.17042406e-01, 1.15181189e06],
+            [1.0, 9.40e1, -7.47709994e-01, 1.15181189e06],
+            [1.0, 4.00e2, -6.88938281e00, 1.15181189e06],
+            [1.0, 9.50e1, -1.51336530e00, 1.15181189e06],
+            [1.0, 4.01e2, -1.57614834e01, 1.15181189e06],
+            [1.0, 9.60e1, -2.54095715e00, 1.15181189e06],
+            [1.0, 1.14e2, -3.95961161e00, 1.15181189e06],
+            [1.0, 4.02e2, -5.60853100e01, 1.15181189e06],
+            [1.0, 1.25e2, 2.35138538e00, 1.15181189e06],
+            [1.0, 4.15e2, 1.69275311e01, 1.15181189e06],
+            [1.0, 1.31e2, -3.66648779e00, 1.15181189e06],
+            [1.0, 4.19e2, -3.45225854e01, 1.15181189e06],
+            [1.0, 1.42e2, 2.32550672e00, 1.15181189e06],
+            [1.0, 4.32e2, 1.65405908e01, 1.15181189e06],
+            [1.0, 1.48e2, -3.58087615e00, 1.15181189e06],
+            [1.0, 4.36e2, -3.27154545e01, 1.15181189e06],
+            [1.0, 1.59e2, 2.35138505e00, 1.15181189e06],
+            [1.0, 4.49e2, 1.69275277e01, 1.15181189e06],
+            [1.0, 1.65e2, -3.66648777e00, 1.15181189e06],
+            [1.0, 4.53e2, -3.45225840e01, 1.15181189e06],
+            [1.0, 1.76e2, 2.44117266e00, 1.15181189e06],
+            [1.0, 1.94e2, 7.34424819e-01, 1.15181189e06],
+            [1.0, 4.66e2, 2.19216459e01, 1.15181189e06],
+            [1.0, 1.95e2, -6.78264346e-02, 1.15181189e06],
+            [1.0, 4.67e2, 3.17038149e-01, 1.15181189e06],
+            [1.0, 1.96e2, -7.47709250e-01, 1.15181189e06],
+            [1.0, 4.68e2, -6.88938656e00, 1.15181189e06],
+            [1.0, 1.97e2, -1.51336458e00, 1.15181189e06],
+            [1.0, 4.69e2, -1.57614826e01, 1.15181189e06],
+            [1.0, 1.82e2, -3.95961151e00, 1.15181189e06],
+            [1.0, 1.98e2, -2.54095654e00, 1.15181189e06],
+            [1.0, 4.70e2, -5.60853022e01, 1.15181189e06],
+            [1.0, 3.99e2, 4.03508517e-03, 1.15181189e06],
+            [1.0, 4.15e2, 2.15441304e-01, 1.15181189e06],
+            [1.0, 7.05e2, 8.25215117e-01, 1.15181189e06],
+            [1.0, 4.00e2, -8.76830539e-02, 1.15181189e06],
+            [1.0, 7.06e2, -3.90793309e-01, 1.15181189e06],
+            [1.0, 4.01e2, -2.00600698e-01, 1.15181189e06],
+            [1.0, 4.19e2, -4.39378360e-01, 1.15181189e06],
+            [1.0, 7.07e2, -2.43955302e00, 1.15181189e06],
+            [1.0, 4.32e2, 2.10516610e-01, 1.15181189e06],
+            [1.0, 7.22e2, 8.37390920e-01, 1.15181189e06],
+            [1.0, 7.23e2, -6.85716153e-02, 1.15181189e06],
+            [1.0, 4.36e2, -4.16378511e-01, 1.15181189e06],
+            [1.0, 7.24e2, -1.73090130e00, 1.15181189e06],
+            [1.0, 4.49e2, 2.15441262e-01, 1.15181189e06],
+            [1.0, 4.67e2, 4.03503099e-03, 1.15181189e06],
+            [1.0, 7.39e2, 8.25212943e-01, 1.15181189e06],
+            [1.0, 4.68e2, -8.76831016e-02, 1.15181189e06],
+            [1.0, 7.40e2, -3.90795105e-01, 1.15181189e06],
+            [1.0, 4.53e2, -4.39378341e-01, 1.15181189e06],
+            [1.0, 4.69e2, -2.00600688e-01, 1.15181189e06],
+            [1.0, 7.41e2, -2.43955388e00, 1.15181189e06],
+        ]
+    )
+
+    # talley some flows on the left and right sides of the lake for comparison
+    # test
+    left_chk_ans = []
+    right_chk_ans = []
+    left_chk_no_vsc = []
+    right_chk_no_vsc = []
+    left_chk_with_vsc = []
+    right_chk_with_vsc = []
+
     if sim.idxsim == 0:
         no_vsc_bud_last = np.array(outbud[-1].tolist())
-        np.savetxt(
-            os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod1reslt.txt"),
-            no_vsc_bud_last,
-        )
-
-    elif sim.idxsim == 1:
-        with_vsc_bud_last = np.array(outbud[-1].tolist())
-        np.savetxt(
-            os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod2reslt.txt"),
-            with_vsc_bud_last,
-        )
-
-    # if both models have run, check relative results
-    if sim.idxsim == 1:
-        f1 = os.path.join(os.path.dirname(exdirs[0]), "mod1reslt.txt")
-        if os.path.isfile(f1):
-            no_vsc_bud_last = np.loadtxt(f1)
-            os.remove(f1)
-
-        f2 = os.path.join(os.path.dirname(exdirs[1]), "mod2reslt.txt")
-        if os.path.isfile(f2):
-            with_vsc_bud_last = np.loadtxt(f2)
-            os.remove(f2)
-
-        # talley some flows on the left and right sides of the lake for comparison
-        # test
         no_vsc_bud_np = np.array(no_vsc_bud_last.tolist())
-        with_vsc_bud_np = np.array(with_vsc_bud_last.tolist())
 
-        left_chk_no_vsc = []
-        right_chk_no_vsc = []
-        left_chk_with_vsc = []
-        right_chk_with_vsc = []
-
-        for idx in np.arange(no_vsc_bud_np.shape[0]):
+        for idx in np.arange(stored_ans.shape[0]):
             k, i, j = lak_lkup_dict[idx]
 
             # left side of lake
             if j < 7:
-                if no_vsc_bud_np[idx, 2] > 0 and with_vsc_bud_np[idx, 2] > 0:
+                if no_vsc_bud_np[idx, 2] > 0 and stored_ans[idx, 2] > 0:
                     left_chk_no_vsc.append(no_vsc_bud_np[idx, 2])
+                    left_chk_ans.append(stored_ans[idx, 2])
+
+            # right side of lake
+            if j > 9:
+                if no_vsc_bud_np[idx, 2] < 0 and stored_ans[idx, 2] < 0:
+                    right_chk_no_vsc.append(no_vsc_bud_np[idx, 2])
+                    right_chk_ans.append(stored_ans[idx, 2])
+
+        # Check that all the flows entering the lak in the 'with vsc' model are greater
+        # than their 'no vsc' counterpart
+        assert np.allclose(
+            np.array(left_chk_ans), np.array(left_chk_no_vsc), atol=1e-3
+        ), (
+            "Lake inflow in no-VSC LAK simulation do not match established "
+            "solution."
+        )
+
+        # Check that all the flows leaving the lak in the 'with vsc' model are less
+        # than their 'no vsc' counterpart (keep in mind values are negative, which
+        # affects how the comparison is made)
+        assert np.allclose(
+            np.array(right_chk_ans), np.array(right_chk_no_vsc), atol=1e-3
+        ), (
+            "Lake outflow in no-VSC LAK simulation do not match established "
+            "solution."
+        )
+
+    elif sim.idxsim == 1:
+        with_vsc_bud_last = np.array(outbud[-1].tolist())
+        with_vsc_bud_np = np.array(with_vsc_bud_last.tolist())
+
+        for idx in np.arange(stored_ans.shape[0]):
+            k, i, j = lak_lkup_dict[idx]
+
+            # left side of lake
+            if j < 7:
+                if stored_ans[idx, 2] > 0 and with_vsc_bud_np[idx, 2] > 0:
+                    left_chk_no_vsc.append(stored_ans[idx, 2])
                     left_chk_with_vsc.append(with_vsc_bud_np[idx, 2])
 
             # right side of lake
             if j > 9:
-                if no_vsc_bud_np[idx, 2] < 0 and with_vsc_bud_np[idx, 2] < 0:
-                    right_chk_no_vsc.append(no_vsc_bud_np[idx, 2])
+                if stored_ans[idx, 2] < 0 and with_vsc_bud_np[idx, 2] < 0:
+                    right_chk_no_vsc.append(stored_ans[idx, 2])
                     right_chk_with_vsc.append(with_vsc_bud_np[idx, 2])
 
         # Check that all the flows entering the lak in the 'with vsc' model are greater

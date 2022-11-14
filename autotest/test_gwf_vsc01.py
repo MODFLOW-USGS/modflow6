@@ -277,62 +277,48 @@ def eval_results(sim):
     budobj = flopy.utils.CellBudgetFile(fname, precision="double")
     outbud = budobj.get_data(text="             GHB")
 
+    # Establish known answer:
+    stored_ans = -151.63446156218242
+
     if sim.idxsim == 0:
         no_vsc_bud_last = np.array(outbud[-1].tolist())
-        np.savetxt(
-            os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod1reslt.txt"),
-            no_vsc_bud_last,
+        sim_val_1 = no_vsc_bud_last[:, 2].sum()
+
+        # Ensure latest simulated value hasn't changed from stored answer
+        assert np.allclose(
+            sim_val_1, stored_ans, atol=1e-4
+        ), "Flow in the " + exdirs[
+            0
+        ] + " test problem (doesn't simulate " "viscosity) has changed,\n should be " + str(
+            stored_ans
+        ) + " but instead is " + str(
+            sim_val_1
         )
 
     elif sim.idxsim == 1:
         with_vsc_bud_last = np.array(outbud[-1].tolist())
-        np.savetxt(
-            os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod2reslt.txt"),
-            with_vsc_bud_last,
+        sim_val_2 = with_vsc_bud_last[:, 2].sum()
+
+        # Ensure latest simulated value hasn't changed from stored answer
+        assert np.allclose(
+            sim_val_2, stored_ans, atol=1e-4
+        ), "Flow in the " + exdirs[
+            1
+        ] + " test problem (simulates " "viscosity) has changed,\n should be " + str(
+            stored_ans
+        ) + " but instead is " + str(
+            sim_val_2
         )
 
     elif sim.idxsim == 2:
         no_vsc_low_k_bud_last = np.array(outbud[-1].tolist())
-        np.savetxt(
-            os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod3reslt.txt"),
-            no_vsc_low_k_bud_last,
-        )
-
-    # if all 3 models have run, check relative results
-    if sim.idxsim == 2:
-        f1 = os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod1reslt.txt")
-        if os.path.isfile(f1):
-            no_vsc_bud_last = np.loadtxt(f1)
-            os.remove(f1)
-
-        f2 = os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod2reslt.txt")
-        if os.path.isfile(f2):
-            with_vsc_bud_last = np.loadtxt(f2)
-            os.remove(f2)
-
-        f3 = os.path.join(os.path.dirname(exdirs[sim.idxsim]), "mod3reslt.txt")
-        if os.path.isfile(f3):
-            no_vsc_low_k_bud_last = np.loadtxt(f3)
-            os.remove(f3)
-
-        model1_exit = no_vsc_bud_last[:, 2].sum()
-        model2_exit = with_vsc_bud_last[:, 2].sum()
-        model3_exit = no_vsc_low_k_bud_last[:, 2].sum()
-
-        # Ensure models 1 & 2 give nearly identical results
-        assert np.allclose(model1_exit, model2_exit, atol=1e-3), (
-            "Flow in models "
-            + exdirs[0]
-            + " and "
-            + exdirs[1]
-            + " should be equal, but are not."
-        )
+        sim_val_3 = no_vsc_low_k_bud_last[:, 2].sum()
 
         # Ensure the flow leaving model 3 is less than what leaves model 2
-        assert abs(model2_exit) > abs(model3_exit), (
+        assert abs(stored_ans) > abs(sim_val_3), (
             "Exit flow from model "
             + exdirs[1]
-            + " should be greater than flow existing "
+            + " should be greater than flow exiting "
             + exdirs[2]
             + ", but it is not."
         )
