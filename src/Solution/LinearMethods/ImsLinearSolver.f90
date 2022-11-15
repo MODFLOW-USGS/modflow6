@@ -1,6 +1,8 @@
 module ImsLinearSolverModule
+  use KindModule, only: I4B
   use LinearSolverBaseModule
   use MatrixBaseModule
+  use VectorBaseModule
   use SparseMatrixModule
   implicit none
   private
@@ -10,7 +12,6 @@ module ImsLinearSolverModule
   type, public, extends(LinearSolverBaseType) :: ImsLinearSolverType
   contains
     procedure :: initialize => ims_initialize
-    procedure :: configure => ims_configure
     procedure :: solve => ims_solve
     procedure :: get_result => ims_get_result
     procedure :: destroy => ims_destroy
@@ -30,16 +31,17 @@ function create_ims_solver() result(solver)
 
 end function create_ims_solver
 
-subroutine ims_initialize(this)
+subroutine ims_initialize(this, matrix, cfg)
   class(ImsLinearSolverType) :: this
+  class(MatrixBaseType), pointer :: matrix
+  class(LinearSolverCfg) :: cfg
 end subroutine ims_initialize
 
-subroutine ims_configure(this)
+subroutine ims_solve(this, kiter, rhs, x)
   class(ImsLinearSolverType) :: this
-end subroutine ims_configure
-
-subroutine ims_solve(this)
-  class(ImsLinearSolverType) :: this
+  integer(I4B) :: kiter
+  class(VectorBaseType), pointer :: rhs
+  class(VectorBaseType), pointer :: x
 end subroutine ims_solve
 
 subroutine ims_get_result(this)

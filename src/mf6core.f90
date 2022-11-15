@@ -72,10 +72,11 @@ contains
     ! -- modules
     use SimulationCreateModule, only: simulation_cr
     integer :: ierr
+    character(len=*), parameter :: file = '/home/russcher/.petscrc'
     !
     ! -- initialize petsc/mpi
 #if defined(__WITH_PETSC__)
-    call PetscInitialize(ierr)
+    call PetscInitialize(file, ierr)
     CHKERRQ(ierr)
 #endif
     !

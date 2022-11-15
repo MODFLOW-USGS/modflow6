@@ -485,6 +485,7 @@ contains
     ! -- dummy variables
     class(NumericalSolutionType) :: this !< NumericalSolutionType instance
     ! -- local variables
+    type(LinearSolverCfg) :: lin_solver_cfg
     class(NumericalModelType), pointer :: mp => null()
     class(NumericalExchangeType), pointer :: cp => null()
     character(len=linelength) :: errmsg
@@ -495,7 +496,7 @@ contains
     integer(I4B) :: i
     integer(I4B) :: im
     integer(I4B) :: ifdparam, mxvl, npp
-    integer(I4B) :: imslinear
+    integer(I4B) :: ims_lin_type
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     integer(I4B) :: ival
@@ -869,20 +870,27 @@ contains
       WRITE (IOUT, *) '***IMS LINEAR SOLVER WILL BE USED***'
       call this%imslinear%imslinear_allocate(this%name, this%parser, IOUT, &
                                              this%iprims, this%mxiter, &
-                                             ifdparam, imslinear, &
+                                             ifdparam, ims_lin_type, &
                                              this%neq, this%system_matrix, &
                                              this%rhs, this%x, this%nitermax)
-      WRITE (IOUT, *)
-      if (imslinear .eq. 1) then
-        this%isymmetric = 1
-      end if
-      !
-      ! -- incorrect linear solver flag
+    !
+    ! -- incorrect linear solver flag
     ELSE
       WRITE (errmsg, '(a)') &
         'INCORRECT VALUE FOR LINEAR SOLUTION METHOD SPECIFIED.'
       call store_error(errmsg)
     END IF
+
+    if (this%solver_mode == 'PAR') then
+      this%linmeth = 2
+    end if
+    lin_solver_cfg%linear_accel_type = ims_lin_type
+    lin_solver_cfg%dvclose = this%imslinear%DVCLOSE
+    call this%linear_solver%initialize(this%system_matrix, lin_solver_cfg)
+
+    if (ims_lin_type .eq. 1) then
+      this%isymmetric = 1
+    end if
     !
     ! -- write message about matrix symmetry
     if (this%isymmetric == 1) then
@@ -2557,6 +2565,10 @@ contains
                                           this%convlocdv, this%convlocdr, &
                                           this%dvmax, this%drmax, &
                                           this%convdvmax, this%convdrmax)
+    else if (this%linmeth == 2) then
+      call this%linear_solver%solve(kiter, this%vec_rhs, this%vec_x)
+      in_iter = this%linear_solver%iteration_number
+      this%icnvg = this%linear_solver%is_converged
     end if
     !
     ! -- ptc finalize - set ratio of ptc value added to the diagonal and the

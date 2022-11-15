@@ -3,7 +3,7 @@ module SparseModule
 !of a matrix.  Module uses FORTRAN 2003 extensions to manage
 !the data structures in an object oriented fashion.
 
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, I4B, LGP
   implicit none
 
   type rowtype
@@ -213,18 +213,25 @@ contains
     return
   end subroutine insert
 
-  subroutine sort(this)
+  subroutine sort(this, with_csr)
     !sort the icolarray for each row, but do not include
     !the diagonal position in the sort so that it stays in front
     ! -- dummy
     class(sparsematrix), intent(inout) :: this
+    logical(LGP), optional :: with_csr
     ! -- local
-    integer(I4B) :: i, nval
+    integer(I4B) :: i, nval, start_idx
     ! -- code
+    start_idx = 2
+    if (present(with_csr)) then
+      ! CSR: don't put diagonal up front
+      start_idx = 1
+    end if
+
     do i = 1, this%nrow
       nval = this%row(i)%nnz
       call sortintarray(nval - 1, &
-                        this%row(i)%icolarray(2:nval))
+                        this%row(i)%icolarray(start_idx:nval))
     end do
     !
     ! -- return

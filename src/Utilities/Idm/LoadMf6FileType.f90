@@ -124,7 +124,8 @@ contains
         (mf6_input%p_block_dfns(iblock)%blockname == 'VERTICES' .or. &
          mf6_input%p_block_dfns(iblock)%blockname == 'CELL2D')) then
       call get_from_memorylist('NVERT', mf6_input%memoryPath, mt, found, .false.)
-      if (.not. found .or. mt%intsclr == 0) return
+      if (.not. found) return
+      if (mt%intsclr == 0) return
     end if
     !
     ! -- block open/close support
