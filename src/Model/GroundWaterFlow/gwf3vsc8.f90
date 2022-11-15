@@ -44,6 +44,7 @@ module GwfVscModule
     real(DP), dimension(:), pointer, contiguous :: ctemp => null() !< temporary array of size (nviscspec) to pass to calc_visc_x
     character(len=LENMODELNAME), dimension(:), allocatable :: cmodelname !< names of gwt (or gwe) models used in viscosity equation
     character(len=LENAUXNAME), dimension(:), allocatable :: cauxspeciesname !< names of aux columns used in viscosity equation
+    character(len=LENAUXNAME) :: name_temp_spec = 'TEMPERATURE'
     !
     ! -- Viscosity constants
     real(DP), pointer :: a2 => null() !< an empirical parameter specified by the user for calculating viscosity
@@ -1142,11 +1143,11 @@ contains
         call this%parser%GetStringCaps(this%cmodelname(iviscspec))
         call this%parser%GetStringCaps(this%cauxspeciesname(iviscspec))
         !
-        if (this%cauxspeciesname(iviscspec) == 'TEMPERATURE') then
+        if (this%cauxspeciesname(iviscspec) == this%name_temp_spec) then
           if (this%idxtmpr > 0) then
             write (errmsg, '(a)') 'More than one species in VSC input identified &
-              &as "TEMPERATURE".  Only one species may be designated as &
-              &"TEMPERATURE".'
+              &as '//trim(this%name_temp_spec)//'. Only one species may be &
+              &designated to represent temperature.'
             call store_error(errmsg)
           else
             this%idxtmpr = iviscspec
@@ -1403,6 +1404,10 @@ contains
                      'followed by FILEOUT'
             call store_error(errmsg)
           end if
+        case ('TEMPERATURE_SPECIES_NAME')
+          call this%parser%GetStringCaps(this%name_temp_spec)
+          write (this%iout, '(4x, a)') 'Temperature species name set to: '// &
+            trim(this%name_temp_spec)
         case ('THERMAL_FORMULATION')
           call this%parser%GetStringCaps(keyword2)
           if (trim(adjustl(keyword2)) == 'LINEAR') this%thermivisc = 1

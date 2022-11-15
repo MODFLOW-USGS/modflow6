@@ -10,6 +10,15 @@ description fluid reference viscosity used in the equation of state.  This value
 default_value 1.0
 
 block options
+name temperature_species_name
+type string
+shape
+reader urword
+optional true
+longname auxspeciesname that corresponds to temperature
+description string used to identify the auxspeciesname in PACKAGEDATA that corresponds to the temperature species.  There can be only one occurrence of this temperature species name in the PACKAGEDATA block or the program will terminate with an error.  This value has no effect if viscosity does not depend on temperature.
+
+block options
 name thermal_formulation
 type string
 shape
@@ -17,7 +26,7 @@ reader urword
 optional true
 valid linear nonlinear
 longname keyword to specify viscosity formulation for the temperature species
-description may be used for specifying which viscosity formulation to use for a species identified by the auxilary name TEMPERATURE. Can be either LINEAR or NONLINEAR. The LINEAR viscosity formulation is the default.
+description may be used for specifying which viscosity formulation to use for the temperature species. Can be either LINEAR or NONLINEAR. The LINEAR viscosity formulation is the default.
 
 block options
 name thermal_a2
@@ -131,7 +140,7 @@ tagged false
 in_record true
 reader urword
 longname slope of the line that defines the linear relationship between viscosity and temperature or between viscosity and concentration, depending on the type of species entered on each line.
-description real value that defines the slope of the line defining the linear relationship between viscosity and temperature or between viscosity and concentration, depending on the type of species entered on each line.  If the value of AUXSPECIESNAME entered on a line is TEMPERATURE, this value will be used when VISCOSITY\_FUNC is equal to LINEAR (the default) in the OPTIONS block.  When VISCOSITY\_FUNC is set to NONLINEAR, a value for DVISCDC must be specified though it is not used.
+description real value that defines the slope of the line defining the linear relationship between viscosity and temperature or between viscosity and concentration, depending on the type of species entered on each line.  If the value of AUXSPECIESNAME entered on a line corresponds to TEMPERATURE\_SPECIES\_NAME (in the OPTIONS block), this value will be used when VISCOSITY\_FUNC is equal to LINEAR (the default) in the OPTIONS block.  When VISCOSITY\_FUNC is set to NONLINEAR, a value for DVISCDC must be specified though it is not used.
 
 block packagedata
 name cviscref
@@ -141,7 +150,7 @@ tagged false
 in_record true
 reader urword
 longname reference temperature value or reference concentration value
-description real value that defines the reference temperature or reference concentration value used for this species in the viscosity equation of state.  If AUXSPECIESNAME entered on a line is TEMPERATURE, then CVISCREF refers to a reference temperature, otherwise it refers to a reference concentration.
+description real value that defines the reference temperature or reference concentration value used for this species in the viscosity equation of state.  If AUXSPECIESNAME entered on a line corresponds to TEMPERATURE\_SPECIES\_NAME (in the OPTIONS block), then CVISCREF refers to a reference temperature, otherwise it refers to a reference concentration.
 
 block packagedata
 name modelname
@@ -151,7 +160,7 @@ tagged false
 shape
 reader urword
 longname modelname
-description name of a GWT (or eventuallky a GWE) model used to simulate a species that will be used in the viscosity equation of state.  This name will have no effect if the simulation does not include a GWT model that corresponds to this GWF model.
+description name of a GWT model used to simulate a species that will be used in the viscosity equation of state.  This name will have no effect if the simulation does not include a GWT model that corresponds to this GWF model.
 
 block packagedata
 name auxspeciesname
