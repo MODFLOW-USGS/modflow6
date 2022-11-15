@@ -2,7 +2,7 @@ module SimulationCreateModule
 
   use KindModule, only: DP, I4B, LGP, write_kindinfo
   use ConstantsModule, only: LINELENGTH, LENMODELNAME, LENBIGLINE, DZERO
-  use SimVariablesModule, only: simfile, simlstfile, iout
+  use SimVariablesModule, only: simfile, simlstfile, iout, simulation_mode, own_rank, num_ranks
   use GenericUtilitiesModule, only: sim_message, write_centered
   use SimModule, only: store_error, count_errors, &
                        store_error_unit, MaxErrors
@@ -28,6 +28,7 @@ module SimulationCreateModule
 
   integer(I4B) :: inunit = 0
   character(len=LENMODELNAME), allocatable, dimension(:) :: modelname
+  character(len=LENMODELNAME), allocatable, dimension(:) :: global_modelname
   type(BlockParserType) :: parser
 
 contains
@@ -45,6 +46,9 @@ contains
     !
     ! -- Open simulation list file
     iout = getunit()
+    if (num_ranks > 1) then
+      write(simlstfile,'(a,i0,a)') 'mfsim.p', own_rank, '.lst'
+    end if
     call openfile(iout, 0, simlstfile, 'LIST', filstat_opt='REPLACE')
     !
     ! -- write simlstfile to stdout
@@ -69,6 +73,7 @@ contains
     !
     ! -- variables
     deallocate (modelname)
+    deallocate (global_modelname)
     !
     ! -- Return
     return
@@ -133,7 +138,7 @@ contains
   subroutine options_create()
     ! -- modules
     use MemoryManagerModule, only: mem_set_print_option
-    use SimVariablesModule, only: isimcontinue, isimcheck
+    use SimVariablesModule, only: isimcontinue, isimcheck, simulation_mode
     ! -- local
     integer(I4B) :: ierr
     integer(I4B) :: imax
@@ -173,6 +178,9 @@ contains
           call MaxErrors(imax)
           write (iout, '(4x, a, i0)') &
             'MAXIMUM NUMBER OF ERRORS THAT WILL BE STORED IS ', imax
+        case ('PARALLEL')
+          simulation_mode = 'PARALLEL'
+          write (iout, '(4x, a)') 'RUNNING SIMULATION IN PARALLEL MODE'
         case default
           write (errmsg, '(4x,a,a)') &
             '****ERROR. UNKNOWN SIMULATION OPTION: ', &
@@ -251,11 +259,12 @@ contains
     use GwfModule, only: gwf_cr
     use GwtModule, only: gwt_cr
     use ConstantsModule, only: LENMODELNAME
+    use SimVariablesModule, only: simulation_mode, num_ranks, own_rank
     ! -- dummy
     ! -- local
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
-    integer(I4B) :: im
+    integer(I4B) :: im, im_global
     character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: keyword
     character(len=LINELENGTH) :: fname, mname
@@ -267,21 +276,40 @@ contains
     if (isfound) then
       write (iout, '(/1x,a)') 'READING SIMULATION MODELS'
       im = 0
+      im_global = 0
       do
         call parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
-        call parser%GetStringCaps(keyword)
+        call parser%GetStringCaps(keyword)        
+        call parser%GetString(fname)
+        call parser%GetStringCaps(mname)
+
+        im_global = im_global + 1
+        call ExpandArray(global_modelname)
+        global_modelname(im_global) = mname
+
+        if (simulation_mode == 'PARALLEL') then
+          if (keyword /= 'GWF6') then
+            write (errmsg, '(4x,a,a)') &
+              '****ERROR. ONLY GWF SUPPORT IN PARALLEL MODE FOR NOW'
+            call store_error(errmsg)
+            call parser%StoreErrorUnit()
+          end if
+          if (im_global /= own_rank + 1) then
+            call add_dist_model(im_global)
+            cycle
+          end if
+        end if
+
         select case (keyword)
         case ('GWF6')
-          call parser%GetString(fname)
           call add_model(im, 'GWF6', mname)
           call gwf_cr(fname, im, modelname(im))
-          call add_dist_model(im)
+          call add_dist_model(im_global, im)
         case ('GWT6')
-          call parser%GetString(fname)
           call add_model(im, 'GWT6', mname)
           call gwt_cr(fname, im, modelname(im))
-          call add_dist_model(im)
+          call add_dist_model(im_global, im)
         case default
           write (errmsg, '(4x,a,a)') &
             '****ERROR. UNKNOWN SIMULATION MODEL: ', &
@@ -391,6 +419,7 @@ contains
     use BaseModelModule, only: BaseModelType
     use BaseExchangeModule, only: BaseExchangeType
     use NumericalSolutionModule, only: solution_create
+    use SimVariablesModule, only: simulation_mode
     ! -- dummy
     ! -- local
     type(SolutionGroupType), pointer :: sgp
@@ -485,6 +514,11 @@ contains
             ! -- Find the model id, and then get model
             mid = ifind(modelname, mname)
             if (mid <= 0) then
+              if (simulation_mode == 'PARALLEL') then
+                ! this is still ok
+                mid = ifind(global_modelname, mname)
+                if (mid > 0) cycle
+              end if
               write (errmsg, '(a,a)') 'Error.  Invalid modelname: ', &
                 trim(mname)
               call store_error(errmsg)
@@ -611,7 +645,6 @@ contains
     ! ------------------------------------------------------------------------------
     im = im + 1
     call expandarray(modelname)
-    call parser%GetStringCaps(mname)
     ilen = len_trim(mname)
     if (ilen > LENMODELNAME) then
       write (errmsg, '(4x,a,a)') &

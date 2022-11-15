@@ -45,25 +45,34 @@ module DistributedModelModule
 
 contains
 
-  subroutine add_dist_model(model_index)
-    integer :: model_index
+  subroutine add_dist_model(model_index, local_model_index)
+    integer(I4B) :: model_index
+    integer(I4B), optional :: local_model_index
     ! local
     class(NumericalModelType), pointer :: num_model
     class(DistributedModelType), pointer :: dist_model
 
-    num_model => GetNumericalModelFromList(basemodellist, model_index)
-
     allocate (dist_model)
-    call dist_model%create_local(num_model)
+
+    if (present(local_model_index)) then
+      num_model => GetNumericalModelFromList(basemodellist, local_model_index)
+      call dist_model%create_local(model_index, num_model)
+    else
+      call dist_model%create_remote(model_index)
+    end if
+    
     call AddDistModelToList(distmodellist, dist_model)
 
   end subroutine add_dist_model
 
-  subroutine create_local(this, model)
+  subroutine create_local(this, model_index, model)
     class(DistributedModelType) :: this
+    integer(I4B) :: model_index
     class(NumericalModelType), pointer :: model
 
     this%id = model%id
+    ! We should move to:
+    !this%id = model_index
     this%name = model%name
     this%model => model
 

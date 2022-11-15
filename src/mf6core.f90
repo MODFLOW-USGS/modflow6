@@ -9,6 +9,7 @@ module Mf6CoreModule
 #if defined(__WITH_PETSC__)
 #include <petsc/finclude/petscksp.h>
   use petscksp
+  use mpi
 #endif
   use KindModule, only: I4B, LGP
   use ListsModule, only: basesolutionlist, solutiongrouplist, &
@@ -71,6 +72,7 @@ contains
   subroutine Mf6Initialize()
     ! -- modules
     use SimulationCreateModule, only: simulation_cr
+    use SimVariablesModule, only: own_rank, num_ranks
     integer :: ierr
     character(len=*), parameter :: file = '/home/russcher/.petscrc'
     !
@@ -78,6 +80,9 @@ contains
 #if defined(__WITH_PETSC__)
     call PetscInitialize(file, ierr)
     CHKERRQ(ierr)
+
+    call MPI_Comm_size(PETSC_COMM_WORLD, num_ranks, ierr)
+    call MPI_Comm_rank(PETSC_COMM_WORLD, own_rank, ierr)
 #endif
     !
     ! -- print banner and info to screen
