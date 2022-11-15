@@ -190,6 +190,9 @@ module LakModule
     integer(I4B), pointer :: idense
     real(DP), dimension(:, :), pointer, contiguous :: denseterms => null()
     !
+    ! -- viscosity variables
+    real(DP), dimension(:, :), pointer, contiguous :: viscratios => null() !< viscosity ratios (1: lak vsc ratio; 2: gwf vsc ratio)
+    !
     ! -- type bound procedures
   contains
     procedure :: lak_allocate_scalars
@@ -267,6 +270,8 @@ module LakModule
     ! -- density
     procedure :: lak_activate_density
     procedure, private :: lak_calculate_density_exchange
+    ! -- viscosity
+    procedure :: lak_activate_viscosity
   end type LakType
 
 contains
@@ -375,6 +380,7 @@ contains
     this%bditems = 11
     this%cbcauxitems = 1
     this%idense = 0
+    this%ivsc = 0
     !
     ! -- return
     return
@@ -444,6 +450,9 @@ contains
     !
     ! -- allocate denseterms to size 0
     call mem_allocate(this%denseterms, 3, 0, 'DENSETERMS', this%memoryPath)
+    !
+    ! -- allocate viscratios to size 0
+    call mem_allocate(this%viscratios, 2, 0, 'VISCRATIOS', this%memoryPath)
     !
     ! -- return
     return
@@ -2338,9 +2347,11 @@ contains
     real(DP) :: botl
     real(DP) :: sat
     real(DP) :: wa
+    real(DP) :: vscratio
     ! -- formats
 ! ------------------------------------------------------------------------------
     cond = DZERO
+    vscratio = DONE
     topl = this%telev(iconn)
     botl = this%belev(iconn)
     call this%lak_calculate_cond_head(iconn, stage, head, vv)
@@ -2370,7 +2381,18 @@ contains
       end if
       sat = wa
     end if
-    cond = sat * this%satcond(iconn)
+    !
+    ! -- account for viscosity effects (if vsc active)
+    if (this%ivsc == 1) then
+      ! flow from lake to aquifer
+      if (stage > head) then
+        vscratio = this%viscratios(1, iconn)
+        ! flow from aquifer to lake
+      else
+        vscratio = this%viscratios(2, iconn)
+      end if
+    end if
+    cond = sat * this%satcond(iconn) * vscratio
     !
     ! -- return
     return
@@ -4451,6 +4473,7 @@ contains
     call mem_deallocate(this%qleak)
     call mem_deallocate(this%qsto)
     call mem_deallocate(this%denseterms)
+    call mem_deallocate(this%viscratios)
     !
     ! -- tables
     if (this%ntables > 0) then
@@ -6360,6 +6383,36 @@ contains
     ! -- return
     return
   end subroutine lak_activate_density
+
+  !> @brief Activate viscosity terms
+    !!
+    !! Method to activate addition of viscosity terms for a LAK package reach.
+    !!
+  !<
+  subroutine lak_activate_viscosity(this)
+    ! -- modules
+    use MemoryManagerModule, only: mem_reallocate
+    ! -- dummy variables
+    class(LakType), intent(inout) :: this !< LakType object
+    ! -- local variables
+    integer(I4B) :: i
+    integer(I4B) :: j
+    !
+    ! -- Set ivsc and reallocate viscratios to be of size MAXBOUND
+    this%ivsc = 1
+    call mem_reallocate(this%viscratios, 2, this%MAXBOUND, 'VISCRATIOS', &
+                        this%memoryPath)
+    do i = 1, this%maxbound
+      do j = 1, 2
+        this%viscratios(j, i) = DONE
+      end do
+    end do
+    write (this%iout, '(/1x,a)') 'VISCOSITY HAS BEEN ACTIVATED FOR LAK &
+      &PACKAGE: '//trim(adjustl(this%packName))
+    !
+    ! -- return
+    return
+  end subroutine lak_activate_viscosity
 
   subroutine lak_calculate_density_exchange(this, iconn, stage, head, cond, &
                                             botl, flow, gwfhcof, gwfrhs)

@@ -665,6 +665,7 @@ if __name__ == '__main__':
                   'gwf-mvr',  # dfn completed  tex updated
                   'gwf-gnc',  # dfn completed  tex updated
                   'gwf-oc',  # dfn completed  tex updated
+                  'gwf-vsc',
                   'gwf-api',
                   'gwt-adv',
                   'gwt-dsp',
