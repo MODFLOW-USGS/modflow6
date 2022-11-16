@@ -419,16 +419,7 @@ contains
     ! -- locals
     integer(I4B) :: ip
     class(BndType), pointer :: packobj
-    integer(I4B) :: ikmodgwf
 ! ------------------------------------------------------------------------------
-    !
-    ! -- Set flag that indicates whether hydraulic conductivities get modified
-    !    from their user-input values (e.g., via npf or tvk input) internally
-    !    by another package (e.g., vsc).
-    ikmodgwf = 0
-    if (this%invsc) then
-      ikmodgwf = 1
-    end if
     !
     ! -- Allocate and read modules attached to model
     if (this%inic > 0) call this%ic%ic_ar(this%x)
@@ -436,7 +427,8 @@ contains
                                              this%x)
     if (this%invsc > 0) call this%vsc%vsc_ar(this%ibound)
     if (this%inbuy > 0) call this%buy%buy_ar(this%npf, this%ibound)
-    if (this%inhfb > 0) call this%hfb%hfb_ar(this%ibound, this%xt3d, this%dis)
+    if (this%inhfb > 0) call this%hfb%hfb_ar(this%ibound, this%xt3d, this%dis, &
+                                             this%invsc, this%vsc)
     if (this%insto > 0) call this%sto%sto_ar(this%dis, this%ibound)
     if (this%incsub > 0) call this%csub%csub_ar(this%dis, this%ibound)
     if (this%inmvr > 0) call this%mvr%mvr_ar()
@@ -457,7 +449,7 @@ contains
       ! -- Read and allocate package
       call packobj%bnd_ar()
       if (this%inbuy > 0) call this%buy%buy_ar_bnd(packobj, this%x)
-      if (this%invsc > 0) call this%vsc%vsc_ar_bnd(packobj)  
+      if (this%invsc > 0) call this%vsc%vsc_ar_bnd(packobj)
     end do
     !
     ! -- return
@@ -1151,12 +1143,12 @@ contains
     !
     ! -- save density to binary file
     if (this%inbuy > 0) then
-      call this%buy%buy_ot_dv(idvsave)  ! kluge note: do similar for viscosity (or viscosity ratio)?
+      call this%buy%buy_ot_dv(idvsave)
     end if
     !
-    ! -- save density to binary file
+    ! -- save viscosity to binary file
     if (this%invsc > 0) then
-      call this%vsc%vsc_ot_dv(idvsave)  ! kluge note: do similar for viscosity (or viscosity ratio)?
+      call this%vsc%vsc_ot_dv(idvsave)
     end if
     !
     ! -- Print advanced package dependent variables

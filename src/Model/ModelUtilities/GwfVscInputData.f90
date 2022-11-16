@@ -14,6 +14,7 @@ module GwfVscInputDataModule
     ! dim
     integer(I4B) :: nviscspecies !< see VSC for description
     ! pkg data
+    integer(I4B), dimension(:), pointer :: ivisc => null() !< indicates if species uses linear or nonlinear relationship
     real(DP), dimension(:), pointer, contiguous :: dviscdc => null() !< see VSC for description
     real(DP), dimension(:), pointer, contiguous :: cviscref => null() !< see VSC for description
     character(len=LENMODELNAME), dimension(:), allocatable :: cmodelname !< see VSC for description
@@ -32,6 +33,7 @@ contains
     class(GwfVscInputDataType) :: this !< the input data block
     integer(I4B) :: nviscspecies !< the number of species
 
+    allocate (this%ivisc(nviscspecies))
     allocate (this%dviscdc(nviscspecies))
     allocate (this%cviscref(nviscspecies))
     allocate (this%cmodelname(nviscspecies))
@@ -44,6 +46,7 @@ contains
   subroutine destruct(this)
     class(GwfVscInputDataType) :: this !< the input data block
 
+    deallocate (this%ivisc)
     deallocate (this%dviscdc)
     deallocate (this%cviscref)
     deallocate (this%cmodelname)

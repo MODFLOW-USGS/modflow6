@@ -5,6 +5,23 @@ module GwfDisInputModule
   public gwf_dis_param_definitions
   public gwf_dis_aggregate_definitions
   public gwf_dis_block_definitions
+  public GwfDisParamFoundType
+
+  type GwfDisParamFoundType
+    logical :: length_units = .false.
+    logical :: nogrb = .false.
+    logical :: xorigin = .false.
+    logical :: yorigin = .false.
+    logical :: angrot = .false.
+    logical :: nlay = .false.
+    logical :: nrow = .false.
+    logical :: ncol = .false.
+    logical :: delr = .false.
+    logical :: delc = .false.
+    logical :: top = .false.
+    logical :: botm = .false.
+    logical :: idomain = .false.
+  end type GwfDisParamFoundType
 
   type(InputParamDefinitionType), parameter :: &
     gwfdis_length_units = InputParamDefinitionType &
@@ -175,7 +192,7 @@ module GwfDisInputModule
     'TOP', & ! tag name
     'TOP', & ! fortran variable
     'DOUBLE2D', & ! type
-    'NCOL, NROW', & ! shape
+    'NCOL NROW', & ! shape
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -191,7 +208,7 @@ module GwfDisInputModule
     'BOTM', & ! tag name
     'BOTM', & ! fortran variable
     'DOUBLE3D', & ! type
-    'NCOL, NROW, NLAY', & ! shape
+    'NCOL NROW NLAY', & ! shape
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
@@ -207,7 +224,7 @@ module GwfDisInputModule
     'IDOMAIN', & ! tag name
     'IDOMAIN', & ! fortran variable
     'INTEGER3D', & ! type
-    'NCOL, NROW, NLAY', & ! shape
+    'NCOL NROW NLAY', & ! shape
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case

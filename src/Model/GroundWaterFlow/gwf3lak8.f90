@@ -272,7 +272,7 @@ module LakModule
     procedure, private :: lak_calculate_density_exchange
     ! -- viscosity
     procedure :: lak_activate_viscosity
-end type LakType
+  end type LakType
 
 contains
 
@@ -358,7 +358,6 @@ contains
     call mem_allocate(this%bditems, 'BDITEMS', this%memoryPath)
     call mem_allocate(this%cbcauxitems, 'CBCAUXITEMS', this%memoryPath)
     call mem_allocate(this%idense, 'IDENSE', this%memoryPath)
-    call mem_allocate(this%ivsc, 'IVSC', this%memoryPath)
     !
     ! -- Set values
     this%iprhed = 0
@@ -453,7 +452,7 @@ contains
     call mem_allocate(this%denseterms, 3, 0, 'DENSETERMS', this%memoryPath)
     !
     ! -- allocate viscratios to size 0
-    call mem_allocate(this%viscratios, 3, 0, 'VISCRATIOS', this%memoryPath)
+    call mem_allocate(this%viscratios, 2, 0, 'VISCRATIOS', this%memoryPath)
     !
     ! -- return
     return
@@ -2388,8 +2387,8 @@ contains
       ! flow from lake to aquifer
       if (stage > head) then
         vscratio = this%viscratios(1, iconn)
-      ! flow from aquifer to lake
-      else if (head > stage) then
+        ! flow from aquifer to lake
+      else
         vscratio = this%viscratios(2, iconn)
       end if
     end if
@@ -4539,7 +4538,6 @@ contains
     call mem_deallocate(this%bditems)
     call mem_deallocate(this%cbcauxitems)
     call mem_deallocate(this%idense)
-    call mem_deallocate(this%ivsc)
     !
     call mem_deallocate(this%nlakeconn)
     call mem_deallocate(this%idxlakeconn)
@@ -6402,11 +6400,11 @@ contains
     !
     ! -- Set ivsc and reallocate viscratios to be of size MAXBOUND
     this%ivsc = 1
-    call mem_reallocate(this%viscratios, 3, this%MAXBOUND, 'VISCRATIOS', &
+    call mem_reallocate(this%viscratios, 2, this%MAXBOUND, 'VISCRATIOS', &
                         this%memoryPath)
     do i = 1, this%maxbound
-      do j = 1, 3
-        this%viscratios(j, i) = DZERO
+      do j = 1, 2
+        this%viscratios(j, i) = DONE
       end do
     end do
     write (this%iout, '(/1x,a)') 'VISCOSITY HAS BEEN ACTIVATED FOR LAK &
@@ -6415,7 +6413,7 @@ contains
     ! -- return
     return
   end subroutine lak_activate_viscosity
-  
+
   subroutine lak_calculate_density_exchange(this, iconn, stage, head, cond, &
                                             botl, flow, gwfhcof, gwfrhs)
 ! ******************************************************************************

@@ -297,7 +297,6 @@ contains
     call mem_allocate(this%icheck, 'ICHECK', this%memoryPath)
     call mem_allocate(this%iconvchk, 'ICONVCHK', this%memoryPath)
     call mem_allocate(this%idense, 'IDENSE', this%memoryPath)
-    call mem_allocate(this%ivsc, 'IVSC', this%memoryPath)
     call mem_allocate(this%ianynone, 'IANYNONE', this%memoryPath)
     call mem_allocate(this%ncrossptstot, 'NCROSSPTSTOT', this%memoryPath)
     !
@@ -513,7 +512,7 @@ contains
     call mem_allocate(this%denseterms, 3, 0, 'DENSETERMS', this%memoryPath)
     !
     ! -- allocate viscratios to size 0
-    call mem_allocate(this%viscratios, 3, 0, 'VISCRATIOS', this%memoryPath)
+    call mem_allocate(this%viscratios, 2, 0, 'VISCRATIOS', this%memoryPath)
     !
     ! -- return
     return
@@ -2642,7 +2641,6 @@ contains
     call mem_deallocate(this%icheck)
     call mem_deallocate(this%iconvchk)
     call mem_deallocate(this%idense)
-    call mem_deallocate(this%ivsc)
     call mem_deallocate(this%ianynone)
     call mem_deallocate(this%ncrossptstot)
     nullify (this%gwfiss)
@@ -4045,7 +4043,7 @@ contains
           if (hsfr > htmp) then
             ! strm stg > gw head
             vscratio = this%viscratios(1, n)
-          else if (htmp > hsfr) then
+          else
             vscratio = this%viscratios(2, n)
           end if
         end if
@@ -5595,7 +5593,8 @@ contains
 
   !> @brief Activate viscosity terms
     !!
-    !! Method to activate addition of viscosity terms for a SFR package reach.
+    !! Method to activate addition of viscosity terms for exhange
+    !! with groundwater along a SFR package reach.
     !!
   !<
   subroutine sfr_activate_viscosity(this)
@@ -5609,11 +5608,11 @@ contains
     !
     ! -- Set ivsc and reallocate viscratios to be of size MAXBOUND
     this%ivsc = 1
-    call mem_reallocate(this%viscratios, 3, this%MAXBOUND, 'VISCRATIOS', &
+    call mem_reallocate(this%viscratios, 2, this%MAXBOUND, 'VISCRATIOS', &
                         this%memoryPath)
     do i = 1, this%maxbound
-      do j = 1, 3
-        this%viscratios(j, i) = DZERO
+      do j = 1, 2
+        this%viscratios(j, i) = DONE
       end do
     end do
     write (this%iout, '(/1x,a)') 'VISCOSITY HAS BEEN ACTIVATED FOR SFR &

@@ -19,7 +19,7 @@ mf6_exe = os.path.abspath(targets.target_dict["mf6"])
 name = "gwf_ret_codes01"
 base_ws = os.path.join("temp", name)
 if not os.path.isdir(base_ws):
-    os.makedirs(base_ws)
+    os.makedirs(base_ws, exist_ok=True)
 app = "mf6"
 if sys.platform.lower() == "win32":
     app += ".exe"
@@ -219,7 +219,7 @@ def idomain_runtime_error():
         returncode, buff = run_mf6([mf6_exe], ws)
         msg = f"could not run {sim.name}"
         if returncode != 0:
-            err_str = "IDOMAIN ARRAY HAS SOME VALUES GREATER THAN ZERO"
+            err_str = "Ensure IDOMAIN array has some"
             err = any(err_str in s for s in buff)
             if err:
                 clean(ws)

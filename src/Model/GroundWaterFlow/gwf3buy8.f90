@@ -155,8 +155,8 @@ contains
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtbuy = &
-      "(1x,/1x,'BUY -- BUOYANCY PACKAGE, VERSION 1, 5/16/2018', &
-      &' INPUT READ FROM UNIT ', i0, //)"
+      "(1x,/1x,'BUY -- Buoyancy Package, Version 1, 5/16/2018', &
+      &' input read from unit ', i0, //)"
 ! ------------------------------------------------------------------------------
     !
     ! --print a message identifying the buoyancy package.
@@ -299,10 +299,10 @@ contains
     integer(I4B) :: i
     ! -- formats
     character(len=*), parameter :: fmtc = &
-      "('BUOYANCY PACKAGE DOES NOT HAVE HAVE A CONCENTRATION SET &
-       &FOR SPECIES ',i0,'. ONE OR MORE MODEL NAMES MAY BE SPECIFIED &
-       &INCORRECTLY IN THE PACKAGEDATA BLOCK OR A GWF-GWT EXCHANGE MAY NEED &
-       &TO BE ACTIVATED.')"
+      "('Buoyancy Package does not have have a concentration set &
+       &for species ',i0,'. One or more model names may be specified &
+       &incorrectly in the PACKAGEDATA block or a gwf-gwt exchange may need &
+       &to be activated.')"
 ! ------------------------------------------------------------------------------
     !
     ! -- Check to make sure all concentration pointers have been set
@@ -1136,7 +1136,7 @@ contains
     !
     ! -- parse dimensions block if detected
     if (isfound) then
-      write (this%iout, '(/1x,a)') 'PROCESSING BUY DIMENSIONS'
+      write (this%iout, '(/1x,a)') 'Processing BUY DIMENSIONS block'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -1147,20 +1147,20 @@ contains
           write (this%iout, '(4x,a,i0)') 'NRHOSPECIES = ', this%nrhospecies
         case default
           write (errmsg, '(4x,a,a)') &
-            'UNKNOWN BUY DIMENSION: ', trim(keyword)
+            'Unknown BUY dimension: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
       end do
-      write (this%iout, '(1x,a)') 'END OF BUY DIMENSIONS'
+      write (this%iout, '(1x,a)') 'End of BUY DIMENSIONS block'
     else
-      call store_error('REQUIRED BUY DIMENSIONS BLOCK NOT FOUND.')
+      call store_error('Required BUY DIMENSIONS block not found.')
       call this%parser%StoreErrorUnit()
     end if
     !
     ! -- check dimension
     if (this%nrhospecies < 1) then
-      call store_error('NRHOSPECIES MUST BE GREATER THAN ZERO.')
+      call store_error('NRHOSPECIES must be greater than zero.')
       call this%parser%StoreErrorUnit()
     end if
     !
@@ -1190,9 +1190,9 @@ contains
     character(len=16) :: c16
     ! -- format
     character(len=*), parameter :: fmterr = &
-      "('INVALID VALUE FOR IRHOSPEC (',i0,') DETECTED IN BUY PACKAGE. &
-      &IRHOSPEC MUST BE > 0 AND <= NRHOSPECIES, AND DUPLICATE VALUES &
-      &ARE NOT ALLOWED.')"
+      "('Invalid value for IRHOSPEC (',i0,') detected in BUY Package. &
+      &IRHOSPEC must be > 0 and <= NRHOSPECIES, and duplicate values &
+      &are not allowed.')"
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize
@@ -1207,7 +1207,7 @@ contains
     !
     ! -- parse packagedata block
     if (isfound) then
-      write (this%iout, '(1x,a)') 'PROCESSING BUY PACKAGEDATA'
+      write (this%iout, '(1x,a)') 'Processing BUY PACKAGEDATA block'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -1226,7 +1226,10 @@ contains
         call this%parser%GetStringCaps(this%cmodelname(irhospec))
         call this%parser%GetStringCaps(this%cauxspeciesname(irhospec))
       end do
-      write (this%iout, '(1x,a)') 'END OF BUY PACKAGEDATA'
+      write (this%iout, '(1x,a)') 'End of BUY PACKAGEDATA block'
+    else
+      call store_error('Required BUY PACKAGEDATA block not found.')
+      call this%parser%StoreErrorUnit()
     end if
     !
     ! -- Check for errors.
@@ -1235,7 +1238,7 @@ contains
     end if
     !
     ! -- write packagedata information
-    write (this%iout, '(/,a)') 'SUMMARY OF SPECIES INFORMATION IN BUY PACKAGE'
+    write (this%iout, '(/,a)') 'Summary of species information in BUY Package'
     write (this%iout, '(1a11, 4a17)') &
       'SPECIES', 'DRHODC', 'CRHOREF', 'MODEL', &
       'AUXSPECIESNAME'
@@ -1638,8 +1641,8 @@ contains
     logical :: isfound, endOfBlock
     ! -- formats
     character(len=*), parameter :: fmtfileout = &
-      "(4x, 'BUY ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', &
-      &a, /4x, 'OPENED ON UNIT: ', I7)"
+      "(4x, 'BUY ', 1x, a, 1x, ' will be saved to file: ', &
+      &a, /4x, 'opened on unit: ', I7)"
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
@@ -1648,7 +1651,7 @@ contains
     !
     ! -- parse options block if detected
     if (isfound) then
-      write (this%iout, '(1x,a)') 'PROCESSING BUY OPTIONS'
+      write (this%iout, '(1x,a)') 'Processing BUY OPTIONS block'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -1658,18 +1661,18 @@ contains
           this%iform = 1
           this%iasym = 0
           write (this%iout, '(4x,a)') &
-            'HYDDRAULIC HEAD FORMULATION SET TO RIGHT-HAND SIDE'
+            'Hydraulic head formulation set to right-hand side'
         case ('DENSEREF')
           this%denseref = this%parser%GetDouble()
           write (this%iout, '(4x,a,1pg15.6)') &
-            'REFERENCE DENSITY HAS BEEN SET TO: ', &
+            'Reference density has been set to: ', &
             this%denseref
         case ('DEV_EFH_FORMULATION')
           call this%parser%DevOpt()
           this%iform = 0
           this%iasym = 0
           write (this%iout, '(4x,a)') &
-            'FORMULATION SET TO EQUIVALENT FRESHWATER HEAD'
+            'Formulation set to equivalent freshwater head'
         case ('DENSITY')
           call this%parser%GetStringCaps(keyword)
           if (keyword == 'FILEOUT') then
@@ -1680,18 +1683,18 @@ contains
             write (this%iout, fmtfileout) &
               'DENSITY', fname, this%ioutdense
           else
-            errmsg = 'OPTIONAL DENSITY KEYWORD MUST BE '// &
-                     'FOLLOWED BY FILEOUT'
+            errmsg = 'Optional density keyword must be '// &
+                     'followed by FILEOUT'
             call store_error(errmsg)
           end if
         case default
-          write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN BUY OPTION: ', &
+          write (errmsg, '(4x,a,a)') '****Error. Unknown BUY option: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
       end do
-      write (this%iout, '(1x,a)') 'END OF BUY OPTIONS'
+      write (this%iout, '(1x,a)') 'End of BUY OPTIONS block'
     end if
     !
     ! -- Return

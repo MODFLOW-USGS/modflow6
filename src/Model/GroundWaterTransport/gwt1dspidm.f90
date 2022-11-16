@@ -5,6 +5,18 @@ module GwtDspInputModule
   public gwt_dsp_param_definitions
   public gwt_dsp_aggregate_definitions
   public gwt_dsp_block_definitions
+  public GwtDspParamFoundType
+
+  type GwtDspParamFoundType
+    logical :: xt3d_off = .false.
+    logical :: xt3d_rhs = .false.
+    logical :: diffc = .false.
+    logical :: alh = .false.
+    logical :: alv = .false.
+    logical :: ath1 = .false.
+    logical :: ath2 = .false.
+    logical :: atv = .false.
+  end type GwtDspParamFoundType
 
   type(InputParamDefinitionType), parameter :: &
     gwtdsp_xt3d_off = InputParamDefinitionType &

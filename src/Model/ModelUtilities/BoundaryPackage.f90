@@ -85,7 +85,7 @@ module BndModule
     !
     ! -- viscosity flag and safe-copy of conductance array
     integer(I4B), pointer :: ivsc => null() !< flag indicating if viscosity is active in the model
-    real(DP), dimension(:), pointer, contiguous :: condinput => null() !< stores user-specified conductance values 
+    real(DP), dimension(:), pointer, contiguous :: condinput => null() !< stores user-specified conductance values
     !
     ! -- timeseries
     type(TimeSeriesManagerType), pointer :: TsManager => null() !< time series manager
@@ -155,6 +155,9 @@ module BndModule
     !
     ! -- procedure to support time series
     procedure, public :: bnd_rp_ts
+    !
+    ! -- procedure to inform package that viscosity active
+    procedure, public :: bnd_activate_viscosity
     !
     ! -- procedure to backup user-specified conductance
     procedure, private :: bnd_store_user_cond
@@ -1111,16 +1114,9 @@ contains
     call mem_allocate(this%bound, this%ncolbnd, this%maxbound, 'BOUND', &
                       this%memoryPath)
     !
-    !-- Allocate array for storing user-specified conductances if vsc active
-    if (this%ivsc == 1) then
-      call mem_allocate(this%condinput, this%maxbound, 'CONDINPUT', &
-                        this%memoryPath)
-      do i = 1, this%maxbound
-        this%condinput(i) = DZERO
-      end do
-    else
-      call mem_allocate(this%condinput, 0, 'CONDINPUT', this%memoryPath)
-    end if
+    !-- Allocate array for storing user-specified conductances
+    !   Will be reallocated to size maxbound if vsc active
+    call mem_allocate(this%condinput, 0, 'CONDINPUT', this%memoryPath)
     !
     ! -- Allocate hcof and rhs
     call mem_allocate(this%hcof, this%maxbound, 'HCOF', this%memoryPath)
@@ -1501,12 +1497,12 @@ contains
     ! -- return
     return
   end subroutine bnd_read_dimensions
-  
+
   !> @ brief Store user-specified conductances when vsc is active
-    !!  
-    !!  VSC will update boundary package conductance values.  Because 
-    !!  viscosity can change every stress period, but user-specified 
-    !!  conductances may not, the base user-input should be stored in 
+    !!
+    !!  VSC will update boundary package conductance values.  Because
+    !!  viscosity can change every stress period, but user-specified
+    !!  conductances may not, the base user-input should be stored in
     !!  backup array so that viscosity-updated conductances may be
     !!  recalculated every stress period/time step
     !!
@@ -1536,7 +1532,7 @@ contains
           trim(adjustl(nodestr))
         call store_error(errmsg)
       end if
-      condinput(l) = rlist(2,l)
+      condinput(l) = rlist(2, l)
     end do
     !
     ! -- return
@@ -2073,5 +2069,39 @@ contains
     ! -- return
     return
   end subroutine save_print_model_flows
+
+  !> @brief Activate viscosity terms
+    !!
+    !! Method to activate addition of viscosity terms when package type
+    !! is DRN, GHB, or RIV (method not needed by other packages at this point)
+    !!
+  !<
+  subroutine bnd_activate_viscosity(this)
+    ! -- modules
+    use MemoryManagerModule, only: mem_reallocate
+    ! -- dummy variables
+    class(BndType), intent(inout) :: this !< BndType object
+    ! -- local variables
+    integer(I4B) :: i
+    !
+    ! -- Set ivsc and reallocate viscratios to be of size MAXBOUND
+    this%ivsc = 1
+    !
+    ! -- Allocate array for storing user-specified conductances
+    !    modified by updated viscosity values
+    call mem_reallocate(this%condinput, this%maxbound, 'CONDINPUT', &
+                        this%memoryPath)
+    do i = 1, this%maxbound
+      this%condinput(i) = DZERO
+    end do
+    !
+    ! -- Notify user via listing file viscosity accounted for by standard
+    !    boundary package.
+    write (this%iout, '(/1x,a,a)') 'VISCOSITY ACTIVE IN ', &
+      trim(this%filtyp)//' PACKAGE CALCULATIONS: '//trim(adjustl(this%packName))
+    !
+    ! -- return
+    return
+  end subroutine bnd_activate_viscosity
 
 end module BndModule

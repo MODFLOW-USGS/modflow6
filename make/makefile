@@ -16,17 +16,18 @@ SOURCEDIR9=../src/Solution
 SOURCEDIR10=../src/Solution/LinearMethods
 SOURCEDIR11=../src/Timing
 SOURCEDIR12=../src/Utilities
-SOURCEDIR13=../src/Utilities/Idm
-SOURCEDIR14=../src/Utilities/Libraries
-SOURCEDIR15=../src/Utilities/Libraries/blas
-SOURCEDIR16=../src/Utilities/Libraries/daglib
-SOURCEDIR17=../src/Utilities/Libraries/rcm
-SOURCEDIR18=../src/Utilities/Libraries/sparsekit
-SOURCEDIR19=../src/Utilities/Libraries/sparskit2
-SOURCEDIR20=../src/Utilities/Memory
-SOURCEDIR21=../src/Utilities/Observation
-SOURCEDIR22=../src/Utilities/OutputControl
-SOURCEDIR23=../src/Utilities/TimeSeries
+SOURCEDIR13=../src/Utilities/ArrayRead
+SOURCEDIR14=../src/Utilities/Idm
+SOURCEDIR15=../src/Utilities/Libraries
+SOURCEDIR16=../src/Utilities/Libraries/blas
+SOURCEDIR17=../src/Utilities/Libraries/daglib
+SOURCEDIR18=../src/Utilities/Libraries/rcm
+SOURCEDIR19=../src/Utilities/Libraries/sparsekit
+SOURCEDIR20=../src/Utilities/Libraries/sparskit2
+SOURCEDIR21=../src/Utilities/Memory
+SOURCEDIR22=../src/Utilities/Observation
+SOURCEDIR23=../src/Utilities/OutputControl
+SOURCEDIR24=../src/Utilities/TimeSeries
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -51,7 +52,8 @@ ${SOURCEDIR19} \
 ${SOURCEDIR20} \
 ${SOURCEDIR21} \
 ${SOURCEDIR22} \
-${SOURCEDIR23} 
+${SOURCEDIR23} \
+${SOURCEDIR24} 
 
 .SUFFIXES: .f90 .F90 .o
 
@@ -98,6 +100,7 @@ $(OBJDIR)/TimeArraySeries.o \
 $(OBJDIR)/ObsOutputList.o \
 $(OBJDIR)/Observe.o \
 $(OBJDIR)/InputDefinition.o \
+$(OBJDIR)/ArrayReaderBase.o \
 $(OBJDIR)/TimeArraySeriesLink.o \
 $(OBJDIR)/ObsUtility.o \
 $(OBJDIR)/ObsContainer.o \
@@ -107,43 +110,56 @@ $(OBJDIR)/gwf3npf8idm.o \
 $(OBJDIR)/gwf3disv8idm.o \
 $(OBJDIR)/gwf3disu8idm.o \
 $(OBJDIR)/gwf3dis8idm.o \
+$(OBJDIR)/Integer2dReader.o \
+$(OBJDIR)/BudgetFileReader.o \
 $(OBJDIR)/TimeArraySeriesManager.o \
 $(OBJDIR)/PackageMover.o \
 $(OBJDIR)/Obs3.o \
 $(OBJDIR)/NumericalPackage.o \
 $(OBJDIR)/Budget.o \
-$(OBJDIR)/BudgetFileReader.o \
 $(OBJDIR)/StructVector.o \
 $(OBJDIR)/IdmLogger.o \
 $(OBJDIR)/InputDefinitionSelector.o \
+$(OBJDIR)/Integer1dReader.o \
+$(OBJDIR)/Double2dReader.o \
+$(OBJDIR)/Double1dReader.o \
+$(OBJDIR)/sort.o \
+$(OBJDIR)/SfrCrossSectionUtils.o \
+$(OBJDIR)/BudgetTerm.o \
 $(OBJDIR)/BoundaryPackage.o \
 $(OBJDIR)/BaseModel.o \
-$(OBJDIR)/BudgetTerm.o \
 $(OBJDIR)/StructArray.o \
 $(OBJDIR)/ModflowInput.o \
+$(OBJDIR)/LayeredArrayReader.o \
+$(OBJDIR)/SfrCrossSectionManager.o \
+$(OBJDIR)/dag_module.o \
+$(OBJDIR)/BudgetObject.o \
 $(OBJDIR)/NumericalModel.o \
 $(OBJDIR)/mf6lists.o \
 $(OBJDIR)/PackageBudget.o \
 $(OBJDIR)/HeadFileReader.o \
-$(OBJDIR)/BudgetObject.o \
-$(OBJDIR)/sort.o \
-$(OBJDIR)/SfrCrossSectionUtils.o \
 $(OBJDIR)/PrintSaveManager.o \
 $(OBJDIR)/Xt3dAlgorithm.o \
 $(OBJDIR)/gwf3tvbase8.o \
 $(OBJDIR)/LoadMf6FileType.o \
+$(OBJDIR)/gwf3sfr8.o \
+$(OBJDIR)/gwf3riv8.o \
+$(OBJDIR)/gwf3maw8.o \
+$(OBJDIR)/gwf3lak8.o \
+$(OBJDIR)/GwfVscInputData.o \
+$(OBJDIR)/gwf3ghb8.o \
+$(OBJDIR)/gwf3drn8.o \
 $(OBJDIR)/DistributedModel.o \
 $(OBJDIR)/BaseExchange.o \
 $(OBJDIR)/UzfCellGroup.o \
 $(OBJDIR)/gwt1fmi1.o \
-$(OBJDIR)/SfrCrossSectionManager.o \
-$(OBJDIR)/dag_module.o \
 $(OBJDIR)/OutputControlData.o \
 $(OBJDIR)/gwf3ic8.o \
 $(OBJDIR)/Xt3dInterface.o \
 $(OBJDIR)/gwf3tvk8.o \
 $(OBJDIR)/MemoryManagerExt.o \
 $(OBJDIR)/IdmMf6FileLoader.o \
+$(OBJDIR)/gwf3vsc8.o \
 $(OBJDIR)/GwfNpfOptions.o \
 $(OBJDIR)/CellWithNbrs.o \
 $(OBJDIR)/NumericalExchange.o \
@@ -151,11 +167,8 @@ $(OBJDIR)/Iunit.o \
 $(OBJDIR)/gwf3uzf8.o \
 $(OBJDIR)/gwt1apt1.o \
 $(OBJDIR)/GwtSpc.o \
-$(OBJDIR)/gwf3sfr8.o \
 $(OBJDIR)/OutputControl.o \
 $(OBJDIR)/gwt1ic1.o \
-$(OBJDIR)/gwf3maw8.o \
-$(OBJDIR)/gwf3lak8.o \
 $(OBJDIR)/gwt1mst1.o \
 $(OBJDIR)/GwtDspOptions.o \
 $(OBJDIR)/gwf3npf8.o \
@@ -191,7 +204,6 @@ $(OBJDIR)/gwf3disv8.o \
 $(OBJDIR)/gwf3dis8.o \
 $(OBJDIR)/gwf3api8.o \
 $(OBJDIR)/gwf3wel8.o \
-$(OBJDIR)/gwf3riv8.o \
 $(OBJDIR)/gwf3rch8.o \
 $(OBJDIR)/gwf3sto8.o \
 $(OBJDIR)/gwf3oc8.o \
@@ -201,9 +213,7 @@ $(OBJDIR)/gwf3hfb8.o \
 $(OBJDIR)/gwf3csub8.o \
 $(OBJDIR)/gwf3buy8.o \
 $(OBJDIR)/GhostNode.o \
-$(OBJDIR)/gwf3ghb8.o \
 $(OBJDIR)/gwf3evt8.o \
-$(OBJDIR)/gwf3drn8.o \
 $(OBJDIR)/gwf3chd8.o \
 $(OBJDIR)/ims8reordering.o \
 $(OBJDIR)/GridConnection.o \

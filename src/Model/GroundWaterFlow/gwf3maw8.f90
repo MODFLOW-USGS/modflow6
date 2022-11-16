@@ -304,7 +304,6 @@ contains
     call mem_allocate(this%kappa, 'KAPPA', this%memoryPath)
     call mem_allocate(this%cbcauxitems, 'CBCAUXITEMS', this%memoryPath)
     call mem_allocate(this%idense, 'IDENSE', this%memoryPath)
-    call mem_allocate(this%ivsc, 'IVSC', this%memoryPath)
     !
     ! -- Set values
     this%correct_flow = .FALSE.
@@ -529,7 +528,7 @@ contains
     call mem_allocate(this%denseterms, 3, 0, 'DENSETERMS', this%memoryPath)
     !
     ! -- allocate viscratios to size 0
-    call mem_allocate(this%viscratios, 3, 0, 'VISCRATIOS', this%memoryPath)
+    call mem_allocate(this%viscratios, 2, 0, 'VISCRATIOS', this%memoryPath)
     !
     ! -- return
     return
@@ -3044,8 +3043,6 @@ contains
     call mem_deallocate(this%kappa)
     call mem_deallocate(this%cbcauxitems)
     call mem_deallocate(this%idense)
-    call mem_deallocate(this%ivsc)
-    call mem_deallocate(this%viscratios)
     !
     ! -- pointers to gwf variables
     nullify (this%gwfiss)
@@ -3892,12 +3889,12 @@ contains
     tmaw = this%topscrn(jpos)
     bmaw = this%botscrn(jpos)
     !
-    ! -- if vsc active, select appropriate viscosity ratio 
+    ! -- if vsc active, select appropriate viscosity ratio
     if (this%ivsc == 1) then
       ! flow out of well (flow is negative)
       if (flow < 0) then
         vscratio = this%viscratios(1, igwfnode)
-      else if (flow > 0) then
+      else
         vscratio = this%viscratios(2, igwfnode)
       end if
     end if
@@ -4199,12 +4196,12 @@ contains
     vscratio = DONE
     htmp = this%shutofflevel(n)
     !
-    ! -- if vsc active, select appropriate viscosity ratio 
+    ! -- if vsc active, select appropriate viscosity ratio
     if (this%ivsc == 1) then
       ! flow out of well (flow is negative)
       if (qnet < 0) then
         vscratio = this%viscratios(1, igwfnode)
-      else if (qnet > 0) then
+      else
         vscratio = this%viscratios(2, igwfnode)
       end if
     end if
@@ -4896,11 +4893,11 @@ contains
     !
     ! -- Set ivsc and reallocate viscratios to be of size MAXBOUND
     this%ivsc = 1
-    call mem_reallocate(this%viscratios, 3, this%MAXBOUND, 'VISCRATIOS', &
+    call mem_reallocate(this%viscratios, 2, this%MAXBOUND, 'VISCRATIOS', &
                         this%memoryPath)
     do i = 1, this%maxbound
-      do j = 1, 3
-        this%viscratios(j, i) = DZERO
+      do j = 1, 2
+        this%viscratios(j, i) = DONE
       end do
     end do
     write (this%iout, '(/1x,a)') 'VISCOSITY HAS BEEN ACTIVATED FOR MAW &
@@ -4909,7 +4906,7 @@ contains
     ! -- return
     return
   end subroutine maw_activate_viscosity
-  
+
   subroutine maw_calculate_density_exchange(this, iconn, hmaw, hgwf, cond, &
                                             bmaw, flow, hcofterm, rhsterm)
 ! ******************************************************************************

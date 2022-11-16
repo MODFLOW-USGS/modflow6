@@ -5,6 +5,37 @@ module GwfDisuInputModule
   public gwf_disu_param_definitions
   public gwf_disu_aggregate_definitions
   public gwf_disu_block_definitions
+  public GwfDisuParamFoundType
+
+  type GwfDisuParamFoundType
+    logical :: length_units = .false.
+    logical :: nogrb = .false.
+    logical :: xorigin = .false.
+    logical :: yorigin = .false.
+    logical :: angrot = .false.
+    logical :: voffsettol = .false.
+    logical :: nodes = .false.
+    logical :: nja = .false.
+    logical :: nvert = .false.
+    logical :: top = .false.
+    logical :: bot = .false.
+    logical :: area = .false.
+    logical :: idomain = .false.
+    logical :: iac = .false.
+    logical :: ja = .false.
+    logical :: ihc = .false.
+    logical :: cl12 = .false.
+    logical :: hwva = .false.
+    logical :: angldegx = .false.
+    logical :: iv = .false.
+    logical :: xv = .false.
+    logical :: yv = .false.
+    logical :: icell2d = .false.
+    logical :: xc = .false.
+    logical :: yc = .false.
+    logical :: ncvert = .false.
+    logical :: icvert = .false.
+  end type GwfDisuParamFoundType
 
   type(InputParamDefinitionType), parameter :: &
     gwfdisu_length_units = InputParamDefinitionType &

@@ -5,6 +5,47 @@ module GwfNpfInputModule
   public gwf_npf_param_definitions
   public gwf_npf_aggregate_definitions
   public gwf_npf_block_definitions
+  public GwfNpfParamFoundType
+
+  type GwfNpfParamFoundType
+    logical :: ipakcb = .false.
+    logical :: iprflow = .false.
+    logical :: cellavg = .false.
+    logical :: ithickstrt = .false.
+    logical :: cvoptions = .false.
+    logical :: ivarcv = .false.
+    logical :: idewatcv = .false.
+    logical :: iperched = .false.
+    logical :: rewet_record = .false.
+    logical :: irewet = .false.
+    logical :: wetfct = .false.
+    logical :: iwetit = .false.
+    logical :: ihdwet = .false.
+    logical :: xt3doptions = .false.
+    logical :: ixt3d = .false.
+    logical :: ixt3drhs = .false.
+    logical :: isavspdis = .false.
+    logical :: isavsat = .false.
+    logical :: ik22overk = .false.
+    logical :: ik33overk = .false.
+    logical :: tvk_filerecord = .false.
+    logical :: tvk6 = .false.
+    logical :: filein = .false.
+    logical :: tvk6_filename = .false.
+    logical :: inewton = .false.
+    logical :: iusgnrhc = .false.
+    logical :: inwtupw = .false.
+    logical :: satmin = .false.
+    logical :: satomega = .false.
+    logical :: icelltype = .false.
+    logical :: k = .false.
+    logical :: k22 = .false.
+    logical :: k33 = .false.
+    logical :: angle1 = .false.
+    logical :: angle2 = .false.
+    logical :: angle3 = .false.
+    logical :: wetdry = .false.
+  end type GwfNpfParamFoundType
 
   type(InputParamDefinitionType), parameter :: &
     gwfnpf_ipakcb = InputParamDefinitionType &
