@@ -102,7 +102,7 @@ def run_flow_model():
         top=top,
         botm=botm,
         idomain=idomain,
-        length_units="feet"
+        length_units="feet",
     )
     idomain = dis.idomain.array
 
@@ -359,7 +359,9 @@ def run_flow_model():
         [1, 35.2, nlakecon[1], "lake2"],
     ]
     # <outletno> <lakein> <lakeout> <couttype> <invert> <width> <rough> <slope>
-    outlets = [[0, 0, -1, "MANNING", 44.5, 5.000000, 0.03, 0.2187500e-02]]
+    outlets = [
+        [0, 0, -1, "MANNING", 44.5, 3.36493214532915, 0.03, 0.2187500e-02]
+    ]
 
     lake_on = True
     if lake_on:
