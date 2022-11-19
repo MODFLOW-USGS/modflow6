@@ -1,7 +1,7 @@
 module PetscSolverModule
 #include <petsc/finclude/petscksp.h>
   use petscksp
-  use KindModule, only: I4B, DP
+  use KindModule, only: I4B, DP, LGP
   use LinearSolverBaseModule
   use MatrixBaseModule
   use VectorBaseModule
@@ -20,10 +20,12 @@ module PetscSolverModule
 
   type, public, extends(LinearSolverBaseType) :: PetscSolverType  
     KSP :: ksp_petsc
-    Mat, pointer :: mat_petsc
+    class(PetscMatrixType), pointer :: matrix
+    Mat, pointer :: mat_petsc   
 
     integer(I4B) :: lin_accel_type
     real(DP) :: dvclose
+    class(PetscContextType), pointer :: petsc_ctx
   contains
     procedure :: initialize => petsc_initialize 
     procedure :: solve => petsc_solve
@@ -44,40 +46,40 @@ contains
     class(PetscSolverType), pointer :: petsc_solver
 
     allocate(petsc_solver)
+    allocate (petsc_solver%petsc_ctx)
+    
     solver => petsc_solver
 
   end function create_petsc_solver
 
-  subroutine petsc_initialize(this, matrix, cfg)
+  subroutine petsc_initialize(this, matrix)
     class(PetscSolverType) :: this
     class(MatrixBaseType), pointer :: matrix
-    class(LinearSolverCfg) :: cfg
     ! local
     PetscErrorCode :: ierr
-    !PC pc !< the preconditioner handle
-    class(PetscContextType), pointer :: petsc_ctx => null() !< the context to use for convergence check
+    logical(LGP) :: found
 
     this%mat_petsc => null()
     select type (pm => matrix)
     class is (PetscMatrixType)
+      this%matrix => pm
       this%mat_petsc => pm%mat
     end select
 
-    this%lin_accel_type = cfg%linear_accel_type
-    this%dvclose = cfg%dvclose
+    this%dvclose = 0.01_DP
+    call PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, &
+                             '-dvclose', this%dvclose, found, ierr)
+    CHKERRQ(ierr)
+
+    this%nitermax = 100
+    call PetscOptionsGetInt(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, &
+                             '-nitermax', this%nitermax, found, ierr)
+    CHKERRQ(ierr)
 
     call KSPCreate(PETSC_COMM_WORLD, this%ksp_petsc, ierr)    
     CHKERRQ(ierr)
-    if (this%lin_accel_type == LIN_ACCEL_CG) then
-      call KSPSetType(this%ksp_petsc, KSPCG, ierr)
-      CHKERRQ(ierr)
-    else if (this%lin_accel_type == LIN_ACCEL_BCGS) then
-      call KSPSetType(this%ksp_petsc, KSPBCGS, ierr)
-      CHKERRQ(ierr)
-    end if
 
-    ! TODO_MJR: why does this need to be false, and not true...
-    call KSPSetInitialGuessNonzero(this%ksp_petsc, .false., ierr)
+    call KSPSetInitialGuessNonzero(this%ksp_petsc, .true., ierr)
     CHKERRQ(ierr)
 
     call KSPSetFromOptions(this%ksp_petsc, ierr)
@@ -87,10 +89,14 @@ contains
     CHKERRQ(ierr)
 
     ! create context for custom convergence check
-    allocate (petsc_ctx)
-    petsc_ctx%dvclose = this%dvclose
+    this%petsc_ctx%dvclose = this%dvclose
+    call MatCreateVecs(this%mat_petsc, this%petsc_ctx%x_old, PETSC_NULL_VEC, ierr)
+    CHKERRQ(ierr)
+    call MatCreateVecs(this%mat_petsc, this%petsc_ctx%delta_x, PETSC_NULL_VEC, ierr)
+    CHKERRQ(ierr)
+
     call KSPSetConvergenceTest(this%ksp_petsc, petsc_check_convergence, &
-                               petsc_ctx, petsc_destroy_context, ierr)
+                               this%petsc_ctx, petsc_destroy_context, ierr)
     CHKERRQ(ierr)
 
   end subroutine petsc_initialize
@@ -105,8 +111,7 @@ contains
     class(PetscVectorType), pointer :: rhs_petsc, x_petsc
     KSPConvergedReason :: icnvg
     ! for debugging:
-    logical :: print_everything = .false.
-
+    logical :: printing = .true.
 
     rhs_petsc => null()
     select type (rhs)
@@ -120,18 +125,27 @@ contains
       x_petsc => x
     end select
 
+    write(*,*) 'starting outer ', kiter
     this%iteration_number = 0
     this%is_converged = 0
 
+    ! update matrix coefficients
+    call this%matrix%update()
+    call x_petsc%update()    
+    call rhs_petsc%update()
+
     ! print system
-    if (print_everything) then
+    if (printing .and. kiter < 3) then
       call this%print_before(rhs_petsc, x_petsc, kiter)
     end if
-
+    
     call KSPSolve(this%ksp_petsc, rhs_petsc%vec_impl, x_petsc%vec_impl, ierr)
     CHKERRQ(ierr)
 
-    if (print_everything) then
+    call x_petsc%reset() 
+    call rhs_petsc%reset()
+
+    if (printing .and. kiter < 3) then
       call this%print_after(x_petsc, kiter)
     end if
 
@@ -149,6 +163,8 @@ contains
     class(PetscSolverType) :: this
     ! local
     PetscErrorCode :: ierr
+
+    deallocate (this%petsc_ctx)
 
     call KSPDestroy(this%ksp_petsc, ierr)
     CHKERRQ(ierr)
@@ -191,7 +207,7 @@ contains
     CHKERRQ(ierr)
     call PetscViewerDestroy(viewer,ierr)
     CHKERRQ(ierr)
-    write(filename,'(a,i0,a,i0,a,i0,a)') 'xold_', nper, '_', kstp, '_', kiter, '.txt'
+    write(filename,'(a,i0,a,i0,a,i0,a)') 'xbefore_', nper, '_', kstp, '_', kiter, '.txt'
     call PetscViewerASCIIOpen(PETSC_COMM_WORLD, filename, viewer, ierr)
     CHKERRQ(ierr)
     call VecView(x%vec_impl, viewer, ierr)        

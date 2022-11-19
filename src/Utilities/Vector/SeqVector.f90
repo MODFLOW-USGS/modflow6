@@ -13,6 +13,8 @@ module SeqVectorModule
     procedure :: create => sqv_create
     procedure :: destroy => sqv_destroy
     procedure :: get_array => sqv_get_array
+    procedure :: get_ownership_range => sqv_get_ownership_range
+    procedure :: get_size => sqv_get_size
     procedure :: zero_entries => sqv_zero_entries
     procedure :: print => sqv_print
   end type SeqVectorType
@@ -51,6 +53,24 @@ contains
     array => this%array
 
   end function sqv_get_array
+
+  subroutine sqv_get_ownership_range(this, start, end)
+    class(SeqVectorType) :: this !< this vector
+    integer(I4B) :: start !< the index of the first element in the vector
+    integer(I4B) :: end !< the index of the last element in the vector
+
+    start = 1
+    end = this%size
+
+  end subroutine sqv_get_ownership_range
+
+  function sqv_get_size(this) result(size)
+    class(SeqVectorType) :: this !< this vector
+    integer(I4B) :: size !< the vector size
+
+    size = this%size
+
+  end function sqv_get_size
 
   !> @brief set all elements to zero
   !<

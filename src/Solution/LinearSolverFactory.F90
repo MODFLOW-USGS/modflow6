@@ -28,8 +28,8 @@ contains
     if (solver_mode == 'SEQ') then
       solver => create_ims_solver()
       return
-    else if (solver_mode == 'PAR') then
 #if defined(__WITH_PETSC__)
+    else if (solver_mode == 'PAR') then
       solver => create_petsc_solver()
 #endif
     else

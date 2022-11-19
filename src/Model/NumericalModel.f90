@@ -299,42 +299,51 @@ contains
     return
   end subroutine allocate_arrays
 
-  subroutine set_xptr(this, xsln, varNameTgt, memPathTgt)
+  subroutine set_xptr(this, xsln, sln_offset, varNameTgt, memPathTgt)
     use MemoryManagerModule, only: mem_checkin
     ! -- dummy
     class(NumericalModelType) :: this
     real(DP), dimension(:), pointer, contiguous, intent(in) :: xsln
+    integer(I4B) :: sln_offset
     character(len=*), intent(in) :: varNameTgt
     character(len=*), intent(in) :: memPathTgt
     ! -- local
+    integer(I4B) :: offset
     ! -- code
-    this%x => xsln(this%moffset + 1:this%moffset + this%neq)
+    offset = this%moffset - sln_offset
+    this%x => xsln(offset + 1:offset + this%neq)
     call mem_checkin(this%x, 'X', this%memoryPath, varNameTgt, memPathTgt)
   end subroutine set_xptr
 
-  subroutine set_rhsptr(this, rhssln, varNameTgt, memPathTgt)
+  subroutine set_rhsptr(this, rhssln, sln_offset, varNameTgt, memPathTgt)
     use MemoryManagerModule, only: mem_checkin
     ! -- dummy
     class(NumericalModelType) :: this
     real(DP), dimension(:), pointer, contiguous, intent(in) :: rhssln
+    integer(I4B) :: sln_offset
     character(len=*), intent(in) :: varNameTgt
     character(len=*), intent(in) :: memPathTgt
     ! -- local
+    integer(I4B) :: offset
     ! -- code
-    this%rhs => rhssln(this%moffset + 1:this%moffset + this%neq)
+    offset = this%moffset - sln_offset
+    this%rhs => rhssln(offset + 1:offset + this%neq)
     call mem_checkin(this%rhs, 'RHS', this%memoryPath, varNameTgt, memPathTgt)
   end subroutine set_rhsptr
 
-  subroutine set_iboundptr(this, iboundsln, varNameTgt, memPathTgt)
+  subroutine set_iboundptr(this, iboundsln, sln_offset, varNameTgt, memPathTgt)
     use MemoryManagerModule, only: mem_checkin
     ! -- dummy
     class(NumericalModelType) :: this
     integer(I4B), dimension(:), pointer, contiguous, intent(in) :: iboundsln
+    integer(I4B) :: sln_offset
     character(len=*), intent(in) :: varNameTgt
     character(len=*), intent(in) :: memPathTgt
     ! -- local
+    integer(I4B) :: offset
     ! -- code
-    this%ibound => iboundsln(this%moffset + 1:this%moffset + this%neq)
+    offset = this%moffset - sln_offset
+    this%ibound => iboundsln(offset + 1:offset + this%neq)
     call mem_checkin(this%ibound, 'IBOUND', this%memoryPath, varNameTgt, &
                      memPathTgt)
   end subroutine set_iboundptr

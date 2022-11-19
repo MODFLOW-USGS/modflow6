@@ -40,7 +40,7 @@ contains
     logical(LGP) :: hasConverged
     !
     ! -- parse any command line arguments
-    call GetCommandLineArguments()
+    !call GetCommandLineArguments()
     !
     ! initialize simulation
     call Mf6Initialize()
@@ -73,16 +73,33 @@ contains
     ! -- modules
     use SimulationCreateModule, only: simulation_cr
     use SimVariablesModule, only: own_rank, num_ranks
-    integer :: ierr
+    integer :: ierr, icnt
     character(len=*), parameter :: file = '/home/russcher/.petscrc'
+    logical(LGP) :: wait_dbg
     !
-    ! -- initialize petsc/mpi
+    ! -- initialize petsc/mpi (TODO_MJR: clean up)
 #if defined(__WITH_PETSC__)
     call PetscInitialize(file, ierr)
     CHKERRQ(ierr)
 
     call MPI_Comm_size(PETSC_COMM_WORLD, num_ranks, ierr)
+    CHKERRQ(ierr)
     call MPI_Comm_rank(PETSC_COMM_WORLD, own_rank, ierr)
+    CHKERRQ(ierr)
+
+    call PetscOptionsHasName(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, &
+                             '-wait_dbg', wait_dbg, ierr)
+    CHKERRQ(ierr)
+
+    if (wait_dbg .and. own_rank == 0) then
+      icnt = 0
+      write(*,*) 'Stalling for process ', getpid()
+      do while(icnt < 1)
+        call sleep(1)
+      end do
+    end if
+    call MPI_Barrier(PETSC_COMM_WORLD, ierr)
+    CHKERRQ(ierr)
 #endif
     !
     ! -- print banner and info to screen

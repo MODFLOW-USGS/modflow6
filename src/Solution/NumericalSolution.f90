@@ -56,6 +56,7 @@ module NumericalSolutionModule
     real(DP), pointer :: ttsoln !< timer - total solution time
     integer(I4B), pointer :: isymmetric => null() !< flag indicating if matrix symmetry is required
     integer(I4B), pointer :: neq => null() !< number of equations
+    integer(I4B), pointer :: matrix_offset => null() !< offset of linear system when part of distributed solution
     class(LinearSolverBaseType), pointer :: linear_solver !< the linear solver for this solution
     class(MatrixBaseType), pointer :: system_matrix !< sparse A-matrix for the system of equations
     class(VectorBaseType), pointer :: vec_rhs !< the right-hand side vector
@@ -254,6 +255,7 @@ contains
     call mem_allocate(this%ttsoln, 'TTSOLN', this%memoryPath)
     call mem_allocate(this%isymmetric, 'ISYMMETRIC', this%memoryPath)
     call mem_allocate(this%neq, 'NEQ', this%memoryPath)
+    call mem_allocate(this%matrix_offset, 'MATRIX_OFFSET', this%memoryPath)
     call mem_allocate(this%dvclose, 'DVCLOSE', this%memoryPath)
     call mem_allocate(this%bigchold, 'BIGCHOLD', this%memoryPath)
     call mem_allocate(this%bigch, 'BIGCH', this%memoryPath)
@@ -421,39 +423,58 @@ contains
   subroutine sln_df(this)
     ! modules
     use MemoryManagerModule, only: mem_allocate
+    use SimVariablesModule, only: simulation_mode, num_ranks
     ! -- dummy variables
     class(NumericalSolutionType) :: this !< NumericalSolutionType instance
     ! -- local variables
     class(NumericalModelType), pointer :: mp => null()
     integer(I4B) :: i
     integer(I4B), allocatable, dimension(:) :: rowmaxnnz
+    integer(I4B) :: ncol, irow_start, irow_end
+    integer(I4B) :: mod_offset
     !
-    ! -- calculate and set offsets
+    ! -- set sol id and determine nr. of equation in this solution
     do i = 1, this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, i)
       call mp%set_idsoln(this%id)
-      call mp%set_moffset(this%neq)
       this%neq = this%neq + mp%neq
     end do
     !
-    ! -- Allocate and initialize solution arrays
-    call this%allocate_arrays()
-
-    this%solver_mode = 'SEQ'
+    ! -- set up the (possibly parallel) linear system
+    if (simulation_mode == 'PARALLEL' .and. num_ranks > 1) then
+      this%solver_mode = 'PAR'
+    else
+      this%solver_mode = 'PAR'
+    end if
+    !
     this%linear_solver => create_linear_solver(this%solver_mode)
     this%system_matrix => this%linear_solver%create_matrix()
     this%vec_x => this%system_matrix%create_vector(this%neq, 'X', this%memoryPath)
     this%x => this%vec_x%get_array()
     this%vec_rhs => this%system_matrix%create_vector(this%neq, 'RHS', this%memoryPath)
     this%rhs => this%vec_rhs%get_array()
-
+    !
+    call this%vec_rhs%get_ownership_range(irow_start, irow_end)
+    ncol = this%vec_rhs%get_size()
+    !
+    ! -- calculate and set offsets
+    mod_offset = irow_start - 1
+    this%matrix_offset = irow_start - 1
+    do i = 1, this%modellist%Count()
+      mp => GetNumericalModelFromList(this%modellist, i)
+      call mp%set_moffset(mod_offset)
+      mod_offset = mod_offset + mp%neq
+    end do
+    !
+    ! -- Allocate and initialize solution arrays
+    call this%allocate_arrays()
     !
     ! -- Go through each model and point x, ibound, and rhs to solution
     do i = 1, this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, i)
-      call mp%set_xptr(this%x, 'X', this%name)
-      call mp%set_rhsptr(this%rhs, 'RHS', this%name)
-      call mp%set_iboundptr(this%active, 'IBOUND', this%name)
+      call mp%set_xptr(this%x, this%matrix_offset, 'X', this%name)
+      call mp%set_rhsptr(this%rhs, this%matrix_offset, 'RHS', this%name)
+      call mp%set_iboundptr(this%active, this%matrix_offset, 'IBOUND', this%name)
     end do
     !
     ! -- Create the sparsematrix instance
@@ -461,7 +482,8 @@ contains
     do i = 1, this%neq
       rowmaxnnz(i) = 4
     end do
-    call this%sparse%init(this%neq, this%neq, rowmaxnnz)
+    call this%sparse%init(this%neq, ncol, rowmaxnnz)
+    this%sparse%offset = this%matrix_offset
     deallocate (rowmaxnnz)
     !
     ! -- Assign connections, fill ia/ja, map connections
@@ -485,7 +507,6 @@ contains
     ! -- dummy variables
     class(NumericalSolutionType) :: this !< NumericalSolutionType instance
     ! -- local variables
-    type(LinearSolverCfg) :: lin_solver_cfg
     class(NumericalModelType), pointer :: mp => null()
     class(NumericalExchangeType), pointer :: cp => null()
     character(len=linelength) :: errmsg
@@ -862,9 +883,14 @@ contains
         call store_error(errmsg)
       end if
     end if
+     
+    if (this%solver_mode == 'PAR') then
+      this%linmeth = 2
+    end if
+
     !
     ! -- call secondary subroutine to initialize and read linear
-    !    solver parameters IMSLINEAR solver
+    !    solver parameters IMSLINEAR solver   
     if (this%linmeth == 1) then
       allocate (this%imslinear)
       WRITE (IOUT, *) '***IMS LINEAR SOLVER WILL BE USED***'
@@ -873,24 +899,21 @@ contains
                                              ifdparam, ims_lin_type, &
                                              this%neq, this%system_matrix, &
                                              this%rhs, this%x, this%nitermax)
+      if (ims_lin_type .eq. 1) then
+        this%isymmetric = 1
+      end if
     !
     ! -- incorrect linear solver flag
+    else if (this%linmeth == 2) then
+      call this%linear_solver%initialize(this%system_matrix)
+      this%nitermax = this%linear_solver%nitermax
+      this%isymmetric = 0
     ELSE
       WRITE (errmsg, '(a)') &
         'INCORRECT VALUE FOR LINEAR SOLUTION METHOD SPECIFIED.'
       call store_error(errmsg)
     END IF
-
-    if (this%solver_mode == 'PAR') then
-      this%linmeth = 2
-    end if
-    lin_solver_cfg%linear_accel_type = ims_lin_type
-    lin_solver_cfg%dvclose = this%imslinear%DVCLOSE
-    call this%linear_solver%initialize(this%system_matrix, lin_solver_cfg)
-
-    if (ims_lin_type .eq. 1) then
-      this%isymmetric = 1
-    end if
+    
     !
     ! -- write message about matrix symmetry
     if (this%isymmetric == 1) then
@@ -963,7 +986,9 @@ contains
            /1X, 'BACKTRACKING RESIDUAL LIMIT              (RES_LIM) = ', E15.6)
     !
     ! -- linear solver data
-    call this%imslinear%imslinear_summary(this%mxiter)
+    if (this%linmeth == 1) then
+      call this%imslinear%imslinear_summary(this%mxiter)
+    end if
 
     ! -- write summary of solver error messages
     ierr = count_errors()
@@ -1128,7 +1153,7 @@ contains
     class(NumericalSolutionType) :: this !< NumericalSolutionType instance
     !
     ! -- write timer output
-    if (IDEVELOPMODE == 1) then
+    if (IDEVELOPMODE == 1 .and. this%linmeth == 1) then
       write (this%imslinear%iout, '(//1x,a,1x,a,1x,a)') &
         'Solution', trim(adjustl(this%name)), 'summary'
       write (this%imslinear%iout, "(1x,70('-'))")
@@ -1154,8 +1179,10 @@ contains
     class(NumericalSolutionType) :: this !< NumericalSolutionType instance
     !
     ! -- IMSLinearModule
-    call this%imslinear%imslinear_da()
-    deallocate (this%imslinear)
+    if (this%linmeth == 1) then
+      call this%imslinear%imslinear_da()
+      deallocate (this%imslinear)
+    end if
     !
     ! -- lists
     call this%modellist%Clear()
@@ -1215,6 +1242,7 @@ contains
     call mem_deallocate(this%ttsoln)
     call mem_deallocate(this%isymmetric)
     call mem_deallocate(this%neq)
+    call mem_deallocate(this%matrix_offset)
     call mem_deallocate(this%dvclose)
     call mem_deallocate(this%bigchold)
     call mem_deallocate(this%bigch)
@@ -1729,7 +1757,7 @@ contains
       locmax_nur = 0
       do im = 1, this%modellist%Count()
         mp => GetNumericalModelFromList(this%modellist, im)
-        i0 = mp%moffset + 1
+        i0 = mp%moffset + 1 - this%matrix_offset
         i1 = i0 + mp%neq - 1
         call mp%model_nur(mp%neq, this%x(i0:i1), this%xtemp(i0:i1), &
                           this%dxold(i0:i1), inewtonur, dxmax_nur, locmax_nur)
@@ -2338,14 +2366,10 @@ contains
   subroutine sln_reset(this)
     ! -- dummy variables
     class(NumericalSolutionType) :: this !< NumericalSolutionType instance
-    ! -- local variables
-    integer(I4B) :: i
     !
     ! -- reset the solution
     call this%system_matrix%zero_entries()
-    do i = 1, this%neq
-      this%rhs(i) = DZERO
-    end do
+    call this%vec_rhs%zero_entries()
     !
     ! -- return
     return
@@ -2368,7 +2392,8 @@ contains
     real(DP), intent(in) :: ptcf
     ! -- local variables
     logical :: lsame
-    integer(I4B) :: n
+    integer(I4B) :: ieq
+    integer(I4B) :: irow
     integer(I4B) :: itestmat
     integer(I4B) :: ipos
     integer(I4B) :: icol_s
@@ -2387,41 +2412,50 @@ contains
       &'_', i0, '_', i0, '.txt')"
     !
     ! -- take care of loose ends for all nodes before call to solver
-    do n = 1, this%neq
+    do ieq = 1, this%neq
+      !
+      ! -- get (global) cell id
+      irow = ieq + this%matrix_offset
       !
       ! -- store x in temporary location
-      this%xtemp(n) = this%x(n)
+      this%xtemp(ieq) = this%x(ieq)
       !
       ! -- make adjustments to the continuity equation for the node
       ! -- adjust small diagonal coefficient in an active cell
-      if (this%active(n) > 0) then
+      if (this%active(ieq) > 0) then
         diagval = -DONE
-        adiag = abs(this%system_matrix%get_diag_value(n))
+        adiag = abs(this%system_matrix%get_diag_value(irow))
         if (adiag < DEM15) then
-          call this%system_matrix%set_diag_value(n, diagval)
-          this%rhs(n) = this%rhs(n) + diagval * this%x(n)
+          call this%system_matrix%set_diag_value(irow, diagval)
+          this%rhs(ieq) = this%rhs(ieq) + diagval * this%x(ieq)
         end if
         ! -- Dirichlet boundary or no-flow cell
       else
-        call this%system_matrix%set_diag_value(n, DONE)
-        call this%system_matrix%zero_row_offdiag(n)
-        this%rhs(n) = this%x(n)
+        call this%system_matrix%set_diag_value(irow, DONE)
+        call this%system_matrix%zero_row_offdiag(irow)
+        this%rhs(ieq) = this%x(ieq)
+        ! Alternative way (TODO_MJR: ):
+        ! call this%system_matrix%add_diag_value(irow, 1.0e+20_DP)
+        ! this%rhs(ieq) = 1.0e+20_DP * this%x(ieq)
       end if
     end do
     !
     ! -- complete adjustments for Dirichlet boundaries for a symmetric matrix
     if (this%isymmetric == 1) then
-      do n = 1, this%neq
-        if (this%active(n) > 0) then
-          icol_s = this%system_matrix%get_first_col_pos(n)
-          icol_e = this%system_matrix%get_last_col_pos(n)
+      do ieq = 1, this%neq
+        !
+        ! -- get (global) row number
+        irow = ieq + this%matrix_offset
+        if (this%active(ieq) > 0) then
+          icol_s = this%system_matrix%get_first_col_pos(irow)
+          icol_e = this%system_matrix%get_last_col_pos(irow)
           do ipos = icol_s, icol_e
             jcol = this%system_matrix%get_column(ipos)
-            if (jcol == n) cycle
-            if (this%active(jcol) < 0) then
-              this%rhs(n) = this%rhs(n) - &
-                            (this%system_matrix%get_value_pos(ipos) * &
-                             this%x(jcol))
+            if (jcol == irow) cycle            
+            if (this%active(jcol - this%matrix_offset) < 0) then
+              this%rhs(ieq) = this%rhs(ieq) - &
+                              (this%system_matrix%get_value_pos(ipos) * &
+                              this%x(jcol - this%matrix_offset))
               call this%system_matrix%set_value_pos(ipos, DZERO)
             end if
 
@@ -2487,9 +2521,9 @@ contains
             this%ptcdel = DONE / ptcf
           else
             bnorm = DZERO
-            do n = 1, this%neq
-              if (this%active(n) .gt. 0) then
-                bnorm = bnorm + this%rhs(n) * this%rhs(n)
+            do ieq = 1, this%neq
+              if (this%active(ieq) .gt. 0) then
+                bnorm = bnorm + this%rhs(ieq) * this%rhs(ieq)
               end if
             end do
             bnorm = sqrt(bnorm)
@@ -2510,13 +2544,14 @@ contains
       end if
       diagmin = DEP20
       bnorm = DZERO
-      do n = 1, this%neq
-        if (this%active(n) > 0) then
-          diagval = abs(this%system_matrix%get_diag_value(n))
-          bnorm = bnorm + this%rhs(n) * this%rhs(n)
+      do ieq = 1, this%neq
+        irow = ieq + this%matrix_offset
+        if (this%active(ieq) > 0) then
+          diagval = abs(this%system_matrix%get_diag_value(irow))
+          bnorm = bnorm + this%rhs(ieq) * this%rhs(ieq)
           if (diagval < diagmin) diagmin = diagval
-          call this%system_matrix%add_diag_value(n, -ptcval)
-          this%rhs(n) = this%rhs(n) - ptcval * this%x(n)
+          call this%system_matrix%add_diag_value(irow, -ptcval)
+          this%rhs(ieq) = this%rhs(ieq) - ptcval * this%x(ieq)
         end if
       end do
       bnorm = sqrt(bnorm)
@@ -2539,12 +2574,13 @@ contains
       itestmat = getunit()
       open (itestmat, file=trim(adjustl(fname)))
       write (itestmat, *) 'NODE, RHS, AMAT FOLLOW'
-      do n = 1, this%neq
-        icol_s = this%system_matrix%get_first_col_pos(n)
-        icol_e = this%system_matrix%get_last_col_pos(n)
+      do ieq = 1, this%neq
+        irow = ieq + this%matrix_offset
+        icol_s = this%system_matrix%get_first_col_pos(irow)
+        icol_e = this%system_matrix%get_last_col_pos(irow)
         write (itestmat, '(*(G0,:,","))') &
-          n, &
-          this%rhs(n), &
+          irow, &
+          this%rhs(ieq), &
           (this%system_matrix%get_column(ipos), ipos=icol_s, icol_e), &
           (this%system_matrix%get_value_pos(ipos), ipos=icol_s, icol_e)
       end do

@@ -12,10 +12,12 @@ module SparseModule
   end type rowtype
 
   type, public :: sparsematrix
-    integer(I4B) :: nrow ! number of rows in the matrix
-    integer(I4B) :: ncol ! number of columns in the matrix
-    integer(I4B) :: nnz ! number of nonzero matrix entries
-    type(rowtype), allocatable, dimension(:) :: row ! one rowtype for each matrix row
+    integer(I4B) :: offset !< global offset for first row in this matrix (default = 0)
+    integer(I4B) :: nrow !< number of rows in the matrix
+    integer(I4B) :: ncol !< number of columns in the matrix
+    integer(I4B) :: nnz !< number of nonzero matrix entries
+    integer(I4B) :: nnz_od !< number of off-diagonal nonzero matrix entries
+    type(rowtype), allocatable, dimension(:) :: row !< one rowtype for each matrix row
   contains
     generic :: init => initialize, initializefixed
     procedure :: addconnection
@@ -48,9 +50,11 @@ contains
     ! -- local
     integer(I4B) :: i
     ! -- code
+    this%offset = 0
     this%nrow = nrow
     this%ncol = ncol
     this%nnz = 0
+    this%nnz_od = 0
     allocate (this%row(nrow))
     do i = 1, nrow
       allocate (this%row(i)%icolarray(rowmaxnnz(i)))
@@ -151,10 +155,19 @@ contains
     integer(I4B), intent(in) :: i, j, inodup
     integer(I4B), optional, intent(inout) :: iaddop
     ! -- local
+    integer(I4B) :: irow_local
     integer(I4B) :: iadded
     ! -- code
-    call insert(j, this%row(i), inodup, iadded)
+    !
+    ! -- when distributed system, reduce row numbers to local range
+    irow_local = i - this%offset
+    !
+    call insert(j, this%row(irow_local), inodup, iadded)
     this%nnz = this%nnz + iadded
+    if (j < this%offset + 1 .or. j > this%offset + this%nrow) then
+      ! count the off-diagonal entries separately
+      this%nnz_od = this%nnz_od + iadded
+    end if
     if (present(iaddop)) iaddop = iadded
     !
     ! -- return
@@ -224,13 +237,15 @@ contains
     ! -- code
     start_idx = 2
     if (present(with_csr)) then
-      ! CSR: don't put diagonal up front
-      start_idx = 1
+      if (with_csr) then
+        ! CSR: don't put diagonal up front
+        start_idx = 1
+      end if
     end if
 
     do i = 1, this%nrow
       nval = this%row(i)%nnz
-      call sortintarray(nval - 1, &
+      call sortintarray(nval - start_idx + 1, &
                         this%row(i)%icolarray(start_idx:nval))
     end do
     !

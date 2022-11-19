@@ -31,10 +31,9 @@ function create_ims_solver() result(solver)
 
 end function create_ims_solver
 
-subroutine ims_initialize(this, matrix, cfg)
+subroutine ims_initialize(this, matrix)
   class(ImsLinearSolverType) :: this
   class(MatrixBaseType), pointer :: matrix
-  class(LinearSolverCfg) :: cfg
 end subroutine ims_initialize
 
 subroutine ims_solve(this, kiter, rhs, x)

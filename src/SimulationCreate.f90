@@ -259,7 +259,7 @@ contains
     use GwfModule, only: gwf_cr
     use GwtModule, only: gwt_cr
     use ConstantsModule, only: LENMODELNAME
-    use SimVariablesModule, only: simulation_mode, num_ranks, own_rank
+    use SimVariablesModule, only: simulation_mode, own_rank, num_ranks
     ! -- dummy
     ! -- local
     integer(I4B) :: ierr
@@ -286,9 +286,9 @@ contains
 
         im_global = im_global + 1
         call ExpandArray(global_modelname)
-        global_modelname(im_global) = mname
+        global_modelname(im_global) = mname(1:LENMODELNAME)
 
-        if (simulation_mode == 'PARALLEL') then
+        if (simulation_mode == 'PARALLEL' .and. num_ranks > 1) then
           if (keyword /= 'GWF6') then
             write (errmsg, '(4x,a,a)') &
               '****ERROR. ONLY GWF SUPPORT IN PARALLEL MODE FOR NOW'

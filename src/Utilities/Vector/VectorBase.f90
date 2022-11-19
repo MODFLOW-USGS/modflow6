@@ -8,9 +8,9 @@ module VectorBaseModule
     procedure(create_if), deferred :: create
     procedure(destroy_if), deferred :: destroy
     procedure(get_array_if), deferred :: get_array
-
+    procedure(get_ownership_range_if), deferred :: get_ownership_range
+    procedure(get_size_if), deferred :: get_size
     procedure(zero_entries_if), deferred :: zero_entries
-
     procedure(print_if), deferred :: print
   end type VectorBaseType
 
@@ -31,6 +31,16 @@ module VectorBaseModule
       class(VectorBaseType) :: this !< this vector
       real(DP), dimension(:), pointer, contiguous :: array
     end function get_array_if
+    subroutine get_ownership_range_if(this, start, end)
+      import VectorBaseType, I4B
+      class(VectorBaseType) :: this !< this vector
+      integer(I4B) :: start, end
+    end subroutine
+    function get_size_if(this) result(size)
+      import VectorBaseType, I4B
+      class(VectorBaseType) :: this !< this vector
+      integer(I4B) :: size
+    end function
     subroutine zero_entries_if(this)
       import VectorBaseType
       class(VectorBaseType) :: this
