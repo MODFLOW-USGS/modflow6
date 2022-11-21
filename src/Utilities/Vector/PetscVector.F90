@@ -3,6 +3,7 @@ module PetscVectorModule
   use petscksp
   use VectorBaseModule
   use KindModule, only: I4B, DP
+  use ConstantsModule, only: DZERO
   use MemoryManagerModule, only: mem_allocate, mem_deallocate
   use SimVariablesModule, only: simulation_mode, num_ranks
   implicit none
@@ -20,10 +21,6 @@ module PetscVectorModule
     procedure :: get_size => petsc_vec_get_size
     procedure :: zero_entries => petsc_vec_zero_entries
     procedure :: print => petsc_vec_print
-
-    ! public
-    procedure :: update => petsc_vec_update
-    procedure :: reset => petsc_vec_reset
   end type PetscVectorType
 
 contains
@@ -46,6 +43,7 @@ contains
       call VecCreateSeqWithArray(PETSC_COMM_WORLD, 1, n, this%array, this%vec_impl, ierr)
     end if
     CHKERRQ(ierr)
+
     call this%zero_entries()
 
   end subroutine petsc_vec_create
@@ -62,31 +60,7 @@ contains
     call mem_deallocate(this%array)
 
   end subroutine petsc_vec_destroy
-
-  !> @brief Update state
-  !<
-  subroutine petsc_vec_update(this)
-    class(PetscVectorType) :: this !< this vector
-    ! local
-    PetscErrorCode :: ierr
-
-    call VecPlaceArray(this%vec_impl, this%array, ierr)
-    CHKERRQ(ierr)
-
-  end subroutine petsc_vec_update
-
-  !> @brief Release arrays
-  !<
-  subroutine petsc_vec_reset(this)
-    class(PetscVectorType) :: this !< this vector
-    ! local
-    PetscErrorCode :: ierr
-
-    call VecResetArray(this%vec_impl, ierr)
-    CHKERRQ(ierr)
-
-  end subroutine petsc_vec_reset
-
+  
   !> @brief Get a pointer to the underlying data array
   !< for this vector
   function petsc_vec_get_array(this) result(array)
@@ -133,6 +107,10 @@ contains
     PetscErrorCode :: ierr
 
     call VecZeroEntries(this%vec_impl, ierr)
+    CHKERRQ(ierr)
+    call VecAssemblyBegin(this%vec_impl, ierr)
+    CHKERRQ(ierr)
+    call VecAssemblyEnd(this%vec_impl, ierr)
     CHKERRQ(ierr)
 
   end subroutine petsc_vec_zero_entries

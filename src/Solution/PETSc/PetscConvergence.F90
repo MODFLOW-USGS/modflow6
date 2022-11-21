@@ -6,7 +6,6 @@ module PetscConvergenceModule
   private
 
   public :: petsc_check_convergence
-  public :: petsc_destroy_context
   
   type, public :: PetscContextType
     Vec :: x_old
@@ -54,17 +53,5 @@ contains
     end if
 
   end subroutine petsc_check_convergence
-
-  subroutine petsc_destroy_context(petsc_context, ierr)
-    class(PetscContextType), pointer :: petsc_context !< optional user-defined monitor context
-    PetscErrorCode :: ierr                        !< error
-
-    call VecDestroy(petsc_context%x_old, ierr)
-    CHKERRQ(ierr)
-    call VecDestroy(petsc_context%delta_x, ierr)
-    CHKERRQ(ierr)
-    deallocate(petsc_context)
-
-  end subroutine petsc_destroy_context
 
 end module PetscConvergenceModule
