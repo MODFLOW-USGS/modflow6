@@ -52,8 +52,8 @@ contains
   !! for a certain model or exchange, or by assigning
   !! the map to an empty slot.
   !!
-  !! The resulting map should be properly initialized beforehand.
-  !<
+  !! The map to which is added, should be properly 
+  !< initialized beforehand
   subroutine add(this, map_to_add)
     use ArrayHandlersModule, only: ExtendPtrArray
     class(InterfaceMapType) :: this
