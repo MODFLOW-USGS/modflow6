@@ -2,6 +2,7 @@ module VirtualGwfModelModule
   use VirtualBaseModule
   use VirtualModelModule
   use SimStagesModule
+  use NumericalModelModule, only: NumericalModelType
   implicit none
   private 
 
@@ -21,9 +22,9 @@ module VirtualGwfModelModule
     type(VirtualDbl1dType), pointer :: npf_wetdry => null()
   contains
     ! public
-    procedure :: create_remote => create_virtual_gwf_remote
-    procedure :: create_local => create_virtual_gwf_local
-    procedure :: destroy => destroy_virtual_gwf
+    procedure :: create => vgwf_create
+    procedure :: destroy => vgwf_destroy
+    procedure :: init_model_data => vgwf_init_model_data
     ! private
     procedure, private :: allocate_data
     procedure, private :: deallocate_data
@@ -31,50 +32,67 @@ module VirtualGwfModelModule
 
 contains
 
-  subroutine create_virtual_gwf_remote(this, model_name)
+  subroutine vgwf_create(this, model_name, model)
     class(VirtualGwfModelType) :: this
     character(len=*) :: model_name
+    class(NumericalModelType), pointer :: model
     
+    ! model can be null
+    if (.not. associated(model)) this%is_remote = .true.
+
     ! create base
-    call this%VirtualModelType%create_remote(model_name)
+    call this%VirtualModelType%create(model_name, model)
     
     ! allocate fields
     call this%allocate_data()
 
-    ! map virtual memory to remote (first phase)
-    call this%npf_iangle1%map('IANGLE1', 'NPF', model_name, (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
-    call this%add_to_list(this%npf_iangle1%to_base())
-    call this%npf_iangle2%map('IANGLE2', 'NPF', model_name, (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
-    call this%add_to_list(this%npf_iangle2%to_base())
-    call this%npf_iangle3%map('IANGLE3', 'NPF', model_name, (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
-    call this%add_to_list(this%npf_iangle3%to_base())
-    call this%npf_iwetdry%map('IWETDRY', 'NPF', model_name, (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
-    call this%add_to_list(this%npf_iwetdry%to_base())
+    ! map virtual memory
+    call this%map(this%npf_iangle1%to_base(), 'IANGLE1', 'NPF', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
+    call this%map(this%npf_iangle2%to_base(), 'IANGLE2', 'NPF', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
+    call this%map(this%npf_iangle3%to_base(), 'IANGLE3', 'NPF', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
+    call this%map(this%npf_iwetdry%to_base(), 'IWETDRY', 'NPF', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
 
-  end subroutine create_virtual_gwf_remote
+  end subroutine vgwf_create
 
-  subroutine create_virtual_gwf_local(this, model_name)
+  subroutine vgwf_init_model_data(this)
     class(VirtualGwfModelType) :: this
-    character(len=*) :: model_name
+    ! local
+    integer(I4B) :: nodes
 
-    ! create base
-    call this%VirtualModelType%create_local(model_name)
+    nodes = 0 ! TODO_MJR: this should follow from the map
 
-    ! link gwf fields (all)
-    call this%npf_iangle1%link('IANGLE1', 'NPF', model_name)
-    call this%npf_iangle2%link('IANGLE2', 'NPF', model_name)
-    call this%npf_iangle3%link('IANGLE3', 'NPF', model_name)
-    call this%npf_iwetdry%link('IWETDRY', 'NPF', model_name)  
-    call this%npf_icelltype%link('ICELLTYPE', 'NPF', model_name)
-    call this%npf_k11%link('K11', 'NPF', model_name)
-    call this%npf_k22%link('K22', 'NPF', model_name)
-    call this%npf_k33%link('K33', 'NPF', model_name)
-    call this%npf_angle1%link('ANGLE1', 'NPF', model_name)
-    call this%npf_angle2%link('ANGLE2', 'NPF', model_name)
-    call this%npf_angle3%link('ANGLE3', 'NPF', model_name)
-    call this%npf_wetdry%link('WETDRY', 'NPF', model_name)
+    ! Num. model data
+    call this%map(this%x%to_base(), 'X', '', nodes, (/STG_BEFORE_AR, STG_BEFORE_AD, STG_BEFORE_CF/), MAP_NODE_TYPE)
+    call this%map(this%ibound%to_base(), 'IBOUND', '', nodes, (/STG_BEFORE_AR, STG_BEFORE_AD, STG_BEFORE_CF/), MAP_NODE_TYPE)
+    call this%map(this%x_old%to_base(), 'XOLD', '',  nodes, (/STG_BEFORE_AD, STG_BEFORE_CF/), MAP_NODE_TYPE)
 
-  end subroutine create_virtual_gwf_local
+    ! NPF
+    call this%map(this%npf_icelltype%to_base(), 'ICELLTYPE', 'NPF', nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+    call this%map(this%npf_k11%to_base(), 'K11', 'NPF', nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+    call this%map(this%npf_k22%to_base(), 'K22', 'NPF', nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+    call this%map(this%npf_k33%to_base(), 'K33', 'NPF', nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)    
+    if (this%npf_iangle1%value > 0) then
+      call this%map(this%npf_angle1%to_base(), 'ANGLE1', 'NPF', nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+    else
+      call this%map(this%npf_angle1%to_base(), 'ANGLE1', 'NPF', 0, (/STG_NEVER/), MAP_NODE_TYPE)
+    end if
+    if (this%npf_iangle2%value > 0) then
+      call this%map(this%npf_angle2%to_base(), 'ANGLE2', 'NPF', nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+    else
+      call this%map(this%npf_angle2%to_base(), 'ANGLE2', 'NPF', 0, (/STG_NEVER/), MAP_NODE_TYPE)
+    end if
+    if (this%npf_iangle3%value > 0) then
+      call this%map(this%npf_angle3%to_base(), 'ANGLE3', 'NPF', nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+    else
+      call this%map(this%npf_angle3%to_base(), 'ANGLE3', 'NPF', 0, (/STG_NEVER/), MAP_NODE_TYPE)
+    end if
+    if (this%npf_iwetdry%value > 0) then
+      call this%map(this%npf_wetdry%to_base(), 'WETDRY', 'NPF', nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+    else
+      call this%map(this%npf_wetdry%to_base(), 'WETDRY', 'NPF', 0, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+    end if
+
+  end subroutine vgwf_init_model_data
   
   subroutine allocate_data(this)
     class(VirtualGwfModelType) :: this
@@ -94,12 +112,12 @@ contains
 
   end subroutine allocate_data
 
-  subroutine destroy_virtual_gwf(this)
+  subroutine vgwf_destroy(this)
     class(VirtualGwfModelType) :: this
 
     call this%deallocate_data()
 
-  end subroutine destroy_virtual_gwf
+  end subroutine vgwf_destroy
 
   subroutine deallocate_data(this)
     class(VirtualGwfModelType) :: this

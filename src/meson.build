@@ -19,6 +19,7 @@ modflow_sources = files(
     'Distributed' / 'RemoteMemory.f90',
     'Distributed' / 'Router.f90',
     'Distributed' / 'VirtualBase.f90',
+    'Distributed' / 'VirtualDataContainer.f90',
     'Distributed' / 'VirtualExchange.f90',
     'Distributed' / 'VirtualModel.f90',
     'Distributed' / 'VirtualGwfModel.f90',

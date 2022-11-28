@@ -1,6 +1,7 @@
 module VirtualGwtModelModule
   use VirtualBaseModule
   use VirtualModelModule
+  use NumericalModelModule, only: NumericalModelType
   implicit none
   private
 
@@ -26,43 +27,37 @@ module VirtualGwtModelModule
     type(VirtualIntType), pointer :: inmst => null()
   contains
     ! public
-    procedure :: create_remote => create_virtual_gwt_remote
-    procedure :: create_local => create_virtual_gwt_local
-    procedure :: destroy
+    procedure :: create => vgwt_create
+    procedure :: destroy => vgwt_destroy
+    procedure :: init_model_data => vgwt_init_model_data
     ! private
 
   end type VirtualGwtModelType
 
 contains
 
-subroutine create_virtual_gwt_remote(this, model_name)
+subroutine vgwt_create(this, model_name, model)
   class(VirtualGwtModelType) :: this
   character(len=*) :: model_name
+  class(NumericalModelType), pointer :: model
 
   ! create base
-  call this%VirtualModelType%create_remote(model_name)
+  call this%VirtualModelType%create(model_name, model)
 
   ! allocate fields
 
   ! map virtual memory to remote (this is done in stages)
 
-end subroutine create_virtual_gwt_remote
+end subroutine vgwt_create
 
-subroutine create_virtual_gwt_local(this, model_name)
+subroutine vgwt_init_model_data(this)
   class(VirtualGwtModelType) :: this
-  character(len=*) :: model_name
+end subroutine vgwt_init_model_data
 
-  ! create base
-  call this%VirtualModelType%create_local(model_name)
-
-  ! link gwt fields
-
-end subroutine create_virtual_gwt_local
-
-subroutine destroy(this)
+subroutine vgwt_destroy(this)
   class(VirtualGwtModelType) :: this
 
-end subroutine destroy
+end subroutine vgwt_destroy
 
 
 end module VirtualGwtModelModule

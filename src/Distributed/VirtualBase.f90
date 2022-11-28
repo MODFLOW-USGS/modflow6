@@ -2,7 +2,6 @@ module VirtualBaseModule
   use KindModule, only: I4B, DP, LGP
   use ConstantsModule, only: LENVARNAME, LENMEMPATH
   use MemoryTypeModule, only: MemoryType
-  use MemoryHelperModule, only: create_mem_path
   use MemoryManagerModule, only: mem_allocate, mem_deallocate, &
                                  get_from_memorylist
   implicit none
@@ -21,8 +20,9 @@ module VirtualBaseModule
   !!  2) Local memory
   !!  In this case no virtual memory item is created, no
   !!  lookup tables and synchronization are necessary. 
-  !!  The virtual memory item simply points to the
-  !!  original memory location.
+  !!  The virtual memory item will be pointed to the
+  !!  original memory location at the requested
+  !!  synchronization stage.
   !<
   type, abstract, public :: VirtualDataType
     logical(LGP) :: is_remote !< is remote memory, when true
@@ -34,9 +34,7 @@ module VirtualBaseModule
     integer(I4B), dimension(:), pointer, contiguous :: remote_to_virtual !< sparse list which maps remote index to virtual
     type(MemoryType), pointer :: virtual_mt
   contains
-    procedure :: map => map_scalar, map_array
     procedure(allocate_vmem_if), deferred :: allocate_vmem
-    procedure :: link => link_vmem
     procedure :: to_base => to_base_vmem
   end type
 
@@ -89,58 +87,6 @@ module VirtualBaseModule
   end interface
 
 contains
-
-  subroutine map_scalar(this, var_name, subcomp_name, comp_name, stages, map_type)
-    class(VirtualDataType) :: this
-    character(len=*) :: var_name
-    character(len=*) :: subcomp_name
-    character(len=*) :: comp_name
-    integer(I4B), dimension(:) :: stages
-    integer(I4B) :: map_type
-
-    call this%map_array(var_name, subcomp_name, comp_name, (/0/), stages, map_type)
-
-  end subroutine map_scalar
-
-  subroutine map_array(this, var_name, subcomp_name, comp_name, shape, stages, map_type)
-    class(VirtualDataType) :: this
-    character(len=*) :: var_name
-    character(len=*) :: subcomp_name
-    character(len=*) :: comp_name
-    integer(I4B), dimension(:) :: shape
-    integer(I4B), dimension(:) :: stages
-    integer(I4B) :: map_type
-    ! local
-    character(len=LENMEMPATH) :: mem_path
-    logical(LGP) :: found
-
-    ! create new virtual memory item
-    mem_path = create_mem_path(comp_name, subcomp_name, context='__VIRTUAL__')
-    call this%allocate_vmem(var_name, mem_path, shape)
-    call get_from_memorylist(var_name, mem_path, this%virtual_mt, found)
-
-    this%sync_stages = stages
-    this%map_type = map_type
-    this%remote_to_virtual => null()
-    this%virtual_to_remote => null()
-
-  end subroutine map_array
-
-  subroutine link_vmem(this, var_name, subcomp_name, comp_name)
-    class(VirtualDataType) :: this
-    character(len=*) :: var_name
-    character(len=*) :: subcomp_name
-    character(len=*) :: comp_name
-    ! local
-    character(len=LENMEMPATH) :: mem_path
-    type(MemoryType), pointer :: mt
-    logical(LGP) :: found
-
-    mem_path = create_mem_path(comp_name, subcomp_name)
-    call get_from_memorylist(var_name, mem_path, mt, found)
-    this%virtual_mt => mt
-
-  end subroutine link_vmem
 
   function to_base_vmem(this) result(base_ptr)
     class(VirtualDataType), target :: this    
