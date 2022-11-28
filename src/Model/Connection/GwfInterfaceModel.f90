@@ -72,7 +72,7 @@ contains
     call disu_cr(this%dis, this%name, -1, this%iout)
     call npf_cr(this%npf, this%name, -this%innpf, this%iout)
     call xt3d_cr(this%xt3d, this%name, -this%innpf, this%iout)
-    call buy_cr(this%buy, this%name, this%inbuy, this%iout)
+    call buy_cr(this%buy, this%name, -this%inbuy, this%iout)
 
   end subroutine gwfifm_cr
 
@@ -140,6 +140,7 @@ contains
     deallocate (this%dis)
     deallocate (this%npf)
     deallocate (this%xt3d)
+    deallocate (this%buy)
     !
     ! -- Scalars
     call mem_deallocate(this%inic)

@@ -25,11 +25,12 @@ module StructVectorModule
     character(len=LENVARNAME) :: varname
     character(len=LENMEMPATH) :: memoryPath
     integer(I4B) :: memtype = 0
+    integer(I4B) :: size = 0
     logical(LGP) :: preserve_case = .false.
     integer(I4B), dimension(:), pointer, contiguous :: int1d => null()
     real(DP), dimension(:), pointer, contiguous :: dbl1d => null()
     type(CharacterStringType), dimension(:), pointer, contiguous :: &
-      str1d => null()
+      charstr1d => null()
     type(VectorInt), pointer :: intvector => null()
     integer(I4B), dimension(:), pointer, contiguous :: intvector_shape => null()
 

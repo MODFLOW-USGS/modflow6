@@ -161,7 +161,7 @@ module GwfDisInputModule
     'DELR', & ! fortran variable
     'DOUBLE1D', & ! type
     'NCOL', & ! shape
-    .true., & ! required
+    .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -177,7 +177,7 @@ module GwfDisInputModule
     'DELC', & ! fortran variable
     'DOUBLE1D', & ! type
     'NROW', & ! shape
-    .true., & ! required
+    .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -193,7 +193,7 @@ module GwfDisInputModule
     'TOP', & ! fortran variable
     'DOUBLE2D', & ! type
     'NCOL NROW', & ! shape
-    .true., & ! required
+    .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -209,7 +209,7 @@ module GwfDisInputModule
     'BOTM', & ! fortran variable
     'DOUBLE3D', & ! type
     'NCOL NROW NLAY', & ! shape
-    .true., & ! required
+    .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .true. & ! layered
@@ -270,7 +270,7 @@ module GwfDisInputModule
     ), &
     InputBlockDefinitionType( &
     'GRIDDATA', & ! blockname
-    .true., & ! required
+    .false., & ! required
     .false. & ! aggregate
     ) &
     ]

@@ -16,7 +16,8 @@ module MemoryManagerExtModule
       mem_set_value_int1d, mem_set_value_int1d_mapped, &
       mem_set_value_int2d, mem_set_value_int3d, mem_set_value_dbl, &
       mem_set_value_dbl1d, mem_set_value_dbl1d_mapped, &
-      mem_set_value_dbl2d, mem_set_value_dbl3d, mem_set_value_str
+      mem_set_value_dbl2d, mem_set_value_dbl3d, mem_set_value_str, &
+      mem_set_value_str1d
   end interface mem_set_value
 
 contains
@@ -352,6 +353,8 @@ contains
     end if
   end subroutine mem_set_value_dbl3d
 
+  !> @brief Set pointer to value of memory list str variable
+  !<
   subroutine mem_set_value_str(p_mem, varname, memory_path, found)
     character(len=*), intent(inout) :: p_mem !< pointer to str scalar
     character(len=*), intent(in) :: varname !< variable name
@@ -365,5 +368,40 @@ contains
       p_mem = mt%strsclr
     end if
   end subroutine mem_set_value_str
+
+  !> @brief Set pointer to value of memory list 1d str array variable
+  !<
+  subroutine mem_set_value_str1d(p_mem, varname, memory_path, found)
+    character(len=*), dimension(:), intent(inout) :: p_mem !< pointer to 1d str array
+    character(len=*), intent(in) :: varname !< variable name
+    character(len=*), intent(in) :: memory_path !< path where variable is stored
+    logical(LGP), intent(inout) :: found
+    type(MemoryType), pointer :: mt
+    logical(LGP) :: checkfail = .false.
+    integer(I4B) :: n
+
+    call get_from_memorylist(varname, memory_path, mt, found, checkfail)
+    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'STRING') then
+      if (associated(mt%astr1d)) then
+        if (size(mt%astr1d) /= size(p_mem)) then
+          call store_error('mem_set_value() size mismatch str1d, varname='//&
+                               &trim(varname), terminate=.TRUE.)
+        else
+          do n = 1, size(mt%astr1d)
+            p_mem(n) = mt%astr1d(n)
+          end do
+        end if
+      else if (associated(mt%acharstr1d)) then
+        if (size(mt%acharstr1d) /= size(p_mem)) then
+          call store_error('mem_set_value() size mismatch str1d, varname='//&
+                                       &trim(varname), terminate=.TRUE.)
+        else
+          do n = 1, size(mt%acharstr1d)
+            p_mem(n) = mt%acharstr1d(n)
+          end do
+        end if
+      end if
+    end if
+  end subroutine mem_set_value_str1d
 
 end module MemoryManagerExtModule

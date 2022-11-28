@@ -7,6 +7,7 @@ reader urword
 optional true
 longname hh formulation on right-hand side
 description use the variable-density hydraulic head formulation and add off-diagonal terms to the right-hand.  This option will prevent the BUY Package from adding asymmetric terms to the flow matrix.
+mf6internal hhform_rhs
 
 block options
 name denseref
@@ -68,6 +69,7 @@ reader urword
 optional true
 longname use equivalent freshwater head formulation
 description use the variable-density equivalent freshwater head formulation instead of the hydraulic head head formulation.  This dev option has only been implemented for confined aquifer conditions and should generally not be used.
+mf6internal dev_efh_form
 
 
 

@@ -35,12 +35,8 @@ class Dfn2F90:
         self._set_var_d()
         self._set_param_strs()
 
-    def write_f90(self, odspec=None, gwt_name=False):
-        if gwt_name:
-            fname = Path(odspec, f"{self.component.lower()}1{self.subcomponent.lower()}idm.f90")
-        else:
-            fname = Path(odspec, f"{self.component.lower()}3{self.subcomponent.lower()}8idm.f90")
-        with open(fname, "w") as f:
+    def write_f90(self, ofspec=None):
+        with open(ofspec, "w") as f:
 
             # file header
             f.write(self._source_file_header(self.component, self.subcomponent))
@@ -260,7 +256,7 @@ class Dfn2F90:
             if shape != "" and not aggregate_t and (t == "DOUBLE" or t == "INTEGER"):
                 t = f"{t}{ndim}D"
 
-            r = ".true."
+            r = ".false."
             if "optional" in v:
                 if v["optional"] == "true":
                     r = ".false."
@@ -399,25 +395,20 @@ class Dfn2F90:
 
 if __name__ == "__main__":
 
-    gwf_dfns = [
-        Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-dis.dfn"),
-        Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-disu.dfn"),
-        Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-disv.dfn"),
-        Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-npf.dfn"),
+    dfns = [
+        # list per dfn [dfn relative path, model parent dirname, output filename]
+        [Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-buy.dfn"), "GroundWaterFlow", "gwf3buy8idm.f90"],
+        [Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-dis.dfn"), "GroundWaterFlow", "gwf3dis8idm.f90"],
+        [Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-disu.dfn"), "GroundWaterFlow", "gwf3disu8idm.f90"],
+        [Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-disv.dfn"), "GroundWaterFlow", "gwf3disv8idm.f90"],
+        [Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-npf.dfn"), "GroundWaterFlow", "gwf3npf8idm.f90"],
+        [Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-dsp.dfn"), "GroundWaterTransport", "gwt1dspidm.f90"],
+        [Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-fmi.dfn"), "GroundWaterTransport", "gwt1fmi1idm.f90"],
     ]
 
-    for dfn in gwf_dfns:
-        converter = Dfn2F90(dfnfspec=dfn)
-        converter.write_f90(odspec=os.path.join("..", "..", "..", "src", "Model", "GroundWaterFlow"))
-        converter.warn()
-
-    gwt_dfns = [
-        Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-dsp.dfn"),
-    ]
-
-    for dfn in gwt_dfns:
-        converter = Dfn2F90(dfnfspec=dfn)
-        converter.write_f90(odspec=os.path.join("..", "..", "..", "src", "Model", "GroundWaterTransport"), gwt_name=True)
+    for dfn in dfns:
+        converter = Dfn2F90(dfnfspec=dfn[0])
+        converter.write_f90(ofspec=os.path.join("..", "..", "..", "src", "Model", dfn[1], dfn[2]))
         converter.warn()
 
     print("\n...done.")

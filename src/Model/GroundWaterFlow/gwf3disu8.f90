@@ -127,7 +127,7 @@ contains
       ! -- Use the input data model routines to load the input data
       !    into memory
       call input_load(dis%parser, 'DISU6', 'GWF', 'DISU', name_model, 'DISU', &
-                      [character(len=LENPACKAGETYPE) ::], iout)
+                      iout)
       !
       ! -- load disu
       call disnew%disu_load()

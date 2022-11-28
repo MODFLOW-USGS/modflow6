@@ -7,12 +7,13 @@ module GwfBuyModule
   use SimModule, only: store_error, count_errors
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, &
                                  mem_deallocate
-  use ConstantsModule, only: DHALF, DZERO, DONE, LENMODELNAME, &
-                             LENAUXNAME, DHNOFLO, MAXCHARLEN, LINELENGTH
+  use ConstantsModule, only: DHALF, DZERO, DONE, LENMODELNAME, LENAUXNAME, &
+                             DHNOFLO, MAXCHARLEN, LINELENGTH, LENMEMPATH
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
   use GwfNpfModule, only: GwfNpfType
   use GwfBuyInputDataModule, only: GwfBuyInputDataType
+  use CharacterStringModule, only: CharacterStringType
 
   implicit none
 
@@ -32,6 +33,7 @@ module GwfBuyModule
     integer(I4B), pointer :: ireadelev => null() ! if 1 then elev has been allocated and filled
     integer(I4B), pointer :: ireadconcbuy => null() ! if 1 then dense has been read from this buy input file
     integer(I4B), pointer :: iconcset => null() ! if 1 then conc is pointed to a gwt model%x
+    integer(I4B), pointer :: iinterfacemodel => null() ! package instance belongs to an interface model
     real(DP), pointer :: denseref => null() ! reference fluid density
     real(DP), dimension(:), pointer, contiguous :: dense => null() ! density
     real(DP), dimension(:), pointer, contiguous :: concbuy => null() ! concentration array if specified in buy package
@@ -65,10 +67,13 @@ module GwfBuyModule
     procedure, private :: buy_calcelev
     procedure :: allocate_scalars
     procedure, private :: allocate_arrays
-    procedure, private :: read_options
+    procedure, private :: source_options
     procedure, private :: set_options
-    procedure, private :: read_dimensions
-    procedure, private :: read_packagedata
+    procedure, private :: source_dimensions
+    procedure, private :: source_packagedata
+    procedure, private :: log_options
+    procedure, private :: log_dimensions
+    procedure, private :: log_packagedata
     procedure, private :: set_packagedata
     procedure :: set_concentration_pointer
   end type GwfBuyType
@@ -111,11 +116,18 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use IdmMf6FileLoaderModule, only: input_load
+    use ConstantsModule, only: LENPACKAGETYPE
     ! -- dummy
     type(GwfBuyType), pointer :: buyobj
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
+    ! -- formats
+    character(len=*), parameter :: fmtbuy = &
+      "(1x,/1x,'BUY -- Buoyancy Package, Version 1, 5/16/2018', &
+      &' input read from unit ', i0, //)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -131,8 +143,20 @@ contains
     buyobj%inunit = inunit
     buyobj%iout = iout
     !
-    ! -- Initialize block parser
-    call buyobj%parser%Initialize(buyobj%inunit, buyobj%iout)
+    ! -- Check if input file is open
+    if (inunit > 0) then
+      !
+      ! -- Print a message identifying the node property flow package.
+      write (iout, fmtbuy) inunit
+      !
+      ! -- Initialize block parser
+      call buyobj%parser%Initialize(buyobj%inunit, buyobj%iout)
+      !
+      ! -- Use the input data model routines to load the input data
+      !    into memory
+      call input_load(buyobj%parser, 'BUY6', 'GWF', 'BUY', buyobj%name_model, &
+                      'BUY', iout)
+    end if
     !
     ! -- Return
     return
@@ -154,13 +178,7 @@ contains
     type(GwfBuyInputDataType), optional, intent(in) :: buy_input !< optional buy input data, otherwise read from file
     ! -- local
     ! -- formats
-    character(len=*), parameter :: fmtbuy = &
-      "(1x,/1x,'BUY -- Buoyancy Package, Version 1, 5/16/2018', &
-      &' input read from unit ', i0, //)"
 ! ------------------------------------------------------------------------------
-    !
-    ! --print a message identifying the buoyancy package.
-    write (this%iout, fmtbuy) this%inunit
     !
     ! -- store pointers to arguments that were passed in
     this%dis => dis
@@ -168,10 +186,10 @@ contains
     if (.not. present(buy_input)) then
       !
       ! -- Read buoyancy options
-      call this%read_options()
+      call this%source_options()
       !
       ! -- Read buoyancy dimensions
-      call this%read_dimensions()
+      call this%source_dimensions()
     else
       ! set from input data instead
       call this%set_options(buy_input)
@@ -184,7 +202,7 @@ contains
     if (.not. present(buy_input)) then
       !
       ! -- Read buoyancy packagedata
-      call this%read_packagedata()
+      call this%source_packagedata()
     else
       ! set from input data instead
       call this%set_packagedata(buy_input)
@@ -299,7 +317,7 @@ contains
     integer(I4B) :: i
     ! -- formats
     character(len=*), parameter :: fmtc = &
-      "('Buoyancy Package does not have have a concentration set &
+      "('Buoyancy Package does not have a concentration set &
        &for species ',i0,'. One or more model names may be specified &
        &incorrectly in the PACKAGEDATA block or a gwf-gwt exchange may need &
        &to be activated.')"
@@ -1079,12 +1097,17 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use MemoryManagerExtModule, only: memorylist_remove
+    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfBuyType) :: this
 ! ------------------------------------------------------------------------------
     !
+    ! -- Deallocate input memory
+    call memorylist_remove(this%name_model, 'BUY', idm_context)
+    !
     ! -- Deallocate arrays if package was active
-    if (this%inunit > 0) then
+    if (this%inunit > 0 .or. this%iinterfacemodel == 1) then
       call mem_deallocate(this%elev)
       call mem_deallocate(this%dense)
       call mem_deallocate(this%concbuy)
@@ -1102,6 +1125,7 @@ contains
     call mem_deallocate(this%ireadelev)
     call mem_deallocate(this%ireadconcbuy)
     call mem_deallocate(this%iconcset)
+    call mem_deallocate(this%iinterfacemodel)
     call mem_deallocate(this%denseref)
 
     call mem_deallocate(this%nrhospecies)
@@ -1113,49 +1137,36 @@ contains
     return
   end subroutine buy_da
 
-  subroutine read_dimensions(this)
+  subroutine source_dimensions(this)
 ! ******************************************************************************
-! read_dimensions -- Read the dimensions for this package
+! source_dimensions --
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_context
+    use GwfBuyInputModule, only: GwfBuyParamFoundType
     ! -- dummy
     class(GwfBuyType), intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
-    integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
+    character(len=LENMEMPATH) :: idmMemoryPath
+    type(GwfBuyParamFoundType) :: found
     ! -- format
 ! ------------------------------------------------------------------------------
     !
-    ! -- get dimensions block
-    call this%parser%GetBlock('DIMENSIONS', isfound, ierr, &
-                              supportOpenClose=.true.)
+    ! -- set memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'BUY', idm_context)
     !
-    ! -- parse dimensions block if detected
-    if (isfound) then
-      write (this%iout, '(/1x,a)') 'Processing BUY DIMENSIONS block'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-        case ('NRHOSPECIES')
-          this%nrhospecies = this%parser%GetInteger()
-          write (this%iout, '(4x,a,i0)') 'NRHOSPECIES = ', this%nrhospecies
-        case default
-          write (errmsg, '(4x,a,a)') &
-            'Unknown BUY dimension: ', trim(keyword)
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end select
-      end do
-      write (this%iout, '(1x,a)') 'End of BUY DIMENSIONS block'
-    else
-      call store_error('Required BUY DIMENSIONS block not found.')
-      call this%parser%StoreErrorUnit()
+    ! --
+    call mem_set_value(this%nrhospecies, 'NRHOSPECIES', idmMemoryPath, &
+                       found%nrhospecies)
+    !
+    ! -- log values to list file
+    if (this%iout > 0) then
+      call this%log_dimensions(found)
     end if
     !
     ! -- check dimension
@@ -1164,78 +1175,98 @@ contains
       call this%parser%StoreErrorUnit()
     end if
     !
-    ! -- return
+    ! -- Return
     return
-  end subroutine read_dimensions
+  end subroutine source_dimensions
 
-  subroutine read_packagedata(this)
+  !> @brief Write dimensions to list file
+  !<
+  subroutine log_dimensions(this, found)
+    use GwfBuyInputModule, only: GwfBuyParamFoundType
+    class(GwfBuyType) :: this
+    type(GwfBuyParamFoundType), intent(in) :: found
+
+    write (this%iout, '(1x,a)') 'Setting Buoyancy Dimensions'
+
+    if (found%nrhospecies) then
+      write (this%iout, '(4x,a,G0)') 'NRHOSPECIES = ', this%nrhospecies
+    end if
+
+    write (this%iout, '(1x,a,/)') 'End Setting Buoyancy Dimensions'
+  end subroutine log_dimensions
+
+  subroutine source_packagedata(this)
 ! ******************************************************************************
-! read_packagedata -- Read PACKAGEDATA block
+! source packagedata -- source PACKAGEDATA input
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerModule, only: mem_setptr
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_context
+    use GwfBuyInputModule, only: GwfBuyParamFoundType
     ! -- dummy
     class(GwfBuyType) :: this
     ! -- local
+    character(len=LENMEMPATH) :: idmMemoryPath
+    type(GwfBuyParamFoundType) :: found
+    integer(I4B), dimension(:), contiguous, pointer :: irhospec
     character(len=LINELENGTH) :: errmsg
-    character(len=LINELENGTH) :: line
-    integer(I4B) :: ierr
-    integer(I4B) :: irhospec
-    logical :: isfound, endOfBlock
-    logical :: blockrequired
-    integer(I4B), dimension(:), allocatable :: itemp
-    character(len=10) :: c10
-    character(len=16) :: c16
+    integer(I4B) :: i
     ! -- format
     character(len=*), parameter :: fmterr = &
       "('Invalid value for IRHOSPEC (',i0,') detected in BUY Package. &
-      &IRHOSPEC must be > 0 and <= NRHOSPECIES, and duplicate values &
-      &are not allowed.')"
+      &IRHOSPEC must be > 0 and <= NRHOSPECIES, duplicate values &
+      &are not allowed and values must be in ascending order.')"
 ! ------------------------------------------------------------------------------
     !
-    ! -- initialize
-    allocate (itemp(this%nrhospecies))
-    itemp(:) = 0
+    ! -- set memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'BUY', idm_context)
     !
-    ! -- get packagedata block
-    blockrequired = .true.
-    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr, &
-                              blockRequired=blockRequired, &
-                              supportOpenClose=.true.)
+    ! --
+    call mem_setptr(irhospec, 'IRHOSPEC', idmMemoryPath)
+    call mem_set_value(this%drhodc, 'DRHODC', idmMemoryPath, found%drhodc)
+    call mem_set_value(this%crhoref, 'CRHOREF', idmMemoryPath, found%crhoref)
+    call mem_set_value(this%cmodelname, 'MODELNAME', idmMemoryPath, &
+                       found%modelname)
+    call mem_set_value(this%cauxspeciesname, 'AUXSPECIESNAME', idmMemoryPath, &
+                       found%auxspeciesname)
     !
-    ! -- parse packagedata block
-    if (isfound) then
-      write (this%iout, '(1x,a)') 'Processing BUY PACKAGEDATA block'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        irhospec = this%parser%GetInteger()
-        if (irhospec < 1 .or. irhospec > this%nrhospecies) then
-          write (errmsg, fmterr) irhospec
-          call store_error(errmsg)
-        end if
-        if (itemp(irhospec) /= 0) then
-          write (errmsg, fmterr) irhospec
-          call store_error(errmsg)
-        end if
-        itemp(irhospec) = 1
-        this%drhodc(irhospec) = this%parser%GetDouble()
-        this%crhoref(irhospec) = this%parser%GetDouble()
-        call this%parser%GetStringCaps(this%cmodelname(irhospec))
-        call this%parser%GetStringCaps(this%cauxspeciesname(irhospec))
-      end do
-      write (this%iout, '(1x,a)') 'End of BUY PACKAGEDATA block'
+    ! -- error checks
+    if (size(irhospec) /= this%nrhospecies) then
+      write (errmsg, fmterr) irhospec
+      call store_error(errmsg)
     else
-      call store_error('Required BUY PACKAGEDATA block not found.')
-      call this%parser%StoreErrorUnit()
+      do i = 1, this%nrhospecies
+        if (irhospec(i) /= i) then
+          write (errmsg, fmterr) irhospec
+          call store_error(errmsg)
+        end if
+      end do
     end if
     !
-    ! -- Check for errors.
-    if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
+    ! -- log values to list file
+    if (this%iout > 0) then
+      call this%log_packagedata(found)
     end if
+    !
+    ! -- Return
+    return
+  end subroutine source_packagedata
+
+  !> @brief Write dimensions to list file
+  !<
+  subroutine log_packagedata(this, found)
+    use GwfBuyInputModule, only: GwfBuyParamFoundType
+    class(GwfBuyType) :: this
+    type(GwfBuyParamFoundType), intent(in) :: found
+    character(len=LINELENGTH) :: line
+    integer(I4B) :: irhospec
+    character(len=10) :: c10
+    character(len=16) :: c16
     !
     ! -- write packagedata information
     write (this%iout, '(/,a)') 'Summary of species information in BUY Package'
@@ -1255,13 +1286,7 @@ contains
       line = trim(line)//' '//adjustr(c16)
       write (this%iout, '(a)') trim(line)
     end do
-    !
-    ! -- deallocate
-    deallocate (itemp)
-    !
-    ! -- return
-    return
-  end subroutine read_packagedata
+  end subroutine log_packagedata
 
   !> @brief Sets package data instead of reading from file
   !<
@@ -1276,6 +1301,7 @@ contains
       this%crhoref(ispec) = input_data%crhoref(ispec)
       this%cmodelname(ispec) = input_data%cmodelname(ispec)
       this%cauxspeciesname(ispec) = input_data%cauxspeciesname(ispec)
+      this%iinterfacemodel = 1
     end do
 
   end subroutine set_packagedata
@@ -1554,6 +1580,7 @@ contains
     call mem_allocate(this%ireadelev, 'IREADELEV', this%memoryPath)
     call mem_allocate(this%ireadconcbuy, 'IREADCONCBUY', this%memoryPath)
     call mem_allocate(this%iconcset, 'ICONCSET', this%memoryPath)
+    call mem_allocate(this%iinterfacemodel, 'IIM', this%memoryPath)
     call mem_allocate(this%denseref, 'DENSEREF', this%memoryPath)
 
     call mem_allocate(this%nrhospecies, 'NRHOSPECIES', this%memoryPath)
@@ -1563,6 +1590,7 @@ contains
     this%ioutdense = 0
     this%ireadelev = 0
     this%iconcset = 0
+    this%iinterfacemodel = 0
     this%ireadconcbuy = 0
     this%denseref = 1000.d0
 
@@ -1622,84 +1650,109 @@ contains
     return
   end subroutine allocate_arrays
 
-  subroutine read_options(this)
+  subroutine source_options(this)
 ! ******************************************************************************
-! read_options
+! source_options - update simulation options from input mempath
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
     use OpenSpecModule, only: access, form
-    use InputOutputModule, only: urword, getunit, urdaux, openfile
+    use InputOutputModule, only: getunit, openfile
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_context
+    use GwfBuyInputModule, only: GwfBuyParamFoundType
     ! -- dummy
     class(GwfBuyType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LENMEMPATH) :: idmMemoryPath
+    type(GwfBuyParamFoundType) :: found
     character(len=MAXCHARLEN) :: fname
-    integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
+    integer(I4B), pointer :: hhform_rhs, dev_efh_form
     ! -- formats
     character(len=*), parameter :: fmtfileout = &
       "(4x, 'BUY ', 1x, a, 1x, ' will be saved to file: ', &
       &a, /4x, 'opened on unit: ', I7)"
 ! ------------------------------------------------------------------------------
     !
-    ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, &
-                              supportOpenClose=.true., blockRequired=.false.)
+    ! -- set memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'BUY', idm_context)
     !
-    ! -- parse options block if detected
-    if (isfound) then
-      write (this%iout, '(1x,a)') 'Processing BUY OPTIONS block'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-        case ('HHFORMULATION_RHS')
-          this%iform = 1
-          this%iasym = 0
-          write (this%iout, '(4x,a)') &
-            'Hydraulic head formulation set to right-hand side'
-        case ('DENSEREF')
-          this%denseref = this%parser%GetDouble()
-          write (this%iout, '(4x,a,1pg15.6)') &
-            'Reference density has been set to: ', &
-            this%denseref
-        case ('DEV_EFH_FORMULATION')
-          call this%parser%DevOpt()
-          this%iform = 0
-          this%iasym = 0
-          write (this%iout, '(4x,a)') &
-            'Formulation set to equivalent freshwater head'
-        case ('DENSITY')
-          call this%parser%GetStringCaps(keyword)
-          if (keyword == 'FILEOUT') then
-            call this%parser%GetString(fname)
-            this%ioutdense = getunit()
-            call openfile(this%ioutdense, this%iout, fname, 'DATA(BINARY)', &
-                          form, access, 'REPLACE')
-            write (this%iout, fmtfileout) &
-              'DENSITY', fname, this%ioutdense
-          else
-            errmsg = 'Optional density keyword must be '// &
-                     'followed by FILEOUT'
-            call store_error(errmsg)
-          end if
-        case default
-          write (errmsg, '(4x,a,a)') '****Error. Unknown BUY option: ', &
-            trim(keyword)
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end select
-      end do
-      write (this%iout, '(1x,a)') 'End of BUY OPTIONS block'
+    ! --
+    call mem_set_value(hhform_rhs, 'HHFORM_RHS', idmMemoryPath, found%hhform_rhs)
+    call mem_set_value(this%denseref, 'DENSEREF', idmMemoryPath, found%denseref)
+    call mem_set_value(dev_efh_form, 'DEV_EFH_FORM', idmMemoryPath, &
+                       found%dev_efh_form)
+    call mem_set_value(fname, 'DENSITYFILE', idmMemoryPath, found%densityfile)
+    !
+    ! -- head formulation rhs
+    if (found%hhform_rhs) then
+      this%iform = 1
+      this%iasym = 0
+    end if
+    !
+    ! -- equivalent freshwater head formulation
+    if (found%dev_efh_form) then
+      this%iform = 0
+      this%iasym = 0
+    end if
+    !
+    ! -- buy output file
+    if (found%densityfile) then
+      this%ioutdense = getunit()
+      call openfile(this%ioutdense, this%iout, fname, 'DATA(BINARY)', &
+                    form, access, 'REPLACE')
+    end if
+    !
+    ! -- log values to list file
+    if (this%iout > 0) then
+      call this%log_options(found, fname)
     end if
     !
     ! -- Return
     return
-  end subroutine read_options
+  end subroutine source_options
+
+  !> @brief Write user options to list file
+  !<
+  subroutine log_options(this, found, density_fname)
+    use GwfBuyInputModule, only: GwfBuyParamFoundType
+    ! -- dummy
+    class(GwfBuyType) :: this
+    type(GwfBuyParamFoundType), intent(in) :: found
+    character(len=MAXCHARLEN), intent(in) :: density_fname
+
+    ! -- formats
+    character(len=*), parameter :: fmtfileout = &
+      "(4x, 'BUY ', 1x, a, 1x, ' will be saved to file: ', &
+      &a, /4x, 'opened on unit: ', I7)"
+
+    write (this%iout, '(1x,a)') 'Setting Buoyancy Options'
+
+    if (found%hhform_rhs) then
+      write (this%iout, '(4x,a)') &
+        'Hydraulic head formulation set to right-hand side'
+    end if
+
+    if (found%denseref) then
+      write (this%iout, '(4x,a,G0)') 'Reference Density = ', this%denseref
+    end if
+
+    if (found%dev_efh_form) then
+      write (this%iout, '(4x,a)') &
+        'Formulation set to equivalent freshwater head'
+    end if
+
+    if (found%densityfile) then
+      write (this%iout, fmtfileout) &
+        'DENSITY', density_fname, this%ioutdense
+    end if
+
+    write (this%iout, '(1x,a,/)') 'End Setting Buoyancy Options'
+
+  end subroutine log_options
 
   !> @brief Sets options as opposed to reading them from a file
   !<

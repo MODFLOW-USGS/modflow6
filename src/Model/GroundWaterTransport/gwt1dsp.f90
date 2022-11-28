@@ -121,7 +121,7 @@ contains
       ! -- Use the input data model routines to load the input data
       !    into memory
       call input_load(dspobj%parser, 'DSP6', 'GWT', 'DSP', dspobj%name_model, &
-                      'DSP', [character(len=LENPACKAGETYPE) ::], iout)
+                      'DSP', iout)
     end if
     !
     ! -- Return

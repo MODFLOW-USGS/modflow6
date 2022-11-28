@@ -50,7 +50,7 @@ contains
   subroutine idm_load_from_blockparser(parser, filetype, &
                                        component_type, subcomponent_type, &
                                        component_name, subcomponent_name, &
-                                       subpackages, iout)
+                                       iout)
     use SimVariablesModule, only: idm_context
     type(BlockParserType), intent(inout) :: parser !< block parser
     character(len=*), intent(in) :: filetype !< file type to load, such as DIS6, DISV6, NPF6
@@ -58,7 +58,6 @@ contains
     character(len=*), intent(in) :: subcomponent_type !< subcomponent type, such as DIS or NPF
     character(len=*), intent(in) :: component_name !< component name, such as MYGWFMODEL
     character(len=*), intent(in) :: subcomponent_name !< subcomponent name, such as MYWELLPACKAGE
-    character(len=*), dimension(:), intent(in) :: subpackages !< array of subpackage types, such as ["TVK6", "OBS6"]
     integer(I4B), intent(in) :: iout !< unit number for output
     integer(I4B) :: iblock !< consecutive block number as defined in definition file
     type(ModflowInputType) :: mf6_input !< ModflowInputType
@@ -68,7 +67,7 @@ contains
     ! -- construct input object
     mf6_input = getModflowInput(filetype, component_type, &
                                 subcomponent_type, component_name, &
-                                subcomponent_name, subpackages)
+                                subcomponent_name)
     !
     ! -- model shape memory path
     componentMemPath = create_mem_path(component=mf6_input%component_name, &
@@ -80,6 +79,8 @@ contains
     !
     ! -- process blocks
     do iblock = 1, size(mf6_input%p_block_dfns)
+      !
+      ! -- parse block and load params
       call parse_block(parser, mf6_input, iblock, mshape, iout)
       !
       ! -- set model shape if discretization dimensions have been read
@@ -93,9 +94,6 @@ contains
     ! -- close logging statement
     call idm_log_close(mf6_input%component_name, &
                        mf6_input%subcomponent_name, iout)
-    !
-    ! -- release allocated memory
-    call mf6_input%destroy()
   end subroutine idm_load_from_blockparser
 
   !> @brief procedure to load a block
@@ -120,11 +118,13 @@ contains
     type(MemoryType), pointer :: mt
     !
     ! -- disu vertices/cell2d blocks are contingent on NVERT dimension
-    if (mf6_input%file_type == 'DISU6' .and. &
-        (mf6_input%p_block_dfns(iblock)%blockname == 'VERTICES' .or. &
-         mf6_input%p_block_dfns(iblock)%blockname == 'CELL2D')) then
-      call get_from_memorylist('NVERT', mf6_input%memoryPath, mt, found, .false.)
-      if (.not. found .or. mt%intsclr == 0) return
+    if (mf6_input%file_type == 'DISU6') then
+      if (mf6_input%p_block_dfns(iblock)%blockname == 'VERTICES' .or. &
+          mf6_input%p_block_dfns(iblock)%blockname == 'CELL2D') then
+        call get_from_memorylist('NVERT', mf6_input%memoryPath, mt, found, &
+                                 .false.)
+        if (.not. found .or. mt%intsclr == 0) return
+      end if
     end if
     !
     ! -- block open/close support
@@ -140,7 +140,7 @@ contains
       if (mf6_input%p_block_dfns(iblock)%aggregate) then
         !
         ! -- process block recarray type, set of variable 1d/2d types
-        call parse_structarray_block(parser, mf6_input, iblock, mshape, iout)
+        call parse_structarray_block(parser, mf6_input, iblock, iout)
       else
         do
           ! process each line in block
@@ -156,40 +156,47 @@ contains
     return
   end subroutine parse_block
 
-  !> @brief check subpackage
-  !!
-  !! Check and make sure that the subpackage is valid for
-  !! this input file and load the filename of the subpackage
-  !! into the memory manager.
-  !!
-  !<
-  subroutine subpackage_check(parser, mf6_input, checktag, iout)
+  subroutine parse_iofile_tag(parser, mf6_input, iblock, mshape, tag, nwords, &
+                              words, iout)
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType
-    character(len=LINELENGTH), intent(in) :: checktag !< subpackage string, such as TVK6
+    integer(I4B), intent(in) :: iblock !< consecutive block number as defined in definition file
+    integer(I4B), dimension(:), contiguous, pointer, intent(inout) :: mshape !< model shape
+    character(len=LINELENGTH), intent(in) :: tag
+    integer(I4B), intent(in) :: nwords
+    character(len=40), dimension(:), intent(in) :: words
     integer(I4B), intent(in) :: iout !< unit number for output
-    character(len=LINELENGTH) :: tag, fname_tag
     type(InputParamDefinitionType), pointer :: idt !< input data type object describing this record
-    integer(I4B) :: isubpkg
-
-    do isubpkg = 1, size(mf6_input%subpackages)
-      if (checktag == mf6_input%subpackages(isubpkg)) then
-        fname_tag = trim(checktag)//'_FILENAME'
-        call parser%GetStringCaps(tag)
-        if (tag == 'FILEIN') then
+    character(len=LINELENGTH) :: mr_tag
+    !
+    ! -- routine assumes 2nd file type token has already been matched
+    !
+    ! -- a filein/fileout record tag definition has 4 tokens
+    if (nwords == 4) then
+      !
+      ! -- verify third definition token is FILEIN/FILEOUT
+      if (words(3) == 'FILEIN' .or. words(3) == 'FILEOUT') then
+        !
+        ! -- read 3rd token
+        call parser%GetStringCaps(mr_tag)
+        !
+        ! -- check if 3rd token matches definition
+        if (.not. (mr_tag == words(3))) then
+          errmsg = 'Expected "'//trim(words(3))//'" following keyword "'// &
+                   trim(tag)//'" but instead found "'//trim(mr_tag)//'"'
+          call store_error(errmsg)
+          !
+          ! -- matches, read and load file name
+        else
           idt => get_param_definition_type(mf6_input%p_param_dfns, &
                                            mf6_input%component_type, &
                                            mf6_input%subcomponent_type, &
-                                           fname_tag)
+                                           words(4))
           call load_string_type(parser, idt, mf6_input%memoryPath, iout)
-        else
-          errmsg = 'Subpackage keyword must be followed by "FILEIN" '// &
-                   'then by filename.'
-          call store_error(errmsg)
         end if
       end if
-    end do
-  end subroutine subpackage_check
+    end if
+  end subroutine parse_iofile_tag
 
   !> @brief load an individual input record into memory
   !!
@@ -200,6 +207,7 @@ contains
   !<
   recursive subroutine parse_tag(parser, mf6_input, iblock, mshape, iout, &
                                  recursive_call)
+    use InputDefinitionSelectorModule, only: parse_multirec_definition
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType
     integer(I4B), intent(in) :: iblock !< consecutive block number as defined in definition file
@@ -208,6 +216,8 @@ contains
     logical(LGP), intent(in) :: recursive_call !< true if recursive call
     character(len=LINELENGTH) :: tag
     type(InputParamDefinitionType), pointer :: idt !< input data type object describing this record
+    integer(I4B) :: nwords
+    character(len=40), dimension(:), allocatable :: words
     !
     ! -- read tag name
     call parser%GetStringCaps(tag)
@@ -225,41 +235,68 @@ contains
                                      tag)
     !
     ! -- allocate and load data type
-    select case (idt%datatype)
+    loader:select case(idt%datatype)
     case ('KEYWORD')
-      call load_keyword_type(parser, idt, mf6_input%memoryPath, iout)
+    !
+    ! -- possible load file name if filein/fileout record type
+    if (idt%in_record) then
       !
-      ! -- load filename if subpackage tag
-      call subpackage_check(parser, mf6_input, tag, iout)
+      ! -- get tokens in matching definition
+      call parse_multirec_definition(mf6_input%p_param_dfns, &
+                                     mf6_input%component_type, &
+                                     mf6_input%subcomponent_type, &
+                                     tag, nwords, words)
       !
-      ! -- set as dev option
-      if (mf6_input%p_block_dfns(iblock)%blockname == 'OPTIONS' .and. &
-          idt%tagname(1:4) == 'DEV_') then
-        call parser%DevOpt()
+      ! -- an fname definition's 4th token will be file name
+      if (nwords > 3) then
+        !
+        ! -- an fname definition should have FILEIN/FILEOUT as third token
+        if (words(3) == 'FILEIN' .or. words(3) == 'FILEOUT') then
+          !
+          ! -- identify and load the file name
+          call parse_iofile_tag(parser, mf6_input, iblock, mshape, tag, nwords, &
+                                words, iout)
+          !
+          ! -- deallocate words
+          deallocate (words)
+          !
+          ! -- done parsing tag, exit loader select
+          exit loader
+        end if
       end if
+    end if
+    !
+    ! -- load standard keyword tag
+    call load_keyword_type(parser, idt, mf6_input%memoryPath, iout)
+    !
+    ! -- set as dev option
+    if (mf6_input%p_block_dfns(iblock)%blockname == 'OPTIONS' .and. &
+        idt%tagname(1:4) == 'DEV_') then
+      call parser%DevOpt()
+    end if
     case ('STRING')
-      call load_string_type(parser, idt, mf6_input%memoryPath, iout)
+    call load_string_type(parser, idt, mf6_input%memoryPath, iout)
     case ('INTEGER')
-      call load_integer_type(parser, idt, mf6_input%memoryPath, iout)
+    call load_integer_type(parser, idt, mf6_input%memoryPath, iout)
     case ('INTEGER1D')
-      call load_integer1d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
+    call load_integer1d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
     case ('INTEGER2D')
-      call load_integer2d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
+    call load_integer2d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
     case ('INTEGER3D')
-      call load_integer3d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
+    call load_integer3d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
     case ('DOUBLE')
-      call load_double_type(parser, idt, mf6_input%memoryPath, iout)
+    call load_double_type(parser, idt, mf6_input%memoryPath, iout)
     case ('DOUBLE1D')
-      call load_double1d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
+    call load_double1d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
     case ('DOUBLE2D')
-      call load_double2d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
+    call load_double2d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
     case ('DOUBLE3D')
-      call load_double3d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
+    call load_double3d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
     case default
-      write (errmsg, '(4x,a,a)') 'Failure reading data for tag: ', trim(tag)
-      call store_error(errmsg)
-      call parser%StoreErrorUnit()
-    end select
+    write (errmsg, '(4x,a,a)') 'Failure reading data for tag: ', trim(tag)
+    call store_error(errmsg)
+    call parser%StoreErrorUnit()
+    end select loader
     !
     ! -- continue line if in same record
     if (idt%in_record) then
@@ -279,16 +316,15 @@ contains
   !! vector.
   !!
   !<
-  subroutine parse_structarray_block(parser, mf6_input, iblock, mshape, iout)
+  subroutine parse_structarray_block(parser, mf6_input, iblock, iout)
     use StructArrayModule, only: StructArrayType, constructStructArray, &
                                  destructStructArray
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType
     integer(I4B), intent(in) :: iblock !< consecutive block number as defined in definition file
-    integer(I4B), dimension(:), contiguous, pointer, intent(inout) :: mshape !< model shape
     integer(I4B), intent(in) :: iout !< unit number for output
     type(InputParamDefinitionType), pointer :: idt !< input data type object describing this record
-    integer(I4B), pointer :: nrow
+    integer(I4B), pointer :: nrow => null()
     integer(I4B) :: icol
     integer(I4B) :: ncol
     integer(I4B) :: nwords
@@ -308,7 +344,9 @@ contains
     ncol = nwords - 1
     !
     ! -- use shape to set the max num of rows
-    call mem_setptr(nrow, idt%shape, mf6_input%memoryPath)
+    if (idt%shape /= '') then
+      call mem_setptr(nrow, idt%shape, mf6_input%memoryPath)
+    end if
     !
     ! -- create a structured array
     struct_array => constructStructArray(ncol, nrow)
@@ -328,7 +366,6 @@ contains
     !
     ! -- read the structured array
     call struct_array%read_from_parser(parser, iout)
-    call parser%terminateblock()
     !
     ! -- destroy the structured array reader
     call destructStructArray(struct_array)
@@ -688,6 +725,7 @@ contains
     integer(I4B), pointer :: ndim1
     integer(I4B), pointer :: ndim2
     integer(I4B), pointer :: ndim3
+    integer(I4B), pointer :: ncelldim
 
     select case (ftype)
     case ('DIS6')
@@ -706,6 +744,9 @@ contains
       call mem_setptr(ndim1, 'NODES', dis_mempath)
       model_shape = [ndim1]
     end select
+
+    call mem_allocate(ncelldim, 'NCELLDIM', model_mempath)
+    ncelldim = size(model_shape)
 
     return
   end subroutine set_model_shape

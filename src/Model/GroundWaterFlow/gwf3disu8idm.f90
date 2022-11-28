@@ -191,7 +191,7 @@ module GwfDisuInputModule
     'TOP', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
-    .true., & ! required
+    .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -207,7 +207,7 @@ module GwfDisuInputModule
     'BOT', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
-    .true., & ! required
+    .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -223,7 +223,7 @@ module GwfDisuInputModule
     'AREA', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
-    .true., & ! required
+    .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -255,7 +255,7 @@ module GwfDisuInputModule
     'IAC', & ! fortran variable
     'INTEGER1D', & ! type
     'NODES', & ! shape
-    .true., & ! required
+    .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -271,7 +271,7 @@ module GwfDisuInputModule
     'JA', & ! fortran variable
     'INTEGER1D', & ! type
     'NJA', & ! shape
-    .true., & ! required
+    .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -287,7 +287,7 @@ module GwfDisuInputModule
     'IHC', & ! fortran variable
     'INTEGER1D', & ! type
     'NJA', & ! shape
-    .true., & ! required
+    .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -303,7 +303,7 @@ module GwfDisuInputModule
     'CL12', & ! fortran variable
     'DOUBLE1D', & ! type
     'NJA', & ! shape
-    .true., & ! required
+    .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -319,7 +319,7 @@ module GwfDisuInputModule
     'HWVA', & ! fortran variable
     'DOUBLE1D', & ! type
     'NJA', & ! shape
-    .true., & ! required
+    .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -555,12 +555,12 @@ module GwfDisuInputModule
     ), &
     InputBlockDefinitionType( &
     'GRIDDATA', & ! blockname
-    .true., & ! required
+    .false., & ! required
     .false. & ! aggregate
     ), &
     InputBlockDefinitionType( &
     'CONNECTIONDATA', & ! blockname
-    .true., & ! required
+    .false., & ! required
     .false. & ! aggregate
     ), &
     InputBlockDefinitionType( &
