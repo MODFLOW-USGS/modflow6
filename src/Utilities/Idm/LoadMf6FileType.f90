@@ -350,6 +350,7 @@ contains
     !
     ! -- create a structured array
     struct_array => constructStructArray(ncol, nrow)
+    nullify (nrow)
     do icol = 1, ncol
       !
       ! -- set pointer to input definition for this 1d vector

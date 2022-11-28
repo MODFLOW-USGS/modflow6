@@ -836,7 +836,6 @@ contains
     use ConstantsModule, only: LINELENGTH, DEM6, LENPACKAGENAME
     use InputOutputModule, only: getunit, openfile, urdaux
     use SimModule, only: store_error, store_error_unit
-    use MemoryManagerModule, only: mem_set_print_option, mem_write_usage
     use MemoryManagerExtModule, only: mem_set_value
     use CharacterStringModule, only: CharacterStringType
     use GwtFmiInputModule, only: GwtFmiParamFoundType
@@ -863,7 +862,7 @@ contains
     !
     ! -- verify FILEIN keyword
     if (fi /= 'FILEIN') then
-      call store_error('GWFBUDGET KEYWORD MUST BE FOLLOWED BY '// &
+      call store_error('Flowtype keyword must be followed by '// &
                        '"FILEIN" then by filename.')
       call this%parser%StoreErrorUnit()
     end if

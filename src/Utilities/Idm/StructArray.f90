@@ -248,14 +248,14 @@ contains
         call this%struct_vector_1d(j)%intvector%destroy()
         deallocate (this%struct_vector_1d(j)%intvector)
         nullify (this%struct_vector_1d(j)%intvector_shape)
-      !
-      ! -- check if shape wasn't known
+        !
+        ! -- check if shape wasn't known
       else if (this%deferred_shape) then
         !
         ! -- allocate and load based on memtype
         select case (this%struct_vector_1d(j)%memtype)
-        !
-        ! -- memtype integer
+          !
+          ! -- memtype integer
         case (1)
           !
           ! -- allocate memory manager vector
@@ -270,8 +270,8 @@ contains
           !
           ! -- deallocate local memory
           deallocate (this%struct_vector_1d(j)%int1d)
-        !
-        ! -- memtype real
+          !
+          ! -- memtype real
         case (2)
           !
           call mem_allocate(p_dbl1d, this%nrow, &
@@ -283,8 +283,8 @@ contains
           end do
           !
           deallocate (this%struct_vector_1d(j)%dbl1d)
-        !
-        ! -- memtype charstring
+          !
+          ! -- memtype charstring
         case (3)
           !
           call mem_allocate(p_charstr1d, LINELENGTH, this%nrow, &
@@ -296,8 +296,8 @@ contains
           end do
           !
           deallocate (this%struct_vector_1d(j)%charstr1d)
-        !
-        ! -- memtype intvector
+          !
+          ! -- memtype intvector
         case (4) ! no-op
         case default ! no-op
         end select
@@ -357,8 +357,8 @@ contains
         !
         ! -- reallocate based on memtype
         select case (this%struct_vector_1d(j)%memtype)
-        !
-        ! -- memtype integer
+          !
+          ! -- memtype integer
         case (1)
           !
           ! -- check if more space needed
@@ -382,8 +382,8 @@ contains
             this%struct_vector_1d(j)%int1d => p_int1d
             this%struct_vector_1d(j)%size = newsize
           end if
-        !
-        ! -- memtype real
+          !
+          ! -- memtype real
         case (2)
           if (this%nrow > this%struct_vector_1d(j)%size) then
             !
@@ -400,8 +400,8 @@ contains
             this%struct_vector_1d(j)%dbl1d => p_dbl1d
             this%struct_vector_1d(j)%size = newsize
           end if
-        !
-        ! -- memtype charstring
+          !
+          ! -- memtype charstring
         case (3)
           if (this%nrow > this%struct_vector_1d(j)%size) then
             !
@@ -421,8 +421,8 @@ contains
         case default
         end select
       end do
-    !
-    ! -- if known shape throw error if vector undersized
+      !
+      ! -- if known shape throw error if vector undersized
     else
       do j = 1, this%ncol
         !
@@ -480,23 +480,23 @@ contains
       do j = 1, this%ncol
         !
         select case (this%struct_vector_1d(j)%memtype)
-        !
-        ! -- memtype integer
+          !
+          ! -- memtype integer
         case (1)
           this%struct_vector_1d(j)%int1d(row) = parser%GetInteger()
-        !
-        ! -- memtype real
+          !
+          ! -- memtype real
         case (2)
           this%struct_vector_1d(j)%dbl1d(row) = parser%GetDouble()
-        !
-        ! -- memtype charstring
+          !
+          ! -- memtype charstring
         case (3)
           call parser%GetString(str, &
                                 (.not. this%struct_vector_1d(j)%preserve_case))
           !
           this%struct_vector_1d(j)%charstr1d(row) = str
-        !
-        ! -- memtype intvector
+          !
+          ! -- memtype intvector
         case (4)
           !
           ! -- get shape for this row
