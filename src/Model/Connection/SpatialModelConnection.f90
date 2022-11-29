@@ -14,7 +14,9 @@ module SpatialModelConnectionModule
   use DistVariableModule
   use DistributedModelModule, only: DistributedModelType, get_dist_model
   use ListModule, only: ListType
-  use VectorIntModule, only: VectorInt
+  use STLVecIntModule, only: STLVecInt
+  use MatrixBaseModule
+  use SparseMatrixModule
 
   implicit none
   private
@@ -36,8 +38,8 @@ module SpatialModelConnectionModule
     integer(I4B), pointer :: nrOfConnections => null() !< total nr. of connected cells (primary)
 
     class(DisConnExchangeType), pointer :: primaryExchange => null() !< the exchange for which the interface model is created
-    type(VectorInt), pointer :: haloModels !< models that are potentially in the halo of this interface
-    type(VectorInt), pointer :: haloExchanges !< exchanges that are potentially part of the halo of this interface (includes primary)
+    type(STLVecInt), pointer :: haloModels !< models that are potentially in the halo of this interface
+    type(STLVecInt), pointer :: haloExchanges !< exchanges that are potentially part of the halo of this interface (includes primary)
     integer(I4B), pointer :: internalStencilDepth => null() !< size of the computational stencil for the interior
                                                             !! default = 1, xt3d = 2, ...
     integer(I4B), pointer :: exchangeStencilDepth => null() !< size of the computational stencil at the interface
@@ -45,10 +47,7 @@ module SpatialModelConnectionModule
 
     ! The following variables are equivalent to those in Numerical Solution:
     integer(I4B), pointer :: neq => null() !< nr. of equations in matrix system
-    integer(I4B), pointer :: nja => null() !< nr. of nonzero matrix elements
-    integer(I4B), dimension(:), pointer, contiguous :: ia => null() !< sparse indexing IA
-    integer(I4B), dimension(:), pointer, contiguous :: ja => null() !< sparse indexing JA
-    real(DP), dimension(:), pointer, contiguous :: amat => null() !< matrix coefficients
+    class(SparseMatrixType), pointer :: matrix => null() !< system matrix for the interface
     real(DP), dimension(:), pointer, contiguous :: rhs => null() !< rhs of interface system
     real(DP), dimension(:), pointer, contiguous :: x => null() !< dependent variable of interface system
     integer(I4B), dimension(:), pointer, contiguous :: active => null() !< cell status (c.f. ibound) of interface system
@@ -116,6 +115,7 @@ contains ! module procedures
     allocate (this%gridConnection)
     allocate (this%haloModels)
     allocate (this%haloExchanges)
+    allocate (this%matrix)
     call this%allocateScalars()
 
     this%internalStencilDepth = 1
@@ -174,7 +174,7 @@ contains ! module procedures
     class(DisConnExchangeType), pointer :: conn_ex
     integer(I4B) :: neighbor_id
     integer(I4B) :: model_mask
-    type(VectorInt) :: nbr_models
+    type(STLVecInt) :: nbr_models
 
     if (.not. present(mask)) then
       model_mask = 0
@@ -305,6 +305,7 @@ contains ! module procedures
     class(SpatialModelConnectionType) :: this !< this connection
     ! local
     type(sparsematrix) :: sparse
+    class(MatrixBaseType), pointer :: matrix_base
 
     call sparse%init(this%neq, this%neq, 7)
     call this%interfaceModel%model_ac(sparse)
@@ -314,7 +315,8 @@ contains ! module procedures
     call sparse%destroy()
 
     ! map connections
-    call this%interfaceModel%model_mc(this%ia, this%ja)
+    matrix_base => this%matrix
+    call this%interfaceModel%model_mc(matrix_base)
     call this%maskOwnerConnections()
 
   end subroutine spatialcon_connect
@@ -382,6 +384,7 @@ contains ! module procedures
     type(sparsematrix), intent(inout) :: sparse !< sparse matrix to store the connections
     ! local
     integer(I4B) :: n, m, ipos
+    integer(I4B) :: icol_start, icol_end
     integer(I4B) :: nglo, mglo
 
     do n = 1, this%neq
@@ -389,48 +392,52 @@ contains ! module procedures
         ! only add connections for own model to global matrix
         cycle
       end if
+
       nglo = this%gridConnection%idxToGlobal(n)%index + &
              this%gridConnection%idxToGlobal(n)%dmodel%moffset
-      do ipos = this%ia(n) + 1, this%ia(n + 1) - 1
-        m = this%ja(ipos)
+
+      icol_start = this%matrix%get_first_col_pos(n)
+      icol_end = this%matrix%get_last_col_pos(n)
+      do ipos = icol_start, icol_end
+        m = this%matrix%get_column(ipos)
+        if (m == n) cycle
         mglo = this%gridConnection%idxToGlobal(m)%index + &
                this%gridConnection%idxToGlobal(m)%dmodel%moffset
-
         call sparse%addconnection(nglo, mglo, 1)
       end do
+
     end do
 
   end subroutine spatialcon_ac
 
   !> @brief Creates the mapping from the local system
   !< matrix to the global one
-  subroutine spatialcon_mc(this, iasln, jasln)
+  subroutine spatialcon_mc(this, matrix_sln)
     use SimModule, only: ustop
     class(SpatialModelConnectionType) :: this !< this connection
-    integer(I4B), dimension(:), intent(in) :: iasln !< global IA array
-    integer(I4B), dimension(:), intent(in) :: jasln !< global JA array
+    class(MatrixBaseType), pointer :: matrix_sln !< global matrix
     ! local
-    integer(I4B) :: m, n, mglo, nglo, ipos, csrIdx
+    integer(I4B) :: m, n, mglo, nglo, ipos, ipos_sln
     logical(LGP) :: isOwned
 
-    allocate (this%mapIdxToSln(this%nja))
+    allocate (this%mapIdxToSln(this%matrix%nja))
 
     do n = 1, this%neq
       isOwned = (this%gridConnection%idxToGlobal(n)%dmodel == this%owner)
-      do ipos = this%ia(n), this%ia(n + 1) - 1
-        m = this%ja(ipos)
+      do ipos = this%matrix%ia(n), this%matrix%ia(n + 1) - 1
+        m = this%matrix%ja(ipos)
         nglo = this%gridConnection%idxToGlobal(n)%index + &
                this%gridConnection%idxToGlobal(n)%dmodel%moffset
         mglo = this%gridConnection%idxToGlobal(m)%index + &
                this%gridConnection%idxToGlobal(m)%dmodel%moffset
-        csrIdx = getCSRIndex(nglo, mglo, iasln, jasln)
-        if (csrIdx == -1 .and. isOwned) then
+        ipos_sln = matrix_sln%get_position(nglo, mglo)
+        if (ipos_sln == -1 .and. isOwned) then
           ! this should not be possible
           write (*, *) 'Error: cannot find cell connection in global system'
           call ustop()
         end if
 
-        this%mapIdxToSln(ipos) = csrIdx
+        this%mapIdxToSln(ipos) = ipos_sln
       end do
     end do
 
@@ -442,14 +449,9 @@ contains ! module procedures
     class(SpatialModelConnectionType) :: this !< this connection
 
     call mem_deallocate(this%neq)
-    call mem_deallocate(this%nja)
     call mem_deallocate(this%internalStencilDepth)
     call mem_deallocate(this%exchangeStencilDepth)
     call mem_deallocate(this%nrOfConnections)
-
-    call mem_deallocate(this%ia)
-    call mem_deallocate(this%ja)
-    call mem_deallocate(this%amat)
 
     call mem_deallocate(this%x)
     call mem_deallocate(this%rhs)
@@ -459,6 +461,8 @@ contains ! module procedures
     call this%haloExchanges%destroy()
     deallocate (this%haloModels)
     deallocate (this%haloExchanges)
+    call this%matrix%destroy()
+    deallocate (this%matrix)
 
     call this%gridConnection%destroy()
     call this%ifaceDistVars%Clear(destroy=.true.)
@@ -499,7 +503,6 @@ contains ! module procedures
     class(SpatialModelConnectionType) :: this !< this connection
 
     call mem_allocate(this%neq, 'NEQ', this%memoryPath)
-    call mem_allocate(this%nja, 'NJA', this%memoryPath)
     call mem_allocate(this%internalStencilDepth, 'INTSTDEPTH', this%memoryPath)
     call mem_allocate(this%exchangeStencilDepth, 'EXGSTDEPTH', this%memoryPath)
     call mem_allocate(this%nrOfConnections, 'NROFCONNS', this%memoryPath)
@@ -545,21 +548,9 @@ contains ! module procedures
     use SimModule, only: ustop
     class(SpatialModelConnectionType) :: this !< this connection
     type(sparsematrix), intent(inout) :: sparse !< the sparse matrix with the cell connections
-    ! local
-    integer(I4B) :: ierror
-
-    this%nja = sparse%nnz
-    call mem_allocate(this%ia, this%neq + 1, 'IA', this%memoryPath)
-    call mem_allocate(this%ja, this%nja, 'JA', this%memoryPath)
-    call mem_allocate(this%amat, this%nja, 'AMAT', this%memoryPath)
 
     call sparse%sort()
-    call sparse%filliaja(this%ia, this%ja, ierror)
-
-    if (ierror /= 0) then
-      write (*, *) 'Error: cannot fill ia/ja for model connection'
-      call ustop()
-    end if
+    call this%matrix%init(sparse, this%memoryPath)
 
   end subroutine createCoefficientMatrix
 

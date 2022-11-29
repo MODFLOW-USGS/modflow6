@@ -1,7 +1,7 @@
 module RouterModule
   use KindModule, only: I4B, LGP
   use SimStagesModule
-  use VectorIntModule
+  use STLVecIntModule
   use ListsModule, only: basesolutionlist
   use NumericalSolutionModule, only: NumericalSolutionType, &
                                      GetNumericalSolutionFromList
@@ -22,8 +22,8 @@ module RouterModule
   type :: RouterType
     integer(I4B) :: nr_solutions
     integer(I4B), dimension(:), pointer :: solution_ids => null()
-    type(VectorInt), dimension(:), pointer :: model_ids => null()
-    type(VectorInt), dimension(:), pointer :: exchange_ids => null()
+    type(STLVecInt), dimension(:), pointer :: model_ids => null()
+    type(STLVecInt), dimension(:), pointer :: exchange_ids => null()
     class(InterfaceMapType), dimension(:), pointer :: interface_maps => null()
   contains
     procedure :: init
@@ -124,7 +124,7 @@ module RouterModule
     integer(I4B) :: isol, sol_idx
     integer(I4B) :: iexg
     class(SpatialModelConnectionType), pointer :: conn
-    type(VectorInt) :: models, exchanges
+    type(STLVecInt) :: models, exchanges
 
     do isol = 1, this%nr_solutions
       ! this index should always match a numerical solution

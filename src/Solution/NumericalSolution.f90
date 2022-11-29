@@ -19,6 +19,7 @@ module NumericalSolutionModule
   use BaseSolutionModule, only: BaseSolutionType, AddBaseSolutionToList
   use ListModule, only: ListType
   use ListsModule, only: basesolutionlist
+  use InputOutputModule, only: getunit
   use NumericalModelModule, only: NumericalModelType, &
                                   AddNumericalModelToList, &
                                   GetNumericalModelFromList
@@ -30,6 +31,11 @@ module NumericalSolutionModule
   use SimStagesModule
   use BlockParserModule, only: BlockParserType
   use IMSLinearModule
+  use MatrixBaseModule
+  use VectorBaseModule
+  use LinearSolverBaseModule
+  use LinearSolverFactory, only: create_linear_solver
+  use SparseMatrixModule ! TODO_MJR: temporary
 
   implicit none
   private
@@ -41,6 +47,7 @@ module NumericalSolutionModule
   type, extends(BaseSolutionType) :: NumericalSolutionType
     character(len=LENMEMPATH) :: memoryPath !< the path for storing solution variables in the memory manager
     character(len=LINELENGTH) :: fname !< input file name
+    character(len=16) :: solver_mode !< the type of solve: sequential, parallel, mayve block, etc.
     type(ListType), pointer :: modellist !< list of models in solution
     type(ListType), pointer :: exchangelist !< list of exchanges in solution
     integer(I4B), pointer :: id !< solution number
@@ -49,12 +56,13 @@ module NumericalSolutionModule
     real(DP), pointer :: ttsoln !< timer - total solution time
     integer(I4B), pointer :: isymmetric => null() !< flag indicating if matrix symmetry is required
     integer(I4B), pointer :: neq => null() !< number of equations
-    integer(I4B), pointer :: nja => null() !< number of non-zero entries
-    integer(I4B), dimension(:), pointer, contiguous :: ia => null() !< CRS row pointers
-    integer(I4B), dimension(:), pointer, contiguous :: ja => null() !< CRS column pointers
-    real(DP), dimension(:), pointer, contiguous :: amat => null() !< coefficient matrix
-    real(DP), dimension(:), pointer, contiguous :: rhs => null() !< right-hand side vector
-    real(DP), dimension(:), pointer, contiguous :: x => null() !< dependent-variable vector
+    integer(I4B), pointer :: matrix_offset => null() !< offset of linear system when part of distributed solution
+    class(LinearSolverBaseType), pointer :: linear_solver !< the linear solver for this solution
+    class(MatrixBaseType), pointer :: system_matrix !< sparse A-matrix for the system of equations
+    class(VectorBaseType), pointer :: vec_rhs !< the right-hand side vector
+    class(VectorBaseType), pointer :: vec_x !< the dependent-variable vector
+    real(DP), dimension(:), pointer, contiguous :: rhs => null() !< right-hand side vector values
+    real(DP), dimension(:), pointer, contiguous :: x => null() !< dependent-variable vector values
     integer(I4B), dimension(:), pointer, contiguous :: active => null() !< active cell array
     real(DP), dimension(:), pointer, contiguous :: xtemp => null() !< temporary vector for previous dependent-variable iterate
     type(BlockParserType) :: parser !< block parser object
@@ -261,7 +269,7 @@ contains
     call mem_allocate(this%ttsoln, 'TTSOLN', this%memoryPath)
     call mem_allocate(this%isymmetric, 'ISYMMETRIC', this%memoryPath)
     call mem_allocate(this%neq, 'NEQ', this%memoryPath)
-    call mem_allocate(this%nja, 'NJA', this%memoryPath)
+    call mem_allocate(this%matrix_offset, 'MATRIX_OFFSET', this%memoryPath)
     call mem_allocate(this%dvclose, 'DVCLOSE', this%memoryPath)
     call mem_allocate(this%bigchold, 'BIGCHOLD', this%memoryPath)
     call mem_allocate(this%bigch, 'BIGCH', this%memoryPath)
@@ -307,7 +315,6 @@ contains
     this%ttform = DZERO
     this%ttsoln = DZERO
     this%neq = 0
-    this%nja = 0
     this%dvclose = DZERO
     this%bigchold = DZERO
     this%bigch = DZERO
@@ -368,9 +375,6 @@ contains
     this%convnmod = this%modellist%Count()
     !
     ! -- allocate arrays
-    call mem_allocate(this%ia, this%neq + 1, 'IA', this%memoryPath)
-    call mem_allocate(this%x, this%neq, 'X', this%memoryPath)
-    call mem_allocate(this%rhs, this%neq, 'RHS', this%memoryPath)
     call mem_allocate(this%active, this%neq, 'IACTIVE', this%memoryPath)
     call mem_allocate(this%xtemp, this%neq, 'XTEMP', this%memoryPath)
     call mem_allocate(this%dxold, this%neq, 'DXOLD', this%memoryPath)
@@ -397,7 +401,6 @@ contains
     !
     ! -- initialize allocated arrays
     do i = 1, this%neq
-      this%x(i) = DZERO
       this%xtemp(i) = DZERO
       this%dxold(i) = DZERO
       this%active(i) = 1 !default is active
@@ -434,19 +437,47 @@ contains
   subroutine sln_df(this)
     ! modules
     use MemoryManagerModule, only: mem_allocate
+    use SimVariablesModule, only: simulation_mode, num_ranks
     ! -- dummy variables
     class(NumericalSolutionType) :: this !< NumericalSolutionType instance
     ! -- local variables
     class(NumericalModelType), pointer :: mp => null()
     integer(I4B) :: i
     integer(I4B), allocatable, dimension(:) :: rowmaxnnz
+    integer(I4B) :: ncol, irow_start, irow_end
+    integer(I4B) :: mod_offset
     !
-    ! -- calculate and set offsets
+    ! -- set sol id and determine nr. of equation in this solution
     do i = 1, this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, i)
       call mp%set_idsoln(this%id)
-      call mp%set_moffset(this%neq)
       this%neq = this%neq + mp%neq
+    end do
+    !
+    ! -- set up the (possibly parallel) linear system
+    if (simulation_mode == 'PARALLEL' .and. num_ranks > 1) then
+      this%solver_mode = 'PAR'
+    else
+      this%solver_mode = 'PAR'
+    end if
+    !
+    this%linear_solver => create_linear_solver(this%solver_mode)
+    this%system_matrix => this%linear_solver%create_matrix()
+    this%vec_x => this%system_matrix%create_vector(this%neq, 'X', this%memoryPath)
+    this%x => this%vec_x%get_array()
+    this%vec_rhs => this%system_matrix%create_vector(this%neq, 'RHS', this%memoryPath)
+    this%rhs => this%vec_rhs%get_array()
+    !
+    call this%vec_rhs%get_ownership_range(irow_start, irow_end)
+    ncol = this%vec_rhs%get_size()
+    !
+    ! -- calculate and set offsets
+    mod_offset = irow_start - 1
+    this%matrix_offset = irow_start - 1
+    do i = 1, this%modellist%Count()
+      mp => GetNumericalModelFromList(this%modellist, i)
+      call mp%set_moffset(mod_offset)
+      mod_offset = mod_offset + mp%neq
     end do
     !
     ! -- Allocate and initialize solution arrays
@@ -455,9 +486,9 @@ contains
     ! -- Go through each model and point x, ibound, and rhs to solution
     do i = 1, this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, i)
-      call mp%set_xptr(this%x, 'X', this%name)
-      call mp%set_rhsptr(this%rhs, 'RHS', this%name)
-      call mp%set_iboundptr(this%active, 'IBOUND', this%name)
+      call mp%set_xptr(this%x, this%matrix_offset, 'X', this%name)
+      call mp%set_rhsptr(this%rhs, this%matrix_offset, 'RHS', this%name)
+      call mp%set_iboundptr(this%active, this%matrix_offset, 'IBOUND', this%name)
     end do
     !
     ! -- Create the sparsematrix instance
@@ -465,7 +496,8 @@ contains
     do i = 1, this%neq
       rowmaxnnz(i) = 4
     end do
-    call this%sparse%init(this%neq, this%neq, rowmaxnnz)
+    call this%sparse%init(this%neq, ncol, rowmaxnnz)
+    this%sparse%offset = this%matrix_offset
     deallocate (rowmaxnnz)
     !
     ! -- Assign connections, fill ia/ja, map connections
@@ -499,7 +531,7 @@ contains
     integer(I4B) :: i
     integer(I4B) :: im
     integer(I4B) :: ifdparam, mxvl, npp
-    integer(I4B) :: imslinear
+    integer(I4B) :: ims_lin_type
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     integer(I4B) :: ival
@@ -865,29 +897,37 @@ contains
         call store_error(errmsg)
       end if
     end if
+     
+    if (this%solver_mode == 'PAR') then
+      this%linmeth = 2
+    end if
+
     !
     ! -- call secondary subroutine to initialize and read linear
-    !    solver parameters IMSLINEAR solver
+    !    solver parameters IMSLINEAR solver   
     if (this%linmeth == 1) then
       allocate (this%imslinear)
       WRITE (IOUT, *) '***IMS LINEAR SOLVER WILL BE USED***'
       call this%imslinear%imslinear_allocate(this%name, this%parser, IOUT, &
                                              this%iprims, this%mxiter, &
-                                             ifdparam, imslinear, &
-                                             this%neq, this%nja, this%ia, &
-                                             this%ja, this%amat, this%rhs, &
-                                             this%x, this%nitermax)
-      WRITE (IOUT, *)
-      if (imslinear .eq. 1) then
+                                             ifdparam, ims_lin_type, &
+                                             this%neq, this%system_matrix, &
+                                             this%rhs, this%x, this%nitermax)
+      if (ims_lin_type .eq. 1) then
         this%isymmetric = 1
       end if
-      !
-      ! -- incorrect linear solver flag
+    !
+    ! -- incorrect linear solver flag
+    else if (this%linmeth == 2) then
+      call this%linear_solver%initialize(this%system_matrix)
+      this%nitermax = this%linear_solver%nitermax
+      this%isymmetric = 0
     ELSE
       WRITE (errmsg, '(a)') &
         'INCORRECT VALUE FOR LINEAR SOLUTION METHOD SPECIFIED.'
       call store_error(errmsg)
     END IF
+    
     !
     ! -- write message about matrix symmetry
     if (this%isymmetric == 1) then
@@ -960,7 +1000,9 @@ contains
            /1X, 'BACKTRACKING RESIDUAL LIMIT              (RES_LIM) = ', E15.6)
     !
     ! -- linear solver data
-    call this%imslinear%imslinear_summary(this%mxiter)
+    if (this%linmeth == 1) then
+      call this%imslinear%imslinear_summary(this%mxiter)
+    end if
 
     ! -- write summary of solver error messages
     ierr = count_errors()
@@ -1125,7 +1167,7 @@ contains
     class(NumericalSolutionType) :: this !< NumericalSolutionType instance
     !
     ! -- write timer output
-    if (IDEVELOPMODE == 1) then
+    if (IDEVELOPMODE == 1 .and. this%linmeth == 1) then
       write (this%imslinear%iout, '(//1x,a,1x,a,1x,a)') &
         'Solution', trim(adjustl(this%name)), 'summary'
       write (this%imslinear%iout, "(1x,70('-'))")
@@ -1151,14 +1193,24 @@ contains
     class(NumericalSolutionType) :: this !< NumericalSolutionType instance
     !
     ! -- IMSLinearModule
-    call this%imslinear%imslinear_da()
-    deallocate (this%imslinear)
+    if (this%linmeth == 1) then
+      call this%imslinear%imslinear_da()
+      deallocate (this%imslinear)
+    end if
     !
     ! -- lists
     call this%modellist%Clear()
     call this%exchangelist%Clear()
     deallocate (this%modellist)
     deallocate (this%exchangelist)
+
+    call this%system_matrix%destroy()
+    deallocate (this%system_matrix)
+    call this%vec_x%destroy()
+    deallocate(this%vec_x)
+    call this%vec_rhs%destroy()
+    deallocate(this%vec_rhs)
+
     !
     ! -- character arrays
     deallocate (this%caccel)
@@ -1177,12 +1229,7 @@ contains
       nullify (this%outertab)
     end if
     !
-    ! -- arrays
-    call mem_deallocate(this%ja)
-    call mem_deallocate(this%amat)
-    call mem_deallocate(this%ia)
-    call mem_deallocate(this%x)
-    call mem_deallocate(this%rhs)
+    ! -- arrays    
     call mem_deallocate(this%active)
     call mem_deallocate(this%xtemp)
     call mem_deallocate(this%dxold)
@@ -1209,7 +1256,7 @@ contains
     call mem_deallocate(this%ttsoln)
     call mem_deallocate(this%isymmetric)
     call mem_deallocate(this%neq)
-    call mem_deallocate(this%nja)
+    call mem_deallocate(this%matrix_offset)
     call mem_deallocate(this%dvclose)
     call mem_deallocate(this%bigchold)
     call mem_deallocate(this%bigch)
@@ -1545,27 +1592,19 @@ contains
     call this%sln_buildsystem(kiter, inewton=1)
 
     !
-    ! -- Add exchange Newton-Raphson terms to solution
-    do ic = 1, this%exchangelist%Count()
-      cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_nr(kiter, this%ia, this%amat)
-    end do
-    !
     ! -- Calculate pseudo-transient continuation factor for each model
     iptc = 0
     ptcf = DZERO
     do im = 1, this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_ptc(kiter, this%neq, this%nja, &
-                        this%ia, this%ja, this%x, &
-                        this%rhs, this%amat, &
-                        iptc, ptcf)
+      call mp%model_ptc(kiter, this%neq, this%system_matrix, &
+                        this%x, this%rhs, iptc, ptcf)
     end do
     !
     ! -- Add model Newton-Raphson terms to solution
     do im = 1, this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_nr(kiter, this%amat, this%nja, 1)
+      call mp%model_nr(kiter, this%system_matrix, 1)
     end do
     call code_timer(1, ttform, this%ttform)
     !
@@ -1732,7 +1771,7 @@ contains
       locmax_nur = 0
       do im = 1, this%modellist%Count()
         mp => GetNumericalModelFromList(this%modellist, im)
-        i0 = mp%moffset + 1
+        i0 = mp%moffset + 1 - this%matrix_offset
         i1 = i0 + mp%neq - 1
         call mp%model_nur(mp%neq, this%x(i0:i1), this%xtemp(i0:i1), &
                           this%dxold(i0:i1), inewtonur, dxmax_nur, locmax_nur)
@@ -1942,13 +1981,13 @@ contains
     ! -- Add exchange coefficients to the solution
     do ic = 1, this%exchangelist%Count()
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_fc(kiter, this%ia, this%amat, this%rhs, inewton)
+      call cp%exg_fc(kiter, this%system_matrix, this%rhs, inewton)
     end do
     !
     ! -- Add model coefficients to the solution
     do im = 1, this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_fc(kiter, this%amat, this%nja, inewton)
+      call mp%model_fc(kiter, this%system_matrix, inewton)
     end do
 
   end subroutine sln_buildsystem
@@ -2184,19 +2223,22 @@ contains
     integer(I4B) :: inunit
 ! ------------------------------------------------------------------------------
     !
-    inunit = getunit()
-    open (unit=inunit, file=filename, status='unknown')
-    write (inunit, *) 'ia'
-    write (inunit, *) this%ia
-    write (inunit, *) 'ja'
-    write (inunit, *) this%ja
-    write (inunit, *) 'amat'
-    write (inunit, *) this%amat
-    write (inunit, *) 'rhs'
-    write (inunit, *) this%rhs
-    write (inunit, *) 'x'
-    write (inunit, *) this%x
-    close (inunit)
+    select type (spm => this%system_matrix)
+    class is (SparseMatrixType)
+      inunit = getunit()
+      open (unit=inunit, file=filename, status='unknown')
+      write (inunit, *) 'ia'
+      write (inunit, *) spm%ia
+      write (inunit, *) 'ja'
+      write (inunit, *) spm%ja
+      write (inunit, *) 'amat'
+      write (inunit, *) spm%amat
+      write (inunit, *) 'rhs'
+      write (inunit, *) this%rhs
+      write (inunit, *) 'x'
+      write (inunit, *) this%x
+      close (inunit)
+    end select
     !
     ! -- return
     return
@@ -2292,7 +2334,6 @@ contains
     class(NumericalExchangeType), pointer :: cp => null()
     integer(I4B) :: im
     integer(I4B) :: ic
-    integer(I4B) :: ierror
     !
     ! -- Add internal model connections to sparse
     do im = 1, this%modellist%Count()
@@ -2311,11 +2352,8 @@ contains
     !
     ! -- The number of non-zero array values are now known so
     ! -- ia and ja can be created from sparse. then destroy sparse
-    this%nja = this%sparse%nnz
-    call mem_allocate(this%ja, this%nja, 'JA', this%name)
-    call mem_allocate(this%amat, this%nja, 'AMAT', this%name)
     call this%sparse%sort()
-    call this%sparse%filliaja(this%ia, this%ja, ierror)
+    call this%system_matrix%init(this%sparse, this%name)
     call this%sparse%destroy()
     !
     ! -- Create mapping arrays for each model.  Mapping assumes
@@ -2323,13 +2361,13 @@ contains
     ! -- however, rows do not need to be sorted.
     do im = 1, this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_mc(this%ia, this%ja)
+      call mp%model_mc(this%system_matrix)
     end do
     !
     ! -- Create arrays for mapping exchange connections to global solution
     do ic = 1, this%exchangelist%Count()
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
-      call cp%exg_mc(this%ia, this%ja)
+      call cp%exg_mc(this%system_matrix)
     end do
     !
     ! -- return
@@ -2345,16 +2383,10 @@ contains
   subroutine sln_reset(this)
     ! -- dummy variables
     class(NumericalSolutionType) :: this !< NumericalSolutionType instance
-    ! -- local variables
-    integer(I4B) :: i
     !
     ! -- reset the solution
-    do i = 1, this%nja
-      this%amat(i) = DZERO
-    end do
-    do i = 1, this%neq
-      this%rhs(i) = DZERO
-    end do
+    call this%system_matrix%zero_entries()
+    call this%vec_rhs%zero_entries()
     !
     ! -- return
     return
@@ -2377,11 +2409,12 @@ contains
     real(DP), intent(in) :: ptcf
     ! -- local variables
     logical :: lsame
-    integer(I4B) :: n
+    integer(I4B) :: ieq
+    integer(I4B) :: irow
     integer(I4B) :: itestmat
-    integer(I4B) :: i
-    integer(I4B) :: i1
-    integer(I4B) :: i2
+    integer(I4B) :: ipos
+    integer(I4B) :: icol_s
+    integer(I4B) :: icol_e
     integer(I4B) :: jcol
     integer(I4B) :: iptct
     integer(I4B) :: iallowptc
@@ -2396,44 +2429,53 @@ contains
       &'_', i0, '_', i0, '.txt')"
     !
     ! -- take care of loose ends for all nodes before call to solver
-    do n = 1, this%neq
+    do ieq = 1, this%neq
+      !
+      ! -- get (global) cell id
+      irow = ieq + this%matrix_offset
       !
       ! -- store x in temporary location
-      this%xtemp(n) = this%x(n)
+      this%xtemp(ieq) = this%x(ieq)
       !
       ! -- make adjustments to the continuity equation for the node
       ! -- adjust small diagonal coefficient in an active cell
-      if (this%active(n) > 0) then
+      if (this%active(ieq) > 0) then
         diagval = -DONE
-        adiag = abs(this%amat(this%ia(n)))
+        adiag = abs(this%system_matrix%get_diag_value(irow))
         if (adiag < DEM15) then
-          this%amat(this%ia(n)) = diagval
-          this%rhs(n) = this%rhs(n) + diagval * this%x(n)
+          call this%system_matrix%set_diag_value(irow, diagval)
+          this%rhs(ieq) = this%rhs(ieq) + diagval * this%x(ieq)
         end if
         ! -- Dirichlet boundary or no-flow cell
       else
-        this%amat(this%ia(n)) = DONE
-        this%rhs(n) = this%x(n)
-        i1 = this%ia(n) + 1
-        i2 = this%ia(n + 1) - 1
-        do i = i1, i2
-          this%amat(i) = DZERO
-        end do
+        call this%system_matrix%set_diag_value(irow, DONE)
+        call this%system_matrix%zero_row_offdiag(irow)
+        this%rhs(ieq) = this%x(ieq)
+        ! Alternative way (TODO_MJR: ):
+        ! call this%system_matrix%add_diag_value(irow, 1.0e+20_DP)
+        ! this%rhs(ieq) = 1.0e+20_DP * this%x(ieq)
       end if
     end do
     !
     ! -- complete adjustments for Dirichlet boundaries for a symmetric matrix
     if (this%isymmetric == 1) then
-      do n = 1, this%neq
-        if (this%active(n) > 0) then
-          i1 = this%ia(n) + 1
-          i2 = this%ia(n + 1) - 1
-          do i = i1, i2
-            jcol = this%ja(i)
-            if (this%active(jcol) < 0) then
-              this%rhs(n) = this%rhs(n) - this%amat(i) * this%x(jcol)
-              this%amat(i) = DZERO
+      do ieq = 1, this%neq
+        !
+        ! -- get (global) row number
+        irow = ieq + this%matrix_offset
+        if (this%active(ieq) > 0) then
+          icol_s = this%system_matrix%get_first_col_pos(irow)
+          icol_e = this%system_matrix%get_last_col_pos(irow)
+          do ipos = icol_s, icol_e
+            jcol = this%system_matrix%get_column(ipos)
+            if (jcol == irow) cycle            
+            if (this%active(jcol - this%matrix_offset) < 0) then
+              this%rhs(ieq) = this%rhs(ieq) - &
+                              (this%system_matrix%get_value_pos(ipos) * &
+                              this%x(jcol - this%matrix_offset))
+              call this%system_matrix%set_value_pos(ipos, DZERO)
             end if
+
           end do
         end if
       end do
@@ -2461,9 +2503,8 @@ contains
     ! -- calculate or modify pseudo transient continuation terms and add
     !    to amat diagonals
     if (iptct /= 0) then
-      call this%sln_l2norm(this%neq, this%nja, &
-                           this%ia, this%ja, this%active, &
-                           this%amat, this%rhs, this%x, l2norm)
+      call this%sln_l2norm(this%neq, this%system_matrix, this%active, &
+                           this%rhs, this%x, l2norm)
       ! -- confirm that the l2norm exceeds previous l2norm
       !    if not, there is no need to add ptc terms
       if (kiter == 1) then
@@ -2497,9 +2538,9 @@ contains
             this%ptcdel = DONE / ptcf
           else
             bnorm = DZERO
-            do n = 1, this%neq
-              if (this%active(n) .gt. 0) then
-                bnorm = bnorm + this%rhs(n) * this%rhs(n)
+            do ieq = 1, this%neq
+              if (this%active(ieq) .gt. 0) then
+                bnorm = bnorm + this%rhs(ieq) * this%rhs(ieq)
               end if
             end do
             bnorm = sqrt(bnorm)
@@ -2520,13 +2561,14 @@ contains
       end if
       diagmin = DEP20
       bnorm = DZERO
-      do n = 1, this%neq
-        if (this%active(n) > 0) then
-          diagval = abs(this%amat(this%ia(n)))
-          bnorm = bnorm + this%rhs(n) * this%rhs(n)
+      do ieq = 1, this%neq
+        irow = ieq + this%matrix_offset
+        if (this%active(ieq) > 0) then
+          diagval = abs(this%system_matrix%get_diag_value(irow))
+          bnorm = bnorm + this%rhs(ieq) * this%rhs(ieq)
           if (diagval < diagmin) diagmin = diagval
-          this%amat(this%ia(n)) = this%amat(this%ia(n)) - ptcval
-          this%rhs(n) = this%rhs(n) - ptcval * this%x(n)
+          call this%system_matrix%add_diag_value(irow, -ptcval)
+          this%rhs(ieq) = this%rhs(ieq) - ptcval * this%x(ieq)
         end if
       end do
       bnorm = sqrt(bnorm)
@@ -2545,15 +2587,21 @@ contains
     if (itestmat == 1) then
       write (fname, fmtfname) this%id, kper, kstp, kiter
       print *, 'Saving amat to: ', trim(adjustl(fname))
-      open (99, file=trim(adjustl(fname)))
-      WRITE (99, *) 'NODE, RHS, AMAT FOLLOW'
-      DO N = 1, this%NEQ
-        I1 = this%IA(N)
-        I2 = this%IA(N + 1) - 1
-        WRITE (99, '(*(G0,:,","))') N, this%RHS(N), (this%ja(i), i=i1, i2), &
-          (this%AMAT(I), I=I1, I2)
-      END DO
-      close (99)
+
+      itestmat = getunit()
+      open (itestmat, file=trim(adjustl(fname)))
+      write (itestmat, *) 'NODE, RHS, AMAT FOLLOW'
+      do ieq = 1, this%neq
+        irow = ieq + this%matrix_offset
+        icol_s = this%system_matrix%get_first_col_pos(irow)
+        icol_e = this%system_matrix%get_last_col_pos(irow)
+        write (itestmat, '(*(G0,:,","))') &
+          irow, &
+          this%rhs(ieq), &
+          (this%system_matrix%get_column(ipos), ipos=icol_s, icol_e), &
+          (this%system_matrix%get_value_pos(ipos), ipos=icol_s, icol_e)
+      end do
+      close (itestmat)
       !stop
     end if
     !-------------------------------------------------------
@@ -2570,6 +2618,10 @@ contains
                                           this%convlocdv, this%convlocdr, &
                                           this%dvmax, this%drmax, &
                                           this%convdvmax, this%convdrmax)
+    else if (this%linmeth == 2) then
+      call this%linear_solver%solve(kiter, this%vec_rhs, this%vec_x)
+      in_iter = this%linear_solver%iteration_number
+      this%icnvg = this%linear_solver%is_converged
     end if
     !
     ! -- ptc finalize - set ratio of ptc value added to the diagonal and the
@@ -2674,15 +2726,13 @@ contains
     !
     ! -- calculate initial l2 norm
     if (kiter == 1) then
-      call this%sln_l2norm(this%neq, this%nja, &
-                           this%ia, this%ja, this%active, &
-                           this%amat, this%rhs, this%x, this%res_prev)
+      call this%sln_l2norm(this%neq, this%system_matrix, this%active, &
+                           this%rhs, this%x, this%res_prev)
       resin = this%res_prev
       ibflag = 0
     else
-      call this%sln_l2norm(this%neq, this%nja, &
-                           this%ia, this%ja, this%active, &
-                           this%amat, this%rhs, this%x, this%res_new)
+      call this%sln_l2norm(this%neq, this%system_matrix, this%active, &
+                           this%rhs, this%x, this%res_new)
       resin = this%res_new
     end if
     ibtcnt = 0
@@ -2708,9 +2758,8 @@ contains
 
           !
           ! -- calculate updated l2norm
-          call this%sln_l2norm(this%neq, this%nja, &
-                               this%ia, this%ja, this%active, &
-                               this%amat, this%rhs, this%x, this%res_new)
+          call this%sln_l2norm(this%neq, this%system_matrix, this%active, &
+                               this%rhs, this%x, this%res_new)
           !
           ! -- evaluate if back tracking can be terminated
           if (nb == this%numtrack) then
@@ -2805,21 +2854,18 @@ contains
   !!  right-hand side vector, and the current dependent-variable vector.
   !!
   !<
-  subroutine sln_l2norm(this, neq, nja, ia, ja, active, amat, rhs, x, l2norm)
+  subroutine sln_l2norm(this, neq, matrix_sln, active, rhs, x, l2norm)
     ! -- dummy variables
     class(NumericalSolutionType), intent(inout) :: this !< NumericalSolutionType instance
     integer(I4B), intent(in) :: neq !< number of equations
-    integer(I4B), intent(in) :: nja !< number of non-zero entries
-    integer(I4B), dimension(neq + 1), intent(in) :: ia !< CRS row pointers
-    integer(I4B), dimension(nja), intent(in) :: ja !< CRS column pointers
+    class(MatrixBaseType), pointer :: matrix_sln !< coefficient matrix for solution
     integer(I4B), dimension(neq), intent(in) :: active !< active cell flag vector (1) inactive (0)
-    real(DP), dimension(nja), intent(in) :: amat !< coefficient matrix
     real(DP), dimension(neq), intent(in) :: rhs !< right-hand side vector
     real(DP), dimension(neq), intent(in) :: x !< dependent-variable vector
     real(DP), intent(inout) :: l2norm !< calculated L-2 norm
     ! -- local variables
     integer(I4B) :: n
-    integer(I4B) :: j
+    integer(I4B) :: ipos, icol_s, icol_e
     integer(I4B) :: jcol
     real(DP) :: rowsum
     real(DP) :: residual
@@ -2831,9 +2877,11 @@ contains
     do n = 1, neq
       if (active(n) > 0) then
         rowsum = DZERO
-        do j = ia(n), ia(n + 1) - 1
-          jcol = ja(j)
-          rowsum = rowsum + amat(j) * x(jcol)
+        icol_s = matrix_sln%get_first_col_pos(n)
+        icol_e = matrix_sln%get_last_col_pos(n)
+        do ipos = icol_s, icol_e
+          jcol = matrix_sln%get_column(ipos)
+          rowsum = rowsum + (matrix_sln%get_value_pos(ipos) * x(jcol))
         end do
         ! compute mean square residual from q of each node
         residual = residual + (rowsum - rhs(n))**2

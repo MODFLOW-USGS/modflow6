@@ -25,6 +25,7 @@ module GwtModule
   use GwtOcModule, only: GwtOcType
   use GwtObsModule, only: GwtObsType
   use BudgetModule, only: BudgetType
+  use MatrixBaseModule
 
   implicit none
 
@@ -349,7 +350,7 @@ contains
     return
   end subroutine gwt_ac
 
-  subroutine gwt_mc(this, iasln, jasln)
+  subroutine gwt_mc(this, matrix_sln)
 ! ******************************************************************************
 ! gwt_mc -- Map the positions of this models connections in the
 ! numerical solution coefficient matrix.
@@ -359,8 +360,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtModelType) :: this
-    integer(I4B), dimension(:), intent(in) :: iasln
-    integer(I4B), dimension(:), intent(in) :: jasln
+    class(MatrixBaseType), pointer :: matrix_sln !< global system matrix
     ! -- local
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
@@ -368,13 +368,13 @@ contains
     !
     ! -- Find the position of each connection in the global ia, ja structure
     !    and store them in idxglo.
-    call this%dis%dis_mc(this%moffset, this%idxglo, iasln, jasln)
-    if (this%indsp > 0) call this%dsp%dsp_mc(this%moffset, iasln, jasln)
+    call this%dis%dis_mc(this%moffset, this%idxglo, matrix_sln)
+    if (this%indsp > 0) call this%dsp%dsp_mc(this%moffset, matrix_sln)
     !
     ! -- Map any package connections
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_mc(this%moffset, iasln, jasln)
+      call packobj%bnd_mc(this%moffset, matrix_sln)
     end do
     !
     ! -- return
@@ -553,7 +553,7 @@ contains
     return
   end subroutine gwt_cf
 
-  subroutine gwt_fc(this, kiter, amatsln, njasln, inwtflag)
+  subroutine gwt_fc(this, kiter, matrix_sln, inwtflag)
 ! ******************************************************************************
 ! gwt_fc -- GroundWater Transport Model fill coefficients
 ! ******************************************************************************
@@ -564,8 +564,7 @@ contains
     ! -- dummy
     class(GwtModelType) :: this
     integer(I4B), intent(in) :: kiter
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in) :: inwtflag
     ! -- local
     class(BndType), pointer :: packobj
@@ -573,31 +572,31 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- call fc routines
-    call this%fmi%fmi_fc(this%dis%nodes, this%xold, this%nja, njasln, &
-                         amatsln, this%idxglo, this%rhs)
+    call this%fmi%fmi_fc(this%dis%nodes, this%xold, this%nja, matrix_sln, &
+                         this%idxglo, this%rhs)
     if (this%inmvt > 0) then
       call this%mvt%mvt_fc(this%x, this%x)
     end if
     if (this%inmst > 0) then
-      call this%mst%mst_fc(this%dis%nodes, this%xold, this%nja, njasln, &
-                           amatsln, this%idxglo, this%x, this%rhs, kiter)
+      call this%mst%mst_fc(this%dis%nodes, this%xold, this%nja, matrix_sln, &
+                           this%idxglo, this%x, this%rhs, kiter)
     end if
     if (this%inadv > 0) then
-      call this%adv%adv_fc(this%dis%nodes, amatsln, this%idxglo, this%x, &
+      call this%adv%adv_fc(this%dis%nodes, matrix_sln, this%idxglo, this%x, &
                            this%rhs)
     end if
     if (this%indsp > 0) then
-      call this%dsp%dsp_fc(kiter, this%dis%nodes, this%nja, njasln, amatsln, &
+      call this%dsp%dsp_fc(kiter, this%dis%nodes, this%nja, matrix_sln, &
                            this%idxglo, this%rhs, this%x)
     end if
     if (this%inssm > 0) then
-      call this%ssm%ssm_fc(amatsln, this%idxglo, this%rhs)
+      call this%ssm%ssm_fc(matrix_sln, this%idxglo, this%rhs)
     end if
     !
     ! -- packages
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_fc(this%rhs, this%ia, this%idxglo, amatsln)
+      call packobj%bnd_fc(this%rhs, this%ia, this%idxglo, matrix_sln)
     end do
     !
     ! -- return

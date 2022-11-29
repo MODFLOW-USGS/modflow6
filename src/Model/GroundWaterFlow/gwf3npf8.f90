@@ -19,6 +19,7 @@ module GwfNpfModule
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, &
                                  mem_deallocate, mem_setptr, &
                                  mem_reassignptr
+  use MatrixBaseModule
 
   implicit none
 
@@ -294,7 +295,7 @@ contains
     return
   end subroutine npf_ac
 
-  subroutine npf_mc(this, moffset, iasln, jasln)
+  subroutine npf_mc(this, moffset, matrix_sln)
 ! ******************************************************************************
 ! npf_mc -- Map connections and construct iax, jax, and idxglox
 ! ******************************************************************************
@@ -305,12 +306,11 @@ contains
     ! -- dummy
     class(GwfNpftype) :: this
     integer(I4B), intent(in) :: moffset
-    integer(I4B), dimension(:), intent(in) :: iasln
-    integer(I4B), dimension(:), intent(in) :: jasln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    if (this%ixt3d /= 0) call this%xt3d%xt3d_mc(moffset, iasln, jasln)
+    if (this%ixt3d /= 0) call this%xt3d%xt3d_mc(moffset, matrix_sln)
     !
     ! -- Return
     return
@@ -526,7 +526,7 @@ contains
     return
   end subroutine npf_cf
 
-  subroutine npf_fc(this, kiter, njasln, amat, idxglo, rhs, hnew)
+  subroutine npf_fc(this, kiter, matrix_sln, idxglo, rhs, hnew)
 ! ******************************************************************************
 ! npf_fc -- Formulate
 ! ******************************************************************************
@@ -538,8 +538,7 @@ contains
     ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B) :: kiter
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amat
+    class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in), dimension(:) :: idxglo
     real(DP), intent(inout), dimension(:) :: rhs
     real(DP), intent(inout), dimension(:) :: hnew
@@ -553,7 +552,7 @@ contains
     ! -- Calculate conductance and put into amat
     !
     if (this%ixt3d /= 0) then
-      call this%xt3d%xt3d_fc(kiter, njasln, amat, idxglo, rhs, hnew)
+      call this%xt3d%xt3d_fc(kiter, matrix_sln, idxglo, rhs, hnew)
     else
       !
       do n = 1, this%dis%nodes
@@ -591,11 +590,11 @@ contains
                   ! -- Fill row n
                   idiag = this%dis%con%ia(n)
                   rhs(n) = rhs(n) - cond * this%dis%bot(n)
-                  amat(idxglo(idiag)) = amat(idxglo(idiag)) - cond
+                  call matrix_sln%add_value_pos(idxglo(idiag), -cond)
                   !
                   ! -- Fill row m
                   isymcon = this%dis%con%isym(ii)
-                  amat(idxglo(isymcon)) = amat(idxglo(isymcon)) + cond
+                  call matrix_sln%add_value_pos(idxglo(isymcon), cond)
                   rhs(m) = rhs(m) + cond * this%dis%bot(n)
                   !
                   ! -- cycle the connection loop
@@ -624,14 +623,14 @@ contains
           !
           ! -- Fill row n
           idiag = this%dis%con%ia(n)
-          amat(idxglo(ii)) = amat(idxglo(ii)) + cond
-          amat(idxglo(idiag)) = amat(idxglo(idiag)) - cond
+          call matrix_sln%add_value_pos(idxglo(ii), cond)
+          call matrix_sln%add_value_pos(idxglo(idiag), -cond)
           !
           ! -- Fill row m
           isymcon = this%dis%con%isym(ii)
           idiagm = this%dis%con%ia(m)
-          amat(idxglo(isymcon)) = amat(idxglo(isymcon)) + cond
-          amat(idxglo(idiagm)) = amat(idxglo(idiagm)) - cond
+          call matrix_sln%add_value_pos(idxglo(isymcon), cond)
+          call matrix_sln%add_value_pos(idxglo(idiagm), -cond)
         end do
       end do
       !
@@ -641,7 +640,7 @@ contains
     return
   end subroutine npf_fc
 
-  subroutine npf_fn(this, kiter, njasln, amat, idxglo, rhs, hnew)
+  subroutine npf_fn(this, kiter, matrix_sln, idxglo, rhs, hnew)
 ! ******************************************************************************
 ! npf_fn -- Fill newton terms
 ! ******************************************************************************
@@ -651,8 +650,7 @@ contains
     ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B) :: kiter
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amat
+    class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in), dimension(:) :: idxglo
     real(DP), intent(inout), dimension(:) :: rhs
     real(DP), intent(inout), dimension(:) :: hnew
@@ -680,7 +678,7 @@ contains
     nodes = this%dis%nodes
     nja = this%dis%con%nja
     if (this%ixt3d /= 0) then
-      call this%xt3d%xt3d_fn(kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+      call this%xt3d%xt3d_fn(kiter, nodes, nja, matrix_sln, idxglo, rhs, hnew)
     else
       !
       do n = 1, nodes
@@ -730,7 +728,7 @@ contains
             ! compute additional term
             consterm = -cond * (hnew(iups) - hnew(idn)) !needs to use hwadi instead of hnew(idn)
             !filledterm = cond
-            filledterm = amat(idxglo(ii))
+            filledterm = matrix_sln%get_value_pos(idxglo(ii))
             derv = sQuadraticSaturationDerivative(topup, botup, hnew(iups), &
                                                   this%satomega, this%satmin)
             idiagm = this%dis%con%ia(m)
@@ -742,16 +740,18 @@ contains
               rhs(n) = rhs(n) + term * hnew(n) !+ amat(idxglo(isymcon)) * (dwadi * hds - hds) !need to add dwadi
               rhs(m) = rhs(m) - term * hnew(n) !- amat(idxglo(isymcon)) * (dwadi * hds - hds) !need to add dwadi
               ! fill in row of n
-              amat(idxglo(idiag)) = amat(idxglo(idiag)) + term
+              call matrix_sln%add_value_pos(idxglo(idiag), term)
               ! fill newton term in off diagonal if active cell
               if (this%ibound(n) > 0) then
-                amat(idxglo(ii)) = amat(idxglo(ii)) !* dwadi !need to add dwadi
+                filledterm = matrix_sln%get_value_pos(idxglo(ii))
+                call matrix_sln%set_value_pos(idxglo(ii), filledterm) !* dwadi !need to add dwadi
               end if
               !fill row of m
-              amat(idxglo(idiagm)) = amat(idxglo(idiagm)) !- filledterm * (dwadi - DONE) !need to add dwadi
+              filledterm = matrix_sln%get_value_pos(idxglo(idiagm))
+              call matrix_sln%set_value_pos(idxglo(idiagm), filledterm) !- filledterm * (dwadi - DONE) !need to add dwadi
               ! fill newton term in off diagonal if active cell
               if (this%ibound(m) > 0) then
-                amat(idxglo(isymcon)) = amat(idxglo(isymcon)) - term
+                call matrix_sln%add_value_pos(idxglo(isymcon), -term)
               end if
               ! fill jacobian for m being the upstream node
             else
@@ -760,16 +760,18 @@ contains
               rhs(n) = rhs(n) + term * hnew(m) !+ amat(idxglo(ii)) * (dwadi * hds - hds) !need to add dwadi
               rhs(m) = rhs(m) - term * hnew(m) !- amat(idxglo(ii)) * (dwadi * hds - hds) !need to add dwadi
               ! fill in row of n
-              amat(idxglo(idiag)) = amat(idxglo(idiag)) !- filledterm * (dwadi - DONE) !need to add dwadi
+              filledterm = matrix_sln%get_value_pos(idxglo(idiag))
+              call matrix_sln%set_value_pos(idxglo(idiag), filledterm) !- filledterm * (dwadi - DONE) !need to add dwadi
               ! fill newton term in off diagonal if active cell
               if (this%ibound(n) > 0) then
-                amat(idxglo(ii)) = amat(idxglo(ii)) + term
+                call matrix_sln%add_value_pos(idxglo(ii), term)
               end if
               !fill row of m
-              amat(idxglo(idiagm)) = amat(idxglo(idiagm)) - term
+              call matrix_sln%add_value_pos(idxglo(idiagm), -term)
               ! fill newton term in off diagonal if active cell
               if (this%ibound(m) > 0) then
-                amat(idxglo(isymcon)) = amat(idxglo(isymcon)) !* dwadi  !need to add dwadi
+                filledterm = matrix_sln%get_value_pos(idxglo(isymcon))
+                call matrix_sln%set_value_pos(idxglo(isymcon), filledterm) !* dwadi  !need to add dwadi
               end if
             end if
           end if

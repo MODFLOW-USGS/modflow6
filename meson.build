@@ -26,6 +26,7 @@ fc = meson.get_compiler('fortran')
 fc_id = fc.get_id()
 compile_args = []
 link_args = []
+with_petsc = false
 
 # Command line options for gfortran
 if fc_id == 'gcc'
@@ -33,6 +34,7 @@ if fc_id == 'gcc'
   compile_args += [
                    '-fall-intrinsics',
                    '-pedantic',
+                   '-cpp',
                    '-Wcharacter-truncation',
                    '-Wno-unused-dummy-argument', # This makes problems with OOP
                    '-Wno-intrinsic-shadow',      # We shadow intrinsics with methods, which should be fine
@@ -85,10 +87,20 @@ elif fc_id == 'intel'
   link_args += '-static-intel'
 endif
 
+mpi = dependency('mpi', language : 'fortran', required : false)
+petsc = dependency('PETSc', required : false)
+
+dependencies = [  ]
+if petsc.found()
+  compile_args += '-D__WITH_PETSC__'
+  with_petsc = true
+  dependencies = [ petsc, mpi ]
+else
+  with_petsc = false
+endif
+
 add_project_arguments(fc.get_supported_arguments(compile_args), language: 'fortran')
 add_project_link_arguments(fc.get_supported_arguments(link_args), language: 'fortran')
-
-mpi = dependency('mpi', language : 'fortran', required : false)
 
 subdir('src')
 subdir('srcbmi')

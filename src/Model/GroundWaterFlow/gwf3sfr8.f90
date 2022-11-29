@@ -37,6 +37,7 @@ module SfrModule
                                            get_cross_section_area, &
                                            get_mannings_section
   use dag_module, only: dag
+  use MatrixBaseModule
   !
   implicit none
   !
@@ -1958,13 +1959,13 @@ contains
     !!  coefficient matrix and right-hand side vector.
     !!
   !<
-  subroutine sfr_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine sfr_fc(this, rhs, ia, idxglo, matrix_sln)
     ! -- dummy variables
     class(SfrType) :: this !< SfrType object
     real(DP), dimension(:), intent(inout) :: rhs !< right-hand side vector for model
     integer(I4B), dimension(:), intent(in) :: ia !< solution CRS row pointers
     integer(I4B), dimension(:), intent(in) :: idxglo !< mapping vector for model (local) to solution (global)
-    real(DP), dimension(:), intent(inout) :: amatsln !< solution coefficient matrix
+    class(MatrixBaseType), pointer :: matrix_sln !< solution coefficient matrix
     ! -- local variables
     integer(I4B) :: i
     integer(I4B) :: j
@@ -2049,7 +2050,7 @@ contains
       if (node < 1) cycle
       rhs(node) = rhs(node) + this%rhs(n)
       ipos = ia(node)
-      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(n)
+      call matrix_sln%add_value_pos(idxglo(ipos), this%hcof(n))
     end do
     !
     ! -- return
@@ -2062,13 +2063,13 @@ contains
     !!  coefficient matrix and right-hand side vector.
     !!
   !<
-  subroutine sfr_fn(this, rhs, ia, idxglo, amatsln)
+  subroutine sfr_fn(this, rhs, ia, idxglo, matrix_sln)
     ! -- dummy variables
     class(SfrType) :: this !< SfrType object
     real(DP), dimension(:), intent(inout) :: rhs !< right-hand side vector for model
     integer(I4B), dimension(:), intent(in) :: ia !< solution CRS row pointers
     integer(I4B), dimension(:), intent(in) :: idxglo !< mapping vector for model (local) to solution (global)
-    real(DP), dimension(:), intent(inout) :: amatsln !< solution coefficient matrix
+    class(MatrixBaseType), pointer :: matrix_sln !< solution coefficient matrix
     ! -- local variables
     integer(I4B) :: i
     integer(I4B) :: j
@@ -2102,7 +2103,7 @@ contains
       drterm = (q2 - q1) / DEM4
       ! -- add terms to convert conductance formulation into
       !    newton-raphson formulation
-      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + drterm - this%hcof(i)
+      call matrix_sln%add_value_pos(idxglo(ipos), drterm - this%hcof(i))
       rhs(n) = rhs(n) - rterm + drterm * this%xnew(n)
     end do
     !

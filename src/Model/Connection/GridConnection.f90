@@ -21,7 +21,7 @@ module GridConnectionModule
   use InterfaceMapModule
   use BaseDisModule, only: dis_transform_xy
   use CsrUtilsModule
-  use VectorIntModule
+  use STLVecIntModule
   implicit none
   private
 
@@ -64,7 +64,7 @@ module GridConnectionModule
     integer(I4B), pointer :: nrOfBoundaryCells => null() !< nr of boundary cells with connection to another model
     type(CellWithNbrsType), dimension(:), pointer :: boundaryCells => null() !< cells on our side of the primary connections
     type(CellWithNbrsType), dimension(:), pointer :: connectedCells => null() !< cells on the neighbors side of the primary connection
-    type(VectorInt), pointer :: haloExchanges !< all exchanges that are potentially part of this interface
+    type(STLVecInt), pointer :: haloExchanges !< all exchanges that are potentially part of this interface
 
     integer(I4B), pointer :: nrOfCells => null() !< the total number of cells in the interface
     type(GlobalCellType), dimension(:), pointer :: idxToGlobal => null() !< a map from interface index to global coordinate
@@ -1034,14 +1034,14 @@ contains
   !> @brief Build interface map object for outside use
   subroutine buildInterfaceMap(this)
     use BaseModelModule, only: BaseModelType, GetBaseModelFromList
-    use VectorIntModule
+    use STLVecIntModule
     class(GridConnectionType) :: this !< this grid connection
     ! local
     integer(I4B) :: i, j, iloc, jloc
     integer(I4B) :: im, ix, mid, n
-    integer(I4B) :: ipos, iposModel
-    type(VectorInt) :: modelIds
-    type(VectorInt) :: srcIdxTmp, tgtIdxTmp, signTmp
+    integer(I4B) :: ipos, iposModel    
+    type(STLVecInt) :: modelIds
+    type(STLVecInt) :: srcIdxTmp, tgtIdxTmp, signTmp
     class(DistributedExchangeType), pointer :: dist_exg
     class(DistributedModelType), pointer :: m1, m2
     type(InterfaceMapType), pointer :: imap

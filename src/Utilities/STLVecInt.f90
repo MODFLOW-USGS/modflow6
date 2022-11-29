@@ -1,15 +1,15 @@
-module VectorIntModule
+module STLVecIntModule
   use KindModule, only: I4B, LGP
   use SimModule, only: ustop
   use ArrayHandlersModule, only: ExpandArray
   implicit none
   private
-  public :: VectorInt
+  public :: STLVecInt
 
   integer(I4B), parameter :: defaultInitialCapacity = 4
 
-  !> This is a dynamic vector type for integers
-  type :: VectorInt
+  ! This is a dynamic vector type for integers
+  type :: STLVecInt
     integer(I4B), private, allocatable :: values(:) !< the internal array for storage
     integer(I4B) :: size !< the number of elements (technically this stuff should be unsigned)
     integer(I4B) :: capacity !< the reserved storage
@@ -28,12 +28,12 @@ module VectorIntModule
     procedure, pass(this) :: get_values !< returns a copy of the values
     ! private
     procedure, private, pass(this) :: expand
-  end type VectorInt
+  end type STLVecInt
 
 contains ! module routines
 
   subroutine init(this, capacity)
-    class(VectorInt), intent(inout) :: this
+    class(STLVecInt), intent(inout) :: this
     integer(I4B), intent(in), optional :: capacity ! the initial capacity, when given
 
     if (present(capacity)) then
@@ -48,7 +48,7 @@ contains ! module routines
   end subroutine init
 
   subroutine push_back(this, newValue)
-    class(VectorInt), intent(inout) :: this
+    class(STLVecInt), intent(inout) :: this
     integer(I4B) :: newValue
     ! check capacity
     if (this%size + 1 > this%capacity) then
@@ -61,7 +61,7 @@ contains ! module routines
   end subroutine push_back
 
   subroutine push_back_unique(this, newValue)
-    class(VectorInt), intent(inout) :: this
+    class(STLVecInt), intent(inout) :: this
     integer(I4B) :: newValue
 
     if (.not. this%contains(newValue)) then
@@ -71,7 +71,7 @@ contains ! module routines
   end subroutine push_back_unique
 
   subroutine add_array(this, array)
-    class(VectorInt), intent(inout) :: this
+    class(STLVecInt), intent(inout) :: this
     integer(I4B), dimension(:), pointer, contiguous :: array
     ! local
     integer(I4B) :: i
@@ -83,7 +83,7 @@ contains ! module routines
   end subroutine add_array
 
   subroutine add_array_unique(this, array)
-    class(VectorInt), intent(inout) :: this
+    class(STLVecInt), intent(inout) :: this
     integer(I4B), dimension(:), pointer, contiguous :: array
     ! local
     integer(I4B) :: i
@@ -97,7 +97,7 @@ contains ! module routines
   end subroutine add_array_unique
 
   function at(this, idx) result(value)
-    class(VectorInt), intent(in) :: this
+    class(STLVecInt), intent(in) :: this
     integer(I4B), intent(in) :: idx
     integer(I4B) :: value
 
@@ -106,12 +106,12 @@ contains ! module routines
   end function at
 
   function at_safe(this, idx) result(value)
-    class(VectorInt), intent(in) :: this
+    class(STLVecInt), intent(inout) :: this
     integer(I4B), intent(in) :: idx
     integer(I4B) :: value
 
     if (idx > this%size) then
-      write (*, *) 'VectorInt exception: access out of bounds, index ', idx, &
+      write (*, *) 'STLVecInt exception: access out of bounds, index ', idx, &
         ' exceeds actual size (', this%size, ')'
       call ustop()
     end if
@@ -120,7 +120,7 @@ contains ! module routines
   end function at_safe
 
   subroutine clear(this)
-    class(VectorInt), intent(inout) :: this
+    class(STLVecInt), intent(inout) :: this
 
     ! really, this is all there is to it...
     this%size = 0
@@ -128,7 +128,7 @@ contains ! module routines
   end subroutine clear
 
   subroutine shrink_to_fit(this)
-    class(VectorInt), intent(inout) :: this
+    class(STLVecInt), intent(inout) :: this
     ! local
     integer(I4B), allocatable :: tempValues(:)
     integer(I4B) :: i, newSize
@@ -156,14 +156,14 @@ contains ! module routines
   end subroutine shrink_to_fit
 
   subroutine destroy(this)
-    class(VectorInt), intent(inout) :: this
+    class(STLVecInt), intent(inout) :: this
 
     if (allocated(this%values)) then
       deallocate (this%values)
       this%size = 0
       this%capacity = 0
     else
-      write (*, *) 'VectorInt exception: cannot delete an unallocated array'
+      write (*, *) 'STLVecInt exception: cannot delete an unallocated array'
       call ustop()
     end if
 
@@ -172,7 +172,7 @@ contains ! module routines
   ! expand the array with the given strategy, at
   ! least by 1
   subroutine expand(this)
-    class(VectorInt), intent(inout) :: this
+    class(STLVecInt), intent(inout) :: this
     integer(I4B) :: increment
 
     ! expansion strategy
@@ -184,7 +184,7 @@ contains ! module routines
 
   ! check if the element is already present
   function contains(this, val) result(res)
-    class(VectorInt), intent(inout) :: this
+    class(STLVecInt), intent(inout) :: this
     integer(I4B) :: val
     logical(LGP) :: res
     ! local
@@ -201,11 +201,11 @@ contains ! module routines
   end function contains
 
   function get_values(this) result(values)
-    class(VectorInt), intent(in) :: this
+    class(STLVecInt), intent(in) :: this
     integer(I4B), dimension(:), allocatable :: values
 
     values = this%values(1:this%size)
 
   end function get_values
 
-end module VectorIntModule
+end module STLVecIntModule

@@ -22,6 +22,7 @@ module GwfModule
   use GwfObsModule, only: GwfObsType, gwf_obs_cr
   use SimModule, only: count_errors, store_error
   use BaseModelModule, only: BaseModelType
+  use MatrixBaseModule
 
   implicit none
 
@@ -376,11 +377,10 @@ contains
   !> @brief Map the positions of this models connections in the
   !! numerical solution coefficient matrix.
   !<
-  subroutine gwf_mc(this, iasln, jasln)
+  subroutine gwf_mc(this, matrix_sln)
     ! -- dummy
     class(GwfModelType) :: this
-    integer(I4B), dimension(:), intent(in) :: iasln
-    integer(I4B), dimension(:), intent(in) :: jasln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
@@ -388,20 +388,20 @@ contains
     !
     ! -- Find the position of each connection in the global ia, ja structure
     !    and store them in idxglo.
-    call this%dis%dis_mc(this%moffset, this%idxglo, iasln, jasln)
+    call this%dis%dis_mc(this%moffset, this%idxglo, matrix_sln)
     !
     ! -- Map any additional connections that NPF may need
-    if (this%innpf > 0) call this%npf%npf_mc(this%moffset, iasln, jasln)
+    if (this%innpf > 0) call this%npf%npf_mc(this%moffset, matrix_sln)
     !
     ! -- Map any package connections
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_mc(this%moffset, iasln, jasln)
+      call packobj%bnd_mc(this%moffset, matrix_sln)
     end do
     !
     ! -- For implicit gnc, need to store positions of gnc connections
     !    in solution matrix connection
-    if (this%ingnc > 0) call this%gnc%gnc_mc(iasln, jasln)
+    if (this%ingnc > 0) call this%gnc%gnc_mc(matrix_sln)
     !
     ! -- return
     return
@@ -574,12 +574,11 @@ contains
   end subroutine gwf_cf
 
   !> @brief GroundWater Flow Model fill coefficients
-  subroutine gwf_fc(this, kiter, amatsln, njasln, inwtflag)
+  subroutine gwf_fc(this, kiter, matrix_sln, inwtflag)
     ! -- dummy
     class(GwfModelType) :: this
     integer(I4B), intent(in) :: kiter
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in) :: inwtflag
     ! -- local
     class(BndType), pointer :: packobj
@@ -600,41 +599,40 @@ contains
     end if
     !
     ! -- Fill standard conductance terms
-    if (this%innpf > 0) call this%npf%npf_fc(kiter, njasln, amatsln, &
-                                             this%idxglo, this%rhs, this%x)
-    if (this%inbuy > 0) call this%buy%buy_fc(kiter, njasln, amatsln, &
-                                             this%idxglo, this%rhs, this%x)
-    if (this%inhfb > 0) call this%hfb%hfb_fc(kiter, njasln, amatsln, &
-                                             this%idxglo, this%rhs, this%x)
-    if (this%ingnc > 0) call this%gnc%gnc_fc(kiter, amatsln)
+    if (this%innpf > 0) call this%npf%npf_fc(kiter, matrix_sln, this%idxglo, &
+                                             this%rhs, this%x)
+    if (this%inbuy > 0) call this%buy%buy_fc(kiter, matrix_sln, this%idxglo, &
+                                             this%rhs, this%x)
+    if (this%inhfb > 0) call this%hfb%hfb_fc(kiter, matrix_sln, this%idxglo, &
+                                             this%rhs, this%x)
+    if (this%ingnc > 0) call this%gnc%gnc_fc(kiter, matrix_sln)
     ! -- storage
     if (this%insto > 0) then
-      call this%sto%sto_fc(kiter, this%xold, this%x, njasln, amatsln, &
+      call this%sto%sto_fc(kiter, this%xold, this%x, matrix_sln, &
                            this%idxglo, this%rhs)
     end if
     ! -- skeletal storage, compaction, and land subsidence
     if (this%incsub > 0) then
-      call this%csub%csub_fc(kiter, this%xold, this%x, njasln, amatsln, &
+      call this%csub%csub_fc(kiter, this%xold, this%x, matrix_sln, &
                              this%idxglo, this%rhs)
     end if
     if (this%inmvr > 0) call this%mvr%mvr_fc()
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_fc(this%rhs, this%ia, this%idxglo, amatsln)
+      call packobj%bnd_fc(this%rhs, this%ia, this%idxglo, matrix_sln)
     end do
     !
     !--Fill newton terms
     if (this%innpf > 0) then
       if (inwt /= 0) then
-        call this%npf%npf_fn(kiter, njasln, amatsln, this%idxglo, this%rhs, &
-                             this%x)
+        call this%npf%npf_fn(kiter, matrix_sln, this%idxglo, this%rhs, this%x)
       end if
     end if
     !
     ! -- Fill newton terms for ghost nodes
     if (this%ingnc > 0) then
       if (inwt /= 0) then
-        call this%gnc%gnc_fn(kiter, njasln, amatsln, this%npf%condsat, &
+        call this%gnc%gnc_fn(kiter, matrix_sln, this%npf%condsat, &
                              ivarcv_opt=this%npf%ivarcv, &
                              ictm1_opt=this%npf%icelltype, &
                              ictm2_opt=this%npf%icelltype)
@@ -644,7 +642,7 @@ contains
     ! -- Fill newton terms for storage
     if (this%insto > 0) then
       if (inwtsto /= 0) then
-        call this%sto%sto_fn(kiter, this%xold, this%x, njasln, amatsln, &
+        call this%sto%sto_fn(kiter, this%xold, this%x, matrix_sln, &
                              this%idxglo, this%rhs)
       end if
     end if
@@ -652,7 +650,7 @@ contains
     ! -- Fill newton terms for skeletal storage, compaction, and land subsidence
     if (this%incsub > 0) then
       if (inwtcsub /= 0) then
-        call this%csub%csub_fn(kiter, this%xold, this%x, njasln, amatsln, &
+        call this%csub%csub_fn(kiter, this%xold, this%x, matrix_sln, &
                                this%idxglo, this%rhs)
       end if
     end if
@@ -663,7 +661,7 @@ contains
       inwtpak = inwtflag
       if (inwtflag == 1) inwtpak = packobj%inewton
       if (inwtpak /= 0) then
-        call packobj%bnd_fn(this%rhs, this%ia, this%idxglo, amatsln)
+        call packobj%bnd_fn(this%rhs, this%ia, this%idxglo, matrix_sln)
       end if
     end do
     !
@@ -746,27 +744,24 @@ contains
   !! for the current outer iteration
   !!
   !<
-  subroutine gwf_ptc(this, kiter, neqsln, njasln, ia, ja, &
-                     x, rhs, amatsln, iptc, ptcf)
+  subroutine gwf_ptc(this, kiter, neqsln, matrix, &
+                     x, rhs, iptc, ptcf)
     ! modules
     use ConstantsModule, only: DONE, DP9
     ! -- dummy
     class(GwfModelType) :: this
     integer(I4B), intent(in) :: kiter
     integer(I4B), intent(in) :: neqsln
-    integer(I4B), intent(in) :: njasln
-    integer(I4B), dimension(neqsln + 1), intent(in) :: ia
-    integer(I4B), dimension(njasln), intent(in) :: ja
+    class(MatrixBaseType), pointer :: matrix
     real(DP), dimension(neqsln), intent(in) :: x
     real(DP), dimension(neqsln), intent(in) :: rhs
-    real(DP), dimension(njasln), intent(in) :: amatsln
     integer(I4B), intent(inout) :: iptc
     real(DP), intent(inout) :: ptcf
     ! -- local
     integer(I4B) :: iptct
     integer(I4B) :: n
-    integer(I4B) :: jcol
-    integer(I4B) :: j, jj
+    integer(I4B) :: jrow
+    integer(I4B) :: j
     real(DP) :: v
     real(DP) :: resid
     real(DP) :: ptcdelem1
@@ -774,6 +769,7 @@ contains
     real(DP) :: diagcnt
     real(DP) :: diagmin
     real(DP) :: diagmax
+    integer(I4B) :: first_col, last_col
 ! ------------------------------------------------------------------------------
     ! -- set temporary flag indicating if pseudo-transient continuation should
     !    be used for this model and time step
@@ -795,18 +791,20 @@ contains
       diagcnt = DZERO
       do n = 1, this%dis%nodes
         if (this%npf%ibound(n) < 1) cycle
-        jcol = n + this%moffset
+        ! TODO_MJR: why is this jcol and not jrow?
+        jrow = n + this%moffset
         !
         ! get the maximum volume of the cell (head at top of cell)
         v = this%dis%get_cell_volume(n, this%dis%top(n))
         !
         ! -- calculate the residual for the cell
         resid = DZERO
-        do j = ia(jcol), ia(jcol + 1) - 1
-          jj = ja(j)
-          resid = resid + amatsln(j) * x(jcol)
+        first_col = matrix%get_first_col_pos(jrow)
+        last_col = matrix%get_last_col_pos(jrow)
+        do j = first_col, last_col
+          resid = resid + matrix%get_value_pos(j) * x(jrow)
         end do
-        resid = resid - rhs(jcol)
+        resid = resid - rhs(jrow)
         !
         ! -- calculate the reciprocal of the pseudo-time step
         !    resid [L3/T] / volume [L3] = [1/T]
@@ -818,8 +816,7 @@ contains
         if (ptcdelem1 > ptcf) ptcf = ptcdelem1
         !
         ! -- determine minimum and maximum diagonal entries
-        j = ia(jcol)
-        diag = abs(amatsln(j))
+        diag = abs(matrix%get_diag_value(jrow))
         diagcnt = diagcnt + DONE
         if (diag > DZERO) then
           if (diag < diagmin) diagmin = diag

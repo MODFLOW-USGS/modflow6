@@ -9,6 +9,7 @@ module DrnModule
   use ObsModule, only: DefaultObsIdProcessor
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
+  use MatrixBaseModule
   !
   implicit none
   !
@@ -343,7 +344,7 @@ contains
     return
   end subroutine drn_cf
 
-  subroutine drn_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine drn_fc(this, rhs, ia, idxglo, matrix_sln)
 ! **************************************************************************
 ! drn_fc -- Copy rhs and hcof into solution rhs and amat
 ! **************************************************************************
@@ -355,7 +356,7 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: n
@@ -376,7 +377,7 @@ contains
       n = this%nodelist(i)
       rhs(n) = rhs(n) + this%rhs(i)
       ipos = ia(n)
-      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
+      call matrix_sln%add_value_pos(idxglo(ipos), this%hcof(i))
       !
       ! -- calculate the drainage scaling factor
       call this%get_drain_factor(i, fact, drnbot)
@@ -394,7 +395,7 @@ contains
     return
   end subroutine drn_fc
 
-  subroutine drn_fn(this, rhs, ia, idxglo, amatsln)
+  subroutine drn_fn(this, rhs, ia, idxglo, matrix_sln)
 ! **************************************************************************
 ! drn_fn -- Fill newton terms
 ! **************************************************************************
@@ -407,7 +408,7 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: node
@@ -447,7 +448,7 @@ contains
           !
           ! -- fill amat and rhs with newton-raphson terms
           ipos = ia(node)
-          amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + drterm
+          call matrix_sln%add_value_pos(idxglo(ipos), drterm)
           rhs(node) = rhs(node) + drterm * xnew
         end if
       end do
