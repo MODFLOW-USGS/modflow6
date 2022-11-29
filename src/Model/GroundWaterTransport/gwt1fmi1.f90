@@ -841,9 +841,9 @@ contains
     use GwtFmiInputModule, only: GwtFmiParamFoundType
     ! -- dummy
     class(GwtFmiType) :: this
-    type(CharacterStringType), pointer, intent(in) :: flowtype
-    type(CharacterStringType), pointer, intent(in) :: filein
-    type(CharacterStringType), pointer, intent(in) :: fname
+    type(CharacterStringType), intent(in) :: flowtype
+    type(CharacterStringType), intent(in) :: filein
+    type(CharacterStringType), intent(in) :: fname
     integer(I4B), intent(inout) :: iapt
     ! -- local
     type(BudgetObjectType), pointer :: budobjptr
