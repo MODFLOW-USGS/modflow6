@@ -14,6 +14,7 @@ module VirtualDataContainerModule
   contains
     ! protected
     generic :: map => map_scalar, map_array1d, map_array2d
+    procedure :: destroy => vdc_destroy
     ! private
     procedure, private :: map_scalar
     procedure, private :: map_array1d
@@ -112,5 +113,21 @@ contains
     call this%virtual_data_list%Add(vdata_ptr)
 
   end subroutine add_to_list
+
+  subroutine vdc_destroy(this)
+    class(VirtualDataContainerType) :: this
+    ! local
+    integer(I4B) :: i
+    class(*), pointer :: obj
+
+    do i = 1, this%virtual_data_list%Count()
+      obj => this%virtual_data_list%GetItem(i)
+      select type (obj)
+      class is (VirtualDataType)
+        call obj%deallocate_vmem()
+      end select
+    end do
+
+  end subroutine vdc_destroy
 
 end module VirtualDataContainerModule

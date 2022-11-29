@@ -57,6 +57,8 @@ end subroutine vgwt_init_model_data
 subroutine vgwt_destroy(this)
   class(VirtualGwtModelType) :: this
 
+  call this%VirtualModelType%destroy()
+
 end subroutine vgwt_destroy
 
 

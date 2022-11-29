@@ -115,6 +115,8 @@ subroutine vm_destroy(this)
 
   call this%deallocate_data()
 
+  call this%VirtualDataContainerType%destroy()
+
 end subroutine vm_destroy
 
 subroutine allocate_data(this)

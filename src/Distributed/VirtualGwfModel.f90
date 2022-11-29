@@ -114,8 +114,10 @@ contains
 
   subroutine vgwf_destroy(this)
     class(VirtualGwfModelType) :: this
-
+    
     call this%deallocate_data()
+
+    call this%VirtualModelType%destroy()
 
   end subroutine vgwf_destroy
 

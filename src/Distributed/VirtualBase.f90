@@ -10,14 +10,14 @@ module VirtualBaseModule
   !> This is a generic data structure to virtualize pieces
   !! of memory in 2 distinct ways:
   !!
-  !!  1) Remote memory
+  !!  1) Virtualize remote memory
   !!  This concerns memory residing on another process.
   !!  Typically, these pieces are subsets of certain model 
   !!  and exchange data and lookup tables are kept with the 
   !!  data to manage their mapping. The stage(s) at which
   !!  to synchronize the virtual memory is stored as well.
   !!
-  !!  2) Local memory
+  !!  2) Virtualize local memory
   !!  In this case no virtual memory item is created, no
   !!  lookup tables and synchronization are necessary. 
   !!  The virtual memory item will be pointed to the
@@ -35,6 +35,7 @@ module VirtualBaseModule
     type(MemoryType), pointer :: virtual_mt
   contains
     procedure(allocate_vmem_if), deferred :: allocate_vmem
+    procedure(deallocate_vmem_if), deferred :: deallocate_vmem
     procedure :: to_base => to_base_vmem
   end type
 
@@ -46,12 +47,14 @@ module VirtualBaseModule
     integer(I4B), pointer :: value
   contains
     procedure :: allocate_vmem => allocate_vmem_int
+    procedure :: deallocate_vmem => deallocate_vmem_int
   end type
 
   type, public, extends(VirtualDataType) :: VirtualInt1dType
     integer(I4B), private, dimension(:), pointer, contiguous :: values
   contains
     procedure :: allocate_vmem => allocate_vmem_int1d
+    procedure :: deallocate_vmem => deallocate_vmem_int1d
     procedure :: at => at_int1d
   end type
 
@@ -59,12 +62,14 @@ module VirtualBaseModule
     real(DP), pointer :: value
   contains
     procedure :: allocate_vmem => allocate_vmem_dbl
+    procedure :: deallocate_vmem => deallocate_vmem_dbl
   end type
 
   type, public, extends(VirtualDataType) :: VirtualDbl1dType
     real(DP), private, dimension(:), pointer, contiguous :: values
   contains
     procedure :: allocate_vmem => allocate_vmem_dbl1d
+    procedure :: deallocate_vmem => deallocate_vmem_dbl1d
     procedure :: at => at_dbl1d
   end type
 
@@ -72,6 +77,7 @@ module VirtualBaseModule
     real(DP), private, dimension(:,:), pointer, contiguous :: values
   contains
     procedure :: allocate_vmem => allocate_vmem_dbl2D
+    procedure :: deallocate_vmem => deallocate_vmem_dbl2D
     procedure :: at => at_dbl2d
   end type
 
@@ -84,6 +90,10 @@ module VirtualBaseModule
       character(len=*) :: mem_path
       integer(I4B), dimension(:) :: shape
     end subroutine allocate_vmem_if
+    subroutine deallocate_vmem_if(this)
+      import VirtualDataType
+      class(VirtualDataType) :: this
+    end subroutine deallocate_vmem_if
   end interface
 
 contains
@@ -108,6 +118,13 @@ contains
 
   end subroutine allocate_vmem_int
 
+  subroutine deallocate_vmem_int(this)
+    class(VirtualIntType) :: this
+
+    call mem_deallocate(this%virtual_mt%intsclr)
+
+  end subroutine deallocate_vmem_int
+
   subroutine allocate_vmem_int1d(this, var_name, mem_path, shape)
     class(VirtualInt1dType) :: this
     character(len=*) :: var_name
@@ -119,6 +136,13 @@ contains
     call mem_allocate(int1d, shape(1), var_name, mem_path)
 
   end subroutine allocate_vmem_int1d
+
+  subroutine deallocate_vmem_int1d(this)
+    class(VirtualInt1dType) :: this
+
+    call mem_deallocate(this%virtual_mt%aint1d)
+
+  end subroutine deallocate_vmem_int1d
 
   subroutine allocate_vmem_dbl(this, var_name, mem_path, shape)
     class(VirtualDblType) :: this
@@ -132,6 +156,13 @@ contains
 
   end subroutine allocate_vmem_dbl
 
+  subroutine deallocate_vmem_dbl(this)
+    class(VirtualDblType) :: this
+
+    call mem_deallocate(this%virtual_mt%dblsclr)
+
+  end subroutine deallocate_vmem_dbl
+
   subroutine allocate_vmem_dbl1d(this, var_name, mem_path, shape)
     class(VirtualDbl1dType) :: this
     character(len=*) :: var_name
@@ -143,6 +174,13 @@ contains
     call mem_allocate(dbl1d, shape(1), var_name, mem_path)
 
   end subroutine allocate_vmem_dbl1d
+
+  subroutine deallocate_vmem_dbl1d(this)
+    class(VirtualDbl1dType) :: this
+
+    call mem_deallocate(this%virtual_mt%adbl1d)
+
+  end subroutine deallocate_vmem_dbl1d
 
   subroutine allocate_vmem_dbl2d(this, var_name, mem_path, shape)
     class(VirtualDbl2dType) :: this
@@ -156,6 +194,12 @@ contains
 
   end subroutine allocate_vmem_dbl2d
 
+  subroutine deallocate_vmem_dbl2d(this)
+    class(VirtualDbl2dType) :: this
+
+    call mem_deallocate(this%virtual_mt%adbl2d)
+
+  end subroutine deallocate_vmem_dbl2d
 
   function at_int1d(this, i_rmt) result(val)
     class(VirtualInt1dType) :: this
