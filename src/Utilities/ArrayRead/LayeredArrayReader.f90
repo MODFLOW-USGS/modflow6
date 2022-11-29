@@ -28,7 +28,7 @@ contains
     integer(I4B) :: k
     integer(I4B) :: ncpl, nrow, ncol
     integer(I4B) :: index_start, index_stop
-    real(DP), dimension(:, :), contiguous, pointer :: dbl2d_ptr
+    real(DP), dimension(:, :), contiguous, pointer :: dbl2d_ptr => null()
 
     ncpl = product(layer_shape)
     index_start = 1
@@ -44,6 +44,7 @@ contains
       end if
       index_start = index_stop + 1
     end do
+    nullify (dbl2d_ptr)
 
   end subroutine read_dbl1d_layered
 
@@ -57,13 +58,14 @@ contains
     ! -- local
     integer(I4B) :: k
     integer(I4B) :: ncpl
-    real(DP), dimension(:), contiguous, pointer :: dbl1d_ptr
+    real(DP), dimension(:), contiguous, pointer :: dbl1d_ptr => null()
 
     ncpl = layer_shape(1)
     do k = 1, nlay
       dbl1d_ptr(1:ncpl) => dbl2d(1:ncpl, k)
       call read_dbl1d(parser, dbl1d_ptr, aname)
     end do
+    nullify (dbl1d_ptr)
 
   end subroutine read_dbl2d_layered
 
@@ -77,7 +79,7 @@ contains
     ! -- local
     integer(I4B) :: k
     integer(I4B) :: ncol, nrow
-    real(DP), dimension(:, :), contiguous, pointer :: dbl2d_ptr
+    real(DP), dimension(:, :), contiguous, pointer :: dbl2d_ptr => null()
 
     ncol = layer_shape(1)
     nrow = layer_shape(2)
@@ -85,6 +87,7 @@ contains
       dbl2d_ptr(1:ncol, 1:nrow) => dbl3d(:, :, k:k)
       call read_dbl2d(parser, dbl2d_ptr, aname)
     end do
+    nullify (dbl2d_ptr)
 
   end subroutine read_dbl3d_layered
 
@@ -99,7 +102,7 @@ contains
     integer(I4B) :: k
     integer(I4B) :: ncpl, nrow, ncol
     integer(I4B) :: index_start, index_stop
-    integer(I4B), dimension(:, :), contiguous, pointer :: int2d_ptr
+    integer(I4B), dimension(:, :), contiguous, pointer :: int2d_ptr => null()
 
     ncpl = product(layer_shape)
     index_start = 1
@@ -115,6 +118,7 @@ contains
       end if
       index_start = index_stop + 1
     end do
+    nullify (int2d_ptr)
 
   end subroutine read_int1d_layered
 
@@ -128,13 +132,14 @@ contains
     ! -- local
     integer(I4B) :: k
     integer(I4B) :: ncpl
-    integer(I4B), dimension(:), contiguous, pointer :: int1d_ptr
+    integer(I4B), dimension(:), contiguous, pointer :: int1d_ptr => null()
 
     ncpl = layer_shape(1)
     do k = 1, nlay
       int1d_ptr(1:ncpl) => int2d(1:ncpl, k)
       call read_int1d(parser, int1d_ptr, aname)
     end do
+    nullify (int1d_ptr)
 
   end subroutine read_int2d_layered
 
@@ -148,7 +153,7 @@ contains
     ! -- local
     integer(I4B) :: k
     integer(I4B) :: ncol, nrow
-    integer(I4B), dimension(:, :), contiguous, pointer :: int2d_ptr
+    integer(I4B), dimension(:, :), contiguous, pointer :: int2d_ptr => null()
 
     ncol = layer_shape(1)
     nrow = layer_shape(2)
@@ -156,6 +161,7 @@ contains
       int2d_ptr(1:ncol, 1:nrow) => int3d(:, :, k:k)
       call read_int2d(parser, int2d_ptr, aname)
     end do
+    nullify (int2d_ptr)
 
   end subroutine read_int3d_layered
 

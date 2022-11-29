@@ -1,11 +1,14 @@
-name: docs
-
+name: MODFLOW 6 documentation
 on:
   push:
-    branches: [ master, develop ]
+    branches:
+      - master
+      - develop
+      - ci-diagnose*
   pull_request:
-    branches: [ develop ]
-
+    branches:
+      - master
+      - develop
 jobs:
   rtd_build:
     runs-on: ubuntu-latest
@@ -17,7 +20,7 @@ jobs:
       distribution-directory: distribution
 
     steps:
-      - uses: actions/checkout@v2.3.4
+      - uses: actions/checkout@v3
 
       - name: Install Conda environment from environment.yml
         uses: mamba-org/provision-with-micromamba@main

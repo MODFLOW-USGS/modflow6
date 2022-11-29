@@ -147,6 +147,9 @@ module SfrModule
     integer(I4B), pointer :: idense !< flag indicating if density corrections are active
     real(DP), dimension(:, :), pointer, contiguous :: denseterms => null() !< density terms
     !
+    ! -- viscosity variables
+    real(DP), dimension(:, :), pointer, contiguous :: viscratios => null() !< viscosity ratios (1: sfr vsc ratio; 2: gwf vsc ratio)
+    !
     ! -- type bound procedures
   contains
     procedure :: sfr_allocate_scalars
@@ -209,6 +212,8 @@ module SfrModule
     ! -- density
     procedure :: sfr_activate_density
     procedure, private :: sfr_calculate_density_exchange
+    ! -- viscosity
+    procedure :: sfr_activate_viscosity
   end type SfrType
 
 contains
@@ -317,6 +322,7 @@ contains
     this%icheck = 1
     this%iconvchk = 1
     this%idense = 0
+    this%ivsc = 0
     this%ianynone = 0
     this%ncrossptstot = 0
     !
@@ -500,11 +506,14 @@ contains
       this%qauxcbc(i) = DZERO
     end do
     !
-    !-- fill cauxcbc
+    ! -- fill cauxcbc
     this%cauxcbc(1) = 'FLOW-AREA       '
     !
     ! -- allocate denseterms to size 0
     call mem_allocate(this%denseterms, 3, 0, 'DENSETERMS', this%memoryPath)
+    !
+    ! -- allocate viscratios to size 0
+    call mem_allocate(this%viscratios, 2, 0, 'VISCRATIOS', this%memoryPath)
     !
     ! -- return
     return
@@ -2472,7 +2481,7 @@ contains
         call this%stagetab%add_term(stage)
         call this%stagetab%add_term(depth)
         call this%stagetab%add_term(w)
-        call this%sfr_calc_cond(n, depth, cond)
+        call this%sfr_calc_cond(n, depth, cond, stage, hgwf)
         if (node > 0) then
           sbot = this%strtop(n) - this%bthick(n)
           if (hgwf < sbot) then
@@ -2558,6 +2567,7 @@ contains
     call mem_deallocate(this%stage0)
     call mem_deallocate(this%usflow0)
     call mem_deallocate(this%denseterms)
+    call mem_deallocate(this%viscratios)
     !
     ! -- deallocate reach order and connection data
     call mem_deallocate(this%isfrorder)
@@ -3406,7 +3416,7 @@ contains
     !
     ! -- calculate reach conductance for a unit depth of water
     !    if equal to zero will skip iterations
-    call this%sfr_calc_cond(n, d1, cstr)
+    call this%sfr_calc_cond(n, d1, cstr, hsfr, hgwf)
     !
     ! -- set flag to skip iterations
     isolve = 1
@@ -3969,10 +3979,7 @@ contains
     ! -- calculate saturation
     call sChSmooth(depth, sat, derv)
     !
-    ! -- calculate conductance
-    call this%sfr_calc_cond(n, depth, cond)
-    !
-    ! -- calculate groundwater leakage
+    ! -- terms for calculating direction of gradient across streambed
     tp = this%strtop(n)
     bt = tp - this%bthick(n)
     hsfr = tp + depth
@@ -3980,6 +3987,11 @@ contains
     if (htmp < bt) then
       htmp = bt
     end if
+    !
+    ! -- calculate conductance
+    call this%sfr_calc_cond(n, depth, cond, hsfr, htmp)
+    !
+    ! -- calculate groundwater leakage
     qgwf = sat * cond * (htmp - hsfr)
     gwfrhs0 = -sat * cond * hsfr
     gwfhcof0 = -sat * cond
@@ -4003,25 +4015,41 @@ contains
     !! Method to calculate the reach-aquifer conductance for a SFR package reach.
     !!
   !<
-  subroutine sfr_calc_cond(this, n, depth, cond)
+  subroutine sfr_calc_cond(this, n, depth, cond, hsfr, htmp)
     ! -- dummy variables
     class(SfrType) :: this !< SfrType object
     integer(I4B), intent(in) :: n !< reach number
     real(DP), intent(in) :: depth !< reach depth
     real(DP), intent(inout) :: cond !< reach-aquifer conductance
+    real(DP), intent(in), optional :: hsfr !< stream stage
+    real(DP), intent(in), optional :: htmp !< head in gw cell
     ! -- local variables
     integer(I4B) :: node
     real(DP) :: wp
+    real(DP) :: vscratio
     !
     ! -- initialize conductance
     cond = DZERO
+    !
+    ! -- initial viscosity ratio to 1
+    vscratio = DONE
     !
     ! -- calculate conductance if GWF cell is active
     node = this%igwfnode(n)
     if (node > 0) then
       if (this%ibound(node) > 0) then
+        !
+        ! -- direction of gradient across streambed determines which vsc ratio
+        if (this%ivsc == 1) then
+          if (hsfr > htmp) then
+            ! strm stg > gw head
+            vscratio = this%viscratios(1, n)
+          else
+            vscratio = this%viscratios(2, n)
+          end if
+        end if
         wp = this%calc_perimeter_wet(n, depth)
-        cond = this%hk(n) * this%length(n) * wp / this%bthick(n)
+        cond = this%hk(n) * vscratio * this%length(n) * wp / this%bthick(n)
       end if
     end if
     !
@@ -5563,6 +5591,37 @@ contains
     ! -- return
     return
   end subroutine sfr_activate_density
+
+  !> @brief Activate viscosity terms
+    !!
+    !! Method to activate addition of viscosity terms for exhange
+    !! with groundwater along a SFR package reach.
+    !!
+  !<
+  subroutine sfr_activate_viscosity(this)
+    ! -- modules
+    use MemoryManagerModule, only: mem_reallocate
+    ! -- dummy variables
+    class(SfrType), intent(inout) :: this !< SfrType object
+    ! -- local variables
+    integer(I4B) :: i
+    integer(I4B) :: j
+    !
+    ! -- Set ivsc and reallocate viscratios to be of size MAXBOUND
+    this%ivsc = 1
+    call mem_reallocate(this%viscratios, 2, this%MAXBOUND, 'VISCRATIOS', &
+                        this%memoryPath)
+    do i = 1, this%maxbound
+      do j = 1, 2
+        this%viscratios(j, i) = DONE
+      end do
+    end do
+    write (this%iout, '(/1x,a)') 'VISCOSITY HAS BEEN ACTIVATED FOR SFR &
+      &PACKAGE: '//trim(adjustl(this%packName))
+    !
+    ! -- return
+    return
+  end subroutine sfr_activate_viscosity
 
   !> @brief Calculate density terms
     !!
