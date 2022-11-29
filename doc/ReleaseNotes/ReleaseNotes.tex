@@ -193,7 +193,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
-		\item A new Viscosity (VSC) package for the Groundwater Flow (GWF) Model is introduced in this release.  The effects of viscosity are accounted for by updates to intercell conductance, as well as the conductance between the aquifer and head-dependent boundaries, based on simulated concentrations and\/or temperatures.  The VSC Package is activated by specifying ``VSC6'' as the file type in a GWF name file.  Changes to the code and input may be required in the future in response to user needs and testing.  Implementation details for the VSC Package are described in the Supplemental Technical Information guide, which is included with the MODFLOW 6 distribution.  
+		\item A new Viscosity (VSC) package for the Groundwater Flow (GWF) Model is introduced in this release.  The effects of viscosity are accounted for by updates to intercell conductance, as well as the conductance between the aquifer and head-dependent boundaries, based on simulated concentrations and\/or temperatures.  The VSC Package is activated by specifying ``VSC6'' as the file type in a GWF name file.  Changes to the code and input may be required in the future in response to user needs and testing.  Implementation details for the VSC Package are described in the Supplemental Technical Information guide, which is included with the MODFLOW 6 distribution.  For this first implementation, the VSC Package cannot be used for a GWF Model that is connected to another GWF Model with a GWF-GWF Exchange.
 	%	\item xxx
 	%	\item xxx
 	\end{itemize}
@@ -290,6 +290,9 @@ If a GWF-GWF Exchange is activated with the XT3D option, then the two connected 
 
 \item
 The Time-Variable Hydraulic Conductivity (TVK) Package is incompatible with the Horizontal Flow Barrier (HFB) Package if the TVK Package is used to change hydraulic properties of cells near horizontal flow barriers.
+
+\item
+If a GWF-GWF Exchange is active, then neither of the connected GWF Models can have an active Viscosity (VSC) Package.
 
 \end{enumerate}
 
