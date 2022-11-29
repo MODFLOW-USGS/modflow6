@@ -104,18 +104,23 @@ module DistributedModelModule
 
 contains
 
-  subroutine add_dist_model(model_index, model_name, macronym)
-    integer(I4B) :: model_index
+  subroutine add_dist_model(loc_model_idx, glob_model_idx, model_name, macronym)
+    integer(I4B) :: loc_model_idx
+    integer(I4B) :: glob_model_idx
     character(len=*) :: model_name    
     character(len=3) :: macronym
     ! local
     class(NumericalModelType), pointer :: num_model
     class(DistributedModelType), pointer :: dist_model
 
-    num_model => GetNumericalModelFromList(basemodellist, model_index)
-
     allocate (dist_model)
-    call dist_model%create(num_model, model_index, model_name, macronym)
+    if (loc_model_idx > 0) then
+      this%is_local = .true.
+      num_model => GetNumericalModelFromList(basemodellist, loc_model_idx)
+      call dist_model%create(num_model, glob_model_idx, model_name, macronym)
+    else
+      ! create remote instance (but we are moving to virtual data containers instead...)
+    end if
     call AddDistModelToList(distmodellist, dist_model)
 
   end subroutine add_dist_model

@@ -296,7 +296,7 @@ contains
             call parser%StoreErrorUnit()
           end if
           if (im_global /= own_rank + 1) then
-            call add_dist_model(im_global, global_modelname(im_global), 'GWF6')
+            call add_dist_model(-1, im_global, global_modelname(im_global), 'GWF6')
             cycle
           end if
         end if
@@ -305,11 +305,11 @@ contains
         case ('GWF6')
           call add_model(im, 'GWF6', mname)
           call gwf_cr(fname, im, modelname(im))
-          call add_dist_model(im_global, modelname(im), 'GWF6')
+          call add_dist_model(im, im_global, modelname(im), 'GWF6')
         case ('GWT6')
           call add_model(im, 'GWT6', mname)
           call gwt_cr(fname, im, modelname(im))
-          call add_dist_model(im_global, modelname(im), 'GWT6')
+          call add_dist_model(im, im_global, modelname(im), 'GWT6')
         case default
           write (errmsg, '(4x,a,a)') &
             '****ERROR. UNKNOWN SIMULATION MODEL: ', &
