@@ -1,0 +1,5 @@
+BEGIN PACKAGEDATA
+  <iviscspec> <dviscdc> <cviscref> <modelname> <auxspeciesname>
+  <iviscspec> <dviscdc> <cviscref> <modelname> <auxspeciesname>
+  ...
+END PACKAGEDATA

@@ -130,7 +130,8 @@ contains
       !
       ! -- Get period block
       call this%parser%GetBlock('PERIOD', isfound, ierr, &
-                                supportOpenClose=.true.)
+                                supportOpenClose=.true., &
+                                blockRequired=.false.)
       !
       ! -- If end of file, set iperoc past kper, else parse line
       if (ierr < 0) then

@@ -96,3 +96,8 @@ subdir('utils')
 
 # add unit test directory
 # subdir('unittests')
+
+# meson tests to evaluate installation success
+test('Test installation version', mf6exe, args : ['-v',])
+test('Test installation compiler', mf6exe, args : ['-c',])
+test('Test installation help', mf6exe, args : ['-h',])

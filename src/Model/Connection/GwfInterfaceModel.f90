@@ -70,8 +70,8 @@ contains
 
     ! create discretization and packages
     call disu_cr(this%dis, this%name, -1, this%iout)
-    call npf_cr(this%npf, this%name, this%innpf, this%iout)
-    call xt3d_cr(this%xt3d, this%name, this%innpf, this%iout)
+    call npf_cr(this%npf, this%name, -this%innpf, this%iout)
+    call xt3d_cr(this%xt3d, this%name, -this%innpf, this%iout)
     call buy_cr(this%buy, this%name, this%inbuy, this%iout)
 
   end subroutine gwfifm_cr
@@ -94,7 +94,7 @@ contains
     ! define NPF package
     call npfOptions%construct()
     call this%setNpfOptions(npfOptions)
-    call this%npf%npf_df(this%dis, this%xt3d, 0, npfOptions)
+    call this%npf%npf_df(this%dis, this%xt3d, 0, 0, npfOptions)
     call npfOptions%destroy()
 
     ! define BUY package
@@ -118,8 +118,8 @@ contains
   !<
   subroutine gwfifm_ar(this)
     class(GwfInterfaceModelType) :: this !< the GWF interface model
-    
-    call this%npf%npf_ar(this%ic, this%ibound, this%x)
+
+    call this%npf%npf_ar(this%ic, this%vsc, this%ibound, this%x)
     if (this%inbuy > 0) call this%buy%buy_ar(this%npf, this%ibound)
 
   end subroutine gwfifm_ar
@@ -147,6 +147,7 @@ contains
     call mem_deallocate(this%inobs)
     call mem_deallocate(this%innpf)
     call mem_deallocate(this%inbuy)
+    call mem_deallocate(this%invsc)
     call mem_deallocate(this%insto)
     call mem_deallocate(this%incsub)
     call mem_deallocate(this%inmvr)

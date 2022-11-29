@@ -1,0 +1,73 @@
+Input to the Viscosity (VSC) Package is read from the file that has type ``VSC6'' in the Name File.  If the VSC Package is active within a groundwater flow model, then the model will account for the dependence of fluid viscosity on solute concentration and the resulting changes in hydraulic conductivity and stress-package conductances, which vary inversely with viscosity.  Viscosity can be calculated as a function of one or more groundwater solute transport (GWT) species using an approach described in the Supplemental Technical Information document distributed with MODFLOW 6 (Chapter 8).  Only one VSC Package can be specified for a GWF model. The VSC Package can be coupled with one or more GWT Models so that the fluid viscosity is updated dynamically with one or more simulated concentration fields.
+
+The VSC Package calculates fluid viscosity using the following equation from \cite{langevin2008seawat}:
+
+\begin{equation}
+\label{eqn:visclinear}
+\mu = VISCREF + \sum_{i=1}^{NVISCSPECIES} DVISCDC_i \left ( CONCENTRATION_i - CVISCREF_i \right )
+\end{equation}
+
+\noindent where $\mu$ is the calculated viscosity, $VISCREF$ is the viscosity of a reference fluid, typically taken to be freshwater at a temperature of 20 degrees Celsius, $NVISCSPECIES$ is the number of chemical species that contribute to the viscosity calculation, $DVISCDC_i$ is the parameter that describes how viscosity changes linearly as a function of concentration for chemical species $i$ (i.e. the slope of a line that relates viscosity to concentration), $CONCENTRATION_i$ is the concentration of species $i$, and $CVISCREF_i$ is the reference concentration for species $i$ corresponding to when the viscosity of the reference fluid is equal to $VISCREF$, which is normally set to a concentration of zero.
+
+In many applications, variations in temperature have a greater effect on fluid viscosity than variations in solute concentration. When a GWT model is formulated such that one of the transported ``species'' is heat (thermal energy), with ``concentration'' used to represent temperature \citep{zheng2010supplemental}, the viscosity can vary linearly with temperature, as it can with any other ``concentration.''  In that case, $CONCENTRATION_i$ and $CVISCREF_i$ represent the simulated and reference temperatures, respectively, and $DVISCDC_i$ represents the rate at which viscosity changes with temperature. In addition, the viscosity formula can optionally include a nonlinear dependence on temperature. In that case, equation 3 becomes
+
+\begin{equation}
+\label{eqn:viscnonlinear}
+\mu = \mu_T(T) + \sum_{i=1}^{NVISCSPECIES} DVISCDC_i \left ( CONCENTRATION_i - CVISCREF_i \right )
+\end{equation}
+
+\noindent where the first term on the right-hand side, $\mu_T(T)$, is a nonlinear function of temperature, and the summation corresponds to the summation in equation \ref{eqn:visclinear}, in which one of the ``species'' is heat. The nonlinear term in equation \ref{eqn:viscnonlinear} is of the form
+
+\begin{equation}
+\label{eqn:munonlinear}
+\mu_T(T) = CVISCREF_i \cdot A_2^{\left [ \frac {-A_3 \left ( CONCENTRATION_i - CVISCREF_i \right ) } {\left ( CONCENTRATION_i + A_4 \right ) \left ( CVISCREF_i + A_4 \right )} \right ]}
+\end{equation}
+
+\noindent where the coefficients $A_2$, $A_3$, and $A_4$ are specified by the user.  Values for $A_2$, $A_3$, and $A_4$ are commonly 10, 248.7, and 133.15, respectively  \citep{langevin2008seawat, Voss1984sutra}.
+ 
+\subsubsection{Stress Packages}
+
+For head-dependent stress packages, the VSC Package can adjust the conductance used to calculate flow between the boundary and the aquifer to account for variations in viscosity. Conductance is assumed to vary inversely with viscosity.
+
+By default, the boundary viscosity is set equal to VISCREF, which, for freshwater, is typically set equal to 1.0. However, there are two additional options for setting the viscosity of a boundary package.  The first is to assign an auxiliary variable with the name ``VISCOSITY''.  If an auxiliary variable named ``VISCOSITY'' is detected, then it will be assigned as the viscosity of the fluid entering from the boundary.  Alternatively, a viscosity value can be calculated for each boundary using the viscosity equation described above and one or more concentrations provided as auxiliary variables.  In this case, the user must assign one auxiliary variable for each AUXSPECIESNAME listed in the PACKAGEDATA block below.  Thus, there must be NVISCSPECIES auxiliary variables, each with the identical name as those specified in PACKAGEDATA.  The VSC Package will calculate the viscosity for each boundary using these concentrations and the values specified for VISCREF, DVISCDC, and CVISCREF.  If the boundary package contains an auxiliary variable named VISCOSITY and also contains AUXSPECIESNAME auxiliary variables, then the boundary viscosity value will be assigned to the one in the VISCOSITY auxiliary variable.
+
+A GWT Model can be used to calculate concentrations for the advanced stress packages (LAK, SFR, MAW, and UZF) if corresponding advanced transport packages are specified (LKT, SFT, MWT, and UZT).  The advanced stress packages have an input option called FLOW\_PACKAGE\_AUXILIARY\_NAME.  When activated, this option will result in the simulated concentration for a lake or other feature being copied from the advanced transport package into the auxiliary variable for the corresponding GWF stress package.  This means that the viscosity for a lake or stream, for example, can be dynamically updated during the simulation using concentrations from advanced transport packages that are fed into auxiliary variables in the advanced stress packages, and ultimately used by the VSC Package to calculate a fluid viscosity.  This concept also applies when multiple GWT Models are used simultaneously to simulate multiple species.  In this case, multiple auxiliary variables are required for an advanced stress package, with each one representing a concentration from a different GWT Model.  
+
+
+\begin{longtable}{p{3cm} p{12cm}}
+\caption{Description of viscosity terms for stress packages}
+\tabularnewline
+\hline
+\hline
+\textbf{Stress Package} & \textbf{Note} \\
+\hline
+\endhead
+\hline
+\endfoot
+GHB & A VISCOSITY auxiliary variable or one or more auxiliary variables for calculating viscosity in the equation of state can be specified \\
+RIV & A VISCOSITY auxiliary variable or one or more auxiliary variables for calculating viscosity in the equation of state can be specified \\
+DRN & The drain formulation assumes that the drain boundary contains water of the same viscosity as the discharging water; auxiliary variables have no effect on the drain calculation  \\
+LAK & A VISCOSITY auxiliary variable or one or more auxiliary variables for calculating viscosity in the equation of state can be specified \\
+SFR & A VISCOSITY auxiliary variable or one or more auxiliary variables for calculating viscosity in the equation of state can be specified \\
+MAW & A VISCOSITY auxiliary variable or one or more auxiliary variables for calculating viscosity in the equation of state can be specified \\
+UZF & Viscosity variations not implemented \\
+\end{longtable}
+
+\vspace{5mm}
+\subsubsection{Structure of Blocks}
+
+\vspace{5mm}
+\noindent \textit{FOR EACH SIMULATION}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-vsc-options.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-vsc-dimensions.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwf-vsc-packagedata.dat}
+
+\vspace{5mm}
+\subsubsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/gwf-vsc-desc.tex}
+\end{description}
+
+\vspace{5mm}
+\subsubsection{Example Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwf-vsc-example.dat}
