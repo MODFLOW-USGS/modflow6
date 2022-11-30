@@ -24,7 +24,7 @@ module VirtualGwfModelModule
     ! public
     procedure :: create => vgwf_create
     procedure :: destroy => vgwf_destroy
-    procedure :: init_model_data => vgwf_init_model_data
+    procedure :: prepare_stage => vgwf_prepare_stage
     ! private
     procedure, private :: allocate_data
     procedure, private :: deallocate_data
@@ -46,53 +46,60 @@ contains
     ! allocate fields
     call this%allocate_data()
 
-    ! map virtual memory
-    call this%map(this%npf_iangle1%to_base(), 'IANGLE1', 'NPF', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
-    call this%map(this%npf_iangle2%to_base(), 'IANGLE2', 'NPF', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
-    call this%map(this%npf_iangle3%to_base(), 'IANGLE3', 'NPF', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
-    call this%map(this%npf_iwetdry%to_base(), 'IWETDRY', 'NPF', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
-
   end subroutine vgwf_create
 
-  subroutine vgwf_init_model_data(this)
+  subroutine vgwf_prepare_stage(this, stage)
     class(VirtualGwfModelType) :: this
+    integer(I4B) :: stage
     ! local
-    integer(I4B) :: nodes
+    integer(I4B) :: nr_nodes
 
-    nodes = 0 ! TODO_MJR: this should follow from the map
+    ! prepare base (=numerical) model data items
+    call this%VirtualModelType%prepare_stage(stage)
 
-    ! Num. model data
-    call this%map(this%x%to_base(), 'X', '', nodes, (/STG_BEFORE_AR, STG_BEFORE_AD, STG_BEFORE_CF/), MAP_NODE_TYPE)
-    call this%map(this%ibound%to_base(), 'IBOUND', '', nodes, (/STG_BEFORE_AR, STG_BEFORE_AD, STG_BEFORE_CF/), MAP_NODE_TYPE)
-    call this%map(this%x_old%to_base(), 'XOLD', '',  nodes, (/STG_BEFORE_AD, STG_BEFORE_CF/), MAP_NODE_TYPE)
+    if (stage == STG_BEFORE_INIT) then
 
-    ! NPF
-    call this%map(this%npf_icelltype%to_base(), 'ICELLTYPE', 'NPF', nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
-    call this%map(this%npf_k11%to_base(), 'K11', 'NPF', nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
-    call this%map(this%npf_k22%to_base(), 'K22', 'NPF', nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
-    call this%map(this%npf_k33%to_base(), 'K33', 'NPF', nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)    
-    if (this%npf_iangle1%value > 0) then
-      call this%map(this%npf_angle1%to_base(), 'ANGLE1', 'NPF', nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
-    else
-      call this%map(this%npf_angle1%to_base(), 'ANGLE1', 'NPF', 0, (/STG_NEVER/), MAP_NODE_TYPE)
-    end if
-    if (this%npf_iangle2%value > 0) then
-      call this%map(this%npf_angle2%to_base(), 'ANGLE2', 'NPF', nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
-    else
-      call this%map(this%npf_angle2%to_base(), 'ANGLE2', 'NPF', 0, (/STG_NEVER/), MAP_NODE_TYPE)
-    end if
-    if (this%npf_iangle3%value > 0) then
-      call this%map(this%npf_angle3%to_base(), 'ANGLE3', 'NPF', nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
-    else
-      call this%map(this%npf_angle3%to_base(), 'ANGLE3', 'NPF', 0, (/STG_NEVER/), MAP_NODE_TYPE)
-    end if
-    if (this%npf_iwetdry%value > 0) then
-      call this%map(this%npf_wetdry%to_base(), 'WETDRY', 'NPF', nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
-    else
-      call this%map(this%npf_wetdry%to_base(), 'WETDRY', 'NPF', 0, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+      call this%map(this%npf_iangle1%to_base(), 'IANGLE1', 'NPF', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
+      call this%map(this%npf_iangle2%to_base(), 'IANGLE2', 'NPF', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
+      call this%map(this%npf_iangle3%to_base(), 'IANGLE3', 'NPF', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
+      call this%map(this%npf_iwetdry%to_base(), 'IWETDRY', 'NPF', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
+
+    else if (stage == STG_BEFORE_AR) then
+
+      nr_nodes = 0 ! TODO_MJR: this should follow from the map
+      ! Num. model data
+      call this%map(this%x%to_base(), 'X', '', nr_nodes, (/STG_BEFORE_AR, STG_BEFORE_AD, STG_BEFORE_CF/), MAP_NODE_TYPE)
+      call this%map(this%ibound%to_base(), 'IBOUND', '', nr_nodes, (/STG_BEFORE_AR, STG_BEFORE_AD, STG_BEFORE_CF/), MAP_NODE_TYPE)
+      call this%map(this%x_old%to_base(), 'XOLD', '',  nr_nodes, (/STG_BEFORE_AD, STG_BEFORE_CF/), MAP_NODE_TYPE)
+      ! NPF
+      call this%map(this%npf_icelltype%to_base(), 'ICELLTYPE', 'NPF', nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+      call this%map(this%npf_k11%to_base(), 'K11', 'NPF', nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+      call this%map(this%npf_k22%to_base(), 'K22', 'NPF', nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+      call this%map(this%npf_k33%to_base(), 'K33', 'NPF', nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)    
+      if (this%npf_iangle1%value > 0) then
+        call this%map(this%npf_angle1%to_base(), 'ANGLE1', 'NPF', nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+      else
+        call this%map(this%npf_angle1%to_base(), 'ANGLE1', 'NPF', 0, (/STG_NEVER/), MAP_NODE_TYPE)
+      end if
+      if (this%npf_iangle2%value > 0) then
+        call this%map(this%npf_angle2%to_base(), 'ANGLE2', 'NPF', nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+      else
+        call this%map(this%npf_angle2%to_base(), 'ANGLE2', 'NPF', 0, (/STG_NEVER/), MAP_NODE_TYPE)
+      end if
+      if (this%npf_iangle3%value > 0) then
+        call this%map(this%npf_angle3%to_base(), 'ANGLE3', 'NPF', nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+      else
+        call this%map(this%npf_angle3%to_base(), 'ANGLE3', 'NPF', 0, (/STG_NEVER/), MAP_NODE_TYPE)
+      end if
+      if (this%npf_iwetdry%value > 0) then
+        call this%map(this%npf_wetdry%to_base(), 'WETDRY', 'NPF', nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+      else
+        call this%map(this%npf_wetdry%to_base(), 'WETDRY', 'NPF', 0, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+      end if
+
     end if
 
-  end subroutine vgwf_init_model_data
+  end subroutine vgwf_prepare_stage    
   
   subroutine allocate_data(this)
     class(VirtualGwfModelType) :: this

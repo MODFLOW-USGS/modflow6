@@ -2,7 +2,7 @@ module SimulationCreateModule
 
   use KindModule, only: DP, I4B, LGP, write_kindinfo
   use ConstantsModule, only: LINELENGTH, LENMODELNAME, LENBIGLINE, DZERO
-  use SimVariablesModule, only: simfile, simlstfile, iout, simulation_mode, own_rank, num_ranks
+  use SimVariablesModule, only: simfile, simlstfile, iout, simulation_mode, proc_id, nr_procs
   use GenericUtilitiesModule, only: sim_message, write_centered
   use SimModule, only: store_error, count_errors, &
                        store_error_unit, MaxErrors
@@ -45,8 +45,8 @@ contains
     !
     ! -- Open simulation list file
     iout = getunit()
-    if (num_ranks > 1) then
-      write(simlstfile,'(a,i0,a)') 'mfsim.p', own_rank, '.lst'
+    if (nr_procs > 1) then
+      write(simlstfile,'(a,i0,a)') 'mfsim.p', proc_id, '.lst'
     end if
     call openfile(iout, 0, simlstfile, 'LIST', filstat_opt='REPLACE')
     !
@@ -259,7 +259,7 @@ contains
     use GwtModule, only: gwt_cr
     use DistributedModelModule, only: add_dist_model    
     use ConstantsModule, only: LENMODELNAME
-    use SimVariablesModule, only: simulation_mode, own_rank, num_ranks
+    use SimVariablesModule, only: simulation_mode, proc_id, nr_procs
     ! -- dummy
     ! -- local
     integer(I4B) :: ierr
@@ -288,16 +288,23 @@ contains
         call ExpandArray(global_modelname)
         global_modelname(im_global) = mname(1:LENMODELNAME)
 
-        if (simulation_mode == 'PARALLEL' .and. num_ranks > 1) then
+        if (simulation_mode == 'PARALLEL' .and. nr_procs > 1) then
           if (keyword /= 'GWF6') then
             write (errmsg, '(4x,a,a)') &
               '****ERROR. ONLY GWF SUPPORT IN PARALLEL MODE FOR NOW'
             call store_error(errmsg)
             call parser%StoreErrorUnit()
           end if
-          if (im_global /= own_rank + 1) then
+          if (im_global /= proc_id + 1) then
             call add_dist_model(-1, im_global, global_modelname(im_global), 'GWF6')
             cycle
+          end if
+        else
+          if (nr_procs > 1) then
+            write (errmsg, '(4x,a,a)') &
+              '****ERROR. MULTIPLE PROCESSES IN SEQUENTIAL MODE NOT ALLOWED.'
+            call store_error(errmsg)
+            call parser%StoreErrorUnit()
           end if
         end if
 

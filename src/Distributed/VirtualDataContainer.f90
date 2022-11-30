@@ -14,6 +14,7 @@ module VirtualDataContainerModule
   contains
     ! protected
     generic :: map => map_scalar, map_array1d, map_array2d
+    procedure :: prepare_stage => vdc_prepare_stage
     procedure :: destroy => vdc_destroy
     ! private
     procedure, private :: map_scalar
@@ -24,6 +25,16 @@ module VirtualDataContainerModule
   end type VirtualDataContainerType
 
 contains
+
+  subroutine vdc_prepare_stage(this, stage)
+    use SimModule, only: ustop
+    class(VirtualDataContainerType) :: this
+    integer(I4B) :: stage
+
+    write(*,*) 'Error: prepare_stage should be overridden'
+    call ustop()
+
+  end subroutine vdc_prepare_stage
 
   subroutine map_scalar(this, vdata, var_name, subcomp_name, stages, map_type)
     class(VirtualDataContainerType) :: this

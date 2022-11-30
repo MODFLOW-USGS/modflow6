@@ -1,4 +1,5 @@
 module VirtualGwtModelModule
+  use KindModule, only: I4B
   use VirtualBaseModule
   use VirtualModelModule
   use NumericalModelModule, only: NumericalModelType
@@ -28,8 +29,8 @@ module VirtualGwtModelModule
   contains
     ! public
     procedure :: create => vgwt_create
+    procedure :: prepare_stage => vgwt_prepare_stage
     procedure :: destroy => vgwt_destroy
-    procedure :: init_model_data => vgwt_init_model_data
     ! private
 
   end type VirtualGwtModelType
@@ -50,9 +51,11 @@ subroutine vgwt_create(this, model_name, model)
 
 end subroutine vgwt_create
 
-subroutine vgwt_init_model_data(this)
+subroutine vgwt_prepare_stage(this, stage)
   class(VirtualGwtModelType) :: this
-end subroutine vgwt_init_model_data
+  integer(I4B) :: stage
+
+end subroutine vgwt_prepare_stage
 
 subroutine vgwt_destroy(this)
   class(VirtualGwtModelType) :: this

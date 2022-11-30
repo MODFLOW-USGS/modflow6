@@ -6,11 +6,6 @@
 !!
 !<
 module Mf6CoreModule
-#if defined(__WITH_PETSC__)
-#include <petsc/finclude/petscksp.h>
-  use petscksp
-  use mpi
-#endif
   use KindModule, only: I4B, LGP
   use ListsModule, only: basesolutionlist, solutiongrouplist, &
                          basemodellist, baseexchangelist, &
@@ -22,7 +17,11 @@ module Mf6CoreModule
   use BaseSolutionModule, only: BaseSolutionType, GetBaseSolutionFromList
   use SolutionGroupModule, only: SolutionGroupType, GetSolutionGroupFromList
   use Mf6DistributedModule, only: mf6_dist_data
+  use RunControlModule, only: RunControlType
+  use SimStagesModule
   implicit none
+  
+  class(RunControlType), pointer :: run_ctrl => null() !< the run controller for this simulation
 
 contains
 
@@ -35,12 +34,11 @@ contains
     ! -- modules
     use CommandArguments, only: GetCommandLineArguments
     use TdisModule, only: totim, totalsimtime
-    use KindModule, only: DP
     ! -- local
     logical(LGP) :: hasConverged
     !
     ! -- parse any command line arguments
-    !call GetCommandLineArguments()
+    call GetCommandLineArguments()
     !
     ! initialize simulation
     call Mf6Initialize()
@@ -71,44 +69,17 @@ contains
   !<
   subroutine Mf6Initialize()
     ! -- modules
+    use RunControlFactoryModule, only: create_run_control
     use SimulationCreateModule, only: simulation_cr
-    use SimVariablesModule, only: own_rank, num_ranks
-    integer :: ierr, icnt
-    character(len=*), parameter :: file = '/home/russcher/.petscrc'
-    logical(LGP) :: wait_dbg
-    !
-    ! -- initialize petsc/mpi (TODO_MJR: clean up)
-#if defined(__WITH_PETSC__)
-    call PetscInitialize(file, ierr)
-    CHKERRQ(ierr)
-
-    call MPI_Comm_size(PETSC_COMM_WORLD, num_ranks, ierr)
-    CHKERRQ(ierr)
-    call MPI_Comm_rank(PETSC_COMM_WORLD, own_rank, ierr)
-    CHKERRQ(ierr)
-
-    call PetscOptionsHasName(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, &
-                             '-wait_dbg', wait_dbg, ierr)
-    CHKERRQ(ierr)
-
-    if (wait_dbg .and. own_rank == 0) then
-      icnt = 0
-      write(*,*) 'Stalling for process ', getpid()
-      do while(icnt < 1)
-        call sleep(1)
-      end do
-    end if
-    call MPI_Barrier(PETSC_COMM_WORLD, ierr)
-    CHKERRQ(ierr)
-#endif
-    !
-    ! -- print banner and info to screen
-    call printInfo()
+    
+    ! -- get the run controller for sequential or parallel builds
+    run_ctrl => create_run_control()
+    call run_ctrl%start()
 
     ! -- create
     call simulation_cr()
 
-    ! -- init distributed data
+    ! -- init distributed data (TODO_MJR: about to go)
     call mf6_dist_data%dd_init()
 
     ! -- define
@@ -152,12 +123,8 @@ contains
     ! -- modules
     use, intrinsic :: iso_fortran_env, only: output_unit
     use ListsModule, only: lists_da
-    use MemoryManagerModule, only: mem_write_usage, mem_da
-    use TimerModule, only: elapsed_time
-    use SimVariablesModule, only: iout
     use SimulationCreateModule, only: simulation_da
     use TdisModule, only: tdis_da
-    use SimModule, only: final_message
     ! -- local variables
     integer(I4B) :: im
     integer(I4B) :: ic
@@ -168,7 +135,6 @@ contains
     class(BaseModelType), pointer :: mp => null()
     class(BaseExchangeType), pointer :: ep => null()
     class(SpatialModelConnectionType), pointer :: mc => null()
-    integer :: ierr
     !
     ! -- FINAL PROCESSING (FP)
     ! -- Final processing for each model
@@ -231,36 +197,10 @@ contains
     call mf6_dist_data%dd_finalize()
     call lists_da()
     !
-    ! -- cleanup petsc/mpi
-#if defined(__WITH_PETSC__)
-    call PetscFinalize(ierr)
-    CHKERRQ(ierr)
-#endif
-    !
-    ! -- Write memory usage, elapsed time and terminate
-    call mem_write_usage(iout)
-    call mem_da()
-    call elapsed_time(iout, 1)
-    call final_message()
+    ! -- finish gently (No calls after this)
+    call run_ctrl%finish()
     !
   end subroutine Mf6Finalize
-
-  !> @brief Print info to screen
-    !!
-    !! This subroutine prints the banner to the screen.
-    !!
-  !<
-  subroutine printInfo()
-    use SimModule, only: initial_message
-    use TimerModule, only: start_time
-    !
-    ! -- print initial message
-    call initial_message()
-    !
-    ! -- get start time
-    call start_time()
-    return
-  end subroutine printInfo
 
   !> @brief Define the simulation
     !!

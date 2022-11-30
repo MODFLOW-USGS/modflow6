@@ -115,10 +115,11 @@ contains
 
     allocate (dist_model)
     if (loc_model_idx > 0) then
-      this%is_local = .true.
+      dist_model%is_local = .true.
       num_model => GetNumericalModelFromList(basemodellist, loc_model_idx)
       call dist_model%create(num_model, glob_model_idx, model_name, macronym)
     else
+      dist_model%is_local = .false.
       ! create remote instance (but we are moving to virtual data containers instead...)
     end if
     call AddDistModelToList(distmodellist, dist_model)

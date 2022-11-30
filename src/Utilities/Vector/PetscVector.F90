@@ -5,7 +5,7 @@ module PetscVectorModule
   use KindModule, only: I4B, DP
   use ConstantsModule, only: DZERO
   use MemoryManagerModule, only: mem_allocate, mem_deallocate
-  use SimVariablesModule, only: simulation_mode, num_ranks
+  use SimVariablesModule, only: simulation_mode, nr_procs
   implicit none
   private
 
@@ -37,7 +37,7 @@ contains
     PetscErrorCode :: ierr
  
     call mem_allocate(this%array, n, name, mem_path)
-    if (simulation_mode == 'PARALLEL' .and. num_ranks > 1) then
+    if (simulation_mode == 'PARALLEL' .and. nr_procs > 1) then
       call VecCreateMPIWithArray(PETSC_COMM_WORLD, 1, n, PETSC_DECIDE, this%array, this%vec_impl, ierr)
     else
       call VecCreateSeqWithArray(PETSC_COMM_WORLD, 1, n, this%array, this%vec_impl, ierr)

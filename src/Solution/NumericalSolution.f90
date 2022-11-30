@@ -437,7 +437,7 @@ contains
   subroutine sln_df(this)
     ! modules
     use MemoryManagerModule, only: mem_allocate
-    use SimVariablesModule, only: simulation_mode, num_ranks
+    use SimVariablesModule, only: simulation_mode
     ! -- dummy variables
     class(NumericalSolutionType) :: this !< NumericalSolutionType instance
     ! -- local variables
@@ -455,10 +455,10 @@ contains
     end do
     !
     ! -- set up the (possibly parallel) linear system
-    if (simulation_mode == 'PARALLEL' .and. num_ranks > 1) then
-      this%solver_mode = 'PAR'
+    if (simulation_mode == 'PARALLEL') then
+      this%solver_mode = 'PETSC'
     else
-      this%solver_mode = 'PAR'
+      this%solver_mode = 'IMS'
     end if
     !
     this%linear_solver => create_linear_solver(this%solver_mode)
@@ -898,7 +898,7 @@ contains
       end if
     end if
      
-    if (this%solver_mode == 'PAR') then
+    if (this%solver_mode == 'PETSC') then
       this%linmeth = 2
     end if
 

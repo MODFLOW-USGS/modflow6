@@ -18,12 +18,17 @@ modflow_sources = files(
     'Distributed' / 'MappedMemory.f90',
     'Distributed' / 'RemoteMemory.f90',
     'Distributed' / 'Router.f90',
+    'Distributed' / 'RouterBase.f90',
+    'Distributed' / 'RouterFactory.f90',
+    'Distributed' / 'SerialRouter.f90',
     'Distributed' / 'VirtualBase.f90',
     'Distributed' / 'VirtualDataContainer.f90',
+    'Distributed' / 'VirtualDataStore.f90',
     'Distributed' / 'VirtualExchange.f90',
     'Distributed' / 'VirtualModel.f90',
     'Distributed' / 'VirtualGwfModel.f90',
     'Distributed' / 'VirtualGwtModel.f90',
+    'Distributed' / 'VirtualSolution.f90',
     'Exchange' / 'BaseExchange.f90',
     'Exchange' / 'DisConnExchange.f90',
     'Exchange' / 'GhostNode.f90',
@@ -212,7 +217,9 @@ modflow_sources = files(
     'Utilities' / 'version.f90',
     'mf6core.f90',
     'mf6lists.f90',
-    'SimulationCreate.f90'
+    'SimulationCreate.f90',
+    'RunControl.f90',
+    'RunControlFactory.F90'
 )
 
 modflow_petsc_sources = files(
@@ -222,8 +229,17 @@ modflow_petsc_sources = files(
   'Solution' / 'PETSc' / 'PetscConvergence.F90'
 )
 
+modflow_mpi_sources = files(
+  'Distributed' / 'MpiRouter.f90',
+  'Distributed' / 'MpiRunControl.F90'
+)
+
 if with_petsc
-  modflow_sources += modflow_petsc_sources
+  modflow_sources += modflow_petsc_sources  
+endif
+
+if with_mpi
+  modflow_sources += modflow_mpi_sources
 endif
 
 mf6_external = static_library('mf6_external', external_libraries)

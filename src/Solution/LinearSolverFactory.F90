@@ -25,11 +25,11 @@ contains
 
     solver => null()
 
-    if (solver_mode == 'SEQ') then
+    if (solver_mode == 'IMS') then
       solver => create_ims_solver()
       return
 #if defined(__WITH_PETSC__)
-    else if (solver_mode == 'PAR') then
+    else if (solver_mode == 'PETSC') then
       solver => create_petsc_solver()
 #endif
     else

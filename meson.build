@@ -87,17 +87,29 @@ elif fc_id == 'intel'
   link_args += '-static-intel'
 endif
 
-mpi = dependency('mpi', language : 'fortran', required : false)
 petsc = dependency('PETSc', required : false)
+mpi = dependency('mpi', language : 'fortran', required : petsc.found())
 
-dependencies = [  ]
+
+# compile with mpi or petsc+mpi when found,
+# (not allowing petsc without mpi)
+dependencies = [ ]
+extra_cmp_args = [ ]
+if mpi.found()
+  extra_cmp_args = [ '-D__WITH_MPI__' ]
+  with_mpi = true
+  dependencies = [ mpi ]
+else
+  with_mpi = false
+endif 
 if petsc.found()
-  compile_args += '-D__WITH_PETSC__'
+  extra_cmp_args = [ '-D__WITH_MPI__', '-D__WITH_PETSC__' ]
   with_petsc = true
   dependencies = [ petsc, mpi ]
 else
   with_petsc = false
 endif
+compile_args += extra_cmp_args
 
 add_project_arguments(fc.get_supported_arguments(compile_args), language: 'fortran')
 add_project_link_arguments(fc.get_supported_arguments(link_args), language: 'fortran')

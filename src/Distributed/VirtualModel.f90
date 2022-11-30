@@ -39,8 +39,7 @@ module VirtualModelModule
   contains
     ! public
     procedure :: create => vm_create
-    procedure :: init_grid_data => vm_init_grid_data
-    procedure :: init_model_data => vm_init_model_data
+    procedure :: prepare_stage => vm_prepare_stage
     procedure :: destroy => vm_destroy
     
     ! private
@@ -69,46 +68,45 @@ subroutine vm_create(this, model_name, model)
 
 end subroutine vm_create
 
-subroutine vm_init_grid_data(this)
+subroutine vm_prepare_stage(this, stage)
   class(VirtualModelType) :: this
+  integer(I4B) :: stage
   ! local
   integer(I4B) :: nodes, nja, njas
 
-  nodes = this%dis_nodes%value
-  nja = this%dis_nja%value
-  njas = this%dis_njas%value
+  if (stage == STG_BEFORE_AC) then
 
-  ! CON
-  call this%map(this%dis_xorigin%to_base(), 'XORIGIN', 'DIS', (/STG_BEFORE_DF/), MAP_ALL_TYPE)
-  call this%map(this%dis_yorigin%to_base(), 'YORIGIN', 'DIS', (/STG_BEFORE_DF/), MAP_ALL_TYPE)
-  call this%map(this%dis_angrot%to_base(), 'ANGROT', 'DIS', (/STG_BEFORE_DF/), MAP_ALL_TYPE)
-  call this%map(this%dis_xc%to_base(), 'XC', 'DIS', nodes, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
-  call this%map(this%dis_yc%to_base(), 'YC', 'DIS', nodes, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
-  call this%map(this%dis_top%to_base(), 'TOP', 'DIS', nodes, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
-  call this%map(this%dis_bot%to_base(), 'BOT', 'DIS', nodes, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
-  ! DIS
-  call this%map(this%con_ia%to_base(), 'IA', 'CON', nodes + 1, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
-  call this%map(this%con_ja%to_base(), 'JA', 'CON', nja, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
-  call this%map(this%con_jas%to_base(), 'JAS', 'CON', nja, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
-  call this%map(this%con_ihc%to_base(), 'IHC', 'CON', njas, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
-  call this%map(this%con_hwva%to_base(), 'HWVA', 'CON', njas, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
-  call this%map(this%con_cl1%to_base(), 'CL1', 'CON', njas, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
-  call this%map(this%con_cl2%to_base(), 'CL2', 'CON', njas, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
-  call this%map(this%con_anglex%to_base(), 'ANGLEX', 'CON', njas, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+    call this%map(this%moffset%to_base(), 'MOFFSET', '', (/STG_BEFORE_AC/), MAP_ALL_TYPE)
+    call this%map(this%dis_nodes%to_base(), 'NODES', 'DIS', (/STG_BEFORE_AC/), MAP_ALL_TYPE)
+    call this%map(this%dis_nja%to_base(), 'NJA', 'DIS', (/STG_BEFORE_AC/), MAP_ALL_TYPE)
+    call this%map(this%dis_njas%to_base(), 'NJAS', 'DIS', (/STG_BEFORE_AC/), MAP_ALL_TYPE)
 
-end subroutine vm_init_grid_data
+  else if (stage == STG_BEFORE_DF) then
 
-subroutine vm_init_model_data(this)
-  use SimModule, only: ustop
-  class(VirtualModelType) :: this
+    nodes = this%dis_nodes%value
+    nja = this%dis_nja%value
+    njas = this%dis_njas%value
+     ! CON
+    call this%map(this%dis_xorigin%to_base(), 'XORIGIN', 'DIS', (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+    call this%map(this%dis_yorigin%to_base(), 'YORIGIN', 'DIS', (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+    call this%map(this%dis_angrot%to_base(), 'ANGROT', 'DIS', (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+    call this%map(this%dis_xc%to_base(), 'XC', 'DIS', nodes, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+    call this%map(this%dis_yc%to_base(), 'YC', 'DIS', nodes, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+    call this%map(this%dis_top%to_base(), 'TOP', 'DIS', nodes, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+    call this%map(this%dis_bot%to_base(), 'BOT', 'DIS', nodes, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+    ! DIS
+    call this%map(this%con_ia%to_base(), 'IA', 'CON', nodes + 1, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+    call this%map(this%con_ja%to_base(), 'JA', 'CON', nja, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+    call this%map(this%con_jas%to_base(), 'JAS', 'CON', nja, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+    call this%map(this%con_ihc%to_base(), 'IHC', 'CON', njas, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+    call this%map(this%con_hwva%to_base(), 'HWVA', 'CON', njas, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+    call this%map(this%con_cl1%to_base(), 'CL1', 'CON', njas, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+    call this%map(this%con_cl2%to_base(), 'CL2', 'CON', njas, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+    call this%map(this%con_anglex%to_base(), 'ANGLEX', 'CON', njas, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
 
-  ! This should be overridden:
-  ! derived types should decide what data 
-  ! to map and which stages to sync
-  write(*,*) 'Error: virtual model data not initialized'
-  call ustop()
+  end if
 
-end subroutine vm_init_model_data
+end subroutine vm_prepare_stage
 
 subroutine vm_destroy(this)
   class(VirtualModelType) :: this

@@ -53,7 +53,7 @@ module PetscMatrixModule
 contains
 
   subroutine pm_init(this, sparse, mem_path)
-    use SimVariablesModule, only: simulation_mode, num_ranks
+    use SimVariablesModule, only: simulation_mode, nr_procs
     class(PetscMatrixType) :: this
     type(sparsematrix) :: sparse
     character(len=*) :: mem_path
@@ -85,7 +85,7 @@ contains
     end do
 
     ! create PETSc matrix object
-    if (simulation_mode == 'PARALLEL' .and. num_ranks > 1) then
+    if (simulation_mode == 'PARALLEL' .and. nr_procs > 1) then
       this%is_parallel = .true.
       call MatCreateMPIAIJWithArrays(PETSC_COMM_WORLD, &
                                      sparse%nrow, sparse%nrow, &
