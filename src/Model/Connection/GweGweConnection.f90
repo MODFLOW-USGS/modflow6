@@ -115,7 +115,7 @@ contains
     end if
 
     ! first call base constructor
-    call this%SpatialModelConnectionType%spatialConnection_ctor(model,&
+    call this%SpatialModelConnectionType%spatialConnection_ctor(model, &
                                                                 gweEx, &
                                                                 name)
 
@@ -218,7 +218,7 @@ contains
                            SYNC_NODES, '', (/AFTER_AR/))
     end if
     call this%mapVariables()
-    
+
     call this%allocate_arrays()
     call this%gweInterfaceModel%allocate_fmi()
 
@@ -470,7 +470,7 @@ contains
     if (this%exchangeIsOwned) then
       gweEx => this%gweExchange
       map => this%interfaceMap%exchange_map(this%interfaceMap%prim_exg_idx)
-          
+
       ! use (half of) the exchnage map in reverse:
       do i = 1, size(map%src_idx)
         if (map%sign(i) < 0) cycle ! simvals is defined from exg%m1 => exg%m2

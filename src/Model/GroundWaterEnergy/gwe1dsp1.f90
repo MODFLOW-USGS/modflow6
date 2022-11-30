@@ -657,11 +657,11 @@ contains
     if (found%atv) then
       write (this%iout, '(4x,a)') 'ATV set from input file'
     end if
-    
+
     if (found%ktw) then
       write (this%iout, '(4x,a)') 'KTW set from input file'
     end if
-    
+
     if (found%kts) then
       write (this%iout, '(4x,a)') 'KTS set from input file'
     end if

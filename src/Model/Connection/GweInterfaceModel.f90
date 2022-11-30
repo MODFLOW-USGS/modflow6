@@ -112,7 +112,7 @@ contains
                       this%fmi%memoryPath)
 
   end subroutine allocate_fmi
-  
+
 !> @brief Define the GWE interface model
 !<
   subroutine gweifmod_df(this)
@@ -210,7 +210,7 @@ contains
     deallocate (this%fmi)
     deallocate (this%adv)
     deallocate (this%dsp)
-    
+
     if (associated(this%mst)) then
       call mem_deallocate(this%mst%porosity)
       deallocate (this%mst)

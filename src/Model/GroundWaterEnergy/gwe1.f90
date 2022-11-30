@@ -778,7 +778,8 @@ contains
     ! -- Override ibudfl and idvprint flags for nonconvergence
     !    and end of period
     ibudfl = this%oc%set_print_flag('BUDGET', this%icnvg, endofperiod)
-    idvprint = this%oc%set_print_flag(trim(this%tsplab%depvartype), this%icnvg, endofperiod)
+    idvprint = this%oc%set_print_flag(trim(this%tsplab%depvartype), &
+                                      this%icnvg, endofperiod)
     !
     !   Calculate and save observations
     call this%gwe_ot_obs()
@@ -1159,27 +1160,27 @@ contains
     case ('TMP6')
       call cnc_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, this%tsplab)
-    !case('SRC6')
-    !  call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-    !                  pakname)
-    !case('LKT6')
-    !  call lkt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-    !                  pakname, this%fmi)
-    !case('SFT6')
-    !  call sft_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-    !                  pakname, this%fmi)
-    !case('MWT6')
-    !  call mwt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-    !                  pakname, this%fmi)
-    !case('UZT6')
-    !  call uzt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-    !                  pakname, this%fmi)
-    !case('IST6')
-    !  call ist_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-    !                  pakname, this%fmi, this%mst)
-    !case('API6')
-    !  call api_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-    !                  pakname)
+      !case('SRC6')
+      !  call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+      !                  pakname)
+      !case('LKT6')
+      !  call lkt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+      !                  pakname, this%fmi)
+      !case('SFT6')
+      !  call sft_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+      !                  pakname, this%fmi)
+      !case('MWT6')
+      !  call mwt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+      !                  pakname, this%fmi)
+      !case('UZT6')
+      !  call uzt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+      !                  pakname, this%fmi)
+      !case('IST6')
+      !  call ist_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+      !                  pakname, this%fmi, this%mst)
+      !case('API6')
+      !  call api_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+      !                  pakname)
     case default
       write (errmsg, *) 'Invalid package type: ', filtyp
       call store_error(errmsg, terminate=.TRUE.)
@@ -1221,8 +1222,8 @@ contains
     character(len=LINELENGTH) :: errmsg
     integer(I4B) :: i, iu
     character(len=LENFTYPE), dimension(10) :: nodupftype = &
-                         (/'DIS6 ', 'DISU6', 'DISV6', 'IC6  ', 'MST6 ', 'ADV6 ', &
-                                              'DSP6 ', 'SSM6 ', 'OC6  ', 'OBS6 '/)
+        &(/'DIS6 ', 'DISU6', 'DISV6', 'IC6  ', 'MST6 ', &
+        &'ADV6 ', 'DSP6 ', 'SSM6 ', 'OC6  ', 'OBS6 '/)
 ! ------------------------------------------------------------------------------
     !
     ! -- Check for IC6, DIS(u), and MST. Stop if not present.

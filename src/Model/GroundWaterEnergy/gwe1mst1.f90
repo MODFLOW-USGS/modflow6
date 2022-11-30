@@ -281,8 +281,8 @@ contains
         !
         ! -- Call function to get zero-order decay rate, which may be changed
         !    from the user-specified rate to prevent negative temperatures     ! kluge note: think through negative temps
-      decay_rate = get_zero_order_decay(this%decay(n), this%decaylast(n), &
-                                        kiter, cold(n), cnew(n), delt)
+        decay_rate = get_zero_order_decay(this%decay(n), this%decaylast(n), &
+                                          kiter, cold(n), cnew(n), delt)
         this%decaylast(n) = decay_rate
         rrhs = decay_rate * vcell * swtpdt * this%porosity(n)
         rhs(n) = rhs(n) + rrhs
@@ -645,8 +645,8 @@ contains
     logical :: isfound, endOfBlock
     ! -- formats
     character(len=*), parameter :: fmtisvflow = &
-            "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED TO BINARY "// &
-                                   "FILE WHENEVER ICBCFL IS NOT ZERO.')"
+            &"(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED TO BINARY "// &
+            &"FILE WHENEVER ICBCFL IS NOT ZERO.')"
     character(len=*), parameter :: fmtidcy1 = &
                                    "(4x,'FIRST-ORDER DECAY IS ACTIVE. ')"
     character(len=*), parameter :: fmtidcy2 = &
