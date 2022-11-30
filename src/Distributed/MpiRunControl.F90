@@ -72,11 +72,9 @@ contains
 
     if (proc_id == 0) then
       icnt = 0
-      write(*,*) 'Stalling for process ', getpid()
-      do while(icnt < 1)
-        call sleep(1)
-      end do
-    end if    
+      write(*,*) 'Hit enter to continue...'
+      read(*,*)
+    end if
     call MPI_Barrier(MF6_COMM_WORLD, ierr)
 
   end subroutine wait_for_debugger

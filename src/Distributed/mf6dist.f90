@@ -72,13 +72,15 @@ contains
     class(Mf6DistributedDataType), target :: this
     ! local
     class(BaseSolutionType), pointer :: sol
+    class(NumericalSolutionType), pointer :: num_sol
     integer(I4B) ::isol
 
     do isol = 1, basesolutionlist%Count()
       sol => GetBaseSolutionFromList(basesolutionlist, isol)
       select type (sol)
       class is (NumericalSolutionType)
-        call this%router%add_solution(sol)
+        num_sol => sol
+        call this%router%add_solution(num_sol)
         sol%synchronize => dd_solution_sync
         sol%synchronize_ctx => this
       end select

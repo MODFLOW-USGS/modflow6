@@ -26,7 +26,6 @@ fc = meson.get_compiler('fortran')
 fc_id = fc.get_id()
 compile_args = []
 link_args = []
-with_petsc = false
 
 # Command line options for gfortran
 if fc_id == 'gcc'
@@ -90,19 +89,24 @@ endif
 petsc = dependency('PETSc', required : false)
 mpi = dependency('mpi', language : 'fortran', required : petsc.found())
 
+# on windows only with intel
+enable_mpi = true
+if build_machine.system() == 'windows'
+  enable_mpi = (fc_id == 'intel-cl')
+endif
 
 # compile with mpi or petsc+mpi when found,
 # (not allowing petsc without mpi)
 dependencies = [ ]
 extra_cmp_args = [ ]
-if mpi.found()
+if mpi.found() and enable_mpi
   extra_cmp_args = [ '-D__WITH_MPI__' ]
   with_mpi = true
   dependencies = [ mpi ]
 else
   with_mpi = false
 endif 
-if petsc.found()
+if petsc.found() and with_mpi
   extra_cmp_args = [ '-D__WITH_MPI__', '-D__WITH_PETSC__' ]
   with_petsc = true
   dependencies = [ petsc, mpi ]
