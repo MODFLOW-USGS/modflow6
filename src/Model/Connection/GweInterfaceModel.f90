@@ -135,13 +135,13 @@ contains
       call this%adv%adv_df(adv_options)
     end if
     if (this%indsp > 0) then
-      this%dsp%idiffc = this%owner%dsp%idiffc
+      !this%dsp%idiffc = this%owner%dsp%idiffc
       this%dsp%idisp = this%owner%dsp%idisp
       call this%dsp%dsp_df(this%dis, dsp_options)
-      if (this%dsp%idiffc > 0) then
-        call mem_reallocate(this%dsp%diffc, this%dis%nodes, 'DIFFC', &
-                            trim(this%dsp%memoryPath))
-      end if
+      !if (this%dsp%idiffc > 0) then
+      !  call mem_reallocate(this%dsp%diffc, this%dis%nodes, 'DIFFC', &
+      !                      trim(this%dsp%memoryPath))
+      !end if
       if (this%dsp%idisp > 0) then
         call mem_reallocate(this%dsp%alh, this%dis%nodes, 'ALH', &
                             trim(this%dsp%memoryPath))

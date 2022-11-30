@@ -186,10 +186,10 @@ contains
                          SYNC_NODES, '', (/BEFORE_AR/))
     call this%addDistVar('AREA', 'DIS', this%gweInterfaceModel%name, &
                          SYNC_NODES, '', (/BEFORE_AR/))
-    if (this%gweInterfaceModel%dsp%idiffc > 0) then
-      call this%addDistVar('DIFFC', 'DSP', this%gweInterfaceModel%name, &
-                           SYNC_NODES, '', (/BEFORE_AR/))
-    end if
+    !if (this%gweInterfaceModel%dsp%idiffc > 0) then
+    !  call this%addDistVar('DIFFC', 'DSP', this%gweInterfaceModel%name, &
+    !                       SYNC_NODES, '', (/BEFORE_AR/))
+    !end if
     if (this%gweInterfaceModel%dsp%idisp > 0) then
       call this%addDistVar('ALH', 'DSP', this%gweInterfaceModel%name, &
                            SYNC_NODES, '', (/BEFORE_AR/))

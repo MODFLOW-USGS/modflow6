@@ -80,6 +80,7 @@
 		<Filter Name="GroundWaterEnergy">
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1dsp1.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1dspidm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1mst1.f90"/></Filter>
 		<Filter Name="GroundWaterFlow">
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3.f90"/>
