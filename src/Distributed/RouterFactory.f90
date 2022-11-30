@@ -11,14 +11,18 @@ module RouterFactoryModule
 
 contains
 
-  function create_router(router_mode) result(router)
-    class(RouterBaseType), pointer :: router
-    character(len=*) :: router_mode
+  !> @ Brief Create the proper router, depends on 
+  !! simulation mode (parallel or sequential) and type 
+  !! of build (with or without mpi)
+  !<
+  function create_router(sim_mode) result(router)
+    character(len=*) :: sim_mode !< simulation mode: SEQUENTIAL or PARALLEL
+    class(RouterBaseType), pointer :: router !< the router object
 
-    if (router_mode == 'SEQ') then
+    if (sim_mode == 'SEQUENTIAL') then
       router => create_serial_router()
 #if defined(__WITH_MPI__)
-    else if (router_mode == 'PAR') then
+    else if (sim_mode == 'PARALLEL') then
       router => create_mpi_router()
 #endif
     else

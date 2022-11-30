@@ -3,12 +3,13 @@ module VirtualDataStoreModule
   use VirtualSolutionModule
   use VirtualDataContainerModule
   use RouterBaseModule
-  use RouterFactoryModule, only: create_router
+  use RouterFactoryModule, only: create_router  
   implicit none
   private
 
   type, public :: VirtualDataStoreType
     integer(I4B) :: nr_solutions
+    integer(I4B), dimension(:), allocatable :: solution_ids
     class(VirtualSolutionType), dimension(:), pointer :: virtual_solutions
     class(RouterBaseType), pointer :: router
   contains
@@ -20,20 +21,24 @@ module VirtualDataStoreModule
     procedure, private :: prepare_solution
     procedure, private :: sync_solution
     procedure, private :: link
+    procedure, private :: count_nr_solutions
   end type VirtualDataStoreType
 
 contains
 
-  subroutine vds_init(this, nr_sol, routing_mode)
+  subroutine vds_init(this, sim_mode)
     class(VirtualDataStoreType) :: this
+    character(len=*) :: sim_mode
+    ! local    
     integer(I4B) :: nr_sol
-    character(len=*) :: routing_mode
 
+    nr_sol = this%count_nr_solutions()
     allocate(this%virtual_solutions(nr_sol))
-    this%router => create_router(routing_mode)
+    allocate(this%solution_ids(nr_sol))
+    
+    this%router => create_router(sim_mode)
     
   end subroutine vds_init
-
 
   subroutine vds_synchronize(this, stage)
     class(VirtualDataStoreType) :: this
@@ -85,6 +90,27 @@ contains
     integer(I4B) :: stage
 
   end subroutine link
+
+  function count_nr_solutions(this) result(count)
+    use ListsModule, only: basesolutionlist
+    use NumericalSolutionModule, only: NumericalSolutionType   
+    class(VirtualDataStoreType) :: this
+    integer(I4B) :: count
+    ! local    
+    integer(I4B) :: isol
+    class(*), pointer :: sol
+
+    ! count nr. of numerical solutions
+    count = 0
+    do isol = 1, basesolutionlist%Count()
+      sol => basesolutionlist%GetItem(isol)
+      select type (sol)
+        class is (NumericalSolutionType)
+        count = count + 1
+      end select
+    end do
+
+  end function count_nr_solutions
 
   subroutine destroy(this)
     class(VirtualDataStoreType) :: this
