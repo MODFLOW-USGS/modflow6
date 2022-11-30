@@ -34,9 +34,11 @@ module VirtualBaseModule
     integer(I4B), dimension(:), pointer, contiguous :: remote_to_virtual !< sparse list which maps remote index to virtual
     type(MemoryType), pointer :: virtual_mt
   contains
-    procedure(allocate_vmem_if), deferred :: allocate_vmem
-    procedure(deallocate_vmem_if), deferred :: deallocate_vmem
-    procedure :: to_base => to_base_vmem
+    procedure(vm_allocate_if), deferred :: vm_allocate
+    procedure(vm_deallocate_if), deferred :: vm_deallocate
+    procedure :: to_base => vm_to_base
+    procedure :: check_stage => vm_check_stage
+    procedure :: link => vm_link
   end type
 
   integer(I4B), public, parameter :: MAP_ALL_TYPE = 1
@@ -46,67 +48,88 @@ module VirtualBaseModule
   type, public, extends(VirtualDataType) :: VirtualIntType
     integer(I4B), pointer :: value
   contains
-    procedure :: allocate_vmem => allocate_vmem_int
-    procedure :: deallocate_vmem => deallocate_vmem_int
+    procedure :: vm_allocate => vm_allocate_int
+    procedure :: vm_deallocate => vm_deallocate_int
   end type
 
   type, public, extends(VirtualDataType) :: VirtualInt1dType
     integer(I4B), private, dimension(:), pointer, contiguous :: values
   contains
-    procedure :: allocate_vmem => allocate_vmem_int1d
-    procedure :: deallocate_vmem => deallocate_vmem_int1d
+    procedure :: vm_allocate => vm_allocate_int1d
+    procedure :: vm_deallocate => vm_deallocate_int1d
     procedure :: at => at_int1d
   end type
 
   type, public, extends(VirtualDataType) :: VirtualDblType
     real(DP), pointer :: value
   contains
-    procedure :: allocate_vmem => allocate_vmem_dbl
-    procedure :: deallocate_vmem => deallocate_vmem_dbl
+    procedure :: vm_allocate => vm_allocate_dbl
+    procedure :: vm_deallocate => vm_deallocate_dbl
   end type
 
   type, public, extends(VirtualDataType) :: VirtualDbl1dType
     real(DP), private, dimension(:), pointer, contiguous :: values
   contains
-    procedure :: allocate_vmem => allocate_vmem_dbl1d
-    procedure :: deallocate_vmem => deallocate_vmem_dbl1d
+    procedure :: vm_allocate => vm_allocate_dbl1d
+    procedure :: vm_deallocate => vm_deallocate_dbl1d
     procedure :: at => at_dbl1d
   end type
 
   type, public, extends(VirtualDataType) :: VirtualDbl2dType
     real(DP), private, dimension(:,:), pointer, contiguous :: values
   contains
-    procedure :: allocate_vmem => allocate_vmem_dbl2D
-    procedure :: deallocate_vmem => deallocate_vmem_dbl2D
+    procedure :: vm_allocate => vm_allocate_dbl2D
+    procedure :: vm_deallocate => vm_deallocate_dbl2D
     procedure :: at => at_dbl2d
   end type
 
   ! etc... 
   abstract interface
-    subroutine allocate_vmem_if(this, var_name, mem_path, shape)
+    subroutine vm_allocate_if(this, var_name, mem_path, shape)
       import VirtualDataType, I4B
       class(VirtualDataType) :: this
       character(len=*) :: var_name
       character(len=*) :: mem_path
       integer(I4B), dimension(:) :: shape
-    end subroutine allocate_vmem_if
-    subroutine deallocate_vmem_if(this)
+    end subroutine vm_allocate_if
+    subroutine vm_deallocate_if(this)
       import VirtualDataType
       class(VirtualDataType) :: this
-    end subroutine deallocate_vmem_if
+    end subroutine vm_deallocate_if
   end interface
 
 contains
 
-  function to_base_vmem(this) result(base_ptr)
-    class(VirtualDataType), target :: this    
+  function vm_to_base(this) result(base_ptr)
+    class(VirtualDataType), target :: this
     class(VirtualDataType), pointer :: base_ptr
 
     base_ptr => this
 
-  end function to_base_vmem
+  end function vm_to_base
 
-  subroutine allocate_vmem_int(this, var_name, mem_path, shape)
+  !> @brief Check if this data item requires syncing
+  !< for this particular stage
+  function vm_check_stage(this, stage) result(has_stage)
+    class(VirtualDataType), target :: this
+    integer(I4B) :: stage
+    logical(LGP) :: has_stage
+
+    has_stage = (findloc(this%sync_stages, stage, dim=1) > 0)
+
+  end function vm_check_stage
+
+  subroutine vm_link(this)
+    class(VirtualDataType), target :: this
+    ! local
+    logical(LGP) :: found
+
+    call get_from_memorylist(this%remote_var_name, this%remote_mem_path, &
+                             this%virtual_mt, found)
+  
+  end subroutine vm_link
+
+  subroutine vm_allocate_int(this, var_name, mem_path, shape)
     class(VirtualIntType) :: this
     character(len=*) :: var_name
     character(len=*) :: mem_path
@@ -116,16 +139,16 @@ contains
 
     call mem_allocate(intscl, var_name, mem_path)
 
-  end subroutine allocate_vmem_int
+  end subroutine vm_allocate_int
 
-  subroutine deallocate_vmem_int(this)
+  subroutine vm_deallocate_int(this)
     class(VirtualIntType) :: this
 
     call mem_deallocate(this%virtual_mt%intsclr)
 
-  end subroutine deallocate_vmem_int
+  end subroutine vm_deallocate_int
 
-  subroutine allocate_vmem_int1d(this, var_name, mem_path, shape)
+  subroutine vm_allocate_int1d(this, var_name, mem_path, shape)
     class(VirtualInt1dType) :: this
     character(len=*) :: var_name
     character(len=*) :: mem_path
@@ -135,16 +158,16 @@ contains
 
     call mem_allocate(int1d, shape(1), var_name, mem_path)
 
-  end subroutine allocate_vmem_int1d
+  end subroutine vm_allocate_int1d
 
-  subroutine deallocate_vmem_int1d(this)
+  subroutine vm_deallocate_int1d(this)
     class(VirtualInt1dType) :: this
 
     call mem_deallocate(this%virtual_mt%aint1d)
 
-  end subroutine deallocate_vmem_int1d
+  end subroutine vm_deallocate_int1d
 
-  subroutine allocate_vmem_dbl(this, var_name, mem_path, shape)
+  subroutine vm_allocate_dbl(this, var_name, mem_path, shape)
     class(VirtualDblType) :: this
     character(len=*) :: var_name
     character(len=*) :: mem_path
@@ -154,16 +177,16 @@ contains
 
     call mem_allocate(dbl, var_name, mem_path)
 
-  end subroutine allocate_vmem_dbl
+  end subroutine vm_allocate_dbl
 
-  subroutine deallocate_vmem_dbl(this)
+  subroutine vm_deallocate_dbl(this)
     class(VirtualDblType) :: this
 
     call mem_deallocate(this%virtual_mt%dblsclr)
 
-  end subroutine deallocate_vmem_dbl
+  end subroutine vm_deallocate_dbl
 
-  subroutine allocate_vmem_dbl1d(this, var_name, mem_path, shape)
+  subroutine vm_allocate_dbl1d(this, var_name, mem_path, shape)
     class(VirtualDbl1dType) :: this
     character(len=*) :: var_name
     character(len=*) :: mem_path
@@ -173,16 +196,16 @@ contains
 
     call mem_allocate(dbl1d, shape(1), var_name, mem_path)
 
-  end subroutine allocate_vmem_dbl1d
+  end subroutine vm_allocate_dbl1d
 
-  subroutine deallocate_vmem_dbl1d(this)
+  subroutine vm_deallocate_dbl1d(this)
     class(VirtualDbl1dType) :: this
 
     call mem_deallocate(this%virtual_mt%adbl1d)
 
-  end subroutine deallocate_vmem_dbl1d
+  end subroutine vm_deallocate_dbl1d
 
-  subroutine allocate_vmem_dbl2d(this, var_name, mem_path, shape)
+  subroutine vm_allocate_dbl2D(this, var_name, mem_path, shape)
     class(VirtualDbl2dType) :: this
     character(len=*) :: var_name
     character(len=*) :: mem_path
@@ -192,14 +215,14 @@ contains
 
     call mem_allocate(dbl2d, shape(1), shape(2), var_name, mem_path)
 
-  end subroutine allocate_vmem_dbl2d
+  end subroutine vm_allocate_dbl2D
 
-  subroutine deallocate_vmem_dbl2d(this)
+  subroutine vm_deallocate_dbl2D(this)
     class(VirtualDbl2dType) :: this
 
     call mem_deallocate(this%virtual_mt%adbl2d)
 
-  end subroutine deallocate_vmem_dbl2d
+  end subroutine vm_deallocate_dbl2D
 
   function at_int1d(this, i_rmt) result(val)
     class(VirtualInt1dType) :: this

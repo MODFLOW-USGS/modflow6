@@ -233,6 +233,7 @@ module MapperModule
 
   end subroutine scatter
 
+  ! TODO_MJR: get rid of this bit manipulation stuff...
   function check_stage(var_stage, current_stage) result(is_sync)
     integer(I4B) :: var_stage
     integer(I4B) :: current_stage

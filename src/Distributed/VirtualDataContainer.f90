@@ -4,17 +4,20 @@ module VirtualDataContainerModule
   use KindModule, only: I4B, LGP
   use ConstantsModule, only: LENCOMPONENTNAME, LENMEMPATH
   use MemoryHelperModule, only: create_mem_path
+  use MemoryManagerModule, only: get_from_memorylist
   implicit none
   private
 
   type, public :: VirtualDataContainerType
     type(ListType) :: virtual_data_list
-    logical(LGP) :: is_remote
+    integer(I4B) :: id
     character(LENCOMPONENTNAME) :: name
+    logical(LGP) :: is_remote
   contains
     ! protected
     generic :: map => map_scalar, map_array1d, map_array2d
     procedure :: prepare_stage => vdc_prepare_stage
+    procedure :: link_items => vdc_link_items
     procedure :: destroy => vdc_destroy
     ! private
     procedure, private :: map_scalar
@@ -35,6 +38,23 @@ contains
     call ustop()
 
   end subroutine vdc_prepare_stage
+
+  subroutine vdc_link_items(this, stage)
+    class(VirtualDataContainerType) :: this
+    integer(I4B) :: stage
+    ! local
+    integer(I4B) :: i
+    class(*), pointer :: vdi
+
+    do i = 1, this%virtual_data_list%Count()
+      vdi => this%virtual_data_list%GetItem(i)
+      select type (vdi)
+        class is (VirtualDataType)
+          if (vdi%check_stage(stage)) call vdi%link()
+      end select
+    end do
+
+  end subroutine vdc_link_items
 
   subroutine map_scalar(this, vdata, var_name, subcomp_name, stages, map_type)
     class(VirtualDataContainerType) :: this
@@ -106,7 +126,7 @@ contains
       else
         virtual_mem_path = create_mem_path(this%name, subcomp_name, context='__VIRTUAL__')
       end if
-      call vdata%allocate_vmem(var_name, virtual_mem_path, shape)
+      call vdata%vm_allocate(var_name, virtual_mem_path, shape)
       call get_from_memorylist(var_name, virtual_mem_path, vdata%virtual_mt, found)
     end if
 
@@ -135,7 +155,7 @@ contains
       obj => this%virtual_data_list%GetItem(i)
       select type (obj)
       class is (VirtualDataType)
-        call obj%deallocate_vmem()
+        call obj%vm_deallocate()
       end select
     end do
 

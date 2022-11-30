@@ -16,7 +16,6 @@ module Mf6CoreModule
                                           GetSpatialModelConnectionFromList
   use BaseSolutionModule, only: BaseSolutionType, GetBaseSolutionFromList
   use SolutionGroupModule, only: SolutionGroupType, GetSolutionGroupFromList
-  use Mf6DistributedModule, only: mf6_dist_data
   use RunControlModule, only: RunControlType
   use SimStagesModule
   implicit none
@@ -78,9 +77,6 @@ contains
 
     ! -- create
     call simulation_cr()
-
-    ! -- init distributed data (TODO_MJR: about to go)
-    call mf6_dist_data%dd_init()
 
     ! -- define
     call simulation_df()
@@ -194,7 +190,6 @@ contains
       deallocate (sgp)
     end do
     call simulation_da()
-    call mf6_dist_data%dd_finalize()
     call lists_da()
     !
     ! -- finish gently (No calls after this)
@@ -236,7 +231,7 @@ contains
     call connections_cr()
     !
     ! -- synchronize
-    call mf6_dist_data%dd_before_df()
+    call run_ctrl%at_stage(STG_BEFORE_DF)
     !
     ! -- Define each connection
     do ic = 1, baseconnectionlist%Count()
@@ -245,7 +240,7 @@ contains
     end do
     !
     ! -- synchronize
-    call mf6_dist_data%dd_after_df()
+    call run_ctrl%at_stage(STG_AFTER_DF)
     !
     ! -- Define each solution
     do is = 1, basesolutionlist%Count()
@@ -288,7 +283,7 @@ contains
     end do
     !
     ! -- Synchronize
-    call mf6_dist_data%dd_before_ar()
+    call run_ctrl%at_stage(STG_BEFORE_AR)
     !
     ! -- Allocate and read all model connections
     do ic = 1, baseconnectionlist%Count()
@@ -297,7 +292,7 @@ contains
     end do
     !
     ! -- Synchronize
-    call mf6_dist_data%dd_after_ar()
+    call run_ctrl%at_stage(STG_AFTER_AR)
     !
     ! -- Allocate and read each solution
     do is = 1, basesolutionlist%Count()

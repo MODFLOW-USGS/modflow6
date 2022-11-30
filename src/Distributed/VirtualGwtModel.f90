@@ -6,6 +6,8 @@ module VirtualGwtModelModule
   implicit none
   private
 
+  public :: add_virtual_gwt_model
+
   type, extends(VirtualModelType) :: VirtualGwtModelType
     ! DSP
     type(VirtualIntType), pointer :: dsp_idiffc => null()
@@ -37,13 +39,33 @@ module VirtualGwtModelModule
 
 contains
 
-subroutine vgwt_create(this, model_name, model)
+subroutine add_virtual_gwt_model(model_id, model_name, model)
+  use VirtualDataListsModule, only: virtual_model_list
+  integer(I4B) :: model_id !< global model id
+  character(len=*) :: model_name !< model name
+  class(NumericalModelType), pointer :: model !< the actual model (can be null() when remote)
+  ! local
+  class(VirtualGwtModelType), pointer :: virtual_gwt_model
+  class(*), pointer :: obj
+
+  allocate (virtual_gwt_model)
+  virtual_gwt_model%id = model_id
+  virtual_gwt_model%name = model_name
+  virtual_gwt_model%local_model => model
+
+  obj => virtual_gwt_model
+  call virtual_model_list%Add(obj)
+  
+end subroutine add_virtual_gwt_model
+
+subroutine vgwt_create(this, model_name, model_id, model)
   class(VirtualGwtModelType) :: this
   character(len=*) :: model_name
+  integer(I4B) :: model_id
   class(NumericalModelType), pointer :: model
 
   ! create base
-  call this%VirtualModelType%create(model_name, model)
+  call this%VirtualModelType%create(model_name, model_id, model)
 
   ! allocate fields
 

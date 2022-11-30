@@ -4,7 +4,9 @@ module VirtualGwfModelModule
   use SimStagesModule
   use NumericalModelModule, only: NumericalModelType
   implicit none
-  private 
+  private
+
+  public :: add_virtual_gwf_model
 
   type, public, extends(VirtualModelType) :: VirtualGwfModelType
     ! NPF 
@@ -32,16 +34,36 @@ module VirtualGwfModelModule
 
 contains
 
-  subroutine vgwf_create(this, model_name, model)
+  subroutine add_virtual_gwf_model(model_id, model_name, model)
+    use VirtualDataListsModule, only: virtual_model_list
+    integer(I4B) :: model_id !< global model id
+    character(len=*) :: model_name !< model name
+    class(NumericalModelType), pointer :: model !< the actual model (can be null() when remote)
+    ! local
+    class(VirtualGwfModelType), pointer :: virtual_gwf_model
+    class(*), pointer :: obj
+
+    allocate (virtual_gwf_model)
+    virtual_gwf_model%id = model_id
+    virtual_gwf_model%name = model_name
+    virtual_gwf_model%local_model => model    
+
+    obj => virtual_gwf_model
+    call virtual_model_list%Add(obj)
+    
+  end subroutine add_virtual_gwf_model
+
+  subroutine vgwf_create(this, model_name, model_id, model)
     class(VirtualGwfModelType) :: this
     character(len=*) :: model_name
+    integer(I4B) :: model_id
     class(NumericalModelType), pointer :: model
     
     ! model can be null
     if (.not. associated(model)) this%is_remote = .true.
 
     ! create base
-    call this%VirtualModelType%create(model_name, model)
+    call this%VirtualModelType%create(model_name, model_id, model)
     
     ! allocate fields
     call this%allocate_data()

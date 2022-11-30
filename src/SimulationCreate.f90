@@ -257,7 +257,9 @@ contains
     ! -- modules
     use GwfModule, only: gwf_cr
     use GwtModule, only: gwt_cr
-    use DistributedModelModule, only: add_dist_model    
+    use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
+    use VirtualGwfModelModule, only: add_virtual_gwf_model
+    use VirtualGwtModelModule, only: add_virtual_gwt_model
     use ConstantsModule, only: LENMODELNAME
     use SimVariablesModule, only: simulation_mode, proc_id, nr_procs
     ! -- dummy
@@ -265,6 +267,7 @@ contains
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     integer(I4B) :: im, im_global
+    class(NumericalModelType), pointer :: num_model
     character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: keyword
     character(len=LINELENGTH) :: fname, mname
@@ -296,7 +299,7 @@ contains
             call parser%StoreErrorUnit()
           end if
           if (im_global /= proc_id + 1) then
-            call add_dist_model(-1, im_global, global_modelname(im_global), 'GWF6')
+            call add_virtual_gwf_model(im_global, global_modelname(im_global), null())
             cycle
           end if
         else
@@ -312,11 +315,13 @@ contains
         case ('GWF6')
           call add_model(im, 'GWF6', mname)
           call gwf_cr(fname, im, modelname(im))
-          call add_dist_model(im, im_global, modelname(im), 'GWF6')
+          num_model => GetNumericalModelFromList(basemodellist, im)
+          call add_virtual_gwf_model(im_global, modelname(im), num_model)
         case ('GWT6')
           call add_model(im, 'GWT6', mname)
           call gwt_cr(fname, im, modelname(im))
-          call add_dist_model(im, im_global, modelname(im), 'GWT6')
+          num_model => GetNumericalModelFromList(basemodellist, im)
+          call add_virtual_gwt_model(im_global, modelname(im), num_model)
         case default
           write (errmsg, '(4x,a,a)') &
             '****ERROR. UNKNOWN SIMULATION MODEL: ', &

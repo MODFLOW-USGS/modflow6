@@ -49,12 +49,14 @@ module VirtualModelModule
 
 contains
 
-subroutine vm_create(this, model_name, model)
+subroutine vm_create(this, model_name, model_id, model)
   class(VirtualModelType) :: this
   character(len=*) :: model_name
+  integer(I4B) :: model_id
   class(NumericalModelType), pointer :: model
 
   this%name = model_name
+  this%id = model_id
   this%local_model => model
 
   ! allocate fields
@@ -62,9 +64,9 @@ subroutine vm_create(this, model_name, model)
 
   ! map virtual memory (first phase)
   call this%map(this%moffset%to_base(), 'MOFFSET', '', (/STG_BEFORE_AC/), MAP_ALL_TYPE)
-  call this%map(this%dis_nodes%to_base(), 'NODES', 'DIS', (/STG_BEFORE_AC/), MAP_ALL_TYPE)
-  call this%map(this%dis_nja%to_base(), 'NJA', 'DIS', (/STG_BEFORE_AC/), MAP_ALL_TYPE)
-  call this%map(this%dis_njas%to_base(), 'NJAS', 'DIS', (/STG_BEFORE_AC/), MAP_ALL_TYPE)
+  call this%map(this%dis_nodes%to_base(), 'NODES', 'DIS', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
+  call this%map(this%dis_nja%to_base(), 'NJA', 'DIS', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
+  call this%map(this%dis_njas%to_base(), 'NJAS', 'DIS', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
 
 end subroutine vm_create
 

@@ -14,5 +14,4 @@ module SimStagesModule
   integer(I4B), public, parameter :: STG_BEFORE_CF = 8
   integer(I4B), public, parameter :: STG_BEFORE_FC = 9
 
-    
 end module SimStagesModule
