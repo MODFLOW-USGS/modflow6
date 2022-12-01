@@ -3,11 +3,16 @@ module VirtualModelModule
   use VirtualDataContainerModule
   use ConstantsModule, only: LENMEMPATH
   use KindModule, only: LGP
+  use ListModule, only: ListType
   use SimStagesModule
   use NumericalModelModule, only: NumericalModelType
   implicit none
   private
   
+  public :: cast_as_virtual_model
+  public :: get_virtual_model_from_list
+  public :: get_virtual_model
+
   type, public, extends(VirtualDataContainerType) :: VirtualModelType    
     class(NumericalModelType), pointer :: local_model
     ! CON
@@ -41,32 +46,31 @@ module VirtualModelModule
     procedure :: create => vm_create
     procedure :: prepare_stage => vm_prepare_stage
     procedure :: destroy => vm_destroy
-    
+    generic :: operator(==) => eq_virtual_model, eq_numerical_model  
     ! private
     procedure, private :: allocate_data
     procedure, private :: deallocate_data
+    procedure, private :: eq_virtual_model
+    procedure, private :: eq_numerical_model
   end type VirtualModelType
 
 contains
 
-subroutine vm_create(this, model_name, model_id, model)
+subroutine vm_create(this, name, id, model)
   class(VirtualModelType) :: this
-  character(len=*) :: model_name
-  integer(I4B) :: model_id
+  character(len=*) :: name
+  integer(I4B) :: id
   class(NumericalModelType), pointer :: model
+  ! local
+  logical(LGP) :: is_remote
 
-  this%name = model_name
-  this%id = model_id
+  is_remote = .not. associated(model)
+  call this%VirtualDataContainerType%vdc_create(name, id, is_remote)
+
   this%local_model => model
 
   ! allocate fields
   call this%allocate_data()
-
-  ! map virtual memory (first phase)
-  call this%map(this%moffset%to_base(), 'MOFFSET', '', (/STG_BEFORE_AC/), MAP_ALL_TYPE)
-  call this%map(this%dis_nodes%to_base(), 'NODES', 'DIS', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
-  call this%map(this%dis_nja%to_base(), 'NJA', 'DIS', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
-  call this%map(this%dis_njas%to_base(), 'NJAS', 'DIS', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
 
 end subroutine vm_create
 
@@ -76,18 +80,21 @@ subroutine vm_prepare_stage(this, stage)
   ! local
   integer(I4B) :: nodes, nja, njas
 
-  if (stage == STG_BEFORE_AC) then
+  if (stage == STG_BEFORE_INIT) then
+    
+    call this%map(this%dis_nodes%to_base(), 'NODES', 'DIS', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
+    call this%map(this%dis_nja%to_base(), 'NJA', 'DIS', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
+    call this%map(this%dis_njas%to_base(), 'NJAS', 'DIS', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
+
+  else if (stage == STG_BEFORE_AC) then
 
     call this%map(this%moffset%to_base(), 'MOFFSET', '', (/STG_BEFORE_AC/), MAP_ALL_TYPE)
-    call this%map(this%dis_nodes%to_base(), 'NODES', 'DIS', (/STG_BEFORE_AC/), MAP_ALL_TYPE)
-    call this%map(this%dis_nja%to_base(), 'NJA', 'DIS', (/STG_BEFORE_AC/), MAP_ALL_TYPE)
-    call this%map(this%dis_njas%to_base(), 'NJAS', 'DIS', (/STG_BEFORE_AC/), MAP_ALL_TYPE)
 
   else if (stage == STG_BEFORE_DF) then
 
-    nodes = this%dis_nodes%value
-    nja = this%dis_nja%value
-    njas = this%dis_njas%value
+    nodes = this%dis_nodes%get()
+    nja = this%dis_nja%get()
+    njas = this%dis_njas%get()
      ! CON
     call this%map(this%dis_xorigin%to_base(), 'XORIGIN', 'DIS', (/STG_BEFORE_DF/), MAP_ALL_TYPE)
     call this%map(this%dis_yorigin%to_base(), 'YORIGIN', 'DIS', (/STG_BEFORE_DF/), MAP_ALL_TYPE)
@@ -185,6 +192,71 @@ subroutine deallocate_data(this)
 
 end subroutine deallocate_data
 
+function get_virtual_model_from_list(model_list, idx) result(v_model)
+  type(ListType) :: model_list
+  integer(I4B) :: idx
+  class(VirtualModelType), pointer :: v_model
+  ! local
+  class(*), pointer :: obj_ptr
 
+  obj_ptr => model_list%GetItem(idx)
+  v_model => cast_as_virtual_model(obj_ptr)
+  return
+
+end function get_virtual_model_from_list
+
+function cast_as_virtual_model(obj_ptr) result(v_model)
+  class(*), pointer :: obj_ptr
+  class(VirtualModelType), pointer :: v_model
+
+  v_model => null()
+  select type (obj_ptr)
+    class is (VirtualModelType)
+      v_model => obj_ptr
+  end select
+
+end function cast_as_virtual_model
+
+function eq_virtual_model(this, v_model) result(is_equal)
+  class(VirtualModelType), intent(in) :: this
+  class(VirtualModelType), intent(in) :: v_model
+  logical(LGP) :: is_equal
+
+  is_equal = (this%id == v_model%id)
+
+end function eq_virtual_model
+
+function eq_numerical_model(this, num_model) result(is_equal)
+  class(VirtualModelType), intent(in) :: this
+  class(NumericalModelType), intent(in) :: num_model
+  logical(LGP) :: is_equal
+
+  is_equal = (this%id == num_model%id)
+
+end function eq_numerical_model
+
+!> @brief Returns a virtual model with the specified id
+!< from the global list
+function get_virtual_model(model_id) result(virtual_model)
+  use VirtualDataListsModule, only: virtual_model_list
+  integer(I4B) :: model_id
+  class(VirtualModelType), pointer :: virtual_model
+  ! local
+  integer(I4B) :: i
+  class(*), pointer :: vm
+
+  virtual_model => null()
+  do i = 1, virtual_model_list%Count()
+    vm => virtual_model_list%GetItem(i)
+    select type (vm)
+      class is (VirtualModelType)
+        if (vm%id == model_id) then
+          virtual_model => vm
+          return
+        end if
+    end select
+  end do
+
+end function get_virtual_model
 
 end module VirtualModelModule

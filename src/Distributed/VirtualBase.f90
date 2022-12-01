@@ -46,18 +46,18 @@ module VirtualBaseModule
   integer(I4B), public, parameter :: MAP_CONN_TYPE = 3
   
   type, public, extends(VirtualDataType) :: VirtualIntType
-    integer(I4B), pointer :: value
   contains
     procedure :: vm_allocate => vm_allocate_int
     procedure :: vm_deallocate => vm_deallocate_int
+    procedure :: get => get_int
   end type
 
   type, public, extends(VirtualDataType) :: VirtualInt1dType
-    integer(I4B), private, dimension(:), pointer, contiguous :: values
   contains
     procedure :: vm_allocate => vm_allocate_int1d
     procedure :: vm_deallocate => vm_deallocate_int1d
-    procedure :: at => at_int1d
+    procedure :: get => get_int1d
+    procedure :: get_array => get_array_int1d
   end type
 
   type, public, extends(VirtualDataType) :: VirtualDblType
@@ -65,22 +65,23 @@ module VirtualBaseModule
   contains
     procedure :: vm_allocate => vm_allocate_dbl
     procedure :: vm_deallocate => vm_deallocate_dbl
+    procedure :: get => get_dbl
   end type
 
   type, public, extends(VirtualDataType) :: VirtualDbl1dType
-    real(DP), private, dimension(:), pointer, contiguous :: values
   contains
     procedure :: vm_allocate => vm_allocate_dbl1d
     procedure :: vm_deallocate => vm_deallocate_dbl1d
-    procedure :: at => at_dbl1d
+    procedure :: get => get_dbl1d
+    procedure :: get_array => get_array_dbl1d
   end type
 
   type, public, extends(VirtualDataType) :: VirtualDbl2dType
-    real(DP), private, dimension(:,:), pointer, contiguous :: values
   contains
     procedure :: vm_allocate => vm_allocate_dbl2D
     procedure :: vm_deallocate => vm_deallocate_dbl2D
-    procedure :: at => at_dbl2d
+    procedure :: get => get_dbl2d
+    procedure :: get_array => get_array_dbl2d
   end type
 
   ! etc... 
@@ -223,42 +224,82 @@ contains
     call mem_deallocate(this%virtual_mt%adbl2d)
 
   end subroutine vm_deallocate_dbl2D
+  
+  function get_int(this) result(val)
+    class(VirtualIntType) :: this
+    integer(I4B) :: val
 
-  function at_int1d(this, i_rmt) result(val)
+    val = this%virtual_mt%intsclr
+
+  end function get_int
+
+  function get_int1d(this, i_rmt) result(val)
     class(VirtualInt1dType) :: this
     integer(I4B) :: i_rmt
     integer(I4B) :: val
     ! local
     integer(I4B) :: i_vrt
 
-    i_vrt = this%remote_to_virtual(i_rmt)
+    i_vrt = i_rmt!this%remote_to_virtual(i_rmt)
     val = this%virtual_mt%aint1d(i_vrt)
 
-  end function at_int1d
+  end function get_int1d
 
-  function at_dbl1d(this, i_rmt) result(val)
+  function get_array_int1d(this) result(array)
+    class(VirtualInt1dType) :: this
+    integer(I4B), dimension(:), pointer, contiguous :: array
+
+    array => this%virtual_mt%aint1d
+
+  end function get_array_int1d
+
+  function get_dbl(this) result(val)
+    class(VirtualDblType) :: this
+    real(DP) :: val
+
+    val = this%virtual_mt%dblsclr
+
+  end function get_dbl
+
+  function get_dbl1d(this, i_rmt) result(val)
     class(VirtualDbl1dType) :: this
     integer(I4B) :: i_rmt
     real(DP) :: val
     ! local
     integer(I4B) :: i_vrt
 
-    i_vrt = this%remote_to_virtual(i_rmt)
+    i_vrt = i_rmt!this%remote_to_virtual(i_rmt)
     val = this%virtual_mt%adbl1d(i_vrt)
 
-  end function at_dbl1d
+  end function get_dbl1d
 
-  function at_dbl2d(this, i_rmt, j_cmp) result(val)
+  function get_array_dbl1d(this) result(array)
+    class(VirtualDbl1dType) :: this
+    real(DP), dimension(:), pointer, contiguous :: array
+
+    array => this%virtual_mt%adbl1d
+
+  end function get_array_dbl1d
+
+  function get_dbl2d(this, j_cmp, i_rmt) result(val)
     class(VirtualDbl2dType) :: this
-    integer(I4B) :: i_rmt
     integer(I4B) :: j_cmp
+    integer(I4B) :: i_rmt
     real(DP) :: val
     ! local
     integer(I4B) :: i_vrt
 
-    i_vrt = this%remote_to_virtual(i_rmt)
+    i_vrt = i_rmt!this%remote_to_virtual(i_rmt)
     val = this%virtual_mt%adbl2d(j_cmp, i_vrt)
 
-  end function at_dbl2d
+  end function get_dbl2d
+
+  function get_array_dbl2d(this) result(array)
+    class(VirtualDbl2dType) :: this
+    real(DP), dimension(:,:), pointer, contiguous :: array
+
+    array => this%virtual_mt%adbl2d
+
+  end function get_array_dbl2d
 
 end module VirtualBaseModule

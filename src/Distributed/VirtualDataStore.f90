@@ -1,7 +1,8 @@
 module VirtualDataStoreModule  
   use KindModule, only: I4B
   use STLVecIntModule
-  use VirtualDataListsModule
+  use VirtualModelModule, only: get_virtual_model
+  use VirtualExchangeModule, only: get_virtual_exchange
   use VirtualSolutionModule
   use VirtualDataContainerModule
   use RouterBaseModule

@@ -3,8 +3,8 @@ module MapperModule
   use ConstantsModule, only: LENVARNAME, LENMEMPATH  
   use MemoryHelperModule, only: create_mem_path
   use IndexMapModule
-  use DistributedModelModule
-  use DistributedExchangeModule
+  use VirtualModelModule, only: VirtualModelType, get_virtual_model
+  use VirtualExchangeModule, only: VirtualExchangeType, get_virtual_exchange
   use InterfaceMapModule
   use DistVariableModule
   use MappedMemoryModule
@@ -110,10 +110,10 @@ module MapperModule
     ! local
     character(len=LENVARNAME) :: src_var_name
     character(len=LENMEMPATH) :: src_mem_path, tgt_mem_path
-    class(DistributedModelType), pointer :: dist_model
+    class(VirtualModelType), pointer :: v_model
 
-    dist_model => get_dist_model(src_model_id) 
-    src_mem_path = dist_model%get_local_mem_path(tgt_subcomp_name)   
+    v_model => get_virtual_model(src_model_id)
+    src_mem_path = v_model%get_vrt_mem_path(tgt_subcomp_name)
 
     if (len_trim(tgt_subcomp_name) > 0) then
       tgt_mem_path = create_mem_path(tgt_model_name, tgt_subcomp_name)
@@ -147,10 +147,10 @@ module MapperModule
     integer(I4B), dimension(:), intent(in) :: stages !< array with 1 or multiple stages for synchronization
     ! local
     character(len=LENMEMPATH) :: src_mem_path, tgt_mem_path
-    class(DistributedExchangeType), pointer :: dist_exg
+    class(VirtualExchangeType), pointer :: v_exchange
 
-    dist_exg => get_dist_exg(src_exg_id)
-    src_mem_path = dist_exg%get_local_mem_path('')
+    v_exchange => get_virtual_exchange(src_exg_id)
+    src_mem_path = v_exchange%get_vrt_mem_path('')
 
     if (len_trim(tgt_subcomp_name) > 0) then
       tgt_mem_path = create_mem_path(tgt_model_name, tgt_subcomp_name)

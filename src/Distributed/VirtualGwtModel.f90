@@ -49,23 +49,21 @@ subroutine add_virtual_gwt_model(model_id, model_name, model)
   class(*), pointer :: obj
 
   allocate (virtual_gwt_model)
-  virtual_gwt_model%id = model_id
-  virtual_gwt_model%name = model_name
-  virtual_gwt_model%local_model => model
+  call virtual_gwt_model%create(model_name, model_id, model)
 
   obj => virtual_gwt_model
   call virtual_model_list%Add(obj)
   
 end subroutine add_virtual_gwt_model
 
-subroutine vgwt_create(this, model_name, model_id, model)
+subroutine vgwt_create(this, name, id, model)
   class(VirtualGwtModelType) :: this
-  character(len=*) :: model_name
-  integer(I4B) :: model_id
+  character(len=*) :: name
+  integer(I4B) :: id
   class(NumericalModelType), pointer :: model
 
   ! create base
-  call this%VirtualModelType%create(model_name, model_id, model)
+  call this%VirtualModelType%create(name, id, model)
 
   ! allocate fields
 

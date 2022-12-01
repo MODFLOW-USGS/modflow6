@@ -34,6 +34,8 @@ module VirtualGwfModelModule
 
 contains
 
+  !> @brief Add virtual GWF model
+  !< 
   subroutine add_virtual_gwf_model(model_id, model_name, model)
     use VirtualDataListsModule, only: virtual_model_list
     integer(I4B) :: model_id !< global model id
@@ -44,26 +46,21 @@ contains
     class(*), pointer :: obj
 
     allocate (virtual_gwf_model)
-    virtual_gwf_model%id = model_id
-    virtual_gwf_model%name = model_name
-    virtual_gwf_model%local_model => model    
+    call virtual_gwf_model%create(model_name, model_id, model)
 
     obj => virtual_gwf_model
     call virtual_model_list%Add(obj)
     
   end subroutine add_virtual_gwf_model
 
-  subroutine vgwf_create(this, model_name, model_id, model)
+  subroutine vgwf_create(this, name, id, model)
     class(VirtualGwfModelType) :: this
-    character(len=*) :: model_name
-    integer(I4B) :: model_id
+    character(len=*) :: name
+    integer(I4B) :: id
     class(NumericalModelType), pointer :: model
     
-    ! model can be null
-    if (.not. associated(model)) this%is_remote = .true.
-
     ! create base
-    call this%VirtualModelType%create(model_name, model_id, model)
+    call this%VirtualModelType%create(name, id, model)
     
     ! allocate fields
     call this%allocate_data()
@@ -98,22 +95,22 @@ contains
       call this%map(this%npf_k11%to_base(), 'K11', 'NPF', nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
       call this%map(this%npf_k22%to_base(), 'K22', 'NPF', nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
       call this%map(this%npf_k33%to_base(), 'K33', 'NPF', nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)    
-      if (this%npf_iangle1%value > 0) then
+      if (this%npf_iangle1%get() > 0) then
         call this%map(this%npf_angle1%to_base(), 'ANGLE1', 'NPF', nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
       else
         call this%map(this%npf_angle1%to_base(), 'ANGLE1', 'NPF', 0, (/STG_NEVER/), MAP_NODE_TYPE)
       end if
-      if (this%npf_iangle2%value > 0) then
+      if (this%npf_iangle2%get() > 0) then
         call this%map(this%npf_angle2%to_base(), 'ANGLE2', 'NPF', nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
       else
         call this%map(this%npf_angle2%to_base(), 'ANGLE2', 'NPF', 0, (/STG_NEVER/), MAP_NODE_TYPE)
       end if
-      if (this%npf_iangle3%value > 0) then
+      if (this%npf_iangle3%get() > 0) then
         call this%map(this%npf_angle3%to_base(), 'ANGLE3', 'NPF', nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
       else
         call this%map(this%npf_angle3%to_base(), 'ANGLE3', 'NPF', 0, (/STG_NEVER/), MAP_NODE_TYPE)
       end if
-      if (this%npf_iwetdry%value > 0) then
+      if (this%npf_iwetdry%get() > 0) then
         call this%map(this%npf_wetdry%to_base(), 'WETDRY', 'NPF', nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
       else
         call this%map(this%npf_wetdry%to_base(), 'WETDRY', 'NPF', 0, (/STG_BEFORE_AR/), MAP_NODE_TYPE)

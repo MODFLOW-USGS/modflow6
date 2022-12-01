@@ -1,8 +1,11 @@
 module SimulationCreateModule
 
   use KindModule, only: DP, I4B, LGP, write_kindinfo
-  use ConstantsModule, only: LINELENGTH, LENMODELNAME, LENBIGLINE, DZERO
-  use SimVariablesModule, only: simfile, simlstfile, iout, simulation_mode, proc_id, nr_procs
+  use ConstantsModule, only: LINELENGTH, LENMODELNAME, LENBIGLINE, &
+                             DZERO, LENEXCHANGENAME
+  use SimVariablesModule, only: simfile, simlstfile, iout, simulation_mode, &
+                                proc_id, nr_procs, &
+                                model_names, model_proc_ids, model_loc_idx
   use GenericUtilitiesModule, only: sim_message, write_centered
   use SimModule, only: store_error, count_errors, &
                        store_error_unit, MaxErrors
@@ -26,8 +29,6 @@ module SimulationCreateModule
   public :: simulation_da
 
   integer(I4B) :: inunit = 0
-  character(len=LENMODELNAME), allocatable, dimension(:) :: modelname
-  character(len=LENMODELNAME), allocatable, dimension(:) :: global_modelname
   type(BlockParserType) :: parser
 
 contains
@@ -71,8 +72,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- variables
-    deallocate (modelname)
-    deallocate (global_modelname)
+    deallocate (model_names)
     !
     ! -- Return
     return
@@ -266,11 +266,11 @@ contains
     ! -- local
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
-    integer(I4B) :: im, im_global
+    integer(I4B) :: im, id_glo
     class(NumericalModelType), pointer :: num_model
     character(len=LINELENGTH) :: errmsg
-    character(len=LINELENGTH) :: keyword
-    character(len=LINELENGTH) :: fname, mname
+    character(len=LINELENGTH) :: model_type
+    character(len=LINELENGTH) :: fname, model_name
 ! ------------------------------------------------------------------------------
     !
     ! -- Process MODELS block
@@ -279,31 +279,41 @@ contains
     if (isfound) then
       write (iout, '(/1x,a)') 'READING SIMULATION MODELS'
       im = 0
-      im_global = 0
+      id_glo = 0
       do
         call parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
-        call parser%GetStringCaps(keyword)        
+        call parser%GetStringCaps(model_type)        
         call parser%GetString(fname)
-        call parser%GetStringCaps(mname)
+        call parser%GetStringCaps(model_name)
+        
+        call check_model_name(model_type, model_name)
 
-        im_global = im_global + 1
-        call ExpandArray(global_modelname)
-        global_modelname(im_global) = mname(1:LENMODELNAME)
+        ! increment global model id
+        id_glo = id_glo + 1
+        call ExpandArray(model_names)
+        call ExpandArray(model_proc_ids)
+        call ExpandArray(model_loc_idx)
+        model_names(id_glo) = model_name(1:LENMODELNAME)
+        model_proc_ids(id_glo) = proc_id
+        model_loc_idx(id_glo) = -1
 
-        if (simulation_mode == 'PARALLEL' .and. nr_procs > 1) then
-          if (keyword /= 'GWF6') then
-            write (errmsg, '(4x,a,a)') &
-              '****ERROR. ONLY GWF SUPPORT IN PARALLEL MODE FOR NOW'
-            call store_error(errmsg)
-            call parser%StoreErrorUnit()
-          end if
-          if (im_global /= proc_id + 1) then
-            call add_virtual_gwf_model(im_global, global_modelname(im_global), null())
-            cycle
-          end if
-        else
-          if (nr_procs > 1) then
+        if (nr_procs > 1) then
+          if (simulation_mode == 'PARALLEL') then
+            if (model_type == 'GWF6') then
+              ! for now we assume: model id == rank nr + 1
+              if (id_glo /= proc_id + 1) then
+                call add_virtual_gwf_model(id_glo, model_names(id_glo), null())
+                model_proc_ids(id_glo) = -1
+                cycle
+              end if
+            else
+              write (errmsg, '(4x,a,a)') &
+                '****ERROR. ONLY GWF SUPPORT IN PARALLEL MODE FOR NOW'
+              call store_error(errmsg)
+              call parser%StoreErrorUnit()
+            end if            
+          else
             write (errmsg, '(4x,a,a)') &
               '****ERROR. MULTIPLE PROCESSES IN SEQUENTIAL MODE NOT ALLOWED.'
             call store_error(errmsg)
@@ -311,21 +321,23 @@ contains
           end if
         end if
 
-        select case (keyword)
+        ! we will add a new (local) model
+        im = im + 1
+        model_loc_idx(id_glo) = im
+
+        select case (model_type)
         case ('GWF6')
-          call add_model(im, 'GWF6', mname)
-          call gwf_cr(fname, im, modelname(im))
+          call gwf_cr(fname, id_glo, model_names(id_glo))          
           num_model => GetNumericalModelFromList(basemodellist, im)
-          call add_virtual_gwf_model(im_global, modelname(im), num_model)
+          call add_virtual_gwf_model(id_glo, model_names(id_glo), num_model)
         case ('GWT6')
-          call add_model(im, 'GWT6', mname)
-          call gwt_cr(fname, im, modelname(im))
+          call gwt_cr(fname, id_glo, model_names(id_glo))
           num_model => GetNumericalModelFromList(basemodellist, im)
-          call add_virtual_gwt_model(im_global, modelname(im), num_model)
+          call add_virtual_gwt_model(id_glo, model_names(id_glo), num_model)
         case default
           write (errmsg, '(4x,a,a)') &
             '****ERROR. UNKNOWN SIMULATION MODEL: ', &
-            trim(keyword)
+            trim(model_type)
           call store_error(errmsg)
           call parser%StoreErrorUnit()
         end select
@@ -348,17 +360,19 @@ contains
     use GwfGwfExchangeModule, only: gwfexchange_create
     use GwfGwtExchangeModule, only: gwfgwt_cr
     use GwtGwtExchangeModule, only: gwtexchange_create
-    use DistributedExchangeModule, only: add_dist_exg
+    use VirtualGwfExchangeModule, only: add_virtual_gwf_exchange
+    use VirtualGwtExchangeModule, only: add_virtual_gwt_exchange
     ! -- dummy
     ! -- local
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
-    integer(I4B) :: id
-    integer(I4B) :: m1
-    integer(I4B) :: m2
+    integer(I4B) :: exg_id
+    integer(I4B) :: m1_id, m2_id
+    integer(I4B) :: m1_index, m2_index
     character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: keyword
     character(len=LINELENGTH) :: fname, name1, name2
+    character(len=LENEXCHANGENAME) :: exg_name
     ! -- formats
     character(len=*), parameter :: fmtmerr = "('Error in simulation control ', &
       &'file.  Could not find model: ', a)"
@@ -367,12 +381,12 @@ contains
                          supportOpenClose=.true.)
     if (isfound) then
       write (iout, '(/1x,a)') 'READING SIMULATION EXCHANGES'
-      id = 0
+      exg_id = 0
       do
         call parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
 
-        id = id + 1
+        exg_id = exg_id + 1
 
         call parser%GetStringCaps(keyword)
         call parser%GetString(fname)
@@ -380,31 +394,45 @@ contains
         call parser%GetStringCaps(name2)
 
         ! find model index in list
-        m1 = ifind(modelname, name1)
-        if (m1 < 0) then
+        m1_id = ifind(model_names, name1)
+        if (m1_id < 0) then
           write (errmsg, fmtmerr) trim(name1)
           call store_error(errmsg)
           call parser%StoreErrorUnit()
         end if
-        m2 = ifind(modelname, name2)
-        if (m2 < 0) then
+        m2_id = ifind(model_names, name2)
+        if (m2_id < 0) then
           write (errmsg, fmtmerr) trim(name2)
           call store_error(errmsg)
           call parser%StoreErrorUnit()
         end if
 
-        write (iout, '(4x,a,a,i0,a,i0,a,i0)') trim(keyword), ' exchange ', &
-          id, ' will be created to connect model ', m1, ' with model ', m2
+        ! both models on other process? then don't create it here...
+        if (model_proc_ids(m1_id) /= proc_id .and. &
+            model_proc_ids(m2_id) /= proc_id) then
+              ! only add virtual
+              write(exg_name, '(a,i0)') 'GWF-GWF_', exg_id
+              call add_virtual_gwf_exchange(exg_name, exg_id, m1_id, m2_id)
+              cycle
+        end if
 
+        write (iout, '(4x,a,a,i0,a,i0,a,i0)') trim(keyword), ' exchange ', &
+          exg_id, ' will be created to connect model ', m1_id, ' with model ', m2_id
+
+        ! careful, index != id
+        m1_index = model_loc_idx(m1_id)
+        m2_index = model_loc_idx(m2_id)
         select case (keyword)
         case ('GWF6-GWF6')
-          call gwfexchange_create(fname, id, m1, m2)
-          call add_dist_exg(id, m1, m2)
+          write(exg_name, '(a,i0)') 'GWF-GWF_', exg_id
+          call gwfexchange_create(fname, exg_name, exg_id, m1_index, m2_index)
+          call add_virtual_gwf_exchange(exg_name, exg_id, m1_id, m2_id)
         case ('GWF6-GWT6')
-          call gwfgwt_cr(fname, id, m1, m2)
+          call gwfgwt_cr(fname, exg_id, m1_index, m2_index)
         case ('GWT6-GWT6')
-          call gwtexchange_create(fname, id, m1, m2)
-          call add_dist_exg(id, m1, m2)
+          write(exg_name, '(a,i0)') 'GWF-GWF_', exg_id
+          call gwtexchange_create(fname, exg_name, exg_id, m1_index, m2_index)
+          call add_virtual_gwt_exchange(exg_name, exg_id, m1_id, m2_id)
         case default
           write (errmsg, '(4x,a,a)') &
             '****ERROR. UNKNOWN SIMULATION EXCHANGES: ', &
@@ -413,7 +441,9 @@ contains
           call parser%StoreErrorUnit()
         end select
       end do
+
       write (iout, '(1x,a)') 'END OF SIMULATION EXCHANGES'
+
     else
       call store_error('****ERROR.  Did not find EXCHANGES block in '// &
                        'simulation control file.')
@@ -446,7 +476,8 @@ contains
     integer(I4B) :: isgp
     integer(I4B) :: isgpsoln
     integer(I4B) :: sgid
-    integer(I4B) :: mid
+    integer(I4B) :: glo_mid
+    integer(I4B) :: loc_idx
     logical(LGP) :: blockRequired
     character(len=LINELENGTH) :: errmsg
     character(len=LENBIGLINE) :: keyword
@@ -527,19 +558,23 @@ contains
             if (mname == '') exit
             !
             ! -- Find the model id, and then get model
-            mid = ifind(modelname, mname)
-            if (mid <= 0) then
-              if (simulation_mode == 'PARALLEL') then
-                ! this is still ok
-                mid = ifind(global_modelname, mname)
-                if (mid > 0) cycle
-              end if
-              write (errmsg, '(a,a)') 'Error.  Invalid modelname: ', &
-                trim(mname)
+            glo_mid = ifind(model_names, mname)
+            if (glo_mid == -1) then
+              write (errmsg, '(a,a)') 'Error.  Invalid model name: ', &
+                                      trim(mname)
               call store_error(errmsg)
               call parser%StoreErrorUnit()
             end if
-            mp => GetBaseModelFromList(basemodellist, mid)
+
+            loc_idx = model_loc_idx(glo_mid)
+            if (loc_idx == -1) then
+              if (simulation_mode == 'PARALLEL') then
+                ! this is still ok
+                cycle
+              end if
+            end if
+
+            mp => GetBaseModelFromList(basemodellist, loc_idx)
             !
             ! -- Add the model to the solution
             call sp%add_model(mp)
@@ -646,11 +681,10 @@ contains
     end do
   end subroutine assign_exchanges
 
-  !> @brief Add the model to the list of modelnames, check that the model name is valid
+  !> @brief Check that the model name is valid
   !<
-  subroutine add_model(im, mtype, mname)
+  subroutine check_model_name(mtype, mname)
     ! -- dummy
-    integer, intent(inout) :: im
     character(len=*), intent(in) :: mtype
     character(len=*), intent(inout) :: mname
     ! -- local
@@ -658,8 +692,6 @@ contains
     integer :: i
     character(len=LINELENGTH) :: errmsg
     ! ------------------------------------------------------------------------------
-    im = im + 1
-    call expandarray(modelname)
     ilen = len_trim(mname)
     if (ilen > LENMODELNAME) then
       write (errmsg, '(4x,a,a)') &
@@ -682,11 +714,9 @@ contains
         call parser%StoreErrorUnit()
       end if
     end do
-    modelname(im) = mname
-    write (iout, '(4x,a,i0)') mtype//' model '//trim(mname)// &
-      ' will be created as model ', im
     !
     ! -- return
     return
-  end subroutine add_model
+  end subroutine check_model_name
+
 end module SimulationCreateModule
