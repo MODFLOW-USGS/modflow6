@@ -10,7 +10,7 @@
 module GwtGwtExchangeModule
 
   use KindModule, only: DP, I4B, LGP
-  use SimVariablesModule, only: errmsg
+  use SimVariablesModule, only: errmsg, model_loc_idx
   use SimModule, only: store_error
   use BaseModelModule, only: BaseModelType, GetBaseModelFromList
   use BaseExchangeModule, only: BaseExchangeType, AddBaseExchangeToList
@@ -112,7 +112,7 @@ contains
   !! Create a new GWT to GWT exchange object.
   !!
   !<
-  subroutine gwtexchange_create(filename, name, id, m1id, m2id)
+  subroutine gwtexchange_create(filename, name, id, m1_id, m2_id)
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use BaseModelModule, only: BaseModelType
@@ -123,12 +123,13 @@ contains
     character(len=*), intent(in) :: filename !< filename for reading
     integer(I4B), intent(in) :: id !< id for the exchange
     character(len=*) :: name !< the exchange name
-    integer(I4B), intent(in) :: m1id !< id for model 1
-    integer(I4B), intent(in) :: m2id !< id for model 2
+    integer(I4B), intent(in) :: m1_id !< id for model 1
+    integer(I4B), intent(in) :: m2_id !< id for model 2
     ! -- local
     type(GwtExchangeType), pointer :: exchange
     class(BaseModelType), pointer :: mb
     class(BaseExchangeType), pointer :: baseexchange
+    integer(I4B) :: m1_index, m2_index
     !
     ! -- Create a new exchange and add it to the baseexchangelist container
     allocate (exchange)
@@ -148,25 +149,27 @@ contains
     exchange%ixt3d = 1
     !
     ! -- set gwtmodel1
-    mb => GetBaseModelFromList(basemodellist, m1id)
+    m1_index = model_loc_idx(m1_id)
+    mb => GetBaseModelFromList(basemodellist, m1_index)
     select type (mb)
     type is (GwtModelType)
       exchange%model1 => mb
       exchange%gwtmodel1 => mb
     end select
-    exchange%v_model1 => get_virtual_model(mb%id)
+    exchange%v_model1 => get_virtual_model(m1_id)
     !
     ! -- set gwtmodel2
-    mb => GetBaseModelFromList(basemodellist, m2id)
+    m2_index = model_loc_idx(m2_id)
+    mb => GetBaseModelFromList(basemodellist, m2_index)
     select type (mb)
     type is (GwtModelType)
       exchange%model2 => mb
       exchange%gwtmodel2 => mb
     end select
-    exchange%v_model2 => get_virtual_model(mb%id)
+    exchange%v_model2 => get_virtual_model(m2_id)
     !
     ! -- Verify that gwt model1 is of the correct type
-    if (.not. associated(exchange%gwtmodel1)) then
+    if (.not. associated(exchange%gwtmodel1) .and. m1_index > 0) then
       write (errmsg, '(3a)') 'Problem with GWT-GWT exchange ', &
         trim(exchange%name), &
         '.  First specified GWT Model does not appear to be of the correct type.'
@@ -174,7 +177,7 @@ contains
     end if
     !
     ! -- Verify that gwf model2 is of the correct type
-    if (.not. associated(exchange%gwtmodel2)) then
+    if (.not. associated(exchange%gwtmodel2) .and. m2_index > 0) then
       write (errmsg, '(3a)') 'Problem with GWT-GWT exchange ', &
         trim(exchange%name), &
         '.  Second specified GWT Model does not appear to be of the correct type.'

@@ -67,11 +67,11 @@ contains
     ! local
     integer(I4B) :: nexg, naux
 
-    if (stage == STG_BEFORE_INIT) then
+    if (stage == STG_INIT) then
 
-      call this%map(this%nexg%to_base(), 'NEXG', '', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
-      call this%map(this%naux%to_base(), 'NAUX', '', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
-      call this%map(this%ianglex%to_base(), 'IANGLEX', '', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
+      call this%map(this%nexg%to_base(), 'NEXG', '', (/STG_INIT/), MAP_ALL_TYPE)
+      call this%map(this%naux%to_base(), 'NAUX', '', (/STG_INIT/), MAP_ALL_TYPE)
+      call this%map(this%ianglex%to_base(), 'IANGLEX', '', (/STG_INIT/), MAP_ALL_TYPE)
 
     else if (stage == STG_BEFORE_DF) then
 

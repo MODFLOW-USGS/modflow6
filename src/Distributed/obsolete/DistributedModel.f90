@@ -140,22 +140,22 @@ contains
     this%macronym = macronym
 
     call this%load(this%moffset, 'MOFFSET', '', (/STG_BEFORE_AC/), MAP_TYPE_NA)
-    call this%load(this%dis_nodes, 'NODES', 'DIS', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
-    call this%load(this%dis_nja, 'NJA', 'DIS', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
-    call this%load(this%dis_njas, 'NJAS', 'DIS', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
+    call this%load(this%dis_nodes, 'NODES', 'DIS', (/STG_INIT/), MAP_TYPE_NA)
+    call this%load(this%dis_nja, 'NJA', 'DIS', (/STG_INIT/), MAP_TYPE_NA)
+    call this%load(this%dis_njas, 'NJAS', 'DIS', (/STG_INIT/), MAP_TYPE_NA)
 
     if (this%macronym == 'GWF') then
-      call this%load(this%npf_iangle1, 'IANGLE1', 'NPF', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
-      call this%load(this%npf_iangle2, 'IANGLE2', 'NPF', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
-      call this%load(this%npf_iangle3, 'IANGLE3', 'NPF', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
-      call this%load(this%npf_iwetdry, 'IWETDRY', 'NPF', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
+      call this%load(this%npf_iangle1, 'IANGLE1', 'NPF', (/STG_INIT/), MAP_TYPE_NA)
+      call this%load(this%npf_iangle2, 'IANGLE2', 'NPF', (/STG_INIT/), MAP_TYPE_NA)
+      call this%load(this%npf_iangle3, 'IANGLE3', 'NPF', (/STG_INIT/), MAP_TYPE_NA)
+      call this%load(this%npf_iwetdry, 'IWETDRY', 'NPF', (/STG_INIT/), MAP_TYPE_NA)
     end if
 
     if (this%macronym == 'GWT') then
-      call this%load(this%dsp_idiffc, 'IDIFFC', 'DSP', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
-      call this%load(this%dsp_idisp, 'IDISP', 'DSP', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
-      call this%load(this%indsp, 'INDSP', '', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
-      call this%load(this%inmst, 'INMST', '', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
+      call this%load(this%dsp_idiffc, 'IDIFFC', 'DSP', (/STG_INIT/), MAP_TYPE_NA)
+      call this%load(this%dsp_idisp, 'IDISP', 'DSP', (/STG_INIT/), MAP_TYPE_NA)
+      call this%load(this%indsp, 'INDSP', '', (/STG_INIT/), MAP_TYPE_NA)
+      call this%load(this%inmst, 'INMST', '', (/STG_INIT/), MAP_TYPE_NA)
     end if
 
   end subroutine create

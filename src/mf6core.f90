@@ -218,7 +218,7 @@ contains
     do im = 1, basemodellist%Count()
       mp => GetBaseModelFromList(basemodellist, im)
       call mp%model_df()
-    end do
+    end do    
     !
     ! -- Define each exchange
     do ic = 1, baseexchangelist%Count()
@@ -231,6 +231,7 @@ contains
     call connections_cr()
     !
     ! -- synchronize
+    call run_ctrl%at_stage(STG_INIT)
     call run_ctrl%at_stage(STG_BEFORE_DF)
     !
     ! -- Define each connection

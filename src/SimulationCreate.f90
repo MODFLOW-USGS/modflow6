@@ -368,7 +368,6 @@ contains
     logical :: isfound, endOfBlock
     integer(I4B) :: exg_id
     integer(I4B) :: m1_id, m2_id
-    integer(I4B) :: m1_index, m2_index
     character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: keyword
     character(len=LINELENGTH) :: fname, name1, name2
@@ -419,19 +418,16 @@ contains
         write (iout, '(4x,a,a,i0,a,i0,a,i0)') trim(keyword), ' exchange ', &
           exg_id, ' will be created to connect model ', m1_id, ' with model ', m2_id
 
-        ! careful, index != id
-        m1_index = model_loc_idx(m1_id)
-        m2_index = model_loc_idx(m2_id)
         select case (keyword)
         case ('GWF6-GWF6')
           write(exg_name, '(a,i0)') 'GWF-GWF_', exg_id
-          call gwfexchange_create(fname, exg_name, exg_id, m1_index, m2_index)
+          call gwfexchange_create(fname, exg_name, exg_id, m1_id, m2_id)
           call add_virtual_gwf_exchange(exg_name, exg_id, m1_id, m2_id)
         case ('GWF6-GWT6')
-          call gwfgwt_cr(fname, exg_id, m1_index, m2_index)
+          call gwfgwt_cr(fname, exg_id, m1_id, m2_id)
         case ('GWT6-GWT6')
           write(exg_name, '(a,i0)') 'GWF-GWF_', exg_id
-          call gwtexchange_create(fname, exg_name, exg_id, m1_index, m2_index)
+          call gwtexchange_create(fname, exg_name, exg_id, m1_id, m2_id)
           call add_virtual_gwt_exchange(exg_name, exg_id, m1_id, m2_id)
         case default
           write (errmsg, '(4x,a,a)') &

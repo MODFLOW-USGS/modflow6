@@ -77,9 +77,9 @@ module DistributedExchangeModule
       this%name = 'undefined'
     end if
 
-    call this%load(this%nexg, 'NEXG', '', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
-    call this%load(this%naux, 'NAUX', '', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
-    call this%load(this%ianglex, 'IANGLEX', '', (/STG_BEFORE_INIT/), MAP_TYPE_NA)
+    call this%load(this%nexg, 'NEXG', '', (/STG_INIT/), MAP_TYPE_NA)
+    call this%load(this%naux, 'NAUX', '', (/STG_INIT/), MAP_TYPE_NA)
+    call this%load(this%ianglex, 'IANGLEX', '', (/STG_INIT/), MAP_TYPE_NA)
 
   end subroutine create
 

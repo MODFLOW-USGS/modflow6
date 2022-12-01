@@ -42,7 +42,7 @@ module GwfGwtExchangeModule
 
 contains
 
-  subroutine gwfgwt_cr(filename, id, m1_idx, m2_idx)
+  subroutine gwfgwt_cr(filename, id, m1_id, m2_id)
 ! ******************************************************************************
 ! gwfgwt_cr -- Create a new GWF to GWT exchange object
 ! ******************************************************************************
@@ -50,11 +50,12 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use SimVariablesModule, only: model_loc_idx
     ! -- dummy
     character(len=*), intent(in) :: filename
     integer(I4B), intent(in) :: id
-    integer(I4B), intent(in) :: m1_idx
-    integer(I4B), intent(in) :: m2_idx
+    integer(I4B), intent(in) :: m1_id
+    integer(I4B), intent(in) :: m2_id
     ! -- local
     class(BaseExchangeType), pointer :: baseexchange => null()
     type(GwfGwtExchangeType), pointer :: exchange => null()
@@ -74,8 +75,10 @@ contains
     !
     ! -- allocate scalars
     call exchange%allocate_scalars()
-    exchange%m1_idx = m1_idx
-    exchange%m2_idx = m2_idx
+    !
+    ! -- NB: convert from id to local model index in base model list
+    exchange%m1_idx = model_loc_idx(m1_id)
+    exchange%m2_idx = model_loc_idx(m2_id)
     !
     ! -- set model pointers
     call exchange%set_model_pointers()

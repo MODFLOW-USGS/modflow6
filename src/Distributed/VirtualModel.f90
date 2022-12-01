@@ -80,11 +80,11 @@ subroutine vm_prepare_stage(this, stage)
   ! local
   integer(I4B) :: nodes, nja, njas
 
-  if (stage == STG_BEFORE_INIT) then
+  if (stage == STG_INIT) then
     
-    call this%map(this%dis_nodes%to_base(), 'NODES', 'DIS', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
-    call this%map(this%dis_nja%to_base(), 'NJA', 'DIS', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
-    call this%map(this%dis_njas%to_base(), 'NJAS', 'DIS', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
+    call this%map(this%dis_nodes%to_base(), 'NODES', 'DIS', (/STG_INIT/), MAP_ALL_TYPE)
+    call this%map(this%dis_nja%to_base(), 'NJA', 'DIS', (/STG_INIT/), MAP_ALL_TYPE)
+    call this%map(this%dis_njas%to_base(), 'NJAS', 'DIS', (/STG_INIT/), MAP_ALL_TYPE)
 
   else if (stage == STG_BEFORE_AC) then
 

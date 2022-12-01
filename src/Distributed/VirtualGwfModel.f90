@@ -76,12 +76,12 @@ contains
     ! prepare base (=numerical) model data items
     call this%VirtualModelType%prepare_stage(stage)
 
-    if (stage == STG_BEFORE_INIT) then
+    if (stage == STG_INIT) then
 
-      call this%map(this%npf_iangle1%to_base(), 'IANGLE1', 'NPF', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
-      call this%map(this%npf_iangle2%to_base(), 'IANGLE2', 'NPF', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
-      call this%map(this%npf_iangle3%to_base(), 'IANGLE3', 'NPF', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
-      call this%map(this%npf_iwetdry%to_base(), 'IWETDRY', 'NPF', (/STG_BEFORE_INIT/), MAP_ALL_TYPE)
+      call this%map(this%npf_iangle1%to_base(), 'IANGLE1', 'NPF', (/STG_INIT/), MAP_ALL_TYPE)
+      call this%map(this%npf_iangle2%to_base(), 'IANGLE2', 'NPF', (/STG_INIT/), MAP_ALL_TYPE)
+      call this%map(this%npf_iangle3%to_base(), 'IANGLE3', 'NPF', (/STG_INIT/), MAP_ALL_TYPE)
+      call this%map(this%npf_iwetdry%to_base(), 'IWETDRY', 'NPF', (/STG_INIT/), MAP_ALL_TYPE)
 
     else if (stage == STG_BEFORE_AR) then
 

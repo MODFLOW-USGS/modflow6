@@ -4,7 +4,7 @@ module SimStagesModule
 
   ! stages for synchronization
   integer(I4B), public, parameter :: STG_NEVER = 0
-  integer(I4B), public, parameter :: STG_BEFORE_INIT = 1
+  integer(I4B), public, parameter :: STG_INIT = 1
   integer(I4B), public, parameter :: STG_BEFORE_DF = 2
   integer(I4B), public, parameter :: STG_AFTER_DF = 3
   integer(I4B), public, parameter :: STG_BEFORE_AC = 4

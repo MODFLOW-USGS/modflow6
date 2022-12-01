@@ -21,6 +21,7 @@ module RunControlModule
     procedure :: at_stage => ctrl_at_stage
     procedure :: finish => ctrl_finish    
     ! private
+    procedure, private :: init_handler
     procedure, private :: before_df_handler
     procedure, private :: after_df_handler
     procedure, private :: before_ar_handler
@@ -78,6 +79,8 @@ contains
     integer(I4B) :: stage
 
     select case (stage)
+      case (STG_INIT)
+        call this%init_handler()
       case (STG_BEFORE_DF)
         call this%before_df_handler()
       case (STG_AFTER_DF)
@@ -93,13 +96,13 @@ contains
 
   end subroutine ctrl_at_stage
 
-  subroutine before_df_handler(this)
+  subroutine init_handler(this)    
     use SimVariablesModule, only: simulation_mode
-    class(RunControlType), target :: this
+    class(RunControlType), target :: this    
     ! local
     integer(I4B) :: i
     class(*), pointer :: sol
-    
+
     call this%virtual_data_store%create(simulation_mode)
     call this%mapper%init()
 
@@ -113,7 +116,13 @@ contains
       end select
     end do
 
-    call this%virtual_data_store%synchronize(STG_BEFORE_INIT)
+    call this%virtual_data_store%synchronize(STG_INIT)
+
+  end subroutine init_handler
+
+  subroutine before_df_handler(this)
+    class(RunControlType), target :: this
+    
     call this%virtual_data_store%synchronize(STG_BEFORE_DF)
 
   end subroutine before_df_handler

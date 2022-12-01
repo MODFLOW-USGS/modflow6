@@ -25,7 +25,7 @@ module GwfGwfExchangeModule
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
   use SimModule, only: count_errors, store_error, store_error_unit
-  use SimVariablesModule, only: errmsg
+  use SimVariablesModule, only: errmsg, model_loc_idx
   use BlockParserModule, only: BlockParserType
   use TableModule, only: TableType, table_cr
   use MatrixBaseModule
@@ -119,7 +119,7 @@ contains
   !! Create a new GWF to GWF exchange object.
   !!
   !< TODO_MJR: refactor, why not just pass in the model objects?
-  subroutine gwfexchange_create(filename, name, id, m1_idx, m2_idx)
+  subroutine gwfexchange_create(filename, name, id, m1_id, m2_id)
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use BaseModelModule, only: BaseModelType
@@ -131,12 +131,13 @@ contains
     character(len=*), intent(in) :: filename !< filename for reading    
     character(len=*) :: name !< exchange name
     integer(I4B), intent(in) :: id !< id for the exchange
-    integer(I4B), intent(in) :: m1_idx !< index into the basemodel list for model 1
-    integer(I4B), intent(in) :: m2_idx !< index into the basemodel list for model 2
+    integer(I4B), intent(in) :: m1_id !< id for model 1
+    integer(I4B), intent(in) :: m2_id !< id for model 2
     ! -- local
     type(GwfExchangeType), pointer :: exchange
     class(BaseModelType), pointer :: mb
     class(BaseExchangeType), pointer :: baseexchange
+    integer(I4B) :: m1_index, m2_index
     !
     ! -- Create a new exchange and add it to the baseexchangelist container
     allocate (exchange)
@@ -154,25 +155,27 @@ contains
     exchange%typename = 'GWF-GWF'
     !
     ! -- set gwfmodel1
-    mb => GetBaseModelFromList(basemodellist, m1_idx)
+    m1_index = model_loc_idx(m1_id)
+    mb => GetBaseModelFromList(basemodellist, m1_index)
     select type (mb)
     type is (GwfModelType)
       exchange%model1 => mb
       exchange%gwfmodel1 => mb
     end select
-    exchange%v_model1 => get_virtual_model(mb%id)
+    exchange%v_model1 => get_virtual_model(m1_id)
     !
     ! -- set gwfmodel2
-    mb => GetBaseModelFromList(basemodellist, m2_idx)
+    m2_index = model_loc_idx(m2_id)
+    mb => GetBaseModelFromList(basemodellist, m2_index)
     select type (mb)
     type is (GwfModelType)
       exchange%model2 => mb
       exchange%gwfmodel2 => mb
     end select
-    exchange%v_model2 => get_virtual_model(mb%id)
+    exchange%v_model2 => get_virtual_model(m2_id)
     !
     ! -- Verify that gwf model1 is of the correct type
-    if (.not. associated(exchange%gwfmodel1)) then
+    if (.not. associated(exchange%gwfmodel1) .and. m1_index > 0) then
       write (errmsg, '(3a)') 'Problem with GWF-GWF exchange ', &
         trim(exchange%name), &
         '.  First specified GWF Model does not appear to be of the correct type.'
@@ -180,7 +183,7 @@ contains
     end if
     !
     ! -- Verify that gwf model2 is of the correct type
-    if (.not. associated(exchange%gwfmodel2)) then
+    if (.not. associated(exchange%gwfmodel2) .and. m2_index > 0) then
       write (errmsg, '(3a)') 'Problem with GWF-GWF exchange ', &
         trim(exchange%name), &
         '.  Second specified GWF Model does not appear to be of the correct type.'
@@ -217,12 +220,14 @@ contains
     call this%parser%Initialize(inunit, iout)
     !
     ! -- Ensure models are in same solution
-    if (this%gwfmodel1%idsoln /= this%gwfmodel2%idsoln) then
-      call store_error('ERROR.  TWO MODELS ARE CONNECTED IN A GWF '// &
-                       'EXCHANGE BUT THEY ARE IN DIFFERENT SOLUTIONS. '// &
-                       'GWF MODELS MUST BE IN SAME SOLUTION: '// &
-                       trim(this%gwfmodel1%name)//' '//trim(this%gwfmodel2%name))
-      call this%parser%StoreErrorUnit()
+    if (associated(this%gwfmodel1) .and. associated(this%gwfmodel2)) then
+      if (this%gwfmodel1%idsoln /= this%gwfmodel2%idsoln) then
+        call store_error('ERROR.  TWO MODELS ARE CONNECTED IN A GWF '// &
+                        'EXCHANGE BUT THEY ARE IN DIFFERENT SOLUTIONS. '// &
+                        'GWF MODELS MUST BE IN SAME SOLUTION: '// &
+                        trim(this%gwfmodel1%name)//' '//trim(this%gwfmodel2%name))
+        call this%parser%StoreErrorUnit()
+      end if
     end if
     !
     ! -- read options
@@ -238,8 +243,12 @@ contains
     call this%read_data(iout)
     !
     ! -- call each model and increase the edge count
-    call this%gwfmodel1%npf%increase_edge_count(this%nexg)
-    call this%gwfmodel2%npf%increase_edge_count(this%nexg)
+    if (associated(this%gwfmodel1)) then
+      call this%gwfmodel1%npf%increase_edge_count(this%nexg)
+    end if
+    if (associated(this%gwfmodel2)) then
+      call this%gwfmodel2%npf%increase_edge_count(this%nexg)
+    end if
     !
     ! -- Create and read ghost node information
     if (this%ingnc > 0) then
@@ -260,7 +269,9 @@ contains
     call this%obs%obs_df(iout, this%name, 'GWF-GWF', this%gwfmodel1%dis)
     !
     ! -- validate
-    call this%validate_exchange()
+    if (associated(this%gwfmodel1) .and. associated(this%gwfmodel2)) then
+      call this%validate_exchange()
+    end if
     !
     ! -- return
     return

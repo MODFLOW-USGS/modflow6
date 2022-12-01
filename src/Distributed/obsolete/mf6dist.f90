@@ -86,7 +86,7 @@ contains
       end select
     end do
 
-    call this%router%route(STG_BEFORE_INIT)
+    call this%router%route(STG_INIT)
     call this%router%init_connectivity()
     
     call this%router%route(STG_BEFORE_DF)
