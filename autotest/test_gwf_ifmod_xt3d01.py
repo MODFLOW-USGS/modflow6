@@ -1,4 +1,5 @@
 import os
+
 import numpy as np
 import pytest
 
@@ -11,6 +12,7 @@ except:
     raise Exception(msg)
 
 from flopy.utils.lgrutil import Lgr
+
 from framework import testing_framework
 from simulation import Simulation
 
@@ -80,7 +82,7 @@ def get_model(idx, dir):
     row_s, row_e = 3, 5
     col_s, col_e = 3, 5
 
-    ref_fct = 3
+    ref_fct = 5
     nrowc = ref_fct * ((row_e - row_s) + 1)
     ncolc = ref_fct * ((col_e - col_s) + 1)
 
@@ -172,8 +174,8 @@ def get_model(idx, dir):
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd)
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        head_filerecord="{}.hds".format(parent_name),
-        budget_filerecord="{}.cbc".format(parent_name),
+        head_filerecord=f"{parent_name}.hds",
+        budget_filerecord=f"{parent_name}.cbc",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
@@ -204,8 +206,8 @@ def get_model(idx, dir):
     )
     oc = flopy.mf6.ModflowGwfoc(
         gwfc,
-        head_filerecord="{}.hds".format(child_name),
-        budget_filerecord="{}.cbc".format(child_name),
+        head_filerecord=f"{child_name}.hds",
+        budget_filerecord=f"{child_name}.cbc",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
@@ -314,27 +316,27 @@ def eval_heads(sim):
 
     name = ex[sim.idxsim]
 
-    fpth = os.path.join(sim.simpath, "{}.hds".format(parent_name))
+    fpth = os.path.join(sim.simpath, f"{parent_name}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads = hds.get_data()
 
-    fpth = os.path.join(sim.simpath, "{}.cbc".format(parent_name))
+    fpth = os.path.join(sim.simpath, f"{parent_name}.cbc")
     nlay, nrow, ncol = heads.shape
     qxb, qyb, qzb = qxqyqz(fpth, nlay, nrow, ncol)
 
-    fpth = os.path.join(sim.simpath, "{}.hds".format(child_name))
+    fpth = os.path.join(sim.simpath, f"{child_name}.hds")
     hds_c = flopy.utils.HeadFile(fpth)
     heads_c = hds_c.get_data()
 
-    fpth = os.path.join(sim.simpath, "{}.cbc".format(child_name))
+    fpth = os.path.join(sim.simpath, f"{child_name}.cbc")
     nlay, nrow, ncol = heads_c.shape
     qxb_c, qyb_c, qzb_c = qxqyqz(fpth, nlay, nrow, ncol)
 
-    fpth = os.path.join(sim.simpath, "{}.dis.grb".format(parent_name))
+    fpth = os.path.join(sim.simpath, f"{parent_name}.dis.grb")
     grb = flopy.mf6.utils.MfGrdFile(fpth)
     mg = grb.modelgrid
 
-    fpth = os.path.join(sim.simpath, "{}.dis.grb".format(child_name))
+    fpth = os.path.join(sim.simpath, f"{child_name}.dis.grb")
     grb_c = flopy.mf6.utils.MfGrdFile(fpth)
     mg_c = grb_c.modelgrid
 
@@ -418,7 +420,7 @@ def eval_heads(sim):
     # todo: mflistbudget
     # check cumulative balance error from .lst file
     for mname in [parent_name, child_name]:
-        fpth = os.path.join(sim.simpath, "{}.lst".format(mname))
+        fpth = os.path.join(sim.simpath, f"{mname}.lst")
         for line in open(fpth):
             if line.lstrip().startswith("PERCENT"):
                 cumul_balance_error = float(line.split()[3])
@@ -431,7 +433,7 @@ def eval_heads(sim):
     # Check on residual, which is stored in diagonal position of
     # flow-ja-face.  Residual should be less than convergence tolerance,
     # or this means the residual term is not added correctly.
-    fpth = os.path.join(sim.simpath, "{}.cbc".format(parent_name))
+    fpth = os.path.join(sim.simpath, f"{parent_name}.cbc")
     cbb = flopy.utils.CellBudgetFile(fpth)
     flow_ja_face = cbb.get_data(idx=0)
     assert (
@@ -441,9 +443,7 @@ def eval_heads(sim):
     for fjf in flow_ja_face:
         fjf = fjf.flatten()
         res = fjf[ia[:-1]]
-        errmsg = "min or max residual too large {} {}".format(
-            res.min(), res.max()
-        )
+        errmsg = f"min or max residual too large {res.min()} {res.max()}"
         assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
     # Read gwf-gwf observations values
@@ -454,7 +454,7 @@ def eval_heads(sim):
     obsvalues = [float(v) for v in lines[1].strip().split(",")[1:]]
 
     # Extract the gwf-gwf flows stored in parent budget file
-    fpth = os.path.join(sim.simpath, "{}.cbc".format(parent_name))
+    fpth = os.path.join(sim.simpath, f"{parent_name}.cbc")
     cbb = flopy.utils.CellBudgetFile(fpth, precision="double")
     parent_exchange_flows = cbb.get_data(
         kstpkper=(0, 0), text="FLOW-JA-FACE", paknam="GWF-GWF_1"
@@ -462,7 +462,7 @@ def eval_heads(sim):
     parent_exchange_flows = parent_exchange_flows["q"]
 
     # Extract the gwf-gwf flows stored in child budget file
-    fpth = os.path.join(sim.simpath, "{}.cbc".format(child_name))
+    fpth = os.path.join(sim.simpath, f"{child_name}.cbc")
     cbb = flopy.utils.CellBudgetFile(fpth, precision="double")
     child_exchange_flows = cbb.get_data(
         kstpkper=(0, 0), text="FLOW-JA-FACE", paknam="GWF-GWF_1"
@@ -521,7 +521,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

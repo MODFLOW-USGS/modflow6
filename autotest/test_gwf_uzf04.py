@@ -10,8 +10,9 @@
 """
 
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -111,7 +112,7 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(imsgwf, [gwf.name])
 
@@ -161,7 +162,7 @@ def build_model(idx, dir):
     uzf_obs = {
         name
         + ".uzf.obs.csv": [
-            ("wc{}".format(k + 1), "water-content", 1, depth)
+            (f"wc{k + 1}", "water-content", 1, depth)
             for k, depth in enumerate(np.linspace(1, 20, 15))
         ]
     }
@@ -209,17 +210,17 @@ def build_model(idx, dir):
         nuzfcells=len(uzf_pkdat),
         packagedata=uzf_pkdat,
         perioddata=uzf_spd,
-        budget_filerecord="{}.uzf.bud".format(name),
-        wc_filerecord="{}.uzf.bin".format(name),
+        budget_filerecord=f"{name}.uzf.bud",
+        wc_filerecord=f"{name}.uzf.bin",
         observations=uzf_obs,
-        filename="{}.uzf".format(name),
+        filename=f"{name}.uzf",
     )
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.bud".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.bud",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
@@ -227,7 +228,7 @@ def build_model(idx, dir):
 
     obs_lst = []
     obs_lst.append(["obs1", "head", (0, 0, 0)])
-    obs_dict = {"{}.obs.csv".format(gwfname): obs_lst}
+    obs_dict = {f"{gwfname}.obs.csv": obs_lst}
     obs = flopy.mf6.ModflowUtlobs(
         gwf, pname="head_obs", digits=20, continuous=obs_dict
     )
@@ -241,11 +242,11 @@ def eval_flow(sim):
     name = ex[sim.idxsim]
     ws = exdirs[sim.idxsim]
 
-    fname = os.path.join(ws, "{}.uzf.bin".format(name))
+    fname = os.path.join(ws, f"{name}.uzf.bin")
     wobj = flopy.utils.HeadFile(fname, text="WATER-CONTENT")
     wc = wobj.get_alldata()
 
-    fname = os.path.join(ws, "{}.hds".format(name))
+    fname = os.path.join(ws, f"{name}.hds")
     wobj = flopy.utils.HeadFile(fname)
     head = wobj.get_alldata()
 
@@ -310,7 +311,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

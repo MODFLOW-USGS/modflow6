@@ -7,9 +7,10 @@ version 6.0.4.
 """
 
 import os
-import pytest
 import sys
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -80,7 +81,7 @@ def build_model(idx, dir):
         sim,
         model_type="gwf6",
         modelname=name,
-        model_nam_file="{}.nam".format(name),
+        model_nam_file=f"{name}.nam",
     )
 
     # create iterative model solution and register the gwf model with it
@@ -110,11 +111,11 @@ def build_model(idx, dir):
         top=top,
         botm=botm,
         idomain=1,
-        filename="{}.dis".format(name),
+        filename=f"{name}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(name))
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{name}.ic")
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -123,7 +124,7 @@ def build_model(idx, dir):
         icelltype=1,
         k=hk,
         k33=hk,
-        filename="{}.npf".format(name),
+        filename=f"{name}.npf",
     )
 
     # storage
@@ -135,23 +136,23 @@ def build_model(idx, dir):
         sy=0.1,
         steady_state={0: False},
         transient={0: True},
-        filename="{}.sto".format(name),
+        filename=f"{name}.sto",
     )
 
     # MAW
-    opth = "{}.maw.obs".format(name)
+    opth = f"{name}.maw.obs"
     wellbottom = -1000
     wellrecarray = [[0, 0.15, wellbottom, 0.0, "THIEM", 1]]
     wellconnectionsrecarray = [[0, 0, (0, 50, 50), 0.0, wellbottom, 0.0, 0.0]]
     wellperiodrecarray = mawsettings[idx]
     mawo_dict = {}
-    mawo_dict["{}.maw.obs.csv".format(name)] = [
+    mawo_dict[f"{name}.maw.obs.csv"] = [
         ("m1head", "head", (0,)),
         ("m1rate", "rate", (0,)),
     ]  # is this index one-based? Not if in a tuple
     maw = flopy.mf6.ModflowGwfmaw(
         gwf,
-        filename="{}.maw".format(name),
+        filename=f"{name}.maw",
         print_input=True,
         print_head=True,
         print_flows=True,
@@ -165,23 +166,23 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(name),
-        head_filerecord="{}.hds".format(name),
+        budget_filerecord=f"{name}.cbc",
+        head_filerecord=f"{name}.hds",
         headprintrecord=[
             ("COLUMNS", ncol, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
         saverecord=[("HEAD", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
-        filename="{}.oc".format(name),
+        filename=f"{name}.oc",
     )
 
     # head observations
     obs_data0 = [("head_well_cell", "HEAD", (0, 0, 0))]
-    obs_recarray = {"{}.obs.csv".format(name): obs_data0}
+    obs_recarray = {f"{name}.obs.csv": obs_data0}
     obs = flopy.mf6.ModflowUtlobs(
         gwf,
         pname="head_obs",
-        filename="{}.obs".format(name),
+        filename=f"{name}.obs",
         digits=15,
         print_input=True,
         continuous=obs_recarray,
@@ -196,11 +197,11 @@ def eval_maw(sim):
     # MODFLOW 6 maw results
     idx = sim.idxsim
     name = ex[idx]
-    fpth = os.path.join(sim.simpath, "{}.maw.obs.csv".format(name))
+    fpth = os.path.join(sim.simpath, f"{name}.maw.obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     if idx == 0:
 
@@ -231,7 +232,7 @@ def eval_maw(sim):
 
     else:
 
-        assert False, "Test error.  idx {} not being tested.".format(idx)
+        assert False, f"Test error.  idx {idx} not being tested."
 
     return
 
@@ -268,7 +269,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

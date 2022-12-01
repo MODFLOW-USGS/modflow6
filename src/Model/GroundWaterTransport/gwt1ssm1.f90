@@ -1,51 +1,51 @@
-!> @brief This module contains the GwtSsm Module 
+!> @brief This module contains the GwtSsm Module
 !!
-!! This module contains the code for handling sources and sinks 
+!! This module contains the code for handling sources and sinks
 !! associated with groundwater flow model stress packages.
 !!
 !! todo: need observations for SSM terms
 !<
 module GwtSsmModule
-  
-  use KindModule,             only: DP, I4B, LGP
-  use ConstantsModule,        only: DONE, DZERO, LENAUXNAME, LENFTYPE,         &
-                                    LENPACKAGENAME, LINELENGTH,                &
-                                    TABLEFT, TABCENTER, LENBUDROWLABEL
-  use SimModule,              only: store_error, count_errors, store_error_unit
-  use SimVariablesModule,     only: errmsg
+
+  use KindModule, only: DP, I4B, LGP
+  use ConstantsModule, only: DONE, DZERO, LENAUXNAME, LENFTYPE, &
+                             LENPACKAGENAME, LINELENGTH, &
+                             TABLEFT, TABCENTER, LENBUDROWLABEL
+  use SimModule, only: store_error, count_errors, store_error_unit
+  use SimVariablesModule, only: errmsg
   use NumericalPackageModule, only: NumericalPackageType
-  use BaseDisModule,          only: DisBaseType
-  use GwtFmiModule,           only: GwtFmiType
-  use TableModule,            only: TableType, table_cr
-  use GwtSpcModule,           only: GwtSpcType
-  
+  use BaseDisModule, only: DisBaseType
+  use GwtFmiModule, only: GwtFmiType
+  use TableModule, only: TableType, table_cr
+  use GwtSpcModule, only: GwtSpcType
+
   implicit none
   public :: GwtSsmType
   public :: ssm_cr
 
-  character(len=LENFTYPE)       :: ftype = 'SSM'
-  character(len=LENPACKAGENAME) :: text  = ' SOURCE-SINK MIX'
+  character(len=LENFTYPE) :: ftype = 'SSM'
+  character(len=LENPACKAGENAME) :: text = ' SOURCE-SINK MIX'
 
-  !> @brief Derived type for the SSM Package 
+  !> @brief Derived type for the SSM Package
   !!
   !! This derived type corresponds to the SSM Package, which adds
   !! the effects of groundwater sources and sinks to the solute transport
-  !! equation.  
+  !! equation.
   !!
   !<
   type, extends(NumericalPackageType) :: GwtSsmType
-    
-    integer(I4B), pointer                              :: nbound                !< total number of flow boundaries in this time step
-    integer(I4B), dimension(:), pointer, contiguous    :: isrctype => null()    !< source type 0 is unspecified, 1 is aux, 2 is auxmixed, 3 is ssmi, 4 is ssmimixed
-    integer(I4B), dimension(:), pointer, contiguous    :: iauxpak => null()     !< aux col for concentration
-    integer(I4B), dimension(:), pointer, contiguous    :: ibound => null()      !< pointer to model ibound
-    real(DP), dimension(:), pointer, contiguous        :: cnew => null()        !< pointer to gwt%x
-    type(GwtFmiType), pointer                          :: fmi => null()         !< pointer to fmi object
-    type(TableType), pointer                           :: outputtab => null()   !< output table object
-    type(GwtSpcType), dimension(:), pointer            :: ssmivec => null()     !< array of stress package concentration objects
-    
+
+    integer(I4B), pointer :: nbound !< total number of flow boundaries in this time step
+    integer(I4B), dimension(:), pointer, contiguous :: isrctype => null() !< source type 0 is unspecified, 1 is aux, 2 is auxmixed, 3 is ssmi, 4 is ssmimixed
+    integer(I4B), dimension(:), pointer, contiguous :: iauxpak => null() !< aux col for concentration
+    integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
+    real(DP), dimension(:), pointer, contiguous :: cnew => null() !< pointer to gwt%x
+    type(GwtFmiType), pointer :: fmi => null() !< pointer to fmi object
+    type(TableType), pointer :: outputtab => null() !< output table object
+    type(GwtSpcType), dimension(:), pointer :: ssmivec => null() !< array of stress package concentration objects
+
   contains
-  
+
     procedure :: ssm_df
     procedure :: ssm_ar
     procedure :: ssm_rp
@@ -66,27 +66,27 @@ module GwtSsmModule
     procedure, private :: set_iauxpak
     procedure, private :: set_ssmivec
     procedure, private :: get_ssm_conc
-  
+
   end type GwtSsmType
-  
-  contains
-  
+
+contains
+
   !> @ brief Create a new SSM package
   !!
   !!  Create a new SSM package by defining names, allocating scalars
-  !!  and initializing the parser. 
+  !!  and initializing the parser.
   !!
   !<
   subroutine ssm_cr(ssmobj, name_model, inunit, iout, fmi)
     ! -- dummy
-    type(GwtSsmType), pointer :: ssmobj            !< GwtSsmType object
-    character(len=*), intent(in) :: name_model     !< name of the model
-    integer(I4B), intent(in) :: inunit             !< fortran unit for input
-    integer(I4B), intent(in) :: iout               !< fortran unit for output
-    type(GwtFmiType), intent(in), target :: fmi    !< GWT FMI package
+    type(GwtSsmType), pointer :: ssmobj !< GwtSsmType object
+    character(len=*), intent(in) :: name_model !< name of the model
+    integer(I4B), intent(in) :: inunit !< fortran unit for input
+    integer(I4B), intent(in) :: iout !< fortran unit for output
+    type(GwtFmiType), intent(in), target :: fmi !< GWT FMI package
     !
     ! -- Create the object
-    allocate(ssmobj)
+    allocate (ssmobj)
     !
     ! -- create name and memory path
     call ssmobj%set_names(1, name_model, 'SSM', 'SSM')
@@ -117,7 +117,7 @@ module GwtSsmModule
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
     ! -- dummy
-    class(GwtSsmType) :: this  !< GwtSsmType object
+    class(GwtSsmType) :: this !< GwtSsmType object
     ! -- local
     ! -- formats
     !
@@ -135,33 +135,35 @@ module GwtSsmModule
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
     ! -- dummy
-    class(GwtSsmType) :: this                                   !< GwtSsmType object
-    class(DisBaseType), pointer, intent(in) :: dis              !< discretization package
-    integer(I4B), dimension(:), pointer, contiguous :: ibound   !< GWT model ibound
-    real(DP), dimension(:), pointer, contiguous :: cnew         !< GWT model dependent variable
+    class(GwtSsmType) :: this !< GwtSsmType object
+    class(DisBaseType), pointer, intent(in) :: dis !< discretization package
+    integer(I4B), dimension(:), pointer, contiguous :: ibound !< GWT model ibound
+    real(DP), dimension(:), pointer, contiguous :: cnew !< GWT model dependent variable
     ! -- local
     ! -- formats
-    character(len=*), parameter :: fmtssm =                                    &
-      "(1x,/1x,'SSM -- SOURCE-SINK MIXING PACKAGE, VERSION 1, 8/25/2017',      &
+    character(len=*), parameter :: fmtssm = &
+      "(1x,/1x,'SSM -- SOURCE-SINK MIXING PACKAGE, VERSION 1, 8/25/2017', &
       &' INPUT READ FROM UNIT ', i0, //)"
     !
     ! --print a message identifying the storage package.
-    write(this%iout, fmtssm) this%inunit
+    write (this%iout, fmtssm) this%inunit
     !
     ! -- store pointers to arguments that were passed in
-    this%dis     => dis
-    this%ibound  => ibound
-    this%cnew    => cnew
+    this%dis => dis
+    this%ibound => ibound
+    this%cnew => cnew
     !
     ! -- Check to make sure that there are flow packages
     if (this%fmi%nflowpack == 0) then
-      write(errmsg, '(a)') 'SSM PACKAGE DOES NOT HAVE &
-                            &BOUNDARY FLOWS.  ACTIVATE GWF-GWT EXCHANGE &
-                            &OR TURN ON FMI AND PROVIDE A BUDGET FILE &
-                            &THAT CONTAINS BOUNDARY FLOWS.'
+      write (errmsg, '(a)') 'SSM PACKAGE DOES NOT DETECT ANY BOUNDARY FLOWS &
+                            &THAT REQUIRE SSM TERMS.  ACTIVATE GWF-GWT &
+                            &EXCHANGE OR ACTIVATE FMI PACKAGE AND PROVIDE A &
+                            &BUDGET FILE THAT CONTAINS BOUNDARY FLOWS.  IF NO &
+                            &BOUNDARY FLOWS ARE PRESENT IN CORRESPONDING GWF &
+                            &MODEL THEN THIS SSM PACKAGE SHOULD BE REMOVED.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-    endif
+    end if
     !
     ! -- Allocate arrays
     call this%allocate_arrays()
@@ -190,7 +192,7 @@ module GwtSsmModule
   subroutine ssm_rp(this)
     ! -- modules
     ! -- dummy
-    class(GwtSsmType) :: this  !< GwtSsmType object
+    class(GwtSsmType) :: this !< GwtSsmType object
     ! -- local
     integer(I4B) :: ip
     type(GwtSpcType), pointer :: ssmiptr
@@ -221,7 +223,7 @@ module GwtSsmModule
   subroutine ssm_ad(this)
     ! -- modules
     ! -- dummy
-    class(GwtSsmType) :: this  !< GwtSsmType object
+    class(GwtSsmType) :: this !< GwtSsmType object
     ! -- local
     integer(I4B) :: ip
     type(GwtSpcType), pointer :: ssmiptr
@@ -243,13 +245,13 @@ module GwtSsmModule
       end do
     end do
     !
-    ! -- Call the ad method on any ssm input files so that values for 
+    ! -- Call the ad method on any ssm input files so that values for
     !    time-series are interpolated
     do ip = 1, this%fmi%nflowpack
       if (this%fmi%iatp(ip) /= 0) cycle
       if (this%isrctype(ip) == 3 .or. this%isrctype(ip) == 4) then
         ssmiptr => this%ssmivec(ip)
-        call ssmiptr%spc_ad(this%fmi%gwfpackages(ip)%nbound,                   &
+        call ssmiptr%spc_ad(this%fmi%gwfpackages(ip)%nbound, &
                             this%fmi%gwfpackages(ip)%budtxt)
       end if
     end do
@@ -257,26 +259,26 @@ module GwtSsmModule
     ! -- Return
     return
   end subroutine ssm_ad
-  
+
   !> @ brief Calculate the SSM mass flow rate and hcof and rhs values
   !!
   !! This is the primary SSM routine that calculates the matrix coefficient
   !! and right-hand-side value for any package and package entry.  It returns
-  !! several different optional variables that are used throughout this 
+  !! several different optional variables that are used throughout this
   !! package to update matrix terms, budget calculations, and output tables.
   !!
   !<
-  subroutine ssm_term(this, ipackage, ientry, rrate, rhsval, hcofval,          &
+  subroutine ssm_term(this, ipackage, ientry, rrate, rhsval, hcofval, &
                       cssm, qssm)
     ! -- dummy
-    class(GwtSsmType) :: this                     !< GwtSsmType
-    integer(I4B), intent(in) :: ipackage          !< package number
-    integer(I4B), intent(in) :: ientry            !< bound number
-    real(DP), intent(out), optional :: rrate      !< calculated mass flow rate
-    real(DP), intent(out), optional :: rhsval     !< calculated rhs value
-    real(DP), intent(out), optional :: hcofval    !< calculated hcof value
-    real(DP), intent(out), optional :: cssm       !< calculated source concentration depending on flow direction
-    real(DP), intent(out), optional :: qssm       !< water flow rate into model cell from boundary package
+    class(GwtSsmType) :: this !< GwtSsmType
+    integer(I4B), intent(in) :: ipackage !< package number
+    integer(I4B), intent(in) :: ientry !< bound number
+    real(DP), intent(out), optional :: rrate !< calculated mass flow rate
+    real(DP), intent(out), optional :: rhsval !< calculated rhs value
+    real(DP), intent(out), optional :: hcofval !< calculated hcof value
+    real(DP), intent(out), optional :: cssm !< calculated source concentration depending on flow direction
+    real(DP), intent(out), optional :: qssm !< water flow rate into model cell from boundary package
     ! -- local
     logical(LGP) :: lauxmixed
     integer(I4B) :: n
@@ -301,46 +303,46 @@ module GwtSsmModule
       call this%get_ssm_conc(ipackage, ientry, ctmp, lauxmixed)
       !
       ! -- assign values for hcoftmp, rhstmp, and ctmp for subsequent assigment
-      !    of hcof, rhs, and rate    
-      if(.not. lauxmixed) then
+      !    of hcof, rhs, and rate
+      if (.not. lauxmixed) then
         !
-        ! -- If qbnd is positive, then concentration represents the inflow 
+        ! -- If qbnd is positive, then concentration represents the inflow
         !    concentration.  If qbnd is negative, then the outflow concentration
         !    is set equal to the simulated cell concentration
         if (qbnd >= DZERO) then
-          omega = DZERO  ! rhs
+          omega = DZERO ! rhs
         else
           ctmp = this%cnew(n)
-          omega = DONE  ! lhs
+          omega = DONE ! lhs
           if (ctmp < DZERO) then
             omega = DZERO ! concentration is negative, so set mass flux to zero
           end if
         end if
       else
         !
-        ! -- lauxmixed value indicates that this is a mixed sink type where 
-        !    the concentration value represents the injected concentration if 
-        !    qbnd is positive. If qbnd is negative, then the withdrawn water 
-        !    is equal to the minimum of the aux concentration and the cell 
+        ! -- lauxmixed value indicates that this is a mixed sink type where
+        !    the concentration value represents the injected concentration if
+        !    qbnd is positive. If qbnd is negative, then the withdrawn water
+        !    is equal to the minimum of the aux concentration and the cell
         !    concentration.
         if (qbnd >= DZERO) then
-          omega = DZERO  ! rhs (ctmp is aux value)
+          omega = DZERO ! rhs (ctmp is aux value)
         else
           if (ctmp < this%cnew(n)) then
-            omega = DZERO  ! rhs (ctmp is aux value)
+            omega = DZERO ! rhs (ctmp is aux value)
           else
             omega = DONE ! lhs (ctmp is cell concentration)
             ctmp = this%cnew(n)
           end if
         end if
-      endif
+      end if
       !
       ! -- Add terms based on qbnd sign
-      if(qbnd <= DZERO) then
+      if (qbnd <= DZERO) then
         hcoftmp = qbnd * omega
       else
         rhstmp = -qbnd * ctmp * (DONE - omega)
-      endif
+      end if
       !
       ! -- end of active ibound
     end if
@@ -355,44 +357,44 @@ module GwtSsmModule
     ! -- return
     return
   end subroutine ssm_term
-  
+
   !> @ brief Provide bound concentration and mixed flag
   !!
   !! SSM concentrations can be provided in auxiliary variables or
   !! through separate SPC files.  If not provided, the default
   !! concentration is zero.  This single routine provides the SSM
   !! bound concentration based on these different approaches.
-  !! The mixed flag indicates whether or not 
+  !! The mixed flag indicates whether or not
   !!
   !<
   subroutine get_ssm_conc(this, ipackage, ientry, conc, lauxmixed)
     ! -- dummy
-    class(GwtSsmType) :: this                !< GwtSsmType
-    integer(I4B), intent(in) :: ipackage     !< package number
-    integer(I4B), intent(in) :: ientry       !< bound number
-    real(DP), intent(out) :: conc            !< user-specified concentration for this bound
-    logical(LGP), intent(out) :: lauxmixed   !< user-specified flag for marking this as a mixed boundary
+    class(GwtSsmType) :: this !< GwtSsmType
+    integer(I4B), intent(in) :: ipackage !< package number
+    integer(I4B), intent(in) :: ientry !< bound number
+    real(DP), intent(out) :: conc !< user-specified concentration for this bound
+    logical(LGP), intent(out) :: lauxmixed !< user-specified flag for marking this as a mixed boundary
     ! -- local
     integer(I4B) :: isrctype
     integer(I4B) :: iauxpos
-    
+
     conc = DZERO
     lauxmixed = .false.
     isrctype = this%isrctype(ipackage)
-    
-    select case(isrctype)
-    case(1, 2)
+
+    select case (isrctype)
+    case (1, 2)
       iauxpos = this%iauxpak(ipackage)
       conc = this%fmi%gwfpackages(ipackage)%auxvar(iauxpos, ientry)
       if (isrctype == 2) lauxmixed = .true.
-    case(3, 4)
+    case (3, 4)
       conc = this%ssmivec(ipackage)%get_value(ientry)
       if (isrctype == 4) lauxmixed = .true.
     end select
-    
+
     return
   end subroutine get_ssm_conc
-  
+
   !> @ brief Fill coefficients
   !!
   !! This routine adds the effects of the SSM to the matrix equations by
@@ -431,14 +433,14 @@ module GwtSsmModule
         amatsln(idiag) = amatsln(idiag) + hcofval
         rhs(n) = rhs(n) + rhsval
         !
-      enddo
+      end do
       !
-    enddo
+    end do
     !
     ! -- Return
     return
   end subroutine ssm_fc
-  
+
   !> @ brief Calculate flow
   !!
   !! Calulate the resulting mass flow between the boundary and the connected
@@ -449,8 +451,8 @@ module GwtSsmModule
   subroutine ssm_cq(this, flowja)
     ! -- modules
     ! -- dummy
-    class(GwtSsmType) :: this                                     !< GwtSsmType object
-    real(DP), dimension(:), contiguous, intent(inout) :: flowja   !< flow across each face in the model grid
+    class(GwtSsmType) :: this !< GwtSsmType object
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja !< flow across each face in the model grid
     ! -- local
     integer(I4B) :: ip
     integer(I4B) :: i
@@ -472,9 +474,9 @@ module GwtSsmModule
         idiag = this%dis%con%ia(n)
         flowja(idiag) = flowja(idiag) + rate
         !
-      enddo
+      end do
       !
-    enddo
+    end do
     !
     ! -- Return
     return
@@ -491,9 +493,9 @@ module GwtSsmModule
     use TdisModule, only: delt
     use BudgetModule, only: BudgetType
     ! -- dummy
-    class(GwtSsmType) :: this                           !< GwtSsmType object
-    integer(I4B), intent(in) :: isuppress_output        !< flag to suppress output
-    type(BudgetType), intent(inout) :: model_budget     !< budget object for the GWT model
+    class(GwtSsmType) :: this !< GwtSsmType object
+    integer(I4B), intent(in) :: isuppress_output !< flag to suppress output
+    type(BudgetType), intent(inout) :: model_budget !< budget object for the GWT model
     ! -- local
     character(len=LENBUDROWLABEL) :: rowlabel
     integer(I4B) :: ip
@@ -519,19 +521,19 @@ module GwtSsmModule
         n = this%fmi%gwfpackages(ip)%nodelist(i)
         if (n <= 0) cycle
         call this%ssm_term(ip, i, rrate=rate)
-        if(rate < DZERO) then
+        if (rate < DZERO) then
           rout = rout - rate
         else
           rin = rin + rate
-        endif
+        end if
         !
-      enddo
+      end do
       !
-      rowlabel = 'SSM_' // adjustl(trim(this%fmi%flowpacknamearray(ip)))
-      call model_budget%addentry(rin, rout, delt,                              &
-                                 this%fmi%gwfpackages(ip)%budtxt,              &
+      rowlabel = 'SSM_'//adjustl(trim(this%fmi%flowpacknamearray(ip)))
+      call model_budget%addentry(rin, rout, delt, &
+                                 this%fmi%gwfpackages(ip)%budtxt, &
                                  isuppress_output, rowlabel=rowlabel)
-    enddo
+    end do
     !
     ! -- Return
     return
@@ -549,12 +551,12 @@ module GwtSsmModule
     use TdisModule, only: kstp, kper
     use ConstantsModule, only: LENPACKAGENAME, LENBOUNDNAME, LENAUXNAME, DZERO
     ! -- dummy
-    class(GwtSsmType) :: this            !< GwtSsmType object
-    integer(I4B), intent(in) :: icbcfl   !< flag for writing binary budget terms
-    integer(I4B), intent(in) :: ibudfl   !< flag for printing budget terms to list file 
-    integer(I4B), intent(in) :: icbcun   !< fortran unit number for binary budget file
+    class(GwtSsmType) :: this !< GwtSsmType object
+    integer(I4B), intent(in) :: icbcfl !< flag for writing binary budget terms
+    integer(I4B), intent(in) :: ibudfl !< flag for printing budget terms to list file
+    integer(I4B), intent(in) :: icbcun !< fortran unit number for binary budget file
     ! -- local
-    character (len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: title
     integer(I4B) :: node, nodeu
     character(len=20) :: nodestr
     integer(I4B) :: maxrows
@@ -564,13 +566,13 @@ module GwtSsmModule
     real(DP) :: qssm
     real(DP) :: cssm
     integer(I4B) :: naux
-    real(DP), dimension(0,0) :: auxvar
+    real(DP), dimension(0, 0) :: auxvar
     character(len=LENAUXNAME), dimension(0) :: auxname
     ! -- for observations
     character(len=LENBOUNDNAME) :: bname
     ! -- formats
     character(len=*), parameter :: fmttkk = &
-      "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
+      &"(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
     !
     ! -- set maxrows
     maxrows = 0
@@ -590,7 +592,7 @@ module GwtSsmModule
       if (maxrows > 0) then
         call this%outputtab%set_maxbound(maxrows)
       end if
-      title = 'SSM PACKAGE (' // trim(this%packName) //     &
+      title = 'SSM PACKAGE ('//trim(this%packName)// &
               ') FLOW RATES'
       call this%outputtab%set_title(title)
     end if
@@ -606,15 +608,16 @@ module GwtSsmModule
     if (icbcfl == 0) ibinun = 0
     !
     ! -- If cell-by-cell flows will be saved as a list, write header.
-    if(ibinun /= 0) then
+    if (ibinun /= 0) then
       naux = 0
-      call this%dis%record_srcdst_list_header(text, this%name_model,           &
-                  this%name_model, this%name_model, this%packName, naux,       &
-                  auxname, ibinun, this%nbound, this%iout)
-    endif
+      call this%dis%record_srcdst_list_header(text, this%name_model, &
+                                              this%name_model, this%name_model, &
+                                              this%packName, naux, auxname, &
+                                              ibinun, this%nbound, this%iout)
+    end if
     !
     ! -- If no boundaries, skip flow calculations.
-    if(this%nbound > 0) then
+    if (this%nbound > 0) then
       !
       ! -- Loop through each boundary calculating flow.
       do ip = 1, this%fmi%nflowpack
@@ -649,18 +652,18 @@ module GwtSsmModule
           ! -- If saving cell-by-cell flows in list, write flow
           if (ibinun /= 0) then
             n2 = i
-            call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate,       &
-                                                naux, auxvar(:,i),             &
+            call this%dis%record_mf6_list_entry(ibinun, node, n2, rrate, &
+                                                naux, auxvar(:, i), &
                                                 olconv2=.FALSE.)
           end if
           !
-        enddo
+        end do
         !
-      enddo
-    endif
+      end do
+    end if
     if (ibudfl /= 0) then
       if (this%iprflow /= 0) then
-          write(this%iout,'(1x)')
+        write (this%iout, '(1x)')
       end if
     end if
     !
@@ -677,35 +680,35 @@ module GwtSsmModule
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(GwtSsmType) :: this  !< GwtSsmType object
+    class(GwtSsmType) :: this !< GwtSsmType object
     ! -- local
     integer(I4B) :: ip
     type(GwtSpcType), pointer :: ssmiptr
     !
     ! -- Deallocate the ssmi objects if package was active
-    if(this%inunit > 0) then
+    if (this%inunit > 0) then
       do ip = 1, size(this%ssmivec)
         if (this%isrctype(ip) == 3 .or. this%isrctype(ip) == 4) then
           ssmiptr => this%ssmivec(ip)
           call ssmiptr%spc_da()
         end if
       end do
-      deallocate(this%ssmivec)
+      deallocate (this%ssmivec)
     end if
     !
     ! -- Deallocate arrays if package was active
-    if(this%inunit > 0) then
+    if (this%inunit > 0) then
       call mem_deallocate(this%iauxpak)
       call mem_deallocate(this%isrctype)
       this%ibound => null()
       this%fmi => null()
-    endif
+    end if
     !
     ! -- output table object
     if (associated(this%outputtab)) then
       call this%outputtab%table_da()
-      deallocate(this%outputtab)
-      nullify(this%outputtab)
+      deallocate (this%outputtab)
+      nullify (this%outputtab)
     end if
     !
     ! -- Scalars
@@ -727,7 +730,7 @@ module GwtSsmModule
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
-    class(GwtSsmType) :: this  !< GwtSsmType object
+    class(GwtSsmType) :: this !< GwtSsmType object
     ! -- local
     !
     ! -- allocate scalars in NumericalPackageType
@@ -752,11 +755,11 @@ module GwtSsmModule
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
-    class(GwtSsmType) :: this  !< GwtSsmType object
+    class(GwtSsmType) :: this !< GwtSsmType object
     ! -- local
     integer(I4B) :: nflowpack
     integer(I4B) :: i
-    !    
+    !
     ! -- Allocate
     nflowpack = this%fmi%nflowpack
     call mem_allocate(this%iauxpak, nflowpack, 'IAUXPAK', this%memoryPath)
@@ -769,12 +772,12 @@ module GwtSsmModule
     end do
     !
     ! -- Allocate the ssmivec array
-    allocate(this%ssmivec(nflowpack))
+    allocate (this%ssmivec(nflowpack))
     !
     ! -- Return
     return
   end subroutine allocate_arrays
-  
+
   !> @ brief Read package options
   !!
   !! Read and set the SSM Package options
@@ -783,18 +786,18 @@ module GwtSsmModule
   subroutine read_options(this)
     ! -- modules
     ! -- dummy
-    class(GwtSSMType) :: this  !< GwtSsmType object
+    class(GwtSSMType) :: this !< GwtSsmType object
     ! -- local
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- formats
-    character(len=*), parameter :: fmtiprflow =                                &
-      "(4x,'SSM FLOW INFORMATION WILL BE PRINTED TO LISTING FILE " // &
-      "WHENEVER ICBCFL IS NOT ZERO.')"
-    character(len=*), parameter :: fmtisvflow =                                &
-      "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED TO BINARY FILE " //    &
-      "WHENEVER ICBCFL IS NOT ZERO.')"
+    character(len=*), parameter :: fmtiprflow = &
+      "(4x,'SSM FLOW INFORMATION WILL BE PRINTED TO LISTING FILE &
+      &WHENEVER ICBCFL IS NOT ZERO.')"
+    character(len=*), parameter :: fmtisvflow = &
+      "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED TO BINARY FILE &
+      &WHENEVER ICBCFL IS NOT ZERO.')"
     !
     ! -- get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false., &
@@ -802,25 +805,25 @@ module GwtSsmModule
     !
     ! -- parse options block if detected
     if (isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING SSM OPTIONS'
+      write (this%iout, '(1x,a)') 'PROCESSING SSM OPTIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
-          case ('PRINT_FLOWS')
-            this%iprflow = 1
-            write(this%iout, fmtiprflow)
-          case ('SAVE_FLOWS')
-            this%ipakcb = -1
-            write(this%iout, fmtisvflow)
-          case default
-            write(errmsg,'(4x,a,a)') 'UNKNOWN SSM OPTION: ', trim(keyword)
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
+        case ('PRINT_FLOWS')
+          this%iprflow = 1
+          write (this%iout, fmtiprflow)
+        case ('SAVE_FLOWS')
+          this%ipakcb = -1
+          write (this%iout, fmtisvflow)
+        case default
+          write (errmsg, '(4x,a,a)') 'UNKNOWN SSM OPTION: ', trim(keyword)
+          call store_error(errmsg)
+          call this%parser%StoreErrorUnit()
         end select
       end do
-      write(this%iout,'(1x,a)')'END OF SSM OPTIONS'
+      write (this%iout, '(1x,a)') 'END OF SSM OPTIONS'
     end if
     !
     ! -- Return
@@ -834,7 +837,7 @@ module GwtSsmModule
   !<
   subroutine read_data(this)
     ! -- dummy
-    class(GwtSsmtype) :: this  !< GwtSsmtype object
+    class(GwtSsmtype) :: this !< GwtSsmtype object
     !
     ! -- read and process required SOURCES block
     call this%read_sources_aux()
@@ -843,7 +846,7 @@ module GwtSsmModule
     call this%read_sources_fileinput()
     return
   end subroutine read_data
-    
+
   !> @ brief Read SOURCES block
   !!
   !! Read SOURCES block and look for auxiliary columns in
@@ -852,7 +855,7 @@ module GwtSsmModule
   !<
   subroutine read_sources_aux(this)
     ! -- dummy
-    class(GwtSsmtype) :: this  !< GwtSsmtype object
+    class(GwtSsmtype) :: this !< GwtSsmtype object
     ! -- local
     character(len=LINELENGTH) :: keyword
     character(len=20) :: srctype
@@ -872,11 +875,11 @@ module GwtSsmModule
     nflowpack = this%fmi%nflowpack
     !
     ! -- get sources block
-    call this%parser%GetBlock('SOURCES', isfound, ierr,                        &
-                              supportOpenClose=.true.,                         &
+    call this%parser%GetBlock('SOURCES', isfound, ierr, &
+                              supportOpenClose=.true., &
                               blockrequired=.true.)
-    if(isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING SOURCES'
+    if (isfound) then
+      write (this%iout, '(1x,a)') 'PROCESSING SOURCES'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -888,18 +891,18 @@ module GwtSsmModule
           if (trim(adjustl(this%fmi%gwfpackages(ip)%name)) == keyword) then
             pakfound = .true.
             exit
-          endif
-        enddo
+          end if
+        end do
         if (.not. pakfound) then
-          write(errmsg,'(1x, a, a)') 'FLOW PACKAGE CANNOT BE FOUND: ',      &
-                                      trim(keyword)
+          write (errmsg, '(1x, a, a)') 'FLOW PACKAGE CANNOT BE FOUND: ', &
+            trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-        endif
+        end if
         !
         ! -- Ensure package was not specified more than once in SOURCES block
         if (this%isrctype(ip) /= 0) then
-          write(errmsg,'(1x, a, a)')                                          &
+          write (errmsg, '(1x, a, a)') &
             'A PACKAGE CANNOT BE SPECIFIED MORE THAN ONCE IN THE SSM SOURCES &
             &BLOCK.  THE FOLLOWING PACKAGE WAS SPECIFIED MORE THAN ONCE: ', &
             trim(keyword)
@@ -909,16 +912,16 @@ module GwtSsmModule
         !
         ! -- read the source type
         call this%parser%GetStringCaps(srctype)
-        select case(srctype)
-        case('AUX')
-          write(this%iout,'(1x,a)') 'AUX SOURCE DETECTED.'
+        select case (srctype)
+        case ('AUX')
+          write (this%iout, '(1x,a)') 'AUX SOURCE DETECTED.'
           isrctype = 1
-        case('AUXMIXED')
-          write(this%iout,'(1x,a)') 'AUXMIXED SOURCE DETECTED.'
+        case ('AUXMIXED')
+          write (this%iout, '(1x,a)') 'AUXMIXED SOURCE DETECTED.'
           lauxmixed = .true.
           isrctype = 2
         case default
-          write(errmsg,'(1x, a, a)')                                          &
+          write (errmsg, '(1x, a, a)') &
             'SRCTYPE MUST BE AUX OR AUXMIXED.  FOUND: ', trim(srctype)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -929,24 +932,24 @@ module GwtSsmModule
         !
         ! -- Find and store the auxiliary column
         call this%set_iauxpak(ip, trim(keyword))
-        
+
       end do
-      write(this%iout,'(1x,a)')'END PROCESSING SOURCES'
+      write (this%iout, '(1x,a)') 'END PROCESSING SOURCES'
     else
-      write(errmsg,'(1x,a)')'ERROR.  REQUIRED SOURCES BLOCK NOT FOUND.'
+      write (errmsg, '(1x,a)') 'ERROR.  REQUIRED SOURCES BLOCK NOT FOUND.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if
     !
     ! -- terminate if errors
-    if(count_errors() > 0) then
+    if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-    endif
+    end if
     !
     ! -- Return
     return
   end subroutine read_sources_aux
-  
+
   !> @ brief Read FILEINPUT block
   !!
   !! Read optional FILEINPUT block and initialize an
@@ -955,7 +958,7 @@ module GwtSsmModule
   !<
   subroutine read_sources_fileinput(this)
     ! -- dummy
-    class(GwtSsmtype) :: this  !< GwtSsmtype object
+    class(GwtSsmtype) :: this !< GwtSsmtype object
     ! -- local
     character(len=LINELENGTH) :: keyword
     character(len=LINELENGTH) :: keyword2
@@ -976,11 +979,11 @@ module GwtSsmModule
     nflowpack = this%fmi%nflowpack
     !
     ! -- get sources_file block
-    call this%parser%GetBlock('FILEINPUT', isfound, ierr,                   &
-                              supportOpenClose=.true.,                         &
+    call this%parser%GetBlock('FILEINPUT', isfound, ierr, &
+                              supportOpenClose=.true., &
                               blockrequired=.false.)
-    if(isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING FILEINPUT'
+    if (isfound) then
+      write (this%iout, '(1x,a)') 'PROCESSING FILEINPUT'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -992,18 +995,18 @@ module GwtSsmModule
           if (trim(adjustl(this%fmi%gwfpackages(ip)%name)) == keyword) then
             pakfound = .true.
             exit
-          endif
-        enddo
+          end if
+        end do
         if (.not. pakfound) then
-          write(errmsg,'(1x, a, a)') 'FLOW PACKAGE CANNOT BE FOUND: ',      &
-                                      trim(keyword)
+          write (errmsg, '(1x, a, a)') 'FLOW PACKAGE CANNOT BE FOUND: ', &
+            trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
-        endif
+        end if
         !
         ! -- Ensure package was not specified more than once in SOURCES block
         if (this%isrctype(ip) /= 0) then
-          write(errmsg,'(1x, a, a)')                                          &
+          write (errmsg, '(1x, a, a)') &
             'A PACKAGE CANNOT BE SPECIFIED MORE THAN ONCE IN THE SSM SOURCES &
             &AND SOURCES_FILES BLOCKS.  THE FOLLOWING PACKAGE WAS SPECIFIED &
             &MORE THAN ONCE: ', &
@@ -1014,16 +1017,16 @@ module GwtSsmModule
         !
         ! -- read the source type
         call this%parser%GetStringCaps(srctype)
-        select case(srctype)
-        case('SPC6')
-          write(this%iout,'(1x,a)') 'SPC6 SOURCE DETECTED.'
+        select case (srctype)
+        case ('SPC6')
+          write (this%iout, '(1x,a)') 'SPC6 SOURCE DETECTED.'
           isrctype = 3
           !
           ! verify filein is next
           call this%parser%GetStringCaps(keyword2)
-          if(trim(adjustl(keyword2)) /= 'FILEIN') then
-            errmsg = 'SPC6 keyword must be followed by "FILEIN" ' //           &
-                      'then by filename and optionally by <MIXED>.'
+          if (trim(adjustl(keyword2)) /= 'FILEIN') then
+            errmsg = 'SPC6 keyword must be followed by "FILEIN" '// &
+                     'then by filename and optionally by <MIXED>.'
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
           end if
@@ -1036,11 +1039,11 @@ module GwtSsmModule
           call this%parser%GetStringCaps(keyword2)
           if (trim(keyword2) == 'MIXED') then
             isrctype = 4
-            write(this%iout,'(1x,a,a)') 'ASSIGNED MIXED SSM TYPE TO PACKAGE ',&
+            write (this%iout, '(1x,a,a)') 'ASSIGNED MIXED SSM TYPE TO PACKAGE ', &
               trim(keyword)
           end if
         case default
-          write(errmsg,'(1x, a, a)')                                          &
+          write (errmsg, '(1x, a, a)') &
             'SRCTYPE MUST BE SPC6.  FOUND: ', trim(srctype)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -1048,23 +1051,23 @@ module GwtSsmModule
         !
         ! -- Store the source type (3 or 4)
         this%isrctype(ip) = isrctype
-        
+
       end do
-      write(this%iout,'(1x,a)')'END PROCESSING FILEINPUT'
+      write (this%iout, '(1x,a)') 'END PROCESSING FILEINPUT'
     else
-      write(this%iout,'(1x,a)')                                                &
+      write (this%iout, '(1x,a)') &
         'OPTIONAL FILEINPUT BLOCK NOT FOUND.  CONTINUING.'
     end if
     !
     ! -- terminate if errors
-    if(count_errors() > 0) then
+    if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-    endif
+    end if
     !
     ! -- Return
     return
   end subroutine read_sources_fileinput
-  
+
   !> @ brief Set iauxpak array value for package ip
   !!
   !!  The next call to parser will return the auxiliary name for
@@ -1076,11 +1079,11 @@ module GwtSsmModule
   !<
   subroutine set_iauxpak(this, ip, packname)
     ! -- dummy
-    class(GwtSsmtype),intent(inout) :: this  !< GwtSsmtype
-    integer(I4B), intent(in) :: ip           !< package number
+    class(GwtSsmtype), intent(inout) :: this !< GwtSsmtype
+    integer(I4B), intent(in) :: ip !< package number
     character(len=*), intent(in) :: packname !< name of package
     ! -- local
-    character(len=LENAUXNAME) :: auxname    
+    character(len=LENAUXNAME) :: auxname
     logical :: auxfound
     integer(I4B) :: iaux
     !
@@ -1088,28 +1091,28 @@ module GwtSsmModule
     call this%parser%GetStringCaps(auxname)
     auxfound = .false.
     do iaux = 1, this%fmi%gwfpackages(ip)%naux
-      if (trim(this%fmi%gwfpackages(ip)%auxname(iaux)) ==                  &
+      if (trim(this%fmi%gwfpackages(ip)%auxname(iaux)) == &
           trim(auxname)) then
         auxfound = .true.
         exit
-      endif
-    enddo
+      end if
+    end do
     if (.not. auxfound) then
-      write(errmsg,'(1x, a, a)')                                           &
+      write (errmsg, '(1x, a, a)') &
         'AUXILIARY NAME CANNOT BE FOUND: ', trim(auxname)
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-    endif
+    end if
     !
     ! -- set iauxpak and write message
     this%iauxpak(ip) = iaux
-    write(this%iout, '(4x, a, i0, a, a)') 'USING AUX COLUMN ',      &
+    write (this%iout, '(4x, a, i0, a, a)') 'USING AUX COLUMN ', &
       iaux, ' IN PACKAGE ', trim(packname)
     !
     ! -- return
     return
   end subroutine set_iauxpak
-  
+
   !> @ brief Set ssmivec array value for package ip
   !!
   !!  The next call to parser will return the input file name for
@@ -1119,10 +1122,10 @@ module GwtSsmModule
   !<
   subroutine set_ssmivec(this, ip, packname)
     ! -- module
-    use InputOutputModule,   only: openfile, getunit
+    use InputOutputModule, only: openfile, getunit
     ! -- dummy
-    class(GwtSsmtype),intent(inout) :: this  !< GwtSsmtype
-    integer(I4B), intent(in) :: ip           !< package number
+    class(GwtSsmtype), intent(inout) :: this !< GwtSsmtype
+    integer(I4B), intent(in) :: ip !< package number
     character(len=*), intent(in) :: packname !< name of package
     ! -- local
     character(len=LINELENGTH) :: filename
@@ -1133,19 +1136,19 @@ module GwtSsmModule
     call this%parser%GetString(filename)
     inunit = getunit()
     call openfile(inunit, this%iout, filename, 'SPC', filstat_opt='OLD')
-    
+
     ! -- Create the SPC file object
     ssmiptr => this%ssmivec(ip)
-    call ssmiptr%initialize(this%dis, ip, inunit, this%iout, this%name_model,  &
+    call ssmiptr%initialize(this%dis, ip, inunit, this%iout, this%name_model, &
                             trim(packname))
-    
-    write(this%iout, '(4x, a, a, a, a)') 'USING SPC INPUT FILE ',              &
+
+    write (this%iout, '(4x, a, a, a, a)') 'USING SPC INPUT FILE ', &
       trim(filename), ' TO SET CONCENTRATIONS FOR PACKAGE ', trim(packname)
     !
     ! -- return
     return
   end subroutine set_ssmivec
-  
+
   !> @ brief Setup the output table
   !!
   !! Setup the output table by creating the column headers.
@@ -1153,7 +1156,7 @@ module GwtSsmModule
   !<
   subroutine pak_setup_outputtab(this)
     ! -- dummy
-    class(GwtSsmtype),intent(inout) :: this
+    class(GwtSsmtype), intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: text
@@ -1169,7 +1172,7 @@ module GwtSsmModule
       !end if
       !
       ! -- initialize the output table object
-      title = 'SSM PACKAGE (' // trim(this%packName) //     &
+      title = 'SSM PACKAGE ('//trim(this%packName)// &
               ') FLOW RATES'
       call table_cr(this%outputtab, this%packName, title)
       call this%outputtab%table_df(1, ntabcol, this%iout, transient=.TRUE.)

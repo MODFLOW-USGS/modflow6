@@ -28,17 +28,17 @@
 !!
 !<
 module PrintSaveManagerModule
-  
+
   use KindModule, only: DP, I4B, LGP
   use ArrayHandlersModule, only: expandarray
   use SimVariablesModule, only: errmsg
-  use SimModule,           only: store_error
-  use InputOutputModule,   only: urword
-  
+  use SimModule, only: store_error
+  use InputOutputModule, only: urword
+
   implicit none
   private
   public :: PrintSaveManagerType
-  
+
   !> @ brief PrintSaveManagerType
   !!
   !!  Object for storing information and determining whether or
@@ -47,25 +47,25 @@ module PrintSaveManagerModule
   type :: PrintSaveManagerType
     integer(I4B), allocatable, dimension(:) :: kstp_list_print
     integer(I4B), allocatable, dimension(:) :: kstp_list_save
-    integer(I4B)                       :: ifreq_print
-    integer(I4B)                       :: ifreq_save
-    logical                            :: print_first
-    logical                            :: save_first
-    logical                            :: print_last
-    logical                            :: save_last
-    logical                            :: print_all
-    logical                            :: save_all
-    logical                            :: save_detected
-    logical                            :: print_detected
+    integer(I4B) :: ifreq_print
+    integer(I4B) :: ifreq_save
+    logical :: print_first
+    logical :: save_first
+    logical :: print_last
+    logical :: save_last
+    logical :: print_all
+    logical :: save_all
+    logical :: save_detected
+    logical :: print_detected
   contains
     procedure :: init
     procedure :: rp
     procedure :: kstp_to_print
     procedure :: kstp_to_save
   end type PrintSaveManagerType
-  
-  contains
-  
+
+contains
+
   !> @ brief Initialize PrintSaveManager
   !!
   !!  Initializes variables of a PrintSaveManagerType
@@ -73,13 +73,13 @@ module PrintSaveManagerModule
   !<
   subroutine init(this)
     ! -- dummy
-    class(PrintSaveManagerType) :: this  !< psm object to initialize
+    class(PrintSaveManagerType) :: this !< psm object to initialize
     !
     ! -- Initialize members to their defaults
-    if(allocated(this%kstp_list_print)) deallocate(this%kstp_list_print)
-    if(allocated(this%kstp_list_save)) deallocate(this%kstp_list_save)
-    allocate(this%kstp_list_print(0))
-    allocate(this%kstp_list_save(0))
+    if (allocated(this%kstp_list_print)) deallocate (this%kstp_list_print)
+    if (allocated(this%kstp_list_save)) deallocate (this%kstp_list_save)
+    allocate (this%kstp_list_print(0))
+    allocate (this%kstp_list_save(0))
     this%ifreq_print = 0
     this%ifreq_save = 0
     this%save_first = .false.
@@ -94,18 +94,18 @@ module PrintSaveManagerModule
     ! -- return
     return
   end subroutine init
-  
+
   !> @ brief Read and prepare for PrintSaveManager
   !!
-  !!  Parse information in the line and assign settings for the 
+  !!  Parse information in the line and assign settings for the
   !!  PrintSaveManagerType.
   !!
   !<
   subroutine rp(this, linein, iout)
     ! -- dummy
-    class(PrintSaveManagerType)  :: this     !< psm object
-    character(len=*), intent(in) :: linein   !< character line of information
-    integer(I4B), intent(in) :: iout         !< unit number of output file
+    class(PrintSaveManagerType) :: this !< psm object
+    character(len=*), intent(in) :: linein !< character line of information
+    integer(I4B), intent(in) :: iout !< unit number of output file
     ! -- local
     character(len=len(linein)) :: line
     logical lp, ls
@@ -114,9 +114,9 @@ module PrintSaveManagerModule
     real(DP) :: rval
     ! -- formats
     character(len=*), parameter :: fmt_steps = &
-      "(6x,'THE FOLLOWING STEPS WILL BE ',A,': ',50(I0,' '))"
+      &"(6x,'THE FOLLOWING STEPS WILL BE ',A,': ',50(I0,' '))"
     character(len=*), parameter :: fmt_freq = &
-      "(6x,'THE FOLLOWING FREQUENCY WILL BE ',A,': ',I0)"
+      &"(6x,'THE FOLLOWING FREQUENCY WILL BE ',A,': ',I0)"
     !
     ! -- Set the values based on line
     ! -- Get keyword to use in assignment
@@ -127,15 +127,15 @@ module PrintSaveManagerModule
     ! -- set dimension for print or save
     lp = .false.
     ls = .false.
-    select case(line(istart:istop))
-    case('PRINT')
+    select case (line(istart:istop))
+    case ('PRINT')
       lp = .true.
-    case('SAVE')
+    case ('SAVE')
       ls = .true.
     case default
-       write(errmsg, '(2a)') &
-       'Looking for PRINT or SAVE. Found:', trim(adjustl(line))
-       call store_error(errmsg, terminate=.TRUE.)
+      write (errmsg, '(2a)') &
+        'Looking for PRINT or SAVE. Found:', trim(adjustl(line))
+      call store_error(errmsg, terminate=.TRUE.)
     end select
     !
     ! -- set member variables
@@ -144,64 +144,64 @@ module PrintSaveManagerModule
     !
     ! -- set the steps to print or save
     call urword(line, lloc, istart, istop, 1, ival, rval, 0, 0)
-    select case(line(istart:istop))
-    case('ALL')
-      if(lp) then
+    select case (line(istart:istop))
+    case ('ALL')
+      if (lp) then
         this%print_all = .true.
-        if(iout > 0) write(iout,"(6x,a)") 'ALL TIME STEPS WILL BE PRINTED'
-      endif
-      if(ls) then
+        if (iout > 0) write (iout, "(6x,a)") 'ALL TIME STEPS WILL BE PRINTED'
+      end if
+      if (ls) then
         this%save_all = .true.
-        if(iout > 0) write(iout,"(6x,a)") 'ALL TIME STEPS WILL BE SAVED'
-      endif
-    case('STEPS')
+        if (iout > 0) write (iout, "(6x,a)") 'ALL TIME STEPS WILL BE SAVED'
+      end if
+    case ('STEPS')
       listsearch: do
         call urword(line, lloc, istart, istop, 2, ival, rval, -1, 0)
-        if(ival > 0) then
-          if(lp) then
+        if (ival > 0) then
+          if (lp) then
             n = size(this%kstp_list_print)
             call expandarray(this%kstp_list_print)
             this%kstp_list_print(n + 1) = ival
-          endif
-          if(ls) then
+          end if
+          if (ls) then
             n = size(this%kstp_list_save)
             call expandarray(this%kstp_list_save)
             this%kstp_list_save(n + 1) = ival
-          endif
+          end if
           cycle listsearch
-        endif
+        end if
         exit listsearch
-      enddo listsearch
-      if(iout > 0) then
-        if(lp) write(iout, fmt_steps) 'PRINTED', this%kstp_list_print
-        if(ls) write(iout, fmt_steps) 'SAVED', this%kstp_list_save
-      endif
-    case('FREQUENCY')
+      end do listsearch
+      if (iout > 0) then
+        if (lp) write (iout, fmt_steps) 'PRINTED', this%kstp_list_print
+        if (ls) write (iout, fmt_steps) 'SAVED', this%kstp_list_save
+      end if
+    case ('FREQUENCY')
       call urword(line, lloc, istart, istop, 2, ival, rval, -1, 0)
-      if(lp) this%ifreq_print = ival
-      if(ls) this%ifreq_save = ival
-      if(iout > 0) then
-        if(lp) write(iout, fmt_freq) 'PRINTED', this%ifreq_print
-        if(ls) write(iout, fmt_freq) 'SAVED', this%ifreq_save
-      endif
-    case('FIRST')
-      if(lp) then
+      if (lp) this%ifreq_print = ival
+      if (ls) this%ifreq_save = ival
+      if (iout > 0) then
+        if (lp) write (iout, fmt_freq) 'PRINTED', this%ifreq_print
+        if (ls) write (iout, fmt_freq) 'SAVED', this%ifreq_save
+      end if
+    case ('FIRST')
+      if (lp) then
         this%print_first = .true.
-        if(iout > 0) write(iout,"(6x,a)") 'THE FIRST TIME STEP WILL BE PRINTED'
-      endif
-      if(ls) then
+        if (iout > 0) write (iout, "(6x,a)") 'THE FIRST TIME STEP WILL BE PRINTED'
+      end if
+      if (ls) then
         this%save_first = .true.
-        if(iout > 0) write(iout,"(6x,a)") 'THE FIRST TIME STEP WILL BE SAVED'
-      endif
-    case('LAST')
-      if(lp) then
+        if (iout > 0) write (iout, "(6x,a)") 'THE FIRST TIME STEP WILL BE SAVED'
+      end if
+    case ('LAST')
+      if (lp) then
         this%print_last = .true.
-        if(iout > 0) write(iout,"(6x,a)") 'THE LAST TIME STEP WILL BE PRINTED'
-      endif
-      if(ls) then
+        if (iout > 0) write (iout, "(6x,a)") 'THE LAST TIME STEP WILL BE PRINTED'
+      end if
+      if (ls) then
         this%save_last = .true.
-        if(iout > 0) write(iout,"(6x,a)") 'THE LAST TIME STEP WILL BE SAVED'
-      endif
+        if (iout > 0) write (iout, "(6x,a)") 'THE LAST TIME STEP WILL BE SAVED'
+      end if
     case default
       write (errmsg, '(2a)') &
         'Looking for ALL, STEPS, FIRST, LAST, OR FREQUENCY. Found: ', &
@@ -212,73 +212,73 @@ module PrintSaveManagerModule
     ! -- return
     return
   end subroutine rp
-  
+
   !> @ brief Determine if it is time to print the data
   !!
-  !!  Determine if data should be printed based on kstp and endofperiod 
+  !!  Determine if data should be printed based on kstp and endofperiod
   !!
   !<
   logical function kstp_to_print(this, kstp, endofperiod)
     ! -- dummy
-    class(PrintSaveManagerType) :: this          !< psm object
-    integer(I4B), intent(in) :: kstp             !< current time step
-    logical(LGP), intent(in) :: endofperiod      !< flag indicating end of stress period
+    class(PrintSaveManagerType) :: this !< psm object
+    integer(I4B), intent(in) :: kstp !< current time step
+    logical(LGP), intent(in) :: endofperiod !< flag indicating end of stress period
     ! -- local
     integer(I4B) :: i, n
     !
     kstp_to_print = .false.
-    if(this%print_all) kstp_to_print = .true.
-    if(kstp == 1 .and. this%print_first) kstp_to_print = .true.
-    if(endofperiod .and. this%print_last) kstp_to_print = .true.
-    if(this%ifreq_print > 0) then
-      if(mod(kstp, this%ifreq_print) == 0) kstp_to_print = .true.
-    endif
+    if (this%print_all) kstp_to_print = .true.
+    if (kstp == 1 .and. this%print_first) kstp_to_print = .true.
+    if (endofperiod .and. this%print_last) kstp_to_print = .true.
+    if (this%ifreq_print > 0) then
+      if (mod(kstp, this%ifreq_print) == 0) kstp_to_print = .true.
+    end if
     n = size(this%kstp_list_print)
-    if(n > 0) then
+    if (n > 0) then
       do i = 1, n
-        if(kstp == this%kstp_list_print(i)) then
+        if (kstp == this%kstp_list_print(i)) then
           kstp_to_print = .true.
           exit
-        endif
-      enddo
-    endif
+        end if
+      end do
+    end if
     !
     ! -- Return
     return
   end function kstp_to_print
-  
+
   !> @ brief Determine if it is time to save the data
   !!
-  !!  Determine if data should be saved based on kstp and endofperiod 
+  !!  Determine if data should be saved based on kstp and endofperiod
   !!
   !<
   logical function kstp_to_save(this, kstp, endofperiod)
     ! -- dummy
-    class(PrintSaveManagerType) :: this          !< psm object
-    integer(I4B), intent(in) :: kstp             !< current time step
-    logical(LGP), intent(in) :: endofperiod      !< flag indicating end of stress period
+    class(PrintSaveManagerType) :: this !< psm object
+    integer(I4B), intent(in) :: kstp !< current time step
+    logical(LGP), intent(in) :: endofperiod !< flag indicating end of stress period
     ! -- local
     integer(I4B) :: i, n
     !
     kstp_to_save = .false.
-    if(this%save_all) kstp_to_save = .true.
-    if(kstp == 1 .and. this%save_first) kstp_to_save = .true.
-    if(endofperiod .and. this%save_last) kstp_to_save = .true.
-    if(this%ifreq_save > 0) then
-      if(mod(kstp, this%ifreq_save) == 0) kstp_to_save = .true.
-    endif
+    if (this%save_all) kstp_to_save = .true.
+    if (kstp == 1 .and. this%save_first) kstp_to_save = .true.
+    if (endofperiod .and. this%save_last) kstp_to_save = .true.
+    if (this%ifreq_save > 0) then
+      if (mod(kstp, this%ifreq_save) == 0) kstp_to_save = .true.
+    end if
     n = size(this%kstp_list_save)
-    if(n > 0) then
+    if (n > 0) then
       do i = 1, n
-        if(kstp == this%kstp_list_save(i)) then
+        if (kstp == this%kstp_list_save(i)) then
           kstp_to_save = .true.
           exit
-        endif
-      enddo
-    endif
+        end if
+      end do
+    end if
     !
     ! -- Return
     return
   end function kstp_to_save
-  
+
 end module PrintSaveManagerModule

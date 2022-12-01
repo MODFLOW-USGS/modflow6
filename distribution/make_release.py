@@ -46,12 +46,12 @@ other parts of the repo to mark the overall status.
 """
 
 
-import subprocess
-import os
-import sys
-import shutil
 import datetime
 import json
+import os
+import shutil
+import subprocess
+import sys
 from collections import OrderedDict
 
 # update files and paths so that there are the same number of
@@ -71,8 +71,8 @@ files = [
 if len(paths) != len(files):
     msg = (
         "The number of entries in paths "
-        + "({}) must equal ".format(len(paths))
-        + "the number of entries in files ({})".format(len(files))
+        + f"({len(paths)}) must equal "
+        + f"the number of entries in files ({len(files)})"
     )
     assert False, msg
 
@@ -205,9 +205,9 @@ def get_branch(verbose=False):
                     if verbose:
                         print(line)
                 if verbose:
-                    print("On Branch: {}\n".format(branch))
+                    print(f"On Branch: {branch}\n")
             if stderr:
-                print("Errors:\n{}".format(stderr.decode("utf-8")))
+                print(f"Errors:\n{stderr.decode('utf-8')}")
 
             if branch is not None:
                 if "master" in branch or "release" in branch:
@@ -223,13 +223,13 @@ def get_branch(verbose=False):
 
 
 def get_version_str(v0, v1, v2):
-    version_type = ("{}".format(v0), "{}".format(v1), "{}".format(v2))
+    version_type = (f"{v0}", f"{v1}", f"{v2}")
     version = ".".join(version_type)
     return version
 
 
 def get_tag(v0, v1, v2):
-    tag_type = ("{}".format(v0), "{}".format(v1), "{}".format(v2))
+    tag_type = (f"{v0}", f"{v1}", f"{v2}")
     tag = ".".join(tag_type)
     return tag
 
@@ -268,10 +268,10 @@ def update_version():
         # write new version file
         f = open(fpth, "w")
         f.write(
-            "# {} version file automatically ".format(prod)
-            + "created using...{}\n".format(os.path.basename(__file__))
+            f"# {prod} version file automatically "
+            + f"created using...{os.path.basename(__file__)}\n"
         )
-        f.write("# created on..." + "{}\n".format(now.strftime("%B %d, %Y %H:%M:%S")))
+        f.write("# created on..." + f"{now.strftime('%B %d, %Y %H:%M:%S')}\n")
         f.write("\n")
         f.write(f"major = {vmajor}\n")
         f.write(f"minor = {vminor}\n")
@@ -283,31 +283,33 @@ def update_version():
         # update version.py in doc directory
         shutil.copyfile(
             os.path.abspath(fpth),
-            os.path.join("..", "doc", os.path.basename(fpth.replace(".txt", ".py"))),
+            os.path.join(
+                "..", "doc", os.path.basename(fpth.replace(".txt", ".py"))
+            ),
         )
 
         # update latex version file
         version = get_version_str(vmajor, vminor, vmicro)
         version_type = get_version_type(get_branch()).strip()
         if len(version_type) > 0:
-            version += "---{}".format(version_type)
+            version += f"---{version_type}"
         pth = os.path.join(paths[1], files[1])
         f = open(pth, "w")
-        line = "\\newcommand{\\modflowversion}{mf" + "{}".format(version) + "}"
-        f.write("{}\n".format(line))
+        line = "\\newcommand{\\modflowversion}{mf" + f"{version}" + "}"
+        f.write(f"{line}\n")
         line = (
             "\\newcommand{\\modflowdate}{"
-            + "{}".format(now.strftime("%B %d, %Y"))
+            + f"{now.strftime('%B %d, %Y')}"
             + "}"
         )
-        f.write("{}\n".format(line))
+        f.write(f"{line}\n")
         line = (
             "\\newcommand{\\currentmodflowversion}"
             + "{Version \\modflowversion---\\modflowdate}"
         )
-        f.write("{}\n".format(line))
+        f.write(f"{line}\n")
         f.close()
-        print("Succesfully updated {}".format(files[1]))
+        print(f"Succesfully updated {files[1]}")
     except:
         msg = "There was a problem updating the version file"
         raise IOError(msg)
@@ -393,17 +395,19 @@ def update_mf6_version(vmajor, vminor, vmicro):
                 skip = False
             continue
         elif ":: IDEVELOPMODE =" in line:
-            line = "  integer(I4B), parameter :: " + "IDEVELOPMODE = {}".format(
-                idevelopmode
+            line = (
+                "  integer(I4B), parameter :: "
+                + f"IDEVELOPMODE = {idevelopmode}"
             )
         elif ":: VERSION =" in line:
-            line = "  character(len=40), parameter :: " + "VERSION = '{}{}{}'".format(
-                version, version_type, sdate
+            line = (
+                "  character(len=40), parameter :: "
+                + "VERSION = '{}{}{}'".format(version, version_type, sdate)
             )
         elif ":: FMTDISCLAIMER =" in line:
             line = disclaimerfmt
             skip = True
-        f.write("{}\n".format(line))
+        f.write(f"{line}\n")
     f.close()
 
     return
@@ -434,11 +438,11 @@ def update_readme_markdown(vmajor, vminor, vmicro):
     f = open(fpth, "w")
     for line in lines:
         if "## Version " in line:
-            line = "### Version {}".format(version)
+            line = f"### Version {version}"
             if "develop" in branch:
                 line += sb
         # This has been commented out as we've generalized this reference.
-        #elif "https://doi.org/10.5066/F76Q1VQV" in line:
+        # elif "https://doi.org/10.5066/F76Q1VQV" in line:
         #    line = (
         #        "[Langevin, C.D., Hughes, J.D., "
         #        + "Banta, E.R., Provost, A.M., "
@@ -454,7 +458,7 @@ def update_readme_markdown(vmajor, vminor, vmicro):
         elif "Disclaimer" in line:
             line = disclaimer
             terminate = True
-        f.write("{}\n".format(line))
+        f.write(f"{line}\n")
         if terminate:
             break
     f.close()

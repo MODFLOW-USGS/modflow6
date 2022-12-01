@@ -3,7 +3,7 @@
 !   Ensure ATS not specified for steady state period
 !   Add courant time step constraint and other stability controls for GWT model
 module AdaptiveTimeStepModule
- 
+
   use KindModule, only: DP, I4B, LGP
   use SimVariablesModule, only: iout, errmsg, warnmsg
   use SimModule, only: store_error, count_errors, store_warning
@@ -22,20 +22,20 @@ module AdaptiveTimeStepModule
   public :: ats_cr
   public :: ats_da
 
-  integer(I4B), pointer                            :: nper => null()       !< set equal to nper
-  integer(I4B), pointer                            :: maxats => null()     !< number of ats entries
-  real(DP), public, pointer                        :: dtstable => null()   !< delt value required for stability
-  integer(I4B), dimension(:), pointer, contiguous  :: kperats => null()    !< array of stress period numbers to apply ats (size NPER)
-  integer(I4B), dimension(:), pointer, contiguous  :: iperats => null()    !< array of stress period numbers to apply ats (size MAXATS)
-  real(DP), dimension(:), pointer, contiguous      :: dt0 => null()        !< input array of initial time step sizes
-  real(DP), dimension(:), pointer, contiguous      :: dtmin => null()      !< input array of minimum time step sizes
-  real(DP), dimension(:), pointer, contiguous      :: dtmax => null()      !< input array of maximum time step sizes
-  real(DP), dimension(:), pointer, contiguous      :: dtadj => null()      !< input array of time step factors for shortening or increasing
-  real(DP), dimension(:), pointer, contiguous      :: dtfailadj => null()  !< input array of time step factors for shortening due to nonconvergence
-  type(BlockParserType)                            :: parser               !< block parser for reading input file
- 
-  contains
-  
+  integer(I4B), pointer :: nper => null() !< set equal to nper
+  integer(I4B), pointer :: maxats => null() !< number of ats entries
+  real(DP), public, pointer :: dtstable => null() !< delt value required for stability
+  integer(I4B), dimension(:), pointer, contiguous :: kperats => null() !< array of stress period numbers to apply ats (size NPER)
+  integer(I4B), dimension(:), pointer, contiguous :: iperats => null() !< array of stress period numbers to apply ats (size MAXATS)
+  real(DP), dimension(:), pointer, contiguous :: dt0 => null() !< input array of initial time step sizes
+  real(DP), dimension(:), pointer, contiguous :: dtmin => null() !< input array of minimum time step sizes
+  real(DP), dimension(:), pointer, contiguous :: dtmax => null() !< input array of maximum time step sizes
+  real(DP), dimension(:), pointer, contiguous :: dtadj => null() !< input array of time step factors for shortening or increasing
+  real(DP), dimension(:), pointer, contiguous :: dtfailadj => null() !< input array of time step factors for shortening due to nonconvergence
+  type(BlockParserType) :: parser !< block parser for reading input file
+
+contains
+
   !> @ brief Determine if period is adaptive
   !!
   !!  Check settings and determine if kper is an adaptive
@@ -53,7 +53,7 @@ module AdaptiveTimeStepModule
     end if
     return
   end function isAdaptivePeriod
-  
+
   !> @ brief Create ATS object
   !!
   !!  Create a new ATS object, and read and check input.
@@ -66,7 +66,7 @@ module AdaptiveTimeStepModule
     integer(I4B), intent(in) :: nper_tdis
     ! -- local
     ! -- formats
-    character(len=*),parameter :: fmtheader = &
+    character(len=*), parameter :: fmtheader = &
         "(1X,/1X,'ATS -- ADAPTIVE TIME STEP PACKAGE,',   /                  &
         &' VERSION 1 : 03/18/2021 - INPUT READ FROM UNIT ',I0)"
     !
@@ -74,7 +74,7 @@ module AdaptiveTimeStepModule
     call ats_allocate_scalars()
     !
     ! -- Identify package
-    write(iout, fmtheader) inunit
+    write (iout, fmtheader) inunit
     !
     ! -- Initialize block parser
     call parser%initialize(inunit, iout)
@@ -110,7 +110,7 @@ module AdaptiveTimeStepModule
 
   !> @ brief Allocate scalars
   !!
-  !! Allocate and initialize scalars for the ATS package. 
+  !! Allocate and initialize scalars for the ATS package.
   !!
   !<
   subroutine ats_allocate_scalars()
@@ -130,10 +130,10 @@ module AdaptiveTimeStepModule
     ! -- return
     return
   end subroutine ats_allocate_scalars
-    
+
   !> @ brief Allocate arrays
   !!
-  !! Allocate and initialize arrays for the ATS package. 
+  !! Allocate and initialize arrays for the ATS package.
   !!
   !<
   subroutine ats_allocate_arrays()
@@ -171,7 +171,7 @@ module AdaptiveTimeStepModule
 
   !> @ brief Deallocate variables
   !!
-  !! Deallocate all ATS variables. 
+  !! Deallocate all ATS variables.
   !!
   !<
   subroutine ats_da()
@@ -197,7 +197,7 @@ module AdaptiveTimeStepModule
 
   !> @ brief Read options
   !!
-  !! Read options from ATS input file. 
+  !! Read options from ATS input file.
   !!
   !<
   subroutine ats_read_options()
@@ -210,33 +210,33 @@ module AdaptiveTimeStepModule
     !
     ! -- get options block
     call parser%GetBlock('OPTIONS', isfound, ierr, &
-      supportOpenClose=.true., blockRequired=.false.)
+                         supportOpenClose=.true., blockRequired=.false.)
     !
     ! -- parse options block if detected
     if (isfound) then
-      write(iout,'(1x,a)')'PROCESSING ATS OPTIONS'
+      write (iout, '(1x,a)') 'PROCESSING ATS OPTIONS'
       do
         call parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         call parser%GetStringCaps(keyword)
         select case (keyword)
         case default
-          write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN ATS OPTION: ',        &
-                                    trim(keyword)
+          write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN ATS OPTION: ', &
+            trim(keyword)
           call store_error(errmsg)
           call parser%StoreErrorUnit()
         end select
       end do
-      write(iout,'(1x,a)') 'END OF ATS OPTIONS'
+      write (iout, '(1x,a)') 'END OF ATS OPTIONS'
     end if
     !
     ! -- Return
     return
   end subroutine ats_read_options
-    
+
   !> @ brief Read dimensions
   !!
-  !! Read dimensions from ATS input file. 
+  !! Read dimensions from ATS input file.
   !!
   !<
   subroutine ats_read_dimensions()
@@ -247,33 +247,33 @@ module AdaptiveTimeStepModule
     logical :: isfound, endOfBlock
     ! -- formats
     character(len=*), parameter :: fmtmaxats = &
-      "(1X,I0,' ADAPTIVE TIME STEP RECORDS(S) WILL FOLLOW IN PERIODDATA')"
+      &"(1X,I0,' ADAPTIVE TIME STEP RECORDS(S) WILL FOLLOW IN PERIODDATA')"
     !
     ! -- get DIMENSIONS block
     call parser%GetBlock('DIMENSIONS', isfound, ierr, &
-      supportOpenClose=.true.)
+                         supportOpenClose=.true.)
     !
     ! -- parse block if detected
     if (isfound) then
-      write(iout,'(1x,a)')'PROCESSING ATS DIMENSIONS'
+      write (iout, '(1x,a)') 'PROCESSING ATS DIMENSIONS'
       do
         call parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         call parser%GetStringCaps(keyword)
         select case (keyword)
-          case ('MAXATS')
-            maxats = parser%GetInteger()
-            write(iout, fmtmaxats) maxats
-          case default
-            write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN ATS DIMENSION: ',     &
-                                      trim(keyword)
-            call store_error(errmsg)
-            call parser%StoreErrorUnit()
+        case ('MAXATS')
+          maxats = parser%GetInteger()
+          write (iout, fmtmaxats) maxats
+        case default
+          write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN ATS DIMENSION: ', &
+            trim(keyword)
+          call store_error(errmsg)
+          call parser%StoreErrorUnit()
         end select
       end do
-      write(iout,'(1x,a)') 'END OF ATS DIMENSIONS'
+      write (iout, '(1x,a)') 'END OF ATS DIMENSIONS'
     else
-      write(errmsg,'(1x,a)')'ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.'
+      write (errmsg, '(1x,a)') 'ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.'
       call store_error(errmsg)
       call parser%StoreErrorUnit()
     end if
@@ -281,10 +281,10 @@ module AdaptiveTimeStepModule
     ! -- Return
     return
   end subroutine ats_read_dimensions
-        
+
   !> @ brief Read timing
   !!
-  !! Read timing information from ATS input file. 
+  !! Read timing information from ATS input file.
   !!
   !<
   subroutine ats_read_timing()
@@ -298,11 +298,11 @@ module AdaptiveTimeStepModule
     !
     ! -- get PERIODDATA block
     call parser%GetBlock('PERIODDATA', isfound, ierr, &
-      supportOpenClose=.true.)
+                         supportOpenClose=.true.)
     !
     ! -- parse block if detected
     if (isfound) then
-      write(iout,'(1x,a)')'READING ATS PERIODDATA'
+      write (iout, '(1x,a)') 'READING ATS PERIODDATA'
       do n = 1, maxats
         call parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -314,18 +314,18 @@ module AdaptiveTimeStepModule
         dtmax(n) = parser%GetDouble()
         dtadj(n) = parser%GetDouble()
         dtfailadj(n) = parser%GetDouble()
-      enddo
+      end do
       !
       ! -- Close the block
       call parser%terminateblock()
       !
       ! -- Check for errors
-      if(count_errors() > 0) then
+      if (count_errors() > 0) then
         call parser%StoreErrorUnit()
-      endif
-      write(iout,'(1x,a)') 'END READING ATS PERIODDATA'
+      end if
+      write (iout, '(1x,a)') 'END READING ATS PERIODDATA'
     else
-      write(errmsg,'(1x,a)')'ERROR.  REQUIRED PERIODDATA BLOCK NOT FOUND.'
+      write (errmsg, '(1x,a)') 'ERROR.  REQUIRED PERIODDATA BLOCK NOT FOUND.'
       call store_error(errmsg)
       call parser%StoreErrorUnit()
     end if
@@ -333,10 +333,10 @@ module AdaptiveTimeStepModule
     ! -- Return
     return
   end subroutine ats_read_timing
-  
+
   !> @ brief Process input
   !!
-  !! Process ATS input by filling the kperats array. 
+  !! Process ATS input by filling the kperats array.
   !!
   !<
   subroutine ats_process_input()
@@ -351,10 +351,10 @@ module AdaptiveTimeStepModule
       end if
     end do
   end subroutine ats_process_input
-  
+
   !> @ brief Write input table
   !!
-  !! Write a table showing the ATS input read from the perioddata block. 
+  !! Write a table showing the ATS input read from the perioddata block.
   !!
   !<
   subroutine ats_input_table()
@@ -392,35 +392,35 @@ module AdaptiveTimeStepModule
       call inputtab%add_term(dtmax(n))
       call inputtab%add_term(dtadj(n))
       call inputtab%add_term(dtfailadj(n))
-    end do      
+    end do
     !
     ! -- deallocate the table
     call inputtab%table_da()
-    deallocate(inputtab)
-    nullify(inputtab)
+    deallocate (inputtab)
+    nullify (inputtab)
     return
   end subroutine ats_input_table
-  
+
   !> @ brief Check timing
   !!
   !! Perform a check on the input data to make sure values are within
-  !! required ranges. 
+  !! required ranges.
   !!
   !<
   subroutine ats_check_timing()
     integer(I4B) :: n
-    write(iout,'(1x,a)') 'PROCESSING ATS INPUT'
+    write (iout, '(1x,a)') 'PROCESSING ATS INPUT'
     do n = 1, maxats
       !
       ! -- check iperats
       if (iperats(n) < 1) then
-        write(errmsg, '(a, i0, a, i0)') &
+        write (errmsg, '(a, i0, a, i0)') &
           'IPERATS MUST BE GREATER THAN ZERO.  FOUND ', iperats(n), &
           ' FOR ATS PERIODDATA RECORD ', n
         call store_error(errmsg)
       end if
       if (iperats(n) > nper) then
-        write(warnmsg, '(a, i0, a, i0)') &
+        write (warnmsg, '(a, i0, a, i0)') &
           'IPERATS GREATER THAN NPER.  FOUND ', iperats(n), &
           ' FOR ATS PERIODDATA RECORD ', n
         call store_warning(warnmsg)
@@ -428,7 +428,7 @@ module AdaptiveTimeStepModule
       !
       ! -- check dt0
       if (dt0(n) < DZERO) then
-        write(errmsg, '(a, g15.7, a, i0)') &
+        write (errmsg, '(a, g15.7, a, i0)') &
           'DT0 MUST BE >= ZERO.  FOUND ', dt0(n), &
           ' FOR ATS PERIODDATA RECORD ', n
         call store_error(errmsg)
@@ -436,7 +436,7 @@ module AdaptiveTimeStepModule
       !
       ! -- check dtmin
       if (dtmin(n) <= DZERO) then
-        write(errmsg, '(a, g15.7, a, i0)') &
+        write (errmsg, '(a, g15.7, a, i0)') &
           'DTMIN MUST BE > ZERO.  FOUND ', dtmin(n), &
           ' FOR ATS PERIODDATA RECORD ', n
         call store_error(errmsg)
@@ -444,7 +444,7 @@ module AdaptiveTimeStepModule
       !
       ! -- check dtmax
       if (dtmax(n) <= DZERO) then
-        write(errmsg, '(a, g15.7, a, i0)') &
+        write (errmsg, '(a, g15.7, a, i0)') &
           'DTMAX MUST BE > ZERO.  FOUND ', dtmax(n), &
           ' FOR ATS PERIODDATA RECORD ', n
         call store_error(errmsg)
@@ -452,7 +452,7 @@ module AdaptiveTimeStepModule
       !
       ! -- check dtmin <= dtmax
       if (dtmin(n) > dtmax(n)) then
-        write(errmsg, '(a, 2g15.7, a, i0)') &
+        write (errmsg, '(a, 2g15.7, a, i0)') &
           'DTMIN MUST BE < DTMAX.  FOUND ', dtmin(n), dtmax(n), &
           ' FOR ATS PERIODDATA RECORD ', n
         call store_error(errmsg)
@@ -460,7 +460,7 @@ module AdaptiveTimeStepModule
       !
       ! -- check dtadj
       if (dtadj(n) .ne. DZERO .and. dtadj(n) < DONE) then
-        write(errmsg, '(a, g15.7, a, i0)') &
+        write (errmsg, '(a, g15.7, a, i0)') &
           'DTADJ MUST BE 0 or >= 1.0.  FOUND ', dtadj(n), &
           ' FOR ATS PERIODDATA RECORD ', n
         call store_error(errmsg)
@@ -468,25 +468,25 @@ module AdaptiveTimeStepModule
       !
       ! -- check dtfailadj
       if (dtfailadj(n) .ne. DZERO .and. dtfailadj(n) < DONE) then
-        write(errmsg, '(a, g15.7, a, i0)') &
+        write (errmsg, '(a, g15.7, a, i0)') &
           'DTFAILADJ MUST BE 0 or >= 1.0.  FOUND ', dtfailadj(n), &
           ' FOR ATS PERIODDATA RECORD ', n
         call store_error(errmsg)
       end if
-      
+
     end do
     !
     ! -- Check for errors
-    if(count_errors() > 0) then
+    if (count_errors() > 0) then
       call parser%StoreErrorUnit()
-    endif
-    write(iout,'(1x,a)') 'DONE PROCESSING ATS INPUT'
+    end if
+    write (iout, '(1x,a)') 'DONE PROCESSING ATS INPUT'
   end subroutine ats_check_timing
-  
+
   !> @ brief Write period message
   !!
   !! Write message to mfsim.lst file with information on ATS settings
-  !! for this period. 
+  !! for this period.
   !!
   !<
   subroutine ats_period_message(kper)
@@ -494,7 +494,7 @@ module AdaptiveTimeStepModule
     integer(I4B), intent(in) :: kper
     ! -- local
     integer(I4B) :: n
-    character(len=*),parameter :: fmtspts =                                    &
+    character(len=*), parameter :: fmtspts = &
     "(28X,'ATS IS OVERRIDING TIME STEPPING FOR THIS PERIOD',/                  &
       &28X,'INITIAL TIME STEP SIZE                 (DT0) = ',G15.7,/           &
       &28X,'MINIMUM TIME STEP SIZE               (DTMIN) = ',G15.7,/           &
@@ -503,10 +503,10 @@ module AdaptiveTimeStepModule
       &28X,'DIVIDER FOR FAILED TIME STEP     (DTFAILADJ) = ',G15.7,/           &
       &)"
     n = kperats(kper)
-    write(iout, fmtspts) dt0(n), dtmin(n), dtmax(n), dtadj(n), dtfailadj(n)
+    write (iout, fmtspts) dt0(n), dtmin(n), dtmax(n), dtadj(n), dtfailadj(n)
     return
   end subroutine ats_period_message
-  
+
   !> @ brief Allow and external caller to submit preferred time step
   !!
   !!  Submit a preferred time step length.  Alternatively, if idir is
@@ -524,9 +524,9 @@ module AdaptiveTimeStepModule
     integer(I4B) :: n
     real(DP) :: tsfact
     real(DP) :: dt_temp
-    character(len=*), parameter :: fmtdtsubmit =                               &
+    character(len=*), parameter :: fmtdtsubmit = &
       &"(1x, 'ATS: ', A,' submitted a preferred time step size of ', G15.7)"
-    
+
     if (isAdaptivePeriod(kper)) then
       n = kperats(kper)
       tsfact = dtadj(n)
@@ -546,7 +546,7 @@ module AdaptiveTimeStepModule
           dt_temp = dt
         end if
         if (kstp > 1 .and. dt_temp > DZERO) then
-          write(iout, fmtdtsubmit) trim(adjustl(sloc)), dt_temp
+          write (iout, fmtdtsubmit) trim(adjustl(sloc)), dt_temp
         end if
         if (dt_temp > DZERO .and. dt_temp < dtstable) then
           ! -- Reset dtstable to a smaller value
@@ -556,7 +556,7 @@ module AdaptiveTimeStepModule
     end if
     return
   end subroutine ats_submit_delt
-  
+
   !> @ brief Set time step
   !!
   !! Set the time step length (delt) for this time step using the ATS
@@ -575,8 +575,8 @@ module AdaptiveTimeStepModule
     integer(I4B) :: n
     real(DP) :: tstart
     ! -- formats
-    character(len=*), parameter :: fmtdt =                               &
-      &"(1x, 'ATS: time step set to ', G15.7, ' for step ', i0,          &
+    character(len=*), parameter :: fmtdt = &
+      "(1x, 'ATS: time step set to ', G15.7, ' for step ', i0, &
       &' and period ', i0)"
     !
     ! -- initialize the record position (n) for this stress period
@@ -588,7 +588,7 @@ module AdaptiveTimeStepModule
     ! -- Calculate delt
     !
     ! -- Setup new stress period if kstp is 1
-    if(kstp == 1) then
+    if (kstp == 1) then
       !
       ! -- Assign first value of delt for this stress period
       if (dt0(n) /= DZERO) then
@@ -619,11 +619,11 @@ module AdaptiveTimeStepModule
     end if
     !
     ! -- Write time step size information
-    write(iout, fmtdt) delt, kstp, kper
+    write (iout, fmtdt) delt, kstp, kper
     !
     return
   end subroutine ats_set_delt
-                          
+
   !> @ brief Reset time step because failure has occurred
   !!
   !!  Reset the time step using dtfailadj because the time step
@@ -643,7 +643,7 @@ module AdaptiveTimeStepModule
     real(DP) :: delt_temp
     real(DP) :: tsfact
     ! -- formats
-    character(len=*),parameter :: fmttsi =                                     &
+    character(len=*), parameter :: fmttsi = &
       "(1X, 'Failed solution for step ', i0, ' and period ', i0, &
       &' will be retried using time step of ', G15.7)"
     if (isAdaptivePeriod(kper)) then
@@ -656,15 +656,15 @@ module AdaptiveTimeStepModule
           if (delt_temp >= dtmin(n)) then
             finishedTrying = .false.
             delt = delt_temp
-            write(iout, fmttsi) kstp, kper, delt
+            write (iout, fmttsi) kstp, kper, delt
           end if
         end if
-        
+
       end if
     end if
     return
   end subroutine ats_reset_delt
-  
+
   !> @ brief Set end of period indicator
   !!
   !! Determine if it is the end of the stress period and set the endofperiod
@@ -679,12 +679,12 @@ module AdaptiveTimeStepModule
     ! -- local
     integer(I4B) :: n
     !
-    ! -- End of stress period and/or simulation?  
+    ! -- End of stress period and/or simulation?
     n = kperats(kper)
     if (abs(pertim - perlencurrent) < dtmin(n)) then
       endofperiod = .true.
     end if
     return
   end subroutine ats_set_endofperiod
-   
+
 end module AdaptiveTimeStepModule

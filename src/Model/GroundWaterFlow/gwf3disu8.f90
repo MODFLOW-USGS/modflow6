@@ -2,8 +2,9 @@ module GwfDisuModule
 
   use ArrayReadersModule, only: ReadArray
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: LENMODELNAME, LINELENGTH, DZERO, DONE
-  use ConnectionsModule, only: ConnectionsType, iac_to_ia
+  use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENVARNAME, &
+                             DZERO, DONE
+  use ConnectionsModule, only: iac_to_ia
   use InputOutputModule, only: URWORD, ulasav, ulaprufw, ubdsv1, ubdsv06
   use SimModule, only: count_errors, store_error, store_error_unit
   use SimVariablesModule, only: errmsg
@@ -17,33 +18,32 @@ module GwfDisuModule
   private
   public :: GwfDisuType
   public :: disu_cr
-  public :: disu_init_mem
   public :: CastAsDisuType
 
   type, extends(DisBaseType) :: GwfDisuType
-    integer(I4B), pointer :: njausr => null()                                    ! user-specified nja size
-    integer(I4B), pointer :: nvert => null()                                     ! number of x,y vertices
-    real(DP), pointer :: voffsettol => null()                                    ! vertical offset tolerance
-    real(DP), dimension(:,:), pointer, contiguous :: vertices => null()          ! cell vertices stored as 2d array of x and y
-    real(DP), dimension(:,:), pointer, contiguous :: cellxy => null()            ! cell center stored as 2d array of x and y
-    real(DP), dimension(:), pointer, contiguous :: top1d => null()               ! (size:nodesuser) cell top elevation
-    real(DP), dimension(:), pointer, contiguous :: bot1d => null()               ! (size:nodesuser) cell bottom elevation
-    real(DP), dimension(:), pointer, contiguous :: area1d => null()              ! (size:nodesuser) cell area, in plan view
-    integer(I4B), dimension(:), pointer, contiguous :: iainp => null()           ! (size:nodesuser+1) user iac converted ia
-    integer(I4B), dimension(:), pointer, contiguous :: jainp => null()           ! (size:njausr) user-input ja array
-    integer(I4B), dimension(:), pointer, contiguous :: ihcinp => null()          ! (size:njausr) user-input ihc array
-    real(DP), dimension(:), pointer, contiguous :: cl12inp => null()             ! (size:njausr) user-input cl12 array
-    real(DP), dimension(:), pointer, contiguous :: hwvainp => null()             ! (size:njausr) user-input hwva array
-    real(DP), dimension(:), pointer, contiguous :: angldegxinp => null()         ! (size:njausr) user-input angldegx array
-    integer(I4B), pointer :: iangledegx => null()                                ! =1 when angle information was present in input, 0 otherwise
-    integer(I4B), dimension(:), pointer, contiguous :: iavert => null()          ! cell vertex pointer ia array
-    integer(I4B), dimension(:), pointer, contiguous:: javert => null()           ! cell vertex pointer ja array
-    integer(I4B), dimension(:), pointer, contiguous :: idomain  => null()        ! idomain (nodes)
-    logical(LGP) :: readFromFile                                                 ! True, when DIS is read from file (almost always)
+    integer(I4B), pointer :: njausr => null() ! user-specified nja size
+    integer(I4B), pointer :: nvert => null() ! number of x,y vertices
+    real(DP), pointer :: voffsettol => null() ! vertical offset tolerance
+    real(DP), dimension(:, :), pointer, contiguous :: vertices => null() ! cell vertices stored as 2d array of x and y
+    real(DP), dimension(:, :), pointer, contiguous :: cellxy => null() ! cell center stored as 2d array of x and y
+    real(DP), dimension(:), pointer, contiguous :: top1d => null() ! (size:nodesuser) cell top elevation
+    real(DP), dimension(:), pointer, contiguous :: bot1d => null() ! (size:nodesuser) cell bottom elevation
+    real(DP), dimension(:), pointer, contiguous :: area1d => null() ! (size:nodesuser) cell area, in plan view
+    integer(I4B), dimension(:), pointer, contiguous :: iainp => null() ! (size:nodesuser+1) user iac converted ia
+    integer(I4B), dimension(:), pointer, contiguous :: jainp => null() ! (size:njausr) user-input ja array
+    integer(I4B), dimension(:), pointer, contiguous :: ihcinp => null() ! (size:njausr) user-input ihc array
+    real(DP), dimension(:), pointer, contiguous :: cl12inp => null() ! (size:njausr) user-input cl12 array
+    real(DP), dimension(:), pointer, contiguous :: hwvainp => null() ! (size:njausr) user-input hwva array
+    real(DP), dimension(:), pointer, contiguous :: angldegxinp => null() ! (size:njausr) user-input angldegx array
+    integer(I4B), pointer :: iangledegx => null() ! =1 when angle information was present in input, 0 otherwise
+    integer(I4B), dimension(:), pointer, contiguous :: iavert => null() ! cell vertex pointer ia array
+    integer(I4B), dimension(:), pointer, contiguous :: javert => null() ! cell vertex pointer ja array
+    integer(I4B), dimension(:), pointer, contiguous :: idomain => null() ! idomain (nodes)
+    logical(LGP) :: readFromFile ! True, when DIS is read from file (almost always)
   contains
     procedure :: dis_df => disu_df
+    procedure :: disu_load
     procedure :: dis_da => disu_da
-    procedure :: get_cellxy => get_cellxy_disu
     procedure :: get_dis_type => get_dis_type
     procedure :: disu_ck
     procedure :: grid_finalize
@@ -62,12 +62,17 @@ module GwfDisuModule
     procedure :: allocate_scalars
     procedure :: allocate_arrays
     procedure :: allocate_arrays_mem
-    procedure :: read_options
-    procedure :: read_dimensions
-    procedure :: read_mf6_griddata
-    procedure :: read_connectivity
-    procedure :: read_vertices
-    procedure :: read_cell2d
+    procedure :: source_options
+    procedure :: source_dimensions
+    procedure :: source_griddata
+    procedure :: source_connectivity
+    procedure :: source_vertices
+    procedure :: source_cell2d
+    procedure :: log_options
+    procedure :: log_dimensions
+    procedure :: log_griddata
+    procedure :: log_connectivity
+    procedure :: define_cellverts
     procedure :: write_grb
     !
     ! -- Read a node-sized model array (reduced or not)
@@ -75,7 +80,7 @@ module GwfDisuModule
     procedure :: read_dbl_array
   end type GwfDisuType
 
-  contains
+contains
 
   subroutine disu_cr(dis, name_model, inunit, iout)
 ! ******************************************************************************
@@ -84,6 +89,9 @@ module GwfDisuModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use IdmMf6FileLoaderModule, only: input_load
+    use ConstantsModule, only: LENPACKAGETYPE
     ! -- dummy
     class(DisBaseType), pointer :: dis
     character(len=*), intent(in) :: name_model
@@ -91,10 +99,13 @@ module GwfDisuModule
     integer(I4B), intent(in) :: iout
     ! -- local
     type(GwfDisuType), pointer :: disnew
+    character(len=*), parameter :: fmtheader = &
+      "(1X, /1X, 'DISU -- UNSTRUCTURED GRID DISCRETIZATION PACKAGE,', &
+      &' VERSION 2 : 3/27/2014 - INPUT READ FROM UNIT ', I0, //)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Create a new discretization object
-    allocate(disnew)
+    allocate (disnew)
     dis => disnew
     !
     ! -- Allocate scalars and assign data
@@ -102,132 +113,64 @@ module GwfDisuModule
     dis%inunit = inunit
     dis%iout = iout
     !
-    ! -- Initialize block parser
-    call dis%parser%Initialize(dis%inunit, dis%iout)
+    ! -- if reading from file
+    if (inunit > 0) then
+      !
+      ! -- Identify package
+      if (iout > 0) then
+        write (iout, fmtheader) inunit
+      end if
+      !
+      ! -- initialize parser and load the disu input file
+      call dis%parser%Initialize(inunit, iout)
+      !
+      ! -- Use the input data model routines to load the input data
+      !    into memory
+      call input_load(dis%parser, 'DISU6', 'GWF', 'DISU', name_model, 'DISU', &
+                      [character(len=LENPACKAGETYPE) ::], iout)
+      !
+      ! -- load disu
+      call disnew%disu_load()
+    end if
     !
     ! -- Return
     return
   end subroutine disu_cr
-  
-  subroutine disu_init_mem(dis, name_model, iout, nodes, nja,                    &
-                           top, bot, area, iac, ja, ihc, cl12, hwva, angldegx,   &
-                           nvert, vertices, cellxy, idomain)
+
+  subroutine disu_load(this)
 ! ******************************************************************************
-! dis_init_mem -- Create a new unstructured discretization object from memory
+! disu_load -- transfer data into this discretization object
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    class(DisBaseType), pointer :: dis
-    character(len=*), intent(in) :: name_model
-    integer(I4B), intent(in) :: iout
-    integer(I4B), intent(in) :: nodes
-    integer(I4B), intent(in) :: nja
-    real(DP), dimension(:), pointer, contiguous, intent(in) :: top
-    real(DP), dimension(:), pointer, contiguous, intent(in) :: bot
-    real(DP), dimension(:), pointer, contiguous, intent(in) :: area
-    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: iac
-    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: ja
-    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: ihc
-    real(DP), dimension(:), pointer, contiguous, intent(in) :: cl12
-    real(DP), dimension(:), pointer, contiguous, intent(in) :: hwva
-    real(DP), dimension(:), pointer, contiguous, intent(in), optional :: angldegx
-    integer(I4B), intent(in), optional :: nvert
-    integer(I4B), dimension(:, :), pointer, contiguous, intent(in),              &
-      optional :: vertices
-    integer(I4B), dimension(:, :), pointer, contiguous, intent(in),              &
-      optional :: cellxy
-    integer(I4B), dimension(:), pointer, contiguous, intent(in),                 &
-      optional :: idomain
-    ! -- local
-    type(GwfDisuType), pointer :: disext
-    integer(I4B) :: n
-    integer(I4B) :: j
-    integer(I4B) :: ival
-    real(DP), dimension(:), pointer, contiguous :: atemp
+    use MemoryHelperModule, only: create_mem_path
+    ! -- dummy
+    class(GwfDisuType) :: this
 ! ------------------------------------------------------------------------------
-    allocate(disext)
-    dis => disext
-    call disext%allocate_scalars(name_model)
-    dis%inunit = 0
-    dis%iout = iout
     !
-    ! -- set dimensions
-    disext%nodes = nodes
-    disext%nja = nja
-    if (present(nvert)) then
-      disext%nvert = nvert
-    end if
+    ! -- source input data
+    call this%source_options()
+    call this%source_dimensions()
+    call this%source_griddata()
+    call this%source_connectivity()
     !
-    ! -- Calculate nodesuser
-    disext%nodesuser = disext%nodes
-    !
-    ! -- Allocate vectors for disu
-    call disext%allocate_arrays()
-    !
-    ! -- fill data
-    do n = 1, disext%nodes
-      disext%top(n) = top(n)
-      disext%bot(n) = bot(n)
-      disext%area(n) = area(n)
-      disext%con%ia(n) = iac(n)
-      if (present(idomain)) then
-        ival = idomain(n)
-      else
-        ival = 1
-      end if
-      disext%idomain(n) = ival
-    end do
-    call iac_to_ia(disext%con%ia)
-    do n = 1, nja
-      disext%con%ja(n) = ja(n)
-    end do
-    if (present(nvert)) then
-      if (present(vertices)) then
-        do n = 1, disext%nvert
-          do j = 1, 2
-            disext%vertices(j, n) = vertices(j, n)
-          end do
-        end do
-      ! -- error
-      else
-      end if
-      if (present(cellxy)) then
-        do n = 1, disext%nodes
-          do j = 1, 2
-            disext%cellxy(j, n) = cellxy(j, n)
-          end do
-        end do
-      ! -- error
-      else
-      end if
+    ! -- If NVERT specified and greater than 0, then source VERTICES and CELL2D
+    if (this%nvert > 0) then
+      call this%source_vertices()
+      call this%source_cell2d()
     else
       ! -- connection direction information cannot be calculated
-      disext%icondir = 0
+      this%icondir = 0
     end if
     !
-    ! -- allocate space for atemp and fill
-    allocate(atemp(nja))
-    if (present(angldegx)) then
-      disext%con%ianglex = 1
-      do n = 1, nja
-        atemp(n) = angldegx(n)
-      end do
-    end if
-    !
-    ! -- finalize connection data
-    call disext%con%con_finalize(ihc, cl12, hwva, atemp)
-    disext%njas = disext%con%njas
-    !
-    ! -- deallocate temp arrays
-    deallocate(atemp)
-    !
-    ! -- Make some final disu checks
-    call disext%disu_ck()
+    ! -- Make some final disu checks on the non-reduced user-provided
+    !    input
+    call this%disu_ck()
     !
     ! -- Return
     return
-  end subroutine disu_init_mem
+  end subroutine disu_load
 
   subroutine disu_df(this)
 ! ******************************************************************************
@@ -240,34 +183,7 @@ module GwfDisuModule
     class(GwfDisuType) :: this
 ! ------------------------------------------------------------------------------
     !
-    ! -- read data from file
-    if (this%inunit /= 0) then
-      !
-      ! -- Identify package
-      write(this%iout,1) this%inunit
-  1   format(1X,/1X,'DISU -- UNSTRUCTURED GRID DISCRETIZATION PACKAGE,',         &
-                  ' VERSION 2 : 3/27/2014 - INPUT READ FROM UNIT ',I0,//)
-      !
-      call this%read_options()
-      call this%read_dimensions()
-      call this%read_mf6_griddata()
-      call this%read_connectivity()
-      !
-      ! -- If NVERT specified and greater than 0, then read VERTICES and CELL2D
-      if(this%nvert > 0) then
-        call this%read_vertices()
-        call this%read_cell2d()
-      else
-        ! -- connection direction information cannot be calculated
-        this%icondir = 0
-      endif
-    end if
-    !
-    ! -- Make some final disu checks on the non-reduced user-provided
-    !    input
-    call this%disu_ck()
-    !
-    ! -- Finalize the grid by creating the connection object and reducing the 
+    ! -- Finalize the grid by creating the connection object and reducing the
     !    grid using IDOMAIN, if necessary
     call this%grid_finalize()
     !
@@ -283,8 +199,7 @@ module GwfDisuModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: count_errors, store_error
-    use MemoryManagerModule, only: mem_allocate
+    use MemoryManagerModule, only: mem_allocate, mem_reallocate
     ! -- dummy
     class(GwfDisuType) :: this
     ! -- locals
@@ -294,32 +209,32 @@ module GwfDisuModule
     integer(I4B) :: nrsize
     ! -- formats
     character(len=*), parameter :: fmtdz = &
-      "('ERROR. CELL (',i0,',',i0,',',i0,') THICKNESS <= 0. ', " //            &
-      "'TOP, BOT: ',2(1pg24.15))"
+      "('CELL (',i0,',',i0,',',i0,') THICKNESS <= 0. ', &
+      &'TOP, BOT: ',2(1pg24.15))"
     character(len=*), parameter :: fmtnr = &
-      "(/1x, 'THE SPECIFIED IDOMAIN RESULTS IN A REDUCED NUMBER OF CELLS.'," // &
-      "/1x, 'NUMBER OF USER NODES: ',I0," // &
-      "/1X, 'NUMBER OF NODES IN SOLUTION: ', I0, //)"
+      "(/1x, 'The specified IDOMAIN results in a reduced number of cells.',&
+      &/1x, 'Number of user nodes: ',I0,&
+      &/1X, 'Number of nodes in solution: ', I0, //)"
 ! ------------------------------------------------------------------------------
     !
     ! -- count active cells
     this%nodes = 0
     do n = 1, this%nodesuser
-      if(this%idomain(n) > 0) this%nodes = this%nodes + 1
-    enddo
+      if (this%idomain(n) > 0) this%nodes = this%nodes + 1
+    end do
     !
     ! -- Check to make sure nodes is a valid number
     if (this%nodes == 0) then
-      call store_error('ERROR.  MODEL DOES NOT HAVE ANY ACTIVE NODES.')
-      call store_error('MAKE SURE IDOMAIN ARRAY HAS SOME VALUES GREATER &
-        &THAN ZERO.')
+      call store_error('Model does not have any active nodes. &
+                       &Ensure IDOMAIN array has some values greater &
+                       &than zero.')
       call this%parser%StoreErrorUnit()
     end if
     !
     ! -- Write message if reduced grid
-    if(this%nodes < this%nodesuser) then
-      write(this%iout, fmtnr) this%nodesuser, this%nodes
-    endif
+    if (this%nodes < this%nodesuser) then
+      write (this%iout, fmtnr) this%nodesuser, this%nodes
+    end if
     !
     ! -- Array size is now known, so allocate
     call this%allocate_arrays()
@@ -328,51 +243,65 @@ module GwfDisuModule
     !    a negative number to indicate it is a pass-through cell, or
     !    a zero to indicate that the cell is excluded from the
     !    solution. (negative idomain not supported for disu)
-    if(this%nodes < this%nodesuser) then
+    if (this%nodes < this%nodesuser) then
       noder = 1
       do node = 1, this%nodesuser
-        if(this%idomain(node) > 0) then
+        if (this%idomain(node) > 0) then
           this%nodereduced(node) = noder
           noder = noder + 1
-        elseif(this%idomain(node) < 0) then
+        elseif (this%idomain(node) < 0) then
           this%nodereduced(node) = -1
         else
           this%nodereduced(node) = 0
-        endif
-      enddo
-    endif
+        end if
+      end do
+    end if
     !
     ! -- Fill nodeuser if a reduced grid
-    if(this%nodes < this%nodesuser) then
+    if (this%nodes < this%nodesuser) then
       noder = 1
       do node = 1, this%nodesuser
-        if(this%idomain(node) > 0) then
+        if (this%idomain(node) > 0) then
           this%nodeuser(noder) = node
           noder = noder + 1
-        endif
-      enddo
-    endif
+        end if
+      end do
+    end if
     !
     ! -- Move top1d, bot1d, and area1d into top, bot, and area
     do node = 1, this%nodesuser
       noder = node
-      if(this%nodes < this%nodesuser) noder = this%nodereduced(node)
-      if(noder <= 0) cycle
+      if (this%nodes < this%nodesuser) noder = this%nodereduced(node)
+      if (noder <= 0) cycle
       this%top(noder) = this%top1d(node)
       this%bot(noder) = this%bot1d(node)
       this%area(noder) = this%area1d(node)
-    enddo
+    end do
+    !
+    ! -- fill cell center coordinates
+    if (this%nvert > 0) then
+      do node = 1, this%nodesuser
+        noder = node
+        if (this%nodes < this%nodesuser) noder = this%nodereduced(node)
+        if (noder <= 0) cycle
+        this%xc(noder) = this%cellxy(1, node)
+        this%yc(noder) = this%cellxy(2, node)
+      end do
+    else
+      call mem_reallocate(this%xc, 0, 'XC', this%memoryPath)
+      call mem_reallocate(this%yc, 0, 'YC', this%memoryPath)
+    end if
     !
     ! -- create and fill the connections object
     nrsize = 0
-    if(this%nodes < this%nodesuser) nrsize = this%nodes
-    allocate(this%con)
-    call this%con%disuconnections(this%name_model, this%nodes,                 &
-                                  this%nodesuser, nrsize,                      &
-                                  this%nodereduced, this%nodeuser,             &
-                                  this%iainp, this%jainp,                      &
-                                  this%ihcinp, this%cl12inp,                   &
-                                  this%hwvainp, this%angldegxinp,              &
+    if (this%nodes < this%nodesuser) nrsize = this%nodes
+    allocate (this%con)
+    call this%con%disuconnections(this%name_model, this%nodes, &
+                                  this%nodesuser, nrsize, &
+                                  this%nodereduced, this%nodeuser, &
+                                  this%iainp, this%jainp, &
+                                  this%ihcinp, this%cl12inp, &
+                                  this%hwvainp, this%angldegxinp, &
                                   this%iangledegx)
     this%nja = this%con%nja
     this%njas = this%con%njas
@@ -398,19 +327,19 @@ module GwfDisuModule
     real(DP) :: dz
     ! -- formats
     character(len=*), parameter :: fmtidm = &
-      "('Invalid idomain value ', i0, ' specified for node ', i0)"
+      &"('Invalid idomain value ', i0, ' specified for node ', i0)"
     character(len=*), parameter :: fmtdz = &
-      "('Cell ', i0, ' with thickness <= 0. Top, bot: ', 2(1pg24.15))"
+      &"('Cell ', i0, ' with thickness <= 0. Top, bot: ', 2(1pg24.15))"
     character(len=*), parameter :: fmtarea = &
-      "('Cell ', i0, ' with area <= 0. Area: ', 1(1pg24.15))"
+      &"('Cell ', i0, ' with area <= 0. Area: ', 1(1pg24.15))"
     character(len=*), parameter :: fmtjan = &
-      "('Cell ', i0, ' must have its first connection be itself.  Found: ', i0)"
+      &"('Cell ', i0, ' must have its first connection be itself.  Found: ', i0)"
     character(len=*), parameter :: fmtjam = &
-      "('Cell ', i0, ' has invalid connection in JA.  Found: ', i0)"
-    character(len=*),parameter :: fmterrmsg =                                  &
+      &"('Cell ', i0, ' has invalid connection in JA.  Found: ', i0)"
+    character(len=*), parameter :: fmterrmsg = &
       "('Top elevation (', 1pg15.6, ') for cell ', i0, ' is above bottom &
       &elevation (', 1pg15.6, ') for cell ', i0, '. Based on node numbering &
-      &rules cell ', i0, ' must be below cell ', i0, '.')"    
+      &rules cell ', i0, ' must be below cell ', i0, '.')"
 ! ------------------------------------------------------------------------------
     !
     ! -- Check connectivity
@@ -425,7 +354,7 @@ module GwfDisuModule
         this%jainp(ipos) = m
       end if
       if (n /= m) then
-        write(errmsg, fmtjan) n, m
+        write (errmsg, fmtjan) n, m
         call store_error(errmsg)
       end if
       !
@@ -434,26 +363,26 @@ module GwfDisuModule
         m = this%jainp(ipos)
         if (m < 0 .or. m > this%nodesuser) then
           ! -- make sure first connection is to itself
-          write(errmsg, fmtjam) n, m
-          call store_error(errmsg)          
-        end if        
+          write (errmsg, fmtjam) n, m
+          call store_error(errmsg)
+        end if
       end do
     end do
     !
     ! -- terminate if errors found
-    if(count_errors() > 0) then
+    if (count_errors() > 0) then
       if (this%inunit > 0) then
         call store_error_unit(this%inunit)
       end if
-    endif
+    end if
     !
     ! -- Ensure idomain values are valid
     do n = 1, this%nodesuser
-      if(this%idomain(n) > 1 .or. this%idomain(n) < 0) then
-        write(errmsg, fmtidm) this%idomain(n), n
+      if (this%idomain(n) > 1 .or. this%idomain(n) < 0) then
+        write (errmsg, fmtidm) this%idomain(n), n
         call store_error(errmsg)
       end if
-    enddo
+    end do
     !
     ! -- Check for zero and negative thickness and zero or negative areas
     !    for cells with idomain == 1
@@ -461,19 +390,19 @@ module GwfDisuModule
       if (this%idomain(n) == 1) then
         dz = this%top1d(n) - this%bot1d(n)
         if (dz <= DZERO) then
-          write(errmsg, fmt=fmtdz) n, this%top1d(n), this%bot1d(n)
+          write (errmsg, fmt=fmtdz) n, this%top1d(n), this%bot1d(n)
           call store_error(errmsg)
-        endif
+        end if
         if (this%area1d(n) <= DZERO) then
-          write(errmsg, fmt=fmtarea) n, this%area1d(n)
+          write (errmsg, fmt=fmtarea) n, this%area1d(n)
           call store_error(errmsg)
-        endif
+        end if
       end if
-    enddo
+    end do
     !
     ! -- check to make sure voffsettol is >= 0
     if (this%voffsettol < DZERO) then
-      write(errmsg, '(a, 1pg15.6)') &
+      write (errmsg, '(a, 1pg15.6)') &
         'Vertical offset tolerance must be greater than zero. Found ', &
         this%voffsettol
       call store_error(errmsg)
@@ -489,9 +418,9 @@ module GwfDisuModule
         m = this%jainp(ipos)
         ihc = this%ihcinp(ipos)
         if (ihc == 0 .and. m > n) then
-          dz = this%top1d(m) - this%bot1d(n) 
+          dz = this%top1d(m) - this%bot1d(n)
           if (dz > this%voffsettol) then
-            write(errmsg, fmterrmsg) this%top1d(m), m, this%bot1d(n), n, m, n
+            write (errmsg, fmterrmsg) this%top1d(m), m, this%bot1d(n), n, m, n
             call store_error(errmsg)
           end if
         end if
@@ -499,11 +428,11 @@ module GwfDisuModule
     end do
     !
     ! -- terminate if errors found
-    if(count_errors() > 0) then
+    if (count_errors() > 0) then
       if (this%inunit > 0) then
         call store_error_unit(this%inunit)
       end if
-    endif
+    end if
     !
     ! -- Return
     return
@@ -518,9 +447,16 @@ module GwfDisuModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
+    use MemoryManagerExtModule, only: memorylist_remove
+    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfDisuType) :: this
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Deallocate idm memory
+    call memorylist_remove(this%name_model, 'DISU', idm_context)
+    call memorylist_remove(component=this%name_model, &
+                           context=idm_context)
     !
     ! -- scalars
     call mem_deallocate(this%njausr)
@@ -532,7 +468,7 @@ module GwfDisuModule
     if (this%readFromFile) then
       call mem_deallocate(this%top1d)
       call mem_deallocate(this%bot1d)
-      call mem_deallocate(this%area1d)      
+      call mem_deallocate(this%area1d)
       if (associated(this%iavert)) then
         call mem_deallocate(this%iavert)
         call mem_deallocate(this%javert)
@@ -543,13 +479,12 @@ module GwfDisuModule
       call mem_deallocate(this%ihcinp)
       call mem_deallocate(this%cl12inp)
       call mem_deallocate(this%hwvainp)
-      call mem_deallocate(this%angldegxinp)      
+      call mem_deallocate(this%angldegxinp)
     end if
 
     call mem_deallocate(this%idomain)
     call mem_deallocate(this%cellxy)
 
-    
     call mem_deallocate(this%nodeuser)
     call mem_deallocate(this%nodereduced)
     !
@@ -576,8 +511,8 @@ module GwfDisuModule
     character(len=10) :: nstr
 ! ------------------------------------------------------------------------------
     !
-    write(nstr, '(i0)') nodeu
-    str = '(' // trim(adjustl(nstr)) // ')'
+    write (nstr, '(i0)') nodeu
+    str = '('//trim(adjustl(nstr))//')'
     !
     ! -- return
     return
@@ -603,8 +538,8 @@ module GwfDisuModule
     ! -- check the size of arr
     isize = size(arr)
     if (isize /= this%ndim) then
-      write(errmsg,'(a,i0,a,i0,a)')                                              &
-        'Program error: nodeu_to_array size of array (', isize,                  &
+      write (errmsg, '(a,i0,a,i0,a)') &
+        'Program error: nodeu_to_array size of array (', isize, &
         ') is not equal to the discretization dimension (', this%ndim, ')'
       call store_error(errmsg, terminate=.TRUE.)
     end if
@@ -616,155 +551,161 @@ module GwfDisuModule
     return
   end subroutine nodeu_to_array
 
-  subroutine read_options(this)
+  !> @brief Write user options to list file
+  !<
+  subroutine log_options(this, found)
+    use GwfDisuInputModule, only: GwfDisuParamFoundType
+    class(GwfDisuType) :: this
+    type(GwfDisuParamFoundType), intent(in) :: found
+
+    write (this%iout, '(1x,a)') 'Setting Discretization Options'
+
+    if (found%length_units) then
+      write (this%iout, '(4x,a,i0)') 'Model length unit [0=UND, 1=FEET, &
+      &2=METERS, 3=CENTIMETERS] set as ', this%lenuni
+    end if
+
+    if (found%nogrb) then
+      write (this%iout, '(4x,a,i0)') 'Binary grid file [0=GRB, 1=NOGRB] &
+        &set as ', this%nogrb
+    end if
+
+    if (found%xorigin) then
+      write (this%iout, '(4x,a,G0)') 'XORIGIN = ', this%xorigin
+    end if
+
+    if (found%yorigin) then
+      write (this%iout, '(4x,a,G0)') 'YORIGIN = ', this%yorigin
+    end if
+
+    if (found%angrot) then
+      write (this%iout, '(4x,a,G0)') 'ANGROT = ', this%angrot
+    end if
+
+    if (found%voffsettol) then
+      write (this%iout, '(4x,a,G0)') 'VERTICAL_OFFSET_TOLERANCE = ', &
+        this%voffsettol
+    end if
+
+    write (this%iout, '(1x,a,/)') 'End Setting Discretization Options'
+
+  end subroutine log_options
+
+  !> @brief Copy options from IDM into package
+  !<
+  subroutine source_options(this)
 ! ******************************************************************************
-! read_options -- Read discretization options
+! source_options -- source options from memory manager input path
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use MemoryManagerModule, only: mem_allocate
-    use ConstantsModule, only: LINELENGTH
-    use SimModule, only: count_errors, store_error
-    implicit none
+    ! -- modules
+    use KindModule, only: LGP
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_context
+    use GwfDisuInputModule, only: GwfDisuParamFoundType
+    ! -- dummy
     class(GwfDisuType) :: this
-    character(len=LINELENGTH) :: keyword
-    integer(I4B) :: ierr, nerr
-    logical :: isfound, endOfBlock
+    ! -- locals
+    character(len=LENMEMPATH) :: idmMemoryPath
+    character(len=LENVARNAME), dimension(3) :: lenunits = &
+      &[character(len=LENVARNAME) :: 'FEET', 'METERS', 'CENTIMETERS']
+    type(GwfDisuParamFoundType) :: found
 ! ------------------------------------------------------------------------------
     !
-    ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, &
-                              supportOpenClose=.true., blockRequired=.false.)
+    ! -- set memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'DISU', idm_context)
     !
-    ! -- set default options
-      this%lenuni = 0
+    ! -- update defaults with idm sourced values
+    call mem_set_value(this%lenuni, 'LENGTH_UNITS', idmMemoryPath, lenunits, &
+                       found%length_units)
+    call mem_set_value(this%nogrb, 'NOGRB', idmMemoryPath, found%nogrb)
+    call mem_set_value(this%xorigin, 'XORIGIN', idmMemoryPath, found%xorigin)
+    call mem_set_value(this%yorigin, 'YORIGIN', idmMemoryPath, found%yorigin)
+    call mem_set_value(this%angrot, 'ANGROT', idmMemoryPath, found%angrot)
+    call mem_set_value(this%voffsettol, 'VOFFSETTOL', idmMemoryPath, &
+                       found%voffsettol)
     !
-    ! -- parse options block if detected
-    if (isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING DISCRETIZATION OPTIONS'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-          case ('LENGTH_UNITS')
-            call this%parser%GetStringCaps(keyword)
-            if(keyword=='FEET') then
-              this%lenuni = 1
-              write(this%iout,'(4x,a)') 'MODEL LENGTH UNIT IS FEET'
-            elseif(keyword=='METERS') then
-              this%lenuni = 2
-              write(this%iout,'(4x,a)') 'MODEL LENGTH UNIT IS METERS'
-            elseif(keyword=='CENTIMETERS') then
-              this%lenuni = 3
-              write(this%iout,'(4x,a)') 'MODEL LENGTH UNIT IS CENTIMETERS'
-            else
-              write(this%iout,'(4x,a)')'UNKNOWN UNIT: ',trim(keyword)
-              write(this%iout,'(4x,a)')'SETTING TO: ','UNDEFINED'
-            endif
-          case('NOGRB')
-            write(this%iout,'(4x,a)') 'BINARY GRB FILE WILL NOT BE WRITTEN'
-            this%writegrb = .false.
-          case('XORIGIN')
-            this%xorigin = this%parser%GetDouble()
-            write(this%iout,'(4x,a,1pg24.15)') 'XORIGIN SPECIFIED AS ',        &
-                                              this%xorigin
-          case('YORIGIN')
-            this%yorigin = this%parser%GetDouble()
-            write(this%iout,'(4x,a,1pg24.15)') 'YORIGIN SPECIFIED AS ',        &
-                        this%yorigin
-          case('ANGROT')
-            this%angrot = this%parser%GetDouble()
-            write(this%iout,'(4x,a,1pg24.15)') 'ANGROT SPECIFIED AS ',         &
-              this%angrot
-          case('VERTICAL_OFFSET_TOLERANCE')
-            this%voffsettol = this%parser%GetDouble()
-            write(this%iout,'(4x,a,1pg24.15)') &
-              'VERTICAL OFFSET TOLERANCE SPECIFIED AS ', this%voffsettol
-          case default
-            write(errmsg,'(a)')'Unknown DISU option: ' // trim(keyword)
-            call store_error(errmsg)
-        end select
-      end do
-      write(this%iout,'(1x,a)')'END OF DISCRETIZATION OPTIONS'
-    else
-      write(this%iout,'(1x,a)')'NO OPTION BLOCK DETECTED.'
+    ! -- log values to list file
+    if (this%iout > 0) then
+      call this%log_options(found)
     end if
-    if(this%lenuni==0) write(this%iout,'(1x,a)') 'MODEL LENGTH UNIT IS UNDEFINED'
-    !
-    nerr = count_errors()
-    if(nerr > 0) then
-      call this%parser%StoreErrorUnit()
-    endif
     !
     ! -- Return
     return
-  end subroutine read_options
+  end subroutine source_options
 
-  subroutine read_dimensions(this)
+  !> @brief Write dimensions to list file
+  !<
+  subroutine log_dimensions(this, found)
+    use GwfDisuInputModule, only: GwfDisuParamFoundType
+    class(GwfDisuType) :: this
+    type(GwfDisuParamFoundType), intent(in) :: found
+
+    write (this%iout, '(1x,a)') 'Setting Discretization Dimensions'
+
+    if (found%nodes) then
+      write (this%iout, '(4x,a,i0)') 'NODES = ', this%nodesuser
+    end if
+
+    if (found%nja) then
+      write (this%iout, '(4x,a,i0)') 'NJA = ', this%njausr
+    end if
+
+    if (found%nvert) then
+      write (this%iout, '(4x,a,i0)') 'NVERT = ', this%nvert
+    end if
+
+    write (this%iout, '(1x,a,/)') 'End Setting Discretization Dimensions'
+
+  end subroutine log_dimensions
+
+  !> @brief Copy dimensions from IDM into package
+  !<
+  subroutine source_dimensions(this)
 ! ******************************************************************************
-! read_dimensions -- Read discretization information from file
+! source_dimensions -- source dimensions from memory manager input path
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use MemoryManagerModule, only: mem_allocate
-    use ConstantsModule, only: LINELENGTH
-    use SimModule, only: count_errors, store_error
-    implicit none
+    use KindModule, only: LGP
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_context
+    use GwfDisuInputModule, only: GwfDisuParamFoundType
+    ! -- dummy
     class(GwfDisuType) :: this
-    character(len=LINELENGTH) :: keyword
-    integer(I4B) :: n, ierr
-    logical :: isfound, endOfBlock
+    ! -- locals
+    character(len=LENMEMPATH) :: idmMemoryPath
+    integer(I4B) :: n
+    type(GwfDisuParamFoundType) :: found
 ! ------------------------------------------------------------------------------
     !
-    ! -- Initialize dimensions
-    this%nodesuser = -1
-    this%njausr = -1
+    ! -- set memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'DISU', idm_context)
     !
-    ! -- get options block
-    call this%parser%GetBlock('DIMENSIONS', isfound, ierr, &
-                              supportOpenClose=.true.)
+    ! -- update defaults with idm sourced values
+    call mem_set_value(this%nodesuser, 'NODES', idmMemoryPath, found%nodes)
+    call mem_set_value(this%njausr, 'NJA', idmMemoryPath, found%nja)
+    call mem_set_value(this%nvert, 'NVERT', idmMemoryPath, found%nvert)
     !
-    ! -- parse options block if detected
-    if (isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING DISCRETIZATION DIMENSIONS'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-          case ('NODES')
-            this%nodesuser =  this%parser%GetInteger()
-            write(this%iout,'(4x,a,i0)') 'NODES = ', this%nodesuser
-          case ('NJA')
-            this%njausr = this%parser%GetInteger()
-            write(this%iout,'(4x,a,i0)') 'NJA   = ', this%njausr
-          case ('NVERT')
-            this%nvert = this%parser%GetInteger()
-            write(this%iout,'(3x,a,i0)') 'NVERT = ', this%nvert
-            write(this%iout,'(3x,a)') 'VERTICES AND CELL2D BLOCKS WILL ' //    &
-              'BE READ BELOW. '
-          case default
-            write(errmsg,'(a)') 'Unknown DISU dimension: ' // trim(keyword)
-            call store_error(errmsg)
-        end select
-      end do
-      write(this%iout,'(1x,a)') 'END OF DISCRETIZATION OPTIONS'
-    else
-      call store_error('Required dimensions block not found.')
+    ! -- log simulation values
+    if (this%iout > 0) then
+      call this%log_dimensions(found)
     end if
     !
     ! -- verify dimensions were set
-    if(this%nodesuser < 1) then
+    if (this%nodesuser < 1) then
       call store_error( &
-          'NODES was not specified or was specified incorrectly.')
-    endif
-    if(this%njausr < 1) then
+        'NODES was not specified or was specified incorrectly.')
+    end if
+    if (this%njausr < 1) then
       call store_error( &
-          'NJA was not specified or was specified incorrectly.')
-    endif
+        'NJA was not specified or was specified incorrectly.')
+    end if
     !
     ! -- terminate if errors were detected
     if (count_errors() > 0) then
@@ -783,12 +724,13 @@ module GwfDisuModule
     call mem_allocate(this%ihcinp, this%njausr, 'IHCINP', this%memoryPath)
     call mem_allocate(this%cl12inp, this%njausr, 'CL12INP', this%memoryPath)
     call mem_allocate(this%hwvainp, this%njausr, 'HWVAINP', this%memoryPath)
-    call mem_allocate(this%angldegxinp, this%njausr, 'ANGLDEGXINP', this%memoryPath)
-    if(this%nvert > 0) then
+    call mem_allocate(this%angldegxinp, this%njausr, 'ANGLDEGXINP', &
+                      this%memoryPath)
+    if (this%nvert > 0) then
       call mem_allocate(this%cellxy, 2, this%nodesuser, 'CELLXY', this%memoryPath)
     else
       call mem_allocate(this%cellxy, 2, 0, 'CELLXY', this%memoryPath)
-    endif
+    end if
     !
     ! -- initialize all cells to be active (idomain = 1)
     do n = 1, this%nodesuser
@@ -797,410 +739,317 @@ module GwfDisuModule
     !
     ! -- Return
     return
-  end subroutine read_dimensions
+  end subroutine source_dimensions
 
-  subroutine read_mf6_griddata(this)
+  !> @brief Write griddata found to list file
+  !<
+  subroutine log_griddata(this, found)
+    use GwfDisuInputModule, only: GwfDisuParamFoundType
+    class(GwfDisuType) :: this
+    type(GwfDisuParamFoundType), intent(in) :: found
+
+    write (this%iout, '(1x,a)') 'Setting Discretization Griddata'
+
+    if (found%top) then
+      write (this%iout, '(4x,a)') 'TOP set from input file'
+    end if
+
+    if (found%bot) then
+      write (this%iout, '(4x,a)') 'BOT set from input file'
+    end if
+
+    if (found%area) then
+      write (this%iout, '(4x,a)') 'AREA set from input file'
+    end if
+
+    if (found%idomain) then
+      write (this%iout, '(4x,a)') 'IDOMAIN set from input file'
+    end if
+
+    write (this%iout, '(1x,a,/)') 'End Setting Discretization Griddata'
+
+  end subroutine log_griddata
+
+  subroutine source_griddata(this)
 ! ******************************************************************************
-! read_mf6_griddata -- Read discretization data
+! source_griddata -- source griddata from memory manager input path
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use MemoryManagerModule, only: mem_allocate
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_context
+    use GwfDisuInputModule, only: GwfDisuParamFoundType
     ! -- dummy
     class(GwfDisuType) :: this
-    ! -- local
-    character(len=LINELENGTH) :: keyword
-    integer(I4B) :: n
-    integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
-    integer(I4B), parameter :: nname = 4
-    logical,dimension(nname) :: lname
-    character(len=24),dimension(nname) :: aname(nname)
+    ! -- locals
+    character(len=LENMEMPATH) :: idmMemoryPath
+    type(GwfDisuParamFoundType) :: found
     ! -- formats
-    ! -- data
-    data aname(1) /'                     TOP'/
-    data aname(2) /'                     BOT'/
-    data aname(3) /'                    AREA'/
-    data aname(4) /'                 IDOMAIN'/
 ! ------------------------------------------------------------------------------
     !
-    ! -- get disdata block
-    call this%parser%GetBlock('GRIDDATA', isfound, ierr)
-    lname(:) = .false.
-    if(isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING GRIDDATA'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-          case ('TOP')
-            call ReadArray(this%parser%iuactive, this%top1d, aname(1), &
-                            this%ndim, this%nodesuser, this%iout, 0)
-            lname(1) = .true.
-          case ('BOT')
-            call ReadArray(this%parser%iuactive, this%bot1d, aname(2), &
-                            this%ndim, this%nodesuser, this%iout, 0)
-            lname(2) = .true.
-          case ('AREA')
-            call ReadArray(this%parser%iuactive, this%area1d, aname(3), &
-                            this%ndim, this%nodesuser, this%iout, 0)
-            lname(3) = .true.
-          case ('IDOMAIN')
-            call ReadArray(this%parser%iuactive, this%idomain, aname(4), &
-                            this%ndim, this%nodesuser, this%iout, 0)
-            lname(4) = .true.
-          case default
-            write(errmsg,'(a)') 'Unknown GRIDDATA tag: ' // trim(keyword)
-            call store_error(errmsg)
-        end select
-      end do
-      write(this%iout,'(1x,a)')'END PROCESSING GRIDDATA'
-    else
-      call store_error('Required GRIDDATA block not found.')
-    end if
+    ! -- set memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'DISU', idm_context)
     !
-    ! -- verify all items were read
-    do n = 1, nname
-      if (n == 4) cycle
-      if(.not. lname(n)) then
-        write(errmsg,'(a)') 'Required input was not specified: ', trim(aname(n))
-        call store_error(errmsg)
-      endif
-    enddo
+    ! -- update defaults with idm sourced values
+    call mem_set_value(this%top1d, 'TOP', idmMemoryPath, found%top)
+    call mem_set_value(this%bot1d, 'BOT', idmMemoryPath, found%bot)
+    call mem_set_value(this%area1d, 'AREA', idmMemoryPath, found%area)
+    call mem_set_value(this%idomain, 'IDOMAIN', idmMemoryPath, found%idomain)
     !
-    ! -- terminate if errors were detected
-    if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
+    ! -- log simulation values
+    if (this%iout > 0) then
+      call this%log_griddata(found)
     end if
     !
     ! -- Return
     return
-  end subroutine read_mf6_griddata
+  end subroutine source_griddata
 
-  subroutine read_connectivity(this)
+  !> @brief Write griddata found to list file
+  !<
+  subroutine log_connectivity(this, found, iac)
+    use GwfDisuInputModule, only: GwfDisuParamFoundType
+    class(GwfDisuType) :: this
+    type(GwfDisuParamFoundType), intent(in) :: found
+    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: iac
+
+    write (this%iout, '(1x,a)') 'Setting Discretization Connectivity'
+
+    if (associated(iac)) then
+      write (this%iout, '(4x,a)') 'IAC set from input file'
+    end if
+
+    if (found%ja) then
+      write (this%iout, '(4x,a)') 'JA set from input file'
+    end if
+
+    if (found%ihc) then
+      write (this%iout, '(4x,a)') 'IHC set from input file'
+    end if
+
+    if (found%cl12) then
+      write (this%iout, '(4x,a)') 'CL12 set from input file'
+    end if
+
+    if (found%hwva) then
+      write (this%iout, '(4x,a)') 'HWVA set from input file'
+    end if
+
+    if (found%angldegx) then
+      write (this%iout, '(4x,a)') 'ANGLDEGX set from input file'
+    end if
+
+    write (this%iout, '(1x,a,/)') 'End Setting Discretization Connectivity'
+
+  end subroutine log_connectivity
+
+  subroutine source_connectivity(this)
 ! ******************************************************************************
-! read_connectivity -- Read user-specified connectivity information
+! source_connectivity -- source connection data from memory manager input path
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: LINELENGTH, DONE, DHALF, DPIO180, DNODATA
-    use SimModule, only: store_error, count_errors, store_error_unit
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerModule, only: mem_setptr
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_context
+    use GwfDisuInputModule, only: GwfDisuParamFoundType
     ! -- dummy
     class(GwfDisuType) :: this
-    ! -- local
-    character(len=LINELENGTH) :: keyword
-    integer(I4B) :: n
-    integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
-    integer(I4B), parameter :: nname = 6
-    logical,dimension(nname) :: lname
-    character(len=24),dimension(nname) :: aname(nname)
+    ! -- locals
+    character(len=LENMEMPATH) :: idmMemoryPath
+    type(GwfDisuParamFoundType) :: found
+    integer(I4B), dimension(:), contiguous, pointer :: iac => null()
     ! -- formats
-    ! -- data
-    data aname(1) /'                     IAC'/
-    data aname(2) /'                      JA'/
-    data aname(3) /'                     IHC'/
-    data aname(4) /'                    CL12'/
-    data aname(5) /'                    HWVA'/
-    data aname(6) /'                ANGLDEGX'/
 ! ------------------------------------------------------------------------------
     !
-    ! -- get connectiondata block
-    call this%parser%GetBlock('CONNECTIONDATA', isfound, ierr)
-    lname(:) = .false.
-    if(isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING CONNECTIONDATA'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-          case ('IAC')
-            call ReadArray(this%parser%iuactive, this%iainp, aname(1), 1, &
-                            this%nodesuser, this%iout, 0)
-            lname(1) = .true.
-            !
-            ! -- Convert iac to ia
-            call iac_to_ia(this%iainp)
-          case ('JA')
-            call ReadArray(this%parser%iuactive, this%jainp, aname(2), 1, &
-                            this%njausr, this%iout, 0)
-            lname(2) = .true.
-          case ('IHC')
-            call ReadArray(this%parser%iuactive, this%ihcinp, aname(3), 1, &
-                            this%njausr, this%iout, 0)
-            lname(3) = .true.
-          case ('CL12')
-            call ReadArray(this%parser%iuactive, this%cl12inp, aname(4), 1, &
-                            this%njausr, this%iout, 0)
-            lname(4) = .true.
-          case ('HWVA')
-            call ReadArray(this%parser%iuactive, this%hwvainp, aname(5), 1, &
-                            this%njausr, this%iout, 0)
-            lname(5) = .true.
-          case ('ANGLDEGX')
-            call ReadArray(this%parser%iuactive, this%angldegxinp, aname(6), 1, &
-                            this%njausr, this%iout, 0)
-            lname(6) = .true.
-          case default
-            write(errmsg,'(4x,a,a)')'Unknown CONNECTIONDATA tag: ',      &
-                                     trim(keyword)
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
-        end select
-      end do
-      write(this%iout,'(1x,a)')'END PROCESSING CONNECTIONDATA'
-    else
-      call store_error('Required CONNECTIONDATA block not found.')
-      call this%parser%StoreErrorUnit()
+    ! -- set memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'DISU', idm_context)
+    !
+    ! -- update defaults with idm sourced values
+    call mem_set_value(this%jainp, 'JA', idmMemoryPath, found%ja)
+    call mem_set_value(this%ihcinp, 'IHC', idmMemoryPath, found%ihc)
+    call mem_set_value(this%cl12inp, 'CL12', idmMemoryPath, found%cl12)
+    call mem_set_value(this%hwvainp, 'HWVA', idmMemoryPath, found%hwva)
+    call mem_set_value(this%angldegxinp, 'ANGLDEGX', idmMemoryPath, &
+                       found%angldegx)
+    !
+    ! -- set pointer to iac input array
+    call mem_setptr(iac, 'IAC', idmMemoryPath)
+    !
+    ! -- Convert iac to ia
+    if (associated(iac)) call iac_to_ia(iac, this%iainp)
+    !
+    ! -- Set angldegx flag if found
+    if (found%angldegx) this%iangledegx = 1
+    !
+    ! -- log simulation values
+    if (this%iout > 0) then
+      call this%log_connectivity(found, iac)
     end if
-    !
-    ! -- store whether angledegx was read
-    if (lname(6)) this%iangledegx = 1
-    !
-    ! -- verify all items were read
-    do n = 1, nname
-      !
-      ! -- skip angledegx because it is not required
-      if(aname(n) == aname(6)) cycle
-      !
-      ! -- error if not read
-      if(.not. lname(n)) then
-        write(errmsg,'(1x,a,a)') &
-          'REQUIRED CONNECTIONDATA INPUT WAS NOT SPECIFIED: ', &
-          adjustl(trim(aname(n)))
-        call store_error(errmsg)
-      endif
-    enddo
-    if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
-    endif
-    if (.not. lname(6)) then
-      write(this%iout, '(1x,a)') 'ANGLDEGX NOT FOUND IN CONNECTIONDATA ' //    &
-                            'BLOCK. SOME CAPABILITIES MAY BE LIMITED.'
-    end if    
     !
     ! -- Return
     return
-  end subroutine read_connectivity
+  end subroutine source_connectivity
 
-  subroutine read_vertices(this)
+  subroutine source_vertices(this)
 ! ******************************************************************************
-! read_vertices -- Read data
+! source_vertices -- source vertex data from memory manager input path
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: count_errors, store_error
+    use MemoryManagerModule, only: mem_setptr
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfDisuType) :: this
+    ! -- local
     integer(I4B) :: i
-    integer(I4B) :: ierr, ival
-    logical :: isfound, endOfBlock
-    real(DP) :: xmin, xmax, ymin, ymax
+    character(len=LENMEMPATH) :: idmMemoryPath
+    real(DP), dimension(:), contiguous, pointer :: vert_x => null()
+    real(DP), dimension(:), contiguous, pointer :: vert_y => null()
     ! -- formats
-    character(len=*), parameter :: fmtvnum = &
-      "('ERROR. VERTEX NUMBER NOT CONSECUTIVE.  LOOKING FOR ',i0," //           &
-      "' BUT FOUND ', i0)"
-    character(len=*), parameter :: fmtnvert = &
-      "(3x, 'SUCCESSFULLY READ ',i0,' (X,Y) COORDINATES')"
-    character(len=*), parameter :: fmtcoord = &
-      "(3x, a,' COORDINATE = ', 1(1pg24.15))"
 ! ------------------------------------------------------------------------------
     !
-    ! --Read DISDATA block
-    call this%parser%GetBlock('VERTICES', isfound, ierr, &
-                              supportOpenClose=.true.)
-    if(isfound) then
-      write(this%iout,'(/,1x,a)') 'PROCESSING VERTICES'
+    ! -- set memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'DISU', idm_context)
+    !
+    ! -- set pointers to memory manager input arrays
+    call mem_setptr(vert_x, 'XV', idmMemoryPath)
+    call mem_setptr(vert_y, 'YV', idmMemoryPath)
+    !
+    ! -- set vertices 2d array
+    if (associated(vert_x) .and. associated(vert_y)) then
       do i = 1, this%nvert
-        call this%parser%GetNextLine(endOfBlock)
-        !
-        ! -- vertex number
-        ival = this%parser%GetInteger()
-        if(ival /= i) then
-          write(errmsg, fmtvnum) i, ival
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        endif
-        !
-        ! -- x
-        this%vertices(1, i) = this%parser%GetDouble()
-        !
-        ! -- y
-        this%vertices(2, i) = this%parser%GetDouble()
-        !
-        ! -- set min/max coords
-        if(i == 1) then
-          xmin = this%vertices(1, i)
-          xmax = xmin
-          ymin = this%vertices(2, i)
-          ymax = ymin
-        else
-          xmin = min(xmin, this%vertices(1, i))
-          xmax = max(xmax, this%vertices(1, i))
-          ymin = min(ymin, this%vertices(2, i))
-          ymax = max(ymax, this%vertices(2, i))
-        endif
-      enddo
-      !
-      ! -- Terminate the block
-      call this%parser%terminateblock()
+        this%vertices(1, i) = vert_x(i)
+        this%vertices(2, i) = vert_y(i)
+      end do
     else
-      call store_error('Required vertices block not found.')
-      call this%parser%StoreErrorUnit()
+      call store_error('Required Vertex arrays not found.')
     end if
     !
-    ! -- Write information
-    write(this%iout, fmtnvert) this%nvert
-    write(this%iout, fmtcoord) 'MINIMUM X', xmin
-    write(this%iout, fmtcoord) 'MAXIMUM X', xmax
-    write(this%iout, fmtcoord) 'MINIMUM Y', ymin
-    write(this%iout, fmtcoord) 'MAXIMUM Y', ymax
-    write(this%iout,'(1x,a)')'END PROCESSING VERTICES'
+    ! -- log
+    if (this%iout > 0) then
+      write (this%iout, '(1x,a)') 'Discretization Vertex data loaded'
+    end if
     !
     ! -- Return
     return
-  end subroutine read_vertices
+  end subroutine source_vertices
 
-  subroutine read_cell2d(this)
-! ******************************************************************************
-! read_cell2d -- Read information describing the two dimensional (x, y)
-!   configuration of each cell.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  subroutine define_cellverts(this, icell2d, ncvert, icvert)
     ! -- modules
-    use SimModule, only: count_errors, store_error
-    use InputOutputModule, only: urword
     use SparseModule, only: sparsematrix
     ! -- dummy
     class(GwfDisuType) :: this
-    integer(I4B) :: i, j, ivert, ivert1, ncvert
-    integer(I4B) :: ierr, ival
-    logical :: isfound, endOfBlock
-    integer(I4B) :: maxvert, maxvertcell, iuext
-    real(DP) :: xmin, xmax, ymin, ymax
-    integer(I4B), dimension(:), allocatable :: maxnnz
-    type(sparsematrix) :: vertspm
-    ! -- formats
-    character(len=*), parameter :: fmtcnum = &
-      "('ERROR. CELL NUMBER NOT CONSECUTIVE.  LOOKING FOR ',i0," //           &
-      "' BUT FOUND ', i0)"
-    character(len=*), parameter :: fmtncpl = &
-      "(3x, 'SUCCESSFULLY READ ',i0,' CELL2D INFORMATION ENTRIES')"
-    character(len=*), parameter :: fmtcoord = &
-      "(3x, a,' CELL CENTER = ', 1(1pg24.15))"
-    character(len=*), parameter :: fmtmaxvert = &
-      "(3x, 'MAXIMUM NUMBER OF CELL2D VERTICES IS ',i0,' FOR CELL ', i0)"
+    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: icell2d
+    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: ncvert
+    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: icvert
+    ! -- locals
+    type(sparsematrix) :: vert_spm
+    integer(I4B) :: i, j, ierr
+    integer(I4B) :: icv_idx, startvert, maxnnz = 5
 ! ------------------------------------------------------------------------------
     !
-    ! -- initialize
-    maxvert = 0
-    maxvertcell = 0
+    ! -- initialize sparse matrix
+    call vert_spm%init(this%nodesuser, this%nvert, maxnnz)
     !
-    ! -- Initialize estimate of the max number of vertices for each cell
-    !    (using 5 as default) and initialize the sparse matrix, which will
-    !    temporarily store the vertex numbers for each cell.  This will
-    !    be converted to iavert and javert after all cell vertices have
-    !    been read.
-    allocate(maxnnz(this%nodesuser))
+    ! -- add sparse matrix connections from input memory paths
+    icv_idx = 1
     do i = 1, this%nodesuser
-      maxnnz(i) = 5
-    enddo
-    call vertspm%init(this%nodesuser, this%nvert, maxnnz)
+      if (icell2d(i) /= i) call store_error('ICELL2D input sequence violation.')
+      do j = 1, ncvert(i)
+        call vert_spm%addconnection(i, icvert(icv_idx), 0)
+        if (j == 1) then
+          startvert = icvert(icv_idx)
+        elseif (j == ncvert(i) .and. (icvert(icv_idx) /= startvert)) then
+          call vert_spm%addconnection(i, startvert, 0)
+        end if
+        icv_idx = icv_idx + 1
+      end do
+    end do
     !
-    ! --Read CELL2D block
-    call this%parser%GetBlock('CELL2D', isfound, ierr, supportOpenClose=.true.)
-    if(isfound) then
-      write(this%iout,'(/,1x,a)') 'PROCESSING CELL2D'
-      do i = 1, this%nodesuser
-        call this%parser%GetNextLine(endOfBlock)
-        !
-        ! -- cell number
-        ival = this%parser%GetInteger()
-        if(ival /= i) then
-          write(errmsg, fmtcnum) i, ival
-          call store_error(errmsg)
-          call store_error_unit(iuext)
-        endif
-        !
-        ! -- Cell x center
-        this%cellxy(1, i) = this%parser%GetDouble()
-        !
-        ! -- Cell y center
-        this%cellxy(2, i) = this%parser%GetDouble()
-        !
-        ! -- Number of vertices for this cell
-        ncvert = this%parser%GetInteger()
-        if(ncvert > maxvert) then
-          maxvert = ncvert
-          maxvertcell = i
-        endif
-        !
-        ! -- Read each vertex number, and then close the polygon if
-        !    the last vertex does not equal the first vertex
-        do j = 1, ncvert
-          ivert = this%parser%GetInteger()
-          call vertspm%addconnection(i, ivert, 0)
-          !
-          ! -- If necessary, repeat the last vertex in order to close the cell
-          if(j == 1) then
-            ivert1 = ivert
-          elseif(j == ncvert) then
-            if(ivert1 /= ivert) then
-              call vertspm%addconnection(i, ivert1, 0)
-            endif
-          endif
-        enddo
-        !
-        ! -- set min/max coords
-        if(i == 1) then
-          xmin = this%cellxy(1, i)
-          xmax = xmin
-          ymin = this%cellxy(2, i)
-          ymax = ymin
-        else
-          xmin = min(xmin, this%cellxy(1, i))
-          xmax = max(xmax, this%cellxy(1, i))
-          ymin = min(ymin, this%cellxy(2, i))
-          ymax = max(ymax, this%cellxy(2, i))
-        endif
-      enddo
-      !
-      ! -- Terminate the block
-      call this%parser%terminateblock()
-    else
-      call store_error('Required CELL2D block not found.')
-      call this%parser%StoreErrorUnit()
-    end if
-    !
-    ! -- Convert vertspm into ia/ja form
+    ! -- allocate and fill iavert and javert
     call mem_allocate(this%iavert, this%nodesuser + 1, 'IAVERT', this%memoryPath)
-    call mem_allocate(this%javert, vertspm%nnz, 'JAVERT', this%memoryPath)
-    
-    call vertspm%filliaja(this%iavert, this%javert, ierr)
-    call vertspm%destroy()
-    !
-    ! -- Write information
-    write(this%iout, fmtncpl) this%nodesuser
-    write(this%iout, fmtcoord) 'MINIMUM X', xmin
-    write(this%iout, fmtcoord) 'MAXIMUM X', xmax
-    write(this%iout, fmtcoord) 'MINIMUM Y', ymin
-    write(this%iout, fmtcoord) 'MAXIMUM Y', ymax
-    write(this%iout, fmtmaxvert) maxvert, maxvertcell
-    write(this%iout,'(1x,a)')'END PROCESSING VERTICES'
+    call mem_allocate(this%javert, vert_spm%nnz, 'JAVERT', this%memoryPath)
+    call vert_spm%filliaja(this%iavert, this%javert, ierr)
+    call vert_spm%destroy()
     !
     ! -- Return
     return
-  end subroutine read_cell2d
+  end subroutine define_cellverts
+
+  subroutine source_cell2d(this)
+! ******************************************************************************
+! source_cell2d -- source cell2d data from memory manager input path
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerModule, only: mem_setptr
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_context
+    ! -- dummy
+    class(GwfDisuType) :: this
+    ! -- locals
+    character(len=LENMEMPATH) :: idmMemoryPath
+    integer(I4B), dimension(:), contiguous, pointer :: icell2d => null()
+    integer(I4B), dimension(:), contiguous, pointer :: ncvert => null()
+    integer(I4B), dimension(:), contiguous, pointer :: icvert => null()
+    real(DP), dimension(:), contiguous, pointer :: cell_x => null()
+    real(DP), dimension(:), contiguous, pointer :: cell_y => null()
+    integer(I4B) :: i
+    ! -- formats
+! ------------------------------------------------------------------------------
+    !
+    ! -- set memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'DISU', idm_context)
+    !
+    ! -- set pointers to input path ncvert and icvert
+    call mem_setptr(icell2d, 'ICELL2D', idmMemoryPath)
+    call mem_setptr(ncvert, 'NCVERT', idmMemoryPath)
+    call mem_setptr(icvert, 'ICVERT', idmMemoryPath)
+    !
+    ! --
+    if (associated(icell2d) .and. associated(ncvert) &
+        .and. associated(icvert)) then
+      call this%define_cellverts(icell2d, ncvert, icvert)
+    else
+      call store_error('Required cell vertex arrays not found.')
+    end if
+    !
+    ! -- set pointers to cell center arrays
+    call mem_setptr(cell_x, 'XC', idmMemoryPath)
+    call mem_setptr(cell_y, 'YC', idmMemoryPath)
+    !
+    ! -- set cell centers
+    if (associated(cell_x) .and. associated(cell_y)) then
+      do i = 1, this%nodesuser
+        this%cellxy(1, i) = cell_x(i)
+        this%cellxy(2, i) = cell_y(i)
+      end do
+    else
+      call store_error('Required cell center arrays not found.')
+    end if
+    !
+    ! -- log
+    if (this%iout > 0) then
+      write (this%iout, '(1x,a)') 'Discretization Cell2d data loaded'
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine source_cell2d
 
   subroutine write_grb(this, icelltype)
 ! ******************************************************************************
@@ -1221,8 +1070,8 @@ module GwfDisuModule
     character(len=50) :: txthdr
     character(len=lentxt) :: txt
     character(len=LINELENGTH) :: fname
-    character(len=*),parameter :: fmtgrdsave = &
-      "(4X,'BINARY GRID INFORMATION WILL BE WRITTEN TO:',                      &
+    character(len=*), parameter :: fmtgrdsave = &
+      "(4X,'BINARY GRID INFORMATION WILL BE WRITTEN TO:', &
        &/,6X,'UNIT NUMBER: ', I0,/,6X, 'FILE NAME: ', A)"
 ! ------------------------------------------------------------------------------
     !
@@ -1231,101 +1080,101 @@ module GwfDisuModule
     if (this%nvert > 0) ntxt = ntxt + 5
     !
     ! -- Open the file
-    inquire(unit=this%inunit, name=fname)
-    fname = trim(fname) // '.grb'
+    inquire (unit=this%inunit, name=fname)
+    fname = trim(fname)//'.grb'
     iunit = getunit()
-    write(this%iout, fmtgrdsave) iunit, trim(adjustl(fname))
-    call openfile(iunit, this%iout, trim(adjustl(fname)), 'DATA(BINARY)',      &
+    write (this%iout, fmtgrdsave) iunit, trim(adjustl(fname))
+    call openfile(iunit, this%iout, trim(adjustl(fname)), 'DATA(BINARY)', &
                   form, access, 'REPLACE')
     !
     ! -- write header information
-    write(txthdr, '(a)') 'GRID DISU'
+    write (txthdr, '(a)') 'GRID DISU'
     txthdr(50:50) = new_line('a')
-    write(iunit) txthdr
-    write(txthdr, '(a)') 'VERSION 1'
+    write (iunit) txthdr
+    write (txthdr, '(a)') 'VERSION 1'
     txthdr(50:50) = new_line('a')
-    write(iunit) txthdr
-    write(txthdr, '(a, i0)') 'NTXT ', ntxt
+    write (iunit) txthdr
+    write (txthdr, '(a, i0)') 'NTXT ', ntxt
     txthdr(50:50) = new_line('a')
-    write(iunit) txthdr
-    write(txthdr, '(a, i0)') 'LENTXT ', lentxt
+    write (iunit) txthdr
+    write (txthdr, '(a, i0)') 'LENTXT ', lentxt
     txthdr(50:50) = new_line('a')
-    write(iunit) txthdr
+    write (iunit) txthdr
     !
     ! -- write variable definitions
-    write(txt, '(3a, i0)') 'NODES ', 'INTEGER ', 'NDIM 0 # ', this%nodesuser
+    write (txt, '(3a, i0)') 'NODES ', 'INTEGER ', 'NDIM 0 # ', this%nodesuser
     txt(lentxt:lentxt) = new_line('a')
-    write(iunit) txt
-    write(txt, '(3a, i0)') 'NJA ', 'INTEGER ', 'NDIM 0 # ', this%con%nja
+    write (iunit) txt
+    write (txt, '(3a, i0)') 'NJA ', 'INTEGER ', 'NDIM 0 # ', this%con%nja
     txt(lentxt:lentxt) = new_line('a')
-    write(iunit) txt
-    write(txt, '(3a, 1pg24.15)') 'XORIGIN ', 'DOUBLE ', 'NDIM 0 # ', this%xorigin
+    write (iunit) txt
+    write (txt, '(3a, 1pg24.15)') 'XORIGIN ', 'DOUBLE ', 'NDIM 0 # ', this%xorigin
     txt(lentxt:lentxt) = new_line('a')
-    write(iunit) txt
-    write(txt, '(3a, 1pg24.15)') 'YORIGIN ', 'DOUBLE ', 'NDIM 0 # ', this%yorigin
+    write (iunit) txt
+    write (txt, '(3a, 1pg24.15)') 'YORIGIN ', 'DOUBLE ', 'NDIM 0 # ', this%yorigin
     txt(lentxt:lentxt) = new_line('a')
-    write(iunit) txt
-    write(txt, '(3a, 1pg24.15)') 'ANGROT ', 'DOUBLE ', 'NDIM 0 # ', this%angrot
+    write (iunit) txt
+    write (txt, '(3a, 1pg24.15)') 'ANGROT ', 'DOUBLE ', 'NDIM 0 # ', this%angrot
     txt(lentxt:lentxt) = new_line('a')
-    write(iunit) txt
-    write(txt, '(3a, i0)') 'TOP ', 'DOUBLE ', 'NDIM 1 ', this%nodesuser
+    write (iunit) txt
+    write (txt, '(3a, i0)') 'TOP ', 'DOUBLE ', 'NDIM 1 ', this%nodesuser
     txt(lentxt:lentxt) = new_line('a')
-    write(iunit) txt
-    write(txt, '(3a, i0)') 'BOT ', 'DOUBLE ', 'NDIM 1 ', this%nodesuser
+    write (iunit) txt
+    write (txt, '(3a, i0)') 'BOT ', 'DOUBLE ', 'NDIM 1 ', this%nodesuser
     txt(lentxt:lentxt) = new_line('a')
-    write(iunit) txt
-    write(txt, '(3a, i0)') 'IA ', 'INTEGER ', 'NDIM 1 ', this%nodesuser + 1
+    write (iunit) txt
+    write (txt, '(3a, i0)') 'IA ', 'INTEGER ', 'NDIM 1 ', this%nodesuser + 1
     txt(lentxt:lentxt) = new_line('a')
-    write(iunit) txt
-    write(txt, '(3a, i0)') 'JA ', 'INTEGER ', 'NDIM 1 ', this%con%nja
+    write (iunit) txt
+    write (txt, '(3a, i0)') 'JA ', 'INTEGER ', 'NDIM 1 ', this%con%nja
     txt(lentxt:lentxt) = new_line('a')
-    write(iunit) txt
-    write(txt, '(3a, i0)') 'ICELLTYPE ', 'INTEGER ', 'NDIM 1 ', this%nodesuser
+    write (iunit) txt
+    write (txt, '(3a, i0)') 'ICELLTYPE ', 'INTEGER ', 'NDIM 1 ', this%nodesuser
     txt(lentxt:lentxt) = new_line('a')
-    write(iunit) txt
+    write (iunit) txt
     !
     ! -- if vertices have been read then write additional header information
     if (this%nvert > 0) then
-      write(txt, '(3a, i0)') 'VERTICES ', 'DOUBLE ', 'NDIM 2 2 ', this%nvert
+      write (txt, '(3a, i0)') 'VERTICES ', 'DOUBLE ', 'NDIM 2 2 ', this%nvert
       txt(lentxt:lentxt) = new_line('a')
-      write(iunit) txt
-      write(txt, '(3a, i0)') 'CELLX ', 'DOUBLE ', 'NDIM 1 ', this%nodesuser
+      write (iunit) txt
+      write (txt, '(3a, i0)') 'CELLX ', 'DOUBLE ', 'NDIM 1 ', this%nodesuser
       txt(lentxt:lentxt) = new_line('a')
-      write(iunit) txt
-      write(txt, '(3a, i0)') 'CELLY ', 'DOUBLE ', 'NDIM 1 ', this%nodesuser
+      write (iunit) txt
+      write (txt, '(3a, i0)') 'CELLY ', 'DOUBLE ', 'NDIM 1 ', this%nodesuser
       txt(lentxt:lentxt) = new_line('a')
-      write(iunit) txt
-      write(txt, '(3a, i0)') 'IAVERT ', 'INTEGER ', 'NDIM 1 ', this%nodesuser + 1
+      write (iunit) txt
+      write (txt, '(3a, i0)') 'IAVERT ', 'INTEGER ', 'NDIM 1 ', this%nodesuser + 1
       txt(lentxt:lentxt) = new_line('a')
-      write(iunit) txt
-      write(txt, '(3a, i0)') 'JAVERT ', 'INTEGER ', 'NDIM 1 ', size(this%javert)
+      write (iunit) txt
+      write (txt, '(3a, i0)') 'JAVERT ', 'INTEGER ', 'NDIM 1 ', size(this%javert)
       txt(lentxt:lentxt) = new_line('a')
-      write(iunit) txt
-    endif
+      write (iunit) txt
+    end if
     !
     ! -- write data
-    write(iunit) this%nodesuser                                                 ! nodes
-    write(iunit) this%nja                                                       ! nja
-    write(iunit) this%xorigin                                                   ! xorigin
-    write(iunit) this%yorigin                                                   ! yorigin
-    write(iunit) this%angrot                                                    ! angrot
-    write(iunit) this%top1d                                                     ! top
-    write(iunit) this%bot1d                                                     ! bot
-    write(iunit) this%con%iausr                                                 ! ia
-    write(iunit) this%con%jausr                                                 ! ja
-    write(iunit) icelltype                                                      ! icelltype
+    write (iunit) this%nodesuser ! nodes
+    write (iunit) this%nja ! nja
+    write (iunit) this%xorigin ! xorigin
+    write (iunit) this%yorigin ! yorigin
+    write (iunit) this%angrot ! angrot
+    write (iunit) this%top1d ! top
+    write (iunit) this%bot1d ! bot
+    write (iunit) this%con%iausr ! ia
+    write (iunit) this%con%jausr ! ja
+    write (iunit) icelltype ! icelltype
     !
     ! -- if vertices have been read then write additional data
     if (this%nvert > 0) then
-      write(iunit) this%vertices                                                ! vertices
-      write(iunit) (this%cellxy(1, i), i = 1, this%nodesuser)                   ! cellx
-      write(iunit) (this%cellxy(2, i), i = 1, this%nodesuser)                   ! celly
-      write(iunit) this%iavert                                                  ! iavert
-      write(iunit) this%javert                                                  ! javert
-    endif
+      write (iunit) this%vertices ! vertices
+      write (iunit) (this%cellxy(1, i), i=1, this%nodesuser) ! cellx
+      write (iunit) (this%cellxy(2, i), i=1, this%nodesuser) ! celly
+      write (iunit) this%iavert ! iavert
+      write (iunit) this%javert ! javert
+    end if
     !
     ! -- Close the file
-    close(iunit)
+    close (iunit)
     !
     ! -- return
     return
@@ -1341,22 +1190,19 @@ module GwfDisuModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error
-    implicit none
     class(GwfDisuType), intent(in) :: this
     integer(I4B), intent(in) :: nodeu
     integer(I4B), intent(in) :: icheck
     integer(I4B) :: nodenumber
 ! ------------------------------------------------------------------------------
     !
-    if(icheck /= 0) then
-      if(nodeu < 1 .or. nodeu > this%nodes) then
-        write(errmsg, '(a,i10)') &
+    if (icheck /= 0) then
+      if (nodeu < 1 .or. nodeu > this%nodes) then
+        write (errmsg, '(a,i10)') &
           'Nodenumber less than 1 or greater than nodes:', nodeu
         call store_error(errmsg)
-      endif
-    endif
+      end if
+    end if
     !
     ! -- set node number to passed in nodenumber since there is a one to one
     !    mapping for an unstructured grid
@@ -1370,7 +1216,7 @@ module GwfDisuModule
     return
   end function get_nodenumber_idx1
 
-  subroutine connection_normal(this, noden, nodem, ihc, xcomp, ycomp, zcomp,   &
+  subroutine connection_normal(this, noden, nodem, ihc, xcomp, ycomp, zcomp, &
                                ipos)
 ! ******************************************************************************
 ! connection_normal -- calculate the normal vector components for reduced
@@ -1381,7 +1227,6 @@ module GwfDisuModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: store_error
     ! -- dummy
     class(GwfDisuType) :: this
     integer(I4B), intent(in) :: noden
@@ -1396,12 +1241,12 @@ module GwfDisuModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Set vector components based on ihc
-    if(ihc == 0) then
+    if (ihc == 0) then
       !
       ! -- connection is vertical
       xcomp = DZERO
       ycomp = DZERO
-      if(nodem < noden) then
+      if (nodem < noden) then
         !
         ! -- nodem must be above noden, so upward connection
         zcomp = DONE
@@ -1409,7 +1254,7 @@ module GwfDisuModule
         !
         ! -- nodem must be below noden, so downward connection
         zcomp = -DONE
-      endif
+      end if
     else
       ! -- find from anglex, since anglex is symmetric, need to flip vector
       !    for lower triangle (nodem < noden)
@@ -1419,13 +1264,13 @@ module GwfDisuModule
       xcomp = cos(angle) * dmult
       ycomp = sin(angle) * dmult
       zcomp = DZERO
-    endif
+    end if
     !
     ! -- return
     return
   end subroutine connection_normal
 
-  subroutine connection_vector(this, noden, nodem, nozee, satn, satm, ihc,   &
+  subroutine connection_vector(this, noden, nodem, nozee, satn, satm, ihc, &
                                xcomp, ycomp, zcomp, conlen)
 ! ******************************************************************************
 ! connection_vector -- calculate the unit vector components from reduced
@@ -1439,7 +1284,6 @@ module GwfDisuModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DHALF
-    use SimModule, only: store_error
     use DisvGeom, only: line_unit_vector
     ! -- dummy
     class(GwfDisuType) :: this
@@ -1459,19 +1303,21 @@ module GwfDisuModule
     !
     ! -- Terminate with error if requesting unit vector components for problems
     !    without cell data
-    if (size(this%cellxy,2) < 1) then
-      write(errmsg, '(a)') &
-        'Cannot calculate unit vector components for DISU grid if VERTEX ' //    &
+    if (size(this%cellxy, 2) < 1) then
+      write (errmsg, '(a)') &
+        'Cannot calculate unit vector components for DISU grid if VERTEX '// &
         'data are not specified'
       call store_error(errmsg, terminate=.TRUE.)
     end if
     !
-    ! -- Find xy coords
-    call this%get_cellxy(noden, xn, yn)
-    call this%get_cellxy(nodem, xm, ym)
+    ! -- get xy center coords
+    xn = this%xc(noden)
+    yn = this%yc(noden)
+    xm = this%xc(nodem)
+    ym = this%yc(nodem)
     !
     ! -- Set vector components based on ihc
-    if(ihc == 0) then
+    if (ihc == 0) then
       !
       ! -- vertical connection, calculate z as cell center elevation
       zn = this%bot(noden) + DHALF * (this%top(noden) - this%bot(noden))
@@ -1486,48 +1332,24 @@ module GwfDisuModule
       else
         zn = this%bot(noden) + DHALF * satn * (this%top(noden) - this%bot(noden))
         zm = this%bot(nodem) + DHALF * satm * (this%top(nodem) - this%bot(nodem))
-      endif
-    endif
+      end if
+    end if
     !
     ! -- Use coords to find vector components and connection length
-    call line_unit_vector(xn, yn, zn, xm, ym, zm, xcomp, ycomp, zcomp,         &
+    call line_unit_vector(xn, yn, zn, xm, ym, zm, xcomp, ycomp, zcomp, &
                           conlen)
     !
     ! -- return
     return
   end subroutine connection_vector
 
-  subroutine get_cellxy_disu(this, node, xcell, ycell)
-! ******************************************************************************
-! get_cellxy_disu -- assign xcell and ycell
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwfDisuType), intent(in)  :: this
-    integer(I4B), intent(in)        :: node         ! the reduced node number
-    real(DP), intent(out)           :: xcell, ycell ! the x,y for the cell
-    ! -- local
-    integer(I4B) :: nu
-! ------------------------------------------------------------------------------
-    !
-    ! -- Convert to user node number (because that's how cell centers are
-    !    stored) and then set xcell and ycell
-    nu = this%get_nodeuser(node)
-    xcell = this%cellxy(1, nu)
-    ycell = this%cellxy(2, nu)
-    !
-    ! -- return
-    return
-  end subroutine get_cellxy_disu
-  
   ! return discretization type
   subroutine get_dis_type(this, dis_type)
-    class(GwfDisuType), intent(in)  :: this
-    character(len=*), intent(out)  :: dis_type
-      
+    class(GwfDisuType), intent(in) :: this
+    character(len=*), intent(out) :: dis_type
+
     dis_type = "DISU"
-    
+
   end subroutine get_dis_type
 
   subroutine allocate_scalars(this, name_model)
@@ -1584,13 +1406,14 @@ module GwfDisuModule
     call this%DisBaseType%allocate_arrays()
     !
     ! -- Allocate arrays in DISU
-    if(this%nodes < this%nodesuser) then
+    if (this%nodes < this%nodesuser) then
       call mem_allocate(this%nodeuser, this%nodes, 'NODEUSER', this%memoryPath)
-      call mem_allocate(this%nodereduced, this%nodesuser, 'NODEREDUCED', this%memoryPath)
+      call mem_allocate(this%nodereduced, this%nodesuser, 'NODEREDUCED', &
+                        this%memoryPath)
     else
       call mem_allocate(this%nodeuser, 1, 'NODEUSER', this%memoryPath)
       call mem_allocate(this%nodereduced, 1, 'NODEREDUCED', this%memoryPath)
-    endif
+    end if
     !
     ! -- Initialize
     this%mshape(1) = this%nodesuser
@@ -1602,11 +1425,11 @@ module GwfDisuModule
   subroutine allocate_arrays_mem(this)
     use MemoryManagerModule, only: mem_allocate
     class(GwfDisuType) :: this
-     
+
     call mem_allocate(this%idomain, this%nodes, 'IDOMAIN', this%memoryPath)
     call mem_allocate(this%vertices, 2, this%nvert, 'VERTICES', this%memoryPath)
     call mem_allocate(this%cellxy, 2, this%nodes, 'CELLXY', this%memoryPath)
-    
+
   end subroutine allocate_arrays_mem
 
   function nodeu_from_string(this, lloc, istart, istop, in, iout, line, &
@@ -1628,7 +1451,7 @@ module GwfDisuModule
     integer(I4B), intent(inout) :: istop
     integer(I4B), intent(in) :: in
     integer(I4B), intent(in) :: iout
-    character(len=*),  intent(inout) :: line
+    character(len=*), intent(inout) :: line
     logical, optional, intent(in) :: flag_string
     logical, optional, intent(in) :: allow_zero
     integer(I4B) :: nodeu
@@ -1643,14 +1466,14 @@ module GwfDisuModule
         ! Check to see if first token in line can be read as an integer.
         lloclocal = lloc
         call urword(line, lloclocal, istart, istop, 1, ndum, r, iout, in)
-        read(line(istart:istop),*,iostat=istat)n
+        read (line(istart:istop), *, iostat=istat) n
         if (istat /= 0) then
           ! First token in line is not an integer; return flag to this effect.
           nodeu = -2
           return
-        endif
-      endif
-    endif
+        end if
+      end if
+    end if
     !
     call urword(line, lloc, istart, istop, 2, nodeu, r, iout, in)
     !
@@ -1658,14 +1481,14 @@ module GwfDisuModule
       if (present(allow_zero)) then
         if (allow_zero) then
           return
-        endif
-      endif
-    endif
+        end if
+      end if
+    end if
     !
-    if(nodeu < 1 .or. nodeu > this%nodesuser) then
-      write(errmsg, *) ' Node number in list is outside of the grid', nodeu
+    if (nodeu < 1 .or. nodeu > this%nodesuser) then
+      write (errmsg, *) ' Node number in list is outside of the grid', nodeu
       call store_error(errmsg)
-      inquire(unit=in, name=fname)
+      inquire (unit=in, name=fname)
       call store_error('Error converting in file: ')
       call store_error(trim(adjustl(fname)))
       call store_error('Cell number cannot be determined in line: ')
@@ -1679,7 +1502,7 @@ module GwfDisuModule
   end function nodeu_from_string
 
   function nodeu_from_cellid(this, cellid, inunit, iout, flag_string, &
-                                     allow_zero) result(nodeu)
+                             allow_zero) result(nodeu)
 ! ******************************************************************************
 ! nodeu_from_cellid -- Receive cellid as a string and convert the string to a
 !   user nodenumber.
@@ -1714,14 +1537,14 @@ module GwfDisuModule
         ! Check to see if first token in cellid can be read as an integer.
         lloclocal = 1
         call urword(cellid, lloclocal, istart, istop, 1, ndum, r, iout, inunit)
-        read(cellid(istart:istop), *, iostat=istat) n
+        read (cellid(istart:istop), *, iostat=istat) n
         if (istat /= 0) then
           ! First token in cellid is not an integer; return flag to this effect.
           nodeu = -2
           return
-        endif
-      endif
-    endif
+        end if
+      end if
+    end if
     !
     lloclocal = 1
     call urword(cellid, lloclocal, istart, istop, 2, nodeu, r, iout, inunit)
@@ -1730,14 +1553,14 @@ module GwfDisuModule
       if (present(allow_zero)) then
         if (allow_zero) then
           return
-        endif
-      endif
-    endif
+        end if
+      end if
+    end if
     !
-    if(nodeu < 1 .or. nodeu > this%nodesuser) then
-      write(errmsg, *) ' Node number in list is outside of the grid', nodeu
+    if (nodeu < 1 .or. nodeu > this%nodesuser) then
+      write (errmsg, *) ' Node number in list is outside of the grid', nodeu
       call store_error(errmsg)
-      inquire(unit=inunit, name=fname)
+      inquire (unit=inunit, name=fname)
       call store_error('Error converting in file: ')
       call store_error(trim(adjustl(fname)))
       call store_error('Cell number cannot be determined in cellid: ')
@@ -1788,19 +1611,16 @@ module GwfDisuModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use InputOutputModule, only: urword
-    use SimModule, only: store_error
-    use ConstantsModule, only: LINELENGTH
     ! -- dummy
-    class(GwfDisuType), intent(inout)                  :: this
-    character(len=*), intent(inout)                    :: line
-    integer(I4B), intent(inout)                        :: lloc
-    integer(I4B), intent(inout)                        :: istart
-    integer(I4B), intent(inout)                        :: istop
-    integer(I4B), intent(in)                           :: in
-    integer(I4B), intent(in)                           :: iout
+    class(GwfDisuType), intent(inout) :: this
+    character(len=*), intent(inout) :: line
+    integer(I4B), intent(inout) :: lloc
+    integer(I4B), intent(inout) :: istart
+    integer(I4B), intent(inout) :: istop
+    integer(I4B), intent(in) :: in
+    integer(I4B), intent(in) :: iout
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: iarray
-    character(len=*), intent(in)                       :: aname
+    character(len=*), intent(in) :: aname
     ! -- local
     integer(I4B) :: nval
     integer(I4B), dimension(:), pointer, contiguous :: itemp
@@ -1810,22 +1630,22 @@ module GwfDisuModule
     !    subroutine.  The temporary array will point to ibuff if it is a
     !    reduced structured system, or to iarray if it is an unstructured
     !    model.
-    if(this%nodes < this%nodesuser) then
+    if (this%nodes < this%nodesuser) then
       nval = this%nodesuser
       itemp => this%ibuff
     else
       nval = this%nodes
       itemp => iarray
-    endif
+    end if
     !
     ! -- Read the array
     ! -- Read unstructured input
     call ReadArray(in, itemp, aname, this%ndim, nval, iout, 0)
     !
     ! -- If reduced model, then need to copy from itemp(=>ibuff) to iarray
-    if(this%nodes <  this%nodesuser) then
+    if (this%nodes < this%nodesuser) then
       call this%fill_grid_array(itemp, iarray)
-    endif
+    end if
     !
     ! -- return
     return
@@ -1840,19 +1660,16 @@ module GwfDisuModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use InputOutputModule, only: urword
-    use SimModule, only: store_error
-    use ConstantsModule, only: LINELENGTH
     ! -- dummy
-    class(GwfDisuType), intent(inout)              :: this
-    character(len=*), intent(inout)                :: line
-    integer(I4B), intent(inout)                    :: lloc
-    integer(I4B), intent(inout)                    :: istart
-    integer(I4B), intent(inout)                    :: istop
-    integer(I4B), intent(in)                       :: in
-    integer(I4B), intent(in)                       :: iout
+    class(GwfDisuType), intent(inout) :: this
+    character(len=*), intent(inout) :: line
+    integer(I4B), intent(inout) :: lloc
+    integer(I4B), intent(inout) :: istart
+    integer(I4B), intent(inout) :: istop
+    integer(I4B), intent(in) :: in
+    integer(I4B), intent(in) :: iout
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: darray
-    character(len=*), intent(in)                   :: aname
+    character(len=*), intent(in) :: aname
     ! -- local
     integer(I4B) :: nval
     real(DP), dimension(:), pointer, contiguous :: dtemp
@@ -1862,28 +1679,28 @@ module GwfDisuModule
     !    subroutine.  The temporary array will point to dbuff if it is a
     !    reduced structured system, or to darray if it is an unstructured
     !    model.
-    if(this%nodes < this%nodesuser) then
+    if (this%nodes < this%nodesuser) then
       nval = this%nodesuser
       dtemp => this%dbuff
     else
       nval = this%nodes
       dtemp => darray
-    endif
+    end if
     !
     ! -- Read the array
     call ReadArray(in, dtemp, aname, this%ndim, nval, iout, 0)
     !
     ! -- If reduced model, then need to copy from dtemp(=>dbuff) to darray
-    if(this%nodes <  this%nodesuser) then
+    if (this%nodes < this%nodesuser) then
       call this%fill_grid_array(dtemp, darray)
-    endif
+    end if
     !
     ! -- return
     return
   end subroutine read_dbl_array
 
-  subroutine record_array(this, darray, iout, iprint, idataun, aname,     &
-                           cdatafmp, nvaluesp, nwidthp, editdesc, dinact)
+  subroutine record_array(this, darray, iout, iprint, idataun, aname, &
+                          cdatafmp, nvaluesp, nwidthp, editdesc, dinact)
 ! ******************************************************************************
 ! record_array -- Record a double precision array.  The array will be
 !   printed to an external file and/or written to an unformatted external file
@@ -1906,17 +1723,17 @@ module GwfDisuModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwfDisuType), intent(inout)              :: this
+    class(GwfDisuType), intent(inout) :: this
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: darray
-    integer(I4B), intent(in)                       :: iout
-    integer(I4B), intent(in)                       :: iprint
-    integer(I4B), intent(in)                       :: idataun
-    character(len=*), intent(in)                   :: aname
-    character(len=*), intent(in)                   :: cdatafmp
-    integer(I4B), intent(in)                       :: nvaluesp
-    integer(I4B), intent(in)                       :: nwidthp
-    character(len=*), intent(in)                   :: editdesc
-    real(DP), intent(in)                           :: dinact
+    integer(I4B), intent(in) :: iout
+    integer(I4B), intent(in) :: iprint
+    integer(I4B), intent(in) :: idataun
+    character(len=*), intent(in) :: aname
+    character(len=*), intent(in) :: cdatafmp
+    integer(I4B), intent(in) :: nvaluesp
+    integer(I4B), intent(in) :: nwidthp
+    character(len=*), intent(in) :: editdesc
+    real(DP), intent(in) :: dinact
     ! -- local
     integer(I4B) :: k, ifirst
     integer(I4B) :: nlay
@@ -1927,7 +1744,7 @@ module GwfDisuModule
     integer(I4B) :: istart, istop
     real(DP), dimension(:), pointer, contiguous :: dtemp
     ! -- formats
-    character(len=*),parameter :: fmthsv = &
+    character(len=*), parameter :: fmthsv = &
       "(1X,/1X,a,' WILL BE SAVED ON UNIT ',I4, &
        &' AT END OF TIME STEP',I5,', STRESS PERIOD ',I4)"
 ! ------------------------------------------------------------------------------
@@ -1939,61 +1756,61 @@ module GwfDisuModule
     !
     ! -- If this is a reduced model, then copy the values from darray into
     !    dtemp.
-    if(this%nodes < this%nodesuser) then
+    if (this%nodes < this%nodesuser) then
       nval = this%nodes
       dtemp => this%dbuff
       do nodeu = 1, this%nodesuser
         noder = this%get_nodenumber(nodeu, 0)
-        if(noder <= 0) then
+        if (noder <= 0) then
           dtemp(nodeu) = dinact
           cycle
-        endif
+        end if
         dtemp(nodeu) = darray(noder)
-      enddo
+      end do
     else
       nval = this%nodes
       dtemp => darray
-    endif
+    end if
     !
     ! -- Print to iout if iprint /= 0
-    if(iprint /= 0) then
+    if (iprint /= 0) then
       istart = 1
       do k = 1, nlay
         istop = istart + nrow * ncol - 1
-        call ulaprufw(ncol, nrow, kstp, kper, k, iout, dtemp(istart:istop),  &
+        call ulaprufw(ncol, nrow, kstp, kper, k, iout, dtemp(istart:istop), &
                       aname, cdatafmp, nvaluesp, nwidthp, editdesc)
         istart = istop + 1
-      enddo
-    endif
+      end do
+    end if
     !
     ! -- Save array to an external file.
-    if(idataun > 0) then
+    if (idataun > 0) then
       ! -- write to binary file by layer
       ifirst = 1
       istart = 1
-      do k=1, nlay
+      do k = 1, nlay
         istop = istart + nrow * ncol - 1
-        if(ifirst == 1) write(iout, fmthsv)                                    &
-                            trim(adjustl(aname)), idataun,                     &
-                            kstp, kper
+        if (ifirst == 1) write (iout, fmthsv) &
+          trim(adjustl(aname)), idataun, &
+          kstp, kper
         ifirst = 0
-        call ulasav(dtemp(istart:istop), aname, kstp, kper,                    &
+        call ulasav(dtemp(istart:istop), aname, kstp, kper, &
                     pertim, totim, ncol, nrow, k, idataun)
         istart = istop + 1
-      enddo
-    elseif(idataun < 0) then
+      end do
+    elseif (idataun < 0) then
       !
       ! -- write entire array as one record
-      call ubdsv1(kstp, kper, aname, -idataun, dtemp, ncol, nrow, nlay,        &
+      call ubdsv1(kstp, kper, aname, -idataun, dtemp, ncol, nrow, nlay, &
                   iout, delt, pertim, totim)
-    endif
+    end if
     !
     ! -- return
     return
   end subroutine record_array
 
-  subroutine record_srcdst_list_header(this, text, textmodel, textpackage,      &
-                                       dstmodel, dstpackage, naux, auxtxt,      &
+  subroutine record_srcdst_list_header(this, text, textmodel, textpackage, &
+                                       dstmodel, dstpackage, naux, auxtxt, &
                                        ibdchn, nlist, iout)
 ! ******************************************************************************
 ! record_srcdst_list_header -- Record list header for imeth=6
@@ -2022,8 +1839,8 @@ module GwfDisuModule
     ncol = this%mshape(1)
     !
     ! -- Use ubdsv06 to write list header
-    call ubdsv06(kstp, kper, text, textmodel, textpackage, dstmodel, dstpackage,&
-                 ibdchn, naux, auxtxt, ncol, nrow, nlay,                        &
+    call ubdsv06(kstp, kper, text, textmodel, textpackage, dstmodel, dstpackage, &
+                 ibdchn, naux, auxtxt, ncol, nrow, nlay, &
                  nlist, iout, delt, pertim, totim)
     !
     ! -- return
@@ -2033,11 +1850,11 @@ module GwfDisuModule
   !> @brief Cast base to DISU
   !<
   function CastAsDisuType(dis) result(disu)
-    class(*), pointer :: dis            !< base pointer to DISU object
+    class(*), pointer :: dis !< base pointer to DISU object
     class(GwfDisuType), pointer :: disu !< the resulting DISU pointer
 
     disu => null()
-    select type(dis)
+    select type (dis)
     class is (GwfDisuType)
       disu => dis
     end select

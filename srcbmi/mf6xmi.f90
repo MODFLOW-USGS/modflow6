@@ -103,11 +103,12 @@ contains
   !! does not allow to alter this value after initialization, so it is ignored
   !! here.
   !<
-  function xmi_prepare_time_step(dt) result(bmi_status) bind(C, name="prepare_time_step")
+  function xmi_prepare_time_step(dt) result(bmi_status) &
+    bind(C, name="prepare_time_step")
     !DIR$ ATTRIBUTES DLLEXPORT :: xmi_prepare_time_step
     ! -- dummy variables
-    real(kind=c_double), intent(in) :: dt  !< time step
-    integer(kind=c_int) :: bmi_status   !< BMI status code
+    real(kind=c_double), intent(in) :: dt !< time step
+    integer(kind=c_int) :: bmi_status !< BMI status code
 
     call Mf6PrepareTimestep()
     bmi_status = BMI_SUCCESS
@@ -134,7 +135,8 @@ contains
   !! This will mostly write output and messages. It is essential
   !! to call this to finish the time step.
   !<
-  function xmi_finalize_time_step() result(bmi_status) bind(C, name="finalize_time_step")
+  function xmi_finalize_time_step() result(bmi_status) &
+    bind(C, name="finalize_time_step")
     !DIR$ ATTRIBUTES DLLEXPORT :: xmi_finalize_time_step
     ! -- dummy variables
     integer(kind=c_int) :: bmi_status !< BMI status code
@@ -159,20 +161,22 @@ contains
   !! Solution Group. (If you don't know what a Solution Group is, then
   !! you are most likely not using more than one...)
   !<
-  function xmi_get_subcomponent_count(count) result(bmi_status) bind(C, name="get_subcomponent_count")
+  function xmi_get_subcomponent_count(count) result(bmi_status) &
+    bind(C, name="get_subcomponent_count")
     !DIR$ ATTRIBUTES DLLEXPORT :: xmi_get_subcomponent_count
     ! -- modules
     use ListsModule, only: solutiongrouplist
     use SimVariablesModule, only: istdout
     ! -- dummy variables
     integer(kind=c_int), intent(out) :: count !< number of solutions
-    integer(kind=c_int) :: bmi_status         !< BMI status code
+    integer(kind=c_int) :: bmi_status !< BMI status code
     ! -- local variables
     class(SolutionGroupType), pointer :: sgp
 
     ! the following is true for all calls at this level (subcomponent)
     if (solutiongrouplist%Count() /= 1) then
-      write (istdout, *) 'Error: BMI does not support the use of multiple solution groups'
+      write (istdout, *) &
+        'Error: BMI does not support the use of multiple solution groups'
       count = -1
       bmi_status = BMI_FAILURE
       return
@@ -190,7 +194,8 @@ contains
   !! in the simulation. The index \p subcomponent_idx runs from 1 to the value returned
   !! by xmi_get_subcomponent_count().
   !<
-  function xmi_prepare_solve(subcomponent_idx) result(bmi_status) bind(C, name="prepare_solve")
+  function xmi_prepare_solve(subcomponent_idx) result(bmi_status) &
+    bind(C, name="prepare_solve")
     !DIR$ ATTRIBUTES DLLEXPORT :: xmi_prepare_solve
     ! -- modules
     use ListsModule, only: solutiongrouplist
@@ -198,13 +203,14 @@ contains
     use SimVariablesModule, only: istdout
     ! -- dummy variables
     integer(kind=c_int) :: subcomponent_idx !< index of the subcomponent (i.e. Numerical Solution)
-    integer(kind=c_int) :: bmi_status       !< BMI status code
+    integer(kind=c_int) :: bmi_status !< BMI status code
     ! -- local variables
     class(NumericalSolutionType), pointer :: ns
 
     ! people might not call 'xmi_get_subcomponent_count' first, so let's repeat this:
     if (solutiongrouplist%Count() /= 1) then
-      write (istdout, *) 'Error: BMI does not support the use of multiple solution groups'
+      write (istdout, *) &
+        'Error: BMI does not support the use of multiple solution groups'
       bmi_status = BMI_FAILURE
       return
     end if
@@ -229,14 +235,15 @@ contains
   !! which runs from 1 to the value returned by xmi_get_subcomponent_count(). Before calling
   !! this, a matching call to xmi_prepare_solve() should be done.
   !<
-  function xmi_solve(subcomponent_idx, has_converged) result(bmi_status) bind(C, name="solve")
+  function xmi_solve(subcomponent_idx, has_converged) result(bmi_status) &
+    bind(C, name="solve")
     !DIR$ ATTRIBUTES DLLEXPORT :: xmi_solve
     ! -- modules
     use NumericalSolutionModule
     ! -- dummy variables
     integer(kind=c_int), intent(in) :: subcomponent_idx !< index of the subcomponent (i.e. Numerical Solution)
-    integer(kind=c_int), intent(out) :: has_converged   !< equal to 1 for convergence, 0 otherwise
-    integer(kind=c_int) :: bmi_status                   !< BMI status code
+    integer(kind=c_int), intent(out) :: has_converged !< equal to 1 for convergence, 0 otherwise
+    integer(kind=c_int) :: bmi_status !< BMI status code
     ! -- local variables
     class(NumericalSolutionType), pointer :: ns
 
@@ -266,13 +273,14 @@ contains
   !! @param[in]   subcomponent_idx    the index of the subcomponent (Numerical Solution)
   !! @return      bmi_status          the BMI status code
   !<
-  function xmi_finalize_solve(subcomponent_idx) result(bmi_status) bind(C, name="finalize_solve")
+  function xmi_finalize_solve(subcomponent_idx) result(bmi_status) &
+    bind(C, name="finalize_solve")
     !DIR$ ATTRIBUTES DLLEXPORT :: xmi_finalize_solve
     ! -- modules
     use NumericalSolutionModule
     ! -- dummy variables
     integer(kind=c_int), intent(in) :: subcomponent_idx !< index of the subcomponent (i.e. Numerical Solution)
-    integer(kind=c_int) :: bmi_status               !< BMI status code
+    integer(kind=c_int) :: bmi_status !< BMI status code
     ! -- local variables
     class(NumericalSolutionType), pointer :: ns
     integer(I4B) :: hasConverged
@@ -301,6 +309,29 @@ contains
 
   end function xmi_finalize_solve
 
+  !> @brief Get the version string for this component
+  !<
+  function xmi_get_version(mf_version) result(bmi_status) &
+    bind(C, name="get_version")
+    !DIR$ ATTRIBUTES DLLEXPORT :: xmi_get_version
+    ! -- modules
+    use VersionModule, only: VERSIONNUMBER, IDEVELOPMODE
+    ! -- dummy variables
+    character(kind=c_char), intent(out) :: mf_version(BMI_LENVERSION)
+    integer(kind=c_int) :: bmi_status !< BMI status code
+    ! -- local variables
+    character(len=BMI_LENVERSION) :: vstr
+
+    if (IDEVELOPMODE == 1) then
+      vstr = VERSIONNUMBER//'-dev'
+    else
+      vstr = VERSIONNUMBER
+    end if
+    mf_version = string_to_char_array(vstr, len_trim(vstr))
+    bmi_status = BMI_SUCCESS
+
+  end function xmi_get_version
+
   !> @brief Get the full address string for a variable
   !!
   !! This routine constructs the full address string of a variable using the
@@ -314,14 +345,15 @@ contains
     !DIR$ ATTRIBUTES DLLEXPORT :: get_var_address
     ! -- modules
     use MemoryHelperModule, only: create_mem_path, create_mem_address
-    use ConstantsModule, only: LENCOMPONENTNAME, LENVARNAME, LENMEMPATH, LENMEMADDRESS
+    use ConstantsModule, only: LENCOMPONENTNAME, LENVARNAME, LENMEMPATH, &
+                               LENMEMADDRESS
     ! -- dummy variables
-    character(kind=c_char), intent(in) :: c_component_name(*)               !< name of the component (a Model or Solution)
-    character(kind=c_char), intent(in) :: c_subcomponent_name(*)            !< name of the subcomponent (Package), or an empty
+    character(kind=c_char), intent(in) :: c_component_name(*) !< name of the component (a Model or Solution)
+    character(kind=c_char), intent(in) :: c_subcomponent_name(*) !< name of the subcomponent (Package), or an empty
                                                                             !! string'' when not applicable
-    character(kind=c_char), intent(in) :: c_var_name(*)                     !< name of the variable
+    character(kind=c_char), intent(in) :: c_var_name(*) !< name of the variable
     character(kind=c_char), intent(out) :: c_var_address(BMI_LENVARADDRESS) !< full address of the variable
-    integer(kind=c_int) :: bmi_status                                       !< BMI status code
+    integer(kind=c_int) :: bmi_status !< BMI status code
     ! -- local variables
     character(len=LENCOMPONENTNAME) :: component_name
     character(len=LENCOMPONENTNAME) :: subcomponent_name
@@ -330,9 +362,15 @@ contains
     character(len=LENMEMADDRESS) :: mem_address
 
     ! convert to Fortran strings
-    component_name = char_array_to_string(c_component_name, strlen(c_component_name))
-    subcomponent_name = char_array_to_string(c_subcomponent_name, strlen(c_subcomponent_name))
-    variable_name = char_array_to_string(c_var_name, strlen(c_var_name))
+    component_name = char_array_to_string(c_component_name, &
+                                          strlen(c_component_name, &
+                                                 LENCOMPONENTNAME + 1))
+    subcomponent_name = char_array_to_string(c_subcomponent_name, &
+                                             strlen(c_subcomponent_name, &
+                                                    LENCOMPONENTNAME + 1))
+    variable_name = char_array_to_string(c_var_name, &
+                                         strlen(c_var_name, &
+                                                LENVARNAME + 1))
 
     ! create memory address
     if (subcomponent_name == '') then
@@ -343,7 +381,8 @@ contains
     mem_address = create_mem_address(mem_path, variable_name)
 
     ! convert to c string:
-    c_var_address(1:len(trim(mem_address)) + 1) = string_to_char_array(trim(mem_address), len(trim(mem_address)))
+    c_var_address(1:len(trim(mem_address)) + 1) = &
+      string_to_char_array(trim(mem_address), len(trim(mem_address)))
 
     bmi_status = BMI_SUCCESS
 

@@ -6,8 +6,9 @@ field is linear from top to bottom.
 
 """
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -73,7 +74,7 @@ def build_model(idx, dir):
         sim,
         model_type="gwt6",
         modelname=gwtname,
-        model_nam_file="{}.nam".format(gwtname),
+        model_nam_file=f"{gwtname}.nam",
     )
     gwt.name_file.save_flows = True
 
@@ -91,7 +92,7 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwtname),
+        filename=f"{gwtname}.ims",
     )
     sim.register_ims_package(imsgwt, [gwt.name])
 
@@ -105,13 +106,11 @@ def build_model(idx, dir):
         top=top,
         botm=botm,
         idomain=1,
-        filename="{}.dis".format(gwtname),
+        filename=f"{gwtname}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwtic(
-        gwt, strt=0.0, filename="{}.ic".format(gwtname)
-    )
+    ic = flopy.mf6.ModflowGwtic(gwt, strt=0.0, filename=f"{gwtname}.ic")
 
     # dispersion
     xt3d_off = not xt3d[idx]
@@ -123,7 +122,7 @@ def build_model(idx, dir):
         alv=0.0,
         ath1=0.0,
         atv=0.0,
-        filename="{}.dsp".format(gwtname),
+        filename=f"{gwtname}.dsp",
     )
 
     # constant concentration
@@ -142,8 +141,8 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwtoc(
         gwt,
-        budget_filerecord="{}.cbc".format(gwtname),
-        concentration_filerecord="{}.ucn".format(gwtname),
+        budget_filerecord=f"{gwtname}.cbc",
+        concentration_filerecord=f"{gwtname}.ucn",
         concentrationprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -160,14 +159,14 @@ def eval_transport(sim):
     name = ex[sim.idxsim]
     gwtname = "gwt_" + name
 
-    fpth = os.path.join(sim.simpath, "{}.ucn".format(gwtname))
+    fpth = os.path.join(sim.simpath, f"{gwtname}.ucn")
     try:
         cobj = flopy.utils.HeadFile(
             fpth, precision="double", text="CONCENTRATION"
         )
         conc = cobj.get_data()
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     # The answer is a linear concentration gradient from 1 to zero
     x = np.array([1.0, -0.25, -0.75, -1.25, -1.75])
@@ -178,10 +177,7 @@ def eval_transport(sim):
     m = (c0 - ce) / (x0 - xe)
     b = c0 - m * x0
     cres = m * x + b
-    msg = (
-        "simulated concentrations do not match with known "
-        "solution. {} {}".format(conc, cres)
-    )
+    msg = f"simulated concentrations do not match with known solution. {conc} {cres}"
     assert np.allclose(cres, conc.flatten()), msg
 
     return
@@ -219,7 +215,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

@@ -5,9 +5,10 @@
 # through the system.
 
 import os
-import pytest
 import sys
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -195,9 +196,6 @@ def build_model(idx, ws):
                 gwfgwf_data.append(connection)
 
     # GWF-GWF
-    mvr_filerecord = None
-    if across_model_mvr_on:
-        mvr_filerecord = f"{name}.gwfgwf.mvr"
     gwfgwf = flopy.mf6.ModflowGwfgwf(
         sim,
         exgtype="GWF6-GWF6",
@@ -206,7 +204,6 @@ def build_model(idx, ws):
         exgmnameb=gwfnames[1],  # south
         exchangedata=gwfgwf_data,
         auxiliary=["ANGLDEGX", "CDIST"],
-        mvr_filerecord=mvr_filerecord,
         dev_interfacemodel_on=False,
     )
 
@@ -215,21 +212,18 @@ def build_model(idx, ws):
         maxmvr, maxpackages = 1, 2
         mvrpack_sim = [["flow1", "lak-1"], ["flow2", "sfr-2"]]
         mvrspd = [["flow1", "lak-1", 0, "flow2", "sfr-2", 0, "FACTOR", 1.00]]
-        mvr = flopy.mf6.ModflowMvr(
-            sim,
+        mvr_filerecord = f"{name}.gwfgwf.mvr"
+        gwfgwf.mvr.initialize(
             modelnames=True,
             maxmvr=maxmvr,
             print_flows=True,
             maxpackages=maxpackages,
             packages=mvrpack_sim,
             perioddata=mvrspd,
-            filename=f"{name}.gwfgwf.mvr",
+            filename=mvr_filerecord,
         )
 
     # GWT-GWT
-    mvt_filerecord = None
-    if across_model_mvt_on:
-        mvt_filerecord = f"{name}.gwtgwt.mvt"
     gwtgwt = flopy.mf6.ModflowGwtgwt(
         sim,
         exgtype="GWT6-GWT6",
@@ -240,15 +234,13 @@ def build_model(idx, ws):
         gwfmodelname2=gwfnames[1],
         exchangedata=gwfgwf_data,
         auxiliary=["ANGLDEGX", "CDIST"],
-        mvt_filerecord=mvt_filerecord,
         # dev_interfacemodel_on=False,
     )
 
     # simulation GWT-GWT Mover
     if across_model_mvt_on:
-        mvt = flopy.mf6.modflow.ModflowGwtmvt(
-            sim, filename=f"{name}.gwtgwt.mvt"
-        )
+        mvt_filerecord = f"{name}.gwtgwt.mvt"
+        gwtgwt.mvt.initialize(filename=f"{name}.gwtgwt.mvt")
 
     regression = None
     return sim, regression
@@ -342,8 +334,8 @@ def build_gwfgwt_combo(
 
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.bud".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.bud",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[
             ("COLUMNS", ncol, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -512,7 +504,9 @@ def build_gwfgwt_combo(
     if icombo == 1:
         lakpackagedata = [[0, 44.0, nlakecon[0], "lake1"]]
         # <outletno> <lakein> <lakeout> <couttype> <invert> <width> <rough> <slope>
-        outlets = [[0, 0, -1, "MANNING", 44.5, 5.000000, 0.03, 0.2187500e-02]]
+        outlets = [
+            [0, 0, -1, "MANNING", 44.5, 3.36493214532915, 0.03, 0.2187500e-02]
+        ]
         noutlets = 1
     elif icombo == 2:
         lakpackagedata = [[0, 35.2, nlakecon[0], "lake2"]]
@@ -527,6 +521,7 @@ def build_gwfgwt_combo(
         lak = flopy.mf6.ModflowGwflak(
             gwf,
             time_conversion=86400.000,
+            length_conversion=3.28081,
             print_stage=True,
             print_flows=True,
             stage_filerecord=gwfname + ".lak.bin",
@@ -667,7 +662,7 @@ def build_gwfgwt_combo(
                 nreaches = sfrpack.nreaches.get_data()
                 sftpackagedata = []
                 for irno in range(nreaches):
-                    t = (irno, 0.0, 99.0, 999.0, "myreach{}".format(irno + 1))
+                    t = (irno, 0.0, 99.0, 999.0, f"myreach{irno + 1}")
                     sftpackagedata.append(t)
 
                 sft_obs = {
@@ -705,8 +700,8 @@ def build_gwfgwt_combo(
 
         oc = flopy.mf6.ModflowGwtoc(
             gwt,
-            budget_filerecord="{}.cbc".format(gwtname),
-            concentration_filerecord="{}.ucn".format(gwtname),
+            budget_filerecord=f"{gwtname}.cbc",
+            concentration_filerecord=f"{gwtname}.ucn",
             concentrationprintrecord=[
                 ("COLUMNS", ncol, "WIDTH", 15, "DIGITS", 6, "GENERAL")
             ],
@@ -960,21 +955,21 @@ def eval_results(sim):
         res_lak1 = lkaconc[:, 0]
         d = res_lak1 - ans_lak1
         print(f"lak1 max diff {d.max()}; min diff {d.min()}")
-        msg = "{} {} {}".format(res_lak1, ans_lak1, d)
+        msg = f"{res_lak1} {ans_lak1} {d}"
         assert np.allclose(res_lak1, ans_lak1, atol=atol), msg
 
     if sft3outflowconc is not None:
         res_sfr3 = sft3outflowconc
         d = res_sfr3 - ans_sfr3
         print(f"sfr3 max diff {d.max()}; min diff {d.min()}")
-        msg = "{} {} {}".format(res_sfr3, ans_sfr3, d)
+        msg = f"{res_sfr3} {ans_sfr3} {d}"
         assert np.allclose(res_sfr3, ans_sfr3, atol=atol), msg
 
     if sft4outflowconc is not None:
         res_sfr4 = sft4outflowconc
         d = res_sfr4 - ans_sfr4
         print(f"sfr4 max diff {d.max()}; min diff {d.min()}")
-        msg = "{} {} {}".format(res_sfr4, ans_sfr4, d)
+        msg = f"{res_sfr4} {ans_sfr4} {d}"
         assert np.allclose(res_sfr4, ans_sfr4, atol=atol), msg
 
     # uncomment when testing
@@ -1012,7 +1007,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

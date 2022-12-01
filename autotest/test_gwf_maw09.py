@@ -2,8 +2,9 @@
 # dry multi-aquifer well problem. Developed to address issue #546
 
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -79,7 +80,7 @@ def build_model(idx, dir):
         complexity="complex",
         outer_dvclose=dvclose,
         inner_dvclose=dvclose,
-        rcloserecord="{} strict".format(rclose),
+        rcloserecord=f"{rclose} strict",
         relaxation_factor=relax,
     )
 
@@ -145,8 +146,8 @@ def build_model(idx, dir):
         k33=Kv,
     )
     # gwf observations
-    opth = "{}.gwf.obs".format(gwfname)
-    obsdata = {"{}.gwf.obs.csv".format(gwfname): gwf_obs}
+    opth = f"{gwfname}.gwf.obs"
+    obsdata = {f"{gwfname}.gwf.obs.csv": gwf_obs}
     flopy.mf6.ModflowUtlobs(
         gwf, filename=opth, digits=20, print_input=True, continuous=obsdata
     )
@@ -175,8 +176,8 @@ def build_model(idx, dir):
     mawconnectiondata["hk_skin"] = 1.0
     mawconnectiondata["radius_skin"] = -999
 
-    mbin = "{}.maw.bin".format(gwfname)
-    mbud = "{}.maw.bud".format(gwfname)
+    mbin = f"{gwfname}.maw.bin"
+    mbud = f"{gwfname}.maw.bud"
     maw = flopy.mf6.ModflowGwfmaw(
         gwf,
         print_input=True,
@@ -189,9 +190,9 @@ def build_model(idx, dir):
         packagedata=mawpackagedata,
         connectiondata=mawconnectiondata,
     )
-    opth = "{}.maw.obs".format(gwfname)
+    opth = f"{gwfname}.maw.obs"
     obsdata = {
-        "{}.maw.obs.csv".format(gwfname): [
+        f"{gwfname}.maw.obs.csv": [
             ("whead", "head", (0,)),
         ]
     }
@@ -202,8 +203,8 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.cbc",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[
             (
@@ -237,13 +238,13 @@ def eval_results(sim):
     gwfname = "gwf_" + name
 
     # get well observations
-    fname = "{}.gwf.obs.csv".format(gwfname)
+    fname = f"{gwfname}.gwf.obs.csv"
     fname = os.path.join(sim.simpath, fname)
     assert os.path.isfile(fname)
     gobs = np.genfromtxt(fname, delimiter=",", names=True)
 
     # get well observations
-    fname = "{}.maw.obs.csv".format(gwfname)
+    fname = f"{gwfname}.maw.obs.csv"
     fname = os.path.join(sim.simpath, fname)
     assert os.path.isfile(fname)
     wobs = np.genfromtxt(fname, delimiter=",", names=True)["WHEAD"]
@@ -269,21 +270,21 @@ def eval_results(sim):
         vt = vw + vg
 
         # write a message
-        msg = "{}\n  well volume: {} ".format(idx, vw)
-        msg += "\n  groundwater volume: {}".format(vg)
-        msg += "\n  total volume: {}".format(vt)
+        msg = f"{idx}\n  well volume: {vw} "
+        msg += f"\n  groundwater volume: {vg}"
+        msg += f"\n  total volume: {vt}"
         print(msg)
 
         # evaluate results
-        msg = "total volume {} not equal to initial volume {}".format(vt, v0)
-        msg += "\nwell volume: {}\ngroundwater volume: {}".format(vw, vg)
+        msg = f"total volume {vt} not equal to initial volume {v0}"
+        msg += f"\nwell volume: {vw}\ngroundwater volume: {vg}"
         assert np.allclose(vt, v0), msg
 
     # Check final well head
     well_head = wobs[-1]
     assert np.allclose(
         well_head, 17.25
-    ), "final simulated maw head ({}) does not equal 17.25.".format(well_head)
+    ), f"final simulated maw head ({well_head}) does not equal 17.25."
 
     fname = gwfname + ".hds"
     fname = os.path.join(sim.simpath, fname)
@@ -310,9 +311,7 @@ def eval_results(sim):
         for i in range(ra_maw.shape[0]):
             qmaw = ra_maw[i]["q"]
             qgwf = ra_gwf[i]["q"]
-            msg = "step {} record {} comparing qmaw with qgwf: {} {}".format(
-                istp, i, qmaw, qgwf
-            )
+            msg = f"step {istp} record {i} comparing qmaw with qgwf: {qmaw} {qgwf}"
             print(msg)
             assert np.allclose(qmaw, -qgwf), msg
 
@@ -348,7 +347,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

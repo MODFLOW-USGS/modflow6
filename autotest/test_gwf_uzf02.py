@@ -4,8 +4,9 @@
 """
 
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -105,7 +106,7 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(imsgwf, [gwf.name])
 
@@ -155,7 +156,7 @@ def build_model(idx, dir):
     uzf_obs = {
         name
         + ".uzf.obs.csv": [
-            ("wc{}".format(k + 1), "water-content", 1, depth)
+            (f"wc{k + 1}", "water-content", 1, depth)
             for k, depth in enumerate(np.linspace(1, 20, 15))
         ]
     }
@@ -187,7 +188,7 @@ def build_model(idx, dir):
             thts,
             thti,
             brooks_corey_epsilon,
-            "uzf0{}".format(k + 1),
+            f"uzf0{k + 1}",
         ]
         for k in range(1, nlay)
     ]
@@ -219,16 +220,16 @@ def build_model(idx, dir):
         nuzfcells=len(uzf_pkdat),
         packagedata=uzf_pkdat,
         perioddata=uzf_spd,
-        budget_filerecord="{}.uzf.bud".format(name),
+        budget_filerecord=f"{name}.uzf.bud",
         observations=uzf_obs,
-        filename="{}.uzf".format(name),
+        filename=f"{name}.uzf",
     )
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.bud".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.bud",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
@@ -236,7 +237,7 @@ def build_model(idx, dir):
 
     obs_lst = []
     obs_lst.append(["obs1", "head", (0, 0, 0)])
-    obs_dict = {"{}.obs.csv".format(gwfname): obs_lst}
+    obs_dict = {f"{gwfname}.obs.csv": obs_lst}
     obs = flopy.mf6.ModflowUtlobs(
         gwf, pname="head_obs", digits=20, continuous=obs_dict
     )
@@ -265,7 +266,7 @@ def make_plot(sim, obsvals):
     depth = np.arange(1, 20, 2.0)
     depth = np.linspace(1, 20, 15)
     for row in obsvals:
-        label = "time {}".format(row[0])
+        label = f"time {row[0]}"
         ax.plot(row[1:], depth, label=label, marker="o")
     ax.set_ylim(0.0, 20.0)
     ax.set_xlim(0.15, 0.4)
@@ -311,9 +312,7 @@ def eval_flow(sim):
     for fjf in flow_ja_face:
         fjf = fjf.flatten()
         res = fjf[ia[:-1]]
-        errmsg = "min or max residual too large {} {}".format(
-            res.min(), res.max()
-        )
+        errmsg = f"min or max residual too large {res.min()} {res.max()}"
         assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
     bpth = os.path.join(ws, name + ".uzf.bud")
@@ -328,7 +327,7 @@ def eval_flow(sim):
     try:
         obsvals = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
     if False:
         make_plot(sim, obsvals)
     return
@@ -365,7 +364,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

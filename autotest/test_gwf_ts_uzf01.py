@@ -1,6 +1,7 @@
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -325,7 +326,7 @@ def get_model(ws, name, timeseries=False):
         [2, "diversion", 1, divflow],
     ]
 
-    cnvgpth = "{}.sfr.cnvg.csv".format(name)
+    cnvgpth = f"{name}.sfr.cnvg.csv"
     sfr = flopy.mf6.ModflowGwfsfr(
         gwf,
         auxiliary=auxnames,
@@ -401,7 +402,7 @@ def get_model(ws, name, timeseries=False):
         (0, "slope", "1.000000000000e-003"),
         (0, "rough", "1.000000000000e-001"),
     ]
-    cnvgpth = "{}.lak.cnvg.csv".format(name)
+    cnvgpth = f"{name}.lak.cnvg.csv"
     lak = flopy.mf6.ModflowGwflak(
         gwf,
         mover=True,
@@ -575,8 +576,8 @@ def get_model(ws, name, timeseries=False):
             [8, finf, pet, extdp, extwc, ha, hroot, rootact, temp, conc],
         ]
 
-    budpth = "{}.{}.cbc".format(name, paktest)
-    cnvgpth = "{}.uzf.cnvg.csv".format(name)
+    budpth = f"{name}.{paktest}.cbc"
+    cnvgpth = f"{name}.uzf.cnvg.csv"
     uzf = flopy.mf6.ModflowGwfuzf(
         gwf,
         print_input=True,
@@ -595,7 +596,7 @@ def get_model(ws, name, timeseries=False):
         pname="uzf-1",
     )
     if timeseries:
-        fname = "{}.{}.ts".format(name, paktest)
+        fname = f"{name}.{paktest}.ts"
         uzf.ts.initialize(
             filename=fname,
             timeseries=ts_data,
@@ -628,7 +629,7 @@ def get_model(ws, name, timeseries=False):
     mvr = flopy.mf6.ModflowGwfmvr(
         gwf,
         maxmvr=len(perioddata),
-        budget_filerecord="{}.mvr.bud".format(name),
+        budget_filerecord=f"{name}.mvr.bud",
         maxpackages=len(packages),
         print_flows=True,
         packages=packages,
@@ -638,8 +639,8 @@ def get_model(ws, name, timeseries=False):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(name),
-        head_filerecord="{}.hds".format(name),
+        budget_filerecord=f"{name}.cbc",
+        head_filerecord=f"{name}.hds",
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("BUDGET", "LAST")],
     )
@@ -666,12 +667,12 @@ def eval_model(sim):
     from budget_file_compare import eval_bud_diff
 
     # get ia/ja from binary grid file
-    fname = "{}.dis.grb".format(os.path.basename(sim.name))
+    fname = f"{os.path.basename(sim.name)}.dis.grb"
     fpth = os.path.join(sim.simpath, fname)
     grbobj = flopy.mf6.utils.MfGrdFile(fpth)
     ia = grbobj._datadict["IA"] - 1
 
-    fname = "{}.cbc".format(os.path.basename(sim.name))
+    fname = f"{os.path.basename(sim.name)}.cbc"
 
     # open first gwf cbc file
     fpth = os.path.join(sim.simpath, fname)
@@ -682,12 +683,12 @@ def eval_model(sim):
     cobj1 = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # define file path and evaluate difference
-    fname = "{}.cbc.cmp.out".format(os.path.basename(sim.name))
+    fname = f"{os.path.basename(sim.name)}.cbc.cmp.out"
     fpth = os.path.join(sim.simpath, fname)
     eval_bud_diff(fpth, cobj0, cobj1, ia)
 
     # evaluate the sfr package budget file
-    fname = "{}.{}.cbc".format(os.path.basename(sim.name), paktest)
+    fname = f"{os.path.basename(sim.name)}.{paktest}.cbc"
     # open first sfr cbc file
     fpth = os.path.join(sim.simpath, fname)
     cobj0 = flopy.utils.CellBudgetFile(fpth, precision="double")
@@ -697,7 +698,7 @@ def eval_model(sim):
     cobj1 = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # define file path and evaluate difference
-    fname = "{}.{}.cbc.cmp.out".format(os.path.basename(sim.name), paktest)
+    fname = f"{os.path.basename(sim.name)}.{paktest}.cbc.cmp.out"
     fpth = os.path.join(sim.simpath, fname)
     eval_bud_diff(fpth, cobj0, cobj1)
 
@@ -737,7 +738,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

@@ -18,7 +18,8 @@ module mf6bmiGrid
 contains
 
   ! Get the grid identifier for the given variable.
-  function get_var_grid(c_var_address, var_grid) result(bmi_status) bind(C, name="get_var_grid")
+  function get_var_grid(c_var_address, var_grid) result(bmi_status) &
+    bind(C, name="get_var_grid")
     !DIR$ ATTRIBUTES DLLEXPORT :: get_var_grid
     ! -- modules
     use ListsModule, only: basemodellist
@@ -37,7 +38,8 @@ contains
     var_grid = -1
 
     bmi_status = BMI_FAILURE
-    var_address = char_array_to_string(c_var_address, strlen(c_var_address))
+    var_address = char_array_to_string(c_var_address, &
+                                       strlen(c_var_address, LENMEMADDRESS + 1))
     model_name = extract_model_name(var_address, success)
     if (.not. success) then
       ! we failed
@@ -55,7 +57,8 @@ contains
   end function get_var_grid
 
   ! Get the grid type as a string.
-  function get_grid_type(grid_id, grid_type) result(bmi_status) bind(C, name="get_grid_type")
+  function get_grid_type(grid_id, grid_type) result(bmi_status) &
+    bind(C, name="get_grid_type")
     !DIR$ ATTRIBUTES DLLEXPORT :: get_grid_type
     ! -- dummy variables
     integer(kind=c_int), intent(in) :: grid_id
@@ -83,7 +86,8 @@ contains
   end function get_grid_type
 
   ! Get number of dimensions of the computational grid.
-  function get_grid_rank(grid_id, grid_rank) result(bmi_status) bind(C, name="get_grid_rank")
+  function get_grid_rank(grid_id, grid_rank) result(bmi_status) &
+    bind(C, name="get_grid_rank")
     !DIR$ ATTRIBUTES DLLEXPORT :: get_grid_rank
     ! -- dummy variables
     integer(kind=c_int), intent(in) :: grid_id
@@ -110,7 +114,8 @@ contains
   end function get_grid_rank
 
   ! Get the total number of elements in the computational grid.
-  function get_grid_size(grid_id, grid_size) result(bmi_status) bind(C, name="get_grid_size")
+  function get_grid_size(grid_id, grid_size) result(bmi_status) &
+    bind(C, name="get_grid_size")
     !DIR$ ATTRIBUTES DLLEXPORT :: get_grid_size
     ! -- dummy variables
     integer(kind=c_int), intent(in) :: grid_id
@@ -126,12 +131,13 @@ contains
     bmi_status = BMI_FAILURE
 
     if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) return
-    grid_type_f = char_array_to_string(grid_type, strlen(grid_type))
+    grid_type_f = char_array_to_string(grid_type, &
+                                       strlen(grid_type, LENGRIDTYPE + 1))
     model_name = get_model_name(grid_id)
 
     if (grid_type_f == "rectilinear") then
       call mem_setptr(grid_shape, "MSHAPE", create_mem_path(model_name, 'DIS'))
-      grid_size = grid_shape(1)*grid_shape(2)*grid_shape(3)
+      grid_size = grid_shape(1) * grid_shape(2) * grid_shape(3)
       bmi_status = BMI_SUCCESS
       return
     else if (grid_type_f == "unstructured") then
@@ -142,7 +148,8 @@ contains
   end function get_grid_size
 
   ! Get the dimensions of the computational grid.
-  function get_grid_shape(grid_id, grid_shape) result(bmi_status) bind(C, name="get_grid_shape")
+  function get_grid_shape(grid_id, grid_shape) result(bmi_status) &
+    bind(C, name="get_grid_shape")
     !DIR$ ATTRIBUTES DLLEXPORT :: get_grid_shape
     ! -- dummy variables
     integer(kind=c_int), intent(in) :: grid_id
@@ -162,15 +169,16 @@ contains
     call mem_setptr(grid_shape_ptr, "MSHAPE", create_mem_path(model_name, 'DIS'))
 
     if (grid_shape_ptr(1) == 1) then
-      grid_shape(1:2) = grid_shape_ptr(2:3)  ! 2D
+      grid_shape(1:2) = grid_shape_ptr(2:3) ! 2D
     else
-      grid_shape(1:3) = grid_shape_ptr       ! 3D
+      grid_shape(1:3) = grid_shape_ptr ! 3D
     end if
     bmi_status = BMI_SUCCESS
   end function get_grid_shape
 
   ! Provides an array (whose length is the number of rows) that gives the x-coordinate for each row.
-  function get_grid_x(grid_id, grid_x) result(bmi_status) bind(C, name="get_grid_x")
+  function get_grid_x(grid_id, grid_x) result(bmi_status) &
+    bind(C, name="get_grid_x")
     !DIR$ ATTRIBUTES DLLEXPORT :: get_grid_x
     ! -- dummy variables
     integer(kind=c_int), intent(in) :: grid_id
@@ -188,17 +196,20 @@ contains
     bmi_status = BMI_FAILURE
     ! make sure function is only used for implemented grid_types
     if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) return
-    grid_type_f = char_array_to_string(grid_type, strlen(grid_type))
+    grid_type_f = char_array_to_string(grid_type, &
+                                       strlen(grid_type, LENGRIDTYPE + 1))
 
     model_name = get_model_name(grid_id)
     if (grid_type_f == "rectilinear") then
-      call mem_setptr(grid_shape_ptr, "MSHAPE", create_mem_path(model_name, 'DIS'))
+      call mem_setptr(grid_shape_ptr, "MSHAPE", &
+                      create_mem_path(model_name, 'DIS'))
       ! The dimension of x is in the last element of the shape array.
       ! + 1 because we count corners, not centers.
       x_size = grid_shape_ptr(size(grid_shape_ptr)) + 1
       grid_x(1:x_size) = [(i, i=0, x_size - 1)]
     else if (grid_type_f == "unstructured") then
-      call mem_setptr(vertices_ptr, "VERTICES", create_mem_path(model_name, 'DIS'))
+      call mem_setptr(vertices_ptr, "VERTICES", &
+                      create_mem_path(model_name, 'DIS'))
       ! x-coordinates are in the 1st column
       x_size = size(vertices_ptr(1, :))
       grid_x(1:x_size) = vertices_ptr(1, :)
@@ -210,7 +221,8 @@ contains
   end function get_grid_x
 
   ! Provides an array (whose length is the number of rows) that gives the y-coordinate for each row.
-  function get_grid_y(grid_id, grid_y) result(bmi_status) bind(C, name="get_grid_y")
+  function get_grid_y(grid_id, grid_y) result(bmi_status) &
+    bind(C, name="get_grid_y")
     !DIR$ ATTRIBUTES DLLEXPORT :: get_grid_y
     ! -- dummy variables
     integer(kind=c_int), intent(in) :: grid_id
@@ -227,17 +239,20 @@ contains
 
     bmi_status = BMI_FAILURE
     if (get_grid_type(grid_id, grid_type) /= BMI_SUCCESS) return
-    grid_type_f = char_array_to_string(grid_type, strlen(grid_type))
+    grid_type_f = char_array_to_string(grid_type, &
+                                       strlen(grid_type, LENGRIDTYPE + 1))
 
     model_name = get_model_name(grid_id)
     if (grid_type_f == "rectilinear") then
-      call mem_setptr(grid_shape_ptr, "MSHAPE", create_mem_path(model_name, 'DIS'))
+      call mem_setptr(grid_shape_ptr, "MSHAPE", &
+                      create_mem_path(model_name, 'DIS'))
       ! The dimension of y is in the second last element of the shape array.
       ! + 1 because we count corners, not centers.
       y_size = grid_shape_ptr(size(grid_shape_ptr - 1)) + 1
       grid_y(1:y_size) = [(i, i=y_size - 1, 0, -1)]
     else if (grid_type_f == "unstructured") then
-      call mem_setptr(vertices_ptr, "VERTICES", create_mem_path(model_name, 'DIS'))
+      call mem_setptr(vertices_ptr, "VERTICES", &
+                      create_mem_path(model_name, 'DIS'))
       ! y-coordinates are in the 2nd column
       y_size = size(vertices_ptr(2, :))
       grid_y(1:y_size) = vertices_ptr(2, :)
@@ -250,7 +265,8 @@ contains
 
   ! NOTE: node in BMI-terms is a vertex in Modflow terms
   ! Get the number of nodes in an unstructured grid.
-  function get_grid_node_count(grid_id, count) result(bmi_status) bind(C, name="get_grid_node_count")
+  function get_grid_node_count(grid_id, count) result(bmi_status) &
+    bind(C, name="get_grid_node_count")
     !DIR$ ATTRIBUTES DLLEXPORT :: get_grid_node_count
     ! -- dummy variables
     integer(kind=c_int), intent(in) :: grid_id
@@ -272,7 +288,8 @@ contains
 
   ! TODO_JH: This currently only works for 2D DISU models
   ! Get the number of faces in an unstructured grid.
-  function get_grid_face_count(grid_id, count) result(bmi_status) bind(C, name="get_grid_face_count")
+  function get_grid_face_count(grid_id, count) result(bmi_status) &
+    bind(C, name="get_grid_face_count")
     !DIR$ ATTRIBUTES DLLEXPORT :: get_grid_face_count
     ! -- modules
     use ListsModule, only: basemodellist
@@ -301,7 +318,8 @@ contains
   end function get_grid_face_count
 
   ! Get the face-node connectivity.
-  function get_grid_face_nodes(grid_id, face_nodes) result(bmi_status) bind(C, name="get_grid_face_nodes")
+  function get_grid_face_nodes(grid_id, face_nodes) result(bmi_status) &
+    bind(C, name="get_grid_face_nodes")
     !DIR$ ATTRIBUTES DLLEXPORT :: get_grid_face_nodes
     ! -- dummy variables
     integer(kind=c_int), intent(in) :: grid_id
@@ -335,7 +353,8 @@ contains
   end function get_grid_face_nodes
 
   ! Get the number of nodes for each face.
-  function get_grid_nodes_per_face(grid_id, nodes_per_face) result(bmi_status) bind(C, name="get_grid_nodes_per_face")
+  function get_grid_nodes_per_face(grid_id, nodes_per_face) result(bmi_status) &
+    bind(C, name="get_grid_nodes_per_face")
     !DIR$ ATTRIBUTES DLLEXPORT :: get_grid_nodes_per_face
     ! -- dummy variables
     integer(kind=c_int), intent(in) :: grid_id

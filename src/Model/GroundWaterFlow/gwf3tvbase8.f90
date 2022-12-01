@@ -180,7 +180,7 @@ contains
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate time series manager
-    allocate(this%tsmanager)
+    allocate (this%tsmanager)
     !
     return
   end subroutine tvbase_allocate_scalars
@@ -202,8 +202,8 @@ contains
     ! -- Create time series manager
     call tsmanager_cr(this%tsmanager, &
                       this%iout, &
-                      removeTsLinksOnCompletion = .true., &
-                      extendTsToEndOfSimulation = .true.)
+                      removeTsLinksOnCompletion=.true., &
+                      extendTsToEndOfSimulation=.true.)
     !
     ! -- Read options
     call this%read_options()
@@ -213,7 +213,7 @@ contains
     call this%tsmanager%tsmanager_df()
     !
     ! -- Terminate if any errors were encountered
-    if(count_errors() > 0) then
+    if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
@@ -238,54 +238,54 @@ contains
     integer(I4B) :: ierr
     ! -- formats
     character(len=*), parameter :: fmtts = &
-      "(4x, 'TIME-SERIES DATA WILL BE READ FROM FILE: ', a)"
+      &"(4x, 'TIME-SERIES DATA WILL BE READ FROM FILE: ', a)"
     !
     ! -- Get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, &
                               blockRequired=.false., supportOpenClose=.true.)
     !
     ! -- Parse options block if detected
-    if(isfound) then
-      write(this%iout, '(1x,a)') &
-        'PROCESSING ' // trim(adjustl(this%packName)) // ' OPTIONS'
+    if (isfound) then
+      write (this%iout, '(1x,a)') &
+        'PROCESSING '//trim(adjustl(this%packName))//' OPTIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
-        if(endOfBlock) then
+        if (endOfBlock) then
           exit
         end if
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
-          case ('PRINT_INPUT')
-            this%iprpak = 1
-            write(this%iout,'(4x,a)') 'TIME-VARYING INPUT WILL BE PRINTED.'
-          case ('TS6')
-            !
-            ! -- Add a time series file
-            call this%parser%GetStringCaps(keyword)
-            if(trim(adjustl(keyword)) /= 'FILEIN') then
-              errmsg = &
-                'TS6 keyword must be followed by "FILEIN" then by filename.'
-              call store_error(errmsg)
-              call this%parser%StoreErrorUnit()
-              call ustop()
-            end if
-            call this%parser%GetString(fname)
-            write(this%iout, fmtts) trim(fname)
-            call this%tsmanager%add_tsfile(fname, this%inunit)
-          case default
-            !
-            ! -- Defer to subtype to read the option;
-            ! -- if the subtype can't handle it, report an error
-            if(.not. this%read_option(keyword)) then
-              write(errmsg, '(a,3(1x,a),a)') &
-                'Unknown', trim(adjustl(this%packName)), "option '", &
-                trim(keyword), "'."
-              call store_error(errmsg)
-            end if
+        case ('PRINT_INPUT')
+          this%iprpak = 1
+          write (this%iout, '(4x,a)') 'TIME-VARYING INPUT WILL BE PRINTED.'
+        case ('TS6')
+          !
+          ! -- Add a time series file
+          call this%parser%GetStringCaps(keyword)
+          if (trim(adjustl(keyword)) /= 'FILEIN') then
+            errmsg = &
+              'TS6 keyword must be followed by "FILEIN" then by filename.'
+            call store_error(errmsg)
+            call this%parser%StoreErrorUnit()
+            call ustop()
+          end if
+          call this%parser%GetString(fname)
+          write (this%iout, fmtts) trim(fname)
+          call this%tsmanager%add_tsfile(fname, this%inunit)
+        case default
+          !
+          ! -- Defer to subtype to read the option;
+          ! -- if the subtype can't handle it, report an error
+          if (.not. this%read_option(keyword)) then
+            write (errmsg, '(a,3(1x,a),a)') &
+              'Unknown', trim(adjustl(this%packName)), "option '", &
+              trim(keyword), "'."
+            call store_error(errmsg)
+          end if
         end select
       end do
-      write(this%iout, '(1x,a)') &
-        'END OF ' // trim(adjustl(this%packName)) // ' OPTIONS'
+      write (this%iout, '(1x,a)') &
+        'END OF '//trim(adjustl(this%packName))//' OPTIONS'
     end if
     !
     return
@@ -306,40 +306,41 @@ contains
     real(DP), pointer :: bndElem => null()
     ! -- formats
     character(len=*), parameter :: fmtblkerr = &
-      "('Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
+      &"('Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
     character(len=*), parameter :: fmtvalchg = &
       "(a, ' package: Setting ', a, ' value for cell ', a, ' at start of &
       &stress period ', i0, ' = ', g12.5)"
     !
-    if(this%inunit == 0) return
+    if (this%inunit == 0) return
     !
     ! -- Get stress period data
-    if(this%ionper < kper) then
+    if (this%ionper < kper) then
       !
       ! -- Get PERIOD block
       call this%parser%GetBlock('PERIOD', isfound, ierr, &
-                                supportOpenClose=.true.)
-      if(isfound) then
+                                supportOpenClose=.true., &
+                                blockRequired=.false.)
+      if (isfound) then
         !
         ! -- Read ionper and check for increasing period numbers
         call this%read_check_ionper()
       else
         !
         ! -- PERIOD block not found
-        if(ierr < 0) then
+        if (ierr < 0) then
           ! -- End of file found; data applies for remainder of simulation.
           this%ionper = nper + 1
         else
           ! -- Found invalid block
           call this%parser%GetCurrentLine(line)
-          write(errmsg, fmtblkerr) adjustl(trim(line))
+          write (errmsg, fmtblkerr) adjustl(trim(line))
           call store_error(errmsg)
         end if
       end if
     end if
     !
     ! -- Read data if ionper == kper
-    if(this%ionper == kper) then
+    if (this%ionper == kper) then
       !
       ! -- Reset per-node property change flags
       call this%reset_change_flags()
@@ -347,7 +348,7 @@ contains
       haveChanges = .false.
       do
         call this%parser%GetNextLine(endOfBlock)
-        if(endOfBlock) then
+        if (endOfBlock) then
           exit
         end if
         !
@@ -357,8 +358,8 @@ contains
                                           this%iout)
         !
         ! -- Validate cell ID
-        if(node < 1 .or. node > this%dis%nodes) then
-          write(errmsg, '(a,2(1x,a))') &
+        if (node < 1 .or. node > this%dis%nodes) then
+          write (errmsg, '(a,2(1x,a))') &
             'CELLID', cellid, 'is not in the active model domain.'
           call store_error(errmsg)
           cycle
@@ -370,8 +371,8 @@ contains
         ! -- Get a pointer to the property value given by varName for the node
         ! -- with the specified cell ID
         bndElem => this%get_pointer_to_value(node, varName)
-        if(.not. associated(bndElem)) then
-          write(errmsg, '(a,3(1x,a),a)') &
+        if (.not. associated(bndElem)) then
+          write (errmsg, '(a,3(1x,a),a)') &
             'Unknown', trim(adjustl(this%packName)), "variable '", &
             trim(varName), "'."
           call store_error(errmsg)
@@ -387,7 +388,7 @@ contains
         !
         ! -- Report value change
         if (this%iprpak /= 0) then
-          write(this%iout, fmtvalchg) &
+          write (this%iout, fmtvalchg) &
             trim(adjustl(this%packName)), trim(varName), trim(cellid), &
             kper, bndElem
         end if
@@ -399,13 +400,13 @@ contains
       !
       ! -- Record that any changes were made at the first time step of the
       ! -- stress period
-      if(haveChanges) then
+      if (haveChanges) then
         call this%set_changed_at(kper, 1)
       end if
     end if
     !
     ! -- Terminate if errors were encountered in the PERIOD block
-    if(count_errors() > 0) then
+    if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
@@ -432,7 +433,7 @@ contains
     ! -- If there are no time series property changes,
     ! -- there is nothing else to be done
     numlinks = this%tsmanager%CountLinks('BND')
-    if(numlinks <= 0) then
+    if (numlinks <= 0) then
       return
     end if
     !
@@ -442,7 +443,7 @@ contains
     !
     ! -- Reset node K change flags at all time steps except the first of each
     ! -- period (the first is done in rp(), to allow non-time series changes)
-    if(kstp /= 1) then
+    if (kstp /= 1) then
       call this%reset_change_flags()
     end if
     !
@@ -454,7 +455,7 @@ contains
     end do
     !
     ! -- Terminate if there were errors
-    if(count_errors() > 0) then
+    if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
@@ -472,7 +473,7 @@ contains
     class(TvBaseType) :: this
     !
     ! -- Deallocate time series manager
-    deallocate(this%tsmanager)
+    deallocate (this%tsmanager)
     !
     ! -- Deallocate parent
     call this%NumericalPackageType%da()

@@ -1,11 +1,11 @@
 module NameFileModule
 
   use KindModule, only: DP, I4B
-  use InputOutputModule,   only: ParseLine, openfile, getunit
-  use ConstantsModule,     only: LINELENGTH, LENPACKAGENAME
+  use InputOutputModule, only: ParseLine, openfile, getunit
+  use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
   use ArrayHandlersModule, only: ExpandArray, remove_character
-  use IunitModule,         only: IunitType
-  use BlockParserModule,   only: BlockParserType
+  use IunitModule, only: IunitType
+  use BlockParserModule, only: BlockParserType
   implicit none
   private
   public :: NameFileType
@@ -18,17 +18,17 @@ module NameFileModule
     type(IunitType) :: iunit_obj
     type(BlockParserType) :: parser
   contains
-    procedure :: init                  => namefile_init
-    procedure :: add_cunit             => namefile_add_cunit
-    procedure :: openlistfile          => namefile_openlistfile
-    procedure :: openfiles             => namefile_openfiles
-    procedure :: get_unitnumber        => namefile_get_unitnumber
-    procedure :: get_nval_for_row      => namefile_get_nval_for_row
+    procedure :: init => namefile_init
+    procedure :: add_cunit => namefile_add_cunit
+    procedure :: openlistfile => namefile_openlistfile
+    procedure :: openfiles => namefile_openfiles
+    procedure :: get_unitnumber => namefile_get_unitnumber
+    procedure :: get_nval_for_row => namefile_get_nval_for_row
     procedure :: get_unitnumber_rowcol => namefile_get_unitnumber_rowcol
-    procedure :: get_pakname           => namefile_get_pakname
+    procedure :: get_pakname => namefile_get_pakname
   end type NameFileType
 
-  contains
+contains
 
   subroutine namefile_init(this, filename, iout)
 ! ******************************************************************************
@@ -49,9 +49,9 @@ module NameFileModule
     integer(I4B) :: i, ierr, inunit, n
     logical :: isFound, endOfBlock
     ! -- formats
-    character(len=*), parameter :: fmtfname =                                  &
-      "(1x, 'NON-COMMENTED ENTRIES FOUND IN ', /,                              &
-       &4X, 'BLOCK: ', a, /,                                                   &
+    character(len=*), parameter :: fmtfname = &
+      "(1x, 'NON-COMMENTED ENTRIES FOUND IN ', /, &
+       &4X, 'BLOCK: ', a, /, &
        &4X, 'FILE: ', a)"
     character(len=*), parameter :: fmtbeg = "(/, 1x, A)"
     character(len=*), parameter :: fmtline = "(2x, a)"
@@ -60,8 +60,8 @@ module NameFileModule
     !
     ! -- Store filename and initialize variables
     this%filename = filename
-    allocate(this%opts(0))
-    allocate(this%input_files(0))
+    allocate (this%opts(0))
+    allocate (this%input_files(0))
     !
     ! -- Open the name file and initialize the block parser
     inunit = getunit()
@@ -70,8 +70,8 @@ module NameFileModule
     !
     ! -- Read and set the options
     call this%parser%GetBlock('OPTIONS', isFound, ierr, &
-      supportOpenClose=.true., blockRequired=.false.)
-    if(isFound) then
+                              supportOpenClose=.true., blockRequired=.false.)
+    if (isFound) then
       !
       ! -- Populate this%opts
       n = 0
@@ -82,26 +82,26 @@ module NameFileModule
         call ExpandArray(this%opts)
         n = n + 1
         this%opts(n) = adjustl(line)
-      enddo getopts
+      end do getopts
       !
-      if(iout > 0) then
-        write(iout, fmtfname) 'OPTIONS', trim(adjustl(filename))
-        write(iout, fmtbeg) 'BEGIN OPTIONS'
+      if (iout > 0) then
+        write (iout, fmtfname) 'OPTIONS', trim(adjustl(filename))
+        write (iout, fmtbeg) 'BEGIN OPTIONS'
         do i = 1, n
-          write(iout, fmtline) trim(adjustl(this%opts(i)))
-        enddo
-        write(iout, fmtend) 'END OPTIONS'
-      endif
+          write (iout, fmtline) trim(adjustl(this%opts(i)))
+        end do
+        write (iout, fmtend) 'END OPTIONS'
+      end if
     else
-      if(iout > 0) then
-        write(iout, '(/, A, /)') 'NO VALID OPTIONS BLOCK DETECTED'
-      endif
-    endif
+      if (iout > 0) then
+        write (iout, '(/, A, /)') 'NO VALID OPTIONS BLOCK DETECTED'
+      end if
+    end if
     !
     ! -- Read and set the input_files
     call this%parser%GetBlock('PACKAGES', isFound, ierr, &
-      supportOpenClose=.true.)
-    if(isFound) then
+                              supportOpenClose=.true.)
+    if (isFound) then
       !
       ! -- Populate this%input_files
       n = 0
@@ -112,24 +112,24 @@ module NameFileModule
         call ExpandArray(this%input_files)
         n = n + 1
         this%input_files(n) = adjustl(line)
-      enddo getpaks
+      end do getpaks
       !
       ! -- Write to list file
-      if(iout > 0) then
-        write(iout, fmtfname) 'PACKAGES', trim(adjustl(filename))
-        write(iout, fmtbeg) 'BEGIN PACKAGES'
+      if (iout > 0) then
+        write (iout, fmtfname) 'PACKAGES', trim(adjustl(filename))
+        write (iout, fmtbeg) 'BEGIN PACKAGES'
         do i = 1, n
-          write(iout, fmtline) trim(adjustl(this%input_files(i)))
-        enddo
-        write(iout, fmtend) 'END PACKAGES'
-      endif
+          write (iout, fmtline) trim(adjustl(this%input_files(i)))
+        end do
+        write (iout, fmtend) 'END PACKAGES'
+      end if
     else
       !
       ! -- Package block not found.  Terminate with error.
-      write(errmsg, '(a, a)') 'Error reading PACKAGES from file: ',            &
-                               trim(adjustl(filename))
+      write (errmsg, '(a, a)') 'Error reading PACKAGES from file: ', &
+        trim(adjustl(filename))
       call store_error(errmsg, terminate=.TRUE.)
-    endif
+    end if
     !
     ! -- return
     return
@@ -182,13 +182,13 @@ module NameFileModule
     findloop: do i = 1, size(this%opts)
       call ParseLine(this%opts(i), nwords, words)
       call upcase(words(1))
-      if(words(1) == 'LIST') then
+      if (words(1) == 'LIST') then
         fname = words(2)
         ipos = i
         found = .true.
         exit findloop
-      endif
-    enddo findloop
+      end if
+    end do findloop
     !
     ! -- remove list file from options list
     if (ipos > 0) then
@@ -206,13 +206,13 @@ module NameFileModule
         if (this%filename(i:i) == '.') then
           istart = i
           exit
-        endif
-      enddo
+        end if
+      end do
       if (istart == 0) istart = istop + 1
       fname = this%filename(1:istart)
       istop = istart + 3
       fname(istart:istop) = '.lst'
-    endif
+    end if
     !
     ! -- Open the list file
     iout = getunit()
@@ -248,7 +248,7 @@ module NameFileModule
       ! -- Parse the line and set defaults
       call ParseLine(this%input_files(i), nwords, words)
       call upcase(words(1))
-      ftype = words(1)(1:20)
+      ftype = words(1) (1:20)
       accarg = 'SEQUENTIAL'
       fmtarg = 'FORMATTED'
       filstat = 'OLD'
@@ -258,9 +258,9 @@ module NameFileModule
       call this%iunit_obj%addfile(ftype, inunit, i, this%filename)
       !
       ! -- Open the file
-      call openfile(inunit, iout, trim(adjustl(words(2))),                     &
+      call openfile(inunit, iout, trim(adjustl(words(2))), &
                     ftype, fmtarg, accarg, filstat)
-    enddo
+    end do
     !
     ! -- return
     return
@@ -307,8 +307,8 @@ module NameFileModule
     return
   end function namefile_get_nval_for_row
 
-  function namefile_get_unitnumber_rowcol(this, irow, jcol)            &
-          result(iu)
+  function namefile_get_unitnumber_rowcol(this, irow, jcol) &
+    result(iu)
 ! ******************************************************************************
 ! namefile_get_unitnumber_rowcol -- Get the unit number for entries in
 !   cunit(irow) and columns (icol).  For example, return the unit number for
@@ -358,23 +358,22 @@ module NameFileModule
     pakname = ''
     if (nwords > 2) then
       ilen = len(trim(adjustl(words(3))))
-      if(ilen > LENPACKAGENAME) then
-        write(errmsg, "(a, i0, a)")                                      &
-                        'ERROR.  PACKAGENAME MUST NOT BE GREATER THAN ', &
-                        LENPACKAGENAME, ' CHARACTERS.'
+      if (ilen > LENPACKAGENAME) then
+        write (errmsg, "(a, i0, a)") &
+          'ERROR.  PACKAGENAME MUST NOT BE GREATER THAN ', &
+          LENPACKAGENAME, ' CHARACTERS.'
         call store_error(errmsg)
         call store_error(trim(this%input_files(ipos)))
-        write(errmsg, '(a, a)') 'Error in PACKAGES block in file: ',  &
-                               trim(adjustl(this%filename))
+        write (errmsg, '(a, a)') 'Error in PACKAGES block in file: ', &
+          trim(adjustl(this%filename))
         call store_error(errmsg, terminate=.TRUE.)
-      endif
+      end if
       pakname = trim(adjustl(words(3)))
       call upcase(pakname)
-    endif
+    end if
     !
     ! -- return
     return
   end subroutine namefile_get_pakname
-
 
 end module NameFileModule

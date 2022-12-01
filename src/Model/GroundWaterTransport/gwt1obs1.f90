@@ -1,13 +1,13 @@
 module GwtObsModule
 
-  use KindModule,       only: DP, I4B
-  use ConstantsModule,  only: LINELENGTH, MAXOBSTYPES
-  use BaseDisModule,    only: DisBaseType
-  use GwtIcModule,      only: GwtIcType
-  use ObserveModule,    only: ObserveType
-  use ObsModule,        only: ObsType
-  use SimModule,        only: count_errors, store_error, &
-                              store_error_unit
+  use KindModule, only: DP, I4B
+  use ConstantsModule, only: LINELENGTH, MAXOBSTYPES
+  use BaseDisModule, only: DisBaseType
+  use GwtIcModule, only: GwtIcType
+  use ObserveModule, only: ObserveType
+  use ObsModule, only: ObsType
+  use SimModule, only: count_errors, store_error, &
+                       store_error_unit
   implicit none
 
   private
@@ -15,9 +15,9 @@ module GwtObsModule
 
   type, extends(ObsType) :: GwtObsType
     ! -- Private members
-    type(GwtIcType), pointer, private                    :: ic => null()         ! initial conditions
-    real(DP), dimension(:), pointer, contiguous, private :: x => null()          ! concentration
-    real(DP), dimension(:), pointer, contiguous, private :: flowja => null()     ! intercell flows
+    type(GwtIcType), pointer, private :: ic => null() ! initial conditions
+    real(DP), dimension(:), pointer, contiguous, private :: x => null() ! concentration
+    real(DP), dimension(:), pointer, contiguous, private :: flowja => null() ! intercell flows
   contains
     ! -- Public procedures
     procedure, public :: gwt_obs_ar
@@ -42,11 +42,11 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    type(GwtObsType), pointer, intent(out)   :: obs
+    type(GwtObsType), pointer, intent(out) :: obs
     integer(I4B), pointer, intent(in) :: inobs
 ! ------------------------------------------------------------------------------
     !
-    allocate(obs)
+    allocate (obs)
     call obs%allocate_scalars()
     obs%active = .false.
     obs%inputFilename = ''
@@ -63,8 +63,8 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtObsType),                    intent(inout) :: this
-    type(GwtIcType),  pointer,               intent(in) :: ic
+    class(GwtObsType), intent(inout) :: this
+    type(GwtIcType), pointer, intent(in) :: ic
     real(DP), dimension(:), pointer, contiguous, intent(in) :: x
     real(DP), dimension(:), pointer, contiguous, intent(in) :: flowja
 ! ------------------------------------------------------------------------------
@@ -90,7 +90,7 @@ contains
     integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: pkgname
     character(len=*), intent(in) :: filtyp
-    class(DisBaseType), pointer  :: dis
+    class(DisBaseType), pointer :: dis
     ! -- local
     integer(I4B) :: indx
 ! ------------------------------------------------------------------------------
@@ -120,7 +120,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtObsType),       intent(inout) :: this
+    class(GwtObsType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i, jaindex, nodenumber
     character(len=100) :: msg
@@ -131,7 +131,7 @@ contains
     !
     ! -- iterate through all GWT observations
     if (this%npakobs > 0) then
-      do i=1,this%npakobs
+      do i = 1, this%npakobs
         obsrv => this%pakobs(i)%obsrv
         nodenumber = obsrv%NodeNumber
         jaindex = obsrv%JaIndex
@@ -141,12 +141,12 @@ contains
         case ('FLOW-JA-FACE')
           call this%SaveOneSimval(obsrv, this%flowja(jaindex))
         case default
-          msg = 'Error: Unrecognized observation type: ' // trim(obsrv%ObsTypeId)
+          msg = 'Error: Unrecognized observation type: '//trim(obsrv%ObsTypeId)
           call store_error(msg)
           call store_error_unit(this%inUnitObs)
         end select
-      enddo
-    endif
+      end do
+    end if
     !
     return
   end subroutine gwt_obs_bd
@@ -176,9 +176,9 @@ contains
     class(GwtObsType), intent(inout) :: this
 ! ------------------------------------------------------------------------------
     !
-    nullify(this%ic)
-    nullify(this%x)
-    nullify(this%flowja)
+    nullify (this%ic)
+    nullify (this%x)
+    nullify (this%flowja)
     call this%ObsType%obs_da()
     !
     return
@@ -215,10 +215,10 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    type(ObserveType),  intent(inout) :: obsrv
-    class(DisBaseType), intent(in)    :: dis
-    integer(I4B),            intent(in)    :: inunitobs
-    integer(I4B),            intent(in)    :: iout
+    type(ObserveType), intent(inout) :: obsrv
+    class(DisBaseType), intent(in) :: dis
+    integer(I4B), intent(in) :: inunitobs
+    integer(I4B), intent(in) :: iout
     ! -- local
     integer(I4B) :: nn1
     integer(I4B) :: icol, istart, istop
@@ -240,7 +240,7 @@ contains
       ermsg = 'Error reading data from ID string'
       call store_error(ermsg)
       call store_error_unit(inunitobs)
-    endif
+    end if
     !
     return
   end subroutine gwt_process_concentration_obs_id
@@ -253,16 +253,16 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    type(ObserveType),  intent(inout) :: obsrv
-    class(DisBaseType), intent(in)    :: dis
-    integer(I4B),            intent(in)    :: inunitobs
-    integer(I4B),            intent(in)    :: iout
+    type(ObserveType), intent(inout) :: obsrv
+    class(DisBaseType), intent(in) :: dis
+    integer(I4B), intent(in) :: inunitobs
+    integer(I4B), intent(in) :: iout
     ! -- local
     integer(I4B) :: nn1, nn2
     integer(I4B) :: icol, istart, istop, jaidx
     character(len=LINELENGTH) :: ermsg, strng
     ! formats
- 70 format('Error: No connection exists between cells identified in text: ',a)
+70  format('Error: No connection exists between cells identified in text: ', a)
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize variables
@@ -277,32 +277,32 @@ contains
     if (nn1 > 0) then
       obsrv%NodeNumber = nn1
     else
-      ermsg = 'Error reading data from ID string: ' // strng(istart:istop)
+      ermsg = 'Error reading data from ID string: '//strng(istart:istop)
       call store_error(ermsg)
-    endif
+    end if
     !
     ! Get node number, with option for ID string to be either node
     ! number or lay, row, column (when dis is structured).
     nn2 = dis%noder_from_string(icol, istart, istop, inunitobs, &
-                                   iout, strng, .false.)
+                                iout, strng, .false.)
     if (nn2 > 0) then
       obsrv%NodeNumber2 = nn2
     else
-      ermsg = 'Error reading data from ID string: ' // strng(istart:istop)
+      ermsg = 'Error reading data from ID string: '//strng(istart:istop)
       call store_error(ermsg)
-    endif
+    end if
     !
     ! -- store JA index
-    jaidx = dis%con%getjaindex(nn1,nn2)
-    if (jaidx==0) then
-      write(ermsg,70)trim(strng)
+    jaidx = dis%con%getjaindex(nn1, nn2)
+    if (jaidx == 0) then
+      write (ermsg, 70) trim(strng)
       call store_error(ermsg)
-    endif
+    end if
     obsrv%JaIndex = jaidx
     !
     if (count_errors() > 0) then
       call store_error_unit(inunitobs)
-    endif
+    end if
     !
     return
   end subroutine gwt_process_intercell_obs_id

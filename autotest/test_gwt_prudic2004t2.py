@@ -5,9 +5,10 @@
 # through the system.
 
 import os
-import pytest
 import sys
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -42,6 +43,7 @@ def build_model(idx, dir):
         exe_name="mf6",
         sim_ws=ws,
         continue_=False,
+        memory_print_option="ALL",
     )
 
     # number of time steps for period 2 are reduced from 12 * 25 to 25 in
@@ -73,7 +75,7 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
 
     nlay = 8
@@ -98,6 +100,7 @@ def build_model(idx, dir):
         top=top,
         botm=botm,
         idomain=idomain,
+        length_units="feet",
     )
     idomain = dis.idomain.array
 
@@ -127,8 +130,8 @@ def build_model(idx, dir):
 
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.bud".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.bud",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[
             ("COLUMNS", ncol, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -324,13 +327,16 @@ def build_model(idx, dir):
         [1, 35.2, nlakecon[1], "lake2"],
     ]
     # <outletno> <lakein> <lakeout> <couttype> <invert> <width> <rough> <slope>
-    outlets = [[0, 0, -1, "MANNING", 44.5, 5.000000, 0.03, 0.2187500e-02]]
+    outlets = [
+        [0, 0, -1, "MANNING", 44.5, 3.36493214532915, 0.03, 0.2187500e-02]
+    ]
 
     lake_on = True
     if lake_on:
         lak = flopy.mf6.ModflowGwflak(
             gwf,
             time_conversion=86400.000,
+            length_conversion=3.28081,
             print_stage=True,
             print_flows=True,
             stage_filerecord=gwfname + ".lak.bin",
@@ -387,7 +393,7 @@ def build_model(idx, dir):
             scaling_method="NONE",
             reordering_method="NONE",
             relaxation_factor=relax,
-            filename="{}.ims".format(gwtname),
+            filename=f"{gwtname}.ims",
         )
         sim.register_ims_package(imsgwt, [gwt.name])
 
@@ -434,13 +440,50 @@ def build_model(idx, dir):
             (0, "STATUS", "ACTIVE"),
             (1, "STATUS", "ACTIVE"),
         ]
-        lkt_obs = {
-            (gwtname + ".lkt.obs.csv",): [
-                ("lkt1conc", "CONCENTRATION", 1),
-                ("lkt2conc", "CONCENTRATION", 2),
-            ],
-        }
-        lkt_obs["digits"] = 7
+
+        lkt_obs = {}
+        for obstype in [
+            "CONCENTRATION",
+            "STORAGE",
+            "CONSTANT",
+            "FROM-MVR",
+            "TO-MVR",
+            "RAINFALL",
+            "EVAPORATION",
+            "RUNOFF",
+            "EXT-INFLOW",
+            "WITHDRAWAL",
+            "EXT-OUTFLOW",
+        ]:
+            fname = f"{gwtname}.lkt.obs.{obstype.lower()}.csv"
+            obs1 = []
+            ncv = 2
+            if obstype == "TO-MVR":
+                ncv = 1
+            obs1 = [(f"lkt{i + 1}", obstype, i + 1) for i in range(ncv)]
+            obs2 = [
+                (f"blkt{i + 1}", obstype, f"mylake{i + 1}") for i in range(ncv)
+            ]
+            lkt_obs[fname] = obs1 + obs2
+
+            # add LKT specific obs
+            obstype = "LKT"
+            ncv = 2
+            nconn = [67, 32]
+            fname = f"{gwtname}.lkt.obs.{obstype.lower()}.csv"
+            obs1 = [
+                (f"lkt{1}-{iconn + 1}", obstype, 1, iconn + 1)
+                for iconn in range(nconn[0])  # lake 1
+            ] + [
+                (f"lkt{2}-{iconn + 1}", obstype, 2, iconn + 1)
+                for iconn in range(nconn[1])  # lake 2
+            ]
+            obs2 = [
+                (f"blkt{i + 1}", obstype, f"mylake{i + 1}") for i in range(ncv)
+            ]
+            lkt_obs[fname] = obs1 + obs2
+
+        lkt_obs["digits"] = 15
         lkt_obs["print_input"] = True
         lkt_obs["filename"] = gwtname + ".lkt.obs"
 
@@ -464,19 +507,53 @@ def build_model(idx, dir):
 
         sftpackagedata = []
         for irno in range(sfrpd.shape[0]):
-            t = (irno, 0.0, 99.0, 999.0, "myreach{}".format(irno + 1))
+            t = (irno, 0.0, 99.0, 999.0, f"myreach{irno + 1}")
             sftpackagedata.append(t)
 
         sftperioddata = [(0, "STATUS", "ACTIVE"), (0, "CONCENTRATION", 0.0)]
 
-        sft_obs = {
-            (gwtname + ".sft.obs.csv",): [
-                ("sft{}conc".format(i + 1), "CONCENTRATION", i + 1)
+        sft_obs = {}
+        for obstype in [
+            "CONCENTRATION",
+            "STORAGE",
+            "CONSTANT",
+            "FROM-MVR",
+            "TO-MVR",
+            "SFT",
+            "RAINFALL",
+            "EVAPORATION",
+            "RUNOFF",
+            "EXT-INFLOW",
+            "EXT-OUTFLOW",
+        ]:
+            fname = f"{gwtname}.sft.obs.{obstype.lower()}.csv"
+            obs1 = [
+                (f"sft{i + 1}", obstype, i + 1) for i in range(sfrpd.shape[0])
+            ]
+            obs2 = [
+                (f"bsft{i + 1}", obstype, f"myreach{i + 1}")
                 for i in range(sfrpd.shape[0])
             ]
-        }
+            sft_obs[fname] = obs1 + obs2
+
+        obstype = "FLOW-JA-FACE"
+        fname = f"{gwtname}.sft.obs.{obstype.lower()}.csv"
+        obs1 = []
+        for id1, reach_connections in enumerate(sfrconnectiondata):
+            for id2 in reach_connections:
+                id2 = abs(id2)
+                if id1 != id2:
+                    obs1.append(
+                        (f"sft{id1 + 1}x{id2 + 1}", obstype, id1 + 1, id2 + 1)
+                    )
+        obs2 = [
+            (f"bsft{i + 1}", obstype, f"myreach{i + 1}")
+            for i in range(sfrpd.shape[0])
+        ]
+        sft_obs[fname] = obs1 + obs2
+
         # append additional obs attributes to obs dictionary
-        sft_obs["digits"] = 7
+        sft_obs["digits"] = 15
         sft_obs["print_input"] = True
         sft_obs["filename"] = gwtname + ".sft.obs"
 
@@ -503,8 +580,8 @@ def build_model(idx, dir):
 
         oc = flopy.mf6.ModflowGwtoc(
             gwt,
-            budget_filerecord="{}.cbc".format(gwtname),
-            concentration_filerecord="{}.ucn".format(gwtname),
+            budget_filerecord=f"{gwtname}.cbc",
+            concentration_filerecord=f"{gwtname}.ucn",
             concentrationprintrecord=[
                 ("COLUMNS", ncol, "WIDTH", 15, "DIGITS", 6, "GENERAL")
             ],
@@ -618,6 +695,141 @@ def make_concentration_map(sim):
     return
 
 
+def check_obs(sim):
+    print("checking obs...")
+    name = ex[sim.idxsim]
+    ws = exdirs[sim.idxsim]
+    sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
+    gwfname = "gwf_" + name
+    gwtname = "gwt_" + name
+    gwf = sim.get_model(gwfname)
+    gwt = sim.get_model(gwtname)
+
+    # ensure SFT obs are the same whether specified by
+    # boundname or by reach
+    csvfiles = gwt.sft.obs.output.obs_names
+    for csvfile in csvfiles:
+        if ".flow-ja-face.csv" in csvfile:
+            continue
+        print(f"Checking csv file: {csvfile}")
+        conc_ra = gwt.sft.obs.output.obs(f=csvfile).data
+        # save a couple entries for comparison with lake
+        if ".to-mvr." in csvfile:
+            sft6tomvr = conc_ra[f"BSFT6"]
+        if ".from-mvr." in csvfile:
+            sft7tomvr = conc_ra[f"BSFT7"]
+        success = True
+        for ireach in range(38):
+            # print(f"  Checking reach {ireach + 1}")
+            is_same = np.allclose(
+                conc_ra[f"SFT{ireach + 1}"], conc_ra[f"BSFT{ireach + 1}"]
+            )
+            if not is_same:
+                success = False
+                for t, x, y in zip(
+                    conc_ra["totim"],
+                    conc_ra[f"SFT{ireach + 1}"],
+                    conc_ra[f"BSFT{ireach + 1}"],
+                ):
+                    print(t, x, y)
+
+    # process the sft values and make sure the individual connection rates add up to the boundname rate
+    csvfile = "gwt_prudic2004t2.sft.obs.flow-ja-face.csv"
+    print(f"Checking csv file: {csvfile}")
+    conc_ra = gwt.sft.obs.output.obs(f=csvfile).data
+    ntimes = conc_ra.shape[0]
+    for ireach in range(38):
+        connection_sum = np.zeros(ntimes)
+        for column_name in conc_ra.dtype.names:
+            if f"SFT{ireach + 1}X" in column_name:
+                connection_sum += conc_ra[column_name]
+        is_same = np.allclose(connection_sum, conc_ra[f"BSFT{ireach + 1}"])
+        if not is_same:
+            success = False
+            diff = connection_sum - conc_ra[f"BSFT{ireach + 1}"]
+            print(
+                f"Problem with SFT {ireach + 1}; mindiff {diff.min()} and maxdiff {diff.max()}"
+            )
+            # for itime, (cs, bsft) in enumerate(zip(connection_sum, conc_ra[f"BSFT{ireach + 1}"])):
+            #    print(itime, cs, bsft)
+
+    assert success, "One or more SFT obs checks did not pass"
+
+    # ensure LKT obs are the same whether specified by
+    # boundname or by reach
+    csvfiles = gwt.lkt.obs.output.obs_names
+    for csvfile in csvfiles:
+        if ".lkt.csv" in csvfile:
+            continue
+        print(f"Checking csv file: {csvfile}")
+        conc_ra = gwt.lkt.obs.output.obs(f=csvfile).data
+        if ".from-mvr." in csvfile:
+            lkt1frommvr = conc_ra[f"BLKT1"]
+        if ".to-mvr." in csvfile:
+            lkt1tomvr = conc_ra[f"BLKT1"]
+        success = True
+        if ".to-mvr." in csvfile:
+            numvalues = 1  # outlet
+        else:
+            numvalues = 2  # lakes
+        for ilake in range(numvalues):
+            # print(f"  Checking lake {ilake + 1}")
+            is_same = np.allclose(
+                conc_ra[f"LKT{ilake + 1}"], conc_ra[f"BLKT{ilake + 1}"]
+            )
+            if not is_same:
+                success = False
+                for t, x, y in zip(
+                    conc_ra["totim"],
+                    conc_ra[f"LKT{ilake + 1}"],
+                    conc_ra[f"BLKT{ilake + 1}"],
+                ):
+                    print(t, x, y)
+
+    # process the lkt values and make sure the individual connection rates add up to the boundname rate
+    csvfile = "gwt_prudic2004t2.lkt.obs.lkt.csv"
+    print(f"Checking csv file: {csvfile}")
+    conc_ra = gwt.lkt.obs.output.obs(f=csvfile).data
+    ntimes = conc_ra.shape[0]
+    for ilake in [0, 1]:
+        connection_sum = np.zeros(ntimes)
+        for column_name in conc_ra.dtype.names:
+            if f"LKT{ilake + 1}" in column_name and column_name.startswith(
+                "LKT"
+            ):
+                connection_sum += conc_ra[column_name]
+        is_same = np.allclose(connection_sum, conc_ra[f"BLKT{ilake + 1}"])
+        if not is_same:
+            success = False
+            print(f"Problem with Lake {ilake + 1}")
+            for itime, (cs, blkt) in enumerate(
+                zip(connection_sum, conc_ra[f"BLKT1"])
+            ):
+                print(itime, cs, blkt)
+
+    assert success, "One or more LKT obs checks did not pass"
+
+    # check that SFT6 to-mvr is equal to LKT1 from-mvr
+    success = True
+    is_same = np.allclose(-sft6tomvr, lkt1frommvr, atol=0.1)
+    if not is_same:
+        success = False
+        print(f"Problem with sft6tomvr comparison to lkt1frommvr")
+        for itime, (a, b) in enumerate(zip(-sft6tomvr, lkt1frommvr)):
+            print(itime, a, b)
+
+    is_same = np.allclose(-lkt1tomvr, sft7tomvr)
+    if not is_same:
+        success = False
+        print(f"Problem with lkt1tomvr comparison to sft7tomvr")
+        for itime, (a, b) in enumerate(zip(-lkt1tomvr, sft7tomvr)):
+            print(itime, a, b)
+
+    assert success, "One or more SFT-LKT obs checks did not pass"
+
+    return
+
+
 def eval_results(sim):
     print("evaluating results...")
 
@@ -634,6 +846,8 @@ def eval_results(sim):
     ws = exdirs[sim.idxsim]
     name = ex[sim.idxsim]
     gwtname = "gwt_" + name
+
+    check_obs(sim)
 
     fname = gwtname + ".lkt.bin"
     fname = os.path.join(ws, fname)
@@ -688,7 +902,7 @@ def eval_results(sim):
     ]
     ans_lak1 = np.array(ans_lak1)
     d = res_lak1 - ans_lak1
-    msg = "{} {} {}".format(res_lak1, ans_lak1, d)
+    msg = f"{res_lak1} {ans_lak1} {d}"
     assert np.allclose(res_lak1, ans_lak1, atol=atol), msg
 
     res_sfr3 = sfaconc[:, 30]
@@ -722,7 +936,7 @@ def eval_results(sim):
     ]
     ans_sfr3 = np.array(ans_sfr3)
     d = res_sfr3 - ans_sfr3
-    msg = "{} {} {}".format(res_sfr3, ans_sfr3, d)
+    msg = f"{res_sfr3} {ans_sfr3} {d}"
     assert np.allclose(res_sfr3, ans_sfr3, atol=atol), msg
 
     res_sfr4 = sfaconc[:, 37]
@@ -756,7 +970,7 @@ def eval_results(sim):
     ]
     ans_sfr4 = np.array(ans_sfr4)
     d = res_sfr4 - ans_sfr4
-    msg = "{} {} {}".format(res_sfr4, ans_sfr4, d)
+    msg = f"{res_sfr4} {ans_sfr4} {d}"
     assert np.allclose(res_sfr4, ans_sfr4, atol=atol), msg
 
     # used to make results for the gwtgwt version of this problem
@@ -802,7 +1016,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

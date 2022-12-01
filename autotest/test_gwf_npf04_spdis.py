@@ -9,9 +9,10 @@ the parent grid.  The heads are also compared.
 """
 
 import os
-import pytest
 import sys
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -110,8 +111,8 @@ def build_model(idx, dir):
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
         pname="oc",
-        budget_filerecord="{}.cbc".format(namea),
-        head_filerecord="{}.hds".format(namea),
+        budget_filerecord=f"{namea}.cbc",
+        head_filerecord=f"{namea}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
@@ -144,8 +145,8 @@ def build_model(idx, dir):
     oc = flopy.mf6.ModflowGwfoc(
         cgwf,
         pname="oc",
-        budget_filerecord="{}.cbc".format(nameb),
-        head_filerecord="{}.hds".format(nameb),
+        budget_filerecord=f"{nameb}.cbc",
+        head_filerecord=f"{nameb}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
@@ -191,28 +192,28 @@ def eval_mf6(sim):
     print("evaluating head and qx in parent and child models...")
 
     # make sure parent head is same as child head in same column
-    fname = os.path.join(sim.simpath, "{}.hds".format(namea))
+    fname = os.path.join(sim.simpath, f"{namea}.hds")
     hdobj = flopy.utils.HeadFile(fname)
     ha = hdobj.get_data()
-    fname = os.path.join(sim.simpath, "{}.hds".format(nameb))
+    fname = os.path.join(sim.simpath, f"{nameb}.hds")
     hdobj = flopy.utils.HeadFile(fname)
     hb = hdobj.get_data()
-    msg = "Heads should be the same {} {}".format(ha[0, 1, 2], hb[0, 0, 0])
+    msg = f"Heads should be the same {ha[0, 1, 2]} {hb[0, 0, 0]}"
     assert np.allclose(ha[0, 1, 2], hb[0, 0, 0]), msg
 
     # make sure specific discharge is calculated correctly for child and
     # parent models (even though child model has same resolution as parent
-    fname = os.path.join(sim.simpath, "{}.cbc".format(namea))
+    fname = os.path.join(sim.simpath, f"{namea}.cbc")
     nlaya, nrowa, ncola = ha.shape
     qxa, qya, qza = qxqyqz(fname, nlaya, nrowa, ncola)
-    fname = os.path.join(sim.simpath, "{}.cbc".format(nameb))
+    fname = os.path.join(sim.simpath, f"{nameb}.cbc")
     nlayb, nrowb, ncolb = hb.shape
     qxb, qyb, qzb = qxqyqz(fname, nlayb, nrowb, ncolb)
-    msg = "qx should be the same {} {}".format(qxa[0, 2, 1], qxb[0, 0, 0])
+    msg = f"qx should be the same {qxa[0, 2, 1]} {qxb[0, 0, 0]}"
     assert np.allclose(qxa[0, 2, 1], qxb[0, 0, 0]), msg
 
-    cbcpth = os.path.join(sim.simpath, "{}.cbc".format(namea))
-    grdpth = os.path.join(sim.simpath, "{}.dis.grb".format(namea))
+    cbcpth = os.path.join(sim.simpath, f"{namea}.cbc")
+    grdpth = os.path.join(sim.simpath, f"{namea}.dis.grb")
     grb = flopy.mf6.utils.MfGrdFile(grdpth)
     cbb = flopy.utils.CellBudgetFile(cbcpth, precision="double")
     flow_ja_face = cbb.get_data(text="FLOW-JA-FACE")
@@ -220,9 +221,7 @@ def eval_mf6(sim):
     for fjf in flow_ja_face:
         fjf = fjf.flatten()
         res = fjf[ia[:-1]]
-        errmsg = "min or max residual too large {} {}".format(
-            res.min(), res.max()
-        )
+        errmsg = f"min or max residual too large {res.min()} {res.max()}"
         assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
     return
@@ -260,7 +259,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

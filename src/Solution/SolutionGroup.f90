@@ -1,10 +1,10 @@
 module SolutionGroupModule
-  use KindModule,         only: DP, I4B
-  use ListsModule,        only: basesolutionlist
+  use KindModule, only: DP, I4B
+  use ListsModule, only: basesolutionlist
   use BaseSolutionModule, only: BaseSolutionType, AddBaseSolutionToList, &
                                 GetBaseSolutionFromList
-  use ListModule,         only: ListType
-  
+  use ListModule, only: ListType
+
   implicit none
   private
   public :: SolutionGroupType, AddSolutionGroupToList, &
@@ -12,19 +12,19 @@ module SolutionGroupModule
   private :: CastAsSolutionGroupClass
 
   type :: SolutionGroupType
-    integer(I4B), pointer                                :: id
-    integer(I4B), pointer                                :: mxiter
-    integer(I4B), pointer                                :: nsolutions
-    integer(I4B), dimension(:), allocatable              :: idsolutions          !array of solution ids in basesolutionlist
+    integer(I4B), pointer :: id
+    integer(I4B), pointer :: mxiter
+    integer(I4B), pointer :: nsolutions
+    integer(I4B), dimension(:), allocatable :: idsolutions !array of solution ids in basesolutionlist
   contains
-    procedure          :: sgp_ca
-    procedure          :: sgp_da
+    procedure :: sgp_ca
+    procedure :: sgp_da
     procedure, private :: allocate_scalars
-    procedure          :: add_solution
+    procedure :: add_solution
   end type SolutionGroupType
-  
-  contains
-  
+
+contains
+
   subroutine solutiongroup_create(sgp, id)
 ! ******************************************************************************
 ! solutiongroup_create -- Create a new solution group
@@ -33,17 +33,17 @@ module SolutionGroupModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     type(SolutionGroupType), pointer :: sgp
-    integer(I4B), intent(in)              :: id
+    integer(I4B), intent(in) :: id
 ! ------------------------------------------------------------------------------
     !
-    allocate(sgp)
+    allocate (sgp)
     call sgp%allocate_scalars()
     sgp%id = id
     !
     ! -- return
     return
   end subroutine solutiongroup_create
-  
+
   subroutine sgp_ca(this)
 ! ******************************************************************************
 ! sgp_ca -- Calculate the solution group
@@ -55,27 +55,27 @@ module SolutionGroupModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule,        only: LINELENGTH
-    use SimVariablesModule,     only: iout, isimcnvg, lastStepFailed
-    use TdisModule,             only: kstp, kper
+    use ConstantsModule, only: LINELENGTH
+    use SimVariablesModule, only: iout, isimcnvg, lastStepFailed
+    use TdisModule, only: kstp, kper
     ! -- dummy
     class(SolutionGroupType) :: this
     ! -- local
-    class(BaseSolutionType),  pointer :: sp
+    class(BaseSolutionType), pointer :: sp
     integer(I4B) :: kpicard, isgcnvg, isuppress_output
     integer(I4B) :: is, isoln
     ! -- formats
-    character(len=*), parameter :: fmtnocnvg =                                 &
-      "(1X,'Solution Group ', i0, ' did not converge for stress period ', i0,  &
+    character(len=*), parameter :: fmtnocnvg = &
+      "(1X,'Solution Group ', i0, ' did not converge for stress period ', i0, &
        &' and time step ', i0)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Suppress output during picard iterations
-    if(this%mxiter > 1) then
+    if (this%mxiter > 1) then
       isuppress_output = 1
     else
       isuppress_output = 0
-    endif
+    end if
     !
     ! -- set failed flag
     lastStepFailed = 0
@@ -83,35 +83,35 @@ module SolutionGroupModule
     ! -- Picard loop
     picardloop: do kpicard = 1, this%mxiter
       if (this%mxiter > 1) then
-        write(iout,'(/a,i6/)') 'SOLUTION GROUP PICARD ITERATION: ', kpicard
+        write (iout, '(/a,i6/)') 'SOLUTION GROUP PICARD ITERATION: ', kpicard
       end if
       isgcnvg = 1
       do is = 1, this%nsolutions
         isoln = this%idsolutions(is)
         sp => GetBaseSolutionFromList(basesolutionlist, isoln)
         call sp%sln_ca(isgcnvg, isuppress_output)
-      enddo
-      if(isgcnvg == 1) exit picardloop
-    enddo picardloop
+      end do
+      if (isgcnvg == 1) exit picardloop
+    end do picardloop
     !
     ! -- if a picard loop was used and the solution group converged
     !    then rerun the timestep and save the output.  Or if there
     !    is only one picard iteration, then do nothing as models
     !    are assumed to be explicitly coupled.
-    if(isgcnvg == 1) then
-      if(this%mxiter > 1) then
+    if (isgcnvg == 1) then
+      if (this%mxiter > 1) then
         isuppress_output = 0
         do is = 1, this%nsolutions
           isoln = this%idsolutions(is)
           sp => GetBaseSolutionFromList(basesolutionlist, isoln)
           call sp%sln_ca(isgcnvg, isuppress_output)
-        enddo
-      endif
+        end do
+      end if
     else
       isimcnvg = 0
       lastStepFailed = 1
-      write(iout, fmtnocnvg) this%id, kper, kstp
-    endif
+      write (iout, fmtnocnvg) this%id, kper, kstp
+    end if
     !
     ! -- return
     return
@@ -127,10 +127,10 @@ module SolutionGroupModule
     class(SolutionGroupType) :: this
 ! ------------------------------------------------------------------------------
     !
-    deallocate(this%id)
-    deallocate(this%mxiter)
-    deallocate(this%nsolutions)
-    deallocate(this%idsolutions)
+    deallocate (this%id)
+    deallocate (this%mxiter)
+    deallocate (this%nsolutions)
+    deallocate (this%idsolutions)
     !
     ! -- return
     return
@@ -146,9 +146,9 @@ module SolutionGroupModule
     class(SolutionGroupType) :: this
 ! ------------------------------------------------------------------------------
     !
-    allocate(this%id)
-    allocate(this%mxiter)
-    allocate(this%nsolutions)
+    allocate (this%id)
+    allocate (this%mxiter)
+    allocate (this%nsolutions)
     this%id = 0
     this%mxiter = 1
     this%nsolutions = 0
@@ -183,7 +183,7 @@ module SolutionGroupModule
     return
   end subroutine add_solution
 
-  function CastAsSolutionGroupClass(obj) result (res)
+  function CastAsSolutionGroupClass(obj) result(res)
     implicit none
     class(*), pointer, intent(inout) :: obj
     class(SolutionGroupType), pointer :: res
@@ -201,7 +201,7 @@ module SolutionGroupModule
   subroutine AddSolutionGroupToList(list, solutiongroup)
     implicit none
     ! -- dummy
-    type(ListType),       intent(inout) :: list
+    type(ListType), intent(inout) :: list
     type(SolutionGroupType), pointer, intent(inout) :: solutiongroup
     ! -- local
     class(*), pointer :: obj
@@ -211,13 +211,13 @@ module SolutionGroupModule
     !
     return
   end subroutine AddSolutionGroupToList
-  
-  function GetSolutionGroupFromList(list, idx) result (res)
+
+  function GetSolutionGroupFromList(list, idx) result(res)
     implicit none
     ! -- dummy
-    type(ListType),           intent(inout) :: list
-    integer(I4B),                  intent(in)    :: idx
-    class(SolutionGroupType), pointer       :: res
+    type(ListType), intent(inout) :: list
+    integer(I4B), intent(in) :: idx
+    class(SolutionGroupType), pointer :: res
     ! -- local
     class(*), pointer :: obj
     !

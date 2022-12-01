@@ -1,6 +1,7 @@
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -10,7 +11,7 @@ except:
     msg += " pip install flopy"
     raise Exception(msg)
 
-from framework import testing_framework, running_on_CI
+from framework import running_on_CI, testing_framework
 from simulation import Simulation
 
 ex = [
@@ -148,7 +149,7 @@ def get_model(name, ws, newton_bool, offset=0.0):
 
     flopy.mf6.ModflowUtlobs(
         gwf,
-        filename="{}.obs".format(name),
+        filename=f"{name}.obs",
         digits=10,
         print_input=True,
         continuous={"head.obs.csv": [(obsname, "HEAD", (0, 0, 0))]},
@@ -184,7 +185,7 @@ def get_model(name, ws, newton_bool, offset=0.0):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(name),
+        budget_filerecord=f"{name}.cbc",
         saverecord=[("BUDGET", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
     )
@@ -216,9 +217,10 @@ def eval_hmax(fpth):
     for idx, t in enumerate(ctimes):
         sv[idx] = b.get_data(totim=t)[obsname]
 
-    msg = "maximum heads in {} exceed tolerance ".format(
-        fpth
-    ) + "- maximum difference {}".format((bv - sv).max())
+    msg = (
+        "maximum heads in {} exceed tolerance ".format(fpth)
+        + f"- maximum difference {(bv - sv).max()}"
+    )
     assert np.allclose(bv, sv), msg
     return
 
@@ -234,7 +236,7 @@ def eval_sto(sim):
 
     msg = (
         "head differences exceed tolerance when offset removed "
-        + "- maximum difference {}".format((base_obs - offset_obs).max())
+        + f"- maximum difference {(base_obs - offset_obs).max()}"
     )
     assert np.allclose(base_obs, offset_obs, atol=1e-6), msg
 
@@ -255,15 +257,15 @@ def eval_sto(sim):
 
     msg = (
         "maximum heads exceed tolerance when offset removed "
-        + "- maximum difference {}".format((base_cmp - offset_cmp).max())
+        + f"- maximum difference {(base_cmp - offset_cmp).max()}"
     )
     assert np.allclose(base_cmp, offset_cmp), msg
 
     print("evaluating storage...")
     name = ex[sim.idxsim]
-    fpth = os.path.join(sim.simpath, "{}.cbc".format(name))
+    fpth = os.path.join(sim.simpath, f"{name}.cbc")
     base_cbc = flopy.utils.CellBudgetFile(fpth, precision="double")
-    fpth = os.path.join(sim.simpath, cmppth, "{}.cbc".format(name))
+    fpth = os.path.join(sim.simpath, cmppth, f"{name}.cbc")
     offset_cbc = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # get results from cbc file
@@ -335,7 +337,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

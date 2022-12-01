@@ -1,0 +1,9 @@
+# MODFLOW 6 configuration for fprettify
+# run from root directory using
+# fprettify -c distribution/.fprettify.yaml SRC
+whitespace-plusminus: 1
+whitespace-multdiv: 1
+line-length: 82
+indent: 2
+enable-decl: true
+strip-comments: true

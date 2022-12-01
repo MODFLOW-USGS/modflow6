@@ -6,7 +6,7 @@ END options
 BEGIN continuous  FILEOUT  gwt_02.uzt.obs.csv
   mwt-1-conc  CONCENTRATION  1
   mwt-1-stor  STORAGE  1
-  mwt-1-gwt1  UZT  1  1
-  mwt-1-gwt2  UZT  2  2
-  mwt-2-gwt1  UZT  3  3
+  mwt-1-gwt1  UZT  1
+  mwt-1-gwt2  UZT  2
+  mwt-2-gwt1  UZT  3
 END continuous

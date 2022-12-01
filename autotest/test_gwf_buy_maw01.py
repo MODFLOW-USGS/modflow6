@@ -10,9 +10,10 @@
 #  3.  Buoyancy package with maw and aquifer density = 1024.5
 
 import os
-import pytest
 import sys
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -93,7 +94,7 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
 
     dis = flopy.mf6.ModflowGwfdis(
@@ -155,8 +156,8 @@ def build_model(idx, dir):
         print_head=True,
         print_flows=True,
         save_flows=True,
-        head_filerecord="{}.maw.bin".format(gwfname),
-        budget_filerecord="{}.maw.bud".format(gwfname),
+        head_filerecord=f"{gwfname}.maw.bin",
+        budget_filerecord=f"{gwfname}.maw.bud",
         packagedata=mawpackagedata,
         connectiondata=mawconnectiondata,
         perioddata=mawperioddata,
@@ -167,8 +168,8 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.cbc",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[
             (
@@ -234,9 +235,7 @@ def eval_results(sim):
                 vgwf += 0.3 * max(0.0, dz)
         vmaw = stage[kstp] * np.pi * 0.1**2
         vnow = vmaw + vgwf
-        errmsg = "kstp {}: current volume ({}) not equal initial volume ({})".format(
-            kstp, v0, vnow
-        )
+        errmsg = f"kstp {kstp}: current volume ({v0}) not equal initial volume ({vnow})"
         assert np.allclose(v0, vnow), errmsg
 
     # compare the maw-gwf flows in maw budget file with the gwf-maw flows in
@@ -259,9 +258,7 @@ def eval_results(sim):
         for i in range(ra_maw.shape[0]):
             qmaw = ra_maw[i]["q"]
             qgwf = ra_gwf[i]["q"]
-            msg = "step {} record {} comparing qmaw with qgwf: {} {}".format(
-                istp, i, qmaw, qgwf
-            )
+            msg = f"step {istp} record {i} comparing qmaw with qgwf: {qmaw} {qgwf}"
             print(msg)
             assert np.allclose(qmaw, -qgwf), msg
 
@@ -297,7 +294,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

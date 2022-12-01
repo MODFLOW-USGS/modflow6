@@ -4,8 +4,9 @@ Test adaptive time step module
 """
 
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -70,16 +71,6 @@ def build_model(idx, dir):
 
     # create tdis package
     ats_filerecord = None
-    if True:
-        atsperiod = [
-            (0, dt0, dtmin, dtmax, dtadj, dtfailadj),
-            (7, dt0, dtmin, dtmax, dtadj, dtfailadj),
-        ]
-        ats = flopy.mf6.ModflowUtlats(
-            sim, maxats=len(atsperiod), perioddata=atsperiod
-        )
-        ats_filerecord = name + ".ats"
-
     tdis = flopy.mf6.ModflowTdis(
         sim,
         ats_filerecord=ats_filerecord,
@@ -87,6 +78,17 @@ def build_model(idx, dir):
         nper=nper,
         perioddata=tdis_rc,
     )
+    if True:
+        ats_filerecord = name + ".ats"
+        atsperiod = [
+            (0, dt0, dtmin, dtmax, dtadj, dtfailadj),
+            (7, dt0, dtmin, dtmax, dtadj, dtfailadj),
+        ]
+        tdis.ats.initialize(
+            maxats=len(atsperiod),
+            perioddata=atsperiod,
+            filename=ats_filerecord,
+        )
 
     # create gwf model
     gwfname = name
@@ -114,7 +116,7 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(imsgwf, [gwf.name])
 
@@ -175,8 +177,8 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.cbc",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
@@ -185,7 +187,7 @@ def build_model(idx, dir):
     obs_lst = []
     obs_lst.append(["obs1", "head", (0, 0, 0)])
     obs_lst.append(["obs2", "head", (0, 0, 1)])
-    obs_dict = {"{}.obs.csv".format(gwfname): obs_lst}
+    obs_dict = {f"{gwfname}.obs.csv": obs_lst}
     obs = flopy.mf6.ModflowUtlobs(
         gwf, pname="head_obs", digits=20, continuous=obs_dict
     )
@@ -200,30 +202,30 @@ def eval_flow(sim):
     gwfname = name
 
     # This will fail if budget numbers cannot be read
-    fpth = os.path.join(sim.simpath, "{}.lst".format(gwfname))
+    fpth = os.path.join(sim.simpath, f"{gwfname}.lst")
     mflist = flopy.utils.Mf6ListBudget(fpth)
     names = mflist.get_record_names()
     inc = mflist.get_incremental()
-    msg = "budget times not monotically increasing {}.".format(inc["totim"])
+    msg = f"budget times not monotically increasing {inc['totim']}."
     assert np.all(np.diff(inc["totim"]) > dtmin), msg
     v = inc["totim"][-1]
-    assert v == 10.0, "Last time should be 10.  Found {}".format(v)
+    assert v == 10.0, f"Last time should be 10.  Found {v}"
 
     # ensure obs results changing monotonically
     fpth = os.path.join(sim.simpath, gwfname + ".obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
-    msg = "obs times not monotically increasing {}.".format(tc["time"])
+    msg = f"obs times not monotically increasing {tc['time']}."
     assert np.all(np.diff(tc["time"]) > dtmin), msg
     for obsname in ["OBS1", "OBS2"]:
         v = tc[obsname]
-        msg = "{} not monotically decreasing: {}.".format(obsname, v)
+        msg = f"{obsname} not monotically decreasing: {v}."
         assert np.all(np.diff(v) < 0), msg
     v = tc["time"][-1]
-    assert v == 10.0, "Last time should be 10.  Found {}".format(v)
+    assert v == 10.0, f"Last time should be 10.  Found {v}"
     return
 
 
@@ -256,7 +258,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

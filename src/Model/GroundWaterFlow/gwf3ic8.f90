@@ -2,8 +2,8 @@ module GwfIcModule
 
   use KindModule, only: DP, I4B
   use NumericalPackageModule, only: NumericalPackageType
-  use BlockParserModule,      only: BlockParserType
-  use BaseDisModule,          only: DisBaseType
+  use BlockParserModule, only: BlockParserType
+  use BaseDisModule, only: DisBaseType
 
   implicit none
   private
@@ -11,16 +11,16 @@ module GwfIcModule
   public :: ic_cr
 
   type, extends(NumericalPackageType) :: GwfIcType
-    real(DP), dimension(:), pointer, contiguous :: strt => null()                ! starting head
+    real(DP), dimension(:), pointer, contiguous :: strt => null() ! starting head
   contains
-    procedure          :: ic_ar
-    procedure          :: ic_da
+    procedure :: ic_ar
+    procedure :: ic_da
     procedure, private :: allocate_arrays
     procedure, private :: read_options
-    procedure          :: read_data
+    procedure :: read_data
   end type GwfIcType
 
-  contains
+contains
 
   subroutine ic_cr(ic, name_model, inunit, iout, dis)
 ! ******************************************************************************
@@ -38,7 +38,7 @@ module GwfIcModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
-    allocate(ic)
+    allocate (ic)
     !
     ! -- create name and memory path
     call ic%set_names(1, name_model, 'IC', 'IC')
@@ -77,9 +77,9 @@ module GwfIcModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Print a message identifying the initial conditions package.
-    write(this%iout,1) this%inunit
-  1 format(1x,/1x,'IC -- INITIAL CONDITIONS PACKAGE, VERSION 8, 3/28/2015', &
-      ' INPUT READ FROM UNIT ',i0)
+    write (this%iout, 1) this%inunit
+1   format(1x, /1x, 'IC -- INITIAL CONDITIONS PACKAGE, VERSION 8, 3/28/2015', &
+           ' INPUT READ FROM UNIT ', i0)
     !
     ! -- Allocate arrays
     call this%allocate_arrays(this%dis%nodes)
@@ -93,7 +93,7 @@ module GwfIcModule
     ! -- Assign x equal to strt
     do n = 1, this%dis%nodes
       x(n) = this%strt(n)
-    enddo
+    end do
     !
     ! -- Return
     return
@@ -154,8 +154,8 @@ module GwfIcModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule,   only: LINELENGTH
-    use SimModule,         only: store_error
+    use ConstantsModule, only: LINELENGTH
+    use SimModule, only: store_error
     ! -- dummy
     class(GwfIcType) :: this
     ! -- local
@@ -171,24 +171,24 @@ module GwfIcModule
     !
     ! -- parse options block if detected
     if (isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING IC OPTIONS'
+      write (this%iout, '(1x,a)') 'PROCESSING IC OPTIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
-          case default
-            write(errmsg,'(4x,a,a)') 'Unknown IC option: ', trim(keyword)
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
+        case default
+          write (errmsg, '(4x,a,a)') 'Unknown IC option: ', trim(keyword)
+          call store_error(errmsg)
+          call this%parser%StoreErrorUnit()
         end select
       end do
-      write(this%iout,'(1x,a)')'END OF IC OPTIONS'
+      write (this%iout, '(1x,a)') 'END OF IC OPTIONS'
     end if
     !
     ! -- Return
     return
-    end subroutine read_options
+  end subroutine read_options
 
   subroutine read_data(this)
 ! ******************************************************************************
@@ -198,8 +198,8 @@ module GwfIcModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule,   only: LINELENGTH
-    use SimModule,         only: store_error
+    use ConstantsModule, only: LINELENGTH
+    use SimModule, only: store_error
     ! -- dummy
     class(GwfIcType) :: this
     ! -- local
@@ -216,8 +216,8 @@ module GwfIcModule
     !
     ! -- get griddata block
     call this%parser%GetBlock('GRIDDATA', isfound, ierr)
-    if(isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING GRIDDATA'
+    if (isfound) then
+      write (this%iout, '(1x,a)') 'PROCESSING GRIDDATA'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -225,17 +225,17 @@ module GwfIcModule
         call this%parser%GetRemainingLine(line)
         lloc = 1
         select case (keyword)
-          case ('STRT')
-            call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                         this%parser%iuactive, this%strt, &
-                                         aname(1))
-          case default
-            write(errmsg,'(4x,a,a)') 'Unknown GRIDDATA tag: ', trim(keyword)
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
+        case ('STRT')
+          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+                                        this%parser%iuactive, this%strt, &
+                                        aname(1))
+        case default
+          write (errmsg, '(4x,a,a)') 'Unknown GRIDDATA tag: ', trim(keyword)
+          call store_error(errmsg)
+          call this%parser%StoreErrorUnit()
         end select
       end do
-      write(this%iout,'(1x,a)')'END PROCESSING GRIDDATA'
+      write (this%iout, '(1x,a)') 'END PROCESSING GRIDDATA'
     else
       call store_error('Required GRIDDATA block not found.')
       call this%parser%StoreErrorUnit()

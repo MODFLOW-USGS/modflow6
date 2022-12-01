@@ -1,11 +1,11 @@
 module GwtCncModule
   !
-  use KindModule,           only: DP, I4B
-  use ConstantsModule,      only: DZERO, DONE, NAMEDBOUNDFLAG, LENFTYPE,       &
-                                  LENPACKAGENAME
-  use ObsModule,            only: DefaultObsIdProcessor
-  use BndModule,            only: BndType
-  use ObserveModule,        only: ObserveType
+  use KindModule, only: DP, I4B
+  use ConstantsModule, only: DZERO, DONE, NAMEDBOUNDFLAG, LENFTYPE, &
+                             LENPACKAGENAME
+  use ObsModule, only: DefaultObsIdProcessor
+  use BndModule, only: BndType
+  use ObserveModule, only: ObserveType
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
   !
@@ -14,13 +14,13 @@ module GwtCncModule
   private
   public :: cnc_create
   !
-  character(len=LENFTYPE)       :: ftype = 'CNC'
-  character(len=LENPACKAGENAME) :: text  = '             CNC'
+  character(len=LENFTYPE) :: ftype = 'CNC'
+  character(len=LENPACKAGENAME) :: text = '             CNC'
   !
   type, extends(BndType) :: GwtCncType
-      real(DP), dimension(:), pointer, contiguous :: ratecncin => null()        !simulated flows into constant conc (excluding other concs)
-      real(DP), dimension(:), pointer, contiguous :: ratecncout => null()       !simulated flows out of constant conc (excluding to other concs)
-    contains
+    real(DP), dimension(:), pointer, contiguous :: ratecncin => null() !simulated flows into constant conc (excluding other concs)
+    real(DP), dimension(:), pointer, contiguous :: ratecncout => null() !simulated flows out of constant conc (excluding to other concs)
+  contains
     procedure :: bnd_rp => cnc_rp
     procedure :: bnd_ad => cnc_ad
     procedure :: bnd_ck => cnc_ck
@@ -50,10 +50,10 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(BndType), pointer :: packobj
-    integer(I4B),intent(in) :: id
-    integer(I4B),intent(in) :: ibcnum
-    integer(I4B),intent(in) :: inunit
-    integer(I4B),intent(in) :: iout
+    integer(I4B), intent(in) :: id
+    integer(I4B), intent(in) :: ibcnum
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
     ! -- local
@@ -61,7 +61,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
-    allocate(cncobj)
+    allocate (cncobj)
     packobj => cncobj
     !
     ! -- create name and memory path
@@ -108,7 +108,8 @@ contains
     !
     ! -- allocate ratecncex
     call mem_allocate(this%ratecncin, this%maxbound, 'RATECNCIN', this%memoryPath)
-    call mem_allocate(this%ratecncout, this%maxbound, 'RATECNCOUT', this%memoryPath)
+    call mem_allocate(this%ratecncout, this%maxbound, 'RATECNCOUT', &
+                      this%memoryPath)
     do i = 1, this%maxbound
       this%ratecncin(i) = DZERO
       this%ratecncout(i) = DZERO
@@ -117,7 +118,7 @@ contains
     ! -- return
     return
   end subroutine cnc_allocate_arrays
-  
+
   subroutine cnc_rp(this)
 ! ******************************************************************************
 ! cnc_rp -- Read and prepare
@@ -133,33 +134,33 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Reset previous CNCs to active cell
-    do i=1,this%nbound
-        node = this%nodelist(i)
-        this%ibound(node) = this%ibcnum
-    enddo
+    do i = 1, this%nbound
+      node = this%nodelist(i)
+      this%ibound(node) = this%ibcnum
+    end do
     !
     ! -- Call the parent class read and prepare
     call this%BndType%bnd_rp()
     !
     ! -- Set ibound to -(ibcnum + 1) for constant concentration cells
     ierr = 0
-    do i=1,this%nbound
+    do i = 1, this%nbound
       node = this%nodelist(i)
       ibd = this%ibound(node)
-      if(ibd < 0) then
+      if (ibd < 0) then
         call this%dis%noder_to_string(node, nodestr)
         call store_error('Error.  Cell is already a constant concentration: ' &
-                         // trim(adjustl(nodestr)))
+                         //trim(adjustl(nodestr)))
         ierr = ierr + 1
       else
         this%ibound(node) = -this%ibcnum
-      endif
-    enddo
+      end if
+    end do
     !
     ! -- Stop if errors detected
-    if(ierr > 0) then
+    if (ierr > 0) then
       call this%parser%StoreErrorUnit()
-    endif
+    end if
     !
     ! -- return
     return
@@ -190,7 +191,7 @@ contains
       cb = this%bound(1, i)
       this%xnew(node) = cb
       this%xold(node) = this%xnew(node)
-    enddo
+    end do
     !
     ! -- For each observation, push simulated value and corresponding
     !    simulation time from "current" to "preceding" and reset
@@ -212,7 +213,7 @@ contains
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, count_errors, store_error_unit
     ! -- dummy
-    class(GwtCncType),intent(inout) :: this
+    class(GwtCncType), intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg
     character(len=30) :: nodestr
@@ -220,18 +221,18 @@ contains
     integer(I4B) :: node
     ! -- formats
     character(len=*), parameter :: fmtcncerr = &
-      "('CNC BOUNDARY ',i0,' CONC (',g0,') IS LESS THAN ZERO FOR CELL', a)"
+      &"('CNC BOUNDARY ',i0,' CONC (',g0,') IS LESS THAN ZERO FOR CELL', a)"
 ! ------------------------------------------------------------------------------
     !
     ! -- check stress period data
     do i = 1, this%nbound
-        node = this%nodelist(i)
-        ! -- accumulate errors
-        if (this%bound(1,i) < DZERO) then
-          call this%dis%noder_to_string(node, nodestr)
-          write(errmsg, fmt=fmtcncerr) i, this%bound(1,i), trim(nodestr)
-          call store_error(errmsg)
-        end if
+      node = this%nodelist(i)
+      ! -- accumulate errors
+      if (this%bound(1, i) < DZERO) then
+        call this%dis%noder_to_string(node, nodestr)
+        write (errmsg, fmt=fmtcncerr) i, this%bound(1, i), trim(nodestr)
+        call store_error(errmsg)
+      end if
     end do
     !
     ! -- write summary of cnc package error messages
@@ -288,7 +289,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- If no boundaries, skip flow calculations.
-    if(this%nbound > 0) then
+    if (this%nbound > 0) then
       !
       ! -- Loop through each boundary calculating flow.
       do i = 1, this%nbound
@@ -300,7 +301,7 @@ contains
         !
         ! -- Calculate the flow rate into the cell.
         do ipos = this%dis%con%ia(node) + 1, &
-                  this%dis%con%ia(node + 1) - 1
+          this%dis%con%ia(node + 1) - 1
           q = flowja(ipos)
           rate = rate - q
           ! -- only accumulate chin and chout for active
@@ -315,7 +316,7 @@ contains
           end if
         end do
         !
-        ! -- For CNC, store total flow in rhs so it is available for other 
+        ! -- For CNC, store total flow in rhs so it is available for other
         !    calculations
         this%rhs(i) = -rate
         this%hcof(i) = DZERO
@@ -347,7 +348,7 @@ contains
     isuppress_output = 0
     call rate_accumulator(this%ratecncin(1:this%nbound), ratin, dum)
     call rate_accumulator(this%ratecncout(1:this%nbound), ratout, dum)
-    call model_budget%addentry(ratin, ratout, delt, this%text,                 &
+    call model_budget%addentry(ratin, ratout, delt, this%text, &
                                isuppress_output, this%packName)
   end subroutine cnc_bd
 
@@ -387,21 +388,21 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- create the header list label
-    this%listlabel = trim(this%filtyp) // ' NO.'
-    if(this%dis%ndim == 3) then
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'ROW'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'COL'
-    elseif(this%dis%ndim == 2) then
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'CELL2D'
+    this%listlabel = trim(this%filtyp)//' NO.'
+    if (this%dis%ndim == 3) then
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'ROW'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'COL'
+    elseif (this%dis%ndim == 2) then
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'CELL2D'
     else
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
-    endif
-    write(this%listlabel, '(a, a16)') trim(this%listlabel), 'CONCENTRATION'
-    if(this%inamedbound == 1) then
-      write(this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
-    endif
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
+    end if
+    write (this%listlabel, '(a, a16)') trim(this%listlabel), 'CONCENTRATION'
+    if (this%inamedbound == 1) then
+      write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
+    end if
     !
     ! -- return
     return
@@ -470,15 +471,15 @@ contains
 ! ------------------------------------------------------------------------------
     !
     nlinks = this%TsManager%boundtslinks%Count()
-    do i=1,nlinks
+    do i = 1, nlinks
       tslink => GetTimeSeriesLinkFromList(this%TsManager%boundtslinks, i)
       if (associated(tslink)) then
         select case (tslink%JCol)
         case (1)
           tslink%Text = 'CONCENTRATION'
         end select
-      endif
-    enddo
+      end if
+    end do
     !
     ! -- return
     return

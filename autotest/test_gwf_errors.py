@@ -7,10 +7,11 @@ very easily and tested with different options to succeed or fail correctly.
 """
 
 import os
-import pytest
 import shutil
 import subprocess
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -41,7 +42,7 @@ def run_mf6(argv, ws):
     if result is not None:
         c = result.decode("utf-8")
         c = c.rstrip("\r\n")
-        print("{}".format(c))
+        print(f"{c}")
         buff.append(c)
 
     return proc.returncode, buff
@@ -61,9 +62,7 @@ def run_mf6_error(ws, err_str_list):
                 raise RuntimeError(msg)
             else:
                 msg += " but did not print correct error message."
-                msg += '  Correct message should have been "{}"'.format(
-                    err_str
-                )
+                msg += f'  Correct message should have been "{err_str}"'
                 raise ValueError(msg)
 
 
@@ -139,7 +138,7 @@ def test_simple_model_success():
     assert returncode == 0, "mf6 failed for simple model."
 
     final_message = "Normal termination of simulation."
-    failure_message = 'mf6 did not terminate with "{}"'.format(final_message)
+    failure_message = f'mf6 did not terminate with "{final_message}"'
     assert final_message in buff[-1], failure_message
     if teardown_test:
         shutil.rmtree(ws, ignore_errors=True)
@@ -244,11 +243,11 @@ def test_fail_continue_success():
     assert returncode == 0, "mf6 failed for simple model."
 
     final_message = "Simulation convergence failure occurred 10 time(s)."
-    failure_message = 'mf6 did not terminate with "{}"'.format(final_message)
+    failure_message = f'mf6 did not terminate with "{final_message}"'
     assert final_message in buff[0], failure_message
 
     final_message = "Normal termination of simulation."
-    failure_message = 'mf6 did not terminate with "{}"'.format(final_message)
+    failure_message = f'mf6 did not terminate with "{final_message}"'
     assert final_message in buff[0], failure_message
 
     if teardown_test:
@@ -259,7 +258,7 @@ def test_fail_continue_success():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     test_empty_folder()
     test_simple_model_success()

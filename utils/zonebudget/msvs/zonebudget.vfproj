@@ -32,13 +32,13 @@
 		<File RelativePath="..\..\..\src\Utilities\ArrayReaders.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\BlockParser.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\Budget.f90"/>
-		<File RelativePath="..\..\..\src\Utilities\compilerversion.fpp">
+		<File RelativePath="..\..\..\src\Utilities\compilerversion.F90">
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
 		<File RelativePath="..\..\..\src\Utilities\Constants.f90"/>
-		<File RelativePath="..\..\..\src\Utilities\defmacro.fpp"/>
+		<File RelativePath="..\..\..\src\Utilities\defmacro.F90">
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
 		<File RelativePath="..\..\..\src\Utilities\genericutils.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\InputOutput.f90"/>
 		<File RelativePath="..\..\..\src\Utilities\kind.f90"/>

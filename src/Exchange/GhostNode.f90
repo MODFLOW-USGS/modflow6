@@ -1,10 +1,10 @@
 module GhostNodeModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule,        only: LINELENGTH
-  use NumericalModelModule,   only: NumericalModelType
+  use ConstantsModule, only: LINELENGTH
+  use NumericalModelModule, only: NumericalModelType
   use NumericalPackageModule, only: NumericalPackageType
-  use BlockParserModule,      only: BlockParserType
+  use BlockParserModule, only: BlockParserType
 
   implicit none
 
@@ -13,36 +13,36 @@ module GhostNodeModule
   public :: gnc_cr
 
   type, extends(NumericalPackageType) :: GhostNodeType
-    logical, pointer                                   :: smgnc       => null()  ! single model gnc
-    logical, pointer                                   :: implicit    => null()  ! lhs or rhs
-    logical, pointer                                   :: i2kn        => null()  ! not used
-    integer(I4B), pointer                              :: nexg        => null()  ! number of gncs
-    integer(I4B), pointer                              :: numjs       => null()  ! number of connecting nodes
-    class(NumericalModelType), pointer                 :: m1          => null()  ! pointer to model 1
-    class(NumericalModelType), pointer                 :: m2          => null()  ! pointer to model 2
-    integer(I4B), dimension(:), pointer, contiguous    :: nodem1      => null()  ! array of nodes in model 1
-    integer(I4B), dimension(:), pointer, contiguous    :: nodem2      => null()  ! array of nodes in model 2
-    integer(I4B), dimension(:, :), pointer, contiguous :: nodesj      => null()  ! array of interpolation nodes
-    real(DP), dimension(:), pointer, contiguous        :: cond        => null()  ! array of conductance
-    integer(I4B), dimension(:), pointer, contiguous    :: idxglo      => null()  ! connection position in amat
-    integer(I4B), dimension(:), pointer, contiguous    :: idxsymglo   => null()  ! symmetric position in amat
-    real(DP), dimension(:, :), pointer, contiguous     :: alphasj     => null()  ! interpolation factors
-    integer(I4B), dimension(:), pointer, contiguous    :: idiagn      => null()  ! amat diagonal position of n
-    integer(I4B), dimension(:), pointer, contiguous    :: idiagm      => null()  ! amat diagonal position of m
-    integer(I4B), dimension(:,:), pointer, contiguous  :: jposinrown  => null()  ! amat j position in row n
-    integer(I4B), dimension(:,:), pointer, contiguous  :: jposinrowm  => null()  ! amat j position in row m
+    logical, pointer :: smgnc => null() ! single model gnc
+    logical, pointer :: implicit => null() ! lhs or rhs
+    logical, pointer :: i2kn => null() ! not used
+    integer(I4B), pointer :: nexg => null() ! number of gncs
+    integer(I4B), pointer :: numjs => null() ! number of connecting nodes
+    class(NumericalModelType), pointer :: m1 => null() ! pointer to model 1
+    class(NumericalModelType), pointer :: m2 => null() ! pointer to model 2
+    integer(I4B), dimension(:), pointer, contiguous :: nodem1 => null() ! array of nodes in model 1
+    integer(I4B), dimension(:), pointer, contiguous :: nodem2 => null() ! array of nodes in model 2
+    integer(I4B), dimension(:, :), pointer, contiguous :: nodesj => null() ! array of interpolation nodes
+    real(DP), dimension(:), pointer, contiguous :: cond => null() ! array of conductance
+    integer(I4B), dimension(:), pointer, contiguous :: idxglo => null() ! connection position in amat
+    integer(I4B), dimension(:), pointer, contiguous :: idxsymglo => null() ! symmetric position in amat
+    real(DP), dimension(:, :), pointer, contiguous :: alphasj => null() ! interpolation factors
+    integer(I4B), dimension(:), pointer, contiguous :: idiagn => null() ! amat diagonal position of n
+    integer(I4B), dimension(:), pointer, contiguous :: idiagm => null() ! amat diagonal position of m
+    integer(I4B), dimension(:, :), pointer, contiguous :: jposinrown => null() ! amat j position in row n
+    integer(I4B), dimension(:, :), pointer, contiguous :: jposinrowm => null() ! amat j position in row m
   contains
-    procedure          :: gnc_df
-    procedure          :: gnc_ac
-    procedure          :: gnc_mc
+    procedure :: gnc_df
+    procedure :: gnc_ac
+    procedure :: gnc_mc
     procedure, private :: gnc_fmsav
-    procedure          :: gnc_fc
-    procedure          :: gnc_fn
-    procedure          :: gnc_cq
-    procedure          :: gnc_ot
-    procedure          :: gnc_da
-    procedure          :: deltaQgnc
-    procedure          :: allocate_scalars
+    procedure :: gnc_fc
+    procedure :: gnc_fn
+    procedure :: gnc_cq
+    procedure :: gnc_ot
+    procedure :: gnc_da
+    procedure :: deltaQgnc
+    procedure :: allocate_scalars
     procedure, private :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_dimensions
@@ -50,7 +50,7 @@ module GhostNodeModule
     procedure, private :: nodeu_to_noder
   end type GhostNodeType
 
-  contains
+contains
 
   subroutine gnc_cr(gncobj, name_parent, inunit, iout)
 ! ******************************************************************************
@@ -68,7 +68,7 @@ module GhostNodeModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate the gnc exchange object
-    allocate(gncobj)
+    allocate (gncobj)
     !
     ! -- create name and memory path. name_parent will either be model name or the
     !    exchange name.
@@ -79,7 +79,7 @@ module GhostNodeModule
     !
     ! -- Set variables
     gncobj%inunit = inunit
-    gncobj%iout   = iout
+    gncobj%iout = iout
     !
     ! -- return
     return
@@ -111,7 +111,7 @@ module GhostNodeModule
     if (present(m2)) then
       this%m2 => m2
       this%smgnc = .false.
-    endif
+    end if
     !
     ! -- Initialize block parser
     call this%parser%Initialize(this%inunit, this%iout)
@@ -129,14 +129,14 @@ module GhostNodeModule
     call this%read_data()
     !
     ! -- Trap for implicit gnc but models are in different solutions
-    if(this%m1%idsoln /= this%m2%idsoln) then
-      if(this%implicit) then
-        write(errmsg, '(a)') 'Error.  GNC is implicit but models are in ' //   &
-                             'different solutions.'
+    if (this%m1%idsoln /= this%m2%idsoln) then
+      if (this%implicit) then
+        write (errmsg, '(a)') 'Error.  GNC is implicit but models are in '// &
+          'different solutions.'
         call store_error(errmsg)
         call store_error_unit(this%inunit)
-      endif
-    endif
+      end if
+    end if
     !
     ! -- return
     return
@@ -162,21 +162,21 @@ module GhostNodeModule
     ! -- Expand the sparse matrix for ghost node connections.  No need to add
     !    connection between n and m as they must be connected some other way
     !    that will calculate the conductance.
-    if(this%implicit) then
+    if (this%implicit) then
       do ignc = 1, this%nexg
         noden = this%nodem1(ignc) + this%m1%moffset
         nodem = this%nodem2(ignc) + this%m2%moffset
         jloop: do jidx = 1, this%numjs
           nodej = this%nodesj(jidx, ignc)
-          if(nodej == 0) cycle
+          if (nodej == 0) cycle
           nodej = nodej + this%m1%moffset
           call sparse%addconnection(nodem, nodej, 1)
           call sparse%addconnection(nodej, nodem, 1)
           call sparse%addconnection(noden, nodej, 1)
           call sparse%addconnection(nodej, noden, 1)
-        enddo jloop
-      enddo
-    endif
+        end do jloop
+      end do
+    end if
     !
     ! -- return
     return
@@ -205,8 +205,8 @@ module GhostNodeModule
     character(len=LINELENGTH) :: errmsg
     integer(I4B) :: noden, nodem, ipos, j, ignc, jidx, nodej
     ! -- formats
-    character(len=*),parameter :: fmterr = &
-      "('GHOST NODE ERROR.  Cell ', i0, ' in model ', a,                       &
+    character(len=*), parameter :: fmterr = &
+      "('GHOST NODE ERROR.  Cell ', i0, ' in model ', a, &
         &' is not connected to cell ', i0, ' in model ', a)"
 ! ------------------------------------------------------------------------------
     !
@@ -228,78 +228,76 @@ module GhostNodeModule
       this%idxglo(ignc) = 0
       searchloopnm: do ipos = iasln(noden) + 1, iasln(noden + 1) - 1
         j = jasln(ipos)
-        if(j == nodem) then
+        if (j == nodem) then
           this%idxglo(ignc) = ipos
           exit searchloopnm
-        endif
-      enddo searchloopnm
+        end if
+      end do searchloopnm
       !
       ! -- find location of n in row m of global solution and store in idxsymglo
-      !if(this%implicit) then
-        this%idxsymglo(ignc) = 0
-        searchloopmn: do ipos = iasln(nodem), iasln(nodem + 1) - 1
-          j = jasln(ipos)
-          if(j == noden) then
-            this%idxsymglo(ignc) = ipos
-            exit searchloopmn
-          endif
-        enddo searchloopmn
-      !endif
+      this%idxsymglo(ignc) = 0
+      searchloopmn: do ipos = iasln(nodem), iasln(nodem + 1) - 1
+        j = jasln(ipos)
+        if (j == noden) then
+          this%idxsymglo(ignc) = ipos
+          exit searchloopmn
+        end if
+      end do searchloopmn
       !
       ! -- Check to make sure idxglo is non-zero
-      if(this%idxglo(ignc) == 0) then
-        write(errmsg, fmterr) this%nodem1(ignc), trim(this%m1%name),           &
-                              this%nodem2(ignc), trim(this%m2%name)
+      if (this%idxglo(ignc) == 0) then
+        write (errmsg, fmterr) this%nodem1(ignc), trim(this%m1%name), &
+          this%nodem2(ignc), trim(this%m2%name)
         call store_error(errmsg)
-      endif
-    !
-    enddo
+      end if
+      !
+    end do
     !
     ! -- Stop if errors
-    if(count_errors() > 0) then
+    if (count_errors() > 0) then
       call store_error_unit(this%inunit)
-    endif
+    end if
     !
     ! -- find locations of j in rows n and row m of global solution
-    if(this%implicit) then
+    if (this%implicit) then
       do ignc = 1, this%nexg
         noden = this%nodem1(ignc) + this%m1%moffset
         nodem = this%nodem2(ignc) + this%m2%moffset
         !
         do jidx = 1, this%numjs
           nodej = this%nodesj(jidx, ignc)
-          if(nodej > 0) nodej = nodej + this%m1%moffset
+          if (nodej > 0) nodej = nodej + this%m1%moffset
           !
           ! -- search for nodej in row n, unless it is 0
-          if(nodej == 0) then
+          if (nodej == 0) then
             ipos = 0
             this%jposinrown(jidx, ignc) = ipos
           else
             searchloopn: do ipos = iasln(noden), iasln(noden + 1) - 1
               j = jasln(ipos)
-              if(j == nodej) then
+              if (j == nodej) then
                 this%jposinrown(jidx, ignc) = ipos
                 exit searchloopn
-              endif
-            enddo searchloopn
-          endif
+              end if
+            end do searchloopn
+          end if
           !
           ! -- search for nodej in row m
-          if(nodej == 0) then
+          if (nodej == 0) then
             ipos = 0
             this%jposinrowm(jidx, ignc) = ipos
           else
             searchloopm: do ipos = iasln(nodem) + 1, iasln(nodem + 1) - 1
               j = jasln(ipos)
-              if(j == nodej) then
+              if (j == nodej) then
                 this%jposinrowm(jidx, ignc) = ipos
                 exit searchloopm
-              endif
-            enddo searchloopm
-          endif
-        enddo
-      enddo
-    endif
+              end if
+            end do searchloopm
+          end if
+        end do
+      end do
+    end if
     !
     ! -- return
     return
@@ -328,13 +326,13 @@ module GhostNodeModule
     !    nodem, and therefore the conductance is zero.
     gncloop: do ignc = 1, this%nexg
       ipos = this%idxglo(ignc)
-      if(ipos > 0) then
+      if (ipos > 0) then
         cond = amatsln(ipos)
       else
         cond = DZERO
-      endif
+      end if
       this%cond(ignc) = cond
-    enddo gncloop
+    end do gncloop
     !
     ! -- return
     return
@@ -362,24 +360,24 @@ module GhostNodeModule
     !
     ! -- If this is a single model gnc (not an exchange across models), then
     !    pull conductances out of amatsln and store them in this%cond
-    if(this%smgnc) call this%gnc_fmsav(kiter, amatsln)
+    if (this%smgnc) call this%gnc_fmsav(kiter, amatsln)
     !
     ! -- Add gnc terms to rhs or to amat depending on whether gnc is implicit
     !    or explicit
     gncloop: do ignc = 1, this%nexg
       noden = this%nodem1(ignc)
       nodem = this%nodem2(ignc)
-      if(this%m1%ibound(noden) == 0 .or. &
-         this%m2%ibound(nodem) == 0) cycle gncloop
+      if (this%m1%ibound(noden) == 0 .or. &
+          this%m2%ibound(nodem) == 0) cycle gncloop
       ipos = this%idxglo(ignc)
       cond = this%cond(ignc)
       jloop: do jidx = 1, this%numjs
         j = this%nodesj(jidx, ignc)
-        if(j == 0) cycle
+        if (j == 0) cycle
         alpha = this%alphasj(jidx, ignc)
         if (alpha == DZERO) cycle
         aterm = alpha * cond
-        if(this%implicit) then
+        if (this%implicit) then
           iposjn = this%jposinrown(jidx, ignc)
           iposjm = this%jposinrowm(jidx, ignc)
           amatsln(this%idiagn(ignc)) = amatsln(this%idiagn(ignc)) + aterm
@@ -390,16 +388,16 @@ module GhostNodeModule
           rterm = aterm * (this%m1%x(noden) - this%m1%x(j))
           this%m1%rhs(noden) = this%m1%rhs(noden) - rterm
           this%m2%rhs(nodem) = this%m2%rhs(nodem) + rterm
-        endif
-      enddo jloop
-    enddo gncloop
+        end if
+      end do jloop
+    end do gncloop
     !
     ! -- return
     return
   end subroutine gnc_fc
 
-  subroutine gnc_fn(this, kiter, njasln, amatsln, condsat, ihc_opt,            &
-    ivarcv_opt, ictm1_opt, ictm2_opt)
+  subroutine gnc_fn(this, kiter, njasln, amatsln, condsat, ihc_opt, &
+                    ivarcv_opt, ictm1_opt, ictm2_opt)
 ! ******************************************************************************
 ! gnc_fn -- Fill GNC Newton terms
 !
@@ -448,12 +446,12 @@ module GhostNodeModule
     gncloop: do ignc = 1, this%nexg
       noden = this%nodem1(ignc)
       nodem = this%nodem2(ignc)
-      if(this%m1%ibound(noden) == 0 .or. &
-         this%m2%ibound(nodem) == 0) cycle gncloop
+      if (this%m1%ibound(noden) == 0 .or. &
+          this%m2%ibound(nodem) == 0) cycle gncloop
       !
       ! -- Assign variables depending on whether single model gnc or exchange
       !    gnc
-      if(this%smgnc) then
+      if (this%smgnc) then
         ipos = this%m1%dis%con%getjaindex(noden, nodem)
         isympos = this%m1%dis%con%jas(ipos)
         ihc = this%m1%dis%con%ihc(isympos)
@@ -461,10 +459,10 @@ module GhostNodeModule
       else
         ihc = ihc_opt(ignc)
         csat = condsat(ignc)
-      endif
+      end if
       !
       ! If vertical connection and not variable cv, then cycle
-      if(ihc == 0 .and. ivarcv == 0) cycle
+      if (ihc == 0 .and. ivarcv == 0) cycle
       !
       ! determine upstream node (0 is noden, 1 is nodem)
       iups = 0
@@ -472,7 +470,7 @@ module GhostNodeModule
       !
       ! -- Set the upstream top and bot, and then recalculate for a
       !    vertically staggered horizontal connection
-      if(iups == 0) then
+      if (iups == 0) then
         topup = this%m1%dis%top(noden)
         botup = this%m1%dis%bot(noden)
         ictup = 1
@@ -484,45 +482,45 @@ module GhostNodeModule
         ictup = 1
         if (present(ictm2_opt)) ictup = ictm2_opt(nodem)
         xup = this%m2%x(nodem)
-      endif
+      end if
       !
       ! -- No newton terms if upstream cell is confined
       if (ictup == 0) cycle
       !
       ! -- Handle vertically staggered horizontal connection
-      if(ihc == 2) then
+      if (ihc == 2) then
         topup = min(this%m1%dis%top(noden), this%m2%dis%top(nodem))
         botup = max(this%m1%dis%bot(noden), this%m2%dis%bot(nodem))
-      endif
+      end if
       !
       ! -- Process each contributing node
       jloop: do jidx = 1, this%numjs
         nodej = this%nodesj(jidx, ignc)
-        if(nodej == 0) cycle
-        if(this%m1%ibound(nodej) == 0) cycle
+        if (nodej == 0) cycle
+        if (this%m1%ibound(nodej) == 0) cycle
         alpha = this%alphasj(jidx, ignc)
         if (alpha == DZERO) cycle
         consterm = csat * alpha * (this%m1%x(noden) - this%m1%x(nodej))
         derv = sQuadraticSaturationDerivative(topup, botup, xup)
         term = consterm * derv
-        if(iups == 0) then
+        if (iups == 0) then
           amatsln(this%idiagn(ignc)) = amatsln(this%idiagn(ignc)) + term
-          if(this%m2%ibound(nodem) > 0) then
-            amatsln(this%idxsymglo(ignc)) = amatsln(this%idxsymglo(ignc)) -    &
+          if (this%m2%ibound(nodem) > 0) then
+            amatsln(this%idxsymglo(ignc)) = amatsln(this%idxsymglo(ignc)) - &
                                             term
-          endif
+          end if
           this%m1%rhs(noden) = this%m1%rhs(noden) + term * this%m1%x(noden)
           this%m2%rhs(nodem) = this%m2%rhs(nodem) - term * this%m1%x(noden)
         else
           amatsln(this%idiagm(ignc)) = amatsln(this%idiagm(ignc)) - term
-          if(this%m1%ibound(noden) > 0) then
+          if (this%m1%ibound(noden) > 0) then
             amatsln(this%idxglo(ignc)) = amatsln(this%idxglo(ignc)) + term
-          endif
+          end if
           this%m1%rhs(noden) = this%m1%rhs(noden) + term * this%m2%x(nodem)
           this%m2%rhs(nodem) = this%m2%rhs(nodem) - term * this%m2%x(nodem)
-        endif
-      enddo jloop
-    enddo gncloop
+        end if
+      end do jloop
+    end do gncloop
     !
     ! -- return
     return
@@ -548,19 +546,19 @@ module GhostNodeModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Process each gnc and output deltaQgnc
-    if(ibudfl /= 0 .and. this%iprflow /= 0) then
-      write(this%iout, '(//, a)') 'GHOST NODE CORRECTION RESULTS'
-      write(this%iout, '(3a10, 2a15)') 'GNC NUM', 'NODEN', 'NODEM', &
+    if (ibudfl /= 0 .and. this%iprflow /= 0) then
+      write (this%iout, '(//, a)') 'GHOST NODE CORRECTION RESULTS'
+      write (this%iout, '(3a10, 2a15)') 'GNC NUM', 'NODEN', 'NODEM', &
         'DELTAQGNC', 'CONDNM'
       do ignc = 1, this%nexg
         deltaQgnc = this%deltaQgnc(ignc)
         call this%m1%dis%noder_to_string(this%nodem1(ignc), nodenstr)
         call this%m2%dis%noder_to_string(this%nodem2(ignc), nodemstr)
-        write(this%iout, fmtgnc) ignc, trim(adjustl(nodenstr)), &
-                                  trim(adjustl(nodemstr)), &
-                                  deltaQgnc, this%cond(ignc)
-      enddo
-    endif
+        write (this%iout, fmtgnc) ignc, trim(adjustl(nodenstr)), &
+          trim(adjustl(nodemstr)), &
+          deltaQgnc, this%cond(ignc)
+      end do
+    end if
     !
     ! -- return
     return
@@ -598,7 +596,7 @@ module GhostNodeModule
       flowja(ipos) = flowja(ipos) + deltaQgnc
       flowja(isympos) = flowja(isympos) - deltaQgnc
       !
-    enddo
+    end do
     !
     ! -- return
     return
@@ -632,19 +630,19 @@ module GhostNodeModule
     nodem = this%nodem2(ignc)
     !
     ! -- calculate deltaQgnc
-    if(this%m1%ibound(noden) /= 0 .and. this%m2%ibound(nodem) /= 0) then
+    if (this%m1%ibound(noden) /= 0 .and. this%m2%ibound(nodem) /= 0) then
       jloop: do jidx = 1, this%numjs
         nodej = this%nodesj(jidx, ignc)
-        if(nodej == 0) cycle jloop
-        if(this%m1%ibound(nodej) == 0) cycle jloop
+        if (nodej == 0) cycle jloop
+        if (this%m1%ibound(nodej) == 0) cycle jloop
         alpha = this%alphasj(jidx, ignc)
         sigalj = sigalj + alpha
         hd = hd + alpha * this%m1%x(nodej)
-      enddo jloop
+      end do jloop
       aterm = sigalj * this%m1%x(noden) - hd
       cond = this%cond(ignc)
       deltaQgnc = aterm * cond
-    endif
+    end if
     !
     ! -- return
     return
@@ -699,24 +697,24 @@ module GhostNodeModule
     ! -- allocate memory for arrays
     call mem_allocate(this%nodem1, this%nexg, 'NODEM1', this%memoryPath)
     call mem_allocate(this%nodem2, this%nexg, 'NODEM2', this%memoryPath)
-    call mem_allocate(this%nodesj, this%numjs, this%nexg, 'NODESJ',            &
+    call mem_allocate(this%nodesj, this%numjs, this%nexg, 'NODESJ', &
                       this%memoryPath)
-    call mem_allocate(this%alphasj, this%numjs, this%nexg, 'ALPHASJ',          &
+    call mem_allocate(this%alphasj, this%numjs, this%nexg, 'ALPHASJ', &
                       this%memoryPath)
     call mem_allocate(this%cond, this%nexg, 'COND', this%memoryPath)
     call mem_allocate(this%idxglo, this%nexg, 'IDXGLO', this%memoryPath)
     call mem_allocate(this%idiagn, this%nexg, 'IDIAGN', this%memoryPath)
     call mem_allocate(this%idiagm, this%nexg, 'IDIAGM', this%memoryPath)
     call mem_allocate(this%idxsymglo, this%nexg, 'IDXSYMGLO', this%memoryPath)
-    if(this%implicit) then
-      call mem_allocate(this%jposinrown, this%numjs, this%nexg, 'JPOSINROWN',  &
+    if (this%implicit) then
+      call mem_allocate(this%jposinrown, this%numjs, this%nexg, 'JPOSINROWN', &
                         this%memoryPath)
-      call mem_allocate(this%jposinrowm, this%numjs, this%nexg, 'JPOSINROWM',  &
+      call mem_allocate(this%jposinrowm, this%numjs, this%nexg, 'JPOSINROWM', &
                         this%memoryPath)
     else
       call mem_allocate(this%jposinrown, 0, 0, 'JPOSINROWN', this%memoryPath)
       call mem_allocate(this%jposinrowm, 0, 0, 'JPOSINROWM', this%memoryPath)
-    endif
+    end if
     !
     ! -- Return
     return
@@ -754,7 +752,7 @@ module GhostNodeModule
       call mem_deallocate(this%idxsymglo)
       call mem_deallocate(this%jposinrown)
       call mem_deallocate(this%jposinrowm)
-    endif
+    end if
     !
     ! -- deallocate NumericalPackageType
     call this%NumericalPackageType%da()
@@ -787,35 +785,35 @@ module GhostNodeModule
     !
     ! -- parse options block if detected
     if (isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING GNC OPTIONS'
+      write (this%iout, '(1x,a)') 'PROCESSING GNC OPTIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
-          case ('PRINT_INPUT')
-            this%iprpak = 1
-            write(this%iout,'(4x,a)') &
-              'THE LIST OF GHOST-NODE CORRECTIONS WILL BE PRINTED.'
-          case ('PRINT_FLOWS')
-            this%iprflow = 1
-            write(this%iout,'(4x,a)') &
-              'DELTAQGNC VALUES WILL BE PRINTED TO THE LIST FILE.'
-          case ('I2KN')
-            this%i2kn = .true.
-            write(this%iout,'(4x,a)') &
-              'SECOND ORDER CORRECTION WILL BE APPLIED.'
-          case ('EXPLICIT')
-            this%implicit = .false.
-            write(this%iout,'(4x,a)')'GHOST NODE CORRECTION IS EXPLICIT.'
-          case default
-            write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN GNC OPTION: ', &
-                                     trim(keyword)
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
+        case ('PRINT_INPUT')
+          this%iprpak = 1
+          write (this%iout, '(4x,a)') &
+            'THE LIST OF GHOST-NODE CORRECTIONS WILL BE PRINTED.'
+        case ('PRINT_FLOWS')
+          this%iprflow = 1
+          write (this%iout, '(4x,a)') &
+            'DELTAQGNC VALUES WILL BE PRINTED TO THE LIST FILE.'
+        case ('I2KN')
+          this%i2kn = .true.
+          write (this%iout, '(4x,a)') &
+            'SECOND ORDER CORRECTION WILL BE APPLIED.'
+        case ('EXPLICIT')
+          this%implicit = .false.
+          write (this%iout, '(4x,a)') 'GHOST NODE CORRECTION IS EXPLICIT.'
+        case default
+          write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN GNC OPTION: ', &
+            trim(keyword)
+          call store_error(errmsg)
+          call this%parser%StoreErrorUnit()
         end select
       end do
-      write(this%iout,'(1x,a)')'END OF GNC OPTIONS'
+      write (this%iout, '(1x,a)') 'END OF GNC OPTIONS'
     end if
     !
     ! -- Set the iasym flag if the correction is implicit
@@ -849,26 +847,26 @@ module GhostNodeModule
     !
     ! -- parse options block if detected
     if (isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING GNC DIMENSIONS'
+      write (this%iout, '(1x,a)') 'PROCESSING GNC DIMENSIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
-          case ('NUMGNC')
-            this%nexg = this%parser%GetInteger()
-            write(this%iout,'(4x,a,i7)')'NUMGNC = ', this%nexg
-          case ('NUMALPHAJ')
-            this%numjs = this%parser%GetInteger()
-            write(this%iout,'(4x,a,i7)')'NUMAPHAJ = ', this%numjs
-          case default
-            write(errmsg,'(4x,a,a)')'****ERROR. UNKNOWN GNC DIMENSION: ', &
-                                     trim(keyword)
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
+        case ('NUMGNC')
+          this%nexg = this%parser%GetInteger()
+          write (this%iout, '(4x,a,i7)') 'NUMGNC = ', this%nexg
+        case ('NUMALPHAJ')
+          this%numjs = this%parser%GetInteger()
+          write (this%iout, '(4x,a,i7)') 'NUMAPHAJ = ', this%numjs
+        case default
+          write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN GNC DIMENSION: ', &
+            trim(keyword)
+          call store_error(errmsg)
+          call this%parser%StoreErrorUnit()
         end select
       end do
-      write(this%iout,'(1x,a)')'END OF GNC DIMENSIONS'
+      write (this%iout, '(1x,a)') 'END OF GNC DIMENSIONS'
     else
       call store_error('Required DIMENSIONS block not found.', terminate=.TRUE.)
     end if
@@ -892,7 +890,7 @@ module GhostNodeModule
     ! -- local
     character(len=LINELENGTH) :: line, errmsg, nodestr, fmtgnc, cellid, &
                                  cellidm, cellidn
-    integer(I4B) :: lloc,ierr,ival
+    integer(I4B) :: lloc, ierr, ival
     integer(I4B) :: ignc, jidx, nodeun, nodeum, nerr
     integer(I4B), dimension(:), allocatable :: nodesuj
     logical :: isfound, endOfBlock
@@ -900,19 +898,19 @@ module GhostNodeModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Construct the fmtgnc format
-    write(fmtgnc, '("(2i10,",i0,"i10,",i0, "(1pg15.6))")') this%numjs,         &
-          this%numjs
+    write (fmtgnc, '("(2i10,",i0,"i10,",i0, "(1pg15.6))")') this%numjs, &
+      this%numjs
     !
     ! -- Allocate the temporary nodesuj, which stores the user-based nodej
     !    node numbers
-    allocate(nodesuj(this%numjs))
+    allocate (nodesuj(this%numjs))
     !
     ! -- get GNCDATA block
     call this%parser%GetBlock('GNCDATA', isfound, ierr, supportOpenClose=.true.)
     !
     ! -- process GNC data
     if (isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING GNCDATA'
+      write (this%iout, '(1x,a)') 'PROCESSING GNCDATA'
       do ignc = 1, this%nexg
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
@@ -921,7 +919,7 @@ module GhostNodeModule
         !
         ! -- cellidn (read as cellid and convert to user node)
         call this%parser%GetCellid(this%m1%dis%ndim, cellidn)
-        nodeun = this%m1%dis%nodeu_from_cellid(cellidn, this%parser%iuactive,  &
+        nodeun = this%m1%dis%nodeu_from_cellid(cellidn, this%parser%iuactive, &
                                                this%iout)
         !
         ! -- convert user node to reduced node number
@@ -929,87 +927,87 @@ module GhostNodeModule
         !
         ! -- cellidm (read as cellid and convert to user node)
         call this%parser%GetCellid(this%m2%dis%ndim, cellidm)
-        nodeum = this%m2%dis%nodeu_from_cellid(cellidm, this%parser%iuactive,  &
+        nodeum = this%m2%dis%nodeu_from_cellid(cellidm, this%parser%iuactive, &
                                                this%iout)
         !
         ! -- convert user node to reduced node number
         call this%nodeu_to_noder(nodeum, this%nodem2(ignc), this%m2)
         !
         ! -- cellidsj (read as cellid)
-        do jidx=1, this%numjs
+        do jidx = 1, this%numjs
           ! read cellidj as cellid of model 1
           call this%parser%GetCellid(this%m1%dis%ndim, cellid)
-          ival = this%m1%dis%nodeu_from_cellid(cellid, this%parser%iuactive,   &
+          ival = this%m1%dis%nodeu_from_cellid(cellid, this%parser%iuactive, &
                                                this%iout, allow_zero=.true.)
           nodesuj(jidx) = ival
-          if(ival > 0) then
+          if (ival > 0) then
             call this%nodeu_to_noder(ival, this%nodesj(jidx, ignc), this%m1)
           else
             this%nodesj(jidx, ignc) = 0
-          endif
-        enddo
+          end if
+        end do
         !
         ! -- alphaj
-        do jidx=1, this%numjs
+        do jidx = 1, this%numjs
           this%alphasj(jidx, ignc) = this%parser%GetDouble()
-        enddo
+        end do
         !
         ! -- Echo if requested
-        if(this%iprpak /= 0)                                                   &
-          write(this%iout, fmtgnc) nodeun, nodeum,                             &
-            (nodesuj(jidx),  jidx = 1, this%numjs),                            &
-            (this%alphasj(jidx, ignc), jidx = 1, this%numjs)
+        if (this%iprpak /= 0) &
+          write (this%iout, fmtgnc) nodeun, nodeum, &
+          (nodesuj(jidx), jidx=1, this%numjs), &
+          (this%alphasj(jidx, ignc), jidx=1, this%numjs)
         !
         ! -- Check to see if noden is outside of active domain
-        if(this%nodem1(ignc) <= 0) then
+        if (this%nodem1(ignc) <= 0) then
           call this%m1%dis%nodeu_to_string(nodeun, nodestr)
-          write(errmsg, *)                                                     &
-                  trim(adjustl(this%m1%name)) //                               &
-                  ' Cell is outside active grid domain: ' //                   &
-                  trim(adjustl(nodestr))
+          write (errmsg, *) &
+            trim(adjustl(this%m1%name))// &
+            ' Cell is outside active grid domain: '// &
+            trim(adjustl(nodestr))
           call store_error(errmsg)
-        endif
+        end if
         !
         ! -- Check to see if nodem is outside of active domain
-        if(this%nodem2(ignc) <= 0) then
+        if (this%nodem2(ignc) <= 0) then
           call this%m2%dis%nodeu_to_string(nodeum, nodestr)
-          write(errmsg, *)                                                     &
-                  trim(adjustl(this%m2%name)) //                               &
-                  ' Cell is outside active grid domain: ' //                   &
-                  trim(adjustl(nodestr))
+          write (errmsg, *) &
+            trim(adjustl(this%m2%name))// &
+            ' Cell is outside active grid domain: '// &
+            trim(adjustl(nodestr))
           call store_error(errmsg)
-        endif
+        end if
         !
         ! -- Check to see if any nodejs are outside of active domain
         do jidx = 1, this%numjs
-          if(this%nodesj(jidx, ignc) < 0) then
+          if (this%nodesj(jidx, ignc) < 0) then
             call this%m1%dis%nodeu_to_string(nodesuj(jidx), nodestr)
-            write(errmsg, *)                                                   &
-                    trim(adjustl(this%m1%name)) //                             &
-                    ' Cell is outside active grid domain: ' //                 &
-                    trim(adjustl(nodestr))
+            write (errmsg, *) &
+              trim(adjustl(this%m1%name))// &
+              ' Cell is outside active grid domain: '// &
+              trim(adjustl(nodestr))
             call store_error(errmsg)
-          endif
-        enddo
+          end if
+        end do
         !
-      enddo
+      end do
       !
       ! -- Stop if errors
       nerr = count_errors()
-      if(nerr > 0) then
+      if (nerr > 0) then
         call store_error('Errors encountered in GNC input file.')
         call this%parser%StoreErrorUnit()
-      endif
+      end if
       !
-      write(this%iout,'(1x,a)')'END OF GNCDATA'
+      write (this%iout, '(1x,a)') 'END OF GNCDATA'
     else
-      write(errmsg, '(1x,a)')'ERROR.  REQUIRED GNCDATA BLOCK NOT FOUND.'
+      write (errmsg, '(1x,a)') 'ERROR.  REQUIRED GNCDATA BLOCK NOT FOUND.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if
     !
     ! -- deallocate nodesuj array
-    deallocate(nodesuj)
+    deallocate (nodesuj)
     !
     ! -- return
     return
@@ -1034,18 +1032,17 @@ module GhostNodeModule
     character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
     !
-    if(nodeu < 1 .or. nodeu > model%dis%nodesuser) then
-      write(errmsg, *) &
-              trim(adjustl(model%name)) //                                     &
-              ' node number < 0 or > model nodes: ', nodeu
+    if (nodeu < 1 .or. nodeu > model%dis%nodesuser) then
+      write (errmsg, *) &
+        trim(adjustl(model%name))// &
+        ' node number < 0 or > model nodes: ', nodeu
       call store_error(errmsg)
     else
       noder = model%dis%get_nodenumber(nodeu, 0)
-    endif
+    end if
     !
     ! -- Return
     return
   end subroutine nodeu_to_noder
-
 
 end module GhostNodeModule

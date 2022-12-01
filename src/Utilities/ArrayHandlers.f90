@@ -8,7 +8,7 @@ module ArrayHandlersModule
   public :: ExpandArray, ExpandArrayWrapper, ExtendPtrArray
   public :: ifind
   public :: remove_character
-  
+
   interface ExpandArrayWrapper
     module procedure expand_integer_wrapper
   end interface
@@ -18,8 +18,8 @@ module ArrayHandlersModule
     ! IMPORTANT: Do not use pointers to elements of arrays when using
     ! ExpandArray to increase the array size!  The locations of array
     ! elements in memory are changed when ExpandArray is invoked.
-    module procedure expand_integer, expand_double,                              &
-                     expand_character  !, expand_real
+    module procedure expand_integer, expand_double, &
+      expand_character !, expand_real
   end interface ExpandArray
 
   interface ExtendPtrArray
@@ -70,11 +70,11 @@ contains
       if (loginc) then
         increment = int(log10(real(nsize, DP)), I4B)
         increment = int(DTEN**increment, I4B)
-      !
-      ! -- increase increment by a multiplier and a value no
-      !    smaller than a default or specified minimum size
+        !
+        ! -- increase increment by a multiplier and a value no
+        !    smaller than a default or specified minimum size
       else
-        increment =  int(nsize * 0.2_DP)
+        increment = int(nsize * 0.2_DP)
         increment = max(minimum_increment, increment)
       end if
       !
@@ -97,7 +97,7 @@ contains
     implicit none
     ! -- dummy
     integer(I4B), allocatable, intent(inout) :: array(:)
-    integer(I4B), optional,    intent(in)    :: increment
+    integer(I4B), optional, intent(in) :: increment
     ! -- local
     integer(I4B) :: inclocal, isize, newsize
     integer(I4B), allocatable, dimension(:) :: array_temp
@@ -107,20 +107,20 @@ contains
       inclocal = increment
     else
       inclocal = 1
-    endif
+    end if
     !
     ! -- increase size of array by inclocal, retaining
     !    contained data
     if (allocated(array)) then
       isize = size(array)
       newsize = isize + inclocal
-      allocate(array_temp(newsize))
+      allocate (array_temp(newsize))
       array_temp(1:isize) = array
-      deallocate(array)
+      deallocate (array)
       call move_alloc(array_temp, array)
     else
-      allocate(array(inclocal))
-    endif
+      allocate (array(inclocal))
+    end if
     !
     return
   end subroutine expand_integer
@@ -129,7 +129,7 @@ contains
     implicit none
     ! -- dummy
     real(DP), allocatable, intent(inout) :: array(:)
-    integer(I4B), optional,             intent(in)    :: increment
+    integer(I4B), optional, intent(in) :: increment
     ! -- local
     integer(I4B) :: inclocal, isize, newsize
     real(DP), allocatable, dimension(:) :: array_temp
@@ -139,20 +139,20 @@ contains
       inclocal = increment
     else
       inclocal = 1
-    endif
+    end if
     !
     ! -- increase size of array by inclocal, retaining
     !    contained data
     if (allocated(array)) then
       isize = size(array)
       newsize = isize + inclocal
-      allocate(array_temp(newsize))
+      allocate (array_temp(newsize))
       array_temp(1:isize) = array
-      deallocate(array)
+      deallocate (array)
       call move_alloc(array_temp, array)
     else
-      allocate(array(inclocal))
-    endif
+      allocate (array(inclocal))
+    end if
     !
     return
   end subroutine expand_double
@@ -161,7 +161,7 @@ contains
     implicit none
     ! -- dummy
     character(len=*), allocatable, intent(inout) :: array(:)
-    integer(I4B), optional,             intent(in)    :: increment
+    integer(I4B), optional, intent(in) :: increment
     ! -- local
     character(len=LINELENGTH) :: line
     character(len=MAXCHARLEN), allocatable, dimension(:) :: array_temp
@@ -172,13 +172,13 @@ contains
     ! -- check character length
     lenc = len(array)
     if (lenc > MAXCHARLEN) then
-      write(line, '(a)') 'Error in ArrayHandlersModule: ' //                     &
-                         'Need to increase MAXCHARLEN'
+      write (line, '(a)') 'Error in ArrayHandlersModule: '// &
+        'Need to increase MAXCHARLEN'
       call sim_message(line, iunit=iout, fmt=stdfmt)
       call sim_message(line, fmt=stdfmt)
       !
       ! -- stop message
-      write(line, '(a)') 'Stopping...'
+      write (line, '(a)') 'Stopping...'
       call sim_message(line, iunit=iout)
       call sim_message(line)
       call stop_with_error(138)
@@ -189,7 +189,7 @@ contains
       inclocal = increment
     else
       inclocal = 1
-    endif
+    end if
     !
     ! -- increase size of array by inclocal, retaining
     !    contained data
@@ -198,22 +198,22 @@ contains
     if (allocated(array)) then
       isize = size(array)
       newsize = isize + inclocal
-      allocate(array_temp(isize))
-      do i=1,isize
+      allocate (array_temp(isize))
+      do i = 1, isize
         array_temp(i) = array(i)
-      enddo
-      deallocate(array)
-      allocate(array(newsize))
-      do i=1,isize
+      end do
+      deallocate (array)
+      allocate (array(newsize))
+      do i = 1, isize
         array(i) = array_temp(i)
-      enddo
-      do i=isize+1,newsize
+      end do
+      do i = isize + 1, newsize
         array(i) = ''
-      enddo
-      deallocate(array_temp)
+      end do
+      deallocate (array_temp)
     else
-      allocate(array(inclocal))
-    endif
+      allocate (array(inclocal))
+    end if
     !
     return
   end subroutine expand_character
@@ -238,32 +238,32 @@ contains
       inclocal = increment
     else
       inclocal = 1
-    endif
+    end if
     !
     ! -- increase size of array by inclocal, retaining
     !    contained data
     if (associated(array)) then
       isize = size(array)
       newsize = isize + inclocal
-      allocate(array_temp(newsize), stat=istat, errmsg=ermsg)
+      allocate (array_temp(newsize), stat=istat, errmsg=ermsg)
       if (istat /= 0) goto 99
-      do i=1,isize
+      do i = 1, isize
         array_temp(i) = array(i)
-      enddo
-      deallocate(array)
+      end do
+      deallocate (array)
       array => array_temp
     else
-      allocate(array(inclocal))
-    endif
+      allocate (array(inclocal))
+    end if
     !
     ! -- normal return
-    return  
+    return
     !
     ! -- Error reporting
 99  continue
 
-    write(line, '(a)') 'Error in ArrayHandlersModule: ' //                       &
-                        'Could not increase array size'
+    write (line, '(a)') 'Error in ArrayHandlersModule: '// &
+      'Could not increase array size'
     call sim_message(line, iunit=iout, fmt=stdfmt)
     call sim_message(line, fmt=stdfmt)
     !
@@ -272,11 +272,11 @@ contains
     call sim_message(ermsg)
     !
     ! -- stop message
-    write(line, '(a)') 'Stopping...'
+    write (line, '(a)') 'Stopping...'
     call sim_message(line, iunit=iout)
     call sim_message(line)
     call stop_with_error(138)
-      
+
   end subroutine extend_double
 
   subroutine extend_integer(array, increment)
@@ -297,23 +297,23 @@ contains
       inclocal = increment
     else
       inclocal = 1
-    endif
+    end if
     !
     ! -- increase size of array by inclocal, retaining
     !    contained data
     if (associated(array)) then
       isize = size(array)
       newsize = isize + inclocal
-      allocate(array_temp(newsize), stat=istat, errmsg=ermsg)
+      allocate (array_temp(newsize), stat=istat, errmsg=ermsg)
       if (istat /= 0) goto 99
-      do i=1,isize
+      do i = 1, isize
         array_temp(i) = array(i)
-      enddo
-      deallocate(array)
+      end do
+      deallocate (array)
       array => array_temp
     else
-      allocate(array(inclocal))
-    endif
+      allocate (array(inclocal))
+    end if
     !
     ! -- normal return
     return
@@ -321,8 +321,8 @@ contains
     ! -- Error reporting
 99  continue
 
-    write(line, '(a)') 'Error in ArrayHandlersModule: ' //                       &
-                        'Could not increase array size'
+    write (line, '(a)') 'Error in ArrayHandlersModule: '// &
+      'Could not increase array size'
     call sim_message(line, iunit=iout, fmt=stdfmt)
     call sim_message(line, fmt=stdfmt)
     !
@@ -331,11 +331,11 @@ contains
     call sim_message(ermsg)
     !
     ! -- stop message
-    write(line, '(a)') 'Stopping...'
+    write (line, '(a)') 'Stopping...'
     call sim_message(line, iunit=iout)
     call sim_message(line)
     call stop_with_error(138)
-      
+
   end subroutine extend_integer
 
   function ifind_character(array, str)
@@ -350,12 +350,12 @@ contains
     ! -- local
     integer(I4B) :: i
     ifind_character = -1
-    findloop: do i=1,size(array)
-      if(array(i) == str) then
+    findloop: do i = 1, size(array)
+      if (array(i) == str) then
         ifind_character = i
         exit findloop
-      endif
-    enddo findloop
+      end if
+    end do findloop
     return
   end function ifind_character
 
@@ -372,11 +372,11 @@ contains
     integer(I4B) :: i
     ifind_integer = -1
     findloop: do i = 1, size(iarray)
-      if(iarray(i) == ival) then
+      if (iarray(i) == ival) then
         ifind_integer = i
         exit findloop
-      endif
-    enddo findloop
+      end if
+    end do findloop
     return
   end function ifind_integer
 
@@ -385,7 +385,7 @@ contains
     implicit none
     ! -- dummy
     character(len=*), allocatable, intent(inout) :: array(:)
-    integer(I4B),                       intent(in)    :: ipos
+    integer(I4B), intent(in) :: ipos
     ! -- local
     character(len=LINELENGTH) :: line
     character(len=MAXCHARLEN), allocatable, dimension(:) :: array_temp
@@ -397,38 +397,38 @@ contains
     lenc = len(array)
     if (lenc > MAXCHARLEN) then
 
-      write(line, '(a)') 'Error in ArrayHandlersModule: ' //                       &
-                         'Need to increase MAXCHARLEN'
+      write (line, '(a)') 'Error in ArrayHandlersModule: '// &
+        'Need to increase MAXCHARLEN'
       call sim_message(line, iunit=iout, fmt=stdfmt)
       call sim_message(line, fmt=stdfmt)
       !
       ! -- stop message
-      write(line, '(a)') 'Stopping...'
+      write (line, '(a)') 'Stopping...'
       call sim_message(line, iunit=iout)
       call sim_message(line)
       call stop_with_error(138)
-    endif
+    end if
     !
     ! -- calculate sizes
     isize = size(array)
     newsize = isize - 1
     !
     ! -- copy array to array_temp
-    allocate(array_temp(isize))
+    allocate (array_temp(isize))
     do i = 1, isize
       array_temp(i) = array(i)
-    enddo
+    end do
     !
-    deallocate(array)
-    allocate(array(newsize))
+    deallocate (array)
+    allocate (array(newsize))
     inew = 1
     do i = 1, isize
-      if(i /= ipos) then
+      if (i /= ipos) then
         array(inew) = array_temp(i)
         inew = inew + 1
-      endif
-    enddo
-    deallocate(array_temp)
+      end if
+    end do
+    deallocate (array_temp)
     !
     return
   end subroutine remove_character

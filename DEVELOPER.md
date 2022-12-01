@@ -52,19 +52,32 @@ gfortran can be used to compile MODFLOW 6 and associated utilities and generate 
 ### Python
 
 Install Python, for example via [miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Anaconda](https://www.anaconda.com/products/individual).
-Please make sure that your Python version is 3.7 or higher.
-Then install all packages necessary to run the tests either by executing [install-python-std.sh](.github/common/install-python-std.sh) via bash directly or by installing the listed packages manually.
+Then create a new environment by executing the following at the root of this repository
+```
+conda env create --force -f environment.yml
+```
 
 ### ifort (optional)
 
 Intel fortran can be used to compile MODFLOW 6 and associated utilities and generate distributable files (if not using gfortran).
 Download the Intel oneAPI HPC Toolkit: https://software.intel.com/content/www/us/en/develop/tools/oneapi/hpc-toolkit/download.html
-Documentation describing how to set the intel envrionment variables can be found [here](https://www.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup.html).
+
+Documentation describing how to set the intel environment variables can be found [here](https://www.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup.html).
+
+#### Windows
+
+- Visual Studio with the appropriate redistributable libraries must be installed for ifort to compile on Windows.
+- Install Visual Studio, which can be found [here](https://visualstudio.microsoft.com/). Note: the latest version of Visual Studio, 2022, requires a sufficiently new version of the Intel OneAPI as well.
+- The redistributable libraries can installed via ticking the "Desktop Development with C++" checkbox in the Visual Studio Installer in the Workloads tab. 
 
 ### Doxygen & LaTeX (optional)
 
 [Doxygen](https://www.doxygen.nl/index.html) is used to generate the [MODFLOW 6 source code documentation](https://modflow-usgs.github.io/modflow6/). [Graphviz](https://graphviz.org/) is used by doxygen to produce source code diagrams. [LaTeX](https://www.latex-project.org/) is used to generate the MODFLOW 6 release notes and Input/Output documents (docs/mf6io/mf6io.nightlybuild).
 These programs can be installed from various sources, including by conda, macports, or from individual sources such as https://www.tug.org/. Details about USGS LaTeX libraries can be seen in addition to linux installs in the CI workflow for the docs (`.github/workflows/ci-docs.yml`).
+
+### fprettify
+
+[fprettify](https://github.com/pseewald/fprettify) can be used to format Fortran source code and in combination with the [MODFLOW 6 fprettify configuration](https://github.com/MODFLOW-USGS/modflow6/blob/develop/distribution/.fprettify.yaml) establishes a contribution standard for properly formatted MODFLOW 6 Fortran source. This tool can be installed with `pip` or `conda` and used from the command line or integrated with a [VSCode](https://github.com/MODFLOW-USGS/modflow6/blob/develop/.vscode/README.md) or Visual Studio development environment. See [contribution guidelines](https://github.com/MODFLOW-USGS/modflow6/blob/develop/CONTRIBUTING.md) for additional information.
 
 ## Getting the Sources
 

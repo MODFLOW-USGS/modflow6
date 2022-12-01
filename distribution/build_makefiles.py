@@ -1,6 +1,7 @@
 import os
 import sys
 from contextlib import contextmanager
+
 import pymake
 
 if sys.platform.lower() == "win32":
@@ -34,7 +35,9 @@ def cwd(path):
 
 
 def run_makefile(target):
-    assert os.path.isfile("makefile"), f"makefile does not exist in {os.getcwd()}"
+    assert os.path.isfile(
+        "makefile"
+    ), f"makefile does not exist in {os.getcwd()}"
 
     base_target = os.path.basename(target)
     base_message = (
@@ -53,7 +56,9 @@ def run_makefile(target):
 
     assert return_code == 0, f"could not make '{base_target}'." + base_message
 
-    assert os.path.isfile(target), f"{base_target} does not exist." + base_message
+    assert os.path.isfile(target), (
+        f"{base_target} does not exist." + base_message
+    )
 
     # clean after successful make
     print(f"clean {base_target} with makefile")

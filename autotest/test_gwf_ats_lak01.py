@@ -3,9 +3,10 @@
 # a smaller time step.
 
 import os
-import pytest
 import sys
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -75,25 +76,26 @@ def build_model(idx, dir):
     dtmax = 10.0
     dtadj = 2.0
     dtfailadj = 5.0
-    ats_filerecord = None
-    if True:
-        atsperiod = [
-            (0, dt0, dtmin, dtmax, dtadj, dtfailadj),
-            (7, dt0, dtmin, dtmax, dtadj, dtfailadj),
-        ]
-        ats = flopy.mf6.ModflowUtlats(
-            sim, maxats=len(atsperiod), perioddata=atsperiod
-        )
-        ats_filerecord = name + ".ats"
 
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
         sim,
-        ats_filerecord=ats_filerecord,
         time_units="DAYS",
         nper=nper,
         perioddata=tdis_rc,
     )
+
+    if True:
+        ats_filerecord = name + ".ats"
+        atsperiod = [
+            (0, dt0, dtmin, dtmax, dtadj, dtfailadj),
+            (7, dt0, dtmin, dtmax, dtadj, dtfailadj),
+        ]
+        tdis.ats.initialize(
+            maxats=len(atsperiod),
+            perioddata=atsperiod,
+            filename=ats_filerecord,
+        )
 
     # create gwf model
     gwfname = name
@@ -113,7 +115,7 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
 
     # number of columns to be a lake for layer 1, 2, , ... len(lakend)
@@ -181,7 +183,7 @@ def build_model(idx, dir):
     ]
 
     # note: for specifying lake number, use fortran indexing!
-    fname = "{}.lak.obs.csv".format(gwfname)
+    fname = f"{gwfname}.lak.obs.csv"
     lak_obs = {
         fname: [
             ("lakestage", "stage", 1),
@@ -198,8 +200,8 @@ def build_model(idx, dir):
         print_input=True,
         print_flows=True,
         print_stage=True,
-        stage_filerecord="{}.lak.bin".format(gwfname),
-        budget_filerecord="{}.lak.bud".format(gwfname),
+        stage_filerecord=f"{gwfname}.lak.bin",
+        budget_filerecord=f"{gwfname}.lak.bud",
         nlakes=len(pak_data),
         ntables=0,
         packagedata=pak_data,
@@ -221,8 +223,8 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.cbc",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
@@ -247,7 +249,7 @@ def make_plot_xsect(sim, headall, stageall):
     fig = plt.figure(figsize=(8, 4))
 
     for ifig, itime in enumerate(itimes):
-        print("processing {} of {}".format(ifig + 1, nplots))
+        print(f"processing {ifig + 1} of {nplots}")
         ax = fig.add_subplot(nplots, 1, ifig + 1, aspect="equal")
         stage = stageall[itime].flatten()
         xmin = 0
@@ -333,9 +335,9 @@ def eval_results(sim):
     all_passed = True
     for itime, t in enumerate(times):
 
-        print("processing totim {}".format(t))
+        print(f"processing totim {t}")
         stage_current = stage[itime].flatten()
-        print("lake stage = {}".format(stage_current))
+        print(f"lake stage = {stage_current}")
 
         qlakleak = np.zeros(idomain.shape, dtype=float).flatten()
         ilak = np.zeros(idomain.shape, dtype=int).flatten()
@@ -465,7 +467,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

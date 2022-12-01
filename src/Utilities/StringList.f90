@@ -1,41 +1,38 @@
 module StringListModule
-  
+
   use KindModule, only: DP, I4B
   use ListModule, only: ListType
+  use CharacterStringModule, only: CharacterStringType
 
   private
   public :: AddStringToList, GetStringFromList
 
-  type :: CharacterContainerType
-    character(len=:), allocatable :: charstring
-  end type CharacterContainerType
-
 contains
 
-  subroutine ConstructCharacterContainer (newCharCont, text)
+  subroutine ConstructCharacterContainer(newCharCont, text)
     implicit none
-    type(CharacterContainerType), pointer, intent(out) :: newCharCont
+    type(CharacterStringType), pointer, intent(out) :: newCharCont
     character(len=*), intent(in) :: text
     !
-    allocate(newCharCont)
-    newCharCont%charstring = text
+    allocate (newCharCont)
+    newCharCont = text
     return
   end subroutine ConstructCharacterContainer
 
-  function CastAsCharacterContainerType(obj) result (res)
+  function CastAsCharacterStringType(obj) result(res)
     implicit none
     class(*), pointer, intent(inout) :: obj
-    type(CharacterContainerType), pointer :: res
+    type(CharacterStringType), pointer :: res
     !
     res => null()
     if (.not. associated(obj)) return
     !
     select type (obj)
-    type is (CharacterContainerType)
+    type is (CharacterStringType)
       res => obj
     end select
     return
-  end function CastAsCharacterContainerType
+  end function CastAsCharacterStringType
 
   subroutine AddStringToList(list, string)
     implicit none
@@ -44,19 +41,19 @@ contains
     character(len=*), intent(in) :: string
     ! -- local
     class(*), pointer :: obj
-    type(CharacterContainerType), pointer :: newCharacterContainer
+    type(CharacterStringType), pointer :: newCharacterContainer
     !
     newCharacterContainer => null()
     call ConstructCharacterContainer(newCharacterContainer, string)
     if (associated(newCharacterContainer)) then
       obj => newCharacterContainer
       call list%Add(obj)
-    endif
+    end if
     !
     return
   end subroutine AddStringToList
-  
-  function GetStringFromList(list, indx) result (string)
+
+  function GetStringFromList(list, indx) result(string)
     implicit none
     ! -- dummy
     type(ListType), intent(inout) :: list
@@ -64,14 +61,16 @@ contains
     character(len=:), allocatable :: string
     ! -- local
     class(*), pointer :: obj
-    type(CharacterContainerType), pointer :: charcont
+    type(CharacterStringType), pointer :: charcont
     !
-    string = ''
     obj => list%GetItem(indx)
-    charcont => CastAsCharacterContainerType(obj)
+    charcont => CastAsCharacterStringType(obj)
     if (associated(charcont)) then
-      string = charcont%charstring
-    endif
+      allocate (character(len=charcont%strlen()) :: string)
+      string(:) = charcont
+    else
+      string = ''
+    end if
     !
     return
   end function GetStringFromList

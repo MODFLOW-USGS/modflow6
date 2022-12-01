@@ -6,13 +6,14 @@
 
 # -- Path setup --------------------------------------------------------------
 
+import os
+import shutil
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import sys
-import os
-import shutil
 from subprocess import Popen, PIPE
 
 sys.path.insert(0, os.path.abspath(os.path.join("..", "doc")))
@@ -118,14 +119,9 @@ extensions = [
     "sphinx.ext.autosectionlabel",
     "nbsphinx",
     "nbsphinx_link",
-    "recommonmark",
+    "myst_parser",
     "sphinx_markdown_tables",
 ]
-
-source_suffix = {
-    ".rst": "restructuredtext",
-    ".md": "markdown",
-}
 
 # # Tell sphinx what the pygments highlight language should be.
 # highlight_language = 'fortran'

@@ -1,6 +1,7 @@
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -61,8 +62,8 @@ def build_model(idx, dir):
     )
 
     # create iterative model solution and register the gwf model with it
-    csv0 = "{}.outer.ims.csv".format(name)
-    csv1 = "{}.inner.ims.csv".format(name)
+    csv0 = f"{name}.outer.ims.csv"
+    csv1 = f"{name}.inner.ims.csv"
     ims = flopy.mf6.ModflowIms(
         sim,
         csv_outer_output_filerecord=csv0,
@@ -204,7 +205,7 @@ def build_model(idx, dir):
         [3, "status", "active"],
         [4, "status", "active"],
     ]
-    cnvgpth = "{}.sfr.cnvg.csv".format(name)
+    cnvgpth = f"{name}.sfr.cnvg.csv"
     sfr = flopy.mf6.ModflowGwfsfr(
         gwf,
         mover=True,
@@ -285,7 +286,7 @@ def build_model(idx, dir):
         (2, "rate", 0.0),
     ]
     perioddata = lakeperioddata + outletperioddata
-    cnvgpth = "{}.lak.cnvg.csv".format(name)
+    cnvgpth = f"{name}.lak.cnvg.csv"
     lak = flopy.mf6.ModflowGwflak(
         gwf,
         mover=True,
@@ -323,7 +324,7 @@ def build_model(idx, dir):
         [7, 1.0e-8, 0, 0, 0, 0, 0, 0],
         [8, 1.0e-8, 0, 0, 0, 0, 0, 0],
     ]
-    cnvgpth = "{}.uzf.cnvg.csv".format(name)
+    cnvgpth = f"{name}.uzf.cnvg.csv"
     uzf = flopy.mf6.ModflowGwfuzf(
         gwf,
         mover=True,
@@ -360,7 +361,7 @@ def build_model(idx, dir):
     mvr = flopy.mf6.ModflowGwfmvr(
         gwf,
         maxmvr=len(perioddata),
-        budget_filerecord="{}.mvr.bud".format(name),
+        budget_filerecord=f"{name}.mvr.bud",
         maxpackages=len(packages),
         print_flows=True,
         packages=packages,
@@ -370,8 +371,8 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(name),
-        head_filerecord="{}.hds".format(name),
+        budget_filerecord=f"{name}.cbc",
+        head_filerecord=f"{name}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
@@ -484,7 +485,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

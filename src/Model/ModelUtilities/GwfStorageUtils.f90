@@ -24,7 +24,7 @@ contains
   !> @brief Calculate the specific storage terms
   !!
   !! Subroutine to calculate the specific storage terms for a cell using
-  !! the cell geometry, current and previous specific storage capacity, 
+  !! the cell geometry, current and previous specific storage capacity,
   !! current and previous cell saturation, and the current and previous head.
   !! Subroutine can optionally return the flow rate from specific storage.
   !!
@@ -33,19 +33,19 @@ contains
                           rho1, rho1old, snnew, snold, hnew, hold, &
                           aterm, rhsterm, rate)
     ! -- dummy variables
-    integer(I4B), intent(in) :: iconvert      !< flag indicating if cell is convertible
-    integer(I4B), intent(in) :: iorig_ss      !< flag indicating if the original MODFLOW 6 specific storage formulation is being used
-    integer(I4B), intent(in) :: iconf_ss      !< flag indicating if specific storage only applies under confined conditions
-    real(DP), intent(in) :: top               !< top of cell
-    real(DP), intent(in) :: bot               !< bottom of cell
-    real(DP), intent(in) :: rho1              !< current specific storage capacity
-    real(DP), intent(in) :: rho1old           !< previous specific storage capacity
-    real(DP), intent(in) :: snnew             !< current cell saturation
-    real(DP), intent(in) :: snold             !< previous cell saturation
-    real(DP), intent(in) :: hnew              !< current head
-    real(DP), intent(in) :: hold              !< previous head
-    real(DP), intent(inout) :: aterm          !< coefficient matrix term
-    real(DP), intent(inout) :: rhsterm        !< right-hand side term
+    integer(I4B), intent(in) :: iconvert !< flag indicating if cell is convertible
+    integer(I4B), intent(in) :: iorig_ss !< flag indicating if the original MODFLOW 6 specific storage formulation is being used
+    integer(I4B), intent(in) :: iconf_ss !< flag indicating if specific storage only applies under confined conditions
+    real(DP), intent(in) :: top !< top of cell
+    real(DP), intent(in) :: bot !< bottom of cell
+    real(DP), intent(in) :: rho1 !< current specific storage capacity
+    real(DP), intent(in) :: rho1old !< previous specific storage capacity
+    real(DP), intent(in) :: snnew !< current cell saturation
+    real(DP), intent(in) :: snold !< previous cell saturation
+    real(DP), intent(in) :: hnew !< current head
+    real(DP), intent(in) :: hold !< previous head
+    real(DP), intent(inout) :: aterm !< coefficient matrix term
+    real(DP), intent(inout) :: rhsterm !< right-hand side term
     real(DP), intent(inout), optional :: rate !< calculated specific storage rate
     ! -- local variables
     real(DP) :: tthk
@@ -93,22 +93,22 @@ contains
   !> @brief Calculate the specific yield storage terms
   !!
   !! Subroutine to calculate the specific yield storage terms for a cell
-  !! using the cell geometry, current and previous specific yield storage 
-  !! capacity, and the current and previous cell saturation. Subroutine 
+  !! using the cell geometry, current and previous specific yield storage
+  !! capacity, and the current and previous cell saturation. Subroutine
   !! can optionally return the flow rate from specific yield.
   !!
   !<
   pure subroutine SyTerms(top, bot, rho2, rho2old, snnew, snold, &
                           aterm, rhsterm, rate)
     ! -- dummy variables
-    real(DP), intent(in) :: top               !< top of cell
-    real(DP), intent(in) :: bot               !< bottom of cell
-    real(DP), intent(in) :: rho2              !< current specific yield storage capacity
-    real(DP), intent(in) :: rho2old           !< previous specific yield storage capacity
-    real(DP), intent(in) :: snnew             !< current cell saturation
-    real(DP), intent(in) :: snold             !< previous cell saturation
-    real(DP), intent(inout) :: aterm          !< coefficient matrix term
-    real(DP), intent(inout) :: rhsterm        !< right-hand side term
+    real(DP), intent(in) :: top !< top of cell
+    real(DP), intent(in) :: bot !< bottom of cell
+    real(DP), intent(in) :: rho2 !< current specific yield storage capacity
+    real(DP), intent(in) :: rho2old !< previous specific yield storage capacity
+    real(DP), intent(in) :: snnew !< current cell saturation
+    real(DP), intent(in) :: snold !< previous cell saturation
+    real(DP), intent(inout) :: aterm !< coefficient matrix term
+    real(DP), intent(inout) :: rhsterm !< right-hand side term
     real(DP), intent(inout), optional :: rate !< calculated specific yield rate
     ! -- local variables
     real(DP) :: tthk
@@ -125,7 +125,7 @@ contains
       else
         rhsterm = tthk * (DZERO - rho2old * snold)
       end if
-    ! -- known flow from specific yield
+      ! -- known flow from specific yield
     else
       rhsterm = tthk * (rho2 * snnew - rho2old * snold)
     end if
@@ -148,11 +148,11 @@ contains
   !<
   pure function SsCapacity(istor_coef, top, bot, area, ss) result(sc1)
     ! -- dummy variables
-    integer(I4B), intent(in) :: istor_coef  !< flag indicating if ss is the storage coefficient
-    real(DP), intent(in) :: top             !< top of cell
-    real(DP), intent(in) :: bot             !< bottom of cell
-    real(DP), intent(in) :: area            !< horizontal cell area
-    real(DP), intent(in) :: ss              !< specific storage or storage coefficient
+    integer(I4B), intent(in) :: istor_coef !< flag indicating if ss is the storage coefficient
+    real(DP), intent(in) :: top !< top of cell
+    real(DP), intent(in) :: bot !< bottom of cell
+    real(DP), intent(in) :: area !< horizontal cell area
+    real(DP), intent(in) :: ss !< specific storage or storage coefficient
     ! -- local variables
     real(DP) :: sc1
     real(DP) :: thick
@@ -162,7 +162,7 @@ contains
     else
       thick = DONE
     end if
-    sc1 = ss*thick*area
+    sc1 = ss * thick * area
     !
     ! -- return
     return
@@ -177,12 +177,12 @@ contains
   !<
   pure function SyCapacity(area, sy) result(sc2)
     ! -- dummy variables
-    real(DP), intent(in) :: area       !< horizontal cell area
-    real(DP), intent(in) :: sy         !< specific yield
+    real(DP), intent(in) :: area !< horizontal cell area
+    real(DP), intent(in) :: sy !< specific yield
     ! -- local variables
     real(DP) :: sc2
     ! -- calculate specific yield capacity
-    sc2 = sy*area
+    sc2 = sy * area
     !
     ! -- return
     return

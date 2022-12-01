@@ -7,6 +7,7 @@ Test to make sure that disu is working correctly
 import os
 import shutil
 import subprocess
+
 import numpy as np
 
 try:
@@ -37,7 +38,7 @@ def run_mf6(argv, ws):
     if result is not None:
         c = result.decode("utf-8")
         c = c.rstrip("\r\n")
-        print("{}".format(c))
+        print(f"{c}")
         buff.append(c)
 
     return proc.returncode, buff
@@ -103,8 +104,8 @@ def test_disu_idomain_simple():
     chd = flopy.mf6.modflow.ModflowGwfchd(gwf, stress_period_data=spd)
     oc = flopy.mf6.modflow.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.bud".format(name),
-        head_filerecord="{}.hds".format(name),
+        budget_filerecord=f"{name}.bud",
+        head_filerecord=f"{name}.hds",
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
     sim.write_simulation()
@@ -141,7 +142,7 @@ def test_disu_idomain_simple():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     test_disu_simple()
     test_disu_idomain_simple()

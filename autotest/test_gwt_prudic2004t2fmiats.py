@@ -5,9 +5,10 @@
 # failure occurs.
 
 import os
-import pytest
 import shutil
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -26,9 +27,8 @@ except:
     raise Exception(msg)
 
 
-from framework import set_teardown_test
-
 import targets
+from framework import set_teardown_test
 
 exe_name_mf6 = targets.target_dict["mf6"]
 exe_name_mf6 = os.path.abspath(exe_name_mf6)
@@ -89,7 +89,7 @@ def run_flow_model():
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
 
     dis = flopy.mf6.ModflowGwfdis(
@@ -102,6 +102,7 @@ def run_flow_model():
         top=top,
         botm=botm,
         idomain=idomain,
+        length_units="feet",
     )
     idomain = dis.idomain.array
 
@@ -132,8 +133,8 @@ def run_flow_model():
 
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.bud".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.bud",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[
             ("COLUMNS", ncol, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -358,13 +359,16 @@ def run_flow_model():
         [1, 35.2, nlakecon[1], "lake2"],
     ]
     # <outletno> <lakein> <lakeout> <couttype> <invert> <width> <rough> <slope>
-    outlets = [[0, 0, -1, "MANNING", 44.5, 5.000000, 0.03, 0.2187500e-02]]
+    outlets = [
+        [0, 0, -1, "MANNING", 44.5, 3.36493214532915, 0.03, 0.2187500e-02]
+    ]
 
     lake_on = True
     if lake_on:
         lak = flopy.mf6.ModflowGwflak(
             gwf,
             time_conversion=86400.000,
+            length_conversion=3.28081,
             print_stage=True,
             print_flows=True,
             stage_filerecord=gwfname + ".lak.bin",
@@ -465,21 +469,6 @@ def run_transport_model():
         continue_=False,
     )
 
-    ats_filerecord = None
-    if True:
-        dt0 = 100
-        dtmin = 1.0e-5
-        dtmax = 10000.0
-        dtadj = 2.0
-        dtfailadj = 5.0
-        atsperiod = [
-            (1, dt0, dtmin, dtmax, dtadj, dtfailadj),
-        ]
-        ats = flopy.mf6.ModflowUtlats(
-            sim, maxats=len(atsperiod), perioddata=atsperiod
-        )
-        ats_filerecord = name + ".ats"
-
     tdis_rc = [(1.0, 1, 1.0), (365.25 * 25, 25, 1.0)]
     nper = len(tdis_rc)
     tdis = flopy.mf6.ModflowTdis(
@@ -487,8 +476,23 @@ def run_transport_model():
         time_units="DAYS",
         nper=nper,
         perioddata=tdis_rc,
-        ats_filerecord=ats_filerecord,
     )
+
+    if True:
+        dt0 = 100
+        dtmin = 1.0e-5
+        dtmax = 10000.0
+        dtadj = 2.0
+        dtfailadj = 5.0
+        ats_filerecord = name + ".ats"
+        atsperiod = [
+            (1, dt0, dtmin, dtmax, dtadj, dtfailadj),
+        ]
+        tdis.ats.initialize(
+            maxats=len(atsperiod),
+            perioddata=atsperiod,
+            filename=ats_filerecord,
+        )
 
     gwt = flopy.mf6.ModflowGwt(sim, modelname=gwtname)
 
@@ -512,7 +516,7 @@ def run_transport_model():
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwtname),
+        filename=f"{gwtname}.ims",
     )
     sim.register_ims_package(imsgwt, [gwt.name])
 
@@ -594,15 +598,14 @@ def run_transport_model():
     nreach = 38
     sftpackagedata = []
     for irno in range(nreach):
-        t = (irno, 0.0, 99.0, 999.0, "myreach{}".format(irno + 1))
+        t = (irno, 0.0, 99.0, 999.0, f"myreach{irno + 1}")
         sftpackagedata.append(t)
 
     sftperioddata = [(0, "STATUS", "ACTIVE"), (0, "CONCENTRATION", 0.0)]
 
     sft_obs = {
         (gwtname + ".sft.obs.csv",): [
-            ("sft{}conc".format(i + 1), "CONCENTRATION", i + 1)
-            for i in range(nreach)
+            (f"sft{i + 1}conc", "CONCENTRATION", i + 1) for i in range(nreach)
         ]
     }
     # append additional obs attributes to obs dictionary
@@ -642,8 +645,8 @@ def run_transport_model():
 
     oc = flopy.mf6.ModflowGwtoc(
         gwt,
-        budget_filerecord="{}.cbc".format(gwtname),
-        concentration_filerecord="{}.ucn".format(gwtname),
+        budget_filerecord=f"{gwtname}.cbc",
+        concentration_filerecord=f"{gwtname}.ucn",
         concentrationprintrecord=[
             ("COLUMNS", ncol, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -751,7 +754,7 @@ def run_transport_model():
     ]
     ans_lak1 = np.array(ans_lak1)
     d = res_lak1 - ans_lak1
-    msg = "{}\n{}\n{}".format(res_lak1, ans_lak1, d)
+    msg = f"{res_lak1}\n{ans_lak1}\n{d}"
     assert np.allclose(res_lak1, ans_lak1, atol=atol), msg
 
     res_sfr3 = sfaconc[:, 30]
@@ -790,7 +793,7 @@ def run_transport_model():
     ]
     ans_sfr3 = np.array(ans_sfr3)
     d = res_sfr3 - ans_sfr3
-    msg = "{}\n{}\n{}".format(res_sfr3, ans_sfr3, d)
+    msg = f"{res_sfr3}\n{ans_sfr3}\n{d}"
     assert np.allclose(res_sfr3, ans_sfr3, atol=atol), msg
 
     res_sfr4 = sfaconc[:, 37]
@@ -829,7 +832,7 @@ def run_transport_model():
     ]
     ans_sfr4 = np.array(ans_sfr4)
     d = res_sfr4 - ans_sfr4
-    msg = "{}\n{}\n{}".format(res_sfr4, ans_sfr4, d)
+    msg = f"{res_sfr4}\n{ans_sfr4}\n{d}"
     assert np.allclose(res_sfr4, ans_sfr4, atol=atol), msg
 
     # make some checks on lake obs csv file
@@ -838,10 +841,8 @@ def run_transport_model():
     try:
         tc = np.genfromtxt(fname, names=True, delimiter=",")
     except:
-        assert False, 'could not load data from "{}"'.format(fname)
-    errmsg = "to-mvr boundname and outlet number do not match for {}".format(
-        fname
-    )
+        assert False, f'could not load data from "{fname}"'
+    errmsg = f"to-mvr boundname and outlet number do not match for {fname}"
     assert np.allclose(tc["LKT1TOMVR"], tc["LKT1BNTOMVR"]), errmsg
 
     # check simulation list file for ats information
@@ -863,7 +864,7 @@ def run_transport_model():
     ]
     all_found = True
     for stxt in txtlist:
-        msg = "Checking for string in mfsim.lst: {}".format(stxt)
+        msg = f"Checking for string in mfsim.lst: {stxt}"
         found = False
         for line in lines:
             if stxt in line:
@@ -872,7 +873,7 @@ def run_transport_model():
         if not found:
             msg += " -- NOT FOUND!"
             all_found = False
-            print("text not found in mfsim.lst: {}".format(stxt))
+            print(f"text not found in mfsim.lst: {stxt}")
         print(msg)
     assert (
         all_found
@@ -894,7 +895,7 @@ def test_prudic2004t2fmiats():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run tests
     test_prudic2004t2fmiats()

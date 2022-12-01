@@ -6,11 +6,11 @@
 module ObsUtilityModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule,     only: LENOBSNAME, LENBIGLINE
-  use ObserveModule,       only: ObserveType
+  use ConstantsModule, only: LENOBSNAME, LENBIGLINE
+  use ObserveModule, only: ObserveType
   use ObsOutputListModule, only: ObsOutputListType
-  use ObsOutputModule,     only: ObsOutputType
-  use TdisModule,          only: totim
+  use ObsOutputModule, only: ObsOutputType
+  use TdisModule, only: totim
 
   implicit none
 
@@ -32,16 +32,16 @@ contains
 ! --------------------------------------------------------------------------
     implicit none
     ! -- dummy
-    character(len=*),                 intent(in)    :: fmtc
-    type(ObserveType),                intent(inout) :: obsrv
+    character(len=*), intent(in) :: fmtc
+    type(ObserveType), intent(inout) :: obsrv
     type(ObsOutputListType), pointer, intent(inout) :: obsOutputList
-    real(DP),                         intent(in)    :: value
+    real(DP), intent(in) :: value
     ! -- local
-    integer(I4B)                       :: indx
-    integer(I4B)                       :: nunit
-    character(len=50)                  :: cval
+    integer(I4B) :: indx
+    integer(I4B) :: nunit
+    character(len=50) :: cval
     character(len=LENOBSNAME), pointer :: linout => null()
-    type(ObsOutputType),       pointer :: ObsOutput => null()
+    type(ObsOutputType), pointer :: ObsOutput => null()
     !---------------------------------------------------------------------------
     ! -- format for totim
 10  format(G20.13)
@@ -52,13 +52,13 @@ contains
     ObsOutput => obsOutputList%Get(indx)
     linout => obsOutput%lineout
     if (linout == '') then
-      write(linout,10) totim
-      write(cval,10) totim
-      write(nunit, '(a)', advance='NO') trim(adjustl(cval))
-    endif
+      write (linout, 10) totim
+      write (cval, 10) totim
+      write (nunit, '(a)', advance='NO') trim(adjustl(cval))
+    end if
     ! -- append value to output line
-    write(cval,fmtc)value
-    write(nunit, '(a,a)', advance='NO') ',', trim(adjustl(cval))
+    write (cval, fmtc) value
+    write (nunit, '(a,a)', advance='NO') ',', trim(adjustl(cval))
     !
     ! -- return
     return
@@ -86,11 +86,11 @@ contains
     type(ObsOutputListType), pointer, intent(inout) :: obsOutputList
     real(DP), intent(in) :: value
     ! -- local
-    integer(I4B)                       :: indx, nunit
+    integer(I4B) :: indx, nunit
     character(len=LENOBSNAME), pointer :: linout => null()
-    real(real32)                       :: totimsngl, valsngl
-    real(real64)                       :: totimdbl, valdbl
-    type(ObsOutputType), pointer       :: obsOutput => null()
+    real(real32) :: totimsngl, valsngl
+    real(real64) :: totimdbl, valdbl
+    type(ObsOutputType), pointer :: obsOutput => null()
     !---------------------------------------------------------------------------
     ! -- formats
 10  format(G20.13)
@@ -101,23 +101,23 @@ contains
     obsOutput => obsOutputList%Get(indx)
     linout => obsOutput%lineout
     if (linout == '') then
-      write(linout,10)totim
+      write (linout, 10) totim
       if (iprec == 1) then
         totimsngl = real(totim, real32)
-        write(nunit)totimsngl
+        write (nunit) totimsngl
       elseif (iprec == 2) then
         totimdbl = totim
-        write(nunit)totimdbl
-      endif
-    endif
+        write (nunit) totimdbl
+      end if
+    end if
     ! -- write value to unformatted output
     if (iprec == 1) then
       valsngl = real(value, real32)
-      write(nunit)valsngl
+      write (nunit) valsngl
     elseif (iprec == 2) then
       valdbl = value
-      write(nunit)valdbl
-    endif
+      write (nunit) valdbl
+    end if
     !
     ! -- return
     return

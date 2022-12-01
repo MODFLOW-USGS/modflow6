@@ -1,5 +1,7 @@
 import os
+
 import pytest
+
 from budget_file_compare import eval_bud_diff
 
 try:
@@ -195,7 +197,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

@@ -2,16 +2,16 @@
 module UzfModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, DEM6, DEM4, DEM2, DEM1, DHALF,              &
-                             DONE, DHUNDRED,                                    &
-                             LINELENGTH, LENFTYPE, LENPACKAGENAME,              &
-                             LENBOUNDNAME, LENBUDTXT, LENPAKLOC, DNODATA,       &
-                             NAMEDBOUNDFLAG, MAXCHARLEN,                        &
-                             DHNOFLO, DHDRY,                                    &
-                             TABLEFT, TABCENTER, TABRIGHT,                      &
+  use ConstantsModule, only: DZERO, DEM6, DEM4, DEM2, DEM1, DHALF, &
+                             DONE, DHUNDRED, &
+                             LINELENGTH, LENFTYPE, LENPACKAGENAME, &
+                             LENBOUNDNAME, LENBUDTXT, LENPAKLOC, DNODATA, &
+                             NAMEDBOUNDFLAG, MAXCHARLEN, &
+                             DHNOFLO, DHDRY, &
+                             TABLEFT, TABCENTER, TABRIGHT, &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use GenericUtilitiesModule, only: sim_message
-  use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr,      &
+  use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr, &
                                  mem_deallocate
   use MemoryHelperModule, only: create_mem_path
   use SparseModule, only: sparsematrix
@@ -29,8 +29,8 @@ module UzfModule
 
   implicit none
 
-  character(len=LENFTYPE)       :: ftype = 'UZF'
-  character(len=LENPACKAGENAME) :: text  = '       UZF CELLS' 
+  character(len=LENFTYPE) :: ftype = 'UZF'
+  character(len=LENPACKAGENAME) :: text = '       UZF CELLS'
 
   private
   public :: uzf_create
@@ -41,62 +41,62 @@ module UzfModule
     integer(I4B), pointer :: iprwcont => null()
     integer(I4B), pointer :: iwcontout => null()
     integer(I4B), pointer :: ibudgetout => null()
-    integer(I4B), pointer :: ibudcsv => null()  !< unit number for csv budget output file
+    integer(I4B), pointer :: ibudcsv => null() !< unit number for csv budget output file
     integer(I4B), pointer :: ipakcsv => null()
     !
-    type(BudgetObjectType), pointer                    :: budobj      => null()
-    integer(I4B), pointer                              :: bditems     => null()  !< number of budget items
-    integer(I4B), pointer                              :: nbdtxt      => null()  !< number of budget text items
-    character(len=LENBUDTXT), dimension(:), pointer,                            &
-                              contiguous               :: bdtxt       => null()  !< budget items written to cbc file
-    character(len=LENBOUNDNAME), dimension(:), pointer,                         &
-                                 contiguous :: uzfname => null()
+    type(BudgetObjectType), pointer :: budobj => null()
+    integer(I4B), pointer :: bditems => null() !< number of budget items
+    integer(I4B), pointer :: nbdtxt => null() !< number of budget text items
+    character(len=LENBUDTXT), dimension(:), pointer, &
+      contiguous :: bdtxt => null() !< budget items written to cbc file
+    character(len=LENBOUNDNAME), dimension(:), pointer, &
+      contiguous :: uzfname => null()
     !
     ! -- uzf table objects
-    type(TableType), pointer                           :: pakcsvtab   => null()
+    type(TableType), pointer :: pakcsvtab => null()
     !
     ! -- uzf kinematic object
-    type(UzfCellGroupType), pointer                    :: uzfobj      => null()
-    type(UzfCellGroupType)                             :: uzfobjwork
+    type(UzfCellGroupType), pointer :: uzfobj => null()
+    type(UzfCellGroupType) :: uzfobjwork
     !
     ! -- pointer to gwf variables
-    integer(I4B), pointer                              :: gwfiss      => null()
-    real(DP), dimension(:), pointer, contiguous        :: gwftop      => null()
-    real(DP), dimension(:), pointer, contiguous        :: gwfbot      => null()
-    real(DP), dimension(:), pointer, contiguous        :: gwfarea     => null()
-    real(DP), dimension(:), pointer, contiguous        :: gwfhcond    => null()
+    integer(I4B), pointer :: gwfiss => null()
+    real(DP), dimension(:), pointer, contiguous :: gwftop => null()
+    real(DP), dimension(:), pointer, contiguous :: gwfbot => null()
+    real(DP), dimension(:), pointer, contiguous :: gwfarea => null()
+    real(DP), dimension(:), pointer, contiguous :: gwfhcond => null()
     !
     ! -- uzf data
-    integer(I4B), pointer                               :: ntrail       => null()
-    integer(I4B), pointer                               :: nsets        => null()
-    integer(I4B), pointer                               :: nwav         => null()
-    integer(I4B), pointer                               :: nodes        => null()
-    integer(I4B), pointer                               :: readflag     => null()
-    integer(I4B), pointer                               :: ietflag      => null()  !< et flag, 0 is off, 1 or 2 are different types
-    integer(I4B), pointer                               :: igwetflag    => null()
-    integer(I4B), pointer                               :: iseepflag    => null()
-    integer(I4B), pointer                               :: imaxcellcnt  => null()
-    integer(I4B), pointer                               :: iuzf2uzf     => null()
+    integer(I4B), pointer :: ntrail => null()
+    integer(I4B), pointer :: nsets => null()
+    integer(I4B), pointer :: nwav => null()
+    integer(I4B), pointer :: nodes => null()
+    integer(I4B), pointer :: readflag => null()
+    integer(I4B), pointer :: ietflag => null() !< et flag, 0 is off, 1 or 2 are different types
+    integer(I4B), pointer :: igwetflag => null()
+    integer(I4B), pointer :: iseepflag => null()
+    integer(I4B), pointer :: imaxcellcnt => null()
+    integer(I4B), pointer :: iuzf2uzf => null()
     ! -- integer vectors
-    integer(I4B), dimension(:), pointer, contiguous     :: igwfnode     => null()
-    integer(I4B), dimension(:), pointer, contiguous     :: ia => null()
-    integer(I4B), dimension(:), pointer, contiguous     :: ja => null()
+    integer(I4B), dimension(:), pointer, contiguous :: igwfnode => null()
+    integer(I4B), dimension(:), pointer, contiguous :: ia => null()
+    integer(I4B), dimension(:), pointer, contiguous :: ja => null()
     ! -- double precision output vectors
-    real(DP), dimension(:), pointer, contiguous         :: appliedinf   => null()
-    real(DP), dimension(:), pointer, contiguous         :: rejinf       => null()
-    real(DP), dimension(:), pointer, contiguous         :: rejinf0      => null()
-    real(DP), dimension(:), pointer, contiguous         :: rejinftomvr  => null()
-    real(DP), dimension(:), pointer, contiguous         :: infiltration => null()
-    real(DP), dimension(:), pointer, contiguous         :: gwet         => null()
-    real(DP), dimension(:), pointer, contiguous         :: uzet         => null()
-    real(DP), dimension(:), pointer, contiguous         :: gwd          => null()
-    real(DP), dimension(:), pointer, contiguous         :: gwd0         => null()
-    real(DP), dimension(:), pointer, contiguous         :: gwdtomvr     => null()
-    real(DP), dimension(:), pointer, contiguous         :: rch          => null()
-    real(DP), dimension(:), pointer, contiguous         :: rch0         => null()
-    real(DP), dimension(:), pointer, contiguous         :: qsto         => null()  !< change in stored mobile water per time for this time step
-    real(DP), dimension(:), pointer, contiguous         :: wcnew        => null()  !< water content for this time step
-    real(DP), dimension(:), pointer, contiguous         :: wcold        => null()  !< water content for previous time step
+    real(DP), dimension(:), pointer, contiguous :: appliedinf => null()
+    real(DP), dimension(:), pointer, contiguous :: rejinf => null()
+    real(DP), dimension(:), pointer, contiguous :: rejinf0 => null()
+    real(DP), dimension(:), pointer, contiguous :: rejinftomvr => null()
+    real(DP), dimension(:), pointer, contiguous :: infiltration => null()
+    real(DP), dimension(:), pointer, contiguous :: gwet => null()
+    real(DP), dimension(:), pointer, contiguous :: uzet => null()
+    real(DP), dimension(:), pointer, contiguous :: gwd => null()
+    real(DP), dimension(:), pointer, contiguous :: gwd0 => null()
+    real(DP), dimension(:), pointer, contiguous :: gwdtomvr => null()
+    real(DP), dimension(:), pointer, contiguous :: rch => null()
+    real(DP), dimension(:), pointer, contiguous :: rch0 => null()
+    real(DP), dimension(:), pointer, contiguous :: qsto => null() !< change in stored mobile water per time for this time step
+    real(DP), dimension(:), pointer, contiguous :: wcnew => null() !< water content for this time step
+    real(DP), dimension(:), pointer, contiguous :: wcold => null() !< water content for previous time step
     !
     ! -- timeseries aware variables
     real(DP), dimension(:), pointer, contiguous :: sinf => null()
@@ -106,7 +106,7 @@ module UzfModule
     real(DP), dimension(:), pointer, contiguous :: ha => null()
     real(DP), dimension(:), pointer, contiguous :: hroot => null()
     real(DP), dimension(:), pointer, contiguous :: rootact => null()
-    real(DP), dimension(:,:), pointer, contiguous :: uauxvar => null()
+    real(DP), dimension(:, :), pointer, contiguous :: uauxvar => null()
     !
     ! -- convergence check
     integer(I4B), pointer :: iconvchk => null()
@@ -115,10 +115,10 @@ module UzfModule
     real(DP), dimension(:), pointer, contiguous :: deriv => null()
     !
     ! budget variables
-    real(DP), pointer                          :: totfluxtot  => null()
-    integer(I4B), pointer                      :: issflag     => null()
-    integer(I4B), pointer                      :: issflagold  => null()
-    integer(I4B), pointer                      :: istocb      => null()
+    real(DP), pointer :: totfluxtot => null()
+    integer(I4B), pointer :: issflag => null()
+    integer(I4B), pointer :: issflagold => null()
+    integer(I4B), pointer :: istocb => null()
     !
     ! -- uzf cbc budget items
     integer(I4B), pointer :: cbcauxitems => NULL()
@@ -163,7 +163,7 @@ module UzfModule
     ! -- budget
     procedure, private :: uzf_setup_budobj
     procedure, private :: uzf_fill_budobj
-    
+
   end type UzfType
 
 contains
@@ -181,10 +181,10 @@ contains
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(BndType), pointer :: packobj
-    integer(I4B),intent(in) :: id
-    integer(I4B),intent(in) :: ibcnum
-    integer(I4B),intent(in) :: inunit
-    integer(I4B),intent(in) :: iout
+    integer(I4B), intent(in) :: id
+    integer(I4B), intent(in) :: ibcnum
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
     ! -- local
@@ -192,7 +192,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
-    allocate(uzfobj)
+    allocate (uzfobj)
     packobj => uzfobj
     !
     ! -- create name and memory path
@@ -210,9 +210,9 @@ contains
     packobj%id = id
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 1
-    packobj%iscloc = 0  ! not supported
+    packobj%iscloc = 0 ! not supported
     packobj%isadvpak = 1
-    packobj%ictMemPath = create_mem_path(namemodel,'NPF')
+    packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
     ! -- return
     return
@@ -240,7 +240,8 @@ contains
     call this%BndType%allocate_arrays()
     !
     ! -- set pointers now that data is available
-    call mem_setptr(this%gwfhcond, 'CONDSAT', create_mem_path(this%name_model,'NPF'))
+    call mem_setptr(this%gwfhcond, 'CONDSAT', create_mem_path(this%name_model, &
+                                                              'NPF'))
     call mem_setptr(this%gwfiss, 'ISS', create_mem_path(this%name_model))
     !
     ! -- set boundname for each connection
@@ -248,7 +249,10 @@ contains
       do n = 1, this%nodes
         this%boundname(n) = this%uzfname(n)
       end do
-    endif
+    end if
+    !
+    ! -- copy boundname into boundname_cst
+    call this%copy_boundname()
     !
     ! -- copy igwfnode into nodelist and set water table
     do i = 1, this%nodes
@@ -260,9 +264,9 @@ contains
     !
     ! -- setup pakmvrobj
     if (this%imover /= 0) then
-      allocate(this%pakmvrobj)
+      allocate (this%pakmvrobj)
       call this%pakmvrobj%ar(this%maxbound, this%maxbound, this%memoryPath)
-    endif
+    end if
     !
     ! -- return
     return
@@ -277,10 +281,10 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(UzfType),   intent(inout) :: this
+    class(UzfType), intent(inout) :: this
     ! -- local
-    integer (I4B) :: i
-    integer (I4B) :: j
+    integer(I4B) :: i
+    integer(I4B) :: j
 ! ------------------------------------------------------------------------------
     !
     ! -- call standard BndType allocate scalars (now done from AR)
@@ -291,8 +295,10 @@ contains
     call mem_allocate(this%appliedinf, this%nodes, 'APPLIEDINF', this%memoryPath)
     call mem_allocate(this%rejinf, this%nodes, 'REJINF', this%memoryPath)
     call mem_allocate(this%rejinf0, this%nodes, 'REJINF0', this%memoryPath)
-    call mem_allocate(this%rejinftomvr, this%nodes, 'REJINFTOMVR', this%memoryPath)
-    call mem_allocate(this%infiltration, this%nodes, 'INFILTRATION', this%memoryPath)
+    call mem_allocate(this%rejinftomvr, this%nodes, 'REJINFTOMVR', &
+                      this%memoryPath)
+    call mem_allocate(this%infiltration, this%nodes, 'INFILTRATION', &
+                      this%memoryPath)
     call mem_allocate(this%gwet, this%nodes, 'GWET', this%memoryPath)
     call mem_allocate(this%uzet, this%nodes, 'UZET', this%memoryPath)
     call mem_allocate(this%gwd, this%nodes, 'GWD', this%memoryPath)
@@ -304,7 +310,7 @@ contains
     call mem_allocate(this%deriv, this%nodes, 'DERIV', this%memoryPath)
 
     ! -- integer vectors
-    call mem_allocate(this%ia, this%dis%nodes+1, 'IA', this%memoryPath)
+    call mem_allocate(this%ia, this%dis%nodes + 1, 'IA', this%memoryPath)
     call mem_allocate(this%ja, this%nodes, 'JA', this%memoryPath)
 
     ! -- allocate timeseries aware variables
@@ -315,8 +321,9 @@ contains
     call mem_allocate(this%ha, this%nodes, 'HA', this%memoryPath)
     call mem_allocate(this%hroot, this%nodes, 'HROOT', this%memoryPath)
     call mem_allocate(this%rootact, this%nodes, 'ROOTACT', this%memoryPath)
-    call mem_allocate(this%uauxvar, this%naux, this%nodes, 'UAUXVAR', this%memoryPath)
-    
+    call mem_allocate(this%uauxvar, this%naux, this%nodes, 'UAUXVAR', &
+                      this%memoryPath)
+
     ! -- initialize
     do i = 1, this%nodes
       this%appliedinf(i) = DZERO
@@ -350,12 +357,12 @@ contains
         end if
       end do
     end do
-    do i = 1, this%dis%nodes+1
+    do i = 1, this%dis%nodes + 1
       this%ia(i) = 0
     end do
     !
     ! -- allocate and initialize character array for budget text
-    allocate(this%bdtxt(this%nbdtxt))
+    allocate (this%bdtxt(this%nbdtxt))
     this%bdtxt(1) = '         UZF-INF'
     this%bdtxt(2) = '       UZF-GWRCH'
     this%bdtxt(3) = '         UZF-GWD'
@@ -368,11 +375,11 @@ contains
     do i = 1, this%nodes
       this%wcnew(i) = DZERO
       this%wcold(i) = DZERO
-    end do  
+    end do
     !
     ! -- allocate character array for aux budget text
-    allocate(this%cauxcbc(this%cbcauxitems))
-    allocate(this%uzfname(this%nodes))
+    allocate (this%cauxcbc(this%cbcauxitems))
+    allocate (this%uzfname(this%nodes))
     !
     ! -- allocate and initialize qauxcbc
     call mem_allocate(this%qauxcbc, this%cbcauxitems, 'QAUXCBC', this%memoryPath)
@@ -382,7 +389,7 @@ contains
     !
     ! -- return
     return
-    end subroutine uzf_allocate_arrays
+  end subroutine uzf_allocate_arrays
 !
 
   subroutine uzf_options(this, option, found)
@@ -400,130 +407,121 @@ contains
     use InputOutputModule, only: urword, getunit, openfile
     implicit none
     ! -- dummy
-    class(uzftype),   intent(inout) :: this
+    class(uzftype), intent(inout) :: this
     character(len=*), intent(inout) :: option
-    logical,          intent(inout) :: found
+    logical, intent(inout) :: found
     ! -- local
     character(len=MAXCHARLEN) :: fname, keyword
     ! -- formats
-    character(len=*),parameter :: fmtnotfound= &
-      "(4x, 'NO UZF OPTIONS WERE FOUND.')"
-    character(len=*),parameter :: fmtet = &
-      "(4x, 'ET WILL BE SIMULATED WITHIN UZ AND GW ZONES, WITH LINEAR ',  &
-        &'GWET IF OPTION NOT SPECIFIED OTHERWISE.')"
-    character(len=*),parameter :: fmtgwetlin = &
-      "(4x, 'GROUNDWATER ET FUNCTION WILL BE LINEAR.')"
-    character(len=*),parameter :: fmtgwetsquare = &
-      "(4x, 'GROUNDWATER ET FUNCTION WILL BE SQUARE WITH SMOOTHING.')"
-    character(len=*),parameter :: fmtgwseepout = &
-      "(4x, 'GROUNDWATER DISCHARGE TO LAND SURFACE WILL BE SIMULATED.')"
-    character(len=*),parameter :: fmtuzetwc = &
-      "(4x, 'UNSATURATED ET FUNCTION OF WATER CONTENT.')"
-    character(len=*),parameter :: fmtuzetae = &
-      "(4x, 'UNSATURATED ET FUNCTION OF AIR ENTRY PRESSURE.')"
-    character(len=*),parameter :: fmtuznlay = &
-      "(4x, 'UNSATURATED FLOW WILL BE SIMULATED SEPARATELY IN EACH LAYER.')"
-    character(len=*),parameter :: fmtuzfbin = &
-      "(4x, 'UZF ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I0)"
-    character(len=*),parameter :: fmtuzfopt = &
-      "(4x, 'UZF ', a, ' VALUE (',g15.7,') SPECIFIED.')"
+    character(len=*), parameter :: fmtnotfound = &
+      &"(4x, 'NO UZF OPTIONS WERE FOUND.')"
+    character(len=*), parameter :: fmtet = &
+      "(4x, 'ET WILL BE SIMULATED WITHIN UZ AND GW ZONES, WITH LINEAR ', &
+      &'GWET IF OPTION NOT SPECIFIED OTHERWISE.')"
+    character(len=*), parameter :: fmtgwetlin = &
+      &"(4x, 'GROUNDWATER ET FUNCTION WILL BE LINEAR.')"
+    character(len=*), parameter :: fmtgwetsquare = &
+      &"(4x, 'GROUNDWATER ET FUNCTION WILL BE SQUARE WITH SMOOTHING.')"
+    character(len=*), parameter :: fmtgwseepout = &
+      &"(4x, 'GROUNDWATER DISCHARGE TO LAND SURFACE WILL BE SIMULATED.')"
+    character(len=*), parameter :: fmtuzetwc = &
+      &"(4x, 'UNSATURATED ET FUNCTION OF WATER CONTENT.')"
+    character(len=*), parameter :: fmtuzetae = &
+      &"(4x, 'UNSATURATED ET FUNCTION OF AIR ENTRY PRESSURE.')"
+    character(len=*), parameter :: fmtuznlay = &
+      &"(4x, 'UNSATURATED FLOW WILL BE SIMULATED SEPARATELY IN EACH LAYER.')"
+    character(len=*), parameter :: fmtuzfbin = &
+      "(4x, 'UZF ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', &
+      &a, /4x, 'OPENED ON UNIT: ', I0)"
+    character(len=*), parameter :: fmtuzfopt = &
+      &"(4x, 'UZF ', a, ' VALUE (',g15.7,') SPECIFIED.')"
 
 ! ------------------------------------------------------------------------------
     !
     !
+    found = .true.
     select case (option)
       !case ('PRINT_WATER-CONTENT')
       !  this%iprwcont = 1
       !  write(this%iout,'(4x,a)') trim(adjustl(this%text))// &
       !    ' WATERCONTENT WILL BE PRINTED TO LISTING FILE.'
-      !  found = .true.
-      case('WATER_CONTENT')
-        call this%parser%GetStringCaps(keyword)
-        if (keyword == 'FILEOUT') then
-          call this%parser%GetString(fname)
-          this%iwcontout = getunit()
-          call openfile(this%iwcontout, this%iout, fname, 'DATA(BINARY)',  &
-                       form, access, 'REPLACE', mode_opt=MNORMAL)
-          write(this%iout,fmtuzfbin) 'WATER-CONTENT', fname, this%iwcontout
-          found = .true.
-        else
-          call store_error('OPTIONAL WATER_CONTENT KEYWORD MUST BE FOLLOWED BY FILEOUT')
-        end if
-      case('BUDGET')
-        call this%parser%GetStringCaps(keyword)
-        if (keyword == 'FILEOUT') then
-          call this%parser%GetString(fname)
-          this%ibudgetout = getunit()
-          call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)',       &
-                        form, access, 'REPLACE', mode_opt=MNORMAL)
-          write(this%iout,fmtuzfbin) 'BUDGET', fname, this%ibudgetout
-          found = .true.
-        else
-          call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
-        end if
-      case('BUDGETCSV')
-        call this%parser%GetStringCaps(keyword)
-        if (keyword == 'FILEOUT') then
-          call this%parser%GetString(fname)
-          this%ibudcsv = getunit()
-          call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
-            filstat_opt='REPLACE')
-          write(this%iout,fmtuzfbin) 'BUDGET CSV', fname, this%ibudcsv
-        else
-          call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
-            &FILEOUT')
-        end if
-      case('PACKAGE_CONVERGENCE')
-        call this%parser%GetStringCaps(keyword)
-        if (keyword == 'FILEOUT') then
-          call this%parser%GetString(fname)
-          this%ipakcsv = getunit()
-          call openfile(this%ipakcsv, this%iout, fname, 'CSV',                   &
-                        filstat_opt='REPLACE', mode_opt=MNORMAL)
-          write(this%iout,fmtuzfbin) 'PACKAGE_CONVERGENCE', fname, this%ipakcsv
-          found = .true.
-        else
-          call store_error('OPTIONAL PACKAGE_CONVERGENCE KEYWORD MUST BE ' //    &
-                           'FOLLOWED BY FILEOUT')
-        end if
-      case('SIMULATE_ET')
-        this%ietflag = 1    !default
-        this%igwetflag = 0
-        found = .true.
-        write(this%iout, fmtet)
-      case('LINEAR_GWET')
-        this%igwetflag = 1
-        found = .true.
-        write(this%iout, fmtgwetlin)
-      case('SQUARE_GWET')
-        this%igwetflag = 2
-        found = .true.
-        write(this%iout, fmtgwetsquare)
-      case('SIMULATE_GWSEEP')
-        this%iseepflag = 1
-        found = .true.
-        write(this%iout, fmtgwseepout)
-      case('UNSAT_ETWC')
-        this%ietflag = 1
-        found = .true.
-        write(this%iout, fmtuzetwc)
-      case('UNSAT_ETAE')
-        this%ietflag = 2
-        found = .true.
-        write(this%iout, fmtuzetae)
-      case('MOVER')
-        this%imover = 1
-        found = .true.
+    case ('WATER_CONTENT')
+      call this%parser%GetStringCaps(keyword)
+      if (keyword == 'FILEOUT') then
+        call this%parser%GetString(fname)
+        this%iwcontout = getunit()
+        call openfile(this%iwcontout, this%iout, fname, 'DATA(BINARY)', &
+                      form, access, 'REPLACE', mode_opt=MNORMAL)
+        write (this%iout, fmtuzfbin) 'WATER-CONTENT', fname, this%iwcontout
+      else
+        call store_error('OPTIONAL WATER_CONTENT KEYWORD &
+                         &MUST BE FOLLOWED BY FILEOUT')
+      end if
+    case ('BUDGET')
+      call this%parser%GetStringCaps(keyword)
+      if (keyword == 'FILEOUT') then
+        call this%parser%GetString(fname)
+        this%ibudgetout = getunit()
+        call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)', &
+                      form, access, 'REPLACE', mode_opt=MNORMAL)
+        write (this%iout, fmtuzfbin) 'BUDGET', fname, this%ibudgetout
+      else
+        call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
+      end if
+    case ('BUDGETCSV')
+      call this%parser%GetStringCaps(keyword)
+      if (keyword == 'FILEOUT') then
+        call this%parser%GetString(fname)
+        this%ibudcsv = getunit()
+        call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
+                      filstat_opt='REPLACE')
+        write (this%iout, fmtuzfbin) 'BUDGET CSV', fname, this%ibudcsv
+      else
+        call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
+          &FILEOUT')
+      end if
+    case ('PACKAGE_CONVERGENCE')
+      call this%parser%GetStringCaps(keyword)
+      if (keyword == 'FILEOUT') then
+        call this%parser%GetString(fname)
+        this%ipakcsv = getunit()
+        call openfile(this%ipakcsv, this%iout, fname, 'CSV', &
+                      filstat_opt='REPLACE', mode_opt=MNORMAL)
+        write (this%iout, fmtuzfbin) 'PACKAGE_CONVERGENCE', fname, this%ipakcsv
+      else
+        call store_error('OPTIONAL PACKAGE_CONVERGENCE KEYWORD MUST BE '// &
+                         'FOLLOWED BY FILEOUT')
+      end if
+    case ('SIMULATE_ET')
+      this%ietflag = 1 !default
+      this%igwetflag = 0
+      write (this%iout, fmtet)
+    case ('LINEAR_GWET')
+      this%igwetflag = 1
+      write (this%iout, fmtgwetlin)
+    case ('SQUARE_GWET')
+      this%igwetflag = 2
+      write (this%iout, fmtgwetsquare)
+    case ('SIMULATE_GWSEEP')
+      this%iseepflag = 1
+      write (this%iout, fmtgwseepout)
+    case ('UNSAT_ETWC')
+      this%ietflag = 1
+      write (this%iout, fmtuzetwc)
+    case ('UNSAT_ETAE')
+      this%ietflag = 2
+      write (this%iout, fmtuzetae)
+    case ('MOVER')
+      this%imover = 1
       !
       ! -- right now these are options that are available but may not be available in
       !    the release (or in documentation)
-      case('DEV_NO_FINAL_CHECK')
-        call this%parser%DevOpt()
-        this%iconvchk = 0
-        write(this%iout, '(4x,a)')                                             &
-     &    'A FINAL CONVERGENCE CHECK OF THE CHANGE IN UZF RECHARGE ' //        &
-     &    'WILL NOT BE MADE'
-        found = .true.
+    case ('DEV_NO_FINAL_CHECK')
+      call this%parser%DevOpt()
+      this%iconvchk = 0
+      write (this%iout, '(4x,a)') &
+        'A FINAL CONVERGENCE CHECK OF THE CHANGE IN UZF RECHARGE &
+        &WILL NOT BE MADE'
       !case('DEV_MAXIMUM_PERCENT_DIFFERENCE')
       !  call this%parser%DevOpt()
       !  r = this%parser%GetDouble()
@@ -534,10 +532,9 @@ contains
       !    write(this%iout, fmtuzfopt) 'INVALID MAXIMUM_PERCENT_DIFFERENCE', r
       !    write(this%iout, fmtuzfopt) 'USING DEFAULT MAXIMUM_PERCENT_DIFFERENCE', this%pdmax
       !  end if
-      !  found = .true.
-     case default
-    ! -- No options found
-        found = .false.
+    case default
+      ! -- No options found
+      found = .false.
     end select
     ! -- return
     return
@@ -554,14 +551,14 @@ contains
 ! ------------------------------------------------------------------------------
     use InputOutputModule, only: urword
     use SimModule, only: store_error, count_errors
-    class(uzftype),intent(inout) :: this
+    class(uzftype), intent(inout) :: this
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
 ! ------------------------------------------------------------------------------
     !
     ! -- initialize dimensions to -1
-    this%nodes= -1
+    this%nodes = -1
     this%ntrail = 0
     this%nsets = 0
     !
@@ -571,29 +568,29 @@ contains
     !
     ! -- parse dimensions block if detected
     if (isfound) then
-      write(this%iout,'(/1x,a)')                                                 &
-        'PROCESSING ' // trim(adjustl(this%text)) // ' DIMENSIONS'
+      write (this%iout, '(/1x,a)') &
+        'PROCESSING '//trim(adjustl(this%text))//' DIMENSIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
-          case ('NUZFCELLS')
-            this%nodes = this%parser%GetInteger()
-            write(this%iout,'(4x,a,i0)') 'NUZFCELLS = ', this%nodes
-          case ('NTRAILWAVES')
-            this%ntrail = this%parser%GetInteger()
-            write(this%iout,'(4x,a,i0)')  'NTRAILWAVES = ', this%ntrail
-          case ('NWAVESETS')
-            this%nsets = this%parser%GetInteger()
-            write(this%iout,'(4x,a,i0)') 'NTRAILSETS = ', this%nsets
-          case default
-            write(errmsg,'(a,a)')                                                &
-              'Unknown '// trim(this%text) // ' dimension: ', trim(keyword)
-          end select
+        case ('NUZFCELLS')
+          this%nodes = this%parser%GetInteger()
+          write (this%iout, '(4x,a,i0)') 'NUZFCELLS = ', this%nodes
+        case ('NTRAILWAVES')
+          this%ntrail = this%parser%GetInteger()
+          write (this%iout, '(4x,a,i0)') 'NTRAILWAVES = ', this%ntrail
+        case ('NWAVESETS')
+          this%nsets = this%parser%GetInteger()
+          write (this%iout, '(4x,a,i0)') 'NTRAILSETS = ', this%nsets
+        case default
+          write (errmsg, '(a,a)') &
+            'Unknown '//trim(this%text)//' dimension: ', trim(keyword)
+        end select
       end do
-      write(this%iout,'(1x,a)')                                                  &
-        'END OF ' // trim(adjustl(this%text)) // ' DIMENSIONS'
+      write (this%iout, '(1x,a)') &
+        'END OF '//trim(adjustl(this%text))//' DIMENSIONS'
     else
       call store_error('Required dimensions block not found.')
     end if
@@ -604,19 +601,19 @@ contains
     !
     ! -- verify dimensions were set
     if (this%nodes <= 0) then
-      write(errmsg, '(a)')                                                       &
+      write (errmsg, '(a)') &
         'NUZFCELLS was not specified or was specified incorrectly.'
       call store_error(errmsg)
     end if
 
     if (this%ntrail <= 0) then
-      write(errmsg, '(a)')                                                       &
+      write (errmsg, '(a)') &
         'NTRAILWAVES was not specified or was specified incorrectly.'
       call store_error(errmsg)
     end if
     !
     if (this%nsets <= 0) then
-      write(errmsg, '(a)')                                                       &
+      write (errmsg, '(a)') &
         'NWAVESETS was not specified or was specified incorrectly.'
       call store_error(errmsg)
     end if
@@ -637,7 +634,7 @@ contains
     call this%uzf_allocate_arrays()
     !
     ! -- initialize uzf group object
-    allocate(this%uzfobj)
+    allocate (this%uzfobj)
     call this%uzfobj%init(this%nodes, this%nwav, this%memoryPath)
     call this%uzfobjwork%init(1, this%nwav)
     !
@@ -684,28 +681,28 @@ contains
     character(len=LINELENGTH) :: line
     logical :: isfound
     logical :: endOfBlock
-    integer (I4B) :: i
-    integer (I4B) :: j
-    integer (I4B) :: jj
+    integer(I4B) :: i
+    integer(I4B) :: j
+    integer(I4B) :: jj
     integer(I4B) :: ierr
     real(DP), pointer :: bndElem => null()
     ! -- table output
-    character (len=20) :: cellid
+    character(len=20) :: cellid
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
     integer(I4B) :: ntabrows
     integer(I4B) :: ntabcols
     integer(I4B) :: node
     !-- formats
-    character(len=*),parameter :: fmtlsp = &
-        "(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
-      character(len=*),parameter :: fmtblkerr = &
-        "('Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
-    character(len=*), parameter :: fmtisvflow =                                &
-        "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED TO BINARY FILE " //  &
-        "WHENEVER ICBCFL IS NOT ZERO.')"
-    character(len=*),parameter :: fmtflow =                                    &
-        "(4x, 'FLOWS WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
+    character(len=*), parameter :: fmtlsp = &
+      &"(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
+    character(len=*), parameter :: fmtblkerr = &
+      &"('Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
+    character(len=*), parameter :: fmtisvflow = &
+      "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED TO BINARY FILE &
+      &WHENEVER ICBCFL IS NOT ZERO.')"
+    character(len=*), parameter :: fmtflow = &
+      &"(4x, 'FLOWS WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I7)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Set ionper to the stress period number for which a new block of data
@@ -717,7 +714,8 @@ contains
       !
       ! -- get period block
       call this%parser%GetBlock('PERIOD', isfound, ierr, &
-                                supportOpenClose=.true.)
+                                supportOpenClose=.true., &
+                                blockRequired=.false.)
       if (isfound) then
         !
         ! -- read ionper and check for increasing period numbers
@@ -731,18 +729,18 @@ contains
         else
           ! -- Found invalid block
           call this%parser%GetCurrentLine(line)
-          write(errmsg, fmtblkerr) adjustl(trim(line))
+          write (errmsg, fmtblkerr) adjustl(trim(line))
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end if
-      endif
+      end if
     end if
     !
     ! -- set steady-state flag based on gwfiss
     this%issflag = this%gwfiss
     !
     ! -- read data if ionper == kper
-    if(this%ionper==kper) then
+    if (this%ionper == kper) then
       !
       ! -- write header
       if (this%iprpak /= 0) then
@@ -763,11 +761,11 @@ contains
         end if
         !
         ! -- initialize table and define columns
-        title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
-                trim(adjustl(this%packName)) //') DATA FOR PERIOD'
-        write(title, '(a,1x,i6)') trim(adjustl(title)), kper
+        title = trim(adjustl(this%text))//' PACKAGE ('// &
+                trim(adjustl(this%packName))//') DATA FOR PERIOD'
+        write (title, '(a,1x,i6)') trim(adjustl(title)), kper
         call table_cr(this%inputtab, this%packName, title)
-        call this%inputtab%table_df(ntabrows, ntabcols, this%iout,               &
+        call this%inputtab%table_df(ntabrows, ntabcols, this%iout, &
                                     finalize=.FALSE.)
         tag = 'NUMBER'
         call this%inputtab%initialize_column(tag, 10)
@@ -793,7 +791,8 @@ contains
         end if
         if (this%inamedbound == 1) then
           tag = 'BOUNDNAME'
-          call this%inputtab%initialize_column(tag, LENBOUNDNAME, alignment=TABLEFT)
+          call this%inputtab%initialize_column(tag, LENBOUNDNAME, &
+                                               alignment=TABLEFT)
         end if
       end if
       !
@@ -805,12 +804,12 @@ contains
         ! -- check for valid uzf node
         i = this%parser%GetInteger()
         if (i < 1 .or. i > this%nodes) then
-          tag = trim(adjustl(this%text)) // ' PACKAGE (' //                      &
-                trim(adjustl(this%packName)) //') DATA FOR PERIOD'
-          write(tag, '(a,1x,i0)') trim(adjustl(tag)), kper
-          
-          write(errmsg,'(a,a,i0,1x,a,i0,a)')                                     &
-            trim(adjustl(tag)), ': UZFNO ', i,                                   &
+          tag = trim(adjustl(this%text))//' PACKAGE ('// &
+                trim(adjustl(this%packName))//') DATA FOR PERIOD'
+          write (tag, '(a,1x,i0)') trim(adjustl(tag)), kper
+
+          write (errmsg, '(a,a,i0,1x,a,i0,a)') &
+            trim(adjustl(tag)), ': UZFNO ', i, &
             'must be greater than 0 and less than or equal to ', this%nodes, '.'
           call store_error(errmsg)
           cycle
@@ -825,65 +824,65 @@ contains
         !
         ! -- FINF
         call this%parser%GetStringCaps(text)
-        jj = 1    ! For SINF
+        jj = 1 ! For SINF
         bndElem => this%sinf(i)
-        call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName,      &
-                                           'BND', this%tsManager, this%iprpak,   &
+        call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName, &
+                                           'BND', this%tsManager, this%iprpak, &
                                            'SINF')
         !
         ! -- PET
         call this%parser%GetStringCaps(text)
-        jj = 1    ! For PET
+        jj = 1 ! For PET
         bndElem => this%pet(i)
-        call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName,      &
-                                           'BND', this%tsManager, this%iprpak,   &
+        call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName, &
+                                           'BND', this%tsManager, this%iprpak, &
                                            'PET')
         !
         ! -- EXTD
         call this%parser%GetStringCaps(text)
-        jj = 1    ! For EXTDP
+        jj = 1 ! For EXTDP
         bndElem => this%extdp(i)
-        call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName,      &
-                                           'BND', this%tsManager, this%iprpak,   &
+        call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName, &
+                                           'BND', this%tsManager, this%iprpak, &
                                            'EXTDP')
         !
         ! -- EXTWC
         call this%parser%GetStringCaps(text)
-        jj = 1    ! For EXTWC
+        jj = 1 ! For EXTWC
         bndElem => this%extwc(i)
-        call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName,      &
-                                           'BND', this%tsManager, this%iprpak,   &
+        call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName, &
+                                           'BND', this%tsManager, this%iprpak, &
                                            'EXTWC')
         !
         ! -- HA
         call this%parser%GetStringCaps(text)
-        jj = 1    ! For HA
+        jj = 1 ! For HA
         bndElem => this%ha(i)
-        call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName,      &
-                                           'BND', this%tsManager, this%iprpak,   &
+        call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName, &
+                                           'BND', this%tsManager, this%iprpak, &
                                            'HA')
         !
         ! -- HROOT
         call this%parser%GetStringCaps(text)
-        jj = 1    ! For HROOT
+        jj = 1 ! For HROOT
         bndElem => this%hroot(i)
-        call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName,      &
-                                           'BND', this%tsManager, this%iprpak,   &
+        call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName, &
+                                           'BND', this%tsManager, this%iprpak, &
                                            'HROOT')
         !
         ! -- ROOTACT
         call this%parser%GetStringCaps(text)
-        jj = 1    ! For ROOTACT
+        jj = 1 ! For ROOTACT
         bndElem => this%rootact(i)
-        call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName,      &
-                                           'BND', this%tsManager, this%iprpak,   &
+        call read_value_or_time_series_adv(text, i, jj, bndElem, this%packName, &
+                                           'BND', this%tsManager, this%iprpak, &
                                            'ROOTACT')
         !
         ! -- read auxillary variables
         do j = 1, this%naux
           call this%parser%GetStringCaps(text)
           bndElem => this%uauxvar(j, i)
-          call read_value_or_time_series_adv(text, i, j, bndElem, this%packName,     &
+          call read_value_or_time_series_adv(text, i, j, bndElem, this%packName, &
                                              'AUX', this%tsManager, this%iprpak, &
                                              this%auxname(j))
         end do
@@ -924,11 +923,11 @@ contains
       if (this%iprpak /= 0) then
         call this%inputtab%finalize_table()
       end if
-    !
-    ! -- using stress period data from the previous stress period
+      !
+      ! -- using stress period data from the previous stress period
     else
-      write(this%iout,fmtlsp) trim(this%filtyp)
-    endif
+      write (this%iout, fmtlsp) trim(this%filtyp)
+    end if
     !
     ! -- write summary of uzf stress period error messages
     ierr = count_errors()
@@ -937,8 +936,8 @@ contains
     end if
     !
     ! -- set wave data for first stress period and second that follows SS
-    if ((this%issflag == 0 .AND. kper == 1) .or.                              &
-      (kper == 2 .AND. this%issflagold == 1)) then
+    if ((this%issflag == 0 .AND. kper == 1) .or. &
+        (kper == 2 .AND. this%issflagold == 1)) then
       do i = 1, this%nodes
         call this%uzfobj%setwaves(i)
       end do
@@ -973,7 +972,7 @@ contains
     integer(I4B) :: i
     integer(I4B) :: ivertflag
     integer(I4B) :: n, iaux
-    real (DP) :: rval1, rval2, rval3
+    real(DP) :: rval1, rval2, rval3
 ! ------------------------------------------------------------------------------
     !
     ! -- Advance the time series
@@ -1006,12 +1005,12 @@ contains
       !    and that doesn't happen until a successful solution is obtained.
       do i = 1, this%nodes
         this%wcnew(i) = this%wcold(i)
-      end do      
+      end do
     end if
     !
     ! -- advance each uzf obj
     do i = 1, this%nodes
-        call this%uzfobj%advance(i)
+      call this%uzfobj%advance(i)
     end do
     !
     ! -- update uzf objects with timeseries aware variables
@@ -1052,9 +1051,9 @@ contains
     end if
     !
     ! -- pakmvrobj ad
-      if(this%imover == 1) then
-        call this%pakmvrobj%ad()
-      endif
+    if (this%imover == 1) then
+      call this%pakmvrobj%ad()
+    end if
     !
     ! -- For each observation, push simulated value and corresponding
     !    simulation time from "current" to "preceding" and reset
@@ -1084,7 +1083,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Return if no UZF cells
-    if(this%nodes == 0) return
+    if (this%nodes == 0) return
     !
     ! -- Store values at start of outer iteration to compare with calculated
     !    values for convergence check
@@ -1097,9 +1096,9 @@ contains
     ! -- pakmvrobj cf
     lrm = .true.
     if (present(reset_mover)) lrm = reset_mover
-    if(this%imover == 1 .and. lrm) then
+    if (this%imover == 1 .and. lrm) then
       call this%pakmvrobj%cf()
-    endif
+    end if
     !
     ! -- return
     return
@@ -1123,9 +1122,9 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- pakmvrobj fc
-    if(this%imover == 1) then
+    if (this%imover == 1) then
       call this%pakmvrobj%fc()
-    endif
+    end if
     !
     ! -- Solve UZF; set reset_state to true so that waves are reset back to
     !    initial position for each outer iteration
@@ -1137,7 +1136,7 @@ contains
       rhs(n) = rhs(n) + this%rhs(i)
       ipos = ia(n)
       amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
-    enddo
+    end do
     !
     ! -- return
     return
@@ -1241,8 +1240,8 @@ contains
         !
         ! -- setup table
         call table_cr(this%pakcsvtab, this%packName, '')
-        call this%pakcsvtab%table_df(ntabrows, ntabcols, this%ipakcsv,           &
-                                     lineseparator=.FALSE., separator=',',       &
+        call this%pakcsvtab%table_df(ntabrows, ntabcols, this%ipakcsv, &
+                                     lineseparator=.FALSE., separator=',', &
                                      finalize=.FALSE.)
         !
         ! -- add columns to package csv
@@ -1320,20 +1319,20 @@ contains
       if (ABS(drejinfmax) > abs(dpak)) then
         ipak = locdrejinfmax
         dpak = drejinfmax
-        write(cloc, "(a,'-',a)") trim(this%packName), 'rejinf'
+        write (cloc, "(a,'-',a)") trim(this%packName), 'rejinf'
         cpak = trim(cloc)
       end if
       if (ABS(drchmax) > abs(dpak)) then
         ipak = locdrchmax
         dpak = drchmax
-        write(cloc, "(a,'-',a)") trim(this%packName), 'rech'
+        write (cloc, "(a,'-',a)") trim(this%packName), 'rech'
         cpak = trim(cloc)
       end if
       if (this%iseepflag == 1) then
         if (ABS(dseepmax) > abs(dpak)) then
           ipak = locdseepmax
           dpak = dseepmax
-          write(cloc, "(a,'-',a)") trim(this%packName), 'seep'
+          write (cloc, "(a,'-',a)") trim(this%packName), 'seep'
           cpak = trim(cloc)
         end if
       end if
@@ -1378,7 +1377,6 @@ contains
     use TdisModule, only: delt
     use ConstantsModule, only: LENBOUNDNAME, DZERO, DHNOFLO, DHDRY
     use BudgetModule, only: BudgetType
-    use InputOutputModule, only: ulasav, ubdsv06
     ! -- dummy
     class(UzfType), intent(inout) :: this
     real(DP), dimension(:), intent(in) :: x
@@ -1394,7 +1392,7 @@ contains
     ! -- for observations
     ! -- formats
     character(len=*), parameter :: fmttkk = &
-      "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
+      &"(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Make uzf solution for budget calculations, and then reset waves.
@@ -1476,7 +1474,7 @@ contains
     ! -- return
     return
   end subroutine uzf_cq
-  
+
   function get_storage_change(top, bot, carea, hold, hnew, wcold, wcnew, &
                               thtr, delt, iss) result(qsto)
     real(DP), intent(in) :: top
@@ -1519,35 +1517,35 @@ contains
     real(DP) :: ratout
     integer(I4B) :: isuppress_output
     isuppress_output = 0
-    
+
     ! -- Calculate flow from uzf to gwf (UZF-GWRCH)
     call rate_accumulator(this%rch, ratin, ratout)
-    call model_budget%addentry(ratin, ratout, delt, this%bdtxt(2),                 &
+    call model_budget%addentry(ratin, ratout, delt, this%bdtxt(2), &
                                isuppress_output, this%packName)
 
     ! -- GW discharge and GW discharge to mover
     if (this%iseepflag == 1) then
       call rate_accumulator(-this%gwd, ratin, ratout)
-      call model_budget%addentry(ratin, ratout, delt, this%bdtxt(3),                 &
+      call model_budget%addentry(ratin, ratout, delt, this%bdtxt(3), &
                                  isuppress_output, this%packName)
       if (this%imover == 1) then
         call rate_accumulator(-this%gwdtomvr, ratin, ratout)
-        call model_budget%addentry(ratin, ratout, delt, this%bdtxt(5),               &
+        call model_budget%addentry(ratin, ratout, delt, this%bdtxt(5), &
                                    isuppress_output, this%packName)
       end if
     end if
-    
+
     ! -- groundwater et (gwet array is positive, so switch ratin/ratout)
     if (this%igwetflag /= 0) then
       call rate_accumulator(-this%gwet, ratin, ratout)
-      call model_budget%addentry(ratin, ratout, delt, this%bdtxt(4),                 &
+      call model_budget%addentry(ratin, ratout, delt, this%bdtxt(4), &
                                  isuppress_output, this%packName)
     end if
-    
+
     return
-  end subroutine uzf_bd  
-  
-  subroutine uzf_ot_model_flows(this,  icbcfl, ibudfl, icbcun, imap)
+  end subroutine uzf_bd
+
+  subroutine uzf_ot_model_flows(this, icbcfl, ibudfl, icbcun, imap)
 ! ******************************************************************************
 ! bnd_ot_model_flows -- write flows to binary file and/or print flows to budget
 ! ******************************************************************************
@@ -1564,55 +1562,67 @@ contains
     integer(I4B), intent(in) :: icbcun
     integer(I4B), dimension(:), optional, intent(in) :: imap
     ! -- local
-    character (len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: title
     integer(I4B) :: itxt
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
     ! -- UZF-GWRCH
     itxt = 2
-    title = trim(adjustl(this%bdtxt(itxt))) // ' PACKAGE (' // trim(this%packName) //     &
-            ') FLOW RATES'
+    title = trim(adjustl(this%bdtxt(itxt)))//' PACKAGE ('// &
+            trim(this%packName)//') FLOW RATES'
     call save_print_model_flows(icbcfl, ibudfl, icbcun, this%iprflow, &
-    this%outputtab, this%nbound, this%nodelist, this%rch, &
-    this%ibound, title, this%bdtxt(itxt), this%ipakcb, this%dis, this%naux, &
-    this%name_model, this%name_model, this%name_model, this%packName, &
-    this%auxname, this%auxvar, this%iout, this%inamedbound, this%boundname)
+                                this%outputtab, this%nbound, this%nodelist, &
+                                this%rch, this%ibound, title, this%bdtxt(itxt), &
+                                this%ipakcb, this%dis, this%naux, &
+                                this%name_model, this%name_model, &
+                                this%name_model, this%packName, this%auxname, &
+                                this%auxvar, this%iout, this%inamedbound, &
+                                this%boundname)
     !
     ! -- UZF-GWD
     if (this%iseepflag == 1) then
       itxt = 3
-      title = trim(adjustl(this%bdtxt(itxt))) // ' PACKAGE (' // trim(this%packName) //     &
-              ') FLOW RATES'
+      title = trim(adjustl(this%bdtxt(itxt)))//' PACKAGE ('// &
+              trim(this%packName)//') FLOW RATES'
       call save_print_model_flows(icbcfl, ibudfl, icbcun, this%iprflow, &
-      this%outputtab, this%nbound, this%nodelist, -this%gwd, &
-      this%ibound, title, this%bdtxt(itxt), this%ipakcb, this%dis, this%naux, &
-      this%name_model, this%name_model, this%name_model, this%packName, &
-      this%auxname, this%auxvar, this%iout, this%inamedbound, this%boundname)
+                                  this%outputtab, this%nbound, this%nodelist, &
+                                  -this%gwd, this%ibound, title, &
+                                  this%bdtxt(itxt), this%ipakcb, this%dis, &
+                                  this%naux, this%name_model, this%name_model, &
+                                  this%name_model, this%packName, this%auxname, &
+                                  this%auxvar, this%iout, this%inamedbound, &
+                                  this%boundname)
       !
       ! -- UZF-GWD TO-MVR
       if (this%imover == 1) then
         itxt = 5
-        title = trim(adjustl(this%bdtxt(itxt))) // ' PACKAGE (' // trim(this%packName) //     &
-                ') FLOW RATES'
+        title = trim(adjustl(this%bdtxt(itxt)))//' PACKAGE ('// &
+                trim(this%packName)//') FLOW RATES'
         call save_print_model_flows(icbcfl, ibudfl, icbcun, this%iprflow, &
-        this%outputtab, this%nbound, this%nodelist, -this%gwdtomvr, &
-        this%ibound, title, this%bdtxt(itxt), this%ipakcb, this%dis, this%naux, &
-        this%name_model, this%name_model, this%name_model, this%packName, &
-        this%auxname, this%auxvar, this%iout, this%inamedbound, this%boundname)
+                                    this%outputtab, this%nbound, this%nodelist, &
+                                    -this%gwdtomvr, this%ibound, title, &
+                                    this%bdtxt(itxt), this%ipakcb, this%dis, &
+                                    this%naux, this%name_model, this%name_model, &
+                                    this%name_model, this%packName, &
+                                    this%auxname, this%auxvar, this%iout, &
+                                    this%inamedbound, this%boundname)
       end if
     end if
     !
     ! -- UZF-GWET
     if (this%igwetflag /= 0) then
       itxt = 4
-      title = trim(adjustl(this%bdtxt(itxt))) // ' PACKAGE (' // trim(this%packName) //     &
-              ') FLOW RATES'
+      title = trim(adjustl(this%bdtxt(itxt)))//' PACKAGE ('// &
+              trim(this%packName)//') FLOW RATES'
       call save_print_model_flows(icbcfl, ibudfl, icbcun, this%iprflow, &
-      this%outputtab, this%nbound, this%nodelist, -this%gwet, &
-      this%ibound, title, this%bdtxt(itxt), this%ipakcb, this%dis, this%naux, &
-      this%name_model, this%name_model, this%name_model, this%packName, &
-      this%auxname, this%auxvar, this%iout, this%inamedbound, this%boundname)
+                                  this%outputtab, this%nbound, this%nodelist, &
+                                  -this%gwet, this%ibound, title, &
+                                  this%bdtxt(itxt), this%ipakcb, this%dis, &
+                                  this%naux, this%name_model, this%name_model, &
+                                  this%name_model, this%packName, this%auxname, &
+                                  this%auxvar, this%iout, this%inamedbound, &
+                                  this%boundname)
     end if
     !
     ! -- return
@@ -1628,10 +1638,10 @@ contains
     !
     ! -- write the flows from the budobj
     ibinun = 0
-    if(this%ibudgetout /= 0) then
+    if (this%ibudgetout /= 0) then
       ibinun = this%ibudgetout
     end if
-    if(icbcfl == 0) ibinun = 0
+    if (icbcfl == 0) ibinun = 0
     if (ibinun > 0) then
       call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
                                   pertim, totim, this%iout)
@@ -1641,7 +1651,7 @@ contains
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
       call this%budobj%write_flowtable(this%dis, kstp, kper)
     end if
-    
+
   end subroutine uzf_ot_package_flows
 
   subroutine uzf_ot_dv(this, idvsave, idvprint)
@@ -1654,34 +1664,34 @@ contains
     !
     ! -- set unit number for binary dependent variable output
     ibinun = 0
-    if(this%iwcontout /= 0) then
+    if (this%iwcontout /= 0) then
       ibinun = this%iwcontout
     end if
-    if(idvsave == 0) ibinun = 0
+    if (idvsave == 0) ibinun = 0
     !
     ! -- write uzf binary moisture-content output
     if (ibinun > 0) then
       call ulasav(this%wcnew, '   WATER-CONTENT', kstp, kper, pertim, &
                   totim, this%nodes, 1, 1, ibinun)
-    end if 
+    end if
   end subroutine uzf_ot_dv
-  
+
   subroutine uzf_ot_bdsummary(this, kstp, kper, iout, ibudfl)
     ! -- module
     use TdisModule, only: totim
     ! -- dummy
-    class(UzfType) :: this              !< UzfType object
-    integer(I4B), intent(in) :: kstp    !< time step number
-    integer(I4B), intent(in) :: kper    !< period number
-    integer(I4B), intent(in) :: iout    !< flag and unit number for the model listing file
-    integer(I4B), intent(in) :: ibudfl  !< flag indicating budget should be written
+    class(UzfType) :: this !< UzfType object
+    integer(I4B), intent(in) :: kstp !< time step number
+    integer(I4B), intent(in) :: kper !< period number
+    integer(I4B), intent(in) :: iout !< flag and unit number for the model listing file
+    integer(I4B), intent(in) :: ibudfl !< flag indicating budget should be written
     !
     call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim)
     !
     ! -- return
     return
   end subroutine uzf_ot_bdsummary
-  
+
   subroutine uzf_solve(this, reset_state)
 ! ******************************************************************************
 ! uzf_solve -- Formulate the HCOF and RHS terms
@@ -1690,8 +1700,8 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only : delt
-    logical, intent(in) :: reset_state         !< flag indicating that waves should be reset after solution
+    use TdisModule, only: delt
+    logical, intent(in) :: reset_state !< flag indicating that waves should be reset after solution
     ! -- dummy
     class(UzfType) :: this
     ! -- locals
@@ -1727,39 +1737,39 @@ contains
       ivertflag = this%uzfobj%ivertcon(i)
       watabold = this%uzfobj%watabold(i)
       !
-      if ( this%ibound(n) > 0 ) then
+      if (this%ibound(n) > 0) then
         !
         ! -- Water mover added to infiltration
         qfrommvr = DZERO
         qformvr = DZERO
-        if(this%imover == 1) then
+        if (this%imover == 1) then
           qfrommvr = this%pakmvrobj%get_qfrommvr(i)
-        endif
+        end if
         !
         hgwf = this%xnew(n)
         m = n
         !
         ! -- solve for current uzf cell
-        call this%uzfobj%solve(this%uzfobjwork, ivertflag, i,                  &
-                               this%totfluxtot, this%ietflag,                  &
-                               this%issflag,this%iseepflag, hgwf,              &
-                               qfrommvr, ierr,                                 &
-                               reset_state=reset_state,                        &
-                               trhs=trhs1, thcof=thcof1, deriv=uzderiv,        &
+        call this%uzfobj%solve(this%uzfobjwork, ivertflag, i, &
+                               this%totfluxtot, this%ietflag, &
+                               this%issflag, this%iseepflag, hgwf, &
+                               qfrommvr, ierr, &
+                               reset_state=reset_state, &
+                               trhs=trhs1, thcof=thcof1, deriv=uzderiv, &
                                watercontent=wc)
         !
         ! -- terminate if an error condition has occurred
         if (ierr > 0) then
-            if ( ierr == 1 ) &
-              errmsg = 'UZF variable NWAVESETS needs to be increased.'
-            call store_error(errmsg, terminate=.TRUE.)
+          if (ierr == 1) &
+            errmsg = 'UZF variable NWAVESETS needs to be increased.'
+          call store_error(errmsg, terminate=.TRUE.)
         end if
         !
         ! -- Calculate gwet
-        if ( this%igwetflag > 0 ) then
+        if (this%igwetflag > 0) then
           call this%uzfobj%setgwpet(i)
-          call this%uzfobj%simgwet(this%igwetflag,i,hgwf,trhs2,thcof2,         &
-                                    derivgwet)
+          call this%uzfobj%simgwet(this%igwetflag, i, hgwf, trhs2, thcof2, &
+                                   derivgwet)
         end if
         !
         ! -- distribute PET to deeper cells
@@ -1783,23 +1793,23 @@ contains
         this%rhs(i) = -trhs1 + trhs2
         !
         ! -- add spring discharge and rejected infiltration to mover
-        if(this%imover == 1) then
+        if (this%imover == 1) then
           qformvr = this%gwd(i) + this%rejinf(i)
           call this%pakmvrobj%accumulate_qformvr(i, qformvr)
-        endif
+        end if
         !
         ! -- Store water content
         this%wcnew(i) = wc
         !
         ! -- Calculate change in mobile storage
-        this%qsto(i) = get_storage_change(this%uzfobj%celtop(i),  &
-                                          this%uzfobj%celbot(i),  &
-                                          this%uzfobj%uzfarea(i),  &
-                                          watabold,  &
-                                          this%uzfobj%watab(i),  &
+        this%qsto(i) = get_storage_change(this%uzfobj%celtop(i), &
+                                          this%uzfobj%celbot(i), &
+                                          this%uzfobj%uzfarea(i), &
+                                          watabold, &
+                                          this%uzfobj%watab(i), &
                                           this%wcold(i), this%wcnew(i), &
                                           this%uzfobj%thtr(i), delt, this%issflag)
-      !
+        !
       end if
     end do
     !
@@ -1819,27 +1829,27 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- create the header list label
-    this%listlabel = trim(this%filtyp) // ' NO.'
-    if(this%dis%ndim == 3) then
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'ROW'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'COL'
-    elseif(this%dis%ndim == 2) then
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'CELL2D'
+    this%listlabel = trim(this%filtyp)//' NO.'
+    if (this%dis%ndim == 3) then
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'ROW'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'COL'
+    elseif (this%dis%ndim == 2) then
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'CELL2D'
     else
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
-    endif
-    write(this%listlabel, '(a, a16)') trim(this%listlabel), 'STRESS RATE'
-    if(this%inamedbound == 1) then
-      write(this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
-    endif
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
+    end if
+    write (this%listlabel, '(a, a16)') trim(this%listlabel), 'STRESS RATE'
+    if (this%inamedbound == 1) then
+      write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
+    end if
     !
     ! -- return
     return
   end subroutine define_listlabel
 
-   subroutine findcellabove(this,n,nml)
+  subroutine findcellabove(this, n, nml)
     class(UzfType) :: this
     integer(I4B), intent(in) :: n
     integer(I4B), intent(inout) :: nml
@@ -1848,23 +1858,23 @@ contains
 !
     ! -- return nml = n if no cell is above it
     nml = n
-    do ipos = this%dis%con%ia(n)+1, this%dis%con%ia(n+1)-1
+    do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
       m = this%dis%con%ja(ipos)
-      if(this%dis%con%ihc(ipos) /= 0) then
+      if (this%dis%con%ihc(ipos) /= 0) then
         if (n < m) then
           ! -- m is beneath n
         else
-          nml = m  ! -- m is above n
+          nml = m ! -- m is above n
           exit
-        endif
+        end if
       end if
-    enddo
+    end do
     return
-   end subroutine findcellabove
+  end subroutine findcellabove
 
-   subroutine read_cell_properties(this)
+  subroutine read_cell_properties(this)
 ! ******************************************************************************
-! read_cell_properties -- Read UZF cell properties and set them for 
+! read_cell_properties -- Read UZF cell properties and set them for
 !                         UzfCellGroup type.
 ! ******************************************************************************
     use InputOutputModule, only: urword
@@ -1890,13 +1900,13 @@ contains
 !
     !
     ! -- allocate space for node counter and initilize
-    allocate(rowmaxnnz(this%dis%nodes))
+    allocate (rowmaxnnz(this%dis%nodes))
     do n = 1, this%dis%nodes
       rowmaxnnz(n) = 0
     end do
     !
     ! -- allocate space for local variables
-    allocate(nboundchk(this%nodes))
+    allocate (nboundchk(this%nodes))
     do n = 1, this%nodes
       nboundchk(n) = 0
     end do
@@ -1914,33 +1924,33 @@ contains
     !
     ! -- get uzf properties block
     call this%parser%GetBlock('PACKAGEDATA', isfound, ierr, &
-      supportOpenClose=.true.)
+                              supportOpenClose=.true.)
     !
     ! -- parse locations block if detected
     if (isfound) then
-      write(this%iout,'(/1x,3a)') 'PROCESSING ', trim(adjustl(this%text)),      &
-                                  ' PACKAGEDATA'
+      write (this%iout, '(/1x,3a)') 'PROCESSING ', trim(adjustl(this%text)), &
+        ' PACKAGEDATA'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         !
         ! -- get uzf cell number
         i = this%parser%GetInteger()
-    
+
         if (i < 1 .or. i > this%nodes) then
-          write(errmsg,'(2(a,1x),i0,a)')                                            &
-            'IUZNO must be greater than 0 and less than',                           &
-            'or equal to', this%nodes , '.'
+          write (errmsg, '(2(a,1x),i0,a)') &
+            'IUZNO must be greater than 0 and less than', &
+            'or equal to', this%nodes, '.'
           call store_error(errmsg)
           cycle
-        end if 
+        end if
         !
         ! -- increment nboundchk
         nboundchk(i) = nboundchk(i) + 1
         !
         ! -- store the reduced gwf nodenumber in igwfnode
         call this%parser%GetCellid(this%dis%ndim, cellid)
-        ic = this%dis%noder_from_cellid(cellid,                                 &
+        ic = this%dis%noder_from_cellid(cellid, &
                                         this%parser%iuactive, this%iout)
         this%igwfnode(i) = ic
         rowmaxnnz(ic) = rowmaxnnz(ic) + 1
@@ -1948,8 +1958,8 @@ contains
         ! -- landflag
         landflag = this%parser%GetInteger()
         if (landflag < 0 .OR. landflag > 1) then
-          write(errmsg,'(a,1x,i0,1x,a,1x,i0,a)')                                 &
-            'LANDFLAG for uzf cell', i,                                          &
+          write (errmsg, '(a,1x,i0,1x,a,1x,i0,a)') &
+            'LANDFLAG for uzf cell', i, &
             'must be 0 or 1 (specified value is', landflag, ').'
           call store_error(errmsg)
         end if
@@ -1957,24 +1967,24 @@ contains
         ! -- ivertcon
         ivertcon = this%parser%GetInteger()
         if (ivertcon < 0 .OR. ivertcon > this%nodes) then
-          write(errmsg,'(a,1x,i0,1x,a,1x,i0,a)')                                 &
-            'IVERTCON for uzf cell', i,                                          &
-            'must be 0 or less than NUZFCELLS (specified value is',              &
+          write (errmsg, '(a,1x,i0,1x,a,1x,i0,a)') &
+            'IVERTCON for uzf cell', i, &
+            'must be 0 or less than NUZFCELLS (specified value is', &
             ivertcon, ').'
           call store_error(errmsg)
         end if
         !
         ! -- surfdep
-        surfdep =  this%parser%GetDouble()
-        if (surfdep <= DZERO .and. landflag > 0) then   !need to check for cell thickness
-          write(errmsg,'(a,1x,i0,1x,a,1x,g0,a)')                                 &
-            'SURFDEP for uzf cell', i,                                           &
+        surfdep = this%parser%GetDouble()
+        if (surfdep <= DZERO .and. landflag > 0) then !need to check for cell thickness
+          write (errmsg, '(a,1x,i0,1x,a,1x,g0,a)') &
+            'SURFDEP for uzf cell', i, &
             'must be greater than 0 (specified value is', surfdep, ').'
           call store_error(errmsg)
         end if
-        if(surfdep >= this%GWFTOP(ic) - this%GWFBOT(ic)) then
-          write(errmsg,'(a,1x,i0,1x,a)')                                         &
-            'SURFDEP for uzf cell', i,                                           &
+        if (surfdep >= this%GWFTOP(ic) - this%GWFBOT(ic)) then
+          write (errmsg, '(a,1x,i0,1x,a)') &
+            'SURFDEP for uzf cell', i, &
             'cannot be greater than the cell thickness.'
           call store_error(errmsg)
         end if
@@ -1982,8 +1992,8 @@ contains
         ! -- vks
         vks = this%parser%GetDouble()
         if (vks <= DZERO) then
-          write(errmsg,'(a,1x,i0,1x,a,1x,g0,a)')                                 &
-            'VKS for uzf cell', i,                                               &
+          write (errmsg, '(a,1x,i0,1x,a,1x,g0,a)') &
+            'VKS for uzf cell', i, &
             'must be greater than 0 (specified value ia', vks, ').'
           call store_error(errmsg)
         end if
@@ -1991,17 +2001,17 @@ contains
         ! -- thtr
         thtr = this%parser%GetDouble()
         if (thtr <= DZERO) then
-          write(errmsg,'(a,1x,i0,1x,a,1x,g0,a)')                                 &
-            'THTR for uzf cell', i,                                              &
-             'must be greater than 0 (specified value is', thtr, ').'
+          write (errmsg, '(a,1x,i0,1x,a,1x,g0,a)') &
+            'THTR for uzf cell', i, &
+            'must be greater than 0 (specified value is', thtr, ').'
           call store_error(errmsg)
         end if
         !
         ! -- thts
         thts = this%parser%GetDouble()
         if (thts <= thtr) then
-          write(errmsg,'(a,1x,i0,1x,a,1x,g0,a)')                                 &
-            'THTS for uzf cell', i,                                              &
+          write (errmsg, '(a,1x,i0,1x,a,1x,g0,a)') &
+            'THTS for uzf cell', i, &
             'must be greater than THTR (specified value is', thts, ').'
           call store_error(errmsg)
         end if
@@ -2009,9 +2019,9 @@ contains
         ! -- thti
         thti = this%parser%GetDouble()
         if (thti < thtr .OR. thti > thts) then
-          write(errmsg,'(a,1x,i0,1x,a,1x,a,1x,g0,a)')                            &
-            'THTI for uzf cell', i,                                              &
-            'must be greater than or equal to THTR AND less than THTS',          &
+          write (errmsg, '(a,1x,i0,1x,a,1x,a,1x,g0,a)') &
+            'THTI for uzf cell', i, &
+            'must be greater than or equal to THTR AND less than THTS', &
             '(specified value is', thti, ').'
           call store_error(errmsg)
         end if
@@ -2019,8 +2029,8 @@ contains
         ! -- eps
         eps = this%parser%GetDouble()
         if (eps < 3.5 .OR. eps > 14) then
-          write(errmsg,'(a,1x,i0,1x,a,1x,g0,a)')                                 &
-            'EPSILON for uzf cell', i,                                           &
+          write (errmsg, '(a,1x,i0,1x,a,1x,g0,a)') &
+            'EPSILON for uzf cell', i, &
             'must be between 3.5 and 14.0 (specified value is', eps, ').'
           call store_error(errmsg)
         end if
@@ -2028,19 +2038,19 @@ contains
         ! -- boundname
         if (this%inamedbound == 1) then
           call this%parser%GetStringCaps(this%uzfname(i))
-        endif
+        end if
         !
         ! -- set data if there are no data errors
         if (count_errors() == 0) then
           n = this%igwfnode(i)
-          call this%uzfobj%setdata(i, this%gwfarea(n), this%gwftop(n),           &
-                                   this%gwfbot(n), surfdep, vks, thtr, thts,     &
+          call this%uzfobj%setdata(i, this%gwfarea(n), this%gwftop(n), &
+                                   this%gwfbot(n), surfdep, vks, thtr, thts, &
                                    thti, eps, this%ntrail, landflag, ivertcon)
           if (ivertcon > 0) then
             this%iuzf2uzf = 1
           end if
         end if
-       !
+        !
       end do
     else
       call store_error('Required packagedata block not found.')
@@ -2049,11 +2059,11 @@ contains
     ! -- check for duplicate or missing uzf cells
     do i = 1, this%nodes
       if (nboundchk(i) == 0) then
-        write(errmsg,'(a,1x,i0,a)')                                              &
+        write (errmsg, '(a,1x,i0,a)') &
           'No data specified for uzf cell', i, '.'
         call store_error(errmsg)
       else if (nboundchk(i) > 1) then
-        write(errmsg,'(a,1x,i0,1x,a,1x,i0,1x,a)')                                &
+        write (errmsg, '(a,1x,i0,1x,a,1x,i0,1x,a)') &
           'Data for uzf cell', i, 'specified', nboundchk(i), 'times.'
         call store_error(errmsg)
       end if
@@ -2074,12 +2084,12 @@ contains
     end do
     !
     ! -- create ia and ja from sparse
-    call sparse%filliaja(this%ia,this%ja,ierr)
+    call sparse%filliaja(this%ia, this%ja, ierr)
     !
     ! -- set imaxcellcnt
     do i = 1, this%dis%nodes
       jcol = 0
-      do j = this%ia(i), this%ia(i+1) - 1
+      do j = this%ia(i), this%ia(i + 1) - 1
         jcol = jcol + 1
       end do
       if (jcol > this%imaxcellcnt) then
@@ -2096,8 +2106,8 @@ contains
     end if
     !
     ! -- deallocate local variables
-    deallocate(rowmaxnnz)
-    deallocate(nboundchk)
+    deallocate (rowmaxnnz)
+    deallocate (nboundchk)
     !
     ! -- return
     return
@@ -2105,14 +2115,14 @@ contains
 
   subroutine print_cell_properties(this)
 ! ******************************************************************************
-! print_cell_properties -- Read UZF cell properties and set them for 
+! print_cell_properties -- Read UZF cell properties and set them for
 !                          UZFCellGroup type.
 ! ******************************************************************************
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(UzfType), intent(inout) :: this
     ! -- local
-    character (len=20) :: cellid
+    character(len=20) :: cellid
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
     integer(I4B) :: ntabrows
@@ -2132,8 +2142,8 @@ contains
     end if
     !
     ! -- initialize table and define columns
-    title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
-            trim(adjustl(this%packName)) //') STATIC UZF CELL DATA'
+    title = trim(adjustl(this%text))//' PACKAGE ('// &
+            trim(adjustl(this%packName))//') STATIC UZF CELL DATA'
     call table_cr(this%inputtab, this%packName, title)
     call this%inputtab%table_df(ntabrows, ntabcols, this%iout)
     tag = 'NUMBER'
@@ -2192,7 +2202,7 @@ contains
     return
   end subroutine print_cell_properties
 
-   subroutine check_cell_area(this)
+  subroutine check_cell_area(this)
 ! ******************************************************************************
 ! check_cell_area -- Check UZF cell areas.
 ! ******************************************************************************
@@ -2231,8 +2241,8 @@ contains
         area2 = this%uzfobj%uzfarea(i2)
         d = abs(area - area2)
         if (d > DEM6) then
-          write(errmsg,'(2(a,1x,g0,1x,a,1x,i0,1x),a)')                           &
-            'UZF cell area (', area, ') for cell ', i,                           &
+          write (errmsg, '(2(a,1x,g0,1x,a,1x,i0,1x),a)') &
+            'UZF cell area (', area, ') for cell ', i, &
             'does not equal uzf cell area (', area2, ') for cell ', i2, '.'
           call store_error(errmsg)
         end if
@@ -2243,7 +2253,7 @@ contains
     !    to the GWF cell area
     do n = 1, this%dis%nodes
       i0 = this%ia(n)
-      i1 = this%ia(n+1)
+      i1 = this%ia(n + 1)
       ! -- skip gwf cells with no UZF cells
       if ((i1 - i0) < 1) cycle
       sumarea = DZERO
@@ -2251,8 +2261,8 @@ contains
       cuzfcells = ''
       do j = i0, i1 - 1
         i = this%ja(j)
-        write(cuzf,'(i0)') i
-        cuzfcells = trim(adjustl(cuzfcells)) // ' ' // trim(adjustl(cuzf))
+        write (cuzf, '(i0)') i
+        cuzfcells = trim(adjustl(cuzfcells))//' '//trim(adjustl(cuzf))
         sumarea = sumarea + this%uzfobj%uzfarea(i)
         cellarea = this%uzfobj%cellarea(i)
       end do
@@ -2260,9 +2270,9 @@ contains
       d = abs(sumarea - cellarea)
       if (d > DEM6) then
         call this%dis%noder_to_string(n, cellid)
-        write(errmsg,'(a,1x,g0,1x,a,1x,g0,1x,a,1x,a,1x,a,a,a)')                  &
-          'Total uzf cell area (', sumarea,                                      &
-          ') exceeds the gwf cell area (', cellarea, ') of cell', cellid,        &
+        write (errmsg, '(a,1x,g0,1x,a,1x,g0,1x,a,1x,a,1x,a,a,a)') &
+          'Total uzf cell area (', sumarea, &
+          ') exceeds the gwf cell area (', cellarea, ') of cell', cellid, &
           'which includes uzf cell(s): ', trim(adjustl(cuzfcells)), '.'
         call store_error(errmsg)
       end if
@@ -2305,7 +2315,7 @@ contains
     class(UzfType) :: this
     ! -- local
     integer(I4B) :: indx
-  ! ------------------------------------------------------------------------------
+    ! ------------------------------------------------------------------------------
     !
     ! -- Store obs type and assign procedure pointer
     !
@@ -2394,61 +2404,61 @@ contains
           n = obsrv%indxbnds(ii)
           v = DNODATA
           select case (obsrv%ObsTypeId)
-            case ('UZF-GWRCH')
-              v = this%rch(n)
-            case ('UZF-GWD')
-              v = this%gwd(n)
+          case ('UZF-GWRCH')
+            v = this%rch(n)
+          case ('UZF-GWD')
+            v = this%gwd(n)
+            if (v > DZERO) then
+              v = -v
+            end if
+          case ('UZF-GWD-TO-MVR')
+            if (this%imover == 1) then
+              v = this%gwdtomvr(n)
               if (v > DZERO) then
                 v = -v
               end if
-            case ('UZF-GWD-TO-MVR')
-              if (this%imover == 1) then
-                v = this%gwdtomvr(n)
-                if (v > DZERO) then
-                  v = -v
-                end if
-              end if
-            case ('UZF-GWET')
-              if (this%igwetflag > 0) then
-                v = this%gwet(n)
-                if (v > DZERO) then
-                  v = -v
-                end if
-              end if
-            case ('INFILTRATION')
-              v = this%appliedinf(n)
-            case ('FROM-MVR')
-              if (this%imover == 1) then
-                v = this%pakmvrobj%get_qfrommvr(n)
-              end if
-            case ('REJ-INF')
-              v = this%rejinf(n)
+            end if
+          case ('UZF-GWET')
+            if (this%igwetflag > 0) then
+              v = this%gwet(n)
               if (v > DZERO) then
                 v = -v
               end if
-            case ('REJ-INF-TO-MVR')
-              if (this%imover == 1) then
-                v = this%rejinftomvr(n)
-                if (v > DZERO) then
-                  v = -v
-                end if
+            end if
+          case ('INFILTRATION')
+            v = this%appliedinf(n)
+          case ('FROM-MVR')
+            if (this%imover == 1) then
+              v = this%pakmvrobj%get_qfrommvr(n)
+            end if
+          case ('REJ-INF')
+            v = this%rejinf(n)
+            if (v > DZERO) then
+              v = -v
+            end if
+          case ('REJ-INF-TO-MVR')
+            if (this%imover == 1) then
+              v = this%rejinftomvr(n)
+              if (v > DZERO) then
+                v = -v
               end if
-            case ('UZET')
-              if (this%ietflag /= 0) then
-                v = this%uzet(n)
-                if (v > DZERO) then
-                  v = -v
-                end if
+            end if
+          case ('UZET')
+            if (this%ietflag /= 0) then
+              v = this%uzet(n)
+              if (v > DZERO) then
+                v = -v
               end if
-            case ('STORAGE')
-              v = -this%qsto(n)
-            case ('NET-INFILTRATION')
-              v = this%infiltration(n)
-            case ('WATER-CONTENT')
-              v = this%uzfobj%get_water_content_at_depth(n, obsrv%obsDepth)
-            case default
-              errmsg = 'Unrecognized observation type: ' // trim(obsrv%ObsTypeId)
-              call store_error(errmsg)
+            end if
+          case ('STORAGE')
+            v = -this%qsto(n)
+          case ('NET-INFILTRATION')
+            v = this%infiltration(n)
+          case ('WATER-CONTENT')
+            v = this%uzfobj%get_water_content_at_depth(n, obsrv%obsDepth)
+          case default
+            errmsg = 'Unrecognized observation type: '//trim(obsrv%ObsTypeId)
+            call store_error(errmsg)
           end select
           call this%obs%SaveOneSimval(obsrv, v)
         end do
@@ -2477,7 +2487,7 @@ contains
     real(DP) :: obsdepth
     real(DP) :: dmax
     character(len=LENBOUNDNAME) :: bname
-    class(ObserveType),   pointer :: obsrv => null()
+    class(ObserveType), pointer :: obsrv => null()
     ! --------------------------------------------------------------------------
     ! -- formats
 60  format('Invalid node number in OBS input: ', i0)
@@ -2507,9 +2517,9 @@ contains
                 ! -- Define intPak1 so that obs_theta is stored (for first uzf
                 !    cell if multiple cells share the same boundname).
                 obsrv%intPak1 = j
-              endif
-            endif
-          enddo
+              end if
+            end if
+          end do
         else
           !
           ! -- get node number
@@ -2523,7 +2533,7 @@ contains
             call store_error(errmsg)
           else
             obsrv%BndFound = .true.
-          endif
+          end if
           obsrv%CurrentTimeStepEndValue = DZERO
           call obsrv%AddObsIndex(nn)
         end if
@@ -2533,9 +2543,9 @@ contains
         if (obsrv%ObsTypeId == 'WATER-CONTENT') then
           n = obsrv%indxbnds_count
           if (n /= 1) then
-            write (errmsg, '(a,3(1x,a))')                                        &
-              trim(adjustl(obsrv%ObsTypeId)), 'for observation',                 &
-              trim(adjustl(obsrv%Name)),                                         &
+            write (errmsg, '(a,3(1x,a))') &
+              trim(adjustl(obsrv%ObsTypeId)), 'for observation', &
+              trim(adjustl(obsrv%Name)), &
               'must be assigned to a UZF cell with a unique boundname.'
             call store_error(errmsg, terminate=.TRUE.)
           end if
@@ -2555,21 +2565,21 @@ contains
           ! -- need to think about a way to put bounds on this depth
           ! -- Also, an observation depth of 0.0, whether a landflag == 1 object
           ! -- or a subsurface object, is not legit since this would be at a
-          ! -- a layer interface and therefore a discontinuity.  
+          ! -- a layer interface and therefore a discontinuity.
           if (obsdepth <= DZERO .or. obsdepth > dmax) then
-            write (errmsg, '(a,3(1x,a),1x,g0,1x,a,1x,g0,a)')                       &
-              trim(adjustl(obsrv%ObsTypeId)), 'for observation',                   &
-              trim(adjustl(obsrv%Name)), 'specified depth (', obsdepth,            &
+            write (errmsg, '(a,3(1x,a),1x,g0,1x,a,1x,g0,a)') &
+              trim(adjustl(obsrv%ObsTypeId)), 'for observation', &
+              trim(adjustl(obsrv%Name)), 'specified depth (', obsdepth, &
               ') must be greater than 0.0 and less than ', dmax, '.'
             call store_error(errmsg)
-          endif
+          end if
         else
           do j = 1, obsrv%indxbnds_count
-            nn =  obsrv%indxbnds(j)
+            nn = obsrv%indxbnds(j)
             if (nn < 1 .or. nn > this%maxbound) then
-              write (errmsg, '(a,2(1x,a),1x,i0,1x,a,1x,i0,a)')                     &
-                trim(adjustl(obsrv%ObsTypeId)), 'uzfno must be greater than 0 ',   &
-                'and less than or equal to', this%maxbound,                        &
+              write (errmsg, '(a,2(1x,a),1x,i0,1x,a,1x,i0,a)') &
+                trim(adjustl(obsrv%ObsTypeId)), 'uzfno must be greater than 0 ', &
+                'and less than or equal to', this%maxbound, &
                 '(specified value is ', nn, ').'
               call store_error(errmsg)
             end if
@@ -2591,10 +2601,10 @@ contains
     ! -- This procedure is pointed to by ObsDataType%ProcesssIdPtr. It processes
     !    the ID string of an observation definition for UZF-package observations.
     ! -- dummy
-    type(ObserveType),      intent(inout) :: obsrv
-    class(DisBaseType), intent(in)    :: dis
-    integer(I4B),            intent(in)    :: inunitobs
-    integer(I4B),            intent(in)    :: iout
+    type(ObserveType), intent(inout) :: obsrv
+    class(DisBaseType), intent(in) :: dis
+    integer(I4B), intent(in) :: inunitobs
+    integer(I4B), intent(in) :: iout
     ! -- local
     integer(I4B) :: n, nn
     real(DP) :: obsdepth
@@ -2602,7 +2612,7 @@ contains
     real(DP) :: r
     character(len=LINELENGTH) :: strng
     ! formats
- 30 format(i10)
+30  format(i10)
     !
     strng = obsrv%IDstring
     ! -- Extract node number from strng and store it.
@@ -2612,7 +2622,7 @@ contains
     ! -- get node number
     call urword(strng, icol, istart, istop, 1, n, r, iout, inunitobs)
     read (strng(istart:istop), 30, iostat=istat) nn
-    if (istat==0) then
+    if (istat == 0) then
       ! -- store uzf node number (NodeNumber)
       obsrv%NodeNumber = nn
     else
@@ -2624,15 +2634,15 @@ contains
       !    so assign NodeNumber as a value that indicates observation
       !    is for a named boundary or group of boundaries.
       obsrv%NodeNumber = NAMEDBOUNDFLAG
-    endif
+    end if
     !
     ! -- for soil water observation, store depth
-    if (obsrv%ObsTypeId=='WATER-CONTENT' ) then
+    if (obsrv%ObsTypeId == 'WATER-CONTENT') then
       call urword(strng, icol, istart, istop, 3, n, r, iout, inunitobs)
       obsdepth = r
       ! -- store observations depth
       obsrv%Obsdepth = obsdepth
-    endif
+    end if
     !
     return
   end subroutine uzf_process_obsID
@@ -2722,24 +2732,24 @@ contains
     !
     ! -- deallocate uzf objects
     call this%uzfobj%dealloc()
-    deallocate(this%uzfobj)
-    nullify(this%uzfobj)
+    deallocate (this%uzfobj)
+    nullify (this%uzfobj)
     call this%uzfobjwork%dealloc()
 
     call this%budobj%budgetobject_da()
-    deallocate(this%budobj)
-    nullify(this%budobj)
+    deallocate (this%budobj)
+    nullify (this%budobj)
     !
     ! -- character arrays
-    deallocate(this%bdtxt)
-    deallocate(this%cauxcbc)
-    deallocate(this%uzfname)
+    deallocate (this%bdtxt)
+    deallocate (this%cauxcbc)
+    deallocate (this%uzfname)
     !
     ! -- package csv table
     if (this%ipakcsv > 0) then
       call this%pakcsvtab%table_da()
-      deallocate(this%pakcsvtab)
-      nullify(this%pakcsvtab)
+      deallocate (this%pakcsvtab)
+      nullify (this%pakcsvtab)
     end if
     !
     ! -- deallocate scalars
@@ -2813,7 +2823,7 @@ contains
   subroutine uzf_setup_budobj(this)
 ! ******************************************************************************
 ! uzf_setup_budobj -- Set up the budget object that stores all the uzf flows
-!   The terms listed here must correspond in number and order to the ones 
+!   The terms listed here must correspond in number and order to the ones
 !   listed in the uzf_fill_budobj routine.
 ! ******************************************************************************
 !
@@ -2844,7 +2854,7 @@ contains
       end if
     end do
     !
-    ! -- Determine the number of uzf budget terms. These are fixed for 
+    ! -- Determine the number of uzf budget terms. These are fixed for
     !    the simulation and cannot change.  This includes FLOW-JA-FACE
     !    so they can be written to the binary budget files, but these internal
     !    flows are not included as part of the budget table.
@@ -2889,10 +2899,10 @@ contains
       end do
     end if
     !
-    ! -- 
+    ! --
     text = '             GWF'
     idx = idx + 1
-    maxlist = this%nodes 
+    maxlist = this%nodes
     naux = 1
     auxtxt(1) = '       FLOW-AREA'
     call this%budobj%budterm(idx)%initialize(text, &
@@ -2909,7 +2919,7 @@ contains
       call this%budobj%budterm(idx)%update_term(n, n2, q)
     end do
     !
-    ! -- 
+    ! --
     text = '    INFILTRATION'
     idx = idx + 1
     maxlist = this%nodes
@@ -2922,7 +2932,7 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! -- 
+    ! --
     text = '         REJ-INF'
     idx = idx + 1
     maxlist = this%nodes
@@ -2935,7 +2945,7 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! -- 
+    ! --
     text = '            UZET'
     if (this%ietflag /= 0) then
       idx = idx + 1
@@ -2950,7 +2960,7 @@ contains
                                                naux)
     end if
     !
-    ! -- 
+    ! --
     text = '         STORAGE'
     idx = idx + 1
     maxlist = this%nodes
@@ -2964,10 +2974,10 @@ contains
                                              maxlist, .false., .false., &
                                              naux, auxtxt)
     !
-    ! -- 
+    ! --
     if (this%imover == 1) then
       !
-      ! -- 
+      ! --
       text = '        FROM-MVR'
       idx = idx + 1
       maxlist = this%nodes
@@ -2980,7 +2990,7 @@ contains
                                                maxlist, .false., .false., &
                                                naux)
       !
-      ! -- 
+      ! --
       text = '  REJ-INF-TO-MVR'
       idx = idx + 1
       maxlist = this%nodes
@@ -2994,11 +3004,11 @@ contains
                                                naux)
     end if
     !
-    ! -- 
+    ! --
     naux = this%naux
     if (naux > 0) then
       !
-      ! -- 
+      ! --
       text = '       AUXILIARY'
       idx = idx + 1
       maxlist = this%maxbound
@@ -3018,7 +3028,7 @@ contains
     !
     ! -- return
     return
-    
+
   end subroutine uzf_setup_budobj
 
   subroutine uzf_fill_budobj(this)
@@ -3054,7 +3064,7 @@ contains
     nlen = 0
     do n = 1, this%nodes
       ivertflag = this%uzfobj%ivertcon(n)
-      if ( ivertflag > 0 ) then
+      if (ivertflag > 0) then
         nlen = nlen + 1
       end if
     end do
@@ -3160,7 +3170,7 @@ contains
         end if
         call this%budobj%budterm(idx)%update_term(n, n, q)
       end do
-      
+
     end if
     !
     ! -- AUXILIARY VARIABLES
