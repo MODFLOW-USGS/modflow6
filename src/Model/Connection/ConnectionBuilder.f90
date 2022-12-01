@@ -60,7 +60,7 @@ contains
       ' model connections for solution ', trim(solution%name)
 
     ! craete the topology of models participating in the interfaces
-    call this%createModelConnectivity(numSol%exchangelist, newConnections)
+    call this%createModelConnectivity(newConnections)
 
     ! replace numerical exchanges in solution with connections
     call this%setConnectionsToSolution(newConnections, numSol)
@@ -245,14 +245,12 @@ contains
 
   !> @brief Create connectivity of models which contribute to the interface
   !!
-  !! This takes all exchanges from the numerical solution for which
-  !! the connections are created. The model halo will be used to 
+  !! This loops over all connections and creates a halo with all 
+  !! models from the numerical solution. The model halo will be used to 
   !! extend the interface grid to include cells from models which are 
-  !! indirectly connected, through yet another exchange object.
-  !<
-  subroutine createModelConnectivity(this, exchanges, connections)
+  !< indirectly connected, through yet another exchange object.
+  subroutine createModelConnectivity(this, connections)
     class(ConnectionBuilderType) :: this !< the connection builder object
-    type(ListType), pointer, intent(in) :: exchanges !< all exchanges in a solution
     type(ListType), intent(inout) :: connections !< all connections that are created for this solution
     ! local
     integer(I4B) :: iconn
@@ -261,7 +259,7 @@ contains
     ! create halo for the model connections
     do iconn = 1, connections%Count()
       modelConn => GetSpatialModelConnectionFromList(connections, iconn)
-      call modelConn%createModelHalo(exchanges)
+      call modelConn%createModelHalo()
     end do
 
   end subroutine createModelConnectivity

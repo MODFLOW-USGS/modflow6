@@ -9,18 +9,22 @@
 module SimVariablesModule
   use, intrinsic :: iso_fortran_env, only: output_unit
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LINELENGTH, MAXCHARLEN, IUSTART, VALL, MNORMAL
+  use ConstantsModule, only: LINELENGTH, MAXCHARLEN, IUSTART, &
+                             VALL, MNORMAL, LENMODELNAME
   public
   character(len=LINELENGTH) :: simfile = 'mfsim.nam' !< simulation name file
   character(len=LINELENGTH) :: simlstfile = 'mfsim.lst' !< simulation listing file name
   character(len=LINELENGTH) :: simstdout = 'mfsim.stdout' !< name of standard out file if screen output is piped to a file
   character(len=LINELENGTH) :: idm_context = '__INPUT__'
 
-  ! temp: for parallel development (TODO_MJR)
+  ! temp: for parallel development (TODO_MJR: move to separate container)
   character(len=LINELENGTH) :: simulation_mode = 'SEQUENTIAL'
   integer(I4B) :: proc_id = 0
   integer(I4B) :: nr_procs = 1
-  integer(I4B) :: MF6_COMM_WORLD = -1 ! should become MPI_Comm type
+  integer(I4B) :: MF6_COMM_WORLD = -1 ! should become MPI_Comm type     
+  character(len=LENMODELNAME), dimension(:), allocatable :: model_names !< all model names in the (global) simulation
+  integer(I4B), dimension(:), allocatable :: model_proc_ids !< equals the home process id for the models
+  integer(I4B), dimension(:), allocatable :: model_loc_idx !< equals the local index into the basemodel list (-1 when not available)
 
   character(len=MAXCHARLEN) :: errmsg !< error message string
   character(len=MAXCHARLEN) :: warnmsg !< warning message string

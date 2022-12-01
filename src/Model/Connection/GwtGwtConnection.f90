@@ -341,8 +341,8 @@ contains
     do ic = 1, this%gridConnection%nrOfBoundaryCells
       boundaryCell = this%gridConnection%boundaryCells(ic)%cell
       connectedCell = this%gridConnection%connectedCells(ic)%cell
-      iglo = boundaryCell%index + boundaryCell%dmodel%moffset
-      jglo = connectedCell%index + connectedCell%dmodel%moffset
+      iglo = boundaryCell%index + boundaryCell%v_model%moffset%get()
+      jglo = connectedCell%index + connectedCell%v_model%moffset%get()
       call sparse%addconnection(iglo, jglo, 1)
       call sparse%addconnection(jglo, iglo, 1)
     end do
@@ -410,12 +410,12 @@ contains
     do n = 1, this%neq
       ! We only need the coefficients for our own model
       ! (i.e. rows in the matrix that belong to this%owner):
-      if (.not. this%gridConnection%idxToGlobal(n)%dmodel == this%owner) then
+      if (.not. this%gridConnection%idxToGlobal(n)%v_model == this%owner) then
         cycle
       end if
 
       nglo = this%gridConnection%idxToGlobal(n)%index + &
-             this%gridConnection%idxToGlobal(n)%dmodel%moffset
+             this%gridConnection%idxToGlobal(n)%v_model%moffset%get()
       rhs_sln(nglo) = rhs_sln(nglo) + this%rhs(n)
 
       icol_start = this%matrix%get_first_col_pos(n)

@@ -36,8 +36,8 @@ contains
                                                      dis_top_m, dis_bot_m
       real(DP), dimension(:), pointer, contiguous :: dis_xc_n, dis_yc_n, &
                                                      dis_xc_m, dis_yc_m
-      real(DP), pointer :: xorigin_n, yorigin_n, angrot_n, &
-                           xorigin_m, yorigin_m, angrot_m
+      real(DP) :: xorigin_n, yorigin_n, angrot_n, &
+                  xorigin_m, yorigin_m, angrot_m
 
       ! get coordinates
       gcn => idxToGlobal(array(n))
@@ -45,21 +45,21 @@ contains
 
       ! get model data
       ! for n:
-      dis_top_n => gcn%dmodel%dis_top
-      dis_bot_n => gcn%dmodel%dis_bot
-      dis_xc_n => gcn%dmodel%dis_xc
-      dis_yc_n => gcn%dmodel%dis_yc
-      xorigin_n => gcn%dmodel%dis_xorigin
-      yorigin_n => gcn%dmodel%dis_yorigin
-      angrot_n => gcn%dmodel%dis_angrot
+      dis_top_n => gcn%v_model%dis_top%get_array()
+      dis_bot_n => gcn%v_model%dis_bot%get_array()
+      dis_xc_n => gcn%v_model%dis_xc%get_array()
+      dis_yc_n => gcn%v_model%dis_yc%get_array()
+      xorigin_n = gcn%v_model%dis_xorigin%get()
+      yorigin_n = gcn%v_model%dis_yorigin%get()
+      angrot_n = gcn%v_model%dis_angrot%get()
       ! for m:
-      dis_top_m => gcm%dmodel%dis_top
-      dis_bot_m => gcm%dmodel%dis_bot
-      dis_xc_m => gcm%dmodel%dis_xc
-      dis_yc_m => gcm%dmodel%dis_yc
-      xorigin_m => gcm%dmodel%dis_xorigin
-      yorigin_m => gcm%dmodel%dis_yorigin
-      angrot_m => gcm%dmodel%dis_angrot
+      dis_top_m => gcm%v_model%dis_top%get_array()
+      dis_bot_m => gcm%v_model%dis_bot%get_array()
+      dis_xc_m => gcm%v_model%dis_xc%get_array()
+      dis_yc_m => gcm%v_model%dis_yc%get_array()
+      xorigin_m = gcm%v_model%dis_xorigin%get()
+      yorigin_m = gcm%v_model%dis_yorigin%get()
+      angrot_m = gcm%v_model%dis_angrot%get()
 
       ! convert coordinates
       call dis_transform_xy(dis_xc_n(gcn%index), dis_yc_n(gcn%index), &

@@ -20,7 +20,6 @@ module GwfGwfExchangeModule
   use ListsModule, only: basemodellist
   use DisConnExchangeModule, only: DisConnExchangeType
   use GwfModule, only: GwfModelType
-  use DistributedModelModule, only: DistributedModelType, get_dist_model
   use GhostNodeModule, only: GhostNodeType
   use GwfMvrModule, only: GwfMvrType
   use ObserveModule, only: ObserveType
@@ -119,24 +118,25 @@ contains
   !!
   !! Create a new GWF to GWF exchange object.
   !!
-  !<
-  subroutine gwfexchange_create(filename, id, m1id, m2id)
+  !< TODO_MJR: refactor, why not just pass in the model objects?
+  subroutine gwfexchange_create(filename, name, id, m1_idx, m2_idx)
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use BaseModelModule, only: BaseModelType
+    use VirtualModelModule, only: get_virtual_model
     use ListsModule, only: baseexchangelist
     use ObsModule, only: obs_cr
     use MemoryHelperModule, only: create_mem_path
     ! -- dummy
-    character(len=*), intent(in) :: filename !< filename for reading
+    character(len=*), intent(in) :: filename !< filename for reading    
+    character(len=*) :: name !< exchange name
     integer(I4B), intent(in) :: id !< id for the exchange
-    integer(I4B), intent(in) :: m1id !< id for model 1
-    integer(I4B), intent(in) :: m2id !< id for model 2
+    integer(I4B), intent(in) :: m1_idx !< index into the basemodel list for model 1
+    integer(I4B), intent(in) :: m2_idx !< index into the basemodel list for model 2
     ! -- local
     type(GwfExchangeType), pointer :: exchange
     class(BaseModelType), pointer :: mb
     class(BaseExchangeType), pointer :: baseexchange
-    character(len=20) :: cint
     !
     ! -- Create a new exchange and add it to the baseexchangelist container
     allocate (exchange)
@@ -145,8 +145,7 @@ contains
     !
     ! -- Assign id and name
     exchange%id = id
-    write (cint, '(i0)') id
-    exchange%name = 'GWF-GWF_'//trim(adjustl(cint))
+    exchange%name = name
     exchange%memoryPath = create_mem_path(exchange%name)
     !
     ! -- allocate scalars and set defaults
@@ -155,22 +154,22 @@ contains
     exchange%typename = 'GWF-GWF'
     !
     ! -- set gwfmodel1
-    mb => GetBaseModelFromList(basemodellist, m1id)
+    mb => GetBaseModelFromList(basemodellist, m1_idx)
     select type (mb)
     type is (GwfModelType)
       exchange%model1 => mb
       exchange%gwfmodel1 => mb
     end select
-    exchange%dmodel1 => get_dist_model(m1id)
+    exchange%v_model1 => get_virtual_model(mb%id)
     !
     ! -- set gwfmodel2
-    mb => GetBaseModelFromList(basemodellist, m2id)
+    mb => GetBaseModelFromList(basemodellist, m2_idx)
     select type (mb)
     type is (GwfModelType)
       exchange%model2 => mb
       exchange%gwfmodel2 => mb
     end select
-    exchange%dmodel2 => get_dist_model(m2id)
+    exchange%v_model2 => get_virtual_model(mb%id)
     !
     ! -- Verify that gwf model1 is of the correct type
     if (.not. associated(exchange%gwfmodel1)) then

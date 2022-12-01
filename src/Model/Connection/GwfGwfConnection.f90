@@ -333,13 +333,13 @@ contains
       ! we cannot check with the mask here, because cross-terms are not
       ! necessarily from primary connections. But, we only need the coefficients
       ! for our own model (i.e. fluxes into cells belonging to this%owner):
-      if (.not. this%gridConnection%idxToGlobal(n)%dmodel == this%owner) then
+      if (.not. this%gridConnection%idxToGlobal(n)%v_model == this%owner) then
         ! only add connections for own model to global matrix
         cycle
       end if
 
       nglo = this%gridConnection%idxToGlobal(n)%index + &
-             this%gridConnection%idxToGlobal(n)%dmodel%moffset
+             this%gridConnection%idxToGlobal(n)%v_model%moffset%get()
       rhs_sln(nglo) = rhs_sln(nglo) + this%rhs(n)
 
       icol_start = this%matrix%get_first_col_pos(n)
@@ -582,7 +582,7 @@ contains
     ! for flows crossing the boundary, and set flowja for internal
     ! flows affected by the connection.
     do n = 1, this%neq
-      if (.not. toGlobal(n)%dmodel == this%owner) then
+      if (.not. toGlobal(n)%v_model == this%owner) then
         ! only add flows to own model
         cycle
       end if
@@ -598,7 +598,7 @@ contains
         m = imCon%ja(ipos)
         mLoc = toGlobal(m)%index
 
-        if (.not. toGlobal(m)%dmodel == this%owner) then
+        if (.not. toGlobal(m)%v_model == this%owner) then
           ! boundary connection, set edge properties
           isym = imCon%jas(ipos)
           ihc = imCon%ihc(isym)

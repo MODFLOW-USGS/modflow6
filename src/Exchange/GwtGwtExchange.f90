@@ -19,9 +19,9 @@ module GwtGwtExchangeModule
                              LENMODELNAME
   use ListModule, only: ListType
   use ListsModule, only: basemodellist
+  use VirtualModelModule, only: get_virtual_model
   use DisConnExchangeModule, only: DisConnExchangeType
   use GwtModule, only: GwtModelType
-  use DistributedModelModule, only: get_dist_model
   use GwtMvtModule, only: GwtMvtType
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
@@ -112,7 +112,7 @@ contains
   !! Create a new GWT to GWT exchange object.
   !!
   !<
-  subroutine gwtexchange_create(filename, id, m1id, m2id)
+  subroutine gwtexchange_create(filename, name, id, m1id, m2id)
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use BaseModelModule, only: BaseModelType
@@ -122,13 +122,13 @@ contains
     ! -- dummy
     character(len=*), intent(in) :: filename !< filename for reading
     integer(I4B), intent(in) :: id !< id for the exchange
+    character(len=*) :: name !< the exchange name
     integer(I4B), intent(in) :: m1id !< id for model 1
     integer(I4B), intent(in) :: m2id !< id for model 2
     ! -- local
     type(GwtExchangeType), pointer :: exchange
     class(BaseModelType), pointer :: mb
     class(BaseExchangeType), pointer :: baseexchange
-    character(len=20) :: cint
     !
     ! -- Create a new exchange and add it to the baseexchangelist container
     allocate (exchange)
@@ -137,8 +137,7 @@ contains
     !
     ! -- Assign id and name
     exchange%id = id
-    write (cint, '(i0)') id
-    exchange%name = 'GWT-GWT_'//trim(adjustl(cint))
+    exchange%name = name
     exchange%memoryPath = create_mem_path(exchange%name)
     !
     ! -- allocate scalars and set defaults
@@ -155,7 +154,7 @@ contains
       exchange%model1 => mb
       exchange%gwtmodel1 => mb
     end select
-    exchange%dmodel1 => get_dist_model(m1id)
+    exchange%v_model1 => get_virtual_model(mb%id)
     !
     ! -- set gwtmodel2
     mb => GetBaseModelFromList(basemodellist, m2id)
@@ -164,7 +163,7 @@ contains
       exchange%model2 => mb
       exchange%gwtmodel2 => mb
     end select
-    exchange%dmodel2 => get_dist_model(m2id)
+    exchange%v_model2 => get_virtual_model(mb%id)
     !
     ! -- Verify that gwt model1 is of the correct type
     if (.not. associated(exchange%gwtmodel1)) then

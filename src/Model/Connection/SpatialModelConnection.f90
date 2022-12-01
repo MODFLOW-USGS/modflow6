@@ -6,13 +6,15 @@ module SpatialModelConnectionModule
   use SimModule, only: ustop
   use NumericalModelModule, only: NumericalModelType
   use NumericalExchangeModule, only: NumericalExchangeType
-  use DisConnExchangeModule, only: DisConnExchangeType, GetDisConnExchangeFromList
+  use DisConnExchangeModule, only: DisConnExchangeType
   use MemoryManagerModule, only: mem_allocate, mem_deallocate, mem_checkin
   use MemoryHelperModule, only: create_mem_path
   use GridConnectionModule, only: GridConnectionType
   use InterfaceMapModule
-  use DistVariableModule
-  use DistributedModelModule, only: DistributedModelType, get_dist_model
+  use DistVariableModule  
+  use VirtualDataListsModule, only: virtual_exchange_list
+  use VirtualModelModule, only: VirtualModelType, get_virtual_model
+  use VirtualExchangeModule, only: VirtualExchangeType, get_virtual_exchange_from_list
   use ListModule, only: ListType
   use STLVecIntModule, only: STLVecInt
   use MatrixBaseModule
@@ -129,49 +131,31 @@ contains ! module procedures
 
   !> @brief Find all models that might participate in this interface
   !<
-  subroutine createModelHalo(this, exchanges)
+  subroutine createModelHalo(this)
     class(SpatialModelConnectionType) :: this !< this connection
-    type(ListType) :: exchanges !< all exchanges in the numerical solution
-    ! local
-    integer(I4B) :: i
-    class(DisConnExchangeType), pointer :: dcx
-
-    ! sanity:
-    do i = 1, exchanges%Count()
-      dcx => GetDisConnExchangeFromList(exchanges, i)
-      if (.not. associated(dcx)) then
-        write (*, *) 'Error: global exchange list for connection ', &
-                     trim(this%name), ' is corrupt'
-        call ustop()
-      end if
-      if (dcx%typename /= this%typename) then
-        write (*, *) 'Error: global exchange list for connection ', &
-                     trim(this%name), ' contains wrong type'
-        call ustop()
-      end if
-    end do
 
     call this%haloModels%init()
     call this%haloExchanges%init()
 
-    call this%addModelNeighbors(this%owner%id, exchanges, &
+    call this%addModelNeighbors(this%owner%id, virtual_exchange_list, &
                                 this%exchangeStencilDepth)
 
   end subroutine createModelHalo
 
   !> @brief Add neighbors and nbrs-of-nbrs to the model tree
   !<
-  recursive subroutine addModelNeighbors(this, dist_model_id, &
-                                         global_exchanges, &
+  recursive subroutine addModelNeighbors(this, model_id, &
+                                         virtual_exchanges, &
                                          depth, mask)
+    use VirtualExchangeModule, only: get_virtual_exchange                                         
     class(SpatialModelConnectionType) :: this !< this connection
-    integer(I4B) :: dist_model_id !< the model (id) to add neighbors for
-    type(ListType) :: global_exchanges !< list with all exchanges
+    integer(I4B) :: model_id !< the model (id) to add neighbors for
+    type(ListType) :: virtual_exchanges !< list with all virtual exchanges
     integer(I4B), value :: depth !< the maximal number of exchanges between
     integer(I4B), optional :: mask !< don't add this one as a neighbor
     ! local
     integer(I4B) :: i, n
-    class(DisConnExchangeType), pointer :: conn_ex
+    class(VirtualExchangeType), pointer :: v_exg
     integer(I4B) :: neighbor_id
     integer(I4B) :: model_mask
     type(STLVecInt) :: nbr_models
@@ -186,13 +170,13 @@ contains ! module procedures
 
     ! first find all direct neighbors of the model and add them,
     ! avoiding duplicates
-    do i = 1, global_exchanges%Count()
+    do i = 1, virtual_exchanges%Count()
       neighbor_id = -1
-      conn_ex => GetDisConnExchangeFromList(global_exchanges, i)
-      if (conn_ex%dmodel1%id == dist_model_id) then
-        neighbor_id = conn_ex%dmodel2%id
-      else if (conn_ex%dmodel2%id == dist_model_id) then
-        neighbor_id = conn_ex%dmodel1%id
+      v_exg => get_virtual_exchange_from_list(virtual_exchanges, i)
+      if (v_exg%v_model1%id == model_id) then
+        neighbor_id = v_exg%v_model2%id
+      else if (v_exg%v_model2%id == model_id) then
+        neighbor_id = v_exg%v_model1%id
       end if
 
       ! check if there is a neighbor, and it is not masked
@@ -205,30 +189,30 @@ contains ! module procedures
         if (.not. nbr_models%contains(neighbor_id)) then
           call nbr_models%push_back(neighbor_id)
         end if
-
         if (.not. this%haloModels%contains(neighbor_id)) then
           call this%haloModels%push_back(neighbor_id)
         end if
-
-        if (.not. this%haloExchanges%contains(conn_ex%id)) then
-          call this%haloExchanges%push_back(conn_ex%id)
+        if (.not. this%haloExchanges%contains(v_exg%id)) then
+          call this%haloExchanges%push_back(v_exg%id)
         end if
-
       end if
+
     end do
 
     depth = depth - 1
     if (depth == 0) then
+      ! and we're done with this branch
       call nbr_models%destroy()
       return
     end if
     
     ! now recurse on the neighbors up to the specified depth
     do n = 1, nbr_models%size
-      call this%addModelNeighbors(nbr_models%at(n), global_exchanges, &
-                                  depth, dist_model_id)
+      call this%addModelNeighbors(nbr_models%at(n), virtual_exchanges, &
+                                  depth, model_id)
     end do
 
+    ! we're done with the tree
     call nbr_models%destroy()
 
   end subroutine addModelNeighbors
@@ -239,7 +223,7 @@ contains ! module procedures
     class(SpatialModelConnectionType) :: this !< this connection
     ! local
     integer(I4B) :: i
-    class(DistributedModelType), pointer :: dist_model
+    class(VirtualModelType), pointer :: v_model
 
     ! create the grid connection data structure
     this%nrOfConnections = this%getNrOfConnections()
@@ -250,8 +234,8 @@ contains ! module procedures
     this%gridConnection%exchangeStencilDepth = this%exchangeStencilDepth
     this%gridConnection%haloExchanges => this%haloExchanges
     do i = 1, this%haloModels%size
-      dist_model => get_dist_model(this%haloModels%at(i))
-      call this%gridConnection%addToRegionalModels(dist_model)
+      v_model => get_virtual_model(this%haloModels%at(i))
+      call this%gridConnection%addToRegionalModels(v_model)
     end do
     call this%setupGridConnection()
 
@@ -265,15 +249,16 @@ contains ! module procedures
   subroutine spatialcon_ar(this)
     class(SpatialModelConnectionType) :: this !< this connection
     ! local
-    integer(I4B) :: iface_idx
+    integer(I4B) :: iface_idx, glob_idx
     class(GridConnectionType), pointer :: gc
 
     ! fill mapping to global index (which can be
     ! done now because moffset is set in sln_df)
     gc => this%gridConnection
     do iface_idx = 1, gc%nrOfCells
-      gc%idxToGlobalIdx(iface_idx) = gc%idxToGlobal(iface_idx)%index + &
-                                     gc%idxToGlobal(iface_idx)%dmodel%moffset
+      glob_idx = gc%idxToGlobal(iface_idx)%index + &
+                 gc%idxToGlobal(iface_idx)%v_model%moffset%get()
+      gc%idxToGlobalIdx(iface_idx) = glob_idx
     end do
 
   end subroutine spatialcon_ar
@@ -337,14 +322,14 @@ contains ! module procedures
     conn => this%interfaceModel%dis%con
     do n = 1, conn%nodes
       ! only for connections internal to the owning model
-      if (.not. this%gridConnection%idxToGlobal(n)%dmodel == this%owner) then
+      if (.not. this%gridConnection%idxToGlobal(n)%v_model == this%owner) then
         cycle
       end if
       nloc = this%gridConnection%idxToGlobal(n)%index
 
       do ipos = conn%ia(n) + 1, conn%ia(n + 1) - 1
         m = conn%ja(ipos)
-        if (.not. this%gridConnection%idxToGlobal(m)%dmodel == this%owner) then
+        if (.not. this%gridConnection%idxToGlobal(m)%v_model == this%owner) then
           cycle
         end if
         mloc = this%gridConnection%idxToGlobal(m)%index
@@ -388,13 +373,13 @@ contains ! module procedures
     integer(I4B) :: nglo, mglo
 
     do n = 1, this%neq
-      if (.not. this%gridConnection%idxToGlobal(n)%dmodel == this%owner) then
+      if (.not. this%gridConnection%idxToGlobal(n)%v_model == this%owner) then
         ! only add connections for own model to global matrix
         cycle
       end if
 
       nglo = this%gridConnection%idxToGlobal(n)%index + &
-             this%gridConnection%idxToGlobal(n)%dmodel%moffset
+             this%gridConnection%idxToGlobal(n)%v_model%moffset%get()
 
       icol_start = this%matrix%get_first_col_pos(n)
       icol_end = this%matrix%get_last_col_pos(n)
@@ -402,7 +387,7 @@ contains ! module procedures
         m = this%matrix%get_column(ipos)
         if (m == n) cycle
         mglo = this%gridConnection%idxToGlobal(m)%index + &
-               this%gridConnection%idxToGlobal(m)%dmodel%moffset
+               this%gridConnection%idxToGlobal(m)%v_model%moffset%get()
         call sparse%addconnection(nglo, mglo, 1)
       end do
 
@@ -423,13 +408,13 @@ contains ! module procedures
     allocate (this%mapIdxToSln(this%matrix%nja))
 
     do n = 1, this%neq
-      isOwned = (this%gridConnection%idxToGlobal(n)%dmodel == this%owner)
+      isOwned = (this%gridConnection%idxToGlobal(n)%v_model == this%owner)
       do ipos = this%matrix%ia(n), this%matrix%ia(n + 1) - 1
         m = this%matrix%ja(ipos)
         nglo = this%gridConnection%idxToGlobal(n)%index + &
-               this%gridConnection%idxToGlobal(n)%dmodel%moffset
+               this%gridConnection%idxToGlobal(n)%v_model%moffset%get()
         mglo = this%gridConnection%idxToGlobal(m)%index + &
-               this%gridConnection%idxToGlobal(m)%dmodel%moffset
+               this%gridConnection%idxToGlobal(m)%v_model%moffset%get()
         ipos_sln = matrix_sln%get_position(nglo, mglo)
         if (ipos_sln == -1 .and. isOwned) then
           ! this should not be possible

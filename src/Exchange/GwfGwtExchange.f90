@@ -23,8 +23,9 @@ module GwfGwtExchangeModule
 
   type, extends(BaseExchangeType) :: GwfGwtExchangeType
 
-    integer(I4B), pointer :: m1id => null()
-    integer(I4B), pointer :: m2id => null()
+    ! TODO_MJR: refactor this class, we can use GwfModelType and GwtModelType here (we already do...)
+    integer(I4B), pointer :: m1_idx => null() !< index into the list of base exchanges for model 1
+    integer(I4B), pointer :: m2_idx => null() !< index into the list of base exchanges for model 2
 
   contains
 
@@ -41,7 +42,7 @@ module GwfGwtExchangeModule
 
 contains
 
-  subroutine gwfgwt_cr(filename, id, m1id, m2id)
+  subroutine gwfgwt_cr(filename, id, m1_idx, m2_idx)
 ! ******************************************************************************
 ! gwfgwt_cr -- Create a new GWF to GWT exchange object
 ! ******************************************************************************
@@ -52,8 +53,8 @@ contains
     ! -- dummy
     character(len=*), intent(in) :: filename
     integer(I4B), intent(in) :: id
-    integer(I4B), intent(in) :: m1id
-    integer(I4B), intent(in) :: m2id
+    integer(I4B), intent(in) :: m1_idx
+    integer(I4B), intent(in) :: m2_idx
     ! -- local
     class(BaseExchangeType), pointer :: baseexchange => null()
     type(GwfGwtExchangeType), pointer :: exchange => null()
@@ -73,8 +74,8 @@ contains
     !
     ! -- allocate scalars
     call exchange%allocate_scalars()
-    exchange%m1id = m1id
-    exchange%m2id = m2id
+    exchange%m1_idx = m1_idx
+    exchange%m2_idx = m2_idx
     !
     ! -- set model pointers
     call exchange%set_model_pointers()
@@ -101,7 +102,7 @@ contains
     !
     ! -- set gwfmodel
     gwfmodel => null()
-    mb => GetBaseModelFromList(basemodellist, this%m1id)
+    mb => GetBaseModelFromList(basemodellist, this%m1_idx)
     select type (mb)
     type is (GwfModelType)
       gwfmodel => mb
@@ -109,7 +110,7 @@ contains
     !
     ! -- set gwtmodel
     gwtmodel => null()
-    mb => GetBaseModelFromList(basemodellist, this%m2id)
+    mb => GetBaseModelFromList(basemodellist, this%m2_idx)
     select type (mb)
     type is (GwtModelType)
       gwtmodel => mb
@@ -159,14 +160,14 @@ contains
     !
     !
     ! -- set gwfmodel
-    mb => GetBaseModelFromList(basemodellist, this%m1id)
+    mb => GetBaseModelFromList(basemodellist, this%m1_idx)
     select type (mb)
     type is (GwfModelType)
       gwfmodel => mb
     end select
     !
     ! -- set gwtmodel
-    mb => GetBaseModelFromList(basemodellist, this%m2id)
+    mb => GetBaseModelFromList(basemodellist, this%m2_idx)
     select type (mb)
     type is (GwtModelType)
       gwtmodel => mb
@@ -224,14 +225,14 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- set gwfmodel
-    mb => GetBaseModelFromList(basemodellist, this%m1id)
+    mb => GetBaseModelFromList(basemodellist, this%m1_idx)
     select type (mb)
     type is (GwfModelType)
       gwfmodel => mb
     end select
     !
     ! -- set gwtmodel
-    mb => GetBaseModelFromList(basemodellist, this%m2id)
+    mb => GetBaseModelFromList(basemodellist, this%m2_idx)
     select type (mb)
     type is (GwtModelType)
       gwtmodel => mb
@@ -478,8 +479,8 @@ contains
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    call mem_deallocate(this%m1id)
-    call mem_deallocate(this%m2id)
+    call mem_deallocate(this%m1_idx)
+    call mem_deallocate(this%m2_idx)
     !
     ! -- return
     return
@@ -499,10 +500,10 @@ contains
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    call mem_allocate(this%m1id, 'M1ID', this%memoryPath)
-    call mem_allocate(this%m2id, 'M2ID', this%memoryPath)
-    this%m1id = 0
-    this%m2id = 0
+    call mem_allocate(this%m1_idx, 'M1ID', this%memoryPath)
+    call mem_allocate(this%m2_idx, 'M2ID', this%memoryPath)
+    this%m1_idx = 0
+    this%m2_idx = 0
     !
     ! -- return
     return
@@ -527,14 +528,14 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- set gwfmodel
-    mb => GetBaseModelFromList(basemodellist, this%m1id)
+    mb => GetBaseModelFromList(basemodellist, this%m1_idx)
     select type (mb)
     type is (GwfModelType)
       gwfmodel => mb
     end select
     !
     ! -- set gwtmodel
-    mb => GetBaseModelFromList(basemodellist, this%m2id)
+    mb => GetBaseModelFromList(basemodellist, this%m2_idx)
     select type (mb)
     type is (GwtModelType)
       gwtmodel => mb
