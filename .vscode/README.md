@@ -21,72 +21,92 @@ Install the following VSCode extensions:
 
 - Modern Fortran:
   https://marketplace.visualstudio.com/items?itemName=krvajalm.linter-gfortran
-- FORTRAN IntelliSense: https://marketplace.visualstudio.com/items?itemName=hansec.fortran-ls
-- C/C++: https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools
-- Fortran Breakpoint Support:
-  https://marketplace.visualstudio.com/items?itemName=ekibun.fortranbreaker
 
-Now, configure the VSCode files for the modflow6 directory. Open the `modflow6`
-directory in VSCode. Copy `.vscode/settings_template.json` to (untracked) `.vscode/settings.json` and make sure that in the copy, the following setting points toward your Python executable.
+Note: The Remote - WSL extension may be required if you want to use a windows VSCode
+installation in a WSL environment.
 
+### Dependencies
+
+Required and optional dependencies for MODFLOW 6 are discussed in [DEVELOPER.md](../DEVELOPER.md)
+
+### Settings
+
+Add [settings.json](https://code.visualstudio.com/docs/getstarted/settings#_settingsjson) to the
+`modflow6/.vscode` directory if not already there. The following settings can be considered a
+starting place as the contents of this file are dictated both by desired VSCode behavior and
+environmental factors:
+
+In general, to determine the path of an installed tool in your environment run:
+- bash: `which <toolname>`, e.g. `which fortls`
+- cmd: `where <toolname>`, e.g. `where python`
+- PowerShell: `Get-Command <toolname>` e.g. `Get-Command fprettify`
+
+1. Activate the conda environment:
+
+```bash
+conda activate modflow6
+```
+
+2. Determine the path of `fortls` and `fprettify`
+
+3. Set the setting "fortran.fortls.path" and "fortran.formatting.path":
 ```json
 {
-    "python.defaultInterpreterPath": "/path/to/python",
+    "fortran.fortls.path": "/path/to/fortls",
+    "fortran.formatting.path": "/path/to/fprettify",
 }
 ```
 
-In order to compile run:
+The fortran formatter can be integrated with VSCode using the following settings:
+
+```json
+{
+    "[fortran]": {
+        "editor.formatOnSave": true,
+    },
+    "fortran.formatting.formatter": "fprettify",
+    "fortran.formatting.fprettifyArgs": ["-c", "/path/to/modflow6/.fprettify.yaml"],
+}
+```
+
+Setting the formatter up in this way will cause a source file to reformat with each explicit save.
+
+### Running VSCode
+
+Open the top level `modflow6` repository directory on your system when starting VSCode. The program will
+then look for the `modflow6/.vscode` directory to discover settings relevant to your session.
+
+A nice alternative on any system is to start VSCode from the shell. For example, in a bash or git bash
+shell (windows), change to the `modflow6` directory and execute the command:
+
+```bash
+code .
+```
+
+Note the dot. Starting in this way, VSCode will open as desired, inheriting and discovering
+expected runtime settings in the correct directory location.
+
+### Compiling
+
+In order to compile Fortran source run:
 
 * Press `Ctrl + Shift + P` in VSCode.
 * Type `Tasks`.
 * Select `Run Task` (press Enter).
 * Select the suitable task for your situation.
 
-
-### Language Server
-
-1. Install the fortran language server via:
-
-```bash
-pip install -U fortran-language-server
-```
-
-2. Find out where the executable is
-
-- bash: `which fortls`
-- cmd: `where fortls`
-- PowerShell: `Get-Command fortls`
-
-3. Add this to `.vscode/settings.json`. In case this file does not exist yet, create a new one. Also remember to adapt `fortran-ls.executablePath` to the path you get in the step before.
-
-
-```json
-    "fortran-ls.executablePath": "/path/to/fortls",
-    "fortran-ls.hoverSignature": true,
-    "fortran-ls.lowercaseIntrinsics": true,
-    "fortran-ls.notifyInit": true,
-    "fortran-ls.variableHover": true,    
-    "fortran.linterEnabled": false,
-    "fortran.provideHover": false,
-    "fortran.provideCompletion": false,
-    "fortran.provideSymbols": false,
-    "[FortranFreeForm]": {
-        "editor.acceptSuggestionOnEnter": "off",
-    },
-```
-
-
-
 ### Debugging
 
 Add a `launch.json` in `.vscode` similar to this.
+Most of the time you will want to debug with gdb.
+Only when compiling with ifort on Windows, vsdbg is the preferred debugger.
 
 ```json
 {
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch Modflow Model",
+            "name": "Debug (gdb)",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/bin/mf6.exe",
@@ -104,6 +124,17 @@ Add a `launch.json` in `.vscode` similar to this.
                     "ignoreFailures": true
                 }
             ]
+        }
+        {
+            "name": "Debug (vsdbg)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/mf6.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "/path/to/modflow6/model",
+            "environment": [],
+            "console": "integratedTerminal"
         }
     ]
 }

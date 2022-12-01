@@ -6,7 +6,7 @@ module ConnectionsModule
   use GenericUtilitiesModule, only: sim_message
   use SimVariablesModule, only: errmsg
   use BlockParserModule, only: BlockParserType
-  
+
   implicit none
   private
   public :: ConnectionsType
@@ -14,27 +14,27 @@ module ConnectionsModule
 
   public :: fillisym
   public :: filljas
-  
+
   type ConnectionsType
-    character(len=LENMEMPATH)                       :: memoryPath                !< memory path of the connections data
-    character(len=LENMODELNAME), pointer            :: name_model => null()      !< name of the model    
-    integer(I4B), pointer                           :: nodes      => null()      !< number of nodes
-    integer(I4B), pointer                           :: nja        => null()      !< number of connections
-    integer(I4B), pointer                           :: njas       => null()      !< number of symmetric connections
-    integer(I4B), pointer                           :: ianglex    => null()      !< indicates whether or not anglex is present
-    integer(I4B), dimension(:), pointer, contiguous :: ia         => null()      !< (size:nodes+1) csr index array
-    integer(I4B), dimension(:), pointer, contiguous :: ja         => null()      !< (size:nja) csr pointer array
-    integer(I4B), dimension(:), pointer, contiguous :: mask       => null()      !< (size:nja) to mask certain connections: ==0 means masked. Do not set the mask directly, use set_mask instead!    
-    real(DP), dimension(:), pointer, contiguous     :: cl1        => null()      !< (size:njas) connection length between node n and shared face with node m
-    real(DP), dimension(:), pointer, contiguous     :: cl2        => null()      !< (size:njas) connection length between node m and shared face with node n
-    real(DP), dimension(:), pointer, contiguous     :: hwva       => null()      !< (size:njas) horizontal perpendicular width (ihc>0) or vertical flow area (ihc=0)
-    real(DP), dimension(:), pointer, contiguous     :: anglex     => null()      !< (size:njas) connection angle of face normal with x axis (read in degrees, stored as radians)
-    integer(I4B), dimension(:), pointer, contiguous :: isym       => null()      !< (size:nja) returns csr index of symmetric counterpart
-    integer(I4B), dimension(:), pointer, contiguous :: jas        => null()      !< (size:nja) map any connection to upper triangle (for pulling out of symmetric array)
-    integer(I4B), dimension(:), pointer, contiguous :: ihc        => null()      !< (size:njas) horizontal connection (0:vertical, 1:mean thickness, 2:staggered)
-    integer(I4B), dimension(:), pointer, contiguous :: iausr      => null()      !< (size:nodesusr+1) 
-    integer(I4B), dimension(:), pointer, contiguous :: jausr      => null()      !< (size:nja)
-    type(BlockParserType)                           :: parser                    !< block parser
+    character(len=LENMEMPATH) :: memoryPath !< memory path of the connections data
+    character(len=LENMODELNAME), pointer :: name_model => null() !< name of the model
+    integer(I4B), pointer :: nodes => null() !< number of nodes
+    integer(I4B), pointer :: nja => null() !< number of connections
+    integer(I4B), pointer :: njas => null() !< number of symmetric connections
+    integer(I4B), pointer :: ianglex => null() !< indicates whether or not anglex is present
+    integer(I4B), dimension(:), pointer, contiguous :: ia => null() !< (size:nodes+1) csr index array
+    integer(I4B), dimension(:), pointer, contiguous :: ja => null() !< (size:nja) csr pointer array
+    integer(I4B), dimension(:), pointer, contiguous :: mask => null() !< (size:nja) to mask certain connections: ==0 means masked. Do not set the mask directly, use set_mask instead!
+    real(DP), dimension(:), pointer, contiguous :: cl1 => null() !< (size:njas) connection length between node n and shared face with node m
+    real(DP), dimension(:), pointer, contiguous :: cl2 => null() !< (size:njas) connection length between node m and shared face with node n
+    real(DP), dimension(:), pointer, contiguous :: hwva => null() !< (size:njas) horizontal perpendicular width (ihc>0) or vertical flow area (ihc=0)
+    real(DP), dimension(:), pointer, contiguous :: anglex => null() !< (size:njas) connection angle of face normal with x axis (read in degrees, stored as radians)
+    integer(I4B), dimension(:), pointer, contiguous :: isym => null() !< (size:nja) returns csr index of symmetric counterpart
+    integer(I4B), dimension(:), pointer, contiguous :: jas => null() !< (size:nja) map any connection to upper triangle (for pulling out of symmetric array)
+    integer(I4B), dimension(:), pointer, contiguous :: ihc => null() !< (size:njas) horizontal connection (0:vertical, 1:mean thickness, 2:staggered)
+    integer(I4B), dimension(:), pointer, contiguous :: iausr => null() !< (size:nodesusr+1)
+    integer(I4B), dimension(:), pointer, contiguous :: jausr => null() !< (size:nja)
+    type(BlockParserType) :: parser !< block parser
   contains
     procedure :: con_da
     procedure :: allocate_scalars
@@ -50,8 +50,8 @@ module ConnectionsModule
     procedure :: set_mask
   end type ConnectionsType
 
-  contains
-  
+contains
+
   subroutine con_da(this)
 ! ******************************************************************************
 ! con_da -- Deallocate connection variables
@@ -66,7 +66,7 @@ module ConnectionsModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Strings
-    deallocate(this%name_model)
+    deallocate (this%name_model)
     !
     ! -- Scalars
     call mem_deallocate(this%nodes)
@@ -75,38 +75,38 @@ module ConnectionsModule
     call mem_deallocate(this%ianglex)
     !
     ! -- iausr and jausr
-    if(associated(this%iausr, this%ia)) then
-      nullify(this%iausr)
+    if (associated(this%iausr, this%ia)) then
+      nullify (this%iausr)
     else
       call mem_deallocate(this%iausr)
-    endif
-    if(associated(this%jausr, this%ja)) then
-      nullify(this%jausr)
+    end if
+    if (associated(this%jausr, this%ja)) then
+      nullify (this%jausr)
     else
       call mem_deallocate(this%jausr)
-    endif
+    end if
     ! -- mask
     if (associated(this%mask, this%ja)) then
-      nullify(this%mask)
+      nullify (this%mask)
     else
       call mem_deallocate(this%mask)
-    end if 
+    end if
     !
     ! -- Arrays
     call mem_deallocate(this%ia)
-    call mem_deallocate(this%ja)  
+    call mem_deallocate(this%ja)
     call mem_deallocate(this%isym)
     call mem_deallocate(this%jas)
     call mem_deallocate(this%hwva)
     call mem_deallocate(this%anglex)
     call mem_deallocate(this%ihc)
     call mem_deallocate(this%cl1)
-    call mem_deallocate(this%cl2)     
+    call mem_deallocate(this%cl2)
     !
     ! -- return
     return
   end subroutine con_da
-  
+
   subroutine allocate_scalars(this, name_model)
 ! ******************************************************************************
 ! allocate_scalars -- Allocate scalars for ConnectionsType
@@ -123,8 +123,8 @@ module ConnectionsModule
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate
-    allocate(this%name_model)
-    
+    allocate (this%name_model)
+
     this%memoryPath = create_mem_path(name_model, 'CON')
     call mem_allocate(this%nodes, 'NODES', this%memoryPath)
     call mem_allocate(this%nja, 'NJA', this%memoryPath)
@@ -153,7 +153,7 @@ module ConnectionsModule
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate space for connection arrays
-    call mem_allocate(this%ia, this%nodes+1, 'IA', this%memoryPath)
+    call mem_allocate(this%ia, this%nodes + 1, 'IA', this%memoryPath)
     call mem_allocate(this%ja, this%nja, 'JA', this%memoryPath)
     call mem_allocate(this%isym, this%nja, 'ISYM', this%memoryPath)
     call mem_allocate(this%jas, this%nja, 'JAS', this%memoryPath)
@@ -164,15 +164,15 @@ module ConnectionsModule
     call mem_allocate(this%cl2, this%njas, 'CL2', this%memoryPath)
     call mem_allocate(this%iausr, 1, 'IAUSR', this%memoryPath)
     call mem_allocate(this%jausr, 1, 'JAUSR', this%memoryPath)
-    ! 
-    ! -- let mask point to ja, which is always nonzero, 
+    !
+    ! -- let mask point to ja, which is always nonzero,
     !    until someone decides to do a 'set_mask'
     this%mask => this%ja
     !
     ! -- Return
     return
   end subroutine allocate_arrays
-  
+
   subroutine con_finalize(this, ihctemp, cl12temp, hwvatemp, angldegx)
 ! ******************************************************************************
 ! con_finalize -- Finalize connection data
@@ -192,60 +192,60 @@ module ConnectionsModule
     ! -- local
     integer(I4B) :: ii, n, m
     integer(I4B), parameter :: nname = 6
-    character(len=24),dimension(nname) :: aname(nname)
+    character(len=24), dimension(nname) :: aname(nname)
     ! -- formats
-    character(len=*),parameter :: fmtsymerr =                                  &
-      &"('Error in array: ',a,'.',                                             &
-        &' Array is not symmetric in positions: ',i0,' and ',i0,'.',           &
-        &' Values in these positions are: ',1pg15.6,' and ', 1pg15.6,          &
+    character(len=*), parameter :: fmtsymerr = &
+      &"('Error in array: ',a,'.', &
+        &' Array is not symmetric in positions: ',i0,' and ',i0,'.', &
+        &' Values in these positions are: ',1pg15.6,' and ', 1pg15.6, &
         &' For node ',i0,' connected to node ',i0)"
-    character(len=*),parameter :: fmtsymerrja =                                &
-      &"('Error in array: ',a,'.',                                             &
-        &' Array does not have symmetric counterpart in position ',i0,         &
+    character(len=*), parameter :: fmtsymerrja = &
+      &"('Error in array: ',a,'.', &
+        &' Array does not have symmetric counterpart in position ',i0, &
         &' for cell ',i0,' connected to cell ',i0)"
-    character(len=*),parameter :: fmtjanmerr =                                 &
-      &"('Error in array: ',a,'.',                                             &
-        &' First value for cell : ',i0,' must equal ',i0,'.',                  &
+    character(len=*), parameter :: fmtjanmerr = &
+      &"('Error in array: ',a,'.', &
+        &' First value for cell : ',i0,' must equal ',i0,'.', &
         &' Found ',i0,' instead.')"
-    character(len=*),parameter :: fmtjasorterr =                               &
-      &"('Error in array: ',a,'.',                                             &
-        &' Entries not sorted for row: ',i0,'.',                               &
+    character(len=*), parameter :: fmtjasorterr = &
+      &"('Error in array: ',a,'.', &
+        &' Entries not sorted for row: ',i0,'.', &
         &' Offending entries are: ',i0,' and ',i0)"
-    character(len=*),parameter :: fmtihcerr =                                  &
-      "('IHC must be 0, 1, or 2.  Found: ',i0)"
+    character(len=*), parameter :: fmtihcerr = &
+                                   "('IHC must be 0, 1, or 2.  Found: ',i0)"
     ! -- data
-    data aname(1) /'                     IAC'/
-    data aname(2) /'                      JA'/
-    data aname(3) /'                     IHC'/
-    data aname(4) /'                    CL12'/
-    data aname(5) /'                    HWVA'/
-    data aname(6) /'                ANGLDEGX'/
+    data aname(1)/'                     IAC'/
+    data aname(2)/'                      JA'/
+    data aname(3)/'                     IHC'/
+    data aname(4)/'                    CL12'/
+    data aname(5)/'                    HWVA'/
+    data aname(6)/'                ANGLDEGX'/
 ! ------------------------------------------------------------------------------
     !
     ! -- Convert any negative ja numbers to positive
     do ii = 1, this%nja
-      if(this%ja(ii) < 0) this%ja(ii) = -this%ja(ii)
-    enddo
+      if (this%ja(ii) < 0) this%ja(ii) = -this%ja(ii)
+    end do
     !
     ! -- Ensure ja is sorted with the row column listed first
     do n = 1, this%nodes
       m = this%ja(this%ia(n))
       if (n /= m) then
-        write(errmsg, fmtjanmerr) trim(adjustl(aname(2))), n, n, m
+        write (errmsg, fmtjanmerr) trim(adjustl(aname(2))), n, n, m
         call store_error(errmsg)
-      endif
+      end if
       do ii = this%ia(n) + 1, this%ia(n + 1) - 2
         m = this%ja(ii)
-        if(m > this%ja(ii+1)) then
-          write(errmsg, fmtjasorterr) trim(adjustl(aname(2))), n,              &
-                                      m, this%ja(ii+1)
+        if (m > this%ja(ii + 1)) then
+          write (errmsg, fmtjasorterr) trim(adjustl(aname(2))), n, &
+            m, this%ja(ii + 1)
           call store_error(errmsg)
-        endif
-      enddo
-    enddo
-    if(count_errors() > 0) then
+        end if
+      end do
+    end do
+    if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-    endif
+    end if
     !
     ! -- fill the isym arrays
     call fillisym(this%nodes, this%nja, this%ia, this%ja, this%isym)
@@ -255,15 +255,15 @@ module ConnectionsModule
     do n = 1, this%nodes
       do ii = this%ia(n), this%ia(n + 1) - 1
         m = this%ja(ii)
-        if(this%isym(ii) == 0) then
-          write(errmsg, fmtsymerrja) trim(adjustl(aname(2))), ii, n, m
+        if (this%isym(ii) == 0) then
+          write (errmsg, fmtsymerrja) trim(adjustl(aname(2))), ii, n, m
           call store_error(errmsg)
-        endif
-      enddo
-    enddo
-    if(count_errors() > 0) then
+        end if
+      end do
+    end do
+    if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-    endif
+    end if
     !
     ! -- Fill the jas array, which maps any connection to upper triangle
     call filljas(this%nodes, this%nja, this%ia, this%ja, this%isym, this%jas)
@@ -272,30 +272,30 @@ module ConnectionsModule
     do n = 1, this%nodes
       do ii = this%ia(n) + 1, this%ia(n + 1) - 1
         m = this%ja(ii)
-        if(ihctemp(ii) /= ihctemp(this%isym(ii))) then
-          write(errmsg, fmtsymerr) trim(adjustl(aname(3))), ii, this%isym(ii), &
-                             ihctemp(ii), ihctemp(this%isym(ii)), n, m
+        if (ihctemp(ii) /= ihctemp(this%isym(ii))) then
+          write (errmsg, fmtsymerr) trim(adjustl(aname(3))), ii, this%isym(ii), &
+            ihctemp(ii), ihctemp(this%isym(ii)), n, m
           call store_error(errmsg)
         else
           this%ihc(this%jas(ii)) = ihctemp(ii)
-        endif
-      enddo
-    enddo
-    if(count_errors() > 0) then
+        end if
+      end do
+    end do
+    if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-    endif
+    end if
     !
     ! -- Put cl12 into symmetric arrays cl1 and cl2
     do n = 1, this%nodes
       do ii = this%ia(n) + 1, this%ia(n + 1) - 1
         m = this%ja(ii)
-        if(m > n) then
+        if (m > n) then
           this%cl1(this%jas(ii)) = cl12temp(ii)
-        elseif(n > m) then
+        elseif (n > m) then
           this%cl2(this%jas(ii)) = cl12temp(ii)
-        endif
-      enddo
-    enddo
+        end if
+      end do
+    end do
     !
     ! -- Put HWVA into symmetric array based on the value of IHC
     !    IHC = 0, vertical connection, HWVA is vertical flow area
@@ -306,41 +306,41 @@ module ConnectionsModule
     do n = 1, this%nodes
       do ii = this%ia(n) + 1, this%ia(n + 1) - 1
         m = this%ja(ii)
-        if(hwvatemp(ii) /= hwvatemp(this%isym(ii))) then
-          write(errmsg, fmtsymerr) trim(adjustl(aname(5))), ii, this%isym(ii), &
-                             hwvatemp(ii), hwvatemp(this%isym(ii)), n, m
+        if (hwvatemp(ii) /= hwvatemp(this%isym(ii))) then
+          write (errmsg, fmtsymerr) trim(adjustl(aname(5))), ii, this%isym(ii), &
+            hwvatemp(ii), hwvatemp(this%isym(ii)), n, m
           call store_error(errmsg)
-        endif
-        if(ihctemp(ii) < 0 .or. ihctemp(ii) > 2) then
-          write(errmsg, fmtihcerr) ihctemp(ii)
+        end if
+        if (ihctemp(ii) < 0 .or. ihctemp(ii) > 2) then
+          write (errmsg, fmtihcerr) ihctemp(ii)
           call store_error(errmsg)
-        endif
+        end if
         this%hwva(this%jas(ii)) = hwvatemp(ii)
-      enddo
-    enddo
-    if(count_errors() > 0) then
+      end do
+    end do
+    if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-    endif
+    end if
     !
     ! -- Put anglextemp into this%anglex; store only upper triangle
-    if(this%ianglex /= 0) then
+    if (this%ianglex /= 0) then
       do n = 1, this%nodes
         do ii = this%ia(n) + 1, this%ia(n + 1) - 1
           m = this%ja(ii)
-          if(n > m) cycle
+          if (n > m) cycle
           this%anglex(this%jas(ii)) = angldegx(ii) * DPIO180
-        enddo
-      enddo
+        end do
+      end do
     else
       do n = 1, size(this%anglex)
         this%anglex(n) = DNODATA
-      enddo
-    endif
+      end do
+    end if
     !
     ! -- Return
     return
   end subroutine con_finalize
-    
+
   subroutine read_connectivity_from_block(this, name_model, nodes, nja, iout)
 ! ******************************************************************************
 ! read_connectivity_from_block -- Read and process IAC and JA from an
@@ -361,22 +361,22 @@ module ConnectionsModule
     ! -- local
     character(len=LINELENGTH) :: line
     character(len=LINELENGTH) :: keyword
-    integer(I4B) :: ii,n,m
+    integer(I4B) :: ii, n, m
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     integer(I4B), parameter :: nname = 2
-    logical,dimension(nname) :: lname
-    character(len=24),dimension(nname) :: aname(nname)
+    logical, dimension(nname) :: lname
+    character(len=24), dimension(nname) :: aname(nname)
     ! -- formats
-    character(len=*),parameter :: fmtsymerr = &
+    character(len=*), parameter :: fmtsymerr = &
       &"(/,'Error in array: ',(a),/, &
           &'Array is not symmetric in positions: ',2i9,/, &
           &'Values in these positions are: ', 2(1pg15.6))"
-    character(len=*),parameter :: fmtihcerr = &
+    character(len=*), parameter :: fmtihcerr = &
       &"(/,'IHC must be 0, 1, or 2.  Found: ',i0)"
     ! -- data
-    data aname(1) /'                     IAC'/
-    data aname(2) /'                      JA'/
+    data aname(1)/'                     IAC'/
+    data aname(2)/'                      JA'/
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate and initialize dimensions
@@ -391,28 +391,29 @@ module ConnectionsModule
     ! -- get connectiondata block
     call this%parser%GetBlock('CONNECTIONDATA', isfound, ierr)
     lname(:) = .false.
-    if(isfound) then
-      write(iout,'(1x,a)')'PROCESSING CONNECTIONDATA'
+    if (isfound) then
+      write (iout, '(1x,a)') 'PROCESSING CONNECTIONDATA'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
-          case ('IAC')
-            call ReadArray(this%parser%iuactive, this%ia, aname(1), 1, &
-                            this%nodes, iout, 0)
-            lname(1) = .true.
-          case ('JA')
-            call ReadArray(this%parser%iuactive, this%ja, aname(2), 1, &
-                            this%nja, iout, 0)
-            lname(2) = .true.
-          case default
-            write(errmsg,'(4x,a,a)') 'UNKNOWN CONNECTIONDATA TAG: ', trim(keyword)
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
+        case ('IAC')
+          call ReadArray(this%parser%iuactive, this%ia, aname(1), 1, &
+                         this%nodes, iout, 0)
+          lname(1) = .true.
+        case ('JA')
+          call ReadArray(this%parser%iuactive, this%ja, aname(2), 1, &
+                         this%nja, iout, 0)
+          lname(2) = .true.
+        case default
+          write (errmsg, '(4x,a,a)') &
+            'UNKNOWN CONNECTIONDATA TAG: ', trim(keyword)
+          call store_error(errmsg)
+          call this%parser%StoreErrorUnit()
         end select
       end do
-      write(iout,'(1x,a)')'END PROCESSING CONNECTIONDATA'
+      write (iout, '(1x,a)') 'END PROCESSING CONNECTIONDATA'
     else
       call store_error('REQUIRED CONNECTIONDATA BLOCK NOT FOUND.')
       call this%parser%StoreErrorUnit()
@@ -420,29 +421,29 @@ module ConnectionsModule
     !
     ! -- verify all items were read
     do n = 1, nname
-      if(.not. lname(n)) then
-        write(errmsg,'(1x,a,a)') &
-          'REQUIRED INPUT WAS NOT SPECIFIED: ',aname(n)
+      if (.not. lname(n)) then
+        write (errmsg, '(1x,a,a)') &
+          'REQUIRED INPUT WAS NOT SPECIFIED: ', aname(n)
         call store_error(errmsg)
-      endif
-    enddo
+      end if
+    end do
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-    endif
+    end if
     !
     ! -- Convert iac to ia
     do n = 2, this%nodes + 1
-      this%ia(n) = this%ia(n) + this%ia(n-1)
-    enddo
+      this%ia(n) = this%ia(n) + this%ia(n - 1)
+    end do
     do n = this%nodes + 1, 2, -1
       this%ia(n) = this%ia(n - 1) + 1
-    enddo
+    end do
     this%ia(1) = 1
     !
     ! -- Convert any negative ja numbers to positive
     do ii = 1, this%nja
-      if(this%ja(ii) < 0) this%ja(ii) = -this%ja(ii)
-    enddo
+      if (this%ja(ii) < 0) this%ja(ii) = -this%ja(ii)
+    end do
     !
     ! -- fill the isym and jas arrays
     call fillisym(this%nodes, this%nja, this%ia, this%ja, this%isym)
@@ -453,25 +454,25 @@ module ConnectionsModule
     do n = 1, this%nodes
       do ii = this%ia(n), this%ia(n + 1) - 1
         m = this%ja(ii)
-        if(n /= this%ja(this%isym(ii))) then
-          write(line, fmtsymerr) aname(2), ii, this%isym(ii)
+        if (n /= this%ja(this%isym(ii))) then
+          write (line, fmtsymerr) aname(2), ii, this%isym(ii)
           call sim_message(line)
           call this%parser%StoreErrorUnit()
-        endif
-      enddo
-    enddo
+        end if
+      end do
+    end do
     !
-    if(count_errors() > 0) then
+    if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-    endif
+    end if
     !
     ! -- Return
     return
   end subroutine read_connectivity_from_block
-  
+
   subroutine set_cl1_cl2_from_fleng(this, fleng)
 ! ******************************************************************************
-! set_cl1_cl2_from_fleng -- Using a vector of cell lengths, 
+! set_cl1_cl2_from_fleng -- Using a vector of cell lengths,
 ! calculate the cl1 and cl2 arrays.
 ! ******************************************************************************
 !
@@ -492,15 +493,15 @@ module ConnectionsModule
         m = this%ja(ii)
         this%cl1(this%jas(ii)) = fleng(n) * DHALF
         this%cl2(this%jas(ii)) = fleng(m) * DHALF
-      enddo
-    enddo
+      end do
+    end do
     !
     ! -- Return
     return
   end subroutine set_cl1_cl2_from_fleng
-  
-  subroutine disconnections(this, name_model, nodes, ncol, nrow, nlay,         &
-                            nrsize, delr, delc, top, bot, nodereduced,         &
+
+  subroutine disconnections(this, name_model, nodes, ncol, nrow, nlay, &
+                            nrsize, delr, delc, top, bot, nodereduced, &
                             nodeuser)
 ! ******************************************************************************
 ! disconnections -- Construct the connectivity arrays for a structured
@@ -521,12 +522,12 @@ module ConnectionsModule
     integer(I4B), intent(in) :: nrow
     integer(I4B), intent(in) :: nlay
     integer(I4B), intent(in) :: nrsize
-    real(DP), dimension(ncol),             intent(in) :: delr
-    real(DP), dimension(nrow),             intent(in) :: delc
-    real(DP), dimension(nodes),            intent(in) :: top
-    real(DP), dimension(nodes),            intent(in) :: bot
-    integer(I4B),          dimension(:), target,        intent(in) :: nodereduced
-    integer(I4B),          dimension(:),                intent(in) :: nodeuser
+    real(DP), dimension(ncol), intent(in) :: delr
+    real(DP), dimension(nrow), intent(in) :: delc
+    real(DP), dimension(nodes), intent(in) :: top
+    real(DP), dimension(nodes), intent(in) :: bot
+    integer(I4B), dimension(:), target, intent(in) :: nodereduced
+    integer(I4B), dimension(:), intent(in) :: nodeuser
     ! -- local
     integer(I4B), dimension(:, :, :), pointer :: nrdcd_ptr => null() !non-contiguous because is a slice
     integer(I4B), dimension(:), allocatable :: rowmaxnnz
@@ -543,16 +544,16 @@ module ConnectionsModule
     this%ianglex = 1
     !
     ! -- Setup the sparse matrix object
-    allocate(rowmaxnnz(this%nodes))
+    allocate (rowmaxnnz(this%nodes))
     do i = 1, this%nodes
       rowmaxnnz(i) = 6
-    enddo
+    end do
     call sparse%init(this%nodes, this%nodes, rowmaxnnz)
     !
     ! -- Create a 3d pointer to nodereduced for easier processing
-    if(nrsize /= 0) then
+    if (nrsize /= 0) then
       nrdcd_ptr(1:ncol, 1:nrow, 1:nlay) => nodereduced
-    endif
+    end if
     !
     ! -- Add connections to sparse
     do k = 1, nlay
@@ -561,96 +562,96 @@ module ConnectionsModule
           !
           ! -- Find the reduced node number and then cycle if the
           !    node is always inactive
-          if(nrsize == 0) then
+          if (nrsize == 0) then
             nr = get_node(k, i, j, nlay, nrow, ncol)
           else
             nr = nrdcd_ptr(j, i, k)
-          endif
-          if(nr <= 0) cycle
+          end if
+          if (nr <= 0) cycle
           !
           ! -- Process diagonal
           call sparse%addconnection(nr, nr, 1)
           !
           ! -- Up direction
-          if(k > 1) then
+          if (k > 1) then
             do kk = k - 1, 1, -1
-              if(nrsize == 0) then
+              if (nrsize == 0) then
                 mr = get_node(kk, i, j, nlay, nrow, ncol)
               else
                 mr = nrdcd_ptr(j, i, kk)
-              endif
-              if(mr >= 0) exit
-            enddo
-            if(mr > 0) then
+              end if
+              if (mr >= 0) exit
+            end do
+            if (mr > 0) then
               call sparse%addconnection(nr, mr, 1)
-            endif
-          endif
+            end if
+          end if
           !
           ! -- Back direction
-          if(i > 1) then
-            if(nrsize == 0) then
-              mr = get_node(k, i-1, j, nlay, nrow, ncol)
+          if (i > 1) then
+            if (nrsize == 0) then
+              mr = get_node(k, i - 1, j, nlay, nrow, ncol)
             else
-              mr = nrdcd_ptr(j, i-1, k)
-            endif
-            if(mr > 0) then
+              mr = nrdcd_ptr(j, i - 1, k)
+            end if
+            if (mr > 0) then
               call sparse%addconnection(nr, mr, 1)
-            endif
-          endif
+            end if
+          end if
           !
           ! -- Left direction
-          if(j > 1) then
-            if(nrsize == 0) then
-              mr = get_node(k, i, j-1, nlay, nrow, ncol)
+          if (j > 1) then
+            if (nrsize == 0) then
+              mr = get_node(k, i, j - 1, nlay, nrow, ncol)
             else
-              mr = nrdcd_ptr(j-1, i, k)
-            endif
-            if(mr > 0) then
+              mr = nrdcd_ptr(j - 1, i, k)
+            end if
+            if (mr > 0) then
               call sparse%addconnection(nr, mr, 1)
-            endif
-          endif
+            end if
+          end if
           !
           ! -- Right direction
-          if(j < ncol) then
-              if(nrsize == 0) then
-                mr = get_node(k, i, j+1, nlay, nrow, ncol)
-              else
-                mr = nrdcd_ptr(j+1, i, k)
-              endif
-            if(mr > 0) then
+          if (j < ncol) then
+            if (nrsize == 0) then
+              mr = get_node(k, i, j + 1, nlay, nrow, ncol)
+            else
+              mr = nrdcd_ptr(j + 1, i, k)
+            end if
+            if (mr > 0) then
               call sparse%addconnection(nr, mr, 1)
-            endif
-          endif
+            end if
+          end if
           !
           ! -- Front direction
-          if(i < nrow) then  !front
-              if(nrsize == 0) then
-                mr = get_node(k, i+1, j, nlay, nrow, ncol)
-              else
-                mr = nrdcd_ptr(j, i+1, k)
-              endif
-            if(mr > 0) then
+          if (i < nrow) then !front
+            if (nrsize == 0) then
+              mr = get_node(k, i + 1, j, nlay, nrow, ncol)
+            else
+              mr = nrdcd_ptr(j, i + 1, k)
+            end if
+            if (mr > 0) then
               call sparse%addconnection(nr, mr, 1)
-            endif
-          endif
+            end if
+          end if
           !
           ! -- Down direction
-          if(k < nlay) then
+          if (k < nlay) then
             do kk = k + 1, nlay
-              if(nrsize == 0) then
+              if (nrsize == 0) then
                 mr = get_node(kk, i, j, nlay, nrow, ncol)
               else
                 mr = nrdcd_ptr(j, i, kk)
-              endif
-              if(mr >= 0) exit
-            enddo
-            if(mr > 0) then
+              end if
+              if (mr >= 0) exit
+            end do
+            if (mr > 0) then
               call sparse%addconnection(nr, mr, 1)
-            endif
-          endif
-        enddo
-      enddo
-    enddo
+            end if
+          end if
+        end do
+      end do
+    end do
     this%nja = sparse%nnz
     this%njas = (this%nja - this%nodes) / 2
     !
@@ -672,72 +673,72 @@ module ConnectionsModule
         do j = 1, ncol
           !
           ! -- cycle if node is always inactive
-          if(nrsize == 0) then
+          if (nrsize == 0) then
             nr = get_node(k, i, j, nlay, nrow, ncol)
           else
             nr = nrdcd_ptr(j, i, k)
-          endif
-          if(nr <= 0) cycle
+          end if
+          if (nr <= 0) cycle
           !
           ! -- right connection
-          if(j < ncol) then
-            if(nrsize == 0) then
-              mr = get_node(k, i, j+1, nlay, nrow, ncol)
+          if (j < ncol) then
+            if (nrsize == 0) then
+              mr = get_node(k, i, j + 1, nlay, nrow, ncol)
             else
-              mr = nrdcd_ptr(j+1, i, k)
-            endif
-            if(mr > 0) then
+              mr = nrdcd_ptr(j + 1, i, k)
+            end if
+            if (mr > 0) then
               this%ihc(isympos) = 1
               this%cl1(isympos) = DHALF * delr(j)
               this%cl2(isympos) = DHALF * delr(j + 1)
               this%hwva(isympos) = delc(i)
               this%anglex(isympos) = DZERO
               isympos = isympos + 1
-            endif
-          endif
+            end if
+          end if
           !
           ! -- front connection
-          if(i < nrow) then
-            if(nrsize == 0) then
-              mr = get_node(k, i+1, j, nlay, nrow, ncol)
+          if (i < nrow) then
+            if (nrsize == 0) then
+              mr = get_node(k, i + 1, j, nlay, nrow, ncol)
             else
-              mr = nrdcd_ptr(j, i+1, k)
-            endif
-            if(mr > 0) then
+              mr = nrdcd_ptr(j, i + 1, k)
+            end if
+            if (mr > 0) then
               this%ihc(isympos) = 1
               this%cl1(isympos) = DHALF * delc(i)
               this%cl2(isympos) = DHALF * delc(i + 1)
               this%hwva(isympos) = delr(j)
               this%anglex(isympos) = DTHREE / DTWO * DPI
               isympos = isympos + 1
-            endif
-          endif
+            end if
+          end if
           !
           ! -- down connection
-          if(k < nlay) then
+          if (k < nlay) then
             do kk = k + 1, nlay
-              if(nrsize == 0) then
+              if (nrsize == 0) then
                 mr = get_node(kk, i, j, nlay, nrow, ncol)
               else
                 mr = nrdcd_ptr(j, i, kk)
-              endif
-              if(mr >= 0) exit
-            enddo
-            if(mr > 0) then
+              end if
+              if (mr >= 0) exit
+            end do
+            if (mr > 0) then
               this%ihc(isympos) = 0
               this%cl1(isympos) = DHALF * (top(nr) - bot(nr))
               this%cl2(isympos) = DHALF * (top(mr) - bot(mr))
               this%hwva(isympos) = delr(j) * delc(i)
               this%anglex(isympos) = DZERO
               isympos = isympos + 1
-            endif
-          endif
-        enddo
-      enddo
-    enddo
+            end if
+          end if
+        end do
+      end do
+    end do
     !
     ! -- Deallocate temporary arrays
-    deallocate(rowmaxnnz)
+    deallocate (rowmaxnnz)
     !
     ! -- If reduced system, then need to build iausr and jausr, otherwise point
     !    them to ia and ja.
@@ -748,8 +749,8 @@ module ConnectionsModule
     return
   end subroutine disconnections
 
-  subroutine disvconnections(this, name_model, nodes, ncpl, nlay, nrsize,      &
-                             nvert, vertex, iavert, javert, cellxy,            & 
+  subroutine disvconnections(this, name_model, nodes, ncpl, nlay, nrsize, &
+                             nvert, vertex, iavert, javert, cellxy, &
                              top, bot, nodereduced, nodeuser)
 ! ******************************************************************************
 ! disvconnections -- Construct the connectivity arrays using cell disv
@@ -765,21 +766,21 @@ module ConnectionsModule
     use DisvGeom, only: DisvGeomType
     use MemoryManagerModule, only: mem_reallocate
     ! -- dummy
-    class(ConnectionsType)                              :: this
-    character(len=*),                        intent(in) :: name_model
-    integer(I4B),                                 intent(in) :: nodes
-    integer(I4B),                                 intent(in) :: ncpl
-    integer(I4B),                                 intent(in) :: nlay
-    integer(I4B),                                 intent(in) :: nrsize
-    integer(I4B),                                 intent(in) :: nvert
-    real(DP), dimension(2, nvert),   intent(in) :: vertex
-    integer(I4B), dimension(:),                   intent(in) :: iavert
-    integer(I4B), dimension(:),                   intent(in) :: javert
-    real(DP), dimension(2, ncpl),    intent(in) :: cellxy
-    real(DP), dimension(nodes),      intent(in) :: top
-    real(DP), dimension(nodes),      intent(in) :: bot
-    integer(I4B),          dimension(:),          intent(in) :: nodereduced
-    integer(I4B),          dimension(:),          intent(in) :: nodeuser
+    class(ConnectionsType) :: this
+    character(len=*), intent(in) :: name_model
+    integer(I4B), intent(in) :: nodes
+    integer(I4B), intent(in) :: ncpl
+    integer(I4B), intent(in) :: nlay
+    integer(I4B), intent(in) :: nrsize
+    integer(I4B), intent(in) :: nvert
+    real(DP), dimension(2, nvert), intent(in) :: vertex
+    integer(I4B), dimension(:), intent(in) :: iavert
+    integer(I4B), dimension(:), intent(in) :: javert
+    real(DP), dimension(2, ncpl), intent(in) :: cellxy
+    real(DP), dimension(nodes), intent(in) :: top
+    real(DP), dimension(nodes), intent(in) :: bot
+    integer(I4B), dimension(:), intent(in) :: nodereduced
+    integer(I4B), dimension(:), intent(in) :: nodeuser
     ! -- local
     integer(I4B), dimension(:), allocatable :: itemp
     type(sparsematrix) :: sparse, vertcellspm
@@ -795,28 +796,28 @@ module ConnectionsModule
     this%ianglex = 1
     !
     ! -- Initialize DisvGeomType objects
-    call cell1%init(nlay, ncpl, nodes, top, bot, iavert, javert, vertex,       &
+    call cell1%init(nlay, ncpl, nodes, top, bot, iavert, javert, vertex, &
                     cellxy, nodereduced, nodeuser)
-    call cell2%init(nlay, ncpl, nodes, top, bot, iavert, javert, vertex,       &
+    call cell2%init(nlay, ncpl, nodes, top, bot, iavert, javert, vertex, &
                     cellxy, nodereduced, nodeuser)
     !
     ! -- Create a sparse matrix array with a row for each vertex.  The columns
     !    in the sparse matrix contains the cells that include that vertex.
     !    This array will be used to determine horizontal cell connectivity.
-    allocate(itemp(nvert))
+    allocate (itemp(nvert))
     do i = 1, nvert
       itemp(i) = 4
-    enddo
+    end do
     call vertcellspm%init(nvert, ncpl, itemp)
-    deallocate(itemp)
+    deallocate (itemp)
     do j = 1, ncpl
       do i = iavert(j), iavert(j + 1) - 1
         call vertcellspm%addconnection(javert(i), j, 1)
-      enddo
-    enddo
+      end do
+    end do
     !
     ! -- Call routine to build a sparse matrix of the connections
-    call vertexconnect(this%nodes, nrsize, 6, nlay, ncpl, sparse,              &
+    call vertexconnect(this%nodes, nrsize, 6, nlay, ncpl, sparse, &
                        vertcellspm, cell1, cell2, nodereduced)
     this%nja = sparse%nnz
     this%njas = (this%nja - this%nodes) / 2
@@ -838,14 +839,14 @@ module ConnectionsModule
       call cell1%set_nodered(n)
       do ipos = this%ia(n) + 1, this%ia(n + 1) - 1
         m = this%ja(ipos)
-        if(m < n) cycle
+        if (m < n) cycle
         call cell2%set_nodered(m)
-        call cell1%cprops(cell2, this%hwva(this%jas(ipos)),                    &
-                          this%cl1(this%jas(ipos)), this%cl2(this%jas(ipos)),  &
-                          this%anglex(this%jas(ipos)),                         &
+        call cell1%cprops(cell2, this%hwva(this%jas(ipos)), &
+                          this%cl1(this%jas(ipos)), this%cl2(this%jas(ipos)), &
+                          this%anglex(this%jas(ipos)), &
                           this%ihc(this%jas(ipos)))
-      enddo
-    enddo
+      end do
+    end do
     !
     ! -- If reduced system, then need to build iausr and jausr, otherwise point
     !    them to ia and ja.
@@ -887,10 +888,10 @@ module ConnectionsModule
     real(DP), dimension(:), contiguous, intent(in) :: angldegxinp
     integer(I4B), intent(in) :: iangledegx
     ! -- local
-    integer(I4B),dimension(:),allocatable :: ihctemp
-    real(DP),dimension(:),allocatable :: cl12temp
-    real(DP),dimension(:),allocatable :: hwvatemp
-    real(DP),dimension(:),allocatable :: angldegxtemp
+    integer(I4B), dimension(:), allocatable :: ihctemp
+    real(DP), dimension(:), allocatable :: cl12temp
+    real(DP), dimension(:), allocatable :: hwvatemp
+    real(DP), dimension(:), allocatable :: angldegxtemp
     integer(I4B) :: nr, nu, mr, mu, ipos, iposr, ierror
     integer(I4B), dimension(:), allocatable :: rowmaxnnz
     type(sparsematrix) :: sparse
@@ -925,11 +926,11 @@ module ConnectionsModule
       ! -- reduced system requires more work
       !
       ! -- Setup the sparse matrix object
-      allocate(rowmaxnnz(this%nodes))
+      allocate (rowmaxnnz(this%nodes))
       do nr = 1, this%nodes
         nu = nodeuser(nr)
         rowmaxnnz(nr) = iainp(nu + 1) - iainp(nu)
-      enddo
+      end do
       call sparse%init(this%nodes, this%nodes, rowmaxnnz)
       !
       ! -- go through user connectivity and create sparse
@@ -942,8 +943,8 @@ module ConnectionsModule
           if (nr < 1) cycle
           if (mr < 1) cycle
           call sparse%addconnection(nr, mr, 1)
-        enddo
-      enddo
+        end do
+      end do
       this%nja = sparse%nnz
       this%njas = (this%nja - this%nodes) / 2
       !
@@ -954,13 +955,13 @@ module ConnectionsModule
       call sparse%sort()
       call sparse%filliaja(this%ia, this%ja, ierror)
       call sparse%destroy()
-      deallocate(rowmaxnnz)
+      deallocate (rowmaxnnz)
       !
       ! -- At this point, need to reduce ihc, cl12, hwva, and angldegx
-      allocate(ihctemp(this%nja))
-      allocate(cl12temp(this%nja))
-      allocate(hwvatemp(this%nja))
-      allocate(angldegxtemp(this%nja))
+      allocate (ihctemp(this%nja))
+      allocate (cl12temp(this%nja))
+      allocate (hwvatemp(this%nja))
+      allocate (angldegxtemp(this%nja))
       !
       ! -- Compress user arrays into reduced arrays
       iposr = 1
@@ -982,10 +983,10 @@ module ConnectionsModule
       call this%con_finalize(ihctemp, cl12temp, hwvatemp, angldegxtemp)
       !
       ! -- deallocate temporary arrays
-      deallocate(ihctemp)
-      deallocate(cl12temp)
-      deallocate(hwvatemp)
-      deallocate(angldegxtemp)
+      deallocate (ihctemp)
+      deallocate (cl12temp)
+      deallocate (hwvatemp)
+      deallocate (angldegxtemp)
     end if
     !
     ! -- If reduced system, then need to build iausr and jausr, otherwise point
@@ -1018,20 +1019,20 @@ module ConnectionsModule
     !
     ! -- If reduced system, then need to build iausr and jausr, otherwise point
     !    them to ia and ja.
-    if(nrsize > 0) then
+    if (nrsize > 0) then
       !
       ! -- Create the iausr array of size nodesuser + 1.  For excluded cells,
       !    iausr(n) and iausr(n + 1) should be equal to indicate no connections.
-      call mem_reallocate(this%iausr, nodesuser+1, 'IAUSR', this%memoryPath)
+      call mem_reallocate(this%iausr, nodesuser + 1, 'IAUSR', this%memoryPath)
       this%iausr(nodesuser + 1) = this%ia(this%nodes + 1)
       do n = nodesuser, 1, -1
         nr = nodereduced(n)
-        if(nr < 1) then
+        if (nr < 1) then
           this%iausr(n) = this%iausr(n + 1)
         else
           this%iausr(n) = this%ia(nr)
-        endif
-      enddo
+        end if
+      end do
       !
       ! -- Create the jausr array, which is the same size as ja, but it
       !    contains user node numbers instead of reduced node numbers
@@ -1040,20 +1041,20 @@ module ConnectionsModule
         nr = this%ja(ipos)
         n = nodeuser(nr)
         this%jausr(ipos) = n
-      enddo
+      end do
     else
       ! -- iausr and jausr will be pointers
       call mem_deallocate(this%iausr)
       call mem_deallocate(this%jausr)
       call mem_setptr(this%iausr, 'IA', this%memoryPath)
       call mem_setptr(this%jausr, 'JA', this%memoryPath)
-    endif
+    end if
     !
     ! -- Return
     return
   end subroutine iajausr
 
-  function getjaindex(this,node1,node2)
+  function getjaindex(this, node1, node2)
 ! ******************************************************************************
 ! Get the index in the JA array corresponding to the connection between
 ! two nodes of interest.  Node1 is used as the index in the IA array, and
@@ -1070,34 +1071,35 @@ module ConnectionsModule
     integer(I4B) :: getjaindex
     ! -- dummy
     class(ConnectionsType) :: this
-    integer(I4B), intent(in)       :: node1, node2 ! nodes of interest
+    integer(I4B), intent(in) :: node1, node2 ! nodes of interest
     ! -- local
     integer(I4B) :: i
 ! ------------------------------------------------------------------------------
     !
     ! -- error checking
-    if (node1<1 .or. node1>this%nodes .or. node2<1 .or. node2>this%nodes) then
-      getjaindex = -1  ! indicates error (an invalid node number)
+    if (node1 < 1 .or. node1 > this%nodes .or. node2 < 1 .or. &
+        node2 > this%nodes) then
+      getjaindex = -1 ! indicates error (an invalid node number)
       return
-    endif
+    end if
     !
     ! -- If node1==node2, just return the position for the diagonal.
-    if (node1==node2) then
+    if (node1 == node2) then
       getjaindex = this%ia(node1)
       return
-    endif
+    end if
     !
     ! -- Look for connection among nonzero elements defined for row node1.
-    do i=this%ia(node1)+1,this%ia(node1+1)-1
-      if (this%ja(i)==node2) then
+    do i = this%ia(node1) + 1, this%ia(node1 + 1) - 1
+      if (this%ja(i) == node2) then
         getjaindex = i
         return
-      endif
-    enddo
+      end if
+    end do
     !
     ! -- If execution reaches here, no connection exists
     !    between nodes of interest.
-    getjaindex = 0  ! indicates no connection exists
+    getjaindex = 0 ! indicates no connection exists
     return
   end function getjaindex
 
@@ -1109,31 +1111,31 @@ module ConnectionsModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    integer(I4B),intent(in) :: neq
-    integer(I4B),intent(in) :: nja
-    integer(I4B),intent(inout),dimension(nja) :: isym
+    integer(I4B), intent(in) :: neq
+    integer(I4B), intent(in) :: nja
+    integer(I4B), intent(inout), dimension(nja) :: isym
     ! -- local
-    integer(I4B),intent(in),dimension(neq+1) :: ia
-    integer(I4B),intent(in),dimension(nja) :: ja
+    integer(I4B), intent(in), dimension(neq + 1) :: ia
+    integer(I4B), intent(in), dimension(nja) :: ja
     integer(I4B) :: n, m, ii, jj
 ! ------------------------------------------------------------------------------
     !
-    do n=1, neq
+    do n = 1, neq
       do ii = ia(n), ia(n + 1) - 1
         m = ja(ii)
-        if(m /= n) then
+        if (m /= n) then
           isym(ii) = 0
           search: do jj = ia(m), ia(m + 1) - 1
-            if(ja(jj) == n) then
+            if (ja(jj) == n) then
               isym(ii) = jj
               exit search
-            endif
-          enddo search
+            end if
+          end do search
         else
           isym(ii) = ii
-        endif
-      enddo
-    enddo
+        end if
+      end do
+    end do
     !
     ! -- Return
     return
@@ -1147,12 +1149,12 @@ module ConnectionsModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    integer(I4B),intent(in) :: neq
-    integer(I4B),intent(in) :: nja
-    integer(I4B),intent(in),dimension(neq+1) :: ia
-    integer(I4B),intent(in),dimension(nja) :: ja
-    integer(I4B),intent(in),dimension(nja) :: isym
-    integer(I4B),intent(inout),dimension(nja) :: jas
+    integer(I4B), intent(in) :: neq
+    integer(I4B), intent(in) :: nja
+    integer(I4B), intent(in), dimension(neq + 1) :: ia
+    integer(I4B), intent(in), dimension(nja) :: ja
+    integer(I4B), intent(in), dimension(nja) :: isym
+    integer(I4B), intent(inout), dimension(nja) :: jas
     ! -- local
     integer(I4B) :: n, m, ii, ipos
 ! ------------------------------------------------------------------------------
@@ -1163,29 +1165,28 @@ module ConnectionsModule
       jas(ia(n)) = 0
       do ii = ia(n) + 1, ia(n + 1) - 1
         m = ja(ii)
-        if(m > n) then
+        if (m > n) then
           jas(ii) = ipos
           ipos = ipos + 1
-        endif
-      enddo
-    enddo
+        end if
+      end do
+    end do
     !
     ! -- fill lower
     do n = 1, neq
       do ii = ia(n), ia(n + 1) - 1
         m = ja(ii)
-        if(m < n) then
+        if (m < n) then
           jas(ii) = jas(isym(ii))
-        endif
-      enddo
-    enddo
+        end if
+      end do
+    end do
     !
     ! -- Return
     return
   end subroutine filljas
 
-
-  subroutine vertexconnect(nodes, nrsize, maxnnz, nlay, ncpl, sparse,          &
+  subroutine vertexconnect(nodes, nrsize, maxnnz, nlay, ncpl, sparse, &
                            vertcellspm, cell1, cell2, nodereduced)
 ! ******************************************************************************
 ! vertexconnect -- routine to make cell connections from vertices
@@ -1213,49 +1214,49 @@ module ConnectionsModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate and fill the ia and ja arrays
-    allocate(rowmaxnnz(nodes))
+    allocate (rowmaxnnz(nodes))
     do i = 1, nodes
       rowmaxnnz(i) = maxnnz
-    enddo
+    end do
     call sparse%init(nodes, nodes, rowmaxnnz)
-    deallocate(rowmaxnnz)
+    deallocate (rowmaxnnz)
     do k = 1, nlay
       do j = 1, ncpl
         !
         ! -- Find the reduced node number and then cycle if the
         !    node is always inactive
         nr = get_node(k, 1, j, nlay, 1, ncpl)
-        if(nrsize > 0) nr = nodereduced(nr)
-        if(nr <= 0) cycle
+        if (nrsize > 0) nr = nodereduced(nr)
+        if (nr <= 0) cycle
         !
         ! -- Process diagonal
         call sparse%addconnection(nr, nr, 1)
         !
         ! -- Up direction
-        if(k > 1) then
+        if (k > 1) then
           do kk = k - 1, 1, -1
             mr = get_node(kk, 1, j, nlay, 1, ncpl)
-            if(nrsize > 0) mr = nodereduced(mr)
-            if(mr >= 0) exit
-          enddo
-          if(mr > 0) then
+            if (nrsize > 0) mr = nodereduced(mr)
+            if (mr >= 0) exit
+          end do
+          if (mr > 0) then
             call sparse%addconnection(nr, mr, 1)
-          endif
-        endif
+          end if
+        end if
         !
         ! -- Down direction
-        if(k < nlay) then
+        if (k < nlay) then
           do kk = k + 1, nlay
             mr = get_node(kk, 1, j, nlay, 1, ncpl)
-            if(nrsize > 0) mr = nodereduced(mr)
-            if(mr >= 0) exit
-          enddo
-          if(mr > 0) then
+            if (nrsize > 0) mr = nodereduced(mr)
+            if (mr >= 0) exit
+          end do
+          if (mr > 0) then
             call sparse%addconnection(nr, mr, 1)
-          endif
-        endif
-      enddo
-    enddo
+          end if
+        end if
+      end do
+    end do
     !
     ! -- Go through each vertex and connect up all the cells that use
     !    this vertex in their definition and share an edge.
@@ -1265,50 +1266,50 @@ module ConnectionsModule
         j1 = vertcellspm%row(i)%icolarray(icol1)
         do k = 1, nlay
           nr = get_node(k, 1, j1, nlay, 1, ncpl)
-          if(nrsize > 0) nr = nodereduced(nr)
-          if(nr <= 0) cycle
+          if (nrsize > 0) nr = nodereduced(nr)
+          if (nr <= 0) cycle
           call cell1%set_nodered(nr)
           do icol2 = 1, vertcellspm%row(i)%nnz
             j2 = vertcellspm%row(i)%icolarray(icol2)
-            if(j1 == j2) cycle
+            if (j1 == j2) cycle
             mr = get_node(k, 1, j2, nlay, 1, ncpl)
-            if(nrsize > 0) mr = nodereduced(mr)
-            if(mr <= 0) cycle
+            if (nrsize > 0) mr = nodereduced(mr)
+            if (mr <= 0) cycle
             call cell2%set_nodered(mr)
-            if(cell1%shares_edge(cell2)) then
+            if (cell1%shares_edge(cell2)) then
               call sparse%addconnection(nr, mr, 1)
-            endif
-          enddo
-        enddo        
-      enddo
-    enddo
+            end if
+          end do
+        end do
+      end do
+    end do
     !
     ! -- return
     return
   end subroutine vertexconnect
-  
+
   subroutine set_mask(this, ipos, maskval)
 ! ******************************************************************************
-! set_mask -- routine to set a value in the mask array 
+! set_mask -- routine to set a value in the mask array
 ! (which has the same shape as this%ja)
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
-! ------------------------------------------------------------------------------ 
+! ------------------------------------------------------------------------------
     use MemoryManagerModule, only: mem_allocate
     class(ConnectionsType) :: this
     integer(I4B), intent(in) :: ipos
     integer(I4B), intent(in) :: maskval
     ! local
     integer(I4B) :: i
-! ------------------------------------------------------------------------------ 
+! ------------------------------------------------------------------------------
     !
     ! if we still point to this%ja, we first need to allocate space
     if (associated(this%mask, this%ja)) then
       call mem_allocate(this%mask, this%nja, 'MASK', this%memoryPath)
       ! and initialize with unmasked
       do i = 1, this%nja
-        this%mask(i) = 1 
+        this%mask(i) = 1
       end do
     end if
     !
@@ -1318,28 +1319,34 @@ module ConnectionsModule
     ! -- return
     return
   end subroutine set_mask
-                           
-  subroutine iac_to_ia(ia)
+
+  subroutine iac_to_ia(iac, ia)
 ! ******************************************************************************
 ! iac_to_ia -- convert an iac array into an ia array
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
-! ------------------------------------------------------------------------------ 
+! ------------------------------------------------------------------------------
     ! -- dummy
+    integer(I4B), dimension(:), contiguous, pointer, intent(in) :: iac
     integer(I4B), dimension(:), contiguous, intent(inout) :: ia
     ! -- local
     integer(I4B) :: n, nodes
-! ------------------------------------------------------------------------------ 
+! ------------------------------------------------------------------------------
     !
     ! -- Convert iac to ia
-    nodes = size(ia) - 1
-    do n = 2, nodes + 1
-      ia(n) = ia(n) + ia(n-1)
-    enddo
+    nodes = size(iac)
+    ia(1) = iac(1)
+    do n = 2, size(ia) ! size(ia) == size(iac) + 1
+      if (n < size(ia)) then
+        ia(n) = iac(n) + ia(n - 1)
+      else
+        ia(n) = ia(n) + ia(n - 1)
+      end if
+    end do
     do n = nodes + 1, 2, -1
       ia(n) = ia(n - 1) + 1
-    enddo
+    end do
     ia(1) = 1
     !
     ! -- return

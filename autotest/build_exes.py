@@ -7,9 +7,10 @@
 #  python -c "import build_exes; build_exes.test_build_modflow6()"
 
 import os
+import pathlib as pl
+import subprocess as sp
 import sys
-import shutil
-import pymake
+from contextlib import contextmanager
 
 from framework import running_on_CI
 
@@ -17,8 +18,7 @@ if running_on_CI():
     print("running on CI environment")
     os.environ["PYMAKE_DOUBLE"] = "1"
 
-
-# make sure exe extension is used on windows
+# set OS dependent extensions
 eext = ""
 soext = ".so"
 if sys.platform.lower() == "win32":
@@ -42,6 +42,28 @@ strict_flags = (
 )
 
 
+@contextmanager
+def set_directory(path: str):
+    """Sets the cwd within the context
+
+    Args:
+        path (Path): The path to the cwd
+
+    Yields:
+        None
+    """
+
+    origin = os.path.abspath(os.getcwd())
+    path = os.path.abspath(path)
+    try:
+        os.chdir(path)
+        print(f"change from {origin} -> {path}")
+        yield
+    finally:
+        os.chdir(origin)
+        print(f"change from {path} -> {origin}")
+
+
 def relpath_fallback(pth):
     try:
         # throws ValueError on Windows if pth is on a different drive
@@ -59,131 +81,61 @@ def create_dir(pth):
     assert os.path.exists(pth), msg
 
 
-def get_compiler_envvar(fc):
-    env_var = os.environ.get("FC")
-    if env_var is not None:
-        if env_var != fc:
-            fc = env_var
-    return fc
+def set_compiler_environment_variable():
+    fc = None
 
-
-def build_mf6(srcdir=None, appdir=None):
-    pm = pymake.Pymake()
-    pm.target = f"mf6{eext}"
-    if srcdir is None:
-        srcdir = os.path.join("..", "src")
-    pm.srcdir = srcdir
-    if appdir is None:
-        appdir = os.path.join("..", "bin")
-    pm.appdir = appdir
-    pm.include_subdirs = True
-    pm.inplace = True
-    pm.makeclean = True
-
-    # reset compiler based on environmental variable, if defined
-    pm.fc = get_compiler_envvar(pm.fc)
-
-    # add strict flags if gfortran is being used
-    if pm.fc == "gfortran":
-        pm.fflags = strict_flags
-
-    # build the application
-    pm.build()
-
-    msg = "{} does not exist.".format(pm.target)
-    assert pm.returncode == 0, msg
-
-
-def build_mf6_so():
-    pm = pymake.Pymake(verbose=True)
-    pm.target = f"libmf6{soext}"
-    pm.srcdir = os.path.join("..", "srcbmi")
-    pm.srcdir2 = os.path.join("..", "src")
-    pm.appdir = os.path.join("..", "bin")
-    pm.excludefiles = [os.path.join(pm.srcdir2, "mf6.f90")]
-    pm.include_subdirs = True
-    pm.inplace = True
-    pm.makeclean = True
-
-    # reset compiler based on environmental variable, if defined
-    pm.fc = get_compiler_envvar(pm.fc)
-
-    # add strict flags if gfortran is being used
-    if pm.fc == "gfortran":
-        pm.fflags = strict_flags
-
-    # build the application
-    pm.build()
-
-    msg = "{} does not exist.".format(pm.target)
-    assert pm.returncode == 0, msg
-
-
-def build_mf5to6():
-    # define default compilers
-    fc = "gfortran"
-    cc = None
-    fflags = None
-
-    # reset compiler based on environmental variable, if defined
-    fc = get_compiler_envvar(fc)
-
-    # determine if fortran compiler specified on the command line
+    # parse command line arguments
     for idx, arg in enumerate(sys.argv):
-        if arg == "-fc":
+        if arg.lower() == "-fc":
             fc = sys.argv[idx + 1]
-        elif arg in ("-ff", "--fflags"):
-            fflags = sys.argv[idx + 1]
+        elif arg.lower().startswith("-fc="):
+            fc = arg.split("=")[1]
 
-    # set source and target paths
-    srcdir = os.path.join("..", "utils", "mf5to6", "src")
-    appdir = os.path.join("..", "bin")
-    target = f"mf5to6{eext}"
-    extrafiles = os.path.join(
-        "..", "utils", "mf5to6", "pymake", "extrafiles.txt"
+    # determine if fc needs to be set to the FC environmental variable
+    env_var = os.getenv("FC", default="gfortran")
+    if fc is None and fc != env_var:
+        fc = env_var
+
+    # validate Fortran compiler
+    fc_options = (
+        "gfortran",
+        "ifort",
     )
+    if fc not in fc_options:
+        raise ValueError(
+            f"Fortran compiler {fc} not supported. Fortran compile must be "
+            + f"[{', '.join(str(value) for value in fc_options)}]."
+        )
 
-    # build modflow 5 to 6 converter
-    pymake.main(
-        srcdir,
-        target,
-        fc=fc,
-        cc=cc,
-        fflags=fflags,
-        include_subdirs=True,
-        extrafiles=extrafiles,
-        inplace=True,
-        appdir=appdir,
-        makeclean=True,
-    )
-    target_pth = os.path.join(appdir, target)
-    msg = f"{relpath_fallback(target_pth)} does not exist."
-    assert os.path.isfile(target_pth), msg
+    # set FC environment variable
+    os.environ["FC"] = fc
 
 
-def build_zbud6():
-    pm = pymake.Pymake()
-    pm.target = f"zbud6{eext}"
-    pm.srcdir = os.path.join("..", "utils", "zonebudget", "src")
-    pm.appdir = os.path.join("..", "bin")
-    pm.extrafiles = os.path.join(
-        "..", "utils", "zonebudget", "pymake", "extrafiles.txt"
-    )
-    pm.inplace = True
-    pm.makeclean = True
+def meson_build(
+    dir_path: str = "..",
+    libdir: str = "bin",
+):
+    set_compiler_environment_variable()
+    is_windows = sys.platform.lower() == "win32"
+    with set_directory(dir_path):
+        cmd = (
+            "meson setup builddir "
+            + f"--bindir={os.path.abspath(libdir)} "
+            + f"--libdir={os.path.abspath(libdir)} "
+            + "--prefix="
+        )
+        if is_windows:
+            cmd += "%CD%"
+        else:
+            cmd += "$(pwd)"
+        if pl.Path("builddir").is_dir():
+            cmd += " --wipe"
+        print(f"setup meson\nrunning...\n  {cmd}")
+        sp.run(cmd, shell=True, check=True)
 
-    # reset compiler based on environmental variable, if defined
-    pm.fc = get_compiler_envvar(pm.fc)
-
-    # add strict flags if gfortran is being used
-    if pm.fc == "gfortran":
-        pm.fflags = strict_flags
-
-    # build the application
-    pm.build()
-
-    msg = "{} does not exist.".format(pm.target)
-    assert pm.returncode == 0, msg
+        cmd = "meson install -C builddir"
+        print(f"build and install with meson\nrunning...\n  {cmd}")
+        sp.run(cmd, shell=True, check=True)
 
 
 def test_create_dirs():
@@ -195,25 +147,10 @@ def test_create_dirs():
     return
 
 
-def test_build_modflow6():
-    build_mf6()
-
-
-def test_build_modflow6_so():
-    build_mf6_so()
-
-
-def test_build_mf5to6():
-    build_mf5to6()
-
-
-def test_build_zbud6():
-    build_zbud6()
+def test_meson_build():
+    meson_build()
 
 
 if __name__ == "__main__":
     test_create_dirs()
-    test_build_modflow6()
-    test_build_modflow6_so()
-    test_build_mf5to6()
-    test_build_zbud6()
+    test_meson_build()

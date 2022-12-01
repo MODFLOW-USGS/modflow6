@@ -48,7 +48,7 @@ def get_home_dir():
 
         home = os.path.join(*cwd_list[:ipos])
 
-    print("HOME: {}".format(home))
+    print(f"HOME: {home}")
 
     return home
 
@@ -67,8 +67,8 @@ def is_directory_available(example_basedir):
     if example_basedir is not None:
         available = os.path.isdir(example_basedir)
     if not available:
-        print('"{}" does not exist'.format(example_basedir))
-        print("no need to run {}".format(os.path.basename(__file__)))
+        print(f'"{example_basedir}" does not exist')
+        print(f"no need to run {os.path.basename(__file__)}")
     return available
 
 
@@ -83,7 +83,7 @@ def get_example_basedir(home, find_dir, subdir=None):
                 break
         if example_basedir is not None:
             example_basedir = os.path.abspath(example_basedir)
-            print("Example base directory: {}".format(example_basedir))
+            print(f"Example base directory: {example_basedir}")
             break
     return example_basedir
 

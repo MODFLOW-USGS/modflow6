@@ -1,8 +1,7 @@
 import os
-import pytest
-import sys
 import shutil
 import subprocess
+import sys
 
 import pytest
 
@@ -20,7 +19,7 @@ mf6_exe = os.path.abspath(targets.target_dict["mf6"])
 name = "gwf_ret_codes01"
 base_ws = os.path.join("temp", name)
 if not os.path.isdir(base_ws):
-    os.makedirs(base_ws)
+    os.makedirs(base_ws, exist_ok=True)
 app = "mf6"
 if sys.platform.lower() == "win32":
     app += ".exe"
@@ -35,7 +34,7 @@ def run_mf6(argv, ws):
     if result is not None:
         c = result.decode("utf-8")
         c = c.rstrip("\r\n")
-        print("{}".format(c))
+        print(f"{c}")
         buff.append(c)
 
     return proc.returncode, buff
@@ -132,8 +131,8 @@ def get_sim(ws, idomain, continue_flag=False, nouter=500):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(name),
-        head_filerecord="{}.hds".format(name),
+        budget_filerecord=f"{name}.cbc",
+        head_filerecord=f"{name}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
@@ -218,9 +217,9 @@ def idomain_runtime_error():
 
         # run the simulation
         returncode, buff = run_mf6([mf6_exe], ws)
-        msg = "could not run {}".format(sim.name)
+        msg = f"could not run {sim.name}"
         if returncode != 0:
-            err_str = "IDOMAIN ARRAY HAS SOME VALUES GREATER THAN ZERO"
+            err_str = "Ensure IDOMAIN array has some"
             err = any(err_str in s for s in buff)
             if err:
                 clean(ws)
@@ -235,14 +234,14 @@ def unknown_keyword_error():
 
     with pytest.raises(RuntimeError):
         returncode, buff = run_mf6([mf6_exe, "--unknown_keyword"], ws)
-        msg = "could not run {}".format("unknown_keyword")
+        msg = "could not run unknown_keyword"
         if returncode != 0:
-            err_str = "{}: illegal option".format(app)
+            err_str = f"{app}: illegal option"
             err = any(err_str in s for s in buff)
             if err:
                 raise RuntimeError(msg)
             else:
-                msg += " but {} not returned".format(err_str)
+                msg += f" but {err_str} not returned"
                 raise ValueError(msg)
 
 
@@ -253,36 +252,34 @@ def run_argv(arg, return_str):
     if returncode == 0:
         found_str = any(return_str in s for s in buff)
         if not found_str:
-            msg = "{} keyword did not return {}".format(arg, return_str)
+            msg = f"{arg} keyword did not return {return_str}"
             raise ValueError(msg)
     else:
-        msg = "could not run with command line argument {}".format(arg)
+        msg = f"could not run with command line argument {arg}"
         raise RuntimeError(msg)
 
 
 def help_argv():
     for arg in ["-h", "--help", "-?"]:
-        return_str = "{} [options]     retrieve program information".format(
-            app
-        )
+        return_str = f"{app} [options]     retrieve program information"
         run_argv(arg, return_str)
 
 
 def version_argv():
     for arg in ["-v", "--version"]:
-        return_str = "{}: 6".format(app)
+        return_str = f"{app}: 6"
         run_argv(arg, return_str)
 
 
 def develop_argv():
     for arg in ["-dev", "--develop"]:
-        return_str = "{}: develop version".format(app)
+        return_str = f"{app}: develop version"
         run_argv(arg, return_str)
 
 
 def compiler_argv():
     for arg in ["-c", "--compiler"]:
-        return_str = "{}: MODFLOW 6 compiled".format(app)
+        return_str = f"{app}: MODFLOW 6 compiled"
         run_argv(arg, return_str)
 
 
@@ -310,7 +307,7 @@ def test_main(fn):
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     idomain_runtime_error()
     unknown_keyword_error()

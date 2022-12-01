@@ -4,9 +4,10 @@
 # be 100.
 
 import os
-import pytest
 import shutil
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -80,7 +81,7 @@ def run_flow_model():
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
 
     dis = flopy.mf6.ModflowGwfdis(
@@ -120,8 +121,8 @@ def run_flow_model():
 
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.bud".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.bud",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[
             ("COLUMNS", ncol, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -151,13 +152,13 @@ def run_flow_model():
     for ipak, i in enumerate(rows):
         blist = []
         blist.append(((0, i, ncol - 1), 50.0, 1000.0, 100.0))
-        fname = "flow.{}.ghb".format(ipak + 1)
+        fname = f"flow.{ipak + 1}.ghb"
         ghb = flopy.mf6.ModflowGwfghb(
             gwf,
             stress_period_data=blist,
             auxiliary=["concentration"],
             filename=fname,
-            pname="GHB-{}".format(ipak + 1),
+            pname=f"GHB-{ipak + 1}",
         )
 
     # riv
@@ -165,13 +166,13 @@ def run_flow_model():
     for ipak, i in enumerate(rows):
         blist = []
         blist.append(((0, i, ncol - 1), 50.0, 1000.0, 0.0, 100.0))
-        fname = "flow.{}.riv".format(ipak + 1)
+        fname = f"flow.{ipak + 1}.riv"
         riv = flopy.mf6.ModflowGwfriv(
             gwf,
             stress_period_data=blist,
             auxiliary=["concentration"],
             filename=fname,
-            pname="RIV-{}".format(ipak + 1),
+            pname=f"RIV-{ipak + 1}",
         )
 
     # drn
@@ -179,18 +180,18 @@ def run_flow_model():
     for ipak, i in enumerate(rows):
         blist = []
         blist.append(((0, i, ncol - 1), 50.0, 1000.0, 100.0))
-        fname = "flow.{}.drn".format(ipak + 1)
+        fname = f"flow.{ipak + 1}.drn"
         drn = flopy.mf6.ModflowGwfdrn(
             gwf,
             stress_period_data=blist,
             auxiliary=["concentration"],
             filename=fname,
-            pname="DRN-{}".format(ipak + 1),
+            pname=f"DRN-{ipak + 1}",
         )
 
     sim.write_simulation()
     success, buff = sim.run_simulation(silent=False)
-    errmsg = "flow model did not terminate successfully\n{}".format(buff)
+    errmsg = f"flow model did not terminate successfully\n{buff}"
     assert success, errmsg
 
     return
@@ -235,7 +236,7 @@ def run_transport_model():
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwtname),
+        filename=f"{gwtname}.ims",
     )
     sim.register_ims_package(imsgwt, [gwt.name])
 
@@ -303,7 +304,7 @@ def run_transport_model():
 
     sim.write_simulation()
     success, buff = sim.run_simulation(silent=False)
-    errmsg = "transport model did not terminate successfully\n{}".format(buff)
+    errmsg = f"transport model did not terminate successfully\n{buff}"
     assert success, errmsg
 
     # ensure budget table can be parsed
@@ -325,7 +326,7 @@ def run_transport_model():
         a1 = d0["WEL(SSM_WEL-1)_IN"] / 10.0
         a2 = d0[name]
         print(f"Checking budet term {name} against WEL-1_IN / 10.")
-        errmsg = "{} not equal WEL-1_IN / 10.\n{}\n{}".format(name, a1, a2)
+        errmsg = f"{name} not equal WEL-1_IN / 10.\n{a1}\n{a2}"
         assert np.allclose(a1, a2), errmsg
 
     print("Checking that all simulated concentrations are 100.")
@@ -351,7 +352,7 @@ def test_ssm01fmi():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run tests
     test_ssm01fmi()

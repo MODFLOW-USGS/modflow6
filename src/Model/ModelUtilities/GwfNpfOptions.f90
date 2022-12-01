@@ -5,19 +5,19 @@ module GwfNpfOptionsModule
   implicit none
   private
 
-  !> Data structure and helper methods for passing NPF options 
+  !> Data structure and helper methods for passing NPF options
   !! into npf_df, as an alternative to reading those from file
   !<
   type, public :: GwfNpfOptionsType
-    integer(I4B) :: icellavg    !< same as npf variable
-    integer(I4B) :: ithickstrt  !< same as npf variable
-    integer(I4B) :: iperched    !< same as npf variable
-    integer(I4B) :: ivarcv      !< same as npf variable
-    integer(I4B) :: idewatcv    !< same as npf variable
-    integer(I4B) :: irewet      !< same as npf variable
-    real(DP)     :: wetfct      !< same as npf variable
-    integer(I4B) :: iwetit      !< same as npf variable
-    integer(I4B) :: ihdwet      !< same as npf variable
+    integer(I4B) :: icellavg !< same as npf variable
+    integer(I4B) :: ithickstrt !< same as npf variable
+    integer(I4B) :: iperched !< same as npf variable
+    integer(I4B) :: ivarcv !< same as npf variable
+    integer(I4B) :: idewatcv !< same as npf variable
+    integer(I4B) :: irewet !< same as npf variable
+    real(DP) :: wetfct !< same as npf variable
+    integer(I4B) :: iwetit !< same as npf variable
+    integer(I4B) :: ihdwet !< same as npf variable
   contains
     procedure, pass(this) :: construct
     procedure, pass(this) :: destroy
@@ -28,7 +28,7 @@ contains
   !> @brief construct the input options, set variables to their defaults
   !<
   subroutine construct(this)
-    class(GwfNpfOptionsType), intent(inout) :: this  !< the NPF options, as in the input OPTIONS block
+    class(GwfNpfOptionsType), intent(inout) :: this !< the NPF options, as in the input OPTIONS block
 
     this%icellavg = 0
     this%ithickstrt = 0
@@ -45,7 +45,7 @@ contains
   !> @brief cleans up
   !<
   subroutine destroy(this)
-    class(GwfNpfOptionsType), intent(inout) :: this  !< the NPF options, as in the input OPTIONS block
+    class(GwfNpfOptionsType), intent(inout) :: this !< the NPF options, as in the input OPTIONS block
 
     ! nothing to be done here for now...
 

@@ -1,5 +1,5 @@
 ! HashTableType implements a hash table for storing integers,
-! for use as an index for an array that could contain 
+! for use as an index for an array that could contain
 ! any data type.  This HashTableModule was designed using the
 ! dictionary implementation by Arjen Markus of the Flibs
 ! collection of Fortran utilities.  This hash table works
@@ -7,37 +7,37 @@
 ! strings and each string will be assigned a unique number
 ! between 1 and n, allowing an efficient way to store a
 ! unique integer index with a character string.
-  
+
 module HashTableModule
 
   use KindModule, only: DP, I4B
-  
+
   implicit none
 
   private
   public HashTableType
   public hash_table_cr
   public hash_table_da
-  
-  integer, parameter, private :: HASH_SIZE  = 4993
+
+  integer, parameter, private :: HASH_SIZE = 4993
   integer, parameter, private :: MULTIPLIER = 31
 
   type :: ListDataType
     character(len=:), allocatable :: key
     integer(I4B) :: index
   end type ListDataType
-  
+
   type :: ListType
     type(ListDataType) :: listdata
     type(ListType), pointer :: next => null()
   contains
     procedure :: add => listtype_add
   end type ListType
-  
+
   type :: HashListType
     type(ListType), pointer :: list => null()
   end type HashListType
-  
+
   type :: HashTableType
     private
     type(HashListType), dimension(:), pointer :: table => null()
@@ -46,9 +46,9 @@ module HashTableModule
     procedure :: get_elem
     procedure :: get_index
   end type HashTableType
-  
-  contains
-  
+
+contains
+
   subroutine hash_table_cr(ht)
 ! ******************************************************************************
 ! hash_table_cr -- public subroutine to create the hash table object
@@ -63,18 +63,18 @@ module HashTableModule
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate
-    allocate(ht)
-    allocate(ht%table(HASH_SIZE))
+    allocate (ht)
+    allocate (ht%table(HASH_SIZE))
     !
     ! -- nullify each list
     do i = 1, HASH_SIZE
       ht%table(i)%list => null()
-    enddo
+    end do
     !
     ! -- return
     return
   end subroutine hash_table_cr
-  
+
   subroutine hash_table_da(ht)
 ! ******************************************************************************
 ! hash_table_da -- public subroutine to deallocate the hash table object
@@ -90,19 +90,19 @@ module HashTableModule
     !
     ! -- deallocate the list for each hash
     do i = 1, size(ht%table)
-      if ( associated( ht%table(i)%list)) then
+      if (associated(ht%table(i)%list)) then
         call listtype_da(ht%table(i)%list)
-      endif
-    enddo
+      end if
+    end do
     !
     ! -- deallocate the table and the hash table
-    deallocate(ht%table)
-    deallocate(ht)
+    deallocate (ht%table)
+    deallocate (ht)
     !
     ! -- return
     return
   end subroutine hash_table_da
-  
+
   subroutine add_entry(this, key, index)
 ! ******************************************************************************
 ! add_entry -- hash table method to add a key/index entry
@@ -157,16 +157,16 @@ module HashTableModule
     elem => this%table(ihash)%list
     do while (associated(elem))
       if (elem%listdata%key == key) then
-          exit
+        exit
       else
         elem => elem%next
       end if
-    enddo
+    end do
     !
     ! -- return
     return
-  end function get_elem 
-  
+  end function get_elem
+
   function get_index(this, key) result(index)
 ! ******************************************************************************
 ! get_index -- get the integer index that corresponds to this hash.
@@ -188,12 +188,12 @@ module HashTableModule
       index = elem%listdata%index
     else
       index = 0
-    endif
+    end if
     !
     ! -- return
     return
   end function get_index
-  
+
   subroutine listtype_cr(list, key, index)
 ! ******************************************************************************
 ! listtype_cr -- subroutine to create a list
@@ -206,7 +206,7 @@ module HashTableModule
     character(len=*), intent(in) :: key
     integer(I4B), intent(in) :: index
 ! ------------------------------------------------------------------------------
-    allocate(list)
+    allocate (list)
     list%next => null()
     list%listdata%key = key
     list%listdata%index = index
@@ -229,7 +229,7 @@ module HashTableModule
     ! -- local
     type(ListType), pointer :: next
 ! ------------------------------------------------------------------------------
-    allocate(next)
+    allocate (next)
     next%listdata%key = key
     next%listdata%index = index
     next%next => this%next
@@ -249,15 +249,15 @@ module HashTableModule
     ! -- dummy
     type(ListType), pointer, intent(in) :: list
     ! -- local
-    type(ListType), pointer  :: current
-    type(ListType), pointer  :: elem
+    type(ListType), pointer :: current
+    type(ListType), pointer :: elem
 ! ------------------------------------------------------------------------------
     elem => list
-    do while ( associated(elem) )
+    do while (associated(elem))
       current => elem
       elem => current%next
-      deallocate(current)
-    enddo
+      deallocate (current)
+    end do
     !
     ! -- return
     return
@@ -277,9 +277,9 @@ module HashTableModule
     integer(I4B) :: i
 ! ------------------------------------------------------------------------------
     ihash = 0
-    do i = 1,len(key)
-      ihash = modulo( MULTIPLIER * ihash + ichar(key(i:i)), HASH_SIZE)
-    enddo
+    do i = 1, len(key)
+      ihash = modulo(MULTIPLIER * ihash + ichar(key(i:i)), HASH_SIZE)
+    end do
     ihash = 1 + modulo(ihash - 1, HASH_SIZE)
     !
     ! -- return

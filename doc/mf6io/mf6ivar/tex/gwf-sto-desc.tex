@@ -7,7 +7,7 @@
 
 \item \texttt{STORAGECOEFFICIENT}---keyword to indicate that the SS array is read as storage coefficient rather than specific storage.
 
-\item \texttt{SS\_CONFINED\_ONLY}---keyword to indicate that specific storage is only calculated when a cell is under confined conditions (head greater than or equal to the top of the cell). This option is identical to the approach used to calculate storage changes under confined conditions in MODFLOW-2005.
+\item \texttt{SS\_CONFINED\_ONLY}---keyword to indicate that compressible storage is only calculated for a convertible cell (ICONVERT>0) when the cell is under confined conditions (head greater than or equal to the top of the cell). This option has no effect on cells that are marked as being always confined (ICONVERT=0).  This option is identical to the approach used to calculate storage changes under confined conditions in MODFLOW-2005.
 
 \item \texttt{TVS6}---keyword to specify that record corresponds to a time-varying storage (TVS) file.  The behavior of TVS and a description of the input file is provided separately.
 

@@ -1,7 +1,7 @@
 project(
   'MODFLOW 6',
   'fortran',
-  version: '6.3.0',
+  version: '6.4.0',
   meson_version: '>= 0.59.0',
   default_options : [
     'b_vscrt=static_from_buildtype', # Link runtime libraries statically on Windows
@@ -63,6 +63,8 @@ endif
 if fc_id == 'intel-cl'
   # windows
   compile_args += ['/fpe:0',              # Activate all floating point exceptions
+                   '/heap-arrays:0',
+                   '/traceback',
                    '/fpp',                # Activate preprocessing
                    '/Qdiag-disable:7416', # f2008 warning
                    '/Qdiag-disable:7025', # f2008 warning
@@ -74,9 +76,11 @@ if fc_id == 'intel-cl'
 elif fc_id == 'intel'
   # linux and macOS
   compile_args += ['-fpe0',              # Activate all floating point exceptions
-                  '-diag-disable:7416',  # f2008 warning
-                  '-diag-disable:7025',  # f2008 warning
-                  '-diag-disable:5268',  # Line too long
+                   '-no-heap-arrays',
+                   '-traceback',
+                   '-diag-disable:7416',  # f2008 warning
+                   '-diag-disable:7025',  # f2008 warning
+                   '-diag-disable:5268',  # Line too long
                   ]
   link_args += '-static-intel'
 endif
@@ -92,3 +96,8 @@ subdir('utils')
 
 # add unit test directory
 # subdir('unittests')
+
+# meson tests to evaluate installation success
+test('Test installation version', mf6exe, args : ['-v',])
+test('Test installation compiler', mf6exe, args : ['-c',])
+test('Test installation help', mf6exe, args : ['-h',])

@@ -2,8 +2,11 @@
 
 import os
 import shutil
+
+from flaky import flaky
 import pymake
 
+from build_exes import meson_build
 from framework import running_on_CI
 
 if running_on_CI():
@@ -50,52 +53,41 @@ def create_dir(pth):
     print(f"creating... {os.path.abspath(pth)}")
     os.makedirs(pth, exist_ok=True)
 
-    msg = "could not create... {}".format(os.path.abspath(pth))
+    msg = f"could not create... {os.path.abspath(pth)}"
     assert os.path.exists(pth), msg
 
 
 def rebuild_mf6_release():
-    pm = pymake.Pymake(verbose=True)
-    pm.target = "mf6"
-    pm.appdir = rebuilt_bindir
+    target = "mf6"
     download_pth = os.path.join("temp")
-    target_dict = pymake.usgs_program_data.get_target(pm.target)
+    target_dict = pymake.usgs_program_data.get_target(target)
 
-    pm.download_target(pm.target, download_path=download_pth, verify=False)
+    pymake.download_and_unzip(
+        target_dict["url"],
+        pth=download_pth,
+        verbose=True,
+    )
 
-    # Set MODFLOW 6 to compile develop version of the release
+    # update IDEVELOP MODE in the release
     srcpth = os.path.join(
         download_pth, target_dict["dirname"], target_dict["srcdir"]
     )
     fpth = os.path.join(srcpth, "Utilities", "version.f90")
     with open(fpth) as f:
         lines = f.read().splitlines()
-
-    assert len(lines) > 0, "could not update {}".format(srcpth)
+    assert len(lines) > 0, f"could not update {srcpth}"
 
     f = open(fpth, "w")
     for line in lines:
         tag = "IDEVELOPMODE = 0"
         if tag in line:
             line = line.replace(tag, "IDEVELOPMODE = 1")
-        f.write("{}\n".format(line))
+        f.write(f"{line}\n")
     f.close()
 
-    # reset compiler based on environmental variable, if defined
-    pm.fc = get_compiler_envvar(pm.fc)
-
-    # add strict flags if gfortran is being used
-    if pm.fc == "gfortran":
-        pm.fflags = strict_flags
-
-    # build the release version of MODFLOW 6
-    pm.build()
-
-    msg = "{} does not exist.".format(pm.target)
-    assert pm.returncode == 0, msg
-
-    # finalize the build
-    pm.finalize()
+    # build release source files with Meson
+    root_path = os.path.join(download_pth, target_dict["dirname"])
+    meson_build(dir_path=root_path, libdir=os.path.abspath(rebuilt_bindir))
 
 
 def test_create_dirs():
@@ -105,16 +97,18 @@ def test_create_dirs():
         create_dir(pth)
 
 
+@flaky(max_runs=3)
 def test_getmfexes(verify=True):
     pymake.getmfexes(mfexe_pth, verify=verify)
     for target in os.listdir(mfexe_pth):
         srcpth = os.path.join(mfexe_pth, target)
         if os.path.isfile(srcpth):
             dstpth = os.path.join(downloaded_bindir, target)
-            print("copying {} -> {}".format(srcpth, dstpth))
+            print(f"copying {srcpth} -> {dstpth}")
             shutil.copy(srcpth, dstpth)
 
 
+@flaky(max_runs=3)
 def test_rebuild_mf6_release():
     rebuild_mf6_release()
 
@@ -122,3 +116,4 @@ def test_rebuild_mf6_release():
 if __name__ == "__main__":
     test_create_dirs()
     test_getmfexes(verify=False)
+    test_rebuild_mf6_release()

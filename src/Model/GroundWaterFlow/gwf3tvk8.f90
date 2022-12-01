@@ -23,13 +23,13 @@ module TvkModule
   public :: tvk_cr
 
   type, extends(TvBaseType) :: TvkType
-    integer(I4B), pointer :: ik22overk => null()                             !< NPF flag that k22 is specified as anisotropy ratio
-    integer(I4B), pointer :: ik33overk => null()                             !< NPF flag that k33 is specified as anisotropy ratio
-    real(DP), dimension(:), pointer, contiguous :: k11 => null()             !< NPF hydraulic conductivity; if anisotropic, then this is Kx prior to rotation
-    real(DP), dimension(:), pointer, contiguous :: k22 => null()             !< NPF hydraulic conductivity; if specified then this is Ky prior to rotation
-    real(DP), dimension(:), pointer, contiguous :: k33 => null()             !< NPF hydraulic conductivity; if specified then this is Kz prior to rotation
-    integer(I4B), pointer :: kchangeper => null()                            !< NPF last stress period in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
-    integer(I4B), pointer :: kchangestp => null()                            !< NPF last time step in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
+    integer(I4B), pointer :: ik22overk => null() !< NPF flag that k22 is specified as anisotropy ratio
+    integer(I4B), pointer :: ik33overk => null() !< NPF flag that k33 is specified as anisotropy ratio
+    real(DP), dimension(:), pointer, contiguous :: k11 => null() !< NPF hydraulic conductivity; if anisotropic, then this is Kx prior to rotation
+    real(DP), dimension(:), pointer, contiguous :: k22 => null() !< NPF hydraulic conductivity; if specified then this is Ky prior to rotation
+    real(DP), dimension(:), pointer, contiguous :: k33 => null() !< NPF hydraulic conductivity; if specified then this is Kz prior to rotation
+    integer(I4B), pointer :: kchangeper => null() !< NPF last stress period in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
+    integer(I4B), pointer :: kchangestp => null() !< NPF last time step in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
     integer(I4B), dimension(:), pointer, contiguous :: nodekchange => null() !< NPF grid array of flags indicating for each node whether its K (or K22, or K33) value changed (1) at (kchangeper, kchangestp) or not (0)
   contains
     procedure :: da => tvk_da
@@ -55,7 +55,7 @@ contains
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     !
-    allocate(tvk)
+    allocate (tvk)
     call tvk%init(name_model, 'TVK', 'TVK', inunit, iout)
     !
     return
@@ -78,7 +78,7 @@ contains
       &' INPUT READ FROM UNIT ', i0, //)"
     !
     ! -- Print a message identifying the TVK package
-    write(this%iout, fmttvk) this%inunit
+    write (this%iout, fmttvk) this%inunit
     !
     ! -- Set pointers to other package variables
     ! -- NPF
@@ -129,14 +129,14 @@ contains
     real(DP), pointer :: bndElem
     !
     select case (varName)
-      case ('K')
-        bndElem => this%k11(n)
-      case ('K22')
-        bndElem => this%k22(n)
-      case ('K33')
-        bndElem => this%k33(n)
-      case default
-        bndElem => null()
+    case ('K')
+      bndElem => this%k11(n)
+    case ('K22')
+      bndElem => this%k22(n)
+    case ('K33')
+      bndElem => this%k33(n)
+    case default
+      bndElem => null()
     end select
     !
     return
@@ -205,28 +205,31 @@ contains
     this%nodekchange(n) = 1
     !
     ! -- Check the changed value is ok
-    if(varName == 'K') then
-      if(this%k11(n) <= DZERO) then
+    if (varName == 'K') then
+      if (this%k11(n) <= DZERO) then
         call this%dis%noder_to_string(n, cellstr)
-        write(errmsg, fmtkerr) trim(adjustl(this%packName)), 'K', trim(cellstr), this%k11(n)
+        write (errmsg, fmtkerr) &
+          trim(adjustl(this%packName)), 'K', trim(cellstr), this%k11(n)
         call store_error(errmsg)
       end if
-    elseif(varName == 'K22') then
-      if(this%ik22overk == 1) then
+    elseif (varName == 'K22') then
+      if (this%ik22overk == 1) then
         this%k22(n) = this%k22(n) * this%k11(n)
       end if
-      if(this%k22(n) <= DZERO) then
+      if (this%k22(n) <= DZERO) then
         call this%dis%noder_to_string(n, cellstr)
-        write(errmsg, fmtkerr) trim(adjustl(this%packName)), 'K22', trim(cellstr), this%k22(n)
+        write (errmsg, fmtkerr) &
+          trim(adjustl(this%packName)), 'K22', trim(cellstr), this%k22(n)
         call store_error(errmsg)
       end if
-    elseif(varName == 'K33') then
-      if(this%ik33overk == 1) then
-        this%k33(n) = this%k33(n) * this%k33(n)
+    elseif (varName == 'K33') then
+      if (this%ik33overk == 1) then
+        this%k33(n) = this%k33(n) * this%k11(n)
       end if
-      if(this%k33(n) <= DZERO) then
+      if (this%k33(n) <= DZERO) then
         call this%dis%noder_to_string(n, cellstr)
-        write(errmsg, fmtkerr) trim(adjustl(this%packName)), 'K33', trim(cellstr), this%k33(n)
+        write (errmsg, fmtkerr) &
+          trim(adjustl(this%packName)), 'K33', trim(cellstr), this%k33(n)
         call store_error(errmsg)
       end if
     end if
@@ -244,14 +247,14 @@ contains
     class(TvkType) :: this
     !
     ! -- Nullify pointers to other package variables
-    nullify(this%ik22overk)
-    nullify(this%ik33overk)
-    nullify(this%k11)
-    nullify(this%k22)
-    nullify(this%k33)
-    nullify(this%kchangeper)
-    nullify(this%kchangestp)
-    nullify(this%nodekchange)
+    nullify (this%ik22overk)
+    nullify (this%ik33overk)
+    nullify (this%k11)
+    nullify (this%k22)
+    nullify (this%k33)
+    nullify (this%kchangeper)
+    nullify (this%kchangestp)
+    nullify (this%nodekchange)
     !
     ! -- Deallocate parent
     call tvbase_da(this)

@@ -1,13 +1,13 @@
 ! -- Groundwater Transport Mover Module
 ! -- This module is responsible for sending mass from providers into
 ! -- receiver qmfrommvr arrays and writing a mover transport budget
-  
+
 module GwtMvtModule
-  
+
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH, MAXCHARLEN, DZERO, LENPAKLOC, &
                              DNODATA, LENPACKAGENAME, TABCENTER, LENMODELNAME
-    
+
   use SimModule, only: store_error
   use BaseDisModule, only: DisBaseType
   use NumericalPackageModule, only: NumericalPackageType
@@ -17,24 +17,24 @@ module GwtMvtModule
   use TableModule, only: TableType, table_cr
 
   implicit none
-  
+
   private
   public :: GwtMvtType
   public :: mvt_cr
-  
+
   type, extends(NumericalPackageType) :: GwtMvtType
-    character(len=LENMODELNAME)                        :: gwfmodelname1 = ''    !< name of model 1
-    character(len=LENMODELNAME)                        :: gwfmodelname2 = ''    !< name of model 2 (set to modelname 1 for single model MVT)
-    integer(I4B), pointer                              :: maxpackages           !< max number of packages
-    integer(I4B), pointer                              :: ibudgetout => null()  !< unit number for budget output file
-    integer(I4B), pointer                              :: ibudcsv => null()     !< unit number for csv budget output file
-    type(GwtFmiType), pointer                          :: fmi1 => null()        !< pointer to fmi object for model 1
-    type(GwtFmiType), pointer                          :: fmi2 => null()        !< pointer to fmi object for model 2 (set to fmi1 for single model)
-    type(BudgetType), pointer                          :: budget => null()      !< mover transport budget object (used to write balance table)
-    type(BudgetObjectType), pointer                    :: budobj => null()      !< budget container (used to write binary file)
-    type(BudgetObjectType), pointer                    :: mvrbudobj => null()   !< pointer to the water mover budget object
-    character(len=LENPACKAGENAME),                                             &
-      dimension(:), pointer, contiguous                :: paknames => null()    !< array of package names
+    character(len=LENMODELNAME) :: gwfmodelname1 = '' !< name of model 1
+    character(len=LENMODELNAME) :: gwfmodelname2 = '' !< name of model 2 (set to modelname 1 for single model MVT)
+    integer(I4B), pointer :: maxpackages !< max number of packages
+    integer(I4B), pointer :: ibudgetout => null() !< unit number for budget output file
+    integer(I4B), pointer :: ibudcsv => null() !< unit number for csv budget output file
+    type(GwtFmiType), pointer :: fmi1 => null() !< pointer to fmi object for model 1
+    type(GwtFmiType), pointer :: fmi2 => null() !< pointer to fmi object for model 2 (set to fmi1 for single model)
+    type(BudgetType), pointer :: budget => null() !< mover transport budget object (used to write balance table)
+    type(BudgetObjectType), pointer :: budobj => null() !< budget container (used to write binary file)
+    type(BudgetObjectType), pointer :: mvrbudobj => null() !< pointer to the water mover budget object
+    character(len=LENPACKAGENAME), &
+      dimension(:), pointer, contiguous :: paknames => null() !< array of package names
     !
     ! -- table objects
     type(TableType), pointer :: outputtab => null()
@@ -60,7 +60,7 @@ module GwtMvtModule
     procedure, private :: mvt_print_outputtab
   end type GwtMvtType
 
-  contains
+contains
 
   subroutine mvt_cr(mvt, name_model, inunit, iout, fmi1, gwfmodelname1, &
                     gwfmodelname2, fmi2)
@@ -82,7 +82,7 @@ module GwtMvtModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
-    allocate(mvt)
+    allocate (mvt)
     !
     ! -- create name and memory path
     call mvt%set_names(1, name_model, 'MVT', 'MVT')
@@ -104,10 +104,10 @@ module GwtMvtModule
     !
     ! -- set model names
     if (present(gwfmodelname1)) then
-      mvt%gwfmodelname1 =  gwfmodelname1
+      mvt%gwfmodelname1 = gwfmodelname1
     end if
     if (present(gwfmodelname2)) then
-      mvt%gwfmodelname2 =  gwfmodelname2
+      mvt%gwfmodelname2 = gwfmodelname2
     end if
     !
     ! -- create the budget object
@@ -130,8 +130,8 @@ module GwtMvtModule
     class(DisBaseType), pointer, intent(in) :: dis
     ! -- local
     ! -- formats
-    character(len=*), parameter :: fmtmvt =                                    &
-      "(1x,/1x,'MVT -- MOVER TRANSPORT PACKAGE, VERSION 1, 4/15/2020',         &
+    character(len=*), parameter :: fmtmvt = &
+      "(1x,/1x,'MVT -- MOVER TRANSPORT PACKAGE, VERSION 1, 4/15/2020', &
       &' INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
     !
@@ -139,7 +139,7 @@ module GwtMvtModule
     this%dis => dis
     !
     ! -- print a message identifying the MVT package.
-    write(this%iout, fmtmvt) this%inunit
+    write (this%iout, fmtmvt) this%inunit
     !
     ! -- Initialize block parser
     call this%parser%Initialize(this%inunit, this%iout)
@@ -153,7 +153,7 @@ module GwtMvtModule
     ! -- Return
     return
   end subroutine mvt_df
-  
+
   !> @ brief Set pointer to mvrbudobj
   !!
   !! Store a pointer to mvrbudobj, which contains the simulated water
@@ -166,7 +166,7 @@ module GwtMvtModule
     type(BudgetObjectType), intent(in), target :: mvrbudobj
     this%mvrbudobj => mvrbudobj
   end subroutine set_pointer_mvrbudobj
-  
+
   subroutine mvt_ar(this)
 ! ******************************************************************************
 ! mvt_ar -- Allocate and read water mover information
@@ -223,7 +223,7 @@ module GwtMvtModule
     ! -- Return
     return
   end subroutine mvt_rp
-  
+
   subroutine mvt_fc(this, cnew1, cnew2)
 ! ******************************************************************************
 ! mvt_fc -- Calculate coefficients and fill amat and rhs
@@ -251,8 +251,8 @@ module GwtMvtModule
     real(DP) :: q, cp
     real(DP), dimension(:), pointer :: concpak
     real(DP), dimension(:), contiguous, pointer :: cnew
-    type(GwtFmiType), pointer :: fmi_pr  !< pointer to provider model fmi package
-    type(GwtFmiType), pointer :: fmi_rc  !< pointer to receiver model fmi package
+    type(GwtFmiType), pointer :: fmi_pr !< pointer to provider model fmi package
+    type(GwtFmiType), pointer :: fmi_rc !< pointer to receiver model fmi package
 ! ------------------------------------------------------------------------------
     !
     ! -- Add mover QC terms to the receiver packages
@@ -302,17 +302,18 @@ module GwtMvtModule
             !
             ! -- Provider is a regular stress package (WEL, DRN, RIV, etc.) or the
             !    provider is an advanced stress package but is not represented with
-            !    SFT, LKT, MWT, or UZT, so use the GWT cell concentration 
+            !    SFT, LKT, MWT, or UZT, so use the GWT cell concentration
             igwtnode = fmi_pr%gwfpackages(ipr)%nodelist(id1)
             cp = cnew(igwtnode)
-            
+
           end if
           !
           ! -- add the mover rate times the provider concentration into the receiver
           !    make sure these are accumulated since multiple providers can move
           !    water into the same receiver
           if (fmi_rc%iatp(irc) /= 0) then
-            fmi_rc%datp(irc)%qmfrommvr(id2) = fmi_rc%datp(irc)%qmfrommvr(id2) - q * cp
+            fmi_rc%datp(irc)%qmfrommvr(id2) = fmi_rc%datp(irc)%qmfrommvr(id2) - &
+                                              q * cp
           end if
         end do
       end if
@@ -321,14 +322,14 @@ module GwtMvtModule
     ! -- Return
     return
   end subroutine mvt_fc
-  
+
   !> @ brief Set the fmi_pr and fmi_rc pointers
   !!
   !! The fmi_pr and fmi_rc arguments are pointers to the provider
   !! and receiver FMI Packages.  If this MVT Package is owned by
   !! a single GWT model, then these pointers are both set to the
   !! FMI Package of this GWT model's FMI Package.  If this MVT
-  !! Package is owned by a GWTGWT Exchange, then the fmi_pr and 
+  !! Package is owned by a GWTGWT Exchange, then the fmi_pr and
   !! fmi_rc pointers may be assigned to FMI Packages in different models.
   !!
   !<
@@ -349,7 +350,8 @@ module GwtMvtModule
       if (this%mvrbudobj%budterm(ibudterm)%text1id1 == this%gwfmodelname1) then
         ! -- model 1 is the provider
         fmi_pr => this%fmi1
-      else if (this%mvrbudobj%budterm(ibudterm)%text1id1 == this%gwfmodelname2) then
+      else if (this%mvrbudobj%budterm(ibudterm)%text1id1 == &
+               this%gwfmodelname2) then
         ! -- model 2 is the provider
         fmi_pr => this%fmi2
       else
@@ -360,12 +362,13 @@ module GwtMvtModule
         print *, this%gwfmodelname2
         stop "error in set_fmi_pr_rc"
       end if
-        
+
       ! modelname for receiver is this%mvrbudobj%budterm(i)%text1id2
       if (this%mvrbudobj%budterm(ibudterm)%text1id2 == this%gwfmodelname1) then
         ! -- model 1 is the receiver
         fmi_rc => this%fmi1
-      else if (this%mvrbudobj%budterm(ibudterm)%text1id2 == this%gwfmodelname2) then
+      else if (this%mvrbudobj%budterm(ibudterm)%text1id2 == &
+               this%gwfmodelname2) then
         ! -- model 2 is the receiver
         fmi_rc => this%fmi2
       else
@@ -377,7 +380,7 @@ module GwtMvtModule
         stop "error in set_fmi_pr_rc"
       end if
     end if
-    
+
     if (.not. associated(fmi_pr)) then
       print *, 'Could not find FMI Package...'
       stop "error in set_fmi_pr_rc"
@@ -399,14 +402,14 @@ module GwtMvtModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtMvtType) :: this
-    integer(I4B),intent(in) :: kiter
-    integer(I4B),intent(in) :: iend
-    integer(I4B),intent(in) :: icnvgmod
+    integer(I4B), intent(in) :: kiter
+    integer(I4B), intent(in) :: iend
+    integer(I4B), intent(in) :: icnvgmod
     character(len=LENPAKLOC), intent(inout) :: cpak
     real(DP), intent(inout) :: dpak
     ! -- local
     ! -- formats
-    character(len=*),parameter :: fmtmvrcnvg = &
+    character(len=*), parameter :: fmtmvrcnvg = &
       "(/,1x,'MOVER PACKAGE REQUIRES AT LEAST TWO OUTER ITERATIONS. CONVERGE &
       &FLAG HAS BEEN RESET TO FALSE.')"
 ! ------------------------------------------------------------------------------
@@ -416,14 +419,14 @@ module GwtMvtModule
       if (icnvgmod == 1 .and. kiter == 1) then
         dpak = DNODATA
         cpak = trim(this%packName)
-        write(this%iout, fmtmvrcnvg)
-      endif
-    endif
+        write (this%iout, fmtmvrcnvg)
+      end if
+    end if
     !
     ! -- return
     return
   end subroutine mvt_cc
-  
+
   subroutine mvt_bd(this, cnew1, cnew2)
 ! ******************************************************************************
 ! mvt_bd -- Write mover terms to listing file
@@ -434,8 +437,8 @@ module GwtMvtModule
     ! -- modules
     ! -- dummy
     class(GwtMvtType) :: this
-    real(DP), dimension(:), contiguous, intent(in)  :: cnew1
-    real(DP), dimension(:), contiguous, intent(in)  :: cnew2
+    real(DP), dimension(:), contiguous, intent(in) :: cnew1
+    real(DP), dimension(:), contiguous, intent(in) :: cnew2
     ! -- local
 ! ------------------------------------------------------------------------------
     !
@@ -445,7 +448,7 @@ module GwtMvtModule
     ! -- return
     return
   end subroutine mvt_bd
-  
+
   subroutine mvt_ot_saveflow(this, icbcfl, ibudfl)
 ! ******************************************************************************
 ! mvt_bd -- Write mover terms
@@ -454,7 +457,7 @@ module GwtMvtModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only : kstp, kper, delt, pertim, totim
+    use TdisModule, only: kstp, kper, delt, pertim, totim
     ! -- dummy
     class(GwtMvttype) :: this
     integer(I4B), intent(in) :: icbcfl
@@ -465,13 +468,13 @@ module GwtMvtModule
     !
     ! -- Save the mover flows from the budobj to a mover binary file
     ibinun = 0
-    if(this%ibudgetout /= 0) then
+    if (this%ibudgetout /= 0) then
       ibinun = this%ibudgetout
     end if
-    if(icbcfl == 0) ibinun = 0
+    if (icbcfl == 0) ibinun = 0
     if (ibinun > 0) then
       call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
-                        pertim, totim, this%iout)
+                                  pertim, totim, this%iout)
     end if
     !
     ! -- Return
@@ -521,42 +524,42 @@ module GwtMvtModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate and initialize ratin/ratout
-    allocate(ratin(this%maxpackages), ratout(this%maxpackages))
+    allocate (ratin(this%maxpackages), ratout(this%maxpackages))
     do j = 1, this%maxpackages
       ratin(j) = DZERO
       ratout(j) = DZERO
-    enddo
+    end do
     !
     ! -- Accumulate the rates
     do i = 1, this%maxpackages
-      
+
       do j = 1, this%budobj%nbudterm
-      
+
         do n = 1, this%budobj%budterm(j)%nlist
 
           !
           ! -- provider is inflow to mover
-          if(this%paknames(i) == this%budobj%budterm(j)%text2id1) then
+          if (this%paknames(i) == this%budobj%budterm(j)%text2id1) then
             ratin(i) = ratin(i) + this%budobj%budterm(j)%flow(n)
-          endif
+          end if
           !
           ! -- receiver is outflow from mover
-          if(this%paknames(i) == this%budobj%budterm(j)%text2id2) then
+          if (this%paknames(i) == this%budobj%budterm(j)%text2id2) then
             ratout(i) = ratout(i) + this%budobj%budterm(j)%flow(n)
-          endif
-        
+          end if
+
         end do
-        
+
       end do
-      
+
     end do
-    
+
     !
     ! -- Send rates to budget object
     call this%budget%reset()
     do j = 1, this%maxpackages
       call this%budget%addentry(ratin(j), ratout(j), delt, this%paknames(j))
-    enddo
+    end do
     !
     ! -- Write the budget
     if (ibudfl /= 0) then
@@ -567,7 +570,7 @@ module GwtMvtModule
     call this%budget%writecsv(totim)
     !
     ! -- Deallocate
-    deallocate(ratin, ratout)
+    deallocate (ratin, ratout)
     !
     ! -- Output mvr budget
     !    Not using budobj write_table here because it would result
@@ -594,27 +597,27 @@ module GwtMvtModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Deallocate arrays if package was active
-    if(this%inunit > 0) then
+    if (this%inunit > 0) then
       !
       ! -- character array
-      deallocate(this%paknames)
+      deallocate (this%paknames)
       !
       ! -- budget object
       call this%budget%budget_da()
-      deallocate(this%budget)
+      deallocate (this%budget)
       !
       ! -- budobj
       call this%budobj%budgetobject_da()
-      deallocate(this%budobj)
-      nullify(this%budobj)
+      deallocate (this%budobj)
+      nullify (this%budobj)
       !
       ! -- output table object
       if (associated(this%outputtab)) then
         call this%outputtab%table_da()
-        deallocate(this%outputtab)
-        nullify(this%outputtab)
+        deallocate (this%outputtab)
+        nullify (this%outputtab)
       end if
-    endif
+    end if
     !
     ! -- Scalars
     this%fmi1 => null()
@@ -679,10 +682,11 @@ module GwtMvtModule
     character(len=MAXCHARLEN) :: fname
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
-    character(len=*),parameter :: fmtflow = &
-      "(4x, a, 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON UNIT: ', I0)"
-    character(len=*),parameter :: fmtflow2 = &
-      "(4x, 'FLOWS WILL BE SAVED TO BUDGET FILE')"
+    character(len=*), parameter :: fmtflow = &
+      "(4x, a, 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, &
+      &/4x, 'OPENED ON UNIT: ', I0)"
+    character(len=*), parameter :: fmtflow2 = &
+      &"(4x, 'FLOWS WILL BE SAVED TO BUDGET FILE')"
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
@@ -691,53 +695,54 @@ module GwtMvtModule
     !
     ! -- parse options block if detected
     if (isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING MVT OPTIONS'
+      write (this%iout, '(1x,a)') 'PROCESSING MVT OPTIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
-          case ('SAVE_FLOWS')
-            this%ipakcb = -1
-            write(this%iout, fmtflow2)
-          case ('PRINT_INPUT')
-            this%iprpak = 1
-            write(this%iout,'(4x,a)') 'MVT INPUT WILL BE PRINTED.'
-          case ('PRINT_FLOWS')
-            this%iprflow = 1
-            write(this%iout,'(4x,a)') &
-              'MVT FLOWS WILL BE PRINTED TO LISTING FILE.'
-          case('BUDGET')
-            call this%parser%GetStringCaps(keyword)
-            if (keyword == 'FILEOUT') then
-              call this%parser%GetString(fname)
-              this%ibudgetout = getunit()
-              call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)',  &
-                            form, access, 'REPLACE')
-              write(this%iout,fmtflow) 'MVT', 'BUDGET', fname, this%ibudgetout
-            else
-              call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
-            end if
-          case('BUDGETCSV')
-            call this%parser%GetStringCaps(keyword)
-            if (keyword == 'FILEOUT') then
-              call this%parser%GetString(fname)
-              this%ibudcsv = getunit()
-              call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
-                filstat_opt='REPLACE')
-              write(this%iout,fmtflow) 'MVT', 'BUDGET CSV', fname, this%ibudcsv
-            else
-              call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
-                &FILEOUT')
-            end if
-          case default
-            write(errmsg,'(4x,a,a)')'***ERROR. UNKNOWN MVT OPTION: ', &
-                                     trim(keyword)
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
+        case ('SAVE_FLOWS')
+          this%ipakcb = -1
+          write (this%iout, fmtflow2)
+        case ('PRINT_INPUT')
+          this%iprpak = 1
+          write (this%iout, '(4x,a)') 'MVT INPUT WILL BE PRINTED.'
+        case ('PRINT_FLOWS')
+          this%iprflow = 1
+          write (this%iout, '(4x,a)') &
+            'MVT FLOWS WILL BE PRINTED TO LISTING FILE.'
+        case ('BUDGET')
+          call this%parser%GetStringCaps(keyword)
+          if (keyword == 'FILEOUT') then
+            call this%parser%GetString(fname)
+            this%ibudgetout = getunit()
+            call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)', &
+                          form, access, 'REPLACE')
+            write (this%iout, fmtflow) 'MVT', 'BUDGET', fname, this%ibudgetout
+          else
+            call store_error('OPTIONAL BUDGET KEYWORD MUST &
+                             &BE FOLLOWED BY FILEOUT')
+          end if
+        case ('BUDGETCSV')
+          call this%parser%GetStringCaps(keyword)
+          if (keyword == 'FILEOUT') then
+            call this%parser%GetString(fname)
+            this%ibudcsv = getunit()
+            call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
+                          filstat_opt='REPLACE')
+            write (this%iout, fmtflow) 'MVT', 'BUDGET CSV', fname, this%ibudcsv
+          else
+            call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
+              &FILEOUT')
+          end if
+        case default
+          write (errmsg, '(4x,a,a)') '***ERROR. UNKNOWN MVT OPTION: ', &
+            trim(keyword)
+          call store_error(errmsg)
+          call this%parser%StoreErrorUnit()
         end select
       end do
-      write(this%iout,'(1x,a)') 'END OF MVT OPTIONS'
+      write (this%iout, '(1x,a)') 'END OF MVT OPTIONS'
     end if
     !
     ! -- return
@@ -761,8 +766,8 @@ module GwtMvtModule
     integer(I4B) :: maxlist
     integer(I4B) :: i
     integer(I4B) :: naux
-    character (len=LENMODELNAME) :: modelname1, modelname2
-    character (len=LENPACKAGENAME) :: packagename1, packagename2
+    character(len=LENMODELNAME) :: modelname1, modelname2
+    character(len=LENPACKAGENAME) :: packagename1, packagename2
     character(len=LENBUDTXT) :: text
 ! ------------------------------------------------------------------------------
     !
@@ -791,7 +796,7 @@ module GwtMvtModule
                                              maxlist, .false., .false., &
                                              naux)
     end do
-    
+
     !
     ! -- return
     return
@@ -810,7 +815,7 @@ module GwtMvtModule
     real(DP), intent(in), dimension(:), contiguous, target :: cnew1
     real(DP), intent(in), dimension(:), contiguous, target :: cnew2
     ! -- local
-    type(GwtFmiType), pointer :: fmi_pr 
+    type(GwtFmiType), pointer :: fmi_pr
     type(GwtFmiType), pointer :: fmi_rc
     real(DP), dimension(:), contiguous, pointer :: cnew
     integer(I4B) :: nbudterm
@@ -899,7 +904,7 @@ module GwtMvtModule
     this%maxpackages = maxpackages
     !
     ! -- allocate paknames
-    allocate(this%paknames(this%maxpackages))
+    allocate (this%paknames(this%maxpackages))
     do i = 1, this%maxpackages
       this%paknames(i) = ''
     end do
@@ -923,7 +928,7 @@ module GwtMvtModule
     ! -- Return
     return
   end subroutine mvt_scan_mvrbudobj
-  
+
   subroutine mvt_setup_outputtab(this)
 ! ******************************************************************************
 ! mvt_setup_outputtab -- set up output table
@@ -932,7 +937,7 @@ module GwtMvtModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtMvtType),intent(inout) :: this
+    class(GwtMvtType), intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: text
@@ -949,15 +954,15 @@ module GwtMvtModule
       maxrow = 0
       !
       ! -- initialize the output table object
-      title = 'TRANSPORT MOVER PACKAGE (' // trim(this%packName) // &
+      title = 'TRANSPORT MOVER PACKAGE ('//trim(this%packName)// &
               ') FLOW RATES'
       call table_cr(this%outputtab, this%packName, title)
       call this%outputtab%table_df(maxrow, ntabcol, this%iout, &
-                                    transient=.TRUE.)
+                                   transient=.TRUE.)
       text = 'NUMBER'
       call this%outputtab%initialize_column(text, 10, alignment=TABCENTER)
       text = 'PROVIDER LOCATION'
-      ilen = LENMODELNAME+LENPACKAGENAME+1
+      ilen = LENMODELNAME + LENPACKAGENAME + 1
       call this%outputtab%initialize_column(text, ilen)
       text = 'PROVIDER ID'
       call this%outputtab%initialize_column(text, 10)
@@ -966,11 +971,11 @@ module GwtMvtModule
       text = 'PROVIDER TRANSPORT RATE'
       call this%outputtab%initialize_column(text, 10)
       text = 'RECEIVER LOCATION'
-      ilen = LENMODELNAME+LENPACKAGENAME+1
+      ilen = LENMODELNAME + LENPACKAGENAME + 1
       call this%outputtab%initialize_column(text, ilen)
       text = 'RECEIVER ID'
       call this%outputtab%initialize_column(text, 10)
-      
+
     end if
     !
     ! -- return
@@ -987,10 +992,10 @@ module GwtMvtModule
     ! -- module
     use TdisModule, only: kstp, kper
     ! -- dummy
-    class(GwtMvttype),intent(inout) :: this
+    class(GwtMvttype), intent(inout) :: this
     ! -- local
-    character (len=LINELENGTH) :: title
-    character(len=LENMODELNAME+LENPACKAGENAME+1) :: cloc1, cloc2
+    character(len=LINELENGTH) :: title
+    character(len=LENMODELNAME + LENPACKAGENAME + 1) :: cloc1, cloc2
     integer(I4B) :: i
     integer(I4B) :: n
     integer(I4B) :: inum
@@ -1009,7 +1014,7 @@ module GwtMvtModule
     call this%outputtab%set_kstpkper(kstp, kper)
     !
     ! -- Add terms and print the table
-    title = 'TRANSPORT MOVER PACKAGE (' // trim(this%packName) //     &
+    title = 'TRANSPORT MOVER PACKAGE ('//trim(this%packName)// &
             ') FLOW RATES'
     call this%outputtab%set_title(title)
     call this%outputtab%set_maxbound(ntabrows)
@@ -1019,9 +1024,9 @@ module GwtMvtModule
     do i = 1, this%budobj%nbudterm
       nlist = this%budobj%budterm(i)%nlist
       do n = 1, nlist
-        cloc1 = trim(adjustl(this%budobj%budterm(i)%text1id1)) // ' ' // &
+        cloc1 = trim(adjustl(this%budobj%budterm(i)%text1id1))//' '// &
                 trim(adjustl(this%budobj%budterm(i)%text2id1))
-        cloc2 = trim(adjustl(this%budobj%budterm(i)%text1id2)) // ' ' // &
+        cloc2 = trim(adjustl(this%budobj%budterm(i)%text1id2))//' '// &
                 trim(adjustl(this%budobj%budterm(i)%text2id2))
         call this%outputtab%add_term(inum)
         call this%outputtab%add_term(cloc1)
@@ -1039,4 +1044,4 @@ module GwtMvtModule
   end subroutine mvt_print_outputtab
 
 end module GwtMvtModule
-  
+

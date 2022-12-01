@@ -1,8 +1,10 @@
-import os
-import pytest
-import numpy as np
-import shutil
 import math
+import os
+import shutil
+
+import numpy as np
+import pytest
+
 import targets
 
 try:
@@ -603,7 +605,7 @@ def instantiate_base_simulation(sim_ws, gwfname, gwfnamec):
         modelname=gwfname,
         save_flows=True,
         newtonoptions="NEWTON",
-        model_nam_file="{}.nam".format(gwfname),
+        model_nam_file=f"{gwfname}.nam",
     )
 
     # Create iterative model solution and register the gwf model with it
@@ -620,7 +622,7 @@ def instantiate_base_simulation(sim_ws, gwfname, gwfnamec):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(imsgwf, [gwf.name])
 
@@ -635,14 +637,12 @@ def instantiate_base_simulation(sim_ws, gwfname, gwfnamec):
         top=topp,
         botm=botmp,
         idomain=idomainp,
-        filename="{}.dis".format(gwfname),
+        filename=f"{gwfname}.dis",
     )
 
     # Instantiate initial conditions package
     strt = [topp - 0.25, topp - 0.25, topp - 0.25]
-    ic = flopy.mf6.ModflowGwfic(
-        gwf, strt=strt, filename="{}.ic".format(gwfname)
-    )
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{gwfname}.ic")
 
     # Instantiate node property flow package
     npf = flopy.mf6.ModflowGwfnpf(
@@ -653,7 +653,7 @@ def instantiate_base_simulation(sim_ws, gwfname, gwfnamec):
         k=hk,
         k33=k33,
         save_specific_discharge=False,
-        filename="{}.npf".format(gwfname),
+        filename=f"{gwfname}.npf",
     )
 
     # output control
@@ -687,7 +687,7 @@ def instantiate_base_simulation(sim_ws, gwfname, gwfnamec):
         stress_period_data=chdspd,
         save_flows=False,
         pname="CHD-1",
-        filename="{}.chd1.chd".format(gwfname),
+        filename=f"{gwfname}.chd1.chd",
     )
     chdspd = {0: chdspd_right}
     chd2 = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(
@@ -696,7 +696,7 @@ def instantiate_base_simulation(sim_ws, gwfname, gwfnamec):
         stress_period_data=chdspd,
         save_flows=False,
         pname="CHD-2",
-        filename="{}.chd2.chd".format(gwfname),
+        filename=f"{gwfname}.chd2.chd",
     )
 
     welspd_mf6 = []
@@ -715,7 +715,7 @@ def instantiate_base_simulation(sim_ws, gwfname, gwfnamec):
         boundnames=False,
         save_flows=True,
         pname="WEL-1",
-        filename="{}.wel".format(gwfname),
+        filename=f"{gwfname}.wel",
     )
 
     # ---------------------------
@@ -750,7 +750,7 @@ def instantiate_base_simulation(sim_ws, gwfname, gwfnamec):
         modelname=gwfnamec,
         save_flows=True,
         newtonoptions="NEWTON",
-        model_nam_file="{}.nam".format(gwfnamec),
+        model_nam_file=f"{gwfnamec}.nam",
     )
 
     # Instantiate the discretization package
@@ -770,7 +770,7 @@ def instantiate_base_simulation(sim_ws, gwfname, gwfnamec):
         idomain=idomainc,
         xorigin=xorigin,
         yorigin=yorigin,
-        filename="{}.dis".format(gwfnamec),
+        filename=f"{gwfnamec}.dis",
     )
 
     # Instantiate initial conditions package
@@ -782,9 +782,7 @@ def instantiate_base_simulation(sim_ws, gwfname, gwfnamec):
         topc - 0.25,
         topc - 0.25,
     ]
-    icc = flopy.mf6.ModflowGwfic(
-        gwfc, strt=strtc, filename="{}.ic".format(gwfnamec)
-    )
+    icc = flopy.mf6.ModflowGwfic(gwfc, strt=strtc, filename=f"{gwfnamec}.ic")
 
     # Instantiate node property flow package
     icelltypec = [1, 0, 0, 0, 0, 0]
@@ -796,7 +794,7 @@ def instantiate_base_simulation(sim_ws, gwfname, gwfnamec):
         k=hk,
         k33=k33,
         save_specific_discharge=False,
-        filename="{}.npf".format(gwfnamec),
+        filename=f"{gwfnamec}.npf",
     )
 
     # output control
@@ -822,7 +820,7 @@ def instantiate_base_simulation(sim_ws, gwfname, gwfnamec):
         boundnames=False,
         save_flows=True,
         pname="WEL-2",
-        filename="{}.wel".format(gwfnamec),
+        filename=f"{gwfnamec}.wel",
     )
 
     # exchange data
@@ -838,9 +836,8 @@ def instantiate_base_simulation(sim_ws, gwfname, gwfnamec):
         exgmnameb=gwfnamec,
         nexg=len(exchange_data),
         exchangedata=exchange_data,
-        mvr_filerecord="{}.mvr".format(name),
         pname="EXG-1",
-        filename="{}.exg".format(name),
+        filename=f"{name}.exg",
     )
 
     return sim, gwf, gwfc
@@ -862,7 +859,7 @@ def add_parent_sfr(gwf, gwfname, conns):
         packagedata=pkdat,
         connectiondata=conns,
         perioddata=sfrspd,
-        filename="{}.sfr".format(gwfname),
+        filename=f"{gwfname}.sfr",
     )
 
 
@@ -882,7 +879,7 @@ def add_child_sfr(gwfc, gwfnamec):
         packagedata=pkdatc,
         connectiondata=connsc,
         perioddata=sfrspd,
-        filename="{}.sfr".format(gwfnamec),
+        filename=f"{gwfnamec}.sfr",
     )
 
 
@@ -896,7 +893,7 @@ def add_parent_mvr(gwf, gwfname, frac):
         maxpackages=maxpackages,
         packages=mvrpack,
         perioddata=mvrspd,
-        filename="{}.mvr".format(gwfname),
+        filename=f"{gwfname}.mvr",
     )
 
 
@@ -908,7 +905,7 @@ def add_child_mvr(gwfc, gwfnamec):
         maxpackages=maxpackagesc,
         packages=mvrpackc,
         perioddata=mvrspdc,
-        filename="{}.mvr".format(gwfnamec),
+        filename=f"{gwfnamec}.mvr",
     )
 
 
@@ -977,15 +974,15 @@ def add_sim_mvr(sim, gwfname, gwfnamec, remaining_frac=None):
 
     mvrspd = {0: sim_mvr_perioddata}
     maxmvr = 3
-    mvr = flopy.mf6.ModflowMvr(
-        sim,
+    gwfgwf = sim.get_exchange_file("gwf.exg")
+    gwfgwf.mvr.initialize(
         modelnames=True,
         maxmvr=maxmvr,
         print_flows=True,
         maxpackages=maxpackages,
         packages=mvrpack_sim,
         perioddata=mvrspd,
-        filename="{}.mvr".format(name),
+        filename=f"{name}.mvr",
     )
 
 
@@ -1174,7 +1171,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

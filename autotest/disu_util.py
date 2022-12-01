@@ -2,6 +2,12 @@ import numpy as np
 
 
 def get_disu_kwargs(nlay, nrow, ncol, delr, delc, tp, botm):
+    """
+    Simple utility for creating args needed to construct
+    a disu package
+
+    """
+
     def get_nn(k, i, j):
         return k * nrow * ncol + i * ncol + j
 

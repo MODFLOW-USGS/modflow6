@@ -22,10 +22,11 @@ TODO: (how) will this affect accuracy?
 
 """
 import os
+
 import numpy as np
-from modflowapi import ModflowApi
-from flopy.utils.lgrutil import Lgr
 import pytest
+from flopy.utils.lgrutil import Lgr
+from modflowapi import ModflowApi
 
 try:
     import flopy
@@ -163,8 +164,8 @@ def get_model(idx, dir):
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd)
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        head_filerecord="{}.hds".format(name_parent),
-        budget_filerecord="{}.cbc".format(name_parent),
+        head_filerecord=f"{name_parent}.hds",
+        budget_filerecord=f"{name_parent}.cbc",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
@@ -197,8 +198,8 @@ def get_model(idx, dir):
     )
     oc = flopy.mf6.ModflowGwfoc(
         gwfc,
-        head_filerecord="{}.hds".format(name_child),
-        budget_filerecord="{}.cbc".format(name_child),
+        head_filerecord=f"{name_child}.hds",
+        budget_filerecord=f"{name_child}.cbc",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
@@ -276,19 +277,19 @@ def build_model(idx, exdir):
 def eval_heads(sim):
     name = ex[sim.idxsim]
 
-    fpth = os.path.join(sim.simpath, "{}.hds".format(name_parent))
+    fpth = os.path.join(sim.simpath, f"{name_parent}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads = hds.get_data()
 
-    fpth = os.path.join(sim.simpath, "{}.hds".format(name_child))
+    fpth = os.path.join(sim.simpath, f"{name_child}.hds")
     hds_c = flopy.utils.HeadFile(fpth)
     heads_c = hds_c.get_data()
 
-    fpth = os.path.join(sim.simpath, "{}.dis.grb".format(name_parent))
+    fpth = os.path.join(sim.simpath, f"{name_parent}.dis.grb")
     grb = flopy.mf6.utils.MfGrdFile(fpth)
     mg = grb.modelgrid
 
-    fpth = os.path.join(sim.simpath, "{}.dis.grb".format(name_child))
+    fpth = os.path.join(sim.simpath, f"{name_child}.dis.grb")
     grb_c = flopy.mf6.utils.MfGrdFile(fpth)
     mg_c = grb_c.modelgrid
 
@@ -377,7 +378,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

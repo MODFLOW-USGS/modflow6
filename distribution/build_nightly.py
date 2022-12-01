@@ -1,13 +1,15 @@
 import os
-import sys
+import pathlib
 import platform
 import shutil
+import sys
+
 import flopy
 import pymake
 
 # add path to build script in autotest directory and reuse mf6 build scripts
 sys.path.append(os.path.join("..", "autotest"))
-from build_exes import build_mf6, build_mf6_so, build_mf5to6, build_zbud6
+from build_exes import meson_build
 
 # make sure exe extension is used on windows
 eext = ""
@@ -16,7 +18,9 @@ if sys.platform.lower() == "win32":
     eext = ".exe"
     soext = ".dll"
 
-binpth, temppth = os.path.join("..", "bin"), os.path.join("temp")
+bin_path = os.path.abspath(os.path.join("..", "bin"))
+example_path = os.path.abspath(os.path.join("temp"))
+zip_path = os.path.abspath(os.path.join("temp_zip"))
 
 
 def get_zipname():
@@ -28,8 +32,6 @@ def get_zipname():
     elif zipname == "win32":
         if platform.architecture()[0] == "64bit":
             zipname = "win64"
-
-    # return
     return zipname
 
 
@@ -44,18 +46,15 @@ def relpath_fallback(pth):
 def create_dir(pth):
     # remove pth directory if it exists
     if os.path.exists(pth):
-        print("removing... {}".format(os.path.abspath(pth)))
+        print(f"removing... {os.path.abspath(pth)}")
         shutil.rmtree(pth)
 
     # create pth directory
-    print("creating... {}".format(os.path.abspath(pth)))
+    print(f"creating... {os.path.abspath(pth)}")
     os.makedirs(pth)
 
-    msg = "could not create... {}".format(os.path.abspath(pth))
+    msg = f"could not create... {os.path.abspath(pth)}"
     assert os.path.exists(pth), msg
-
-    # return
-    return
 
 
 def test_update_version():
@@ -63,48 +62,51 @@ def test_update_version():
 
     update_version()
 
-    # return
-    return
-
 
 def test_create_dirs():
-    pths = [binpth, temppth]
-
-    for pth in pths:
+    for pth in (
+        bin_path,
+        zip_path,
+    ):
         create_dir(pth)
 
-    # return
-    return
 
+def test_nightly_build():
+    meson_build()
 
-def test_mf6():
-    build_mf6()
+    # test if there are any executable files to zip
+    binpth_files = [
+        os.path.join(bin_path, f)
+        for f in os.listdir(bin_path)
+        if os.path.isfile(os.path.join(bin_path, f))
+        and shutil.which(os.path.join(bin_path, f), mode=os.X_OK)
+        and pathlib.Path(os.path.join(bin_path, f)).suffix
+        not in (".a", ".lib", ".pdb")
+    ]
+    if len(binpth_files) < 1:
+        raise FileNotFoundError(
+            f"No executable files present in {os.path.abspath(bin_path)}.\n"
+            + f"Available files:\n [{', '.join(os.listdir(bin_path))}]"
+        )
+    else:
+        print(f"Files to zip:\n [{', '.join(binpth_files)}]")
 
-
-def test_libmf6():
-    build_mf6_so()
-
-
-def test_mf5to6():
-    build_mf5to6()
-
-
-def test_zbud6():
-    build_zbud6()
+    zip_pth = os.path.abspath(os.path.join(zip_path, get_zipname() + ".zip"))
+    print(f"Zipping files to '{zip_pth}'")
+    success = pymake.zip_all(zip_pth, file_pths=binpth_files)
+    assert success, f"Could not create '{zip_pth}'"
 
 
 def test_update_mf6io():
     from mkdist import update_mf6io_tex_files
 
-    if not os.path.isdir(temppth):
-        os.makedirs(temppth)
     # build simple model
     name = "mymodel"
-    ws = os.path.join(temppth, name)
+    ws = os.path.join(example_path, name)
     exe_name = "mf6"
     if sys.platform.lower() == "win32":
         exe_name += ".exe"
-    exe_name = os.path.join(binpth, exe_name)
+    exe_name = os.path.join(bin_path, exe_name)
     sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=ws, exe_name=exe_name)
     tdis = flopy.mf6.ModflowTdis(sim)
     ims = flopy.mf6.ModflowIms(sim)
@@ -121,33 +123,9 @@ def test_update_mf6io():
     # update the mf6io simulation output for LaTeX
     update_mf6io_tex_files(None, exe_name, expth=ws)
 
-    # return
-    return
-
-
-def test_zip_assets():
-    # create temppth if it does not exist
-    if not os.path.isdir(temppth):
-        os.makedirs(temppth)
-
-    # zip assets
-    env = "GITHUB_ACTIONS"
-    os.environ[env] = "true"
-    if env in os.environ:
-        fpth = get_zipname() + ".zip"
-        # zip up exe's using directories
-        zip_pth = os.path.join(temppth, fpth)
-        success = pymake.zip_all(zip_pth, dir_pths=binpth)
-        assert success, "could not create '{}'".format(zip_pth)
-    return
-
 
 if __name__ == "__main__":
     test_update_version()
     test_create_dirs()
-    test_mf6()
-    test_libmf6()
-    test_mf5to6()
-    test_zbud6()
+    test_nightly_build()
     test_update_mf6io()
-    test_zip_assets()

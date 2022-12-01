@@ -1,11 +1,11 @@
 module GwtAdvModule
-  
-  use KindModule,             only: DP, I4B
-  use ConstantsModule,        only: DONE, DZERO, DHALF, DTWO
+
+  use KindModule, only: DP, I4B
+  use ConstantsModule, only: DONE, DZERO, DHALF, DTWO
   use NumericalPackageModule, only: NumericalPackageType
-  use BaseDisModule,          only: DisBaseType
-  use GwtFmiModule,           only: GwtFmiType
-  use GwtAdvOptionsModule,    only: GwtAdvOptionsType
+  use BaseDisModule, only: DisBaseType
+  use GwtFmiModule, only: GwtFmiType
+  use GwtAdvOptionsModule, only: GwtAdvOptionsType
 
   implicit none
   private
@@ -13,29 +13,29 @@ module GwtAdvModule
   public :: adv_cr
 
   type, extends(NumericalPackageType) :: GwtAdvType
-    
-    integer(I4B), pointer                            :: iadvwt => null()        !< advection scheme (0 up, 1 central, 2 tvd)
-    integer(I4B), dimension(:), pointer, contiguous  :: ibound => null()        !< pointer to model ibound
-    type(GwtFmiType), pointer                        :: fmi => null()           !< pointer to fmi object
-    
+
+    integer(I4B), pointer :: iadvwt => null() !< advection scheme (0 up, 1 central, 2 tvd)
+    integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
+    type(GwtFmiType), pointer :: fmi => null() !< pointer to fmi object
+
   contains
-  
+
     procedure :: adv_df
     procedure :: adv_ar
     procedure :: adv_fc
     procedure :: adv_cq
     procedure :: adv_da
-    
+
     procedure :: allocate_scalars
     procedure, private :: read_options
     procedure, private :: advqtvd
     procedure, private :: advtvd_bd
     procedure :: adv_weight
     procedure :: advtvd
-    
+
   end type GwtAdvType
-  
-  contains
+
+contains
 
   subroutine adv_cr(advobj, name_model, inunit, iout, fmi)
 ! ******************************************************************************
@@ -53,7 +53,7 @@ module GwtAdvModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
-    allocate(advobj)
+    allocate (advobj)
     !
     ! -- create name and memory path
     call advobj%set_names(1, name_model, 'ADV', 'ADV')
@@ -74,19 +74,19 @@ module GwtAdvModule
     class(GwtAdvType) :: this
     type(GwtAdvOptionsType), optional, intent(in) :: adv_options !< the optional options, for when not constructing from file
     ! local
-    character(len=*), parameter :: fmtadv =                                    &
-      "(1x,/1x,'ADV-- ADVECTION PACKAGE, VERSION 1, 8/25/2017',                &
+    character(len=*), parameter :: fmtadv = &
+      "(1x,/1x,'ADV-- ADVECTION PACKAGE, VERSION 1, 8/25/2017', &
       &' INPUT READ FROM UNIT ', i0, //)"
     !
     ! -- Read or set advection options
-    if (.not. present(adv_options)) then      
+    if (.not. present(adv_options)) then
       !
       ! -- Initialize block parser (adv has no define, so it's
       ! not done until here)
       call this%parser%Initialize(this%inunit, this%iout)
       !
       ! --print a message identifying the advection package.
-      write(this%iout, fmtadv) this%inunit
+      write (this%iout, fmtadv) this%inunit
       !
       ! --read options from file
       call this%read_options()
@@ -112,14 +112,11 @@ module GwtAdvModule
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     ! -- local
     ! -- formats
-! ------------------------------------------------------------------------------    
+! ------------------------------------------------------------------------------
     !
     ! -- adv pointers to arguments that were passed in
-    this%dis     => dis
-    this%ibound  => ibound
-    !
-    ! -- Allocate arrays (not needed for adv)
-    !call this%allocate_arrays(dis%nodes)    
+    this%dis => dis
+    this%ibound => ibound
     !
     ! -- Return
     return
@@ -145,7 +142,7 @@ module GwtAdvModule
     real(DP) :: omega, qnm
 ! ------------------------------------------------------------------------------
     !
-    ! -- Calculate advection terms and add to solution rhs and hcof.  qnm 
+    ! -- Calculate advection terms and add to solution rhs and hcof.  qnm
     !    is the volumetric flow rate and has dimensions of L^/T.
     do n = 1, nodes
       if (this%ibound(n) == 0) cycle
@@ -158,21 +155,21 @@ module GwtAdvModule
         omega = this%adv_weight(this%iadvwt, ipos, n, m, qnm)
         amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + qnm * (DONE - omega)
         amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + qnm * omega
-      enddo
-    enddo
+      end do
+    end do
     !
     ! -- TVD
     if (this%iadvwt == 2) then
       do n = 1, nodes
-        if(this%ibound(n) == 0) cycle
+        if (this%ibound(n) == 0) cycle
         call this%advtvd(n, cnew, rhs)
-      enddo
-    endif
+      end do
+    end if
     !
     ! -- Return
     return
   end subroutine adv_fc
-    
+
   subroutine advtvd(this, n, cnew, rhs)
 ! ******************************************************************************
 ! advtvd -- Calculate TVD
@@ -181,7 +178,7 @@ module GwtAdvModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    ! -- dummy  
+    ! -- dummy
     class(GwtAdvType) :: this
     integer(I4B), intent(in) :: n
     real(DP), dimension(:), intent(in) :: cnew
@@ -199,8 +196,8 @@ module GwtAdvModule
         qtvd = this%advqtvd(n, m, ipos, cnew)
         rhs(n) = rhs(n) - qtvd
         rhs(m) = rhs(m) + qtvd
-      endif
-    enddo
+      end if
+    end do
     !
     ! -- Return
     return
@@ -217,7 +214,7 @@ module GwtAdvModule
     use ConstantsModule, only: DPREC
     ! -- return
     real(DP) :: qtvd
-    ! -- dummy  
+    ! -- dummy
     class(GwtAdvType) :: this
     integer(I4B), intent(in) :: n
     integer(I4B), intent(in) :: m
@@ -242,7 +239,7 @@ module GwtAdvModule
     else
       iup = n
       idn = m
-    endif
+    end if
     elupdn = this%dis%con%cl1(isympos) + this%dis%con%cl2(isympos)
     !
     ! -- Find second node upstream to iup
@@ -257,22 +254,22 @@ module GwtAdvModule
         qmax = qupj
         i2up = j
         elup2up = this%dis%con%cl1(isympos) + this%dis%con%cl2(isympos)
-      endif
-    enddo
+      end if
+    end do
     !
     ! -- Calculate flux limiting term
     if (i2up > 0) then
       smooth = DZERO
       cdiff = ABS(cnew(idn) - cnew(iup))
       if (cdiff > DPREC) then
-        smooth = (cnew(iup) - cnew(i2up)) / elup2up *                          &
+        smooth = (cnew(iup) - cnew(i2up)) / elup2up * &
                  elupdn / (cnew(idn) - cnew(iup))
-      endif
+      end if
       if (smooth > DZERO) then
         alimiter = DTWO * smooth / (DONE + smooth)
         qtvd = DHALF * alimiter * qnm * (cnew(idn) - cnew(iup))
-      endif
-    endif
+      end if
+    end if
     !
     ! -- Return
     return
@@ -307,10 +304,10 @@ module GwtAdvModule
         if (this%ibound(m) == 0) cycle
         qnm = this%fmi%gwfflowja(ipos)
         omega = this%adv_weight(this%iadvwt, ipos, n, m, qnm)
-        flowja(ipos) = flowja(ipos) + qnm * omega * cnew(n) +                  &
-                                      qnm * (DONE - omega) * cnew(m)
-      enddo
-    enddo
+        flowja(ipos) = flowja(ipos) + qnm * omega * cnew(n) + &
+                       qnm * (DONE - omega) * cnew(m)
+      end do
+    end do
     !
     ! -- TVD
     if (this%iadvwt == 2) call this%advtvd_bd(cnew, flowja)
@@ -318,7 +315,7 @@ module GwtAdvModule
     ! -- Return
     return
   end subroutine adv_cq
-  
+
   subroutine advtvd_bd(this, cnew, flowja)
 ! ******************************************************************************
 ! advtvd_bd -- Add TVD contribution to flowja
@@ -327,7 +324,7 @@ module GwtAdvModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    ! -- dummy  
+    ! -- dummy
     class(GwtAdvType) :: this
     real(DP), dimension(:), intent(in) :: cnew
     real(DP), dimension(:), intent(inout) :: flowja
@@ -345,9 +342,9 @@ module GwtAdvModule
           qnm = this%fmi%gwfflowja(ipos)
           qtvd = this%advqtvd(n, m, ipos, cnew)
           flowja(ipos) = flowja(ipos) + qtvd
-        endif
-      enddo
-    enddo
+        end if
+      end do
+    end do
     !
     ! -- Return
     return
@@ -367,8 +364,8 @@ module GwtAdvModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Deallocate arrays if package was active
-    if(this%inunit > 0) then
-    endif
+    if (this%inunit > 0) then
+    end if
     !
     ! -- nullify pointers
     this%ibound => null()
@@ -421,8 +418,8 @@ module GwtAdvModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule,   only: LINELENGTH
-    use SimModule,         only: store_error
+    use ConstantsModule, only: LINELENGTH
+    use SimModule, only: store_error
     ! -- dummy
     class(GwtAdvType) :: this
     ! -- local
@@ -430,8 +427,8 @@ module GwtAdvModule
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- formats
-    character(len=*), parameter :: fmtiadvwt =                                 &
-      "(4x,'ADVECTION WEIGHTING SCHEME HAS BEEN SET TO: ', a)"
+    character(len=*), parameter :: fmtiadvwt = &
+      &"(4x,'ADVECTION WEIGHTING SCHEME HAS BEEN SET TO: ', a)"
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
@@ -440,46 +437,40 @@ module GwtAdvModule
     !
     ! -- parse options block if detected
     if (isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING ADVECTION OPTIONS'
+      write (this%iout, '(1x,a)') 'PROCESSING ADVECTION OPTIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
-          case ('SCHEME')
-            call this%parser%GetStringCaps(keyword)
-            select case (keyword)
-              case('UPSTREAM')
-                this%iadvwt = 0
-                this%iasym = 1
-                write(this%iout, fmtiadvwt) 'UPSTREAM'
-              case ('CENTRAL')
-                this%iadvwt = 1
-                write(this%iout, fmtiadvwt) 'CENTRAL'
-              case('TVD')
-                this%iadvwt = 2
-                write(this%iout, fmtiadvwt) 'TVD'
-              case default
-                write(errmsg,'(4x, a, a)')                                     &
-                  'ERROR. UNKNOWN SCHEME: ', trim(keyword)
-                call store_error(errmsg)
-                write(errmsg,'(4x, a, a)')                                     &
-                  'SCHEME MUST BE "UPSTREAM", "CENTRAL" OR "TVD"'
-                call store_error(errmsg)
-                call this%parser%StoreErrorUnit()
-            end select
+        case ('SCHEME')
+          call this%parser%GetStringCaps(keyword)
+          select case (keyword)
+          case ('UPSTREAM')
+            this%iadvwt = 0
+            write (this%iout, fmtiadvwt) 'UPSTREAM'
+          case ('CENTRAL')
+            this%iadvwt = 1
+            write (this%iout, fmtiadvwt) 'CENTRAL'
+          case ('TVD')
+            this%iadvwt = 2
+            write (this%iout, fmtiadvwt) 'TVD'
           case default
-            write(errmsg,'(4x,a,a)')'Unknown ADVECTION option: ',  &
-                                     trim(keyword)
-            call store_error(errmsg, terminate=.TRUE.)
+            write (errmsg, '(4x, a, a)') &
+              'ERROR. UNKNOWN SCHEME: ', trim(keyword)
+            call store_error(errmsg)
+            write (errmsg, '(4x, a, a)') &
+              'SCHEME MUST BE "UPSTREAM", "CENTRAL" OR "TVD"'
+            call store_error(errmsg)
+            call this%parser%StoreErrorUnit()
+          end select
+        case default
+          write (errmsg, '(4x,a,a)') 'Unknown ADVECTION option: ', &
+            trim(keyword)
+          call store_error(errmsg, terminate=.TRUE.)
         end select
       end do
-      if (this%iadvwt /= 1) then
-        this%iasym = 1
-        write(this%iout,'(1x,a)')'SELECTED ADVECTION SCHEME RESULTS IN AN &
-          &ASYMMETRIC MATRIX.'
-      endif
-      write(this%iout,'(1x,a)')'END OF ADVECTION OPTIONS'
+      write (this%iout, '(1x,a)') 'END OF ADVECTION OPTIONS'
     end if
     !
     ! -- Return
@@ -505,8 +496,8 @@ module GwtAdvModule
     ! -- local
     real(DP) :: lnm, lmn
 ! ------------------------------------------------------------------------------
-    select case(iadvwt)
-    case(1)
+    select case (iadvwt)
+    case (1)
       ! -- calculate weight based on distances between nodes and the shared
       !    face of the connection
       if (this%dis%con%ihc(this%dis%con%jas(ipos)) == 0) then
@@ -517,21 +508,19 @@ module GwtAdvModule
         ! -- horizontal connection
         lnm = this%dis%con%cl1(this%dis%con%jas(ipos))
         lmn = this%dis%con%cl2(this%dis%con%jas(ipos))
-      endif
+      end if
       omega = lmn / (lnm + lmn)
-    case(0, 2)
+    case (0, 2)
       ! -- use upstream weighting for upstream and tvd schemes
-      if(qnm > DZERO) then
+      if (qnm > DZERO) then
         omega = DZERO
       else
         omega = DONE
-      endif
+      end if
     end select
     !
     ! -- return
     return
   end function adv_weight
-  
 
-  
 end module GwtAdvModule

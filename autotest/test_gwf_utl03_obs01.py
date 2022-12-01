@@ -1,7 +1,8 @@
 import os
-import pytest
 import sys
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -52,12 +53,8 @@ for loc in chdlocr:
 cd6 = {0: c60, 1: c61}
 
 # gwf obs
-obs_data0 = [
-    ("h{:04d}".format(i + 1), "HEAD", (0, 10, 10)) for i in range(1000)
-]
-obs_data1 = [
-    ("h{:04d}".format(i + 1001), "HEAD", (0, 1, 1)) for i in range(737)
-]
+obs_data0 = [(f"h{i + 1:04d}", "HEAD", (0, 10, 10)) for i in range(1000)]
+obs_data1 = [(f"h{i + 1001:04d}", "HEAD", (0, 1, 1)) for i in range(737)]
 
 # solver data
 nouter, ninner = 100, 300
@@ -80,7 +77,7 @@ def build_mf6(idx, ws, binaryobs=True):
     gwf = flopy.mf6.ModflowGwf(
         sim,
         modelname=name,
-        model_nam_file="{}.nam".format(name),
+        model_nam_file=f"{name}.nam",
         save_flows=True,
     )
 
@@ -113,11 +110,11 @@ def build_mf6(idx, ws, binaryobs=True):
         top=top,
         botm=botm,
         idomain=1,
-        filename="{}.dis".format(name),
+        filename=f"{name}.dis",
     )
 
     # initial conditions
-    flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(name))
+    flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{name}.ic")
 
     # node property flow
     flopy.mf6.ModflowGwfnpf(gwf, icelltype=1, k=hk)
@@ -131,7 +128,7 @@ def build_mf6(idx, ws, binaryobs=True):
     o = flopy.mf6.ModflowUtlobs(
         gwf,
         pname="head_obs",
-        filename="{}.obs".format(name),
+        filename=f"{name}.obs",
         digits=10,
         print_input=True,
         continuous=obs_recarray,
@@ -143,8 +140,8 @@ def build_mf6(idx, ws, binaryobs=True):
     # output control
     flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(name),
-        head_filerecord="{}.hds".format(name),
+        budget_filerecord=f"{name}.cbc",
+        head_filerecord=f"{name}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
@@ -186,7 +183,7 @@ def hack_binary_obs(idx, dir):
             line = line.rstrip()
             if "BEGIN continuous  FILEOUT" in line:
                 line += "  BINARY"
-            f.write("{}\n".format(line))
+            f.write(f"{line}\n")
         f.close()
     return
 
@@ -205,24 +202,24 @@ def eval_obs(sim):
         names0 = d0.dtype.names
         names1 = d1.dtype.names
         msg = (
-            "The number of columns ({}) ".format(len(names0))
-            + "in {} ".format(pth0)
+            f"The number of columns ({len(names0)}) "
+            + f"in {pth0} "
             + "is not equal to "
-            + "the number of columns ({}) ".format(len(names1))
-            + "in {}.".format(pth1)
+            + f"the number of columns ({len(names1)}) "
+            + f"in {pth1}."
         )
         assert len(names0) == len(names1), msg
         msg = (
-            "The number of rows ({}) ".format(d0.shape[0])
-            + "in {} ".format(pth0)
+            f"The number of rows ({d0.shape[0]}) "
+            + f"in {pth0} "
             + "is not equal to "
-            + "the number of rows ({}) ".format(d1.shape[0])
-            + "in {}.".format(pth1)
+            + f"the number of rows ({d1.shape[0]}) "
+            + f"in {pth1}."
         )
         assert d0.shape[0] == d1.shape[0], msg
         for name in names0:
             msg = (
-                "The values for column '{}' ".format(name)
+                f"The values for column '{name}' "
                 + "are not within 1e-5 of each other"
             )
             assert np.allclose(d0[name], d1[name], rtol=1e-5), msg
@@ -261,7 +258,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

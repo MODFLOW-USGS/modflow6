@@ -27,9 +27,10 @@ models where one is translated and rotated in space:
 
 """
 import os
+
 import numpy as np
-from modflowapi import ModflowApi
 import pytest
+from modflowapi import ModflowApi
 
 try:
     import pymake
@@ -156,8 +157,8 @@ def get_model(dir, name):
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd_left)
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        head_filerecord="{}.hds".format(name_left),
-        budget_filerecord="{}.cbc".format(name_left),
+        head_filerecord=f"{name_left}.hds",
+        budget_filerecord=f"{name_left}.cbc",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
@@ -190,8 +191,8 @@ def get_model(dir, name):
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd_right)
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        head_filerecord="{}.hds".format(name_right),
-        budget_filerecord="{}.cbc".format(name_right),
+        head_filerecord=f"{name_right}.hds",
+        budget_filerecord=f"{name_right}.cbc",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
@@ -339,7 +340,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

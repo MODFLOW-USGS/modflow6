@@ -1,7 +1,8 @@
 import os
-import pytest
 import sys
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -72,7 +73,7 @@ def build_model(idx, dir):
         sim,
         model_type="gwf6",
         modelname=gwfname,
-        model_nam_file="{}.nam".format(gwfname),
+        model_nam_file=f"{gwfname}.nam",
     )
     gwf.name_file.save_flows = True
 
@@ -90,7 +91,7 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(imsgwf, [gwf.name])
 
@@ -104,13 +105,11 @@ def build_model(idx, dir):
         top=top,
         botm=botm,
         idomain=np.ones((nlay, nrow, ncol), dtype=int),
-        filename="{}.dis".format(gwfname),
+        filename=f"{gwfname}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(
-        gwf, strt=strt, filename="{}.ic".format(gwfname)
-    )
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{gwfname}.ic")
 
     # node property flow
     tvk_filename = f"{gwfname}.npf.tvk"
@@ -120,7 +119,6 @@ def build_model(idx, dir):
         icelltype=laytyp,
         k=hk,
         k33=hk,
-        tvk_filerecord=[tvk_filename],
     )
 
     # tvk
@@ -134,7 +132,7 @@ def build_model(idx, dir):
                     spd.append([(k, i, j), "K", hydraulic_conductivity])
         tvkspd[kper] = spd
     tvk = flopy.mf6.ModflowUtltvk(
-        gwf, print_input=True, perioddata=tvkspd, filename=tvk_filename
+        npf, print_input=True, perioddata=tvkspd, filename=tvk_filename
     )
 
     # chd files
@@ -154,8 +152,8 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.cbc",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
@@ -171,20 +169,20 @@ def eval_model(sim):
     gwfname = "gwf_" + name
 
     # head
-    fpth = os.path.join(sim.simpath, "{}.hds".format(gwfname))
+    fpth = os.path.join(sim.simpath, f"{gwfname}.hds")
     try:
         hobj = flopy.utils.HeadFile(fpth, precision="double")
         head = hobj.get_data()
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     # budget
-    fpth = os.path.join(sim.simpath, "{}.cbc".format(gwfname))
+    fpth = os.path.join(sim.simpath, f"{gwfname}.cbc")
     try:
         bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
         bud_allspd = bobj.get_data(text="CHD")
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     # This is the answer to this problem.
     hk = time_varying_k[sim.idxsim]
@@ -237,7 +235,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

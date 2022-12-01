@@ -1,51 +1,54 @@
 module BaseDisModule
-  
-  use KindModule,              only: DP, I4B
-  use ConstantsModule,         only: LENMODELNAME, LENAUXNAME, LINELENGTH,      &
-                                     DZERO, LENMEMPATH, DPIO180
-  use SmoothingModule,         only: sQuadraticSaturation
-  use ConnectionsModule,       only: ConnectionsType
-  use InputOutputModule,       only: URWORD, ubdsv1
-  use SimVariablesModule,      only: errmsg
-  use SimModule,               only: count_errors, store_error,                &
-                                     store_error_unit
-  use BlockParserModule,       only: BlockParserType
-  use MemoryManagerModule,     only: mem_allocate
-  use MemoryHelperModule,      only: create_mem_path
-  use TdisModule,              only: kstp, kper, pertim, totim, delt
+
+  use KindModule, only: DP, I4B
+  use ConstantsModule, only: LENMODELNAME, LENAUXNAME, LINELENGTH, &
+                             DZERO, LENMEMPATH, DPIO180
+  use SmoothingModule, only: sQuadraticSaturation
+  use ConnectionsModule, only: ConnectionsType
+  use InputOutputModule, only: URWORD, ubdsv1
+  use SimVariablesModule, only: errmsg
+  use SimModule, only: count_errors, store_error, &
+                       store_error_unit
+  use BlockParserModule, only: BlockParserType
+  use MemoryManagerModule, only: mem_allocate
+  use MemoryHelperModule, only: create_mem_path
+  use TdisModule, only: kstp, kper, pertim, totim, delt
   use TimeSeriesManagerModule, only: TimeSeriesManagerType
 
   implicit none
-  
+
   private
   public :: DisBaseType
+  public :: dis_transform_xy
 
   type :: DisBaseType
-    character(len=LENMEMPATH)                       :: memoryPath                !< path for memory allocation
-    character(len=LENMODELNAME), pointer            :: name_model => null()      !< name of the model
-    integer(I4B), pointer                           :: inunit     => null()      !< unit number for input file
-    integer(I4B), pointer                           :: iout       => null()      !< unit number for output file
-    integer(I4B), pointer                           :: nodes      => null()      !< number of nodes in solution
-    integer(I4B), pointer                           :: nodesuser  => null()      !< number of user nodes (same as nodes for disu grid)
-    integer(I4B), pointer                           :: nja        => null()      !< number of connections plus number of nodes
-    integer(I4B), pointer                           :: njas       => null()      !< (nja-nodes)/2
-    integer(I4B), pointer                           :: lenuni     => null()      !< length unit
-    integer(I4B), pointer                           :: ndim       => null()      !< number of spatial model dimensions (1 for disu grid)
-    integer(I4B), pointer                           :: icondir    => null()      !< flag indicating if grid has enough info to calculate connection vectors
-    logical, pointer                                :: writegrb   => null()      !< write binary grid file
-    real(DP), pointer                               :: yorigin    => null()      !< y-position of the lower-left grid corner (default is 0.)
-    real(DP), pointer                               :: xorigin    => null()      !< x-position of the lower-left grid corner (default is 0.)
-    real(DP), pointer                               :: angrot     => null()      !< counter-clockwise rotation angle of the lower-left corner (default is 0.0)
-    integer(I4B), dimension(:), pointer, contiguous :: mshape     => null()      !< shape of the model; (nodes) for DisBaseType
-    real(DP), dimension(:), pointer, contiguous     :: top        => null()      !< (size:nodes) cell top elevation
-    real(DP), dimension(:), pointer, contiguous     :: bot        => null()      !< (size:nodes) cell bottom elevation
-    real(DP), dimension(:), pointer, contiguous     :: area       => null()      !< (size:nodes) cell area, in plan view
-    type(ConnectionsType), pointer                  :: con        => null()      !< connections object
-    type(BlockParserType)                           :: parser                    !< object to read blocks
-    real(DP), dimension(:), pointer, contiguous     :: dbuff      => null()      !< helper double array of size nodesuser
-    integer(I4B), dimension(:), pointer, contiguous :: ibuff      => null()      !< helper int array of size nodesuser
-    integer(I4B), dimension(:), pointer, contiguous :: nodereduced => null()     !< (size:nodesuser)contains reduced nodenumber (size 0 if not reduced); -1 means vertical pass through, 0 is idomain = 0
-    integer(I4B), dimension(:), pointer, contiguous :: nodeuser => null()        !< (size:nodes) given a reduced nodenumber, provide the user nodenumber (size 0 if not reduced)
+    character(len=LENMEMPATH) :: memoryPath !< path for memory allocation
+    character(len=LENMODELNAME), pointer :: name_model => null() !< name of the model
+    integer(I4B), pointer :: inunit => null() !< unit number for input file
+    integer(I4B), pointer :: iout => null() !< unit number for output file
+    integer(I4B), pointer :: nodes => null() !< number of nodes in solution
+    integer(I4B), pointer :: nodesuser => null() !< number of user nodes (same as nodes for disu grid)
+    integer(I4B), pointer :: nja => null() !< number of connections plus number of nodes
+    integer(I4B), pointer :: njas => null() !< (nja-nodes)/2
+    integer(I4B), pointer :: lenuni => null() !< length unit
+    integer(I4B), pointer :: ndim => null() !< number of spatial model dimensions (1 for disu grid)
+    integer(I4B), pointer :: icondir => null() !< flag indicating if grid has enough info to calculate connection vectors
+    integer(I4B), pointer :: nogrb => null() !< don't write binary grid file
+    real(DP), dimension(:), pointer, contiguous :: xc => null() !< x-coordinate of the cell center
+    real(DP), dimension(:), pointer, contiguous :: yc => null() !< y-coordinate of the cell center
+    real(DP), pointer :: yorigin => null() !< y-position of the lower-left grid corner (default is 0.)
+    real(DP), pointer :: xorigin => null() !< x-position of the lower-left grid corner (default is 0.)
+    real(DP), pointer :: angrot => null() !< counter-clockwise rotation angle of the lower-left corner (default is 0.0)
+    integer(I4B), dimension(:), pointer, contiguous :: mshape => null() !< shape of the model; (nodes) for DisBaseType
+    real(DP), dimension(:), pointer, contiguous :: top => null() !< (size:nodes) cell top elevation
+    real(DP), dimension(:), pointer, contiguous :: bot => null() !< (size:nodes) cell bottom elevation
+    real(DP), dimension(:), pointer, contiguous :: area => null() !< (size:nodes) cell area, in plan view
+    type(ConnectionsType), pointer :: con => null() !< connections object
+    type(BlockParserType) :: parser !< object to read blocks
+    real(DP), dimension(:), pointer, contiguous :: dbuff => null() !< helper double array of size nodesuser
+    integer(I4B), dimension(:), pointer, contiguous :: ibuff => null() !< helper int array of size nodesuser
+    integer(I4B), dimension(:), pointer, contiguous :: nodereduced => null() !< (size:nodesuser)contains reduced nodenumber (size 0 if not reduced); -1 means vertical pass through, 0 is idomain = 0
+    integer(I4B), dimension(:), pointer, contiguous :: nodeuser => null() !< (size:nodes) given a reduced nodenumber, provide the user nodenumber (size 0 if not reduced)
   contains
     procedure :: dis_df
     procedure :: dis_ac
@@ -57,11 +60,11 @@ module BaseDisModule
     ! -- get_nodenumber is an overloaded integer function that will always
     !    return the reduced nodenumber.  For all grids, get_nodenumber can
     !    be passed the user nodenumber.  For some other grids, it can also
-    !    be passed an index.  For dis3d the index is k, i, j, and for 
+    !    be passed an index.  For dis3d the index is k, i, j, and for
     !    disv the index is k, n.
-    generic   :: get_nodenumber => get_nodenumber_idx1,                        &
-                                   get_nodenumber_idx2,                        &
-                                   get_nodenumber_idx3
+    generic :: get_nodenumber => get_nodenumber_idx1, &
+      get_nodenumber_idx2, &
+      get_nodenumber_idx3
     procedure :: get_nodenumber_idx1
     procedure :: get_nodenumber_idx2
     procedure :: get_nodenumber_idx3
@@ -74,7 +77,6 @@ module BaseDisModule
     procedure :: noder_from_cellid
     procedure :: connection_normal
     procedure :: connection_vector
-    procedure :: get_cellxy
     procedure :: get_dis_type
     procedure :: supports_layers
     procedure :: allocate_scalars
@@ -83,30 +85,29 @@ module BaseDisModule
     procedure :: get_cell_volume
     procedure :: write_grb
     !
-    procedure          :: read_int_array
-    procedure          :: read_dbl_array
-    generic, public    :: read_grid_array => read_int_array, read_dbl_array
-    procedure, public  :: read_layer_array
-    procedure          :: fill_int_array
-    procedure          :: fill_dbl_array
-    generic, public    :: fill_grid_array => fill_int_array, fill_dbl_array
-    procedure, public  :: read_list
+    procedure :: read_int_array
+    procedure :: read_dbl_array
+    generic, public :: read_grid_array => read_int_array, read_dbl_array
+    procedure, public :: read_layer_array
+    procedure :: fill_int_array
+    procedure :: fill_dbl_array
+    generic, public :: fill_grid_array => fill_int_array, fill_dbl_array
+    procedure, public :: read_list
     !
-    procedure, public  :: record_array
-    procedure, public  :: record_connection_array
-    procedure, public  :: noder_to_string
-    procedure, public  :: noder_to_array
-    procedure, public  :: record_srcdst_list_header
+    procedure, public :: record_array
+    procedure, public :: record_connection_array
+    procedure, public :: noder_to_string
+    procedure, public :: noder_to_array
+    procedure, public :: record_srcdst_list_header
     procedure, private :: record_srcdst_list_entry
-    generic, public    :: record_mf6_list_entry => record_srcdst_list_entry
-    procedure, public  :: nlarray_to_nodelist
-    procedure, public  :: highest_active
-    procedure, public  :: get_area
-    procedure, public  :: transform_xy
-    
+    generic, public :: record_mf6_list_entry => record_srcdst_list_entry
+    procedure, public :: nlarray_to_nodelist
+    procedure, public :: highest_active
+    procedure, public :: get_area
+
   end type DisBaseType
-  
-  contains
+
+contains
 
   subroutine dis_df(this)
 ! ******************************************************************************
@@ -144,13 +145,13 @@ module BaseDisModule
 ! ------------------------------------------------------------------------------
     !
     do i = 1, this%nodes
-      do ipos = this%con%ia(i), this%con%ia(i+1) - 1
+      do ipos = this%con%ia(i), this%con%ia(i + 1) - 1
         j = this%con%ja(ipos)
         iglo = i + moffset
         jglo = j + moffset
         call sparse%addconnection(iglo, jglo, 1)
-      enddo
-    enddo
+      end do
+    end do
     !
     ! -- Return
     return
@@ -181,13 +182,13 @@ module BaseDisModule
         j = this%con%ja(ipos)
         jglo = j + moffset
         searchloop: do ipossln = iasln(iglo), iasln(iglo + 1) - 1
-          if(jglo == jasln(ipossln)) then
+          if (jglo == jasln(ipossln)) then
             idxglo(ipos) = ipossln
             exit searchloop
-          endif
-        enddo searchloop
-      enddo
-    enddo
+          end if
+        end do searchloop
+      end do
+    end do
     !
     ! -- Return
     return
@@ -210,17 +211,17 @@ module BaseDisModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Expand icelltype to full grid; fill with 0 if cell is excluded
-    allocate(ict(this%nodesuser))
+    allocate (ict(this%nodesuser))
     do nu = 1, this%nodesuser
       nr = this%get_nodenumber(nu, 0)
       if (nr > 0) then
         ict(nu) = icelltype(nr)
       else
         ict(nu) = 0
-      endif
-    enddo
+      end if
+    end do
     !
-    if (this%writegrb) call this%write_grb(ict)
+    if (this%nogrb == 0) call this%write_grb(ict)
     !
     ! -- Return
     return
@@ -262,7 +263,7 @@ module BaseDisModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Strings
-    deallocate(this%name_model)
+    deallocate (this%name_model)
     !
     ! -- Scalars
     call mem_deallocate(this%inunit)
@@ -271,7 +272,7 @@ module BaseDisModule
     call mem_deallocate(this%nodesuser)
     call mem_deallocate(this%ndim)
     call mem_deallocate(this%icondir)
-    call mem_deallocate(this%writegrb)
+    call mem_deallocate(this%nogrb)
     call mem_deallocate(this%xorigin)
     call mem_deallocate(this%yorigin)
     call mem_deallocate(this%angrot)
@@ -281,6 +282,8 @@ module BaseDisModule
     !
     ! -- Arrays
     call mem_deallocate(this%mshape)
+    call mem_deallocate(this%xc)
+    call mem_deallocate(this%yc)
     call mem_deallocate(this%top)
     call mem_deallocate(this%bot)
     call mem_deallocate(this%area)
@@ -289,7 +292,7 @@ module BaseDisModule
     !
     ! -- Connections
     call this%con%con_da()
-    deallocate(this%con)
+    deallocate (this%con)
     !
     ! -- Return
     return
@@ -320,7 +323,7 @@ module BaseDisModule
   subroutine nodeu_to_array(this, nodeu, arr)
 ! ******************************************************************************
 ! nodeu_to_array -- Convert user node number to cellid and fill array with
-!                   (nodenumber) or (k,j) or (k,i,j) 
+!                   (nodenumber) or (k,j) or (k,i,j)
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -353,11 +356,11 @@ module BaseDisModule
     integer(I4B), intent(in) :: noder
 ! ------------------------------------------------------------------------------
     !
-    if(this%nodes < this%nodesuser) then
+    if (this%nodes < this%nodesuser) then
       nodenumber = this%nodeuser(noder)
     else
       nodenumber = noder
-    endif
+    end if
     !
     ! -- return
     return
@@ -440,10 +443,10 @@ module BaseDisModule
     return
   end function get_nodenumber_idx3
 
-  subroutine connection_normal(this, noden, nodem, ihc, xcomp, ycomp, zcomp,   &
+  subroutine connection_normal(this, noden, nodem, ihc, xcomp, ycomp, zcomp, &
                                ipos)
 ! ******************************************************************************
-! connection_normal -- calculate the normal vector components for reduced 
+! connection_normal -- calculate the normal vector components for reduced
 !   nodenumber cell (noden) and its shared face with cell nodem.  ihc is the
 !   horizontal connection flag.
 ! ******************************************************************************
@@ -469,11 +472,11 @@ module BaseDisModule
     ! -- return
     return
   end subroutine connection_normal
-    
-  subroutine connection_vector(this, noden, nodem, nozee, satn, satm, ihc,   &
+
+  subroutine connection_vector(this, noden, nodem, nozee, satn, satm, ihc, &
                                xcomp, ycomp, zcomp, conlen)
 ! ******************************************************************************
-! connection_vector -- calculate the unit vector components from reduced 
+! connection_vector -- calculate the unit vector components from reduced
 !   nodenumber cell (noden) to its neighbor cell (nodem).  The saturation for
 !   for these cells are also required so that the vertical position of the cell
 !   cell centers can be calculated.  ihc is the horizontal flag.  Also return
@@ -500,68 +503,56 @@ module BaseDisModule
 ! ------------------------------------------------------------------------------
     !
     call store_error('Program error: connection_vector not implemented.', &
-                      terminate=.TRUE.)
+                     terminate=.TRUE.)
     !
     ! -- return
     return
   end subroutine connection_vector
-                                 
-  ! return x,y coordinate for a node
-  subroutine get_cellxy(this, node, xcell, ycell)
-    class(DisBaseType), intent(in)  :: this
-    integer(I4B), intent(in)        :: node
-    real(DP), intent(out)           :: xcell, ycell
-      
-    ! suppress warning
-    xcell = -999999.0
-    ycell = -999999.0
-    
-    call store_error('Program error: get_cellxy not implemented.', &
-                      terminate=.TRUE.)
-    
-  end subroutine get_cellxy
-  
+
   !> @brief get the x,y for a node transformed into
   !! 'global coordinates' using xorigin, yorigin, angrot,
-  !< analogously to how flopy does this. 
-  subroutine transform_xy(this, x, y, xglo, yglo)
-    class(DisBaseType), intent(in) :: this !< this DIS
-    real(DP), intent(in)           :: x    !< the cell-x coordinate to transform
-    real(DP), intent(in)           :: y    !< the cell-y coordinate to transform
-    real(DP), intent(out)          :: xglo !< the global cell-x coordinate
-    real(DP), intent(out)          :: yglo !< the global cell-y coordinate
+  !< analogously to how flopy does this.
+  subroutine dis_transform_xy(x, y, xorigin, yorigin, angrot, xglo, yglo)
+    real(DP), intent(in) :: x !< the cell-x coordinate to transform
+    real(DP), intent(in) :: y !< the cell-y coordinate to transform
+    real(DP), intent(in) :: xorigin !< the cell-y coordinate to transform
+    real(DP), intent(in) :: yorigin !< the cell-y coordinate to transform
+    real(DP), intent(in) :: angrot !< the cell-y coordinate to transform
+    real(DP), intent(out) :: xglo !< the global cell-x coordinate
+    real(DP), intent(out) :: yglo !< the global cell-y coordinate
     ! local
     real(DP) :: ang
-    
+
     xglo = x
     yglo = y
 
     ! first _rotate_ to 'real world'
-    ang = this%angrot*DPIO180
+    ang = angrot * DPIO180
     if (ang /= DZERO) then
-      xglo = x*cos(ang) - y*sin(ang)
-      yglo = x*sin(ang) + y*cos(ang)
+      xglo = x * cos(ang) - y * sin(ang)
+      yglo = x * sin(ang) + y * cos(ang)
     end if
 
     ! then _translate_
-    xglo = xglo + this%xorigin
-    yglo = yglo + this%yorigin
+    xglo = xglo + xorigin
+    yglo = yglo + yorigin
 
-  end subroutine transform_xy
-  
-  ! return discretization type
+  end subroutine dis_transform_xy
+
+  !> @brief return discretization type
+  !<
   subroutine get_dis_type(this, dis_type)
-    class(DisBaseType), intent(in)  :: this
-    character(len=*), intent(out)   :: dis_type
-      
+    class(DisBaseType), intent(in) :: this
+    character(len=*), intent(out) :: dis_type
+
     ! suppress warning
-    dis_type = "Not implemented" 
-    
+    dis_type = "Not implemented"
+
     call store_error('Program error: get_dis_type not implemented.', &
-                      terminate=.TRUE.)
-    
+                     terminate=.TRUE.)
+
   end subroutine get_dis_type
-                               
+
   subroutine allocate_scalars(this, name_model)
 ! ******************************************************************************
 ! allocate_scalars -- Allocate and initialize scalar variables in this class
@@ -581,7 +572,7 @@ module BaseDisModule
     this%memoryPath = create_mem_path(name_model, 'DIS')
     !
     ! -- Allocate
-    allocate(this%name_model)
+    allocate (this%name_model)
     !
     call mem_allocate(this%inunit, 'INUNIT', this%memoryPath)
     call mem_allocate(this%iout, 'IOUT', this%memoryPath)
@@ -589,7 +580,7 @@ module BaseDisModule
     call mem_allocate(this%nodesuser, 'NODESUSER', this%memoryPath)
     call mem_allocate(this%ndim, 'NDIM', this%memoryPath)
     call mem_allocate(this%icondir, 'ICONDIR', this%memoryPath)
-    call mem_allocate(this%writegrb, 'WRITEGRB', this%memoryPath)
+    call mem_allocate(this%nogrb, 'NOGRB', this%memoryPath)
     call mem_allocate(this%xorigin, 'XORIGIN', this%memoryPath)
     call mem_allocate(this%yorigin, 'YORIGIN', this%memoryPath)
     call mem_allocate(this%angrot, 'ANGROT', this%memoryPath)
@@ -605,10 +596,10 @@ module BaseDisModule
     this%nodesuser = 0
     this%ndim = 1
     this%icondir = 1
-    this%writegrb = .true.
+    this%nogrb = 0
     this%xorigin = DZERO
     this%yorigin = DZERO
-    this%angrot = DZERO    
+    this%angrot = DZERO
     this%nja = 0
     this%njas = 0
     this%lenuni = 0
@@ -633,6 +624,8 @@ module BaseDisModule
     !
     ! -- Allocate
     call mem_allocate(this%mshape, this%ndim, 'MSHAPE', this%memoryPath)
+    call mem_allocate(this%xc, this%nodes, 'XC', this%memoryPath)
+    call mem_allocate(this%yc, this%nodes, 'YC', this%memoryPath)
     call mem_allocate(this%top, this%nodes, 'TOP', this%memoryPath)
     call mem_allocate(this%bot, this%nodes, 'BOT', this%memoryPath)
     call mem_allocate(this%area, this%nodes, 'AREA', this%memoryPath)
@@ -641,11 +634,11 @@ module BaseDisModule
     this%mshape(1) = this%nodes
     !
     ! -- Determine size of buff memory
-    if(this%nodes < this%nodesuser) then
+    if (this%nodes < this%nodesuser) then
       isize = this%nodesuser
     else
       isize = this%nodes
-    endif
+    end if
     !
     ! -- Allocate the arrays
     call mem_allocate(this%dbuff, isize, 'DBUFF', this%name_model) ! TODO_MJR: is this correct??
@@ -660,42 +653,42 @@ module BaseDisModule
 ! ******************************************************************************
 ! nodeu_from_string -- Receive a string and convert the string to a user
 !   nodenumber.  The model is unstructured; just read user nodenumber.
-!   If flag_string argument is present and true, the first token in string 
+!   If flag_string argument is present and true, the first token in string
 !   is allowed to be a string (e.g. boundary name). In this case, if a string
 !   is encountered, return value as -2.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-      ! -- dummy
-      class(DisBaseType)               :: this
-      integer(I4B),      intent(inout) :: lloc
-      integer(I4B),      intent(inout) :: istart
-      integer(I4B),      intent(inout) :: istop
-      integer(I4B),      intent(in)    :: in
-      integer(I4B),      intent(in)    :: iout
-      character(len=*),  intent(inout) :: line
-      logical, optional, intent(in)    :: flag_string
-      logical, optional, intent(in)    :: allow_zero
-      integer(I4B)                     :: nodeu
-      ! -- local
+    ! -- dummy
+    class(DisBaseType) :: this
+    integer(I4B), intent(inout) :: lloc
+    integer(I4B), intent(inout) :: istart
+    integer(I4B), intent(inout) :: istop
+    integer(I4B), intent(in) :: in
+    integer(I4B), intent(in) :: iout
+    character(len=*), intent(inout) :: line
+    logical, optional, intent(in) :: flag_string
+    logical, optional, intent(in) :: allow_zero
+    integer(I4B) :: nodeu
+    ! -- local
 ! ------------------------------------------------------------------------------
-      !
-      !
-      nodeu = 0
-      call store_error('Program error: DisBaseType method nodeu_from_string &
-                       &not implemented.', terminate=.TRUE.)
-      !
-      ! -- return
-      return
+    !
+    !
+    nodeu = 0
+    call store_error('Program error: DisBaseType method nodeu_from_string &
+                     &not implemented.', terminate=.TRUE.)
+    !
+    ! -- return
+    return
   end function nodeu_from_string
-  
-  function nodeu_from_cellid(this, cellid, inunit, iout, flag_string,          &
-                                     allow_zero) result(nodeu)
+
+  function nodeu_from_cellid(this, cellid, inunit, iout, flag_string, &
+                             allow_zero) result(nodeu)
 ! ******************************************************************************
 ! nodeu_from_cellid -- Receive cellid as a string and convert the string to a
-!   user nodenumber.  
-!   If flag_string argument is present and true, the first token in string 
+!   user nodenumber.
+!   If flag_string argument is present and true, the first token in string
 !   is allowed to be a string (e.g. boundary name). In this case, if a string
 !   is encountered, return value as -2.
 !   If allow_zero argument is present and true, if all indices equal zero, the
@@ -706,12 +699,12 @@ module BaseDisModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(DisBaseType)               :: this
-    character(len=*),  intent(inout) :: cellid
-    integer(I4B),           intent(in)    :: inunit
-    integer(I4B),           intent(in)    :: iout
-    logical, optional, intent(in)    :: flag_string
-    logical, optional, intent(in)    :: allow_zero
+    class(DisBaseType) :: this
+    character(len=*), intent(inout) :: cellid
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: iout
+    logical, optional, intent(in) :: flag_string
+    logical, optional, intent(in) :: allow_zero
     integer(I4B) :: nodeu
 ! ------------------------------------------------------------------------------
     !
@@ -722,13 +715,13 @@ module BaseDisModule
     ! -- return
     return
   end function nodeu_from_cellid
-  
-  function noder_from_string(this, lloc, istart, istop, in, iout, line,        &
+
+  function noder_from_string(this, lloc, istart, istop, in, iout, line, &
                              flag_string) result(noder)
 ! ******************************************************************************
 ! noder_from_string -- Receive a string and convert the string to a reduced
 !   nodenumber.  The model is unstructured; just read user nodenumber.
-!   If flag_string argument is present and true, the first token in string 
+!   If flag_string argument is present and true, the first token in string
 !   is allowed to be a string (e.g. boundary name). In this case, if a string
 !   is encountered, return value as -2.
 ! ******************************************************************************
@@ -736,15 +729,15 @@ module BaseDisModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(DisBaseType)               :: this
-    integer(I4B),      intent(inout) :: lloc
-    integer(I4B),      intent(inout) :: istart
-    integer(I4B),      intent(inout) :: istop
-    integer(I4B),      intent(in)    :: in
-    integer(I4B),      intent(in)    :: iout
-    character(len=*),  intent(inout) :: line
-    logical, optional, intent(in)    :: flag_string
-    integer(I4B)                     :: noder
+    class(DisBaseType) :: this
+    integer(I4B), intent(inout) :: lloc
+    integer(I4B), intent(inout) :: istart
+    integer(I4B), intent(inout) :: istop
+    integer(I4B), intent(in) :: in
+    integer(I4B), intent(in) :: iout
+    character(len=*), intent(inout) :: line
+    logical, optional, intent(in) :: flag_string
+    integer(I4B) :: noder
     ! -- local
     integer(I4B) :: nodeu
     character(len=LINELENGTH) :: nodestr
@@ -755,8 +748,8 @@ module BaseDisModule
       flag_string_local = flag_string
     else
       flag_string_local = .false.
-    endif
-    nodeu = this%nodeu_from_string(lloc, istart, istop, in, iout, line,        &
+    end if
+    nodeu = this%nodeu_from_string(lloc, istart, istop, in, iout, line, &
                                    flag_string_local)
     !
     ! -- Convert user-based nodenumber to reduced node number
@@ -764,25 +757,25 @@ module BaseDisModule
       noder = this%get_nodenumber(nodeu, 0)
     else
       noder = nodeu
-    endif
-    if(noder <= 0 .and. .not. flag_string_local) then
+    end if
+    if (noder <= 0 .and. .not. flag_string_local) then
       call this%nodeu_to_string(nodeu, nodestr)
-      write(errmsg, *) &
-              ' Cell is outside active grid domain: ' //                       &
-              trim(adjustl(nodestr))
+      write (errmsg, *) &
+        ' Cell is outside active grid domain: '// &
+        trim(adjustl(nodestr))
       call store_error(errmsg)
-    endif
+    end if
     !
     ! -- return
     return
   end function noder_from_string
-  
-  function noder_from_cellid(this, cellid, inunit, iout, flag_string,          &
-                                     allow_zero) result(noder)
+
+  function noder_from_cellid(this, cellid, inunit, iout, flag_string, &
+                             allow_zero) result(noder)
 ! ******************************************************************************
 ! noder_from_cellid -- Receive cellid as a string and convert it to a reduced
-!   nodenumber.  
-!   If flag_string argument is present and true, the first token in string 
+!   nodenumber.
+!   If flag_string argument is present and true, the first token in string
 !   is allowed to be a string (e.g. boundary name). In this case, if a string
 !   is encountered, return value as -2.
 !   If allow_zero argument is present and true, if all indices equal zero, the
@@ -795,12 +788,12 @@ module BaseDisModule
     ! -- return
     integer(I4B) :: noder
     ! -- dummy
-    class(DisBaseType)               :: this
-    character(len=*),  intent(inout) :: cellid
-    integer(I4B),           intent(in)    :: inunit
-    integer(I4B),           intent(in)    :: iout
-    logical, optional, intent(in)    :: flag_string
-    logical, optional, intent(in)    :: allow_zero
+    class(DisBaseType) :: this
+    character(len=*), intent(inout) :: cellid
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: iout
+    logical, optional, intent(in) :: flag_string
+    logical, optional, intent(in) :: allow_zero
     ! -- local
     integer(I4B) :: nodeu
     logical :: allowzerolocal
@@ -812,14 +805,14 @@ module BaseDisModule
       flag_string_local = flag_string
     else
       flag_string_local = .false.
-    endif
+    end if
     if (present(allow_zero)) then
       allowzerolocal = allow_zero
     else
       allowzerolocal = .false.
-    endif
+    end if
     !
-    nodeu = this%nodeu_from_cellid(cellid, inunit, iout, flag_string_local,    &
+    nodeu = this%nodeu_from_cellid(cellid, inunit, iout, flag_string_local, &
                                    allowzerolocal)
     !
     ! -- Convert user-based nodenumber to reduced node number
@@ -827,19 +820,19 @@ module BaseDisModule
       noder = this%get_nodenumber(nodeu, 0)
     else
       noder = nodeu
-    endif
-    if(noder <= 0 .and. .not. flag_string_local) then
+    end if
+    if (noder <= 0 .and. .not. flag_string_local) then
       call this%nodeu_to_string(nodeu, nodestr)
-      write(errmsg, *)                                                          &
-              ' Cell is outside active grid domain: ' //                       &
-              trim(adjustl(nodestr))
+      write (errmsg, *) &
+        ' Cell is outside active grid domain: '// &
+        trim(adjustl(nodestr))
       call store_error(errmsg)
-    endif
+    end if
     !
     ! -- return
     return
   end function noder_from_cellid
-    
+
   logical function supports_layers(this)
 ! ******************************************************************************
 ! supports_layers
@@ -881,7 +874,7 @@ module BaseDisModule
     ! -- Return
     return
   end function get_ncpl
-  
+
   function get_cell_volume(this, n, x)
 ! ******************************************************************************
 ! get_cell_volume -- Return volume of cell n based on x value passed.
@@ -923,15 +916,15 @@ module BaseDisModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(DisBaseType), intent(inout)                  :: this
-    character(len=*), intent(inout)                    :: line
-    integer(I4B), intent(inout)                        :: lloc
-    integer(I4B), intent(inout)                        :: istart
-    integer(I4B), intent(inout)                        :: istop
-    integer(I4B), intent(in)                           :: in
-    integer(I4B), intent(in)                           :: iout
+    class(DisBaseType), intent(inout) :: this
+    character(len=*), intent(inout) :: line
+    integer(I4B), intent(inout) :: lloc
+    integer(I4B), intent(inout) :: istart
+    integer(I4B), intent(inout) :: istop
+    integer(I4B), intent(in) :: in
+    integer(I4B), intent(in) :: iout
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: iarray
-    character(len=*), intent(in)                       :: aname
+    character(len=*), intent(in) :: aname
     !
     ! -- store error
     errmsg = 'Programmer error: read_int_array needs to be overridden &
@@ -942,7 +935,7 @@ module BaseDisModule
     return
   end subroutine read_int_array
 
-  subroutine read_dbl_array(this, line, lloc, istart, istop, iout, in,         &
+  subroutine read_dbl_array(this, line, lloc, istart, istop, iout, in, &
                             darray, aname)
 ! ******************************************************************************
 ! read_dbl_array -- Read a GWF double precision array
@@ -951,15 +944,15 @@ module BaseDisModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(DisBaseType), intent(inout)                          :: this
-    character(len=*), intent(inout)                            :: line
-    integer(I4B), intent(inout)                                :: lloc
-    integer(I4B), intent(inout)                                :: istart
-    integer(I4B), intent(inout)                                :: istop
-    integer(I4B), intent(in)                                   :: in
-    integer(I4B), intent(in)                                   :: iout
+    class(DisBaseType), intent(inout) :: this
+    character(len=*), intent(inout) :: line
+    integer(I4B), intent(inout) :: lloc
+    integer(I4B), intent(inout) :: istart
+    integer(I4B), intent(inout) :: istop
+    integer(I4B), intent(in) :: in
+    integer(I4B), intent(in) :: iout
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: darray
-    character(len=*), intent(in)                               :: aname
+    character(len=*), intent(in) :: aname
     !
     ! -- str=ore error message
     errmsg = 'Programmer error: read_dbl_array needs to be overridden &
@@ -978,8 +971,8 @@ module BaseDisModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(DisBaseType), intent(inout)                              :: this
-    integer(I4B), dimension(:), pointer, contiguous, intent(in)    :: ibuff1
+    class(DisBaseType), intent(inout) :: this
+    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: ibuff1
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: ibuff2
     ! -- local
     integer(I4B) :: nodeu
@@ -987,7 +980,7 @@ module BaseDisModule
 ! ------------------------------------------------------------------------------
     do nodeu = 1, this%nodesuser
       noder = this%get_nodenumber(nodeu, 0)
-      if(noder <= 0) cycle
+      if (noder <= 0) cycle
       ibuff2(noder) = ibuff1(nodeu)
     end do
     !
@@ -1003,8 +996,8 @@ module BaseDisModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(DisBaseType), intent(inout)                          :: this
-    real(DP), dimension(:), pointer, contiguous, intent(in)    :: buff1
+    class(DisBaseType), intent(inout) :: this
+    real(DP), dimension(:), pointer, contiguous, intent(in) :: buff1
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: buff2
     ! -- local
     integer(I4B) :: nodeu
@@ -1012,21 +1005,21 @@ module BaseDisModule
 ! ------------------------------------------------------------------------------
     do nodeu = 1, this%nodesuser
       noder = this%get_nodenumber(nodeu, 0)
-      if(noder <= 0) cycle
+      if (noder <= 0) cycle
       buff2(noder) = buff1(nodeu)
     end do
     !
     ! -- return
     return
   end subroutine fill_dbl_array
-                            
-  subroutine read_list(this, in, iout, iprpak, nlist, inamedbound,             &
-                        iauxmultcol, nodelist,  rlist, auxvar, auxname,        &
-                        boundname, label, pkgname, tsManager, iscloc,          &
-                        indxconvertflux)
+
+  subroutine read_list(this, in, iout, iprpak, nlist, inamedbound, &
+                       iauxmultcol, nodelist, rlist, auxvar, auxname, &
+                       boundname, label, pkgname, tsManager, iscloc, &
+                       indxconvertflux)
 ! ******************************************************************************
 ! read_list -- Read a list using the list reader object.
-!              Convert user node numbers to reduced numbers.  
+!              Convert user node numbers to reduced numbers.
 !              Terminate if any nodenumbers are within an inactive domain.
 !              Set up time series and multiply by iauxmultcol if it exists.
 !              Write the list to iout if iprpak is set.
@@ -1039,7 +1032,7 @@ module BaseDisModule
     use ListReaderModule, only: ListReaderType
     use SimModule, only: store_error, store_error_unit, count_errors
     use InputOutputModule, only: urword
-    use TimeSeriesLinkModule, only:  TimeSeriesLinkType
+    use TimeSeriesLinkModule, only: TimeSeriesLinkType
     use TimeSeriesManagerModule, only: read_value_or_time_series
     ! -- dummy
     class(DisBaseType) :: this
@@ -1050,16 +1043,16 @@ module BaseDisModule
     integer(I4B), intent(in) :: inamedbound
     integer(I4B), intent(in) :: iauxmultcol
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: nodelist
-    real(DP), dimension(:,:), pointer, contiguous, intent(inout) :: rlist
-    real(DP), dimension(:,:), pointer, contiguous, intent(inout) :: auxvar
+    real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: rlist
+    real(DP), dimension(:, :), pointer, contiguous, intent(inout) :: auxvar
     character(len=LENAUXNAME), dimension(:), intent(inout) :: auxname
-    character(len=LENBOUNDNAME), dimension(:), pointer, contiguous,                        &
-                                          intent(inout) :: boundname
+    character(len=LENBOUNDNAME), dimension(:), pointer, contiguous, &
+      intent(inout) :: boundname
     !character(len=:), dimension(:), pointer, contiguous, intent(inout) :: auxname
     !character(len=:), dimension(:), pointer, contiguous, intent(inout) :: boundname
     character(len=*), intent(in) :: label
-    character(len=*),  intent(in) :: pkgName
-    type(TimeSeriesManagerType)   :: tsManager
+    character(len=*), intent(in) :: pkgName
+    type(TimeSeriesManagerType) :: tsManager
     integer(I4B), intent(in) :: iscloc
     integer(I4B), intent(in), optional :: indxconvertflux
     ! -- local
@@ -1074,32 +1067,33 @@ module BaseDisModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Read the list
-    call lstrdobj%read_list(in, iout, nlist, inamedbound, this%mshape,         &
+    call lstrdobj%read_list(in, iout, nlist, inamedbound, this%mshape, &
                             nodelist, rlist, auxvar, auxname, boundname, label)
     !
     ! -- Go through all locations where a text string was found instead of
     !    a double precision value and make time-series links to rlist
-    if(lstrdobj%ntxtrlist > 0) then
+    if (lstrdobj%ntxtrlist > 0) then
       do l = 1, lstrdobj%ntxtrlist
         ii = lstrdobj%idxtxtrow(l)
         jj = lstrdobj%idxtxtcol(l)
         tsLinkBnd => NULL()
         bndElem => rlist(jj, ii)
-        call read_value_or_time_series(lstrdobj%txtrlist(l), ii, jj,           &
-                bndElem, pkgName, 'BND', tsManager, iprpak, tsLinkBnd)
+        call read_value_or_time_series(lstrdobj%txtrlist(l), ii, jj, bndElem, &
+                                       pkgName, 'BND', tsManager, iprpak, &
+                                       tsLinkBnd)
         if (associated(tsLinkBnd)) then
           !
           ! -- If iauxmultcol is active and this column is the column
-          !    to be scaled, then assign tsLinkBnd%RMultiplier to auxvar 
+          !    to be scaled, then assign tsLinkBnd%RMultiplier to auxvar
           !    multiplier
           if (iauxmultcol > 0 .and. jj == iscloc) then
             tsLinkBnd%RMultiplier => auxvar(iauxmultcol, ii)
-          endif
+          end if
           !
           ! -- If boundaries are named, save the name in the link
           if (lstrdobj%inamedbound == 1) then
             tsLinkBnd%BndName = lstrdobj%boundname(tsLinkBnd%IRow)
-          endif
+          end if
           !
           ! -- if the value is a flux and needs to be converted to a flow
           !    then set the tsLinkBnd appropriately
@@ -1109,71 +1103,72 @@ module BaseDisModule
               nodeu = nodelist(ii)
               noder = this%get_nodenumber(nodeu, 0)
               tsLinkBnd%CellArea = this%get_area(noder)
-            endif
-          endif
+            end if
+          end if
           !
-        endif
-      enddo
-    endif
+        end if
+      end do
+    end if
     !
     ! -- Make time-series substitutions for auxvar
-    if(lstrdobj%ntxtauxvar > 0) then
+    if (lstrdobj%ntxtauxvar > 0) then
       do l = 1, lstrdobj%ntxtauxvar
         ii = lstrdobj%idxtxtauxrow(l)
         jj = lstrdobj%idxtxtauxcol(l)
         tsLinkAux => NULL()
         bndElem => auxvar(jj, ii)
-        call read_value_or_time_series(lstrdobj%txtauxvar(l), ii, jj,          &
-                bndElem, pkgName, 'AUX', tsManager, iprpak, tslinkAux)
+        call read_value_or_time_series(lstrdobj%txtauxvar(l), ii, jj, bndElem, &
+                                       pkgName, 'AUX', tsManager, iprpak, &
+                                       tslinkAux)
         if (lstrdobj%inamedbound == 1) then
           if (associated(tsLinkAux)) then
             tsLinkAux%BndName = lstrdobj%boundname(tsLinkAux%IRow)
-          endif
-        endif
-      enddo
-    endif
+          end if
+        end if
+      end do
+    end if
     !
     ! -- Multiply rlist by the multiplier column in auxvar
-    if(iauxmultcol > 0) then
+    if (iauxmultcol > 0) then
       do l = 1, nlist
         rlist(iscloc, l) = rlist(iscloc, l) * auxvar(iauxmultcol, l)
-      enddo
-    endif
+      end do
+    end if
     !
     ! -- Write the list to iout if requested
-    if(iprpak /= 0) then
+    if (iprpak /= 0) then
       call lstrdobj%write_list()
-    endif
+    end if
     !
     ! -- Convert user nodenumbers to reduced nodenumbers, if necessary.
     !    Conversion to reduced nodenumbers must be done last, after the
     !    list is written so that correct indices are written to the list.
-    if(this%nodes < this%nodesuser) then
+    if (this%nodes < this%nodesuser) then
       do l = 1, nlist
         nodeu = nodelist(l)
         noder = this%get_nodenumber(nodeu, 0)
-        if(noder <= 0) then
+        if (noder <= 0) then
           call this%nodeu_to_string(nodeu, nodestr)
-          write(errmsg, *)                                                     &
-                  ' Cell is outside active grid domain: ' //                   &
-                  trim(adjustl(nodestr))
+          write (errmsg, *) &
+            ' Cell is outside active grid domain: '// &
+            trim(adjustl(nodestr))
           call store_error(errmsg)
-        endif
+        end if
         nodelist(l) = noder
-      enddo
+      end do
       !
       ! -- Check for errors and terminate if encountered
-      if(count_errors() > 0) then
-        write(errmsg, *) count_errors(), ' errors encountered.'
+      if (count_errors() > 0) then
+        write (errmsg, *) count_errors(), ' errors encountered.'
         call store_error(errmsg)
         call store_error_unit(in)
-      endif
-    endif
+      end if
+    end if
     !
     ! -- return
   end subroutine read_list
 
-  subroutine read_layer_array(this, nodelist, darray, ncolbnd, maxbnd,         &
+  subroutine read_layer_array(this, nodelist, darray, ncolbnd, maxbnd, &
                               icolbnd, aname, inunit, iout)
 ! ******************************************************************************
 ! read_layer_array -- Read a 2d double array into col icolbnd of darray.
@@ -1202,9 +1197,9 @@ module BaseDisModule
     !
     ! -- return
   end subroutine read_layer_array
-  
-  subroutine record_array(this, darray, iout, iprint, idataun, aname,          &
-                           cdatafmp, nvaluesp, nwidthp, editdesc, dinact)
+
+  subroutine record_array(this, darray, iout, iprint, idataun, aname, &
+                          cdatafmp, nvaluesp, nwidthp, editdesc, dinact)
 ! ******************************************************************************
 ! record_array -- Record a double precision array.  The array will be
 !   printed to an external file and/or written to an unformatted external file
@@ -1226,19 +1221,19 @@ module BaseDisModule
 !        from the model domain
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(DisBaseType), intent(inout)              :: this
+    class(DisBaseType), intent(inout) :: this
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: darray
-    integer(I4B), intent(in)                       :: iout
-    integer(I4B), intent(in)                       :: iprint
-    integer(I4B), intent(in)                       :: idataun
-    character(len=*), intent(in)                   :: aname
-    character(len=*), intent(in)                   :: cdatafmp
-    integer(I4B), intent(in)                       :: nvaluesp
-    integer(I4B), intent(in)                       :: nwidthp 
-    character(len=*), intent(in)                   :: editdesc
-    real(DP), intent(in)                           :: dinact
+    integer(I4B), intent(in) :: iout
+    integer(I4B), intent(in) :: iprint
+    integer(I4B), intent(in) :: idataun
+    character(len=*), intent(in) :: aname
+    character(len=*), intent(in) :: cdatafmp
+    integer(I4B), intent(in) :: nvaluesp
+    integer(I4B), intent(in) :: nwidthp
+    character(len=*), intent(in) :: editdesc
+    real(DP), intent(in) :: dinact
     !
-    ! -- 
+    ! --
     errmsg = 'Programmer error: record_array needs to be overridden &
             &in any DIS type that extends DisBaseType'
     call store_error(errmsg, terminate=.TRUE.)
@@ -1261,11 +1256,11 @@ module BaseDisModule
     ! -- local
     character(len=16), dimension(1) :: text
     ! -- data
-    data text(1) /'    FLOW-JA-FACE'/
+    data text(1)/'    FLOW-JA-FACE'/
 ! ------------------------------------------------------------------------------
     !
     ! -- write full ja array
-    call ubdsv1(kstp, kper, text(1), ibinun, flowja, size(flowja), 1, 1,       &
+    call ubdsv1(kstp, kper, text(1), ibinun, flowja, size(flowja), 1, 1, &
                 iout, delt, pertim, totim)
     !
     ! -- return
@@ -1299,7 +1294,7 @@ module BaseDisModule
   subroutine noder_to_array(this, noder, arr)
 ! ******************************************************************************
 ! noder_to_array -- Convert reduced node number to cellid and fill array with
-!                   (nodenumber) or (k,j) or (k,i,j) 
+!                   (nodenumber) or (k,j) or (k,i,j)
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1320,8 +1315,8 @@ module BaseDisModule
     return
   end subroutine noder_to_array
 
-  subroutine record_srcdst_list_header(this, text, textmodel, textpackage,      &
-                                       dstmodel, dstpackage, naux, auxtxt,      &
+  subroutine record_srcdst_list_header(this, text, textmodel, textpackage, &
+                                       dstmodel, dstpackage, naux, auxtxt, &
                                        ibdchn, nlist, iout)
 ! ******************************************************************************
 ! record_srcdst_list_header -- Record list header for imeth=6
@@ -1342,7 +1337,7 @@ module BaseDisModule
     integer(I4B), intent(in) :: nlist
     integer(I4B), intent(in) :: iout
     !
-    ! -- 
+    ! --
     errmsg = 'Programmer error: record_srcdst_list_header needs to be &
             &overridden in any DIS type that extends DisBaseType'
     call store_error(errmsg, terminate=.TRUE.)
@@ -1351,7 +1346,7 @@ module BaseDisModule
     return
   end subroutine record_srcdst_list_header
 
-  subroutine record_srcdst_list_entry(this, ibdchn, noder, noder2, q,           &
+  subroutine record_srcdst_list_entry(this, ibdchn, noder, noder2, q, &
                                       naux, aux, olconv, olconv2)
 ! ******************************************************************************
 ! record_srcdst_list_header -- Record list header
@@ -1405,7 +1400,7 @@ module BaseDisModule
     return
   end subroutine record_srcdst_list_entry
 
-  subroutine nlarray_to_nodelist(this, nodelist, maxbnd, nbound, aname,        &
+  subroutine nlarray_to_nodelist(this, nodelist, maxbnd, nbound, aname, &
                                  inunit, iout)
 ! ******************************************************************************
 ! nlarray_to_nodelist -- Read an integer array into nodelist. For structured
@@ -1427,7 +1422,7 @@ module BaseDisModule
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     !
-    ! -- 
+    ! --
     errmsg = 'Programmer error: nlarray_to_nodelist needs to be &
             &overridden in any DIS type that extends DisBaseType'
     call store_error(errmsg, terminate=.TRUE.)
@@ -1448,36 +1443,36 @@ module BaseDisModule
     integer(I4B), intent(inout) :: n
     integer(I4B), dimension(:), intent(in) :: ibound
     ! -- locals
-    integer(I4B) :: m,ii,iis
+    integer(I4B) :: m, ii, iis
     logical done, bottomcell
 ! ------------------------------------------------------------------------------
     !
     ! -- Loop through connected cells until the highest active one (including a
     !    constant head cell) is found.  Return that cell as n.
-    done=.false.
-    do while(.not. done)
+    done = .false.
+    do while (.not. done)
       bottomcell = .true.
-      cloop: do ii = this%con%ia(n) + 1, this%con%ia(n+1)-1
+      cloop: do ii = this%con%ia(n) + 1, this%con%ia(n + 1) - 1
         m = this%con%ja(ii)
         iis = this%con%jas(ii)
-        if(this%con%ihc(iis) == 0 .and. m > n) then
+        if (this%con%ihc(iis) == 0 .and. m > n) then
           !
           ! -- this cannot be a bottom cell
           bottomcell = .false.
           !
           ! -- vertical down
-          if(ibound(m) /= 0) then
+          if (ibound(m) /= 0) then
             n = m
             done = .true.
             exit cloop
           else
             n = m
             exit cloop
-          endif
-        endif
-      enddo cloop
-      if(bottomcell) done = .true.
-    enddo
+          end if
+        end if
+      end do cloop
+      if (bottomcell) done = .true.
+    end do
     !
     ! -- return
     return

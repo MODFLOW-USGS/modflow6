@@ -5,8 +5,9 @@ Test the time array series for the recharge package
 """
 
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -95,7 +96,7 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(imsgwf, [gwf.name])
 
@@ -190,8 +191,8 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.cbc",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
@@ -207,22 +208,22 @@ def eval_transport(sim):
     idx = sim.idxsim
 
     # load concentration file
-    fpth = os.path.join(sim.simpath, "{}.hds".format(gwfname))
+    fpth = os.path.join(sim.simpath, f"{gwfname}.hds")
     try:
         hobj = flopy.utils.HeadFile(fpth, precision="double")
         head = hobj.get_data()
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     # load gwf budget file
-    fpth = os.path.join(sim.simpath, "{}.cbc".format(gwfname))
+    fpth = os.path.join(sim.simpath, f"{gwfname}.cbc")
     try:
         bobj = flopy.utils.CellBudgetFile(
             fpth,
             precision="double",
         )
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     rchbudall = bobj.get_data(text="RCH")
     times = bobj.get_times()
@@ -409,7 +410,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

@@ -8,8 +8,8 @@
 import os
 import shutil
 
-import pytest
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -77,7 +77,7 @@ def build_model():
         sim,
         model_type="gwf6",
         modelname=name,
-        model_nam_file="{}.nam".format(name),
+        model_nam_file=f"{name}.nam",
     )
     gwf.name_file.newtonoptions = newtonoptions[0]
 
@@ -108,11 +108,11 @@ def build_model():
         top=100.0,
         botm=0.0,
         idomain=1,
-        filename="{}.dis".format(name),
+        filename=f"{name}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(name))
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{name}.ic")
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -121,7 +121,7 @@ def build_model():
         icelltype=1,
         k=hk,
         k33=hk,
-        filename="{}.npf".format(name),
+        filename=f"{name}.npf",
     )
     # storage
     sto = flopy.mf6.ModflowGwfsto(
@@ -132,7 +132,7 @@ def build_model():
         sy=0.1,
         steady_state={0: True},
         # transient={1: False},
-        filename="{}.sto".format(name),
+        filename=f"{name}.sto",
     )
 
     # chd files
@@ -149,7 +149,7 @@ def build_model():
         gwf,
         stress_period_data=chdspdict,
         save_flows=False,
-        filename="{}.chd".format(name),
+        filename=f"{name}.chd",
     )
 
     # wel files
@@ -158,7 +158,7 @@ def build_model():
     #                              periodrecarray=wd6,
     #                              save_flows=False)
     # MAW
-    opth = "{}.maw.obs".format(name)
+    opth = f"{name}.maw.obs"
     wellbottom = 50.0
     wellrecarray = [[0, 0.1, wellbottom, 100.0, "THIEM", 1]]
     wellconnectionsrecarray = [[0, 0, (0, 0, 1), 100.0, wellbottom, 1.0, 0.1]]
@@ -167,7 +167,7 @@ def build_model():
     mawo_dict["maw_obs.csv"] = [("mh1", "head", 1), ("mawgw", "maw", 1)]
     maw = flopy.mf6.ModflowGwfmaw(
         gwf,
-        filename="{}.maw".format(name),
+        filename=f"{name}.maw",
         print_input=True,
         print_head=True,
         print_flows=True,
@@ -181,12 +181,12 @@ def build_model():
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(name),
-        head_filerecord="{}.hds".format(name),
+        budget_filerecord=f"{name}.cbc",
+        head_filerecord=f"{name}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
-        filename="{}.oc".format(name),
+        filename=f"{name}.oc",
     )
 
     return sim
@@ -253,7 +253,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

@@ -1,7 +1,8 @@
 import os
-import sys
 import shutil
+import sys
 import time
+
 import numpy as np
 
 try:
@@ -56,9 +57,9 @@ class Simulation(object):
                 exe0 = targets.target_dict[key]
                 exe = os.path.join(os.path.dirname(exe0), sys.argv[idx + 1])
                 msg = (
-                    "replacing {} executable ".format(key)
-                    + '"{}" with '.format(targets.target_dict[key])
-                    + '"{}".'.format(exe)
+                    f"replacing {key} executable "
+                    + f'"{targets.target_dict[key]}" with '
+                    + f'"{exe}".'
                 )
                 print(msg)
                 targets.target_dict[key] = exe
@@ -73,9 +74,9 @@ class Simulation(object):
                     exe0 = targets.target_dict[key]
                     exe = os.path.join(os.path.dirname(exe0), value)
                     msg = (
-                        "replacing {} executable ".format(key)
-                        + '"{}" with '.format(targets.target_dict[key])
-                        + '"{}".'.format(exe)
+                        f"replacing {key} executable "
+                        + f'"{targets.target_dict[key]}" with '
+                        + f'"{exe}".'
                     )
                     print(msg)
                     targets.target_dict[key] = exe
@@ -150,7 +151,7 @@ class Simulation(object):
         """
         # make sure this is a valid path
         if not os.path.isdir(pth):
-            assert False, "{} is not a valid directory".format(pth)
+            assert False, f"{pth} is not a valid directory"
 
         self.simpath = pth
 
@@ -177,7 +178,7 @@ class Simulation(object):
         # write message
         print(
             "running pymake.setup_mf6 from "
-            + "{}".format(os.path.abspath(os.getcwd()))
+            + f"{os.path.abspath(os.getcwd())}"
         )
         try:
             self.inpt, self.outp = pymake.setup_mf6(src=src, dst=dst)
@@ -186,8 +187,8 @@ class Simulation(object):
             success = True
         except:
             success = False
-            print("source:      {}".format(src))
-            print("destination: {}".format(dst))
+            print(f"source:      {src}")
+            print(f"destination: {dst}")
         assert success, "did not run pymake.setup_mf6"
 
         if success:
@@ -196,6 +197,10 @@ class Simulation(object):
         return
 
     def setup_comparison(self, src, dst, testModel=True):
+
+        # evaluate if comparison should be made
+        if not self.make_comparison:
+            return
 
         # adjust htol if it is smaller than IMS outer_dvclose
         dvclose = self._get_dvclose(dst)
@@ -421,7 +426,7 @@ class Simulation(object):
                                 pth = os.path.join(cpth, files_cmp[idx])
                                 files2.append(pth)
                                 txt = sfmt.format(
-                                    "Comparison file {}".format(ipos + 1),
+                                    f"Comparison file {ipos + 1}",
                                     os.path.basename(pth),
                                 )
                                 print(txt)
@@ -462,7 +467,7 @@ class Simulation(object):
                             exfile = exfiles[ipos]
                             if exfile is not None:
                                 txt = sfmt.format(
-                                    "Exclusion file {}".format(ipos + 1),
+                                    f"Exclusion file {ipos + 1}",
                                     os.path.basename(exfile),
                                 )
                                 print(txt)
@@ -483,7 +488,7 @@ class Simulation(object):
                         exfile=exfile,
                     )
                     msg = sfmt.format(
-                        "{} comparison {}".format(extdict[ext], ipos + 1),
+                        f"{extdict[ext]} comparison {ipos + 1}",
                         self.name,
                     )
                     print(msg)
@@ -551,7 +556,7 @@ class Simulation(object):
             i0 = 0
         for line in lines[i0:]:
             if len(line) > 0:
-                msg += "{}\n".format(line)
+                msg += f"{line}\n"
         msg += 79 * "-" + "\n\n"
         return msg
 
@@ -628,7 +633,7 @@ class Simulation(object):
         for idx, (fpth0, fpth1) in enumerate(zip(files0, files1)):
             outfile = os.path.splitext(os.path.basename(fpth0))[0]
             outfile = os.path.join(
-                self.simpath, outfile + ".{}.cmp.out".format(extension)
+                self.simpath, outfile + f".{extension}.cmp.out"
             )
             success_tst = pymake.compare_heads(
                 None,
@@ -642,8 +647,8 @@ class Simulation(object):
                 verbose=self.cmp_verbose,
             )
             msg = sfmt.format(
-                "{} comparison {}".format(extdict[extension], ipos + 1),
-                "{} ({})".format(self.name, os.path.basename(fpth0)),
+                f"{extdict[extension]} comparison {ipos + 1}",
+                f"{self.name} ({os.path.basename(fpth0)})",
             )
             ipos += 1
             print(msg)
@@ -664,7 +669,7 @@ class Simulation(object):
         for idx, (fpth0, fpth1) in enumerate(zip(files0, files1)):
             outfile = os.path.splitext(os.path.basename(fpth0))[0]
             outfile = os.path.join(
-                self.simpath, outfile + ".{}.cmp.out".format(extension)
+                self.simpath, outfile + f".{extension}.cmp.out"
             )
             success_tst = pymake.compare_heads(
                 None,
@@ -678,8 +683,8 @@ class Simulation(object):
                 verbose=self.cmp_verbose,
             )
             msg = sfmt.format(
-                "{} comparison {}".format(extdict[extension], ipos + 1),
-                "{} ({})".format(self.name, os.path.basename(fpth0)),
+                f"{extdict[extension]} comparison {ipos + 1}",
+                f"{self.name} ({os.path.basename(fpth0)})",
             )
             ipos += 1
             print(msg)
@@ -702,7 +707,7 @@ class Simulation(object):
                 continue
             outfile = os.path.splitext(os.path.basename(fpth0))[0]
             outfile = os.path.join(
-                self.simpath, outfile + ".{}.cmp.out".format(extension)
+                self.simpath, outfile + f".{extension}.cmp.out"
             )
             fcmp = open(outfile, "w")
 
@@ -763,21 +768,21 @@ class Simulation(object):
                     if diffmax > vmin_tol:
                         success_tst = False
                         msg = (
-                            "{} - ".format(os.path.basename(fpth0))
-                            + "{:16s} ".format(key)
-                            + "difference ({:10.4g}) ".format(diffmax)
-                            + "> {:10.4g} ".format(self.pdtol)
-                            + "at {} nodes ".format(indices.size)
-                            + " [first location ({})] ".format(indices[0] + 1)
-                            + "at time {} ".format(t)
+                            f"{os.path.basename(fpth0)} - "
+                            + f"{key:16s} "
+                            + f"difference ({diffmax:10.4g}) "
+                            + f"> {self.pdtol:10.4g} "
+                            + f"at {indices.size} nodes "
+                            + f" [first location ({indices[0] + 1})] "
+                            + f"at time {t} "
                         )
-                        fcmp.write("{}\n".format(msg))
+                        fcmp.write(f"{msg}\n")
                         if self.cmp_verbose:
                             print(msg)
 
             msg = sfmt.format(
-                "{} comparison {}".format(extdict[extension], ipos + 1),
-                "{} ({})".format(self.name, os.path.basename(fpth0)),
+                f"{extdict[extension]} comparison {ipos + 1}",
+                f"{self.name} ({os.path.basename(fpth0)})",
             )
             ipos += 1
             print(msg)

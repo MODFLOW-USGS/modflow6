@@ -7,10 +7,10 @@ module CompilerVersion
   implicit none
   private
   ! -- compiler version
-  character(len=10) :: ccompiler        !< compiler string
-  character(len=10) :: cversion         !< compiler version string
-  character(len=20) :: cdate            !< compilation date
-  integer(I4B) :: icompiler = CUNKNOWN  !< compiler enum
+  character(len=10) :: ccompiler !< compiler string
+  character(len=10) :: cversion !< compiler version string
+  character(len=20) :: cdate !< compilation date
+  integer(I4B) :: icompiler = CUNKNOWN !< compiler enum
   public :: get_compiler, get_compile_date, get_compile_options
 contains
 
@@ -34,7 +34,7 @@ contains
 #endif
 #ifdef _CRAYFTN
     icompiler = CCRAYFTN
-    cdate = __DATE__ // ' ' // __TIME__
+    cdate = __DATE__//' '//__TIME__
 #endif
     !
     ! -- set compiler strings
@@ -45,7 +45,7 @@ contains
     end if
     !
     ! -- write string with compiler information
-    write (txt, '(a,4(1x,a))') &
+    write (txt, '(a,3(1x,a))') &
       'MODFLOW 6 compiled', trim(adjustl(cdate)), &
       'with', trim(adjustl(compiler_version()))
     !
@@ -60,7 +60,7 @@ contains
   !<
   subroutine get_compile_date(txt)
     ! -- dummy variables
-    character(len=20), intent(inout) :: txt  !< compilation date
+    character(len=20), intent(inout) :: txt !< compilation date
     ! -- set variables
 #ifdef __GFORTRAN__
     cdate = __DATE__//' '//__TIME__
@@ -69,7 +69,7 @@ contains
     cdate = __DATE__//' '//__TIME__
 #endif
 #ifdef _CRAYFTN
-    cdate = __DATE__ // ' ' // __TIME__
+    cdate = __DATE__//' '//__TIME__
 #endif
     !
     ! -- write compilation date string
@@ -86,7 +86,7 @@ contains
   !<
   subroutine get_compile_options(txt)
     ! -- dummy variables
-    character(len=LENBIGLINE), intent(inout) :: txt  !< compilation options
+    character(len=LENBIGLINE), intent(inout) :: txt !< compilation options
     ! -- set variables
     !
     ! -- set txt string

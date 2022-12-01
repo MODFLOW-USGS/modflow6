@@ -11,8 +11,9 @@ are observed and written to and obs output file must fall on a line between
 """
 
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import pymake
@@ -75,21 +76,20 @@ def build_model(idx, dir):
     dtmax = 100.0
     dtadj = 2.0
     dtfailadj = 5.0
-    ats_filerecord = None
-    if True:
-        atsperiod = [(0, dt0, dtmin, dtmax, dtadj, dtfailadj)]
-        ats = flopy.mf6.ModflowUtlats(
-            sim, maxats=len(atsperiod), perioddata=atsperiod
-        )
-        ats_filerecord = name + ".ats"
-
     tdis = flopy.mf6.ModflowTdis(
         sim,
-        ats_filerecord=ats_filerecord,
         time_units="DAYS",
         nper=nper,
         perioddata=tdis_rc,
     )
+    if True:
+        ats_filerecord = name + ".ats"
+        atsperiod = [(0, dt0, dtmin, dtmax, dtadj, dtfailadj)]
+        tdis.ats.initialize(
+            maxats=len(atsperiod),
+            perioddata=atsperiod,
+            filename=ats_filerecord,
+        )
 
     # create gwf model
     gwfname = name
@@ -117,7 +117,7 @@ def build_model(idx, dir):
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
     sim.register_ims_package(imsgwf, [gwf.name])
 
@@ -193,8 +193,8 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.cbc",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
@@ -203,7 +203,7 @@ def build_model(idx, dir):
     obs_lst = []
     obs_lst.append(["obs1", "head", (0, 0, 0)])
     obs_lst.append(["obs2", "head", (0, 0, ncol - 1)])
-    obs_dict = {"{}.obs.csv".format(gwfname): obs_lst}
+    obs_dict = {f"{gwfname}.obs.csv": obs_lst}
     obs = flopy.mf6.ModflowUtlobs(
         gwf, pname="head_obs", digits=20, continuous=obs_dict
     )
@@ -222,11 +222,11 @@ def eval_flow(sim):
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
     x = np.array(tc["time"])
     answer = 100.0 - x * 0.5
     result = np.array(tc["OBS2"])
-    msg = "obs2 must drop linearly from 100 down to 50: {}".format(result)
+    msg = f"obs2 must drop linearly from 100 down to 50: {result}"
     assert np.allclose(answer, result), msg
 
 
@@ -259,7 +259,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

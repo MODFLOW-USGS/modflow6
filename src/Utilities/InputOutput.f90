@@ -28,38 +28,26 @@ module InputOutputModule
 
   contains
 
+  !> @brief Open a file
+  !!
+  !! Subroutine to open a file using the specified arguments
+  !!
+  !<
   subroutine openfile(iu, iout, fname, ftype, fmtarg_opt, accarg_opt,          &
                       filstat_opt, mode_opt)
-! ******************************************************************************
-! openfile -- Open a file using the specified arguments.
-!
-!   iu is the unit number
-!   iout is the output unit number to write a message (iout=0 does not print)
-!   fname is the name of the file
-!   ftype is the type of the file (e.g. WEL)
-!   fmtarg_opt is the format, default is 'formatted'
-!   accarg_opt is the access, default is 'sequential'
-!   filstat_opt is the file status, default is 'old'.  Use 'REPLACE' for an
-!     output file.
-!   mode_opt is a simulation mode that is evaluated to determine if the file
-!   should be opened  
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use OpenSpecModule, only: action
     implicit none
-    ! -- dummy
-    integer(I4B), intent(inout)       :: iu
-    integer(I4B), intent(in)          :: iout
-    character(len=*), intent(in) :: fname
-    character(len=*), intent(in) :: ftype
-    character(len=*), intent(in), optional :: fmtarg_opt
-    character(len=*), intent(in), optional :: accarg_opt
-    character(len=*), intent(in), optional :: filstat_opt
-    integer(I4B), intent(in), optional :: mode_opt
-    ! -- local
+    ! -- dummy variables
+    integer(I4B), intent(inout)       :: iu                 !< unit number
+    integer(I4B), intent(in)          :: iout               !< output unit number to write a message (iout=0 does not print)
+    character(len=*), intent(in) :: fname                   !< name of the file
+    character(len=*), intent(in) :: ftype                   !< file type (e.g. WEL)
+    character(len=*), intent(in), optional :: fmtarg_opt    !< file format, default is 'formatted'
+    character(len=*), intent(in), optional :: accarg_opt    !< file access, default is 'sequential'
+    character(len=*), intent(in), optional :: filstat_opt   !< file status, default is 'old'. Use 'REPLACE' for output file.
+    integer(I4B), intent(in), optional :: mode_opt          !< simulation mode that is evaluated to determine if the file should be opened
+    ! -- local variables
     character(len=20) :: fmtarg
     character(len=20) :: accarg
     character(len=20) :: filstat
@@ -74,15 +62,6 @@ module InputOutputModule
                  1X,'FORMAT:',A,3X,'ACCESS:',A/                                &
                  1X,'ACTION:',A/)
 60  FORMAT(1X,/1X,'DID NOT OPEN ',A,/)
-2011  FORMAT('*** ERROR OPENING FILE "',A,'" ON UNIT ',I0)
-2017  format('*** FILE ALREADY OPEN ON UNIT: ',I0)
-2012  format('       SPECIFIED FILE STATUS: ',A)
-2013  format('       SPECIFIED FILE FORMAT: ',A)
-2014  format('       SPECIFIED FILE ACCESS: ',A)
-2015  format('       SPECIFIED FILE ACTION: ',A)
-2016  format('         IOSTAT ERROR NUMBER: ',I0)
-2018  format('  -- STOP EXECUTION (openfile)')
-! ------------------------------------------------------------------------------
     !
     ! -- process mode_opt
     if (present(mode_opt)) then
@@ -141,22 +120,24 @@ module InputOutputModule
       !
       ! -- Check for an error
       if(ivar /= 0) then
-        write(errmsg,2011) fname(1:iflen), iu
+        write (errmsg, '(3a,1x,i0,a)') &
+          'Could not open "', fname(1:iflen), '" on unit', iu, '.'
         if(iuop > 0) then
-          write(errmsg, 2017) iuop
-          call store_error(errmsg)
+          write (errmsg, '(a,1x,a,1x,i0,a)') &
+            trim(errmsg), 'File already open on unit', iuop, '.'
         endif
-        write(errmsg,2012) filstat
-        call store_error(errmsg)
-        write(errmsg,2013) fmtarg
-        call store_error(errmsg)
-        write(errmsg,2014) accarg
-        call store_error(errmsg)
-        write(errmsg,2015) filact
-        call store_error(errmsg)
-        write(errmsg,2016) ivar
-        call store_error(errmsg)
-        write(errmsg,2018)
+        write (errmsg, '(a,1x,a,1x,a,a)') &
+          trim(errmsg), 'Specified file status', trim(filstat), '.'
+        write (errmsg, '(a,1x,a,1x,a,a)') &
+          trim(errmsg), 'Specified file format', trim(fmtarg), '.'
+        write (errmsg, '(a,1x,a,1x,a,a)') &
+          trim(errmsg), 'Specified file access', trim(accarg), '.'
+        write (errmsg, '(a,1x,a,1x,a,a)') &
+          trim(errmsg), 'Specified file action', trim(filact), '.'
+        write (errmsg, '(a,1x,a,1x,i0,a)') &
+          trim(errmsg), 'IOSTAT error number', ivar, '.'
+        write (errmsg, '(a,1x,a)') &
+          trim(errmsg), 'STOP EXECUTION in subroutine openfile().'
         call store_error(errmsg, terminate=.TRUE.)
       endif
       !
@@ -173,22 +154,21 @@ module InputOutputModule
     return
   end subroutine openfile
 
+  !> @brief Assign a free unopened unit number
+  !!
+  !! Subroutine to assign a free unopened unit number to the iu dummy argument
+  !!
+  !<
   subroutine freeunitnumber(iu)
-! ******************************************************************************
-! Assign a free unopened unit number to the iu dummy argument.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     implicit none
-    ! -- dummy
-    integer(I4B),intent(inout) :: iu
-    ! -- local
+    ! -- dummy variables
+    integer(I4B),intent(inout) :: iu  !< next free file unit number
+    ! -- local variables
     integer(I4B) :: i
     logical :: opened
-! ------------------------------------------------------------------------------
-  !
+    !
+    ! -- code
     do i = iunext, iulast
       inquire(unit=i, opened=opened)
       if(.not. opened) exit
@@ -200,21 +180,20 @@ module InputOutputModule
     return
   end subroutine freeunitnumber
 
+  !> @brief Get a free unit number
+  !!
+  !! Function to get a free unit number that hasn't been used
+  !!
+  !<
   function getunit()
-! ******************************************************************************
-! Get a free unit number that hasn't been used yet.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     implicit none
     ! -- return
-    integer(I4B) :: getunit
-    ! -- local
+    integer(I4B) :: getunit  !< free unit number
+    ! -- local variables
     integer(I4B) :: iunit
-! ------------------------------------------------------------------------------
     !
+    ! -- code
     call freeunitnumber(iunit)
     getunit = iunit
     !
@@ -222,28 +201,26 @@ module InputOutputModule
     return
   end function getunit
   
+  !> @brief Get the next non-comment line
+  !!
+  !! Subroutine to get the next non-comment line from a file
+  !!
+  !<
   subroutine u8rdcom(iin, iout, line, ierr)
-! ******************************************************************************
-! Read until non-comment line found and then return line
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use, intrinsic :: iso_fortran_env, only: IOSTAT_END
     implicit none
-    ! -- dummy
-    integer(I4B),         intent(in) :: iin
-    integer(I4B),         intent(in) :: iout
-    character (len=*), intent(inout) :: line
-    integer(I4B),        intent(out) :: ierr
-    ! -- local definitions
+    ! -- dummy variables
+    integer(I4B),         intent(in) :: iin   !< file unit number
+    integer(I4B),         intent(in) :: iout  !< output listing file
+    character (len=*), intent(inout) :: line  !< next non-comment line
+    integer(I4B),        intent(out) :: ierr  !< error code
+    ! -- local variables
     character (len=2), parameter :: comment = '//'
     character(len=1), parameter  :: tab = CHAR(9)
     logical :: iscomment
     integer(I4B) :: i, l
-! ------------------------------------------------------------------------------
-    !code
     !
+    ! -- code
     line = comment
     pcomments: do
       read (iin,'(a)', iostat=ierr) line
@@ -264,7 +241,7 @@ module InputOutputModule
         cycle
       end if
       !
-      ! Ensure that any initial tab characters are treated as spaces
+      ! -- Ensure that any initial tab characters are treated as spaces
       cleartabs: do
         line = trim(adjustl(line))
         iscomment = .false.
@@ -304,24 +281,24 @@ module InputOutputModule
     return
   end subroutine u8rdcom
 
+  !> @brief Get line from a block
+  !!
+  !! Subroutine to read and return a line from an external file or from 
+  !! within a block. The line is read from an external file if iu is 
+  !! not equal to iuext.
+  !!
+  !<
   subroutine uget_block_line(iu, iuext, iout, line, lloc, istart, istop)
-! ******************************************************************************
-! Read and return line read from an external file or from within a block.
-! The line is read from an external file if iu is not equal to iuext
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     implicit none
-    ! -- dummy
-    integer(I4B), intent(in) :: iu
-    integer(I4B), intent(in) :: iuext
-    integer(I4B), intent(in) :: iout
-    character (len=*), intent(inout) :: line
-    integer(I4B), intent(inout) :: lloc
-    integer(I4B), intent(inout) :: istart
-    integer(I4B), intent(inout) :: istop
-    ! -- local definitions
+    ! -- dummy variables
+    integer(I4B), intent(in) :: iu            !< file unit number
+    integer(I4B), intent(in) :: iuext         !< external file unit number
+    integer(I4B), intent(in) :: iout          !< output listing file
+    character (len=*), intent(inout) :: line  !< line
+    integer(I4B), intent(inout) :: lloc       !< position in line
+    integer(I4B), intent(inout) :: istart     !< starting position of a word
+    integer(I4B), intent(inout) :: istop      !< ending position of a word
+    ! -- local variables
     integer(I4B) :: ierr
     integer(I4B) :: ival
     real(DP) :: rval
@@ -343,27 +320,27 @@ module InputOutputModule
   end subroutine uget_block_line
 
 
+  !> @brief Find a block in a file
+  !!
+  !! Subroutine to read from a file until the tag (ctag) for a block is
+  !! is found. Return isfound with true, if found.
+  !!
+  !<
   subroutine uget_block(iin, iout, ctag, ierr, isfound, lloc, line, iuext,     &
                         blockRequired, supportopenclose)
-! ******************************************************************************
-! Read until the ctag block is found.  Return isfound with true, if found.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     implicit none
-    ! -- dummy
-    integer(I4B),         intent(in) :: iin
-    integer(I4B),         intent(in) :: iout
-    character (len=*),    intent(in) :: ctag
-    integer(I4B),        intent(out) :: ierr
-    logical,           intent(inout) :: isfound
-    integer(I4B),      intent(inout) :: lloc
-    character (len=:), allocatable, intent(inout) :: line
-    integer(I4B),      intent(inout) :: iuext
-    logical, optional,    intent(in) :: blockRequired
-    logical, optional,    intent(in) :: supportopenclose
-    ! -- local
+    ! -- dummy variables
+    integer(I4B),         intent(in) :: iin                   !< file unit
+    integer(I4B),         intent(in) :: iout                  !< output listing file unit 
+    character (len=*),    intent(in) :: ctag                  !< block tag
+    integer(I4B),        intent(out) :: ierr                  !< error 
+    logical,           intent(inout) :: isfound               !< boolean indicating if the block was found
+    integer(I4B),      intent(inout) :: lloc                  !< position in line
+    character (len=:), allocatable, intent(inout) :: line     !< line
+    integer(I4B),      intent(inout) :: iuext                 !< external file unit number
+    logical, optional,    intent(in) :: blockRequired         !< boolean indicating if the block is required
+    logical, optional,    intent(in) :: supportopenclose      !< boolean indicating if the block supports open/close
+    ! -- local variables
     integer(I4B) :: istart
     integer(I4B) :: istop
     integer(I4B) :: ival
@@ -373,8 +350,8 @@ module InputOutputModule
     character(len=LINELENGTH) :: fname
     character(len=MAXCHARLEN) :: ermsg
     logical :: supportoc, blockRequiredLocal
-! ------------------------------------------------------------------------------
-    !code
+    !
+    ! -- code
     if (present(blockRequired)) then
       blockRequiredLocal = blockRequired
     else
@@ -389,7 +366,16 @@ module InputOutputModule
     mainloop: do
       lloc = 1
       call u9rdcom(iin, iout, line, ierr)
-      if (ierr < 0) exit
+      if (ierr < 0) then
+        if (blockRequiredLocal) then
+          ermsg = 'Required block "' // trim(ctag) // &
+                  '" not found.  Found end of file instead.'
+          call store_error(ermsg)
+          call store_error_unit(iuext)
+        end if
+        ! block not found so exit
+        exit
+      end if
       call urword(line, lloc, istart, istop, 1, ival, rval, iin, iout)
       if (line(istart:istop) == 'BEGIN') then
         call urword(line, lloc, istart, istop, 1, ival, rval, iin, iout)
@@ -444,35 +430,36 @@ module InputOutputModule
         endif
       end if
     end do mainloop
+    !
+    ! -- return
     return
   end subroutine uget_block
 
+  !> @brief Find the next block in a file
+  !!
+  !! Subroutine to read from a file until next block is found.
+  !! Return isfound with true, if found, and return the block name.
+  !!
+  !<
   subroutine uget_any_block(iin,iout,isfound,lloc,line,ctagfound,iuext)
-! ******************************************************************************
-! Read until any block is found. If found, return isfound as true and
-! return block name in ctagfound.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     implicit none
-    ! -- dummy
-    integer(I4B), intent(in) :: iin
-    integer(I4B), intent(in) :: iout
-    logical, intent(inout) :: isfound
-    integer(I4B), intent(inout) :: lloc
-    character (len=:), allocatable, intent(inout) :: line
-    character(len=*), intent(out) :: ctagfound
-    integer(I4B), intent(inout) :: iuext
-    ! -- local
+    ! -- dummy variables
+    integer(I4B), intent(in) :: iin                         !< file unit number
+    integer(I4B), intent(in) :: iout                        !< output listing file unit
+    logical, intent(inout) :: isfound                       !< boolean indicating if a block was found
+    integer(I4B), intent(inout) :: lloc                     !< position in line
+    character (len=:), allocatable, intent(inout) :: line   !< line
+    character(len=*), intent(out) :: ctagfound              !< block name
+    integer(I4B), intent(inout) :: iuext                    !< external file unit number
+    ! -- local variables
     integer(I4B) :: ierr, istart, istop
     integer(I4B) :: ival, lloc2
     real(DP) :: rval
     character(len=100) :: ermsg
     character (len=:), allocatable :: line2
     character(len=LINELENGTH) :: fname
-! ------------------------------------------------------------------------------
-    !code
+    !
+    ! -- code
     isfound = .false.
     ctagfound = ''
     iuext = iin
@@ -509,25 +496,25 @@ module InputOutputModule
     return
   end subroutine uget_any_block
 
+  !> @brief Evaluate if the end of a block has been found
+  !!
+  !! Subroutine to evaluate if the end of a block has been found. Abnormal 
+  !! termination if 'begin' is found or if 'end' encountered with 
+  !! incorrect tag.
+  !!
+  !<
   subroutine uterminate_block(iin,iout,key,ctag,lloc,line,ierr,iuext)
-! ******************************************************************************
-! Possible abnormal block termination.  Terminate if 'begin' found or if
-! 'end' encountered with incorrect tag.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     implicit none
-    ! -- dummy
-    integer(I4B), intent(in) :: iin
-    integer(I4B), intent(in) :: iout
-    character (len=*), intent(in) :: key
-    character (len=*), intent(in) :: ctag
-    integer(I4B), intent(inout) :: lloc
-    character (len=*), intent(inout) :: line
-    integer(I4B), intent(inout) :: ierr
-    integer(I4B), intent(inout) :: iuext
-    ! -- local
+    ! -- dummy variables
+    integer(I4B), intent(in) :: iin              !< file unit number
+    integer(I4B), intent(in) :: iout             !< output listing file unit number
+    character (len=*), intent(in) :: key         !< keyword in block
+    character (len=*), intent(in) :: ctag        !< block name
+    integer(I4B), intent(inout) :: lloc          !< position in line
+    character (len=*), intent(inout) :: line     !< line
+    integer(I4B), intent(inout) :: ierr          !< error
+    integer(I4B), intent(inout) :: iuext         !< external file unit number
+    ! -- local variables
     character(len=LENBIGLINE) :: ermsg
     integer(I4B) :: istart
     integer(I4B) :: istop
@@ -538,20 +525,20 @@ module InputOutputModule
       '" MUST BE USED TO END ',A,'.')
 2   format('ERROR. "',A,'" DETECTED BEFORE "END',1X,A,'". ','"END',1X,A, &
         '" MUST BE USED TO END ',A,'.')
-! ------------------------------------------------------------------------------
-    !code
+    !
+    ! -- code
     ierr = 1
     select case(key)
       case ('END')
         call urword(line, lloc, istart, istop, 1, ival, rval, iout, iin)
-        if (line(istart:istop).ne.ctag) then
+        if (line(istart:istop) /= ctag) then
           write(ermsg, 1) trim(key), trim(ctag), trim(ctag), trim(ctag)
           call store_error(ermsg)
           call store_error_unit(iin)
         else
           ierr = 0
           if (iuext /= iin) then
-            ! close external file
+            ! -- close external file
             close(iuext)
             iuext = iin
           endif
@@ -561,354 +548,373 @@ module InputOutputModule
         call store_error(ermsg)
         call store_error_unit(iin)
     end select
+    !
+    ! -- return
     return
   end subroutine uterminate_block
 
-      SUBROUTINE UPCASE(WORD)
-!C     ******************************************************************
-!C     CONVERT A CHARACTER STRING TO ALL UPPER CASE
-!C     ******************************************************************
-!C       SPECIFICATIONS:
-!C     ------------------------------------------------------------------
-      CHARACTER WORD*(*)
-!C
-!C1------Compute the difference between lowercase and uppercase.
-      L = LEN(WORD)
-      IDIFF=ICHAR('a')-ICHAR('A')
-!C
-!C2------Loop through the string and convert any lowercase characters.
-      DO 10 K=1,L
-      IF(WORD(K:K).GE.'a' .AND. WORD(K:K).LE.'z') &
-     &   WORD(K:K)=CHAR(ICHAR(WORD(K:K))-IDIFF)
-10    CONTINUE
-!C
-!C3------return.
-      RETURN
-      END SUBROUTINE upcase
+  !> @brief Convert to upper case
+  !!
+  !! Subroutine to convert a character string to upper case.
+  !!
+  !<
+  subroutine upcase(word)
+    implicit none
+    ! -- dummy variables  
+    character (len=*), intent(inout) :: word  !< word to convert to upper case
+    ! -- local variables
+    integer(I4B) :: l
+    integer(I4B) :: idiff
+    integer(I4B) :: k
+    !
+    ! -- Compute the difference between lowercase and uppercase.
+    l = len(word)
+    idiff = ichar('a') - ichar('A')
+    !
+    ! -- Loop through the string and convert any lowercase characters.
+    do k = 1, l
+      IF (word(k:k) >= 'a' .and. word(k:k) <= 'z') &
+        word(k:k) = char(ichar(word(k:k)) - idiff)
+    end do
+    !
+    ! -- return.
+    return
+    end subroutine upcase
 
-      subroutine lowcase(word)
-!     ******************************************************************
-!     Convert a character string to all lower case
-!     ******************************************************************
-!       specifications:
-!     ------------------------------------------------------------------
-      implicit none
-      ! -- dummy
-      character(len=*) :: word
-      ! -- local
-      integer(I4B) :: idiff, k, l
-!
-!------compute the difference between lowercase and uppercase.
-      l = len(word)
-      idiff=ichar('a')-ichar('A')
-!
-!------loop through the string and convert any uppercase characters.
-      do k=1,l
-        if(word(k:k).ge.'A' .and. word(k:k).le.'Z') then
-          word(k:k)=char(ichar(word(k:k))+idiff)
-        endif
-      enddo
-!
-!------return.
-      return
-      end subroutine lowcase
+  !> @brief Convert to lower case
+  !!
+  !! Subroutine to convert a character string to lower case.
+  !!
+  !<
+  subroutine lowcase(word)
+    implicit none
+    ! -- dummy variables
+    character(len=*) :: word  !< 
+    ! -- local variables
+    integer(I4B) :: idiff, k, l
+    !
+    ! -- compute the difference between lowercase and uppercase.
+    l = len(word)
+    idiff = ichar('a') - ichar('A')
+    !
+    ! -- loop through the string and convert any uppercase characters.
+    do k = 1, l
+      if(word(k:k) >= 'A' .and. word(k:k) <= 'Z') then
+        word(k:k)=char(ichar(word(k:k))+idiff)
+      endif
+    enddo
+    !
+    ! -- return.
+    return
+  end subroutine lowcase
 
-      subroutine UWWORD(LINE,ICOL,ILEN,NCODE,C,N,R,FMT,ALIGNMENT,SEP)
-      implicit none
-      ! -- dummy
-      character (len=*), intent(inout) :: LINE
-      integer(I4B), intent(inout) :: ICOL
-      integer(I4B), intent(in) :: ILEN
-      integer(I4B), intent(in) :: NCODE
-      character (len=*), intent(in) :: C
-      integer(I4B), intent(in) :: N
-      real(DP), intent(in) :: R
-      character (len=*), optional, intent(in) :: FMT
-      integer(I4B), optional, intent(in) :: ALIGNMENT
-      character (len=*), optional, intent(in) :: SEP
-      ! -- local
-      character (len=16) :: cfmt
-      character (len=16) :: cffmt
-      character (len=ILEN) :: cval
-      integer(I4B) :: ialign
-      integer(I4B) :: i
-      integer(I4B) :: ispace
-      integer(I4B) :: istop
-      integer(I4B) :: ipad
-      integer(I4B) :: ireal
-      ! -- code
-      !
-      ! -- initialize locals
-      ipad = 0
-      ireal = 0
-      !
-      ! -- process dummy variables
-      if (present(FMT)) then
-        CFMT = FMT
-      else
-        select case(NCODE)
-          case(TABSTRING, TABUCSTRING)
-            write(cfmt, '(A,I0,A)') '(A', ILEN, ')'
-          case(TABINTEGER)
-            write(cfmt, '(A,I0,A)') '(I', ILEN, ')'
-          case(TABREAL)
-            ireal = 1
-            i = ILEN - 7
-            write(cfmt, '(A,I0,A,I0,A)') '(1PG', ILEN, '.', i, ')'
-            if (R >= DZERO) then
-              ipad = 1
-            end if
-        end select
-      end if
-      write(cffmt, '(A,I0,A)') '(A', ILEN, ')'
-
-      if (present(ALIGNMENT)) then
-        ialign = ALIGNMENT
-      else
-        ialign = TABRIGHT
-      end if
-      !
-      ! -- 
-      if (NCODE == TABSTRING .or. NCODE == TABUCSTRING) then
-        cval = C
-        if (NCODE == TABUCSTRING) then
-          call UPCASE(cval)
-        end if
-      else if (NCODE == TABINTEGER) then
-        write(cval, cfmt) N
-      else if (NCODE == TABREAL) then
-        write(cval, cfmt) R
-      end if
-      !
-      ! -- apply alignment to cval
-      if (len_trim(adjustl(cval)) > ILEN) then
-        cval = adjustl(cval)
-      else
-        cval = trim(adjustl(cval))
-      end if
-      if (ialign == TABCENTER) then
-        i = len_trim(cval)
-        ispace = (ILEN - i) / 2
-        if (ireal > 0) then
-          if (ipad > 0) then
-            cval = ' ' //trim(adjustl(cval))
-          else
-            cval = trim(adjustl(cval))
+  !> @brief Create a formatted line
+  !!
+  !! Subroutine to create a formatted line with specified alignment
+  !! and column separators. Like URWORD, UWWORD works with strings,
+  !! integers, and floats. Can pass an optional format statement,
+  !! alignment, and column separator.
+  !!
+  !<
+  subroutine UWWORD(LINE,ICOL,ILEN,NCODE,C,N,R,FMT,ALIGNMENT,SEP)
+    implicit none
+    ! -- dummy variables
+    character (len=*), intent(inout) :: LINE         !< line
+    integer(I4B), intent(inout) :: ICOL              !< column to write to line
+    integer(I4B), intent(in) :: ILEN                 !< current length of line
+    integer(I4B), intent(in) :: NCODE                !< code for data type to write
+    character (len=*), intent(in) :: C               !< character data type
+    integer(I4B), intent(in) :: N                    !< integer data type
+    real(DP), intent(in) :: R                        !< float data type
+    character (len=*), optional, intent(in) :: FMT   !< format statement
+    integer(I4B), optional, intent(in) :: ALIGNMENT  !< alignment specifier
+    character (len=*), optional, intent(in) :: SEP   !< column separator
+    ! -- local variables
+    character (len=16) :: cfmt
+    character (len=16) :: cffmt
+    character (len=ILEN) :: cval
+    integer(I4B) :: ialign
+    integer(I4B) :: i
+    integer(I4B) :: ispace
+    integer(I4B) :: istop
+    integer(I4B) :: ipad
+    integer(I4B) :: ireal
+    ! -- code
+    !
+    ! -- initialize locals
+    ipad = 0
+    ireal = 0
+    !
+    ! -- process dummy variables
+    if (present(FMT)) then
+      CFMT = FMT
+    else
+      select case(NCODE)
+        case(TABSTRING, TABUCSTRING)
+          write(cfmt, '(A,I0,A)') '(A', ILEN, ')'
+        case(TABINTEGER)
+          write(cfmt, '(A,I0,A)') '(I', ILEN, ')'
+        case(TABREAL)
+          ireal = 1
+          i = ILEN - 7
+          write(cfmt, '(A,I0,A,I0,A)') '(1PG', ILEN, '.', i, ')'
+          if (R >= DZERO) then
+            ipad = 1
           end if
-        else
-          cval = repeat(' ', ispace) // trim(cval)
-        end if
-      else if (ialign == TABLEFT) then
-        cval = trim(adjustl(cval))
-        if (ipad > 0) then
-          cval = ' ' //trim(adjustl(cval))
-        end if
-      else
-        cval = adjustr(cval)
-      end if
+      end select
+    end if
+    write(cffmt, '(A,I0,A)') '(A', ILEN, ')'
+
+    if (present(ALIGNMENT)) then
+      ialign = ALIGNMENT
+    else
+      ialign = TABRIGHT
+    end if
+    !
+    ! -- 
+    if (NCODE == TABSTRING .or. NCODE == TABUCSTRING) then
+      cval = C
       if (NCODE == TABUCSTRING) then
         call UPCASE(cval)
       end if
-      !
-      ! -- increment istop to the end of the column
-      istop = ICOL + ILEN - 1
-      !
-      ! -- write final string to line
-      write(LINE(ICOL:istop), cffmt) cval
-
-      ICOL = istop + 1
-
-      if (present(SEP)) then
-        i = len(SEP)
-        istop = ICOL + i
-        write(LINE(ICOL:istop), '(A)') SEP
-        ICOL = istop
-      end if
-      
-!
-!------return.
-      return
-      end subroutine UWWORD
-
-      SUBROUTINE URWORD(LINE,ICOL,ISTART,ISTOP,NCODE,N,R,IOUT,IN)
-!C     ******************************************************************
-!C     ROUTINE TO EXTRACT A WORD FROM A LINE OF TEXT, AND OPTIONALLY
-!C     CONVERT THE WORD TO A NUMBER.
-!C        ISTART AND ISTOP WILL BE RETURNED WITH THE STARTING AND
-!C          ENDING CHARACTER POSITIONS OF THE WORD.
-!C        THE LAST CHARACTER IN THE LINE IS SET TO BLANK SO THAT IF ANY
-!C          PROBLEMS OCCUR WITH FINDING A WORD, ISTART AND ISTOP WILL
-!C          POINT TO THIS BLANK CHARACTER.  THUS, A WORD WILL ALWAYS BE
-!C          RETURNED UNLESS THERE IS A NUMERIC CONVERSION ERROR.  BE SURE
-!C          THAT THE LAST CHARACTER IN LINE IS NOT AN IMPORTANT CHARACTER
-!C          BECAUSE IT WILL ALWAYS BE SET TO BLANK.
-!C        A WORD STARTS WITH THE FIRST CHARACTER THAT IS NOT A SPACE OR
-!C          COMMA, AND ENDS WHEN A SUBSEQUENT CHARACTER THAT IS A SPACE
-!C          OR COMMA.  NOTE THAT THESE PARSING RULES DO NOT TREAT TWO
-!C          COMMAS SEPARATED BY ONE OR MORE SPACES AS A NULL WORD.
-!C        FOR A WORD THAT BEGINS WITH "'" OR '"', THE WORD STARTS WITH
-!C          THE CHARACTER AFTER THE QUOTE AND ENDS WITH THE CHARACTER
-!C          PRECEDING A SUBSEQUENT QUOTE.  THUS, A QUOTED WORD CAN
-!C          INCLUDE SPACES AND COMMAS.  THE QUOTED WORD CANNOT CONTAIN
-!C          A QUOTE CHARACTER OF THE SAME TYPE WITHIN THE WORD BUT
-!C          CAN CONTAIN A DIFFERENT QUOTE CHARACTER.  FOR EXAMPLE,
-!C          "WORD'S" OR 'WORD"S'.
-!C        IF NCODE IS 1, THE WORD IS CONVERTED TO UPPER CASE.
-!C        IF NCODE IS 2, THE WORD IS CONVERTED TO AN INTEGER.
-!C        IF NCODE IS 3, THE WORD IS CONVERTED TO A REAL NUMBER.
-!C        NUMBER CONVERSION ERROR IS WRITTEN TO UNIT IOUT IF IOUT IS
-!C          POSITIVE; ERROR IS WRITTEN TO DEFAULT OUTPUT IF IOUT IS 0;
-!C          NO ERROR MESSAGE IS WRITTEN IF IOUT IS NEGATIVE.
-!C     ******************************************************************
-!C
-!C        SPECIFICATIONS:
-!C     ------------------------------------------------------------------
-      integer(I4B), intent(inout) :: n
-      real(DP),intent(inout) :: r
-      CHARACTER(len=*) LINE
-      CHARACTER(len=20) STRING
-      CHARACTER(len=30) RW
-      CHARACTER(len=1) TAB
-      CHARACTER(len=1) CHAREND
-      character(len=200) :: msg
-      character(len=LINELENGTH) :: msg_line
-!C     ------------------------------------------------------------------
-      TAB=CHAR(9)
-!C
-!C1------Set last char in LINE to blank and set ISTART and ISTOP to point
-!C1------to this blank as a default situation when no word is found.  If
-!C1------starting location in LINE is out of bounds, do not look for a
-!C1------word.
-      LINLEN=LEN(LINE)
-      LINE(LINLEN:LINLEN)=' '
-      ISTART=LINLEN
-      ISTOP=LINLEN
-      LINLEN=LINLEN-1
-      IF(ICOL.LT.1 .OR. ICOL.GT.LINLEN) GO TO 100
-!C
-!C2------Find start of word, which is indicated by first character that
-!C2------is not a blank, a comma, or a tab.
-      DO 10 I=ICOL,LINLEN
-      IF(LINE(I:I).NE.' ' .AND. LINE(I:I).NE.',' &
-     &    .AND. LINE(I:I).NE.TAB) GO TO 20
-10    CONTINUE
-      ICOL=LINLEN+1
-      GO TO 100
-!C
-!C3------Found start of word.  Look for end.
-!C3A-----When word is quoted, only a quote can terminate it.
-!C-------SEARCH FOR A SINGLE (CHAR(39)) OR DOUBLE (CHAR(34)) QUOTE
-20    IF(LINE(I:I).EQ.CHAR(34) .OR. LINE(I:I).EQ.CHAR(39)) THEN
-         IF (LINE(I:I).EQ.CHAR(34)) THEN
-           CHAREND = CHAR(34)
-         ELSE
-           CHAREND = CHAR(39)
-         END IF
-         I=I+1
-         IF(I.LE.LINLEN) THEN
-            DO 25 J=I,LINLEN
-            IF(LINE(J:J).EQ.CHAREND) GO TO 40
-25          CONTINUE
-         END IF
-!C
-!C3B-----When word is not quoted, space, comma, or tab will terminate.
-      ELSE
-         DO 30 J=I,LINLEN
-         IF(LINE(J:J).EQ.' ' .OR. LINE(J:J).EQ.',' &
-     &    .OR. LINE(J:J).EQ.TAB) GO TO 40
-30       CONTINUE
-      END IF
-!C
-!C3C-----End of line without finding end of word; set end of word to
-!C3C-----end of line.
-      J=LINLEN+1
-!C
-!C4------Found end of word; set J to point to last character in WORD and
-!C-------set ICOL to point to location for scanning for another word.
-40    ICOL=J+1
-      J=J-1
-      IF(J.LT.I) GO TO 100
-      ISTART=I
-      ISTOP=J
-!C
-!C5------Convert word to upper case and RETURN if NCODE is 1.
-      IF(NCODE.EQ.1) THEN
-         IDIFF=ICHAR('a')-ICHAR('A')
-         DO 50 K=ISTART,ISTOP
-            IF(LINE(K:K).GE.'a' .AND. LINE(K:K).LE.'z') &
-     &             LINE(K:K)=CHAR(ICHAR(LINE(K:K))-IDIFF)
-50       CONTINUE
-         RETURN
-      END IF
-!C
-!C6------Convert word to a number if requested.
-100   IF(NCODE.EQ.2 .OR. NCODE.EQ.3) THEN
-         RW=' '
-         L=30-ISTOP+ISTART
-         IF(L.LT.1) GO TO 200
-         RW(L:30)=LINE(ISTART:ISTOP)
-         IF(NCODE.EQ.2) READ(RW,'(I30)',ERR=200) N
-         IF(NCODE.EQ.3) READ(RW,'(F30.0)',ERR=200) R
-      END IF
-      RETURN
-!C
-!C7------Number conversion error.
-200   IF(NCODE.EQ.3) THEN
-         STRING= 'A REAL NUMBER'
-         L=13
-      ELSE
-         STRING= 'AN INTEGER'
-         L=10
-      END IF
-!C
-!C7A-----If output unit is negative, set last character of string to 'E'.
-      IF(IOUT.LT.0) THEN
-         N=0
-         R=0.
-         LINE(LINLEN+1:LINLEN+1)='E'
-         RETURN
-!C
-!C7B-----If output unit is positive; write a message to output unit.
-      ELSE IF(IOUT.GT.0) THEN
-         IF(IN.GT.0) THEN
-            write(msg_line,201) IN,LINE(ISTART:ISTOP),STRING(1:L)
-         ELSE
-            WRITE(msg_line,202) LINE(ISTART:ISTOP),STRING(1:L)
-         END IF
-         call sim_message(msg_line, iunit=IOUT, skipbefore=1)
-         call sim_message(LINE, iunit=IOUT, fmt='(1x,a)')
-201      FORMAT(1X,'FILE UNIT ',I4,' : ERROR CONVERTING "',A,                    &
-     &          '" TO ',A,' IN LINE:')
-202      FORMAT(1X,'KEYBOARD INPUT : ERROR CONVERTING "',A,                      &
-                '" TO ',A,' IN LINE:')
-!C
-!C7C-----If output unit is 0; write a message to default output.
-      ELSE
-         IF(IN.GT.0) THEN
-            write(msg_line,201) IN,LINE(ISTART:ISTOP),STRING(1:L)
-         ELSE
-            WRITE(msg_line,202) LINE(ISTART:ISTOP),STRING(1:L)
-         END IF
-         call sim_message(msg_line, iunit=IOUT, skipbefore=1)
-         call sim_message(LINE, iunit=IOUT, fmt='(1x,a)')
-      END IF
-!C
-!C7D-----STOP after storing error message.
-      call lowcase(string)
-      if (in > 0) then
-        write(msg,205) in,line(istart:istop),trim(string)
+    else if (NCODE == TABINTEGER) then
+      write(cval, cfmt) N
+    else if (NCODE == TABREAL) then
+      write(cval, cfmt) R
+    end if
+    !
+    ! -- apply alignment to cval
+    if (len_trim(adjustl(cval)) > ILEN) then
+      cval = adjustl(cval)
+    else
+      cval = trim(adjustl(cval))
+    end if
+    if (ialign == TABCENTER) then
+      i = len_trim(cval)
+      ispace = (ILEN - i) / 2
+      if (ireal > 0) then
+        if (ipad > 0) then
+          cval = ' ' //trim(adjustl(cval))
+        else
+          cval = trim(adjustl(cval))
+        end if
       else
-        write(msg,207) line(istart:istop),trim(string)
-      endif
-205   format('File unit ',I0,': Error converting "',A, &
-     &       '" to ',A,' in following line:')
-207   format('Keyboard input: Error converting "',A, &
-     &       '" to ',A,' in following line:')
-      call store_error(msg)
-      call store_error(trim(line))
-      call store_error_unit(in)
-      !
-      END SUBROUTINE URWORD
+        cval = repeat(' ', ispace) // trim(cval)
+      end if
+    else if (ialign == TABLEFT) then
+      cval = trim(adjustl(cval))
+      if (ipad > 0) then
+        cval = ' ' //trim(adjustl(cval))
+      end if
+    else
+      cval = adjustr(cval)
+    end if
+    if (NCODE == TABUCSTRING) then
+      call UPCASE(cval)
+    end if
+    !
+    ! -- increment istop to the end of the column
+    istop = ICOL + ILEN - 1
+    !
+    ! -- write final string to line
+    write(LINE(ICOL:istop), cffmt) cval
+
+    ICOL = istop + 1
+
+    if (present(SEP)) then
+      i = len(SEP)
+      istop = ICOL + i
+      write(LINE(ICOL:istop), '(A)') SEP
+      ICOL = istop
+    end if
+    !
+    !-- return
+    return
+  end subroutine UWWORD
+
+  !> @brief Extract a word from a string
+  !!
+  !! Subroutine to extract a word from a line of text, and optionally
+  !! convert the word to a number. The last character in the line is 
+  !! set to blank so that if any problems occur with finding a word, 
+  !! istart and istop will point to this blank character. Thus, a word 
+  !! will always be returned unless there is a numeric conversion error.
+  !! Be sure that the last character in line is not an important character
+  !! because it will always be set to blank.
+  !!
+  !! A word starts with the first character that is not a space or
+  !! comma, and ends when a subsequent character that is a space
+  !! or comma. Note that these parsing rules do not treat two
+  !! commas separated by one or more spaces as a null word.
+  !!
+  !! For a word that begins with "'" or '"', the word starts with
+  !! the character after the quote and ends with the character preceding 
+  !! a subsequent quote. Thus, a quoted word can include spaces and commas.
+  !! The quoted word cannot contain a quote character of the same type 
+  !! within the word but can contain a different quote character. For 
+  !! example, "WORD'S" or 'WORD"S'.
+  !!
+  !! Number conversion error is written to unit iout if iout is positive; 
+  !! error is written to default output if iout is 0; no error message is 
+  !! written if iout is negative.
+  !!
+  !<
+  SUBROUTINE URWORD(LINE,ICOL,ISTART,ISTOP,NCODE,N,R,IOUT,IN)
+    ! -- dummy variables  
+    character(len=*) :: LINE                 !< line to parse
+    integer(I4B), intent(inout) :: icol      !< current column in line
+    integer(I4B), intent(inout) :: istart    !< starting character position of the word
+    integer(I4B), intent(inout) :: istop     !< ending character position of the word
+    integer(I4B), intent(in) :: ncode        !< word conversion flag (1) upper case, (2) integer, (3) real number
+    integer(I4B), intent(inout) :: n         !< integer data type
+    real(DP), intent(inout) :: r             !< float data type
+    integer(I4B), intent(in) :: iout         !< output listing file unit
+    integer(I4B), intent(in) :: in           !< input file unit number
+    ! -- local variables
+    CHARACTER(len=20) STRING                
+    CHARACTER(len=30) RW
+    CHARACTER(len=1) TAB
+    CHARACTER(len=1) CHAREND
+    character(len=200) :: msg
+    character(len=LINELENGTH) :: msg_line
+    !
+    ! -- code
+    TAB=CHAR(9)
+    !
+    ! -- Set last char in LINE to blank and set ISTART and ISTOP to point
+    !    to this blank as a default situation when no word is found.  If
+    !    starting location in LINE is out of bounds, do not look for a word.
+    LINLEN=LEN(LINE)
+    LINE(LINLEN:LINLEN)=' '
+    ISTART=LINLEN
+    ISTOP=LINLEN
+    LINLEN=LINLEN-1
+    IF(ICOL.LT.1 .OR. ICOL.GT.LINLEN) GO TO 100
+    !
+    ! -- Find start of word, which is indicated by first character that
+    !    is not a blank, a comma, or a tab.
+    DO 10 I=ICOL,LINLEN
+      IF(LINE(I:I).NE.' ' .AND. LINE(I:I).NE.',' .AND. &
+         LINE(I:I).NE.TAB) GO TO 20
+10  CONTINUE
+    ICOL=LINLEN+1
+    GO TO 100
+    !
+    ! -- Found start of word.  Look for end.
+    !    When word is quoted, only a quote can terminate it.
+    !    SEARCH FOR A SINGLE (CHAR(39)) OR DOUBLE (CHAR(34)) QUOTE
+20  IF(LINE(I:I).EQ.CHAR(34) .OR. LINE(I:I).EQ.CHAR(39)) THEN
+      IF (LINE(I:I).EQ.CHAR(34)) THEN
+        CHAREND = CHAR(34)
+      ELSE
+        CHAREND = CHAR(39)
+      END IF
+      I=I+1
+      IF(I.LE.LINLEN) THEN
+        DO 25 J=I,LINLEN
+          IF(LINE(J:J).EQ.CHAREND) GO TO 40
+25      CONTINUE
+      END IF
+    !
+    ! -- When word is not quoted, space, comma, or tab will terminate.
+    ELSE
+      DO 30 J=I,LINLEN
+        IF(LINE(J:J).EQ.' ' .OR. LINE(J:J).EQ.',' .OR. &
+           LINE(J:J).EQ.TAB) GO TO 40
+30    CONTINUE
+    END IF
+    !
+    ! -- End of line without finding end of word; set end of word to
+    !    end of line.
+    J=LINLEN+1
+    !
+    ! -- Found end of word; set J to point to last character in WORD and
+    !    set ICOL to point to location for scanning for another word.
+40  ICOL=J+1
+    J=J-1
+    IF(J.LT.I) GO TO 100
+    ISTART=I
+    ISTOP=J
+    !
+    ! -- Convert word to upper case and RETURN if NCODE is 1.
+    IF(NCODE.EQ.1) THEN
+      IDIFF=ICHAR('a')-ICHAR('A')
+      DO 50 K=ISTART,ISTOP
+        IF(LINE(K:K).GE.'a' .AND. LINE(K:K).LE.'z') &
+           LINE(K:K)=CHAR(ICHAR(LINE(K:K))-IDIFF)
+50    CONTINUE
+      RETURN
+    END IF
+    !
+    ! -- Convert word to a number if requested.
+100 IF(NCODE.EQ.2 .OR. NCODE.EQ.3) THEN
+      RW=' '
+      L=30-ISTOP+ISTART
+      IF(L.LT.1) GO TO 200
+      RW(L:30)=LINE(ISTART:ISTOP)
+      IF(NCODE.EQ.2) READ(RW,'(I30)',ERR=200) N
+      IF(NCODE.EQ.3) READ(RW,'(F30.0)',ERR=200) R
+    END IF
+    RETURN
+    !
+    ! -- Number conversion error.
+200 IF(NCODE.EQ.3) THEN
+      STRING= 'A REAL NUMBER'
+      L=13
+    ELSE
+      STRING= 'AN INTEGER'
+      L=10
+    END IF
+    !
+    ! -- If output unit is negative, set last character of string to 'E'.
+    IF(IOUT.LT.0) THEN
+      N=0
+      R=0.
+      LINE(LINLEN+1:LINLEN+1)='E'
+      RETURN
+    !
+    ! -- If output unit is positive; write a message to output unit.
+    ELSE IF(IOUT.GT.0) THEN
+      IF(IN.GT.0) THEN
+        write(msg_line,201) IN,LINE(ISTART:ISTOP),STRING(1:L)
+      ELSE
+        WRITE(msg_line,202) LINE(ISTART:ISTOP),STRING(1:L)
+      END IF
+      call sim_message(msg_line, iunit=IOUT, skipbefore=1)
+      call sim_message(LINE, iunit=IOUT, fmt='(1x,a)')
+201   FORMAT(1X,'FILE UNIT ',I4,' : ERROR CONVERTING "',A, &
+             '" TO ',A,' IN LINE:')
+202   FORMAT(1X,'KEYBOARD INPUT : ERROR CONVERTING "',A, &
+             '" TO ',A,' IN LINE:')
+    !
+    ! -- If output unit is 0; write a message to default output.
+    ELSE
+      IF(IN.GT.0) THEN
+        write(msg_line,201) IN,LINE(ISTART:ISTOP),STRING(1:L)
+      ELSE
+        WRITE(msg_line,202) LINE(ISTART:ISTOP),STRING(1:L)
+      END IF
+      call sim_message(msg_line, iunit=IOUT, skipbefore=1)
+      call sim_message(LINE, iunit=IOUT, fmt='(1x,a)')
+    END IF
+    !
+    ! -- STOP after storing error message.
+    call lowcase(string)
+    if (in > 0) then
+      write(msg,205) in,line(istart:istop),trim(string)
+    else
+      write(msg,207) line(istart:istop),trim(string)
+    endif
+205 format('File unit ',I0,': Error converting "',A, &
+           '" to ',A,' in following line:')
+207 format('Keyboard input: Error converting "',A, &
+           '" to ',A,' in following line:')
+    call store_error(msg)
+    call store_error(trim(line))
+    call store_error_unit(in)
+    !
+    ! -- return
+END SUBROUTINE URWORD
 
       SUBROUTINE ULSTLB(IOUT,LABEL,CAUX,NCAUX,NAUX)
 !C     ******************************************************************
@@ -1349,7 +1355,7 @@ module InputOutputModule
     real(DP), intent(in) :: delt
     real(DP), intent(in) :: pertim
     real(DP), intent(in) :: totim
-    ! -- local
+    ! -- local variables
     integer(I4B) :: n
     ! -- format
     character(len=*), parameter :: fmt = &
@@ -1390,7 +1396,7 @@ module InputOutputModule
     real(DP), intent(in) :: q
     integer(I4B), intent(in) :: naux
     real(DP), dimension(naux), intent(in) :: aux
-    ! -- local
+    ! -- local variables
     integer(I4B) :: nn
 ! ------------------------------------------------------------------------------
     !
@@ -1420,7 +1426,7 @@ module InputOutputModule
     real(DP), intent(in) :: q
     integer(I4B), intent(in) :: naux
     real(DP), dimension(naux), intent(in) :: aux
-    ! -- local
+    ! -- local variables
     integer(I4B) :: nn
 ! ------------------------------------------------------------------------------
     !
@@ -1438,9 +1444,9 @@ module InputOutputModule
   logical function same_word(word1, word2)
     ! Perform a case-insensitive comparison of two words
     implicit none
-    ! -- dummy variables
+    ! -- dummy variables variables
     character(len=*), intent(in) :: word1, word2
-    ! -- local
+    ! -- local variables
     character(len=200) :: upword1, upword2
     !
     upword1 = word1
@@ -1458,7 +1464,7 @@ module InputOutputModule
     implicit none
     ! -- return
     integer(I4B) :: get_node
-    ! -- dummy
+    ! -- dummy variables
     integer(I4B), intent(in) :: ilay, irow, icol, nlay, nrow, ncol
     !
     if (nlay>0 .and. nrow>0 .and. ncol>0) then
@@ -1480,7 +1486,7 @@ module InputOutputModule
     ! dimensions.  If nodenumber is invalid, set irow, icol, and
     ! ilay to -1
     implicit none
-    ! -- dummy
+    ! -- dummy variables
     integer(I4B), intent(in) :: nodenumber
     integer(I4B), intent(in) :: nrow
     integer(I4B), intent(in) :: ncol
@@ -1488,7 +1494,7 @@ module InputOutputModule
     integer(I4B), intent(out) :: irow
     integer(I4B), intent(out) :: icol
     integer(I4B), intent(out) :: ilay
-    ! -- local
+    ! -- local variables
     integer(I4B) :: nodes
     integer(I4B) :: ij
     !
@@ -1512,13 +1518,13 @@ module InputOutputModule
     ! dimensions.  If nodenumber is invalid, set irow, icol, and
     ! ilay to -1
     implicit none
-    ! -- dummy
+    ! -- dummy variables
     integer(I4B), intent(in) :: nodenumber
     integer(I4B), intent(in) :: ncpl
     integer(I4B), intent(in) :: nlay
     integer(I4B), intent(out) :: icpl
     integer(I4B), intent(out) :: ilay
-    ! -- local
+    ! -- local variables
     integer(I4B) :: nodes
     !
     nodes = ncpl * nlay
@@ -1534,9 +1540,9 @@ module InputOutputModule
   end subroutine get_jk
 
   subroutine unitinquire(iu)
-    ! -- dummy
+    ! -- dummy variables
     integer(I4B) :: iu
-    ! -- local
+    ! -- local variables
     character(len=LINELENGTH) :: line
     character(len=100) :: fname, ac, act, fm, frm, seq, unf
     ! -- format
@@ -1567,13 +1573,13 @@ module InputOutputModule
     ! are not recognized as delimiters.
     use ConstantsModule, only: LINELENGTH
     implicit none
-    ! -- dummy
+    ! -- dummy variables
     character(len=*), intent(in) :: line
     integer(I4B), intent(inout) :: nwords
     character(len=*), allocatable, dimension(:), intent(inout) :: words
     integer(I4B), intent(in), optional :: inunit
     character(len=*), intent(in), optional :: filename
-    ! -- local
+    ! -- local variables
     integer(I4B) :: i, idum, istart, istop, linelen, lloc
     real(DP) :: rdum
     !
@@ -1607,14 +1613,14 @@ module InputOutputModule
     !    Specifications:
     ! --------------------------------------------------------------------------
     implicit none
-    ! -- dummy
+    ! -- dummy variables
     integer(I4B), intent(in) :: ncol, nrow, kstp, kper, ilay, iout
     real(DP),dimension(ncol,nrow), intent(in) :: buf
     character(len=*), intent(in) :: text
     character(len=*), intent(in) :: userfmt
     integer(I4B), intent(in) :: nvalues, nwidth
     character(len=1), intent(in) :: editdesc
-    ! -- local
+    ! -- local variables
     integer(I4B) :: i, j, nspaces
     ! formats
     1 format('1',/2X,A,' IN LAYER ',I3,' AT END OF TIME STEP ',I3, &
@@ -1648,35 +1654,6 @@ module InputOutputModule
     return
   end subroutine ulaprufw
 
-  ! function linear_interpolate(t0, t1, y0, y1, t) result(y)
-  !   implicit none
-  !   ! -- dummy
-  !   real(DP), intent(in) :: t, t0, t1, y0, y1
-  !   real(DP)             :: y
-  !   ! -- local
-  !   real(DP) :: delt, dely, slope
-  !   character(len=100) :: msg
-  !   !
-  !   ! -- don't get bitten by rounding errors or divide-by-zero
-  !   if (is_same(t0, t1) .or. is_same(t, t1)) then
-  !     y = y1
-  !   elseif (t == t0) then
-  !     y = y0
-  !   elseif ((t0 < t .and. t < t1) .or. (t1 < t .and. t < t0)) then
-  !     ! -- perform linear interpolation
-  !     delt = t1 - t0
-  !     dely = y1 - y0
-  !     slope = dely / delt
-  !     y = y0 + slope * (t - t0)
-  !   else
-  !     ! -- t is outside range t0 to t1
-  !     msg = 'Error: in linear_interpolate, t is outside range t0 to t1'
-  !     call store_error(msg, terminate=.TRUE.)
-  !   endif
-  !   !
-  !   return
-  ! end function linear_interpolate
-
   function read_line(iu, eof) result (astring)
     ! This function reads a line of arbitrary length and returns
     ! it.  The returned string can be stored in a deferred-length
@@ -1690,11 +1667,11 @@ module InputOutputModule
     !    my_string = read_line(iu, eof)
     !
     implicit none
-    ! -- dummy
+    ! -- dummy variables
     integer(I4B), intent(in)           :: iu
     logical, intent(out)          :: eof
     character(len=:), allocatable :: astring
-    ! -- local
+    ! -- local variables
     integer(I4B)        :: isize, istat
     character(len=256)  :: buffer
     character(len=1000) :: ermsg, fname
@@ -1746,10 +1723,10 @@ module InputOutputModule
 
   subroutine GetFileFromPath(pathname, filename)
     implicit none
-    ! -- dummy
+    ! -- dummy variables
     character(len=*), intent(in) :: pathname
     character(len=*), intent(out) :: filename
-    ! -- local
+    ! -- local variables
     integer(I4B) :: i, istart, istop, lenpath
     character(len=1) :: fs = '/'
     character(len=1) :: bs = '\'
@@ -1781,12 +1758,12 @@ module InputOutputModule
     ! If token is not an integer(I4B), assume it is a boundary name, return NAMEDBOUNDFLAG
     ! in idnum, convert string to uppercase and return it in bndname.
     implicit none
-    ! -- dummy
+    ! -- dummy variables
     character(len=*),            intent(inout) :: line
     integer(I4B),                     intent(inout) :: icol, istart, istop
     integer(I4B),                     intent(out)   :: idnum
     character(len=LENBOUNDNAME), intent(out)   :: bndname
-    ! -- local
+    ! -- local variables
     integer(I4B) :: istat, ndum, ncode=0
     real(DP) :: rdum
     !
@@ -1816,7 +1793,7 @@ module InputOutputModule
     use ConstantsModule,     only: LENAUXNAME
     ! -- implicit
     implicit none
-    ! -- dummy
+    ! -- dummy variables
     integer(I4B), intent(inout) :: naux
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
@@ -1826,8 +1803,9 @@ module InputOutputModule
     character(len=LENAUXNAME), allocatable, dimension(:), intent(inout) :: auxname
     character(len=*), intent(inout) :: line
     character(len=*), intent(in) :: text
-    ! -- local
+    ! -- local variables
     integer(I4B) :: n, linelen
+    integer(I4B) :: iauxlen
     real(DP) :: rval
 ! ------------------------------------------------------------------------------
     linelen = len(line)
@@ -1839,8 +1817,17 @@ module InputOutputModule
     endif
     auxloop: do
       call urword(line, lloc, istart, istop, 1, n, rval, iout, inunit)
-      !if(lloc >= linelen) exit auxloop
       if (istart >= linelen) exit auxloop
+      iauxlen = istop - istart + 1
+      if (iauxlen > LENAUXNAME) then
+        write (errmsg, '(a, a, a, i0, a, i0, a)') &
+          'Found auxiliary variable (', line(istart:istop), &
+          ') with a name of size ', iauxlen, &
+          '. Auxiliary variable names must be len than or equal&
+          & to ', LENAUXNAME, ' characters.'
+        call store_error(errmsg)
+        call store_error_unit(inunit)
+      end if      
       naux = naux + 1
       call ExpandArray(auxname)
       auxname(naux) = line(istart:istop)
@@ -1849,7 +1836,8 @@ module InputOutputModule
           trim(adjustl(text)), auxname(naux)
       endif
     enddo auxloop
-
+    !
+    return
   end subroutine urdaux
 
   subroutine print_format(linein, cdatafmp, editdesc, nvaluesp, nwidthp, inunit)
@@ -1875,14 +1863,14 @@ module InputOutputModule
 ! A default value should be passed in for editdesc as G, I, E, F, or S.
 ! If I is passed in, then the fortran format will be for an integer variable.
 ! ------------------------------------------------------------------------------
-    ! -- dummy
+    ! -- dummy variables
     character(len=*), intent(in) :: linein
     character(len=*), intent(inout) :: cdatafmp
     character(len=*), intent(inout) :: editdesc
     integer(I4B), intent(inout) :: nvaluesp
     integer(I4B), intent(inout) :: nwidthp
     integer(I4B), intent(in) :: inunit
-    ! -- local
+    ! -- local variables
     character(len=len(linein)) :: line
     character(len=20), dimension(:), allocatable :: words
     character(len=100) :: ermsg
@@ -1997,11 +1985,11 @@ module InputOutputModule
   subroutine BuildFixedFormat(nvalsp, nwidp, ndig, outfmt, prowcolnum)
     ! Build a fixed format for printing or saving a real array
     implicit none
-    ! -- dummy
+    ! -- dummy variables
     integer(I4B), intent(in) :: nvalsp, nwidp, ndig
     character(len=*), intent(inout) :: outfmt
     logical, intent(in), optional :: prowcolnum  ! default true
-    ! -- local
+    ! -- local variables
     character(len=8)   :: cvalues, cwidth, cdigits
     character(len=60)  :: ufmt
     logical :: prowcolnumlocal
@@ -2048,12 +2036,12 @@ module InputOutputModule
   subroutine BuildFloatFormat(nvalsp, nwidp, ndig, editdesc, outfmt, prowcolnum)
     ! Build a floating-point format for printing or saving a real array
     implicit none
-    ! -- dummy
+    ! -- dummy variables
     integer(I4B), intent(in) :: nvalsp, nwidp, ndig
     character(len=*), intent(in) :: editdesc
     character(len=*), intent(inout) :: outfmt
     logical, intent(in), optional :: prowcolnum  ! default true
-    ! -- local
+    ! -- local variables
     character(len=8)   :: cvalues,  cwidth, cdigits
     character(len=60)  :: ufmt
     logical :: prowcolnumlocal
@@ -2111,11 +2099,11 @@ module InputOutputModule
   subroutine BuildIntFormat(nvalsp, nwidp, outfmt, prowcolnum)
     ! Build a format for printing or saving an integer array
     implicit none
-    ! -- dummy
+    ! -- dummy variables
     integer(I4B), intent(in) :: nvalsp, nwidp
     character(len=*), intent(inout) :: outfmt
     logical, intent(in), optional :: prowcolnum  ! default true
-    ! -- local
+    ! -- local variables
     character(len=8)   :: cvalues, cwidth
     character(len=60)  :: ufmt
     logical :: prowcolnumlocal
@@ -2152,18 +2140,17 @@ module InputOutputModule
   end subroutine BuildIntFormat
 
 
+  !> @brief Get the number of words in a string
+  !!
+  !! Function to get the number of words in a string
+  !!
+  !<
   function get_nwords(line)
-! ******************************************************************************
-! get_nwords -- return number of words in a string
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- return variable
-    integer(I4B) :: get_nwords
-    ! -- dummy
-    character(len=*), intent(in) :: line
-    ! -- local
+    integer(I4B) :: get_nwords            !< number of words in a string
+    ! -- dummy variables
+    character(len=*), intent(in) :: line  !< line
+    ! -- local variables
     integer(I4B) :: linelen
     integer(I4B) :: lloc
     integer(I4B) :: istart
@@ -2241,12 +2228,12 @@ module InputOutputModule
 ! ------------------------------------------------------------------------------
     use, intrinsic :: iso_fortran_env, only: IOSTAT_END
     implicit none
-    ! -- dummy
+    ! -- dummy variables
     integer(I4B),         intent(in) :: iin
     integer(I4B),         intent(in) :: iout
     character (len=:), allocatable, intent(inout) :: line
     integer(I4B),        intent(out) :: ierr
-    ! -- local definitions
+    ! -- local variables
     character (len=:), allocatable :: linetemp
     character (len=2), parameter :: comment = '//'
     character(len=1), parameter  :: tab = CHAR(9)
@@ -2341,11 +2328,11 @@ module InputOutputModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    ! -- dummy
+    ! -- dummy variables
     integer(I4B), intent(in) :: lun
     character(len=:), intent(out), allocatable :: line
     integer(I4B), intent(out) :: iostat
-    ! -- local
+    ! -- local variables
     integer(I4B), parameter :: buffer_len = MAXCHARLEN
     character(len=buffer_len) :: buffer
     character(len=:), allocatable :: linetemp

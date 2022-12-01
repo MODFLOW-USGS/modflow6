@@ -1,11 +1,11 @@
 module ghbmodule
   use KindModule, only: DP, I4B
-  use ConstantsModule,              only: DZERO, LENFTYPE, LENPACKAGENAME
-  use MemoryHelperModule,           only: create_mem_path
-  use BndModule,                    only: BndType
-  use ObsModule,                    only: DefaultObsIdProcessor
-  use TimeSeriesLinkModule,         only: TimeSeriesLinkType,                  &
-                                          GetTimeSeriesLinkFromList
+  use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME
+  use MemoryHelperModule, only: create_mem_path
+  use BndModule, only: BndType
+  use ObsModule, only: DefaultObsIdProcessor
+  use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
+                                  GetTimeSeriesLinkFromList
   !
   implicit none
   !
@@ -13,8 +13,8 @@ module ghbmodule
   public :: ghb_create
   public :: GhbType
   !
-  character(len=LENFTYPE)       :: ftype = 'GHB'
-  character(len=LENPACKAGENAME) :: text  = '             GHB'
+  character(len=LENFTYPE) :: ftype = 'GHB'
+  character(len=LENPACKAGENAME) :: text = '             GHB'
   !
   type, extends(BndType) :: GhbType
   contains
@@ -43,10 +43,10 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(BndType), pointer :: packobj
-    integer(I4B),intent(in) :: id
-    integer(I4B),intent(in) :: ibcnum
-    integer(I4B),intent(in) :: inunit
-    integer(I4B),intent(in) :: iout
+    integer(I4B), intent(in) :: id
+    integer(I4B), intent(in) :: ibcnum
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
     ! -- local
@@ -54,7 +54,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
-    allocate(ghbobj)
+    allocate (ghbobj)
     packobj => ghbobj
     !
     ! -- create name and memory path
@@ -67,13 +67,13 @@ contains
     ! -- initialize package
     call packobj%pack_initialize()
     !
-    packobj%inunit=inunit
-    packobj%iout=iout
-    packobj%id=id
+    packobj%inunit = inunit
+    packobj%iout = iout
+    packobj%id = id
     packobj%ibcnum = ibcnum
-    packobj%ncolbnd=2
-    packobj%iscloc=2
-    packobj%ictMemPath = create_mem_path(namemodel,'NPF')
+    packobj%ncolbnd = 2
+    packobj%iscloc = 2
+    packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
     ! -- return
     return
@@ -89,20 +89,20 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GhbType),   intent(inout) :: this
+    class(GhbType), intent(inout) :: this
     character(len=*), intent(inout) :: option
-    logical,          intent(inout) :: found
+    logical, intent(inout) :: found
 ! ------------------------------------------------------------------------------
     !
     select case (option)
-      case('MOVER')
-        this%imover = 1
-        write(this%iout, '(4x,A)') 'MOVER OPTION ENABLED'
-        found = .true.
-      case default
-        !
-        ! -- No options found
-        found = .false.
+    case ('MOVER')
+      this%imover = 1
+      write (this%iout, '(4x,A)') 'MOVER OPTION ENABLED'
+      found = .true.
+    case default
+      !
+      ! -- No options found
+      found = .false.
     end select
     !
     ! -- return
@@ -120,7 +120,7 @@ contains
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, count_errors, store_error_unit
     ! -- dummy
-    class(GhbType),intent(inout) :: this
+    class(GhbType), intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg
     integer(I4B) :: i
@@ -128,19 +128,19 @@ contains
     real(DP) :: bt
     ! -- formats
     character(len=*), parameter :: fmtghberr = &
-      "('GHB BOUNDARY (',i0,') HEAD (',f10.3,') IS LESS THAN CELL " // &
-      "BOTTOM (',f10.3,')')"
+      "('GHB BOUNDARY (',i0,') HEAD (',f10.3,') IS LESS THAN CELL &
+      &BOTTOM (',f10.3,')')"
 ! ------------------------------------------------------------------------------
     !
     ! -- check stress period data
     do i = 1, this%nbound
-        node = this%nodelist(i)
-        bt = this%dis%bot(node)
-        ! -- accumulate errors
-        if (this%bound(1,i) < bt .and. this%icelltype(node) /= 0) then
-          write(errmsg, fmt=fmtghberr) i, this%bound(1,i), bt
-          call store_error(errmsg)
-        end if
+      node = this%nodelist(i)
+      bt = this%dis%bot(node)
+      ! -- accumulate errors
+      if (this%bound(1, i) < bt .and. this%icelltype(node) /= 0) then
+        write (errmsg, fmt=fmtghberr) i, this%bound(1, i), bt
+        call store_error(errmsg)
+      end if
     end do
     !
     !write summary of ghb package error messages
@@ -170,25 +170,25 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Return if no ghbs
-    if(this%nbound.eq.0) return
+    if (this%nbound .eq. 0) return
     !
     ! -- packmvrobj cf
     lrm = .true.
     if (present(reset_mover)) lrm = reset_mover
-    if(this%imover == 1 .and. lrm) then
+    if (this%imover == 1 .and. lrm) then
       call this%pakmvrobj%cf()
-    endif
+    end if
     !
     ! -- Calculate hcof and rhs for each ghb entry
-    do i=1,this%nbound
-        node=this%nodelist(i)
-        if(this%ibound(node).le.0) then
-          this%hcof(i)=DZERO
-          this%rhs(i)=DZERO
-          cycle
-        endif
-        this%hcof(i) = -this%bound(2,i)
-        this%rhs(i) = -this%bound(2,i) * this%bound(1,i)
+    do i = 1, this%nbound
+      node = this%nodelist(i)
+      if (this%ibound(node) .le. 0) then
+        this%hcof(i) = DZERO
+        this%rhs(i) = DZERO
+        cycle
+      end if
+      this%hcof(i) = -this%bound(2, i)
+      this%rhs(i) = -this%bound(2, i) * this%bound(1, i)
     end do
     !
     ! -- return
@@ -214,9 +214,9 @@ contains
 ! --------------------------------------------------------------------------
     !
     ! -- pakmvrobj fc
-    if(this%imover == 1) then
+    if (this%imover == 1) then
       call this%pakmvrobj%fc()
-    endif
+    end if
     !
     ! -- Copy package rhs and hcof into solution rhs and amat
     do i = 1, this%nbound
@@ -227,13 +227,13 @@ contains
       !
       ! -- If mover is active and this boundary is discharging,
       !    store available water (as positive value).
-      bhead = this%bound(1,i)
-      if(this%imover == 1 .and. this%xnew(n) > bhead) then
-        cond = this%bound(2,i)
+      bhead = this%bound(1, i)
+      if (this%imover == 1 .and. this%xnew(n) > bhead) then
+        cond = this%bound(2, i)
         qghb = cond * (this%xnew(n) - bhead)
         call this%pakmvrobj%accumulate_qformvr(i, qghb)
-      endif
-    enddo
+      end if
+    end do
     !
     ! -- return
     return
@@ -251,22 +251,22 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- create the header list label
-    this%listlabel = trim(this%filtyp) // ' NO.'
-    if(this%dis%ndim == 3) then
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'ROW'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'COL'
-    elseif(this%dis%ndim == 2) then
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'CELL2D'
+    this%listlabel = trim(this%filtyp)//' NO.'
+    if (this%dis%ndim == 3) then
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'ROW'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'COL'
+    elseif (this%dis%ndim == 2) then
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'LAYER'
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'CELL2D'
     else
-      write(this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
-    endif
-    write(this%listlabel, '(a, a16)') trim(this%listlabel), 'STAGE'
-    write(this%listlabel, '(a, a16)') trim(this%listlabel), 'CONDUCTANCE'
-    if(this%inamedbound == 1) then
-      write(this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
-    endif
+      write (this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
+    end if
+    write (this%listlabel, '(a, a16)') trim(this%listlabel), 'STAGE'
+    write (this%listlabel, '(a, a16)') trim(this%listlabel), 'CONDUCTANCE'
+    if (this%inamedbound == 1) then
+      write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
+    end if
     !
     ! -- return
     return
@@ -275,36 +275,36 @@ contains
   ! -- Procedures related to observations
 
   logical function ghb_obs_supported(this)
-  ! ******************************************************************************
-  ! ghb_obs_supported
-  !   -- Return true because GHB package supports observations.
-  !   -- Overrides BndType%bnd_obs_supported()
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
+    ! ******************************************************************************
+    ! ghb_obs_supported
+    !   -- Return true because GHB package supports observations.
+    !   -- Overrides BndType%bnd_obs_supported()
+    ! ******************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! ------------------------------------------------------------------------------
     implicit none
     class(GhbType) :: this
-  ! ------------------------------------------------------------------------------
+    ! ------------------------------------------------------------------------------
     ghb_obs_supported = .true.
     return
   end function ghb_obs_supported
 
   subroutine ghb_df_obs(this)
-  ! ******************************************************************************
-  ! ghb_df_obs (implements bnd_df_obs)
-  !   -- Store observation type supported by GHB package.
-  !   -- Overrides BndType%bnd_df_obs
-  ! ******************************************************************************
-  !
-  !    SPECIFICATIONS:
-  ! ------------------------------------------------------------------------------
+    ! ******************************************************************************
+    ! ghb_df_obs (implements bnd_df_obs)
+    !   -- Store observation type supported by GHB package.
+    !   -- Overrides BndType%bnd_df_obs
+    ! ******************************************************************************
+    !
+    !    SPECIFICATIONS:
+    ! ------------------------------------------------------------------------------
     implicit none
     ! -- dummy
     class(GhbType) :: this
     ! -- local
     integer(I4B) :: indx
-  ! ------------------------------------------------------------------------------
+    ! ------------------------------------------------------------------------------
     call this%obs%StoreObsType('ghb', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
     !
@@ -331,7 +331,7 @@ contains
     type(TimeSeriesLinkType), pointer :: tslink => null()
     !
     nlinks = this%TsManager%boundtslinks%Count()
-    do i=1,nlinks
+    do i = 1, nlinks
       tslink => GetTimeSeriesLinkFromList(this%TsManager%boundtslinks, i)
       if (associated(tslink)) then
         select case (tslink%JCol)
@@ -340,8 +340,8 @@ contains
         case (2)
           tslink%Text = 'COND'
         end select
-      endif
-    enddo
+      end if
+    end do
     !
     return
   end subroutine ghb_rp_ts

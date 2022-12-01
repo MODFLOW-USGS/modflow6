@@ -1,20 +1,20 @@
 module BaseExchangeModule
-  
-  use KindModule,         only: DP, I4B, LGP
-  use ConstantsModule,    only: LENEXCHANGENAME, LENMEMPATH
-  use ListModule,         only: ListType  
-  use BaseModelModule,    only: BaseModelType
+
+  use KindModule, only: DP, I4B, LGP
+  use ConstantsModule, only: LENEXCHANGENAME, LENMEMPATH
+  use ListModule, only: ListType
+  use BaseModelModule, only: BaseModelType
 
   implicit none
-  
+
   private
   public :: BaseExchangeType, AddBaseExchangeToList, GetBaseExchangeFromList
   private :: CastAsBaseExchangeClass
-  
+
   type, abstract :: BaseExchangeType
-    character(len=LENEXCHANGENAME)   :: name                !< the name of this exchange
-    character(len=LENMEMPATH)        :: memoryPath          !< the location in the memory manager where the variables are stored
-    integer(I4B)                     :: id
+    character(len=LENEXCHANGENAME) :: name !< the name of this exchange
+    character(len=LENMEMPATH) :: memoryPath !< the location in the memory manager where the variables are stored
+    integer(I4B) :: id
   contains
     procedure(exg_df), deferred :: exg_df
     procedure(exg_ar), deferred :: exg_ar
@@ -39,9 +39,9 @@ module BaseExchangeModule
     end subroutine
 
   end interface
-  
-  contains
-     
+
+contains
+
   subroutine exg_rp(this)
 ! ******************************************************************************
 ! exg_rp -- Read and prepare
@@ -63,7 +63,7 @@ module BaseExchangeModule
     ! -- Return
     return
   end subroutine exg_rp
-  
+
   subroutine exg_calculate_delt(this)
 ! ******************************************************************************
 ! exg_calculate_delt -- Calculate time step length
@@ -81,7 +81,7 @@ module BaseExchangeModule
     ! -- Return
     return
   end subroutine exg_calculate_delt
-      
+
   subroutine exg_ot(this)
 ! ******************************************************************************
 ! exg_ot -- Output
@@ -97,7 +97,7 @@ module BaseExchangeModule
     ! -- Return
     return
   end subroutine exg_ot
-  
+
   subroutine exg_fp(this)
 ! ******************************************************************************
 ! exg_fp -- Final processing
@@ -113,7 +113,7 @@ module BaseExchangeModule
     ! -- Return
     return
   end subroutine exg_fp
-  
+
   subroutine exg_da(this)
 ! ******************************************************************************
 ! exg_da -- Deallocate
@@ -134,15 +134,15 @@ module BaseExchangeModule
   !! added to the solution where the model resides
   !<
   function connects_model(this, model) result(is_connected)
-    class(BaseExchangeType) :: this                     !< the instance of the exchange
-    class(BaseModelType), pointer, intent(in) :: model  !< the model to which the exchange might hold a connection
-    logical(LGP) :: is_connected                        !< true, when connected
+    class(BaseExchangeType) :: this !< the instance of the exchange
+    class(BaseModelType), pointer, intent(in) :: model !< the model to which the exchange might hold a connection
+    logical(LGP) :: is_connected !< true, when connected
 
     is_connected = .false.
 
   end function
 
-  function CastAsBaseExchangeClass(obj) result (res)
+  function CastAsBaseExchangeClass(obj) result(res)
 ! ******************************************************************************
 ! CastAsBaseExchangeClass
 ! ******************************************************************************
@@ -173,7 +173,7 @@ module BaseExchangeModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    type(ListType),       intent(inout) :: list
+    type(ListType), intent(inout) :: list
     class(BaseExchangeType), pointer, intent(inout) :: exchange
     ! -- local
     class(*), pointer :: obj
@@ -184,8 +184,8 @@ module BaseExchangeModule
     !
     return
   end subroutine AddBaseExchangeToList
-  
-  function GetBaseExchangeFromList(list, idx) result (res)
+
+  function GetBaseExchangeFromList(list, idx) result(res)
 ! ******************************************************************************
 ! GetBaseExchangeFromList
 ! ******************************************************************************
@@ -193,9 +193,9 @@ module BaseExchangeModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    type(ListType),       intent(inout) :: list
-    integer(I4B),              intent(in)    :: idx
-    class(BaseExchangeType), pointer    :: res
+    type(ListType), intent(inout) :: list
+    integer(I4B), intent(in) :: idx
+    class(BaseExchangeType), pointer :: res
     ! -- local
     class(*), pointer :: obj
 ! ------------------------------------------------------------------------------

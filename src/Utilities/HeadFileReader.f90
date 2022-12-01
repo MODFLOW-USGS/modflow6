@@ -4,12 +4,12 @@ module HeadFileReaderModule
   use ConstantsModule, only: LINELENGTH
 
   implicit none
-  
+
   private
   public :: HeadFileReaderType
-  
+
   type :: HeadFileReaderType
-    
+
     integer(I4B) :: inunit
     character(len=16) :: text
     integer(I4B) :: nlay
@@ -22,17 +22,17 @@ module HeadFileReaderModule
     real(DP) :: pertim
     real(DP) :: totim
     real(DP), dimension(:), allocatable :: head
-  
+
   contains
-  
+
     procedure :: initialize
     procedure :: read_record
     procedure :: finalize
-  
+
   end type HeadFileReaderType
-  
-  contains
-  
+
+contains
+
   subroutine initialize(this, iu, iout)
 ! ******************************************************************************
 ! initialize
@@ -56,27 +56,27 @@ module HeadFileReaderModule
     call this%read_record(success)
     kstp_last = this%kstp
     kper_last = this%kper
-    rewind(this%inunit)
+    rewind (this%inunit)
     !
     ! -- Determine number of records within a time step
     if (iout > 0) &
-      write(iout, '(a)') &
-        'Reading binary file to determine number of records per time step.'
+      write (iout, '(a)') &
+      'Reading binary file to determine number of records per time step.'
     do
       call this%read_record(success, iout)
       if (.not. success) exit
       if (kstp_last /= this%kstp .or. kper_last /= this%kper) exit
       this%nlay = this%nlay + 1
-    enddo
-    rewind(this%inunit)
+    end do
+    rewind (this%inunit)
     if (iout > 0) &
-    write(iout, '(a, i0, a)') 'Detected ', this%nlay, &
+      write (iout, '(a, i0, a)') 'Detected ', this%nlay, &
       ' unique records in binary file.'
     !
     ! -- return
     return
   end subroutine initialize
-  
+
   subroutine read_record(this, success, iout_opt)
 ! ******************************************************************************
 ! read_record
@@ -99,48 +99,48 @@ module HeadFileReaderModule
       iout = iout_opt
     else
       iout = 0
-    endif
+    end if
     !
     this%kstp = 0
     this%kper = 0
     success = .true.
     this%kstpnext = 0
     this%kpernext = 0
-    read(this%inunit, iostat=iostat) this%kstp, this%kper, this%pertim, &
+    read (this%inunit, iostat=iostat) this%kstp, this%kper, this%pertim, &
       this%totim, this%text, ncol, nrow, ilay
     if (iostat /= 0) then
       success = .false.
       if (iostat < 0) this%endoffile = .true.
       return
-    endif
+    end if
     !
     ! -- allocate head to proper size
     if (.not. allocated(this%head)) then
-      allocate(this%head(ncol*nrow))
+      allocate (this%head(ncol * nrow))
     else
-      if (size(this%head) /= ncol*nrow) then
-        deallocate(this%head)
-        allocate(this%head(ncol*nrow))
-      endif
-    endif
+      if (size(this%head) /= ncol * nrow) then
+        deallocate (this%head)
+        allocate (this%head(ncol * nrow))
+      end if
+    end if
     !
     ! -- read the head array
-    read(this%inunit) this%head
+    read (this%inunit) this%head
     !
     ! -- look ahead to next kstp and kper, then backup if read successfully
     if (.not. this%endoffile) then
-      read(this%inunit, iostat=iostat) this%kstpnext, this%kpernext
+      read (this%inunit, iostat=iostat) this%kstpnext, this%kpernext
       if (iostat == 0) then
         call fseek_stream(this%inunit, -2 * I4B, 1, iostat)
       else if (iostat < 0) then
         this%endoffile = .true.
-      endif
-    endif
+      end if
+    end if
     !
     ! -- return
     return
   end subroutine read_record
-  
+
   subroutine finalize(this)
 ! ******************************************************************************
 ! budgetdata_finalize
@@ -150,11 +150,11 @@ module HeadFileReaderModule
 ! ------------------------------------------------------------------------------
     class(HeadFileReaderType) :: this
 ! ------------------------------------------------------------------------------
-    close(this%inunit)
-    if(allocated(this%head)) deallocate(this%head)
+    close (this%inunit)
+    if (allocated(this%head)) deallocate (this%head)
     !
     ! -- return
     return
   end subroutine finalize
-  
+
 end module HeadFileReaderModule

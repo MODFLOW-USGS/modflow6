@@ -14,24 +14,24 @@ module NumericalModelModule
             GetNumericalModelFromList
 
   type, extends(BaseModelType) :: NumericalModelType
-    character(len=LINELENGTH), pointer              :: filename => null()        !input file name
-    integer(I4B), pointer                           :: neq      => null()        !number of equations
-    integer(I4B), pointer                           :: nja      => null()        !number of connections
-    integer(I4B), pointer                           :: moffset  => null()        !offset of this model in the solution
-    integer(I4B), pointer                           :: icnvg    => null()        !convergence flag
-    integer(I4B), dimension(:), pointer, contiguous :: ia       => null()        !csr row pointer
-    integer(I4B), dimension(:), pointer, contiguous :: ja       => null()        !csr columns
-    real(DP), dimension(:), pointer, contiguous     :: x        => null()        !dependent variable (head, conc, etc)
-    real(DP), dimension(:), pointer, contiguous     :: rhs      => null()        !right-hand side vector
-    real(DP), dimension(:), pointer, contiguous     :: cond     => null()        !conductance matrix
-    integer(I4B), dimension(:), pointer, contiguous :: idxglo   => null()        !pointer to position in solution matrix
-    real(DP), dimension(:), pointer, contiguous     :: xold     => null()        !dependent variable for previous timestep
-    real(DP), dimension(:), pointer, contiguous     :: flowja   => null()        !intercell flows
-    integer(I4B), dimension(:), pointer, contiguous :: ibound   => null()        !ibound array
+    character(len=LINELENGTH), pointer :: filename => null() !input file name
+    integer(I4B), pointer :: neq => null() !number of equations
+    integer(I4B), pointer :: nja => null() !number of connections
+    integer(I4B), pointer :: moffset => null() !offset of this model in the solution
+    integer(I4B), pointer :: icnvg => null() !convergence flag
+    integer(I4B), dimension(:), pointer, contiguous :: ia => null() !csr row pointer
+    integer(I4B), dimension(:), pointer, contiguous :: ja => null() !csr columns
+    real(DP), dimension(:), pointer, contiguous :: x => null() !dependent variable (head, conc, etc)
+    real(DP), dimension(:), pointer, contiguous :: rhs => null() !right-hand side vector
+    real(DP), dimension(:), pointer, contiguous :: cond => null() !conductance matrix
+    integer(I4B), dimension(:), pointer, contiguous :: idxglo => null() !pointer to position in solution matrix
+    real(DP), dimension(:), pointer, contiguous :: xold => null() !dependent variable for previous timestep
+    real(DP), dimension(:), pointer, contiguous :: flowja => null() !intercell flows
+    integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !ibound array
     !
     ! -- Derived types
-    type(ListType), pointer                         :: bndlist  => null()        !array of boundary packages for this model
-    class(DisBaseType), pointer                     :: dis      => null()        !discretization object
+    type(ListType), pointer :: bndlist => null() !array of boundary packages for this model
+    class(DisBaseType), pointer :: dis => null() !discretization object
 
   contains
     !
@@ -74,7 +74,7 @@ module NumericalModelModule
     procedure :: get_iasym
   end type NumericalModelType
 
-  contains
+contains
   !
   ! -- Type-bound procedures for a numerical model
   !
@@ -104,17 +104,17 @@ module NumericalModelModule
   subroutine model_ad(this)
     class(NumericalModelType) :: this
   end subroutine model_ad
-  
-  subroutine model_cf(this,kiter)
+
+  subroutine model_cf(this, kiter)
     class(NumericalModelType) :: this
-    integer(I4B),intent(in) :: kiter
+    integer(I4B), intent(in) :: kiter
   end subroutine model_cf
 
   subroutine model_fc(this, kiter, amatsln, njasln, inwtflag)
     class(NumericalModelType) :: this
-    integer(I4B),intent(in) :: kiter
-    integer(I4B),intent(in) :: njasln
-    real(DP),dimension(njasln),intent(inout) :: amatsln
+    integer(I4B), intent(in) :: kiter
+    integer(I4B), intent(in) :: njasln
+    real(DP), dimension(njasln), intent(inout) :: amatsln
     integer(I4B), intent(in) :: inwtflag
   end subroutine model_fc
 
@@ -127,32 +127,32 @@ module NumericalModelModule
   subroutine model_ptc(this, kiter, neqsln, njasln, &
                        ia, ja, x, rhs, amatsln, iptc, ptcf)
     class(NumericalModelType) :: this
-    integer(I4B),intent(in) :: kiter
+    integer(I4B), intent(in) :: kiter
     integer(I4B), intent(in) :: neqsln
-    integer(I4B),intent(in) :: njasln
-    integer(I4B), dimension(neqsln+1), intent(in) :: ia
-    integer(I4B),dimension(njasln),intent(in) :: ja
+    integer(I4B), intent(in) :: njasln
+    integer(I4B), dimension(neqsln + 1), intent(in) :: ia
+    integer(I4B), dimension(njasln), intent(in) :: ja
     real(DP), dimension(neqsln), intent(in) :: x
     real(DP), dimension(neqsln), intent(in) :: rhs
-    real(DP),dimension(njasln),intent(in) :: amatsln
+    real(DP), dimension(njasln), intent(in) :: amatsln
     integer(I4B), intent(inout) :: iptc
-    real(DP),intent(inout) :: ptcf
+    real(DP), intent(inout) :: ptcf
   end subroutine model_ptc
 
   subroutine model_nr(this, kiter, amatsln, njasln, inwtflag)
     class(NumericalModelType) :: this
-    integer(I4B),intent(in) :: kiter
-    integer(I4B),intent(in) :: njasln
-    real(DP),dimension(njasln),intent(inout) :: amatsln
+    integer(I4B), intent(in) :: kiter
+    integer(I4B), intent(in) :: njasln
+    real(DP), dimension(njasln), intent(inout) :: amatsln
     integer(I4B), intent(in) :: inwtflag
   end subroutine model_nr
 
   subroutine model_cc(this, innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
     class(NumericalModelType) :: this
-    integer(I4B),intent(in) :: innertot
-    integer(I4B),intent(in) :: kiter
-    integer(I4B),intent(in) :: iend
-    integer(I4B),intent(in) :: icnvgmod
+    integer(I4B), intent(in) :: innertot
+    integer(I4B), intent(in) :: kiter
+    integer(I4B), intent(in) :: iend
+    integer(I4B), intent(in) :: icnvgmod
     character(len=LENPAKLOC), intent(inout) :: cpak
     integer(I4B), intent(inout) :: ipak
     real(DP), intent(inout) :: dpak
@@ -171,24 +171,24 @@ module NumericalModelModule
 
   subroutine model_cq(this, icnvg, isuppress_output)
     class(NumericalModelType) :: this
-    integer(I4B),intent(in) :: icnvg
+    integer(I4B), intent(in) :: icnvg
     integer(I4B), intent(in) :: isuppress_output
   end subroutine model_cq
 
   subroutine model_bd(this, icnvg, isuppress_output)
     class(NumericalModelType) :: this
-    integer(I4B),intent(in) :: icnvg
+    integer(I4B), intent(in) :: icnvg
     integer(I4B), intent(in) :: isuppress_output
   end subroutine model_bd
 
   subroutine model_bdcalc(this, icnvg)
     class(NumericalModelType) :: this
-    integer(I4B),intent(in) :: icnvg
+    integer(I4B), intent(in) :: icnvg
   end subroutine model_bdcalc
 
   subroutine model_bdsave(this, icnvg)
     class(NumericalModelType) :: this
-    integer(I4B),intent(in) :: icnvg
+    integer(I4B), intent(in) :: icnvg
   end subroutine model_bdsave
 
   subroutine model_ot(this)
@@ -216,7 +216,7 @@ module NumericalModelModule
     call mem_deallocate(this%nja)
     call mem_deallocate(this%icnvg)
     call mem_deallocate(this%moffset)
-    deallocate(this%filename)
+    deallocate (this%filename)
     !
     ! -- Arrays
     call mem_deallocate(this%xold)
@@ -225,7 +225,7 @@ module NumericalModelModule
     !
     ! -- derived types
     call this%bndlist%Clear()
-    deallocate(this%bndlist)
+    deallocate (this%bndlist)
     !
     ! -- nullify pointers
     call mem_deallocate(this%x, 'X', this%memoryPath)
@@ -263,7 +263,7 @@ module NumericalModelModule
   subroutine allocate_scalars(this, modelname)
     use MemoryManagerModule, only: mem_allocate
     class(NumericalModelType) :: this
-    character(len=*), intent(in)  :: modelname
+    character(len=*), intent(in) :: modelname
     !
     ! -- allocate basetype members
     call this%BaseModelType%allocate_scalars(modelname)
@@ -273,8 +273,8 @@ module NumericalModelModule
     call mem_allocate(this%nja, 'NJA', this%memoryPath)
     call mem_allocate(this%icnvg, 'ICNVG', this%memoryPath)
     call mem_allocate(this%moffset, 'MOFFSET', this%memoryPath)
-    allocate(this%filename)
-    allocate(this%bndlist)
+    allocate (this%filename)
+    allocate (this%bndlist)
     !
     this%filename = ''
     this%neq = 0
@@ -341,7 +341,8 @@ module NumericalModelModule
     ! -- local
     ! -- code
     this%ibound => iboundsln(this%moffset + 1:this%moffset + this%neq)
-    call mem_checkin(this%ibound, 'IBOUND', this%memoryPath, varNameTgt, memPathTgt)
+    call mem_checkin(this%ibound, 'IBOUND', this%memoryPath, varNameTgt, &
+                     memPathTgt)
   end subroutine set_iboundptr
 
   subroutine get_mcellid(this, node, mcellid)
@@ -353,10 +354,10 @@ module NumericalModelModule
     character(len=20) :: cellid
     integer(I4B) :: ip, ipaknode, istart, istop
     class(BndType), pointer :: packobj
-    
+
     if (node < 1) then
       cellid = ''
-    else if(node <= this%dis%nodes) then
+    else if (node <= this%dis%nodes) then
       call this%dis%noder_to_string(node, cellid)
     else
       cellid = '***ERROR***'
@@ -364,18 +365,18 @@ module NumericalModelModule
       istart = 1
       do ip = 1, this%bndlist%Count()
         packobj => GetBndFromList(this%bndlist, ip)
-        if(packobj%npakeq == 0) cycle
+        if (packobj%npakeq == 0) cycle
         istop = istart + packobj%npakeq - 1
-        if(istart <= ipaknode .and. ipaknode <= istop) then
-          write(cellid, '(a, a, a, i0, a, i0, a)') '(',                        &
-            trim(packobj%filtyp), '_',                                         &
+        if (istart <= ipaknode .and. ipaknode <= istop) then
+          write (cellid, '(a, a, a, i0, a, i0, a)') '(', &
+            trim(packobj%filtyp), '_', &
             packobj%ibcnum, '-', ipaknode - packobj%ioffset, ')'
           exit
-        endif
+        end if
         istart = istop + 1
-      enddo
-    endif
-    write(mcellid, '(i0, a, a, a, a)') this%id, '_', this%macronym, '-',       &
+      end do
+    end if
+    write (mcellid, '(i0, a, a, a, a)') this%id, '_', this%macronym, '-', &
       trim(adjustl(cellid))
     return
   end subroutine get_mcellid
@@ -386,21 +387,21 @@ module NumericalModelModule
     integer(I4B), intent(in) :: node
     integer(I4B), intent(inout) :: nodeu
     ! -- local
-    if(node <= this%dis%nodes) then
+    if (node <= this%dis%nodes) then
       nodeu = this%dis%get_nodeuser(node)
     else
       nodeu = -(node - this%dis%nodes)
-    endif
+    end if
     return
   end subroutine get_mnodeu
-  
-  function get_iasym(this) result (iasym)
+
+  function get_iasym(this) result(iasym)
     class(NumericalModelType) :: this
     integer(I4B) :: iasym
     iasym = 0
   end function get_iasym
 
-  function CastAsNumericalModelClass(obj) result (res)
+  function CastAsNumericalModelClass(obj) result(res)
     implicit none
     class(*), pointer, intent(inout) :: obj
     class(NumericalModelType), pointer :: res
@@ -418,7 +419,7 @@ module NumericalModelModule
   subroutine AddNumericalModelToList(list, model)
     implicit none
     ! -- dummy
-    type(ListType),             intent(inout) :: list
+    type(ListType), intent(inout) :: list
     class(NumericalModelType), pointer, intent(inout) :: model
     ! -- local
     class(*), pointer :: obj
@@ -428,13 +429,13 @@ module NumericalModelModule
     !
     return
   end subroutine AddNumericalModelToList
-  
-  function GetNumericalModelFromList(list, idx) result (res)
+
+  function GetNumericalModelFromList(list, idx) result(res)
     implicit none
     ! -- dummy
-    type(ListType),           intent(inout) :: list
-    integer(I4B),                  intent(in)    :: idx
-    class(NumericalModelType), pointer       :: res
+    type(ListType), intent(inout) :: list
+    integer(I4B), intent(in) :: idx
+    class(NumericalModelType), pointer :: res
     ! -- local
     class(*), pointer :: obj
     !

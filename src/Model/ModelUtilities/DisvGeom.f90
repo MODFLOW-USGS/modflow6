@@ -1,12 +1,12 @@
 module DisvGeom
-  
+
   use KindModule, only: DP, I4B
   use InputOutputModule, only: get_node, get_jk
   implicit none
   private
   public :: DisvGeomType
   public :: line_unit_vector
-  
+
   type DisvGeomType
     integer(I4B) :: k
     integer(I4B) :: j
@@ -15,7 +15,7 @@ module DisvGeom
     integer(I4B) :: nlay
     integer(I4B) :: ncpl
     logical :: reduced
-    integer(I4B) :: nodes                                                        ! number of reduced nodes; nodes = nlay *ncpl when grid is NOT reduced
+    integer(I4B) :: nodes ! number of reduced nodes; nodes = nlay *ncpl when grid is NOT reduced
     real(DP) :: top
     real(DP) :: bot
     real(DP), pointer, dimension(:) :: top_grid => null()
@@ -24,8 +24,8 @@ module DisvGeom
     integer(I4B), pointer, dimension(:) :: javert => null()
     real(DP), pointer, dimension(:, :) :: vertex_grid => null()
     real(DP), pointer, dimension(:, :) :: cellxy_grid => null()
-    integer(I4B), pointer, dimension(:, :) :: nodereduced => null()              ! nodered = nodereduced(nodeusr)
-    integer(I4B), pointer, dimension(:) :: nodeuser => null()                    ! nodeusr = nodesuser(nodered)
+    integer(I4B), pointer, dimension(:, :) :: nodereduced => null() ! nodered = nodereduced(nodeusr)
+    integer(I4B), pointer, dimension(:) :: nodeuser => null() ! nodeusr = nodesuser(nodered)
   contains
     procedure :: init
     generic :: set => set_kj, set_nodered
@@ -38,10 +38,10 @@ module DisvGeom
     procedure :: shares_edge
     procedure :: get_area
   end type DisvGeomType
-  
-  contains
-  
-  subroutine init(this, nlay, ncpl, nodes, top_grid, bot_grid, iavert,        &
+
+contains
+
+  subroutine init(this, nlay, ncpl, nodes, top_grid, bot_grid, iavert, &
                   javert, vertex_grid, cellxy_grid, nodereduced, nodeuser)
     class(DisvGeomType) :: this
     integer(I4B), intent(in) :: nlay
@@ -69,13 +69,13 @@ module DisvGeom
     this%nodereduced => nodereduced
     this%nodeuser => nodeuser
     nodesuser = ncpl * nlay
-    if(nodes < nodesuser) then
+    if (nodes < nodesuser) then
       this%reduced = .true.
     else
       this%reduced = .false.
-    endif
+    end if
   end subroutine init
-  
+
   subroutine set_kj(this, k, j)
     class(DisvGeomType) :: this
     integer(I4B), intent(in) :: k
@@ -83,11 +83,11 @@ module DisvGeom
     this%k = k
     this%j = j
     this%nodeusr = get_node(k, 1, j, this%nlay, 1, this%ncpl)
-    if(this%reduced) then
+    if (this%reduced) then
       this%nodered = this%nodereduced(k, j)
     else
       this%nodered = this%nodeusr
-    endif
+    end if
     call this%cell_setup()
     return
   end subroutine set_kj
@@ -96,11 +96,11 @@ module DisvGeom
     class(DisvGeomType) :: this
     integer(I4B), intent(in) :: nodered
     this%nodered = nodered
-    if(this%reduced) then
+    if (this%reduced) then
       this%nodeusr = this%nodeuser(nodered)
     else
       this%nodeusr = nodered
-    endif
+    end if
     call get_jk(this%nodeusr, this%ncpl, this%nlay, this%j, this%k)
     call this%cell_setup()
     return
@@ -111,7 +111,7 @@ module DisvGeom
     this%top = this%top_grid(this%nodered)
     this%bot = this%bot_grid(this%nodered)
   end subroutine cell_setup
-  
+
   subroutine cprops(this, cell2, hwva, cl1, cl2, ax, ihc)
     ! -- module
     use ConstantsModule, only: DZERO, DHALF, DONE
@@ -127,7 +127,7 @@ module DisvGeom
     integer(I4B) :: istart1, istart2, istop1, istop2
     real(DP) :: x0, y0, x1, y1, x2, y2
     !
-    if(this%j == cell2%j) then
+    if (this%j == cell2%j) then
       !
       ! -- Cells share same j index, so must be a vertical connection
       ihc = 0
@@ -146,7 +146,7 @@ module DisvGeom
       call shared_edge(this%javert(istart1:istop1), &
                        this%javert(istart2:istop2), &
                        ivert1, ivert2)
-      if(ivert1 == 0 .or. ivert2 == 0) then
+      if (ivert1 == 0 .or. ivert2 == 0) then
         !
         ! -- Cells do not share an edge
         hwva = DZERO
@@ -175,11 +175,11 @@ module DisvGeom
         x2 = this%vertex_grid(1, ivert2)
         y2 = this%vertex_grid(2, ivert2)
         ax = anglex(x1, y1, x2, y2)
-      endif
-    endif
-    return    
+      end if
+    end if
+    return
   end subroutine cprops
-  
+
   subroutine edge_normal(this, cell2, xcomp, ycomp)
     ! return the x and y components of an outward normal
     ! facing vector
@@ -200,19 +200,19 @@ module DisvGeom
     istart2 = cell2%iavert(cell2%j)
     istop2 = this%iavert(cell2%j + 1) - 1
     call shared_edge(this%javert(istart1:istop1), &
-                      this%javert(istart2:istop2), &
-                      ivert1, ivert2)
+                     this%javert(istart2:istop2), &
+                     ivert1, ivert2)
     x1 = this%vertex_grid(1, ivert1)
     y1 = this%vertex_grid(2, ivert1)
     x2 = this%vertex_grid(1, ivert2)
     y2 = this%vertex_grid(2, ivert2)
     !
     call line_unit_normal(x1, y1, x2, y2, xcomp, ycomp)
-    return    
+    return
   end subroutine edge_normal
-  
-  subroutine connection_vector(this, cell2, nozee, satn, satm, xcomp,        &
-    ycomp, zcomp, conlen)
+
+  subroutine connection_vector(this, cell2, nozee, satn, satm, xcomp, &
+                               ycomp, zcomp, conlen)
     ! return the x y and z components of a unit vector that points
     ! from the center of this to the center of cell2, and the
     ! straight-line connection length
@@ -243,11 +243,11 @@ module DisvGeom
       z2 = cell2%bot + DHALF * satm * (cell2%top - cell2%bot)
     end if
     !
-    call line_unit_vector(x1, y1, z1, x2, y2, z2, xcomp, ycomp, zcomp,       &
+    call line_unit_vector(x1, y1, z1, x2, y2, z2, xcomp, ycomp, zcomp, &
                           conlen)
-    return    
+    return
   end subroutine connection_vector
-  
+
   function shares_edge(this, cell2) result(l)
 ! ******************************************************************************
 ! shares_edge -- Return true if this shares a horizontal edge with cell2
@@ -266,15 +266,15 @@ module DisvGeom
     istart2 = cell2%iavert(cell2%j)
     istop2 = this%iavert(cell2%j + 1) - 1
     call shared_edge(this%javert(istart1:istop1), &
-                      this%javert(istart2:istop2), &
-                      ivert1, ivert2)
+                     this%javert(istart2:istop2), &
+                     ivert1, ivert2)
     l = .true.
-    if(ivert1 == 0 .or. ivert2 == 0) then
+    if (ivert1 == 0 .or. ivert2 == 0) then
       l = .false.
-    endif
-    return  
+    end if
+    return
   end function shares_edge
-  
+
   subroutine shared_edge(ivlist1, ivlist2, ivert1, ivert2)
 ! ******************************************************************************
 ! shared_edge -- Find two common vertices shared by cell1 and cell2.
@@ -304,22 +304,22 @@ module DisvGeom
     ivert2 = 0
     outerloop: do il1 = 1, nv1 - 1
       do il2 = nv2, 2, -1
-        if(ivlist1(il1) == ivlist2(il2) .and. &
-           ivlist1(il1 + 1) == ivlist2(il2 - 1)) then
+        if (ivlist1(il1) == ivlist2(il2) .and. &
+            ivlist1(il1 + 1) == ivlist2(il2 - 1)) then
           found = .true.
           ivert1 = ivlist1(il1)
           ivert2 = ivlist1(il1 + 1)
           exit outerloop
-        endif
-      enddo
-      if(found) exit
-    enddo outerloop
+        end if
+      end do
+      if (found) exit
+    end do outerloop
   end subroutine shared_edge
-  
+
   function get_area(this) result(area)
 ! ******************************************************************************
 ! get_cell2d_area -- Calculate and return the area of the cell
-!   a = 1/2 *[(x1*y2 + x2*y3 + x3*y4 + ... + xn*y1) - 
+!   a = 1/2 *[(x1*y2 + x2*y3 + x3*y4 + ... + xn*y1) -
 !             (x2*y1 + x3*y2 + x4*y3 + ... + x1*yn)]
 ! ******************************************************************************
 !
@@ -344,37 +344,37 @@ module DisvGeom
     icount = 1
     do ivert = this%iavert(this%j), this%iavert(this%j + 1) - 1
       x = this%vertex_grid(1, this%javert(ivert))
-      if(icount < nvert) then
+      if (icount < nvert) then
         y = this%vertex_grid(2, this%javert(ivert + 1))
       else
         y = this%vertex_grid(2, this%javert(this%iavert(this%j)))
-      endif
+      end if
       area = area + x * y
       icount = icount + 1
-    enddo
+    end do
     !
     icount = 1
     do ivert = this%iavert(this%j), this%iavert(this%j + 1) - 1
       y = this%vertex_grid(2, this%javert(ivert))
-      if(icount < nvert) then
+      if (icount < nvert) then
         x = this%vertex_grid(1, this%javert(ivert + 1))
       else
         x = this%vertex_grid(1, this%javert(this%iavert(this%j)))
-      endif
+      end if
       area = area - x * y
       icount = icount + 1
-    enddo
+    end do
     !
     area = abs(area) * DHALF
     !
     ! -- return
     return
   end function get_area
-  
+
   function anglex(x1, y1, x2, y2) result(ax)
 ! ******************************************************************************
-! anglex -- Calculate the angle that the x-axis makes with a line that is 
-!   normal to the two points.  This assumes that vertices are numbered 
+! anglex -- Calculate the angle that the x-axis makes with a line that is
+!   normal to the two points.  This assumes that vertices are numbered
 !   clockwise so that the angle is for the normal outward of cell n.
 ! ******************************************************************************
 !
@@ -392,10 +392,10 @@ module DisvGeom
     dx = x2 - x1
     dy = y2 - y1
     ax = atan2(dx, -dy)
-    if(ax < DZERO) ax = DTWO * DPI + ax
+    if (ax < DZERO) ax = DTWO * DPI + ax
     return
   end function anglex
-  
+
   function distance(x1, y1, x2, y2) result(d)
 ! ******************************************************************************
 ! distance -- Calculate distance between two points
@@ -409,11 +409,11 @@ module DisvGeom
     real(DP), intent(in) :: y2
     real(DP) :: d
 ! ------------------------------------------------------------------------------
-    d = (x1 - x2) ** 2 + (y1 - y2) ** 2
+    d = (x1 - x2)**2 + (y1 - y2)**2
     d = sqrt(d)
     return
   end function distance
-  
+
   function distance_normal(x0, y0, x1, y1, x2, y2) result(d)
 ! ******************************************************************************
 ! distance_normal -- Calculate normal distance from point (x0, y0) to line
@@ -434,10 +434,10 @@ module DisvGeom
     d = d / distance(x1, y1, x2, y2)
     return
   end function distance_normal
-  
+
   subroutine line_unit_normal(x0, y0, x1, y1, xcomp, ycomp)
 ! ******************************************************************************
-! line_unit_normal -- Calculate the normal vector components (xcomp and ycomp) 
+! line_unit_normal -- Calculate the normal vector components (xcomp and ycomp)
 !   for a line defined by two points, (x0, y0), (x1, y1)
 ! ******************************************************************************
 !
@@ -453,16 +453,16 @@ module DisvGeom
 ! ------------------------------------------------------------------------------
     dx = x1 - x0
     dy = y1 - y0
-    vmag = sqrt(dx ** 2 + dy ** 2)
+    vmag = sqrt(dx**2 + dy**2)
     xcomp = -dy / vmag
     ycomp = dx / vmag
     return
   end subroutine line_unit_normal
-  
-  subroutine line_unit_vector(x0, y0, z0, x1, y1, z1,                        &
-    xcomp, ycomp, zcomp, vmag)
+
+  subroutine line_unit_vector(x0, y0, z0, x1, y1, z1, &
+                              xcomp, ycomp, zcomp, vmag)
 ! ******************************************************************************
-! line_unit_vector -- Calculate the vector components (xcomp, ycomp, and zcomp) 
+! line_unit_vector -- Calculate the vector components (xcomp, ycomp, and zcomp)
 !   for a line defined by two points, (x0, y0, z0), (x1, y1, z1). Also return
 !   the magnitude of the original vector, vmag.
 ! ******************************************************************************
@@ -483,12 +483,11 @@ module DisvGeom
     dx = x1 - x0
     dy = y1 - y0
     dz = z1 - z0
-    vmag = sqrt(dx ** 2 + dy ** 2 + dz ** 2)
+    vmag = sqrt(dx**2 + dy**2 + dz**2)
     xcomp = dx / vmag
     ycomp = dy / vmag
     zcomp = dz / vmag
     return
   end subroutine line_unit_vector
-  
-  
+
 end module DisvGeom

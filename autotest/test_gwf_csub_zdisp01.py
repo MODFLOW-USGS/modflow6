@@ -1,6 +1,7 @@
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -18,7 +19,7 @@ except:
     msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
     raise Exception(msg)
 
-from framework import testing_framework, running_on_CI
+from framework import running_on_CI, testing_framework
 from simulation import Simulation
 
 ex = ["csub_zdisp01"]
@@ -184,7 +185,7 @@ if nndb > 0:
                 # skip constant head cells
                 if idomain[k, i, j] == 0:
                     continue
-                tag = "{:02d}_{:02d}_{:02d}".format(k + 1, i + 1, j + 1)
+                tag = f"{k + 1:02d}_{i + 1:02d}_{j + 1:02d}"
                 # create nodelay entry
                 # no delay beds
                 b = thicknd0[kdx]
@@ -268,11 +269,11 @@ def get_model(idx, dir):
         top=top,
         botm=botm,
         idomain=idomain,
-        filename="{}.dis".format(name),
+        filename=f"{name}.dis",
     )
 
     # initial conditions
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(name))
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{name}.ic")
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -291,11 +292,11 @@ def get_model(idx, dir):
     )
 
     # csub files
-    opth = "{}.csub.obs".format(name)
-    ibcsv = "{}.ib.strain.csv".format(name)
-    skcsv = "{}.sk.strain.csv".format(name)
-    copth = "{}.compaction.gridbin".format(name)
-    zopth = "{}.zdisplacement.gridbin".format(name)
+    opth = f"{name}.csub.obs"
+    ibcsv = f"{name}.ib.strain.csv"
+    skcsv = f"{name}.sk.strain.csv"
+    copth = f"{name}.compaction.gridbin"
+    zopth = f"{name}.zdisplacement.gridbin"
     csub = flopy.mf6.ModflowGwfcsub(
         gwf,
         boundnames=True,
@@ -313,7 +314,7 @@ def get_model(idx, dir):
         packagedata=sub6,
     )
     orecarray = {}
-    tag = "{:02d}_{:02d}_{:02d}".format(3, wrp[0] + 1, wcp[0] + 1)
+    tag = f"{3:02d}_{wrp[0] + 1:02d}_{wcp[0] + 1:02d}"
     oloc = (2, wrp[0], wcp[0])
     orecarray["csub_obs.csv"] = [
         ("tcomp3", "interbed-compaction", tag),
@@ -347,8 +348,8 @@ def get_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(name),
-        head_filerecord="{}.hds".format(name),
+        budget_filerecord=f"{name}.cbc",
+        head_filerecord=f"{name}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
@@ -439,34 +440,32 @@ def eval_zdisplacement(sim):
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     # MODFLOW-2005 total compaction results
-    fn = "{}.total_comp.hds".format(os.path.basename(sim.name))
+    fn = f"{os.path.basename(sim.name)}.total_comp.hds"
     fpth = os.path.join(sim.simpath, "mfnwt", fn)
     try:
         sobj = flopy.utils.HeadFile(fpth, text="LAYER COMPACTION")
         tc0 = sobj.get_ts((2, wrp[0], wcp[0]))
     except:
-        assert False, 'could not load data from "{}"'.format(fpth)
+        assert False, f'could not load data from "{fpth}"'
 
     # calculate maximum absolute error
     diff = tc["TCOMP3"] - tc0[:, 1]
     diffmax = np.abs(diff).max()
-    msg = "maximum absolute total-compaction difference ({}) ".format(diffmax)
+    msg = f"maximum absolute total-compaction difference ({diffmax}) "
 
     if diffmax > dtol:
         sim.success = False
-        msg += "exceeds {}".format(dtol)
+        msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
         sim.success = True
         print("    " + msg)
 
     # get results from listing file
-    fpth = os.path.join(
-        sim.simpath, "{}.lst".format(os.path.basename(sim.name))
-    )
+    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.lst")
     budl = flopy.utils.Mf6ListBudget(fpth)
     names = list(bud_lst)
     d0 = budl.get_budget(names=names)[0]
@@ -485,9 +484,7 @@ def eval_zdisplacement(sim):
     d = np.recarray(nbud, dtype=dtype)
     for key in bud_lst:
         d[key] = 0.0
-    fpth = os.path.join(
-        sim.simpath, "{}.cbc".format(os.path.basename(sim.name))
-    )
+    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.cbc")
     cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     kk = cobj.get_kstpkper()
     times = cobj.get_times()
@@ -512,41 +509,41 @@ def eval_zdisplacement(sim):
             d["totim"][idx] = t
             d["time_step"][idx] = k[0]
             d["stress_period"] = k[1]
-            key = "{}_IN".format(text)
+            key = f"{text}_IN"
             d[key][idx] = qin
-            key = "{}_OUT".format(text)
+            key = f"{text}_OUT"
             d[key][idx] = qout
 
     diff = np.zeros((nbud, len(bud_lst)), dtype=float)
     for idx, key in enumerate(bud_lst):
         diff[:, idx] = d0[key] - d[key]
     diffmax = np.abs(diff).max()
-    msg = "maximum absolute total-budget difference ({}) ".format(diffmax)
+    msg = f"maximum absolute total-budget difference ({diffmax}) "
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, "{}.bud.cmp.out".format(os.path.basename(sim.name))
+        sim.simpath, f"{os.path.basename(sim.name)}.bud.cmp.out"
     )
     f = open(fpth, "w")
     for i in range(diff.shape[0]):
         if i == 0:
-            line = "{:>10s}".format("TIME")
+            line = f"{'TIME':>10s}"
             for idx, key in enumerate(bud_lst):
-                line += "{:>25s}".format(key + "_LST")
-                line += "{:>25s}".format(key + "_CBC")
-                line += "{:>25s}".format(key + "_DIF")
+                line += f"{key + '_LST':>25s}"
+                line += f"{key + '_CBC':>25s}"
+                line += f"{key + '_DIF':>25s}"
             f.write(line + "\n")
-        line = "{:10g}".format(d["totim"][i])
+        line = f"{d['totim'][i]:10g}"
         for idx, key in enumerate(bud_lst):
-            line += "{:25g}".format(d0[key][i])
-            line += "{:25g}".format(d[key][i])
-            line += "{:25g}".format(diff[i, idx])
+            line += f"{d0[key][i]:25g}"
+            line += f"{d[key][i]:25g}"
+            line += f"{diff[i, idx]:25g}"
         f.write(line + "\n")
     f.close()
 
     if diffmax > budtol:
         sim.success = False
-        msg += "exceeds {}".format(dtol)
+        msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
         sim.success = True
@@ -555,14 +552,14 @@ def eval_zdisplacement(sim):
     # compare z-displacement data
     fpth1 = os.path.join(
         sim.simpath,
-        "{}.zdisplacement.gridbin".format(os.path.basename(sim.name)),
+        f"{os.path.basename(sim.name)}.zdisplacement.gridbin",
     )
     fpth2 = os.path.join(sim.simpath, cmppth, "csub_zdisp01.vert_disp.hds")
     text1 = "CSUB-ZDISPLACE"
     text2 = "Z DISPLACEMENT"
     fout = os.path.join(
         sim.simpath,
-        "{}.z-displacement.bin.out".format(os.path.basename(sim.name)),
+        f"{os.path.basename(sim.name)}.z-displacement.bin.out",
     )
     success_tst = pymake.compare_heads(
         None,
@@ -576,7 +573,7 @@ def eval_zdisplacement(sim):
         verbose=True,
         exarr=iex,
     )
-    msg = "z-displacement comparison success = {}".format(success_tst)
+    msg = f"z-displacement comparison success = {success_tst}"
     if success_tst:
         sim.success = True
         print(msg)
@@ -643,7 +640,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

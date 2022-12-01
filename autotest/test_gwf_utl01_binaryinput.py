@@ -3,8 +3,9 @@
 # 2. Have binary data in a single record for all layers
 
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -63,7 +64,7 @@ def build_model(idx, dir):
         sim,
         model_type="gwf6",
         modelname=name,
-        model_nam_file="{}.nam".format(name),
+        model_nam_file=f"{name}.nam",
     )
 
     # create iterative model solution and register the gwf model with it
@@ -120,8 +121,8 @@ def build_model(idx, dir):
     if idx == 0:
         botarr = []
         for k in range(nlay):
-            text = "BOTM_L{}".format(k + 1)
-            fname = "botm.l{:02d}.bin".format(k + 1)
+            text = f"BOTM_L{k + 1}"
+            fname = f"botm.l{k + 1:02d}.bin"
             pth = os.path.join(exdirs[idx], fname)
             f = open(pth, "wb")
             header = flopy.utils.BinaryHeader.create(
@@ -186,8 +187,8 @@ def build_model(idx, dir):
     if idx == 0:
         idomain = []
         for k in range(nlay):
-            text = "IDOMAIN_L{}".format(k + 1)
-            fname = "idomain.l{:02d}.bin".format(k + 1)
+            text = f"IDOMAIN_L{k + 1}"
+            fname = f"idomain.l{k + 1:02d}.bin"
             pth = os.path.join(exdirs[idx], fname)
             f = open(pth, "wb")
             header = flopy.utils.BinaryHeader.create(
@@ -259,7 +260,7 @@ def build_model(idx, dir):
         top=top,
         botm=botarr,
         idomain=idomain,
-        filename="{}.dis".format(name),
+        filename=f"{name}.dis",
     )
 
     # initial conditions
@@ -267,8 +268,8 @@ def build_model(idx, dir):
     if idx == 0:
         strt = []
         for k in range(nlay):
-            text = "IC_L{}".format(k + 1)
-            fname = "ic.strt_l{:02d}.bin".format(k + 1)
+            text = f"IC_L{k + 1}"
+            fname = f"ic.strt_l{k + 1:02d}.bin"
             pth = os.path.join(exdirs[idx], fname)
             f = open(pth, "wb")
             header = flopy.utils.BinaryHeader.create(
@@ -330,14 +331,14 @@ def build_model(idx, dir):
             "iprn": 1,
         }
 
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(name))
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{name}.ic")
 
     # node property flow
     # write icelltype to binary file
     if idx == 0:
         icelltype = []
         for k in range(nlay):
-            fname = "npf.icelltype.l{}.bin".format(k + 1)
+            fname = f"npf.icelltype.l{k + 1}.bin"
             pth = os.path.join(exdirs[idx], fname)
             f = open(pth, "wb")
             header = flopy.utils.BinaryHeader.create(
@@ -408,7 +409,7 @@ def build_model(idx, dir):
         icelltype=icelltype,
         k=hk,
         k33=hk,
-        filename="{}.npf".format(name),
+        filename=f"{name}.npf",
     )
 
     # chd files
@@ -421,18 +422,18 @@ def build_model(idx, dir):
         gwf,
         stress_period_data=chdspdict,
         save_flows=False,
-        filename="{}.chd".format(name),
+        filename=f"{name}.chd",
     )
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(name),
-        head_filerecord="{}.hds".format(name),
+        budget_filerecord=f"{name}.cbc",
+        head_filerecord=f"{name}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "ALL")],
         printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
-        filename="{}.oc".format(name),
+        filename=f"{name}.oc",
     )
 
     return sim, None
@@ -470,7 +471,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

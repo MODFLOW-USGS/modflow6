@@ -1,6 +1,7 @@
 import os
-import pytest
 import sys
+
+import pytest
 
 try:
     import pymake
@@ -27,8 +28,8 @@ testpaths = os.path.join("..", exdir)
 def dir_avail():
     avail = os.path.isdir(exdir)
     if not avail:
-        print('"{}" does not exist'.format(exdir))
-        print("no need to run {}".format(os.path.basename(__file__)))
+        print(f'"{exdir}" does not exist')
+        print(f"no need to run {os.path.basename(__file__)}")
     return avail
 
 
@@ -104,7 +105,7 @@ def get_mf6_models():
         if len(dirs) < 1:
             msg = "Selected packages not available ["
             for pak in select_packages:
-                msg += " {}".format(pak)
+                msg += f" {pak}"
             msg += "]"
             print(msg)
 
@@ -138,7 +139,7 @@ def test_mf6model(idx, dir):
 def main():
     # write message
     tnam = os.path.splitext(os.path.basename(__file__))[0]
-    msg = "Running {} test".format(tnam)
+    msg = f"Running {tnam} test"
     print(msg)
 
     # get a list of test models to run
@@ -154,7 +155,7 @@ def main():
 
 if __name__ == "__main__":
 
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     delFiles = True
     for idx, arg in enumerate(sys.argv):

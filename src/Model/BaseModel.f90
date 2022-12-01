@@ -12,18 +12,17 @@ module BaseModelModule
             GetBaseModelFromList
 
   type :: BaseModelType
-    character(len=LENMEMPATH)            :: memoryPath                           !< the location in the memory manager where the variables are stored
+    character(len=LENMEMPATH) :: memoryPath !< the location in the memory manager where the variables are stored
 
-    character(len=LENMODELNAME), pointer :: name             => null()           !< name of the model    
-    character(len=3), pointer            :: macronym         => null()           !< 3 letter model acronym (GWF, GWT, ...)
-    integer(I4B), pointer                :: idsoln           => null()           !< id of the solution model is in
-    integer(I4B), pointer                :: id               => null()           !< model id
-    integer(I4B), pointer                :: iout             => null()           !< output unit number
-    integer(I4B), pointer                :: inewton          => null()           !< newton-raphson flag
-    integer(I4B), pointer                :: iprpak           => null()           !< integer flag to echo input
-    integer(I4B), pointer                :: iprflow          => null()           !< flag to print simulated flows
-    integer(I4B), pointer                :: ipakcb           => null()           !< save_flows flag
-    logical, pointer                     :: single_model_run => null()           !< indicate if it is a single model run
+    character(len=LENMODELNAME), pointer :: name => null() !< name of the model
+    character(len=3), pointer :: macronym => null() !< 3 letter model acronym (GWF, GWT, ...)
+    integer(I4B), pointer :: idsoln => null() !< id of the solution model is in
+    integer(I4B), pointer :: id => null() !< model id
+    integer(I4B), pointer :: iout => null() !< output unit number
+    integer(I4B), pointer :: inewton => null() !< newton-raphson flag
+    integer(I4B), pointer :: iprpak => null() !< integer flag to echo input
+    integer(I4B), pointer :: iprflow => null() !< flag to print simulated flows
+    integer(I4B), pointer :: ipakcb => null() !< save_flows flag
   contains
     procedure :: model_df
     procedure :: model_ar
@@ -36,8 +35,8 @@ module BaseModelModule
     procedure :: model_message
   end type BaseModelType
 
-  contains
-  
+contains
+
   subroutine model_df(this)
 ! ******************************************************************************
 ! modeldf -- Define the model
@@ -51,7 +50,7 @@ module BaseModelModule
     ! -- return
     return
   end subroutine model_df
-  
+
   subroutine model_ar(this)
 ! ******************************************************************************
 ! modelar -- Allocate and read
@@ -65,7 +64,7 @@ module BaseModelModule
     ! -- return
     return
   end subroutine model_ar
-  
+
   subroutine model_rp(this)
 ! ******************************************************************************
 ! model_rp -- Read and prepare
@@ -79,7 +78,7 @@ module BaseModelModule
     ! -- return
     return
   end subroutine model_rp
-  
+
   subroutine model_calculate_delt(this)
 ! ******************************************************************************
 ! model_calculate_delt -- Calculate time step length
@@ -93,7 +92,7 @@ module BaseModelModule
     ! -- return
     return
   end subroutine model_calculate_delt
-      
+
   subroutine model_ot(this)
 ! ******************************************************************************
 ! model_ot -- output results
@@ -107,7 +106,7 @@ module BaseModelModule
     ! -- return
     return
   end subroutine model_ot
-  
+
   subroutine model_message(this, line, fmt)
 ! ******************************************************************************
 ! model_message -- write line to model iout
@@ -131,12 +130,12 @@ module BaseModelModule
     end if
     !
     ! -- write line
-    write(this%iout, trim(cfmt)) trim(line)
+    write (this%iout, trim(cfmt)) trim(line)
     !
     ! -- return
     return
   end subroutine model_message
-  
+
   subroutine model_fp(this)
 ! ******************************************************************************
 ! model_fp -- Final processing
@@ -150,7 +149,7 @@ module BaseModelModule
     ! -- return
     return
   end subroutine model_fp
-  
+
   subroutine allocate_scalars(this, modelname)
 ! ******************************************************************************
 ! allocate_scalars
@@ -162,12 +161,11 @@ module BaseModelModule
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(BaseModelType) :: this
-    character(len=*), intent(in)  :: modelname
+    character(len=*), intent(in) :: modelname
 ! ------------------------------------------------------------------------------
     !
-    allocate(this%name)
-    allocate(this%macronym)
-    allocate(this%single_model_run)
+    call mem_allocate(this%name, LENMODELNAME, 'NAME', this%memoryPath)
+    call mem_allocate(this%macronym, 3, 'MACRONYM', this%memoryPath)
     call mem_allocate(this%id, 'ID', this%memoryPath)
     call mem_allocate(this%iout, 'IOUT', this%memoryPath)
     call mem_allocate(this%inewton, 'INEWTON', this%memoryPath)
@@ -185,12 +183,11 @@ module BaseModelModule
     this%iprflow = 0
     this%ipakcb = 0
     this%inewton = 0 !default is standard formulation
-    this%single_model_run = .false.
     !
     ! -- return
     return
   end subroutine allocate_scalars
-  
+
   subroutine model_da(this)
 ! ******************************************************************************
 ! deallocate
@@ -205,11 +202,10 @@ module BaseModelModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Strings
-    deallocate(this%name)
-    deallocate(this%macronym)
+    call mem_deallocate(this%name, 'NAME', this%memoryPath)
+    call mem_deallocate(this%macronym, 'MACRONYM', this%memoryPath)
     !
     ! -- Scalars
-    deallocate(this%single_model_run)
     call mem_deallocate(this%id)
     call mem_deallocate(this%iout)
     call mem_deallocate(this%inewton)
@@ -222,7 +218,7 @@ module BaseModelModule
     return
   end subroutine model_da
 
-  function CastAsBaseModelClass(obj) result (res)
+  function CastAsBaseModelClass(obj) result(res)
     implicit none
     class(*), pointer, intent(inout) :: obj
     class(BaseModelType), pointer :: res
@@ -240,7 +236,7 @@ module BaseModelModule
   subroutine AddBaseModelToList(list, model)
     implicit none
     ! -- dummy
-    type(ListType),       intent(inout) :: list
+    type(ListType), intent(inout) :: list
     class(BaseModelType), pointer, intent(inout) :: model
     ! -- local
     class(*), pointer :: obj
@@ -250,13 +246,13 @@ module BaseModelModule
     !
     return
   end subroutine AddBaseModelToList
-  
-  function GetBaseModelFromList(list, idx) result (res)
+
+  function GetBaseModelFromList(list, idx) result(res)
     implicit none
     ! -- dummy
-    type(ListType),       intent(inout) :: list
-    integer(I4B),              intent(in)    :: idx
-    class(BaseModelType), pointer       :: res
+    type(ListType), intent(inout) :: list
+    integer(I4B), intent(in) :: idx
+    class(BaseModelType), pointer :: res
     ! -- local
     class(*), pointer :: obj
     !

@@ -2,7 +2,7 @@
 !This module contains a derived type, called GwfMvrType, that
 !is attached to the GWF model.  The water mover can be used to move water
 !between packages.  The mover requires that mover-aware packages have access
-!to four arrays: qtformvr, qformvr, qtomvr, and qfrommvr.  These arrays are 
+!to four arrays: qtformvr, qformvr, qtomvr, and qfrommvr.  These arrays are
 !stored and managed by a separate PackageMoverType object.  qformvr is a
 !vector of volumetric flow rates available for the mover.  The package
 !must fill the vector (dimensioned by number of reaches) with the available
@@ -49,11 +49,11 @@
 !
 !      if(this%inmvr > 0) call this%mvr%mvr_ar()
 !
-!      Mover aware packages allocate the four vectors.  The first three 
+!      Mover aware packages allocate the four vectors.  The first three
 !      (qtformvr, qformvr, qtomvr) are allocated to the number of providers
 !      and the last one (qfrommvr) is allocated to the number of receivers.
 !
-!  4.  In gwf_rp call the RP method for the mover.  This reads the 
+!  4.  In gwf_rp call the RP method for the mover.  This reads the
 !      movers active for the current period.
 !
 !      if(this%inmvr > 0) call this%mvr%mvr_rp()
@@ -81,8 +81,8 @@
 !      if(this%inmvr > 0) call this%mvr%mvr_fc()  ! called from gwf%gwf_fc()
 !
 !      a. Mover aware packages first set qformvr(:) = 0.
-!      b. Mover aware packages that are receivers (MAW, SFR, LAK, UZF) add 
-!         qfrommvr terms to their individual control volume equations as a 
+!      b. Mover aware packages that are receivers (MAW, SFR, LAK, UZF) add
+!         qfrommvr terms to their individual control volume equations as a
 !         source of water.
 !      c. Mover aware packages calculate qformvr as amount of water available
 !         to be moved (these qformvr terms are used in the next iteration
@@ -102,44 +102,46 @@
 !      if(this%inmvr > 0) call this%mvr%mvr_ot()
 !
 module GwfMvrModule
-  use KindModule,             only: DP, I4B
-  use ConstantsModule,        only: LENMEMPATH, LENPACKAGENAME, LENMODELNAME,   &
-                                    LENBUDTXT, LENAUXNAME, LENPAKLOC,          &
-                                    DZERO, DNODATA, MAXCHARLEN, TABCENTER,     &
-                                    LINELENGTH
-  use MvrModule,              only: MvrType
-  use BudgetModule,           only: BudgetType, budget_cr
-  use BudgetObjectModule,     only: BudgetObjectType, budgetobject_cr
+  use KindModule, only: DP, I4B
+  use ConstantsModule, only: LENMEMPATH, LENPACKAGENAME, LENMODELNAME, &
+                             LENBUDTXT, LENAUXNAME, LENPAKLOC, &
+                             DZERO, DNODATA, MAXCHARLEN, TABCENTER, &
+                             LINELENGTH
+  use MvrModule, only: MvrType
+  use BudgetModule, only: BudgetType, budget_cr
+  use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
   use NumericalPackageModule, only: NumericalPackageType
-  use BlockParserModule,      only: BlockParserType
-  use PackageMoverModule,     only: PackageMoverType
-  use BaseDisModule,          only: DisBaseType
-  use InputOutputModule,      only: urword
-  use TableModule,            only: TableType, table_cr
+  use BlockParserModule, only: BlockParserType
+  use GwfMvrPeriodDataModule, only: GwfMvrPeriodDataType
+  use PackageMoverModule, only: PackageMoverType
+  use BaseDisModule, only: DisBaseType
+  use InputOutputModule, only: urword
+  use TableModule, only: TableType, table_cr
 
   implicit none
   private
   public :: GwfMvrType, mvr_cr
 
   type, extends(NumericalPackageType) :: GwfMvrType
-    integer(I4B), pointer                            :: ibudgetout => null()     !< binary budget output file
-    integer(I4B), pointer                            :: ibudcsv => null()        !< unit number for csv budget output file
-    integer(I4B), pointer                            :: maxmvr => null()         !< max number of movers to be specified
-    integer(I4B), pointer                            :: maxpackages => null()    !< max number of packages to be specified
-    integer(I4B), pointer                            :: maxcomb => null()        !< max number of combination of packages
-    integer(I4B), pointer                            :: nmvr => null()           !< number of movers for current stress period
-    integer(I4B), pointer                            :: iexgmvr => null()        !< indicate mover is for an exchange (not for a single model)
-    integer(I4B), pointer                            :: imodelnames => null()    !< indicate package input file has model names in it
-    integer(I4B), dimension(:), pointer, contiguous  :: ientries => null()       !< number of entries for each combination
-    character(len=LENMEMPATH),                                                &
-      dimension(:), pointer, contiguous              :: pckMemPaths              !< memory paths of all packages used in this mover
-    character(len=LENPACKAGENAME),                                             &
-      dimension(:), pointer, contiguous              :: paknames => null()       !< array of package names
-    type(MvrType), dimension(:), pointer, contiguous :: mvr => null()            !< array of movers
-    type(BudgetType), pointer                        :: budget => null()         !< mover budget object (used to write table)
-    type(BudgetObjectType), pointer                  :: budobj => null()         !< new budget container (used to write binary file)
-    type(PackageMoverType),                                                    &
-      dimension(:), pointer, contiguous    :: pakmovers => null()                !< pointer to package mover objects
+    integer(I4B), pointer :: ibudgetout => null() !< binary budget output file
+    integer(I4B), pointer :: ibudcsv => null() !< unit number for csv budget output file
+    integer(I4B), pointer :: maxmvr => null() !< max number of movers to be specified
+    integer(I4B), pointer :: maxpackages => null() !< max number of packages to be specified
+    integer(I4B), pointer :: maxcomb => null() !< max number of combination of packages
+    integer(I4B), pointer :: nmvr => null() !< number of movers for current stress period
+    integer(I4B), pointer :: iexgmvr => null() !< indicate mover is for an exchange (not for a single model)
+    integer(I4B), pointer :: imodelnames => null() !< indicate package input file has model names in it
+    integer(I4B), dimension(:), pointer, contiguous :: ientries => null() !< number of entries for each combination
+    character(len=LENMEMPATH), &
+      dimension(:), pointer, contiguous :: pckMemPaths !< memory paths of all packages used in this mover
+    character(len=LENPACKAGENAME), &
+      dimension(:), pointer, contiguous :: paknames => null() !< array of package names
+    type(MvrType), dimension(:), pointer, contiguous :: mvr => null() !< array of movers
+    type(GwfMvrPeriodDataType), pointer :: gwfmvrperioddata => null() !< input data object
+    type(BudgetType), pointer :: budget => null() !< mover budget object (used to write table)
+    type(BudgetObjectType), pointer :: budobj => null() !< new budget container (used to write binary file)
+    type(PackageMoverType), &
+      dimension(:), pointer, contiguous :: pakmovers => null() !< pointer to package mover objects
     !
     ! -- table objects
     type(TableType), pointer :: outputtab => null()
@@ -169,7 +171,7 @@ module GwfMvrModule
     procedure, private :: mvr_print_outputtab
   end type GwfMvrType
 
-  contains
+contains
 
   subroutine mvr_cr(mvrobj, name_parent, inunit, iout, dis, iexgmvr)
 ! ******************************************************************************
@@ -188,7 +190,7 @@ module GwfMvrModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
-    allocate(mvrobj)
+    allocate (mvrobj)
     !
     ! -- create name and memory paths. name_parent will either be model name or the
     !    exchange name.
@@ -205,7 +207,7 @@ module GwfMvrModule
     mvrobj%iout = iout
     !
     ! -- Set iexgmvr
-    if(present(iexgmvr)) mvrobj%iexgmvr = iexgmvr
+    if (present(iexgmvr)) mvrobj%iexgmvr = iexgmvr
     !
     ! -- Create the budget object
     if (inunit > 0) then
@@ -213,7 +215,7 @@ module GwfMvrModule
       !
       ! -- Initialize block parser
       call mvrobj%parser%Initialize(mvrobj%inunit, mvrobj%iout)
-    endif
+    end if
     !
     ! -- instantiate the budget object
     call budgetobject_cr(mvrobj%budobj, 'WATER MOVER')
@@ -236,9 +238,9 @@ module GwfMvrModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Print a message identifying the water mover package.
-    write(this%iout, 1) this%inunit
-  1 format(1x,/1x,'MVR -- WATER MOVER PACKAGE, VERSION 8, 1/29/2016', &
-      ' INPUT READ FROM UNIT ', i0)
+    write (this%iout, 1) this%inunit
+1   format(1x, /1x, 'MVR -- WATER MOVER PACKAGE, VERSION 8, 1/29/2016', &
+           ' INPUT READ FROM UNIT ', i0)
     !
     ! -- Read and check options
     call this%read_options()
@@ -280,18 +282,18 @@ module GwfMvrModule
     use SimModule, only: store_error, store_error_unit, count_errors
     use ArrayHandlersModule, only: ifind
     ! -- dummy
-    class(GwfMvrType),intent(inout) :: this
+    class(GwfMvrType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i, ierr, nlist, ipos
     integer(I4B) :: ii, jj
-    logical :: isfound, endOfBlock
+    logical :: isfound
     character(len=LINELENGTH) :: line, errmsg
     character(len=LENMODELNAME) :: mname
     ! -- formats
-    character(len=*),parameter :: fmtblkerr = &
-      "('Error.  Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
-    character(len=*),parameter :: fmtlsp = &
-      "(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
+    character(len=*), parameter :: fmtblkerr = &
+      &"('Error.  Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
+    character(len=*), parameter :: fmtlsp = &
+      &"(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
     character(len=*), parameter :: fmtnbd = &
       "(1X,/1X,'THE NUMBER OF ACTIVE ',A,'S (',I6, &
        &') IS GREATER THAN MAXIMUM(',I6,')')"
@@ -299,15 +301,16 @@ module GwfMvrModule
     !
     ! -- Set ionper to the stress period number for which a new block of data
     !    will be read.
-    if(this%inunit == 0) return
+    if (this%inunit == 0) return
     !
     ! -- get stress period data
     if (this%ionper < kper) then
       !
       ! -- get period block
       call this%parser%GetBlock('PERIOD', isfound, ierr, &
-                                supportOpenClose=.true.)
-      if(isfound) then
+                                supportOpenClose=.true., &
+                                blockRequired=.false.)
+      if (isfound) then
         !
         ! -- read ionper and check for increasing period numbers
         call this%read_check_ionper()
@@ -320,80 +323,73 @@ module GwfMvrModule
         else
           ! -- Found invalid block
           call this%parser%GetCurrentLine(line)
-          write(errmsg, fmtblkerr) adjustl(trim(line))
+          write (errmsg, fmtblkerr) adjustl(trim(line))
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end if
-      endif
+      end if
     end if
     !
     ! -- read data if ionper == kper
-    if(this%ionper == kper) then
-      write(this%iout, '(/,2x,a,i0)') 'READING WATER MOVERS FOR PERIOD ', kper
+    if (this%ionper == kper) then
+      write (this%iout, '(/,2x,a,i0)') 'READING WATER MOVERS FOR PERIOD ', kper
       nlist = -1
       i = 1
       !
       ! -- set mname to '' if this is an exchange mover, or to the model name
-      if(this%iexgmvr == 0) then
+      if (this%iexgmvr == 0) then
         mname = this%name_model
       else
         mname = ''
-      endif
+      end if
       !
       ! -- Assign a pointer to the package mover object.  The pointer assignment
       !    will happen only the first time
       call this%assign_packagemovers()
       !
-      ! -- Read each mover entry
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetCurrentLine(line)
-        !
-        ! -- Raise error if movers exceeds maxmvr
-        if (i > this%maxmvr) then
-          write(errmsg,'(4x,a,a)') 'MOVERS EXCEED MAXMVR ON LINE: ', &
-                                    trim(adjustl(line))
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        endif
-        !
-        ! -- Process the water mover line (mname = '' if this is an exchange)
-        call this%mvr(i)%set(line, this%parser%iuactive, this%iout, mname,     &
-                             this%pckMemPaths, this%pakmovers)
-        !
-        ! -- Echo input
-        if(this%iprpak == 1) call this%mvr(i)%echo(this%iout)
-        !
-        ! -- increment counter
-        i = i + 1
+      ! -- Call the period data input reader
+      call this%gwfmvrperioddata%read_from_parser(this%parser, nlist, mname)
+      !
+      ! -- Process the input data into the individual mover objects
+      do i = 1, nlist
+        call this%mvr(i)%set_values(this%gwfmvrperioddata%mname1(i), &
+                                    this%gwfmvrperioddata%pname1(i), &
+                                    this%gwfmvrperioddata%id1(i), &
+                                    this%gwfmvrperioddata%mname2(i), &
+                                    this%gwfmvrperioddata%pname2(i), &
+                                    this%gwfmvrperioddata%id2(i), &
+                                    this%gwfmvrperioddata%imvrtype(i), &
+                                    this%gwfmvrperioddata%value(i))
+        call this%mvr(i)%prepare(this%parser%iuactive, &
+                                 this%pckMemPaths, &
+                                 this%pakmovers)
+        if (this%iprpak == 1) call this%mvr(i)%echo(this%iout)
       end do
-      write(this%iout,'(/,1x,a,1x,i6,/)') 'END OF DATA FOR PERIOD', kper
-      nlist = i - 1
+      write (this%iout, '(/,1x,a,1x,i6,/)') 'END OF DATA FOR PERIOD', kper
       !
       ! -- Set the number of movers for this period to nlist
       this%nmvr = nlist
-      write(this%iout, '(4x, i0, a, i0)') this%nmvr,                           &
+      write (this%iout, '(4x, i0, a, i0)') this%nmvr, &
         ' MOVERS READ FOR PERIOD ', kper
       !
       ! -- Check to make sure all providers and receivers are properly stored
       do i = 1, this%nmvr
         ipos = ifind(this%pckMemPaths, this%mvr(i)%pckNameSrc)
-        if(ipos < 1) then
-          write(errmsg,'(4x,a,a,a)') 'PROVIDER ',                              &
+        if (ipos < 1) then
+          write (errmsg, '(4x,a,a,a)') 'PROVIDER ', &
             trim(this%mvr(i)%pckNameSrc), ' NOT LISTED IN PACKAGES BLOCK.'
           call store_error(errmsg)
-        endif
+        end if
         ipos = ifind(this%pckMemPaths, this%mvr(i)%pckNameTgt)
-        if(ipos < 1) then
-          write(errmsg,'(4x,a,a,a)') 'RECEIVER ',                              &
+        if (ipos < 1) then
+          write (errmsg, '(4x,a,a,a)') 'RECEIVER ', &
             trim(this%mvr(i)%pckNameTgt), ' NOT LISTED IN PACKAGES BLOCK.'
           call store_error(errmsg)
-        endif
-      enddo
-      if(count_errors() > 0) then
+        end if
+      end do
+      if (count_errors() > 0) then
         call this%parser%StoreErrorUnit()
-      endif
+      end if
       !
       ! -- reset ientries
       do i = 1, this%maxcomb
@@ -408,9 +404,9 @@ module GwfMvrModule
         this%ientries(ipos) = this%ientries(ipos) + 1
       end do
     else
-      write(this%iout, fmtlsp) 'MVR'
+      write (this%iout, fmtlsp) 'MVR'
       !
-    endif
+    end if
     !
     ! -- return
     return
@@ -432,7 +428,7 @@ module GwfMvrModule
     !
     do i = 1, this%nmvr
       call this%mvr(i)%advance()
-    enddo
+    end do
     !
     ! -- Return
     return
@@ -454,7 +450,7 @@ module GwfMvrModule
     !
     do i = 1, this%nmvr
       call this%mvr(i)%fc()
-    enddo
+    end do
     !
     ! -- Return
     return
@@ -469,16 +465,16 @@ module GwfMvrModule
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwfMvrType) :: this
-    integer(I4B),intent(in) :: innertot
-    integer(I4B),intent(in) :: kiter
-    integer(I4B),intent(in) :: iend
-    integer(I4B),intent(in) :: icnvgmod
+    integer(I4B), intent(in) :: innertot
+    integer(I4B), intent(in) :: kiter
+    integer(I4B), intent(in) :: iend
+    integer(I4B), intent(in) :: icnvgmod
     character(len=LENPAKLOC), intent(inout) :: cpak
     integer(I4B), intent(inout) :: ipak
     real(DP), intent(inout) :: dpak
     ! -- local
     ! -- formats
-    character(len=*),parameter :: fmtmvrcnvg = &
+    character(len=*), parameter :: fmtmvrcnvg = &
       "(/,1x,'MOVER PACKAGE REQUIRES AT LEAST TWO OUTER ITERATIONS. CONVERGE &
       &FLAG HAS BEEN RESET TO FALSE.')"
 ! ------------------------------------------------------------------------------
@@ -488,14 +484,14 @@ module GwfMvrModule
       if (icnvgmod == 1 .and. kiter == 1) then
         dpak = DNODATA
         cpak = trim(this%packName)
-        write(this%iout, fmtmvrcnvg)
-      endif
-    endif
+        write (this%iout, fmtmvrcnvg)
+      end if
+    end if
     !
     ! -- return
     return
   end subroutine mvr_cc
-  
+
   subroutine mvr_bd(this)
 ! ******************************************************************************
 ! mvr_bd -- fill the mover budget object
@@ -504,7 +500,6 @@ module GwfMvrModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use InputOutputModule, only: ubdsv06, ubdsvd
     ! -- dummy
     class(GwfMvrType) :: this
     ! -- locals
@@ -526,8 +521,7 @@ module GwfMvrModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only : kstp, kper, delt, pertim, totim
-    use InputOutputModule, only: ubdsv06, ubdsvd
+    use TdisModule, only: kstp, kper, delt, pertim, totim
     ! -- dummy
     class(GwfMvrType) :: this
     integer(I4B), intent(in) :: icbcfl
@@ -537,7 +531,7 @@ module GwfMvrModule
     integer(I4B) :: ibinun
     ! -- formats
     character(len=*), parameter :: fmttkk = &
-      "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
+                                   "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Print the mover flow table
@@ -547,14 +541,14 @@ module GwfMvrModule
     !
     ! -- Save the mover flows from the budobj to a mover binary file
     ibinun = 0
-    if(this%ibudgetout /= 0) then
+    if (this%ibudgetout /= 0) then
       ibinun = this%ibudgetout
     end if
-    if(icbcfl == 0) ibinun = 0
+    if (icbcfl == 0) ibinun = 0
     if (isuppress_output /= 0) ibinun = 0
     if (ibinun > 0) then
       call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
-                        pertim, totim, this%iout)
+                                  pertim, totim, this%iout)
     end if
     !
     ! -- Return
@@ -569,7 +563,7 @@ module GwfMvrModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only : kstp, kper, delt, pertim, totim
+    use TdisModule, only: kstp, kper, delt, pertim, totim
     ! -- dummy
     class(GwfMvrType) :: this
     integer(I4B), intent(in) :: icbcfl
@@ -580,13 +574,13 @@ module GwfMvrModule
     !
     ! -- Save the mover flows from the budobj to a mover binary file
     ibinun = 0
-    if(this%ibudgetout /= 0) then
+    if (this%ibudgetout /= 0) then
       ibinun = this%ibudgetout
     end if
-    if(icbcfl == 0) ibinun = 0
+    if (icbcfl == 0) ibinun = 0
     if (ibinun > 0) then
       call this%budobj%save_flows(this%dis, ibinun, kstp, kper, delt, &
-                        pertim, totim, this%iout)
+                                  pertim, totim, this%iout)
     end if
     !
     ! -- Return
@@ -637,34 +631,34 @@ module GwfMvrModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate and initialize ratin/ratout
-    allocate(ratin(this%maxpackages), ratout(this%maxpackages))
+    allocate (ratin(this%maxpackages), ratout(this%maxpackages))
     do j = 1, this%maxpackages
       ratin(j) = DZERO
       ratout(j) = DZERO
-    enddo
+    end do
     !
     ! -- Accumulate the rates
     do i = 1, this%nmvr
       do j = 1, this%maxpackages
-        if(this%pckMemPaths(j) == this%mvr(i)%pckNameSrc) then
+        if (this%pckMemPaths(j) == this%mvr(i)%pckNameSrc) then
           ratin(j) = ratin(j) + this%mvr(i)%qpactual
-        endif
-        if(this%pckMemPaths(j) == this%mvr(i)%pckNameTgt) then
+        end if
+        if (this%pckMemPaths(j) == this%mvr(i)%pckNameTgt) then
           ratout(j) = ratout(j) + this%mvr(i)%qpactual
-        endif
-      enddo
-    enddo
+        end if
+      end do
+    end do
     !
     ! -- Send rates to budget object
     call this%budget%reset()
     do j = 1, this%maxpackages
-      if((this%iexgmvr) == 1) then
+      if ((this%iexgmvr) == 1) then
         pckMemPath = this%pckMemPaths(j)
       else
         pckMemPath = this%paknames(j)
-      endif
+      end if
       call this%budget%addentry(ratin(j), ratout(j), delt, pckMemPath)
-    enddo
+    end do
     !
     ! -- Write the budget
     if (ibudfl /= 0) then
@@ -675,7 +669,7 @@ module GwfMvrModule
     call this%budget%writecsv(totim)
     !
     ! -- Deallocate
-    deallocate(ratin, ratout)
+    deallocate (ratin, ratout)
     !
     ! -- Output mvr budget
     !    Not using budobj write_table here because it would result
@@ -705,27 +699,32 @@ module GwfMvrModule
     ! -- Arrays
     if (this%inunit > 0) then
       call mem_deallocate(this%ientries)
-      deallocate(this%mvr)
-      deallocate(this%pckMemPaths)
-      deallocate(this%paknames)
-      deallocate(this%pakmovers)
+      deallocate (this%mvr)
+      deallocate (this%pckMemPaths)
+      deallocate (this%paknames)
+      deallocate (this%pakmovers)
+      !
+      ! -- allocate the perioddata object
+      call this%gwfmvrperioddata%destroy()
+      deallocate (this%gwfmvrperioddata)
+      nullify (this%gwfmvrperioddata)
       !
       ! -- budget object
       call this%budget%budget_da()
-      deallocate(this%budget)
+      deallocate (this%budget)
       !
       ! -- budobj
       call this%budobj%budgetobject_da()
-      deallocate(this%budobj)
-      nullify(this%budobj)
+      deallocate (this%budobj)
+      nullify (this%budobj)
       !
       ! -- output table object
       if (associated(this%outputtab)) then
         call this%outputtab%table_da()
-        deallocate(this%outputtab)
-        nullify(this%outputtab)
+        deallocate (this%outputtab)
+        nullify (this%outputtab)
       end if
-    endif
+    end if
     !
     ! -- Scalars
     call mem_deallocate(this%ibudgetout)
@@ -764,77 +763,78 @@ module GwfMvrModule
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- formats
-    character(len=*),parameter :: fmtmvrbin = &
+    character(len=*), parameter :: fmtmvrbin = &
       "(4x, 'MVR ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, /4x, 'OPENED ON &
       &UNIT: ', I0)"
 ! ------------------------------------------------------------------------------
     !
     ! -- get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, &
-      supportOpenClose=.true., blockRequired=.false.)
+                              supportOpenClose=.true., blockRequired=.false.)
     !
     ! -- parse options block if detected
     if (isfound) then
-      write(this%iout,'(1x,a)')'PROCESSING MVR OPTIONS'
+      write (this%iout, '(1x,a)') 'PROCESSING MVR OPTIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
-          case('BUDGET')
-            call this%parser%GetStringCaps(keyword)
-            if (keyword == 'FILEOUT') then
-              call this%parser%GetString(fname)
-              this%ibudgetout = getunit()
-              call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)',  &
-                            form, access, 'REPLACE')
-              write(this%iout,fmtmvrbin) 'BUDGET', fname, this%ibudgetout
-            else
-              call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
-            end if
-          case('BUDGETCSV')
-            call this%parser%GetStringCaps(keyword)
-            if (keyword == 'FILEOUT') then
-              call this%parser%GetString(fname)
-              this%ibudcsv = getunit()
-              call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
-                filstat_opt='REPLACE')
-              write(this%iout,fmtmvrbin) 'BUDGET CSV', fname, this%ibudcsv
-            else
-              call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
-                &FILEOUT')
-            end if
-          case ('PRINT_INPUT')
-            this%iprpak = 1
-            write(this%iout,'(4x,a)') 'WATER MOVER INPUT '//                   &
-              'WILL BE PRINTED TO LIST FILE.'
-          case ('PRINT_FLOWS')
-            this%iprflow = 1
-            write(this%iout,'(4x,a)') 'LISTS OF WATER MOVER FLOWS '//          &
-              'WILL BE PRINTED TO LIST FILE.'
-          case ('MODELNAMES')
-            this%imodelnames = 1
-            write(this%iout,'(4x,a)') 'ALL PACKAGE NAMES ARE PRECEDED '//      &
-              'BY THE NAME OF THE MODEL CONTAINING THE PACKAGE.'
-            if (this%iexgmvr == 0) then
-              write(errmsg,'(4x,a,a)')                                         &
-                'MODELNAMES CANNOT BE SPECIFIED UNLESS THE ' //                &
-                'MOVER PACKAGE IS FOR AN EXCHANGE.'
-              call store_error(errmsg)
-              call this%parser%StoreErrorUnit()
-            endif
-          case default
-            write(errmsg,'(4x,a,a)') 'Unknown MVR option: ', trim(keyword)
+        case ('BUDGET')
+          call this%parser%GetStringCaps(keyword)
+          if (keyword == 'FILEOUT') then
+            call this%parser%GetString(fname)
+            this%ibudgetout = getunit()
+            call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)', &
+                          form, access, 'REPLACE')
+            write (this%iout, fmtmvrbin) 'BUDGET', fname, this%ibudgetout
+          else
+            call store_error('OPTIONAL BUDGET KEYWORD MUST &
+                             &BE FOLLOWED BY FILEOUT')
+          end if
+        case ('BUDGETCSV')
+          call this%parser%GetStringCaps(keyword)
+          if (keyword == 'FILEOUT') then
+            call this%parser%GetString(fname)
+            this%ibudcsv = getunit()
+            call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
+                          filstat_opt='REPLACE')
+            write (this%iout, fmtmvrbin) 'BUDGET CSV', fname, this%ibudcsv
+          else
+            call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
+              &FILEOUT')
+          end if
+        case ('PRINT_INPUT')
+          this%iprpak = 1
+          write (this%iout, '(4x,a)') 'WATER MOVER INPUT '// &
+            'WILL BE PRINTED TO LIST FILE.'
+        case ('PRINT_FLOWS')
+          this%iprflow = 1
+          write (this%iout, '(4x,a)') 'LISTS OF WATER MOVER FLOWS '// &
+            'WILL BE PRINTED TO LIST FILE.'
+        case ('MODELNAMES')
+          this%imodelnames = 1
+          write (this%iout, '(4x,a)') 'ALL PACKAGE NAMES ARE PRECEDED '// &
+            'BY THE NAME OF THE MODEL CONTAINING THE PACKAGE.'
+          if (this%iexgmvr == 0) then
+            write (errmsg, '(4x,a,a)') &
+              'MODELNAMES CANNOT BE SPECIFIED UNLESS THE '// &
+              'MOVER PACKAGE IS FOR AN EXCHANGE.'
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
+          end if
+        case default
+          write (errmsg, '(4x,a,a)') 'Unknown MVR option: ', trim(keyword)
+          call store_error(errmsg)
+          call this%parser%StoreErrorUnit()
         end select
       end do
-      write(this%iout,'(1x,a)')'END OF MVR OPTIONS'
+      write (this%iout, '(1x,a)') 'END OF MVR OPTIONS'
     end if
     !
     ! -- Return
     return
-    end subroutine read_options
+  end subroutine read_options
 
   subroutine check_options(this)
 ! ******************************************************************************
@@ -855,21 +855,21 @@ module GwfMvrModule
     !
     ! -- Check if not exchange mover but model names are specified
     if (this%iexgmvr == 0 .and. this%imodelnames == 1) then
-      write(errmsg,'(4x,a,a)')                                                 &
-        '****ERROR. MODELNAMES CANNOT BE SPECIFIED UNLESS THE ' //             &
+      write (errmsg, '(4x,a,a)') &
+        '****ERROR. MODELNAMES CANNOT BE SPECIFIED UNLESS THE '// &
         'MOVER PACKAGE IS FOR AN EXCHANGE.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-    endif
+    end if
     !
     ! -- Check if exchange mover but model names not specified
     if (this%iexgmvr /= 0 .and. this%imodelnames == 0) then
-      write(errmsg,'(4x,a,a)')                                                 &
-        '****ERROR. MODELNAMES OPTION MUST BE SPECIFIED BECAUSE ' //           &
+      write (errmsg, '(4x,a,a)') &
+        '****ERROR. MODELNAMES OPTION MUST BE SPECIFIED BECAUSE '// &
         'MOVER PACKAGE IS FOR AN EXCHANGE.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-    endif
+    end if
     !
     ! -- Return
     return
@@ -886,9 +886,9 @@ module GwfMvrModule
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, count_errors, store_error_unit
     ! -- dummy
-    class(GwfMvrType),intent(inout) :: this
+    class(GwfMvrType), intent(inout) :: this
     ! -- local
-    character (len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: errmsg, keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     integer(I4B) :: i
@@ -902,26 +902,26 @@ module GwfMvrModule
     !
     ! -- parse dimensions block if detected
     if (isfound) then
-      write(this%iout,'(/1x,a)')'PROCESSING MVR DIMENSIONS'
+      write (this%iout, '(/1x,a)') 'PROCESSING MVR DIMENSIONS'
       do
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
-          case ('MAXMVR')
-            this%maxmvr = this%parser%GetInteger()
-            write(this%iout,'(4x,a,i0)')'MAXMVR = ', this%maxmvr
-          case ('MAXPACKAGES')
-            this%maxpackages  = this%parser%GetInteger()
-            write(this%iout,'(4x,a,i0)')'MAXPACKAGES = ', this%maxpackages
-          case default
-            write(errmsg,'(4x,a,a)')                                           &
-              'Unknown MVR dimension: ', trim(keyword)
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
+        case ('MAXMVR')
+          this%maxmvr = this%parser%GetInteger()
+          write (this%iout, '(4x,a,i0)') 'MAXMVR = ', this%maxmvr
+        case ('MAXPACKAGES')
+          this%maxpackages = this%parser%GetInteger()
+          write (this%iout, '(4x,a,i0)') 'MAXPACKAGES = ', this%maxpackages
+        case default
+          write (errmsg, '(4x,a,a)') &
+            'Unknown MVR dimension: ', trim(keyword)
+          call store_error(errmsg)
+          call this%parser%StoreErrorUnit()
         end select
       end do
-      write(this%iout,'(1x,a)')'END OF MVR DIMENSIONS'
+      write (this%iout, '(1x,a)') 'END OF MVR DIMENSIONS'
     else
       call store_error('Required DIMENSIONS block not found.')
       call this%parser%StoreErrorUnit()
@@ -936,18 +936,18 @@ module GwfMvrModule
     end do
     !
     ! -- verify dimensions were set
-    if(this%maxmvr < 0) then
-      write(errmsg, '(1x,a)') &
+    if (this%maxmvr < 0) then
+      write (errmsg, '(1x,a)') &
         'MAXMVR was not specified or was specified incorrectly.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-    endif
-    if(this%maxpackages < 0) then
-      write(errmsg, '(1x,a)') &
+    end if
+    if (this%maxpackages < 0) then
+      write (errmsg, '(1x,a)') &
         'MAXPACKAGES was not specified or was specified incorrectly.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-    endif
+    end if
     !
     ! -- return
     return
@@ -965,9 +965,9 @@ module GwfMvrModule
     use MemoryHelperModule, only: create_mem_path
     use SimModule, only: store_error, count_errors, store_error_unit
     ! -- dummy
-    class(GwfMvrType),intent(inout) :: this
+    class(GwfMvrType), intent(inout) :: this
     ! -- local
-    character (len=LINELENGTH) :: errmsg, word, word1, word2
+    character(len=LINELENGTH) :: errmsg, word, word1, word2
     integer(I4B) :: lloc, ierr
     integer(I4B) :: npak
     logical :: isfound, endOfBlock
@@ -980,7 +980,7 @@ module GwfMvrModule
     !
     ! -- parse packages block
     if (isfound) then
-      write(this%iout,'(/1x,a)')'PROCESSING MVR PACKAGES'
+      write (this%iout, '(/1x,a)') 'PROCESSING MVR PACKAGES'
       npak = 0
       do
         call this%parser%GetNextLine(endOfBlock)
@@ -991,8 +991,8 @@ module GwfMvrModule
         if (npak > this%maxpackages) then
           call store_error('ERROR.  MAXPACKAGES NOT SET LARGE ENOUGH.')
           call this%parser%StoreErrorUnit()
-        endif
-        if(this%iexgmvr == 0) then
+        end if
+        if (this%iexgmvr == 0) then
           this%pckMemPaths(npak) = create_mem_path(this%name_model, word1)
           word = word1
         else
@@ -1000,25 +1000,25 @@ module GwfMvrModule
           call this%parser%GetStringCaps(word2)
           this%pckMemPaths(npak) = create_mem_path(this%pckMemPaths(npak), word2)
           word = word2
-        endif
+        end if
         this%paknames(npak) = trim(word)
-        write(this%iout,'(3x,a,a)')'INCLUDING PACKAGE: ',                  &
+        write (this%iout, '(3x,a,a)') 'INCLUDING PACKAGE: ', &
           trim(this%pckMemPaths(npak))
       end do
-      write(this%iout,'(1x,a)')'END OF MVR PACKAGES'
+      write (this%iout, '(1x,a)') 'END OF MVR PACKAGES'
     else
       call store_error('ERROR.  REQUIRED PACKAGES BLOCK NOT FOUND.')
       call this%parser%StoreErrorUnit()
     end if
     !
     ! -- Check to make sure npak = this%maxpackages
-    if(npak /= this%maxpackages) then
-      write(errmsg, '(a, i0, a, i0, a)')                                        &
-        'ERROR.  NUMBER OF PACKAGES (', npak, ') DOES NOT EQUAL ' //            &
+    if (npak /= this%maxpackages) then
+      write (errmsg, '(a, i0, a, i0, a)') &
+        'ERROR.  NUMBER OF PACKAGES (', npak, ') DOES NOT EQUAL '// &
         'MAXPACKAGES (', this%maxpackages, ').'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-    endif
+    end if
     !
     ! -- return
     return
@@ -1036,9 +1036,9 @@ module GwfMvrModule
     use MemoryManagerModule, only: mem_setptr
     use SimModule, only: store_error, count_errors, store_error_unit
     ! -- dummy
-    class(GwfMvrType),intent(inout) :: this
+    class(GwfMvrType), intent(inout) :: this
     ! -- local
-    character (len=LINELENGTH) :: errmsg
+    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: i
     integer(I4B), pointer :: imover_ptr
     ! -- format
@@ -1049,10 +1049,10 @@ module GwfMvrModule
       imover_ptr => null()
       call mem_setptr(imover_ptr, 'IMOVER', trim(this%pckMemPaths(i)))
       if (imover_ptr == 0) then
-        write(errmsg, '(a, a, a)') &
-                          'ERROR.  MODEL AND PACKAGE "', &
-                          trim(this%pckMemPaths(i)), &
-                          '" DOES NOT HAVE MOVER SPECIFIED IN OPTIONS BLOCK.'
+        write (errmsg, '(a, a, a)') &
+          'ERROR.  MODEL AND PACKAGE "', &
+          trim(this%pckMemPaths(i)), &
+          '" DOES NOT HAVE MOVER SPECIFIED IN OPTIONS BLOCK.'
         call store_error(errmsg)
       end if
     end do
@@ -1060,7 +1060,7 @@ module GwfMvrModule
     ! -- Terminate if errors detected.
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
-    endif
+    end if
     !
     ! -- return
     return
@@ -1076,7 +1076,7 @@ module GwfMvrModule
     ! -- modules
     use PackageMoverModule, only: set_packagemover_pointer
     ! -- dummy
-    class(GwfMvrType),intent(inout) :: this
+    class(GwfMvrType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i
     ! -- format
@@ -1132,6 +1132,9 @@ module GwfMvrModule
     this%iexgmvr = 0
     this%imodelnames = 0
     !
+    ! -- allocate the period data input object
+    allocate (this%gwfmvrperioddata)
+    !
     ! -- Return
     return
   end subroutine allocate_scalars
@@ -1154,15 +1157,19 @@ module GwfMvrModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate
-    allocate(this%mvr(this%maxmvr))
-    allocate(this%pckMemPaths(this%maxpackages))
-    allocate(this%paknames(this%maxpackages))
-    allocate(this%pakmovers(this%maxpackages))
+    allocate (this%mvr(this%maxmvr))
+    allocate (this%pckMemPaths(this%maxpackages))
+    allocate (this%paknames(this%maxpackages))
+    allocate (this%pakmovers(this%maxpackages))
     !
     ! -- nullify the pakmovers
     do i = 1, this%maxpackages
       call nulllify_packagemover_pointer(this%pakmovers(i))
     end do
+    !
+    ! -- allocate the perioddata object
+    call this%gwfmvrperioddata%construct(this%maxmvr, this%memoryPath)
+    !
     !
     ! -- allocate the object and assign values to object variables
     call mem_allocate(this%ientries, this%maxcomb, 'IENTRIES', this%memoryPath)
@@ -1197,14 +1204,14 @@ module GwfMvrModule
     integer(I4B) :: i
     integer(I4B) :: j
     integer(I4B) :: naux
-    character (len=LENMODELNAME) :: modelname1, modelname2
-    character (len=LENPACKAGENAME) :: packagename1, packagename2
+    character(len=LENMODELNAME) :: modelname1, modelname2
+    character(len=LENPACKAGENAME) :: packagename1, packagename2
     integer(I4B) :: maxlist
     integer(I4B) :: idx
     character(len=LENBUDTXT) :: text
 ! ------------------------------------------------------------------------------
     !
-    ! -- Determine the number of mover budget terms. These are fixed for 
+    ! -- Determine the number of mover budget terms. These are fixed for
     !    the simulation and cannot change.  A separate term is required
     !    for each possible provider/receiver combination.
     nbudterm = 0
@@ -1227,11 +1234,11 @@ module GwfMvrModule
     maxlist = this%maxmvr
     naux = 0
     do i = 1, this%maxpackages
-      
+
       call split_mem_path(this%pckMemPaths(i), modelname1, packagename1)
-      
-      do j = 1, this%maxpackages  
-        
+
+      do j = 1, this%maxpackages
+
         idx = idx + 1
         call split_mem_path(this%pckMemPaths(j), modelname2, packagename2)
         call this%budobj%budterm(idx)%initialize(text, &
@@ -1270,16 +1277,15 @@ module GwfMvrModule
     integer(I4B) :: istart
     integer(I4B) :: istop
     real(DP) :: rval
-    character (len=LENMODELNAME) :: modelname1, modelname2
-    character (len=LENPACKAGENAME) :: packagename1, packagename2
-    character (len=LENMEMPATH) :: pckMemPathsDummy
+    character(len=LENMODELNAME) :: modelname1, modelname2
+    character(len=LENPACKAGENAME) :: packagename1, packagename2
+    character(len=LENMEMPATH) :: pckMemPathsDummy
     real(DP) :: q
     ! -- formats
 ! -----------------------------------------------------------------------------
     !
     ! -- initialize counter
     idx = 0
-
 
     do i = 1, this%maxpackages
       ! -- Retrieve modelname1 and packagename1
@@ -1293,10 +1299,12 @@ module GwfMvrModule
       do j = 1, this%maxpackages
         ! -- Retrieve modelname2 and packagename2
         lloc = 1
-        call urword(this%pckMemPaths(j), lloc, istart, istop, 1, ival, rval, -1, -1)
+        call urword(this%pckMemPaths(j), lloc, istart, istop, 1, ival, rval, &
+                    -1, -1)
         pckMemPathsDummy = this%pckMemPaths(j)
         modelname2 = pckMemPathsDummy(istart:istop)
-        call urword(this%pckMemPaths(j), lloc, istart, istop, 1, ival, rval, -1, -1)
+        call urword(this%pckMemPaths(j), lloc, istart, istop, 1, ival, rval, &
+                    -1, -1)
         pckMemPathsDummy = this%pckMemPaths(j)
         packagename2 = pckMemPathsDummy(istart:istop)
         ipos = (i - 1) * this%maxpackages + j
@@ -1311,8 +1319,8 @@ module GwfMvrModule
           !
           ! -- pname1 is provider, pname2 is receiver
           !    flow is always negative because it is coming from provider
-          if(this%pckMemPaths(i) == this%mvr(n)%pckNameSrc) then
-            if(this%pckMemPaths(j) == this%mvr(n)%pckNameTgt) then
+          if (this%pckMemPaths(i) == this%mvr(n)%pckNameSrc) then
+            if (this%pckMemPaths(j) == this%mvr(n)%pckNameTgt) then
               !
               ! -- set q to qpactual
               q = -this%mvr(n)%qpactual
@@ -1347,7 +1355,7 @@ module GwfMvrModule
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwfMvrType),intent(inout) :: this
+    class(GwfMvrType), intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: text
@@ -1362,15 +1370,15 @@ module GwfMvrModule
       ntabcol = 7
       !
       ! -- initialize the output table object
-      title = 'WATER MOVER PACKAGE (' // trim(this%packName) //     &
+      title = 'WATER MOVER PACKAGE ('//trim(this%packName)// &
               ') FLOW RATES'
       call table_cr(this%outputtab, this%packName, title)
-      call this%outputtab%table_df(this%maxmvr, ntabcol, this%iout,            &
-                                    transient=.TRUE.)
+      call this%outputtab%table_df(this%maxmvr, ntabcol, this%iout, &
+                                   transient=.TRUE.)
       text = 'NUMBER'
       call this%outputtab%initialize_column(text, 10, alignment=TABCENTER)
       text = 'PROVIDER LOCATION'
-      ilen = LENMODELNAME+LENPACKAGENAME+1
+      ilen = LENMODELNAME + LENPACKAGENAME + 1
       call this%outputtab%initialize_column(text, ilen)
       text = 'PROVIDER ID'
       call this%outputtab%initialize_column(text, 10)
@@ -1379,11 +1387,11 @@ module GwfMvrModule
       text = 'PROVIDED RATE'
       call this%outputtab%initialize_column(text, 10)
       text = 'RECEIVER LOCATION'
-      ilen = LENMODELNAME+LENPACKAGENAME+1
+      ilen = LENMODELNAME + LENPACKAGENAME + 1
       call this%outputtab%initialize_column(text, ilen)
       text = 'RECEIVER ID'
       call this%outputtab%initialize_column(text, 10)
-      
+
     end if
     !
     ! -- return
@@ -1400,9 +1408,9 @@ module GwfMvrModule
     ! -- module
     use TdisModule, only: kstp, kper
     ! -- dummy
-    class(GwfMvrType),intent(inout) :: this
+    class(GwfMvrType), intent(inout) :: this
     ! -- local
-    character (len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: title
     integer(I4B) :: i
 ! ------------------------------------------------------------------------------
     !
@@ -1410,7 +1418,7 @@ module GwfMvrModule
     call this%outputtab%set_kstpkper(kstp, kper)
     !
     ! -- Add terms and print the table
-    title = 'WATER MOVER PACKAGE (' // trim(this%packName) //     &
+    title = 'WATER MOVER PACKAGE ('//trim(this%packName)// &
             ') FLOW RATES'
     call this%outputtab%set_title(title)
     call this%outputtab%set_maxbound(this%nmvr)

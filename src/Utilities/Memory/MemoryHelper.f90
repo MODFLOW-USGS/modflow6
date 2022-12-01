@@ -1,6 +1,7 @@
 module MemoryHelperModule
   use KindModule, only: I4B, LGP
-  use ConstantsModule, only: LENMEMPATH, LENMEMSEPARATOR, LENMEMADDRESS, LENVARNAME, LENCOMPONENTNAME
+  use ConstantsModule, only: LENMEMPATH, LENMEMSEPARATOR, LENMEMADDRESS, &
+                             LENVARNAME, LENCOMPONENTNAME, LENCONTEXTNAME
   use SimModule, only: store_error
   use SimVariablesModule, only: errmsg
 
@@ -13,24 +14,30 @@ contains
   !> @brief returns the path to the memory object
   !!
   !! Returns the path to the location in the memory manager where
-  !! the variables for this (sub)component are stored, the 'memoryPath' 
+  !! the variables for this (sub)component are stored, the 'memoryPath'
   !!
   !! NB: no need to trim the input parameters
   !<
-  function create_mem_path(component, subcomponent) result(memory_path)
-    character(len=*), intent(in) :: component               !< name of the solution, model, or exchange
-    character(len=*), intent(in), optional :: subcomponent  !< name of the package (optional)
-    character(len=LENMEMPATH) :: memory_path                !< the memory path
-    
+  function create_mem_path(component, subcomponent, context) result(memory_path)
+    character(len=*), intent(in) :: component !< name of the solution, model, or exchange
+    character(len=*), intent(in), optional :: subcomponent !< name of the package (optional)
+    character(len=*), intent(in), optional :: context !< name of the context (optional)
+    character(len=LENMEMPATH) :: memory_path !< the memory path
+
     call mem_check_length(component, LENCOMPONENTNAME, "solution/model/exchange")
-    call mem_check_length(subcomponent, LENCOMPONENTNAME, "package")  
-    
+    call mem_check_length(subcomponent, LENCOMPONENTNAME, "package")
+    call mem_check_length(context, LENCONTEXTNAME, "context")
+
+    memory_path = trim(component)
+
     if (present(subcomponent)) then
-      memory_path = trim(component) // memPathSeparator // trim(subcomponent)    
-    else
-      memory_path = trim(component)
+      memory_path = trim(memory_path)//memPathSeparator//trim(subcomponent)
     end if
-    
+
+    if (present(context)) then
+      memory_path = trim(context)//memPathSeparator//trim(memory_path)
+    end if
+
   end function create_mem_path
 
   !> @brief returns the address string of the memory object
@@ -40,24 +47,24 @@ contains
   !! NB: no need to trim the input parameters
   !<
   function create_mem_address(mem_path, var_name) result(mem_address)
-    character(len=*), intent(in) :: mem_path    !< path to the memory object
-    character(len=*), intent(in) :: var_name    !< name of the stored variable
+    character(len=*), intent(in) :: mem_path !< path to the memory object
+    character(len=*), intent(in) :: var_name !< name of the stored variable
     character(len=LENMEMADDRESS) :: mem_address !< full address string to the memory object
 
     call mem_check_length(mem_path, LENMEMPATH, "memory path")
     call mem_check_length(var_name, LENVARNAME, "variable")
 
-    mem_address = trim(mem_path) // memPathSeparator // trim(var_name) 
+    mem_address = trim(mem_path)//memPathSeparator//trim(var_name)
 
-  end function create_mem_address  
+  end function create_mem_address
 
   !> @brief Split a memory address string into memory path and variable name
   !<
   subroutine split_mem_address(mem_address, mem_path, var_name, success)
-    character(len=*), intent(in) :: mem_address         !< the full memory address string
-    character(len=LENMEMPATH), intent(out) :: mem_path  !< the memory path
-    character(len=LENVARNAME), intent(out) :: var_name  !< the variable name
-    logical(LGP), intent(out) :: success                !< true when successful
+    character(len=*), intent(in) :: mem_address !< the full memory address string
+    character(len=LENMEMPATH), intent(out) :: mem_path !< the memory path
+    character(len=LENVARNAME), intent(out) :: var_name !< the variable name
+    logical(LGP), intent(out) :: success !< true when successful
     ! local
     integer(I4B) :: idx
 
@@ -65,52 +72,65 @@ contains
 
     ! if no separator, or it's at the end of the string,
     ! the memory address is not valid:
-    if(idx < 1 .or. idx == len(mem_address)) then
+    if (idx < 1 .or. idx == len(mem_address)) then
       success = .false.
       mem_path = ''
       var_name = ''
     else
       success = .true.
-      mem_path = mem_address(:idx-1)
-      var_name = mem_address(idx+1:)
+      mem_path = mem_address(:idx - 1)
+      var_name = mem_address(idx + 1:)
     end if
-    
+
+    ! remove context specifier if prepended to mempath
+    !if (success) then
+    !  idx = index(mem_path, memPathSeparator, back=.true.)
+    !  if (idx > 0 .and. mem_path(1:2) == '__') then
+    !    mem_path = mem_path(idx + 1:)
+    !  end if
+    !end if
+
   end subroutine split_mem_address
 
   !> @brief Split the memory path into component(s)
   !!
-  !! NB: when there is no subcomponent in the path, the 
+  !! NB: when there is no subcomponent in the path, the
   !! value for @par subcomponent is set to an empty string.
   !<
-  subroutine split_mem_path(mem_path, component, subcomponent)   
-    character(len=*), intent(in) :: mem_path                      !< path to the memory object
-    character(len=LENCOMPONENTNAME), intent(out) :: component     !< name of the component (solution, model, exchange)
-    character(len=LENCOMPONENTNAME), intent(out) :: subcomponent  !< name of the subcomponent (package)
-    
+  subroutine split_mem_path(mem_path, component, subcomponent)
+    character(len=*), intent(in) :: mem_path !< path to the memory object
+    character(len=LENCOMPONENTNAME), intent(out) :: component !< name of the component (solution, model, exchange)
+    character(len=LENCOMPONENTNAME), intent(out) :: subcomponent !< name of the subcomponent (package)
+
     ! local
     integer(I4B) :: idx
 
     idx = index(mem_path, memPathSeparator, back=.true.)
     ! if the separator is found at the end of the string,
     ! the path is invalid:
-    if(idx == len(mem_path)) then
-      write(errmsg, '(*(G0))')                                               &
+    if (idx == len(mem_path)) then
+      write (errmsg, '(*(G0))') &
         'Fatal error in Memory Manager, cannot split invalid memory path: ', &
-         mem_path
+        mem_path
 
       ! -- store error and stop program execution
       call store_error(errmsg, terminate=.TRUE.)
     end if
 
-
     if (idx > 0) then
       ! when found:
-      component = mem_path(:idx-1)
-      subcomponent = mem_path(idx+1:)
+      component = mem_path(:idx - 1)
+      subcomponent = mem_path(idx + 1:)
     else
       ! when not found, there apparently is no subcomponent:
       component = mem_path
       subcomponent = ''
+    end if
+
+    ! remove context specifier if prepended to component
+    idx = index(component, memPathSeparator, back=.true.)
+    if (idx > 0 .and. component(1:2) == '__') then
+      component = component(idx + 1:)
     end if
 
   end subroutine split_mem_path
@@ -119,7 +139,7 @@ contains
   !!
   !! The string will be trimmed before the measurement.
   !!
-  !! @warning{if the length exceeds the maximum, a message is recorded 
+  !! @warning{if the length exceeds the maximum, a message is recorded
   !! and the program will be stopped}
   !!
   !! The description should describe the part of the address that is checked
@@ -127,13 +147,13 @@ contains
   !! itself
   !<
   subroutine mem_check_length(name, max_length, description)
-    character(len=*), intent(in) :: name        !< string to be checked
-    integer(I4B), intent(in)     :: max_length  !< maximum length
+    character(len=*), intent(in) :: name !< string to be checked
+    integer(I4B), intent(in) :: max_length !< maximum length
     character(len=*), intent(in) :: description !< a descriptive string
-    
-    if(len(trim(name)) > max_length) then
-      write(errmsg, '(*(G0))')                                                   &
-        'Fatal error in Memory Manager, length of ', description, ' must be ',   &
+
+    if (len(trim(name)) > max_length) then
+      write (errmsg, '(*(G0))') &
+        'Fatal error in Memory Manager, length of ', description, ' must be ', &
         max_length, ' characters or less: ', name, '(len=', len(trim(name)), ')'
 
       ! -- store error and stop program execution

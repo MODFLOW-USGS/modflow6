@@ -6,8 +6,9 @@ model grid of square cells.
 """
 
 import os
-import pytest
+
 import numpy as np
+import pytest
 from matplotlib import pyplot as plt
 
 try:
@@ -99,8 +100,8 @@ def get_gwf_model(sim, gwfname, gwfpath, modelshape, chdspd=None, welspd=None):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.cbc",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
@@ -156,8 +157,8 @@ def get_gwt_model(
     # output control
     oc = flopy.mf6.ModflowGwtoc(
         gwt,
-        budget_filerecord="{}.cbc".format(gwtname),
-        concentration_filerecord="{}.ucn".format(gwtname),
+        budget_filerecord=f"{gwtname}.cbc",
+        concentration_filerecord=f"{gwtname}.ucn",
         concentrationprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
@@ -302,7 +303,7 @@ def build_model(idx, dir):
         exgtype="GWT6-GWT6",
         gwfmodelname1=gwf1.name,
         gwfmodelname2=gwf2.name,
-        advscheme=scheme[idx],
+        adv_scheme=scheme[idx],
         nexg=len(gwfgwf_data),
         exgmnamea=gwt1.name,
         exgmnameb=gwt2.name,
@@ -707,7 +708,7 @@ def eval_transport(sim):
 
     # check budget
     for mname in ["transport1", "transport2"]:
-        fpth = os.path.join(sim.simpath, mname, "{}.lst".format(mname))
+        fpth = os.path.join(sim.simpath, mname, f"{mname}.lst")
         for line in open(fpth):
             if line.lstrip().startswith("PERCENT"):
                 cumul_balance_error = float(line.split()[3])
@@ -719,21 +720,21 @@ def eval_transport(sim):
 
         # get grid data (from GWF)
         gwfname = "flow1" if mname == "transport1" else "flow2"
-        fpth = os.path.join(sim.simpath, gwfname, "{}.dis.grb".format(gwfname))
+        fpth = os.path.join(sim.simpath, gwfname, f"{gwfname}.dis.grb")
         grb = flopy.mf6.utils.MfGrdFile(fpth)
 
         # Check on residual, which is stored in diagonal position of
         # flow-ja-face.  Residual should be less than convergence tolerance,
         # or this means the residual term is not added correctly.
-        fpth = os.path.join(sim.simpath, mname, "{}.cbc".format(mname))
+        fpth = os.path.join(sim.simpath, mname, f"{mname}.cbc")
         cbb = flopy.utils.CellBudgetFile(fpth)
         flow_ja_face = cbb.get_data(text="FLOW-JA-FACE")
         ia = grb._datadict["IA"] - 1
         for fjf in flow_ja_face:
             fjf = fjf.flatten()
             res = fjf[ia[:-1]]
-            errmsg = "min or max flowja residual too large {} {}".format(
-                res.min(), res.max()
+            errmsg = (
+                f"min or max flowja residual too large {res.min()} {res.max()}"
             )
             # TODO: this is not implemented yet:
             # assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
@@ -773,7 +774,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

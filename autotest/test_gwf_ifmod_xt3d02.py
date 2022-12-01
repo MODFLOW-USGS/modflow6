@@ -1,4 +1,5 @@
 import os
+
 import numpy as np
 import pytest
 
@@ -11,6 +12,7 @@ except:
     raise Exception(msg)
 
 from flopy.utils.lgrutil import Lgr
+
 from framework import testing_framework
 from simulation import Simulation
 
@@ -176,8 +178,8 @@ def get_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        head_filerecord="{}.hds".format(mname_ref),
-        budget_filerecord="{}.cbc".format(mname_ref),
+        head_filerecord=f"{mname_ref}.hds",
+        budget_filerecord=f"{mname_ref}.cbc",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
@@ -214,8 +216,8 @@ def get_model(idx, dir):
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd_left)
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        head_filerecord="{}.hds".format(mname_left),
-        budget_filerecord="{}.cbc".format(mname_left),
+        head_filerecord=f"{mname_left}.hds",
+        budget_filerecord=f"{mname_left}.cbc",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
@@ -259,8 +261,8 @@ def get_model(idx, dir):
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd_right)
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        head_filerecord="{}.hds".format(mname_right),
-        budget_filerecord="{}.cbc".format(mname_right),
+        head_filerecord=f"{mname_right}.hds",
+        budget_filerecord=f"{mname_right}.cbc",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
@@ -323,24 +325,24 @@ def qxqyqz(fname, nlay, nrow, ncol):
 def compare_to_ref(sim):
     print("comparing heads and spec. discharge to single model reference...")
 
-    fpth = os.path.join(sim.simpath, "{}.hds".format(mname_ref))
+    fpth = os.path.join(sim.simpath, f"{mname_ref}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads = hds.get_data()
-    fpth = os.path.join(sim.simpath, "{}.cbc".format(mname_ref))
+    fpth = os.path.join(sim.simpath, f"{mname_ref}.cbc")
     nlay, nrow, ncol = heads.shape
     qxb, qyb, qzb = qxqyqz(fpth, nlay, nrow, ncol)
 
-    fpth = os.path.join(sim.simpath, "{}.hds".format(mname_left))
+    fpth = os.path.join(sim.simpath, f"{mname_left}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads_left = hds.get_data()
-    fpth = os.path.join(sim.simpath, "{}.cbc".format(mname_left))
+    fpth = os.path.join(sim.simpath, f"{mname_left}.cbc")
     nlay, nrow, ncol = heads_left.shape
     qxb_left, qyb_left, qzb_left = qxqyqz(fpth, nlay, nrow, ncol)
 
-    fpth = os.path.join(sim.simpath, "{}.hds".format(mname_right))
+    fpth = os.path.join(sim.simpath, f"{mname_right}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads_right = hds.get_data()
-    fpth = os.path.join(sim.simpath, "{}.cbc".format(mname_right))
+    fpth = os.path.join(sim.simpath, f"{mname_right}.cbc")
     nlay, nrow, ncol = heads_right.shape
     qxb_right, qyb_right, qzb_right = qxqyqz(fpth, nlay, nrow, ncol)
 
@@ -411,7 +413,7 @@ def compare_to_ref(sim):
 
     # check budget error from .lst file
     for mname in [mname_ref, mname_left, mname_right]:
-        fpth = os.path.join(sim.simpath, "{}.lst".format(mname))
+        fpth = os.path.join(sim.simpath, f"{mname}.lst")
         for line in open(fpth):
             if line.lstrip().startswith("PERCENT"):
                 cumul_balance_error = float(line.split()[3])
@@ -455,7 +457,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

@@ -1,9 +1,9 @@
 module TimeArraySeriesLinkModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule,       only: LENPACKAGENAME, LENTIMESERIESTEXT
-  use InputOutputModule,     only: UPCASE
-  use ListModule,            only: ListType
+  use ConstantsModule, only: LENPACKAGENAME, LENTIMESERIESTEXT
+  use InputOutputModule, only: UPCASE
+  use ListModule, only: ListType
   use TimeArraySeriesModule, only: TimeArraySeriesType
 
   implicit none
@@ -53,7 +53,7 @@ contains
   end subroutine tasl_da
 
   subroutine ConstructTimeArraySeriesLink(newTasLink, timeArraySeries, &
-                                     pkgName, bndArray, iprpak, text)
+                                          pkgName, bndArray, iprpak, text)
 ! ******************************************************************************
 ! ConstructTimeArraySeriesLink -- construct
 ! ******************************************************************************
@@ -61,17 +61,17 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    type(TimeArraySeriesLinkType), pointer,  intent(out) :: newTasLink
-    type(TimeArraySeriesType), pointer,      intent(in)  :: timeArraySeries
-    character(len=*),                        intent(in)  :: pkgName
-    real(DP), dimension(:), pointer,         intent(in)  :: bndArray
-    integer(I4B),                            intent(in)  :: iprpak
-    character(len=*),                        intent(in)  :: text
+    type(TimeArraySeriesLinkType), pointer, intent(out) :: newTasLink
+    type(TimeArraySeriesType), pointer, intent(in) :: timeArraySeries
+    character(len=*), intent(in) :: pkgName
+    real(DP), dimension(:), pointer, intent(in) :: bndArray
+    integer(I4B), intent(in) :: iprpak
+    character(len=*), intent(in) :: text
     ! -- local
     character(len=LENPACKAGENAME) :: pkgNameTemp
 ! ------------------------------------------------------------------------------
     !
-    allocate(newTasLink)
+    allocate (newTasLink)
     ! Store package name as all caps
     pkgNameTemp = pkgName
     call UPCASE(pkgNameTemp)
@@ -86,7 +86,7 @@ contains
 
   function CastAsTimeArraySeriesLinkType(obj) result(res)
 ! ******************************************************************************
-! CastAsTimeArraySeriesLinkType -- Cast an unlimited polymorphic object as 
+! CastAsTimeArraySeriesLinkType -- Cast an unlimited polymorphic object as
 !   TimeArraySeriesLinkType
 ! ******************************************************************************
 !
@@ -115,7 +115,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    type(ListType),                         intent(inout) :: list
+    type(ListType), intent(inout) :: list
     type(TimeArraySeriesLinkType), pointer, intent(inout) :: tasLink
     ! -- local
     class(*), pointer :: obj
@@ -127,7 +127,7 @@ contains
     return
   end subroutine AddTimeArraySeriesLinkToList
 
-  function GetTimeArraySeriesLinkFromList(list, idx) result (res)
+  function GetTimeArraySeriesLinkFromList(list, idx) result(res)
 ! ******************************************************************************
 ! GetTimeArraySeriesLinkFromList -- get from list
 ! ******************************************************************************
@@ -135,9 +135,9 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    type(ListType),             intent(inout) :: list
-    integer(I4B),                    intent(in)    :: idx
-    type(TimeArraySeriesLinkType), pointer    :: res
+    type(ListType), intent(inout) :: list
+    integer(I4B), intent(in) :: idx
+    type(TimeArraySeriesLinkType), pointer :: res
     ! -- local
     class(*), pointer :: obj
 ! ------------------------------------------------------------------------------

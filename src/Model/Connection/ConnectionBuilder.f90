@@ -6,38 +6,38 @@ module ConnectionBuilderModule
   use BaseSolutionModule, only: BaseSolutionType
   use NumericalSolutionModule, only: NumericalSolutionType
   use BaseExchangeModule, only: BaseExchangeType, GetBaseExchangeFromList
-  use DisConnExchangeModule, only: DisConnExchangeType,               &
-                                GetDisConnExchangeFromList
+  use DisConnExchangeModule, only: DisConnExchangeType, &
+                                   GetDisConnExchangeFromList
   use NumericalModelModule, only: NumericalModelType
   use SpatialModelConnectionModule, only: SpatialModelConnectionType, &
-                                CastAsSpatialModelConnectionClass,    &
-                                GetSpatialModelConnectionFromList,    &
-                                AddSpatialModelConnectionToList
-  
-  implicit none  
+                                          CastAsSpatialModelConnectionClass, &
+                                          GetSpatialModelConnectionFromList, &
+                                          AddSpatialModelConnectionToList
+
+  implicit none
   private
-  
+
   type, public :: ConnectionBuilderType
   contains
     procedure, pass(this) :: processSolution
     procedure, private, pass(this) :: processExchanges
     procedure, private, pass(this) :: setConnectionsToSolution
     procedure, private, pass(this) :: assignExchangesToConnections
-  end type ConnectionBuilderType  
-  
-  contains
+  end type ConnectionBuilderType
+
+contains
 
   !> @brief Process the exchanges in the solution into model connections
   !!
   !! This routine processes all exchanges in a solution and,
-  !! when required, creates model connections of the proper 
+  !! when required, creates model connections of the proper
   !! type (GWF-GWF, GWT-GWT, ...) for a subset. It removes this
   !! subset of exchanges from the solution and replaces them with the
   !! created connections.
   !<
   subroutine processSolution(this, solution)
-    class(ConnectionBuilderType) :: this            !< the connection builder object
-    class(BaseSolutionType), pointer :: solution    !< the solution for which the exchanges are processed
+    class(ConnectionBuilderType) :: this !< the connection builder object
+    class(BaseSolutionType), pointer :: solution !< the solution for which the exchanges are processed
     ! local
     class(NumericalSolutionType), pointer :: numSol
     type(ListType) :: newConnections
@@ -54,10 +54,10 @@ module ConnectionBuilderModule
     call this%processExchanges(numSol%exchangelist, newConnections)
     if (newConnections%Count() == 0) then
       return
-    end if    
+    end if
 
-    write(iout,'(1x,a,i0,a,a)') 'Created ', newConnections%Count(),              &
-                      ' model connections for solution ', trim(solution%name)
+    write (iout, '(1x,a,i0,a,a)') 'Created ', newConnections%Count(), &
+      ' model connections for solution ', trim(solution%name)
 
     ! set the global exchanges from this solution to
     ! the model connections
@@ -73,16 +73,16 @@ module ConnectionBuilderModule
 
   !> @brief Create connections from exchanges
   !!
-  !! If the configuration demands it, this will create connections, 
+  !! If the configuration demands it, this will create connections,
   !! for the exchanges (one connection per exchange) add them to
   !! the global list, and return them as @param newConnections
   !<
   subroutine processExchanges(this, exchanges, newConnections)
     use ListsModule, only: baseconnectionlist, baseexchangelist
     use VersionModule, only: IDEVELOPMODE
-    class(ConnectionBuilderType) :: this              !< the connection builder object
-    type(ListType), pointer, intent(in) :: exchanges  !< the list of exchanges to process
-    type(ListType), intent(inout) :: newConnections   !< the newly created connections
+    class(ConnectionBuilderType) :: this !< the connection builder object
+    type(ListType), pointer, intent(in) :: exchanges !< the list of exchanges to process
+    type(ListType), intent(inout) :: newConnections !< the newly created connections
     ! local
     class(DisConnExchangeType), pointer :: conEx
     class(BaseExchangeType), pointer :: baseEx
@@ -96,10 +96,11 @@ module ConnectionBuilderModule
     ! Force use of the interface model
     dev_always_ifmod = .false.
     if (IDEVELOPMODE == 1) then
-      call get_environment_variable('DEV_ALWAYS_USE_IFMOD', value=envvar, status=status)
+      call get_environment_variable('DEV_ALWAYS_USE_IFMOD', &
+                                    value=envvar, status=status)
       if (status == 0 .and. envvar == '1') then
         dev_always_ifmod = .true.
-        write(*,'(a,/)') "### Experimental: forcing interface model ###"
+        write (*, '(a,/)') "### Experimental: forcing interface model ###"
       end if
     end if
 
@@ -109,17 +110,17 @@ module ConnectionBuilderModule
         ! if it is not DisConnExchangeType, we can skip it
         continue
       end if
-    
+
       ! for now, if we have XT3D on the interface, we use a connection,
-      ! (this will be more generic in the future)      
-      if (conEx%use_interface_model() .or. conEx%dev_ifmod_on                   &
+      ! (this will be more generic in the future)
+      if (conEx%use_interface_model() .or. conEx%dev_ifmod_on &
           .or. dev_always_ifmod) then
 
         ! we should not get period connections here
         isPeriodic = associated(conEx%model1, conEx%model2)
         if (isPeriodic) then
-          write(*,*) 'Error (which should never happen): interface model '//    &
-                     'does not support periodic boundary condition'
+          write (*, *) 'Error (which should never happen): interface model '// &
+            'does not support periodic boundary condition'
           call ustop()
         end if
 
@@ -128,7 +129,7 @@ module ConnectionBuilderModule
         call AddSpatialModelConnectionToList(baseconnectionlist, modelConnection)
         call AddSpatialModelConnectionToList(newConnections, modelConnection)
 
-        ! and for model 2, unless periodic 
+        ! and for model 2, unless periodic
         modelConnection => createModelConnection(conEx%model2, conEx)
         call AddSpatialModelConnectionToList(baseconnectionlist, modelConnection)
         call AddSpatialModelConnectionToList(newConnections, modelConnection)
@@ -142,7 +143,7 @@ module ConnectionBuilderModule
             exit
           end if
         end do
-        
+
       end if
     end do
 
@@ -158,45 +159,45 @@ module ConnectionBuilderModule
     use GwfGwfConnectionModule, only: GwfGwfConnectionType
     use GwtGwtConnectionModule, only: GwtGwtConnectionType
     use GwfModule, only: GwfModelType
-    
-    class(NumericalModelType), pointer , intent(in) :: model    !< the model for which the connection will be created
+
+    class(NumericalModelType), pointer, intent(in) :: model !< the model for which the connection will be created
     class(DisConnExchangeType), pointer, intent(in) :: exchange !< the type of connection
-    class(SpatialModelConnectionType), pointer :: connection    !< the created connection
-    
+    class(SpatialModelConnectionType), pointer :: connection !< the created connection
+
     ! different concrete connection types:
     class(GwfGwfConnectionType), pointer :: flowConnection => null()
     class(GwtGwtConnectionType), pointer :: transportConnection => null()
-    
+
     connection => null()
-    
+
     ! select on type of connection to create
-    select case(exchange%typename)
-      case('GWF-GWF')
-        allocate(GwfGwfConnectionType :: flowConnection)
-        call flowConnection%construct(model, exchange)
-        connection => flowConnection
-        flowConnection => null()        
-      case('GWT-GWT')
-        allocate(GwtGwtConnectionType :: transportConnection)
-        call transportConnection%construct(model, exchange)
-        connection => transportConnection
-        transportConnection => null()
-      case default
-        write(*,*) 'Error (which should never happen): undefined exchangetype found'
-        call ustop()
-    end select   
-    
+    select case (exchange%typename)
+    case ('GWF-GWF')
+      allocate (GwfGwfConnectionType :: flowConnection)
+      call flowConnection%construct(model, exchange)
+      connection => flowConnection
+      flowConnection => null()
+    case ('GWT-GWT')
+      allocate (GwtGwtConnectionType :: transportConnection)
+      call transportConnection%construct(model, exchange)
+      connection => transportConnection
+      transportConnection => null()
+    case default
+      write (*, *) 'Error (which should never happen): '// &
+        'undefined exchangetype found'
+      call ustop()
+    end select
+
   end function createModelConnection
-  
-  
+
   !> @brief Set connections to the solution
   !!
-  !! This adds the connections to the solution and removes 
+  !! This adds the connections to the solution and removes
   !! those exchanges which are replaced by a connection
   !<
   subroutine setConnectionsToSolution(this, connections, solution)
-    class(ConnectionBuilderType) :: this                          !< the connection builder object
-    type(ListType), intent(inout) :: connections                  !< the connections created for the solution
+    class(ConnectionBuilderType) :: this !< the connection builder object
+    type(ListType), intent(inout) :: connections !< the connections created for the solution
     class(NumericalSolutionType), pointer, intent(in) :: solution !< the solution to which the connections are set
     ! local
     type(ListType) :: keepList
@@ -211,7 +212,7 @@ module ConnectionBuilderModule
       ! will this exchange be replaced by a connection?
       keepExchange = .true.
       do iconn = 1, connections%Count()
-        conn => GetSpatialModelConnectionFromList(connections,iconn)
+        conn => GetSpatialModelConnectionFromList(connections, iconn)
         exPtr2 => conn%primaryExchange
         if (associated(exPtr2, exPtr)) then
           ! if so, don't add it to the list
@@ -252,9 +253,9 @@ module ConnectionBuilderModule
   !! connected, through yet another exchange object.
   !<
   subroutine assignExchangesToConnections(this, exchanges, connections)
-    class(ConnectionBuilderType) :: this              !< the connection builder object
-    type(ListType), pointer, intent(in) :: exchanges  !< all exchanges in a solution
-    type(ListType), intent(inout) :: connections         !< all connections that are created for this solution
+    class(ConnectionBuilderType) :: this !< the connection builder object
+    type(ListType), pointer, intent(in) :: exchanges !< all exchanges in a solution
+    type(ListType), intent(inout) :: connections !< all connections that are created for this solution
     ! local
     integer(I4B) :: iex, iconn
     class(DisConnExchangeType), pointer :: conEx
@@ -284,8 +285,7 @@ module ConnectionBuilderModule
 
     ! clean
     call keepList%Clear(destroy=.false.)
-   
+
   end subroutine assignExchangesToConnections
-  
-  
+
 end module ConnectionBuilderModule

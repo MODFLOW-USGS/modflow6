@@ -3,8 +3,9 @@
 # maw_06b - well starts at 2, aquifer starts at .25
 
 import os
-import pytest
+
 import numpy as np
+import pytest
 
 try:
     import flopy
@@ -103,12 +104,12 @@ def build_model(idx, dir):
         under_relaxation_gamma=0.98,
         inner_maximum=ninner,
         inner_dvclose=hclose,
-        rcloserecord="{} strict".format(rclose),
+        rcloserecord=f"{rclose} strict",
         linear_acceleration="BICGSTAB",
         scaling_method="NONE",
         reordering_method="NONE",
         relaxation_factor=relax,
-        filename="{}.ims".format(gwfname),
+        filename=f"{gwfname}.ims",
     )
 
     dis = flopy.mf6.ModflowGwfdis(
@@ -150,8 +151,8 @@ def build_model(idx, dir):
     ]
     # <wellno> <mawsetting>
     mawperioddata = [[0, "STATUS", "ACTIVE"]]
-    mbin = "{}.maw.bin".format(gwfname)
-    mbud = "{}.maw.bud".format(gwfname)
+    mbin = f"{gwfname}.maw.bin"
+    mbud = f"{gwfname}.maw.bud"
     maw = flopy.mf6.ModflowGwfmaw(
         gwf,
         print_input=True,
@@ -166,9 +167,9 @@ def build_model(idx, dir):
         perioddata=mawperioddata,
         pname="MAW-1",
     )
-    opth = "{}.maw.obs".format(gwfname)
+    opth = f"{gwfname}.maw.obs"
     obsdata = {
-        "{}.maw.obs.csv".format(gwfname): [
+        f"{gwfname}.maw.obs.csv": [
             ("whead", "head", (0,)),
         ]
     }
@@ -179,8 +180,8 @@ def build_model(idx, dir):
     # output control
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord="{}.cbc".format(gwfname),
-        head_filerecord="{}.hds".format(gwfname),
+        budget_filerecord=f"{gwfname}.cbc",
+        head_filerecord=f"{gwfname}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[
             (
@@ -232,9 +233,9 @@ def eval_results(sim):
 
     print(
         "Initial volumes\n"
-        + "  Groundwater:    {}\n".format(v0gwf)
-        + "  Well:           {}\n".format(v0maw)
-        + "  Total:          {}".format(v0)
+        + f"  Groundwater:    {v0gwf}\n"
+        + f"  Well:           {v0maw}\n"
+        + f"  Total:          {v0}"
     )
 
     # calculate current volume of water in well and aquifer and compare with
@@ -249,20 +250,20 @@ def eval_results(sim):
         vmaw = (stage[kstp] - bot) * mawarea
         vnow = vmaw + vgwf
         errmsg = (
-            "kstp {}: \n".format(kstp + 1)
-            + "  Groundwater:   {}\n".format(vgwf)
-            + "  Well:          {}\n".format(vmaw)
-            + "  Total:         {}\n".format(vnow)
-            + "  Initial Total: {}".format(v0)
+            f"kstp {kstp + 1}: \n"
+            + f"  Groundwater:   {vgwf}\n"
+            + f"  Well:          {vmaw}\n"
+            + f"  Total:         {vnow}\n"
+            + f"  Initial Total: {v0}"
         )
         assert np.allclose(v0, vnow), errmsg
 
     print(
-        "kstp {}: \n".format(kstp + 1)
-        + "  Groundwater:   {}\n".format(vgwf)
-        + "  Well:          {}\n".format(vmaw)
-        + "  Total:         {}\n".format(vnow)
-        + "  Initial Total: {}".format(v0)
+        f"kstp {kstp + 1}: \n"
+        + f"  Groundwater:   {vgwf}\n"
+        + f"  Well:          {vmaw}\n"
+        + f"  Total:         {vnow}\n"
+        + f"  Initial Total: {v0}"
     )
 
     # compare the maw-gwf flows with the gwf-maw flows
@@ -284,9 +285,7 @@ def eval_results(sim):
         for i in range(ra_maw.shape[0]):
             qmaw = ra_maw[i]["q"]
             qgwf = ra_gwf[i]["q"]
-            msg = "step {} record {} comparing qmaw with qgwf: {} {}".format(
-                istp, i, qmaw, qgwf
-            )
+            msg = f"step {istp} record {i} comparing qmaw with qgwf: {qmaw} {qgwf}"
             print(msg)
             assert np.allclose(qmaw, -qgwf), msg
 
@@ -322,7 +321,7 @@ def main():
 
 if __name__ == "__main__":
     # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
+    print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
     main()

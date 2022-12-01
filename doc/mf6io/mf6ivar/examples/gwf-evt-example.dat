@@ -9,10 +9,11 @@ PRINT_INPUT
 
 BEGIN DIMENSIONS
   MAXBOUND  10
+  NSEG 3
 END DIMENSIONS
 
 BEGIN PERIOD 1
-# Lay Row Col SURFACE  RATE   DEPTH PXPD1 PXPD2 PETM1 PETM2 Mult  Name
+# Lay Row Col SURFACE  RATE   DEPTH PXDP1 PXDP2 PETM1 PETM2 Mult  Name
     1   1  13  110.0  et_rate  10.0  0.2   0.5   0.3   0.1   0.2  ET-1
     1   2  13  110.0  et_rate  10.0  0.2   0.5   0.3   0.1   0.4  ET-2
     1   3  13  110.0  et_rate  10.0  0.2   0.5   0.3   0.1   0.6  ET-3

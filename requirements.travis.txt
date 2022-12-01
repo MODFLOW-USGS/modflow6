@@ -1,4 +1,0 @@
-numpy
-pip
-nose-timer
-bmipy

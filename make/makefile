@@ -1,4 +1,4 @@
-# makefile created by pymake (version 1.2.3) for the 'mf6' executable.
+# makefile created by pymake (version 1.2.5) for the 'mf6' executable.
 
 
 include ./makedefaults
@@ -6,26 +6,28 @@ include ./makedefaults
 # Define the source file directories
 SOURCEDIR1=../src
 SOURCEDIR2=../src/Exchange
-SOURCEDIR3=../src/Solution
-SOURCEDIR4=../src/Solution/SparseMatrixSolver
-SOURCEDIR5=../src/Timing
-SOURCEDIR6=../src/Utilities
-SOURCEDIR7=../src/Utilities/TimeSeries
-SOURCEDIR8=../src/Utilities/Memory
-SOURCEDIR9=../src/Utilities/OutputControl
-SOURCEDIR10=../src/Utilities/Libraries
-SOURCEDIR11=../src/Utilities/Libraries/rcm
-SOURCEDIR12=../src/Utilities/Libraries/blas
-SOURCEDIR13=../src/Utilities/Libraries/sparskit2
-SOURCEDIR14=../src/Utilities/Libraries/daglib
-SOURCEDIR15=../src/Utilities/Libraries/sparsekit
-SOURCEDIR16=../src/Utilities/Observation
-SOURCEDIR17=../src/Model
-SOURCEDIR18=../src/Model/Connection
-SOURCEDIR19=../src/Model/GroundWaterTransport
-SOURCEDIR20=../src/Model/ModelUtilities
-SOURCEDIR21=../src/Model/GroundWaterFlow
-SOURCEDIR22=../src/Model/Geometry
+SOURCEDIR3=../src/Model
+SOURCEDIR4=../src/Model/Connection
+SOURCEDIR5=../src/Model/Geometry
+SOURCEDIR6=../src/Model/GroundWaterFlow
+SOURCEDIR7=../src/Model/GroundWaterTransport
+SOURCEDIR8=../src/Model/ModelUtilities
+SOURCEDIR9=../src/Solution
+SOURCEDIR10=../src/Solution/LinearMethods
+SOURCEDIR11=../src/Timing
+SOURCEDIR12=../src/Utilities
+SOURCEDIR13=../src/Utilities/ArrayRead
+SOURCEDIR14=../src/Utilities/Idm
+SOURCEDIR15=../src/Utilities/Libraries
+SOURCEDIR16=../src/Utilities/Libraries/blas
+SOURCEDIR17=../src/Utilities/Libraries/daglib
+SOURCEDIR18=../src/Utilities/Libraries/rcm
+SOURCEDIR19=../src/Utilities/Libraries/sparsekit
+SOURCEDIR20=../src/Utilities/Libraries/sparskit2
+SOURCEDIR21=../src/Utilities/Memory
+SOURCEDIR22=../src/Utilities/Observation
+SOURCEDIR23=../src/Utilities/OutputControl
+SOURCEDIR24=../src/Utilities/TimeSeries
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -49,7 +51,9 @@ ${SOURCEDIR18} \
 ${SOURCEDIR19} \
 ${SOURCEDIR20} \
 ${SOURCEDIR21} \
-${SOURCEDIR22} 
+${SOURCEDIR22} \
+${SOURCEDIR23} \
+${SOURCEDIR24} 
 
 .SUFFIXES: .f90 .F90 .o
 
@@ -69,6 +73,7 @@ $(OBJDIR)/InputOutput.o \
 $(OBJDIR)/TableTerm.o \
 $(OBJDIR)/Table.o \
 $(OBJDIR)/MemoryHelper.o \
+$(OBJDIR)/CharString.o \
 $(OBJDIR)/Memory.o \
 $(OBJDIR)/List.o \
 $(OBJDIR)/MemoryList.o \
@@ -94,64 +99,94 @@ $(OBJDIR)/ObsOutput.o \
 $(OBJDIR)/TimeArraySeries.o \
 $(OBJDIR)/ObsOutputList.o \
 $(OBJDIR)/Observe.o \
+$(OBJDIR)/InputDefinition.o \
+$(OBJDIR)/ArrayReaderBase.o \
 $(OBJDIR)/TimeArraySeriesLink.o \
 $(OBJDIR)/ObsUtility.o \
 $(OBJDIR)/ObsContainer.o \
+$(OBJDIR)/VectorInt.o \
+$(OBJDIR)/gwt1dspidm.o \
+$(OBJDIR)/gwf3npf8idm.o \
+$(OBJDIR)/gwf3disv8idm.o \
+$(OBJDIR)/gwf3disu8idm.o \
+$(OBJDIR)/gwf3dis8idm.o \
+$(OBJDIR)/Integer2dReader.o \
 $(OBJDIR)/BudgetFileReader.o \
 $(OBJDIR)/TimeArraySeriesManager.o \
 $(OBJDIR)/PackageMover.o \
 $(OBJDIR)/Obs3.o \
 $(OBJDIR)/NumericalPackage.o \
 $(OBJDIR)/Budget.o \
+$(OBJDIR)/StructVector.o \
+$(OBJDIR)/IdmLogger.o \
+$(OBJDIR)/InputDefinitionSelector.o \
+$(OBJDIR)/Integer1dReader.o \
+$(OBJDIR)/Double2dReader.o \
+$(OBJDIR)/Double1dReader.o \
+$(OBJDIR)/sort.o \
+$(OBJDIR)/SfrCrossSectionUtils.o \
 $(OBJDIR)/BudgetTerm.o \
 $(OBJDIR)/BoundaryPackage.o \
 $(OBJDIR)/BaseModel.o \
+$(OBJDIR)/StructArray.o \
+$(OBJDIR)/ModflowInput.o \
+$(OBJDIR)/LayeredArrayReader.o \
+$(OBJDIR)/SfrCrossSectionManager.o \
+$(OBJDIR)/dag_module.o \
+$(OBJDIR)/BudgetObject.o \
+$(OBJDIR)/NumericalModel.o \
+$(OBJDIR)/mf6lists.o \
 $(OBJDIR)/PackageBudget.o \
 $(OBJDIR)/HeadFileReader.o \
-$(OBJDIR)/BudgetObject.o \
-$(OBJDIR)/sort.o \
-$(OBJDIR)/SfrCrossSectionUtils.o \
 $(OBJDIR)/PrintSaveManager.o \
 $(OBJDIR)/Xt3dAlgorithm.o \
 $(OBJDIR)/gwf3tvbase8.o \
-$(OBJDIR)/NumericalModel.o \
+$(OBJDIR)/LoadMf6FileType.o \
+$(OBJDIR)/gwf3sfr8.o \
+$(OBJDIR)/gwf3riv8.o \
+$(OBJDIR)/gwf3maw8.o \
+$(OBJDIR)/gwf3lak8.o \
+$(OBJDIR)/GwfVscInputData.o \
+$(OBJDIR)/gwf3ghb8.o \
+$(OBJDIR)/gwf3drn8.o \
+$(OBJDIR)/DistributedModel.o \
 $(OBJDIR)/BaseExchange.o \
 $(OBJDIR)/UzfCellGroup.o \
 $(OBJDIR)/gwt1fmi1.o \
-$(OBJDIR)/SfrCrossSectionManager.o \
-$(OBJDIR)/dag_module.o \
 $(OBJDIR)/OutputControlData.o \
 $(OBJDIR)/gwf3ic8.o \
 $(OBJDIR)/Xt3dInterface.o \
 $(OBJDIR)/gwf3tvk8.o \
+$(OBJDIR)/MemoryManagerExt.o \
+$(OBJDIR)/IdmMf6FileLoader.o \
+$(OBJDIR)/gwf3vsc8.o \
 $(OBJDIR)/GwfNpfOptions.o \
-$(OBJDIR)/GwfNpfGridData.o \
 $(OBJDIR)/CellWithNbrs.o \
 $(OBJDIR)/NumericalExchange.o \
 $(OBJDIR)/Iunit.o \
 $(OBJDIR)/gwf3uzf8.o \
 $(OBJDIR)/gwt1apt1.o \
 $(OBJDIR)/GwtSpc.o \
-$(OBJDIR)/gwf3sfr8.o \
 $(OBJDIR)/OutputControl.o \
 $(OBJDIR)/gwt1ic1.o \
-$(OBJDIR)/gwf3maw8.o \
-$(OBJDIR)/gwf3lak8.o \
 $(OBJDIR)/gwt1mst1.o \
 $(OBJDIR)/GwtDspOptions.o \
-$(OBJDIR)/GwtDspGridData.o \
 $(OBJDIR)/gwf3npf8.o \
 $(OBJDIR)/GwtAdvOptions.o \
 $(OBJDIR)/gwf3tvs8.o \
 $(OBJDIR)/GwfStorageUtils.o \
 $(OBJDIR)/Mover.o \
+$(OBJDIR)/GwfMvrPeriodData.o \
+$(OBJDIR)/ims8misc.o \
 $(OBJDIR)/GwfBuyInputData.o \
+$(OBJDIR)/InterfaceMap.o \
 $(OBJDIR)/gwf3disu8.o \
 $(OBJDIR)/GridSorting.o \
 $(OBJDIR)/DisConnExchange.o \
 $(OBJDIR)/CsrUtils.o \
+$(OBJDIR)/MappedVariable.o \
+$(OBJDIR)/TransportModel.o \
 $(OBJDIR)/NameFile.o \
-$(OBJDIR)/mf6lists.o \
 $(OBJDIR)/gwt1uzt1.o \
 $(OBJDIR)/gwt1ssm1.o \
 $(OBJDIR)/gwt1src1.o \
@@ -169,7 +204,6 @@ $(OBJDIR)/gwf3disv8.o \
 $(OBJDIR)/gwf3dis8.o \
 $(OBJDIR)/gwf3api8.o \
 $(OBJDIR)/gwf3wel8.o \
-$(OBJDIR)/gwf3riv8.o \
 $(OBJDIR)/gwf3rch8.o \
 $(OBJDIR)/gwf3sto8.o \
 $(OBJDIR)/gwf3oc8.o \
@@ -179,12 +213,11 @@ $(OBJDIR)/gwf3hfb8.o \
 $(OBJDIR)/gwf3csub8.o \
 $(OBJDIR)/gwf3buy8.o \
 $(OBJDIR)/GhostNode.o \
-$(OBJDIR)/gwf3ghb8.o \
 $(OBJDIR)/gwf3evt8.o \
-$(OBJDIR)/gwf3drn8.o \
 $(OBJDIR)/gwf3chd8.o \
 $(OBJDIR)/ims8reordering.o \
 $(OBJDIR)/GridConnection.o \
+$(OBJDIR)/DistributedData.o \
 $(OBJDIR)/gwt1.o \
 $(OBJDIR)/gwf3.o \
 $(OBJDIR)/ims8base.o \
@@ -207,7 +240,6 @@ $(OBJDIR)/comarg.o \
 $(OBJDIR)/mf6core.o \
 $(OBJDIR)/BaseGeometry.o \
 $(OBJDIR)/mf6.o \
-$(OBJDIR)/VectorInt.o \
 $(OBJDIR)/StringList.o \
 $(OBJDIR)/MemorySetHandler.o \
 $(OBJDIR)/ilut.o \

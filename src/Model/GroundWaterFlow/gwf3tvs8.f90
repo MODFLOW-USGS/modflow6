@@ -23,10 +23,10 @@ module TvsModule
   public :: tvs_cr
 
   type, extends(TvBaseType) :: TvsType
-    integer(I4B), pointer :: integratechanges => null()           !< STO flag indicating if mid-simulation ss and sy changes should be integrated via an additional matrix formulation term
-    integer(I4B), pointer :: iusesy => null()                     !< STO flag set if any cell is convertible (0, 1)
-    real(DP), dimension(:), pointer, contiguous :: ss => null()   !< STO specfic storage or storage coefficient
-    real(DP), dimension(:), pointer, contiguous :: sy => null()   !< STO specific yield
+    integer(I4B), pointer :: integratechanges => null() !< STO flag indicating if mid-simulation ss and sy changes should be integrated via an additional matrix formulation term
+    integer(I4B), pointer :: iusesy => null() !< STO flag set if any cell is convertible (0, 1)
+    real(DP), dimension(:), pointer, contiguous :: ss => null() !< STO specfic storage or storage coefficient
+    real(DP), dimension(:), pointer, contiguous :: sy => null() !< STO specific yield
   contains
     procedure :: da => tvs_da
     procedure :: ar_set_pointers => tvs_ar_set_pointers
@@ -51,7 +51,7 @@ contains
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     !
-    allocate(tvs)
+    allocate (tvs)
     call tvs%init(name_model, 'TVS', 'TVS', inunit, iout)
     !
     return
@@ -74,7 +74,7 @@ contains
       &' INPUT READ FROM UNIT ', i0, //)"
     !
     ! -- Print a message identifying the TVS package
-    write(this%iout, fmttvs) this%inunit
+    write (this%iout, fmttvs) this%inunit
     !
     ! -- Set pointers to other package variables
     ! -- STO
@@ -108,12 +108,12 @@ contains
       &'Storage derivative terms will not be added to STO matrix formulation')"
     !
     select case (keyword)
-      case ('DISABLE_STORAGE_CHANGE_INTEGRATION')
-        success = .true.
-        this%integratechanges = 0
-        write(this%iout, fmtdsci)
-      case default
-        success = .false.
+    case ('DISABLE_STORAGE_CHANGE_INTEGRATION')
+      success = .true.
+      this%integratechanges = 0
+      write (this%iout, fmtdsci)
+    case default
+      success = .false.
     end select
     !
     return
@@ -134,12 +134,12 @@ contains
     real(DP), pointer :: bndElem
     !
     select case (varName)
-      case ('SS')
-        bndElem => this%ss(n)
-      case ('SY')
-        bndElem => this%sy(n)
-      case default
-        bndElem => null()
+    case ('SS')
+      bndElem => this%ss(n)
+    case ('SY')
+      bndElem => this%sy(n)
+    case default
+      bndElem => null()
     end select
     !
     return
@@ -202,25 +202,25 @@ contains
       &in this model (all ICONVERT flags are 0).')"
     !
     ! -- Check the changed value is ok and convert to storage capacity
-    if(varName == 'SS') then
-      if(this%ss(n) < DZERO) then
+    if (varName == 'SS') then
+      if (this%ss(n) < DZERO) then
         call this%dis%noder_to_string(n, cellstr)
-        write(errmsg, fmtserr) trim(adjustl(this%packName)), 'SS', &
-                               trim(cellstr), this%ss(n)
+        write (errmsg, fmtserr) trim(adjustl(this%packName)), 'SS', &
+          trim(cellstr), this%ss(n)
         call store_error(errmsg)
-      endif
-    elseif(varName == 'SY') then
-      if(this%iusesy /= 1) then
+      end if
+    elseif (varName == 'SY') then
+      if (this%iusesy /= 1) then
         call this%dis%noder_to_string(n, cellstr)
-        write(errmsg, fmtsyerr) trim(adjustl(this%packName)), 'SY', &
-                                trim(cellstr)
+        write (errmsg, fmtsyerr) trim(adjustl(this%packName)), 'SY', &
+          trim(cellstr)
         call store_error(errmsg)
-      elseif(this%sy(n) < DZERO) then
+      elseif (this%sy(n) < DZERO) then
         call this%dis%noder_to_string(n, cellstr)
-        write(errmsg, fmtserr) trim(adjustl(this%packName)), 'SY', &
-                               trim(cellstr), this%sy(n)
+        write (errmsg, fmtserr) trim(adjustl(this%packName)), 'SY', &
+          trim(cellstr), this%sy(n)
         call store_error(errmsg)
-      endif
+      end if
     end if
     !
     return
@@ -236,10 +236,10 @@ contains
     class(TvsType) :: this
     !
     ! -- Nullify pointers to other package variables
-    nullify(this%integratechanges)
-    nullify(this%iusesy)
-    nullify(this%ss)
-    nullify(this%sy)
+    nullify (this%integratechanges)
+    nullify (this%iusesy)
+    nullify (this%ss)
+    nullify (this%sy)
     !
     ! -- Deallocate parent
     call tvbase_da(this)
