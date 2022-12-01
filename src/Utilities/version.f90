@@ -16,8 +16,8 @@ module VersionModule
   ! -- modflow 6 version
   integer(I4B), parameter :: IDEVELOPMODE = 0
   character(len=*), parameter :: VERSIONNUMBER = '6.4.0'
-  character(len=*), parameter :: VERSIONTAG = ' release candidate 03/04/2022'
-  character(len=40), parameter :: VERSION = '6.4.0 12/01/2022'
+  character(len=*), parameter :: VERSIONTAG = ' release candidate 11/30/2022'
+  character(len=40), parameter :: VERSION = '6.4.0 11/30/2022'
   character(len=10), parameter :: MFVNAM = ' 6'
   character(len=*), parameter :: MFTITLE = &
     &'U.S. GEOLOGICAL SURVEY MODULAR HYDROLOGIC MODEL'
@@ -56,7 +56,7 @@ module VersionModule
     &'      (https://github.com/jacobwilliams/daglib)',/&
     &)"
   ! -- disclaimer must be appropriate for version (release or release candidate)
-  character(len=*), parameter :: FMTDISCLAIMER =                                &
+  character(len=*), parameter :: FMTDISCLAIMER = &
     "(/,                                                                        &
     &'This software has been approved for release by the U.S. Geological ',/,   &
     &'Survey (USGS). Although the software has been subjected to rigorous ',/,  &
