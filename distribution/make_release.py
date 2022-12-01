@@ -108,7 +108,7 @@ neither the USGS nor the U.S. Government shall be held liable for any damages
 resulting from the authorized or unauthorized use of the software.
 """
 
-approvedfmt = '''  character(len=*), parameter :: FMTDISCLAIMER =                                &
+approvedfmt = '''  character(len=*), parameter :: FMTDISCLAIMER = &
     "(/,                                                                        &
     &'This software has been approved for release by the U.S. Geological ',/,   &
     &'Survey (USGS). Although the software has been subjected to rigorous ',/,  &
@@ -123,7 +123,7 @@ approvedfmt = '''  character(len=*), parameter :: FMTDISCLAIMER =               
     &'Resources Software User Rights Notice for complete use, copyright, ',/,   &
     &'and distribution information.',/)"'''
 
-preliminaryfmt = '''  character(len=*), parameter :: FMTDISCLAIMER =                                &
+preliminaryfmt = '''  character(len=*), parameter :: FMTDISCLAIMER = &
     "(/,                                                                        &
     &'This software is preliminary or provisional and is subject to ',/,        &
     &'revision. It is being provided to meet the need for timely best ',/,      &
