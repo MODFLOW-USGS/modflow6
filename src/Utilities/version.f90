@@ -17,7 +17,7 @@ module VersionModule
   integer(I4B), parameter :: IDEVELOPMODE = 1
   character(len=*), parameter :: VERSIONNUMBER = '6.4.0'
   character(len=*), parameter :: VERSIONTAG = ' release candidate 11/30/2022'
-  character(len=40), parameter :: VERSION = '6.5.0 release candidate 12/01/2022'
+  character(len=40), parameter :: VERSION = '6.4.1 release candidate 12/02/2022'
   character(len=10), parameter :: MFVNAM = ' 6'
   character(len=*), parameter :: MFTITLE = &
     &'U.S. GEOLOGICAL SURVEY MODULAR HYDROLOGIC MODEL'
