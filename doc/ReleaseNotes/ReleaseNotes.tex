@@ -209,13 +209,12 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
 	\underline{BASIC FUNCTIONALITY}
 	\begin{itemize}
-		\item - Removed code from bnd_store_user_cond function inside BoundaryPackage.f90 that was duplicating an operation already performed.  The code was attempting to find a reduced node number ID when it already had access to the reduced node number.  This bug was introduced with the debut of the VSC package and was identified by user-contributed test model that contained some cells with idomain equal to 0.
 		\item -
 	\end{itemize}
 
 	\underline{INTERNAL FLOW PACKAGES}
 	\begin{itemize}
-		\item -
+		\item - The Viscosity (VSC) Package introduced in version 6.4.0 would report an error for certain types of stress packages if the IDOMAIN capability was activated by the user.  In some cases, the error message would indicate that a boundary was not assigned to a valid cell.  This invalid error would prevent the simluation from proceeding.  The error was corrected by removing the invalid check, which allows the program to proceed normally.
 	%	\item xxx
 	\end{itemize}
 
