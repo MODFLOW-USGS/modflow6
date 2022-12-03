@@ -214,7 +214,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 
 	\underline{INTERNAL FLOW PACKAGES}
 	\begin{itemize}
-		\item - The Viscosity (VSC) Package introduced in version 6.4.0 would report an error for certain types of stress packages if the IDOMAIN capability was activated by the user.  In some cases, the error message would indicate that a boundary was not assigned to a valid cell.  This invalid error would prevent the simluation from proceeding.  The error was corrected by removing the invalid check, which allows the program to proceed normally.
+		\item - The Viscosity (VSC) Package introduced in version 6.4.0 would report an error for certain types of stress packages if the IDOMAIN capability was activated by the user.  In some cases, the error message would indicate that a boundary was not assigned to a valid cell.  This invalid error would prevent the simulation from proceeding.  The error was corrected by removing the invalid check so that the program can proceed normally.
 	%	\item xxx
 	\end{itemize}
 
