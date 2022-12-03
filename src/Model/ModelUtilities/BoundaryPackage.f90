@@ -374,8 +374,7 @@ contains
       !
       ! -- save user-specified conductance if vsc package is active
       if (this%ivsc == 1) then
-        call this%bnd_store_user_cond(nlist, this%nodelist, this%bound, &
-                                      this%condinput)
+        call this%bnd_store_user_cond(nlist, this%bound, this%condinput)
       end if
       !
       ! Define the tsLink%Text value(s) appropriately.
@@ -1507,19 +1506,16 @@ contains
     !!  recalculated every stress period/time step
     !!
   !<
-  subroutine bnd_store_user_cond(this, nlist, nodelist, rlist, condinput)
+  subroutine bnd_store_user_cond(this, nlist, rlist, condinput)
     ! -- modules
     use SimModule, only: store_error
     ! -- dummy variables
     class(BndType), intent(inout) :: this !< BndType object
     integer(I4B), intent(in) :: nlist
-    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: nodelist
     real(DP), dimension(:, :), pointer, contiguous, intent(in) :: rlist
     real(DP), dimension(:), pointer, contiguous, intent(inout) :: condinput
     ! -- local variables
     integer(I4B) :: l
-    integer(I4B) :: nodeu, noder
-    character(len=LINELENGTH) :: nodestr
     !
     ! -- store backup copy of conductance values
     do l = 1, nlist
@@ -1528,7 +1524,7 @@ contains
     !
     ! -- return
     return
-  end subroutine
+  end subroutine bnd_store_user_cond
 
   !> @ brief Read initial parameters for package
     !!
