@@ -174,6 +174,7 @@ A list of all MODFLOW 6 releases is shown in table \ref{tab:releases}.  Changes 
 6.2.2 & July 30, 2021 & same as above \\
 6.3.0 & March 4, 2022 & \url{https://doi.org/10.5066/P97FFF9M} \\
 6.4.0 & November 30, 2022 & \url{https://doi.org/10.5066/P9FL1JCC} \\
+6.4.1 & December xx, 2022 & \url{https://doi.org/10.5066/P9FL1JCC} \\
 \hline
 \label{tab:releases}
 \end{tabular*}
@@ -189,18 +190,18 @@ This section describes changes introduced into MODFLOW~6 for the current release
 \begin{itemize}
 	
 	%\item Version mf6.x.x--Month xx, 202x
-	\item Version mf6.4.0--November 30, 2022
+	\item Version mf6.4.1--December xx, 2022
 	
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
-		\item A new Viscosity (VSC) package for the Groundwater Flow (GWF) Model is introduced in this release.  The effects of viscosity are accounted for by updates to intercell conductance, as well as the conductance between the aquifer and head-dependent boundaries, based on simulated concentrations and\/or temperatures.  The VSC Package is activated by specifying ``VSC6'' as the file type in a GWF name file.  Changes to the code and input may be required in the future in response to user needs and testing.  Implementation details for the VSC Package are described in the Supplemental Technical Information guide, which is included with the MODFLOW 6 distribution.  For this first implementation, the VSC Package cannot be used for a GWF Model that is connected to another GWF Model with a GWF-GWF Exchange.
+		\item -
 	%	\item xxx
 	%	\item xxx
 	\end{itemize}
 
 	\underline{EXAMPLES}
 	\begin{itemize}
-		\item A new example called ex-gwt-stallman was added.  This new problem uses the GWT Model as a surrogate for simulating heat flow.  The example represents one-dimensional heat convection and conduction in the subsurface in response to a periodic temperature boundary condition imposed at land surface.  Results from the MODFLOW 6 simulation are in good agreement with an analytical solution.
+		\item -
 	%	\item xxx
 	%	\item xxx
 	\end{itemize}
@@ -208,39 +209,25 @@ This section describes changes introduced into MODFLOW~6 for the current release
 	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
 	\underline{BASIC FUNCTIONALITY}
 	\begin{itemize}
-		\item Corrected programming error in XT3D functionality that could affect coupled flow models or coupled transport models.  The XT3D code would result in a memory access error when a child model with a much larger level of refinement was coupled to a coarser parent model.  The XT3D code was generalized to handle this situation. 
-		\item Corrected a programming error in which the final message would be written twice to the screen and twice to mfsim.lst when the simulation terminated prematurely. 
-		\item Terminate with error if METHOD or METHODS not specified in time series input files.  Prior to this change, the program would continue without an interpolated value for one or more time series records.
-		\item When a GWF Model and a corresponding GWT model are solved in the same simulation, the GWF Model must be solved before the corresponding GWT model.  The GWF Model must also be solved by a different IMS than the GWT Model.  There was not a check for this in previous versions and if these conditions were not met, the solution would often not converge or it would give erroneous results.
-		\item The DISV Package would not raise an error if a model cell was defined as a line.  The program was modified to check for the case where the calculated cell area is equal to zero.  If the calculated cell area is equal to zero, the program terminates with an error.
-		\item When searching for a required block in an input file, the program would not terminate with a sensible error message if the end of file was found instead of the required block.  Program now indicates that the required block was not found.
-		\item This release contains a first step toward implementation of generic input routines to read input files.  The new input routines were implemented for the DIS, DISV, and DISU Packages of the GWF and GWT Models, for the NPF Package of the GWF Model, and the DSP Package of the GWT Model.  Output summaries written to the GWF and GWT Model listing files are different from summaries written using previous versions of MODFLOW 6.  For packages that use the new input data model, the IPRN capability of the READARRAY utility (described in mf6io.pdf) is no longer supported as a way to write input arrays to the model listing file.  The IPRN capability may not be supported in future versions as the new generic input routines are implemented for other packages.
-		\item Corrected an error in ZONEBUDGET for MODFLOW 6 that prevented the program from running properly in workspaces that contain one or more spaces in the path.
+		\item -
 	\end{itemize}
 
 	\underline{INTERNAL FLOW PACKAGES}
 	\begin{itemize}
-		\item Corrected programming error in the Time-Variable Hydraulic Conductivity (TVK) Package in which the vertical hydraulic conductivity was not reset properly if the K33OVERK option was invoked in the Node Property Flow (NPF) Package.
-		\item The Node Property Flow (NPF) Package had an error in how the saturated thickness at the interface between two cells was calculated for a DISU connection that is marked as vertically staggered (IHC = 2).  The calculation was corrected so that the thickness for two confined cells is based on the overlap of the cells rather than the average thickness of the two cells.
+		\item - The Viscosity (VSC) Package introduced in version 6.4.0 would report an error for certain types of stress packages if the IDOMAIN capability was activated by the user.  In some cases, the error message would indicate that a boundary was not assigned to a valid cell.  This invalid error would prevent the simulation from proceeding.  The error was corrected by removing the invalid check so that the program can proceed normally.
 	%	\item xxx
 	\end{itemize}
 
 	\underline{STRESS PACKAGES}
 	\begin{itemize}
-		\item The Evapotranspiration (EVT) Package was modified to include a new error check if the segmented evapotranspiration capability is active.  If the number of ET segments is greater than 1, then the user must specify values for PXDP (as well as PETM).  For a cell, PXDP is a one-dimensional array of size NSEG - 1.  Values in this array must be greater than zero and less than one.  Furthermore, the values in PXDP must increase monotonically.  The program now checks for these conditions and terminates with an error if these conditions are not met.  The segmented ET capability can be used for list-based EVT Package input.  Provided that the PXDP conditions are met, this new error check should have no effect on simulation results.
-		\item The Evapotranspiration (EVT) Package would throw an index error when SURF\_RATE\_SPECIFIED was specified in the OPTIONS block and NSEG was set equal to 1.  The code now supports this combination of input options.
+		\item -
 	%	\item xxx
 	%	\item xxx
 	\end{itemize}
 
 	\underline{ADVANCED STRESS PACKAGES}
 	\begin{itemize}
-		\item When the LAK Package was used with a combination of outlets that routed water to another lake and outlets that did not, then the budget information stored for the LAK Package had uninitialized records for LAK to LAK flows.  These uninitialized records were used by the LKT Package and possibly other programs.  The LAK to LAK budget information was modified to include only valid records.
-		\item When a WITHDRAWAL value was specified for lakes, only the withdrawal value for the last lake would be reported in budget files, lake budget tables, and in lake withdrawal observations.  This error would also be propagated to the GWT Lake Transport (LKT) Package, if active.  This error would only show up for models with more than one lake and if the lake withdrawal term was included.
-		\item When lakes were assigned with the STATUS CONSTANT setting to prescribe the lake stage, the CONSTANT term used in the lake budget table was tabulated using an incorrect sign for aquifer leakage.  This error would result in inaccurate budget tables.  The program modified to use the correct leakage values for calculating the CONSTANT term.
-		\item There were several problems in the observation utility for the Streamflow Transport (SFT), Lake Transport (LKT), Multi-Aquifer Well Transport (MWT), and Unsaturated Zone Transport (UZT) Packages.  These issues were corrected as well as the descriptions for the observations in the user input and output guide.
-		\item The BUDGETCSV option for the advanced stress packages would intermittently cause an error due to a variable not being set properly.  The BUDGETCSV option did not work at all for the GWT advanced packages.  The BUDGETCSV option was fixed to work properly.
-		\item For multi-layer GWF Models, the UZF Package should generally have UZF cells assigned to each GWF cell that can be dry or partially saturated.  If a UZF cell was assigned to an upper layer of a GWF Model, but not to underlying GWF layers, then outflow from the upper UZF cell would not always flow to the water table.  The program was modified so that outflow from UZF cells is transferred into the GWF Model when there are no underlying UZF cells.  This routing of water to GWF may not work properly unless the Newton-Raphson formulation is active.
+		\item -
 	%	\item xxx
 	\end{itemize}
 
@@ -253,7 +240,7 @@ This section describes changes introduced into MODFLOW~6 for the current release
 
 	\underline{EXCHANGES}
 	\begin{itemize}
-		\item The GWT-GWT Exchange did not work when the XT3D\_OFF option was specified.  The program was fixed so that the XT3D dispersion terms can be shut off for a GWT-GWT Exchange.  GWT-GWT Exchange keywords were renamed from ADVSCHEME, XT3D\_OFF, and XT3D\_RHS to ADV\_SCHEME, DSP\_XT3D\_OFF, and DSP\_XT3D\_RHS, respectively, to more clearly indicate how the keywords relate to the underlying processes.  
+		\item -  
 	%	\item xxx
 	%	\item xxx
 	\end{itemize}
