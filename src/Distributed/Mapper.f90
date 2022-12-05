@@ -14,6 +14,8 @@ module MapperModule
 
   public :: MapperType
 
+  ! TODO_MJR: mapping should become copying or so,
+  ! and this can be either in full, or with a map...
   type :: MapperType
 
     type(ListType) :: mapped_data_list
@@ -21,13 +23,16 @@ module MapperModule
     contains
 
     procedure :: init
-    procedure :: add_dist_vars
+    procedure :: add_exchange_vars
+    procedure :: add_interface_vars
     procedure :: scatter
     procedure :: destroy
-
+    
+    procedure :: add_dist_vars ! TODO_MJR: make private after removing distdata module
     procedure, private :: map_model_data
     procedure, private :: map_exg_data
     procedure, private :: map_data
+    procedure, private :: map_data_full
 
   end type MapperType
 
@@ -38,8 +43,61 @@ module MapperModule
 
   end subroutine init
 
+  !> @brief Add virtual exchange variables
+  !<
+  subroutine add_exchange_vars(this)
+    use SimStagesModule
+    use ListsModule, only: baseexchangelist
+    use DisConnExchangeModule, only: DisConnExchangeType, &
+                                     GetDisConnExchangeFromList
+    use VirtualExchangeModule, only: VirtualExchangeType, get_virtual_exchange
+    class(MapperType) :: this
+    ! local
+    integer(I4B) :: ix
+    class(DisConnExchangeType), pointer :: exg
+    class(VirtualExchangeType), pointer :: virt_exg
+    character(len=LENMEMPATH) :: virt_mem_path
+
+    ! add variables for all partially remote exchanges
+    do ix = 1, baseexchangelist%Count()
+      exg => GetDisConnExchangeFromList(baseexchangelist, ix)
+      if (.not. associated(exg)) cycle
+
+      virt_exg => get_virtual_exchange(exg%id)
+      virt_mem_path = virt_exg%get_vrt_mem_path('')
+      if (exg%v_model1%is_remote) then
+        call this%map_data_full(0, 'NODEM1', exg%memoryPath, 'NODEM1', virt_mem_path, (/STG_AFTER_MDL_DF/))
+      end if
+      if (exg%v_model2%is_remote) then
+        call this%map_data_full(0, 'NODEM2', exg%memoryPath, 'NODEM2', virt_mem_path, (/STG_AFTER_MDL_DF/))
+      end if
+
+    end do
+
+  end subroutine add_exchange_vars
+
   !> @brief Add distributed interface variables as memory mapped items
   !<
+  subroutine add_interface_vars(this)
+    use ListsModule, only: baseconnectionlist
+    use SpatialModelConnectionModule, only: SpatialModelConnectionType,&
+                                            GetSpatialModelConnectionFromList
+    class(MapperType) :: this
+    ! local
+    integer(I4B) :: iconn
+    class(SpatialModelConnectionType), pointer :: conn
+
+    do iconn = 1, baseconnectionlist%Count()
+      conn => GetSpatialModelConnectionFromList(baseconnectionlist, iconn)
+      ! add the variables for this interface model to our mapper
+      call this%add_dist_vars(conn%owner%idsoln, &
+                              conn%ifaceDistVars, &
+                              conn%interfaceMap)
+    end do
+
+  end subroutine add_interface_vars
+
+  
   subroutine add_dist_vars(this, sol_id, var_list, interface_map)    
     class(MapperType) :: this
     integer(I4B) :: sol_id
@@ -164,6 +222,23 @@ module MapperModule
                        index_map_sgn%sign, stages)
 
   end subroutine map_exg_data
+
+  !> @brief Full copy between two variables in memory
+  subroutine map_data_full(this, controller_id, tgt_name, tgt_path, &
+                           src_name, src_path, stages)
+    class(MapperType) :: this
+    integer(I4B) :: controller_id
+    character(len=*), intent(in) :: tgt_name
+    character(len=*), intent(in) :: tgt_path
+    character(len=*), intent(in) :: src_name
+    character(len=*), intent(in) :: src_path
+    integer(I4B), dimension(:), intent(in) :: stages
+
+    call this%map_data(controller_id, tgt_name, tgt_path, null(), &
+                                      src_name, src_path, null(), &
+                                      null(), stages)
+
+  end subroutine map_data_full
   
   !> @brief Generic mapping between two variables in memory, using
   !< an optional sign conversion
@@ -200,6 +275,7 @@ module MapperModule
     mapped_data%tgt_name = tgt_name
     mapped_data%tgt_path = tgt_path
     mapped_data%tgt => null()
+    mapped_data%copy_all = .not. associated(src_idx)
     mapped_data%src_idx => src_idx
     mapped_data%tgt_idx => tgt_idx
     mapped_data%sign => sign_array

@@ -22,11 +22,11 @@ module RunControlModule
     procedure :: finish => ctrl_finish    
     ! private
     procedure, private :: init_handler
+    procedure, private :: after_mdl_df_handler
     procedure, private :: before_df_handler
     procedure, private :: after_df_handler
     procedure, private :: before_ar_handler
     procedure, private :: after_ar_handler
-    procedure, private :: init_mapper
     procedure, private :: destroy
   end type RunControlType
 
@@ -40,15 +40,7 @@ contains
   end function create_seq_run_control
 
   subroutine ctrl_start(this)
-    use SimModule, only: initial_message
-    use TimerModule, only: start_time
     class(RunControlType) :: this
-    
-    ! print initial message
-    call initial_message()
-    
-    ! get start time
-    call start_time()
 
     allocate (this%virtual_data_store)
 
@@ -78,34 +70,49 @@ contains
     class(RunControlType) :: this
     integer(I4B) :: stage
 
-    select case (stage)
-      case (STG_INIT)
-        call this%init_handler()
-      case (STG_BEFORE_DF)
-        call this%before_df_handler()
-      case (STG_AFTER_DF)
-        call this%after_df_handler()
-      case (STG_BEFORE_AR)
-        call this%before_ar_handler()
-      case (STG_AFTER_AR)
-        call this%after_ar_handler()
-      case default
-        ! nothing be done
-        return
-    end select
+    if (stage == STG_INIT) then
+      call this%init_handler()
+    else if (stage == STG_AFTER_MDL_DF) then 
+      call this%after_mdl_df_handler()
+    else if (stage == STG_BEFORE_DF) then
+      call this%before_df_handler()
+    else if (stage == STG_AFTER_DF) then 
+      call this%after_df_handler()
+    else if (stage== STG_BEFORE_AR) then 
+      call this%before_ar_handler()
+    else if (stage == STG_AFTER_AR) then 
+      call this%after_ar_handler()
+    end if
+
+    call this%virtual_data_store%synchronize(stage)
+    call this%mapper%scatter(0, stage)
 
   end subroutine ctrl_at_stage
 
   subroutine init_handler(this)    
     use SimVariablesModule, only: simulation_mode
+    class(RunControlType), target :: this
+
+    call this%virtual_data_store%create(simulation_mode)
+    call this%virtual_data_store%init()
+    call this%mapper%init()
+
+  end subroutine init_handler
+
+  subroutine after_mdl_df_handler(this)
+    class(RunControlType) :: this
+  end subroutine after_mdl_df_handler
+
+  subroutine before_df_handler(this)
     class(RunControlType), target :: this    
     ! local
     integer(I4B) :: i
     class(*), pointer :: sol
 
-    call this%virtual_data_store%create(simulation_mode)
-    call this%mapper%init()
-
+    ! Interface models are created now and we know which
+    ! remote models and exchanges are required in the
+    ! virtual solution. Also set the synchronization handler 
+    ! to the numerical solutions.
     do i = 1, basesolutionlist%Count()
       sol => basesolutionlist%GetItem(i)
       select type (sol)
@@ -116,59 +123,24 @@ contains
       end select
     end do
 
-    call this%virtual_data_store%synchronize(STG_INIT)
-
-  end subroutine init_handler
-
-  subroutine before_df_handler(this)
-    class(RunControlType), target :: this
-    
-    call this%virtual_data_store%synchronize(STG_BEFORE_DF)
+    call this%mapper%add_exchange_vars()
 
   end subroutine before_df_handler
 
   subroutine after_df_handler(this)
     class(RunControlType) :: this
-    
-    ! after define: we can initialize the mapper:
-    call this%init_mapper()    
 
-    call this%virtual_data_store%synchronize(STG_AFTER_DF)
-    call this%mapper%scatter(0, STG_AFTER_DF)
+    call this%mapper%add_interface_vars()
 
   end subroutine after_df_handler
 
   subroutine before_ar_handler(this)
     class(RunControlType) :: this
-
-    call this%virtual_data_store%synchronize(STG_BEFORE_AR)
-    call this%mapper%scatter(0, STG_BEFORE_AR)
-
   end subroutine before_ar_handler
 
   subroutine after_ar_handler(this)
     class(RunControlType) :: this
-
-    call this%virtual_data_store%synchronize(STG_AFTER_AR)
-    call this%mapper%scatter(0, STG_AFTER_AR)
-
   end subroutine after_ar_handler
-
-  subroutine init_mapper(this)
-    class(RunControlType) :: this
-    ! local
-    integer(I4B) :: iconn
-    class(SpatialModelConnectionType), pointer :: conn
-
-    do iconn = 1, baseconnectionlist%Count()
-      conn => GetSpatialModelConnectionFromList(baseconnectionlist, iconn)
-      ! add the variables for this interface model to our mapper
-      call this%mapper%add_dist_vars(conn%owner%idsoln, &
-                                     conn%ifaceDistVars, &
-                                     conn%interfaceMap)
-    end do
-
-  end subroutine init_mapper
 
   !> @brief Synchronizes from within numerical solution (delegate)
   !<
@@ -180,7 +152,7 @@ contains
 
     select type (ctx)
     class is (RunControlType)
-      call ctx%virtual_data_store%synchronize(num_sol%id, stage)
+      call ctx%virtual_data_store%synchronize_sln(num_sol%id, stage)
       call ctx%mapper%scatter(num_sol%id, stage)
     end select
 

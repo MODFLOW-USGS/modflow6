@@ -99,6 +99,7 @@ module GwfGwfExchangeModule
     procedure :: parse_option
     procedure :: read_gnc
     procedure :: read_mvr
+    procedure, private :: calc_cond_sat
     procedure, private :: condcalc
     procedure, private :: rewet
     procedure, private :: qcalc
@@ -243,10 +244,10 @@ contains
     call this%read_data(iout)
     !
     ! -- call each model and increase the edge count
-    if (associated(this%gwfmodel1)) then
+    if (associated(this%gwfmodel1)) then ! TODO_MJR: temp guard
       call this%gwfmodel1%npf%increase_edge_count(this%nexg)
     end if
-    if (associated(this%gwfmodel2)) then
+    if (associated(this%gwfmodel2)) then ! TODO_MJR: temp guard
       call this%gwfmodel2%npf%increase_edge_count(this%nexg)
     end if
     !
@@ -269,7 +270,7 @@ contains
     call this%obs%obs_df(iout, this%name, 'GWF-GWF', this%gwfmodel1%dis)
     !
     ! -- validate
-    if (associated(this%gwfmodel1) .and. associated(this%gwfmodel2)) then
+    if (associated(this%gwfmodel1) .and. associated(this%gwfmodel2)) then ! TODO_MJR: temp guard
       call this%validate_exchange()
     end if
     !
@@ -407,93 +408,14 @@ contains
   !<
   subroutine gwf_gwf_ar(this)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH, DZERO, DHALF, DONE, DPIO180
-    use GwfNpfModule, only: condmean, vcond, hcond
     ! -- dummy
-    class(GwfExchangeType) :: this !<  GwfExchangeType
-    ! -- local
-    integer(I4B) :: iexg
-    integer(I4B) :: n, m, ihc
-    real(DP) :: topn, topm
-    real(DP) :: botn, botm
-    real(DP) :: satn, satm
-    real(DP) :: thickn, thickm
-    real(DP) :: angle, hyn, hym
-    real(DP) :: csat
-    real(DP) :: fawidth
-    real(DP), dimension(3) :: vg
+    class(GwfExchangeType) :: this !<  GwfExchangeType    
     !
     ! -- If mover is active, then call ar routine
-    if (this%inmvr > 0) call this%mvr%mvr_ar()
+    if (this%inmvr > 0) call this%mvr%mvr_ar()    
     !
-    ! -- Go through each connection and calculate the saturated conductance
-    do iexg = 1, this%nexg
-      !
-      ihc = this%ihc(iexg)
-      n = this%nodem1(iexg)
-      m = this%nodem2(iexg)
-      topn = this%gwfmodel1%dis%top(n)
-      topm = this%gwfmodel2%dis%top(m)
-      botn = this%gwfmodel1%dis%bot(n)
-      botm = this%gwfmodel2%dis%bot(m)
-      satn = this%gwfmodel1%npf%sat(n)
-      satm = this%gwfmodel2%npf%sat(m)
-      thickn = (topn - botn) * satn
-      thickm = (topm - botm) * satm
-      !
-      ! -- Calculate conductance depending on connection orientation
-      if (ihc == 0) then
-        !
-        ! -- Vertical conductance for fully saturated conditions
-        vg(1) = DZERO
-        vg(2) = DZERO
-        vg(3) = DONE
-        hyn = this%gwfmodel1%npf%hy_eff(n, 0, ihc, vg=vg)
-        hym = this%gwfmodel2%npf%hy_eff(m, 0, ihc, vg=vg)
-        csat = vcond(1, 1, 1, 1, 0, 1, 1, DONE, &
-                     botn, botm, &
-                     hyn, hym, &
-                     satn, satm, &
-                     topn, topm, &
-                     botn, botm, &
-                     this%hwva(iexg))
-      else
-        !
-        ! -- Calculate horizontal conductance
-        hyn = this%gwfmodel1%npf%k11(n)
-        hym = this%gwfmodel2%npf%k11(m)
-        !
-        ! -- Check for anisotropy in models, and recalculate hyn and hym
-        if (this%ianglex > 0) then
-          angle = this%auxvar(this%ianglex, iexg) * DPIO180
-          vg(1) = abs(cos(angle))
-          vg(2) = abs(sin(angle))
-          vg(3) = DZERO
-          !
-          ! -- anisotropy in model 1
-          if (this%gwfmodel1%npf%ik22 /= 0) then
-            hyn = this%gwfmodel1%npf%hy_eff(n, 0, ihc, vg=vg)
-          end if
-          !
-          ! -- anisotropy in model 2
-          if (this%gwfmodel2%npf%ik22 /= 0) then
-            hym = this%gwfmodel2%npf%hy_eff(m, 0, ihc, vg=vg)
-          end if
-        end if
-        !
-        fawidth = this%hwva(iexg)
-        csat = hcond(1, 1, 1, 1, this%inewton, 0, ihc, &
-                     this%icellavg, 0, 0, DONE, &
-                     topn, topm, satn, satm, hyn, hym, &
-                     topn, topm, &
-                     botn, botm, &
-                     this%cl1(iexg), this%cl2(iexg), &
-                     fawidth, this%satomega)
-      end if
-      !
-      ! -- store csat in condsat
-      this%condsat(iexg) = csat
-    end do
+    ! -- Calculate the saturated conductance for all connections
+    if (.not. this%use_interface_model()) call this%calc_cond_sat()
     !
     ! -- Observation AR
     call this%obs%obs_ar()
@@ -1609,6 +1531,94 @@ contains
     ! -- Return
     return
   end subroutine rewet
+
+  subroutine calc_cond_sat(this) 
+    ! -- modules   
+    use ConstantsModule, only: LINELENGTH, DZERO, DHALF, DONE, DPIO180
+    use GwfNpfModule, only: condmean, vcond, hcond
+    ! -- dummy
+    class(GwfExchangeType) :: this !<  GwfExchangeType
+    ! -- local
+    integer(I4B) :: iexg
+    integer(I4B) :: n, m, ihc
+    real(DP) :: topn, topm
+    real(DP) :: botn, botm
+    real(DP) :: satn, satm
+    real(DP) :: thickn, thickm
+    real(DP) :: angle, hyn, hym
+    real(DP) :: csat
+    real(DP) :: fawidth
+    real(DP), dimension(3) :: vg
+
+    do iexg = 1, this%nexg
+      !
+      ihc = this%ihc(iexg)
+      n = this%nodem1(iexg)
+      m = this%nodem2(iexg)
+      topn = this%gwfmodel1%dis%top(n)
+      topm = this%gwfmodel2%dis%top(m)
+      botn = this%gwfmodel1%dis%bot(n)
+      botm = this%gwfmodel2%dis%bot(m)
+      satn = this%gwfmodel1%npf%sat(n)
+      satm = this%gwfmodel2%npf%sat(m)
+      thickn = (topn - botn) * satn
+      thickm = (topm - botm) * satm
+      !
+      ! -- Calculate conductance depending on connection orientation
+      if (ihc == 0) then
+        !
+        ! -- Vertical conductance for fully saturated conditions
+        vg(1) = DZERO
+        vg(2) = DZERO
+        vg(3) = DONE
+        hyn = this%gwfmodel1%npf%hy_eff(n, 0, ihc, vg=vg)
+        hym = this%gwfmodel2%npf%hy_eff(m, 0, ihc, vg=vg)
+        csat = vcond(1, 1, 1, 1, 0, 1, 1, DONE, &
+                     botn, botm, &
+                     hyn, hym, &
+                     satn, satm, &
+                     topn, topm, &
+                     botn, botm, &
+                     this%hwva(iexg))
+      else
+        !
+        ! -- Calculate horizontal conductance
+        hyn = this%gwfmodel1%npf%k11(n)
+        hym = this%gwfmodel2%npf%k11(m)
+        !
+        ! -- Check for anisotropy in models, and recalculate hyn and hym
+        if (this%ianglex > 0) then
+          angle = this%auxvar(this%ianglex, iexg) * DPIO180
+          vg(1) = abs(cos(angle))
+          vg(2) = abs(sin(angle))
+          vg(3) = DZERO
+          !
+          ! -- anisotropy in model 1
+          if (this%gwfmodel1%npf%ik22 /= 0) then
+            hyn = this%gwfmodel1%npf%hy_eff(n, 0, ihc, vg=vg)
+          end if
+          !
+          ! -- anisotropy in model 2
+          if (this%gwfmodel2%npf%ik22 /= 0) then
+            hym = this%gwfmodel2%npf%hy_eff(m, 0, ihc, vg=vg)
+          end if
+        end if
+        !
+        fawidth = this%hwva(iexg)
+        csat = hcond(1, 1, 1, 1, this%inewton, 0, ihc, &
+                     this%icellavg, 0, 0, DONE, &
+                     topn, topm, satn, satm, hyn, hym, &
+                     topn, topm, &
+                     botn, botm, &
+                     this%cl1(iexg), this%cl2(iexg), &
+                     fawidth, this%satomega)
+      end if
+      !
+      ! -- store csat in condsat
+      this%condsat(iexg) = csat
+    end do
+
+  end subroutine calc_cond_sat
 
   !> @ brief Calculate the conductance
   !!

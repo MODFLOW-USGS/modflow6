@@ -4,8 +4,7 @@ module SimulationCreateModule
   use ConstantsModule, only: LINELENGTH, LENMODELNAME, LENBIGLINE, &
                              DZERO, LENEXCHANGENAME
   use SimVariablesModule, only: simfile, simlstfile, iout, simulation_mode, &
-                                proc_id, nr_procs, &
-                                model_names, model_proc_ids, model_loc_idx
+                                proc_id, nr_procs, model_names, model_loc_idx
   use GenericUtilitiesModule, only: sim_message, write_centered
   use SimModule, only: store_error, count_errors, &
                        store_error_unit, MaxErrors
@@ -261,7 +260,6 @@ contains
     use VirtualGwfModelModule, only: add_virtual_gwf_model
     use VirtualGwtModelModule, only: add_virtual_gwt_model
     use ConstantsModule, only: LENMODELNAME
-    use SimVariablesModule, only: simulation_mode, proc_id, nr_procs
     ! -- dummy
     ! -- local
     integer(I4B) :: ierr
@@ -292,10 +290,8 @@ contains
         ! increment global model id
         id_glo = id_glo + 1
         call ExpandArray(model_names)
-        call ExpandArray(model_proc_ids)
         call ExpandArray(model_loc_idx)
         model_names(id_glo) = model_name(1:LENMODELNAME)
-        model_proc_ids(id_glo) = proc_id
         model_loc_idx(id_glo) = -1
 
         if (nr_procs > 1) then
@@ -304,7 +300,6 @@ contains
               ! for now we assume: model id == rank nr + 1
               if (id_glo /= proc_id + 1) then
                 call add_virtual_gwf_model(id_glo, model_names(id_glo), null())
-                model_proc_ids(id_glo) = -1
                 cycle
               end if
             else
@@ -407,12 +402,11 @@ contains
         end if
 
         ! both models on other process? then don't create it here...
-        if (model_proc_ids(m1_id) /= proc_id .and. &
-            model_proc_ids(m2_id) /= proc_id) then
-              ! only add virtual
-              write(exg_name, '(a,i0)') 'GWF-GWF_', exg_id
-              call add_virtual_gwf_exchange(exg_name, exg_id, m1_id, m2_id)
-              cycle
+        if (model_loc_idx(m1_id) == -1 .and. model_loc_idx(m2_id) == -1) then
+          ! only add virtual
+          write(exg_name, '(a,i0)') 'GWF-GWF_', exg_id
+          call add_virtual_gwf_exchange(exg_name, exg_id, m1_id, m2_id)
+          cycle
         end if
 
         write (iout, '(4x,a,a,i0,a,i0,a,i0)') trim(keyword), ' exchange ', &

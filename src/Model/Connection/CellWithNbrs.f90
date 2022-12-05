@@ -12,7 +12,7 @@ module CellWithNbrsModule
   !< index
   type, public :: GlobalCellType
     integer(I4B) :: index !< the index on the model grid
-    class(VirtualModelType), pointer :: v_model => null() !< distributed model
+    class(VirtualModelType), pointer :: v_model => null() !< virtual model
   end type
 
   ! a global cell with neighbors

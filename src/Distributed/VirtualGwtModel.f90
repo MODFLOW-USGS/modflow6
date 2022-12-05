@@ -85,12 +85,12 @@ subroutine vgwt_prepare_stage(this, stage)
   nr_nodes = 0
   nr_conns = 0
 
-  if (stage == STG_INIT) then
+  if (stage == STG_AFTER_MDL_DF) then
     
-    call this%map(this%dsp_idiffc%to_base(),'IDIFFC', 'DSP', (/STG_INIT/), MAP_ALL_TYPE)
-    call this%map(this%dsp_idisp%to_base(), 'IDISP', 'DSP', (/STG_INIT/), MAP_ALL_TYPE)
-    call this%map(this%indsp%to_base(), 'INDSP', '', (/STG_INIT/), MAP_ALL_TYPE)
-    call this%map(this%inmst%to_base(), 'INMST', '', (/STG_INIT/), MAP_ALL_TYPE)
+    call this%map(this%dsp_idiffc%to_base(),'IDIFFC', 'DSP', (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
+    call this%map(this%dsp_idisp%to_base(), 'IDISP', 'DSP', (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
+    call this%map(this%indsp%to_base(), 'INDSP', '', (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
+    call this%map(this%inmst%to_base(), 'INMST', '', (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
 
   else if (stage == STG_BEFORE_AR) then
 
@@ -164,10 +164,9 @@ end subroutine deallocate_data
 
 subroutine vgwt_destroy(this)
   class(VirtualGwtModelType) :: this
-
-  call this%deallocate_data()
-
+  
   call this%VirtualModelType%destroy()
+  call this%deallocate_data()
 
 end subroutine vgwt_destroy
 

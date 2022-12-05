@@ -75,6 +75,9 @@ contains
     run_ctrl => create_run_control()
     call run_ctrl%start()
 
+    ! -- print info and start timer
+    call print_info()
+
     ! -- create
     call simulation_cr()
 
@@ -197,6 +200,20 @@ contains
     !
   end subroutine Mf6Finalize
 
+  !> @brief print initial message
+  !<
+  subroutine print_info()    
+    use SimModule, only: initial_message
+    use TimerModule, only: print_start_time
+
+    ! print initial message
+    call initial_message()
+    
+    ! get start time
+    call print_start_time()
+
+  end subroutine print_info
+
   !> @brief Define the simulation
     !!
     !! This subroutine defined the simulation. Steps include:
@@ -214,11 +231,17 @@ contains
     class(BaseExchangeType), pointer :: ep => null()
     class(SpatialModelConnectionType), pointer :: mc => null()
 
+    ! -- init virtual data environment
+    call run_ctrl%at_stage(STG_INIT)
+
     ! -- Define each model
     do im = 1, basemodellist%Count()
       mp => GetBaseModelFromList(basemodellist, im)
       call mp%model_df()
-    end do    
+    end do
+    !
+    ! -- synchronize
+    call run_ctrl%at_stage(STG_AFTER_MDL_DF)
     !
     ! -- Define each exchange
     do ic = 1, baseexchangelist%Count()
@@ -231,7 +254,6 @@ contains
     call connections_cr()
     !
     ! -- synchronize
-    call run_ctrl%at_stage(STG_INIT)
     call run_ctrl%at_stage(STG_BEFORE_DF)
     !
     ! -- Define each connection

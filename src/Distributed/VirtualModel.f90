@@ -2,7 +2,7 @@ module VirtualModelModule
   use VirtualBaseModule
   use VirtualDataContainerModule
   use ConstantsModule, only: LENMEMPATH
-  use KindModule, only: LGP
+  use KindModule, only: I4B, LGP
   use ListModule, only: ListType
   use SimStagesModule
   use NumericalModelModule, only: NumericalModelType
@@ -25,6 +25,7 @@ module VirtualModelModule
     type(VirtualDbl1dType), pointer :: con_cl2 => null()
     type(VirtualDbl1dType), pointer :: con_anglex => null()
     ! DIS
+    type(VirtualIntType), pointer :: dis_ndim => null()
     type(VirtualIntType), pointer :: dis_nodes => null()
     type(VirtualIntType), pointer :: dis_nja => null()
     type(VirtualIntType), pointer :: dis_njas => null()
@@ -80,11 +81,12 @@ subroutine vm_prepare_stage(this, stage)
   ! local
   integer(I4B) :: nodes, nja, njas
 
-  if (stage == STG_INIT) then
-    
-    call this%map(this%dis_nodes%to_base(), 'NODES', 'DIS', (/STG_INIT/), MAP_ALL_TYPE)
-    call this%map(this%dis_nja%to_base(), 'NJA', 'DIS', (/STG_INIT/), MAP_ALL_TYPE)
-    call this%map(this%dis_njas%to_base(), 'NJAS', 'DIS', (/STG_INIT/), MAP_ALL_TYPE)
+  if (stage == STG_AFTER_MDL_DF) then
+
+    call this%map(this%dis_ndim%to_base(), 'NDIM', 'DIS', (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
+    call this%map(this%dis_nodes%to_base(), 'NODES', 'DIS', (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
+    call this%map(this%dis_nja%to_base(), 'NJA', 'DIS', (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
+    call this%map(this%dis_njas%to_base(), 'NJAS', 'DIS', (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
 
   else if (stage == STG_BEFORE_AC) then
 
@@ -120,9 +122,8 @@ end subroutine vm_prepare_stage
 subroutine vm_destroy(this)
   class(VirtualModelType) :: this
 
-  call this%deallocate_data()
-
   call this%VirtualDataContainerType%destroy()
+  call this%deallocate_data()
 
 end subroutine vm_destroy
 
@@ -139,6 +140,7 @@ subroutine allocate_data(this)
   allocate (this%con_cl2)
   allocate (this%con_anglex)
   ! DIS
+  allocate (this%dis_ndim)
   allocate (this%dis_nodes)
   allocate (this%dis_nja)
   allocate (this%dis_njas)
@@ -173,6 +175,7 @@ subroutine deallocate_data(this)
   deallocate (this%con_cl2)
   deallocate (this%con_anglex)
   ! DIS
+  deallocate (this%dis_ndim)
   deallocate (this%dis_nodes)
   deallocate (this%dis_nja)
   deallocate (this%dis_njas)

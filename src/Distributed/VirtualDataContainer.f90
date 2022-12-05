@@ -8,6 +8,8 @@ module VirtualDataContainerModule
   implicit none
   private
 
+  public :: get_vdc_from_list
+
   type, public :: VirtualDataContainerType
     type(ListType) :: virtual_data_list
     character(LENCOMPONENTNAME) :: name    
@@ -31,8 +33,7 @@ module VirtualDataContainerModule
 
 contains
 
-  subroutine vdc_create(this, name, id, is_remote)    
-    use SimVariablesModule, only: proc_id
+  subroutine vdc_create(this, name, id, is_remote)
     class(VirtualDataContainerType) :: this
     character(len=*) :: name
     integer(I4B) :: id
@@ -42,7 +43,7 @@ contains
     this%id = id
     this%is_remote = is_remote
     if (is_remote) then
-      write(this%vmem_ctx, '(a,i0,a)') '__P', proc_id, '__'
+      write(this%vmem_ctx, '(a)') '__REMOTE__'
     else
       this%vmem_ctx = 'undefined'
     end if
@@ -142,11 +143,7 @@ contains
 
     if (this%is_remote) then
       ! create new virtual memory item
-      if (subcomp_name == '') then
-        virtual_mem_path = create_mem_path(this%name, context='__VIRTUAL__')
-      else
-        virtual_mem_path = create_mem_path(this%name, subcomp_name, context='__VIRTUAL__')
-      end if
+      virtual_mem_path = this%get_vrt_mem_path(subcomp_name)
       call vdata%vm_allocate(var_name, virtual_mem_path, shape)
       call get_from_memorylist(var_name, virtual_mem_path, vdata%virtual_mt, found)
     end if
@@ -172,11 +169,10 @@ contains
     character(len=LENMEMPATH) :: vrt_path
   
     if (this%is_remote) then
-      ! remote so create memory with context: '__PXX__' for process XX
       if (subcomp_name == '') then
-        vrt_path = create_mem_path(this%name, this%vmem_ctx)
+        vrt_path = create_mem_path(this%name, context=this%vmem_ctx)
       else 
-        vrt_path = create_mem_path(this%name, subcomp_name, this%vmem_ctx)
+        vrt_path = create_mem_path(this%name, subcomp_name, context=this%vmem_ctx)
       end if
     else
       if (subcomp_name == '') then
@@ -197,11 +193,27 @@ contains
     do i = 1, this%virtual_data_list%Count()
       obj => this%virtual_data_list%GetItem(i)
       select type (obj)
-      class is (VirtualDataType)
+      class is (VirtualDataType)      
         call obj%vm_deallocate()
       end select
     end do
 
   end subroutine vdc_destroy
+
+  function get_vdc_from_list(list, idx) result(vdc)
+    type(ListType) :: list
+    integer(I4B) :: idx
+    class(VirtualDataContainerType), pointer :: vdc
+    ! local
+    class(*), pointer :: obj_ptr
+
+    vdc => null()
+    obj_ptr => list%GetItem(idx)
+    select type (obj_ptr)
+      class is (VirtualDataContainerType)
+        vdc => obj_ptr
+    end select
+
+  end function get_vdc_from_list
 
 end module VirtualDataContainerModule

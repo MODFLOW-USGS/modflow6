@@ -46,6 +46,7 @@ module VirtualBaseModule
   integer(I4B), public, parameter :: MAP_CONN_TYPE = 3
   
   type, public, extends(VirtualDataType) :: VirtualIntType
+    integer(I4B), private, pointer :: intsclr
   contains
     procedure :: vm_allocate => vm_allocate_int
     procedure :: vm_deallocate => vm_deallocate_int
@@ -53,6 +54,7 @@ module VirtualBaseModule
   end type
 
   type, public, extends(VirtualDataType) :: VirtualInt1dType
+    integer(I4B), dimension(:), pointer, contiguous :: int1d
   contains
     procedure :: vm_allocate => vm_allocate_int1d
     procedure :: vm_deallocate => vm_deallocate_int1d
@@ -61,7 +63,7 @@ module VirtualBaseModule
   end type
 
   type, public, extends(VirtualDataType) :: VirtualDblType
-    real(DP), pointer :: value
+    real(DP), private, pointer :: dblsclr
   contains
     procedure :: vm_allocate => vm_allocate_dbl
     procedure :: vm_deallocate => vm_deallocate_dbl
@@ -69,6 +71,7 @@ module VirtualBaseModule
   end type
 
   type, public, extends(VirtualDataType) :: VirtualDbl1dType
+    real(DP), dimension(:), pointer, contiguous :: dbl1d
   contains
     procedure :: vm_allocate => vm_allocate_dbl1d
     procedure :: vm_deallocate => vm_deallocate_dbl1d
@@ -77,6 +80,7 @@ module VirtualBaseModule
   end type
 
   type, public, extends(VirtualDataType) :: VirtualDbl2dType
+    real(DP), dimension(:,:), pointer, contiguous :: dbl2d
   contains
     procedure :: vm_allocate => vm_allocate_dbl2D
     procedure :: vm_deallocate => vm_deallocate_dbl2D
@@ -135,17 +139,15 @@ contains
     character(len=*) :: var_name
     character(len=*) :: mem_path
     integer(I4B), dimension(:) :: shape
-    ! local
-    integer(I4B), pointer :: intscl
 
-    call mem_allocate(intscl, var_name, mem_path)
+    call mem_allocate(this%intsclr, var_name, mem_path)
 
   end subroutine vm_allocate_int
 
   subroutine vm_deallocate_int(this)
     class(VirtualIntType) :: this
 
-    call mem_deallocate(this%virtual_mt%intsclr)
+    if (this%is_remote) call mem_deallocate(this%intsclr)
 
   end subroutine vm_deallocate_int
 
@@ -154,17 +156,15 @@ contains
     character(len=*) :: var_name
     character(len=*) :: mem_path
     integer(I4B), dimension(:) :: shape
-    ! local
-    integer(I4B), dimension(:), pointer, contiguous :: int1d
 
-    call mem_allocate(int1d, shape(1), var_name, mem_path)
+    call mem_allocate(this%int1d, shape(1), var_name, mem_path)
 
   end subroutine vm_allocate_int1d
 
   subroutine vm_deallocate_int1d(this)
     class(VirtualInt1dType) :: this
 
-    call mem_deallocate(this%virtual_mt%aint1d)
+    if (this%is_remote) call mem_deallocate(this%int1d)
 
   end subroutine vm_deallocate_int1d
 
@@ -173,17 +173,15 @@ contains
     character(len=*) :: var_name
     character(len=*) :: mem_path
     integer(I4B), dimension(:) :: shape
-    ! local
-    real(DP), pointer :: dbl
 
-    call mem_allocate(dbl, var_name, mem_path)
+    call mem_allocate(this%dblsclr, var_name, mem_path)
 
   end subroutine vm_allocate_dbl
 
   subroutine vm_deallocate_dbl(this)
     class(VirtualDblType) :: this
 
-    call mem_deallocate(this%virtual_mt%dblsclr)
+    if (this%is_remote) call mem_deallocate(this%dblsclr)
 
   end subroutine vm_deallocate_dbl
 
@@ -192,17 +190,15 @@ contains
     character(len=*) :: var_name
     character(len=*) :: mem_path
     integer(I4B), dimension(:) :: shape
-    ! local
-    real(DP), dimension(:), pointer, contiguous :: dbl1d
 
-    call mem_allocate(dbl1d, shape(1), var_name, mem_path)
+    call mem_allocate(this%dbl1d, shape(1), var_name, mem_path)
 
   end subroutine vm_allocate_dbl1d
 
   subroutine vm_deallocate_dbl1d(this)
     class(VirtualDbl1dType) :: this
 
-    call mem_deallocate(this%virtual_mt%adbl1d)
+    if (this%is_remote) call mem_deallocate(this%dbl1d)
 
   end subroutine vm_deallocate_dbl1d
 
@@ -211,17 +207,15 @@ contains
     character(len=*) :: var_name
     character(len=*) :: mem_path
     integer(I4B), dimension(:) :: shape
-    ! local
-    real(DP), dimension(:,:), pointer, contiguous :: dbl2d
 
-    call mem_allocate(dbl2d, shape(1), shape(2), var_name, mem_path)
+    call mem_allocate(this%dbl2d, shape(1), shape(2), var_name, mem_path)
 
   end subroutine vm_allocate_dbl2D
 
   subroutine vm_deallocate_dbl2D(this)
     class(VirtualDbl2dType) :: this
 
-    call mem_deallocate(this%virtual_mt%adbl2d)
+    if (this%is_remote) call mem_deallocate(this%dbl2d)
 
   end subroutine vm_deallocate_dbl2D
   

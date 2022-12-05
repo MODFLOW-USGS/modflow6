@@ -23,8 +23,8 @@ module SimVariablesModule
   integer(I4B) :: nr_procs = 1
   integer(I4B) :: MF6_COMM_WORLD = -1 ! should become MPI_Comm type     
   character(len=LENMODELNAME), dimension(:), allocatable :: model_names !< all model names in the (global) simulation
-  integer(I4B), dimension(:), allocatable :: model_proc_ids !< equals the home process id for the models
   integer(I4B), dimension(:), allocatable :: model_loc_idx !< equals the local index into the basemodel list (-1 when not available)
+  
 
   character(len=MAXCHARLEN) :: errmsg !< error message string
   character(len=MAXCHARLEN) :: warnmsg !< warning message string

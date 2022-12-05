@@ -53,7 +53,8 @@ contains
     this%v_model1 => get_virtual_model(m1_id)
     this%v_model2 => get_virtual_model(m2_id)
 
-    is_remote = this%v_model1%is_remote .and. this%v_model2%is_remote
+    ! if any of the two models is remote, we virtualize _all_ the data
+    is_remote = this%v_model1%is_remote .or. this%v_model2%is_remote
     call this%VirtualDataContainerType%vdc_create(name, exg_id, is_remote)
 
     ! allocate fields
@@ -67,11 +68,11 @@ contains
     ! local
     integer(I4B) :: nexg, naux
 
-    if (stage == STG_INIT) then
+    if (stage == STG_AFTER_MDL_DF) then
 
-      call this%map(this%nexg%to_base(), 'NEXG', '', (/STG_INIT/), MAP_ALL_TYPE)
-      call this%map(this%naux%to_base(), 'NAUX', '', (/STG_INIT/), MAP_ALL_TYPE)
-      call this%map(this%ianglex%to_base(), 'IANGLEX', '', (/STG_INIT/), MAP_ALL_TYPE)
+      call this%map(this%nexg%to_base(), 'NEXG', '', (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
+      call this%map(this%naux%to_base(), 'NAUX', '', (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
+      call this%map(this%ianglex%to_base(), 'IANGLEX', '', (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
 
     else if (stage == STG_BEFORE_DF) then
 
@@ -108,6 +109,7 @@ contains
   subroutine vx_destroy(this)
     class(VirtualExchangeType) :: this
 
+    call this%VirtualDataContainerType%destroy()
     call this%deallocate_data()
 
   end subroutine vx_destroy

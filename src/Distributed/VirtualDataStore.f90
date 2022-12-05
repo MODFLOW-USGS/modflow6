@@ -1,6 +1,7 @@
 module VirtualDataStoreModule  
   use KindModule, only: I4B
   use STLVecIntModule
+  use VirtualDataListsModule, only: virtual_model_list, virtual_exchange_list
   use VirtualModelModule, only: get_virtual_model
   use VirtualExchangeModule, only: get_virtual_exchange
   use VirtualSolutionModule
@@ -13,6 +14,8 @@ module VirtualDataStoreModule
   implicit none
   private
 
+  ! TODO_MJR: virtual solution should be a virtual data
+  ! collection targeting a single remote address
   type, public :: VirtualDataStoreType
     integer(I4B) :: nr_solutions
     integer(I4B), dimension(:), allocatable :: solution_ids
@@ -20,14 +23,17 @@ module VirtualDataStoreModule
     class(RouterBaseType), pointer :: router
   contains
     procedure :: create => vds_create
+    procedure :: init => vds_init
     procedure :: add_solution => vds_add_solution
-    generic :: synchronize => vds_synchronize, vds_synchronize_by_id
+    procedure :: synchronize => vds_synchronize
+    procedure :: synchronize_sln => vds_synchronize_sln
     procedure :: destroy
 
     ! private
-    procedure, private :: vds_synchronize
-    procedure, private :: vds_synchronize_by_id
-    procedure, private :: sync_solution
+    procedure, private :: vds_synchronize    
+    procedure, private :: vds_synchronize_sln
+    procedure, private :: prepare_all
+    procedure, private :: link_all
     procedure, private :: prepare_solution
     procedure, private :: update_solution
     procedure, private :: link
@@ -54,6 +60,15 @@ contains
     this%router => create_router(sim_mode)
     
   end subroutine vds_create
+
+  !> @brief Initialize internal components
+  !<
+  subroutine vds_init(this)
+    class(VirtualDataStoreType) :: this
+
+    call this%router%initialize()
+
+  end subroutine
 
   subroutine vds_add_solution(this, num_sol)
     class(VirtualDataStoreType) :: this
@@ -109,45 +124,74 @@ contains
 
   end subroutine vds_add_solution
 
-  !> @brief Synchronize the virtual data store for this stage
+  !> @brief Synchronize the full virtual data store for this stage
   !<
   subroutine vds_synchronize(this, stage)
     class(VirtualDataStoreType) :: this
     integer(I4B) :: stage
-    ! local
-    integer(I4B) :: i
-    
-    do i = 1, this%nr_solutions
-      call this%sync_solution(i, stage)
-    end do
+
+    call this%prepare_all(stage)
+    call this%link_all(stage)
+    call this%router%route_all(stage)
 
   end subroutine vds_synchronize
 
+  subroutine prepare_all(this, stage)
+    class(VirtualDataStoreType) :: this
+    integer(I4B) :: stage
+    ! local
+    integer(I4B) :: i
+    class(VirtualDataContainerType), pointer :: vdc
+
+    ! prepare all virtual data for this stage
+    do i = 1, virtual_model_list%Count()
+      vdc => get_vdc_from_list(virtual_model_list, i)
+      call vdc%prepare_stage(stage)      
+    end do
+    do i = 1, virtual_exchange_list%Count()
+      vdc => get_vdc_from_list(virtual_exchange_list, i)
+      call vdc%prepare_stage(stage)      
+    end do
+
+  end subroutine prepare_all
+
+  subroutine link_all(this, stage)
+    class(VirtualDataStoreType) :: this
+    integer(I4B) :: stage
+    ! local
+    integer(I4B) :: i
+    class(VirtualDataContainerType), pointer :: vdc
+
+    ! link all local objects
+    do i = 1, virtual_model_list%Count()
+      vdc => get_vdc_from_list(virtual_model_list, i)
+      if (.not. vdc%is_remote) then
+        call vdc%link_items(stage)
+      end if
+    end do
+    do i = 1, virtual_exchange_list%Count()
+      vdc => get_vdc_from_list(virtual_exchange_list, i)
+      if (.not. vdc%is_remote) then
+        call vdc%link_items(stage)
+      end if
+    end do
+
+  end subroutine link_all
+
   !> @brief Synchronize one particular solution for this stage  
   !<
-  subroutine vds_synchronize_by_id(this, id_sln, stage)
-    class(VirtualDataStoreType) :: this    
+  subroutine vds_synchronize_sln(this, id_sln, stage)
+    class(VirtualDataStoreType) :: this
     integer(I4B) :: id_sln !< the id of the solution
     integer(I4B) :: stage
     ! local
-    integer(I4B) :: sol_index
+    integer(I4B) :: sol_idx
     
-    sol_index = findloc(this%solution_ids, id_sln, dim=1)
-    call this%sync_solution(sol_index, stage)    
-
-  end subroutine vds_synchronize_by_id
-
-  !> @brief Internal routine to sync a solution
-  !<
-  subroutine sync_solution(this, sol_idx, stage)
-    class(VirtualDataStoreType) :: this    
-    integer(I4B) :: sol_idx !< the index of the solution in our array of solution ids
-    integer(I4B) :: stage
-
+    sol_idx = findloc(this%solution_ids, id_sln, dim=1)
     call this%prepare_solution(this%virtual_solutions(sol_idx), stage)
     call this%update_solution(this%virtual_solutions(sol_idx), stage)
 
-  end subroutine sync_solution
+  end subroutine vds_synchronize_sln
 
   !> @brief Force the virtual data containers (models,
   !! exchanges, etc.) to schedule their virtual data
@@ -158,22 +202,16 @@ contains
     integer(I4B) :: stage
     ! local
     integer(I4B) :: i
-    class(*), pointer :: vdc
+    class(VirtualDataContainerType), pointer :: vdc
 
-    do i = 1, virtual_sol%models%Count()
-      vdc => virtual_sol%models%GetItem(i)
-      select type (vdc)
-        class is (VirtualDataContainerType)
-          call vdc%prepare_stage(stage)
-      end select
+    do i = 1, virtual_sol%models%Count()      
+      vdc => get_vdc_from_list(virtual_sol%models, i)
+      call vdc%prepare_stage(stage)
     end do
 
     do i = 1, virtual_sol%exchanges%Count()
-      vdc => virtual_sol%exchanges%GetItem(i)
-      select type (vdc)
-        class is (VirtualDataContainerType)
-          call vdc%prepare_stage(stage)
-      end select
+      vdc => get_vdc_from_list(virtual_sol%exchanges, i)
+      call vdc%prepare_stage(stage)
     end do
 
   end subroutine prepare_solution
@@ -192,7 +230,7 @@ contains
     call this%link(virtual_sol, stage)
 
     ! remote objects are routed
-    call this%router%route(virtual_sol, stage)
+    call this%router%route_sln(virtual_sol, stage)
 
   end subroutine update_solution
 
@@ -204,26 +242,20 @@ contains
     integer(I4B) :: stage
     ! local
     integer(I4B) :: i
-    class(*), pointer :: vdc
+    class(VirtualDataContainerType), pointer :: vdc
 
     do i = 1, virtual_sol%models%Count()
-      vdc => virtual_sol%models%GetItem(i)
-      select type (vdc)
-        class is (VirtualDataContainerType)
-          if (.not. vdc%is_remote) then
-            call vdc%link_items(stage)
-          end if
-      end select
+      vdc => get_vdc_from_list(virtual_sol%models, i)
+      if (.not. vdc%is_remote) then
+        call vdc%link_items(stage)
+      end if
     end do
 
     do i = 1, virtual_sol%exchanges%Count()
-      vdc => virtual_sol%exchanges%GetItem(i)
-      select type (vdc)
-        class is (VirtualDataContainerType)
-          if (.not. vdc%is_remote) then
-            call vdc%link_items(stage)
-          end if
-      end select
+      vdc => get_vdc_from_list(virtual_sol%exchanges, i)
+      if (.not. vdc%is_remote) then
+        call vdc%link_items(stage)
+      end if
     end do
 
   end subroutine link
@@ -253,8 +285,19 @@ contains
 
   subroutine destroy(this)
     class(VirtualDataStoreType) :: this
+    ! local
+    integer(I4B) :: i
+    class(VirtualDataContainerType), pointer :: vdc
 
-    ! TODO_MJR: clean virtual data lists
+    do i = 1, virtual_model_list%Count()
+      vdc => get_vdc_from_list(virtual_model_list, i)
+      call vdc%destroy()
+    end do
+
+    do i = 1, virtual_exchange_list%Count()
+      vdc => get_vdc_from_list(virtual_exchange_list, i)
+      call vdc%destroy()
+    end do
 
     deallocate(this%virtual_solutions)
 

@@ -4,6 +4,8 @@ module VirtualSolutionModule
   implicit none
   private
 
+  !> This bundles all virtual data for a particular solution
+  !< for convenience, it never owns any of it
   type, public :: VirtualSolutionType
     integer(I4B) :: solution_id = -1
     type(ListType) :: models

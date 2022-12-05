@@ -1,4 +1,5 @@
 module VirtualGwfModelModule
+  use KindModule, only: I4B
   use VirtualBaseModule
   use VirtualModelModule
   use SimStagesModule
@@ -76,12 +77,12 @@ contains
     ! prepare base (=numerical) model data items
     call this%VirtualModelType%prepare_stage(stage)
 
-    if (stage == STG_INIT) then
+    if (stage == STG_AFTER_MDL_DF) then
 
-      call this%map(this%npf_iangle1%to_base(), 'IANGLE1', 'NPF', (/STG_INIT/), MAP_ALL_TYPE)
-      call this%map(this%npf_iangle2%to_base(), 'IANGLE2', 'NPF', (/STG_INIT/), MAP_ALL_TYPE)
-      call this%map(this%npf_iangle3%to_base(), 'IANGLE3', 'NPF', (/STG_INIT/), MAP_ALL_TYPE)
-      call this%map(this%npf_iwetdry%to_base(), 'IWETDRY', 'NPF', (/STG_INIT/), MAP_ALL_TYPE)
+      call this%map(this%npf_iangle1%to_base(), 'IANGLE1', 'NPF', (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
+      call this%map(this%npf_iangle2%to_base(), 'IANGLE2', 'NPF', (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
+      call this%map(this%npf_iangle3%to_base(), 'IANGLE3', 'NPF', (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
+      call this%map(this%npf_iwetdry%to_base(), 'IWETDRY', 'NPF', (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
 
     else if (stage == STG_BEFORE_AR) then
 
@@ -141,9 +142,8 @@ contains
   subroutine vgwf_destroy(this)
     class(VirtualGwfModelType) :: this
     
-    call this%deallocate_data()
-
     call this%VirtualModelType%destroy()
+    call this%deallocate_data()
 
   end subroutine vgwf_destroy
 

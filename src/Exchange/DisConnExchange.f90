@@ -226,20 +226,28 @@ contains
         lloc = 1
         !
         ! -- Read and check node 1
-        call this%parser%GetCellid(this%model1%dis%ndim, cellid1, &
+        call this%parser%GetCellid(this%v_model1%dis_ndim%get(), cellid1, &
                                    flag_string=.true.)
-        nodem1 = this%model1%dis%noder_from_cellid(cellid1, &
-                                                   this%parser%iuactive, &
-                                                   iout, flag_string=.true.)
-        this%nodem1(iexg) = nodem1
+        if (associated(this%model1)) then          
+          nodem1 = this%model1%dis%noder_from_cellid(cellid1, &
+                                                     this%parser%iuactive, &
+                                                     iout, flag_string=.true.)
+          this%nodem1(iexg) = nodem1
+        else
+          this%nodem1(iexg) = -1
+        end if
         !
         ! -- Read and check node 2
-        call this%parser%GetCellid(this%model2%dis%ndim, cellid2, &
+        call this%parser%GetCellid(this%v_model2%dis_ndim%get(), cellid2, &
                                    flag_string=.true.)
-        nodem2 = this%model2%dis%noder_from_cellid(cellid2, &
-                                                   this%parser%iuactive, &
-                                                   iout, flag_string=.true.)
-        this%nodem2(iexg) = nodem2
+        if (associated(this%model2)) then          
+          nodem2 = this%model2%dis%noder_from_cellid(cellid2, &
+                                                     this%parser%iuactive, &
+                                                     iout, flag_string=.true.)
+          this%nodem2(iexg) = nodem2
+        else
+          this%nodem2(iexg) = -1
+        end if
         !
         ! -- Read rest of input line
         this%ihc(iexg) = this%parser%GetInteger()
@@ -270,21 +278,25 @@ contains
         end if
         !
         ! -- Check to see if nodem1 is outside of active domain
-        if (nodem1 <= 0) then
-          write (errmsg, *) &
-            trim(adjustl(this%model1%name))// &
-            ' Cell is outside active grid domain ('// &
-            trim(adjustl(cellid1))//').'
-          call store_error(errmsg)
+        if (associated(this%model1)) then
+          if (nodem1 <= 0) then
+            write (errmsg, *) &
+              trim(adjustl(this%model1%name))// &
+              ' Cell is outside active grid domain ('// &
+              trim(adjustl(cellid1))//').'
+            call store_error(errmsg)
+          end if
         end if
         !
         ! -- Check to see if nodem2 is outside of active domain
-        if (nodem2 <= 0) then
-          write (errmsg, *) &
-            trim(adjustl(this%model2%name))// &
-            ' Cell is outside active grid domain ('// &
-            trim(adjustl(cellid2))//').'
-          call store_error(errmsg)
+        if (associated(this%model2)) then
+          if (nodem2 <= 0) then
+            write (errmsg, *) &
+              trim(adjustl(this%model2%name))// &
+              ' Cell is outside active grid domain ('// &
+              trim(adjustl(cellid2))//').'
+            call store_error(errmsg)
+          end if
         end if
       end do
       !

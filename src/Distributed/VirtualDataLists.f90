@@ -8,6 +8,6 @@ module VirtualDataListsModule
 
   type(ListType) :: virtual_model_list
 
-  type(ListType) :: virtual_exchange_list  
+  type(ListType) :: virtual_exchange_list
 
 end module VirtualDataListsModule

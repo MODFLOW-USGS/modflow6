@@ -19,6 +19,7 @@ module MappedMemoryModule
     character(len=LENVARNAME) :: tgt_name
     character(len=LENMEMPATH) :: tgt_path
     type(MemoryType), pointer :: tgt !< cached memory item
+    logical(LGP) :: copy_all !< when true: copy all elements
     integer(I4B), dimension(:), pointer :: src_idx !< source indexes to copy from
     integer(I4B), dimension(:), pointer :: tgt_idx !< target indexes to copy to
     integer(I4B), dimension(:), pointer :: sign !< optional sign (or null) to negate copied value
@@ -77,9 +78,15 @@ contains
     ! local
     integer(I4B) :: i
 
-    do i = 1, size(this%tgt_idx)
-      this%tgt%aint1d(this%tgt_idx(i)) = this%src%aint1d(this%src_idx(i))
-    end do
+    if (this%copy_all) then
+      do i = 1, this%tgt%isize
+        this%tgt%aint1d(i) = this%src%aint1d(i)
+      end do
+    else
+      do i = 1, size(this%tgt_idx)
+        this%tgt%aint1d(this%tgt_idx(i)) = this%src%aint1d(this%src_idx(i))
+      end do
+    end if
 
   end subroutine sync_int1d
 
@@ -88,10 +95,16 @@ contains
     ! local
     integer(I4B) :: i
 
-    do i = 1, size(this%tgt_idx)
-      this%tgt%aint1d(this%tgt_idx(i)) = this%tgt%aint1d(this%tgt_idx(i)) * &
-                                         this%sign(i)
-    end do
+    if (this%copy_all) then
+      do i = 1, this%tgt%isize
+        this%tgt%aint1d(i) = this%tgt%aint1d(i) * this%sign(i)
+      end do
+    else
+      do i = 1, size(this%tgt_idx)
+        this%tgt%aint1d(this%tgt_idx(i)) = this%tgt%aint1d(this%tgt_idx(i)) * &
+                                           this%sign(i)
+      end do
+    end if
 
   end subroutine apply_sgn_int1d
 
@@ -102,9 +115,15 @@ contains
     ! local
     integer(I4B) :: i
 
-    do i = 1, size(this%tgt_idx)
-      this%tgt%adbl1d(this%tgt_idx(i)) = this%src%adbl1d(this%src_idx(i))
-    end do
+    if (this%copy_all) then
+      do i = 1, this%tgt%isize
+        this%tgt%adbl1d(i) = this%src%adbl1d(i)
+      end do
+    else
+      do i = 1, size(this%tgt_idx)
+        this%tgt%adbl1d(this%tgt_idx(i)) = this%src%adbl1d(this%src_idx(i))
+      end do
+    end if
 
   end subroutine sync_dbl1d
 
@@ -113,10 +132,16 @@ contains
     ! local
     integer(I4B) :: i
 
-    do i = 1, size(this%tgt_idx)
-      this%tgt%adbl1d(this%tgt_idx(i)) = this%tgt%adbl1d(this%tgt_idx(i)) * &
-                                         this%sign(i)
-    end do
+    if (this%copy_all) then
+      do i = 1, this%tgt%isize
+        this%tgt%adbl1d(i) = this%tgt%adbl1d(i) * this%sign(i)
+      end do
+    else
+      do i = 1, size(this%tgt_idx)
+        this%tgt%adbl1d(this%tgt_idx(i)) = this%tgt%adbl1d(this%tgt_idx(i)) * &
+                                           this%sign(i)
+      end do
+    end if
 
   end subroutine apply_sgn_dbl1d
 
@@ -127,11 +152,19 @@ contains
     ! local
     integer(I4B) :: i, k
 
-    do i = 1, size(this%tgt_idx)
-      do k = 1, size(this%src%adbl2d, dim=1)
-        this%tgt%adbl2d(k, this%tgt_idx(i)) = this%src%adbl2d(k, this%src_idx(i))
+    if (this%copy_all) then
+      do i = 1, this%tgt%isize
+        do k = 1, size(this%src%adbl2d, dim=1)
+          this%tgt%adbl2d(k, i) = this%src%adbl2d(k, i)
+        end do
       end do
-    end do
+    else      
+      do i = 1, size(this%tgt_idx)
+        do k = 1, size(this%src%adbl2d, dim=1)
+          this%tgt%adbl2d(k, this%tgt_idx(i)) = this%src%adbl2d(k, this%src_idx(i))
+        end do
+      end do
+    end if
 
   end subroutine sync_dbl2d
 
@@ -140,12 +173,20 @@ contains
     ! local
     integer(I4B) :: i, k
 
-    do i = 1, size(this%tgt_idx)
-      do k = 1, size(this%src%adbl2d, dim=1)
-        this%tgt%adbl2d(k, this%tgt_idx(i)) = &
-          this%tgt%adbl2d(k, this%tgt_idx(i)) * this%sign(i)
+    if (this%copy_all) then
+      do i = 1, this%tgt%isize
+        do k = 1, size(this%src%adbl2d, dim=1)
+          this%tgt%adbl2d(k, i) = this%tgt%adbl2d(k, i) * this%sign(i)
+        end do
       end do
-    end do
+    else
+      do i = 1, size(this%tgt_idx)
+        do k = 1, size(this%src%adbl2d, dim=1)
+          this%tgt%adbl2d(k, this%tgt_idx(i)) = &
+            this%tgt%adbl2d(k, this%tgt_idx(i)) * this%sign(i)
+        end do
+      end do
+    end if
 
   end subroutine apply_sgn_dbl2d
 
