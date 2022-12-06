@@ -33,7 +33,7 @@
 ! none                      none          CONSTANT              accumulate
 !
 !
-module GwtAptModule
+module TspAptModule
 
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: DZERO, DONE, DEP20, LENFTYPE, LINELENGTH, &
@@ -54,14 +54,14 @@ module GwtAptModule
 
   implicit none
 
-  public :: GwtAptType
+  public :: TspAptType
   public :: apt_process_obsID
   public :: apt_process_obsID12
 
   character(len=LENFTYPE) :: ftype = 'APT'
   character(len=16) :: text = '             APT'
 
-  type, extends(BndType) :: GwtAptType
+  type, extends(BndType) :: TspAptType
 
     character(len=LENPACKAGENAME) :: flowpackagename = '' !< name of corresponding flow package
     character(len=8), &
@@ -173,7 +173,7 @@ module GwtAptModule
     procedure, private :: apt_copy2flowp
     procedure, private :: apt_setup_tableobj
 
-  end type GwtAptType
+  end type TspAptType
 
 contains
 
@@ -187,7 +187,7 @@ contains
     use MemoryManagerModule, only: mem_setptr
     use SparseModule, only: sparsematrix
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     integer(I4B), intent(in) :: moffset
     type(sparsematrix), intent(inout) :: sparse
     ! -- local
@@ -241,7 +241,7 @@ contains
 ! ------------------------------------------------------------------------------
     use SparseModule, only: sparsematrix
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     integer(I4B), intent(in) :: moffset
     integer(I4B), dimension(:), intent(in) :: iasln
     integer(I4B), dimension(:), intent(in) :: jasln
@@ -327,7 +327,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     ! -- local
     integer(I4B) :: j
     logical :: found
@@ -402,7 +402,7 @@ contains
 ! ------------------------------------------------------------------------------
     use TdisModule, only: kper, nper
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     ! -- local
     integer(I4B) :: ierr
     integer(I4B) :: n
@@ -528,7 +528,7 @@ contains
     ! -- module
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     integer(I4B), intent(in) :: itemno
     ! -- local
     character(len=LINELENGTH) :: text
@@ -629,7 +629,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     integer(I4B), intent(in) :: itemno
     character(len=*), intent(in) :: keyword
     logical, intent(inout) :: found
@@ -655,7 +655,7 @@ contains
     ! -- return
     integer(I4B) :: ierr
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     integer(I4B), intent(in) :: itemno
     ! -- local
     ! -- formats
@@ -679,7 +679,7 @@ contains
     ! -- modules
     use SimVariablesModule, only: iFailedStepRetry
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- local
     integer(I4B) :: n
     integer(I4B) :: j, iaux
@@ -740,7 +740,7 @@ contains
   !<
   subroutine apt_cf(this, reset_mover)
     ! -- modules
-    class(GwtAptType) :: this !< GwtAptType object
+    class(TspAptType) :: this !< TspAptType object
     logical(LGP), intent(in), optional :: reset_mover !< boolean for resetting mover
     ! -- local
     integer(I4B) :: i
@@ -768,7 +768,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
@@ -797,7 +797,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
@@ -832,7 +832,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
@@ -945,7 +945,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
@@ -970,7 +970,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- local
     integer(I4B) :: j, n
     real(DP) :: qbnd
@@ -1006,7 +1006,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     real(DP), dimension(:), intent(in) :: x
     real(DP), dimension(:), contiguous, intent(inout) :: flowja
     integer(I4B), optional, intent(in) :: iadv
@@ -1047,7 +1047,7 @@ contains
 
   subroutine apt_ot_package_flows(this, icbcfl, ibudfl)
     use TdisModule, only: kstp, kper, delt, pertim, totim
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     integer(I4B), intent(in) :: icbcfl
     integer(I4B), intent(in) :: ibudfl
     integer(I4B) :: ibinun
@@ -1074,7 +1074,7 @@ contains
     use TdisModule, only: kstp, kper, pertim, totim
     use ConstantsModule, only: DHNOFLO, DHDRY
     use InputOutputModule, only: ulasav
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     integer(I4B), intent(in) :: idvsave
     integer(I4B), intent(in) :: idvprint
     integer(I4B) :: ibinun
@@ -1123,7 +1123,7 @@ contains
     ! -- module
     use TdisModule, only: totim
     ! -- dummy
-    class(GwtAptType) :: this !< GwtAptType object
+    class(TspAptType) :: this !< TspAptType object
     integer(I4B), intent(in) :: kstp !< time step number
     integer(I4B), intent(in) :: kper !< period number
     integer(I4B), intent(in) :: iout !< flag and unit number for the model listing file
@@ -1144,7 +1144,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- local
     !
     ! -- allocate scalars in NumericalPackageType
@@ -1201,7 +1201,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     ! -- local
     integer(I4B) :: n
 
@@ -1260,7 +1260,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     ! -- local
     integer(I4B) :: n
     !
@@ -1319,7 +1319,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- local
     !
     ! -- deallocate arrays
@@ -1396,7 +1396,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- local
 ! ------------------------------------------------------------------------------
     !
@@ -1410,7 +1410,7 @@ contains
 
   subroutine apt_options(this, option, found)
 ! ******************************************************************************
-! apt_options -- set options specific to GwtAptType
+! apt_options -- set options specific to TspAptType
 !
 ! apt_options overrides BndType%bnd_options
 ! ******************************************************************************
@@ -1421,7 +1421,7 @@ contains
     use OpenSpecModule, only: access, form
     use InputOutputModule, only: urword, getunit, openfile
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     character(len=*), intent(inout) :: option
     logical, intent(inout) :: found
     ! -- local
@@ -1514,7 +1514,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     ! -- local
     integer(I4B) :: ierr
     ! -- format
@@ -1591,7 +1591,7 @@ contains
     use MemoryManagerModule, only: mem_allocate
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: text
     character(len=LENBOUNDNAME) :: bndName, bndNameTemp
@@ -1755,7 +1755,7 @@ contains
     use ConstantsModule, only: LINELENGTH
     use BudgetModule, only: budget_cr
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     ! -- local
     !character(len=LINELENGTH) :: text
     integer(I4B) :: j, n
@@ -1847,7 +1847,7 @@ contains
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- local
     integer(I4B) :: n, j, igwfnode
     integer(I4B) :: n1, n2
@@ -1939,7 +1939,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- local
 ! ------------------------------------------------------------------------------
     !
@@ -1959,7 +1959,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     integer(I4B), intent(in) :: ilak
     real(DP), intent(in) :: rrate
     real(DP), intent(inout) :: ccratin
@@ -1997,7 +1997,7 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
 ! ------------------------------------------------------------------------------
     !
     ! -- create the header list label
@@ -2029,7 +2029,7 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     integer(I4B), pointer :: neq
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     real(DP), dimension(:), pointer, contiguous :: xnew
@@ -2064,7 +2064,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     integer(I4B), intent(in) :: icv
     real(DP), intent(inout) :: vnew, vold
     real(DP), intent(in) :: delt
@@ -2095,7 +2095,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- return
     integer(I4B) :: nbudterms
     ! -- local
@@ -2117,7 +2117,7 @@ contains
     ! -- modules
     use ConstantsModule, only: LENBUDTXT
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- local
     integer(I4B) :: nbudterm
     integer(I4B) :: nlen
@@ -2301,7 +2301,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     integer(I4B), intent(inout) :: idx
     ! -- local
 ! ------------------------------------------------------------------------------
@@ -2324,7 +2324,7 @@ contains
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     real(DP), dimension(:), intent(in) :: x
     ! -- local
     integer(I4B) :: naux
@@ -2463,7 +2463,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     integer(I4B), intent(inout) :: idx
     real(DP), dimension(:), intent(in) :: x
     real(DP), intent(inout) :: ccratin
@@ -2483,7 +2483,7 @@ contains
   subroutine apt_stor_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
     use TdisModule, only: delt
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     integer(I4B), intent(in) :: ientry
     integer(I4B), intent(inout) :: n1
     integer(I4B), intent(inout) :: n2
@@ -2507,7 +2507,7 @@ contains
 
   subroutine apt_tmvr_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     integer(I4B), intent(in) :: ientry
     integer(I4B), intent(inout) :: n1
     integer(I4B), intent(inout) :: n2
@@ -2530,7 +2530,7 @@ contains
 
   subroutine apt_fjf_term(this, ientry, n1, n2, rrate, &
                           rhsval, hcofval)
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     integer(I4B), intent(in) :: ientry
     integer(I4B), intent(inout) :: n1
     integer(I4B), intent(inout) :: n2
@@ -2564,7 +2564,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- local
     integer(I4B) :: n, j
 ! ------------------------------------------------------------------------------
@@ -2596,7 +2596,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
 ! ------------------------------------------------------------------------------
     !
     ! -- Set to true
@@ -2617,7 +2617,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- local
 ! ------------------------------------------------------------------------------
     !
@@ -2638,7 +2638,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- local
 ! ------------------------------------------------------------------------------
     !
@@ -2656,7 +2656,7 @@ contains
   !<
   subroutine pak_rp_obs(this, obsrv, found)
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this !< package class
+    class(TspAptType), intent(inout) :: this !< package class
     type(ObserveType), intent(inout) :: obsrv !< observation object
     logical, intent(inout) :: found !< indicate whether observation was found
     ! -- local
@@ -2675,7 +2675,7 @@ contains
     !!
   !<
   subroutine rp_obs_byfeature(this, obsrv)
-    class(GwtAptType), intent(inout) :: this !< object
+    class(TspAptType), intent(inout) :: this !< object
     type(ObserveType), intent(inout) :: obsrv !< observation
     integer(I4B) :: nn1
     integer(I4B) :: j
@@ -2721,7 +2721,7 @@ contains
     !!
   !<
   subroutine rp_obs_budterm(this, obsrv, budterm)
-    class(GwtAptType), intent(inout) :: this !< object
+    class(TspAptType), intent(inout) :: this !< object
     type(ObserveType), intent(inout) :: obsrv !< observation
     type(BudgetTermType), intent(in) :: budterm !< budget term
     integer(I4B) :: nn1
@@ -2796,7 +2796,7 @@ contains
     !!
   !<
   subroutine rp_obs_flowjaface(this, obsrv, budterm)
-    class(GwtAptType), intent(inout) :: this !< object
+    class(TspAptType), intent(inout) :: this !< object
     type(ObserveType), intent(inout) :: obsrv !< observation
     type(BudgetTermType), intent(in) :: budterm !< budget term
     integer(I4B) :: nn1
@@ -2875,7 +2875,7 @@ contains
     ! -- modules
     use TdisModule, only: kper
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i
     logical :: found
@@ -2948,14 +2948,14 @@ contains
   subroutine apt_bd_obs(this)
 ! ******************************************************************************
 ! apt_bd_obs -- Calculate observations common to SFT/LKT/MWT/UZT
-!      ObsType%SaveOneSimval for each GwtAptType observation.
+!      ObsType%SaveOneSimval for each TspAptType observation.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: igwfnode
@@ -3050,7 +3050,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtAptType), intent(inout) :: this
+    class(TspAptType), intent(inout) :: this
     character(len=*), intent(in) :: obstypeid
     integer(I4B), intent(in) :: jj
     real(DP), intent(inout) :: v
@@ -3177,7 +3177,7 @@ contains
     ! -- modules
     use ConstantsModule, only: LINELENGTH, LENBUDTXT
     ! -- dummy
-    class(GwtAptType) :: this
+    class(TspAptType) :: this
     ! -- local
     integer(I4B) :: nterms
     character(len=LINELENGTH) :: title
@@ -3220,4 +3220,4 @@ contains
     return
   end subroutine apt_setup_tableobj
 
-end module GwtAptModule
+end module TspAptModule
