@@ -4,12 +4,15 @@ on:
     branches:
       - master
       - v*
+  release:
+    types:
+      - published
 env:
   FC: ifort
 jobs:
   build:
     name: Build binaries (${{ matrix.os }})
-    if: ${{ github.event_name != 'push' || github.ref_name != 'master' }}
+    if: ${{ github.event_name == 'push' && github.ref_name != 'master' }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -19,8 +22,8 @@ jobs:
             ostag: linux
           - os: macos-12
             ostag: mac
-          # - os: windows-2022
-          #   ostag: win64
+          - os: windows-2022
+            ostag: win64
     defaults:
       run:
         shell: bash -l {0}
@@ -99,7 +102,7 @@ jobs:
 
   docs:
     name: Build docs
-    if: ${{ github.event_name != 'push' || github.ref_name != 'master' }}
+    if: ${{ github.event_name == 'push' && github.ref_name != 'master' }}
     needs: build
     runs-on: ubuntu-22.04
     defaults:
@@ -216,7 +219,7 @@ jobs:
 
   dist:
     name: Build distribution (${{ matrix.os }})
-    if: ${{ github.event_name != 'push' || github.ref_name != 'master' }}
+    if: ${{ github.event_name == 'push' && github.ref_name != 'master' }}
     needs: docs
     runs-on: ${{ matrix.os }}
     strategy:
@@ -227,8 +230,8 @@ jobs:
             ostag: linux
           - os: macos-12
             ostag: mac
-          # - os: windows-2022
-          #   ostag: win64
+          - os: windows-2022
+            ostag: win64
     defaults:
       run:
         shell: bash -l {0}
@@ -401,8 +404,8 @@ jobs:
           path: ${{ env.DISTNAME }}/doc/release.pdf
 
   pr:
-    name: Create release PR
-    if: ${{ github.event_name == 'push' && !(contains(github.ref_name, 'rc')) }}
+    name: Draft release PR
+    if: ${{ github.event_name == 'push' && github.ref_name != 'master' && !(contains(github.ref_name, 'rc')) }}
     needs: dist
     runs-on: ubuntu-22.04
     permissions:
@@ -441,7 +444,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "ci(release): update version to $ver"
+          git commit -m "ci(release): update version to $ver release mode"
           git push origin "$ref"
 
       - name: Create pull request
@@ -460,7 +463,7 @@ jobs:
           gh pr create -B "master" -H "$ref" --title "Release $ver" --draft --body "$body"
 
   release:
-    name: Release and reset
+    name: Draft release
     if: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
     runs-on: ubuntu-22.04
     defaults:
@@ -495,7 +498,7 @@ jobs:
       #       mf*/mf*.zip
       #       release_notes/release.pdf
 
-      - name: Create release
+      - name: Draft release
         working-directory: modflow6
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -514,40 +517,63 @@ jobs:
           '
           gh release create "$version" ../mf*/mf*.zip ../release_notes/release.pdf --target master --title "$title" --notes "$notes" --draft --latest
 
-      - uses: oprypin/find-latest-tag@v1
+  reset:
+    name: Draft reset PR
+    if: ${{ github.event_name == 'release' }}
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+
+      - name: Checkout modflow6
+        uses: actions/checkout@v3
+        with:
+          path: modflow6
+
+      - name: Setup Micromamba
+        uses: mamba-org/provision-with-micromamba@main
+        with:
+          environment-file: modflow6/environment.yml
+          cache-downloads: true
+          cache-env: true
+
+      - name: Get release tag
+        uses: oprypin/find-latest-tag@v1
         id: latest_tag
         with:
-          repository: MODFLOW-USGS/modflow6
+          repository: ${{ github.repository }}
           releases-only: true
 
-      - name: Reinitialize develop branch
+      - name: Create pull request
         working-directory: modflow6
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           # create reset branch from master
           reset_branch="post-release-${{ steps.latest_tag.outputs.tag }}-reset"
+          git fetch origin
           git checkout master
           git switch -c $reset_branch
-          
+
           # increment minor version from latest official release and reset IDEVELOPMODE to 1
           major_version=$(echo "${{ steps.latest_tag.outputs.tag }}" | cut -d. -f1)
           minor_version=$(echo "${{ steps.latest_tag.outputs.tag }}" | cut -d. -f2)
           version="$major_version.$((minor_version + 1)).0"
           python distribution/update_version.py -v "$version"
-          
+
           # commit and push to reset branch
           git config core.sharedRepository true
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "ci(release): reinitialize develop for next release"
+          git commit -m "ci(release): update version to $version development mode"
           git push -u origin $reset_branch
-          
+
           # create PR into develop
           body='
           # Reinitialize for development
-          
-          Updates the `develop` branch from `master` following an approved release. Bumps the minor version number, resets version files, and sets `IDEVELOPMODE` back to `1`.
+
+          Updates the `develop` branch from `master` following an approved release. Bumps the minor version number and resets `IDEVELOPMODE` back to `1`.
           '
-          gh pr create -B "develop" -H "$reset_branch" --title "Reinitialize develop to $version" --draft --body "$body"
+          gh pr create -B "develop" -H "$reset_branch" --title "Reinitialize develop branch" --draft --body "$body"
