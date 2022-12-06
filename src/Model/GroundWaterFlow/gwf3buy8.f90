@@ -71,10 +71,10 @@ module GwfBuyModule
     procedure, private :: set_options
     procedure, private :: source_dimensions
     procedure, private :: source_packagedata
+    procedure, private :: set_packagedata
     procedure, private :: log_options
     procedure, private :: log_dimensions
     procedure, private :: log_packagedata
-    procedure, private :: set_packagedata
     procedure :: set_concentration_pointer
   end type GwfBuyType
 
@@ -147,13 +147,14 @@ contains
     if (inunit > 0) then
       !
       ! -- Print a message identifying the node property flow package.
-      write (iout, fmtbuy) inunit
+      if (iout > 0) then
+        write (iout, fmtbuy) inunit
+      end if
       !
       ! -- Initialize block parser
       call buyobj%parser%Initialize(buyobj%inunit, buyobj%iout)
       !
-      ! -- Use the input data model routines to load the input data
-      !    into memory
+      ! -- Load package input context
       call input_load(buyobj%parser, 'BUY6', 'GWF', 'BUY', buyobj%name_model, &
                       'BUY', iout)
     end if
@@ -185,10 +186,10 @@ contains
 
     if (.not. present(buy_input)) then
       !
-      ! -- Read buoyancy options
+      ! -- Source buoyancy options
       call this%source_options()
       !
-      ! -- Read buoyancy dimensions
+      ! -- Source buoyancy dimensions
       call this%source_dimensions()
     else
       ! set from input data instead
@@ -201,7 +202,7 @@ contains
 
     if (.not. present(buy_input)) then
       !
-      ! -- Read buoyancy packagedata
+      ! -- Source buoyancy packagedata
       call this%source_packagedata()
     else
       ! set from input data instead
@@ -1103,8 +1104,10 @@ contains
     class(GwfBuyType) :: this
 ! ------------------------------------------------------------------------------
     !
-    ! -- Deallocate input memory
-    call memorylist_remove(this%name_model, 'BUY', idm_context)
+    ! -- Deallocate package input context
+    if (this%inunit > 0) then
+      call memorylist_remove(this%name_model, 'BUY', idm_context)
+    end if
     !
     ! -- Deallocate arrays if package was active
     if (this%inunit > 0 .or. this%iinterfacemodel == 1) then
@@ -1139,7 +1142,7 @@ contains
 
   subroutine source_dimensions(this)
 ! ******************************************************************************
-! source_dimensions --
+! source_dimensions -- source package dimensions from input context
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1157,7 +1160,7 @@ contains
     ! -- format
 ! ------------------------------------------------------------------------------
     !
-    ! -- set memory path
+    ! -- set input context memory path
     idmMemoryPath = create_mem_path(this%name_model, 'BUY', idm_context)
     !
     ! --
@@ -1197,7 +1200,7 @@ contains
 
   subroutine source_packagedata(this)
 ! ******************************************************************************
-! source packagedata -- source PACKAGEDATA input
+! source packagedata -- source PACKAGEDATA from input context
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1223,7 +1226,7 @@ contains
       &are not allowed and values must be in ascending order.')"
 ! ------------------------------------------------------------------------------
     !
-    ! -- set memory path
+    ! -- set input context memory path
     idmMemoryPath = create_mem_path(this%name_model, 'BUY', idm_context)
     !
     ! --
@@ -1652,7 +1655,7 @@ contains
 
   subroutine source_options(this)
 ! ******************************************************************************
-! source_options - update simulation options from input mempath
+! source_options - source package options from input context
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1677,7 +1680,7 @@ contains
       &a, /4x, 'opened on unit: ', I7)"
 ! ------------------------------------------------------------------------------
     !
-    ! -- set memory path
+    ! -- set input context memory path
     idmMemoryPath = create_mem_path(this%name_model, 'BUY', idm_context)
     !
     ! --

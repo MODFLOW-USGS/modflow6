@@ -42,33 +42,51 @@ class Dfn2F90:
             f.write(self._source_file_header(self.component, self.subcomponent))
 
             # found type
-            f.write(f"  type {self.component.capitalize()}{self.subcomponent.capitalize()}ParamFoundType\n")
+            f.write(
+                f"  type {self.component.capitalize()}{self.subcomponent.capitalize()}ParamFoundType\n"
+            )
             for var in self._param_varnames:
-              varname = var.split(f"{self.component.lower()}{self.subcomponent.lower()}_")[1]
-              f.write(f"    logical :: {varname} = .false.\n")
-            f.write(f"  end type {self.component.capitalize()}{self.subcomponent.capitalize()}ParamFoundType\n\n")
+                varname = var.split(
+                    f"{self.component.lower()}{self.subcomponent.lower()}_"
+                )[1]
+                f.write(f"    logical :: {varname} = .false.\n")
+            f.write(
+                f"  end type {self.component.capitalize()}{self.subcomponent.capitalize()}ParamFoundType\n\n"
+            )
 
             # params
             if len(self._param_varnames):
                 f.write(self._param_str)
                 f.write(self._source_params_header(self.component, self.subcomponent))
                 f.write("    " + ", &\n    ".join(self._param_varnames) + " &\n")
-                f.write(self._source_list_footer(self.component, self.subcomponent) + "\n")
+                f.write(
+                    self._source_list_footer(self.component, self.subcomponent) + "\n"
+                )
             else:
                 f.write(self._source_params_header(self.component, self.subcomponent))
                 f.write(self._param_str.rsplit(",", 1)[0] + " &\n")
-                f.write(self._source_list_footer(self.component, self.subcomponent) + "\n")
+                f.write(
+                    self._source_list_footer(self.component, self.subcomponent) + "\n"
+                )
 
             # aggregate types
             if len(self._aggregate_varnames):
                 f.write(self._aggregate_str)
-                f.write(self._source_aggregates_header(self.component, self.subcomponent))
+                f.write(
+                    self._source_aggregates_header(self.component, self.subcomponent)
+                )
                 f.write("    " + ", &\n    ".join(self._aggregate_varnames) + " &\n")
-                f.write(self._source_list_footer(self.component, self.subcomponent) + "\n")
+                f.write(
+                    self._source_list_footer(self.component, self.subcomponent) + "\n"
+                )
             else:
-                f.write(self._source_aggregates_header(self.component, self.subcomponent))
+                f.write(
+                    self._source_aggregates_header(self.component, self.subcomponent)
+                )
                 f.write(self._aggregate_str.rsplit(",", 1)[0] + " &\n")
-                f.write(self._source_list_footer(self.component, self.subcomponent) + "\n")
+                f.write(
+                    self._source_list_footer(self.component, self.subcomponent) + "\n"
+                )
 
             # blocks
             f.write(self._source_blocks_header(self.component, self.subcomponent))
@@ -161,7 +179,9 @@ class Dfn2F90:
 
         return f90statement
 
-    def _construct_f90_param_statement(self, tuple_list, basename, varname, aggregate=False):
+    def _construct_f90_param_statement(
+        self, tuple_list, basename, varname, aggregate=False
+    ):
         vname = f"{basename.lower()}_{varname.lower()}"
         if aggregate:
             self._aggregate_varnames.append(vname)
@@ -202,6 +222,7 @@ class Dfn2F90:
         required_l = None
         required_l = []
         is_aggregate_blk = False
+        aggregate_required = False
 
         # comment
         s = f"    ! {component} {subcomponent} {blockname.upper()}\n"
@@ -262,7 +283,6 @@ class Dfn2F90:
                     r = ".false."
                 else:
                     r = ".true."
-                    is_required_blk = True
 
             inrec = ".false."
             if "in_record" in v:
@@ -305,9 +325,13 @@ class Dfn2F90:
             # if necessary
             if aggregate_t:
                 self._aggregate_str += (
-                    self._construct_f90_param_statement(tuple_list, f"{component}{subcomponent}", mf6vn, True) + "\n"
+                    self._construct_f90_param_statement(
+                        tuple_list, f"{component}{subcomponent}", mf6vn, True
+                    )
+                    + "\n"
                 )
                 is_aggregate_blk = True
+                aggregate_required = r == ".true."
                 if not shape:
                     self._warnings.append(
                         f"Aggregate type found with no shape: {component}-{subcomponent}-{blockname}: {mf6vn}"
@@ -315,13 +339,20 @@ class Dfn2F90:
 
             else:
                 self._param_str += (
-                    self._construct_f90_param_statement(tuple_list, f"{component}{subcomponent}", mf6vn) + "\n"
+                    self._construct_f90_param_statement(
+                        tuple_list, f"{component}{subcomponent}", mf6vn
+                    )
+                    + "\n"
                 )
 
+        if is_aggregate_blk:
+            required = aggregate_required
+        else:
+            required = ".true." in required_l
         self._block_str += (
             self._construct_f90_block_statement(
                 blockname.upper(),
-                required=(".true." in required_l),
+                required=required,
                 aggregate=is_aggregate_blk,
             )
             + "\n"
@@ -397,18 +428,83 @@ if __name__ == "__main__":
 
     dfns = [
         # list per dfn [dfn relative path, model parent dirname, output filename]
-        [Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-buy.dfn"), "GroundWaterFlow", "gwf3buy8idm.f90"],
-        [Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-dis.dfn"), "GroundWaterFlow", "gwf3dis8idm.f90"],
-        [Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-disu.dfn"), "GroundWaterFlow", "gwf3disu8idm.f90"],
-        [Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-disv.dfn"), "GroundWaterFlow", "gwf3disv8idm.f90"],
-        [Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-npf.dfn"), "GroundWaterFlow", "gwf3npf8idm.f90"],
-        [Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-dsp.dfn"), "GroundWaterTransport", "gwt1dspidm.f90"],
-        [Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-fmi.dfn"), "GroundWaterTransport", "gwt1fmi1idm.f90"],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-buy.dfn"),
+            "GroundWaterFlow",
+            "gwf3buy8idm.f90",
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-dis.dfn"),
+            "GroundWaterFlow",
+            "gwf3dis8idm.f90",
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-disu.dfn"),
+            "GroundWaterFlow",
+            "gwf3disu8idm.f90",
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-disv.dfn"),
+            "GroundWaterFlow",
+            "gwf3disv8idm.f90",
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-ic.dfn"),
+            "GroundWaterFlow",
+            "gwf3ic8idm.f90",
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-npf.dfn"),
+            "GroundWaterFlow",
+            "gwf3npf8idm.f90",
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-vsc.dfn"),
+            "GroundWaterFlow",
+            "gwf3vsc8idm.f90",
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-adv.dfn"),
+            "GroundWaterTransport",
+            "gwt1adv1idm.f90",
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-dsp.dfn"),
+            "GroundWaterTransport",
+            "gwt1dspidm.f90",
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-fmi.dfn"),
+            "GroundWaterTransport",
+            "gwt1fmi1idm.f90",
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-ic.dfn"),
+            "GroundWaterTransport",
+            "gwt1ic1idm.f90",
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-mst.dfn"),
+            "GroundWaterTransport",
+            "gwt1mst1idm.f90",
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-mvt.dfn"),
+            "GroundWaterTransport",
+            "gwt1mvt1idm.f90",
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-ssm.dfn"),
+            "GroundWaterTransport",
+            "gwt1ssm1idm.f90",
+        ],
     ]
 
     for dfn in dfns:
         converter = Dfn2F90(dfnfspec=dfn[0])
-        converter.write_f90(ofspec=os.path.join("..", "..", "..", "src", "Model", dfn[1], dfn[2]))
+        converter.write_f90(
+            ofspec=os.path.join("..", "..", "..", "src", "Model", dfn[1], dfn[2])
+        )
         converter.warn()
 
     print("\n...done.")

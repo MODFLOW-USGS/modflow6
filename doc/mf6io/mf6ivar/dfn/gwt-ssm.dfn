@@ -7,6 +7,7 @@ reader urword
 optional true
 longname print calculated flows to listing file
 description REPLACE print_flows {'{#1}': 'SSM'}
+mf6internal iprflow
 
 block options
 name save_flows
@@ -15,7 +16,7 @@ reader urword
 optional true
 longname save calculated flows to budget file
 description REPLACE save_flows {'{#1}': 'SSM'}
-
+mf6internal ipakcb
 
 # --------------------- gwt ssm sources ---------------------
 
@@ -35,6 +36,7 @@ tagged false
 reader urword
 longname package name
 description name of the flow package for which an auxiliary variable contains a source concentration.  If this flow package is represented using an advanced transport package (SFT, LKT, MWT, or UZT), then the advanced transport package will override SSM terms specified here.
+mf6internal pname_sources
 
 block sources
 name srctype
@@ -63,6 +65,7 @@ block fileinput
 name fileinput
 type recarray pname spc6 filein spc6_filename mixed
 reader urword
+optional true
 longname
 description
 
@@ -74,6 +77,7 @@ tagged false
 reader urword
 longname package name
 description name of the flow package for which an SPC6 input file contains a source concentration.  If this flow package is represented using an advanced transport package (SFT, LKT, MWT, or UZT), then the advanced transport package will override SSM terms specified here.
+mf6internal pname_fileinput
 
 
 block fileinput

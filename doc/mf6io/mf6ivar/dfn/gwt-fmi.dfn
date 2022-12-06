@@ -44,7 +44,7 @@ shape
 in_record true
 reader urword
 tagged true
-optional true
+optional false
 longname file keyword
 description keyword to specify that an input filename is expected next.
 

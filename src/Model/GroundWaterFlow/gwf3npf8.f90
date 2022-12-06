@@ -186,13 +186,14 @@ contains
     if (inunit > 0) then
       !
       ! -- Print a message identifying the node property flow package.
-      write (iout, fmtheader) inunit
+      if (iout > 0) then
+        write (iout, fmtheader) inunit
+      end if
       !
       ! -- Initialize block parser and read options
       call npfobj%parser%Initialize(inunit, iout)
       !
-      ! -- Use the input data model routines to load the input data
-      !    into memory
+      ! Load package input context
       call input_load(npfobj%parser, 'NPF6', 'GWF', 'NPF', npfobj%name_model, &
                       'NPF', iout)
     end if
@@ -237,13 +238,13 @@ contains
     !
     if (.not. present(npf_options)) then
       !
-      ! -- source options
+      ! -- Source options
       call this%source_options()
       !
       ! -- allocate arrays
       call this%allocate_arrays(this%dis%nodes, this%dis%njas)
       !
-      ! -- source griddata, set, and convert/check the input
+      ! -- Source griddata, set, and convert/check the input
       call this%source_griddata()
       call this%prepcheck()
     else
@@ -1093,8 +1094,10 @@ contains
     class(GwfNpftype) :: this
 ! ------------------------------------------------------------------------------
     !
-    ! -- Deallocate input memory
-    call memorylist_remove(this%name_model, 'NPF', idm_context)
+    ! -- Deallocate package input context
+    if (this%inunit > 0) then
+      call memorylist_remove(this%name_model, 'NPF', idm_context)
+    end if
     !
     ! -- TVK
     if (this%intvk /= 0) then
@@ -1384,7 +1387,7 @@ contains
 
   subroutine log_options(this, found)
 ! ******************************************************************************
-! log_options -- log npf options sourced from the input mempath
+! log_options -- log npf options sourced from input context
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1468,13 +1471,14 @@ contains
 
   subroutine source_options(this)
 ! ******************************************************************************
-! source_options -- update simulation options from input mempath
+! source_options -- source package options from input context
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
     use KindModule, only: LGP
+    use ConstantsModule, only: MAXCHARLEN
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
@@ -1486,10 +1490,10 @@ contains
     character(len=LENVARNAME), dimension(3) :: cellavg_method = &
       &[character(len=LENVARNAME) :: 'LOGARITHMIC', 'AMT-LMK', 'AMT-HMK']
     type(GwfNpfParamFoundType) :: found
-    character(len=LINELENGTH) :: tvk6_filename
+    character(len=MAXCHARLEN) :: tvk6_filename
 ! ------------------------------------------------------------------------------
     !
-    ! -- set memory path
+    ! -- set input context memory path
     idmMemoryPath = create_mem_path(this%name_model, 'NPF', idm_context)
     !
     ! -- update defaults with idm sourced values
@@ -1734,7 +1738,7 @@ contains
 
   subroutine source_griddata(this)
 ! ******************************************************************************
-! source_griddata -- update simulation griddata from input mempath
+! source_griddata -- source package griddata from input context
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1757,11 +1761,13 @@ contains
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! -- set memory path
+    ! -- initialize map
+    map => null()
+    !
+    ! -- set input context memory path
     idmMemoryPath = create_mem_path(this%name_model, 'NPF', idm_context)
     !
-    ! -- set map to convert user input data into reduced data
-    map => null()
+    ! -- if reduced, set node map
     if (this%dis%nodes < this%dis%nodesuser) map => this%dis%nodeuser
     !
     ! -- update defaults with idm sourced values

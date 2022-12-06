@@ -502,7 +502,9 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Deallocate input memory
-    call memorylist_remove(this%name_model, 'DSP', idm_context)
+    if (this%inunit > 0) then
+      call memorylist_remove(this%name_model, 'DSP', idm_context)
+    end if
     !
     ! -- deallocate arrays
     if (this%inunit /= 0) then
@@ -564,15 +566,13 @@ contains
 
   subroutine source_options(this)
 ! ******************************************************************************
-! source_options -- update simulation mempath options
+! source_options -- source package options from input context
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    !use KindModule, only: LGP
     use MemoryHelperModule, only: create_mem_path
-    use MemoryTypeModule, only: MemoryType
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
     use ConstantsModule, only: LENMEMPATH
@@ -584,7 +584,7 @@ contains
     type(GwtDspParamFoundType) :: found
 ! ------------------------------------------------------------------------------
     !
-    ! -- set memory path
+    ! -- set input context memory path
     idmMemoryPath = create_mem_path(this%name_model, 'DSP', idm_context)
     !
     ! -- update defaults with idm sourced values
@@ -643,7 +643,7 @@ contains
 
   subroutine source_griddata(this)
 ! ******************************************************************************
-! source_griddata -- update dsp simulation data from input mempath
+! source_griddata -- source package griddata from input context
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -666,11 +666,13 @@ contains
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! -- set memory path
+    ! -- initialize map
+    map => null()
+    !
+    ! -- set input context memory path
     idmMemoryPath = create_mem_path(this%name_model, 'DSP', idm_context)
     !
-    ! -- set map
-    map => null()
+    ! -- if reduced, set node map
     if (this%dis%nodes < this%dis%nodesuser) map => this%dis%nodeuser
     !
     ! -- update defaults with idm sourced values

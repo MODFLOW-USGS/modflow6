@@ -25,6 +25,7 @@ reader urword
 optional true
 longname save lake flows to budget file
 description REPLACE save_flows {'{#1}': 'lake'}
+mf6internal ipakcb
 
 block options
 name budget_filerecord

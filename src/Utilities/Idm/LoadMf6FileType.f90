@@ -156,20 +156,29 @@ contains
     return
   end subroutine parse_block
 
-  subroutine parse_iofile_tag(parser, mf6_input, iblock, mshape, tag, nwords, &
-                              words, iout)
+  subroutine parse_iofile_tag(parser, mf6_input, iblock, mshape, tag, found, &
+                              iout)
+    use InputDefinitionSelectorModule, only: parse_multirec_definition
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType
     integer(I4B), intent(in) :: iblock !< consecutive block number as defined in definition file
     integer(I4B), dimension(:), contiguous, pointer, intent(inout) :: mshape !< model shape
     character(len=LINELENGTH), intent(in) :: tag
-    integer(I4B), intent(in) :: nwords
-    character(len=40), dimension(:), intent(in) :: words
+    logical(LGP), intent(inout) :: found !< file tag was identified and loaded
     integer(I4B), intent(in) :: iout !< unit number for output
     type(InputParamDefinitionType), pointer :: idt !< input data type object describing this record
-    character(len=LINELENGTH) :: mr_tag
+    character(len=40), dimension(:), allocatable :: words
+    integer(I4B) :: nwords
+    character(len=LINELENGTH) :: io_tag
     !
-    ! -- routine assumes 2nd file type token has already been matched
+    ! -- initialization
+    found = .false.
+    !
+    ! -- get tokens in matching definition
+    call parse_multirec_definition(mf6_input%p_param_dfns, &
+                                   mf6_input%component_type, &
+                                   mf6_input%subcomponent_type, &
+                                   tag, nwords, words)
     !
     ! -- a filein/fileout record tag definition has 4 tokens
     if (nwords == 4) then
@@ -178,24 +187,32 @@ contains
       if (words(3) == 'FILEIN' .or. words(3) == 'FILEOUT') then
         !
         ! -- read 3rd token
-        call parser%GetStringCaps(mr_tag)
+        call parser%GetStringCaps(io_tag)
         !
         ! -- check if 3rd token matches definition
-        if (.not. (mr_tag == words(3))) then
+        if (.not. (io_tag == words(3))) then
           errmsg = 'Expected "'//trim(words(3))//'" following keyword "'// &
-                   trim(tag)//'" but instead found "'//trim(mr_tag)//'"'
+                   trim(tag)//'" but instead found "'//trim(io_tag)//'"'
           call store_error(errmsg)
           !
           ! -- matches, read and load file name
         else
-          idt => get_param_definition_type(mf6_input%p_param_dfns, &
-                                           mf6_input%component_type, &
-                                           mf6_input%subcomponent_type, &
-                                           words(4))
+          idt => &
+            get_param_definition_type(mf6_input%p_param_dfns, &
+                                      mf6_input%component_type, &
+                                      mf6_input%subcomponent_type, &
+                                      mf6_input%p_block_dfns(iblock)%blockname, &
+                                      words(4))
           call load_string_type(parser, idt, mf6_input%memoryPath, iout)
+          !
+          ! -- io tag loaded
+          found = .true.
         end if
       end if
     end if
+    !
+    ! -- deallocate words
+    if (allocated(words)) deallocate (words)
   end subroutine parse_iofile_tag
 
   !> @brief load an individual input record into memory
@@ -207,7 +224,6 @@ contains
   !<
   recursive subroutine parse_tag(parser, mf6_input, iblock, mshape, iout, &
                                  recursive_call)
-    use InputDefinitionSelectorModule, only: parse_multirec_definition
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType
     integer(I4B), intent(in) :: iblock !< consecutive block number as defined in definition file
@@ -216,8 +232,7 @@ contains
     logical(LGP), intent(in) :: recursive_call !< true if recursive call
     character(len=LINELENGTH) :: tag
     type(InputParamDefinitionType), pointer :: idt !< input data type object describing this record
-    integer(I4B) :: nwords
-    character(len=40), dimension(:), allocatable :: words
+    logical(LGP) :: found_io_tag
     !
     ! -- read tag name
     call parser%GetStringCaps(tag)
@@ -232,71 +247,57 @@ contains
     idt => get_param_definition_type(mf6_input%p_param_dfns, &
                                      mf6_input%component_type, &
                                      mf6_input%subcomponent_type, &
+                                     mf6_input%p_block_dfns(iblock)%blockname, &
                                      tag)
     !
     ! -- allocate and load data type
-    loader:select case(idt%datatype)
+    !loader:select case(idt%datatype)
+    select case (idt%datatype)
     case ('KEYWORD')
-    !
-    ! -- possible load file name if filein/fileout record type
-    if (idt%in_record) then
       !
-      ! -- get tokens in matching definition
-      call parse_multirec_definition(mf6_input%p_param_dfns, &
-                                     mf6_input%component_type, &
-                                     mf6_input%subcomponent_type, &
-                                     tag, nwords, words)
-      !
-      ! -- an fname definition's 4th token will be file name
-      if (nwords > 3) then
+      ! -- possible load file name if filein/fileout record type
+      if (idt%in_record) then
         !
-        ! -- an fname definition should have FILEIN/FILEOUT as third token
-        if (words(3) == 'FILEIN' .or. words(3) == 'FILEOUT') then
-          !
-          ! -- identify and load the file name
-          call parse_iofile_tag(parser, mf6_input, iblock, mshape, tag, nwords, &
-                                words, iout)
-          !
-          ! -- deallocate words
-          deallocate (words)
-          !
-          ! -- done parsing tag, exit loader select
-          exit loader
+        ! -- identify and load the file name
+        call parse_iofile_tag(parser, mf6_input, iblock, mshape, tag, &
+                              found_io_tag, iout)
+      end if
+
+      if (.not. idt%in_record .or. (idt%in_record .and. .not. found_io_tag)) then
+        !
+        ! -- load standard keyword tag
+        call load_keyword_type(parser, idt, mf6_input%memoryPath, iout)
+        !
+        ! -- set as dev option
+        if (mf6_input%p_block_dfns(iblock)%blockname == 'OPTIONS' .and. &
+            idt%tagname(1:4) == 'DEV_') then
+          call parser%DevOpt()
         end if
       end if
-    end if
-    !
-    ! -- load standard keyword tag
-    call load_keyword_type(parser, idt, mf6_input%memoryPath, iout)
-    !
-    ! -- set as dev option
-    if (mf6_input%p_block_dfns(iblock)%blockname == 'OPTIONS' .and. &
-        idt%tagname(1:4) == 'DEV_') then
-      call parser%DevOpt()
-    end if
     case ('STRING')
-    call load_string_type(parser, idt, mf6_input%memoryPath, iout)
+      call load_string_type(parser, idt, mf6_input%memoryPath, iout)
     case ('INTEGER')
-    call load_integer_type(parser, idt, mf6_input%memoryPath, iout)
+      call load_integer_type(parser, idt, mf6_input%memoryPath, iout)
     case ('INTEGER1D')
-    call load_integer1d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
+      call load_integer1d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
     case ('INTEGER2D')
-    call load_integer2d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
+      call load_integer2d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
     case ('INTEGER3D')
-    call load_integer3d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
+      call load_integer3d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
     case ('DOUBLE')
-    call load_double_type(parser, idt, mf6_input%memoryPath, iout)
+      call load_double_type(parser, idt, mf6_input%memoryPath, iout)
     case ('DOUBLE1D')
-    call load_double1d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
+      call load_double1d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
     case ('DOUBLE2D')
-    call load_double2d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
+      call load_double2d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
     case ('DOUBLE3D')
-    call load_double3d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
+      call load_double3d_type(parser, idt, mf6_input%memoryPath, mshape, iout)
     case default
-    write (errmsg, '(4x,a,a)') 'Failure reading data for tag: ', trim(tag)
-    call store_error(errmsg)
-    call parser%StoreErrorUnit()
-    end select loader
+      write (errmsg, '(4x,a,a)') 'Failure reading data for tag: ', trim(tag)
+      call store_error(errmsg)
+      call parser%StoreErrorUnit()
+      !end select loader
+    end select
     !
     ! -- continue line if in same record
     if (idt%in_record) then
@@ -357,6 +358,7 @@ contains
       idt => get_param_definition_type(mf6_input%p_param_dfns, &
                                        mf6_input%component_type, &
                                        mf6_input%subcomponent_type, &
+                                       mf6_input%p_block_dfns(iblock)%blockname, &
                                        words(icol + 1))
       !
       ! -- allocate variable in memory manager
@@ -401,6 +403,7 @@ contains
     ilen = LINELENGTH
     call mem_allocate(cstr, ilen, idt%mf6varname, memoryPath)
     call parser%GetString(cstr, (.not. idt%preserve_case))
+    call idm_log_var(cstr, idt%mf6varname, memoryPath, iout)
     return
   end subroutine load_string_type
 

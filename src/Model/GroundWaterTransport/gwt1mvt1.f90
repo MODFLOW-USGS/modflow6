@@ -50,7 +50,8 @@ module GwtMvtModule
     procedure :: mvt_ot_bdsummary
     procedure :: mvt_da
     procedure :: allocate_scalars
-    procedure :: read_options
+    procedure :: source_options
+    procedure :: log_options
     procedure :: mvt_setup_budobj
     procedure :: mvt_fill_budobj
     procedure :: mvt_scan_mvrbudobj
@@ -70,6 +71,8 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use IdmMf6FileLoaderModule, only: input_load
     ! -- dummy
     type(GwtMvtType), pointer :: mvt
     character(len=*), intent(in) :: name_model
@@ -79,6 +82,10 @@ contains
     character(len=*), intent(in), optional :: gwfmodelname1
     character(len=*), intent(in), optional :: gwfmodelname2
     type(GwtFmiType), intent(in), target, optional :: fmi2
+    ! -- formats
+    character(len=*), parameter :: fmtmvt = &
+      "(1x,/1x,'MVT -- MOVER TRANSPORT PACKAGE, VERSION 1, 4/15/2020', &
+      &' INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -113,6 +120,22 @@ contains
     ! -- create the budget object
     call budgetobject_cr(mvt%budobj, 'TRANSPORT MOVER')
     !
+    ! -- Check if input file is open
+    if (inunit > 0) then
+      !
+      ! -- Print a message identifying the node property flow package.
+      if (iout > 0) then
+        write (iout, fmtmvt) inunit
+      end if
+      !
+      ! -- Initialize block parser
+      call mvt%parser%Initialize(inunit, iout)
+      !
+      ! -- Load package input context
+      call input_load(mvt%parser, 'MVT6', 'GWT', 'MVT', mvt%name_model, &
+                      'MVT', iout)
+    end if
+    !
     ! -- Return
     return
   end subroutine mvt_cr
@@ -130,25 +153,16 @@ contains
     class(DisBaseType), pointer, intent(in) :: dis
     ! -- local
     ! -- formats
-    character(len=*), parameter :: fmtmvt = &
-      "(1x,/1x,'MVT -- MOVER TRANSPORT PACKAGE, VERSION 1, 4/15/2020', &
-      &' INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
     !
     ! -- set pointer to dis
     this%dis => dis
     !
-    ! -- print a message identifying the MVT package.
-    write (this%iout, fmtmvt) this%inunit
-    !
-    ! -- Initialize block parser
-    call this%parser%Initialize(this%inunit, this%iout)
-    !
     ! -- initialize the budget table writer
     call budget_cr(this%budget, this%memoryPath)
     !
-    ! -- Read mvt options
-    call this%read_options()
+    ! -- Source mvt options
+    call this%source_options()
     !
     ! -- Return
     return
@@ -591,6 +605,8 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
+    use MemoryManagerExtModule, only: memorylist_remove
+    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwtMvtType) :: this
     ! -- local
@@ -598,6 +614,11 @@ contains
     !
     ! -- Deallocate arrays if package was active
     if (this%inunit > 0) then
+      !
+      ! -- Deallocate package input context
+      if (this%inunit > 0) then
+        call memorylist_remove(this%name_model, 'MVT', idm_context)
+      end if
       !
       ! -- character array
       deallocate (this%paknames)
@@ -665,89 +686,116 @@ contains
     return
   end subroutine allocate_scalars
 
-  subroutine read_options(this)
+  !> @ brief Source user options for package
+  !<
+  subroutine source_options(this)
 ! ******************************************************************************
-! read_options -- Read Options
+! source_options -- source package options from input context
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use ConstantsModule, only: LENMEMPATH, MAXCHARLEN
     use OpenSpecModule, only: access, form
     use InputOutputModule, only: getunit, openfile
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_context
+    use GwtMvtInputModule, only: GwtMvtParamFoundType
     ! -- dummy
     class(GwtMvtType) :: this
-    ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
-    character(len=MAXCHARLEN) :: fname
-    integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
+    ! -- locals
+    character(len=LENMEMPATH) :: idmMemoryPath
+    type(GwtMvtParamFoundType) :: found
+    character(len=MAXCHARLEN) :: budget_fname, budget_csv_fname
+! ------------------------------------------------------------------------------
+    !
+    ! -- set input context memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'MVT', idm_context)
+    !
+    ! -- source input context pkg options
+    call mem_set_value(this%ipakcb, 'IPAKCB', idmMemoryPath, found%ipakcb)
+    call mem_set_value(this%iprpak, 'PRINT_INPUT', idmMemoryPath, &
+                       found%print_input)
+    call mem_set_value(this%iprflow, 'PRINT_FLOWS', idmMemoryPath, &
+                       found%print_flows)
+    call mem_set_value(budget_fname, 'BUDGETFILE', idmMemoryPath, &
+                       found%budgetfile)
+    call mem_set_value(budget_csv_fname, 'BUDGETCSVFILE', idmMemoryPath, &
+                       found%budgetcsvfile)
+
+    !
+    ! -- save flows
+    if (found%ipakcb) then
+      this%ipakcb = -1
+    end if
+    !
+    ! -- budget file spec provided
+    if (found%budgetfile) then
+      this%ibudgetout = getunit()
+      call openfile(this%ibudgetout, this%iout, budget_fname, 'DATA(BINARY)', &
+                    form, access, 'REPLACE')
+    end if
+    !
+    ! -- budgetcsv file spec provided
+    if (found%budgetcsvfile) then
+      this%ibudcsv = getunit()
+      call openfile(this%ibudcsv, this%iout, budget_csv_fname, 'CSV', &
+                    filstat_opt='REPLACE')
+    end if
+    !
+    ! -- log options
+    if (this%iout > 0) then
+      call this%log_options(found, budget_fname, budget_csv_fname)
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine source_options
+
+  !> @brief Write user options to list file
+  !<
+  subroutine log_options(this, found, budget_fname, budget_csv_fname)
+    use GwtMvtInputModule, only: GwtMvtParamFoundType
+    class(GwtMvtType) :: this
+    type(GwtMvtParamFoundType), intent(in) :: found
+    character(len=LINELENGTH), intent(in) :: budget_fname
+    character(len=LINELENGTH), intent(in) :: budget_csv_fname
+    ! -- formats
     character(len=*), parameter :: fmtflow = &
-      "(4x, a, 1x, a, 1x, ' WILL BE SAVED TO FILE: ', a, &
+      "(4x, a, 1x, a, 1x, 'WILL BE SAVED TO FILE: ', a, &
       &/4x, 'OPENED ON UNIT: ', I0)"
     character(len=*), parameter :: fmtflow2 = &
       &"(4x, 'FLOWS WILL BE SAVED TO BUDGET FILE')"
-! ------------------------------------------------------------------------------
-    !
-    ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false., &
-                              supportOpenClose=.true.)
-    !
-    ! -- parse options block if detected
-    if (isfound) then
-      write (this%iout, '(1x,a)') 'PROCESSING MVT OPTIONS'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-        case ('SAVE_FLOWS')
-          this%ipakcb = -1
-          write (this%iout, fmtflow2)
-        case ('PRINT_INPUT')
-          this%iprpak = 1
-          write (this%iout, '(4x,a)') 'MVT INPUT WILL BE PRINTED.'
-        case ('PRINT_FLOWS')
-          this%iprflow = 1
-          write (this%iout, '(4x,a)') &
-            'MVT FLOWS WILL BE PRINTED TO LISTING FILE.'
-        case ('BUDGET')
-          call this%parser%GetStringCaps(keyword)
-          if (keyword == 'FILEOUT') then
-            call this%parser%GetString(fname)
-            this%ibudgetout = getunit()
-            call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)', &
-                          form, access, 'REPLACE')
-            write (this%iout, fmtflow) 'MVT', 'BUDGET', fname, this%ibudgetout
-          else
-            call store_error('OPTIONAL BUDGET KEYWORD MUST &
-                             &BE FOLLOWED BY FILEOUT')
-          end if
-        case ('BUDGETCSV')
-          call this%parser%GetStringCaps(keyword)
-          if (keyword == 'FILEOUT') then
-            call this%parser%GetString(fname)
-            this%ibudcsv = getunit()
-            call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
-                          filstat_opt='REPLACE')
-            write (this%iout, fmtflow) 'MVT', 'BUDGET CSV', fname, this%ibudcsv
-          else
-            call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
-              &FILEOUT')
-          end if
-        case default
-          write (errmsg, '(4x,a,a)') '***ERROR. UNKNOWN MVT OPTION: ', &
-            trim(keyword)
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end select
-      end do
-      write (this%iout, '(1x,a)') 'END OF MVT OPTIONS'
+
+    write (this%iout, '(1x,a)') 'Setting MVT Options'
+
+    if (found%ipakcb) then
+      write (this%iout, fmtflow2)
     end if
-    !
-    ! -- return
-    return
-  end subroutine read_options
+
+    if (found%print_input) then
+      write (this%iout, '(4x,a)') 'MVT INPUT WILL BE PRINTED.'
+    end if
+
+    if (found%print_flows) then
+      write (this%iout, '(4x,a)') &
+        'MVT FLOWS WILL BE PRINTED TO LISTING FILE.'
+    end if
+
+    if (found%budgetfile) then
+      write (this%iout, fmtflow) 'MVT', 'BUDGET', trim(budget_fname), &
+        this%ibudgetout
+    end if
+
+    if (found%budgetcsvfile) then
+      write (this%iout, fmtflow) 'MVT', 'BUDGET CSV', trim(budget_csv_fname), &
+        this%ibudcsv
+    end if
+
+    write (this%iout, '(1x,a)') 'End Setting MVT Options'
+  end subroutine log_options
 
   subroutine mvt_setup_budobj(this)
 ! ******************************************************************************

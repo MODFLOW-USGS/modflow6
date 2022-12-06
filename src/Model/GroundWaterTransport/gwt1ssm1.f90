@@ -58,13 +58,14 @@ module GwtSsmModule
     procedure :: allocate_scalars
     procedure, private :: ssm_term
     procedure, private :: allocate_arrays
-    procedure, private :: read_options
-    procedure, private :: read_data
-    procedure, private :: read_sources_aux
-    procedure, private :: read_sources_fileinput
+    procedure, private :: set_package_index
+    procedure, private :: set_ssm_source_type
+    procedure, private :: set_ssm_file_input
+    procedure, private :: source_options
+    procedure, private :: source_sources
+    procedure, private :: source_fileinput
+    procedure, private :: log_options
     procedure, private :: pak_setup_outputtab
-    procedure, private :: set_iauxpak
-    procedure, private :: set_ssmivec
     procedure, private :: get_ssm_conc
 
   end type GwtSsmType
@@ -78,12 +79,18 @@ contains
   !!
   !<
   subroutine ssm_cr(ssmobj, name_model, inunit, iout, fmi)
+    ! -- modules
+    use IdmMf6FileLoaderModule, only: input_load
     ! -- dummy
     type(GwtSsmType), pointer :: ssmobj !< GwtSsmType object
     character(len=*), intent(in) :: name_model !< name of the model
     integer(I4B), intent(in) :: inunit !< fortran unit for input
     integer(I4B), intent(in) :: iout !< fortran unit for output
     type(GwtFmiType), intent(in), target :: fmi !< GWT FMI package
+    ! -- formats
+    character(len=*), parameter :: fmtssm = &
+      "(1x,/1x,'SSM -- SOURCE-SINK MIXING PACKAGE, VERSION 1, 8/25/2017', &
+      &' INPUT READ FROM UNIT ', i0, //)"
     !
     ! -- Create the object
     allocate (ssmobj)
@@ -99,8 +106,21 @@ contains
     ssmobj%iout = iout
     ssmobj%fmi => fmi
     !
-    ! -- Initialize block parser
-    call ssmobj%parser%Initialize(ssmobj%inunit, ssmobj%iout)
+    ! -- Check if input file is open
+    if (inunit > 0) then
+      !
+      ! -- Print a message identifying the node property flow package.
+      if (iout > 0) then
+        write (iout, fmtssm) inunit
+      end if
+      !
+      ! -- Initialize block parser
+      call ssmobj%parser%Initialize(ssmobj%inunit, ssmobj%iout)
+      !
+      ! -- Load package input context
+      call input_load(ssmobj%parser, 'SSM6', 'GWT', 'SSM', ssmobj%name_model, &
+                      'SSM', iout)
+    end if
     !
     ! -- Return
     return
@@ -141,12 +161,6 @@ contains
     real(DP), dimension(:), pointer, contiguous :: cnew !< GWT model dependent variable
     ! -- local
     ! -- formats
-    character(len=*), parameter :: fmtssm = &
-      "(1x,/1x,'SSM -- SOURCE-SINK MIXING PACKAGE, VERSION 1, 8/25/2017', &
-      &' INPUT READ FROM UNIT ', i0, //)"
-    !
-    ! --print a message identifying the storage package.
-    write (this%iout, fmtssm) this%inunit
     !
     ! -- store pointers to arguments that were passed in
     this%dis => dis
@@ -168,11 +182,12 @@ contains
     ! -- Allocate arrays
     call this%allocate_arrays()
     !
-    ! -- Read ssm options
-    call this%read_options()
+    ! -- Source ssm options
+    call this%source_options()
     !
-    ! -- read the data block
-    call this%read_data()
+    ! -- Source the data blocks
+    call this%source_sources()
+    call this%source_fileinput()
     !
     ! -- setup the output table
     call this%pak_setup_outputtab()
@@ -679,11 +694,18 @@ contains
   subroutine ssm_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
+    use MemoryManagerExtModule, only: memorylist_remove
+    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwtSsmType) :: this !< GwtSsmType object
     ! -- local
     integer(I4B) :: ip
     type(GwtSpcType), pointer :: ssmiptr
+    !
+    ! -- Deallocate package input context
+    if (this%inunit > 0) then
+      call memorylist_remove(this%name_model, 'SSM', idm_context)
+    end if
     !
     ! -- Deallocate the ssmi objects if package was active
     if (this%inunit > 0) then
@@ -778,19 +800,53 @@ contains
     return
   end subroutine allocate_arrays
 
-  !> @ brief Read package options
-  !!
-  !! Read and set the SSM Package options
-  !!
-  !<
-  subroutine read_options(this)
+  subroutine source_options(this)
+! ******************************************************************************
+! source_options -- source package options from input context
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
     ! -- modules
+    use ConstantsModule, only: LENMEMPATH
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_context
+    use GwtSsmInputModule, only: GwtSsmParamFoundType
     ! -- dummy
-    class(GwtSSMType) :: this !< GwtSsmType object
-    ! -- local
-    character(len=LINELENGTH) :: keyword
-    integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
+    class(GwtSsmType) :: this
+    ! -- locals
+    character(len=LENMEMPATH) :: idmMemoryPath
+    type(GwtSsmParamFoundType) :: found
+! ------------------------------------------------------------------------------
+    !
+    ! -- set input context memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'SSM', idm_context)
+    !
+    ! -- source from input context
+    call mem_set_value(this%iprflow, 'IPRFLOW', idmMemoryPath, found%iprflow)
+    call mem_set_value(this%ipakcb, 'IPAKCB', idmMemoryPath, found%ipakcb)
+    !
+    ! -- save flows
+    if (found%ipakcb) then
+      this%ipakcb = -1
+    end if
+    !
+    ! -- log options
+    if (this%iout > 0) then
+      call this%log_options(found)
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine source_options
+
+  !> @brief Write user options to list file
+  !<
+  subroutine log_options(this, found)
+    use GwtSsmInputModule, only: GwtSsmParamFoundType
+    class(GwtSsmType) :: this
+    type(GwtSsmParamFoundType), intent(in) :: found
     ! -- formats
     character(len=*), parameter :: fmtiprflow = &
       "(4x,'SSM FLOW INFORMATION WILL BE PRINTED TO LISTING FILE &
@@ -798,356 +854,332 @@ contains
     character(len=*), parameter :: fmtisvflow = &
       "(4x,'CELL-BY-CELL FLOW INFORMATION WILL BE SAVED TO BINARY FILE &
       &WHENEVER ICBCFL IS NOT ZERO.')"
-    !
-    ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false., &
-                              supportOpenClose=.true.)
-    !
-    ! -- parse options block if detected
-    if (isfound) then
-      write (this%iout, '(1x,a)') 'PROCESSING SSM OPTIONS'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-        case ('PRINT_FLOWS')
-          this%iprflow = 1
-          write (this%iout, fmtiprflow)
-        case ('SAVE_FLOWS')
-          this%ipakcb = -1
-          write (this%iout, fmtisvflow)
-        case default
-          write (errmsg, '(4x,a,a)') 'UNKNOWN SSM OPTION: ', trim(keyword)
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end select
-      end do
-      write (this%iout, '(1x,a)') 'END OF SSM OPTIONS'
+
+    write (this%iout, '(1x,a)') 'Setting SSM Options'
+
+    if (found%iprflow) then
+      write (this%iout, fmtiprflow)
     end if
-    !
-    ! -- Return
-    return
-  end subroutine read_options
 
-  !> @ brief Read package data
-  !!
-  !! Read and set the SSM Package data
-  !!
-  !<
-  subroutine read_data(this)
+    if (found%ipakcb) then
+      write (this%iout, fmtisvflow)
+    end if
+
+    write (this%iout, '(1x,a)') 'End Setting SSM Options'
+  end subroutine log_options
+
+  subroutine set_package_index(this, pkgname, index_package)
+! ******************************************************************************
+! set_package_index -- identify and set package index based on name
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use CharacterStringModule, only: CharacterStringType
     ! -- dummy
-    class(GwtSsmtype) :: this !< GwtSsmtype object
+    class(GwtSsmType) :: this
+    character(len=LINELENGTH), intent(in) :: pkgname
+    integer(I4B), intent(inout) :: index_package
+    ! -- locals
+    integer(I4B) :: ipkg
+    logical :: pkgfound
+! ------------------------------------------------------------------------------
     !
-    ! -- read and process required SOURCES block
-    call this%read_sources_aux()
+    ! -- initialization
+    index_package = 0
+    pkgfound = .false.
     !
-    ! -- read and process optional FILEINPUT block
-    call this%read_sources_fileinput()
-    return
-  end subroutine read_data
-
-  !> @ brief Read SOURCES block
-  !!
-  !! Read SOURCES block and look for auxiliary columns in
-  !! corresponding flow data.
-  !!
-  !<
-  subroutine read_sources_aux(this)
-    ! -- dummy
-    class(GwtSsmtype) :: this !< GwtSsmtype object
-    ! -- local
-    character(len=LINELENGTH) :: keyword
-    character(len=20) :: srctype
-    integer(I4B) :: ierr
-    integer(I4B) :: ip
-    integer(I4B) :: nflowpack
-    integer(I4B) :: isrctype
-    logical :: isfound, endOfBlock
-    logical :: pakfound
-    logical :: lauxmixed
-    ! -- formats
-    ! -- data
+    ! -- identify index of package
+    do ipkg = 1, this%fmi%nflowpack
+      if (trim(adjustl(this%fmi%gwfpackages(ipkg)%name)) == pkgname) then
+        pkgfound = .true.
+        exit
+      end if
+    end do
     !
-    ! -- initialize
-    isfound = .false.
-    lauxmixed = .false.
-    nflowpack = this%fmi%nflowpack
-    !
-    ! -- get sources block
-    call this%parser%GetBlock('SOURCES', isfound, ierr, &
-                              supportOpenClose=.true., &
-                              blockrequired=.true.)
-    if (isfound) then
-      write (this%iout, '(1x,a)') 'PROCESSING SOURCES'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        !
-        ! -- read package name and make sure it can be found
-        call this%parser%GetStringCaps(keyword)
-        pakfound = .false.
-        do ip = 1, nflowpack
-          if (trim(adjustl(this%fmi%gwfpackages(ip)%name)) == keyword) then
-            pakfound = .true.
-            exit
-          end if
-        end do
-        if (.not. pakfound) then
-          write (errmsg, '(1x, a, a)') 'FLOW PACKAGE CANNOT BE FOUND: ', &
-            trim(keyword)
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end if
-        !
-        ! -- Ensure package was not specified more than once in SOURCES block
-        if (this%isrctype(ip) /= 0) then
-          write (errmsg, '(1x, a, a)') &
-            'A PACKAGE CANNOT BE SPECIFIED MORE THAN ONCE IN THE SSM SOURCES &
-            &BLOCK.  THE FOLLOWING PACKAGE WAS SPECIFIED MORE THAN ONCE: ', &
-            trim(keyword)
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end if
-        !
-        ! -- read the source type
-        call this%parser%GetStringCaps(srctype)
-        select case (srctype)
-        case ('AUX')
-          write (this%iout, '(1x,a)') 'AUX SOURCE DETECTED.'
-          isrctype = 1
-        case ('AUXMIXED')
-          write (this%iout, '(1x,a)') 'AUXMIXED SOURCE DETECTED.'
-          lauxmixed = .true.
-          isrctype = 2
-        case default
-          write (errmsg, '(1x, a, a)') &
-            'SRCTYPE MUST BE AUX OR AUXMIXED.  FOUND: ', trim(srctype)
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end select
-        !
-        ! -- Store the source type (1 or 2)
-        this%isrctype(ip) = isrctype
-        !
-        ! -- Find and store the auxiliary column
-        call this%set_iauxpak(ip, trim(keyword))
-
-      end do
-      write (this%iout, '(1x,a)') 'END PROCESSING SOURCES'
-    else
-      write (errmsg, '(1x,a)') 'ERROR.  REQUIRED SOURCES BLOCK NOT FOUND.'
+    ! -- set error if package not found
+    if (.not. pkgfound) then
+      write (errmsg, '(1x, a, a)') 'FLOW PACKAGE CANNOT BE FOUND: ', &
+        trim(pkgname)
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-    end if
-    !
-    ! -- terminate if errors
-    if (count_errors() > 0) then
+      !
+      ! -- Ensure package was not specified more than once in SOURCES block
+    else if (this%isrctype(ipkg) /= 0) then
+      write (errmsg, '(1x, a, a)') &
+        'A PACKAGE CANNOT BE SPECIFIED MORE THAN ONCE IN THE SSM SOURCES &
+        &BLOCK.  THE FOLLOWING PACKAGE WAS SPECIFIED MORE THAN ONCE: ', &
+        trim(pkgname)
+      call store_error(errmsg)
       call this%parser%StoreErrorUnit()
-    end if
-    !
-    ! -- Return
-    return
-  end subroutine read_sources_aux
-
-  !> @ brief Read FILEINPUT block
-  !!
-  !! Read optional FILEINPUT block and initialize an
-  !! SPC input file reader for each entry.
-  !!
-  !<
-  subroutine read_sources_fileinput(this)
-    ! -- dummy
-    class(GwtSsmtype) :: this !< GwtSsmtype object
-    ! -- local
-    character(len=LINELENGTH) :: keyword
-    character(len=LINELENGTH) :: keyword2
-    character(len=20) :: srctype
-    integer(I4B) :: ierr
-    integer(I4B) :: ip
-    integer(I4B) :: nflowpack
-    integer(I4B) :: isrctype
-    logical :: isfound, endOfBlock
-    logical :: pakfound
-    logical :: lauxmixed
-    ! -- formats
-    ! -- data
-    !
-    ! -- initialize
-    isfound = .false.
-    lauxmixed = .false.
-    nflowpack = this%fmi%nflowpack
-    !
-    ! -- get sources_file block
-    call this%parser%GetBlock('FILEINPUT', isfound, ierr, &
-                              supportOpenClose=.true., &
-                              blockrequired=.false.)
-    if (isfound) then
-      write (this%iout, '(1x,a)') 'PROCESSING FILEINPUT'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        !
-        ! -- read package name and make sure it can be found
-        call this%parser%GetStringCaps(keyword)
-        pakfound = .false.
-        do ip = 1, nflowpack
-          if (trim(adjustl(this%fmi%gwfpackages(ip)%name)) == keyword) then
-            pakfound = .true.
-            exit
-          end if
-        end do
-        if (.not. pakfound) then
-          write (errmsg, '(1x, a, a)') 'FLOW PACKAGE CANNOT BE FOUND: ', &
-            trim(keyword)
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end if
-        !
-        ! -- Ensure package was not specified more than once in SOURCES block
-        if (this%isrctype(ip) /= 0) then
-          write (errmsg, '(1x, a, a)') &
-            'A PACKAGE CANNOT BE SPECIFIED MORE THAN ONCE IN THE SSM SOURCES &
-            &AND SOURCES_FILES BLOCKS.  THE FOLLOWING PACKAGE WAS SPECIFIED &
-            &MORE THAN ONCE: ', &
-            trim(keyword)
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end if
-        !
-        ! -- read the source type
-        call this%parser%GetStringCaps(srctype)
-        select case (srctype)
-        case ('SPC6')
-          write (this%iout, '(1x,a)') 'SPC6 SOURCE DETECTED.'
-          isrctype = 3
-          !
-          ! verify filein is next
-          call this%parser%GetStringCaps(keyword2)
-          if (trim(adjustl(keyword2)) /= 'FILEIN') then
-            errmsg = 'SPC6 keyword must be followed by "FILEIN" '// &
-                     'then by filename and optionally by <MIXED>.'
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
-          end if
-          !
-          ! -- Use set_ssmivec to read file name and set up
-          !    ssmi file object
-          call this%set_ssmivec(ip, trim(keyword))
-          !
-          ! -- check for optional MIXED keyword and set isrctype to 4 if found
-          call this%parser%GetStringCaps(keyword2)
-          if (trim(keyword2) == 'MIXED') then
-            isrctype = 4
-            write (this%iout, '(1x,a,a)') 'ASSIGNED MIXED SSM TYPE TO PACKAGE ', &
-              trim(keyword)
-          end if
-        case default
-          write (errmsg, '(1x, a, a)') &
-            'SRCTYPE MUST BE SPC6.  FOUND: ', trim(srctype)
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end select
-        !
-        ! -- Store the source type (3 or 4)
-        this%isrctype(ip) = isrctype
-
-      end do
-      write (this%iout, '(1x,a)') 'END PROCESSING FILEINPUT'
+      !
+      ! -- set valid index
     else
-      write (this%iout, '(1x,a)') &
-        'OPTIONAL FILEINPUT BLOCK NOT FOUND.  CONTINUING.'
+      index_package = ipkg
     end if
-    !
-    ! -- terminate if errors
-    if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
-    end if
-    !
-    ! -- Return
-    return
-  end subroutine read_sources_fileinput
+  end subroutine set_package_index
 
-  !> @ brief Set iauxpak array value for package ip
-  !!
-  !!  The next call to parser will return the auxiliary name for
-  !!  package ip in the SSM SOURCES block.  The routine searches
-  !!  through the auxiliary names in package ip and sets iauxpak
-  !!  to the column number corresponding to the correct auxiliary
-  !!  column.
-  !!
-  !<
-  subroutine set_iauxpak(this, ip, packname)
+  subroutine set_ssm_source_type(this, pname, srctype, auxname)
+! ******************************************************************************
+! set_ssm_source_type -- set a single ssm source type
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use CharacterStringModule, only: CharacterStringType
     ! -- dummy
-    class(GwtSsmtype), intent(inout) :: this !< GwtSsmtype
-    integer(I4B), intent(in) :: ip !< package number
-    character(len=*), intent(in) :: packname !< name of package
-    ! -- local
-    character(len=LENAUXNAME) :: auxname
+    class(GwtSsmType) :: this
+    ! -- locals
+    type(CharacterStringType), intent(in) :: pname
+    type(CharacterStringType), intent(in) :: srctype
+    type(CharacterStringType), intent(in) :: auxname
+    character(len=LINELENGTH) :: pkgname, sourcetype, aux
+    integer(I4B) :: isrctype
+    integer(I4B) :: ipkg, iaux
     logical :: auxfound
-    integer(I4B) :: iaux
+! ------------------------------------------------------------------------------
     !
-    ! -- read name of auxiliary column
-    call this%parser%GetStringCaps(auxname)
+    ! -- assign CharacterString to string
+    pkgname = pname
+    sourcetype = srctype
+    aux = auxname
+    !
+    ! -- initialize locals
     auxfound = .false.
-    do iaux = 1, this%fmi%gwfpackages(ip)%naux
-      if (trim(this%fmi%gwfpackages(ip)%auxname(iaux)) == &
-          trim(auxname)) then
+    !
+    ! -- identify index of package
+    call this%set_package_index(pkgname, ipkg)
+    if (ipkg == 0) then
+      !
+      ! -- error condition; error is set
+      return
+    end if
+    !
+    ! --
+    select case (sourcetype)
+    case ('AUX')
+      write (this%iout, '(1x,a)') 'AUX SOURCE DETECTED.'
+      isrctype = 1
+    case ('AUXMIXED')
+      write (this%iout, '(1x,a)') 'AUXMIXED SOURCE DETECTED.'
+      isrctype = 2
+    case default
+      write (errmsg, '(1x, a, a)') &
+        'SRCTYPE MUST BE AUX OR AUXMIXED.  FOUND: ', trim(sourcetype)
+      call store_error(errmsg)
+      call this%parser%StoreErrorUnit()
+    end select
+    !
+    ! -- Store the source type (1 or 2)
+    this%isrctype(ipkg) = isrctype
+    !
+    ! -- Find and store the auxiliary column
+    do iaux = 1, this%fmi%gwfpackages(ipkg)%naux
+      if (trim(this%fmi%gwfpackages(ipkg)%auxname(iaux)) == &
+          trim(aux)) then
         auxfound = .true.
         exit
       end if
     end do
+    !
+    ! -- set error if aux not found
     if (.not. auxfound) then
       write (errmsg, '(1x, a, a)') &
-        'AUXILIARY NAME CANNOT BE FOUND: ', trim(auxname)
+        'AUXILIARY NAME CANNOT BE FOUND: ', trim(aux)
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if
     !
     ! -- set iauxpak and write message
-    this%iauxpak(ip) = iaux
+    this%iauxpak(ipkg) = iaux
     write (this%iout, '(4x, a, i0, a, a)') 'USING AUX COLUMN ', &
-      iaux, ' IN PACKAGE ', trim(packname)
+      iaux, ' IN PACKAGE ', trim(pkgname)
+  end subroutine set_ssm_source_type
+
+  subroutine source_sources(this)
+! ******************************************************************************
+! source_sources -- source ssm sources from input context
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: LENMEMPATH
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerModule, only: mem_setptr
+    use SimVariablesModule, only: idm_context
+    use CharacterStringModule, only: CharacterStringType
+    use GwtSsmInputModule, only: GwtSsmParamFoundType
+    ! -- dummy
+    class(GwtSsmType) :: this
+    ! -- locals
+    character(len=LENMEMPATH) :: idmMemoryPath
+    type(CharacterStringType), dimension(:), pointer, contiguous :: pname
+    type(CharacterStringType), dimension(:), pointer, contiguous :: srctype
+    type(CharacterStringType), dimension(:), pointer, contiguous :: auxname
+    integer(I4B) :: i
+! ------------------------------------------------------------------------------
+    !
+    ! -- set input context memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'SSM', idm_context)
+    !
+    ! -- set pointers to variable describing files
+    call mem_setptr(pname, 'PNAME_SOURCES', idmMemoryPath)
+    call mem_setptr(srctype, 'SRCTYPE', idmMemoryPath)
+    call mem_setptr(auxname, 'AUXNAME', idmMemoryPath)
+    !
+    ! -- set each source type
+    do i = 1, size(pname)
+      call this%set_ssm_source_type(pname(i), srctype(i), auxname(i))
+    end do
     !
     ! -- return
     return
-  end subroutine set_iauxpak
+  end subroutine source_sources
 
-  !> @ brief Set ssmivec array value for package ip
-  !!
-  !!  The next call to parser will return the input file name for
-  !!  package ip in the SSM SOURCES block.  The routine then
-  !!  initializes the SPC input file.
-  !!
-  !<
-  subroutine set_ssmivec(this, ip, packname)
-    ! -- module
+  subroutine set_ssm_file_input(this, pname, srctype, iotype, filename, mix)
+! ******************************************************************************
+! set_ssm_file_input -- set a single ssm file input
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
     use InputOutputModule, only: openfile, getunit
+    use CharacterStringModule, only: CharacterStringType
     ! -- dummy
-    class(GwtSsmtype), intent(inout) :: this !< GwtSsmtype
-    integer(I4B), intent(in) :: ip !< package number
-    character(len=*), intent(in) :: packname !< name of package
-    ! -- local
-    character(len=LINELENGTH) :: filename
+    class(GwtSsmType) :: this
+    ! -- locals
+    type(CharacterStringType), intent(in) :: pname
+    type(CharacterStringType), intent(in) :: srctype
+    type(CharacterStringType), intent(in) :: iotype
+    type(CharacterStringType), intent(in) :: filename
+    type(CharacterStringType), intent(in) :: mix
+    character(len=LINELENGTH) :: pkgname, sourcetype, io, fname, mixed
+    integer(I4B) :: isrctype
+    integer(I4B) :: ipkg
     type(GwtSpcType), pointer :: ssmiptr
     integer(I4B) :: inunit
+! ------------------------------------------------------------------------------
     !
-    ! -- read file name
-    call this%parser%GetString(filename)
-    inunit = getunit()
-    call openfile(inunit, this%iout, filename, 'SPC', filstat_opt='OLD')
+    ! -- assign CharacterString to string
+    pkgname = pname
+    sourcetype = srctype
+    io = iotype
+    fname = filename
+    mixed = mix
+    !
+    ! -- identify index of package
+    call this%set_package_index(pkgname, ipkg)
+    if (ipkg == 0) then
+      !
+      ! -- error condition; error is set
+      return
+    end if
+    !
+    ! --
+    select case (sourcetype)
+    case ('SPC6')
+      write (this%iout, '(1x,a)') 'SPC6 SOURCE DETECTED.'
+      isrctype = 3
+      !
+      ! verify filein keyword
+      if (trim(adjustl(io)) /= 'FILEIN') then
+        errmsg = 'SPC6 keyword must be followed by "FILEIN" '// &
+                 'then by filename and optionally by <MIXED>.'
+        call store_error(errmsg)
+        call this%parser%StoreErrorUnit()
+      end if
+      !
+      ! -- open the file
+      inunit = getunit()
+      call openfile(inunit, this%iout, fname, 'SPC', filstat_opt='OLD')
+      !
+      ! -- create the SPC file object
+      ssmiptr => this%ssmivec(ipkg)
+      call ssmiptr%initialize(this%dis, ipkg, inunit, this%iout, &
+                              this%name_model, trim(pkgname))
+      !
+      ! -- log file and package
+      write (this%iout, '(4x, a, a, a, a)') 'USING SPC INPUT FILE ', &
+        trim(fname), ' TO SET CONCENTRATIONS FOR PACKAGE ', trim(pkgname)
+      !
+      ! -- check for optional MIXED keyword and set isrctype to 4 if found
+      if (trim(mixed) == 'MIXED') then
+        isrctype = 4
+        write (this%iout, '(1x,a,a)') 'ASSIGNED MIXED SSM TYPE TO PACKAGE ', &
+          trim(pkgname)
+      end if
+    case default
+      write (errmsg, '(1x, a, a)') &
+        'SRCTYPE MUST BE SPC6.  FOUND: ', trim(sourcetype)
+      call store_error(errmsg)
+      call this%parser%StoreErrorUnit()
+    end select
+    !
+    ! -- Store the source type (3 or 4)
+    this%isrctype(ipkg) = isrctype
+  end subroutine set_ssm_file_input
 
-    ! -- Create the SPC file object
-    ssmiptr => this%ssmivec(ip)
-    call ssmiptr%initialize(this%dis, ip, inunit, this%iout, this%name_model, &
-                            trim(packname))
+  subroutine source_fileinput(this)
+! ******************************************************************************
+! source_fileinput -- source ssm fileinput from input context
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: LENMEMPATH
+    use MemoryTypeModule, only: MemoryType
+    use MemoryManagerModule, only: get_from_memorylist
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerModule, only: mem_setptr
+    use SimVariablesModule, only: idm_context
+    use CharacterStringModule, only: CharacterStringType
+    use GwtSsmInputModule, only: GwtSsmParamFoundType
+    ! -- dummy
+    class(GwtSsmType) :: this
+    ! -- locals
+    character(len=LENMEMPATH) :: idmMemoryPath
+    type(CharacterStringType), dimension(:), pointer, contiguous :: pname
+    type(CharacterStringType), dimension(:), pointer, contiguous :: srctype
+    type(CharacterStringType), dimension(:), pointer, contiguous :: filein
+    type(CharacterStringType), dimension(:), pointer, contiguous :: fname
+    type(CharacterStringType), dimension(:), pointer, contiguous :: mixed
+    integer(I4B) :: i
+    logical(LGP) :: found
+    type(MemoryType), pointer :: mt
+! ------------------------------------------------------------------------------
+    !
+    ! -- set input context memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'SSM', idm_context)
+    !
+    ! -- fileinput is optional block, check if PNAME_FILEINPUT in memory
+    call get_from_memorylist('PNAME_FILEINPUT', idmMemoryPath, mt, found, .false.)
+    !
+    ! -- set pointers to variable describing files
+    if (found) then
+      call mem_setptr(pname, 'PNAME_FILEINPUT', idmMemoryPath)
+      call mem_setptr(srctype, 'SPC6', idmMemoryPath)
+      call mem_setptr(filein, 'FILEIN', idmMemoryPath)
+      call mem_setptr(fname, 'SPC6_FILENAME', idmMemoryPath)
+      call mem_setptr(mixed, 'MIXED', idmMemoryPath)
+    else
+      !
+      ! -- nothing to do
+      return
+    end if
 
-    write (this%iout, '(4x, a, a, a, a)') 'USING SPC INPUT FILE ', &
-      trim(filename), ' TO SET CONCENTRATIONS FOR PACKAGE ', trim(packname)
+    do i = 1, size(pname)
+      call this%set_ssm_file_input(pname(i), srctype(i), filein(i), fname(i), &
+                                   mixed(i))
+    end do
     !
     ! -- return
     return
-  end subroutine set_ssmivec
+  end subroutine source_fileinput
 
   !> @ brief Setup the output table
   !!

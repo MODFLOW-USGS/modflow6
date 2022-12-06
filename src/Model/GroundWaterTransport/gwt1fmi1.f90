@@ -131,13 +131,12 @@ contains
     fmiobj%iout = iout
     !
     ! --
-    if (inunit /= 0) then
+    if (inunit > 0) then
       !
       ! -- Initialize block parser
       call fmiobj%parser%Initialize(fmiobj%inunit, fmiobj%iout)
       !
-      ! -- Use the input data model routines to load the input data
-      !    into memory
+      ! -- Load package input context
       call input_load(fmiobj%parser, 'FMI6', 'GWT', 'FMI', fmiobj%name_model, &
                       'FMI', iout)
     end if
@@ -186,12 +185,12 @@ contains
     ! -- store pointers to arguments that were passed in
     this%dis => dis
     !
-    ! -- Read fmi options
+    ! -- Source fmi options
     if (this%inunit /= 0) then
       call this%source_options()
     end if
     !
-    ! -- Read packagedata options
+    ! -- Source packagedata options
     if (this%inunit /= 0 .and. this%flows_from_file) then
       call this%source_packagedata()
       call this%initialize_gwfterms_from_bfr()
@@ -555,8 +554,10 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- todo: finalize hfr and bfr either here or in a finalize routine
     !
-    ! -- Deallocate input memory
-    call memorylist_remove(this%name_model, 'FMI', idm_context)
+    ! -- Deallocate package input context
+    if (this%inunit > 0) then
+      call memorylist_remove(this%name_model, 'FMI', idm_context)
+    end if
     !
     ! -- deallocate any memory stored with gwfpackages
     call this%deallocate_gwfpackages()
@@ -762,7 +763,7 @@ contains
 
   subroutine source_options(this)
 ! ******************************************************************************
-! source_options -- source input options
+! source_options -- source package options from input context
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -782,7 +783,7 @@ contains
     integer(I4B), pointer :: ipakcb
 ! ------------------------------------------------------------------------------
     !
-    ! -- set memory path
+    ! -- set input context memory path
     idmMemoryPath = create_mem_path(this%name_model, 'FMI', idm_context)
     !
     ! --
@@ -929,7 +930,7 @@ contains
 
   subroutine source_packagedata(this)
 ! ******************************************************************************
-! source_packagedata -- source input PACKAGEDATA
+! source_packagedata -- source PACKAGEDATA from input context
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -938,7 +939,6 @@ contains
     use ConstantsModule, only: LENMEMPATH
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr
-    use MemoryManagerExtModule, only: mem_set_value
     use CharacterStringModule, only: CharacterStringType
     use SimVariablesModule, only: idm_context
     use GwtFmiInputModule, only: GwtFmiParamFoundType
@@ -953,7 +953,7 @@ contains
     type(CharacterStringType), dimension(:), pointer, contiguous :: fname
 ! ------------------------------------------------------------------------------
     !
-    ! -- set memory path
+    ! -- set input context memory path
     idmMemoryPath = create_mem_path(this%name_model, 'FMI', idm_context)
     !
     ! -- set pointers to variable describing files

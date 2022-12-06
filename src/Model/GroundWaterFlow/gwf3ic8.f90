@@ -16,8 +16,7 @@ module GwfIcModule
     procedure :: ic_ar
     procedure :: ic_da
     procedure, private :: allocate_arrays
-    procedure, private :: read_options
-    procedure :: read_data
+    procedure :: source_data
   end type GwfIcType
 
 contains
@@ -29,6 +28,9 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use IdmMf6FileLoaderModule, only: input_load
+    use ConstantsModule, only: LENPACKAGETYPE
     ! -- dummy
     type(GwfIcType), pointer :: ic
     character(len=*), intent(in) :: name_model
@@ -54,6 +56,9 @@ contains
     !
     ! -- Initialize block parser
     call ic%parser%Initialize(ic%inunit, ic%iout)
+    !
+    ! -- Load package input context
+    call input_load(ic%parser, 'IC6', 'GWF', 'IC', ic%name_model, 'IC', iout)
     !
     ! -- Return
     return
@@ -84,11 +89,8 @@ contains
     ! -- Allocate arrays
     call this%allocate_arrays(this%dis%nodes)
     !
-    ! -- Read options
-    call this%read_options()
-    !
-    ! -- Read data
-    call this%read_data()
+    ! -- Source data
+    call this%source_data()
     !
     ! -- Assign x equal to strt
     do n = 1, this%dis%nodes
@@ -108,9 +110,14 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
+    use MemoryManagerExtModule, only: memorylist_remove
+    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfIcType) :: this
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Deallocate package input context
+    call memorylist_remove(this%name_model, 'IC', idm_context)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
@@ -146,103 +153,42 @@ contains
     return
   end subroutine allocate_arrays
 
-  subroutine read_options(this)
+  subroutine source_data(this)
 ! ******************************************************************************
-! read_options
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error
-    ! -- dummy
-    class(GwfIcType) :: this
-    ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
-    integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
-    ! -- formats
-! ------------------------------------------------------------------------------
-    !
-    ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, &
-                              supportOpenClose=.true., blockRequired=.false.)
-    !
-    ! -- parse options block if detected
-    if (isfound) then
-      write (this%iout, '(1x,a)') 'PROCESSING IC OPTIONS'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-        case default
-          write (errmsg, '(4x,a,a)') 'Unknown IC option: ', trim(keyword)
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end select
-      end do
-      write (this%iout, '(1x,a)') 'END OF IC OPTIONS'
-    end if
-    !
-    ! -- Return
-    return
-  end subroutine read_options
-
-  subroutine read_data(this)
-! ******************************************************************************
-! read_data
+! source_data -- source package data from input context
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error
+    use ConstantsModule, only: LENMEMPATH
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_context
+    use GwfIcInputModule, only: GwfIcParamFoundType
     ! -- dummy
     class(GwfIcType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
-    character(len=:), allocatable :: line
-    integer(I4B) :: istart, istop, lloc, ierr
-    logical :: isfound, endOfBlock
-    character(len=24) :: aname(1)
+    character(len=LENMEMPATH) :: idmMemoryPath
+    type(GwfIcParamFoundType) :: found
+    integer(I4B), dimension(:), pointer, contiguous :: map
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! -- Setup the label
-    aname(1) = '    INITIAL HEAD'
+    ! -- initialize map
+    map => null()
     !
-    ! -- get griddata block
-    call this%parser%GetBlock('GRIDDATA', isfound, ierr)
-    if (isfound) then
-      write (this%iout, '(1x,a)') 'PROCESSING GRIDDATA'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        call this%parser%GetRemainingLine(line)
-        lloc = 1
-        select case (keyword)
-        case ('STRT')
-          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                        this%parser%iuactive, this%strt, &
-                                        aname(1))
-        case default
-          write (errmsg, '(4x,a,a)') 'Unknown GRIDDATA tag: ', trim(keyword)
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end select
-      end do
-      write (this%iout, '(1x,a)') 'END PROCESSING GRIDDATA'
-    else
-      call store_error('Required GRIDDATA block not found.')
-      call this%parser%StoreErrorUnit()
-    end if
+    ! -- set input context memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'IC', idm_context)
+    !
+    ! -- if reduced, set node map
+    if (this%dis%nodes < this%dis%nodesuser) map => this%dis%nodeuser
+    !
+    ! -- source data from input context
+    call mem_set_value(this%strt, 'STRT', idmMemoryPath, map, found%strt)
     !
     ! -- Return
     return
-  end subroutine read_data
+  end subroutine source_data
 
 end module GwfIcModule

@@ -27,7 +27,8 @@ module GwtAdvModule
     procedure :: adv_da
 
     procedure :: allocate_scalars
-    procedure, private :: read_options
+    procedure, private :: source_options
+    procedure, private :: log_options
     procedure, private :: advqtvd
     procedure, private :: advtvd_bd
     procedure :: adv_weight
@@ -44,12 +45,19 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use IdmMf6FileLoaderModule, only: input_load
+    use ConstantsModule, only: LENPACKAGETYPE
     ! -- dummy
     type(GwtAdvType), pointer :: advobj
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     type(GwtFmiType), intent(in), target :: fmi
+    ! -- formats
+    character(len=*), parameter :: fmtadv = &
+      "(1x,/1x,'ADV-- ADVECTION PACKAGE, VERSION 1, 8/25/2017', &
+      &' INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -66,6 +74,22 @@ contains
     advobj%iout = iout
     advobj%fmi => fmi
     !
+    ! -- Check if input file is open
+    if (inunit > 0) then
+      !
+      ! -- Print a message identifying the node property flow package.
+      if (iout > 0) then
+        write (iout, fmtadv) inunit
+      end if
+      !
+      ! -- Initialize block parser and read options
+      call advobj%parser%Initialize(inunit, iout)
+      !
+      ! Load package input context
+      call input_load(advobj%parser, 'ADV6', 'GWT', 'ADV', advobj%name_model, &
+                      'ADV', iout)
+    end if
+    !
     ! -- Return
     return
   end subroutine adv_cr
@@ -73,23 +97,12 @@ contains
   subroutine adv_df(this, adv_options)
     class(GwtAdvType) :: this
     type(GwtAdvOptionsType), optional, intent(in) :: adv_options !< the optional options, for when not constructing from file
-    ! local
-    character(len=*), parameter :: fmtadv = &
-      "(1x,/1x,'ADV-- ADVECTION PACKAGE, VERSION 1, 8/25/2017', &
-      &' INPUT READ FROM UNIT ', i0, //)"
     !
-    ! -- Read or set advection options
+    ! -- Source or set advection options
     if (.not. present(adv_options)) then
       !
-      ! -- Initialize block parser (adv has no define, so it's
-      ! not done until here)
-      call this%parser%Initialize(this%inunit, this%iout)
-      !
-      ! --print a message identifying the advection package.
-      write (this%iout, fmtadv) this%inunit
-      !
-      ! --read options from file
-      call this%read_options()
+      ! --source options from file
+      call this%source_options()
     else
       !
       ! --set options from input arg
@@ -359,9 +372,16 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
+    use MemoryManagerExtModule, only: memorylist_remove
+    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwtAdvType) :: this
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Deallocate input context
+    if (this%inunit > 0) then
+      call memorylist_remove(this%name_model, 'ADV', idm_context)
+    end if
     !
     ! -- Deallocate arrays if package was active
     if (this%inunit > 0) then
@@ -410,72 +430,77 @@ contains
     return
   end subroutine allocate_scalars
 
-  subroutine read_options(this)
+  subroutine source_options(this)
 ! ******************************************************************************
-! read_options -- Allocate and Read
+! source_options -- source package options from input context
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
+    use ConstantsModule, only: LINELENGTH, LENMEMPATH
     use SimModule, only: store_error
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_context
+    use GwtAdvInputModule, only: GwtAdvParamFoundType
     ! -- dummy
     class(GwtAdvType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
-    integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
-    ! -- formats
-    character(len=*), parameter :: fmtiadvwt = &
-      &"(4x,'ADVECTION WEIGHTING SCHEME HAS BEEN SET TO: ', a)"
+    character(len=LENMEMPATH) :: idmMemoryPath
+    type(GwtAdvParamFoundType) :: found
+    character(len=LINELENGTH) :: scheme
+    character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
     !
-    ! -- get options block
-    call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false., &
-                              supportOpenClose=.true.)
+    ! -- set input context memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'ADV', idm_context)
     !
-    ! -- parse options block if detected
-    if (isfound) then
-      write (this%iout, '(1x,a)') 'PROCESSING ADVECTION OPTIONS'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        select case (keyword)
-        case ('SCHEME')
-          call this%parser%GetStringCaps(keyword)
-          select case (keyword)
-          case ('UPSTREAM')
-            this%iadvwt = 0
-            write (this%iout, fmtiadvwt) 'UPSTREAM'
-          case ('CENTRAL')
-            this%iadvwt = 1
-            write (this%iout, fmtiadvwt) 'CENTRAL'
-          case ('TVD')
-            this%iadvwt = 2
-            write (this%iout, fmtiadvwt) 'TVD'
-          case default
-            write (errmsg, '(4x, a, a)') &
-              'ERROR. UNKNOWN SCHEME: ', trim(keyword)
-            call store_error(errmsg)
-            write (errmsg, '(4x, a, a)') &
-              'SCHEME MUST BE "UPSTREAM", "CENTRAL" OR "TVD"'
-            call store_error(errmsg)
-            call this%parser%StoreErrorUnit()
-          end select
-        case default
-          write (errmsg, '(4x,a,a)') 'Unknown ADVECTION option: ', &
-            trim(keyword)
-          call store_error(errmsg, terminate=.TRUE.)
-        end select
-      end do
-      write (this%iout, '(1x,a)') 'END OF ADVECTION OPTIONS'
+    ! -- update defaults with idm sourced values
+    call mem_set_value(scheme, 'SCHEME', idmMemoryPath, found%scheme)
+    !
+    ! --
+    if (found%scheme) then
+      select case (scheme)
+      case ('UPSTREAM')
+        this%iadvwt = 0
+      case ('CENTRAL')
+        this%iadvwt = 1
+      case ('TVD')
+        this%iadvwt = 2
+      case default
+        write (errmsg, '(4x, a, a)') &
+          'Unrecognized Advection Scheme: "'//trim(scheme)//'"'
+        call store_error(errmsg)
+        call this%parser%StoreErrorUnit()
+      end select
+    end if
+    !
+    ! -- log options
+    if (this%iout > 0) then
+      call this%log_options(found)
     end if
     !
     ! -- Return
     return
-  end subroutine read_options
+  end subroutine source_options
+
+  !> @brief Write user options to list file
+  !<
+  subroutine log_options(this, found)
+    use GwtAdvInputModule, only: GwtAdvParamFoundType
+    class(GwtAdvType) :: this
+    type(GwtAdvParamFoundType), intent(in) :: found
+
+    write (this%iout, '(1x,a)') 'Setting Advection Options'
+
+    if (found%scheme) then
+      write (this%iout, '(4x,a,i0)') 'Advection scheme [0=UPSTREAM, &
+      &1=CENTRAL, 2=TVD] set as ', this%iadvwt
+    end if
+
+    write (this%iout, '(1x,a)') 'End Setting Advection Options'
+  end subroutine log_options
 
   function adv_weight(this, iadvwt, ipos, n, m, qnm) result(omega)
 ! ******************************************************************************

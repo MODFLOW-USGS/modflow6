@@ -17,6 +17,7 @@ reader urword
 optional true
 longname auxspeciesname that corresponds to temperature
 description string used to identify the auxspeciesname in PACKAGEDATA that corresponds to the temperature species.  There can be only one occurrence of this temperature species name in the PACKAGEDATA block or the program will terminate with an error.  This value has no effect if viscosity does not depend on temperature.
+mf6internal name_temp_spec
 
 block options
 name thermal_formulation
@@ -27,6 +28,7 @@ optional true
 valid linear nonlinear
 longname keyword to specify viscosity formulation for the temperature species
 description may be used for specifying which viscosity formulation to use for the temperature species. Can be either LINEAR or NONLINEAR. The LINEAR viscosity formulation is the default.
+mf6internal thermal_form
 
 block options
 name thermal_a2
@@ -116,7 +118,7 @@ description number of species used in the viscosity equation of state.  If eithe
 block packagedata
 name packagedata
 type recarray iviscspec dviscdc cviscref modelname auxspeciesname
-shape (nrhospecies)
+shape (nviscspecies)
 reader urword
 longname
 description
@@ -129,7 +131,7 @@ tagged false
 in_record true
 reader urword
 longname species number for this entry
-description integer value that defines the species number associated with the specified PACKAGEDATA data entered on each line. IVISCSPECIES must be greater than zero and less than or equal to NVISCSPECIES. Information must be specified for each of the NVISCSPECIES species or the program will terminate with an error.  The program will also terminate with an error if information for a species is specified more than once.
+description integer value that defines the species number associated with the specified PACKAGEDATA data entered on each line. IVISCSPECIES must be greater than zero and less than or equal to NVISCSPECIES. Information must be specified for each of the NVISCSPECIES species in ascending order or the program will terminate with an error.  The program will also terminate with an error if information for a species is specified more than once.
 numeric_index true
 
 block packagedata

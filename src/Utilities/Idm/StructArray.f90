@@ -448,12 +448,12 @@ contains
     type(BlockParserType) :: parser !< block parser to read from
     integer(I4B), intent(in) :: iout !< unit number for output
     logical(LGP) :: endOfBlock
-    integer(I4B) :: row, j, k
+    integer(I4B) :: irow, j, k
     integer(I4B) :: intval, numval
     character(len=LINELENGTH) :: str
     !
-    ! -- initialize row
-    row = 0
+    ! -- initialize index irow
+    irow = 0
     !
     ! -- read entire block
     do
@@ -473,8 +473,8 @@ contains
       ! -- check and update memory allocation
       call this%check_reallocate()
       !
-      ! -- update row counter
-      row = row + 1
+      ! -- update irow index
+      irow = irow + 1
       !
       ! -- handle line reads by column memtype
       do j = 1, this%ncol
@@ -483,24 +483,24 @@ contains
           !
           ! -- memtype integer
         case (1)
-          this%struct_vector_1d(j)%int1d(row) = parser%GetInteger()
+          this%struct_vector_1d(j)%int1d(irow) = parser%GetInteger()
           !
           ! -- memtype real
         case (2)
-          this%struct_vector_1d(j)%dbl1d(row) = parser%GetDouble()
+          this%struct_vector_1d(j)%dbl1d(irow) = parser%GetDouble()
           !
           ! -- memtype charstring
         case (3)
           call parser%GetString(str, &
                                 (.not. this%struct_vector_1d(j)%preserve_case))
           !
-          this%struct_vector_1d(j)%charstr1d(row) = str
+          this%struct_vector_1d(j)%charstr1d(irow) = str
           !
           ! -- memtype intvector
         case (4)
           !
           ! -- get shape for this row
-          numval = this%struct_vector_1d(j)%intvector_shape(row)
+          numval = this%struct_vector_1d(j)%intvector_shape(irow)
           !
           ! -- read and store row values
           do k = 1, numval

@@ -13,7 +13,7 @@ module GwtIcModule
   ! -- Most of the GwtIcType functionality comes from GwfIcType
   type, extends(GwfIcType) :: GwtIcType
   contains
-    procedure :: read_data
+    procedure :: source_data
   end type GwtIcType
 
 contains
@@ -25,6 +25,9 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use IdmMf6FileLoaderModule, only: input_load
+    use ConstantsModule, only: LENPACKAGETYPE
     ! -- dummy
     type(GwtIcType), pointer :: ic
     character(len=*), intent(in) :: name_model
@@ -51,64 +54,49 @@ contains
     ! -- Initialize block parser
     call ic%parser%Initialize(ic%inunit, ic%iout)
     !
+    ! -- Load package input context
+    call input_load(ic%parser, 'IC6', 'GWT', 'IC', ic%name_model, 'IC', iout)
+    !
     ! -- Return
     return
   end subroutine ic_cr
 
-  subroutine read_data(this)
+  subroutine source_data(this)
 ! ******************************************************************************
-! read_data
+! source_data -- source package data from input context
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error
+    use ConstantsModule, only: LENMEMPATH
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_context
+    use GwtIcInputModule, only: GwtIcParamFoundType
     ! -- dummy
     class(GwtIcType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
-    character(len=:), allocatable :: line
-    integer(I4B) :: istart, istop, lloc, ierr
-    logical :: isfound, endOfBlock
-    character(len=24) :: aname(1)
+    character(len=LENMEMPATH) :: idmMemoryPath
+    type(GwtIcParamFoundType) :: found
+    integer(I4B), dimension(:), pointer, contiguous :: map
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! -- Setup the label
-    aname(1) = 'INITIAL CONCENTRATION'
+    ! -- initialize map
+    map => null()
     !
-    ! -- get griddata block
-    call this%parser%GetBlock('GRIDDATA', isfound, ierr)
-    if (isfound) then
-      write (this%iout, '(1x,a)') 'PROCESSING GRIDDATA'
-      do
-        call this%parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call this%parser%GetStringCaps(keyword)
-        call this%parser%GetRemainingLine(line)
-        lloc = 1
-        select case (keyword)
-        case ('STRT')
-          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                        this%parser%iuactive, this%strt, &
-                                        aname(1))
-        case default
-          write (errmsg, '(4x,a,a)') 'ERROR. UNKNOWN GRIDDATA TAG: ', &
-            trim(keyword)
-          call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
-        end select
-      end do
-      write (this%iout, '(1x,a)') 'END PROCESSING GRIDDATA'
-    else
-      call store_error('ERROR.  REQUIRED GRIDDATA BLOCK NOT FOUND.')
-      call this%parser%StoreErrorUnit()
-    end if
+    ! -- set input context memory path
+    idmMemoryPath = create_mem_path(this%name_model, 'IC', idm_context)
+    !
+    ! -- if reduced, set node map
+    if (this%dis%nodes < this%dis%nodesuser) map => this%dis%nodeuser
+    !
+    ! -- source data from input context
+    call mem_set_value(this%strt, 'STRT', idmMemoryPath, map, found%strt)
     !
     ! -- Return
     return
-  end subroutine read_data
+  end subroutine source_data
 
 end module GwtIcModule

@@ -80,12 +80,13 @@ FTYPE | Status | Comment
 DIS6 | complete |
 DISV6 | complete |
 DISU6 | complete |
-IC6 | candidate | stage next set
+IC6 | complete |
 OC6 | IDM time-varying support needed |
 NPF6 | complete |
 STO6 | candidate | simplified period block, good candidate for early tv support
 CSUB6 | IDM time-varying support needed |
-BUY6 | candidate | in progress
+BUY6 | complete |
+VSC6 | complete |
 HFB6 | candidate | period block but no timeseries data
 CHD6 | IDM time-varying support needed | BndType
 WEL6 | IDM time-varying support needed | BndType
@@ -101,24 +102,24 @@ UZF6 | IDM time-varying support needed | BndType
 MVR6 | IDM time-varying support needed |
 GNC6 | candidate | stage next set
 OBS6 | candidate | stage next set
-FMI6 | candidate | in progress
-ADV6 | candidate | stage next set
+FMI6 | complete |
+ADV6 | complete |
 DSP6 | complete |
-SSM6 | candidate | stage next set
-MST6 | candidate | stage next set
-IST6 | IDM time-varying support needed | BndType
+SSM6 | complete |
+MST6 | complete |
+IST6 | candidate | BndType but no period block
 CNC6 | IDM time-varying support needed | BndType
 SRC6 | IDM time-varying support needed | BndType
 LKT6 | IDM time-varying support needed | GwtAptType
 SFT6 | IDM time-varying support needed | GwtAptType
 MWT6 | IDM time-varying support needed | GwtAptType
 UZT6 | IDM time-varying support needed | GwtAptType
-MVT6 | candidate | stage next set
+MVT6 | complete |
 API6 | IDM time-varying support needed | BndType
 
 ## Package Update process
 ###	Update [dfn2f90.py](scripts/dfn2f90.py)
-Add the package dfn file path to the `gwf_dfns` or `gwt_dfns` list structure
+Update the `dfns` list structure, which describes the new dfn input and generated .f90 file, in main.
 ### Run the dfn2f90.py script
 ```shell
 cd utils/idmloader/scripts

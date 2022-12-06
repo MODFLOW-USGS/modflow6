@@ -7,6 +7,7 @@ reader urword
 optional true
 longname save calculated flows to budget file
 description REPLACE save_flows {'{#1}': 'MST'}
+mf6internal ipakcb
 
 block options
 name first_order_decay
@@ -15,6 +16,7 @@ reader urword
 optional true
 longname activate first-order decay
 description is a text keyword to indicate that first-order decay will occur.  Use of this keyword requires that DECAY and DECAY\_SORBED (if sorption is active) are specified in the GRIDDATA block.
+mf6internal decay_order_1
 
 block options
 name zero_order_decay
@@ -23,6 +25,7 @@ reader urword
 optional true
 longname activate zero-order decay
 description is a text keyword to indicate that zero-order decay will occur.  Use of this keyword requires that DECAY and DECAY\_SORBED (if sorption is active) are specified in the GRIDDATA block.
+mf6internal decay_order_0
 
 block options
 name sorption

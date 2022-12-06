@@ -102,9 +102,16 @@ $(OBJDIR)/TimeArraySeries.o \
 $(OBJDIR)/ObsOutputList.o \
 $(OBJDIR)/Observe.o \
 $(OBJDIR)/VectorInt.o \
+$(OBJDIR)/gwt1ssm1idm.o \
+$(OBJDIR)/gwt1mvt1idm.o \
+$(OBJDIR)/gwt1mst1idm.o \
+$(OBJDIR)/gwt1ic1idm.o \
 $(OBJDIR)/gwt1fmi1idm.o \
 $(OBJDIR)/gwt1dspidm.o \
+$(OBJDIR)/gwt1adv1idm.o \
+$(OBJDIR)/gwf3vsc8idm.o \
 $(OBJDIR)/gwf3npf8idm.o \
+$(OBJDIR)/gwf3ic8idm.o \
 $(OBJDIR)/gwf3disv8idm.o \
 $(OBJDIR)/gwf3disu8idm.o \
 $(OBJDIR)/gwf3dis8idm.o \
