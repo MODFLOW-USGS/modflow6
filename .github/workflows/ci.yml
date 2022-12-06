@@ -5,10 +5,18 @@ on:
       - master
       - develop
       - ci-diagnose*
+    paths-ignore:
+      - '**.md'
+      - 'doc/**'
+      - '.github/workflows/release.yml'
   pull_request:
     branches:
       - master
       - develop
+    paths-ignore:
+      - '**.md'
+      - 'doc/**'
+      - '.github/workflows/release.yml'
 jobs:
   lint:
     name: Lint (fprettify)
@@ -57,11 +65,14 @@ jobs:
           cache-downloads: true
           cache-env: true
 
-      - name: Meson setup/compile
+      - name: Meson setup
         run: |
           meson setup builddir -Ddebug=false -Dwerror=true
+
+      - name: Meson compile
+        run: |
           meson compile -C builddir
-      
+
       - name: Meson test
         run: |
           meson test --verbose --no-rebuild -C builddir
@@ -94,7 +105,13 @@ jobs:
           repository: MODFLOW-USGS/modflow6-testmodels
           path: modflow6-testmodels
 
-      - name: Setup gfortran ${{ env.GCC_V }}
+      - name: Checkout modflow6-examples
+        uses: actions/checkout@v3
+        with:
+          repository: MODFLOW-USGS/modflow6-examples
+          path: modflow6-examples
+
+      - name: Setup GNU Fortran ${{ env.GCC_V }}
         uses: awvwgk/setup-fortran@main
         with:
           compiler: gcc
@@ -106,6 +123,26 @@ jobs:
           environment-file: modflow6/environment.yml
           cache-downloads: true
           cache-env: true
+
+      - name: Cache modflow6 examples
+        id: cache-examples
+        uses: actions/cache@v3
+        with:
+          path: modflow6-examples/examples
+          key: modflow6-examples-${{ hashFiles('modflow6-examples/scripts/**') }}
+
+      - name: Install extra Python packages
+        if: steps.cache-examples.outputs.cache-hit != 'true'
+        working-directory: modflow6-examples/etc
+        run: |
+          pip install -r requirements.pip.txt
+
+      - name: Build example models
+        if: steps.cache-examples.outputs.cache-hit != 'true'
+        working-directory: modflow6-examples/etc
+        run: |
+          python ci_build_files.py
+          ls -lh ../examples/
 
       - name: Build modflow6
         working-directory: modflow6
@@ -124,10 +161,17 @@ jobs:
         run: |
           pytest -v --durations 0 get_exes.py
 
-      - name: Run tests
+      - name: Test programs
         working-directory: modflow6/autotest
         run: |
           pytest -v -n auto --durations 0
+
+      - name: Test scripts
+        working-directory: modflow6/distribution
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          pytest -v --durations 0
 
   test_gfortran_previous:
     name: Test gfortran (${{ matrix.GCC_V }}, ${{ matrix.os }})
@@ -158,7 +202,7 @@ jobs:
           repository: MODFLOW-USGS/modflow6-testmodels
           path: modflow6-testmodels
 
-      - name: Setup gfortran ${{ matrix.GCC_V }}
+      - name: Setup GNU Fortran ${{ matrix.GCC_V }}
         uses: awvwgk/setup-fortran@main
         with:
           compiler: gcc
@@ -188,10 +232,10 @@ jobs:
         run: |
           pytest -v --durations 0 get_exes.py
 
-      - name: Run tests
+      - name: Test modflow6
         working-directory: modflow6/autotest
         run: |
-          pytest -v -n auto --durations 0 
+          pytest -v -n auto --durations 0
 
   test_ifort:
     name: Test (ifort)
@@ -219,6 +263,12 @@ jobs:
           repository: MODFLOW-USGS/modflow6-testmodels
           path: modflow6-testmodels
 
+      - name: Checkout modflow6-examples
+        uses: actions/checkout@v3
+        with:
+          repository: MODFLOW-USGS/modflow6-examples
+          path: modflow6-examples
+
       - name: Setup Micromamba
         uses: mamba-org/provision-with-micromamba@main
         with:
@@ -226,10 +276,10 @@ jobs:
           cache-downloads: true
           cache-env: true
 
-      - name: Setup ifort
+      - name: Setup Intel Fortran
         uses: modflowpy/install-intelfortran-action@v1
 
-      - name: Add Micromamba Scripts dir to path
+      - name: Fix Micromamba path (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
@@ -237,6 +287,30 @@ jobs:
           $mamba_bin = "C:\Users\runneradmin\micromamba-root\envs\modflow6\Scripts"
           echo $mamba_bin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
+      - name: Cache modflow6 examples
+        id: cache-examples
+        uses: actions/cache@v3
+        with:
+          path: modflow6-examples/examples
+          key: modflow6-examples-${{ hashFiles('modflow6-examples/scripts/**') }}
+
+      - name: Install extra Python packages
+        if: steps.cache-examples.outputs.cache-hit != 'true'
+        working-directory: modflow6-examples/etc
+        run: |
+          pip install -r requirements.pip.txt
+
+      - name: Build example models
+        if: steps.cache-examples.outputs.cache-hit != 'true'
+        working-directory: modflow6-examples/etc
+        run: |
+          python ci_build_files.py
+          ls -lh ../examples/
+
+      - name: Update version files
+        working-directory: modflow6/distribution
+        run: python update_version.py
+
       - name: Build modflow6
         if: runner.os != 'Windows'
         working-directory: modflow6
@@ -245,7 +319,7 @@ jobs:
           meson install -C builddir
           meson test --verbose --no-rebuild -C builddir
 
-      - name: Build modflow6
+      - name: Build modflow6 (Windows)
         if: runner.os == 'Windows'
         working-directory: modflow6
         shell: pwsh
@@ -265,175 +339,39 @@ jobs:
         run: |
           pytest -v --durations 0 get_exes.py
           
-      - name: Get executables
+      - name: Get executables (Windows)
         if: runner.os == 'Windows'
         working-directory: modflow6/autotest
         shell: pwsh
         run: |
           pytest -v --durations 0 get_exes.py
-      
-      - name: Run tests
+
+      - name: Test programs
         if: runner.os != 'Windows'
         working-directory: modflow6/autotest
         run: |
           pytest -v -n auto --durations 0
 
-      - name: Run tests
+      - name: Test programs (Windows)
         if: runner.os == 'Windows'
         working-directory: modflow6/autotest
         shell: pwsh
         run: |
           pytest -v -n auto --durations 0
-  
-  test_makefiles_gfortran:
-    name: Test makefiles (gfortran ${{ matrix.gcc_v }}, ${{ matrix.os }})
-    needs:
-      - lint
-      - build
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ ubuntu-22.04, macos-12, windows-2022]
-        gcc_v: [ 12 ]
-    defaults:
-      run:
-        shell: bash -l {0}
-    env:
-      FC: gfortran
-    steps:
 
-      - name: Checkout modflow6
-        uses: actions/checkout@v3
-        with:
-          path: modflow6
-
-      - name: Checkout modflow6-testmodels
-        uses: actions/checkout@v3
-        with:
-          repository: MODFLOW-USGS/modflow6-testmodels
-          path: modflow6-testmodels
-
-      - name: Setup gfortran ${{ matrix.gcc_v }}
-        uses: awvwgk/setup-fortran@main
-        with:
-          compiler: gcc
-          version: ${{ matrix.gcc_v }}
-
-      - name: Setup Micromamba
-        uses: mamba-org/provision-with-micromamba@main
-        with:
-          environment-file: modflow6/environment.yml
-          cache-downloads: true
-          cache-env: true
-
-      - name: Test makefiles
+      - name: Test scripts
+        if: runner.os != 'Windows'
         working-directory: modflow6/distribution
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          pytest -v -n auto build_makefiles.py
-          
-  test_makefiles_ifort:
-    name: Test makefiles (ifort, ${{ matrix.os }})
-    needs:
-      - lint
-      - build
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ ubuntu-latest, macos-latest ]
-    defaults:
-      run:
-        shell: bash -l {0}
-    env:
-      FC: ifort
-    steps:
+          pytest -v --durations 0
 
-      - name: Checkout modflow6
-        uses: actions/checkout@v3
-        with:
-          path: modflow6
-
-      - name: Checkout modflow6-testmodels
-        uses: actions/checkout@v3
-        with:
-          repository: MODFLOW-USGS/modflow6-testmodels
-          path: modflow6-testmodels
-
-      - name: Setup ifort
-        uses: modflowpy/install-intelfortran-action@v1
-
-      - name: Setup Micromamba
-        uses: mamba-org/provision-with-micromamba@main
-        with:
-          environment-file: modflow6/environment.yml
-          cache-downloads: true
-          cache-env: true
-
-      - name: Test makefiles
+      - name: Test scripts (Windows)
+        if: runner.os == 'Windows'
         working-directory: modflow6/distribution
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          pytest -v -n auto build_makefiles.py
-
-  test_nightly_build_gfortran:
-    name: Test nightly build (gfortran 12)
-    needs:
-      - lint
-      - build
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-22.04
-            ostag: linux
-          - os: macos-12
-            ostag: mac
-          - os: windows-2022
-            ostag: win64
-    env:
-      GCC_V: 12
-    defaults:
-      run:
-        shell: bash -l {0}
-    steps:
-
-      - name: Checkout modflow6
-        uses: actions/checkout@v3
-      
-      - name: Setup gfortran ${{ env.GCC_V }}
-        uses: awvwgk/setup-fortran@main
-        with:
-          compiler: gcc
-          version: ${{ env.GCC_V }}
-
-      - name: Setup Micromamba
-        uses: mamba-org/provision-with-micromamba@main
-        with:
-          cache-downloads: true
-          cache-env: true
-
-      - name: Print Python package versions
-        run: |
-          pip list
-
-      - name: Update flopy
-        working-directory: autotest
-        run: |
-          python update_flopy.py
-          
-      - name: Run nightly build script
-        working-directory: distribution
-        run: |
-          python build_nightly.py
-          
-      - name: Make sure zip file exists
-        working-directory: distribution
-        run: |
-          path="temp_zip/${{ matrix.ostag }}.zip"
-          if [ -e "$path" ]; then
-            echo "Zipfile found: $path"
-          else
-            echo "Zipfile not found: $path"
-            exit 1
-          fi
+          pytest -v --durations 0

@@ -52,7 +52,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: modflow6-examples/examples
-          key: modflow6-examples-${{ hashFiles('modflow6-examples/data/**') }}
+          key: modflow6-examples-${{ hashFiles('modflow6-examples/scripts/**') }}
 
       - name: Install extra Python packages
         if: matrix.repo == 'examples' && steps.cache-examples.outputs.cache-hit != 'true'
