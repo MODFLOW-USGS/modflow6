@@ -325,11 +325,12 @@ def build_distribution(
         bin_path=output_path / "bin",
         overwrite=overwrite)
 
-    # examples
-    setup_examples(
-        bin_path=output_path / "bin",
-        examples_path=output_path / "examples",
-        overwrite=overwrite)
+    if not development:
+        # examples
+        setup_examples(
+            bin_path=output_path / "bin",
+            examples_path=output_path / "examples",
+            overwrite=overwrite)
 
     # docs
     build_documentation(

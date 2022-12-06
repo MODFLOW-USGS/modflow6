@@ -444,10 +444,10 @@ if __name__ == "__main__":
             current = Version.from_file(project_root_path / "version.txt")
             if args.bump_major:
                 print(f"Incrementing major number")
-                version = Version(current.major + 1, current.minor, current.patch)
+                version = Version(current.major + 1, 0, 0)
             elif args.bump_minor:
                 print(f"Incrementing minor number")
-                version = Version(current.major, current.minor + 1, current.patch)
+                version = Version(current.major, current.minor + 1, 0)
             else:
                 print(f"Incrementing patch number")
                 version = Version(current.major, current.minor, current.patch + 1)
