@@ -174,7 +174,7 @@ A list of all MODFLOW 6 releases is shown in table \ref{tab:releases}.  Changes 
 6.2.2 & July 30, 2021 & same as above \\
 6.3.0 & March 4, 2022 & \url{https://doi.org/10.5066/P97FFF9M} \\
 6.4.0 & November 30, 2022 & \url{https://doi.org/10.5066/P9FL1JCC} \\
-6.4.1 & December xx, 2022 & \url{https://doi.org/10.5066/P9FL1JCC} \\
+6.4.1 & December 6, 2022 & \url{https://doi.org/10.5066/P9FL1JCC} \\
 \hline
 \label{tab:releases}
 \end{tabular*}
@@ -188,64 +188,7 @@ A list of all MODFLOW 6 releases is shown in table \ref{tab:releases}.  Changes 
 This section describes changes introduced into MODFLOW~6 for the current release.  These changes may substantially affect users.
 
 \begin{itemize}
-	
-	%\item Version mf6.x.x--Month xx, 202x
-	\item Version mf6.4.1--December xx, 2022
-	
-	\underline{NEW FUNCTIONALITY}
-	\begin{itemize}
-		\item -
-	%	\item xxx
-	%	\item xxx
-	\end{itemize}
-
-	\underline{EXAMPLES}
-	\begin{itemize}
-		\item -
-	%	\item xxx
-	%	\item xxx
-	\end{itemize}
-
-	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
-	\underline{BASIC FUNCTIONALITY}
-	\begin{itemize}
-		\item -
-	\end{itemize}
-
-	\underline{INTERNAL FLOW PACKAGES}
-	\begin{itemize}
-		\item - The Viscosity (VSC) Package introduced in version 6.4.0 would report an error for certain types of stress packages if the IDOMAIN capability was activated by the user.  In some cases, the error message would indicate that a boundary was not assigned to a valid cell.  This invalid error would prevent the simulation from proceeding.  The error was corrected by removing the invalid check so that the program can proceed normally.
-	%	\item xxx
-	\end{itemize}
-
-	\underline{STRESS PACKAGES}
-	\begin{itemize}
-		\item -
-	%	\item xxx
-	%	\item xxx
-	\end{itemize}
-
-	\underline{ADVANCED STRESS PACKAGES}
-	\begin{itemize}
-		\item -
-	%	\item xxx
-	\end{itemize}
-
-	%\underline{SOLUTION}
-	%\begin{itemize}
-	%	\item xxx
-	%	\item xxx
-	%	\item xxx
-	%\end{itemize}
-
-	\underline{EXCHANGES}
-	\begin{itemize}
-		\item -  
-	%	\item xxx
-	%	\item xxx
-	\end{itemize}
-
-	
+\input{v6.4.1.tex}
 \end{itemize}
 
 % -------------------------------------------------
