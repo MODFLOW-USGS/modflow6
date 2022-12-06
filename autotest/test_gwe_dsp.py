@@ -3,11 +3,11 @@
 # One-Dimensional Transport in a Uniform Flow Field.
 # The purpose of this script is to test the new heat transport model developed
 # for MODFLOW 6.  To that end, this problem uses the setup of the first MT3DMS
-# test problem but adapts it for heat. MODFLOW 6 is setup using the new GWE 
+# test problem but adapts it for heat. MODFLOW 6 is setup using the new GWE
 # model with input parameters entered in their native units.  The equivalent
-# values are calculated for "tricking" MT3DMS into heat transport.  
+# values are calculated for "tricking" MT3DMS into heat transport.
 #
-# It may be possible to find a 1D heat transport analytical solution in the 
+# It may be possible to find a 1D heat transport analytical solution in the
 # future.
 
 # Imports
@@ -19,6 +19,14 @@ import numpy as np
 import pytest
 
 try:
+    import pymake
+except:
+    msg = "Error. Pymake package is not available.\n"
+    msg += "Try installing using the following command:\n"
+    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
+    raise Exception(msg)
+
+try:
     import flopy
 except:
     msg = "Error. FloPy package is not available.\n"
@@ -28,9 +36,8 @@ except:
 
 import targets
 
-exe_name_mf = targets.target_dict["mf2005s"]
-exe_name_mt = targets.target_dict["mt3dms"]
-exe_name_mf6 = targets.target_dict["mf6"]
+from framework import testing_framework
+from simulation import Simulation
 
 # Base simulation and model name and workspace
 
@@ -82,10 +89,10 @@ ibound[0, 0, -1] = -1
 mixelm = 0  # FD
 rhob = 1110.0
 sp2 = 0.0  # read, but not used in this problem
-kd = 1.8168E-4
+kd = 1.8168e-4
 strt_temp = np.zeros((nlay, nrow, ncol), dtype=float)
 dispersivity = 1.0
-dmcoef = 3.2519E-7  # Molecular diffusion coefficient
+dmcoef = 3.2519e-7  # Molecular diffusion coefficient
 
 # Set solver parameter values (and related)
 nouter, ninner = 100, 300
@@ -114,128 +121,7 @@ c0 = 40.0
 ctpspd = [[(0, 0, 0), c0]]
 
 
-#
-# MF2K5/MT3DMS and MODFLOW 6 (sim) flopy objects returned if building the model
-#
-
-def build_mfmt_models(idx, dir):
-    # Base MF2K5/MT3DMS runs
-    ws = dir
-    name = ex[idx]
-
-    mt3d_ws = os.path.join(ws, name, "mt3d")
-    modelname_mf = "p01-mf"
-
-    # Instantiate the MODFLOW model
-    mf = flopy.modflow.Modflow(
-        modelname=modelname_mf, model_ws=mt3d_ws, exe_name=exe_name_mf
-    )
-
-    # Instantiate discretization package
-    # units: itmuni=4 (days), lenuni=2 (m)
-    flopy.modflow.ModflowDis(
-        mf,
-        nlay=nlay,
-        nrow=nrow,
-        ncol=ncol,
-        delr=delr,
-        delc=delc,
-        top=top,
-        nstp=nstp,
-        botm=botm,
-        perlen=perlen,
-        itmuni=4,
-        lenuni=2,
-    )
-
-    # Instantiate basic package
-    flopy.modflow.ModflowBas(mf, ibound=ibound, strt=strt)
-
-    # Instantiate layer property flow package
-    flopy.modflow.ModflowLpf(mf, hk=k11, laytyp=laytyp)
-
-    # Instantiate solver package
-    flopy.modflow.ModflowPcg(mf)
-
-    # Instantiate link mass transport package (for writing linker file)
-    flopy.modflow.ModflowLmt(mf)
-
-    # Write and run the simulation to create the linker file
-    mf.write_input()
-    mf.run_model(silent=False)
-
-    # Transport
-    modelname_mt = "p01-mt"
-    mt = flopy.mt3d.Mt3dms(
-        modelname=modelname_mt,
-        model_ws=mt3d_ws,
-        exe_name=exe_name_mt,
-        modflowmodel=mf,
-    )
-
-    icbund = np.ones((nlay, nrow, ncol), dtype=int)
-    icbund[0, 0, 0] = -1
-    strt_temp = np.zeros((nlay, nrow, ncol), dtype=float)
-    strt_temp[0, 0, 0] = c0
-    flopy.mt3d.Mt3dBtn(
-        mt,
-        laycon=laytyp,
-        icbund=icbund,
-        prsity=prsity,
-        sconc=strt_temp,
-        dt0=dt0,
-        ifmtcn=1,
-    )
-
-    # Instatiate the advection package
-    flopy.mt3d.Mt3dAdv(
-        mt,
-        mixelm=mixelm,
-        dceps=dceps,
-        nplane=nplane,
-        npl=npl,
-        nph=nph,
-        npmin=npmin,
-        npmax=npmax,
-        nlsink=nlsink,
-        npsink=npsink,
-        percel=0.5,
-    )
-
-    # Instantiate the dispersion package
-    flopy.mt3d.Mt3dDsp(mt, al=dispersivity, dmcoef=dmcoef)
-
-    # Set reactive variables and instantiate chemical reaction package
-    isothm = 1
-    flopy.mt3d.Mt3dRct(
-        mt,
-        isothm=isothm,
-        ireact=0,
-        igetsc=0,
-        rhob=rhob,
-        sp1=kd
-    )
-
-    # Instantiate the source/sink mixing package
-    flopy.mt3d.Mt3dSsm(mt)
-
-    # Instantiate the GCG solver in MT3DMS
-    flopy.mt3d.Mt3dGcg(mt, mxiter=10)
-
-    mt.write_input()
-    fname = os.path.join(mt3d_ws, "MT3D001.UCN")
-    if os.path.isfile(fname):
-        os.remove(fname)
-    mt.run_model(silent=False)
-
-    ucnobj = flopy.utils.UcnFile(fname)
-    times = ucnobj.get_times()
-    conc = ucnobj.get_alldata()
-
-    return conc, times
-
-
-def build_mf6_models(idx, dir):
+def build_model(idx, dir):
     # Base MF6 GWE model type
     ws = dir
     name = ex[idx]
@@ -248,7 +134,7 @@ def build_mf6_models(idx, dir):
 
     sim_ws = os.path.join(ws, name)
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, sim_ws=ws, exe_name=exe_name_mf6, version="mf6"
+        sim_name=name, sim_ws=ws, exe_name="mf6", version="mf6"
     )
 
     # Instantiating MODFLOW 6 time discretization
@@ -309,9 +195,7 @@ def build_mf6_models(idx, dir):
     )
 
     # Instantiating MODFLOW 6 initial conditions package for flow model
-    flopy.mf6.ModflowGwfic(
-        gwf, strt=strt, filename="{}.ic".format(gwfname)
-    )
+    flopy.mf6.ModflowGwfic(gwf, strt=strt, filename="{}.ic".format(gwfname))
 
     # Instantiating VSC
     if viscosity_on[idx]:
@@ -347,9 +231,7 @@ def build_mf6_models(idx, dir):
         gwf,
         head_filerecord="{}.hds".format(gwfname),
         budget_filerecord="{}.cbc".format(gwfname),
-        headprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
@@ -424,6 +306,7 @@ def build_mf6_models(idx, dir):
     # Instantiating MODFLOW 6 transport mass storage package (formerly "reaction" package in MT3DMS)
     flopy.mf6.ModflowGwemst(
         gwe,
+        save_flows=True,
         porosity=prsity,
         cpw=4183.0,
         cps=760.0,
@@ -468,83 +351,167 @@ def build_mf6_models(idx, dir):
         filename="{}.gwfgwe".format(name),
     )
 
-    # Grab output
-    sim.write_simulation()
-    fname = os.path.join(ws, gwename + ".ucn")
-    if os.path.isfile(fname):
-        os.remove(fname)
-    success, buff = sim.run_simulation(silent=False, report=True)
-    if not success:
-        print(buff)
-
-    # load temperatures
-    ucnobj = flopy.utils.HeadFile(fname, precision="double", text="TEMPERATURE")
-    times = ucnobj.get_times()
-    conc = ucnobj.get_alldata()
-
-    return conc, times
+    return sim, None
 
 
-# Function to write model files
-def write_model(mf2k5, mt3d, sim, silent=True):
-    if config.writeModel:
-        mf2k5.write_input()
-        mt3d.write_input()
-        sim.write_simulation(silent=silent)
-
-
-# Function to ensure GWE model is working properly
-def eval_results(mt3d, mf6):
-    print("evaluating results...")
-
-    # read transport results from model
-    mt3d_out_path = mt3d.model_ws
-    mf6_out_path = mf6.simulation_data.mfpath.get_sim_path()
-    mf6.simulation_data.mfpath.get_sim_path()
-
-    # Get the MT3DMS concentration output
-    fname_mt3d = os.path.join(mt3d_out_path, "MT3D001.UCN")
-    ucnobj_mt3d = flopy.utils.UcnFile(fname_mt3d)
-    conc_mt3d = ucnobj_mt3d.get_alldata()
-
-    # Get the MF6 concentration output
-    gwt = mf6.get_model(list(mf6.model_names)[1])
-    #ucnobj_mf6 = gwt.output.temperature()
-    ucnobj_mf6 = gwt.output.concentration()
-    conc_mf6 = ucnobj_mf6.get_alldata()
-
-
-def eval_results(sim):
+def eval_model(sim):
     print("evaluating results...")
 
     # read transport results from GWE model
     name = ex[sim.idxsim]
-    gwfname = "gwf-" + name
+    gwename = "gwe-" + name
 
-    fname = gwfname + ".bud"
-    fname = os.path.join(sim.simpath, fname)
-    assert os.path.isfile(fname)
-    budobj = flopy.utils.CellBudgetFile(fname, precision="double")
-    outbud = budobj.get_data(text="             GHB")
+    fpth = os.path.join(sim.simpath, f"{gwename}.ucn")
+    try:
+        # load temperatures
+        cobj = flopy.utils.HeadFile(
+            fpth, precision="double", text="TEMPERATURE"
+        )
+        conc1 = cobj.get_alldata()
+    except:
+        assert False, f'could not load concentration data from "{fpth}"'
+
+    # This is the answer
+    c_ans = [
+        4.00000000e01,
+        3.99999983e01,
+        3.99999898e01,
+        3.99999566e01,
+        3.99998462e01,
+        3.99995197e01,
+        3.99986427e01,
+        3.99964775e01,
+        3.99915230e01,
+        3.99809477e01,
+        3.99597839e01,
+        3.99198995e01,
+        3.98488519e01,
+        3.97288247e01,
+        3.95359427e01,
+        3.92403042e01,
+        3.88070317e01,
+        3.81985089e01,
+        3.73777505e01,
+        3.63125911e01,
+        3.49801399e01,
+        3.33708033e01,
+        3.14911723e01,
+        2.93652158e01,
+        2.70334931e01,
+        2.45504338e01,
+        2.19800532e01,
+        1.93907148e01,
+        1.68496655e01,
+        1.44180473e01,
+        1.21469471e01,
+        1.00748333e01,
+        8.22648357e00,
+        6.61329449e00,
+        5.23470060e00,
+        4.08034410e00,
+        3.13261741e00,
+        2.36924164e00,
+        1.76562010e00,
+        1.29679741e00,
+        9.38944408e-01,
+        6.70362685e-01,
+        4.72056032e-01,
+        3.27947150e-01,
+        2.24829892e-01,
+        1.52144844e-01,
+        1.01654320e-01,
+        6.70766201e-02,
+        4.37223104e-02,
+        2.81598160e-02,
+        1.79249349e-02,
+        1.12795213e-02,
+        7.01828727e-03,
+        4.31895689e-03,
+        2.62924728e-03,
+        1.58374083e-03,
+        9.44125798e-04,
+        5.57133590e-04,
+        3.25507431e-04,
+        1.88330495e-04,
+        1.07925092e-04,
+        6.12700035e-05,
+        3.44648666e-05,
+        1.92125906e-05,
+        1.06157638e-05,
+        5.81494908e-06,
+        3.15821246e-06,
+        1.70101068e-06,
+        9.08679391e-07,
+        4.81524218e-07,
+        2.53159103e-07,
+        1.32068539e-07,
+        6.83748562e-08,
+        3.51353218e-08,
+        1.79225415e-08,
+        9.07652498e-09,
+        4.56413759e-09,
+        2.27913640e-09,
+        1.13033292e-09,
+        5.56823550e-10,
+        2.72491770e-10,
+        1.32483548e-10,
+        6.40015158e-11,
+        3.07244529e-11,
+        1.46584603e-11,
+        6.95098705e-12,
+        3.27643160e-12,
+        1.53530190e-12,
+        7.15261898e-13,
+        3.31325318e-13,
+        1.52616350e-13,
+        6.99104644e-14,
+        3.18504005e-14,
+        1.44329547e-14,
+        6.50576657e-15,
+        2.91728603e-15,
+        1.30145909e-15,
+        5.77678170e-16,
+        2.55141072e-16,
+        1.12178999e-16,
+        5.01900830e-17,
+    ]
+
+    msg = f"gwe temperatures do not match stored concentrations"
+    assert np.allclose(conc1[0, 0, 0, :], c_ans, atol=1e-5), msg
 
 
-def test_gwe_dsp01():
+# - No need to change any code below
+@pytest.mark.parametrize(
+    "idx, dir",
+    list(enumerate(exdirs)),
+)
+def test_mf6model(idx, dir):
+    # initialize testing framework
+    test = testing_framework()
+
+    # build the model
+    test.build_mf6_models(build_model, idx, dir)
 
     # run the test model
-    idx = 0
-    dir = exdirs[idx]
+    test.run_mf6(Simulation(dir, exfunc=eval_model, idxsim=idx))
 
-    mt3d_conc, mt3d_times = build_mfmt_models(idx, dir)
-    gwe_temp, gwe_times = build_mf6_models(idx, dir)
 
-    msg = f"gwe temperatures do not equal mt3dms concentrations"
-    assert np.allclose(gwe_temp, mt3d_conc, atol=0.41159), msg
+def main():
+    # initialize testing framework
+    test = testing_framework()
+
+    # run the test model
+    for idx, dir in enumerate(exdirs):
+
+        test.build_mf6_models(build_model, idx, dir)
+        sim = Simulation(dir, exfunc=eval_model, idxsim=idx)
+        test.run_mf6(sim)
 
 
 if __name__ == "__main__":
-    # ### Heat Transport in 1-dimension
+    # Heat Transport in 1-dimension
     # print message
     print(f"standalone run of {os.path.basename(__file__)}")
 
     # run main routine
-    test_gwe_dsp01()
+    main()
