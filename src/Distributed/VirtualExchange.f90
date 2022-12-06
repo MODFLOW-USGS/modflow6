@@ -41,7 +41,7 @@ contains
 
   !> @brief Create the virtual exchange base
   !<
-  subroutine vx_create(this, name, exg_id, m1_id, m2_id)       
+  subroutine vx_create(this, name, exg_id, m1_id, m2_id)
     class(VirtualExchangeType) :: this
     character(len=*) :: name
     integer(I4B) :: exg_id

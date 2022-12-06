@@ -1,6 +1,7 @@
 module VirtualGwtExchangeModule
   use KindModule, only: I4B
   use VirtualDataListsModule, only: virtual_exchange_list
+  use VirtualDataContainerModule, only: VDC_GWTEXG_TYPE
   use VirtualExchangeModule
   implicit none
   private
@@ -44,6 +45,7 @@ subroutine vtx_create(this, name, exg_id, m1_id, m2_id)
   integer(I4B) :: m2_id
 
   call this%VirtualExchangeType%create(name, exg_id, m1_id, m2_id)
+  this%container_type = VDC_GWTEXG_TYPE
 
 end subroutine vtx_create
 

@@ -1,7 +1,7 @@
 module RunControlModule
   use KindModule, only: I4B
   use SimStagesModule
-  use VirtualDataStoreModule
+  use VirtualDataManagerModule
   use MapperModule  
   use ListsModule, only: baseconnectionlist, basesolutionlist
   use SpatialModelConnectionModule, only: SpatialModelConnectionType, &
@@ -13,7 +13,7 @@ module RunControlModule
   public :: create_seq_run_control
 
   type, public :: RunControlType
-    class(VirtualDataStoreType), pointer :: virtual_data_store !< contains globally accessible data, timely synchronized 
+    class(VirtualDataManagerType), pointer :: virtual_data_store !< contains globally accessible data, timely synchronized 
                                                                !! by direct linking (local) or message passing (remote)
     type(MapperType) :: mapper !< a 'mapper' for filling the interface models: this needs a better name/place
   contains

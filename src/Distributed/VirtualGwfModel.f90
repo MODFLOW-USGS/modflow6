@@ -1,6 +1,7 @@
 module VirtualGwfModelModule
   use KindModule, only: I4B
   use VirtualBaseModule
+  use VirtualDataContainerModule, only: VDC_GWFMODEL_TYPE
   use VirtualModelModule
   use SimStagesModule
   use NumericalModelModule, only: NumericalModelType
@@ -62,6 +63,7 @@ contains
     
     ! create base
     call this%VirtualModelType%create(name, id, model)
+    this%container_type = VDC_GWFMODEL_TYPE
     
     ! allocate fields
     call this%allocate_data()

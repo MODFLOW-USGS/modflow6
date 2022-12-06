@@ -36,7 +36,7 @@ contains
   subroutine mpi_ctrl_start(this)
     class(MpiRunControlType) :: this
     ! local
-    integer(I4B) :: ierr
+    integer :: ierr
     character(len=*), parameter :: file = '/home/russcher/.petscrc'
     logical(LGP) :: wait_dbg
     
@@ -68,7 +68,8 @@ contains
   subroutine wait_for_debugger(this)
     class(MpiRunControlType) :: this
     ! local
-    integer(I4B) :: icnt, ierr
+    integer :: ierr
+    integer(I4B) :: icnt
 
     if (proc_id == 0) then
       icnt = 0
@@ -82,7 +83,7 @@ contains
   subroutine mpi_ctrl_finish(this)
     class(MpiRunControlType) :: this
     ! local
-    integer(I4B) :: ierr
+    integer :: ierr
 
     ! finish mpi    
 #if defined(__WITH_PETSC__)

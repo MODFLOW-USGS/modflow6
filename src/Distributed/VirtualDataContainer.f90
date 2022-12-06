@@ -10,12 +10,24 @@ module VirtualDataContainerModule
 
   public :: get_vdc_from_list
 
+  integer(I4B), public, parameter :: VDC_UNKNOWN_TYPE = 0
+  integer(I4B), public, parameter :: VDC_GWFMODEL_TYPE = 1
+  integer(I4B), public, parameter :: VDC_GWTMODEL_TYPE = 2
+  integer(I4B), public, parameter :: VDC_GWFEXG_TYPE = 3
+  integer(I4B), public, parameter :: VDC_GWTEXG_TYPE = 4
+  integer(I4B), public, parameter :: VDC_GWFMVR_TYPE = 5
+  integer(I4B), public, parameter :: VDC_GWTMVT_TYPE = 6
+
   type, public :: VirtualDataContainerType
-    type(ListType) :: virtual_data_list
-    character(LENCOMPONENTNAME) :: name    
-    integer(I4B) :: id
+    type(ListType) :: virtual_data_list !< a list with all virtual data items for this container
+    integer(I4B) :: container_type !< to identify the actual type of this container
+    character(LENCOMPONENTNAME) :: name !< container name (model, exchange, ...) used in the memory path
+    integer(I4B) :: id !< unique identifier matching with the real counterpart
     character(LENCONTEXTNAME) :: vmem_ctx !< prefixes virtual memory located on remote processes
-    logical(LGP) :: is_remote
+    logical(LGP) :: is_remote !< when true, the physical container (model, exchange, ...) resides on a remote process
+    ! for parallel
+    logical(LGP) :: is_active !< when true, this container is being synchronized
+    integer(I4B) :: orig_rank !< the global rank of the process which holds the physical data for this container
   contains
     procedure :: vdc_create
     generic :: map => map_scalar, map_array1d, map_array2d
@@ -23,6 +35,7 @@ module VirtualDataContainerModule
     procedure :: link_items => vdc_link_items
     procedure :: get_vrt_mem_path => vdc_get_vrt_mem_path
     procedure :: destroy => vdc_destroy
+    procedure :: set_orig_rank => vdc_set_orig_rank
     ! private
     procedure, private :: map_scalar
     procedure, private :: map_array1d
@@ -42,11 +55,10 @@ contains
     this%name = name
     this%id = id
     this%is_remote = is_remote
-    if (is_remote) then
-      write(this%vmem_ctx, '(a)') '__REMOTE__'
-    else
-      this%vmem_ctx = 'undefined'
-    end if
+    this%vmem_ctx = 'undefined'
+    this%orig_rank = 0
+    this%is_active = .true.
+    this%container_type = VDC_UNKNOWN_TYPE
 
   end subroutine vdc_create
 
@@ -199,6 +211,15 @@ contains
     end do
 
   end subroutine vdc_destroy
+
+  subroutine vdc_set_orig_rank(this, rank)
+    class(VirtualDataContainerType) :: this
+    integer(I4B) :: rank
+
+    this%orig_rank = rank
+    write(this%vmem_ctx, '(a,i0,a)') '__P', rank, '__'
+
+  end subroutine vdc_set_orig_rank
 
   function get_vdc_from_list(list, idx) result(vdc)
     type(ListType) :: list

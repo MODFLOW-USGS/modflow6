@@ -24,7 +24,7 @@ modflow_sources = files(
     'Distributed' / 'VirtualBase.f90',
     'Distributed' / 'VirtualDataContainer.f90',
     'Distributed' / 'VirtualDataLists.f90',
-    'Distributed' / 'VirtualDataStore.f90',
+    'Distributed' / 'VirtualDataManager.f90',
     'Distributed' / 'VirtualExchange.f90',    
     'Distributed' / 'VirtualGwfExchange.f90',
     'Distributed' / 'VirtualGwtExchange.f90',
@@ -233,6 +233,7 @@ modflow_petsc_sources = files(
 )
 
 modflow_mpi_sources = files(
+  'Distributed' / 'MpiMessageBuilder.f90',
   'Distributed' / 'MpiRouter.f90',
   'Distributed' / 'MpiRunControl.F90'
 )

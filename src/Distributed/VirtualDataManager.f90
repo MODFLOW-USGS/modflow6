@@ -1,4 +1,4 @@
-module VirtualDataStoreModule  
+module VirtualDataManagerModule  
   use KindModule, only: I4B
   use STLVecIntModule
   use VirtualDataListsModule, only: virtual_model_list, virtual_exchange_list
@@ -16,7 +16,7 @@ module VirtualDataStoreModule
 
   ! TODO_MJR: virtual solution should be a virtual data
   ! collection targeting a single remote address
-  type, public :: VirtualDataStoreType
+  type, public :: VirtualDataManagerType
     integer(I4B) :: nr_solutions
     integer(I4B), dimension(:), allocatable :: solution_ids
     class(VirtualSolutionType), dimension(:), pointer :: virtual_solutions
@@ -38,13 +38,13 @@ module VirtualDataStoreModule
     procedure, private :: update_solution
     procedure, private :: link
     procedure, private :: count_nr_solutions
-  end type VirtualDataStoreType
+  end type VirtualDataManagerType
 
 contains
 
   !> @brief Initialize the virtual data store
   subroutine vds_create(this, sim_mode)
-    class(VirtualDataStoreType) :: this
+    class(VirtualDataManagerType) :: this
     character(len=*) :: sim_mode
     ! local    
     integer(I4B) :: nr_sol
@@ -64,14 +64,14 @@ contains
   !> @brief Initialize internal components
   !<
   subroutine vds_init(this)
-    class(VirtualDataStoreType) :: this
+    class(VirtualDataManagerType) :: this
 
     call this%router%initialize()
 
   end subroutine
 
   subroutine vds_add_solution(this, num_sol)
-    class(VirtualDataStoreType) :: this
+    class(VirtualDataManagerType) :: this
     class(NumericalSolutionType), pointer :: num_sol
     ! local
     integer(I4B) :: i, ix, im, ihx
@@ -127,7 +127,7 @@ contains
   !> @brief Synchronize the full virtual data store for this stage
   !<
   subroutine vds_synchronize(this, stage)
-    class(VirtualDataStoreType) :: this
+    class(VirtualDataManagerType) :: this
     integer(I4B) :: stage
 
     call this%prepare_all(stage)
@@ -137,7 +137,7 @@ contains
   end subroutine vds_synchronize
 
   subroutine prepare_all(this, stage)
-    class(VirtualDataStoreType) :: this
+    class(VirtualDataManagerType) :: this
     integer(I4B) :: stage
     ! local
     integer(I4B) :: i
@@ -156,7 +156,7 @@ contains
   end subroutine prepare_all
 
   subroutine link_all(this, stage)
-    class(VirtualDataStoreType) :: this
+    class(VirtualDataManagerType) :: this
     integer(I4B) :: stage
     ! local
     integer(I4B) :: i
@@ -181,7 +181,7 @@ contains
   !> @brief Synchronize one particular solution for this stage  
   !<
   subroutine vds_synchronize_sln(this, id_sln, stage)
-    class(VirtualDataStoreType) :: this
+    class(VirtualDataManagerType) :: this
     integer(I4B) :: id_sln !< the id of the solution
     integer(I4B) :: stage
     ! local
@@ -197,7 +197,7 @@ contains
   !! exchanges, etc.) to schedule their virtual data
   !< items for synchronization
   subroutine prepare_solution(this, virtual_sol, stage)
-    class(VirtualDataStoreType) :: this
+    class(VirtualDataManagerType) :: this
     type(VirtualSolutionType) :: virtual_sol
     integer(I4B) :: stage
     ! local
@@ -222,7 +222,7 @@ contains
   !!   2) route data for items that are remote
   !<
   subroutine update_solution(this, virtual_sol, stage)
-    class(VirtualDataStoreType) :: this
+    class(VirtualDataManagerType) :: this
     type(VirtualSolutionType) :: virtual_sol
     integer(I4B) :: stage
 
@@ -237,7 +237,7 @@ contains
   !> @brief Connect virtual memory items to their  
   !< sources when they are local for this stage
   subroutine link(this, virtual_sol, stage)
-    class(VirtualDataStoreType) :: this
+    class(VirtualDataManagerType) :: this
     type(VirtualSolutionType) :: virtual_sol
     integer(I4B) :: stage
     ! local
@@ -265,7 +265,7 @@ contains
   function count_nr_solutions(this) result(count)
     use ListsModule, only: basesolutionlist
     use NumericalSolutionModule, only: NumericalSolutionType   
-    class(VirtualDataStoreType) :: this
+    class(VirtualDataManagerType) :: this
     integer(I4B) :: count
     ! local    
     integer(I4B) :: isol
@@ -284,7 +284,7 @@ contains
   end function count_nr_solutions
 
   subroutine destroy(this)
-    class(VirtualDataStoreType) :: this
+    class(VirtualDataManagerType) :: this
     ! local
     integer(I4B) :: i
     class(VirtualDataContainerType), pointer :: vdc
@@ -303,4 +303,4 @@ contains
 
   end subroutine destroy
 
-end module VirtualDataStoreModule
+end module VirtualDataManagerModule

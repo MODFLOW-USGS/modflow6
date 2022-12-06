@@ -2,6 +2,7 @@ module VirtualGwtModelModule
   use KindModule, only: I4B
   use SimStagesModule
   use VirtualBaseModule
+  use VirtualDataContainerModule, only: VDC_GWTMODEL_TYPE
   use VirtualModelModule
   use NumericalModelModule, only: NumericalModelType
   implicit none
@@ -66,6 +67,7 @@ subroutine vgwt_create(this, name, id, model)
 
   ! create base
   call this%VirtualModelType%create(name, id, model)
+  this%container_type = VDC_GWTMODEL_TYPE
 
   ! allocate fields
   call this%allocate_data()

@@ -1,5 +1,6 @@
 module VirtualGwfExchangeModule
   use KindModule, only: I4B
+  use VirtualDataContainerModule, only: VDC_GWFEXG_TYPE
   use VirtualExchangeModule
   use VirtualDataListsModule, only: virtual_exchange_list
   implicit none
@@ -44,6 +45,7 @@ subroutine vfx_create(this, name, exg_id, m1_id, m2_id)
   integer(I4B) :: m2_id
 
   call this%VirtualExchangeType%create(name, exg_id, m1_id, m2_id)
+  this%container_type = VDC_GWFEXG_TYPE
 
 end subroutine vfx_create
 
