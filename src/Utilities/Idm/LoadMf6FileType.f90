@@ -255,6 +255,9 @@ contains
     select case (idt%datatype)
     case ('KEYWORD')
       !
+      ! -- initialize, not a filein/fileout tag
+      found_io_tag = .false.
+      !
       ! -- possible load file name if filein/fileout record type
       if (idt%in_record) then
         !
@@ -263,16 +266,16 @@ contains
                               found_io_tag, iout)
       end if
 
-      if (.not. idt%in_record .or. (idt%in_record .and. .not. found_io_tag)) then
+      if (.not. found_io_tag) then
         !
         ! -- load standard keyword tag
         call load_keyword_type(parser, idt, mf6_input%memoryPath, iout)
-        !
-        ! -- set as dev option
-        if (mf6_input%p_block_dfns(iblock)%blockname == 'OPTIONS' .and. &
-            idt%tagname(1:4) == 'DEV_') then
-          call parser%DevOpt()
-        end if
+      end if
+      !
+      ! -- set as dev option
+      if (mf6_input%p_block_dfns(iblock)%blockname == 'OPTIONS' .and. &
+          idt%tagname(1:4) == 'DEV_') then
+        call parser%DevOpt()
       end if
     case ('STRING')
       call load_string_type(parser, idt, mf6_input%memoryPath, iout)
