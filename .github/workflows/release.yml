@@ -22,8 +22,8 @@ jobs:
             ostag: linux
           - os: macos-12
             ostag: mac
-          - os: windows-2022
-            ostag: win64
+          # - os: windows-2022
+          #   ostag: win64
     defaults:
       run:
         shell: bash -l {0}
@@ -99,6 +99,56 @@ jobs:
         with:
           name: bin-${{ runner.os }}
           path: modflow6/bin
+
+      - name: Checkout modflow6-testmodels
+        uses: actions/checkout@v3
+        with:
+          repository: MODFLOW-USGS/modflow6-testmodels
+          path: modflow6-testmodels
+
+      - name: Checkout modflow6-examples
+        uses: actions/checkout@v3
+        with:
+          repository: MODFLOW-USGS/modflow6-examples
+          path: modflow6-examples
+
+      - name: Cache modflow6 examples
+        id: cache-examples
+        uses: actions/cache@v3
+        with:
+          path: modflow6-examples/examples
+          key: modflow6-examples-${{ hashFiles('modflow6-examples/scripts/**') }}
+
+      - name: Install extra Python packages
+        if: steps.cache-examples.outputs.cache-hit != 'true'
+        working-directory: modflow6-examples/etc
+        run: |
+          pip install -r requirements.pip.txt
+
+      - name: Build example models
+        if: steps.cache-examples.outputs.cache-hit != 'true'
+        working-directory: modflow6-examples/etc
+        run: |
+          python ci_build_files.py
+          ls -lh ../examples/
+
+      - name: Update flopy
+        working-directory: modflow6/autotest
+        run: python update_flopy.py
+
+      - name: Get executables
+        working-directory: modflow6/autotest
+        run: pytest -v --durations 0 get_exes.py
+
+      - name: Test programs
+        working-directory: modflow6/autotest
+        run: pytest -v -n auto --durations 0
+
+      - name: Test scripts
+        working-directory: modflow6/distribution
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pytest -v --durations 0
 
   docs:
     name: Build docs
@@ -230,8 +280,8 @@ jobs:
             ostag: linux
           - os: macos-12
             ostag: mac
-          - os: windows-2022
-            ostag: win64
+          # - os: windows-2022
+          #   ostag: win64
     defaults:
       run:
         shell: bash -l {0}
@@ -288,7 +338,13 @@ jobs:
             python update_version.py -v "${ver#"v"}" 
           fi
           
-          echo "DISTNAME=mf${ref#"v"}" >> $GITHUB_ENV
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            dist_name="mf${ref#"v"}"
+          else
+            dist_name="mf${ref#"v"}_${{ matrix.ostag }}"
+          fi
+          
+          echo "DISTNAME=$dist_name" >> $GITHUB_ENV
 
       - name: Download artifacts
         uses: actions/download-artifact@v3
@@ -312,19 +368,11 @@ jobs:
           # rename PDF docs
           mv "$DISTNAME/doc/ReleaseNotes.pdf" "$DISTNAME/doc/release.pdf"
           mv "$DISTNAME/doc/converter_mf5to6.pdf" "$DISTNAME/doc/mf5to6.pdf"
-          
-          # set zip name
-          if [ "${{ runner.os }}" == "Windows" ]; then
-            zip_name="${{ env.DISTNAME }}"
-          else
-            zip_name="${{ env.DISTNAME }}_${{ matrix.ostag }}"
-          fi
-          echo "ZIP_NAME=$zip_name" >> $GITHUB_ENV
 
       - name: Zip distribution
         if: runner.os != 'Windows'
         run: |
-          zip -r ${{ env.ZIP_NAME }}.zip \
+          zip -r ${{ env.DISTNAME }}.zip \
             ${{ env.DISTNAME }}/bin \
             ${{ env.DISTNAME }}/src \
             ${{ env.DISTNAME }}/srcbmi \
@@ -345,7 +393,7 @@ jobs:
       - name: Zip distribution (Windows)
         if: runner.os == 'Windows'
         run: |
-          7z a -tzip ${{ env.ZIP_NAME }}.zip \
+          7z a -tzip ${{ env.DISTNAME }}.zip \
             ${{ env.DISTNAME }}/bin \
             ${{ env.DISTNAME }}/src \
             ${{ env.DISTNAME }}/srcbmi \
@@ -369,15 +417,15 @@ jobs:
       - name: Upload distribution
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.ZIP_NAME }}
-          path: ${{ env.ZIP_NAME }}.zip
+          name: ${{ env.DISTNAME }}
+          path: ${{ env.DISTNAME }}.zip
 
       # actions/upload-artifact doesn't preserve execute permissions
       # - name: Upload distribution (Windows)
       #   if: runner.os == 'Windows'
       #   uses: actions/upload-artifact@v3
       #   with:
-      #     name: ${{ env.ZIP_NAME }}
+      #     name: ${{ env.DISTNAME }}
       #     path: |
       #       ${{ env.DISTNAME }}/bin
       #       ${{ env.DISTNAME }}/src
