@@ -1,11 +1,14 @@
 module VirtualBaseModule
   use KindModule, only: I4B, DP, LGP
+  use ListModule
   use ConstantsModule, only: LENVARNAME, LENMEMPATH
   use MemoryTypeModule, only: MemoryType
   use MemoryManagerModule, only: mem_allocate, mem_deallocate, &
                                  get_from_memorylist
   implicit none
   private
+
+  public :: get_virtual_data_from_list
 
   !> This is a generic data structure to virtualize pieces
   !! of memory in 2 distinct ways:
@@ -295,5 +298,21 @@ contains
     array => this%virtual_mt%adbl2d
 
   end function get_array_dbl2d
+
+  function get_virtual_data_from_list(list, idx) result(vd)
+    type(ListType) :: list
+    integer(I4B) :: idx
+    class(VirtualDataType), pointer :: vd
+    ! local
+    class(*), pointer :: obj_ptr
+
+    vd => null()
+    obj_ptr => list%GetItem(idx)
+    select type (obj_ptr)
+      class is (VirtualDataType)
+        vd => obj_ptr
+    end select
+
+  end function get_virtual_data_from_list
 
 end module VirtualBaseModule

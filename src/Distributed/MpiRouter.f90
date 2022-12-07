@@ -2,16 +2,17 @@ module MpiRouterModule
   use RouterBaseModule
   use KindModule, only: I4B
   use STLVecIntModule
-  use SimVariablesModule, only: MF6_COMM_WORLD, proc_id
+  use SimVariablesModule, only: proc_id
   use SimStagesModule, only: STG_TO_STR
   use VirtualDataListsModule, only: virtual_model_list, &
                                     virtual_exchange_list
   use VirtualDataContainerModule, only: VirtualDataContainerType, &
-                                        get_vdc_from_list  
+                                        get_vdc_from_list
   use VirtualExchangeModule, only: VirtualExchangeType, &
                                    get_virtual_exchange_from_list
   use VirtualSolutionModule
   use MpiMessageBuilderModule
+  use MpiWorldModule
   use mpi
   implicit none
   private
@@ -23,6 +24,7 @@ module MpiRouterModule
     type(STLVecInt) :: senders
     type(STLVecInt) :: receivers
     type(MpiMessageBuilderType) :: message_builder
+    type(MpiWorldType), pointer :: mpi_world
   contains
     procedure :: initialize => mr_initialize
     procedure :: route_all => mr_route_all
@@ -53,9 +55,12 @@ contains
     integer :: ierr
     integer(I4B) :: i
     integer(I4B) :: nr_models, nr_exchanges
-    class(VirtualDataContainerType), pointer :: vdc  
+    class(VirtualDataContainerType), pointer :: vdc
     class(VirtualExchangeType), pointer :: vex
     
+    ! get mpi world for our process
+    this%mpi_world => get_mpi_world()
+
     ! init address list
     call this%senders%init()
     call this%receivers%init()
@@ -81,6 +86,7 @@ contains
       call vdc%set_orig_rank(this%model_proc_ids(i))
     end do
 
+    nr_exchanges = virtual_exchange_list%Count()
     do i = 1, nr_exchanges
       vex => get_virtual_exchange_from_list(virtual_exchange_list, i)
       ! TODO_MJR: we set it from model1, or from model2 when model1 is local.
@@ -100,72 +106,89 @@ contains
     class(MpiRouterType) :: this
     integer(I4B) :: stage
     ! local
-    integer(I4B) :: i, rank
-    integer(I4B) :: max_headers
-    integer(I4B), dimension(:,:), allocatable :: headers
+    integer(I4B) :: i, rnk
     integer :: ierr
+    ! mpi handles
     integer, dimension(:), allocatable :: rcv_req
     integer, dimension(:), allocatable :: snd_req
     integer, dimension(:,:), allocatable :: status
-    integer, dimension(:), allocatable :: hdr_rcv_mt
-    integer, dimension(:), allocatable :: hdr_snd_mt 
+    ! message header
+    integer(I4B) :: max_headers    
+    type(VdcHeaderType), dimension(:,:), allocatable :: headers
+    integer, dimension(:), allocatable :: hdr_rcv_t
+    integer, dimension(:), allocatable :: hdr_snd_t    
+    integer, dimension(:), allocatable :: hdr_rcv_cnt
+    ! message body
+    integer, dimension(:), allocatable :: body_rcv_t
+    integer, dimension(:), allocatable :: body_snd_t
 
     ! update address list
     call this%mr_update_senders()
-    call this%mr_update_receivers()
+    call this%mr_update_receivers() 
 
+    ! allocate handles
     allocate (rcv_req(this%receivers%size))
     allocate (snd_req(this%senders%size))
     allocate (status(MPI_STATUS_SIZE, this%receivers%size))
-    allocate (hdr_rcv_mt(this%receivers%size))
-    allocate (hdr_snd_mt(this%senders%size))
 
-    ! TODO_MJR: improve, for now we assume all can be asked for...
-    max_headers = virtual_exchange_list%Count() + virtual_model_list%Count()
-    allocate (headers(2, max_headers))
+    ! allocate header data
+    max_headers = virtual_exchange_list%Count() + virtual_model_list%Count()    
+    allocate (hdr_rcv_t(this%receivers%size))
+    allocate (hdr_snd_t(this%senders%size))
+    allocate (headers(max_headers, this%receivers%size))
+    allocate (hdr_rcv_cnt(max_headers))
+
+    ! allocate body data
+    allocate (body_rcv_t(this%senders%size))
+    allocate (body_snd_t(this%receivers%size))
     
-    ! first receive headers (to send data to our receivers)    
+    ! first receive headers for outward data  
     do i = 1, this%receivers%size
-      rank = this%receivers%at(i)
-      call this%message_builder%create_header_in(rank, stage, hdr_rcv_mt(i))
-
-      call MPI_Irecv(headers, max_headers, hdr_rcv_mt(i), rank, stage, MF6_COMM_WORLD, rcv_req(i), ierr)
+      rnk = this%receivers%at(i)
+      call this%message_builder%create_header_rcv(hdr_rcv_t(i))
+      call MPI_Type_commit(hdr_rcv_t(i), ierr)
+      call MPI_Irecv(headers(:,i), max_headers, hdr_rcv_t(i), rnk, stage, MF6_COMM_WORLD, rcv_req(i), ierr)
     end do
 
-    ! send header
+    ! send header for incoming data
     do i = 1, this%senders%size
-      rank = this%senders%at(i)
-      call this%message_builder%create_header_out(rank, stage, hdr_snd_mt(i))
-      
-      call MPI_Isend(MPI_BOTTOM, 1, hdr_snd_mt(i), rank, stage, MF6_COMM_WORLD, &
-                     snd_req(i), ierr)
+      rnk = this%senders%at(i)
+      call this%message_builder%create_header_snd(rnk, stage, hdr_snd_t(i))
+      call MPI_Type_commit(hdr_snd_t(i), ierr)
+      call MPI_Isend(MPI_BOTTOM, 1, hdr_snd_t(i), rnk, stage, MF6_COMM_WORLD, snd_req(i), ierr)
+      call MPI_Type_free(hdr_snd_t(i), ierr)
     end do
+
+    ! wait for exchange of all headers
     call MPI_WaitAll(this%receivers%size, rcv_req, status, ierr)
 
-    ! release memory m(can we move this to directly after Isend/Irecv?)
-    do i = 1, this%receivers%size
-      call MPI_Type_free(hdr_rcv_mt(i), ierr)
-    end do
-    do i = 1, this%senders%size
-      call MPI_Type_free(hdr_snd_mt(i), ierr)
-    end do    
-
     ! afer WaitAll we can count incoming headers from statuses
-
-
-    
-    ! get nr. of headers from statuses
-
-    ! send bodies
+    do i = 1, this%receivers%size
+      call MPI_Get_count(status(:,i), hdr_rcv_t(i), hdr_rcv_cnt(i), ierr)
+      call MPI_Type_free(hdr_rcv_t(i), ierr)
+    end do
 
     ! recv bodies
+    do i = 1, this%senders%size
+      rnk = this%senders%at(i)
+      call this%message_builder%create_body_rcv(rnk, stage, body_rcv_t(i))
+      call MPI_Type_commit(hdr_snd_t(i), ierr)
+      call MPI_Isend(MPI_BOTTOM, 1, body_rcv_t(i), rnk, stage, MF6_COMM_WORLD, rcv_req(i), ierr)
+      call MPI_Type_free(body_rcv_t(i), ierr)
+    end do
 
-    !write(*,*) 'mpi route all for stage ', STG_TO_STR(stage)
+    ! send bodies
+    do i = 1, this%receivers%size
+      rnk = this%receivers%at(i)
+      call this%message_builder%create_body_snd(rnk, stage, headers(1 : hdr_rcv_cnt(i), i), body_snd_t(i))
+    end do
 
     deallocate (rcv_req)
+    deallocate (snd_req)
     deallocate (status)
-    deallocate (hdr_rcv_mt)
-    deallocate (hdr_snd_mt)
+    deallocate (hdr_rcv_t)
+    deallocate (hdr_snd_t)
+    deallocate (headers)
 
   end subroutine mr_route_all
 
@@ -173,8 +196,6 @@ contains
     class(MpiRouterType) :: this
     type(VirtualSolutionType) :: virtual_sol
     integer(I4B) :: stage
-
-    !write(*,*) 'mpi route solution ', virtual_sol%solution_id, ' for stage ', STG_TO_STR(stage)
 
     ! snd+rcv header
 
@@ -193,6 +214,7 @@ contains
     class(VirtualDataContainerType), pointer :: vdc
 
     call this%senders%clear()
+
     do i = 1, virtual_model_list%Count()
       vdc => get_vdc_from_list(virtual_model_list, i)
       if (vdc%is_remote .and. vdc%is_active) then
@@ -210,7 +232,15 @@ contains
 
   subroutine mr_update_receivers(this)
     class(MpiRouterType) :: this
+    ! local
+    integer(I4B) :: i
 
+    call this%receivers%clear()
+
+    ! assuming symmetry for now
+    do i = 1, this%senders%size
+      call this%receivers%push_back(this%senders%at(i))
+    end do
     
   end subroutine mr_update_receivers
 

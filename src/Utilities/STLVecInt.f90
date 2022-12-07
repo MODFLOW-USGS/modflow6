@@ -72,7 +72,7 @@ contains ! module routines
 
   subroutine add_array(this, array)
     class(STLVecInt), intent(inout) :: this
-    integer(I4B), dimension(:), pointer, contiguous :: array
+    integer(I4B), dimension(:), pointer :: array
     ! local
     integer(I4B) :: i
 
@@ -84,7 +84,7 @@ contains ! module routines
 
   subroutine add_array_unique(this, array)
     class(STLVecInt), intent(inout) :: this
-    integer(I4B), dimension(:), pointer, contiguous :: array
+    integer(I4B), dimension(:), pointer :: array
     ! local
     integer(I4B) :: i
 

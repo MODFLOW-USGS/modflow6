@@ -235,7 +235,8 @@ modflow_petsc_sources = files(
 modflow_mpi_sources = files(
   'Distributed' / 'MpiMessageBuilder.f90',
   'Distributed' / 'MpiRouter.f90',
-  'Distributed' / 'MpiRunControl.F90'
+  'Distributed' / 'MpiRunControl.F90',
+  'Distributed' / 'MpiWorld.f90'
 )
 
 if with_petsc

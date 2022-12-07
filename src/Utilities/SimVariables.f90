@@ -21,7 +21,6 @@ module SimVariablesModule
   character(len=LINELENGTH) :: simulation_mode = 'SEQUENTIAL'
   integer(I4B) :: proc_id = 0
   integer(I4B) :: nr_procs = 1
-  integer(I4B) :: MF6_COMM_WORLD = -1 ! should become MPI_Comm type     
   character(len=LENMODELNAME), dimension(:), allocatable :: model_names !< all model names in the (global) simulation
   integer(I4B), dimension(:), allocatable :: model_loc_idx !< equals the local index into the basemodel list (-1 when not available)
   

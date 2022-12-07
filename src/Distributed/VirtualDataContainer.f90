@@ -18,16 +18,16 @@ module VirtualDataContainerModule
   integer(I4B), public, parameter :: VDC_GWFMVR_TYPE = 5
   integer(I4B), public, parameter :: VDC_GWTMVT_TYPE = 6
 
-  type, public :: VirtualDataContainerType
-    type(ListType) :: virtual_data_list !< a list with all virtual data items for this container
+  type, public :: VirtualDataContainerType   
+    integer(I4B) :: id !< unique identifier matching with the real counterpart
     integer(I4B) :: container_type !< to identify the actual type of this container
     character(LENCOMPONENTNAME) :: name !< container name (model, exchange, ...) used in the memory path
-    integer(I4B) :: id !< unique identifier matching with the real counterpart
     character(LENCONTEXTNAME) :: vmem_ctx !< prefixes virtual memory located on remote processes
     logical(LGP) :: is_remote !< when true, the physical container (model, exchange, ...) resides on a remote process
-    ! for parallel
     logical(LGP) :: is_active !< when true, this container is being synchronized
     integer(I4B) :: orig_rank !< the global rank of the process which holds the physical data for this container
+    
+    type(ListType) :: virtual_data_list !< a list with all virtual data items for this container 
   contains
     procedure :: vdc_create
     generic :: map => map_scalar, map_array1d, map_array2d

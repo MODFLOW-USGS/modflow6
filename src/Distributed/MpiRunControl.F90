@@ -4,7 +4,8 @@ module MpiRunControlModule
   use petscksp
 #endif
   use mpi
-  use SimVariablesModule, only: MF6_COMM_WORLD, proc_id, nr_procs
+  use MpiWorldModule
+  use SimVariablesModule, only: proc_id, nr_procs
   use KindModule, only: I4B, LGP
   use RunControlModule, only: RunControlType
   implicit none
@@ -39,6 +40,7 @@ contains
     integer :: ierr
     character(len=*), parameter :: file = '/home/russcher/.petscrc'
     logical(LGP) :: wait_dbg
+    class(MpiWorldType), pointer :: mpi_world
     
     ! if PETSc we need their initialize
     wait_dbg = .false.
@@ -53,6 +55,9 @@ contains
     call MPI_Init(ierr)
     MF6_COMM_WORLD = MPI_COMM_WORLD
 #endif
+
+    mpi_world => get_mpi_world()
+    call mpi_world%init()
 
     call MPI_Comm_size(MF6_COMM_WORLD, nr_procs, ierr)
     call MPI_Comm_rank(MF6_COMM_WORLD, proc_id, ierr)
