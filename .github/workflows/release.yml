@@ -4,12 +4,15 @@ on:
     branches:
       - master
       - v*
+  release:
+    types:
+      - published
 env:
   FC: ifort
 jobs:
   build:
     name: Build binaries (${{ matrix.os }})
-    if: ${{ github.event_name != 'push' || github.ref_name != 'master' }}
+    if: ${{ github.event_name == 'push' && github.ref_name != 'master' }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -39,7 +42,7 @@ jobs:
           path: modflow6/bin
 
       - name: Setup Micromamba
-        if: ${{ !(contains(github.ref_name, 'rc')) || steps.cache-bin.outputs.cache-hit != 'true' }}
+        if: ${{ steps.cache-bin.outputs.cache-hit != 'true' }}
         uses: mamba-org/provision-with-micromamba@main
         with:
           environment-file: modflow6/environment.yml
@@ -47,11 +50,11 @@ jobs:
           cache-env: true
 
       - name: Setup Intel Fortran
-        if: ${{ !(contains(github.ref_name, 'rc')) || steps.cache-bin.outputs.cache-hit != 'true' }}
+        if: ${{ steps.cache-bin.outputs.cache-hit != 'true' }}
         uses: modflowpy/install-intelfortran-action@v1
 
       - name: Fix Micromamba path (Windows)
-        if: ${{ runner.os == 'Windows' && (!(contains(github.ref_name, 'rc')) || steps.cache-bin.outputs.cache-hit != 'true') }}
+        if: ${{ runner.os == 'Windows' && steps.cache-bin.outputs.cache-hit != 'true' }}
         shell: pwsh
         run: |
           # https://github.com/modflowpy/install-intelfortran-action#conda-scripts
@@ -59,23 +62,22 @@ jobs:
           echo $mamba_bin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Update version
-        if: ${{ !(contains(github.ref_name, 'rc')) || steps.cache-bin.outputs.cache-hit != 'true' }}
+        if: ${{ steps.cache-bin.outputs.cache-hit != 'true' }}
         working-directory: modflow6/distribution
         run: |
+          # extract version from ref name
           ref="${{ github.ref_name }}"
           ver="${ref%"rc"}"
-          # if tag doesn't end with 'rc' the release is approved
-          if [ "$ref" == "$ver" ]; then
+          
+          # update version files
+          if [[ "$ver" == *"rc"* ]]; then
             python update_version.py -v "${ver#"v"}" --approve
           else
             python update_version.py -v "${ver#"v"}" 
           fi
-          
-          # check src/Utilities/version.f90 IDEVELOPMODE setting
-          cat ../src/Utilities/version.f90
 
       - name: Build binaries
-        if: ${{ runner.os != 'Windows' && (!(contains(github.ref_name, 'rc')) || steps.cache-bin.outputs.cache-hit != 'true') }}
+        if: ${{ runner.os != 'Windows' && steps.cache-bin.outputs.cache-hit != 'true' }}
         working-directory: modflow6
         run: |
           meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
@@ -83,7 +85,7 @@ jobs:
           meson test --verbose --no-rebuild -C builddir
 
       - name: Build binaries (Windows)
-        if: ${{ runner.os == 'Windows' && (!(contains(github.ref_name, 'rc')) || steps.cache-bin.outputs.cache-hit != 'true') }}
+        if: ${{ runner.os == 'Windows' && steps.cache-bin.outputs.cache-hit != 'true' }}
         working-directory: modflow6
         shell: pwsh
         run: |
@@ -97,9 +99,56 @@ jobs:
           name: bin-${{ runner.os }}
           path: modflow6/bin
 
+      - name: Checkout modflow6-testmodels
+        uses: actions/checkout@v3
+        with:
+          repository: MODFLOW-USGS/modflow6-testmodels
+          path: modflow6-testmodels
+
+      - name: Checkout modflow6-examples
+        uses: actions/checkout@v3
+        with:
+          repository: MODFLOW-USGS/modflow6-examples
+          path: modflow6-examples
+
+      - name: Cache modflow6 examples
+        id: cache-examples
+        uses: actions/cache@v3
+        with:
+          path: modflow6-examples/examples
+          key: modflow6-examples-${{ hashFiles('modflow6-examples/scripts/**') }}
+
+      - name: Install extra Python packages
+        if: steps.cache-examples.outputs.cache-hit != 'true'
+        working-directory: modflow6-examples/etc
+        run: pip install -r requirements.pip.txt
+
+      - name: Build example models
+        if: steps.cache-examples.outputs.cache-hit != 'true'
+        working-directory: modflow6-examples/etc
+        run: python ci_build_files.py
+
+      - name: Update flopy
+        working-directory: modflow6/autotest
+        run: python update_flopy.py
+
+      - name: Get executables
+        working-directory: modflow6/autotest
+        run: pytest -v --durations 0 get_exes.py
+
+      - name: Test programs
+        working-directory: modflow6/autotest
+        run: pytest -v -n auto -m "not developmode" --durations 0
+
+      - name: Test scripts
+        working-directory: modflow6/distribution
+        run: pytest -v --durations 0
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
   docs:
     name: Build docs
-    if: ${{ github.event_name != 'push' || github.ref_name != 'master' }}
+    if: ${{ github.event_name == 'push' && github.ref_name != 'master' }}
     needs: build
     runs-on: ubuntu-22.04
     defaults:
@@ -121,7 +170,11 @@ jobs:
       - name: Install TeX Live
         run: |
           sudo apt-get update
-          sudo apt install texlive-latex-extra texlive-science texlive-font-utils texlive-fonts-recommended texlive-fonts-extra
+          sudo apt install texlive-science \
+            texlive-latex-extra \
+            texlive-font-utils \
+            texlive-fonts-recommended \
+            texlive-fonts-extra
 
       - name: Checkout usgslatex
         uses: actions/checkout@v3
@@ -131,8 +184,7 @@ jobs:
 
       - name: Install USGS LaTeX style files and Univers font
         working-directory: usgslatex/usgsLaTeX
-        run: |
-          sudo ./install.sh --all-users
+        run: sudo ./install.sh --all-users
 
       - name: Setup Micromamba
         uses: mamba-org/provision-with-micromamba@main
@@ -158,23 +210,29 @@ jobs:
 
       - name: Build example models
         working-directory: modflow6-examples/etc
-        run: |
-          pytest -v -n auto ci_build_files.py
-          ls -lh ../examples/ 
+        run: pytest -v -n auto ci_build_files.py
 
       - name: Update version
         working-directory: modflow6/distribution
         run: |
+          # extract version from ref name
           ref="${{ github.ref_name }}"
           ver="${ref%"rc"}"
-          # if tag doesn't end with 'rc' the release is approved
-          if [ "$ref" == "$ver" ]; then
+          
+          # update version files
+          if [[ "$ver" == *"rc"* ]]; then
             python update_version.py -v "${ver#"v"}" --approve
           else
             python update_version.py -v "${ver#"v"}" 
           fi
           
-          echo "DISTNAME=mf${ref#"v"}" >> $GITHUB_ENV
+          # set dist name, format is 'mf<major.minor.patch>_<ostag>'
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            distname="mf${ref#"v"}"
+          else
+            distname="mf${ref#"v"}_${{ matrix.ostag }}"
+          fi
+          echo "DISTNAME=$distname" >> $GITHUB_ENV
 
       - name: Create directory structure
         run: |
@@ -216,7 +274,7 @@ jobs:
 
   dist:
     name: Build distribution (${{ matrix.os }})
-    if: ${{ github.event_name != 'push' || github.ref_name != 'master' }}
+    if: ${{ github.event_name == 'push' && github.ref_name != 'master' }}
     needs: docs
     runs-on: ${{ matrix.os }}
     strategy:
@@ -264,28 +322,33 @@ jobs:
 
       - name: Install extra Python packages
         working-directory: modflow6-examples/etc
-        run: |
-          pip install -r requirements.pip.txt
+        run: pip install -r requirements.pip.txt
 
       - name: Build example models
         working-directory: modflow6-examples/etc
-        run: |
-          pytest -v -n auto ci_build_files.py
-          ls -lh ../examples/ 
-      
+        run: pytest -v -n auto ci_build_files.py
+
       - name: Update version
         working-directory: modflow6/distribution
         run: |
+          # extract version from ref name
           ref="${{ github.ref_name }}"
           ver="${ref%"rc"}"
-          # if tag doesn't end with 'rc' the release is approved
-          if [ "$ref" == "$ver" ]; then
+          
+          # update version files
+          if [[ "$ver" == *"rc"* ]]; then
             python update_version.py -v "${ver#"v"}" --approve
           else
             python update_version.py -v "${ver#"v"}" 
           fi
           
-          echo "DISTNAME=mf${ref#"v"}" >> $GITHUB_ENV
+          # set dist name, format is 'mf<major.minor.patch>_<ostag>'
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            distname="mf${ref#"v"}"
+          else
+            distname="mf${ref#"v"}_${{ matrix.ostag }}"
+          fi
+          echo "DISTNAME=$distname" >> $GITHUB_ENV
 
       - name: Download artifacts
         uses: actions/download-artifact@v3
@@ -294,8 +357,7 @@ jobs:
 
       - name: Select artifacts for OS
         run: |
-          # move binaries for current OS to top level bin
-          # directory and remove executables for other OS
+          # move binaries for current OS to top level bin dir
           mv "$DISTNAME/bin-${{ runner.os }}" "$DISTNAME/bin"
           rm -rf "$DISTNAME/bin-*"
 
@@ -303,30 +365,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          if [ "${{ runner.os }}" == "Windows" ]; then
-            # fix MSVC linker path on Windows
-            export PATH="/C/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.33.31629/bin/Hostx64/x64":$PATH
-          fi
-          
           # build dist folder
           python modflow6/distribution/build_dist.py -o "$DISTNAME" -e modflow6-examples
 
           # rename PDF docs
           mv "$DISTNAME/doc/ReleaseNotes.pdf" "$DISTNAME/doc/release.pdf"
           mv "$DISTNAME/doc/converter_mf5to6.pdf" "$DISTNAME/doc/mf5to6.pdf"
-          
-          # set zip name
-          if [ "${{ runner.os }}" == "Windows" ]; then
-            zip_name="${{ env.DISTNAME }}"
-          else
-            zip_name="${{ env.DISTNAME }}_${{ matrix.ostag }}"
-          fi
-          echo "ZIP_NAME=$zip_name" >> $GITHUB_ENV
 
       - name: Zip distribution
         if: runner.os != 'Windows'
         run: |
-          zip -r ${{ env.ZIP_NAME }}.zip \
+          zip -r ${{ env.DISTNAME }}.zip \
             ${{ env.DISTNAME }}/bin \
             ${{ env.DISTNAME }}/src \
             ${{ env.DISTNAME }}/srcbmi \
@@ -347,7 +396,7 @@ jobs:
       - name: Zip distribution (Windows)
         if: runner.os == 'Windows'
         run: |
-          7z a -tzip ${{ env.ZIP_NAME }}.zip \
+          7z a -tzip ${{ env.DISTNAME }}.zip \
             ${{ env.DISTNAME }}/bin \
             ${{ env.DISTNAME }}/src \
             ${{ env.DISTNAME }}/srcbmi \
@@ -371,32 +420,8 @@ jobs:
       - name: Upload distribution
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.ZIP_NAME }}
-          path: ${{ env.ZIP_NAME }}.zip
-
-      # actions/upload-artifact doesn't preserve execute permissions
-      # - name: Upload distribution (Windows)
-      #   if: runner.os == 'Windows'
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: ${{ env.ZIP_NAME }}
-      #     path: |
-      #       ${{ env.DISTNAME }}/bin
-      #       ${{ env.DISTNAME }}/src
-      #       ${{ env.DISTNAME }}/srcbmi
-      #       ${{ env.DISTNAME }}/doc
-      #       ${{ env.DISTNAME }}/examples
-      #       ${{ env.DISTNAME }}/make
-      #       ${{ env.DISTNAME }}/msvs
-      #       ${{ env.DISTNAME }}/utils
-      #       ${{ env.DISTNAME }}/code.json
-      #       ${{ env.DISTNAME }}/meson.build
-      #       !${{ env.DISTNAME }}/utils/idmloader
-      #       !${{ env.DISTNAME }}/bin/libmf6.lib
-      #       !${{ env.DISTNAME }}/**/pymake
-      #       !${{ env.DISTNAME }}/**/.DS_Store
-      #       !${{ env.DISTNAME }}/**/obj_temp
-      #       !${{ env.DISTNAME }}/**/mod_temp
+          name: ${{ env.DISTNAME }}
+          path: ${{ env.DISTNAME }}.zip
 
       - name: Upload release notes
         if: runner.os == 'Linux'
@@ -406,8 +431,9 @@ jobs:
           path: ${{ env.DISTNAME }}/doc/release.pdf
 
   pr:
-    name: Create release PR
-    if: ${{ github.event_name == 'push' && !(contains(github.ref_name, 'rc')) }}
+    name: Draft release PR
+    # only runs if branch name doesn't end with 'rc' (i.e. release is approved)
+    if: ${{ github.event_name == 'push' && github.ref_name != 'master' && !(contains(github.ref_name, 'rc')) }}
     needs: dist
     runs-on: ubuntu-22.04
     permissions:
@@ -429,16 +455,18 @@ jobs:
       - name: Update version
         working-directory: distribution
         run: |
-          # update version files
+          # extract version from branch name
           ref="${{ github.ref_name }}"
           ver="${ref#"v"}"
+          
+          # update version files
           if [[ "$ver" == *"rc"* ]]; then
             python update_version.py -v "$ver" 
           else
             python update_version.py -v "$ver" --approve
           fi
           
-          # update formatting
+          # lint version.f90
           fprettify -c ../.fprettify.yaml ../src/Utilities/version.f90
           
           # commit and push
@@ -446,7 +474,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "ci(release): update version to $ver"
+          git commit -m "ci(release): update version to $ver release mode"
           git push origin "$ref"
 
       - name: Create pull request
@@ -458,14 +486,15 @@ jobs:
           body='
           # MODFLOW '$ver' release
           
-          To approve this release, merge this pull request into `master`. This will trigger a final CI job to: 
-          1) create a tagged GitHub release and upload assets (OS-specific distributions and release notes)
-          2) open a PR updating `develop` from `master`, resetting version files, and setting `IDEVELOPMODE=1`
+          This release can be approved by merging this PR into `master`. Doing so triggers a final job, to: 
+          1) create and tag a draft GitHub release, then upload assets (OS distributions and release notes)
+          2) open a PR to update `develop` from `master`, resetting version files and setting `IDEVELOPMODE=1`
           '
           gh pr create -B "master" -H "$ref" --title "Release $ver" --draft --body "$body"
 
   release:
-    name: Release and reset
+    name: Draft release
+    # runs only after release PR is merged to master
     if: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
     runs-on: ubuntu-22.04
     defaults:
@@ -487,20 +516,7 @@ jobs:
       - name: Download artifacts
         uses: dawidd6/action-download-artifact@v2
 
-      # - name: Create release
-      #   uses: marvinpinto/action-automatic-releases@latest
-      #   with:
-      #     repo_token: ${{ github.token }}
-      #     automatic_release_tag: ${{ env.RELEASE_VERSION }}
-      #     prerelease: false
-      #     title: "MODFLOW ${{ env.RELEASE_VERSION }}"
-      #     files: |
-      #       # double-nested because actions/upload-artifact has no way of
-      #       # disabling compression or detecting files already compressed
-      #       mf*/mf*.zip
-      #       release_notes/release.pdf
-
-      - name: Create release
+      - name: Draft release
         working-directory: modflow6
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -508,7 +524,7 @@ jobs:
           # detect release version
           version=$(python distribution/update_version.py --get)
           
-          # create release
+          # create draft release
           title="MODFLOW $version"
           notes='
           This is the approved USGS MODFLOW '$version' release.
@@ -519,32 +535,65 @@ jobs:
           '
           gh release create "$version" ../mf*/mf*.zip ../release_notes/release.pdf --target master --title "$title" --notes "$notes" --draft --latest
 
-      - name: Reinitialize develop branch
+  reset:
+    name: Draft reset PR
+    # runs only after release is published (manually promoted from draft to public)
+    if: ${{ github.event_name == 'release' }}
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+
+      - name: Checkout modflow6
+        uses: actions/checkout@v3
+        with:
+          path: modflow6
+
+      - name: Setup Micromamba
+        uses: mamba-org/provision-with-micromamba@main
+        with:
+          environment-file: modflow6/environment.yml
+          cache-downloads: true
+          cache-env: true
+
+      - name: Get release tag
+        uses: oprypin/find-latest-tag@v1
+        id: latest_tag
+        with:
+          repository: ${{ github.repository }}
+          releases-only: true
+
+      - name: Create pull request
         working-directory: modflow6
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           # create reset branch from master
-          reset_branch="post-release-$RELEASE_VERSION-reset"
+          reset_branch="post-release-${{ steps.latest_tag.outputs.tag }}-reset"
+          git fetch origin
           git checkout master
           git switch -c $reset_branch
-          
-          # bump minor version and reset IDEVELOPMODE to 1
-          python distribution/update_version.py --bump-minor
-          version=$(python distribution/update_version.py --get)
-          
-          # commit and push to reset branch
+
+          # increment minor version and reset IDEVELOPMODE to 1
+          major_version=$(echo "${{ steps.latest_tag.outputs.tag }}" | cut -d. -f1)
+          minor_version=$(echo "${{ steps.latest_tag.outputs.tag }}" | cut -d. -f2)
+          version="$major_version.$((minor_version + 1)).0"
+          python distribution/update_version.py -v "$version"
+
+          # commit and push reset branch
           git config core.sharedRepository true
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "ci(release): reinitialize develop for next release"
+          git commit -m "ci(release): update version to $version development mode"
           git push -u origin $reset_branch
-          
+
           # create PR into develop
           body='
           # Reinitialize for development
-          
-          Updates the `develop` branch from `master` following an approved release. Bumps the minor version number, resets version files, and sets `IDEVELOPMODE` back to `1`.
+
+          Updates the `develop` branch from `master` following a successful release.
+          Increments the minor version number and resets `IDEVELOPMODE` back to `1`.
           '
-          gh pr create -B "develop" -H "$reset_branch" --title "Reinitialize develop to $version" --draft --body "$body"
+          gh pr create -B "develop" -H "$reset_branch" --title "Reinitialize develop branch" --draft --body "$body"

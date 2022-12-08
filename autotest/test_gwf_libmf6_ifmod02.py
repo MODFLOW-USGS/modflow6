@@ -429,6 +429,7 @@ def check_interface_models(mf6):
     "idx, dir",
     list(enumerate(exdirs)),
 )
+@pytest.mark.developmode
 def test_mf6model(idx, dir):
     # initialize testing framework
     test = testing_framework()
