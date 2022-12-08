@@ -111,9 +111,10 @@ contains
     ! mpi handles
     integer, dimension(:), allocatable :: rcv_req
     integer, dimension(:), allocatable :: snd_req
-    integer, dimension(:,:), allocatable :: status
+    integer, dimension(:,:), allocatable :: rcv_stat
+    integer, dimension(:,:), allocatable :: snd_stat
     ! message header
-    integer(I4B) :: max_headers    
+    integer(I4B) :: max_headers
     type(VdcHeaderType), dimension(:,:), allocatable :: headers
     integer, dimension(:), allocatable :: hdr_rcv_t
     integer, dimension(:), allocatable :: hdr_snd_t    
@@ -129,7 +130,8 @@ contains
     ! allocate handles
     allocate (rcv_req(this%receivers%size))
     allocate (snd_req(this%senders%size))
-    allocate (status(MPI_STATUS_SIZE, this%receivers%size))
+    allocate (rcv_stat(MPI_STATUS_SIZE, this%receivers%size))
+    allocate (snd_stat(MPI_STATUS_SIZE, this%senders%size))
 
     ! allocate header data
     max_headers = virtual_exchange_list%Count() + virtual_model_list%Count()    
@@ -148,6 +150,7 @@ contains
       call this%message_builder%create_header_rcv(hdr_rcv_t(i))
       call MPI_Type_commit(hdr_rcv_t(i), ierr)
       call MPI_Irecv(headers(:,i), max_headers, hdr_rcv_t(i), rnk, stage, MF6_COMM_WORLD, rcv_req(i), ierr)
+      ! don't free mpi datatype, we need the count below
     end do
 
     ! send header for incoming data
@@ -160,11 +163,11 @@ contains
     end do
 
     ! wait for exchange of all headers
-    call MPI_WaitAll(this%receivers%size, rcv_req, status, ierr)
+    call MPI_WaitAll(this%receivers%size, rcv_req, rcv_stat, ierr)
 
-    ! afer WaitAll we can count incoming headers from statuses
+    ! after WaitAll we can count incoming headers from statuses
     do i = 1, this%receivers%size
-      call MPI_Get_count(status(:,i), hdr_rcv_t(i), hdr_rcv_cnt(i), ierr)
+      call MPI_Get_count(rcv_stat(:,i), hdr_rcv_t(i), hdr_rcv_cnt(i), ierr)
       call MPI_Type_free(hdr_rcv_t(i), ierr)
     end do
 
@@ -172,20 +175,30 @@ contains
     do i = 1, this%senders%size
       rnk = this%senders%at(i)
       call this%message_builder%create_body_rcv(rnk, stage, body_rcv_t(i))
-      call MPI_Type_commit(hdr_snd_t(i), ierr)
-      call MPI_Isend(MPI_BOTTOM, 1, body_rcv_t(i), rnk, stage, MF6_COMM_WORLD, rcv_req(i), ierr)
-      call MPI_Type_free(body_rcv_t(i), ierr)
+      call MPI_Irecv(MPI_BOTTOM, 1, body_rcv_t(i), rnk, stage, MF6_COMM_WORLD, snd_req(i), ierr)          
     end do
 
     ! send bodies
     do i = 1, this%receivers%size
       rnk = this%receivers%at(i)
       call this%message_builder%create_body_snd(rnk, stage, headers(1 : hdr_rcv_cnt(i), i), body_snd_t(i))
+      call MPI_Isend(MPI_Bottom, 1, body_snd_t(i), rnk, stage, MF6_COMM_WORLD, rcv_req(i), ierr)      
     end do
 
+    ! wait for exchange of all messages
+    call MPI_WaitAll(this%senders%size, snd_req, snd_stat, ierr)
+
+    ! clean up types
+    do i = 1, this%senders%size
+      call MPI_Type_free(body_rcv_t(i), ierr)  
+    end do
+    do i = 1, this%receivers%size
+      call MPI_Type_free(body_snd_t(i), ierr)
+    end do
+    
     deallocate (rcv_req)
     deallocate (snd_req)
-    deallocate (status)
+    deallocate (rcv_stat)
     deallocate (hdr_rcv_t)
     deallocate (hdr_snd_t)
     deallocate (headers)

@@ -120,12 +120,16 @@ contains
     do i = 1, nr_models
       vdc => get_vdc_from_list(virtual_model_list, model_idxs%at(i))
       call MPI_Get_address(vdc%id, displs(i), ierr)
-      types(i) = this%create_vdc_body(vdc, stage)
+      types(i) = this%create_vdc_body(vdc, stage)      
       blk_cnts(i) = 1
     end do
 
     ! create the list of virtual data containers to receive
     call MPI_Type_create_struct(model_idxs%size, blk_cnts, displs, types, body_rcv_type, ierr)
+    call MPI_Type_commit(body_rcv_type, ierr)
+    do i = 1, nr_models
+      call MPI_Type_free(types(i), ierr)
+    end do
 
     call model_idxs%destroy()
     deallocate (types)
@@ -164,6 +168,10 @@ contains
 
     ! create the list of virtual data containers to receive
     call MPI_Type_create_struct(nr_headers, blk_cnts, displs, types, body_snd_type, ierr)
+    call MPI_Type_commit(body_snd_type, ierr)
+    do i = 1, nr_headers
+      call MPI_Type_free(types(i), ierr)
+    end do
 
     deallocate (types)
     deallocate (displs)
@@ -227,9 +235,19 @@ contains
       blk_cnts(i) = 1
       ! rebase w.r.t. id field
       displs(i) = displs(i) - offset
+      if (types(i) /= MPI_INTEGER .and. types(i) /= MPI_DOUBLE_PRECISION) then
+        call MPI_Type_commit(types(i), ierr)
+      end if
     end do
 
     call MPI_Type_create_struct(items%size, blk_cnts, displs, types, new_type, ierr)
+    call MPI_Type_commit(new_type, ierr)
+
+    do i = 1, items%size
+      if (types(i) /= MPI_INTEGER .and. types(i) /= MPI_DOUBLE_PRECISION) then
+        call MPI_Type_free(types(i), ierr)
+      end if
+    end do
 
     deallocate (types)
     deallocate (displs)
@@ -303,7 +321,7 @@ contains
     integer :: ierr
 
     call MPI_Get_address(mem%intsclr, el_displ, ierr)
-    el_type = MPI_INT
+    el_type = MPI_INTEGER
 
   end subroutine get_mpitype_for_int
 
@@ -315,7 +333,7 @@ contains
     integer :: ierr
 
     call MPI_Get_address(mem%aint1d, el_displ, ierr)
-    call MPI_Type_contiguous(mem%isize, MPI_INT, el_type, ierr)
+    call MPI_Type_contiguous(mem%isize, MPI_INTEGER, el_type, ierr)
     
   end subroutine get_mpitype_for_int1d
 
@@ -327,7 +345,7 @@ contains
     integer :: ierr
 
     call MPI_Get_address(mem%aint2d, el_displ, ierr)
-    call MPI_Type_contiguous(mem%isize, MPI_INT, el_type, ierr)
+    call MPI_Type_contiguous(mem%isize, MPI_INTEGER, el_type, ierr)
     
   end subroutine get_mpitype_for_int2d
 
@@ -339,7 +357,7 @@ contains
     integer :: ierr
 
     call MPI_Get_address(mem%aint3d, el_displ, ierr)
-    call MPI_Type_contiguous(mem%isize, MPI_INT, el_type, ierr)
+    call MPI_Type_contiguous(mem%isize, MPI_INTEGER, el_type, ierr)
     
   end subroutine get_mpitype_for_int3d
 

@@ -33,9 +33,9 @@ module VirtualBaseModule
     character(len=LENMEMPATH) :: remote_mem_path !< remote memory path
     integer(I4B), dimension(:), allocatable :: sync_stages !< stage(s) at which to synchronize
     integer(I4B) :: map_type !< the type of map
-    integer(I4B), dimension(:), pointer, contiguous :: virtual_to_remote !< contiguous list which maps virtual index to remote
-    integer(I4B), dimension(:), pointer, contiguous :: remote_to_virtual !< sparse list which maps remote index to virtual
-    type(MemoryType), pointer :: virtual_mt
+    integer(I4B), dimension(:), pointer, contiguous :: virtual_to_remote => null() !< contiguous list which maps virtual index to remote
+    integer(I4B), dimension(:), pointer, contiguous :: remote_to_virtual => null() !< sparse list which maps remote index to virtual
+    type(MemoryType), pointer :: virtual_mt => null()
   contains
     procedure(vm_allocate_if), deferred :: vm_allocate
     procedure(vm_deallocate_if), deferred :: vm_deallocate

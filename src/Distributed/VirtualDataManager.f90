@@ -127,12 +127,43 @@ contains
   !> @brief Synchronize the full virtual data store for this stage
   !<
   subroutine vds_synchronize(this, stage)
+    use MpiWorldModule
+    use VirtualModelModule
+    use SimVariablesModule, only: proc_id
+    use SimStagesModule
     class(VirtualDataManagerType) :: this
     integer(I4B) :: stage
+    ! local
+    integer(I4B) :: i
+    integer(I4B) :: nodes
+    class(VirtualModelType), pointer :: vm
+    type(MpiWorldType), pointer :: mpi_world
+
+    mpi_world => get_mpi_world()
 
     call this%prepare_all(stage)
     call this%link_all(stage)
+
+    ! prepare all virtual data for this stage
+    call mpi_world%begin_order()
+    write(*,'(a,i0)') 'rank ', proc_id
+    do i = 1, virtual_model_list%Count()
+      vm => get_virtual_model_from_list(virtual_model_list, i)
+      if (associated(vm%dis_nodes%virtual_mt)) nodes = vm%dis_nodes%get()
+      write(*,*) 'after linking stage ', trim(STG_TO_STR(stage)), ', model ', vm%name, ': dis nodes = ', nodes
+    end do
+    call mpi_world%end_order()    
+
     call this%router%route_all(stage)
+
+    call mpi_world%begin_order()
+    write(*,'(a,i0)') 'rank ', proc_id
+    do i = 1, virtual_model_list%Count()
+      vm => get_virtual_model_from_list(virtual_model_list, i)
+      if (associated(vm%dis_nodes%virtual_mt)) nodes = vm%dis_nodes%get()
+      write(*,*) 'after routing stage ', trim(STG_TO_STR(stage)), ', model ', vm%name, ': dis nodes = ', nodes
+    end do
+    call mpi_world%end_order()
 
   end subroutine vds_synchronize
 
