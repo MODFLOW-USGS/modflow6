@@ -22,8 +22,8 @@ jobs:
             ostag: linux
           - os: macos-12
             ostag: mac
-          # - os: windows-2022
-          #   ostag: win64
+          - os: windows-2022
+            ostag: win64
     defaults:
       run:
         shell: bash -l {0}
@@ -65,17 +65,16 @@ jobs:
         if: ${{ steps.cache-bin.outputs.cache-hit != 'true' }}
         working-directory: modflow6/distribution
         run: |
+          # extract version from ref name
           ref="${{ github.ref_name }}"
           ver="${ref%"rc"}"
-          # if tag doesn't end with 'rc' the release is approved
-          if [ "$ref" == "$ver" ]; then
+          
+          # update version files
+          if [[ "$ver" == *"rc"* ]]; then
             python update_version.py -v "${ver#"v"}" --approve
           else
             python update_version.py -v "${ver#"v"}" 
           fi
-          
-          # check src/Utilities/version.f90 IDEVELOPMODE setting
-          cat ../src/Utilities/version.f90
 
       - name: Build binaries
         if: ${{ runner.os != 'Windows' && steps.cache-bin.outputs.cache-hit != 'true' }}
@@ -122,15 +121,12 @@ jobs:
       - name: Install extra Python packages
         if: steps.cache-examples.outputs.cache-hit != 'true'
         working-directory: modflow6-examples/etc
-        run: |
-          pip install -r requirements.pip.txt
+        run: pip install -r requirements.pip.txt
 
       - name: Build example models
         if: steps.cache-examples.outputs.cache-hit != 'true'
         working-directory: modflow6-examples/etc
-        run: |
-          python ci_build_files.py
-          ls -lh ../examples/
+        run: python ci_build_files.py
 
       - name: Update flopy
         working-directory: modflow6/autotest
@@ -142,13 +138,13 @@ jobs:
 
       - name: Test programs
         working-directory: modflow6/autotest
-        run: pytest -v -n auto --durations 0
+        run: pytest -v -n auto -m "not developmode" --durations 0
 
       - name: Test scripts
         working-directory: modflow6/distribution
+        run: pytest -v --durations 0
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: pytest -v --durations 0
 
   docs:
     name: Build docs
@@ -174,7 +170,11 @@ jobs:
       - name: Install TeX Live
         run: |
           sudo apt-get update
-          sudo apt install texlive-latex-extra texlive-science texlive-font-utils texlive-fonts-recommended texlive-fonts-extra
+          sudo apt install texlive-science \
+            texlive-latex-extra \
+            texlive-font-utils \
+            texlive-fonts-recommended \
+            texlive-fonts-extra
 
       - name: Checkout usgslatex
         uses: actions/checkout@v3
@@ -184,8 +184,7 @@ jobs:
 
       - name: Install USGS LaTeX style files and Univers font
         working-directory: usgslatex/usgsLaTeX
-        run: |
-          sudo ./install.sh --all-users
+        run: sudo ./install.sh --all-users
 
       - name: Setup Micromamba
         uses: mamba-org/provision-with-micromamba@main
@@ -211,23 +210,29 @@ jobs:
 
       - name: Build example models
         working-directory: modflow6-examples/etc
-        run: |
-          pytest -v -n auto ci_build_files.py
-          ls -lh ../examples/ 
+        run: pytest -v -n auto ci_build_files.py
 
       - name: Update version
         working-directory: modflow6/distribution
         run: |
+          # extract version from ref name
           ref="${{ github.ref_name }}"
           ver="${ref%"rc"}"
-          # if tag doesn't end with 'rc' the release is approved
-          if [ "$ref" == "$ver" ]; then
+          
+          # update version files
+          if [[ "$ver" == *"rc"* ]]; then
             python update_version.py -v "${ver#"v"}" --approve
           else
             python update_version.py -v "${ver#"v"}" 
           fi
           
-          echo "DISTNAME=mf${ref#"v"}" >> $GITHUB_ENV
+          # set dist name, format is 'mf<major.minor.patch>_<ostag>'
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            distname="mf${ref#"v"}"
+          else
+            distname="mf${ref#"v"}_${{ matrix.ostag }}"
+          fi
+          echo "DISTNAME=$distname" >> $GITHUB_ENV
 
       - name: Create directory structure
         run: |
@@ -280,8 +285,8 @@ jobs:
             ostag: linux
           - os: macos-12
             ostag: mac
-          # - os: windows-2022
-          #   ostag: win64
+          - os: windows-2022
+            ostag: win64
     defaults:
       run:
         shell: bash -l {0}
@@ -317,34 +322,33 @@ jobs:
 
       - name: Install extra Python packages
         working-directory: modflow6-examples/etc
-        run: |
-          pip install -r requirements.pip.txt
+        run: pip install -r requirements.pip.txt
 
       - name: Build example models
         working-directory: modflow6-examples/etc
-        run: |
-          pytest -v -n auto ci_build_files.py
-          ls -lh ../examples/ 
-      
+        run: pytest -v -n auto ci_build_files.py
+
       - name: Update version
         working-directory: modflow6/distribution
         run: |
+          # extract version from ref name
           ref="${{ github.ref_name }}"
           ver="${ref%"rc"}"
-          # if tag doesn't end with 'rc' the release is approved
-          if [ "$ref" == "$ver" ]; then
+          
+          # update version files
+          if [[ "$ver" == *"rc"* ]]; then
             python update_version.py -v "${ver#"v"}" --approve
           else
             python update_version.py -v "${ver#"v"}" 
           fi
           
+          # set dist name, format is 'mf<major.minor.patch>_<ostag>'
           if [ "${{ runner.os }}" == "Windows" ]; then
-            dist_name="mf${ref#"v"}"
+            distname="mf${ref#"v"}"
           else
-            dist_name="mf${ref#"v"}_${{ matrix.ostag }}"
+            distname="mf${ref#"v"}_${{ matrix.ostag }}"
           fi
-          
-          echo "DISTNAME=$dist_name" >> $GITHUB_ENV
+          echo "DISTNAME=$distname" >> $GITHUB_ENV
 
       - name: Download artifacts
         uses: actions/download-artifact@v3
@@ -353,8 +357,7 @@ jobs:
 
       - name: Select artifacts for OS
         run: |
-          # move binaries for current OS to top level bin
-          # directory and remove executables for other OS
+          # move binaries for current OS to top level bin dir
           mv "$DISTNAME/bin-${{ runner.os }}" "$DISTNAME/bin"
           rm -rf "$DISTNAME/bin-*"
 
@@ -420,30 +423,6 @@ jobs:
           name: ${{ env.DISTNAME }}
           path: ${{ env.DISTNAME }}.zip
 
-      # actions/upload-artifact doesn't preserve execute permissions
-      # - name: Upload distribution (Windows)
-      #   if: runner.os == 'Windows'
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: ${{ env.DISTNAME }}
-      #     path: |
-      #       ${{ env.DISTNAME }}/bin
-      #       ${{ env.DISTNAME }}/src
-      #       ${{ env.DISTNAME }}/srcbmi
-      #       ${{ env.DISTNAME }}/doc
-      #       ${{ env.DISTNAME }}/examples
-      #       ${{ env.DISTNAME }}/make
-      #       ${{ env.DISTNAME }}/msvs
-      #       ${{ env.DISTNAME }}/utils
-      #       ${{ env.DISTNAME }}/code.json
-      #       ${{ env.DISTNAME }}/meson.build
-      #       !${{ env.DISTNAME }}/utils/idmloader
-      #       !${{ env.DISTNAME }}/bin/libmf6.lib
-      #       !${{ env.DISTNAME }}/**/pymake
-      #       !${{ env.DISTNAME }}/**/.DS_Store
-      #       !${{ env.DISTNAME }}/**/obj_temp
-      #       !${{ env.DISTNAME }}/**/mod_temp
-
       - name: Upload release notes
         if: runner.os == 'Linux'
         uses: actions/upload-artifact@v3
@@ -453,6 +432,7 @@ jobs:
 
   pr:
     name: Draft release PR
+    # only runs if branch name doesn't end with 'rc' (i.e. release is approved)
     if: ${{ github.event_name == 'push' && github.ref_name != 'master' && !(contains(github.ref_name, 'rc')) }}
     needs: dist
     runs-on: ubuntu-22.04
@@ -475,16 +455,18 @@ jobs:
       - name: Update version
         working-directory: distribution
         run: |
-          # update version files
+          # extract version from branch name
           ref="${{ github.ref_name }}"
           ver="${ref#"v"}"
+          
+          # update version files
           if [[ "$ver" == *"rc"* ]]; then
             python update_version.py -v "$ver" 
           else
             python update_version.py -v "$ver" --approve
           fi
           
-          # update formatting
+          # lint version.f90
           fprettify -c ../.fprettify.yaml ../src/Utilities/version.f90
           
           # commit and push
@@ -504,14 +486,15 @@ jobs:
           body='
           # MODFLOW '$ver' release
           
-          To approve this release, merge this pull request into `master`. This will trigger a final CI job to: 
-          1) create a tagged GitHub release and upload assets (OS-specific distributions and release notes)
-          2) open a PR updating `develop` from `master`, resetting version files, and setting `IDEVELOPMODE=1`
+          This release can be approved by merging this PR into `master`. Doing so triggers a final job, to: 
+          1) create and tag a draft GitHub release, then upload assets (OS distributions and release notes)
+          2) open a PR to update `develop` from `master`, resetting version files and setting `IDEVELOPMODE=1`
           '
           gh pr create -B "master" -H "$ref" --title "Release $ver" --draft --body "$body"
 
   release:
     name: Draft release
+    # runs only after release PR is merged to master
     if: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
     runs-on: ubuntu-22.04
     defaults:
@@ -533,19 +516,6 @@ jobs:
       - name: Download artifacts
         uses: dawidd6/action-download-artifact@v2
 
-      # - name: Create release
-      #   uses: marvinpinto/action-automatic-releases@latest
-      #   with:
-      #     repo_token: ${{ github.token }}
-      #     automatic_release_tag: ${{ env.RELEASE_VERSION }}
-      #     prerelease: false
-      #     title: "MODFLOW ${{ env.RELEASE_VERSION }}"
-      #     files: |
-      #       # double-nested because actions/upload-artifact has no way of
-      #       # disabling compression or detecting files already compressed
-      #       mf*/mf*.zip
-      #       release_notes/release.pdf
-
       - name: Draft release
         working-directory: modflow6
         env:
@@ -554,7 +524,7 @@ jobs:
           # detect release version
           version=$(python distribution/update_version.py --get)
           
-          # create release
+          # create draft release
           title="MODFLOW $version"
           notes='
           This is the approved USGS MODFLOW '$version' release.
@@ -567,6 +537,7 @@ jobs:
 
   reset:
     name: Draft reset PR
+    # runs only after release is published (manually promoted from draft to public)
     if: ${{ github.event_name == 'release' }}
     runs-on: ubuntu-22.04
     defaults:
@@ -604,13 +575,13 @@ jobs:
           git checkout master
           git switch -c $reset_branch
 
-          # increment minor version from latest official release and reset IDEVELOPMODE to 1
+          # increment minor version and reset IDEVELOPMODE to 1
           major_version=$(echo "${{ steps.latest_tag.outputs.tag }}" | cut -d. -f1)
           minor_version=$(echo "${{ steps.latest_tag.outputs.tag }}" | cut -d. -f2)
           version="$major_version.$((minor_version + 1)).0"
           python distribution/update_version.py -v "$version"
 
-          # commit and push to reset branch
+          # commit and push reset branch
           git config core.sharedRepository true
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -622,6 +593,7 @@ jobs:
           body='
           # Reinitialize for development
 
-          Updates the `develop` branch from `master` following an approved release. Bumps the minor version number and resets `IDEVELOPMODE` back to `1`.
+          Updates the `develop` branch from `master` following a successful release.
+          Increments the minor version number and resets `IDEVELOPMODE` back to `1`.
           '
           gh pr create -B "develop" -H "$reset_branch" --title "Reinitialize develop branch" --draft --body "$body"
