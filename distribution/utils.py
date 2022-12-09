@@ -16,6 +16,25 @@ def get_project_root_path():
     return _project_root_path
 
 
+def get_branch():
+    try:
+        # determine current branch
+        b = subprocess.Popen(
+            ("git", "status"), stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+        ).communicate()[0]
+        if isinstance(b, bytes):
+            b = b.decode("utf-8")
+
+        # determine current branch
+        for line in b.splitlines():
+            if "On branch" in line:
+                branch = line.replace("On branch ", "").rstrip()
+    except:
+        branch = None
+
+    return branch
+
+
 def get_modified_time(path: Path) -> float:
     return path.stat().st_mtime if path.is_file() else datetime.today().timestamp()
 

@@ -71,9 +71,9 @@ jobs:
           
           # update version files
           if [[ "$ver" == *"rc"* ]]; then
-            python update_version.py -v "${ver#"v"}" --approve
-          else
             python update_version.py -v "${ver#"v"}" 
+          else
+            python update_version.py -v "${ver#"v"}" --approve
           fi
 
       - name: Build binaries
@@ -221,9 +221,9 @@ jobs:
           
           # update version files
           if [[ "$ver" == *"rc"* ]]; then
-            python update_version.py -v "${ver#"v"}" --approve
-          else
             python update_version.py -v "${ver#"v"}" 
+          else
+            python update_version.py -v "${ver#"v"}" --approve
           fi
           
           # set dist name, format is 'mf<major.minor.patch>_<ostag>'
@@ -337,9 +337,9 @@ jobs:
           
           # update version files
           if [[ "$ver" == *"rc"* ]]; then
-            python update_version.py -v "${ver#"v"}" --approve
-          else
             python update_version.py -v "${ver#"v"}" 
+          else
+            python update_version.py -v "${ver#"v"}" --approve
           fi
           
           # set dist name, format is 'mf<major.minor.patch>_<ostag>'
