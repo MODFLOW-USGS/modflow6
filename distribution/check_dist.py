@@ -46,9 +46,8 @@ def test_sources(dist_dir_path):
     # make sure IDEVELOPMODE was set correctly
     branch = get_branch()
     idevelopmode = 1 if ("rc" in branch or "candidate" in branch) else 0
-    print(idevelopmode)
-    print(line)
     assert f"IDEVELOPMODE = {idevelopmode}" in line
+
 
 @pytest.mark.skipif(not _fc, reason="needs Fortran compiler")
 def test_makefiles(dist_dir_path):

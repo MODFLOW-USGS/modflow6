@@ -1,3 +1,4 @@
+import os
 import platform
 import shutil
 import subprocess
@@ -17,6 +18,7 @@ def get_project_root_path():
 
 
 def get_branch():
+    branch = None
     try:
         # determine current branch
         b = subprocess.Popen(
@@ -29,8 +31,15 @@ def get_branch():
         for line in b.splitlines():
             if "On branch" in line:
                 branch = line.replace("On branch ", "").rstrip()
+        if branch is None:
+            raise
     except:
-        branch = None
+        branch = os.environ.get("GITHUB_REF_NAME", None)
+
+    if branch is None:
+        raise ValueError(f"Couldn't detect branch")
+    else:
+        print(f"Detected branch: {branch}")
 
     return branch
 
