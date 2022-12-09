@@ -135,7 +135,6 @@ contains
     integer(I4B) :: stage
     ! local
     integer(I4B) :: i
-    integer(I4B) :: nodes
     class(VirtualModelType), pointer :: vm
     type(MpiWorldType), pointer :: mpi_world
 
@@ -149,10 +148,13 @@ contains
     write(*,'(a,i0)') 'rank ', proc_id
     do i = 1, virtual_model_list%Count()
       vm => get_virtual_model_from_list(virtual_model_list, i)
-      if (associated(vm%dis_nodes%virtual_mt)) nodes = vm%dis_nodes%get()
-      write(*,*) 'after linking stage ', trim(STG_TO_STR(stage)), ', model ', vm%name, ': dis nodes = ', nodes
+      if (associated(vm%dis_xorigin%virtual_mt)) then
+        write(*,*) 'after linking stage ', trim(STG_TO_STR(stage)), ', model ', vm%name, ': xorigin = ', vm%dis_xorigin%get()
+      else
+        write(*,*) 'after linking stage ', trim(STG_TO_STR(stage)), ', model ', vm%name, ': xorigin = undefined'
+      end if
     end do
-    call mpi_world%end_order()    
+    call mpi_world%end_order()
 
     call this%router%route_all(stage)
 
@@ -160,10 +162,14 @@ contains
     write(*,'(a,i0)') 'rank ', proc_id
     do i = 1, virtual_model_list%Count()
       vm => get_virtual_model_from_list(virtual_model_list, i)
-      if (associated(vm%dis_nodes%virtual_mt)) nodes = vm%dis_nodes%get()
-      write(*,*) 'after routing stage ', trim(STG_TO_STR(stage)), ', model ', vm%name, ': dis nodes = ', nodes
+      if (associated(vm%dis_xorigin%virtual_mt)) then
+        write(*,*) 'after router stage ', trim(STG_TO_STR(stage)), ', model ', vm%name, ': xorigin = ', vm%dis_xorigin%get()
+      else
+        write(*,*) 'after router stage ', trim(STG_TO_STR(stage)), ', model ', vm%name, ': xorigin = undefined'
+      end if
     end do
     call mpi_world%end_order()
+
 
   end subroutine vds_synchronize
 

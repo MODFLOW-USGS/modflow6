@@ -64,6 +64,10 @@ contains
     
     call MPI_Type_create_struct(model_idxs%size, blk_cnts, displs, &
                                 types, hdrs_snd_type, ierr)
+    call MPI_Type_commit(hdrs_snd_type, ierr)
+    do i = 1, model_idxs%size
+      call MPI_Type_free(types(i), ierr)
+    end do
 
     call model_idxs%destroy()
     deallocate(blk_cnts)
@@ -81,7 +85,8 @@ contains
     ! this will be for one data container, the mpi recv
     ! call will accept an array of them, no need to create
     ! an overarching contiguous type...
-    call MPI_Type_contiguous(2, MPI_INTEGER, hdr_rcv_type, ierr)    
+    call MPI_Type_contiguous(2, MPI_INTEGER, hdr_rcv_type, ierr)
+    call MPI_Type_commit(hdr_rcv_type, ierr)    
 
   end subroutine mb_create_header_rcv
 
@@ -201,7 +206,8 @@ contains
 
     ! rebase to id field
     displs = displs - displs(1)
-    call MPI_Type_create_struct(2, blk_cnts, displs, types, new_type, ierr)
+    call MPI_Type_create_struct(2, blk_cnts, displs, types, new_type, ierr)    
+    call MPI_Type_commit(new_type, ierr)
 
   end function create_vdc_snd_hdr
 
@@ -230,23 +236,19 @@ contains
     call MPI_Get_address(vdc%id, offset, ierr)
 
     do i = 1, items%size
-      vd => get_virtual_data_from_list(vdc%virtual_data_list, i)
+      vd => get_virtual_data_from_list(vdc%virtual_data_list, items%at(i))
       call get_mpi_datatype(vd, displs(i), types(i))
       blk_cnts(i) = 1
       ! rebase w.r.t. id field
       displs(i) = displs(i) - offset
-      if (types(i) /= MPI_INTEGER .and. types(i) /= MPI_DOUBLE_PRECISION) then
-        call MPI_Type_commit(types(i), ierr)
-      end if
     end do
 
     call MPI_Type_create_struct(items%size, blk_cnts, displs, types, new_type, ierr)
     call MPI_Type_commit(new_type, ierr)
 
     do i = 1, items%size
-      if (types(i) /= MPI_INTEGER .and. types(i) /= MPI_DOUBLE_PRECISION) then
-        call MPI_Type_free(types(i), ierr)
-      end if
+      vd => get_virtual_data_from_list(vdc%virtual_data_list, items%at(i))
+      call free_mpi_datatype(vd, types(i))
     end do
 
     deallocate (types)
@@ -280,6 +282,9 @@ contains
 
   end function get_vdc_from_hdr
 
+  !> @brief Local routine to get elemental mpi data types representing
+  !! the virtual data items. Types are automatically committed unless
+  !< they are primitives (e.g. MPI_INTEGER)
   subroutine get_mpi_datatype(virtual_data, el_displ, el_type)
     use SimModule, only: ustop    
     class(VirtualDataType), pointer :: virtual_data
@@ -313,6 +318,34 @@ contains
 
   end subroutine get_mpi_datatype
 
+  !> @brief Local routine to free elemental mpi data types representing
+  !! the virtual data items. This can't be done generally, because some 
+  !< (scalar) types are primitive and freeing them causes nasty errors...
+  subroutine free_mpi_datatype(virtual_data, el_type)
+    class(VirtualDataType), pointer :: virtual_data
+    integer :: el_type
+    ! local
+    type(MemoryType), pointer :: mt
+    integer :: ierr
+
+    mt => virtual_data%virtual_mt
+    if (associated(mt%intsclr)) then
+      ! type is MPI_INTEGER, don't free this!
+      return
+    else if (associated(mt%dblsclr)) then
+      ! type is MPI_DOUBLE_PRECISION, don't free this!
+      return
+    else if (associated(mt%logicalsclr)) then
+      ! type is MPI_LOGICAL, don't free this!
+      return
+    else
+      ! all other types are freed here
+      call MPI_Type_free(el_type, ierr)
+      return
+    end if
+
+  end subroutine free_mpi_datatype
+
   subroutine get_mpitype_for_int(mem, el_displ, el_type)
     type(MemoryType), pointer :: mem
     integer(kind=MPI_ADDRESS_KIND) :: el_displ
@@ -322,6 +355,7 @@ contains
 
     call MPI_Get_address(mem%intsclr, el_displ, ierr)
     el_type = MPI_INTEGER
+    ! no need to commit primitive type
 
   end subroutine get_mpitype_for_int
 
@@ -334,6 +368,7 @@ contains
 
     call MPI_Get_address(mem%aint1d, el_displ, ierr)
     call MPI_Type_contiguous(mem%isize, MPI_INTEGER, el_type, ierr)
+    call MPI_Type_commit(el_type, ierr)
     
   end subroutine get_mpitype_for_int1d
 
@@ -346,6 +381,7 @@ contains
 
     call MPI_Get_address(mem%aint2d, el_displ, ierr)
     call MPI_Type_contiguous(mem%isize, MPI_INTEGER, el_type, ierr)
+    call MPI_Type_commit(el_type, ierr)
     
   end subroutine get_mpitype_for_int2d
 
@@ -358,6 +394,7 @@ contains
 
     call MPI_Get_address(mem%aint3d, el_displ, ierr)
     call MPI_Type_contiguous(mem%isize, MPI_INTEGER, el_type, ierr)
+    call MPI_Type_commit(el_type, ierr)
     
   end subroutine get_mpitype_for_int3d
 
@@ -370,6 +407,7 @@ contains
 
     call MPI_Get_address(mem%dblsclr, el_displ, ierr)
     el_type = MPI_DOUBLE_PRECISION
+    ! no need to commit primitive type
     
   end subroutine get_mpitype_for_dbl
 
@@ -382,6 +420,7 @@ contains
 
     call MPI_Get_address(mem%adbl1d, el_displ, ierr)
     call MPI_Type_contiguous(mem%isize, MPI_DOUBLE_PRECISION, el_type, ierr)
+    call MPI_Type_commit(el_type, ierr)
     
   end subroutine get_mpitype_for_dbl1d
 
@@ -394,6 +433,7 @@ contains
 
     call MPI_Get_address(mem%adbl2d, el_displ, ierr)
     call MPI_Type_contiguous(mem%isize, MPI_DOUBLE_PRECISION, el_type, ierr)
+    call MPI_Type_commit(el_type, ierr)
     
   end subroutine get_mpitype_for_dbl2d
 
@@ -406,6 +446,7 @@ contains
 
     call MPI_Get_address(mem%adbl3d, el_displ, ierr)
     call MPI_Type_contiguous(mem%isize, MPI_DOUBLE_PRECISION, el_type, ierr)
+    call MPI_Type_commit(el_type, ierr)
     
   end subroutine get_mpitype_for_dbl3d
 

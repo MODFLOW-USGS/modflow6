@@ -148,7 +148,6 @@ contains
     do i = 1, this%receivers%size
       rnk = this%receivers%at(i)
       call this%message_builder%create_header_rcv(hdr_rcv_t(i))
-      call MPI_Type_commit(hdr_rcv_t(i), ierr)
       call MPI_Irecv(headers(:,i), max_headers, hdr_rcv_t(i), rnk, stage, MF6_COMM_WORLD, rcv_req(i), ierr)
       ! don't free mpi datatype, we need the count below
     end do
@@ -157,7 +156,6 @@ contains
     do i = 1, this%senders%size
       rnk = this%senders%at(i)
       call this%message_builder%create_header_snd(rnk, stage, hdr_snd_t(i))
-      call MPI_Type_commit(hdr_snd_t(i), ierr)
       call MPI_Isend(MPI_BOTTOM, 1, hdr_snd_t(i), rnk, stage, MF6_COMM_WORLD, snd_req(i), ierr)
       call MPI_Type_free(hdr_snd_t(i), ierr)
     end do
