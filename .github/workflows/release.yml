@@ -226,12 +226,8 @@ jobs:
             python update_version.py -v "${ver#"v"}" --approve
           fi
           
-          # set dist name, format is 'mf<major.minor.patch>_<ostag>'
-          if [ "${{ runner.os }}" == "Windows" ]; then
-            distname="mf${ref#"v"}"
-          else
-            distname="mf${ref#"v"}_${{ matrix.ostag }}"
-          fi
+          # set dist name, format is 'mf<major.minor.patch>' for docs (no os tag)
+          distname="mf${ref#"v"}"
           echo "DISTNAME=$distname" >> $GITHUB_ENV
 
       - name: Create directory structure
@@ -486,7 +482,9 @@ jobs:
           body='
           # MODFLOW '$ver' release
           
-          This release can be approved by merging this PR into `master`. Doing so triggers a final job, to: 
+          The release can be approved by merging this PR into `master`. Merging rather than squashing is necessary to preserve the commit history.
+          
+          When this PR is merged, a final job will be triggered to:
           1) create and tag a draft GitHub release, then upload assets (OS distributions and release notes)
           2) open a PR to update `develop` from `master`, resetting version files and setting `IDEVELOPMODE=1`
           '
@@ -593,7 +591,6 @@ jobs:
           body='
           # Reinitialize for development
 
-          Updates the `develop` branch from `master` following a successful release.
-          Increments the minor version number and resets `IDEVELOPMODE` back to `1`.
+          Updates the `develop` branch from `master` following a successful release. Increments the minor version number and resets `IDEVELOPMODE` back to `1`.
           '
           gh pr create -B "develop" -H "$reset_branch" --title "Reinitialize develop branch" --draft --body "$body"
