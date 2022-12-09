@@ -26,7 +26,7 @@ for path in "${SEARCHPATHS[@]}"; do
 
     ((checkcount++))
 
-    if [[ ! -z $(fprettify -d -c ./distribution/.fprettify.yaml "${file}" 2>&1) ]]; then
+    if [[ ! -z $(fprettify -d -c .fprettify.yaml "${file}" 2>&1) ]]; then
       fformatfails+=("${file}")
     fi
   done
