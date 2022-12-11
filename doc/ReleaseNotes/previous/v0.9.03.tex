@@ -1,0 +1,37 @@
+	\subsection{Version mf6beta0.9.03---June 23, 2017}
+	
+	\underline{BASIC FUNCTIONALITY}
+	\begin{itemize}
+		\item Renamed all FTYPE keywords to version 6.  They were named with an 8.  So, for example, the GHB Package is now activated in the GWF name file using ``GHB6'' instead of ``GHB8''.
+		\item Keywords in the simulation name file must now be specified as TDIS6, GWF6, and GWF6-GWF6 to be consistent.
+		\item The DIS Package had grid offsets (XOFFSET and YOFFSET) that could be specified as options.  These offsets were relative to the upper-left corner of the model grid.  The default value for YOFFSET was set to the sum of DELR so that (0, 0) would correspond to the lower-left corner of the model grid.  These options have been removed and replaced with XORIGIN and YORIGIN, which is the coordinate of the lower-left corner of the model grid.  The default value is zero for XORIGIN and YORIGIN.
+		\item Can now specify XORIGIN, YORIGIN, and ANGROT as options for the DISV and DISU packages.  These values are written to the binary grid file, which can be used by post-processors to locate the model grid in space.  These options have no affect on the simulation results.  The default value is 0.0 if not specified.
+		\item Added a new option to the TDIS input file called START\_DATE\_TIME.  This is a 30 character string that represents the simulation starting date and time, preferably in the format described at https://www.w3.org/TR/NOTE-datetime.  The value provided by the user has no affect on the simulation, but if it is provided, the value is written to the simulation list file.
+		\item Changed default behavior for how memory usage is written to the end of the simulation list file.  Added new MEMORY\_PRINT\_OPTION to simulation options to control how memory usage is written.
+		\item Corrections were made to the memory manager to ensure that all memory is deallocated at the end of a simulation.
+	\end{itemize}
+	
+	\underline{INTERNAL FLOW PACKAGES}
+	\begin{itemize}
+		\item Changed the way hydraulic conductivity is specified in the NPF Package.  Users no longer specify HK, VK, and HANI.  Hydraulic conductivity is now specified as ``K''.  If hydraulic conductivity is isotropic, then this is all that needs to be specified.  For anisotropic cases, the user can specify an optional ``K22'' array and an optional ``K33'' array.  For an unrotated conductivity ellipsoid ``K22'' corresponds to hydraulic conductivity in the y direction and ``K33'' corresponds to hydraulic conductivity in the z direction, respectively.
+	\end {itemize}
+	
+	\underline{ADVANCED STRESS PACKAGES}
+	\begin{itemize}
+		\item Modified the MAW Package to include the effects of aquifer anisotropy in the calculation of conductance.
+		\item Simplified the SFR Package connectivity to reflect feedback from beta users. There is no longer a requirement to connect reaches that do not have flow between them.  Program will now terminate with an error if this condition is encountered.
+		\item Added simple routing option to SFR package. This is the equivalent of the specified depth option (icalc=0) in previous versions of MODFLOW. If water is available in the reach, then there can be leakage from the SFR reach into the aquifer.  If no water is available, then no leakage is applied.  STAGE keyword also added and only applies to reaches that use the simple routing option. If the STAGE keyword is not specified for reaches that use the simple routing option the specified stage is set to the top of the reach (depth = 0).
+		\item Added functionality to pass SFR leakage to the aquifer to the highest active layer.
+		\item Converted SFR Manning's to a time-varying, time series aware variable.  
+		\item Updated LAK package so that conductance calculations correctly account for THICKSTRT in the NPF package for layers that use THICKSTRT (and are confined). Also updated EMBEDDEDH and EMBEDDEDV so that the conductance for these connection types are constant for confined layers.
+		\item Converted UZF stress period data to time series aware data.
+		\item Added time-series aware AUXILIARY variables to UZF package.
+		\item Implemented AUXMULTNAME in options block for UZF package (AUXILIARY variables have to be specified). AUXMULTNAME is applied to the GWF cell area and is used to simulated more than one UZF cell per GWF cell. This could be used to simulate different land use classifications (i.e., agricultural and natural land use types) in the same GWF cell.
+	\end{itemize}
+	
+	\underline{SOLUTION}
+	\begin{itemize}
+		\item Reworked IMS convergence information so that model specific convergence information is also printed to each model listing file when PRINT\_OPTION ALL is specified in the IMS OPTIONS block.
+		\item Added csv output option for IMS convergence information. Solution convergence information and model specific convergence information (if the solution includes more than one model) is written to a comma separated value file. If PRINT\_OPTION is NONE or SUMMARY, csv output includes maximum head change convergence information at the end of each outer iteration for each time step. If PRINT\_OPTION is ALL, csv output includes maximum head change and maximum residual convergence information for the solution and each model (if the solution includes more than one model) and linear acceleration information for each inner iteration. 
+	\end{itemize}
+	
