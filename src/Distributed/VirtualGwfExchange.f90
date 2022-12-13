@@ -46,7 +46,7 @@ subroutine vfx_create(this, name, exg_id, m1_id, m2_id)
 
   call this%VirtualExchangeType%create(name, exg_id, m1_id, m2_id)
   this%container_type = VDC_GWFEXG_TYPE
-
+  
 end subroutine vfx_create
 
 subroutine vfx_destroy(this)

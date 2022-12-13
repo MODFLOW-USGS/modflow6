@@ -123,15 +123,19 @@ contains
           call ustop()
         end if
 
-        ! create new model connection for model 1
-        modelConnection => createModelConnection(conEx%model1, conEx)
-        call AddSpatialModelConnectionToList(baseconnectionlist, modelConnection)
-        call AddSpatialModelConnectionToList(newConnections, modelConnection)
+        if (conEx%v_model1%is_local) then
+          ! create model connection for model 1
+          modelConnection => createModelConnection(conEx%model1, conEx)
+          call AddSpatialModelConnectionToList(baseconnectionlist, modelConnection)
+          call AddSpatialModelConnectionToList(newConnections, modelConnection)
+        end if
 
-        ! and for model 2, unless periodic
-        modelConnection => createModelConnection(conEx%model2, conEx)
-        call AddSpatialModelConnectionToList(baseconnectionlist, modelConnection)
-        call AddSpatialModelConnectionToList(newConnections, modelConnection)
+        ! and for model 2
+        if (conEx%v_model2%is_local) then
+          modelConnection => createModelConnection(conEx%model2, conEx)
+          call AddSpatialModelConnectionToList(baseconnectionlist, modelConnection)
+          call AddSpatialModelConnectionToList(newConnections, modelConnection)
+        end if
 
         ! remove this exchange from the base list, ownership
         ! now lies with the connection

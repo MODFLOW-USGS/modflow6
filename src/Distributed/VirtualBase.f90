@@ -1,7 +1,7 @@
 module VirtualBaseModule
   use KindModule, only: I4B, DP, LGP
   use ListModule
-  use ConstantsModule, only: LENVARNAME, LENMEMPATH
+  use ConstantsModule, only: LENVARNAME, LENMEMPATH, LENCOMPONENTNAME
   use MemoryTypeModule, only: MemoryType
   use MemoryManagerModule, only: mem_allocate, mem_deallocate, &
                                  get_from_memorylist
@@ -28,9 +28,10 @@ module VirtualBaseModule
   !!  synchronization stage.
   !<
   type, abstract, public :: VirtualDataType
-    logical(LGP) :: is_remote !< is remote memory, when true
-    character(len=LENVARNAME) :: remote_var_name !< remote variable name
-    character(len=LENMEMPATH) :: remote_mem_path !< remote memory path
+    logical(LGP) :: is_remote = .false. !< is remote memory, when true (default is false)
+    character(len=LENVARNAME) :: var_name !< variable name
+    character(len=LENCOMPONENTNAME) :: subcmp_name !< subcomponent name, e.g. package name
+    character(len=LENMEMPATH) :: mem_path !< memory path
     integer(I4B), dimension(:), allocatable :: sync_stages !< stage(s) at which to synchronize
     integer(I4B) :: map_type !< the type of map
     integer(I4B), dimension(:), pointer, contiguous :: virtual_to_remote => null() !< contiguous list which maps virtual index to remote
@@ -123,7 +124,10 @@ contains
     integer(I4B) :: stage
     logical(LGP) :: has_stage
 
-    has_stage = (findloc(this%sync_stages, stage, dim=1) > 0)
+    has_stage = .false.
+    if (allocated(this%sync_stages)) then
+      has_stage = (findloc(this%sync_stages, stage, dim=1) > 0)
+    end if
 
   end function vm_check_stage
 
@@ -132,7 +136,7 @@ contains
     ! local
     logical(LGP) :: found
 
-    call get_from_memorylist(this%remote_var_name, this%remote_mem_path, &
+    call get_from_memorylist(this%var_name, this%mem_path, &
                              this%virtual_mt, found)
   
   end subroutine vm_link
@@ -205,7 +209,7 @@ contains
 
   end subroutine vm_deallocate_dbl1d
 
-  subroutine vm_allocate_dbl2D(this, var_name, mem_path, shape)
+  subroutine vm_allocate_dbl2d(this, var_name, mem_path, shape)
     class(VirtualDbl2dType) :: this
     character(len=*) :: var_name
     character(len=*) :: mem_path
@@ -213,14 +217,14 @@ contains
 
     call mem_allocate(this%dbl2d, shape(1), shape(2), var_name, mem_path)
 
-  end subroutine vm_allocate_dbl2D
+  end subroutine vm_allocate_dbl2d
 
-  subroutine vm_deallocate_dbl2D(this)
+  subroutine vm_deallocate_dbl2d(this)
     class(VirtualDbl2dType) :: this
 
     if (this%is_remote) call mem_deallocate(this%dbl2d)
 
-  end subroutine vm_deallocate_dbl2D
+  end subroutine vm_deallocate_dbl2d
   
   function get_int(this) result(val)
     class(VirtualIntType) :: this

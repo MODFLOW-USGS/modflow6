@@ -4,6 +4,7 @@ module VirtualExchangeModule
   use VirtualModelModule, only: VirtualModelType, get_virtual_model
   use KindModule, only: I4B, LGP
   use ListModule, only: ListType
+  use STLVecIntModule
   use ConstantsModule, only: LENEXCHANGENAME
   use SimStagesModule
   implicit none
@@ -32,8 +33,11 @@ module VirtualExchangeModule
   contains
     procedure :: create => vx_create
     procedure :: prepare_stage => vx_prepare_stage
+    procedure :: get_send_items => vx_get_send_items
+    procedure :: get_recv_items => vx_get_recv_items    
     procedure :: destroy => vx_destroy
-    procedure, private :: allocate_data
+    ! private
+    procedure, private :: create_virtual_fields
     procedure, private :: deallocate_data
   end type VirtualExchangeType
 
@@ -48,19 +52,55 @@ contains
     integer(I4B) :: m1_id
     integer(I4B) :: m2_id
     ! local
-    logical(LGP) :: is_remote
+    logical(LGP) :: is_local
     
     this%v_model1 => get_virtual_model(m1_id)
     this%v_model2 => get_virtual_model(m2_id)
 
-    ! if any of the two models is remote, we virtualize _all_ the data
-    is_remote = this%v_model1%is_remote .or. this%v_model2%is_remote
-    call this%VirtualDataContainerType%vdc_create(name, exg_id, is_remote)
+    ! - if both models are local, is_local = true
+    ! - if both are remote, is_local = false
+    ! - if only one of them is remote, is_local = true and only the 
+    ! remote nodem1/2 array will get its property is_local = false
+    is_local = this%v_model1%is_local .or. this%v_model2%is_local
+    call this%VirtualDataContainerType%vdc_create(name, exg_id, is_local)
 
     ! allocate fields
-    call this%allocate_data()
+    call this%create_virtual_fields()
 
   end subroutine vx_create
+  
+  subroutine create_virtual_fields(this)
+    class(VirtualExchangeType) :: this
+    ! local
+    logical(LGP) :: is_nodem1_local
+    logical(LGP) :: is_nodem2_local
+
+    ! exchanges can be hybrid with both local and remote fields
+    is_nodem1_local = this%is_local .and. this%v_model1%is_local
+    is_nodem2_local = this%is_local .and. this%v_model2%is_local
+
+    allocate (this%nexg)
+    call this%create_field(this%nexg%to_base(), 'NEXG', '')
+    allocate (this%naux)
+    call this%create_field(this%naux%to_base(), 'NAUX', '')
+    allocate (this%ianglex)
+    call this%create_field(this%ianglex%to_base(), 'IANGLEX', '')
+    allocate (this%nodem1)
+    call this%create_field(this%nodem1%to_base(), 'NODEM1', '', is_nodem1_local)
+    allocate (this%nodem2)
+    call this%create_field(this%nodem2%to_base(), 'NODEM2', '', is_nodem2_local)
+    allocate (this%ihc)
+    call this%create_field(this%ihc%to_base(), 'IHC', '')
+    allocate (this%cl1)
+    call this%create_field(this%cl1%to_base(), 'CL1', '')
+    allocate (this%cl2)
+    call this%create_field(this%cl2%to_base(), 'CL2', '')
+    allocate (this%hwva)
+    call this%create_field(this%hwva%to_base(), 'HWVA', '')
+    allocate (this%auxvar)
+    call this%create_field(this%auxvar%to_base(), 'AUXVAR', '')
+
+  end subroutine create_virtual_fields
 
   subroutine vx_prepare_stage(this, stage)
     class(VirtualExchangeType) :: this
@@ -68,43 +108,101 @@ contains
     ! local
     integer(I4B) :: nexg, naux
 
-    if (stage == STG_AFTER_MDL_DF) then
+    if (stage == STG_AFTER_EXG_DF) then
 
-      call this%map(this%nexg%to_base(), 'NEXG', '', (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
-      call this%map(this%naux%to_base(), 'NAUX', '', (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
-      call this%map(this%ianglex%to_base(), 'IANGLEX', '', (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
+      call this%map(this%nexg%to_base(), (/STG_AFTER_EXG_DF/), MAP_ALL_TYPE)
+      call this%map(this%naux%to_base(), (/STG_AFTER_EXG_DF/), MAP_ALL_TYPE)
+      call this%map(this%ianglex%to_base(), (/STG_AFTER_EXG_DF/), MAP_ALL_TYPE)
 
     else if (stage == STG_BEFORE_DF) then
 
       nexg = this%nexg%get()
       naux = this%naux%get()
-      call this%map(this%nodem1%to_base(), 'NODEM1', '', nexg, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
-      call this%map(this%nodem2%to_base(), 'NODEM2', '', nexg, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
-      call this%map(this%ihc%to_base(), 'IHC', '', nexg, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
-      call this%map(this%cl1%to_base(), 'CL1', '', nexg, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
-      call this%map(this%cl2%to_base(), 'CL2', '', nexg, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
-      call this%map(this%hwva%to_base(), 'HWVA', '', nexg, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
-      call this%map(this%auxvar%to_base(), 'AUXVAR', '', naux, nexg, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+      call this%map(this%nodem1%to_base(), nexg, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+      call this%map(this%nodem2%to_base(), nexg, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+      call this%map(this%ihc%to_base(), nexg, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+      call this%map(this%cl1%to_base(), nexg, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+      call this%map(this%cl2%to_base(), nexg, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+      call this%map(this%hwva%to_base(), nexg, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+      call this%map(this%auxvar%to_base(), naux, nexg, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
 
     end if
 
   end subroutine vx_prepare_stage
 
-  subroutine allocate_data(this)
+  subroutine vx_get_recv_items(this, stage, rank, virtual_items)
     class(VirtualExchangeType) :: this
+    integer(I4B) :: stage
+    integer(I4B) :: rank
+    type(STLVecInt) :: virtual_items
+    ! local
+    integer(I4B) :: i, nodem1_idx, nodem2_idx
 
-    allocate (this%nexg)
-    allocate (this%naux)  
-    allocate (this%ianglex)    
-    allocate (this%nodem1)
-    allocate (this%nodem2)
-    allocate (this%ihc)
-    allocate (this%cl1)
-    allocate (this%cl2)
-    allocate (this%hwva)
-    allocate (this%auxvar)
+    nodem1_idx = -1
+    nodem2_idx = -1
+    do i = 1, this%virtual_data_list%Count()
+      if (associated(this%virtual_data_list%GetItem(i), this%nodem1)) then
+        nodem1_idx = i
+      end if
+      if (associated(this%virtual_data_list%GetItem(i), this%nodem2)) then
+        nodem2_idx = i
+      end if
+    end do
 
-  end subroutine allocate_data
+    if (.not. this%v_model1%is_local .and. .not. this%v_model2%is_local) then
+      ! receive all using base
+      call this%VirtualDataContainerType%get_recv_items(stage, rank, &
+                                                        virtual_items)
+    else if (.not. this%v_model2%is_local) then
+      ! receive for model2
+      if (this%nodem2%check_stage(stage)) then
+        call virtual_items%push_back(nodem2_idx)
+      end if
+    else if (.not. this%v_model1%is_local) then
+      ! receive for model1
+      if (this%nodem1%check_stage(stage)) then
+        call virtual_items%push_back(nodem1_idx)
+      end if
+    end if
+
+  end subroutine vx_get_recv_items
+
+  subroutine vx_get_send_items(this, stage, rank, virtual_items)
+    class(VirtualExchangeType) :: this
+    integer(I4B) :: stage
+    integer(I4B) :: rank
+    type(STLVecInt) :: virtual_items
+    ! local
+    integer(I4B) :: i, nodem1_idx, nodem2_idx
+
+    nodem1_idx = -1
+    nodem2_idx = -1
+    do i = 1, this%virtual_data_list%Count()
+      if (associated(this%virtual_data_list%GetItem(i), this%nodem1)) then
+        nodem1_idx = i
+      end if
+      if (associated(this%virtual_data_list%GetItem(i), this%nodem2)) then
+        nodem2_idx = i
+      end if
+    end do
+
+    if (this%v_model1%is_local .and. this%v_model2%is_local) then
+      ! send all using base
+      call this%VirtualDataContainerType%get_send_items(stage, rank, &
+                                                        virtual_items)
+    else if (this%v_model1%is_local) then
+      ! send for model1
+      if (this%nodem1%check_stage(stage)) then
+        call virtual_items%push_back(nodem1_idx)
+      end if
+    else if (this%v_model2%is_local) then
+      ! send for model2
+      if (this%nodem2%check_stage(stage)) then
+        call virtual_items%push_back(nodem2_idx)
+      end if
+    end if
+    
+  end subroutine vx_get_send_items
 
   subroutine vx_destroy(this)
     class(VirtualExchangeType) :: this

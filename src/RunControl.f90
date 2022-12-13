@@ -111,7 +111,7 @@ contains
 
     ! Interface models are created now and we know which
     ! remote models and exchanges are required in the
-    ! virtual solution. Also set the synchronization handler 
+    ! virtual solution. Also set the synchronization handler
     ! to the numerical solutions.
     do i = 1, basesolutionlist%Count()
       sol => basesolutionlist%GetItem(i)
@@ -149,7 +149,7 @@ contains
     class(NumericalSolutionType) :: num_sol
     integer(I4B) :: stage
     class(*), pointer :: ctx
-
+    
     select type (ctx)
     class is (RunControlType)
       call ctx%virtual_data_store%synchronize_sln(num_sol%id, stage)

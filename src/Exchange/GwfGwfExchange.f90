@@ -267,7 +267,9 @@ contains
     !
     ! -- Store obs
     call this%gwf_gwf_df_obs()
-    call this%obs%obs_df(iout, this%name, 'GWF-GWF', this%gwfmodel1%dis)
+    if (associated(this%gwfmodel1)) then
+      call this%obs%obs_df(iout, this%name, 'GWF-GWF', this%gwfmodel1%dis)
+    end if
     !
     ! -- validate
     if (associated(this%gwfmodel1) .and. associated(this%gwfmodel2)) then ! TODO_MJR: temp guard

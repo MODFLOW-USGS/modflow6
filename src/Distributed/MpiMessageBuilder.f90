@@ -22,6 +22,8 @@ module MpiMessageBuilderModule
     procedure :: create_body_snd => mb_create_body_snd
     ! private
     procedure, private :: create_vdc_snd_hdr
+    procedure, private :: create_vdc_snd_body
+    procedure, private :: create_vdc_rcv_body
     procedure, private :: create_vdc_body
   end type
 
@@ -33,14 +35,15 @@ contains
     integer(I4B) :: stage    
     integer :: hdrs_snd_type
     ! local
-    integer(I4B) :: i
+    integer(I4B) :: i, offset, nr_types
     class(VirtualDataContainerType), pointer :: vdc
     integer :: ierr
-    type(STLVecInt) :: model_idxs
+    type(STLVecInt) :: model_idxs, exg_idxs
     integer, dimension(:), allocatable :: blk_cnts, types
     integer(kind=MPI_ADDRESS_KIND), dimension(:), allocatable :: displs
 
     call model_idxs%init()
+    call exg_idxs%init()
 
     ! determine which containers to include
     do i = 1, virtual_model_list%Count()
@@ -49,27 +52,44 @@ contains
         call model_idxs%push_back(i)
       end if
     end do
+    do i = 1, virtual_exchange_list%Count()
+      vdc => get_vdc_from_list(virtual_exchange_list, i)
+      if (vdc%is_active .and. vdc%orig_rank == rank) then
+        call exg_idxs%push_back(i)
+      end if
+    end do
 
-    allocate(blk_cnts(model_idxs%size))
-    allocate(types(model_idxs%size))
-    allocate(displs(model_idxs%size))
+    nr_types = model_idxs%size + exg_idxs%size
+    allocate(blk_cnts(nr_types))
+    allocate(types(nr_types))
+    allocate(displs(nr_types))
 
-    ! loop over included models
+    ! loop over containers
     do i = 1, model_idxs%size
       vdc => get_vdc_from_list(virtual_model_list, model_idxs%at(i))
       call MPI_Get_address(vdc%id, displs(i), ierr)
       blk_cnts(i) = 1
       types(i) = this%create_vdc_snd_hdr(vdc, stage)
     end do
+    offset = model_idxs%size
+    do i = 1, exg_idxs%size
+      vdc => get_vdc_from_list(virtual_exchange_list, exg_idxs%at(i))
+      call MPI_Get_address(vdc%id, displs(i + offset), ierr)
+      blk_cnts(i + offset) = 1
+      types(i + offset) = this%create_vdc_snd_hdr(vdc, stage)
+    end do
     
-    call MPI_Type_create_struct(model_idxs%size, blk_cnts, displs, &
-                                types, hdrs_snd_type, ierr)
+    ! create a MPI data type for the headers to send
+    call MPI_Type_create_struct(nr_types, blk_cnts, displs, types, &
+                                hdrs_snd_type, ierr)
     call MPI_Type_commit(hdrs_snd_type, ierr)
-    do i = 1, model_idxs%size
+    do i = 1, nr_types
       call MPI_Type_free(types(i), ierr)
     end do
 
     call model_idxs%destroy()
+    call exg_idxs%destroy()
+
     deallocate(blk_cnts)
     deallocate(types)
     deallocate(displs)
@@ -98,45 +118,61 @@ contains
     integer(I4B) :: stage
     integer :: body_rcv_type
     ! local
-    integer(I4B) :: i, nr_models
+    integer(I4B) :: i, nr_types, offset
     class(VirtualDataContainerType), pointer :: vdc
-    type(STLVecInt) :: model_idxs
+    type(STLVecInt) :: model_idxs, exg_idxs
     integer :: ierr
     integer, dimension(:), allocatable :: types
     integer(kind=MPI_ADDRESS_KIND), dimension(:), allocatable :: displs
     integer, dimension(:), allocatable :: blk_cnts
 
     call model_idxs%init()
+    call exg_idxs%init()
 
-    ! gather all models coming from this rank
+    ! gather all containers from this rank
     do i = 1, virtual_model_list%Count()
       vdc => get_vdc_from_list(virtual_model_list, i)
       if (vdc%is_active .and. vdc%orig_rank == rank) then
         call model_idxs%push_back(i)
       end if
     end do
-
-    nr_models = model_idxs%size
-    allocate (types(nr_models))
-    allocate (displs(nr_models))
-    allocate (blk_cnts(nr_models))
-
-    ! loop over included models
-    do i = 1, nr_models
-      vdc => get_vdc_from_list(virtual_model_list, model_idxs%at(i))
-      call MPI_Get_address(vdc%id, displs(i), ierr)
-      types(i) = this%create_vdc_body(vdc, stage)      
-      blk_cnts(i) = 1
+    do i = 1, virtual_exchange_list%Count()
+      vdc => get_vdc_from_list(virtual_exchange_list, i)
+      if (vdc%is_active .and. vdc%orig_rank == rank) then
+        call exg_idxs%push_back(i)
+      end if
     end do
 
-    ! create the list of virtual data containers to receive
-    call MPI_Type_create_struct(model_idxs%size, blk_cnts, displs, types, body_rcv_type, ierr)
+    nr_types = model_idxs%size + exg_idxs%size
+    allocate (types(nr_types))
+    allocate (displs(nr_types))
+    allocate (blk_cnts(nr_types))
+
+    ! loop over included containers
+    do i = 1, model_idxs%size
+      vdc => get_vdc_from_list(virtual_model_list, model_idxs%at(i))
+      call MPI_Get_address(vdc%id, displs(i), ierr)
+      types(i) = this%create_vdc_rcv_body(vdc, rank, stage)
+      blk_cnts(i) = 1
+    end do
+    offset = model_idxs%size
+    do i = 1, exg_idxs%size
+      vdc => get_vdc_from_list(virtual_exchange_list, exg_idxs%at(i))
+      call MPI_Get_address(vdc%id, displs(i + offset), ierr)
+      blk_cnts(i + offset) = 1
+      types(i + offset) = this%create_vdc_rcv_body(vdc, rank, stage) 
+    end do
+
+    ! create a MPI data type for the virtual data containers to receive
+    call MPI_Type_create_struct(nr_types, blk_cnts, displs, types, &
+                                body_rcv_type, ierr)
     call MPI_Type_commit(body_rcv_type, ierr)
-    do i = 1, nr_models
+    do i = 1, nr_types
       call MPI_Type_free(types(i), ierr)
     end do
 
     call model_idxs%destroy()
+    call exg_idxs%destroy()
     deallocate (types)
     deallocate (displs)
     deallocate (blk_cnts)
@@ -167,7 +203,7 @@ contains
     do i = 1, nr_headers
       vdc => get_vdc_from_hdr(headers(i))
       call MPI_Get_address(vdc%id, displs(i), ierr)
-      types(i) = this%create_vdc_body(vdc, stage)
+      types(i) = this%create_vdc_snd_body(vdc, rank, stage)
       blk_cnts(i) = 1
     end do
 
@@ -211,24 +247,54 @@ contains
 
   end function create_vdc_snd_hdr
 
-  !> @brief Create data type for this container, relative
-  !< to its id field. This is used for sending and receiving
-  function create_vdc_body(this, vdc, stage) result(new_type)
+  function create_vdc_rcv_body(this, vdc, rank, stage) result(new_type)
     class(MpiMessageBuilderType) :: this
     class(VirtualDataContainerType), pointer :: vdc
+    integer(I4B) :: rank
     integer(I4B) :: stage
     integer :: new_type
     ! local
-    integer(I4B) :: i 
+    type(STLVecInt) :: virtual_items
+
+    call virtual_items%init()
+    call vdc%get_recv_items(stage, rank, virtual_items)
+    new_type = this%create_vdc_body(vdc, virtual_items)
+    call virtual_items%destroy()
+
+  end function create_vdc_rcv_body
+
+  function create_vdc_snd_body(this, vdc, rank, stage) result(new_type)
+    class(MpiMessageBuilderType) :: this
+    class(VirtualDataContainerType), pointer :: vdc
+    integer(I4B) :: rank
+    integer(I4B) :: stage
+    integer :: new_type
+    ! local
+    type(STLVecInt) :: virtual_items
+
+    call virtual_items%init()
+    call vdc%get_send_items(stage, rank, virtual_items)
+    new_type = this%create_vdc_body(vdc, virtual_items)
+    call virtual_items%destroy()    
+
+  end function create_vdc_snd_body
+
+  !> @brief Create data type for this container, relative
+  !< to its id field. This is used for sending and receiving
+  function create_vdc_body(this, vdc, items) result(new_type)
+    class(MpiMessageBuilderType) :: this
+    class(VirtualDataContainerType), pointer :: vdc    
     type(STLVecInt) :: items
+    integer :: new_type
+    ! local
+    integer(I4B) :: i 
     class(VirtualDataType), pointer :: vd
     integer :: ierr
     integer(kind=MPI_ADDRESS_KIND) :: offset
     integer, dimension(:), allocatable :: types
     integer(kind=MPI_ADDRESS_KIND), dimension(:), allocatable :: displs
     integer, dimension(:), allocatable :: blk_cnts
-
-    call get_items_for_stage(vdc, stage, items)
+    
     allocate (types(items%size))
     allocate (displs(items%size))
     allocate (blk_cnts(items%size))
@@ -286,14 +352,18 @@ contains
   !! the virtual data items. Types are automatically committed unless
   !< they are primitives (e.g. MPI_INTEGER)
   subroutine get_mpi_datatype(virtual_data, el_displ, el_type)
-    use SimModule, only: ustop    
+    use SimModule, only: ustop
+    use SimVariablesModule, only: proc_id
     class(VirtualDataType), pointer :: virtual_data
     integer(kind=MPI_ADDRESS_KIND) :: el_displ
     integer :: el_type
     ! local
     type(MemoryType), pointer :: mt
-
+    
     mt => virtual_data%virtual_mt
+    if (.not. associated(mt)) then
+      write(*,*) 'not associated: ', virtual_data%var_name, proc_id
+    end if
     if (associated(mt%intsclr)) then
       call get_mpitype_for_int(mt, el_displ, el_type)
     else if (associated(mt%aint1d)) then
@@ -312,7 +382,7 @@ contains
       call get_mpitype_for_dbl3d(mt, el_displ, el_type)
     else
       write(*,*) 'unsupported datatype in MPI messaging for ', &
-                 virtual_data%remote_var_name, virtual_data%remote_mem_path
+                 virtual_data%var_name, virtual_data%mem_path
       call ustop()
     end if
 
@@ -449,28 +519,5 @@ contains
     call MPI_Type_commit(el_type, ierr)
     
   end subroutine get_mpitype_for_dbl3d
-
-  !> @brief Get indexes of virtual data items in this
-  !< container as a vector
-  subroutine get_items_for_stage(vdc, stage, virtual_items)
-    class(VirtualDataContainerType), pointer :: vdc
-    integer(I4B) :: stage
-    type(STLVecInt) :: virtual_items
-    ! local
-    integer(I4B) :: i
-    class(*), pointer :: obj_ptr
-
-    call virtual_items%init()
-
-    do i = 1, vdc%virtual_data_list%Count()
-      obj_ptr => vdc%virtual_data_list%GetItem(i)
-      select type (obj_ptr)
-        class is (VirtualDataType)
-          if (.not. obj_ptr%check_stage(stage)) cycle
-          call virtual_items%push_back(i)
-      end select
-    end do
-
-  end subroutine get_items_for_stage
 
 end module MpiMessageBuilderModule

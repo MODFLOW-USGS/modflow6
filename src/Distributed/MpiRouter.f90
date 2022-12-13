@@ -71,10 +71,10 @@ contains
     
     do i = 1, nr_models
       vdc => get_vdc_from_list(virtual_model_list, i)
-      if (vdc%is_remote) then
-        this%model_proc_ids(i) = 0
-      else
+      if (vdc%is_local) then
         this%model_proc_ids(i) = proc_id
+      else        
+        this%model_proc_ids(i) = 0
       end if
     end do
 
@@ -95,7 +95,7 @@ contains
       ! We need refactoring of Exchanges here, such that Exchange <=> rank
       ! is always 1-to-1.
       call vex%set_orig_rank(vex%v_model1%orig_rank)
-      if (.not. vex%v_model1%is_remote) then
+      if (vex%v_model1%is_local) then
         call vex%set_orig_rank(vex%v_model2%orig_rank)
       end if
     end do
@@ -228,13 +228,13 @@ contains
 
     do i = 1, virtual_model_list%Count()
       vdc => get_vdc_from_list(virtual_model_list, i)
-      if (vdc%is_remote .and. vdc%is_active) then
+      if (.not. vdc%is_local .and. vdc%is_active) then
         call this%senders%push_back_unique(vdc%orig_rank)
       end if
     end do
     do i = 1, virtual_exchange_list%Count()
       vdc => get_vdc_from_list(virtual_exchange_list, i)
-      if (vdc%is_remote .and. vdc%is_active) then
+      if (.not. vdc%is_local .and. vdc%is_active) then
         call this%senders%push_back_unique(vdc%orig_rank)
       end if
     end do

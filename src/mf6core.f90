@@ -249,6 +249,9 @@ contains
       call ep%exg_df()
     end do
     !
+    ! -- synchronize
+    call run_ctrl%at_stage(STG_AFTER_EXG_DF)
+    !
     ! -- when needed, this is were the interface models are
     ! created and added to the numerical solutions
     call connections_cr()

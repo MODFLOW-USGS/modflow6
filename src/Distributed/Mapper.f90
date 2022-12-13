@@ -47,31 +47,30 @@ module MapperModule
   !<
   subroutine add_exchange_vars(this)
     use SimStagesModule
-    use ListsModule, only: baseexchangelist
-    use DisConnExchangeModule, only: DisConnExchangeType, &
-                                     GetDisConnExchangeFromList
+    use ListsModule, only: baseconnectionlist
+    use SpatialModelConnectionModule, only: SpatialModelConnectionType, &
+                                            GetSpatialModelConnectionFromList
     use VirtualExchangeModule, only: VirtualExchangeType, get_virtual_exchange
     class(MapperType) :: this
     ! local
-    integer(I4B) :: ix
-    class(DisConnExchangeType), pointer :: exg
+    integer(I4B) :: iconn
+    class(SpatialModelConnectionType), pointer :: conn
     class(VirtualExchangeType), pointer :: virt_exg
     character(len=LENMEMPATH) :: virt_mem_path
 
-    ! add variables for all partially remote exchanges
-    do ix = 1, baseexchangelist%Count()
-      exg => GetDisConnExchangeFromList(baseexchangelist, ix)
-      if (.not. associated(exg)) cycle
-
-      virt_exg => get_virtual_exchange(exg%id)
-      virt_mem_path = virt_exg%get_vrt_mem_path('')
-      if (exg%v_model1%is_remote) then
-        call this%map_data_full(0, 'NODEM1', exg%memoryPath, 'NODEM1', virt_mem_path, (/STG_AFTER_MDL_DF/))
+    do iconn = 1, baseconnectionlist%Count()
+      conn => GetSpatialModelConnectionFromList(baseconnectionlist, iconn)
+      virt_exg => get_virtual_exchange(conn%primaryExchange%id)
+      if (.not. virt_exg%v_model1%is_local) then
+        virt_mem_path = virt_exg%get_vrt_mem_path('NODEM1','')
+        call this%map_data_full(0, 'NODEM1', conn%primaryExchange%memoryPath, &
+                                   'NODEM1', virt_mem_path, (/STG_BEFORE_DF/))
       end if
-      if (exg%v_model2%is_remote) then
-        call this%map_data_full(0, 'NODEM2', exg%memoryPath, 'NODEM2', virt_mem_path, (/STG_AFTER_MDL_DF/))
+      if (.not. virt_exg%v_model2%is_local) then
+        virt_mem_path = virt_exg%get_vrt_mem_path('NODEM2','')
+        call this%map_data_full(0, 'NODEM2', conn%primaryExchange%memoryPath, &
+                                   'NODEM2', virt_mem_path, (/STG_BEFORE_DF/))
       end if
-
     end do
 
   end subroutine add_exchange_vars
@@ -171,7 +170,6 @@ module MapperModule
     class(VirtualModelType), pointer :: v_model
 
     v_model => get_virtual_model(src_model_id)
-    src_mem_path = v_model%get_vrt_mem_path(tgt_subcomp_name)
 
     if (len_trim(tgt_subcomp_name) > 0) then
       tgt_mem_path = create_mem_path(tgt_model_name, tgt_subcomp_name)
@@ -180,6 +178,7 @@ module MapperModule
     end if
 
     src_var_name = tgt_var_name
+    src_mem_path = v_model%get_vrt_mem_path(src_var_name, tgt_subcomp_name)
     call this%map_data(controller_id, &
                        tgt_var_name, tgt_mem_path, index_map%tgt_idx, &
                        src_var_name, src_mem_path, index_map%src_idx, &
@@ -208,14 +207,14 @@ module MapperModule
     class(VirtualExchangeType), pointer :: v_exchange
 
     v_exchange => get_virtual_exchange(src_exg_id)
-    src_mem_path = v_exchange%get_vrt_mem_path('')
 
     if (len_trim(tgt_subcomp_name) > 0) then
       tgt_mem_path = create_mem_path(tgt_model_name, tgt_subcomp_name)
     else
       tgt_mem_path = create_mem_path(tgt_model_name)
     end if
-
+    
+    src_mem_path = v_exchange%get_vrt_mem_path(src_var_name, '')
     call this%map_data(controller_id, &
                        tgt_var_name, tgt_mem_path, index_map_sgn%tgt_idx, &
                        src_var_name, src_mem_path, index_map_sgn%src_idx, &

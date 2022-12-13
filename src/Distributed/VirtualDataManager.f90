@@ -9,6 +9,9 @@ module VirtualDataManagerModule
   use RouterBaseModule
   use RouterFactoryModule, only: create_router
   use NumericalSolutionModule, only: NumericalSolutionType
+  use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
+  use NumericalExchangeModule, only: NumericalExchangeType, &
+                                     GetNumericalExchangeFromList
   use SpatialModelConnectionModule, only: SpatialModelConnectionType, &
                                           GetSpatialModelConnectionFromList
   implicit none
@@ -70,13 +73,18 @@ contains
 
   end subroutine
 
+  !> @brief Add the models and exchanges from the passed solution
+  !! to the virtual data structure. This can then be used
+  !< to efficiently sync only this particular solution.
   subroutine vds_add_solution(this, num_sol)
     class(VirtualDataManagerType) :: this
     class(NumericalSolutionType), pointer :: num_sol
     ! local
-    integer(I4B) :: i, ix, im, ihx
+    integer(I4B) :: i, im, ix, ihm, ihx
     class(VirtualSolutionType), pointer :: virt_sol
-    class(SpatialModelConnectionType), pointer :: conn
+    class(NumericalModelType), pointer :: num_mod
+    class(NumericalExchangeType), pointer :: num_exg
+    class(SpatialModelConnectionType), pointer :: conn    
     integer(I4B) :: model_id, exg_id
     type(STLVecInt) :: model_ids, exchange_ids
     class(*), pointer :: vdc
@@ -91,14 +99,28 @@ contains
     this%solution_ids(this%nr_solutions) = num_sol%id ! TODO_MJR: do we need this double bookkeeping?
     virt_sol%solution_id = num_sol%id
 
+    ! let's start with adding all models and exchanges from the global list
+    ! (we will make them inactive when they are remote and not part of
+    ! our halo)
+    do im = 1, num_sol%modellist%Count()
+      num_mod => GetNumericalModelFromList(num_sol%modellist, im)
+      call model_ids%push_back(num_mod%id)
+    end do
+
     ! loop over exchanges in solution and get connections
     do ix = 1, num_sol%exchangelist%Count()
       conn => GetSpatialModelConnectionFromList(num_sol%exchangelist, ix)
-      if (.not. associated(conn)) cycle
+      if (.not. associated(conn)) then
+        ! it's a classic exchange, add it
+        num_exg => GetNumericalExchangeFromList(num_sol%exchangelist, ix)
+        call exchange_ids%push_back_unique(num_exg%id)
+        cycle
+      end if
 
-      ! get halo models and halo exchanges from connection
-      do im = 1, conn%haloModels%size
-        model_id = conn%haloModels%at(im)
+      ! it's an interface model based exchanged, get
+      ! halo models and halo exchanges from connection
+      do ihm = 1, conn%haloModels%size
+        model_id = conn%haloModels%at(ihm)
         call model_ids%push_back_unique(model_id)
       end do
       do ihx = 1, conn%haloExchanges%size
@@ -127,49 +149,34 @@ contains
   !> @brief Synchronize the full virtual data store for this stage
   !<
   subroutine vds_synchronize(this, stage)
-    use MpiWorldModule
-    use VirtualModelModule
+    use VirtualExchangeModule
     use SimVariablesModule, only: proc_id
-    use SimStagesModule
     class(VirtualDataManagerType) :: this
     integer(I4B) :: stage
     ! local
     integer(I4B) :: i
-    class(VirtualModelType), pointer :: vm
-    type(MpiWorldType), pointer :: mpi_world
-
-    mpi_world => get_mpi_world()
+    class(VirtualExchangeType), pointer :: vx
 
     call this%prepare_all(stage)
     call this%link_all(stage)
-
-    ! prepare all virtual data for this stage
-    call mpi_world%begin_order()
-    write(*,'(a,i0)') 'rank ', proc_id
-    do i = 1, virtual_model_list%Count()
-      vm => get_virtual_model_from_list(virtual_model_list, i)
-      if (associated(vm%dis_xorigin%virtual_mt)) then
-        write(*,*) 'after linking stage ', trim(STG_TO_STR(stage)), ', model ', vm%name, ': xorigin = ', vm%dis_xorigin%get()
-      else
-        write(*,*) 'after linking stage ', trim(STG_TO_STR(stage)), ', model ', vm%name, ': xorigin = undefined'
-      end if
-    end do
-    call mpi_world%end_order()
-
     call this%router%route_all(stage)
 
-    call mpi_world%begin_order()
-    write(*,'(a,i0)') 'rank ', proc_id
-    do i = 1, virtual_model_list%Count()
-      vm => get_virtual_model_from_list(virtual_model_list, i)
-      if (associated(vm%dis_xorigin%virtual_mt)) then
-        write(*,*) 'after router stage ', trim(STG_TO_STR(stage)), ', model ', vm%name, ': xorigin = ', vm%dis_xorigin%get()
-      else
-        write(*,*) 'after router stage ', trim(STG_TO_STR(stage)), ', model ', vm%name, ': xorigin = undefined'
-      end if
-    end do
-    call mpi_world%end_order()
-
+    if (proc_id == 0) then
+      write(*,*) 'stage ', stage
+      do i = 1, virtual_exchange_list%Count()
+        vx => get_virtual_exchange_from_list(virtual_exchange_list, i)
+        if (associated(vx%nodem1)) then
+          if (associated(vx%nodem1%virtual_mt)) then
+            write(*,*) 'virtual nodem1 ', vx%nodem1%get_array()            
+          end if
+        end if
+        if (associated(vx%nodem2)) then
+          if (associated(vx%nodem2%virtual_mt)) then
+            write(*,*) 'virtual nodem2 ', vx%nodem2%get_array()
+          end if
+        end if
+      end do
+    end if    
 
   end subroutine vds_synchronize
 
@@ -183,11 +190,11 @@ contains
     ! prepare all virtual data for this stage
     do i = 1, virtual_model_list%Count()
       vdc => get_vdc_from_list(virtual_model_list, i)
-      call vdc%prepare_stage(stage)      
+      call vdc%prepare_stage(stage)
     end do
     do i = 1, virtual_exchange_list%Count()
       vdc => get_vdc_from_list(virtual_exchange_list, i)
-      call vdc%prepare_stage(stage)      
+      call vdc%prepare_stage(stage)
     end do
 
   end subroutine prepare_all
@@ -202,15 +209,11 @@ contains
     ! link all local objects
     do i = 1, virtual_model_list%Count()
       vdc => get_vdc_from_list(virtual_model_list, i)
-      if (.not. vdc%is_remote) then
-        call vdc%link_items(stage)
-      end if
+      call vdc%link_items(stage)
     end do
     do i = 1, virtual_exchange_list%Count()
       vdc => get_vdc_from_list(virtual_exchange_list, i)
-      if (.not. vdc%is_remote) then
-        call vdc%link_items(stage)
-      end if
+      call vdc%link_items(stage)
     end do
 
   end subroutine link_all
@@ -283,16 +286,12 @@ contains
 
     do i = 1, virtual_sol%models%Count()
       vdc => get_vdc_from_list(virtual_sol%models, i)
-      if (.not. vdc%is_remote) then
-        call vdc%link_items(stage)
-      end if
+      call vdc%link_items(stage)
     end do
 
     do i = 1, virtual_sol%exchanges%Count()
       vdc => get_vdc_from_list(virtual_sol%exchanges, i)
-      if (.not. vdc%is_remote) then
-        call vdc%link_items(stage)
-      end if
+      call vdc%link_items(stage)
     end do
 
   end subroutine link

@@ -36,7 +36,7 @@ module VirtualGwtModelModule
     procedure :: prepare_stage => vgwt_prepare_stage
     procedure :: destroy => vgwt_destroy
     ! private
-    procedure, private :: allocate_data
+    procedure, private :: create_virtual_fields
     procedure, private :: deallocate_data
   end type VirtualGwtModelType
 
@@ -70,9 +70,45 @@ subroutine vgwt_create(this, name, id, model)
   this%container_type = VDC_GWTMODEL_TYPE
 
   ! allocate fields
-  call this%allocate_data()
+  call this%create_virtual_fields()
 
 end subroutine vgwt_create
+
+subroutine create_virtual_fields(this)
+  class(VirtualGwtModelType) :: this
+
+  allocate (this%dsp_idiffc)
+  call this%create_field(this%dsp_idiffc%to_base(),'IDIFFC', 'DSP')
+  allocate (this%dsp_idisp)
+  call this%create_field(this%dsp_idisp%to_base(), 'IDISP', 'DSP')
+  allocate (this%dsp_diffc)
+  call this%create_field(this%dsp_diffc%to_base(), 'DIFFC', 'DSP')
+  allocate (this%dsp_alh)
+  call this%create_field(this%dsp_alh%to_base(), 'ALH', 'DSP')
+  allocate (this%dsp_alv)
+  call this%create_field(this%dsp_alv%to_base(), 'ALV', 'DSP')
+  allocate (this%dsp_ath1)
+  call this%create_field(this%dsp_ath1%to_base(), 'ATH1', 'DSP')
+  allocate (this%dsp_ath2)
+  call this%create_field(this%dsp_ath2%to_base(), 'ATH2', 'DSP')
+  allocate (this%dsp_atv)
+  call this%create_field(this%dsp_atv%to_base(), 'ATV', 'DSP')
+  allocate (this%fmi_gwfhead)
+  call this%create_field(this%fmi_gwfhead%to_base(), 'GWFHEAD', 'FMI')
+  allocate (this%fmi_gwfsat)
+  call this%create_field(this%fmi_gwfsat%to_base(), 'GWFSAT', 'FMI')
+  allocate (this%fmi_gwfspdis)
+  call this%create_field(this%fmi_gwfspdis%to_base(), 'GWFSPDIS', 'FMI')
+  allocate (this%fmi_gwfflowja)
+  call this%create_field(this%fmi_gwfflowja%to_base(), 'GWFFLOWJA', 'FMI')
+  allocate (this%mst_porosity)
+  call this%create_field(this%mst_porosity%to_base(), 'POROSITY', 'MST')
+  allocate (this%indsp)
+  call this%create_field(this%indsp%to_base(), 'INDSP', '')
+  allocate (this%inmst)
+  call this%create_field(this%inmst%to_base(), 'INMST', '')
+
+end subroutine create_virtual_fields
 
 subroutine vgwt_prepare_stage(this, stage)
   class(VirtualGwtModelType) :: this
@@ -89,59 +125,38 @@ subroutine vgwt_prepare_stage(this, stage)
 
   if (stage == STG_AFTER_MDL_DF) then
     
-    call this%map(this%dsp_idiffc%to_base(),'IDIFFC', 'DSP', (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
-    call this%map(this%dsp_idisp%to_base(), 'IDISP', 'DSP', (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
-    call this%map(this%indsp%to_base(), 'INDSP', '', (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
-    call this%map(this%inmst%to_base(), 'INMST', '', (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
+    call this%map(this%dsp_idiffc%to_base(), (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
+    call this%map(this%dsp_idisp%to_base(), (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
+    call this%map(this%indsp%to_base(), (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
+    call this%map(this%inmst%to_base(), (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
 
   else if (stage == STG_BEFORE_AR) then
 
-    call this%map(this%x%to_base(), 'X', '', nr_nodes, (/STG_BEFORE_AR, STG_BEFORE_AD, STG_BEFORE_CF/), MAP_NODE_TYPE)
-    call this%map(this%ibound%to_base(), 'IBOUND', '', nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+    call this%map(this%x%to_base(), nr_nodes, (/STG_BEFORE_AR, STG_BEFORE_AD, STG_BEFORE_CF/), MAP_NODE_TYPE)
+    call this%map(this%ibound%to_base(), nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
     if (this%dsp_idiffc%get() > 0) then
-      call this%map(this%dsp_diffc%to_base(), 'DIFFC', 'DSP', nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+      call this%map(this%dsp_diffc%to_base(), nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
     end if
     if (this%dsp_idisp%get() > 0) then
-      call this%map(this%dsp_alh%to_base(), 'ALH', 'DSP', nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
-      call this%map(this%dsp_alv%to_base(), 'ALV', 'DSP', nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
-      call this%map(this%dsp_ath1%to_base(), 'ATH1', 'DSP', nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
-      call this%map(this%dsp_ath2%to_base(), 'ATH2', 'DSP', nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
-      call this%map(this%dsp_atv%to_base(), 'ATV', 'DSP', nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+      call this%map(this%dsp_alh%to_base(), nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+      call this%map(this%dsp_alv%to_base(), nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+      call this%map(this%dsp_ath1%to_base(), nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+      call this%map(this%dsp_ath2%to_base(), nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+      call this%map(this%dsp_atv%to_base(), nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
     end if
 
-    call this%map(this%fmi_gwfhead%to_base(), 'GWFHEAD', 'FMI', nr_nodes, (/STG_BEFORE_AD/), MAP_NODE_TYPE)
-    call this%map(this%fmi_gwfsat%to_base(), 'GWFSAT', 'FMI', nr_nodes, (/STG_BEFORE_AD/), MAP_NODE_TYPE)
-    call this%map(this%fmi_gwfspdis%to_base(), 'GWFSPDIS', 'FMI',  3, nr_nodes, (/STG_BEFORE_AD/), MAP_NODE_TYPE)
-    call this%map(this%fmi_gwfflowja%to_base(), 'GWFFLOWJA', 'FMI', nr_conns, (/STG_BEFORE_AD/), MAP_NODE_TYPE)
+    call this%map(this%fmi_gwfhead%to_base(), nr_nodes, (/STG_BEFORE_AD/), MAP_NODE_TYPE)
+    call this%map(this%fmi_gwfsat%to_base(), nr_nodes, (/STG_BEFORE_AD/), MAP_NODE_TYPE)
+    call this%map(this%fmi_gwfspdis%to_base(), 3, nr_nodes, (/STG_BEFORE_AD/), MAP_NODE_TYPE)
+    call this%map(this%fmi_gwfflowja%to_base(), nr_conns, (/STG_BEFORE_AD/), MAP_NODE_TYPE)
 
     if (this%indsp%get() > 0 .and. this%inmst%get() > 0) then
-      call this%map(this%mst_porosity%to_base(), 'POROSITY', 'MST', nr_nodes, (/STG_AFTER_AR/), MAP_NODE_TYPE)
+      call this%map(this%mst_porosity%to_base(), nr_nodes, (/STG_AFTER_AR/), MAP_NODE_TYPE)
     end if
 
   end if
 
 end subroutine vgwt_prepare_stage
-
-subroutine allocate_data(this)
-  class(VirtualGwtModelType) :: this
-
-  allocate (this%dsp_idiffc)
-  allocate (this%dsp_idisp)
-  allocate (this%dsp_diffc)
-  allocate (this%dsp_alh)
-  allocate (this%dsp_alv)
-  allocate (this%dsp_ath1)
-  allocate (this%dsp_ath2)
-  allocate (this%dsp_atv)
-  allocate (this%fmi_gwfhead)
-  allocate (this%fmi_gwfsat)
-  allocate (this%fmi_gwfspdis)
-  allocate (this%fmi_gwfflowja)
-  allocate (this%mst_porosity)
-  allocate (this%indsp)
-  allocate (this%inmst)
-
-end subroutine allocate_data
 
 subroutine deallocate_data(this)
   class(VirtualGwtModelType) :: this
