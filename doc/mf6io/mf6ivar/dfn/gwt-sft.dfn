@@ -87,7 +87,7 @@ in_record true
 reader urword
 tagged true
 optional false
-longname stage keyword
+longname concentration keyword
 description keyword to specify that record corresponds to concentration.
 
 block options
