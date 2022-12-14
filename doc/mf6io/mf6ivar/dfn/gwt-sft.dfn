@@ -50,7 +50,7 @@ name print_concentration
 type keyword
 reader urword
 optional true
-longname print calculated stages to listing file
+longname print calculated concentrations to listing file
 description REPLACE print_concentration {'{#1}': 'reach', '{#2}': 'concentration', '{#3}': 'CONCENTRATION'}
 
 block options
