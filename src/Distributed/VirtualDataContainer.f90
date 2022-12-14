@@ -19,6 +19,10 @@ module VirtualDataContainerModule
   integer(I4B), public, parameter :: VDC_GWFMVR_TYPE = 5
   integer(I4B), public, parameter :: VDC_GWTMVT_TYPE = 6
  
+  type, public :: VdcPtrType
+    class(VirtualDataContainerType), pointer :: ptr => null()
+  end type VdcPtrType
+
   type, public :: VirtualDataContainerType   
     integer(I4B) :: id !< unique identifier matching with the real counterpart
     integer(I4B) :: container_type !< to identify the actual type of this container

@@ -87,7 +87,7 @@ contains
     class(SpatialModelConnectionType), pointer :: conn    
     integer(I4B) :: model_id, exg_id
     type(STLVecInt) :: model_ids, exchange_ids
-    class(*), pointer :: vdc
+    class(VirtualDataContainerType), pointer :: vdc
 
     this%nr_solutions = this%nr_solutions + 1
     virt_sol => this%virtual_solutions(this%nr_solutions)
@@ -128,16 +128,19 @@ contains
         call exchange_ids%push_back_unique(exg_id)
       end do
 
-    end do    
+    end do 
+    
+    allocate (virt_sol%models(model_ids%size))
+    allocate (virt_sol%exchanges(exchange_ids%size))
 
     ! select virtual containers for models/exchanges
-    do i = 1, model_ids%size
+    do i = 1, model_ids%size      
       vdc => get_virtual_model(model_ids%at(i))
-      call virt_sol%models%Add(vdc)
+      virt_sol%models(i)%ptr => vdc
     end do
     do i = 1, exchange_ids%size
       vdc => get_virtual_exchange(exchange_ids%at(i))
-      call virt_sol%exchanges%Add(vdc)
+      virt_sol%exchanges(i)%ptr => vdc
     end do
 
     ! cleanup
@@ -149,34 +152,12 @@ contains
   !> @brief Synchronize the full virtual data store for this stage
   !<
   subroutine vds_synchronize(this, stage)
-    use VirtualExchangeModule
-    use SimVariablesModule, only: proc_id
     class(VirtualDataManagerType) :: this
     integer(I4B) :: stage
-    ! local
-    integer(I4B) :: i
-    class(VirtualExchangeType), pointer :: vx
 
     call this%prepare_all(stage)
     call this%link_all(stage)
     call this%router%route_all(stage)
-
-    if (proc_id == 0) then
-      write(*,*) 'stage ', stage
-      do i = 1, virtual_exchange_list%Count()
-        vx => get_virtual_exchange_from_list(virtual_exchange_list, i)
-        if (associated(vx%nodem1)) then
-          if (associated(vx%nodem1%virtual_mt)) then
-            write(*,*) 'virtual nodem1 ', vx%nodem1%get_array()            
-          end if
-        end if
-        if (associated(vx%nodem2)) then
-          if (associated(vx%nodem2%virtual_mt)) then
-            write(*,*) 'virtual nodem2 ', vx%nodem2%get_array()
-          end if
-        end if
-      end do
-    end if    
 
   end subroutine vds_synchronize
 
@@ -244,13 +225,13 @@ contains
     integer(I4B) :: i
     class(VirtualDataContainerType), pointer :: vdc
 
-    do i = 1, virtual_sol%models%Count()      
-      vdc => get_vdc_from_list(virtual_sol%models, i)
+    do i = 1, size(virtual_sol%models)   
+      vdc => virtual_sol%models(i)%ptr
       call vdc%prepare_stage(stage)
     end do
 
-    do i = 1, virtual_sol%exchanges%Count()
-      vdc => get_vdc_from_list(virtual_sol%exchanges, i)
+    do i = 1, size(virtual_sol%exchanges)
+      vdc => virtual_sol%exchanges(i)%ptr
       call vdc%prepare_stage(stage)
     end do
 
@@ -284,13 +265,13 @@ contains
     integer(I4B) :: i
     class(VirtualDataContainerType), pointer :: vdc
 
-    do i = 1, virtual_sol%models%Count()
-      vdc => get_vdc_from_list(virtual_sol%models, i)
+    do i = 1, size(virtual_sol%models)
+      vdc => virtual_sol%models(i)%ptr
       call vdc%link_items(stage)
     end do
 
-    do i = 1, virtual_sol%exchanges%Count()
-      vdc => get_vdc_from_list(virtual_sol%exchanges, i)
+    do i = 1, size(virtual_sol%exchanges)
+      vdc => virtual_sol%exchanges(i)%ptr
       call vdc%link_items(stage)
     end do
 
@@ -335,6 +316,10 @@ contains
       call vdc%destroy()
     end do
 
+    do i = 1, this%nr_solutions
+      deallocate (this%virtual_solutions(i)%models)
+      deallocate (this%virtual_solutions(i)%exchanges)
+    end do
     deallocate(this%virtual_solutions)
 
   end subroutine destroy

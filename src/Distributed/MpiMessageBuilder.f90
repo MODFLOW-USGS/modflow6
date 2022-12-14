@@ -3,7 +3,6 @@ module MpiMessageBuilderModule
   use MemoryTypeModule, only: MemoryType
   use STLVecIntModule
   use VirtualBaseModule
-  use VirtualDataListsModule, only: virtual_model_list, virtual_exchange_list
   use VirtualDataContainerModule
   use mpi
   implicit none
@@ -14,13 +13,18 @@ module MpiMessageBuilderModule
     integer(I4B) :: container_type
   end type
 
-  type, public :: MpiMessageBuilderType
+  type, public :: MpiMessageBuilderType    
+    type(VdcPtrType), dimension(:), pointer :: vdc_models => null() !< the models to be build the message for
+    type(VdcPtrType), dimension(:), pointer :: vdc_exchanges => null() !< the exchanges to be build the message for
   contains
+    procedure :: attach_data => mb_attach_data
+    procedure :: release_data => mb_release_data
     procedure :: create_header_snd => mb_create_header_snd
     procedure :: create_header_rcv => mb_create_header_rcv
     procedure :: create_body_rcv => mb_create_body_rcv
     procedure :: create_body_snd => mb_create_body_snd
     ! private
+    procedure, private :: get_vdc_from_hdr
     procedure, private :: create_vdc_snd_hdr
     procedure, private :: create_vdc_snd_body
     procedure, private :: create_vdc_rcv_body
@@ -28,6 +32,24 @@ module MpiMessageBuilderModule
   end type
 
 contains
+
+  subroutine mb_attach_data(this, vdc_models, vdc_exchanges)
+    class(MpiMessageBuilderType) :: this
+    type(VdcPtrType), dimension(:), pointer :: vdc_models
+    type(VdcPtrType), dimension(:), pointer :: vdc_exchanges
+
+    this%vdc_models => vdc_models
+    this%vdc_exchanges => vdc_exchanges    
+
+  end subroutine mb_attach_data
+
+  subroutine mb_release_data(this)
+    class(MpiMessageBuilderType) :: this
+
+    this%vdc_models => null()
+    this%vdc_exchanges => null()
+
+  end subroutine mb_release_data
 
   subroutine mb_create_header_snd(this, rank, stage, hdrs_snd_type)
     class(MpiMessageBuilderType) :: this
@@ -46,14 +68,14 @@ contains
     call exg_idxs%init()
 
     ! determine which containers to include
-    do i = 1, virtual_model_list%Count()
-      vdc => get_vdc_from_list(virtual_model_list, i)
+    do i = 1, size(this%vdc_models)
+      vdc => this%vdc_models(i)%ptr
       if (vdc%is_active .and. vdc%orig_rank == rank) then
         call model_idxs%push_back(i)
       end if
     end do
-    do i = 1, virtual_exchange_list%Count()
-      vdc => get_vdc_from_list(virtual_exchange_list, i)
+    do i = 1, size(this%vdc_exchanges)
+      vdc => this%vdc_exchanges(i)%ptr
       if (vdc%is_active .and. vdc%orig_rank == rank) then
         call exg_idxs%push_back(i)
       end if
@@ -66,14 +88,14 @@ contains
 
     ! loop over containers
     do i = 1, model_idxs%size
-      vdc => get_vdc_from_list(virtual_model_list, model_idxs%at(i))
+      vdc => this%vdc_models(model_idxs%at(i))%ptr
       call MPI_Get_address(vdc%id, displs(i), ierr)
       blk_cnts(i) = 1
       types(i) = this%create_vdc_snd_hdr(vdc, stage)
     end do
     offset = model_idxs%size
     do i = 1, exg_idxs%size
-      vdc => get_vdc_from_list(virtual_exchange_list, exg_idxs%at(i))
+      vdc => this%vdc_exchanges(exg_idxs%at(i))%ptr
       call MPI_Get_address(vdc%id, displs(i + offset), ierr)
       blk_cnts(i + offset) = 1
       types(i + offset) = this%create_vdc_snd_hdr(vdc, stage)
@@ -130,14 +152,14 @@ contains
     call exg_idxs%init()
 
     ! gather all containers from this rank
-    do i = 1, virtual_model_list%Count()
-      vdc => get_vdc_from_list(virtual_model_list, i)
+    do i = 1, size(this%vdc_models)
+      vdc => this%vdc_models(i)%ptr
       if (vdc%is_active .and. vdc%orig_rank == rank) then
         call model_idxs%push_back(i)
       end if
     end do
-    do i = 1, virtual_exchange_list%Count()
-      vdc => get_vdc_from_list(virtual_exchange_list, i)
+    do i = 1, size(this%vdc_exchanges)
+      vdc => this%vdc_exchanges(i)%ptr
       if (vdc%is_active .and. vdc%orig_rank == rank) then
         call exg_idxs%push_back(i)
       end if
@@ -150,14 +172,14 @@ contains
 
     ! loop over included containers
     do i = 1, model_idxs%size
-      vdc => get_vdc_from_list(virtual_model_list, model_idxs%at(i))
+      vdc => this%vdc_models(model_idxs%at(i))%ptr
       call MPI_Get_address(vdc%id, displs(i), ierr)
       types(i) = this%create_vdc_rcv_body(vdc, rank, stage)
       blk_cnts(i) = 1
     end do
     offset = model_idxs%size
     do i = 1, exg_idxs%size
-      vdc => get_vdc_from_list(virtual_exchange_list, exg_idxs%at(i))
+      vdc => this%vdc_exchanges(exg_idxs%at(i))%ptr
       call MPI_Get_address(vdc%id, displs(i + offset), ierr)
       blk_cnts(i + offset) = 1
       types(i + offset) = this%create_vdc_rcv_body(vdc, rank, stage) 
@@ -201,7 +223,7 @@ contains
     allocate (blk_cnts(nr_headers))
 
     do i = 1, nr_headers
-      vdc => get_vdc_from_hdr(headers(i))
+      vdc => this%get_vdc_from_hdr(headers(i))
       call MPI_Get_address(vdc%id, displs(i), ierr)
       types(i) = this%create_vdc_snd_body(vdc, rank, stage)
       blk_cnts(i) = 1
@@ -323,7 +345,8 @@ contains
 
   end function create_vdc_body
 
-  function get_vdc_from_hdr(header) result(vdc)
+  function get_vdc_from_hdr(this, header) result(vdc)
+    class(MpiMessageBuilderType) :: this
     type(VdcHeaderType) :: header
     class(VirtualDataContainerType), pointer :: vdc
     ! local
@@ -332,15 +355,15 @@ contains
     vdc => null()
     if (header%container_type == VDC_GWFMODEL_TYPE .or. &
         header%container_type == VDC_GWTMODEL_TYPE) then
-      do i = 1, virtual_model_list%Count()
-        vdc => get_vdc_from_list(virtual_model_list, i)
+      do i = 1, size(this%vdc_models)
+        vdc => this%vdc_models(i)%ptr
         if (vdc%id == header%id) return
         vdc => null()
       end do
     else if (header%container_type == VDC_GWFEXG_TYPE .or. &
              header%container_type == VDC_GWTEXG_TYPE) then
-      do i = 1, virtual_exchange_list%Count()
-        vdc => get_vdc_from_list(virtual_exchange_list, i)
+      do i = 1, size(this%vdc_exchanges)
+        vdc => this%vdc_exchanges(i)%ptr
         if (vdc%id == header%id) return
         vdc => null()
       end do

@@ -7,9 +7,8 @@ module MpiRouterModule
   use VirtualDataListsModule, only: virtual_model_list, &
                                     virtual_exchange_list
   use VirtualDataContainerModule, only: VirtualDataContainerType, &
-                                        get_vdc_from_list
-  use VirtualExchangeModule, only: VirtualExchangeType, &
-                                   get_virtual_exchange_from_list
+                                        VdcPtrType, get_vdc_from_list
+  use VirtualExchangeModule, only: VirtualExchangeType
   use VirtualSolutionModule
   use MpiMessageBuilderModule
   use MpiWorldModule
@@ -23,8 +22,12 @@ module MpiRouterModule
     integer(I4B), dimension(:), pointer :: model_proc_ids
     type(STLVecInt) :: senders
     type(STLVecInt) :: receivers
+    type(VdcPtrType), dimension(:), pointer :: all_models => null() !< all virtual models from the global list
+    type(VdcPtrType), dimension(:),  pointer :: all_exchanges => null() !< all virtual exchanges from the global list
+    type(VdcPtrType), dimension(:), pointer :: rte_models => null() !< the currently active models to be routed
+    type(VdcPtrType), dimension(:),  pointer :: rte_exchanges => null() !< the currently active exchanges to be routed
     type(MpiMessageBuilderType) :: message_builder
-    type(MpiWorldType), pointer :: mpi_world
+    type(MpiWorldType), pointer :: mpi_world => null()
   contains
     procedure :: initialize => mr_initialize
     procedure :: route_all => mr_route_all
@@ -32,7 +35,10 @@ module MpiRouterModule
     procedure :: destroy => mr_destroy
     ! private
     procedure, private :: mr_update_senders
+    procedure, private :: mr_update_senders_sln
     procedure, private :: mr_update_receivers
+    procedure, private :: mr_update_receivers_sln
+    procedure, private :: mr_route_active
   end type MpiRouterType
 
 contains
@@ -56,7 +62,6 @@ contains
     integer(I4B) :: i
     integer(I4B) :: nr_models, nr_exchanges
     class(VirtualDataContainerType), pointer :: vdc
-    class(VirtualExchangeType), pointer :: vex
     
     ! get mpi world for our process
     this%mpi_world => get_mpi_world()
@@ -66,11 +71,15 @@ contains
     call this%receivers%init()
 
     ! find out where models are
-    nr_models = virtual_model_list%Count()
+    nr_models = virtual_model_list%Count()    
+    nr_exchanges = virtual_exchange_list%Count()
     allocate (this%model_proc_ids(nr_models))
+    allocate (this%all_models(nr_models))
+    allocate (this%all_exchanges(nr_exchanges))
     
     do i = 1, nr_models
       vdc => get_vdc_from_list(virtual_model_list, i)
+      this%all_models(i)%ptr => vdc
       if (vdc%is_local) then
         this%model_proc_ids(i) = proc_id
       else        
@@ -86,23 +95,85 @@ contains
       call vdc%set_orig_rank(this%model_proc_ids(i))
     end do
 
-    nr_exchanges = virtual_exchange_list%Count()
     do i = 1, nr_exchanges
-      vex => get_virtual_exchange_from_list(virtual_exchange_list, i)
-      ! TODO_MJR: we set it from model1, or from model2 when model1 is local.
-      ! This is problematic because when a remote exchange resides
-      ! on two distinct processes we cannot synchronize in one sweep...
-      ! We need refactoring of Exchanges here, such that Exchange <=> rank
-      ! is always 1-to-1.
-      call vex%set_orig_rank(vex%v_model1%orig_rank)
-      if (vex%v_model1%is_local) then
-        call vex%set_orig_rank(vex%v_model2%orig_rank)
-      end if
+      vdc => get_vdc_from_list(virtual_exchange_list, i)      
+      this%all_exchanges(i)%ptr => vdc
+      select type (vex => vdc)
+       class is (VirtualExchangeType)
+        ! TODO_MJR: we set it from model1, or from model2 when model1 is local.
+        ! This is problematic because when a remote exchange resides
+        ! on two distinct processes we cannot synchronize in one sweep...
+        ! We need refactoring of Exchanges here, such that Exchange <=> rank
+        ! is always 1-to-1.
+        call vex%set_orig_rank(vex%v_model1%orig_rank)
+        if (vex%v_model1%is_local) then
+          call vex%set_orig_rank(vex%v_model2%orig_rank)
+        end if
+      end select      
     end do
 
   end subroutine mr_initialize
 
+  !> @brief This will route all remote data from the 
+  !! global models and exchanges over MPI, for a 
+  !< given stage
   subroutine mr_route_all(this, stage)
+    class(MpiRouterType) :: this
+    integer(I4B) :: stage    
+
+    ! data to route
+    this%rte_models => this%all_models
+    this%rte_exchanges => this%all_exchanges
+    call this%message_builder%attach_data(this%rte_models, &
+                                          this%rte_exchanges)
+
+    ! update address list
+    call this%mr_update_senders()
+    call this%mr_update_receivers()
+
+    ! route all
+    call this%mr_route_active(stage)
+
+    ! release
+    this%rte_models => null()
+    this%rte_exchanges => null()
+    call this%message_builder%release_data()
+
+  end subroutine mr_route_all
+
+  !> @brief This will route all remote data from models
+  !! and exchanges in a particular solution over MPI,
+  !< for a given stage
+  subroutine mr_route_sln(this, virtual_sol, stage)
+    class(MpiRouterType) :: this
+    type(VirtualSolutionType) :: virtual_sol
+    integer(I4B) :: stage
+
+    ! data to route
+    this%rte_models => virtual_sol%models
+    this%rte_exchanges => virtual_sol%exchanges
+    call this%message_builder%attach_data(this%rte_models, &
+                                          this%rte_exchanges)
+
+    ! update adress list
+    call this%mr_update_senders_sln(virtual_sol)
+    call this%mr_update_receivers_sln(virtual_sol)
+    
+    ! route for this solution
+    call this%mr_route_active(stage)
+
+    ! release
+    call this%message_builder%release_data()
+
+  end subroutine mr_route_sln
+
+  !> @brief Routes the models and exchanges from the
+  !! active lists in this instance:
+  !!
+  !!   this%active_models
+  !!   this%active_exchanges
+  !<
+  subroutine mr_route_active(this, stage)
     class(MpiRouterType) :: this
     integer(I4B) :: stage
     ! local
@@ -123,10 +194,6 @@ contains
     integer, dimension(:), allocatable :: body_rcv_t
     integer, dimension(:), allocatable :: body_snd_t
 
-    ! update address list
-    call this%mr_update_senders()
-    call this%mr_update_receivers() 
-
     ! allocate handles
     allocate (rcv_req(this%receivers%size))
     allocate (snd_req(this%senders%size))
@@ -134,7 +201,7 @@ contains
     allocate (snd_stat(MPI_STATUS_SIZE, this%senders%size))
 
     ! allocate header data
-    max_headers = virtual_exchange_list%Count() + virtual_model_list%Count()    
+    max_headers = size(this%rte_models) + size(this%rte_exchanges)  
     allocate (hdr_rcv_t(this%receivers%size))
     allocate (hdr_snd_t(this%senders%size))
     allocate (headers(max_headers, this%receivers%size))
@@ -201,22 +268,7 @@ contains
     deallocate (hdr_snd_t)
     deallocate (headers)
 
-  end subroutine mr_route_all
-
-  subroutine mr_route_sln(this, virtual_sol, stage)
-    class(MpiRouterType) :: this
-    type(VirtualSolutionType) :: virtual_sol
-    integer(I4B) :: stage
-
-    ! snd+rcv header
-
-    ! snd+rcv maps
-
-    ! snd+rcv data
-
-    ! async. wait
-
-  end subroutine mr_route_sln
+  end subroutine mr_route_active
 
   subroutine mr_update_senders(this)
     class(MpiRouterType) :: this
@@ -226,20 +278,44 @@ contains
 
     call this%senders%clear()
 
-    do i = 1, virtual_model_list%Count()
-      vdc => get_vdc_from_list(virtual_model_list, i)
+    do i = 1, size(this%rte_models)
+      vdc => this%rte_models(i)%ptr
       if (.not. vdc%is_local .and. vdc%is_active) then
         call this%senders%push_back_unique(vdc%orig_rank)
       end if
     end do
-    do i = 1, virtual_exchange_list%Count()
-      vdc => get_vdc_from_list(virtual_exchange_list, i)
+    do i = 1, size(this%rte_exchanges)
+      vdc => this%rte_exchanges(i)%ptr
       if (.not. vdc%is_local .and. vdc%is_active) then
         call this%senders%push_back_unique(vdc%orig_rank)
       end if
     end do
 
   end subroutine mr_update_senders
+
+  subroutine mr_update_senders_sln(this, virtual_sol)
+    class(MpiRouterType) :: this
+    type(VirtualSolutionType) :: virtual_sol
+    ! local
+    integer(I4B) :: i
+    class(VirtualDataContainerType), pointer :: vdc
+
+    call this%senders%clear()
+
+    do i = 1, size(virtual_sol%models)
+      vdc => virtual_sol%models(i)%ptr
+      if (.not. vdc%is_local .and. vdc%is_active) then
+        call this%senders%push_back_unique(vdc%orig_rank)
+      end if
+    end do
+    do i = 1, size(virtual_sol%exchanges)
+      vdc => virtual_sol%exchanges(i)%ptr
+      if (.not. vdc%is_local .and. vdc%is_active) then
+        call this%senders%push_back_unique(vdc%orig_rank)
+      end if
+    end do
+
+  end subroutine mr_update_senders_sln
 
   subroutine mr_update_receivers(this)
     class(MpiRouterType) :: this
@@ -254,6 +330,21 @@ contains
     end do
     
   end subroutine mr_update_receivers
+
+  subroutine mr_update_receivers_sln(this, virtual_sol)
+    class(MpiRouterType) :: this
+    type(VirtualSolutionType) :: virtual_sol
+    ! local
+    integer(I4B) :: i
+
+    call this%receivers%clear()
+
+    ! assuming symmetry for now
+    do i = 1, this%senders%size
+      call this%receivers%push_back(this%senders%at(i))
+    end do
+    
+  end subroutine mr_update_receivers_sln
 
   subroutine mr_destroy(this)
     class(MpiRouterType) :: this
