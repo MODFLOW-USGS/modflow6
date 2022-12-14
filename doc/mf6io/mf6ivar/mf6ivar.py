@@ -637,7 +637,9 @@ if __name__ == '__main__':
                   'sim-tdis',  # dfn completed  tex updated
                   'exg-gwfgwf',  # dfn completed  tex updated
                   'exg-gwfgwt',
+                  'exg-gwfgwe',
                   'exg-gwtgwt',
+                  'exg-gwegwe',
                   'sln-ims',  # dfn completed  tex updated
                   'gwf-nam',  # dfn completed  tex updated
                   'gwf-dis',  # dfn completed  tex updated
@@ -688,6 +690,19 @@ if __name__ == '__main__':
                   'gwt-fmi',
                   'gwt-mvt',
                   'gwt-api',
+                  'gwe-nam',
+                  'gwe-adv',
+                  'gwe-dis',
+                  'gwe-disv',
+                  'gwe-dsp',
+                  'gwe-fmi',
+                  'gwe-ic',
+                  'gwe-mst',
+                  'gwe-oc',
+                  'gwe-sfe',
+                  'gwe-src',
+                  'gwe-ssm',
+                  'gwe-tmp',
                   'utl-spc',
                   'utl-spca',
                   'utl-obs',
