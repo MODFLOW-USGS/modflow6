@@ -339,7 +339,8 @@ contains
       end if
 
       nglo = this%gridConnection%idxToGlobal(n)%index + &
-             this%gridConnection%idxToGlobal(n)%v_model%moffset%get()
+             this%gridConnection%idxToGlobal(n)%v_model%moffset%get() - &
+             matrix_sln%get_row_offset()
       rhs_sln(nglo) = rhs_sln(nglo) + this%rhs(n)
 
       icol_start = this%matrix%get_first_col_pos(n)
@@ -371,8 +372,8 @@ contains
     ! local
 
     ! base validation (geometry/spatial)
-    call this%SpatialModelConnectionType%validateConnection()
-    call this%validateGwfExchange()
+    !call this%SpatialModelConnectionType%validateConnection()
+    !call this%validateGwfExchange()
 
     ! abort on errors
     if (count_errors() > 0) then
@@ -649,7 +650,8 @@ contains
     ! call exchange budget routine, also calls bd
     ! for movers.
     if (this%exchangeIsOwned) then
-      call this%gwfExchange%exg_bd(icnvg, isuppress_output, isolnid)
+      ! TODO_MJR
+      !call this%gwfExchange%exg_bd(icnvg, isuppress_output, isolnid)
     end if
 
   end subroutine gwfgwfcon_bd
@@ -664,7 +666,8 @@ contains
     ! based on gwfExchange%simvals(:), which was correctly
     ! filled from gwfgwfcon
     if (this%exchangeIsOwned) then
-      call this%gwfExchange%exg_ot()
+      ! TODO_MJR
+      !call this%gwfExchange%exg_ot()
     end if
 
   end subroutine gwfgwfcon_ot

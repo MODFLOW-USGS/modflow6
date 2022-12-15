@@ -7,13 +7,6 @@ external_libraries = files(
 )
 
 modflow_sources = files(
-    'Distributed' / 'obsolete' / 'mf6dist.f90',
-    'Distributed' / 'obsolete' / 'mf6distlists.f90',
-    'Distributed' / 'obsolete' / 'DistributedBase.f90',
-    'Distributed' / 'obsolete' / 'DistributedModel.f90',
-    'Distributed' / 'obsolete' / 'DistributedExchange.f90',    
-    'Distributed' / 'obsolete' / 'RemoteMemory.f90',
-    'Distributed' / 'obsolete' / 'Router.f90',
     'Distributed' / 'IndexMap.f90',
     'Distributed' / 'InterfaceMap.f90',
     'Distributed' / 'Mapper.f90',

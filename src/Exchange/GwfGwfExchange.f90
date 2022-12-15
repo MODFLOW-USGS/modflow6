@@ -741,15 +741,19 @@ contains
 
     do i = 1, this%nexg
 
-      flow = this%simvals(i)
-      n = this%nodem1(i)
-      idiag = this%gwfmodel1%ia(n)
-      this%gwfmodel1%flowja(idiag) = this%gwfmodel1%flowja(idiag) + flow
+      if (associated(this%gwfmodel1)) then
+        flow = this%simvals(i)
+        n = this%nodem1(i)
+        idiag = this%gwfmodel1%ia(n)
+        this%gwfmodel1%flowja(idiag) = this%gwfmodel1%flowja(idiag) + flow
+      end if
 
-      flow = -this%simvals(i)
-      n = this%nodem2(i)
-      idiag = this%gwfmodel2%ia(n)
-      this%gwfmodel2%flowja(idiag) = this%gwfmodel2%flowja(idiag) + flow
+      if (associated(this%gwfmodel2)) then
+        flow = -this%simvals(i)
+        n = this%nodem2(i)
+        idiag = this%gwfmodel2%ia(n)
+        this%gwfmodel2%flowja(idiag) = this%gwfmodel2%flowja(idiag) + flow
+      end if
 
     end do
 
@@ -896,14 +900,18 @@ contains
     call rate_accumulator(this%simvals, ratin, ratout)
     !
     ! -- Add the budget terms to model 1
-    budterm(1, 1) = ratin
-    budterm(2, 1) = ratout
-    call this%gwfmodel1%model_bdentry(budterm, budtxt, this%name)
+    if (associated(this%gwfmodel1)) then
+      budterm(1, 1) = ratin
+      budterm(2, 1) = ratout
+      call this%gwfmodel1%model_bdentry(budterm, budtxt, this%name)
+    end if
     !
     ! -- Add the budget terms to model 2
-    budterm(1, 1) = ratout
-    budterm(2, 1) = ratin
-    call this%gwfmodel2%model_bdentry(budterm, budtxt, this%name)
+    if (associated(this%gwfmodel2)) then
+      budterm(1, 1) = ratout
+      budterm(2, 1) = ratin
+      call this%gwfmodel2%model_bdentry(budterm, budtxt, this%name)
+    end if
     !
     ! -- Call mvr bd routine
     if (this%inmvr > 0) call this%mvr%mvr_bd()

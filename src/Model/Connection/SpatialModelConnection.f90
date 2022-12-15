@@ -403,26 +403,30 @@ contains ! module procedures
     class(MatrixBaseType), pointer :: matrix_sln !< global matrix
     ! local
     integer(I4B) :: m, n, mglo, nglo, ipos, ipos_sln
-    logical(LGP) :: isOwned
+    logical(LGP) :: is_owned
 
+    ! TODO_MJR: this map could be half the size...??
     allocate (this%mapIdxToSln(this%matrix%nja))
 
     do n = 1, this%neq
-      isOwned = (this%gridConnection%idxToGlobal(n)%v_model == this%owner)
+      is_owned = (this%gridConnection%idxToGlobal(n)%v_model == this%owner)
+      if (.not. is_owned) cycle
+
       do ipos = this%matrix%ia(n), this%matrix%ia(n + 1) - 1
         m = this%matrix%ja(ipos)
         nglo = this%gridConnection%idxToGlobal(n)%index + &
                this%gridConnection%idxToGlobal(n)%v_model%moffset%get()
         mglo = this%gridConnection%idxToGlobal(m)%index + &
                this%gridConnection%idxToGlobal(m)%v_model%moffset%get()
+
         ipos_sln = matrix_sln%get_position(nglo, mglo)
-        if (ipos_sln == -1 .and. isOwned) then
+        if (ipos_sln == -1) then
           ! this should not be possible
           write (*, *) 'Error: cannot find cell connection in global system'
           call ustop()
         end if
-
         this%mapIdxToSln(ipos) = ipos_sln
+
       end do
     end do
 

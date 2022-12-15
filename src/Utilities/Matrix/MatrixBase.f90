@@ -30,6 +30,8 @@ module MatrixBaseModule
     procedure(get_position_diag_if), deferred :: get_position_diag
 
     procedure(get_aij_if), deferred :: get_aij
+    procedure(get_row_offset_if), deferred :: get_row_offset !< TODO_MJR: temp, we should probably deal with 
+                                                             !! this by making the vectors global aware?
     
   end type MatrixBaseType
 
@@ -136,6 +138,11 @@ module MatrixBaseModule
       integer(I4B), dimension(:), pointer, contiguous :: ja
       real(DP), dimension(:), pointer, contiguous :: amat
     end subroutine
+    function get_row_offset_if(this) result(offset)
+      import MatrixBaseType, I4B
+      class(MatrixBaseType) :: this
+      integer(I4B) :: offset
+    end function
   end interface
 
 end module MatrixBaseModule

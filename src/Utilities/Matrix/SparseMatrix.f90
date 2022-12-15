@@ -37,6 +37,7 @@ module SparseMatrixModule
     procedure :: get_position => spm_get_position
     procedure :: get_position_diag => spm_get_position_diag
     procedure :: get_aij => spm_get_aij
+    procedure :: get_row_offset => spm_get_row_offset
 
     procedure :: allocate_scalars
     procedure :: allocate_arrays
@@ -265,5 +266,13 @@ contains
     amat => this%amat
 
   end subroutine spm_get_aij
+
+  function spm_get_row_offset(this) result(offset)
+    class(SparseMatrixType) :: this
+    integer(I4B) :: offset
+
+    offset = 0
+    
+  end function spm_get_row_offset
 
 end module SparseMatrixModule

@@ -119,7 +119,7 @@ contains
   !< given stage
   subroutine mr_route_all(this, stage)
     class(MpiRouterType) :: this
-    integer(I4B) :: stage    
+    integer(I4B) :: stage
 
     ! data to route
     this%rte_models => this%all_models
@@ -240,14 +240,14 @@ contains
     do i = 1, this%senders%size
       rnk = this%senders%at(i)
       call this%message_builder%create_body_rcv(rnk, stage, body_rcv_t(i))
-      call MPI_Irecv(MPI_BOTTOM, 1, body_rcv_t(i), rnk, stage, MF6_COMM_WORLD, snd_req(i), ierr)          
+      call MPI_Irecv(MPI_BOTTOM, 1, body_rcv_t(i), rnk, stage, MF6_COMM_WORLD, snd_req(i), ierr) 
     end do
 
     ! send bodies
     do i = 1, this%receivers%size
       rnk = this%receivers%at(i)
       call this%message_builder%create_body_snd(rnk, stage, headers(1 : hdr_rcv_cnt(i), i), body_snd_t(i))
-      call MPI_Isend(MPI_Bottom, 1, body_snd_t(i), rnk, stage, MF6_COMM_WORLD, rcv_req(i), ierr)      
+      call MPI_Isend(MPI_Bottom, 1, body_snd_t(i), rnk, stage, MF6_COMM_WORLD, rcv_req(i), ierr)
     end do
 
     ! wait for exchange of all messages

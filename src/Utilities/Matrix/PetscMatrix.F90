@@ -41,6 +41,7 @@ module PetscMatrixModule
     procedure :: get_position => pm_get_position
     procedure :: get_position_diag => pm_get_position_diag
     procedure :: get_aij => pm_get_aij
+    procedure :: get_row_offset => pm_get_row_offset
 
     ! public
     procedure :: update => pm_update
@@ -332,5 +333,13 @@ contains
     call ustop()
 
   end subroutine pm_get_aij
+
+  function pm_get_row_offset(this) result(offset)
+    class(PetscMatrixType) :: this
+    integer(I4B) :: offset
+
+    offset = this%offset
+
+  end function pm_get_row_offset
 
 end module PetscMatrixModule
