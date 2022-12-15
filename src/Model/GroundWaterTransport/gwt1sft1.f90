@@ -91,7 +91,7 @@ contains
   subroutine sft_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         fmi)
 ! ******************************************************************************
-! mwt_create -- Create a New MWT Package
+! sft_create -- Create a New SFT Package
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
