@@ -106,19 +106,19 @@ contains
     character(len=*), intent(in) :: pakname
     type(GwtFmiType), pointer :: fmi
     ! -- local
-    type(GwtSftType), pointer :: lktobj
+    type(GwtSftType), pointer :: sftobj
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
-    allocate (lktobj)
-    packobj => lktobj
+    allocate (sftobj)
+    packobj => sftobj
     !
     ! -- create name and memory path
     call packobj%set_names(ibcnum, namemodel, pakname, ftype)
     packobj%text = text
     !
     ! -- allocate scalars
-    call lktobj%allocate_scalars()
+    call sftobj%allocate_scalars()
     !
     ! -- initialize package
     call packobj%pack_initialize()
@@ -133,7 +133,7 @@ contains
     ! -- Store pointer to flow model interface.  When the GwfGwt exchange is
     !    created, it sets fmi%bndlist so that the GWT model has access to all
     !    the flow packages
-    lktobj%fmi => fmi
+    sftobj%fmi => fmi
     !
     ! -- return
     return
@@ -141,7 +141,7 @@ contains
 
   subroutine find_sft_package(this)
 ! ******************************************************************************
-! find corresponding lkt package
+! find corresponding sft package
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -266,7 +266,7 @@ contains
   subroutine sft_fc_expanded(this, rhs, ia, idxglo, amatsln)
 ! ******************************************************************************
 ! sft_fc_expanded -- this will be called from GwtAptType%apt_fc_expanded()
-!   in order to add matrix terms specifically for LKT
+!   in order to add matrix terms specifically for SFT
 ! ****************************************************************************
 !
 !    SPECIFICATIONS:
