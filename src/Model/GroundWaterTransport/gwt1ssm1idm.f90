@@ -62,7 +62,7 @@ module GwtSsmInputModule
     'PNAME_SOURCES', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
-    .false., & ! required
+    .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -110,7 +110,7 @@ module GwtSsmInputModule
     'PNAME_FILEINPUT', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
-    .false., & ! required
+    .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered

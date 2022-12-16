@@ -161,7 +161,7 @@ module GwfBuyInputModule
     'IRHOSPEC', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
-    .false., & ! required
+    .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -177,7 +177,7 @@ module GwfBuyInputModule
     'DRHODC', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
-    .false., & ! required
+    .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -193,7 +193,7 @@ module GwfBuyInputModule
     'CRHOREF', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
-    .false., & ! required
+    .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -209,7 +209,7 @@ module GwfBuyInputModule
     'MODELNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
-    .false., & ! required
+    .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -225,7 +225,7 @@ module GwfBuyInputModule
     'AUXSPECIESNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
-    .false., & ! required
+    .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -259,7 +259,7 @@ module GwfBuyInputModule
     'PACKAGEDATA', & ! fortran variable
     'RECARRAY IRHOSPEC DRHODC CRHOREF MODELNAME AUXSPECIESNAME', & ! type
     'NRHOSPECIES', & ! shape
-    .false., & ! required
+    .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -276,7 +276,7 @@ module GwfBuyInputModule
     [ &
     InputBlockDefinitionType( &
     'OPTIONS', & ! blockname
-    .true., & ! required
+    .false., & ! required
     .false. & ! aggregate
     ), &
     InputBlockDefinitionType( &
@@ -286,7 +286,7 @@ module GwfBuyInputModule
     ), &
     InputBlockDefinitionType( &
     'PACKAGEDATA', & ! blockname
-    .false., & ! required
+    .true., & ! required
     .true. & ! aggregate
     ) &
     ]

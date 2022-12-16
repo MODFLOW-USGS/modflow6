@@ -57,7 +57,7 @@ module GwtFmiInputModule
     'FLOWTYPE', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
-    .false., & ! required
+    .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -89,7 +89,7 @@ module GwtFmiInputModule
     'FNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
-    .false., & ! required
+    .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
     .false. & ! layered

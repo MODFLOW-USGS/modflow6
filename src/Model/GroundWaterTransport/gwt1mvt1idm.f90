@@ -206,7 +206,7 @@ module GwtMvtInputModule
     [ &
     InputBlockDefinitionType( &
     'OPTIONS', & ! blockname
-    .true., & ! required
+    .false., & ! required
     .false. & ! aggregate
     ) &
     ]

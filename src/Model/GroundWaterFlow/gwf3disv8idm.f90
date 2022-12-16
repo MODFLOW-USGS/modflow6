@@ -167,7 +167,7 @@ module GwfDisvInputModule
     'TOP', & ! fortran variable
     'DOUBLE1D', & ! type
     'NCPL', & ! shape
-    .false., & ! required
+    .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -183,7 +183,7 @@ module GwfDisvInputModule
     'BOTM', & ! fortran variable
     'DOUBLE2D', & ! type
     'NCPL NLAY', & ! shape
-    .false., & ! required
+    .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .true. & ! layered
@@ -411,7 +411,7 @@ module GwfDisvInputModule
     ), &
     InputBlockDefinitionType( &
     'GRIDDATA', & ! blockname
-    .false., & ! required
+    .true., & ! required
     .false. & ! aggregate
     ), &
     InputBlockDefinitionType( &

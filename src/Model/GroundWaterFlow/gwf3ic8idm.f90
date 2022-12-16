@@ -38,7 +38,7 @@ module GwfIcInputModule
     'STRT', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
-    .false., & ! required
+    .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .true. & ! layered
@@ -67,7 +67,7 @@ module GwfIcInputModule
     ), &
     InputBlockDefinitionType( &
     'GRIDDATA', & ! blockname
-    .false., & ! required
+    .true., & ! required
     .false. & ! aggregate
     ) &
     ]

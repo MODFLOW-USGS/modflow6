@@ -240,7 +240,6 @@ class Dfn2F90:
             v = self._var_d[k]
 
             if "block_variable" in v and v["block_variable"].upper() == "TRUE":
-                # TODO: add to block defn type
                 continue
 
             c = component
@@ -277,19 +276,19 @@ class Dfn2F90:
             if shape != "" and not aggregate_t and (t == "DOUBLE" or t == "INTEGER"):
                 t = f"{t}{ndim}D"
 
-            r = ".false."
-            if "optional" in v:
-                if v["optional"] == "true":
-                    r = ".false."
-                else:
-                    r = ".true."
-
             inrec = ".false."
             if "in_record" in v:
                 if v["in_record"] == "true":
                     inrec = ".true."
                 else:
                     inrec = ".false."
+
+            r = ".true."
+            if "optional" in v:
+                if v["optional"] == "true":
+                    r = ".false."
+                else:
+                    r = ".true."
 
             preserve_case = ".false."
             if "preserve_case" in v:
@@ -305,7 +304,8 @@ class Dfn2F90:
                 else:
                     layered = ".false."
 
-            required_l.append(r)
+            if inrec == ".false.":
+                required_l.append(r)
             tuple_list = [
                 (c, "component"),
                 (sc, "subcomponent"),
@@ -430,81 +430,65 @@ if __name__ == "__main__":
         # list per dfn [dfn relative path, model parent dirname, output filename]
         [
             Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-buy.dfn"),
-            "GroundWaterFlow",
-            "gwf3buy8idm.f90",
+            Path("../../../src/Model/GroundWaterFlow", "gwf3buy8idm.f90"),
         ],
         [
             Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-dis.dfn"),
-            "GroundWaterFlow",
-            "gwf3dis8idm.f90",
+            Path("../../../src/Model/GroundWaterFlow", "gwf3dis8idm.f90"),
         ],
         [
             Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-disu.dfn"),
-            "GroundWaterFlow",
-            "gwf3disu8idm.f90",
+            Path("../../../src/Model/GroundWaterFlow", "gwf3disu8idm.f90"),
         ],
         [
             Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-disv.dfn"),
-            "GroundWaterFlow",
-            "gwf3disv8idm.f90",
+            Path("../../../src/Model/GroundWaterFlow", "gwf3disv8idm.f90"),
         ],
         [
             Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-ic.dfn"),
-            "GroundWaterFlow",
-            "gwf3ic8idm.f90",
+            Path("../../../src/Model/GroundWaterFlow", "gwf3ic8idm.f90"),
         ],
         [
             Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-npf.dfn"),
-            "GroundWaterFlow",
-            "gwf3npf8idm.f90",
+            Path("../../../src/Model/GroundWaterFlow", "gwf3npf8idm.f90"),
         ],
         [
             Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-vsc.dfn"),
-            "GroundWaterFlow",
-            "gwf3vsc8idm.f90",
+            Path("../../../src/Model/GroundWaterFlow", "gwf3vsc8idm.f90"),
         ],
         [
             Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-adv.dfn"),
-            "GroundWaterTransport",
-            "gwt1adv1idm.f90",
+            Path("../../../src/Model/GroundWaterTransport", "gwt1adv1idm.f90"),
         ],
         [
             Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-dsp.dfn"),
-            "GroundWaterTransport",
-            "gwt1dspidm.f90",
+            Path("../../../src/Model/GroundWaterTransport", "gwt1dspidm.f90"),
         ],
         [
             Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-fmi.dfn"),
-            "GroundWaterTransport",
-            "gwt1fmi1idm.f90",
+            Path("../../../src/Model/GroundWaterTransport", "gwt1fmi1idm.f90"),
         ],
         [
             Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-ic.dfn"),
-            "GroundWaterTransport",
-            "gwt1ic1idm.f90",
+            Path("../../../src/Model/GroundWaterTransport", "gwt1ic1idm.f90"),
         ],
         [
             Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-mst.dfn"),
-            "GroundWaterTransport",
-            "gwt1mst1idm.f90",
+            Path("../../../src/Model/GroundWaterTransport", "gwt1mst1idm.f90"),
         ],
         [
             Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-mvt.dfn"),
-            "GroundWaterTransport",
-            "gwt1mvt1idm.f90",
+            Path("../../../src/Model/GroundWaterTransport", "gwt1mvt1idm.f90"),
         ],
         [
             Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-ssm.dfn"),
-            "GroundWaterTransport",
-            "gwt1ssm1idm.f90",
+            Path("../../../src/Model/GroundWaterTransport", "gwt1ssm1idm.f90"),
         ],
     ]
 
     for dfn in dfns:
         converter = Dfn2F90(dfnfspec=dfn[0])
-        converter.write_f90(
-            ofspec=os.path.join("..", "..", "..", "src", "Model", dfn[1], dfn[2])
-        )
+        converter.write_f90(ofspec=dfn[1])
         converter.warn()
 
     print("\n...done.")

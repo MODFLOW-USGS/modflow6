@@ -94,7 +94,7 @@ module GwtMstInputModule
     'POROSITY', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
-    .false., & ! required
+    .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .true. & ! layered
@@ -211,7 +211,7 @@ module GwtMstInputModule
     ), &
     InputBlockDefinitionType( &
     'GRIDDATA', & ! blockname
-    .false., & ! required
+    .true., & ! required
     .false. & ! aggregate
     ) &
     ]

@@ -137,7 +137,7 @@ module GwfNpfInputModule
     'IVARCV', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
-    .false., & ! required
+    .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -281,7 +281,7 @@ module GwfNpfInputModule
     'IXT3D', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
-    .false., & ! required
+    .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -521,7 +521,7 @@ module GwfNpfInputModule
     'ICELLTYPE', & ! fortran variable
     'INTEGER1D', & ! type
     'NODES', & ! shape
-    .false., & ! required
+    .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .true. & ! layered
@@ -537,7 +537,7 @@ module GwfNpfInputModule
     'K', & ! fortran variable
     'DOUBLE1D', & ! type
     'NODES', & ! shape
-    .false., & ! required
+    .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .true. & ! layered
@@ -692,12 +692,12 @@ module GwfNpfInputModule
     [ &
     InputBlockDefinitionType( &
     'OPTIONS', & ! blockname
-    .true., & ! required
+    .false., & ! required
     .false. & ! aggregate
     ), &
     InputBlockDefinitionType( &
     'GRIDDATA', & ! blockname
-    .false., & ! required
+    .true., & ! required
     .false. & ! aggregate
     ) &
     ]

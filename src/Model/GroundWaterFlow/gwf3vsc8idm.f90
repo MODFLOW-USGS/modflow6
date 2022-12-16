@@ -212,7 +212,7 @@ module GwfVscInputModule
     'IVISCSPEC', & ! fortran variable
     'INTEGER', & ! type
     '', & ! shape
-    .false., & ! required
+    .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -228,7 +228,7 @@ module GwfVscInputModule
     'DVISCDC', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
-    .false., & ! required
+    .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -244,7 +244,7 @@ module GwfVscInputModule
     'CVISCREF', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
-    .false., & ! required
+    .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -260,7 +260,7 @@ module GwfVscInputModule
     'MODELNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
-    .false., & ! required
+    .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -276,7 +276,7 @@ module GwfVscInputModule
     'AUXSPECIESNAME', & ! fortran variable
     'STRING', & ! type
     '', & ! shape
-    .false., & ! required
+    .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -313,7 +313,7 @@ module GwfVscInputModule
     'PACKAGEDATA', & ! fortran variable
     'RECARRAY IVISCSPEC DVISCDC CVISCREF MODELNAME AUXSPECIESNAME', & ! type
     'NVISCSPECIES', & ! shape
-    .false., & ! required
+    .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -330,7 +330,7 @@ module GwfVscInputModule
     [ &
     InputBlockDefinitionType( &
     'OPTIONS', & ! blockname
-    .true., & ! required
+    .false., & ! required
     .false. & ! aggregate
     ), &
     InputBlockDefinitionType( &
@@ -340,7 +340,7 @@ module GwfVscInputModule
     ), &
     InputBlockDefinitionType( &
     'PACKAGEDATA', & ! blockname
-    .false., & ! required
+    .true., & ! required
     .true. & ! aggregate
     ) &
     ]
