@@ -64,16 +64,16 @@ hydraulic_conductivity = 1.0e-4  # Hydraulic conductivity ($m s^{-1}$)
 porosity = 0.35  # Porosity (unitless)
 alphal = 0.0  # Longitudinal dispersivity ($m$)
 alphat = 0.0  # Transverse dispersivity ($m$)
-diffc = 1.02882E-06  # Diffusion coefficient ($m s^{-1}$)
+diffc = 1.02882e-06  # Diffusion coefficient ($m s^{-1}$)
 T_az = 10  # Ambient temperature ($^o C$)
 dT = 5  # Temperature variation ($^o C$)
 bulk_dens = 2630  # Bulk density ($kg/m^3$)
 kd = 0.000191663  # Distribution coefficient (unitless)
-ktw=0.58
-kts=2
-cpw=4174.0
-cps=800.0
-rhow=1000.0
+ktw = 0.58
+kts = 2
+cpw = 4174.0
+cps = 800.0
+rhow = 1000.0
 rhos = bulk_dens
 
 # Stress period input
@@ -86,23 +86,26 @@ per_mf6 = per_data
 tp = top
 botm = []
 for i in range(nlay):
-    if i==0:botm.append(59.9)
-    elif i==119:botm.append(0.0)
-    else: botm.append(60-i*0.5)
+    if i == 0:
+        botm.append(59.9)
+    elif i == 119:
+        botm.append(0.0)
+    else:
+        botm.append(60 - i * 0.5)
 
 # Head input
 chd_data = {}
-for k in range(nper):
-    chd_data[k] = [[(0, 0, 0), 60.000000],[(119, 0, 0), 59.701801]]
+#for k in range(nper):
+chd_data[0] = [[(0, 0, 0), 60.000000], [(119, 0, 0), 59.701801]]
 chd_mf6 = chd_data
 
 # Initial temperature input
-strt_conc = T_az* np.ones((nlay, 1, 1), dtype=np.float32)
+strt_temp = T_az * np.ones((nlay, 1, 1), dtype=np.float32)
 
 # Boundary temperature input
 cnc_data = {}
 for k in range(nper):
-    cnc_temp = T_az+dT*np.sin(2*np.pi*k*perlen/365/86400)
+    cnc_temp = T_az + dT * np.sin(2 * np.pi * k * perlen / 365 / 86400)
     cnc_data[k] = [[(0, 0, 0), cnc_temp]]
 cnc_mf6 = cnc_data
 
@@ -110,19 +113,23 @@ nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-8, 1e-8, 0.97
 
 
-
 # Analytical solution for Stallman analysis (Stallman 1965, JGR)
-# Analytical solution for Stallman analysis (Stallman 1965, JGR)
-def Stallman(T_az,dT,tau,t,c_rho,darcy_flux,ko,c_w,rho_w,zbotm,nlay):
+def Stallman(T_az, dT, tau, t, c_rho, darcy_flux, ko, c_w, rho_w, zbotm, nlay):
     zstallman = np.zeros((nlay, 2))
-    K = np.pi*c_rho/ko/tau
-    V = darcy_flux*c_w*rho_w/2/ko
-    a = ((K**2+V**4/4)**0.5+V**2/2)**0.5-V
-    b = ((K**2+V**4/4)**0.5-V**2/2)**0.5
+    K = np.pi * c_rho / ko / tau
+    V = darcy_flux * c_w * rho_w / 2 / ko
+    a = ((K ** 2 + V ** 4 / 4) ** 0.5 + V ** 2 / 2) ** 0.5 - V
+    b = ((K ** 2 + V ** 4 / 4) ** 0.5 - V ** 2 / 2) ** 0.5
     for i in range(len(zstallman)):
-        zstallman[i,0] = zbotm[i]
-        zstallman[i,1] = dT*np.exp(-a*(-zstallman[i,0]))*np.sin(2*np.pi*t/tau-b*(-zstallman[i,0])) + T_az
+        zstallman[i, 0] = zbotm[i]
+        zstallman[i, 1] = (
+            dT
+            * np.exp(-a * (-zstallman[i, 0]))
+            * np.sin(2 * np.pi * t / tau - b * (-zstallman[i, 0]))
+            + T_az
+        )
     return zstallman
+
 
 #
 # MODFLOW 6 (sim) flopy objects returned if building the model
@@ -140,7 +147,7 @@ def build_model(idx, dir):
     gwfname = "gwf-" + name
     gwename = "gwe-" + name
 
-    #sim_ws = os.path.join(ws, name)
+    # sim_ws = os.path.join(ws, name)
     sim = flopy.mf6.MFSimulation(
         sim_name=name, sim_ws=ws, exe_name="mf6", version="mf6"
     )
@@ -200,9 +207,7 @@ def build_model(idx, dir):
     )
 
     # Instantiating MODFLOW 6 initial conditions package for flow model
-    flopy.mf6.ModflowGwfic(
-        gwf, strt=top, filename="{}.ic".format(gwfname)
-    )
+    flopy.mf6.ModflowGwfic(gwf, strt=top, filename="{}.ic".format(gwfname))
 
     # Instantiating VSC
     if viscosity_on[idx]:
@@ -235,9 +240,7 @@ def build_model(idx, dir):
         gwf,
         head_filerecord="{}.hds".format(gwfname),
         budget_filerecord="{}.cbc".format(gwfname),
-        headprintrecord=[
-            ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
-        ],
+        headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
         saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
@@ -283,7 +286,7 @@ def build_model(idx, dir):
 
     # Instantiating MODFLOW 6 transport initial concentrations
     flopy.mf6.ModflowGweic(
-        gwe, strt=strt_conc, filename="{}.ic".format(gwename)
+        gwe, strt=strt_temp, filename="{}.ic".format(gwename)
     )
 
     # Instantiating MODFLOW 6 transport advection package
@@ -350,11 +353,11 @@ def build_model(idx, dir):
 
 def eval_model(sim):
     print("evaluating results...")
-    
+
     # read transport results from GWE model
     name = ex[sim.idxsim]
     gwename = "gwe-" + name
-    
+
     fpth = os.path.join(sim.simpath, f"{gwename}.ucn")
     try:
         # load temperatures
@@ -369,33 +372,36 @@ def eval_model(sim):
     # Prepare to compare the results of MF6-GWE with analytical solution
     zconc = np.zeros((nlay, 2))
     for i in range(nlay):
-        if i != (nlay-1): zconc[i+1,0] = -(60-botm[i])
-        zconc[i,1] = conc1[i][0][0]
+        if i != (nlay - 1):
+            zconc[i + 1, 0] = -(60 - botm[i])
+        zconc[i, 1] = conc1[i][0][0]
 
     # Analytical solution - Stallman analysis
-    tau = 365*86400
-    t =  283824000.0
+    tau = 365 * 86400
+    t = 283824000.0
     c_w = 4174
     rho_w = 1000
     c_r = 800
     rho_r = 2630
-    c_rho = c_r*rho_r*(1-porosity) + c_w*rho_w*porosity
-    darcy_flux = 5.00E-07
+    c_rho = c_r * rho_r * (1 - porosity) + c_w * rho_w * porosity
+    darcy_flux = 5.00e-07
     ko = 1.503
-    zanal = Stallman(T_az,dT,tau,t,c_rho,darcy_flux,ko,c_w,rho_w,zconc[:,0],nlay)
-    
-    plt.plot(zconc[:,1], zconc[:,0], "k--", linewidth=0.5, label='MF6-GWE')
-    plt.plot(zanal[:,1], zanal[:,0], "bo", mfc="none", label='Analytical')
-    plt.xlim(T_az-dT, T_az+dT)
+    zanal = Stallman(
+        T_az, dT, tau, t, c_rho, darcy_flux, ko, c_w, rho_w, zconc[:, 0], nlay
+    )
+
+    plt.plot(zconc[:, 1], zconc[:, 0], "k--", linewidth=0.5, label="MF6-GWE")
+    plt.plot(zanal[:, 1], zanal[:, 0], "bo", mfc="none", label="Analytical")
+    plt.xlim(T_az - dT, T_az + dT)
     plt.ylim(-top, 0)
     plt.ylabel("Depth (m)")
     plt.xlabel("Temperature (deg C)")
     plt.legend()
-    plt.savefig('stallman.png')
-    
+    plt.savefig("stallman.png")
+
     msg = f"gwe temperatures do not match stored concentrations"
-    assert np.allclose(zconc[:,1], zanal[:,1], atol=1e-1), msg
-    
+    assert np.allclose(zconc[:, 1], zanal[:, 1], atol=1e-1), msg
+
     return
 
 
