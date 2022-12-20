@@ -39,12 +39,12 @@
 	%	\item xxx
 	%\end{itemize}
 
-	%\underline{ADVANCED STRESS PACKAGES}
-	%\begin{itemize}
+	\underline{ADVANCED STRESS PACKAGES}
+	\begin{itemize}
+		\item Added additional convergence check to the Unsaturated Zone Flow (UZF) Package to ensure that flows from the Water Mover (MVR) Package meet solver tolerance.  Mover flows are converted into depths using the time step length and UZF cell area, and the depths are compared to the Iterative Model Solution (IMS) DVCLOSE input parameter.  If a depth is greater than DVCLOSE, then the iteration is marked as not converged.  The maximum depth and UZF cell number is written for each outer iteration to a comma-separated value file, provided the PACKAGE\_CONVERGENCE option is specified for UZF.
 	%	\item xxx
 	%	\item xxx
-	%	\item xxx
-	%\end{itemize}
+	\end{itemize}
 
 	%\underline{SOLUTION}
 	%\begin{itemize}
