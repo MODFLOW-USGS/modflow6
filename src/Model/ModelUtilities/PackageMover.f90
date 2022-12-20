@@ -175,7 +175,8 @@ contains
     call mem_allocate(this%qformvr, this%nproviders, 'QFORMVR', this%memoryPath)
     call mem_allocate(this%qtomvr, this%nproviders, 'QTOMVR', this%memoryPath)
     call mem_allocate(this%qfrommvr, this%nreceivers, 'QFROMMVR', this%memoryPath)
-    call mem_allocate(this%qfrommvr0, this%nreceivers, 'QFROMMVR0', this%memoryPath)
+    call mem_allocate(this%qfrommvr0, this%nreceivers, 'QFROMMVR0', &
+                      this%memoryPath)
     !
     ! -- initialize
     do i = 1, this%nproviders
