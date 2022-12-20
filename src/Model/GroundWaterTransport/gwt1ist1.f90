@@ -451,7 +451,7 @@ contains
         else
           fim = this%fim(n)
         end if
-          !
+        !
         ! -- Calculate exchange with immobile domain
         rate = DZERO
         hhcof = DZERO
