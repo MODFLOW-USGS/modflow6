@@ -57,12 +57,14 @@ module GwtIstModule
     integer(I4B), pointer :: ibudcsv => null() !< unit number for csv budget output file
     integer(I4B), pointer :: idcy => null() !< order of decay rate (0:none, 1:first, 2:zero)
     integer(I4B), pointer :: isrb => null() !< sorption active flag (0:off, 1:on); only linear is supported in ist
+    integer(I4B), pointer :: ifim => null() !< flag to indicate fim was specified by user in the GRIDDATA block
     integer(I4B), pointer :: kiter => null() !< picard iteration counter
     real(DP), dimension(:), pointer, contiguous :: cim => null() !< concentration for immobile domain
     real(DP), dimension(:), pointer, contiguous :: cimnew => null() !< immobile concentration at end of current time step
     real(DP), dimension(:), pointer, contiguous :: cimold => null() !< immobile concentration at end of last time step
     real(DP), dimension(:), pointer, contiguous :: zetaim => null() !< mass transfer rate to immobile domain
     real(DP), dimension(:), pointer, contiguous :: thetaim => null() !< porosity of the immobile domain
+    real(DP), dimension(:), pointer, contiguous :: fim => null() !< solid mass fraction of the immobile domain (set to thetaim/(thetam + prsity2) if not specified)
     real(DP), dimension(:), pointer, contiguous :: bulk_density => null() !< bulk density
     real(DP), dimension(:), pointer, contiguous :: distcoef => null() !< distribution coefficient
     real(DP), dimension(:), pointer, contiguous :: decay => null() !< first or zero order rate constant for liquid
@@ -188,8 +190,14 @@ contains
       this%cimnew(n) = this%cim(n)
     end do
     !
-    ! -- add thetaim to the prsity2 accumulator in mst package
+    ! -- add thetaim to the prsity2 accumulator in mst package,
+    !    and to thetaim_sum if fim is not specified
     call this%mst%addto_prsity2(this%thetaim)
+    if (this%ifim == 0) then
+      call this%mst%addto_thetaim_sum(this%thetaim)
+    else
+      call this%mst%addto_fim_sum(this%fim)
+    end if
     !
     ! -- setup the immobile domain budget
     call budget_cr(this%budget, this%memoryPath)
@@ -289,8 +297,7 @@ contains
     real(DP) :: vcell
     real(DP) :: thetaim
     real(DP) :: zetaim
-    real(DP) :: thetamfrac
-    real(DP) :: thetaimfrac
+    real(DP) :: fim
     real(DP) :: kd
     real(DP) :: rhob
     real(DP) :: lambda1im
@@ -323,9 +330,12 @@ contains
       ! -- set exchange coefficient
       zetaim = this%zetaim(n)
       !
-      ! -- Set thetamfrac and thetaimfrac
-      thetamfrac = this%mst%get_thetamfrac(n)
-      thetaimfrac = this%mst%get_thetaimfrac(n, this%thetaim(n))
+      ! -- Set fim
+      if (this%ifim == 0) then
+        fim = this%mst%get_thetaimfrac(n, this%thetaim(n))
+      else
+        fim = this%fim(n)
+      end if
       !
       ! -- Add dual domain mass transfer contributions to rhs and hcof
       kd = DZERO
@@ -362,7 +372,7 @@ contains
       !
       ! -- calculate the terms and then get the hcof and rhs contributions
       call get_ddterm(thetaim, vcell, delt, swtpdt, &
-                      thetaimfrac, rhob, kd, lambda1im, lambda2im, &
+                      fim, rhob, kd, lambda1im, lambda2im, &
                       gamma1im, gamma2im, zetaim, ddterm, f)
       cimold = this%cimold(n)
       call get_hcofrhs(ddterm, f, cimold, hhcof, rrhs)
@@ -400,8 +410,7 @@ contains
     real(DP) :: vcell
     real(DP) :: thetaim
     real(DP) :: zetaim
-    real(DP) :: thetamfrac
-    real(DP) :: thetaimfrac
+    real(DP) :: fim
     real(DP) :: kd
     real(DP) :: rhob
     real(DP) :: lambda1im
@@ -436,10 +445,13 @@ contains
         ! -- set exchange coefficient
         zetaim = this%zetaim(n)
         !
-        ! -- Set thetamfrac and thetaimfrac
-        thetamfrac = this%mst%get_thetamfrac(n)
-        thetaimfrac = this%mst%get_thetaimfrac(n, this%thetaim(n))
-        !
+        ! -- Set fim
+        if (this%ifim == 0) then
+          fim = this%mst%get_thetaimfrac(n, this%thetaim(n))
+        else
+          fim = this%fim(n)
+        end if
+          !
         ! -- Calculate exchange with immobile domain
         rate = DZERO
         hhcof = DZERO
@@ -471,7 +483,7 @@ contains
         !
         ! -- calculate the terms and then get the hcof and rhs contributions
         call get_ddterm(thetaim, vcell, delt, swtpdt, &
-                        thetaimfrac, rhob, kd, lambda1im, lambda2im, &
+                        fim, rhob, kd, lambda1im, lambda2im, &
                         gamma1im, gamma2im, zetaim, ddterm, f)
         cimold = this%cimold(n)
         call get_hcofrhs(ddterm, f, cimold, hhcof, rrhs)
@@ -675,12 +687,14 @@ contains
       call mem_deallocate(this%ibudcsv)
       call mem_deallocate(this%idcy)
       call mem_deallocate(this%isrb)
+      call mem_deallocate(this%ifim)
       call mem_deallocate(this%kiter)
       call mem_deallocate(this%cim)
       call mem_deallocate(this%cimnew)
       call mem_deallocate(this%cimold)
       call mem_deallocate(this%zetaim)
       call mem_deallocate(this%thetaim)
+      call mem_deallocate(this%fim)
       call mem_deallocate(this%bulk_density)
       call mem_deallocate(this%distcoef)
       call mem_deallocate(this%decay)
@@ -729,6 +743,7 @@ contains
     call mem_allocate(this%ibudcsv, 'IBUDCSV', this%memoryPath)
     call mem_allocate(this%isrb, 'ISRB', this%memoryPath)
     call mem_allocate(this%idcy, 'IDCY', this%memoryPath)
+    call mem_allocate(this%ifim, 'IFIM', this%memoryPath)
     call mem_allocate(this%kiter, 'KITER', this%memoryPath)
     !
     ! -- Initialize
@@ -737,6 +752,7 @@ contains
     this%ibudcsv = 0
     this%isrb = 0
     this%idcy = 0
+    this%ifim = 0
     this%kiter = 0
     !
     ! -- Create the ocd object, which is used to manage printing and saving
@@ -795,6 +811,7 @@ contains
                         this%memoryPath)
     end if
     call mem_allocate(this%decay_sorbed, 1, 'DECAY_SORBED', this%memoryPath)
+    call mem_allocate(this%fim, 0, 'FIM', this%memoryPath)
     !
     ! -- initialize
     do n = 1, this%dis%nodes
@@ -954,8 +971,8 @@ contains
     character(len=:), allocatable :: line
     integer(I4B) :: istart, istop, lloc, ierr
     logical :: isfound, endOfBlock
-    logical, dimension(7) :: lname
-    character(len=24), dimension(7) :: aname
+    logical, dimension(8) :: lname
+    character(len=24), dimension(8) :: aname
     ! -- formats
     ! -- data
     data aname(1)/'            BULK DENSITY'/
@@ -965,6 +982,7 @@ contains
     data aname(5)/'   INITIAL IMMOBILE CONC'/
     data aname(6)/'  FIRST ORDER TRANS RATE'/
     data aname(7)/'IMMOBILE DOMAIN POROSITY'/
+    data aname(8)/'IMM. SOLID MASS FRACTION'/
     !
     ! -- initialize
     isfound = .false.
@@ -1027,6 +1045,14 @@ contains
                                         this%parser%iuactive, this%thetaim, &
                                         aname(7))
           lname(7) = .true.
+        case ('FIM')
+          call mem_reallocate(this%fim, this%dis%nodes, 'FIM', &
+                              trim(this%memoryPath))
+          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+                                        this%parser%iuactive, this%fim, &
+                                        aname(8))
+          lname(8) = .true.
+          this%ifim = 1
         case default
           write (errmsg, '(4x,a,a)') 'Unknown GRIDDATA tag: ', trim(keyword)
           call store_error(errmsg)
@@ -1137,14 +1163,14 @@ contains
   !!
   !<
   subroutine get_ddterm(thetaim, vcell, delt, swtpdt, &
-                        thetaimfrac, rhob, kd, lambda1im, lambda2im, &
+                        fim, rhob, kd, lambda1im, lambda2im, &
                         gamma1im, gamma2im, zetaim, ddterm, f)
     ! -- dummy
     real(DP), intent(in) :: thetaim !< immobile domain porosity
     real(DP), intent(in) :: vcell !< volume of cell
     real(DP), intent(in) :: delt !< length of time step
     real(DP), intent(in) :: swtpdt !< cell saturation at end of time step
-    real(DP), intent(in) :: thetaimfrac !< fraction of total porosity this is immobile
+    real(DP), intent(in) :: fim !< fraction of solid mass that is immobile
     real(DP), intent(in) :: rhob !< bulk density
     real(DP), intent(in) :: kd !< distribution coefficient for linear isotherm
     real(DP), intent(in) :: lambda1im !< first-order decay rate in aqueous phase
@@ -1164,12 +1190,12 @@ contains
     !    coefficients in equation 7-4 of the GWT model report
     ddterm(1) = thetaim * vcell * tled
     ddterm(2) = thetaim * vcell * tled
-    ddterm(3) = thetaimfrac * rhob * vcell * kd * tled
-    ddterm(4) = thetaimfrac * rhob * vcell * kd * tled
+    ddterm(3) = fim * rhob * vcell * kd * tled
+    ddterm(4) = fim * rhob * vcell * kd * tled
     ddterm(5) = thetaim * lambda1im * vcell
-    ddterm(6) = thetaimfrac * lambda2im * rhob * kd * vcell
+    ddterm(6) = fim * lambda2im * rhob * kd * vcell
     ddterm(7) = thetaim * gamma1im * vcell
-    ddterm(8) = thetaimfrac * gamma2im * rhob * vcell
+    ddterm(8) = fim * gamma2im * rhob * vcell
     ddterm(9) = vcell * swtpdt * zetaim
     !
     ! -- calculate denominator term, f

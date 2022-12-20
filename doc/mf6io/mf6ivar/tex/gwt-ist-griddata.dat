@@ -13,4 +13,6 @@ BEGIN GRIDDATA
     <bulk_density(nodes)> -- READARRAY
   DISTCOEF [LAYERED]
     <distcoef(nodes)> -- READARRAY
+  [FIM [LAYERED]
+    <fim(nodes)> -- READARRAY]
 END GRIDDATA

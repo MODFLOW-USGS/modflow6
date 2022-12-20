@@ -296,3 +296,13 @@ layered true
 longname distribution coefficient
 description is the distribution coefficient for the equilibrium-controlled linear sorption isotherm in dimensions of length cubed per mass.  distcoef will have no effect on simulation results unless the SORPTION keyword is specified in the options block.
 
+block griddata
+name fim
+type double precision
+shape (nodes)
+reader readarray
+layered true
+optional true
+longname immobile domain solid mass fraction
+description is the immobile domain solid mass fraction, in dimensions of mass per mass.  FIM represents the mass of immobile solid aquifer material that is available for immobile domain sorptive exchange per mass of total solid aquifer material.  If not specifed, then this mass fraction is approximated to be the immobile domain porosity (THETAIM) divided by the total porosity (the sum of all immobile domain porosities and the mobile domain porosity).
+

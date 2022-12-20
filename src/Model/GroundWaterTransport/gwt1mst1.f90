@@ -39,6 +39,8 @@ module GwtMstModule
     ! -- storage
     real(DP), dimension(:), pointer, contiguous :: porosity => null() !< porosity
     real(DP), dimension(:), pointer, contiguous :: prsity2 => null() !< sum of immobile porosity
+    real(DP), dimension(:), pointer, contiguous :: fim_sum => null() !< sum of fim for immobile domains with fim user specified
+    real(DP), dimension(:), pointer, contiguous :: thetaim_sum => null() !< sum of thetaim for immobile domains without fim specified by user
     real(DP), dimension(:), pointer, contiguous :: ratesto => null() !< rate of mobile storage
     !
     ! -- decay
@@ -79,8 +81,10 @@ module GwtMstModule
     procedure :: mst_da
     procedure :: allocate_scalars
     procedure :: addto_prsity2
-    procedure :: get_thetamfrac
+    procedure :: addto_fim_sum
+    procedure :: addto_thetaim_sum
     procedure :: get_thetaimfrac
+    procedure :: get_frac_mobile
     procedure, private :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_data
@@ -358,7 +362,7 @@ contains
       swtpdt = this%fmi%gwfsat(n)
       swt = this%fmi%gwfsatold(n, delt)
       idiag = this%dis%con%ia(n)
-      thetamfrac = this%get_thetamfrac(n)
+      thetamfrac = this%get_frac_mobile(n)
       const1 = this%distcoef(n)
       const2 = 0.
       if (this%isrb > 1) const2 = this%sp2(n)
@@ -497,7 +501,7 @@ contains
       swnew = this%fmi%gwfsat(n)
       distcoef = this%distcoef(n)
       idiag = this%dis%con%ia(n)
-      thetamfrac = this%get_thetamfrac(n)
+      thetamfrac = this%get_frac_mobile(n)
       term = this%decay_sorbed(n) * thetamfrac * this%bulk_density(n) * &
              swnew * vcell
       !
@@ -745,7 +749,7 @@ contains
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
       swtpdt = this%fmi%gwfsat(n)
       swt = this%fmi%gwfsatold(n, delt)
-      thetamfrac = this%get_thetamfrac(n)
+      thetamfrac = this%get_frac_mobile(n)
       rhob = this%bulk_density(n)
       const1 = this%distcoef(n)
       const2 = 0.
@@ -808,7 +812,7 @@ contains
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
       swnew = this%fmi%gwfsat(n)
       distcoef = this%distcoef(n)
-      thetamfrac = this%get_thetamfrac(n)
+      thetamfrac = this%get_frac_mobile(n)
       term = this%decay_sorbed(n) * thetamfrac * this%bulk_density(n) * &
              swnew * vcell
       !
@@ -987,6 +991,8 @@ contains
     if (this%inunit > 0) then
       call mem_deallocate(this%porosity)
       call mem_deallocate(this%prsity2)
+      call mem_deallocate(this%fim_sum)
+      call mem_deallocate(this%thetaim_sum)
       call mem_deallocate(this%ratesto)
       call mem_deallocate(this%idcy)
       call mem_deallocate(this%decay)
@@ -1059,6 +1065,8 @@ contains
     ! -- sto
     call mem_allocate(this%porosity, nodes, 'POROSITY', this%memoryPath)
     call mem_allocate(this%prsity2, nodes, 'PRSITY2', this%memoryPath)
+    call mem_allocate(this%fim_sum, nodes, 'FIM_SUM', this%memoryPath)
+    call mem_allocate(this%thetaim_sum, nodes, 'THETAIM_SUM', this%memoryPath)
     call mem_allocate(this%ratesto, nodes, 'RATESTO', this%memoryPath)
     !
     ! -- dcy
@@ -1104,6 +1112,8 @@ contains
     do n = 1, nodes
       this%porosity(n) = DZERO
       this%prsity2(n) = DZERO
+      this%fim_sum(n) = DZERO
+      this%thetaim_sum(n) = DZERO
       this%ratesto(n) = DZERO
     end do
     do n = 1, size(this%decay)
@@ -1424,25 +1434,78 @@ contains
     return
   end subroutine addto_prsity2
 
-  !> @ brief Return mobile porosity fraction
+  !> @ brief Accumulate immobile domain terms
   !!
-  !!  Calculate and return the fraction of the total porosity that is mobile
+  !!  Accumulate fim values specified by user in the
+  !!  immobile domain packages
   !!
   !<
-  function get_thetamfrac(this, node) result(thetamfrac)
+  subroutine addto_fim_sum(this, fim)
+    ! -- modules
+    ! -- dummy
+    class(GwtMstType) :: this !< GwtMstType object
+    real(DP), dimension(:), intent(in) :: fim !< immobile domain solid mass fraction specified by user
+    ! -- local
+    integer(I4B) :: n
+    !
+    ! -- Add to fim_sum
+    do n = 1, this%dis%nodes
+      if (this%ibound(n) == 0) cycle
+      this%fim_sum(n) = this%fim_sum(n) + fim(n)
+    end do
+    !
+    ! -- Return
+    return
+  end subroutine addto_fim_sum
+
+  !> @ brief Accumulate immobile domain terms
+  !!
+  !!  Accumulate thetaim values specified by user in the
+  !!  immobile domain packages for those IST packages
+  !!  that do not have user-specified fim arrays
+  !!
+  !<
+  subroutine addto_thetaim_sum(this, thetaim)
+    ! -- modules
+    ! -- dummy
+    class(GwtMstType) :: this !< GwtMstType object
+    real(DP), dimension(:), intent(in) :: thetaim !< immobile domain porosity specified by user
+    ! -- local
+    integer(I4B) :: n
+    !
+    ! -- Add to thetaim_sum
+    do n = 1, this%dis%nodes
+      if (this%ibound(n) == 0) cycle
+      this%thetaim_sum(n) = this%thetaim_sum(n) + thetaim(n)
+    end do
+    !
+    ! -- Return
+    return
+  end subroutine addto_thetaim_sum
+
+  !> @ brief Return fm
+  !!
+  !!  Calculate and return the fraction of the total mass
+  !!  that available to the mobile domain for sorption
+  !!
+  !<
+  function get_frac_mobile(this, node) result(fm)
     ! -- modules
     ! -- dummy
     class(GwtMstType) :: this !< GwtMstType object
     integer(I4B), intent(in) :: node !< node number
     ! -- return
-    real(DP) :: thetamfrac
+    real(DP) :: fm
+    ! -- local
+    real(DP) :: fim
     !
-    thetamfrac = this%porosity(node) / &
-                 (this%porosity(node) + this%prsity2(node))
+    fim = this%fim_sum(node) + this%thetaim_sum(node) / &
+          (this%porosity(node) + this%prsity2(node))
+    fm = DONE - fim
     !
     ! -- Return
     return
-  end function get_thetamfrac
+  end function get_frac_mobile
 
   !> @ brief Return immobile porosity fraction
   !!

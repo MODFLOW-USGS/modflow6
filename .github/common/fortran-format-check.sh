@@ -39,7 +39,7 @@ if [[ ${#fformatfails[@]} > 0 ]]; then
   for f in "${fformatfails[@]}"; do echo "${f}"; done
 
   echo -e "\nTo verify file format diff and/or warn in local environment run:"
-  echo -e " 'fprettify -d -c <path to modflow6>/distribution/.fprettify.yaml <filepath>'\n\n"
+  echo -e " 'fprettify -c .fprettify.yaml <filepath>'\n\n"
 
   exit 1
 fi
