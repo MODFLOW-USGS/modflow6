@@ -1817,11 +1817,11 @@ contains
     if (.not. found%wetdry) call mem_reallocate(this%wetdry, 1, 'WETDRY', &
                                                 trim(this%memoryPath))
     if (.not. found%angle1 .and. this%ixt3d == 0) &
-      call mem_reallocate(this%angle1, 1, 'ANGLE1', trim(this%memoryPath))
+      call mem_reallocate(this%angle1, 0, 'ANGLE1', trim(this%memoryPath))
     if (.not. found%angle2 .and. this%ixt3d == 0) &
-      call mem_reallocate(this%angle2, 1, 'ANGLE2', trim(this%memoryPath))
+      call mem_reallocate(this%angle2, 0, 'ANGLE2', trim(this%memoryPath))
     if (.not. found%angle3 .and. this%ixt3d == 0) &
-      call mem_reallocate(this%angle3, 1, 'ANGLE3', trim(this%memoryPath))
+      call mem_reallocate(this%angle3, 0, 'ANGLE3', trim(this%memoryPath))
     !
     ! -- log griddata
     if (this%iout > 0) then
