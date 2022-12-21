@@ -1,4 +1,4 @@
-# makefile created by pymake (version 1.2.5) for the 'mf5to6' executable.
+# makefile created by pymake (version 1.2.7) for the 'mf5to6' executable.
 
 
 include ./makedefaults
@@ -6,9 +6,9 @@ include ./makedefaults
 # Define the source file directories
 SOURCEDIR1=../src
 SOURCEDIR2=../src/LGR
-SOURCEDIR3=../src/MF2005
-SOURCEDIR4=../src/NWT
-SOURCEDIR5=../src/Preproc
+SOURCEDIR3=../src/Preproc
+SOURCEDIR4=../src/MF2005
+SOURCEDIR5=../src/NWT
 SOURCEDIR6=../../../src/Utilities/Memory
 SOURCEDIR7=../../../src/Utilities/TimeSeries
 SOURCEDIR8=../../../src/Utilities
