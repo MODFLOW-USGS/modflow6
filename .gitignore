@@ -1,3 +1,4 @@
+**.env
 *.exe
 *.lib
 *.dll
@@ -73,6 +74,7 @@ autotest/notebooks/
 distribution/temp/
 distribution/temp_zip/
 distribution/*.zip
+dist
 
 mod_temp/
 obj_temp/
@@ -128,3 +130,6 @@ modflow6.code-workspace
 
 # unittests
 unittests/
+
+**/__pycache__
+**/.benchmarks

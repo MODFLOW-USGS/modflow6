@@ -1,0 +1,57 @@
+	\subsection{Version mf6.2.2--July 30, 2021}
+
+	\underline{NEW FUNCTIONALITY}
+	\begin{itemize}
+	        \item A new Adaptive Time Step (ATS) utility was added.  The ATS utility allows any stress period to be overridden with an alternative time stepping approach.  The ATS utility implements two main capabilities (1) the capability to retry failed time steps with a shorter time step repeatedly until convergence is achieved, and (2) the capability to shorten and lengthen time steps based on simulation behavior.  These capabilities are described in the user input and output guide in a new section on the ATS utility.
+	        \item A new option for printing water contents to a dedicated output file has been added to UZF.  To activate, the keyword WATER\_CONTENT is added to the OPTIONS block of UZF, followed by FILEOUT, followed by the user-specified output file name, for example ``water-content.uzf.bin''.  The approach is analogous to the STAGE option within the SFR options block.  Contents of the new file will be written in binary and can be read using flopy's binaryfile utility.  
+	        \item The residual balance error for groundwater flow and solute transport is now written to the diagonal position of the flowja array, which is marked with the text description ``FLOW-JA-FACE''.  The flowja array is optionally written to the binary model budget file according to user settings in the output control file and other package input files.
+	        \item A new option for simulating specific storage changes only when a cell is fully saturated has been added to the storage (STO) package. To activate, the SS\_CONFINED\_ONLY keyword is added to the OPTIONS block in the STO Package. This option is identical to the approach used to calculate storage changes under confined conditions in MODFLOW-2005.
+	        \item A new observation type called ``wel-reduction'' was added for the Well Package.  This observation type reports the reduction in the well discharge that can occur when the \texttt{AUTO\_FLOW\_REDUCE} option is specified.
+	\end{itemize}
+	
+	\underline{EXAMPLES}
+	\begin{itemize}
+	        \item Added the following new examples: 
+	        \begin{itemize}
+	          \item ex-gwt-hecht-mendez
+	          \item ex-gwf-capture (This example is described in mf6examples.pdf to demonstrate functionality of the Application Programming Interface; it is not included in the examples folder of this distribution as it requires python and several python packages)
+	        \end{itemize}
+	        \item Added new citation to this document.  The \cite{morway2021} paper describes the use of the Water Mover Package in MODFLOW~6 to represent natural and managed hydrologic connections. 
+	\end{itemize}
+
+	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
+	\underline{BASIC FUNCTIONALITY}
+	\begin{itemize}
+		\item The specific storage formulation in the storage (STO) package has been modified to eliminate the dependency of the original formulation on the vertical datum. The original specific storage formulation also overestimated storage changes for cells that resaturated or desaturated in successive time steps. Furthermore, the sign of the specific storage change was incorrect in cells with negative heads and resaturated or desaturated in successive time steps. The revised specific storage formulation resolves all of the deficiencies of the original formulation and accurately simulates specific storage changes under water table conditions but will change the results for existing models. Testing indicates that the differences between models run with the original and revised specific storage formulation are generally small but tend to increase in models with large specific storage values or have cells that repeatedly resaturated or desaturated in successive time steps.
+		\item The convergence failure message message written to GWF and GWT listing files (FAILED TO MEET SOLVER CONVERGENCE CRITERIA) is now written after the budget summary tables.  In previous releases this convergence failure message was written prior to printing heads and concentrations, which often resulted in this message being unnoticed by users.
+	        \item The order of output written to the GWF and GWT listing files for a time step was reorganized in a consistent manner with model and package flows coming first, followed by dependent variables, and then concluding with budget summary tables.
+	        \item The DISU Package checks to make sure that the top of a cell is not higher than the bottom of an overlying cell.  A new option was added to the DISU Package to allow the user to specify the vertical offset tolerance used in this check.  This new optional input variable is VERTICAL\_OFFSET\_TOLERANCE.
+	        \item Add DISU Package check to ensure that JA(IA(n)) is equal to n and that no values in JA are less than zero or greater than nodes.
+	        \item When IDOMAIN is used with the DISU Package and any IDOMAIN value is zero, then the program was expecting all JA values to be positive. The program is supposed to allow a negative JA value to be specified for the corresponding cell (in the diagonal position), but this was not working.  A fix was implemented to allow a negative cell number to be specified in the diagonal position of the JA array when the IDOMAIN capability is active.
+	        \item A new check was added to the Horizontal Flow Barrier (HFB) Package to ensure that barriers are between cells that are horizontally connected.  The program would previously continue running if a barrier was between vertically connected cells.
+	        \item There was no check to prevent the zero-order decay functionality of the Mobile Storage and Transfer (MST) and Immobile Storage and Transfer (IST) Packages in the GWT Model from producing negative concentrations.  The program now reduces the zero-order decay rate for the aqueous and sorbed phases (for the mobile and immobile domains) to ensure that decay does not consume more mass than is available.  These changes do not affect zero-order growth.
+	        \item If a binary budget file from a GWF Model was larger than about 2 Gigabytes, then it could not be used as input for a subsequent GWT Model.  The program was modified to use a long integer to store the byte position.
+	        \item The program was terminating with a non-zero return code if the simulation did not converge.  This is the intended behavior, unless the CONTINUE option is specified in the simulation name file.  The program now terminates with a return code of zero if the simulation does not converge, but the CONTINUE option is set and the program reaches the end of the simulation.
+	\end{itemize}
+
+%	\underline{STRESS PACKAGES}
+%	\begin{itemize}
+%	        \item xxx  
+%	        \item xxx  
+%	        \item xxx  
+%	\end{itemize}
+
+	\underline{ADVANCED STRESS PACKAGES}
+	\begin{itemize}
+	        \item The UZF water-content observation by depth was giving an error, because a check was using the wrong index to retrieve the cell top and bottom elevations for the requested observation.  The program was modified to use the correct index, and the output is now as expected.  Note that this bug is not related to the new WC keyword in the OPTIONS block, but rather is related to OBS6 output option.
+	        \item Amend surfdep error check with landflag.  Deep cells (non-land surface cells) should not require surfdep > 0
+	        \item In the LAK observation package, users can specify ``lak'' to get a summary of lake-groundwater exchange.  Users could specify a lake number without specifying a specific connection number (variable ``iconn'').  Code will now stop if lake number is provided without a matching connection number.  Code will still provide a summary of total lake-groundwater exchange when BOUNDNAME is entered for the variable ID.  This also will fix a similar issue for the observation types ``wetted-area'' and ``conductance'', since both require ID2 when ID is an integer corresponding to a lake number.
+	        \item In the MAW observation package, users can specify ``maw'' to get a summary of well-groundwater exchange.  The code was allowing users to specify a well number without requiring specification of a connection number (variable ``icon'').  Code will now stop if well number is provided without a matching connection number.  Code will still provide a summary of total well-groundwater exchange when BOUNDNAME is entered for the variable ID.  This also will fix a similar issue for the observation type ``conductance'', since both require ID2 when ID is an integer corresponding to a well number.
+	\end{itemize}
+
+	\underline{SOLUTION}
+	\begin{itemize}
+	        \item An optional new input variable called ATS\_OUTER\_MAXIMUM\_FRACTION can now be entered for the IMS Package.  This variable has no effect unless the new ATS capability is active.  
+%	        \item xxx  
+%	        \item xxx  
+	\end{itemize}

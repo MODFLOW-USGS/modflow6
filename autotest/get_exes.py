@@ -3,6 +3,7 @@
 import os
 import shutil
 
+from flaky import flaky
 import pymake
 
 from build_exes import meson_build
@@ -96,6 +97,7 @@ def test_create_dirs():
         create_dir(pth)
 
 
+@flaky(max_runs=3)
 def test_getmfexes(verify=True):
     pymake.getmfexes(mfexe_pth, verify=verify)
     for target in os.listdir(mfexe_pth):
@@ -106,6 +108,7 @@ def test_getmfexes(verify=True):
             shutil.copy(srcpth, dstpth)
 
 
+@flaky(max_runs=3)
 def test_rebuild_mf6_release():
     rebuild_mf6_release()
 

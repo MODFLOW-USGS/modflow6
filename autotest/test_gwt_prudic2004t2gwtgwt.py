@@ -504,7 +504,9 @@ def build_gwfgwt_combo(
     if icombo == 1:
         lakpackagedata = [[0, 44.0, nlakecon[0], "lake1"]]
         # <outletno> <lakein> <lakeout> <couttype> <invert> <width> <rough> <slope>
-        outlets = [[0, 0, -1, "MANNING", 44.5, 5.000000, 0.03, 0.2187500e-02]]
+        outlets = [
+            [0, 0, -1, "MANNING", 44.5, 3.36493214532915, 0.03, 0.2187500e-02]
+        ]
         noutlets = 1
     elif icombo == 2:
         lakpackagedata = [[0, 35.2, nlakecon[0], "lake2"]]
@@ -519,6 +521,7 @@ def build_gwfgwt_combo(
         lak = flopy.mf6.ModflowGwflak(
             gwf,
             time_conversion=86400.000,
+            length_conversion=3.28081,
             print_stage=True,
             print_flows=True,
             stage_filerecord=gwfname + ".lak.bin",

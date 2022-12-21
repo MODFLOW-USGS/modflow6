@@ -102,6 +102,7 @@ def run_flow_model():
         top=top,
         botm=botm,
         idomain=idomain,
+        length_units="feet",
     )
     idomain = dis.idomain.array
 
@@ -358,13 +359,16 @@ def run_flow_model():
         [1, 35.2, nlakecon[1], "lake2"],
     ]
     # <outletno> <lakein> <lakeout> <couttype> <invert> <width> <rough> <slope>
-    outlets = [[0, 0, -1, "MANNING", 44.5, 5.000000, 0.03, 0.2187500e-02]]
+    outlets = [
+        [0, 0, -1, "MANNING", 44.5, 3.36493214532915, 0.03, 0.2187500e-02]
+    ]
 
     lake_on = True
     if lake_on:
         lak = flopy.mf6.ModflowGwflak(
             gwf,
             time_conversion=86400.000,
+            length_conversion=3.28081,
             print_stage=True,
             print_flows=True,
             stage_filerecord=gwfname + ".lak.bin",

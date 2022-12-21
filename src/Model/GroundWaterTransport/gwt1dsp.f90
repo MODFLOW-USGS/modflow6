@@ -556,8 +556,8 @@ contains
     type(GwtDspParamFoundType), intent(in) :: found
 
     write (this%iout, '(1x,a)') 'Setting DSP Options'
-    write (this%iout, '(4x,a,i0)') 'XT3D FORMULATION [0=INACTIVE, 1=ACTIVE, &
-                                   &3=ACTIVE RHS] SET TO: ', this%ixt3d
+    write (this%iout, '(4x,a,i0)') 'XT3D formulation [0=INACTIVE, 1=ACTIVE, &
+                                   &3=ACTIVE RHS] set to: ', this%ixt3d
     write (this%iout, '(1x,a,/)') 'End Setting DSP Options'
   end subroutine log_options
 
@@ -703,7 +703,7 @@ contains
     if (this%idisp > 0) then
       if (.not. (found%alh .and. found%ath1)) then
         write (errmsg, '(1x,a)') &
-          'IF DISPERSIVITIES ARE SPECIFIED THEN ALH AND ATH1 ARE REQUIRED.'
+          'if dispersivities are specified then ALH and ATH1 are required.'
         call store_error(errmsg)
       end if
       ! -- If alv not specified then point it to alh

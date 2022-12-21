@@ -318,36 +318,23 @@ subroutine parse_command_line(fnam, flst, fcsv)
 ! ------------------------------------------------------------------------------
   ! -- modules
   use KindModule
-  use InputOutputModule, only: urword
-  use ConstantsModule, only: LENHUGELINE
   implicit none
   ! -- dummy
   character(len=*), intent(inout) :: fnam
   character(len=*), intent(inout) :: flst
   character(len=*), intent(inout) :: fcsv
   ! -- local
-  character(len=LENHUGELINE) :: line
-  integer(I4B) :: inunit = 0
-  integer(I4B) :: ilen
-  integer(I4B) :: istat
-  integer(I4B) :: lloc
+  integer(I4B) :: icountcmd
   integer(I4B) :: istart
   integer(I4B) :: istop
-  integer(I4B) :: ival
   integer(I4B) :: i
-  real(DP) :: rval
 ! ------------------------------------------------------------------------------
   !
-  ! -- Get the command line string
-  call GET_COMMAND(line, ilen, istat)
-  !
-  ! -- This will read zonebudget executable
-  lloc = 1
-  call urword(line, lloc, istart, istop, 0, ival, rval, 0, inunit)
-  !
-  ! -- This will read first argument (zone budget name file)
-  call urword(line, lloc, istart, istop, 0, ival, rval, 0, inunit)
-  if (istart < len(line)) fnam = line(istart:istop)
+  ! -- assign fnam to first command line argument
+  icountcmd = command_argument_count()
+  if (icountcmd > 0) then
+    call get_command_argument(1, fnam)
+  end if
   !
   ! -- Set lst and csv file names by replacing fnam suffix with .lst
   istart = 0

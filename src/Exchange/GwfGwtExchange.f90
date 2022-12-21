@@ -275,9 +275,15 @@ contains
       end if
     end if
     !
-    ! -- Set a pointer to conc
+    ! -- Set a pointer to conc in buy
     if (gwfmodel%inbuy > 0) then
       call gwfmodel%buy%set_concentration_pointer(gwtmodel%name, gwtmodel%x, &
+                                                  gwtmodel%ibound)
+    end if
+    !
+    ! -- Set a pointer to conc (which could be a temperature) in vsc
+    if (gwfmodel%invsc > 0) then
+      call gwfmodel%vsc%set_concentration_pointer(gwtmodel%name, gwtmodel%x, &
                                                   gwtmodel%ibound)
     end if
     !
