@@ -1043,13 +1043,13 @@ contains
     !
     ! -- return
     return
-  end subroutine gwf_gwf_bdsav 
+  end subroutine gwf_gwf_bdsav
 
   subroutine gwf_gwf_bdsav_model(this, model)
     use ConstantsModule, only: DZERO, LENBUDTXT, LENPACKAGENAME
     use TdisModule, only: kstp, kper
     class(GwfExchangeType) :: this !< this exchange
-    type(GwfModelType), pointer :: model !< the model to save budget for    
+    type(GwfModelType), pointer :: model !< the model to save budget for
     ! local
     character(len=LENPACKAGENAME + 4) :: packname
     character(len=LENBUDTXT), dimension(1) :: budtxt
@@ -1161,7 +1161,7 @@ contains
             nodeu = model%dis%get_nodeuser(n1)
             call model%dis%nodeu_to_string(nodeu, nodestr)
             call output_tab%print_list_entry(i, trim(adjustl(nodestr)), &
-                                             rsgn*rrate, bname)
+                                             rsgn * rrate, bname)
           end if
         end if
         if (rrate < DZERO) then
@@ -1175,7 +1175,7 @@ contains
       n1u = model%dis%get_nodeuser(n1)
       n2u = model%dis%get_nodeuser(n2)
       if (ibinun1 /= 0) &
-        call model%dis%record_mf6_list_entry(ibinun1, n1u, n2u, rsgn*rrate, &
+        call model%dis%record_mf6_list_entry(ibinun1, n1u, n2u, rsgn * rrate, &
                                              this%naux, this%auxvar(:, i), &
                                              .false., .false.)
       !
