@@ -1059,9 +1059,9 @@ contains
     integer(I4B) :: ntabrows
     integer(I4B) :: nodeu
     integer(I4B) :: i, n1, n2, n1u, n2u
-    integer(I4B) :: ibinun1
+    integer(I4B) :: ibinun
     real(DP) :: ratin, ratout, rrate
-    integer(I4B) :: rsgn !< rate sign
+    logical(LGP) :: is_for_model1
 
     budtxt(1) = '    FLOW-JA-FACE'
     packname = 'EXG '//this%name
@@ -1069,11 +1069,11 @@ contains
     if (associated(model, this%gwfmodel1)) then
       output_tab => this%outputtab1
       nbr_model => this%gwfmodel2
-      rsgn = 1
+      is_for_model1 = .true.
     else
       output_tab => this%outputtab2
       nbr_model => this%gwfmodel1
-      rsgn = -1
+      is_for_model1 = .false.
     end if
     !
     ! -- update output tables
@@ -1094,8 +1094,7 @@ contains
         n2 = this%nodem2(i)
         !
         ! -- If both cells are active then calculate flow rate
-        if (model%ibound(n1) /= 0 .and. &
-            nbr_model%ibound(n2) /= 0) then
+        if (model%ibound(n1) /= 0 .and. nbr_model%ibound(n2) /= 0) then
           ntabrows = ntabrows + 1
         end if
       end do
@@ -1108,24 +1107,24 @@ contains
     !
     ! -- Set binary unit numbers for saving flows
     if (this%ipakcb /= 0) then
-      ibinun1 = model%oc%oc_save_unit('BUDGET')
+      ibinun = model%oc%oc_save_unit('BUDGET')
     else
-      ibinun1 = 0
+      ibinun = 0
     end if
     !
     ! -- If save budget flag is zero for this stress period, then
     !    shut off saving
-    if (.not. model%oc%oc_save('BUDGET')) ibinun1 = 0
+    if (.not. model%oc%oc_save('BUDGET')) ibinun = 0
     !
     ! -- If cell-by-cell flows will be saved as a list, write header.
-    if (ibinun1 /= 0) then
+    if (ibinun /= 0) then
       call model%dis%record_srcdst_list_header(budtxt(1), &
                                                model%name, &
                                                this%name, &
                                                nbr_model%name, &
                                                this%name, &
                                                this%naux, this%auxname, &
-                                               ibinun1, this%nexg, &
+                                               ibinun, this%nexg, &
                                                model%iout)
     end if
     !
@@ -1157,10 +1156,18 @@ contains
           if (model%oc%oc_save('BUDGET')) then
             !
             ! -- set nodestr and write outputtab table
-            nodeu = model%dis%get_nodeuser(n1)
-            call model%dis%nodeu_to_string(nodeu, nodestr)
-            call output_tab%print_list_entry(i, trim(adjustl(nodestr)), &
-                                             rsgn * rrate, bname)
+            if (is_for_model1) then
+              nodeu = model%dis%get_nodeuser(n1)
+              call model%dis%nodeu_to_string(nodeu, nodestr)
+              call output_tab%print_list_entry(i, trim(adjustl(nodestr)), &
+                                               rrate, bname)
+            else
+              nodeu = model%dis%get_nodeuser(n2)
+              call model%dis%nodeu_to_string(nodeu, nodestr)
+              call output_tab%print_list_entry(i, trim(adjustl(nodestr)), &
+                                               -rrate, bname)
+            end if
+            
           end if
         end if
         if (rrate < DZERO) then
@@ -1172,11 +1179,18 @@ contains
       !
       ! -- If saving cell-by-cell flows in list, write flow
       n1u = model%dis%get_nodeuser(n1)
-      n2u = model%dis%get_nodeuser(n2)
-      if (ibinun1 /= 0) &
-        call model%dis%record_mf6_list_entry(ibinun1, n1u, n2u, rsgn * rrate, &
-                                             this%naux, this%auxvar(:, i), &
-                                             .false., .false.)
+      n2u = nbr_model%dis%get_nodeuser(n2)
+      if (ibinun /= 0) then
+        if (is_for_model1) then
+          call model%dis%record_mf6_list_entry(ibinun, n1u, n2u, rrate, &
+                                               this%naux, this%auxvar(:, i), &
+                                               .false., .false.)
+        else
+          call model%dis%record_mf6_list_entry(ibinun, n2u, n1u, -rrate, &
+                                               this%naux, this%auxvar(:, i), &
+                                               .false., .false.)
+        end if
+      end if
       !
     end do
 
