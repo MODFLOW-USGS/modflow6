@@ -1,0 +1,8 @@
+	\subsection{Version mf6.4.1--December 9, 2022}
+	
+	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
+
+	\underline{INTERNAL FLOW PACKAGES}
+	\begin{itemize}
+		\item The Viscosity (VSC) Package introduced in version 6.4.0 would report an error for certain types of stress packages if the IDOMAIN capability was activated by the user.  In some cases, the error message would indicate that a boundary was not assigned to a valid cell.  This invalid error would prevent the simulation from proceeding.  The error was corrected by removing the invalid check so that the program can proceed normally.
+	\end{itemize}

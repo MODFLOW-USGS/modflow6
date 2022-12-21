@@ -1,0 +1,9 @@
+BEGIN OPTIONS
+  [VISCREF <viscref>]
+  [TEMPERATURE_SPECIES_NAME <temperature_species_name>]
+  [THERMAL_FORMULATION <thermal_formulation>]
+  [THERMAL_A2 <thermal_a2>]
+  [THERMAL_A3 <thermal_a3>]
+  [THERMAL_A4 <thermal_a4>]
+  [VISCOSITY FILEOUT <viscosityfile>]
+END OPTIONS

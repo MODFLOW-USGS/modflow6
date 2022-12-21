@@ -326,6 +326,16 @@ contains
       call store_error(errmsg, terminate=.TRUE.)
     end if
 
+    ! If viscosity is on in either model, then terminate with an
+    ! error as viscosity package doesn't work yet with exchanges.
+    if (this%gwfmodel1%npf%invsc /= 0 .or. &
+        this%gwfmodel2%npf%invsc /= 0) then
+      write (errmsg, '(3a)') 'GWF-GWF exchange ', trim(this%name), &
+        ' requires that the Viscosity Package is inactive'// &
+        ' in both of the connected models.'
+      call store_error(errmsg, terminate=.TRUE.)
+    end if
+
   end subroutine validate_exchange
 
   !> @ brief Add connections

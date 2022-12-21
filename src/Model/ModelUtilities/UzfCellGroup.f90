@@ -708,9 +708,9 @@ contains
     this%surfluxbelow(icell) = DZERO
     if (this%ivertcon(icell) > 0) then
       this%finf(jbelow) = DZERO
-      if (this%watab(icell) < this%celbot(icell)) &
-        this%watab(icell) = this%celbot(icell)
     end if
+    if (this%watab(icell) < this%celbot(icell)) &
+      this%watab(icell) = this%celbot(icell)
     !
     ! -- initialize derivative variables
     deriv1 = DZERO

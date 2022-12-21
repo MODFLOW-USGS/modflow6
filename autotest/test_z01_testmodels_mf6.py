@@ -105,7 +105,7 @@ def get_mf6_models():
         example_dirs = []
 
     # exclude dev examples on master or release branches
-    if "master" in branch.lower() or "release" in branch.lower():
+    if "master" in branch.lower() or "release" in branch.lower() or branch.lower().startswith("v6"):
         drmv = []
         for d in example_dirs:
             if "_dev" in d.lower():

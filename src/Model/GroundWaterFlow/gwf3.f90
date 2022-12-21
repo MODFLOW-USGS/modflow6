@@ -11,6 +11,7 @@ module GwfModule
   use GwfNpfModule, only: GwfNpfType
   use Xt3dModule, only: Xt3dType
   use GwfBuyModule, only: GwfBuyType
+  use GwfVscModule, only: GwfVscType
   use GwfHfbModule, only: GwfHfbType
   use GwfStoModule, only: GwfStoType
   use GwfCsubModule, only: GwfCsubType
@@ -36,6 +37,7 @@ module GwfModule
     type(GwfNpfType), pointer :: npf => null() ! node property flow package
     type(Xt3dType), pointer :: xt3d => null() ! xt3d option for npf
     type(GwfBuyType), pointer :: buy => null() ! buoyancy package
+    type(GwfVscType), pointer :: vsc => null() ! viscosity package
     type(GwfStoType), pointer :: sto => null() ! storage package
     type(GwfCsubType), pointer :: csub => null() ! subsidence package
     type(GwfOcType), pointer :: oc => null() ! output control package
@@ -48,6 +50,7 @@ module GwfModule
     integer(I4B), pointer :: inoc => null() ! unit number OC
     integer(I4B), pointer :: innpf => null() ! unit number NPF
     integer(I4B), pointer :: inbuy => null() ! unit number BUY
+    integer(I4B), pointer :: invsc => null() ! unit number VSC
     integer(I4B), pointer :: insto => null() ! unit number STO
     integer(I4B), pointer :: incsub => null() ! unit number CSUB
     integer(I4B), pointer :: inmvr => null() ! unit number MVR
@@ -97,7 +100,7 @@ module GwfModule
             &'GHB6 ', 'RCH6 ', 'EVT6 ', 'OBS6 ', 'GNC6 ', & ! 15
             &'API6 ', 'CHD6 ', '     ', '     ', '     ', & ! 20
             &'     ', 'MAW6 ', 'SFR6 ', 'LAK6 ', 'UZF6 ', & ! 25
-            &'DISV6', 'MVR6 ', 'CSUB6', 'BUY6 ', '     ', & ! 30
+            &'DISV6', 'MVR6 ', 'CSUB6', 'BUY6 ', 'VSC6 ', & ! 30
             &70*'     '/
 
 contains
@@ -123,6 +126,7 @@ contains
     use GwfNpfModule, only: npf_cr
     use Xt3dModule, only: xt3d_cr
     use GwfBuyModule, only: buy_cr
+    use GwfVscModule, only: vsc_cr
     use GwfStoModule, only: sto_cr
     use GwfCsubModule, only: csub_cr
     use GwfMvrModule, only: mvr_cr
@@ -236,6 +240,7 @@ contains
     call namefile_obj%get_unitnumber('OC6', this%inoc, 1)
     call namefile_obj%get_unitnumber('NPF6', this%innpf, 1)
     call namefile_obj%get_unitnumber('BUY6', this%inbuy, 1)
+    call namefile_obj%get_unitnumber('VSC6', this%invsc, 1)
     call namefile_obj%get_unitnumber('STO6', this%insto, 1)
     call namefile_obj%get_unitnumber('CSUB6', this%incsub, 1)
     call namefile_obj%get_unitnumber('MVR6', this%inmvr, 1)
@@ -262,6 +267,7 @@ contains
     call npf_cr(this%npf, this%name, this%innpf, this%iout)
     call xt3d_cr(this%xt3d, this%name, this%innpf, this%iout)
     call buy_cr(this%buy, this%name, this%inbuy, this%iout)
+    call vsc_cr(this%vsc, this%name, this%invsc, this%iout)
     call gnc_cr(this%gnc, this%name, this%ingnc, this%iout)
     call hfb_cr(this%hfb, this%name, this%inhfb, this%iout)
     call sto_cr(this%sto, this%name, this%insto, this%iout)
@@ -307,10 +313,11 @@ contains
     !
     ! -- Define packages and utility objects
     call this%dis%dis_df()
-    call this%npf%npf_df(this%dis, this%xt3d, this%ingnc)
+    call this%npf%npf_df(this%dis, this%xt3d, this%ingnc, this%invsc)
     call this%oc%oc_df()
     call this%budget%budget_df(niunit, 'VOLUME', 'L**3')
     if (this%inbuy > 0) call this%buy%buy_df(this%dis)
+    if (this%invsc > 0) call this%vsc%vsc_df(this%dis)
     if (this%ingnc > 0) call this%gnc%gnc_df(this)
     !
     ! -- Assign or point model members to dis members
@@ -416,9 +423,12 @@ contains
     !
     ! -- Allocate and read modules attached to model
     if (this%inic > 0) call this%ic%ic_ar(this%x)
-    if (this%innpf > 0) call this%npf%npf_ar(this%ic, this%ibound, this%x)
+    if (this%innpf > 0) call this%npf%npf_ar(this%ic, this%vsc, this%ibound, &
+                                             this%x)
+    if (this%invsc > 0) call this%vsc%vsc_ar(this%ibound)
     if (this%inbuy > 0) call this%buy%buy_ar(this%npf, this%ibound)
-    if (this%inhfb > 0) call this%hfb%hfb_ar(this%ibound, this%xt3d, this%dis)
+    if (this%inhfb > 0) call this%hfb%hfb_ar(this%ibound, this%xt3d, this%dis, &
+                                             this%invsc, this%vsc)
     if (this%insto > 0) call this%sto%sto_ar(this%dis, this%ibound)
     if (this%incsub > 0) call this%csub%csub_ar(this%dis, this%ibound)
     if (this%inmvr > 0) call this%mvr%mvr_ar()
@@ -439,6 +449,7 @@ contains
       ! -- Read and allocate package
       call packobj%bnd_ar()
       if (this%inbuy > 0) call this%buy%buy_ar_bnd(packobj, this%x)
+      if (this%invsc > 0) call this%vsc%vsc_ar_bnd(packobj)
     end do
     !
     ! -- return
@@ -466,6 +477,7 @@ contains
     ! -- Read and prepare
     if (this%innpf > 0) call this%npf%npf_rp()
     if (this%inbuy > 0) call this%buy%buy_rp()
+    if (this%invsc > 0) call this%vsc%vsc_rp()
     if (this%inhfb > 0) call this%hfb%hfb_rp()
     if (this%inoc > 0) call this%oc%oc_rp()
     if (this%insto > 0) call this%sto%sto_rp()
@@ -515,6 +527,7 @@ contains
     end if
     !
     ! -- Advance
+    if (this%invsc > 0) call this%vsc%vsc_ad()
     if (this%innpf > 0) call this%npf%npf_ad(this%dis%nodes, this%xold, &
                                              this%x, irestore)
     if (this%insto > 0) call this%sto%sto_ad()
@@ -524,6 +537,7 @@ contains
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_ad()
+      if (this%invsc > 0) call this%vsc%vsc_ad_bnd(packobj, this%x)
       if (isimcheck > 0) then
         call packobj%bnd_ck()
       end if
@@ -1120,24 +1134,31 @@ contains
     integer(I4B), intent(inout) :: ipflag
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
-
+    !
     ! -- Save compaction to binary file
     if (this%incsub > 0) call this%csub%csub_ot_dv(idvsave, idvprint)
-
+    !
     ! -- save density to binary file
     if (this%inbuy > 0) then
       call this%buy%buy_ot_dv(idvsave)
     end if
-
+    !
+    ! -- save viscosity to binary file
+    if (this%invsc > 0) then
+      call this%vsc%vsc_ot_dv(idvsave)
+    end if
+    !
     ! -- Print advanced package dependent variables
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_ot_dv(idvsave, idvprint)
     end do
-
+    !
     ! -- save head and print head
     call this%oc%oc_ot(ipflag)
-
+    !
+    ! -- Return
+    return
   end subroutine gwf_ot_dv
 
   subroutine gwf_ot_bdsummary(this, ibudfl, ipflag)
@@ -1204,6 +1225,7 @@ contains
     call this%npf%npf_da()
     call this%xt3d%xt3d_da()
     call this%buy%buy_da()
+    call this%vsc%vsc_da()
     call this%gnc%gnc_da()
     call this%sto%sto_da()
     call this%csub%csub_da()
@@ -1219,6 +1241,7 @@ contains
     deallocate (this%npf)
     deallocate (this%xt3d)
     deallocate (this%buy)
+    deallocate (this%vsc)
     deallocate (this%gnc)
     deallocate (this%sto)
     deallocate (this%csub)
@@ -1241,6 +1264,7 @@ contains
     call mem_deallocate(this%inobs)
     call mem_deallocate(this%innpf)
     call mem_deallocate(this%inbuy)
+    call mem_deallocate(this%invsc)
     call mem_deallocate(this%insto)
     call mem_deallocate(this%incsub)
     call mem_deallocate(this%inmvr)
@@ -1333,6 +1357,7 @@ contains
     call mem_allocate(this%inoc, 'INOC', this%memoryPath)
     call mem_allocate(this%innpf, 'INNPF', this%memoryPath)
     call mem_allocate(this%inbuy, 'INBUY', this%memoryPath)
+    call mem_allocate(this%invsc, 'INVSC', this%memoryPath)
     call mem_allocate(this%insto, 'INSTO', this%memoryPath)
     call mem_allocate(this%incsub, 'INCSUB', this%memoryPath)
     call mem_allocate(this%inmvr, 'INMVR', this%memoryPath)
@@ -1346,6 +1371,7 @@ contains
     this%inoc = 0
     this%innpf = 0
     this%inbuy = 0
+    this%invsc = 0
     this%insto = 0
     this%incsub = 0
     this%inmvr = 0
@@ -1457,31 +1483,32 @@ contains
     ! -- local
     character(len=LINELENGTH) :: errmsg
     integer(I4B) :: i, iu
-    character(len=LENFTYPE), dimension(11) :: nodupftype = &
+    character(len=LENFTYPE), dimension(13) :: nodupftype = &
                                               (/'DIS6 ', 'DISU6', 'DISV6', &
                                                 'IC6  ', 'OC6  ', 'NPF6 ', &
                                                 'STO6 ', 'MVR6 ', 'HFB6 ', &
-                                                'GNC6 ', 'OBS6 '/)
+                                                'GNC6 ', 'BUY6 ', 'VSC6 ', &
+                                                'OBS6 '/)
 ! ------------------------------------------------------------------------------
     !
     ! -- Check for IC8, DIS(u), and NPF. Stop if not present.
     if (this%inic == 0) then
       write (errmsg, '(1x,a)') &
-        'ERROR. INITIAL CONDITIONS (IC6) PACKAGE NOT SPECIFIED.'
+        'Initial Conditions (IC6) package not specified.'
       call store_error(errmsg)
     end if
     if (indis == 0) then
       write (errmsg, '(1x,a)') &
-        'ERROR. DISCRETIZATION (DIS6, DISV6, or DISU6) PACKAGE NOT SPECIFIED.'
+        'Discretization (DIS6, DISV6, or DISU6) Package not specified.'
       call store_error(errmsg)
     end if
     if (this%innpf == 0) then
       write (errmsg, '(1x,a)') &
-        'ERROR.  NODE PROPERTY FLOW (NPF6) PACKAGE NOT SPECIFIED.'
+        'Node Property Flow (NPF6) Package not specified.'
       call store_error(errmsg)
     end if
     if (count_errors() > 0) then
-      write (errmsg, '(1x,a)') 'ERROR. REQUIRED PACKAGE(S) NOT SPECIFIED.'
+      write (errmsg, '(1x,a)') 'One or more required package(s) not specified.'
       call store_error(errmsg)
     end if
     !
@@ -1491,8 +1518,8 @@ contains
       call namefile_obj%get_unitnumber(trim(nodupftype(i)), iu, 0)
       if (iu > 0) then
         write (errmsg, '(1x, a, a, a)') &
-          'DUPLICATE ENTRIES FOR FTYPE ', trim(nodupftype(i)), &
-          ' NOT ALLOWED FOR GWF MODEL.'
+          'Duplicate entries for FTYPE ', trim(nodupftype(i)), &
+          ' not allowed for GWF Model.'
         call store_error(errmsg)
       end if
     end do
