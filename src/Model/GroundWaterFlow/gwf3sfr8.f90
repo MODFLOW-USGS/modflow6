@@ -3272,6 +3272,7 @@ contains
     integer(I4B) :: ibflg
     real(DP) :: hgwf
     real(DP) :: sa
+    real(DP) :: sa_wet
     real(DP) :: qu
     real(DP) :: qi
     real(DP) :: qr
@@ -3355,9 +3356,10 @@ contains
     this%usflow(n) = qu
     ! -- calculate remaining terms
     sa = this%calc_surface_area(n)
+    sa_wet = this%calc_surface_area_wet(n, this%depth(n))
     qi = this%inflow(n)
     qr = this%rain(n) * sa
-    qe = this%evap(n) * sa
+    qe = this%evap(n) * sa_wet
     qro = this%runoff(n)
     !
     ! -- Water mover term; assume that it goes in at the upstream end of the reach
@@ -3831,7 +3833,7 @@ contains
     a = this%calc_surface_area(n)
     ae = this%calc_surface_area_wet(n, depth)
     qr = this%rain(n) * a
-    qe = this%evap(n) * a
+    qe = this%evap(n) * ae
     !
     ! -- calculate mover term
     qfrommvr = DZERO
