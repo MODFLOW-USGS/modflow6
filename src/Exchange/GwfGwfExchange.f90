@@ -1020,12 +1020,11 @@ contains
     class(GwfExchangeType) :: this !<  GwfExchangeType
     ! -- local
     integer(I4B) :: icbcfl, ibudfl
-    integer(I4B) :: isuppress_output
     !
     ! -- budget for model1
     call this%gwf_gwf_bdsav_model(this%gwfmodel1)
     !
-    ! -- budget for model1
+    ! -- budget for model2
     call this%gwf_gwf_bdsav_model(this%gwfmodel2)
     !
     ! -- Set icbcfl, ibudfl to zero so that flows will be printed and
@@ -1034,7 +1033,7 @@ contains
     ibudfl = 1
     !
     ! -- Call mvr bd routine
-    if (this%inmvr > 0) call this%mvr%mvr_bdsav(icbcfl, ibudfl, isuppress_output)
+    if (this%inmvr > 0) call this%mvr%mvr_bdsav(icbcfl, ibudfl, 0)
     !
     ! -- Calculate and write simulated values for observations
     if (this%inobs /= 0) then
