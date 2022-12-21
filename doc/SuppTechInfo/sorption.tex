@@ -1,0 +1,72 @@
+
+As described by \cite{modflow6gwt}, sorption of solute by the mobile and immobile domains can be simulated by the Groundwater Transport (GWT) Model in \mf.  This chapter summarizes and clarifies the sorption equations implemented in \mf, and presents a new input option for the Immobile Storage and Transfer (IST) Package.
+
+The GWT Model in \mf solves the following mathematical equation
+
+\begin{equation}
+\label{eqn:gwtpde}
+\begin{aligned}
+\frac {\partial \left ( S_w \theta C \right )}{\partial t} = 
+- \nabla \cdot \left ( \matr{q} C  \right ) 
++ \nabla \cdot \left ( S_w \theta \matr{D} \nabla C \right ) 
++ q'_s C_s + M_s  
+- \lambda_1 \theta S_w C - \gamma_1 \theta S_w \\
+- f_m \rho_b \frac {\partial \left ( S_w \overline{C} \right ) }{\partial t} 
+- \lambda_2 f_m \rho_b S_w \overline{C} - \gamma_2 f_m \rho_b S_w 
+- \sum \limits_{im=1}^{nim}  \zeta_{im} S_w \left ( C - C_{im} \right ),
+\end{aligned}
+\end{equation}
+
+\noindent where the symbols are defined in \cite{modflow6gwt}.  This chapter provides additional clarification on the $f_m$ term in equation~\ref{eqn:gwtpde}, which is defined as the fraction of aquifer solid material available for sorptive exchange with the mobile phase under fully saturated conditions.  When there are no immobile domains specified by the user, then $f_m$ is automatically set by the GWT Model to a value of one.  When one or more immobile domains are specified by the user, however, then the $f_m$ term in equation~\ref{eqn:gwtpde} requires additional clarification.
+
+The Immobile domain Storage and Transfer (IST) Package for the GWT Model allows users to designate a fraction of a model cell as immobile.  Transfer of solute mass into or out of the immobile part of a model cell is calculated using a diffusive equation as described in \cite{modflow6gwt}.  The transport equation for the immobile domain is
+
+\begin{equation}
+\label{eqn:gwtistpde}
+\begin{split}
+\theta_{im} \frac{\partial C_{im} }{\partial t} + f_{im} \rho_b \frac{\partial \overline{C}_{im}}{\partial t} = 
+- \lambda_{1,im} \theta_{im} C_{im} - \lambda_{2,im}  f_{im} \rho_b \overline{C}_{im} \\
+- \gamma_{1,im} \theta_{im} - \gamma_{2,im} f_{im}  \rho_b 
++ \zeta_{im} S_w \left ( C - C_{im} \right ),
+\end{split}
+\end{equation}
+
+\noindent where the symbols are defined in \cite{modflow6gwt}.  The $f_{im}$ term in equation~\ref{eqn:gwtistpde} is the fraction of aquifer solid material available for sorptive exchange with the immobile domain under fully saturated conditions.  
+
+\subsection{Approximating Solid Mass Fractions} \label{sec:solidmassfrac1}
+
+The GWT Model in \mf sets its immobile solid mass fraction to
+
+\begin{equation}
+\label{eqn:fim1}
+f_{im} = \frac{\theta_{im}}{\theta_t},
+\end{equation}
+
+\noindent where $\theta_{im}$ is the immobile domain porosity and $\theta_t$ is the total porosity.  The total porosity, $\theta_t$ is simply the sum of the immobile domain porosities ($\sum_{im}{\theta_{im}}$) and the mobile domain porosity ($\theta$), which gives
+
+\begin{equation}
+\label{eqn:thetat1}
+\theta_t = \sum_{im}{\theta_{im}} + \theta,
+\end{equation}
+
+\noindent There is an error in the \cite{modflow6gwt} document related to the equation used for $f_{im}$.  The text incorrectly states that $f_{im}$ is assigned by the program to be $\frac{\theta_{im}}{\theta}$, rather than $\frac{\theta_{im}}{\theta_t}$ as intended and as implemented in the \mf program.
+
+Equation~\ref{eqn:fim1} implies that the mobile domain solid mass fraction can be calculated as
+
+\begin{equation}
+\label{eqn:fm1}
+f_m = 1 - \sum_{im}f_{im} = 1 - \frac{\sum_{im}\theta_{im}}{\theta_t} = \frac{\theta_{m}}{\theta_t},
+\end{equation}
+
+\noindent which is the equation implemented in \mf to calculate $f_m$ from user-provided immobile domain porosities.  If there are no immobile domains, then the total porosity is the same as the mobile porosity and $f_m$ is one.
+
+Equation~\ref{eqn:fim1} may not always be a good approximation as the solid mass available for sorptive exchange with the immobile domain per total aquifer mass may not be well described by the immobile domain porosity divided by the total porosity.
+
+\subsection{New Option to Specify Solid Mass Fractions} \label{sec:solidmassfrac2}
+
+A new option was added to \mf for situations where the assumptions underlying equations~\ref{eqn:fim1} and \ref{eqn:fm1} are not valid.  Rather than approximating $f_{im}$ with equation~\ref{eqn:fim1}, the user can specify values for $f_{im}$ as input to the IST Package.  In this case $f_m$ is calculated as
+
+\begin{equation}
+\label{eqn:fm1}
+f_m = 1 - \sum_{im}f_{im}.
+\end{equation}
