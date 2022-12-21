@@ -1167,7 +1167,7 @@ contains
               call output_tab%print_list_entry(i, trim(adjustl(nodestr)), &
                                                -rrate, bname)
             end if
-            
+
           end if
         end if
         if (rrate < DZERO) then
