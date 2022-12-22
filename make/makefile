@@ -1,4 +1,4 @@
-# makefile created by pymake (version 1.2.5) for the 'mf6' executable.
+# makefile created by pymake (version 1.2.7) for the 'mf6' executable.
 
 
 include ./makedefaults
@@ -7,27 +7,28 @@ include ./makedefaults
 SOURCEDIR1=../src
 SOURCEDIR2=../src/Exchange
 SOURCEDIR3=../src/Model
-SOURCEDIR4=../src/Model/Connection
-SOURCEDIR5=../src/Model/Geometry
-SOURCEDIR6=../src/Model/GroundWaterFlow
+SOURCEDIR4=../src/Model/Geometry
+SOURCEDIR5=../src/Model/ModelUtilities
+SOURCEDIR6=../src/Model/Connection
 SOURCEDIR7=../src/Model/GroundWaterTransport
-SOURCEDIR8=../src/Model/ModelUtilities
+SOURCEDIR8=../src/Model/GroundWaterFlow
 SOURCEDIR9=../src/Solution
 SOURCEDIR10=../src/Solution/LinearMethods
 SOURCEDIR11=../src/Timing
 SOURCEDIR12=../src/Utilities
-SOURCEDIR13=../src/Utilities/ArrayRead
-SOURCEDIR14=../src/Utilities/Idm
-SOURCEDIR15=../src/Utilities/Libraries
-SOURCEDIR16=../src/Utilities/Libraries/blas
-SOURCEDIR17=../src/Utilities/Libraries/daglib
-SOURCEDIR18=../src/Utilities/Libraries/rcm
-SOURCEDIR19=../src/Utilities/Libraries/sparsekit
-SOURCEDIR20=../src/Utilities/Libraries/sparskit2
-SOURCEDIR21=../src/Utilities/Memory
+SOURCEDIR13=../src/Utilities/TimeSeries
+SOURCEDIR14=../src/Utilities/Libraries
+SOURCEDIR15=../src/Utilities/Libraries/rcm
+SOURCEDIR16=../src/Utilities/Libraries/sparsekit
+SOURCEDIR17=../src/Utilities/Libraries/sparskit2
+SOURCEDIR18=../src/Utilities/Libraries/blas
+SOURCEDIR19=../src/Utilities/Libraries/daglib
+SOURCEDIR20=../src/Utilities/Idm
+SOURCEDIR21=../src/Utilities/Matrix
 SOURCEDIR22=../src/Utilities/Observation
 SOURCEDIR23=../src/Utilities/OutputControl
-SOURCEDIR24=../src/Utilities/TimeSeries
+SOURCEDIR24=../src/Utilities/Memory
+SOURCEDIR25=../src/Utilities/ArrayRead
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -53,7 +54,8 @@ ${SOURCEDIR20} \
 ${SOURCEDIR21} \
 ${SOURCEDIR22} \
 ${SOURCEDIR23} \
-${SOURCEDIR24} 
+${SOURCEDIR24} \
+${SOURCEDIR25} 
 
 .SUFFIXES: .f90 .F90 .o
 
@@ -91,6 +93,7 @@ $(OBJDIR)/DisvGeom.o \
 $(OBJDIR)/ArrayReaders.o \
 $(OBJDIR)/TimeSeriesManager.o \
 $(OBJDIR)/SmoothingFunctions.o \
+$(OBJDIR)/MatrixBase.o \
 $(OBJDIR)/ListReader.o \
 $(OBJDIR)/Connections.o \
 $(OBJDIR)/DiscretizationBase.o \
@@ -216,6 +219,7 @@ $(OBJDIR)/GhostNode.o \
 $(OBJDIR)/gwf3evt8.o \
 $(OBJDIR)/gwf3chd8.o \
 $(OBJDIR)/ims8reordering.o \
+$(OBJDIR)/SparseMatrix.o \
 $(OBJDIR)/GridConnection.o \
 $(OBJDIR)/DistributedData.o \
 $(OBJDIR)/gwt1.o \

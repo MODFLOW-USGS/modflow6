@@ -129,6 +129,8 @@ modflow_sources = files(
     'Utilities' / 'Idm' / 'LoadMf6FileType.f90',
     'Utilities' / 'Idm' / 'StructArray.f90',
     'Utilities' / 'Idm' / 'StructVector.f90',
+    'Utilities' / 'Matrix' / 'MatrixBase.f90',
+    'Utilities' / 'Matrix' / 'SparseMatrix.f90',
     'Utilities' / 'Memory' / 'Memory.f90',
     'Utilities' / 'Memory' / 'MemoryHelper.f90',
     'Utilities' / 'Memory' / 'MemoryList.f90',

@@ -42,6 +42,7 @@ module GwfCsubModule
   use TableModule, only: TableType, table_cr
   !
   use IMSLinearMisc, only: ims_misc_thomas
+  use MatrixModule
   !
   implicit none
   !
@@ -2783,7 +2784,7 @@ contains
   !!  Fill the coefficient matrix and right-hand side with the CSUB package terms.
   !!
   !<
-  subroutine csub_fc(this, kiter, hold, hnew, njasln, amat, idxglo, rhs)
+  subroutine csub_fc(this, kiter, hold, hnew, matrix_sln, idxglo, rhs)
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy variables
@@ -2791,8 +2792,7 @@ contains
     integer(I4B), intent(in) :: kiter !< outer iteration numbed
     real(DP), intent(in), dimension(:) :: hold !< previous heads
     real(DP), intent(in), dimension(:) :: hnew !< current heads
-    integer(I4B), intent(in) :: njasln !< size of the A matrix for the solution
-    real(DP), dimension(njasln), intent(inout) :: amat !< A matrix
+    class(MatrixBaseType), pointer :: matrix_sln !< A matrix
     integer(I4B), intent(in), dimension(:) :: idxglo !< global index model to solution
     real(DP), intent(inout), dimension(:) :: rhs !< right-hand side
     ! -- local variables
@@ -2841,7 +2841,7 @@ contains
                              hcof, rhsterm)
         !
         ! -- add coarse-grained storage terms to amat and rhs for coarse-grained storage
-        amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
+        call matrix_sln%add_value_pos(idxglo(idiag), hcof)
         rhs(node) = rhs(node) + rhsterm
         !
         ! -- calculate coarse-grained water compressibility
@@ -2852,7 +2852,7 @@ contains
           !
           ! -- add water compression storage terms to amat and rhs for
           !   coarse-grained storage
-          amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
+          call matrix_sln%add_value_pos(idxglo(idiag), hcof)
           rhs(node) = rhs(node) + rhsterm
         end if
       end do
@@ -2869,7 +2869,7 @@ contains
           area = this%dis%get_area(node)
           call this%csub_interbed_fc(ib, node, area, hnew(node), hold(node), &
                                      hcof, rhsterm)
-          amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
+          call matrix_sln%add_value_pos(idxglo(idiag), hcof)
           rhs(node) = rhs(node) + rhsterm
           !
           ! -- calculate interbed water compressibility terms
@@ -2879,7 +2879,7 @@ contains
                                             hcof, rhsterm)
             !
             ! -- add water compression storage terms to amat and rhs for interbed
-            amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
+            call matrix_sln%add_value_pos(idxglo(idiag), hcof)
             rhs(node) = rhs(node) + rhsterm
           end if
         end do
@@ -2904,7 +2904,7 @@ contains
   !! @param[in,out]  rhs   right-hand side
   !!
   !<
-  subroutine csub_fn(this, kiter, hold, hnew, njasln, amat, idxglo, rhs)
+  subroutine csub_fn(this, kiter, hold, hnew, matrix_sln, idxglo, rhs)
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy variables
@@ -2912,8 +2912,7 @@ contains
     integer(I4B), intent(in) :: kiter !< outer iteration number
     real(DP), intent(in), dimension(:) :: hold !< previous heads
     real(DP), intent(in), dimension(:) :: hnew !< current heads
-    integer(I4B), intent(in) :: njasln !< size of the A matrix for the solution
-    real(DP), dimension(njasln), intent(inout) :: amat !< A matrix
+    class(MatrixBaseType), pointer :: matrix_sln !< A matrix
     integer(I4B), intent(in), dimension(:) :: idxglo !< global index model to solution
     real(DP), intent(inout), dimension(:) :: rhs !< right-hand side
     ! -- local variables
@@ -2944,7 +2943,7 @@ contains
         !
         ! -- add coarse-grained storage newton terms to amat and rhs for
         !   coarse-grained storage
-        amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
+        call matrix_sln%add_value_pos(idxglo(idiag), hcof)
         rhs(node) = rhs(node) + rhsterm
         !
         ! -- calculate coarse-grained water compressibility storage
@@ -2955,7 +2954,7 @@ contains
           !
           ! -- add water compression storage newton terms to amat and rhs for
           !    coarse-grained storage
-          amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
+          call matrix_sln%add_value_pos(idxglo(idiag), hcof)
           rhs(node) = rhs(node) + rhsterm
         end if
       end do
@@ -2979,7 +2978,7 @@ contains
                                      hcof, rhsterm)
           !
           ! -- add interbed newton terms to amat and rhs
-          amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
+          call matrix_sln%add_value_pos(idxglo(idiag), hcof)
           rhs(node) = rhs(node) + rhsterm
           !
           ! -- calculate interbed water compressibility terms
@@ -2989,7 +2988,7 @@ contains
                                             hcof, rhsterm)
             !
             ! -- add interbed water compression newton terms to amat and rhs
-            amat(idxglo(idiag)) = amat(idxglo(idiag)) + hcof
+            call matrix_sln%add_value_pos(idxglo(idiag), hcof)
             rhs(node) = rhs(node) + rhsterm
           end if
         end do

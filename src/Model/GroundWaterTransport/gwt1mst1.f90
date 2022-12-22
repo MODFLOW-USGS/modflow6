@@ -14,6 +14,7 @@ module GwtMstModule
   use SimVariablesModule, only: errmsg, warnmsg
   use SimModule, only: store_error, count_errors, &
                        store_warning
+  use MatrixModule
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
   use GwtFmiModule, only: GwtFmiType
@@ -164,7 +165,7 @@ contains
   !!  Method to calculate and fill coefficients for the package.
   !!
   !<
-  subroutine mst_fc(this, nodes, cold, nja, njasln, amatsln, idxglo, cnew, &
+  subroutine mst_fc(this, nodes, cold, nja, matrix_sln, idxglo, cnew, &
                     rhs, kiter)
     ! -- modules
     ! -- dummy
@@ -172,8 +173,7 @@ contains
     integer, intent(in) :: nodes !< number of nodes
     real(DP), intent(in), dimension(nodes) :: cold !< concentration at end of last time step
     integer(I4B), intent(in) :: nja !< number of GWT connections
-    integer(I4B), intent(in) :: njasln !< number of connections in solution
-    real(DP), dimension(njasln), intent(inout) :: amatsln !< solution coefficient matrix
+    class(MatrixBaseType), pointer :: matrix_sln !< solution matrix
     integer(I4B), intent(in), dimension(nja) :: idxglo !< mapping vector for model (local) to solution (global)
     real(DP), intent(inout), dimension(nodes) :: rhs !< right-hand side vector for model
     real(DP), intent(in), dimension(nodes) :: cnew !< concentration at end of this time step
@@ -181,22 +181,22 @@ contains
     ! -- local
     !
     ! -- storage contribution
-    call this%mst_fc_sto(nodes, cold, nja, njasln, amatsln, idxglo, rhs)
+    call this%mst_fc_sto(nodes, cold, nja, matrix_sln, idxglo, rhs)
     !
     ! -- decay contribution
     if (this%idcy /= 0) then
-      call this%mst_fc_dcy(nodes, cold, cnew, nja, njasln, amatsln, idxglo, &
+      call this%mst_fc_dcy(nodes, cold, cnew, nja, matrix_sln, idxglo, &
                            rhs, kiter)
     end if
     !
     ! -- sorption contribution
     if (this%isrb /= 0) then
-      call this%mst_fc_srb(nodes, cold, nja, njasln, amatsln, idxglo, rhs, cnew)
+      call this%mst_fc_srb(nodes, cold, nja, matrix_sln, idxglo, rhs, cnew)
     end if
     !
     ! -- decay sorbed contribution
     if (this%isrb /= 0 .and. this%idcy /= 0) then
-      call this%mst_fc_dcy_srb(nodes, cold, nja, njasln, amatsln, idxglo, rhs, &
+      call this%mst_fc_dcy_srb(nodes, cold, nja, matrix_sln, idxglo, rhs, &
                                cnew, kiter)
     end if
     !
@@ -209,7 +209,7 @@ contains
   !!  Method to calculate and fill storage coefficients for the package.
   !!
   !<
-  subroutine mst_fc_sto(this, nodes, cold, nja, njasln, amatsln, idxglo, rhs)
+  subroutine mst_fc_sto(this, nodes, cold, nja, matrix_sln, idxglo, rhs)
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
@@ -217,8 +217,7 @@ contains
     integer, intent(in) :: nodes !< number of nodes
     real(DP), intent(in), dimension(nodes) :: cold !< concentration at end of last time step
     integer(I4B), intent(in) :: nja !< number of GWT connections
-    integer(I4B), intent(in) :: njasln !< number of connections in solution
-    real(DP), dimension(njasln), intent(inout) :: amatsln !< solution coefficient matrix
+    class(MatrixBaseType), pointer :: matrix_sln !< solution coefficient matrix
     integer(I4B), intent(in), dimension(nja) :: idxglo !< mapping vector for model (local) to solution (global)
     real(DP), intent(inout), dimension(nodes) :: rhs !< right-hand side vector for model
     ! -- local
@@ -247,7 +246,7 @@ contains
       hhcof = -vnew * tled
       rrhs = -vold * tled * cold(n)
       idiag = this%dis%con%ia(n)
-      amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
+      call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
       rhs(n) = rhs(n) + rrhs
     end do
     !
@@ -260,7 +259,7 @@ contains
   !!  Method to calculate and fill decay coefficients for the package.
   !!
   !<
-  subroutine mst_fc_dcy(this, nodes, cold, cnew, nja, njasln, amatsln, &
+  subroutine mst_fc_dcy(this, nodes, cold, cnew, nja, matrix_sln, &
                         idxglo, rhs, kiter)
     ! -- modules
     use TdisModule, only: delt
@@ -270,8 +269,7 @@ contains
     real(DP), intent(in), dimension(nodes) :: cold !< concentration at end of last time step
     real(DP), intent(in), dimension(nodes) :: cnew !< concentration at end of this time step
     integer(I4B), intent(in) :: nja !< number of GWT connections
-    integer(I4B), intent(in) :: njasln !< number of connections in solution
-    real(DP), dimension(njasln), intent(inout) :: amatsln !< solution coefficient matrix
+    class(MatrixBaseType), pointer :: matrix_sln !< solution coefficient matrix
     integer(I4B), intent(in), dimension(nja) :: idxglo !< mapping vector for model (local) to solution (global)
     real(DP), intent(inout), dimension(nodes) :: rhs !< right-hand side vector for model
     integer(I4B), intent(in) :: kiter !< solution outer iteration number
@@ -299,7 +297,7 @@ contains
         ! -- first order decay rate is a function of concentration, so add
         !    to left hand side
         hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n)
-        amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
+        call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
       elseif (this%idcy == 2) then
         !
         ! -- Call function to get zero-order decay rate, which may be changed
@@ -322,7 +320,7 @@ contains
   !!  Method to calculate and fill sorption coefficients for the package.
   !!
   !<
-  subroutine mst_fc_srb(this, nodes, cold, nja, njasln, amatsln, idxglo, rhs, &
+  subroutine mst_fc_srb(this, nodes, cold, nja, matrix_sln, idxglo, rhs, &
                         cnew)
     ! -- modules
     use TdisModule, only: delt
@@ -331,8 +329,7 @@ contains
     integer, intent(in) :: nodes !< number of nodes
     real(DP), intent(in), dimension(nodes) :: cold !< concentration at end of last time step
     integer(I4B), intent(in) :: nja !< number of GWT connections
-    integer(I4B), intent(in) :: njasln !< number of connections in solution
-    real(DP), dimension(njasln), intent(inout) :: amatsln !< solution coefficient matrix
+    class(MatrixBaseType), pointer :: matrix_sln !< solution coefficient matrix
     integer(I4B), intent(in), dimension(nja) :: idxglo !< mapping vector for model (local) to solution (global)
     real(DP), intent(inout), dimension(nodes) :: rhs !< right-hand side vector for model
     real(DP), intent(in), dimension(nodes) :: cnew !< concentration at end of this time step
@@ -371,7 +368,7 @@ contains
                         hcofval=hhcof, rhsval=rrhs)
       !
       ! -- Add hhcof to diagonal and rrhs to right-hand side
-      amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
+      call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
       rhs(n) = rhs(n) + rrhs
       !
     end do
@@ -460,7 +457,7 @@ contains
   !!  Method to calculate and fill sorption-decay coefficients for the package.
   !!
   !<
-  subroutine mst_fc_dcy_srb(this, nodes, cold, nja, njasln, amatsln, idxglo, &
+  subroutine mst_fc_dcy_srb(this, nodes, cold, nja, matrix_sln, idxglo, &
                             rhs, cnew, kiter)
     ! -- modules
     use TdisModule, only: delt
@@ -469,8 +466,7 @@ contains
     integer, intent(in) :: nodes !< number of nodes
     real(DP), intent(in), dimension(nodes) :: cold !< concentration at end of last time step
     integer(I4B), intent(in) :: nja !< number of GWT connections
-    integer(I4B), intent(in) :: njasln !< number of connections in solution
-    real(DP), dimension(njasln), intent(inout) :: amatsln !< solution coefficient matrix
+    class(MatrixBaseType), pointer :: matrix_sln !< solution coefficient matrix
     integer(I4B), intent(in), dimension(nja) :: idxglo !< mapping vector for model (local) to solution (global)
     real(DP), intent(inout), dimension(nodes) :: rhs !< right-hand side vector for model
     real(DP), intent(in), dimension(nodes) :: cnew !< concentration at end of this time step
@@ -551,7 +547,7 @@ contains
       end if
       !
       ! -- Add hhcof to diagonal and rrhs to right-hand side
-      amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
+      call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
       rhs(n) = rhs(n) + rrhs
       !
     end do

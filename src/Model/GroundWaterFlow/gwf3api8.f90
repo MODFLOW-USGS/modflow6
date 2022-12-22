@@ -17,6 +17,7 @@ module apimodule
   use ObsModule, only: DefaultObsIdProcessor
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
+  use MatrixModule
   !
   implicit none
   !
@@ -130,13 +131,13 @@ contains
   !!  package terms.
   !!
   !<
-  subroutine api_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine api_fc(this, rhs, ia, idxglo, matrix_sln)
     ! -- dummy variables
     class(ApiType) :: this
     real(DP), dimension(:), intent(inout) :: rhs !< right-hand side vector
     integer(I4B), dimension(:), intent(in) :: ia !< pointer to the rows in A matrix
     integer(I4B), dimension(:), intent(in) :: idxglo !< position of entries in A matrix
-    real(DP), dimension(:), intent(inout) :: amatsln !< A matrix for solution
+    class(MatrixBaseType), pointer :: matrix_sln !< A matrix for solution
     ! -- local variables
     integer(I4B) :: i
     integer(I4B) :: n
@@ -153,7 +154,7 @@ contains
       n = this%nodelist(i)
       rhs(n) = rhs(n) + this%rhs(i)
       ipos = ia(n)
-      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
+      call matrix_sln%add_value_pos(idxglo(ipos), this%hcof(i))
       !
       ! -- If mover is active and this boundary is discharging,
       !    store available water (as positive value).

@@ -19,6 +19,7 @@ module GwfGwfConnectionModule
   use ConnectionsModule, only: ConnectionsType
   use CellWithNbrsModule, only: GlobalCellType
   use DistributedDataModule
+  use MatrixModule
 
   implicit none
   private
@@ -313,9 +314,7 @@ contains
     integer(I4B) :: i
 
     ! reset interface system
-    do i = 1, this%nja
-      this%amat(i) = 0.0_DP
-    end do
+    call this%matrix%zero_entries()
     do i = 1, this%neq
       this%rhs(i) = 0.0_DP
     end do
@@ -327,18 +326,20 @@ contains
 
   !> @brief Write the calculated coefficients into the global
   !< system matrix and the rhs
-  subroutine gwfgwfcon_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
+  subroutine gwfgwfcon_fc(this, kiter, matrix_sln, rhs_sln, inwtflag)
     class(GwfGwfConnectionType) :: this !< this connection
     integer(I4B), intent(in) :: kiter !< the iteration counter
-    integer(I4B), dimension(:), intent(in) :: iasln !< global system's IA array
-    real(DP), dimension(:), intent(inout) :: amatsln !< global system matrix coefficients
-    real(DP), dimension(:), intent(inout) :: rhssln !< global right-hand-side
+    class(MatrixBaseType), pointer :: matrix_sln !< global system matrix coefficients
+    real(DP), dimension(:), intent(inout) :: rhs_sln !< global right-hand-side
     integer(I4B), optional, intent(in) :: inwtflag !< newton-raphson flag
     ! local
-    integer(I4B) :: n, ipos, nglo
+    integer(I4B) :: n, nglo
+    integer(I4B) :: ipos, icol_start, icol_end
+    class(MatrixBaseType), pointer :: matrix_base
 
     ! fill (and add to...) coefficients for interface
-    call this%gwfInterfaceModel%model_fc(kiter, this%amat, this%nja, inwtflag)
+    matrix_base => this%matrix
+    call this%gwfInterfaceModel%model_fc(kiter, matrix_base, inwtflag)
 
     ! map back to solution matrix
     do n = 1, this%neq
@@ -352,11 +353,13 @@ contains
 
       nglo = this%gridConnection%idxToGlobal(n)%index + &
              this%gridConnection%idxToGlobal(n)%dmodel%moffset
-      rhssln(nglo) = rhssln(nglo) + this%rhs(n)
+      rhs_sln(nglo) = rhs_sln(nglo) + this%rhs(n)
 
-      do ipos = this%ia(n), this%ia(n + 1) - 1
-        amatsln(this%mapIdxToSln(ipos)) = amatsln(this%mapIdxToSln(ipos)) + &
-                                          this%amat(ipos)
+      icol_start = this%matrix%get_first_col_pos(n)
+      icol_end = this%matrix%get_last_col_pos(n)
+      do ipos = icol_start, icol_end
+        call matrix_sln%add_value_pos(this%mapIdxToSln(ipos), &
+                                      this%matrix%get_value_pos(ipos))
       end do
     end do
 
