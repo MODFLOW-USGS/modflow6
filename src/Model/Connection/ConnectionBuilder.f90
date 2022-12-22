@@ -116,7 +116,7 @@ contains
           .or. dev_always_ifmod) then
 
         ! we should not get period connections here
-        isPeriodic = associated(conEx%model1, conEx%model2)
+        isPeriodic = (conEx%v_model1 == conEx%v_model2)
         if (isPeriodic) then
           write (*, *) 'Error (which should never happen): interface model '// &
             'does not support periodic boundary condition'

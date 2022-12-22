@@ -107,7 +107,7 @@ contains
     ! local
     PetscErrorCode :: ierr
 
-    call KSPCreate(PETSC_COMM_WORLD, this%ksp_petsc, ierr)    
+    call KSPCreate(PETSC_COMM_WORLD, this%ksp_petsc, ierr)
     CHKERRQ(ierr)
 
     call KSPSetInitialGuessNonzero(this%ksp_petsc, .true., ierr)

@@ -108,7 +108,7 @@ module GwfGwfExchangeModule
     procedure, private :: gwf_gwf_rp_obs
     procedure, public :: gwf_gwf_save_simvals
     procedure, private :: gwf_gwf_calc_simvals
-    procedure, public :: gwf_gwf_set_spdis
+    procedure, public :: gwf_gwf_set_flow_to_npf
     procedure, private :: validate_exchange
     procedure :: gwf_gwf_add_to_flowja
   end type GwfExchangeType
@@ -157,22 +157,26 @@ contains
     !
     ! -- set gwfmodel1
     m1_index = model_loc_idx(m1_id)
-    mb => GetBaseModelFromList(basemodellist, m1_index)
-    select type (mb)
-    type is (GwfModelType)
-      exchange%model1 => mb
-      exchange%gwfmodel1 => mb
-    end select
+    if (m1_index > 0) then
+      mb => GetBaseModelFromList(basemodellist, m1_index)
+      select type (mb)
+      type is (GwfModelType)
+        exchange%model1 => mb
+        exchange%gwfmodel1 => mb
+      end select
+    end if
     exchange%v_model1 => get_virtual_model(m1_id)
     !
     ! -- set gwfmodel2
     m2_index = model_loc_idx(m2_id)
-    mb => GetBaseModelFromList(basemodellist, m2_index)
-    select type (mb)
-    type is (GwfModelType)
-      exchange%model2 => mb
-      exchange%gwfmodel2 => mb
-    end select
+    if (m2_index > 0) then      
+      mb => GetBaseModelFromList(basemodellist, m2_index)
+      select type (mb)
+      type is (GwfModelType)
+        exchange%model2 => mb
+        exchange%gwfmodel2 => mb
+      end select
+    end if
     exchange%v_model2 => get_virtual_model(m2_id)
     !
     ! -- Verify that gwf model1 is of the correct type
@@ -244,10 +248,10 @@ contains
     call this%read_data(iout)
     !
     ! -- call each model and increase the edge count
-    if (associated(this%gwfmodel1)) then ! TODO_MJR: temp guard
+    if (associated(this%gwfmodel1)) then
       call this%gwfmodel1%npf%increase_edge_count(this%nexg)
     end if
-    if (associated(this%gwfmodel2)) then ! TODO_MJR: temp guard
+    if (associated(this%gwfmodel2)) then
       call this%gwfmodel2%npf%increase_edge_count(this%nexg)
     end if
     !
@@ -272,7 +276,7 @@ contains
     end if
     !
     ! -- validate
-    if (associated(this%gwfmodel1) .and. associated(this%gwfmodel2)) then ! TODO_MJR: temp guard
+    if (associated(this%gwfmodel1) .and. associated(this%gwfmodel2)) then
       call this%validate_exchange()
     end if
     !
@@ -690,10 +694,10 @@ contains
     ! -- calculate flow and store in simvals
     call this%gwf_gwf_calc_simvals()
     !
-    ! -- calculate specific discharge and set to model
-    call this%gwf_gwf_set_spdis()
+    ! -- set flows to model edges in NPF
+    call this%gwf_gwf_set_flow_to_npf()
     !
-    ! -- add exchange flow to model 1 and 2 flowja array diagonal position
+    ! -- add exchange flows to model's flowja diagonal
     call this%gwf_gwf_add_to_flowja()
     !
     ! -- return
@@ -760,9 +764,9 @@ contains
     return
   end subroutine gwf_gwf_add_to_flowja
 
-  !> @brief Calculate specific discharge from flow rates
-  !< and set them to the models
-  subroutine gwf_gwf_set_spdis(this)
+  !> @brief Set flow rates to the edges in the models
+  !<
+  subroutine gwf_gwf_set_flow_to_npf(this)
     use ConstantsModule, only: DZERO, DPIO180
     use GwfNpfModule, only: thksatnm
     class(GwfExchangeType) :: this !<  GwfExchangeType
@@ -871,7 +875,7 @@ contains
     end do
     !
     return
-  end subroutine gwf_gwf_set_spdis
+  end subroutine gwf_gwf_set_flow_to_npf
 
   !> @ brief Budget
   !!

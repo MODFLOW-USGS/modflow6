@@ -30,13 +30,16 @@ module GwfGwfConnectionModule
   !> Connecting a GWF model to other models in space, implements
   !! NumericalExchangeType so the solution can used this object to determine
   !! the coefficients for the coupling between two adjacent models.
+  !!
+  !! Two connections are created per exchange between model1 and model2:
+  !! one to manage the coefficients in the matrix rows for model1, and
+  !! the other to do the same for model2.
   !<
   type, public, extends(SpatialModelConnectionType) :: GwfGwfConnectionType
 
     type(GwfModelType), pointer :: gwfModel => null() !< the model for which this connection exists
     type(GwfExchangeType), pointer :: gwfExchange => null() !< the primary exchange, cast to its concrete type
-    logical(LGP) :: exchangeIsOwned !< there are two connections (in serial) for an exchange,
-                                    !! one of them needs to manage/own the exchange (e.g. clean up)
+    logical(LGP) :: owns_exhange !< when true, this connection has ownership over the exchange
     type(GwfInterfaceModelType), pointer :: gwfInterfaceModel => null() !< the interface model
     integer(I4B), pointer :: iXt3dOnExchange => null() !< run XT3D on the interface,
                                                        !! 0 = don't, 1 = matrix, 2 = rhs
@@ -92,9 +95,13 @@ contains
     objPtr => gwfEx
     this%gwfExchange => CastAsGwfExchange(objPtr)
 
-    this%exchangeIsOwned = associated(gwfEx%model1, model)
+    if (gwfEx%v_model1%is_local .and. gwfEx%v_model2%is_local) then
+      this%owns_exhange = (gwfEx%v_model1 == model)
+    else
+      this%owns_exhange = .true.
+    end if
 
-    if (this%exchangeIsOwned) then
+    if (gwfEx%v_model1 == model) then
       write (name, '(a,i0)') 'GWFCON1_', gwfEx%id
     else
       write (name, '(a,i0)') 'GWFCON2_', gwfEx%id
@@ -142,7 +149,7 @@ contains
     ! Now grid conn is defined, we create the interface model
     ! here, and the remainder of this routine is define.
     ! we basically follow the logic that is present in sln_df()
-    if (this%exchangeIsOwned) then
+    if (this%primaryExchange%v_model1 == this%owner) then
       write (imName, '(a,i0)') 'GWFIM1_', this%gwfExchange%id
     else
       write (imName, '(a,i0)') 'GWFIM2_', this%gwfExchange%id
@@ -253,7 +260,7 @@ contains
     call this%gwfInterfaceModel%model_ar()
 
     ! AR the movers and obs through the exchange
-    if (this%exchangeIsOwned) then
+    if (this%owns_exhange) then
       if (this%gwfExchange%inmvr > 0) then
         call this%gwfExchange%mvr%mvr_ar()
       end if
@@ -270,7 +277,7 @@ contains
     class(GwfGwfConnectionType) :: this !< this connection
 
     ! Call exchange rp routines
-    if (this%exchangeIsOwned) then
+    if (this%owns_exhange) then
       call this%gwfExchange%exg_rp()
     end if
 
@@ -285,7 +292,7 @@ contains
     ! this triggers the BUY density calculation
     if (this%gwfInterfaceModel%inbuy > 0) call this%gwfInterfaceModel%buy%buy_ad()
 
-    if (this%exchangeIsOwned) then
+    if (this%owns_exhange) then
       call this%gwfExchange%exg_ad()
     end if
 
@@ -353,7 +360,7 @@ contains
 
     ! FC the movers through the exchange; we cannot call
     ! exg_fc() directly because it calculates matrix terms
-    if (this%exchangeIsOwned) then
+    if (this%owns_exhange) then
       if (this%gwfExchange%inmvr > 0) then
         call this%gwfExchange%mvr%mvr_fc()
       end if
@@ -484,7 +491,7 @@ contains
     end if
 
     ! we need to deallocate the baseexchange we own:
-    if (this%exchangeIsOwned) then
+    if (this%owns_exhange) then
       call this%gwfExchange%exg_da()
     end if
 
@@ -516,7 +523,7 @@ contains
     ! to be done in setNpfEdgeProps, but there was a sign issue
     ! and flowja was only updated if icalcspdis was 1 (it should
     ! always be updated.
-    if (this%exchangeIsOwned) then
+    if (this%owns_exhange) then
       call this%gwfExchange%gwf_gwf_add_to_flowja()
     end if
 
@@ -532,7 +539,7 @@ contains
     class(GwfExchangeType), pointer :: gwfEx
     type(IndexMapSgnType), pointer :: map
 
-    if (this%exchangeIsOwned) then
+    if (this%owns_exhange) then
       gwfEx => this%gwfExchange
       map => this%interfaceMap%exchange_map(this%interfaceMap%prim_exg_idx)
 
@@ -649,7 +656,7 @@ contains
 
     ! call exchange budget routine, also calls bd
     ! for movers.
-    if (this%exchangeIsOwned) then
+    if (this%owns_exhange) then
       ! TODO_MJR
       !call this%gwfExchange%exg_bd(icnvg, isuppress_output, isolnid)
     end if
@@ -665,7 +672,7 @@ contains
     ! Call exg_ot() here as it handles all output processing
     ! based on gwfExchange%simvals(:), which was correctly
     ! filled from gwfgwfcon
-    if (this%exchangeIsOwned) then
+    if (this%owns_exhange) then
       ! TODO_MJR
       !call this%gwfExchange%exg_ot()
     end if

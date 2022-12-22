@@ -24,7 +24,7 @@ module DisConnExchangeModule
     character(len=LINELENGTH), pointer :: filename => null() !< name of the input file
 
     class(NumericalModelType), pointer :: model1 => null() !< model 1
-    class(NumericalModelType), pointer :: model2 => null() !< model 2
+    class(NumericalModelType), pointer :: model2 => null() !< model 2    
     class(VirtualModelType), pointer :: v_model1 => null() !< virtual model 1
     class(VirtualModelType), pointer :: v_model2 => null() !< virtual model 2
 
