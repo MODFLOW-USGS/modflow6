@@ -1148,7 +1148,8 @@ contains
       n2 = this%nodem2(i)
       !
       ! -- If both cells are active then calculate flow rate
-      if (model%ibound(n1) /= 0 .and. nbr_model%ibound(n2) /= 0) then
+      if (this%model1%ibound(n1) /= 0 .and. &
+          this%model2%ibound(n2) /= 0) then
         rrate = this%simvals(i)
         !
         ! -- Print the individual rates to model list files if requested
@@ -1178,8 +1179,8 @@ contains
       end if
       !
       ! -- If saving cell-by-cell flows in list, write flow
-      n1u = model%dis%get_nodeuser(n1)
-      n2u = nbr_model%dis%get_nodeuser(n2)
+      n1u = this%model1%dis%get_nodeuser(n1)
+      n2u = this%model2%dis%get_nodeuser(n2)
       if (ibinun /= 0) then
         if (is_for_model1) then
           call model%dis%record_mf6_list_entry(ibinun, n1u, n2u, rrate, &
