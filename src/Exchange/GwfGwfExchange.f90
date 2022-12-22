@@ -1094,7 +1094,7 @@ contains
         n2 = this%nodem2(i)
         !
         ! -- If both cells are active then calculate flow rate
-        if (model%ibound(n1) /= 0 .and. nbr_model%ibound(n2) /= 0) then
+        if (this%model1%ibound(n1) /= 0 .and. this%model2%ibound(n2) /= 0) then
           ntabrows = ntabrows + 1
         end if
       end do
