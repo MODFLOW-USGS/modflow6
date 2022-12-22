@@ -1483,31 +1483,32 @@ contains
     ! -- local
     character(len=LINELENGTH) :: errmsg
     integer(I4B) :: i, iu
-    character(len=LENFTYPE), dimension(11) :: nodupftype = &
+    character(len=LENFTYPE), dimension(13) :: nodupftype = &
                                               (/'DIS6 ', 'DISU6', 'DISV6', &
                                                 'IC6  ', 'OC6  ', 'NPF6 ', &
                                                 'STO6 ', 'MVR6 ', 'HFB6 ', &
-                                                'GNC6 ', 'OBS6 '/)
+                                                'GNC6 ', 'BUY6 ', 'VSC6 ', &
+                                                'OBS6 '/)
 ! ------------------------------------------------------------------------------
     !
     ! -- Check for IC8, DIS(u), and NPF. Stop if not present.
     if (this%inic == 0) then
       write (errmsg, '(1x,a)') &
-        'ERROR. INITIAL CONDITIONS (IC6) PACKAGE NOT SPECIFIED.'
+        'Initial Conditions (IC6) package not specified.'
       call store_error(errmsg)
     end if
     if (indis == 0) then
       write (errmsg, '(1x,a)') &
-        'ERROR. DISCRETIZATION (DIS6, DISV6, or DISU6) PACKAGE NOT SPECIFIED.'
+        'Discretization (DIS6, DISV6, or DISU6) Package not specified.'
       call store_error(errmsg)
     end if
     if (this%innpf == 0) then
       write (errmsg, '(1x,a)') &
-        'ERROR.  NODE PROPERTY FLOW (NPF6) PACKAGE NOT SPECIFIED.'
+        'Node Property Flow (NPF6) Package not specified.'
       call store_error(errmsg)
     end if
     if (count_errors() > 0) then
-      write (errmsg, '(1x,a)') 'ERROR. REQUIRED PACKAGE(S) NOT SPECIFIED.'
+      write (errmsg, '(1x,a)') 'One or more required package(s) not specified.'
       call store_error(errmsg)
     end if
     !
@@ -1517,8 +1518,8 @@ contains
       call namefile_obj%get_unitnumber(trim(nodupftype(i)), iu, 0)
       if (iu > 0) then
         write (errmsg, '(1x, a, a, a)') &
-          'DUPLICATE ENTRIES FOR FTYPE ', trim(nodupftype(i)), &
-          ' NOT ALLOWED FOR GWF MODEL.'
+          'Duplicate entries for FTYPE ', trim(nodupftype(i)), &
+          ' not allowed for GWF Model.'
         call store_error(errmsg)
       end if
     end do

@@ -3,29 +3,28 @@
 
 This is the development repository for the USGS MODFLOW 6 Hydrologic Model. The  official USGS distribution is available at [USGS Release Page](https://water.usgs.gov/ogw/modflow/MODFLOW.html).
 
-### Version 6.4.0 release candidate
+### Version 6.5.0 Release Candidate
 
+[![GitHub release](https://img.shields.io/github/release/MODFLOW-USGS/modflow6.svg)](https://github.com/MODFLOW-USGS/modflow6/releases/latest)
 [![MODFLOW 6 continuous integration](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci.yml)
 [![MODFLOW 6 documentation](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/docs.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/docs.yml)
 [![MODFLOW 6 large models](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/large.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/large.yml)
-
 [![MODFLOW 6 intel nightly build](https://github.com/MODFLOW-USGS/modflow6-nightly-build/actions/workflows/nightly-build-intel.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6-nightly-build/actions/workflows/nightly-build-intel.yml)
-[![MODFLOW 6 nightly build](https://github.com/MODFLOW-USGS/modflow6-nightly-build/actions/workflows/nightly-build.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6-nightly-build/actions/workflows/nightly-build.yml)
 
 ## Branches
 
 This repository contains branches of ongoing MODFLOW 6 development.  The two main branches in this repository are:
 
-* `master` -- the state of the MODFLOW 6 repository corresponding to the last official USGS release
-* `develop` -- the current development version of the MODFLOW 6 program
+* `master`: the state of the MODFLOW 6 repository corresponding to the last official USGS release
+* `develop`: the current development version of the MODFLOW 6 program
 
-The `develop` branch is under active and frequent updates by the MODFLOW development team and other interested contributors.  We follow a fork and pull request workflow and require that pull requests pass our test suite before they are considered a possible candidate to merge into develop.
+The `develop` branch is under active and frequent updates by the MODFLOW development team and other interested contributors.  We follow a fork and pull request workflow and require that pull requests pass our test suite before they are considered a possible candidate to merge into `develop`. The `master` branch is only updated immediately prior to each new release.
 
 This repository may contain other branches with various levels of development code; however, these branches may be merged into develop or deleted without notice.
 
 ## Nightly Builds
 
-The `develop` branch often contains bug fixes and new features that are not yet part of the official USGS release.  The updated user guide (mf6io.pdf) and binary executables for several operating systems of the `develop` branch are built and posted each night to the [nightly-build repository](https://github.com/MODFLOW-USGS/modflow6-nightly-build/releases).
+This repository's `develop` branch often contains bug fixes and new features that are not yet part of the official USGS release. Binaries for Linux, macOS and Windows are built from the `develop` branch and posted to the [`MODFLOW-USGS/modflow6-nightly-build` repository](https://github.com/MODFLOW-USGS/modflow6-nightly-build/releases) each night. The updated user guide `mf6io.pdf` is also included, as well as the `code.json` metadata file.
 
 ## Releases
 

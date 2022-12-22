@@ -663,6 +663,7 @@ def compare_to_ref(sim):
     "idx, exdir",
     list(enumerate(exdirs)),
 )
+@pytest.mark.developmode
 def test_mf6model(idx, exdir):
     # initialize testing framework
     test = testing_framework()

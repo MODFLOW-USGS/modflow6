@@ -1,0 +1,26 @@
+	\subsection{Version mf6.0.0---August 10, 2017}
+	
+	\underline{BASIC FUNCTIONALITY}
+	\begin{itemize}
+		\item Removed support for the SINGLE observation type.  All observations must be CONTINUOUS, which means observation values are written for every time step. 
+		\item Added support for a no-data value (3.0E30), which can be used as a placeholder in a time-series file containing multiple time series. Use of the no-data value facilitates combining separate time series into a single file when the time series contain records for differing simulation times.
+		\item Model names specified in the simulation name file cannot have spaces in them.  A check was implemented to terminate with an error if the model name contains spaces.  Model names cannot exceed 16 characters.  Trailing spaces are allowed.
+		\item The name and version of the compiler used to make the run file is now written to the terminal and to the simulation list file.
+		\item Many of the Fortran source files were modified and reformatted.  Unused variables were removed.
+	\end{itemize}
+	
+	\underline{ADVANCED STRESS PACKAGES}
+	\begin{itemize}
+		\item Updated MAW package so that well connection conductance calculations correctly account for THICKSTRT in the NPF package for layers that use THICKSTRT (and are confined).
+		\item Added \texttt{CUMULATIVE} \texttt{coneqn} (conductance) option to MAW package.
+		\item Fixed bug in LAK package weir lake outlet calculation.
+		\item Fixed bug in LAK package when internal outlets were specified and combined with the MVR package that was also moving water internally in the same LAK package.
+		\item Updated the table created when PRINT\_FLOWS is specified in the LAK package OPTIONS block to include internal flow terms if NOUTLETS is greater than 0. 
+		\item Renamed Lake Tables DIMENSIONS block NENTRIES to NROW and added NCOL to DIMENSIONS block.
+		\item Eliminated MAXIMUM\_OUTLET\_DEPTH = 10 [L] as default behavior for MANNING and WEIR LAK package lake outlet types. The maximum depth threshold was used in MODFLOW-2005 lake package because a table was used to calculate lake outflows to SFR. Can still use maximum depth threshold in develop versions of MODFLOW~6 by specifying MAXIMUM\_OUTLET\_DEPTH in the options block with a value.
+		\item Removed MULTILAYER option for UZF package---this option didn't actually do anything.
+		\item Added the requirement that the UZF number be specified as the first value on each line in the PACKAGEDATA block.
+		\item Renamed MAXBOUND in the DIMENSIONS block of the SFR Package to be NREACHES.
+		\item Implemented a check in the SFR Package to make sure that information is specified in the PACKAGEDATA block for every reach.  Program terminates with an error if information for a reach is not found.
+	\end{itemize}
+	
