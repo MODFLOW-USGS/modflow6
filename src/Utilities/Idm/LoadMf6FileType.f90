@@ -363,6 +363,7 @@ contains
     ilen = LINELENGTH
     call mem_allocate(cstr, ilen, idt%mf6varname, memoryPath)
     call parser%GetString(cstr, (.not. idt%preserve_case))
+    call idm_log_var(cstr, idt%mf6varname, memoryPath, iout)
     return
   end subroutine load_string_type
 
