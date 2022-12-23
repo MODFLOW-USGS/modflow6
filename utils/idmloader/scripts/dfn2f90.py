@@ -35,16 +35,8 @@ class Dfn2F90:
         self._set_var_d()
         self._set_param_strs()
 
-    def write_f90(self, odspec=None, gwt_name=False):
-        if gwt_name:
-            fname = Path(
-                odspec, f"{self.component.lower()}1{self.subcomponent.lower()}idm.f90"
-            )
-        else:
-            fname = Path(
-                odspec, f"{self.component.lower()}3{self.subcomponent.lower()}8idm.f90"
-            )
-        with open(fname, "w") as f:
+    def write_f90(self, ofspec=None):
+        with open(ofspec, "w") as f:
 
             # file header
             f.write(self._source_file_header(self.component, self.subcomponent))
@@ -230,6 +222,7 @@ class Dfn2F90:
         required_l = None
         required_l = []
         is_aggregate_blk = False
+        aggregate_required = False
 
         # comment
         s = f"    ! {component} {subcomponent} {blockname.upper()}\n"
@@ -247,7 +240,6 @@ class Dfn2F90:
             v = self._var_d[k]
 
             if "block_variable" in v and v["block_variable"].upper() == "TRUE":
-                # TODO: add to block defn type
                 continue
 
             c = component
@@ -284,20 +276,19 @@ class Dfn2F90:
             if shape != "" and not aggregate_t and (t == "DOUBLE" or t == "INTEGER"):
                 t = f"{t}{ndim}D"
 
-            r = ".true."
-            if "optional" in v:
-                if v["optional"] == "true":
-                    r = ".false."
-                else:
-                    r = ".true."
-                    is_required_blk = True
-
             inrec = ".false."
             if "in_record" in v:
                 if v["in_record"] == "true":
                     inrec = ".true."
                 else:
                     inrec = ".false."
+
+            r = ".true."
+            if "optional" in v:
+                if v["optional"] == "true":
+                    r = ".false."
+                else:
+                    r = ".true."
 
             preserve_case = ".false."
             if "preserve_case" in v:
@@ -313,7 +304,8 @@ class Dfn2F90:
                 else:
                     layered = ".false."
 
-            required_l.append(r)
+            if inrec == ".false.":
+                required_l.append(r)
             tuple_list = [
                 (c, "component"),
                 (sc, "subcomponent"),
@@ -339,6 +331,7 @@ class Dfn2F90:
                     + "\n"
                 )
                 is_aggregate_blk = True
+                aggregate_required = r == ".true."
                 if not shape:
                     self._warnings.append(
                         f"Aggregate type found with no shape: {component}-{subcomponent}-{blockname}: {mf6vn}"
@@ -352,10 +345,14 @@ class Dfn2F90:
                     + "\n"
                 )
 
+        if is_aggregate_blk:
+            required = aggregate_required
+        else:
+            required = ".true." in required_l
         self._block_str += (
             self._construct_f90_block_statement(
                 blockname.upper(),
-                required=(".true." in required_l),
+                required=required,
                 aggregate=is_aggregate_blk,
             )
             + "\n"
@@ -429,32 +426,33 @@ class Dfn2F90:
 
 if __name__ == "__main__":
 
-    gwf_dfns = [
-        Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-dis.dfn"),
-        Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-disu.dfn"),
-        Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-disv.dfn"),
-        Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-npf.dfn"),
+    dfns = [
+        # list per dfn [dfn relative path, model parent dirname, output filename]
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-dis.dfn"),
+            Path("../../../src/Model/GroundWaterFlow", "gwf3dis8idm.f90"),
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-disu.dfn"),
+            Path("../../../src/Model/GroundWaterFlow", "gwf3disu8idm.f90"),
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-disv.dfn"),
+            Path("../../../src/Model/GroundWaterFlow", "gwf3disv8idm.f90"),
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-npf.dfn"),
+            Path("../../../src/Model/GroundWaterFlow", "gwf3npf8idm.f90"),
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-dsp.dfn"),
+            Path("../../../src/Model/GroundWaterTransport", "gwt1dspidm.f90"),
+        ],
     ]
 
-    for dfn in gwf_dfns:
-        converter = Dfn2F90(dfnfspec=dfn)
-        converter.write_f90(
-            odspec=os.path.join("..", "..", "..", "src", "Model", "GroundWaterFlow")
-        )
-        converter.warn()
-
-    gwt_dfns = [
-        Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-dsp.dfn"),
-    ]
-
-    for dfn in gwt_dfns:
-        converter = Dfn2F90(dfnfspec=dfn)
-        converter.write_f90(
-            odspec=os.path.join(
-                "..", "..", "..", "src", "Model", "GroundWaterTransport"
-            ),
-            gwt_name=True,
-        )
+    for dfn in dfns:
+        converter = Dfn2F90(dfnfspec=dfn[0])
+        converter.write_f90(ofspec=dfn[1])
         converter.warn()
 
     print("\n...done.")
