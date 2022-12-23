@@ -106,8 +106,7 @@ contains
       !
       ! -- Use the input data model routines to load the input data
       !    into memory
-      call input_load(dis%parser, 'DIS6', 'GWF', 'DIS', name_model, 'DIS', &
-                      [character(len=LENPACKAGETYPE) ::], iout)
+      call input_load(dis%parser, 'DIS6', 'GWF', 'DIS', name_model, 'DIS', iout)
     end if
     !
     ! -- Return

@@ -35,6 +35,7 @@ module InputDefinitionSelectorModule
   public :: param_definitions
   public :: get_param_definition_type
   public :: get_aggregate_definition_type
+  public :: split_record_definition
 
 contains
 
@@ -195,5 +196,61 @@ contains
       call store_error(errmsg)
     end if
   end function get_aggregate_definition_type
+
+  !> @brief Return aggregate definition
+  !!
+  !! Split a component RECORD datatype definition whose second element matches
+  !! tagname into an array of character tokens
+  !<
+  subroutine split_record_definition(input_definition_types, component_type, &
+                                     subcomponent_type, tagname, nwords, words)
+    use InputOutputModule, only: parseline
+    type(InputParamDefinitionType), dimension(:), intent(in), target :: &
+      input_definition_types
+    character(len=*), intent(in) :: component_type !< component type, such as GWF or GWT
+    character(len=*), intent(in) :: subcomponent_type !< subcomponent type, such as DIS or NPF
+    character(len=*), intent(in) :: tagname !< name of the input tag
+    integer(I4B), intent(inout) :: nwords
+    character(len=40), dimension(:), allocatable, intent(inout) :: words
+    type(InputParamDefinitionType), pointer :: tmp_ptr
+    integer(I4B) :: i
+    character(len=:), allocatable :: parse_str
+    !
+    ! -- initialize to deallocated
+    if (allocated(words)) deallocate (words)
+    !
+    ! -- return all tokens of multi-record type that matches the first
+    ! -- tag following the expected first token "RECORD"
+    do i = 1, size(input_definition_types)
+      !
+      ! -- initialize
+      nwords = 0
+      !
+      ! -- set ptr to current definition
+      tmp_ptr => input_definition_types(i)
+      !
+      ! -- match for definition to split
+      if (tmp_ptr%component_type == component_type .and. &
+          tmp_ptr%subcomponent_type == subcomponent_type .and. &
+          tmp_ptr%datatype(1:6) == 'RECORD') then
+        !
+        ! -- set split string
+        parse_str = trim(input_definition_types(i)%datatype)//' '
+        !
+        ! -- split
+        call parseline(parse_str, nwords, words)
+        !
+        ! -- check for match and manage memory
+        if (nwords >= 2) then
+          if (words(1) == 'RECORD' .and. words(2) == tagname) exit
+        end if
+        !
+        ! -- deallocate
+        if (allocated(parse_str)) deallocate (parse_str)
+        if (allocated(words)) deallocate (words)
+        !
+      end if
+    end do
+  end subroutine split_record_definition
 
 end module InputDefinitionSelectorModule

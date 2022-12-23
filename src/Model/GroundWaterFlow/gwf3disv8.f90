@@ -111,7 +111,7 @@ contains
       ! -- Use the input data model routines to load the input data
       !    into memory
       call input_load(dis%parser, 'DISV6', 'GWF', 'DISV', name_model, 'DISV', &
-                      [character(len=LENPACKAGETYPE) ::], iout)
+                      iout)
       !
       ! -- load disv
       call disnew%disv_load()
