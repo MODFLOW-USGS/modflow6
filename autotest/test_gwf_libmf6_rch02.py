@@ -7,33 +7,14 @@ simulated head in the non-bmi simulation.
 
 import os
 
+import flopy
 import numpy as np
 import pytest
+from framework import TestFramework
 from modflowapi import ModflowApi
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation, api_return
+from simulation import TestSimulation
 
 ex = ["libgwf_rch02"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
 
 # recharge package name
 rch_pname = "RCH-1"
@@ -88,7 +69,7 @@ nouter, ninner = 100, 100
 hclose, rclose, relax = 1e-9, 1e-3, 0.97
 
 
-def get_model(ws, name, rech=rch_spd):
+def get_model(ws, name, exe, rech=rch_spd):
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -172,15 +153,15 @@ def get_model(ws, name, rech=rch_spd):
     return sim
 
 
-def build_model(idx, dir):
+def build_model(idx, dir, exe):
     # build MODFLOW 6 files
     ws = dir
     name = ex[idx]
-    sim = get_model(ws, name)
+    sim = get_model(ws, name, exe)
 
     # build comparison model
     ws = os.path.join(dir, "libmf6")
-    mc = get_model(ws, name, rech=0.0)
+    mc = get_model(ws, name, exe, rech=0.0)
 
     return sim, mc
 
@@ -203,12 +184,13 @@ def run_perturbation(mf6, max_iter, recharge, tag, rch):
 
 def api_func(exe, idx, model_ws=None):
     print("\nBMI implementation test:")
-    success = False
 
     name = ex[idx].upper()
     init_wd = os.path.abspath(os.getcwd())
     if model_ws is not None:
         os.chdir(model_ws)
+
+    output_file_path = os.path.join(model_ws, "mfsim.stdout")
 
     # get the observations from the standard run
     fpth = os.path.join("..", f"{ex[idx]}.head.obs.csv")
@@ -219,13 +201,13 @@ def api_func(exe, idx, model_ws=None):
     except Exception as e:
         print("Failed to load " + exe)
         print("with message: " + str(e))
-        return api_return(success, model_ws)
+        return False, open(output_file_path).readlines()
 
     # initialize the model
     try:
         mf6.initialize()
     except:
-        return api_return(success, model_ws)
+        return False, open(output_file_path).readlines()
 
     # time loop
     current_time = mf6.get_current_time()
@@ -265,7 +247,7 @@ def api_func(exe, idx, model_ws=None):
                 mf6, max_iter, new_recharge, rch_tag, rch
             )
             if not has_converged:
-                return api_return(success, model_ws)
+                return False, open(output_file_path).readlines()
             h0 = head.reshape((nrow, ncol))[5, 5]
             r0 = h0 - htarget
 
@@ -274,7 +256,7 @@ def api_func(exe, idx, model_ws=None):
                 mf6, max_iter, new_recharge, rch_tag, rch + drch
             )
             if not has_converged:
-                return api_return(success, model_ws)
+                return False, open(output_file_path).readlines()
             h1 = head.reshape((nrow, ncol))[5, 5]
             r1 = h1 - htarget
 
@@ -302,7 +284,7 @@ def api_func(exe, idx, model_ws=None):
             mf6, max_iter, new_recharge, rch_tag, rch
         )
         if not has_converged:
-            return api_return(success, model_ws)
+            return False, open(output_file_path).readlines()
 
         # finalize time step
         mf6.finalize_solve()
@@ -316,50 +298,30 @@ def api_func(exe, idx, model_ws=None):
     # cleanup
     try:
         mf6.finalize()
-        success = True
     except:
-        return api_return(success, model_ws)
+        return False, open(output_file_path).readlines()
 
     if model_ws is not None:
         os.chdir(init_wd)
 
     # cleanup and return
-    return api_return(success, model_ws)
+    return True, open(output_file_path).readlines()
 
 
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, idxsim=idx, api_func=api_func))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, idxsim=idx, api_func=api_func)
-        test.run_mf6(sim)
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework()
+    test.build(
+        lambda i, d: build_model(i, d, targets["mf6"]),
+        idx,
+        str(function_tmpdir),
+    )
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, idxsim=idx, api_func=api_func
+        ),
+        str(function_tmpdir),
+    )

@@ -1,37 +1,15 @@
 import os
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-import targets
-from framework import running_on_CI, testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["zbud6_zb01"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-
-ddir = "data"
-
-## run all examples on Travis
-continuous_integration = [True for idx in range(len(exdirs))]
-
-# set replace_exe to None to use default executable
-replace_exe = None
-
-htol = [None for idx in range(len(exdirs))]
+htol = [None for idx in range(len(ex))]
 dtol = 1e-3
 budtol = 1e-2
-
 bud_lst = [
     "STO-SS_IN",
     "STO-SS_OUT",
@@ -132,13 +110,13 @@ ske = [6e-4, 3e-4, 6e-4]
 
 
 # variant SUB package problem 3
-def build_model(idx, dir):
+def build_model(idx, dir, exe):
     name = ex[idx]
 
     # build MODFLOW 6 files
     ws = dir
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
+        sim_name=name, version="mf6", exe_name=exe, sim_ws=ws
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -238,8 +216,7 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_zb6(sim):
-
+def eval_zb6(sim, exe):
     print("evaluating zonebudget...")
 
     # build zonebudget files
@@ -267,21 +244,18 @@ def eval_zb6(sim):
     f.close()
 
     # run zonebudget
-    zbexe = os.path.abspath(targets.target_dict["zbud6"])
     success, buff = flopy.run_model(
-        zbexe,
+        exe,
         "zonebudget.nam",
         model_ws=sim.simpath,
         silent=False,
         report=True,
     )
     if success:
-        print(f"successfully ran...{os.path.basename(zbexe)}")
         sim.success = True
     else:
         sim.success = False
-        msg = f"could not run...{zbexe}"
-        assert success, msg
+        assert success
 
     # read data from csv file
     fpth = os.path.join(sim.simpath, "zonebudget.csv")
@@ -414,62 +388,24 @@ def eval_zb6(sim):
         sim.success = True
         print("    " + msg)
 
-    return
 
-
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-
-    # determine if running on CI infrastructure
-    is_CI = running_on_CI()
-    r_exe = None
-    if not is_CI:
-        if replace_exe is not None:
-            r_exe = replace_exe
-
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    test.build_mf6_models_legacy(build_model, idx, dir)
-
-    # run the test model
-    if is_CI and not continuous_integration[idx]:
-        return
-    test.run_mf6(
-        Simulation(
-            dir, exfunc=eval_zb6, exe_dict=r_exe, htol=htol[idx], idxsim=idx
-        )
-    )
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models_legacy(build_model, idx, dir)
-        sim = Simulation(
-            dir,
-            exfunc=eval_zb6,
-            exe_dict=replace_exe,
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    mf6 = targets.mf6
+    zb6 = targets.zbud6
+    test = TestFramework()
+    test.build(lambda i, w: build_model(i, w, mf6), idx, ws)
+    test.run(
+        TestSimulation(
+            name=name,
+            exe_dict=targets,
+            exfunc=lambda s: eval_zb6(s, zb6),
             htol=htol[idx],
             idxsim=idx,
-        )
-        test.run_mf6(sim)
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+        ),
+        ws,
+    )

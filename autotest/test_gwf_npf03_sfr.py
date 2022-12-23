@@ -1,37 +1,18 @@
 import os
-import sys
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import running_on_CI, testing_framework
-from simulation import Simulation
+from conftest import project_root_path
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["npf03_sfra", "npf03_sfrb"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-ddir = "data"
-
-# run all examples on CI
-continuous_integration = [True for idx in range(len(exdirs))]
-# continuous_integration = [False for idx in range(len(exdirs))]
-
-# read hk data
-fpth = os.path.join(ddir, "npf03_hk.ref")
+fpth = str(project_root_path / "autotest" / "data" / "npf03_hk.ref")
 shape = (50, 108)
 hk = flopy.utils.Util2d.load_txt(shape, fpth, dtype=float, fmtin="(FREE)")
 n1 = hk.shape[1]
 nd = 40
-
 ncols = [[n1], [n1 - nd, nd]]
 
 # static model data
@@ -5794,47 +5775,19 @@ def eval_hds(sim):
         sim.success = True
         print("    " + msg)
 
-    return
 
-
-# - No need to change any code below
+@pytest.mark.slow
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # determine if running on CI infrastructure
-    is_CI = running_on_CI()
-
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    if is_CI and not continuous_integration[idx]:
-        return
-    test.run_mf6(Simulation(dir, exfunc=eval_hds, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_hds, idxsim=idx)
-        test.run_mf6(sim)
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, idx, ws)
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_hds, idxsim=idx
+        ),
+        ws,
+    )

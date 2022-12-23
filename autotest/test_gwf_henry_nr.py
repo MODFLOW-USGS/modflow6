@@ -5,27 +5,14 @@
 # and DRNs alternate and move up and down along the boundary to represent
 # the effects of tides on the aquifer.
 
-import os
-
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
 from conftest import should_compare
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["gwf_henrynr01"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
 
 # global model variables
 nlay = 20
@@ -78,8 +65,7 @@ def sinfunc(a, b, c, d, x):
     return a * np.sin(b * (x - c)) + d
 
 
-def build_model(idx, dir):
-
+def build_model(idx, dir, exe):
     ws = dir
     name = ex[idx]
 
@@ -103,7 +89,7 @@ def build_model(idx, dir):
 
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
+        sim_name=name, version="mf6", exe_name=exe, sim_ws=ws
     )
     sim.name_file.continue_ = False
 
@@ -246,24 +232,25 @@ def build_model(idx, dir):
 
 
 # - No need to change any code below
+@pytest.mark.slow
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir, targets):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(
-        Simulation(
-            dir,
+def test_mf6model(idx, name, function_tmpdir, targets):
+    name = "gwf-henry-nr"
+    comparisons = {name: ("6.2.1",)}
+    mf6 = targets["mf6"]
+    test = TestFramework()
+    test.build(lambda i, w: build_model(i, w, mf6), idx, str(function_tmpdir))
+    test.run(
+        TestSimulation(
+            name=name,
+            exe_dict=targets,
             idxsim=idx,
             mf6_regression=True,
             cmp_verbose=False,
-            make_comparison=should_compare("gwf_henry_nr", comparisons={"gwf_henry_nr": ("6.2.1",)}, executables=targets),
-        )
+            make_comparison=should_compare(name, comparisons, targets),
+        ),
+        str(function_tmpdir),
     )

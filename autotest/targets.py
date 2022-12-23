@@ -49,7 +49,7 @@ target_dict["mf2005s"] = target
 target = target_pth(f"mt3dms{target_ext}", downloaded_bindir)
 target_dict["mt3dms"] = target
 target = target_pth(f"mf6{target_ext}", rebuilt_bindir)
-target_dict["mf6-regression"] = target
+target_dict["mf6_regression"] = target
 
 # create MODFLOW 6 target name and add to dictionary
 program = f"mf6{target_ext}"

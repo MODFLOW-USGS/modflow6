@@ -1,6 +1,6 @@
 import pytest
 from conftest import should_compare
-from simulation import Simulation
+from simulation import TestSimulation
 
 excluded_models = [
     "alt_model",
@@ -38,9 +38,9 @@ def test_model(function_tmpdir, test_model_mf6, targets, original_regression):
     if name in excluded_models:
         pytest.skip(f"Excluding mf6 model: {name}")
 
-    sim = Simulation(
+    sim = TestSimulation(
         name=name,
-        exe_dict=targets.as_dict(),
+        exe_dict=targets,
         mf6_regression=not original_regression,
         cmp_verbose=False,
         make_comparison=should_compare(name, excluded_comparisons, targets),

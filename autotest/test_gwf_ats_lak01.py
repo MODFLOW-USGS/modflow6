@@ -3,28 +3,14 @@
 # a smaller time step.
 
 import os
-import sys
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["gwf_ats_lak_01a"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-
-# store global gwf for subsequent plotting
 gwf = None
 
 
@@ -236,9 +222,6 @@ def build_model(idx, dir):
 def make_plot_xsect(sim, headall, stageall):
     print("making plots...")
 
-    name = ex[sim.idxsim]
-    ws = exdirs[sim.idxsim]
-
     import matplotlib.patches as patches
     import matplotlib.pyplot as plt
     from matplotlib.collections import PatchCollection
@@ -274,17 +257,12 @@ def make_plot_xsect(sim, headall, stageall):
         # ax.set_ylim(-10, 5)
 
     fname = "fig-xsect.pdf"
-    fname = os.path.join(ws, fname)
+    fname = os.path.join(sim.simpath, fname)
     plt.savefig(fname, bbox_inches="tight")
-
-    return
 
 
 def make_plot(sim, times, headall, stageall):
     print("making plots...")
-
-    name = ex[sim.idxsim]
-    ws = exdirs[sim.idxsim]
 
     import matplotlib.pyplot as plt
 
@@ -296,10 +274,8 @@ def make_plot(sim, times, headall, stageall):
     ax.plot(times, h, "bo-", label="max head")
 
     fname = "fig-timeseries.pdf"
-    fname = os.path.join(ws, fname)
+    fname = os.path.join(sim.simpath, fname)
     plt.savefig(fname, bbox_inches="tight")
-
-    return
 
 
 def get_kij_from_node(node, nrow, ncol):
@@ -316,16 +292,14 @@ def eval_results(sim):
     print("evaluating results...")
 
     # calculate volume of water and make sure it is conserved
-    name = ex[sim.idxsim]
-    gwfname = name
-    fname = gwfname + ".lak.bin"
+    fname = sim.name + ".lak.bin"
     fname = os.path.join(sim.simpath, fname)
     assert os.path.isfile(fname)
     bobj = flopy.utils.HeadFile(fname, text="STAGE")
     times = bobj.get_times()
     stage = bobj.get_alldata()
 
-    fname = gwfname + ".cbc"
+    fname = sim.name + ".cbc"
     fname = os.path.join(sim.simpath, fname)
     bobj = flopy.utils.CellBudgetFile(fname, precision="double", verbose=False)
     times = bobj.get_times()
@@ -369,7 +343,7 @@ def eval_results(sim):
                     print(msg)
     assert all_passed, "found recharge applied to cell beneath active lake"
 
-    fname = gwfname + ".hds"
+    fname = sim.name + ".hds"
     fname = os.path.join(sim.simpath, fname)
     assert os.path.isfile(fname)
     hobj = flopy.utils.HeadFile(fname)
@@ -431,43 +405,21 @@ def eval_results(sim):
     errmsg = "lake stage does not match known answer"
     assert np.allclose(stage_answer, stage.flatten()), errmsg
 
-    if False:
-        make_plot(sim, times, head, stage)
-        make_plot_xsect(sim, head, stage)
-
-    return
+    # make_plot(sim, times, head, stage)
+    # make_plot_xsect(sim, head, stage)
 
 
-# - No need to change any code below
+@pytest.mark.slow
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_results, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_results, idxsim=idx)
-        test.run_mf6(sim)
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework()
+    test.build(build_model, 0, str(function_tmpdir))
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_results, idxsim=0
+        ),
+        str(function_tmpdir),
+    )

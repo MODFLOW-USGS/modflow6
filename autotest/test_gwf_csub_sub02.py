@@ -1,25 +1,9 @@
 import os
 
+import flopy
 import pytest
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import running_on_CI, testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = [
     "csub_sub02a",
@@ -28,24 +12,13 @@ ex = [
     "csub_sub02d",
     "csub_sub02e",
 ]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-ddir = "data"
-cmppth = "mf6-regression"
-
+cmppth = "mf6_regression"
 cg_ske = 1.14e-3 / (500.0 - 20.0)
 cg_S = cg_ske * (500.0 - 20.0)
 ss = [cg_S, cg_S, cg_ske, cg_ske, cg_S]
 storagecoeff = [True, True, False, False, True]
 cdelay = [False, True, False, True, True]
 ndelaycells = [None, 19, None, 19, 19]
-
-# run all examples on Travis
-continuous_integration = [True for e in ex]
-
-# set replace_exe to None to use default executable
-replace_exe = None
 
 # static model data
 nlay, nrow, ncol = 1, 1, 1
@@ -236,50 +209,14 @@ def build_model(idx, dir):
     return sim, mc
 
 
-# - No need to change any code below
-
-
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # determine if running on CI infrastructure
-    is_CI = running_on_CI()
-
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    test.build_mf6_models(build_model, idx, dir)
-
-    if is_CI and not continuous_integration[idx]:
-        return
-
-    # run the test model
-    test.run_mf6(Simulation(dir, mf6_regression=True))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test model
-    for dir in exdirs:
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(
-            dir,
-            mf6_regression=True,
-        )
-        test.run_mf6(sim)
-
-    return
-
-
-# use python test_gwf_csub_sub02.py --mf2005 mf2005devdbl
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework()
+    test.build(build_model, idx, str(function_tmpdir))
+    test.run(
+        TestSimulation(name=name, exe_dict=targets, mf6_regression=True),
+        str(function_tmpdir),
+    )

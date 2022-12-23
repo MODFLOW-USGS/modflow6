@@ -4,24 +4,13 @@
 import os
 import sys
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["buy_sfr_01"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
 
 
 def build_model(idx, dir):
@@ -387,9 +376,8 @@ def eval_results(sim):
     print("evaluating results...")
 
     # assign names
-    name = ex[sim.idxsim]
-    gwtname = "gwt_" + name
-    gwfname = "gwf_" + name
+    gwtname = "gwt_" + sim.name
+    gwfname = "gwf_" + sim.name
 
     # load the sft concentrations and make sure all values are correct
     fname = gwtname + ".sft.bin"
@@ -468,42 +456,14 @@ def eval_results(sim):
             qcalc, qsim
         ), f"reach {n} flow {qcalc} not equal {qsim}"
 
-    # uncomment when testing
-    # assert False
 
-    return
-
-
-# - No need to change any code below
-@pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
-)
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_results, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_results, idxsim=idx)
-        test.run_mf6(sim)
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+@pytest.mark.parametrize("name", ex)
+def test_mf6model(name, function_tmpdir, targets):
+    test = TestFramework()
+    test.build(build_model, 0, str(function_tmpdir))
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_results, idxsim=0
+        ),
+        str(function_tmpdir),
+    )

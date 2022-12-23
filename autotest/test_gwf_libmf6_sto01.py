@@ -7,33 +7,14 @@ the non-bmi simulation.
 
 import os
 
+import flopy
 import numpy as np
 import pytest
+from framework import TestFramework
 from modflowapi import ModflowApi
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation, api_return
+from simulation import TestSimulation
 
 ex = ["libgwf_sto01"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
 
 # average recharge rate
 avg_rch = 0.001
@@ -171,24 +152,24 @@ def build_model(idx, dir):
 
 
 def api_func(exe, idx, model_ws=None):
-    success = False
-
     name = ex[idx].upper()
     if model_ws is None:
         model_ws = "."
+
+    output_file_path = os.path.join(model_ws, "mfsim.stdout")
 
     try:
         mf6 = ModflowApi(exe, working_directory=model_ws)
     except Exception as e:
         print("Failed to load " + exe)
         print("with message: " + str(e))
-        return api_return(success, model_ws)
+        return False, open(output_file_path).readlines()
 
     # initialize the model
     try:
         mf6.initialize()
     except:
-        return api_return(success, model_ws)
+        return False, open(output_file_path).readlines()
 
     # time loop
     current_time = mf6.get_current_time()
@@ -209,7 +190,7 @@ def api_func(exe, idx, model_ws=None):
         try:
             mf6.update()
         except:
-            return api_return(success, model_ws)
+            return False, open(output_file_path).readlines()
 
         # update time
         current_time = mf6.get_current_time()
@@ -220,47 +201,24 @@ def api_func(exe, idx, model_ws=None):
     # cleanup
     try:
         mf6.finalize()
-        success = True
     except:
-        return api_return(success, model_ws)
+        return False, open(output_file_path).readlines()
 
     # cleanup and return
-    return api_return(success, model_ws)
+    return True, open(output_file_path).readlines()
 
 
-# - No need to change any code below
+@pytest.mark.slow
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, idxsim=idx, api_func=api_func))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, idxsim=idx, api_func=api_func)
-        test.run_mf6(sim)
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework()
+    test.build(build_model, idx, str(function_tmpdir))
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, idxsim=idx, api_func=api_func
+        ),
+        str(function_tmpdir),
+    )

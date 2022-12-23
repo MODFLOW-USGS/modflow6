@@ -1,18 +1,10 @@
 import os
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 # Test compatibility of GWT-GWT with the 'classic' GWF exchange.
 # It compares the result of a single reference model
@@ -37,10 +29,6 @@ from simulation import Simulation
 
 ex = ["gwtgwt_oldexg"]
 use_ifmod = False
-
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
 
 # some global convenience...:
 # model names
@@ -719,8 +707,6 @@ def compare_gwf_to_ref(sim):
             errmsg = f"min or max residual too large {res.min()} {res.max()}"
             assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
-    return
-
 
 def compare_gwt_to_ref(sim):
     print("comparing concentration  to single model reference...")
@@ -781,41 +767,18 @@ def compare_gwt_to_ref(sim):
             errmsg = f"min or max residual too large {res.min()} {res.max()}"
             assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
-    return
 
-
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, exdir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, exdir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, exdir)
-
-    # run the test model
-    test.run_mf6(Simulation(exdir, exfunc=compare_to_ref, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test models
-    for idx, exdir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, exdir)
-
-        sim = Simulation(exdir, exfunc=compare_to_ref, idxsim=idx)
-        test.run_mf6(sim)
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, idx, ws)
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=compare_to_ref, idxsim=idx
+        ),
+        ws,
+    )
