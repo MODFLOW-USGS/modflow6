@@ -195,7 +195,7 @@ contains
       ! -- Use the input data model routines to load the input data
       !    into memory
       call input_load(npfobj%parser, 'NPF6', 'GWF', 'NPF', npfobj%name_model, &
-                      'NPF', [character(len=LENPACKAGETYPE) :: 'TVK6'], iout)
+                      'NPF', iout)
     end if
     !
     ! -- Return
