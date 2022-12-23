@@ -120,11 +120,13 @@ contains
     type(MemoryType), pointer :: mt
     !
     ! -- disu vertices/cell2d blocks are contingent on NVERT dimension
-    if (mf6_input%file_type == 'DISU6' .and. &
-        (mf6_input%p_block_dfns(iblock)%blockname == 'VERTICES' .or. &
-         mf6_input%p_block_dfns(iblock)%blockname == 'CELL2D')) then
-      call get_from_memorylist('NVERT', mf6_input%memoryPath, mt, found, .false.)
-      if (.not. found .or. mt%intsclr == 0) return
+    if (mf6_input%file_type == 'DISU6') then
+      if (mf6_input%p_block_dfns(iblock)%blockname == 'VERTICES' .or. &
+          mf6_input%p_block_dfns(iblock)%blockname == 'CELL2D') then
+        call get_from_memorylist('NVERT', mf6_input%memoryPath, mt, found, &
+                                 .false.)
+        if (.not. found .or. mt%intsclr == 0) return
+      end if
     end if
     !
     ! -- block open/close support
