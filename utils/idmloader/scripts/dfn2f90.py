@@ -37,42 +37,64 @@ class Dfn2F90:
 
     def write_f90(self, odspec=None, gwt_name=False):
         if gwt_name:
-            fname = Path(odspec, f"{self.component.lower()}1{self.subcomponent.lower()}idm.f90")
+            fname = Path(
+                odspec, f"{self.component.lower()}1{self.subcomponent.lower()}idm.f90"
+            )
         else:
-            fname = Path(odspec, f"{self.component.lower()}3{self.subcomponent.lower()}8idm.f90")
+            fname = Path(
+                odspec, f"{self.component.lower()}3{self.subcomponent.lower()}8idm.f90"
+            )
         with open(fname, "w") as f:
 
             # file header
             f.write(self._source_file_header(self.component, self.subcomponent))
 
             # found type
-            f.write(f"  type {self.component.capitalize()}{self.subcomponent.capitalize()}ParamFoundType\n")
+            f.write(
+                f"  type {self.component.capitalize()}{self.subcomponent.capitalize()}ParamFoundType\n"
+            )
             for var in self._param_varnames:
-              varname = var.split(f"{self.component.lower()}{self.subcomponent.lower()}_")[1]
-              f.write(f"    logical :: {varname} = .false.\n")
-            f.write(f"  end type {self.component.capitalize()}{self.subcomponent.capitalize()}ParamFoundType\n\n")
+                varname = var.split(
+                    f"{self.component.lower()}{self.subcomponent.lower()}_"
+                )[1]
+                f.write(f"    logical :: {varname} = .false.\n")
+            f.write(
+                f"  end type {self.component.capitalize()}{self.subcomponent.capitalize()}ParamFoundType\n\n"
+            )
 
             # params
             if len(self._param_varnames):
                 f.write(self._param_str)
                 f.write(self._source_params_header(self.component, self.subcomponent))
                 f.write("    " + ", &\n    ".join(self._param_varnames) + " &\n")
-                f.write(self._source_list_footer(self.component, self.subcomponent) + "\n")
+                f.write(
+                    self._source_list_footer(self.component, self.subcomponent) + "\n"
+                )
             else:
                 f.write(self._source_params_header(self.component, self.subcomponent))
                 f.write(self._param_str.rsplit(",", 1)[0] + " &\n")
-                f.write(self._source_list_footer(self.component, self.subcomponent) + "\n")
+                f.write(
+                    self._source_list_footer(self.component, self.subcomponent) + "\n"
+                )
 
             # aggregate types
             if len(self._aggregate_varnames):
                 f.write(self._aggregate_str)
-                f.write(self._source_aggregates_header(self.component, self.subcomponent))
+                f.write(
+                    self._source_aggregates_header(self.component, self.subcomponent)
+                )
                 f.write("    " + ", &\n    ".join(self._aggregate_varnames) + " &\n")
-                f.write(self._source_list_footer(self.component, self.subcomponent) + "\n")
+                f.write(
+                    self._source_list_footer(self.component, self.subcomponent) + "\n"
+                )
             else:
-                f.write(self._source_aggregates_header(self.component, self.subcomponent))
+                f.write(
+                    self._source_aggregates_header(self.component, self.subcomponent)
+                )
                 f.write(self._aggregate_str.rsplit(",", 1)[0] + " &\n")
-                f.write(self._source_list_footer(self.component, self.subcomponent) + "\n")
+                f.write(
+                    self._source_list_footer(self.component, self.subcomponent) + "\n"
+                )
 
             # blocks
             f.write(self._source_blocks_header(self.component, self.subcomponent))
@@ -165,7 +187,9 @@ class Dfn2F90:
 
         return f90statement
 
-    def _construct_f90_param_statement(self, tuple_list, basename, varname, aggregate=False):
+    def _construct_f90_param_statement(
+        self, tuple_list, basename, varname, aggregate=False
+    ):
         vname = f"{basename.lower()}_{varname.lower()}"
         if aggregate:
             self._aggregate_varnames.append(vname)
@@ -309,7 +333,10 @@ class Dfn2F90:
             # if necessary
             if aggregate_t:
                 self._aggregate_str += (
-                    self._construct_f90_param_statement(tuple_list, f"{component}{subcomponent}", mf6vn, True) + "\n"
+                    self._construct_f90_param_statement(
+                        tuple_list, f"{component}{subcomponent}", mf6vn, True
+                    )
+                    + "\n"
                 )
                 is_aggregate_blk = True
                 if not shape:
@@ -319,7 +346,10 @@ class Dfn2F90:
 
             else:
                 self._param_str += (
-                    self._construct_f90_param_statement(tuple_list, f"{component}{subcomponent}", mf6vn) + "\n"
+                    self._construct_f90_param_statement(
+                        tuple_list, f"{component}{subcomponent}", mf6vn
+                    )
+                    + "\n"
                 )
 
         self._block_str += (
@@ -408,7 +438,9 @@ if __name__ == "__main__":
 
     for dfn in gwf_dfns:
         converter = Dfn2F90(dfnfspec=dfn)
-        converter.write_f90(odspec=os.path.join("..", "..", "..", "src", "Model", "GroundWaterFlow"))
+        converter.write_f90(
+            odspec=os.path.join("..", "..", "..", "src", "Model", "GroundWaterFlow")
+        )
         converter.warn()
 
     gwt_dfns = [
@@ -417,7 +449,12 @@ if __name__ == "__main__":
 
     for dfn in gwt_dfns:
         converter = Dfn2F90(dfnfspec=dfn)
-        converter.write_f90(odspec=os.path.join("..", "..", "..", "src", "Model", "GroundWaterTransport"), gwt_name=True)
+        converter.write_f90(
+            odspec=os.path.join(
+                "..", "..", "..", "src", "Model", "GroundWaterTransport"
+            ),
+            gwt_name=True,
+        )
         converter.warn()
 
     print("\n...done.")
