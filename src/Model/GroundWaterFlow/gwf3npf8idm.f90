@@ -692,7 +692,7 @@ module GwfNpfInputModule
     [ &
     InputBlockDefinitionType( &
     'OPTIONS', & ! blockname
-    .true., & ! required
+    .false., & ! required
     .false. & ! aggregate
     ), &
     InputBlockDefinitionType( &
