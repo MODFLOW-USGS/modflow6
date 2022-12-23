@@ -1233,6 +1233,7 @@ contains
       deallocate (astrtemp)
       !
       ! -- reset memory manager values
+      mt%acharstr1d => acharstr1d
       mt%element_size = ilen
       mt%isize = isize
       mt%nrealloc = mt%nrealloc + 1
