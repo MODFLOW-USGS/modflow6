@@ -134,11 +134,13 @@ contains
   !> @brief Return parameter definition
   !<
   function get_param_definition_type(input_definition_types, component_type, &
-                                     subcomponent_type, tagname) result(idt)
+                                     subcomponent_type, blockname, tagname) &
+    result(idt)
     type(InputParamDefinitionType), dimension(:), intent(in), target :: &
       input_definition_types
     character(len=*), intent(in) :: component_type !< component type, such as GWF or GWT
     character(len=*), intent(in) :: subcomponent_type !< subcomponent type, such as DIS or NPF
+    character(len=*), intent(in) :: blockname !< name of the block
     character(len=*), intent(in) :: tagname !< name of the input tag
     type(InputParamDefinitionType), pointer :: idt !< corresponding InputParameterDefinitionType for this tag
     type(InputParamDefinitionType), pointer :: tmp_ptr
@@ -149,6 +151,7 @@ contains
       tmp_ptr => input_definition_types(i)
       if (tmp_ptr%component_type == component_type .and. &
           tmp_ptr%subcomponent_type == subcomponent_type .and. &
+          tmp_ptr%blockname == blockname .and. &
           tmp_ptr%tagname == tagname) then
         idt => input_definition_types(i)
         exit

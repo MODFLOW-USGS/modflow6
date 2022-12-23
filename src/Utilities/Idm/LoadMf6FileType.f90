@@ -163,9 +163,10 @@ contains
   !! into the memory manager.
   !!
   !<
-  subroutine subpackage_check(parser, mf6_input, checktag, iout)
+  subroutine subpackage_check(parser, mf6_input, iblock, checktag, iout)
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType
+    integer(I4B), intent(in) :: iblock !< consecutive block number as defined in definition file
     character(len=LINELENGTH), intent(in) :: checktag !< subpackage string, such as TVK6
     integer(I4B), intent(in) :: iout !< unit number for output
     character(len=LINELENGTH) :: tag, fname_tag
@@ -180,6 +181,7 @@ contains
           idt => get_param_definition_type(mf6_input%p_param_dfns, &
                                            mf6_input%component_type, &
                                            mf6_input%subcomponent_type, &
+                                           mf6_input%p_block_dfns(iblock)%blockname, &
                                            fname_tag)
           call load_string_type(parser, idt, mf6_input%memoryPath, iout)
         else
@@ -222,6 +224,7 @@ contains
     idt => get_param_definition_type(mf6_input%p_param_dfns, &
                                      mf6_input%component_type, &
                                      mf6_input%subcomponent_type, &
+                                     mf6_input%p_block_dfns(iblock)%blockname, &
                                      tag)
     !
     ! -- allocate and load data type
@@ -230,7 +233,7 @@ contains
       call load_keyword_type(parser, idt, mf6_input%memoryPath, iout)
       !
       ! -- load filename if subpackage tag
-      call subpackage_check(parser, mf6_input, tag, iout)
+      call subpackage_check(parser, mf6_input, iblock, tag, iout)
       !
       ! -- set as dev option
       if (mf6_input%p_block_dfns(iblock)%blockname == 'OPTIONS' .and. &
@@ -318,6 +321,7 @@ contains
       idt => get_param_definition_type(mf6_input%p_param_dfns, &
                                        mf6_input%component_type, &
                                        mf6_input%subcomponent_type, &
+                                       mf6_input%p_block_dfns(iblock)%blockname, &
                                        words(icol + 1))
       !
       ! -- allocate variable in memory manager
