@@ -228,15 +228,21 @@ contains
     !
     ! -- Create discretization object
     if (indis6 > 0) then
+      call this%load_input_context('DIS6', this%name, 'DIS', indis, this%iout)
       call dis_cr(this%dis, this%name, indis, this%iout)
     elseif (indisu6 > 0) then
+      call this%load_input_context('DISU6', this%name, 'DISU', indis, this%iout)
       call disu_cr(this%dis, this%name, indis, this%iout)
     elseif (indisv6 > 0) then
+      call this%load_input_context('DISV6', this%name, 'DISV', indis, this%iout)
       call disv_cr(this%dis, this%name, indis, this%iout)
     end if
     !
     ! -- Create utility objects
     call budget_cr(this%budget, this%name)
+    !
+    ! -- Load input context for currently supported packages
+    call this%load_input_context('DSP6', this%name, 'DSP', this%indsp, this%iout)
     !
     ! -- Create packages that are tied directly to model
     call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis)

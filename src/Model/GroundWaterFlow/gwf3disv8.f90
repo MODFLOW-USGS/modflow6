@@ -9,7 +9,6 @@ module GwfDisvModule
                                ubdsv06
   use SimModule, only: count_errors, store_error, store_error_unit
   use DisvGeom, only: DisvGeomType
-  use BlockParserModule, only: BlockParserType
   use MemoryManagerModule, only: mem_allocate
   use MemoryHelperModule, only: create_mem_path
   use TdisModule, only: kstp, kper, pertim, totim, delt
@@ -104,14 +103,6 @@ contains
       if (iout > 0) then
         write (iout, fmtheader) inunit
       end if
-      !
-      ! -- initialize parser and load the disv input file
-      call dis%parser%Initialize(dis%inunit, dis%iout)
-      !
-      ! -- Use the input data model routines to load the input data
-      !    into memory
-      call input_load(dis%parser, 'DISV6', 'GWF', 'DISV', name_model, 'DISV', &
-                      iout)
       !
       ! -- load disv
       call disnew%disv_load()
@@ -324,17 +315,17 @@ contains
     if (this%nlay < 1) then
       call store_error( &
         'NLAY was not specified or was specified incorrectly.')
-      call this%parser%StoreErrorUnit()
+      call store_error_unit(this%inunit)
     end if
     if (this%ncpl < 1) then
       call store_error( &
         'NCPL was not specified or was specified incorrectly.')
-      call this%parser%StoreErrorUnit()
+      call store_error_unit(this%inunit)
     end if
     if (this%nvert < 1) then
       call store_error( &
         'NVERT was not specified or was specified incorrectly.')
-      call this%parser%StoreErrorUnit()
+      call store_error_unit(this%inunit)
     end if
     !
     ! -- Calculate nodesuser
@@ -487,7 +478,7 @@ contains
       call store_error('Model does not have any active nodes. &
                        &Ensure IDOMAIN array has some values greater &
                        &than zero.')
-      call this%parser%StoreErrorUnit()
+      call store_error_unit(this%inunit)
     end if
     !
     ! -- Check cell thicknesses
@@ -509,7 +500,7 @@ contains
       end do
     end do
     if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
+      call store_error_unit(this%inunit)
     end if
     !
     ! -- Write message if reduced grid

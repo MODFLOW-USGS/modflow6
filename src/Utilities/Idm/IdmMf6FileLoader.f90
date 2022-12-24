@@ -16,7 +16,7 @@ module IdmMf6FileLoaderModule
   public :: input_load
 
   interface input_load
-    module procedure input_load_blockparser
+    module procedure input_load_blockparser, input_load_generic
   end interface input_load
 
   !> @brief derived type for storing package loader
@@ -91,5 +91,44 @@ contains
     ! -- return
     return
   end subroutine input_load_blockparser
+
+  !> @brief main entry to mf6 input load
+  !<
+  subroutine input_load_generic(filetype, &
+                                component_type, subcomponent_type, &
+                                component_name, subcomponent_name, &
+                                inunit, iout)
+    character(len=*), intent(in) :: filetype !< file type to load, such as DIS6, DISV6, NPF6
+    character(len=*), intent(in) :: component_type !< component type, such as GWF or GWT
+    character(len=*), intent(in) :: subcomponent_type !< subcomponent type, such as DIS or NPF
+    character(len=*), intent(in) :: component_name !< component name, such as MYGWFMODEL
+    character(len=*), intent(in) :: subcomponent_name !< subcomponent name, such as MYWELLPACKAGE
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: iout !< unit number for output
+    type(BlockParserType), pointer :: parser !< block parser
+    type(ModflowInputType) :: mf6_input
+    type(PackageLoad) :: pkgloader
+
+    mf6_input = getModflowInput(filetype, component_type, &
+                                subcomponent_type, component_name, &
+                                subcomponent_name)
+    !
+    ! -- set mf6 parser based package loader by file type
+    select case (filetype)
+    case default
+      allocate (parser)
+      call parser%Initialize(inunit, iout)
+      pkgloader%load_package => generic_mf6_load
+    end select
+    !
+    ! -- invoke the selected load routine
+    call pkgloader%load_package(parser, mf6_input, iout)
+    !
+    ! -- deallocate
+    deallocate (parser)
+    !
+    ! -- return
+    return
+  end subroutine input_load_generic
 
 end module IdmMf6FileLoaderModule

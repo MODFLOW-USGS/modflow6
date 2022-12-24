@@ -13,7 +13,6 @@ module GwfNpfModule
   use GwfIcModule, only: GwfIcType
   use GwfVscModule, only: GwfVscType
   use Xt3dModule, only: Xt3dType
-  use BlockParserModule, only: BlockParserType
   use InputOutputModule, only: GetUnit, openfile
   use TvkModule, only: TvkType, tvk_cr
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, &
@@ -188,14 +187,6 @@ contains
       !
       ! -- Print a message identifying the node property flow package.
       write (iout, fmtheader) inunit
-      !
-      ! -- Initialize block parser and read options
-      call npfobj%parser%Initialize(inunit, iout)
-      !
-      ! -- Use the input data model routines to load the input data
-      !    into memory
-      call input_load(npfobj%parser, 'NPF6', 'GWF', 'NPF', npfobj%name_model, &
-                      'NPF', iout)
     end if
     !
     ! -- Return
@@ -1581,7 +1572,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: store_error, count_errors
+    use SimModule, only: store_error, count_errors, store_error_unit
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwfNpftype) :: this
@@ -1678,7 +1669,7 @@ contains
     !
     ! -- Terminate if errors
     if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
+      call store_error_unit(this%inunit)
     end if
     !
     ! -- Return
@@ -1842,7 +1833,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH, DPIO180
-    use SimModule, only: store_error, count_errors
+    use SimModule, only: store_error, count_errors, store_error_unit
     ! -- dummy
     class(GwfNpfType) :: this
     ! -- local
@@ -1987,7 +1978,7 @@ contains
     !
     ! -- terminate if data errors
     if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
+      call store_error_unit(this%inunit)
     end if
 
     return
@@ -2005,7 +1996,7 @@ contains
   !<
   subroutine preprocess_input(this)
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error, count_errors
+    use SimModule, only: store_error, count_errors, store_error_unit
     class(GwfNpfType) :: this !< the instance of the NPF package
     ! local
     integer(I4B) :: n, m, ii, nn
@@ -2131,7 +2122,7 @@ contains
       end if
     end do
     if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
+      call store_error_unit(this%inunit)
     end if
     !
     ! -- Calculate condsat, but only if xt3d is not active.  If xt3d is
@@ -2320,7 +2311,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: kstp, kper
-    use SimModule, only: store_error
+    use SimModule, only: store_error, store_error_unit
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwfNpfType) :: this
@@ -2380,7 +2371,7 @@ contains
         call store_error(errmsg)
         write (errmsg, fmttopbot) ttop, bbot
         call store_error(errmsg)
-        call this%parser%StoreErrorUnit()
+        call store_error_unit(this%inunit)
       end if
       !
       ! -- Calculate saturated thickness
@@ -2402,7 +2393,7 @@ contains
           call this%dis%noder_to_string(n, nodestr)
           write (errmsg, fmtni) trim(adjustl(nodestr)), kiter, kstp, kper
           call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
+          call store_error_unit(this%inunit)
         end if
         this%ibound(n) = 0
       end if
