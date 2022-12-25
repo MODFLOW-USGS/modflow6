@@ -103,12 +103,13 @@ contains
     character(len=*), intent(in) :: subcomponent_type !< subcomponent type, such as DIS or NPF
     character(len=*), intent(in) :: component_name !< component name, such as MYGWFMODEL
     character(len=*), intent(in) :: subcomponent_name !< subcomponent name, such as MYWELLPACKAGE
-    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: inunit !< unit number for input
     integer(I4B), intent(in) :: iout !< unit number for output
-    type(BlockParserType), pointer :: parser !< block parser
+    type(BlockParserType), allocatable :: parser !< block parser
     type(ModflowInputType) :: mf6_input
     type(PackageLoad) :: pkgloader
-
+    !
+    ! -- create description of input
     mf6_input = getModflowInput(filetype, component_type, &
                                 subcomponent_type, component_name, &
                                 subcomponent_name)
@@ -125,7 +126,7 @@ contains
     call pkgloader%load_package(parser, mf6_input, iout)
     !
     ! -- deallocate
-    deallocate (parser)
+    if (allocated(parser)) deallocate (parser)
     !
     ! -- return
     return

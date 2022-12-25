@@ -441,14 +441,10 @@ contains
   end function GetNumericalModelFromList
 
   !> @brief Load input context for supported package
-  !!
-  !!
   !<
   subroutine load_input_context(this, filtyp, modelname, pkgname, inunit, iout, &
                                 ipaknum)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error
     use IdmMf6FileLoaderModule, only: input_load
     ! -- dummy
     class(NumericalModelType) :: this
