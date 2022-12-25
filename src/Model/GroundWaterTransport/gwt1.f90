@@ -82,7 +82,7 @@ module GwtModule
     procedure, private :: gwt_ot_dv
     procedure, private :: gwt_ot_bdsummary
     procedure, private :: gwt_ot_obs
-
+    procedure :: load_input_context => gwt_load_input_context
   end type GwtModelType
 
   ! -- Module variables constant for simulation
@@ -1287,5 +1287,39 @@ contains
     end select
 
   end function CastAsGwtModel
+
+  !> @brief Load input context for supported package
+  !<
+  subroutine gwt_load_input_context(this, filtyp, modelname, pkgname, inunit, &
+                                    iout, ipaknum)
+    ! -- modules
+    use IdmMf6FileLoaderModule, only: input_load
+    ! -- dummy
+    class(GwtModelType) :: this
+    character(len=*), intent(in) :: filtyp
+    character(len=*), intent(in) :: modelname
+    character(len=*), intent(in) :: pkgname
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: iout
+    integer(I4B), optional, intent(in) :: ipaknum
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- only load if there is a file to read
+    if (inunit <= 0) return
+    !
+    ! -- Load model package input to input context
+    select case (filtyp)
+    case ('DSP6')
+      call input_load('DSP6', 'GWT', 'DSP', modelname, pkgname, inunit, iout)
+    case default
+      call this%NumericalModelType%load_input_context(filtyp, modelname, &
+                                                      pkgname, inunit, iout, &
+                                                      ipaknum)
+    end select
+    !
+    ! -- return
+    return
+  end subroutine gwt_load_input_context
 
 end module GwtModule
