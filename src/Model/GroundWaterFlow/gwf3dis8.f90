@@ -7,7 +7,6 @@ module GwfDisModule
   use InputOutputModule, only: get_node, URWORD, ulasav, ulaprufw, ubdsv1, &
                                ubdsv06
   use SimModule, only: count_errors, store_error, store_error_unit
-  use BlockParserModule, only: BlockParserType
   use MemoryManagerModule, only: mem_allocate
   use MemoryHelperModule, only: create_mem_path
   use TdisModule, only: kstp, kper, pertim, totim, delt
@@ -100,13 +99,6 @@ contains
       if (iout > 0) then
         write (iout, fmtheader) inunit
       end if
-      !
-      ! -- Initialize block parser
-      call dis%parser%Initialize(inunit, iout)
-      !
-      ! -- Use the input data model routines to load the input data
-      !    into memory
-      call input_load(dis%parser, 'DIS6', 'GWF', 'DIS', name_model, 'DIS', iout)
     end if
     !
     ! -- Return
@@ -295,17 +287,17 @@ contains
     if (this%nlay < 1) then
       call store_error( &
         'NLAY was not specified or was specified incorrectly.')
-      call this%parser%StoreErrorUnit()
+      call store_error_unit(this%inunit)
     end if
     if (this%nrow < 1) then
       call store_error( &
         'NROW was not specified or was specified incorrectly.')
-      call this%parser%StoreErrorUnit()
+      call store_error_unit(this%inunit)
     end if
     if (this%ncol < 1) then
       call store_error( &
         'NCOL was not specified or was specified incorrectly.')
-      call this%parser%StoreErrorUnit()
+      call store_error_unit(this%inunit)
     end if
     !
     ! -- calculate nodesuser
@@ -476,7 +468,7 @@ contains
       call store_error('Model does not have any active nodes. &
                        &Ensure IDOMAIN array has some values greater &
                        &than zero.')
-      call this%parser%StoreErrorUnit()
+      call store_error_unit(this%inunit)
     end if
     !
     ! -- Check cell thicknesses
@@ -500,7 +492,7 @@ contains
       end do
     end do
     if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
+      call store_error_unit(this%inunit)
     end if
     !
     ! -- Write message if reduced grid

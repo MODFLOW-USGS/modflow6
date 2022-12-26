@@ -89,6 +89,7 @@ module GwfModule
     procedure :: gwf_ot_flow
     procedure :: gwf_ot_dv
     procedure :: gwf_ot_bdsummary
+    procedure :: load_input_context => gwf_load_input_context
     !
   end type GwfModelType
 
@@ -253,15 +254,21 @@ contains
     !
     ! -- Create discretization object
     if (indis6 > 0) then
+      call this%load_input_context('DIS6', this%name, 'DIS', indis, this%iout)
       call dis_cr(this%dis, this%name, indis, this%iout)
     elseif (indisu6 > 0) then
+      call this%load_input_context('DISU6', this%name, 'DISU', indis, this%iout)
       call disu_cr(this%dis, this%name, indis, this%iout)
     elseif (indisv6 > 0) then
+      call this%load_input_context('DISV6', this%name, 'DISV', indis, this%iout)
       call disv_cr(this%dis, this%name, indis, this%iout)
     end if
     !
     ! -- Create utility objects
     call budget_cr(this%budget, this%name)
+    !
+    ! -- Load input context for currently supported packages
+    call this%load_input_context('NPF6', this%name, 'NPF', this%innpf, this%iout)
     !
     ! -- Create packages that are tied directly to model
     call npf_cr(this%npf, this%name, this%innpf, this%iout)
@@ -1551,5 +1558,39 @@ contains
     return
 
   end function CastAsGwfModel
+
+  !> @brief Load input context for supported package
+  !<
+  subroutine gwf_load_input_context(this, filtyp, modelname, pkgname, inunit, &
+                                    iout, ipaknum)
+    ! -- modules
+    use IdmMf6FileLoaderModule, only: input_load
+    ! -- dummy
+    class(GwfModelType) :: this
+    character(len=*), intent(in) :: filtyp
+    character(len=*), intent(in) :: modelname
+    character(len=*), intent(in) :: pkgname
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: iout
+    integer(I4B), optional, intent(in) :: ipaknum
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- only load if there is a file to read
+    if (inunit <= 0) return
+    !
+    ! -- Load model package input to input context
+    select case (filtyp)
+    case ('NPF6')
+      call input_load('NPF6', 'GWF', 'NPF', modelname, pkgname, inunit, iout)
+    case default
+      call this%NumericalModelType%load_input_context(filtyp, modelname, &
+                                                      pkgname, inunit, iout, &
+                                                      ipaknum)
+    end select
+    !
+    ! -- return
+    return
+  end subroutine gwf_load_input_context
 
 end module GwfModule
