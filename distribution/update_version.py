@@ -6,6 +6,7 @@ Update files in this modflow6 repository according to release information.
 This script is used to update several files in the modflow6 repository, including:
 
   ../version.txt
+  ../meson.build
   ../doc/version.tex
   ../README.md
   ../DISCLAIMER.md
@@ -48,6 +49,7 @@ project_root_path = Path(__file__).parent.parent
 version_file_path = project_root_path / "version.txt"
 touched_file_paths = [
     version_file_path,
+    project_root_path / "meson.build",
     project_root_path / "doc" / "version.tex",
     project_root_path / "doc" / "version.py",
     project_root_path / "README.md",
@@ -194,6 +196,18 @@ def update_version_txt_and_py(
     log_update(py_path, release_type, version)
 
 
+def update_meson_build(release_type: ReleaseType, timestamp: datetime, version: Version):
+    path = project_root_path / "meson.build"
+    lines = open(path, "r").read().splitlines()
+    with open(path, "w") as f:
+        for line in lines:
+            if "version:" in line and "meson_version:" not in line:
+                line = f"  version: '{version.major}.{version.minor}.{version.patch}',"
+            f.write(f"{line}\n")
+
+    log_update(path, release_type, version)
+
+
 def update_version_tex(
     release_type: ReleaseType, timestamp: datetime, version: Version
 ):
@@ -318,6 +332,7 @@ def update_version(
 
         with lock:
             update_version_txt_and_py(release_type, timestamp, version)
+            update_meson_build(release_type, timestamp, version)
             update_version_tex(release_type, timestamp, version)
             update_version_f90(release_type, timestamp, version)
             update_readme_and_disclaimer(release_type, timestamp, version)
