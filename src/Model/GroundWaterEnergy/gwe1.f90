@@ -1136,7 +1136,7 @@ contains
     use TspCncModule, only: cnc_create
 !    use GweSrcModule, only: src_create
 !    use GweLktModule, only: lkt_create
-!    use GweSftModule, only: sft_create
+    use GweSfeModule, only: sfe_create
 !    use GweMwtModule, only: mwt_create
 !    use GweUztModule, only: uzt_create
 !    use ApiModule, only: api_create
@@ -1166,9 +1166,9 @@ contains
       !case('LKT6')
       !  call lkt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
       !                  pakname, this%fmi)
-      !case('SFT6')
-      !  call sft_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-      !                  pakname, this%fmi)
+    case('SFE6')
+      call sfe_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                        pakname, this%fmi, this%tsplab)
       !case('MWT6')
       !  call mwt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
       !                  pakname, this%fmi)

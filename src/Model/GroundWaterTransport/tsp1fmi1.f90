@@ -12,6 +12,7 @@ module TspFmiModule
   use HeadFileReaderModule, only: HeadFileReaderType
   use PackageBudgetModule, only: PackageBudgetType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr_bfr
+  use TspLabelsModule, only: TspLabelsType
 
   implicit none
   private
@@ -95,7 +96,7 @@ module TspFmiModule
 
 contains
 
-  subroutine fmi_cr(fmiobj, name_model, inunit, iout)
+  subroutine fmi_cr(fmiobj, name_model, inunit, iout, tsplab)
 ! ******************************************************************************
 ! fmi_cr -- Create a new FMI object
 ! ******************************************************************************
@@ -107,6 +108,7 @@ contains
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
+    type(TspLabelsType), pointer, intent(in) :: tsplab
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -128,6 +130,9 @@ contains
     !
     ! -- Initialize block parser
     call fmiobj%parser%Initialize(fmiobj%inunit, fmiobj%iout)
+    !
+    ! -- Give package access to the assigned labels based on dependent variable
+    fmiobj%tsplab => tsplab
     !
     ! -- Return
     return
@@ -283,12 +288,6 @@ contains
     integer(I4B) :: ipos
     real(DP) :: crewet, tflow, flownm
     character(len=15) :: nodestr
-    character(len=*), parameter :: fmtdry = &
-     &"(/1X,'WARNING: DRY CELL ENCOUNTERED AT ',a,';  RESET AS INACTIVE &
-     &WITH DRY CONCENTRATION = ', G13.5)"
-    character(len=*), parameter :: fmtrewet = &
-     &"(/1X,'DRY CELL REACTIVATED AT ', a,&
-     &' WITH STARTING CONCENTRATION =',G13.5)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Set flag to indicated that flows are being updated.  For the case where
@@ -336,7 +335,10 @@ contains
           this%ibound(n) = 0
           cnew(n) = DHDRY
           call this%dis%noder_to_string(n, nodestr)
-          write (this%iout, fmtdry) trim(nodestr), DHDRY
+          write (this%iout, '(/1x,a,1x,a,a,1x,a,1x,a,1x,G13.5)') &
+            'WARNING: DRY CELL ENCOUNTERED AT', trim(nodestr), ';  RESET AS &
+              &INACTIVE WITH DRY', trim(adjustl(this%tsplab%depvartype)), &
+              '=', DHDRY
         end if
       end if
       !
@@ -344,7 +346,7 @@ contains
       if (cnew(n) == DHDRY) then
         if (this%gwfhead(n) /= DHDRY) then
           !
-          ! -- obtain weighted concentration
+          ! -- obtain weighted concentration/temperature
           crewet = DZERO
           tflow = DZERO
           do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
@@ -367,7 +369,9 @@ contains
           this%ibound(n) = 1
           cnew(n) = crewet
           call this%dis%noder_to_string(n, nodestr)
-          write (this%iout, fmtrewet) trim(nodestr), crewet
+          write (this%iout, '(/1x,a,1x,a,1x,a,1x,a,1x,a,1x,G13.5)') &
+            'DRY CELL REACTIVATED AT', trim(nodestr), 'WITH STARTING', &
+            trim(adjustl(this%tsplab%depvartype)), '=', crewet
         end if
       end if
     end do

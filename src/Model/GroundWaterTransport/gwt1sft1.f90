@@ -41,6 +41,7 @@ module GwtSftModule
   use ObserveModule, only: ObserveType
   use TspAptModule, only: TspAptType, apt_process_obsID, &
                           apt_process_obsID12
+  use TspLabelsModule, only: TspLabelsType
 
   implicit none
 
@@ -89,9 +90,9 @@ module GwtSftModule
 contains
 
   subroutine sft_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
-                        fmi)
+                        fmi, tsplab)
 ! ******************************************************************************
-! mwt_create -- Create a New MWT Package
+! sft_create -- Create a New SFT Package
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -105,24 +106,25 @@ contains
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
     type(TspFmiType), pointer :: fmi
+    type(TspLabelsType), pointer :: tsplab
     ! -- local
-    type(GwtSftType), pointer :: lktobj
+    type(GwtSftType), pointer :: sftobj
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
-    allocate (lktobj)
-    packobj => lktobj
+    allocate (sftobj)
+    packobj => sftobj
     !
     ! -- create name and memory path
     call packobj%set_names(ibcnum, namemodel, pakname, ftype)
     packobj%text = text
     !
     ! -- allocate scalars
-    call lktobj%allocate_scalars()
+    call sftobj%allocate_scalars()
     !
     ! -- initialize package
     call packobj%pack_initialize()
-
+    !
     packobj%inunit = inunit
     packobj%iout = iout
     packobj%id = id
@@ -133,7 +135,7 @@ contains
     ! -- Store pointer to flow model interface.  When the GwfGwt exchange is
     !    created, it sets fmi%bndlist so that the GWT model has access to all
     !    the flow packages
-    lktobj%fmi => fmi
+    sftobj%fmi => fmi
     !
     ! -- return
     return

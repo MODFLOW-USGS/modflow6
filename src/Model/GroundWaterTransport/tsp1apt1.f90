@@ -66,7 +66,7 @@ module TspAptModule
     character(len=LENPACKAGENAME) :: flowpackagename = '' !< name of corresponding flow package
     character(len=8), &
       dimension(:), pointer, contiguous :: status => null() !< active, inactive, constant
-    character(len=LENAUXNAME) :: cauxfpconc = '' !< name of aux column in flow package auxvar array for concentration
+    character(len=LENAUXNAME) :: cauxfpconc = '' !< name of aux column in flow package auxvar array for concentration (or temperature)
     integer(I4B), pointer :: iauxfpconc => null() !< column in flow package bound array to insert concs
     integer(I4B), pointer :: imatrows => null() !< if active, add new rows to matrix
     integer(I4B), pointer :: iprconc => null() !< print conc to listing file
@@ -75,7 +75,7 @@ module TspAptModule
     integer(I4B), pointer :: ibudcsv => null() !< unit number for csv budget output file
     integer(I4B), pointer :: ncv => null() !< number of control volumes
     integer(I4B), pointer :: igwfaptpak => null() !< package number of corresponding this package
-    real(DP), dimension(:), pointer, contiguous :: strt => null() !< starting feature concentration
+    real(DP), dimension(:), pointer, contiguous :: strt => null() !< starting feature concentration (or temperature)
     integer(I4B), dimension(:), pointer, contiguous :: idxlocnode => null() !< map position in global rhs and x array of pack entry
     integer(I4B), dimension(:), pointer, contiguous :: idxpakdiag => null() !< map diag position of feature in global amat
     integer(I4B), dimension(:), pointer, contiguous :: idxdglo => null() !< map position in global array of package diagonal row entries
@@ -85,16 +85,16 @@ module TspAptModule
     integer(I4B), dimension(:), pointer, contiguous :: idxfjfdglo => null() !< map diagonal feature to feature in global amat
     integer(I4B), dimension(:), pointer, contiguous :: idxfjfoffdglo => null() !< map off diagonal feature to feature in global amat
     integer(I4B), dimension(:), pointer, contiguous :: iboundpak => null() !< package ibound
-    real(DP), dimension(:), pointer, contiguous :: xnewpak => null() !< feature concentration for current time step
-    real(DP), dimension(:), pointer, contiguous :: xoldpak => null() !< feature concentration from previous time step
+    real(DP), dimension(:), pointer, contiguous :: xnewpak => null() !< feature concentration (or temperature) for current time step
+    real(DP), dimension(:), pointer, contiguous :: xoldpak => null() !< feature concentration (or temperature) from previous time step
     real(DP), dimension(:), pointer, contiguous :: dbuff => null() !< temporary storage array
     character(len=LENBOUNDNAME), &
       dimension(:), pointer, contiguous :: featname => null()
-    real(DP), dimension(:), pointer, contiguous :: concfeat => null() !< concentration of the feature
+    real(DP), dimension(:), pointer, contiguous :: concfeat => null() !< concentration (or temperature) of the feature
     real(DP), dimension(:, :), pointer, contiguous :: lauxvar => null() !< auxiliary variable
     type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
-    real(DP), dimension(:), pointer, contiguous :: qsto => null() !< mass flux due to storage change
-    real(DP), dimension(:), pointer, contiguous :: ccterm => null() !< mass flux required to maintain constant concentration
+    real(DP), dimension(:), pointer, contiguous :: qsto => null() !< mass (or energy) flux due to storage change
+    real(DP), dimension(:), pointer, contiguous :: ccterm => null() !< mass (or energy) flux required to maintain constant concentration (or temperature) 
     integer(I4B), pointer :: idxbudfjf => null() !< index of flow ja face in flowbudptr
     integer(I4B), pointer :: idxbudgwf => null() !< index of gwf terms in flowbudptr
     integer(I4B), pointer :: idxbudsto => null() !< index of storage terms in flowbudptr
@@ -103,8 +103,8 @@ module TspAptModule
     integer(I4B), pointer :: idxbudaux => null() !< index of auxiliary terms in flowbudptr
     integer(I4B), dimension(:), pointer, contiguous :: idxbudssm => null() !< flag that flowbudptr%buditem is a general solute source/sink
     integer(I4B), pointer :: nconcbudssm => null() !< number of concbudssm terms (columns)
-    real(DP), dimension(:, :), pointer, contiguous :: concbudssm => null() !< user specified concentrations for flow terms
-    real(DP), dimension(:), pointer, contiguous :: qmfrommvr => null() !< a mass flow coming from the mover that needs to be added
+    real(DP), dimension(:, :), pointer, contiguous :: concbudssm => null() !< user specified concentrations (or temperatures) for flow terms
+    real(DP), dimension(:), pointer, contiguous :: qmfrommvr => null() !< a mass or energy flow coming from the mover that needs to be added
     !
     ! -- pointer to flow package boundary
     type(BndType), pointer :: flowpackagebnd => null()
@@ -361,8 +361,8 @@ contains
     this%fmi%datp(this%igwfaptpak)%qmfrommvr => this%qmfrommvr
     !
     ! -- If there is an associated flow package and the user wishes to put
-    !    simulated concentrations into a aux variable column, then find
-    !    the column number.
+    !    simulated concentrations (or temperatures) into a aux variable 
+    !    column, then find the column number.
     if (associated(this%flowpackagebnd)) then
       if (this%cauxfpconc /= '') then
         found = .false.
@@ -542,9 +542,9 @@ contains
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! -- Support these general options with apply to LKT, SFT, MWT, UZT
+    ! -- Support these general options in LKT, SFT, MWT, UZT
     ! STATUS <status>
-    ! CONCENTRATION <concentration>
+    ! CONCENTRATION <concentration> or TEMPERATURE <temperature>
     ! WITHDRAWAL <withdrawal>
     ! AUXILIARY <auxname> <auxval>
     !
@@ -569,7 +569,7 @@ contains
           'Unknown '//trim(this%text)//' status keyword: ', text//'.'
         call store_error(errmsg)
       end if
-    case ('CONCENTRATION')
+    case ('CONCENTRATION', 'TEMPERATURE')
       ierr = this%apt_check_valid(itemno)
       if (ierr /= 0) then
         goto 999
@@ -579,7 +579,7 @@ contains
       bndElem => this%concfeat(itemno)
       call read_value_or_time_series_adv(text, itemno, jj, bndElem, &
                                          this%packName, 'BND', this%tsManager, &
-                                         this%iprpak, 'CONCENTRATION')
+                                         this%iprpak, this%tsplab%depvartype)
     case ('AUXILIARY')
       ierr = this%apt_check_valid(itemno)
       if (ierr /= 0) then
@@ -700,8 +700,8 @@ contains
       end do
     end if
     !
-    ! -- copy xnew into xold and set xnewpak to specified concentration for
-    !    constant concentration features
+    ! -- copy xnew into xold and set xnewpak to specified concentration (or
+    !    temperature) for constant concentration/temperature features
     if (iFailedStepRetry == 0) then
       do n = 1, this%ncv
         this%xoldpak(n) = this%xnewpak(n)
@@ -790,7 +790,7 @@ contains
   subroutine apt_fc_nonexpanded(this, rhs, ia, idxglo, amatsln)
 ! ******************************************************************************
 ! apt_fc_nonexpanded -- formulate for the nonexpanded a matrix case in which
-!   feature concentrations are solved explicitly
+!   feature concentrations (or temperatures) are solved explicitly
 ! ****************************************************************************
 !
 !    SPECIFICATIONS:
@@ -806,7 +806,7 @@ contains
     integer(I4B) :: j, igwfnode, idiag
 ! ------------------------------------------------------------------------------
     !
-    ! -- solve for concentration in the features
+    ! -- solve for concentration (or temperatures) in the features
     call this%apt_solve()
     !
     ! -- add hcof and rhs terms (from apt_solve) to the gwf matrix
@@ -857,7 +857,7 @@ contains
     !    specific to the package
     call this%pak_fc_expanded(rhs, ia, idxglo, amatsln)
     !
-    ! -- mass storage in features
+    ! -- mass (or energy) storage in features
     do n = 1, this%ncv
       cold = this%xoldpak(n)
       iloc = this%idxlocnode(n)
@@ -1015,8 +1015,8 @@ contains
     real(DP) :: rrate
 ! ------------------------------------------------------------------------------
     !
-    ! -- Solve the feature concentrations again or update the feature hcof
-    !    and rhs terms
+    ! -- Solve the feature concentrations (or temperatures) again or update 
+    !    the feature hcof and rhs terms
     if (this%imatrows == 0) then
       call this%apt_solve()
     else
@@ -1035,7 +1035,7 @@ contains
       this%qsto(n) = rrate
     end do
     !
-    ! -- Copy concentrations into the flow package auxiliary variable
+    ! -- Copy concentrations (or temperatures) into the flow package auxiliary variable
     call this%apt_copy2flowp()
     !
     ! -- fill the budget object
@@ -1071,15 +1071,20 @@ contains
   end subroutine apt_ot_package_flows
 
   subroutine apt_ot_dv(this, idvsave, idvprint)
+    ! -- modules
+    use ConstantsModule, only: LENBUDTXT
     use TdisModule, only: kstp, kper, pertim, totim
-    use ConstantsModule, only: DHNOFLO, DHDRY
+    use ConstantsModule, only: DHNOFLO, DHDRY, LENBUDTXT
     use InputOutputModule, only: ulasav
+    ! -- dummy
     class(TspAptType) :: this
     integer(I4B), intent(in) :: idvsave
     integer(I4B), intent(in) :: idvprint
+    ! -- local
     integer(I4B) :: ibinun
     integer(I4B) :: n
     real(DP) :: c
+    character(len=LENBUDTXT) :: text
     !
     ! -- set unit number for binary dependent variable output
     ibinun = 0
@@ -1097,7 +1102,8 @@ contains
         end if
         this%dbuff(n) = c
       end do
-      call ulasav(this%dbuff, '   CONCENTRATION', kstp, kper, pertim, totim, &
+      write(text, '(a)') padl(this%tsplab%depvartype, 16)
+      call ulasav(this%dbuff, text, kstp, kper, pertim, totim, &
                   this%ncv, 1, 1, ibinun)
     end if
     !
@@ -1293,7 +1299,7 @@ contains
     call mem_allocate(this%concbudssm, this%nconcbudssm, this%ncv, &
                       'CONCBUDSSM', this%memoryPath)
     !
-    ! -- mass added from the mover transport package
+    ! -- mass (or energy) added from the mover transport package
     call mem_allocate(this%qmfrommvr, this%ncv, 'QMFROMMVR', this%memoryPath)
     !
     ! -- initialize arrays
@@ -1454,11 +1460,12 @@ contains
       write (this%iout, '(4x,a)') &
         trim(adjustl(this%text))// &
         ' WILL NOT ADD ADDITIONAL ROWS TO THE A MATRIX.'
-    case ('PRINT_CONCENTRATION')
+    case ('PRINT_CONCENTRATION', 'PRINT_TEMPERATURE')
       this%iprconc = 1
-      write (this%iout, '(4x,a)') trim(adjustl(this%text))// &
-        ' CONCENTRATIONS WILL BE PRINTED TO LISTING FILE.'
-    case ('CONCENTRATION')
+      write (this%iout, '(4x,a,1x,a,1x,a)') trim(adjustl(this%text))// &
+        trim(adjustl(this%tsplab%depvartype))//'S WILL BE PRINTED TO LISTING &
+          &FILE.'
+    case ('CONCENTRATION', 'TEMPERATURE')
       call this%parser%GetStringCaps(keyword)
       if (keyword == 'FILEOUT') then
         call this%parser%GetString(fname)
@@ -1466,10 +1473,12 @@ contains
         call openfile(this%iconcout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE')
         write (this%iout, fmtaptbin) &
-          trim(adjustl(this%text)), 'CONCENTRATION', trim(fname), this%iconcout
+          trim(adjustl(this%text)), trim(adjustl(this%tsplab%depvartype)), &
+          trim(fname), this%iconcout
       else
-        call store_error('OPTIONAL CONCENTRATION KEYWORD MUST &
-                         &BE FOLLOWED BY FILEOUT')
+        write (errmsg, "('OPTIONAL', 1x, a, 1x, 'KEYWORD MUST &
+                         &BE FOLLOWED BY FILEOUT')") this%tsplab%depvartype
+        call store_error(errmsg)
       end if
     case ('BUDGET')
       call this%parser%GetStringCaps(keyword)
@@ -1790,7 +1799,7 @@ contains
 ! ------------------------------------------------------------------------------
 
     !
-    ! -- initialize xnewpak and set lake concentration
+    ! -- initialize xnewpak and set lake concentration (or temperature)
     ! -- todo: this should be a time series?
     do n = 1, this%ncv
       this%xnewpak(n) = this%strt(n)
@@ -1839,8 +1848,8 @@ contains
 
   subroutine apt_solve(this)
 ! ******************************************************************************
-! apt_solve -- explicit solve for concentration in features, which is an
-!   alternative to the iterative implicit solve
+! apt_solve -- explicit solve for concentration (or temperature) in features, 
+!   which is an alternative to the iterative implicit solve
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1884,7 +1893,7 @@ contains
     end if
     !
     ! -- go through each gwf connection and accumulate
-    !    total mass in dbuff mass
+    !    total mass (or energy) in dbuff mass
     do j = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
       n = this%flowbudptr%budterm(this%idxbudgwf)%id1(j)
       this%hcof(j) = DZERO
@@ -1903,7 +1912,7 @@ contains
     end do
     !
     ! -- go through each lak-lak connection and accumulate
-    !    total mass in dbuff mass
+    !    total mass (or energy) in dbuff mass
     if (this%idxbudfjf /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudfjf)%nlist
         call this%apt_fjf_term(j, n1, n2, rrate)
@@ -1912,7 +1921,7 @@ contains
       end do
     end if
     !
-    ! -- calulate the feature concentration
+    ! -- calulate the feature concentration/temperature
     do n = 1, this%ncv
       call this%apt_stor_term(n, n1, n2, rrate, rhsval, hcofval)
       !
@@ -1953,7 +1962,8 @@ contains
 
   subroutine apt_accumulate_ccterm(this, ilak, rrate, ccratin, ccratout)
 ! ******************************************************************************
-! apt_accumulate_ccterm -- Accumulate constant concentration terms for budget.
+! apt_accumulate_ccterm -- Accumulate constant concentration (or temperature) 
+!    terms for budget.  
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -2106,6 +2116,20 @@ contains
                      terminate=.TRUE.)
     nbudterms = 0
   end function pak_get_nbudterms
+  
+  function padl(str, width) result(res)
+    ! -- local
+    character(len=*), intent(in) :: str
+    integer, intent(in) :: width
+    ! -- return
+    character(len=max(len_trim(str), width)) :: res
+! ------------------------------------------------------------------------------    
+    res = str
+    res = adjustr(res)
+    !
+    ! -- return
+    return
+  end function
 
   subroutine apt_setup_budobj(this)
 ! ******************************************************************************
@@ -2211,7 +2235,8 @@ contains
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudsto)%maxlist
     naux = 1
-    auxtxt(1) = '            MASS'
+    write(text, '(a)') padl(this%tsplab%depvarunit, 16)
+    auxtxt(1) = text  ! '            MASS' or '          ENERGY'
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
                                              this%packName, &
@@ -2343,8 +2368,8 @@ contains
     ! -- initialize counter
     idx = 0
     !
-    ! -- initialize ccterm, which is used to sum up all mass flows
-    !    into a constant concentration cell
+    ! -- initialize ccterm, which is used to sum up all mass (or energy) flows
+    !    into a constant concentration (or temperature) cell
     ccratin = DZERO
     ccratout = DZERO
     do n1 = 1, this%ncv
@@ -2557,7 +2582,8 @@ contains
 
   subroutine apt_copy2flowp(this)
 ! ******************************************************************************
-! apt_copy2flowp -- copy concentrations into flow package aux variable
+! apt_copy2flowp -- copy concentrations (or temperatures) into flow package 
+!   aux variable
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -2886,14 +2912,15 @@ contains
       do i = 1, this%obs%npakobs
         obsrv => this%obs%pakobs(i)%obsrv
         select case (obsrv%ObsTypeId)
-        case ('CONCENTRATION')
+        case ('CONCENTRATION', 'TEMPERATURE')
           call this%rp_obs_byfeature(obsrv)
           !
           ! -- catch non-cumulative observation assigned to observation defined
           !    by a boundname that is assigned to more than one element
           if (obsrv%indxbnds_count > 1) then
-            write (errmsg, '(a, a, a)') &
-              'CONCENTRATION for observation', trim(adjustl(obsrv%Name)), &
+            write (errmsg, '(a, a, a, a)') & 
+              trim(adjustl(this%tsplab%depvartype))// &
+              ' for observation', trim(adjustl(obsrv%Name)), &
               ' must be assigned to a feature with a unique boundname.'
             call store_error(errmsg)
           end if
@@ -2978,7 +3005,7 @@ contains
           v = DNODATA
           jj = obsrv%indxbnds(j)
           select case (obsrv%ObsTypeId)
-          case ('CONCENTRATION')
+          case ('CONCENTRATION', 'TEMPERATURE')
             if (this%iboundpak(jj) /= 0) then
               v = this%xnewpak(jj)
             end if
@@ -3194,7 +3221,8 @@ contains
       ! -- set up table title
       title = trim(adjustl(this%text))//' PACKAGE ('// &
               trim(adjustl(this%packName))// &
-              ') CONCENTRATION FOR EACH CONTROL VOLUME'
+              ') '//trim(adjustl(this%tsplab%depvartype))// &
+              &' FOR EACH CONTROL VOLUME'
       !
       ! -- set up dv tableobj
       call table_cr(this%dvtab, this%packName, title)

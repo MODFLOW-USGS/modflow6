@@ -85,8 +85,7 @@ contains
     packobj%ncolbnd = 1
     packobj%iscloc = 1
     !
-    ! -- Store pointer to labels associated with the current model so that the 
-    !    package has access to the assigned labels
+    ! -- Give package access to the assigned labels based on dependent variable
     packobj%tsplab => tsplab
     !
     ! -- return
@@ -346,16 +345,21 @@ contains
     return
   end subroutine cnc_cq
 
+  !> @brief Add package ratin/ratout to model budget
+  !<
   subroutine cnc_bd(this, model_budget)
-    ! -- add package ratin/ratout to model budget
+    ! -- modules
     use TdisModule, only: delt
     use BudgetModule, only: BudgetType, rate_accumulator
+    ! -- dummy
     class(TspCncType) :: this
     type(BudgetType), intent(inout) :: model_budget
+    ! -- local
     real(DP) :: ratin
     real(DP) :: ratout
     real(DP) :: dum
     integer(I4B) :: isuppress_output
+! ------------------------------------------------------------------------------
     isuppress_output = 0
     call rate_accumulator(this%ratecncin(1:this%nbound), ratin, dum)
     call rate_accumulator(this%ratecncout(1:this%nbound), ratout, dum)
