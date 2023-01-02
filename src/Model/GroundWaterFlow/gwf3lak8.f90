@@ -4024,9 +4024,13 @@ contains
     integer(I4B) :: locdhmax
     integer(I4B) :: locdgwfmax
     integer(I4B) :: locdqoutmax
+    integer(I4B) :: locdqfrommvrmax
     integer(I4B) :: ntabrows
     integer(I4B) :: ntabcols
     integer(I4B) :: n
+    real(DP) :: q
+    real(DP) :: q0
+    real(DP) :: qtolfact
     real(DP) :: area
     real(DP) :: gwf0
     real(DP) :: gwf
@@ -4045,6 +4049,8 @@ contains
     real(DP) :: dhmax
     real(DP) :: dgwfmax
     real(DP) :: dqoutmax
+    real(DP) :: dqfrommvr
+    real(DP) :: dqfrommvrmax
     ! format
 ! --------------------------------------------------------------------------
     !
@@ -4054,9 +4060,11 @@ contains
     locdhmax = 0
     locdgwfmax = 0
     locdqoutmax = 0
+    locdqfrommvrmax = 0
     dhmax = DZERO
     dgwfmax = DZERO
     dqoutmax = DZERO
+    dqfrommvrmax = DZERO
     !
     ! -- if not saving package convergence data on check convergence if
     !    the model is considered converged
@@ -4075,6 +4083,9 @@ contains
         ntabrows = 1
         ntabcols = 9
         if (this%noutlets > 0) then
+          ntabcols = ntabcols + 2
+        end if
+        if (this%imover == 1) then
           ntabcols = ntabcols + 2
         end if
         !
@@ -4109,6 +4120,12 @@ contains
           tag = 'dqoutmax_loc'
           call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
         end if
+        if (this%imover == 1) then
+          tag = 'dqfrommvrmax'
+          call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+          tag = 'dqfrommvrmax_loc'
+          call this%pakcsvtab%initialize_column(tag, 16, alignment=TABLEFT)
+        end if
       end if
     end if
     !
@@ -4127,12 +4144,15 @@ contains
         ! -- calculate surface area
         call this%lak_calculate_sarea(n, hlak, area)
         !
+        ! -- set the Q to length factor
+        qtolfact = delt / area
+        !
         ! -- change in gwf exchange
         dgwf = DZERO
         if (area > DZERO) then
           gwf0 = this%qgwf0(n)
           call this%lak_calculate_exchange(n, hlak, gwf)
-          dgwf = (gwf0 - gwf) * delt / area
+          dgwf = (gwf0 - gwf) * qtolfact
         end if
         !
         ! -- change in outflows
@@ -4147,6 +4167,14 @@ contains
           end if
         end if
         !
+        ! -- q from mvr
+        dqfrommvr = DZERO
+        if (this%imover == 1) then
+          q = this%pakmvrobj%get_qfrommvr(n)
+          q0 = this%pakmvrobj%get_qfrommvr0(n)
+          dqfrommvr = qtolfact * (q0 - q)
+        end if
+        !
         ! -- evaluate magnitude of differences
         if (n == 1) then
           locdhmax = n
@@ -4155,6 +4183,8 @@ contains
           dgwfmax = dgwf
           locdqoutmax = n
           dqoutmax = dqout
+          dqfrommvrmax = dqfrommvr
+          locdqfrommvrmax = n
         else
           if (abs(dh) > abs(dhmax)) then
             locdhmax = n
@@ -4167,6 +4197,10 @@ contains
           if (abs(dqout) > abs(dqoutmax)) then
             locdqoutmax = n
             dqoutmax = dqout
+          end if
+          if (ABS(dqfrommvr) > abs(dqfrommvrmax)) then
+            dqfrommvrmax = dqfrommvr
+            locdqfrommvrmax = n
           end if
         end if
       end do final_check
@@ -4195,6 +4229,14 @@ contains
           cpak = trim(cloc)
         end if
       end if
+      if (this%imover == 1) then
+        if (ABS(dqfrommvrmax) > abs(dpak)) then
+          ipak = locdqfrommvrmax
+          dpak = dqfrommvrmax
+          write (cloc, "(a,'-',a)") trim(this%packName), 'qfrommvr'
+          cpak = trim(cloc)
+        end if
+      end if
       !
       ! -- write convergence data to package csv
       if (this%ipakcsv /= 0) then
@@ -4212,6 +4254,10 @@ contains
         if (this%noutlets > 0) then
           call this%pakcsvtab%add_term(dqoutmax)
           call this%pakcsvtab%add_term(locdqoutmax)
+        end if
+        if (this%imover == 1) then
+          call this%pakcsvtab%add_term(dqfrommvrmax)
+          call this%pakcsvtab%add_term(locdqfrommvrmax)
         end if
         !
         ! -- finalize the package csv
