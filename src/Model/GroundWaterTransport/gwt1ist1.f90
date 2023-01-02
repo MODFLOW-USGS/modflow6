@@ -1069,35 +1069,35 @@ contains
     ! -- Check for required sorption variables
     if (this%isrb > 0) then
       if (.not. lname(1)) then
-        write (errmsg, '(1x,a)') 'ERROR.  SORPTION IS ACTIVE BUT BULK_DENSITY &
-          &NOT SPECIFIED.  BULK_DENSITY MUST BE SPECIFIED IN GRIDDATA BLOCK.'
+        write (errmsg, '(1x,a)') 'Sorption is active but bulk_density &
+          &not specified.  BULK_DENSITY must be specified in GRIDDATA block.'
         call store_error(errmsg)
       end if
       if (.not. lname(2)) then
-        write (errmsg, '(1x,a)') 'ERROR.  SORPTION IS ACTIVE BUT DISTRIBUTION &
-          &COEFFICIENT NOT SPECIFIED.  DISTCOEF MUST BE SPECIFIED IN &
-          &GRIDDATA BLOCK.'
+        write (errmsg, '(1x,a)') 'Sorption is active but distribution &
+          &coefficient not specified.  DISTCOEF must be specified in &
+          &GRIDDATA block.'
         call store_error(errmsg)
       end if
     else
       if (lname(1)) then
-        write (this%iout, '(1x,a)') 'WARNING.  SORPTION IS NOT ACTIVE BUT &
-          &BULK_DENSITY WAS SPECIFIED.  BULK_DENSITY WILL HAVE NO AFFECT ON &
-          &SIMULATION RESULTS.'
+        write (this%iout, '(1x,a)') 'Warning.  Sorption is not active but &
+          &BULK_DENSITY was specified.  BULK_DENSITY will have no affect on &
+          &simulation results.'
       end if
       if (lname(2)) then
-        write (this%iout, '(1x,a)') 'WARNING.  SORPTION IS NOT ACTIVE BUT &
-          &DISTRIBUTION COEFFICIENT WAS SPECIFIED.  DISTCOEF WILL HAVE &
-          &NO AFFECT ON SIMULATION RESULTS.'
+        write (this%iout, '(1x,a)') 'Warning.  Sorption is not active but &
+          &distribution coefficient was specified.  DISTCOEF will have &
+          &no effect on simulation results.'
       end if
     end if
     !
     ! -- Check for required decay/production rate coefficients
     if (this%idcy > 0) then
       if (.not. lname(3)) then
-        write (errmsg, '(1x,a)') 'ERROR.  FIRST OR ZERO ORDER DECAY IS &
-          &ACTIVE BUT THE FIRST RATE COEFFICIENT IS NOT SPECIFIED.  &
-          &DECAY MUST BE SPECIFIED IN GRIDDATA BLOCK.'
+        write (errmsg, '(1x,a)') 'First or zero order decay is &
+          &active but the first rate coefficient is not specified.  &
+          &decay must be specified in GRIDDATA block.'
         call store_error(errmsg)
       end if
       if (.not. lname(4)) then
@@ -1113,35 +1113,35 @@ contains
       end if
     else
       if (lname(3)) then
-        write (this%iout, '(1x,a)') 'WARNING.  FIRST OR ZERO ORER DECAY &
-          &IS NOT ACTIVE BUT DECAY WAS SPECIFIED.  DECAY WILL &
-          &HAVE NO AFFECT ON SIMULATION RESULTS.'
+        write (this%iout, '(1x,a)') 'Warning.  first or zero orer decay &
+          &is not active but decay was specified.  decay will &
+          &have no effect on simulation results.'
       end if
       if (lname(4)) then
-        write (this%iout, '(1x,a)') 'WARNING.  FIRST OR ZERO ORER DECAY &
-          &IS NOT ACTIVE BUT DECAY_SORBED MUST  WAS SPECIFIED.  &
-          &DECAY_SORBED MUST  WILL HAVE NO AFFECT ON SIMULATION &
-          &RESULTS.'
+        write (this%iout, '(1x,a)') 'Warning.  first or zero orer decay &
+          &is not active but DECAY_SORBED was specified.  &
+          &DECAY_SORBED will have no effect on simulation &
+          &results.'
       end if
     end if
     !
     ! -- Check for required dual domain arrays or warn if they are specified
     !    but won't be used.
     if (.not. lname(5)) then
-      write (this%iout, '(1x,a)') 'WARNING.  DUAL DOMAIN IS ACTIVE BUT &
-        &INITIAL IMMOBILE DOMAIN CONCENTRATION WAS NOT SPECIFIED.  &
-        &SETTING CIM TO ZERO.'
+      write (this%iout, '(1x,a)') 'Warning.  dual domain is active but &
+        &initial immobile domain concentration was not specified.  &
+        &Setting CIM to zero.'
     end if
     if (.not. lname(6)) then
-      write (errmsg, '(1x,a)') 'DUAL DOMAIN IS ACTIVE BUT DUAL &
-        &DOMAIN MASS TRANSFER RATE (ZETAIM) WAS NOT SPECIFIED.  ZETAIM &
-        &MUST BE SPECIFIED IN GRIDDATA BLOCK.'
+      write (errmsg, '(1x,a)') 'Dual domain is active but dual &
+        &domain mass transfer rate (ZETAIM) was not specified.  ZETAIM &
+        &must be specified in GRIDDATA block.'
       call store_error(errmsg)
     end if
     if (.not. lname(7)) then
-      write (errmsg, '(1x,a)') 'DUAL DOMAIN IS ACTIVE BUT &
-        &IMMOBILE DOMAIN POROSITY (THETAIM) WAS NOT SPECIFIED.  THETAIM &
-        &MUST BE SPECIFIED IN GRIDDATA BLOCK.'
+      write (errmsg, '(1x,a)') 'Dual domain is active but &
+        &immobile domain porosity (THETAIM) was not specified.  THETAIM &
+        &must be specified in GRIDDATA block.'
       call store_error(errmsg)
     end if
     !

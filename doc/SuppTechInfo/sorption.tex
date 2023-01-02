@@ -1,7 +1,9 @@
 
 As described by \cite{modflow6gwt}, sorption of solute by the mobile and immobile domains can be simulated by the Groundwater Transport (GWT) Model in \mf.  This chapter summarizes and clarifies the sorption equations implemented in \mf, and presents a new input option for the Immobile Storage and Transfer (IST) Package.
 
-The GWT Model in \mf solves the following mathematical equation
+\subsection{Governing Equations} \label{sec:goveqn1}
+
+As described in the GWT Model documentation \citep{modflow6gwt},  the GWT Model solves the following mathematical equation
 
 \begin{equation}
 \label{eqn:gwtpde}
@@ -17,9 +19,9 @@ The GWT Model in \mf solves the following mathematical equation
 \end{aligned}
 \end{equation}
 
-\noindent where the symbols are defined in \cite{modflow6gwt}.  This chapter provides additional clarification on the $f_m$ term in equation~\ref{eqn:gwtpde}, which is defined as the fraction of aquifer solid material available for sorptive exchange with the mobile phase under fully saturated conditions.  When there are no immobile domains specified by the user, then $f_m$ is automatically set by the GWT Model to a value of one.  When one or more immobile domains are specified by the user, however, then the $f_m$ term in equation~\ref{eqn:gwtpde} requires additional clarification.
+\noindent where $S_w$ is the water saturation (dimensionless) defined as the volume of water per volume of voids, $\theta$ is the effective porosity of the mobile domain (dimensionless), defined as volume of voids participating in mobile transport per unit volume of aquifer, $C$ is volumetric concentration of the mobile domain expressed as mass of dissolved solute per unit volume of fluid ($M/L^3$), $t$ is time ($T$), $\matr{q}$ is the vector of specific discharge ($L/T$), $\matr{D}$ is the second-order tensor of hydrodynamic dispersion coefficients ($L^2/T$), $q'_s$ is the volumetric flow rate per unit volume of aquifer (defined as positive for flow into the aquifer) for mass sources and sinks ($1/T$), $C_s$ is the volumetric solute concentration of the source or sink fluid ($M/L^3$), $M_s$ is rate of solute mass loading per unit volume of aquifer ($M/L^3T$), $\lambda_1$ is the first-order decay rate coefficient for the liquid phase ($1/T$), $\gamma_1$ is the zero-order decay rate coefficient for the liquid phase ($M/L^3T$), $f_m$ is the fraction of aquifer solid material available for sorptive exchange with the mobile phase under fully saturated conditions, $\rho_b$ is the bulk density of the aquifer material ($M/L^3$), $\overline{C}$ is the sorbed concentration of solute mass in the mobile domain ($M/M$), $\lambda_2$ is the first-order decay rate coefficient ($1/T$) for the sorbed phase of the mobile domain,  $\gamma_2$ is the zero-order decay rate coefficient for the sorbed phase of the mobile domain ($M/MT$), $nim$ is the number of immobile domains, $\zeta_{im}$ is the rate coefficient for the transfer of mass between the mobile domain and immobile domain $im$ ($1/T$), and $C_{im}$ is the solute concentration for immobile domain $im$ ($M/L^3$)..  
 
-The Immobile domain Storage and Transfer (IST) Package for the GWT Model allows users to designate a fraction of a model cell as immobile.  Transfer of solute mass into or out of the immobile part of a model cell is calculated using a diffusive equation as described in \cite{modflow6gwt}.  The transport equation for the immobile domain is
+The Immobile Storage and Transfer (IST) Package for the GWT Model allows users to designate a fraction of a model cell as immobile.  Transfer of solute mass into or out of the immobile part of a model cell is calculated using a simple diffusive equation.  The transport equation for the immobile domain is
 
 \begin{equation}
 \label{eqn:gwtistpde}
@@ -31,7 +33,9 @@ The Immobile domain Storage and Transfer (IST) Package for the GWT Model allows 
 \end{split}
 \end{equation}
 
-\noindent where the symbols are defined in \cite{modflow6gwt}.  The $f_{im}$ term in equation~\ref{eqn:gwtistpde} is the fraction of aquifer solid material available for sorptive exchange with the immobile domain under fully saturated conditions.  
+\noindent where $\theta_{im}$ is the volume of the immobile pores per volume of aquifer, $f_{im}$ is the fraction of aquifer solid material available for sorptive exchange with the immobile domain under fully saturated conditions, $\overline{C}_{im}$ is the sorbed concentration of the immobile domain, expressed as the mass of the sorbed chemical per mass of solid,  $\lambda_{1,im}$ is the first-order reaction rate coefficient for the liquid phase of the immobile domain ($1/T$), $\lambda_{2,im}$ is the first-order reaction rate coefficient for the sorbed phase of the immobile domain ($1/T$), $\gamma_{1,im}$ is the zero-order reaction rate coefficient for the liquid phase of the immobile domain ($ML^{-3}T^{-1}$), and $\gamma_{2,im}$ is the zero-order reaction rate coefficient for the sorbed phase of the immobile domain ($M M^{-1}T^{-1}$).  
+
+This chapter provides additional clarification on the $f_m$ term in equation~\ref{eqn:gwtpde}, which is defined as the fraction of aquifer solid material available for sorptive exchange with the mobile phase under fully saturated conditions.  When there are no immobile domains specified by the user, then $f_m$ is automatically set by the GWT Model to a value of one.  When one or more immobile domains are specified by the user, however, then the $f_m$ term in equation~\ref{eqn:gwtpde} requires additional clarification.
 
 \subsection{Approximating Solid Mass Fractions} \label{sec:solidmassfrac1}
 
@@ -67,6 +71,102 @@ Equation~\ref{eqn:fim1} may not always be a good approximation as the solid mass
 A new option was added to \mf for situations where the assumptions underlying equations~\ref{eqn:fim1} and \ref{eqn:fm1} are not valid.  Rather than approximating $f_{im}$ with equation~\ref{eqn:fim1}, the user can specify values for $f_{im}$ as input to the IST Package.  In this case $f_m$ is calculated as
 
 \begin{equation}
-\label{eqn:fm1}
+\label{eqn:fm2}
 f_m = 1 - \sum_{im}f_{im}.
+\end{equation}
+
+\subsection{Parameter Specification} \label{sec:solidmassfrac3}
+
+When an aquifer can be distinctly divided into multiple domains, it may be intuitive to think about the volumes and properties of the individual domains.  If we define the mobile domain volume fraction as
+
+\begin{equation}
+\label{eqn:fm3}
+\hat{f}_m = \frac{mob. \; dom. \; vol.}{total \: vol.},
+\end{equation}
+
+\noindent and the immobile domain volume fraction as
+
+\begin{equation}
+\label{eqn:fm4}
+\hat{f}_{im} = \frac{imm. \; dom. \; vol.}{total \: vol.},
+\end{equation}
+
+\noindent then they are related by
+
+\begin{equation}
+\label{eqn:fm5}
+\hat{f}_m = 1 - \hat{f}_{im}.
+\end{equation}
+
+We may also wish to work with the porosities and bulk densities of the individual domains.  We can define the porosity of the individual domains as
+
+\begin{equation}
+\label{eqn:phi_m}
+\phi_m = \frac{mob. \; dom. \; pore \; vol.}{mob. \; dom. \: vol.},
+\end{equation}
+
+\noindent and
+
+\begin{equation}
+\label{eqn:phi_im}
+\phi_{im} = \frac{imm. \; dom. \; pore \; vol.}{imm. \; dom. \: vol.}.
+\end{equation}
+
+\noindent These domain porosities, denoted by $\phi$, are different from the bulk porosities, denoted by $\theta$, which are required as input for the GWT Model.  They are related by 
+
+\begin{equation}
+\label{eqn:theta1}
+\theta_{m} = \hat{f}_{m} \phi_{m},
+\end{equation}
+
+\noindent and
+
+\begin{equation}
+\label{eqn:theta2}
+\theta_{im} = \hat{f}_{im} \phi_{im}.
+\end{equation}
+
+
+The bulk densities of the individual domains are defined as
+
+\begin{equation}
+\label{eqn:rhob_m}
+\rho_{b,m} = \frac{mob. \; dom. \; solid \; mass.}{mob. \; dom. \: vol.},
+\end{equation}
+ 
+ \noindent and
+ 
+\begin{equation}
+\label{eqn:rhob_im}
+\rho_{b,im} = \frac{imm. \; dom. \; solid \; mass.}{imm. \; dom. \: vol.}.
+\end{equation}
+ 
+ With a system defined this way, it may not be obvious how to assign input parameters for the GWT Model.  For example, the MST Package requires specification of the average bulk density of the aquifer.  If the bulk density for the mobile domain, $\rho_{b,m}$, is equal to the bulk density of the immobile domain, $\rho_{b,im}$, then the average bulk density for the aquifer, $\rho_{b}$, can be set as $\rho_{b} = \rho_{b,m} = \rho_{b,im}$.  If the bulk density of the mobile domain differs from the bulk density of the immobile domain, then the average bulk density for the aquifer can be calculated as
+ 
+\begin{equation}
+\label{eqn:rhob1}
+\rho_{b} = \hat{f}_m \rho_{b, m} + \hat{f}_{im} \rho_{b, im},
+\end{equation}
+
+\noindent for a dual-domain system, or as
+
+\begin{equation}
+\label{eqn:rhob2}
+\rho_{b} = \hat{f}_m \rho_{b, m} + \sum_{im}{\hat{f}_{im} \rho_{b, im}},
+\end{equation}
+
+\noindent for a multi-domain system.
+
+It's important to recognize that the ``$f$'' terms in equation~\ref{eqn:gwtpde} and \ref{eqn:gwtistpde} are solid mass fractions rather than volume fractions.  The following equations can be used to convert from volume fractions, denoted as ``$\hat{f}$'' to mass fractions ($f$):
+
+\begin{equation}
+\label{eqn:fmfm}
+f_{m} = \hat{f}_m \frac{\rho_{b, m}}{\rho_{b}},
+\end{equation}
+
+\noindent and 
+
+\begin{equation}
+\label{eqn:fmfm}
+f_{im} = \hat{f}_{im} \frac{\rho_{b, im}}{\rho_{b}}.
 \end{equation}
