@@ -771,7 +771,7 @@ class Simulation(object):
                             f"{os.path.basename(fpth0)} - "
                             + f"{key:16s} "
                             + f"difference ({diffmax:10.4g}) "
-                            + f"> {self.pdtol:10.4g} "
+                            + f"> {vmin_tol:10.4g} "
                             + f"at {indices.size} nodes "
                             + f" [first location ({indices[0] + 1})] "
                             + f"at time {t} "

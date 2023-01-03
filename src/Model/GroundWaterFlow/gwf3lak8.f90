@@ -4163,7 +4163,7 @@ contains
             call this%lak_calculate_outlet_outflow(n, hlak0, inf, qout0)
             call this%lak_calculate_available(n, hlak, inf, ra, ro, qinf, ex)
             call this%lak_calculate_outlet_outflow(n, hlak, inf, qout)
-            dqout = (qout0 - qout) * delt / area
+            dqout = (qout0 - qout) * qtolfact
           end if
         end if
         !

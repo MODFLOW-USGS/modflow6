@@ -189,8 +189,8 @@ def set_make_comparison(test):
         "test051_uzfp3_lakmvr_v2": ("6.2.1",),
         "test051_uzfp3_wellakmvr_v2": ("6.2.1",),
         "test045_lake4ss": ("6.2.2",),
-        "test056_mt3dms_usgs_gwtex_dev": ("6.2.2",),
-        "test056_mt3dms_usgs_gwtex_IR_dev": ("6.2.2",),
+        "test056_mt3dms_usgs_gwtex_dev": ("6.4.1",),
+        "test056_mt3dms_usgs_gwtex_IR_dev": ("6.4.1",),
     }
     make_comparison = True
     if test in compare_tests.keys():
@@ -200,6 +200,7 @@ def set_make_comparison(test):
         print(f"MODFLOW regression version='{version}'")
         if version in compare_tests[test]:
             make_comparison = False
+            print(f"Make comparison has been set to False.")
     return make_comparison
 
 
