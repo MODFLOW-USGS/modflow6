@@ -186,6 +186,7 @@ def build_model(idx, dir):
     # Instantiating MODFLOW 6 discretization package
     flopy.mf6.ModflowGwfdis(
         gwf,
+        nogrb=True,
         length_units=length_units,
         nlay=nlay,
         nrow=nrow,
