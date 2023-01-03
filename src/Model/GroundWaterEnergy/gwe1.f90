@@ -240,12 +240,13 @@ contains
     call budget_cr(this%budget, this%name)
     !
     ! -- Create packages that are tied directly to model
-    call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis)
-    call fmi_cr(this%fmi, this%name, this%infmi, this%iout)
+    call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis, this%tsplab)
+    call fmi_cr(this%fmi, this%name, this%infmi, this%iout, this%tsplab)
     call mst_cr(this%mst, this%name, this%inmst, this%iout, this%fmi)
     call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi)
     call dsp_cr(this%dsp, this%name, this%indsp, this%iout, this%fmi)
-    call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, this%tsplab)
+    call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, &
+                this%tsplab)
     call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
     call tsp_obs_cr(this%obs, this%inobs)
@@ -411,7 +412,8 @@ contains
     if (this%inmvt > 0) call this%mvt%mvt_ar()
     if (this%inic > 0) call this%ic%ic_ar(this%x)
     if (this%inmst > 0) call this%mst%mst_ar(this%dis, this%ibound)
-    if (this%inadv > 0) call this%adv%adv_ar(this%dis, this%ibound)
+    if (this%inadv > 0) call this%adv%adv_ar(this%dis, this%ibound, &
+                                             this%mst%cpw, this%mst%rhow)
     if (this%indsp > 0) call this%dsp%dsp_ar(this%ibound, this%mst%porosity, &
                                              this%mst%cpw, this%mst%rhow)
     if (this%inssm > 0) call this%ssm%ssm_ar(this%dis, this%ibound, this%x)
@@ -428,7 +430,7 @@ contains
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%set_pointers(this%dis%nodes, this%ibound, this%x, &
-                                this%xold, this%flowja)
+                                this%xold, this%flowja, this%mst%cpw, this%mst%rhow)
       ! -- Read and allocate package
       call packobj%bnd_ar()
     end do

@@ -4,6 +4,7 @@ module TspIcModule
   use GwfIcModule, only: GwfIcType
   use BlockParserModule, only: BlockParserType
   use BaseDisModule, only: DisBaseType
+  use TspLabelsModule, only: TspLabelsType
 
   implicit none
   private
@@ -18,7 +19,7 @@ module TspIcModule
 
 contains
 
-  subroutine ic_cr(ic, name_model, inunit, iout, dis)
+  subroutine ic_cr(ic, name_model, inunit, iout, dis, tsplab)
 ! ******************************************************************************
 ! ic_cr -- Create a new initial conditions object
 ! ******************************************************************************
@@ -27,6 +28,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     type(TspIcType), pointer :: ic
+    type(TspLabelsType), pointer, intent(in) :: tsplab
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
@@ -47,6 +49,9 @@ contains
     !
     ! -- set pointers
     ic%dis => dis
+    !
+    ! -- Give package access to the assigned labelsd based on dependent variable
+    ic%tsplab => tsplab
     !
     ! -- Initialize block parser
     call ic%parser%Initialize(ic%inunit, ic%iout)
@@ -77,7 +82,8 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Setup the label
-    aname(1) = 'INITIAL CONCENTRATION'
+    write(aname(1), '(a,1x,a)') 'INITIAL', trim(adjustl(this%tsplab%depvartype))
+    !aname(1) = , CONCENTRATION'
     !
     ! -- get griddata block
     call this%parser%GetBlock('GRIDDATA', isfound, ierr)

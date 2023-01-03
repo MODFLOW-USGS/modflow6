@@ -245,8 +245,8 @@ contains
     call budget_cr(this%budget, this%name)
     !
     ! -- Create packages that are tied directly to model
-    call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis)
-    call fmi_cr(this%fmi, this%name, this%infmi, this%iout)
+    call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis, this%tsplab)
+    call fmi_cr(this%fmi, this%name, this%infmi, this%iout, this%tsplab)
     call mst_cr(this%mst, this%name, this%inmst, this%iout, this%fmi)
     call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi)
     call dsp_cr(this%dsp, this%name, this%indsp, this%iout, this%fmi)
