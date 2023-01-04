@@ -167,6 +167,7 @@ contains
       end select
     end if
     exchange%v_model1 => get_virtual_model(m1_id)
+    exchange%is_datacopy = .not. exchange%v_model1%is_local
     !
     ! -- set gwfmodel2
     m2_index = model_loc_idx(m2_id)
@@ -948,10 +949,14 @@ contains
     integer(I4B) :: icbcfl, ibudfl
     !
     ! -- budget for model1
-    call this%gwf_gwf_bdsav_model(this%gwfmodel1)
+    if (associated(this%gwfmodel1)) then
+      call this%gwf_gwf_bdsav_model(this%gwfmodel1)
+    end if
     !
     ! -- budget for model2
-    call this%gwf_gwf_bdsav_model(this%gwfmodel2)
+    if (associated(this%gwfmodel2)) then
+      call this%gwf_gwf_bdsav_model(this%gwfmodel2)
+    end if
     !
     ! -- Set icbcfl, ibudfl to zero so that flows will be printed and
     !    saved, if the options were set in the MVR package
@@ -1156,7 +1161,9 @@ contains
     deltaqgnc = DZERO
     !
     ! -- Write a table of exchanges
-    if (this%iprflow /= 0) then
+    ! TODO_MJR: how to restore this for parallel exchanges?
+    if (this%iprflow /= 0 .and. &
+        this%v_model1%is_local .and. this%v_model2%is_local) then
       if (this%ingnc > 0) then
         write (iout, fmtheader) trim(adjustl(this%name)), this%id, 'NODEM1', &
           'NODEM2', 'COND', 'X_M1', 'X_M2', 'DELTAQGNC', &
@@ -1270,10 +1277,11 @@ contains
     character(len=LINELENGTH) :: fname
     integer(I4B) :: inobs
     character(len=LINELENGTH) :: subkey
+    character(len=:), allocatable :: line
 
     parsed = .true.
 
-    select case (keyword)
+    sel_opt: select case (keyword)
     case ('PRINT_FLOWS')
       this%iprflow = 1
       write (iout, '(4x,a)') &
@@ -1328,6 +1336,10 @@ contains
       write (iout, '(4x,a)') &
         'GHOST NODES WILL BE READ FROM ', trim(fname)
     case ('MVR6')
+      if (this%is_datacopy) then
+        call this%parser%GetRemainingLine(line)
+        exit sel_opt
+      end if
       call this%parser%GetStringCaps(subkey)
       if (subkey /= 'FILEIN') then
         call store_error('MVR6 KEYWORD MUST BE FOLLOWED BY '// &
@@ -1344,6 +1356,10 @@ contains
       write (iout, '(4x,a)') &
         'WATER MOVER INFORMATION WILL BE READ FROM ', trim(fname)
     case ('OBS6')
+      if (this%is_datacopy) then
+        call this%parser%GetRemainingLine(line)
+        exit sel_opt
+      end if
       call this%parser%GetStringCaps(subkey)
       if (subkey /= 'FILEIN') then
         call store_error('OBS8 KEYWORD MUST BE FOLLOWED BY '// &
@@ -1357,7 +1373,7 @@ contains
       this%obs%inUnitObs = inobs
     case default
       parsed = .false.
-    end select
+    end select sel_opt
 
   end function parse_option
 
@@ -2040,11 +2056,12 @@ contains
 
   !> @brief Should interface model be used for this exchange
   !<
-  function use_interface_model(this) result(useIM)
+  function use_interface_model(this) result(use_im)
     class(GwfExchangeType) :: this !<  GwfExchangeType
-    logical(LGP) :: useIM !< true when interface model should be used
+    logical(LGP) :: use_im !< true when interface model should be used
 
-    useIM = (this%ixt3d > 0)
+    use_im = this%DisConnExchangeType%use_interface_model()
+    use_im = use_im .or. (this%ixt3d > 0)
 
   end function
 

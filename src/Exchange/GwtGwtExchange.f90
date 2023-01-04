@@ -1246,17 +1246,13 @@ contains
   !! model flux calculation, then logic should be added here to
   !! set the return accordingly.
   !<
-  function use_interface_model(this) result(useIM)
+  function use_interface_model(this) result(use_im)
     class(GwtExchangeType) :: this !<  GwtExchangeType
-    logical(LGP) :: useIM !< true when interface model should be used
+    logical(LGP) :: use_im !< true when interface model should be used
 
-    ! if support is added in the future for simpler flow calcuation,
-    ! then set useIM as follows
-    !useIM = (this%ixt3d > 0)
-
-    ! For now set useIM to .true. since the interface model approach
+    ! For now set use_im to .true. since the interface model approach
     ! must currently be used for any GWT-GWT exchange.
-    useIM = .true.
+    use_im = .true.
 
   end function
 

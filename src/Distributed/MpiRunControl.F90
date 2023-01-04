@@ -39,7 +39,7 @@ contains
     class(MpiRunControlType) :: this
     ! local
     integer :: ierr
-    character(len=*), parameter :: petsc_db_file = '/home/russcher/.petscrc'
+    character(len=*), parameter :: petsc_db_file = '../../.petscrc'
     logical(LGP) :: petsc_db_exists, wait_dbg
     class(MpiWorldType), pointer :: mpi_world
     ! if PETSc we need their initialize
@@ -47,10 +47,12 @@ contains
 #if defined(__WITH_PETSC__)
     inquire(file=petsc_db_file, exist=petsc_db_exists)
     if (.not. petsc_db_exists) then
-      write(*,*) 'No petsc database file found: ', petsc_db_file
-      call ustop()
+      write(*,*) 'Initialize PETSc'
+      call PetscInitialize(ierr)
+    else
+      write(*,*) 'Initialize PETSc with database ', petsc_db_file
+      call PetscInitialize(petsc_db_file, ierr)
     end if
-    call PetscInitialize(petsc_db_file, ierr)
     MF6_COMM_WORLD = PETSC_COMM_WORLD
     CHKERRQ(ierr)
     call PetscOptionsHasName(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, &

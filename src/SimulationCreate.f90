@@ -420,7 +420,7 @@ contains
         case ('GWF6-GWT6')
           call gwfgwt_cr(fname, exg_id, m1_id, m2_id)
         case ('GWT6-GWT6')
-          write(exg_name, '(a,i0)') 'GWF-GWF_', exg_id
+          write(exg_name, '(a,i0)') 'GWT-GWT_', exg_id
           call gwtexchange_create(fname, exg_name, exg_id, m1_id, m2_id)
           call add_virtual_gwt_exchange(exg_name, exg_id, m1_id, m2_id)
         case default

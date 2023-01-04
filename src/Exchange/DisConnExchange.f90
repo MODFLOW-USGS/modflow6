@@ -27,6 +27,8 @@ module DisConnExchangeModule
     class(NumericalModelType), pointer :: model2 => null() !< model 2    
     class(VirtualModelType), pointer :: v_model1 => null() !< virtual model 1
     class(VirtualModelType), pointer :: v_model2 => null() !< virtual model 2
+    logical(LGP) :: is_datacopy !< when true, this exchange is just a data copy on another process and
+                                !! not responsible for controlling movers, observations, ...
 
     integer(I4B), pointer :: nexg => null() !< number of exchanges
     integer(I4B), dimension(:), pointer, contiguous :: nodem1 => null() !< node numbers in model 1
@@ -380,12 +382,13 @@ contains
   !> @brief Should interface model be used to handle these
   !! exchanges, to be overridden for inheriting types
   !<
-  function use_interface_model(this) result(useIM)
+  function use_interface_model(this) result(use_im)
     class(DisConnExchangeType) :: this !< instance of exchange object
-    logical(LGP) :: useIM !< flag whether interface model should be used
-                                     !! for this exchange instead
+    logical(LGP) :: use_im !< flag whether interface model should be used
+                          !! for this exchange instead    
 
-    useIM = .false.
+    ! use im when one of the models is not local
+    use_im = .not. (this%v_model1%is_local .and. this%v_model2%is_local)
 
   end function use_interface_model
 
