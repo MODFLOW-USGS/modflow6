@@ -3,22 +3,7 @@ import sys
 
 import pytest
 
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
+from common_regression import get_mf6_ftypes, get_namefiles
 from simulation import Simulation
 
 exdir = os.path.join("..", "tmp_simulations")
@@ -87,10 +72,10 @@ def get_mf6_models():
         found_dirs = []
         for d in dirs:
             pth = os.path.join(exdir, d)
-            namefiles = pymake.get_namefiles(pth)
+            namefiles = get_namefiles(pth)
             ftypes = []
             for namefile in namefiles:
-                ftype = pymake.autotest.get_mf6_ftypes(
+                ftype = get_mf6_ftypes(
                     namefile, select_packages
                 )
                 if ftype not in ftypes:

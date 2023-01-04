@@ -152,22 +152,17 @@ We also provide make files which can be used to build MODFLOW 6 with [GNU Make](
 For the build instructions we refer to the [GNU Make Manual](https://www.gnu.org/software/make/manual/).
 
 
-## Running Tests Locally
+## Running Tests
 
-For complete testing as done on the CI, clone your fork of the modflow6-testmodels repository (via either ssh or https, ssh shown here):
+Tests should pass locally before a PR is opened on Github. All the tests are executed by the CI system and a pull request can only be merged with passing tests.
 
-```shell
-git clone git@github.com:<github username>/modflow6-testmodels.git
-```
-* The modflow6-testmodels repository must be cloned in the same directory that contains the modflow6 repository.
-
-To run tests first change directory to the `autotest` folder:
+Tests must be run from the `autotest` folder:
 
 ```shell
 cd modflow6/autotest
 ```
 
-Update your flopy installation by executing
+FloPy plugins must first be updated:
 
 ```shell
 python update_flopy.py
@@ -186,24 +181,79 @@ Unless you built and installed MODFLOW 6 binaries with meson, you will also have
 pytest -v build_exes.py
 ```
 
-Then the tests can be run with commands similar to these:
+Then the tests can be run with `pytest` as usual, for instance:
 
 ```shell
-# Build MODFLOW 6 tests
+# Run all tests with verbose output
 pytest -v
-
-# Build MODFLOW 6 example tests
-pytest -v test_z01_testmodels_mf6.py
-
-# Build MODFLOW 5 to 6 converter example tests
-pytest -v test_z02_testmodels_mf5to6.py
 ```
 
-The tests can be run in parallel by adding the flag "-n" which accepts an argument for the specific number of processes to use or "auto" to let pytest decide:
+Tests can be run in parallel with the `-n` option, which accepts an integer argument for the number of processes to use. If the value `auto` is provided, `pytest-xdist` will use as many processes as your machine has available CPUs:
 
 ```shell
 pytest -v -n auto
 ```
 
-You should execute the test suites before submitting a PR to Github.
-All the tests are executed on our Continuous Integration infrastructure and a pull request can only be merged once all tests pass.
+### External model repos
+
+While many tests create models programmatically, the full suite tests MODFLOW 6 against example models stored in the following external repositories:
+
+- [`MODFLOW-USGS/modflow6-testmodels`](https://github.com/MODFLOW-USGS/modflow6-testmodels)
+- [`MODFLOW-USGS/modflow6-largetestmodels`](https://github.com/MODFLOW-USGS/modflow6-largetestmodels)
+- [`MODFLOW-USGS/modflow6-examples`](https://github.com/MODFLOW-USGS/modflow6-examples)
+
+#### Installing external repos
+
+By default, the tests expect these repositories side-by-side with (i.e. in the same parent directory as) the `modflow6` repository. If the repos are somewhere else, you can set the `REPOS_PATH` environment variable to point to their parent directory.
+
+**Note:** a convenient way to persist environment variables needed for tests is to store them in a `.env` file in the `autotest` folder. Each variable should be defined on a separate line, with format `KEY=VALUE`. The `pytest-dotenv` plugin will then automatically load any variables found in this file into the test process' environment.
+
+##### Test models
+
+The test model repos can simply be cloned &mdash; ideally, into the parent directory of the `modflow6` repository, so that repositories live side-by-side:
+
+```shell
+git clone MODFLOW-USGS/modflow6-testmodels
+git clone MODFLOW-USGS/modflow6-largetestmodels
+```
+
+##### Example models
+
+First clone the example models repo:
+
+```shell
+git clone MODFLOW-USGS/modflow6-examples
+```
+
+The example models require some setup after cloning. Some extra Python dependencies are required to build the examples: 
+
+```shell
+cd modflow6-examples/etc
+pip install -r requirements.pip.txt
+```
+
+Then, still from the `etc` folder, run:
+
+```shell
+python ci_build_files.py
+```
+
+This will build the examples for subsequent use by the tests.
+
+#### Running external model tests
+
+External model tests are located in their own files:
+
+```shell
+# Run MODFLOW 6 test models
+pytest -v -n auto test_z01_testmodels_mf6.py
+
+# Run MODFLOW 5 to 6 conversion test models
+pytest -v -n auto test_z02_testmodels_mf5to6.py
+
+# Run example models
+pytest -v -n auto test_z03_examples.py
+
+# Run large test models
+pytest -v -n auto test_z03_largetestmodels.py
+```

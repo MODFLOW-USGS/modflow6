@@ -18,9 +18,9 @@ except:
     msg += " pip install flopy"
     raise Exception(msg)
 
+from conftest import should_compare
 from framework import testing_framework
 from simulation import Simulation
-from targets import get_mf6_version
 
 ex = ["gwf_henrynr01"]
 exdirs = []
@@ -245,24 +245,12 @@ def build_model(idx, dir):
     return sim, None
 
 
-def set_make_comparison():
-    version = get_mf6_version()
-    print(f"MODFLOW version='{version}'")
-    version = get_mf6_version(version="mf6-regression")
-    print(f"MODFLOW regression version='{version}'")
-    if version in ("6.2.1",):
-        make_comparison = False
-    else:
-        make_comparison = True
-    return make_comparison
-
-
 # - No need to change any code below
 @pytest.mark.parametrize(
     "idx, dir",
     list(enumerate(exdirs)),
 )
-def test_mf6model(idx, dir):
+def test_mf6model(idx, dir, targets):
     # initialize testing framework
     test = testing_framework()
 
@@ -276,33 +264,6 @@ def test_mf6model(idx, dir):
             idxsim=idx,
             mf6_regression=True,
             cmp_verbose=False,
-            make_comparison=set_make_comparison(),
+            make_comparison=should_compare("gwf_henry_nr", comparisons={"gwf_henry_nr": ("6.2.1",)}, executables=targets),
         )
     )
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test model
-    for idx, on_dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(
-            on_dir,
-            idxsim=idx,
-            mf6_regression=True,
-            cmp_verbose=True,
-            make_comparison=set_make_comparison(),
-        )
-        test.run_mf6(sim)
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()

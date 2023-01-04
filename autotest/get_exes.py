@@ -1,119 +1,93 @@
-# Get executables
+import argparse
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from warnings import warn
 
-import os
-import shutil
-
+import flopy
+import pytest
 from flaky import flaky
-import pymake
+from modflow_devtools.build import meson_build
+from modflow_devtools.download import download_and_unzip, get_release
+from modflow_devtools.misc import get_ostag
 
-from build_exes import meson_build
-from framework import running_on_CI
+from conftest import project_root_path
 
-if running_on_CI():
-    print("running on CI environment")
-    os.environ["PYMAKE_DOUBLE"] = "1"
-
-# path to rebuilt executables for previous versions of MODFLOW
-rebuilt_bindir = os.path.join("..", "bin", "rebuilt")
-
-if not os.path.exists(rebuilt_bindir):
-    os.makedirs(rebuilt_bindir)
-
-# paths to downloaded for previous versions of MODFLOW
-downloaded_bindir = os.path.join("..", "bin", "downloaded")
-
-if not os.path.exists(downloaded_bindir):
-    os.makedirs(downloaded_bindir)
+repository = "MODFLOW-USGS/modflow6"
+top_bin_path = project_root_path / "bin"
 
 
-mfexe_pth = "temp/mfexes"
-
-# use the line below to set fortran compiler using environmental variables
-# os.environ["FC"] = "gfortran"
-
-# some flags to check for errors in the code
-# add -Werror for compilation to terminate if errors are found
-strict_flags = (
-    "-Wtabs -Wline-truncation -Wunused-label "
-    "-Wunused-variable -pedantic -std=f2008 "
-    "-Wcharacter-truncation"
-)
+def get_asset_name(asset: dict) -> str:
+    ostag = get_ostag()
+    name = asset["name"]
+    if "win" in ostag:
+        return name
+    else:
+        prefix = name.rpartition('_')[0]
+        prefix += f"_{ostag}"
+        return f"{prefix}.zip"
 
 
-def get_compiler_envvar(fc):
-    env_var = os.environ.get("FC")
-    if env_var is not None:
-        if env_var != fc:
-            fc = env_var
-    return fc
+@pytest.fixture
+def rebuilt_bin_path() -> Path:
+    return top_bin_path / "rebuilt"
 
 
-def create_dir(pth):
-    # create pth directory
-    print(f"creating... {os.path.abspath(pth)}")
-    os.makedirs(pth, exist_ok=True)
-
-    msg = f"could not create... {os.path.abspath(pth)}"
-    assert os.path.exists(pth), msg
-
-
-def rebuild_mf6_release():
-    target = "mf6"
-    download_pth = os.path.join("temp")
-    target_dict = pymake.usgs_program_data.get_target(target)
-
-    pymake.download_and_unzip(
-        target_dict["url"],
-        pth=download_pth,
-        verbose=True,
-    )
-
-    # update IDEVELOP MODE in the release
-    srcpth = os.path.join(
-        download_pth, target_dict["dirname"], target_dict["srcdir"]
-    )
-    fpth = os.path.join(srcpth, "Utilities", "version.f90")
-    with open(fpth) as f:
-        lines = f.read().splitlines()
-    assert len(lines) > 0, f"could not update {srcpth}"
-
-    f = open(fpth, "w")
-    for line in lines:
-        tag = "IDEVELOPMODE = 0"
-        if tag in line:
-            line = line.replace(tag, "IDEVELOPMODE = 1")
-        f.write(f"{line}\n")
-    f.close()
-
-    # build release source files with Meson
-    root_path = os.path.join(download_pth, target_dict["dirname"])
-    meson_build(dir_path=root_path, libdir=os.path.abspath(rebuilt_bindir))
-
-
-def test_create_dirs():
-    pths = [os.path.join("..", "bin"), os.path.join("temp")]
-
-    for pth in pths:
-        create_dir(pth)
+@pytest.fixture
+def downloaded_bin_path() -> Path:
+    return top_bin_path / "downloaded"
 
 
 @flaky(max_runs=3)
-def test_getmfexes(verify=True):
-    pymake.getmfexes(mfexe_pth, verify=verify)
-    for target in os.listdir(mfexe_pth):
-        srcpth = os.path.join(mfexe_pth, target)
-        if os.path.isfile(srcpth):
-            dstpth = os.path.join(downloaded_bindir, target)
-            print(f"copying {srcpth} -> {dstpth}")
-            shutil.copy(srcpth, dstpth)
+def test_rebuild_release(rebuilt_bin_path: Path):
+    print(f"Rebuilding and installing last release to: {rebuilt_bin_path}")
+    release = get_release(repository)
+    assets = release["assets"]
+    ostag = get_ostag()
+    asset = next(iter([a for a in assets if a["name"] == get_asset_name(a)]), None)
+    if not asset:
+        warn(f"Couldn't find asset for OS {get_ostag()}, available assets:\n{assets}")
+
+    with TemporaryDirectory() as td:
+        download_path = Path(td)
+        download_and_unzip(
+            asset["browser_download_url"],
+            path=download_path,
+            verbose=True,
+        )
+
+        # update IDEVELOPMODE
+        source_files_path = download_path / asset["name"].replace(".zip", "") / "src"
+        version_file_path = source_files_path / "Utilities" / "version.f90"
+        with open(version_file_path) as f:
+            lines = f.read().splitlines()
+        assert len(lines) > 0, f"File is empty: {source_files_path}"
+        with open(version_file_path, "w") as f:
+            for line in lines:
+                tag = "IDEVELOPMODE = 0"
+                if tag in line:
+                    line = line.replace(tag, "IDEVELOPMODE = 1")
+                f.write(f"{line}\n")
+
+        # rebuild with Meson
+        meson_build(
+            project_path=source_files_path.parent,
+            build_path=download_path / "builddir",
+            bin_path=rebuilt_bin_path
+        )
 
 
 @flaky(max_runs=3)
-def test_rebuild_mf6_release():
-    rebuild_mf6_release()
+def test_get_executables(downloaded_bin_path: Path):
+    print(f"Installing MODFLOW-related executables to: {downloaded_bin_path}")
+    downloaded_bin_path.mkdir(exist_ok=True, parents=True)
+    flopy.utils.get_modflow(str(downloaded_bin_path))
 
 
 if __name__ == "__main__":
-    test_create_dirs()
-    test_getmfexes(verify=False)
-    test_rebuild_mf6_release()
+    parser = argparse.ArgumentParser("Get executables needed for MODFLOW 6 testing")
+    parser.add_argument("-p", "--path", help="path to top-level bin directory")
+    args = parser.parse_args()
+    bin_path = Path(args.path).resolve() if args.path else top_bin_path
+
+    test_get_executables(bin_path / "downloaded")
+    test_rebuild_release(bin_path / "rebuilt")
