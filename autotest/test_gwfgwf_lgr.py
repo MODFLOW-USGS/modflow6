@@ -294,6 +294,7 @@ def eval_heads(sim):
     "idx, exdir",
     list(enumerate(exdirs)),
 )
+@pytest.mark.developmode
 def test_mf6model(idx, exdir):
     # initialize testing framework
     test = testing_framework()

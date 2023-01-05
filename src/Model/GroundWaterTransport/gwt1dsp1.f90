@@ -7,6 +7,7 @@ module GwtDspModule
   use TspFmiModule, only: TspFmiType
   use Xt3dModule, only: Xt3dType, xt3d_cr
   use GwtDspOptionsModule, only: GwtDspOptionsType
+  use MatrixModule
 
   implicit none
   private
@@ -114,14 +115,6 @@ contains
       if (dspobj%iout > 0) then
         write (dspobj%iout, fmtdsp) dspobj%inunit
       end if
-      !
-      ! -- Initialize block parser
-      call dspobj%parser%Initialize(dspobj%inunit, dspobj%iout)
-      !
-      ! -- Use the input data model routines to load the input data
-      !    into memory
-      call input_load(dspobj%parser, 'DSP6', 'GWT', 'DSP', dspobj%name_model, &
-                      'DSP', [character(len=LENPACKAGETYPE) ::], iout)
     end if
     !
     ! -- Return
@@ -203,7 +196,7 @@ contains
     return
   end subroutine dsp_ac
 
-  subroutine dsp_mc(this, moffset, iasln, jasln)
+  subroutine dsp_mc(this, moffset, matrix_sln)
 ! ******************************************************************************
 ! dsp_mc -- Map connections and construct iax, jax, and idxglox
 ! ******************************************************************************
@@ -215,13 +208,12 @@ contains
     ! -- dummy
     class(GwtDspType) :: this
     integer(I4B), intent(in) :: moffset
-    integer(I4B), dimension(:), intent(in) :: iasln
-    integer(I4B), dimension(:), intent(in) :: jasln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
 ! ------------------------------------------------------------------------------
     !
     ! -- Call xt3d map connections
-    if (this%ixt3d > 0) call this%xt3d%xt3d_mc(moffset, iasln, jasln)
+    if (this%ixt3d > 0) call this%xt3d%xt3d_mc(moffset, matrix_sln)
     !
     ! -- Return
     return
@@ -296,7 +288,7 @@ contains
     return
   end subroutine dsp_ad
 
-  subroutine dsp_fc(this, kiter, nodes, nja, njasln, amatsln, idxglo, rhs, cnew)
+  subroutine dsp_fc(this, kiter, nodes, nja, matrix_sln, idxglo, rhs, cnew)
 ! ******************************************************************************
 ! dsp_fc -- Calculate coefficients and fill amat and rhs
 ! ******************************************************************************
@@ -309,8 +301,7 @@ contains
     integer(I4B) :: kiter
     integer(I4B), intent(in) :: nodes
     integer(I4B), intent(in) :: nja
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in), dimension(nja) :: idxglo
     real(DP), intent(inout), dimension(nodes) :: rhs
     real(DP), intent(inout), dimension(nodes) :: cnew
@@ -320,7 +311,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     if (this%ixt3d > 0) then
-      call this%xt3d%xt3d_fc(kiter, njasln, amatsln, idxglo, rhs, cnew)
+      call this%xt3d%xt3d_fc(kiter, matrix_sln, idxglo, rhs, cnew)
     else
       do n = 1, nodes
         if (this%fmi%ibdgwfsat0(n) == 0) cycle
@@ -334,14 +325,14 @@ contains
           dnm = this%dispcoef(isympos)
           !
           ! -- Contribution to row n
-          amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + dnm
-          amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) - dnm
+          call matrix_sln%add_value_pos(idxglo(ipos), dnm)
+          call matrix_sln%add_value_pos(idxglo(idiag), -dnm)
           !
           ! -- Contribution to row m
           idiagm = this%dis%con%ia(m)
           isymcon = this%dis%con%isym(ipos)
-          amatsln(idxglo(isymcon)) = amatsln(idxglo(isymcon)) + dnm
-          amatsln(idxglo(idiagm)) = amatsln(idxglo(idiagm)) - dnm
+          call matrix_sln%add_value_pos(idxglo(isymcon), dnm)
+          call matrix_sln%add_value_pos(idxglo(idiagm), -dnm)
         end do
       end do
     end if

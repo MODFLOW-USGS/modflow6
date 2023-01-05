@@ -7,6 +7,7 @@ module GwfHfbModule
   use NumericalPackageModule, only: NumericalPackageType
   use BlockParserModule, only: BlockParserType
   use BaseDisModule, only: DisBaseType
+  use MatrixModule
 
   implicit none
 
@@ -223,7 +224,7 @@ contains
     return
   end subroutine hfb_rp
 
-  subroutine hfb_fc(this, kiter, njasln, amat, idxglo, rhs, hnew)
+  subroutine hfb_fc(this, kiter, matrix_sln, idxglo, rhs, hnew)
 ! ******************************************************************************
 ! hfb_fc -- Fill amatsln for the following conditions:
 !   1.  Not Newton, and
@@ -239,8 +240,7 @@ contains
     ! -- dummy
     class(GwfHfbType) :: this
     integer(I4B) :: kiter
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amat
+    class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in), dimension(:) :: idxglo
     real(DP), intent(inout), dimension(:) :: rhs
     real(DP), intent(inout), dimension(:) :: hnew
@@ -306,7 +306,7 @@ contains
           condhfb = this%hydchr(ihfb)
         end if
         ! -- Make hfb corrections for xt3d
-        call this%xt3d%xt3d_fhfb(kiter, nodes, nja, njasln, amat, idxglo, &
+        call this%xt3d%xt3d_fhfb(kiter, nodes, nja, matrix_sln, idxglo, &
                                  rhs, hnew, n, m, condhfb)
       end do
       !
@@ -316,7 +316,7 @@ contains
       if (this%inewton == 0) then
         do ihfb = 1, this%nhfb
           ipos = this%idxloc(ihfb)
-          aterm = amat(idxglo(ipos))
+          aterm = matrix_sln%get_value_pos(idxglo(ipos))
           n = this%noden(ihfb)
           m = this%nodem(ihfb)
           if (this%ibound(n) == 0 .or. this%ibound(m) == 0) cycle
@@ -358,14 +358,14 @@ contains
             !
             ! -- Fill row n diag and off diag
             idiag = this%ia(n)
-            amat(idxglo(idiag)) = amat(idxglo(idiag)) + aterm - cond
-            amat(idxglo(ipos)) = cond
+            call matrix_sln%add_value_pos(idxglo(idiag), aterm - cond)
+            call matrix_sln%set_value_pos(idxglo(ipos), cond)
             !
             ! -- Fill row m diag and off diag
             isymcon = this%isym(ipos)
             idiag = this%ia(m)
-            amat(idxglo(idiag)) = amat(idxglo(idiag)) + aterm - cond
-            amat(idxglo(isymcon)) = cond
+            call matrix_sln%add_value_pos(idxglo(idiag), aterm - cond)
+            call matrix_sln%set_value_pos(idxglo(isymcon), cond)
             !
           end if
         end do

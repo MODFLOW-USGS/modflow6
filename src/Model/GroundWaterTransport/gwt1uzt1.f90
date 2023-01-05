@@ -35,7 +35,7 @@ module GwtUztModule
   use ObserveModule, only: ObserveType
   use TspAptModule, only: TspAptType, apt_process_obsID, &
                           apt_process_obsID12
-
+  use MatrixModule
   implicit none
 
   public uzt_create
@@ -249,7 +249,7 @@ contains
     return
   end subroutine find_uzt_package
 
-  subroutine uzt_fc_expanded(this, rhs, ia, idxglo, amatsln)
+  subroutine uzt_fc_expanded(this, rhs, ia, idxglo, matrix_sln)
 ! ******************************************************************************
 ! uzt_fc_expanded -- this will be called from TspAptType%apt_fc_expanded()
 !   in order to add matrix terms specifically for this package
@@ -263,7 +263,7 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     integer(I4B) :: j, n1, n2
     integer(I4B) :: iloc
@@ -279,7 +279,7 @@ contains
         call this%uzt_infl_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
-        amatsln(iposd) = amatsln(iposd) + hcofval
+        call matrix_sln%add_value_pos(iposd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
@@ -290,7 +290,7 @@ contains
         call this%uzt_rinf_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
-        amatsln(iposd) = amatsln(iposd) + hcofval
+        call matrix_sln%add_value_pos(iposd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
@@ -301,7 +301,7 @@ contains
         call this%uzt_uzet_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
-        amatsln(iposd) = amatsln(iposd) + hcofval
+        call matrix_sln%add_value_pos(iposd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
@@ -312,7 +312,7 @@ contains
         call this%uzt_ritm_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
-        amatsln(iposd) = amatsln(iposd) + hcofval
+        call matrix_sln%add_value_pos(iposd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if

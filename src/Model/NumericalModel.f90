@@ -7,6 +7,7 @@ module NumericalModelModule
   use SparseModule, only: sparsematrix
   use TimeArraySeriesManagerModule, only: TimeArraySeriesManagerType
   use ListModule, only: ListType
+  use MatrixModule
 
   implicit none
   private
@@ -72,6 +73,7 @@ module NumericalModelModule
     procedure :: get_mcellid
     procedure :: get_mnodeu
     procedure :: get_iasym
+    procedure :: load_input_context
   end type NumericalModelType
 
 contains
@@ -87,10 +89,9 @@ contains
     type(sparsematrix), intent(inout) :: sparse
   end subroutine model_ac
 
-  subroutine model_mc(this, iasln, jasln)
+  subroutine model_mc(this, matrix_sln)
     class(NumericalModelType) :: this
-    integer(I4B), dimension(:), intent(in) :: iasln
-    integer(I4B), dimension(:), intent(in) :: jasln
+    class(MatrixBaseType), pointer :: matrix_sln
   end subroutine model_mc
 
   subroutine model_ar(this)
@@ -110,11 +111,10 @@ contains
     integer(I4B), intent(in) :: kiter
   end subroutine model_cf
 
-  subroutine model_fc(this, kiter, amatsln, njasln, inwtflag)
+  subroutine model_fc(this, kiter, matrix_sln, inwtflag)
     class(NumericalModelType) :: this
     integer(I4B), intent(in) :: kiter
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in) :: inwtflag
   end subroutine model_fc
 
@@ -124,26 +124,21 @@ contains
     iptc = 0
   end subroutine model_ptcchk
 
-  subroutine model_ptc(this, kiter, neqsln, njasln, &
-                       ia, ja, x, rhs, amatsln, iptc, ptcf)
+  subroutine model_ptc(this, kiter, neqsln, matrix, x, rhs, iptc, ptcf)
     class(NumericalModelType) :: this
     integer(I4B), intent(in) :: kiter
     integer(I4B), intent(in) :: neqsln
-    integer(I4B), intent(in) :: njasln
-    integer(I4B), dimension(neqsln + 1), intent(in) :: ia
-    integer(I4B), dimension(njasln), intent(in) :: ja
+    class(MatrixBaseType), pointer :: matrix
     real(DP), dimension(neqsln), intent(in) :: x
     real(DP), dimension(neqsln), intent(in) :: rhs
-    real(DP), dimension(njasln), intent(in) :: amatsln
     integer(I4B), intent(inout) :: iptc
     real(DP), intent(inout) :: ptcf
   end subroutine model_ptc
 
-  subroutine model_nr(this, kiter, amatsln, njasln, inwtflag)
+  subroutine model_nr(this, kiter, matrix, inwtflag)
     class(NumericalModelType) :: this
     integer(I4B), intent(in) :: kiter
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix
     integer(I4B), intent(in) :: inwtflag
   end subroutine model_nr
 
@@ -444,5 +439,40 @@ contains
     !
     return
   end function GetNumericalModelFromList
+
+  !> @brief Load input context for supported package
+  !<
+  subroutine load_input_context(this, filtyp, modelname, pkgname, inunit, iout, &
+                                ipaknum)
+    ! -- modules
+    use IdmMf6FileLoaderModule, only: input_load
+    ! -- dummy
+    class(NumericalModelType) :: this
+    character(len=*), intent(in) :: filtyp
+    character(len=*), intent(in) :: modelname
+    character(len=*), intent(in) :: pkgname
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: iout
+    integer(I4B), optional, intent(in) :: ipaknum
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- only load if there is a file to read
+    if (inunit <= 0) return
+    !
+    ! -- Load model package input to input context
+    select case (filtyp)
+    case ('DIS6')
+      call input_load('DIS6', 'GWF', 'DIS', modelname, pkgname, inunit, iout)
+    case ('DISU6')
+      call input_load('DISU6', 'GWF', 'DISU', modelname, pkgname, inunit, iout)
+    case ('DISV6')
+      call input_load('DISV6', 'GWF', 'DISV', modelname, pkgname, inunit, iout)
+    case default
+    end select
+    !
+    ! -- return
+    return
+  end subroutine load_input_context
 
 end module NumericalModelModule

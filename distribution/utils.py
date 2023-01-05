@@ -1,3 +1,4 @@
+import os
 import platform
 import shutil
 import subprocess
@@ -14,6 +15,33 @@ _project_root_path = Path(__file__).parent.parent
 
 def get_project_root_path():
     return _project_root_path
+
+
+def get_branch():
+    branch = None
+    try:
+        # determine current branch
+        b = subprocess.Popen(
+            ("git", "status"), stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+        ).communicate()[0]
+        if isinstance(b, bytes):
+            b = b.decode("utf-8")
+
+        # determine current branch
+        for line in b.splitlines():
+            if "On branch" in line:
+                branch = line.replace("On branch ", "").rstrip()
+        if branch is None:
+            raise
+    except:
+        branch = os.environ.get("GITHUB_REF_NAME", None)
+
+    if branch is None:
+        raise ValueError(f"Couldn't detect branch")
+    else:
+        print(f"Detected branch: {branch}")
+
+    return branch
 
 
 def get_modified_time(path: Path) -> float:

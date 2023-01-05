@@ -274,13 +274,17 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt => null()
     logical(LGP) :: found
+    logical(LGP) :: terminate
     ! -- code
     !
     ! -- initialize isize to a value to communicate failure
     isize = -1
     !
+    ! -- don't exit program if variable not found
+    terminate = .false.
+    !
     ! -- get the entry from the memory manager
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorylist(name, mem_path, mt, found, terminate)
     !
     ! -- set isize
     if (found) then
@@ -1233,6 +1237,7 @@ contains
       deallocate (astrtemp)
       !
       ! -- reset memory manager values
+      mt%acharstr1d => acharstr1d
       mt%element_size = ilen
       mt%isize = isize
       mt%nrealloc = mt%nrealloc + 1

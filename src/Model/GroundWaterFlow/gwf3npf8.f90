@@ -13,12 +13,12 @@ module GwfNpfModule
   use GwfIcModule, only: GwfIcType
   use GwfVscModule, only: GwfVscType
   use Xt3dModule, only: Xt3dType
-  use BlockParserModule, only: BlockParserType
   use InputOutputModule, only: GetUnit, openfile
   use TvkModule, only: TvkType, tvk_cr
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, &
                                  mem_deallocate, mem_setptr, &
                                  mem_reassignptr
+  use MatrixModule
 
   implicit none
 
@@ -187,14 +187,6 @@ contains
       !
       ! -- Print a message identifying the node property flow package.
       write (iout, fmtheader) inunit
-      !
-      ! -- Initialize block parser and read options
-      call npfobj%parser%Initialize(inunit, iout)
-      !
-      ! -- Use the input data model routines to load the input data
-      !    into memory
-      call input_load(npfobj%parser, 'NPF6', 'GWF', 'NPF', npfobj%name_model, &
-                      'NPF', [character(len=LENPACKAGETYPE) :: 'TVK6'], iout)
     end if
     !
     ! -- Return
@@ -294,7 +286,7 @@ contains
     return
   end subroutine npf_ac
 
-  subroutine npf_mc(this, moffset, iasln, jasln)
+  subroutine npf_mc(this, moffset, matrix_sln)
 ! ******************************************************************************
 ! npf_mc -- Map connections and construct iax, jax, and idxglox
 ! ******************************************************************************
@@ -305,12 +297,11 @@ contains
     ! -- dummy
     class(GwfNpftype) :: this
     integer(I4B), intent(in) :: moffset
-    integer(I4B), dimension(:), intent(in) :: iasln
-    integer(I4B), dimension(:), intent(in) :: jasln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    if (this%ixt3d /= 0) call this%xt3d%xt3d_mc(moffset, iasln, jasln)
+    if (this%ixt3d /= 0) call this%xt3d%xt3d_mc(moffset, matrix_sln)
     !
     ! -- Return
     return
@@ -526,7 +517,7 @@ contains
     return
   end subroutine npf_cf
 
-  subroutine npf_fc(this, kiter, njasln, amat, idxglo, rhs, hnew)
+  subroutine npf_fc(this, kiter, matrix_sln, idxglo, rhs, hnew)
 ! ******************************************************************************
 ! npf_fc -- Formulate
 ! ******************************************************************************
@@ -538,8 +529,7 @@ contains
     ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B) :: kiter
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amat
+    class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in), dimension(:) :: idxglo
     real(DP), intent(inout), dimension(:) :: rhs
     real(DP), intent(inout), dimension(:) :: hnew
@@ -553,7 +543,7 @@ contains
     ! -- Calculate conductance and put into amat
     !
     if (this%ixt3d /= 0) then
-      call this%xt3d%xt3d_fc(kiter, njasln, amat, idxglo, rhs, hnew)
+      call this%xt3d%xt3d_fc(kiter, matrix_sln, idxglo, rhs, hnew)
     else
       !
       do n = 1, this%dis%nodes
@@ -591,11 +581,11 @@ contains
                   ! -- Fill row n
                   idiag = this%dis%con%ia(n)
                   rhs(n) = rhs(n) - cond * this%dis%bot(n)
-                  amat(idxglo(idiag)) = amat(idxglo(idiag)) - cond
+                  call matrix_sln%add_value_pos(idxglo(idiag), -cond)
                   !
                   ! -- Fill row m
                   isymcon = this%dis%con%isym(ii)
-                  amat(idxglo(isymcon)) = amat(idxglo(isymcon)) + cond
+                  call matrix_sln%add_value_pos(idxglo(isymcon), cond)
                   rhs(m) = rhs(m) + cond * this%dis%bot(n)
                   !
                   ! -- cycle the connection loop
@@ -624,14 +614,14 @@ contains
           !
           ! -- Fill row n
           idiag = this%dis%con%ia(n)
-          amat(idxglo(ii)) = amat(idxglo(ii)) + cond
-          amat(idxglo(idiag)) = amat(idxglo(idiag)) - cond
+          call matrix_sln%add_value_pos(idxglo(ii), cond)
+          call matrix_sln%add_value_pos(idxglo(idiag), -cond)
           !
           ! -- Fill row m
           isymcon = this%dis%con%isym(ii)
           idiagm = this%dis%con%ia(m)
-          amat(idxglo(isymcon)) = amat(idxglo(isymcon)) + cond
-          amat(idxglo(idiagm)) = amat(idxglo(idiagm)) - cond
+          call matrix_sln%add_value_pos(idxglo(isymcon), cond)
+          call matrix_sln%add_value_pos(idxglo(idiagm), -cond)
         end do
       end do
       !
@@ -641,7 +631,7 @@ contains
     return
   end subroutine npf_fc
 
-  subroutine npf_fn(this, kiter, njasln, amat, idxglo, rhs, hnew)
+  subroutine npf_fn(this, kiter, matrix_sln, idxglo, rhs, hnew)
 ! ******************************************************************************
 ! npf_fn -- Fill newton terms
 ! ******************************************************************************
@@ -651,8 +641,7 @@ contains
     ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B) :: kiter
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amat
+    class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in), dimension(:) :: idxglo
     real(DP), intent(inout), dimension(:) :: rhs
     real(DP), intent(inout), dimension(:) :: hnew
@@ -680,7 +669,7 @@ contains
     nodes = this%dis%nodes
     nja = this%dis%con%nja
     if (this%ixt3d /= 0) then
-      call this%xt3d%xt3d_fn(kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+      call this%xt3d%xt3d_fn(kiter, nodes, nja, matrix_sln, idxglo, rhs, hnew)
     else
       !
       do n = 1, nodes
@@ -730,7 +719,7 @@ contains
             ! compute additional term
             consterm = -cond * (hnew(iups) - hnew(idn)) !needs to use hwadi instead of hnew(idn)
             !filledterm = cond
-            filledterm = amat(idxglo(ii))
+            filledterm = matrix_sln%get_value_pos(idxglo(ii))
             derv = sQuadraticSaturationDerivative(topup, botup, hnew(iups), &
                                                   this%satomega, this%satmin)
             idiagm = this%dis%con%ia(m)
@@ -742,16 +731,18 @@ contains
               rhs(n) = rhs(n) + term * hnew(n) !+ amat(idxglo(isymcon)) * (dwadi * hds - hds) !need to add dwadi
               rhs(m) = rhs(m) - term * hnew(n) !- amat(idxglo(isymcon)) * (dwadi * hds - hds) !need to add dwadi
               ! fill in row of n
-              amat(idxglo(idiag)) = amat(idxglo(idiag)) + term
+              call matrix_sln%add_value_pos(idxglo(idiag), term)
               ! fill newton term in off diagonal if active cell
               if (this%ibound(n) > 0) then
-                amat(idxglo(ii)) = amat(idxglo(ii)) !* dwadi !need to add dwadi
+                filledterm = matrix_sln%get_value_pos(idxglo(ii))
+                call matrix_sln%set_value_pos(idxglo(ii), filledterm) !* dwadi !need to add dwadi
               end if
               !fill row of m
-              amat(idxglo(idiagm)) = amat(idxglo(idiagm)) !- filledterm * (dwadi - DONE) !need to add dwadi
+              filledterm = matrix_sln%get_value_pos(idxglo(idiagm))
+              call matrix_sln%set_value_pos(idxglo(idiagm), filledterm) !- filledterm * (dwadi - DONE) !need to add dwadi
               ! fill newton term in off diagonal if active cell
               if (this%ibound(m) > 0) then
-                amat(idxglo(isymcon)) = amat(idxglo(isymcon)) - term
+                call matrix_sln%add_value_pos(idxglo(isymcon), -term)
               end if
               ! fill jacobian for m being the upstream node
             else
@@ -760,16 +751,18 @@ contains
               rhs(n) = rhs(n) + term * hnew(m) !+ amat(idxglo(ii)) * (dwadi * hds - hds) !need to add dwadi
               rhs(m) = rhs(m) - term * hnew(m) !- amat(idxglo(ii)) * (dwadi * hds - hds) !need to add dwadi
               ! fill in row of n
-              amat(idxglo(idiag)) = amat(idxglo(idiag)) !- filledterm * (dwadi - DONE) !need to add dwadi
+              filledterm = matrix_sln%get_value_pos(idxglo(idiag))
+              call matrix_sln%set_value_pos(idxglo(idiag), filledterm) !- filledterm * (dwadi - DONE) !need to add dwadi
               ! fill newton term in off diagonal if active cell
               if (this%ibound(n) > 0) then
-                amat(idxglo(ii)) = amat(idxglo(ii)) + term
+                call matrix_sln%add_value_pos(idxglo(ii), term)
               end if
               !fill row of m
-              amat(idxglo(idiagm)) = amat(idxglo(idiagm)) - term
+              call matrix_sln%add_value_pos(idxglo(idiagm), -term)
               ! fill newton term in off diagonal if active cell
               if (this%ibound(m) > 0) then
-                amat(idxglo(isymcon)) = amat(idxglo(isymcon)) !* dwadi  !need to add dwadi
+                filledterm = matrix_sln%get_value_pos(idxglo(isymcon))
+                call matrix_sln%set_value_pos(idxglo(isymcon), filledterm) !* dwadi  !need to add dwadi
               end if
             end if
           end if
@@ -1579,7 +1572,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: store_error, count_errors
+    use SimModule, only: store_error, count_errors, store_error_unit
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwfNpftype) :: this
@@ -1676,7 +1669,7 @@ contains
     !
     ! -- Terminate if errors
     if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
+      call store_error_unit(this%inunit)
     end if
     !
     ! -- Return
@@ -1817,11 +1810,11 @@ contains
     if (.not. found%wetdry) call mem_reallocate(this%wetdry, 1, 'WETDRY', &
                                                 trim(this%memoryPath))
     if (.not. found%angle1 .and. this%ixt3d == 0) &
-      call mem_reallocate(this%angle1, 1, 'ANGLE1', trim(this%memoryPath))
+      call mem_reallocate(this%angle1, 0, 'ANGLE1', trim(this%memoryPath))
     if (.not. found%angle2 .and. this%ixt3d == 0) &
-      call mem_reallocate(this%angle2, 1, 'ANGLE2', trim(this%memoryPath))
+      call mem_reallocate(this%angle2, 0, 'ANGLE2', trim(this%memoryPath))
     if (.not. found%angle3 .and. this%ixt3d == 0) &
-      call mem_reallocate(this%angle3, 1, 'ANGLE3', trim(this%memoryPath))
+      call mem_reallocate(this%angle3, 0, 'ANGLE3', trim(this%memoryPath))
     !
     ! -- log griddata
     if (this%iout > 0) then
@@ -1840,7 +1833,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH, DPIO180
-    use SimModule, only: store_error, count_errors
+    use SimModule, only: store_error, count_errors, store_error_unit
     ! -- dummy
     class(GwfNpfType) :: this
     ! -- local
@@ -1985,7 +1978,7 @@ contains
     !
     ! -- terminate if data errors
     if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
+      call store_error_unit(this%inunit)
     end if
 
     return
@@ -2003,7 +1996,7 @@ contains
   !<
   subroutine preprocess_input(this)
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error, count_errors
+    use SimModule, only: store_error, count_errors, store_error_unit
     class(GwfNpfType) :: this !< the instance of the NPF package
     ! local
     integer(I4B) :: n, m, ii, nn
@@ -2129,7 +2122,7 @@ contains
       end if
     end do
     if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
+      call store_error_unit(this%inunit)
     end if
     !
     ! -- Calculate condsat, but only if xt3d is not active.  If xt3d is
@@ -2318,7 +2311,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: kstp, kper
-    use SimModule, only: store_error
+    use SimModule, only: store_error, store_error_unit
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwfNpfType) :: this
@@ -2378,7 +2371,7 @@ contains
         call store_error(errmsg)
         write (errmsg, fmttopbot) ttop, bbot
         call store_error(errmsg)
-        call this%parser%StoreErrorUnit()
+        call store_error_unit(this%inunit)
       end if
       !
       ! -- Calculate saturated thickness
@@ -2400,7 +2393,7 @@ contains
           call this%dis%noder_to_string(n, nodestr)
           write (errmsg, fmtni) trim(adjustl(nodestr)), kiter, kstp, kper
           call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
+          call store_error_unit(this%inunit)
         end if
         this%ibound(n) = 0
       end if

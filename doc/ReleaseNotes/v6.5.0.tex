@@ -1,0 +1,62 @@
+% Use this template for starting initializing the release notes
+% after a release has just been made.
+	
+	\item Version mf6.x.x--Month xx, 202x
+	
+	\underline{NEW FUNCTIONALITY}
+	\begin{itemize}
+		\item xxx
+	%	\item xxx
+	%	\item xxx
+	\end{itemize}
+
+	%\underline{EXAMPLES}
+	%\begin{itemize}
+	%	\item xxx
+	%	\item xxx
+	%	\item xxx
+	%\end{itemize}
+
+	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
+	\underline{BASIC FUNCTIONALITY}
+	\begin{itemize}
+		\item When n-point cross-sections are active in SFR, the evaporation calculation uses the variable rwid (see MF6io.pdf) to calculate the total amount of evaporation even though the wetted topwidth is less than rwid.  For example, using a trapezoidal cross-section geometry with an rwid of 10, an rlen of 100, and prescribed evaporation rate of 0.1, the calculated evaporative losses would equal 100 even when the wetted top width was only 5.0 units wide.  With this bug fix, the evaporation in this example results in only 50 units of evaporation loss.  A new autotests confirms the evaporation calculation using an n-point cross-section and common rectangular geometries in the same simulation.  It is also worth mentioning that the precipitation calculation currently uses rwid.  Since the precipitation falling outside the margins of the wetted top width but within rwid would likely be accumulated in a channel, it makes sense to leave this calculation as is.
+	%	\item xxx
+	%	\item xxx
+	\end{itemize}
+
+	%\underline{INTERNAL FLOW PACKAGES}
+	%\begin{itemize}
+	%	\item xxx
+	%	\item xxx
+	%	\item xxx
+	%\end{itemize}
+
+	%\underline{STRESS PACKAGES}
+	%\begin{itemize}
+	%	\item xxx
+	%	\item xxx
+	%	\item xxx
+	%\end{itemize}
+
+	\underline{ADVANCED STRESS PACKAGES}
+	\begin{itemize}
+		\item Added additional convergence checks to the Streamflow Routing (SFR), Lake (LAK) and Unsaturated Zone Flow (UZF) Packages to ensure that flows from the Water Mover (MVR) Package meet solver tolerance.  Mover flows are converted into depths using the time step length and area, and the depths are compared to the Iterative Model Solution (IMS) DVCLOSE input parameter.  If a depth is greater than DVCLOSE, then the iteration is marked as not converged.  The maximum depth change between iterations and the advanced package feature number is written for each outer iteration to a comma-separated value file, provided the PACKAGE\_CONVERGENCE option is specified in the options block.
+	%	\item xxx
+	%	\item xxx
+	\end{itemize}
+
+	%\underline{SOLUTION}
+	%\begin{itemize}
+	%	\item xxx
+	%	\item xxx
+	%	\item xxx
+	%\end{itemize}
+
+	%\underline{EXCHANGES}
+	%\begin{itemize}
+	%	\item xxx
+	%	\item xxx
+	%	\item xxx
+	%\end{itemize}
+

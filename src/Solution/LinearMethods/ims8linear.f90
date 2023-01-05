@@ -12,6 +12,8 @@ MODULE IMSLinearModule
                                  ims_base_scale, ims_base_pcu, &
                                  ims_base_residual
   use BlockParserModule, only: BlockParserType
+  use MatrixModule
+  use SparseMatrixModule
 
   IMPLICIT NONE
   private
@@ -104,8 +106,7 @@ CONTAINS
     !!
   !<
   SUBROUTINE imslinear_ar(this, NAME, parser, IOUT, IPRIMS, MXITER, IFDPARAM, &
-                          IMSLINEARM, NEQ, NJA, IA, JA, AMAT, RHS, X, &
-                          NINNER, LFINDBLOCK)
+                          IMSLINEARM, NEQ, matrix, RHS, X, NINNER, LFINDBLOCK)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     use MemoryHelperModule, only: create_mem_path
@@ -121,16 +122,14 @@ CONTAINS
     integer(I4B), INTENT(IN) :: IFDPARAM !< complexity option
     integer(I4B), INTENT(INOUT) :: IMSLINEARM !< linear method option (1) CG (2) BICGSTAB
     integer(I4B), TARGET, INTENT(IN) :: NEQ !< number of equations
-    integer(I4B), TARGET, INTENT(IN) :: NJA !< number of non-zero entries in the coefficient matrix
-    integer(I4B), DIMENSION(NEQ + 1), TARGET, INTENT(IN) :: IA !< pointer to the start of a row in the coefficient matrix
-    integer(I4B), DIMENSION(NJA), TARGET, INTENT(IN) :: JA !< column pointer
-    real(DP), DIMENSION(NJA), TARGET, INTENT(IN) :: AMAT !< coefficient matrix
+    class(MatrixBaseType), pointer :: matrix
     real(DP), DIMENSION(NEQ), TARGET, INTENT(INOUT) :: RHS !< right-hand side
     real(DP), DIMENSION(NEQ), TARGET, INTENT(INOUT) :: X !< dependent variables
     integer(I4B), TARGET, INTENT(INOUT) :: NINNER !< maximum number of inner iterations
     integer(I4B), INTENT(IN), OPTIONAL :: LFINDBLOCK !< flag indicating if the linear block is present (1) or missing (0)
 
     ! -- local variables
+    class(SparseMatrixType), pointer :: sparse_matrix => null()
     LOGICAL :: lreaddata
     character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: warnmsg
@@ -145,6 +144,11 @@ CONTAINS
     integer(I4B) :: ijw
     integer(I4B) :: iwlu
     integer(I4B) :: iwk
+    !
+    select type (matrix)
+    class is (SparseMatrixType)
+      sparse_matrix => matrix
+    end select
     !
     ! -- SET LREADDATA
     IF (PRESENT(LFINDBLOCK)) THEN
@@ -163,10 +167,10 @@ CONTAINS
     ! -- SET POINTERS TO SOLUTION STORAGE
     this%IPRIMS => IPRIMS
     this%NEQ => NEQ
-    this%NJA => NJA
-    this%IA => IA
-    this%JA => JA
-    this%AMAT => AMAT
+    this%NJA => sparse_matrix%nja
+    this%IA => sparse_matrix%ia
+    this%JA => sparse_matrix%ja
+    this%AMAT => sparse_matrix%amat
     this%RHS => RHS
     this%X => X
     !
@@ -407,7 +411,7 @@ CONTAINS
       ELSE
         iwk = 0
         DO n = 1, NEQ
-          i = IA(n + 1) - IA(n)
+          i = this%IA(n + 1) - this%IA(n)
           IF (i > iwk) THEN
             iwk = i
           END IF
