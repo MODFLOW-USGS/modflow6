@@ -4,25 +4,12 @@ import sys
 import time
 
 import numpy as np
+import flopy
+from flopy.utils.compare import compare_heads
 
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-import targets
+from common_regression import get_namefiles, get_mf6_files, setup_mf6, setup_mf6_comparison, get_mf6_comparison
 from framework import running_on_CI, set_teardown_test
+import targets
 
 sfmt = "{:25s} - {}"
 extdict = {
@@ -49,6 +36,7 @@ class Simulation(object):
         api_func=None,
         mf6_regression=False,
         make_comparison=True,
+        simpath=None,
     ):
         teardown_test = set_teardown_test()
         for idx, arg in enumerate(sys.argv):
@@ -85,7 +73,7 @@ class Simulation(object):
         print(msg)
         self.name = name
         self.exfunc = exfunc
-        self.simpath = None
+        self.simpath = simpath
         self.inpt = None
         self.outp = None
         self.coutp = None
@@ -157,7 +145,7 @@ class Simulation(object):
 
         # get MODFLOW 6 output file names
         fpth = os.path.join(pth, "mfsim.nam")
-        mf6inp, mf6outp = pymake.get_mf6_files(fpth)
+        mf6inp, mf6outp = get_mf6_files(fpth)
         self.outp = mf6outp
 
         # determine comparison model
@@ -168,7 +156,7 @@ class Simulation(object):
         #     self.action = pymake.get_mf6_comparison(pth)
         if self.action is not None:
             if "mf6" in self.action or "mf6-regression" in self.action:
-                cinp, self.coutp = pymake.get_mf6_files(fpth)
+                cinp, self.coutp = get_mf6_files(fpth)
 
     def setup(self, src, dst):
         msg = sfmt.format("Setup test", self.name)
@@ -181,7 +169,7 @@ class Simulation(object):
             + f"{os.path.abspath(os.getcwd())}"
         )
         try:
-            self.inpt, self.outp = pymake.setup_mf6(src=src, dst=dst)
+            self.inpt, self.outp = setup_mf6(src=src, dst=dst)
             print("waiting...")
             time.sleep(0.5)
             success = True
@@ -225,11 +213,11 @@ class Simulation(object):
                 shutil.rmtree(pth)
             shutil.copytree(dst, pth)
         elif testModel:
-            action = pymake.setup_mf6_comparison(
+            action = setup_mf6_comparison(
                 src, dst, remove_existing=self.teardown_test
             )
         else:
-            action = pymake.get_mf6_comparison(dst)
+            action = get_mf6_comparison(dst)
 
         self.action = action
 
@@ -316,7 +304,7 @@ class Simulation(object):
                     ):
                         nam = None
                     else:
-                        npth = pymake.get_namefiles(cpth)[0]
+                        npth = get_namefiles(cpth)[0]
                         nam = os.path.basename(npth)
                     self.nam_cmp = nam
                     try:
@@ -379,7 +367,7 @@ class Simulation(object):
                     files_cmp.append(file)
             elif "mf6" in self.action:
                 fpth = os.path.join(cpth, "mfsim.nam")
-                cinp, self.coutp = pymake.get_mf6_files(fpth)
+                cinp, self.coutp = get_mf6_files(fpth)
 
             head_extensions = (
                 "hds",
@@ -473,7 +461,7 @@ class Simulation(object):
                                 print(txt)
 
                     # make comparison
-                    success_tst = pymake.compare_heads(
+                    success_tst = compare_heads(
                         None,
                         pth,
                         precision="double",
@@ -635,7 +623,7 @@ class Simulation(object):
             outfile = os.path.join(
                 self.simpath, outfile + f".{extension}.cmp.out"
             )
-            success_tst = pymake.compare_heads(
+            success_tst = compare_heads(
                 None,
                 None,
                 precision="double",
@@ -671,7 +659,7 @@ class Simulation(object):
             outfile = os.path.join(
                 self.simpath, outfile + f".{extension}.cmp.out"
             )
-            success_tst = pymake.compare_heads(
+            success_tst = compare_heads(
                 None,
                 None,
                 precision="double",

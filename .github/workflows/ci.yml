@@ -149,6 +149,8 @@ jobs:
 
       - name: Get executables
         working-directory: modflow6/autotest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: pytest -v --durations 0 get_exes.py
 
       - name: Test programs
@@ -221,6 +223,8 @@ jobs:
       
       - name: Get executables
         working-directory: modflow6/autotest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: pytest -v --durations 0 get_exes.py
 
       - name: Test modflow6
@@ -327,12 +331,16 @@ jobs:
       - name: Get executables
         if: runner.os != 'Windows'
         working-directory: modflow6/autotest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: pytest -v --durations 0 get_exes.py
           
       - name: Get executables (Windows)
         if: runner.os == 'Windows'
         working-directory: modflow6/autotest
         shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: pytest -v --durations 0 get_exes.py
 
       - name: Test programs
