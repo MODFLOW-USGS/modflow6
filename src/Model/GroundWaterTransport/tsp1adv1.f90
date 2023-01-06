@@ -17,6 +17,8 @@ module TspAdvModule
     integer(I4B), pointer :: iadvwt => null() !< advection scheme (0 up, 1 central, 2 tvd)
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
     type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
+    real(DP), dimension(:), pointer, contiguous :: cpw => null() ! pointer to GWE heat capacity of water
+    real(DP), dimension(:), pointer, contiguous :: rhow => null() ! fixed density of water
 
   contains
 
@@ -98,7 +100,7 @@ contains
 
   end subroutine adv_df
 
-  subroutine adv_ar(this, dis, ibound)
+  subroutine adv_ar(this, dis, ibound, cpw, rhow)
 ! ******************************************************************************
 ! adv_ar -- Allocate and Read
 ! ******************************************************************************
@@ -109,7 +111,9 @@ contains
     ! -- dummy
     class(TspAdvType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
-    integer(I4B), dimension(:), pointer, contiguous :: ibound
+    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: ibound
+    real(DP), dimension(:), pointer, contiguous, optional, intent(in) :: cpw
+    real(DP), dimension(:), pointer, contiguous, optional, intent(in) :: rhow
     ! -- local
     ! -- formats
 ! ------------------------------------------------------------------------------
@@ -118,11 +122,15 @@ contains
     this%dis => dis
     this%ibound => ibound
     !
+    ! -- if part of a GWE simulation, need heat capacity(cpw) and density (rhow)
+    if (present(cpw)) this%cpw => cpw
+    if (present(rhow)) this%rhow => rhow
+    !
     ! -- Return
     return
   end subroutine adv_ar
 
-  subroutine adv_fc(this, nodes, amatsln, idxglo, cnew, rhs)
+  subroutine adv_fc(this, nodes, matrix_sln, idxglo, cnew, rhs)
 ! ******************************************************************************
 ! adv_fc -- Calculate coefficients and fill amat and rhs
 ! ******************************************************************************
@@ -133,7 +141,7 @@ contains
     ! -- dummy
     class(TspAdvType) :: this
     integer, intent(in) :: nodes
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in), dimension(:) :: idxglo
     real(DP), intent(in), dimension(:) :: cnew
     real(DP), dimension(:), intent(inout) :: rhs
@@ -153,8 +161,8 @@ contains
         if (this%ibound(m) == 0) cycle
         qnm = this%fmi%gwfflowja(ipos)
         omega = this%adv_weight(this%iadvwt, ipos, n, m, qnm)
-        amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + qnm * (DONE - omega)
-        amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + qnm * omega
+        call matrix_sln%add_value_pos(idxglo(ipos), qnm * (DONE - omega))
+        call matrix_sln%add_value_pos(idxglo(idiag), qnm * omega)
       end do
     end do
     !
@@ -224,10 +232,13 @@ contains
     integer(I4B) :: ipos, isympos, iup, idn, i2up, j
     real(DP) :: qnm, qmax, qupj, elupdn, elup2up
     real(DP) :: smooth, cdiff, alimiter
+    real(DP) :: unitadjdn, unitadjup
 ! ------------------------------------------------------------------------------
     !
     ! -- intialize
     qtvd = DZERO
+    unitadjdn = DONE
+    unitadjup = DONE
     !
     ! -- Find upstream node
     isympos = this%dis%con%jas(iposnm)
@@ -267,7 +278,12 @@ contains
       end if
       if (smooth > DZERO) then
         alimiter = DTWO * smooth / (DONE + smooth)
-        qtvd = DHALF * alimiter * qnm * (cnew(idn) - cnew(iup))
+        if (associated(this%cpw).and.associated(this%rhow)) then
+          unitadjdn = this%cpw(idn) * this%rhow(idn)
+          unitadjup = this%cpw(iup) * this%rhow(iup)
+        end if
+        qtvd = DHALF * alimiter * qnm * (cnew(idn) * unitadjdn - &
+          cnew(iup) * unitadjup) 
       end if
     end if
     !
@@ -291,7 +307,12 @@ contains
     integer(I4B) :: nodes
     integer(I4B) :: n, m, idiag, ipos
     real(DP) :: omega, qnm
+    real(DP) :: unitadjn, unitadjm
 ! ------------------------------------------------------------------------------
+    !
+    ! -- intialize
+    unitadjn = DONE
+    unitadjm = DONE
     !
     ! -- Calculate advection and add to flowja. qnm is the volumetric flow
     !    rate and has dimensions of L^/T.
@@ -304,8 +325,12 @@ contains
         if (this%ibound(m) == 0) cycle
         qnm = this%fmi%gwfflowja(ipos)
         omega = this%adv_weight(this%iadvwt, ipos, n, m, qnm)
-        flowja(ipos) = flowja(ipos) + qnm * omega * cnew(n) + &
-                       qnm * (DONE - omega) * cnew(m)
+        if (associated(this%cpw).and.associated(this%rhow)) then
+          unitadjn = this%cpw(n) * this%rhow(n)
+          unitadjm = this%cpw(m) * this%rhow(m)
+        end if
+        flowja(ipos) = flowja(ipos) + qnm * omega * cnew(n) * unitadjn + &
+                       qnm * (DONE - omega) * cnew(m) * unitadjm
       end do
     end do
     !
@@ -369,6 +394,8 @@ contains
     !
     ! -- nullify pointers
     this%ibound => null()
+    nullify(this%cpw)
+    nullify(this%rhow)
     !
     ! -- Scalars
     call mem_deallocate(this%iadvwt)
