@@ -19,6 +19,7 @@ module TspSsmModule
   use TspLabelsModule, only: TspLabelsType
   use TableModule, only: TableType, table_cr
   use GwtSpcModule, only: GwtSpcType
+  use MatrixModule
 
   implicit none
   public :: TspSsmType
@@ -41,6 +42,8 @@ module TspSsmModule
     integer(I4B), dimension(:), pointer, contiguous :: iauxpak => null() !< aux col for concentration
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
     real(DP), dimension(:), pointer, contiguous :: cnew => null() !< pointer to gwt%x
+    real(DP), dimension(:), pointer, contiguous :: cpw => null() !< pointer to gwe%cpw
+    real(DP), dimension(:), pointer, contiguous :: rhow => null() !< pointer to gwe%rhow
     type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
     type(TableType), pointer :: outputtab => null() !< output table object
     type(GwtSpcType), dimension(:), pointer :: ssmivec => null() !< array of stress package concentration objects
@@ -105,7 +108,7 @@ contains
     call ssmobj%parser%Initialize(ssmobj%inunit, ssmobj%iout)
     !
     ! -- Store pointer to labels associated with the current model so that the 
-    !    package has access to the assigned labels
+    !    package has access to the corresponding dependent variable type
     ssmobj%tsplab => tsplab
     !
     ! -- Return
@@ -137,7 +140,7 @@ contains
   !! options and data, and sets up the output table.
   !!
   !<
-  subroutine ssm_ar(this, dis, ibound, cnew)
+  subroutine ssm_ar(this, dis, ibound, cnew, cpw, rhow)
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
     ! -- dummy
@@ -145,6 +148,8 @@ contains
     class(DisBaseType), pointer, intent(in) :: dis !< discretization package
     integer(I4B), dimension(:), pointer, contiguous :: ibound !< GWT model ibound
     real(DP), dimension(:), pointer, contiguous :: cnew !< GWT model dependent variable
+    real(DP), dimension(:), pointer, contiguous, optional :: cpw !< GWE heat capacity paramter
+    real(DP), dimension(:), pointer, contiguous, optional :: rhow !< GWE fluid density paramter
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtssm = &
@@ -158,6 +163,8 @@ contains
     this%dis => dis
     this%ibound => ibound
     this%cnew => cnew
+    this%cpw => cpw
+    this%rhow => rhow
     !
     ! -- Check to make sure that there are flow packages
     if (this%fmi%nflowpack == 0) then
@@ -293,12 +300,21 @@ contains
     real(DP) :: omega
     real(DP) :: hcoftmp
     real(DP) :: rhstmp
+    real(DP) :: unitadj
     !
-    ! -- retrieve node number, qbnd and iauxpos
+    ! -- initialize
     hcoftmp = DZERO
     rhstmp = DZERO
     ctmp = DZERO
     qbnd = DZERO
+    !
+    ! -- initialize unitadj, set its value if GWE model
+    unitadj = DONE
+    if (associated(this%cpw).and.associated(this%rhow)) then
+      unitadj = this%cpw(ientry) * this%rhow(ientry)
+    end if
+    !
+    ! -- retrieve node number, qbnd and iauxpos
     n = this%fmi%gwfpackages(ipackage)%nodelist(ientry)
     !
     ! -- If cell is active (ibound > 0) then calculate values
@@ -347,7 +363,7 @@ contains
       if (qbnd <= DZERO) then
         hcoftmp = qbnd * omega
       else
-        rhstmp = -qbnd * ctmp * (DONE - omega)
+        rhstmp = -qbnd * ctmp * (DONE - omega) * unitadj
       end if
       !
       ! -- end of active ibound
@@ -364,13 +380,14 @@ contains
     return
   end subroutine ssm_term
 
-  !> @ brief Provide bound concentration and mixed flag
+  !> @ brief Provide bound concentration (or temperature) and mixed flag
   !!
-  !! SSM concentrations can be provided in auxiliary variables or
-  !! through separate SPC files.  If not provided, the default
-  !! concentration is zero.  This single routine provides the SSM
-  !! bound concentration based on these different approaches.
-  !! The mixed flag indicates whether or not
+  !! SSM concentrations and temperatures can be provided in auxiliary variables
+  !! or through separate SPC files.  If not provided, the default
+  !! concentration (or temperature) is zero.  This single routine provides 
+  !! the SSM bound concentration (or temperature) based on these different 
+  !! approaches. The mixed flag indicates whether or not the boundary as a
+  !! mixed type.
   !!
   !<
   subroutine get_ssm_conc(this, ipackage, ientry, conc, lauxmixed)
@@ -407,11 +424,11 @@ contains
   !! updating the a matrix and right-hand side vector.
   !!
   !<
-  subroutine ssm_fc(this, amatsln, idxglo, rhs)
+  subroutine ssm_fc(this, matrix_sln, idxglo, rhs)
     ! -- modules
     ! -- dummy
     class(TspSsmType) :: this
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in), dimension(:) :: idxglo
     real(DP), intent(inout), dimension(:) :: rhs
     ! -- local
@@ -436,7 +453,7 @@ contains
         if (n <= 0) cycle
         call this%ssm_term(ip, i, rhsval=rhsval, hcofval=hcofval)
         idiag = idxglo(this%dis%con%ia(n))
-        amatsln(idiag) = amatsln(idiag) + hcofval
+        call matrix_sln%add_value_pos(idiag, hcofval)
         rhs(n) = rhs(n) + rhsval
         !
       end do
@@ -719,6 +736,10 @@ contains
     !
     ! -- Scalars
     call mem_deallocate(this%nbound)
+    !
+    ! -- nullify pointers
+    nullify(this%cpw)
+    nullify(this%rhow)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
