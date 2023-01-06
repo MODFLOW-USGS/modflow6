@@ -1,12 +1,12 @@
 module ghbmodule
-  use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME, LENMEMPATH,  &
-                             LENVARNAME, LENMEMSEPARATOR
-  use MemoryHelperModule, only: create_mem_path, split_mem_address
+  use KindModule, only: DP, I4B
+  use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME
+  use MemoryHelperModule, only: create_mem_path
   use BndModule, only: BndType
   use ObsModule, only: DefaultObsIdProcessor
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
+  use MatrixModule
   !
   implicit none
   !
@@ -16,10 +16,8 @@ module ghbmodule
   !
   character(len=LENFTYPE) :: ftype = 'GHB'
   character(len=LENPACKAGENAME) :: text = '             GHB'
-  character(len=LENMEMSEPARATOR), parameter :: memPathSeparator = '/'
   !
   type, extends(BndType) :: GhbType
-    
   contains
     procedure :: bnd_options => ghb_options
     procedure :: bnd_ck => ghb_ck
@@ -54,10 +52,6 @@ contains
     character(len=*), intent(in) :: pakname
     ! -- local
     type(GhbType), pointer :: ghbobj
-    character(len=LENMEMPATH) :: vscpath !< if vsc exist, this is path name
-    character(len=LENMEMPATH) :: locmempath !< the memory path for the model
-    character(len=LENVARNAME) :: locvarname !< the package name to check on
-    logical(LGP) :: vscexists !< flag will be true if vsc is active
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
@@ -81,13 +75,6 @@ contains
     packobj%ncolbnd = 2
     packobj%iscloc = 2
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
-    !
-    ! -- check if vsc package exists and set flag if so
-    vscpath = trim(namemodel)//memPathSeparator//'VSC'
-    call split_mem_address(vscpath, locmempath, locvarname, vscexists)
-    if (vscexists) then
-      packobj%ivsc = 1
-    end if
     !
     ! -- return
     return
@@ -209,7 +196,7 @@ contains
     return
   end subroutine ghb_cf
 
-  subroutine ghb_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine ghb_fc(this, rhs, ia, idxglo, matrix_sln)
 ! **************************************************************************
 ! ghb_fc -- Copy rhs and hcof into solution rhs and amat
 ! **************************************************************************
@@ -221,7 +208,7 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     integer(I4B) :: i, n, ipos
     real(DP) :: cond, bhead, qghb
@@ -237,7 +224,7 @@ contains
       n = this%nodelist(i)
       rhs(n) = rhs(n) + this%rhs(i)
       ipos = ia(n)
-      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
+      call matrix_sln%add_value_pos(idxglo(ipos), this%hcof(i))
       !
       ! -- If mover is active and this boundary is discharging,
       !    store available water (as positive value).
