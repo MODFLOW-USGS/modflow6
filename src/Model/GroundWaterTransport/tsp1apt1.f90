@@ -51,6 +51,7 @@ module TspAptModule
   use ObserveModule, only: ObserveType
   use InputOutputModule, only: extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
+  use MatrixModule
 
   implicit none
 
@@ -232,7 +233,7 @@ contains
     return
   end subroutine apt_ac
 
-  subroutine apt_mc(this, moffset, iasln, jasln)
+  subroutine apt_mc(this, moffset, matrix_sln)
 ! ******************************************************************************
 ! apt_mc -- map package connection to matrix
 ! ******************************************************************************
@@ -243,10 +244,9 @@ contains
     ! -- dummy
     class(TspAptType), intent(inout) :: this
     integer(I4B), intent(in) :: moffset
-    integer(I4B), dimension(:), intent(in) :: iasln
-    integer(I4B), dimension(:), intent(in) :: jasln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
-    integer(I4B) :: n, j, jj, iglo, jglo
+    integer(I4B) :: n, j, iglo, jglo
     integer(I4B) :: ipos
     ! -- format
 ! ------------------------------------------------------------------------------
@@ -265,20 +265,15 @@ contains
       do n = 1, this%ncv
         this%idxlocnode(n) = this%dis%nodes + this%ioffset + n
         iglo = moffset + this%dis%nodes + this%ioffset + n
-        this%idxpakdiag(n) = iasln(iglo)
+        this%idxpakdiag(n) = matrix_sln%get_position_diag(iglo)
       end do
       do ipos = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
         n = this%flowbudptr%budterm(this%idxbudgwf)%id1(ipos)
         j = this%flowbudptr%budterm(this%idxbudgwf)%id2(ipos)
         iglo = moffset + this%dis%nodes + this%ioffset + n
         jglo = j + moffset
-        searchloop: do jj = iasln(iglo), iasln(iglo + 1) - 1
-          if (jglo == jasln(jj)) then
-            this%idxdglo(ipos) = iasln(iglo)
-            this%idxoffdglo(ipos) = jj
-            exit searchloop
-          end if
-        end do searchloop
+        this%idxdglo(ipos) = matrix_sln%get_position_diag(iglo)
+        this%idxoffdglo(ipos) = matrix_sln%get_position(iglo, jglo)
       end do
       !
       ! -- apt contributions to gwf portion of global matrix
@@ -287,13 +282,8 @@ contains
         j = this%flowbudptr%budterm(this%idxbudgwf)%id2(ipos)
         iglo = j + moffset
         jglo = moffset + this%dis%nodes + this%ioffset + n
-        symsearchloop: do jj = iasln(iglo), iasln(iglo + 1) - 1
-          if (jglo == jasln(jj)) then
-            this%idxsymdglo(ipos) = iasln(iglo)
-            this%idxsymoffdglo(ipos) = jj
-            exit symsearchloop
-          end if
-        end do symsearchloop
+        this%idxsymdglo(ipos) = matrix_sln%get_position_diag(iglo)
+        this%idxsymoffdglo(ipos) = matrix_sln%get_position(iglo, jglo)
       end do
       !
       ! -- apt-apt contributions to gwf portion of global matrix
@@ -303,13 +293,8 @@ contains
           j = this%flowbudptr%budterm(this%idxbudfjf)%id2(ipos)
           iglo = moffset + this%dis%nodes + this%ioffset + n
           jglo = moffset + this%dis%nodes + this%ioffset + j
-          fjfsearchloop: do jj = iasln(iglo), iasln(iglo + 1) - 1
-            if (jglo == jasln(jj)) then
-              this%idxfjfdglo(ipos) = iasln(iglo)
-              this%idxfjfoffdglo(ipos) = jj
-              exit fjfsearchloop
-            end if
-          end do fjfsearchloop
+          this%idxfjfdglo(ipos) = matrix_sln%get_position_diag(iglo)
+          this%idxfjfoffdglo(ipos) = matrix_sln%get_position(iglo, jglo)
         end do
       end if
     end if
@@ -759,7 +744,7 @@ contains
     return
   end subroutine apt_cf
 
-  subroutine apt_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine apt_fc(this, rhs, ia, idxglo, matrix_sln)
 ! ******************************************************************************
 ! apt_fc
 ! ****************************************************************************
@@ -772,22 +757,22 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
 ! ------------------------------------------------------------------------------
     !
     ! -- Call fc depending on whether or not a matrix is expanded or not
     if (this%imatrows == 0) then
-      call this%apt_fc_nonexpanded(rhs, ia, idxglo, amatsln)
+      call this%apt_fc_nonexpanded(rhs, ia, idxglo, matrix_sln)
     else
-      call this%apt_fc_expanded(rhs, ia, idxglo, amatsln)
+      call this%apt_fc_expanded(rhs, ia, idxglo, matrix_sln)
     end if
     !
     ! -- Return
     return
   end subroutine apt_fc
 
-  subroutine apt_fc_nonexpanded(this, rhs, ia, idxglo, amatsln)
+  subroutine apt_fc_nonexpanded(this, rhs, ia, idxglo, matrix_sln)
 ! ******************************************************************************
 ! apt_fc_nonexpanded -- formulate for the nonexpanded a matrix case in which
 !   feature concentrations (or temperatures) are solved explicitly
@@ -801,7 +786,7 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     integer(I4B) :: j, igwfnode, idiag
 ! ------------------------------------------------------------------------------
@@ -814,7 +799,7 @@ contains
       igwfnode = this%flowbudptr%budterm(this%idxbudgwf)%id2(j)
       if (this%ibound(igwfnode) < 1) cycle
       idiag = idxglo(ia(igwfnode))
-      amatsln(idiag) = amatsln(idiag) + this%hcof(j)
+      call matrix_sln%add_value_pos(idiag, this%hcof(j))
       rhs(igwfnode) = rhs(igwfnode) + this%rhs(j)
     end do
     !
@@ -822,7 +807,7 @@ contains
     return
   end subroutine apt_fc_nonexpanded
 
-  subroutine apt_fc_expanded(this, rhs, ia, idxglo, amatsln)
+  subroutine apt_fc_expanded(this, rhs, ia, idxglo, matrix_sln)
 ! ******************************************************************************
 ! apt_fc_expanded -- formulate for the expanded matrix case in which new
 !   rows are added to the system of equations for each feature
@@ -836,7 +821,7 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     integer(I4B) :: j, n, n1, n2
     integer(I4B) :: iloc
@@ -845,6 +830,7 @@ contains
     real(DP) :: cold
     real(DP) :: qbnd
     real(DP) :: omega
+    real(DP) :: unitadj
     real(DP) :: rrate
     real(DP) :: rhsval
     real(DP) :: hcofval
@@ -855,7 +841,7 @@ contains
     !      GwtLktType, GwtSftType, GwtMwtType, GwtUztType
     !    This routine will add terms for rainfall, runoff, or other terms
     !    specific to the package
-    call this%pak_fc_expanded(rhs, ia, idxglo, amatsln)
+    call this%pak_fc_expanded(rhs, ia, idxglo, matrix_sln)
     !
     ! -- mass (or energy) storage in features
     do n = 1, this%ncv
@@ -863,7 +849,7 @@ contains
       iloc = this%idxlocnode(n)
       iposd = this%idxpakdiag(n)
       call this%apt_stor_term(n, n1, n2, rrate, rhsval, hcofval)
-      amatsln(iposd) = amatsln(iposd) + hcofval
+      call matrix_sln%add_value_pos(iposd, hcofval)
       rhs(iloc) = rhs(iloc) + rhsval
     end do
     !
@@ -873,7 +859,7 @@ contains
         call this%apt_tmvr_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
-        amatsln(iposd) = amatsln(iposd) + hcofval
+        call matrix_sln%add_value_pos(iposd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
@@ -902,14 +888,14 @@ contains
         ! -- add to apt row
         iposd = this%idxdglo(j)
         iposoffd = this%idxoffdglo(j)
-        amatsln(iposd) = amatsln(iposd) + omega * qbnd
-        amatsln(iposoffd) = amatsln(iposoffd) + (DONE - omega) * qbnd
+        call matrix_sln%add_value_pos(iposd, omega * qbnd)
+        call matrix_sln%add_value_pos(iposoffd, (DONE - omega) * qbnd)
         !
         ! -- add to gwf row for apt connection
         ipossymd = this%idxsymdglo(j)
         ipossymoffd = this%idxsymoffdglo(j)
-        amatsln(ipossymd) = amatsln(ipossymd) - (DONE - omega) * qbnd
-        amatsln(ipossymoffd) = amatsln(ipossymoffd) - omega * qbnd
+        call matrix_sln%add_value_pos(ipossymd, -(DONE - omega) * qbnd)
+        call matrix_sln%add_value_pos(ipossymoffd, -omega * qbnd)
       end if
     end do
     !
@@ -926,8 +912,8 @@ contains
         end if
         iposd = this%idxfjfdglo(j)
         iposoffd = this%idxfjfoffdglo(j)
-        amatsln(iposd) = amatsln(iposd) + omega * qbnd
-        amatsln(iposoffd) = amatsln(iposoffd) + (DONE - omega) * qbnd
+        call matrix_sln%add_value_pos(iposd, omega * qbnd)
+        call matrix_sln%add_value_pos(iposoffd, (DONE - omega) * qbnd)
       end do
     end if
     !
@@ -935,7 +921,7 @@ contains
     return
   end subroutine apt_fc_expanded
 
-  subroutine pak_fc_expanded(this, rhs, ia, idxglo, amatsln)
+  subroutine pak_fc_expanded(this, rhs, ia, idxglo, matrix_sln)
 ! ******************************************************************************
 ! pak_fc_expanded -- allow a subclass advanced transport package to inject
 !   terms into the matrix assembly.  This method must be overridden.
@@ -949,7 +935,7 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
 ! ------------------------------------------------------------------------------
     !
@@ -975,11 +961,12 @@ contains
     integer(I4B) :: j, n
     real(DP) :: qbnd
     real(DP) :: omega
+    real(DP) :: unitadj
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate hcof and rhs terms so GWF exchanges are calculated correctly
     ! -- go through each apt-gwf connection and calculate
-    !    rhs and hcof terms for gwt matrix rows
+    !    rhs and hcof terms for gwt/gwe matrix rows
     do j = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
       n = this%flowbudptr%budterm(this%idxbudgwf)%id1(j)
       this%hcof(j) = DZERO
@@ -987,9 +974,13 @@ contains
       if (this%iboundpak(n) /= 0) then
         qbnd = this%flowbudptr%budterm(this%idxbudgwf)%flow(j)
         omega = DZERO
+        unitadj = DONE
         if (qbnd < DZERO) omega = DONE
+        if (associated(this%cpw).and.associated(this%rhow)) then
+          unitadj = this%cpw(j) * this%rhow(j)
+        end if
         this%hcof(j) = -(DONE - omega) * qbnd
-        this%rhs(j) = omega * qbnd * this%xnewpak(n)
+        this%rhs(j) = omega * unitadj * qbnd * this%xnewpak(n)
       end if
     end do
     !
@@ -1384,6 +1375,10 @@ contains
     call mem_deallocate(this%idxbudaux)
     call mem_deallocate(this%idxbudssm)
     call mem_deallocate(this%nconcbudssm)
+    !
+    ! -- nullify pointers
+    nullify(this%cpw)
+    nullify(this%rhow)
     !
     ! -- deallocate scalars in NumericalPackageType
     call this%BndType%bnd_da()
@@ -1864,8 +1859,8 @@ contains
     real(DP) :: ctmp
     real(DP) :: c1, qbnd
     real(DP) :: hcofval, rhsval
+    real(DP) :: unitadj
 ! ------------------------------------------------------------------------------
-    !
     !
     ! -- first initialize dbuff
     do n = 1, this%ncv
@@ -1898,16 +1893,20 @@ contains
       n = this%flowbudptr%budterm(this%idxbudgwf)%id1(j)
       this%hcof(j) = DZERO
       this%rhs(j) = DZERO
+      unitadj = DONE
       igwfnode = this%flowbudptr%budterm(this%idxbudgwf)%id2(j)
       qbnd = this%flowbudptr%budterm(this%idxbudgwf)%flow(j)
+      if (associated(this%cpw).and.associated(this%rhow)) then
+        unitadj = this%cpw(j) * this%rhow(j)
+      end if
       if (qbnd <= DZERO) then
         ctmp = this%xnewpak(n)
-        this%rhs(j) = qbnd * ctmp
+        this%rhs(j) = unitadj * qbnd * ctmp
       else
         ctmp = this%xnew(igwfnode)
         this%hcof(j) = -qbnd
       end if
-      c1 = qbnd * ctmp
+      c1 = unitadj * qbnd * ctmp
       this%dbuff(n) = this%dbuff(n) + c1
     end do
     !
@@ -2031,7 +2030,8 @@ contains
     return
   end subroutine define_listlabel
 
-  subroutine apt_set_pointers(this, neq, ibound, xnew, xold, flowja)
+  subroutine apt_set_pointers(this, neq, ibound, xnew, xold, flowja, cpw, rhow, &
+                              latheatvap)
 ! ******************************************************************************
 ! set_pointers -- Set pointers to model arrays and variables so that a package
 !                 has access to these things.
@@ -2045,12 +2045,21 @@ contains
     real(DP), dimension(:), pointer, contiguous :: xnew
     real(DP), dimension(:), pointer, contiguous :: xold
     real(DP), dimension(:), pointer, contiguous :: flowja
+    real(DP), dimension(:), pointer, contiguous, optional :: cpw !< heat capacity of fluid (for GWE model type)
+    real(DP), dimension(:), pointer, contiguous, optional :: rhow !< density of fluid (for GWE model type)
+    real(DP), dimension(:), pointer, contiguous, optional :: latheatvap !< latent heat of vaporization (for GWE evaporation)
+    !
     ! -- local
     integer(I4B) :: istart, iend
 ! ------------------------------------------------------------------------------
     !
     ! -- call base BndType set_pointers
-    call this%BndType%set_pointers(neq, ibound, xnew, xold, flowja)
+    if (.not.present(cpw) .and. .not.present(rhow)) then
+      call this%BndType%set_pointers(neq, ibound, xnew, xold, flowja)
+    else
+      call this%BndType%set_pointers(neq, ibound, xnew, xold, flowja, &
+                                     cpw, rhow, latheatvap)
+    end if
     !
     ! -- Set the pointers
     !
@@ -2532,6 +2541,8 @@ contains
 
   subroutine apt_tmvr_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
+    ! -- modules
+    ! -- dummy
     class(TspAptType) :: this
     integer(I4B), intent(in) :: ientry
     integer(I4B), intent(inout) :: n1
@@ -2539,13 +2550,23 @@ contains
     real(DP), intent(inout), optional :: rrate
     real(DP), intent(inout), optional :: rhsval
     real(DP), intent(inout), optional :: hcofval
+    ! -- local
     real(DP) :: qbnd
     real(DP) :: ctmp
+    real(DP) :: unitadj
+! ------------------------------------------------------------------------------
+    !
+    ! -- If GWE package, adjust for thermal units
+    unitadj = DONE
+    if (associated(this%cpw).and.associated(this%rhow)) then
+      unitadj = this%cpw(ientry) * this%rhow(ientry)
+    end if
+    ! -- Calculate MVR-related terms 
     n1 = this%flowbudptr%budterm(this%idxbudtmvr)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudtmvr)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudtmvr)%flow(ientry)
     ctmp = this%xnewpak(n1)
-    if (present(rrate)) rrate = ctmp * qbnd
+    if (present(rrate)) rrate = unitadj * ctmp * qbnd
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd
     !
@@ -2555,6 +2576,8 @@ contains
 
   subroutine apt_fjf_term(this, ientry, n1, n2, rrate, &
                           rhsval, hcofval)
+    ! -- modules
+    ! -- dummy
     class(TspAptType) :: this
     integer(I4B), intent(in) :: ientry
     integer(I4B), intent(inout) :: n1
@@ -2562,8 +2585,18 @@ contains
     real(DP), intent(inout), optional :: rrate
     real(DP), intent(inout), optional :: rhsval
     real(DP), intent(inout), optional :: hcofval
+    ! -- local
     real(DP) :: qbnd
     real(DP) :: ctmp
+    real(DP) :: unitadj
+! ------------------------------------------------------------------------------
+    !
+    ! -- If GWE package, adjust for thermal units
+    unitadj = DONE
+    !if (associated(this%cpw).and.associated(this%rhow)) then
+      unitadj = this%cpw(ientry) * this%rhow(ientry)
+    !end if
+    !
     n1 = this%flowbudptr%budterm(this%idxbudfjf)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudfjf)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudfjf)%flow(ientry)
@@ -2572,7 +2605,7 @@ contains
     else
       ctmp = this%xnewpak(n2)
     end if
-    if (present(rrate)) rrate = ctmp * qbnd
+    if (present(rrate)) rrate = unitadj * ctmp * qbnd
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
