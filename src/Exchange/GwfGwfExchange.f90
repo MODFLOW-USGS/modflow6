@@ -29,6 +29,7 @@ module GwfGwfExchangeModule
   use SimVariablesModule, only: errmsg
   use BlockParserModule, only: BlockParserType
   use TableModule, only: TableType, table_cr
+  use MatrixModule
 
   implicit none
 
@@ -103,11 +104,12 @@ module GwfGwfExchangeModule
     procedure, private :: rewet
     procedure, private :: qcalc
     procedure :: gwf_gwf_bdsav
+    procedure, private :: gwf_gwf_bdsav_model
     procedure, private :: gwf_gwf_df_obs
     procedure, private :: gwf_gwf_rp_obs
     procedure, public :: gwf_gwf_save_simvals
     procedure, private :: gwf_gwf_calc_simvals
-    procedure, public :: gwf_gwf_set_spdis
+    procedure, public :: gwf_gwf_set_simvals_to_npf
     procedure, private :: validate_exchange
     procedure :: gwf_gwf_add_to_flowja
   end type GwfExchangeType
@@ -373,39 +375,26 @@ contains
   !! Map the connections in the global matrix
   !!
   !<
-  subroutine gwf_gwf_mc(this, iasln, jasln)
+  subroutine gwf_gwf_mc(this, matrix_sln)
     ! -- modules
     use SparseModule, only: sparsematrix
     ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
-    integer(I4B), dimension(:), intent(in) :: iasln
-    integer(I4B), dimension(:), intent(in) :: jasln
+    class(MatrixBaseType), pointer :: matrix_sln !< the system matrix
     ! -- local
-    integer(I4B) :: n, iglo, jglo, ipos
+    integer(I4B) :: n, iglo, jglo
     !
     ! -- map exchange connections
     do n = 1, this%nexg
       iglo = this%nodem1(n) + this%gwfmodel1%moffset
       jglo = this%nodem2(n) + this%gwfmodel2%moffset
-      ! -- find jglobal value in row iglo and store in idxglo
-      do ipos = iasln(iglo), iasln(iglo + 1) - 1
-        if (jglo == jasln(ipos)) then
-          this%idxglo(n) = ipos
-          exit
-        end if
-      end do
-      ! -- find and store symmetric location
-      do ipos = iasln(jglo), iasln(jglo + 1) - 1
-        if (iglo == jasln(ipos)) then
-          this%idxsymglo(n) = ipos
-          exit
-        end if
-      end do
+      this%idxglo(n) = matrix_sln%get_position(iglo, jglo)
+      this%idxsymglo(n) = matrix_sln%get_position(jglo, iglo)
     end do
     !
     ! -- map gnc connections
     if (this%ingnc > 0) then
-      call this%gnc%gnc_mc(iasln, jasln)
+      call this%gnc%gnc_mc(matrix_sln)
     end if
     !
     ! -- Return
@@ -583,21 +572,19 @@ contains
   !! Calculate conductance and fill coefficient matrix
   !!
   !<
-  subroutine gwf_gwf_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
+  subroutine gwf_gwf_fc(this, kiter, matrix_sln, rhs_sln, inwtflag)
     ! -- modules
     use ConstantsModule, only: DHALF
     use GwfNpfModule, only: hcond, vcond
     ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
     integer(I4B), intent(in) :: kiter
-    integer(I4B), dimension(:), intent(in) :: iasln
-    real(DP), dimension(:), intent(inout) :: amatsln
-    real(DP), dimension(:), intent(inout) :: rhssln
+    class(MatrixBaseType), pointer :: matrix_sln
+    real(DP), dimension(:), intent(inout) :: rhs_sln
     integer(I4B), optional, intent(in) :: inwtflag
     ! -- local
     integer(I4B) :: inwt, iexg
-    integer(I4B) :: i, nodem1sln, nodem2sln, idiagsln
-    integer(I4B) :: njasln
+    integer(I4B) :: i, nodem1sln, nodem2sln
     !
     ! -- calculate the conductance for each exchange connection
     call this%condcalc()
@@ -612,19 +599,18 @@ contains
     !
     ! -- Put this%cond into amatsln
     do i = 1, this%nexg
-      amatsln(this%idxglo(i)) = this%cond(i)
-      amatsln(this%idxsymglo(i)) = this%cond(i)
+      call matrix_sln%set_value_pos(this%idxglo(i), this%cond(i))
+      call matrix_sln%set_value_pos(this%idxsymglo(i), this%cond(i))
+
       nodem1sln = this%nodem1(i) + this%gwfmodel1%moffset
       nodem2sln = this%nodem2(i) + this%gwfmodel2%moffset
-      idiagsln = iasln(nodem1sln)
-      amatsln(idiagsln) = amatsln(idiagsln) - this%cond(i)
-      idiagsln = iasln(nodem2sln)
-      amatsln(idiagsln) = amatsln(idiagsln) - this%cond(i)
+      call matrix_sln%add_diag_value(nodem1sln, -this%cond(i))
+      call matrix_sln%add_diag_value(nodem2sln, -this%cond(i))
     end do
     !
     ! -- Fill the gnc terms in the solution matrix
     if (this%ingnc > 0) then
-      call this%gnc%gnc_fc(kiter, amatsln)
+      call this%gnc%gnc_fc(kiter, matrix_sln)
     end if
     !
     ! -- Call mvr fc routine
@@ -636,14 +622,13 @@ contains
       if (inwtflag == 0) inwt = 0
     end if
     if (inwt /= 0) then
-      call this%exg_fn(kiter, iasln, amatsln)
+      call this%exg_fn(kiter, matrix_sln)
     end if
     !
     ! -- Ghost node Newton-Raphson
     if (this%ingnc > 0) then
       if (inwt /= 0) then
-        njasln = size(amatsln)
-        call this%gnc%gnc_fn(kiter, njasln, amatsln, this%condsat, &
+        call this%gnc%gnc_fn(kiter, matrix_sln, this%condsat, &
                              ihc_opt=this%ihc, ivarcv_opt=this%ivarcv, &
                              ictm1_opt=this%gwfmodel1%npf%icelltype, &
                              ictm2_opt=this%gwfmodel2%npf%icelltype)
@@ -659,21 +644,19 @@ contains
   !! Fill amatsln with Newton terms
   !!
   !<
-  subroutine gwf_gwf_fn(this, kiter, iasln, amatsln)
+  subroutine gwf_gwf_fn(this, kiter, matrix_sln)
     ! -- modules
     use SmoothingModule, only: sQuadraticSaturationDerivative
     ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
     integer(I4B), intent(in) :: kiter
-    integer(I4B), dimension(:), intent(in) :: iasln
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     logical :: nisup
     integer(I4B) :: iexg
     integer(I4B) :: n, m
     integer(I4B) :: nodensln, nodemsln
     integer(I4B) :: ibdn, ibdm
-    integer(I4B) :: idiagnsln, idiagmsln
     real(DP) :: topn, topm
     real(DP) :: botn, botm
     real(DP) :: topup, botup
@@ -738,17 +721,15 @@ contains
         ! -- compute terms
         consterm = -cond * (hup - hdn)
         derv = sQuadraticSaturationDerivative(topup, botup, hup)
-        idiagnsln = iasln(nodensln)
-        idiagmsln = iasln(nodemsln)
         if (nisup) then
           !
           ! -- fill jacobian with n being upstream
           term = consterm * derv
           this%gwfmodel1%rhs(n) = this%gwfmodel1%rhs(n) + term * hn
           this%gwfmodel2%rhs(m) = this%gwfmodel2%rhs(m) - term * hn
-          amatsln(idiagnsln) = amatsln(idiagnsln) + term
+          call matrix_sln%add_diag_value(nodensln, term)
           if (ibdm > 0) then
-            amatsln(this%idxsymglo(iexg)) = amatsln(this%idxsymglo(iexg)) - term
+            call matrix_sln%add_value_pos(this%idxsymglo(iexg), -term)
           end if
         else
           !
@@ -756,9 +737,9 @@ contains
           term = -consterm * derv
           this%gwfmodel1%rhs(n) = this%gwfmodel1%rhs(n) + term * hm
           this%gwfmodel2%rhs(m) = this%gwfmodel2%rhs(m) - term * hm
-          amatsln(idiagmsln) = amatsln(idiagmsln) - term
+          call matrix_sln%add_diag_value(nodemsln, -term)
           if (ibdn > 0) then
-            amatsln(this%idxglo(iexg)) = amatsln(this%idxglo(iexg)) + term
+            call matrix_sln%add_value_pos(this%idxglo(iexg), term)
           end if
         end if
       end if
@@ -786,8 +767,8 @@ contains
     ! -- calculate flow and store in simvals
     call this%gwf_gwf_calc_simvals()
     !
-    ! -- calculate specific discharge and set to model
-    call this%gwf_gwf_set_spdis()
+    ! -- set rates to model edges in npf for spdis calculation
+    call this%gwf_gwf_set_simvals_to_npf()
     !
     ! -- add exchange flow to model 1 and 2 flowja array diagonal position
     call this%gwf_gwf_add_to_flowja()
@@ -854,7 +835,7 @@ contains
 
   !> @brief Calculate specific discharge from flow rates
   !< and set them to the models
-  subroutine gwf_gwf_set_spdis(this)
+  subroutine gwf_gwf_set_simvals_to_npf(this)
     use ConstantsModule, only: DZERO, DPIO180
     use GwfNpfModule, only: thksatnm
     class(GwfExchangeType) :: this !<  GwfExchangeType
@@ -963,7 +944,7 @@ contains
     end do
     !
     return
-  end subroutine gwf_gwf_set_spdis
+  end subroutine gwf_gwf_set_simvals_to_npf
 
   !> @ brief Budget
   !!
@@ -1015,225 +996,16 @@ contains
   !<
   subroutine gwf_gwf_bdsav(this)
     ! -- modules
-    use ConstantsModule, only: DZERO, LENBUDTXT, LENPACKAGENAME
-    use TdisModule, only: kstp, kper
     ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
     ! -- local
-    character(len=LENBOUNDNAME) :: bname
-    character(len=LENPACKAGENAME + 4) :: packname1
-    character(len=LENPACKAGENAME + 4) :: packname2
-    character(len=LENBUDTXT), dimension(1) :: budtxt
-    character(len=20) :: nodestr
-    integer(I4B) :: ntabrows
-    integer(I4B) :: nodeu
-    integer(I4B) :: i, n1, n2, n1u, n2u
-    integer(I4B) :: ibinun1, ibinun2
     integer(I4B) :: icbcfl, ibudfl
-    real(DP) :: ratin, ratout, rrate
-    integer(I4B) :: isuppress_output
-    ! -- formats
     !
-    ! -- initialize local variables
-    isuppress_output = 0
-    budtxt(1) = '    FLOW-JA-FACE'
-    packname1 = 'EXG '//this%name
-    packname1 = adjustr(packname1)
-    packname2 = 'EXG '//this%name
-    packname2 = adjustr(packname2)
+    ! -- budget for model1
+    call this%gwf_gwf_bdsav_model(this%gwfmodel1)
     !
-    ! -- update output tables
-    if (this%iprflow /= 0) then
-      !
-      ! -- update titles
-      if (this%gwfmodel1%oc%oc_save('BUDGET')) then
-        call this%outputtab1%set_title(packname1)
-      end if
-      if (this%gwfmodel2%oc%oc_save('BUDGET')) then
-        call this%outputtab2%set_title(packname2)
-      end if
-      !
-      ! -- set table kstp and kper
-      call this%outputtab1%set_kstpkper(kstp, kper)
-      call this%outputtab2%set_kstpkper(kstp, kper)
-      !
-      ! -- update maxbound of tables
-      ntabrows = 0
-      do i = 1, this%nexg
-        n1 = this%nodem1(i)
-        n2 = this%nodem2(i)
-        !
-        ! -- If both cells are active then calculate flow rate
-        if (this%gwfmodel1%ibound(n1) /= 0 .and. &
-            this%gwfmodel2%ibound(n2) /= 0) then
-          ntabrows = ntabrows + 1
-        end if
-      end do
-      if (ntabrows > 0) then
-        call this%outputtab1%set_maxbound(ntabrows)
-        call this%outputtab2%set_maxbound(ntabrows)
-      end if
-    end if
-    !
-    ! -- Print and write budget terms for model 1
-    !
-    ! -- Set binary unit numbers for saving flows
-    if (this%ipakcb /= 0) then
-      ibinun1 = this%gwfmodel1%oc%oc_save_unit('BUDGET')
-    else
-      ibinun1 = 0
-    end if
-    !
-    ! -- If save budget flag is zero for this stress period, then
-    !    shut off saving
-    if (.not. this%gwfmodel1%oc%oc_save('BUDGET')) ibinun1 = 0
-    if (isuppress_output /= 0) then
-      ibinun1 = 0
-    end if
-    !
-    ! -- If cell-by-cell flows will be saved as a list, write header.
-    if (ibinun1 /= 0) then
-      call this%gwfmodel1%dis%record_srcdst_list_header(budtxt(1), &
-                                                        this%gwfmodel1%name, &
-                                                        this%name, &
-                                                        this%gwfmodel2%name, &
-                                                        this%name, &
-                                                        this%naux, this%auxname, &
-                                                        ibinun1, this%nexg, &
-                                                        this%gwfmodel1%iout)
-    end if
-    !
-    ! Initialize accumulators
-    ratin = DZERO
-    ratout = DZERO
-    !
-    ! -- Loop through all exchanges
-    do i = 1, this%nexg
-      !
-      ! -- Assign boundary name
-      if (this%inamedbound > 0) then
-        bname = this%boundname(i)
-      else
-        bname = ''
-      end if
-      !
-      ! -- Calculate the flow rate between n1 and n2
-      rrate = DZERO
-      n1 = this%nodem1(i)
-      n2 = this%nodem2(i)
-      !
-      ! -- If both cells are active then calculate flow rate
-      if (this%gwfmodel1%ibound(n1) /= 0 .and. &
-          this%gwfmodel2%ibound(n2) /= 0) then
-        rrate = this%simvals(i)
-        !
-        ! -- Print the individual rates to model list files if requested
-        if (this%iprflow /= 0) then
-          if (this%gwfmodel1%oc%oc_save('BUDGET')) then
-            !
-            ! -- set nodestr and write outputtab table
-            nodeu = this%gwfmodel1%dis%get_nodeuser(n1)
-            call this%gwfmodel1%dis%nodeu_to_string(nodeu, nodestr)
-            call this%outputtab1%print_list_entry(i, trim(adjustl(nodestr)), &
-                                                  rrate, bname)
-          end if
-        end if
-        if (rrate < DZERO) then
-          ratout = ratout - rrate
-        else
-          ratin = ratin + rrate
-        end if
-      end if
-      !
-      ! -- If saving cell-by-cell flows in list, write flow
-      n1u = this%gwfmodel1%dis%get_nodeuser(n1)
-      n2u = this%gwfmodel2%dis%get_nodeuser(n2)
-      if (ibinun1 /= 0) &
-        call this%gwfmodel1%dis%record_mf6_list_entry( &
-        ibinun1, n1u, n2u, rrate, this%naux, this%auxvar(:, i), &
-        .false., .false.)
-      !
-    end do
-    !
-    ! -- Print and write budget terms for model 2
-    !
-    ! -- Set binary unit numbers for saving flows
-    if (this%ipakcb /= 0) then
-      ibinun2 = this%gwfmodel2%oc%oc_save_unit('BUDGET')
-    else
-      ibinun2 = 0
-    end if
-    !
-    ! -- If save budget flag is zero for this stress period, then
-    !    shut off saving
-    if (.not. this%gwfmodel2%oc%oc_save('BUDGET')) ibinun2 = 0
-    if (isuppress_output /= 0) then
-      ibinun2 = 0
-    end if
-    !
-    ! -- If cell-by-cell flows will be saved as a list, write header.
-    if (ibinun2 /= 0) then
-      call this%gwfmodel2%dis%record_srcdst_list_header(budtxt(1), &
-                                                        this%gwfmodel2%name, &
-                                                        this%name, &
-                                                        this%gwfmodel1%name, &
-                                                        this%name, &
-                                                        this%naux, this%auxname, &
-                                                        ibinun2, this%nexg, &
-                                                        this%gwfmodel2%iout)
-    end if
-    !
-    ! Initialize accumulators
-    ratin = DZERO
-    ratout = DZERO
-    !
-    ! -- Loop through all exchanges
-    do i = 1, this%nexg
-      !
-      ! -- Assign boundary name
-      if (this%inamedbound > 0) then
-        bname = this%boundname(i)
-      else
-        bname = ''
-      end if
-      !
-      ! -- Calculate the flow rate between n1 and n2
-      rrate = DZERO
-      n1 = this%nodem1(i)
-      n2 = this%nodem2(i)
-      !
-      ! -- If both cells are active then calculate flow rate
-      if (this%gwfmodel1%ibound(n1) /= 0 .and. &
-          this%gwfmodel2%ibound(n2) /= 0) then
-        rrate = this%simvals(i)
-        !
-        ! -- Print the individual rates to model list files if requested
-        if (this%iprflow /= 0) then
-          if (this%gwfmodel2%oc%oc_save('BUDGET')) then
-            !
-            ! -- set nodestr and write outputtab table
-            nodeu = this%gwfmodel2%dis%get_nodeuser(n2)
-            call this%gwfmodel2%dis%nodeu_to_string(nodeu, nodestr)
-            call this%outputtab2%print_list_entry(i, trim(adjustl(nodestr)), &
-                                                  -rrate, bname)
-          end if
-        end if
-        if (rrate < DZERO) then
-          ratout = ratout - rrate
-        else
-          ratin = ratin + rrate
-        end if
-      end if
-      !
-      ! -- If saving cell-by-cell flows in list, write flow
-      n1u = this%gwfmodel1%dis%get_nodeuser(n1)
-      n2u = this%gwfmodel2%dis%get_nodeuser(n2)
-      if (ibinun2 /= 0) &
-        call this%gwfmodel2%dis%record_mf6_list_entry( &
-        ibinun2, n2u, n1u, -rrate, this%naux, this%auxvar(:, i), &
-        .false., .false.)
-      !
-    end do
+    ! -- budget for model2
+    call this%gwf_gwf_bdsav_model(this%gwfmodel2)
     !
     ! -- Set icbcfl, ibudfl to zero so that flows will be printed and
     !    saved, if the options were set in the MVR package
@@ -1241,7 +1013,7 @@ contains
     ibudfl = 1
     !
     ! -- Call mvr bd routine
-    if (this%inmvr > 0) call this%mvr%mvr_bdsav(icbcfl, ibudfl, isuppress_output)
+    if (this%inmvr > 0) call this%mvr%mvr_bdsav(icbcfl, ibudfl, 0)
     !
     ! -- Calculate and write simulated values for observations
     if (this%inobs /= 0) then
@@ -1251,6 +1023,159 @@ contains
     ! -- return
     return
   end subroutine gwf_gwf_bdsav
+
+  subroutine gwf_gwf_bdsav_model(this, model)
+    use ConstantsModule, only: DZERO, LENBUDTXT, LENPACKAGENAME
+    use TdisModule, only: kstp, kper
+    class(GwfExchangeType) :: this !< this exchange
+    type(GwfModelType), pointer :: model !< the model to save budget for
+    ! local
+    character(len=LENPACKAGENAME + 4) :: packname
+    character(len=LENBUDTXT), dimension(1) :: budtxt
+    type(TableType), pointer :: output_tab
+    class(GwfModelType), pointer :: nbr_model
+    character(len=20) :: nodestr
+    character(len=LENBOUNDNAME) :: bname
+    integer(I4B) :: ntabrows
+    integer(I4B) :: nodeu
+    integer(I4B) :: i, n1, n2, n1u, n2u
+    integer(I4B) :: ibinun
+    real(DP) :: ratin, ratout, rrate
+    logical(LGP) :: is_for_model1
+
+    budtxt(1) = '    FLOW-JA-FACE'
+    packname = 'EXG '//this%name
+    packname = adjustr(packname)
+    if (associated(model, this%gwfmodel1)) then
+      output_tab => this%outputtab1
+      nbr_model => this%gwfmodel2
+      is_for_model1 = .true.
+    else
+      output_tab => this%outputtab2
+      nbr_model => this%gwfmodel1
+      is_for_model1 = .false.
+    end if
+    !
+    ! -- update output tables
+    if (this%iprflow /= 0) then
+      !
+      ! -- update titles
+      if (model%oc%oc_save('BUDGET')) then
+        call output_tab%set_title(packname)
+      end if
+      !
+      ! -- set table kstp and kper
+      call output_tab%set_kstpkper(kstp, kper)
+      !
+      ! -- update maxbound of tables
+      ntabrows = 0
+      do i = 1, this%nexg
+        n1 = this%nodem1(i)
+        n2 = this%nodem2(i)
+        !
+        ! -- If both cells are active then calculate flow rate
+        if (this%model1%ibound(n1) /= 0 .and. this%model2%ibound(n2) /= 0) then
+          ntabrows = ntabrows + 1
+        end if
+      end do
+      if (ntabrows > 0) then
+        call output_tab%set_maxbound(ntabrows)
+      end if
+    end if
+    !
+    ! -- Print and write budget terms
+    !
+    ! -- Set binary unit numbers for saving flows
+    if (this%ipakcb /= 0) then
+      ibinun = model%oc%oc_save_unit('BUDGET')
+    else
+      ibinun = 0
+    end if
+    !
+    ! -- If save budget flag is zero for this stress period, then
+    !    shut off saving
+    if (.not. model%oc%oc_save('BUDGET')) ibinun = 0
+    !
+    ! -- If cell-by-cell flows will be saved as a list, write header.
+    if (ibinun /= 0) then
+      call model%dis%record_srcdst_list_header(budtxt(1), &
+                                               model%name, &
+                                               this%name, &
+                                               nbr_model%name, &
+                                               this%name, &
+                                               this%naux, this%auxname, &
+                                               ibinun, this%nexg, &
+                                               model%iout)
+    end if
+    !
+    ! Initialize accumulators
+    ratin = DZERO
+    ratout = DZERO
+    !
+    ! -- Loop through all exchanges
+    do i = 1, this%nexg
+      !
+      ! -- Assign boundary name
+      if (this%inamedbound > 0) then
+        bname = this%boundname(i)
+      else
+        bname = ''
+      end if
+      !
+      ! -- Calculate the flow rate between n1 and n2
+      rrate = DZERO
+      n1 = this%nodem1(i)
+      n2 = this%nodem2(i)
+      !
+      ! -- If both cells are active then calculate flow rate
+      if (this%model1%ibound(n1) /= 0 .and. &
+          this%model2%ibound(n2) /= 0) then
+        rrate = this%simvals(i)
+        !
+        ! -- Print the individual rates to model list files if requested
+        if (this%iprflow /= 0) then
+          if (model%oc%oc_save('BUDGET')) then
+            !
+            ! -- set nodestr and write outputtab table
+            if (is_for_model1) then
+              nodeu = model%dis%get_nodeuser(n1)
+              call model%dis%nodeu_to_string(nodeu, nodestr)
+              call output_tab%print_list_entry(i, trim(adjustl(nodestr)), &
+                                               rrate, bname)
+            else
+              nodeu = model%dis%get_nodeuser(n2)
+              call model%dis%nodeu_to_string(nodeu, nodestr)
+              call output_tab%print_list_entry(i, trim(adjustl(nodestr)), &
+                                               -rrate, bname)
+            end if
+
+          end if
+        end if
+        if (rrate < DZERO) then
+          ratout = ratout - rrate
+        else
+          ratin = ratin + rrate
+        end if
+      end if
+      !
+      ! -- If saving cell-by-cell flows in list, write flow
+      n1u = this%model1%dis%get_nodeuser(n1)
+      n2u = this%model2%dis%get_nodeuser(n2)
+      if (ibinun /= 0) then
+        if (is_for_model1) then
+          call model%dis%record_mf6_list_entry(ibinun, n1u, n2u, rrate, &
+                                               this%naux, this%auxvar(:, i), &
+                                               .false., .false.)
+        else
+          call model%dis%record_mf6_list_entry(ibinun, n2u, n1u, -rrate, &
+                                               this%naux, this%auxvar(:, i), &
+                                               .false., .false.)
+        end if
+      end if
+      !
+    end do
+
+  end subroutine gwf_gwf_bdsav_model
 
   !> @ brief Output
   !!

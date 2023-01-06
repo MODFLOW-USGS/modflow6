@@ -1,4 +1,4 @@
-# makefile created by pymake (version 1.2.5) for the 'mf6' executable.
+# makefile created by pymake (version 1.2.7) for the 'mf6' executable.
 
 
 include ./makedefaults
@@ -24,10 +24,11 @@ SOURCEDIR17=../src/Utilities/Libraries/daglib
 SOURCEDIR18=../src/Utilities/Libraries/rcm
 SOURCEDIR19=../src/Utilities/Libraries/sparsekit
 SOURCEDIR20=../src/Utilities/Libraries/sparskit2
-SOURCEDIR21=../src/Utilities/Memory
-SOURCEDIR22=../src/Utilities/Observation
-SOURCEDIR23=../src/Utilities/OutputControl
-SOURCEDIR24=../src/Utilities/TimeSeries
+SOURCEDIR21=../src/Utilities/Matrix
+SOURCEDIR22=../src/Utilities/Memory
+SOURCEDIR23=../src/Utilities/Observation
+SOURCEDIR24=../src/Utilities/OutputControl
+SOURCEDIR25=../src/Utilities/TimeSeries
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -53,7 +54,8 @@ ${SOURCEDIR20} \
 ${SOURCEDIR21} \
 ${SOURCEDIR22} \
 ${SOURCEDIR23} \
-${SOURCEDIR24} 
+${SOURCEDIR24} \
+${SOURCEDIR25} 
 
 .SUFFIXES: .f90 .F90 .o
 
@@ -91,19 +93,12 @@ $(OBJDIR)/DisvGeom.o \
 $(OBJDIR)/ArrayReaders.o \
 $(OBJDIR)/TimeSeriesManager.o \
 $(OBJDIR)/SmoothingFunctions.o \
+$(OBJDIR)/MatrixBase.o \
 $(OBJDIR)/ListReader.o \
 $(OBJDIR)/Connections.o \
-$(OBJDIR)/DiscretizationBase.o \
-$(OBJDIR)/TimeArray.o \
-$(OBJDIR)/ObsOutput.o \
-$(OBJDIR)/TimeArraySeries.o \
-$(OBJDIR)/ObsOutputList.o \
-$(OBJDIR)/Observe.o \
 $(OBJDIR)/InputDefinition.o \
 $(OBJDIR)/ArrayReaderBase.o \
-$(OBJDIR)/TimeArraySeriesLink.o \
-$(OBJDIR)/ObsUtility.o \
-$(OBJDIR)/ObsContainer.o \
+$(OBJDIR)/DiscretizationBase.o \
 $(OBJDIR)/VectorInt.o \
 $(OBJDIR)/gwt1dspidm.o \
 $(OBJDIR)/gwf3npf8idm.o \
@@ -111,26 +106,36 @@ $(OBJDIR)/gwf3disv8idm.o \
 $(OBJDIR)/gwf3disu8idm.o \
 $(OBJDIR)/gwf3dis8idm.o \
 $(OBJDIR)/Integer2dReader.o \
-$(OBJDIR)/BudgetFileReader.o \
-$(OBJDIR)/TimeArraySeriesManager.o \
-$(OBJDIR)/PackageMover.o \
-$(OBJDIR)/Obs3.o \
-$(OBJDIR)/NumericalPackage.o \
-$(OBJDIR)/Budget.o \
+$(OBJDIR)/TimeArray.o \
+$(OBJDIR)/ObsOutput.o \
 $(OBJDIR)/StructVector.o \
 $(OBJDIR)/IdmLogger.o \
 $(OBJDIR)/InputDefinitionSelector.o \
 $(OBJDIR)/Integer1dReader.o \
 $(OBJDIR)/Double2dReader.o \
 $(OBJDIR)/Double1dReader.o \
-$(OBJDIR)/sort.o \
-$(OBJDIR)/SfrCrossSectionUtils.o \
-$(OBJDIR)/BudgetTerm.o \
-$(OBJDIR)/BoundaryPackage.o \
-$(OBJDIR)/BaseModel.o \
+$(OBJDIR)/TimeArraySeries.o \
+$(OBJDIR)/ObsOutputList.o \
+$(OBJDIR)/Observe.o \
 $(OBJDIR)/StructArray.o \
 $(OBJDIR)/ModflowInput.o \
 $(OBJDIR)/LayeredArrayReader.o \
+$(OBJDIR)/TimeArraySeriesLink.o \
+$(OBJDIR)/ObsUtility.o \
+$(OBJDIR)/ObsContainer.o \
+$(OBJDIR)/BudgetFileReader.o \
+$(OBJDIR)/LoadMf6FileType.o \
+$(OBJDIR)/TimeArraySeriesManager.o \
+$(OBJDIR)/PackageMover.o \
+$(OBJDIR)/Obs3.o \
+$(OBJDIR)/NumericalPackage.o \
+$(OBJDIR)/Budget.o \
+$(OBJDIR)/sort.o \
+$(OBJDIR)/SfrCrossSectionUtils.o \
+$(OBJDIR)/BudgetTerm.o \
+$(OBJDIR)/IdmMf6FileLoader.o \
+$(OBJDIR)/BoundaryPackage.o \
+$(OBJDIR)/BaseModel.o \
 $(OBJDIR)/SfrCrossSectionManager.o \
 $(OBJDIR)/dag_module.o \
 $(OBJDIR)/BudgetObject.o \
@@ -141,7 +146,6 @@ $(OBJDIR)/HeadFileReader.o \
 $(OBJDIR)/PrintSaveManager.o \
 $(OBJDIR)/Xt3dAlgorithm.o \
 $(OBJDIR)/gwf3tvbase8.o \
-$(OBJDIR)/LoadMf6FileType.o \
 $(OBJDIR)/gwf3sfr8.o \
 $(OBJDIR)/gwf3riv8.o \
 $(OBJDIR)/gwf3maw8.o \
@@ -158,7 +162,6 @@ $(OBJDIR)/gwf3ic8.o \
 $(OBJDIR)/Xt3dInterface.o \
 $(OBJDIR)/gwf3tvk8.o \
 $(OBJDIR)/MemoryManagerExt.o \
-$(OBJDIR)/IdmMf6FileLoader.o \
 $(OBJDIR)/gwf3vsc8.o \
 $(OBJDIR)/GwfNpfOptions.o \
 $(OBJDIR)/CellWithNbrs.o \
@@ -216,6 +219,7 @@ $(OBJDIR)/GhostNode.o \
 $(OBJDIR)/gwf3evt8.o \
 $(OBJDIR)/gwf3chd8.o \
 $(OBJDIR)/ims8reordering.o \
+$(OBJDIR)/SparseMatrix.o \
 $(OBJDIR)/GridConnection.o \
 $(OBJDIR)/DistributedData.o \
 $(OBJDIR)/gwt1.o \

@@ -36,12 +36,12 @@ module GwtSftModule
   use ConstantsModule, only: DZERO, DONE, LINELENGTH
   use SimModule, only: store_error
   use BndModule, only: BndType, GetBndFromList
-  use TspFmiModule, only: TspFmiType
+  use GwtFmiModule, only: GwtFmiType
   use SfrModule, only: SfrType
   use ObserveModule, only: ObserveType
-  use TspAptModule, only: TspAptType, apt_process_obsID, &
+  use GwtAptModule, only: GwtAptType, apt_process_obsID, &
                           apt_process_obsID12
-  use TspLabelsModule, only: TspLabelsType
+  use MatrixModule
 
   implicit none
 
@@ -51,7 +51,7 @@ module GwtSftModule
   character(len=*), parameter :: flowtype = 'SFR'
   character(len=16) :: text = '             SFT'
 
-  type, extends(TspAptType) :: GwtSftType
+  type, extends(GwtAptType) :: GwtSftType
 
     integer(I4B), pointer :: idxbudrain => null() ! index of rainfall terms in flowbudptr
     integer(I4B), pointer :: idxbudevap => null() ! index of evaporation terms in flowbudptr
@@ -90,7 +90,7 @@ module GwtSftModule
 contains
 
   subroutine sft_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
-                        fmi, tsplab)
+                        fmi)
 ! ******************************************************************************
 ! sft_create -- Create a New SFT Package
 ! ******************************************************************************
@@ -105,8 +105,7 @@ contains
     integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
-    type(TspFmiType), pointer :: fmi
-    type(TspLabelsType), pointer :: tsplab
+    type(GwtFmiType), pointer :: fmi
     ! -- local
     type(GwtSftType), pointer :: sftobj
 ! ------------------------------------------------------------------------------
@@ -124,7 +123,7 @@ contains
     !
     ! -- initialize package
     call packobj%pack_initialize()
-    !
+
     packobj%inunit = inunit
     packobj%iout = iout
     packobj%id = id
@@ -143,7 +142,7 @@ contains
 
   subroutine find_sft_package(this)
 ! ******************************************************************************
-! find corresponding lkt package
+! find corresponding sft package
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -265,10 +264,10 @@ contains
     return
   end subroutine find_sft_package
 
-  subroutine sft_fc_expanded(this, rhs, ia, idxglo, amatsln)
+  subroutine sft_fc_expanded(this, rhs, ia, idxglo, matrix_sln)
 ! ******************************************************************************
-! sft_fc_expanded -- this will be called from TspAptType%apt_fc_expanded()
-!   in order to add matrix terms specifically for LKT
+! sft_fc_expanded -- this will be called from GwtAptType%apt_fc_expanded()
+!   in order to add matrix terms specifically for SFT
 ! ****************************************************************************
 !
 !    SPECIFICATIONS:
@@ -279,7 +278,7 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     integer(I4B) :: j, n1, n2
     integer(I4B) :: iloc
@@ -295,7 +294,7 @@ contains
         call this%sft_rain_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
-        amatsln(iposd) = amatsln(iposd) + hcofval
+        call matrix_sln%add_value_pos(iposd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
@@ -306,7 +305,7 @@ contains
         call this%sft_evap_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
-        amatsln(iposd) = amatsln(iposd) + hcofval
+        call matrix_sln%add_value_pos(iposd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
@@ -317,7 +316,7 @@ contains
         call this%sft_roff_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
-        amatsln(iposd) = amatsln(iposd) + hcofval
+        call matrix_sln%add_value_pos(iposd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
@@ -328,7 +327,7 @@ contains
         call this%sft_iflw_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
-        amatsln(iposd) = amatsln(iposd) + hcofval
+        call matrix_sln%add_value_pos(iposd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
@@ -339,7 +338,7 @@ contains
         call this%sft_outf_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
-        amatsln(iposd) = amatsln(iposd) + hcofval
+        call matrix_sln%add_value_pos(iposd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
@@ -606,8 +605,8 @@ contains
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    ! -- allocate scalars in TspAptType
-    call this%TspAptType%allocate_scalars()
+    ! -- allocate scalars in GwtAptType
+    call this%GwtAptType%allocate_scalars()
     !
     ! -- Allocate
     call mem_allocate(this%idxbudrain, 'IDXBUDRAIN', this%memoryPath)
@@ -648,8 +647,8 @@ contains
     call mem_allocate(this%concroff, this%ncv, 'CONCROFF', this%memoryPath)
     call mem_allocate(this%conciflw, this%ncv, 'CONCIFLW', this%memoryPath)
     !
-    ! -- call standard TspAptType allocate arrays
-    call this%TspAptType%apt_allocate_arrays()
+    ! -- call standard GwtApttype allocate arrays
+    call this%GwtAptType%apt_allocate_arrays()
     !
     ! -- Initialize
     do n = 1, this%ncv
@@ -691,8 +690,8 @@ contains
     call mem_deallocate(this%concroff)
     call mem_deallocate(this%conciflw)
     !
-    ! -- deallocate scalars in TspAptType
-    call this%TspAptType%bnd_da()
+    ! -- deallocate scalars in GwtAptType
+    call this%GwtAptType%bnd_da()
     !
     ! -- Return
     return

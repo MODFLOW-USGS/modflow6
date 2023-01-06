@@ -747,6 +747,7 @@ def eval_transport(sim):
     "idx, dir",
     list(enumerate(exdirs)),
 )
+@pytest.mark.developmode
 def test_mf6model(idx, dir):
     # initialize testing framework
     test = testing_framework()

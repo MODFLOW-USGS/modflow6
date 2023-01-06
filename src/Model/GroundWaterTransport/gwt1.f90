@@ -12,18 +12,18 @@ module GwtModule
   use ConstantsModule, only: LENFTYPE, DZERO, LENPAKLOC
   use VersionModule, only: write_listfile_header
   use NumericalModelModule, only: NumericalModelType
-  use TransportModelModule, only: TransportModelType, cunit, niunit
+  use TransportModelModule, only: TransportModelType
   use BaseModelModule, only: BaseModelType
   use BndModule, only: BndType, AddBndToList, GetBndFromList
-  use TspIcModule, only: TspIcType
-  use TspFmiModule, only: TspFmiType
-  use TspAdvModule, only: TspAdvType
-  use TspSsmModule, only: TspSsmType
-  use TspMvtModule, only: TspMvtType
-  use TspOcModule, only: TspOcType
-  use TspObsModule, only: TspObsType
+  use GwtIcModule, only: GwtIcType
+  use GwtFmiModule, only: GwtFmiType
+  use GwtAdvModule, only: GwtAdvType
   use GwtDspModule, only: GwtDspType
+  use GwtSsmModule, only: GwtSsmType
+  use GwtMvtModule, only: GwtMvtType
   use GwtMstModule, only: GwtMstType
+  use GwtOcModule, only: GwtOcType
+  use GwtObsModule, only: GwtObsType
   use BudgetModule, only: BudgetType
   use MatrixModule
 
@@ -36,16 +36,15 @@ module GwtModule
 
   type, extends(TransportModelType) :: GwtModelType
 
-    type(TspLabelsType), pointer :: tsplab => null() ! object defining the appropriate labels
-    type(TspIcType), pointer :: ic => null() ! initial conditions package
-    type(TspFmiType), pointer :: fmi => null() ! flow model interface
-    type(TspAdvType), pointer :: adv => null() ! advection package
-    type(TspSsmType), pointer :: ssm => null() ! source sink mixing package
-    type(TspMvtType), pointer :: mvt => null() ! mover transport package
-    type(TspOcType), pointer :: oc => null() ! output control package
-    type(TspObsType), pointer :: obs => null() ! observation package
+    type(GwtIcType), pointer :: ic => null() ! initial conditions package
+    type(GwtFmiType), pointer :: fmi => null() ! flow model interface
     type(GwtMstType), pointer :: mst => null() ! mass storage and transfer package
+    type(GwtAdvType), pointer :: adv => null() ! advection package
     type(GwtDspType), pointer :: dsp => null() ! dispersion package
+    type(GwtSsmType), pointer :: ssm => null() ! source sink mixing package
+    type(GwtMvtType), pointer :: mvt => null() ! mover transport package
+    type(GwtOcType), pointer :: oc => null() ! output control package
+    type(GwtObsType), pointer :: obs => null() ! observation package
     type(BudgetType), pointer :: budget => null() ! budget object
     integer(I4B), pointer :: inic => null() ! unit number IC
     integer(I4B), pointer :: infmi => null() ! unit number FMI
@@ -87,14 +86,14 @@ module GwtModule
   end type GwtModelType
 
   ! -- Module variables constant for simulation
-  !integer(I4B), parameter :: NIUNIT = 100
-  !character(len=LENFTYPE), dimension(NIUNIT) :: cunit
-  !data cunit/'DIS6 ', 'DISV6', 'DISU6', 'IC6  ', 'MST6 ', & !  5
-  !          &'ADV6 ', 'DSP6 ', 'SSM6 ', '     ', 'CNC6 ', & ! 10
-  !          &'OC6  ', 'OBS6 ', 'FMI6 ', 'SRC6 ', 'IST6 ', & ! 15
-  !          &'LKT6 ', 'SFT6 ', 'MWT6 ', 'UZT6 ', 'MVT6 ', & ! 20
-  !          &'API6 ', '     ', '     ', '     ', '     ', & ! 25
-  !          &75*'     '/
+  integer(I4B), parameter :: NIUNIT = 100
+  character(len=LENFTYPE), dimension(NIUNIT) :: cunit
+  data cunit/'DIS6 ', 'DISV6', 'DISU6', 'IC6  ', 'MST6 ', & !  5
+            &'ADV6 ', 'DSP6 ', 'SSM6 ', '     ', 'CNC6 ', & ! 10
+            &'OC6  ', 'OBS6 ', 'FMI6 ', 'SRC6 ', 'IST6 ', & ! 15
+            &'LKT6 ', 'SFT6 ', 'MWT6 ', 'UZT6 ', 'MVT6 ', & ! 20
+            &'API6 ', '     ', '     ', '     ', '     ', & ! 25
+            &75*'     '/
 
 contains
 
@@ -116,17 +115,16 @@ contains
     use GwfDisModule, only: dis_cr
     use GwfDisvModule, only: disv_cr
     use GwfDisuModule, only: disu_cr
-    use TspIcModule, only: ic_cr
-    use TspFmiModule, only: fmi_cr
-    use TspAdvModule, only: adv_cr
-    use TspSsmModule, only: ssm_cr
-    use TspMvtModule, only: mvt_cr
-    use TspOcModule, only: oc_cr
-    use TspObsModule, only: tsp_obs_cr
+    use GwtIcModule, only: ic_cr
+    use GwtFmiModule, only: fmi_cr
     use GwtMstModule, only: mst_cr
+    use GwtAdvModule, only: adv_cr
     use GwtDspModule, only: dsp_cr
+    use GwtSsmModule, only: ssm_cr
+    use GwtMvtModule, only: mvt_cr
+    use GwtOcModule, only: oc_cr
+    use GwtObsModule, only: gwt_obs_cr
     use BudgetModule, only: budget_cr
-    use TspLabelsModule, only: tsplabels_cr
     use NameFileModule, only: NameFileType
     ! -- dummy
     character(len=*), intent(in) :: filename
@@ -142,7 +140,6 @@ contains
     class(BaseModelType), pointer :: model
     integer(I4B) :: nwords
     character(len=LINELENGTH), allocatable, dimension(:) :: words
-    cunit(10) = 'CNC6 '
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate a new GWT Model (this) and add it to basemodellist
@@ -160,9 +157,6 @@ contains
     this%name = modelname
     this%macronym = 'GWT'
     this%id = id
-    !
-    ! -- Instantiate generalized labels for later assignment
-    call tsplabels_cr(this%tsplab, this%name)
     !
     ! -- Open namefile and set iout
     call namefile_obj%init(this%filename, 0)
@@ -251,15 +245,15 @@ contains
     call this%load_input_context('DSP6', this%name, 'DSP', this%indsp, this%iout)
     !
     ! -- Create packages that are tied directly to model
-    call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis, this%tsplab)
-    call fmi_cr(this%fmi, this%name, this%infmi, this%iout, this%tsplab)
+    call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis)
+    call fmi_cr(this%fmi, this%name, this%infmi, this%iout)
     call mst_cr(this%mst, this%name, this%inmst, this%iout, this%fmi)
     call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi)
     call dsp_cr(this%dsp, this%name, this%indsp, this%iout, this%fmi)
-    call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, this%tsplab)
+    call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi)
     call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
-    call tsp_obs_cr(this%obs, this%inobs)
+    call gwt_obs_cr(this%obs, this%inobs)
     !
     ! -- Create stress packages
     ipakid = 1
@@ -289,16 +283,12 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TspLabelsModule, only: setTspLabels
     ! -- dummy
     class(GwtModelType) :: this
     ! -- local
     integer(I4B) :: ip
     class(BndType), pointer :: packobj
 ! ------------------------------------------------------------------------------
-    !
-    ! -- Set labels to be used with transport model
-    call this%tsplab%setTspLabels(this%macronym, 'CONCENTRATION', 'MASS', 'M')     
     !
     ! -- Define packages and utility objects
     call this%dis%dis_df()
@@ -424,13 +414,13 @@ contains
     if (this%inadv > 0) call this%adv%adv_ar(this%dis, this%ibound)
     if (this%indsp > 0) call this%dsp%dsp_ar(this%ibound, this%mst%porosity)
     if (this%inssm > 0) call this%ssm%ssm_ar(this%dis, this%ibound, this%x)
-    if (this%inobs > 0) call this%obs%tsp_obs_ar(this%ic, this%x, this%flowja)
+    if (this%inobs > 0) call this%obs%gwt_obs_ar(this%ic, this%x, this%flowja)
     !
     ! -- Call dis_ar to write binary grid file
     !call this%dis%dis_ar(this%npf%icelltype)
     !
     ! -- set up output control
-    call this%oc%oc_ar(this%x, this%dis, DHNOFLO, this%tsplab%depvartype)
+    call this%oc%oc_ar(this%x, this%dis, DHNOFLO)
     call this%budget%set_ibudcsv(this%oc%ibudcsv)
     !
     ! -- Package input files now open, so allocate and read
@@ -779,8 +769,8 @@ contains
     idvprint = 0
     icbcfl = 0
     ibudfl = 0
-    if (this%oc%oc_save(trim(this%tsplab%depvartype))) idvsave = 1
-    if (this%oc%oc_print(trim(this%tsplab%depvartype))) idvprint = 1
+    if (this%oc%oc_save('CONCENTRATION')) idvsave = 1
+    if (this%oc%oc_print('CONCENTRATION')) idvprint = 1
     if (this%oc%oc_save('BUDGET')) icbcfl = 1
     if (this%oc%oc_print('BUDGET')) ibudfl = 1
     icbcun = this%oc%oc_save_unit('BUDGET')
@@ -788,7 +778,7 @@ contains
     ! -- Override ibudfl and idvprint flags for nonconvergence
     !    and end of period
     ibudfl = this%oc%set_print_flag('BUDGET', this%icnvg, endofperiod)
-    idvprint = this%oc%set_print_flag(trim(this%tsplab%depvartype), this%icnvg, endofperiod)
+    idvprint = this%oc%set_print_flag('CONCENTRATION', this%icnvg, endofperiod)
     !
     !   Calculate and save observations
     call this%gwt_ot_obs()
@@ -1000,7 +990,6 @@ contains
     call this%budget%budget_da()
     call this%oc%oc_da()
     call this%obs%obs_da()
-    call this%tsplab%tsplabels_da()
     !
     ! -- Internal package objects
     deallocate (this%dis)
@@ -1151,7 +1140,7 @@ contains
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error
-    use TspCncModule, only: cnc_create
+    use GwtCncModule, only: cnc_create
     use GwtSrcModule, only: src_create
     use GwtIstModule, only: ist_create
     use GwtLktModule, only: lkt_create
@@ -1177,17 +1166,15 @@ contains
     ! -- This part creates the package object
     select case (filtyp)
     case ('CNC6')
-      call cnc_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                      pakname, this%tsplab)
+      call cnc_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
     case ('SRC6')
-      call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                      pakname, this%tsplab)
+      call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
     case ('LKT6')
       call lkt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, this%fmi)
     case ('SFT6')
       call sft_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                      pakname, this%fmi, this%tsplab)
+                      pakname, this%fmi)
     case ('MWT6')
       call mwt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, this%fmi)
@@ -1198,8 +1185,7 @@ contains
       call ist_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, this%fmi, this%mst)
     case ('API6')
-      call api_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                      pakname)
+      call api_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
     case default
       write (errmsg, *) 'Invalid package type: ', filtyp
       call store_error(errmsg, terminate=.TRUE.)

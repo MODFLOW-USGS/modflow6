@@ -1,11 +1,11 @@
-!> @brief This module contains the TspSsm Module
+!> @brief This module contains the GwtSsm Module
 !!
 !! This module contains the code for handling sources and sinks
 !! associated with groundwater flow model stress packages.
 !!
 !! todo: need observations for SSM terms
 !<
-module TspSsmModule
+module GwtSsmModule
 
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: DONE, DZERO, LENAUXNAME, LENFTYPE, &
@@ -15,14 +15,13 @@ module TspSsmModule
   use SimVariablesModule, only: errmsg
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
-  use TspFmiModule, only: TspFmiType
-  use TspLabelsModule, only: TspLabelsType
+  use GwtFmiModule, only: GwtFmiType
   use TableModule, only: TableType, table_cr
   use GwtSpcModule, only: GwtSpcType
   use MatrixModule
 
   implicit none
-  public :: TspSsmType
+  public :: GwtSsmType
   public :: ssm_cr
 
   character(len=LENFTYPE) :: ftype = 'SSM'
@@ -35,16 +34,14 @@ module TspSsmModule
   !! equation.
   !!
   !<
-  type, extends(NumericalPackageType) :: TspSsmType
+  type, extends(NumericalPackageType) :: GwtSsmType
 
     integer(I4B), pointer :: nbound !< total number of flow boundaries in this time step
     integer(I4B), dimension(:), pointer, contiguous :: isrctype => null() !< source type 0 is unspecified, 1 is aux, 2 is auxmixed, 3 is ssmi, 4 is ssmimixed
     integer(I4B), dimension(:), pointer, contiguous :: iauxpak => null() !< aux col for concentration
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
     real(DP), dimension(:), pointer, contiguous :: cnew => null() !< pointer to gwt%x
-    real(DP), dimension(:), pointer, contiguous :: cpw => null() !< pointer to gwe%cpw
-    real(DP), dimension(:), pointer, contiguous :: rhow => null() !< pointer to gwe%rhow
-    type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
+    type(GwtFmiType), pointer :: fmi => null() !< pointer to fmi object
     type(TableType), pointer :: outputtab => null() !< output table object
     type(GwtSpcType), dimension(:), pointer :: ssmivec => null() !< array of stress package concentration objects
 
@@ -71,7 +68,7 @@ module TspSsmModule
     procedure, private :: set_ssmivec
     procedure, private :: get_ssm_conc
 
-  end type TspSsmType
+  end type GwtSsmType
 
 contains
 
@@ -81,14 +78,13 @@ contains
   !!  and initializing the parser.
   !!
   !<
-  subroutine ssm_cr(ssmobj, name_model, inunit, iout, fmi, tsplab)
+  subroutine ssm_cr(ssmobj, name_model, inunit, iout, fmi)
     ! -- dummy
-    type(TspSsmType), pointer :: ssmobj !< TspSsmType object
+    type(GwtSsmType), pointer :: ssmobj !< GwtSsmType object
     character(len=*), intent(in) :: name_model !< name of the model
     integer(I4B), intent(in) :: inunit !< fortran unit for input
     integer(I4B), intent(in) :: iout !< fortran unit for output
-    type(TspFmiType), intent(in), target :: fmi !< Transport FMI package
-    type(TspLabelsType), intent(in), pointer :: tsplab !< TspLabelsType object
+    type(GwtFmiType), intent(in), target :: fmi !< GWT FMI package
     !
     ! -- Create the object
     allocate (ssmobj)
@@ -107,10 +103,6 @@ contains
     ! -- Initialize block parser
     call ssmobj%parser%Initialize(ssmobj%inunit, ssmobj%iout)
     !
-    ! -- Store pointer to labels associated with the current model so that the 
-    !    package has access to the corresponding dependent variable type
-    ssmobj%tsplab => tsplab
-    !
     ! -- Return
     return
   end subroutine ssm_cr
@@ -126,7 +118,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
     ! -- dummy
-    class(TspSsmType) :: this !< TspSsmType object
+    class(GwtSsmType) :: this !< GwtSsmType object
     ! -- local
     ! -- formats
     !
@@ -140,16 +132,14 @@ contains
   !! options and data, and sets up the output table.
   !!
   !<
-  subroutine ssm_ar(this, dis, ibound, cnew, cpw, rhow)
+  subroutine ssm_ar(this, dis, ibound, cnew)
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
     ! -- dummy
-    class(TspSsmType) :: this !< TspSsmType object
+    class(GwtSsmType) :: this !< GwtSsmType object
     class(DisBaseType), pointer, intent(in) :: dis !< discretization package
     integer(I4B), dimension(:), pointer, contiguous :: ibound !< GWT model ibound
     real(DP), dimension(:), pointer, contiguous :: cnew !< GWT model dependent variable
-    real(DP), dimension(:), pointer, contiguous, optional :: cpw !< GWE heat capacity paramter
-    real(DP), dimension(:), pointer, contiguous, optional :: rhow !< GWE fluid density paramter
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtssm = &
@@ -163,8 +153,6 @@ contains
     this%dis => dis
     this%ibound => ibound
     this%cnew => cnew
-    this%cpw => cpw
-    this%rhow => rhow
     !
     ! -- Check to make sure that there are flow packages
     if (this%fmi%nflowpack == 0) then
@@ -205,7 +193,7 @@ contains
   subroutine ssm_rp(this)
     ! -- modules
     ! -- dummy
-    class(TspSsmType) :: this !< TspSsmType object
+    class(GwtSsmType) :: this !< GwtSsmType object
     ! -- local
     integer(I4B) :: ip
     type(GwtSpcType), pointer :: ssmiptr
@@ -236,7 +224,7 @@ contains
   subroutine ssm_ad(this)
     ! -- modules
     ! -- dummy
-    class(TspSsmType) :: this !< TspSsmType object
+    class(GwtSsmType) :: this !< GwtSsmType object
     ! -- local
     integer(I4B) :: ip
     type(GwtSpcType), pointer :: ssmiptr
@@ -284,7 +272,7 @@ contains
   subroutine ssm_term(this, ipackage, ientry, rrate, rhsval, hcofval, &
                       cssm, qssm)
     ! -- dummy
-    class(TspSsmType) :: this !< TspSsmType
+    class(GwtSsmType) :: this !< GwtSsmType
     integer(I4B), intent(in) :: ipackage !< package number
     integer(I4B), intent(in) :: ientry !< bound number
     real(DP), intent(out), optional :: rrate !< calculated mass flow rate
@@ -300,21 +288,12 @@ contains
     real(DP) :: omega
     real(DP) :: hcoftmp
     real(DP) :: rhstmp
-    real(DP) :: unitadj
     !
-    ! -- initialize
+    ! -- retrieve node number, qbnd and iauxpos
     hcoftmp = DZERO
     rhstmp = DZERO
     ctmp = DZERO
     qbnd = DZERO
-    !
-    ! -- initialize unitadj, set its value if GWE model
-    unitadj = DONE
-    if (associated(this%cpw).and.associated(this%rhow)) then
-      unitadj = this%cpw(ientry) * this%rhow(ientry)
-    end if
-    !
-    ! -- retrieve node number, qbnd and iauxpos
     n = this%fmi%gwfpackages(ipackage)%nodelist(ientry)
     !
     ! -- If cell is active (ibound > 0) then calculate values
@@ -363,7 +342,7 @@ contains
       if (qbnd <= DZERO) then
         hcoftmp = qbnd * omega
       else
-        rhstmp = -qbnd * ctmp * (DONE - omega) * unitadj
+        rhstmp = -qbnd * ctmp * (DONE - omega)
       end if
       !
       ! -- end of active ibound
@@ -380,19 +359,18 @@ contains
     return
   end subroutine ssm_term
 
-  !> @ brief Provide bound concentration (or temperature) and mixed flag
+  !> @ brief Provide bound concentration and mixed flag
   !!
-  !! SSM concentrations and temperatures can be provided in auxiliary variables
-  !! or through separate SPC files.  If not provided, the default
-  !! concentration (or temperature) is zero.  This single routine provides 
-  !! the SSM bound concentration (or temperature) based on these different 
-  !! approaches. The mixed flag indicates whether or not the boundary as a
-  !! mixed type.
+  !! SSM concentrations can be provided in auxiliary variables or
+  !! through separate SPC files.  If not provided, the default
+  !! concentration is zero.  This single routine provides the SSM
+  !! bound concentration based on these different approaches.
+  !! The mixed flag indicates whether or not
   !!
   !<
   subroutine get_ssm_conc(this, ipackage, ientry, conc, lauxmixed)
     ! -- dummy
-    class(TspSsmType) :: this !< TspSsmType
+    class(GwtSsmType) :: this !< GwtSsmType
     integer(I4B), intent(in) :: ipackage !< package number
     integer(I4B), intent(in) :: ientry !< bound number
     real(DP), intent(out) :: conc !< user-specified concentration for this bound
@@ -427,7 +405,7 @@ contains
   subroutine ssm_fc(this, matrix_sln, idxglo, rhs)
     ! -- modules
     ! -- dummy
-    class(TspSsmType) :: this
+    class(GwtSsmType) :: this
     class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in), dimension(:) :: idxglo
     real(DP), intent(inout), dimension(:) :: rhs
@@ -474,7 +452,7 @@ contains
   subroutine ssm_cq(this, flowja)
     ! -- modules
     ! -- dummy
-    class(TspSsmType) :: this !< TspSsmType object
+    class(GwtSsmType) :: this !< GwtSsmType object
     real(DP), dimension(:), contiguous, intent(inout) :: flowja !< flow across each face in the model grid
     ! -- local
     integer(I4B) :: ip
@@ -516,7 +494,7 @@ contains
     use TdisModule, only: delt
     use BudgetModule, only: BudgetType
     ! -- dummy
-    class(TspSsmType) :: this !< TspSsmType object
+    class(GwtSsmType) :: this !< GwtSsmType object
     integer(I4B), intent(in) :: isuppress_output !< flag to suppress output
     type(BudgetType), intent(inout) :: model_budget !< budget object for the GWT model
     ! -- local
@@ -574,7 +552,7 @@ contains
     use TdisModule, only: kstp, kper
     use ConstantsModule, only: LENPACKAGENAME, LENBOUNDNAME, LENAUXNAME, DZERO
     ! -- dummy
-    class(TspSsmType) :: this !< TspSsmType object
+    class(GwtSsmType) :: this !< GwtSsmType object
     integer(I4B), intent(in) :: icbcfl !< flag for writing binary budget terms
     integer(I4B), intent(in) :: ibudfl !< flag for printing budget terms to list file
     integer(I4B), intent(in) :: icbcun !< fortran unit number for binary budget file
@@ -703,7 +681,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(TspSsmType) :: this !< TspSsmType object
+    class(GwtSsmType) :: this !< GwtSsmType object
     ! -- local
     integer(I4B) :: ip
     type(GwtSpcType), pointer :: ssmiptr
@@ -737,10 +715,6 @@ contains
     ! -- Scalars
     call mem_deallocate(this%nbound)
     !
-    ! -- nullify pointers
-    nullify(this%cpw)
-    nullify(this%rhow)
-    !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
     !
@@ -757,7 +731,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
-    class(TspSsmType) :: this !< TspSsmType object
+    class(GwtSsmType) :: this !< GwtSsmType object
     ! -- local
     !
     ! -- allocate scalars in NumericalPackageType
@@ -782,7 +756,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
-    class(TspSsmType) :: this !< TspSsmType object
+    class(GwtSsmType) :: this !< GwtSsmType object
     ! -- local
     integer(I4B) :: nflowpack
     integer(I4B) :: i
@@ -813,7 +787,7 @@ contains
   subroutine read_options(this)
     ! -- modules
     ! -- dummy
-    class(TspSsmType) :: this !< TspSsmType object
+    class(GwtSSMType) :: this !< GwtSsmType object
     ! -- local
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
@@ -864,7 +838,7 @@ contains
   !<
   subroutine read_data(this)
     ! -- dummy
-    class(TspSsmType) :: this !< TspSsmType object
+    class(GwtSsmtype) :: this !< GwtSsmtype object
     !
     ! -- read and process required SOURCES block
     call this%read_sources_aux()
@@ -882,7 +856,7 @@ contains
   !<
   subroutine read_sources_aux(this)
     ! -- dummy
-    class(TspSsmType) :: this !< TspSsmType object
+    class(GwtSsmtype) :: this !< GwtSsmtype object
     ! -- local
     character(len=LINELENGTH) :: keyword
     character(len=20) :: srctype
@@ -985,7 +959,7 @@ contains
   !<
   subroutine read_sources_fileinput(this)
     ! -- dummy
-    class(TspSsmType) :: this !< TspSsmType object
+    class(GwtSsmtype) :: this !< GwtSsmtype object
     ! -- local
     character(len=LINELENGTH) :: keyword
     character(len=LINELENGTH) :: keyword2
@@ -1106,7 +1080,7 @@ contains
   !<
   subroutine set_iauxpak(this, ip, packname)
     ! -- dummy
-    class(TspSsmType), intent(inout) :: this !< TspSsmType
+    class(GwtSsmtype), intent(inout) :: this !< GwtSsmtype
     integer(I4B), intent(in) :: ip !< package number
     character(len=*), intent(in) :: packname !< name of package
     ! -- local
@@ -1151,7 +1125,7 @@ contains
     ! -- module
     use InputOutputModule, only: openfile, getunit
     ! -- dummy
-    class(TspSsmType), intent(inout) :: this !< TspSsmType
+    class(GwtSsmtype), intent(inout) :: this !< GwtSsmtype
     integer(I4B), intent(in) :: ip !< package number
     character(len=*), intent(in) :: packname !< name of package
     ! -- local
@@ -1169,9 +1143,8 @@ contains
     call ssmiptr%initialize(this%dis, ip, inunit, this%iout, this%name_model, &
                             trim(packname))
 
-    write (this%iout, '(4x, a, a, a, a, a)') 'USING SPC INPUT FILE ', &
-      trim(filename), ' TO SET ',trim(this%tsplab%depvartype),'S FOR PACKAGE ', &
-      trim(packname)
+    write (this%iout, '(4x, a, a, a, a)') 'USING SPC INPUT FILE ', &
+      trim(filename), ' TO SET CONCENTRATIONS FOR PACKAGE ', trim(packname)
     !
     ! -- return
     return
@@ -1184,7 +1157,7 @@ contains
   !<
   subroutine pak_setup_outputtab(this)
     ! -- dummy
-    class(TspSsmType), intent(inout) :: this
+    class(GwtSsmtype), intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: text
@@ -1226,4 +1199,4 @@ contains
     return
   end subroutine pak_setup_outputtab
 
-end module TspSsmModule
+end module GwtSsmModule

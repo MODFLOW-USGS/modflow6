@@ -5,6 +5,8 @@ from pathlib import Path
 
 import pytest
 
+from utils import get_branch
+
 _system = platform.system()
 _eext = ".exe" if _system == "Windows" else ""
 _soext = ".dll" if _system == "Windows" else ".so" if _system == "Linux" else ".dylib"
@@ -31,6 +33,20 @@ def dist_dir_path(request):
 def test_sources(dist_dir_path):
     assert (dist_dir_path / "src").is_dir()
     assert (dist_dir_path / "src" / "mf6.f90").is_file()
+
+    version_file_path = dist_dir_path / "src" / "Utilities" / "version.f90"
+    assert version_file_path.is_file()
+
+    # find IDEVELOPMODE line
+    lines = open(version_file_path, "r").read().splitlines()
+    pattern = ":: IDEVELOPMODE ="
+    line = next(iter([l for l in lines if pattern in l]), None)
+    assert line
+
+    # make sure IDEVELOPMODE was set correctly
+    branch = get_branch()
+    idevelopmode = 1 if ("rc" in branch or "candidate" in branch) else 0
+    assert f"IDEVELOPMODE = {idevelopmode}" in line
 
 
 @pytest.mark.skipif(not _fc, reason="needs Fortran compiler")
@@ -90,14 +106,19 @@ def test_binaries(dist_dir_path):
     assert (bin_path / f"mf5to6{_eext}").is_file()
     assert (bin_path / f"libmf6{_soext}").is_file()
 
-    output = ' '.join(subprocess.check_output([str(bin_path / f"mf6{_eext}"), "-v"]).decode().split())
+    output = ' '.join(subprocess.check_output([str(bin_path / f"mf6{_eext}"), "-v"]).decode().split()).lower()
     assert output.startswith("mf6")
-    assert output.lower().count("release") == 1
-    assert output.lower().count("candidate") <= 1
+    assert output.count("release") == 1
 
+    # make sure binaries were built in correct mode
+    branch = get_branch()
+    if "rc" in branch or "candidate" in branch:
+        assert output.count("candidate") == 1, "Binaries were not built in development mode"
+    else:
+        assert "candidate" not in output, "Binaries were not built in release mode"
+
+    # check version string
     version = output.lower().rpartition(":")[2].rpartition("release")[0].strip()
     v_split = version.split(".")
     assert len(v_split) == 3
     assert all(s.isdigit() for s in v_split)
-
-    # TODO check utils

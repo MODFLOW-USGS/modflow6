@@ -37,6 +37,7 @@ module SfrModule
                                            get_cross_section_area, &
                                            get_mannings_section
   use dag_module, only: dag
+  use MatrixModule
   !
   implicit none
   !
@@ -1958,13 +1959,13 @@ contains
     !!  coefficient matrix and right-hand side vector.
     !!
   !<
-  subroutine sfr_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine sfr_fc(this, rhs, ia, idxglo, matrix_sln)
     ! -- dummy variables
     class(SfrType) :: this !< SfrType object
     real(DP), dimension(:), intent(inout) :: rhs !< right-hand side vector for model
     integer(I4B), dimension(:), intent(in) :: ia !< solution CRS row pointers
     integer(I4B), dimension(:), intent(in) :: idxglo !< mapping vector for model (local) to solution (global)
-    real(DP), dimension(:), intent(inout) :: amatsln !< solution coefficient matrix
+    class(MatrixBaseType), pointer :: matrix_sln !< solution coefficient matrix
     ! -- local variables
     integer(I4B) :: i
     integer(I4B) :: j
@@ -2049,7 +2050,7 @@ contains
       if (node < 1) cycle
       rhs(node) = rhs(node) + this%rhs(n)
       ipos = ia(node)
-      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(n)
+      call matrix_sln%add_value_pos(idxglo(ipos), this%hcof(n))
     end do
     !
     ! -- return
@@ -2062,13 +2063,13 @@ contains
     !!  coefficient matrix and right-hand side vector.
     !!
   !<
-  subroutine sfr_fn(this, rhs, ia, idxglo, amatsln)
+  subroutine sfr_fn(this, rhs, ia, idxglo, matrix_sln)
     ! -- dummy variables
     class(SfrType) :: this !< SfrType object
     real(DP), dimension(:), intent(inout) :: rhs !< right-hand side vector for model
     integer(I4B), dimension(:), intent(in) :: ia !< solution CRS row pointers
     integer(I4B), dimension(:), intent(in) :: idxglo !< mapping vector for model (local) to solution (global)
-    real(DP), dimension(:), intent(inout) :: amatsln !< solution coefficient matrix
+    class(MatrixBaseType), pointer :: matrix_sln !< solution coefficient matrix
     ! -- local variables
     integer(I4B) :: i
     integer(I4B) :: j
@@ -2102,7 +2103,7 @@ contains
       drterm = (q2 - q1) / DEM4
       ! -- add terms to convert conductance formulation into
       !    newton-raphson formulation
-      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + drterm - this%hcof(i)
+      call matrix_sln%add_value_pos(idxglo(ipos), drterm - this%hcof(i))
       rhs(n) = rhs(n) - rterm + drterm * this%xnew(n)
     end do
     !
@@ -2135,13 +2136,19 @@ contains
     integer(I4B) :: ipakfail
     integer(I4B) :: locdhmax
     integer(I4B) :: locrmax
+    integer(I4B) :: locdqfrommvrmax
     integer(I4B) :: ntabrows
     integer(I4B) :: ntabcols
     integer(I4B) :: n
+    real(DP) :: q
+    real(DP) :: q0
+    real(DP) :: qtolfact
     real(DP) :: dh
     real(DP) :: r
     real(DP) :: dhmax
     real(DP) :: rmax
+    real(DP) :: dqfrommvr
+    real(DP) :: dqfrommvrmax
     !
     ! -- initialize local variables
     icheck = this%iconvchk
@@ -2151,6 +2158,8 @@ contains
     r = DZERO
     dhmax = DZERO
     rmax = DZERO
+    locdqfrommvrmax = 0
+    dqfrommvrmax = DZERO
     !
     ! -- if not saving package convergence data on check convergence if
     !    the model is considered converged
@@ -2168,6 +2177,9 @@ contains
         ! -- determine the number of columns and rows
         ntabrows = 1
         ntabcols = 9
+        if (this%imover == 1) then
+          ntabcols = ntabcols + 2
+        end if
         !
         ! -- setup table
         call table_cr(this%pakcsvtab, this%packName, '')
@@ -2194,6 +2206,12 @@ contains
         call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
         tag = 'dinflowmax_loc'
         call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        if (this%imover == 1) then
+          tag = 'dqfrommvrmax'
+          call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+          tag = 'dqfrommvrmax_loc'
+          call this%pakcsvtab%initialize_column(tag, 16, alignment=TABLEFT)
+        end if
       end if
     end if
     !
@@ -2201,6 +2219,11 @@ contains
     if (icheck /= 0) then
       final_check: do n = 1, this%maxbound
         if (this%iboundpak(n) == 0) cycle
+        !
+        ! -- set the Q to length factor
+        qtolfact = delt / this%calc_surface_area(n)
+        !
+        ! -- calculate stage change
         dh = this%stage0(n) - this%stage(n)
         !
         ! -- evaluate flow difference if the time step is transient
@@ -2208,7 +2231,15 @@ contains
           r = this%usflow0(n) - this%usflow(n)
           !
           ! -- normalize flow difference and convert to a depth
-          r = r * delt / this%calc_surface_area(n)
+          r = r * qtolfact
+        end if
+        !
+        ! -- q from mvr
+        dqfrommvr = DZERO
+        if (this%imover == 1) then
+          q = this%pakmvrobj%get_qfrommvr(n)
+          q0 = this%pakmvrobj%get_qfrommvr0(n)
+          dqfrommvr = qtolfact * (q0 - q)
         end if
         !
         ! -- evaluate magnitude of differences
@@ -2217,6 +2248,8 @@ contains
           dhmax = dh
           locrmax = n
           rmax = r
+          dqfrommvrmax = dqfrommvr
+          locdqfrommvrmax = n
         else
           if (abs(dh) > abs(dhmax)) then
             locdhmax = n
@@ -2225,6 +2258,10 @@ contains
           if (abs(r) > abs(rmax)) then
             locrmax = n
             rmax = r
+          end if
+          if (ABS(dqfrommvr) > abs(dqfrommvrmax)) then
+            dqfrommvrmax = dqfrommvr
+            locdqfrommvrmax = n
           end if
         end if
       end do final_check
@@ -2242,6 +2279,14 @@ contains
         write (cloc, "(a,'-',a)") trim(this%packName), 'inflow'
         cpak = trim(cloc)
       end if
+      if (this%imover == 1) then
+        if (ABS(dqfrommvrmax) > abs(dpak)) then
+          ipak = locdqfrommvrmax
+          dpak = dqfrommvrmax
+          write (cloc, "(a,'-',a)") trim(this%packName), 'qfrommvr'
+          cpak = trim(cloc)
+        end if
+      end if
       !
       ! -- write convergence data to package csv
       if (this%ipakcsv /= 0) then
@@ -2256,6 +2301,10 @@ contains
         call this%pakcsvtab%add_term(locdhmax)
         call this%pakcsvtab%add_term(rmax)
         call this%pakcsvtab%add_term(locrmax)
+        if (this%imover == 1) then
+          call this%pakcsvtab%add_term(dqfrommvrmax)
+          call this%pakcsvtab%add_term(locdqfrommvrmax)
+        end if
         !
         ! -- finalize the package csv
         if (iend == 1) then

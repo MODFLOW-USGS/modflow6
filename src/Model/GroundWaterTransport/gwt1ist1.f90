@@ -22,6 +22,7 @@ module GwtIstModule
   use TspFmiModule, only: TspFmiType
   use GwtMstModule, only: GwtMstType, get_zero_order_decay
   use OutputControlDataModule, only: OutputControlDataType
+  use MatrixModule
   !
   implicit none
   !
@@ -271,7 +272,7 @@ contains
   !!  Method to calculate and fill coefficients for the package.
   !!
   !<
-  subroutine ist_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine ist_fc(this, rhs, ia, idxglo, matrix_sln)
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
@@ -279,7 +280,7 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs !< right-hand side vector for model
     integer(I4B), dimension(:), intent(in) :: ia !< solution CRS row pointers
     integer(I4B), dimension(:), intent(in) :: idxglo !< mapping vector for model (local) to solution (global)
-    real(DP), dimension(:), intent(inout) :: amatsln !< solution coefficient matrix
+    class(MatrixBaseType), pointer :: matrix_sln !< solution coefficient matrix
     ! -- local
     integer(I4B) :: n, idiag
     real(DP) :: tled
@@ -367,7 +368,7 @@ contains
       call get_hcofrhs(ddterm, f, cimold, hhcof, rrhs)
       !
       ! -- update solution accumulators
-      amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
+      call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
       rhs(n) = rhs(n) + rrhs
       !
     end do

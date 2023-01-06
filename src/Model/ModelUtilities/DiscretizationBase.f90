@@ -14,6 +14,7 @@ module BaseDisModule
   use MemoryHelperModule, only: create_mem_path
   use TdisModule, only: kstp, kper, pertim, totim, delt
   use TimeSeriesManagerModule, only: TimeSeriesManagerType
+  use MatrixModule
 
   implicit none
 
@@ -157,7 +158,7 @@ contains
     return
   end subroutine dis_ac
 
-  subroutine dis_mc(this, moffset, idxglo, iasln, jasln)
+  subroutine dis_mc(this, moffset, idxglo, matrix_sln)
 ! ******************************************************************************
 ! dis_mc -- Map the positions of cell connections in the numerical solution
 !   coefficient matrix.
@@ -170,10 +171,9 @@ contains
     class(DisBaseType) :: this
     integer(I4B), intent(in) :: moffset
     integer(I4B), dimension(:), intent(inout) :: idxglo
-    integer(I4B), dimension(:), intent(in) :: iasln
-    integer(I4B), dimension(:), intent(in) :: jasln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
-    integer(I4B) :: i, j, ipos, ipossln, iglo, jglo
+    integer(I4B) :: i, j, ipos, iglo, jglo
 ! ------------------------------------------------------------------------------
     !
     do i = 1, this%nodes
@@ -181,12 +181,7 @@ contains
       do ipos = this%con%ia(i), this%con%ia(i + 1) - 1
         j = this%con%ja(ipos)
         jglo = j + moffset
-        searchloop: do ipossln = iasln(iglo), iasln(iglo + 1) - 1
-          if (jglo == jasln(ipossln)) then
-            idxglo(ipos) = ipossln
-            exit searchloop
-          end if
-        end do searchloop
+        idxglo(ipos) = matrix_sln%get_position(iglo, jglo)
       end do
     end do
     !

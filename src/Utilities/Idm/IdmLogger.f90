@@ -19,7 +19,7 @@ module IdmLoggerModule
       idm_log_var_int1d, idm_log_var_int2d, &
       idm_log_var_int3d, idm_log_var_dbl, &
       idm_log_var_dbl1d, idm_log_var_dbl2d, &
-      idm_log_var_dbl3d
+      idm_log_var_dbl3d, idm_log_var_str
   end interface idm_log_var
 
 contains
@@ -205,5 +205,16 @@ contains
         min_val, ' to ', max_val
     end if
   end subroutine idm_log_var_dbl3d
+
+  !> @brief Log type specific information str
+  !<
+  subroutine idm_log_var_str(p_mem, varname, mempath, iout)
+    character(len=*), intent(in) :: p_mem !< pointer to str scalar
+    character(len=*), intent(in) :: varname !< variable name
+    character(len=*), intent(in) :: mempath !< variable memory path
+    integer(I4B) :: iout
+
+    write (iout, '(3x,a, " = ", a)') trim(varname), trim(p_mem)
+  end subroutine idm_log_var_str
 
 end module IdmLoggerModule

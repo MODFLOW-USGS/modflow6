@@ -5,6 +5,7 @@ module NumericalExchangeModule
   use BaseExchangeModule, only: BaseExchangeType, AddBaseExchangeToList
   use NumericalModelModule, only: NumericalModelType
   use ListModule, only: ListType
+  use MatrixModule
 
   implicit none
 
@@ -23,7 +24,6 @@ module NumericalExchangeModule
     procedure :: exg_ad
     procedure :: exg_cf
     procedure :: exg_fc
-    procedure :: exg_nr
     procedure :: exg_cc
     procedure :: exg_cq
     procedure :: exg_bd
@@ -72,7 +72,7 @@ contains
     return
   end subroutine exg_ac
 
-  subroutine exg_mc(this, iasln, jasln)
+  subroutine exg_mc(this, matrix_sln)
 ! ******************************************************************************
 ! exg_mc -- Map the connections in the global matrix
 ! ******************************************************************************
@@ -83,8 +83,7 @@ contains
     use SparseModule, only: sparsematrix
     ! -- dummy
     class(NumericalExchangeType) :: this
-    integer(I4B), dimension(:), intent(in) :: iasln
-    integer(I4B), dimension(:), intent(in) :: jasln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
 ! ------------------------------------------------------------------------------
     !
@@ -140,7 +139,7 @@ contains
     return
   end subroutine exg_cf
 
-  subroutine exg_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
+  subroutine exg_fc(this, kiter, matrix_sln, rhs_sln, inwtflag)
 ! ******************************************************************************
 ! exg_fc -- Fill the matrix
 ! ******************************************************************************
@@ -150,9 +149,8 @@ contains
     ! -- dummy
     class(NumericalExchangeType) :: this
     integer(I4B), intent(in) :: kiter
-    integer(I4B), dimension(:), intent(in) :: iasln
-    real(DP), dimension(:), intent(inout) :: amatsln
-    real(DP), dimension(:), intent(inout) :: rhssln
+    class(MatrixBaseType), pointer :: matrix_sln
+    real(DP), dimension(:), intent(inout) :: rhs_sln
     integer(I4B), optional, intent(in) :: inwtflag
     ! -- local
 ! ------------------------------------------------------------------------------
@@ -160,26 +158,6 @@ contains
     ! -- return
     return
   end subroutine exg_fc
-
-  subroutine exg_nr(this, kiter, iasln, amatsln, inwtflag)
-! ******************************************************************************
-! exg_nr -- Add Newton-Raphson terms to the solution
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(NumericalExchangeType) :: this
-    integer(I4B), intent(in) :: kiter
-    integer(I4B), dimension(:), intent(in) :: iasln
-    real(DP), dimension(:), intent(inout) :: amatsln
-    integer(I4B), optional, intent(in) :: inwtflag
-    ! -- local
-! ------------------------------------------------------------------------------
-    !
-    ! -- return
-    return
-  end subroutine exg_nr
 
   subroutine exg_cc(this, icnvg)
 ! ******************************************************************************

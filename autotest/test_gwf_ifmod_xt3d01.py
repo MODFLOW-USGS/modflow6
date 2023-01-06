@@ -475,7 +475,7 @@ def eval_heads(sim):
     ), "exchange observations do not match parent exchange flows"
     assert np.allclose(
         obsvalues, -child_exchange_flows
-    ), "exchange observations do not match chile exchange flows"
+    ), "exchange observations do not match child exchange flows"
 
     # Read the lumped boundname observations values
     fpth = os.path.join(sim.simpath, "gwf_obs_boundnames.csv")
