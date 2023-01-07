@@ -30,6 +30,7 @@ module GweGweExchangeModule
   use SimVariablesModule, only: errmsg
   use BlockParserModule, only: BlockParserType
   use TableModule, only: TableType, table_cr
+  use MatrixModule
 
   implicit none
 
@@ -378,14 +379,13 @@ contains
   !! Calculate conductance and fill coefficient matrix
   !!
   !<
-  subroutine gwe_gwe_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
+  subroutine gwe_gwe_fc(this, kiter, matrix_sln, rhs_sln, inwtflag)
     ! -- modules
     ! -- dummy
     class(GweExchangeType) :: this !<  GwtExchangeType
     integer(I4B), intent(in) :: kiter
-    integer(I4B), dimension(:), intent(in) :: iasln
-    real(DP), dimension(:), intent(inout) :: amatsln
-    real(DP), dimension(:), intent(inout) :: rhssln
+    class(MatrixBaseType), pointer :: matrix_sln
+    real(DP), dimension(:), intent(inout) :: rhs_sln
     integer(I4B), optional, intent(in) :: inwtflag
     ! -- local
     !
