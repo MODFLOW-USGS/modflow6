@@ -34,7 +34,7 @@ module TransportModelModule
     'ADV6 ', 'DSP6 ', 'SSM6 ', '     ', '     ', & ! 10
     'OC6  ', 'OBS6 ', 'FMI6 ', 'SRC6 ', 'IST6 ', & ! 15
     'LKT6 ', 'SFT6 ', 'MWT6 ', 'UZT6 ', 'MVT6 ', & ! 20
-    'API6 ', '     ', '     ', '     ', '     ', & ! 25
+    'API6 ', '     ', 'SFE6 ', '     ', '     ', & ! 25
     75*'     '/
 
 contains

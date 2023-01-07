@@ -17,6 +17,7 @@ module GweMstModule
   use SimVariablesModule, only: errmsg, warnmsg
   use SimModule, only: store_error, count_errors, &
                        store_warning
+  use MatrixModule
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
   use TspFmiModule, only: TspFmiType
@@ -45,12 +46,14 @@ module GweMstModule
     !
     ! -- decay
     integer(I4B), pointer :: idcy => null() !< order of decay rate (0:none, 1:first, 2:zero)
+    integer(I4B), pointer :: ilhv => null() !< latent heat of vaporization for calculating temperature change associcated with evaporation (0: not specified, not 0: specified)
     real(DP), dimension(:), pointer, contiguous :: decay => null() !< first or zero order decay rate (aqueous)
     real(DP), dimension(:), pointer, contiguous :: ratedcy => null() !< rate of decay
     real(DP), dimension(:), pointer, contiguous :: decaylast => null() !< decay rate used for last iteration (needed for zero order decay)
     !
     ! -- misc
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
+    real(DP), dimension(:), pointer, contiguous :: latheatvap => null() !< latent heat of vaporization
     type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
 
   contains
@@ -150,7 +153,7 @@ contains
   !!  Method to calculate and fill coefficients for the package.
   !!
   !<
-  subroutine mst_fc(this, nodes, cold, nja, njasln, amatsln, idxglo, cnew, &
+  subroutine mst_fc(this, nodes, cold, nja, matrix_sln, idxglo, cnew, &
                     rhs, kiter)
     ! -- modules
     ! -- dummy
@@ -158,8 +161,7 @@ contains
     integer, intent(in) :: nodes !< number of nodes
     real(DP), intent(in), dimension(nodes) :: cold !< temperature at end of last time step
     integer(I4B), intent(in) :: nja !< number of GWE connections
-    integer(I4B), intent(in) :: njasln !< number of connections in solution
-    real(DP), dimension(njasln), intent(inout) :: amatsln !< solution coefficient matrix
+    class(MatrixBaseType), pointer :: matrix_sln !< solution matrix
     integer(I4B), intent(in), dimension(nja) :: idxglo !< mapping vector for model (local) to solution (global)
     real(DP), intent(inout), dimension(nodes) :: rhs !< right-hand side vector for model
     real(DP), intent(in), dimension(nodes) :: cnew !< temperature at end of this time step
@@ -167,11 +169,11 @@ contains
     ! -- local
     !
     ! -- storage contribution
-    call this%mst_fc_sto(nodes, cold, nja, njasln, amatsln, idxglo, rhs)
+    call this%mst_fc_sto(nodes, cold, nja, matrix_sln, idxglo, rhs)
     !
     ! -- decay contribution
     if (this%idcy /= 0) then
-      call this%mst_fc_dcy(nodes, cold, cnew, nja, njasln, amatsln, idxglo, &
+      call this%mst_fc_dcy(nodes, cold, cnew, nja, matrix_sln, idxglo, &
                            rhs, kiter)
     end if
     !
@@ -184,7 +186,7 @@ contains
   !!  Method to calculate and fill storage coefficients for the package.
   !!
   !<
-  subroutine mst_fc_sto(this, nodes, cold, nja, njasln, amatsln, idxglo, rhs)
+  subroutine mst_fc_sto(this, nodes, cold, nja, matrix_sln, idxglo, rhs)
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
@@ -192,8 +194,7 @@ contains
     integer, intent(in) :: nodes !< number of nodes
     real(DP), intent(in), dimension(nodes) :: cold !< temperature at end of last time step
     integer(I4B), intent(in) :: nja !< number of GWE connections
-    integer(I4B), intent(in) :: njasln !< number of connections in solution
-    real(DP), dimension(njasln), intent(inout) :: amatsln !< solution coefficient matrix
+    class(MatrixBaseType), pointer :: matrix_sln !< solution coefficient matrix
     integer(I4B), intent(in), dimension(nja) :: idxglo !< mapping vector for model (local) to solution (global)
     real(DP), intent(inout), dimension(nodes) :: rhs !< right-hand side vector for model
     ! -- local
@@ -224,7 +225,7 @@ contains
       hhcof = -(vnew + term) * tled
       rrhs = -(vold + term) * tled * cold(n)
       idiag = this%dis%con%ia(n)
-      amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
+      call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
       rhs(n) = rhs(n) + rrhs
     end do
     !
@@ -237,7 +238,7 @@ contains
   !!  Method to calculate and fill decay coefficients for the package.
   !!
   !<
-  subroutine mst_fc_dcy(this, nodes, cold, cnew, nja, njasln, amatsln, &
+  subroutine mst_fc_dcy(this, nodes, cold, cnew, nja, matrix_sln, &
                         idxglo, rhs, kiter)
     ! -- modules
     use TdisModule, only: delt
@@ -247,8 +248,7 @@ contains
     real(DP), intent(in), dimension(nodes) :: cold !< temperature at end of last time step
     real(DP), intent(in), dimension(nodes) :: cnew !< temperature at end of this time step
     integer(I4B), intent(in) :: nja !< number of GWE connections
-    integer(I4B), intent(in) :: njasln !< number of connections in solution
-    real(DP), dimension(njasln), intent(inout) :: amatsln !< solution coefficient matrix
+    class(MatrixBaseType), pointer :: matrix_sln !< solution coefficient matrix
     integer(I4B), intent(in), dimension(nja) :: idxglo !< mapping vector for model (local) to solution (global)
     real(DP), intent(inout), dimension(nodes) :: rhs !< right-hand side vector for model
     integer(I4B), intent(in) :: kiter !< solution outer iteration number
@@ -276,7 +276,7 @@ contains
         ! -- first order decay rate is a function of temperature, so add
         !    to left hand side
         hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n)
-        amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
+        call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
       elseif (this%idcy == 2) then
         !
         ! -- Call function to get zero-order decay rate, which may be changed
@@ -340,7 +340,7 @@ contains
     integer(I4B) :: idiag
     real(DP) :: rate
     real(DP) :: tled
-    real(DP) :: vnew, vold, vcell, vsolid, term
+    real(DP) :: vwatnew, vwatold, vcell, vsolid, term
     real(DP) :: hhcof, rrhs
     !
     ! -- initialize
@@ -355,16 +355,16 @@ contains
       !
       ! -- calculate new and old water volumes and solid volume
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
-      vnew = vcell * this%fmi%gwfsat(n) * this%porosity(n)
-      vold = vnew
-      if (this%fmi%igwfstrgss /= 0) vold = vold + this%fmi%gwfstrgss(n) * delt
-      if (this%fmi%igwfstrgsy /= 0) vold = vold + this%fmi%gwfstrgsy(n) * delt
+      vwatnew = vcell * this%fmi%gwfsat(n) * this%porosity(n)
+      vwatold = vwatnew
+      if (this%fmi%igwfstrgss /= 0) vwatold = vwatold + this%fmi%gwfstrgss(n) * delt
+      if (this%fmi%igwfstrgsy /= 0) vwatold = vwatold + this%fmi%gwfstrgsy(n) * delt
       vsolid = vcell * (DONE - this%porosity(n))
       !
       ! -- calculate rate
       term = vsolid * (this%rhos(n) * this%cps(n)) / (this%rhow(n) * this%cpw(n))
-      hhcof = -(vnew + term) * tled
-      rrhs = -(vold + term) * tled * cold(n)
+      hhcof = -(vwatnew + term) * tled
+      rrhs = -(vwatold + term) * tled * cold(n)
       rate = hhcof * cnew(n) - rrhs
       this%ratesto(n) = rate
       idiag = this%dis%con%ia(n)
@@ -530,6 +530,7 @@ contains
       call mem_deallocate(this%porosity)
       call mem_deallocate(this%ratesto)
       call mem_deallocate(this%idcy)
+      call mem_deallocate(this%ilhv)
       call mem_deallocate(this%decay)
       call mem_deallocate(this%ratedcy)
       call mem_deallocate(this%decaylast)
@@ -537,6 +538,7 @@ contains
       call mem_deallocate(this%cps)
       call mem_deallocate(this%rhow)
       call mem_deallocate(this%rhos)
+      call mem_deallocate(this%latheatvap)
       this%ibound => null()
       this%fmi => null()
     end if
@@ -567,9 +569,11 @@ contains
     !
     ! -- Allocate
     call mem_allocate(this%idcy, 'IDCY', this%memoryPath)
+    call mem_allocate(this%ilhv, 'ILHV', this%memoryPath)
     !
     ! -- Initialize
     this%idcy = 0
+    this%ilhv = 0
     !
     ! -- Return
     return
@@ -610,6 +614,13 @@ contains
       call mem_allocate(this%decaylast, nodes, 'DECAYLAST', this%memoryPath)
     end if
     !
+    ! -- latent heat of vaporization
+    if (this%ilhv == 0) then
+      call mem_allocate(this%latheatvap, 1, 'LATHEATVAP', this%memoryPath)
+    else
+      call mem_allocate(this%latheatvap, nodes, 'LATHEATVAP', this%memoryPath)
+    end if
+    !
     ! -- Initialize
     do n = 1, nodes
       this%porosity(n) = DZERO
@@ -623,6 +634,9 @@ contains
       this%decay(n) = DZERO
       this%ratedcy(n) = DZERO
       this%decaylast(n) = DZERO
+    end do
+    do n = 1, size(this%latheatvap)
+      this%latheatvap(n) = DZERO
     end do
     !
     ! -- Return
@@ -640,7 +654,7 @@ contains
     ! -- dummy
     class(GweMstType) :: this !< GweMstType object
     ! -- local
-    character(len=LINELENGTH) :: keyword, keyword2
+    character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
     ! -- formats
@@ -651,6 +665,9 @@ contains
                                    "(4x,'FIRST-ORDER DECAY IS ACTIVE. ')"
     character(len=*), parameter :: fmtidcy2 = &
                                    "(4x,'ZERO-ORDER DECAY IS ACTIVE. ')"
+    character(len=*), parameter :: fmtilhv = &
+                                   "(4x,'LATENT HEAT OF VAPORIZATION WILL BE &
+            &USED IN EVAPORATION CALCULATIONS.')"
     !
     ! -- get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false., &
@@ -673,6 +690,9 @@ contains
         case ('ZERO_ORDER_DECAY')
           this%idcy = 2
           write (this%iout, fmtidcy2)
+        case ('LATENT_HEAT_VAPORIZATION')
+          this%ilhv = 1
+          write (this%iout, fmtilhv)
         case default
           write (errmsg, '(a,a)') 'UNKNOWN MST OPTION: ', trim(keyword)
           call store_error(errmsg)
@@ -703,7 +723,7 @@ contains
     integer(I4B) :: istart, istop, lloc, ierr
     logical :: isfound, endOfBlock
     logical, dimension(10) :: lname
-    character(len=24), dimension(6) :: aname
+    character(len=24), dimension(7) :: aname
     ! -- formats
     ! -- data
     data aname(1)/'  MOBILE DOMAIN POROSITY'/
@@ -712,6 +732,7 @@ contains
     data aname(4)/' HEAT CAPACITY OF SOLIDS'/
     data aname(5)/'        DENSITY OF WATER'/
     data aname(6)/'       DENSITY OF SOLIDS'/
+    data aname(7)/'LATENT HEAT VAPORIZATION'/
     !
     ! -- initialize
     isfound = .false.
@@ -761,6 +782,14 @@ contains
                                         this%parser%iuactive, this%rhos, &
                                         aname(6))
           lname(6) = .true.
+        case ('LATHEATVAP')
+          if (this%ilhv == 0) &
+            call mem_reallocate(this%latheatvap, this%dis%nodes, 'LATHEATVAP', &
+                                trim(this%memoryPath))
+          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+                                        this%parser%iuactive, this%latheatvap, &
+                                        aname(7))
+          lname(7) = .true.
         case default
           write (errmsg, '(a,a)') 'UNKNOWN GRIDDATA TAG: ', trim(keyword)
           call store_error(errmsg)
@@ -809,6 +838,27 @@ contains
         write (warnmsg, '(a)') 'FIRST OR ZERO ORER DECAY &
           &IS NOT ACTIVE BUT DECAY WAS SPECIFIED.  DECAY WILL &
           &HAVE NO AFFECT ON SIMULATION RESULTS.'
+        call store_warning(warnmsg)
+        write (this%iout, '(1x,a)') 'WARNING.  '//warnmsg
+      end if
+    end if
+    !
+    ! -- Check for latent heat of vaporization.  May be used by multiple packages 
+    !    wherever evaporation occurs, is specified in mst instead of in multiple
+    !    GWE packages that simulate evaporation (SFE, LKE, UZE)
+    if (this%ilhv > 0) then
+      if (.not. lname(7)) then
+        write (errmsg, '(a)') 'EVAPORATION IS EXPECTED IN A GWE PACKAGE &
+          &BUT THE LATENT HEAT OF VAPORIZATION IS NOT SPECIFIED.  LATHEATVAP &
+          &MUST BE SPECIFIED IN GRIDDATA BLOCK.'
+        call store_error(errmsg)
+      end if
+    else
+      if (lname(7)) then
+        write (warnmsg, '(a)') 'LATENT HEAT OF VAPORIZATION FOR CALCULATING &
+          &EVAPORATION IS SPECIFIED, BUT CORRESPONDING OPTION NOT SET IN &
+          &OPTIONS BLOCK.  EVAPORATION CALCULATIONS WILL STILL USE LATHEATVAP &
+          &SPECIFIED IN GWE MST PACKAGE.'
         call store_warning(warnmsg)
         write (this%iout, '(1x,a)') 'WARNING.  '//warnmsg
       end if

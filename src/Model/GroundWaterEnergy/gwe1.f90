@@ -21,6 +21,7 @@ module GweModule
   use GweMstModule, only: GweMstType
   use BudgetModule, only: BudgetType
   use TspLabelsModule, only: TspLabelsType
+  use MatrixModule
 
   implicit none
 
@@ -78,7 +79,7 @@ module GweModule
     procedure, private :: gwe_ot_dv
     procedure, private :: gwe_ot_bdsummary
     procedure, private :: gwe_ot_obs
-
+    procedure :: load_input_context => gwe_load_input_context
   end type GweModelType
 
   ! -- Module variables constant for simulation
@@ -105,8 +106,9 @@ contains
     use BaseModelModule, only: AddBaseModelToList
     use SimModule, only: store_error, count_errors
     use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
+    use CompilerVersion
+    use MemoryManagerModule, only: mem_allocate
     use MemoryHelperModule, only: create_mem_path
-    use NameFileModule, only: NameFileType
     use GwfDisModule, only: dis_cr
     use GwfDisvModule, only: disv_cr
     use GwfDisuModule, only: disu_cr
@@ -121,7 +123,7 @@ contains
     use GweDspModule, only: dsp_cr
     use BudgetModule, only: budget_cr
     use TspLabelsModule, only: tsplabels_cr
-
+    use NameFileModule, only: NameFileType
     ! -- dummy
     character(len=*), intent(in) :: filename
     integer(I4B), intent(in) :: id
@@ -129,13 +131,13 @@ contains
     ! -- local
     integer(I4B) :: indis, indis6, indisu6, indisv6
     integer(I4B) :: ipakid, i, j, iu, ipaknum
-    integer(I4B) :: nwords
     character(len=LINELENGTH) :: errmsg
     character(len=LENPACKAGENAME) :: pakname
-    character(len=LINELENGTH), allocatable, dimension(:) :: words
     type(NameFileType) :: namefile_obj
     type(GweModelType), pointer :: this
     class(BaseModelType), pointer :: model
+    integer(I4B) :: nwords
+    character(len=LINELENGTH), allocatable, dimension(:) :: words
     cunit(10) = 'TMP6 '
 ! ------------------------------------------------------------------------------
     !
@@ -217,8 +219,8 @@ contains
     call namefile_obj%get_unitnumber('IC6', this%inic, 1)
     call namefile_obj%get_unitnumber('FMI6', this%infmi, 1)
     call namefile_obj%get_unitnumber('MVT6', this%inmvt, 1)
-    call namefile_obj%get_unitnumber('ADV6', this%inadv, 1)
     call namefile_obj%get_unitnumber('MST6', this%inmst, 1)
+    call namefile_obj%get_unitnumber('ADV6', this%inadv, 1)
     call namefile_obj%get_unitnumber('DSP6', this%indsp, 1)
     call namefile_obj%get_unitnumber('SSM6', this%inssm, 1)
     call namefile_obj%get_unitnumber('OC6', this%inoc, 1)
@@ -229,15 +231,21 @@ contains
     !
     ! -- Create discretization object
     if (indis6 > 0) then
+      call this%load_input_context('DIS6', this%name, 'DIS', indis, this%iout)
       call dis_cr(this%dis, this%name, indis, this%iout)
     elseif (indisu6 > 0) then
+      call this%load_input_context('DISU6', this%name, 'DISU', indis, this%iout)
       call disu_cr(this%dis, this%name, indis, this%iout)
     elseif (indisv6 > 0) then
+      call this%load_input_context('DISV6', this%name, 'DISV', indis, this%iout)
       call disv_cr(this%dis, this%name, indis, this%iout)
     end if
     !
     ! -- Create utility objects
-    call budget_cr(this%budget, this%name)
+    call budget_cr(this%budget, this%name, this%tsplab)
+    !
+    ! -- Load input context for currently supported packages
+    call this%load_input_context('DSP6', this%name, 'DSP', this%indsp, this%iout)
     !
     ! -- Create packages that are tied directly to model
     call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis, this%tsplab)
@@ -298,7 +306,8 @@ contains
     if (this%indsp > 0) call this%dsp%dsp_df(this%dis)
     if (this%inssm > 0) call this%ssm%ssm_df()
     call this%oc%oc_df()
-    call this%budget%budget_df(niunit, 'MASS', 'M')
+    call this%budget%budget_df(niunit, this%tsplab%depvarunit, &
+                               this%tsplab%depvarunitabbrev)
     !
     ! -- Assign or point model members to dis members
     this%neq = this%dis%nodes
@@ -322,7 +331,6 @@ contains
     !
     ! -- return
     return
-
   end subroutine gwe_df
 
   subroutine gwe_ac(this, sparse)
@@ -357,7 +365,7 @@ contains
     return
   end subroutine gwe_ac
 
-  subroutine gwe_mc(this, iasln, jasln)
+  subroutine gwe_mc(this, matrix_sln)
 ! ******************************************************************************
 ! gwe_mc -- Map the positions of this models connections in the
 ! numerical solution coefficient matrix.
@@ -367,8 +375,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(GweModelType) :: this
-    integer(I4B), dimension(:), intent(in) :: iasln
-    integer(I4B), dimension(:), intent(in) :: jasln
+    class(MatrixBaseType), pointer :: matrix_sln !< global system matrix
     ! -- local
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
@@ -376,13 +383,13 @@ contains
     !
     ! -- Find the position of each connection in the global ia, ja structure
     !    and store them in idxglo.
-    call this%dis%dis_mc(this%moffset, this%idxglo, iasln, jasln)
-    if (this%indsp > 0) call this%dsp%dsp_mc(this%moffset, iasln, jasln)
+    call this%dis%dis_mc(this%moffset, this%idxglo, matrix_sln)
+    if (this%indsp > 0) call this%dsp%dsp_mc(this%moffset, matrix_sln)
     !
     ! -- Map any package connections
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_mc(this%moffset, iasln, jasln)
+      call packobj%bnd_mc(this%moffset, matrix_sln)
     end do
     !
     ! -- return
@@ -416,7 +423,8 @@ contains
                                              this%mst%cpw, this%mst%rhow)
     if (this%indsp > 0) call this%dsp%dsp_ar(this%ibound, this%mst%porosity, &
                                              this%mst%cpw, this%mst%rhow)
-    if (this%inssm > 0) call this%ssm%ssm_ar(this%dis, this%ibound, this%x)
+    if (this%inssm > 0) call this%ssm%ssm_ar(this%dis, this%ibound, this%x, &
+                                             this%mst%cpw, this%mst%rhow)
     if (this%inobs > 0) call this%obs%tsp_obs_ar(this%ic, this%x, this%flowja)
     !
     ! -- Call dis_ar to write binary grid file
@@ -562,7 +570,7 @@ contains
     return
   end subroutine gwe_cf
 
-  subroutine gwe_fc(this, kiter, amatsln, njasln, inwtflag)
+  subroutine gwe_fc(this, kiter, matrix_sln, inwtflag)
 ! ******************************************************************************
 ! gwe_fc -- GroundWater Energy Transport Model fill coefficients
 ! ******************************************************************************
@@ -573,8 +581,7 @@ contains
     ! -- dummy
     class(GweModelType) :: this
     integer(I4B), intent(in) :: kiter
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in) :: inwtflag
     ! -- local
     class(BndType), pointer :: packobj
@@ -582,31 +589,31 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- call fc routines
-    call this%fmi%fmi_fc(this%dis%nodes, this%xold, this%nja, njasln, &
-                         amatsln, this%idxglo, this%rhs)
+    call this%fmi%fmi_fc(this%dis%nodes, this%xold, this%nja, matrix_sln, &
+                         this%idxglo, this%rhs)
     if (this%inmvt > 0) then
       call this%mvt%mvt_fc(this%x, this%x)
     end if
     if (this%inmst > 0) then
-      call this%mst%mst_fc(this%dis%nodes, this%xold, this%nja, njasln, &
-                           amatsln, this%idxglo, this%x, this%rhs, kiter)
+      call this%mst%mst_fc(this%dis%nodes, this%xold, this%nja, matrix_sln, &
+                           this%idxglo, this%x, this%rhs, kiter)
     end if
     if (this%inadv > 0) then
-      call this%adv%adv_fc(this%dis%nodes, amatsln, this%idxglo, this%x, &
+      call this%adv%adv_fc(this%dis%nodes, matrix_sln, this%idxglo, this%x, &
                            this%rhs)
     end if
     if (this%indsp > 0) then
-      call this%dsp%dsp_fc(kiter, this%dis%nodes, this%nja, njasln, amatsln, &
+      call this%dsp%dsp_fc(kiter, this%dis%nodes, this%nja, matrix_sln, &
                            this%idxglo, this%rhs, this%x)
     end if
     if (this%inssm > 0) then
-      call this%ssm%ssm_fc(amatsln, this%idxglo, this%rhs)
+      call this%ssm%ssm_fc(matrix_sln, this%idxglo, this%rhs)
     end if
     !
     ! -- packages
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_fc(this%rhs, this%ia, this%idxglo, amatsln)
+      call packobj%bnd_fc(this%rhs, this%ia, this%idxglo, matrix_sln)
     end do
     !
     ! -- return
@@ -1057,18 +1064,15 @@ contains
     return
   end subroutine gwe_bdentry
 
+  !> @brief return 1 if any package causes the matrix to be asymmetric.
+  !! Otherwise return 0.
+  !<
   function gwe_get_iasym(this) result(iasym)
-! ******************************************************************************
-! gwe_get_iasym -- return 1 if any package causes the matrix to be asymmetric.
-!   Otherwise return 0.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     class(GweModelType) :: this
     ! -- local
     integer(I4B) :: iasym
-! ------------------------------------------------------------------------------
+    integer(I4B) :: ip
+    class(BndType), pointer :: packobj
     !
     ! -- Start by setting iasym to zero
     iasym = 0
@@ -1078,6 +1082,16 @@ contains
       if (this%adv%iasym /= 0) iasym = 1
     end if
     !
+    ! -- DSP
+    if (this%indsp > 0) then
+      if (this%dsp%ixt3d /= 0) iasym = 1
+    end if
+    !
+    ! -- Check for any packages that introduce matrix asymmetry
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      if (packobj%iasym /= 0) iasym = 1
+    end do
     ! -- return
     return
   end function gwe_get_iasym
@@ -1122,7 +1136,7 @@ contains
     !
     ! -- return
     return
-  end subroutine
+  end subroutine allocate_scalars_gwe
 
   subroutine package_create(this, filtyp, ipakid, ipaknum, pakname, inunit, &
                             iout)
@@ -1285,5 +1299,39 @@ contains
     end select
 
   end function CastAsGweModel
+  
+  !> @brief Load input context for supported package
+  !<
+  subroutine gwe_load_input_context(this, filtyp, modelname, pkgname, inunit, &
+                                    iout, ipaknum)
+    ! -- modules
+    use IdmMf6FileLoaderModule, only: input_load
+    ! -- dummy
+    class(GweModelType) :: this
+    character(len=*), intent(in) :: filtyp
+    character(len=*), intent(in) :: modelname
+    character(len=*), intent(in) :: pkgname
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: iout
+    integer(I4B), optional, intent(in) :: ipaknum
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- only load if there is a file to read
+    if (inunit <= 0) return
+    !
+    ! -- Load model package input to input context
+    select case (filtyp)
+    case ('DSP6')
+      call input_load('DSP6', 'GWE', 'DSP', modelname, pkgname, inunit, iout)
+    case default
+      call this%NumericalModelType%load_input_context(filtyp, modelname, &
+                                                      pkgname, inunit, iout, &
+                                                      ipaknum)
+    end select
+    !
+    ! -- return
+    return
+  end subroutine gwe_load_input_context
 
 end module GweModule
