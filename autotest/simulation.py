@@ -2,6 +2,7 @@ import os
 import shutil
 import sys
 import time
+from traceback import format_exc
 
 import flopy
 import numpy as np
@@ -125,21 +126,16 @@ class TestSimulation:
         # if self.mf6_regression:
         #     self.action = "mf6_regression"
         # else:
-        #     self.action = pymake.get_mf6_comparison(pth)
+        #     self.action = get_mf6_comparison(pth)
         if self.action is not None:
             if "mf6" in self.action or "mf6_regression" in self.action:
                 cinp, self.coutp = get_mf6_files(fpth)
 
     def setup(self, src, dst):
-        msg = sfmt.format("Setup test", self.name)
+        msg = sfmt.format("Setting up test workspace", self.name)
         print(msg)
         self.originpath = src
         self.simpath = dst
-        # write message
-        print(
-            "running pymake.setup_mf6 from "
-            + f"{os.path.abspath(os.getcwd())}"
-        )
         try:
             self.inpt, self.outp = setup_mf6(src=src, dst=dst)
             print("waiting...")
@@ -149,7 +145,7 @@ class TestSimulation:
             success = False
             print(f"source:      {src}")
             print(f"destination: {dst}")
-        assert success, "did not run pymake.setup_mf6"
+        assert success, f"Failed to set up test workspace: {format_exc()}"
 
         if success:
             self.setup_comparison(src, dst)
