@@ -1,23 +1,25 @@
-module GwtAdvModule
+module TspAdvModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DONE, DZERO, DHALF, DTWO
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
-  use GwtFmiModule, only: GwtFmiType
-  use GwtAdvOptionsModule, only: GwtAdvOptionsType
+  use TspFmiModule, only: TspFmiType
+  use TspAdvOptionsModule, only: TspAdvOptionsType
   use MatrixModule
-
+  
   implicit none
   private
-  public :: GwtAdvType
+  public :: TspAdvType
   public :: adv_cr
 
-  type, extends(NumericalPackageType) :: GwtAdvType
+  type, extends(NumericalPackageType) :: TspAdvType
 
     integer(I4B), pointer :: iadvwt => null() !< advection scheme (0 up, 1 central, 2 tvd)
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
-    type(GwtFmiType), pointer :: fmi => null() !< pointer to fmi object
+    type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
+    real(DP), dimension(:), pointer, contiguous :: cpw => null() ! pointer to GWE heat capacity of water
+    real(DP), dimension(:), pointer, contiguous :: rhow => null() ! fixed density of water
 
   contains
 
@@ -34,7 +36,7 @@ module GwtAdvModule
     procedure :: adv_weight
     procedure :: advtvd
 
-  end type GwtAdvType
+  end type TspAdvType
 
 contains
 
@@ -46,11 +48,11 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    type(GwtAdvType), pointer :: advobj
+    type(TspAdvType), pointer :: advobj
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
-    type(GwtFmiType), intent(in), target :: fmi
+    type(TspFmiType), intent(in), target :: fmi
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -72,8 +74,8 @@ contains
   end subroutine adv_cr
 
   subroutine adv_df(this, adv_options)
-    class(GwtAdvType) :: this
-    type(GwtAdvOptionsType), optional, intent(in) :: adv_options !< the optional options, for when not constructing from file
+    class(TspAdvType) :: this
+    type(TspAdvOptionsType), optional, intent(in) :: adv_options !< the optional options, for when not constructing from file
     ! local
     character(len=*), parameter :: fmtadv = &
       "(1x,/1x,'ADV-- ADVECTION PACKAGE, VERSION 1, 8/25/2017', &
@@ -99,7 +101,7 @@ contains
 
   end subroutine adv_df
 
-  subroutine adv_ar(this, dis, ibound)
+  subroutine adv_ar(this, dis, ibound, cpw, rhow)
 ! ******************************************************************************
 ! adv_ar -- Allocate and Read
 ! ******************************************************************************
@@ -108,9 +110,11 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAdvType) :: this
+    class(TspAdvType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
-    integer(I4B), dimension(:), pointer, contiguous :: ibound
+    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: ibound
+    real(DP), dimension(:), pointer, contiguous, optional, intent(in) :: cpw
+    real(DP), dimension(:), pointer, contiguous, optional, intent(in) :: rhow
     ! -- local
     ! -- formats
 ! ------------------------------------------------------------------------------
@@ -118,6 +122,10 @@ contains
     ! -- adv pointers to arguments that were passed in
     this%dis => dis
     this%ibound => ibound
+    !
+    ! -- if part of a GWE simulation, need heat capacity(cpw) and density (rhow)
+    if (present(cpw)) this%cpw => cpw
+    if (present(rhow)) this%rhow => rhow
     !
     ! -- Return
     return
@@ -132,7 +140,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAdvType) :: this
+    class(TspAdvType) :: this
     integer, intent(in) :: nodes
     class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in), dimension(:) :: idxglo
@@ -180,7 +188,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAdvType) :: this
+    class(TspAdvType) :: this
     integer(I4B), intent(in) :: n
     real(DP), dimension(:), intent(in) :: cnew
     real(DP), dimension(:), intent(inout) :: rhs
@@ -216,7 +224,7 @@ contains
     ! -- return
     real(DP) :: qtvd
     ! -- dummy
-    class(GwtAdvType) :: this
+    class(TspAdvType) :: this
     integer(I4B), intent(in) :: n
     integer(I4B), intent(in) :: m
     integer(I4B), intent(in) :: iposnm
@@ -225,10 +233,13 @@ contains
     integer(I4B) :: ipos, isympos, iup, idn, i2up, j
     real(DP) :: qnm, qmax, qupj, elupdn, elup2up
     real(DP) :: smooth, cdiff, alimiter
+    real(DP) :: unitadjdn, unitadjup
 ! ------------------------------------------------------------------------------
     !
     ! -- intialize
     qtvd = DZERO
+    unitadjdn = DONE
+    unitadjup = DONE
     !
     ! -- Find upstream node
     isympos = this%dis%con%jas(iposnm)
@@ -268,7 +279,12 @@ contains
       end if
       if (smooth > DZERO) then
         alimiter = DTWO * smooth / (DONE + smooth)
-        qtvd = DHALF * alimiter * qnm * (cnew(idn) - cnew(iup))
+        if (associated(this%cpw).and.associated(this%rhow)) then
+          unitadjdn = this%cpw(idn) * this%rhow(idn)
+          unitadjup = this%cpw(iup) * this%rhow(iup)
+        end if
+        qtvd = DHALF * alimiter * qnm * (cnew(idn) * unitadjdn - &
+          cnew(iup) * unitadjup) 
       end if
     end if
     !
@@ -285,14 +301,19 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAdvType) :: this
+    class(TspAdvType) :: this
     real(DP), intent(in), dimension(:) :: cnew
     real(DP), intent(inout), dimension(:) :: flowja
     ! -- local
     integer(I4B) :: nodes
     integer(I4B) :: n, m, idiag, ipos
     real(DP) :: omega, qnm
+    real(DP) :: unitadjn, unitadjm
 ! ------------------------------------------------------------------------------
+    !
+    ! -- intialize
+    unitadjn = DONE
+    unitadjm = DONE
     !
     ! -- Calculate advection and add to flowja. qnm is the volumetric flow
     !    rate and has dimensions of L^/T.
@@ -305,8 +326,12 @@ contains
         if (this%ibound(m) == 0) cycle
         qnm = this%fmi%gwfflowja(ipos)
         omega = this%adv_weight(this%iadvwt, ipos, n, m, qnm)
-        flowja(ipos) = flowja(ipos) + qnm * omega * cnew(n) + &
-                       qnm * (DONE - omega) * cnew(m)
+        if (associated(this%cpw).and.associated(this%rhow)) then
+          unitadjn = this%cpw(n) * this%rhow(n)
+          unitadjm = this%cpw(m) * this%rhow(m)
+        end if
+        flowja(ipos) = flowja(ipos) + qnm * omega * cnew(n) * unitadjn + &
+                       qnm * (DONE - omega) * cnew(m) * unitadjm
       end do
     end do
     !
@@ -326,7 +351,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAdvType) :: this
+    class(TspAdvType) :: this
     real(DP), dimension(:), intent(in) :: cnew
     real(DP), dimension(:), intent(inout) :: flowja
     ! -- local
@@ -361,7 +386,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(GwtAdvType) :: this
+    class(TspAdvType) :: this
 ! ------------------------------------------------------------------------------
     !
     ! -- Deallocate arrays if package was active
@@ -370,6 +395,8 @@ contains
     !
     ! -- nullify pointers
     this%ibound => null()
+    nullify(this%cpw)
+    nullify(this%rhow)
     !
     ! -- Scalars
     call mem_deallocate(this%iadvwt)
@@ -391,7 +418,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
-    class(GwtAdvType) :: this
+    class(TspAdvType) :: this
     ! -- local
 ! ------------------------------------------------------------------------------
     !
@@ -422,7 +449,7 @@ contains
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error
     ! -- dummy
-    class(GwtAdvType) :: this
+    class(TspAdvType) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg, keyword
     integer(I4B) :: ierr
@@ -488,7 +515,7 @@ contains
     ! -- return
     real(DP) :: omega
     ! -- dummy
-    class(GwtAdvType) :: this
+    class(TspAdvType) :: this
     integer, intent(in) :: iadvwt
     integer, intent(in) :: ipos
     integer, intent(in) :: n
@@ -524,4 +551,4 @@ contains
     return
   end function adv_weight
 
-end module GwtAdvModule
+end module TspAdvModule

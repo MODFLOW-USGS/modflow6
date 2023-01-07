@@ -83,7 +83,6 @@ contains
     !
     ! -- Setup the label
     write(aname(1), '(a,1x,a)') 'INITIAL', trim(adjustl(this%tsplab%depvartype))
-    !aname(1) = , CONCENTRATION'
     !
     ! -- get griddata block
     call this%parser%GetBlock('GRIDDATA', isfound, ierr)

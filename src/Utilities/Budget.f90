@@ -23,6 +23,7 @@ module BudgetModule
   use SimModule, only: store_error, count_errors
   use ConstantsModule, only: LINELENGTH, LENBUDTXT, LENBUDROWLABEL, DZERO, &
                              DTWO, DHUNDRED
+  use TspLabelsModule, only: TspLabelsType
 
   implicit none
   private
@@ -54,6 +55,9 @@ module BudgetModule
     ! -- csv output
     integer(I4B), pointer :: ibudcsv => null()
     integer(I4B), pointer :: icsvheader => null()
+    !
+    ! -- labels
+    type(TspLabelsType), pointer :: tsplab => null()
 
   contains
     procedure :: budget_df
@@ -79,11 +83,12 @@ contains
   !!  Create a new budget object.
   !!
   !<
-  subroutine budget_cr(this, name_model)
+  subroutine budget_cr(this, name_model, tsplab)
     ! -- modules
     ! -- dummy
     type(BudgetType), pointer :: this !< BudgetType object
     character(len=*), intent(in) :: name_model !< name of the model
+    type(TspLabelsType), pointer, intent(in), optional :: tsplab !< TspLabelsType object
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -91,6 +96,11 @@ contains
     !
     ! -- Allocate scalars
     call this%allocate_scalars(name_model)
+    !
+    ! -- Store pointer to labels associated with the current model in order
+    !    assign the correct transport-related labels - only necessary for 
+    !    transport model type (i.e., GWT or GWE)
+    if (present(tsplab)) this%tsplab => tsplab
     !
     ! -- Return
     return
@@ -300,11 +310,11 @@ contains
             , ' TIME STEP', I5, ', STRESS PERIOD', I4 / 2X, 78('-'))
 261 FORMAT(//2X, a, ' BUDGET FOR ', a, ' AT END OF' &
             , ' TIME STEP', I5, ', STRESS PERIOD', I4 / 2X, 99('-'))
-265 FORMAT(1X, /5X, 'CUMULATIVE ', a, 6X, a, 7X &
-           , 'RATES FOR THIS TIME STEP', 6X, a, '/T'/5X, 18('-'), 17X, 24('-') &
+265 FORMAT(1X, /5X, 'CUMULATIVE ', a, 11X, a, 6X &
+           , 'RATES FOR THIS TIME STEP', 8X, a, '/T'/5X, 18('-'), 17X, 24('-') &
            //11X, 'IN:', 38X, 'IN:'/11X, '---', 38X, '---')
-266 FORMAT(1X, /5X, 'CUMULATIVE ', a, 6X, a, 7X &
-           , 'RATES FOR THIS TIME STEP', 6X, a, '/T', 10X, A16, &
+266 FORMAT(1X, /5X, 'CUMULATIVE ', a, 11X, a, 6X &
+           , 'RATES FOR THIS TIME STEP', 8X, a, '/T', 10X, A16, &
            /5X, 18('-'), 17X, 24('-'), 21X, 16('-') &
            //11X, 'IN:', 38X, 'IN:'/11X, '---', 38X, '---')
 275 FORMAT(1X, 3X, A16, ' =', A17, 6X, A16, ' =', A17)

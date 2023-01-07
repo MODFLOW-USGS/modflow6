@@ -1,4 +1,4 @@
-module GwtFmiModule
+module TspFmiModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DONE, DZERO, DHALF, LINELENGTH, LENBUDTXT, &
@@ -12,11 +12,12 @@ module GwtFmiModule
   use HeadFileReaderModule, only: HeadFileReaderType
   use PackageBudgetModule, only: PackageBudgetType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr_bfr
+  use TspLabelsModule, only: TspLabelsType
   use MatrixModule
 
   implicit none
   private
-  public :: GwtFmiType
+  public :: TspFmiType
   public :: fmi_cr
 
   integer(I4B), parameter :: NBDITEMS = 2
@@ -32,7 +33,7 @@ module GwtFmiModule
     type(BudgetObjectType), pointer :: ptr
   end type BudObjPtrArray
 
-  type, extends(NumericalPackageType) :: GwtFmiType
+  type, extends(NumericalPackageType) :: TspFmiType
 
     logical, pointer :: flows_from_file => null() !< if .false., then flows come from GWF through GWF-GWT exg
     integer(I4B), dimension(:), pointer, contiguous :: iatp => null() !< advanced transport package applied to gwfpackages
@@ -92,11 +93,11 @@ module GwtFmiModule
     procedure :: get_package_index
     procedure :: set_aptbudobj_pointer
 
-  end type GwtFmiType
+  end type TspFmiType
 
 contains
 
-  subroutine fmi_cr(fmiobj, name_model, inunit, iout)
+  subroutine fmi_cr(fmiobj, name_model, inunit, iout, tsplab)
 ! ******************************************************************************
 ! fmi_cr -- Create a new FMI object
 ! ******************************************************************************
@@ -104,10 +105,11 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    type(GwtFmiType), pointer :: fmiobj
+    type(TspFmiType), pointer :: fmiobj
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
+    type(TspLabelsType), pointer, intent(in) :: tsplab
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -130,6 +132,9 @@ contains
     ! -- Initialize block parser
     call fmiobj%parser%Initialize(fmiobj%inunit, fmiobj%iout)
     !
+    ! -- Give package access to the assigned labels based on dependent variable
+    fmiobj%tsplab => tsplab
+    !
     ! -- Return
     return
   end subroutine fmi_cr
@@ -144,7 +149,7 @@ contains
     ! -- modules
     use SimModule, only: store_error
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
     integer(I4B), intent(in) :: inssm
     ! -- local
@@ -213,7 +218,7 @@ contains
     ! -- modules
     use SimModule, only: store_error
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     ! -- local
     ! -- formats
@@ -239,7 +244,7 @@ contains
     ! -- modules
     use TdisModule, only: kper, kstp
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     integer(I4B), intent(in) :: inmvr
     ! -- local
     ! -- formats
@@ -276,7 +281,7 @@ contains
     ! -- modules
     use ConstantsModule, only: DHDRY
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     real(DP), intent(inout), dimension(:) :: cnew
     ! -- local
     integer(I4B) :: n
@@ -284,12 +289,6 @@ contains
     integer(I4B) :: ipos
     real(DP) :: crewet, tflow, flownm
     character(len=15) :: nodestr
-    character(len=*), parameter :: fmtdry = &
-     &"(/1X,'WARNING: DRY CELL ENCOUNTERED AT ',a,';  RESET AS INACTIVE &
-     &WITH DRY CONCENTRATION = ', G13.5)"
-    character(len=*), parameter :: fmtrewet = &
-     &"(/1X,'DRY CELL REACTIVATED AT ', a,&
-     &' WITH STARTING CONCENTRATION =',G13.5)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Set flag to indicated that flows are being updated.  For the case where
@@ -337,7 +336,10 @@ contains
           this%ibound(n) = 0
           cnew(n) = DHDRY
           call this%dis%noder_to_string(n, nodestr)
-          write (this%iout, fmtdry) trim(nodestr), DHDRY
+          write (this%iout, '(/1x,a,1x,a,a,1x,a,1x,a,1x,G13.5)') &
+            'WARNING: DRY CELL ENCOUNTERED AT', trim(nodestr), ';  RESET AS &
+              &INACTIVE WITH DRY', trim(adjustl(this%tsplab%depvartype)), &
+              '=', DHDRY
         end if
       end if
       !
@@ -345,7 +347,7 @@ contains
       if (cnew(n) == DHDRY) then
         if (this%gwfhead(n) /= DHDRY) then
           !
-          ! -- obtain weighted concentration
+          ! -- obtain weighted concentration/temperature
           crewet = DZERO
           tflow = DZERO
           do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
@@ -368,7 +370,9 @@ contains
           this%ibound(n) = 1
           cnew(n) = crewet
           call this%dis%noder_to_string(n, nodestr)
-          write (this%iout, fmtrewet) trim(nodestr), crewet
+          write (this%iout, '(/1x,a,1x,a,1x,a,1x,a,1x,a,1x,G13.5)') &
+            'DRY CELL REACTIVATED AT', trim(nodestr), 'WITH STARTING', &
+            trim(adjustl(this%tsplab%depvartype)), '=', crewet
         end if
       end if
     end do
@@ -387,7 +391,7 @@ contains
     ! -- modules
     !use BndModule,              only: BndType, GetBndFromList
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     integer, intent(in) :: nodes
     real(DP), intent(in), dimension(nodes) :: cold
     integer(I4B), intent(in) :: nja
@@ -423,7 +427,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     real(DP), intent(in), dimension(:) :: cnew
     real(DP), dimension(:), contiguous, intent(inout) :: flowja
     ! -- local
@@ -462,7 +466,7 @@ contains
     use TdisModule, only: delt
     use BudgetModule, only: BudgetType, rate_accumulator
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     integer(I4B), intent(in) :: isuppress_output
     type(BudgetType), intent(inout) :: model_budget
     ! -- local
@@ -488,7 +492,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     integer(I4B), intent(in) :: icbcfl
     integer(I4B), intent(in) :: icbcun
     ! -- local
@@ -536,7 +540,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
 ! ------------------------------------------------------------------------------
     ! -- todo: finalize hfr and bfr either here or in a finalize routine
     !
@@ -594,7 +598,7 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     ! -- local
 ! ------------------------------------------------------------------------------
     !
@@ -642,7 +646,7 @@ contains
     !modules
     use ConstantsModule, only: DZERO
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     integer(I4B), intent(in) :: nodes
     ! -- local
     integer(I4B) :: n
@@ -719,7 +723,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     integer(I4B), intent(in) :: n
     real(DP), intent(in) :: delt
     ! -- result
@@ -755,7 +759,7 @@ contains
     use InputOutputModule, only: getunit, openfile, urdaux
     use SimModule, only: store_error, store_error_unit
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     ! -- local
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
@@ -813,7 +817,7 @@ contains
     use InputOutputModule, only: getunit, openfile, urdaux
     use SimModule, only: store_error, store_error_unit
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     ! -- local
     type(BudgetObjectType), pointer :: budobjptr
     character(len=LINELENGTH) :: keyword, fname
@@ -947,7 +951,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     ! -- dumm
     character(len=*), intent(in) :: name
     type(BudgetObjectType), pointer :: budobjptr
@@ -975,7 +979,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     ! -- dummy
     integer(I4B) :: ncrbud
 ! ------------------------------------------------------------------------------
@@ -998,7 +1002,7 @@ contains
     ! -- modules
     use TdisModule, only: kstp, kper
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     ! -- local
     logical :: success
     integer(I4B) :: n
@@ -1144,7 +1148,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     ! -- dummy
 ! ------------------------------------------------------------------------------
     !
@@ -1161,7 +1165,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     ! -- dummy
 ! ------------------------------------------------------------------------------
     !
@@ -1181,7 +1185,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: kstp, kper
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     integer(I4B) :: nu, nr, i, ilay
     integer(I4B) :: ncpl
     real(DP) :: val
@@ -1277,7 +1281,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     ! -- dummy
 ! ------------------------------------------------------------------------------
     !
@@ -1298,7 +1302,7 @@ contains
     use MemoryManagerModule, only: mem_allocate
     use SimModule, only: store_error, store_error_unit, count_errors
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     ! -- local
     integer(I4B) :: nflowpack
     integer(I4B) :: i, ip
@@ -1403,7 +1407,7 @@ contains
     ! -- modules
     use BndModule, only: BndType, GetBndFromList
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     ! -- local
     integer(I4B) :: ngwfpack
     integer(I4B) :: ngwfterms
@@ -1479,7 +1483,7 @@ contains
     use ConstantsModule, only: LENMEMPATH
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     integer(I4B), intent(in) :: ngwfterms
     ! -- local
     integer(I4B) :: n
@@ -1521,7 +1525,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     ! -- local
     integer(I4B) :: n
 ! ------------------------------------------------------------------------------
@@ -1543,7 +1547,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use BndModule, only: BndType, GetBndFromList
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     character(len=*), intent(in) :: name
     integer(I4B), intent(inout) :: idx
     ! -- local
@@ -1567,4 +1571,4 @@ contains
     return
   end subroutine get_package_index
 
-end module GwtFmiModule
+end module TspFmiModule
