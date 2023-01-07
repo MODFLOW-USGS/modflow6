@@ -30,7 +30,6 @@ This document describes how to set up a development environment to modify, build
 - [Building](#building)
 - [Testing](#testing)
   - [Configuring a test environment](#configuring-a-test-environment)
-- [Testing](#testing-1)
     - [Building development binaries](#building-development-binaries)
     - [Rebuilding and installing release binaries](#rebuilding-and-installing-release-binaries)
     - [Updating `flopy` plugins](#updating-flopy-plugins)
@@ -41,6 +40,7 @@ This document describes how to set up a development environment to modify, build
   - [Running Tests](#running-tests)
     - [Selecting tests with markers](#selecting-tests-with-markers)
     - [External model tests](#external-model-tests)
+    - [Writing tests](#writing-tests)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -237,7 +237,6 @@ MODFLOW 6 tests are driven with [`pytest`](https://docs.pytest.org/en/7.1.x/), w
 
 A few tasks must be completed before running tests:
 
-## Testing
 - build local MODFLOW 6 development version
 - rebuild the last MODFLOW 6 release
 - install additional executables
@@ -362,6 +361,8 @@ pytest -v -n auto
 Markers can be used to select subsets of tests. Markers provided in `pytest.ini` include:
 
 - `slow`: tests that take longer than a few seconds to complete
+- `repo`: tests that require external model repositories
+- `large`: tests using large models (from the `modflow6-examples` and `modflow6-largetestmodels` repos)
 - `regression`: tests comparing results from multiple versions
 
 Markers can be used with the `-m <marker>` option, and can be applied in boolean combinations with `and`, `or` and `not`. For instance, to run fast tests in parallel, excluding regression tests:
@@ -386,18 +387,39 @@ Tests using models from external repositories can be selected with the `repo` ma
 pytest -v -n auto -m "repo"
 ```
 
-The test scripts can also be run independently:
+The `large` marker is a subset of the `repo` marker. To test models excluded from commit-triggered CI and only run on GitHub Actions nightly:
 
 ```shell
-# Run MODFLOW 6 test models
+pytest -v -n auto -m "large"
+```
+
+Test scripts for external model repositories can also be run independently:
+
+```shell
+# MODFLOW 6 test models
 pytest -v -n auto test_z01_testmodels_mf6.py
 
-# Run MODFLOW 5 to 6 conversion test models
+# MODFLOW 5 to 6 conversion test models
 pytest -v -n auto test_z02_testmodels_mf5to6.py
 
-# Run example models
+# models from modflow6-examples repo
 pytest -v -n auto test_z03_examples.py
 
-# Run large test models
+# models from modflow6-largetestmodels repo
 pytest -v -n auto test_z03_largetestmodels.py
 ```
+
+Tests load external models from fixtures provided by `modflow-devtools`. External model tests can be selected by model or simulation name, or by packages used. See the [`modflow-devtools` documentation](https://modflow-devtools.readthedocs.io/en/latest/md/fixtures.html#filtering) for usage examples. Note that filtering options only apply to tests using external models, and will not filter tests defining models in code &mdash; for that, the `pytest` built-in `-k` option may be used.
+
+#### Writing tests
+
+Tests should ideally follow a few conventions for easier maintenance:
+
+- Use temporary directory fixtures. Tests which write to disk should use `pytest`'s built-in `tmp_path` fixtures or one of the [keepable temporary directory fixtures from `modflow-devtools`](https://modflow-devtools.readthedocs.io/en/latest/md/fixtures.html#keepable-temporary-directories). This prevents tests from polluting one another's state.
+
+- Use markers for convenient (de-)selection:
+  - `@pytest.mark.slow` if the test doesn't complete in a few seconds (this preserves the ability to quickly [`--smoke` test](https://modflow-devtools.readthedocs.io/en/latest/md/markers.html#smoke-testing)
+  - `@pytest.mark.repo` if the test relies on external model repositories
+  - `@pytest.mark.regression` if the test compares results from different versions
+
+The test suite must pass before code can be merged, so be sure it passes locally before opening a PR.
