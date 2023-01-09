@@ -157,9 +157,9 @@ jobs:
         working-directory: modflow6/autotest
         run: |
           if [ "${{ github.ref_name }}" == "master" ]; then
-            pytest -v -n auto --durations 0 -m "not developmode"
+            pytest -v -n auto --durations 0 -m "not large and not developmode"
           else
-            pytest -v -n auto --durations 0
+            pytest -v -n auto --durations 0 -m "not large"
           fi
 
       - name: Test scripts
@@ -231,9 +231,9 @@ jobs:
         working-directory: modflow6/autotest
         run: |
           if [ "${{ github.ref_name }}" == "master" ]; then
-            pytest -v -n auto --durations 0 -m "not developmode"
+            pytest -v -n auto --durations 0 -m "not large and not developmode"
           else
-            pytest -v -n auto --durations 0
+            pytest -v -n auto --durations 0 -m "not large"
           fi
 
   test_ifort:
@@ -348,9 +348,9 @@ jobs:
         working-directory: modflow6/autotest
         run: |
           if [ "${{ github.ref_name }}" == "master" ]; then
-            pytest -v -n auto --durations 0 -m "not developmode"
+            pytest -v -n auto --durations 0 -m "not large and not developmode"
           else
-            pytest -v -n auto --durations 0
+            pytest -v -n auto --durations 0 -m "not large"
           fi
 
       - name: Test programs (Windows)
@@ -359,9 +359,9 @@ jobs:
         shell: pwsh
         run: |
           if ( "${{ github.ref_name }}" -eq "master" ) {
-            pytest -v -n auto --durations 0 -m "not developmode"
+            pytest -v -n auto --durations 0 -m "not large and not developmode"
           } else {
-            pytest -v -n auto --durations 0
+            pytest -v -n auto --durations 0 -m "not large"
           }
 
       - name: Test scripts
