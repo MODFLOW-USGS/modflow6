@@ -300,19 +300,12 @@ contains
     real(DP) :: omega
     real(DP) :: hcoftmp
     real(DP) :: rhstmp
-    real(DP) :: unitadj
     !
     ! -- initialize
     hcoftmp = DZERO
     rhstmp = DZERO
     ctmp = DZERO
     qbnd = DZERO
-    !
-    ! -- initialize unitadj, set its value if GWE model
-    unitadj = DONE
-    if (associated(this%cpw).and.associated(this%rhow)) then
-      unitadj = this%cpw(ientry) * this%rhow(ientry)
-    end if
     !
     ! -- retrieve node number, qbnd and iauxpos
     n = this%fmi%gwfpackages(ipackage)%nodelist(ientry)
@@ -363,7 +356,7 @@ contains
       if (qbnd <= DZERO) then
         hcoftmp = qbnd * omega
       else
-        rhstmp = -qbnd * ctmp * (DONE - omega) * unitadj
+        rhstmp = -qbnd * ctmp * (DONE - omega)
       end if
       !
       ! -- end of active ibound

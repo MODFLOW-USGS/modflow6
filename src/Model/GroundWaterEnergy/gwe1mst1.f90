@@ -342,6 +342,7 @@ contains
     real(DP) :: tled
     real(DP) :: vwatnew, vwatold, vcell, vsolid, term
     real(DP) :: hhcof, rrhs
+    real(DP) :: unitadj
     !
     ! -- initialize
     tled = DONE / delt
@@ -349,6 +350,7 @@ contains
     ! -- Calculate storage change
     do n = 1, nodes
       this%ratesto(n) = DZERO
+      unitadj = this%cpw(n) * this%rhow(n)
       !
       ! -- skip if transport inactive
       if (this%ibound(n) <= 0) cycle

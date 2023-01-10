@@ -233,13 +233,10 @@ contains
     integer(I4B) :: ipos, isympos, iup, idn, i2up, j
     real(DP) :: qnm, qmax, qupj, elupdn, elup2up
     real(DP) :: smooth, cdiff, alimiter
-    real(DP) :: unitadjdn, unitadjup
 ! ------------------------------------------------------------------------------
     !
     ! -- intialize
     qtvd = DZERO
-    unitadjdn = DONE
-    unitadjup = DONE
     !
     ! -- Find upstream node
     isympos = this%dis%con%jas(iposnm)
@@ -279,12 +276,7 @@ contains
       end if
       if (smooth > DZERO) then
         alimiter = DTWO * smooth / (DONE + smooth)
-        if (associated(this%cpw).and.associated(this%rhow)) then
-          unitadjdn = this%cpw(idn) * this%rhow(idn)
-          unitadjup = this%cpw(iup) * this%rhow(iup)
-        end if
-        qtvd = DHALF * alimiter * qnm * (cnew(idn) * unitadjdn - &
-          cnew(iup) * unitadjup) 
+        qtvd = DHALF * alimiter * qnm * (cnew(idn) - cnew(iup))
       end if
     end if
     !
@@ -308,12 +300,7 @@ contains
     integer(I4B) :: nodes
     integer(I4B) :: n, m, idiag, ipos
     real(DP) :: omega, qnm
-    real(DP) :: unitadjn, unitadjm
 ! ------------------------------------------------------------------------------
-    !
-    ! -- intialize
-    unitadjn = DONE
-    unitadjm = DONE
     !
     ! -- Calculate advection and add to flowja. qnm is the volumetric flow
     !    rate and has dimensions of L^/T.
@@ -326,12 +313,8 @@ contains
         if (this%ibound(m) == 0) cycle
         qnm = this%fmi%gwfflowja(ipos)
         omega = this%adv_weight(this%iadvwt, ipos, n, m, qnm)
-        if (associated(this%cpw).and.associated(this%rhow)) then
-          unitadjn = this%cpw(n) * this%rhow(n)
-          unitadjm = this%cpw(m) * this%rhow(m)
-        end if
-        flowja(ipos) = flowja(ipos) + qnm * omega * cnew(n) * unitadjn + &
-                       qnm * (DONE - omega) * cnew(m) * unitadjm
+        flowja(ipos) = flowja(ipos) + qnm * omega * cnew(n) + &
+                       qnm * (DONE - omega) * cnew(m) 
       end do
     end do
     !
