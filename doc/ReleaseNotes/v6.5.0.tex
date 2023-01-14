@@ -21,7 +21,7 @@
 	\underline{BASIC FUNCTIONALITY}
 	\begin{itemize}
 		\item When n-point cross-sections are active in SFR, the evaporation calculation uses the variable rwid (see MF6io.pdf) to calculate the total amount of evaporation even though the wetted topwidth is less than rwid.  For example, using a trapezoidal cross-section geometry with an rwid of 10, an rlen of 100, and prescribed evaporation rate of 0.1, the calculated evaporative losses would equal 100 even when the wetted top width was only 5.0 units wide.  With this bug fix, the evaporation in this example results in only 50 units of evaporation loss.  A new autotests confirms the evaporation calculation using an n-point cross-section and common rectangular geometries in the same simulation.  It is also worth mentioning that the precipitation calculation currently uses rwid.  Since the precipitation falling outside the margins of the wetted top width but within rwid would likely be accumulated in a channel, it makes sense to leave this calculation as is.
-	%	\item xxx
+		\item In SFR, a channel defined with the n-point cross-section option was calculating the wetted cross-sectional area incorrectly. The calculation for determining the area of a triangle needed to be multiplied by the width of the triangle.  A small fix also was needed for the surrounding if-then logic.  The fixed code was manually verified using a model with a 6-point trapezoid geometry.  One of the autotests with a baked-in answer was updated to account for this fix.
 	%	\item xxx
 	\end{itemize}
 

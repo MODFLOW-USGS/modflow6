@@ -382,7 +382,11 @@ contains
         !
         ! -- add the area below dmax
         if (dmax /= dmin .and. d > dmin) then
-          a(n) = a(n) + DHALF * (d - dmin)
+          if (d < dmax) then
+            a(n) = a(n) + DHALF * (d - dmin) * xlen
+          else
+            a(n) = a(n) + DHALF * (dmax - dmin) * xlen
+          end if
         end if
       end if
     end do
