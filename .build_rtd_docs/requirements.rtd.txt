@@ -8,7 +8,4 @@ ipykernel
 rtds_action
 myst_parser
 sphinx_rtd_theme
-
-
-
-
+pytest
