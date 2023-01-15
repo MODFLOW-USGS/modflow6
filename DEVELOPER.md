@@ -1,17 +1,39 @@
-# Building and Testing MODFLOW 6
+# Developing MODFLOW 6
 
 This document describes how to set up your development environment to build and test MODFLOW 6.
-It also explains the basic mechanics of using `git`. Details on how to contribute your code to the repository are found in the separate document [CONTRIBUTING.md](CONTRIBUTING.md)
+It also explains the basic mechanics of using `git`. Details on how to contribute your code to the repository are found in the separate document [CONTRIBUTING.md](CONTRIBUTING.md).
 
-* [Prerequisite Software](#prerequisite-software)
-* [Getting the Sources](#getting-the-sources)
-* [Building](#building)
-* [Running Tests Locally](#running-tests-locally)
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-See the [contribution guidelines](https://github.com/MODFLOW-USGS/modflow6/blob/develop/CONTRIBUTING.md)
-if you'd like to contribute to MODFLOW 6.
 
-## Prerequisite Software
+- [Requirements](#requirements)
+  - [Git](#git)
+  - [gfortran (version 4.9 to 10)](#gfortran-version-49-to-10)
+    - [Linux](#linux)
+    - [macOS](#macos)
+    - [Windows](#windows)
+  - [Python](#python)
+  - [ifort (optional)](#ifort-optional)
+    - [Windows](#windows-1)
+  - [Doxygen & LaTeX (optional)](#doxygen--latex-optional)
+  - [fprettify](#fprettify)
+- [Installation](#installation)
+- [Building](#building)
+  - [Meson](#meson)
+  - [Visual Studio](#visual-studio)
+  - [Pymake](#pymake)
+  - [Make](#make)
+- [Testing](#testing)
+  - [External model repos](#external-model-repos)
+    - [Installing external repos](#installing-external-repos)
+      - [Test models](#test-models)
+      - [Example models](#example-models)
+    - [Running external model tests](#running-external-model-tests)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
+## Requirements
 
 Before you can build and test MODFLOW 6, you must install and configure the
 following products on your development machine.
@@ -79,7 +101,7 @@ These programs can be installed from various sources, including by conda, macpor
 
 [fprettify](https://github.com/pseewald/fprettify) can be used to format Fortran source code and in combination with the [MODFLOW 6 fprettify configuration](https://github.com/MODFLOW-USGS/modflow6/blob/develop/distribution/.fprettify.yaml) establishes a contribution standard for properly formatted MODFLOW 6 Fortran source. This tool can be installed with `pip` or `conda` and used from the command line or integrated with a [VSCode](https://github.com/MODFLOW-USGS/modflow6/blob/develop/.vscode/README.md) or Visual Studio development environment. See [contribution guidelines](https://github.com/MODFLOW-USGS/modflow6/blob/develop/CONTRIBUTING.md) for additional information.
 
-## Getting the Sources
+## Installation
 
 Fork and clone the MODFLOW 6 repository:
 
@@ -151,15 +173,14 @@ The README also explains how to build MODFLOW 6 with it.
 We also provide make files which can be used to build MODFLOW 6 with [GNU Make](https://www.gnu.org/software/make/).
 For the build instructions we refer to the [GNU Make Manual](https://www.gnu.org/software/make/manual/).
 
-
-## Running Tests
+## Testing
 
 Tests should pass locally before a PR is opened on Github. All the tests are executed by the CI system and a pull request can only be merged with passing tests.
 
-Tests must be run from the `autotest` folder:
+Tests must be run from the `autotest` folder.
 
 ```shell
-cd modflow6/autotest
+cd autotest
 ```
 
 FloPy plugins must first be updated:
@@ -204,7 +225,7 @@ While many tests create models programmatically, the full suite tests MODFLOW 6 
 
 #### Installing external repos
 
-By default, the tests expect these repositories side-by-side with (i.e. in the same parent directory as) the `modflow6` repository. If the repos are somewhere else, you can set the `REPOS_PATH` environment variable to point to their parent directory.
+By default, the tests expect these repositories side-by-side with (i.e. in the same parent directory as) the `modflow6` repository. If the repos are somewhere else, you can set the `REPOS_PATH` environment variable to point to their parent directory. If external model repositories are not found, tests requiring them will be skipped.
 
 **Note:** a convenient way to persist environment variables needed for tests is to store them in a `.env` file in the `autotest` folder. Each variable should be defined on a separate line, with format `KEY=VALUE`. The `pytest-dotenv` plugin will then automatically load any variables found in this file into the test process' environment.
 
