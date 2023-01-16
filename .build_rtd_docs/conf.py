@@ -17,6 +17,7 @@ import sys
 from subprocess import Popen, PIPE
 
 sys.path.insert(0, os.path.abspath(os.path.join("..", "doc")))
+sys.path.insert(0, os.path.abspath(os.path.join("..", "distribution")))
 
 # -- determine if running on readthedocs ------------------------------------
 on_rtd = os.environ.get("READTHEDOCS") == "True"
@@ -35,18 +36,8 @@ for dox_pth in dox_pths:
 
 # -- Update the modflow 6 version -------------------------------------------
 print("Update the modflow6 version")
-pth = os.path.join("..", "distribution")
-args = (
-    "python",
-    "update_version.py",
-)
-# run the command
-proc = Popen(args, stdout=PIPE, stderr=PIPE, cwd=pth)
-stdout, stderr = proc.communicate()
-if stdout:
-    print(stdout.decode("utf-8"))
-if stderr:
-    print("Errors:\n{}".format(stderr.decode("utf-8")))
+from update_version import update_version
+update_version()
 
 # -- import version from doc/version.py -------------------------------------
 from version import __version__
@@ -92,7 +83,7 @@ with open("Doxyfile", "w") as fp:
 # -- Project information -----------------------------------------------------
 
 project = "MODFLOW 6 Program Documentation"
-copyright = "2020, MODFLOW Development Team"
+copyright = "2023, MODFLOW Development Team"
 author = "MODFLOW Development Team"
 
 # -- Project version ---------------------------------------------------------
