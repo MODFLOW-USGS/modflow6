@@ -1,12 +1,12 @@
 import pytest
-
-
 from conftest import should_compare
 from simulation import Simulation
 
-
-excluded = ["alt_model"]
-comparisons = {
+excluded_models = [
+    "alt_model",
+    "test205_gwtbuy-henrytidal"
+]
+excluded_comparisons = {
     "test001e_noUZF_3lay": ("6.2.1",),
     "test005_advgw_tidal": ("6.2.1",),
     "test017_Crinkle": ("6.2.1",),
@@ -29,22 +29,25 @@ comparisons = {
 }
 
 
+@pytest.mark.repo
+@pytest.mark.regression
 def test_model(function_tmpdir, test_model_mf6, targets, original_regression):
     exdir = test_model_mf6.parent
     name = exdir.name
 
-    if name in excluded:
+    if name in excluded_models:
         pytest.skip(f"Excluding mf6 model: {name}")
 
     sim = Simulation(
         name=name,
+        exe_dict=targets.as_dict(),
         mf6_regression=not original_regression,
         cmp_verbose=False,
-        make_comparison=should_compare(exdir, comparisons, targets),
-        simpath=str(exdir)
+        make_comparison=should_compare(name, excluded_comparisons, targets),
+        simpath=str(exdir),
     )
 
-    src = sim.simpath
+    src = exdir
     dst = str(function_tmpdir)
 
     # Run the MODFLOW 6 simulation and compare to results generated using

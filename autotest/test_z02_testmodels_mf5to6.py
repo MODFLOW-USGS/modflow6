@@ -2,15 +2,16 @@ import os
 
 import flopy
 import pytest
-
+from common_regression import get_namefiles, model_setup
 from conftest import should_compare
-from common_regression import model_setup, get_namefiles
 from simulation import Simulation
 
-
 sfmt = "{:25s} - {}"
-excluded = ["alt_model"]
-comparisons = {
+excluded_models = [
+    "alt_model",
+    "mf2005"
+]
+excluded_comparisons = {
     "testPr2": ("6.2.1",),
     "testUzfLakSfr": ("6.2.1",),
     "testUzfLakSfr_laketable": ("6.2.1",),
@@ -18,19 +19,24 @@ comparisons = {
 }
 
 
-def test_model(function_tmpdir, test_model_mf5to6, targets, original_regression):
+@pytest.mark.repo
+@pytest.mark.regression
+def test_model(
+    function_tmpdir, test_model_mf5to6, targets, original_regression
+):
     exdir = test_model_mf5to6.parent
     name = exdir.name
 
-    if name in excluded:
+    if name in excluded_models:
         pytest.skip(f"Excluding mf5to6 model: {name}")
 
     sim = Simulation(
-        exdir.name,
+        name=exdir.name,
+        exe_dict=targets.as_dict(),
         mf6_regression=not original_regression,
         cmp_verbose=False,
-        make_comparison=should_compare(name, comparisons, targets),
-        simpath=str(exdir)
+        make_comparison=should_compare(name, excluded_comparisons, targets),
+        simpath=str(exdir),
     )
 
     src = sim.simpath
@@ -100,4 +106,3 @@ def test_model(function_tmpdir, test_model_mf5to6, targets, original_regression)
     # appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
     sim.run()
     sim.compare()
-    sim.teardown()

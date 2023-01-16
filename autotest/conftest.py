@@ -7,18 +7,18 @@ pytest_plugins = ["modflow_devtools.fixtures"]
 project_root_path = Path(__file__).parent.parent
 
 
-def should_compare(test: str, comparisons: dict, executables: Executables) -> bool:
+def should_compare(
+    test: str, comparisons: dict, executables: Executables
+) -> bool:
     if test in comparisons.keys():
-        version = Executables.get_version(path=executables.mf6)
-        print(f"MODFLOW 6 development version='{version}'")
-        version = Executables.get_version(path=executables.mf6_regression)
-        print(f"MODFLOW 6 regression version='{version}'")
-        if version in comparisons[test]:
+        dev_ver = Executables.get_version(path=executables.mf6).split(' ')[0]
+        reg_ver = Executables.get_version(path=executables.mf6_regression).split(' ')[0]
+        print(f"MODFLOW 6 development version: {dev_ver}")
+        print(f"MODFLOW 6 regression version: {reg_ver}")
+        excluded = list(comparisons[test])
+        if reg_ver in excluded:
             print(
-                f"Test {test} does not run with versions {comparisons[test]}"
-            )
-            print(
-                f"Skipping regression test of sim {test} because the version is {version}"
+                f"Regression version {reg_ver} not supported for test {test}, skipping comparison"
             )
             return False
     return True
@@ -45,5 +45,5 @@ def pytest_addoption(parser):
         "--original-regression",
         action="store_true",
         default=False,
-        help="TODO"
+        help="TODO",
     )

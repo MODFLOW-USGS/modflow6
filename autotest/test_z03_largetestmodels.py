@@ -1,11 +1,9 @@
 import pytest
-
 from conftest import should_compare
 from simulation import Simulation
 
-
-excluded = []
-comparisons = {
+excluded_models = []
+excluded_comparisons = {
     "test1004_mvlake_laksfr_tr": ("6.2.2",),
     "test1004_mvlake_lak_tr": ("6.2.1",),
     "test1003_MNW2_Fig28": ("6.2.1",),
@@ -13,19 +11,26 @@ comparisons = {
 }
 
 
-def test_model(function_tmpdir, large_test_model, targets, original_regression):
+@pytest.mark.large
+@pytest.mark.repo
+@pytest.mark.regression
+@pytest.mark.slow
+def test_model(
+    function_tmpdir, large_test_model, targets, original_regression
+):
     exdir = large_test_model.parent
     name = exdir.name
 
-    if name in excluded:
+    if name in excluded_models:
         pytest.skip(f"Excluding large mf6 model: {name}")
 
     sim = Simulation(
         name=name,
+        exe_dict=targets.as_dict(),
         mf6_regression=not original_regression,
         cmp_verbose=False,
-        make_comparison=should_compare(name, comparisons, targets),
-        simpath=str(exdir)
+        make_comparison=should_compare(name, excluded_comparisons, targets),
+        simpath=str(exdir),
     )
 
     src = sim.simpath

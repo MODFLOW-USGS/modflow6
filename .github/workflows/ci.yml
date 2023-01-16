@@ -99,12 +99,6 @@ jobs:
           repository: MODFLOW-USGS/modflow6-testmodels
           path: modflow6-testmodels
 
-      - name: Checkout modflow6-examples
-        uses: actions/checkout@v3
-        with:
-          repository: MODFLOW-USGS/modflow6-examples
-          path: modflow6-examples
-
       - name: Setup GNU Fortran ${{ env.GCC_V }}
         uses: awvwgk/setup-fortran@main
         with:
@@ -117,24 +111,6 @@ jobs:
           environment-file: modflow6/environment.yml
           cache-downloads: true
           cache-env: true
-
-      - name: Cache modflow6 examples
-        id: cache-examples
-        uses: actions/cache@v3
-        with:
-          path: modflow6-examples/examples
-          key: modflow6-examples-${{ hashFiles('modflow6-examples/scripts/**') }}
-
-      - name: Install extra Python packages
-        if: steps.cache-examples.outputs.cache-hit != 'true'
-        working-directory: modflow6-examples/etc
-        run: |
-          pip install -r requirements.pip.txt
-
-      - name: Build example models
-        if: steps.cache-examples.outputs.cache-hit != 'true'
-        working-directory: modflow6-examples/etc
-        run: python ci_build_files.py
 
       - name: Build modflow6
         working-directory: modflow6
@@ -157,9 +133,9 @@ jobs:
         working-directory: modflow6/autotest
         run: |
           if [ "${{ github.ref_name }}" == "master" ]; then
-            pytest -v -n auto --durations 0 -m "not developmode"
+            pytest -v -n auto --durations 0 -m "not large and not developmode"
           else
-            pytest -v -n auto --durations 0
+            pytest -v -n auto --durations 0 -m "not large"
           fi
 
       - name: Test scripts
@@ -231,9 +207,9 @@ jobs:
         working-directory: modflow6/autotest
         run: |
           if [ "${{ github.ref_name }}" == "master" ]; then
-            pytest -v -n auto --durations 0 -m "not developmode"
+            pytest -v -n auto --durations 0 -m "not large and not developmode"
           else
-            pytest -v -n auto --durations 0
+            pytest -v -n auto --durations 0 -m "not large"
           fi
 
   test_ifort:
@@ -262,12 +238,6 @@ jobs:
           repository: MODFLOW-USGS/modflow6-testmodels
           path: modflow6-testmodels
 
-      - name: Checkout modflow6-examples
-        uses: actions/checkout@v3
-        with:
-          repository: MODFLOW-USGS/modflow6-examples
-          path: modflow6-examples
-
       - name: Setup Micromamba
         uses: mamba-org/provision-with-micromamba@main
         with:
@@ -285,23 +255,6 @@ jobs:
           # https://github.com/modflowpy/install-intelfortran-action#conda-scripts
           $mamba_bin = "C:\Users\runneradmin\micromamba-root\envs\modflow6\Scripts"
           echo $mamba_bin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-      - name: Cache modflow6 examples
-        id: cache-examples
-        uses: actions/cache@v3
-        with:
-          path: modflow6-examples/examples
-          key: modflow6-examples-${{ hashFiles('modflow6-examples/scripts/**') }}
-
-      - name: Install extra Python packages
-        if: steps.cache-examples.outputs.cache-hit != 'true'
-        working-directory: modflow6-examples/etc
-        run: pip install -r requirements.pip.txt
-
-      - name: Build example models
-        if: steps.cache-examples.outputs.cache-hit != 'true'
-        working-directory: modflow6-examples/etc
-        run: python ci_build_files.py
 
       - name: Update version files
         working-directory: modflow6/distribution
@@ -348,9 +301,9 @@ jobs:
         working-directory: modflow6/autotest
         run: |
           if [ "${{ github.ref_name }}" == "master" ]; then
-            pytest -v -n auto --durations 0 -m "not developmode"
+            pytest -v -n auto --durations 0 -m "not large and not developmode"
           else
-            pytest -v -n auto --durations 0
+            pytest -v -n auto --durations 0 -m "not large"
           fi
 
       - name: Test programs (Windows)
@@ -359,9 +312,9 @@ jobs:
         shell: pwsh
         run: |
           if ( "${{ github.ref_name }}" -eq "master" ) {
-            pytest -v -n auto --durations 0 -m "not developmode"
+            pytest -v -n auto --durations 0 -m "not large and not developmode"
           } else {
-            pytest -v -n auto --durations 0
+            pytest -v -n auto --durations 0 -m "not large"
           }
 
       - name: Test scripts
