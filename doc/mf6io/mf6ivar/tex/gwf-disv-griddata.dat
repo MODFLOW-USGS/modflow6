@@ -2,7 +2,7 @@ BEGIN GRIDDATA
   TOP
     <top(ncpl)> -- READARRAY
   BOTM [LAYERED]
-    <botm(nlay, ncpl)> -- READARRAY
+    <botm(ncpl, nlay)> -- READARRAY
   [IDOMAIN [LAYERED]
-    <idomain(nlay, ncpl)> -- READARRAY]
+    <idomain(ncpl, nlay)> -- READARRAY]
 END GRIDDATA

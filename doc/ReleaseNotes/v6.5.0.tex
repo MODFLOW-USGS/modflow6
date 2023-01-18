@@ -5,7 +5,7 @@
 	
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
-		\item xxx
+		\item The sorption formulation for the Groundwater Transport (GWT) model was modified for simulations involving a mobile domain and one or more immobile domains.  The modifications do not affect GWT Models without the Immobile Storage and Transfer (IST) Package or GWT models without sorption.  Prior to these changes, the multi-domain sorption formulation required the bulk density to be specified in both the Mobile Storage and Transfer (MST) Package and the IST Package.  To generalize the formulation, the definition for bulk density in the MST Package was changed to be the mass of aquifer solid material in the mobile domain per unit volume of aquifer.  The bulk density specified in the IST Package was changed to be the mass of aquifer solid material in the immobile domain per unit volume of aquifer.  For multi-domain GWT Models that include sorption (and prepared for MODFLOW version 6.4.1 or earlier), it will be necessary to change the bulk density values specified in the MST and IST Packages according to the new definitions.  A full description of the revised sorption formulation for multi-domain GWT Models is included in the MODFLOW 6 Supplemental Technical Information document included with the distribution.
 	%	\item xxx
 	%	\item xxx
 	\end{itemize}

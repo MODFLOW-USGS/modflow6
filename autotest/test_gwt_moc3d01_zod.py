@@ -219,10 +219,15 @@ def build_model(idx, dir):
     rtd = retardation[idx]
     sorption = None
     kd = None
-    rhob = None
+    rhobm = None
+    rhobim = None
     if rtd is not None:
         rhob = 1.0
         kd = (rtd - 1.0) * porosity / rhob
+        rhobm = rhob
+        if ist_package[idx]:
+            rhobm = .5 * rhob
+            rhobim = .5 * rhob
         sorption = "linear"
 
     decay_rate = decay[idx]
@@ -239,7 +244,7 @@ def build_model(idx, dir):
         decay_sorbed=decay_rate,
         sorption=sorption,
         distcoef=kd,
-        bulk_density=rhob,
+        bulk_density=rhobm,
     )
 
     if ist_package[idx]:
@@ -252,7 +257,7 @@ def build_model(idx, dir):
             thetaim=porosity,
             zetaim=1.0,
             decay=decay_rate,
-            bulk_density=rhob,
+            bulk_density=rhobim,
             distcoef=kd,
             decay_sorbed=decay_rate,
         )
