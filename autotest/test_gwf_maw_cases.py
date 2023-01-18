@@ -147,12 +147,12 @@ class GwfMawCases:
     ]
 
     @parametrize(data=cases1, ids=[c.name for c in cases1])
-    def case_1(self, tmpdir, targets, data):
+    def case_1(self, function_tmpdir, targets, data):
         sim = flopy.mf6.MFSimulation(
             sim_name=data.name,
             version="mf6",
             exe_name=targets["mf6"],
-            sim_ws=str(tmpdir),
+            sim_ws=str(function_tmpdir),
         )
 
         # create tdis package
@@ -329,9 +329,9 @@ class GwfMawCases:
     cases2 = [case2]
 
     @parametrize(data=cases2, ids=[c.name for c in cases2])
-    def case_2(self, tmpdir, targets, data):
+    def case_2(self, function_tmpdir, targets, data):
         name = data.name
-        ws = str(tmpdir)
+        ws = str(function_tmpdir)
         sim = flopy.mf6.MFSimulation(
             sim_name=name, version="mf6", exe_name=targets["mf6"], sim_ws=ws
         )
@@ -598,7 +598,7 @@ class GwfMawCases:
     ]
 
     @parametrize(data=cases3, ids=[c.name for c in cases3])
-    def case_3(self, tmpdir, targets, data):
+    def case_3(self, function_tmpdir, targets, data):
         top = 0.0
         botm = [-1000.0]
 
@@ -607,7 +607,7 @@ class GwfMawCases:
             tdis_rc.append((data.perlen[i], data.nstp[i], data.tsmult[i]))
 
         name = data.name
-        ws = str(tmpdir)
+        ws = str(function_tmpdir)
         sim = flopy.mf6.MFSimulation(
             sim_name=name, sim_ws=ws, exe_name=targets["mf6"]
         )
@@ -810,7 +810,7 @@ class GwfMawCases:
     # ]
 
     # @parametrize(data=cases4, ids=[c['name'] for c in cases4])
-    # def case_4(self, tmpdir, targets, data):
+    # def case_4(self, function_tmpdir, targets, data):
     #     pass
 
     # def eval_4(self, sim, data):

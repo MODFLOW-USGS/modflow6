@@ -144,9 +144,9 @@ cases = [case.copy_update(name=case.name + "a", well=well4("a"),)] + [
 
 class GwfMaw04Cases:
     @parametrize(data=cases, ids=[c.name for c in cases])
-    def case_4(self, tmpdir, targets, data):
+    def case_4(self, function_tmpdir, targets, data):
         name = data.name
-        ws = str(tmpdir)
+        ws = str(function_tmpdir)
 
         # build MODFLOW 6 files
         sim = flopy.mf6.MFSimulation(
@@ -225,7 +225,7 @@ class GwfMaw04Cases:
             mc = None
         else:
             cmppth = "mf2005"
-            ws = os.path.join(str(tmpdir), cmppth)
+            ws = os.path.join(str(function_tmpdir), cmppth)
             mc = flopy.modflow.Modflow(name, model_ws=ws, version=cmppth)
             dis = flopy.modflow.ModflowDis(
                 mc,

@@ -34,12 +34,12 @@ class GwfCsubSkCases:
             Data("c", None, True, 0, 15, True, 0.3),
         ]
     )
-    def case_generator(self, tmpdir, data):
-        sim = self.get_model(data, tmpdir)
-        cmp = self.get_model(data, tmpdir / "mf6_regression")
+    def case_generator(self, function_tmpdir, data):
+        sim = self.get_model(data, function_tmpdir)
+        cmp = self.get_model(data, function_tmpdir / "mf6_regression")
         return data, sim, cmp, self.eval_case
 
-    def get_model(self, data, tmpdir):
+    def get_model(self, data, function_tmpdir):
         name = data.name
         newton = data.newton
         newtonoptions = None
@@ -168,7 +168,7 @@ class GwfCsubSkCases:
 
         # build MODFLOW 6 files
         sim = flopy.mf6.MFSimulation(
-            sim_name=name, version="mf6", exe_name="mf6", sim_ws=str(tmpdir)
+            sim_name=name, version="mf6", exe_name="mf6", sim_ws=str(function_tmpdir)
         )
         # create tdis package
         tdis = flopy.mf6.ModflowTdis(

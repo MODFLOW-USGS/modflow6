@@ -37,7 +37,7 @@ class GwfBuyLakCases:
             Data(name="d", gwt_conc=0, lak_conc=35),
         ]
     )
-    def case_generator(self, data, tmpdir):
+    def case_generator(self, data, function_tmpdir):
         lx = 7.0
         lz = 4.0
         nlay = 4
@@ -69,7 +69,7 @@ class GwfBuyLakCases:
             sim_name=data.name,
             version="mf6",
             exe_name="mf6",
-            sim_ws=str(tmpdir),
+            sim_ws=str(function_tmpdir),
         )
         # create tdis package
         tdis = flopy.mf6.ModflowTdis(

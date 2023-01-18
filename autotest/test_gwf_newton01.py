@@ -113,8 +113,8 @@ def eval_head(sim):
     "idx, name",
     list(enumerate(ex)),
 )
-def test_mf6model(idx, name, tmpdir, targets):
-    ws = str(tmpdir)
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
     test = TestFramework()
     test.build(build_model, idx, ws)
     test.run(TestSimulation(name=name, exe_dict=targets, exfunc=eval_head), ws)
