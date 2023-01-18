@@ -5,33 +5,13 @@ Test adaptive time step module
 
 import os
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["gwf_ats01a"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-ddir = "data"
 nlay, nrow, ncol = 1, 1, 2
 
 # set dt0, dtmin, dtmax, dtadj, dtfailadj
@@ -198,11 +178,8 @@ def build_model(idx, dir):
 def eval_flow(sim):
     print("evaluating flow...")
 
-    name = ex[sim.idxsim]
-    gwfname = name
-
     # This will fail if budget numbers cannot be read
-    fpth = os.path.join(sim.simpath, f"{gwfname}.lst")
+    fpth = os.path.join(sim.simpath, f"{sim.name}.lst")
     mflist = flopy.utils.Mf6ListBudget(fpth)
     names = mflist.get_record_names()
     inc = mflist.get_incremental()
@@ -212,7 +189,7 @@ def eval_flow(sim):
     assert v == 10.0, f"Last time should be 10.  Found {v}"
 
     # ensure obs results changing monotonically
-    fpth = os.path.join(sim.simpath, gwfname + ".obs.csv")
+    fpth = os.path.join(sim.simpath, sim.name + ".obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -226,39 +203,19 @@ def eval_flow(sim):
         assert np.all(np.diff(v) < 0), msg
     v = tc["time"][-1]
     assert v == 10.0, f"Last time should be 10.  Found {v}"
-    return
 
 
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_flow, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_flow, idxsim=idx)
-        test.run_mf6(sim)
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    workspace = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, 0, workspace)
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_flow, idxsim=0
+        ),
+        workspace,
+    )

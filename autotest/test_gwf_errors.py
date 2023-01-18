@@ -6,31 +6,12 @@ very easily and tested with different options to succeed or fail correctly.
 
 """
 
-import os
-import shutil
 import subprocess
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-import targets
-from framework import set_teardown_test
-
-mf6_exe = os.path.abspath(targets.target_dict["mf6"])
-testname = "gwf_errors"
-testdir = os.path.join("temp", testname)
-os.makedirs(testdir, exist_ok=True)
-everything_was_successful = True
-
-teardown_test = set_teardown_test()
+from flopy.utils.gridutil import get_disu_kwargs
 
 
 def run_mf6(argv, ws):
@@ -48,11 +29,9 @@ def run_mf6(argv, ws):
     return proc.returncode, buff
 
 
-def run_mf6_error(ws, err_str_list):
-    returncode, buff = run_mf6([mf6_exe], ws)
+def run_mf6_error(ws, exe, err_str_list):
+    returncode, buff = run_mf6([exe], ws)
     msg = "mf terminated with error"
-    if teardown_test:
-        shutil.rmtree(ws, ignore_errors=True)
     if returncode != 0:
         if not isinstance(err_str_list, list):
             err_str_list = list(err_str_list)
@@ -68,6 +47,7 @@ def run_mf6_error(ws, err_str_list):
 
 def get_minimal_gwf_simulation(
     ws,
+    exe,
     name="test",
     simkwargs=None,
     simnamefilekwargs=None,
@@ -111,7 +91,7 @@ def get_minimal_gwf_simulation(
             0: [[(0, 0, 0), 0], [(0, nr - 1, nc - 1), 1]]
         }
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name=mf6_exe, sim_ws=ws, **simkwargs
+        sim_name=name, version="mf6", exe_name=exe, sim_ws=ws, **simkwargs
     )
     if simnamefilekwargs is not None:
         for k in simnamefilekwargs:
@@ -129,47 +109,50 @@ def get_minimal_gwf_simulation(
     return sim
 
 
-def test_simple_model_success():
+def test_simple_model_success(function_tmpdir, targets):
+    mf6 = targets.mf6
+
     # test a simple model to make sure it runs and terminates correctly
-    ws = f"{testdir}_sim0"
-    sim = get_minimal_gwf_simulation(ws)
+    sim = get_minimal_gwf_simulation(str(function_tmpdir), mf6)
     sim.write_simulation()
-    returncode, buff = run_mf6([mf6_exe], ws)
+    returncode, buff = run_mf6([mf6], str(function_tmpdir))
     assert returncode == 0, "mf6 failed for simple model."
 
     final_message = "Normal termination of simulation."
     failure_message = f'mf6 did not terminate with "{final_message}"'
     assert final_message in buff[-1], failure_message
-    if teardown_test:
-        shutil.rmtree(ws, ignore_errors=True)
-    return
 
 
-def test_empty_folder():
+def test_empty_folder(function_tmpdir, targets):
+    mf6 = targets.mf6
     with pytest.raises(RuntimeError):
         # make sure mf6 fails when there is no simulation name file
         err_str = "mf6: mfsim.nam is not present in working directory."
-        run_mf6_error(testdir, err_str)
+        run_mf6_error(str(function_tmpdir), mf6, err_str)
 
 
-def test_sim_errors():
+def test_sim_errors(function_tmpdir, targets):
+    mf6 = targets.mf6
+
     with pytest.raises(RuntimeError):
         # verify that the correct number of errors are reported
-        ws = f"{testdir}_sim1"
         chdkwargs = {}
         chdkwargs["stress_period_data"] = {
             0: [[(0, 0, 0), 0.0] for i in range(10)]
         }
-        sim = get_minimal_gwf_simulation(ws, chdkwargs=chdkwargs)
+        sim = get_minimal_gwf_simulation(
+            str(function_tmpdir), exe=mf6, chdkwargs=chdkwargs
+        )
         sim.write_simulation()
         err_str = ["1. Cell is already a constant head ((1,1,1))."]
-        run_mf6_error(ws, err_str)
+        run_mf6_error(str(function_tmpdir), mf6, err_str)
 
 
-def test_sim_maxerrors():
+def test_sim_maxerrors(function_tmpdir, targets):
+    mf6 = targets.mf6
+
     with pytest.raises(RuntimeError):
         # verify that the maxerrors keyword gives the correct error output
-        ws = f"{testdir}_sim2"
         simnamefilekwargs = {}
         simnamefilekwargs["maxerrors"] = 5
         chdkwargs = {}
@@ -177,7 +160,10 @@ def test_sim_maxerrors():
             0: [[(0, 0, 0), 0.0] for i in range(10)]
         }
         sim = get_minimal_gwf_simulation(
-            ws, simnamefilekwargs=simnamefilekwargs, chdkwargs=chdkwargs
+            str(function_tmpdir),
+            exe=mf6,
+            simnamefilekwargs=simnamefilekwargs,
+            chdkwargs=chdkwargs,
         )
         sim.write_simulation()
         err_str = [
@@ -186,14 +172,13 @@ def test_sim_maxerrors():
             "UNIT ERROR REPORT:",
             "1. ERROR OCCURRED WHILE READING FILE 'test.chd'",
         ]
-        run_mf6_error(ws, err_str)
+        run_mf6_error(str(function_tmpdir), mf6, err_str)
 
 
-def test_disu_errors():
+def test_disu_errors(function_tmpdir, targets):
+    mf6 = targets.mf6
+
     with pytest.raises(RuntimeError):
-        from disu_util import get_disu_kwargs
-
-        ws = f"{testdir}_sim3"
         disukwargs = get_disu_kwargs(
             3, 3, 3, np.ones(3), np.ones(3), 0, [-1, -2, -3]
         )
@@ -202,7 +187,10 @@ def test_disu_errors():
         top[9] = 2.0
         bot[9] = 1.0
         sim = get_minimal_gwf_simulation(
-            ws, disukwargs=disukwargs, chdkwargs={"stress_period_data": [[]]}
+            str(function_tmpdir),
+            exe=mf6,
+            disukwargs=disukwargs,
+            chdkwargs={"stress_period_data": [[]]},
         )
         sim.write_simulation()
         err_str = [
@@ -212,34 +200,41 @@ def test_disu_errors():
             "UNIT ERROR REPORT:"
             "1. ERROR OCCURRED WHILE READING FILE './test.disu'",
         ]
-        run_mf6_error(ws, err_str)
+        run_mf6_error(str(function_tmpdir), mf6, err_str)
 
 
-def test_solver_fail():
+def test_solver_fail(function_tmpdir, targets):
+    mf6 = targets.mf6
+
     with pytest.raises(RuntimeError):
         # test failed to converge
-        ws = f"{testdir}_sim4"
         imskwargs = {"inner_maximum": 1, "outer_maximum": 2}
-        sim = get_minimal_gwf_simulation(ws, imskwargs=imskwargs)
+        sim = get_minimal_gwf_simulation(
+            str(function_tmpdir), exe=mf6, imskwargs=imskwargs
+        )
         sim.write_simulation()
         err_str = [
             "Simulation convergence failure occurred 1 time(s).",
             "Premature termination of simulation.",
         ]
-        run_mf6_error(ws, err_str)
+        run_mf6_error(str(function_tmpdir), mf6, err_str)
 
 
-def test_fail_continue_success():
+def test_fail_continue_success(function_tmpdir, targets):
+    mf6 = targets.mf6
+
     # test continue but failed to converge
-    ws = f"{testdir}_sim5"
     tdiskwargs = {"nper": 1, "perioddata": [(10.0, 10, 1.0)]}
     imskwargs = {"inner_maximum": 1, "outer_maximum": 2}
     sim = get_minimal_gwf_simulation(
-        ws, imskwargs=imskwargs, tdiskwargs=tdiskwargs
+        str(function_tmpdir),
+        exe=mf6,
+        imskwargs=imskwargs,
+        tdiskwargs=tdiskwargs,
     )
     sim.name_file.continue_ = True
     sim.write_simulation()
-    returncode, buff = run_mf6([mf6_exe], ws)
+    returncode, buff = run_mf6([mf6], str(function_tmpdir))
     assert returncode == 0, "mf6 failed for simple model."
 
     final_message = "Simulation convergence failure occurred 10 time(s)."
@@ -249,21 +244,3 @@ def test_fail_continue_success():
     final_message = "Normal termination of simulation."
     failure_message = f'mf6 did not terminate with "{final_message}"'
     assert final_message in buff[0], failure_message
-
-    if teardown_test:
-        shutil.rmtree(ws, ignore_errors=True)
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    test_empty_folder()
-    test_simple_model_success()
-    test_sim_errors()
-    test_sim_maxerrors()
-    test_disu_errors()
-    test_solver_fail()
-    test_fail_continue_success()

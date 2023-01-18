@@ -1,22 +1,13 @@
 import os
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 name = "gwf_mvr01"
-ws = os.path.join("temp", name)
-exdirs = [ws]
+ex = [name]
 
 
 def build_model(idx, dir):
@@ -45,7 +36,7 @@ def build_model(idx, dir):
 
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=str(dir)
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -453,39 +444,19 @@ def eval_model(sim):
     )
 
     assert records[24].shape == (0,)
-    return
 
 
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_model, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_model, idxsim=idx)
-        test.run_mf6(sim)
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, idx, ws)
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_model, idxsim=idx
+        ),
+        ws,
+    )

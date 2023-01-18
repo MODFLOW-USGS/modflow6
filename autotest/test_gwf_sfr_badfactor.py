@@ -1,33 +1,11 @@
-import os
-import shutil
-import subprocess
-import sys
-
+import flopy
 import numpy as np
-import pytest
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-import targets
-from framework import testing_framework
-from simulation import Simulation
-
-mf6_exe = os.path.abspath(targets.target_dict["mf6"])
 
 paktest = "sfr"
 testname = "ts_sfr01"
-testdir = os.path.join("temp", testname)
-os.makedirs(testdir, exist_ok=True)
-everything_was_successful = True
 
 
-def build_model(timeseries=False):
+def build_model(ws, exe, timeseries=False):
     # static model data
     # temporal discretization
     nper = 1
@@ -57,9 +35,8 @@ def build_model(timeseries=False):
 
     # build MODFLOW 6 files
     name = testname
-    ws = testdir
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name=mf6_exe, sim_ws=ws
+        sim_name=name, version="mf6", exe_name=exe, sim_ws=ws
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -529,15 +506,16 @@ def build_model(timeseries=False):
     return sim
 
 
-# - No need to change any code below
-def test_mf6model():
+def test_mf6model(function_tmpdir, targets):
+    mf6 = targets.mf6
+
     # build and run the test model
-    sim = build_model()
+    sim = build_model(str(function_tmpdir), mf6)
     sim.write_simulation()
     sim.run_simulation()
 
     # ensure that the error msg is contained in the mfsim.lst file
-    f = open(os.path.join(testdir, "mfsim.lst"), "r")
+    f = open(str(function_tmpdir / "mfsim.lst"), "r")
     lines = f.readlines()
     error_count = 0
     expected_msg = False
@@ -551,38 +529,3 @@ def test_mf6model():
     )
 
     print("Finished running surfdep check")
-
-    return
-
-
-def main():
-    # build and run the test model
-    sim = build_model()
-    sim.write_simulation()
-    sim.run_simulation()
-
-    # ensure that the error msg is contained in the mfsim.lst file
-    f = open(os.path.join(testdir, "mfsim.lst"), "r")
-    lines = f.readlines()
-    error_count = 0
-    expected_msg = False
-    for line in lines:
-        if "cprior" and "divflow not within" in line:
-            expected_msg = True
-            error_count += 1
-
-    assert error_count == 1, (
-        "error count = " + str(error_count) + "but should equal 1"
-    )
-
-    print("Finished running surfdep check")
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()

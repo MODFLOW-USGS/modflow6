@@ -7,33 +7,13 @@ water to water table unless there was a uzf in each cell.
 
 import os
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["gwf_uzf05a"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-ddir = "data"
 nlay, nrow, ncol = 3, 1, 1
 
 thts = 0.30  # saturated water content
@@ -59,7 +39,7 @@ def build_model(idx, dir):
 
     # unsat props
     hk = 10.0
-    infiltration_rate = 10.
+    infiltration_rate = 10.0
     evapotranspiration_rate = 0.0
     evt_extinction_depth = 2.0
     brooks_corey_epsilon = 3.5  # brooks corey exponent
@@ -237,8 +217,8 @@ def build_model(idx, dir):
 def eval_flow(sim):
     print("evaluating flow...")
 
-    name = ex[sim.idxsim]
-    ws = exdirs[sim.idxsim]
+    name = sim.name
+    ws = sim.simpath
 
     fname = os.path.join(ws, f"{name}.uzf.bin")
     wobj = flopy.utils.HeadFile(fname, text="WATER-CONTENT")
@@ -256,43 +236,20 @@ def eval_flow(sim):
     node, node2, q, flow_area = flowtogwf[0]
     assert node == 1, "uzf node should be 1"
     assert node2 == 1, "GWF node should be 1"
-    assert np.isclose(q, -4.), "Flow from UZF to node 1 should be -4."
-
-    return
+    assert np.isclose(q, -4.0), "Flow from UZF to node 1 should be -4."
 
 
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_flow, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_flow, idxsim=idx)
-        test.run_mf6(sim)
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, idx, ws)
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_flow, idxsim=idx
+        ),
+        ws,
+    )

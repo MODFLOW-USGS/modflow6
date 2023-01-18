@@ -2,14 +2,14 @@ import os
 import shutil
 import sys
 import time
+from traceback import format_exc
 
-import numpy as np
 import flopy
+import numpy as np
+from common_regression import (get_mf6_comparison, get_mf6_files,
+                               get_namefiles, setup_mf6, setup_mf6_comparison)
 from flopy.utils.compare import compare_heads
-
-from common_regression import get_namefiles, get_mf6_files, setup_mf6, setup_mf6_comparison, get_mf6_comparison
-from framework import running_on_CI, set_teardown_test
-import targets
+from modflow_devtools.misc import is_in_ci
 
 sfmt = "{:25s} - {}"
 extdict = {
@@ -21,7 +21,10 @@ extdict = {
 }
 
 
-class Simulation(object):
+class TestSimulation:
+    # tell pytest this isn't a test class, don't collect it
+    __test__ = False
+
     def __init__(
         self,
         name,
@@ -38,41 +41,12 @@ class Simulation(object):
         make_comparison=True,
         simpath=None,
     ):
-        teardown_test = set_teardown_test()
-        for idx, arg in enumerate(sys.argv):
-            if arg[2:].lower() in list(targets.target_dict.keys()):
-                key = arg[2:].lower()
-                exe0 = targets.target_dict[key]
-                exe = os.path.join(os.path.dirname(exe0), sys.argv[idx + 1])
-                msg = (
-                    f"replacing {key} executable "
-                    + f'"{targets.target_dict[key]}" with '
-                    + f'"{exe}".'
-                )
-                print(msg)
-                targets.target_dict[key] = exe
-
-        if exe_dict is not None:
-            if not isinstance(exe_dict, dict):
-                msg = "exe_dict must be a dictionary"
-                assert False, msg
-            keys = list(targets.target_dict.keys())
-            for key, value in exe_dict.items():
-                if key in keys:
-                    exe0 = targets.target_dict[key]
-                    exe = os.path.join(os.path.dirname(exe0), value)
-                    msg = (
-                        f"replacing {key} executable "
-                        + f'"{targets.target_dict[key]}" with '
-                        + f'"{exe}".'
-                    )
-                    print(msg)
-                    targets.target_dict[key] = exe
-
         msg = sfmt.format("Initializing test", name)
         print(msg)
+
         self.name = name
         self.exfunc = exfunc
+        self.targets = exe_dict
         self.simpath = simpath
         self.inpt = None
         self.outp = None
@@ -122,11 +96,10 @@ class Simulation(object):
         # set allow failure
         self.require_failure = require_failure
 
-        self.teardown_test = teardown_test
         self.success = False
 
         # set is_ci
-        self.is_CI = running_on_CI()
+        self.is_CI = is_in_ci()
 
         return
 
@@ -151,23 +124,18 @@ class Simulation(object):
         # determine comparison model
         self.setup_comparison(pth, pth, testModel=testModel)
         # if self.mf6_regression:
-        #     self.action = "mf6-regression"
+        #     self.action = "mf6_regression"
         # else:
-        #     self.action = pymake.get_mf6_comparison(pth)
+        #     self.action = get_mf6_comparison(pth)
         if self.action is not None:
-            if "mf6" in self.action or "mf6-regression" in self.action:
+            if "mf6" in self.action or "mf6_regression" in self.action:
                 cinp, self.coutp = get_mf6_files(fpth)
 
     def setup(self, src, dst):
-        msg = sfmt.format("Setup test", self.name)
+        msg = sfmt.format("Setting up test workspace", self.name)
         print(msg)
         self.originpath = src
         self.simpath = dst
-        # write message
-        print(
-            "running pymake.setup_mf6 from "
-            + f"{os.path.abspath(os.getcwd())}"
-        )
         try:
             self.inpt, self.outp = setup_mf6(src=src, dst=dst)
             print("waiting...")
@@ -177,7 +145,7 @@ class Simulation(object):
             success = False
             print(f"source:      {src}")
             print(f"destination: {dst}")
-        assert success, "did not run pymake.setup_mf6"
+        assert success, f"Failed to set up test workspace: {format_exc()}"
 
         if success:
             self.setup_comparison(src, dst)
@@ -207,15 +175,13 @@ class Simulation(object):
 
         # Copy comparison simulations if available
         if self.mf6_regression:
-            action = "mf6-regression"
+            action = "mf6_regression"
             pth = os.path.join(dst, action)
             if os.path.isdir(pth):
                 shutil.rmtree(pth)
             shutil.copytree(dst, pth)
         elif testModel:
-            action = setup_mf6_comparison(
-                src, dst, remove_existing=self.teardown_test
-            )
+            action = setup_mf6_comparison(src, dst, remove_existing=True)
         else:
             action = get_mf6_comparison(dst)
 
@@ -234,8 +200,7 @@ class Simulation(object):
         nam = None
 
         # run mf6 models
-        target, ext = os.path.splitext(targets.program)
-        exe = os.path.abspath(targets.target_dict[target])
+        exe = str(self.targets["mf6"].absolute())
         msg = sfmt.format("using executable", exe)
         print(msg)
         try:
@@ -294,13 +259,13 @@ class Simulation(object):
                 else:
                     cpth = os.path.join(self.simpath, self.action)
                     key = self.action.lower().replace(".cmp", "")
-                    exe = os.path.abspath(targets.target_dict[key])
+                    exe = str(self.targets[key].absolute())
                     msg = sfmt.format("comparison executable", exe)
                     print(msg)
                     if (
                         "mf6" in key
                         or "libmf6" in key
-                        or "mf6-regression" in key
+                        or "mf6_regression" in key
                     ):
                         nam = None
                     else:
@@ -376,7 +341,7 @@ class Simulation(object):
                 "ahd",
                 "bin",
             )
-            if "mf6-regression" in self.action:
+            if "mf6_regression" in self.action:
                 success, msgall = self._compare_heads(
                     msgall,
                     extensions=head_extensions,
@@ -486,13 +451,13 @@ class Simulation(object):
                         msgall += msg + " ... FAILED\n"
 
             # compare concentrations
-            if "mf6-regression" in self.action:
+            if "mf6_regression" in self.action:
                 success, msgall = self._compare_concentrations(msgall)
                 if not success:
                     self.success = False
 
             # compare cbc files
-            if "mf6-regression" in self.action:
+            if "mf6_regression" in self.action:
                 cbc_extensions = (
                     "cbc",
                     "bud",
@@ -504,31 +469,6 @@ class Simulation(object):
                     self.success = False
 
         assert self.success, msgall
-        return
-
-    def teardown(self):
-        """
-        Remove the example folder
-
-        """
-        if self.success:
-            if self.teardown_test:
-                msg = sfmt.format("Teardown test", self.name)
-                print(msg)
-
-                # wait to delete on windows
-                if sys.platform.lower() == "win32":
-                    time.sleep(3)
-
-                try:
-                    shutil.rmtree(self.simpath)
-                    success = True
-                except:
-                    print("Could not remove test " + self.name)
-                    success = False
-                assert success
-            else:
-                print("Retaining test files")
         return
 
     def _get_mfsim_listing(self, lst_pth):
@@ -605,7 +545,7 @@ class Simulation(object):
                     if file_name.lower().endswith(extension):
                         files0.append(fpth0)
                         fpth1 = os.path.join(
-                            self.simpath, "mf6-regression", file_name
+                            self.simpath, "mf6_regression", file_name
                         )
                         files1.append(fpth1)
                         break

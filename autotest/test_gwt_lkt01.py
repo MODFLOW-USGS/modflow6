@@ -4,26 +4,14 @@
 # leaks into the aquifer.
 
 import os
-import sys
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["lkt_01"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
 
 
 def build_model(idx, dir):
@@ -346,14 +334,14 @@ def build_model(idx, dir):
 
 
 def get_mfsim(testsim):
-    ws = exdirs[testsim.idxsim]
+    ws = testsim.simpath
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
     return sim
 
 
 def eval_csv_information(testsim):
     sim = get_mfsim(testsim)
-    name = ex[testsim.idxsim]
+    name = testsim.name
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
     gwf = sim.get_model(gwfname)
@@ -362,9 +350,9 @@ def eval_csv_information(testsim):
     lak_budget = gwf.lak.output.budgetcsv().data
     result = lak_budget["PERCENT_DIFFERENCE"]
     answer = np.zeros(result.shape)
-    assert np.allclose(result, answer), f"Lake package does not have zero mass balance error: {result}"
-
-    return
+    assert np.allclose(
+        result, answer
+    ), f"Lake package does not have zero mass balance error: {result}"
 
 
 def eval_results(sim):
@@ -374,7 +362,7 @@ def eval_results(sim):
     eval_csv_information(sim)
 
     # ensure lake concentrations were saved
-    name = ex[sim.idxsim]
+    name = sim.name
     gwtname = "gwt_" + name
     fname = gwtname + ".lkt.bin"
     fname = os.path.join(sim.simpath, fname)
@@ -444,39 +432,18 @@ def eval_results(sim):
     # uncomment when testing
     # assert False
 
-    return
 
-
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_results, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_results, idxsim=idx)
-        test.run_mf6(sim)
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, idx, ws)
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
+        ),
+        ws,
+    )

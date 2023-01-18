@@ -1,53 +1,25 @@
 import os
-import sys
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import running_on_CI, testing_framework
-from simulation import Simulation
+from conftest import project_root_path
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["csub_subwt03a", "csub_subwt03b", "csub_subwt03c", "csub_subwt03d"]
 nex = len(ex)
-exdirs = [os.path.join("temp", s) for s in ex]
-
-ddir = "data"
 cmppth = "mf6"
-
 htol = None  # 0.1
 dtol = 1e-3
 budtol = 1e-2
-
 paktest = "csub"
-
 isnewton = 2 * [None, "NEWTON"]
 headbased = [True, True, False, False]
 delay = 4 * [False]
 
-# set travis to True when version 1.13.0 is released
-continuous_integration = [True for s in ex]
-
-# set replace_exe to None to use default executable
-replace_exe = None
-
 # static model data
-pth = os.path.join(ddir, "ibc01_ibound.ref")
+pth = str(project_root_path / "autotest" / "data" / "ibc01_ibound.ref")
 ib0 = np.genfromtxt(pth)
 
 # temporal discretization
@@ -440,8 +412,6 @@ def eval_comp(sim):
     # compare budgets
     cbc_compare(sim)
 
-    return
-
 
 # compare cbc and lst budgets
 def cbc_compare(sim):
@@ -538,64 +508,23 @@ def cbc_compare(sim):
         sim.success = True
         print("    " + msg)
 
-    return
 
-
-# - No need to change any code below
-
-
+@pytest.mark.slow
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # determine if running on CI infrastructure
-    is_CI = running_on_CI()
-    r_exe = None
-    if not is_CI:
-        if replace_exe is not None:
-            r_exe = replace_exe
-
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    if is_CI and not continuous_integration[idx]:
-        return
-    test.run_mf6(
-        Simulation(
-            dir, exe_dict=r_exe, exfunc=eval_comp, cmp_verbose=False, htol=htol
-        )
-    )
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    # run the test model
-    for dir in exdirs:
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(
-            dir,
-            exe_dict=replace_exe,
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, idx, ws)
+    test.run(
+        TestSimulation(
+            name=name,
+            exe_dict=targets,
             exfunc=eval_comp,
             cmp_verbose=False,
             htol=htol,
-        )
-        test.run_mf6(sim)
-
-    return
-
-
-# use python testmf6_csub_subwt03.py
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+        ),
+        ws,
+    )

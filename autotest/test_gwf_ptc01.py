@@ -1,28 +1,15 @@
 import os
-import sys
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from conftest import project_root_path
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["ptc01"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-ddir = "data"
-
-# read bottom data
-fpth = os.path.join(ddir, "nwtp03_bot.ref")
+data_path = project_root_path / "autotest" / "data"
+fpth = str(data_path / "nwtp03_bot.ref")
 botm = np.loadtxt(fpth, dtype=float)
 nlay = 1
 nrow, ncol = botm.shape
@@ -37,7 +24,7 @@ chd = 24.0
 strt = botm + 20.0
 
 # read recharge data
-fpth = os.path.join(ddir, "nwtp03_rch.ref")
+fpth = str(data_path / "nwtp03_rch.ref")
 rch = np.loadtxt(fpth, dtype=float)
 
 
@@ -156,39 +143,13 @@ def build_model(idx, dir):
     return sim, mc
 
 
-# - No need to change any code below
+@pytest.mark.slow
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    # run the test model
-    for dir in exdirs:
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir)
-        test.run_mf6(sim)
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, idx, ws)
+    test.run(TestSimulation(name=name, exe_dict=targets), ws)

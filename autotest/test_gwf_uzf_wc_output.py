@@ -1,33 +1,15 @@
 import os
 
+import flopy
+import flopy.utils.binaryfile as bf
 import numpy as np
 import pytest
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-import flopy.utils.binaryfile as bf
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 include_NWT = False
 
 ex = ["uzf_3lay_wc_chk"]
-exdirs = [os.path.join("temp", name) for name in ex]
 
 iuz_cell_dict = {}
 cell_iuz_dict = {}
@@ -470,9 +452,8 @@ def build_model(idx, ws):
 def eval_model(sim):
     print("evaluating model...")
 
-    idx = sim.idxsim
-    name = ex[idx]
-    ws = os.path.join("temp", name)
+    name = sim.name
+    ws = sim.simpath
 
     # Get the MF6 heads
     fpth = os.path.join(ws, "uzf_3lay_wc_chk.hds")
@@ -560,39 +541,20 @@ def eval_model(sim):
     print("Finished running checks")
 
 
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, exdir",
-    list(enumerate(exdirs)),
+    "name",
+    ex,
 )
-def test_mf6model(idx, exdir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, exdir)
-
-    # run the test models
-    test.run_mf6(
-        Simulation(
-            exdir,
+def test_mf6model(name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, 0, ws)
+    test.run(
+        TestSimulation(
+            name=name,
+            exe_dict=targets,
             exfunc=eval_model,
-            idxsim=idx,
-        )
+            idxsim=0,
+        ),
+        ws,
     )
-    return
-
-
-def main():
-    for idx, exdir in enumerate(exdirs):
-        test_mf6model(idx, exdir)
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()

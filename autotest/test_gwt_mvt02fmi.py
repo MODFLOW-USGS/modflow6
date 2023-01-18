@@ -5,35 +5,13 @@
 # There is no flow between the stream and the aquifer.
 
 import os
-import shutil
+from os.path import join
 
+import flopy
 import numpy as np
 
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-import targets
-from framework import set_teardown_test
-
-exe_name_mf6 = targets.target_dict["mf6"]
-exe_name_mf6 = os.path.abspath(exe_name_mf6)
-
-testdir = "./temp"
 testgroup = "mvt02fmi"
-d = os.path.join(testdir, testgroup)
-if os.path.isdir(d):
-    shutil.rmtree(d)
-
-
 ex = ["mvt02fmi"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
 
 # parameters
 lx = 7.0
@@ -61,14 +39,11 @@ nouter, ninner = 20, 10
 hclose, rclose, relax = 1e-8, 1e-6, 0.97
 
 
-def run_flow_model():
-
+def run_flow_model(dir, exe):
     name = "flow"
     gwfname = name
-    wsf = os.path.join(testdir, testgroup, name)
-    sim = flopy.mf6.MFSimulation(
-        sim_name=name, sim_ws=wsf, exe_name=exe_name_mf6
-    )
+    wsf = join(dir, testgroup, name)
+    sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=wsf, exe_name=exe)
 
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -262,18 +237,15 @@ def run_flow_model():
     errmsg = f"flow model did not terminate successfully\n{buff}"
     assert success, errmsg
 
-    return
 
-
-def run_transport_model():
-
+def run_transport_model(dir, exe):
     name = "transport"
     gwtname = name
-    wst = os.path.join(testdir, testgroup, name)
+    wst = join(dir, testgroup, name)
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
-        exe_name=exe_name_mf6,
+        exe_name=exe,
         sim_ws=wst,
         continue_=False,
         memory_print_option=["ALL"],
@@ -496,24 +468,8 @@ def run_transport_model():
     # uncomment when testing so files aren't deleted
     # assert False
 
-    return
 
-
-def test_mvt02fmi():
-    run_flow_model()
-    run_transport_model()
-    d = os.path.join(testdir, testgroup)
-
-    teardowntest = set_teardown_test()
-    if teardowntest:
-        if os.path.isdir(d):
-            shutil.rmtree(d)
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run tests
-    test_mvt02fmi()
+def test_mvt02fmi(function_tmpdir, targets):
+    mf6 = targets.mf6
+    run_flow_model(str(function_tmpdir), mf6)
+    run_transport_model(str(function_tmpdir), mf6)

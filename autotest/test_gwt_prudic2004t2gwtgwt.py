@@ -7,26 +7,16 @@
 import os
 import sys
 
+import flopy
 import numpy as np
 import pytest
+from conftest import project_root_path
+from framework import TestFramework
+from simulation import TestSimulation
 
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
-
-data_ws = "./data/prudic2004test2gwtgwt/"
+data_path = project_root_path / "autotest" / "data"
+model_path = str(data_path / "prudic2004test2gwtgwt")
 ex = ["prudic2004t2gwtgwt"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-
 gwfnames = ["flow1", "flow2"]
 gwtnames = ["transport1", "transport2"]
 
@@ -37,7 +27,7 @@ ncol = 23
 delr = 405.665
 delc = 403.717
 top = 100.0
-fname = os.path.join(data_ws, "bot1.dat")
+fname = os.path.join(model_path, "bot1.dat")
 bot0 = np.loadtxt(fname)
 botm = [bot0] + [bot0 - (15.0 * k) for k in range(1, nlay)]
 
@@ -57,12 +47,12 @@ within_model_mvt_on = True and within_model_mvr_on
 across_model_mvt_on = True and across_model_mvr_on
 
 # setup idomain
-fname = os.path.join(data_ws, "idomain1.dat")
+fname = os.path.join(model_path, "idomain1.dat")
 idomain0 = np.loadtxt(fname, dtype=int)
 idomain = nlay * [idomain0]
 idomain = np.array(idomain)
 
-fname = os.path.join(data_ws, "lakibd.dat")
+fname = os.path.join(model_path, "lakibd.dat")
 lakibd = np.loadtxt(fname, dtype=int)
 
 
@@ -353,7 +343,7 @@ def build_gwfgwt_combo(
     else:
         fname = "chd_south.dat"
     chdlist = []
-    fname = os.path.join(data_ws, fname)
+    fname = os.path.join(model_path, fname)
     print(f"Setting CHD information from: {fname}")
     for line in open(fname, "r").readlines():
         ll = line.strip().split()
@@ -383,10 +373,10 @@ def build_gwfgwt_combo(
                         [0, "inflow", 8640.0],
                     ]
                 }
-            fname = os.path.join(data_ws, f"sfr-packdata-{isfrseg}.dat")
+            fname = os.path.join(model_path, f"sfr-packdata-{isfrseg}.dat")
             sfrpd = sfr_packagedata_to_list(fname, gwf)
             nreaches = len(sfrpd)
-            fname = os.path.join(data_ws, f"sfr-conndata-{isfrseg}.dat")
+            fname = os.path.join(model_path, f"sfr-conndata-{isfrseg}.dat")
             sfrcd = sfr_connectiondata_to_list(fname)
             print(f"Setting nreaches to {nreaches}")
             sfr = flopy.mf6.ModflowGwfsfr(
@@ -504,9 +494,7 @@ def build_gwfgwt_combo(
     if icombo == 1:
         lakpackagedata = [[0, 44.0, nlakecon[0], "lake1"]]
         # <outletno> <lakein> <lakeout> <couttype> <invert> <width> <rough> <slope>
-        outlets = [
-            [0, 0, -1, "MANNING", 44.5, 3.36493214532915, 0.03, 0.2187500e-02]
-        ]
+        outlets = [[0, 0, -1, "MANNING", 44.5, 5.000000, 0.03, 0.2187500e-02]]
         noutlets = 1
     elif icombo == 2:
         lakpackagedata = [[0, 35.2, nlakecon[0], "lake2"]]
@@ -521,7 +509,6 @@ def build_gwfgwt_combo(
         lak = flopy.mf6.ModflowGwflak(
             gwf,
             time_conversion=86400.000,
-            length_conversion=3.28081,
             print_stage=True,
             print_flows=True,
             stage_filerecord=gwfname + ".lak.bin",
@@ -892,18 +879,16 @@ def make_concentration_map(sim, ws):
     print(f"Creating {fname}")
     plt.savefig(fname)
 
-    return
-
 
 def eval_results(sim):
     print("evaluating results...")
 
     # these answer files are results from autotest/prudic2004test2
-    fname = os.path.join(data_ws, "result_conc_lak1.txt")
+    fname = os.path.join(model_path, "result_conc_lak1.txt")
     ans_lak1 = np.loadtxt(fname)
-    fname = os.path.join(data_ws, "result_conc_sfr3.txt")
+    fname = os.path.join(model_path, "result_conc_sfr3.txt")
     ans_sfr3 = np.loadtxt(fname)
-    fname = os.path.join(data_ws, "result_conc_sfr4.txt")
+    fname = os.path.join(model_path, "result_conc_sfr4.txt")
     ans_sfr4 = np.loadtxt(fname)
 
     makeplot = False
@@ -911,7 +896,7 @@ def eval_results(sim):
         if arg.lower() == "--makeplot":
             makeplot = True
 
-    ws = exdirs[sim.idxsim]
+    ws = sim.simpath
     simfp = flopy.mf6.MFSimulation.load(sim_ws=ws, strict=False)
 
     if makeplot:
@@ -921,7 +906,7 @@ def eval_results(sim):
             make_concentration_map(simfp, ws)
 
     # ensure concentrations were saved
-    ws = exdirs[sim.idxsim]
+    ws = sim.simpath
     gwfname = gwfnames[0]
     gwtname = gwtnames[0]
 
@@ -975,39 +960,19 @@ def eval_results(sim):
     # uncomment when testing
     # assert False
 
-    return
 
-
-# - No need to change any code below
+@pytest.mark.slow
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_results, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_results, idxsim=idx)
-        test.run_mf6(sim)
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, idx, ws)
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
+        ),
+        ws,
+    )

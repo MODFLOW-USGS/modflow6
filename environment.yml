@@ -23,5 +23,6 @@ dependencies:
   - pytest
   - pytest-cases
   - pytest-dotenv
+  - pytest-order
   - pytest-xdist
   - flaky

@@ -1,50 +1,20 @@
 import os
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import running_on_CI, testing_framework
-from simulation import Simulation
+from conftest import project_root_path
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["csub_sub03a", "csub_sub03b"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-cmppth = "mf6-regression"
-
-
+cmppth = "mf6_regression"
 cvopt = [None, None, None]
 constantcv = [True, True]
 ndelaybeds = [0, 2]
 ndelaycells = [None, 39]
-
-ddir = "data"
-
-## run all examples on Travis
-continuous_integration = [True for e in ex]
-
-# set replace_exe to None to use default executable
-replace_exe = None
-
 htol = [None, None, None]
 dtol = 1e-3
-
 bud_lst = [
     "CSUB-ELASTIC_IN",
     "CSUB-INELASTIC_IN",
@@ -161,7 +131,9 @@ dz = [5.894, 5.08]
 nz = [1, 1]
 dstart = []
 for k in ldnd:
-    pth = os.path.join(ddir, f"ibc03_dstart{k + 1}.ref")
+    pth = str(
+        project_root_path / "autotest" / "data" / f"ibc03_dstart{k + 1}.ref"
+    )
     v = np.genfromtxt(pth)
     dstart.append(v.copy())
 
@@ -461,62 +433,22 @@ def eval_comp(sim):
         sim.success = True
         print("    " + msg)
 
-    return
 
-
-# - No need to change any code below
-
-
+@pytest.mark.slow
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # determine if running on CI infrastructure
-    is_CI = running_on_CI()
-
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    if is_CI and not continuous_integration[idx]:
-        return
-    test.run_mf6(
-        Simulation(
-            dir,
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework()
+    test.build(build_model, idx, str(function_tmpdir))
+    test.run(
+        TestSimulation(
+            name=name,
+            exe_dict=targets,
             exfunc=eval_comp,
             htol=htol[idx],
             mf6_regression=True,
-        )
+        ),
+        str(function_tmpdir),
     )
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(
-            dir,
-            exfunc=eval_comp,
-            mf6_regression=True,
-            htol=htol[idx],
-        )
-        test.run_mf6(sim)
-
-    return
-
-
-# use python test_gwf_csub_sub03.py --mf2005 mf2005devdbl
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
