@@ -163,7 +163,7 @@ class Dfn2F90:
         self._var_d = vardict
 
     def _construct_f90_block_statement(
-        self, blockname, required=False, aggregate=False
+        self, blockname, required=False, aggregate=False, block_var=False
     ):
         f90statement = f"    InputBlockDefinitionType( &\n"
         f90statement += f"    '{blockname}', & ! blockname\n"
@@ -172,9 +172,13 @@ class Dfn2F90:
         else:
             f90statement += f"    .false., & ! required\n"
         if aggregate:
-            f90statement += f"    .true. & ! aggregate\n"
+            f90statement += f"    .true., & ! aggregate\n"
         else:
-            f90statement += f"    .false. & ! aggregate\n"
+            f90statement += f"    .false., & ! aggregate\n"
+        if block_var:
+            f90statement += f"    .true. & ! block_variable\n"
+        else:
+            f90statement += f"    .false. & ! block_variable\n"
         f90statement += f"    ), &"
 
         return f90statement
@@ -221,6 +225,7 @@ class Dfn2F90:
 
         required_l = None
         required_l = []
+        has_block_var = False
         is_aggregate_blk = False
         aggregate_required = False
 
@@ -240,6 +245,7 @@ class Dfn2F90:
             v = self._var_d[k]
 
             if "block_variable" in v and v["block_variable"].upper() == "TRUE":
+                has_block_var = True
                 continue
 
             c = component
@@ -354,6 +360,7 @@ class Dfn2F90:
                 blockname.upper(),
                 required=required,
                 aggregate=is_aggregate_blk,
+                block_var=has_block_var,
             )
             + "\n"
         )
