@@ -100,6 +100,7 @@ $(OBJDIR)/InputDefinition.o \
 $(OBJDIR)/ArrayReaderBase.o \
 $(OBJDIR)/DiscretizationBase.o \
 $(OBJDIR)/VectorInt.o \
+$(OBJDIR)/simnamidm.o \
 $(OBJDIR)/gwt1dspidm.o \
 $(OBJDIR)/gwf3npf8idm.o \
 $(OBJDIR)/gwf3disv8idm.o \
@@ -250,6 +251,7 @@ $(OBJDIR)/ilut.o \
 $(OBJDIR)/sparsekit.o \
 $(OBJDIR)/rcm.o \
 $(OBJDIR)/blas1_d.o \
+$(OBJDIR)/IdmSimulation.o \
 $(OBJDIR)/RectangularGeometry.o \
 $(OBJDIR)/CircularGeometry.o
 
