@@ -79,7 +79,7 @@ contains
     !
     ! -- process blocks
     do iblock = 1, size(mf6_input%p_block_dfns)
-      call parse_block(parser, mf6_input, iblock, mshape, iout)
+      call parse_block(parser, mf6_input, iblock, mshape, iout, .false.)
       !
       ! -- set model shape if discretization dimensions have been read
       if (mf6_input%p_block_dfns(iblock)%blockname == 'DIMENSIONS' .and. &
@@ -97,10 +97,12 @@ contains
   !> @brief procedure to load a block
   !!
   !! Use parser to load information from a block into the __INPUT__
-  !! memory context location of the memory manager.
+  !! memory context location of the memory manager. Allow for recursive
+  !! calls for blocks that may appear multiple times in an input file.
   !!
   !<
-  subroutine parse_block(parser, mf6_input, iblock, mshape, iout)
+  recursive subroutine parse_block(parser, mf6_input, iblock, mshape, iout, &
+                                   recursive_call)
     use MemoryTypeModule, only: MemoryType
     use MemoryManagerModule, only: get_from_memorylist
     type(BlockParserType), intent(inout) :: parser !< block parser
@@ -108,11 +110,12 @@ contains
     integer(I4B), intent(in) :: iblock !< consecutive block number as defined in definition file
     integer(I4B), dimension(:), contiguous, pointer, intent(inout) :: mshape !< model shape
     integer(I4B), intent(in) :: iout !< unit number for output
+    logical(LGP), intent(in) :: recursive_call !< true if recursive call
     logical(LGP) :: isblockfound
     logical(LGP) :: endOfBlock
     logical(LGP) :: supportOpenClose
     integer(I4B) :: ierr
-    logical(LGP) :: found
+    logical(LGP) :: found, required
     type(MemoryType), pointer :: mt
     !
     ! -- disu vertices/cell2d blocks are contingent on NVERT dimension
@@ -129,9 +132,10 @@ contains
     supportOpenClose = (mf6_input%p_block_dfns(iblock)%blockname /= 'GRIDDATA')
     !
     ! -- parser search for block
+    required = mf6_input%p_block_dfns(iblock)%required .and. .not. recursive_call
     call parser%GetBlock(mf6_input%p_block_dfns(iblock)%blockname, isblockfound, &
                          ierr, supportOpenClose=supportOpenClose, &
-                         blockRequired=mf6_input%p_block_dfns(iblock)%required)
+                         blockRequired=required)
     !
     ! -- process block
     if (isblockfound) then
@@ -150,7 +154,15 @@ contains
         end do
       end if
     end if
-
+    !
+    ! -- recurse if block is reloadable and was just read
+    if (mf6_input%p_block_dfns(iblock)%block_variable) then
+      if (isblockfound) then
+        call parse_block(parser, mf6_input, iblock, mshape, iout, .true.)
+      end if
+    end if
+    !
+    ! -- return
     return
   end subroutine parse_block
 
@@ -326,13 +338,15 @@ contains
     integer(I4B), dimension(:), contiguous, pointer, intent(inout) :: mshape !< model shape
     integer(I4B), intent(in) :: iout !< unit number for output
     type(InputParamDefinitionType), pointer :: idt !< input data type object describing this record
-    integer(I4B), pointer :: nrow
+    integer(I4B) :: blocknum, iwords
+    integer(I4B), pointer :: nrow => null()
     integer(I4B) :: icol
     integer(I4B) :: ncol
     integer(I4B) :: nwords
     character(len=16), dimension(:), allocatable :: words
     type(StructArrayType), pointer :: struct_array
     character(len=:), allocatable :: parse_str
+    character(len=100) :: varname
     !
     ! -- set input definition for this block
     idt => get_aggregate_definition_type(mf6_input%p_aggregate_dfns, &
@@ -340,24 +354,56 @@ contains
                                          mf6_input%subcomponent_type, &
                                          mf6_input%p_block_dfns(iblock)%blockname)
     !
+    ! -- if block is reloadable read the block number
+    if (mf6_input%p_block_dfns(iblock)%block_variable) then
+      blocknum = parser%GetInteger()
+    else
+      blocknum = 0
+    end if
+    !
     ! -- identify variable names, ignore first RECARRAY column
     parse_str = trim(idt%datatype)//' '
     call parseline(parse_str, nwords, words)
     ncol = nwords - 1
     !
+    ! -- a column will be prepended if block is reloadable
+    if (blocknum > 0) ncol = ncol + 1
+    !
     ! -- use shape to set the max num of rows
-    call mem_setptr(nrow, idt%shape, mf6_input%memoryPath)
+    if (idt%shape /= '') then
+      call mem_setptr(nrow, idt%shape, mf6_input%memoryPath)
+    end if
     !
     ! -- create a structured array
-    struct_array => constructStructArray(ncol, nrow)
+    struct_array => constructStructArray(ncol, nrow, blocknum)
+    nullify (nrow)
+    !
+    ! -- create structarray vectors for each column
     do icol = 1, ncol
+      !
+      ! -- if block is reloadable, block number is first column
+      if (blocknum > 0) then
+        if (icol == 1) then
+          !
+          ! -- assign first column as the block number
+          varname = trim(mf6_input%p_block_dfns(iblock)%blockname)//'#'
+          call struct_array%mem_create_vector(icol, 'INTEGER', &
+                                              varname, &
+                                              mf6_input%memoryPath, '', &
+                                              .false.)
+          cycle
+        end if
+        iwords = icol
+      else
+        iwords = icol + 1
+      end if
       !
       ! -- set pointer to input definition for this 1d vector
       idt => get_param_definition_type(mf6_input%p_param_dfns, &
                                        mf6_input%component_type, &
                                        mf6_input%subcomponent_type, &
                                        mf6_input%p_block_dfns(iblock)%blockname, &
-                                       words(icol + 1))
+                                       words(iwords))
       !
       ! -- allocate variable in memory manager
       call struct_array%mem_create_vector(icol, idt%datatype, idt%mf6varname, &
@@ -367,7 +413,6 @@ contains
     !
     ! -- read the structured array
     call struct_array%read_from_parser(parser, iout)
-    call parser%terminateblock()
     !
     ! -- destroy the structured array reader
     call destructStructArray(struct_array)
