@@ -7,6 +7,7 @@
 !<
 module Mf6CoreModule
   use KindModule, only: I4B, LGP
+  use SimVariablesModule, only: iout
   use ListsModule, only: basesolutionlist, solutiongrouplist, &
                          basemodellist, baseexchangelist, &
                          baseconnectionlist
@@ -71,6 +72,12 @@ contains
     ! -- print banner and info to screen
     call printInfo()
 
+    ! -- create mfsim.lst
+    call setupLogging()
+
+    ! -- create input context
+    call createInputContext()
+
     ! -- create
     call simulation_cr()
 
@@ -117,7 +124,6 @@ contains
     use ListsModule, only: lists_da
     use MemoryManagerModule, only: mem_write_usage, mem_da
     use TimerModule, only: elapsed_time
-    use SimVariablesModule, only: iout
     use SimulationCreateModule, only: simulation_da
     use TdisModule, only: tdis_da
     use SimModule, only: final_message
@@ -217,6 +223,47 @@ contains
     call start_time()
     return
   end subroutine printInfo
+
+  !> @brief Set up mfsim list file output logging
+    !!
+    !! This subroutine creates the mfsim list file
+    !! and writes the header.
+    !!
+  !<
+  subroutine setupLogging()
+    use ConstantsModule, only: LINELENGTH
+    use SimVariablesModule, only: simlstfile
+    use InputOutputModule, only: getunit, openfile
+    use GenericUtilitiesModule, only: sim_message
+    use VersionModule, only: write_listfile_header
+    character(len=LINELENGTH) :: line
+    !
+    ! -- initialize iout
+    iout = 0
+    !
+    ! -- Open simulation list file
+    iout = getunit()
+    call openfile(iout, 0, simlstfile, 'LIST', filstat_opt='REPLACE')
+    !
+    ! -- write simlstfile to stdout
+    write (line, '(2(1x,A))') 'Writing simulation list file:', &
+      trim(adjustl(simlstfile))
+    call sim_message(line)
+    call write_listfile_header(iout)
+    return
+  end subroutine setupLogging
+
+  !> @brief Create simulation input context
+    !!
+    !! This subroutine creates the simulation input context
+    !!
+  !<
+  subroutine createInputContext()
+    use IdmSimulationModule, only: simnam_load
+    !
+    call simnam_load()
+    return
+  end subroutine createInputContext
 
   !> @brief Define the simulation
     !!
@@ -328,7 +375,6 @@ contains
   !<
   subroutine connections_cr()
     use ConnectionBuilderModule
-    use SimVariablesModule, only: iout
     integer(I4B) :: isol
     type(ConnectionBuilderType) :: connectionBuilder
     class(BaseSolutionType), pointer :: sol => null()

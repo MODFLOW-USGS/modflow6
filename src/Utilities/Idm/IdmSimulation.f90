@@ -9,6 +9,7 @@ module IdmSimulationModule
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LINELENGTH, LENMEMPATH
   use SimModule, only: store_error
+  use SimVariablesModule, only: iout
   use InputDefinitionModule, only: InputParamDefinitionType
   use ModflowInputModule, only: ModflowInputType, getModflowInput
 
@@ -21,12 +22,11 @@ contains
 
   !> @brief MODFLOW 6 mfsim.nam input load routine
   !<
-  subroutine simnam_load(iout)
+  subroutine simnam_load()
     use SimVariablesModule, only: simfile
     use InputOutputModule, only: openfile, getunit
     use GenericUtilitiesModule, only: sim_message
     use IdmMf6FileLoaderModule, only: input_load
-    integer(I4B), intent(in) :: iout !< unit number for output
     integer(I4B) :: inunit
     logical :: lexist
     character(len=LINELENGTH) :: line
@@ -36,7 +36,8 @@ contains
     if (lexist) then
       !
       ! -- write name of namfile to stdout
-      write (line, '(2(1x,a))') 'Using Simulation name file:', trim(adjustl(simfile))
+      write (line, '(2(1x,a))') 'Using Simulation name file:', &
+        trim(adjustl(simfile))
       call sim_message(line, skipafter=1)
       !
       ! -- open namfile and load to input context
@@ -48,7 +49,7 @@ contains
     end if
     !
     ! -- allocate any / all sim namfile variables that haven't been
-    call simnam_allocate(iout)
+    call simnam_allocate()
     !
     ! --return
     return
@@ -56,11 +57,10 @@ contains
 
   !> @brief MODFLOW 6 mfsim.nam parameter set default value
   !<
-  subroutine set_default_value(intvar, mf6varname, iout)
+  subroutine set_default_value(intvar, mf6varname)
     use SimVariablesModule, only: isimcontinue, isimcheck
     integer(I4B), pointer, intent(in) :: intvar
     character(len=*), intent(in) :: mf6varname
-    integer(I4B), intent(in) :: iout
     character(len=LINELENGTH) :: errmsg
     logical(LGP) :: terminate = .true.
     !
@@ -89,13 +89,12 @@ contains
 
   !> @brief MODFLOW 6 mfsim.nam input context parameter allocation
   !<
-  subroutine simnam_allocate(iout)
+  subroutine simnam_allocate()
     use MemoryHelperModule, only: create_mem_path
     use MemoryTypeModule, only: MemoryType
     use MemoryManagerModule, only: get_from_memorylist, mem_allocate
     use SimVariablesModule, only: idm_context
     use CharacterStringModule, only: CharacterStringType
-    integer(I4B), intent(in) :: iout
     character(len=LENMEMPATH) :: idmMemoryPath
     type(ModflowInputType) :: mf6_input
     type(InputParamDefinitionType), pointer :: idt
@@ -128,7 +127,7 @@ contains
         select case (idt%datatype)
         case ('KEYWORD', 'INTEGER')
           call mem_allocate(intvar, idt%mf6varname, idmMemoryPath)
-          call set_default_value(intvar, idt%mf6varname, iout)
+          call set_default_value(intvar, idt%mf6varname)
           nullify (intvar)
         case ('STRING')
           if (idt%in_record) then
