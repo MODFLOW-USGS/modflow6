@@ -48,7 +48,7 @@ contains
       close (inunit)
     end if
     !
-    ! -- allocate any / all sim namfile variables that haven't been
+    ! -- allocate any/all unallocated sim namfile variables
     call simnam_allocate()
     !
     ! --return

@@ -240,6 +240,7 @@ $(OBJDIR)/SolutionGroup.o \
 $(OBJDIR)/NumericalSolution.o \
 $(OBJDIR)/GwfGwtExchange.o \
 $(OBJDIR)/SimulationCreate.o \
+$(OBJDIR)/IdmSimulation.o \
 $(OBJDIR)/ConnectionBuilder.o \
 $(OBJDIR)/comarg.o \
 $(OBJDIR)/mf6core.o \
@@ -251,7 +252,6 @@ $(OBJDIR)/ilut.o \
 $(OBJDIR)/sparsekit.o \
 $(OBJDIR)/rcm.o \
 $(OBJDIR)/blas1_d.o \
-$(OBJDIR)/IdmSimulation.o \
 $(OBJDIR)/RectangularGeometry.o \
 $(OBJDIR)/CircularGeometry.o
 

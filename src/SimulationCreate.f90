@@ -332,7 +332,7 @@ contains
       write (iout, '(4x,a,a,i0,a,i0,a,i0)') trim(exgtype), ' exchange ', &
         n, ' will be created to connect model ', m1, ' with model ', m2
       !
-      ! -- create exchangers
+      ! -- create exchanges
       select case (exgtype)
       case ('GWF6-GWF6')
         call gwfexchange_create(exgfile, n, m1, m2)
@@ -411,11 +411,12 @@ contains
     ! -- open solution group logging block
     write (iout, '(/1x,a)') 'READING SOLUTIONGROUP SIMULATION INPUT'
     !
-    ! --
+    ! -- initialize
     sgid = 0 ! integer id of soln group, tracks with blocknum
     isoln = 0 ! cumulative solution number
+    !
+    ! -- create solution groups
     do i = 1, size(blocknum)
-      !do i = 1, size(slntype)
       !
       ! -- attributes for this solution
       stype = slntype(i)
@@ -485,7 +486,7 @@ contains
         parse_str = trim(mnames)//' '
         call parseline(parse_str, nwords, words)
         !
-        ! -- Find each model id, and then get model
+        ! -- Find each model id and get model
         do j = 1, nwords
           call upcase(words(j))
           mid = ifind(modelname, words(j))
