@@ -7,10 +7,7 @@ from conftest import should_compare
 from simulation import TestSimulation
 
 sfmt = "{:25s} - {}"
-excluded_models = [
-    "alt_model",
-    "mf2005"
-]
+excluded_models = ["alt_model", "mf2005"]
 excluded_comparisons = {
     "testPr2": ("6.2.1",),
     "testUzfLakSfr": ("6.2.1",),

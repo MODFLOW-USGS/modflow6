@@ -29,7 +29,7 @@ contains
   subroutine Mf6Run
     ! -- modules
     use CommandArguments, only: GetCommandLineArguments
-    use TdisModule, only: totim, totalsimtime
+    use TdisModule, only: endofsimulation
     use KindModule, only: DP
     ! -- local
     logical(LGP) :: hasConverged
@@ -41,7 +41,7 @@ contains
     call Mf6Initialize()
     !
     ! -- time loop
-    do while (totim < totalsimtime)
+    do while (.not. endofsimulation)
 
       ! perform a time step
       hasConverged = Mf6Update()

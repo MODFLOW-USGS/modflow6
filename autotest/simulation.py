@@ -6,8 +6,13 @@ from traceback import format_exc
 
 import flopy
 import numpy as np
-from common_regression import (get_mf6_comparison, get_mf6_files,
-                               get_namefiles, setup_mf6, setup_mf6_comparison)
+from common_regression import (
+    get_mf6_comparison,
+    get_mf6_files,
+    get_namefiles,
+    setup_mf6,
+    setup_mf6_comparison,
+)
 from flopy.utils.compare import compare_heads
 from modflow_devtools.misc import is_in_ci
 
