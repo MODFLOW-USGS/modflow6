@@ -2,10 +2,7 @@ import pytest
 from conftest import should_compare
 from simulation import TestSimulation
 
-excluded_models = [
-    "alt_model",
-    "test205_gwtbuy-henrytidal"
-]
+excluded_models = ["alt_model", "test205_gwtbuy-henrytidal"]
 excluded_comparisons = {
     "test001e_noUZF_3lay": ("6.2.1",),
     "test005_advgw_tidal": ("6.2.1",),

@@ -11,8 +11,10 @@ def should_compare(
     test: str, comparisons: dict, executables: Executables
 ) -> bool:
     if test in comparisons.keys():
-        dev_ver = Executables.get_version(path=executables.mf6).split(' ')[0]
-        reg_ver = Executables.get_version(path=executables.mf6_regression).split(' ')[0]
+        dev_ver = Executables.get_version(path=executables.mf6).split(" ")[0]
+        reg_ver = Executables.get_version(
+            path=executables.mf6_regression
+        ).split(" ")[0]
         print(f"MODFLOW 6 development version: {dev_ver}")
         print(f"MODFLOW 6 regression version: {reg_ver}")
         excluded = list(comparisons[test])

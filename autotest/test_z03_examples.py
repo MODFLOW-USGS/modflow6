@@ -64,7 +64,9 @@ def test_scenario(function_tmpdir, example_scenario, targets):
             exe_dict=targets.as_dict(),
             mf6_regression=True,
             cmp_verbose=False,
-            make_comparison=should_compare(name, excluded_comparisons, targets),
+            make_comparison=should_compare(
+                name, excluded_comparisons, targets
+            ),
             simpath=str(exdir),
         )
 
