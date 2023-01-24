@@ -73,10 +73,10 @@ contains
     call printInfo()
 
     ! -- create mfsim.lst
-    call setupLogging()
+    call open_lstfile()
 
-    ! -- create input context
-    call createInputContext()
+    ! -- load input context
+    call static_input_load()
 
     ! -- create
     call simulation_cr()
@@ -230,7 +230,7 @@ contains
     !! and writes the header.
     !!
   !<
-  subroutine setupLogging()
+  subroutine open_lstfile()
     use ConstantsModule, only: LINELENGTH
     use SimVariablesModule, only: simlstfile
     use InputOutputModule, only: getunit, openfile
@@ -251,19 +251,19 @@ contains
     call sim_message(line)
     call write_listfile_header(iout)
     return
-  end subroutine setupLogging
+  end subroutine open_lstfile
 
   !> @brief Create simulation input context
     !!
     !! This subroutine creates the simulation input context
     !!
   !<
-  subroutine createInputContext()
+  subroutine static_input_load()
     use IdmSimulationModule, only: simnam_load
     !
     call simnam_load()
     return
-  end subroutine createInputContext
+  end subroutine static_input_load
 
   !> @brief Define the simulation
     !!

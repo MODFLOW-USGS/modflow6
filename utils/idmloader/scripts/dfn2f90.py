@@ -456,6 +456,14 @@ if __name__ == "__main__":
             Path("../../../src/Model/GroundWaterTransport", "gwt1dspidm.f90"),
         ],
         [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-nam.dfn"),
+            Path("../../../src/Model/GroundWaterFlow", "gwf3idm.f90"),
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-nam.dfn"),
+            Path("../../../src/Model/GroundWaterTransport", "gwt1idm.f90"),
+        ],
+        [
             Path("../../../doc/mf6io/mf6ivar/dfn", "sim-nam.dfn"),
             Path("../../../src", "simnamidm.f90"),
         ],

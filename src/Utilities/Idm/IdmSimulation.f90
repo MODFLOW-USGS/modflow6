@@ -10,8 +10,10 @@ module IdmSimulationModule
   use ConstantsModule, only: LINELENGTH, LENMEMPATH
   use SimModule, only: store_error
   use SimVariablesModule, only: iout
+  use InputOutputModule, only: openfile, getunit
   use InputDefinitionModule, only: InputParamDefinitionType
   use ModflowInputModule, only: ModflowInputType, getModflowInput
+  use IdmMf6FileLoaderModule, only: input_load
 
   implicit none
   private
@@ -24,9 +26,8 @@ contains
   !<
   subroutine simnam_load()
     use SimVariablesModule, only: simfile
-    use InputOutputModule, only: openfile, getunit
     use GenericUtilitiesModule, only: sim_message
-    use IdmMf6FileLoaderModule, only: input_load
+    use IdmMf6FileLoaderModule, only: load_model_input
     integer(I4B) :: inunit
     logical :: lexist
     character(len=LINELENGTH) :: line
@@ -46,10 +47,17 @@ contains
       call input_load('NAM6', 'SIM', 'NAM', 'SIM', 'NAM', inunit, iout)
       !
       close (inunit)
+      !
+      ! -- allocate any unallocated simnam params
+      call simnam_allocate()
+      !
+      ! -- load models
+      call load_model_input(iout)
+    else
+      !
+      ! -- allocate  simnam params
+      call simnam_allocate()
     end if
-    !
-    ! -- allocate any/all unallocated sim namfile variables
-    call simnam_allocate()
     !
     ! --return
     return
@@ -92,15 +100,14 @@ contains
   subroutine simnam_allocate()
     use MemoryHelperModule, only: create_mem_path
     use MemoryTypeModule, only: MemoryType
-    use MemoryManagerModule, only: get_from_memorylist, mem_allocate
+    use MemoryManagerModule, only: get_isize, mem_allocate
     use SimVariablesModule, only: idm_context
     use CharacterStringModule, only: CharacterStringType
     character(len=LENMEMPATH) :: idmMemoryPath
     type(ModflowInputType) :: mf6_input
     type(InputParamDefinitionType), pointer :: idt
-    integer(I4B) :: iparam
-    logical(LGP) :: found, check = .false., terminate = .true.
-    type(MemoryType), pointer :: mt
+    integer(I4B) :: iparam, isize
+    logical(LGP) :: terminate = .true.
     integer(I4B), pointer :: intvar => null()
     character(len=LINELENGTH), pointer :: cstr => null()
     type(CharacterStringType), dimension(:), &
@@ -120,10 +127,10 @@ contains
       idt => mf6_input%p_param_dfns(iparam)
       !
       ! -- check if variable is already allocated
-      call get_from_memorylist(idt%mf6varname, idmMemoryPath, mt, found, check)
+      call get_isize(idt%mf6varname, idmMemoryPath, isize)
       !
       ! -- if not, allocate and set default
-      if (.not. found) then
+      if (isize < 0) then
         select case (idt%datatype)
         case ('KEYWORD', 'INTEGER')
           call mem_allocate(intvar, idt%mf6varname, idmMemoryPath)
