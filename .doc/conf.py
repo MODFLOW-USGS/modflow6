@@ -49,7 +49,7 @@ if not on_rtd:
 # -- Project information -----------------------------------------------------
 
 project = "MODFLOW 6 Program Documentation"
-copyright = "2020, MODFLOW Development Team"
+copyright = "2023, MODFLOW Development Team"
 author = "MODFLOW Development Team"
 
 # -- General configuration ---------------------------------------------------
@@ -70,7 +70,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "IPython.sphinxext.ipython_console_highlighting",  # lowercase didn't work
     "sphinx.ext.autosectionlabel",
-    "recommonmark",
+    "myst_parser",
     "sphinx_markdown_tables",
 ]
 

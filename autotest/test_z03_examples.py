@@ -1,6 +1,6 @@
 import pytest
 from conftest import should_compare
-from simulation import Simulation
+from simulation import TestSimulation
 
 # skip nested models
 # ex-gwf-csub-p02c has subdirs like 'es-001', 'hb-100'
@@ -59,12 +59,14 @@ def test_scenario(function_tmpdir, example_scenario, targets):
     for exdir in exdirs:
         model_name = f"{name}_{exdir.name}"
         workspace = function_tmpdir / model_name
-        sim = Simulation(
+        sim = TestSimulation(
             name=model_name,
             exe_dict=targets.as_dict(),
             mf6_regression=True,
             cmp_verbose=False,
-            make_comparison=should_compare(name, excluded_comparisons, targets),
+            make_comparison=should_compare(
+                name, excluded_comparisons, targets
+            ),
             simpath=str(exdir),
         )
 

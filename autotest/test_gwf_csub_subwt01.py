@@ -1,50 +1,20 @@
 import os
-import sys
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import running_on_CI, testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["csub_subwt01a", "csub_subwt01b", "csub_subwt01c", "csub_subwt01d"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-ddir = "data"
-cmppth = "mf6-regression"
-
+cmppth = "mf6_regression"
 htol = [None for n in ex]
 dtol = 1e-3
 budtol = 1e-2
-
 paktest = "csub"
-
 ump = [None, True, None, True]
 ivoid = [0, 1, 0, 1]
 gs0 = [0.0, 0.0, 1700.0, 1700.0]
-
-# set travis to True when version 1.13.0 is released
-continuous_integration = [True for n in ex]
-
-# set replace_exe to None to use default executable
-replace_exe = None
 
 # temporal discretization
 nper = 3
@@ -432,67 +402,22 @@ def cbc_compare(sim):
         sim.success = True
         print("    " + msg)
 
-    return
 
-
-# - No need to change any code below
-
-
+@pytest.mark.slow
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # determine if running on CI infrastructure
-    is_CI = running_on_CI()
-    r_exe = None
-    if not is_CI:
-        if replace_exe is not None:
-            r_exe = replace_exe
-
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    if is_CI and not continuous_integration[idx]:
-        return
-    test.run_mf6(
-        Simulation(
-            dir,
-            exe_dict=r_exe,
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework()
+    test.build(build_model, idx, str(function_tmpdir))
+    test.run(
+        TestSimulation(
+            name=name,
+            exe_dict=targets,
             exfunc=eval_comp,
             htol=htol[idx],
             mf6_regression=True,
-        )
+        ),
+        str(function_tmpdir),
     )
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    # run the test model
-    for dir in exdirs:
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(
-            dir,
-            exe_dict=replace_exe,
-            exfunc=eval_comp,
-            htol=htol[idx],
-            mf6_regression=True,
-        )
-        test.run_mf6(sim)
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()

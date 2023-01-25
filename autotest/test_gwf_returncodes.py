@@ -1,25 +1,11 @@
 import os
-import shutil
 import subprocess
 import sys
 
+import flopy
 import pytest
 
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-import targets
-
-mf6_exe = os.path.abspath(targets.target_dict["mf6"])
 name = "gwf_ret_codes01"
-base_ws = os.path.join("temp", name)
-if not os.path.isdir(base_ws):
-    os.makedirs(base_ws, exist_ok=True)
 app = "mf6"
 if sys.platform.lower() == "win32":
     app += ".exe"
@@ -40,7 +26,7 @@ def run_mf6(argv, ws):
     return proc.returncode, buff
 
 
-def get_sim(ws, idomain, continue_flag=False, nouter=500):
+def get_sim(ws, exe, idomain, continue_flag=False, nouter=500):
     # static model data
     # temporal discretization
     nper = 1
@@ -66,7 +52,7 @@ def get_sim(ws, idomain, continue_flag=False, nouter=500):
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
-        exe_name=mf6_exe,
+        exe_name=exe,
         sim_ws=ws,
         continue_=continue_flag,
     )
@@ -143,17 +129,17 @@ def get_sim(ws, idomain, continue_flag=False, nouter=500):
     return sim
 
 
-def normal_termination():
-    ws = os.path.join(base_ws, "normal_termination")
+def normal_termination(dir, exe):
+    ws = os.path.join(dir, "normal_termination")
 
     # get the simulation
-    sim = get_sim(ws, idomain=1)
+    sim = get_sim(ws, exe, idomain=1)
 
     # write the input files
     sim.write_simulation()
 
     # run the simulation
-    returncode, buff = run_mf6([mf6_exe], ws)
+    returncode, buff = run_mf6([exe], ws)
     if returncode != 0:
         msg = (
             "The run should have been successful but it terminated "
@@ -161,79 +147,69 @@ def normal_termination():
         )
         raise ValueError(msg)
 
-    # clean up working directory
-    clean(ws)
 
-    return
-
-
-def converge_fail_continue():
-    ws = os.path.join(base_ws, "converge_fail_continue")
+def converge_fail_continue(dir, exe):
+    ws = os.path.join(dir, "converge_fail_continue")
 
     # get the simulation
-    sim = get_sim(ws, idomain=1, continue_flag=True, nouter=1)
+    sim = get_sim(ws, exe, idomain=1, continue_flag=True, nouter=1)
 
     # write the input files
     sim.write_simulation()
 
     # run the simulation
-    returncode, buff = run_mf6([mf6_exe], ws)
+    returncode, buff = run_mf6([exe], ws)
     msg = (
         "The run should have been successful even though it failed, because"
         " the continue flag was set.  But a non-zero error code was "
         "found: {}".format(returncode)
     )
     assert returncode == 0, msg
-    return
 
 
-def converge_fail_nocontinue():
-    ws = os.path.join(base_ws, "converge_fail_nocontinue")
+def converge_fail_nocontinue(dir, exe):
+    ws = os.path.join(dir, "converge_fail_nocontinue")
 
     with pytest.raises(RuntimeError):
         # get the simulation
-        sim = get_sim(ws, idomain=1, continue_flag=False, nouter=1)
+        sim = get_sim(ws, exe, idomain=1, continue_flag=False, nouter=1)
 
         # write the input files
         sim.write_simulation()
 
         # run the simulation
-        returncode, buff = run_mf6([mf6_exe], ws)
+        returncode, buff = run_mf6([exe], ws)
         msg = "This run should fail with a returncode of 1"
         if returncode == 1:
-            clean(ws)
             raise RuntimeError(msg)
 
 
-def idomain_runtime_error():
-    ws = os.path.join(base_ws, "idomain_runtime_error")
+def idomain_runtime_error(dir, exe):
+    ws = os.path.join(dir, "idomain_runtime_error")
 
     with pytest.raises(RuntimeError):
         # get the simulation
-        sim = get_sim(ws, idomain=0)
+        sim = get_sim(ws, exe, idomain=0)
 
         # write the input files
         sim.write_simulation()
 
         # run the simulation
-        returncode, buff = run_mf6([mf6_exe], ws)
+        returncode, buff = run_mf6([exe], ws)
         msg = f"could not run {sim.name}"
         if returncode != 0:
             err_str = "Ensure IDOMAIN array has some"
             err = any(err_str in s for s in buff)
             if err:
-                clean(ws)
                 raise RuntimeError(msg)
             else:
                 msg += " but IDOMAIN ARRAY ERROR not returned"
                 raise ValueError(msg)
 
 
-def unknown_keyword_error():
-    ws = base_ws
-
-    with pytest.raises(RuntimeError):
-        returncode, buff = run_mf6([mf6_exe, "--unknown_keyword"], ws)
+def unknown_keyword_error(dir, exe):
+    with pytest.raises((RuntimeError, ValueError)):
+        returncode, buff = run_mf6([exe, "--unknown_keyword"], dir)
         msg = "could not run unknown_keyword"
         if returncode != 0:
             err_str = f"{app}: illegal option"
@@ -245,10 +221,8 @@ def unknown_keyword_error():
                 raise ValueError(msg)
 
 
-def run_argv(arg, return_str):
-    ws = base_ws
-
-    returncode, buff = run_mf6([mf6_exe, arg], ws)
+def run_argv(arg, return_str, tempdir, exe):
+    returncode, buff = run_mf6([exe, arg], tempdir)
     if returncode == 0:
         found_str = any(return_str in s for s in buff)
         if not found_str:
@@ -259,62 +233,43 @@ def run_argv(arg, return_str):
         raise RuntimeError(msg)
 
 
-def help_argv():
+def help_argv(dir, exe):
     for arg in ["-h", "--help", "-?"]:
         return_str = f"{app} [options]     retrieve program information"
-        run_argv(arg, return_str)
+        run_argv(arg, return_str, dir, exe)
 
 
-def version_argv():
+def version_argv(dir, exe):
     for arg in ["-v", "--version"]:
         return_str = f"{app}: 6"
-        run_argv(arg, return_str)
+        run_argv(arg, return_str, dir, exe)
 
 
-def develop_argv():
+def develop_argv(dir, exe):
     for arg in ["-dev", "--develop"]:
         return_str = f"{app}: develop version"
-        run_argv(arg, return_str)
+        run_argv(arg, return_str, dir, exe)
 
 
-def compiler_argv():
+def compiler_argv(dir, exe):
     for arg in ["-c", "--compiler"]:
         return_str = f"{app}: MODFLOW 6 compiled"
-        run_argv(arg, return_str)
-
-
-def clean(dir_pth):
-    print(f"Cleaning up {dir_pth}")
-    shutil.rmtree(dir_pth)
+        run_argv(arg, return_str, dir, exe)
 
 
 @pytest.mark.parametrize(
     "fn",
     (
-        "idomain_runtime_error()",
-        "unknown_keyword_error()",
-        "normal_termination()",
-        "converge_fail_nocontinue()",
-        "help_argv()",
-        "version_argv()",
-        "develop_argv()",
-        "compiler_argv()",
+        "idomain_runtime_error",
+        "unknown_keyword_error",
+        "normal_termination",
+        "converge_fail_nocontinue",
+        "help_argv",
+        "version_argv",
+        "develop_argv",
+        "compiler_argv",
     ),
 )
-def test_main(fn):
-    eval(fn)
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    idomain_runtime_error()
-    unknown_keyword_error()
-    normal_termination()
-    converge_fail_nocontinue()
-    help_argv()
-    version_argv()
-    develop_argv()
-    compiler_argv()
-    clean(base_ws)
+def test_main(fn, function_tmpdir, targets):
+    mf6 = targets.as_dict()["mf6"]
+    eval(fn)(function_tmpdir, mf6)

@@ -1,39 +1,17 @@
 import os
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import running_on_CI, testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["gwf_sto01"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-
 cmppth = "mfnwt"
 tops = [0.0]
-
-ddir = "data"
-
-## run all examples on Travis
-continuous_integration = [True for idx in range(len(exdirs))]
-
-# use default executable
-replace_exe = None
-
-htol = [None for idx in range(len(exdirs))]
+htol = [None for idx in range(len(ex))]
 dtol = 1e-3
 budtol = 1e-2
-
 bud_lst = ["STO-SS_IN", "STO-SS_OUT", "STO-SY_IN", "STO-SY_OUT"]
 
 # static model data
@@ -359,62 +337,22 @@ def eval_sto(sim):
         sim.success = True
         print("    " + msg)
 
-    return
 
-
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-
-    # determine if running on CI infrastructure
-    is_CI = running_on_CI()
-    r_exe = None
-    if not is_CI:
-        if replace_exe is not None:
-            r_exe = replace_exe
-
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    test.build_mf6_models_legacy(build_model, idx, dir)
-
-    # run the test model
-    if is_CI and not continuous_integration[idx]:
-        return
-    test.run_mf6(
-        Simulation(
-            dir, exfunc=eval_sto, exe_dict=r_exe, htol=htol[idx], idxsim=idx
-        )
-    )
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models_legacy(build_model, idx, dir)
-        sim = Simulation(
-            dir,
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, idx, ws)
+    test.run(
+        TestSimulation(
+            name=name,
+            exe_dict=targets,
             exfunc=eval_sto,
-            exe_dict=replace_exe,
             htol=htol[idx],
             idxsim=idx,
-        )
-        test.run_mf6(sim)
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+        ),
+        ws,
+    )

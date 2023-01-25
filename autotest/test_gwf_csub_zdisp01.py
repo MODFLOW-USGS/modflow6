@@ -1,46 +1,17 @@
 import os
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-from framework import running_on_CI, testing_framework
-from simulation import Simulation
+from flopy.utils.compare import compare_heads
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["csub_zdisp01"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-
 cmppth = "mfnwt"
-
-ddir = "data"
-
-## run all examples on Travis
-continuous_integration = [True for idx in range(len(exdirs))]
-
-# set replace_exe to None to use default executable
-replace_exe = None
-
-htol = [None for idx in range(len(exdirs))]
+htol = [None for idx in range(len(ex))]
 dtol = 1e-3
 budtol = 1e-2
-
 bud_lst = [
     "STO-SS_IN",
     "STO-SS_OUT",
@@ -421,15 +392,11 @@ def get_model(idx, dir):
         backflag=0,
         idroptol=0,
     )
+
+    sim.write_simulation()
+    mc.write_input()
+
     return sim, mc
-
-
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = get_model(idx, dir)
-        sim.write_simulation()
-        mc.write_input()
-    return
 
 
 def eval_zdisplacement(sim):
@@ -561,7 +528,7 @@ def eval_zdisplacement(sim):
         sim.simpath,
         f"{os.path.basename(sim.name)}.z-displacement.bin.out",
     )
-    success_tst = pymake.compare_heads(
+    success_tst = compare_heads(
         None,
         None,
         text=text1,
@@ -581,66 +548,22 @@ def eval_zdisplacement(sim):
         sim.success = False
         assert success_tst, msg
 
-    return
 
-
-# - No need to change any code below
+@pytest.mark.slow
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # determine if running on CI infrastructure
-    is_CI = running_on_CI()
-    r_exe = None
-    if not is_CI:
-        if replace_exe is not None:
-            r_exe = replace_exe
-
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    build_models()
-
-    # run the test model
-    if is_CI and not continuous_integration[idx]:
-        return
-    test.run_mf6(
-        Simulation(
-            dir,
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework()
+    sim, mc = get_model(idx, str(function_tmpdir))
+    test.run(
+        TestSimulation(
+            name=name,
+            exe_dict=targets,
             exfunc=eval_zdisplacement,
-            exe_dict=r_exe,
             htol=htol[idx],
             idxsim=idx,
-        )
+        ),
+        str(function_tmpdir),
     )
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    build_models()
-
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        sim = Simulation(
-            dir,
-            exfunc=eval_zdisplacement,
-            exe_dict=replace_exe,
-            htol=htol[idx],
-            idxsim=idx,
-        )
-        test.run_mf6(sim)
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()

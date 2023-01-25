@@ -5,12 +5,11 @@ from warnings import warn
 
 import flopy
 import pytest
+from conftest import project_root_path
 from flaky import flaky
 from modflow_devtools.build import meson_build
 from modflow_devtools.download import download_and_unzip, get_release
 from modflow_devtools.misc import get_ostag
-
-from conftest import project_root_path
 
 repository = "MODFLOW-USGS/modflow6"
 top_bin_path = project_root_path / "bin"
@@ -22,7 +21,7 @@ def get_asset_name(asset: dict) -> str:
     if "win" in ostag:
         return name
     else:
-        prefix = name.rpartition('_')[0]
+        prefix = name.rpartition("_")[0]
         prefix += f"_{ostag}"
         return f"{prefix}.zip"
 
@@ -43,9 +42,13 @@ def test_rebuild_release(rebuilt_bin_path: Path):
     release = get_release(repository)
     assets = release["assets"]
     ostag = get_ostag()
-    asset = next(iter([a for a in assets if a["name"] == get_asset_name(a)]), None)
+    asset = next(
+        iter([a for a in assets if a["name"] == get_asset_name(a)]), None
+    )
     if not asset:
-        warn(f"Couldn't find asset for OS {get_ostag()}, available assets:\n{assets}")
+        warn(
+            f"Couldn't find asset for OS {get_ostag()}, available assets:\n{assets}"
+        )
 
     with TemporaryDirectory() as td:
         download_path = Path(td)
@@ -56,7 +59,9 @@ def test_rebuild_release(rebuilt_bin_path: Path):
         )
 
         # update IDEVELOPMODE
-        source_files_path = download_path / asset["name"].replace(".zip", "") / "src"
+        source_files_path = (
+            download_path / asset["name"].replace(".zip", "") / "src"
+        )
         version_file_path = source_files_path / "Utilities" / "version.f90"
         with open(version_file_path) as f:
             lines = f.read().splitlines()
@@ -72,7 +77,7 @@ def test_rebuild_release(rebuilt_bin_path: Path):
         meson_build(
             project_path=source_files_path.parent,
             build_path=download_path / "builddir",
-            bin_path=rebuilt_bin_path
+            bin_path=rebuilt_bin_path,
         )
 
 
@@ -84,7 +89,9 @@ def test_get_executables(downloaded_bin_path: Path):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser("Get executables needed for MODFLOW 6 testing")
+    parser = argparse.ArgumentParser(
+        "Get executables needed for MODFLOW 6 testing"
+    )
     parser.add_argument("-p", "--path", help="path to top-level bin directory")
     args = parser.parse_args()
     bin_path = Path(args.path).resolve() if args.path else top_bin_path

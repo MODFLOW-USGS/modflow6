@@ -6,39 +6,14 @@
 
 
 import os
-import shutil
 
-import numpy as np
-import pytest
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-import targets
-
-mf6_exe = os.path.abspath(targets.target_dict["mf6"])
+import flopy
 
 newtonoptions = [None, "NEWTON", "NEWTON UNDER_RELAXATION"]
 ex = "maw_obs"
-exdir = os.path.join("temp", ex)
-
-ddir = "data"
 
 
-def build_model():
+def build_model(dir, exe):
 
     nlay, nrow, ncol = 1, 1, 3
     nper = 3
@@ -63,9 +38,9 @@ def build_model():
     name = ex
 
     # build MODFLOW 6 files
-    ws = exdir
+    ws = dir
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name=mf6_exe, sim_ws=ws
+        sim_name=name, version="mf6", exe_name=exe, sim_ws=ws
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -192,18 +167,14 @@ def build_model():
     return sim
 
 
-def test_mf6model():
-    # build the models
-    sim = build_model()
-
-    # write model input
+def test_mf6model(function_tmpdir, targets):
+    mf6 = targets["mf6"]
+    sim = build_model(str(function_tmpdir), mf6)
     sim.write_simulation()
-
-    # attempt to run model should fail
     sim.run_simulation()
 
     # ensure that the error msg is contained in the mfsim.lst file
-    f = open(os.path.join(exdir, "mfsim.lst"), "r")
+    f = open(str(function_tmpdir / "mfsim.lst"), "r")
     lines = f.readlines()
     error_count = 0
     expected_msg = False
@@ -217,8 +188,8 @@ def test_mf6model():
     )
 
     # fix the error and attempt to rerun model
-    orig_fl = os.path.join(exdir, ex + ".maw.obs")
-    new_fl = os.path.join(exdir, ex + ".maw.obs.new")
+    orig_fl = str(function_tmpdir / (ex + ".maw.obs"))
+    new_fl = str(function_tmpdir / (ex + ".maw.obs.new"))
     sr = open(orig_fl, "r")
     sw = open(new_fl, "w")
 
@@ -241,19 +212,3 @@ def test_mf6model():
     success, buff = sim.run_simulation()
 
     assert success, "model rerun failed"
-
-    shutil.rmtree(exdir, ignore_errors=True)
-
-
-def main():
-    test_mf6model()
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()

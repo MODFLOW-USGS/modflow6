@@ -4,13 +4,10 @@ import flopy
 import pytest
 from common_regression import get_namefiles, model_setup
 from conftest import should_compare
-from simulation import Simulation
+from simulation import TestSimulation
 
 sfmt = "{:25s} - {}"
-excluded_models = [
-    "alt_model",
-    "mf2005"
-]
+excluded_models = ["alt_model", "mf2005"]
 excluded_comparisons = {
     "testPr2": ("6.2.1",),
     "testUzfLakSfr": ("6.2.1",),
@@ -30,9 +27,9 @@ def test_model(
     if name in excluded_models:
         pytest.skip(f"Excluding mf5to6 model: {name}")
 
-    sim = Simulation(
+    sim = TestSimulation(
         name=exdir.name,
-        exe_dict=targets.as_dict(),
+        exe_dict=targets,
         mf6_regression=not original_regression,
         cmp_verbose=False,
         make_comparison=should_compare(name, excluded_comparisons, targets),

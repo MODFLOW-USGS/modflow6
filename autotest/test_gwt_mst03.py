@@ -7,36 +7,16 @@ pages 9-10.
 
 import os
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["mst03"]
 laytyp = [1]
 ss = [1.0e-10]
 sy = [0.1]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-ddir = "data"
 nlay, nrow, ncol = 1, 1, 1
 
 
@@ -238,25 +218,17 @@ def build_model(idx, dir):
 def eval_transport(sim):
     print("evaluating transport...")
 
-    name = ex[sim.idxsim]
+    name = sim.name
     gwtname = "gwt_" + name
     gwfname = "gwf_" + name
 
     fpth = os.path.join(sim.simpath, f"{gwfname}.hds")
-    try:
-        hobj = flopy.utils.HeadFile(fpth, precision="double")
-        head = hobj.get_alldata().flatten()
-    except:
-        assert False, f'could not load data from "{fpth}"'
+    hobj = flopy.utils.HeadFile(fpth, precision="double")
+    head = hobj.get_alldata().flatten()
 
     fpth = os.path.join(sim.simpath, f"{gwtname}.ucn")
-    try:
-        cobj = flopy.utils.HeadFile(
-            fpth, precision="double", text="CONCENTRATION"
-        )
-        conc = cobj.get_alldata().flatten()
-    except:
-        assert False, f'could not load data from "{fpth}"'
+    cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
+    conc = cobj.get_alldata().flatten()
 
     # calculations
     times = hobj.get_times()
@@ -312,42 +284,18 @@ def eval_transport(sim):
     errmsg = f"{conc}\n{canswer}"
     assert np.allclose(conc, canswer, atol=1.0e-8), errmsg
 
-    return
 
-
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "name",
+    ex,
 )
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_transport, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_transport, idxsim=idx)
-        test.run_mf6(sim)
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, 0, ws)
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=0
+        ),
+        ws,
+    )

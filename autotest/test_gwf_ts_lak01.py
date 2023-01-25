@@ -1,41 +1,15 @@
 import os
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from flopy.utils.compare import eval_bud_diff
+from framework import TestFramework
+from simulation import TestSimulation
 
 paktest = "lak"
 budtol = 1e-2
-
 ex = ["ts_lak01"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-ddir = "data"
-
-# run all examples on Travis
-continuous_integration = [True for idx in range(len(exdirs))]
-
-# set replace_exe to None to use default executable
-replace_exe = None
 
 # static model data
 # spatial discretization
@@ -355,7 +329,6 @@ def build_model(idx, dir):
 
 def eval_budget(sim):
     print("evaluating budgets...")
-    from budget_file_compare import eval_bud_diff
 
     # get ia/ja from binary grid file
     fname = f"{os.path.basename(sim.name)}.dis.grb"
@@ -378,44 +351,19 @@ def eval_budget(sim):
     fpth = os.path.join(sim.simpath, fname)
     eval_bud_diff(fpth, cobj0, cobj1, ia, dtol=0.1)
 
-    return
 
-
-# - No need to change any code below
-
-
+@pytest.mark.slow
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_budget, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_budget, idxsim=idx)
-        test.run_mf6(sim)
-    return
-
-
-# use python testmf6_drn_ddrn01.py
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, idx, ws)
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_budget, idxsim=idx
+        ),
+        ws,
+    )
