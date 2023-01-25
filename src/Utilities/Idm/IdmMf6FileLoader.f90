@@ -17,7 +17,7 @@ module IdmMf6FileLoaderModule
   implicit none
   private
   public :: input_load
-  public :: load_model_input
+  public :: load_model_inputs
 
   interface input_load
     module procedure input_load_blockparser, input_load_generic
@@ -136,7 +136,9 @@ contains
     return
   end subroutine input_load_generic
 
-  subroutine load_package_input(mtype, mfname, mname, iout)
+  !> @brief load files listed in model namfile packages block
+  !<
+  subroutine load_package_inputs(mtype, mfname, mname, iout)
     ! -- modules
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr
@@ -149,11 +151,13 @@ contains
     integer(I4B), intent(in) :: iout
     ! -- locals
     character(len=LENMEMPATH) :: idmMemoryPath
-    type(CharacterStringType), dimension(:), pointer, contiguous :: ftypes !< types
+    type(CharacterStringType), dimension(:), pointer, contiguous :: ftypes !< file types
     type(CharacterStringType), dimension(:), pointer, contiguous :: fnames !< file names
-    type(CharacterStringType), dimension(:), pointer, contiguous :: pnames !< names
+    type(CharacterStringType), dimension(:), pointer, contiguous :: pnames !< package names
     character(len=LINELENGTH) :: ftype, fname, pname
     integer(I4B) :: n, idis, idsp, inpf
+    character(len=LINELENGTH) :: errmsg
+    logical(LGP) :: terminate = .true.
     !
     ! -- set input memory path
     idmMemoryPath = create_mem_path(mname, 'NAM', idm_context)
@@ -195,19 +199,33 @@ contains
       case default
       end select
     end do
-
+    !
+    ! -- Verify discretization is loaded
+    if (idis == 0) then
+      write (errmsg, '(1x,a,a,a)') &
+        '****ERROR[', trim(mname), &
+        ']. Discretization (DIS6, DISV6, or DISU6) Package not specified.'
+      call store_error(errmsg, terminate)
+    end if
+    !
+    ! -- load DSP package inputs
     if (idsp > 0) then
       fname = fnames(idsp)
       call load_package(fname, 'DSP6', 'GWT', 'DSP', mname, 'DSP', iout)
     end if
-
+    !
+    ! -- load NPF package inputs
     if (inpf > 0) then
       fname = fnames(inpf)
       call load_package(fname, 'NPF6', 'GWF', 'NPF', mname, 'NPF', iout)
     end if
+    !
+    ! -- return
+    return
+  end subroutine load_package_inputs
 
-  end subroutine load_package_input
-
+  !> @brief load a model package file
+  !<
   subroutine load_package(fname, ftype, ctype, sctype, cname, scname, iout)
     ! -- modules
     ! -- dummy
@@ -237,8 +255,13 @@ contains
     !
     ! -- close file
     close (inunit)
+    !
+    ! -- return
+    return
   end subroutine load_package
 
+  !> @brief verify package is unique for model
+  !<
   subroutine check_package_duplicates(mname, ftype, current_index, &
                                       candidate_index)
     ! -- modules
@@ -250,7 +273,7 @@ contains
     ! -- locals
     character(len=LINELENGTH) :: errmsg
     logical(LGP) :: terminate = .true.
-
+    !
     if (current_index > 0) then
       write (errmsg, '(1x,a,a,a,a,a)') &
         '****ERROR[', trim(mname), '][', trim(ftype), &
@@ -259,8 +282,13 @@ contains
     else
       current_index = candidate_index
     end if
+    !
+    ! -- return
+    return
   end subroutine check_package_duplicates
 
+  !> @brief load a model namfile
+  !<
   subroutine model_load(mtype, mfname, mname, iout)
     ! -- modules
     ! -- dummy
@@ -281,25 +309,27 @@ contains
     select case (mtype)
     case ('GWF6')
       call input_load('GWF6', 'GWF', 'NAM', mname, 'NAM', inunit, iout)
-      call load_package_input(mtype, mfname, mname, iout)
+      call load_package_inputs(mtype, mfname, mname, iout)
     case ('GWT6')
       call input_load('GWT6', 'GWT', 'NAM', mname, 'NAM', inunit, iout)
-      call load_package_input(mtype, mfname, mname, iout)
+      call load_package_inputs(mtype, mfname, mname, iout)
     case default
-      write (errmsg, '(4x,a,a)') &
-        '****ERROR. UNKNOWN SIMULATION MODEL: ', &
-        trim(mtype)
+      write (errmsg, '(1x,a,a,a,a)') &
+        '****ERROR[', trim(mname), &
+        ']. Unknown Simulation Modeltype: ', trim(mtype)
       call store_error(errmsg, terminate)
     end select
     !
-    ! --
+    ! -- close file
     close (inunit)
     !
     ! -- return
     return
   end subroutine model_load
 
-  subroutine load_model_input(iout)
+  !> @brief load model namfiles
+  !<
+  subroutine load_model_inputs(iout)
     ! -- modules
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr
@@ -324,16 +354,19 @@ contains
     call mem_setptr(mfnames, 'MFNAME', idmMemoryPath)
     call mem_setptr(mnames, 'MNAME', idmMemoryPath)
     !
-    ! -- create models
     do n = 1, size(mtypes)
       !
       ! -- attributes for this model
       mtype = mtypes(n)
       mfname = mfnames(n)
       mname = mnames(n)
-
+      !
+      ! -- load model namfile
       call model_load(mtype, mfname, mname, iout)
     end do
-  end subroutine load_model_input
+    !
+    ! -- return
+    return
+  end subroutine load_model_inputs
 
 end module IdmMf6FileLoaderModule

@@ -250,7 +250,7 @@ contains
         call gwt_cr(mfname, n, mname)
       case default
         write (errmsg, '(4x,a,a)') &
-          '****ERROR. UNKNOWN SIMULATION MODEL: ', &
+          '****ERROR. UNKNOWN SIMULATION MODELTYPE: ', &
           trim(mtype)
         call store_error(errmsg, terminate)
       end select
@@ -260,7 +260,6 @@ contains
     end do
     !
     ! -- close model logging block
-    write (iout, '(4x,a,i0)') 'NUMBER OF MODELS CREATED: ', size(modelname)
     write (iout, '(1x,a)') 'END OF MODEL SIMULATION INPUT'
     !
     ! -- return
@@ -349,7 +348,6 @@ contains
     end do
     !
     ! -- close exchange logging block
-    write (iout, '(4x,a,i0)') 'NUMBER OF EXCHANGES CREATED: ', n - 1
     write (iout, '(1x,a)') 'END OF EXCHANGE SIMULATION INPUT'
     !
     ! -- return
@@ -506,7 +504,6 @@ contains
     end do
     !
     ! -- close exchange logging block
-    write (iout, '(4x,a,i0)') 'NUMBER OF SOLUTIONGROUPS CREATED: ', isoln
     write (iout, '(1x,a)') 'END OF SOLUTIONGROUP SIMULATION INPUT'
     !
     ! -- Check and make sure at least one solution group was found

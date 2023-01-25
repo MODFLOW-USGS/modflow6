@@ -237,7 +237,7 @@ contains
     return
   end subroutine add_vector_intvector
 
-  !> @brief load integer vector into StructArrayType
+  !> @brief load deferred vectors into managed memory
   !<
   subroutine load_deferred_vectors(this)
     use MemoryManagerModule, only: get_isize
@@ -398,6 +398,8 @@ contains
     return
   end subroutine log_structarray_vars
 
+  !> @brief reallocate local memory for deferred vectors if necessary
+  !<
   subroutine check_reallocate(this)
     class(StructArrayType) :: this !< StructArrayType
     integer(I4B) :: i, j, newsize

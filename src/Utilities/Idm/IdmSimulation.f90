@@ -27,7 +27,7 @@ contains
   subroutine simnam_load()
     use SimVariablesModule, only: simfile
     use GenericUtilitiesModule, only: sim_message
-    use IdmMf6FileLoaderModule, only: load_model_input
+    use IdmMf6FileLoaderModule, only: load_model_inputs
     integer(I4B) :: inunit
     logical :: lexist
     character(len=LINELENGTH) :: line
@@ -52,7 +52,7 @@ contains
       call simnam_allocate()
       !
       ! -- load models
-      call load_model_input(iout)
+      call load_model_inputs(iout)
     else
       !
       ! -- allocate  simnam params
@@ -72,17 +72,15 @@ contains
     character(len=LINELENGTH) :: errmsg
     logical(LGP) :: terminate = .true.
     !
-    ! -- load defaults for keyword / integer types
+    ! -- load defaults for keyword/integer types
     select case (mf6varname)
     case ('CONTINUE')
       intvar = isimcontinue
     case ('NOCHECK')
       intvar = isimcheck
     case ('MAXERRORS')
-      ! TODO: add to SimVariables? (MessageType max_message)
-      intvar = 1000
+      intvar = 1000 !< MessageType max_message
     case ('MXITER')
-      ! TODO: add to SimVariables?
       intvar = 1
     case default
       write (errmsg, '(4x,a,a)') &
@@ -133,17 +131,31 @@ contains
       if (isize < 0) then
         select case (idt%datatype)
         case ('KEYWORD', 'INTEGER')
+          !
+          ! -- allocate and set default
           call mem_allocate(intvar, idt%mf6varname, idmMemoryPath)
           call set_default_value(intvar, idt%mf6varname)
+          !
+          ! -- reset pointer
           nullify (intvar)
         case ('STRING')
+          !
+          ! -- did this param originate from sim namfile RECARRAY type
           if (idt%in_record) then
+            !
+            ! -- allocate 0 size CharacterStringType array
             call mem_allocate(acharstr1d, LINELENGTH, 0, idt%mf6varname, &
                               idmMemoryPath)
+            !
+            ! -- reset pointer
             nullify (acharstr1d)
           else
+            !
+            ! -- allocate empty string
             call mem_allocate(cstr, LINELENGTH, idt%mf6varname, idmMemoryPath)
             cstr = ''
+            !
+            ! -- reset pointer
             nullify (cstr)
           end if
         case default
