@@ -153,7 +153,7 @@ contains
     type(NameFileType) :: namefile_obj
     type(GwfModelType), pointer :: this
     class(BaseModelType), pointer :: model
-    type(CharacterStringType), dimension(:), pointer, contiguous :: ftypes !< model types
+    type(CharacterStringType), dimension(:), pointer, contiguous :: ftypes
     character(len=LINELENGTH) :: ftype
     integer(I4B) :: n
     character(len=LENMEMPATH) :: idmMemoryPath
@@ -164,7 +164,7 @@ contains
     ! -- set input memory path
     idmMemoryPath = create_mem_path(modelname, 'NAM', idm_context)
     !
-    ! -- set pointers to input context package attribute arrays
+    ! -- set pointer to input context model package types
     call mem_setptr(ftypes, 'FTYPE', idmMemoryPath)
     !
     ! -- Allocate a new GWF Model (this) and add it to basemodellist
@@ -214,7 +214,7 @@ contains
       call this%log_namfile_options(found)
     end if
     !
-    ! -- iterate through ftypes sourced from model package block
+    ! -- iterate through ftypes sourced from model packages block
     do n = 1, size(ftypes)
       !
       ! -- this ftype

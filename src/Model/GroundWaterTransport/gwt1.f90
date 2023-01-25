@@ -199,7 +199,7 @@ contains
       call this%log_namfile_options(found)
     end if
     !
-    ! -- iterate through ftypes sourced from model package block
+    ! -- iterate through ftypes sourced from model packages block
     do n = 1, size(ftypes)
       !
       ! -- this ftype
