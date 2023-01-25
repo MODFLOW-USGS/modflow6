@@ -4243,6 +4243,7 @@ contains
       else
         derv = DZERO
       end if
+      if (derv > 10) derv = 10
       dd = derv * residual
       d = d - dd
       call this%sfr_calc_qman(n, d, q0)
@@ -5514,7 +5515,8 @@ contains
       calc_perimeter_wet = get_wetted_perimeter(npts, this%station(i0:i1), &
                                                 this%xsheight(i0:i1), depth)
     else
-      calc_perimeter_wet = this%station(i0) ! no depth dependence in original implementation
+      ! original implementation should account for vertical wetted sides
+      calc_perimeter_wet = this%station(i0) + 2 * depth
     end if
     !
     ! -- return

@@ -14,7 +14,7 @@ module GwfSfrCrossSectionUtilsModule
   use ConstantsModule, only: DZERO, DHALF, DTWOTHIRDS, DONE, DTWO
 
   implicit none
-  private
+  private :: get_wetted_vface
   public :: get_saturated_topwidth
   public :: get_wetted_topwidth
   public :: get_wetted_perimeter
@@ -267,6 +267,40 @@ contains
     return
   end function get_mannings_section
 
+  !> @brief Calculate the vertically wetted perimeter component
+  !!
+  !! Function to calculate the vertical component of the wetted-
+  !! perimeter in an n-point cross-section.  This calculation is
+  !! only needed if the sub-segement being considered is either
+  !! the first or last sub-segment of a n-point cross-section
+  !! definition.
+  !!
+  !! @return      vlen               height of vertically wetted perimeter
+  !<
+  function get_wetted_vface(x0, xuser0, x1, xuser1, qdepth, dmax) &
+    result(vlen)
+    ! -- dummy variables
+    real(DP), intent(in) :: x0, x1
+    real(DP), intent(in) :: xuser0, xuser1
+    real(DP), intent(in) :: qdepth, dmax
+    ! -- local variables
+    real(DP) :: vlen
+    !
+    ! -- intitialize the vertically inundated length to 0
+    vlen = DZERO
+    !
+    ! -- calculate the vertically inundated length
+    if (x0 == xuser0 .and. x1 == xuser1) then
+      ! -- fully inundated end segment
+      if (qdepth > dmax) then
+        vlen = qdepth - dmax
+      end if
+    end if
+    !
+    ! -- return
+    return
+  end function get_wetted_vface
+
   ! -- private functions and subroutines
 
   !> @brief Calculate the wetted perimeters for each line segment
@@ -293,12 +327,14 @@ contains
     real(DP) :: dmin
     real(DP) :: xlen
     real(DP) :: dlen
+    real(DP) :: vlen
     !
     ! -- iterate over the station-height data
     do n = 1, npts - 1
       !
       ! -- initialize the wetted perimeter
       p(n) = DZERO
+      vlen = DZERO
       !
       ! -- initialize station-height data for segment
       x0 = stations(n)
@@ -325,7 +361,21 @@ contains
           dlen = DZERO
         end if
       end if
-      p(n) = sqrt(xlen**DTWO + dlen**DTWO)
+      !
+      ! -- for a single segment n-point cross-section, tally vertical faces
+      if (n == 1 .and. n == npts - 1) then
+        ! -- left vertical face
+        vlen = get_wetted_vface(x0, stations(n), x0, stations(n), d, d0)
+        ! -- right vertical face
+        vlen = vlen + get_wetted_vface(x1, stations(n + 1), x1, stations(n + 1), &
+                                       d, d1)
+      else if (n == 1 .or. n == npts - 1) then
+        ! potentially only 1 vertical face if first or last sub-segment in
+        ! multi-segment n-point cross-section
+        vlen = get_wetted_vface(x0, stations(n), x1, stations(n + 1), d, dmax)
+      end if
+      !
+      p(n) = sqrt(xlen**DTWO + dlen**DTWO) + vlen
     end do
     !
     ! -- return
