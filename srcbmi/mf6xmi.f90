@@ -300,7 +300,7 @@ contains
       write (bmi_last_error, fmt_fail_cvg_sol) subcomponent_idx
       call report_bmi_error(bmi_last_error)
     end if
-    
+
     ! non-convergence is no reason to crash the API:
     bmi_status = BMI_SUCCESS
 
