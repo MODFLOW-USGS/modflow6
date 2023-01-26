@@ -325,13 +325,17 @@ contains
       call this%xt3d%xt3d_fc(kiter, matrix_sln, idxglo, rhs, cnew)
     else
       do n = 1, nodes
-        if (this%fmi%ibdgwfsat0(n) == 0) cycle
+        if (this%fmi%idryinactive /= 0) then
+          if (this%fmi%ibdgwfsat0(n) == 0) cycle
+        end if
         idiag = this%dis%con%ia(n)
         do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
           if (this%dis%con%mask(ipos) == 0) cycle
           m = this%dis%con%ja(ipos)
           if (m < n) cycle
-          if (this%fmi%ibdgwfsat0(m) == 0) cycle
+          if (this%fmi%idryinactive /= 0) then
+            if (this%fmi%ibdgwfsat0(m) == 0) cycle
+          end if
           isympos = this%dis%con%jas(ipos)
           dnm = this%dispcoef(isympos)
           !
@@ -374,10 +378,14 @@ contains
       call this%xt3d%xt3d_flowja(cnew, flowja)
     else
       do n = 1, this%dis%nodes
-        if (this%fmi%ibdgwfsat0(n) == 0) cycle
+        if (this%fmi%idryinactive /= 0) then
+          if (this%fmi%ibdgwfsat0(n) == 0) cycle
+        end if
         do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
           m = this%dis%con%ja(ipos)
-          if (this%fmi%ibdgwfsat0(m) == 0) cycle
+          if (this%fmi%idryinactive /= 0) then
+            if (this%fmi%ibdgwfsat0(m) == 0) cycle
+          end if
           isympos = this%dis%con%jas(ipos)
           dnm = this%dispcoef(isympos)
           flowja(ipos) = flowja(ipos) + dnm * (cnew(m) - cnew(n))
@@ -780,6 +788,7 @@ contains
     real(DP) :: qzoqsquared
     real(DP) :: dstar
     real(DP) :: ktbulk ! TODO: Implement additional options for characterizing ktbulk (see Markle refs)
+    real(DP) :: qsw
 ! ------------------------------------------------------------------------------
     !
     ! -- loop through and calculate dispersion coefficients and angles
@@ -793,7 +802,9 @@ contains
       this%angle1(n) = DZERO
       this%angle2(n) = DZERO
       this%angle3(n) = DZERO
-      if (this%fmi%ibdgwfsat0(n) == 0) cycle
+      if (this%fmi%idryinactive /= 0) then
+        if (this%fmi%ibdgwfsat0(n) == 0) cycle
+      end if
       !
       ! -- specific discharge
       qx = DZERO
@@ -826,7 +837,8 @@ contains
       !  dstar = this%diffc(n) * this%porosity(n)
       !end if
       ktbulk = DZERO
-      if (this%iktw > 0) ktbulk = ktbulk + this%porosity(n) * this%ktw(n)
+      if (this%iktw > 0) ktbulk = ktbulk + this%porosity(n) * this%ktw(n) * &
+                                  this%fmi%gwfsat(n)
       if (this%ikts > 0) ktbulk = ktbulk + (DONE - this%porosity(n)) * this%kts(n)
       dstar = ktbulk / (this%cpw(n) * this%rhow(n))
       !
@@ -842,9 +854,10 @@ contains
       end if
       !
       ! -- Calculate and save the diagonal components of the dispersion tensor
-      this%d11(n) = al * q + dstar
-      this%d22(n) = at1 * q + dstar
-      this%d33(n) = at2 * q + dstar
+      qsw = q * this%fmi%gwfsat(n)
+      this%d11(n) = al * qsw + dstar
+      this%d22(n) = at1 * qsw + dstar
+      this%d33(n) = at2 * qsw + dstar
       !
       ! -- Angles of rotation if velocity based dispersion tensor
       if (this%idisp > 0) then
@@ -914,7 +927,9 @@ contains
     ! -- Proces connections
     nodes = size(this%d11)
     do n = 1, nodes
-      if (this%fmi%ibdgwfsat0(n) == 0) cycle
+      if (this%fmi%idryinactive /= 0) then
+        if (this%fmi%ibdgwfsat0(n) == 0) cycle
+      end if
       idiag = this%dis%con%ia(n)
       do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
         !
@@ -925,7 +940,9 @@ contains
         if (m < n) cycle
         isympos = this%dis%con%jas(ipos)
         this%dispcoef(isympos) = DZERO
-        if (this%fmi%ibdgwfsat0(m) == 0) cycle
+        if (this%fmi%idryinactive /= 0) then
+          if (this%fmi%ibdgwfsat0(m) == 0) cycle
+        end if
         !
         ! -- cell dimensions
         hwva = this%dis%con%hwva(isympos)
@@ -938,8 +955,14 @@ contains
         botm = this%dis%bot(m)
         !
         ! -- flow model information
-        satn = this%fmi%gwfsat(n)
-        satm = this%fmi%gwfsat(m)
+        if (this%fmi%idryinactive == 0) then
+          satn = this%fmi%ibdgwfsat0(n)
+          satm = this%fmi%ibdgwfsat0(m)
+        else
+          ! -- GWT approach
+          satn = this%fmi%gwfsat(n)
+          satm = this%fmi%gwfsat(m)
+        end if
         !
         ! -- Calculate dispersion coefficient for cell n in the direction
         !    normal to the shared n-m face and for cell m in the direction

@@ -47,6 +47,7 @@ module TspFmiModule
     real(DP), dimension(:), pointer, contiguous :: gwfhead => null() !< pointer to the GWF head array
     real(DP), dimension(:), pointer, contiguous :: gwfsat => null() !< pointer to the GWF saturation array
     integer(I4B), dimension(:), pointer, contiguous :: ibdgwfsat0 => null() !< mark cells with saturation = 0 to exclude from dispersion
+    integer(I4B), pointer :: idryinactive => null() !< mark cells with an additional flag to exclude from deactivation (gwe will simulate conduction through dry cells)
     real(DP), dimension(:), pointer, contiguous :: gwfstrgss => null() !< pointer to flow model QSTOSS
     real(DP), dimension(:), pointer, contiguous :: gwfstrgsy => null() !< pointer to flow model QSTOSY
     integer(I4B), pointer :: igwfstrgss => null() !< indicates if gwfstrgss is available
@@ -92,6 +93,7 @@ module TspFmiModule
     procedure :: deallocate_gwfpackages
     procedure :: get_package_index
     procedure :: set_aptbudobj_pointer
+    procedure :: set_active_status
 
   end type TspFmiType
 
@@ -202,6 +204,13 @@ contains
           &IS NO SSM PACKAGE.  THE SSM PACKAGE MUST BE ACTIVATED.', &
           terminate=.TRUE.)
       end if
+    end if
+    !
+    ! -- Set flag that stops dry flows from being deactivated in a GWE transport
+    !    transport model since conduction will still be simulated. 
+    !    0: GWE (skip deactivation step); 1: GWT (default: use existing code)
+    if (this%tsplab%tsptype == 'GWE') then
+      this%idryinactive = 0
     end if
     !
     ! -- Return
@@ -318,30 +327,35 @@ contains
       end do
     end if
     !
+    ! -- set inactive transport cell status
+    if (this%idryinactive /= 0) then
+      call this%set_active_status(cnew)
+    end if
+    !
     ! -- if flow cell is dry, then set gwt%ibound = 0 and conc to dry
     do n = 1, this%dis%nodes
-      !
-      ! -- Calculate the ibound-like array that has 0 if saturation
-      !    is zero and 1 otherwise
-      if (this%gwfsat(n) > DZERO) then
-        this%ibdgwfsat0(n) = 1
-      else
-        this%ibdgwfsat0(n) = 0
-      end if
-      !
-      ! -- Check if active transport cell is inactive for flow
-      if (this%ibound(n) > 0) then
-        if (this%gwfhead(n) == DHDRY) then
-          ! -- transport cell should be made inactive
-          this%ibound(n) = 0
-          cnew(n) = DHDRY
-          call this%dis%noder_to_string(n, nodestr)
-          write (this%iout, '(/1x,a,1x,a,a,1x,a,1x,a,1x,G13.5)') &
-            'WARNING: DRY CELL ENCOUNTERED AT', trim(nodestr), ';  RESET AS &
-              &INACTIVE WITH DRY', trim(adjustl(this%tsplab%depvartype)), &
-              '=', DHDRY
-        end if
-      end if
+      !!!!
+      !!!! -- Calculate the ibound-like array that has 0 if saturation
+      !!!!    is zero and 1 otherwise
+      !!!if (this%gwfsat(n) > DZERO) then
+      !!!  this%ibdgwfsat0(n) = 1
+      !!!else
+      !!!  this%ibdgwfsat0(n) = 0
+      !!!end if
+      !!!!
+      !!!! -- Check if active transport cell is inactive for flow
+      !!!if (this%ibound(n) > 0) then
+      !!!  if (this%gwfhead(n) == DHDRY) then
+      !!!    ! -- transport cell should be made inactive
+      !!!    this%ibound(n) = 0
+      !!!    cnew(n) = DHDRY
+      !!!    call this%dis%noder_to_string(n, nodestr)
+      !!!    write (this%iout, '(/1x,a,1x,a,a,1x,a,1x,a,1x,G13.5)') &
+      !!!      'WARNING: DRY CELL ENCOUNTERED AT', trim(nodestr), ';  RESET AS &
+      !!!        &INACTIVE WITH DRY', trim(adjustl(this%tsplab%depvartype)), &
+      !!!        '=', DHDRY
+      !!!  end if
+      !!!end if
       !
       ! -- Convert dry transport cell to active if flow has rewet
       if (cnew(n) == DHDRY) then
@@ -559,6 +573,7 @@ contains
     deallocate (this%aptbudobj)
     call mem_deallocate(this%flowcorrect)
     call mem_deallocate(this%ibdgwfsat0)
+    call mem_deallocate(this%idryinactive)
     if (this%flows_from_file) then
       call mem_deallocate(this%gwfstrgss)
       call mem_deallocate(this%gwfstrgsy)
@@ -615,6 +630,7 @@ contains
     call mem_allocate(this%iuhds, 'IUHDS', this%memoryPath)
     call mem_allocate(this%iumvr, 'IUMVR', this%memoryPath)
     call mem_allocate(this%nflowpack, 'NFLOWPACK', this%memoryPath)
+    call mem_allocate(this%idryinactive, "IDRYINACTIVE", this%memoryPath)
     !
     ! -- Although not a scalar, allocate the advanced package transport
     !    budget object to zero so that it can be dynamically resized later
@@ -630,6 +646,7 @@ contains
     this%iuhds = 0
     this%iumvr = 0
     this%nflowpack = 0
+    this%idryinactive = 1
     !
     ! -- Return
     return
@@ -712,6 +729,51 @@ contains
     ! -- Return
     return
   end subroutine allocate_arrays
+
+  !> @brief set gwt transport cell status
+  !!
+  !! Dry GWF cells are treated differently by GWT and GWE.  Transport does not
+  !! occur in deactivated GWF cells; however, GWE still simulates conduction
+  !! through dry cells.
+  !<
+  subroutine set_active_status(this, cnew)
+    ! -- modules
+    use ConstantsModule, only: DHDRY
+    ! -- dummy
+    class(TspFmiType) :: this
+    real(DP), intent(inout), dimension(:) :: cnew
+    ! -- local
+    integer(I4B) :: n
+    character(len=15) :: nodestr
+! ------------------------------------------------------------------------------
+    !
+    do n = 1, this%dis%nodes
+      ! -- Calculate the ibound-like array that has 0 if saturation
+      !    is zero and 1 otherwise
+      if (this%gwfsat(n) > DZERO) then
+        this%ibdgwfsat0(n) = 1
+      else
+        this%ibdgwfsat0(n) = 0
+      end if
+      !
+      ! -- Check if active transport cell is inactive for flow
+      if (this%ibound(n) > 0) then
+        if (this%gwfhead(n) == DHDRY) then
+          ! -- transport cell should be made inactive
+          this%ibound(n) = 0
+          cnew(n) = DHDRY
+          call this%dis%noder_to_string(n, nodestr)
+          write (this%iout, '(/1x,a,1x,a,a,1x,a,1x,a,1x,G13.5)') &
+            'WARNING: DRY CELL ENCOUNTERED AT', trim(nodestr), ';  RESET AS &
+              &INACTIVE WITH DRY', trim(adjustl(this%tsplab%depvartype)), &
+              '=', DHDRY
+        end if
+      end if
+    end do
+    !
+    ! -- return
+    return
+  end subroutine set_active_status
 
   function gwfsatold(this, n, delt) result(satold)
 ! ******************************************************************************
