@@ -701,7 +701,7 @@ contains
     n2 = this%flowbudptr%budterm(this%idxbudrain)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudrain)%flow(ientry)
     ctmp = this%temprain(n1)
-    if (present(rrate)) rrate = ctmp * qbnd
+    if (present(rrate)) rrate = ctmp * qbnd * this%cpw(n1) * this%rhow(n1)
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
@@ -711,7 +711,8 @@ contains
 
   !> @brief Evaporative term
   !<
-  subroutine sfe_evap_term(this, ientry, n1, n2, rrate, rhsval)
+  subroutine sfe_evap_term(this, ientry, n1, n2, rrate, &
+                           rhsval, hcofval)
     ! -- dummy
     class(GweSfeType) :: this
     integer(I4B), intent(in) :: ientry
@@ -754,12 +755,11 @@ contains
     real(DP) :: ctmp
     real(DP) :: unitadj
 ! ------------------------------------------------------------------------------
-    unitadj = this%bndType%cpw(n1) * this%bndType%rhow(n1)
     n1 = this%flowbudptr%budterm(this%idxbudroff)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudroff)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudroff)%flow(ientry)
     ctmp = this%temproff(n1)
-    if (present(rrate)) rrate = unitadj * ctmp * qbnd
+    if (present(rrate)) rrate = ctmp * qbnd * this%cpw(n1) * this%rhow(n1)
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
@@ -768,6 +768,10 @@ contains
   end subroutine sfe_roff_term
 
   !> @brief Inflow Term
+  !!
+  !! Accounts for energy added externally, for example, energy entering the 
+  !! model domain via a specified flow in a stream channel.
+  !!
   !<
   subroutine sfe_iflw_term(this, ientry, n1, n2, rrate, rhsval, hcofval)
     ! -- dummy
@@ -786,7 +790,7 @@ contains
     n2 = this%flowbudptr%budterm(this%idxbudiflw)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudiflw)%flow(ientry)
     ctmp = this%tempiflw(n1)
-    if (present(rrate)) rrate = ctmp * qbnd
+    if (present(rrate)) rrate = ctmp * qbnd * this%cpw(n1) * this%rhow(n1)
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
@@ -813,9 +817,9 @@ contains
     n2 = this%flowbudptr%budterm(this%idxbudoutf)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudoutf)%flow(ientry)
     ctmp = this%xnewpak(n1)
-    if (present(rrate)) rrate = ctmp * qbnd
+    if (present(rrate)) rrate = ctmp * qbnd * this%cpw(n1) * this%rhow(n1)
     if (present(rhsval)) rhsval = DZERO
-    if (present(hcofval)) hcofval = qbnd
+    if (present(hcofval)) hcofval = qbnd * this%cpw(n1) * this%rhow(n1)
     !
     ! -- return
     return

@@ -835,6 +835,7 @@ contains
     real(DP) :: rhsval
     real(DP) :: hcofval
 ! ------------------------------------------------------------------------------
+    unitadj = DONE  !TODO: Avoid checking whether solute or energy
     !
     ! -- call the specific method for the advanced transport package, such as
     !    what would be overridden by
@@ -888,14 +889,14 @@ contains
         ! -- add to apt row
         iposd = this%idxdglo(j)
         iposoffd = this%idxoffdglo(j)
-        call matrix_sln%add_value_pos(iposd, omega * qbnd)
-        call matrix_sln%add_value_pos(iposoffd, (DONE - omega) * qbnd)
+        call matrix_sln%add_value_pos(iposd, omega * qbnd * unitadj)
+        call matrix_sln%add_value_pos(iposoffd, (DONE - omega) * qbnd * unitadj)
         !
         ! -- add to gwf row for apt connection
         ipossymd = this%idxsymdglo(j)
         ipossymoffd = this%idxsymoffdglo(j)
-        call matrix_sln%add_value_pos(ipossymd, -(DONE - omega) * qbnd)
-        call matrix_sln%add_value_pos(ipossymoffd, -omega * qbnd)
+        call matrix_sln%add_value_pos(ipossymd, -(DONE - omega) * qbnd * unitadj)
+        call matrix_sln%add_value_pos(ipossymoffd, -omega * qbnd * unitadj)
       end if
     end do
     !
@@ -905,6 +906,10 @@ contains
         n1 = this%flowbudptr%budterm(this%idxbudfjf)%id1(j)
         n2 = this%flowbudptr%budterm(this%idxbudfjf)%id2(j)
         qbnd = this%flowbudptr%budterm(this%idxbudfjf)%flow(j)
+        ! TODO - Clean this out
+        if (associated(this%cpw).and.associated(this%rhow)) then
+          unitadj = this%bndtype%cpw(j) * this%bndtype%rhow(j)
+        end if
         if (qbnd <= DZERO) then
           omega = DONE
         else
@@ -912,8 +917,8 @@ contains
         end if
         iposd = this%idxfjfdglo(j)
         iposoffd = this%idxfjfoffdglo(j)
-        call matrix_sln%add_value_pos(iposd, omega * qbnd)
-        call matrix_sln%add_value_pos(iposoffd, (DONE - omega) * qbnd)
+        call matrix_sln%add_value_pos(iposd, omega * qbnd * unitadj)
+        call matrix_sln%add_value_pos(iposoffd, (DONE - omega) * qbnd * unitadj)
       end do
     end if
     !
@@ -974,12 +979,12 @@ contains
       if (this%iboundpak(n) /= 0) then
         qbnd = this%flowbudptr%budterm(this%idxbudgwf)%flow(j)
         omega = DZERO
-        unitadj = DONE
+        unitadj = DONE  !TODO: Avoid checking whether solute or energy
         if (qbnd < DZERO) omega = DONE
         if (associated(this%cpw).and.associated(this%rhow)) then
           unitadj = this%cpw(j) * this%rhow(j)
         end if
-        this%hcof(j) = -(DONE - omega) * qbnd
+        this%hcof(j) = -(DONE - omega) * unitadj * qbnd
         this%rhs(j) = omega * unitadj * qbnd * this%xnewpak(n)
       end if
     end do
@@ -1893,7 +1898,7 @@ contains
       n = this%flowbudptr%budterm(this%idxbudgwf)%id1(j)
       this%hcof(j) = DZERO
       this%rhs(j) = DZERO
-      unitadj = DONE
+      unitadj = DONE  ! Avoid checking whether solute or energy
       igwfnode = this%flowbudptr%budterm(this%idxbudgwf)%id2(j)
       qbnd = this%flowbudptr%budterm(this%idxbudgwf)%flow(j)
       if (associated(this%cpw).and.associated(this%rhow)) then
@@ -1904,7 +1909,7 @@ contains
         this%rhs(j) = unitadj * qbnd * ctmp
       else
         ctmp = this%xnew(igwfnode)
-        this%hcof(j) = -qbnd
+        this%hcof(j) = -qbnd * unitadj
       end if
       c1 = unitadj * qbnd * ctmp
       this%dbuff(n) = this%dbuff(n) + c1
@@ -2536,9 +2541,9 @@ contains
     call this%get_volumes(n1, v1, v0, delt)
     c0 = this%xoldpak(n1)
     c1 = this%xnewpak(n1)
-    if (present(rrate)) rrate = -c1 * v1 / delt + c0 * v0 / delt
-    if (present(rhsval)) rhsval = -c0 * v0 / delt
-    if (present(hcofval)) hcofval = -v1 / delt
+    if (present(rrate)) rrate = (-c1 * v1 / delt + c0 * v0 / delt) * this%cpw(n1) * this%rhow(n1)
+    if (present(rhsval)) rhsval = -c0 * v0 / delt * this%cpw(n1) * this%rhow(n1)
+    if (present(hcofval)) hcofval = -v1 / delt * this%cpw(n1) * this%rhow(n1)
     !
     ! -- return
     return
@@ -2562,7 +2567,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- If GWE package, adjust for thermal units
-    unitadj = DONE
+    unitadj = DONE  ! TODO: Avoid checking whether solute or energy
     if (associated(this%cpw).and.associated(this%rhow)) then
       unitadj = this%cpw(ientry) * this%rhow(ientry)
     end if
@@ -2573,7 +2578,7 @@ contains
     ctmp = this%xnewpak(n1)
     if (present(rrate)) rrate = unitadj * ctmp * qbnd
     if (present(rhsval)) rhsval = DZERO
-    if (present(hcofval)) hcofval = qbnd
+    if (present(hcofval)) hcofval = qbnd * unitadj
     !
     ! -- return
     return
@@ -2597,10 +2602,10 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- If GWE package, adjust for thermal units
-    unitadj = DONE
-    !if (associated(this%cpw).and.associated(this%rhow)) then
+    unitadj = DONE  ! TODO: Avoid checking whether solute or energy
+    if (associated(this%cpw).and.associated(this%rhow)) then
       unitadj = this%cpw(ientry) * this%rhow(ientry)
-    !end if
+    end if
     !
     n1 = this%flowbudptr%budterm(this%idxbudfjf)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudfjf)%id2(ientry)

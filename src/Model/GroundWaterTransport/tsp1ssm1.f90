@@ -163,8 +163,8 @@ contains
     this%dis => dis
     this%ibound => ibound
     this%cnew => cnew
-    this%cpw => cpw
-    this%rhow => rhow
+    if (present(cpw)) this%cpw => cpw
+    if (present(rhow)) this%rhow => rhow
     !
     ! -- Check to make sure that there are flow packages
     if (this%fmi%nflowpack == 0) then
@@ -300,12 +300,14 @@ contains
     real(DP) :: omega
     real(DP) :: hcoftmp
     real(DP) :: rhstmp
+    real(DP) :: unitadj
     !
     ! -- initialize
     hcoftmp = DZERO
     rhstmp = DZERO
     ctmp = DZERO
     qbnd = DZERO
+    unitadj = DONE
     !
     ! -- retrieve node number, qbnd and iauxpos
     n = this%fmi%gwfpackages(ipackage)%nodelist(ientry)
@@ -352,6 +354,11 @@ contains
         end if
       end if
       !
+      ! -- If GWE transport model type, adjust units to energy
+      if (this%tsplab%tsptype == "GWE") then
+        unitadj = this%cpw(n) * this%rhow(n)
+      end if
+      !
       ! -- Add terms based on qbnd sign
       if (qbnd <= DZERO) then
         hcoftmp = qbnd * omega
@@ -365,7 +372,13 @@ contains
     ! -- set requested values
     if (present(hcofval)) hcofval = hcoftmp
     if (present(rhsval)) rhsval = rhstmp
-    if (present(rrate)) rrate = hcoftmp * ctmp - rhstmp
+    if (present(rrate)) then
+      if (this%tsplab%tsptype /= 'GWE') then
+        rrate = hcoftmp * ctmp - rhstmp
+      else
+        rrate = hcoftmp * ctmp * unitadj - rhstmp * unitadj
+      endif
+    end if
     if (present(cssm)) cssm = ctmp
     if (present(qssm)) qssm = qbnd
     !

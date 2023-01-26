@@ -356,12 +356,24 @@ contains
     class(TspCncType) :: this
     type(BudgetType), intent(inout) :: model_budget
     ! -- local
+    integer(I4B) :: n
     real(DP) :: ratin
     real(DP) :: ratout
     real(DP) :: dum
     integer(I4B) :: isuppress_output
 ! ------------------------------------------------------------------------------
     isuppress_output = 0
+    !
+    ! -- for GWE model types, storage rate needs to have units adjusted
+    if (this%tsplab%depvartype /= 'GWE') then
+      do n = 1, size(this%ratecncin)
+        this%ratecncin(n) = this%ratecncin(n) * this%cpw(n) * this%rhow(n)
+      end do
+      do n = 1, size(this%ratecncout)
+        this%ratecncout(n) = this%ratecncout(n) * this%cpw(n) * this%rhow(n)
+      end do
+    end if
+    !
     call rate_accumulator(this%ratecncin(1:this%nbound), ratin, dum)
     call rate_accumulator(this%ratecncout(1:this%nbound), ratout, dum)
     call model_budget%addentry(ratin, ratout, delt, this%text, &

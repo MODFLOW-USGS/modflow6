@@ -449,8 +449,14 @@ contains
     integer(I4B), intent(in) :: isuppress_output !< flag to supress output
     type(BudgetType), intent(inout) :: model_budget !< model budget object
     ! -- local
+    integer(I4B) :: n
     real(DP) :: rin
     real(DP) :: rout
+    !
+    ! -- for GWE, storage rate needs to have units adjusted
+    do n = 1, size(this%ratesto)
+      this%ratesto(n) = this%ratesto(n) * this%cpw(n) * this%rhow(n)
+    end do
     !
     ! -- sto
     call rate_accumulator(this%ratesto, rin, rout)
