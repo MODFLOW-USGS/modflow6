@@ -194,7 +194,7 @@ contains
     ! -- Open files
     call namefile_obj%openfiles(this%iout)
     !
-    ! -- set pointers to input context option params
+    ! -- copy option params from input context
     call mem_set_value(this%inewton, 'NEWTON', idmMemoryPath, found%newton)
     call mem_set_value(this%inewtonur, 'UNDER_RELAXATION', idmMemoryPath, &
                        found%under_relaxation)
@@ -204,7 +204,7 @@ contains
                        found%print_flows)
     call mem_set_value(this%ipakcb, 'SAVE_FLOWS', idmMemoryPath, found%save_flows)
     !
-    ! --
+    ! -- activate save_flows if found
     if (found%save_flows) then
       this%ipakcb = -1
     end if

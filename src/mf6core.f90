@@ -250,6 +250,8 @@ contains
       trim(adjustl(simlstfile))
     call sim_message(line)
     call write_listfile_header(iout)
+    !
+    ! -- return
     return
   end subroutine open_lstfile
 
@@ -261,7 +263,10 @@ contains
   subroutine static_input_load()
     use IdmSimulationModule, only: simnam_load
     !
+    ! -- load input context
     call simnam_load()
+    !
+    ! -- return
     return
   end subroutine static_input_load
 
