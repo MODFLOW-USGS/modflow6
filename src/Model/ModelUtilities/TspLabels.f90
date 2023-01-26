@@ -96,7 +96,7 @@ contains
   !<
   subroutine setTspLabels(this, tsptype, depvartype, depvarunit, depvarunitabbrev)
     class(TspLabelsType) :: this
-    character(len=*), intent(in) :: tsptype !< type of model, default is GWT6
+    character(len=*), intent(in) :: tsptype !< type of model, default is GWT (alternative is GWE)
     character(len=*), intent(in) :: depvartype !< dependent variable type, default is "CONCENTRATION"
     character(len=*), intent(in) :: depvarunit !< units of dependent variable for writing to list file
     character(len=*), intent(in) :: depvarunitabbrev !< abbreviation of associated units

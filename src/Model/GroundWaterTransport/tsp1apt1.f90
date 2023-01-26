@@ -3233,8 +3233,8 @@ contains
   subroutine apt_setup_tableobj(this)
 ! ******************************************************************************
 ! apt_setup_tableobj -- Set up the table object that is used to write the apt
-!                       conc data. The terms listed here must correspond in
-!                       in the apt_ot method.
+!                       concentration (or temperature) data. The terms listed 
+!                       here must correspond in the apt_ot method.
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -3278,7 +3278,8 @@ contains
       call this%dvtab%initialize_column(text_temp, 10, alignment=TABCENTER)
       !
       ! -- feature conc
-      text_temp = 'CONC'
+      !text_temp = 'CONC'
+      text_temp = this%tsplab%depvartype(1:4)
       call this%dvtab%initialize_column(text_temp, 12, alignment=TABCENTER)
     end if
     !
