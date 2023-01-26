@@ -291,7 +291,7 @@ contains
       if (this%ixt3d == 0) then
         call this%calcdispcoef()
       else if (this%ixt3d > 0) then
-        call this%xt3d%xt3d_fcpc(this%dis%nodes, .false.)
+        call this%xt3d%xt3d_fcpc(this%dis%nodes, .true.)
       end if
     end if
     !
