@@ -296,13 +296,13 @@ contains
     call ns%finalizeSolve(iterationCounter, hasConverged, 0)
 
     ! check convergence on solution
-    if (hasConverged == 1) then
-      bmi_status = BMI_SUCCESS
-    else
+    if (.not. hasConverged == 1) then
       write (bmi_last_error, fmt_fail_cvg_sol) subcomponent_idx
       call report_bmi_error(bmi_last_error)
-      bmi_status = BMI_FAILURE
     end if
+    
+    ! non-convergence is no reason to crash the API:
+    bmi_status = BMI_SUCCESS
 
     ! clear this for safety
     deallocate (iterationCounter)
