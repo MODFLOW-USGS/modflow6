@@ -719,20 +719,20 @@ contains
     integer(I4B), intent(inout) :: n2
     real(DP), intent(inout), optional :: rrate
     real(DP), intent(inout), optional :: rhsval
+    real(DP), intent(inout), optional :: hcofval
     ! -- local
     real(DP) :: qbnd
     real(DP) :: heatlat
     real(DP) :: unitadj
 ! ------------------------------------------------------------------------------
-    unitadj = this%bndType%cpw(n1) * this%bndType%rhow(n1)
     n1 = this%flowbudptr%budterm(this%idxbudevap)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudevap)%id2(ientry)
     ! -- note that qbnd is negative for evap
     qbnd = this%flowbudptr%budterm(this%idxbudevap)%flow(ientry)
-    heatlat = this%bndType%rhow(n1) * this%latheatvap(n1)
-    if (present(rrate)) rrate = qbnd * heatlat !m^3/day * kg/m^3 * J/kg = J/day
-    if (present(rhsval)) rhsval = -1 * qbnd * heatlat
-    !if (present(hcofval)) hcofval = omega * qbnd
+    heatlat = this%bndType%rhow(n1) * this%latheatvap(n1)  ! kg/m^3 * J/kg = J/m^3
+    if (present(rrate)) rrate = qbnd * heatlat !m^3/day * J/m^3 = J/day
+    if (present(rhsval)) rhsval = -rrate
+    if (present(hcofval)) hcofval = DZERO
     !
     ! -- return
     return

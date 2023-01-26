@@ -438,7 +438,8 @@ contains
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%set_pointers(this%dis%nodes, this%ibound, this%x, &
-                                this%xold, this%flowja, this%mst%cpw, this%mst%rhow)
+                                this%xold, this%flowja, this%mst%cpw, &
+                                this%mst%rhow, this%mst%latheatvap)
       ! -- Read and allocate package
       call packobj%bnd_ar()
     end do
