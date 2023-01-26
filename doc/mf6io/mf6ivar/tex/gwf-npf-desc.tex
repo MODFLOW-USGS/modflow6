@@ -5,6 +5,8 @@
 \begin{description}
 \item \texttt{SAVE\_FLOWS}---keyword to indicate that budget flow terms will be written to the file specified with ``BUDGET SAVE FILE'' in Output Control.
 
+\item \texttt{PRINT\_FLOWS}---keyword to indicate that calculated flows between cells will be printed to the listing file for every stress period time step in which ``BUDGET PRINT'' is specified in Output Control. If there is no Output Control option and ``PRINT\_FLOWS'' is specified, then flow rates are printed for the last time step of each stress period.  This option can produce extremely large list files because all cell-by-cell flows are printed.  It should only be used with the NPF Package for models that have a small number of cells.
+
 \item \texttt{alternative\_cell\_averaging}---is a text keyword to indicate that an alternative method will be used for calculating the conductance for horizontal cell connections.  The text value for ALTERNATIVE\_CELL\_AVERAGING can be ``LOGARITHMIC'', ``AMT-LMK'', or ``AMT-HMK''.  ``AMT-LMK'' signifies that the conductance will be calculated using arithmetic-mean thickness and logarithmic-mean hydraulic conductivity.  ``AMT-HMK'' signifies that the conductance will be calculated using arithmetic-mean thickness and harmonic-mean hydraulic conductivity. If the user does not specify a value for ALTERNATIVE\_CELL\_AVERAGING, then the harmonic-mean method will be used.  This option cannot be used if the XT3D option is invoked.
 
 \item \texttt{THICKSTRT}---indicates that cells having a negative ICELLTYPE are confined, and their cell thickness for conductance calculations will be computed as STRT-BOT rather than TOP-BOT.
@@ -39,7 +41,7 @@
 
 \item \texttt{FILEIN}---keyword to specify that an input filename is expected next.
 
-\item \texttt{tvk\_filename}---defines a time-varying hydraulic conductivity (TVK) input file.  Records in the TVK file can be used to change hydraulic conductivity properties at specified times or stress periods.
+\item \texttt{tvk6\_filename}---defines a time-varying hydraulic conductivity (TVK) input file.  Records in the TVK file can be used to change hydraulic conductivity properties at specified times or stress periods.
 
 \end{description}
 \item \textbf{Block: GRIDDATA}

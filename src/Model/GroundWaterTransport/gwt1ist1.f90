@@ -188,9 +188,6 @@ contains
       this%cimnew(n) = this%cim(n)
     end do
     !
-    ! -- add thetaim to the prsity2 accumulator in mst package
-    call this%mst%addto_prsity2(this%thetaim)
-    !
     ! -- setup the immobile domain budget
     call budget_cr(this%budget, this%memoryPath)
     call this%budget%budget_df(NBDITEMS, 'MASS', 'M', bdzone=this%packName)
@@ -289,10 +286,8 @@ contains
     real(DP) :: vcell
     real(DP) :: thetaim
     real(DP) :: zetaim
-    real(DP) :: thetamfrac
-    real(DP) :: thetaimfrac
     real(DP) :: kd
-    real(DP) :: rhob
+    real(DP) :: rhobim
     real(DP) :: lambda1im
     real(DP) :: lambda2im
     real(DP) :: gamma1im
@@ -323,13 +318,9 @@ contains
       ! -- set exchange coefficient
       zetaim = this%zetaim(n)
       !
-      ! -- Set thetamfrac and thetaimfrac
-      thetamfrac = this%mst%get_thetamfrac(n)
-      thetaimfrac = this%mst%get_thetaimfrac(n, this%thetaim(n))
-      !
       ! -- Add dual domain mass transfer contributions to rhs and hcof
       kd = DZERO
-      rhob = DZERO
+      rhobim = DZERO
       lambda1im = DZERO
       lambda2im = DZERO
       gamma1im = DZERO
@@ -347,7 +338,7 @@ contains
       ! -- setup sorption variables
       if (this%isrb > 0) then
         kd = this%distcoef(n)
-        rhob = this%bulk_density(n)
+        rhobim = this%bulk_density(n)
         if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
         if (this%idcy == 2) then
           cimsrbold = this%cimold(n) * kd
@@ -362,7 +353,7 @@ contains
       !
       ! -- calculate the terms and then get the hcof and rhs contributions
       call get_ddterm(thetaim, vcell, delt, swtpdt, &
-                      thetaimfrac, rhob, kd, lambda1im, lambda2im, &
+                      rhobim, kd, lambda1im, lambda2im, &
                       gamma1im, gamma2im, zetaim, ddterm, f)
       cimold = this%cimold(n)
       call get_hcofrhs(ddterm, f, cimold, hhcof, rrhs)
@@ -400,10 +391,8 @@ contains
     real(DP) :: vcell
     real(DP) :: thetaim
     real(DP) :: zetaim
-    real(DP) :: thetamfrac
-    real(DP) :: thetaimfrac
     real(DP) :: kd
-    real(DP) :: rhob
+    real(DP) :: rhobim
     real(DP) :: lambda1im
     real(DP) :: lambda2im
     real(DP) :: gamma1im
@@ -436,16 +425,12 @@ contains
         ! -- set exchange coefficient
         zetaim = this%zetaim(n)
         !
-        ! -- Set thetamfrac and thetaimfrac
-        thetamfrac = this%mst%get_thetamfrac(n)
-        thetaimfrac = this%mst%get_thetaimfrac(n, this%thetaim(n))
-        !
         ! -- Calculate exchange with immobile domain
         rate = DZERO
         hhcof = DZERO
         rrhs = DZERO
         kd = DZERO
-        rhob = DZERO
+        rhobim = DZERO
         lambda1im = DZERO
         lambda2im = DZERO
         gamma1im = DZERO
@@ -457,7 +442,7 @@ contains
         end if
         if (this%isrb > 0) then
           kd = this%distcoef(n)
-          rhob = this%bulk_density(n)
+          rhobim = this%bulk_density(n)
           if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
           if (this%idcy == 2) then
             cimsrbold = this%cimold(n) * kd
@@ -471,7 +456,7 @@ contains
         !
         ! -- calculate the terms and then get the hcof and rhs contributions
         call get_ddterm(thetaim, vcell, delt, swtpdt, &
-                        thetaimfrac, rhob, kd, lambda1im, lambda2im, &
+                        rhobim, kd, lambda1im, lambda2im, &
                         gamma1im, gamma2im, zetaim, ddterm, f)
         cimold = this%cimold(n)
         call get_hcofrhs(ddterm, f, cimold, hhcof, rrhs)
@@ -1137,15 +1122,14 @@ contains
   !!
   !<
   subroutine get_ddterm(thetaim, vcell, delt, swtpdt, &
-                        thetaimfrac, rhob, kd, lambda1im, lambda2im, &
+                        rhobim, kd, lambda1im, lambda2im, &
                         gamma1im, gamma2im, zetaim, ddterm, f)
     ! -- dummy
     real(DP), intent(in) :: thetaim !< immobile domain porosity
     real(DP), intent(in) :: vcell !< volume of cell
     real(DP), intent(in) :: delt !< length of time step
     real(DP), intent(in) :: swtpdt !< cell saturation at end of time step
-    real(DP), intent(in) :: thetaimfrac !< fraction of total porosity this is immobile
-    real(DP), intent(in) :: rhob !< bulk density
+    real(DP), intent(in) :: rhobim !< bulk density for the immobile domain (fim * rhob)
     real(DP), intent(in) :: kd !< distribution coefficient for linear isotherm
     real(DP), intent(in) :: lambda1im !< first-order decay rate in aqueous phase
     real(DP), intent(in) :: lambda2im !< first-order decay rate in sorbed phase
@@ -1164,12 +1148,12 @@ contains
     !    coefficients in equation 7-4 of the GWT model report
     ddterm(1) = thetaim * vcell * tled
     ddterm(2) = thetaim * vcell * tled
-    ddterm(3) = thetaimfrac * rhob * vcell * kd * tled
-    ddterm(4) = thetaimfrac * rhob * vcell * kd * tled
+    ddterm(3) = rhobim * vcell * kd * tled
+    ddterm(4) = rhobim * vcell * kd * tled
     ddterm(5) = thetaim * lambda1im * vcell
-    ddterm(6) = thetaimfrac * lambda2im * rhob * kd * vcell
+    ddterm(6) = lambda2im * rhobim * kd * vcell
     ddterm(7) = thetaim * gamma1im * vcell
-    ddterm(8) = thetaimfrac * gamma2im * rhob * vcell
+    ddterm(8) = gamma2im * rhobim * vcell
     ddterm(9) = vcell * swtpdt * zetaim
     !
     ! -- calculate denominator term, f
