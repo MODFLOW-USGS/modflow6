@@ -2057,8 +2057,13 @@ contains
     if (.not.present(cpw) .and. .not.present(rhow)) then
       call this%BndType%set_pointers(neq, ibound, xnew, xold, flowja)
     else
-      call this%BndType%set_pointers(neq, ibound, xnew, xold, flowja, &
-                                     cpw, rhow, latheatvap)
+      if (.not.present(latheatvap)) then
+        call this%BndType%set_pointers(neq, ibound, xnew, xold, flowja, &
+                                       cpw, rhow)
+      else
+        call this%BndType%set_pointers(neq, ibound, xnew, xold, flowja, &
+                                       cpw, rhow, latheatvap)
+      end if
     end if
     !
     ! -- Set the pointers
