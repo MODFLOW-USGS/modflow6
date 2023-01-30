@@ -141,7 +141,7 @@ contains
     return
   end subroutine fmi_cr
 
-  subroutine fmi_df(this, dis, inssm)
+  subroutine fmi_df(this, dis, inssm, idryinactive)
 ! ******************************************************************************
 ! fmi_df -- Define
 ! ******************************************************************************
@@ -154,6 +154,7 @@ contains
     class(TspFmiType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
     integer(I4B), intent(in) :: inssm
+    integer(I4B), intent(in) :: idryinactive
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtfmi = &
@@ -206,12 +207,10 @@ contains
       end if
     end if
     !
-    ! -- Set flag that stops dry flows from being deactivated in a GWE transport
+    ! -- Set flag that stops dry flows from being deactivated in a GWE 
     !    transport model since conduction will still be simulated. 
     !    0: GWE (skip deactivation step); 1: GWT (default: use existing code)
-    if (this%tsplab%tsptype == 'GWE') then
-      this%idryinactive = 0
-    end if
+    this%idryinactive = idryinactive
     !
     ! -- Return
     return
@@ -294,10 +293,6 @@ contains
     real(DP), intent(inout), dimension(:) :: cnew
     ! -- local
     integer(I4B) :: n
-    integer(I4B) :: m
-    integer(I4B) :: ipos
-    real(DP) :: crewet, tflow, flownm
-    character(len=15) :: nodestr
 ! ------------------------------------------------------------------------------
     !
     ! -- Set flag to indicated that flows are being updated.  For the case where
@@ -331,65 +326,6 @@ contains
     if (this%idryinactive /= 0) then
       call this%set_active_status(cnew)
     end if
-    !
-    ! -- if flow cell is dry, then set gwt%ibound = 0 and conc to dry
-    do n = 1, this%dis%nodes
-      !!!!
-      !!!! -- Calculate the ibound-like array that has 0 if saturation
-      !!!!    is zero and 1 otherwise
-      !!!if (this%gwfsat(n) > DZERO) then
-      !!!  this%ibdgwfsat0(n) = 1
-      !!!else
-      !!!  this%ibdgwfsat0(n) = 0
-      !!!end if
-      !!!!
-      !!!! -- Check if active transport cell is inactive for flow
-      !!!if (this%ibound(n) > 0) then
-      !!!  if (this%gwfhead(n) == DHDRY) then
-      !!!    ! -- transport cell should be made inactive
-      !!!    this%ibound(n) = 0
-      !!!    cnew(n) = DHDRY
-      !!!    call this%dis%noder_to_string(n, nodestr)
-      !!!    write (this%iout, '(/1x,a,1x,a,a,1x,a,1x,a,1x,G13.5)') &
-      !!!      'WARNING: DRY CELL ENCOUNTERED AT', trim(nodestr), ';  RESET AS &
-      !!!        &INACTIVE WITH DRY', trim(adjustl(this%tsplab%depvartype)), &
-      !!!        '=', DHDRY
-      !!!  end if
-      !!!end if
-      !
-      ! -- Convert dry transport cell to active if flow has rewet
-      if (cnew(n) == DHDRY) then
-        if (this%gwfhead(n) /= DHDRY) then
-          !
-          ! -- obtain weighted concentration/temperature
-          crewet = DZERO
-          tflow = DZERO
-          do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
-            m = this%dis%con%ja(ipos)
-            flownm = this%gwfflowja(ipos)
-            if (flownm > 0) then
-              if (this%ibound(m) /= 0) then
-                crewet = crewet + cnew(m) * flownm
-                tflow = tflow + this%gwfflowja(ipos)
-              end if
-            end if
-          end do
-          if (tflow > DZERO) then
-            crewet = crewet / tflow
-          else
-            crewet = DZERO
-          end if
-          !
-          ! -- cell is now wet
-          this%ibound(n) = 1
-          cnew(n) = crewet
-          call this%dis%noder_to_string(n, nodestr)
-          write (this%iout, '(/1x,a,1x,a,1x,a,1x,a,1x,a,1x,G13.5)') &
-            'DRY CELL REACTIVATED AT', trim(nodestr), 'WITH STARTING', &
-            trim(adjustl(this%tsplab%depvartype)), '=', crewet
-        end if
-      end if
-    end do
     !
     ! -- Return
     return
@@ -744,6 +680,9 @@ contains
     real(DP), intent(inout), dimension(:) :: cnew
     ! -- local
     integer(I4B) :: n
+    integer(I4B) :: m
+    integer(I4B) :: ipos
+    real(DP) :: crewet, tflow, flownm
     character(len=15) :: nodestr
 ! ------------------------------------------------------------------------------
     !
@@ -770,6 +709,44 @@ contains
         end if
       end if
     end do
+    !
+    ! -- if flow cell is dry, then set gwt%ibound = 0 and conc to dry
+    do n = 1, this%dis%nodes
+      !
+      ! -- Convert dry transport cell to active if flow has rewet
+      if (cnew(n) == DHDRY) then
+        if (this%gwfhead(n) /= DHDRY) then
+          !
+          ! -- obtain weighted concentration/temperature
+          crewet = DZERO
+          tflow = DZERO
+          do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+            m = this%dis%con%ja(ipos)
+            flownm = this%gwfflowja(ipos)
+            if (flownm > 0) then
+              if (this%ibound(m) /= 0) then
+                crewet = crewet + cnew(m) * flownm
+                tflow = tflow + this%gwfflowja(ipos)
+              end if
+            end if
+          end do
+          if (tflow > DZERO) then
+            crewet = crewet / tflow
+          else
+            crewet = DZERO
+          end if
+          !
+          ! -- cell is now wet
+          this%ibound(n) = 1
+          cnew(n) = crewet
+          call this%dis%noder_to_string(n, nodestr)
+          write (this%iout, '(/1x,a,1x,a,1x,a,1x,a,1x,a,1x,G13.5)') &
+            'DRY CELL REACTIVATED AT', trim(nodestr), 'WITH STARTING', &
+            trim(adjustl(this%tsplab%depvartype)), '=', crewet
+        end if
+      end if
+    end do
+
     !
     ! -- return
     return

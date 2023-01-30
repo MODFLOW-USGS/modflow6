@@ -129,7 +129,7 @@ contains
     ! define DISU
     disPtr => this%dis
     call this%gridConnection%getDiscretization(CastAsDisuType(disPtr))
-    call this%fmi%fmi_df(this%dis, 0)
+    call this%fmi%fmi_df(this%dis, 0, 0)
 
     if (this%inadv > 0) then
       call this%adv%adv_df(adv_options)

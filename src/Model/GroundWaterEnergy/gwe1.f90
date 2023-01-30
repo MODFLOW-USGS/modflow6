@@ -300,7 +300,7 @@ contains
     !
     ! -- Define packages and utility objects
     call this%dis%dis_df()
-    call this%fmi%fmi_df(this%dis, this%inssm)
+    call this%fmi%fmi_df(this%dis, this%inssm, 0)
     if (this%inmvt > 0) call this%mvt%mvt_df(this%dis)
     if (this%inadv > 0) call this%adv%adv_df()
     if (this%indsp > 0) call this%dsp%dsp_df(this%dis)
