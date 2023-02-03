@@ -41,7 +41,6 @@ def test_rebuild_release(rebuilt_bin_path: Path):
     print(f"Rebuilding and installing last release to: {rebuilt_bin_path}")
     release = get_release(repository)
     assets = release["assets"]
-    ostag = get_ostag()
     asset = next(
         iter([a for a in assets if a["name"] == get_asset_name(a)]), None
     )
