@@ -19,8 +19,9 @@ else
   profile = 'develop'
 endif
 
+do_parallel_build = get_option('parallel')
 message('The used profile is:', profile)
-
+message('Parallel build:', do_parallel_build)
 
 fc = meson.get_compiler('fortran')
 fc_id = fc.get_id()
@@ -90,7 +91,7 @@ petsc = dependency('PETSc', required : false)
 mpi = dependency('mpi', language : 'fortran', required : petsc.found())
 
 # on windows only with intel
-enable_mpi = true
+enable_mpi = do_parallel_build
 if build_machine.system() == 'windows'
   enable_mpi = (fc_id == 'intel-cl')
 endif
