@@ -2082,6 +2082,16 @@ contains
       end if
     end if
     !
+    ! -- If THCKSTRT is not active, then loop through icelltype and replace
+    !    any negative values with 1.
+    if (this%ithickstrt == 0) then
+      do n = 1, this%dis%nodes
+        if (this%icelltype(n) < 0) then
+          this%icelltype(n) = 1
+        end if
+      end do
+    end if
+    !
     ! -- Initialize sat to zero for ibound=0 cells, unless the cell can
     !    rewet.  Initialize sat to the saturated fraction based on strt
     !    if icelltype is negative and the THCKSTRT option is in effect.
