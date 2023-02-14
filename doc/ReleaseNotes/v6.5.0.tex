@@ -27,7 +27,7 @@
 
 	\underline{INTERNAL FLOW PACKAGES}
 	\begin{itemize}
-		\item The ICELLTYPE input variable in the Node Property Flow (NPF) Package behaves differently depending on whether or not the THICKSTRT option is specified by the user.  In some cases, the program would give unexpected results if a negative value was specified for ICELLTYPE and the THICKSTRT option was not active.  For example, the Horizontal Flow Barrier (HFB) Package did not work property when negative values for ICELLTYPE were specified by the user, but the THICKSTRT option was not activated.  The program was modified so that negative ICELLTYPE values provided by the user are automatically reassigned a value of one when the user does not activate the THICKSTRT option.  This is the intended behavior and is consistent with the input and output guide.   
+		\item The ICELLTYPE input variable in the Node Property Flow (NPF) Package behaves differently depending on whether or not the THICKSTRT option is specified by the user.  In some cases, the program would give unexpected results if a negative value was specified for ICELLTYPE and the THICKSTRT option was not active.  For example, the Horizontal Flow Barrier (HFB) Package did not work properly when negative values for ICELLTYPE were specified by the user, but the THICKSTRT option was not activated.  The program was modified so that negative ICELLTYPE values provided by the user are automatically reassigned a value of one when the user does not activate the THICKSTRT option.  This is the intended behavior and is consistent with the input and output guide.   
 	%	\item xxx
 	%	\item xxx
 	\end{itemize}
