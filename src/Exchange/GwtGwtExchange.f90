@@ -1331,7 +1331,7 @@ contains
     strng = obsrv%IDstring
     icol = 1
     ! -- get exchange index
-    call urword(strng, icol, istart, istop, 0, n, r, iout, inunitobs)
+    call urword(strng, icol, istart, istop, 1, n, r, iout, inunitobs)
     read (strng(istart:istop), '(i10)', iostat=istat) iexg
     if (istat == 0) then
       obsrv%intPak1 = iexg

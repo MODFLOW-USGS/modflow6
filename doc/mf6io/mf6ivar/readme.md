@@ -76,11 +76,26 @@ An example below is the second line in the ts subpackage dfn:
 
 There are three possible types (or combination of them) that can be used for "parent package type", MFPackage, MFModel, and MFSimulation. If a package supports multiple types of parents (for example, it can be either in the model namefile or in a package, like the obs package), include all the types supported, seperating each type with a / (MFPackage/MFModel). 
 
-## Creating Definition Files for a New Model
+## Creating Definition Files for New Models
 
 To create a new type of model choose a unique three letter model abbreviation ("gwf", "gwt", ...). Create a name file dfn with the naming convention \<model abbr\>-nam.dfn. The name file must have only an options and packages block (see gwf-nam.dfn as an example). Create a new dfn file for each of the packages in your new model, following the naming convention described above. 
 
 When your model is ready for release copy the dfn file to the flopy distribution in the flopy/mf6/data/dfn folder, run createpackages.py, and check in your new dfn files, the package classes, and updated init.py that createpackages.py created.
+
+## Creating Definition Files for New Solvers
+
+Create a solver definition file as you would any package definition file.  When you are done add a commented line at the top of the definition file to let FloPy know that this package is a solver (solution package type). The line should look like this:
+
+\# solution_package <solver abbreviation> <list of model abbreviations the solver supports>
+
+For example, the following would tell FloPy the IMS package supports the gwf6 and gwt6 model types:
+
+\# flopy solution_package ims gwf6 gwt6
+
+If a "*" is used instead of the list of model abbreviations, the solver is assumed to support all model types.  For example, the following would tell FloPy that the IMS package supports all models:
+
+\# flopy solution_package ims *
+
 
 # Simple Definition File Example
 
