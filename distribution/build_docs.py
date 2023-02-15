@@ -3,12 +3,10 @@ import os
 import platform
 import shutil
 import textwrap
-from _warnings import warn
 from datetime import datetime
 from os import PathLike
 from pathlib import Path
 from pprint import pprint
-from shutil import which
 from tempfile import TemporaryDirectory
 from typing import List, Optional
 from urllib.error import HTTPError
@@ -96,17 +94,17 @@ def clean_tex_files():
     assert not os.path.isfile(str(pth) + ".pdf")
 
 
-def download_benchmarks(output_path: PathLike, quiet: bool = True) -> Optional[Path]:
+def download_benchmarks(output_path: PathLike, verbose: bool = False) -> Optional[Path]:
     output_path = Path(output_path).expanduser().absolute()
     name = "run-time-comparison"
     repo = "w-bonelli/modflow6"
-    artifacts = list_artifacts(repo, name=name, quiet=quiet)
+    artifacts = list_artifacts(repo, name=name, verbose=verbose)
     artifacts = sorted(artifacts, key=lambda a: datetime.strptime(a['created_at'], '%Y-%m-%dT%H:%M:%SZ'), reverse=True)
     most_recent = next(iter(artifacts), None)
     print(f"Found most recent benchmarks (artifact {most_recent['id']})")
     if most_recent:
         print(f"Downloading benchmarks (artifact {most_recent['id']})")
-        download_artifact(repo, id=most_recent['id'], path=output_path, quiet=quiet)
+        download_artifact(repo, id=most_recent['id'], path=output_path, verbose=verbose)
         print(f"Downloaded benchmarks to {output_path}")
         path = output_path / f"{name}.md"
         assert path.is_file()
@@ -119,7 +117,7 @@ def download_benchmarks(output_path: PathLike, quiet: bool = True) -> Optional[P
 @flaky
 @requires_github
 def test_download_benchmarks(tmp_path):
-    path = download_benchmarks(tmp_path, quiet=False)
+    path = download_benchmarks(tmp_path, verbose=True)
     if path:
         assert path.name == "run-time-comparison.md"
 
