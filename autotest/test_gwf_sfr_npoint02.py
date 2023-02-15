@@ -3,6 +3,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+from cross_section_functions import get_depths
 from framework import TestFramework
 from simulation import TestSimulation
 
@@ -219,10 +220,23 @@ def eval_npointdepth(sim):
         obs["INFLOW"], np.abs(obs["OUTFLOW"])
     ), "inflow not equal to outflow"
 
-    d = flow_to_depth_wide(
-        obs["WIDTH"],
-        inflow,
-    )
+    d = []
+    for n in range(nper):
+        x0 = 0.0
+        x1 = rwid * (n + 1)   # generates absolute widths generated above
+        x = np.array([x0, x1])
+        cdepth = get_depths(
+            inflow,
+            x=x,
+            h=np_data[n]["h"],
+            roughness=roughness,
+            slope=slope,
+            conv=1.0,
+            dd=1e-4,
+            verbose=False
+        )
+        d.append(cdepth[0])
+
 
     assert np.allclose(
         obs["DEPTH"], d
