@@ -223,7 +223,7 @@ def eval_npointdepth(sim):
     d = []
     for n in range(nper):
         x0 = 0.0
-        x1 = rwid * (n + 1)   # generates absolute widths generated above
+        x1 = rwid * (n + 1)  # generates absolute widths generated above
         x = np.array([x0, x1])
         cdepth = get_depths(
             inflow,
@@ -233,10 +233,9 @@ def eval_npointdepth(sim):
             slope=slope,
             conv=1.0,
             dd=1e-4,
-            verbose=False
+            verbose=False,
         )
         d.append(cdepth[0])
-
 
     assert np.allclose(
         obs["DEPTH"], d

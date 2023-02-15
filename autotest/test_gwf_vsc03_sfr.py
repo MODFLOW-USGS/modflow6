@@ -544,6 +544,3 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         ),
         ws,
     )
-
-
-
