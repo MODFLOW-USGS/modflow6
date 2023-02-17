@@ -34,7 +34,7 @@ jobs:
           cache-env: true
 
       - name: Check Fortran source formatting
-        run: .github/common/fortran-format-check.sh
+        run: python .github/common/fortran_format_check.py
 
   build:
     name: Build (gfortran 12)
