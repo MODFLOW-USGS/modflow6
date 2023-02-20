@@ -93,7 +93,7 @@ mpi = dependency('mpi', language : 'fortran', required : petsc.found())
 # on windows only with intel
 enable_mpi = do_parallel_build
 if build_machine.system() == 'windows'
-  enable_mpi = (fc_id == 'intel-cl')
+  enable_mpi = do_parallel_build and (fc_id == 'intel-cl')
 endif
 
 # compile with mpi or petsc+mpi when found,
