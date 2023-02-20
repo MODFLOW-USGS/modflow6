@@ -20,6 +20,7 @@ module GwfGwfExchangeModule
   use ListsModule, only: basemodellist
   use DisConnExchangeModule, only: DisConnExchangeType
   use GwfModule, only: GwfModelType
+  use VirtualModelModule, only: VirtualModelType
   use GhostNodeModule, only: GhostNodeType
   use GwfMvrModule, only: GwfMvrType
   use ObserveModule, only: ObserveType
@@ -278,9 +279,7 @@ contains
     end if
     !
     ! -- validate
-    if (associated(this%gwfmodel1) .and. associated(this%gwfmodel2)) then
       call this%validate_exchange()
-    end if
     !
     ! -- return
     return
@@ -291,6 +290,7 @@ contains
   subroutine validate_exchange(this)
     class(GwfExchangeType) :: this !<  GwfExchangeType
     ! local
+    logical(LGP) :: has_k22, has_spdis, has_vsc
 
     ! Periodic boundary condition in exchange don't allow XT3D (=interface model)
     if (associated(this%model1, this%model2)) then
@@ -300,12 +300,37 @@ contains
           ' be configured with XT3D'
         call store_error(errmsg, terminate=.TRUE.)
       end if
+    end if    
+
+    ! XT3D needs angle information
+    if (this%ixt3d > 0 .and. this%ianglex == 0) then
+      write (errmsg, '(3a)') 'GWF-GWF exchange ', trim(this%name), &
+        ' requires that ANGLDEGX be specified as an'// &
+        ' auxiliary variable because XT3D is enabled'
+      call store_error(errmsg, terminate=.TRUE.)
     end if
 
-    ! Check to see if horizontal anisotropy is in either model1 or model2.
-    ! If so, then ANGLDEGX must be provided as an auxiliary variable for this
+    ! determine if specific functionality is demanded,
+    ! in model 1 or model 2 (in parallel, only one of
+    ! the models is checked, but the exchange is duplicated)
+    has_k22 = .false.
+    has_spdis = .false.
+    has_vsc = .false.
+    if (associated(this%gwfmodel1)) then
+      has_k22 = (this%gwfmodel1%npf%ik22 /= 0)
+      has_spdis = (this%gwfmodel1%npf%icalcspdis /= 0)
+      has_vsc = (this%gwfmodel1%npf%invsc /= 0)
+    end if
+    if (associated(this%gwfmodel2)) then
+      has_k22 = has_k22 .or. (this%gwfmodel2%npf%ik22 /= 0)
+      has_spdis = has_spdis .or. (this%gwfmodel2%npf%icalcspdis /= 0)
+      has_vsc = has_vsc .or. (this%gwfmodel2%npf%invsc /= 0)
+    end if
+
+    ! If horizontal anisotropy is in either model1 or model2,
+    ! ANGLDEGX must be provided as an auxiliary variable for this
     ! GWF-GWF exchange (this%ianglex > 0).
-    if (this%gwfmodel1%npf%ik22 /= 0 .or. this%gwfmodel2%npf%ik22 /= 0) then
+    if (has_k22) then
       if (this%ianglex == 0) then
         write (errmsg, '(3a)') 'GWF-GWF exchange ', trim(this%name), &
           ' requires that ANGLDEGX be specified as an'// &
@@ -315,11 +340,10 @@ contains
       end if
     end if
 
-    ! Check to see if specific discharge is needed for model1 or model2.
-    ! If so, then ANGLDEGX must be provided as an auxiliary variable for this
+    ! If specific discharge is needed for model1 or model2,
+    ! ANGLDEGX must be provided as an auxiliary variable for this
     ! GWF-GWF exchange (this%ianglex > 0).
-    if (this%gwfmodel1%npf%icalcspdis /= 0 .or. &
-        this%gwfmodel2%npf%icalcspdis /= 0) then
+    if (has_spdis) then
       if (this%ianglex == 0) then
         write (errmsg, '(3a)') 'GWF-GWF exchange ', trim(this%name), &
           ' requires that ANGLDEGX be specified as an'// &
@@ -338,17 +362,9 @@ contains
       end if
     end if
 
-    if (this%ixt3d > 0 .and. this%ianglex == 0) then
-      write (errmsg, '(3a)') 'GWF-GWF exchange ', trim(this%name), &
-        ' requires that ANGLDEGX be specified as an'// &
-        ' auxiliary variable because XT3D is enabled'
-      call store_error(errmsg, terminate=.TRUE.)
-    end if
-
     ! If viscosity is on in either model, then terminate with an
     ! error as viscosity package doesn't work yet with exchanges.
-    if (this%gwfmodel1%npf%invsc /= 0 .or. &
-        this%gwfmodel2%npf%invsc /= 0) then
+    if (has_vsc) then
       write (errmsg, '(3a)') 'GWF-GWF exchange ', trim(this%name), &
         ' requires that the Viscosity Package is inactive'// &
         ' in both of the connected models.'
@@ -984,7 +1000,7 @@ contains
     character(len=LENPACKAGENAME + 4) :: packname
     character(len=LENBUDTXT), dimension(1) :: budtxt
     type(TableType), pointer :: output_tab
-    class(GwfModelType), pointer :: nbr_model
+    class(VirtualModelType), pointer :: nbr_model
     character(len=20) :: nodestr
     character(len=LENBOUNDNAME) :: bname
     integer(I4B) :: ntabrows
@@ -999,11 +1015,11 @@ contains
     packname = adjustr(packname)
     if (associated(model, this%gwfmodel1)) then
       output_tab => this%outputtab1
-      nbr_model => this%gwfmodel2
+      nbr_model => this%v_model2
       is_for_model1 = .true.
     else
       output_tab => this%outputtab2
-      nbr_model => this%gwfmodel1
+      nbr_model => this%v_model1
       is_for_model1 = .false.
     end if
     !
@@ -1025,7 +1041,8 @@ contains
         n2 = this%nodem2(i)
         !
         ! -- If both cells are active then calculate flow rate
-        if (this%model1%ibound(n1) /= 0 .and. this%model2%ibound(n2) /= 0) then
+        if (this%v_model1%ibound%get(n1) /= 0 .and. &
+            this%v_model2%ibound%get(n2) /= 0) then
           ntabrows = ntabrows + 1
         end if
       end do
@@ -1079,8 +1096,8 @@ contains
       n2 = this%nodem2(i)
       !
       ! -- If both cells are active then calculate flow rate
-      if (this%model1%ibound(n1) /= 0 .and. &
-          this%model2%ibound(n2) /= 0) then
+      if (this%v_model1%ibound%get(n1) /= 0 .and. &
+          this%v_model2%ibound%get(n2) /= 0) then
         rrate = this%simvals(i)
         !
         ! -- Print the individual rates to model list files if requested
@@ -1110,6 +1127,7 @@ contains
       end if
       !
       ! -- If saving cell-by-cell flows in list, write flow
+      ! TODO_MJR: implement these without type bound procedure:
       n1u = this%model1%dis%get_nodeuser(n1)
       n2u = this%model2%dis%get_nodeuser(n2)
       if (ibinun /= 0) then
@@ -1161,9 +1179,7 @@ contains
     deltaqgnc = DZERO
     !
     ! -- Write a table of exchanges
-    ! TODO_MJR: how to restore this for parallel exchanges?
-    if (this%iprflow /= 0 .and. &
-        this%v_model1%is_local .and. this%v_model2%is_local) then
+    if (this%iprflow /= 0) then
       if (this%ingnc > 0) then
         write (iout, fmtheader) trim(adjustl(this%name)), this%id, 'NODEM1', &
           'NODEM2', 'COND', 'X_M1', 'X_M2', 'DELTAQGNC', &
@@ -1182,13 +1198,13 @@ contains
           deltaqgnc = this%gnc%deltaqgnc(iexg)
           write (iout, fmtdata) trim(adjustl(node1str)), &
             trim(adjustl(node2str)), &
-            this%cond(iexg), this%gwfmodel1%x(n1), &
-            this%gwfmodel2%x(n2), deltaqgnc, flow
+            this%cond(iexg), this%v_model1%x%get(n1), &
+            this%v_model2%x%get(n2), deltaqgnc, flow
         else
           write (iout, fmtdata) trim(adjustl(node1str)), &
             trim(adjustl(node2str)), &
-            this%cond(iexg), this%gwfmodel1%x(n1), &
-            this%gwfmodel2%x(n2), flow
+            this%cond(iexg), this%v_model1%x%get(n1), &
+            this%v_model2%x%get(n2), flow
         end if
       end do
     end if
@@ -1844,6 +1860,7 @@ contains
       !
       ! -- initialize the output table objects
       !    outouttab1
+      if (this%v_model1%is_local) then
       call table_cr(this%outputtab1, this%name, '    ')
       call this%outputtab1%table_df(this%nexg, ntabcol, this%gwfmodel1%iout, &
                                     transient=.TRUE.)
@@ -1856,8 +1873,10 @@ contains
       if (this%inamedbound > 0) then
         text = 'NAME'
         call this%outputtab1%initialize_column(text, 20, alignment=TABLEFT)
+        end if
       end if
       !    outouttab2
+      if (this%v_model2%is_local) then
       call table_cr(this%outputtab2, this%name, '    ')
       call this%outputtab2%table_df(this%nexg, ntabcol, this%gwfmodel2%iout, &
                                     transient=.TRUE.)
@@ -1870,6 +1889,7 @@ contains
       if (this%inamedbound > 0) then
         text = 'NAME'
         call this%outputtab2%initialize_column(text, 20, alignment=TABLEFT)
+        end if
       end if
     end if
     !
