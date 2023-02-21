@@ -11,8 +11,8 @@ module RouterFactoryModule
 
 contains
 
-  !> @ Brief Create the proper router, depends on 
-  !! simulation mode (parallel or sequential) and type 
+  !> @ Brief Create the proper router, depends on
+  !! simulation mode (parallel or sequential) and type
   !! of build (with or without mpi)
   !<
   function create_router(sim_mode) result(router)

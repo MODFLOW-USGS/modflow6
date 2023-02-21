@@ -1,11 +1,11 @@
 module MpiWorldModule
   use KindModule, only: I4B
   use SimVariablesModule, only: nr_procs, proc_id
-  use mpi  
+  use mpi
   implicit none
   private
 
-  public :: get_mpi_world  
+  public :: get_mpi_world
   integer(I4B), public :: MF6_COMM_WORLD = -1
 
   type, public :: MpiWorldType
@@ -37,10 +37,10 @@ contains
     class(MpiWorldType) :: this
     ! local
     integer :: ierr
-    
+
     call MPI_Comm_size(MF6_COMM_WORLD, this%world_size, ierr)
-    call MPI_Comm_rank(MF6_COMM_WORLD, this%mpi_rank, ierr)    
-    nr_procs = this%world_size 
+    call MPI_Comm_rank(MF6_COMM_WORLD, this%mpi_rank, ierr)
+    nr_procs = this%world_size
     proc_id = this%mpi_rank
 
   end subroutine mpiw_init
@@ -64,9 +64,9 @@ contains
     ! local
     integer :: ierr
 
-    if (this%mpi_rank < this%world_size-1) then
-      call mpi_send(this%mpi_rank, 1, MPI_INTEGER, this%mpi_rank + 1, this%mpi_rank + 1, &
-                    MF6_COMM_WORLD, ierr)
+    if (this%mpi_rank < this%world_size - 1) then
+      call mpi_send(this%mpi_rank, 1, MPI_INTEGER, this%mpi_rank + 1, &
+                    this%mpi_rank + 1, MF6_COMM_WORLD, ierr)
     end if
 
   end subroutine mpiw_end_order

@@ -18,42 +18,42 @@ contains
 
 !> @brief Add a virtual GWF-GWF exchange to the simulation
 !<
-subroutine add_virtual_gwf_exchange(name, exchange_id, model1_id, model2_id)
-  integer(I4B) :: exchange_id
-  character(len=*) :: name
-  integer(I4B) :: model1_id
-  integer(I4B) :: model2_id
-  ! local
-  class(VirtualGwfExchangeType), pointer :: v_exg
-  class(*), pointer :: obj_ptr
+  subroutine add_virtual_gwf_exchange(name, exchange_id, model1_id, model2_id)
+    integer(I4B) :: exchange_id
+    character(len=*) :: name
+    integer(I4B) :: model1_id
+    integer(I4B) :: model2_id
+    ! local
+    class(VirtualGwfExchangeType), pointer :: v_exg
+    class(*), pointer :: obj_ptr
 
-  allocate (v_exg)
-  call v_exg%create(name, exchange_id, model1_id, model2_id)
+    allocate (v_exg)
+    call v_exg%create(name, exchange_id, model1_id, model2_id)
 
-  obj_ptr => v_exg
-  call virtual_exchange_list%Add(obj_ptr)
+    obj_ptr => v_exg
+    call virtual_exchange_list%Add(obj_ptr)
 
-end subroutine add_virtual_gwf_exchange
+  end subroutine add_virtual_gwf_exchange
 
 !> @brief Create a virtual GWF-GWF exchange
 !<
-subroutine vfx_create(this, name, exg_id, m1_id, m2_id)
-  class(VirtualGwfExchangeType) :: this
-  character(len=*) :: name
-  integer(I4B) :: exg_id
-  integer(I4B) :: m1_id
-  integer(I4B) :: m2_id
+  subroutine vfx_create(this, name, exg_id, m1_id, m2_id)
+    class(VirtualGwfExchangeType) :: this
+    character(len=*) :: name
+    integer(I4B) :: exg_id
+    integer(I4B) :: m1_id
+    integer(I4B) :: m2_id
 
-  call this%VirtualExchangeType%create(name, exg_id, m1_id, m2_id)
-  this%container_type = VDC_GWFEXG_TYPE
-  
-end subroutine vfx_create
+    call this%VirtualExchangeType%create(name, exg_id, m1_id, m2_id)
+    this%container_type = VDC_GWFEXG_TYPE
 
-subroutine vfx_destroy(this)
-  class(VirtualGwfExchangeType) :: this
+  end subroutine vfx_create
 
-  call this%VirtualExchangeType%destroy()
+  subroutine vfx_destroy(this)
+    class(VirtualGwfExchangeType) :: this
 
-end subroutine vfx_destroy
+    call this%VirtualExchangeType%destroy()
+
+  end subroutine vfx_destroy
 
 end module VirtualGwfExchangeModule

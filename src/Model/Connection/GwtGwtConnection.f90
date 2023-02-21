@@ -199,7 +199,7 @@ contains
     call this%addDistVar('GWFSPDIS', 'FMI', SYNC_NODES, (/STG_BEFORE_AD/))
     call this%addDistVar('GWFFLOWJA', 'FMI', SYNC_CONNECTIONS, (/STG_BEFORE_AD/))
     call this%addDistVar('GWFFLOWJA', 'FMI', SYNC_EXCHANGES, (/STG_BEFORE_AD/), &
-                         exg_var_name = 'GWFSIMVALS')
+                         exg_var_name='GWFSIMVALS')
     ! fill porosity from mst packages, needed for dsp
     if (this%gwtModel%indsp > 0 .and. this%gwtModel%inmst > 0) then
       call this%addDistVar('POROSITY', 'MST', SYNC_NODES, (/STG_AFTER_AR/))

@@ -1,5 +1,5 @@
-module SerialRouterModule  
-  use RouterBaseModule  
+module SerialRouterModule
+  use RouterBaseModule
   use KindModule, only: I4B
   use VirtualSolutionModule
   implicit none
@@ -24,7 +24,7 @@ contains
     ! local
     class(SerialRouterType), pointer :: serial_router
 
-    allocate(serial_router)
+    allocate (serial_router)
     router => serial_router
 
   end function create_serial_router

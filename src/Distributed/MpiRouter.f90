@@ -23,9 +23,9 @@ module MpiRouterModule
     type(STLVecInt) :: senders
     type(STLVecInt) :: receivers
     type(VdcPtrType), dimension(:), pointer :: all_models => null() !< all virtual models from the global list
-    type(VdcPtrType), dimension(:),  pointer :: all_exchanges => null() !< all virtual exchanges from the global list
+    type(VdcPtrType), dimension(:), pointer :: all_exchanges => null() !< all virtual exchanges from the global list
     type(VdcPtrType), dimension(:), pointer :: rte_models => null() !< the currently active models to be routed
-    type(VdcPtrType), dimension(:),  pointer :: rte_exchanges => null() !< the currently active exchanges to be routed
+    type(VdcPtrType), dimension(:), pointer :: rte_exchanges => null() !< the currently active exchanges to be routed
     type(MpiMessageBuilderType) :: message_builder
     type(MpiWorldType), pointer :: mpi_world => null()
   contains
@@ -62,7 +62,7 @@ contains
     integer(I4B) :: i
     integer(I4B) :: nr_models, nr_exchanges
     class(VirtualDataContainerType), pointer :: vdc
-    
+
     ! get mpi world for our process
     this%mpi_world => get_mpi_world()
 
@@ -71,18 +71,18 @@ contains
     call this%receivers%init()
 
     ! find out where models are
-    nr_models = virtual_model_list%Count()    
+    nr_models = virtual_model_list%Count()
     nr_exchanges = virtual_exchange_list%Count()
     allocate (this%model_proc_ids(nr_models))
     allocate (this%all_models(nr_models))
     allocate (this%all_exchanges(nr_exchanges))
-    
+
     do i = 1, nr_models
       vdc => get_vdc_from_list(virtual_model_list, i)
       this%all_models(i)%ptr => vdc
       if (vdc%is_local) then
         this%model_proc_ids(i) = proc_id
-      else        
+      else
         this%model_proc_ids(i) = 0
       end if
     end do
@@ -96,10 +96,10 @@ contains
     end do
 
     do i = 1, nr_exchanges
-      vdc => get_vdc_from_list(virtual_exchange_list, i)      
+      vdc => get_vdc_from_list(virtual_exchange_list, i)
       this%all_exchanges(i)%ptr => vdc
       select type (vex => vdc)
-       class is (VirtualExchangeType)
+      class is (VirtualExchangeType)
         ! TODO_MJR: we set it from model1, or from model2 when model1 is local.
         ! This is problematic because when a remote exchange resides
         ! on two distinct processes we cannot synchronize in one sweep...
@@ -109,13 +109,13 @@ contains
         if (vex%v_model1%is_local) then
           call vex%set_orig_rank(vex%v_model2%orig_rank)
         end if
-      end select      
+      end select
     end do
 
   end subroutine mr_initialize
 
-  !> @brief This will route all remote data from the 
-  !! global models and exchanges over MPI, for a 
+  !> @brief This will route all remote data from the
+  !! global models and exchanges over MPI, for a
   !< given stage
   subroutine mr_route_all(this, stage)
     class(MpiRouterType) :: this
@@ -158,7 +158,7 @@ contains
     ! update adress list
     call this%mr_update_senders_sln(virtual_sol)
     call this%mr_update_receivers_sln(virtual_sol)
-    
+
     ! route for this solution
     call this%mr_route_active(stage)
 
@@ -182,13 +182,13 @@ contains
     ! mpi handles
     integer, dimension(:), allocatable :: rcv_req
     integer, dimension(:), allocatable :: snd_req
-    integer, dimension(:,:), allocatable :: rcv_stat
-    integer, dimension(:,:), allocatable :: snd_stat
+    integer, dimension(:, :), allocatable :: rcv_stat
+    integer, dimension(:, :), allocatable :: snd_stat
     ! message header
     integer(I4B) :: max_headers
-    type(VdcHeaderType), dimension(:,:), allocatable :: headers
+    type(VdcHeaderType), dimension(:, :), allocatable :: headers
     integer, dimension(:), allocatable :: hdr_rcv_t
-    integer, dimension(:), allocatable :: hdr_snd_t    
+    integer, dimension(:), allocatable :: hdr_snd_t
     integer, dimension(:), allocatable :: hdr_rcv_cnt
     ! message body
     integer, dimension(:), allocatable :: body_rcv_t
@@ -201,7 +201,7 @@ contains
     allocate (snd_stat(MPI_STATUS_SIZE, this%senders%size))
 
     ! allocate header data
-    max_headers = size(this%rte_models) + size(this%rte_exchanges)  
+    max_headers = size(this%rte_models) + size(this%rte_exchanges)
     allocate (hdr_rcv_t(this%receivers%size))
     allocate (hdr_snd_t(this%senders%size))
     allocate (headers(max_headers, this%receivers%size))
@@ -210,12 +210,13 @@ contains
     ! allocate body data
     allocate (body_rcv_t(this%senders%size))
     allocate (body_snd_t(this%receivers%size))
-    
-    ! first receive headers for outward data  
+
+    ! first receive headers for outward data
     do i = 1, this%receivers%size
       rnk = this%receivers%at(i)
       call this%message_builder%create_header_rcv(hdr_rcv_t(i))
-      call MPI_Irecv(headers(:,i), max_headers, hdr_rcv_t(i), rnk, stage, MF6_COMM_WORLD, rcv_req(i), ierr)
+      call MPI_Irecv(headers(:, i), max_headers, hdr_rcv_t(i), rnk, stage, &
+                     MF6_COMM_WORLD, rcv_req(i), ierr)
       ! don't free mpi datatype, we need the count below
     end do
 
@@ -223,7 +224,8 @@ contains
     do i = 1, this%senders%size
       rnk = this%senders%at(i)
       call this%message_builder%create_header_snd(rnk, stage, hdr_snd_t(i))
-      call MPI_Isend(MPI_BOTTOM, 1, hdr_snd_t(i), rnk, stage, MF6_COMM_WORLD, snd_req(i), ierr)
+      call MPI_Isend(MPI_BOTTOM, 1, hdr_snd_t(i), rnk, stage, &
+                     MF6_COMM_WORLD, snd_req(i), ierr)
       call MPI_Type_free(hdr_snd_t(i), ierr)
     end do
 
@@ -232,7 +234,7 @@ contains
 
     ! after WaitAll we can count incoming headers from statuses
     do i = 1, this%receivers%size
-      call MPI_Get_count(rcv_stat(:,i), hdr_rcv_t(i), hdr_rcv_cnt(i), ierr)
+      call MPI_Get_count(rcv_stat(:, i), hdr_rcv_t(i), hdr_rcv_cnt(i), ierr)
       call MPI_Type_free(hdr_rcv_t(i), ierr)
     end do
 
@@ -240,14 +242,17 @@ contains
     do i = 1, this%senders%size
       rnk = this%senders%at(i)
       call this%message_builder%create_body_rcv(rnk, stage, body_rcv_t(i))
-      call MPI_Irecv(MPI_BOTTOM, 1, body_rcv_t(i), rnk, stage, MF6_COMM_WORLD, snd_req(i), ierr) 
+      call MPI_Irecv(MPI_BOTTOM, 1, body_rcv_t(i), rnk, stage, &
+                     MF6_COMM_WORLD, snd_req(i), ierr)
     end do
 
     ! send bodies
     do i = 1, this%receivers%size
       rnk = this%receivers%at(i)
-      call this%message_builder%create_body_snd(rnk, stage, headers(1 : hdr_rcv_cnt(i), i), body_snd_t(i))
-      call MPI_Isend(MPI_Bottom, 1, body_snd_t(i), rnk, stage, MF6_COMM_WORLD, rcv_req(i), ierr)
+      call this%message_builder%create_body_snd( &
+        rnk, stage, headers(1:hdr_rcv_cnt(i), i), body_snd_t(i))
+      call MPI_Isend(MPI_Bottom, 1, body_snd_t(i), rnk, stage, &
+                     MF6_COMM_WORLD, rcv_req(i), ierr)
     end do
 
     ! wait for exchange of all messages
@@ -255,12 +260,12 @@ contains
 
     ! clean up types
     do i = 1, this%senders%size
-      call MPI_Type_free(body_rcv_t(i), ierr)  
+      call MPI_Type_free(body_rcv_t(i), ierr)
     end do
     do i = 1, this%receivers%size
       call MPI_Type_free(body_snd_t(i), ierr)
     end do
-    
+
     deallocate (rcv_req)
     deallocate (snd_req)
     deallocate (rcv_stat)
@@ -328,7 +333,7 @@ contains
     do i = 1, this%senders%size
       call this%receivers%push_back(this%senders%at(i))
     end do
-    
+
   end subroutine mr_update_receivers
 
   subroutine mr_update_receivers_sln(this, virtual_sol)
@@ -343,7 +348,7 @@ contains
     do i = 1, this%senders%size
       call this%receivers%push_back(this%senders%at(i))
     end do
-    
+
   end subroutine mr_update_receivers_sln
 
   subroutine mr_destroy(this)

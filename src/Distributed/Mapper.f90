@@ -1,6 +1,6 @@
 module MapperModule
   use KindModule, only: I4B, LGP
-  use ConstantsModule, only: LENVARNAME, LENMEMPATH  
+  use ConstantsModule, only: LENVARNAME, LENMEMPATH
   use MemoryHelperModule, only: create_mem_path
   use IndexMapModule
   use VirtualModelModule, only: VirtualModelType, get_virtual_model
@@ -20,14 +20,14 @@ module MapperModule
 
     type(ListType) :: mapped_data_list
 
-    contains
+  contains
 
     procedure :: init
     procedure :: add_exchange_vars
     procedure :: add_interface_vars
     procedure :: scatter
     procedure :: destroy
-    
+
     procedure :: add_dist_vars ! TODO_MJR: make private after removing distdata module
     procedure, private :: map_model_data
     procedure, private :: map_exg_data
@@ -36,7 +36,7 @@ module MapperModule
 
   end type MapperType
 
-  contains
+contains
 
   subroutine init(this)
     class(MapperType) :: this
@@ -49,7 +49,7 @@ module MapperModule
     use SimStagesModule
     use ListsModule, only: baseconnectionlist
     use SpatialModelConnectionModule, only: SpatialModelConnectionType, &
-                                            GetSpatialModelConnectionFromList
+                                            get_smc_from_list
     use VirtualExchangeModule, only: VirtualExchangeType, get_virtual_exchange
     class(MapperType) :: this
     ! local
@@ -59,17 +59,17 @@ module MapperModule
     character(len=LENMEMPATH) :: virt_mem_path
 
     do iconn = 1, baseconnectionlist%Count()
-      conn => GetSpatialModelConnectionFromList(baseconnectionlist, iconn)
+      conn => get_smc_from_list(baseconnectionlist, iconn)
       virt_exg => get_virtual_exchange(conn%primaryExchange%id)
       if (.not. virt_exg%v_model1%is_local) then
-        virt_mem_path = virt_exg%get_vrt_mem_path('NODEM1','')
+        virt_mem_path = virt_exg%get_vrt_mem_path('NODEM1', '')
         call this%map_data_full(0, 'NODEM1', conn%primaryExchange%memoryPath, &
-                                   'NODEM1', virt_mem_path, (/STG_BEFORE_DF/))
+                                'NODEM1', virt_mem_path, (/STG_BEFORE_DF/))
       end if
       if (.not. virt_exg%v_model2%is_local) then
-        virt_mem_path = virt_exg%get_vrt_mem_path('NODEM2','')
+        virt_mem_path = virt_exg%get_vrt_mem_path('NODEM2', '')
         call this%map_data_full(0, 'NODEM2', conn%primaryExchange%memoryPath, &
-                                   'NODEM2', virt_mem_path, (/STG_BEFORE_DF/))
+                                'NODEM2', virt_mem_path, (/STG_BEFORE_DF/))
       end if
     end do
 
@@ -79,15 +79,15 @@ module MapperModule
   !<
   subroutine add_interface_vars(this)
     use ListsModule, only: baseconnectionlist
-    use SpatialModelConnectionModule, only: SpatialModelConnectionType,&
-                                            GetSpatialModelConnectionFromList
+    use SpatialModelConnectionModule, only: SpatialModelConnectionType, &
+                                            get_smc_from_list
     class(MapperType) :: this
     ! local
     integer(I4B) :: iconn
     class(SpatialModelConnectionType), pointer :: conn
 
     do iconn = 1, baseconnectionlist%Count()
-      conn => GetSpatialModelConnectionFromList(baseconnectionlist, iconn)
+      conn => get_smc_from_list(baseconnectionlist, iconn)
       ! add the variables for this interface model to our mapper
       call this%add_dist_vars(conn%owner%idsoln, &
                               conn%ifaceDistVars, &
@@ -96,8 +96,7 @@ module MapperModule
 
   end subroutine add_interface_vars
 
-  
-  subroutine add_dist_vars(this, sol_id, var_list, interface_map)    
+  subroutine add_dist_vars(this, sol_id, var_list, interface_map)
     class(MapperType) :: this
     integer(I4B) :: sol_id
     type(ListType) :: var_list
@@ -213,7 +212,7 @@ module MapperModule
     else
       tgt_mem_path = create_mem_path(tgt_model_name)
     end if
-    
+
     src_mem_path = v_exchange%get_vrt_mem_path(src_var_name, '')
     call this%map_data(controller_id, &
                        tgt_var_name, tgt_mem_path, index_map_sgn%tgt_idx, &
@@ -234,11 +233,11 @@ module MapperModule
     integer(I4B), dimension(:), intent(in) :: stages
 
     call this%map_data(controller_id, tgt_name, tgt_path, null(), &
-                                      src_name, src_path, null(), &
-                                      null(), stages)
+                       src_name, src_path, null(), &
+                       null(), stages)
 
   end subroutine map_data_full
-  
+
   !> @brief Generic mapping between two variables in memory, using
   !< an optional sign conversion
   subroutine map_data(this, controller_id, tgt_name, tgt_path, tgt_idx, &
@@ -283,7 +282,7 @@ module MapperModule
 
   end subroutine map_data
 
-  !> @brief Scatter the mapped memory, typically into  
+  !> @brief Scatter the mapped memory, typically into
   !< the memory space of the interface models
   subroutine scatter(this, controller_id, stage)
     class(MapperType) :: this

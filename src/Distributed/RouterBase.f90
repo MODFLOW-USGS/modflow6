@@ -1,6 +1,6 @@
 module RouterBaseModule
   use KindModule, only: I4B
-  use VirtualSolutionModule 
+  use VirtualSolutionModule
   implicit none
   private
 

@@ -11,10 +11,11 @@ module SpatialModelConnectionModule
   use MemoryHelperModule, only: create_mem_path
   use GridConnectionModule, only: GridConnectionType
   use InterfaceMapModule
-  use DistVariableModule  
+  use DistVariableModule
   use VirtualDataListsModule, only: virtual_exchange_list
   use VirtualModelModule, only: VirtualModelType, get_virtual_model
-  use VirtualExchangeModule, only: VirtualExchangeType, get_virtual_exchange_from_list
+  use VirtualExchangeModule, only: VirtualExchangeType, &
+                                   get_virtual_exchange_from_list
   use ListModule, only: ListType
   use STLVecIntModule, only: STLVecInt
   use MatrixBaseModule
@@ -22,9 +23,9 @@ module SpatialModelConnectionModule
 
   implicit none
   private
-  public :: CastAsSpatialModelConnectionClass
-  public :: AddSpatialModelConnectionToList
-  public :: GetSpatialModelConnectionFromList
+  public :: cast_as_smc
+  public :: add_smc_to_list
+  public :: get_smc_from_list
 
   !> Class to manage spatial connection of a model to one
   !! or more models of the same type. Spatial connection here
@@ -147,7 +148,7 @@ contains ! module procedures
   recursive subroutine addModelNeighbors(this, model_id, &
                                          virtual_exchanges, &
                                          depth, mask)
-    use VirtualExchangeModule, only: get_virtual_exchange                                         
+    use VirtualExchangeModule, only: get_virtual_exchange
     class(SpatialModelConnectionType) :: this !< this connection
     integer(I4B) :: model_id !< the model (id) to add neighbors for
     type(ListType) :: virtual_exchanges !< list with all virtual exchanges
@@ -205,7 +206,7 @@ contains ! module procedures
       call nbr_models%destroy()
       return
     end if
-    
+
     ! now recurse on the neighbors up to the specified depth
     do n = 1, nbr_models%size
       call this%addModelNeighbors(nbr_models%at(n), virtual_exchanges, &
@@ -475,7 +476,7 @@ contains ! module procedures
 
     ! connect cells from primary exchange
     call this%gridConnection%connectPrimaryExchange(this%primaryExchange)
-    
+
     ! now scan for nbr-of-nbrs and create final data structures
     call this%gridConnection%extendConnection()
 
@@ -579,7 +580,7 @@ contains ! module procedures
     integer(I4B) :: map_type !< can be 0 = scalar, 1 = node based, 2 = connection based,
                              !! 3 = exchange based (connections crossing model boundaries)
     integer(I4B), dimension(:) :: sync_stages !< when to sync, e.g. (/ STAGE_AD, STAGE_CF /)
-                                              !! which is before AD and CF    
+                                              !! which is before AD and CF
     character(len=*), optional :: exg_var_name !< needed for exchange variables, e.g. SIMVALS
     ! local
     type(DistVarType), pointer :: distVar => null()
@@ -602,7 +603,7 @@ contains ! module procedures
 
   !> @brief Cast to SpatialModelConnectionType
   !<
-  function CastAsSpatialModelConnectionClass(obj) result(res)
+  function cast_as_smc(obj) result(res)
     implicit none
     class(*), pointer, intent(inout) :: obj !< object to be cast
     class(SpatialModelConnectionType), pointer :: res !< the instance of SpatialModelConnectionType
@@ -615,11 +616,11 @@ contains ! module procedures
       res => obj
     end select
     return
-  end function CastAsSpatialModelConnectionClass
+  end function cast_as_smc
 
   !> @brief Add connection to a list
   !<
-  subroutine AddSpatialModelConnectionToList(list, conn)
+  subroutine add_smc_to_list(list, conn)
     implicit none
     ! -- dummy
     type(ListType), intent(inout) :: list !< the list
@@ -631,11 +632,11 @@ contains ! module procedures
     call list%Add(obj)
     !
     return
-  end subroutine AddSpatialModelConnectionToList
+  end subroutine add_smc_to_list
 
   !> @brief Get the connection from a list
   !<
-  function GetSpatialModelConnectionFromList(list, idx) result(res)
+  function get_smc_from_list(list, idx) result(res)
     type(ListType), intent(inout) :: list !< the list
     integer(I4B), intent(in) :: idx !< the index of the connection
     class(SpatialModelConnectionType), pointer :: res !< the returned connection
@@ -643,9 +644,9 @@ contains ! module procedures
     ! local
     class(*), pointer :: obj
     obj => list%GetItem(idx)
-    res => CastAsSpatialModelConnectionClass(obj)
+    res => cast_as_smc(obj)
     !
     return
-  end function GetSpatialModelConnectionFromList
+  end function get_smc_from_list
 
 end module SpatialModelConnectionModule

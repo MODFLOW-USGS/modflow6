@@ -18,12 +18,12 @@ module VirtualDataContainerModule
   integer(I4B), public, parameter :: VDC_GWTEXG_TYPE = 4
   integer(I4B), public, parameter :: VDC_GWFMVR_TYPE = 5
   integer(I4B), public, parameter :: VDC_GWTMVT_TYPE = 6
- 
+
   type, public :: VdcPtrType
     class(VirtualDataContainerType), pointer :: ptr => null()
   end type VdcPtrType
 
-  type, public :: VirtualDataContainerType   
+  type, public :: VirtualDataContainerType
     integer(I4B) :: id !< unique identifier matching with the real counterpart
     integer(I4B) :: container_type !< to identify the actual type of this container
     character(LENCOMPONENTNAME) :: name !< container name (model, exchange, ...) used in the memory path
@@ -32,8 +32,8 @@ module VirtualDataContainerModule
                              !! some of its variables can still be remote
     logical(LGP) :: is_active !< when true, this container is being synchronized
     integer(I4B) :: orig_rank !< the global rank of the process which holds the physical data for this container
-    
-    type(ListType) :: virtual_data_list !< a list with all virtual data items for this container 
+
+    type(ListType) :: virtual_data_list !< a list with all virtual data items for this container
   contains
     procedure :: vdc_create
     generic :: map => map_scalar, map_array1d, map_array2d
@@ -51,7 +51,7 @@ module VirtualDataContainerModule
     procedure, private :: map_scalar
     procedure, private :: map_array1d
     procedure, private :: map_array2d
-    procedure, private :: map_internal 
+    procedure, private :: map_internal
     procedure, private :: vdc_get_virtual_data
     procedure, private :: get_items_for_stage
   end type VirtualDataContainerType
@@ -72,7 +72,7 @@ contains
     this%is_active = .true.
     this%container_type = VDC_UNKNOWN_TYPE
 
-  end subroutine vdc_create  
+  end subroutine vdc_create
 
   subroutine create_field(this, field, var_name, subcmp_name, is_local)
     class(VirtualDataContainerType) :: this
@@ -95,7 +95,7 @@ contains
     field%virtual_mt => null()
     call this%add_to_list(field)
 
-  end subroutine create_field  
+  end subroutine create_field
 
   subroutine add_to_list(this, virtual_data)
     class(VirtualDataContainerType) :: this
@@ -113,7 +113,7 @@ contains
     class(VirtualDataContainerType) :: this
     integer(I4B) :: stage
 
-    write(*,*) 'Error: prepare_stage should be overridden'
+    write (*, *) 'Error: prepare_stage should be overridden'
     call ustop()
 
   end subroutine vdc_prepare_stage
@@ -130,9 +130,9 @@ contains
     do i = 1, this%virtual_data_list%Count()
       vdi => this%virtual_data_list%GetItem(i)
       select type (vdi)
-        class is (VirtualDataType)
-          if (vdi%is_remote) cycle
-          if (vdi%check_stage(stage)) call vdi%link()
+      class is (VirtualDataType)
+        if (vdi%is_remote) cycle
+        if (vdi%check_stage(stage)) call vdi%link()
       end select
     end do
 
@@ -144,7 +144,7 @@ contains
     integer(I4B), dimension(:) :: stages
     integer(I4B) :: map_type
 
-    call this%map_internal(field, (/ 0 /), stages, map_type)
+    call this%map_internal(field, (/0/), stages, map_type)
 
   end subroutine map_scalar
 
@@ -155,7 +155,7 @@ contains
     integer(I4B), dimension(:) :: stages
     integer(I4B) :: map_type
 
-    call this%map_internal(field, (/ nrow /), stages, map_type)
+    call this%map_internal(field, (/nrow/), stages, map_type)
 
   end subroutine map_array1d
 
@@ -167,7 +167,7 @@ contains
     integer(I4B), dimension(:) :: stages
     integer(I4B) :: map_type
 
-    call this%map_internal(field, (/ ncol, nrow /), stages, map_type)
+    call this%map_internal(field, (/ncol, nrow/), stages, map_type)
 
   end subroutine map_array2d
 
@@ -180,7 +180,7 @@ contains
     ! local
     character(len=LENMEMPATH) :: vmem_path
     logical(LGP) :: found
-    
+
     field%sync_stages = stages
     field%map_type = map_type
     if (field%is_remote) then
@@ -214,7 +214,7 @@ contains
 
     call this%get_items_for_stage(stage, virtual_items)
 
-  end subroutine vdc_get_recv_items   
+  end subroutine vdc_get_recv_items
 
   subroutine get_items_for_stage(this, stage, virtual_items)
     class(VirtualDataContainerType) :: this
@@ -227,9 +227,9 @@ contains
     do i = 1, this%virtual_data_list%Count()
       obj_ptr => this%virtual_data_list%GetItem(i)
       select type (obj_ptr)
-        class is (VirtualDataType)
-          if (.not. obj_ptr%check_stage(stage)) cycle
-          call virtual_items%push_back(i)
+      class is (VirtualDataType)
+        if (.not. obj_ptr%check_stage(stage)) cycle
+        call virtual_items%push_back(i)
       end select
     end do
 
@@ -244,12 +244,12 @@ contains
     character(len=LENMEMPATH) :: vrt_path
     ! local
     class(VirtualDataType), pointer :: vdi
-    
-    vdi => this%vdc_get_virtual_data(var_name, subcomp_name)      
+
+    vdi => this%vdc_get_virtual_data(var_name, subcomp_name)
     if (vdi%is_remote) then
       if (subcomp_name == '') then
         vrt_path = create_mem_path(this%name, context=this%vmem_ctx)
-      else 
+      else
         vrt_path = create_mem_path(this%name, subcomp_name, context=this%vmem_ctx)
       end if
     else
@@ -282,7 +282,7 @@ contains
       end if
     end do
 
-    write(*,*) 'Error: unknown virtual variable ', var_name, ' ', subcomp_name
+    write (*, *) 'Error: unknown virtual variable ', var_name, ' ', subcomp_name
     call ustop()
 
   end function vdc_get_virtual_data
@@ -311,7 +311,7 @@ contains
     integer(I4B) :: rank
 
     this%orig_rank = rank
-    write(this%vmem_ctx, '(a,i0,a)') '__P', rank, '__'
+    write (this%vmem_ctx, '(a,i0,a)') '__P', rank, '__'
 
   end subroutine vdc_set_orig_rank
 
@@ -325,8 +325,8 @@ contains
     vdc => null()
     obj_ptr => list%GetItem(idx)
     select type (obj_ptr)
-      class is (VirtualDataContainerType)
-        vdc => obj_ptr
+    class is (VirtualDataContainerType)
+      vdc => obj_ptr
     end select
 
   end function get_vdc_from_list

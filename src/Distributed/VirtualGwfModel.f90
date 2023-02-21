@@ -11,7 +11,7 @@ module VirtualGwfModelModule
   public :: add_virtual_gwf_model
 
   type, public, extends(VirtualModelType) :: VirtualGwfModelType
-    ! NPF 
+    ! NPF
     type(VirtualIntType), pointer :: npf_iangle1 => null()
     type(VirtualIntType), pointer :: npf_iangle2 => null()
     type(VirtualIntType), pointer :: npf_iangle3 => null()
@@ -37,7 +37,7 @@ module VirtualGwfModelModule
 contains
 
   !> @brief Add virtual GWF model
-  !< 
+  !<
   subroutine add_virtual_gwf_model(model_id, model_name, model)
     use VirtualDataListsModule, only: virtual_model_list
     integer(I4B) :: model_id !< global model id
@@ -52,7 +52,7 @@ contains
 
     obj => virtual_gwf_model
     call virtual_model_list%Add(obj)
-    
+
   end subroutine add_virtual_gwf_model
 
   subroutine vgwf_create(this, name, id, model)
@@ -60,16 +60,16 @@ contains
     character(len=*) :: name
     integer(I4B) :: id
     class(NumericalModelType), pointer :: model
-    
+
     ! create base
     call this%VirtualModelType%create(name, id, model)
     this%container_type = VDC_GWFMODEL_TYPE
-    
+
     ! allocate fields
     call this%create_virtual_fields()
 
   end subroutine vgwf_create
-  
+
   subroutine create_virtual_fields(this)
     class(VirtualGwfModelType) :: this
 
@@ -97,7 +97,7 @@ contains
     call this%create_field(this%npf_angle3%to_base(), 'ANGLE3', 'NPF')
     allocate (this%npf_wetdry)
     call this%create_field(this%npf_wetdry%to_base(), 'WETDRY', 'NPF')
-    
+
   end subroutine create_virtual_fields
 
   subroutine vgwf_prepare_stage(this, stage)
@@ -111,51 +111,73 @@ contains
 
     if (stage == STG_AFTER_MDL_DF) then
 
-      call this%map(this%npf_iangle1%to_base(), (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
-      call this%map(this%npf_iangle2%to_base(), (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
-      call this%map(this%npf_iangle3%to_base(), (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
-      call this%map(this%npf_iwetdry%to_base(), (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
+      call this%map(this%npf_iangle1%to_base(), &
+                    (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
+      call this%map(this%npf_iangle2%to_base(), &
+                    (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
+      call this%map(this%npf_iangle3%to_base(), &
+                    (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
+      call this%map(this%npf_iwetdry%to_base(), &
+                    (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
 
     else if (stage == STG_BEFORE_AR) then
 
       nr_nodes = this%dis_nodes%get() ! TODO_MJR: this should follow from the map
       ! Num. model data
-      call this%map(this%x%to_base(), nr_nodes, (/STG_BEFORE_AR, STG_BEFORE_AD, STG_BEFORE_CF/), MAP_NODE_TYPE)
-      call this%map(this%ibound%to_base(), nr_nodes, (/STG_BEFORE_AR, STG_BEFORE_AD, STG_BEFORE_CF/), MAP_NODE_TYPE)
-      call this%map(this%x_old%to_base(), nr_nodes, (/STG_BEFORE_AD, STG_BEFORE_CF/), MAP_NODE_TYPE)
+      call this%map(this%x%to_base(), nr_nodes, &
+                    (/STG_BEFORE_AR, STG_BEFORE_AD, STG_BEFORE_CF/), &
+                    MAP_NODE_TYPE)
+      call this%map(this%ibound%to_base(), nr_nodes, &
+                    (/STG_BEFORE_AR, STG_BEFORE_AD, STG_BEFORE_CF/), &
+                    MAP_NODE_TYPE)
+      call this%map(this%x_old%to_base(), nr_nodes, &
+                    (/STG_BEFORE_AD, STG_BEFORE_CF/), MAP_NODE_TYPE)
       ! NPF
-      call this%map(this%npf_icelltype%to_base(), nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
-      call this%map(this%npf_k11%to_base(), nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
-      call this%map(this%npf_k22%to_base(), nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
-      call this%map(this%npf_k33%to_base(), nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)    
+      call this%map(this%npf_icelltype%to_base(), nr_nodes, &
+                    (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+      call this%map(this%npf_k11%to_base(), nr_nodes, &
+                    (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+      call this%map(this%npf_k22%to_base(), nr_nodes, &
+                    (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+      call this%map(this%npf_k33%to_base(), nr_nodes, &
+                    (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+
       if (this%npf_iangle1%get() > 0) then
-        call this%map(this%npf_angle1%to_base(), nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+        call this%map(this%npf_angle1%to_base(), nr_nodes, &
+                      (/STG_BEFORE_AR/), MAP_NODE_TYPE)
       else
-        call this%map(this%npf_angle1%to_base(), 0, (/STG_NEVER/), MAP_NODE_TYPE)
+        call this%map(this%npf_angle1%to_base(), 0, &
+                      (/STG_NEVER/), MAP_NODE_TYPE)
       end if
       if (this%npf_iangle2%get() > 0) then
-        call this%map(this%npf_angle2%to_base(), nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+        call this%map(this%npf_angle2%to_base(), nr_nodes, &
+                      (/STG_BEFORE_AR/), MAP_NODE_TYPE)
       else
-        call this%map(this%npf_angle2%to_base(), 0, (/STG_NEVER/), MAP_NODE_TYPE)
+        call this%map(this%npf_angle2%to_base(), 0, &
+                      (/STG_NEVER/), MAP_NODE_TYPE)
       end if
       if (this%npf_iangle3%get() > 0) then
-        call this%map(this%npf_angle3%to_base(), nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+        call this%map(this%npf_angle3%to_base(), nr_nodes, &
+                      (/STG_BEFORE_AR/), MAP_NODE_TYPE)
       else
-        call this%map(this%npf_angle3%to_base(), 0, (/STG_NEVER/), MAP_NODE_TYPE)
+        call this%map(this%npf_angle3%to_base(), 0, &
+                      (/STG_NEVER/), MAP_NODE_TYPE)
       end if
       if (this%npf_iwetdry%get() > 0) then
-        call this%map(this%npf_wetdry%to_base(), nr_nodes, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+        call this%map(this%npf_wetdry%to_base(), nr_nodes, &
+                      (/STG_BEFORE_AR/), MAP_NODE_TYPE)
       else
-        call this%map(this%npf_wetdry%to_base(), 0, (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+        call this%map(this%npf_wetdry%to_base(), 0, &
+                      (/STG_BEFORE_AR/), MAP_NODE_TYPE)
       end if
 
     end if
 
-  end subroutine vgwf_prepare_stage    
-  
+  end subroutine vgwf_prepare_stage
+
   subroutine vgwf_destroy(this)
     class(VirtualGwfModelType) :: this
-    
+
     call this%VirtualModelType%destroy()
     call this%deallocate_data()
 
@@ -163,11 +185,11 @@ contains
 
   subroutine deallocate_data(this)
     class(VirtualGwfModelType) :: this
-    
+
     deallocate (this%npf_iangle1)
     deallocate (this%npf_iangle2)
     deallocate (this%npf_iangle3)
-    deallocate (this%npf_iwetdry)  
+    deallocate (this%npf_iwetdry)
     deallocate (this%npf_icelltype)
     deallocate (this%npf_k11)
     deallocate (this%npf_k22)

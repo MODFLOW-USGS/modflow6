@@ -1,4 +1,4 @@
-module VirtualDataManagerModule  
+module VirtualDataManagerModule
   use KindModule, only: I4B
   use STLVecIntModule
   use VirtualDataListsModule, only: virtual_model_list, virtual_exchange_list
@@ -13,7 +13,7 @@ module VirtualDataManagerModule
   use NumericalExchangeModule, only: NumericalExchangeType, &
                                      GetNumericalExchangeFromList
   use SpatialModelConnectionModule, only: SpatialModelConnectionType, &
-                                          GetSpatialModelConnectionFromList
+                                          get_smc_from_list
   implicit none
   private
 
@@ -33,7 +33,7 @@ module VirtualDataManagerModule
     procedure :: destroy
 
     ! private
-    procedure, private :: vds_synchronize    
+    procedure, private :: vds_synchronize
     procedure, private :: vds_synchronize_sln
     procedure, private :: prepare_all
     procedure, private :: link_all
@@ -49,19 +49,19 @@ contains
   subroutine vds_create(this, sim_mode)
     class(VirtualDataManagerType) :: this
     character(len=*) :: sim_mode
-    ! local    
+    ! local
     integer(I4B) :: nr_sol
 
     nr_sol = this%count_nr_solutions()
-    allocate(this%virtual_solutions(nr_sol))
-    allocate(this%solution_ids(nr_sol))
-    
+    allocate (this%virtual_solutions(nr_sol))
+    allocate (this%solution_ids(nr_sol))
+
     ! we use this one as a counter:
     this%nr_solutions = 0
-    
+
     ! create a router, sequential or parallel
     this%router => create_router(sim_mode)
-    
+
   end subroutine vds_create
 
   !> @brief Initialize internal components
@@ -84,7 +84,7 @@ contains
     class(VirtualSolutionType), pointer :: virt_sol
     class(NumericalModelType), pointer :: num_mod
     class(NumericalExchangeType), pointer :: num_exg
-    class(SpatialModelConnectionType), pointer :: conn    
+    class(SpatialModelConnectionType), pointer :: conn
     integer(I4B) :: model_id, exg_id
     type(STLVecInt) :: model_ids, exchange_ids
     class(VirtualDataContainerType), pointer :: vdc
@@ -95,7 +95,7 @@ contains
     call model_ids%init()
     call exchange_ids%init()
 
-    ! build the virtual solution       
+    ! build the virtual solution
     this%solution_ids(this%nr_solutions) = num_sol%id ! TODO_MJR: do we need this double bookkeeping?
     virt_sol%solution_id = num_sol%id
 
@@ -109,7 +109,7 @@ contains
 
     ! loop over exchanges in solution and get connections
     do ix = 1, num_sol%exchangelist%Count()
-      conn => GetSpatialModelConnectionFromList(num_sol%exchangelist, ix)
+      conn => get_smc_from_list(num_sol%exchangelist, ix)
       if (.not. associated(conn)) then
         ! it's a classic exchange, add it
         num_exg => GetNumericalExchangeFromList(num_sol%exchangelist, ix)
@@ -128,13 +128,13 @@ contains
         call exchange_ids%push_back_unique(exg_id)
       end do
 
-    end do 
-    
+    end do
+
     allocate (virt_sol%models(model_ids%size))
     allocate (virt_sol%exchanges(exchange_ids%size))
 
     ! select virtual containers for models/exchanges
-    do i = 1, model_ids%size      
+    do i = 1, model_ids%size
       vdc => get_virtual_model(model_ids%at(i))
       virt_sol%models(i)%ptr => vdc
     end do
@@ -199,7 +199,7 @@ contains
 
   end subroutine link_all
 
-  !> @brief Synchronize one particular solution for this stage  
+  !> @brief Synchronize one particular solution for this stage
   !<
   subroutine vds_synchronize_sln(this, id_sln, stage)
     class(VirtualDataManagerType) :: this
@@ -207,7 +207,7 @@ contains
     integer(I4B) :: stage
     ! local
     integer(I4B) :: sol_idx
-    
+
     sol_idx = findloc(this%solution_ids, id_sln, dim=1)
     call this%prepare_solution(this%virtual_solutions(sol_idx), stage)
     call this%update_solution(this%virtual_solutions(sol_idx), stage)
@@ -225,7 +225,7 @@ contains
     integer(I4B) :: i
     class(VirtualDataContainerType), pointer :: vdc
 
-    do i = 1, size(virtual_sol%models)   
+    do i = 1, size(virtual_sol%models)
       vdc => virtual_sol%models(i)%ptr
       call vdc%prepare_stage(stage)
     end do
@@ -255,7 +255,7 @@ contains
 
   end subroutine update_solution
 
-  !> @brief Connect virtual memory items to their  
+  !> @brief Connect virtual memory items to their
   !< sources when they are local for this stage
   subroutine link(this, virtual_sol, stage)
     class(VirtualDataManagerType) :: this
@@ -277,14 +277,14 @@ contains
 
   end subroutine link
 
-  !> @brief Returns the number of Numerical Solutions 
+  !> @brief Returns the number of Numerical Solutions
   !< in this simulation
   function count_nr_solutions(this) result(count)
     use ListsModule, only: basesolutionlist
-    use NumericalSolutionModule, only: NumericalSolutionType   
+    use NumericalSolutionModule, only: NumericalSolutionType
     class(VirtualDataManagerType) :: this
     integer(I4B) :: count
-    ! local    
+    ! local
     integer(I4B) :: isol
     class(*), pointer :: sol
 
@@ -293,7 +293,7 @@ contains
     do isol = 1, basesolutionlist%Count()
       sol => basesolutionlist%GetItem(isol)
       select type (sol)
-        class is (NumericalSolutionType)
+      class is (NumericalSolutionType)
         count = count + 1
       end select
     end do
@@ -320,7 +320,7 @@ contains
       deallocate (this%virtual_solutions(i)%models)
       deallocate (this%virtual_solutions(i)%exchanges)
     end do
-    deallocate(this%virtual_solutions)
+    deallocate (this%virtual_solutions)
 
   end subroutine destroy
 

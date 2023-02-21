@@ -2,10 +2,10 @@ module RunControlModule
   use KindModule, only: I4B
   use SimStagesModule
   use VirtualDataManagerModule
-  use MapperModule  
+  use MapperModule
   use ListsModule, only: baseconnectionlist, basesolutionlist
   use SpatialModelConnectionModule, only: SpatialModelConnectionType, &
-                                          GetSpatialModelConnectionFromList
+                                          get_smc_from_list
   use NumericalSolutionModule, only: NumericalSolutionType
   implicit none
   private
@@ -13,13 +13,13 @@ module RunControlModule
   public :: create_seq_run_control
 
   type, public :: RunControlType
-    class(VirtualDataManagerType), pointer :: virtual_data_store !< contains globally accessible data, timely synchronized 
+    class(VirtualDataManagerType), pointer :: virtual_data_store !< contains globally accessible data, timely synchronized
                                                                !! by direct linking (local) or message passing (remote)
     type(MapperType) :: mapper !< a 'mapper' for filling the interface models: this needs a better name/place
   contains
     procedure :: start => ctrl_start
     procedure :: at_stage => ctrl_at_stage
-    procedure :: finish => ctrl_finish    
+    procedure :: finish => ctrl_finish
     ! private
     procedure, private :: init_handler
     procedure, private :: after_mdl_df_handler
@@ -35,7 +35,7 @@ contains
   function create_seq_run_control() result(run_controller)
     class(RunControlType), pointer :: run_controller
 
-    allocate(run_controller)
+    allocate (run_controller)
 
   end function create_seq_run_control
 
@@ -46,7 +46,7 @@ contains
 
   end subroutine ctrl_start
 
-  subroutine ctrl_finish(this)    
+  subroutine ctrl_finish(this)
     use SimVariablesModule, only: iout
     use MemoryManagerModule, only: mem_write_usage, mem_da
     use TimerModule, only: elapsed_time
@@ -72,15 +72,15 @@ contains
 
     if (stage == STG_INIT) then
       call this%init_handler()
-    else if (stage == STG_AFTER_MDL_DF) then 
+    else if (stage == STG_AFTER_MDL_DF) then
       call this%after_mdl_df_handler()
     else if (stage == STG_BEFORE_DF) then
       call this%before_df_handler()
-    else if (stage == STG_AFTER_DF) then 
+    else if (stage == STG_AFTER_DF) then
       call this%after_df_handler()
-    else if (stage== STG_BEFORE_AR) then 
+    else if (stage == STG_BEFORE_AR) then
       call this%before_ar_handler()
-    else if (stage == STG_AFTER_AR) then 
+    else if (stage == STG_AFTER_AR) then
       call this%after_ar_handler()
     end if
 
@@ -89,7 +89,7 @@ contains
 
   end subroutine ctrl_at_stage
 
-  subroutine init_handler(this)    
+  subroutine init_handler(this)
     use SimVariablesModule, only: simulation_mode
     class(RunControlType), target :: this
 
@@ -104,7 +104,7 @@ contains
   end subroutine after_mdl_df_handler
 
   subroutine before_df_handler(this)
-    class(RunControlType), target :: this    
+    class(RunControlType), target :: this
     ! local
     integer(I4B) :: i
     class(*), pointer :: sol
@@ -149,7 +149,7 @@ contains
     class(NumericalSolutionType) :: num_sol
     integer(I4B) :: stage
     class(*), pointer :: ctx
-    
+
     select type (ctx)
     class is (RunControlType)
       call ctx%virtual_data_store%synchronize_sln(num_sol%id, stage)

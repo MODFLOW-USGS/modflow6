@@ -158,10 +158,11 @@ contains
           this%tgt%adbl2d(k, i) = this%src%adbl2d(k, i)
         end do
       end do
-    else      
+    else
       do i = 1, size(this%tgt_idx)
         do k = 1, size(this%src%adbl2d, dim=1)
-          this%tgt%adbl2d(k, this%tgt_idx(i)) = this%src%adbl2d(k, this%src_idx(i))
+          this%tgt%adbl2d(k, this%tgt_idx(i)) = &
+            this%src%adbl2d(k, this%src_idx(i))
         end do
       end do
     end if

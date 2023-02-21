@@ -10,7 +10,7 @@ module VirtualSolutionModule
   type, public :: VirtualSolutionType
     integer(I4B) :: solution_id = -1
     type(VdcPtrType), dimension(:), pointer :: models => null()
-    type(VdcPtrType), dimension(:),  pointer :: exchanges => null()
+    type(VdcPtrType), dimension(:), pointer :: exchanges => null()
     ! type(ListType) :: exchange_movers
     ! type(ListType) :: etc...
   end type VirtualSolutionType

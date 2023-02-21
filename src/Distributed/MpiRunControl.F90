@@ -29,7 +29,7 @@ contains
     ! local
     class(MpiRunControlType), pointer :: mpi_controller
 
-    allocate(mpi_controller)
+    allocate (mpi_controller)
     controller => mpi_controller
 
   end function create_mpi_run_control
@@ -45,12 +45,12 @@ contains
     ! if PETSc we need their initialize
     wait_dbg = .false.
 #if defined(__WITH_PETSC__)
-    inquire(file=petsc_db_file, exist=petsc_db_exists)
+    inquire (file=petsc_db_file, exist=petsc_db_exists)
     if (.not. petsc_db_exists) then
-      write(*,*) 'Initialize PETSc'
+      write (*, *) 'Initialize PETSc'
       call PetscInitialize(ierr)
     else
-      write(*,*) 'Initialize PETSc with database ', petsc_db_file
+      write (*, *) 'Initialize PETSc with database ', petsc_db_file
       call PetscInitialize(petsc_db_file, ierr)
     end if
     MF6_COMM_WORLD = PETSC_COMM_WORLD
@@ -85,8 +85,8 @@ contains
 
     if (proc_id == 0) then
       icnt = 0
-      write(*,*) 'Hit enter to continue...'
-      read(*,*)
+      write (*, *) 'Hit enter to continue...'
+      read (*, *)
     end if
     call MPI_Barrier(MF6_COMM_WORLD, ierr)
 
@@ -97,7 +97,7 @@ contains
     ! local
     integer :: ierr
 
-    ! finish mpi    
+    ! finish mpi
 #if defined(__WITH_PETSC__)
     call PetscFinalize(ierr)
     CHKERRQ(ierr)

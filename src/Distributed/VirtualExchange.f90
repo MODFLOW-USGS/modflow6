@@ -14,13 +14,12 @@ module VirtualExchangeModule
   public :: get_virtual_exchange_from_list
   private :: cast_as_virtual_exchange
 
-
   type, public, extends(VirtualDataContainerType) :: VirtualExchangeType
     class(VirtualModelType), pointer :: v_model1 => null()
     class(VirtualModelType), pointer :: v_model2 => null()
     ! scalars
     type(VirtualIntType), pointer :: nexg => null()
-    type(VirtualIntType), pointer :: naux => null()  
+    type(VirtualIntType), pointer :: naux => null()
     type(VirtualIntType), pointer :: ianglex => null()
     ! arrays
     type(VirtualInt1dType), pointer :: nodem1 => null()
@@ -34,7 +33,7 @@ module VirtualExchangeModule
     procedure :: create => vx_create
     procedure :: prepare_stage => vx_prepare_stage
     procedure :: get_send_items => vx_get_send_items
-    procedure :: get_recv_items => vx_get_recv_items    
+    procedure :: get_recv_items => vx_get_recv_items
     procedure :: destroy => vx_destroy
     ! private
     procedure, private :: create_virtual_fields
@@ -53,13 +52,13 @@ contains
     integer(I4B) :: m2_id
     ! local
     logical(LGP) :: is_local
-    
+
     this%v_model1 => get_virtual_model(m1_id)
     this%v_model2 => get_virtual_model(m2_id)
 
     ! - if both models are local, is_local = true
     ! - if both are remote, is_local = false
-    ! - if only one of them is remote, is_local = true and only the 
+    ! - if only one of them is remote, is_local = true and only the
     ! remote nodem1/2 array will get its property is_local = false
     is_local = this%v_model1%is_local .or. this%v_model2%is_local
     call this%VirtualDataContainerType%vdc_create(name, exg_id, is_local)
@@ -68,7 +67,7 @@ contains
     call this%create_virtual_fields()
 
   end subroutine vx_create
-  
+
   subroutine create_virtual_fields(this)
     class(VirtualExchangeType) :: this
     ! local
@@ -124,7 +123,8 @@ contains
       call this%map(this%cl1%to_base(), nexg, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
       call this%map(this%cl2%to_base(), nexg, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
       call this%map(this%hwva%to_base(), nexg, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
-      call this%map(this%auxvar%to_base(), naux, nexg, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+      call this%map(this%auxvar%to_base(), naux, nexg, &
+                    (/STG_BEFORE_DF/), MAP_ALL_TYPE)
 
     end if
 
@@ -201,7 +201,7 @@ contains
         call virtual_items%push_back(nodem2_idx)
       end if
     end if
-    
+
   end subroutine vx_get_send_items
 
   subroutine vx_destroy(this)
@@ -216,8 +216,8 @@ contains
     class(VirtualExchangeType) :: this
 
     deallocate (this%nexg)
-    deallocate (this%naux)  
-    deallocate (this%ianglex)    
+    deallocate (this%naux)
+    deallocate (this%ianglex)
     deallocate (this%nodem1)
     deallocate (this%nodem2)
     deallocate (this%ihc)
@@ -242,11 +242,11 @@ contains
     do i = 1, virtual_exchange_list%Count()
       ve => virtual_exchange_list%GetItem(i)
       select type (ve)
-        class is (VirtualExchangeType)
-          if (ve%id == exg_id) then
-            virtual_exg => ve
-            return
-          end if
+      class is (VirtualExchangeType)
+        if (ve%id == exg_id) then
+          virtual_exg => ve
+          return
+        end if
       end select
     end do
 
@@ -260,21 +260,20 @@ contains
     class(*), pointer :: obj_ptr
 
     obj_ptr => list%GetItem(idx)
-    virtual_exg => cast_as_virtual_exchange(obj_ptr)    
-    
+    virtual_exg => cast_as_virtual_exchange(obj_ptr)
+
   end function get_virtual_exchange_from_list
-  
+
   function cast_as_virtual_exchange(obj_ptr) result(virtual_exg)
     class(*), pointer :: obj_ptr
     class(VirtualExchangeType), pointer :: virtual_exg
 
     virtual_exg => null()
     select type (obj_ptr)
-      class is (VirtualExchangeType)
+    class is (VirtualExchangeType)
       virtual_exg => obj_ptr
     end select
 
   end function cast_as_virtual_exchange
-
 
 end module VirtualExchangeModule

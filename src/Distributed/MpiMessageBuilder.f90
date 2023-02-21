@@ -13,7 +13,7 @@ module MpiMessageBuilderModule
     integer(I4B) :: container_type
   end type
 
-  type, public :: MpiMessageBuilderType    
+  type, public :: MpiMessageBuilderType
     type(VdcPtrType), dimension(:), pointer :: vdc_models => null() !< the models to be build the message for
     type(VdcPtrType), dimension(:), pointer :: vdc_exchanges => null() !< the exchanges to be build the message for
   contains
@@ -39,7 +39,7 @@ contains
     type(VdcPtrType), dimension(:), pointer :: vdc_exchanges
 
     this%vdc_models => vdc_models
-    this%vdc_exchanges => vdc_exchanges    
+    this%vdc_exchanges => vdc_exchanges
 
   end subroutine mb_attach_data
 
@@ -54,7 +54,7 @@ contains
   subroutine mb_create_header_snd(this, rank, stage, hdrs_snd_type)
     class(MpiMessageBuilderType) :: this
     integer(I4B) :: rank
-    integer(I4B) :: stage    
+    integer(I4B) :: stage
     integer :: hdrs_snd_type
     ! local
     integer(I4B) :: i, offset, nr_types
@@ -82,9 +82,9 @@ contains
     end do
 
     nr_types = model_idxs%size + exg_idxs%size
-    allocate(blk_cnts(nr_types))
-    allocate(types(nr_types))
-    allocate(displs(nr_types))
+    allocate (blk_cnts(nr_types))
+    allocate (types(nr_types))
+    allocate (displs(nr_types))
 
     ! loop over containers
     do i = 1, model_idxs%size
@@ -100,7 +100,7 @@ contains
       blk_cnts(i + offset) = 1
       types(i + offset) = this%create_vdc_snd_hdr(vdc, stage)
     end do
-    
+
     ! create a MPI data type for the headers to send
     call MPI_Type_create_struct(nr_types, blk_cnts, displs, types, &
                                 hdrs_snd_type, ierr)
@@ -112,9 +112,9 @@ contains
     call model_idxs%destroy()
     call exg_idxs%destroy()
 
-    deallocate(blk_cnts)
-    deallocate(types)
-    deallocate(displs)
+    deallocate (blk_cnts)
+    deallocate (types)
+    deallocate (displs)
 
   end subroutine mb_create_header_snd
 
@@ -123,12 +123,12 @@ contains
     integer :: hdr_rcv_type
     ! local
     integer :: ierr
-    
+
     ! this will be for one data container, the mpi recv
     ! call will accept an array of them, no need to create
     ! an overarching contiguous type...
     call MPI_Type_contiguous(2, MPI_INTEGER, hdr_rcv_type, ierr)
-    call MPI_Type_commit(hdr_rcv_type, ierr)    
+    call MPI_Type_commit(hdr_rcv_type, ierr)
 
   end subroutine mb_create_header_rcv
 
@@ -182,7 +182,7 @@ contains
       vdc => this%vdc_exchanges(exg_idxs%at(i))%ptr
       call MPI_Get_address(vdc%id, displs(i + offset), ierr)
       blk_cnts(i + offset) = 1
-      types(i + offset) = this%create_vdc_rcv_body(vdc, rank, stage) 
+      types(i + offset) = this%create_vdc_rcv_body(vdc, rank, stage)
     end do
 
     ! create a MPI data type for the virtual data containers to receive
@@ -230,7 +230,8 @@ contains
     end do
 
     ! create the list of virtual data containers to receive
-    call MPI_Type_create_struct(nr_headers, blk_cnts, displs, types, body_snd_type, ierr)
+    call MPI_Type_create_struct(nr_headers, blk_cnts, displs, &
+                                types, body_snd_type, ierr)
     call MPI_Type_commit(body_snd_type, ierr)
     do i = 1, nr_headers
       call MPI_Type_free(types(i), ierr)
@@ -242,7 +243,7 @@ contains
 
   end subroutine mb_create_body_snd
 
-  !> @brief Create send header for virtual data container, relative  
+  !> @brief Create send header for virtual data container, relative
   !< to the field ...%id
   function create_vdc_snd_hdr(this, vdc, stage) result(new_type)
     class(MpiMessageBuilderType) :: this
@@ -264,7 +265,7 @@ contains
 
     ! rebase to id field
     displs = displs - displs(1)
-    call MPI_Type_create_struct(2, blk_cnts, displs, types, new_type, ierr)    
+    call MPI_Type_create_struct(2, blk_cnts, displs, types, new_type, ierr)
     call MPI_Type_commit(new_type, ierr)
 
   end function create_vdc_snd_hdr
@@ -297,7 +298,7 @@ contains
     call virtual_items%init()
     call vdc%get_send_items(stage, rank, virtual_items)
     new_type = this%create_vdc_body(vdc, virtual_items)
-    call virtual_items%destroy()    
+    call virtual_items%destroy()
 
   end function create_vdc_snd_body
 
@@ -305,18 +306,18 @@ contains
   !< to its id field. This is used for sending and receiving
   function create_vdc_body(this, vdc, items) result(new_type)
     class(MpiMessageBuilderType) :: this
-    class(VirtualDataContainerType), pointer :: vdc    
+    class(VirtualDataContainerType), pointer :: vdc
     type(STLVecInt) :: items
     integer :: new_type
     ! local
-    integer(I4B) :: i 
+    integer(I4B) :: i
     class(VirtualDataType), pointer :: vd
     integer :: ierr
     integer(kind=MPI_ADDRESS_KIND) :: offset
     integer, dimension(:), allocatable :: types
     integer(kind=MPI_ADDRESS_KIND), dimension(:), allocatable :: displs
     integer, dimension(:), allocatable :: blk_cnts
-    
+
     allocate (types(items%size))
     allocate (displs(items%size))
     allocate (blk_cnts(items%size))
@@ -331,7 +332,8 @@ contains
       displs(i) = displs(i) - offset
     end do
 
-    call MPI_Type_create_struct(items%size, blk_cnts, displs, types, new_type, ierr)
+    call MPI_Type_create_struct(items%size, blk_cnts, displs, &
+                                types, new_type, ierr)
     call MPI_Type_commit(new_type, ierr)
 
     do i = 1, items%size
@@ -382,10 +384,10 @@ contains
     integer :: el_type
     ! local
     type(MemoryType), pointer :: mt
-    
+
     mt => virtual_data%virtual_mt
     if (.not. associated(mt)) then
-      write(*,*) 'not associated: ', virtual_data%var_name, proc_id
+      write (*, *) 'not associated: ', virtual_data%var_name, proc_id
     end if
     if (associated(mt%intsclr)) then
       call get_mpitype_for_int(mt, el_displ, el_type)
@@ -404,15 +406,15 @@ contains
     else if (associated(mt%adbl3d)) then
       call get_mpitype_for_dbl3d(mt, el_displ, el_type)
     else
-      write(*,*) 'unsupported datatype in MPI messaging for ', &
-                 virtual_data%var_name, virtual_data%mem_path
+      write (*, *) 'unsupported datatype in MPI messaging for ', &
+        virtual_data%var_name, virtual_data%mem_path
       call ustop()
     end if
 
   end subroutine get_mpi_datatype
 
   !> @brief Local routine to free elemental mpi data types representing
-  !! the virtual data items. This can't be done generally, because some 
+  !! the virtual data items. This can't be done generally, because some
   !< (scalar) types are primitive and freeing them causes nasty errors...
   subroutine free_mpi_datatype(virtual_data, el_type)
     class(VirtualDataType), pointer :: virtual_data
@@ -462,7 +464,7 @@ contains
     call MPI_Get_address(mem%aint1d, el_displ, ierr)
     call MPI_Type_contiguous(mem%isize, MPI_INTEGER, el_type, ierr)
     call MPI_Type_commit(el_type, ierr)
-    
+
   end subroutine get_mpitype_for_int1d
 
   subroutine get_mpitype_for_int2d(mem, el_displ, el_type)
@@ -475,7 +477,7 @@ contains
     call MPI_Get_address(mem%aint2d, el_displ, ierr)
     call MPI_Type_contiguous(mem%isize, MPI_INTEGER, el_type, ierr)
     call MPI_Type_commit(el_type, ierr)
-    
+
   end subroutine get_mpitype_for_int2d
 
   subroutine get_mpitype_for_int3d(mem, el_displ, el_type)
@@ -488,7 +490,7 @@ contains
     call MPI_Get_address(mem%aint3d, el_displ, ierr)
     call MPI_Type_contiguous(mem%isize, MPI_INTEGER, el_type, ierr)
     call MPI_Type_commit(el_type, ierr)
-    
+
   end subroutine get_mpitype_for_int3d
 
   subroutine get_mpitype_for_dbl(mem, el_displ, el_type)
@@ -501,7 +503,7 @@ contains
     call MPI_Get_address(mem%dblsclr, el_displ, ierr)
     el_type = MPI_DOUBLE_PRECISION
     ! no need to commit primitive type
-    
+
   end subroutine get_mpitype_for_dbl
 
   subroutine get_mpitype_for_dbl1d(mem, el_displ, el_type)
@@ -514,7 +516,7 @@ contains
     call MPI_Get_address(mem%adbl1d, el_displ, ierr)
     call MPI_Type_contiguous(mem%isize, MPI_DOUBLE_PRECISION, el_type, ierr)
     call MPI_Type_commit(el_type, ierr)
-    
+
   end subroutine get_mpitype_for_dbl1d
 
   subroutine get_mpitype_for_dbl2d(mem, el_displ, el_type)
@@ -527,7 +529,7 @@ contains
     call MPI_Get_address(mem%adbl2d, el_displ, ierr)
     call MPI_Type_contiguous(mem%isize, MPI_DOUBLE_PRECISION, el_type, ierr)
     call MPI_Type_commit(el_type, ierr)
-    
+
   end subroutine get_mpitype_for_dbl2d
 
   subroutine get_mpitype_for_dbl3d(mem, el_displ, el_type)
@@ -540,7 +542,7 @@ contains
     call MPI_Get_address(mem%adbl3d, el_displ, ierr)
     call MPI_Type_contiguous(mem%isize, MPI_DOUBLE_PRECISION, el_type, ierr)
     call MPI_Type_commit(el_type, ierr)
-    
+
   end subroutine get_mpitype_for_dbl3d
 
 end module MpiMessageBuilderModule

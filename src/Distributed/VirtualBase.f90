@@ -15,14 +15,14 @@ module VirtualBaseModule
   !!
   !!  1) Virtualize remote memory
   !!  This concerns memory residing on another process.
-  !!  Typically, these pieces are subsets of certain model 
-  !!  and exchange data and lookup tables are kept with the 
+  !!  Typically, these pieces are subsets of certain model
+  !!  and exchange data and lookup tables are kept with the
   !!  data to manage their mapping. The stage(s) at which
   !!  to synchronize the virtual memory is stored as well.
   !!
   !!  2) Virtualize local memory
   !!  In this case no virtual memory item is created, no
-  !!  lookup tables and synchronization are necessary. 
+  !!  lookup tables and synchronization are necessary.
   !!  The virtual memory item will be pointed to the
   !!  original memory location at the requested
   !!  synchronization stage.
@@ -48,7 +48,7 @@ module VirtualBaseModule
   integer(I4B), public, parameter :: MAP_ALL_TYPE = 1
   integer(I4B), public, parameter :: MAP_NODE_TYPE = 2
   integer(I4B), public, parameter :: MAP_CONN_TYPE = 3
-  
+
   type, public, extends(VirtualDataType) :: VirtualIntType
     integer(I4B), private, pointer :: intsclr
   contains
@@ -84,7 +84,7 @@ module VirtualBaseModule
   end type
 
   type, public, extends(VirtualDataType) :: VirtualDbl2dType
-    real(DP), dimension(:,:), pointer, contiguous :: dbl2d
+    real(DP), dimension(:, :), pointer, contiguous :: dbl2d
   contains
     procedure :: vm_allocate => vm_allocate_dbl2D
     procedure :: vm_deallocate => vm_deallocate_dbl2D
@@ -92,7 +92,7 @@ module VirtualBaseModule
     procedure :: get_array => get_array_dbl2d
   end type
 
-  ! etc... 
+  ! etc...
   abstract interface
     subroutine vm_allocate_if(this, var_name, mem_path, shape)
       import VirtualDataType, I4B
@@ -138,7 +138,7 @@ contains
 
     call get_from_memorylist(this%var_name, this%mem_path, &
                              this%virtual_mt, found)
-  
+
   end subroutine vm_link
 
   subroutine vm_allocate_int(this, var_name, mem_path, shape)
@@ -225,7 +225,7 @@ contains
     if (this%is_remote) call mem_deallocate(this%dbl2d)
 
   end subroutine vm_deallocate_dbl2d
-  
+
   function get_int(this) result(val)
     class(VirtualIntType) :: this
     integer(I4B) :: val
@@ -241,7 +241,7 @@ contains
     ! local
     integer(I4B) :: i_vrt
 
-    i_vrt = i_rmt!this%remote_to_virtual(i_rmt)
+    i_vrt = i_rmt !this%remote_to_virtual(i_rmt)
     val = this%virtual_mt%aint1d(i_vrt)
 
   end function get_int1d
@@ -269,7 +269,7 @@ contains
     ! local
     integer(I4B) :: i_vrt
 
-    i_vrt = i_rmt!this%remote_to_virtual(i_rmt)
+    i_vrt = i_rmt !this%remote_to_virtual(i_rmt)
     val = this%virtual_mt%adbl1d(i_vrt)
 
   end function get_dbl1d
@@ -290,14 +290,14 @@ contains
     ! local
     integer(I4B) :: i_vrt
 
-    i_vrt = i_rmt!this%remote_to_virtual(i_rmt)
+    i_vrt = i_rmt !this%remote_to_virtual(i_rmt)
     val = this%virtual_mt%adbl2d(j_cmp, i_vrt)
 
   end function get_dbl2d
 
   function get_array_dbl2d(this) result(array)
     class(VirtualDbl2dType) :: this
-    real(DP), dimension(:,:), pointer, contiguous :: array
+    real(DP), dimension(:, :), pointer, contiguous :: array
 
     array => this%virtual_mt%adbl2d
 
@@ -313,8 +313,8 @@ contains
     vd => null()
     obj_ptr => list%GetItem(idx)
     select type (obj_ptr)
-      class is (VirtualDataType)
-        vd => obj_ptr
+    class is (VirtualDataType)
+      vd => obj_ptr
     end select
 
   end function get_virtual_data_from_list

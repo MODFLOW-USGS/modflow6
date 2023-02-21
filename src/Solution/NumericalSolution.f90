@@ -471,7 +471,8 @@ contains
     this%system_matrix => this%linear_solver%create_matrix()
     this%vec_x => this%system_matrix%create_vector(this%neq, 'X', this%memoryPath)
     this%x => this%vec_x%get_array()
-    this%vec_rhs => this%system_matrix%create_vector(this%neq, 'RHS', this%memoryPath)
+    this%vec_rhs => this%system_matrix%create_vector(this%neq, 'RHS', &
+                                                     this%memoryPath)
     this%rhs => this%vec_rhs%get_array()
     !
     call this%vec_rhs%get_ownership_range(irow_start, irow_end)
@@ -903,14 +904,14 @@ contains
         call store_error(errmsg)
       end if
     end if
-     
+
     if (this%solver_mode == 'PETSC') then
       this%linmeth = 2
     end if
 
     !
     ! -- call secondary subroutine to initialize and read linear
-    !    solver parameters IMSLINEAR solver   
+    !    solver parameters IMSLINEAR solver
     if (this%linmeth == 1) then
       allocate (this%imslinear)
       WRITE (IOUT, *) '***IMS LINEAR SOLVER WILL BE USED***'
@@ -922,8 +923,8 @@ contains
       if (ims_lin_type .eq. 1) then
         this%isymmetric = 1
       end if
-    !
-    ! -- incorrect linear solver flag
+      !
+      ! -- incorrect linear solver flag
     else if (this%linmeth == 2) then
       call this%linear_solver%initialize(this%system_matrix)
       this%nitermax = this%linear_solver%nitermax
@@ -933,7 +934,7 @@ contains
         'INCORRECT VALUE FOR LINEAR SOLUTION METHOD SPECIFIED.'
       call store_error(errmsg)
     END IF
-    
+
     !
     ! -- write message about matrix symmetry
     if (this%isymmetric == 1) then
@@ -1213,9 +1214,9 @@ contains
     call this%system_matrix%destroy()
     deallocate (this%system_matrix)
     call this%vec_x%destroy()
-    deallocate(this%vec_x)
+    deallocate (this%vec_x)
     call this%vec_rhs%destroy()
-    deallocate(this%vec_rhs)
+    deallocate (this%vec_rhs)
 
     !
     ! -- character arrays
@@ -1235,7 +1236,7 @@ contains
       nullify (this%outertab)
     end if
     !
-    ! -- arrays    
+    ! -- arrays
     call mem_deallocate(this%active)
     call mem_deallocate(this%xtemp)
     call mem_deallocate(this%dxold)
@@ -2350,7 +2351,7 @@ contains
     ! -- synchronize before AC
     call this%synchronize(STG_BEFORE_AC, this%synchronize_ctx)
     !
-    ! -- Add the cross terms to sparse    
+    ! -- Add the cross terms to sparse
     do ic = 1, this%exchangelist%Count()
       cp => GetNumericalExchangeFromList(this%exchangelist, ic)
       call cp%exg_ac(this%sparse)
@@ -2474,11 +2475,11 @@ contains
           icol_e = this%system_matrix%get_last_col_pos(irow)
           do ipos = icol_s, icol_e
             jcol = this%system_matrix%get_column(ipos)
-            if (jcol == irow) cycle            
+            if (jcol == irow) cycle
             if (this%active(jcol - this%matrix_offset) < 0) then
               this%rhs(ieq) = this%rhs(ieq) - &
                               (this%system_matrix%get_value_pos(ipos) * &
-                              this%x(jcol - this%matrix_offset))
+                               this%x(jcol - this%matrix_offset))
               call this%system_matrix%set_value_pos(ipos, DZERO)
             end if
 

@@ -24,7 +24,7 @@ module DisConnExchangeModule
     character(len=LINELENGTH), pointer :: filename => null() !< name of the input file
 
     class(NumericalModelType), pointer :: model1 => null() !< model 1
-    class(NumericalModelType), pointer :: model2 => null() !< model 2    
+    class(NumericalModelType), pointer :: model2 => null() !< model 2
     class(VirtualModelType), pointer :: v_model1 => null() !< virtual model 1
     class(VirtualModelType), pointer :: v_model2 => null() !< virtual model 2
     logical(LGP) :: is_datacopy !< when true, this exchange is just a data copy on another process and
@@ -230,7 +230,7 @@ contains
         ! -- Read and check node 1
         call this%parser%GetCellid(this%v_model1%dis_ndim%get(), cellid1, &
                                    flag_string=.true.)
-        if (associated(this%model1)) then          
+        if (associated(this%model1)) then
           nodem1 = this%model1%dis%noder_from_cellid(cellid1, &
                                                      this%parser%iuactive, &
                                                      iout, flag_string=.true.)
@@ -242,7 +242,7 @@ contains
         ! -- Read and check node 2
         call this%parser%GetCellid(this%v_model2%dis_ndim%get(), cellid2, &
                                    flag_string=.true.)
-        if (associated(this%model2)) then          
+        if (associated(this%model2)) then
           nodem2 = this%model2%dis%noder_from_cellid(cellid2, &
                                                      this%parser%iuactive, &
                                                      iout, flag_string=.true.)
@@ -340,7 +340,7 @@ contains
     call mem_allocate(this%auxname, LENAUXNAME, 0, &
                       'AUXNAME', this%memoryPath)
     call mem_allocate(this%auxname_cst, LENAUXNAME, 0, &
-                      'AUXNAME_CST', this%memoryPath)                  
+                      'AUXNAME_CST', this%memoryPath)
 
     this%nexg = 0
     this%naux = 0
@@ -385,7 +385,7 @@ contains
   function use_interface_model(this) result(use_im)
     class(DisConnExchangeType) :: this !< instance of exchange object
     logical(LGP) :: use_im !< flag whether interface model should be used
-                          !! for this exchange instead    
+                          !! for this exchange instead
 
     ! use im when one of the models is not local
     use_im = .not. (this%v_model1%is_local .and. this%v_model2%is_local)

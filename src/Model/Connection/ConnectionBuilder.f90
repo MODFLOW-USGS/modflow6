@@ -10,9 +10,9 @@ module ConnectionBuilderModule
                                    GetDisConnExchangeFromList
   use NumericalModelModule, only: NumericalModelType
   use SpatialModelConnectionModule, only: SpatialModelConnectionType, &
-                                          CastAsSpatialModelConnectionClass, &
-                                          GetSpatialModelConnectionFromList, &
-                                          AddSpatialModelConnectionToList
+                                          cast_as_smc, &
+                                          get_smc_from_list, &
+                                          add_smc_to_list
 
   implicit none
   private
@@ -126,15 +126,15 @@ contains
         if (conEx%v_model1%is_local) then
           ! create model connection for model 1
           modelConnection => createModelConnection(conEx%model1, conEx)
-          call AddSpatialModelConnectionToList(baseconnectionlist, modelConnection)
-          call AddSpatialModelConnectionToList(newConnections, modelConnection)
+          call add_smc_to_list(baseconnectionlist, modelConnection)
+          call add_smc_to_list(newConnections, modelConnection)
         end if
 
         ! and for model 2
         if (conEx%v_model2%is_local) then
           modelConnection => createModelConnection(conEx%model2, conEx)
-          call AddSpatialModelConnectionToList(baseconnectionlist, modelConnection)
-          call AddSpatialModelConnectionToList(newConnections, modelConnection)
+          call add_smc_to_list(baseconnectionlist, modelConnection)
+          call add_smc_to_list(newConnections, modelConnection)
         end if
 
         ! remove this exchange from the base list, ownership
@@ -215,7 +215,7 @@ contains
       ! will this exchange be replaced by a connection?
       keepExchange = .true.
       do iconn = 1, connections%Count()
-        conn => GetSpatialModelConnectionFromList(connections, iconn)
+        conn => get_smc_from_list(connections, iconn)
         exPtr2 => conn%primaryExchange
         if (associated(exPtr2, exPtr)) then
           ! if so, don't add it to the list
@@ -249,9 +249,9 @@ contains
 
   !> @brief Create connectivity of models which contribute to the interface
   !!
-  !! This loops over all connections and creates a halo with all 
-  !! models from the numerical solution. The model halo will be used to 
-  !! extend the interface grid to include cells from models which are 
+  !! This loops over all connections and creates a halo with all
+  !! models from the numerical solution. The model halo will be used to
+  !! extend the interface grid to include cells from models which are
   !< indirectly connected, through yet another exchange object.
   subroutine createModelConnectivity(this, connections)
     class(ConnectionBuilderType) :: this !< the connection builder object
@@ -262,7 +262,7 @@ contains
 
     ! create halo for the model connections
     do iconn = 1, connections%Count()
-      modelConn => GetSpatialModelConnectionFromList(connections, iconn)
+      modelConn => get_smc_from_list(connections, iconn)
       call modelConn%createModelHalo()
     end do
 

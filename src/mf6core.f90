@@ -13,13 +13,13 @@ module Mf6CoreModule
   use BaseModelModule, only: BaseModelType, GetBaseModelFromList
   use BaseExchangeModule, only: BaseExchangeType, GetBaseExchangeFromList
   use SpatialModelConnectionModule, only: SpatialModelConnectionType, &
-                                          GetSpatialModelConnectionFromList
+                                          get_smc_from_list
   use BaseSolutionModule, only: BaseSolutionType, GetBaseSolutionFromList
   use SolutionGroupModule, only: SolutionGroupType, GetSolutionGroupFromList
   use RunControlModule, only: RunControlType
   use SimStagesModule
   implicit none
-  
+
   class(RunControlType), pointer :: run_ctrl => null() !< the run controller for this simulation
 
 contains
@@ -70,7 +70,7 @@ contains
     ! -- modules
     use RunControlFactoryModule, only: create_run_control
     use SimulationCreateModule, only: simulation_cr
-    
+
     ! -- get the run controller for sequential or parallel builds
     run_ctrl => create_run_control()
     call run_ctrl%start()
@@ -174,7 +174,7 @@ contains
     !
     ! -- Deallocate for each connection
     do ic = 1, baseconnectionlist%Count()
-      mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
+      mc => get_smc_from_list(baseconnectionlist, ic)
       call mc%exg_da()
       deallocate (mc)
     end do
@@ -202,13 +202,13 @@ contains
 
   !> @brief print initial message
   !<
-  subroutine print_info()    
+  subroutine print_info()
     use SimModule, only: initial_message
     use TimerModule, only: print_start_time
 
     ! print initial message
     call initial_message()
-    
+
     ! get start time
     call print_start_time()
 
@@ -261,7 +261,7 @@ contains
     !
     ! -- Define each connection
     do ic = 1, baseconnectionlist%Count()
-      mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
+      mc => get_smc_from_list(baseconnectionlist, ic)
       call mc%exg_df()
     end do
     !
@@ -313,7 +313,7 @@ contains
     !
     ! -- Allocate and read all model connections
     do ic = 1, baseconnectionlist%Count()
-      mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
+      mc => get_smc_from_list(baseconnectionlist, ic)
       call mc%exg_ar()
     end do
     !
@@ -430,7 +430,7 @@ contains
     !
     ! -- Read and prepare each connection
     do ic = 1, baseconnectionlist%Count()
-      mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
+      mc => get_smc_from_list(baseconnectionlist, ic)
       call mc%exg_rp()
     end do
     !
@@ -451,7 +451,7 @@ contains
     !
     ! -- time update for each connection
     do ic = 1, baseconnectionlist%Count()
-      mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
+      mc => get_smc_from_list(baseconnectionlist, ic)
       call mc%exg_calculate_delt()
     end do
     !
@@ -609,7 +609,7 @@ contains
       !
       ! -- Write output for each connection
       do ic = 1, baseconnectionlist%Count()
-        mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
+        mc => get_smc_from_list(baseconnectionlist, ic)
         call mc%exg_ot()
       end do
       !

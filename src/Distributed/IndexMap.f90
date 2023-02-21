@@ -7,27 +7,27 @@ module IndexMapModule
   !> TODO_MJR: this should go to more general place (Utilities)
   !<
   type, public :: IndexMapType
-      integer(I4B), dimension(:), pointer, contiguous :: src_idx => null()
-      integer(I4B), dimension(:), pointer, contiguous :: tgt_idx => null()
-    contains
-      procedure :: add => add_map
-      procedure :: copy => copy_map
-      procedure, private :: add_map
-      procedure, private :: copy_map
+    integer(I4B), dimension(:), pointer, contiguous :: src_idx => null()
+    integer(I4B), dimension(:), pointer, contiguous :: tgt_idx => null()
+  contains
+    procedure :: add => add_map
+    procedure :: copy => copy_map
+    procedure, private :: add_map
+    procedure, private :: copy_map
   end type IndexMapType
 
   type, public :: IndexMapSgnType
-      integer(I4B), dimension(:), pointer, contiguous :: src_idx => null()
-      integer(I4B), dimension(:), pointer, contiguous :: tgt_idx => null()
-      integer(I4B), dimension(:), pointer, contiguous :: sign => null()
-    contains
-      procedure :: add => add_signed_map
-      procedure :: copy => copy_signed_map
-      procedure, private :: add_signed_map
-      procedure, private :: copy_signed_map
+    integer(I4B), dimension(:), pointer, contiguous :: src_idx => null()
+    integer(I4B), dimension(:), pointer, contiguous :: tgt_idx => null()
+    integer(I4B), dimension(:), pointer, contiguous :: sign => null()
+  contains
+    procedure :: add => add_signed_map
+    procedure :: copy => copy_signed_map
+    procedure, private :: add_signed_map
+    procedure, private :: copy_signed_map
   end type IndexMapSgnType
 
-  contains
+contains
 
   subroutine add_map(this, map)
     class(IndexMapType) :: this
@@ -44,8 +44,8 @@ module IndexMapModule
     ! local
     integer(I4B) :: i
 
-    allocate(this%src_idx(size(map%src_idx)))
-    allocate(this%tgt_idx(size(map%tgt_idx)))
+    allocate (this%src_idx(size(map%src_idx)))
+    allocate (this%tgt_idx(size(map%tgt_idx)))
     do i = 1, size(map%src_idx)
       this%src_idx(i) = map%src_idx(i)
     end do
@@ -58,7 +58,7 @@ module IndexMapModule
   subroutine add_signed_map(this, signed_map)
     class(IndexMapSgnType) :: this
     class(IndexMapSgnType) :: signed_map
-    
+
     call ConcatArray(this%src_idx, signed_map%src_idx)
     call ConcatArray(this%tgt_idx, signed_map%tgt_idx)
     call ConcatArray(this%sign, signed_map%sign)
@@ -70,10 +70,10 @@ module IndexMapModule
     class(IndexMapSgnType) :: signed_map
     ! local
     integer(I4B) :: i
-    
-    allocate(this%src_idx(size(signed_map%src_idx)))
-    allocate(this%tgt_idx(size(signed_map%tgt_idx)))
-    allocate(this%sign(size(signed_map%sign)))
+
+    allocate (this%src_idx(size(signed_map%src_idx)))
+    allocate (this%tgt_idx(size(signed_map%tgt_idx)))
+    allocate (this%sign(size(signed_map%sign)))
     do i = 1, size(signed_map%src_idx)
       this%src_idx(i) = signed_map%src_idx(i)
     end do
@@ -84,5 +84,5 @@ module IndexMapModule
       this%sign(i) = signed_map%sign(i)
     end do
 
-    end subroutine copy_signed_map
+  end subroutine copy_signed_map
 end module IndexMapModule

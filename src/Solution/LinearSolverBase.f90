@@ -16,7 +16,7 @@ module LinearSolverBaseModule
     integer(I4B) :: is_converged
   contains
     procedure(initialize_if), deferred :: initialize
-    procedure(solve_if), deferred:: solve
+    procedure(solve_if), deferred :: solve
     procedure(get_result_if), deferred :: get_result
     procedure(destroy_if), deferred :: destroy
 

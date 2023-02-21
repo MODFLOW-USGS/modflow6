@@ -18,16 +18,16 @@ module PetscSolverModule
   integer(I4B), parameter :: LIN_ACCEL_CG = 1
   integer(I4B), parameter :: LIN_ACCEL_BCGS = 2
 
-  type, public, extends(LinearSolverBaseType) :: PetscSolverType  
+  type, public, extends(LinearSolverBaseType) :: PetscSolverType
     KSP :: ksp_petsc
     class(PetscMatrixType), pointer :: matrix
-    Mat, pointer :: mat_petsc   
+    Mat, pointer :: mat_petsc
 
     integer(I4B) :: lin_accel_type
     real(DP) :: dvclose
     class(PetscContextType), pointer :: petsc_ctx
   contains
-    procedure :: initialize => petsc_initialize 
+    procedure :: initialize => petsc_initialize
     procedure :: solve => petsc_solve
     procedure :: get_result => petsc_get_result
     procedure :: destroy => petsc_destroy
@@ -49,9 +49,9 @@ contains
     ! local
     class(PetscSolverType), pointer :: petsc_solver
 
-    allocate(petsc_solver)
+    allocate (petsc_solver)
     allocate (petsc_solver%petsc_ctx)
-    
+
     solver => petsc_solver
 
   end function create_petsc_solver
@@ -95,7 +95,7 @@ contains
 
     this%nitermax = 100
     call PetscOptionsGetInt(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, &
-                             '-nitermax', this%nitermax, found, ierr)
+                            '-nitermax', this%nitermax, found, ierr)
     CHKERRQ(ierr)
 
   end subroutine get_options
@@ -121,7 +121,7 @@ contains
 
   end subroutine create_ksp
 
-  !> @brief Create and assign a custom convergence 
+  !> @brief Create and assign a custom convergence
   !< check for this solver
   subroutine create_convergence_check(this)
     class(PetscSolverType) :: this !< This solver instance
@@ -129,9 +129,11 @@ contains
     PetscErrorCode :: ierr
 
     this%petsc_ctx%dvclose = this%dvclose
-    call MatCreateVecs(this%mat_petsc, this%petsc_ctx%x_old, PETSC_NULL_VEC, ierr)
+    call MatCreateVecs( &
+      this%mat_petsc, this%petsc_ctx%x_old, PETSC_NULL_VEC, ierr)
     CHKERRQ(ierr)
-    call MatCreateVecs(this%mat_petsc, this%petsc_ctx%delta_x, PETSC_NULL_VEC, ierr)
+    call MatCreateVecs( &
+      this%mat_petsc, this%petsc_ctx%delta_x, PETSC_NULL_VEC, ierr)
     CHKERRQ(ierr)
 
     call KSPSetConvergenceTest(this%ksp_petsc, petsc_check_convergence, &
@@ -166,7 +168,7 @@ contains
     this%is_converged = 0
 
     ! update matrix coefficients
-    call this%matrix%update()    
+    call this%matrix%update()
     call KSPSolve(this%ksp_petsc, rhs_petsc%vec_impl, x_petsc%vec_impl, ierr)
     CHKERRQ(ierr)
 
@@ -185,7 +187,7 @@ contains
     ! local
     PetscErrorCode :: ierr
 
-    call KSPDestroy(this%ksp_petsc, ierr)    
+    call KSPDestroy(this%ksp_petsc, ierr)
     CHKERRQ(ierr)
 
     ! delete context
@@ -208,23 +210,24 @@ contains
 
   end function petsc_create_matrix
 
-  subroutine print_vec(this, vec, vec_name, kiter)    
+  subroutine print_vec(this, vec, vec_name, kiter)
     use TdisModule, only: nper, kstp
     class(PetscSolverType) :: this
     class(PetscVectorType) :: vec
     character(len=*) :: vec_name
     integer(I4B) :: kiter
-    ! local    
+    ! local
     PetscViewer :: viewer
     character(len=24) :: filename
     PetscErrorCode :: ierr
 
-    write(filename,'(2a,i0,a,i0,a,i0,a)') vec_name, '_', nper, '_', kstp, '_', kiter, '.txt'
+    write (filename, '(2a,i0,a,i0,a,i0,a)') vec_name, '_', nper, &
+      '_', kstp, '_', kiter, '.txt'
     call PetscViewerASCIIOpen(PETSC_COMM_WORLD, filename, viewer, ierr)
     CHKERRQ(ierr)
-    call VecView(vec%vec_impl, viewer, ierr)        
+    call VecView(vec%vec_impl, viewer, ierr)
     CHKERRQ(ierr)
-    call PetscViewerDestroy(viewer,ierr)
+    call PetscViewerDestroy(viewer, ierr)
     CHKERRQ(ierr)
 
   end subroutine print_vec

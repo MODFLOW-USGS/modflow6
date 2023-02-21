@@ -46,7 +46,7 @@ contains
     ! -- Open simulation list file
     iout = getunit()
     if (nr_procs > 1) then
-      write(simlstfile,'(a,i0,a)') 'mfsim.p', proc_id, '.lst'
+      write (simlstfile, '(a,i0,a)') 'mfsim.p', proc_id, '.lst'
     end if
     call openfile(iout, 0, simlstfile, 'LIST', filstat_opt='REPLACE')
     !
@@ -281,10 +281,10 @@ contains
       do
         call parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
-        call parser%GetStringCaps(model_type)        
+        call parser%GetStringCaps(model_type)
         call parser%GetString(fname)
         call parser%GetStringCaps(model_name)
-        
+
         call check_model_name(model_type, model_name)
 
         ! increment global model id
@@ -307,7 +307,7 @@ contains
                 '****ERROR. ONLY GWF SUPPORT IN PARALLEL MODE FOR NOW'
               call store_error(errmsg)
               call parser%StoreErrorUnit()
-            end if            
+            end if
           else
             write (errmsg, '(4x,a,a)') &
               '****ERROR. MULTIPLE PROCESSES IN SEQUENTIAL MODE NOT ALLOWED.'
@@ -322,7 +322,7 @@ contains
 
         select case (model_type)
         case ('GWF6')
-          call gwf_cr(fname, id_glo, model_names(id_glo))          
+          call gwf_cr(fname, id_glo, model_names(id_glo))
           num_model => GetNumericalModelFromList(basemodellist, im)
           call add_virtual_gwf_model(id_glo, model_names(id_glo), num_model)
         case ('GWT6')
@@ -404,23 +404,24 @@ contains
         ! both models on other process? then don't create it here...
         if (model_loc_idx(m1_id) == -1 .and. model_loc_idx(m2_id) == -1) then
           ! only add virtual
-          write(exg_name, '(a,i0)') 'GWF-GWF_', exg_id
+          write (exg_name, '(a,i0)') 'GWF-GWF_', exg_id
           call add_virtual_gwf_exchange(exg_name, exg_id, m1_id, m2_id)
           cycle
         end if
 
         write (iout, '(4x,a,a,i0,a,i0,a,i0)') trim(keyword), ' exchange ', &
-          exg_id, ' will be created to connect model ', m1_id, ' with model ', m2_id
+          exg_id, ' will be created to connect model ', m1_id, &
+          ' with model ', m2_id
 
         select case (keyword)
         case ('GWF6-GWF6')
-          write(exg_name, '(a,i0)') 'GWF-GWF_', exg_id
+          write (exg_name, '(a,i0)') 'GWF-GWF_', exg_id
           call gwfexchange_create(fname, exg_name, exg_id, m1_id, m2_id)
           call add_virtual_gwf_exchange(exg_name, exg_id, m1_id, m2_id)
         case ('GWF6-GWT6')
           call gwfgwt_cr(fname, exg_id, m1_id, m2_id)
         case ('GWT6-GWT6')
-          write(exg_name, '(a,i0)') 'GWT-GWT_', exg_id
+          write (exg_name, '(a,i0)') 'GWT-GWT_', exg_id
           call gwtexchange_create(fname, exg_name, exg_id, m1_id, m2_id)
           call add_virtual_gwt_exchange(exg_name, exg_id, m1_id, m2_id)
         case default
@@ -551,7 +552,7 @@ contains
             glo_mid = ifind(model_names, mname)
             if (glo_mid == -1) then
               write (errmsg, '(a,a)') 'Error.  Invalid model name: ', &
-                                      trim(mname)
+                trim(mname)
               call store_error(errmsg)
               call parser%StoreErrorUnit()
             end if

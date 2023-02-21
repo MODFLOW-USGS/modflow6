@@ -160,7 +160,7 @@ CONTAINS
     ! -- SET POINTERS TO SOLUTION STORAGE
     this%IPRIMS => IPRIMS
     this%NEQ => NEQ
-    call matrix%get_aij(this%IA, this%JA, this%AMAT)    
+    call matrix%get_aij(this%IA, this%JA, this%AMAT)
     call mem_allocate(this%NJA, 'NJA', this%memoryPath)
     this%NJA = size(this%AMAT)
     this%RHS => RHS

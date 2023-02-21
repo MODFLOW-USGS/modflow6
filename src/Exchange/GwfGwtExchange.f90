@@ -7,7 +7,7 @@ module GwfGwtExchangeModule
   use SimVariablesModule, only: errmsg
   use BaseExchangeModule, only: BaseExchangeType, AddBaseExchangeToList
   use SpatialModelConnectionModule, only: SpatialModelConnectionType, &
-                                          GetSpatialModelConnectionFromList
+                                          get_smc_from_list
   use GwtGwtConnectionModule, only: GwtGwtConnectionType, CastAsGwtGwtConnection
   use GwfGwfConnectionModule, only: GwfGwfConnectionType, CastAsGwfGwfConnection
   use GwfGwfExchangeModule, only: GwfExchangeType, &
@@ -328,7 +328,7 @@ contains
     ! loop over all connections
     gwtloop: do ic1 = 1, baseconnectionlist%Count()
 
-      conn => GetSpatialModelConnectionFromList(baseconnectionlist, ic1)
+      conn => get_smc_from_list(baseconnectionlist, ic1)
       if (.not. associated(conn%owner, gwtModel)) cycle gwtloop
 
       ! start with a GWT conn.
@@ -339,7 +339,7 @@ contains
 
       ! find matching GWF conn. in same list
       gwfloop: do ic2 = 1, baseconnectionlist%Count()
-        conn => GetSpatialModelConnectionFromList(baseconnectionlist, ic2)
+        conn => get_smc_from_list(baseconnectionlist, ic2)
 
         if (associated(conn%owner, gwfModel)) then
           objPtr => conn

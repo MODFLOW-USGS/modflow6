@@ -6,7 +6,7 @@ module PetscConvergenceModule
   private
 
   public :: petsc_check_convergence
-  
+
   type, public :: PetscContextType
     Vec :: x_old
     Vec :: delta_x
@@ -45,7 +45,7 @@ contains
 
     call VecCopy(x, petsc_context%x_old, ierr)
     CHKERRQ(ierr)
-    
+
     if (norm < petsc_context%dvclose) then
       flag = KSP_CONVERGED_HAPPY_BREAKDOWN ! Converged
     else

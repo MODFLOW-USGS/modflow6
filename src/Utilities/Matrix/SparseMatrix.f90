@@ -85,17 +85,17 @@ contains
     class(SparseMatrixType) :: this ! this sparse matrix
     integer(I4B) :: n !< the nr. of elements in the vector
     character(len=*) :: name !< the variable name (for access through memory manager)
-    character(len=*) :: mem_path !< memory path for storing the underlying memory items    
+    character(len=*) :: mem_path !< memory path for storing the underlying memory items
     class(VectorBaseType), pointer :: vec ! the vector to create
     ! local
     class(SeqVectorType), pointer :: seq_vec
 
-    allocate(seq_vec)
+    allocate (seq_vec)
     call seq_vec%create(n, name, mem_path)
     vec => seq_vec
 
   end function spm_create_vector
-  
+
   function spm_get_value_pos(this, ipos) result(value)
     class(SparseMatrixType) :: this
     integer(I4B) :: ipos
@@ -272,7 +272,7 @@ contains
     integer(I4B) :: offset
 
     offset = 0
-    
+
   end function spm_get_row_offset
 
 end module SparseMatrixModule

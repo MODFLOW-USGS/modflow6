@@ -131,7 +131,7 @@ contains
     use ObsModule, only: obs_cr
     use MemoryHelperModule, only: create_mem_path
     ! -- dummy
-    character(len=*), intent(in) :: filename !< filename for reading    
+    character(len=*), intent(in) :: filename !< filename for reading
     character(len=*) :: name !< exchange name
     integer(I4B), intent(in) :: id !< id for the exchange
     integer(I4B), intent(in) :: m1_id !< id for model 1
@@ -172,7 +172,7 @@ contains
     !
     ! -- set gwfmodel2
     m2_index = model_loc_idx(m2_id)
-    if (m2_index > 0) then      
+    if (m2_index > 0) then
       mb => GetBaseModelFromList(basemodellist, m2_index)
       select type (mb)
       type is (GwfModelType)
@@ -231,9 +231,10 @@ contains
     if (associated(this%gwfmodel1) .and. associated(this%gwfmodel2)) then
       if (this%gwfmodel1%idsoln /= this%gwfmodel2%idsoln) then
         call store_error('ERROR.  TWO MODELS ARE CONNECTED IN A GWF '// &
-                        'EXCHANGE BUT THEY ARE IN DIFFERENT SOLUTIONS. '// &
-                        'GWF MODELS MUST BE IN SAME SOLUTION: '// &
-                        trim(this%gwfmodel1%name)//' '//trim(this%gwfmodel2%name))
+                         'EXCHANGE BUT THEY ARE IN DIFFERENT SOLUTIONS. '// &
+                         'GWF MODELS MUST BE IN SAME SOLUTION: '// &
+                         trim(this%gwfmodel1%name)//' '// &
+                         trim(this%gwfmodel2%name))
         call this%parser%StoreErrorUnit()
       end if
     end if
@@ -279,7 +280,7 @@ contains
     end if
     !
     ! -- validate
-      call this%validate_exchange()
+    call this%validate_exchange()
     !
     ! -- return
     return
@@ -300,7 +301,7 @@ contains
           ' be configured with XT3D'
         call store_error(errmsg, terminate=.TRUE.)
       end if
-    end if    
+    end if
 
     ! XT3D needs angle information
     if (this%ixt3d > 0 .and. this%ianglex == 0) then
@@ -443,10 +444,10 @@ contains
   subroutine gwf_gwf_ar(this)
     ! -- modules
     ! -- dummy
-    class(GwfExchangeType) :: this !<  GwfExchangeType    
+    class(GwfExchangeType) :: this !<  GwfExchangeType
     !
     ! -- If mover is active, then call ar routine
-    if (this%inmvr > 0) call this%mvr%mvr_ar()    
+    if (this%inmvr > 0) call this%mvr%mvr_ar()
     !
     ! -- Calculate the saturated conductance for all connections
     if (.not. this%use_interface_model()) call this%calc_cond_sat()
@@ -1297,98 +1298,98 @@ contains
 
     parsed = .true.
 
-    sel_opt: select case (keyword)
+    sel_opt:select case(keyword)
     case ('PRINT_FLOWS')
-      this%iprflow = 1
-      write (iout, '(4x,a)') &
-        'EXCHANGE FLOWS WILL BE PRINTED TO LIST FILES.'
+    this%iprflow = 1
+    write (iout, '(4x,a)') &
+      'EXCHANGE FLOWS WILL BE PRINTED TO LIST FILES.'
     case ('SAVE_FLOWS')
-      this%ipakcb = -1
-      write (iout, '(4x,a)') &
-        'EXCHANGE FLOWS WILL BE SAVED TO BINARY BUDGET FILES.'
+    this%ipakcb = -1
+    write (iout, '(4x,a)') &
+      'EXCHANGE FLOWS WILL BE SAVED TO BINARY BUDGET FILES.'
     case ('ALTERNATIVE_CELL_AVERAGING')
-      call this%parser%GetStringCaps(subkey)
-      select case (subkey)
-      case ('LOGARITHMIC')
-        this%icellavg = 1
-      case ('AMT-LMK')
-        this%icellavg = 2
-      case default
-        errmsg = "Unknown cell averaging method '"//trim(subkey)//"'."
-        call store_error(errmsg)
-        call this%parser%StoreErrorUnit()
-      end select
-      write (iout, '(4x,a,a)') &
-        'CELL AVERAGING METHOD HAS BEEN SET TO: ', trim(subkey)
-    case ('VARIABLECV')
-      this%ivarcv = 1
-      write (iout, '(4x,a)') &
-        'VERTICAL CONDUCTANCE VARIES WITH WATER TABLE.'
-      call this%parser%GetStringCaps(subkey)
-      if (subkey == 'DEWATERED') then
-        this%idewatcv = 1
-        write (iout, '(4x,a)') &
-          'VERTICAL CONDUCTANCE ACCOUNTS FOR DEWATERED PORTION OF   '// &
-          'AN UNDERLYING CELL.'
-      end if
-    case ('NEWTON')
-      this%inewton = 1
-      write (iout, '(4x,a)') &
-        'NEWTON-RAPHSON method used for unconfined cells'
-    case ('GNC6')
-      call this%parser%GetStringCaps(subkey)
-      if (subkey /= 'FILEIN') then
-        call store_error('GNC6 KEYWORD MUST BE FOLLOWED BY '// &
-                         '"FILEIN" then by filename.')
-        call this%parser%StoreErrorUnit()
-      end if
-      call this%parser%GetString(fname)
-      if (fname == '') then
-        call store_error('NO GNC6 FILE SPECIFIED.')
-        call this%parser%StoreErrorUnit()
-      end if
-      this%ingnc = getunit()
-      call openfile(this%ingnc, iout, fname, 'GNC')
-      write (iout, '(4x,a)') &
-        'GHOST NODES WILL BE READ FROM ', trim(fname)
-    case ('MVR6')
-      if (this%is_datacopy) then
-        call this%parser%GetRemainingLine(line)
-        exit sel_opt
-      end if
-      call this%parser%GetStringCaps(subkey)
-      if (subkey /= 'FILEIN') then
-        call store_error('MVR6 KEYWORD MUST BE FOLLOWED BY '// &
-                         '"FILEIN" then by filename.')
-        call this%parser%StoreErrorUnit()
-      end if
-      call this%parser%GetString(fname)
-      if (fname == '') then
-        call store_error('NO MVR6 FILE SPECIFIED.')
-        call this%parser%StoreErrorUnit()
-      end if
-      this%inmvr = getunit()
-      call openfile(this%inmvr, iout, fname, 'MVR')
-      write (iout, '(4x,a)') &
-        'WATER MOVER INFORMATION WILL BE READ FROM ', trim(fname)
-    case ('OBS6')
-      if (this%is_datacopy) then
-        call this%parser%GetRemainingLine(line)
-        exit sel_opt
-      end if
-      call this%parser%GetStringCaps(subkey)
-      if (subkey /= 'FILEIN') then
-        call store_error('OBS8 KEYWORD MUST BE FOLLOWED BY '// &
-                         '"FILEIN" then by filename.')
-        call this%parser%StoreErrorUnit()
-      end if
-      this%obs%active = .true.
-      call this%parser%GetString(this%obs%inputFilename)
-      inobs = GetUnit()
-      call openfile(inobs, iout, this%obs%inputFilename, 'OBS')
-      this%obs%inUnitObs = inobs
+    call this%parser%GetStringCaps(subkey)
+    select case (subkey)
+    case ('LOGARITHMIC')
+      this%icellavg = 1
+    case ('AMT-LMK')
+      this%icellavg = 2
     case default
-      parsed = .false.
+      errmsg = "Unknown cell averaging method '"//trim(subkey)//"'."
+      call store_error(errmsg)
+      call this%parser%StoreErrorUnit()
+    end select
+    write (iout, '(4x,a,a)') &
+      'CELL AVERAGING METHOD HAS BEEN SET TO: ', trim(subkey)
+    case ('VARIABLECV')
+    this%ivarcv = 1
+    write (iout, '(4x,a)') &
+      'VERTICAL CONDUCTANCE VARIES WITH WATER TABLE.'
+    call this%parser%GetStringCaps(subkey)
+    if (subkey == 'DEWATERED') then
+      this%idewatcv = 1
+      write (iout, '(4x,a)') &
+        'VERTICAL CONDUCTANCE ACCOUNTS FOR DEWATERED PORTION OF   '// &
+        'AN UNDERLYING CELL.'
+    end if
+    case ('NEWTON')
+    this%inewton = 1
+    write (iout, '(4x,a)') &
+      'NEWTON-RAPHSON method used for unconfined cells'
+    case ('GNC6')
+    call this%parser%GetStringCaps(subkey)
+    if (subkey /= 'FILEIN') then
+      call store_error('GNC6 KEYWORD MUST BE FOLLOWED BY '// &
+                       '"FILEIN" then by filename.')
+      call this%parser%StoreErrorUnit()
+    end if
+    call this%parser%GetString(fname)
+    if (fname == '') then
+      call store_error('NO GNC6 FILE SPECIFIED.')
+      call this%parser%StoreErrorUnit()
+    end if
+    this%ingnc = getunit()
+    call openfile(this%ingnc, iout, fname, 'GNC')
+    write (iout, '(4x,a)') &
+      'GHOST NODES WILL BE READ FROM ', trim(fname)
+    case ('MVR6')
+    if (this%is_datacopy) then
+      call this%parser%GetRemainingLine(line)
+      exit sel_opt
+    end if
+    call this%parser%GetStringCaps(subkey)
+    if (subkey /= 'FILEIN') then
+      call store_error('MVR6 KEYWORD MUST BE FOLLOWED BY '// &
+                       '"FILEIN" then by filename.')
+      call this%parser%StoreErrorUnit()
+    end if
+    call this%parser%GetString(fname)
+    if (fname == '') then
+      call store_error('NO MVR6 FILE SPECIFIED.')
+      call this%parser%StoreErrorUnit()
+    end if
+    this%inmvr = getunit()
+    call openfile(this%inmvr, iout, fname, 'MVR')
+    write (iout, '(4x,a)') &
+      'WATER MOVER INFORMATION WILL BE READ FROM ', trim(fname)
+    case ('OBS6')
+    if (this%is_datacopy) then
+      call this%parser%GetRemainingLine(line)
+      exit sel_opt
+    end if
+    call this%parser%GetStringCaps(subkey)
+    if (subkey /= 'FILEIN') then
+      call store_error('OBS8 KEYWORD MUST BE FOLLOWED BY '// &
+                       '"FILEIN" then by filename.')
+      call this%parser%StoreErrorUnit()
+    end if
+    this%obs%active = .true.
+    call this%parser%GetString(this%obs%inputFilename)
+    inobs = GetUnit()
+    call openfile(inobs, iout, this%obs%inputFilename, 'OBS')
+    this%obs%inUnitObs = inobs
+    case default
+    parsed = .false.
     end select sel_opt
 
   end function parse_option
@@ -1533,8 +1534,8 @@ contains
     return
   end subroutine rewet
 
-  subroutine calc_cond_sat(this) 
-    ! -- modules   
+  subroutine calc_cond_sat(this)
+    ! -- modules
     use ConstantsModule, only: LINELENGTH, DZERO, DHALF, DONE, DPIO180
     use GwfNpfModule, only: condmean, vcond, hcond
     ! -- dummy
@@ -1861,34 +1862,34 @@ contains
       ! -- initialize the output table objects
       !    outouttab1
       if (this%v_model1%is_local) then
-      call table_cr(this%outputtab1, this%name, '    ')
-      call this%outputtab1%table_df(this%nexg, ntabcol, this%gwfmodel1%iout, &
-                                    transient=.TRUE.)
-      text = 'NUMBER'
-      call this%outputtab1%initialize_column(text, 10, alignment=TABCENTER)
-      text = 'CELLID'
-      call this%outputtab1%initialize_column(text, 20, alignment=TABLEFT)
-      text = 'RATE'
-      call this%outputtab1%initialize_column(text, 15, alignment=TABCENTER)
-      if (this%inamedbound > 0) then
-        text = 'NAME'
+        call table_cr(this%outputtab1, this%name, '    ')
+        call this%outputtab1%table_df(this%nexg, ntabcol, this%gwfmodel1%iout, &
+                                      transient=.TRUE.)
+        text = 'NUMBER'
+        call this%outputtab1%initialize_column(text, 10, alignment=TABCENTER)
+        text = 'CELLID'
         call this%outputtab1%initialize_column(text, 20, alignment=TABLEFT)
+        text = 'RATE'
+        call this%outputtab1%initialize_column(text, 15, alignment=TABCENTER)
+        if (this%inamedbound > 0) then
+          text = 'NAME'
+          call this%outputtab1%initialize_column(text, 20, alignment=TABLEFT)
         end if
       end if
       !    outouttab2
       if (this%v_model2%is_local) then
-      call table_cr(this%outputtab2, this%name, '    ')
-      call this%outputtab2%table_df(this%nexg, ntabcol, this%gwfmodel2%iout, &
-                                    transient=.TRUE.)
-      text = 'NUMBER'
-      call this%outputtab2%initialize_column(text, 10, alignment=TABCENTER)
-      text = 'CELLID'
-      call this%outputtab2%initialize_column(text, 20, alignment=TABLEFT)
-      text = 'RATE'
-      call this%outputtab2%initialize_column(text, 15, alignment=TABCENTER)
-      if (this%inamedbound > 0) then
-        text = 'NAME'
+        call table_cr(this%outputtab2, this%name, '    ')
+        call this%outputtab2%table_df(this%nexg, ntabcol, this%gwfmodel2%iout, &
+                                      transient=.TRUE.)
+        text = 'NUMBER'
+        call this%outputtab2%initialize_column(text, 10, alignment=TABCENTER)
+        text = 'CELLID'
         call this%outputtab2%initialize_column(text, 20, alignment=TABLEFT)
+        text = 'RATE'
+        call this%outputtab2%initialize_column(text, 15, alignment=TABCENTER)
+        if (this%inamedbound > 0) then
+          text = 'NAME'
+          call this%outputtab2%initialize_column(text, 20, alignment=TABLEFT)
         end if
       end if
     end if

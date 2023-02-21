@@ -88,7 +88,7 @@ contains
   subroutine sqv_print(this)
     class(SeqVectorType) :: this !< this vector
 
-    write(*,*) this%array
+    write (*, *) this%array
 
   end subroutine sqv_print
 

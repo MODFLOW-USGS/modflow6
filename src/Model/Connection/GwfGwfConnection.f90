@@ -124,7 +124,7 @@ contains
     call this%allocateScalars()
 
     this%typename = 'GWF-GWF'
-    
+
     ! determine the required size of the interface grid
     call this%setGridExtent()
 

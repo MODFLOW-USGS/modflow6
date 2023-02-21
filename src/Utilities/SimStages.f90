@@ -26,7 +26,7 @@ contains
   function STG_TO_STR(stage) result(stg_str)
     integer(I4B) :: stage
     character(len=24) :: stg_str
-    
+
     if (stage == STG_NEVER) then; stg_str = "STG_NEVER"
     else if (stage == STG_INIT) then; stg_str = "STG_INIT"
     else if (stage == STG_AFTER_MDL_DF) then; stg_str = "STG_AFTER_MDL_DF"

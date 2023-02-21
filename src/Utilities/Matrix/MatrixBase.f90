@@ -30,9 +30,9 @@ module MatrixBaseModule
     procedure(get_position_diag_if), deferred :: get_position_diag
 
     procedure(get_aij_if), deferred :: get_aij
-    procedure(get_row_offset_if), deferred :: get_row_offset !< TODO_MJR: temp, we should probably deal with 
+    procedure(get_row_offset_if), deferred :: get_row_offset !< TODO_MJR: temp, we should probably deal with
                                                              !! this by making the vectors global aware?
-    
+
   end type MatrixBaseType
 
   abstract interface
@@ -52,7 +52,7 @@ module MatrixBaseModule
       integer(I4B) :: n
       character(len=*) :: name
       character(len=*) :: mem_path
-      class(VectorBaseType), pointer :: vec      
+      class(VectorBaseType), pointer :: vec
     end function
     function get_value_pos_if(this, ipos) result(value)
       import MatrixBaseType, I4B, DP

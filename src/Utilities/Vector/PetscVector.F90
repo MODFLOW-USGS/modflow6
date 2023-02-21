@@ -25,7 +25,6 @@ module PetscVectorModule
 
 contains
 
-
   !> @brief Create a PETSc vector
   !<
   subroutine petsc_vec_create(this, n, name, mem_path)
@@ -35,12 +34,14 @@ contains
     character(len=*) :: mem_path !< memory path for storing the underlying memory items
     ! local
     PetscErrorCode :: ierr
- 
+
     call mem_allocate(this%array, n, name, mem_path)
     if (simulation_mode == 'PARALLEL' .and. nr_procs > 1) then
-      call VecCreateMPIWithArray(PETSC_COMM_WORLD, 1, n, PETSC_DECIDE, this%array, this%vec_impl, ierr)
+      call VecCreateMPIWithArray(PETSC_COMM_WORLD, 1, n, PETSC_DECIDE, &
+                                 this%array, this%vec_impl, ierr)
     else
-      call VecCreateSeqWithArray(PETSC_COMM_WORLD, 1, n, this%array, this%vec_impl, ierr)
+      call VecCreateSeqWithArray(PETSC_COMM_WORLD, 1, n, this%array, &
+                                 this%vec_impl, ierr)
     end if
     CHKERRQ(ierr)
 
@@ -60,7 +61,7 @@ contains
     call mem_deallocate(this%array)
 
   end subroutine petsc_vec_destroy
-  
+
   !> @brief Get a pointer to the underlying data array
   !< for this vector
   function petsc_vec_get_array(this) result(array)
@@ -119,7 +120,7 @@ contains
     class(PetscVectorType) :: this !< this vector
     ! local
     PetscErrorCode :: ierr
-    
+
     call VecView(this%vec_impl, PETSC_VIEWER_STDOUT_WORLD, ierr)
     CHKERRQ(ierr)
 

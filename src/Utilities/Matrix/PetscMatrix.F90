@@ -21,7 +21,7 @@ module PetscMatrixModule
     integer(I4B), dimension(:), pointer, contiguous :: ia_petsc !< IA(CSR) for petsc, contains 0-based index values
     integer(I4B), dimension(:), pointer, contiguous :: ja_petsc !< JA(CSR) for petsc, contains 0-based index values
     real(DP), dimension(:), pointer, contiguous :: amat_petsc !< A(CSR) for petsc
-    logical(LGP) :: is_parallel 
+    logical(LGP) :: is_parallel
   contains
     ! override
     procedure :: init => pm_init
@@ -73,12 +73,12 @@ contains
     allocate (this%ja_petsc(this%nnz))
     allocate (this%amat_petsc(this%nnz))
 
-    call sparse%sort(with_csr = .true.) !< PETSc has full row sorting, MF6 had diagonal first and then sorted
+    call sparse%sort(with_csr=.true.) !< PETSc has full row sorting, MF6 had diagonal first and then sorted
     call sparse%filliaja(this%ia_petsc, this%ja_petsc, ierror)
 
     ! go to C indexing for PETSc internals
-    do i = 1, this%nrow + 1  
-      this%ia_petsc(i) = this%ia_petsc(i) - 1   
+    do i = 1, this%nrow + 1
+      this%ia_petsc(i) = this%ia_petsc(i) - 1
     end do
     do i = 1, this%nnz
       this%ja_petsc(i) = this%ja_petsc(i) - 1
@@ -90,7 +90,7 @@ contains
       this%is_parallel = .true.
       call MatCreateMPIAIJWithArrays(PETSC_COMM_WORLD, &
                                      sparse%nrow, sparse%nrow, &
-                                     sparse%ncol,  sparse%ncol, &
+                                     sparse%ncol, sparse%ncol, &
                                      this%ia_petsc, this%ja_petsc, &
                                      this%amat_petsc, this%mat, &
                                      ierr)
@@ -106,7 +106,7 @@ contains
 
   end subroutine pm_init
 
-  !> @brief Copies the values from the CSR array into 
+  !> @brief Copies the values from the CSR array into
   !< the PETSc matrix object
   subroutine pm_update(this)
     class(PetscMatrixType) :: this
@@ -115,12 +115,11 @@ contains
 
     if (this%is_parallel) then
       call MatUpdateMPIAIJWithArrays(this%mat, this%nrow, this%nrow, &
-                                     this%ncol,  this%ncol, &
+                                     this%ncol, this%ncol, &
                                      this%ia_petsc, this%ja_petsc, &
                                      this%amat_petsc, ierr)
       CHKERRQ(ierr)
     end if
-    
 
   end subroutine pm_update
 
@@ -270,7 +269,7 @@ contains
     integer(I4B) :: irow_local
 
     ipos = -1
-    
+
     ! convert to local row index
     irow_local = irow - this%offset
 
@@ -302,7 +301,7 @@ contains
 
     do i = 1, this%nnz
       this%amat_petsc(i) = DZERO
-    end do   
+    end do
 
   end subroutine pm_zero_entries
 
@@ -328,8 +327,8 @@ contains
     integer(I4B), dimension(:), pointer, contiguous :: ia
     integer(I4B), dimension(:), pointer, contiguous :: ja
     real(DP), dimension(:), pointer, contiguous :: amat
-    
-    write(*,*) 'NOT IMPLEMENTED'
+
+    write (*, *) 'NOT IMPLEMENTED'
     call ustop()
 
   end subroutine pm_get_aij

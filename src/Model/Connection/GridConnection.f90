@@ -72,7 +72,7 @@ module GridConnectionModule
     integer(I4B), dimension(:), pointer, contiguous :: idxToGlobalIdx => null() !< a (flat) map from interface index to global index,
                                                                                 !! stored in mem. mgr. so can be used for debugging
     type(ListType) :: regionalModels !< the models participating in the interface
-    integer(I4B), dimension(:), pointer :: region_to_iface_map => null() !< (sparse) mapping from regional index to interface ixd    
+    integer(I4B), dimension(:), pointer :: region_to_iface_map => null() !< (sparse) mapping from regional index to interface ixd
     integer(I4B), dimension(:), pointer :: regionalModelOffset => null() !< the new offset to compactify the range of indices
     integer(I4B), pointer :: indexCount => null() !< counts the number of cells in the interface
 
@@ -87,7 +87,7 @@ module GridConnectionModule
     procedure, pass(this) :: construct
     procedure, private, pass(this) :: allocateScalars
     procedure, pass(this) :: destroy
-    procedure, pass(this) :: addToRegionalModels    
+    procedure, pass(this) :: addToRegionalModels
     procedure, pass(this) :: connectPrimaryExchange
     procedure, pass(this) :: extendConnection
     procedure, pass(this) :: getDiscretization
@@ -448,7 +448,8 @@ contains
         do iexg = 1, v_exchange%nexg%get()
           if (v_exchange%nodem1%get(iexg) == cellNbrs%cell%index) then
             ! we have a link, now add foreign neighbor
-            call this%addNeighborCell(cellNbrs, v_exchange%nodem2%get(iexg), v_m2, mask)
+            call this%addNeighborCell( &
+              cellNbrs, v_exchange%nodem2%get(iexg), v_m2, mask)
           end if
         end do
       end if
@@ -457,7 +458,8 @@ contains
         do iexg = 1, v_exchange%nexg%get()
           if (v_exchange%nodem2%get(iexg) == cellNbrs%cell%index) then
             ! we have a link, now add foreign neighbor
-            call this%addNeighborCell(cellNbrs, v_exchange%nodem1%get(iexg), v_m1, mask)
+            call this%addNeighborCell( &
+              cellNbrs, v_exchange%nodem1%get(iexg), v_m1, mask)
           end if
         end do
       end if
@@ -667,7 +669,6 @@ contains
     type(GlobalCellType), pointer :: ncell, mcell
     class(VirtualModelType), pointer :: v_m !< pointer to virtual model (readability)
 
-
     conn => this%connections
 
     do n = 1, conn%nodes
@@ -685,7 +686,7 @@ contains
 
           ! within same model, straight copy
           ipos_orig = getCSRIndex(ncell%index, mcell%index, &
-                                 v_m%con_ia%get_array(), v_m%con_ja%get_array())
+                                  v_m%con_ia%get_array(), v_m%con_ja%get_array())
 
           if (ipos_orig == 0) then
             ! periodic boundary conditions can add connections between cells in
@@ -729,7 +730,7 @@ contains
     type(ConnectionsType), pointer :: conn
 
     conn => this%connections
-    
+
     do inx = 1, this%haloExchanges%size
       v_exg => get_virtual_exchange(this%haloExchanges%at(inx))
 
@@ -766,7 +767,8 @@ contains
           conn%cl1(isym) = v_exg%cl1%get(iexg)
           conn%cl2(isym) = v_exg%cl2%get(iexg)
           if (v_exg%ianglex%get() > 0) then
-            conn%anglex(isym) = v_exg%auxvar%get(v_exg%ianglex%get(), iexg) * DPIO180
+            conn%anglex(isym) = &
+              v_exg%auxvar%get(v_exg%ianglex%get(), iexg) * DPIO180
           end if
         else
           conn%cl1(isym) = v_exg%cl2%get(iexg)
@@ -1047,13 +1049,14 @@ contains
     ! local
     integer(I4B) :: i, j, iloc, jloc
     integer(I4B) :: im, ix, mid, n
-    integer(I4B) :: ipos, ipos_model    
+    integer(I4B) :: ipos, ipos_model
     type(STLVecInt) :: model_ids
     type(STLVecInt) :: src_idx_tmp, tgt_idx_tmp, sign_tmp
     class(VirtualExchangeType), pointer :: v_exg
     class(VirtualModelType), pointer :: vm
     class(VirtualModelType), pointer :: v_model1, v_model2
     type(InterfaceMapType), pointer :: imap
+    integer(I4B), dimension(:), pointer, contiguous :: ia_ptr, ja_ptr
 
     allocate (this%interfaceMap)
     imap => this%interfaceMap
@@ -1111,9 +1114,9 @@ contains
           ! i and j are now in same model (mid)
           iloc = this%idxToGlobal(i)%index
           jloc = this%idxToGlobal(j)%index
-          ipos_model = getCSRIndex(iloc, jloc, &
-            this%idxToGlobal(i)%v_model%con_ia%get_array(), &
-            this%idxToGlobal(i)%v_model%con_ja%get_array())
+          ia_ptr => this%idxToGlobal(i)%v_model%con_ia%get_array()
+          ja_ptr => this%idxToGlobal(i)%v_model%con_ja%get_array()
+          ipos_model = getCSRIndex(iloc, jloc, ia_ptr, ja_ptr)
           call src_idx_tmp%push_back(ipos_model)
           call tgt_idx_tmp%push_back(ipos)
         end do

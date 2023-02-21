@@ -23,7 +23,6 @@ module SimVariablesModule
   integer(I4B) :: nr_procs = 1
   character(len=LENMODELNAME), dimension(:), allocatable :: model_names !< all model names in the (global) simulation
   integer(I4B), dimension(:), allocatable :: model_loc_idx !< equals the local index into the basemodel list (-1 when not available)
-  
 
   character(len=MAXCHARLEN) :: errmsg !< error message string
   character(len=MAXCHARLEN) :: warnmsg !< warning message string
