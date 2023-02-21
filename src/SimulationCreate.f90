@@ -177,6 +177,7 @@ contains
           write (iout, '(4x, a, i0)') &
             'MAXIMUM NUMBER OF ERRORS THAT WILL BE STORED IS ', imax
         case ('PARALLEL')
+          call parser%DevOpt()
           simulation_mode = 'PARALLEL'
           write (iout, '(4x, a)') 'RUNNING SIMULATION IN PARALLEL MODE'
         case default
