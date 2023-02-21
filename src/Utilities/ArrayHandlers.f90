@@ -30,7 +30,7 @@ module ArrayHandlersModule
   end interface
 
   interface ConcatArray
-      module procedure concat_integer
+    module procedure concat_integer
   end interface
 
   interface ifind
@@ -342,14 +342,14 @@ contains
     call sim_message(line)
     call stop_with_error(138)
 
-  end subroutine extend_integer  
+  end subroutine extend_integer
 
   !> @brief Grows or allocated the array with the passed increment,
   !< the old value of the array pointer is rendered invalid
   subroutine extend_string(array, increment)
     character(len=*), dimension(:), pointer, contiguous :: array
     integer(I4B), optional :: increment
-    ! local    
+    ! local
     integer(I4B) :: inc_local
     integer(I4B) :: i, old_size, new_size
     character(len=len(array)), dimension(:), pointer, contiguous :: temp_array
@@ -364,15 +364,15 @@ contains
       old_size = size(array)
       new_size = old_size + inc_local
       temp_array => array
-      allocate(array(new_size))
+      allocate (array(new_size))
       do i = 1, old_size
         array(i) = temp_array(i)
       end do
-      deallocate(temp_array)
+      deallocate (temp_array)
     else
-      allocate(array(inc_local))
+      allocate (array(inc_local))
     end if
-    
+
   end subroutine extend_string
 
   subroutine concat_integer(array, array_to_add)
@@ -380,7 +380,7 @@ contains
     integer(I4B), dimension(:), pointer, contiguous :: array_to_add
     ! local
     integer(I4B) :: i, old_size
-    
+
     old_size = size(array)
     call ExtendPtrArray(array, increment=size(array_to_add))
     do i = 1, size(array_to_add)
