@@ -1198,9 +1198,12 @@ contains
     integer(I4B) :: locdrejinfmax
     integer(I4B) :: locdrchmax
     integer(I4B) :: locdseepmax
+    integer(I4B) :: locdqfrommvrmax
     integer(I4B) :: ntabrows
     integer(I4B) :: ntabcols
     integer(I4B) :: n
+    real(DP) :: q
+    real(DP) :: q0
     real(DP) :: qtolfact
     real(DP) :: drejinf
     real(DP) :: drejinfmax
@@ -1208,6 +1211,8 @@ contains
     real(DP) :: drchmax
     real(DP) :: dseep
     real(DP) :: dseepmax
+    real(DP) :: dqfrommvr
+    real(DP) :: dqfrommvrmax
     ! format
 ! --------------------------------------------------------------------------
     !
@@ -1217,9 +1222,11 @@ contains
     locdrejinfmax = 0
     locdrchmax = 0
     locdseepmax = 0
+    locdqfrommvrmax = 0
     drejinfmax = DZERO
     drchmax = DZERO
     dseepmax = DZERO
+    dqfrommvrmax = DZERO
     !
     ! -- if not saving package convergence data on check convergence if
     !    the model is considered converged
@@ -1236,6 +1243,9 @@ contains
         ntabrows = 1
         ntabcols = 9
         if (this%iseepflag == 1) then
+          ntabcols = ntabcols + 2
+        end if
+        if (this%imover == 1) then
           ntabcols = ntabcols + 2
         end if
         !
@@ -1270,6 +1280,12 @@ contains
           tag = 'dseepmax_loc'
           call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
         end if
+        if (this%imover == 1) then
+          tag = 'dqfrommvrmax'
+          call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+          tag = 'dqfrommvrmax_loc'
+          call this%pakcsvtab%initialize_column(tag, 16, alignment=TABLEFT)
+        end if
       end if
     end if
     !
@@ -1292,6 +1308,14 @@ contains
           dseep = qtolfact * (this%gwd0(n) - this%gwd(n))
         end if
         !
+        ! -- q from mvr
+        dqfrommvr = DZERO
+        if (this%imover == 1) then
+          q = this%pakmvrobj%get_qfrommvr(n)
+          q0 = this%pakmvrobj%get_qfrommvr0(n)
+          dqfrommvr = qtolfact * (q0 - q)
+        end if
+        !
         ! -- evaluate magnitude of differences
         if (n == 1) then
           drejinfmax = drejinf
@@ -1300,6 +1324,8 @@ contains
           locdrchmax = n
           dseepmax = dseep
           locdseepmax = n
+          dqfrommvrmax = dqfrommvr
+          locdqfrommvrmax = n
         else
           if (ABS(drejinf) > abs(drejinfmax)) then
             drejinfmax = drejinf
@@ -1312,6 +1338,10 @@ contains
           if (ABS(dseep) > abs(dseepmax)) then
             dseepmax = dseep
             locdseepmax = n
+          end if
+          if (ABS(dqfrommvr) > abs(dqfrommvrmax)) then
+            dqfrommvrmax = dqfrommvr
+            locdqfrommvrmax = n
           end if
         end if
       end do final_check
@@ -1337,6 +1367,14 @@ contains
           cpak = trim(cloc)
         end if
       end if
+      if (this%imover == 1) then
+        if (ABS(dqfrommvrmax) > abs(dpak)) then
+          ipak = locdqfrommvrmax
+          dpak = dqfrommvrmax
+          write (cloc, "(a,'-',a)") trim(this%packName), 'qfrommvr'
+          cpak = trim(cloc)
+        end if
+      end if
       !
       ! -- write convergence data to package csv
       if (this%ipakcsv /= 0) then
@@ -1354,6 +1392,10 @@ contains
         if (this%iseepflag == 1) then
           call this%pakcsvtab%add_term(dseepmax)
           call this%pakcsvtab%add_term(locdseepmax)
+        end if
+        if (this%imover == 1) then
+          call this%pakcsvtab%add_term(dqfrommvrmax)
+          call this%pakcsvtab%add_term(locdqfrommvrmax)
         end if
         !
         ! -- finalize the package csv

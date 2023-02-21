@@ -44,6 +44,7 @@ This repository contains an `./autotest` folder with python scripts for building
 
 * [modflowpy/pymake](https://github.com/modflowpy/pymake)
 * [modflowpy/flopy](https://github.com/modflowpy/flopy)
+* [MODFLOW-USGS/modflow6-examples](https://github.com/MODFLOW-USGS/modflow6-examples)
 * [MODFLOW-USGS/modflow6-testmodels](https://github.com/MODFLOW-USGS/modflow6-testmodels)
 * [MODFLOW-USGS/modflow6-largetestmodels](https://github.com/MODFLOW-USGS/modflow6-largetestmodels)
 * [MODFLOW-USGS/executables](https://github.com/MODFLOW-USGS/executables)

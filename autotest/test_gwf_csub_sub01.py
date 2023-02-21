@@ -1,48 +1,16 @@
 import os
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import running_on_CI, testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 paktest = "csub"
 budtol = 1e-2
-
 ex = ["csub_sub01a", "csub_sub01b"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-ddir = "data"
-
 compression_indices = [None, True]
-
 ndcell = [19] * len(ex)
-
-# run all examples on Travis
-# continuous_integration = [True for idx in range(len(exdirs))]
-# the delay bed problems only run on the development version of MODFLOW-2005
-# set travis to True when version 1.13.0 is released
-continuous_integration = [True for idx in range(len(exdirs))]
-
-# set replace_exe to None to use default executable
-replace_exe = None
 
 # static model data
 # spatial discretization
@@ -254,7 +222,7 @@ def build_model(idx, dir):
     sim = get_model(idx, ws)
 
     # build MODFLOW-2005 files
-    ws = os.path.join(dir, "mf6-regression")
+    ws = os.path.join(dir, "mf6_regression")
     mc = get_model(idx, ws)
 
     return sim, mc
@@ -271,7 +239,7 @@ def eval_sub(sim):
         assert False, f'could not load data from "{fpth}"'
 
     # comparison total compaction results
-    fpth = os.path.join(sim.simpath, "mf6-regression", "csub_obs.csv")
+    fpth = os.path.join(sim.simpath, "mf6_regression", "csub_obs.csv")
     try:
         tc0 = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -409,50 +377,21 @@ def cbc_compare(sim):
         sim.success = True
         print("    " + msg)
 
-    return
 
-
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, exdir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, exdir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test model
-    test.build_mf6_models(build_model, idx, exdir)
-
-    test.run_mf6(
-        Simulation(
-            exdir,
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework()
+    test.build(build_model, idx, str(function_tmpdir))
+    test.run(
+        TestSimulation(
+            name=name,
+            exe_dict=targets,
             exfunc=eval_sub,
             idxsim=idx,
             mf6_regression=True,
-        )
+        ),
+        str(function_tmpdir),
     )
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test model
-    for idx, exdir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, exdir)
-        sim = Simulation(
-            exdir,
-            exfunc=eval_sub,
-            idxsim=idx,
-            mf6_regression=True,
-        )
-        test.run_mf6(sim)
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()

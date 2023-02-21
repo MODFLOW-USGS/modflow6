@@ -1,30 +1,14 @@
 import math
 import os
-import shutil
 
+import flopy
 import numpy as np
 import pytest
+from flopy.utils.lgrutil import Lgr
+from framework import TestFramework
+from simulation import TestSimulation
 
-import targets
-
-try:
-    import flopy
-    from flopy.utils.lgrutil import Lgr
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
-
-mf6exe = os.path.abspath(targets.target_dict["mf6"])
-
-name = "gwf"
 mvr_scens = ["mltmvr", "mltmvr5050", "mltmvr7525"]
-ws = os.path.join("temp", name)
-exdirs = [f"{ws}-{s}" for s in mvr_scens]
 sim_workspaces = []
 gwf_names = []
 
@@ -583,9 +567,9 @@ def instantiate_base_simulation(sim_ws, gwfname, gwfnamec):
     sim_workspaces.append(sim_ws)
     gwf_names.append(gwfname)
     sim = flopy.mf6.MFSimulation(
-        sim_name=name,
+        sim_name="gwf",
         version="mf6",
-        exe_name=mf6exe,
+        exe_name="mf6",
         sim_ws=sim_ws,
         continue_=False,
     )
@@ -837,7 +821,7 @@ def instantiate_base_simulation(sim_ws, gwfname, gwfnamec):
         nexg=len(exchange_data),
         exchangedata=exchange_data,
         pname="EXG-1",
-        filename=f"{name}.exg",
+        filename=f"gwf.exg",
     )
 
     return sim, gwf, gwfc
@@ -982,7 +966,7 @@ def add_sim_mvr(sim, gwfname, gwfnamec, remaining_frac=None):
         maxpackages=maxpackages,
         packages=mvrpack_sim,
         perioddata=mvrspd,
-        filename=f"{name}.mvr",
+        filename=f"gwf.mvr",
     )
 
 
@@ -993,8 +977,8 @@ def build_model(idx, sim_ws):
         scen_conns[idx],
         parent_mvr_frac[idx],
     )
-    scen_nm_parent = name + "_" + scen_nm + "_p"
-    scen_nm_child = name + "_" + scen_nm + "_c"
+    scen_nm_parent = "gwf_" + scen_nm + "_p"
+    scen_nm_child = "gwf_" + scen_nm + "_c"
     sim, gwf, gwfc = instantiate_base_simulation(
         sim_ws, scen_nm_parent, scen_nm_child
     )
@@ -1021,9 +1005,9 @@ def check_simulation_output(sim):
     gwf_srch_str2 = " WATER MOVER PACKAGE (MVR) FLOW RATES   "
     sim_srch_str = " WATER MOVER PACKAGE (MVR) FLOW RATES "
 
-    # cur_ws, gwfparent = exdirs[idx], gwf_names[idx]
-    cur_ws = exdirs[idx]
-    gwfparent = name + "_" + mvr_scens[idx] + "_p"
+    # cur_ws, gwfparent = ex[idx], gwf_names[idx]
+    cur_ws = sim.simpath
+    gwfparent = "gwf_" + mvr_scens[idx] + "_p"
     with open(os.path.join(cur_ws, gwfparent + ".lst"), "r") as gwf_lst, open(
         os.path.join(cur_ws, "mfsim.lst"), "r"
     ) as sim_lst:
@@ -1130,48 +1114,19 @@ def check_simulation_output(sim):
         )
 
 
-# - No need to change any code below
-
-
 @pytest.mark.parametrize(
-    "idx, exdir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(mvr_scens)),
 )
-def test_mf6model(idx, exdir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    test.build_mf6_models(build_model, idx, exdir)
-
-    test.run_mf6(
-        Simulation(
-            exdir,
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework()
+    test.build(build_model, idx, str(function_tmpdir))
+    test.run(
+        TestSimulation(
+            name=name,
+            exe_dict=targets,
             exfunc=check_simulation_output,
             idxsim=idx,
-        )
+        ),
+        str(function_tmpdir),
     )
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    for idx, exdir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, exdir)
-        sim = Simulation(
-            exdir,
-            exfunc=check_simulation_output,
-            idxsim=idx,
-        )
-        test.run_mf6(sim)
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()

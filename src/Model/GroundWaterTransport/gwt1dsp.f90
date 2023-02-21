@@ -115,14 +115,6 @@ contains
       if (dspobj%iout > 0) then
         write (dspobj%iout, fmtdsp) dspobj%inunit
       end if
-      !
-      ! -- Initialize block parser
-      call dspobj%parser%Initialize(dspobj%inunit, dspobj%iout)
-      !
-      ! -- Use the input data model routines to load the input data
-      !    into memory
-      call input_load(dspobj%parser, 'DSP6', 'GWT', 'DSP', dspobj%name_model, &
-                      'DSP', [character(len=LENPACKAGETYPE) ::], iout)
     end if
     !
     ! -- Return

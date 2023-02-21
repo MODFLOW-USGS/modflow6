@@ -34,7 +34,7 @@ jobs:
           cache-env: true
 
       - name: Check Fortran source formatting
-        run: .github/common/fortran-format-check.sh
+        run: python .github/common/fortran_format_check.py
 
   build:
     name: Build (gfortran 12)
@@ -71,11 +71,66 @@ jobs:
       - name: Meson test
         run: meson test --verbose --no-rebuild -C builddir
 
+  smoke_test:
+    name: Smoke test (gfortran 12)
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash -l {0}
+    env:
+      FC: gfortran
+      GCC_V: 12
+    steps:
+      - name: Checkout modflow6
+        uses: actions/checkout@v3
+        with:
+          path: modflow6
+
+      - name: Setup GNU Fortran ${{ env.GCC_V }}
+        uses: awvwgk/setup-fortran@main
+        with:
+          compiler: gcc
+          version: ${{ env.GCC_V }}
+
+      - name: Setup Micromamba
+        uses: mamba-org/provision-with-micromamba@main
+        with:
+          environment-file: modflow6/environment.yml
+          cache-downloads: true
+          cache-env: true
+
+      - name: Build modflow6
+        working-directory: modflow6
+        run: |
+          meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
+          meson install -C builddir
+          meson test --verbose --no-rebuild -C builddir
+
+      - name: Update flopy
+        working-directory: modflow6/autotest
+        run: python update_flopy.py
+
+      - name: Get executables
+        working-directory: modflow6/autotest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pytest -v --durations 0 get_exes.py
+
+      - name: Test programs
+        working-directory: modflow6/autotest
+        run: |
+          if [ "${{ github.ref_name }}" == "master" ]; then
+            pytest -v -n auto --durations 0 -m "not slow and not regression and not developmode"
+          else
+            pytest -v -n auto --durations 0 -S
+          fi
+
   test_gfortran_latest:
     name: Test (gfortran 12)
     needs:
       - lint
       - build
+      - smoke_test
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -99,12 +154,6 @@ jobs:
           repository: MODFLOW-USGS/modflow6-testmodels
           path: modflow6-testmodels
 
-      - name: Checkout modflow6-examples
-        uses: actions/checkout@v3
-        with:
-          repository: MODFLOW-USGS/modflow6-examples
-          path: modflow6-examples
-
       - name: Setup GNU Fortran ${{ env.GCC_V }}
         uses: awvwgk/setup-fortran@main
         with:
@@ -117,24 +166,6 @@ jobs:
           environment-file: modflow6/environment.yml
           cache-downloads: true
           cache-env: true
-
-      - name: Cache modflow6 examples
-        id: cache-examples
-        uses: actions/cache@v3
-        with:
-          path: modflow6-examples/examples
-          key: modflow6-examples-${{ hashFiles('modflow6-examples/scripts/**') }}
-
-      - name: Install extra Python packages
-        if: steps.cache-examples.outputs.cache-hit != 'true'
-        working-directory: modflow6-examples/etc
-        run: |
-          pip install -r requirements.pip.txt
-
-      - name: Build example models
-        if: steps.cache-examples.outputs.cache-hit != 'true'
-        working-directory: modflow6-examples/etc
-        run: python ci_build_files.py
 
       - name: Build modflow6
         working-directory: modflow6
@@ -149,15 +180,19 @@ jobs:
 
       - name: Get executables
         working-directory: modflow6/autotest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: pytest -v --durations 0 get_exes.py
 
       - name: Test programs
         working-directory: modflow6/autotest
+        env:
+          REPOS_PATH: ${{ github.workspace }}
         run: |
           if [ "${{ github.ref_name }}" == "master" ]; then
-            pytest -v -n auto --durations 0 -m "not developmode"
+            pytest -v -n auto --durations 0 -m "not large and not developmode"
           else
-            pytest -v -n auto --durations 0
+            pytest -v -n auto --durations 0 -m "not large"
           fi
 
       - name: Test scripts
@@ -171,6 +206,7 @@ jobs:
     needs:
       - lint
       - build
+      - smoke_test
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -221,15 +257,19 @@ jobs:
       
       - name: Get executables
         working-directory: modflow6/autotest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: pytest -v --durations 0 get_exes.py
 
       - name: Test modflow6
         working-directory: modflow6/autotest
+        env:
+          REPOS_PATH: ${{ github.workspace }}
         run: |
           if [ "${{ github.ref_name }}" == "master" ]; then
-            pytest -v -n auto --durations 0 -m "not developmode"
+            pytest -v -n auto --durations 0 -m "not large and not developmode"
           else
-            pytest -v -n auto --durations 0
+            pytest -v -n auto --durations 0 -m "not large"
           fi
 
   test_ifort:
@@ -237,6 +277,7 @@ jobs:
     needs:
       - lint
       - build
+      - smoke_test
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -258,12 +299,6 @@ jobs:
           repository: MODFLOW-USGS/modflow6-testmodels
           path: modflow6-testmodels
 
-      - name: Checkout modflow6-examples
-        uses: actions/checkout@v3
-        with:
-          repository: MODFLOW-USGS/modflow6-examples
-          path: modflow6-examples
-
       - name: Setup Micromamba
         uses: mamba-org/provision-with-micromamba@main
         with:
@@ -281,23 +316,6 @@ jobs:
           # https://github.com/modflowpy/install-intelfortran-action#conda-scripts
           $mamba_bin = "C:\Users\runneradmin\micromamba-root\envs\modflow6\Scripts"
           echo $mamba_bin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-      - name: Cache modflow6 examples
-        id: cache-examples
-        uses: actions/cache@v3
-        with:
-          path: modflow6-examples/examples
-          key: modflow6-examples-${{ hashFiles('modflow6-examples/scripts/**') }}
-
-      - name: Install extra Python packages
-        if: steps.cache-examples.outputs.cache-hit != 'true'
-        working-directory: modflow6-examples/etc
-        run: pip install -r requirements.pip.txt
-
-      - name: Build example models
-        if: steps.cache-examples.outputs.cache-hit != 'true'
-        working-directory: modflow6-examples/etc
-        run: python ci_build_files.py
 
       - name: Update version files
         working-directory: modflow6/distribution
@@ -327,33 +345,41 @@ jobs:
       - name: Get executables
         if: runner.os != 'Windows'
         working-directory: modflow6/autotest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: pytest -v --durations 0 get_exes.py
           
       - name: Get executables (Windows)
         if: runner.os == 'Windows'
         working-directory: modflow6/autotest
         shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: pytest -v --durations 0 get_exes.py
 
       - name: Test programs
         if: runner.os != 'Windows'
         working-directory: modflow6/autotest
+        env:
+          REPOS_PATH: ${{ github.workspace }}
         run: |
           if [ "${{ github.ref_name }}" == "master" ]; then
-            pytest -v -n auto --durations 0 -m "not developmode"
+            pytest -v -n auto --durations 0 -m "not large and not developmode"
           else
-            pytest -v -n auto --durations 0
+            pytest -v -n auto --durations 0 -m "not large"
           fi
 
       - name: Test programs (Windows)
         if: runner.os == 'Windows'
         working-directory: modflow6/autotest
         shell: pwsh
+        env:
+          REPOS_PATH: ${{ github.workspace }}
         run: |
           if ( "${{ github.ref_name }}" -eq "master" ) {
-            pytest -v -n auto --durations 0 -m "not developmode"
+            pytest -v -n auto --durations 0 -m "not large and not developmode"
           } else {
-            pytest -v -n auto --durations 0
+            pytest -v -n auto --durations 0 -m "not large"
           }
 
       - name: Test scripts

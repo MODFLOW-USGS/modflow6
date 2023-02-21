@@ -4,35 +4,14 @@ correct.
 """
 import os
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 cell_dimensions = (300,)
 ex = ["gwf_obs02"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-ddir = "data"
-
 h0, h1 = 1.0, 0.0
 nlay, nrow, ncol = 1, 10, 10
 
@@ -147,10 +126,9 @@ def build_model(idx, dir):
 
 def eval_model(sim):
     print("evaluating model observations...")
-    name = ex[sim.idxsim]
     headcsv = np.empty((nlay, nrow, ncol), dtype=float)
     for i in range(nrow):
-        fname = f"{name}.{i}.obs.csv"
+        fname = f"{sim.name}.{i}.obs.csv"
         print(f"Loading and testing {fname}")
         fname = os.path.join(sim.simpath, fname)
         rec = np.genfromtxt(fname, names=True, delimiter=",", deletechars="")
@@ -164,7 +142,7 @@ def eval_model(sim):
             assert obsname_true == obsname_found, errmsg
         headcsv[0, i, :] = np.array(rec.tolist()[1:])
 
-    fn = os.path.join(sim.simpath, f"{name}.hds")
+    fn = os.path.join(sim.simpath, f"{sim.name}.hds")
     hobj = flopy.utils.HeadFile(fn)
     headbin = hobj.get_data()
 
@@ -172,42 +150,18 @@ def eval_model(sim):
         headcsv, headbin
     ), "headcsv not equal head from binary file"
 
-    return
 
-
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "name",
+    ex,
 )
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build all of the models
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_model, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # build all of the models
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_model, idxsim=idx)
-        test.run_mf6(sim)
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, 0, ws)
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_model, idxsim=0
+        ),
+        ws,
+    )

@@ -1,7 +1,7 @@
 project(
   'MODFLOW 6',
   'fortran',
-  version: '6.4.1',
+  version: '6.5.0',
   meson_version: '>= 0.59.0',
   default_options : [
     'b_vscrt=static_from_buildtype', # Link runtime libraries statically on Windows

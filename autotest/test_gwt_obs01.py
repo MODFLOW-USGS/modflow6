@@ -6,28 +6,16 @@ Test that the obs concentrations match the oc concentrations
 
 import os
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = [
     "gwt_obs01a",
 ]
 scheme = ["upstream"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-ddir = "data"
 
 
 def build_model(idx, dir):
@@ -257,25 +245,17 @@ def build_model(idx, dir):
 def eval_transport(sim):
     print("evaluating transport...")
 
-    name = ex[sim.idxsim]
+    name = sim.name
     gwtname = "gwt_" + name
 
     # MODFLOW 6 output control concentrations
     fpth = os.path.join(sim.simpath, f"{gwtname}.ucn")
-    try:
-        cobj = flopy.utils.HeadFile(
-            fpth, precision="double", text="CONCENTRATION"
-        )
-        conc = cobj.get_alldata()
-    except:
-        assert False, f'could not load data from "{fpth}"'
+    cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
+    conc = cobj.get_alldata()
 
     # MODFLOW 6 observation package concentrations
     fpth = os.path.join(sim.simpath, "conc_obs.csv")
-    try:
-        tc = np.genfromtxt(fpth, names=True, delimiter=",")
-    except:
-        assert False, f'could not load data from "{fpth}"'
+    tc = np.genfromtxt(fpth, names=True, delimiter=",")
 
     assert np.allclose(
         tc["1_1_10"], conc[:, 0, 0, 9]
@@ -285,42 +265,18 @@ def eval_transport(sim):
         tc["1_1_50"], conc[:, 0, 0, 49]
     ), "obs concentrations do not match oc concentrations."
 
-    return
 
-
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "name",
+    ex,
 )
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_transport, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_transport, idxsim=idx)
-        test.run_mf6(sim)
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, 0, ws)
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=0
+        ),
+        ws,
+    )

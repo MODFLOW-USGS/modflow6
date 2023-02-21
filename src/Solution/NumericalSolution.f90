@@ -36,6 +36,8 @@ module NumericalSolutionModule
   use LinearSolverBaseModule
   use LinearSolverFactory, only: create_linear_solver
   use SparseMatrixModule ! TODO_MJR: temporary
+  use MatrixBaseModule
+  use SparseMatrixModule
 
   implicit none
   private
@@ -217,6 +219,7 @@ contains
     type(NumericalSolutionType), pointer :: solution => null()
     class(BaseSolutionType), pointer :: solbase => null()
     character(len=LENSOLUTIONNAME) :: solutionname
+    class(SparseMatrixType), pointer :: matrix_impl
     !
     ! -- Create a new solution and add it to the basesolutionlist container
     allocate (solution)
@@ -227,6 +230,9 @@ contains
     solution%memoryPath = create_mem_path(solutionname)
     allocate (solution%modellist)
     allocate (solution%exchangelist)
+    !
+    allocate (matrix_impl)
+    solution%system_matrix => matrix_impl
     !
     call solution%allocate_scalars()
     !

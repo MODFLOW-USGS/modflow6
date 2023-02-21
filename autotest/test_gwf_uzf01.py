@@ -6,33 +6,13 @@
 
 import os
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["gwf_uzf01a"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-ddir = "data"
 nlay, nrow, ncol = 100, 1, 1
 
 
@@ -236,8 +216,8 @@ def build_model(idx, exdir):
 def eval_flow(sim):
     print("evaluating flow...")
 
-    name = ex[sim.idxsim]
-    ws = exdirs[sim.idxsim]
+    name = sim.name
+    ws = sim.simpath
 
     # check binary grid file
     fname = os.path.join(ws, name + ".dis.grb")
@@ -281,41 +261,18 @@ def eval_flow(sim):
             "data in the cell-by-cell file."
         )
 
-    return
 
-
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, exdir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, exdir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, exdir)
-
-    # run the test model
-    test.run_mf6(Simulation(exdir, exfunc=eval_flow, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test model
-    for idx, exdir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, exdir)
-        sim = Simulation(exdir, exfunc=eval_flow, idxsim=idx)
-        test.run_mf6(sim)
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, idx, ws)
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_flow, idxsim=idx
+        ),
+        ws,
+    )

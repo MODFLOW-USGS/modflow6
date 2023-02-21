@@ -1,26 +1,10 @@
 import os
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import running_on_CI, testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = (
     "csub_sk04a",
@@ -28,9 +12,6 @@ ex = (
     "csub_sk04c",
     "csub_sk04d",
 )
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
 newtons = (True, False, True, False)
 stress_lag = (
     None,
@@ -38,11 +19,6 @@ stress_lag = (
     True,
     True,
 )
-
-ddir = "data"
-
-# set replace_exe to None to use default executable
-replace_exe = None
 
 htol = None
 dtol = 1e-3
@@ -351,54 +327,21 @@ def eval_comp(sim):
         sim.success = True
         print("    " + msg)
 
-    return
-
-
-# - No need to change any code below
-
 
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # determine if running on CI infrastructure
-    is_CI = running_on_CI()
-    r_exe = None
-    if not is_CI:
-        if replace_exe is not None:
-            r_exe = replace_exe
-
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(
-        Simulation(
-            dir, exfunc=eval_comp, exe_dict=r_exe, htol=htol, idxsim=idx
-        )
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework()
+    test.build(build_model, idx, str(function_tmpdir))
+    test.run(
+        TestSimulation(
+            name=name,
+            exe_dict=targets,
+            exfunc=eval_comp,
+            htol=htol,
+            idxsim=idx,
+        ),
+        str(function_tmpdir),
     )
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(
-            dir, exfunc=eval_comp, exe_dict=replace_exe, htol=htol, idxsim=idx
-        )
-        test.run_mf6(sim)
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()

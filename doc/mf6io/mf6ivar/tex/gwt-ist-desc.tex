@@ -49,7 +49,7 @@
 
 \item \texttt{decay\_sorbed}---is the rate coefficient for first or zero-order decay for the sorbed phase of the immobile domain.  A negative value indicates solute production.  The dimensions of decay\_sorbed for first-order decay is one over time.  The dimensions of decay\_sorbed for zero-order decay is mass of solute per mass of aquifer per time.  If decay\_sorbed is not specified and both decay and sorption are active, then the program will terminate with an error.  decay\_sorbed will have no effect on simulation results unless the SORPTION keyword and either first- or zero-order decay are specified in the options block.
 
-\item \texttt{bulk\_density}---is the bulk density of the aquifer in mass per length cubed.  bulk\_density will have no effect on simulation results unless the SORPTION keyword is specified in the options block.
+\item \texttt{bulk\_density}---is the bulk density of the aquifer in mass per length cubed.  bulk\_density will have no effect on simulation results unless the SORPTION keyword is specified in the options block.  Bulk density is defined as the immobile domain solid mass per aquifer volume. The definition for this input variable changed after version 6.4.1 was released.  The bulk density specified in this package is defined differently from the bulk density defined in the Mobile Storage and Transfer (MST) Package. Additional information on bulk density is included in the MODFLOW 6 Supplemental Technical Information document.
 
 \item \texttt{distcoef}---is the distribution coefficient for the equilibrium-controlled linear sorption isotherm in dimensions of length cubed per mass.  distcoef will have no effect on simulation results unless the SORPTION keyword is specified in the options block.
 

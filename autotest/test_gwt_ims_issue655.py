@@ -8,27 +8,11 @@ of the version 6.2.2 release that addressed Issue 655.
 
 import os
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["issue655a", "issue655b"]
 newton = [
@@ -38,9 +22,6 @@ newton = [
 laytyp = [1]
 ss = [1.0e-10]
 sy = [0.1]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
 nlay, nrow, ncol = 1, 11, 11
 
 
@@ -310,39 +291,18 @@ def eval_transport(sim):
     #     assert np.allclose(c, conc_calc, atol=0.001), msg
     #     vold = v
 
-    return
 
-
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, exdir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, exdir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, exdir)
-
-    # run the test model
-    test.run_mf6(Simulation(exdir, exfunc=eval_transport, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # build and run the test model
-    for idx, exdir in enumerate(exdirs):
-        test_mf6model(idx, exdir)
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, idx, ws)
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=idx
+        ),
+        ws,
+    )

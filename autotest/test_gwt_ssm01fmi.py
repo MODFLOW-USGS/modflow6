@@ -4,38 +4,12 @@
 # be 100.
 
 import os
-import shutil
+from os.path import join
 
+import flopy
 import numpy as np
-import pytest
 
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-
-import targets
-
-exe_name_mf6 = targets.target_dict["mf6"]
-exe_name_mf6 = os.path.abspath(exe_name_mf6)
-
-testdir = "./temp"
 testgroup = "ssm01"
-d = os.path.join(testdir, testgroup)
-if os.path.isdir(d):
-    shutil.rmtree(d)
 
 nlay = 1
 nrow = 10
@@ -46,14 +20,12 @@ top = 100.0
 botm = 0.0
 
 
-def run_flow_model():
+def run_flow_model(dir, exe):
     global idomain
     name = "flow"
     gwfname = name
-    wsf = os.path.join(testdir, testgroup, name)
-    sim = flopy.mf6.MFSimulation(
-        sim_name=name, sim_ws=wsf, exe_name=exe_name_mf6
-    )
+    wsf = join(dir, testgroup, name)
+    sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=wsf, exe_name=exe)
     tdis_rc = [(100.0, 1, 1.0), (100.0, 1, 1.0)]
     nper = len(tdis_rc)
     tdis = flopy.mf6.ModflowTdis(
@@ -194,17 +166,15 @@ def run_flow_model():
     errmsg = f"flow model did not terminate successfully\n{buff}"
     assert success, errmsg
 
-    return
 
-
-def run_transport_model():
+def run_transport_model(dir, exe):
     name = "transport"
     gwtname = name
-    wst = os.path.join(testdir, testgroup, name)
+    wst = join(dir, testgroup, name)
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
-        exe_name=exe_name_mf6,
+        exe_name=exe,
         sim_ws=wst,
         continue_=False,
     )
@@ -338,21 +308,8 @@ def run_transport_model():
     )
     assert np.all(simulated_concentration == 100.0), errmsg
 
-    return
 
-
-def test_ssm01fmi():
-    run_flow_model()
-    run_transport_model()
-    d = os.path.join(testdir, testgroup)
-    if os.path.isdir(d):
-        shutil.rmtree(d)
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run tests
-    test_ssm01fmi()
+def test_ssm01fmi(function_tmpdir, targets):
+    mf6 = targets.mf6
+    run_flow_model(str(function_tmpdir), mf6)
+    run_transport_model(str(function_tmpdir), mf6)

@@ -9,7 +9,6 @@ module GwfDisuModule
   use SimModule, only: count_errors, store_error, store_error_unit
   use SimVariablesModule, only: errmsg
   use BaseDisModule, only: DisBaseType
-  use BlockParserModule, only: BlockParserType
   use MemoryManagerModule, only: mem_allocate
   use TdisModule, only: kstp, kper, pertim, totim, delt
 
@@ -121,14 +120,6 @@ contains
         write (iout, fmtheader) inunit
       end if
       !
-      ! -- initialize parser and load the disu input file
-      call dis%parser%Initialize(inunit, iout)
-      !
-      ! -- Use the input data model routines to load the input data
-      !    into memory
-      call input_load(dis%parser, 'DISU6', 'GWF', 'DISU', name_model, 'DISU', &
-                      [character(len=LENPACKAGETYPE) ::], iout)
-      !
       ! -- load disu
       call disnew%disu_load()
     end if
@@ -228,7 +219,7 @@ contains
       call store_error('Model does not have any active nodes. &
                        &Ensure IDOMAIN array has some values greater &
                        &than zero.')
-      call this%parser%StoreErrorUnit()
+      call store_error_unit(this%inunit)
     end if
     !
     ! -- Write message if reduced grid
@@ -709,7 +700,7 @@ contains
     !
     ! -- terminate if errors were detected
     if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
+      call store_error_unit(this%inunit)
     end if
     !
     ! -- allocate vectors that are the size of nodesuser
