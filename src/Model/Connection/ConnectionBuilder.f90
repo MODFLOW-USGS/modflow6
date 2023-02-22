@@ -216,7 +216,7 @@ contains
       keepExchange = .true.
       do iconn = 1, connections%Count()
         conn => get_smc_from_list(connections, iconn)
-        exPtr2 => conn%primaryExchange
+        exPtr2 => conn%prim_exchange
         if (associated(exPtr2, exPtr)) then
           ! if so, don't add it to the list
           keepExchange = .false.

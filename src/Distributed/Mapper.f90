@@ -60,15 +60,15 @@ contains
 
     do iconn = 1, baseconnectionlist%Count()
       conn => get_smc_from_list(baseconnectionlist, iconn)
-      virt_exg => get_virtual_exchange(conn%primaryExchange%id)
+      virt_exg => get_virtual_exchange(conn%prim_exchange%id)
       if (.not. virt_exg%v_model1%is_local) then
         virt_mem_path = virt_exg%get_vrt_mem_path('NODEM1', '')
-        call this%map_data_full(0, 'NODEM1', conn%primaryExchange%memoryPath, &
+        call this%map_data_full(0, 'NODEM1', conn%prim_exchange%memoryPath, &
                                 'NODEM1', virt_mem_path, (/STG_BEFORE_DF/))
       end if
       if (.not. virt_exg%v_model2%is_local) then
         virt_mem_path = virt_exg%get_vrt_mem_path('NODEM2', '')
-        call this%map_data_full(0, 'NODEM2', conn%primaryExchange%memoryPath, &
+        call this%map_data_full(0, 'NODEM2', conn%prim_exchange%memoryPath, &
                                 'NODEM2', virt_mem_path, (/STG_BEFORE_DF/))
       end if
     end do
@@ -90,8 +90,8 @@ contains
       conn => get_smc_from_list(baseconnectionlist, iconn)
       ! add the variables for this interface model to our mapper
       call this%add_dist_vars(conn%owner%idsoln, &
-                              conn%ifaceDistVars, &
-                              conn%interfaceMap)
+                              conn%iface_dist_vars, &
+                              conn%interface_map)
     end do
 
   end subroutine add_interface_vars

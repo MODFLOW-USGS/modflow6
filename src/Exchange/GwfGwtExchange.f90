@@ -347,15 +347,15 @@ contains
 
           ! for now, connecting the same nodes nrs will be
           ! sufficient evidence of equality
-          areEqual = all(gwfConn%primaryExchange%nodem1 == &
-                         gwtConn%primaryExchange%nodem1)
-          areEqual = areEqual .and. all(gwfConn%primaryExchange%nodem2 == &
-                                        gwtConn%primaryExchange%nodem2)
+          areEqual = all(gwfConn%prim_exchange%nodem1 == &
+                         gwtConn%prim_exchange%nodem1)
+          areEqual = areEqual .and. all(gwfConn%prim_exchange%nodem2 == &
+                                        gwtConn%prim_exchange%nodem2)
           if (areEqual) then
             ! same DIS, same exchange: link and go to next GWT conn.
             write (iout, '(/6a)') 'Linking exchange ', &
-              trim(gwtConn%primaryExchange%name), &
-              ' to ', trim(gwfConn%primaryExchange%name), &
+              trim(gwtConn%prim_exchange%name), &
+              ' to ', trim(gwfConn%prim_exchange%name), &
               ' (using interface model) for GWT model ', &
               trim(gwtModel%name)
             gwfConnIdx = ic2
@@ -379,13 +379,13 @@ contains
               associated(gwfEx%model2, gwfModel)) then
             ! again, connecting the same nodes nrs will be
             ! sufficient evidence of equality
-            areEqual = all(gwfEx%nodem1 == gwtConn%primaryExchange%nodem1)
+            areEqual = all(gwfEx%nodem1 == gwtConn%prim_exchange%nodem1)
             areEqual = areEqual .and. &
-                       all(gwfEx%nodem2 == gwtConn%primaryExchange%nodem2)
+                       all(gwfEx%nodem2 == gwtConn%prim_exchange%nodem2)
             if (areEqual) then
               ! link exchange to connection
               write (iout, '(/6a)') 'Linking exchange ', &
-                trim(gwtConn%primaryExchange%name), &
+                trim(gwtConn%prim_exchange%name), &
                 ' to ', trim(gwfEx%name), ' for GWT model ', &
                 trim(gwtModel%name)
               gwfExIdx = iex
@@ -419,7 +419,7 @@ contains
         ! none found, report
         write (errmsg, '(/6a)') 'Missing GWF-GWF exchange when connecting GWT'// &
           ' model ', trim(gwtModel%name), ' with exchange ', &
-          trim(gwtConn%primaryExchange%name), ' to GWF model ', &
+          trim(gwtConn%prim_exchange%name), ' to GWF model ', &
           trim(gwfModel%name)
         call store_error(errmsg, terminate=.true.)
       end if

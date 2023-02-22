@@ -119,12 +119,12 @@ contains
 
       ! it's an interface model based exchanged, get
       ! halo models and halo exchanges from connection
-      do ihm = 1, conn%haloModels%size
-        model_id = conn%haloModels%at(ihm)
+      do ihm = 1, conn%halo_models%size
+        model_id = conn%halo_models%at(ihm)
         call model_ids%push_back_unique(model_id)
       end do
-      do ihx = 1, conn%haloExchanges%size
-        exg_id = conn%haloExchanges%at(ihx)
+      do ihx = 1, conn%halo_exchanges%size
+        exg_id = conn%halo_exchanges%at(ihx)
         call exchange_ids%push_back_unique(exg_id)
       end do
 
