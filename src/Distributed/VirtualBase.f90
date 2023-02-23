@@ -120,13 +120,15 @@ contains
   !> @brief Check if this data item requires syncing
   !< for this particular stage
   function vm_check_stage(this, stage) result(has_stage)
+    use ArrayHandlersModule, only: ifind
     class(VirtualDataType), target :: this
-    integer(I4B) :: stage
+    integer(I4B) :: stage, stg_idx
     logical(LGP) :: has_stage
 
     has_stage = .false.
     if (allocated(this%sync_stages)) then
-      has_stage = (findloc(this%sync_stages, stage, dim=1) > 0)
+      stg_idx = ifind(this%sync_stages, stage)
+      has_stage = (stg_idx > 0)
     end if
 
   end function vm_check_stage

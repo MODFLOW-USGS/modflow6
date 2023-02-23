@@ -202,13 +202,14 @@ contains
   !> @brief Synchronize one particular solution for this stage
   !<
   subroutine vds_synchronize_sln(this, id_sln, stage)
+    use ArrayHandlersModule, only: ifind
     class(VirtualDataManagerType) :: this
     integer(I4B) :: id_sln !< the id of the solution
     integer(I4B) :: stage
     ! local
     integer(I4B) :: sol_idx
 
-    sol_idx = findloc(this%solution_ids, id_sln, dim=1)
+    sol_idx = ifind(this%solution_ids, id_sln)
     call this%prepare_solution(this%virtual_solutions(sol_idx), stage)
     call this%update_solution(this%virtual_solutions(sol_idx), stage)
 

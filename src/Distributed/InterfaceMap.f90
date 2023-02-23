@@ -58,8 +58,8 @@ contains
   !!
   !! The map to which is added, should be properly
   !< initialized beforehand
-  subroutine add(this, map_to_add)
-    use ArrayHandlersModule, only: ExtendPtrArray
+  subroutine add(this, map_to_add)    
+    use ArrayHandlersModule, only: ExtendPtrArray, ifind
     class(InterfaceMapType) :: this
     class(InterfaceMapType) :: map_to_add
     ! local
@@ -70,14 +70,14 @@ contains
     ! add models
     do im = 1, map_to_add%nr_models
       m_id = map_to_add%model_ids(im)
-      m_index = findloc(this%model_ids, m_id, dim=1)
+      m_index = ifind(this%model_ids, m_id)
       if (m_index > 0) then
         ! extend existing index map
         call this%node_map(m_index)%add(map_to_add%node_map(im))
         call this%connection_map(m_index)%add(map_to_add%connection_map(im))
       else
         ! place in first empty spot
-        m_index = findloc(this%model_ids, -1, dim=1)
+        m_index = ifind(this%model_ids, -1)
         this%model_ids(m_index) = m_id
         this%model_names(m_index) = map_to_add%model_names(im)
         call this%node_map(m_index)%copy(map_to_add%node_map(im))
@@ -88,13 +88,13 @@ contains
     ! add exchanges
     do ie = 1, map_to_add%nr_exchanges
       e_id = map_to_add%exchange_ids(ie)
-      e_index = findloc(this%exchange_ids, e_id, dim=1)
+      e_index = ifind(this%exchange_ids, e_id)
       if (e_index > 0) then
         ! extend existing index map
         call this%exchange_map(e_index)%add(map_to_add%exchange_map(ie))
       else
         ! place in first empty spot
-        e_index = findloc(this%exchange_ids, -1, dim=1)
+        e_index = ifind(this%exchange_ids, -1)
         this%exchange_ids(e_index) = e_id
         this%exchange_names(e_index) = map_to_add%exchange_names(ie)
         call this%exchange_map(e_index)%copy(map_to_add%exchange_map(ie))
