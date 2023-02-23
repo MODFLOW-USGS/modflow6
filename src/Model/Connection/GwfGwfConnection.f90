@@ -129,7 +129,7 @@ contains
     call this%setGridExtent()
 
     allocate (this%gwfInterfaceModel)
-    this%interfaceModel => this%gwfInterfaceModel
+    this%interface_model => this%gwfInterfaceModel
 
   end subroutine gwfGwfConnection_ctor
 
@@ -149,12 +149,12 @@ contains
     ! Now grid conn is defined, we create the interface model
     ! here, and the remainder of this routine is define.
     ! we basically follow the logic that is present in sln_df()
-    if (this%primaryExchange%v_model1 == this%owner) then
+    if (this%prim_exchange%v_model1 == this%owner) then
       write (imName, '(a,i0)') 'GWFIM1_', this%gwfExchange%id
     else
       write (imName, '(a,i0)') 'GWFIM2_', this%gwfExchange%id
     end if
-    call this%gwfInterfaceModel%gwfifm_cr(imName, this%iout, this%gridConnection)
+    call this%gwfInterfaceModel%gwfifm_cr(imName, this%iout, this%ig_builder)
     call this%gwfInterfaceModel%set_idsoln(this%gwfModel%idsoln)
     this%gwfInterfaceModel%npf%satomega = this%gwfModel%npf%satomega
     this%gwfInterfaceModel%npf%ixt3d = this%iXt3dOnExchange
@@ -222,9 +222,9 @@ contains
 
     this%iXt3dOnExchange = this%gwfExchange%ixt3d
     if (this%iXt3dOnExchange > 0) then
-      this%exchangeStencilDepth = 2
+      this%exg_stencil_depth = 2
       if (this%gwfModel%npf%ixt3d > 0) then
-        this%internalStencilDepth = 2
+        this%int_stencil_depth = 2
       end if
     end if
 
@@ -340,20 +340,20 @@ contains
       ! we cannot check with the mask here, because cross-terms are not
       ! necessarily from primary connections. But, we only need the coefficients
       ! for our own model (i.e. fluxes into cells belonging to this%owner):
-      if (.not. this%gridConnection%idxToGlobal(n)%v_model == this%owner) then
+      if (.not. this%ig_builder%idxToGlobal(n)%v_model == this%owner) then
         ! only add connections for own model to global matrix
         cycle
       end if
 
-      nglo = this%gridConnection%idxToGlobal(n)%index + &
-             this%gridConnection%idxToGlobal(n)%v_model%moffset%get() - &
+      nglo = this%ig_builder%idxToGlobal(n)%index + &
+             this%ig_builder%idxToGlobal(n)%v_model%moffset%get() - &
              matrix_sln%get_row_offset()
       rhs_sln(nglo) = rhs_sln(nglo) + this%rhs(n)
 
       icol_start = this%matrix%get_first_col_pos(n)
       icol_end = this%matrix%get_last_col_pos(n)
       do ipos = icol_start, icol_end
-        call matrix_sln%add_value_pos(this%mapIdxToSln(ipos), &
+        call matrix_sln%add_value_pos(this%ipos_to_sln(ipos), &
                                       this%matrix%get_value_pos(ipos))
       end do
     end do
@@ -541,7 +541,7 @@ contains
 
     if (this%owns_exchange) then
       gwfEx => this%gwfExchange
-      map => this%interfaceMap%exchange_map(this%interfaceMap%prim_exg_idx)
+      map => this%interface_map%exchange_map(this%interface_map%prim_exg_idx)
 
       ! use (half of) the exchange map in reverse:
       do i = 1, size(map%src_idx)
@@ -579,7 +579,7 @@ contains
     imDis => this%gwfInterfaceModel%dis
     imCon => this%gwfInterfaceModel%dis%con
     imNpf => this%gwfInterfaceModel%npf
-    toGlobal => this%gridConnection%idxToGlobal
+    toGlobal => this%ig_builder%idxToGlobal
 
     nozee = .false.
     if (imNpf%ixt3d > 0) then

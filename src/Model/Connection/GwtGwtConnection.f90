@@ -128,7 +128,7 @@ contains
     this%exgflowSign = 1
 
     allocate (this%gwtInterfaceModel)
-    this%interfaceModel => this%gwtInterfaceModel
+    this%interface_model => this%gwtInterfaceModel
 
   end subroutine gwtGwtConnection_ctor
 
@@ -172,7 +172,7 @@ contains
     end if
     call this%gwtInterfaceModel%gwtifmod_cr(imName, &
                                             this%iout, &
-                                            this%gridConnection)
+                                            this%ig_builder)
     call this%gwtInterfaceModel%set_idsoln(this%gwtModel%idsoln)
     this%gwtInterfaceModel%iAdvScheme = this%iIfaceAdvScheme
     this%gwtInterfaceModel%ixt3d = this%iIfaceXt3d
@@ -225,7 +225,7 @@ contains
   subroutine allocate_arrays(this)
     class(GwtGwtConnectionType) :: this !< the connection
 
-    call mem_allocate(this%exgflowjaGwt, this%gridConnection%nrOfBoundaryCells, &
+    call mem_allocate(this%exgflowjaGwt, this%ig_builder%nrOfBoundaryCells, &
                       'EXGFLOWJAGWT', this%memoryPath)
 
   end subroutine allocate_arrays
@@ -242,18 +242,18 @@ contains
 
     if (hasAdv) then
       if (this%iIfaceAdvScheme == 2) then
-        this%exchangeStencilDepth = 2
+        this%exg_stencil_depth = 2
         if (this%gwtModel%adv%iadvwt == 2) then
-          this%internalStencilDepth = 2
+          this%int_stencil_depth = 2
         end if
       end if
     end if
 
     if (hasDsp) then
       if (this%iIfaceXt3d > 0) then
-        this%exchangeStencilDepth = 2
+        this%exg_stencil_depth = 2
         if (this%gwtModel%dsp%ixt3d > 0) then
-          this%internalStencilDepth = 2
+          this%int_stencil_depth = 2
         end if
       end if
     end if
@@ -338,9 +338,9 @@ contains
     type(GlobalCellType) :: boundaryCell, connectedCell
 
     ! connections to other models
-    do ic = 1, this%gridConnection%nrOfBoundaryCells
-      boundaryCell = this%gridConnection%boundaryCells(ic)%cell
-      connectedCell = this%gridConnection%connectedCells(ic)%cell
+    do ic = 1, this%ig_builder%nrOfBoundaryCells
+      boundaryCell = this%ig_builder%boundaryCells(ic)%cell
+      connectedCell = this%ig_builder%connectedCells(ic)%cell
       iglo = boundaryCell%index + boundaryCell%v_model%moffset%get()
       jglo = connectedCell%index + connectedCell%v_model%moffset%get()
       call sparse%addconnection(iglo, jglo, 1)
@@ -410,18 +410,18 @@ contains
     do n = 1, this%neq
       ! We only need the coefficients for our own model
       ! (i.e. rows in the matrix that belong to this%owner):
-      if (.not. this%gridConnection%idxToGlobal(n)%v_model == this%owner) then
+      if (.not. this%ig_builder%idxToGlobal(n)%v_model == this%owner) then
         cycle
       end if
 
-      nglo = this%gridConnection%idxToGlobal(n)%index + &
-             this%gridConnection%idxToGlobal(n)%v_model%moffset%get()
+      nglo = this%ig_builder%idxToGlobal(n)%index + &
+             this%ig_builder%idxToGlobal(n)%v_model%moffset%get()
       rhs_sln(nglo) = rhs_sln(nglo) + this%rhs(n)
 
       icol_start = this%matrix%get_first_col_pos(n)
       icol_end = this%matrix%get_last_col_pos(n)
       do ipos = icol_start, icol_end
-        call matrix_sln%add_value_pos(this%mapIdxToSln(ipos), &
+        call matrix_sln%add_value_pos(this%ipos_to_sln(ipos), &
                                       this%matrix%get_value_pos(ipos))
       end do
     end do
@@ -457,7 +457,7 @@ contains
 
     if (this%exchangeIsOwned) then
       gwtEx => this%gwtExchange
-      map => this%interfaceMap%exchange_map(this%interfaceMap%prim_exg_idx)
+      map => this%interface_map%exchange_map(this%interface_map%prim_exg_idx)
 
       ! use (half of) the exchange map in reverse:
       do i = 1, size(map%src_idx)
