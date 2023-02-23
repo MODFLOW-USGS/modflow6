@@ -58,7 +58,7 @@ contains
   !!
   !! The map to which is added, should be properly
   !< initialized beforehand
-  subroutine add(this, map_to_add)    
+  subroutine add(this, map_to_add)
     use ArrayHandlersModule, only: ExtendPtrArray, ifind
     class(InterfaceMapType) :: this
     class(InterfaceMapType) :: map_to_add
