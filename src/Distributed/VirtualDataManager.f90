@@ -310,11 +310,13 @@ contains
       vdc => get_vdc_from_list(virtual_model_list, i)
       call vdc%destroy()
     end do
+    call virtual_model_list%Clear(destroy=.true.)
 
     do i = 1, virtual_exchange_list%Count()
       vdc => get_vdc_from_list(virtual_exchange_list, i)
       call vdc%destroy()
     end do
+    call virtual_exchange_list%Clear(destroy=.true.)
 
     do i = 1, this%nr_solutions
       deallocate (this%virtual_solutions(i)%models)
