@@ -137,14 +137,16 @@ contains
     type(STLVecInt) :: virtual_items
     ! local
     integer(I4B) :: i, nodem1_idx, nodem2_idx
+    class(*), pointer :: virtual_data_item
 
     nodem1_idx = -1
     nodem2_idx = -1
     do i = 1, this%virtual_data_list%Count()
-      if (associated(this%virtual_data_list%GetItem(i), this%nodem1)) then
+      virtual_data_item => this%virtual_data_list%GetItem(i)
+      if (associated(virtual_data_item, this%nodem1)) then
         nodem1_idx = i
       end if
-      if (associated(this%virtual_data_list%GetItem(i), this%nodem2)) then
+      if (associated(virtual_data_item, this%nodem2)) then
         nodem2_idx = i
       end if
     end do
@@ -174,14 +176,16 @@ contains
     type(STLVecInt) :: virtual_items
     ! local
     integer(I4B) :: i, nodem1_idx, nodem2_idx
+    class(*), pointer :: virtual_data_item
 
     nodem1_idx = -1
     nodem2_idx = -1
     do i = 1, this%virtual_data_list%Count()
-      if (associated(this%virtual_data_list%GetItem(i), this%nodem1)) then
+      virtual_data_item => this%virtual_data_list%GetItem(i)
+      if (associated(virtual_data_item, this%nodem1)) then
         nodem1_idx = i
       end if
-      if (associated(this%virtual_data_list%GetItem(i), this%nodem2)) then
+      if (associated(virtual_data_item, this%nodem2)) then
         nodem2_idx = i
       end if
     end do

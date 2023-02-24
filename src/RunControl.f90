@@ -107,16 +107,18 @@ contains
     class(RunControlType), target :: this
     ! local
     integer(I4B) :: i
-    class(*), pointer :: sol
+    class(*), pointer :: obj_ptr
+    class(NumericalSolutionType), pointer :: sol
 
     ! Interface models are created now and we know which
     ! remote models and exchanges are required in the
     ! virtual solution. Also set the synchronization handler
     ! to the numerical solutions.
     do i = 1, basesolutionlist%Count()
-      sol => basesolutionlist%GetItem(i)
-      select type (sol)
+      obj_ptr => basesolutionlist%GetItem(i)
+      select type (obj_ptr)
       class is (NumericalSolutionType)
+        sol => obj_ptr
         call this%virtual_data_store%add_solution(sol)
         sol%synchronize => rc_solution_sync
         sol%synchronize_ctx => this
