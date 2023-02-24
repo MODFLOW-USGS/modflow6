@@ -12,7 +12,7 @@ modflow_sources = files(
     'Distributed' / 'Mapper.f90',
     'Distributed' / 'MappedMemory.f90',
     'Distributed' / 'RouterBase.f90',
-    'Distributed' / 'RouterFactory.f90',
+    'Distributed' / 'RouterFactory.F90',
     'Distributed' / 'SerialRouter.f90',
     'Distributed' / 'VirtualBase.f90',
     'Distributed' / 'VirtualDataContainer.f90',
