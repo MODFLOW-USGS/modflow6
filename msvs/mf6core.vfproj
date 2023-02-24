@@ -44,6 +44,41 @@
 		<Filter Name="Header Files" Filter="fi;fd"/>
 		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
+		<Filter Name="Distributed">
+		<File RelativePath="..\src\Distributed\IndexMap.f90"/>
+		<File RelativePath="..\src\Distributed\InterfaceMap.f90"/>
+		<File RelativePath="..\src\Distributed\MappedMemory.f90"/>
+		<File RelativePath="..\src\Distributed\Mapper.f90"/>
+		<File RelativePath="..\src\Distributed\MpiMessageBuilder.f90">
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\src\Distributed\MpiRouter.f90">
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\src\Distributed\MpiRunControl.F90">
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\src\Distributed\MpiWorld.f90">
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\src\Distributed\RouterBase.f90"/>
+		<File RelativePath="..\src\Distributed\RouterFactory.f90">
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
+		<File RelativePath="..\src\Distributed\SerialRouter.f90"/>
+		<File RelativePath="..\src\Distributed\VirtualBase.f90"/>
+		<File RelativePath="..\src\Distributed\VirtualDataContainer.f90"/>
+		<File RelativePath="..\src\Distributed\VirtualDataLists.f90"/>
+		<File RelativePath="..\src\Distributed\VirtualDataManager.f90"/>
+		<File RelativePath="..\src\Distributed\VirtualExchange.f90"/>
+		<File RelativePath="..\src\Distributed\VirtualGwfExchange.f90"/>
+		<File RelativePath="..\src\Distributed\VirtualGwfModel.f90"/>
+		<File RelativePath="..\src\Distributed\VirtualGwtExchange.f90"/>
+		<File RelativePath="..\src\Distributed\VirtualGwtModel.f90"/>
+		<File RelativePath="..\src\Distributed\VirtualModel.f90"/>
+		<File RelativePath="..\src\Distributed\VirtualSolution.f90"/></Filter>
 		<Filter Name="Exchange">
 		<File RelativePath="..\src\Exchange\BaseExchange.f90"/>
 		<File RelativePath="..\src\Exchange\DisConnExchange.f90"/>
@@ -57,16 +92,13 @@
 		<File RelativePath="..\src\Model\Connection\CellWithNbrs.f90"/>
 		<File RelativePath="..\src\Model\Connection\ConnectionBuilder.f90"/>
 		<File RelativePath="..\src\Model\Connection\CsrUtils.f90"/>
-		<File RelativePath="..\src\Model\Connection\DistributedData.f90"/>
-		<File RelativePath="..\src\Model\Connection\DistributedModel.f90"/>
+		<File RelativePath="..\src\Model\Connection\DistributedVariable.f90"/>
 		<File RelativePath="..\src\Model\Connection\GridConnection.f90"/>
 		<File RelativePath="..\src\Model\Connection\GridSorting.f90"/>
 		<File RelativePath="..\src\Model\Connection\GwfGwfConnection.f90"/>
 		<File RelativePath="..\src\Model\Connection\GwfInterfaceModel.f90"/>
 		<File RelativePath="..\src\Model\Connection\GwtGwtConnection.f90"/>
 		<File RelativePath="..\src\Model\Connection\GwtInterfaceModel.f90"/>
-		<File RelativePath="..\src\Model\Connection\InterfaceMap.f90"/>
-		<File RelativePath="..\src\Model\Connection\MappedVariable.f90"/>
 		<File RelativePath="..\src\Model\Connection\qsort_inline.inc"/>
 		<File RelativePath="..\src\Model\Connection\SpatialModelConnection.f90"/></Filter>
 		<Filter Name="Geometry">
@@ -156,8 +188,22 @@
 		<File RelativePath="..\src\Solution\LinearMethods\ims8base.f90"/>
 		<File RelativePath="..\src\Solution\LinearMethods\ims8linear.f90"/>
 		<File RelativePath="..\src\Solution\LinearMethods\ims8misc.f90"/>
-		<File RelativePath="..\src\Solution\LinearMethods\ims8reordering.f90"/></Filter>
+		<File RelativePath="..\src\Solution\LinearMethods\ims8reordering.f90"/>
+		<File RelativePath="..\src\Solution\LinearMethods\ImsLinearSolver.f90"/></Filter>
+		<Filter Name="PETSc">
+		<File RelativePath="..\src\Solution\PETSc\PetscConvergence.F90">
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\src\Solution\PETSc\PetscSolver.F90">
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/></File></Filter>
 		<File RelativePath="..\src\Solution\BaseSolution.f90"/>
+		<File RelativePath="..\src\Solution\LinearSolverBase.f90"/>
+		<File RelativePath="..\src\Solution\LinearSolverFactory.F90">
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
 		<File RelativePath="..\src\Solution\NumericalSolution.f90"/>
 		<File RelativePath="..\src\Solution\SolutionGroup.f90"/></Filter>
 		<Filter Name="Timing">
@@ -186,6 +232,12 @@
 		<File RelativePath="..\src\Utilities\Libraries\sparskit2\ilut.f90"/>
 		<File RelativePath="..\src\Utilities\Libraries\rcm\rcm.f90"/>
 		<File RelativePath="..\src\Utilities\Libraries\sparsekit\sparsekit.f90"/></Filter>
+		<Filter Name="Matrix">
+		<File RelativePath="..\src\Utilities\Matrix\MatrixBase.f90"/>
+		<File RelativePath="..\src\Utilities\Matrix\PetscMatrix.F90">
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\src\Utilities\Matrix\SparseMatrix.f90"/></Filter>
 		<Filter Name="Memory">
 		<File RelativePath="..\src\Utilities\Memory\Memory.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemoryHelper.f90"/>
@@ -193,9 +245,12 @@
 		<File RelativePath="..\src\Utilities\Memory\MemoryManager.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemoryManagerExt.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemorySetHandler.f90"/></Filter>
-		<Filter Name="Matrix">
-		<File RelativePath="..\src\Utilities\Matrix\MatrixBase.f90"/>
-		<File RelativePath="..\src\Utilities\Matrix\SparseMatrix.f90"/></Filter>
+		<Filter Name="Vector">
+		<File RelativePath="..\src\Utilities\Vector\PetscVector.F90">
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\src\Utilities\Vector\SeqVector.f90"/>
+		<File RelativePath="..\src\Utilities\Vector\VectorBase.f90"/></Filter>
 		<Filter Name="Observation">
 		<File RelativePath="..\src\Utilities\Observation\Obs3.f90"/>
 		<File RelativePath="..\src\Utilities\Observation\ObsContainer.f90"/>
@@ -250,17 +305,24 @@
 		<File RelativePath="..\src\Utilities\OpenSpec.f90"/>
 		<File RelativePath="..\src\Utilities\PackageBudget.f90"/>
 		<File RelativePath="..\src\Utilities\Sim.f90"/>
+		<File RelativePath="..\src\Utilities\SimStages.f90"/>
 		<File RelativePath="..\src\Utilities\SimVariables.f90"/>
 		<File RelativePath="..\src\Utilities\SmoothingFunctions.f90"/>
 		<File RelativePath="..\src\Utilities\sort.f90"/>
 		<File RelativePath="..\src\Utilities\Sparse.f90"/>
+		<File RelativePath="..\src\Utilities\STLVecInt.f90"/>
 		<File RelativePath="..\src\Utilities\StringList.f90"/>
 		<File RelativePath="..\src\Utilities\Table.f90"/>
 		<File RelativePath="..\src\Utilities\TableTerm.f90"/>
 		<File RelativePath="..\src\Utilities\Timer.f90"/>
-		<File RelativePath="..\src\Utilities\VectorInt.f90"/>
 		<File RelativePath="..\src\Utilities\version.f90"/></Filter>
 		<File RelativePath="..\src\mf6core.f90"/>
 		<File RelativePath="..\src\mf6lists.f90"/>
+		<File RelativePath="..\src\RunControl.f90"/>
+		<File RelativePath="..\src\RunControlFactory.F90">
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
 		<File RelativePath="..\src\SimulationCreate.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>
