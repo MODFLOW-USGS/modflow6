@@ -40,7 +40,7 @@ def get_model(dir, name):
 
     # solver data
     nouter, ninner = 100, 300
-    hclose, rclose, relax = 10 - 9, 1e-3, 0.97
+    hclose, rclose, relax = 10e-9, 1e-3, 0.97
 
     # model spatial discretization
     nlay = 3

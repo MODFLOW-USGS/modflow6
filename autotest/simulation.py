@@ -3,6 +3,7 @@ import shutil
 import sys
 import time
 from traceback import format_exc
+from subprocess import PIPE, STDOUT, Popen
 
 import flopy
 import numpy as np
@@ -33,6 +34,8 @@ class TestSimulation:
     def __init__(
         self,
         name,
+        parallel=False,
+        ncpus=1,
         exfunc=None,
         exe_dict=None,
         htol=None,
@@ -50,6 +53,8 @@ class TestSimulation:
         print(msg)
 
         self.name = name
+        self.parallel = parallel
+        self.ncpus = ncpus
         self.exfunc = exfunc
         self.targets = exe_dict
         self.simpath = simpath
@@ -208,23 +213,35 @@ class TestSimulation:
         exe = str(self.targets["mf6"].absolute())
         msg = sfmt.format("using executable", exe)
         print(msg)
-        try:
-            success, buff = flopy.run_model(
-                exe,
-                nam,
-                model_ws=self.simpath,
-                silent=False,
-                report=True,
-            )
-            msg = sfmt.format("MODFLOW 6 run", self.name)
-            if success:
+
+        if self.parallel:
+            print("running parallel on", self.ncpus, "processes")
+            try:
+                success, buff = self.run_parallel(
+                    exe,
+                )
+            except:
+                msg = sfmt.format("MODFLOW 6 run", self.name)
                 print(msg)
-            else:
+                success = False
+        else:
+            try:
+                success, buff = flopy.run_model(
+                    exe,
+                    nam,
+                    model_ws=self.simpath,
+                    silent=False,
+                    report=True,
+                )
+                msg = sfmt.format("MODFLOW 6 run", self.name)
+                if success:
+                    print(msg)
+                else:
+                    print(msg)
+            except:
+                msg = sfmt.format("MODFLOW 6 run", self.name)
                 print(msg)
-        except:
-            msg = sfmt.format("MODFLOW 6 run", self.name)
-            print(msg)
-            success = False
+                success = False
 
         # set failure based on success and require_failure setting
         if self.require_failure is None:
@@ -311,6 +328,33 @@ class TestSimulation:
                     assert success_cmp, "Unsuccessful comparison run"
 
         return
+
+    def run_parallel(self, exe):
+        normal_msg="normal termination"
+        success = False
+        buff = []
+
+        mpiexec_cmd = "mpiexec -np " + str(self.ncpus) + " " + exe
+        proc = Popen(mpiexec_cmd, stdout=PIPE, stderr=STDOUT, cwd=self.simpath)
+
+        while True:
+            line = proc.stdout.readline().decode("utf-8")
+            if line == "" and proc.poll() is not None:
+                break
+            if line:
+                for msg in normal_msg:
+                    if msg in line.lower():
+                        success = True
+                        break
+                line = line.rstrip("\r\n")
+                print(line)
+                buff.append(line)
+            else:
+                break
+
+        success = True
+        return success, buff
+
 
     def compare(self):
         """

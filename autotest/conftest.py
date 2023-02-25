@@ -49,3 +49,17 @@ def pytest_addoption(parser):
         default=False,
         help="TODO",
     )
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--parallel", action="store_true", default=False, help="include parallel test cases"
+    )
+
+def pytest_collection_modifyitems(config, items):
+    if config.getoption("--parallel"):
+        # --parallel given in cli: do not skip parallel tests
+        return
+    skip_parallel = pytest.mark.skip(reason="need --parallel option to run")
+    for item in items:
+        if "parallel" in item.keywords:
+            item.add_marker(skip_parallel)
