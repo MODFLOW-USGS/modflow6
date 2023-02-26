@@ -59,6 +59,14 @@ np_data = {
     "r": np.array([10.0, 1.0, 10.0, 10.0], dtype=float),
 }
 
+#  Cross section depiction
+#
+#    |           |           |           |
+#    |  (left)   | (channel) |  (right)  |
+#    |   10.0    |    1.0    |   10.0    | <- "MANFRACTION"
+#    |           |           |           |
+#    +-----------+-----------+-----------+  y: 0, 0, 0, 0
+# x: 0          1/3         2/3          1
 
 #
 def build_model(idx, ws, base=False):
@@ -169,13 +177,13 @@ def build_model(idx, ws, base=False):
 
     depth = simulated_depths[idx]
     qleft = calculate_rectchan_mannings_discharge(
-        conversion_fact, roughness * 10.0, slope, 10.0, depth
+        conversion_fact, roughness * 10.0, slope, 10.0, depth, True, False
     )
     qchannel = calculate_rectchan_mannings_discharge(
-        conversion_fact, roughness, slope, 10.0, depth
+        conversion_fact, roughness, slope, 10.0, depth, False, False
     )
     qright = calculate_rectchan_mannings_discharge(
-        conversion_fact, roughness * 10.0, slope, 10.0, depth
+        conversion_fact, roughness * 10.0, slope, 10.0, depth, False, True
     )
     qtotal = qleft + qchannel + qright
 
