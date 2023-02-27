@@ -402,7 +402,6 @@ jobs:
     needs:
       - lint
       - build
-      - smoke_test
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -518,16 +517,24 @@ jobs:
         working-directory: modflow6
         run: cat builddir/meson-logs/meson-log.txt
 
-      - name: Check shared libs
-        if: runner.os == 'Linux'
-        working-directory: modflow6
-        run: ldd bin/mf6
+      - name: Update flopy
+        working-directory: modflow6/autotest
+        run: python update_flopy.py
 
-      - name: Check shared libs
-        if: runner.os == 'macOS'
-        working-directory: modflow6
-        run: otool -L bin/mf6
+      - name: Get executables
+        working-directory: modflow6/autotest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pytest -v --durations 0 get_exes.py
 
-      - name: Test modflow
-        working-directory: modflow6
-        run: mpiexec -np 2 bin/mf6 -v
+      - name: Test programs (parallel)
+        working-directory: modflow6/autotest
+        env:
+          REPOS_PATH: ${{ github.workspace }}
+        run: |
+          if [ "${{ github.ref_name }}" == "master" ]; then
+            pytest -v -n auto --parallel --durations 0 -m "not large and not developmode"
+          else
+            pytest -v -n auto --parallel --durations 0 -m "not large"
+          fi
+          
