@@ -36,6 +36,7 @@ contains
 
   subroutine mpi_ctrl_start(this)
     use SimModule, only: ustop, store_error
+
     class(MpiRunControlType) :: this
     ! local
     integer :: ierr
@@ -47,11 +48,9 @@ contains
 #if defined(__WITH_PETSC__)
     inquire (file=petsc_db_file, exist=petsc_db_exists)
     if (.not. petsc_db_exists) then
-      call store_error( &
-        '****ERROR. PETSc database file not found: '//petsc_db_file, &
-        .true.)
+      write (*, *) 'WARNING. PETSc database file not found: '//petsc_db_file
+      call PetscInitialize(ierr)
     else
-      write (*, *) 'Initialize PETSc with database ', petsc_db_file
       call PetscInitialize(petsc_db_file, ierr)
     end if
     MF6_COMM_WORLD = PETSC_COMM_WORLD

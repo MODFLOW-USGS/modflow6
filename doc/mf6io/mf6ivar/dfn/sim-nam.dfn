@@ -32,14 +32,6 @@ optional true
 longname maximum number of errors
 description maximum number of errors that will be stored and printed.
 
-block options
-name parallel
-type keyword
-reader urword
-optional true
-longname run parallel MODFLOW simulation
-description keyword flag to indicate that the simulation should be run in parallel mode
-
 # --------------------- sim nam timing ---------------------
 
 block timing

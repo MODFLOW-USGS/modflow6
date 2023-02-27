@@ -336,7 +336,7 @@ class TestSimulation:
         nr_success = 0
         buff = []
 
-        mpiexec_cmd = ["mpiexec", "-np", str(self.ncpus), exe]
+        mpiexec_cmd = ["mpiexec", "-np", str(self.ncpus), exe, "-p"]
         proc = Popen(mpiexec_cmd, stdout=PIPE, stderr=STDOUT, cwd=self.simpath)
 
         while True:

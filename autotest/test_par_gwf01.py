@@ -58,7 +58,6 @@ def get_model(idx, dir):
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=dir,
     )
-    sim.name_file.parallel = True
 
     tdis = flopy.mf6.ModflowTdis(
         sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
@@ -185,6 +184,7 @@ def build_petsc_db(exdir):
     with open(petsc_db_file, 'w') as petsc_file:
         petsc_file.write("-sub_ksp_type bcgs\n")
         petsc_file.write("-sub_pc_type ilu\n")
+        petsc_file.write("-options_left no\n")
 
 def build_model(idx, exdir):
     sim = get_model(idx, exdir)
@@ -194,7 +194,7 @@ def build_model(idx, exdir):
 def eval_model(sim):
     print("\n(eval_model: not checking anything yet...)\n")
 
-#@pytest.mark.parallel
+@pytest.mark.parallel
 @pytest.mark.parametrize(
     "name",
     ex,

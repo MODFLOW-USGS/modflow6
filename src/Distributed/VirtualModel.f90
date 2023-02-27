@@ -171,7 +171,7 @@ contains
                     (/STG_BEFORE_AC/), MAP_ALL_TYPE)
       if (is_reduced) then
         call this%map(this%dis_nodeuser%to_base(), nodes, &
-                      (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
+                      (/STG_BEFORE_AC/), MAP_ALL_TYPE)
       else
         ! no reduction, zero sized array, never synchronize
         call this%map(this%dis_nodeuser%to_base(), 0, &
