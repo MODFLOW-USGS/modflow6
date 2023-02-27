@@ -56,8 +56,9 @@ def get_model(idx, dir):
     h_start = 0.0
 
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name="mf6", sim_ws=dir
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=dir,
     )
+    sim.name_file.parallel = True
 
     tdis = flopy.mf6.ModflowTdis(
         sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
