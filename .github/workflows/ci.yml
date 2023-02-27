@@ -400,9 +400,9 @@ jobs:
   parallel_test:
     name: Parallel testing
     needs:
-#      - lint
-#      - build
-#      - smoke_test
+      - lint
+      - build
+      - smoke_test
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
