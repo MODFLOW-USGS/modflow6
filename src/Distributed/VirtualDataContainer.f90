@@ -21,7 +21,7 @@ module VirtualDataContainerModule
 
   !> @brief Wrapper for virtual data containers
   !!
-  !! We can't have an array of pointers in Fortran, so we use  
+  !! We can't have an array of pointers in Fortran, so we use
   !! this trick where we wrap the pointer and have an array
   !< of VdcPtrType instead.
   type, public :: VdcPtrType
@@ -32,7 +32,7 @@ module VirtualDataContainerModule
   !!
   !! A virtual model or exchange derives from this base
   !! and can add the component-specific items to the list
-  !! of virtual data items. As far as synchronization 
+  !! of virtual data items. As far as synchronization
   !! of virtual objects is concerned, all that is needed
   !< is the list of virtual data items in this container.
   type, public :: VirtualDataContainerType
