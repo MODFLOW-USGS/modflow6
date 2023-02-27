@@ -1128,9 +1128,8 @@ contains
       end if
       !
       ! -- If saving cell-by-cell flows in list, write flow
-      ! TODO_MJR: implement these without type bound procedure:
-      n1u = this%model1%dis%get_nodeuser(n1)
-      n2u = this%model2%dis%get_nodeuser(n2)
+      n1u = this%v_model1%dis_get_nodeuser(n1)
+      n2u = this%v_model2%dis_get_nodeuser(n2)
       if (ibinun /= 0) then
         if (is_for_model1) then
           call model%dis%record_mf6_list_entry(ibinun, n1u, n2u, rrate, &
@@ -1193,8 +1192,9 @@ contains
         n1 = this%nodem1(iexg)
         n2 = this%nodem2(iexg)
         flow = this%simvals(iexg)
-        call this%gwfmodel1%dis%noder_to_string(n1, node1str)
-        call this%gwfmodel2%dis%noder_to_string(n2, node2str)
+        call this%v_model1%dis_noder_to_string(n1, node1str)
+        call this%v_model2%dis_noder_to_string(n2, node2str)
+
         if (this%ingnc > 0) then
           deltaqgnc = this%gnc%deltaqgnc(iexg)
           write (iout, fmtdata) trim(adjustl(node1str)), &

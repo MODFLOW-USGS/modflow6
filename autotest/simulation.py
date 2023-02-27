@@ -220,9 +220,10 @@ class TestSimulation:
                 success, buff = self.run_parallel(
                     exe,
                 )
-            except:
+            except Exception as exc:                
                 msg = sfmt.format("MODFLOW 6 run", self.name)
                 print(msg)
+                print(exc)
                 success = False
         else:
             try:
@@ -332,9 +333,10 @@ class TestSimulation:
     def run_parallel(self, exe):
         normal_msg="normal termination"
         success = False
+        nr_success = 0
         buff = []
 
-        mpiexec_cmd = "mpiexec -np " + str(self.ncpus) + " " + exe
+        mpiexec_cmd = ["mpiexec", "-np", str(self.ncpus), exe]
         proc = Popen(mpiexec_cmd, stdout=PIPE, stderr=STDOUT, cwd=self.simpath)
 
         while True:
@@ -342,17 +344,18 @@ class TestSimulation:
             if line == "" and proc.poll() is not None:
                 break
             if line:
-                for msg in normal_msg:
-                    if msg in line.lower():
+                # success is when the success message appears
+                # in every process of the parallel simulation
+                if normal_msg in line.lower():
+                    nr_success = nr_success + 1
+                    if nr_success == self.ncpus:
                         success = True
-                        break
                 line = line.rstrip("\r\n")
                 print(line)
                 buff.append(line)
             else:
                 break
 
-        success = True
         return success, buff
 
 

@@ -35,11 +35,11 @@ contains
   end function create_mpi_run_control
 
   subroutine mpi_ctrl_start(this)
-    use SimModule, only: ustop
+    use SimModule, only: ustop, store_error
     class(MpiRunControlType) :: this
     ! local
     integer :: ierr
-    character(len=*), parameter :: petsc_db_file = '../../.petscrc'
+    character(len=*), parameter :: petsc_db_file = '.petscrc'
     logical(LGP) :: petsc_db_exists, wait_dbg
     class(MpiWorldType), pointer :: mpi_world
     ! if PETSc we need their initialize
@@ -47,8 +47,9 @@ contains
 #if defined(__WITH_PETSC__)
     inquire (file=petsc_db_file, exist=petsc_db_exists)
     if (.not. petsc_db_exists) then
-      write (*, *) 'Initialize PETSc'
-      call PetscInitialize(ierr)
+      call store_error( &
+        '****ERROR. PETSc database file not found: '//petsc_db_file, &
+        .true.)
     else
       write (*, *) 'Initialize PETSc with database ', petsc_db_file
       call PetscInitialize(petsc_db_file, ierr)

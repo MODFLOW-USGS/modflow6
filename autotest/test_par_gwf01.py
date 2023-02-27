@@ -180,14 +180,21 @@ def get_model(idx, dir):
 
     return sim
 
+def build_petsc_db(exdir):
+    petsc_db_file = os.path.join(exdir, ".petscrc")
+    with open(petsc_db_file, 'w') as petsc_file:
+        petsc_file.write("-sub_ksp_type bcgs\n")
+        petsc_file.write("-sub_pc_type ilu\n")
+
 def build_model(idx, exdir):
     sim = get_model(idx, exdir)
+    build_petsc_db(exdir)
     return sim, None
 
 def eval_model(sim):
     print("\n(eval_model: not checking anything yet...)\n")
 
-@pytest.mark.parallel
+#@pytest.mark.parallel
 @pytest.mark.parametrize(
     "name",
     ex,

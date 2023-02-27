@@ -27,6 +27,8 @@ module VirtualModelModule
     ! DIS
     type(VirtualIntType), pointer :: dis_ndim => null()
     type(VirtualIntType), pointer :: dis_nodes => null()
+    type(VirtualIntType), pointer :: dis_nodesuser => null()
+    type(VirtualInt1dType), pointer :: dis_nodeuser => null()
     type(VirtualIntType), pointer :: dis_nja => null()
     type(VirtualIntType), pointer :: dis_njas => null()
     type(VirtualDblType), pointer :: dis_xorigin => null()
@@ -48,6 +50,10 @@ module VirtualModelModule
     procedure :: prepare_stage => vm_prepare_stage
     procedure :: destroy => vm_destroy
     generic :: operator(==) => eq_virtual_model, eq_numerical_model
+
+    procedure :: dis_get_nodeuser
+    procedure :: dis_noder_to_string
+
     ! private
     procedure, private :: create_virtual_fields
     procedure, private :: deallocate_data
@@ -100,6 +106,10 @@ contains
     call this%create_field(this%dis_ndim%to_base(), 'NDIM', 'DIS')
     allocate (this%dis_nodes)
     call this%create_field(this%dis_nodes%to_base(), 'NODES', 'DIS')
+    allocate (this%dis_nodesuser)
+    call this%create_field(this%dis_nodesuser%to_base(), 'NODESUSER', 'DIS')
+    allocate (this%dis_nodeuser)
+    call this%create_field(this%dis_nodeuser%to_base(), 'NODEUSER', 'DIS')
     allocate (this%dis_nja)
     call this%create_field(this%dis_nja%to_base(), 'NJA', 'DIS')
     allocate (this%dis_njas)
@@ -136,13 +146,16 @@ contains
     class(VirtualModelType) :: this
     integer(I4B) :: stage
     ! local
-    integer(I4B) :: nodes, nja, njas
+    integer(I4B) :: nodes, nodesuser, nja, njas
+    logical(LGP) :: is_reduced
 
     if (stage == STG_AFTER_MDL_DF) then
 
       call this%map(this%dis_ndim%to_base(), &
                     (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
       call this%map(this%dis_nodes%to_base(), &
+                    (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
+      call this%map(this%dis_nodesuser%to_base(), &
                     (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
       call this%map(this%dis_nja%to_base(), &
                     (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
@@ -151,8 +164,19 @@ contains
 
     else if (stage == STG_BEFORE_AC) then
 
-      call this%map(this%moffset%to_base(), (/STG_BEFORE_AC/), MAP_ALL_TYPE)
-
+      nodes = this%dis_nodes%get()
+      nodesuser = this%dis_nodesuser%get()
+      is_reduced = (nodes /= nodesuser)
+      call this%map(this%moffset%to_base(), &
+                    (/STG_BEFORE_AC/), MAP_ALL_TYPE)
+      if (is_reduced) then
+        call this%map(this%dis_nodeuser%to_base(), nodes, &
+                      (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
+      else
+        ! no reduction, zero sized array, never synchronize
+        call this%map(this%dis_nodeuser%to_base(), 0, &
+                      (/STG_NEVER/), MAP_ALL_TYPE)
+      end if
     else if (stage == STG_BEFORE_DF) then
 
       nodes = this%dis_nodes%get()
@@ -196,6 +220,38 @@ contains
 
   end subroutine vm_prepare_stage
 
+  !> @brief Get user node number from reduced number
+  !<
+  function dis_get_nodeuser(this, node_reduced) result(node_user)
+    class(VirtualModelType) :: this !< this virtual model
+    integer(I4B), intent(in) :: node_reduced !< the reduced node number
+    integer(I4B) :: node_user !< the returned user node number
+
+    if (this%dis_nodes%get() < this%dis_nodesuser%get()) then
+      node_user = this%dis_nodeuser%get(node_reduced)
+    else
+      node_user = node_reduced
+    end if
+
+  end function dis_get_nodeuser
+
+  subroutine dis_noder_to_string(this, node_reduced, node_str)
+    class(VirtualModelType) :: this !< this virtual model
+    integer(I4B), intent(in) :: node_reduced !< reduced node number
+    character(len=*), intent(inout) :: node_str !< the string representative of the user node number
+    ! local
+    character(len=11) :: nr_str
+
+    if (this%is_local) then
+      call this%local_model%dis%noder_to_string(node_reduced, node_str)
+    else
+      ! for now this will look like: (102r)
+      write (nr_str, '(i0)') node_reduced
+      node_str = '('//trim(adjustl(nr_str))//'r)'
+    end if
+
+  end subroutine dis_noder_to_string
+
   subroutine vm_destroy(this)
     class(VirtualModelType) :: this
 
@@ -221,6 +277,7 @@ contains
     ! DIS
     deallocate (this%dis_ndim)
     deallocate (this%dis_nodes)
+    deallocate (this%dis_nodeuser)
     deallocate (this%dis_nja)
     deallocate (this%dis_njas)
     deallocate (this%dis_xorigin)
