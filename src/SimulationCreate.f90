@@ -300,13 +300,14 @@ contains
                 cycle
               end if
             else
-              write (errmsg, '(4x,a,a)') &
+              write (errmsg, '(4x,a)') &
                 '****ERROR. ONLY GWF SUPPORT IN PARALLEL MODE FOR NOW'
               call store_error(errmsg)
               call parser%StoreErrorUnit()
             end if
           else
-            write (errmsg, '(4x,a,a)') &
+            ! TODO_MJR: this code cannot be reached...
+            write (errmsg, '(4x,a)') &
               '****ERROR. MULTIPLE PROCESSES IN SEQUENTIAL MODE NOT ALLOWED.'
             call store_error(errmsg)
             call parser%StoreErrorUnit()
