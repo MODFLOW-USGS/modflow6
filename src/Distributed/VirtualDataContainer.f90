@@ -19,10 +19,22 @@ module VirtualDataContainerModule
   integer(I4B), public, parameter :: VDC_GWFMVR_TYPE = 5
   integer(I4B), public, parameter :: VDC_GWTMVT_TYPE = 6
 
+  !> @brief Wrapper for virtual data containers
+  !!
+  !! We can't have an array of pointers in Fortran, so we use  
+  !! this trick where we wrap the pointer and have an array
+  !< of VdcPtrType instead.
   type, public :: VdcPtrType
     class(VirtualDataContainerType), pointer :: ptr => null()
   end type VdcPtrType
 
+  !> @brief Container (list) of virtual data items.
+  !!
+  !! A virtual model or exchange derives from this base
+  !! and can add the component-specific items to the list
+  !! of virtual data items. As far as synchronization 
+  !! of virtual objects is concerned, all that is needed
+  !< is the list of virtual data items in this container.
   type, public :: VirtualDataContainerType
     integer(I4B) :: id !< unique identifier matching with the real counterpart
     integer(I4B) :: container_type !< to identify the actual type of this container
@@ -74,6 +86,8 @@ contains
 
   end subroutine vdc_create
 
+  !> @brief Create virtual data item, without allocation,
+  !< and add store it in this container.
   subroutine create_field(this, field, var_name, subcmp_name, is_local)
     class(VirtualDataContainerType) :: this
     class(VirtualDataType), pointer :: field

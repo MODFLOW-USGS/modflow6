@@ -399,10 +399,6 @@ jobs:
         
   parallel_test:
     name: Parallel testing
-    needs:
-      - lint
-      - build
-      - smoke_test
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -498,6 +494,7 @@ jobs:
             pkg-config pkgfile tar unzip mingw-w64-x86_64-cmake \
             mingw-w64-x86_64-msmpi mingw-w64-x86_64-openblas mingw-w64-x86_64-jq
           /usr/bin/python ./configure --with-mpiexec='/C/Program\ Files/Microsoft\ MPI/Bin/mpiexec' --with-shared-libraries=0
+          make all
 
       - name: Setup Micromamba
         uses: mamba-org/provision-with-micromamba@main
