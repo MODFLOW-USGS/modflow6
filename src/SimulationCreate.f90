@@ -305,12 +305,6 @@ contains
               call store_error(errmsg)
               call parser%StoreErrorUnit()
             end if
-          else
-            ! TODO_MJR: this code cannot be reached...
-            write (errmsg, '(4x,a)') &
-              '****ERROR. MULTIPLE PROCESSES IN SEQUENTIAL MODE NOT ALLOWED.'
-            call store_error(errmsg)
-            call parser%StoreErrorUnit()
           end if
         end if
 
@@ -339,6 +333,14 @@ contains
     else
       call store_error('****ERROR.  Did not find MODELS block in simulation'// &
                        ' control file.')
+      call parser%StoreErrorUnit()
+    end if
+    !
+    ! -- sanity check
+    if (simulation_mode == 'PARALLEL' .and. im == 0) then
+      write (errmsg, '(4x,a, i0)') &
+        '****ERROR. No MODELS assigned to process ', proc_id
+      call store_error(errmsg)
       call parser%StoreErrorUnit()
     end if
     !

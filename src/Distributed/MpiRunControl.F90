@@ -41,7 +41,7 @@ contains
     ! local
     integer :: ierr
     character(len=*), parameter :: petsc_db_file = '.petscrc'
-    logical(LGP) :: petsc_db_exists, wait_dbg
+    logical(LGP) :: petsc_db_exists, wait_dbg, is_parallel_mode
     class(MpiWorldType), pointer :: mpi_world
     ! if PETSc we need their initialize
     wait_dbg = .false.
@@ -57,6 +57,8 @@ contains
     CHKERRQ(ierr)
     call PetscOptionsHasName(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, &
                              '-wait_dbg', wait_dbg, ierr)
+    call PetscOptionsHasName(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, &
+                             '-p', is_parallel_mode, ierr)
     CHKERRQ(ierr)
 #else
     call MPI_Init(ierr)
@@ -71,6 +73,10 @@ contains
 
     ! possibly wait to attach debugger here
     if (wait_dbg) call this%wait_for_debugger()
+
+    if (is_parallel_mode .and. nr_procs == 1) then
+      write (*, '(a,/)') '(WARNING. Running parallel mode on only 1 process)'
+    end if
 
     ! start everything else by calling parent
     call this%RunControlType%start()

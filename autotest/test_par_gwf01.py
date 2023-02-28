@@ -6,6 +6,18 @@ import pytest
 from framework import TestFramework
 from simulation import TestSimulation
 
+# Test for parallel MODFLOW running on two cpus.
+# It contains two coupled models with (nlay,nrow,ncol) = (1,1,5),
+# constant head boundaries left=1.0, right=10.0.
+#
+#    idomain:
+#
+#    'leftmodel'     'rightmodel'
+#
+#     1 1 1 1 1       1 1 1 1 1
+#
+# The result should be a uniform flow field.
+
 ex = ["par_gwf01"]
 
 # global convenience...
@@ -192,7 +204,17 @@ def build_model(idx, exdir):
     return sim, None
 
 def eval_model(sim):
-    print("\n(eval_model: not checking anything yet...)\n")
+    # two coupled models with a uniform flow field,
+    # here we assert the known head values at the 
+    # cell centers
+    fpth = os.path.join(sim.simpath, f"{name_left}.hds")
+    hds = flopy.utils.HeadFile(fpth)
+    heads_left = hds.get_data().flatten()
+    fpth = os.path.join(sim.simpath, f"{name_right}.hds")
+    hds = flopy.utils.HeadFile(fpth)
+    heads_right = hds.get_data().flatten()
+    np.testing.assert_array_almost_equal(heads_left, [1.0, 2.0, 3.0, 4.0, 5.0])
+    np.testing.assert_array_almost_equal(heads_right, [6.0, 7.0, 8.0, 9.0, 10.0])
 
 @pytest.mark.parallel
 @pytest.mark.parametrize(
@@ -206,7 +228,7 @@ def test_mf6model(name, function_tmpdir, targets):
         TestSimulation(
             name=name, exe_dict=targets, exfunc=eval_model, 
             idxsim=0, make_comparison=False,
-            parallel=True, ncpus=2,
+            parallel=True, ncpus=4,
         ),
         str(function_tmpdir),
     )
