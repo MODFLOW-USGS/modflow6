@@ -34,12 +34,11 @@ module VirtualDataManagerModule
 
     ! private
     procedure, private :: vds_synchronize
-    procedure, private :: vds_synchronize_sln
     procedure, private :: prepare_all
     procedure, private :: link_all
-    procedure, private :: prepare_solution
-    procedure, private :: update_solution
-    procedure, private :: link
+    procedure, private :: vds_synchronize_sln
+    procedure, private :: prepare_sln
+    procedure, private :: link_sln
     procedure, private :: count_nr_solutions
   end type VirtualDataManagerType
 
@@ -210,15 +209,16 @@ contains
     integer(I4B) :: sol_idx
 
     sol_idx = ifind(this%solution_ids, id_sln)
-    call this%prepare_solution(this%virtual_solutions(sol_idx), stage)
-    call this%update_solution(this%virtual_solutions(sol_idx), stage)
+    call this%prepare_sln(this%virtual_solutions(sol_idx), stage)
+    call this%link_sln(this%virtual_solutions(sol_idx), stage)
+    call this%router%route_sln(this%virtual_solutions(sol_idx), stage)
 
   end subroutine vds_synchronize_sln
 
   !> @brief Force the virtual data containers (models,
   !! exchanges, etc.) to schedule their virtual data
   !< items for synchronization
-  subroutine prepare_solution(this, virtual_sol, stage)
+  subroutine prepare_sln(this, virtual_sol, stage)
     class(VirtualDataManagerType) :: this
     type(VirtualSolutionType) :: virtual_sol
     integer(I4B) :: stage
@@ -236,29 +236,11 @@ contains
       call vdc%prepare_stage(stage)
     end do
 
-  end subroutine prepare_solution
-
-  !> @brief Update this virtual solution in two steps:
-  !!
-  !!   1) link all items that are local
-  !!   2) route data for items that are remote
-  !<
-  subroutine update_solution(this, virtual_sol, stage)
-    class(VirtualDataManagerType) :: this
-    type(VirtualSolutionType) :: virtual_sol
-    integer(I4B) :: stage
-
-    ! local objects are linked
-    call this%link(virtual_sol, stage)
-
-    ! remote objects are routed
-    call this%router%route_sln(virtual_sol, stage)
-
-  end subroutine update_solution
+  end subroutine prepare_sln
 
   !> @brief Connect virtual memory items to their
   !< sources when they are local for this stage
-  subroutine link(this, virtual_sol, stage)
+  subroutine link_sln(this, virtual_sol, stage)
     class(VirtualDataManagerType) :: this
     type(VirtualSolutionType) :: virtual_sol
     integer(I4B) :: stage
@@ -276,7 +258,7 @@ contains
       call vdc%link_items(stage)
     end do
 
-  end subroutine link
+  end subroutine link_sln
 
   !> @brief Returns the number of Numerical Solutions
   !< in this simulation

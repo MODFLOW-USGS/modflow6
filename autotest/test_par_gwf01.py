@@ -228,7 +228,7 @@ def test_mf6model(name, function_tmpdir, targets):
         TestSimulation(
             name=name, exe_dict=targets, exfunc=eval_model, 
             idxsim=0, make_comparison=False,
-            parallel=True, ncpus=4,
+            parallel=True, ncpus=2,
         ),
         str(function_tmpdir),
     )

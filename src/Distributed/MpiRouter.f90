@@ -20,8 +20,8 @@ module MpiRouterModule
 
   type, public, extends(RouterBaseType) :: MpiRouterType
     integer(I4B), dimension(:), pointer :: model_proc_ids
-    type(STLVecInt) :: senders
-    type(STLVecInt) :: receivers
+    type(STLVecInt) :: senders !< the process ids to receive data from
+    type(STLVecInt) :: receivers !< the process ids to send data to
     type(VdcPtrType), dimension(:), pointer :: all_models => null() !< all virtual models from the global list
     type(VdcPtrType), dimension(:), pointer :: all_exchanges => null() !< all virtual exchanges from the global list
     type(VdcPtrType), dimension(:), pointer :: rte_models => null() !< the currently active models to be routed
@@ -90,6 +90,7 @@ contains
     call MPI_Allreduce(MPI_IN_PLACE, this%model_proc_ids, nr_models, &
                        MPI_INTEGER, MPI_SUM, MF6_COMM_WORLD, ierr)
 
+    ! set the process id to the models and exchanges
     do i = 1, nr_models
       vdc => get_vdc_from_list(virtual_model_list, i)
       call vdc%set_orig_rank(this%model_proc_ids(i))
@@ -127,10 +128,6 @@ contains
     call this%message_builder%attach_data(this%rte_models, &
                                           this%rte_exchanges)
 
-    ! update address list
-    call this%mr_update_senders()
-    call this%mr_update_receivers()
-
     ! route all
     call this%mr_route_active(stage)
 
@@ -152,26 +149,20 @@ contains
     ! data to route
     this%rte_models => virtual_sol%models
     this%rte_exchanges => virtual_sol%exchanges
-    call this%message_builder%attach_data(this%rte_models, &
-                                          this%rte_exchanges)
-
-    ! update adress list
-    call this%mr_update_senders_sln(virtual_sol)
-    call this%mr_update_receivers_sln(virtual_sol)
+    call this%message_builder%attach_data(virtual_sol%models, &
+                                          virtual_sol%exchanges)
 
     ! route for this solution
     call this%mr_route_active(stage)
 
     ! release
+    this%rte_models => null()
+    this%rte_exchanges => null()
     call this%message_builder%release_data()
 
   end subroutine mr_route_sln
 
-  !> @brief Routes the models and exchanges from the
-  !! active lists in this instance:
-  !!
-  !!   this%active_models
-  !!   this%active_exchanges
+  !> @brief Routes the models and exchanges
   !<
   subroutine mr_route_active(this, stage)
     class(MpiRouterType) :: this
@@ -193,6 +184,10 @@ contains
     ! message body
     integer, dimension(:), allocatable :: body_rcv_t
     integer, dimension(:), allocatable :: body_snd_t
+
+    ! update adress list
+    call this%mr_update_senders()
+    call this%mr_update_receivers()
 
     ! allocate handles
     allocate (rcv_req(this%receivers%size))
@@ -358,6 +353,8 @@ contains
     call this%receivers%destroy()
 
     deallocate (this%model_proc_ids)
+    deallocate (this%all_models)
+    deallocate (this%all_exchanges)
 
   end subroutine mr_destroy
 
