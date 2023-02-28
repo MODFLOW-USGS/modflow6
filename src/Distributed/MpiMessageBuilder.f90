@@ -51,6 +51,10 @@ contains
 
   end subroutine mb_release_data
 
+  !> @brief Create the header data type to send to
+  !! the remote process for this particular stage.
+  !! From these data, the receiver can construct the
+  !< body to send back to us.
   subroutine mb_create_header_snd(this, rank, stage, hdrs_snd_type)
     class(MpiMessageBuilderType) :: this
     integer(I4B) :: rank

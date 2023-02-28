@@ -1,8 +1,8 @@
 module MpiRouterModule
   use RouterBaseModule
-  use KindModule, only: I4B
+  use KindModule, only: I4B, LGP
   use STLVecIntModule
-  use SimVariablesModule, only: proc_id
+  use SimVariablesModule, only: proc_id, nr_procs
   use SimStagesModule, only: STG_TO_STR
   use VirtualDataListsModule, only: virtual_model_list, &
                                     virtual_exchange_list
@@ -28,6 +28,8 @@ module MpiRouterModule
     type(VdcPtrType), dimension(:), pointer :: rte_exchanges => null() !< the currently active exchanges to be routed
     type(MpiMessageBuilderType) :: message_builder
     type(MpiWorldType), pointer :: mpi_world => null()
+    integer(I4B) :: imon !< the output file unit for the mpi monitor
+    logical(LGP) :: enable_monitor !< when true, log diagnostics
   contains
     procedure :: initialize => mr_initialize
     procedure :: route_all => mr_route_all
@@ -56,12 +58,18 @@ contains
   end function create_mpi_router
 
   subroutine mr_initialize(this)
+    use InputOutputModule, only: getunit
+    use ConstantsModule, only: LINELENGTH
     class(MpiRouterType) :: this
     ! local
     integer :: ierr
     integer(I4B) :: i
     integer(I4B) :: nr_models, nr_exchanges
     class(VirtualDataContainerType), pointer :: vdc
+    character(len=LINELENGTH) :: monitor_file
+
+    ! to log or not to log
+    this%enable_monitor = .true.
 
     ! get mpi world for our process
     this%mpi_world => get_mpi_world()
@@ -113,6 +121,24 @@ contains
       end select
     end do
 
+    ! open log file
+    if (this%enable_monitor) then
+      this%imon = getunit()
+      write (monitor_file, '(a,i0,a)') "mpi.p", proc_id, ".log"
+      open (unit=this%imon, file=monitor_file)
+
+      ! write initial info
+      write (this%imon, '(a,/)') "initialize MPI Router:"
+      write (this%imon, '(2x,a,i0)') "process id: ", proc_id
+      write (this%imon, '(2x,a,i0)') "nr. of processes: ", nr_procs
+      write (this%imon, '(2x,a,i0)') "nr. of models: ", nr_models
+      write (this%imon, '(2x,a,i0)') "nr. of exchanges: ", nr_exchanges
+      write (this%imon, '(2x,2a)') "model id, processor id:"
+      do i = 1, nr_models
+        write (this%imon, '(4x,2i8)') i, this%model_proc_ids(i)
+      end do
+    end if
+
   end subroutine mr_initialize
 
   !> @brief This will route all remote data from the
@@ -121,6 +147,11 @@ contains
   subroutine mr_route_all(this, stage)
     class(MpiRouterType) :: this
     integer(I4B) :: stage
+
+    if (this%enable_monitor) then
+      write (this%imon, '(/,a)') "routing all"
+      write (this%imon, '(2a)') "routing stage: ", STG_TO_STR(stage)
+    end if
 
     ! data to route
     this%rte_models => this%all_models
@@ -146,6 +177,11 @@ contains
     type(VirtualSolutionType) :: virtual_sol
     integer(I4B) :: stage
 
+    if (this%enable_monitor) then
+      write (this%imon, '(/,a,i0)') "routing solution: ", virtual_sol%solution_id
+      write (this%imon, '(2a)') "routing stage: ", STG_TO_STR(stage)
+    end if
+
     ! data to route
     this%rte_models => virtual_sol%models
     this%rte_exchanges => virtual_sol%exchanges
@@ -168,8 +204,8 @@ contains
     class(MpiRouterType) :: this
     integer(I4B) :: stage
     ! local
-    integer(I4B) :: i, rnk
-    integer :: ierr
+    integer(I4B) :: i, j, rnk
+    integer :: ierr, type_size
     ! mpi handles
     integer, dimension(:), allocatable :: rcv_req
     integer, dimension(:), allocatable :: snd_req
@@ -188,6 +224,13 @@ contains
     ! update adress list
     call this%mr_update_senders()
     call this%mr_update_receivers()
+
+    if (this%enable_monitor) then
+      write (this%imon, '(2x,a,*(i0))') "process ids sending data: ", &
+        this%senders%get_values()
+      write (this%imon, '(2x,a,*(i0))') "process ids receiving data: ", &
+        this%receivers%get_values()
+    end if
 
     ! allocate handles
     allocate (rcv_req(this%receivers%size))
@@ -221,6 +264,12 @@ contains
       call this%message_builder%create_header_snd(rnk, stage, hdr_snd_t(i))
       call MPI_Isend(MPI_BOTTOM, 1, hdr_snd_t(i), rnk, stage, &
                      MF6_COMM_WORLD, snd_req(i), ierr)
+
+      if (this%enable_monitor) then
+        call MPI_Type_size(hdr_snd_t(i), type_size, ierr)
+        write (this%imon, '(4x,a,i0)') "send header to process: ", rnk
+      end if
+
       call MPI_Type_free(hdr_snd_t(i), ierr)
     end do
 
@@ -230,6 +279,17 @@ contains
     ! after WaitAll we can count incoming headers from statuses
     do i = 1, this%receivers%size
       call MPI_Get_count(rcv_stat(:, i), hdr_rcv_t(i), hdr_rcv_cnt(i), ierr)
+
+      if (this%enable_monitor) then
+        rnk = this%senders%at(i)
+        write (this%imon, '(4x,a,i0)') "received headers from process: ", rnk
+        write (this%imon, '(4x,a)') "expecting headers:"
+        do j = 1, hdr_rcv_cnt(i)
+          write (this%imon, '(4x,a,i0,a,i0)') "id: ", headers(j, i)%id, &
+            " type: ", headers(j, i)%container_type
+        end do
+      end if
+
       call MPI_Type_free(hdr_rcv_t(i), ierr)
     end do
 
@@ -239,6 +299,12 @@ contains
       call this%message_builder%create_body_rcv(rnk, stage, body_rcv_t(i))
       call MPI_Irecv(MPI_BOTTOM, 1, body_rcv_t(i), rnk, stage, &
                      MF6_COMM_WORLD, snd_req(i), ierr)
+
+      if (this%enable_monitor) then
+        call MPI_Type_size(body_rcv_t(i), type_size, ierr)
+        write (this%imon, '(4x,a,i0)') "receiving from process: ", rnk
+        write (this%imon, '(4x,a,i0)') "message body size: ", type_size
+      end if
     end do
 
     ! send bodies
@@ -248,6 +314,12 @@ contains
         rnk, stage, headers(1:hdr_rcv_cnt(i), i), body_snd_t(i))
       call MPI_Isend(MPI_Bottom, 1, body_snd_t(i), rnk, stage, &
                      MF6_COMM_WORLD, rcv_req(i), ierr)
+
+      if (this%enable_monitor) then
+        call MPI_Type_size(body_snd_t(i), type_size, ierr)
+        write (this%imon, '(4x,a,i0)') "sending to process: ", rnk
+        write (this%imon, '(4x,a,i0)') "message body size: ", type_size
+      end if
     end do
 
     ! wait for exchange of all messages
