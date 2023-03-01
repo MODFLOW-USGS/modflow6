@@ -14,26 +14,20 @@ module MapperModule
 
   public :: MapperType
 
-  ! TODO_MJR: mapping should become copying or so,
-  ! and this can be either in full, or with a map...
   type :: MapperType
-
     type(ListType) :: mapped_data_list
-
   contains
-
     procedure :: init
     procedure :: add_exchange_vars
     procedure :: add_interface_vars
     procedure :: scatter
     procedure :: destroy
 
-    procedure :: add_dist_vars ! TODO_MJR: make private after removing distdata module
+    procedure, private :: add_dist_vars
     procedure, private :: map_model_data
     procedure, private :: map_exg_data
     procedure, private :: map_data
     procedure, private :: map_data_full
-
   end type MapperType
 
 contains
@@ -307,7 +301,6 @@ contains
 
   end subroutine scatter
 
-  ! TODO_MJR: get rid of this bit manipulation stuff...
   function check_stage(var_stage, current_stage) result(is_sync)
     integer(I4B) :: var_stage
     integer(I4B) :: current_stage

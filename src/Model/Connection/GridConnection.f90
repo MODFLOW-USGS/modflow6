@@ -357,12 +357,6 @@ contains
 
     ! fill connection data (ihc, cl1, cl2, etc.) using data
     ! from models and exchanges
-    !
-    ! TODO_MJR: this could probably be done as the first step
-    ! in _ar, such that the cl1,cl2,ihc,... arrays only
-    ! need to be synced for models that are actually in the
-    ! interface model
-    !
     call this%fillConnectionDataInternal()
     call this%fillConnectionDataFromExchanges()
 
@@ -1142,7 +1136,6 @@ contains
 
       ! all exchanges in this list should have at
       ! least one relevant connection for this map
-      ! TODO_MJR: confirm this, really compressed??
       v_exg => get_virtual_exchange(this%haloExchanges%at(ix))
       v_model1 => v_exg%v_model1
       v_model2 => v_exg%v_model2
@@ -1201,7 +1194,6 @@ contains
       end if
     end do
 
-    ! TODO_MJR: compress the maps
     ! sanity check
     ! do i = 1, interfaceMap%nr_models
     !   if (size(interfaceMap%node_map(i)%src_idx) == 0) then

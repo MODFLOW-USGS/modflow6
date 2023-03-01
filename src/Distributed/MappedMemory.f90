@@ -71,8 +71,7 @@ contains
 
   end function skip_sync
 
-  !> @brief Copy 1d integer array with map.
-  !< TODO_MJR: should this maybe move to the memory manager for more convenient maintenance?
+  !> @brief Copy 1d integer array with map
   subroutine sync_int1d(this)
     class(MappedMemoryType) :: this
     ! local

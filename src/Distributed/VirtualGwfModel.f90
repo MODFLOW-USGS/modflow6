@@ -122,7 +122,7 @@ contains
 
     else if (stage == STG_BEFORE_AR) then
 
-      nr_nodes = this%dis_nodes%get() ! TODO_MJR: this should follow from the map
+      nr_nodes = this%dis_nodes%get()
       ! Num. model data
       call this%map(this%x%to_base(), nr_nodes, &
                     (/STG_BEFORE_AR, STG_BEFORE_AD, STG_BEFORE_CF/), &

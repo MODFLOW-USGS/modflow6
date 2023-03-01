@@ -4,8 +4,6 @@ module IndexMapModule
   implicit none
   private
 
-  !> TODO_MJR: this should go to more general place (Utilities)
-  !<
   type, public :: IndexMapType
     integer(I4B), dimension(:), pointer, contiguous :: src_idx => null()
     integer(I4B), dimension(:), pointer, contiguous :: tgt_idx => null()

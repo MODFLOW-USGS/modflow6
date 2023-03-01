@@ -17,8 +17,6 @@ module VirtualDataManagerModule
   implicit none
   private
 
-  ! TODO_MJR: virtual solution should be a virtual data
-  ! collection targeting a single remote address
   type, public :: VirtualDataManagerType
     integer(I4B) :: nr_solutions
     integer(I4B), dimension(:), allocatable :: solution_ids
@@ -95,7 +93,7 @@ contains
     call exchange_ids%init()
 
     ! build the virtual solution
-    this%solution_ids(this%nr_solutions) = num_sol%id ! TODO_MJR: do we need this double bookkeeping?
+    this%solution_ids(this%nr_solutions) = num_sol%id
     virt_sol%solution_id = num_sol%id
 
     ! let's start with adding all models and exchanges from the global list

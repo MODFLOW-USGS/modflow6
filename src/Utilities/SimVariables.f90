@@ -17,7 +17,7 @@ module SimVariablesModule
   character(len=LINELENGTH) :: simstdout = 'mfsim.stdout' !< name of standard out file if screen output is piped to a file
   character(len=LINELENGTH) :: idm_context = '__INPUT__'
 
-  ! temp: for parallel development (TODO_MJR: move to separate container)
+  ! for parallel development
   character(len=LINELENGTH) :: simulation_mode = 'SEQUENTIAL'
   integer(I4B) :: proc_id = 0
   integer(I4B) :: nr_procs = 1

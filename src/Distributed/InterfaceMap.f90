@@ -6,8 +6,6 @@ module InterfaceMapModule
   implicit none
   private
 
-  !> TODO_MJR: this should go somewhere more general (Utilities)
-  !<
   type, public :: InterfaceMapType
     integer(I4B) :: nr_models
     integer(I4B), dimension(:), pointer, contiguous :: model_ids => null()

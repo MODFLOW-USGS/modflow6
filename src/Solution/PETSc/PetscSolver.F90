@@ -14,10 +14,6 @@ module PetscSolverModule
 
   public :: create_petsc_solver
 
-  ! TODO_MJR: this should be universal
-  integer(I4B), parameter :: LIN_ACCEL_CG = 1
-  integer(I4B), parameter :: LIN_ACCEL_BCGS = 2
-
   type, public, extends(LinearSolverBaseType) :: PetscSolverType
     KSP :: ksp_petsc
     class(PetscMatrixType), pointer :: matrix

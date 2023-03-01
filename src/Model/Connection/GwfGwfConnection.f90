@@ -142,6 +142,7 @@ contains
     class(GwfGwfConnectionType) :: this !< this connection
     ! local
     character(len=LENCOMPONENTNAME) :: imName !< the interface model's name
+    integer(I4B) :: i
 
     ! this sets up the GridConnection
     call this%spatialcon_df()
@@ -160,8 +161,7 @@ contains
     this%gwfInterfaceModel%npf%ixt3d = this%iXt3dOnExchange
     call this%gwfInterfaceModel%model_df()
 
-    ! Take these settings from the owning model, TODO_MJR:
-    ! what if the owner iangle1 == 0 but the neighbor doesn't?
+    ! Take these settings from the owning model
     this%gwfInterfaceModel%npf%ik22 = this%gwfModel%npf%ik22
     this%gwfInterfaceModel%npf%ik33 = this%gwfModel%npf%ik33
     this%gwfInterfaceModel%npf%iwetdry = this%gwfModel%npf%iwetdry
@@ -201,10 +201,15 @@ contains
     end if
 
     ! set defaults
-    ! TODO_MJR: loop this
-    this%gwfInterfaceModel%npf%angle1 = 0.0_DP
-    this%gwfInterfaceModel%npf%angle2 = 0.0_DP
-    this%gwfInterfaceModel%npf%angle3 = 0.0_DP
+    do i = 1, size(this%gwfInterfaceModel%npf%angle1)
+      this%gwfInterfaceModel%npf%angle1 = 0.0_DP
+    end do
+    do i = 1, size(this%gwfInterfaceModel%npf%angle2)
+      this%gwfInterfaceModel%npf%angle2 = 0.0_DP
+    end do
+    do i = 1, size(this%gwfInterfaceModel%npf%angle3)
+      this%gwfInterfaceModel%npf%angle3 = 0.0_DP
+    end do
 
     ! point X, RHS, IBOUND to connection
     call this%spatialcon_setmodelptrs()
@@ -634,7 +639,6 @@ contains
                                                      nx, ny, dist)
         else
           ! internal, need to set flowja for n-m
-          ! TODO_MJR: should we mask the flowja calculation in the model?
           iposLoc = getCSRIndex(nLoc, mLoc, this%gwfModel%ia, this%gwfModel%ja)
 
           ! update flowja with correct value

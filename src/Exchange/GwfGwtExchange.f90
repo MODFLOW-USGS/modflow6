@@ -23,7 +23,6 @@ module GwfGwtExchangeModule
 
   type, extends(BaseExchangeType) :: GwfGwtExchangeType
 
-    ! TODO_MJR: refactor this class, we can use GwfModelType and GwtModelType here (we already do...)
     integer(I4B), pointer :: m1_idx => null() !< index into the list of base exchanges for model 1
     integer(I4B), pointer :: m2_idx => null() !< index into the list of base exchanges for model 2
 

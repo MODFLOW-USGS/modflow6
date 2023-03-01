@@ -351,10 +351,10 @@ contains ! module procedures
             call this%owner%dis%con%set_mask(csr_idx, 0)
           else
             ! edge case, someone will be calculating this connection
-            ! so we ignore it here (TODO_MJR: add name)
-            write (*, *) 'Debug: overlap detected, ignoring connection ', &
-              nloc, ':', mloc, ' for model ', trim(this%owner%name), &
-              ' in Exchange ???'
+            ! so we ignore it here
+            write (*, *) 'Warning: overlap detected, no mask on connection ', &
+              nloc, ':', mloc, ' in model ', trim(this%owner%name), &
+              ' for Exchange ', trim(this%prim_exchange%name)
             call conn%set_mask(ipos, 0)
           end if
         end if
@@ -403,11 +403,13 @@ contains ! module procedures
     class(SpatialModelConnectionType) :: this !< this connection
     class(MatrixBaseType), pointer :: matrix_sln !< global matrix
     ! local
-    integer(I4B) :: m, n, mglo, nglo, ipos, ipos_sln
+    integer(I4B) :: i, m, n, mglo, nglo, ipos, ipos_sln
     logical(LGP) :: is_owned
 
-    ! TODO_MJR: this map could be half the size...??
     allocate (this%ipos_to_sln(this%matrix%nja))
+    do i = 1, this%matrix%nja
+      this%ipos_to_sln(i) = -1
+    end do
 
     do n = 1, this%neq
       is_owned = (this%ig_builder%idxToGlobal(n)%v_model == this%owner)

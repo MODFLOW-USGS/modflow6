@@ -119,9 +119,7 @@ contains
 
   !> @ brief Create GWF GWF exchange
   !!
-  !! Create a new GWF to GWF exchange object.
-  !!
-  !< TODO_MJR: refactor, why not just pass in the model objects?
+  !< Create a new GWF to GWF exchange object.
   subroutine gwfexchange_create(filename, name, id, m1_id, m2_id)
     ! -- modules
     use ConstantsModule, only: LINELENGTH

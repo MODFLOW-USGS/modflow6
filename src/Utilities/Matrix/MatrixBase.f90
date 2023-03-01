@@ -30,8 +30,7 @@ module MatrixBaseModule
     procedure(get_position_diag_if), deferred :: get_position_diag
 
     procedure(get_aij_if), deferred :: get_aij
-    procedure(get_row_offset_if), deferred :: get_row_offset !< TODO_MJR: temp, we should probably deal with
-                                                             !! this by making the vectors global aware?
+    procedure(get_row_offset_if), deferred :: get_row_offset
 
   end type MatrixBaseType
 

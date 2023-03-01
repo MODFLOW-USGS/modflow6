@@ -798,7 +798,7 @@ contains
       diagcnt = DZERO
       do n = 1, this%dis%nodes
         if (this%npf%ibound(n) < 1) cycle
-        ! TODO_MJR: why is this jcol and not jrow?
+        !
         jrow = n + this%moffset
         !
         ! get the maximum volume of the cell (head at top of cell)

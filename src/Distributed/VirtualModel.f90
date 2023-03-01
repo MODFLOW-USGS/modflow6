@@ -263,8 +263,6 @@ contains
   subroutine deallocate_data(this)
     class(VirtualModelType) :: this
 
-    ! TODO_MJR: add loop with deallocate for virtual mem items
-
     ! CON
     deallocate (this%con_ia)
     deallocate (this%con_ja)

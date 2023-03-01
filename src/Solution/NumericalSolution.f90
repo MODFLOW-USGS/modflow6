@@ -35,9 +35,8 @@ module NumericalSolutionModule
   use VectorBaseModule
   use LinearSolverBaseModule
   use LinearSolverFactory, only: create_linear_solver
-  use SparseMatrixModule ! TODO_MJR: temporary
-  use MatrixBaseModule
   use SparseMatrixModule
+  use MatrixBaseModule
 
   implicit none
   private
@@ -2458,9 +2457,6 @@ contains
         call this%system_matrix%set_diag_value(irow, DONE)
         call this%system_matrix%zero_row_offdiag(irow)
         this%rhs(ieq) = this%x(ieq)
-        ! Alternative way (TODO_MJR: ):
-        ! call this%system_matrix%add_diag_value(irow, 1.0e+20_DP)
-        ! this%rhs(ieq) = 1.0e+20_DP * this%x(ieq)
       end if
     end do
     !

@@ -55,7 +55,7 @@ def get_model(idx, dir):
     shift_y = 0.0
 
     # top/bot of the aquifer
-    tops = [0.0, -100.0]
+    tops = [0.0, -100.0, -200]
 
     # hydraulic conductivity
     k11 = 1.0
@@ -105,7 +105,7 @@ def get_model(idx, dir):
         delr=delr,
         delc=delc,
         top=tops[0],
-        botm=tops[1:],
+        botm=tops[1:nlay+1],
     )
     ic = flopy.mf6.ModflowGwfic(gwf, strt=h_start)
     npf = flopy.mf6.ModflowGwfnpf(
@@ -143,7 +143,7 @@ def get_model(idx, dir):
         xorigin=shift_x,
         yorigin=shift_y,
         top=tops[0],
-        botm=tops[1:],
+        botm=tops[1:nlay+1],
     )
     ic = flopy.mf6.ModflowGwfic(gwf, strt=h_start)
     npf = flopy.mf6.ModflowGwfnpf(
@@ -197,6 +197,7 @@ def build_petsc_db(exdir):
         petsc_file.write("-sub_ksp_type bcgs\n")
         petsc_file.write("-sub_pc_type ilu\n")
         petsc_file.write("-options_left no\n")
+        #petsc_file.write("-wait_dbg\n")
 
 def build_model(idx, exdir):
     sim = get_model(idx, exdir)
@@ -213,8 +214,8 @@ def eval_model(sim):
     fpth = os.path.join(sim.simpath, f"{name_right}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads_right = hds.get_data().flatten()
-    np.testing.assert_array_almost_equal(heads_left, [1.0, 2.0, 3.0, 4.0, 5.0])
-    np.testing.assert_array_almost_equal(heads_right, [6.0, 7.0, 8.0, 9.0, 10.0])
+    np.testing.assert_array_almost_equal(heads_left[0:5], [1.0, 2.0, 3.0, 4.0, 5.0])
+    np.testing.assert_array_almost_equal(heads_right[0:5], [6.0, 7.0, 8.0, 9.0, 10.0])
 
 @pytest.mark.parallel
 @pytest.mark.parametrize(

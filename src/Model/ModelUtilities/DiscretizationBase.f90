@@ -636,7 +636,7 @@ contains
     end if
     !
     ! -- Allocate the arrays
-    call mem_allocate(this%dbuff, isize, 'DBUFF', this%name_model) ! TODO_MJR: is this correct??
+    call mem_allocate(this%dbuff, isize, 'DBUFF', this%name_model)
     call mem_allocate(this%ibuff, isize, 'IBUFF', this%name_model)
     !
     ! -- Return

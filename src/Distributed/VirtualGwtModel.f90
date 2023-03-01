@@ -119,7 +119,6 @@ contains
     ! prepare base (=numerical) model data items
     call this%VirtualModelType%prepare_stage(stage)
 
-    ! TODO_MJR: get these from the map
     nr_nodes = 0
     nr_conns = 0
 

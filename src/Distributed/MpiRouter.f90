@@ -109,11 +109,6 @@ contains
       this%all_exchanges(i)%ptr => vdc
       select type (vex => vdc)
       class is (VirtualExchangeType)
-        ! TODO_MJR: we set it from model1, or from model2 when model1 is local.
-        ! This is problematic because when a remote exchange resides
-        ! on two distinct processes we cannot synchronize in one sweep...
-        ! We need refactoring of Exchanges here, such that Exchange <=> rank
-        ! is always 1-to-1.
         call vex%set_orig_rank(vex%v_model1%orig_rank)
         if (vex%v_model1%is_local) then
           call vex%set_orig_rank(vex%v_model2%orig_rank)
