@@ -12,20 +12,12 @@ module GwtModule
   use ConstantsModule, only: LENFTYPE, DZERO, LENPAKLOC
   use VersionModule, only: write_listfile_header
   use NumericalModelModule, only: NumericalModelType
-  use TransportModelModule, only: TransportModelType, cunit, niunit
   use BaseModelModule, only: BaseModelType
   use BndModule, only: BndType, AddBndToList, GetBndFromList
-  use TspIcModule, only: TspIcType
-  use TspFmiModule, only: TspFmiType
-  use TspAdvModule, only: TspAdvType
-  use TspSsmModule, only: TspSsmType
-  use TspMvtModule, only: TspMvtType
-  use TspOcModule, only: TspOcType
-  use TspObsModule, only: TspObsType
   use GwtDspModule, only: GwtDspType
   use GwtMstModule, only: GwtMstType
   use BudgetModule, only: BudgetType
-  use TspLabelsModule, only: TspLabelsType
+  use TransportModelModule
   use MatrixModule
 
   implicit none
@@ -34,29 +26,21 @@ module GwtModule
   public :: gwt_cr
   public :: GwtModelType
   public :: CastAsGwtModel
+  public :: niunit
 
   type, extends(TransportModelType) :: GwtModelType
 
-    type(TspLabelsType), pointer :: tsplab => null() ! object defining the appropriate labels
-    type(TspIcType), pointer :: ic => null() ! initial conditions package
-    type(TspFmiType), pointer :: fmi => null() ! flow model interface
-    type(TspAdvType), pointer :: adv => null() ! advection package
-    type(TspSsmType), pointer :: ssm => null() ! source sink mixing package
-    type(TspMvtType), pointer :: mvt => null() ! mover transport package
-    type(TspOcType), pointer :: oc => null() ! output control package
-    type(TspObsType), pointer :: obs => null() ! observation package
     type(GwtMstType), pointer :: mst => null() ! mass storage and transfer package
     type(GwtDspType), pointer :: dsp => null() ! dispersion package
-    type(BudgetType), pointer :: budget => null() ! budget object
-    integer(I4B), pointer :: inic => null() ! unit number IC
-    integer(I4B), pointer :: infmi => null() ! unit number FMI
-    integer(I4B), pointer :: inmvt => null() ! unit number MVT
-    integer(I4B), pointer :: inmst => null() ! unit number MST
-    integer(I4B), pointer :: inadv => null() ! unit number ADV
-    integer(I4B), pointer :: indsp => null() ! unit number DSP
-    integer(I4B), pointer :: inssm => null() ! unit number SSM
-    integer(I4B), pointer :: inoc => null() ! unit number OC
-    integer(I4B), pointer :: inobs => null() ! unit number OBS
+    ! integer(I4B), pointer :: inic => null() ! unit number IC
+    ! integer(I4B), pointer :: infmi => null() ! unit number FMI
+    ! integer(I4B), pointer :: inmvt => null() ! unit number MVT
+    ! integer(I4B), pointer :: inmst => null() ! unit number MST
+    ! integer(I4B), pointer :: inadv => null() ! unit number ADV
+    ! integer(I4B), pointer :: indsp => null() ! unit number DSP
+    ! integer(I4B), pointer :: inssm => null() ! unit number SSM
+    ! integer(I4B), pointer :: inoc => null() ! unit number OC
+    ! integer(I4B), pointer :: inobs => null() ! unit number OBS
 
   contains
 
@@ -77,13 +61,8 @@ module GwtModule
 
     procedure :: allocate_scalars
     procedure, private :: package_create
-    procedure, private :: ftype_check
+    !procedure, private :: ftype_check
     procedure :: get_iasym => gwt_get_iasym
-    procedure, private :: gwt_ot_flow
-    procedure, private :: gwt_ot_flowja
-    procedure, private :: gwt_ot_dv
-    procedure, private :: gwt_ot_bdsummary
-    procedure, private :: gwt_ot_obs
     procedure :: load_input_context => gwt_load_input_context
   end type GwtModelType
 
@@ -387,6 +366,7 @@ contains
     ! -- Find the position of each connection in the global ia, ja structure
     !    and store them in idxglo.
     call this%dis%dis_mc(this%moffset, this%idxglo, matrix_sln)
+    !
     if (this%indsp > 0) call this%dsp%dsp_mc(this%moffset, matrix_sln)
     !
     ! -- Map any package connections
@@ -745,7 +725,6 @@ contains
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_bd(this%budget)
     end do
-
     !
     ! -- Return
     return

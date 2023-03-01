@@ -9,10 +9,25 @@
 
 module TransportModelModule
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: LENFTYPE
+  use InputOutputModule, only: ParseLine
+  use VersionModule, only: write_listfile_header
+  use ConstantsModule, only: LENFTYPE, DZERO, LENPAKLOC
   use SimVariablesModule, only: errmsg
   use NumericalModelModule, only: NumericalModelType
+  use NumericalPackageModule, only: NumericalPackageType
   use TspLabelsModule, only: TspLabelsType
+  use BndModule, only: BndType, GetBndFromList
+  use GwtMstModule, only: GwtMstType, CastAsGwtMstType
+  use GweMstModule, only: GweMstType
+  use TspIcModule, only: TspIcType
+  use TspFmiModule, only: TspFmiType
+  use TspAdvModule, only: TspAdvType
+  use TspSsmModule, only: TspSsmType
+  use TspMvtModule, only: TspMvtType
+  use TspOcModule, only: TspOcType
+  use TspObsModule, only: TspObsType
+  use BudgetModule, only: BudgetType
+  use MatrixModule
 
   implicit none
 
@@ -23,7 +38,49 @@ module TransportModelModule
 
   type, extends(NumericalModelType) :: TransportModelType
 
+    ! Generalized transport package types common to either GWT or GWE
+    class(*), pointer :: tspmst => null() !< flavor of MST package associated with this model type (GWT or GWE)
+    type(TspAdvType), pointer :: adv => null() ! advection package
+    type(TspFmiType), pointer :: fmi => null() ! flow model interface
+    type(TspIcType), pointer :: ic => null() ! initial conditions package
+    type(TspMvtType), pointer :: mvt => null() ! mover transport package
+    type(TspObsType), pointer :: obs => null() ! observation package
+    type(TspOcType), pointer :: oc => null() ! output control package
+    type(TspSsmType), pointer :: ssm => null() ! source sink mixing package
+    type(TspLabelsType), pointer :: tsplab => null() ! object defining the appropriate labels
+    type(BudgetType), pointer :: budget => null() ! budget object
+    integer(I4B), pointer :: inic => null() ! unit number IC
+    integer(I4B), pointer :: infmi => null() ! unit number FMI
+    integer(I4B), pointer :: inmvt => null() ! unit number MVT
+    integer(I4B), pointer :: inadv => null() ! unit number ADV
+    integer(I4B), pointer :: inssm => null() ! unit number SSM
+    integer(I4B), pointer :: inoc => null() ! unit number OC
+    integer(I4B), pointer :: inobs => null() ! unit number OBS
+    integer(I4B), pointer :: inmst => null() ! unit number MST
+    integer(I4B), pointer :: indsp => null() ! unit number DSP
+
   contains
+  
+    ! -- public
+    procedure :: allocate_scalars
+    procedure, public :: tsp_cr
+    procedure, public :: tsp_df
+    procedure, public :: tsp_ac
+    procedure, public :: tsp_mc
+    procedure, public :: tsp_ar
+    procedure, public :: tsp_rp
+    procedure, public :: tsp_ad
+    procedure, public :: tsp_fc
+    procedure, public :: tsp_cc
+    procedure, public :: tsp_cq
+    procedure, public :: tsp_bd
+    procedure, public :: tsp_ot
+    procedure, private :: ftype_check
+    procedure, private :: tsp_ot_obs
+    procedure, private :: tsp_ot_flow
+    procedure, private :: tsp_ot_flowja
+    procedure, private :: tsp_ot_dv
+    procedure, private :: tsp_ot_bdsummary
 
   end type TransportModelType
 
@@ -31,7 +88,7 @@ module TransportModelModule
   integer(I4B), parameter :: NIUNIT = 100
   character(len=LENFTYPE), dimension(NIUNIT) :: cunit
   data cunit/'DIS6 ', 'DISV6', 'DISU6', 'IC6  ', 'MST6 ', & !  5
-    'ADV6 ', 'DSP6 ', 'SSM6 ', '     ', '     ', & ! 10
+    'ADV6 ', 'DSP6 ', 'SSM6 ', '     ', 'CNC6 ', & ! 10
     'OC6  ', 'OBS6 ', 'FMI6 ', 'SRC6 ', 'IST6 ', & ! 15
     'LKT6 ', 'SFT6 ', 'MWT6 ', 'UZT6 ', 'MVT6 ', & ! 20
     'API6 ', '     ', 'SFE6 ', '     ', '     ', & ! 25
