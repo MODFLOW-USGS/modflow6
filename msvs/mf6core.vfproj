@@ -205,6 +205,10 @@
 			<FileConfiguration Name="Debug|x64">
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
 		<File RelativePath="..\src\Solution\NumericalSolution.f90"/>
+		<File RelativePath="..\src\Solution\ParallelSolution.f90">
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\src\Solution\SolutionFactory.F90"/>
 		<File RelativePath="..\src\Solution\SolutionGroup.f90"/></Filter>
 		<Filter Name="Timing">
 		<File RelativePath="..\src\Timing\ats.f90"/>
@@ -245,12 +249,6 @@
 		<File RelativePath="..\src\Utilities\Memory\MemoryManager.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemoryManagerExt.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemorySetHandler.f90"/></Filter>
-		<Filter Name="Vector">
-		<File RelativePath="..\src\Utilities\Vector\PetscVector.F90">
-			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
-			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/></File>
-		<File RelativePath="..\src\Utilities\Vector\SeqVector.f90"/>
-		<File RelativePath="..\src\Utilities\Vector\VectorBase.f90"/></Filter>
 		<Filter Name="Observation">
 		<File RelativePath="..\src\Utilities\Observation\Obs3.f90"/>
 		<File RelativePath="..\src\Utilities\Observation\ObsContainer.f90"/>
@@ -272,6 +270,12 @@
 		<File RelativePath="..\src\Utilities\TimeSeries\TimeSeriesLink.f90"/>
 		<File RelativePath="..\src\Utilities\TimeSeries\TimeSeriesManager.f90"/>
 		<File RelativePath="..\src\Utilities\TimeSeries\TimeSeriesRecord.f90"/></Filter>
+		<Filter Name="Vector">
+		<File RelativePath="..\src\Utilities\Vector\PetscVector.F90">
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\src\Utilities\Vector\SeqVector.f90"/>
+		<File RelativePath="..\src\Utilities\Vector\VectorBase.f90"/></Filter>
 		<File RelativePath="..\src\Utilities\ArrayHandlers.f90"/>
 		<File RelativePath="..\src\Utilities\ArrayReaders.f90"/>
 		<File RelativePath="..\src\Utilities\BlockParser.f90"/>
