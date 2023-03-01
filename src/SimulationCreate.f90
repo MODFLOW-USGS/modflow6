@@ -451,10 +451,10 @@ contains
     ! -- modules
     use SolutionGroupModule, only: SolutionGroupType, &
                                    solutiongroup_create
+    use SolutionFactoryModule, only: create_ims_solution
     use BaseSolutionModule, only: BaseSolutionType
     use BaseModelModule, only: BaseModelType
     use BaseExchangeModule, only: BaseExchangeType
-    use NumericalSolutionModule, only: solution_create
     use SimVariablesModule, only: simulation_mode
     ! -- dummy
     ! -- local
@@ -535,8 +535,7 @@ contains
           !
           ! -- Create the solution, retrieve from the list, and add to sgp
           call parser%GetString(fname)
-          call solution_create(fname, isoln)
-          sp => GetBaseSolutionFromList(basesolutionlist, isoln)
+          sp => create_ims_solution(simulation_mode, fname, isoln)
           call sgp%add_solution(isoln, sp)
           !
           ! -- Add all of the models that are listed on this line to

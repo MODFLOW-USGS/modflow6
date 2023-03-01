@@ -130,6 +130,7 @@ modflow_sources = files(
     'Solution' / 'LinearSolverBase.f90',
     'Solution' / 'LinearSolverFactory.F90',
     'Solution' / 'NumericalSolution.f90',
+    'Solution' / 'SolutionFactory.F90',
     'Solution' / 'SolutionGroup.f90',
     'Timing' / 'ats.f90',
     'Timing' / 'tdis.f90',
@@ -229,7 +230,8 @@ modflow_mpi_sources = files(
   'Distributed' / 'MpiMessageBuilder.f90',
   'Distributed' / 'MpiRouter.f90',
   'Distributed' / 'MpiRunControl.F90',
-  'Distributed' / 'MpiWorld.f90'
+  'Distributed' / 'MpiWorld.f90',
+  'Solution' / 'ParallelSolution.f90'
 )
 
 if with_petsc

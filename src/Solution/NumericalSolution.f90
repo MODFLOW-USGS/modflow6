@@ -41,9 +41,9 @@ module NumericalSolutionModule
   implicit none
   private
 
-  public :: solution_create
   public :: NumericalSolutionType
   public :: GetNumericalSolutionFromList
+  public :: create_numerical_solution
 
   type, extends(BaseSolutionType) :: NumericalSolutionType
     character(len=LENMEMPATH) :: memoryPath !< the path for storing solution variables in the memory manager
@@ -199,45 +199,44 @@ module NumericalSolutionModule
 
 contains
 
-!> @ brief Create a new solution
-!!
-!!  Create a new solution using the data in filename, assign this new
-!!  solution an id number and store the solution in the basesolutionlist.
-!!  Also open the filename for later reading.
-!!
-!<
-  subroutine solution_create(filename, id)
+  !> @ brief Create a new solution
+  !!
+  !!  Create a new solution using the data in filename, assign this new
+  !!  solution an id number and store the solution in the basesolutionlist.
+  !!  Also open the filename for later reading.
+  !!
+  !<
+  subroutine create_numerical_solution(num_sol, filename, id)
     ! -- modules
     use SimVariablesModule, only: iout
     use InputOutputModule, only: getunit, openfile
     ! -- dummy variables
+    class(NumericalSolutionType), pointer :: num_sol !< the create solution
     character(len=*), intent(in) :: filename !< solution input file name
     integer(I4B), intent(in) :: id !< solution id
     ! -- local variables
     integer(I4B) :: inunit
-    type(NumericalSolutionType), pointer :: solution => null()
     class(BaseSolutionType), pointer :: solbase => null()
     character(len=LENSOLUTIONNAME) :: solutionname
     class(SparseMatrixType), pointer :: matrix_impl
     !
     ! -- Create a new solution and add it to the basesolutionlist container
-    allocate (solution)
-    solbase => solution
+    solbase => num_sol
     write (solutionname, '(a, i0)') 'SLN_', id
     !
-    solution%name = solutionname
-    solution%memoryPath = create_mem_path(solutionname)
-    allocate (solution%modellist)
-    allocate (solution%exchangelist)
+    num_sol%name = solutionname
+    num_sol%memoryPath = create_mem_path(solutionname)
+    allocate (num_sol%modellist)
+    allocate (num_sol%exchangelist)
     !
     allocate (matrix_impl)
-    solution%system_matrix => matrix_impl
+    num_sol%system_matrix => matrix_impl
     !
-    call solution%allocate_scalars()
+    call num_sol%allocate_scalars()
     !
     call AddBaseSolutionToList(basesolutionlist, solbase)
     !
-    solution%id = id
+    num_sol%id = id
     !
     ! -- Open solution input file for reading later after problem size is known
     !    Check to see if the file is already opened, which can happen when
@@ -245,16 +244,16 @@ contains
     inquire (file=filename, number=inunit)
 
     if (inunit < 0) inunit = getunit()
-    solution%iu = inunit
-    write (iout, '(/a,a)') ' Creating solution: ', solution%name
-    call openfile(solution%iu, iout, filename, 'IMS')
+    num_sol%iu = inunit
+    write (iout, '(/a,a)') ' Creating solution: ', num_sol%name
+    call openfile(num_sol%iu, iout, filename, 'IMS')
     !
     ! -- Initialize block parser
-    call solution%parser%Initialize(solution%iu, iout)
+    call num_sol%parser%Initialize(num_sol%iu, iout)
     !
     ! -- return
     return
-  end subroutine solution_create
+  end subroutine create_numerical_solution
 
   !> @ brief Allocate scalars
   !!
