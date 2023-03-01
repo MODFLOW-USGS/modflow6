@@ -7,7 +7,8 @@ module MpiRouterModule
   use VirtualDataListsModule, only: virtual_model_list, &
                                     virtual_exchange_list
   use VirtualDataContainerModule, only: VirtualDataContainerType, &
-                                        VdcPtrType, get_vdc_from_list
+                                        VdcPtrType, get_vdc_from_list, &
+                                        VDC_TYPE_TO_STR
   use VirtualExchangeModule, only: VirtualExchangeType
   use VirtualSolutionModule
   use MpiMessageBuilderModule
@@ -200,7 +201,7 @@ contains
     integer(I4B) :: stage
     ! local
     integer(I4B) :: i, j, rnk
-    integer :: ierr, type_size
+    integer :: ierr, msg_size
     ! mpi handles
     integer, dimension(:), allocatable :: rcv_req
     integer, dimension(:), allocatable :: snd_req
@@ -261,7 +262,7 @@ contains
                      MF6_COMM_WORLD, snd_req(i), ierr)
 
       if (this%enable_monitor) then
-        call MPI_Type_size(hdr_snd_t(i), type_size, ierr)
+        call MPI_Type_size(hdr_snd_t(i), msg_size, ierr)
         write (this%imon, '(4x,a,i0)') "send header to process: ", rnk
       end if
 
@@ -278,10 +279,10 @@ contains
       if (this%enable_monitor) then
         rnk = this%senders%at(i)
         write (this%imon, '(4x,a,i0)') "received headers from process: ", rnk
-        write (this%imon, '(4x,a)') "expecting headers:"
+        write (this%imon, '(4x,a)') "expecting data for:"
         do j = 1, hdr_rcv_cnt(i)
-          write (this%imon, '(4x,a,i0,a,i0)') "id: ", headers(j, i)%id, &
-            " type: ", headers(j, i)%container_type
+          write (this%imon, '(6x,a,i0,a,a)') "id: ", headers(j, i)%id, &
+            " type: ", trim(VDC_TYPE_TO_STR(headers(j, i)%container_type))
         end do
       end if
 
@@ -292,13 +293,19 @@ contains
     do i = 1, this%senders%size
       rnk = this%senders%at(i)
       call this%message_builder%create_body_rcv(rnk, stage, body_rcv_t(i))
-      call MPI_Irecv(MPI_BOTTOM, 1, body_rcv_t(i), rnk, stage, &
-                     MF6_COMM_WORLD, snd_req(i), ierr)
+      call MPI_Type_size(body_rcv_t(i), msg_size, ierr)
+      if (msg_size > 0) then
+        call MPI_Irecv(MPI_BOTTOM, 1, body_rcv_t(i), rnk, stage, &
+                       MF6_COMM_WORLD, snd_req(i), ierr)
+      end if
 
       if (this%enable_monitor) then
-        call MPI_Type_size(body_rcv_t(i), type_size, ierr)
-        write (this%imon, '(4x,a,i0)') "receiving from process: ", rnk
-        write (this%imon, '(4x,a,i0)') "message body size: ", type_size
+        if (msg_size > 0) then
+          write (this%imon, '(4x,a,i0)') "receiving from process: ", rnk
+          write (this%imon, '(6x,a,i0)') "message body size: ", msg_size
+        else
+          write (this%imon, '(4x,a,i0)') "no receiving from process: ", rnk
+        end if
       end if
     end do
 
@@ -307,13 +314,19 @@ contains
       rnk = this%receivers%at(i)
       call this%message_builder%create_body_snd( &
         rnk, stage, headers(1:hdr_rcv_cnt(i), i), body_snd_t(i))
-      call MPI_Isend(MPI_Bottom, 1, body_snd_t(i), rnk, stage, &
-                     MF6_COMM_WORLD, rcv_req(i), ierr)
+      call MPI_Type_size(body_snd_t(i), msg_size, ierr)
+      if (msg_size > 0) then
+        call MPI_Isend(MPI_Bottom, 1, body_snd_t(i), rnk, stage, &
+                       MF6_COMM_WORLD, rcv_req(i), ierr)
+      end if
 
       if (this%enable_monitor) then
-        call MPI_Type_size(body_snd_t(i), type_size, ierr)
-        write (this%imon, '(4x,a,i0)') "sending to process: ", rnk
-        write (this%imon, '(4x,a,i0)') "message body size: ", type_size
+        if (msg_size > 0) then
+          write (this%imon, '(4x,a,i0)') "sending to process: ", rnk
+          write (this%imon, '(6x,a,i0)') "message body size: ", msg_size
+        else
+          write (this%imon, '(4x,a,i0)') "no receiving from process: ", rnk
+        end if
       end if
     end do
 

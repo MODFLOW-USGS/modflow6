@@ -10,6 +10,7 @@ module VirtualDataContainerModule
   private
 
   public :: get_vdc_from_list
+  public VDC_TYPE_TO_STR
 
   integer(I4B), public, parameter :: VDC_UNKNOWN_TYPE = 0
   integer(I4B), public, parameter :: VDC_GWFMODEL_TYPE = 1
@@ -344,5 +345,23 @@ contains
     end select
 
   end function get_vdc_from_list
+
+  !> @ Converts a virtual container type to its string representation
+  !<
+  function VDC_TYPE_TO_STR(cntr_type) result(cntr_str)
+    integer(I4B) :: cntr_type
+    character(len=24) :: cntr_str
+
+    if (cntr_type == VDC_UNKNOWN_TYPE) then; cntr_str = "unknown"
+    else if (VDC_GWFMODEL_TYPE == 1) then; cntr_str = "GWF Model"
+    else if (VDC_GWTMODEL_TYPE == 2) then; cntr_str = "GWT Model"
+    else if (VDC_GWFEXG_TYPE == 3) then; cntr_str = "GWF Exchange"
+    else if (VDC_GWTEXG_TYPE == 4) then; cntr_str = "GWT Exchange"
+    else if (VDC_GWFMVR_TYPE == 5) then; cntr_str = "GWF Mover"
+    else if (VDC_GWTMVT_TYPE == 6) then; cntr_str = "GWT Mover"
+    else; cntr_str = "Undefined"
+    end if
+
+  end function VDC_TYPE_TO_STR
 
 end module VirtualDataContainerModule
