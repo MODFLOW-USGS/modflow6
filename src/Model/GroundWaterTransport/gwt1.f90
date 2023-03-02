@@ -63,6 +63,11 @@ module GwtModule
     procedure, private :: package_create
     !procedure, private :: ftype_check
     procedure :: get_iasym => gwt_get_iasym
+    procedure, private :: gwt_ot_flow
+    procedure, private :: gwt_ot_flowja
+    procedure, private :: gwt_ot_dv
+    procedure, private :: gwt_ot_bdsummary
+    procedure, private :: gwt_ot_obs
     procedure :: load_input_context => gwt_load_input_context
   end type GwtModelType
 
@@ -141,7 +146,7 @@ contains
     this%macronym = 'GWT'
     this%id = id
     !
-    ! -- Instantiate generalized labels for later assignment
+    ! -- Instantiate generalized labels 
     call tsplabels_cr(this%tsplab, this%name)
     !
     ! -- Open namefile and set iout
@@ -210,7 +215,7 @@ contains
     call namefile_obj%get_unitnumber('OBS6', this%inobs, 1)
     !
     ! -- Check to make sure that required ftype's have been specified
-    call this%ftype_check(namefile_obj, indis)
+    call this%TransportModelType%ftype_check(namefile_obj, indis)
     !
     ! -- Create discretization object
     if (indis6 > 0) then
@@ -1203,72 +1208,72 @@ contains
     return
   end subroutine package_create
 
-  subroutine ftype_check(this, namefile_obj, indis)
-! ******************************************************************************
-! ftype_check -- Check to make sure required input files have been specified
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error, count_errors
-    use NameFileModule, only: NameFileType
-    ! -- dummy
-    class(GwtModelType) :: this
-    type(NameFileType), intent(in) :: namefile_obj
-    integer(I4B), intent(in) :: indis
-    ! -- local
-    character(len=LINELENGTH) :: errmsg
-    integer(I4B) :: i, iu
-    character(len=LENFTYPE), dimension(10) :: nodupftype = &
-      &(/'DIS6 ', 'DISU6', 'DISV6', 'IC6  ', 'MST6 ', 'ADV6 ', 'DSP6 ', &
-        &'SSM6 ', 'OC6  ', 'OBS6 '/)
-! ------------------------------------------------------------------------------
-    !
-    ! -- Check for IC6, DIS(u), and MST. Stop if not present.
-    if (this%inic == 0) then
-      write (errmsg, '(1x,a)') &
-        'ERROR. INITIAL CONDITIONS (IC6) PACKAGE NOT SPECIFIED.'
-      call store_error(errmsg)
-    end if
-    if (indis == 0) then
-      write (errmsg, '(1x,a)') &
-        'ERROR. DISCRETIZATION (DIS6 or DISU6) PACKAGE NOT SPECIFIED.'
-      call store_error(errmsg)
-    end if
-    if (this%inmst == 0) then
-      write (errmsg, '(1x,a)') 'ERROR. MASS STORAGE AND TRANSFER (MST6) &
-        &PACKAGE NOT SPECIFIED.'
-      call store_error(errmsg)
-    end if
-    if (count_errors() > 0) then
-      write (errmsg, '(1x,a)') 'ERROR. REQUIRED PACKAGE(S) NOT SPECIFIED.'
-      call store_error(errmsg)
-    end if
-    !
-    ! -- Check to make sure that some GWT packages are not specified more
-    !    than once
-    do i = 1, size(nodupftype)
-      call namefile_obj%get_unitnumber(trim(nodupftype(i)), iu, 0)
-      if (iu > 0) then
-        write (errmsg, '(1x, a, a, a)') &
-          'DUPLICATE ENTRIES FOR FTYPE ', trim(nodupftype(i)), &
-          ' NOT ALLOWED FOR GWT MODEL.'
-        call store_error(errmsg)
-      end if
-    end do
-    !
-    ! -- Stop if errors
-    if (count_errors() > 0) then
-      write (errmsg, '(a, a)') 'ERROR OCCURRED WHILE READING FILE: ', &
-        trim(namefile_obj%filename)
-      call store_error(errmsg, terminate=.TRUE.)
-    end if
-    !
-    ! -- return
-    return
-  end subroutine ftype_check
+!  subroutine ftype_check(this, namefile_obj, indis)
+!! ******************************************************************************
+!! ftype_check -- Check to make sure required input files have been specified
+!! ******************************************************************************
+!!
+!!    SPECIFICATIONS:
+!! ------------------------------------------------------------------------------
+!    ! -- modules
+!    use ConstantsModule, only: LINELENGTH
+!    use SimModule, only: store_error, count_errors
+!    use NameFileModule, only: NameFileType
+!    ! -- dummy
+!    class(GwtModelType) :: this
+!    type(NameFileType), intent(in) :: namefile_obj
+!    integer(I4B), intent(in) :: indis
+!    ! -- local
+!    character(len=LINELENGTH) :: errmsg
+!    integer(I4B) :: i, iu
+!    character(len=LENFTYPE), dimension(10) :: nodupftype = &
+!      &(/'DIS6 ', 'DISU6', 'DISV6', 'IC6  ', 'MST6 ', 'ADV6 ', 'DSP6 ', &
+!        &'SSM6 ', 'OC6  ', 'OBS6 '/)
+!! ------------------------------------------------------------------------------
+!    !
+!    ! -- Check for IC6, DIS(u), and MST. Stop if not present.
+!    if (this%inic == 0) then
+!      write (errmsg, '(1x,a)') &
+!        'ERROR. INITIAL CONDITIONS (IC6) PACKAGE NOT SPECIFIED.'
+!      call store_error(errmsg)
+!    end if
+!    if (indis == 0) then
+!      write (errmsg, '(1x,a)') &
+!        'ERROR. DISCRETIZATION (DIS6 or DISU6) PACKAGE NOT SPECIFIED.'
+!      call store_error(errmsg)
+!    end if
+!    if (this%inmst == 0) then
+!      write (errmsg, '(1x,a)') 'ERROR. MASS STORAGE AND TRANSFER (MST6) &
+!        &PACKAGE NOT SPECIFIED.'
+!      call store_error(errmsg)
+!    end if
+!    if (count_errors() > 0) then
+!      write (errmsg, '(1x,a)') 'ERROR. REQUIRED PACKAGE(S) NOT SPECIFIED.'
+!      call store_error(errmsg)
+!    end if
+!    !
+!    ! -- Check to make sure that some GWT packages are not specified more
+!    !    than once
+!    do i = 1, size(nodupftype)
+!      call namefile_obj%get_unitnumber(trim(nodupftype(i)), iu, 0)
+!      if (iu > 0) then
+!        write (errmsg, '(1x, a, a, a)') &
+!          'DUPLICATE ENTRIES FOR FTYPE ', trim(nodupftype(i)), &
+!          ' NOT ALLOWED FOR GWT MODEL.'
+!        call store_error(errmsg)
+!      end if
+!    end do
+!    !
+!    ! -- Stop if errors
+!    if (count_errors() > 0) then
+!      write (errmsg, '(a, a)') 'ERROR OCCURRED WHILE READING FILE: ', &
+!        trim(namefile_obj%filename)
+!      call store_error(errmsg, terminate=.TRUE.)
+!    end if
+!    !
+!    ! -- return
+!    return
+!  end subroutine ftype_check
 
   !> @brief Cast to GwtModelType
   function CastAsGwtModel(model) result(gwtmodel)
