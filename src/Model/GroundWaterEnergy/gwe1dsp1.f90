@@ -325,17 +325,13 @@ contains
       call this%xt3d%xt3d_fc(kiter, matrix_sln, idxglo, rhs, cnew)
     else
       do n = 1, nodes
-        if (this%fmi%idryinactive /= 0) then
-          if (this%fmi%ibdgwfsat0(n) == 0) cycle
-        end if
+        if (this%fmi%ibdgwfsat0(n) == 0) cycle
         idiag = this%dis%con%ia(n)
         do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
           if (this%dis%con%mask(ipos) == 0) cycle
           m = this%dis%con%ja(ipos)
           if (m < n) cycle
-          if (this%fmi%idryinactive /= 0) then
-            if (this%fmi%ibdgwfsat0(m) == 0) cycle
-          end if
+          if (this%fmi%ibdgwfsat0(m) == 0) cycle
           isympos = this%dis%con%jas(ipos)
           dnm = this%dispcoef(isympos)
           !
@@ -378,14 +374,10 @@ contains
       call this%xt3d%xt3d_flowja(cnew, flowja)
     else
       do n = 1, this%dis%nodes
-        if (this%fmi%idryinactive /= 0) then
-          if (this%fmi%ibdgwfsat0(n) == 0) cycle
-        end if
+        if (this%fmi%ibdgwfsat0(n) == 0) cycle
         do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
           m = this%dis%con%ja(ipos)
-          if (this%fmi%idryinactive /= 0) then
-            if (this%fmi%ibdgwfsat0(m) == 0) cycle
-          end if
+          if (this%fmi%ibdgwfsat0(m) == 0) cycle
           isympos = this%dis%con%jas(ipos)
           dnm = this%dispcoef(isympos)
           flowja(ipos) = flowja(ipos) + dnm * (cnew(m) - cnew(n))
@@ -802,9 +794,7 @@ contains
       this%angle1(n) = DZERO
       this%angle2(n) = DZERO
       this%angle3(n) = DZERO
-      if (this%fmi%idryinactive /= 0) then
-        if (this%fmi%ibdgwfsat0(n) == 0) cycle
-      end if
+      if (this%fmi%ibdgwfsat0(n) == 0) cycle
       !
       ! -- specific discharge
       qx = DZERO
@@ -927,9 +917,7 @@ contains
     ! -- Proces connections
     nodes = size(this%d11)
     do n = 1, nodes
-      if (this%fmi%idryinactive /= 0) then
-        if (this%fmi%ibdgwfsat0(n) == 0) cycle
-      end if
+      if (this%fmi%ibdgwfsat0(n) == 0) cycle
       idiag = this%dis%con%ia(n)
       do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
         !
@@ -940,9 +928,7 @@ contains
         if (m < n) cycle
         isympos = this%dis%con%jas(ipos)
         this%dispcoef(isympos) = DZERO
-        if (this%fmi%idryinactive /= 0) then
-          if (this%fmi%ibdgwfsat0(m) == 0) cycle
-        end if
+        if (this%fmi%ibdgwfsat0(m) == 0) cycle
         !
         ! -- cell dimensions
         hwva = this%dis%con%hwva(isympos)
@@ -955,14 +941,8 @@ contains
         botm = this%dis%bot(m)
         !
         ! -- flow model information
-        if (this%fmi%idryinactive == 0) then
-          satn = this%fmi%ibdgwfsat0(n)
-          satm = this%fmi%ibdgwfsat0(m)
-        else
-          ! -- GWT approach
-          satn = this%fmi%gwfsat(n)
-          satm = this%fmi%gwfsat(m)
-        end if
+        satn = this%fmi%ibdgwfsat0(n)
+        satm = this%fmi%ibdgwfsat0(m)
         !
         ! -- Calculate dispersion coefficient for cell n in the direction
         !    normal to the shared n-m face and for cell m in the direction
