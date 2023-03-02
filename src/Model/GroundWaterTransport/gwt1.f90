@@ -12,20 +12,12 @@ module GwtModule
   use ConstantsModule, only: LENFTYPE, DZERO, LENPAKLOC
   use VersionModule, only: write_listfile_header
   use NumericalModelModule, only: NumericalModelType
-  use TransportModelModule, only: TransportModelType, cunit, niunit
   use BaseModelModule, only: BaseModelType
   use BndModule, only: BndType, AddBndToList, GetBndFromList
-  use TspIcModule, only: TspIcType
-  use TspFmiModule, only: TspFmiType
-  use TspAdvModule, only: TspAdvType
-  use TspSsmModule, only: TspSsmType
-  use TspMvtModule, only: TspMvtType
-  use TspOcModule, only: TspOcType
-  use TspObsModule, only: TspObsType
   use GwtDspModule, only: GwtDspType
   use GwtMstModule, only: GwtMstType
   use BudgetModule, only: BudgetType
-  use TspLabelsModule, only: TspLabelsType
+  use TransportModelModule
   use MatrixModule
 
   implicit none
@@ -34,29 +26,21 @@ module GwtModule
   public :: gwt_cr
   public :: GwtModelType
   public :: CastAsGwtModel
+  public :: niunit
 
   type, extends(TransportModelType) :: GwtModelType
 
-    type(TspLabelsType), pointer :: tsplab => null() ! object defining the appropriate labels
-    type(TspIcType), pointer :: ic => null() ! initial conditions package
-    type(TspFmiType), pointer :: fmi => null() ! flow model interface
-    type(TspAdvType), pointer :: adv => null() ! advection package
-    type(TspSsmType), pointer :: ssm => null() ! source sink mixing package
-    type(TspMvtType), pointer :: mvt => null() ! mover transport package
-    type(TspOcType), pointer :: oc => null() ! output control package
-    type(TspObsType), pointer :: obs => null() ! observation package
     type(GwtMstType), pointer :: mst => null() ! mass storage and transfer package
     type(GwtDspType), pointer :: dsp => null() ! dispersion package
-    type(BudgetType), pointer :: budget => null() ! budget object
-    integer(I4B), pointer :: inic => null() ! unit number IC
-    integer(I4B), pointer :: infmi => null() ! unit number FMI
-    integer(I4B), pointer :: inmvt => null() ! unit number MVT
-    integer(I4B), pointer :: inmst => null() ! unit number MST
-    integer(I4B), pointer :: inadv => null() ! unit number ADV
-    integer(I4B), pointer :: indsp => null() ! unit number DSP
-    integer(I4B), pointer :: inssm => null() ! unit number SSM
-    integer(I4B), pointer :: inoc => null() ! unit number OC
-    integer(I4B), pointer :: inobs => null() ! unit number OBS
+    ! integer(I4B), pointer :: inic => null() ! unit number IC
+    ! integer(I4B), pointer :: infmi => null() ! unit number FMI
+    ! integer(I4B), pointer :: inmvt => null() ! unit number MVT
+    ! integer(I4B), pointer :: inmst => null() ! unit number MST
+    ! integer(I4B), pointer :: inadv => null() ! unit number ADV
+    ! integer(I4B), pointer :: indsp => null() ! unit number DSP
+    ! integer(I4B), pointer :: inssm => null() ! unit number SSM
+    ! integer(I4B), pointer :: inoc => null() ! unit number OC
+    ! integer(I4B), pointer :: inobs => null() ! unit number OBS
 
   contains
 
@@ -77,7 +61,7 @@ module GwtModule
 
     procedure :: allocate_scalars
     procedure, private :: package_create
-    procedure, private :: ftype_check
+    !procedure, private :: ftype_check
     procedure :: get_iasym => gwt_get_iasym
     procedure, private :: gwt_ot_flow
     procedure, private :: gwt_ot_flowja
@@ -162,7 +146,7 @@ contains
     this%macronym = 'GWT'
     this%id = id
     !
-    ! -- Instantiate generalized labels for later assignment
+    ! -- Instantiate generalized labels 
     call tsplabels_cr(this%tsplab, this%name)
     !
     ! -- Open namefile and set iout
@@ -231,7 +215,7 @@ contains
     call namefile_obj%get_unitnumber('OBS6', this%inobs, 1)
     !
     ! -- Check to make sure that required ftype's have been specified
-    call this%ftype_check(namefile_obj, indis)
+    call this%TransportModelType%ftype_check(namefile_obj, indis)
     !
     ! -- Create discretization object
     if (indis6 > 0) then
@@ -387,6 +371,7 @@ contains
     ! -- Find the position of each connection in the global ia, ja structure
     !    and store them in idxglo.
     call this%dis%dis_mc(this%moffset, this%idxglo, matrix_sln)
+    !
     if (this%indsp > 0) call this%dsp%dsp_mc(this%moffset, matrix_sln)
     !
     ! -- Map any package connections
@@ -745,7 +730,6 @@ contains
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_bd(this%budget)
     end do
-
     !
     ! -- Return
     return
@@ -1224,72 +1208,72 @@ contains
     return
   end subroutine package_create
 
-  subroutine ftype_check(this, namefile_obj, indis)
-! ******************************************************************************
-! ftype_check -- Check to make sure required input files have been specified
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error, count_errors
-    use NameFileModule, only: NameFileType
-    ! -- dummy
-    class(GwtModelType) :: this
-    type(NameFileType), intent(in) :: namefile_obj
-    integer(I4B), intent(in) :: indis
-    ! -- local
-    character(len=LINELENGTH) :: errmsg
-    integer(I4B) :: i, iu
-    character(len=LENFTYPE), dimension(10) :: nodupftype = &
-      &(/'DIS6 ', 'DISU6', 'DISV6', 'IC6  ', 'MST6 ', 'ADV6 ', 'DSP6 ', &
-        &'SSM6 ', 'OC6  ', 'OBS6 '/)
-! ------------------------------------------------------------------------------
-    !
-    ! -- Check for IC6, DIS(u), and MST. Stop if not present.
-    if (this%inic == 0) then
-      write (errmsg, '(1x,a)') &
-        'ERROR. INITIAL CONDITIONS (IC6) PACKAGE NOT SPECIFIED.'
-      call store_error(errmsg)
-    end if
-    if (indis == 0) then
-      write (errmsg, '(1x,a)') &
-        'ERROR. DISCRETIZATION (DIS6 or DISU6) PACKAGE NOT SPECIFIED.'
-      call store_error(errmsg)
-    end if
-    if (this%inmst == 0) then
-      write (errmsg, '(1x,a)') 'ERROR. MASS STORAGE AND TRANSFER (MST6) &
-        &PACKAGE NOT SPECIFIED.'
-      call store_error(errmsg)
-    end if
-    if (count_errors() > 0) then
-      write (errmsg, '(1x,a)') 'ERROR. REQUIRED PACKAGE(S) NOT SPECIFIED.'
-      call store_error(errmsg)
-    end if
-    !
-    ! -- Check to make sure that some GWT packages are not specified more
-    !    than once
-    do i = 1, size(nodupftype)
-      call namefile_obj%get_unitnumber(trim(nodupftype(i)), iu, 0)
-      if (iu > 0) then
-        write (errmsg, '(1x, a, a, a)') &
-          'DUPLICATE ENTRIES FOR FTYPE ', trim(nodupftype(i)), &
-          ' NOT ALLOWED FOR GWT MODEL.'
-        call store_error(errmsg)
-      end if
-    end do
-    !
-    ! -- Stop if errors
-    if (count_errors() > 0) then
-      write (errmsg, '(a, a)') 'ERROR OCCURRED WHILE READING FILE: ', &
-        trim(namefile_obj%filename)
-      call store_error(errmsg, terminate=.TRUE.)
-    end if
-    !
-    ! -- return
-    return
-  end subroutine ftype_check
+!  subroutine ftype_check(this, namefile_obj, indis)
+!! ******************************************************************************
+!! ftype_check -- Check to make sure required input files have been specified
+!! ******************************************************************************
+!!
+!!    SPECIFICATIONS:
+!! ------------------------------------------------------------------------------
+!    ! -- modules
+!    use ConstantsModule, only: LINELENGTH
+!    use SimModule, only: store_error, count_errors
+!    use NameFileModule, only: NameFileType
+!    ! -- dummy
+!    class(GwtModelType) :: this
+!    type(NameFileType), intent(in) :: namefile_obj
+!    integer(I4B), intent(in) :: indis
+!    ! -- local
+!    character(len=LINELENGTH) :: errmsg
+!    integer(I4B) :: i, iu
+!    character(len=LENFTYPE), dimension(10) :: nodupftype = &
+!      &(/'DIS6 ', 'DISU6', 'DISV6', 'IC6  ', 'MST6 ', 'ADV6 ', 'DSP6 ', &
+!        &'SSM6 ', 'OC6  ', 'OBS6 '/)
+!! ------------------------------------------------------------------------------
+!    !
+!    ! -- Check for IC6, DIS(u), and MST. Stop if not present.
+!    if (this%inic == 0) then
+!      write (errmsg, '(1x,a)') &
+!        'ERROR. INITIAL CONDITIONS (IC6) PACKAGE NOT SPECIFIED.'
+!      call store_error(errmsg)
+!    end if
+!    if (indis == 0) then
+!      write (errmsg, '(1x,a)') &
+!        'ERROR. DISCRETIZATION (DIS6 or DISU6) PACKAGE NOT SPECIFIED.'
+!      call store_error(errmsg)
+!    end if
+!    if (this%inmst == 0) then
+!      write (errmsg, '(1x,a)') 'ERROR. MASS STORAGE AND TRANSFER (MST6) &
+!        &PACKAGE NOT SPECIFIED.'
+!      call store_error(errmsg)
+!    end if
+!    if (count_errors() > 0) then
+!      write (errmsg, '(1x,a)') 'ERROR. REQUIRED PACKAGE(S) NOT SPECIFIED.'
+!      call store_error(errmsg)
+!    end if
+!    !
+!    ! -- Check to make sure that some GWT packages are not specified more
+!    !    than once
+!    do i = 1, size(nodupftype)
+!      call namefile_obj%get_unitnumber(trim(nodupftype(i)), iu, 0)
+!      if (iu > 0) then
+!        write (errmsg, '(1x, a, a, a)') &
+!          'DUPLICATE ENTRIES FOR FTYPE ', trim(nodupftype(i)), &
+!          ' NOT ALLOWED FOR GWT MODEL.'
+!        call store_error(errmsg)
+!      end if
+!    end do
+!    !
+!    ! -- Stop if errors
+!    if (count_errors() > 0) then
+!      write (errmsg, '(a, a)') 'ERROR OCCURRED WHILE READING FILE: ', &
+!        trim(namefile_obj%filename)
+!      call store_error(errmsg, terminate=.TRUE.)
+!    end if
+!    !
+!    ! -- return
+!    return
+!  end subroutine ftype_check
 
   !> @brief Cast to GwtModelType
   function CastAsGwtModel(model) result(gwtmodel)
