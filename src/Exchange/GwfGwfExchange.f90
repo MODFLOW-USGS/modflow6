@@ -17,19 +17,19 @@ module GwfGwfExchangeModule
   use ConstantsModule, only: LENBOUNDNAME, NAMEDBOUNDFLAG, LINELENGTH, &
                              TABCENTER, TABLEFT, LENAUXNAME, DNODATA
   use ListModule, only: ListType
-  use ListsModule, only: basemodellist, distmodellist
+  use ListsModule, only: basemodellist
   use DisConnExchangeModule, only: DisConnExchangeType
   use GwfModule, only: GwfModelType
-  use DistributedModelModule, only: DistributedModelType, GetDistModelFromList
+  use VirtualModelModule, only: VirtualModelType
   use GhostNodeModule, only: GhostNodeType
   use GwfMvrModule, only: GwfMvrType
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
   use SimModule, only: count_errors, store_error, store_error_unit
-  use SimVariablesModule, only: errmsg
+  use SimVariablesModule, only: errmsg, model_loc_idx
   use BlockParserModule, only: BlockParserType
   use TableModule, only: TableType, table_cr
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
 
@@ -100,6 +100,7 @@ module GwfGwfExchangeModule
     procedure :: parse_option
     procedure :: read_gnc
     procedure :: read_mvr
+    procedure, private :: calc_cond_sat
     procedure, private :: condcalc
     procedure, private :: rewet
     procedure, private :: qcalc
@@ -109,7 +110,7 @@ module GwfGwfExchangeModule
     procedure, private :: gwf_gwf_rp_obs
     procedure, public :: gwf_gwf_save_simvals
     procedure, private :: gwf_gwf_calc_simvals
-    procedure, public :: gwf_gwf_set_simvals_to_npf
+    procedure, public :: gwf_gwf_set_flow_to_npf
     procedure, private :: validate_exchange
     procedure :: gwf_gwf_add_to_flowja
   end type GwfExchangeType
@@ -118,26 +119,26 @@ contains
 
   !> @ brief Create GWF GWF exchange
   !!
-  !! Create a new GWF to GWF exchange object.
-  !!
-  !<
-  subroutine gwfexchange_create(filename, id, m1id, m2id)
+  !< Create a new GWF to GWF exchange object.
+  subroutine gwfexchange_create(filename, name, id, m1_id, m2_id)
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use BaseModelModule, only: BaseModelType
+    use VirtualModelModule, only: get_virtual_model
     use ListsModule, only: baseexchangelist
     use ObsModule, only: obs_cr
     use MemoryHelperModule, only: create_mem_path
     ! -- dummy
     character(len=*), intent(in) :: filename !< filename for reading
+    character(len=*) :: name !< exchange name
     integer(I4B), intent(in) :: id !< id for the exchange
-    integer(I4B), intent(in) :: m1id !< id for model 1
-    integer(I4B), intent(in) :: m2id !< id for model 2
+    integer(I4B), intent(in) :: m1_id !< id for model 1
+    integer(I4B), intent(in) :: m2_id !< id for model 2
     ! -- local
     type(GwfExchangeType), pointer :: exchange
     class(BaseModelType), pointer :: mb
     class(BaseExchangeType), pointer :: baseexchange
-    character(len=20) :: cint
+    integer(I4B) :: m1_index, m2_index
     !
     ! -- Create a new exchange and add it to the baseexchangelist container
     allocate (exchange)
@@ -146,8 +147,7 @@ contains
     !
     ! -- Assign id and name
     exchange%id = id
-    write (cint, '(i0)') id
-    exchange%name = 'GWF-GWF_'//trim(adjustl(cint))
+    exchange%name = name
     exchange%memoryPath = create_mem_path(exchange%name)
     !
     ! -- allocate scalars and set defaults
@@ -156,25 +156,32 @@ contains
     exchange%typename = 'GWF-GWF'
     !
     ! -- set gwfmodel1
-    mb => GetBaseModelFromList(basemodellist, m1id)
-    select type (mb)
-    type is (GwfModelType)
-      exchange%model1 => mb
-      exchange%gwfmodel1 => mb
-    end select
-    exchange%dmodel1 => GetDistModelFromList(distmodellist, m1id)
+    m1_index = model_loc_idx(m1_id)
+    if (m1_index > 0) then
+      mb => GetBaseModelFromList(basemodellist, m1_index)
+      select type (mb)
+      type is (GwfModelType)
+        exchange%model1 => mb
+        exchange%gwfmodel1 => mb
+      end select
+    end if
+    exchange%v_model1 => get_virtual_model(m1_id)
+    exchange%is_datacopy = .not. exchange%v_model1%is_local
     !
     ! -- set gwfmodel2
-    mb => GetBaseModelFromList(basemodellist, m2id)
-    select type (mb)
-    type is (GwfModelType)
-      exchange%model2 => mb
-      exchange%gwfmodel2 => mb
-    end select
-    exchange%dmodel2 => GetDistModelFromList(distmodellist, m2id)
+    m2_index = model_loc_idx(m2_id)
+    if (m2_index > 0) then
+      mb => GetBaseModelFromList(basemodellist, m2_index)
+      select type (mb)
+      type is (GwfModelType)
+        exchange%model2 => mb
+        exchange%gwfmodel2 => mb
+      end select
+    end if
+    exchange%v_model2 => get_virtual_model(m2_id)
     !
     ! -- Verify that gwf model1 is of the correct type
-    if (.not. associated(exchange%gwfmodel1)) then
+    if (.not. associated(exchange%gwfmodel1) .and. m1_index > 0) then
       write (errmsg, '(3a)') 'Problem with GWF-GWF exchange ', &
         trim(exchange%name), &
         '.  First specified GWF Model does not appear to be of the correct type.'
@@ -182,7 +189,7 @@ contains
     end if
     !
     ! -- Verify that gwf model2 is of the correct type
-    if (.not. associated(exchange%gwfmodel2)) then
+    if (.not. associated(exchange%gwfmodel2) .and. m2_index > 0) then
       write (errmsg, '(3a)') 'Problem with GWF-GWF exchange ', &
         trim(exchange%name), &
         '.  Second specified GWF Model does not appear to be of the correct type.'
@@ -219,12 +226,15 @@ contains
     call this%parser%Initialize(inunit, iout)
     !
     ! -- Ensure models are in same solution
-    if (this%gwfmodel1%idsoln /= this%gwfmodel2%idsoln) then
-      call store_error('ERROR.  TWO MODELS ARE CONNECTED IN A GWF '// &
-                       'EXCHANGE BUT THEY ARE IN DIFFERENT SOLUTIONS. '// &
-                       'GWF MODELS MUST BE IN SAME SOLUTION: '// &
-                       trim(this%gwfmodel1%name)//' '//trim(this%gwfmodel2%name))
-      call this%parser%StoreErrorUnit()
+    if (associated(this%gwfmodel1) .and. associated(this%gwfmodel2)) then
+      if (this%gwfmodel1%idsoln /= this%gwfmodel2%idsoln) then
+        call store_error('ERROR.  TWO MODELS ARE CONNECTED IN A GWF '// &
+                         'EXCHANGE BUT THEY ARE IN DIFFERENT SOLUTIONS. '// &
+                         'GWF MODELS MUST BE IN SAME SOLUTION: '// &
+                         trim(this%gwfmodel1%name)//' '// &
+                         trim(this%gwfmodel2%name))
+        call this%parser%StoreErrorUnit()
+      end if
     end if
     !
     ! -- read options
@@ -240,8 +250,12 @@ contains
     call this%read_data(iout)
     !
     ! -- call each model and increase the edge count
-    call this%gwfmodel1%npf%increase_edge_count(this%nexg)
-    call this%gwfmodel2%npf%increase_edge_count(this%nexg)
+    if (associated(this%gwfmodel1)) then
+      call this%gwfmodel1%npf%increase_edge_count(this%nexg)
+    end if
+    if (associated(this%gwfmodel2)) then
+      call this%gwfmodel2%npf%increase_edge_count(this%nexg)
+    end if
     !
     ! -- Create and read ghost node information
     if (this%ingnc > 0) then
@@ -259,7 +273,9 @@ contains
     !
     ! -- Store obs
     call this%gwf_gwf_df_obs()
-    call this%obs%obs_df(iout, this%name, 'GWF-GWF', this%gwfmodel1%dis)
+    if (associated(this%gwfmodel1)) then
+      call this%obs%obs_df(iout, this%name, 'GWF-GWF', this%gwfmodel1%dis)
+    end if
     !
     ! -- validate
     call this%validate_exchange()
@@ -273,6 +289,7 @@ contains
   subroutine validate_exchange(this)
     class(GwfExchangeType) :: this !<  GwfExchangeType
     ! local
+    logical(LGP) :: has_k22, has_spdis, has_vsc
 
     ! Periodic boundary condition in exchange don't allow XT3D (=interface model)
     if (associated(this%model1, this%model2)) then
@@ -284,10 +301,35 @@ contains
       end if
     end if
 
-    ! Check to see if horizontal anisotropy is in either model1 or model2.
-    ! If so, then ANGLDEGX must be provided as an auxiliary variable for this
+    ! XT3D needs angle information
+    if (this%ixt3d > 0 .and. this%ianglex == 0) then
+      write (errmsg, '(3a)') 'GWF-GWF exchange ', trim(this%name), &
+        ' requires that ANGLDEGX be specified as an'// &
+        ' auxiliary variable because XT3D is enabled'
+      call store_error(errmsg, terminate=.TRUE.)
+    end if
+
+    ! determine if specific functionality is demanded,
+    ! in model 1 or model 2 (in parallel, only one of
+    ! the models is checked, but the exchange is duplicated)
+    has_k22 = .false.
+    has_spdis = .false.
+    has_vsc = .false.
+    if (associated(this%gwfmodel1)) then
+      has_k22 = (this%gwfmodel1%npf%ik22 /= 0)
+      has_spdis = (this%gwfmodel1%npf%icalcspdis /= 0)
+      has_vsc = (this%gwfmodel1%npf%invsc /= 0)
+    end if
+    if (associated(this%gwfmodel2)) then
+      has_k22 = has_k22 .or. (this%gwfmodel2%npf%ik22 /= 0)
+      has_spdis = has_spdis .or. (this%gwfmodel2%npf%icalcspdis /= 0)
+      has_vsc = has_vsc .or. (this%gwfmodel2%npf%invsc /= 0)
+    end if
+
+    ! If horizontal anisotropy is in either model1 or model2,
+    ! ANGLDEGX must be provided as an auxiliary variable for this
     ! GWF-GWF exchange (this%ianglex > 0).
-    if (this%gwfmodel1%npf%ik22 /= 0 .or. this%gwfmodel2%npf%ik22 /= 0) then
+    if (has_k22) then
       if (this%ianglex == 0) then
         write (errmsg, '(3a)') 'GWF-GWF exchange ', trim(this%name), &
           ' requires that ANGLDEGX be specified as an'// &
@@ -297,11 +339,10 @@ contains
       end if
     end if
 
-    ! Check to see if specific discharge is needed for model1 or model2.
-    ! If so, then ANGLDEGX must be provided as an auxiliary variable for this
+    ! If specific discharge is needed for model1 or model2,
+    ! ANGLDEGX must be provided as an auxiliary variable for this
     ! GWF-GWF exchange (this%ianglex > 0).
-    if (this%gwfmodel1%npf%icalcspdis /= 0 .or. &
-        this%gwfmodel2%npf%icalcspdis /= 0) then
+    if (has_spdis) then
       if (this%ianglex == 0) then
         write (errmsg, '(3a)') 'GWF-GWF exchange ', trim(this%name), &
           ' requires that ANGLDEGX be specified as an'// &
@@ -320,17 +361,9 @@ contains
       end if
     end if
 
-    if (this%ixt3d > 0 .and. this%ianglex == 0) then
-      write (errmsg, '(3a)') 'GWF-GWF exchange ', trim(this%name), &
-        ' requires that ANGLDEGX be specified as an'// &
-        ' auxiliary variable because XT3D is enabled'
-      call store_error(errmsg, terminate=.TRUE.)
-    end if
-
     ! If viscosity is on in either model, then terminate with an
     ! error as viscosity package doesn't work yet with exchanges.
-    if (this%gwfmodel1%npf%invsc /= 0 .or. &
-        this%gwfmodel2%npf%invsc /= 0) then
+    if (has_vsc) then
       write (errmsg, '(3a)') 'GWF-GWF exchange ', trim(this%name), &
         ' requires that the Viscosity Package is inactive'// &
         ' in both of the connected models.'
@@ -408,93 +441,14 @@ contains
   !<
   subroutine gwf_gwf_ar(this)
     ! -- modules
-    use ConstantsModule, only: LINELENGTH, DZERO, DHALF, DONE, DPIO180
-    use GwfNpfModule, only: condmean, vcond, hcond
     ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
-    ! -- local
-    integer(I4B) :: iexg
-    integer(I4B) :: n, m, ihc
-    real(DP) :: topn, topm
-    real(DP) :: botn, botm
-    real(DP) :: satn, satm
-    real(DP) :: thickn, thickm
-    real(DP) :: angle, hyn, hym
-    real(DP) :: csat
-    real(DP) :: fawidth
-    real(DP), dimension(3) :: vg
     !
     ! -- If mover is active, then call ar routine
     if (this%inmvr > 0) call this%mvr%mvr_ar()
     !
-    ! -- Go through each connection and calculate the saturated conductance
-    do iexg = 1, this%nexg
-      !
-      ihc = this%ihc(iexg)
-      n = this%nodem1(iexg)
-      m = this%nodem2(iexg)
-      topn = this%gwfmodel1%dis%top(n)
-      topm = this%gwfmodel2%dis%top(m)
-      botn = this%gwfmodel1%dis%bot(n)
-      botm = this%gwfmodel2%dis%bot(m)
-      satn = this%gwfmodel1%npf%sat(n)
-      satm = this%gwfmodel2%npf%sat(m)
-      thickn = (topn - botn) * satn
-      thickm = (topm - botm) * satm
-      !
-      ! -- Calculate conductance depending on connection orientation
-      if (ihc == 0) then
-        !
-        ! -- Vertical conductance for fully saturated conditions
-        vg(1) = DZERO
-        vg(2) = DZERO
-        vg(3) = DONE
-        hyn = this%gwfmodel1%npf%hy_eff(n, 0, ihc, vg=vg)
-        hym = this%gwfmodel2%npf%hy_eff(m, 0, ihc, vg=vg)
-        csat = vcond(1, 1, 1, 1, 0, 1, 1, DONE, &
-                     botn, botm, &
-                     hyn, hym, &
-                     satn, satm, &
-                     topn, topm, &
-                     botn, botm, &
-                     this%hwva(iexg))
-      else
-        !
-        ! -- Calculate horizontal conductance
-        hyn = this%gwfmodel1%npf%k11(n)
-        hym = this%gwfmodel2%npf%k11(m)
-        !
-        ! -- Check for anisotropy in models, and recalculate hyn and hym
-        if (this%ianglex > 0) then
-          angle = this%auxvar(this%ianglex, iexg) * DPIO180
-          vg(1) = abs(cos(angle))
-          vg(2) = abs(sin(angle))
-          vg(3) = DZERO
-          !
-          ! -- anisotropy in model 1
-          if (this%gwfmodel1%npf%ik22 /= 0) then
-            hyn = this%gwfmodel1%npf%hy_eff(n, 0, ihc, vg=vg)
-          end if
-          !
-          ! -- anisotropy in model 2
-          if (this%gwfmodel2%npf%ik22 /= 0) then
-            hym = this%gwfmodel2%npf%hy_eff(m, 0, ihc, vg=vg)
-          end if
-        end if
-        !
-        fawidth = this%hwva(iexg)
-        csat = hcond(1, 1, 1, 1, this%inewton, 0, ihc, &
-                     this%icellavg, 0, 0, DONE, &
-                     topn, topm, satn, satm, hyn, hym, &
-                     topn, topm, &
-                     botn, botm, &
-                     this%cl1(iexg), this%cl2(iexg), &
-                     fawidth, this%satomega)
-      end if
-      !
-      ! -- store csat in condsat
-      this%condsat(iexg) = csat
-    end do
+    ! -- Calculate the saturated conductance for all connections
+    if (.not. this%use_interface_model()) call this%calc_cond_sat()
     !
     ! -- Observation AR
     call this%obs%obs_ar()
@@ -767,10 +721,10 @@ contains
     ! -- calculate flow and store in simvals
     call this%gwf_gwf_calc_simvals()
     !
-    ! -- set rates to model edges in npf for spdis calculation
-    call this%gwf_gwf_set_simvals_to_npf()
+    ! -- set flows to model edges in NPF
+    call this%gwf_gwf_set_flow_to_npf()
     !
-    ! -- add exchange flow to model 1 and 2 flowja array diagonal position
+    ! -- add exchange flows to model's flowja diagonal
     call this%gwf_gwf_add_to_flowja()
     !
     ! -- return
@@ -818,24 +772,28 @@ contains
 
     do i = 1, this%nexg
 
-      flow = this%simvals(i)
-      n = this%nodem1(i)
-      idiag = this%gwfmodel1%ia(n)
-      this%gwfmodel1%flowja(idiag) = this%gwfmodel1%flowja(idiag) + flow
+      if (associated(this%gwfmodel1)) then
+        flow = this%simvals(i)
+        n = this%nodem1(i)
+        idiag = this%gwfmodel1%ia(n)
+        this%gwfmodel1%flowja(idiag) = this%gwfmodel1%flowja(idiag) + flow
+      end if
 
-      flow = -this%simvals(i)
-      n = this%nodem2(i)
-      idiag = this%gwfmodel2%ia(n)
-      this%gwfmodel2%flowja(idiag) = this%gwfmodel2%flowja(idiag) + flow
+      if (associated(this%gwfmodel2)) then
+        flow = -this%simvals(i)
+        n = this%nodem2(i)
+        idiag = this%gwfmodel2%ia(n)
+        this%gwfmodel2%flowja(idiag) = this%gwfmodel2%flowja(idiag) + flow
+      end if
 
     end do
 
     return
   end subroutine gwf_gwf_add_to_flowja
 
-  !> @brief Calculate specific discharge from flow rates
-  !< and set them to the models
-  subroutine gwf_gwf_set_simvals_to_npf(this)
+  !> @brief Set flow rates to the edges in the models
+  !<
+  subroutine gwf_gwf_set_flow_to_npf(this)
     use ConstantsModule, only: DZERO, DPIO180
     use GwfNpfModule, only: thksatnm
     class(GwfExchangeType) :: this !<  GwfExchangeType
@@ -944,7 +902,7 @@ contains
     end do
     !
     return
-  end subroutine gwf_gwf_set_simvals_to_npf
+  end subroutine gwf_gwf_set_flow_to_npf
 
   !> @ brief Budget
   !!
@@ -973,14 +931,18 @@ contains
     call rate_accumulator(this%simvals, ratin, ratout)
     !
     ! -- Add the budget terms to model 1
-    budterm(1, 1) = ratin
-    budterm(2, 1) = ratout
-    call this%gwfmodel1%model_bdentry(budterm, budtxt, this%name)
+    if (associated(this%gwfmodel1)) then
+      budterm(1, 1) = ratin
+      budterm(2, 1) = ratout
+      call this%gwfmodel1%model_bdentry(budterm, budtxt, this%name)
+    end if
     !
     ! -- Add the budget terms to model 2
-    budterm(1, 1) = ratout
-    budterm(2, 1) = ratin
-    call this%gwfmodel2%model_bdentry(budterm, budtxt, this%name)
+    if (associated(this%gwfmodel2)) then
+      budterm(1, 1) = ratout
+      budterm(2, 1) = ratin
+      call this%gwfmodel2%model_bdentry(budterm, budtxt, this%name)
+    end if
     !
     ! -- Call mvr bd routine
     if (this%inmvr > 0) call this%mvr%mvr_bd()
@@ -1002,10 +964,14 @@ contains
     integer(I4B) :: icbcfl, ibudfl
     !
     ! -- budget for model1
-    call this%gwf_gwf_bdsav_model(this%gwfmodel1)
+    if (associated(this%gwfmodel1)) then
+      call this%gwf_gwf_bdsav_model(this%gwfmodel1)
+    end if
     !
     ! -- budget for model2
-    call this%gwf_gwf_bdsav_model(this%gwfmodel2)
+    if (associated(this%gwfmodel2)) then
+      call this%gwf_gwf_bdsav_model(this%gwfmodel2)
+    end if
     !
     ! -- Set icbcfl, ibudfl to zero so that flows will be printed and
     !    saved, if the options were set in the MVR package
@@ -1033,7 +999,7 @@ contains
     character(len=LENPACKAGENAME + 4) :: packname
     character(len=LENBUDTXT), dimension(1) :: budtxt
     type(TableType), pointer :: output_tab
-    class(GwfModelType), pointer :: nbr_model
+    class(VirtualModelType), pointer :: nbr_model
     character(len=20) :: nodestr
     character(len=LENBOUNDNAME) :: bname
     integer(I4B) :: ntabrows
@@ -1048,11 +1014,11 @@ contains
     packname = adjustr(packname)
     if (associated(model, this%gwfmodel1)) then
       output_tab => this%outputtab1
-      nbr_model => this%gwfmodel2
+      nbr_model => this%v_model2
       is_for_model1 = .true.
     else
       output_tab => this%outputtab2
-      nbr_model => this%gwfmodel1
+      nbr_model => this%v_model1
       is_for_model1 = .false.
     end if
     !
@@ -1074,7 +1040,8 @@ contains
         n2 = this%nodem2(i)
         !
         ! -- If both cells are active then calculate flow rate
-        if (this%model1%ibound(n1) /= 0 .and. this%model2%ibound(n2) /= 0) then
+        if (this%v_model1%ibound%get(n1) /= 0 .and. &
+            this%v_model2%ibound%get(n2) /= 0) then
           ntabrows = ntabrows + 1
         end if
       end do
@@ -1128,8 +1095,8 @@ contains
       n2 = this%nodem2(i)
       !
       ! -- If both cells are active then calculate flow rate
-      if (this%model1%ibound(n1) /= 0 .and. &
-          this%model2%ibound(n2) /= 0) then
+      if (this%v_model1%ibound%get(n1) /= 0 .and. &
+          this%v_model2%ibound%get(n2) /= 0) then
         rrate = this%simvals(i)
         !
         ! -- Print the individual rates to model list files if requested
@@ -1159,8 +1126,8 @@ contains
       end if
       !
       ! -- If saving cell-by-cell flows in list, write flow
-      n1u = this%model1%dis%get_nodeuser(n1)
-      n2u = this%model2%dis%get_nodeuser(n2)
+      n1u = this%v_model1%dis_get_nodeuser(n1)
+      n2u = this%v_model2%dis_get_nodeuser(n2)
       if (ibinun /= 0) then
         if (is_for_model1) then
           call model%dis%record_mf6_list_entry(ibinun, n1u, n2u, rrate, &
@@ -1223,19 +1190,20 @@ contains
         n1 = this%nodem1(iexg)
         n2 = this%nodem2(iexg)
         flow = this%simvals(iexg)
-        call this%gwfmodel1%dis%noder_to_string(n1, node1str)
-        call this%gwfmodel2%dis%noder_to_string(n2, node2str)
+        call this%v_model1%dis_noder_to_string(n1, node1str)
+        call this%v_model2%dis_noder_to_string(n2, node2str)
+
         if (this%ingnc > 0) then
           deltaqgnc = this%gnc%deltaqgnc(iexg)
           write (iout, fmtdata) trim(adjustl(node1str)), &
             trim(adjustl(node2str)), &
-            this%cond(iexg), this%gwfmodel1%x(n1), &
-            this%gwfmodel2%x(n2), deltaqgnc, flow
+            this%cond(iexg), this%v_model1%x%get(n1), &
+            this%v_model2%x%get(n2), deltaqgnc, flow
         else
           write (iout, fmtdata) trim(adjustl(node1str)), &
             trim(adjustl(node2str)), &
-            this%cond(iexg), this%gwfmodel1%x(n1), &
-            this%gwfmodel2%x(n2), flow
+            this%cond(iexg), this%v_model1%x%get(n1), &
+            this%v_model2%x%get(n2), flow
         end if
       end do
     end if
@@ -1324,94 +1292,103 @@ contains
     character(len=LINELENGTH) :: fname
     integer(I4B) :: inobs
     character(len=LINELENGTH) :: subkey
+    character(len=:), allocatable :: line
 
     parsed = .true.
 
-    select case (keyword)
+    sel_opt:select case(keyword)
     case ('PRINT_FLOWS')
-      this%iprflow = 1
-      write (iout, '(4x,a)') &
-        'EXCHANGE FLOWS WILL BE PRINTED TO LIST FILES.'
+    this%iprflow = 1
+    write (iout, '(4x,a)') &
+      'EXCHANGE FLOWS WILL BE PRINTED TO LIST FILES.'
     case ('SAVE_FLOWS')
-      this%ipakcb = -1
-      write (iout, '(4x,a)') &
-        'EXCHANGE FLOWS WILL BE SAVED TO BINARY BUDGET FILES.'
+    this%ipakcb = -1
+    write (iout, '(4x,a)') &
+      'EXCHANGE FLOWS WILL BE SAVED TO BINARY BUDGET FILES.'
     case ('ALTERNATIVE_CELL_AVERAGING')
-      call this%parser%GetStringCaps(subkey)
-      select case (subkey)
-      case ('LOGARITHMIC')
-        this%icellavg = 1
-      case ('AMT-LMK')
-        this%icellavg = 2
-      case default
-        errmsg = "Unknown cell averaging method '"//trim(subkey)//"'."
-        call store_error(errmsg)
-        call this%parser%StoreErrorUnit()
-      end select
-      write (iout, '(4x,a,a)') &
-        'CELL AVERAGING METHOD HAS BEEN SET TO: ', trim(subkey)
-    case ('VARIABLECV')
-      this%ivarcv = 1
-      write (iout, '(4x,a)') &
-        'VERTICAL CONDUCTANCE VARIES WITH WATER TABLE.'
-      call this%parser%GetStringCaps(subkey)
-      if (subkey == 'DEWATERED') then
-        this%idewatcv = 1
-        write (iout, '(4x,a)') &
-          'VERTICAL CONDUCTANCE ACCOUNTS FOR DEWATERED PORTION OF   '// &
-          'AN UNDERLYING CELL.'
-      end if
-    case ('NEWTON')
-      this%inewton = 1
-      write (iout, '(4x,a)') &
-        'NEWTON-RAPHSON method used for unconfined cells'
-    case ('GNC6')
-      call this%parser%GetStringCaps(subkey)
-      if (subkey /= 'FILEIN') then
-        call store_error('GNC6 KEYWORD MUST BE FOLLOWED BY '// &
-                         '"FILEIN" then by filename.')
-        call this%parser%StoreErrorUnit()
-      end if
-      call this%parser%GetString(fname)
-      if (fname == '') then
-        call store_error('NO GNC6 FILE SPECIFIED.')
-        call this%parser%StoreErrorUnit()
-      end if
-      this%ingnc = getunit()
-      call openfile(this%ingnc, iout, fname, 'GNC')
-      write (iout, '(4x,a)') &
-        'GHOST NODES WILL BE READ FROM ', trim(fname)
-    case ('MVR6')
-      call this%parser%GetStringCaps(subkey)
-      if (subkey /= 'FILEIN') then
-        call store_error('MVR6 KEYWORD MUST BE FOLLOWED BY '// &
-                         '"FILEIN" then by filename.')
-        call this%parser%StoreErrorUnit()
-      end if
-      call this%parser%GetString(fname)
-      if (fname == '') then
-        call store_error('NO MVR6 FILE SPECIFIED.')
-        call this%parser%StoreErrorUnit()
-      end if
-      this%inmvr = getunit()
-      call openfile(this%inmvr, iout, fname, 'MVR')
-      write (iout, '(4x,a)') &
-        'WATER MOVER INFORMATION WILL BE READ FROM ', trim(fname)
-    case ('OBS6')
-      call this%parser%GetStringCaps(subkey)
-      if (subkey /= 'FILEIN') then
-        call store_error('OBS8 KEYWORD MUST BE FOLLOWED BY '// &
-                         '"FILEIN" then by filename.')
-        call this%parser%StoreErrorUnit()
-      end if
-      this%obs%active = .true.
-      call this%parser%GetString(this%obs%inputFilename)
-      inobs = GetUnit()
-      call openfile(inobs, iout, this%obs%inputFilename, 'OBS')
-      this%obs%inUnitObs = inobs
+    call this%parser%GetStringCaps(subkey)
+    select case (subkey)
+    case ('LOGARITHMIC')
+      this%icellavg = 1
+    case ('AMT-LMK')
+      this%icellavg = 2
     case default
-      parsed = .false.
+      errmsg = "Unknown cell averaging method '"//trim(subkey)//"'."
+      call store_error(errmsg)
+      call this%parser%StoreErrorUnit()
     end select
+    write (iout, '(4x,a,a)') &
+      'CELL AVERAGING METHOD HAS BEEN SET TO: ', trim(subkey)
+    case ('VARIABLECV')
+    this%ivarcv = 1
+    write (iout, '(4x,a)') &
+      'VERTICAL CONDUCTANCE VARIES WITH WATER TABLE.'
+    call this%parser%GetStringCaps(subkey)
+    if (subkey == 'DEWATERED') then
+      this%idewatcv = 1
+      write (iout, '(4x,a)') &
+        'VERTICAL CONDUCTANCE ACCOUNTS FOR DEWATERED PORTION OF   '// &
+        'AN UNDERLYING CELL.'
+    end if
+    case ('NEWTON')
+    this%inewton = 1
+    write (iout, '(4x,a)') &
+      'NEWTON-RAPHSON method used for unconfined cells'
+    case ('GNC6')
+    call this%parser%GetStringCaps(subkey)
+    if (subkey /= 'FILEIN') then
+      call store_error('GNC6 KEYWORD MUST BE FOLLOWED BY '// &
+                       '"FILEIN" then by filename.')
+      call this%parser%StoreErrorUnit()
+    end if
+    call this%parser%GetString(fname)
+    if (fname == '') then
+      call store_error('NO GNC6 FILE SPECIFIED.')
+      call this%parser%StoreErrorUnit()
+    end if
+    this%ingnc = getunit()
+    call openfile(this%ingnc, iout, fname, 'GNC')
+    write (iout, '(4x,a)') &
+      'GHOST NODES WILL BE READ FROM ', trim(fname)
+    case ('MVR6')
+    if (this%is_datacopy) then
+      call this%parser%GetRemainingLine(line)
+      exit sel_opt
+    end if
+    call this%parser%GetStringCaps(subkey)
+    if (subkey /= 'FILEIN') then
+      call store_error('MVR6 KEYWORD MUST BE FOLLOWED BY '// &
+                       '"FILEIN" then by filename.')
+      call this%parser%StoreErrorUnit()
+    end if
+    call this%parser%GetString(fname)
+    if (fname == '') then
+      call store_error('NO MVR6 FILE SPECIFIED.')
+      call this%parser%StoreErrorUnit()
+    end if
+    this%inmvr = getunit()
+    call openfile(this%inmvr, iout, fname, 'MVR')
+    write (iout, '(4x,a)') &
+      'WATER MOVER INFORMATION WILL BE READ FROM ', trim(fname)
+    case ('OBS6')
+    if (this%is_datacopy) then
+      call this%parser%GetRemainingLine(line)
+      exit sel_opt
+    end if
+    call this%parser%GetStringCaps(subkey)
+    if (subkey /= 'FILEIN') then
+      call store_error('OBS8 KEYWORD MUST BE FOLLOWED BY '// &
+                       '"FILEIN" then by filename.')
+      call this%parser%StoreErrorUnit()
+    end if
+    this%obs%active = .true.
+    call this%parser%GetString(this%obs%inputFilename)
+    inobs = GetUnit()
+    call openfile(inobs, iout, this%obs%inputFilename, 'OBS')
+    this%obs%inUnitObs = inobs
+    case default
+    parsed = .false.
+    end select sel_opt
 
   end function parse_option
 
@@ -1554,6 +1531,94 @@ contains
     ! -- Return
     return
   end subroutine rewet
+
+  subroutine calc_cond_sat(this)
+    ! -- modules
+    use ConstantsModule, only: LINELENGTH, DZERO, DHALF, DONE, DPIO180
+    use GwfNpfModule, only: condmean, vcond, hcond
+    ! -- dummy
+    class(GwfExchangeType) :: this !<  GwfExchangeType
+    ! -- local
+    integer(I4B) :: iexg
+    integer(I4B) :: n, m, ihc
+    real(DP) :: topn, topm
+    real(DP) :: botn, botm
+    real(DP) :: satn, satm
+    real(DP) :: thickn, thickm
+    real(DP) :: angle, hyn, hym
+    real(DP) :: csat
+    real(DP) :: fawidth
+    real(DP), dimension(3) :: vg
+
+    do iexg = 1, this%nexg
+      !
+      ihc = this%ihc(iexg)
+      n = this%nodem1(iexg)
+      m = this%nodem2(iexg)
+      topn = this%gwfmodel1%dis%top(n)
+      topm = this%gwfmodel2%dis%top(m)
+      botn = this%gwfmodel1%dis%bot(n)
+      botm = this%gwfmodel2%dis%bot(m)
+      satn = this%gwfmodel1%npf%sat(n)
+      satm = this%gwfmodel2%npf%sat(m)
+      thickn = (topn - botn) * satn
+      thickm = (topm - botm) * satm
+      !
+      ! -- Calculate conductance depending on connection orientation
+      if (ihc == 0) then
+        !
+        ! -- Vertical conductance for fully saturated conditions
+        vg(1) = DZERO
+        vg(2) = DZERO
+        vg(3) = DONE
+        hyn = this%gwfmodel1%npf%hy_eff(n, 0, ihc, vg=vg)
+        hym = this%gwfmodel2%npf%hy_eff(m, 0, ihc, vg=vg)
+        csat = vcond(1, 1, 1, 1, 0, 1, 1, DONE, &
+                     botn, botm, &
+                     hyn, hym, &
+                     satn, satm, &
+                     topn, topm, &
+                     botn, botm, &
+                     this%hwva(iexg))
+      else
+        !
+        ! -- Calculate horizontal conductance
+        hyn = this%gwfmodel1%npf%k11(n)
+        hym = this%gwfmodel2%npf%k11(m)
+        !
+        ! -- Check for anisotropy in models, and recalculate hyn and hym
+        if (this%ianglex > 0) then
+          angle = this%auxvar(this%ianglex, iexg) * DPIO180
+          vg(1) = abs(cos(angle))
+          vg(2) = abs(sin(angle))
+          vg(3) = DZERO
+          !
+          ! -- anisotropy in model 1
+          if (this%gwfmodel1%npf%ik22 /= 0) then
+            hyn = this%gwfmodel1%npf%hy_eff(n, 0, ihc, vg=vg)
+          end if
+          !
+          ! -- anisotropy in model 2
+          if (this%gwfmodel2%npf%ik22 /= 0) then
+            hym = this%gwfmodel2%npf%hy_eff(m, 0, ihc, vg=vg)
+          end if
+        end if
+        !
+        fawidth = this%hwva(iexg)
+        csat = hcond(1, 1, 1, 1, this%inewton, 0, ihc, &
+                     this%icellavg, 0, 0, DONE, &
+                     topn, topm, satn, satm, hyn, hym, &
+                     topn, topm, &
+                     botn, botm, &
+                     this%cl1(iexg), this%cl2(iexg), &
+                     fawidth, this%satomega)
+      end if
+      !
+      ! -- store csat in condsat
+      this%condsat(iexg) = csat
+    end do
+
+  end subroutine calc_cond_sat
 
   !> @ brief Calculate the conductance
   !!
@@ -1794,32 +1859,36 @@ contains
       !
       ! -- initialize the output table objects
       !    outouttab1
-      call table_cr(this%outputtab1, this%name, '    ')
-      call this%outputtab1%table_df(this%nexg, ntabcol, this%gwfmodel1%iout, &
-                                    transient=.TRUE.)
-      text = 'NUMBER'
-      call this%outputtab1%initialize_column(text, 10, alignment=TABCENTER)
-      text = 'CELLID'
-      call this%outputtab1%initialize_column(text, 20, alignment=TABLEFT)
-      text = 'RATE'
-      call this%outputtab1%initialize_column(text, 15, alignment=TABCENTER)
-      if (this%inamedbound > 0) then
-        text = 'NAME'
+      if (this%v_model1%is_local) then
+        call table_cr(this%outputtab1, this%name, '    ')
+        call this%outputtab1%table_df(this%nexg, ntabcol, this%gwfmodel1%iout, &
+                                      transient=.TRUE.)
+        text = 'NUMBER'
+        call this%outputtab1%initialize_column(text, 10, alignment=TABCENTER)
+        text = 'CELLID'
         call this%outputtab1%initialize_column(text, 20, alignment=TABLEFT)
+        text = 'RATE'
+        call this%outputtab1%initialize_column(text, 15, alignment=TABCENTER)
+        if (this%inamedbound > 0) then
+          text = 'NAME'
+          call this%outputtab1%initialize_column(text, 20, alignment=TABLEFT)
+        end if
       end if
       !    outouttab2
-      call table_cr(this%outputtab2, this%name, '    ')
-      call this%outputtab2%table_df(this%nexg, ntabcol, this%gwfmodel2%iout, &
-                                    transient=.TRUE.)
-      text = 'NUMBER'
-      call this%outputtab2%initialize_column(text, 10, alignment=TABCENTER)
-      text = 'CELLID'
-      call this%outputtab2%initialize_column(text, 20, alignment=TABLEFT)
-      text = 'RATE'
-      call this%outputtab2%initialize_column(text, 15, alignment=TABCENTER)
-      if (this%inamedbound > 0) then
-        text = 'NAME'
+      if (this%v_model2%is_local) then
+        call table_cr(this%outputtab2, this%name, '    ')
+        call this%outputtab2%table_df(this%nexg, ntabcol, this%gwfmodel2%iout, &
+                                      transient=.TRUE.)
+        text = 'NUMBER'
+        call this%outputtab2%initialize_column(text, 10, alignment=TABCENTER)
+        text = 'CELLID'
         call this%outputtab2%initialize_column(text, 20, alignment=TABLEFT)
+        text = 'RATE'
+        call this%outputtab2%initialize_column(text, 15, alignment=TABCENTER)
+        if (this%inamedbound > 0) then
+          text = 'NAME'
+          call this%outputtab2%initialize_column(text, 20, alignment=TABLEFT)
+        end if
       end if
     end if
     !
@@ -2006,11 +2075,12 @@ contains
 
   !> @brief Should interface model be used for this exchange
   !<
-  function use_interface_model(this) result(useIM)
+  function use_interface_model(this) result(use_im)
     class(GwfExchangeType) :: this !<  GwfExchangeType
-    logical(LGP) :: useIM !< true when interface model should be used
+    logical(LGP) :: use_im !< true when interface model should be used
 
-    useIM = (this%ixt3d > 0)
+    use_im = this%DisConnExchangeType%use_interface_model()
+    use_im = use_im .or. (this%ixt3d > 0)
 
   end function
 

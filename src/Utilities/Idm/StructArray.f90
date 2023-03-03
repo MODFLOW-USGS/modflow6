@@ -12,7 +12,7 @@ module StructArrayModule
   use StructVectorModule, only: StructVectorType
   use MemoryManagerModule, only: mem_allocate
   use CharacterStringModule, only: CharacterStringType
-  use VectorIntModule, only: VectorInt
+  use STLVecIntModule, only: STLVecInt
   use IdmLoggerModule, only: idm_log_var
   use MemoryManagerModule, only: mem_setptr
   use BlockParserModule, only: BlockParserType
@@ -84,7 +84,7 @@ contains
     integer(I4B), dimension(:), pointer, contiguous :: int1d
     real(DP), dimension(:), pointer, contiguous :: dbl1d
     type(CharacterStringType), dimension(:), pointer, contiguous :: cstr1d
-    type(VectorInt), pointer :: intvector
+    type(STLVecInt), pointer :: intvector
     integer(I4B) :: j
     integer(I4B) :: inodata = 999 !todo: create INODATA in constants?
 
@@ -166,7 +166,7 @@ contains
     return
   end subroutine add_vector_str1d
 
-  !> @brief add VectorInt to StructArrayType
+  !> @brief add STLVecInt to StructArrayType
   !<
   subroutine add_vector_intvector(this, varname, memoryPath, varname_shape, &
                                   icol, intvector)
@@ -175,7 +175,7 @@ contains
     character(len=*), intent(in) :: memoryPath !< memory path to vector
     character(len=*), intent(in) :: varname_shape !< shape of variable
     integer(I4B), intent(in) :: icol !< column of the vector
-    type(VectorInt), pointer, intent(in) :: intvector !< vector to add
+    type(STLVecInt), pointer, intent(in) :: intvector !< vector to add
     type(StructVectorType) :: sv
 
     call intvector%init()

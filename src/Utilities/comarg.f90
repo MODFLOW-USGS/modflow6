@@ -8,7 +8,7 @@ module CommandArguments
   use CompilerVersion
   use SimVariablesModule, only: istdout, isim_level, &
                                 simfile, simlstfile, simstdout, &
-                                isim_mode
+                                isim_mode, simulation_mode
   use GenericUtilitiesModule, only: sim_message, write_message
   use SimModule, only: store_error, ustop
   use InputOutputModule, only: upcase, getunit
@@ -163,6 +163,8 @@ contains
       case ('-D', '--DISCLAIMER')
         lstop = .TRUE.
         call sim_message('', fmt=FMTDISCLAIMER)
+      case ('-P', '--PARALLEL')
+        simulation_mode = 'PARALLEL'
       case ('-LIC', '--LICENSE')
         lstop = .TRUE.
         call sim_message('', fmt=FMTLICENSE)
@@ -270,6 +272,7 @@ contains
       &' -v        --version        Display program version information.',/,&
       &' -dev      --develop        Display program develop option mode.',/,&
       &' -d        --disclaimer     Display program disclaimer.',/,&
+      &' -p        --parallel       Run program in parallel mode.',/,&
       &' -lic      --license        Display program license information.',/,&
       &' -c        --compiler       Display compiler information.',/,&
       &' -co       --compiler-opt   Display compiler options.',/,&

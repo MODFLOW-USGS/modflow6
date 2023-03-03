@@ -19,5 +19,7 @@ pmobj.subdirs = True
 pmobj.inplace = True
 pmobj.verbose = True
 pmobj.makeclean = True
+pmobj.excludefiles = "excludefiles.txt"
+pmobj.makefile = False
 
 pmobj.build()

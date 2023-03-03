@@ -7,7 +7,7 @@ module GwfHfbModule
   use NumericalPackageModule, only: NumericalPackageType
   use BlockParserModule, only: BlockParserType
   use BaseDisModule, only: DisBaseType
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
 

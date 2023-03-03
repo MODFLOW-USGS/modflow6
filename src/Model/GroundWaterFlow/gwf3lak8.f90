@@ -29,7 +29,7 @@ module LakModule
   use BlockParserModule, only: BlockParserType
   use BaseDisModule, only: DisBaseType
   use SimVariablesModule, only: errmsg
-  use MatrixModule
+  use MatrixBaseModule
   !
   implicit none
   !

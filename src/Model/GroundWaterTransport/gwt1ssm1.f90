@@ -18,7 +18,7 @@ module GwtSsmModule
   use GwtFmiModule, only: GwtFmiType
   use TableModule, only: TableType, table_cr
   use GwtSpcModule, only: GwtSpcType
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
   public :: GwtSsmType

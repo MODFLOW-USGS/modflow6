@@ -9,7 +9,7 @@ module StructVectorModule
   use KindModule, only: I4B, DP, LGP
   use ConstantsModule, only: LENMEMPATH, LENVARNAME
   use CharacterStringModule, only: CharacterStringType
-  use VectorIntModule, only: VectorInt
+  use STLVecIntModule, only: STLVecInt
 
   implicit none
   private
@@ -30,7 +30,7 @@ module StructVectorModule
     real(DP), dimension(:), pointer, contiguous :: dbl1d => null()
     type(CharacterStringType), dimension(:), pointer, contiguous :: &
       str1d => null()
-    type(VectorInt), pointer :: intvector => null()
+    type(STLVecInt), pointer :: intvector => null()
     integer(I4B), dimension(:), pointer, contiguous :: intvector_shape => null()
 
   end type StructVectorType

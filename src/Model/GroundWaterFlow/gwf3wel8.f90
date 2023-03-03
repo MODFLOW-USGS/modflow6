@@ -27,7 +27,7 @@ module WelModule
                                   GetTimeSeriesLinkFromList
   use BlockParserModule, only: BlockParserType
   use InputOutputModule, only: GetUnit, openfile
-  use MatrixModule
+  use MatrixBaseModule
   !
   implicit none
   !

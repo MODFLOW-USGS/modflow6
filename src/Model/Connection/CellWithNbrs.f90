@@ -1,7 +1,7 @@
 module CellWithNbrsModule
   use KindModule, only: I4B, LGP
   use NumericalModelModule, only: NumericalModelType
-  use DistributedModelModule, only: DistributedModelType
+  use VirtualModelModule, only: VirtualModelType
   implicit none
   private
 
@@ -12,7 +12,7 @@ module CellWithNbrsModule
   !< index
   type, public :: GlobalCellType
     integer(I4B) :: index !< the index on the model grid
-    class(DistributedModelType), pointer :: dmodel => null() !< distributed model
+    class(VirtualModelType), pointer :: v_model => null() !< virtual model
   end type
 
   ! a global cell with neighbors
@@ -27,10 +27,10 @@ module CellWithNbrsModule
 
 contains
 
-  subroutine addNbrCell(this, index, dist_model)
+  subroutine addNbrCell(this, index, v_model)
     class(CellWithNbrsType) :: this
     integer(I4B) :: index
-    class(DistributedModelType), pointer :: dist_model ! TODO_MJR: this will replace the model pointer entirely
+    class(VirtualModelType), pointer :: v_model
     ! local
     integer(I4B) :: nbrCnt, currentSize, i
     type(CellWithNbrsType), dimension(:), pointer, contiguous :: newNeighbors
@@ -59,7 +59,7 @@ contains
     end if
 
     this%neighbors(nbrCnt + 1)%cell%index = index
-    this%neighbors(nbrCnt + 1)%cell%dmodel => dist_model
+    this%neighbors(nbrCnt + 1)%cell%v_model => v_model
 
     this%nrOfNbrs = nbrCnt + 1
 

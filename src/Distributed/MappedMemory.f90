@@ -1,4 +1,4 @@
-module MappedVariableModule
+module MappedMemoryModule
   use KindModule, only: I4B, LGP
   use ConstantsModule, only: LENMEMPATH, LENVARNAME
   use MemoryTypeModule, only: MemoryType
@@ -7,10 +7,10 @@ module MappedVariableModule
   implicit none
   private
 
-  public :: CastAsMappedVariable
-  public :: MappedVariableType
+  public :: CastAsMappedData
+  public :: MappedMemoryType
 
-  type :: MappedVariableType
+  type :: MappedMemoryType
     integer(I4B) :: controller_id
     integer(I4B) :: sync_stage
     character(len=LENVARNAME) :: src_name
@@ -19,6 +19,7 @@ module MappedVariableModule
     character(len=LENVARNAME) :: tgt_name
     character(len=LENMEMPATH) :: tgt_path
     type(MemoryType), pointer :: tgt !< cached memory item
+    logical(LGP) :: copy_all !< when true: copy all elements
     integer(I4B), dimension(:), pointer :: src_idx !< source indexes to copy from
     integer(I4B), dimension(:), pointer :: tgt_idx !< target indexes to copy to
     integer(I4B), dimension(:), pointer :: sign !< optional sign (or null) to negate copied value
@@ -33,12 +34,12 @@ module MappedVariableModule
     procedure, private :: sync_dbl2d
     procedure, private :: apply_sgn_dbl2d
 
-  end type MappedVariableType
+  end type MappedMemoryType
 
 contains
 
   subroutine sync(this)
-    class(MappedVariableType) :: this
+    class(MappedMemoryType) :: this
     ! local
     logical(LGP) :: found
 
@@ -63,104 +64,144 @@ contains
   end subroutine sync
 
   function skip_sync(this) result(skip)
-    class(MappedVariableType) :: this
+    class(MappedMemoryType) :: this
     logical(LGP) :: skip
 
     skip = (this%src%isize == 0)
 
   end function skip_sync
 
-  !> @brief Copy 1d integer array with map.
-  !< TODO_MJR: should this maybe move to the memory manager for more convenient maintenance?
+  !> @brief Copy 1d integer array with map
   subroutine sync_int1d(this)
-    class(MappedVariableType) :: this
+    class(MappedMemoryType) :: this
     ! local
     integer(I4B) :: i
 
-    do i = 1, size(this%tgt_idx)
-      this%tgt%aint1d(this%tgt_idx(i)) = this%src%aint1d(this%src_idx(i))
-    end do
+    if (this%copy_all) then
+      do i = 1, this%tgt%isize
+        this%tgt%aint1d(i) = this%src%aint1d(i)
+      end do
+    else
+      do i = 1, size(this%tgt_idx)
+        this%tgt%aint1d(this%tgt_idx(i)) = this%src%aint1d(this%src_idx(i))
+      end do
+    end if
 
   end subroutine sync_int1d
 
   subroutine apply_sgn_int1d(this)
-    class(MappedVariableType) :: this
+    class(MappedMemoryType) :: this
     ! local
     integer(I4B) :: i
 
-    do i = 1, size(this%tgt_idx)
-      this%tgt%aint1d(this%tgt_idx(i)) = this%tgt%aint1d(this%tgt_idx(i)) * &
-                                         this%sign(i)
-    end do
+    if (this%copy_all) then
+      do i = 1, this%tgt%isize
+        this%tgt%aint1d(i) = this%tgt%aint1d(i) * this%sign(i)
+      end do
+    else
+      do i = 1, size(this%tgt_idx)
+        this%tgt%aint1d(this%tgt_idx(i)) = this%tgt%aint1d(this%tgt_idx(i)) * &
+                                           this%sign(i)
+      end do
+    end if
 
   end subroutine apply_sgn_int1d
 
   !> @brief Copy 1d double array with map.
   !<
   subroutine sync_dbl1d(this)
-    class(MappedVariableType) :: this
+    class(MappedMemoryType) :: this
     ! local
     integer(I4B) :: i
 
-    do i = 1, size(this%tgt_idx)
-      this%tgt%adbl1d(this%tgt_idx(i)) = this%src%adbl1d(this%src_idx(i))
-    end do
+    if (this%copy_all) then
+      do i = 1, this%tgt%isize
+        this%tgt%adbl1d(i) = this%src%adbl1d(i)
+      end do
+    else
+      do i = 1, size(this%tgt_idx)
+        this%tgt%adbl1d(this%tgt_idx(i)) = this%src%adbl1d(this%src_idx(i))
+      end do
+    end if
 
   end subroutine sync_dbl1d
 
   subroutine apply_sgn_dbl1d(this)
-    class(MappedVariableType) :: this
+    class(MappedMemoryType) :: this
     ! local
     integer(I4B) :: i
 
-    do i = 1, size(this%tgt_idx)
-      this%tgt%adbl1d(this%tgt_idx(i)) = this%tgt%adbl1d(this%tgt_idx(i)) * &
-                                         this%sign(i)
-    end do
+    if (this%copy_all) then
+      do i = 1, this%tgt%isize
+        this%tgt%adbl1d(i) = this%tgt%adbl1d(i) * this%sign(i)
+      end do
+    else
+      do i = 1, size(this%tgt_idx)
+        this%tgt%adbl1d(this%tgt_idx(i)) = this%tgt%adbl1d(this%tgt_idx(i)) * &
+                                           this%sign(i)
+      end do
+    end if
 
   end subroutine apply_sgn_dbl1d
 
   !> @brief Copy 2d double array with map.
   !< NB: only dim=2 is mapped.
   subroutine sync_dbl2d(this)
-    class(MappedVariableType) :: this
+    class(MappedMemoryType) :: this
     ! local
     integer(I4B) :: i, k
 
-    do i = 1, size(this%tgt_idx)
-      do k = 1, size(this%src%adbl2d, dim=1)
-        this%tgt%adbl2d(k, this%tgt_idx(i)) = this%src%adbl2d(k, this%src_idx(i))
+    if (this%copy_all) then
+      do i = 1, this%tgt%isize
+        do k = 1, size(this%src%adbl2d, dim=1)
+          this%tgt%adbl2d(k, i) = this%src%adbl2d(k, i)
+        end do
       end do
-    end do
+    else
+      do i = 1, size(this%tgt_idx)
+        do k = 1, size(this%src%adbl2d, dim=1)
+          this%tgt%adbl2d(k, this%tgt_idx(i)) = &
+            this%src%adbl2d(k, this%src_idx(i))
+        end do
+      end do
+    end if
 
   end subroutine sync_dbl2d
 
   subroutine apply_sgn_dbl2d(this)
-    class(MappedVariableType) :: this
+    class(MappedMemoryType) :: this
     ! local
     integer(I4B) :: i, k
 
-    do i = 1, size(this%tgt_idx)
-      do k = 1, size(this%src%adbl2d, dim=1)
-        this%tgt%adbl2d(k, this%tgt_idx(i)) = &
-          this%tgt%adbl2d(k, this%tgt_idx(i)) * this%sign(i)
+    if (this%copy_all) then
+      do i = 1, this%tgt%isize
+        do k = 1, size(this%src%adbl2d, dim=1)
+          this%tgt%adbl2d(k, i) = this%tgt%adbl2d(k, i) * this%sign(i)
+        end do
       end do
-    end do
+    else
+      do i = 1, size(this%tgt_idx)
+        do k = 1, size(this%src%adbl2d, dim=1)
+          this%tgt%adbl2d(k, this%tgt_idx(i)) = &
+            this%tgt%adbl2d(k, this%tgt_idx(i)) * this%sign(i)
+        end do
+      end do
+    end if
 
   end subroutine apply_sgn_dbl2d
 
-  function CastAsMappedVariable(obj) result(res)
+  function CastAsMappedData(obj) result(res)
     implicit none
     class(*), pointer, intent(inout) :: obj
-    class(MappedVariableType), pointer :: res
+    class(MappedMemoryType), pointer :: res
 
     res => null()
 
     select type (obj)
-    class is (MappedVariableType)
+    class is (MappedMemoryType)
       res => obj
     end select
 
-  end function CastAsMappedVariable
+  end function CastAsMappedData
 
-end module MappedVariableModule
+end module MappedMemoryModule

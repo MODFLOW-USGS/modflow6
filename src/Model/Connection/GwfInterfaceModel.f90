@@ -3,7 +3,7 @@ module GwfInterfaceModelModule
   use ConstantsModule, only: DZERO
   use MemoryManagerModule, only: mem_allocate
   use MemoryHelperModule, only: create_mem_path
-  use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
+  use NumericalModelModule, only: NumericalModelType
   use GwfModule, only: GwfModelType, CastAsGwfModel
   use Xt3dModule, only: xt3d_cr
   use GwfBuyModule, only: buy_cr

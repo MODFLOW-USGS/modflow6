@@ -19,8 +19,9 @@ else
   profile = 'develop'
 endif
 
+do_parallel_build = get_option('parallel')
 message('The used profile is:', profile)
-
+message('Parallel build:', do_parallel_build)
 
 fc = meson.get_compiler('fortran')
 fc_id = fc.get_id()
@@ -33,6 +34,7 @@ if fc_id == 'gcc'
   compile_args += [
                    '-fall-intrinsics',
                    '-pedantic',
+                   '-cpp',
                    '-Wcharacter-truncation',
                    '-Wno-unused-dummy-argument', # This makes problems with OOP
                    '-Wno-intrinsic-shadow',      # We shadow intrinsics with methods, which should be fine
@@ -85,10 +87,37 @@ elif fc_id == 'intel'
   link_args += '-static-intel'
 endif
 
+petsc = dependency('PETSc', required : false)
+mpi = dependency('mpi', language : 'fortran', required : petsc.found())
+
+# on windows only with intel
+enable_mpi = do_parallel_build
+if build_machine.system() == 'windows'
+  enable_mpi = do_parallel_build and (fc_id == 'intel-cl')
+endif
+
+# compile with mpi or petsc+mpi when found,
+# (not allowing petsc without mpi)
+dependencies = [ ]
+extra_cmp_args = [ ]
+if mpi.found() and enable_mpi
+  extra_cmp_args = [ '-D__WITH_MPI__' ]
+  with_mpi = true
+  dependencies = [ mpi ]
+else
+  with_mpi = false
+endif 
+if petsc.found() and with_mpi
+  extra_cmp_args = [ '-D__WITH_MPI__', '-D__WITH_PETSC__' ]
+  with_petsc = true
+  dependencies = [ petsc, mpi ]
+else
+  with_petsc = false
+endif
+compile_args += extra_cmp_args
+
 add_project_arguments(fc.get_supported_arguments(compile_args), language: 'fortran')
 add_project_link_arguments(fc.get_supported_arguments(link_args), language: 'fortran')
-
-mpi = dependency('mpi', language : 'fortran', required : false)
 
 subdir('src')
 subdir('srcbmi')

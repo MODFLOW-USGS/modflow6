@@ -12,7 +12,7 @@ module GwtFmiModule
   use HeadFileReaderModule, only: HeadFileReaderType
   use PackageBudgetModule, only: PackageBudgetType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr_bfr
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
   private

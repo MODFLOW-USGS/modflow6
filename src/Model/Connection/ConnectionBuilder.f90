@@ -10,9 +10,9 @@ module ConnectionBuilderModule
                                    GetDisConnExchangeFromList
   use NumericalModelModule, only: NumericalModelType
   use SpatialModelConnectionModule, only: SpatialModelConnectionType, &
-                                          CastAsSpatialModelConnectionClass, &
-                                          GetSpatialModelConnectionFromList, &
-                                          AddSpatialModelConnectionToList
+                                          cast_as_smc, &
+                                          get_smc_from_list, &
+                                          add_smc_to_list
 
   implicit none
   private
@@ -22,7 +22,7 @@ module ConnectionBuilderModule
     procedure, pass(this) :: processSolution
     procedure, private, pass(this) :: processExchanges
     procedure, private, pass(this) :: setConnectionsToSolution
-    procedure, private, pass(this) :: assignExchangesToConnections
+    procedure, private, pass(this) :: createModelConnectivity
   end type ConnectionBuilderType
 
 contains
@@ -59,9 +59,8 @@ contains
     write (iout, '(1x,a,i0,a,a)') 'Created ', newConnections%Count(), &
       ' model connections for solution ', trim(solution%name)
 
-    ! set the global exchanges from this solution to
-    ! the model connections
-    call this%assignExchangesToConnections(numSol%exchangelist, newConnections)
+    ! craete the topology of models participating in the interfaces
+    call this%createModelConnectivity(newConnections)
 
     ! replace numerical exchanges in solution with connections
     call this%setConnectionsToSolution(newConnections, numSol)
@@ -117,22 +116,26 @@ contains
           .or. dev_always_ifmod) then
 
         ! we should not get period connections here
-        isPeriodic = associated(conEx%model1, conEx%model2)
+        isPeriodic = (conEx%v_model1 == conEx%v_model2)
         if (isPeriodic) then
           write (*, *) 'Error (which should never happen): interface model '// &
             'does not support periodic boundary condition'
           call ustop()
         end if
 
-        ! create new model connection for model 1
-        modelConnection => createModelConnection(conEx%model1, conEx)
-        call AddSpatialModelConnectionToList(baseconnectionlist, modelConnection)
-        call AddSpatialModelConnectionToList(newConnections, modelConnection)
+        if (conEx%v_model1%is_local) then
+          ! create model connection for model 1
+          modelConnection => createModelConnection(conEx%model1, conEx)
+          call add_smc_to_list(baseconnectionlist, modelConnection)
+          call add_smc_to_list(newConnections, modelConnection)
+        end if
 
-        ! and for model 2, unless periodic
-        modelConnection => createModelConnection(conEx%model2, conEx)
-        call AddSpatialModelConnectionToList(baseconnectionlist, modelConnection)
-        call AddSpatialModelConnectionToList(newConnections, modelConnection)
+        ! and for model 2
+        if (conEx%v_model2%is_local) then
+          modelConnection => createModelConnection(conEx%model2, conEx)
+          call add_smc_to_list(baseconnectionlist, modelConnection)
+          call add_smc_to_list(newConnections, modelConnection)
+        end if
 
         ! remove this exchange from the base list, ownership
         ! now lies with the connection
@@ -212,8 +215,8 @@ contains
       ! will this exchange be replaced by a connection?
       keepExchange = .true.
       do iconn = 1, connections%Count()
-        conn => GetSpatialModelConnectionFromList(connections, iconn)
-        exPtr2 => conn%primaryExchange
+        conn => get_smc_from_list(connections, iconn)
+        exPtr2 => conn%prim_exchange
         if (associated(exPtr2, exPtr)) then
           ! if so, don't add it to the list
           keepExchange = .false.
@@ -244,48 +247,25 @@ contains
 
   end subroutine setConnectionsToSolution
 
-  !> @brief Add global exchanges from a certain numerical solution
-  !! to the connections.
+  !> @brief Create connectivity of models which contribute to the interface
   !!
-  !! This concerns all exchanges of the proper type. Inside the
-  !! connection it will be used to extend the interface grid with
-  !! the possibility to include cells from models which are indirectly
-  !! connected, through yet another exchange object.
-  !<
-  subroutine assignExchangesToConnections(this, exchanges, connections)
+  !! This loops over all connections and creates a halo with all
+  !! models from the numerical solution. The model halo will be used to
+  !! extend the interface grid to include cells from models which are
+  !< indirectly connected, through yet another exchange object.
+  subroutine createModelConnectivity(this, connections)
     class(ConnectionBuilderType) :: this !< the connection builder object
-    type(ListType), pointer, intent(in) :: exchanges !< all exchanges in a solution
     type(ListType), intent(inout) :: connections !< all connections that are created for this solution
     ! local
-    integer(I4B) :: iex, iconn
-    class(DisConnExchangeType), pointer :: conEx
+    integer(I4B) :: iconn
     class(SpatialModelConnectionType), pointer :: modelConn
-    class(*), pointer :: exPtr
-    type(ListType) :: keepList
 
-    ! first filter on exchanges of proper type
-    do iex = 1, exchanges%Count()
-      conEx => GetDisConnExchangeFromList(exchanges, iex)
-      if (.not. associated(conEx)) then
-        ! if it is not DisConnExchangeType, we should skip it
-        continue
-      end if
-      exPtr => conEx
-      call keepList%Add(exPtr)
-    end do
-
-    ! now add them to the model connections
+    ! create halo for the model connections
     do iconn = 1, connections%Count()
-      modelConn => GetSpatialModelConnectionFromList(connections, iconn)
-      do iex = 1, keepList%Count()
-        exPtr => keepList%GetItem(iex)
-        call modelConn%globalExchanges%Add(exPtr)
-      end do
+      modelConn => get_smc_from_list(connections, iconn)
+      call modelConn%createModelHalo()
     end do
 
-    ! clean
-    call keepList%Clear(destroy=.false.)
-
-  end subroutine assignExchangesToConnections
+  end subroutine createModelConnectivity
 
 end module ConnectionBuilderModule
