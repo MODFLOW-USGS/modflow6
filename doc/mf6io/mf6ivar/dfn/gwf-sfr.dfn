@@ -306,8 +306,25 @@ name unit_conversion
 type double precision
 reader urword
 optional true
+deprecated 6.5.0
 longname conversion factor
 description value (or conversion factor) that is used in calculating stream depth for stream reach. A constant of 1.486 is used for flow units of cubic feet per second, and a constant of 1.0 is used for units of cubic meters per second. The constant must be multiplied by 86,400 when using time units of days in the simulation.
+
+block options
+name length_conversion
+type double precision
+reader urword
+optional true
+longname length conversion factor
+description real value that is used in converting Manning's equation to consistent length units. LENGTH\_CONVERSION should be set to 3.28081, 1.0, and 100.0 when using length units (LENGTH\_UNITS) of feet, meters, or centimeters in the simulation, respectively. LENGTH\_CONVERSION does not need to be specified if LENGTH\_UNITS are meters.
+
+block options
+name time_conversion
+type double precision
+reader urword
+optional true
+longname time conversion factor
+description value that is used in converting Manning's equation to consistent time units. TIME\_CONVERSION should be set to 1.0, 60.0, 3,600.0, 86,400.0, and 31,557,600.0 when using time units (TIME\_UNITS) of seconds, minutes, hours, days, or years in the simulation, respectively. TIME\_CONVERSION does not need to be specified if TIME\_UNITS are seconds.
 
 
 # --------------------- gwf sfr dimensions ---------------------
