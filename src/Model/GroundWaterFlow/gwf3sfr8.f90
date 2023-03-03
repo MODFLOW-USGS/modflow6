@@ -4289,7 +4289,7 @@ contains
   !> @brief Check unit conversion data
     !!
     !! Method to check unit conversion data for a SFR package. This method
-    !! also calculate unitconv that is used in the Manning's equation.
+    !! also calculates unitconv that is used in the Manning's equation.
     !!
   !<
   subroutine sfr_check_conversion(this)
