@@ -712,7 +712,7 @@ contains
       !
       ! -- create warning message
       write (warnmsg, '(a)') &
-      'SETTING UNIT_CONVERSION DIRECTLY'
+        'SETTING UNIT_CONVERSION DIRECTLY'
       !
       ! -- create deprecation warning
       call deprecation_warning('OPTIONS', 'UNIT_CONVERSION', '6.5.0', &
@@ -4375,7 +4375,7 @@ contains
       call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
     end if
     !
-    ! -- 
+    ! --
     !
     ! -- check the reach data for simple errors
     do n = 1, this%maxbound
