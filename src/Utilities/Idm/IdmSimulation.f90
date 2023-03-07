@@ -71,22 +71,22 @@ contains
     !
     ! -- load defaults for keyword/integer types
     select case (mf6varname)
-    !
+      !
     case ('CONTINUE')
       intvar = isimcontinue
-    !
+      !
     case ('NOCHECK')
       intvar = isimcheck
-    !
+      !
     case ('MAXERRORS')
       intvar = 1000 !< MessageType max_message
-    !
+      !
     case ('MXITER')
       intvar = 1
-    !
+      !
     case default
       write (errmsg, '(4x,a,a)') &
-        '**Internal ERROR. IdmSimulation set_default_value unhandled variable: ', &
+        '**ERROR. IdmSimulation set_default_value unhandled variable: ', &
         trim(mf6varname)
       call store_error(errmsg, terminate)
     end select
@@ -162,7 +162,7 @@ contains
           end if
         case default
           write (errmsg, '(4x,a,a)') &
-            '**Internal ERROR. IdmSimulation unhandled datatype: ', &
+            '**ERROR. IdmSimulation unhandled datatype: ', &
             trim(idt%datatype)
           call store_error(errmsg, terminate)
         end select

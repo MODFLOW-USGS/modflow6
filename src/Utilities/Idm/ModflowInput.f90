@@ -65,7 +65,7 @@ contains
     mf6_input%subcomponent_name = trim(subcomponent_name)
 
     mf6_input%mempath = create_mem_path(component_name, subcomponent_name, &
-                                           idm_context)
+                                        idm_context)
     mf6_input%component = trim(component_type)//'/'//trim(subcomponent_type)
 
     mf6_input%p_block_dfns => block_definitions(mf6_input%component)

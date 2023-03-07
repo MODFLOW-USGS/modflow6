@@ -116,12 +116,12 @@ contains
     !
     ! -- allocate array memory for StructVectorType
     select case (vartype)
-    !
+      !
     case ('INTEGER1D')
       allocate (intvector)
       call this%add_vector_intvector(name, memoryPath, varname_shape, icol, &
                                      intvector)
-    !
+      !
     case ('INTEGER')
       if (this%deferred_shape) then
         allocate (int1d(this%deferred_size_init))
@@ -132,14 +132,14 @@ contains
         int1d(j) = inodata
       end do
       call this%add_vector_int1d(name, memoryPath, icol, int1d)
-    !
+      !
     case ('DOUBLE')
       call mem_allocate(dbl1d, this%nrow, name, memoryPath)
       do j = 1, this%nrow
         dbl1d(j) = DNODATA
       end do
       call this%add_vector_dbl1d(name, memoryPath, icol, dbl1d)
-    !
+      !
     case ('STRING', 'KEYWORD')
       if (this%deferred_shape) then
         allocate (charstr1d(this%deferred_size_init))

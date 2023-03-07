@@ -389,8 +389,9 @@ contains
           ilen = len_trim(mf6_input%p_block_dfns(iblock)%blockname)
           !
           if (ilen > (LENVARNAME - len(block_suffix))) then
-            varname = mf6_input%p_block_dfns(iblock)%blockname(1:(LENVARNAME - &
-                                             len(block_suffix)))//block_suffix
+            varname = &
+              mf6_input%p_block_dfns(iblock)% &
+              blockname(1:(LENVARNAME - len(block_suffix)))//block_suffix
           else
             varname = trim(mf6_input%p_block_dfns(iblock)%blockname)//block_suffix
           end if
@@ -399,7 +400,7 @@ contains
                                               varname, &
                                               mf6_input%mempath, '', &
                                               .false.)
-          ! 
+          !
           ! -- continue as this column managed by internally SA object
           cycle
         end if
