@@ -402,27 +402,32 @@ module GwfDisvInputModule
     InputBlockDefinitionType( &
     'OPTIONS', & ! blockname
     .false., & ! required
-    .false. & ! aggregate
+    .false., & ! aggregate
+    .false. & ! block_variable
     ), &
     InputBlockDefinitionType( &
     'DIMENSIONS', & ! blockname
     .true., & ! required
-    .false. & ! aggregate
+    .false., & ! aggregate
+    .false. & ! block_variable
     ), &
     InputBlockDefinitionType( &
     'GRIDDATA', & ! blockname
     .true., & ! required
-    .false. & ! aggregate
+    .false., & ! aggregate
+    .false. & ! block_variable
     ), &
     InputBlockDefinitionType( &
     'VERTICES', & ! blockname
     .true., & ! required
-    .true. & ! aggregate
+    .true., & ! aggregate
+    .false. & ! block_variable
     ), &
     InputBlockDefinitionType( &
     'CELL2D', & ! blockname
     .true., & ! required
-    .true. & ! aggregate
+    .true., & ! aggregate
+    .false. & ! block_variable
     ) &
     ]
 

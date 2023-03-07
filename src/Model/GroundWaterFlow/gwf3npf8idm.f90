@@ -693,12 +693,14 @@ module GwfNpfInputModule
     InputBlockDefinitionType( &
     'OPTIONS', & ! blockname
     .false., & ! required
-    .false. & ! aggregate
+    .false., & ! aggregate
+    .false. & ! block_variable
     ), &
     InputBlockDefinitionType( &
     'GRIDDATA', & ! blockname
     .true., & ! required
-    .false. & ! aggregate
+    .false., & ! aggregate
+    .false. & ! block_variable
     ) &
     ]
 
