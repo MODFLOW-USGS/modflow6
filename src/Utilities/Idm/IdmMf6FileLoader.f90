@@ -52,7 +52,7 @@ contains
     type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType object that describes the input
     integer(I4B), intent(in) :: iout !< unit number for output
 
-    call idm_load(parser, mf6_input%file_type, &
+    call idm_load(parser, mf6_input%pkgtype, &
                   mf6_input%component_type, mf6_input%subcomponent_type, &
                   mf6_input%component_name, mf6_input%subcomponent_name, &
                   iout)
