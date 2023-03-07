@@ -224,6 +224,7 @@
 		<Filter Name="Idm">
 		<File RelativePath="..\src\Utilities\Idm\IdmLogger.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\IdmMf6FileLoader.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\IdmSimulation.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\InputDefinition.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\InputDefinitionSelector.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\LoadMf6FileType.f90"/>
