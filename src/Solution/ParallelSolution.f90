@@ -1,5 +1,5 @@
 module ParallelSolutionModule
-  use KindModule, only: DP, LGP  
+  use KindModule, only: DP, LGP
   use NumericalSolutionModule, only: NumericalSolutionType
   use mpi
   use MpiWorldModule
