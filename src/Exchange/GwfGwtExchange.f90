@@ -128,7 +128,7 @@ contains
     ! -- Verify that gwt model is of the correct type
     if (.not. associated(gwtmodel)) then
       write (errmsg, '(3a)') 'Problem with GWF-GWT exchange ', trim(this%name), &
-        '.  Specified GWF Model does not appear to be of the correct type.'
+        '.  Specified GWT Model does not appear to be of the correct type.'
       call store_error(errmsg, terminate=.true.)
     end if
     !
