@@ -35,10 +35,6 @@ module LoadMf6FileTypeModule
   private
   public :: idm_load
 
-  interface idm_load
-    module procedure idm_load_from_blockparser
-  end interface idm_load
-
 contains
 
   !> @brief procedure to load a file
@@ -47,13 +43,13 @@ contains
   !! memory context location of the memory manager.
   !!
   !<
-  subroutine idm_load_from_blockparser(parser, filetype, &
-                                       component_type, subcomponent_type, &
-                                       component_name, subcomponent_name, &
-                                       iout)
+  subroutine idm_load(parser, pkgtype, &
+                      component_type, subcomponent_type, &
+                      component_name, subcomponent_name, &
+                      iout)
     use SimVariablesModule, only: idm_context
     type(BlockParserType), intent(inout) :: parser !< block parser
-    character(len=*), intent(in) :: filetype !< file type to load, such as DIS6, DISV6, NPF6
+    character(len=*), intent(in) :: pkgtype !< file type to load, such as DIS6, DISV6, NPF6
     character(len=*), intent(in) :: component_type !< component type, such as GWF or GWT
     character(len=*), intent(in) :: subcomponent_type !< subcomponent type, such as DIS or NPF
     character(len=*), intent(in) :: component_name !< component name, such as MYGWFMODEL
@@ -65,7 +61,7 @@ contains
     integer(I4B), dimension(:), contiguous, pointer :: mshape => null()
     !
     ! -- construct input object
-    mf6_input = getModflowInput(filetype, component_type, &
+    mf6_input = getModflowInput(pkgtype, component_type, &
                                 subcomponent_type, component_name, &
                                 subcomponent_name)
     !
@@ -83,7 +79,7 @@ contains
       !
       ! -- set model shape if discretization dimensions have been read
       if (mf6_input%p_block_dfns(iblock)%blockname == 'DIMENSIONS' .and. &
-          filetype(1:3) == 'DIS') then
+          pkgtype(1:3) == 'DIS') then
         call set_model_shape(mf6_input%pkgtype, componentMemPath, &
                              mf6_input%mempath, mshape)
       end if
@@ -92,7 +88,7 @@ contains
     ! -- close logging statement
     call idm_log_close(mf6_input%component_name, &
                        mf6_input%subcomponent_name, iout)
-  end subroutine idm_load_from_blockparser
+  end subroutine idm_load
 
   !> @brief procedure to load a block
   !!
