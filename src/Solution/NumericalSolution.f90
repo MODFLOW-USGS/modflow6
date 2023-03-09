@@ -170,6 +170,7 @@ module NumericalSolutionModule
     procedure, private :: sln_calcdx
     procedure, private :: sln_underrelax
     procedure, private :: sln_outer_check
+    procedure, private :: sln_has_converged
     procedure, private :: sln_get_loc
     procedure, private :: sln_get_nodeu
     procedure, private :: allocate_scalars
@@ -1640,11 +1641,9 @@ contains
     !
     ! -- check convergence of solution
     call this%sln_outer_check(this%hncg(kiter), this%lrch(1, kiter))
-    if (this%icnvg /= 0) then
-      this%icnvg = 0
-      if (abs(this%hncg(kiter)) <= this%dvclose) then
-        this%icnvg = 1
-      end if
+    this%icnvg = 0
+    if (this%sln_has_converged(this%hncg(kiter))) then
+      this%icnvg = 1
     end if
     !
     ! -- set failure flag
@@ -3140,6 +3139,18 @@ contains
     ! -- return
     return
   end subroutine sln_outer_check
+
+  function sln_has_converged(this, max_dvc) result(has_converged)
+    class(NumericalSolutionType) :: this !< NumericalSolutionType instance
+    real(DP) :: max_dvc !< the maximum dependent variable change
+    logical(LGP) :: has_converged !< True, when converged
+
+    has_converged = .false.
+    if (abs(max_dvc) <= this%dvclose) then
+      has_converged = .true.
+    end if
+
+  end function sln_has_converged
 
   !> @ brief Get cell location string
   !!

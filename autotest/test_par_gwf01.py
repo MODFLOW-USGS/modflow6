@@ -7,23 +7,21 @@ from framework import TestFramework
 from simulation import TestSimulation
 
 # Test for parallel MODFLOW running on two cpus.
-# It contains two coupled models with (nlay,nrow,ncol) = (1,1,5),
+# It contains two coupled models with 
+# 
+#   (nlay,nrow,ncol) = (1,1,5),
+#   (nlay,nrow,ncol) = (1,5,5),
+#   (nlay,nrow,ncol) = (5,5,5),
+#
 # constant head boundaries left=1.0, right=10.0.
-#
-#    idomain:
-#
-#    'leftmodel'     'rightmodel'
-#
-#     1 1 1 1 1       1 1 1 1 1
-#
 # The result should be a uniform flow field.
 
-ex = ["par_gwf01"]
+ex = ["par_gwf01-1d", "par_gwf01-2d", "par_gwf01-3d"]
+dis_shape = [(1,1,5), (1,5,5), (5,5,5)]
 
 # global convenience...
 name_left = "leftmodel"
 name_right = "rightmodel"
-
 
 def get_model(idx, dir):
 
@@ -41,9 +39,9 @@ def get_model(idx, dir):
     hclose, rclose, relax = 10e-9, 1e-3, 0.97
 
     # model spatial discretization
-    nlay = 1
-    nrow = 1
-    ncol = 5
+    nlay = dis_shape[idx][0]
+    nrow = dis_shape[idx][1]
+    ncol = dis_shape[idx][2]
 
     # cell spacing
     delr = 100.0
@@ -55,7 +53,7 @@ def get_model(idx, dir):
     shift_y = 0.0
 
     # top/bot of the aquifer
-    tops = [0.0, -100.0, -200]
+    tops = [0.0, -100.0, -200.0, -300.0, -400.0, -500.0]
 
     # hydraulic conductivity
     k11 = 1.0
@@ -77,7 +75,7 @@ def get_model(idx, dir):
 
     ims = flopy.mf6.ModflowIms(
         sim,
-        print_option="SUMMARY",
+        print_option="ALL",
         outer_dvclose=hclose,
         outer_maximum=nouter,
         under_relaxation="DBD",
@@ -196,6 +194,7 @@ def build_petsc_db(exdir):
     with open(petsc_db_file, 'w') as petsc_file:
         petsc_file.write("-sub_ksp_type bcgs\n")
         petsc_file.write("-sub_pc_type ilu\n")
+        petsc_file.write("-dvclose 10e-7\n")
         petsc_file.write("-options_left no\n")
         #petsc_file.write("-wait_dbg\n")
 
@@ -219,12 +218,12 @@ def eval_model(sim):
 
 @pytest.mark.parallel
 @pytest.mark.parametrize(
-    "name",
-    ex,
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework()
-    test.build(build_model, 0, str(function_tmpdir))
+    test.build(build_model, idx, str(function_tmpdir))
     test.run(
         TestSimulation(
             name=name, exe_dict=targets, exfunc=eval_model, 
