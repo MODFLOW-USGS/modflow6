@@ -23,6 +23,10 @@ do_parallel_build = get_option('parallel')
 message('The used profile is:', profile)
 message('Parallel build:', do_parallel_build)
 
+# windows options:
+petsc_dir = 'd:\checkouts\petsc-3.18.5'
+petsc_arch = 'arch-ci-mswin-intel-modflow6'
+
 fc = meson.get_compiler('fortran')
 fc_id = fc.get_id()
 compile_args = []
@@ -89,8 +93,7 @@ endif
 
 if build_machine.system() == 'windows'
   # directly look for petsc
-  petsc_path= meson.project_source_root() / '..' / 'petsc-3.18.5'
-  petsc_compiled = petsc_path / 'arch-ci-mswin-intel-modflow6'
+  petsc_compiled = petsc_dir / petsc_arch
   petsc = fc.find_library('libpetsc', dirs: petsc_compiled / 'lib')
 else
   petsc = dependency('PETSc', required : false)
@@ -136,8 +139,8 @@ add_project_link_arguments(fc.get_supported_arguments(link_args), language: 'for
 
 if with_petsc and build_machine.system() == 'windows'
   message('Compiling PETSc Fortran modudules')
-  petsc_incdir = include_directories([petsc_path / 'include', petsc_compiled / 'include'])
-  petsc_src = petsc_path / 'src'
+  petsc_incdir = include_directories([petsc_dir / 'include', petsc_compiled / 'include'])
+  petsc_src = petsc_dir / 'src'
   sources_petsc = [petsc_src / 'dm/f90-mod/petscdmdamod.F90',
                   petsc_src / 'dm/f90-mod/petscdmmod.F90',
                   petsc_src / 'dm/f90-mod/petscdmplexmod.F90',
