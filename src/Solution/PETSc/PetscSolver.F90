@@ -22,6 +22,7 @@ module PetscSolverModule
     integer(I4B) :: lin_accel_type
     real(DP) :: dvclose
     class(PetscContextType), pointer :: petsc_ctx
+    integer(I4B) :: ctx_idx
   contains
     procedure :: initialize => petsc_initialize
     procedure :: solve => petsc_solve
@@ -131,9 +132,10 @@ contains
     call MatCreateVecs( &
       this%mat_petsc, this%petsc_ctx%delta_x, PETSC_NULL_VEC, ierr)
     CHKERRQ(ierr)
+    call petsc_add_context(this%petsc_ctx, this%ctx_idx)
 
     call KSPSetConvergenceTest(this%ksp_petsc, petsc_check_convergence, &
-                               this%petsc_ctx, PETSC_NULL_FUNCTION, ierr)
+                               this%ctx_idx, PETSC_NULL_FUNCTION, ierr)
     CHKERRQ(ierr)
 
   end subroutine create_convergence_check
