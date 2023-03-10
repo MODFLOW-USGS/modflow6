@@ -27,6 +27,9 @@ module InputDefinitionSelectorModule
   use GwtDspInputModule, only: gwt_dsp_param_definitions, &
                                gwt_dsp_aggregate_definitions, &
                                gwt_dsp_block_definitions
+  use SimNamInputModule, only: sim_nam_param_definitions, &
+                               sim_nam_aggregate_definitions, &
+                               sim_nam_block_definitions
 
   implicit none
   private
@@ -56,6 +59,8 @@ contains
       call set_pointer(input_definition, gwf_npf_param_definitions)
     case ('GWT/DSP')
       call set_pointer(input_definition, gwt_dsp_param_definitions)
+    case ('SIM/NAM')
+      call set_pointer(input_definition, sim_nam_param_definitions)
     case default
       write (warnmsg, '(a,a)') 'IDM Unsupported input type: ', trim(component)
       call store_warning(warnmsg)
@@ -81,6 +86,8 @@ contains
       call set_pointer(input_definition, gwf_npf_aggregate_definitions)
     case ('GWT/DSP')
       call set_pointer(input_definition, gwt_dsp_aggregate_definitions)
+    case ('SIM/NAM')
+      call set_pointer(input_definition, sim_nam_aggregate_definitions)
     case default
       write (warnmsg, '(a,a)') 'IDM Unsupported input type: ', trim(component)
       call store_warning(warnmsg)
@@ -106,6 +113,8 @@ contains
       call set_block_pointer(input_definition, gwf_npf_block_definitions)
     case ('GWT/DSP')
       call set_block_pointer(input_definition, gwt_dsp_block_definitions)
+    case ('SIM/NAM')
+      call set_block_pointer(input_definition, sim_nam_block_definitions)
     case default
       write (warnmsg, '(a,a)') 'IDM Unsupported input type: ', trim(component)
       call store_warning(warnmsg)
