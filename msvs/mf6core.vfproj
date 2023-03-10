@@ -62,7 +62,7 @@
 			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/></File>
 		<File RelativePath="..\src\Distributed\RouterBase.f90"/>
-		<File RelativePath="..\src\Distributed\RouterFactory.f90">
+		<File RelativePath="..\src\Distributed\RouterFactory.F90">
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
