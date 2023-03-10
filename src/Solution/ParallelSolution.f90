@@ -11,7 +11,7 @@ module ParallelSolutionModule
   type, extends(NumericalSolutionType) :: ParallelSolutionType
   contains
     ! override
-    procedure, private :: sln_has_converged
+    procedure :: sln_has_converged => par_has_converged
   end type ParallelSolutionType
 
 contains
@@ -19,7 +19,7 @@ contains
   !> @brief Check global convergence. The local maximum dependent
   !! variable change is reduced over MPI with all other processes
   !< that are running this parallel numerical solution.
-  function sln_has_converged(this, max_dvc) result(has_converged)
+  function par_has_converged(this, max_dvc) result(has_converged)
     class(ParallelSolutionType) :: this !< ParallelSolutionType instance
     real(DP) :: max_dvc !< the LOCAL maximum dependent variable change
     logical(LGP) :: has_converged !< True, when GLOBALLY converged
@@ -35,6 +35,6 @@ contains
       has_converged = .true.
     end if
 
-  end function sln_has_converged
+  end function par_has_converged
 
 end module ParallelSolutionModule
