@@ -481,7 +481,7 @@ contains
     use SimVariablesModule, only: idm_context, simulation_mode
     use SolutionGroupModule, only: SolutionGroupType, &
                                    solutiongroup_create
-    use SolutionFactoryModule, only: create_ims_solution
+    use SolutionFactoryModule, only: create_ims_solution, create_ems_solution
     use BaseSolutionModule, only: BaseSolutionType
     use BaseModelModule, only: BaseModelType
     use BaseExchangeModule, only: BaseExchangeType
@@ -579,6 +579,44 @@ contains
         !
         ! -- create soln and add to group
         sp => create_ims_solution(simulation_mode, fname, isoln)
+        call sgp%add_solution(isoln, sp)
+        !
+        ! -- parse model names
+        parse_str = trim(mnames)//' '
+        call parseline(parse_str, nwords, words)
+        !
+        ! -- Find each model id and get model
+        do j = 1, nwords
+          call upcase(words(j))
+          glo_mid = ifind(model_names, words(j))
+          if (glo_mid == -1) then
+            write (errmsg, '(a,a)') 'Error.  Invalid model name: ', &
+              trim(words(j))
+            call store_error(errmsg, terminate)
+          end if
+          !
+          loc_idx = model_loc_idx(glo_mid)
+          if (loc_idx == -1) then
+            if (simulation_mode == 'PARALLEL') then
+              ! this is still ok
+              cycle
+            end if
+          end if
+          !
+          mp => GetBaseModelFromList(basemodellist, loc_idx)
+          !
+          ! -- Add the model to the solution
+          call sp%add_model(mp)
+          mp%idsoln = isoln
+        end do
+      case ('EMS6')
+        !
+        ! -- increment solution counters
+        isoln = isoln + 1
+        isgpsoln = isgpsoln + 1
+        !
+        ! -- create soln and add to group
+        sp => create_ems_solution(simulation_mode, fname, isoln)
         call sgp%add_solution(isoln, sp)
         !
         ! -- parse model names

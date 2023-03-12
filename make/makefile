@@ -5,34 +5,35 @@ include ./makedefaults
 
 # Define the source file directories
 SOURCEDIR1=../src
-SOURCEDIR2=../src/Distributed
-SOURCEDIR3=../src/Exchange
-SOURCEDIR4=../src/Model
-SOURCEDIR5=../src/Model/Connection
-SOURCEDIR6=../src/Model/Geometry
-SOURCEDIR7=../src/Model/GroundWaterFlow
-SOURCEDIR8=../src/Model/GroundWaterTransport
-SOURCEDIR9=../src/Model/ModelUtilities
-SOURCEDIR10=../src/Solution
-SOURCEDIR11=../src/Solution/LinearMethods
-SOURCEDIR12=../src/Solution/PETSc
-SOURCEDIR13=../src/Timing
-SOURCEDIR14=../src/Utilities
-SOURCEDIR15=../src/Utilities/ArrayRead
-SOURCEDIR16=../src/Utilities/Idm
-SOURCEDIR17=../src/Utilities/Idm/selector
-SOURCEDIR18=../src/Utilities/Libraries
-SOURCEDIR19=../src/Utilities/Libraries/blas
-SOURCEDIR20=../src/Utilities/Libraries/daglib
-SOURCEDIR21=../src/Utilities/Libraries/rcm
-SOURCEDIR22=../src/Utilities/Libraries/sparsekit
-SOURCEDIR23=../src/Utilities/Libraries/sparskit2
-SOURCEDIR24=../src/Utilities/Matrix
-SOURCEDIR25=../src/Utilities/Memory
-SOURCEDIR26=../src/Utilities/Observation
-SOURCEDIR27=../src/Utilities/OutputControl
-SOURCEDIR28=../src/Utilities/TimeSeries
-SOURCEDIR29=../src/Utilities/Vector
+SOURCEDIR2=../src/Exchange
+SOURCEDIR3=../src/Distributed
+SOURCEDIR4=../src/Solution
+SOURCEDIR5=../src/Solution/LinearMethods
+SOURCEDIR6=../src/Solution/PETSc
+SOURCEDIR7=../src/Timing
+SOURCEDIR8=../src/Utilities
+SOURCEDIR9=../src/Utilities/Idm
+SOURCEDIR10=../src/Utilities/Idm/selector
+SOURCEDIR11=../src/Utilities/TimeSeries
+SOURCEDIR12=../src/Utilities/Memory
+SOURCEDIR13=../src/Utilities/OutputControl
+SOURCEDIR14=../src/Utilities/ArrayRead
+SOURCEDIR15=../src/Utilities/Libraries
+SOURCEDIR16=../src/Utilities/Libraries/rcm
+SOURCEDIR17=../src/Utilities/Libraries/blas
+SOURCEDIR18=../src/Utilities/Libraries/sparskit2
+SOURCEDIR19=../src/Utilities/Libraries/daglib
+SOURCEDIR20=../src/Utilities/Libraries/sparsekit
+SOURCEDIR21=../src/Utilities/Vector
+SOURCEDIR22=../src/Utilities/Matrix
+SOURCEDIR23=../src/Utilities/Observation
+SOURCEDIR24=../src/Model
+SOURCEDIR25=../src/Model/Connection
+SOURCEDIR26=../src/Model/GroundWaterTransport
+SOURCEDIR27=../src/Model/ModelUtilities
+SOURCEDIR28=../src/Model/GroundWaterFlow
+SOURCEDIR29=../src/Model/Geometry
+SOURCEDIR30=../src/Model/StreamNetworkFlow
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -63,7 +64,8 @@ ${SOURCEDIR25} \
 ${SOURCEDIR26} \
 ${SOURCEDIR27} \
 ${SOURCEDIR28} \
-${SOURCEDIR29} 
+${SOURCEDIR29} \
+${SOURCEDIR30} 
 
 .SUFFIXES: .f90 .F90 .o
 
@@ -254,6 +256,7 @@ $(OBJDIR)/Timer.o \
 $(OBJDIR)/LinearSolverFactory.o \
 $(OBJDIR)/ims8linear.o \
 $(OBJDIR)/BaseSolution.o \
+$(OBJDIR)/ExplicitModel.o \
 $(OBJDIR)/SpatialModelConnection.o \
 $(OBJDIR)/GwtInterfaceModel.o \
 $(OBJDIR)/GwtGwtExchange.o \
@@ -262,6 +265,7 @@ $(OBJDIR)/GwfGwfExchange.o \
 $(OBJDIR)/RouterFactory.o \
 $(OBJDIR)/NumericalSolution.o \
 $(OBJDIR)/MappedMemory.o \
+$(OBJDIR)/ExplicitSolution.o \
 $(OBJDIR)/GwtGwtConnection.o \
 $(OBJDIR)/GwfGwfConnection.o \
 $(OBJDIR)/VirtualDataManager.o \

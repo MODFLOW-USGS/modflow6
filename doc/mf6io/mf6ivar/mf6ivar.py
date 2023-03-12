@@ -639,6 +639,7 @@ if __name__ == '__main__':
                   'exg-gwfgwt',
                   'exg-gwtgwt',
                   'sln-ims',  # dfn completed  tex updated
+                  'sln-ems',  # dfn completed  tex updated
                   'gwf-nam',  # dfn completed  tex updated
                   'gwf-dis',  # dfn completed  tex updated
                   'gwf-disv',  # dfn completed  tex updated
