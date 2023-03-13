@@ -6,14 +6,16 @@ mpowfivethirds = 5.0 / 3.0
 
 
 def calculate_rectchan_mannings_discharge(
-    conversion_factor, roughness, slope, width, depth
+    conversion_factor, roughness, slope, width, depth, left_vert=False, right_vert=False
 ):
     """
     Calculate Manning's discharge for a rectangular channel.
 
     """
     area = width * depth
-    return conversion_factor * area * depth ** mpow * slope ** 0.5 / roughness
+    hydrad = get_wetted_area(0, 0 + width, 0, 0, depth) / \
+             get_wetted_perimeter(0, 0 + width, 0, 0, depth, left_vert, right_vert)
+    return conversion_factor * area * hydrad ** mpow * slope ** 0.5 / roughness
 
 
 # n-point cross-section functions
