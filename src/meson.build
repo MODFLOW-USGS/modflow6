@@ -246,6 +246,25 @@ endif
 
 mf6_external = static_library('mf6_external', external_libraries)
 
-mf6core = static_library('mf6core', modflow_sources,  dependencies: dependencies, link_with: [mf6_external])
-
-mf6exe = executable('mf6', 'mf6.f90', link_with: [mf6core],  dependencies: dependencies, install: true)
+if build_machine.system() == 'windows' and with_petsc
+  mf6core = static_library('mf6core', 
+                           modflow_sources, 
+                           dependencies:  dependencies, 
+                           link_with: [mf6_external], 
+                           include_directories: petsc_incdir)
+  mf6exe = executable('mf6',
+                      'mf6.f90', 
+                      link_with: [mf6core],
+                      dependencies: dependencies, 
+                      install: true)
+else
+  mf6core = static_library('mf6core', 
+                           modflow_sources,  
+                           dependencies: dependencies,
+                           link_with: [mf6_external])
+  mf6exe = executable('mf6', 
+                      'mf6.f90', 
+                      link_with: [mf6core],  
+                      dependencies: dependencies, 
+                      install: true)
+endif
