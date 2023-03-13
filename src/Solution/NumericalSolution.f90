@@ -159,6 +159,10 @@ module NumericalSolutionModule
     procedure :: get_exchanges
     procedure :: save
 
+    ! 'protected' (this can be overridden)
+    procedure :: sln_has_converged
+
+    ! private
     procedure, private :: sln_connect
     procedure, private :: sln_reset
     procedure, private :: sln_ls
@@ -170,7 +174,6 @@ module NumericalSolutionModule
     procedure, private :: sln_calcdx
     procedure, private :: sln_underrelax
     procedure, private :: sln_outer_check
-    procedure, private :: sln_has_converged
     procedure, private :: sln_get_loc
     procedure, private :: sln_get_nodeu
     procedure, private :: allocate_scalars
