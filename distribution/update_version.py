@@ -45,7 +45,7 @@ from filelock import FileLock
 from utils import get_modified_time
 
 project_name = "MODFLOW 6"
-project_root_path = Path(__file__).parent.parent
+project_root_path = Path(__file__).resolve().parent.parent
 version_file_path = project_root_path / "version.txt"
 touched_file_paths = [
     version_file_path,

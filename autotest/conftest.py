@@ -4,7 +4,7 @@ import pytest
 from modflow_devtools.executables import Executables, build_default_exe_dict
 
 pytest_plugins = ["modflow_devtools.fixtures"]
-project_root_path = Path(__file__).parent.parent
+project_root_path = Path(__file__).resolve().parent.parent
 
 
 def should_compare(
