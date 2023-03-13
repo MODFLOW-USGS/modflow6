@@ -24,7 +24,7 @@ message('The used profile is:', profile)
 message('Parallel build:', do_parallel_build)
 
 # windows options:
-petsc_dir = 'd:\checkouts\petsc-3.18.5'
+petsc_dir = meson.project_source_root() / '..' /'petsc-3.18.5'
 petsc_arch = 'arch-ci-mswin-intel-modflow6'
 
 fc = meson.get_compiler('fortran')
