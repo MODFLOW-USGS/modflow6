@@ -12,6 +12,8 @@ module VirtualDataManagerModule
   use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
   use NumericalExchangeModule, only: NumericalExchangeType, &
                                      GetNumericalExchangeFromList
+  use DisConnExchangeModule, only: DisConnExchangeType, &
+                                   GetDisConnExchangeFromList
   use SpatialModelConnectionModule, only: SpatialModelConnectionType, &
                                           get_smc_from_list
   implicit none
@@ -81,6 +83,7 @@ contains
     class(VirtualSolutionType), pointer :: virt_sol
     class(NumericalModelType), pointer :: num_mod
     class(NumericalExchangeType), pointer :: num_exg
+    class(DisConnExchangeType), pointer :: exg
     class(SpatialModelConnectionType), pointer :: conn
     integer(I4B) :: model_id, exg_id
     type(STLVecInt) :: model_ids, exchange_ids
@@ -96,23 +99,23 @@ contains
     this%solution_ids(this%nr_solutions) = num_sol%id
     virt_sol%solution_id = num_sol%id
 
-    ! let's start with adding all models and exchanges from the global list
-    ! (we will make them inactive when they are remote and not part of
-    ! our halo)
+    ! 1) adding all local models from the solution
     do im = 1, num_sol%modellist%Count()
       num_mod => GetNumericalModelFromList(num_sol%modellist, im)
       call model_ids%push_back(num_mod%id)
     end do
 
-    ! loop over exchanges in solution and get connections
+    ! 2) adding all local exchanges
+    do ix = 1, num_sol%exchangelist%Count()
+      exg => GetDisConnExchangeFromList(num_sol%exchangelist, ix)
+      if (.not. associated(exg)) cycle ! interface model is handled separately
+      call exchange_ids%push_back_unique(exg%id)
+    end do
+
+    ! 3) add halo models and exchanges from interface models
     do ix = 1, num_sol%exchangelist%Count()
       conn => get_smc_from_list(num_sol%exchangelist, ix)
-      if (.not. associated(conn)) then
-        ! it's a classic exchange, add it
-        num_exg => GetNumericalExchangeFromList(num_sol%exchangelist, ix)
-        call exchange_ids%push_back_unique(num_exg%id)
-        cycle
-      end if
+      if (.not. associated(conn)) cycle
 
       ! it's an interface model based exchanged, get
       ! halo models and halo exchanges from connection
@@ -124,7 +127,6 @@ contains
         exg_id = conn%halo_exchanges%at(ihx)
         call exchange_ids%push_back_unique(exg_id)
       end do
-
     end do
 
     allocate (virt_sol%models(model_ids%size))

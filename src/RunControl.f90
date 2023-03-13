@@ -74,9 +74,9 @@ contains
       call this%init_handler()
     else if (stage == STG_AFTER_MDL_DF) then
       call this%after_mdl_df_handler()
-    else if (stage == STG_BEFORE_DF) then
+    else if (stage == STG_BEFORE_CON_DF) then
       call this%before_df_handler()
-    else if (stage == STG_AFTER_DF) then
+    else if (stage == STG_AFTER_CON_DF) then
       call this%after_df_handler()
     else if (stage == STG_BEFORE_AR) then
       call this%before_ar_handler()

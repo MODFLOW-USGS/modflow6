@@ -109,22 +109,31 @@ contains
 
     if (stage == STG_AFTER_EXG_DF) then
 
-      call this%map(this%nexg%to_base(), (/STG_AFTER_EXG_DF/), MAP_ALL_TYPE)
-      call this%map(this%naux%to_base(), (/STG_AFTER_EXG_DF/), MAP_ALL_TYPE)
-      call this%map(this%ianglex%to_base(), (/STG_AFTER_EXG_DF/), MAP_ALL_TYPE)
+      call this%map(this%nexg%to_base(), &
+                    (/STG_AFTER_EXG_DF/), MAP_ALL_TYPE)
+      call this%map(this%naux%to_base(), &
+                    (/STG_AFTER_EXG_DF/), MAP_ALL_TYPE)
+      call this%map(this%ianglex%to_base(), &
+                    (/STG_AFTER_EXG_DF/), MAP_ALL_TYPE)
 
-    else if (stage == STG_BEFORE_DF) then
+    else if (stage == STG_BEFORE_CON_DF) then
 
       nexg = this%nexg%get()
       naux = this%naux%get()
-      call this%map(this%nodem1%to_base(), nexg, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
-      call this%map(this%nodem2%to_base(), nexg, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
-      call this%map(this%ihc%to_base(), nexg, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
-      call this%map(this%cl1%to_base(), nexg, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
-      call this%map(this%cl2%to_base(), nexg, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
-      call this%map(this%hwva%to_base(), nexg, (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+      call this%map(this%nodem1%to_base(), nexg, &
+                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
+      call this%map(this%nodem2%to_base(), nexg, &
+                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
+      call this%map(this%ihc%to_base(), nexg, &
+                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
+      call this%map(this%cl1%to_base(), nexg, &
+                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
+      call this%map(this%cl2%to_base(), nexg, &
+                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
+      call this%map(this%hwva%to_base(), nexg, &
+                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
       call this%map(this%auxvar%to_base(), naux, nexg, &
-                    (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
 
     end if
 
