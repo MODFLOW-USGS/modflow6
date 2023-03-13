@@ -94,7 +94,7 @@ endif
 if build_machine.system() == 'windows'
   # directly look for petsc
   petsc_compiled = petsc_dir / petsc_arch
-  petsc = fc.find_library('libpetsc', dirs: petsc_compiled / 'lib')
+  petsc = fc.find_library('libpetsc', dirs: petsc_compiled / 'lib', required : false)
 else
   petsc = dependency('PETSc', required : false)
 endif
