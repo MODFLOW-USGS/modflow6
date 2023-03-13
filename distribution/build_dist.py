@@ -2,6 +2,7 @@ import argparse
 import os
 import platform
 import shutil
+import sys
 import textwrap
 from collections import namedtuple
 from os import PathLike, environ
@@ -162,7 +163,7 @@ def build_examples(examples_repo_path: PathLike, overwrite: bool = False):
         ]
         for script in scripts:
             argv = [
-                "python",
+                sys.executable,
                 script,
                 "--no_run",
                 "--no_plot",

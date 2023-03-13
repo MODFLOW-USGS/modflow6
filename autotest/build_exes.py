@@ -30,4 +30,4 @@ if __name__ == "__main__":
         "-p", "--path", help="path to bin directory", default=top_bin_path
     )
     args = parser.parse_args()
-    test_meson_build(Path(args.path).resolve())
+    test_meson_build(Path(args.path).expanduser().resolve())

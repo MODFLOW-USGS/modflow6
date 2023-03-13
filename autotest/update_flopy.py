@@ -3,6 +3,7 @@ import importlib
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import flopy
@@ -70,7 +71,7 @@ def test_create_packages():
 
     # run createpackages.py script
     print(f"running...{fn}")
-    subprocess.check_output(["python", "createpackages.py"], cwd=pth)
+    subprocess.check_output([sys.executable, "createpackages.py"], cwd=pth)
 
     # reload flopy
     print("reloading flopy")
@@ -124,7 +125,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    path = Path(args.path).resolve()
+    path = Path(args.path).expanduser().resolve()
     print(f"Updating flopy packages from DFN files in: {path}")
 
     test_delete_mf6()

@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 from contextlib import contextmanager
 
 # base name for mf6io LaTeX document
@@ -60,7 +61,7 @@ def test_rebuild_from_dfn():
             os.remove(fpth)
 
         # run python
-        argv = ["python", "mf6ivar.py"]
+        argv = [sys.executable, "mf6ivar.py"]
         buff, ierr = run_command(argv, pth)
         msg = f"\nERROR {ierr}: could not run {argv[0]} with {argv[1]}"
         assert ierr == 0, buff + msg
