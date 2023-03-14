@@ -579,33 +579,33 @@ contains
       "('List entry ',i0,' contains cellid ',a,' but this cellid is invalid &
       &for model with shape ', a)"
     character(len=*), parameter :: fmtndim1 = &
-      "('(',i0,')')"
+                                   "('(',i0,')')"
     character(len=*), parameter :: fmtndim2 = &
-      "('(',i0,',',i0,')')"
+                                   "('(',i0,',',i0,')')"
     character(len=*), parameter :: fmtndim3 = &
-      "('(',i0,',',i0,',',i0,')')"
+                                   "('(',i0,',',i0,',',i0,')')"
     if (ndim == 1) then
       if (cellid(1) < 1 .or. cellid(1) > mshape(1)) then
-        write(cellstr, fmtndim1) cellid(1)
-        write(mshstr, fmtndim1) mshape(1)
-        write(errmsg, fmterr) ii, trim(adjustl(cellstr)), trim(adjustl(mshstr))
+        write (cellstr, fmtndim1) cellid(1)
+        write (mshstr, fmtndim1) mshape(1)
+        write (errmsg, fmterr) ii, trim(adjustl(cellstr)), trim(adjustl(mshstr))
         call store_error(errmsg)
       end if
     else if (ndim == 2) then
       if (cellid(1) < 1 .or. cellid(1) > mshape(1) .or. &
           cellid(2) < 1 .or. cellid(2) > mshape(2)) then
-        write(cellstr, fmtndim2) cellid(1), cellid(2)
-        write(mshstr, fmtndim2) mshape(1), mshape(2)
-        write(errmsg, fmterr) ii, trim(adjustl(cellstr)), trim(adjustl(mshstr))
+        write (cellstr, fmtndim2) cellid(1), cellid(2)
+        write (mshstr, fmtndim2) mshape(1), mshape(2)
+        write (errmsg, fmterr) ii, trim(adjustl(cellstr)), trim(adjustl(mshstr))
         call store_error(errmsg)
       end if
     else if (ndim == 3) then
       if (cellid(1) < 1 .or. cellid(1) > mshape(1) .or. &
           cellid(2) < 1 .or. cellid(2) > mshape(2) .or. &
           cellid(3) < 1 .or. cellid(3) > mshape(3)) then
-        write(cellstr, fmtndim3) cellid(1), cellid(2), cellid(3)
-        write(mshstr, fmtndim3) mshape(1), mshape(2), mshape(3)
-        write(errmsg, fmterr) ii, trim(adjustl(cellstr)), trim(adjustl(mshstr))
+        write (cellstr, fmtndim3) cellid(1), cellid(2), cellid(3)
+        write (mshstr, fmtndim3) mshape(1), mshape(2), mshape(3)
+        write (errmsg, fmterr) ii, trim(adjustl(cellstr)), trim(adjustl(mshstr))
         call store_error(errmsg)
       end if
     end if
