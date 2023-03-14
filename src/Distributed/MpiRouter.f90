@@ -72,6 +72,9 @@ contains
     ! to log or not to log
     this%enable_monitor = .true.
 
+    ! initialize the MPI message builder
+    call this%message_builder%init()
+
     ! get mpi world for our process
     this%mpi_world => get_mpi_world()
 
@@ -122,6 +125,7 @@ contains
       this%imon = getunit()
       write (monitor_file, '(a,i0,a)') "mpi.p", proc_id, ".log"
       open (unit=this%imon, file=monitor_file)
+      call this%message_builder%set_monitor(this%imon)
 
       ! write initial info
       write (this%imon, '(a,/)') "initialize MPI Router:"
