@@ -14,6 +14,49 @@ module VirtualExchangeModule
   public :: get_virtual_exchange_from_list
   private :: cast_as_virtual_exchange
 
+  !> The Virtual Exchange is based on two Virtual Models
+  !! and is therefore not always strictly local, or remote.
+  !! We have to consider three different cases:
+  !!
+  !! 1) both virtual models are local
+  !!
+  !!  RECV: In this case this virtual data container will have 
+  !!        no data items to receive from other processes. 
+  !!  SEND: Whenever it is called to send its virtual data items
+  !!        to other processes, it simply sends everything.
+  !!
+  !! 2) one model is local, one model is remote
+  !!
+  !!  Consequently, there is another exchange which
+  !!  has the reverse, we call this our _dual_ exchange.
+  !!
+  !!  RECV: The sender is our dual exchange, and
+  !!        we have all data except its list of
+  !!        reduced model node numbers, either
+  !!        this%nodem1 or this%nodem2. We receive
+  !!        the missing array. Receiving from a sender
+  !!        that is not the dual exchange cannot occur.
+  !!
+  !!  SEND: here we have to consider two cases
+  !!   a) The receiver is our dual exchange, we return
+  !!      the favor and send the list of model node
+  !!      numbers that is present on this process, this
+  !!      would be either this%nodem1 or this%nodem2
+  !!   b) The receiver is not the dual exchange. And
+  !!      here we will send everything.
+  !!
+  !! 3) both models are remote
+  !!
+  !!  RECV: we will receive everything. In case the source
+  !!        exchange is fully local, i.e. type 1) above, we get
+  !!        all the data at the first attempt. Otherwise, it will
+  !!        take a second attempt before all the data is in.
+  !!        (To allow for two attempts, the nodem1 and nodem2
+  !!        arrays are registered to be synchronized at two
+  !!        consecutive stages)
+  !!
+  !!  SEND: nothing to be sent.
+  !<
   type, public, extends(VirtualDataContainerType) :: VirtualExchangeType
     class(VirtualModelType), pointer :: v_model1 => null()
     class(VirtualModelType), pointer :: v_model2 => null()
