@@ -226,9 +226,9 @@ contains
     call this%mr_update_receivers()
 
     if (this%enable_monitor) then
-      write (this%imon, '(2x,a,*(i0))') "process ids sending data: ", &
+      write (this%imon, '(2x,a,*(i3))') "process ids sending data: ", &
         this%senders%get_values()
-      write (this%imon, '(2x,a,*(i0))') "process ids receiving data: ", &
+      write (this%imon, '(2x,a,*(i3))') "process ids receiving data: ", &
         this%receivers%get_values()
     end if
 
@@ -249,27 +249,31 @@ contains
     allocate (body_rcv_t(this%senders%size))
     allocate (body_snd_t(this%receivers%size))
 
+    if (this%enable_monitor) then
+      write (this%imon, '(2x,a)') "== communicating headers =="
+    end if
+
     ! first receive headers for outward data
     do i = 1, this%receivers%size
       rnk = this%receivers%at(i)
+      if (this%enable_monitor) then
+        write (this%imon, '(4x,a,i0)') "Ireceive header from process: ", rnk
+      end if  
       call this%message_builder%create_header_rcv(hdr_rcv_t(i))
       call MPI_Irecv(headers(:, i), max_headers, hdr_rcv_t(i), rnk, stage, &
                      MF6_COMM_WORLD, rcv_req(i), ierr)
       ! don't free mpi datatype, we need the count below
     end do
 
-    ! send header for incoming data
+    ! send header for incoming data    
     do i = 1, this%senders%size
       rnk = this%senders%at(i)
+      if (this%enable_monitor) then
+        write (this%imon, '(4x,a,i0)') "send header to process: ", rnk
+      end if      
       call this%message_builder%create_header_snd(rnk, stage, hdr_snd_t(i))
       call MPI_Isend(MPI_BOTTOM, 1, hdr_snd_t(i), rnk, stage, &
                      MF6_COMM_WORLD, snd_req(i), ierr)
-
-      if (this%enable_monitor) then
-        call MPI_Type_size(hdr_snd_t(i), msg_size, ierr)
-        write (this%imon, '(4x,a,i0)') "send header to process: ", rnk
-      end if
-
       call MPI_Type_free(hdr_snd_t(i), ierr)
     end do
 
@@ -283,7 +287,7 @@ contains
       if (this%enable_monitor) then
         rnk = this%senders%at(i)
         write (this%imon, '(4x,a,i0)') "received headers from process: ", rnk
-        write (this%imon, '(4x,a)') "expecting data for:"
+        write (this%imon, '(6x,a)') "expecting data for:"
         do j = 1, hdr_rcv_cnt(i)
           write (this%imon, '(6x,a,i0,a,a)') "id: ", headers(j, i)%id, &
             " type: ", trim(VDC_TYPE_TO_STR(headers(j, i)%container_type))
@@ -293,9 +297,17 @@ contains
       call MPI_Type_free(hdr_rcv_t(i), ierr)
     end do
 
+    if (this%enable_monitor) then
+      write (this%imon, '(2x,a)') "== communicating bodies =="
+    end if
+
     ! recv bodies
     do i = 1, this%senders%size
       rnk = this%senders%at(i)
+      if (this%enable_monitor) then  
+        write (this%imon, '(4x,a,i0)') "receiving from process: ", rnk
+      end if
+
       call this%message_builder%create_body_rcv(rnk, stage, body_rcv_t(i))
       call MPI_Type_size(body_rcv_t(i), msg_size, ierr)
       if (msg_size > 0) then
@@ -304,18 +316,16 @@ contains
       end if
 
       if (this%enable_monitor) then
-        if (msg_size > 0) then
-          write (this%imon, '(4x,a,i0)') "receiving from process: ", rnk
-          write (this%imon, '(6x,a,i0)') "message body size: ", msg_size
-        else
-          write (this%imon, '(4x,a,i0)') "no receiving from process: ", rnk
-        end if
+        write (this%imon, '(6x,a,i0)') "message body size: ", msg_size
       end if
     end do
 
     ! send bodies
     do i = 1, this%receivers%size
       rnk = this%receivers%at(i)
+      if (this%enable_monitor) then
+        write (this%imon, '(4x,a,i0)') "sending to process: ", rnk
+      end if
       call this%message_builder%create_body_snd( &
         rnk, stage, headers(1:hdr_rcv_cnt(i), i), body_snd_t(i))
       call MPI_Type_size(body_snd_t(i), msg_size, ierr)
@@ -325,16 +335,12 @@ contains
       end if
 
       if (this%enable_monitor) then
-        if (msg_size > 0) then
-          write (this%imon, '(4x,a,i0)') "sending to process: ", rnk
-          write (this%imon, '(6x,a,i0)') "message body size: ", msg_size
-        else
-          write (this%imon, '(4x,a,i0)') "no receiving from process: ", rnk
-        end if
+        write (this%imon, '(6x,a,i0)') "message body size: ", msg_size
       end if
+      call flush(this%imon)
     end do
 
-    ! wait for exchange of all messages
+    ! wait for exchange of all messages    
     call MPI_WaitAll(this%senders%size, snd_req, snd_stat, ierr)
 
     ! clean up types

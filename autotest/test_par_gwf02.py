@@ -22,7 +22,7 @@ from simulation import TestSimulation
 
 ex = ["par_gwf02-noxt3d"]
 ex_xt3d = [False]
-nr_models_x = 2
+nr_models_x = 3
 nr_models_y = 1
 
 nlay = 1

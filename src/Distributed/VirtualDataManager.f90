@@ -82,7 +82,6 @@ contains
     integer(I4B) :: i, im, ix, ihm, ihx
     class(VirtualSolutionType), pointer :: virt_sol
     class(NumericalModelType), pointer :: num_mod
-    class(NumericalExchangeType), pointer :: num_exg
     class(DisConnExchangeType), pointer :: exg
     class(SpatialModelConnectionType), pointer :: conn
     integer(I4B) :: model_id, exg_id

@@ -109,10 +109,12 @@ contains
     allocate (types(nr_types))
     allocate (displs(nr_types))
 
-    write (this%imon, '(6x,a,i0)') "create headers for models: ", &
-      model_idxs%get_values(), " from rank ", rank
-    write (this%imon, '(6x,a,i0)') "create headers for exchange: ", &
-      exg_idxs%get_values(), " from rank ", rank
+    if (this%imon > 0) then
+      write (this%imon, '(6x,a,*(i3))') "create headers for models: ", &
+        model_idxs%get_values()
+      write (this%imon, '(6x,a,*(i3))') "create headers for exchange: ", &
+        exg_idxs%get_values()
+    end if
 
     ! loop over containers
     do i = 1, model_idxs%size
@@ -182,13 +184,19 @@ contains
     ! gather all containers from this rank
     do i = 1, size(this%vdc_models)
       vdc => this%vdc_models(i)%ptr
-      if (vdc%is_active .and. vdc%orig_rank == rank) then
+      if (vdc%is_active .and. vdc%orig_rank == rank) then        
+        if (this%imon > 0) then
+          write (this%imon, '(6x,a,i0)') "expecting model ", vdc%id
+        end if
         call model_idxs%push_back(i)
       end if
     end do
     do i = 1, size(this%vdc_exchanges)
       vdc => this%vdc_exchanges(i)%ptr
       if (vdc%is_active .and. vdc%orig_rank == rank) then
+        if (this%imon > 0) then
+          write (this%imon, '(6x,a,i0)') "expecting exchange ", vdc%id
+        end if
         call exg_idxs%push_back(i)
       end if
     end do
