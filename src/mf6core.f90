@@ -312,6 +312,9 @@ contains
     call connections_cr()
     !
     ! -- synchronize
+    call run_ctrl%at_stage(STG_AFTER_CON_CR)
+    !
+    ! -- synchronize TODO_MJR: this could be merged with the above, in general
     call run_ctrl%at_stage(STG_BEFORE_CON_DF)
     !
     ! -- Define each connection

@@ -22,11 +22,8 @@ module RunControlModule
     procedure :: finish => ctrl_finish
     ! private
     procedure, private :: init_handler
-    procedure, private :: after_mdl_df_handler
     procedure, private :: before_df_handler
     procedure, private :: after_df_handler
-    procedure, private :: before_ar_handler
-    procedure, private :: after_ar_handler
     procedure, private :: destroy
   end type RunControlType
 
@@ -72,16 +69,10 @@ contains
 
     if (stage == STG_INIT) then
       call this%init_handler()
-    else if (stage == STG_AFTER_MDL_DF) then
-      call this%after_mdl_df_handler()
     else if (stage == STG_BEFORE_CON_DF) then
       call this%before_df_handler()
     else if (stage == STG_AFTER_CON_DF) then
       call this%after_df_handler()
-    else if (stage == STG_BEFORE_AR) then
-      call this%before_ar_handler()
-    else if (stage == STG_AFTER_AR) then
-      call this%after_ar_handler()
     end if
 
     call this%virtual_data_store%synchronize(stage)
@@ -98,10 +89,6 @@ contains
     call this%mapper%init()
 
   end subroutine init_handler
-
-  subroutine after_mdl_df_handler(this)
-    class(RunControlType) :: this
-  end subroutine after_mdl_df_handler
 
   subroutine before_df_handler(this)
     class(RunControlType), target :: this
@@ -135,14 +122,6 @@ contains
     call this%mapper%add_interface_vars()
 
   end subroutine after_df_handler
-
-  subroutine before_ar_handler(this)
-    class(RunControlType) :: this
-  end subroutine before_ar_handler
-
-  subroutine after_ar_handler(this)
-    class(RunControlType) :: this
-  end subroutine after_ar_handler
 
   !> @brief Synchronizes from within numerical solution (delegate)
   !<

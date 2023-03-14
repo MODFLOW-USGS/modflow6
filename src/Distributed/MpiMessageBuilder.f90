@@ -184,7 +184,7 @@ contains
     ! gather all containers from this rank
     do i = 1, size(this%vdc_models)
       vdc => this%vdc_models(i)%ptr
-      if (vdc%is_active .and. vdc%orig_rank == rank) then        
+      if (vdc%is_active .and. vdc%orig_rank == rank) then
         if (this%imon > 0) then
           write (this%imon, '(6x,a,i0)') "expecting model ", vdc%id
         end if
@@ -317,6 +317,7 @@ contains
 
     call virtual_items%init()
     call vdc%get_recv_items(stage, rank, virtual_items)
+    !if (this%imon > 0) call vdc%print_items(this%imon, virtual_items)
     new_type = this%create_vdc_body(vdc, virtual_items)
     call virtual_items%destroy()
 
@@ -333,6 +334,7 @@ contains
 
     call virtual_items%init()
     call vdc%get_send_items(stage, rank, virtual_items)
+    !if (this%imon > 0) call vdc%print_items(this%imon, virtual_items)
     new_type = this%create_vdc_body(vdc, virtual_items)
     call virtual_items%destroy()
 

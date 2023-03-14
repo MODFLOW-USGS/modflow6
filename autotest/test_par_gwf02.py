@@ -2,6 +2,7 @@ import os
 
 import flopy
 import numpy as np
+from decimal import Decimal
 import pytest
 from framework import TestFramework
 from simulation import TestSimulation
@@ -18,20 +19,22 @@ from simulation import TestSimulation
 #   -----------------------------------
 #     [M11] | [M21] |   ...  | [Mnx1]
 # 
-# with XT3D off and on, constant head boundaries.
+# with constant head set at the lower-left corner.
+# This constant head should reach all domains,
+# no matter the topology of partitions
 
-ex = ["par_gwf02-noxt3d"]
-ex_xt3d = [False]
-nr_models_x = 3
-nr_models_y = 1
+ex = ["par_gwf02-a", "par_gwf02-b", "par_gwf02-c", 
+      "par_gwf02-d", "par_gwf02-e", "par_gwf02-f"]
+domain_grid = [(1,5), (5,1), (2,2), (3,3), (4,4), (5,5)]
 
 nlay = 1
 nrow = 3
 ncol = 3
 delr = 100.0
 delc = 100.0
-cst_head_south_west = 0.0
-cst_head_north_east = 10.0
+head_initial = -1.0
+cst_head_south_west = 435.0
+hclose = 1.0e-8
 
 
 def get_model_name(ix, iy):
@@ -41,7 +44,8 @@ def get_model_name(ix, iy):
 def get_simulation(idx, dir):
 
     name = ex[idx]
-    with_xt3d = ex_xt3d[idx]
+    nr_models_x = domain_grid[idx][0]
+    nr_models_y = domain_grid[idx][1]
 
     # parameters and spd
     # tdis
@@ -52,7 +56,7 @@ def get_simulation(idx, dir):
 
     # solver data
     nouter, ninner = 100, 300
-    hclose, rclose, relax = 10e-9, 1e-3, 0.97
+    rclose, relax = 1e-3, 0.97
 
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=dir,
@@ -78,7 +82,7 @@ def get_simulation(idx, dir):
     # create models (and exchanges)
     for ix in range(nr_models_x):
         for iy in range(nr_models_y):
-            add_model(sim, ix, iy)
+            add_model(sim, ix, iy, nr_models_x, nr_models_y)
 
     # add exchanges from west to east
     for iy in range(nr_models_y):
@@ -96,7 +100,7 @@ def get_simulation(idx, dir):
 
     return sim
 
-def add_model(sim, ix, iy):
+def add_model(sim, ix, iy, nr_models_x, nr_models_y):
 
     # model spatial discretization
     shift_x = ix * ncol * delr
@@ -110,7 +114,7 @@ def add_model(sim, ix, iy):
     k11 = 1.0
 
     # initial head
-    h_start = -1.0
+    h_start = head_initial
 
     gwf = flopy.mf6.ModflowGwf(sim, modelname=model_name, save_flows=True)
     dis = flopy.mf6.ModflowGwfdis(
@@ -146,12 +150,6 @@ def add_model(sim, ix, iy):
         sw_chd = [[(0, 0, 0), cst_head_south_west]]
         chd_spd_sw = {0: sw_chd}
         chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd_sw)
-
-    if ix == nr_models_x - 1 and iy == nr_models_y - 1:
-        # add top right corner BC
-        ne_chd = [[(0, nrow-1, ncol-1), cst_head_north_east]]
-        chd_spd_ne = {0: ne_chd}
-        chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd_ne)
 
 def add_exchange_west_east(sim, name_west, name_east):
 
@@ -221,9 +219,9 @@ def build_petsc_db(exdir):
     with open(petsc_db_file, 'w') as petsc_file:
         petsc_file.write("-sub_ksp_type bcgs\n")
         petsc_file.write("-sub_pc_type ilu\n")
-        petsc_file.write("-dvclose 10e-7\n")
+        petsc_file.write(f"-dvclose {Decimal(hclose):.2E}\n")
         petsc_file.write("-options_left no\n")
-        petsc_file.write("-wait_dbg\n")
+        #petsc_file.write("-wait_dbg\n")
 
 def build_model(idx, exdir):
     sim = get_simulation(idx, exdir)
@@ -231,7 +229,13 @@ def build_model(idx, exdir):
     return sim, None
 
 def eval_model(sim):
-    print("no eval yet...")
+    mf6_sim = flopy.mf6.MFSimulation.load(sim_ws=sim.simpath)
+    for mname in mf6_sim.model_names:
+        m = mf6_sim.get_model(mname)
+        hds = m.output.head().get_data().flatten()
+        hds_compare = cst_head_south_west*np.ones_like(hds)
+        assert np.allclose(hds, hds_compare, atol=1.0e-6, rtol=0.0)
+    
 
 @pytest.mark.parallel
 @pytest.mark.parametrize(
@@ -239,13 +243,14 @@ def eval_model(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
+    ncpus = domain_grid[idx][0]*domain_grid[idx][1]
     test = TestFramework()
     test.build(build_model, idx, str(function_tmpdir))
     test.run(
         TestSimulation(
             name=name, exe_dict=targets, exfunc=eval_model, 
             idxsim=0, make_comparison=False,
-            parallel=True, ncpus=nr_models_x*nr_models_y,
+            parallel=True, ncpus=ncpus,
         ),
         str(function_tmpdir),
     )

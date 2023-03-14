@@ -116,24 +116,26 @@ contains
       call this%map(this%ianglex%to_base(), &
                     (/STG_AFTER_EXG_DF/), MAP_ALL_TYPE)
 
-    else if (stage == STG_BEFORE_CON_DF) then
+    else if (stage == STG_AFTER_CON_CR) then
 
       nexg = this%nexg%get()
       naux = this%naux%get()
       call this%map(this%nodem1%to_base(), nexg, &
-                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
+                    (/STG_AFTER_CON_CR, STG_BEFORE_CON_DF/), &
+                    MAP_ALL_TYPE)
       call this%map(this%nodem2%to_base(), nexg, &
-                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
+                    (/STG_AFTER_CON_CR, STG_BEFORE_CON_DF/), &
+                    MAP_ALL_TYPE)
       call this%map(this%ihc%to_base(), nexg, &
-                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
+                    (/STG_AFTER_CON_CR/), MAP_ALL_TYPE)
       call this%map(this%cl1%to_base(), nexg, &
-                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
+                    (/STG_AFTER_CON_CR/), MAP_ALL_TYPE)
       call this%map(this%cl2%to_base(), nexg, &
-                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
+                    (/STG_AFTER_CON_CR/), MAP_ALL_TYPE)
       call this%map(this%hwva%to_base(), nexg, &
-                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
+                    (/STG_AFTER_CON_CR/), MAP_ALL_TYPE)
       call this%map(this%auxvar%to_base(), naux, nexg, &
-                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
+                    (/STG_AFTER_CON_CR/), MAP_ALL_TYPE)
 
     end if
 
@@ -145,35 +147,31 @@ contains
     integer(I4B) :: rank
     type(STLVecInt) :: virtual_items
     ! local
-    integer(I4B) :: i, nodem1_idx, nodem2_idx
-    class(*), pointer :: virtual_data_item
+    integer(I4B) :: nodem1_idx, nodem2_idx
+    class(*), pointer :: vdi
 
-    nodem1_idx = -1
-    nodem2_idx = -1
-    do i = 1, this%virtual_data_list%Count()
-      virtual_data_item => this%virtual_data_list%GetItem(i)
-      if (associated(virtual_data_item, this%nodem1)) then
-        nodem1_idx = i
-      end if
-      if (associated(virtual_data_item, this%nodem2)) then
-        nodem2_idx = i
-      end if
-    end do
+    vdi => this%nodem1
+    nodem1_idx = this%virtual_data_list%GetIndex(vdi)
+    vdi => this%nodem2
+    nodem2_idx = this%virtual_data_list%GetIndex(vdi)
 
-    if (.not. this%v_model1%is_local .and. .not. this%v_model2%is_local) then
-      ! receive all using base
-      call this%VirtualDataContainerType%get_recv_items(stage, rank, &
-                                                        virtual_items)
-    else if (.not. this%v_model2%is_local) then
-      ! receive for model2
+    if (this%v_model1%is_local .and. &
+        this%v_model2%orig_rank == rank) then
+      ! this is our image exchange on the other rank,
+      ! only receive nodem2
       if (this%nodem2%check_stage(stage)) then
         call virtual_items%push_back(nodem2_idx)
       end if
-    else if (.not. this%v_model1%is_local) then
-      ! receive for model1
+    else if (this%v_model2%is_local .and. &
+             this%v_model1%orig_rank == rank) then
+      ! the reverse case...
       if (this%nodem1%check_stage(stage)) then
         call virtual_items%push_back(nodem1_idx)
       end if
+    else
+      ! receive all using base
+      call this%VirtualDataContainerType%get_recv_items(stage, rank, &
+                                                        virtual_items)
     end if
 
   end subroutine vx_get_recv_items
@@ -184,35 +182,30 @@ contains
     integer(I4B) :: rank
     type(STLVecInt) :: virtual_items
     ! local
-    integer(I4B) :: i, nodem1_idx, nodem2_idx
-    class(*), pointer :: virtual_data_item
+    integer(I4B) :: nodem1_idx, nodem2_idx
+    class(*), pointer :: vdi
 
-    nodem1_idx = -1
-    nodem2_idx = -1
-    do i = 1, this%virtual_data_list%Count()
-      virtual_data_item => this%virtual_data_list%GetItem(i)
-      if (associated(virtual_data_item, this%nodem1)) then
-        nodem1_idx = i
-      end if
-      if (associated(virtual_data_item, this%nodem2)) then
-        nodem2_idx = i
-      end if
-    end do
-
-    if (this%v_model1%is_local .and. this%v_model2%is_local) then
-      ! send all using base
-      call this%VirtualDataContainerType%get_send_items(stage, rank, &
-                                                        virtual_items)
-    else if (this%v_model1%is_local) then
-      ! send for model1
+    vdi => this%nodem1
+    nodem1_idx = this%virtual_data_list%GetIndex(vdi)
+    vdi => this%nodem2
+    nodem2_idx = this%virtual_data_list%GetIndex(vdi)
+    if (this%v_model1%is_local .and. &
+        this%v_model2%orig_rank == rank) then
+      ! this is our image exchange on the other rank,
+      ! only send nodem1
       if (this%nodem1%check_stage(stage)) then
         call virtual_items%push_back(nodem1_idx)
       end if
-    else if (this%v_model2%is_local) then
-      ! send for model2
+    else if (this%v_model2%is_local .and. &
+             this%v_model1%orig_rank == rank) then
+      ! the reverse case...
       if (this%nodem2%check_stage(stage)) then
         call virtual_items%push_back(nodem2_idx)
       end if
+    else
+      ! send all of it
+      call this%VirtualDataContainerType%get_send_items(stage, rank, &
+                                                        virtual_items)
     end if
 
   end subroutine vx_get_send_items

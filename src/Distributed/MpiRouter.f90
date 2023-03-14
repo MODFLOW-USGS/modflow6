@@ -70,7 +70,7 @@ contains
     character(len=LINELENGTH) :: monitor_file
 
     ! to log or not to log
-    this%enable_monitor = .true.
+    this%enable_monitor = .false.
 
     ! initialize the MPI message builder
     call this%message_builder%init()
@@ -167,6 +167,10 @@ contains
     this%rte_exchanges => null()
     call this%message_builder%release_data()
 
+    if (this%enable_monitor) then
+      write (this%imon, '(2a)') "end routing all: ", STG_TO_STR(stage)
+    end if
+
   end subroutine mr_route_all
 
   !> @brief This will route all remote data from models
@@ -195,6 +199,10 @@ contains
     this%rte_models => null()
     this%rte_exchanges => null()
     call this%message_builder%release_data()
+
+    if (this%enable_monitor) then
+      write (this%imon, '(2a)') "end routing solution: ", STG_TO_STR(stage)
+    end if
 
   end subroutine mr_route_sln
 
@@ -258,19 +266,19 @@ contains
       rnk = this%receivers%at(i)
       if (this%enable_monitor) then
         write (this%imon, '(4x,a,i0)') "Ireceive header from process: ", rnk
-      end if  
+      end if
       call this%message_builder%create_header_rcv(hdr_rcv_t(i))
       call MPI_Irecv(headers(:, i), max_headers, hdr_rcv_t(i), rnk, stage, &
                      MF6_COMM_WORLD, rcv_req(i), ierr)
       ! don't free mpi datatype, we need the count below
     end do
 
-    ! send header for incoming data    
+    ! send header for incoming data
     do i = 1, this%senders%size
       rnk = this%senders%at(i)
       if (this%enable_monitor) then
         write (this%imon, '(4x,a,i0)') "send header to process: ", rnk
-      end if      
+      end if
       call this%message_builder%create_header_snd(rnk, stage, hdr_snd_t(i))
       call MPI_Isend(MPI_BOTTOM, 1, hdr_snd_t(i), rnk, stage, &
                      MF6_COMM_WORLD, snd_req(i), ierr)
@@ -304,7 +312,7 @@ contains
     ! recv bodies
     do i = 1, this%senders%size
       rnk = this%senders%at(i)
-      if (this%enable_monitor) then  
+      if (this%enable_monitor) then
         write (this%imon, '(4x,a,i0)') "receiving from process: ", rnk
       end if
 
@@ -337,10 +345,10 @@ contains
       if (this%enable_monitor) then
         write (this%imon, '(6x,a,i0)') "message body size: ", msg_size
       end if
-      call flush(this%imon)
+      call flush (this%imon)
     end do
 
-    ! wait for exchange of all messages    
+    ! wait for exchange of all messages
     call MPI_WaitAll(this%senders%size, snd_req, snd_stat, ierr)
 
     ! clean up types

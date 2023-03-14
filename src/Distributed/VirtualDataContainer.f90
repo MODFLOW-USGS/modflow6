@@ -57,6 +57,7 @@ module VirtualDataContainerModule
     procedure :: set_orig_rank => vdc_set_orig_rank
     procedure :: get_send_items => vdc_get_send_items
     procedure :: get_recv_items => vdc_get_recv_items
+    procedure :: print_items
     ! protected
     procedure :: create_field
     ! private
@@ -249,6 +250,23 @@ contains
     end do
 
   end subroutine get_items_for_stage
+
+  subroutine print_items(this, imon, items)
+    class(VirtualDataContainerType) :: this
+    integer(I4B) :: imon
+    type(STLVecInt) :: items
+    ! local
+    integer(I4B) :: i
+    class(VirtualDataType), pointer :: vdi
+
+    write (imon, *) "=====> items"
+    do i = 1, items%size
+      vdi => get_virtual_data_from_list(this%virtual_data_list, items%at(i))
+      write (imon, *) vdi%var_name, ":", vdi%mem_path
+    end do
+    write (imon, *) "<===== items"
+
+  end subroutine print_items
 
   !> @brief Get virtual memory path for a certain variable
   !<
