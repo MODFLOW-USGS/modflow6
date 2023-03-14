@@ -224,6 +224,7 @@
 		<Filter Name="Idm">
 		<File RelativePath="..\src\Utilities\Idm\IdmLogger.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\IdmMf6FileLoader.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\IdmSimulation.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\InputDefinition.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\InputDefinitionSelector.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\LoadMf6FileType.f90"/>
@@ -322,6 +323,7 @@
 		<File RelativePath="..\src\Utilities\version.f90"/></Filter>
 		<File RelativePath="..\src\mf6core.f90"/>
 		<File RelativePath="..\src\mf6lists.f90"/>
+		<File RelativePath="..\src\simnamidm.f90"/>
 		<File RelativePath="..\src\RunControl.f90"/>
 		<File RelativePath="..\src\RunControlFactory.F90">
 			<FileConfiguration Name="Release|x64">

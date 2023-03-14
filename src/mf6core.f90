@@ -78,6 +78,12 @@ contains
     ! -- print info and start timer
     call print_info()
 
+    ! -- create mfsim.lst
+    call create_lstfile()
+
+    ! -- load input context
+    call static_input_load()
+
     ! -- create
     call simulation_cr()
 
@@ -213,6 +219,55 @@ contains
     call print_start_time()
 
   end subroutine print_info
+
+  !> @brief Set up mfsim list file output logging
+    !!
+    !! This subroutine creates the mfsim list file
+    !! and writes the header.
+    !!
+  !<
+  subroutine create_lstfile()
+    use ConstantsModule, only: LINELENGTH
+    use SimVariablesModule, only: proc_id, nr_procs, simlstfile, iout
+    use InputOutputModule, only: getunit, openfile
+    use GenericUtilitiesModule, only: sim_message
+    use VersionModule, only: write_listfile_header
+    character(len=LINELENGTH) :: line
+    !
+    ! -- Open simulation list file
+    iout = getunit()
+    !
+    if (nr_procs > 1) then
+      write (simlstfile, '(a,i0,a)') 'mfsim.p', proc_id, '.lst'
+    end if
+    !
+    call openfile(iout, 0, simlstfile, 'LIST', filstat_opt='REPLACE')
+    !
+    ! -- write simlstfile to stdout
+    write (line, '(2(1x,A))') 'Writing simulation list file:', &
+      trim(adjustl(simlstfile))
+    !
+    call sim_message(line)
+    call write_listfile_header(iout)
+    !
+    ! -- return
+    return
+  end subroutine create_lstfile
+
+  !> @brief Create simulation input context
+    !!
+    !! This subroutine creates the simulation input context
+    !!
+  !<
+  subroutine static_input_load()
+    use IdmSimulationModule, only: simnam_load
+    !
+    ! -- load input context
+    call simnam_load()
+    !
+    ! -- return
+    return
+  end subroutine static_input_load
 
   !> @brief Define the simulation
     !!

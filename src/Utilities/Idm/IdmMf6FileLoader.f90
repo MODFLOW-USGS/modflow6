@@ -15,10 +15,6 @@ module IdmMf6FileLoaderModule
   private
   public :: input_load
 
-  interface input_load
-    module procedure input_load_blockparser, input_load_generic
-  end interface input_load
-
   !> @brief derived type for storing package loader
   !!
   !! This derived type is used to store a pointer to a
@@ -52,53 +48,20 @@ contains
     type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType object that describes the input
     integer(I4B), intent(in) :: iout !< unit number for output
 
-    call idm_load(parser, mf6_input%file_type, &
+    call idm_load(parser, mf6_input%pkgtype, &
                   mf6_input%component_type, mf6_input%subcomponent_type, &
                   mf6_input%component_name, mf6_input%subcomponent_name, &
                   iout)
 
   end subroutine generic_mf6_load
 
-  !> @brief main entry to mf6 input load
+  !> @brief input load for traditional mf6 simulation input file
   !<
-  subroutine input_load_blockparser(parser, filetype, &
-                                    component_type, subcomponent_type, &
-                                    component_name, subcomponent_name, &
-                                    iout)
-    type(BlockParserType), intent(inout) :: parser !< block parser
-    character(len=*), intent(in) :: filetype !< file type to load, such as DIS6, DISV6, NPF6
-    character(len=*), intent(in) :: component_type !< component type, such as GWF or GWT
-    character(len=*), intent(in) :: subcomponent_type !< subcomponent type, such as DIS or NPF
-    character(len=*), intent(in) :: component_name !< component name, such as MYGWFMODEL
-    character(len=*), intent(in) :: subcomponent_name !< subcomponent name, such as MYWELLPACKAGE
-    integer(I4B), intent(in) :: iout !< unit number for output
-    type(ModflowInputType) :: mf6_input
-    type(PackageLoad) :: pkgloader
-
-    mf6_input = getModflowInput(filetype, component_type, &
-                                subcomponent_type, component_name, &
-                                subcomponent_name)
-    !
-    ! -- set mf6 parser based package loader by file type
-    select case (filetype)
-    case default
-      pkgloader%load_package => generic_mf6_load
-    end select
-    !
-    ! -- invoke the selected load routine
-    call pkgloader%load_package(parser, mf6_input, iout)
-    !
-    ! -- return
-    return
-  end subroutine input_load_blockparser
-
-  !> @brief main entry to mf6 input load
-  !<
-  subroutine input_load_generic(filetype, &
-                                component_type, subcomponent_type, &
-                                component_name, subcomponent_name, &
-                                inunit, iout)
-    character(len=*), intent(in) :: filetype !< file type to load, such as DIS6, DISV6, NPF6
+  subroutine input_load(pkgtype, &
+                        component_type, subcomponent_type, &
+                        component_name, subcomponent_name, &
+                        inunit, iout)
+    character(len=*), intent(in) :: pkgtype !< pkgtype to load, such as DIS6, DISV6, NPF6
     character(len=*), intent(in) :: component_type !< component type, such as GWF or GWT
     character(len=*), intent(in) :: subcomponent_type !< subcomponent type, such as DIS or NPF
     character(len=*), intent(in) :: component_name !< component name, such as MYGWFMODEL
@@ -110,12 +73,12 @@ contains
     type(PackageLoad) :: pkgloader
     !
     ! -- create description of input
-    mf6_input = getModflowInput(filetype, component_type, &
+    mf6_input = getModflowInput(pkgtype, component_type, &
                                 subcomponent_type, component_name, &
                                 subcomponent_name)
     !
     ! -- set mf6 parser based package loader by file type
-    select case (filetype)
+    select case (pkgtype)
     case default
       allocate (parser)
       call parser%Initialize(inunit, iout)
@@ -125,11 +88,14 @@ contains
     ! -- invoke the selected load routine
     call pkgloader%load_package(parser, mf6_input, iout)
     !
-    ! -- deallocate
-    if (allocated(parser)) deallocate (parser)
+    ! -- close files and deallocate
+    if (allocated(parser)) then
+      !call parser%clear()
+      deallocate (parser)
+    end if
     !
     ! -- return
     return
-  end subroutine input_load_generic
+  end subroutine input_load
 
 end module IdmMf6FileLoaderModule
