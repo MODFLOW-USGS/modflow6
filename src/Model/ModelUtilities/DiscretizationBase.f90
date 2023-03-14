@@ -618,7 +618,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate
-    call mem_allocate(this%mshape, this%ndim, 'MSHAPE', this%memoryPath)
+    call mem_allocate(this%mshape, 3, 'MSHAPE', this%memoryPath)
     call mem_allocate(this%xc, this%nodes, 'XC', this%memoryPath)
     call mem_allocate(this%yc, this%nodes, 'YC', this%memoryPath)
     call mem_allocate(this%top, this%nodes, 'TOP', this%memoryPath)
@@ -627,6 +627,8 @@ contains
     !
     ! -- Initialize
     this%mshape(1) = this%nodes
+    this%mshape(2) = -1
+    this%mshape(3) = -1
     !
     ! -- Determine size of buff memory
     if (this%nodes < this%nodesuser) then
@@ -1062,8 +1064,9 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Read the list
-    call lstrdobj%read_list(in, iout, nlist, inamedbound, this%mshape, &
-                            nodelist, rlist, auxvar, auxname, boundname, label)
+    call lstrdobj%read_list(in, iout, nlist, inamedbound, &
+                            this%ndim, this%mshape, nodelist, &
+                            rlist, auxvar, auxname, boundname, label)
     !
     ! -- Go through all locations where a text string was found instead of
     !    a double precision value and make time-series links to rlist

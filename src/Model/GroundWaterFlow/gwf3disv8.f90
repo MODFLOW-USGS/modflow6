@@ -1312,6 +1312,7 @@ contains
     ! -- Initialize
     this%mshape(1) = this%nlay
     this%mshape(2) = this%ncpl
+    this%mshape(3) = -1
     !
     ! -- Return
     return

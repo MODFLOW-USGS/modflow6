@@ -386,7 +386,7 @@ contains
     ! Get dimensions for supported discretization type
     if (this%dis%supports_layers()) then
       nodesperlayer = this%dis%get_ncpl()
-      if (size(this%dis%mshape) == 3) then
+      if (this%dis%ndim == 3) then
         nrow = this%dis%mshape(2)
         ncol = this%dis%mshape(3)
       else

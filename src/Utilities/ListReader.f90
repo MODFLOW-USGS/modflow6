@@ -51,8 +51,8 @@ module ListReaderModule
 
 contains
 
-  subroutine read_list(this, in, iout, nlist, inamedbound, mshape, nodelist, &
-                       rlist, auxvar, auxname, boundname, label)
+  subroutine read_list(this, in, iout, nlist, inamedbound, ndim, mshape, &
+                       nodelist, rlist, auxvar, auxname, boundname, label)
 ! ******************************************************************************
 ! init -- Initialize the reader
 ! ******************************************************************************
@@ -67,6 +67,7 @@ contains
     integer(I4B), intent(in) :: iout
     integer(I4B), intent(inout) :: nlist
     integer(I4B), intent(in) :: inamedbound
+    integer(I4B), intent(in) :: ndim
     integer(I4B), dimension(:), intent(in), contiguous, pointer :: mshape
     integer(I4B), dimension(:), intent(inout), contiguous, pointer :: nodelist
     real(DP), dimension(:, :), intent(inout), contiguous, pointer :: rlist
@@ -83,7 +84,7 @@ contains
     this%iout = iout
     this%nlist = nlist
     this%inamedbound = inamedbound
-    this%ndim = size(mshape)
+    this%ndim = ndim
     this%label = label
     !
     ! -- Set pointers
@@ -645,12 +646,12 @@ contains
       fmtlstbn = '(a7'
     end if
     ! -- sequence number, layer, row, and column.
-    if (size(this%mshape) == 3) then
+    if (this%ndim == 3) then
       ntabcols = 4
       fmtlstbn = trim(fmtlstbn)//',a7,a7,a7'
       !
       ! -- sequence number, layer, and cell2d.
-    else if (size(this%mshape) == 2) then
+    else if (this%ndim == 2) then
       ntabcols = 3
       fmtlstbn = trim(fmtlstbn)//',a7,a7'
       !
@@ -722,14 +723,14 @@ contains
       call inputtab%add_term(ii)
       !
       ! -- discretization
-      if (size(this%mshape) == 3) then
+      if (this%ndim == 3) then
         nod = this%nodelist(ii)
         call get_ijk(nod, this%mshape(2), this%mshape(3), this%mshape(1), &
                      i, j, k)
         call inputtab%add_term(k)
         call inputtab%add_term(i)
         call inputtab%add_term(j)
-      else if (size(this%mshape) == 2) then
+      else if (this%ndim == 2) then
         nod = this%nodelist(ii)
         call get_ijk(nod, 1, this%mshape(2), this%mshape(1), i, j, k)
         call inputtab%add_term(k)

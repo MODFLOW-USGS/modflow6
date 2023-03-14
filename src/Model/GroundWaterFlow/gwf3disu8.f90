@@ -1408,6 +1408,8 @@ contains
     !
     ! -- Initialize
     this%mshape(1) = this%nodesuser
+    this%mshape(2) = -1
+    this%mshape(3) = -1
     !
     ! -- Return
     return
