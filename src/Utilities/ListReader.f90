@@ -316,7 +316,7 @@ contains
       read (this%inlist, iostat=this%ierr) cellid
 
       ! -- ensure cellid is valid, store an error otherwise
-      call check_cellid(cellid, this%mshape, this%ndim)
+      call check_cellid(ii, cellid, this%mshape, this%ndim)
 
       ! -- If not end of record, then store nodenumber, else
       !    calculate lstend and nlist, and exit readloop
@@ -471,7 +471,7 @@ contains
       end if
       !
       ! -- ensure cellid is valid, store an error otherwise
-      call check_cellid(cellid, this%mshape, this%ndim)
+      call check_cellid(ii, cellid, this%mshape, this%ndim)
       !
       ! -- Calculate user node number
       if (this%ndim == 3) then
@@ -569,46 +569,46 @@ contains
 
   !> @ brief Check for valid cellid
   !<
-  subroutine check_cellid(cellid, mshape, ndim)
+  subroutine check_cellid(ii, cellid, mshape, ndim)
+    integer(I4B), intent(in) :: ii
     integer(I4B), dimension(:), intent(in) :: cellid !< cellid
     integer(I4B), dimension(:), intent(in) :: mshape !< model shape
     integer(I4B), intent(in) :: ndim !< size of mshape
-
+    character(len=20) :: cellstr, mshstr
+    character(len=*), parameter :: fmterr = &
+      "('List entry ',i0,' contains cellid ',a,' but this cellid is invalid &
+      &for model with shape ', a)"
+    character(len=*), parameter :: fmtndim1 = &
+      "('(',i0,')')"
+    character(len=*), parameter :: fmtndim2 = &
+      "('(',i0,',',i0,')')"
+    character(len=*), parameter :: fmtndim3 = &
+      "('(',i0,',',i0,',',i0,')')"
     if (ndim == 1) then
       if (cellid(1) < 1 .or. cellid(1) > mshape(1)) then
-        write (errmsg, *) ' Cell number in list is outside of the grid', &
-          cellid(1)
+        write(cellstr, fmtndim1) cellid(1)
+        write(mshstr, fmtndim1) mshape(1)
+        write(errmsg, fmterr) ii, trim(adjustl(cellstr)), trim(adjustl(mshstr))
         call store_error(errmsg)
       end if
     else if (ndim == 2) then
-      if (cellid(1) < 1 .or. cellid(1) > mshape(1)) then
-        write (errmsg, *) ' Layer number in list is outside of the grid', &
-          cellid(1)
-        call store_error(errmsg)
-      end if
-      if (cellid(2) < 1 .or. cellid(2) > mshape(2)) then
-        write (errmsg, *) ' Cell2d number in list is outside of the grid', &
-          cellid(2)
+      if (cellid(1) < 1 .or. cellid(1) > mshape(1) .or. &
+          cellid(2) < 1 .or. cellid(2) > mshape(2)) then
+        write(cellstr, fmtndim2) cellid(1), cellid(2)
+        write(mshstr, fmtndim2) mshape(1), mshape(2)
+        write(errmsg, fmterr) ii, trim(adjustl(cellstr)), trim(adjustl(mshstr))
         call store_error(errmsg)
       end if
     else if (ndim == 3) then
-      if (cellid(1) < 1 .or. cellid(1) > mshape(1)) then
-        write (errmsg, *) ' Layer number in list is outside of the grid', &
-          cellid(1)
-        call store_error(errmsg)
-      end if
-      if (cellid(2) < 1 .or. cellid(2) > mshape(2)) then
-        write (errmsg, *) ' Row number in list is outside of the grid', &
-          cellid(2)
-        call store_error(errmsg)
-      end if
-      if (cellid(3) < 1 .or. cellid(3) > mshape(3)) then
-        write (errmsg, *) ' Column number in list is outside of the grid', &
-          cellid(3)
+      if (cellid(1) < 1 .or. cellid(1) > mshape(1) .or. &
+          cellid(2) < 1 .or. cellid(2) > mshape(2) .or. &
+          cellid(3) < 1 .or. cellid(3) > mshape(3)) then
+        write(cellstr, fmtndim3) cellid(1), cellid(2), cellid(3)
+        write(mshstr, fmtndim3) mshape(1), mshape(2), mshape(3)
+        write(errmsg, fmterr) ii, trim(adjustl(cellstr)), trim(adjustl(mshstr))
         call store_error(errmsg)
       end if
     end if
-
     return
   end subroutine check_cellid
 
