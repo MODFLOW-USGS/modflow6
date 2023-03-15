@@ -37,6 +37,8 @@ module MpiRouterModule
     procedure :: route_sln => mr_route_sln
     procedure :: destroy => mr_destroy
     ! private
+    procedure, private :: activate
+    procedure, private :: deactivate
     procedure, private :: mr_update_senders
     procedure, private :: mr_update_senders_sln
     procedure, private :: mr_update_receivers
@@ -141,6 +143,30 @@ contains
 
   end subroutine mr_initialize
 
+  !> @brief Activate models and exchanges for routing
+  !<
+  subroutine activate(this, models, exchanges)
+    class(MpiRouterType) :: this
+    type(VdcPtrType), dimension(:), pointer :: models
+    type(VdcPtrType), dimension(:), pointer :: exchanges
+
+    this%rte_models => models
+    this%rte_exchanges => exchanges
+    call this%message_builder%attach_data(models, exchanges)
+
+  end subroutine activate
+
+  !> @brief Deactivate data after routing
+  !<
+  subroutine deactivate(this)
+    class(MpiRouterType) :: this
+
+    this%rte_models => null()
+    this%rte_exchanges => null()
+    call this%message_builder%release_data()
+
+  end subroutine deactivate
+
   !> @brief This will route all remote data from the
   !! global models and exchanges over MPI, for a
   !< given stage
@@ -153,19 +179,10 @@ contains
       write (this%imon, '(2a)') "routing stage: ", STG_TO_STR(stage)
     end if
 
-    ! data to route
-    this%rte_models => this%all_models
-    this%rte_exchanges => this%all_exchanges
-    call this%message_builder%attach_data(this%rte_models, &
-                                          this%rte_exchanges)
-
     ! route all
+    call this%activate(this%all_models, this%all_exchanges)
     call this%mr_route_active(stage)
-
-    ! release
-    this%rte_models => null()
-    this%rte_exchanges => null()
-    call this%message_builder%release_data()
+    call this%deactivate()
 
     if (this%enable_monitor) then
       write (this%imon, '(2a)') "end routing all: ", STG_TO_STR(stage)
@@ -186,19 +203,10 @@ contains
       write (this%imon, '(2a)') "routing stage: ", STG_TO_STR(stage)
     end if
 
-    ! data to route
-    this%rte_models => virtual_sol%models
-    this%rte_exchanges => virtual_sol%exchanges
-    call this%message_builder%attach_data(virtual_sol%models, &
-                                          virtual_sol%exchanges)
-
     ! route for this solution
+    call this%activate(virtual_sol%models, virtual_sol%exchanges)
     call this%mr_route_active(stage)
-
-    ! release
-    this%rte_models => null()
-    this%rte_exchanges => null()
-    call this%message_builder%release_data()
+    call this%deactivate()
 
     if (this%enable_monitor) then
       write (this%imon, '(2a)') "end routing solution: ", STG_TO_STR(stage)

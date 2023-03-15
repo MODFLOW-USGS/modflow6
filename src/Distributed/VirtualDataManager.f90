@@ -28,6 +28,7 @@ module VirtualDataManagerModule
     procedure :: create => vds_create
     procedure :: init => vds_init
     procedure :: add_solution => vds_add_solution
+    procedure :: reduce_halo => vds_reduce_halo
     procedure :: synchronize => vds_synchronize
     procedure :: synchronize_sln => vds_synchronize_sln
     procedure :: destroy
@@ -147,11 +148,22 @@ contains
 
   end subroutine vds_add_solution
 
+  !> @brief Reduce the halo for all solutions. This will
+  !< activate the mapping tables in the virtual data items.
+  subroutine vds_reduce_halo(this)
+    class(VirtualDataManagerType) :: this
+
+    ! merge the interface maps over this process
+
+    ! assign reduced maps to virtual data containers
+
+  end subroutine vds_reduce_halo
+
   !> @brief Synchronize the full virtual data store for this stage
   !<
   subroutine vds_synchronize(this, stage)
-    class(VirtualDataManagerType) :: this
-    integer(I4B) :: stage
+    class(VirtualDataManagerType) :: this !< this vdm
+    integer(I4B) :: stage !< the stage to sync
 
     call this%prepare_all(stage)
     call this%link_all(stage)

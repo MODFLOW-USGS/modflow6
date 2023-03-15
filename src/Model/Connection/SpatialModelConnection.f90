@@ -186,16 +186,9 @@ contains ! module procedures
 
         ! check if masked
         if (neighbor_id == model_mask) cycle
-
-        if (.not. nbr_models%contains(neighbor_id)) then
-          call nbr_models%push_back(neighbor_id)
-        end if
-        if (.not. this%halo_models%contains(neighbor_id)) then
-          call this%halo_models%push_back(neighbor_id)
-        end if
-        if (.not. this%halo_exchanges%contains(v_exg%id)) then
-          call this%halo_exchanges%push_back(v_exg%id)
-        end if
+        call nbr_models%push_back_unique(neighbor_id)
+        call this%halo_models%push_back_unique(neighbor_id)
+        call this%halo_exchanges%push_back_unique(v_exg%id)
       end if
 
     end do
@@ -218,8 +211,9 @@ contains ! module procedures
 
   end subroutine addModelNeighbors
 
-  !> @brief Define this connection, mostly sets up the grid
-  !< connection, allocates arrays, and links x,rhs, and ibound
+  !> @brief Define this connection, this is where the
+  !! discretization (DISU) for the interface model is
+  !< created!
   subroutine spatialcon_df(this)
     class(SpatialModelConnectionType) :: this !< this connection
     ! local
