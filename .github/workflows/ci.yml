@@ -473,8 +473,8 @@ jobs:
       - name: Configure environment
         if: runner.os == 'macOS'
         run: |
-          echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/petsc/arch-darwin-c-debug/lib/pkgconfig" >> $GITHUB_ENV
-          echo "$GITHUB_WORKSPACE/petsc/arch-darwin-c-debug/bin" >> $GITHUB_PATH
+          echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/petsc/arch-darwin-gcc-debug/lib/pkgconfig" >> $GITHUB_ENV
+          echo "$GITHUB_WORKSPACE/petsc/arch-darwin-gcc-debug/bin" >> $GITHUB_PATH
 
       - name: Configure PETSc
         if: runner.os == 'Linux'
@@ -487,7 +487,7 @@ jobs:
         if: runner.os == 'macOS'
         working-directory: petsc
         run: |
-          sudo ./configure PETSC_DIR="$GITHUB_WORKSPACE/petsc" PETSC_ARCH=arch-darwin-c-debug --download-fblaslapack --download-openmpi
+          sudo ./configure PETSC_DIR="$GITHUB_WORKSPACE/petsc" PETSC_ARCH=arch-darwin-gcc-debug --download-fblaslapack --download-openmpi
           sudo make all
 
       - name: Configure PETSc
