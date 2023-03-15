@@ -13,7 +13,7 @@ module RunControlModule
   public :: create_seq_run_control
 
   type, public :: RunControlType
-    class(VirtualDataManagerType), pointer :: virtual_data_mgr !< syncs globally accessible data, timely, by 
+    class(VirtualDataManagerType), pointer :: virtual_data_mgr !< syncs globally accessible data, timely, by
                                                                !! linking (local) or message passing (remote)
     type(MapperType) :: mapper !< a 'mapper' for copying data between two memory addresses
   contains
@@ -95,7 +95,7 @@ contains
   !! Set up the virtual data manager:
   !! The models and exchanges in the halo for this interface
   !! have been determined. Add them to the virtual data manager
-  !! for synchronization. (After which the interface model 
+  !! for synchronization. (After which the interface model
   !< grids can be constructed)
   subroutine before_con_df_handler(this)
     class(RunControlType), target :: this
@@ -125,7 +125,7 @@ contains
   end subroutine before_con_df_handler
 
   !> @brief Actions after definining connections
-  !< 
+  !<
   subroutine after_con_df_handler(this)
     class(RunControlType) :: this
 
