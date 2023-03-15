@@ -411,6 +411,9 @@ jobs:
     defaults:
       run:
         shell: bash -l {0}
+    env:
+      FC: gfortran
+      GCC_V: 12
     steps:
 
       - name: Checkout modflow6
@@ -437,11 +440,11 @@ jobs:
         with:
           mpi: msmpi
 
-      - name: Setup GNU Fortran 9
+      - name: Setup GNU Fortran ${{ env.GCC_V }}
         uses: awvwgk/setup-fortran@main
         with:
           compiler: gcc
-          version: 9
+          version: ${{ env.GCC_V }}
 
       - name: Cache PETSc
         id: cache-petsc
