@@ -6,6 +6,7 @@
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
 		\item The sorption formulation for the Groundwater Transport (GWT) model was modified for simulations involving a mobile domain and one or more immobile domains.  The modifications do not affect GWT Models without the Immobile Storage and Transfer (IST) Package or GWT models without sorption.  Prior to these changes, the multi-domain sorption formulation required the bulk density to be specified in both the Mobile Storage and Transfer (MST) Package and the IST Package.  To generalize the formulation, the definition for bulk density in the MST Package was changed to be the mass of aquifer solid material in the mobile domain per unit volume of aquifer.  The bulk density specified in the IST Package was changed to be the mass of aquifer solid material in the immobile domain per unit volume of aquifer.  For multi-domain GWT Models that include sorption (and prepared for MODFLOW version 6.4.1 or earlier), it will be necessary to change the bulk density values specified in the MST and IST Packages according to the new definitions.  A full description of the revised sorption formulation for multi-domain GWT Models is included in the MODFLOW 6 Supplemental Technical Information document included with the distribution.
+		\item Add LENGTH\_CONVERSION and TIME\_CONVERSION variables to replace the UNIT\_CONVERSION variable in the SFR Package input file. The LENGTH\_CONVERSION and TIME\_CONVERSION variables are used to convert user-specified Manning's roughness coefficients from SI units (sec/m$^{1/3}$) to model length and time units. LENGTH\_CONVERSION does not need to be specified if LENGTH\_UNITS are meters. TIME\_CONVERSION does not need to be specified if TIME\_UNITS are seconds. Warning messages will be issued if UNIT\_CONVERSION variable is specified. The model will terminate with an error if UNIT\_CONVERSION and LENGTH\_CONVERSION and TIME\_CONVERSION variables are specified. The UNIT\_CONVERSION variable in the SFR Package input file will eventually be deprecated. 
 	%	\item xxx
 	%	\item xxx
 	\end{itemize}
@@ -21,7 +22,9 @@
 	\underline{BASIC FUNCTIONALITY}
 	\begin{itemize}
 		\item When n-point cross-sections are active in SFR, the evaporation calculation uses the variable rwid (see MF6io.pdf) to calculate the total amount of evaporation even though the wetted topwidth is less than rwid.  For example, using a trapezoidal cross-section geometry with an rwid of 10, an rlen of 100, and prescribed evaporation rate of 0.1, the calculated evaporative losses would equal 100 even when the wetted top width was only 5.0 units wide.  With this bug fix, the evaporation in this example results in only 50 units of evaporation loss.  A new autotests confirms the evaporation calculation using an n-point cross-section and common rectangular geometries in the same simulation.  It is also worth mentioning that the precipitation calculation currently uses rwid.  Since the precipitation falling outside the margins of the wetted top width but within rwid would likely be accumulated in a channel, it makes sense to leave this calculation as is.
+		\item The input for some stress packages is read in a list format consisting of a cellid, the form of which depends on the type of discretization package, and stress information on each line.  The cellid is checked upon reading to ensure that the cell is within the model grid.  If the cell is outside the model grid, the program issues an error message and terminates.  This cellid check was not implemented when the list was provided from an OPEN/CLOSE binary input file.  The program was modified to include this check for both text and binary input.
 		\item In SFR, a channel defined with the n-point cross-section option was calculating the wetted cross-sectional area incorrectly. The calculation for determining the area of a triangle needed to be multiplied by the width of the triangle.  A small fix also was needed for the surrounding if-then logic.  The fixed code was manually verified using a model with a 6-point trapezoid geometry.  One of the autotests with a baked-in answer was updated to account for this fix.
+
 	%	\item xxx
 	\end{itemize}
 
@@ -42,6 +45,7 @@
 	\underline{ADVANCED STRESS PACKAGES}
 	\begin{itemize}
 		\item Added additional convergence checks to the Streamflow Routing (SFR), Lake (LAK) and Unsaturated Zone Flow (UZF) Packages to ensure that flows from the Water Mover (MVR) Package meet solver tolerance.  Mover flows are converted into depths using the time step length and area, and the depths are compared to the Iterative Model Solution (IMS) DVCLOSE input parameter.  If a depth is greater than DVCLOSE, then the iteration is marked as not converged.  The maximum depth change between iterations and the advanced package feature number is written for each outer iteration to a comma-separated value file, provided the PACKAGE\_CONVERGENCE option is specified in the options block.
+		
 	%	\item xxx
 	%	\item xxx
 	\end{itemize}

@@ -2,6 +2,7 @@ import argparse
 import os
 import platform
 import shutil
+import sys
 import textwrap
 from datetime import datetime
 from os import PathLike
@@ -143,7 +144,7 @@ def build_benchmark_tex(output_path: PathLike, overwrite: bool = False):
     with set_dir(_release_notes_path):
         tex_path = Path("run-time-comparison.tex")
         tex_path.unlink(missing_ok=True)
-        out, err, ret = run_cmd("python", "mk_runtimecomp.py", benchmarks_path, verbose=True)
+        out, err, ret = run_cmd(sys.executable, "mk_runtimecomp.py", benchmarks_path, verbose=True)
         assert not ret, out + err
         assert tex_path.is_file()
 
@@ -202,7 +203,7 @@ def build_mf6io_tex_from_dfn(overwrite: bool = False):
                 f.unlink()
 
             # run python script
-            out, err, ret = run_cmd("python", "mf6ivar.py")
+            out, err, ret = run_cmd(sys.executable, "mf6ivar.py")
             assert not ret, out + err
 
             # check that dfn and tex files match
@@ -246,7 +247,7 @@ def build_tex_folder_structure(overwrite: bool = False):
         return
 
     with set_dir(_release_notes_path):
-        out, err, ret = run_cmd("python", "mk_folder_struct.py", "-dp", _project_root_path)
+        out, err, ret = run_cmd(sys.executable, "mk_folder_struct.py", "-dp", _project_root_path)
         assert not ret, out + err
 
     assert path.is_file(), f"Failed to create {path}"

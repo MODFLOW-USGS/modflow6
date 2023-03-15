@@ -36,31 +36,30 @@ contains
                                                      dis_top_m, dis_bot_m
       real(DP), dimension(:), pointer, contiguous :: dis_xc_n, dis_yc_n, &
                                                      dis_xc_m, dis_yc_m
-      real(DP), pointer :: xorigin_n, yorigin_n, angrot_n, &
-                           xorigin_m, yorigin_m, angrot_m
+      real(DP) :: xorigin_n, yorigin_n, angrot_n, &
+                  xorigin_m, yorigin_m, angrot_m
 
       ! get coordinates
       gcn => idxToGlobal(array(n))
       gcm => idxToGlobal(array(m))
 
-      ! load model data
-      ! TODO_MJR: we should probably cache this
+      ! get model data
       ! for n:
-      call gcn%dmodel%load(dis_top_n, 'TOP', 'DIS')
-      call gcn%dmodel%load(dis_bot_n, 'BOT', 'DIS')
-      call gcn%dmodel%load(dis_xc_n, 'XC', 'DIS')
-      call gcn%dmodel%load(dis_yc_n, 'YC', 'DIS')
-      call gcn%dmodel%load(xorigin_n, 'XORIGIN', 'DIS')
-      call gcn%dmodel%load(yorigin_n, 'YORIGIN', 'DIS')
-      call gcn%dmodel%load(angrot_n, 'ANGROT', 'DIS')
+      dis_top_n => gcn%v_model%dis_top%get_array()
+      dis_bot_n => gcn%v_model%dis_bot%get_array()
+      dis_xc_n => gcn%v_model%dis_xc%get_array()
+      dis_yc_n => gcn%v_model%dis_yc%get_array()
+      xorigin_n = gcn%v_model%dis_xorigin%get()
+      yorigin_n = gcn%v_model%dis_yorigin%get()
+      angrot_n = gcn%v_model%dis_angrot%get()
       ! for m:
-      call gcm%dmodel%load(dis_top_m, 'TOP', 'DIS')
-      call gcm%dmodel%load(dis_bot_m, 'BOT', 'DIS')
-      call gcm%dmodel%load(dis_xc_m, 'XC', 'DIS')
-      call gcm%dmodel%load(dis_yc_m, 'YC', 'DIS')
-      call gcm%dmodel%load(xorigin_m, 'XORIGIN', 'DIS')
-      call gcm%dmodel%load(yorigin_m, 'YORIGIN', 'DIS')
-      call gcm%dmodel%load(angrot_m, 'ANGROT', 'DIS')
+      dis_top_m => gcm%v_model%dis_top%get_array()
+      dis_bot_m => gcm%v_model%dis_bot%get_array()
+      dis_xc_m => gcm%v_model%dis_xc%get_array()
+      dis_yc_m => gcm%v_model%dis_yc%get_array()
+      xorigin_m = gcm%v_model%dis_xorigin%get()
+      yorigin_m = gcm%v_model%dis_yorigin%get()
+      angrot_m = gcm%v_model%dis_angrot%get()
 
       ! convert coordinates
       call dis_transform_xy(dis_xc_n(gcn%index), dis_yc_n(gcn%index), &

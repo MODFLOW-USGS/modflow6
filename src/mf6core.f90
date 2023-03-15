@@ -13,11 +13,14 @@ module Mf6CoreModule
   use BaseModelModule, only: BaseModelType, GetBaseModelFromList
   use BaseExchangeModule, only: BaseExchangeType, GetBaseExchangeFromList
   use SpatialModelConnectionModule, only: SpatialModelConnectionType, &
-                                          GetSpatialModelConnectionFromList
+                                          get_smc_from_list
   use BaseSolutionModule, only: BaseSolutionType, GetBaseSolutionFromList
   use SolutionGroupModule, only: SolutionGroupType, GetSolutionGroupFromList
-  use DistributedDataModule
+  use RunControlModule, only: RunControlType
+  use SimStagesModule
   implicit none
+
+  class(RunControlType), pointer :: run_ctrl => null() !< the run controller for this simulation
 
 contains
 
@@ -30,7 +33,6 @@ contains
     ! -- modules
     use CommandArguments, only: GetCommandLineArguments
     use TdisModule, only: endofsimulation
-    use KindModule, only: DP
     ! -- local
     logical(LGP) :: hasConverged
     !
@@ -66,10 +68,21 @@ contains
   !<
   subroutine Mf6Initialize()
     ! -- modules
+    use RunControlFactoryModule, only: create_run_control
     use SimulationCreateModule, only: simulation_cr
-    !
-    ! -- print banner and info to screen
-    call printInfo()
+
+    ! -- get the run controller for sequential or parallel builds
+    run_ctrl => create_run_control()
+    call run_ctrl%start()
+
+    ! -- print info and start timer
+    call print_info()
+
+    ! -- create mfsim.lst
+    call create_lstfile()
+
+    ! -- load input context
+    call static_input_load()
 
     ! -- create
     call simulation_cr()
@@ -115,12 +128,8 @@ contains
     ! -- modules
     use, intrinsic :: iso_fortran_env, only: output_unit
     use ListsModule, only: lists_da
-    use MemoryManagerModule, only: mem_write_usage, mem_da
-    use TimerModule, only: elapsed_time
-    use SimVariablesModule, only: iout
     use SimulationCreateModule, only: simulation_da
     use TdisModule, only: tdis_da
-    use SimModule, only: final_message
     ! -- local variables
     integer(I4B) :: im
     integer(I4B) :: ic
@@ -171,7 +180,7 @@ contains
     !
     ! -- Deallocate for each connection
     do ic = 1, baseconnectionlist%Count()
-      mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
+      mc => get_smc_from_list(baseconnectionlist, ic)
       call mc%exg_da()
       deallocate (mc)
     end do
@@ -191,32 +200,74 @@ contains
     end do
     call simulation_da()
     call lists_da()
-    call distributed_data%destroy()
     !
-    ! -- Write memory usage, elapsed time and terminate
-    call mem_write_usage(iout)
-    call mem_da()
-    call elapsed_time(iout, 1)
-    call final_message()
+    ! -- finish gently (No calls after this)
+    call run_ctrl%finish()
     !
   end subroutine Mf6Finalize
 
-  !> @brief Print info to screen
+  !> @brief print initial message
+  !<
+  subroutine print_info()
+    use SimModule, only: initial_message
+    use TimerModule, only: print_start_time
+
+    ! print initial message
+    call initial_message()
+
+    ! get start time
+    call print_start_time()
+
+  end subroutine print_info
+
+  !> @brief Set up mfsim list file output logging
     !!
-    !! This subroutine prints the banner to the screen.
+    !! This subroutine creates the mfsim list file
+    !! and writes the header.
     !!
   !<
-  subroutine printInfo()
-    use SimModule, only: initial_message
-    use TimerModule, only: start_time
+  subroutine create_lstfile()
+    use ConstantsModule, only: LINELENGTH
+    use SimVariablesModule, only: proc_id, nr_procs, simlstfile, iout
+    use InputOutputModule, only: getunit, openfile
+    use GenericUtilitiesModule, only: sim_message
+    use VersionModule, only: write_listfile_header
+    character(len=LINELENGTH) :: line
     !
-    ! -- print initial message
-    call initial_message()
+    ! -- Open simulation list file
+    iout = getunit()
     !
-    ! -- get start time
-    call start_time()
+    if (nr_procs > 1) then
+      write (simlstfile, '(a,i0,a)') 'mfsim.p', proc_id, '.lst'
+    end if
+    !
+    call openfile(iout, 0, simlstfile, 'LIST', filstat_opt='REPLACE')
+    !
+    ! -- write simlstfile to stdout
+    write (line, '(2(1x,A))') 'Writing simulation list file:', &
+      trim(adjustl(simlstfile))
+    !
+    call sim_message(line)
+    call write_listfile_header(iout)
+    !
+    ! -- return
     return
-  end subroutine printInfo
+  end subroutine create_lstfile
+
+  !> @brief Create simulation input context
+    !!
+    !! This subroutine creates the simulation input context
+    !!
+  !<
+  subroutine static_input_load()
+    use IdmSimulationModule, only: simnam_load
+    !
+    ! -- load input context
+    call simnam_load()
+    !
+    ! -- return
+    return
+  end subroutine static_input_load
 
   !> @brief Define the simulation
     !!
@@ -235,11 +286,17 @@ contains
     class(BaseExchangeType), pointer :: ep => null()
     class(SpatialModelConnectionType), pointer :: mc => null()
 
+    ! -- init virtual data environment
+    call run_ctrl%at_stage(STG_INIT)
+
     ! -- Define each model
     do im = 1, basemodellist%Count()
       mp => GetBaseModelFromList(basemodellist, im)
       call mp%model_df()
     end do
+    !
+    ! -- synchronize
+    call run_ctrl%at_stage(STG_AFTER_MDL_DF)
     !
     ! -- Define each exchange
     do ic = 1, baseexchangelist%Count()
@@ -247,15 +304,27 @@ contains
       call ep%exg_df()
     end do
     !
+    ! -- synchronize
+    call run_ctrl%at_stage(STG_AFTER_EXG_DF)
+    !
     ! -- when needed, this is were the interface models are
     ! created and added to the numerical solutions
     call connections_cr()
     !
+    ! -- synchronize
+    call run_ctrl%at_stage(STG_AFTER_CON_CR)
+    !
+    ! -- synchronize TODO_MJR: this could be merged with the above, in general
+    call run_ctrl%at_stage(STG_BEFORE_CON_DF)
+    !
     ! -- Define each connection
     do ic = 1, baseconnectionlist%Count()
-      mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
+      mc => get_smc_from_list(baseconnectionlist, ic)
       call mc%exg_df()
     end do
+    !
+    ! -- synchronize
+    call run_ctrl%at_stage(STG_AFTER_CON_DF)
     !
     ! -- Define each solution
     do is = 1, basesolutionlist%Count()
@@ -275,7 +344,7 @@ contains
     !!
   !<
   subroutine simulation_ar()
-    use DistributedDataModule
+    use DistVariableModule
     ! -- local variables
     integer(I4B) :: im
     integer(I4B) :: ic
@@ -298,16 +367,16 @@ contains
     end do
     !
     ! -- Synchronize
-    call distributed_data%synchronize(0, BEFORE_AR)
+    call run_ctrl%at_stage(STG_BEFORE_AR)
     !
     ! -- Allocate and read all model connections
     do ic = 1, baseconnectionlist%Count()
-      mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
+      mc => get_smc_from_list(baseconnectionlist, ic)
       call mc%exg_ar()
     end do
     !
     ! -- Synchronize
-    call distributed_data%synchronize(0, AFTER_AR)
+    call run_ctrl%at_stage(STG_AFTER_AR)
     !
     ! -- Allocate and read each solution
     do is = 1, basesolutionlist%Count()
@@ -419,7 +488,7 @@ contains
     !
     ! -- Read and prepare each connection
     do ic = 1, baseconnectionlist%Count()
-      mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
+      mc => get_smc_from_list(baseconnectionlist, ic)
       call mc%exg_rp()
     end do
     !
@@ -440,7 +509,7 @@ contains
     !
     ! -- time update for each connection
     do ic = 1, baseconnectionlist%Count()
-      mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
+      mc => get_smc_from_list(baseconnectionlist, ic)
       call mc%exg_calculate_delt()
     end do
     !
@@ -598,7 +667,7 @@ contains
       !
       ! -- Write output for each connection
       do ic = 1, baseconnectionlist%Count()
-        mc => GetSpatialModelConnectionFromList(baseconnectionlist, ic)
+        mc => get_smc_from_list(baseconnectionlist, ic)
         call mc%exg_ot()
       end do
       !

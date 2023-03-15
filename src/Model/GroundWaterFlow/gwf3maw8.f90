@@ -28,7 +28,7 @@ module MawModule
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr, &
                                  mem_deallocate
   use MemoryHelperModule, only: create_mem_path
-  use MatrixModule
+  use MatrixBaseModule
   !
   implicit none
 

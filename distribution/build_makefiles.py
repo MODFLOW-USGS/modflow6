@@ -43,6 +43,7 @@ def run_makefile(target):
 
 def build_mf6_makefile():
     target = "mf6"
+    excludefiles = str(_project_root_path / "pymake" / "excludefiles.txt")
     print(f"Creating makefile for {target}")
     with set_dir(_project_root_path / "make"):
         pymake.main(
@@ -50,6 +51,7 @@ def build_mf6_makefile():
             target=target,
             appdir=str(_project_root_path / "bin"),
             include_subdirs=True,
+            excludefiles=excludefiles,
             inplace=True,
             dryrun=True,
             makefile=True,

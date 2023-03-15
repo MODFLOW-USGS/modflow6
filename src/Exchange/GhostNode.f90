@@ -5,7 +5,7 @@ module GhostNodeModule
   use NumericalModelModule, only: NumericalModelType
   use NumericalPackageModule, only: NumericalPackageType
   use BlockParserModule, only: BlockParserType
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
 

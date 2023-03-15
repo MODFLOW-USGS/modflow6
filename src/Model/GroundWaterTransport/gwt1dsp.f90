@@ -7,7 +7,7 @@ module GwtDspModule
   use GwtFmiModule, only: GwtFmiType
   use Xt3dModule, only: Xt3dType, xt3d_cr
   use GwtDspOptionsModule, only: GwtDspOptionsType
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
   private

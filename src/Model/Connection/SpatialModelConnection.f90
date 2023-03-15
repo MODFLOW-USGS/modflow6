@@ -6,21 +6,26 @@ module SpatialModelConnectionModule
   use SimModule, only: ustop
   use NumericalModelModule, only: NumericalModelType
   use NumericalExchangeModule, only: NumericalExchangeType
-  use DisConnExchangeModule, only: DisConnExchangeType, GetDisConnExchangeFromList
+  use DisConnExchangeModule, only: DisConnExchangeType
   use MemoryManagerModule, only: mem_allocate, mem_deallocate, mem_checkin
   use MemoryHelperModule, only: create_mem_path
   use GridConnectionModule, only: GridConnectionType
   use InterfaceMapModule
-  use DistributedDataModule
+  use DistVariableModule
+  use VirtualDataListsModule, only: virtual_exchange_list
+  use VirtualModelModule, only: VirtualModelType, get_virtual_model
+  use VirtualExchangeModule, only: VirtualExchangeType, &
+                                   get_virtual_exchange_from_list
   use ListModule, only: ListType
-  use MatrixModule
+  use STLVecIntModule, only: STLVecInt
+  use MatrixBaseModule
   use SparseMatrixModule
 
   implicit none
   private
-  public :: CastAsSpatialModelConnectionClass
-  public :: AddSpatialModelConnectionToList
-  public :: GetSpatialModelConnectionFromList
+  public :: cast_as_smc
+  public :: add_smc_to_list
+  public :: get_smc_from_list
 
   !> Class to manage spatial connection of a model to one
   !! or more models of the same type. Spatial connection here
@@ -32,15 +37,16 @@ module SpatialModelConnectionModule
   type, public, extends(NumericalExchangeType) :: SpatialModelConnectionType
 
     class(NumericalModelType), pointer :: owner => null() !< the model whose connection this is
-    class(NumericalModelType), pointer :: interfaceModel => null() !< the interface model
-    integer(I4B), pointer :: nrOfConnections => null() !< total nr. of connected cells (primary)
+    class(NumericalModelType), pointer :: interface_model => null() !< the interface model
+    integer(I4B), pointer :: nr_connections => null() !< total nr. of connected cells (primary)
 
-    class(DisConnExchangeType), pointer :: primaryExchange => null() !< the exchange for which the interface model is created
-    type(ListType) :: globalExchanges !< all exchanges in the same solution
-    integer(I4B), pointer :: internalStencilDepth => null() !< size of the computational stencil for the interior
-                                                            !! default = 1, xt3d = 2, ...
-    integer(I4B), pointer :: exchangeStencilDepth => null() !< size of the computational stencil at the interface
-                                                            !! default = 1, xt3d = 2, ...
+    class(DisConnExchangeType), pointer :: prim_exchange => null() !< the exchange for which the interface model is created
+    type(STLVecInt), pointer :: halo_models !< models that are potentially in the halo of this interface
+    type(STLVecInt), pointer :: halo_exchanges !< exchanges that are potentially part of the halo of this interface (includes primary)
+    integer(I4B), pointer :: int_stencil_depth => null() !< size of the computational stencil for the interior
+                                                         !! default = 1, xt3d = 2, ...
+    integer(I4B), pointer :: exg_stencil_depth => null() !< size of the computational stencil at the interface
+                                                         !! default = 1, xt3d = 2, ...
 
     ! The following variables are equivalent to those in Numerical Solution:
     integer(I4B), pointer :: neq => null() !< nr. of equations in matrix system
@@ -50,10 +56,10 @@ module SpatialModelConnectionModule
     integer(I4B), dimension(:), pointer, contiguous :: active => null() !< cell status (c.f. ibound) of interface system
 
     ! these are not in the memory manager
-    class(GridConnectionType), pointer :: gridConnection => null() !< facility to build the interface grid connection structure
-    integer(I4B), dimension(:), pointer :: mapIdxToSln => null() !< mapping between interface matrix and the solution matrix
-    type(ListType) :: distVarList !< list with distributed variables
-    type(InterfaceMapType), pointer :: interfaceMap => null() !< a map of the interface into models and exchanges
+    class(GridConnectionType), pointer :: ig_builder => null() !< facility to build the interface grid connection structure
+    integer(I4B), dimension(:), pointer :: ipos_to_sln => null() !< mapping between position in the interface matrix and the solution matrix
+    type(ListType) :: iface_dist_vars !< list with distributed variables for this interface
+    type(InterfaceMapType), pointer :: interface_map => null() !< a map of the interface into models and exchanges
 
   contains
 
@@ -77,7 +83,7 @@ module SpatialModelConnectionModule
     procedure, pass(this) :: spatialcon_connect
     procedure, pass(this) :: validateConnection
     procedure, pass(this) :: addDistVar
-    procedure, pass(this) :: mapVariables
+    procedure, pass(this) :: createModelHalo
 
     ! private
     procedure, private, pass(this) :: setupGridConnection
@@ -86,6 +92,7 @@ module SpatialModelConnectionModule
     procedure, private, pass(this) :: allocateArrays
     procedure, private, pass(this) :: createCoefficientMatrix
     procedure, private, pass(this) :: maskOwnerConnections
+    procedure, private, pass(this) :: addModelNeighbors
 
   end type SpatialModelConnectionType
 
@@ -106,36 +113,128 @@ contains ! module procedures
     this%memoryPath = create_mem_path(this%name)
 
     this%owner => model
-    this%primaryExchange => exchange
+    this%prim_exchange => exchange
 
-    allocate (this%gridConnection)
+    allocate (this%ig_builder)
+    allocate (this%halo_models)
+    allocate (this%halo_exchanges)
     allocate (this%matrix)
     call this%allocateScalars()
 
-    this%internalStencilDepth = 1
-    this%exchangeStencilDepth = 1
-    this%nrOfConnections = 0
+    this%int_stencil_depth = 1
+    this%exg_stencil_depth = 1
+    this%nr_connections = 0
 
     ! this should be set in derived ctor
-    this%interfaceModel => null()
+    this%interface_model => null()
 
   end subroutine spatialConnection_ctor
 
-  !> @brief Define this connection, mostly sets up the grid
-  !< connection, allocates arrays, and links x,rhs, and ibound
-  subroutine spatialcon_df(this)
+  !> @brief Find all models that might participate in this interface
+  !<
+  subroutine createModelHalo(this)
     class(SpatialModelConnectionType) :: this !< this connection
 
+    call this%halo_models%init()
+    call this%halo_exchanges%init()
+
+    call this%addModelNeighbors(this%owner%id, virtual_exchange_list, &
+                                this%exg_stencil_depth)
+
+  end subroutine createModelHalo
+
+  !> @brief Add neighbors and nbrs-of-nbrs to the model tree
+  !<
+  recursive subroutine addModelNeighbors(this, model_id, &
+                                         virtual_exchanges, &
+                                         depth, mask)
+    use VirtualExchangeModule, only: get_virtual_exchange
+    class(SpatialModelConnectionType) :: this !< this connection
+    integer(I4B) :: model_id !< the model (id) to add neighbors for
+    type(ListType) :: virtual_exchanges !< list with all virtual exchanges
+    integer(I4B), value :: depth !< the maximal number of exchanges between
+    integer(I4B), optional :: mask !< don't add this one as a neighbor
+    ! local
+    integer(I4B) :: i, n
+    class(VirtualExchangeType), pointer :: v_exg
+    integer(I4B) :: neighbor_id
+    integer(I4B) :: model_mask
+    type(STLVecInt) :: nbr_models
+
+    if (.not. present(mask)) then
+      model_mask = 0
+    else
+      model_mask = mask
+    end if
+
+    call nbr_models%init()
+
+    ! first find all direct neighbors of the model and add them,
+    ! avoiding duplicates
+    do i = 1, virtual_exchanges%Count()
+      neighbor_id = -1
+      v_exg => get_virtual_exchange_from_list(virtual_exchanges, i)
+      if (v_exg%v_model1%id == model_id) then
+        neighbor_id = v_exg%v_model2%id
+      else if (v_exg%v_model2%id == model_id) then
+        neighbor_id = v_exg%v_model1%id
+      end if
+
+      ! check if there is a neighbor, and it is not masked
+      ! (to prevent back-and-forth connections)
+      if (neighbor_id > 0) then
+
+        ! check if masked
+        if (neighbor_id == model_mask) cycle
+        call nbr_models%push_back_unique(neighbor_id)
+        call this%halo_models%push_back_unique(neighbor_id)
+        call this%halo_exchanges%push_back_unique(v_exg%id)
+      end if
+
+    end do
+
+    depth = depth - 1
+    if (depth == 0) then
+      ! and we're done with this branch
+      call nbr_models%destroy()
+      return
+    end if
+
+    ! now recurse on the neighbors up to the specified depth
+    do n = 1, nbr_models%size
+      call this%addModelNeighbors(nbr_models%at(n), virtual_exchanges, &
+                                  depth, model_id)
+    end do
+
+    ! we're done with the tree
+    call nbr_models%destroy()
+
+  end subroutine addModelNeighbors
+
+  !> @brief Define this connection, this is where the
+  !! discretization (DISU) for the interface model is
+  !< created!
+  subroutine spatialcon_df(this)
+    class(SpatialModelConnectionType) :: this !< this connection
+    ! local
+    integer(I4B) :: i
+    class(VirtualModelType), pointer :: v_model
+
     ! create the grid connection data structure
-    this%nrOfConnections = this%getNrOfConnections()
-    call this%gridConnection%construct(this%owner, &
-                                       this%nrOfConnections, &
-                                       this%name)
-    this%gridConnection%internalStencilDepth = this%internalStencilDepth
-    this%gridConnection%exchangeStencilDepth = this%exchangeStencilDepth
+    this%nr_connections = this%getNrOfConnections()
+    call this%ig_builder%construct(this%owner, &
+                                   this%nr_connections, &
+                                   this%name)
+    this%ig_builder%internalStencilDepth = this%int_stencil_depth
+    this%ig_builder%exchangeStencilDepth = this%exg_stencil_depth
+    this%ig_builder%haloExchanges => this%halo_exchanges
+    do i = 1, this%halo_models%size
+      v_model => get_virtual_model(this%halo_models%at(i))
+      call this%ig_builder%addToRegionalModels(v_model)
+    end do
     call this%setupGridConnection()
 
-    this%neq = this%gridConnection%nrOfCells
+    this%neq = this%ig_builder%nrOfCells
     call this%allocateArrays()
 
   end subroutine spatialcon_df
@@ -145,31 +244,19 @@ contains ! module procedures
   subroutine spatialcon_ar(this)
     class(SpatialModelConnectionType) :: this !< this connection
     ! local
-    integer(I4B) :: iface_idx
+    integer(I4B) :: iface_idx, glob_idx
     class(GridConnectionType), pointer :: gc
 
     ! fill mapping to global index (which can be
     ! done now because moffset is set in sln_df)
-    gc => this%gridConnection
+    gc => this%ig_builder
     do iface_idx = 1, gc%nrOfCells
-      gc%idxToGlobalIdx(iface_idx) = gc%idxToGlobal(iface_idx)%index + &
-                                     gc%idxToGlobal(iface_idx)%dmodel%moffset
+      glob_idx = gc%idxToGlobal(iface_idx)%index + &
+                 gc%idxToGlobal(iface_idx)%v_model%moffset%get()
+      gc%idxToGlobalIdx(iface_idx) = glob_idx
     end do
 
   end subroutine spatialcon_ar
-
-  !> @brief Map interface variables to the specified
-  !< source data
-  subroutine mapVariables(this)
-    class(SpatialModelConnectionType) :: this !< this connection
-
-    ! map distributed model variables for synchronization
-    call this%gridConnection%getInterfaceMap(this%interfaceMap)
-    call distributed_data%map_variables(this%interfaceModel%idsoln, &
-                                        this%distVarList, &
-                                        this%interfaceMap)
-
-  end subroutine mapVariables
 
   !> @brief set model pointers to connection
   !<
@@ -177,17 +264,17 @@ contains ! module procedures
     class(SpatialModelConnectionType) :: this !< this connection
 
     ! point x, ibound, and rhs to connection
-    this%interfaceModel%x => this%x
-    call mem_checkin(this%interfaceModel%x, 'X', &
-                     this%interfaceModel%memoryPath, 'X', &
+    this%interface_model%x => this%x
+    call mem_checkin(this%interface_model%x, 'X', &
+                     this%interface_model%memoryPath, 'X', &
                      this%memoryPath)
-    this%interfaceModel%rhs => this%rhs
-    call mem_checkin(this%interfaceModel%rhs, 'RHS', &
-                     this%interfaceModel%memoryPath, 'RHS', &
+    this%interface_model%rhs => this%rhs
+    call mem_checkin(this%interface_model%rhs, 'RHS', &
+                     this%interface_model%memoryPath, 'RHS', &
                      this%memoryPath)
-    this%interfaceModel%ibound => this%active
-    call mem_checkin(this%interfaceModel%ibound, 'IBOUND', &
-                     this%interfaceModel%memoryPath, 'IBOUND', &
+    this%interface_model%ibound => this%active
+    call mem_checkin(this%interface_model%ibound, 'IBOUND', &
+                     this%interface_model%memoryPath, 'IBOUND', &
                      this%memoryPath)
 
   end subroutine spatialcon_setmodelptrs
@@ -201,7 +288,7 @@ contains ! module procedures
     class(MatrixBaseType), pointer :: matrix_base
 
     call sparse%init(this%neq, this%neq, 7)
-    call this%interfaceModel%model_ac(sparse)
+    call this%interface_model%model_ac(sparse)
 
     ! create amat from sparse
     call this%createCoefficientMatrix(sparse)
@@ -209,7 +296,7 @@ contains ! module procedures
 
     ! map connections
     matrix_base => this%matrix
-    call this%interfaceModel%model_mc(matrix_base)
+    call this%interface_model%model_mc(matrix_base)
     call this%maskOwnerConnections()
 
   end subroutine spatialcon_connect
@@ -223,45 +310,45 @@ contains ! module procedures
     use CsrUtilsModule, only: getCSRIndex
     class(SpatialModelConnectionType) :: this !< the connection
     ! local
-    integer(I4B) :: ipos, n, m, nloc, mloc, csrIdx
+    integer(I4B) :: ipos, n, m, nloc, mloc, csr_idx
     type(ConnectionsType), pointer :: conn
 
     ! set the mask on connections that are calculated by the interface model
-    conn => this%interfaceModel%dis%con
+    conn => this%interface_model%dis%con
     do n = 1, conn%nodes
       ! only for connections internal to the owning model
-      if (.not. this%gridConnection%idxToGlobal(n)%dmodel == this%owner) then
+      if (.not. this%ig_builder%idxToGlobal(n)%v_model == this%owner) then
         cycle
       end if
-      nloc = this%gridConnection%idxToGlobal(n)%index
+      nloc = this%ig_builder%idxToGlobal(n)%index
 
       do ipos = conn%ia(n) + 1, conn%ia(n + 1) - 1
         m = conn%ja(ipos)
-        if (.not. this%gridConnection%idxToGlobal(m)%dmodel == this%owner) then
+        if (.not. this%ig_builder%idxToGlobal(m)%v_model == this%owner) then
           cycle
         end if
-        mloc = this%gridConnection%idxToGlobal(m)%index
+        mloc = this%ig_builder%idxToGlobal(m)%index
 
         if (conn%mask(ipos) > 0) then
           ! calculated by interface model, set local model's mask to zero
-          csrIdx = getCSRIndex(nloc, mloc, this%owner%ia, this%owner%ja)
-          if (csrIdx == -1) then
+          csr_idx = getCSRIndex(nloc, mloc, this%owner%ia, this%owner%ja)
+          if (csr_idx == -1) then
             ! this can only happen with periodic boundary conditions,
             ! then there is no need to set the mask
-            if (this%gridConnection%isPeriodic(nloc, mloc)) cycle
+            if (this%ig_builder%isPeriodic(nloc, mloc)) cycle
 
             write (*, *) 'Error: cannot find cell connection in global system'
             call ustop()
           end if
 
-          if (this%owner%dis%con%mask(csrIdx) > 0) then
-            call this%owner%dis%con%set_mask(csrIdx, 0)
+          if (this%owner%dis%con%mask(csr_idx) > 0) then
+            call this%owner%dis%con%set_mask(csr_idx, 0)
           else
             ! edge case, someone will be calculating this connection
-            ! so we ignore it here (TODO_MJR: add name)
-            write (*, *) 'Debug: overlap detected, ignoring connection ', &
-              nloc, ':', mloc, ' for model ', trim(this%owner%name), &
-              ' in Exchange ???'
+            ! so we ignore it here
+            write (*, *) 'Warning: overlap detected, no mask on connection ', &
+              nloc, ':', mloc, ' in model ', trim(this%owner%name), &
+              ' for Exchange ', trim(this%prim_exchange%name)
             call conn%set_mask(ipos, 0)
           end if
         end if
@@ -281,21 +368,21 @@ contains ! module procedures
     integer(I4B) :: nglo, mglo
 
     do n = 1, this%neq
-      if (.not. this%gridConnection%idxToGlobal(n)%dmodel == this%owner) then
+      if (.not. this%ig_builder%idxToGlobal(n)%v_model == this%owner) then
         ! only add connections for own model to global matrix
         cycle
       end if
 
-      nglo = this%gridConnection%idxToGlobal(n)%index + &
-             this%gridConnection%idxToGlobal(n)%dmodel%moffset
+      nglo = this%ig_builder%idxToGlobal(n)%index + &
+             this%ig_builder%idxToGlobal(n)%v_model%moffset%get()
 
       icol_start = this%matrix%get_first_col_pos(n)
       icol_end = this%matrix%get_last_col_pos(n)
       do ipos = icol_start, icol_end
         m = this%matrix%get_column(ipos)
         if (m == n) cycle
-        mglo = this%gridConnection%idxToGlobal(m)%index + &
-               this%gridConnection%idxToGlobal(m)%dmodel%moffset
+        mglo = this%ig_builder%idxToGlobal(m)%index + &
+               this%ig_builder%idxToGlobal(m)%v_model%moffset%get()
         call sparse%addconnection(nglo, mglo, 1)
       end do
 
@@ -310,27 +397,33 @@ contains ! module procedures
     class(SpatialModelConnectionType) :: this !< this connection
     class(MatrixBaseType), pointer :: matrix_sln !< global matrix
     ! local
-    integer(I4B) :: m, n, mglo, nglo, ipos, ipos_sln
-    logical(LGP) :: isOwned
+    integer(I4B) :: i, m, n, mglo, nglo, ipos, ipos_sln
+    logical(LGP) :: is_owned
 
-    allocate (this%mapIdxToSln(this%matrix%nja))
+    allocate (this%ipos_to_sln(this%matrix%nja))
+    do i = 1, this%matrix%nja
+      this%ipos_to_sln(i) = -1
+    end do
 
     do n = 1, this%neq
-      isOwned = (this%gridConnection%idxToGlobal(n)%dmodel == this%owner)
+      is_owned = (this%ig_builder%idxToGlobal(n)%v_model == this%owner)
+      if (.not. is_owned) cycle
+
       do ipos = this%matrix%ia(n), this%matrix%ia(n + 1) - 1
         m = this%matrix%ja(ipos)
-        nglo = this%gridConnection%idxToGlobal(n)%index + &
-               this%gridConnection%idxToGlobal(n)%dmodel%moffset
-        mglo = this%gridConnection%idxToGlobal(m)%index + &
-               this%gridConnection%idxToGlobal(m)%dmodel%moffset
+        nglo = this%ig_builder%idxToGlobal(n)%index + &
+               this%ig_builder%idxToGlobal(n)%v_model%moffset%get()
+        mglo = this%ig_builder%idxToGlobal(m)%index + &
+               this%ig_builder%idxToGlobal(m)%v_model%moffset%get()
+
         ipos_sln = matrix_sln%get_position(nglo, mglo)
-        if (ipos_sln == -1 .and. isOwned) then
+        if (ipos_sln == -1) then
           ! this should not be possible
           write (*, *) 'Error: cannot find cell connection in global system'
           call ustop()
         end if
+        this%ipos_to_sln(ipos) = ipos_sln
 
-        this%mapIdxToSln(ipos) = ipos_sln
       end do
     end do
 
@@ -342,22 +435,26 @@ contains ! module procedures
     class(SpatialModelConnectionType) :: this !< this connection
 
     call mem_deallocate(this%neq)
-    call mem_deallocate(this%internalStencilDepth)
-    call mem_deallocate(this%exchangeStencilDepth)
-    call mem_deallocate(this%nrOfConnections)
+    call mem_deallocate(this%int_stencil_depth)
+    call mem_deallocate(this%exg_stencil_depth)
+    call mem_deallocate(this%nr_connections)
 
     call mem_deallocate(this%x)
     call mem_deallocate(this%rhs)
     call mem_deallocate(this%active)
 
+    call this%halo_models%destroy()
+    call this%halo_exchanges%destroy()
+    deallocate (this%halo_models)
+    deallocate (this%halo_exchanges)
     call this%matrix%destroy()
     deallocate (this%matrix)
 
-    call this%gridConnection%destroy()
-    call this%distVarList%Clear(destroy=.true.)
-    deallocate (this%gridConnection)
-    deallocate (this%interfaceMap)
-    deallocate (this%mapIdxToSln)
+    call this%ig_builder%destroy()
+    call this%iface_dist_vars%Clear(destroy=.true.)
+    deallocate (this%ig_builder)
+    deallocate (this%interface_map)
+    deallocate (this%ipos_to_sln)
 
   end subroutine spatialcon_da
 
@@ -374,14 +471,14 @@ contains ! module procedures
     ! local
 
     ! connect cells from primary exchange
-    call this%gridConnection%connectPrimaryExchange(this%primaryExchange)
-
-    ! create topology of models
-    call this%gridConnection%findModelNeighbors(this%globalExchanges, &
-                                                this%exchangeStencilDepth)
+    call this%ig_builder%connectPrimaryExchange(this%prim_exchange)
 
     ! now scan for nbr-of-nbrs and create final data structures
-    call this%gridConnection%extendConnection()
+    call this%ig_builder%extendConnection()
+
+    ! construct the interface map
+    call this%ig_builder%buildInterfaceMap()
+    this%interface_map => this%ig_builder%interfaceMap
 
   end subroutine setupGridConnection
 
@@ -392,9 +489,9 @@ contains ! module procedures
     class(SpatialModelConnectionType) :: this !< this connection
 
     call mem_allocate(this%neq, 'NEQ', this%memoryPath)
-    call mem_allocate(this%internalStencilDepth, 'INTSTDEPTH', this%memoryPath)
-    call mem_allocate(this%exchangeStencilDepth, 'EXGSTDEPTH', this%memoryPath)
-    call mem_allocate(this%nrOfConnections, 'NROFCONNS', this%memoryPath)
+    call mem_allocate(this%int_stencil_depth, 'INTSTDEPTH', this%memoryPath)
+    call mem_allocate(this%exg_stencil_depth, 'EXGSTDEPTH', this%memoryPath)
+    call mem_allocate(this%nr_connections, 'NROFCONNS', this%memoryPath)
 
   end subroutine allocateScalars
 
@@ -427,7 +524,7 @@ contains ! module procedures
     integer(I4B) :: nrConns
     !local
 
-    nrConns = this%primaryExchange%nexg
+    nrConns = this%prim_exchange%nexg
 
   end function getNrOfConnections
 
@@ -439,7 +536,7 @@ contains ! module procedures
     type(sparsematrix), intent(inout) :: sparse !< the sparse matrix with the cell connections
 
     call sparse%sort()
-    call this%matrix%create(sparse, this%memoryPath)
+    call this%matrix%init(sparse, this%memoryPath)
 
   end subroutine createCoefficientMatrix
 
@@ -452,7 +549,7 @@ contains ! module procedures
     ! local
     class(DisConnExchangeType), pointer :: conEx => null()
 
-    conEx => this%primaryExchange
+    conEx => this%prim_exchange
     if (conEx%ixt3d > 0) then
       ! if XT3D, we need these angles:
       if (conEx%model1%dis%con%ianglex == 0) then
@@ -471,37 +568,38 @@ contains ! module procedures
 
   end subroutine validateConnection
 
-  subroutine addDistVar(this, var_name, subcomp_name, comp_name, &
-                        map_type, exg_var_name, sync_stages)
+  subroutine addDistVar(this, var_name, subcomp_name, map_type, &
+                        sync_stages, exg_var_name)
     class(SpatialModelConnectionType) :: this !< this connection
     character(len=*) :: var_name !< name of variable, e.g. "K11"
     character(len=*) :: subcomp_name !< subcomponent, e.g. "NPF"
-    character(len=*) :: comp_name !< component, e.g. the model or exchange name
     integer(I4B) :: map_type !< can be 0 = scalar, 1 = node based, 2 = connection based,
                              !! 3 = exchange based (connections crossing model boundaries)
-    character(len=*) :: exg_var_name !< needed for exchange variables, e.g. SIMVALS
     integer(I4B), dimension(:) :: sync_stages !< when to sync, e.g. (/ STAGE_AD, STAGE_CF /)
                                               !! which is before AD and CF
+    character(len=*), optional :: exg_var_name !< needed for exchange variables, e.g. SIMVALS
     ! local
-    type(DistVarType), pointer :: distVar => null()
+    type(DistVarType), pointer :: dist_var => null()
     class(*), pointer :: obj
 
-    allocate (distVar)
-    distVar%var_name = var_name
-    distVar%subcomp_name = subcomp_name
-    distVar%comp_name = comp_name
-    distVar%map_type = map_type
-    distVar%exg_var_name = exg_var_name
-    distVar%sync_stages = sync_stages
+    if (.not. present(exg_var_name)) exg_var_name = ''
 
-    obj => distVar
-    call this%distVarList%Add(obj)
+    allocate (dist_var)
+    dist_var%var_name = var_name
+    dist_var%subcomp_name = subcomp_name
+    dist_var%comp_name = this%interface_model%name
+    dist_var%map_type = map_type
+    dist_var%sync_stages = sync_stages
+    dist_var%exg_var_name = exg_var_name
+
+    obj => dist_var
+    call this%iface_dist_vars%Add(obj)
 
   end subroutine addDistVar
 
   !> @brief Cast to SpatialModelConnectionType
   !<
-  function CastAsSpatialModelConnectionClass(obj) result(res)
+  function cast_as_smc(obj) result(res)
     implicit none
     class(*), pointer, intent(inout) :: obj !< object to be cast
     class(SpatialModelConnectionType), pointer :: res !< the instance of SpatialModelConnectionType
@@ -514,11 +612,11 @@ contains ! module procedures
       res => obj
     end select
     return
-  end function CastAsSpatialModelConnectionClass
+  end function cast_as_smc
 
   !> @brief Add connection to a list
   !<
-  subroutine AddSpatialModelConnectionToList(list, conn)
+  subroutine add_smc_to_list(list, conn)
     implicit none
     ! -- dummy
     type(ListType), intent(inout) :: list !< the list
@@ -530,11 +628,11 @@ contains ! module procedures
     call list%Add(obj)
     !
     return
-  end subroutine AddSpatialModelConnectionToList
+  end subroutine add_smc_to_list
 
   !> @brief Get the connection from a list
   !<
-  function GetSpatialModelConnectionFromList(list, idx) result(res)
+  function get_smc_from_list(list, idx) result(res)
     type(ListType), intent(inout) :: list !< the list
     integer(I4B), intent(in) :: idx !< the index of the connection
     class(SpatialModelConnectionType), pointer :: res !< the returned connection
@@ -542,9 +640,9 @@ contains ! module procedures
     ! local
     class(*), pointer :: obj
     obj => list%GetItem(idx)
-    res => CastAsSpatialModelConnectionClass(obj)
+    res => cast_as_smc(obj)
     !
     return
-  end function GetSpatialModelConnectionFromList
+  end function get_smc_from_list
 
 end module SpatialModelConnectionModule

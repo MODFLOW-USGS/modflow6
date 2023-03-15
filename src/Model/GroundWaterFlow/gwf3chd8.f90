@@ -9,7 +9,7 @@ module ChdModule
   use ObserveModule, only: ObserveType
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
-  use MatrixModule
+  use MatrixBaseModule
   !
   implicit none
   !

@@ -4,7 +4,7 @@ module Xt3dModule
   use ConstantsModule, only: DZERO, DHALF, DONE, LENMEMPATH
   use BaseDisModule, only: DisBaseType
   use MemoryHelperModule, only: create_mem_path
-  use MatrixModule
+  use MatrixBaseModule
   implicit none
 
   public Xt3dType

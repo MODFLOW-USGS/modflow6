@@ -11,7 +11,7 @@ module EvtModule
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
   use BlockParserModule, only: BlockParserType
-  use MatrixModule
+  use MatrixBaseModule
   !
   implicit none
   !

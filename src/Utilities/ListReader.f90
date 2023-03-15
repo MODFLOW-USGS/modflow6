@@ -4,7 +4,9 @@ module ListReaderModule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, LENTIMESERIESNAME, &
                              LENAUXNAME, LENLISTLABEL, DONE
-  use SimModule, only: store_error_unit
+  use SimVariablesModule, only: errmsg
+  use SimModule, only: store_error, count_errors, store_error_unit
+
   implicit none
   private
   public ListReaderType
@@ -168,7 +170,6 @@ contains
     use InputOutputModule, only: u9rdcom, urword, openfile
     use OpenSpecModule, only: form, access
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error
     ! -- dummy
     class(ListReaderType) :: this
     ! -- local
@@ -177,7 +178,6 @@ contains
     logical :: exists
     integer(I4B) :: nunopn = 99
     character(len=LINELENGTH) :: fname
-    character(len=LINELENGTH) :: errmsg
     ! -- formats
     character(len=*), parameter :: fmtocne = &
       &"('Specified OPEN/CLOSE file ',(A),' does not exist')"
@@ -283,13 +283,11 @@ contains
     ! -- modules
     use ConstantsModule, only: LINELENGTH, LENBIGLINE
     use InputOutputModule, only: get_node
-    use SimModule, only: store_error
     ! -- dummy
     class(ListReaderType) :: this
     ! -- local
     integer(I4B) :: mxlist, ldim, naux, nod, ii, jj
     character(len=LINELENGTH) :: fname
-    character(len=LENBIGLINE) :: errmsg
     integer(I4B), dimension(:), allocatable :: cellid
     ! -- formats
     character(len=*), parameter :: fmtmxlsterronly = &
@@ -317,6 +315,9 @@ contains
       ! -- read layer, row, col, or cell number
       read (this%inlist, iostat=this%ierr) cellid
 
+      ! -- ensure cellid is valid, store an error otherwise
+      call check_cellid(ii, cellid, this%mshape, this%ndim)
+
       ! -- If not end of record, then store nodenumber, else
       !    calculate lstend and nlist, and exit readloop
       select case (this%ierr)
@@ -329,7 +330,7 @@ contains
           call store_error(errmsg, terminate=.TRUE.)
         end if
         !
-        ! -- Store node number and read the remainder of the record
+        ! -- Calculate and store user node number
         if (this%ndim == 1) then
           nod = cellid(1)
         elseif (this%ndim == 2) then
@@ -340,6 +341,8 @@ contains
                          this%mshape(1), this%mshape(2), this%mshape(3))
         end if
         this%nodelist(ii) = nod
+
+        ! -- Read remainder of record
         read (this%inlist, iostat=this%ierr) (this%rlist(jj, ii), jj=1, ldim), &
           (this%auxvar(ii, jj), jj=1, naux)
         if (this%ierr /= 0) then
@@ -373,6 +376,11 @@ contains
       !
     end do readloop
     !
+    ! -- Stop if errors were detected
+    if (count_errors() > 0) then
+      call store_error_unit(this%inlist)
+    end if
+    !
     ! -- return
     return
   end subroutine read_binary
@@ -387,7 +395,6 @@ contains
     ! -- modules
     use ConstantsModule, only: LENBOUNDNAME, LINELENGTH, DZERO
     use InputOutputModule, only: u9rdcom, urword, get_node
-    use SimModule, only: store_error, count_errors
     use ArrayHandlersModule, only: ExpandArray
     ! -- dummy
     class(ListReaderType) :: this
@@ -397,7 +404,6 @@ contains
     real(DP) :: r
     integer(I4B), dimension(:), allocatable :: cellid
     character(len=LINELENGTH) :: fname
-    character(len=LINELENGTH) :: errmsg
     ! -- formats
     character(len=*), parameter :: fmtmxlsterronly = &
       "('***ERROR READING LIST. &
@@ -449,71 +455,33 @@ contains
         call store_error_unit(this%inlist)
       end if
       !
-      ! -- Read layer, row, column or cell number and assign to nodelist
+      ! -- Initialize locator
       this%lloc = 1
-      if (this%ndim == 3) then
-        !
-        ! -- Grid is structured; read layer, row, column
-        call urword(this%line, this%lloc, this%istart, this%istop, 2, &
-                    cellid(1), r, this%iout, this%inlist)
+      !
+      ! -- Read cellid
+      call urword(this%line, this%lloc, this%istart, this%istop, 2, &
+                  cellid(1), r, this%iout, this%inlist)
+      if (this%ndim > 1) then
         call urword(this%line, this%lloc, this%istart, this%istop, 2, &
                     cellid(2), r, this%iout, this%inlist)
+      end if
+      if (this%ndim > 2) then
         call urword(this%line, this%lloc, this%istart, this%istop, 2, &
                     cellid(3), r, this%iout, this%inlist)
-        !
-        ! -- Check for illegal grid location
-        if (cellid(1) < 1 .or. cellid(1) > this%mshape(1)) then
-          write (errmsg, *) ' Layer number in list is outside of the grid', &
-            cellid(1)
-          call store_error(errmsg)
-        end if
-        if (cellid(2) < 1 .or. cellid(2) > this%mshape(2)) then
-          write (errmsg, *) ' Row number in list is outside of the grid', &
-            cellid(2)
-          call store_error(errmsg)
-        end if
-        if (cellid(3) < 1 .or. cellid(3) > this%mshape(3)) then
-          write (errmsg, *) ' Column number in list is outside of the grid', &
-            cellid(3)
-          call store_error(errmsg)
-        end if
-        !
-        ! -- Calculate nodenumber and put in nodelist
+      end if
+      !
+      ! -- ensure cellid is valid, store an error otherwise
+      call check_cellid(ii, cellid, this%mshape, this%ndim)
+      !
+      ! -- Calculate user node number
+      if (this%ndim == 3) then
         nod = get_node(cellid(1), cellid(2), cellid(3), &
                        this%mshape(1), this%mshape(2), this%mshape(3))
       elseif (this%ndim == 2) then
-        !
-        ! -- Grid is disv
-        call urword(this%line, this%lloc, this%istart, this%istop, 2, &
-                    cellid(1), r, this%iout, this%inlist)
-        call urword(this%line, this%lloc, this%istart, this%istop, 2, &
-                    cellid(2), r, this%iout, this%inlist)
-        !
-        ! -- Check for illegal grid location
-        if (cellid(1) < 1 .or. cellid(1) > this%mshape(1)) then
-          write (errmsg, *) ' Layer number in list is outside of the grid', &
-            cellid(1)
-          call store_error(errmsg)
-        end if
-        if (cellid(2) < 1 .or. cellid(2) > this%mshape(2)) then
-          write (errmsg, *) ' Cell2d number in list is outside of the grid', &
-            cellid(2)
-          call store_error(errmsg)
-        end if
-        !
-        ! -- Calculate nodenumber and put in nodelist
         nod = get_node(cellid(1), 1, cellid(2), &
                        this%mshape(1), 1, this%mshape(2))
       else
-        !
-        ! -- Grid is unstructured; read layer and celld2d number
-        call urword(this%line, this%lloc, this%istart, this%istop, 2, nod, r, &
-                    this%iout, this%inlist)
-        if (nod < 1 .or. nod > this%mshape(1)) then
-          write (errmsg, *) ' Node number in list is outside of the grid', nod
-          call store_error(errmsg)
-        end if
-        !
+        nod = cellid(1)
       end if
       !
       ! -- Assign nod to nodelist
@@ -598,6 +566,51 @@ contains
     ! -- return
     return
   end subroutine read_ascii
+
+  !> @ brief Check for valid cellid
+  !<
+  subroutine check_cellid(ii, cellid, mshape, ndim)
+    integer(I4B), intent(in) :: ii
+    integer(I4B), dimension(:), intent(in) :: cellid !< cellid
+    integer(I4B), dimension(:), intent(in) :: mshape !< model shape
+    integer(I4B), intent(in) :: ndim !< size of mshape
+    character(len=20) :: cellstr, mshstr
+    character(len=*), parameter :: fmterr = &
+      "('List entry ',i0,' contains cellid ',a,' but this cellid is invalid &
+      &for model with shape ', a)"
+    character(len=*), parameter :: fmtndim1 = &
+                                   "('(',i0,')')"
+    character(len=*), parameter :: fmtndim2 = &
+                                   "('(',i0,',',i0,')')"
+    character(len=*), parameter :: fmtndim3 = &
+                                   "('(',i0,',',i0,',',i0,')')"
+    if (ndim == 1) then
+      if (cellid(1) < 1 .or. cellid(1) > mshape(1)) then
+        write (cellstr, fmtndim1) cellid(1)
+        write (mshstr, fmtndim1) mshape(1)
+        write (errmsg, fmterr) ii, trim(adjustl(cellstr)), trim(adjustl(mshstr))
+        call store_error(errmsg)
+      end if
+    else if (ndim == 2) then
+      if (cellid(1) < 1 .or. cellid(1) > mshape(1) .or. &
+          cellid(2) < 1 .or. cellid(2) > mshape(2)) then
+        write (cellstr, fmtndim2) cellid(1), cellid(2)
+        write (mshstr, fmtndim2) mshape(1), mshape(2)
+        write (errmsg, fmterr) ii, trim(adjustl(cellstr)), trim(adjustl(mshstr))
+        call store_error(errmsg)
+      end if
+    else if (ndim == 3) then
+      if (cellid(1) < 1 .or. cellid(1) > mshape(1) .or. &
+          cellid(2) < 1 .or. cellid(2) > mshape(2) .or. &
+          cellid(3) < 1 .or. cellid(3) > mshape(3)) then
+        write (cellstr, fmtndim3) cellid(1), cellid(2), cellid(3)
+        write (mshstr, fmtndim3) mshape(1), mshape(2), mshape(3)
+        write (errmsg, fmterr) ii, trim(adjustl(cellstr)), trim(adjustl(mshstr))
+        call store_error(errmsg)
+      end if
+    end if
+    return
+  end subroutine check_cellid
 
   subroutine write_list(this)
 ! ******************************************************************************

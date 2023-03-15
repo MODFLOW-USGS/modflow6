@@ -59,7 +59,7 @@ shutil.copy(src, dst)
 # -- build the mf6io markdown files -----------------------------------------
 print("Build the mf6io markdown files")
 pth = os.path.join("..", "doc", "mf6io", "mf6ivar")
-args = ("python", "mf6ivar.py")
+args = (sys.executable, "mf6ivar.py")
 # run the command
 proc = Popen(args, stdout=PIPE, stderr=PIPE, cwd=pth)
 stdout, stderr = proc.communicate()

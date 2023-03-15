@@ -498,6 +498,7 @@ contains
   subroutine initial_message()
     ! -- modules
     use VersionModule, only: write_listfile_header
+    use SimVariablesModule, only: simulation_mode
     !
     ! -- initialize message lists
     call sim_errors%init_message()
@@ -508,6 +509,11 @@ contains
     ! -- Write banner to screen (unit stdout)
     call write_listfile_header(istdout, write_kind_info=.false., &
                                write_sys_command=.false.)
+    !
+    if (simulation_mode == 'PARALLEL') then
+      call sim_message('(MODFLOW runs in '//trim(simulation_mode)//' mode)', &
+                       skipafter=1)
+    end if
     !
   end subroutine initial_message
 

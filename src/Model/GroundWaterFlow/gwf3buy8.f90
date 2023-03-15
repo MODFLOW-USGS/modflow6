@@ -13,7 +13,7 @@ module GwfBuyModule
   use BaseDisModule, only: DisBaseType
   use GwfNpfModule, only: GwfNpfType
   use GwfBuyInputDataModule, only: GwfBuyInputDataType
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
 

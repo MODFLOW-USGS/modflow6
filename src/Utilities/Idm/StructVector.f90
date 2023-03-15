@@ -9,7 +9,7 @@ module StructVectorModule
   use KindModule, only: I4B, DP, LGP
   use ConstantsModule, only: LENMEMPATH, LENVARNAME
   use CharacterStringModule, only: CharacterStringType
-  use VectorIntModule, only: VectorInt
+  use STLVecIntModule, only: STLVecInt
 
   implicit none
   private
@@ -23,14 +23,16 @@ module StructVectorModule
   !<
   type StructVectorType
     character(len=LENVARNAME) :: varname
-    character(len=LENMEMPATH) :: memoryPath
+    character(len=LENVARNAME) :: shapevar
+    character(len=LENMEMPATH) :: mempath
     integer(I4B) :: memtype = 0
+    integer(I4B) :: size = 0
     logical(LGP) :: preserve_case = .false.
     integer(I4B), dimension(:), pointer, contiguous :: int1d => null()
     real(DP), dimension(:), pointer, contiguous :: dbl1d => null()
     type(CharacterStringType), dimension(:), pointer, contiguous :: &
-      str1d => null()
-    type(VectorInt), pointer :: intvector => null()
+      charstr1d => null()
+    type(STLVecInt), pointer :: intvector => null()
     integer(I4B), dimension(:), pointer, contiguous :: intvector_shape => null()
 
   end type StructVectorType

@@ -21,7 +21,7 @@ module GwfStoModule
   use GwfStorageUtilsModule, only: SsCapacity, SyCapacity, SsTerms, SyTerms
   use InputOutputModule, only: GetUnit, openfile
   use TvsModule, only: TvsType, tvs_cr
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
   public :: GwfStoType, sto_cr
