@@ -15,48 +15,53 @@ module VirtualExchangeModule
   private :: cast_as_virtual_exchange
 
   !> The Virtual Exchange is based on two Virtual Models
-  !! and is therefore not always strictly local, or remote.
+  !! and is therefore not always strictly local or remote.
   !! We have to consider three different cases:
   !!
   !! 1) both virtual models are local
   !!
-  !!  RECV: In this case this virtual data container will have 
-  !!        no data items to receive from other processes. 
-  !!  SEND: Whenever it is called to send its virtual data items
-  !!        to other processes, it simply sends everything.
+  !!   RECV: In this case this virtual data container will have
+  !!         no data items to receive from other processes.
+  !!   SEND: Whenever it is called to send its virtual data items
+  !!         to other processes, it simply sends everything.
   !!
   !! 2) one model is local, one model is remote
   !!
-  !!  Consequently, there is another exchange which
-  !!  has the reverse, we call this our _dual_ exchange.
-  !!
-  !!  RECV: The sender is our dual exchange, and
-  !!        we have all data except its list of
-  !!        reduced model node numbers, either
-  !!        this%nodem1 or this%nodem2. We receive
-  !!        the missing array. Receiving from a sender
-  !!        that is not the dual exchange cannot occur.
-  !!
-  !!  SEND: here we have to consider two cases
-  !!   a) The receiver is our dual exchange, we return
-  !!      the favor and send the list of model node
-  !!      numbers that is present on this process, this
-  !!      would be either this%nodem1 or this%nodem2
-  !!   b) The receiver is not the dual exchange. And
-  !!      here we will send everything.
+  !!   Consequently, there is another exchange which
+  !!   has the reverse, we call this our _dual_ exchange.
+  !! 
+  !!   RECV: The sender is our dual exchange, and we have all data
+  !!         except its list of reduced model node numbers, either
+  !!         this%nodem1 or this%nodem2. We receive the missing
+  !!         array. Receiving from a sender that is not the dual
+  !!         exchange cannot occur.
+  !! 
+  !!   SEND: here we have to consider two cases
+  !!      a) The receiver is our dual exchange, we return the favor
+  !!         and send the list of model node numbers that is present
+  !!         on this process, this
+  !!         would be either this%nodem1 or this%nodem2
+  !!      b) The receiver is not the dual exchange. And here we will 
+  !!         send everything.
   !!
   !! 3) both models are remote
   !!
-  !!  RECV: we will receive everything. In case the source
-  !!        exchange is fully local, i.e. type 1) above, we get
-  !!        all the data at the first attempt. Otherwise, it will
-  !!        take a second attempt before all the data is in.
-  !!        (To allow for two attempts, the nodem1 and nodem2
-  !!        arrays are registered to be synchronized at two
-  !!        consecutive stages)
+  !!   RECV: we will receive everything. In case the source
+  !!         exchange is fully local, i.e. type 1) above, we get
+  !!         all the data at the first attempt. Otherwise, it will
+  !!         take a second attempt before all the data is in.
+  !!         (To allow for two attempts, the nodem1 and nodem2
+  !!         arrays are registered to be synchronized at two
+  !!         consecutive stages)
   !!
   !!  SEND: nothing to be sent.
-  !<
+  !!
+  !!
+  !! This behavior is different from the general VirtualDataContainer,
+  !! so the get_send_items and get_recv_items subroutines are
+  !! overridden accordingly. 
+  !! Additionally, for case 2) the container will have a mix of
+  !< local and remote virtual data items.
   type, public, extends(VirtualDataContainerType) :: VirtualExchangeType
     class(VirtualModelType), pointer :: v_model1 => null()
     class(VirtualModelType), pointer :: v_model2 => null()
@@ -99,10 +104,9 @@ contains
     this%v_model1 => get_virtual_model(m1_id)
     this%v_model2 => get_virtual_model(m2_id)
 
-    ! - if both models are local, is_local = true
-    ! - if both are remote, is_local = false
-    ! - if only one of them is remote, is_local = true and only the
-    ! remote nodem1/2 array will get its property is_local = false
+    ! 1) both models local:  is_local = true
+    ! 2) only one of them:   is_local = true
+    ! 3) both models remote: is_local = false
     is_local = this%v_model1%is_local .or. this%v_model2%is_local
     call this%VirtualDataContainerType%vdc_create(name, exg_id, is_local)
 
@@ -117,9 +121,11 @@ contains
     logical(LGP) :: is_nodem1_local
     logical(LGP) :: is_nodem2_local
 
-    ! exchanges can be hybrid with both local and remote fields
-    is_nodem1_local = this%is_local .and. this%v_model1%is_local
-    is_nodem2_local = this%is_local .and. this%v_model2%is_local
+    ! exchanges can be hybrid with both local and remote
+    ! fields, nodem1/2 array only local when corresponding
+    ! model sits on the same process
+    is_nodem1_local = this%v_model1%is_local
+    is_nodem2_local = this%v_model2%is_local
 
     allocate (this%nexg)
     call this%create_field(this%nexg%to_base(), 'NEXG', '')
@@ -200,7 +206,7 @@ contains
 
     if (this%v_model1%is_local .and. &
         this%v_model2%orig_rank == rank) then
-      ! this is our image exchange on the other rank,
+      ! this is our dual exchange on the other rank,
       ! only receive nodem2
       if (this%nodem2%check_stage(stage)) then
         call virtual_items%push_back(nodem2_idx)
@@ -234,7 +240,7 @@ contains
     nodem2_idx = this%virtual_data_list%GetIndex(vdi)
     if (this%v_model1%is_local .and. &
         this%v_model2%orig_rank == rank) then
-      ! this is our image exchange on the other rank,
+      ! this is our dual exchange on the other rank,
       ! only send nodem1
       if (this%nodem1%check_stage(stage)) then
         call virtual_items%push_back(nodem1_idx)
