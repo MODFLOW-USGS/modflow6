@@ -29,19 +29,19 @@ module VirtualExchangeModule
   !!
   !!   Consequently, there is another exchange which
   !!   has the reverse, we call this our _dual_ exchange.
-  !! 
+  !!
   !!   RECV: The sender is our dual exchange, and we have all data
   !!         except its list of reduced model node numbers, either
   !!         this%nodem1 or this%nodem2. We receive the missing
   !!         array. Receiving from a sender that is not the dual
   !!         exchange cannot occur.
-  !! 
+  !!
   !!   SEND: here we have to consider two cases
   !!      a) The receiver is our dual exchange, we return the favor
   !!         and send the list of model node numbers that is present
   !!         on this process, this
   !!         would be either this%nodem1 or this%nodem2
-  !!      b) The receiver is not the dual exchange. And here we will 
+  !!      b) The receiver is not the dual exchange. And here we will
   !!         send everything.
   !!
   !! 3) both models are remote
@@ -59,7 +59,7 @@ module VirtualExchangeModule
   !!
   !! This behavior is different from the general VirtualDataContainer,
   !! so the get_send_items and get_recv_items subroutines are
-  !! overridden accordingly. 
+  !! overridden accordingly.
   !! Additionally, for case 2) the container will have a mix of
   !< local and remote virtual data items.
   type, public, extends(VirtualDataContainerType) :: VirtualExchangeType
