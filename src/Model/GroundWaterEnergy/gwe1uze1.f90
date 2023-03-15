@@ -293,8 +293,8 @@ contains
         call sparse%addconnection(nglo, nglo, 1)
       end do
       !
-      ! -- add uze-to-gwe connections. For uze, this loop is
-      !    the same as its counterpart in apt_ac.
+      ! -- add uze-to-gwe connections. For uze, this particular do loop
+      !    is the same as its counterpart in apt_ac.
       ! nlist: number of gwe cells with a connection to at least one uze object
       do i = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
         n = this%flowbudptr%budterm(this%idxbudgwf)%id1(i) !< uze object position within uze object list
@@ -307,8 +307,8 @@ contains
       !
       ! -- For uze, add feature-to-feature connections (i.e., 
       !    vertically stacked UZ objects) to row corresponding 
-      !    to the host cell. Terms added to row assoc. with host 
-      !    cell go into columns associated with other uze features. 
+      !    to the host cell. Terms added to the row associated with host 
+      !    cell are added to columns associated with other uze features. 
       !    This approach deviates from the approach taken in apt_ac.
       if (this%idxbudfjf /= 0) then
         do i = 1, this%flowbudptr%budterm(this%idxbudfjf)%maxlist
@@ -376,23 +376,32 @@ contains
       !
       ! -- cell to feature connection in global matrix
       do ipos = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
-        n = this%flowbudptr%budterm(this%idxbudgwf)%id1(ipos)
-        j = this%flowbudptr%budterm(this%idxbudgwf)%id2(ipos)
-        iglo = moffset + this%dis%nodes + this%ioffset + n
-        jglo = j + moffset
-        ! -- Note that this is where idxlocnode is set now; it is set
-        !    to the host cell global row rather than the feature global row
-        this%idxlocnode(n) = jglo
+        n = this%flowbudptr%budterm(this%idxbudgwf)%id1(ipos) !< feature number
+        j = this%flowbudptr%budterm(this%idxbudgwf)%id2(ipos) !< cell number
+        iglo = moffset + this%dis%nodes + this%ioffset + n    !< feature row index
+        jglo = j + moffset                                    !< cell row index
+        ! -- Note that this is where idxlocnode is set for uze; it is set
+!!        !    to the host cell global row rather than the feature global row
+!!        this%idxlocnode(n) = jglo
+        !    to the host cell local row index rather than the feature local
+        !    row index                   ! jiffylube: LOCAL row
+        this%idxlocnode(n) = j           ! jiffylube: LOCAL row
+        ! -- for connection ipos in list of feature-cell connections,
+        !    global positions of feature-row diagonal and off-diagonal
+        !    corresponding to the cell
         this%idxdglo(ipos) = matrix_sln%get_position_diag(iglo)
         this%idxoffdglo(ipos) = matrix_sln%get_position(iglo, jglo)
       end do
       !
       ! -- feature to cell connection in global matrix
       do ipos = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
-        n = this%flowbudptr%budterm(this%idxbudgwf)%id1(ipos)
-        j = this%flowbudptr%budterm(this%idxbudgwf)%id2(ipos)
-        iglo = j + moffset
-        jglo = moffset + this%dis%nodes + this%ioffset + n
+        n = this%flowbudptr%budterm(this%idxbudgwf)%id1(ipos) !< feature number
+        j = this%flowbudptr%budterm(this%idxbudgwf)%id2(ipos) !< cell number
+        iglo = j + moffset                                    !< cell row index
+        jglo = moffset + this%dis%nodes + this%ioffset + n    !< feature row index
+        ! -- for connection ipos in list of feature-cell connections,
+        !    global positions of cell-row diagonal and off-diagonal
+        !    corresponding to the feature
         this%idxsymdglo(ipos) = matrix_sln%get_position_diag(iglo)
         this%idxsymoffdglo(ipos) = matrix_sln%get_position(iglo, jglo)
       end do
@@ -400,20 +409,25 @@ contains
       ! -- feature to feature connection in global matrix
       if (this%idxbudfjf /= 0) then
         do ipos = 1, this%flowbudptr%budterm(this%idxbudfjf)%nlist
-          n = this%flowbudptr%budterm(this%idxbudfjf)%id1(ipos) !< position of currently considered uze feature
-          j = this%flowbudptr%budterm(this%idxbudfjf)%id2(ipos) !< position of connected uze feature
+          n = this%flowbudptr%budterm(this%idxbudfjf)%id1(ipos) !< number of currently considered uze feature
+          j = this%flowbudptr%budterm(this%idxbudfjf)%id2(ipos) !< number of connected uze feature
           iglo = moffset + this%dis%nodes + this%ioffset + n !< global position of currently considered uze feature
           jglo = moffset + this%dis%nodes + this%ioffset + j !< global position of connected uze feature
           ! -- if connected uze feature is upstream, find cell that hosts currently 
           !    considered uze feature and map connection to that cell's row
-!!          if (j < n) then
+!!          if (j < n) then           ! jiffylube: determine ordering of features; is id1 always upstream of id2?
             do idxpos = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
-              idxn = this%flowbudptr%budterm(this%idxbudgwf)%id1(idxpos) !< uze object position within uze object list
-              idxj = this%flowbudptr%budterm(this%idxbudgwf)%id2(idxpos) !< gwe cell list position
-              idxjglo = moffset + this%dis%nodes + this%ioffset + idxn !< feature's global position
-              idxiglo = moffset + idxj !< uze cell's global position
-              if (iglo == idxjglo) exit
+              idxn = this%flowbudptr%budterm(this%idxbudgwf)%id1(idxpos) !< feature number
+              idxj = this%flowbudptr%budterm(this%idxbudgwf)%id2(idxpos) !< cell number
+              ! jiffylube: should be able to base search simply on (idxn == n)
+              idxjglo = moffset + this%dis%nodes + this%ioffset + idxn   !< feature row index
+              idxiglo = moffset + idxj                                   !< cell row index
+              if (idxjglo == iglo) exit
             end do
+            ! -- for connection ipos in list of feature-feature connections,
+            !    global positions of host-cell-row entries corresponding to
+            !    (in the same columns as) the feature-id1-row diagonal and the
+            !    feature-id1-row off-diagonal corresponding to feature id2
             this%idxfjfdglo(ipos) = matrix_sln%get_position_diag(idxiglo)
             this%idxfjfoffdglo(ipos) = matrix_sln%get_position(idxiglo, jglo)
 !!          end if  
@@ -434,6 +448,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use TdisModule, only: kper, kstp
     ! -- dummy
     class(GweUzeType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
@@ -452,29 +467,32 @@ contains
     real(DP) :: rrate
     real(DP) :: rhsval
     real(DP) :: hcofval
+    real(DP) :: dummy
 ! ------------------------------------------------------------------------------
     !
     ! -- TODO: This needs to be cleaned up, unitadj should be based on 
     !    scalars that are spatially constant.
     !    At some point, unitadj's name should be adapted to represent the 
-    !    this physics it captures.  For example, could be something like 
+    !    physics it captures.  For example, could be something like 
     !    cpw_vol which denotes volume-based heat capacity.  Its stored 
     !    value would represent cpw * rhow
     if (associated(this%cpw).and.associated(this%rhow)) then
       unitadj = this%bndtype%cpw(1) * this%bndtype%rhow(1)
     end if
+    unitadj = DONE    ! jiffylube: kluge debug
     !
     ! -- add infiltration contribution
     !    uze does not put feature balance coefficients in the row 
     !    associated with the feature.  Instead, these coefficients are
-    !    moved into the row assoicated with cell hosting the uze feature
+    !    moved into the row associated with cell hosting the uze feature
     if (this%idxbudinfl /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudinfl)%nlist
         call this%uze_infl_term(j, n1, n2, rrate, rhsval, hcofval)
-        ipossymd = this%idxsymdglo(j)
-        iloc = this%idxlocnode(n1)  ! for uze idxlocnode stores the host cell global row
+        iloc = this%idxlocnode(n1)  ! for uze idxlocnode stores the host cell local row index
 !!        iposd = this%idxpakdiag(n1)
-        call matrix_sln%add_value_pos(ipossymd, hcofval)
+!!        call matrix_sln%add_value_pos(iposd, hcofval)
+        ipossymoffd = this%idxsymoffdglo(j)
+        call matrix_sln%add_value_pos(ipossymoffd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
@@ -483,10 +501,11 @@ contains
     if (this%idxbudrinf /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudrinf)%nlist
         call this%uze_rinf_term(j, n1, n2, rrate, rhsval, hcofval)
-        ipossymd = this%idxsymdglo(j)
-        iloc = this%idxlocnode(n1)  ! for uze idxlocnode stores the host cell global row
+        iloc = this%idxlocnode(n1)  ! for uze idxlocnode stores the host cell local row index
 !!        iposd = this%idxpakdiag(n1)
-        call matrix_sln%add_value_pos(ipossymd, hcofval)
+!!        call matrix_sln%add_value_pos(iposd, hcofval)
+        ipossymoffd = this%idxsymoffdglo(j)
+        call matrix_sln%add_value_pos(ipossymoffd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
@@ -495,10 +514,11 @@ contains
     if (this%idxbuduzet /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbuduzet)%nlist
         call this%uze_uzet_term(j, n1, n2, rrate, rhsval, hcofval)
-        ipossymd = this%idxsymdglo(j)
-        iloc = this%idxlocnode(n1)  ! for uze idxlocnode stores the host cell global row
+        iloc = this%idxlocnode(n1)  ! for uze idxlocnode stores the host cell local row index
 !!        iposd = this%idxpakdiag(n1)
-        call matrix_sln%add_value_pos(ipossymd, hcofval)
+!!        call matrix_sln%add_value_pos(iposd, hcofval)
+        ipossymoffd = this%idxsymoffdglo(j)
+        call matrix_sln%add_value_pos(ipossymoffd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
@@ -507,10 +527,11 @@ contains
     if (this%idxbudritm /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudritm)%nlist
         call this%uze_ritm_term(j, n1, n2, rrate, rhsval, hcofval)
-        ipossymd = this%idxsymdglo(j)
-        iloc = this%idxlocnode(n1)  ! for uze idxlocnode stores the host cell global row
+        iloc = this%idxlocnode(n1)  ! for uze idxlocnode stores the host cell local row index
 !!        iposd = this%idxpakdiag(n1)
-        call matrix_sln%add_value_pos(ipossymd, hcofval)
+!!        call matrix_sln%add_value_pos(iposd, hcofval)
+        ipossymoffd = this%idxsymoffdglo(j)
+        call matrix_sln%add_value_pos(ipossymoffd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
@@ -525,11 +546,13 @@ contains
 !!      iposd = this%idxpakdiag(n)
 !!      call this%apt_stor_term(n, n1, n2, rrate, rhsval, hcofval)
 !!      call matrix_sln%add_value_pos(iposd, hcofval)
-      ipossymd = this%idxsymdglo(n)  ! TO DO: convince ourselves that "n" is ok here, since it's not aloop over "j"
-      iloc = this%idxlocnode(n)  ! for uze idxlocnode stores the host cell global row
-!!      iposd = this%idxpakdiag(n1)
+      iloc = this%idxlocnode(n)  ! for uze idxlocnode stores the host cell local row index
+      ipossymoffd = this%idxsymoffdglo(n)  ! TO DO: convince ourselves that "n" is ok here, since it's not aloop over "j"
+      if (kper == 3 .and. kstp == 2) then
+        dummy = 2.2
+      end if
       call this%apt_stor_term(n, n1, n2, rrate, rhsval, hcofval)
-      call matrix_sln%add_value_pos(ipossymd, hcofval)
+      call matrix_sln%add_value_pos(ipossymoffd, hcofval)
       rhs(iloc) = rhs(iloc) + rhsval
     end do
     !
@@ -539,11 +562,16 @@ contains
         call this%apt_tmvr_term(j, n1, n2, rrate, rhsval, hcofval)
 !!        iloc = this%idxlocnode(n1)
 !!        iposd = this%idxpakdiag(n1)
+!!
+!!      NOTE: originally was iposd, but changed to idxsymdglo on the first 
+!!            modification.  It was later realized we needed idxsymoffdglo.
+!!           (If this works, consider changing 'ipossymd' to 'ipossymoffd'
+!! 
 !!        call matrix_sln%add_value_pos(iposd, hcofval)
-        ipossymd = this%idxsymdglo(j)
-        iloc = this%idxlocnode(n1)  ! for uze idxlocnode stores the host cell global row
+        iloc = this%idxlocnode(n1)  ! for uze idxlocnode stores the host cell local row index
 !!        iposd = this%idxpakdiag(n1)
-        call matrix_sln%add_value_pos(ipossymd, hcofval)
+        ipossymoffd = this%idxsymoffdglo(j)  !< TODO: Need
+        call matrix_sln%add_value_pos(ipossymoffd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
@@ -552,7 +580,7 @@ contains
     if (this%idxbudfmvr /= 0) then
       do n = 1, this%ncv
         rhsval = this%qmfrommvr(n)
-        iloc = this%idxlocnode(n)
+        iloc = this%idxlocnode(n)  ! for uze idxlocnode stores the host cell local row index
         rhs(iloc) = rhs(iloc) - rhsval
       end do
     end if
@@ -564,11 +592,11 @@ contains
       n = this%flowbudptr%budterm(this%idxbudgwf)%id1(j)
       if (this%iboundpak(n) /= 0) then
         !
-        ! -- set acoef and rhs to negative so they are relative to apt and not gwt
-        qbnd = this%flowbudptr%budterm(this%idxbudgwf)%flow(j)
-        omega = DZERO
-        if (qbnd < DZERO) omega = DONE
-        !
+!!        ! -- set acoef and rhs to negative so they are relative to apt and not gwt
+!!        qbnd = this%flowbudptr%budterm(this%idxbudgwf)%flow(j)   ! jiffylube: shouldn't need these 3 lines
+!!        omega = DZERO
+!!        if (qbnd < DZERO) omega = DONE
+!!        !
         ! -- this code altered from its counterpart appearing in apt; this equates
         !    uze temperature to cell temperature using the feature's row
         iposd = this%idxdglo(j)
@@ -576,11 +604,11 @@ contains
         call matrix_sln%add_value_pos(iposd, DONE)
         call matrix_sln%add_value_pos(iposoffd, -DONE)
         !
-        ! -- add to gwf row for apt connection
-        ipossymd = this%idxsymdglo(j)
-        ipossymoffd = this%idxsymoffdglo(j)
-        call matrix_sln%add_value_pos(ipossymd, -(DONE - omega) * qbnd * unitadj)
-        call matrix_sln%add_value_pos(ipossymoffd, -omega * qbnd * unitadj)
+        !! -- add to gwf row for apt connection (recharge)
+        !!ipossymd = this%idxsymdglo(j)
+        !!ipossymoffd = this%idxsymoffdglo(j)
+        !!call matrix_sln%add_value_pos(ipossymd, -(DONE - omega) * qbnd * unitadj)
+        !!call matrix_sln%add_value_pos(ipossymoffd, -omega * qbnd * unitadj)
       end if
     end do
     !
@@ -595,8 +623,8 @@ contains
         else
           omega = DZERO
         end if
-        iposd = this%idxfjfdglo(j)
-        iposoffd = this%idxfjfoffdglo(j)
+        iposd = this%idxfjfdglo(j)        !< position of feature-id1 column in feature id1's host-cell row
+        iposoffd = this%idxfjfoffdglo(j)  !< position of feature-id2 column in feature id1's host-cell row
         call matrix_sln%add_value_pos(iposd, omega * qbnd * unitadj)
         call matrix_sln%add_value_pos(iposoffd, (DONE - omega) * qbnd * unitadj)
       end do
@@ -958,7 +986,16 @@ contains
     real(DP) :: qbnd
     real(DP) :: ctmp
     real(DP) :: h, r
+    real(DP) :: unitadj
 ! ------------------------------------------------------------------------------
+    ! 
+    ! -- TODO: these unitadj values should be cleaned-up as denoted in
+    !    uze_fc_expanded
+    if (associated(this%cpw).and.associated(this%rhow)) then
+      unitadj = this%bndtype%cpw(1) * this%bndtype%rhow(1)
+    end if
+    unitadj = DONE    ! jiffylube: kluge debug
+    !
     n1 = this%flowbudptr%budterm(this%idxbudinfl)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudinfl)%id2(ientry)
     ! -- note that qbnd is negative for negative infiltration
@@ -972,9 +1009,9 @@ contains
       h = DZERO
       r = -qbnd * ctmp
     end if
-    if (present(rrate)) rrate = qbnd * ctmp
-    if (present(rhsval)) rhsval = r
-    if (present(hcofval)) hcofval = h
+    if (present(rrate)) rrate = qbnd * ctmp * unitadj
+    if (present(rhsval)) rhsval = r * unitadj
+    if (present(hcofval)) hcofval = h * unitadj
     !
     ! -- return
     return
@@ -999,14 +1036,23 @@ contains
     ! -- local
     real(DP) :: qbnd
     real(DP) :: ctmp
+    real(DP) :: unitadj
 ! ------------------------------------------------------------------------------
+    ! 
+    ! -- TODO: these unitadj values should be cleaned-up as denoted in
+    !    uze_fc_expanded
+    if (associated(this%cpw).and.associated(this%rhow)) then
+      unitadj = this%bndtype%cpw(1) * this%bndtype%rhow(1)
+    end if
+    unitadj = DONE    ! jiffylube: kluge debug
+    !
     n1 = this%flowbudptr%budterm(this%idxbudrinf)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudrinf)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudrinf)%flow(ientry)
     ctmp = this%tempinfl(n1)
-    if (present(rrate)) rrate = ctmp * qbnd
-    if (present(rhsval)) rhsval = DZERO
-    if (present(hcofval)) hcofval = qbnd
+    if (present(rrate)) rrate = ctmp * qbnd * unitadj
+    if (present(rhsval)) rhsval = DZERO * unitadj
+    if (present(hcofval)) hcofval = qbnd * unitadj
     !
     ! -- return
     return
@@ -1031,8 +1077,18 @@ contains
     ! -- local
     real(DP) :: qbnd
     real(DP) :: ctmp
-    real(DP) :: omega
+    real(DP) :: omega    
+    real(DP) :: unitadj
 ! ------------------------------------------------------------------------------
+    ! 
+    ! -- TODO: these unitadj values should be cleaned-up as denoted in
+    !    uze_fc_expanded
+    ! -- TODO: Latent heat will likely need to play a role here at some point
+    if (associated(this%cpw).and.associated(this%rhow)) then
+      unitadj = this%bndtype%cpw(1) * this%bndtype%rhow(1)
+    end if
+    unitadj = DONE    ! jiffylube: kluge debug
+    !
     n1 = this%flowbudptr%budterm(this%idxbuduzet)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbuduzet)%id2(ientry)
     ! -- note that qbnd is negative for uzet
@@ -1044,10 +1100,10 @@ contains
       omega = DZERO
     end if
     if (present(rrate)) &
-      rrate = omega * qbnd * this%xnewpak(n1) + &
-              (DONE - omega) * qbnd * ctmp
-    if (present(rhsval)) rhsval = -(DONE - omega) * qbnd * ctmp
-    if (present(hcofval)) hcofval = omega * qbnd
+      rrate = (omega * qbnd * this%xnewpak(n1) + &
+              (DONE - omega) * qbnd * ctmp) * unitadj   ! jiffylube: added parens so unitadj multiplies the whole expression
+    if (present(rhsval)) rhsval = -(DONE - omega) * qbnd * ctmp * unitadj
+    if (present(hcofval)) hcofval = omega * qbnd * unitadj
     !
     ! -- return
     return
@@ -1072,14 +1128,23 @@ contains
     ! -- local
     real(DP) :: qbnd
     real(DP) :: ctmp
+    real(DP) :: unitadj
 ! ------------------------------------------------------------------------------
+    ! 
+    ! -- TODO: these unitadj values should be cleaned-up as denoted in
+    !    uze_fc_expanded
+    if (associated(this%cpw).and.associated(this%rhow)) then
+      unitadj = this%bndtype%cpw(1) * this%bndtype%rhow(1)
+    end if
+    unitadj = DONE    ! jiffylube: kluge debug
+    !
     n1 = this%flowbudptr%budterm(this%idxbudritm)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudritm)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudritm)%flow(ientry)
     ctmp = this%tempinfl(n1)
-    if (present(rrate)) rrate = ctmp * qbnd
-    if (present(rhsval)) rhsval = DZERO
-    if (present(hcofval)) hcofval = qbnd
+    if (present(rrate)) rrate = ctmp * qbnd * unitadj
+    if (present(rhsval)) rhsval = DZERO * unitadj
+    if (present(hcofval)) hcofval = qbnd * unitadj
     !
     ! -- return
     return
