@@ -58,12 +58,12 @@ contains
       if (.not. virt_exg%v_model1%is_local) then
         virt_mem_path = virt_exg%get_vrt_mem_path('NODEM1', '')
         call this%map_data_full(0, 'NODEM1', conn%prim_exchange%memoryPath, &
-                                'NODEM1', virt_mem_path, (/STG_BEFORE_DF/))
+                                'NODEM1', virt_mem_path, (/STG_BEFORE_CON_DF/))
       end if
       if (.not. virt_exg%v_model2%is_local) then
         virt_mem_path = virt_exg%get_vrt_mem_path('NODEM2', '')
         call this%map_data_full(0, 'NODEM2', conn%prim_exchange%memoryPath, &
-                                'NODEM2', virt_mem_path, (/STG_BEFORE_DF/))
+                                'NODEM2', virt_mem_path, (/STG_BEFORE_CON_DF/))
       end if
     end do
 

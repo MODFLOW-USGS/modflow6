@@ -3,6 +3,7 @@ module ListModule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH
   use GenericUtilitiesModule, only: sim_message, stop_with_error
+  implicit none
   private
   public :: ListType, ListNodeType, isEqualIface, arePointersEqual
 
@@ -22,6 +23,7 @@ module ListModule
     procedure, public :: Count
     procedure, public :: ContainsObject
     procedure, public :: DeallocateBackward
+    procedure, public :: GetIndex
     procedure, public :: GetNextItem
     procedure, public :: GetPreviousItem
     generic, public :: GetItem => get_item_by_index, get_current_item
@@ -66,7 +68,6 @@ contains
   ! -- Public type-bound procedures for ListType
 
   subroutine Add(this, objptr)
-    implicit none
     ! -- dummy variables
     class(ListType), intent(inout) :: this
     class(*), pointer, intent(inout) :: objptr
@@ -94,7 +95,6 @@ contains
     !
     !    SPECIFICATIONS:
     ! --------------------------------------------------------------------------
-    implicit none
     ! -- dummy variables
     class(ListType) :: this
     logical, intent(in), optional :: destroy
@@ -142,7 +142,6 @@ contains
     !
     !    SPECIFICATIONS:
     ! --------------------------------------------------------------------------
-    implicit none
     ! -- return
     integer(I4B) :: Count
     ! -- dummy variables
@@ -191,7 +190,6 @@ contains
     !
     !    SPECIFICATIONS:
     ! --------------------------------------------------------------------------
-    implicit none
     ! -- dummy
     class(ListType), target, intent(inout) :: this
     type(ListNodeType), pointer, intent(inout) :: fromNode
@@ -221,8 +219,26 @@ contains
     return
   end subroutine DeallocateBackward
 
+  function GetIndex(this, obj) result(idx)
+    class(ListType), target, intent(inout) :: this
+    class(*), pointer :: obj
+    integer(I4B) :: idx
+    ! local
+    integer(I4B) :: i
+    class(*), pointer :: obj_in_list
+
+    idx = -1
+    do i = 1, this%Count()
+      obj_in_list => this%GetItem(i)
+      if (associated(obj, obj_in_list)) then
+        idx = i
+        exit
+      end if
+    end do
+
+  end function GetIndex
+
   function GetNextItem(this) result(resultobj)
-    implicit none
     class(ListType), target, intent(inout) :: this
     ! result
     class(*), pointer :: resultobj
@@ -233,7 +249,6 @@ contains
   end function GetNextItem
 
   function GetPreviousItem(this) result(resultobj)
-    implicit none
     class(ListType), target, intent(inout) :: this
     ! result
     class(*), pointer :: resultobj
@@ -244,7 +259,6 @@ contains
   end function GetPreviousItem
 
   subroutine InsertAfter(this, objptr, indx)
-    implicit none
     ! -- dummy
     class(ListType), intent(inout) :: this
     class(*), pointer, intent(inout) :: objptr
@@ -282,7 +296,6 @@ contains
 
   subroutine InsertBefore(this, objptr, targetNode)
     ! Insert an object into the list in front of a target node
-    implicit none
     ! -- dummy
     class(ListType), intent(inout) :: this
     class(*), pointer, intent(inout) :: objptr
@@ -316,7 +329,6 @@ contains
   end subroutine InsertBefore
 
   subroutine Next(this)
-    implicit none
     class(ListType), target, intent(inout) :: this
     !
     if (this%currentNodeIndex == 0) then
@@ -340,7 +352,6 @@ contains
   end subroutine Next
 
   subroutine Previous(this)
-    implicit none
     class(ListType), target, intent(inout) :: this
     !
     if (this%currentNodeIndex <= 1) then
@@ -353,7 +364,6 @@ contains
   end subroutine Previous
 
   subroutine Reset(this)
-    implicit none
     class(ListType), target, intent(inout) :: this
     !
     this%currentNode => null()
@@ -362,7 +372,6 @@ contains
   end subroutine Reset
 
   subroutine remove_node_by_index(this, i, destroyValue)
-    implicit none
     ! -- dummy
     class(ListType), intent(inout) :: this
     integer(I4B), intent(in) :: i
@@ -380,7 +389,6 @@ contains
   end subroutine remove_node_by_index
 
   subroutine remove_this_node(this, node, destroyValue)
-    implicit none
     ! -- dummy
     class(ListType), intent(inout) :: this
     type(ListNodeType), pointer, intent(inout) :: node
@@ -431,7 +439,6 @@ contains
   ! -- Private type-bound procedures for ListType
 
   function get_current_item(this) result(resultobj)
-    implicit none
     class(ListType), target, intent(inout) :: this
     ! result
     class(*), pointer :: resultobj
@@ -451,7 +458,6 @@ contains
     !
     !    SPECIFICATIONS:
     ! --------------------------------------------------------------------------
-    implicit none
     ! -- dummy
     class(ListType), intent(inout) :: this
     integer(I4B), intent(in) :: indx
@@ -516,7 +522,6 @@ contains
     !
     !    SPECIFICATIONS:
     ! --------------------------------------------------------------------------
-    implicit none
     ! -- dummy
     class(ListType), intent(inout) :: this
     integer(I4B), intent(in) :: indx
@@ -580,7 +585,6 @@ contains
     !
     !    SPECIFICATIONS:
     ! ------------------------------------------------------------------------
-    implicit none
     class(ListNodeType), intent(inout) :: this
     class(*), pointer :: valueObject
     !
@@ -595,7 +599,6 @@ contains
     !
     !    SPECIFICATIONS:
     ! ------------------------------------------------------------------------
-    implicit none
     class(ListNodeType), intent(inout) :: this
     logical, intent(in), optional :: destroy
     !

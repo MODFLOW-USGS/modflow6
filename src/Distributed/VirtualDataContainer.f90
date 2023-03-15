@@ -57,6 +57,7 @@ module VirtualDataContainerModule
     procedure :: set_orig_rank => vdc_set_orig_rank
     procedure :: get_send_items => vdc_get_send_items
     procedure :: get_recv_items => vdc_get_recv_items
+    procedure :: print_items
     ! protected
     procedure :: create_field
     ! private
@@ -250,6 +251,23 @@ contains
 
   end subroutine get_items_for_stage
 
+  subroutine print_items(this, imon, items)
+    class(VirtualDataContainerType) :: this
+    integer(I4B) :: imon
+    type(STLVecInt) :: items
+    ! local
+    integer(I4B) :: i
+    class(VirtualDataType), pointer :: vdi
+
+    write (imon, *) "=====> items"
+    do i = 1, items%size
+      vdi => get_virtual_data_from_list(this%virtual_data_list, items%at(i))
+      write (imon, *) vdi%var_name, ":", vdi%mem_path
+    end do
+    write (imon, *) "<===== items"
+
+  end subroutine print_items
+
   !> @brief Get virtual memory path for a certain variable
   !<
   function vdc_get_vrt_mem_path(this, var_name, subcomp_name) result(vrt_path)
@@ -353,12 +371,12 @@ contains
     character(len=24) :: cntr_str
 
     if (cntr_type == VDC_UNKNOWN_TYPE) then; cntr_str = "unknown"
-    else if (VDC_GWFMODEL_TYPE == 1) then; cntr_str = "GWF Model"
-    else if (VDC_GWTMODEL_TYPE == 2) then; cntr_str = "GWT Model"
-    else if (VDC_GWFEXG_TYPE == 3) then; cntr_str = "GWF Exchange"
-    else if (VDC_GWTEXG_TYPE == 4) then; cntr_str = "GWT Exchange"
-    else if (VDC_GWFMVR_TYPE == 5) then; cntr_str = "GWF Mover"
-    else if (VDC_GWTMVT_TYPE == 6) then; cntr_str = "GWT Mover"
+    else if (cntr_type == VDC_GWFMODEL_TYPE) then; cntr_str = "GWF Model"
+    else if (cntr_type == VDC_GWTMODEL_TYPE) then; cntr_str = "GWT Model"
+    else if (cntr_type == VDC_GWFEXG_TYPE) then; cntr_str = "GWF Exchange"
+    else if (cntr_type == VDC_GWTEXG_TYPE) then; cntr_str = "GWT Exchange"
+    else if (cntr_type == VDC_GWFMVR_TYPE) then; cntr_str = "GWF Mover"
+    else if (cntr_type == VDC_GWTMVT_TYPE) then; cntr_str = "GWT Mover"
     else; cntr_str = "Undefined"
     end if
 

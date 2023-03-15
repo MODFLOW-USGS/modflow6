@@ -12,6 +12,8 @@ module VirtualDataManagerModule
   use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
   use NumericalExchangeModule, only: NumericalExchangeType, &
                                      GetNumericalExchangeFromList
+  use DisConnExchangeModule, only: DisConnExchangeType, &
+                                   GetDisConnExchangeFromList
   use SpatialModelConnectionModule, only: SpatialModelConnectionType, &
                                           get_smc_from_list
   implicit none
@@ -26,6 +28,7 @@ module VirtualDataManagerModule
     procedure :: create => vds_create
     procedure :: init => vds_init
     procedure :: add_solution => vds_add_solution
+    procedure :: reduce_halo => vds_reduce_halo
     procedure :: synchronize => vds_synchronize
     procedure :: synchronize_sln => vds_synchronize_sln
     procedure :: destroy
@@ -80,7 +83,7 @@ contains
     integer(I4B) :: i, im, ix, ihm, ihx
     class(VirtualSolutionType), pointer :: virt_sol
     class(NumericalModelType), pointer :: num_mod
-    class(NumericalExchangeType), pointer :: num_exg
+    class(DisConnExchangeType), pointer :: exg
     class(SpatialModelConnectionType), pointer :: conn
     integer(I4B) :: model_id, exg_id
     type(STLVecInt) :: model_ids, exchange_ids
@@ -96,23 +99,23 @@ contains
     this%solution_ids(this%nr_solutions) = num_sol%id
     virt_sol%solution_id = num_sol%id
 
-    ! let's start with adding all models and exchanges from the global list
-    ! (we will make them inactive when they are remote and not part of
-    ! our halo)
+    ! 1) adding all local models from the solution
     do im = 1, num_sol%modellist%Count()
       num_mod => GetNumericalModelFromList(num_sol%modellist, im)
       call model_ids%push_back(num_mod%id)
     end do
 
-    ! loop over exchanges in solution and get connections
+    ! 2) adding all local exchanges
+    do ix = 1, num_sol%exchangelist%Count()
+      exg => GetDisConnExchangeFromList(num_sol%exchangelist, ix)
+      if (.not. associated(exg)) cycle ! interface model is handled separately
+      call exchange_ids%push_back_unique(exg%id)
+    end do
+
+    ! 3) add halo models and exchanges from interface models
     do ix = 1, num_sol%exchangelist%Count()
       conn => get_smc_from_list(num_sol%exchangelist, ix)
-      if (.not. associated(conn)) then
-        ! it's a classic exchange, add it
-        num_exg => GetNumericalExchangeFromList(num_sol%exchangelist, ix)
-        call exchange_ids%push_back_unique(num_exg%id)
-        cycle
-      end if
+      if (.not. associated(conn)) cycle
 
       ! it's an interface model based exchanged, get
       ! halo models and halo exchanges from connection
@@ -124,7 +127,6 @@ contains
         exg_id = conn%halo_exchanges%at(ihx)
         call exchange_ids%push_back_unique(exg_id)
       end do
-
     end do
 
     allocate (virt_sol%models(model_ids%size))
@@ -146,11 +148,22 @@ contains
 
   end subroutine vds_add_solution
 
+  !> @brief Reduce the halo for all solutions. This will
+  !< activate the mapping tables in the virtual data items.
+  subroutine vds_reduce_halo(this)
+    class(VirtualDataManagerType) :: this
+
+    ! merge the interface maps over this process
+
+    ! assign reduced maps to virtual data containers
+
+  end subroutine vds_reduce_halo
+
   !> @brief Synchronize the full virtual data store for this stage
   !<
   subroutine vds_synchronize(this, stage)
-    class(VirtualDataManagerType) :: this
-    integer(I4B) :: stage
+    class(VirtualDataManagerType) :: this !< this vdm
+    integer(I4B) :: stage !< the stage to sync
 
     call this%prepare_all(stage)
     call this%link_all(stage)

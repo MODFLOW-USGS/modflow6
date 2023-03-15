@@ -13,20 +13,17 @@ module RunControlModule
   public :: create_seq_run_control
 
   type, public :: RunControlType
-    class(VirtualDataManagerType), pointer :: virtual_data_store !< contains globally accessible data, timely synchronized
-                                                               !! by direct linking (local) or message passing (remote)
-    type(MapperType) :: mapper !< a 'mapper' for filling the interface models: this needs a better name/place
+    class(VirtualDataManagerType), pointer :: virtual_data_mgr !< syncs globally accessible data, timely, by
+                                                               !! linking (local) or message passing (remote)
+    type(MapperType) :: mapper !< a 'mapper' for copying data between two memory addresses
   contains
     procedure :: start => ctrl_start
     procedure :: at_stage => ctrl_at_stage
     procedure :: finish => ctrl_finish
     ! private
     procedure, private :: init_handler
-    procedure, private :: after_mdl_df_handler
-    procedure, private :: before_df_handler
-    procedure, private :: after_df_handler
-    procedure, private :: before_ar_handler
-    procedure, private :: after_ar_handler
+    procedure, private :: before_con_df_handler
+    procedure, private :: after_con_df_handler
     procedure, private :: destroy
   end type RunControlType
 
@@ -42,7 +39,7 @@ contains
   subroutine ctrl_start(this)
     class(RunControlType) :: this
 
-    allocate (this%virtual_data_store)
+    allocate (this%virtual_data_mgr)
 
   end subroutine ctrl_start
 
@@ -72,19 +69,13 @@ contains
 
     if (stage == STG_INIT) then
       call this%init_handler()
-    else if (stage == STG_AFTER_MDL_DF) then
-      call this%after_mdl_df_handler()
-    else if (stage == STG_BEFORE_DF) then
-      call this%before_df_handler()
-    else if (stage == STG_AFTER_DF) then
-      call this%after_df_handler()
-    else if (stage == STG_BEFORE_AR) then
-      call this%before_ar_handler()
-    else if (stage == STG_AFTER_AR) then
-      call this%after_ar_handler()
+    else if (stage == STG_BEFORE_CON_DF) then
+      call this%before_con_df_handler()
+    else if (stage == STG_AFTER_CON_DF) then
+      call this%after_con_df_handler()
     end if
 
-    call this%virtual_data_store%synchronize(stage)
+    call this%virtual_data_mgr%synchronize(stage)
     call this%mapper%scatter(0, stage)
 
   end subroutine ctrl_at_stage
@@ -93,56 +84,58 @@ contains
     use SimVariablesModule, only: simulation_mode
     class(RunControlType), target :: this
 
-    call this%virtual_data_store%create(simulation_mode)
-    call this%virtual_data_store%init()
+    call this%virtual_data_mgr%create(simulation_mode)
+    call this%virtual_data_mgr%init()
     call this%mapper%init()
 
   end subroutine init_handler
 
-  subroutine after_mdl_df_handler(this)
-    class(RunControlType) :: this
-  end subroutine after_mdl_df_handler
-
-  subroutine before_df_handler(this)
+  !> @brief Actions before defining the connections
+  !!
+  !! Set up the virtual data manager:
+  !! The models and exchanges in the halo for this interface
+  !! have been determined. Add them to the virtual data manager
+  !! for synchronization. (After which the interface model
+  !< grids can be constructed)
+  subroutine before_con_df_handler(this)
     class(RunControlType), target :: this
     ! local
     integer(I4B) :: i
     class(*), pointer :: obj_ptr
     class(NumericalSolutionType), pointer :: sol
 
-    ! Interface models are created now and we know which
-    ! remote models and exchanges are required in the
-    ! virtual solution. Also set the synchronization handler
-    ! to the numerical solutions.
+    ! Add (halo) models and exchanges to the virtual
+    ! solutions. Set the synchronization handler
+    ! in the numerical solution.
     do i = 1, basesolutionlist%Count()
       obj_ptr => basesolutionlist%GetItem(i)
       select type (obj_ptr)
       class is (NumericalSolutionType)
         sol => obj_ptr
-        call this%virtual_data_store%add_solution(sol)
+        call this%virtual_data_mgr%add_solution(sol)
         sol%synchronize => rc_solution_sync
         sol%synchronize_ctx => this
       end select
     end do
 
+    ! The remote data fields in exchanges need to
+    ! be copied in from the virtual exchanges
     call this%mapper%add_exchange_vars()
 
-  end subroutine before_df_handler
+  end subroutine before_con_df_handler
 
-  subroutine after_df_handler(this)
+  !> @brief Actions after definining connections
+  !<
+  subroutine after_con_df_handler(this)
     class(RunControlType) :: this
 
+    ! Reduce the halo
+    call this%virtual_data_mgr%reduce_halo()
+
+    ! Add variables in interface models to the mapper
     call this%mapper%add_interface_vars()
 
-  end subroutine after_df_handler
-
-  subroutine before_ar_handler(this)
-    class(RunControlType) :: this
-  end subroutine before_ar_handler
-
-  subroutine after_ar_handler(this)
-    class(RunControlType) :: this
-  end subroutine after_ar_handler
+  end subroutine after_con_df_handler
 
   !> @brief Synchronizes from within numerical solution (delegate)
   !<
@@ -154,7 +147,7 @@ contains
 
     select type (ctx)
     class is (RunControlType)
-      call ctx%virtual_data_store%synchronize_sln(num_sol%id, stage)
+      call ctx%virtual_data_mgr%synchronize_sln(num_sol%id, stage)
       call ctx%mapper%scatter(num_sol%id, stage)
     end select
 
@@ -163,8 +156,8 @@ contains
   subroutine destroy(this)
     class(RunControlType) :: this
 
-    call this%virtual_data_store%destroy()
-    deallocate (this%virtual_data_store)
+    call this%virtual_data_mgr%destroy()
+    deallocate (this%virtual_data_mgr)
 
   end subroutine destroy
 

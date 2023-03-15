@@ -312,7 +312,10 @@ contains
     call connections_cr()
     !
     ! -- synchronize
-    call run_ctrl%at_stage(STG_BEFORE_DF)
+    call run_ctrl%at_stage(STG_AFTER_CON_CR)
+    !
+    ! -- synchronize TODO_MJR: this could be merged with the above, in general
+    call run_ctrl%at_stage(STG_BEFORE_CON_DF)
     !
     ! -- Define each connection
     do ic = 1, baseconnectionlist%Count()
@@ -321,7 +324,7 @@ contains
     end do
     !
     ! -- synchronize
-    call run_ctrl%at_stage(STG_AFTER_DF)
+    call run_ctrl%at_stage(STG_AFTER_CON_DF)
     !
     ! -- Define each solution
     do is = 1, basesolutionlist%Count()
