@@ -369,7 +369,7 @@ contains
     if (this%tsplab%tsptype /= 'GWE') then
       unitadj = DONE
     else
-      unitadj = this%cpw(n) * this%rhow(n)   ! jiffylube: kluge note - check use of unitadj in cnc
+      unitadj = this%cpw(1) * this%rhow(1)   ! jiffylube: kluge note - check use of unitadj in cnc
     end if
     !
     do n = 1, size(this%ratecncin)
