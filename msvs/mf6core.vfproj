@@ -82,7 +82,9 @@
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1dsp1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1dspidm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1mst1.f90"/>
-		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1sfe1.f90"/></Filter>
+		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1sfe1.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1src1.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1uze1.f90"/></Filter>
 		<Filter Name="GroundWaterFlow">
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3api8.f90"/>
@@ -199,6 +201,9 @@
 		<File RelativePath="..\src\Utilities\Libraries\sparskit2\ilut.f90"/>
 		<File RelativePath="..\src\Utilities\Libraries\rcm\rcm.f90"/>
 		<File RelativePath="..\src\Utilities\Libraries\sparsekit\sparsekit.f90"/></Filter>
+		<Filter Name="Matrix">
+		<File RelativePath="..\src\Utilities\Matrix\MatrixBase.f90"/>
+		<File RelativePath="..\src\Utilities\Matrix\SparseMatrix.f90"/></Filter>
 		<Filter Name="Memory">
 		<File RelativePath="..\src\Utilities\Memory\Memory.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemoryHelper.f90"/>
@@ -206,9 +211,6 @@
 		<File RelativePath="..\src\Utilities\Memory\MemoryManager.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemoryManagerExt.f90"/>
 		<File RelativePath="..\src\Utilities\Memory\MemorySetHandler.f90"/></Filter>
-		<Filter Name="Matrix">
-		<File RelativePath="..\src\Utilities\Matrix\MatrixBase.f90"/>
-		<File RelativePath="..\src\Utilities\Matrix\SparseMatrix.f90"/></Filter>
 		<Filter Name="Observation">
 		<File RelativePath="..\src\Utilities\Observation\Obs3.f90"/>
 		<File RelativePath="..\src\Utilities\Observation\ObsContainer.f90"/>

@@ -127,7 +127,7 @@ module TspAptModule
     procedure :: bnd_ad => apt_ad
     procedure :: bnd_cf => apt_cf
     procedure :: bnd_fc => apt_fc
-    procedure, private :: apt_fc_expanded
+    procedure, public :: apt_fc_expanded ! kluge: Made public for uze on 3/3/2023 (reston)
     procedure :: pak_fc_expanded
     procedure, private :: apt_fc_nonexpanded
     procedure, private :: apt_cfupdate
@@ -168,8 +168,8 @@ module TspAptModule
     procedure :: pak_setup_budobj
     procedure :: apt_fill_budobj
     procedure :: pak_fill_budobj
-    procedure, private :: apt_stor_term
-    procedure, private :: apt_tmvr_term
+    procedure, public :: apt_stor_term
+    procedure, public :: apt_tmvr_term
     procedure, private :: apt_fjf_term
     procedure, private :: apt_copy2flowp
     procedure, private :: apt_setup_tableobj
@@ -906,10 +906,10 @@ contains
         n1 = this%flowbudptr%budterm(this%idxbudfjf)%id1(j)
         n2 = this%flowbudptr%budterm(this%idxbudfjf)%id2(j)
         qbnd = this%flowbudptr%budterm(this%idxbudfjf)%flow(j)
-        ! TODO - Clean this out
-        if (associated(this%cpw).and.associated(this%rhow)) then
-          unitadj = this%bndtype%cpw(j) * this%bndtype%rhow(j)
-        end if
+!!        ! TODO - Clean this out   ! jiffylube: commented this out
+!!        if (associated(this%cpw).and.associated(this%rhow)) then
+!!          unitadj = this%bndtype%cpw(j) * this%bndtype%rhow(j)
+!!        end if
         if (qbnd <= DZERO) then
           omega = DONE
         else
@@ -981,9 +981,9 @@ contains
         omega = DZERO
         unitadj = DONE  !TODO: Avoid checking whether solute or energy
         if (qbnd < DZERO) omega = DONE
-        if (associated(this%cpw).and.associated(this%rhow)) then
-          unitadj = this%cpw(j) * this%rhow(j)
-        end if
+!!        if (associated(this%cpw).and.associated(this%rhow)) then
+!!          unitadj = this%cpw(j) * this%rhow(j)   ! jiffylube: kluge debug "!!" ?
+!!        end if
         this%hcof(j) = -(DONE - omega) * unitadj * qbnd
         this%rhs(j) = omega * unitadj * qbnd * this%xnewpak(n)
       end if
@@ -1901,9 +1901,9 @@ contains
       unitadj = DONE  ! Avoid checking whether solute or energy
       igwfnode = this%flowbudptr%budterm(this%idxbudgwf)%id2(j)
       qbnd = this%flowbudptr%budterm(this%idxbudgwf)%flow(j)
-      if (associated(this%cpw).and.associated(this%rhow)) then
-        unitadj = this%cpw(j) * this%rhow(j)
-      end if
+!!      if (associated(this%cpw).and.associated(this%rhow)) then
+!!        unitadj = this%cpw(j) * this%rhow(j)   ! jiffylube: kluge debug "!!" ?
+!!      end if
       if (qbnd <= DZERO) then
         ctmp = this%xnewpak(n)
         this%rhs(j) = unitadj * qbnd * ctmp
@@ -1925,7 +1925,7 @@ contains
       end do
     end if
     !
-    ! -- calulate the feature concentration/temperature
+    ! -- calculate the feature concentration/temperature
     do n = 1, this%ncv
       call this%apt_stor_term(n, n1, n2, rrate, rhsval, hcofval)
       !
@@ -2536,14 +2536,24 @@ contains
     real(DP), intent(inout), optional :: hcofval
     real(DP) :: v0, v1
     real(DP) :: c0, c1
+    real(DP) :: unitadj
+! -----------------------------------------------------------------
+    ! 
+    ! -- TODO: these unitadj values should be cleaned-up as denoted in
+    !    uze_fc_expanded
+    if (associated(this%cpw).and.associated(this%rhow)) then
+      unitadj = this%bndtype%cpw(1) * this%bndtype%rhow(1)
+    end if
+    unitadj = DONE      ! jiffylube: kluge debug
+    !
     n1 = ientry
     n2 = ientry
     call this%get_volumes(n1, v1, v0, delt)
     c0 = this%xoldpak(n1)
     c1 = this%xnewpak(n1)
-    if (present(rrate)) rrate = (-c1 * v1 / delt + c0 * v0 / delt) * this%cpw(n1) * this%rhow(n1)
-    if (present(rhsval)) rhsval = -c0 * v0 / delt * this%cpw(n1) * this%rhow(n1)
-    if (present(hcofval)) hcofval = -v1 / delt * this%cpw(n1) * this%rhow(n1)
+    if (present(rrate)) rrate = (-c1 * v1 / delt + c0 * v0 / delt) * unitadj
+    if (present(rhsval)) rhsval = -c0 * v0 / delt * unitadj
+    if (present(hcofval)) hcofval = -v1 / delt * unitadj
     !
     ! -- return
     return
@@ -2571,6 +2581,8 @@ contains
     if (associated(this%cpw).and.associated(this%rhow)) then
       unitadj = this%cpw(ientry) * this%rhow(ientry)
     end if
+    unitadj = DONE      ! jiffylube: kluge debug
+    !
     ! -- Calculate MVR-related terms 
     n1 = this%flowbudptr%budterm(this%idxbudtmvr)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudtmvr)%id2(ientry)
@@ -2604,8 +2616,9 @@ contains
     ! -- If GWE package, adjust for thermal units
     unitadj = DONE  ! TODO: Avoid checking whether solute or energy
     if (associated(this%cpw).and.associated(this%rhow)) then
-      unitadj = this%cpw(ientry) * this%rhow(ientry)
+      unitadj = this%cpw(1) * this%rhow(1)
     end if
+    unitadj = DONE       ! jiffylube: kluge debug
     !
     n1 = this%flowbudptr%budterm(this%idxbudfjf)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudfjf)%id2(ientry)
@@ -2967,7 +2980,7 @@ contains
               ' must be assigned to a feature with a unique boundname.'
             call store_error(errmsg)
           end if
-        case ('LKT', 'SFT', 'MWT', 'UZT')
+        case ('LKT', 'SFT', 'MWT', 'UZT', 'UZE')
           call this%rp_obs_budterm(obsrv, &
                                    this%flowbudptr%budterm(this%idxbudgwf))
         case ('FLOW-JA-FACE')
@@ -3052,7 +3065,7 @@ contains
             if (this%iboundpak(jj) /= 0) then
               v = this%xnewpak(jj)
             end if
-          case ('LKT', 'SFT', 'MWT', 'UZT')
+          case ('LKT', 'SFT', 'MWT', 'UZT', 'UZE')
             n = this%flowbudptr%budterm(this%idxbudgwf)%id1(jj)
             if (this%iboundpak(n) /= 0) then
               igwfnode = this%flowbudptr%budterm(this%idxbudgwf)%id2(jj)

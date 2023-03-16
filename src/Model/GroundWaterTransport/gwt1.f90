@@ -94,6 +94,7 @@ contains
     use ListsModule, only: basemodellist
     use BaseModelModule, only: AddBaseModelToList
     use SimModule, only: store_error, count_errors
+    use NameFileModule, only: NameFileType
     use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
     use CompilerVersion
     use MemoryManagerModule, only: mem_allocate
@@ -112,7 +113,7 @@ contains
     use GwtDspModule, only: dsp_cr
     use BudgetModule, only: budget_cr
     use TspLabelsModule, only: tsplabels_cr
-    use NameFileModule, only: NameFileType
+
     ! -- dummy
     character(len=*), intent(in) :: filename
     integer(I4B), intent(in) :: id
@@ -1102,25 +1103,25 @@ contains
     call this%NumericalModelType%allocate_scalars(modelname)
     !
     ! -- allocate members that are part of model class
-    call mem_allocate(this%inic, 'INIC', this%memoryPath)
-    call mem_allocate(this%infmi, 'INFMI', this%memoryPath)
-    call mem_allocate(this%inmvt, 'INMVT', this%memoryPath)
+    !call mem_allocate(this%inic, 'INIC', this%memoryPath)
+    !call mem_allocate(this%infmi, 'INFMI', this%memoryPath)
+    !call mem_allocate(this%inmvt, 'INMVT', this%memoryPath)
     call mem_allocate(this%inmst, 'INMST', this%memoryPath)
-    call mem_allocate(this%inadv, 'INADV', this%memoryPath)
+    !call mem_allocate(this%inadv, 'INADV', this%memoryPath)
     call mem_allocate(this%indsp, 'INDSP', this%memoryPath)
-    call mem_allocate(this%inssm, 'INSSM', this%memoryPath)
-    call mem_allocate(this%inoc, 'INOC ', this%memoryPath)
-    call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
+    !call mem_allocate(this%inssm, 'INSSM', this%memoryPath)
+    !call mem_allocate(this%inoc, 'INOC ', this%memoryPath)
+    !call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
     !
-    this%inic = 0
-    this%infmi = 0
-    this%inmvt = 0
+    !this%inic = 0
+    !this%infmi = 0
+    !this%inmvt = 0
     this%inmst = 0
-    this%inadv = 0
+    !this%inadv = 0
     this%indsp = 0
-    this%inssm = 0
-    this%inoc = 0
-    this%inobs = 0
+    !this%inssm = 0
+    !this%inoc = 0
+    !this%inobs = 0
     !
     ! -- return
     return

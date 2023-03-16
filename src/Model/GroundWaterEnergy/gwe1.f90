@@ -7,20 +7,12 @@ module GweModule
   use ConstantsModule, only: LENFTYPE, DZERO, LENPAKLOC
   use VersionModule, only: write_listfile_header
   use NumericalModelModule, only: NumericalModelType
-  use TransportModelModule, only: TransportModelType, cunit, niunit
   use BaseModelModule, only: BaseModelType
   use BndModule, only: BndType, AddBndToList, GetBndFromList
-  use TspIcModule, only: TspIcType
-  use TspFmiModule, only: TspFmiType
-  use TspOcModule, only: TspOcType
-  use TspAdvModule, only: TspAdvType
-  use TspSsmModule, only: TspSsmType
-  use TspMvtModule, only: TspMvtType
-  use TspObsModule, only: TspObsType
   use GweDspModule, only: GweDspType
   use GweMstModule, only: GweMstType
   use BudgetModule, only: BudgetType
-  use TspLabelsModule, only: TspLabelsType
+  use TransportModelModule
   use MatrixModule
 
   implicit none
@@ -32,26 +24,18 @@ module GweModule
 
   type, extends(TransportModelType) :: GweModelType
 
-    type(TspLabelsType), pointer :: tsplab => null() ! object defining the appropriate labels
-    type(TspIcType), pointer :: ic => null() ! initial conditions package
-    type(TspFmiType), pointer :: fmi => null() ! flow model interface
-    type(TspAdvType), pointer :: adv => null() ! advection package
-    type(TspSsmType), pointer :: ssm => null() ! source sink mixing package
-    type(TspMvtType), pointer :: mvt => null() ! mover transport package
-    type(TspOcType), pointer :: oc => null() ! output control package
-    type(TspObsType), pointer :: obs => null() ! observation package
     type(GweMstType), pointer :: mst => null() ! mass storage and transfer package
     type(GweDspType), pointer :: dsp => null() ! dispersion package
-    type(BudgetType), pointer :: budget => null() ! budget object
-    integer(I4B), pointer :: inic => null() ! unit number IC
-    integer(I4B), pointer :: infmi => null() ! unit number FMI
-    integer(I4B), pointer :: inmvt => null() ! unit number MVT
-    integer(I4B), pointer :: inmst => null() ! unit number MST
-    integer(I4B), pointer :: inadv => null() ! unit number ADV
-    integer(I4B), pointer :: indsp => null() ! unit number DSP
-    integer(I4B), pointer :: inssm => null() ! unit number SSM
-    integer(I4B), pointer :: inoc => null() ! unit number OC
-    integer(I4B), pointer :: inobs => null() ! unit number OBS
+    !type(BudgetType), pointer :: budget => null() ! budget object
+    !integer(I4B), pointer :: inic => null() ! unit number IC
+    !integer(I4B), pointer :: infmi => null() ! unit number FMI
+    !integer(I4B), pointer :: inmvt => null() ! unit number MVT
+    !integer(I4B), pointer :: inmst => null() ! unit number MST
+    !integer(I4B), pointer :: inadv => null() ! unit number ADV
+    !integer(I4B), pointer :: indsp => null() ! unit number DSP
+    !integer(I4B), pointer :: inssm => null() ! unit number SSM
+    !integer(I4B), pointer :: inoc => null() ! unit number OC
+    !integer(I4B), pointer :: inobs => null() ! unit number OBS
 
   contains
 
@@ -70,9 +54,9 @@ module GweModule
     procedure :: model_da => gwe_da
     procedure :: model_bdentry => gwe_bdentry
 
-    procedure :: allocate_scalars => allocate_scalars_gwe
+    procedure :: allocate_scalars
     procedure, private :: package_create
-    procedure, private :: ftype_check
+    !procedure, private :: ftype_check
     procedure :: get_iasym => gwe_get_iasym
     procedure, private :: gwe_ot_flow
     procedure, private :: gwe_ot_flowja
@@ -105,6 +89,7 @@ contains
     use ListsModule, only: basemodellist
     use BaseModelModule, only: AddBaseModelToList
     use SimModule, only: store_error, count_errors
+    use NameFileModule, only: NameFileType
     use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
     use CompilerVersion
     use MemoryManagerModule, only: mem_allocate
@@ -123,7 +108,6 @@ contains
     use GweDspModule, only: dsp_cr
     use BudgetModule, only: budget_cr
     use TspLabelsModule, only: tsplabels_cr
-    use NameFileModule, only: NameFileType
     ! -- dummy
     character(len=*), intent(in) :: filename
     integer(I4B), intent(in) :: id
@@ -138,6 +122,7 @@ contains
     class(BaseModelType), pointer :: model
     integer(I4B) :: nwords
     character(len=LINELENGTH), allocatable, dimension(:) :: words
+    
     cunit(10) = 'TMP6 '
 ! ------------------------------------------------------------------------------
     !
@@ -157,7 +142,7 @@ contains
     this%macronym = 'GWE'
     this%id = id
     !
-    ! -- Instantiate generalized labels for later assignment
+    ! -- Instantiate generalized labels
     call tsplabels_cr(this%tsplab, this%name)
     !
     ! -- Open namefile and set iout
@@ -166,13 +151,12 @@ contains
     call namefile_obj%openlistfile(this%iout)
     !
     ! -- Write header to model list file
-    call write_listfile_header(this%iout, 'GROUNDWATER ENERGY TRANSPORT '// &
-                               'MODEL (GWE)')
+    call write_listfile_header(this%iout, 'GROUNDWATER ENERGY TRANSPORT MODEL (GWE)')
     !
     ! -- Open files
     call namefile_obj%openfiles(this%iout)
     !
-    ! -- Process OPTIONS block
+    ! --
     if (size(namefile_obj%opts) > 0) then
       write (this%iout, '(1x,a)') 'NAMEFILE OPTIONS:'
     end if
@@ -227,7 +211,7 @@ contains
     call namefile_obj%get_unitnumber('OBS6', this%inobs, 1)
     !
     ! -- Check to make sure that required ftype's have been specified
-    call this%ftype_check(namefile_obj, indis)
+    call this%TransportModelType%ftype_check(namefile_obj, indis)
     !
     ! -- Create discretization object
     if (indis6 > 0) then
@@ -253,11 +237,10 @@ contains
     call mst_cr(this%mst, this%name, this%inmst, this%iout, this%fmi)
     call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi)
     call dsp_cr(this%dsp, this%name, this%indsp, this%iout, this%fmi)
-    call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, &
-                this%tsplab)
+    call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, this%tsplab)
     call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
-    call tsp_obs_cr(this%obs, this%inobs)
+    call tsp_obs_cr(this%obs, this%inobs)    
     !
     ! -- Create stress packages
     ipakid = 1
@@ -384,6 +367,7 @@ contains
     ! -- Find the position of each connection in the global ia, ja structure
     !    and store them in idxglo.
     call this%dis%dis_mc(this%moffset, this%idxglo, matrix_sln)
+    !
     if (this%indsp > 0) call this%dsp%dsp_mc(this%moffset, matrix_sln)
     !
     ! -- Map any package connections
@@ -846,8 +830,9 @@ contains
     call this%gwe_ot_flowja(this%nja, this%flowja, icbcfl, icbcun)
     if (this%inmst > 0) call this%mst%mst_ot_flow(icbcfl, icbcun)
     if (this%infmi > 0) call this%fmi%fmi_ot_flow(icbcfl, icbcun)
-    if (this%inssm > 0) call this%ssm%ssm_ot_flow(icbcfl=icbcfl, ibudfl=0, &
-                                                  icbcun=icbcun)
+    if (this%inssm > 0) then
+      call this%ssm%ssm_ot_flow(icbcfl=icbcfl, ibudfl=0, icbcun=icbcun)
+    end if
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_ot_model_flows(icbcfl=icbcfl, ibudfl=0, icbcun=icbcun)
@@ -866,8 +851,9 @@ contains
     ! no need to print flowja
     ! no need to print mst
     ! no need to print fmi
-    if (this%inssm > 0) call this%ssm%ssm_ot_flow(icbcfl=icbcfl, ibudfl=ibudfl, &
-                                                  icbcun=0)
+    if (this%inssm > 0) then
+      call this%ssm%ssm_ot_flow(icbcfl=icbcfl, ibudfl=ibudfl, icbcun=0)
+    end if
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_ot_model_flows(icbcfl=icbcfl, ibudfl=ibudfl, icbcun=0)
@@ -1023,15 +1009,7 @@ contains
     end do
     !
     ! -- Scalars
-    call mem_deallocate(this%inic)
-    call mem_deallocate(this%infmi)
-    call mem_deallocate(this%inadv)
-    call mem_deallocate(this%indsp)
-    call mem_deallocate(this%inssm)
-    call mem_deallocate(this%inmst)
-    call mem_deallocate(this%inmvt)
-    call mem_deallocate(this%inoc)
-    call mem_deallocate(this%inobs)
+    call this%TransportModelType%tsp_da()
     !
     ! -- NumericalModelType
     call this%NumericalModelType%model_da()
@@ -1093,11 +1071,12 @@ contains
       packobj => GetBndFromList(this%bndlist, ip)
       if (packobj%iasym /= 0) iasym = 1
     end do
+    !
     ! -- return
     return
   end function gwe_get_iasym
 
-  subroutine allocate_scalars_gwe(this, modelname)
+  subroutine allocate_scalars(this, modelname)
 ! ******************************************************************************
 ! allocate_scalars -- Allocate memory for non-allocatable members
 ! ******************************************************************************
@@ -1115,29 +1094,29 @@ contains
     call this%TransportModelType%allocate_scalars(modelname)
     !
     ! -- allocate members that are part of model class
-    call mem_allocate(this%inic, 'INIC', this%memoryPath)
-    call mem_allocate(this%infmi, 'INFMI', this%memoryPath)
-    call mem_allocate(this%inmvt, 'INMVT', this%memoryPath)
-    call mem_allocate(this%inadv, 'INADV', this%memoryPath)
-    call mem_allocate(this%inssm, 'INSSM', this%memoryPath)
-    call mem_allocate(this%inoc, 'INOC ', this%memoryPath)
-    call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
+    !call mem_allocate(this%inic, 'INIC', this%memoryPath)
+    !call mem_allocate(this%infmi, 'INFMI', this%memoryPath)
+    !call mem_allocate(this%inmvt, 'INMVT', this%memoryPath)
     call mem_allocate(this%inmst, 'INMST', this%memoryPath)
+    !call mem_allocate(this%inadv, 'INADV', this%memoryPath)
     call mem_allocate(this%indsp, 'INDSP', this%memoryPath)
-    !!
-    this%inic = 0
-    this%infmi = 0
-    this%inmvt = 0
-    this%inadv = 0
-    this%inssm = 0
-    this%inoc = 0
-    this%inobs = 0
+    !call mem_allocate(this%inssm, 'INSSM', this%memoryPath)
+    !call mem_allocate(this%inoc, 'INOC ', this%memoryPath)
+    !call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
+    !
+    !this%inic = 0
+    !this%infmi = 0
+    !this%inmvt = 0
     this%inmst = 0
+    !this%inadv = 0
     this%indsp = 0
+    !this%inssm = 0
+    !this%inoc = 0
+    !this%inobs = 0
     !
     ! -- return
     return
-  end subroutine allocate_scalars_gwe
+  end subroutine allocate_scalars
 
   subroutine package_create(this, filtyp, ipakid, ipaknum, pakname, inunit, &
                             iout)
@@ -1155,7 +1134,7 @@ contains
 !    use GweLktModule, only: lkt_create
     use GweSfeModule, only: sfe_create
 !    use GweMwtModule, only: mwt_create
-!    use GweUztModule, only: uzt_create
+    use GweUzeModule, only: uze_create
 !    use ApiModule, only: api_create
     ! -- dummy
     class(GweModelType) :: this
@@ -1189,9 +1168,9 @@ contains
       !case('MWT6')
       !  call mwt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
       !                  pakname, this%fmi)
-      !case('UZT6')
-      !  call uzt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-      !                  pakname, this%fmi)
+    case('UZE6')
+      call uze_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                        pakname, this%fmi, this%tsplab)
       !case('IST6')
       !  call ist_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
       !                  pakname, this%fmi, this%mst)

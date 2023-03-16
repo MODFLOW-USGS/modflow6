@@ -39,7 +39,6 @@ module TransportModelModule
   type, extends(NumericalModelType) :: TransportModelType
 
     ! Generalized transport package types common to either GWT or GWE
-    class(*), pointer :: tspmst => null() !< flavor of MST package associated with this model type (GWT or GWE)
     type(TspAdvType), pointer :: adv => null() ! advection package
     type(TspFmiType), pointer :: fmi => null() ! flow model interface
     type(TspIcType), pointer :: ic => null() ! initial conditions package
@@ -66,6 +65,7 @@ module TransportModelModule
     procedure, public :: ftype_check
     procedure, public :: tsp_cr
     procedure, public :: tsp_df
+    procedure, public :: tsp_da
     procedure, public :: tsp_ac
     procedure, public :: tsp_mc
     procedure, public :: tsp_ar
@@ -91,7 +91,7 @@ module TransportModelModule
     'ADV6 ', 'DSP6 ', 'SSM6 ', '     ', 'CNC6 ', & ! 10
     'OC6  ', 'OBS6 ', 'FMI6 ', 'SRC6 ', 'IST6 ', & ! 15
     'LKT6 ', 'SFT6 ', 'MWT6 ', 'UZT6 ', 'MVT6 ', & ! 20
-    'API6 ', '     ', 'SFE6 ', '     ', '     ', & ! 25
+    'API6 ', '     ', 'SFE6 ', 'UZE6 ', '     ', & ! 25
     75*'     '/
 
     contains
@@ -692,6 +692,35 @@ module TransportModelModule
     ! -- return
     return
   end subroutine allocate_scalars
+  
+  subroutine tsp_da(this)
+! ******************************************************************************
+! tsp_da -- Deallocate
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_deallocate
+    ! -- dummy
+    class(TransportModelType) :: this
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- Scalars
+    call mem_deallocate(this%inic)
+    call mem_deallocate(this%infmi)
+    call mem_deallocate(this%inadv)
+    call mem_deallocate(this%indsp)
+    call mem_deallocate(this%inssm)
+    call mem_deallocate(this%inmst)
+    call mem_deallocate(this%inmvt)
+    call mem_deallocate(this%inoc)
+    call mem_deallocate(this%inobs)
+    !
+    ! -- return
+    return
+  end subroutine tsp_da
   
   subroutine ftype_check(this, namefile_obj, indis)
 ! ******************************************************************************

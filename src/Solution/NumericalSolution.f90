@@ -2511,7 +2511,7 @@ contains
     !    to enable set itestmat to 1 and recompile
     !-------------------------------------------------------
     itestmat = 0
-    if (itestmat == 1) then
+    if (itestmat == 1 .and. this%id == 2) then
       write (fname, fmtfname) this%id, kper, kstp, kiter
       print *, 'Saving amat to: ', trim(adjustl(fname))
 

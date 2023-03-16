@@ -701,7 +701,7 @@ contains
     n2 = this%flowbudptr%budterm(this%idxbudrain)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudrain)%flow(ientry)
     ctmp = this%temprain(n1)
-    if (present(rrate)) rrate = ctmp * qbnd * this%cpw(n1) * this%rhow(n1)
+    if (present(rrate)) rrate = ctmp * qbnd !* this%cpw(n1) * this%rhow(n1)
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
@@ -759,7 +759,7 @@ contains
     n2 = this%flowbudptr%budterm(this%idxbudroff)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudroff)%flow(ientry)
     ctmp = this%temproff(n1)
-    if (present(rrate)) rrate = ctmp * qbnd * this%cpw(n1) * this%rhow(n1)
+    if (present(rrate)) rrate = ctmp * qbnd !* this%cpw(n1) * this%rhow(n1)
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
@@ -790,7 +790,7 @@ contains
     n2 = this%flowbudptr%budterm(this%idxbudiflw)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudiflw)%flow(ientry)
     ctmp = this%tempiflw(n1)
-    if (present(rrate)) rrate = ctmp * qbnd * this%cpw(n1) * this%rhow(n1)
+    if (present(rrate)) rrate = ctmp * qbnd !* this%cpw(n1) * this%rhow(n1)
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
@@ -817,9 +817,9 @@ contains
     n2 = this%flowbudptr%budterm(this%idxbudoutf)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudoutf)%flow(ientry)
     ctmp = this%xnewpak(n1)
-    if (present(rrate)) rrate = ctmp * qbnd * this%cpw(n1) * this%rhow(n1)
+    if (present(rrate)) rrate = ctmp * qbnd !* this%cpw(n1) * this%rhow(n1)
     if (present(rhsval)) rhsval = DZERO
-    if (present(hcofval)) hcofval = qbnd * this%cpw(n1) * this%rhow(n1)
+    if (present(hcofval)) hcofval = qbnd !* this%cpw(n1) * this%rhow(n1)
     !
     ! -- return
     return

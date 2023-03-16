@@ -356,7 +356,7 @@ contains
       !
       ! -- If GWE transport model type, adjust units to energy
       if (this%tsplab%tsptype == "GWE") then
-        unitadj = this%cpw(n) * this%rhow(n)
+        unitadj = this%cpw(n) * this%rhow(n)    ! jiffylube: kluge note - check use of unitadj in ssm
       end if
       !
       ! -- Add terms based on qbnd sign
