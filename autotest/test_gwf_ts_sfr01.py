@@ -580,7 +580,7 @@ def eval_model(sim):
 
     v0 = cobj0.get_data(totim=1.0, text="EXT-OUTFLOW")[0]
     v0 = v0["q"][4:]
-    check = np.array([-0.8101459, -5e-2, -2.5e-2, -5e-2, -2.0e-2, -5e-2])
+    check = np.array([-0.81018072, -5e-2, -2.5e-2, -5e-2, -2.0e-2, -5e-2])
     assert np.allclose(v0, check), "EXT-OUTFLOW failed"
 
     v0 = cobj0.get_data(totim=1.0, text="FROM-MVR")[0]

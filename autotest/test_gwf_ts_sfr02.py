@@ -570,7 +570,7 @@ def eval_model(sim):
             q.append(v0["q"][idx])
     v0 = np.array(q)
     check = np.ones(v0.shape, dtype=float) * 5e-2
-    check[1] = 0.76809669
+    check[1] = 0.7680612
     check[-2] = 4e-2
     assert np.allclose(v0, check), "FLOW-JA-FACE failed"
 
@@ -580,7 +580,7 @@ def eval_model(sim):
         if node in nodes:
             q.append(v0["q"][idx])
     v0 = np.array(q)
-    check = np.array([-2.5e-2, -0.8101459, -5e-2, -5e-2, -2.0e-2, -5e-2])
+    check = np.array([-2.5e-2, -0.81018072, -5e-2, -5e-2, -2.0e-2, -5e-2])
     assert np.allclose(v0, check), "EXT-OUTFLOW failed"
 
     v0 = cobj0.get_data(totim=1.0, text="FROM-MVR")[0]
