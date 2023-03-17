@@ -5592,7 +5592,7 @@ contains
             call this%lak_calculate_external(n, ex)
             this%flwin(n) = this%surfin(n) + ro + qinf + ex + &
                             max(v0, v1) / delt
-            
+
             !
             ! -- compute new lake stage using Newton's method
             resid = this%precip(n) + this%evap(n) + this%withr(n) + ro + &
