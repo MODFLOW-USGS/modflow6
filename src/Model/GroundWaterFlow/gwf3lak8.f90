@@ -25,7 +25,7 @@ module LakModule
   use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
   use SimModule, only: count_errors, store_error, store_error_unit
-  use GenericUtilitiesModule, only: sim_message
+  use GenericUtilitiesModule, only: sim_message, is_same
   use BlockParserModule, only: BlockParserType
   use BaseDisModule, only: DisBaseType
   use SimVariablesModule, only: errmsg
@@ -2733,7 +2733,11 @@ contains
     call this%lak_calculate_sarea(ilak, stage, sa)
     ev = sa * this%evaporation(ilak)
     if (ev > avail) then
-      ev = -avail
+      if (is_same(avail, DPREC)) then
+        ev = DZERO
+      else
+        ev = -avail
+      end if
     else
       ev = -ev
     end if
@@ -5440,15 +5444,17 @@ contains
     end do
     !
     ! -- sum up overland runoff, inflows, and external flows into lake
-    !    (includes lake volume)
+    !    (includes maximum lake volume)
     do n = 1, this%nlakes
       hlak0 = this%xoldpak(n)
+      hlak = this%xnewpak(n)
       call this%lak_calculate_runoff(n, ro)
       call this%lak_calculate_inflow(n, qinf)
       call this%lak_calculate_external(n, ex)
-      ! --
       call this%lak_calculate_vol(n, hlak0, v0)
-      this%flwin(n) = this%surfin(n) + ro + qinf + ex + v0 / delt
+      call this%lak_calculate_vol(n, hlak, v1)
+      this%flwin(n) = this%surfin(n) + ro + qinf + ex + &
+                      max(v0, v1) / delt
     end do
     !
     ! -- sum up inflows from upstream outlets
@@ -5578,11 +5584,15 @@ contains
             !
             ! -- recalculate flwin
             hlak0 = this%xoldpak(n)
+            hlak = this%xnewpak(n)
             call this%lak_calculate_vol(n, hlak0, v0)
+            call this%lak_calculate_vol(n, hlak, v1)
             call this%lak_calculate_runoff(n, ro)
             call this%lak_calculate_inflow(n, qinf)
             call this%lak_calculate_external(n, ex)
-            this%flwin(n) = this%surfin(n) + ro + qinf + ex + v0 / delt
+            this%flwin(n) = this%surfin(n) + ro + qinf + ex + &
+                            max(v0, v1) / delt
+            
             !
             ! -- compute new lake stage using Newton's method
             resid = this%precip(n) + this%evap(n) + this%withr(n) + ro + &
@@ -5591,8 +5601,6 @@ contains
             resid1 = this%precip1(n) + this%evap1(n) + this%withr1(n) + ro + &
                      qinf + ex + this%surfin(n) + &
                      this%surfout1(n) + this%seep1(n)
-
-            !call this%lak_calculate_residual(n, this%xnewpak(n), residb)
             !
             ! -- add storage changes for transient stress periods
             hlak = this%xnewpak(n)
@@ -5601,13 +5609,7 @@ contains
               resid = resid + (v0 - v1) / delt
               call this%lak_calculate_vol(n, hlak + delh, v1)
               resid1 = resid1 + (v0 - v1) / delt
-              !else
-              !  call this%lak_calculate_vol(n, hlak, v1)
-              !  resid = resid - v1 / delt
-              !  call this%lak_calculate_vol(n, hlak+delh, v1)
-              !  resid1 = resid1 - v1 / delt
             end if
-
             !
             ! -- determine the derivative and the stage change
             if (ABS(resid1 - resid) > DZERO) then
@@ -5630,7 +5632,7 @@ contains
             if (iter == 1) this%dh0(n) = dh
             adh = ABS(dh)
             adh0 = ABS(this%dh0(n))
-            if ((ts >= this%en2(n)) .or. (ts <= this%en1(n))) then
+            if ((ts >= this%en2(n)) .or. (ts < this%en1(n))) then
               ! -- use bisection if dh is increasing or updated stage is below the
               !    bottom of the lake
               if ((adh > adh0) .or. (ts - this%lakebot(n)) < DPREC) then
