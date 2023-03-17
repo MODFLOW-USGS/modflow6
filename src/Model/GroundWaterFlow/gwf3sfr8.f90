@@ -2951,7 +2951,7 @@ contains
           case ('DEPTH')
             v = this%depth(n)
           case ('WET-PERIMETER')
-            v = this%calc_perimeter_wet(n, this%depth(n))
+            v = this%calc_perimeter_wet(n, this%depth(n), .true.)
           case ('WET-AREA')
             v = this%calc_area_wet(n, this%depth(n))
           case ('WET-WIDTH')
@@ -3999,7 +3999,7 @@ contains
       else
         r = this%rough(n)
         aw = this%calc_area_wet(n, depth)
-        wp = this%calc_perimeter_wet(n, depth)
+        wp = this%calc_perimeter_wet(n, depth, .true.)
         if (wp > DZERO) then
           rh = aw / wp
         else
@@ -4126,7 +4126,7 @@ contains
             vscratio = this%viscratios(2, n)
           end if
         end if
-        wp = this%calc_perimeter_wet(n, depth)
+        wp = this%calc_perimeter_wet(n, depth, .false.)
         cond = this%hk(n) * vscratio * this%length(n) * wp / this%bthick(n)
       end if
     end if
@@ -4271,6 +4271,7 @@ contains
       else
         derv = DZERO
       end if
+      if (derv > 10) derv = 10
       dd = derv * residual
       d = d - dd
       call this%sfr_calc_qman(n, d, q0)
@@ -5564,13 +5565,14 @@ contains
     !! Function to calculate the wetted perimeter for a SFR package reach.
     !!
   !<
-  function calc_perimeter_wet(this, n, depth)
+  function calc_perimeter_wet(this, n, depth, include_vert_sides)
     ! -- return variable
     real(DP) :: calc_perimeter_wet !< wetted perimeter
     ! -- dummy variables
     class(SfrType) :: this !< SfrType object
     integer(I4B), intent(in) :: n !< reach number
     real(DP), intent(in) :: depth !< reach depth
+    logical, intent(in) :: include_vert_sides !< flag to include wetted vertical sides in wetted perimeter (not needed for conductance calculation)
     ! -- local variables
     integer(I4B) :: npts
     integer(I4B) :: i0
@@ -5584,7 +5586,12 @@ contains
       calc_perimeter_wet = get_wetted_perimeter(npts, this%station(i0:i1), &
                                                 this%xsheight(i0:i1), depth)
     else
-      calc_perimeter_wet = this%station(i0) ! no depth dependence in original implementation
+      if (include_vert_sides) then
+        ! original implementation should account for vertical wetted sides
+        calc_perimeter_wet = this%station(i0) + 2 * depth
+      else
+        calc_perimeter_wet = this%station(i0)
+      end if
     end if
     !
     ! -- return
