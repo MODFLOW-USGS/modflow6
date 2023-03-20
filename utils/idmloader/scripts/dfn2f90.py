@@ -354,6 +354,17 @@ class Dfn2F90:
             required = aggregate_required
         else:
             required = ".true." in required_l
+
+        if self._block_str == "" and blockname.upper() != "OPTIONS":
+            self._block_str += (
+                self._construct_f90_block_statement(
+                    "OPTIONS",
+                    required=False,
+                    aggregate=False,
+                )
+                + "\n"
+            )
+
         self._block_str += (
             self._construct_f90_block_statement(
                 blockname.upper(),
