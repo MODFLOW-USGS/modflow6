@@ -23,6 +23,7 @@ module InterfaceMapModule
     procedure :: init
     procedure :: add
     procedure :: destroy
+    procedure :: print_interface
   end type InterfaceMapType
 
 contains
@@ -100,6 +101,44 @@ contains
     end do
 
   end subroutine add
+
+  !> @brief Dumps interface data to the screen
+  !<
+  subroutine print_interface(this, outunit)
+    class(InterfaceMapType) :: this
+    integer(I4B) :: outunit
+    ! local
+    integer(I4B) :: i, n
+
+    write(outunit,'(a,i0)') "nr. models: ", this%nr_models
+    write(outunit,'(a,i0)') "nr. exchanges: ", this%nr_exchanges
+    do i = 1, this%nr_models
+      write(outunit,'(3a,i0,a)') "model: ", trim(this%model_names(i)), &
+                       "[", this%model_ids(i), "]"
+      write(outunit,*) "node map:"
+      do n = 1, size(this%node_map(i)%src_idx)      
+        write(outunit,'(i7,a,i7)') this%node_map(i)%src_idx(n), &
+                                 " ", this%node_map(i)%tgt_idx(n)
+      end do
+      write(outunit,*) "connection map:"
+      do n = 1, size(this%connection_map(i)%src_idx)      
+        write(outunit,'(i7,a,i7)') this%connection_map(i)%src_idx(n), &
+                         " ", this%connection_map(i)%tgt_idx(n)
+      end do      
+    end do
+
+    do i = 1, this%nr_exchanges
+      write(outunit,'(3a,i0,a)') "exchange: ", trim(this%exchange_names(i)), &
+                       "[", this%exchange_ids(i), "]"
+      write(outunit,*) "exchange map:"
+      do n = 1, size(this%exchange_map(i)%src_idx)      
+        write(outunit,'(i7,a,i7,a,i7)') this%exchange_map(i)%src_idx(n), &
+                         " ", this%exchange_map(i)%tgt_idx(n), &
+                         " ", this%exchange_map(i)%sign(n)
+      end do
+    end do
+
+  end subroutine print_interface
 
   subroutine destroy(this)
     class(InterfaceMapType) :: this
