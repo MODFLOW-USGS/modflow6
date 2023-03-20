@@ -20,18 +20,19 @@ SOURCEDIR13=../src/Timing
 SOURCEDIR14=../src/Utilities
 SOURCEDIR15=../src/Utilities/ArrayRead
 SOURCEDIR16=../src/Utilities/Idm
-SOURCEDIR17=../src/Utilities/Libraries
-SOURCEDIR18=../src/Utilities/Libraries/blas
-SOURCEDIR19=../src/Utilities/Libraries/daglib
-SOURCEDIR20=../src/Utilities/Libraries/rcm
-SOURCEDIR21=../src/Utilities/Libraries/sparsekit
-SOURCEDIR22=../src/Utilities/Libraries/sparskit2
-SOURCEDIR23=../src/Utilities/Matrix
-SOURCEDIR24=../src/Utilities/Memory
-SOURCEDIR25=../src/Utilities/Observation
-SOURCEDIR26=../src/Utilities/OutputControl
-SOURCEDIR27=../src/Utilities/TimeSeries
-SOURCEDIR28=../src/Utilities/Vector
+SOURCEDIR17=../src/Utilities/Idm/selector
+SOURCEDIR18=../src/Utilities/Libraries
+SOURCEDIR19=../src/Utilities/Libraries/blas
+SOURCEDIR20=../src/Utilities/Libraries/daglib
+SOURCEDIR21=../src/Utilities/Libraries/rcm
+SOURCEDIR22=../src/Utilities/Libraries/sparsekit
+SOURCEDIR23=../src/Utilities/Libraries/sparskit2
+SOURCEDIR24=../src/Utilities/Matrix
+SOURCEDIR25=../src/Utilities/Memory
+SOURCEDIR26=../src/Utilities/Observation
+SOURCEDIR27=../src/Utilities/OutputControl
+SOURCEDIR28=../src/Utilities/TimeSeries
+SOURCEDIR29=../src/Utilities/Vector
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -61,7 +62,8 @@ ${SOURCEDIR24} \
 ${SOURCEDIR25} \
 ${SOURCEDIR26} \
 ${SOURCEDIR27} \
-${SOURCEDIR28} 
+${SOURCEDIR28} \
+${SOURCEDIR29} 
 
 .SUFFIXES: .f90 .F90 .o
 
@@ -98,27 +100,30 @@ $(OBJDIR)/VectorBase.o \
 $(OBJDIR)/Sparse.o \
 $(OBJDIR)/DisvGeom.o \
 $(OBJDIR)/ArrayReaders.o \
+$(OBJDIR)/InputDefinition.o \
 $(OBJDIR)/TimeSeriesManager.o \
 $(OBJDIR)/SmoothingFunctions.o \
 $(OBJDIR)/MatrixBase.o \
 $(OBJDIR)/ListReader.o \
 $(OBJDIR)/Connections.o \
-$(OBJDIR)/InputDefinition.o \
-$(OBJDIR)/ArrayReaderBase.o \
-$(OBJDIR)/DiscretizationBase.o \
-$(OBJDIR)/STLVecInt.o \
 $(OBJDIR)/simnamidm.o \
 $(OBJDIR)/gwt1dspidm.o \
 $(OBJDIR)/gwf3npf8idm.o \
 $(OBJDIR)/gwf3disv8idm.o \
 $(OBJDIR)/gwf3disu8idm.o \
 $(OBJDIR)/gwf3dis8idm.o \
+$(OBJDIR)/ArrayReaderBase.o \
+$(OBJDIR)/DiscretizationBase.o \
+$(OBJDIR)/STLVecInt.o \
+$(OBJDIR)/IdmSimDfnSelector.o \
+$(OBJDIR)/IdmGwtDfnSelector.o \
+$(OBJDIR)/IdmGwfDfnSelector.o \
 $(OBJDIR)/Integer2dReader.o \
 $(OBJDIR)/TimeArray.o \
 $(OBJDIR)/ObsOutput.o \
 $(OBJDIR)/StructVector.o \
 $(OBJDIR)/IdmLogger.o \
-$(OBJDIR)/InputDefinitionSelector.o \
+$(OBJDIR)/IdmDfnSelector.o \
 $(OBJDIR)/Integer1dReader.o \
 $(OBJDIR)/Double2dReader.o \
 $(OBJDIR)/Double1dReader.o \
@@ -128,6 +133,7 @@ $(OBJDIR)/Observe.o \
 $(OBJDIR)/StructArray.o \
 $(OBJDIR)/ModflowInput.o \
 $(OBJDIR)/LayeredArrayReader.o \
+$(OBJDIR)/IdmDfnSelectorUtils.o \
 $(OBJDIR)/TimeArraySeriesLink.o \
 $(OBJDIR)/ObsUtility.o \
 $(OBJDIR)/ObsContainer.o \

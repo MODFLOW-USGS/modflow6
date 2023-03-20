@@ -226,11 +226,16 @@
 		<File RelativePath="..\src\Utilities\ArrayRead\Integer2dReader.f90"/>
 		<File RelativePath="..\src\Utilities\ArrayRead\LayeredArrayReader.f90"/></Filter>
 		<Filter Name="Idm">
+		<Filter Name="selector">
+		<File RelativePath="J:\home\mreno\tmp4\modflow6\src\Utilities\Idm\selector\IdmDfnSelector.f90"/>
+		<File RelativePath="J:\home\mreno\tmp4\modflow6\src\Utilities\Idm\selector\IdmGwfDfnSelector.f90"/>
+		<File RelativePath="J:\home\mreno\tmp4\modflow6\src\Utilities\Idm\selector\IdmGwtDfnSelector.f90"/>
+		<File RelativePath="J:\home\mreno\tmp4\modflow6\src\Utilities\Idm\selector\IdmSimDfnSelector.f90"/></Filter>
+		<File RelativePath="..\src\Utilities\Idm\IdmDfnSelectorUtils.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\IdmLogger.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\IdmMf6FileLoader.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\IdmSimulation.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\InputDefinition.f90"/>
-		<File RelativePath="..\src\Utilities\Idm\InputDefinitionSelector.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\LoadMf6FileType.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\ModflowInput.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\StructArray.f90"/>
