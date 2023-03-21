@@ -1,7 +1,8 @@
 module EvtModule
   !
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, DONE, LENFTYPE, LENPACKAGENAME, MAXCHARLEN
+  use ConstantsModule, only: DZERO, DONE, LENFTYPE, LENPACKAGENAME, MAXCHARLEN, &
+                             IWETLAKE
   use MemoryHelperModule, only: create_mem_path
   use BndModule, only: BndType
   use SimModule, only: store_error, store_error_unit, count_errors
@@ -628,7 +629,7 @@ contains
       this%hcof(i) = DZERO
       !
       ! -- if ibound is positive and not overlain by a lake, then add terms
-      if (this%ibound(node) > 0 .and. this%ibound(node) /= 10000) then
+      if (this%ibound(node) > 0 .and. this%ibound(node) /= IWETLAKE) then
         !
         c = this%bound(2, i) ! RATE -- max. ET rate
         s = this%bound(1, i) ! SURFACE -- ET surface elevation
@@ -743,7 +744,7 @@ contains
       n = this%nodelist(i)
       if (n <= 0) cycle
       ! -- reset hcof and rhs for excluded cells
-      if (this%ibound(n) == 10000) then
+      if (this%ibound(n) == IWETLAKE) then
         this%hcof(i) = DZERO
         this%rhs(i) = DZERO
         cycle

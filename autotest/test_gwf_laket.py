@@ -12,8 +12,14 @@ from framework import TestFramework
 from simulation import TestSimulation
 
 ex = [
-    "gwf_laket",
+    "gwf_laket01",
+    "gwf_laket02",
+    "gwf_laket03",
 ]
+
+bedleak = [0.0, 1.0, 1.0]
+strt = [5.0, 6.0, 4.0]
+lakestage = [6.0, 5.0, 6.0]
 
 
 def get_model(idx, ws):
@@ -57,7 +63,7 @@ def get_model(idx, ws):
 
     ims = flopy.mf6.ModflowIms(
         sim,
-        print_option="SUMMARY",
+        print_option="ALL",
         complexity="simple",
         linear_acceleration="BICGSTAB",
     )
@@ -79,9 +85,7 @@ def get_model(idx, ws):
     )
 
     # initial conditions
-    strt = np.zeros((nlay, nrow, ncol), dtype=float)
-    strt += top
-    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt[idx])
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -95,7 +99,13 @@ def get_model(idx, ws):
 
     sy = 0.3
     ss = 1e-5
-    sto = flopy.mf6.ModflowGwfsto(gwf, sy=sy, ss=ss, iconvert=1)
+    sto = flopy.mf6.ModflowGwfsto(
+        gwf,
+        ss_confined_only=False,
+        sy=sy,
+        ss=ss,
+        iconvert=1,
+    )
 
     lake_vconnect = [
         (0, 0, 0),
@@ -103,14 +113,12 @@ def get_model(idx, ws):
     nlakeconn = 1
 
     # pak_data = [lakeno, strt, nlakeconn]
-    initial_stage = top + 1.0
-    pak_data = [(0, initial_stage, nlakeconn)]
+    pak_data = [(0, lakestage[idx], nlakeconn)]
 
-    bedleak = 0.0  # "None"
     belev = top
     con_data = [
-        (0, i, idx, "VERTICAL", bedleak, belev, -99, -99, -99)
-        for i, idx in enumerate(lake_vconnect)
+        (0, i, cellid, "VERTICAL", bedleak[idx], belev, -99, -99, -99)
+        for i, cellid in enumerate(lake_vconnect)
     ]
 
     # period data
@@ -146,9 +154,17 @@ def get_model(idx, ws):
         connectiondata=con_data,
         perioddata=p_data,
         observations=lak_obs,
+        package_convergence_filerecord=f"{gwfname}.lak.convergence.csv",
     )
 
-    # chd = flopy.mf6.modflow.ModflowGwfchd(gwf, stress_period_data=[(0, 0, 0, top + 0.1),])
+    if idx > 0:
+        ghb = flopy.mf6.modflow.ModflowGwfghb(
+            gwf,
+            stress_period_data=[
+                (0, 0, 0, strt[idx], 1000.0),
+            ],
+        )
+        # chd = flopy.mf6.modflow.ModflowGwfchd(gwf, stress_period_data=[(0, 0, 0, strt[idx]),])
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
@@ -170,43 +186,76 @@ def build_model(idx, dir):
 def eval_laket(sim):
     msg = "Evaluating Lake ET. "
 
-    fpth = os.path.join(sim.simpath, "gwf_laket.lak.obs.csv")
+    fpth = os.path.join(sim.simpath, f"{sim.name}.lak.obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
         assert False, f'could not load data from "{fpth}"'
 
-    obs = [
-        (1.000000000000, 5.9000000000000004, -0.1),
-        (2.000000000000, 5.8000000000000007, -0.1),
-        (3.000000000000, 5.7000000000000011, -0.1),
-        (4.000000000000, 5.6000000000000014, -0.1),
-        (5.000000000000, 5.5000000000000018, -0.1),
-        (6.000000000000, 5.4000000000000021, -0.1),
-        (7.000000000000, 5.3000000000000025, -0.1),
-        (8.000000000000, 5.2000000000000028, -0.1),
-        (9.000000000000, 5.1000000000000032, -0.1),
-        (10.00000000000, 5.0000000000000036, -0.1),
-        (11.00000000000, 5.0000000000000000, -0.35527136788005009e-14),
-        (12.00000000000, 5.0999999999999996, -0.1),
-        (13.00000000000, 5.1999999999999993, -0.1),
-        (14.00000000000, 5.2999999999999989, -0.1),
-        (15.00000000000, 5.3999999999999986, -0.1),
-        (16.00000000000, 5.4999999999999982, -0.1),
-        (17.00000000000, 5.5999999999999979, -0.1),
-        (18.00000000000, 5.6999999999999975, -0.1),
-        (19.00000000000, 5.7999999999999972, -0.1),
-        (20.00000000000, 5.8999999999999968, -0.1),
-        (21.00000000000, 5.9999999999999964, -0.1),
-        (22.00000000000, 6.0999999999999961, -0.1),
-    ]
+    dtype = [("time", float), ("stage", float), ("evap", float)]
+    obs = {
+        0: np.array(
+            [
+                (1.000000000000, 5.9000000000000004, -0.1),
+                (2.000000000000, 5.8000000000000007, -0.1),
+                (3.000000000000, 5.7000000000000011, -0.1),
+                (4.000000000000, 5.6000000000000014, -0.1),
+                (5.000000000000, 5.5000000000000018, -0.1),
+                (6.000000000000, 5.4000000000000021, -0.1),
+                (7.000000000000, 5.3000000000000025, -0.1),
+                (8.000000000000, 5.2000000000000028, -0.1),
+                (9.000000000000, 5.1000000000000032, -0.1),
+                (10.00000000000, 5.0000000000000036, -0.1),
+                (11.00000000000, 5.0000000000000000, -0.35527136788005009e-14),
+                (12.00000000000, 5.0999999999999996, -0.1),
+                (13.00000000000, 5.1999999999999993, -0.1),
+                (14.00000000000, 5.2999999999999989, -0.1),
+                (15.00000000000, 5.3999999999999986, -0.1),
+                (16.00000000000, 5.4999999999999982, -0.1),
+                (17.00000000000, 5.5999999999999979, -0.1),
+                (18.00000000000, 5.6999999999999975, -0.1),
+                (19.00000000000, 5.7999999999999972, -0.1),
+                (20.00000000000, 5.8999999999999968, -0.1),
+                (21.00000000000, 5.9999999999999964, -0.1),
+                (22.00000000000, 6.0999999999999961, -0.1),
+            ],
+            dtype=dtype,
+        ),
+        1: np.array(
+            [
+                (1.000000000000, 5.0571204119063822, -0.1),
+                (2.000000000000, 5.1060819299607383, -0.1),
+                (3.000000000000, 5.1480499445118104, -0.1),
+                (4.000000000000, 5.1840233847838952, -0.1),
+                (5.000000000000, 5.2148584962098710, -0.1),
+                (6.000000000000, 5.2412892209184587, -0.1),
+                (7.000000000000, 5.2639446671391816, -0.1),
+                (8.000000000000, 5.2833640833345035, -0.1),
+                (9.000000000000, 5.3000096934757943, -0.1),
+                (10.00000000000, 5.3142776989703462, -0.1),
+                (11.00000000000, 5.3265077091090305, -0.1),
+                (12.00000000000, 5.5084234768802327, -0.1),
+                (13.00000000000, 5.6643549898781638, -0.1),
+                (14.00000000000, 5.7980137542817234, -0.1),
+                (15.00000000000, 5.9125811368359047, -0.1),
+                (16.00000000000, 6.0107840882389674, -0.1),
+                (17.00000000000, 6.0949600504480319, -0.1),
+                (18.00000000000, 6.1671125928369053, -0.1),
+                (19.00000000000, 6.2289591014666277, -0.1),
+                (20.00000000000, 6.2819716565762063, -0.1),
+                (21.00000000000, 6.3274120712659299, -0.1),
+                (22.00000000000, 6.3663619253694703, -0.1),
+            ],
+            dtype=dtype,
+        ),
+    }
 
-    obs = np.array(
-        obs, dtype=[("time", float), ("stage", float), ("evap", float)]
-    )
-    
-    evap_compare = np.allclose(obs["evap"], tc["EVAP"])
-    stage_compare = np.allclose(obs["stage"], tc["LAKESTAGE"])
+    if sim.idxsim in (0, 1,):
+        evap_compare = np.allclose(obs[sim.idxsim]["evap"], tc["EVAP"])
+        stage_compare = np.allclose(obs[sim.idxsim]["stage"], tc["LAKESTAGE"])
+    else:
+        evap_compare = True
+        stage_compare = True
 
     sim.success = True
     if not evap_compare:
@@ -235,4 +284,3 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         ),
         str(function_tmpdir),
     )
-

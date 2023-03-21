@@ -48,6 +48,7 @@ module ConstantsModule
   integer(I4B), parameter :: NAMEDBOUNDFLAG = -9 !< named bound flag
   integer(I4B), parameter :: LENPAKLOC = 34 !< maximum length of a package location
   integer(I4B), parameter :: IZERO = 0 !< integer constant zero
+  integer(I4B), parameter :: IWETLAKE = 10000 !< integer constant for a dry lake
   !
   ! -- file constants
   integer(I4B), parameter :: IUOC = 999 !< open/close file unit number

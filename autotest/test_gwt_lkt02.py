@@ -365,7 +365,7 @@ def eval_results(sim):
     # load the lake concentrations and make sure all values are correct
     cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")
     clak = cobj.get_data()
-    answer = np.array([2.20913605e-01, 2.06598617e-03, 1.64112298e-05])
+    answer = np.array([2.20917292e-01, 2.06602236e-03, 1.64115202e-05])
     assert np.allclose(clak, answer), f"{clak} {answer}"
 
     # load the aquifer concentrations and make sure all values are correct
@@ -376,12 +376,12 @@ def eval_results(sim):
     answer = np.array(
         [
             1.00000000e02,
-            8.50686091e00,
-            5.71594204e-01,
-            1.30062708e-02,
-            2.38399700e-04,
-            3.30711200e-06,
-            7.33445279e-08,
+            8.50692758e00,
+            5.71603342e-01,
+            1.30064549e-02,
+            2.38402430e-04,
+            3.30714374e-06,
+            7.33450747e-08,
         ]
     )
     assert np.allclose(caq, answer), f"{caq.flatten()} {answer}"
@@ -394,46 +394,46 @@ def eval_results(sim):
         assert False, f'could not load data from "{fpth}"'
     res = tc["LKT1CONC"]
     answer = [
-        0.00418347,
-        0.01249363,
-        0.02487425,
-        0.04126975,
-        0.06162508,
-        0.0858858,
-        0.113998,
-        0.1459085,
-        0.1815644,
-        0.2209136,
+        0.00418356,
+        0.01249386,
+        0.02487472,
+        0.04127051,
+        0.06162619,
+        0.08588733,
+        0.114,
+        0.145911,
+        0.1815675,
+        0.2209173,
     ]
     answer = np.array(answer)
     assert np.allclose(res, answer), f"{res} {answer}"
     res = tc["LKT1STOR"]
     answer = [
-        -0.1988482,
-        -0.3949968,
-        -0.588474,
-        -0.779308,
-        -0.9675264,
-        -1.153157,
-        -1.336226,
-        -1.516762,
-        -1.694791,
-        -1.87034,
+        -0.198852,
+        -0.3950041,
+        -0.5884846,
+        -0.7793216,
+        -0.9675429,
+        -1.153176,
+        -1.336248,
+        -1.516786,
+        -1.694817,
+        -1.870368,
     ]
     answer = np.array(answer)
     assert np.allclose(res, answer), f"{res} {answer}"
     res = tc["LKT1MYLAKE1"]
     answer = [
-        0.1992666,
-        0.3962462,
-        0.5909615,
-        0.7834349,
-        0.9736889,
-        1.161745,
-        1.347626,
-        1.531353,
-        1.712948,
-        1.892431,
+        0.1992704,
+        0.3962535,
+        0.5909721,
+        0.7834487,
+        0.9737055,
+        1.161765,
+        1.347648,
+        1.531377,
+        1.712974,
+        1.89246,
     ]
     answer = np.array(answer)
     assert np.allclose(res, answer), f"{res} {answer}"
@@ -461,8 +461,8 @@ def eval_results(sim):
     # check the flow-ja-face terms
     res = bobj.get_data(text="flow-ja-face")[-1]
     answer = [
-        (1, 2, -0.02209136),
-        (2, 1, 0.02209136),
+        (1, 2, -0.02209173),
+        (2, 1, 0.02209173),
         (2, 3, -0.0002066),
         (3, 2, 0.0002066),
     ]
@@ -473,9 +473,9 @@ def eval_results(sim):
     # check the storage terms, which include the total mass in the lake as an aux variable
     res = bobj.get_data(text="storage")[-1]
     answer = [
-        (1, 1, -1.87033970e00, 1.05004295e-01),
-        (2, 2, -2.18847617e-02, 8.85953709e-04),
-        (3, 3, -2.10987695e-04, 6.88867607e-06),
+        (1, 1, -1.87036784e00, 1.05006009e-01),
+        (2, 2, -2.18851269e-02, 8.85969084e-04),
+        (3, 3, -2.10991316e-04, 6.88879732e-06),
     ]
     dt = [("node", "<i4"), ("node2", "<i4"), ("q", "<f8"), ("MASS", "<f8")]
     answer = np.array(answer, dtype=dt)
