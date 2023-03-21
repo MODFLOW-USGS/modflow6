@@ -30,7 +30,7 @@ contains
     has_converged = .false.
     global_max_dvc = huge(0.0)
     call MPI_Allreduce(max_dvc, global_max_dvc, 1, MPI_DOUBLE_PRECISION, &
-                       MPI_MIN, MF6_COMM_WORLD, ierr)
+                       MPI_MAX, MF6_COMM_WORLD, ierr)
     if (global_max_dvc <= this%dvclose) then
       has_converged = .true.
     end if

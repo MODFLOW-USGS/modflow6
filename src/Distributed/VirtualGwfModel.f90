@@ -168,7 +168,7 @@ contains
                       (/STG_BEFORE_AR/), MAP_NODE_TYPE)
       else
         call this%map(this%npf_wetdry%to_base(), 0, &
-                      (/STG_BEFORE_AR/), MAP_NODE_TYPE)
+                      (/STG_NEVER/), MAP_NODE_TYPE)
       end if
 
     end if

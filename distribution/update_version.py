@@ -41,6 +41,7 @@ from typing import NamedTuple, Optional
 
 import pytest
 from filelock import FileLock
+import yaml
 
 from utils import get_modified_time
 
@@ -54,6 +55,7 @@ touched_file_paths = [
     project_root_path / "doc" / "version.py",
     project_root_path / "README.md",
     project_root_path / "DISCLAIMER.md",
+    project_root_path / "CITATION.cff",
     project_root_path / "code.json",
     project_root_path / "src" / "Utilities" / "version.f90",
 ]
@@ -291,6 +293,25 @@ def update_readme_and_disclaimer(
     log_update(disclaimer_path, release_type, version)
 
 
+def update_citation_cff(release_type: ReleaseType, timestamp: datetime, version: Version):
+    path = project_root_path / "CITATION.cff"
+    citation = yaml.safe_load(path.read_text())
+
+    # update version and date-released
+    citation["version"] = str(version)
+    citation["date-released"] = timestamp.strftime("%Y-%m-%d")
+
+    with open(path, "w") as f:
+        yaml.safe_dump(
+            citation,
+            f,
+            allow_unicode=True,
+            default_flow_style=False,
+            sort_keys=False,
+        )
+    log_update(path, release_type, version)
+
+
 def update_codejson(release_type: ReleaseType, timestamp: datetime, version: Version):
     path = project_root_path / "code.json"
     with open(path, "r") as f:
@@ -336,6 +357,7 @@ def update_version(
             update_version_tex(release_type, timestamp, version)
             update_version_f90(release_type, timestamp, version)
             update_readme_and_disclaimer(release_type, timestamp, version)
+            update_citation_cff(release_type, timestamp, version)
             update_codejson(release_type, timestamp, version)
     finally:
         lock_path.unlink(missing_ok=True)

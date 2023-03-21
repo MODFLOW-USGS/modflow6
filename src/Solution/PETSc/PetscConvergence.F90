@@ -8,6 +8,7 @@ module PetscConvergenceModule
 
   public :: petsc_check_convergence
   public :: petsc_add_context
+  public :: petsc_remove_context
 
   type, public :: PetscContextType
     Vec :: x_old
@@ -20,19 +21,34 @@ module PetscConvergenceModule
 contains
 
   !> @brief Add a context to the static list. The
-  !< generated idx can then be used as a handle when
-  !< calling 'KSPSetConvergenceTest'
+  !! generated idx can then be used as a handle when
+  !! calling 'KSPSetConvergenceTest'. Make sure to remove
+  !< the context from this global list when done.
   subroutine petsc_add_context(ctx, idx)
     class(PetscContextType), pointer, intent(in) :: ctx
     integer(I4B), intent(out) :: idx
     ! local
-    class(*), pointer :: ctx_ptr
+    class(*), pointer :: obj_ptr
 
-    ctx_ptr => ctx
-    call ctx_list%Add(ctx_ptr)
+    obj_ptr => ctx
+    call ctx_list%Add(obj_ptr)
     idx = ctx_list%Count()
 
   end subroutine petsc_add_context
+
+  !> @brief This will clear the list with context pointers
+  !<
+  subroutine petsc_remove_context(ctx)
+    class(PetscContextType), pointer, intent(in) :: ctx
+    ! local
+    integer(I4B) :: idx
+    class(*), pointer :: obj_ptr
+
+    obj_ptr => ctx
+    idx = ctx_list%GetIndex(obj_ptr)
+    call ctx_list%RemoveNode(idx, .false.)
+
+  end subroutine petsc_remove_context
 
   !> @brief Routine to check the convergence. This is called
   !< from within PETSc.

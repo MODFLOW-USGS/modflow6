@@ -177,45 +177,45 @@ contains
         call this%map(this%dis_nodeuser%to_base(), 0, &
                       (/STG_NEVER/), MAP_ALL_TYPE)
       end if
-    else if (stage == STG_BEFORE_DF) then
+    else if (stage == STG_BEFORE_CON_DF) then
 
       nodes = this%dis_nodes%get()
       nja = this%dis_nja%get()
       njas = this%dis_njas%get()
       ! DIS
       call this%map(this%dis_xorigin%to_base(), &
-                    (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
       call this%map(this%dis_yorigin%to_base(), &
-                    (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
       call this%map(this%dis_angrot%to_base(), &
-                    (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
       call this%map(this%dis_xc%to_base(), nodes, &
-                    (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
       call this%map(this%dis_yc%to_base(), nodes, &
-                    (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
       call this%map(this%dis_top%to_base(), nodes, &
-                    (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
       call this%map(this%dis_bot%to_base(), nodes, &
-                    (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
       call this%map(this%dis_area%to_base(), nodes, &
-                    (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
       ! CON
       call this%map(this%con_ia%to_base(), nodes + 1, &
-                    (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
       call this%map(this%con_ja%to_base(), nja, &
-                    (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
       call this%map(this%con_jas%to_base(), nja, &
-                    (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
       call this%map(this%con_ihc%to_base(), njas, &
-                    (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
       call this%map(this%con_hwva%to_base(), njas, &
-                    (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
       call this%map(this%con_cl1%to_base(), njas, &
-                    (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
       call this%map(this%con_cl2%to_base(), njas, &
-                    (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
       call this%map(this%con_anglex%to_base(), njas, &
-                    (/STG_BEFORE_DF/), MAP_ALL_TYPE)
+                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
     end if
 
   end subroutine vm_prepare_stage

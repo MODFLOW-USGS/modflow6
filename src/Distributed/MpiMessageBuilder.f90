@@ -1,5 +1,5 @@
 module MpiMessageBuilderModule
-  use KindModule, only: I4B
+  use KindModule, only: I4B, LGP
   use MemoryTypeModule, only: MemoryType
   use STLVecIntModule
   use VirtualBaseModule
@@ -16,13 +16,17 @@ module MpiMessageBuilderModule
   type, public :: MpiMessageBuilderType
     type(VdcPtrType), dimension(:), pointer :: vdc_models => null() !< the models to be build the message for
     type(VdcPtrType), dimension(:), pointer :: vdc_exchanges => null() !< the exchanges to be build the message for
+    integer(I4B) :: imon !< the output file unit, set from outside
+    logical(LGP) :: enable_monitor !< log when true
   contains
-    procedure :: attach_data => mb_attach_data
-    procedure :: release_data => mb_release_data
-    procedure :: create_header_snd => mb_create_header_snd
-    procedure :: create_header_rcv => mb_create_header_rcv
-    procedure :: create_body_rcv => mb_create_body_rcv
-    procedure :: create_body_snd => mb_create_body_snd
+    procedure :: init
+    procedure :: attach_data
+    procedure :: release_data
+    procedure :: create_header_snd
+    procedure :: create_header_rcv
+    procedure :: create_body_rcv
+    procedure :: create_body_snd
+    procedure :: set_monitor
     ! private
     procedure, private :: get_vdc_from_hdr
     procedure, private :: create_vdc_snd_hdr
@@ -33,7 +37,14 @@ module MpiMessageBuilderModule
 
 contains
 
-  subroutine mb_attach_data(this, vdc_models, vdc_exchanges)
+  subroutine init(this)
+    class(MpiMessageBuilderType) :: this
+
+    this%imon = -1
+
+  end subroutine init
+
+  subroutine attach_data(this, vdc_models, vdc_exchanges)
     class(MpiMessageBuilderType) :: this
     type(VdcPtrType), dimension(:), pointer :: vdc_models
     type(VdcPtrType), dimension(:), pointer :: vdc_exchanges
@@ -41,21 +52,29 @@ contains
     this%vdc_models => vdc_models
     this%vdc_exchanges => vdc_exchanges
 
-  end subroutine mb_attach_data
+  end subroutine attach_data
 
-  subroutine mb_release_data(this)
+  subroutine release_data(this)
     class(MpiMessageBuilderType) :: this
 
     this%vdc_models => null()
     this%vdc_exchanges => null()
 
-  end subroutine mb_release_data
+  end subroutine release_data
+
+  subroutine set_monitor(this, imon)
+    class(MpiMessageBuilderType) :: this
+    integer(I4B) :: imon
+
+    this%imon = imon
+
+  end subroutine set_monitor
 
   !> @brief Create the header data type to send to
   !! the remote process for this particular stage.
   !! From these data, the receiver can construct the
   !< body to send back to us.
-  subroutine mb_create_header_snd(this, rank, stage, hdrs_snd_type)
+  subroutine create_header_snd(this, rank, stage, hdrs_snd_type)
     class(MpiMessageBuilderType) :: this
     integer(I4B) :: rank
     integer(I4B) :: stage
@@ -90,6 +109,13 @@ contains
     allocate (types(nr_types))
     allocate (displs(nr_types))
 
+    if (this%imon > 0) then
+      write (this%imon, '(6x,a,*(i3))') "create headers for models: ", &
+        model_idxs%get_values()
+      write (this%imon, '(6x,a,*(i3))') "create headers for exchange: ", &
+        exg_idxs%get_values()
+    end if
+
     ! loop over containers
     do i = 1, model_idxs%size
       vdc => this%vdc_models(model_idxs%at(i))%ptr
@@ -120,9 +146,9 @@ contains
     deallocate (types)
     deallocate (displs)
 
-  end subroutine mb_create_header_snd
+  end subroutine create_header_snd
 
-  subroutine mb_create_header_rcv(this, hdr_rcv_type)
+  subroutine create_header_rcv(this, hdr_rcv_type)
     class(MpiMessageBuilderType) :: this
     integer :: hdr_rcv_type
     ! local
@@ -134,11 +160,11 @@ contains
     call MPI_Type_contiguous(2, MPI_INTEGER, hdr_rcv_type, ierr)
     call MPI_Type_commit(hdr_rcv_type, ierr)
 
-  end subroutine mb_create_header_rcv
+  end subroutine create_header_rcv
 
   !> @brief Create the body to receive based on the headers
   !< that have been sent
-  subroutine mb_create_body_rcv(this, rank, stage, body_rcv_type)
+  subroutine create_body_rcv(this, rank, stage, body_rcv_type)
     class(MpiMessageBuilderType) :: this
     integer(I4B) :: rank
     integer(I4B) :: stage
@@ -159,12 +185,18 @@ contains
     do i = 1, size(this%vdc_models)
       vdc => this%vdc_models(i)%ptr
       if (vdc%is_active .and. vdc%orig_rank == rank) then
+        if (this%imon > 0) then
+          write (this%imon, '(6x,a,i0)') "expecting model ", vdc%id
+        end if
         call model_idxs%push_back(i)
       end if
     end do
     do i = 1, size(this%vdc_exchanges)
       vdc => this%vdc_exchanges(i)%ptr
       if (vdc%is_active .and. vdc%orig_rank == rank) then
+        if (this%imon > 0) then
+          write (this%imon, '(6x,a,i0)') "expecting exchange ", vdc%id
+        end if
         call exg_idxs%push_back(i)
       end if
     end do
@@ -203,11 +235,11 @@ contains
     deallocate (displs)
     deallocate (blk_cnts)
 
-  end subroutine mb_create_body_rcv
+  end subroutine create_body_rcv
 
   !> @brief Create the body to send based on the received headers
   !<
-  subroutine mb_create_body_snd(this, rank, stage, headers, body_snd_type)
+  subroutine create_body_snd(this, rank, stage, headers, body_snd_type)
     class(MpiMessageBuilderType) :: this
     integer(I4B) :: rank
     integer(I4B) :: stage
@@ -245,7 +277,7 @@ contains
     deallocate (displs)
     deallocate (blk_cnts)
 
-  end subroutine mb_create_body_snd
+  end subroutine create_body_snd
 
   !> @brief Create send header for virtual data container, relative
   !< to the field ...%id
@@ -285,6 +317,7 @@ contains
 
     call virtual_items%init()
     call vdc%get_recv_items(stage, rank, virtual_items)
+    !if (this%imon > 0) call vdc%print_items(this%imon, virtual_items)
     new_type = this%create_vdc_body(vdc, virtual_items)
     call virtual_items%destroy()
 
@@ -301,6 +334,7 @@ contains
 
     call virtual_items%init()
     call vdc%get_send_items(stage, rank, virtual_items)
+    !if (this%imon > 0) call vdc%print_items(this%imon, virtual_items)
     new_type = this%create_vdc_body(vdc, virtual_items)
     call virtual_items%destroy()
 

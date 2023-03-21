@@ -50,27 +50,19 @@
 		<File RelativePath="..\src\Distributed\MappedMemory.f90"/>
 		<File RelativePath="..\src\Distributed\Mapper.f90"/>
 		<File RelativePath="..\src\Distributed\MpiMessageBuilder.f90">
-			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/></File>
 		<File RelativePath="..\src\Distributed\MpiRouter.f90">
-			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/></File>
 		<File RelativePath="..\src\Distributed\MpiRunControl.F90">
-			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true">
-				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
-			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true">
-				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/></File>
 		<File RelativePath="..\src\Distributed\MpiWorld.f90">
-			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/></File>
 		<File RelativePath="..\src\Distributed\RouterBase.f90"/>
 		<File RelativePath="..\src\Distributed\RouterFactory.F90">
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
@@ -200,33 +192,24 @@
 		<File RelativePath="..\src\Solution\LinearMethods\ImsLinearSolver.f90"/></Filter>
 		<Filter Name="PETSc">
 		<File RelativePath="..\src\Solution\PETSc\PetscConvergence.F90">
-			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true">
-				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
-			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true">
-				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/></File>
 		<File RelativePath="..\src\Solution\PETSc\PetscSolver.F90">
-			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true">
-				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
-			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true">
-				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File></Filter>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/></File></Filter>
 		<File RelativePath="..\src\Solution\BaseSolution.f90"/>
 		<File RelativePath="..\src\Solution\LinearSolverBase.f90"/>
 		<File RelativePath="..\src\Solution\LinearSolverFactory.F90">
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
 		<File RelativePath="..\src\Solution\NumericalSolution.f90"/>
 		<File RelativePath="..\src\Solution\ParallelSolution.f90">
-			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/></File>
 		<File RelativePath="..\src\Solution\SolutionFactory.F90">
-			<FileConfiguration Name="Debug|Win32">
+			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
@@ -261,11 +244,8 @@
 		<Filter Name="Matrix">
 		<File RelativePath="..\src\Utilities\Matrix\MatrixBase.f90"/>
 		<File RelativePath="..\src\Utilities\Matrix\PetscMatrix.F90">
-			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true">
-				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
-			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true">
-				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/></File>
 		<File RelativePath="..\src\Utilities\Matrix\SparseMatrix.f90"/></Filter>
 		<Filter Name="Memory">
 		<File RelativePath="..\src\Utilities\Memory\Memory.f90"/>
@@ -297,11 +277,8 @@
 		<File RelativePath="..\src\Utilities\TimeSeries\TimeSeriesRecord.f90"/></Filter>
 		<Filter Name="Vector">
 		<File RelativePath="..\src\Utilities\Vector\PetscVector.F90">
-			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true">
-				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
-			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true">
-				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/></File>
 		<File RelativePath="..\src\Utilities\Vector\SeqVector.f90"/>
 		<File RelativePath="..\src\Utilities\Vector\VectorBase.f90"/></Filter>
 		<File RelativePath="..\src\Utilities\ArrayHandlers.f90"/>
@@ -352,8 +329,6 @@
 		<File RelativePath="..\src\mf6lists.f90"/>
 		<File RelativePath="..\src\RunControl.f90"/>
 		<File RelativePath="..\src\RunControlFactory.F90">
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">

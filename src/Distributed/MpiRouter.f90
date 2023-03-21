@@ -37,6 +37,8 @@ module MpiRouterModule
     procedure :: route_sln => mr_route_sln
     procedure :: destroy => mr_destroy
     ! private
+    procedure, private :: activate
+    procedure, private :: deactivate
     procedure, private :: mr_update_senders
     procedure, private :: mr_update_senders_sln
     procedure, private :: mr_update_receivers
@@ -70,7 +72,10 @@ contains
     character(len=LINELENGTH) :: monitor_file
 
     ! to log or not to log
-    this%enable_monitor = .true.
+    this%enable_monitor = .false.
+
+    ! initialize the MPI message builder
+    call this%message_builder%init()
 
     ! get mpi world for our process
     this%mpi_world => get_mpi_world()
@@ -122,6 +127,7 @@ contains
       this%imon = getunit()
       write (monitor_file, '(a,i0,a)') "mpi.p", proc_id, ".log"
       open (unit=this%imon, file=monitor_file)
+      call this%message_builder%set_monitor(this%imon)
 
       ! write initial info
       write (this%imon, '(a,/)') "initialize MPI Router:"
@@ -137,6 +143,30 @@ contains
 
   end subroutine mr_initialize
 
+  !> @brief Activate models and exchanges for routing
+  !<
+  subroutine activate(this, models, exchanges)
+    class(MpiRouterType) :: this
+    type(VdcPtrType), dimension(:), pointer :: models
+    type(VdcPtrType), dimension(:), pointer :: exchanges
+
+    this%rte_models => models
+    this%rte_exchanges => exchanges
+    call this%message_builder%attach_data(models, exchanges)
+
+  end subroutine activate
+
+  !> @brief Deactivate data after routing
+  !<
+  subroutine deactivate(this)
+    class(MpiRouterType) :: this
+
+    this%rte_models => null()
+    this%rte_exchanges => null()
+    call this%message_builder%release_data()
+
+  end subroutine deactivate
+
   !> @brief This will route all remote data from the
   !! global models and exchanges over MPI, for a
   !< given stage
@@ -149,19 +179,14 @@ contains
       write (this%imon, '(2a)') "routing stage: ", STG_TO_STR(stage)
     end if
 
-    ! data to route
-    this%rte_models => this%all_models
-    this%rte_exchanges => this%all_exchanges
-    call this%message_builder%attach_data(this%rte_models, &
-                                          this%rte_exchanges)
-
     ! route all
+    call this%activate(this%all_models, this%all_exchanges)
     call this%mr_route_active(stage)
+    call this%deactivate()
 
-    ! release
-    this%rte_models => null()
-    this%rte_exchanges => null()
-    call this%message_builder%release_data()
+    if (this%enable_monitor) then
+      write (this%imon, '(2a)') "end routing all: ", STG_TO_STR(stage)
+    end if
 
   end subroutine mr_route_all
 
@@ -178,19 +203,14 @@ contains
       write (this%imon, '(2a)') "routing stage: ", STG_TO_STR(stage)
     end if
 
-    ! data to route
-    this%rte_models => virtual_sol%models
-    this%rte_exchanges => virtual_sol%exchanges
-    call this%message_builder%attach_data(virtual_sol%models, &
-                                          virtual_sol%exchanges)
-
     ! route for this solution
+    call this%activate(virtual_sol%models, virtual_sol%exchanges)
     call this%mr_route_active(stage)
+    call this%deactivate()
 
-    ! release
-    this%rte_models => null()
-    this%rte_exchanges => null()
-    call this%message_builder%release_data()
+    if (this%enable_monitor) then
+      write (this%imon, '(2a)') "end routing solution: ", STG_TO_STR(stage)
+    end if
 
   end subroutine mr_route_sln
 
@@ -222,9 +242,9 @@ contains
     call this%mr_update_receivers()
 
     if (this%enable_monitor) then
-      write (this%imon, '(2x,a,*(i0))') "process ids sending data: ", &
+      write (this%imon, '(2x,a,*(i3))') "process ids sending data: ", &
         this%senders%get_values()
-      write (this%imon, '(2x,a,*(i0))') "process ids receiving data: ", &
+      write (this%imon, '(2x,a,*(i3))') "process ids receiving data: ", &
         this%receivers%get_values()
     end if
 
@@ -245,9 +265,16 @@ contains
     allocate (body_rcv_t(this%senders%size))
     allocate (body_snd_t(this%receivers%size))
 
+    if (this%enable_monitor) then
+      write (this%imon, '(2x,a)') "== communicating headers =="
+    end if
+
     ! first receive headers for outward data
     do i = 1, this%receivers%size
       rnk = this%receivers%at(i)
+      if (this%enable_monitor) then
+        write (this%imon, '(4x,a,i0)') "Ireceive header from process: ", rnk
+      end if
       call this%message_builder%create_header_rcv(hdr_rcv_t(i))
       call MPI_Irecv(headers(:, i), max_headers, hdr_rcv_t(i), rnk, stage, &
                      MF6_COMM_WORLD, rcv_req(i), ierr)
@@ -257,15 +284,12 @@ contains
     ! send header for incoming data
     do i = 1, this%senders%size
       rnk = this%senders%at(i)
+      if (this%enable_monitor) then
+        write (this%imon, '(4x,a,i0)') "send header to process: ", rnk
+      end if
       call this%message_builder%create_header_snd(rnk, stage, hdr_snd_t(i))
       call MPI_Isend(MPI_BOTTOM, 1, hdr_snd_t(i), rnk, stage, &
                      MF6_COMM_WORLD, snd_req(i), ierr)
-
-      if (this%enable_monitor) then
-        call MPI_Type_size(hdr_snd_t(i), msg_size, ierr)
-        write (this%imon, '(4x,a,i0)') "send header to process: ", rnk
-      end if
-
       call MPI_Type_free(hdr_snd_t(i), ierr)
     end do
 
@@ -279,7 +303,7 @@ contains
       if (this%enable_monitor) then
         rnk = this%senders%at(i)
         write (this%imon, '(4x,a,i0)') "received headers from process: ", rnk
-        write (this%imon, '(4x,a)') "expecting data for:"
+        write (this%imon, '(6x,a)') "expecting data for:"
         do j = 1, hdr_rcv_cnt(i)
           write (this%imon, '(6x,a,i0,a,a)') "id: ", headers(j, i)%id, &
             " type: ", trim(VDC_TYPE_TO_STR(headers(j, i)%container_type))
@@ -289,9 +313,17 @@ contains
       call MPI_Type_free(hdr_rcv_t(i), ierr)
     end do
 
+    if (this%enable_monitor) then
+      write (this%imon, '(2x,a)') "== communicating bodies =="
+    end if
+
     ! recv bodies
     do i = 1, this%senders%size
       rnk = this%senders%at(i)
+      if (this%enable_monitor) then
+        write (this%imon, '(4x,a,i0)') "receiving from process: ", rnk
+      end if
+
       call this%message_builder%create_body_rcv(rnk, stage, body_rcv_t(i))
       call MPI_Type_size(body_rcv_t(i), msg_size, ierr)
       if (msg_size > 0) then
@@ -300,18 +332,16 @@ contains
       end if
 
       if (this%enable_monitor) then
-        if (msg_size > 0) then
-          write (this%imon, '(4x,a,i0)') "receiving from process: ", rnk
-          write (this%imon, '(6x,a,i0)') "message body size: ", msg_size
-        else
-          write (this%imon, '(4x,a,i0)') "no receiving from process: ", rnk
-        end if
+        write (this%imon, '(6x,a,i0)') "message body size: ", msg_size
       end if
     end do
 
     ! send bodies
     do i = 1, this%receivers%size
       rnk = this%receivers%at(i)
+      if (this%enable_monitor) then
+        write (this%imon, '(4x,a,i0)') "sending to process: ", rnk
+      end if
       call this%message_builder%create_body_snd( &
         rnk, stage, headers(1:hdr_rcv_cnt(i), i), body_snd_t(i))
       call MPI_Type_size(body_snd_t(i), msg_size, ierr)
@@ -321,13 +351,9 @@ contains
       end if
 
       if (this%enable_monitor) then
-        if (msg_size > 0) then
-          write (this%imon, '(4x,a,i0)') "sending to process: ", rnk
-          write (this%imon, '(6x,a,i0)') "message body size: ", msg_size
-        else
-          write (this%imon, '(4x,a,i0)') "no receiving from process: ", rnk
-        end if
+        write (this%imon, '(6x,a,i0)') "message body size: ", msg_size
       end if
+      call flush (this%imon)
     end do
 
     ! wait for exchange of all messages
