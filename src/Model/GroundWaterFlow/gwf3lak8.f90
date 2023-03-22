@@ -5407,7 +5407,6 @@ contains
     integer(I4B) :: idry
     integer(I4B) :: idry1
     integer(I4B) :: igwfnode
-    !integer(I4B) :: ibisection
     integer(I4B) :: ibflg
     integer(I4B) :: idhp
     real(DP) :: hlak
@@ -5429,8 +5428,6 @@ contains
     real(DP) :: resid
     real(DP) :: resid1
     real(DP) :: residb
-    !real(DP) :: residb0
-    !real(DP) :: en2
     real(DP) :: wr
     real(DP) :: derv
     real(DP) :: dh
@@ -5673,19 +5670,8 @@ contains
               ! -- use bisection if dh is increasing or updated stage is below the
               !    bottom of the lake
               if ((adh > adh0) .or. (ts - this%lakebot(n)) < DPREC) then
+                residb = resid
                 call this%lak_bisection(n, ibflg, hlak, ts, dh, residb)
-                !ibflg = 1
-                !residb0 = resid
-                !en2 = this%en2(n)
-                !bisectloop: do ibisection = 1, 100
-                !  ts = DHALF * (this%en1(n) + en2)
-                !  call this%lak_calculate_residual(n, ts, residb)
-                !  if (abs(residb) < abs(residb0)) then
-                !    exit bisectloop
-                !  end if
-                !  en2 = ts
-                !end do bisectloop
-                !dh = hlak - ts
               end if
             end if
             !
@@ -5716,22 +5702,6 @@ contains
             if (ibflg == 1) then
               if (this%iseepc(n) > 7 .or. this%idhc(n) > 12) then
                 call this%lak_bisection(n, ibflg, hlak, ts, dh, residb)
-                !ibflg = 1
-                !ts = DHALF * (this%en1(n) + this%en2(n))
-                !call this%lak_calculate_residual(n, ts, residb)
-                !dh = hlak - ts
-              end if
-            end if
-            if (ibflg == 1) then
-              ! -- change end points
-              ! -- root is between r1 and residb
-              if (this%r1(n) * residb < DZERO) then
-                this%en2(n) = ts
-                this%r2(n) = residb
-                ! -- root is between fp and f2
-              else
-                this%en1(n) = ts
-                this%r1(n) = residb
               end if
             end if
           else
@@ -5787,21 +5757,37 @@ contains
     real(DP), intent(inout) :: residual !< lake residual
     ! -- local
     integer(I4B) :: i
-    real(DP) :: residual0
+    real(DP) :: temporary_stage0
+    real(DP) :: residuala
     real(DP) :: endpoint1
     real(DP) :: endpoint2
+    real(DP) :: dmaxchg = DEM5
     ! -- code
     ibflg = 1
-    residual0 = residual
+    temporary_stage0 = hlak
     endpoint1 = this%en1(n)
     endpoint2 = this%en2(n)
+    call this%lak_calculate_residual(n, temporary_stage, residuala)
+    if (hlak > endpoint1 .and. hlak < endpoint2) then
+      endpoint2 = hlak
+    end if
     do i = 1, 100
       temporary_stage = DHALF * (endpoint1 + endpoint2)
       call this%lak_calculate_residual(n, temporary_stage, residual)
-      if (abs(residual) < abs(residual0)) then
+      if (abs(residual) == DZERO .or. &
+          abs(temporary_stage0 - temporary_stage) < dmaxchg) then
         exit
       end if
-      endpoint2 = temporary_stage
+      call this%lak_calculate_residual(n, endpoint1, residuala)
+      ! -- change end points
+      ! -- root is between temporary_stage and endpoint2
+      if (sign(DONE, residuala) == SIGN(DONE, residual)) then
+        endpoint1 = temporary_stage
+      ! -- root is between endpoint1 and temporary_stage
+      else
+        endpoint2 = temporary_stage
+      end if
+      temporary_stage0 = temporary_stage
     end do
     dh = hlak - temporary_stage
     !
