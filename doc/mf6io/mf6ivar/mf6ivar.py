@@ -703,6 +703,7 @@ if __name__ == '__main__':
                   'gwe-src',
                   'gwe-ssm',
                   'gwe-tmp',
+                  'gwe-uze',
                   'utl-spc',
                   'utl-spca',
                   'utl-obs',
