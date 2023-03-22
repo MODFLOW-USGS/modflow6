@@ -787,7 +787,8 @@ contains
             this%ibudgetout = getunit()
             call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)', &
                           form, access, 'REPLACE')
-            write (this%iout, fmtmvrbin) 'BUDGET', fname, this%ibudgetout
+            write (this%iout, fmtmvrbin) 'BUDGET', trim(adjustl(fname)), &
+                                         this%ibudgetout
           else
             call store_error('OPTIONAL BUDGET KEYWORD MUST &
                              &BE FOLLOWED BY FILEOUT')
@@ -799,7 +800,8 @@ contains
             this%ibudcsv = getunit()
             call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
                           filstat_opt='REPLACE')
-            write (this%iout, fmtmvrbin) 'BUDGET CSV', fname, this%ibudcsv
+            write (this%iout, fmtmvrbin) 'BUDGET CSV', trim(adjustl(fname)), &
+                                         this%ibudcsv
           else
             call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
               &FILEOUT')

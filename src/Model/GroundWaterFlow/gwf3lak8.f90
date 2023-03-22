@@ -3436,7 +3436,8 @@ contains
         this%istageout = getunit()
         call openfile(this%istageout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE', mode_opt=MNORMAL)
-        write (this%iout, fmtlakbin) 'STAGE', fname, this%istageout
+        write (this%iout, fmtlakbin) 'STAGE', trim(adjustl(fname)), &
+                                     this%istageout
       else
         call store_error('OPTIONAL STAGE KEYWORD MUST BE FOLLOWED BY FILEOUT')
       end if
@@ -3447,7 +3448,8 @@ contains
         this%ibudgetout = getunit()
         call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE', mode_opt=MNORMAL)
-        write (this%iout, fmtlakbin) 'BUDGET', fname, this%ibudgetout
+        write (this%iout, fmtlakbin) 'BUDGET', trim(adjustl(fname)), &
+                                     this%ibudgetout
       else
         call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
       end if
@@ -3458,7 +3460,8 @@ contains
         this%ibudcsv = getunit()
         call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
                       filstat_opt='REPLACE')
-        write (this%iout, fmtlakbin) 'BUDGET CSV', fname, this%ibudcsv
+        write (this%iout, fmtlakbin) 'BUDGET CSV', trim(adjustl(fname)), &
+                                     this%ibudcsv
       else
         call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
           &FILEOUT')
@@ -3470,7 +3473,8 @@ contains
         this%ipakcsv = getunit()
         call openfile(this%ipakcsv, this%iout, fname, 'CSV', &
                       filstat_opt='REPLACE', mode_opt=MNORMAL)
-        write (this%iout, fmtlakbin) 'PACKAGE_CONVERGENCE', fname, this%ipakcsv
+        write (this%iout, fmtlakbin) 'PACKAGE_CONVERGENCE', &
+                                     trim(adjustl(fname)), this%ipakcsv
       else
         call store_error('OPTIONAL PACKAGE_CONVERGENCE KEYWORD MUST BE '// &
                          'FOLLOWED BY FILEOUT')
