@@ -110,9 +110,9 @@ contains
 
           ! pick the right index map: connection based or node based
           if (distvar%map_type == SYNC_NODES) then
-            idx_map => interface_map%node_map(m)
+            idx_map => interface_map%node_maps(m)
           else if (distvar%map_type == SYNC_CONNECTIONS) then
-            idx_map => interface_map%connection_map(m)
+            idx_map => interface_map%connection_maps(m)
           end if
 
           ! and map ...
@@ -133,7 +133,7 @@ contains
                                  distvar%var_name, &
                                  interface_map%exchange_ids(e), &
                                  distvar%exg_var_name, &
-                                 interface_map%exchange_map(e), &
+                                 interface_map%exchange_maps(e), &
                                  distvar%sync_stages)
         end do
       end if

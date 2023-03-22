@@ -8,7 +8,12 @@ module VirtualBaseModule
   implicit none
   private
 
-  public :: get_virtual_data_from_list
+  public :: get_virtual_data_from_list  
+
+  integer(I4B), public, parameter :: MAP_ALL_TYPE = 0
+  integer(I4B), public, parameter :: MAP_NODE_TYPE = 1
+  integer(I4B), public, parameter :: MAP_CONN_TYPE = 2
+  integer(I4B), public, parameter :: NR_VDC_ELEMENT_MAPS = 2
 
   !> This is a generic data structure to virtualize pieces
   !! of memory in 2 distinct ways:
@@ -34,7 +39,8 @@ module VirtualBaseModule
     character(len=LENMEMPATH) :: mem_path !< memory path
     integer(I4B), dimension(:), allocatable :: sync_stages !< stage(s) at which to synchronize
     integer(I4B) :: map_type !< the type of map
-    integer(I4B), dimension(:), pointer, contiguous :: virtual_to_remote => null() !< contiguous list which maps virtual index to remote
+    integer(I4B), dimension(:), pointer, contiguous :: remote_elem_shift => null() !< contiguous list with 0-based remote indexes
+                                                                                   !! (this is important for creating mpi data types)
     integer(I4B), dimension(:), pointer, contiguous :: remote_to_virtual => null() !< sparse list which maps remote index to virtual
     type(MemoryType), pointer :: virtual_mt => null()
   contains
@@ -43,11 +49,8 @@ module VirtualBaseModule
     procedure :: to_base => vm_to_base
     procedure :: check_stage => vm_check_stage
     procedure :: link => vm_link
+    procedure :: get_element_map
   end type
-
-  integer(I4B), public, parameter :: MAP_ALL_TYPE = 1
-  integer(I4B), public, parameter :: MAP_NODE_TYPE = 2
-  integer(I4B), public, parameter :: MAP_CONN_TYPE = 3
 
   type, public, extends(VirtualDataType) :: VirtualIntType
     integer(I4B), private, pointer :: intsclr
@@ -142,6 +145,19 @@ contains
                              this%virtual_mt, found)
 
   end subroutine vm_link
+
+  !> @brief Return array with offsets for elements
+  !< mapped in this virtual data item
+  function get_element_map(this) result(el_map)
+    class(VirtualDataType), target :: this
+    integer(I4B), dimension(:), pointer, contiguous :: el_map
+
+    el_map => null()
+    if (this%map_type > 0) then
+      el_map => this%remote_elem_shift
+    end if
+
+  end function get_element_map
 
   subroutine vm_allocate_int(this, var_name, mem_path, shape)
     class(VirtualIntType) :: this

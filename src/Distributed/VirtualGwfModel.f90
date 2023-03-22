@@ -123,6 +123,7 @@ contains
     else if (stage == STG_BEFORE_AR) then
 
       nr_nodes = this%dis_nodes%get()
+      !nr_nodes = this%element_maps(MAP_NODE_TYPE)%nr_virt_elems
       ! Num. model data
       call this%map(this%x%to_base(), nr_nodes, &
                     (/STG_BEFORE_AR, STG_BEFORE_AD, STG_BEFORE_CF/), &

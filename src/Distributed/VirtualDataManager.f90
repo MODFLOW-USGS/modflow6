@@ -2,6 +2,7 @@ module VirtualDataManagerModule
   use KindModule, only: I4B
   use STLVecIntModule
   use VirtualDataListsModule, only: virtual_model_list, virtual_exchange_list
+  use VirtualBaseModule, only: MAP_NODE_TYPE, MAP_CONN_TYPE
   use VirtualModelModule, only: get_virtual_model
   use VirtualExchangeModule, only: get_virtual_exchange
   use VirtualSolutionModule
@@ -157,25 +158,28 @@ contains
   subroutine vds_reduce_halo(this)
     use InputOutputModule, only: getunit
     use SimVariablesModule, only: proc_id
+    use IndexMapModule
     class(VirtualDataManagerType) :: this
     ! local
-    integer(I4B) :: isol, iexg
+    integer(I4B) :: ivm, isol, iexg
     integer(I4B) :: outunit
     character(len=128) :: monitor_file
-    type(VirtualSolutionType), pointer :: v_sol
+    type(VirtualSolutionType), pointer :: virt_sol
     class(NumericalSolutionType), pointer :: num_sol
     class(SpatialModelConnectionType), pointer :: conn
+    type(VirtualDataContainerType), pointer :: vdc
+    type(IndexMapType), pointer :: nmap, cmap
 
     ! merge the interface maps over this process
     do isol = 1, this%nr_solutions
-      v_sol => this%virtual_solutions(isol)
-      num_sol => v_sol%numerical_solution      
+      virt_sol => this%virtual_solutions(isol)
+      num_sol => virt_sol%numerical_solution      
       do iexg = 1, num_sol%exchangelist%Count()
         conn => get_smc_from_list(num_sol%exchangelist, iexg)
         if (.not. associated(conn)) cycle
         ! these are interface models, now merge their
         ! interface maps
-        call v_sol%interface_map%add(conn%interface_map)
+        call virt_sol%interface_map%add(conn%interface_map)
       end do
     end do
 
@@ -186,11 +190,22 @@ contains
     do isol = 1, this%nr_solutions
       write(outunit, '(a,i0,/)') "interface mape for solution ", &
                                  this%virtual_solutions(isol)%solution_id
-      !call this%virtual_solutions(isol)%interface_map%print_interface(outunit)
+      call this%virtual_solutions(isol)%interface_map%print_interface(outunit)
     end do
     close(outunit)
 
     ! assign reduced maps to virtual data containers
+    do isol = 1, this%nr_solutions
+      virt_sol => this%virtual_solutions(isol)
+      do ivm = 1, size(virt_sol%models) ! TODO_MJR: other containers, exchanges?
+        vdc => virt_sol%models(ivm)%ptr
+        if (vdc%is_local) cycle
+        nmap => virt_sol%interface_map%get_node_map(vdc%id)
+        cmap => virt_sol%interface_map%get_connection_map(vdc%id)
+        call vdc%set_element_map(nmap%src_idx, MAP_NODE_TYPE)
+        call vdc%set_element_map(cmap%src_idx, MAP_CONN_TYPE)
+      end do
+    end do
 
   end subroutine vds_reduce_halo
 

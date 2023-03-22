@@ -72,7 +72,7 @@ contains
     character(len=LINELENGTH) :: monitor_file
 
     ! to log or not to log
-    this%enable_monitor = .false.
+    this%enable_monitor = .true.
 
     ! initialize the MPI message builder
     call this%message_builder%init()
@@ -171,6 +171,7 @@ contains
   !! global models and exchanges over MPI, for a
   !< given stage
   subroutine mr_route_all(this, stage)
+    use MemoryManagerModule, only: mem_print_detailed
     class(MpiRouterType) :: this
     integer(I4B) :: stage
 
@@ -185,7 +186,8 @@ contains
     call this%deactivate()
 
     if (this%enable_monitor) then
-      write (this%imon, '(2a)') "end routing all: ", STG_TO_STR(stage)
+      write (this%imon, '(2a,/)') "end routing all: ", STG_TO_STR(stage)
+      !call mem_print_detailed(this%imon)
     end if
 
   end subroutine mr_route_all

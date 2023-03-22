@@ -1084,11 +1084,11 @@ contains
       end do
 
       ! and copy into interface map
-      allocate (imap%node_map(im)%src_idx(src_idx_tmp%size))
-      allocate (imap%node_map(im)%tgt_idx(tgt_idx_tmp%size))
+      allocate (imap%node_maps(im)%src_idx(src_idx_tmp%size))
+      allocate (imap%node_maps(im)%tgt_idx(tgt_idx_tmp%size))
       do i = 1, src_idx_tmp%size
-        imap%node_map(im)%src_idx(i) = src_idx_tmp%at(i)
-        imap%node_map(im)%tgt_idx(i) = tgt_idx_tmp%at(i)
+        imap%node_maps(im)%src_idx(i) = src_idx_tmp%at(i)
+        imap%node_maps(im)%tgt_idx(i) = tgt_idx_tmp%at(i)
       end do
 
       call src_idx_tmp%destroy()
@@ -1117,11 +1117,11 @@ contains
       end do
 
       ! copy into interface map
-      allocate (imap%connection_map(im)%src_idx(src_idx_tmp%size))
-      allocate (imap%connection_map(im)%tgt_idx(tgt_idx_tmp%size))
+      allocate (imap%connection_maps(im)%src_idx(src_idx_tmp%size))
+      allocate (imap%connection_maps(im)%tgt_idx(tgt_idx_tmp%size))
       do i = 1, src_idx_tmp%size
-        imap%connection_map(im)%src_idx(i) = src_idx_tmp%at(i)
-        imap%connection_map(im)%tgt_idx(i) = tgt_idx_tmp%at(i)
+        imap%connection_maps(im)%src_idx(i) = src_idx_tmp%at(i)
+        imap%connection_maps(im)%tgt_idx(i) = tgt_idx_tmp%at(i)
       end do
 
       call src_idx_tmp%destroy()
@@ -1169,13 +1169,13 @@ contains
         call sign_tmp%push_back(-1)
       end do
 
-      allocate (imap%exchange_map(ix)%src_idx(src_idx_tmp%size))
-      allocate (imap%exchange_map(ix)%tgt_idx(tgt_idx_tmp%size))
-      allocate (imap%exchange_map(ix)%sign(sign_tmp%size))
+      allocate (imap%exchange_maps(ix)%src_idx(src_idx_tmp%size))
+      allocate (imap%exchange_maps(ix)%tgt_idx(tgt_idx_tmp%size))
+      allocate (imap%exchange_maps(ix)%sign(sign_tmp%size))
       do i = 1, src_idx_tmp%size
-        imap%exchange_map(ix)%src_idx(i) = src_idx_tmp%at(i)
-        imap%exchange_map(ix)%tgt_idx(i) = tgt_idx_tmp%at(i)
-        imap%exchange_map(ix)%sign(i) = sign_tmp%at(i)
+        imap%exchange_maps(ix)%src_idx(i) = src_idx_tmp%at(i)
+        imap%exchange_maps(ix)%tgt_idx(i) = tgt_idx_tmp%at(i)
+        imap%exchange_maps(ix)%sign(i) = sign_tmp%at(i)
       end do
 
       call src_idx_tmp%destroy()
