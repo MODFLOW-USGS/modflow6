@@ -5783,7 +5783,7 @@ contains
       ! -- root is between temporary_stage and endpoint2
       if (sign(DONE, residuala) == SIGN(DONE, residual)) then
         endpoint1 = temporary_stage
-      ! -- root is between endpoint1 and temporary_stage
+        ! -- root is between endpoint1 and temporary_stage
       else
         endpoint2 = temporary_stage
       end if
