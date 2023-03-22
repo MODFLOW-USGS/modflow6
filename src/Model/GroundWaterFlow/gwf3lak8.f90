@@ -3437,7 +3437,7 @@ contains
         call openfile(this%istageout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE', mode_opt=MNORMAL)
         write (this%iout, fmtlakbin) 'STAGE', trim(adjustl(fname)), &
-                                     this%istageout
+          this%istageout
       else
         call store_error('OPTIONAL STAGE KEYWORD MUST BE FOLLOWED BY FILEOUT')
       end if
@@ -3449,7 +3449,7 @@ contains
         call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE', mode_opt=MNORMAL)
         write (this%iout, fmtlakbin) 'BUDGET', trim(adjustl(fname)), &
-                                     this%ibudgetout
+          this%ibudgetout
       else
         call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
       end if
@@ -3461,7 +3461,7 @@ contains
         call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
                       filstat_opt='REPLACE')
         write (this%iout, fmtlakbin) 'BUDGET CSV', trim(adjustl(fname)), &
-                                     this%ibudcsv
+          this%ibudcsv
       else
         call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
           &FILEOUT')
@@ -3474,7 +3474,7 @@ contains
         call openfile(this%ipakcsv, this%iout, fname, 'CSV', &
                       filstat_opt='REPLACE', mode_opt=MNORMAL)
         write (this%iout, fmtlakbin) 'PACKAGE_CONVERGENCE', &
-                                     trim(adjustl(fname)), this%ipakcsv
+          trim(adjustl(fname)), this%ipakcsv
       else
         call store_error('OPTIONAL PACKAGE_CONVERGENCE KEYWORD MUST BE '// &
                          'FOLLOWED BY FILEOUT')

@@ -1792,7 +1792,7 @@ contains
         call openfile(this%iheadout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE', mode_opt=MNORMAL)
         write (this%iout, fmtmawbin) 'HEAD', trim(adjustl(fname)), &
-                                     this%iheadout
+          this%iheadout
       else
         call store_error('Optional maw stage keyword must be '// &
                          'followed by fileout.')
@@ -1805,7 +1805,7 @@ contains
         call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE', mode_opt=MNORMAL)
         write (this%iout, fmtmawbin) 'BUDGET', trim(adjustl(fname)), &
-                                     this%ibudgetout
+          this%ibudgetout
       else
         call store_error('Optional maw budget keyword must be '// &
                          'followed by fileout.')
@@ -1818,7 +1818,7 @@ contains
         call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
                       filstat_opt='REPLACE')
         write (this%iout, fmtmawbin) 'BUDGET CSV', trim(adjustl(fname)), &
-                                     this%ibudcsv
+          this%ibudcsv
       else
         call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
           &FILEOUT')

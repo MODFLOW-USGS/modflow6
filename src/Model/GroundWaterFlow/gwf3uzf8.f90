@@ -454,7 +454,7 @@ contains
         call openfile(this%iwcontout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE', mode_opt=MNORMAL)
         write (this%iout, fmtuzfbin) 'WATER-CONTENT', trim(adjustl(fname)), &
-                                     this%iwcontout
+          this%iwcontout
       else
         call store_error('OPTIONAL WATER_CONTENT KEYWORD &
                          &MUST BE FOLLOWED BY FILEOUT')
@@ -467,7 +467,7 @@ contains
         call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE', mode_opt=MNORMAL)
         write (this%iout, fmtuzfbin) 'BUDGET', trim(adjustl(fname)), &
-                                     this%ibudgetout
+          this%ibudgetout
       else
         call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
       end if
@@ -479,7 +479,7 @@ contains
         call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
                       filstat_opt='REPLACE')
         write (this%iout, fmtuzfbin) 'BUDGET CSV', trim(adjustl(fname)), &
-                                     this%ibudcsv
+          this%ibudcsv
       else
         call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
           &FILEOUT')
@@ -492,7 +492,7 @@ contains
         call openfile(this%ipakcsv, this%iout, fname, 'CSV', &
                       filstat_opt='REPLACE', mode_opt=MNORMAL)
         write (this%iout, fmtuzfbin) 'PACKAGE_CONVERGENCE', &
-                                     trim(adjustl(fname)), this%ipakcsv
+          trim(adjustl(fname)), this%ipakcsv
       else
         call store_error('OPTIONAL PACKAGE_CONVERGENCE KEYWORD MUST BE '// &
                          'FOLLOWED BY FILEOUT')
