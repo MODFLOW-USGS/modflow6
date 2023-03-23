@@ -4,7 +4,7 @@ module LakModule
   use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, LENTIMESERIESNAME, &
                              IWETLAKE, &
                              DZERO, DPREC, DEM30, DEM9, DEM6, DEM5, &
-                             DEM4, DEM2, DEM1, DHALF, DP7, DONE, &
+                             DEM4, DEM2, DEM1, DHALF, DP7, DP999, DONE, &
                              DTWO, DPI, DTHREE, DEIGHT, DTEN, DHUNDRED, DEP20, &
                              DONETHIRD, DTWOTHIRDS, DFIVETHIRDS, &
                              DGRAVITY, DCD, &
@@ -53,6 +53,7 @@ module LakModule
     ! -- characters
     character(len=16), dimension(:), pointer, contiguous :: clakbudget => NULL()
     character(len=16), dimension(:), pointer, contiguous :: cauxcbc => NULL()
+    ! -- control variables
     ! -- integers
     integer(I4B), pointer :: iprhed => null()
     integer(I4B), pointer :: istageout => null()
@@ -69,7 +70,9 @@ module LakModule
     integer(I4B), pointer :: igwhcopt => NULL()
     integer(I4B), pointer :: iconvchk => NULL()
     integer(I4B), pointer :: iconvresidchk => NULL()
+    integer(I4B), pointer :: maxlakit => NULL() !< maximum number of iterations in LAK solve
     real(DP), pointer :: surfdep => NULL()
+    real(DP), pointer :: dmaxchg => NULL()
     real(DP), pointer :: delh => NULL()
     real(DP), pointer :: pdmax => NULL()
     integer(I4B), pointer :: check_attr => NULL()
@@ -354,7 +357,9 @@ contains
     call mem_allocate(this%igwhcopt, 'IGWHCOPT', this%memoryPath)
     call mem_allocate(this%iconvchk, 'ICONVCHK', this%memoryPath)
     call mem_allocate(this%iconvresidchk, 'ICONVRESIDCHK', this%memoryPath)
+    call mem_allocate(this%maxlakit, 'MAXLAKIT', this%memoryPath)
     call mem_allocate(this%surfdep, 'SURFDEP', this%memoryPath)
+    call mem_allocate(this%dmaxchg, 'DMAXCHG', this%memoryPath)
     call mem_allocate(this%delh, 'DELH', this%memoryPath)
     call mem_allocate(this%pdmax, 'PDMAX', this%memoryPath)
     call mem_allocate(this%check_attr, 'CHECK_ATTR', this%memoryPath)
@@ -377,8 +382,10 @@ contains
     this%igwhcopt = 0
     this%iconvchk = 1
     this%iconvresidchk = 1
+    this%maxlakit = 100
     this%surfdep = DZERO
-    this%delh = DEM5
+    this%dmaxchg = DEM5
+    this%delh = DP999 * this%dmaxchg
     this%pdmax = DEM1
     this%bditems = 11
     this%cbcauxitems = 1
@@ -3427,6 +3434,10 @@ contains
     character(len=*), parameter :: fmtlakbin = &
       "(4x, 'LAK ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', &
       &a, /4x, 'OPENED ON UNIT: ', I0)"
+    character(len=*), parameter :: fmtiter = &
+      &"(4x, 'MAXIMUM LAK ITERATION VALUE (',i0,') SPECIFIED.')"
+    character(len=*), parameter :: fmtdmaxchg = &
+      &"(4x, 'MAXIMUM STAGE CHANGE VALUE (',g0,') SPECIFIED.')"
 ! ------------------------------------------------------------------------------
     !
     found = .true.
@@ -3497,6 +3508,14 @@ contains
       end if
       this%surfdep = r
       write (this%iout, fmtlakeopt) 'SURFDEP', this%surfdep
+    case ('MAXIMUM_ITERATIONS')
+      this%maxlakit = this%parser%GetInteger()
+      write (this%iout, fmtiter) this%maxlakit
+    case ('MAXIMUM_STAGE_CHANGE')
+      r = this%parser%GetDouble()
+      this%dmaxchg = r
+      this%delh = DP999 * r
+      write (this%iout, fmtdmaxchg) this%dmaxchg
       !
       ! -- right now these are options that are only available in the
       !    development version and are not included in the documentation.
@@ -4616,7 +4635,9 @@ contains
     call mem_deallocate(this%igwhcopt)
     call mem_deallocate(this%iconvchk)
     call mem_deallocate(this%iconvresidchk)
+    call mem_deallocate(this%maxlakit)
     call mem_deallocate(this%surfdep)
+    call mem_deallocate(this%dmaxchg)
     call mem_deallocate(this%delh)
     call mem_deallocate(this%pdmax)
     call mem_deallocate(this%check_attr)
@@ -5435,6 +5456,8 @@ contains
     real(DP) :: adh0
     real(DP) :: delh
     real(DP) :: ts
+    real(DP) :: area
+    real(DP) :: qtolfact
 ! --------------------------------------------------------------------------
     !
     ! -- set lupdate
@@ -5498,7 +5521,7 @@ contains
     end do
 
     iicnvg = 0
-    maxiter = 150
+    maxiter = this%maxlakit
 
     ! -- outer loop
     converge: do iter = 1, maxiter
@@ -5713,7 +5736,23 @@ contains
           if (hlak < this%lakebot(n)) then
             hlak = this%lakebot(n)
           end if
-          if (ABS(dh) < delh) then
+          !
+          ! -- calculate surface area
+          call this%lak_calculate_sarea(n, hlak, area)
+          !
+          ! -- set the Q to length factor
+          if (area > DZERO) then
+            qtolfact = delt / area
+          else
+            qtolfact = DZERO
+          end if
+          !
+          ! -- recalculate the residual
+          call this%lak_calculate_residual(n, hlak, resid)
+          !
+          ! -- evaluate convergence
+          !if (ABS(dh) < delh) then
+          if (ABS(dh) < delh .and. abs(resid) * qtolfact < this%dmaxchg) then
             this%ncncvr(n) = 1
           end if
           this%xnewpak(n) = hlak
@@ -5761,7 +5800,6 @@ contains
     real(DP) :: residuala
     real(DP) :: endpoint1
     real(DP) :: endpoint2
-    real(DP) :: dmaxchg = DEM5
     ! -- code
     ibflg = 1
     temporary_stage0 = hlak
@@ -5771,11 +5809,11 @@ contains
     if (hlak > endpoint1 .and. hlak < endpoint2) then
       endpoint2 = hlak
     end if
-    do i = 1, 100
+    do i = 1, this%maxlakit
       temporary_stage = DHALF * (endpoint1 + endpoint2)
       call this%lak_calculate_residual(n, temporary_stage, residual)
       if (abs(residual) == DZERO .or. &
-          abs(temporary_stage0 - temporary_stage) < dmaxchg) then
+          abs(temporary_stage0 - temporary_stage) < this%dmaxchg) then
         exit
       end if
       call this%lak_calculate_residual(n, endpoint1, residuala)
