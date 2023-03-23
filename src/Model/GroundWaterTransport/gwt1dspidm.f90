@@ -1,3 +1,4 @@
+! ** Do Not Modify! MODFLOW 6 system generated file. **
 module GwtDspInputModule
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
@@ -6,6 +7,7 @@ module GwtDspInputModule
   public gwt_dsp_aggregate_definitions
   public gwt_dsp_block_definitions
   public GwtDspParamFoundType
+  public gwt_dsp_multi_package
 
   type GwtDspParamFoundType
     logical :: xt3d_off = .false.
@@ -17,6 +19,8 @@ module GwtDspInputModule
     logical :: ath2 = .false.
     logical :: atv = .false.
   end type GwtDspParamFoundType
+
+  logical :: gwt_dsp_multi_package = .false.
 
   type(InputParamDefinitionType), parameter :: &
     gwtdsp_xt3d_off = InputParamDefinitionType &
