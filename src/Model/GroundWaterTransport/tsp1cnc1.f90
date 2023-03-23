@@ -9,6 +9,7 @@ module TspCncModule
   use ObserveModule, only: ObserveType
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
+  use GweInputDataModule, only: GweInputDataType
   use MatrixModule
   !
   implicit none
@@ -20,9 +21,14 @@ module TspCncModule
   character(len=LENPACKAGENAME) :: text = '             CNC'
   !
   type, extends(BndType) :: TspCncType
+    
+    type(GweInputDataType), pointer :: gwecommon => null() !< pointer to shared gwe data used by multiple packages but set in mst
+    
     real(DP), dimension(:), pointer, contiguous :: ratecncin => null() !simulated flows into constant conc (excluding other concs)
     real(DP), dimension(:), pointer, contiguous :: ratecncout => null() !simulated flows out of constant conc (excluding to other concs)
+    
   contains
+  
     procedure :: bnd_rp => cnc_rp
     procedure :: bnd_ad => cnc_ad
     procedure :: bnd_ck => cnc_ck
@@ -42,7 +48,7 @@ module TspCncModule
 contains
 
   subroutine cnc_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
-                        tsplab)
+                        tsplab, gwecommon)
 ! ******************************************************************************
 ! cnc_create -- Create a New Constant Concentration/Temperature Package
 ! Subroutine: (1) create new-style package
@@ -60,6 +66,7 @@ contains
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
     type(TspLabelsType), pointer :: tsplab
+    type(GweInputDataType), intent(in), target, optional :: gwecommon !< shared data container for use by multiple GWE packages
     ! -- local
     type(TspCncType), pointer :: cncobj
 ! ------------------------------------------------------------------------------
@@ -88,6 +95,11 @@ contains
     !
     ! -- Give package access to the assigned labels based on dependent variable
     packobj%tsplab => tsplab
+    !
+    ! -- Give package access to the shared heat transport variables assigned in MST
+    if (present(gwecommon)) then
+      cncobj%gwecommon => gwecommon
+    end if
     !
     ! -- return
     return
@@ -369,7 +381,7 @@ contains
     if (this%tsplab%tsptype /= 'GWE') then
       unitadj = DONE
     else
-      unitadj = this%cpw(1) * this%rhow(1)   ! jiffylube: kluge note - check use of unitadj in cnc
+      unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
     end if
     !
     do n = 1, size(this%ratecncin)
@@ -404,6 +416,9 @@ contains
     ! -- arrays
     call mem_deallocate(this%ratecncin)
     call mem_deallocate(this%ratecncout)
+    !
+    ! -- pointers
+    nullify (this%gwecommon)
     !
     ! -- return
     return

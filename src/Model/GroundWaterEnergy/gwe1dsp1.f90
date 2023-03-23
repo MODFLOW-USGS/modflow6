@@ -7,6 +7,7 @@ module GweDspModule
   use TspFmiModule, only: TspFmiType
   use Xt3dModule, only: Xt3dType, xt3d_cr
   use GweDspOptionsModule, only: GweDspOptionsType
+  use GweInputDataModule, only: GweInputDataType
   use MatrixModule
   
   implicit none
@@ -18,6 +19,7 @@ module GweDspModule
 
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() ! pointer to GWE model ibound
     type(TspFmiType), pointer :: fmi => null() ! pointer to GWE fmi object
+    type(GweInputDataType), pointer :: gwecommon => null() !< pointer to shared gwe data used by multiple packages but set in mst
     real(DP), dimension(:), pointer, contiguous :: porosity => null() ! pointer to GWE storage porosity
     ! TODO: Can remove diffc from GWE
     !real(DP), dimension(:), pointer, contiguous :: diffc => null() ! molecular diffusion coefficient for each cell
@@ -26,10 +28,8 @@ module GweDspModule
     real(DP), dimension(:), pointer, contiguous :: ath1 => null() ! transverse horizontal dispersivity
     real(DP), dimension(:), pointer, contiguous :: ath2 => null() ! transverse horizontal dispersivity
     real(DP), dimension(:), pointer, contiguous :: atv => null() ! transverse vertical dispersivity
-    real(DP), dimension(:), pointer, contiguous :: cpw => null() ! pointer to GWE heat capacity of water
     real(DP), dimension(:), pointer, contiguous :: ktw => null() ! thermal conductivity of water
     real(DP), dimension(:), pointer, contiguous :: kts => null() ! thermal conductivity of aquifer material
-    real(DP), dimension(:), pointer, contiguous :: rhow => null() ! fixed density of water
     !integer(I4B), pointer :: idiffc => null() ! flag indicating diffusion is active
     integer(I4B), pointer :: idisp => null() ! flag indicating mechanical dispersion is active
     integer(I4B), pointer :: ialh => null() ! longitudinal horizontal dispersivity data flag
@@ -79,7 +79,7 @@ module GweDspModule
 
 contains
 
-  subroutine dsp_cr(dspobj, name_model, inunit, iout, fmi)
+  subroutine dsp_cr(dspobj, name_model, inunit, iout, fmi, gwecommon)
 ! ******************************************************************************
 ! dsp_cr -- Create a new DSP object
 ! ******************************************************************************
@@ -95,6 +95,7 @@ contains
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     type(TspFmiType), intent(in), target :: fmi
+    type(GweInputDataType), intent(in), target :: gwecommon !< shared data container for use by multiple GWE packages
     ! -- formats
     character(len=*), parameter :: fmtdsp = &
       "(1x,/1x,'DSP-- THERMAL CONDUCTION AND DISPERSION PACKAGE, VERSION 1, ', &
@@ -114,6 +115,7 @@ contains
     dspobj%inunit = inunit
     dspobj%iout = iout
     dspobj%fmi => fmi
+    dspobj%gwecommon => gwecommon
     !
     ! -- Check if input file is open
     if (dspobj%inunit > 0) then
@@ -226,7 +228,7 @@ contains
     return
   end subroutine dsp_mc
 
-  subroutine dsp_ar(this, ibound, porosity, cpw, rhow)
+  subroutine dsp_ar(this, ibound, porosity)
 ! ******************************************************************************
 ! dsp_ar -- Allocate and Read
 ! ******************************************************************************
@@ -238,8 +240,6 @@ contains
     class(GweDspType) :: this
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     real(DP), dimension(:), pointer, contiguous :: porosity
-    real(DP), dimension(:), pointer, contiguous :: cpw
-    real(DP), dimension(:), pointer, contiguous :: rhow
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtdsp = &
@@ -250,8 +250,6 @@ contains
     ! -- dsp pointers to arguments that were passed in
     this%ibound => ibound
     this%porosity => porosity
-    this%cpw => cpw
-    this%rhow => rhow
     !
     ! -- Return
     return
@@ -534,6 +532,7 @@ contains
     !
     ! -- deallocate objects
     if (this%ixt3d > 0) deallocate (this%xt3d)
+    nullify (this%gwecommon)
     !
     ! -- deallocate scalars
     !call mem_deallocate(this%idiffc)
@@ -830,7 +829,7 @@ contains
       if (this%iktw > 0) ktbulk = ktbulk + this%porosity(n) * this%ktw(n) * &
                                   this%fmi%gwfsat(n)
       if (this%ikts > 0) ktbulk = ktbulk + (DONE - this%porosity(n)) * this%kts(n)
-      dstar = ktbulk / (this%cpw(n) * this%rhow(n))
+      dstar = ktbulk / (this%gwecommon%gwecpw * this%gwecommon%gwerhow)
       !
       ! -- Calculate the longitudal and transverse dispersivities
       al = DZERO

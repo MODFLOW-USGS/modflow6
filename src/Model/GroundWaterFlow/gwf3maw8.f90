@@ -3075,8 +3075,7 @@ contains
     return
   end subroutine define_listlabel
 
-  subroutine maw_set_pointers(this, neq, ibound, xnew, xold, flowja, &
-                              cpw, rhow, latheatvap)
+  subroutine maw_set_pointers(this, neq, ibound, xnew, xold, flowja)
 ! ******************************************************************************
 ! set_pointers -- Set pointers to model arrays and variables so that a package
 !                 has access to these things.
@@ -3093,9 +3092,6 @@ contains
     real(DP), dimension(:), pointer, contiguous :: xnew
     real(DP), dimension(:), pointer, contiguous :: xold
     real(DP), dimension(:), pointer, contiguous :: flowja
-    real(DP), dimension(:), pointer, contiguous, optional :: cpw !< heat capacity of fluid (used by GWE model type, not here)
-    real(DP), dimension(:), pointer, contiguous, optional :: rhow !< density of fluid (used by GWE model type, not here)
-    real(DP), dimension(:), pointer, contiguous, optional :: latheatvap !< latent heat of vaporization (used by GWE model type, not here)
     ! -- local
     integer(I4B) :: n
     integer(I4B) :: istart, iend

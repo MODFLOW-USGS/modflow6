@@ -42,6 +42,7 @@ module GweSfeModule
   use TspAptModule, only: TspAptType, apt_process_obsID, &
                           apt_process_obsID12
   use TspLabelsModule, only: TspLabelsType
+  use GweInputDataModule, only: GweInputDataType
   use MatrixModule
   !
   implicit none
@@ -55,6 +56,8 @@ module GweSfeModule
 
   type, extends(TspAptType) :: GweSfeType
 
+    type(GweInputDataType), pointer :: gwecommon => null() !< pointer to shared gwe data used by multiple packages but set in mst
+    
     integer(I4B), pointer :: idxbudrain => null() ! index of rainfall terms in flowbudptr
     integer(I4B), pointer :: idxbudevap => null() ! index of evaporation terms in flowbudptr
     integer(I4B), pointer :: idxbudroff => null() ! index of runoff terms in flowbudptr
@@ -92,7 +95,7 @@ module GweSfeModule
 contains
 
   subroutine sfe_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
-                        fmi, tsplab)
+                        fmi, tsplab, gwecommon)
 ! ******************************************************************************
 ! sfe_create -- Create a New SFE Package
 ! ******************************************************************************
@@ -109,6 +112,7 @@ contains
     character(len=*), intent(in) :: pakname
     type(TspFmiType), pointer :: fmi
     type(TspLabelsType), pointer :: tsplab
+    type(GweInputDataType), intent(in), target :: gwecommon !< shared data container for use by multiple GWE packages
     ! -- local
     type(GweSfeType), pointer :: sfeobj
 ! ------------------------------------------------------------------------------
@@ -142,6 +146,11 @@ contains
     ! -- Store pointer to the labels module for dynamic setting of 
     !    concentration vs temperature
     sfeobj%tsplab => tsplab
+    !
+    ! -- Store pointer to shared data module for accessing cpw, rhow
+    !    for the budget calculations, and for accessing the latent heat of
+    !    vaporization for evaporative cooling.
+    sfeobj%gwecommon => gwecommon
     !
     ! -- return
     return
@@ -730,7 +739,7 @@ contains
     n2 = this%flowbudptr%budterm(this%idxbudevap)%id2(ientry)
     ! -- note that qbnd is negative for evap
     qbnd = this%flowbudptr%budterm(this%idxbudevap)%flow(ientry)
-    heatlat = this%bndType%rhow(n1) * this%latheatvap(n1)  ! kg/m^3 * J/kg = J/m^3
+    heatlat = this%gwecommon%gwerhow * this%gwecommon%gwelatheatvap  ! kg/m^3 * J/kg = J/m^3
     if (present(rrate)) rrate = qbnd * heatlat !m^3/day * J/m^3 = J/day
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO

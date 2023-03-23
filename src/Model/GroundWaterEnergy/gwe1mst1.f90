@@ -21,6 +21,7 @@ module GweMstModule
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
   use TspFmiModule, only: TspFmiType
+  use GweInputDataModule, only: GweInputDataType
 
   implicit none
   public :: GweMstType
@@ -37,12 +38,12 @@ module GweMstModule
   type, extends(NumericalPackageType) :: GweMstType
     !
     ! -- storage
+    real(DP), pointer :: cpw => null() !< heat capacity of water
+    real(DP), pointer :: rhow => null() !< density of water
+    real(DP), dimension(:), pointer, contiguous :: cps => null() !< heat capacity of solid
+    real(DP), dimension(:), pointer, contiguous :: rhos => null() !< density of solid
     real(DP), dimension(:), pointer, contiguous :: porosity => null() !< porosity
     real(DP), dimension(:), pointer, contiguous :: ratesto => null() !< rate of mobile storage
-    real(DP), dimension(:), pointer, contiguous :: cpw => null() !< heat capacity of water
-    real(DP), dimension(:), pointer, contiguous :: cps => null() !< heat capacity of solid
-    real(DP), dimension(:), pointer, contiguous :: rhow => null() !< density of water
-    real(DP), dimension(:), pointer, contiguous :: rhos => null() !< density of solid
     !
     ! -- decay
     integer(I4B), pointer :: idcy => null() !< order of decay rate (0:none, 1:first, 2:zero)
@@ -53,8 +54,9 @@ module GweMstModule
     !
     ! -- misc
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
-    real(DP), dimension(:), pointer, contiguous :: latheatvap => null() !< latent heat of vaporization
     type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
+    type(GweInputDataType), pointer :: gwecommon => null() !< pointer to shared gwe data used by multiple packages but set in mst
+    real(DP), pointer :: latheatvap => null() !< latent heat of vaporization
 
   contains
 
@@ -72,6 +74,7 @@ module GweMstModule
     procedure, private :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_data
+    procedure, private :: read_packagedata
 
   end type GweMstType
 
@@ -82,13 +85,14 @@ contains
   !!  Create a new MST object
   !!
   !<
-  subroutine mst_cr(mstobj, name_model, inunit, iout, fmi)
+  subroutine mst_cr(mstobj, name_model, inunit, iout, fmi, gwecommon)
     ! -- dummy
     type(GweMstType), pointer :: mstobj !< unallocated new mst object to create
     character(len=*), intent(in) :: name_model !< name of the model
     integer(I4B), intent(in) :: inunit !< unit number of WEL package input file
     integer(I4B), intent(in) :: iout !< unit number of model listing file
     type(TspFmiType), intent(in), target :: fmi !< fmi package for this GWE model
+    type(GweInputDataType), intent(in), target :: gwecommon !< shared data container for use by multiple GWE packages
     !
     ! -- Create the object
     allocate (mstobj)
@@ -103,6 +107,7 @@ contains
     mstobj%inunit = inunit
     mstobj%iout = iout
     mstobj%fmi => fmi
+    mstobj%gwecommon => gwecommon
     !
     ! -- Initialize block parser
     call mstobj%parser%Initialize(mstobj%inunit, mstobj%iout)
@@ -118,6 +123,7 @@ contains
   !<
   subroutine mst_ar(this, dis, ibound)
     ! -- modules
+    use GweInputDataModule, only: set_gwe_dat_ptrs
     ! -- dummy
     class(GweMstType), intent(inout) :: this !< GweMstType object
     class(DisBaseType), pointer, intent(in) :: dis !< pointer to dis package
@@ -141,8 +147,20 @@ contains
     ! -- Allocate arrays
     call this%allocate_arrays(dis%nodes)
     !
-    ! -- read the data block
+    ! -- read the gridded data
     call this%read_data()
+    !
+    ! -- read package data that is not gridded
+    call this%read_packagedata()
+    !
+    ! -- set pointers for data required by other packages
+    if (this%ilhv == 1) then
+      call this%gwecommon%set_gwe_dat_ptrs(this%rhow, this%cpw, this%rhow, &
+                                           this%cpw, this%latheatvap)
+    else
+      call this%gwecommon%set_gwe_dat_ptrs(this%rhow, this%cpw, this%rhow, &
+                                           this%cpw)
+    end if
     !
     ! -- Return
     return
@@ -221,7 +239,7 @@ contains
       vsolid = vcell * (DONE - this%porosity(n))
       !
       ! -- add terms to diagonal and rhs accumulators
-      term = vsolid * (this%rhos(n) * this%cps(n)) / (this%rhow(n) * this%cpw(n))
+      term = vsolid * (this%rhos(n) * this%cps(n)) / (this%rhow * this%cpw)
       hhcof = -(vnew + term) * tled
       rrhs = -(vold + term) * tled * cold(n)
       idiag = this%dis%con%ia(n)
@@ -350,7 +368,7 @@ contains
     ! -- Calculate storage change
     do n = 1, nodes
       this%ratesto(n) = DZERO
-      unitadj = this%cpw(n) * this%rhow(n)
+      unitadj = this%cpw * this%rhow
       !
       ! -- skip if transport inactive
       if (this%ibound(n) <= 0) cycle
@@ -364,7 +382,7 @@ contains
       vsolid = vcell * (DONE - this%porosity(n))
       !
       ! -- calculate rate
-      term = vsolid * (this%rhos(n) * this%cps(n)) / (this%rhow(n) * this%cpw(n))
+      term = vsolid * (this%rhos(n) * this%cps(n)) / (this%rhow * this%cpw)
       hhcof = -(vwatnew + term) * tled
       rrhs = -(vwatold + term) * tled * cold(n)
       rate = hhcof * cnew(n) - rrhs
@@ -455,7 +473,7 @@ contains
     !
     ! -- for GWE, storage rate needs to have units adjusted
     do n = 1, size(this%ratesto)
-      this%ratesto(n) = this%ratesto(n) * this%cpw(n) * this%rhow(n)
+      this%ratesto(n) = this%ratesto(n) * this%cpw * this%rhow
     end do
     !
     ! -- sto
@@ -576,10 +594,16 @@ contains
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate
+    call mem_allocate(this%cpw, 'CPW', this%memoryPath)
+    call mem_allocate(this%rhow, 'RHOW', this%memoryPath)
+    call mem_allocate(this%latheatvap, 'LATHEATVAP', this%memoryPath)
     call mem_allocate(this%idcy, 'IDCY', this%memoryPath)
     call mem_allocate(this%ilhv, 'ILHV', this%memoryPath)
     !
     ! -- Initialize
+    this%cpw = DZERO
+    this%rhow = DZERO
+    this%latheatvap = DZERO
     this%idcy = 0
     this%ilhv = 0
     !
@@ -606,9 +630,7 @@ contains
     ! -- sto
     call mem_allocate(this%porosity, nodes, 'POROSITY', this%memoryPath)
     call mem_allocate(this%ratesto, nodes, 'RATESTO', this%memoryPath)
-    call mem_allocate(this%cpw, nodes, 'CPW', this%memoryPath)
     call mem_allocate(this%cps, nodes, 'CPS', this%memoryPath)
-    call mem_allocate(this%rhow, nodes, 'RHOW', this%memoryPath)
     call mem_allocate(this%rhos, nodes, 'RHOS', this%memoryPath)
     !
     ! -- dcy
@@ -622,29 +644,17 @@ contains
       call mem_allocate(this%decaylast, nodes, 'DECAYLAST', this%memoryPath)
     end if
     !
-    ! -- latent heat of vaporization
-    if (this%ilhv == 0) then
-      call mem_allocate(this%latheatvap, 1, 'LATHEATVAP', this%memoryPath)
-    else
-      call mem_allocate(this%latheatvap, nodes, 'LATHEATVAP', this%memoryPath)
-    end if
-    !
     ! -- Initialize
     do n = 1, nodes
       this%porosity(n) = DZERO
       this%ratesto(n) = DZERO
-      this%cpw(n) = DZERO
       this%cps(n) = DZERO
-      this%rhow(n) = DZERO
       this%rhos(n) = DZERO
     end do
     do n = 1, size(this%decay)
       this%decay(n) = DZERO
       this%ratedcy(n) = DZERO
       this%decaylast(n) = DZERO
-    end do
-    do n = 1, size(this%latheatvap)
-      this%latheatvap(n) = DZERO
     end do
     !
     ! -- Return
@@ -730,17 +740,14 @@ contains
     character(len=:), allocatable :: line
     integer(I4B) :: istart, istop, lloc, ierr
     logical :: isfound, endOfBlock
-    logical, dimension(10) :: lname
-    character(len=24), dimension(7) :: aname
+    logical, dimension(4) :: lname
+    character(len=24), dimension(4) :: aname
     ! -- formats
     ! -- data
     data aname(1)/'  MOBILE DOMAIN POROSITY'/
     data aname(2)/'              DECAY RATE'/
-    data aname(3)/'  HEAT CAPACITY OF WATER'/
-    data aname(4)/' HEAT CAPACITY OF SOLIDS'/
-    data aname(5)/'        DENSITY OF WATER'/
-    data aname(6)/'       DENSITY OF SOLIDS'/
-    data aname(7)/'LATENT HEAT VAPORIZATION'/
+    data aname(3)/' HEAT CAPACITY OF SOLIDS'/
+    data aname(4)/'       DENSITY OF SOLIDS'/
     !
     ! -- initialize
     isfound = .false.
@@ -770,34 +777,16 @@ contains
                                         this%parser%iuactive, this%decay, &
                                         aname(2))
           lname(2) = .true.
-        case ('CPW')
-          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                        this%parser%iuactive, this%cpw, &
-                                        aname(3))
-          lname(3) = .true.
         case ('CPS')
           call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
                                         this%parser%iuactive, this%cps, &
-                                        aname(4))
-          lname(4) = .true.
-        case ('RHOW')
-          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                        this%parser%iuactive, this%rhow, &
-                                        aname(5))
-          lname(5) = .true.
+                                        aname(3))
+          lname(3) = .true.
         case ('RHOS')
           call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
                                         this%parser%iuactive, this%rhos, &
-                                        aname(6))
-          lname(6) = .true.
-        case ('LATHEATVAP')
-          if (this%ilhv == 0) &
-            call mem_reallocate(this%latheatvap, this%dis%nodes, 'LATHEATVAP', &
-                                trim(this%memoryPath))
-          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                        this%parser%iuactive, this%latheatvap, &
-                                        aname(7))
-          lname(7) = .true.
+                                        aname(4))
+          lname(4) = .true.
         case default
           write (errmsg, '(a,a)') 'UNKNOWN GRIDDATA TAG: ', trim(keyword)
           call store_error(errmsg)
@@ -817,18 +806,10 @@ contains
       call store_error(errmsg)
     end if
     if (.not. lname(3)) then
-      write (errmsg, '(a)') 'CPW NOT SPECIFIED IN GRIDDATA BLOCK.'
-      call store_error(errmsg)
-    end if
-    if (.not. lname(4)) then
       write (errmsg, '(a)') 'CPS NOT SPECIFIED IN GRIDDATA BLOCK.'
       call store_error(errmsg)
     end if
-    if (.not. lname(5)) then
-      write (errmsg, '(a)') 'RHOW NOT SPECIFIED IN GRIDDATA BLOCK.'
-      call store_error(errmsg)
-    end if
-    if (.not. lname(6)) then
+    if (.not. lname(4)) then
       write (errmsg, '(a)') 'RHOS NOT SPECIFIED IN GRIDDATA BLOCK.'
       call store_error(errmsg)
     end if
@@ -851,27 +832,6 @@ contains
       end if
     end if
     !
-    ! -- Check for latent heat of vaporization.  May be used by multiple packages 
-    !    wherever evaporation occurs, is specified in mst instead of in multiple
-    !    GWE packages that simulate evaporation (SFE, LKE, UZE)
-    if (this%ilhv > 0) then
-      if (.not. lname(7)) then
-        write (errmsg, '(a)') 'EVAPORATION IS EXPECTED IN A GWE PACKAGE &
-          &BUT THE LATENT HEAT OF VAPORIZATION IS NOT SPECIFIED.  LATHEATVAP &
-          &MUST BE SPECIFIED IN GRIDDATA BLOCK.'
-        call store_error(errmsg)
-      end if
-    else
-      if (lname(7)) then
-        write (warnmsg, '(a)') 'LATENT HEAT OF VAPORIZATION FOR CALCULATING &
-          &EVAPORATION IS SPECIFIED, BUT CORRESPONDING OPTION NOT SET IN &
-          &OPTIONS BLOCK.  EVAPORATION CALCULATIONS WILL STILL USE LATHEATVAP &
-          &SPECIFIED IN GWE MST PACKAGE.'
-        call store_warning(warnmsg)
-        write (this%iout, '(1x,a)') 'WARNING.  '//warnmsg
-      end if
-    end if
-    !
     ! -- terminate if errors
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
@@ -880,6 +840,66 @@ contains
     ! -- Return
     return
   end subroutine read_data
+
+  !> @ brief Read data for package
+  !!
+  !!  Method to read data for the package.
+  !!
+  !<
+  subroutine read_packagedata(this)
+    ! -- modules
+    ! -- dummy
+    class(GweMstType) :: this !< GweMstType object
+    ! -- local
+    logical :: isfound
+    logical :: endOfBlock
+    integer(I4B) :: ierr
+    !
+    call this%parser%GetBlock('PACKAGEDATA', isfound, ierr, &
+                              supportopenclose=.true.)
+    !
+    ! -- parse locations block if detected
+    if (isfound) then
+      write (this%iout, '(/1x,a)') 'PROCESSING '//trim(adjustl(this%packName))// &
+        ' PACKAGEDATA'
+      do
+        call this%parser%GetNextLine(endOfBlock)
+        if (endOfBlock) then
+          exit
+        end if
+        !
+        ! -- get fluid constants
+        this%cpw = this%parser%GetDouble()
+        this%rhow = this%parser%GetDouble()
+      end do
+    end if
+    !
+    ! -- Check for latent heat of vaporization.  May be used by multiple packages 
+    !    wherever evaporation occurs, is specified in mst instead of in multiple
+    !    GWE packages that simulate evaporation (SFE, LKE, UZE)
+    !if (this%ilhv > 0) then
+    !  if (.not. lname(7)) then
+    !    write (errmsg, '(a)') 'EVAPORATION IS EXPECTED IN A GWE PACKAGE &
+    !      &BUT THE LATENT HEAT OF VAPORIZATION IS NOT SPECIFIED.  LATHEATVAP &
+    !      &MUST BE SPECIFIED IN GRIDDATA BLOCK.'
+    !    call store_error(errmsg)
+    !  end if
+    !else
+    !  if (lname(7)) then
+    !    write (warnmsg, '(a)') 'LATENT HEAT OF VAPORIZATION FOR CALCULATING &
+    !      &EVAPORATION IS SPECIFIED, BUT CORRESPONDING OPTION NOT SET IN &
+    !      &OPTIONS BLOCK.  EVAPORATION CALCULATIONS WILL STILL USE LATHEATVAP &
+    !      &SPECIFIED IN GWE MST PACKAGE.'
+    !    call store_warning(warnmsg)
+    !    write (this%iout, '(1x,a)') 'WARNING.  '//warnmsg
+    !  end if
+    !end if
+
+    !
+    ! -- Return
+    return
+  end subroutine read_packagedata
+
 
   !> @ brief Calculate zero-order decay rate and constrain if necessary
   !!

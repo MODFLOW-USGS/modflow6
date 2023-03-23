@@ -17,6 +17,7 @@ module TspSsmModule
   use BaseDisModule, only: DisBaseType
   use TspFmiModule, only: TspFmiType
   use TspLabelsModule, only: TspLabelsType
+  use GweInputDataModule, only: GweInputDataType
   use TableModule, only: TableType, table_cr
   use GwtSpcModule, only: GwtSpcType
   use MatrixModule
@@ -36,7 +37,9 @@ module TspSsmModule
   !!
   !<
   type, extends(NumericalPackageType) :: TspSsmType
-
+    
+    type(GweInputDataType), pointer :: gwecommon => null() !< pointer to shared gwe data used by multiple packages but set in mst
+    
     integer(I4B), pointer :: nbound !< total number of flow boundaries in this time step
     integer(I4B), dimension(:), pointer, contiguous :: isrctype => null() !< source type 0 is unspecified, 1 is aux, 2 is auxmixed, 3 is ssmi, 4 is ssmimixed
     integer(I4B), dimension(:), pointer, contiguous :: iauxpak => null() !< aux col for concentration
@@ -81,7 +84,7 @@ contains
   !!  and initializing the parser.
   !!
   !<
-  subroutine ssm_cr(ssmobj, name_model, inunit, iout, fmi, tsplab)
+  subroutine ssm_cr(ssmobj, name_model, inunit, iout, fmi, tsplab, gwecommon)
     ! -- dummy
     type(TspSsmType), pointer :: ssmobj !< TspSsmType object
     character(len=*), intent(in) :: name_model !< name of the model
@@ -89,6 +92,7 @@ contains
     integer(I4B), intent(in) :: iout !< fortran unit for output
     type(TspFmiType), intent(in), target :: fmi !< Transport FMI package
     type(TspLabelsType), intent(in), pointer :: tsplab !< TspLabelsType object
+    type(GweInputDataType), intent(in), target, optional :: gwecommon !< shared data container for use by multiple GWE packages
     !
     ! -- Create the object
     allocate (ssmobj)
@@ -110,6 +114,11 @@ contains
     ! -- Store pointer to labels associated with the current model so that the 
     !    package has access to the corresponding dependent variable type
     ssmobj%tsplab => tsplab
+    !
+    ! -- Give package access to the shared heat transport variables assigned in MST
+    if (present(gwecommon)) then
+      ssmobj%gwecommon => gwecommon
+    end if
     !
     ! -- Return
     return
@@ -140,7 +149,7 @@ contains
   !! options and data, and sets up the output table.
   !!
   !<
-  subroutine ssm_ar(this, dis, ibound, cnew, cpw, rhow)
+  subroutine ssm_ar(this, dis, ibound, cnew)
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
     ! -- dummy
@@ -148,8 +157,6 @@ contains
     class(DisBaseType), pointer, intent(in) :: dis !< discretization package
     integer(I4B), dimension(:), pointer, contiguous :: ibound !< GWT model ibound
     real(DP), dimension(:), pointer, contiguous :: cnew !< GWT model dependent variable
-    real(DP), dimension(:), pointer, contiguous, optional :: cpw !< GWE heat capacity paramter
-    real(DP), dimension(:), pointer, contiguous, optional :: rhow !< GWE fluid density paramter
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtssm = &
@@ -163,8 +170,6 @@ contains
     this%dis => dis
     this%ibound => ibound
     this%cnew => cnew
-    if (present(cpw)) this%cpw => cpw
-    if (present(rhow)) this%rhow => rhow
     !
     ! -- Check to make sure that there are flow packages
     if (this%fmi%nflowpack == 0) then
@@ -356,7 +361,7 @@ contains
       !
       ! -- If GWE transport model type, adjust units to energy
       if (this%tsplab%tsptype == "GWE") then
-        unitadj = this%cpw(n) * this%rhow(n)    ! jiffylube: kluge note - check use of unitadj in ssm
+        unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
       end if
       !
       ! -- Add terms based on qbnd sign
@@ -743,9 +748,8 @@ contains
     ! -- Scalars
     call mem_deallocate(this%nbound)
     !
-    ! -- nullify pointers
-    nullify(this%cpw)
-    nullify(this%rhow)
+    ! -- Pointers
+    nullify (this%gwecommon)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()

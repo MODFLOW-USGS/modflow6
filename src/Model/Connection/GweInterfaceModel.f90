@@ -83,7 +83,8 @@ contains
     call disu_cr(this%dis, this%name, -1, this%iout)
     call fmi_cr(this%fmi, this%name, 0, this%iout, this%tsplab)
     call adv_cr(this%adv, this%name, adv_unit, this%iout, this%fmi)
-    call dsp_cr(this%dsp, this%name, -dsp_unit, this%iout, this%fmi)
+    call dsp_cr(this%dsp, this%name, -dsp_unit, this%iout, this%fmi, &
+                this%gwecommon)
     call tsp_obs_cr(this%obs, inobs)
 
   end subroutine gweifmod_cr
@@ -185,8 +186,7 @@ contains
       call this%adv%adv_ar(this%dis, this%ibound)
     end if
     if (this%indsp > 0) then
-      call this%dsp%dsp_ar(this%ibound, this%porosity, this%dsp%cpw, &
-                           this%dsp%rhow)
+      call this%dsp%dsp_ar(this%ibound, this%porosity)
     end if
 
   end subroutine gweifmod_ar

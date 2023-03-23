@@ -1380,10 +1380,7 @@ contains
     call mem_deallocate(this%idxbudaux)
     call mem_deallocate(this%idxbudssm)
     call mem_deallocate(this%nconcbudssm)
-    !
-    ! -- nullify pointers
-    nullify(this%cpw)
-    nullify(this%rhow)
+
     !
     ! -- deallocate scalars in NumericalPackageType
     call this%BndType%bnd_da()
@@ -2035,8 +2032,7 @@ contains
     return
   end subroutine define_listlabel
 
-  subroutine apt_set_pointers(this, neq, ibound, xnew, xold, flowja, cpw, rhow, &
-                              latheatvap)
+  subroutine apt_set_pointers(this, neq, ibound, xnew, xold, flowja)
 ! ******************************************************************************
 ! set_pointers -- Set pointers to model arrays and variables so that a package
 !                 has access to these things.
@@ -2050,26 +2046,13 @@ contains
     real(DP), dimension(:), pointer, contiguous :: xnew
     real(DP), dimension(:), pointer, contiguous :: xold
     real(DP), dimension(:), pointer, contiguous :: flowja
-    real(DP), dimension(:), pointer, contiguous, optional :: cpw !< heat capacity of fluid (for GWE model type)
-    real(DP), dimension(:), pointer, contiguous, optional :: rhow !< density of fluid (for GWE model type)
-    real(DP), dimension(:), pointer, contiguous, optional :: latheatvap !< latent heat of vaporization (for GWE evaporation)
     !
     ! -- local
     integer(I4B) :: istart, iend
 ! ------------------------------------------------------------------------------
     !
     ! -- call base BndType set_pointers
-    if (.not.present(cpw) .and. .not.present(rhow)) then
-      call this%BndType%set_pointers(neq, ibound, xnew, xold, flowja)
-    else
-      if (.not.present(latheatvap)) then
-        call this%BndType%set_pointers(neq, ibound, xnew, xold, flowja, &
-                                       cpw, rhow)
-      else
-        call this%BndType%set_pointers(neq, ibound, xnew, xold, flowja, &
-                                       cpw, rhow, latheatvap)
-      end if
-    end if
+    call this%BndType%set_pointers(neq, ibound, xnew, xold, flowja)
     !
     ! -- Set the pointers
     !
@@ -2541,9 +2524,6 @@ contains
     ! 
     ! -- TODO: these unitadj values should be cleaned-up as denoted in
     !    uze_fc_expanded
-    if (associated(this%cpw).and.associated(this%rhow)) then
-      unitadj = this%bndtype%cpw(1) * this%bndtype%rhow(1)
-    end if
     unitadj = DONE      ! jiffylube: kluge debug
     !
     n1 = ientry
@@ -2577,10 +2557,6 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- If GWE package, adjust for thermal units
-    unitadj = DONE  ! TODO: Avoid checking whether solute or energy
-    if (associated(this%cpw).and.associated(this%rhow)) then
-      unitadj = this%cpw(ientry) * this%rhow(ientry)
-    end if
     unitadj = DONE      ! jiffylube: kluge debug
     !
     ! -- Calculate MVR-related terms 
@@ -2614,10 +2590,6 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- If GWE package, adjust for thermal units
-    unitadj = DONE  ! TODO: Avoid checking whether solute or energy
-    if (associated(this%cpw).and.associated(this%rhow)) then
-      unitadj = this%cpw(1) * this%rhow(1)
-    end if
     unitadj = DONE       ! jiffylube: kluge debug
     !
     n1 = this%flowbudptr%budterm(this%idxbudfjf)%id1(ientry)

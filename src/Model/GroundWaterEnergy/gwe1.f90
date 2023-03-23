@@ -12,6 +12,7 @@ module GweModule
   use GweDspModule, only: GweDspType
   use GweMstModule, only: GweMstType
   use BudgetModule, only: BudgetType
+  use GweInputDataModule, only: GweInputDataType
   use TransportModelModule
   use MatrixModule
 
@@ -24,8 +25,9 @@ module GweModule
 
   type, extends(TransportModelType) :: GweModelType
 
-    type(GweMstType), pointer :: mst => null() ! mass storage and transfer package
-    type(GweDspType), pointer :: dsp => null() ! dispersion package
+    type(GweInputDataType), pointer :: gwecommon => null() !< container for data shared with multiple packages
+    type(GweMstType), pointer :: mst => null() !< mass storage and transfer package
+    type(GweDspType), pointer :: dsp => null() !< dispersion package
     !type(BudgetType), pointer :: budget => null() ! budget object
     !integer(I4B), pointer :: inic => null() ! unit number IC
     !integer(I4B), pointer :: infmi => null() ! unit number FMI
@@ -64,6 +66,7 @@ module GweModule
     procedure, private :: gwe_ot_bdsummary
     procedure, private :: gwe_ot_obs
     procedure :: load_input_context => gwe_load_input_context
+    
   end type GweModelType
 
   ! -- Module variables constant for simulation
@@ -108,6 +111,7 @@ contains
     use GweDspModule, only: dsp_cr
     use BudgetModule, only: budget_cr
     use TspLabelsModule, only: tsplabels_cr
+    use GweInputDataModule, only: gweshared_dat_cr
     ! -- dummy
     character(len=*), intent(in) :: filename
     integer(I4B), intent(in) :: id
@@ -144,6 +148,9 @@ contains
     !
     ! -- Instantiate generalized labels
     call tsplabels_cr(this%tsplab, this%name)
+    !
+    ! -- Instantiate shared data container
+    call gweshared_dat_cr(this%gwecommon)
     !
     ! -- Open namefile and set iout
     call namefile_obj%init(this%filename, 0)
@@ -234,10 +241,13 @@ contains
     ! -- Create packages that are tied directly to model
     call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis, this%tsplab)
     call fmi_cr(this%fmi, this%name, this%infmi, this%iout, this%tsplab)
-    call mst_cr(this%mst, this%name, this%inmst, this%iout, this%fmi)
+    call mst_cr(this%mst, this%name, this%inmst, this%iout, this%fmi, &
+                this%gwecommon)
     call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi)
-    call dsp_cr(this%dsp, this%name, this%indsp, this%iout, this%fmi)
-    call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, this%tsplab)
+    call dsp_cr(this%dsp, this%name, this%indsp, this%iout, this%fmi, &
+                this%gwecommon)
+    call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, &
+                this%tsplab, this%gwecommon)
     call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
     call tsp_obs_cr(this%obs, this%inobs)    
@@ -271,6 +281,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use TspLabelsModule, only: setTspLabels
+    use GweInputDataModule, only: gweshared_dat_df
     ! -- dummy
     class(GweModelType) :: this
     ! -- local
@@ -297,6 +308,9 @@ contains
     this%nja = this%dis%nja
     this%ia => this%dis%con%ia
     this%ja => this%dis%con%ja
+    !
+    ! -- Define shared data (cpw, rhow, latent heat of vaporization)
+    call this%gwecommon%gweshared_dat_df(this%neq)
     !
     ! -- Allocate model arrays, now that neq and nja are assigned
     call this%allocate_arrays()
@@ -403,12 +417,9 @@ contains
     if (this%inmvt > 0) call this%mvt%mvt_ar()
     if (this%inic > 0) call this%ic%ic_ar(this%x)
     if (this%inmst > 0) call this%mst%mst_ar(this%dis, this%ibound)
-    if (this%inadv > 0) call this%adv%adv_ar(this%dis, this%ibound, &
-                                             this%mst%cpw, this%mst%rhow)
-    if (this%indsp > 0) call this%dsp%dsp_ar(this%ibound, this%mst%porosity, &
-                                             this%mst%cpw, this%mst%rhow)
-    if (this%inssm > 0) call this%ssm%ssm_ar(this%dis, this%ibound, this%x, &
-                                             this%mst%cpw, this%mst%rhow)
+    if (this%inadv > 0) call this%adv%adv_ar(this%dis, this%ibound)
+    if (this%indsp > 0) call this%dsp%dsp_ar(this%ibound, this%mst%porosity)
+    if (this%inssm > 0) call this%ssm%ssm_ar(this%dis, this%ibound, this%x)
     if (this%inobs > 0) call this%obs%tsp_obs_ar(this%ic, this%x, this%flowja)
     !
     ! -- Call dis_ar to write binary grid file
@@ -422,8 +433,7 @@ contains
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%set_pointers(this%dis%nodes, this%ibound, this%x, &
-                                this%xold, this%flowja, this%mst%cpw, &
-                                this%mst%rhow, this%mst%latheatvap)
+                                this%xold, this%flowja)
       ! -- Read and allocate package
       call packobj%bnd_ar()
     end do
@@ -986,6 +996,7 @@ contains
     call this%oc%oc_da()
     call this%obs%obs_da()
     call this%tsplab%tsplabels_da()
+    call this%gwecommon%gweshared_dat_da()
     !
     ! -- Internal package objects
     deallocate (this%dis)
@@ -1000,6 +1011,7 @@ contains
     deallocate (this%oc)
     deallocate (this%obs)
     deallocate (this%tsplab)
+    nullify (this%gwecommon)
     !
     ! -- Boundary packages
     do ip = 1, this%bndlist%Count()
@@ -1155,7 +1167,7 @@ contains
     select case (filtyp)
     case ('TMP6')
       call cnc_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                      pakname, this%tsplab)
+                      pakname, this%tsplab, this%gwecommon)
       !case('SRC6')
       !  call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
       !                  pakname)
@@ -1164,13 +1176,13 @@ contains
       !                  pakname, this%fmi)
     case('SFE6')
       call sfe_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                        pakname, this%fmi, this%tsplab)
+                        pakname, this%fmi, this%tsplab, this%gwecommon)
       !case('MWT6')
       !  call mwt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
       !                  pakname, this%fmi)
     case('UZE6')
       call uze_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                        pakname, this%fmi, this%tsplab)
+                        pakname, this%fmi, this%tsplab, this%gwecommon)
       !case('IST6')
       !  call ist_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
       !                  pakname, this%fmi, this%mst)

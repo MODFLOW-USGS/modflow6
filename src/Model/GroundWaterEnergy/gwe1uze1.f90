@@ -35,9 +35,11 @@ module GweUzeModule
   use TspAptModule, only: TspAptType, apt_process_obsID, &
                           apt_process_obsID12
   use TspLabelsModule, only: TspLabelsType
+  use GweInputDataModule, only: GweInputDataType
   use MatrixModule
+ 
   implicit none
-
+ 
   public uze_create
 
   character(len=*), parameter :: ftype = 'UZE'
@@ -45,6 +47,8 @@ module GweUzeModule
   character(len=16) :: text = '             UZE'
 
   type, extends(TspAptType) :: GweUzeType
+    
+    type(GweInputDataType), pointer :: gwecommon => null() !< pointer to shared gwe data used by multiple packages but set in mst
 
     integer(I4B), pointer :: idxbudinfl => null() ! index of uzf infiltration terms in flowbudptr
     integer(I4B), pointer :: idxbudrinf => null() ! index of rejected infiltration terms in flowbudptr
@@ -80,7 +84,7 @@ module GweUzeModule
 contains
 
   subroutine uze_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
-                        fmi, tsplab)
+                        fmi, tsplab, gwecommon)
 ! ******************************************************************************
 ! uze_create -- Create a New UZE Package
 ! ******************************************************************************
@@ -97,6 +101,7 @@ contains
     character(len=*), intent(in) :: pakname
     type(TspFmiType), pointer :: fmi
     type(TspLabelsType), pointer :: tsplab
+    type(GweInputDataType), intent(in), target :: gwecommon !< shared data container for use by multiple GWE packages
     ! -- local
     type(GweUzeType), pointer :: uzeobj
 ! ------------------------------------------------------------------------------
@@ -130,6 +135,11 @@ contains
     ! -- Store pointer to the labels module for dynamic setting of 
     !    concentration vs temperature
     uzeobj%tsplab => tsplab
+    !
+    ! -- Store pointer to shared data module for accessing cpw, rhow
+    !    for the budget calculations, and for accessing the latent heat of
+    !    vaporization
+    uzeobj%gwecommon => gwecommon
     !
     ! -- return
     return
@@ -476,9 +486,6 @@ contains
     !    physics it captures.  For example, could be something like 
     !    cpw_vol which denotes volume-based heat capacity.  Its stored 
     !    value would represent cpw * rhow
-    if (associated(this%cpw).and.associated(this%rhow)) then
-      unitadj = this%bndtype%cpw(1) * this%bndtype%rhow(1)
-    end if
     unitadj = DONE    ! jiffylube: kluge debug
     !
     ! -- add infiltration contribution
@@ -548,9 +555,6 @@ contains
 !!      call matrix_sln%add_value_pos(iposd, hcofval)
       iloc = this%idxlocnode(n)  ! for uze idxlocnode stores the host cell local row index
       ipossymoffd = this%idxsymoffdglo(n)  ! TO DO: convince ourselves that "n" is ok here, since it's not aloop over "j"
-      if (kper == 3 .and. kstp == 2) then
-        dummy = 2.2
-      end if
       call this%apt_stor_term(n, n1, n2, rrate, rhsval, hcofval)
       call matrix_sln%add_value_pos(ipossymoffd, hcofval)
       rhs(iloc) = rhs(iloc) + rhsval
@@ -991,9 +995,6 @@ contains
     ! 
     ! -- TODO: these unitadj values should be cleaned-up as denoted in
     !    uze_fc_expanded
-    if (associated(this%cpw).and.associated(this%rhow)) then
-      unitadj = this%bndtype%cpw(1) * this%bndtype%rhow(1)
-    end if
     unitadj = DONE    ! jiffylube: kluge debug
     !
     n1 = this%flowbudptr%budterm(this%idxbudinfl)%id1(ientry)
@@ -1041,9 +1042,6 @@ contains
     ! 
     ! -- TODO: these unitadj values should be cleaned-up as denoted in
     !    uze_fc_expanded
-    if (associated(this%cpw).and.associated(this%rhow)) then
-      unitadj = this%bndtype%cpw(1) * this%bndtype%rhow(1)
-    end if
     unitadj = DONE    ! jiffylube: kluge debug
     !
     n1 = this%flowbudptr%budterm(this%idxbudrinf)%id1(ientry)
@@ -1084,9 +1082,6 @@ contains
     ! -- TODO: these unitadj values should be cleaned-up as denoted in
     !    uze_fc_expanded
     ! -- TODO: Latent heat will likely need to play a role here at some point
-    if (associated(this%cpw).and.associated(this%rhow)) then
-      unitadj = this%bndtype%cpw(1) * this%bndtype%rhow(1)
-    end if
     unitadj = DONE    ! jiffylube: kluge debug
     !
     n1 = this%flowbudptr%budterm(this%idxbuduzet)%id1(ientry)
@@ -1133,9 +1128,6 @@ contains
     ! 
     ! -- TODO: these unitadj values should be cleaned-up as denoted in
     !    uze_fc_expanded
-    if (associated(this%cpw).and.associated(this%rhow)) then
-      unitadj = this%bndtype%cpw(1) * this%bndtype%rhow(1)
-    end if
     unitadj = DONE    ! jiffylube: kluge debug
     !
     n1 = this%flowbudptr%budterm(this%idxbudritm)%id1(ientry)

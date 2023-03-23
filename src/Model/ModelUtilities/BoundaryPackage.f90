@@ -111,11 +111,6 @@ module BndModule
     type(TableType), pointer :: inputtab => null() !< input table object
     type(TableType), pointer :: outputtab => null() !< output table object for package flows writtent to the model listing file
     type(TableType), pointer :: errortab => null() !< package error table
-    !
-    ! -- physical parameters
-    real(DP), dimension(:), pointer, contiguous :: cpw => null() !< points to heat capacity specified in GWE MST package
-    real(DP), dimension(:), pointer, contiguous :: rhow => null() !< points to density of fluid specified in GWE MST package
-    real(DP), dimension(:), pointer, contiguous :: latheatvap => null() !< points to latent heat of vaporization in GWE MST package
 
   contains
     procedure :: bnd_df
@@ -1210,8 +1205,7 @@ contains
     !!  variables. This base method should not need to be overridden.
     !!
   !<
-  subroutine set_pointers(this, neq, ibound, xnew, xold, flowja, cpw, rhow, &
-                          latheatvap)
+  subroutine set_pointers(this, neq, ibound, xnew, xold, flowja)
     ! -- dummy variables
     class(BndType) :: this !< BndType object
     integer(I4B), pointer :: neq !< number of equations in the model
@@ -1219,9 +1213,6 @@ contains
     real(DP), dimension(:), pointer, contiguous :: xnew !< current dependent variable
     real(DP), dimension(:), pointer, contiguous :: xold !< previous dependent variable
     real(DP), dimension(:), pointer, contiguous :: flowja !< connection flow terms
-    real(DP), dimension(:), pointer, contiguous, optional :: cpw !< heat capacity of fluid (for GWE model type)
-    real(DP), dimension(:), pointer, contiguous, optional :: rhow !< density of fluid (for GWE model type)
-    real(DP), dimension(:), pointer, contiguous, optional :: latheatvap !< latent heat of vaporization (for GWE model type)
     !
     ! -- Set the pointers
     this%neq => neq
@@ -1229,11 +1220,6 @@ contains
     this%xnew => xnew
     this%xold => xold
     this%flowja => flowja
-    !
-    ! -- if part of a GWE simulation, need heat capacity(cpw) and density (rhow)
-    if (present(cpw)) this%cpw => cpw
-    if (present(rhow)) this%rhow => rhow
-    if (present(latheatvap)) this%latheatvap => latheatvap
     !
     ! -- return
   end subroutine set_pointers
