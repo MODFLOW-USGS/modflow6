@@ -456,18 +456,12 @@ contains
       end do
     end do
 
-    deallocate (rcv_req)
-    deallocate (snd_req)
-    deallocate (rcv_stat)
-    deallocate (hdr_rcv_t)
-    deallocate (hdr_snd_t)
-    deallocate (hdr_rcv_cnt)
+    deallocate (rcv_req, snd_req, rcv_stat, snd_stat)
+    deallocate (hdr_rcv_t, hdr_snd_t, hdr_rcv_cnt)
     deallocate (headers)
-    deallocate (map_rcv_t)
-    deallocate (map_snd_t)
+    deallocate (map_rcv_t, map_snd_t)
     deallocate (rcv_maps)
-    deallocate (body_rcv_t)
-    deallocate (body_snd_t)
+    deallocate (body_rcv_t, body_snd_t)
 
   end subroutine mr_route_active
 
