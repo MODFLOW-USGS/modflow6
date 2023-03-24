@@ -291,7 +291,7 @@ type integer
 reader urword
 optional true
 longname LAK Newton-Raphson iterations
-description integer value that defines the maximum number of Newton-Raphson iterations allowed for a lake. By default, MAXIMUM\_ITERATIONS is equal to 100. MAXIMUM\_ITERATIONS would only need to be increased from the default value if one or more lake in a simulation has a large water budget error (IN-OUT).
+description integer value that defines the maximum number of Newton-Raphson iterations allowed for a lake. By default, MAXIMUM\_ITERATIONS is equal to 100. MAXIMUM\_ITERATIONS would only need to be increased from the default value if one or more lakes in a simulation has a large water budget error.
 
 block options
 name maximum_stage_change
@@ -299,7 +299,7 @@ type double precision
 reader urword
 optional true
 longname stage closure tolerance
-description real value that defines the lake stage closure tolerance. By default, MAXIMUM\_STAGE\_CHANGE is equal to $1 \times 10^{-5}$. The MAXIMUM\_STAGE\_CHANGE would only need to be increased or decreased from the default value if the water budget error (IN-OUT) for one or more lake is too small or too large, respectively.
+description real value that defines the lake stage closure tolerance. By default, MAXIMUM\_STAGE\_CHANGE is equal to $1 \times 10^{-5}$. The MAXIMUM\_STAGE\_CHANGE would only need to be increased or decreased from the default value if the water budget error for one or more lakes is too small or too large, respectively.
 
 block options
 name time_conversion

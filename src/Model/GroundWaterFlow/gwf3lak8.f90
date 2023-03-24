@@ -2,7 +2,7 @@ module LakModule
   !
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, LENTIMESERIESNAME, &
-                             IWETLAKE, &
+                             IWETLAKE, MAXADPIT, &
                              DZERO, DPREC, DEM30, DEM9, DEM6, DEM5, &
                              DEM4, DEM2, DEM1, DHALF, DP7, DP999, DONE, &
                              DTWO, DPI, DTHREE, DEIGHT, DTEN, DHUNDRED, DEP20, &
@@ -382,7 +382,7 @@ contains
     this%igwhcopt = 0
     this%iconvchk = 1
     this%iconvresidchk = 1
-    this%maxlakit = 100
+    this%maxlakit = MAXADPIT
     this%surfdep = DZERO
     this%dmaxchg = DEM5
     this%delh = DP999 * this%dmaxchg
