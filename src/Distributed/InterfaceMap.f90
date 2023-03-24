@@ -26,7 +26,6 @@ module InterfaceMapModule
     procedure :: destroy
     procedure :: get_node_map
     procedure :: get_connection_map
-    procedure :: reduce_maps
     procedure :: print_interface
   end type InterfaceMapType
 
@@ -135,17 +134,6 @@ contains
 
   end function get_connection_map
 
-  !> @brief Reduce the model maps (nodes, connections)
-  !< using lookup tables from remote index into local mem
-  subroutine reduce_maps(this, model_id, node_lut, conn_lut)
-    class(InterfaceMapType) :: this
-    integer(I4B) :: model_id
-    integer(I4B), dimension(:), pointer, contiguous :: node_lut
-    integer(I4B), dimension(:), pointer, contiguous :: conn_lut
-    ! local
-
-  end subroutine reduce_maps
-
   !> @brief Dumps interface data to the screen
   !<
   subroutine print_interface(this, outunit)
@@ -157,6 +145,7 @@ contains
     write (outunit, '(a,i0)') "nr. models: ", this%nr_models
     write (outunit, '(a,i0)') "nr. exchanges: ", this%nr_exchanges
     do i = 1, this%nr_models
+      if (this%model_ids(i) == -1) cycle
       write (outunit, '(3a,i0,a)') "model: ", trim(this%model_names(i)), &
         "[", this%model_ids(i), "]"
       write (outunit, *) "node map:"
@@ -172,6 +161,7 @@ contains
     end do
 
     do i = 1, this%nr_exchanges
+      if (this%exchange_ids(i) == -1) cycle
       write (outunit, '(3a,i0,a)') "exchange: ", trim(this%exchange_names(i)), &
         "[", this%exchange_ids(i), "]"
       write (outunit, *) "exchange map:"
@@ -189,12 +179,8 @@ contains
     ! local
     integer(I4B) :: i
 
-    deallocate (this%model_ids)
-    deallocate (this%model_names)
-    deallocate (this%exchange_ids)
-    deallocate (this%exchange_names)
-
     do i = 1, this%nr_models
+      if (this%model_ids(i) == -1) cycle
       deallocate (this%node_maps(i)%src_idx)
       deallocate (this%node_maps(i)%tgt_idx)
       deallocate (this%conn_maps(i)%src_idx)
@@ -204,11 +190,17 @@ contains
     deallocate (this%conn_maps)
 
     do i = 1, this%nr_exchanges
+      if (this%exchange_ids(i) == -1) cycle
       deallocate (this%exchange_maps(i)%src_idx)
       deallocate (this%exchange_maps(i)%tgt_idx)
       deallocate (this%exchange_maps(i)%sign)
     end do
     deallocate (this%exchange_maps)
+
+    deallocate (this%model_ids)
+    deallocate (this%model_names)
+    deallocate (this%exchange_ids)
+    deallocate (this%exchange_names)
 
   end subroutine destroy
 

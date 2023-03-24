@@ -162,7 +162,6 @@ contains
     class(VirtualDataManagerType) :: this
     ! local
     integer(I4B) :: ivm, isol, iexg
-    integer(I4B) :: im, model_id
     integer(I4B) :: outunit
     character(len=128) :: monitor_file
     type(VirtualSolutionType), pointer :: virt_sol
@@ -170,7 +169,6 @@ contains
     class(SpatialModelConnectionType), pointer :: conn
     class(VirtualDataContainerType), pointer :: vdc
     type(IndexMapType), pointer :: nmap, cmap
-    integer(I4B), dimension(:), pointer, contiguous :: node_lut, conn_lut
 
     ! merge the interface maps over this process
     do isol = 1, this%nr_solutions
@@ -206,23 +204,6 @@ contains
         cmap => virt_sol%interface_map%get_connection_map(vdc%id)
         call vdc%set_element_map(nmap%src_idx, MAP_NODE_TYPE)
         call vdc%set_element_map(cmap%src_idx, MAP_CONN_TYPE)
-      end do
-    end do
-
-    ! create reduced index map
-    do isol = 1, this%nr_solutions
-      num_sol => virt_sol%numerical_solution
-      do iexg = 1, num_sol%exchangelist%Count()
-        conn => get_smc_from_list(num_sol%exchangelist, iexg)
-        if (.not. associated(conn)) cycle
-        ! these are interface models, create reduced maps
-        do im = 1, conn%interface_map%nr_models
-          model_id = conn%interface_map%model_ids(im)
-          vdc => get_virtual_model(model_id)
-          node_lut => vdc%element_luts(MAP_NODE_TYPE)%remote_to_virtual
-          conn_lut => vdc%element_luts(MAP_CONN_TYPE)%remote_to_virtual
-          call conn%interface_map%reduce_maps(model_id, node_lut, conn_lut)
-        end do
       end do
     end do
 
