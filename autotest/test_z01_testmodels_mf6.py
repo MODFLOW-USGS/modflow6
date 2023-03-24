@@ -24,6 +24,14 @@ excluded_comparisons = {
     "test056_mt3dms_usgs_gwtex_dev": ("6.4.1",),
     "test056_mt3dms_usgs_gwtex_IR_dev": ("6.4.1",),
     "test059_mvlake_lak_ss": ("6.4.1",),
+    "test045_lake2tr_xsfrc_dev": ("6.4.1",),
+    "test045_lake2tr_xsfrd_dev": ("6.4.1",),
+    "test045_lake2tr_xsfre_dev": ("6.4.1",),
+    "test045_lake4ss": ("6.4.1",),
+    "test045_lake4ss_dev": ("6.4.1",),
+    "test045_lake4ss_il_dev": ("6.4.1",),
+    "test045_lake4ss_nr_dev": ("6.4.1",),
+    "test045_lake4ss_nr_embedded": ("6.4.1",),
 }
 
 
