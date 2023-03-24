@@ -1,5 +1,6 @@
 module VirtualDataContainerModule
   use VirtualBaseModule
+  use SimModule, only: ustop
   use ListModule
   use KindModule, only: I4B, LGP
   use STLVecIntModule
@@ -29,11 +30,15 @@ module VirtualDataContainerModule
     class(VirtualDataContainerType), pointer :: ptr => null()
   end type VdcPtrType
 
-  type :: VdcElementMapType
-    integer(I4B) :: nr_virt_elems !< the number of virtualized elements 
+  type, public :: VdcElementMapType
+    integer(I4B) :: nr_virt_elems !< nr. of virtualized elements
     integer(I4B), dimension(:), pointer, contiguous :: remote_elem_shift => null() !< array with 0-based remote indexes
-    integer(I4B), dimension(:), pointer, contiguous :: remote_to_virtual => null() !< (sparse) array with local indexes
   end type VdcElementMapType
+
+  type :: VdcElementLutType
+    integer(I4B) :: max_remote_idx !< max. remote index, also size of the lookup table
+    integer(I4B), dimension(:), pointer, contiguous :: remote_to_virtual => null() !< (sparse) array with local indexes
+  end type VdcElementLutType
 
   !> @brief Container (list) of virtual data items.
   !!
@@ -54,6 +59,7 @@ module VirtualDataContainerModule
 
     type(ListType) :: virtual_data_list !< a list with all virtual data items for this container
     type(VdcElementMapType), dimension(NR_VDC_ELEMENT_MAPS) :: element_maps !< a list with all element maps
+    type(VdcElementLutType), dimension(NR_VDC_ELEMENT_MAPS) :: element_luts !< lookup tables from remote index to local index
   contains
     procedure :: vdc_create
     generic :: map => map_scalar, map_array1d, map_array2d
@@ -99,7 +105,10 @@ contains
     do i = 1, size(this%element_maps)
       this%element_maps(i)%nr_virt_elems = 0
       this%element_maps(i)%remote_elem_shift => null()
-      this%element_maps(i)%remote_to_virtual => null()
+    end do
+    do i = 1, size(this%element_luts)
+      this%element_luts(i)%max_remote_idx = 0
+      this%element_luts(i)%remote_to_virtual => null()
     end do
 
   end subroutine vdc_create
@@ -178,22 +187,28 @@ contains
     integer(I4B), dimension(:), pointer, contiguous :: src_indexes
     integer(I4B) :: map_id
     ! local
-    integer(I4B) :: i, idx_remote, nmax
+    integer(I4B) :: i, idx_remote, max_remote_idx
+
+    if (this%element_maps(map_id)%nr_virt_elems > 0) then
+      write (*, *) "Error, VDC element map already set"
+      call ustop()
+    end if
 
     this%element_maps(map_id)%nr_virt_elems = size(src_indexes)
     allocate (this%element_maps(map_id)%remote_elem_shift(size(src_indexes)))
-    do i = 1, size(src_indexes)      
+    do i = 1, size(src_indexes)
       this%element_maps(map_id)%remote_elem_shift(i) = src_indexes(i) - 1
-    enddo
+    end do
 
-    nmax = maxval(src_indexes)    
-    allocate (this%element_maps(map_id)%remote_to_virtual(nmax))
-    do i = 1, nmax
-      this%element_maps(map_id)%remote_to_virtual(i) = -1
+    max_remote_idx = maxval(src_indexes)
+    this%element_luts(map_id)%max_remote_idx = max_remote_idx
+    allocate (this%element_luts(map_id)%remote_to_virtual(max_remote_idx))
+    do i = 1, max_remote_idx
+      this%element_luts(map_id)%remote_to_virtual(i) = -1
     end do
     do i = 1, size(src_indexes)
       idx_remote = src_indexes(i)
-      this%element_maps(map_id)%remote_to_virtual(idx_remote) = i
+      this%element_luts(map_id)%remote_to_virtual(idx_remote) = i
     end do
 
   end subroutine vdc_set_element_map
@@ -243,13 +258,15 @@ contains
 
     field%sync_stages = stages
     field%map_type = map_id
+    field%is_reduced = .false.
     if (field%is_remote) then
       ! create new virtual memory item
       vmem_path = this%get_vrt_mem_path(field%var_name, field%subcmp_name)
       call field%vm_allocate(field%var_name, vmem_path, shape)
       call get_from_memorylist(field%var_name, vmem_path, field%virtual_mt, found)
       if (map_id > 0) then
-        field%remote_to_virtual => this%element_maps(map_id)%remote_to_virtual
+        field%is_reduced = .true.
+        field%remote_to_virtual => this%element_luts(map_id)%remote_to_virtual
         field%remote_elem_shift => this%element_maps(map_id)%remote_elem_shift
       end if
     end if
@@ -377,6 +394,11 @@ contains
     do i = 1, size(this%element_maps)
       if (associated(this%element_maps(i)%remote_elem_shift)) then
         deallocate (this%element_maps(i)%remote_elem_shift)
+      end if
+    end do
+    do i = 1, size(this%element_luts)
+      if (associated(this%element_luts(i)%remote_to_virtual)) then
+        deallocate (this%element_luts(i)%remote_to_virtual)
       end if
     end do
 

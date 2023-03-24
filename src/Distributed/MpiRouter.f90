@@ -6,9 +6,8 @@ module MpiRouterModule
   use SimStagesModule, only: STG_TO_STR
   use VirtualDataListsModule, only: virtual_model_list, &
                                     virtual_exchange_list
-  use VirtualDataContainerModule, only: VirtualDataContainerType, &
-                                        VdcPtrType, get_vdc_from_list, &
-                                        VDC_TYPE_TO_STR
+  use VirtualBaseModule, only: NR_VDC_ELEMENT_MAPS
+  use VirtualDataContainerModule
   use VirtualExchangeModule, only: VirtualExchangeType
   use VirtualSolutionModule
   use MpiMessageBuilderModule
@@ -216,13 +215,14 @@ contains
 
   end subroutine mr_route_sln
 
-  !> @brief Routes the models and exchanges
-  !<
+  !> @brief Routes the models and exchanges. This is the
+  !< workhorse routine
   subroutine mr_route_active(this, stage)
     class(MpiRouterType) :: this
     integer(I4B) :: stage
     ! local
-    integer(I4B) :: i, j, rnk
+    integer(I4B) :: i, j, k
+    integer(I4B) :: rnk
     integer :: ierr, msg_size
     ! mpi handles
     integer, dimension(:), allocatable :: rcv_req
@@ -235,6 +235,12 @@ contains
     integer, dimension(:), allocatable :: hdr_rcv_t
     integer, dimension(:), allocatable :: hdr_snd_t
     integer, dimension(:), allocatable :: hdr_rcv_cnt
+
+    ! maps
+    type(VdcReceiverMapsType), dimension(:, :), allocatable :: rcv_maps
+    integer, dimension(:), allocatable :: map_rcv_t
+    integer, dimension(:), allocatable :: map_snd_t
+
     ! message body
     integer, dimension(:), allocatable :: body_rcv_t
     integer, dimension(:), allocatable :: body_snd_t
@@ -262,6 +268,11 @@ contains
     allocate (hdr_snd_t(this%senders%size))
     allocate (headers(max_headers, this%receivers%size))
     allocate (hdr_rcv_cnt(max_headers))
+
+    ! allocate map data
+    allocate (map_snd_t(this%senders%size))
+    allocate (map_rcv_t(this%receivers%size))
+    allocate (rcv_maps(max_headers, this%receivers%size)) ! for every header, we potentially need the maps
 
     ! allocate body data
     allocate (body_rcv_t(this%senders%size))
@@ -309,10 +320,78 @@ contains
         do j = 1, hdr_rcv_cnt(i)
           write (this%imon, '(6x,a,i0,a,a)') "id: ", headers(j, i)%id, &
             " type: ", trim(VDC_TYPE_TO_STR(headers(j, i)%container_type))
+          write (this%imon, '(6x,a,99i6)') "map sizes: ", headers(j, i)%map_sizes
         end do
       end if
 
       call MPI_Type_free(hdr_rcv_t(i), ierr)
+    end do
+
+    if (this%enable_monitor) then
+      write (this%imon, '(2x,a)') "== communicating maps =="
+    end if
+
+    ! allocate space for receiving maps
+    do i = 1, this%receivers%size
+      do j = 1, hdr_rcv_cnt(i)
+        call rcv_maps(j, i)%create(headers(j, i)%map_sizes)
+      end do
+    end do
+
+    ! receive maps
+    do i = 1, this%receivers%size
+      rnk = this%receivers%at(i)
+      if (this%enable_monitor) then
+        write (this%imon, '(4x,a,i0)') "Ireceive maps from process: ", rnk
+      end if
+
+      call this%message_builder%create_map_rcv(rcv_maps(:, i), hdr_rcv_cnt(i), &
+                                               map_rcv_t(i))
+
+      call MPI_Irecv(MPI_BOTTOM, 1, map_rcv_t(i), rnk, stage, &
+                     MF6_COMM_WORLD, rcv_req(i), ierr)
+    end do
+
+    ! send maps
+    do i = 1, this%senders%size
+      rnk = this%senders%at(i)
+      if (this%enable_monitor) then
+        write (this%imon, '(4x,a,i0)') "send map to process: ", rnk
+      end if
+      call this%message_builder%create_map_snd(rnk, stage, map_snd_t(i))
+      call MPI_Isend(MPI_BOTTOM, 1, map_snd_t(i), rnk, stage, &
+                     MF6_COMM_WORLD, snd_req(i), ierr)
+    end do
+
+    ! wait on receiving maps
+    call MPI_WaitAll(this%receivers%size, rcv_req, rcv_stat, ierr)
+
+    ! print maps
+    if (this%enable_monitor) then
+      do i = 1, this%receivers%size
+        rnk = this%receivers%at(i)
+        write (this%imon, '(4x,a,i0)') "received maps from process: ", rnk
+        do j = 1, hdr_rcv_cnt(i)
+          write (this%imon, '(6x,a,i0,a,a)') "id: ", headers(j, i)%id, &
+            " type: ", trim(VDC_TYPE_TO_STR(headers(j, i)%container_type))
+          do k = 1, NR_VDC_ELEMENT_MAPS
+            write (this%imon, '(8x,i0, a,i0)') k, " nr. elements: ", &
+              rcv_maps(j, i)%el_maps(k)%nr_virt_elems
+            if (rcv_maps(j, i)%el_maps(k)%nr_virt_elems > 0) then
+              write (this%imon, '(8x,*(i6))') &
+                rcv_maps(j, i)%el_maps(k)%remote_elem_shift
+            end if
+          end do
+        end do
+      end do
+    end if
+
+    ! clean up types
+    do i = 1, this%receivers%size
+      call MPI_Type_free(map_rcv_t(i), ierr)
+    end do
+    do i = 1, this%senders%size
+      call MPI_Type_free(map_snd_t(i), ierr)
     end do
 
     if (this%enable_monitor) then
@@ -330,7 +409,7 @@ contains
       call MPI_Type_size(body_rcv_t(i), msg_size, ierr)
       if (msg_size > 0) then
         call MPI_Irecv(MPI_BOTTOM, 1, body_rcv_t(i), rnk, stage, &
-                       MF6_COMM_WORLD, snd_req(i), ierr)
+                       MF6_COMM_WORLD, rcv_req(i), ierr)
       end if
 
       if (this%enable_monitor) then
@@ -345,11 +424,12 @@ contains
         write (this%imon, '(4x,a,i0)') "sending to process: ", rnk
       end if
       call this%message_builder%create_body_snd( &
-        rnk, stage, headers(1:hdr_rcv_cnt(i), i), body_snd_t(i))
+        rnk, stage, headers(1:hdr_rcv_cnt(i), i), &
+        rcv_maps(:, i), body_snd_t(i))
       call MPI_Type_size(body_snd_t(i), msg_size, ierr)
       if (msg_size > 0) then
         call MPI_Isend(MPI_Bottom, 1, body_snd_t(i), rnk, stage, &
-                       MF6_COMM_WORLD, rcv_req(i), ierr)
+                       MF6_COMM_WORLD, snd_req(i), ierr)
       end if
 
       if (this%enable_monitor) then
@@ -359,7 +439,7 @@ contains
     end do
 
     ! wait for exchange of all messages
-    call MPI_WaitAll(this%senders%size, snd_req, snd_stat, ierr)
+    call MPI_WaitAll(this%senders%size, rcv_req, snd_stat, ierr)
 
     ! clean up types
     do i = 1, this%senders%size
@@ -369,12 +449,25 @@ contains
       call MPI_Type_free(body_snd_t(i), ierr)
     end do
 
+    ! done sending, clean up element maps
+    do i = 1, this%receivers%size
+      do j = 1, hdr_rcv_cnt(i)
+        call rcv_maps(j, i)%destroy()
+      end do
+    end do
+
     deallocate (rcv_req)
     deallocate (snd_req)
     deallocate (rcv_stat)
     deallocate (hdr_rcv_t)
     deallocate (hdr_snd_t)
+    deallocate (hdr_rcv_cnt)
     deallocate (headers)
+    deallocate (map_rcv_t)
+    deallocate (map_snd_t)
+    deallocate (rcv_maps)
+    deallocate (body_rcv_t)
+    deallocate (body_snd_t)
 
   end subroutine mr_route_active
 

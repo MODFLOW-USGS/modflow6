@@ -8,7 +8,7 @@ module VirtualBaseModule
   implicit none
   private
 
-  public :: get_virtual_data_from_list  
+  public :: get_virtual_data_from_list
 
   integer(I4B), public, parameter :: MAP_ALL_TYPE = 0
   integer(I4B), public, parameter :: MAP_NODE_TYPE = 1
@@ -39,9 +39,13 @@ module VirtualBaseModule
     character(len=LENMEMPATH) :: mem_path !< memory path
     integer(I4B), dimension(:), allocatable :: sync_stages !< stage(s) at which to synchronize
     integer(I4B) :: map_type !< the type of map
-    integer(I4B), dimension(:), pointer, contiguous :: remote_elem_shift => null() !< contiguous list with 0-based remote indexes
-                                                                                   !! (this is important for creating mpi data types)
-    integer(I4B), dimension(:), pointer, contiguous :: remote_to_virtual => null() !< sparse list which maps remote index to virtual
+    logical(LGP) :: is_reduced !< when true, the discontinuous remote data is compressed
+                               !! into contiguous virtual memory
+    integer(I4B), dimension(:), &
+      pointer, contiguous :: remote_elem_shift => null() !< contiguous list with 0-based remote indexes
+                                !! (this is important for creating mpi data types)
+    integer(I4B), dimension(:), &
+      pointer, contiguous :: remote_to_virtual => null() !< sparse list which maps remote index to virtual
     type(MemoryType), pointer :: virtual_mt => null()
   contains
     procedure(vm_allocate_if), deferred :: vm_allocate
@@ -259,7 +263,11 @@ contains
     ! local
     integer(I4B) :: i_vrt
 
-    i_vrt = i_rmt !this%remote_to_virtual(i_rmt)
+    if (this%is_reduced) then
+      i_vrt = this%remote_to_virtual(i_rmt)
+    else
+      i_vrt = i_rmt
+    end if
     val = this%virtual_mt%aint1d(i_vrt)
 
   end function get_int1d
@@ -287,7 +295,11 @@ contains
     ! local
     integer(I4B) :: i_vrt
 
-    i_vrt = i_rmt !this%remote_to_virtual(i_rmt)
+    if (this%is_reduced) then
+      i_vrt = this%remote_to_virtual(i_rmt)
+    else
+      i_vrt = i_rmt
+    end if
     val = this%virtual_mt%adbl1d(i_vrt)
 
   end function get_dbl1d
@@ -308,7 +320,11 @@ contains
     ! local
     integer(I4B) :: i_vrt
 
-    i_vrt = i_rmt !this%remote_to_virtual(i_rmt)
+    if (this%is_reduced) then
+      i_vrt = this%remote_to_virtual(i_rmt)
+    else
+      i_vrt = i_rmt
+    end if
     val = this%virtual_mt%adbl2d(j_cmp, i_vrt)
 
   end function get_dbl2d

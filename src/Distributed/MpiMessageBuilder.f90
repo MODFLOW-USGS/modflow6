@@ -11,6 +11,14 @@ module MpiMessageBuilderModule
   type, public :: VdcHeaderType
     integer(I4B) :: id
     integer(I4B) :: container_type
+    integer(I4B), dimension(NR_VDC_ELEMENT_MAPS) :: map_sizes
+  end type
+
+  type, public :: VdcReceiverMapsType
+    type(VdcElementMapType), dimension(NR_VDC_ELEMENT_MAPS) :: el_maps
+  contains
+    procedure :: create
+    procedure :: destroy
   end type
 
   type, public :: MpiMessageBuilderType
@@ -23,18 +31,47 @@ module MpiMessageBuilderModule
     procedure :: release_data
     procedure :: create_header_snd
     procedure :: create_header_rcv
+    procedure :: create_map_snd
+    procedure :: create_map_rcv
     procedure :: create_body_rcv
     procedure :: create_body_snd
     procedure :: set_monitor
     ! private
     procedure, private :: get_vdc_from_hdr
     procedure, private :: create_vdc_snd_hdr
+    procedure, private :: create_vdc_snd_map
     procedure, private :: create_vdc_snd_body
     procedure, private :: create_vdc_rcv_body
     procedure, private :: create_element_map
   end type
 
 contains
+
+  subroutine create(this, map_sizes)
+    class(VdcReceiverMapsType) :: this
+    integer(I4B), dimension(NR_VDC_ELEMENT_MAPS) :: map_sizes
+    ! local
+    integer(I4B) :: i
+
+    do i = 1, NR_VDC_ELEMENT_MAPS
+      this%el_maps(i)%nr_virt_elems = map_sizes(i)
+      allocate (this%el_maps(i)%remote_elem_shift(map_sizes(i)))
+    end do
+
+  end subroutine create
+
+  subroutine destroy(this)
+    class(VdcReceiverMapsType) :: this
+    ! local
+    integer(I4B) :: i
+
+    do i = 1, NR_VDC_ELEMENT_MAPS
+      if (associated(this%el_maps(i)%remote_elem_shift)) then
+        deallocate (this%el_maps(i)%remote_elem_shift)
+      end if
+    end do
+
+  end subroutine destroy
 
   subroutine init(this)
     class(MpiMessageBuilderType) :: this
@@ -156,10 +193,128 @@ contains
     ! this will be for one data container, the mpi recv
     ! call will accept an array of them, no need to create
     ! an overarching contiguous type...
-    call MPI_Type_contiguous(2, MPI_INTEGER, hdr_rcv_type, ierr)
+    call MPI_Type_contiguous(NR_VDC_ELEMENT_MAPS + 2, MPI_INTEGER, &
+                             hdr_rcv_type, ierr)
     call MPI_Type_commit(hdr_rcv_type, ierr)
 
   end subroutine create_header_rcv
+
+  subroutine create_map_snd(this, rank, stage, map_snd_type)
+    class(MpiMessageBuilderType) :: this
+    integer(I4B) :: rank
+    integer(I4B) :: stage
+    integer :: map_snd_type
+    ! local
+    integer(I4B) :: i, offset, nr_types
+    class(VirtualDataContainerType), pointer :: vdc
+    integer :: ierr
+    type(STLVecInt) :: model_idxs, exg_idxs
+    integer, dimension(:), allocatable :: blk_cnts, types
+    integer(kind=MPI_ADDRESS_KIND), dimension(:), allocatable :: displs
+
+    call model_idxs%init()
+    call exg_idxs%init()
+
+    ! determine which containers to include TODO_MJR: avoid repetition
+    do i = 1, size(this%vdc_models)
+      vdc => this%vdc_models(i)%ptr
+      if (vdc%is_active .and. vdc%orig_rank == rank) then
+        call model_idxs%push_back(i)
+      end if
+    end do
+    do i = 1, size(this%vdc_exchanges)
+      vdc => this%vdc_exchanges(i)%ptr
+      if (vdc%is_active .and. vdc%orig_rank == rank) then
+        call exg_idxs%push_back(i)
+      end if
+    end do
+
+    nr_types = model_idxs%size + exg_idxs%size
+    allocate (blk_cnts(nr_types))
+    allocate (types(nr_types))
+    allocate (displs(nr_types))
+
+    if (this%imon > 0) then
+      write (this%imon, '(6x,a,*(i3))') "create maps for models: ", &
+        model_idxs%get_values()
+      write (this%imon, '(6x,a,*(i3))') "create maps for exchange: ", &
+        exg_idxs%get_values()
+    end if
+
+    ! loop over containers
+    do i = 1, model_idxs%size
+      vdc => this%vdc_models(model_idxs%at(i))%ptr
+      call MPI_Get_address(vdc%id, displs(i), ierr)
+      blk_cnts(i) = 1
+      types(i) = this%create_vdc_snd_map(vdc, stage)
+    end do
+    offset = model_idxs%size
+    do i = 1, exg_idxs%size
+      vdc => this%vdc_exchanges(exg_idxs%at(i))%ptr
+      call MPI_Get_address(vdc%id, displs(i + offset), ierr)
+      blk_cnts(i + offset) = 1
+      types(i + offset) = this%create_vdc_snd_map(vdc, stage)
+    end do
+
+    ! create a compound MPI data type for the maps
+    call MPI_Type_create_struct(nr_types, blk_cnts, displs, types, &
+                                map_snd_type, ierr)
+    call MPI_Type_commit(map_snd_type, ierr)
+
+    ! free the subtypes
+    do i = 1, nr_types
+      call MPI_Type_free(types(i), ierr)
+    end do
+
+    call model_idxs%destroy()
+    call exg_idxs%destroy()
+
+    deallocate (blk_cnts)
+    deallocate (types)
+    deallocate (displs)
+
+  end subroutine create_map_snd
+
+  subroutine create_map_rcv(this, rcv_map, nr_headers, map_rcv_type)
+    class(MpiMessageBuilderType) :: this
+    type(VdcReceiverMapsType), dimension(:) :: rcv_map
+    integer(I4B) :: nr_headers
+    integer :: map_rcv_type
+    ! local
+    integer(I4B) :: i, j, nr_elems, type_cnt
+    integer :: ierr, max_nr_maps
+    integer, dimension(:), allocatable :: types
+    integer(kind=MPI_ADDRESS_KIND), dimension(:), allocatable :: displs
+    integer, dimension(:), allocatable :: blk_cnts
+
+    max_nr_maps = nr_headers * NR_VDC_ELEMENT_MAPS
+    allocate (types(max_nr_maps))
+    allocate (displs(max_nr_maps))
+    allocate (blk_cnts(max_nr_maps))
+
+    type_cnt = 0
+    do i = 1, nr_headers
+      do j = 1, NR_VDC_ELEMENT_MAPS
+        nr_elems = rcv_map(i)%el_maps(j)%nr_virt_elems
+        if (nr_elems == 0) cycle
+
+        type_cnt = type_cnt + 1
+        call MPI_Get_address(rcv_map(i)%el_maps(j)%remote_elem_shift, &
+                             displs(type_cnt), ierr)
+        call MPI_Type_contiguous(nr_elems, MPI_Integer, types(type_cnt), ierr)
+        blk_cnts(type_cnt) = 1
+      end do
+    end do
+
+    call MPI_Type_create_struct(type_cnt, blk_cnts, displs, types, &
+                                map_rcv_type, ierr)
+    call MPI_Type_commit(map_rcv_type, ierr)
+
+    deallocate (types)
+    deallocate (displs)
+    deallocate (blk_cnts)
+
+  end subroutine create_map_rcv
 
   !> @brief Create the body to receive based on the headers
   !< that have been sent
@@ -238,11 +393,12 @@ contains
 
   !> @brief Create the body to send based on the received headers
   !<
-  subroutine create_body_snd(this, rank, stage, headers, body_snd_type)
+  subroutine create_body_snd(this, rank, stage, headers, maps, body_snd_type)
     class(MpiMessageBuilderType) :: this
     integer(I4B) :: rank
     integer(I4B) :: stage
     type(VdcHeaderType), dimension(:) :: headers
+    type(VdcReceiverMapsType), dimension(:) :: maps
     integer :: body_snd_type
     ! local
     integer(I4B) :: i, nr_headers
@@ -260,7 +416,7 @@ contains
     do i = 1, nr_headers
       vdc => this%get_vdc_from_hdr(headers(i))
       call MPI_Get_address(vdc%id, displs(i), ierr)
-      types(i) = this%create_vdc_snd_body(vdc, rank, stage)
+      types(i) = this%create_vdc_snd_body(vdc, maps(i)%el_maps, rank, stage)
       blk_cnts(i) = 1
     end do
 
@@ -286,10 +442,10 @@ contains
     integer(I4B) :: stage
     integer :: new_type ! the created MPI datatype, uncommitted
     ! local
-    integer :: ierr
-    integer, dimension(2) :: blk_cnts
-    integer(kind=MPI_ADDRESS_KIND), dimension(2) :: displs
-    integer, dimension(2) :: types
+    integer :: i, ierr
+    integer, dimension(NR_VDC_ELEMENT_MAPS + 2) :: blk_cnts
+    integer(kind=MPI_ADDRESS_KIND), dimension(NR_VDC_ELEMENT_MAPS + 2) :: displs
+    integer, dimension(NR_VDC_ELEMENT_MAPS + 2) :: types
 
     call MPI_Get_address(vdc%id, displs(1), ierr)
     types(1) = MPI_INTEGER
@@ -297,13 +453,69 @@ contains
     call MPI_Get_address(vdc%container_type, displs(2), ierr)
     types(2) = MPI_INTEGER
     blk_cnts(2) = 1
+    do i = 1, NR_VDC_ELEMENT_MAPS
+      call MPI_Get_address(vdc%element_maps(i)%nr_virt_elems, displs(i + 2), ierr)
+      types(i + 2) = MPI_INTEGER
+      blk_cnts(i + 2) = 1
+    end do
 
     ! rebase to id field
     displs = displs - displs(1)
-    call MPI_Type_create_struct(2, blk_cnts, displs, types, new_type, ierr)
+    call MPI_Type_create_struct(NR_VDC_ELEMENT_MAPS + 2, blk_cnts, &
+                                displs, types, new_type, ierr)
     call MPI_Type_commit(new_type, ierr)
 
   end function create_vdc_snd_hdr
+
+  !> @brief Create a MPI datatype for sending the maps
+  !< with the type relative to the id field
+  function create_vdc_snd_map(this, vdc, stage) result(new_type)
+    class(MpiMessageBuilderType) :: this
+    class(VirtualDataContainerType), pointer :: vdc
+    integer(I4B) :: stage
+    integer :: new_type
+    ! local
+    integer(I4B) :: i, type_cnt
+    integer :: n_elems, ierr
+    integer(kind=MPI_ADDRESS_KIND) :: offset
+    integer, dimension(:), allocatable :: types
+    integer(kind=MPI_ADDRESS_KIND), dimension(:), allocatable :: displs
+    integer, dimension(:), allocatable :: blk_cnts
+
+    allocate (types(NR_VDC_ELEMENT_MAPS))
+    allocate (displs(NR_VDC_ELEMENT_MAPS))
+    allocate (blk_cnts(NR_VDC_ELEMENT_MAPS))
+
+    ! displ relative to id field
+    call MPI_Get_address(vdc%id, offset, ierr)
+
+    type_cnt = 0
+    do i = 1, NR_VDC_ELEMENT_MAPS
+      n_elems = vdc%element_maps(i)%nr_virt_elems
+      if (n_elems == 0) cycle ! only non-empty maps are sent
+
+      type_cnt = type_cnt + 1
+      call MPI_Get_address(vdc%element_maps(i)%remote_elem_shift, &
+                           displs(type_cnt), ierr)
+      call MPI_Type_contiguous(n_elems, MPI_INTEGER, types(type_cnt), ierr)
+      call MPI_Type_commit(types(type_cnt), ierr)
+      blk_cnts(type_cnt) = 1
+      displs(type_cnt) = displs(type_cnt) - offset
+    end do
+
+    call MPI_Type_create_struct(type_cnt, blk_cnts, displs, types, &
+                                new_type, ierr)
+    call MPI_Type_commit(new_type, ierr)
+
+    do i = 1, type_cnt
+      call MPI_Type_free(types(i), ierr)
+    end do
+
+    deallocate (types)
+    deallocate (displs)
+    deallocate (blk_cnts)
+
+  end function create_vdc_snd_map
 
   function create_vdc_rcv_body(this, vdc, rank, stage) result(new_type)
     class(MpiMessageBuilderType) :: this
@@ -356,9 +568,10 @@ contains
 
   end function create_vdc_rcv_body
 
-  function create_vdc_snd_body(this, vdc, rank, stage) result(new_type)
+  function create_vdc_snd_body(this, vdc, vdc_maps, rank, stage) result(new_type)
     class(MpiMessageBuilderType) :: this
     class(VirtualDataContainerType), pointer :: vdc
+    type(VdcElementMapType), dimension(:) :: vdc_maps
     integer(I4B) :: rank
     integer(I4B) :: stage
     integer :: new_type
@@ -385,9 +598,12 @@ contains
 
     do i = 1, items%size
       vd => get_virtual_data_from_list(vdc%virtual_data_list, items%at(i))
-      el_map => this%create_element_map(rank, vdc, vd)
+      if (vd%map_type > 0) then
+        el_map => vdc_maps(vd%map_type)%remote_elem_shift
+      else
+        el_map => null()
+      end if
       call get_mpi_datatype(this, vd, displs(i), types(i), el_map)
-      if (associated(el_map)) deallocate (el_map)
       blk_cnts(i) = 1
       ! rebase w.r.t. id field
       displs(i) = displs(i) - offset
@@ -410,13 +626,15 @@ contains
 
   end function create_vdc_snd_body
 
+  !> @brief Temp. function to generate a dummy (complete) map
+  !<
   function create_element_map(this, rank, vdc, vd) result(el_map)
     use MemoryManagerModule, only: get_mem_shape, get_mem_rank
     use ConstantsModule, only: MAXMEMRANK
     class(MpiMessageBuilderType) :: this
     integer(I4B) :: rank
     class(VirtualDataContainerType), pointer :: vdc
-    class(VirtualDataType), pointer :: vd    
+    class(VirtualDataType), pointer :: vd
     integer(I4B), dimension(:), pointer, contiguous :: el_map
     ! local
     integer(I4B), dimension(MAXMEMRANK) :: mem_shp
@@ -472,25 +690,18 @@ contains
     integer :: el_type
     integer(I4B), dimension(:), pointer, contiguous, optional :: el_map_opt !< optional, and can be null
     ! local
-    type(MemoryType), pointer :: mt    
+    type(MemoryType), pointer :: mt
     integer(I4B), dimension(:), pointer, contiguous :: el_map
 
     el_map => null()
     if (present(el_map_opt)) el_map => el_map_opt
 
-    if (associated(el_map)) then
-      if (size(el_map) == 0) then
-        write(*,'(8x,a)') 'cannot send indexed set of data without an element map'
-        call ustop()
-      end if
-    end if
-
     if (this%imon > 0) then
       if (.not. associated(el_map)) then
-        write(this%imon, '(8x,2a,i0)') virtual_data%var_name, ' all ', &
+        write (this%imon, '(8x,2a,i0)') virtual_data%var_name, ' all ', &
           virtual_data%virtual_mt%isize
       else
-        write(this%imon, '(8x,2a,i0)') virtual_data%var_name, &
+        write (this%imon, '(8x,2a,i0)') virtual_data%var_name, &
           ' with map size ', size(el_map)
       end if
     end if

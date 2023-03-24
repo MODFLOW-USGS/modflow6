@@ -26,6 +26,8 @@ from simulation import TestSimulation
 ex = ["par_gwf02-a", "par_gwf02-b", "par_gwf02-c", 
       "par_gwf02-d", "par_gwf02-e", "par_gwf02-f"]
 domain_grid = [(1,5), (5,1), (2,2), (3,3), (4,4), (5,5)]
+# ex = ["par_gwf02-a"]
+# domain_grid = [(1,3)]
 
 nlay = 1
 nrow = 3

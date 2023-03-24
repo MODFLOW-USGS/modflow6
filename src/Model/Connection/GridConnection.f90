@@ -1117,11 +1117,11 @@ contains
       end do
 
       ! copy into interface map
-      allocate (imap%connection_maps(im)%src_idx(src_idx_tmp%size))
-      allocate (imap%connection_maps(im)%tgt_idx(tgt_idx_tmp%size))
+      allocate (imap%conn_maps(im)%src_idx(src_idx_tmp%size))
+      allocate (imap%conn_maps(im)%tgt_idx(tgt_idx_tmp%size))
       do i = 1, src_idx_tmp%size
-        imap%connection_maps(im)%src_idx(i) = src_idx_tmp%at(i)
-        imap%connection_maps(im)%tgt_idx(i) = tgt_idx_tmp%at(i)
+        imap%conn_maps(im)%src_idx(i) = src_idx_tmp%at(i)
+        imap%conn_maps(im)%tgt_idx(i) = tgt_idx_tmp%at(i)
       end do
 
       call src_idx_tmp%destroy()
