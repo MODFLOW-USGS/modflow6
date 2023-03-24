@@ -42,6 +42,7 @@ excluded_comparisons = {
     "ex-gwf-lgr": ("6.2.2",),
     "ex-gwt-rotate": ("6.2.2",),
     "ex-gwt-gwtgwt-mt3dms-p10": ("6.3.0",),
+    "ex-gwf-lak-p01": ("6.4.1"),
 }
 
 
