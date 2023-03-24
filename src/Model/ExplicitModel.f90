@@ -69,7 +69,7 @@ contains
     ! -- return
     return
   end subroutine model_cq
-  
+
   !> @ brief Calculate model budget
   !<
   subroutine model_bd(this, icnvg, isuppress_output)
