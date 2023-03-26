@@ -109,29 +109,23 @@ contains
   !<
   subroutine load_model_pkgfiles(model_pkg_inputs, iout)
     ! -- modules
-    use MemoryManagerModule, only: mem_allocate
-    use MemoryHelperModule, only: create_mem_path
-    use SimVariablesModule, only: idm_context
     use IdmDfnSelectorModule, only: idm_integrated, idm_multi_package
     ! -- dummy
     type(ModelPackageInputsType), intent(inout) :: model_pkg_inputs
     integer(I4B), intent(in) :: iout
     ! -- locals
     integer(I4B) :: n, m
-    character(len=LENMEMPATH) :: mempath
     character(len=LENPACKAGETYPE) :: pkgtype
     character(len=LENPACKAGENAME) :: sc_name
-    character(len=LINELENGTH), pointer :: cstr
     !
     do n = 1, size(model_pkg_inputs%pkglist)
       !
       ! -- this list package type
       pkgtype = model_pkg_inputs%pkglist(n)%pkgtype
       !
-      ! -- open each package type instance file
+      ! -- load all idm integrated package type file instances
       do m = 1, model_pkg_inputs%pkglist(n)%pnum
         !
-        ! -- load package to input context if using IDM
         if (idm_integrated(model_pkg_inputs%component_type, &
                            model_pkg_inputs%pkglist(n)%component_type)) then
           !
@@ -155,13 +149,6 @@ contains
           close (model_pkg_inputs%pkglist(n)%inunits(m))
           model_pkg_inputs%pkglist(n)%inunits(m) = 0
           !
-          ! -- set package mempath for filename
-          mempath = create_mem_path(model_pkg_inputs%modelname, sc_name, idm_context)
-          !
-          ! -- allocate and set input filename for package
-          call mem_allocate(cstr, LINELENGTH, 'INPUT_FNAME', mempath)
-          cstr = model_pkg_inputs%pkglist(n)%filenames(m)
-          !
         else
           ! Not an IDM supported package, leave inunit open
         end if
@@ -181,22 +168,16 @@ contains
     integer(I4B), intent(in) :: iout
     ! -- locals
     integer(I4B) :: n, m
-    character(len=20) :: accarg, fmtarg, filstat
     character(len=LINELENGTH) :: filename
     character(len=LENPACKAGETYPE) :: filetype
     character(len=LINELENGTH) :: errmsg
     !
-    ! -- initialize read attributes
-    accarg = 'SEQUENTIAL'
-    fmtarg = 'FORMATTED'
-    filstat = 'OLD'
-    !
     do n = 1, size(model_pkg_inputs%pkglist)
       !
-      ! -- this list package type
+      ! -- this package type
       filetype = model_pkg_inputs%pkglist(n)%pkgtype
       !
-      ! -- open each package type instance file
+      ! -- open each package type file instance
       do m = 1, model_pkg_inputs%pkglist(n)%pnum
         !
         ! -- set filename
@@ -204,12 +185,12 @@ contains
         !
         if (filename /= '') then
           !
-          ! -- get unit number and open file
+          ! -- get unit number, update object and open file
           model_pkg_inputs%pkglist(n)%inunits(m) = getunit()
           call openfile(model_pkg_inputs%pkglist(n)%inunits(m), iout, &
-                        trim(adjustl(filename)), filetype, fmtarg, accarg, &
-                        filstat)
-        !
+                        trim(adjustl(filename)), filetype, 'FORMATTED', &
+                        'SEQUENTIAL', 'OLD')
+          !
         else
           write (errmsg, '(a,a,a,a,a)') &
             'Package file unspecified, cannot load model package &
@@ -227,20 +208,18 @@ contains
 
   !> @brief load and make pkg info available to models
   !<
-  subroutine modelpkgs_load(mtype, mfname, mname, niunit, cunit, iout)
+  subroutine modelpkgs_load(mtype, mfname, mname, iout)
     ! -- modules
     ! -- dummy
     character(len=*), intent(in) :: mtype
     character(len=*), intent(in) :: mfname
     character(len=*), intent(in) :: mname
-    integer(I4B), intent(in) :: niunit
-    character(len=*), dimension(niunit), intent(in) :: cunit
     integer(I4B), intent(in) :: iout
     ! -- locals
     type(ModelPackageInputsType) :: model_pkg_inputs
     !
-    ! -- initialize model package object
-    call model_pkg_inputs%init(mtype, mfname, mname, niunit, cunit, iout)
+    ! -- set baseline state for model package instances
+    call model_pkg_inputs%init(mtype, mfname, mname, iout)
     !
     ! -- open model package files
     call open_model_pkgfiles(model_pkg_inputs, iout)
@@ -263,7 +242,6 @@ contains
   subroutine model_load(mtype, mfname, mname, iout)
     ! -- modules
     use SimVariablesModule, only: simfile
-    use IdmPackageModule, only: supported_model_packages
     ! -- dummy
     character(len=*), intent(in) :: mtype
     character(len=*), intent(in) :: mfname
@@ -272,15 +250,10 @@ contains
     ! -- locals
     character(len=LINELENGTH) :: errmsg
     integer(I4B) :: inunit
-    character(len=LENPACKAGETYPE), dimension(:), allocatable :: pkgtypes
-    integer(I4B) :: numpkgs
     !
     ! -- open namfile
     inunit = getunit()
     call openfile(inunit, iout, trim(mfname), 'NAM')
-    !
-    ! -- allocate and set model supported package types
-    call supported_model_packages(mtype, pkgtypes, numpkgs)
     !
     select case (mtype)
     case ('GWF6')
@@ -289,13 +262,13 @@ contains
       call input_load('GWF6', 'GWF', 'NAM', mname, 'NAM', inunit, iout)
       !
       ! -- load and create descriptions of model package files
-      call modelpkgs_load(mtype, mfname, mname, numpkgs, pkgtypes, iout)
+      call modelpkgs_load(mtype, mfname, mname, iout)
       !
     case ('GWT6')
       !
       call input_load('GWT6', 'GWT', 'NAM', mname, 'NAM', inunit, iout)
       !
-      call modelpkgs_load(mtype, mfname, mname, numpkgs, pkgtypes, iout)
+      call modelpkgs_load(mtype, mfname, mname, iout)
       !
     case default
       write (errmsg, '(a,a,a,a,a)') &
@@ -308,9 +281,6 @@ contains
     !
     ! -- close namfile
     close (inunit)
-    !
-    ! -- cleanup
-    if (allocated(pkgtypes)) deallocate (pkgtypes)
     !
     ! -- return
     return

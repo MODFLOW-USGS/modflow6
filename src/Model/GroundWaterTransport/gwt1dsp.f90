@@ -72,7 +72,7 @@ module GwtDspModule
 
 contains
 
-  subroutine dsp_cr(dspobj, name_model, inunit, iout, fmi)
+  subroutine dsp_cr(dspobj, name_model, input_mempath, inunit, iout, fmi)
 ! ******************************************************************************
 ! dsp_cr -- Create a new DSP object
 ! ******************************************************************************
@@ -80,18 +80,21 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use IdmMf6FileLoaderModule, only: input_load
-    use ConstantsModule, only: LENPACKAGETYPE
+    use KindModule, only: LGP
+    use MemoryManagerExtModule, only: mem_set_value
     ! -- dummy
     type(GwtDspType), pointer :: dspobj
     character(len=*), intent(in) :: name_model
+    character(len=*), intent(in) :: input_mempath
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     type(GwtFmiType), intent(in), target :: fmi
+    ! -- locals
+    logical(LGP) :: found_fname
     ! -- formats
     character(len=*), parameter :: fmtdsp = &
       "(1x,/1x,'DSP-- DISPERSION PACKAGE, VERSION 1, 1/24/2018', &
-      &' INPUT READ FROM UNIT ', i0, //)"
+      &' INPUT READ FROM MEMPATH ', A, //)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -104,16 +107,20 @@ contains
     call dspobj%allocate_scalars()
     !
     ! -- Set variables
+    dspobj%input_mempath = input_mempath
     dspobj%inunit = inunit
     dspobj%iout = iout
     dspobj%fmi => fmi
     !
-    ! -- Check if input file is open
+    ! -- set name of input file
+    call mem_set_value(dspobj%input_fname, 'INPUT_FNAME', dspobj%input_mempath, &
+                       found_fname)
+    !
     if (dspobj%inunit > 0) then
       !
       ! -- Print a message identifying the dispersion package.
       if (dspobj%iout > 0) then
-        write (dspobj%iout, fmtdsp) dspobj%inunit
+        write (dspobj%iout, fmtdsp) input_mempath
       end if
     end if
     !
@@ -562,25 +569,19 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     !use KindModule, only: LGP
-    use MemoryHelperModule, only: create_mem_path
-    use MemoryTypeModule, only: MemoryType
     use MemoryManagerExtModule, only: mem_set_value
-    use SimVariablesModule, only: idm_context
-    use ConstantsModule, only: LENMEMPATH
     use GwtDspInputModule, only: GwtDspParamFoundType
     ! -- dummy
     class(GwtDspType) :: this
     ! -- locals
-    character(len=LENMEMPATH) :: idmMemoryPath
     type(GwtDspParamFoundType) :: found
 ! ------------------------------------------------------------------------------
     !
-    ! -- set memory path
-    idmMemoryPath = create_mem_path(this%name_model, 'DSP', idm_context)
-    !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%ixt3doff, 'XT3D_OFF', idmMemoryPath, found%xt3d_off)
-    call mem_set_value(this%ixt3drhs, 'XT3D_RHS', idmMemoryPath, found%xt3d_rhs)
+    call mem_set_value(this%ixt3doff, 'XT3D_OFF', this%input_mempath, &
+                       found%xt3d_off)
+    call mem_set_value(this%ixt3drhs, 'XT3D_RHS', this%input_mempath, &
+                       found%xt3d_rhs)
     !
     ! -- set xt3d state flag
     if (found%xt3d_off) this%ixt3d = 0
@@ -641,36 +642,30 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: count_errors, store_error
-    use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_reallocate, mem_reassignptr
     use MemoryManagerExtModule, only: mem_set_value
-    use SimVariablesModule, only: idm_context
-    use ConstantsModule, only: LENMEMPATH, LINELENGTH
+    use ConstantsModule, only: LINELENGTH
     use GwtDspInputModule, only: GwtDspParamFoundType
     ! -- dummy
     class(GwtDsptype) :: this
     ! -- locals
-    character(len=LENMEMPATH) :: idmMemoryPath
     character(len=LINELENGTH) :: errmsg
     type(GwtDspParamFoundType) :: found
     integer(I4B), dimension(:), pointer, contiguous :: map
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! -- set memory path
-    idmMemoryPath = create_mem_path(this%name_model, 'DSP', idm_context)
-    !
     ! -- set map
     map => null()
     if (this%dis%nodes < this%dis%nodesuser) map => this%dis%nodeuser
     !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%diffc, 'DIFFC', idmMemoryPath, map, found%diffc)
-    call mem_set_value(this%alh, 'ALH', idmMemoryPath, map, found%alh)
-    call mem_set_value(this%alv, 'ALV', idmMemoryPath, map, found%alv)
-    call mem_set_value(this%ath1, 'ATH1', idmMemoryPath, map, found%ath1)
-    call mem_set_value(this%ath2, 'ATH2', idmMemoryPath, map, found%ath2)
-    call mem_set_value(this%atv, 'ATV', idmMemoryPath, map, found%atv)
+    call mem_set_value(this%diffc, 'DIFFC', this%input_mempath, map, found%diffc)
+    call mem_set_value(this%alh, 'ALH', this%input_mempath, map, found%alh)
+    call mem_set_value(this%alv, 'ALV', this%input_mempath, map, found%alv)
+    call mem_set_value(this%ath1, 'ATH1', this%input_mempath, map, found%ath1)
+    call mem_set_value(this%ath2, 'ATH2', this%input_mempath, map, found%ath2)
+    call mem_set_value(this%atv, 'ATV', this%input_mempath, map, found%atv)
     !
     ! -- set active flags
     if (found%diffc) this%idiffc = 1

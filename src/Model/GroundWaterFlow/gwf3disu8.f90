@@ -6,7 +6,8 @@ module GwfDisuModule
                              DZERO, DONE
   use ConnectionsModule, only: iac_to_ia
   use InputOutputModule, only: URWORD, ulasav, ulaprufw, ubdsv1, ubdsv06
-  use SimModule, only: count_errors, store_error, store_error_unit
+  use SimModule, only: count_errors, store_error, store_error_unit, &
+                       store_error_filename
   use SimVariablesModule, only: errmsg
   use BaseDisModule, only: DisBaseType
   use MemoryManagerModule, only: mem_allocate
@@ -81,7 +82,7 @@ module GwfDisuModule
 
 contains
 
-  subroutine disu_cr(dis, name_model, inunit, iout)
+  subroutine disu_cr(dis, name_model, input_mempath, inunit, iout)
 ! ******************************************************************************
 ! disu_cr -- Create discretization object
 ! ******************************************************************************
@@ -89,18 +90,20 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use IdmMf6FileLoaderModule, only: input_load
-    use ConstantsModule, only: LENPACKAGETYPE
+    use KindModule, only: LGP
+    use MemoryManagerExtModule, only: mem_set_value
     ! -- dummy
     class(DisBaseType), pointer :: dis
     character(len=*), intent(in) :: name_model
+    character(len=*), intent(in) :: input_mempath
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     ! -- local
     type(GwfDisuType), pointer :: disnew
+    logical(LGP) :: found_fname
     character(len=*), parameter :: fmtheader = &
       "(1X, /1X, 'DISU -- UNSTRUCTURED GRID DISCRETIZATION PACKAGE,', &
-      &' VERSION 2 : 3/27/2014 - INPUT READ FROM UNIT ', I0, //)"
+      &' VERSION 2 : 3/27/2014 - INPUT READ FROM MEMPATH ', A, //)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Create a new discretization object
@@ -109,15 +112,20 @@ contains
     !
     ! -- Allocate scalars and assign data
     call dis%allocate_scalars(name_model)
+    dis%input_mempath = input_mempath
     dis%inunit = inunit
     dis%iout = iout
     !
-    ! -- if reading from file
+    ! -- set name of input file
+    call mem_set_value(dis%input_fname, 'INPUT_FNAME', dis%input_mempath, &
+                       found_fname)
+    !
+    ! -- If disu is enabled
     if (inunit > 0) then
       !
       ! -- Identify package
       if (iout > 0) then
-        write (iout, fmtheader) inunit
+        write (iout, fmtheader) dis%input_mempath
       end if
       !
       ! -- load disu
@@ -135,7 +143,7 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use MemoryHelperModule, only: create_mem_path
+    ! -- modules
     ! -- dummy
     class(GwfDisuType) :: this
 ! ------------------------------------------------------------------------------
@@ -219,7 +227,7 @@ contains
       call store_error('Model does not have any active nodes. &
                        &Ensure IDOMAIN array has some values greater &
                        &than zero.')
-      call store_error_unit(this%inunit)
+      call store_error_filename(this%input_fname)
     end if
     !
     ! -- Write message if reduced grid
@@ -363,7 +371,7 @@ contains
     ! -- terminate if errors found
     if (count_errors() > 0) then
       if (this%inunit > 0) then
-        call store_error_unit(this%inunit)
+        call store_error_filename(this%input_fname)
       end if
     end if
     !
@@ -398,7 +406,7 @@ contains
         this%voffsettol
       call store_error(errmsg)
       if (this%inunit > 0) then
-        call store_error_unit(this%inunit)
+        call store_error_filename(this%input_fname)
       end if
     end if
     !
@@ -421,7 +429,7 @@ contains
     ! -- terminate if errors found
     if (count_errors() > 0) then
       if (this%inunit > 0) then
-        call store_error_unit(this%inunit)
+        call store_error_filename(this%input_fname)
       end if
     end if
     !
@@ -592,31 +600,24 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use KindModule, only: LGP
-    use MemoryHelperModule, only: create_mem_path
     use MemoryManagerExtModule, only: mem_set_value
-    use SimVariablesModule, only: idm_context
     use GwfDisuInputModule, only: GwfDisuParamFoundType
     ! -- dummy
     class(GwfDisuType) :: this
     ! -- locals
-    character(len=LENMEMPATH) :: idmMemoryPath
     character(len=LENVARNAME), dimension(3) :: lenunits = &
       &[character(len=LENVARNAME) :: 'FEET', 'METERS', 'CENTIMETERS']
     type(GwfDisuParamFoundType) :: found
 ! ------------------------------------------------------------------------------
     !
-    ! -- set memory path
-    idmMemoryPath = create_mem_path(this%name_model, 'DISU', idm_context)
-    !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%lenuni, 'LENGTH_UNITS', idmMemoryPath, lenunits, &
-                       found%length_units)
-    call mem_set_value(this%nogrb, 'NOGRB', idmMemoryPath, found%nogrb)
-    call mem_set_value(this%xorigin, 'XORIGIN', idmMemoryPath, found%xorigin)
-    call mem_set_value(this%yorigin, 'YORIGIN', idmMemoryPath, found%yorigin)
-    call mem_set_value(this%angrot, 'ANGROT', idmMemoryPath, found%angrot)
-    call mem_set_value(this%voffsettol, 'VOFFSETTOL', idmMemoryPath, &
+    call mem_set_value(this%lenuni, 'LENGTH_UNITS', this%input_mempath, &
+                       lenunits, found%length_units)
+    call mem_set_value(this%nogrb, 'NOGRB', this%input_mempath, found%nogrb)
+    call mem_set_value(this%xorigin, 'XORIGIN', this%input_mempath, found%xorigin)
+    call mem_set_value(this%yorigin, 'YORIGIN', this%input_mempath, found%yorigin)
+    call mem_set_value(this%angrot, 'ANGROT', this%input_mempath, found%angrot)
+    call mem_set_value(this%voffsettol, 'VOFFSETTOL', this%input_mempath, &
                        found%voffsettol)
     !
     ! -- log values to list file
@@ -662,26 +663,19 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use KindModule, only: LGP
-    use MemoryHelperModule, only: create_mem_path
     use MemoryManagerExtModule, only: mem_set_value
-    use SimVariablesModule, only: idm_context
     use GwfDisuInputModule, only: GwfDisuParamFoundType
     ! -- dummy
     class(GwfDisuType) :: this
     ! -- locals
-    character(len=LENMEMPATH) :: idmMemoryPath
     integer(I4B) :: n
     type(GwfDisuParamFoundType) :: found
 ! ------------------------------------------------------------------------------
     !
-    ! -- set memory path
-    idmMemoryPath = create_mem_path(this%name_model, 'DISU', idm_context)
-    !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%nodesuser, 'NODES', idmMemoryPath, found%nodes)
-    call mem_set_value(this%njausr, 'NJA', idmMemoryPath, found%nja)
-    call mem_set_value(this%nvert, 'NVERT', idmMemoryPath, found%nvert)
+    call mem_set_value(this%nodesuser, 'NODES', this%input_mempath, found%nodes)
+    call mem_set_value(this%njausr, 'NJA', this%input_mempath, found%nja)
+    call mem_set_value(this%nvert, 'NVERT', this%input_mempath, found%nvert)
     !
     ! -- log simulation values
     if (this%iout > 0) then
@@ -700,7 +694,7 @@ contains
     !
     ! -- terminate if errors were detected
     if (count_errors() > 0) then
-      call store_error_unit(this%inunit)
+      call store_error_filename(this%input_fname)
     end if
     !
     ! -- allocate vectors that are the size of nodesuser
@@ -769,26 +763,20 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use MemoryHelperModule, only: create_mem_path
     use MemoryManagerExtModule, only: mem_set_value
-    use SimVariablesModule, only: idm_context
     use GwfDisuInputModule, only: GwfDisuParamFoundType
     ! -- dummy
     class(GwfDisuType) :: this
     ! -- locals
-    character(len=LENMEMPATH) :: idmMemoryPath
     type(GwfDisuParamFoundType) :: found
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! -- set memory path
-    idmMemoryPath = create_mem_path(this%name_model, 'DISU', idm_context)
-    !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%top1d, 'TOP', idmMemoryPath, found%top)
-    call mem_set_value(this%bot1d, 'BOT', idmMemoryPath, found%bot)
-    call mem_set_value(this%area1d, 'AREA', idmMemoryPath, found%area)
-    call mem_set_value(this%idomain, 'IDOMAIN', idmMemoryPath, found%idomain)
+    call mem_set_value(this%top1d, 'TOP', this%input_mempath, found%top)
+    call mem_set_value(this%bot1d, 'BOT', this%input_mempath, found%bot)
+    call mem_set_value(this%area1d, 'AREA', this%input_mempath, found%area)
+    call mem_set_value(this%idomain, 'IDOMAIN', this%input_mempath, found%idomain)
     !
     ! -- log simulation values
     if (this%iout > 0) then
@@ -845,33 +833,27 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr
     use MemoryManagerExtModule, only: mem_set_value
-    use SimVariablesModule, only: idm_context
     use GwfDisuInputModule, only: GwfDisuParamFoundType
     ! -- dummy
     class(GwfDisuType) :: this
     ! -- locals
-    character(len=LENMEMPATH) :: idmMemoryPath
     type(GwfDisuParamFoundType) :: found
     integer(I4B), dimension(:), contiguous, pointer :: iac => null()
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! -- set memory path
-    idmMemoryPath = create_mem_path(this%name_model, 'DISU', idm_context)
-    !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%jainp, 'JA', idmMemoryPath, found%ja)
-    call mem_set_value(this%ihcinp, 'IHC', idmMemoryPath, found%ihc)
-    call mem_set_value(this%cl12inp, 'CL12', idmMemoryPath, found%cl12)
-    call mem_set_value(this%hwvainp, 'HWVA', idmMemoryPath, found%hwva)
-    call mem_set_value(this%angldegxinp, 'ANGLDEGX', idmMemoryPath, &
+    call mem_set_value(this%jainp, 'JA', this%input_mempath, found%ja)
+    call mem_set_value(this%ihcinp, 'IHC', this%input_mempath, found%ihc)
+    call mem_set_value(this%cl12inp, 'CL12', this%input_mempath, found%cl12)
+    call mem_set_value(this%hwvainp, 'HWVA', this%input_mempath, found%hwva)
+    call mem_set_value(this%angldegxinp, 'ANGLDEGX', this%input_mempath, &
                        found%angldegx)
     !
     ! -- set pointer to iac input array
-    call mem_setptr(iac, 'IAC', idmMemoryPath)
+    call mem_setptr(iac, 'IAC', this%input_mempath)
     !
     ! -- Convert iac to ia
     if (associated(iac)) call iac_to_ia(iac, this%iainp)
@@ -897,25 +879,18 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
-    use MemoryHelperModule, only: create_mem_path
-    use MemoryManagerExtModule, only: mem_set_value
-    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfDisuType) :: this
     ! -- local
     integer(I4B) :: i
-    character(len=LENMEMPATH) :: idmMemoryPath
     real(DP), dimension(:), contiguous, pointer :: vert_x => null()
     real(DP), dimension(:), contiguous, pointer :: vert_y => null()
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! -- set memory path
-    idmMemoryPath = create_mem_path(this%name_model, 'DISU', idm_context)
-    !
     ! -- set pointers to memory manager input arrays
-    call mem_setptr(vert_x, 'XV', idmMemoryPath)
-    call mem_setptr(vert_y, 'YV', idmMemoryPath)
+    call mem_setptr(vert_x, 'XV', this%input_mempath)
+    call mem_setptr(vert_y, 'YV', this%input_mempath)
     !
     ! -- set vertices 2d array
     if (associated(vert_x) .and. associated(vert_y)) then
@@ -986,14 +961,10 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr
-    use MemoryManagerExtModule, only: mem_set_value
-    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwfDisuType) :: this
     ! -- locals
-    character(len=LENMEMPATH) :: idmMemoryPath
     integer(I4B), dimension(:), contiguous, pointer :: icell2d => null()
     integer(I4B), dimension(:), contiguous, pointer :: ncvert => null()
     integer(I4B), dimension(:), contiguous, pointer :: icvert => null()
@@ -1003,13 +974,10 @@ contains
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! -- set memory path
-    idmMemoryPath = create_mem_path(this%name_model, 'DISU', idm_context)
-    !
     ! -- set pointers to input path ncvert and icvert
-    call mem_setptr(icell2d, 'ICELL2D', idmMemoryPath)
-    call mem_setptr(ncvert, 'NCVERT', idmMemoryPath)
-    call mem_setptr(icvert, 'ICVERT', idmMemoryPath)
+    call mem_setptr(icell2d, 'ICELL2D', this%input_mempath)
+    call mem_setptr(ncvert, 'NCVERT', this%input_mempath)
+    call mem_setptr(icvert, 'ICVERT', this%input_mempath)
     !
     ! --
     if (associated(icell2d) .and. associated(ncvert) &
@@ -1020,8 +988,8 @@ contains
     end if
     !
     ! -- set pointers to cell center arrays
-    call mem_setptr(cell_x, 'XC', idmMemoryPath)
-    call mem_setptr(cell_y, 'YC', idmMemoryPath)
+    call mem_setptr(cell_x, 'XC', this%input_mempath)
+    call mem_setptr(cell_y, 'YC', this%input_mempath)
     !
     ! -- set cell centers
     if (associated(cell_x) .and. associated(cell_y)) then
@@ -1071,8 +1039,7 @@ contains
     if (this%nvert > 0) ntxt = ntxt + 5
     !
     ! -- Open the file
-    inquire (unit=this%inunit, name=fname)
-    fname = trim(fname)//'.grb'
+    fname = trim(this%input_fname)//'.grb'
     iunit = getunit()
     write (this%iout, fmtgrdsave) iunit, trim(adjustl(fname))
     call openfile(iunit, this%iout, trim(adjustl(fname)), 'DATA(BINARY)', &

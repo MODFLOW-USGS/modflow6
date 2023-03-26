@@ -17,7 +17,6 @@ module IdmPackageModule
   private
   public :: NIUNIT_GWF, NIUNIT_GWT
   public :: ModelPackageInputsType
-  public :: supported_model_packages
 
   ! -- GWF base package types, ordered for memload
   integer(I4B), parameter :: GWF_NBASEPKG = 50
@@ -26,7 +25,7 @@ module IdmPackageModule
                   &'NPF6 ', 'BUY6 ', 'VSC6 ', 'GNC6 ', '     ', & ! 10
                   &'HFB6 ', 'STO6 ', 'IC6  ', '     ', '     ', & ! 15
                   &'MVR6 ', 'OC6  ', 'OBS6 ', '     ', '     ', & ! 20
-                  &30*'     '/                                    ! 50
+                  &30*'     '/ ! 50
 
   ! -- GWF multi package types, ordered for memload
   integer(I4B), parameter :: GWF_NMULTIPKG = 50
@@ -34,7 +33,7 @@ module IdmPackageModule
   data GWF_MULTIPKG/'WEL6 ', 'DRN6 ', 'RIV6 ', 'GHB6 ', '     ', & !  5
                    &'RCH6 ', 'EVT6 ', 'CHD6 ', 'CSUB6', '     ', & ! 10
                    &'MAW6 ', 'SFR6 ', 'LAK6 ', 'UZF6 ', 'API6 ', & ! 15
-                   &35*'     '/                                    ! 50
+                   &35*'     '/ ! 50
 
   ! -- GWT base package types, ordered for memload
   integer(I4B), parameter :: GWT_NBASEPKG = 50
@@ -43,14 +42,14 @@ module IdmPackageModule
                   &'IC6  ', 'FMI6 ', 'MST6 ', 'ADV6 ', '     ', & ! 10
                   &'DSP6 ', 'SSM6 ', 'MVT6 ', 'OC6  ', '     ', & ! 15
                   &'OBS6 ', '     ', '     ', '     ', '     ', & ! 20
-                  &30*'     '/                                    ! 50
+                  &30*'     '/ ! 50
 
   ! -- GWT multi package types, ordered for memload
   integer(I4B), parameter :: GWT_NMULTIPKG = 50
   character(len=LENPACKAGETYPE), dimension(GWT_NMULTIPKG) :: GWT_MULTIPKG
   data GWT_MULTIPKG/'CNC6 ', 'SRC6 ', 'LKT6 ', 'IST6 ', '     ', & !  5
                    &'SFT6 ', 'MWT6 ', 'UZT6 ', 'API6 ', '     ', & ! 10
-                   &40*'     '/                                    ! 50
+                   &40*'     '/ ! 50
 
   ! -- size of supported model package arrays
   integer(I4B), parameter :: NIUNIT_GWF = GWF_NBASEPKG + GWF_NMULTIPKG
@@ -129,7 +128,8 @@ contains
     ! -- modules
     ! -- dummy
     character(len=LENFTYPE), intent(in) :: mtype
-    character(len=LENPACKAGETYPE), dimension(:), allocatable, intent(inout) :: pkgtypes
+    character(len=LENPACKAGETYPE), dimension(:), allocatable, &
+      intent(inout) :: pkgtypes
     integer(I4B), intent(inout) :: numpkgs
     ! -- local
     !
@@ -138,12 +138,12 @@ contains
       numpkgs = GWF_NBASEPKG + GWF_NMULTIPKG
       allocate (pkgtypes(numpkgs))
       pkgtypes = [GWF_BASEPKG, GWF_MULTIPKG]
-    !
+      !
     case ('GWT6')
       numpkgs = GWT_NBASEPKG + GWT_NMULTIPKG
       allocate (pkgtypes(numpkgs))
       pkgtypes = [GWT_BASEPKG, GWT_MULTIPKG]
-    !
+      !
     case default
     end select
     !
@@ -167,7 +167,7 @@ contains
     ilen = len_trim(pkgtype)
     do i = 1, ilen
       if (pkgtype(i:i) == '6') then
-        write (component_type, '(a)') trim(pkgtype(1:i-1))
+        write (component_type, '(a)') trim(pkgtype(1:i - 1))
       end if
     end do
     !
@@ -206,7 +206,7 @@ contains
             exit
           end if
         end do
-      !
+        !
       case ('GWT')
         do n = 1, GWT_NMULTIPKG
           if (GWT_MULTIPKG(n) == pkgtype) then
@@ -214,7 +214,7 @@ contains
             exit
           end if
         end do
-      !
+        !
       case default
       end select
     end if
@@ -250,8 +250,10 @@ contains
 
   !> @brief add a new package instance to this package type
   !<
-  subroutine pkgtype_add(this, modelname, mtype_component, filetype, filename, pkgname, iout)
+  subroutine pkgtype_add(this, modelname, mtype_component, filetype, &
+                         filename, pkgname, iout)
     ! -- modules
+    use MemoryManagerModule, only: mem_allocate
     use MemoryHelperModule, only: create_mem_path
     use SimVariablesModule, only: idm_context
     use IdmDfnSelectorModule, only: idm_integrated, idm_multi_package
@@ -265,6 +267,8 @@ contains
     integer(I4B), intent(in) :: iout
     ! -- local
     character(len=LENPACKAGENAME) :: sc_name
+    character(len=LENMEMPATH) :: mempath
+    character(len=LINELENGTH), pointer :: cstr
     !
     ! -- reallocate
     call expandarray(this%filenames)
@@ -278,7 +282,7 @@ contains
     this%pkgnames(this%pnum) = pkgname
     this%inunits(this%pnum) = 0
     !
-    ! -- create mempath
+    ! -- set up input context for model
     if (idm_integrated(mtype_component, this%component_type)) then
       !
       ! -- set subcomponent name
@@ -293,6 +297,11 @@ contains
       ! -- create and store the mempath
       this%mempaths(this%pnum) = &
         create_mem_path(modelname, sc_name, idm_context)
+      !
+      ! -- allocate and initialize filename for package
+      mempath = create_mem_path(modelname, sc_name, idm_context)
+      call mem_allocate(cstr, LINELENGTH, 'INPUT_FNAME', mempath)
+      cstr = filename
     else
       !
       ! -- set mempath empty
@@ -323,7 +332,7 @@ contains
 
   !> @brief initialize model package inputs object
   !<
-  subroutine modelpkgs_init(this, modeltype, modelfname, modelname, niunit, cunit, iout)
+  subroutine modelpkgs_init(this, modeltype, modelfname, modelname, iout)
     ! -- modules
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_allocate
@@ -333,32 +342,33 @@ contains
     character(len=*), intent(in) :: modeltype
     character(len=*), intent(in) :: modelfname
     character(len=*), intent(in) :: modelname
-    integer(I4B), intent(in) :: niunit
-    character(len=*), dimension(niunit), intent(in) :: cunit
     integer(I4B), intent(in) :: iout
     ! -- local
-    ! -- formats
     !
     ! -- initialize object
     this%modeltype = modeltype
     this%modelfname = modelfname
     this%modelname = modelname
     this%component_type = component_type(modeltype)
-    this%niunit = niunit
-    allocate (this%cunit(niunit))
-    this%cunit = cunit
     this%iout = iout
     !
+    ! -- allocate and set model supported package types
+    call supported_model_packages(modeltype, this%cunit, this%niunit)
+    !
     ! -- set model memory path
-    this%model_mempath = create_mem_path(component=this%modelname, context=idm_context)
+    this%model_mempath = create_mem_path(component=this%modelname, &
+                                         context=idm_context)
     !
     ! -- allocate managed memory
-    call mem_allocate(this%pkgtypes, LENPACKAGETYPE, 0, 'PKGTYPES', this%model_mempath)
-    call mem_allocate(this%pkgnames, LENPACKAGENAME, 0, 'PKGNAMES', this%model_mempath)
-    call mem_allocate(this%mempaths, LENMEMPATH, 0, 'MEMPATHS', this%model_mempath)
+    call mem_allocate(this%pkgtypes, LENPACKAGETYPE, 0, 'PKGTYPES', &
+                      this%model_mempath)
+    call mem_allocate(this%pkgnames, LENPACKAGENAME, 0, 'PKGNAMES', &
+                      this%model_mempath)
+    call mem_allocate(this%mempaths, LENMEMPATH, 0, 'MEMPATHS', &
+                      this%model_mempath)
     call mem_allocate(this%inunits, 0, 'INUNITS', this%model_mempath)
     !
-    ! build description of model packages
+    ! build descriptions of packages
     call this%addpkgs()
     !
     ! -- return
@@ -387,7 +397,7 @@ contains
     ! -- identify input packages and check that each is supported
     do n = 1, size(ftypes)
       !
-      ! -- model namfile packages block filetype
+      ! -- type from model name file packages block
       ftype = ftypes(n)
       found = .false.
       !
@@ -422,9 +432,9 @@ contains
     !
     ! -- allocate the pkglist
     allocate (this%pkglist(size(cunit_idxs)))
-    allocate (indx(size(cunit_idxs)))
     !
     ! -- sort cunit indexes
+    allocate (indx(size(cunit_idxs)))
     call qsort(indx, cunit_idxs)
     !
     ! -- create sorted LoadablePackageType object list
@@ -433,8 +443,8 @@ contains
     end do
     !
     ! -- cleanup
-    deallocate (indx)
     deallocate (cunit_idxs)
+    deallocate (indx)
     !
     ! -- return
     return
@@ -477,11 +487,11 @@ contains
     ! -- dummy
     class(ModelPackageInputsType) :: this
     ! -- local
-    type(CharacterStringType), dimension(:), contiguous, & 
+    type(CharacterStringType), dimension(:), contiguous, &
       pointer :: ftypes !< file types
-    type(CharacterStringType), dimension(:), contiguous, & 
+    type(CharacterStringType), dimension(:), contiguous, &
       pointer :: fnames !< file names
-    type(CharacterStringType), dimension(:), contiguous, & 
+    type(CharacterStringType), dimension(:), contiguous, &
       pointer :: pnames !< package names
     character(len=LENMEMPATH) :: input_mempath
     character(len=LINELENGTH) :: ftype, fname, pname
@@ -573,13 +583,16 @@ contains
     ! -- initialize load index
     idx = 0
     !
-    ! -- Set total number of package instances
+    ! -- set total number of package instances
     pnum = this%pkgcount()
     !
     ! -- reallocate model input package attribute arrays
-    call mem_reallocate(this%pkgtypes, LENPACKAGETYPE, pnum, 'PKGTYPES', this%model_mempath)
-    call mem_reallocate(this%pkgnames, LENPACKAGENAME, pnum, 'PKGNAMES', this%model_mempath)
-    call mem_reallocate(this%mempaths, LENMEMPATH, pnum, 'MEMPATHS', this%model_mempath)
+    call mem_reallocate(this%pkgtypes, LENPACKAGETYPE, pnum, 'PKGTYPES', &
+                        this%model_mempath)
+    call mem_reallocate(this%pkgnames, LENPACKAGENAME, pnum, 'PKGNAMES', &
+                        this%model_mempath)
+    call mem_reallocate(this%mempaths, LENMEMPATH, pnum, 'MEMPATHS', &
+                        this%model_mempath)
     call mem_reallocate(this%inunits, pnum, 'INUNITS', this%model_mempath)
     !
     ! -- load pkinfo
@@ -588,11 +601,11 @@ contains
       do m = 1, this%pkglist(n)%pnum
         ! -- increment index
         idx = idx + 1
-        ! -- pkg type e.g. 'CHD6'
+        ! -- package type like 'CHD6'
         this%pkgtypes(idx) = trim(this%pkglist(n)%pkgtype)
-        ! -- pkg name e.g. 'CHD-2'
+        ! -- package name like 'CHD-2'
         this%pkgnames(idx) = trim(this%pkglist(n)%pkgnames(m))
-        ! -- memory path e.g. '__INPUT__/MYMODEL/CHD-2'
+        ! -- memory path like '__INPUT__/MYMODEL/CHD-2'
         this%mempaths(idx) = trim(this%pkglist(n)%mempaths(m))
         ! -- input file unit number
         this%inunits(idx) = this%pkglist(n)%inunits(m)
