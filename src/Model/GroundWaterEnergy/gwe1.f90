@@ -1142,7 +1142,7 @@ contains
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error
     use TspCncModule, only: cnc_create
-!    use GweSrcModule, only: src_create
+    use GweSrcModule, only: src_create
 !    use GweLktModule, only: lkt_create
     use GweSfeModule, only: sfe_create
 !    use GweMwtModule, only: mwt_create
@@ -1168,19 +1168,19 @@ contains
     case ('TMP6')
       call cnc_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, this%tsplab, this%gwecommon)
-      !case('SRC6')
-      !  call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-      !                  pakname)
+    case ('SRC6')
+      call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname, this%tsplab, this%gwecommon)
       !case('LKT6')
       !  call lkt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
       !                  pakname, this%fmi)
-    case('SFE6')
+    case ('SFE6')
       call sfe_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                         pakname, this%fmi, this%tsplab, this%gwecommon)
       !case('MWT6')
       !  call mwt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
       !                  pakname, this%fmi)
-    case('UZE6')
+    case ('UZE6')
       call uze_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                         pakname, this%fmi, this%tsplab, this%gwecommon)
       !case('IST6')

@@ -8,6 +8,7 @@ module GweSrcModule
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
   use BlockParserModule, only: BlockParserType
+  use GweInputDataModule, only: GweInputDataType
   use MatrixModule
   !
   implicit none
@@ -19,7 +20,11 @@ module GweSrcModule
   character(len=16) :: text = '             SRC'
   !
   type, extends(BndType) :: GweSrcType
+      
+    type(GweInputDataType), pointer :: gwecommon => null() !< pointer to shared gwe data used by multiple packages but set in mst
+      
   contains
+  
     procedure :: allocate_scalars => src_allocate_scalars
     procedure :: bnd_cf => src_cf
     procedure :: bnd_fc => src_fc
@@ -35,7 +40,7 @@ module GweSrcModule
 contains
 
   subroutine src_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
-                        tsplab)
+                        tsplab, gwecommon)
 ! ******************************************************************************
 ! src_create -- Create a New Src Package
 ! Subroutine: (1) create new-style package
@@ -53,6 +58,7 @@ contains
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
     type(TspLabelsType), pointer :: tsplab
+    type(GweInputDataType), intent(in), target :: gwecommon !< shared data container for use by multiple GWE packages
     ! -- local
     type(GweSrcType), pointer :: srcobj
 ! ------------------------------------------------------------------------------
@@ -81,6 +87,11 @@ contains
     ! -- Store pointer to labels associated with the current model so that the 
     !    package has access to the assigned labels
     packobj%tsplab => tsplab
+    !
+    ! -- Store pointer to shared data module for accessing cpw, rhow
+    !    for the budget calculations, and for accessing the latent heat of
+    !    vaporization for evaporative cooling.
+    srcobj%gwecommon => gwecommon
     !
     ! -- return
     return
@@ -168,7 +179,7 @@ contains
         cycle
       end if
       q = this%bound(1, i)
-      this%rhs(i) = -q
+      this%rhs(i) = -q / (this%gwecommon%gwecpw * this%gwecommon%gwerhow)
     end do
     !
     return
