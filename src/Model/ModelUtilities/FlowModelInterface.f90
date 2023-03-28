@@ -425,7 +425,7 @@ contains
           call openfile(inunit, this%iout, fname, 'DATA(BINARY)', FORM, &
                         ACCESS, 'UNKNOWN')
           this%iumvr = inunit
-          call budgetobject_cr_bfr(this%mvrbudobj, 'MVT', this%iumvr, & ! kluge note: MVT?
+          call budgetobject_cr_bfr(this%mvrbudobj, 'MVT', this%iumvr, &
                                    this%iout)
           call this%mvrbudobj%fill_from_bfr(this%dis, this%iout)
         case default
@@ -537,7 +537,7 @@ contains
         if (this%bfr%kstp > 1 .and. (kstp /= this%bfr%kstp)) then
           write (errmsg, '(4x,a)') 'TIME STEP NUMBER IN BUDGET FILE &
             &DOES NOT MATCH TIME STEP NUMBER IN TRANSPORT MODEL.  IF THERE &
-           &IS MORE THAN ONE TIME STEP IN THE BUDGET FILE FOR A GIVEN STRESS &
+            &IS MORE THAN ONE TIME STEP IN THE BUDGET FILE FOR A GIVEN STRESS &
             &PERIOD, BUDGET FILE TIME STEPS MUST MATCH GWT MODEL TIME STEPS &
             &ONE-FOR-ONE IN THAT STRESS PERIOD.'
           call store_error(errmsg)

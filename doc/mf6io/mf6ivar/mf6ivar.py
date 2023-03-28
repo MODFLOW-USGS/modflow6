@@ -689,9 +689,11 @@ if __name__ == "__main__":
         "exg-gwtgwt",
         "exg-gwfgwe",
         "exg-gwegwe",
+        "exg-gwfprt",
         "exg-swfgwf",
         "sln-ims",  # dfn completed  tex updated
         "sln-ems",  # dfn completed  tex updated
+        "sln-pts",
         "gwf-nam",  # dfn completed  tex updated
         "gwf-dis",  # dfn completed  tex updated
         "gwf-disv",  # dfn completed  tex updated
@@ -767,6 +769,13 @@ if __name__ == "__main__":
         "swf-chd",
         "swf-flw",
         "swf-zdg",
+        'prt-nam',
+        'prt-dis',
+        'prt-disv',
+        'prt-mip',
+        'prt-prp',
+        'prt-oc',
+        'prt-fmi',
         "utl-spc",
         "utl-spca",
         "utl-spt",

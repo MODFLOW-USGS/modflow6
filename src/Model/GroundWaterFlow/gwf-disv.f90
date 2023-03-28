@@ -1370,7 +1370,7 @@ contains
     class(GwfDisvType), intent(inout) :: this
     integer(I4B), intent(in) :: ic !< cell number (reduced)
     real(DP), allocatable, intent(out) :: polyverts(:, :) !< polygon vertices (column-major indexing)
-    logical(LGP), intent(in), optional :: closed !< whether to close the polygon, duplicating a vertex
+    logical(LGP), intent(in), optional :: closed !< whether to close the polygon, duplicating a vertex (default false)
     ! -- local
     integer(I4B) :: icu, icu2d, iavert, ncpl, nverts, m, j
     logical(LGP) :: lclosed

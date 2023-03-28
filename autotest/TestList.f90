@@ -112,7 +112,6 @@ contains
     type(ListType), pointer :: list
     type(IntNodeType), pointer :: n1, n2, n3
     class(*), pointer :: p
-    integer(I4B) :: i
 
     allocate (list)
     allocate (n1)

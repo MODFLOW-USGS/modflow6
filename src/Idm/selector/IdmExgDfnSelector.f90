@@ -11,6 +11,7 @@ module IdmExgDfnSelectorModule
   use ExgGwfgweInputModule
   use ExgGwegweInputModule
   use ExgSwfgwfInputModule
+  use ExgGwfprtInputModule
 
   implicit none
   private
@@ -51,6 +52,8 @@ contains
       call set_param_pointer(input_definition, exg_gwegwe_param_definitions)
     case ('SWFGWF')
       call set_param_pointer(input_definition, exg_swfgwf_param_definitions)
+    case ('GWFPRT')
+      call set_param_pointer(input_definition, exg_gwfprt_param_definitions)
     case default
     end select
     return
@@ -73,6 +76,8 @@ contains
       call set_param_pointer(input_definition, exg_gwegwe_aggregate_definitions)
     case ('SWFGWF')
       call set_param_pointer(input_definition, exg_swfgwf_aggregate_definitions)
+    case ('GWFPRT')
+      call set_param_pointer(input_definition, exg_gwfprt_aggregate_definitions)
     case default
     end select
     return
@@ -95,6 +100,8 @@ contains
       call set_block_pointer(input_definition, exg_gwegwe_block_definitions)
     case ('SWFGWF')
       call set_block_pointer(input_definition, exg_swfgwf_block_definitions)
+    case ('GWFPRT')
+      call set_block_pointer(input_definition, exg_gwfprt_block_definitions)
     case default
     end select
     return
@@ -116,6 +123,8 @@ contains
       multi_package = exg_gwegwe_multi_package
     case ('SWFGWF')
       multi_package = exg_swfgwf_multi_package
+    case ('GWFPRT')
+      multi_package = exg_gwfprt_multi_package
     case default
       call store_error('Idm selector subcomponent not found; '//&
                        &'component="EXG"'//&
@@ -140,6 +149,8 @@ contains
     case ('GWEGWE')
       integrated = .true.
     case ('SWFGWF')
+      integrated = .true.
+    case ('GWFPRT')
       integrated = .true.
     case default
     end select

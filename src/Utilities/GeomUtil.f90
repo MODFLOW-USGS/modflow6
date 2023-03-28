@@ -6,8 +6,7 @@ module GeomUtilModule
   private
   public :: between, point_in_polygon, &
             get_node, get_ijk, get_jk, &
-            skew, transform, &
-            compose
+            skew, transform, compose
 contains
 
   !> @brief Check if a value is between two other values (inclusive).
@@ -17,8 +16,10 @@ contains
   end function between
 
   !> @brief Check if a point is within a polygon.
-  !! Vertices and edge points are considered in.
-  !! Reference: https://stackoverflow.com/a/63436180/6514033
+  !!
+  !! Vertices and edge points are considered in the polygon.
+  !! Adapted from https://stackoverflow.com/a/63436180/6514033,
+  !<
   logical function point_in_polygon(x, y, poly)
     ! dummy
     real(DP), intent(in) :: x !< x point coordinate
@@ -38,23 +39,27 @@ contains
       xb = poly(1, ii)
       yb = poly(2, ii)
 
-      if ((x == xa .and. y == ya) .or. (x == xb .and. y == yb)) then
+      if ((x == xa .and. y == ya) .or. &
+          (x == xb .and. y == yb)) then
         ! on vertex
         point_in_polygon = .true.
         exit
-      else if (ya == yb .and. y == ya .and. between(x, xa, xb)) then
+      else if (ya == yb .and. &
+               y == ya .and. &
+               between(x, xa, xb)) then
         ! on horizontal edge
         point_in_polygon = .true.
         exit
       else if (between(y, ya, yb)) then
-        if ((y == ya .and. yb >= ya) .or. (y == yb .and. ya >= yb)) then
+        if ((y == ya .and. yb >= ya) .or. &
+            (y == yb .and. ya >= yb)) then
           xa = xb
           ya = yb
           cycle
         end if
         ! cross product
         c = (xa - x) * (yb - y) - (xb - x) * (ya - y)
-        if (c == 0) then
+        if (c == 0.0_DP) then
           ! on edge
           point_in_polygon = .true.
           exit

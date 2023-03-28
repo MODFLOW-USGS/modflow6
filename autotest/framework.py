@@ -299,10 +299,19 @@ class TestFramework:
                     else:
                         files2.append(None)
 
-            if self.cmp_namefile is None:
+            # todo: clean up namfile path detection?
+            nf = next(iter(get_namefiles(cpth)), None)
+            cmp_namefile = (
+                None
+                if "mf6" in self.compare or "libmf6" in self.compare
+                else os.path.basename(nf)
+                if nf
+                else None
+            )
+            if cmp_namefile is None:
                 pth = None
             else:
-                pth = os.path.join(cpth, self.cmp_namefile)
+                pth = os.path.join(cpth, cmp_namefile)
 
             for i in range(len(files1)):
                 file1 = files1[i]
@@ -629,8 +638,13 @@ class TestFramework:
             else:
                 # non-MF6 model
                 try:
+                    nf_ext = ".mpsim" if "mp7" in target.name else ".nam"
+                    namefile = next(iter(workspace.glob(f"*{nf_ext}")), None)
+                    assert (
+                        namefile
+                    ), f"Control file with extension {nf_ext} not found"
                     success, buff = flopy.run_model(
-                        target, self.cmp_namefile, workspace, report=True
+                        target, namefile, workspace, report=True
                     )
                 except Exception:
                     warn(f"{target} model failed:\n{format_exc()}")

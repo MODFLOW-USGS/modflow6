@@ -1,0 +1,16 @@
+Model Input (MIP) Package information is read from the file that is specified by ``MIP6'' as the file type.  The MIP Package is required, and only one MIP Package can be specified for a PRT model.  The information read by the MIP Package pertains to the entire PRT model.
+
+\vspace{5mm}
+\subsubsection{Structure of Blocks}
+%%\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/prt-mip-options.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/prt-mip-griddata.dat}
+
+\vspace{5mm}
+\subsubsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/prt-mip-desc.tex}
+\end{description}
+
+\vspace{5mm}
+\subsubsection{Example Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/prt-mip-example.dat}

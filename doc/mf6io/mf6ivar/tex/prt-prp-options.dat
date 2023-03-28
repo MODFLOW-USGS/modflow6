@@ -1,0 +1,12 @@
+BEGIN OPTIONS
+  [BOUNDNAMES]
+  [TRACK FILEOUT <trackfile>]
+  [TRACKCSV FILEOUT <trackcsvfile>]
+  [STOPTIME <stoptime>]
+  [STOPTRAVELTIME <stoptraveltime>]
+  [STOP_AT_WEAK_SINK]
+  [ISTOPZONE <istopzone>]
+  [DRAPE]
+  [RELEASE_TIMES <times(unknown)>]
+  [RELEASE_TIMESFILE <timesfile>]
+END OPTIONS

@@ -7,7 +7,7 @@ module MathUtilModule
 
   implicit none
   private
-  public :: f1d, is_close, mod_offset, zeroch, zeroin, zerotest
+  public :: f1d, is_close, mod_offset, zero_ch, zero_br, zero_test
 
   interface mod_offset
     module procedure :: mod_offset_int, mod_offset_dbl
@@ -128,7 +128,7 @@ contains
   !! Simulation of Classical and Quantum Systems," 2nd ed., Springer, New York.
   !!
   !<
-  function zeroch(x0, x1, f, epsa) result(z)
+  function zero_ch(x0, x1, f, epsa) result(z)
     ! -- dummy
     real(DP) :: x0, x1
     procedure(f1d), pointer, intent(in) :: f
@@ -240,11 +240,11 @@ contains
   !!
   !! Output:
   !!
-  !! zeroin abscissa approximating a zero of  f  in the interval ax,bx
+  !! zero_br abscissa approximating a zero of  f  in the interval ax,bx
   !!
   !!     it is assumed  that   f(ax)   and   f(bx)   have  opposite  signs
   !! this is checked, and an error message is printed if this is not
-  !! satisfied.   zeroin  returns a zero  x  in the given interval
+  !! satisfied.   zero_br  returns a zero  x  in the given interval
   !! ax,bx  to within a tolerance  4*macheps*abs(x)+tol, where macheps  is
   !! the  relative machine precision defined as the smallest representable
   !! number such that  1.+macheps .gt. 1.
@@ -252,7 +252,7 @@ contains
   !! the algol 60 procedure  zero  given in  richard brent, algorithms for
   !! minimization without derivatives, prentice-hall, inc. (1973).
   !<
-  function zeroin(ax, bx, f, tol) result(z)
+  function zero_br(ax, bx, f, tol) result(z)
     ! -- dummy
     real(DP) :: ax, bx
     procedure(f1d), pointer, intent(in) :: f
@@ -352,10 +352,10 @@ contains
       fb = f(b)
       rs = (fb * (fc / dabs(fc))) .gt. 0.0d0
     end do
-  end function zeroin
+  end function zero_br
 
-  !> @brief Compute a zero of the function f(x) in the interval (x0, x1)
-  function zerotest(x0, x1, f, epsa) result(z)
+  !> @brief Compute a zero of f(x) in the interval (x0, x1) with a test method.
+  function zero_test(x0, x1, f, epsa) result(z)
     ! -- dummy
     real(DP) :: x0, x1
     procedure(f1d), pointer, intent(in) :: f

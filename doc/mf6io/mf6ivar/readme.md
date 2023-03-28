@@ -255,7 +255,7 @@ Note that in this case, both of the variables are required (optional false) and 
 
 ## Recarray Type
 
-The recarray type is pattered after the recarray type that is available in the numpy package for Python.
+The recarray type is patterned after the recarray type that is available in the numpy package for Python.
 
 An example of a recarray record is shown below for the drain package.  First you'll note that the recarray has a shape.  This shape is of maxbound, which is the maximum number of records that the user can enter.  Also note that following the ``recarray'' identifier is cellid, elev, cond, aux, and boundname.  These are all additional variables that are described after the recarray.  Because these are listed next to recarray, the protocol is that they will all be listed on one line.  You'll also note that the cellid, elev, cond, aux, and boundname variables have the in_record attribute set to true.  This is required so that the variables are not written again after the recarray; they are only written inside the recarray.  These variables all have the tagged attribute set to false so that they are not preceded by a keyword.
 
