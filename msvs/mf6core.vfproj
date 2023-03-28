@@ -260,8 +260,8 @@
 		<File RelativePath="..\src\Utilities\ArrayRead\LayeredArrayReader.f90"/></Filter>
 		<Filter Name="Idm">
 		<Filter Name="mf6blockfile">
-		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\IdmMf6FileLoader.f90"/>
-		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\LoadMf6FileType.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\IdmMf6File.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\LoadMf6File.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\StructArray.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\StructVector.f90"/></Filter>
 		<Filter Name="selector">
@@ -269,11 +269,11 @@
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmGwfDfnSelector.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmGwtDfnSelector.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmSimDfnSelector.f90"/></Filter>
-		<File RelativePath="..\src\Utilities\Idm\IdmDfnSelectorUtils.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\DefinitionSelect.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\IdmLogger.f90"/>
-		<File RelativePath="..\src\Utilities\Idm\IdmPackage.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\IdmSimulation.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\InputDefinition.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\ModelPackages.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\ModflowInput.f90"/></Filter>
 		<Filter Name="Libraries">
 		<File RelativePath="..\src\Utilities\Libraries\blas\blas1_d.f90"/>

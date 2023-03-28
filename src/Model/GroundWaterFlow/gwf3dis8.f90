@@ -86,7 +86,7 @@ contains
     logical(LGP) :: found_fname
     character(len=*), parameter :: fmtheader = &
       "(1X, /1X, 'DIS -- STRUCTURED GRID DISCRETIZATION PACKAGE,', &
-      &' VERSION 2 : 3/27/2014 - INPUT READ FROM MEMPATH ', A, /)"
+      &' VERSION 2 : 3/27/2014 - INPUT READ FROM MEMPATH: ', A, /)"
 ! ------------------------------------------------------------------------------
     allocate (disnew)
     dis => disnew
@@ -125,7 +125,7 @@ contains
     ! -- locals
 ! ------------------------------------------------------------------------------
     ! -- Transfer the data from the memory manager into this package object
-    if (this%inunit > 0) then
+    if (this%inunit /= 0) then
       !
       ! -- source input options
       call this%source_options()

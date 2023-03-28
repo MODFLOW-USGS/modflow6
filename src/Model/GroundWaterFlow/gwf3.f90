@@ -1598,7 +1598,9 @@ contains
     call this%ftype_check(indis)
     !
     call this%create_bndpkgs(bndpkgs, pkgtypes, pkgnames, mempaths, inunits)
-
+    !
+    ! -- return
+    return
   end subroutine create_packages
 
   subroutine create_lstfile(this, lst_fname, model_fname, defined)

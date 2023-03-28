@@ -169,7 +169,7 @@ contains
     ! -- formats
     character(len=*), parameter :: fmtheader = &
       "(1x, /1x, 'NPF -- NODE PROPERTY FLOW PACKAGE, VERSION 1, 3/30/2015', &
-       &' INPUT READ FROM MEMPATH ', A, /)"
+       &' INPUT READ FROM MEMPATH: ', A, /)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object

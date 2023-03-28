@@ -104,10 +104,10 @@ contains
     type(InputParamDefinitionType), pointer :: idt
     integer(I4B) :: iparam, isize
     logical(LGP) :: terminate = .true.
-    integer(I4B), pointer :: intvar => null()
-    character(len=LINELENGTH), pointer :: cstr => null()
+    integer(I4B), pointer :: intvar
+    character(len=LINELENGTH), pointer :: cstr
     type(CharacterStringType), dimension(:), &
-      pointer, contiguous :: acharstr1d => null() !< variable for allocation
+      pointer, contiguous :: acharstr1d
     character(len=LINELENGTH) :: errmsg
     !
     ! -- set memory path
@@ -125,17 +125,19 @@ contains
       ! -- check if variable is already allocated
       call get_isize(idt%mf6varname, input_mempath, isize)
       !
-      ! -- if not, allocate and set default
       if (isize < 0) then
+        !
+        ! -- reset pointers
+        nullify (intvar)
+        nullify (acharstr1d)
+        nullify (cstr)
+        !
         select case (idt%datatype)
         case ('KEYWORD', 'INTEGER')
           !
           ! -- allocate and set default
           call mem_allocate(intvar, idt%mf6varname, input_mempath)
           call set_default_value(intvar, idt%mf6varname)
-          !
-          ! -- reset pointer
-          nullify (intvar)
         case ('STRING')
           !
           ! -- did this param originate from sim namfile RECARRAY type
@@ -144,17 +146,11 @@ contains
             ! -- allocate 0 size CharacterStringType array
             call mem_allocate(acharstr1d, LINELENGTH, 0, idt%mf6varname, &
                               input_mempath)
-            !
-            ! -- reset pointer
-            nullify (acharstr1d)
           else
             !
             ! -- allocate empty string
             call mem_allocate(cstr, LINELENGTH, idt%mf6varname, input_mempath)
             cstr = ''
-            !
-            ! -- reset pointer
-            nullify (cstr)
           end if
         case default
           write (errmsg, '(a,a)') &
@@ -210,17 +206,13 @@ contains
       call openfile(inunit, iout, trim(adjustl(simfile)), 'NAM')
       call input_load('NAM6', 'SIM', 'NAM', 'SIM', 'NAM', inunit, iout)
       close (inunit)
-      !
-      ! -- allocate any unallocated simnam params
-      call simnam_allocate()
-      !
-      ! -- memload summary info
-      call simnam_load_dim()
-    else
-      !
-      ! -- allocate  simnam params
-      call simnam_allocate()
     end if
+    !
+    ! -- allocate any unallocated simnam params
+    call simnam_allocate()
+    !
+    ! -- memload summary info
+    call simnam_load_dim()
     !
     ! --return
     return

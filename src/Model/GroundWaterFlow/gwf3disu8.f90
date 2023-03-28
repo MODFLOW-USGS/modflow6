@@ -103,7 +103,7 @@ contains
     logical(LGP) :: found_fname
     character(len=*), parameter :: fmtheader = &
       "(1X, /1X, 'DISU -- UNSTRUCTURED GRID DISCRETIZATION PACKAGE,', &
-      &' VERSION 2 : 3/27/2014 - INPUT READ FROM MEMPATH ', A, //)"
+      &' VERSION 2 : 3/27/2014 - INPUT READ FROM MEMPATH: ', A, //)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Create a new discretization object

@@ -94,7 +94,7 @@ contains
     ! -- formats
     character(len=*), parameter :: fmtdsp = &
       "(1x,/1x,'DSP-- DISPERSION PACKAGE, VERSION 1, 1/24/2018', &
-      &' INPUT READ FROM MEMPATH ', A, //)"
+      &' INPUT READ FROM MEMPATH: ', A, //)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object

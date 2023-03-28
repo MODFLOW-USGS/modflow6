@@ -286,7 +286,8 @@ contains
     !
     ! -- set mask
     if (simulation_mode == 'PARALLEL') then
-      ! TODO
+      ! TODO temporarily load all
+      model_loadmask = 1
     else
       model_loadmask = 1
     end if

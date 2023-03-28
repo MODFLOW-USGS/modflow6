@@ -90,7 +90,7 @@ contains
     logical(LGP) :: found_fname
     character(len=*), parameter :: fmtheader = &
       "(1X, /1X, 'DISV -- VERTEX GRID DISCRETIZATION PACKAGE,', &
-      &' VERSION 1 : 12/23/2015 - INPUT READ FROM MEMPATH ', A, //)"
+      &' VERSION 1 : 12/23/2015 - INPUT READ FROM MEMPATH: ', A, //)"
 ! ------------------------------------------------------------------------------
     allocate (disnew)
     dis => disnew
