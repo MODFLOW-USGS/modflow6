@@ -517,7 +517,8 @@ contains
       fname = fnames(n)
       pname = pnames(n)
       !
-      ! TODO: consider naming pkg here if not provided
+      ! TODO: name pkg here if not provided, this is expected to cause
+      !       failures for multi-pkg types when names aren't provided
       !
       ! -- add this instance to package list
       call this%add(ftype, fname, pname)

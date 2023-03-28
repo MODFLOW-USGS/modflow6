@@ -262,7 +262,7 @@ contains
   subroutine static_input_load()
     ! -- modules
     use ConstantsModule, only: LENMEMPATH
-    use SimVariablesModule, only: simulation_mode, iout
+    use SimVariablesModule, only: simulation_mode, proc_id, iout
     use IdmSimulationModule, only: simnam_load, load_models
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr
@@ -286,8 +286,8 @@ contains
     !
     ! -- set mask
     if (simulation_mode == 'PARALLEL') then
-      ! TODO temporarily load all
-      model_loadmask = 1
+      ! TODO under development
+      model_loadmask(proc_id + 1) = 1
     else
       model_loadmask = 1
     end if
