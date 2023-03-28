@@ -1,9 +1,10 @@
-!> @brief This module contains the IdmPackageModule
+!> @brief This module contains the ModelPackageInputsModule
 !!
-!! This module contains the high-level routines for...
+!! This module contains the high-level routines for assembling
+!! model package information and loading to the input context
 !!
 !<
-module IdmPackageModule
+module ModelPackageInputsModule
 
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENMODELNAME, LENFTYPE, &
@@ -637,4 +638,4 @@ contains
     return
   end subroutine modelpkgs_destroy
 
-end module IdmPackageModule
+end module ModelPackageInputsModule

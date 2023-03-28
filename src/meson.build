@@ -151,7 +151,7 @@ modflow_sources = files(
     'Utilities' / 'Idm' / 'IdmLogger.f90',
     'Utilities' / 'Idm' / 'IdmSimulation.f90',
     'Utilities' / 'Idm' / 'InputDefinition.f90',
-    'Utilities' / 'Idm' / 'ModelPackages.f90',
+    'Utilities' / 'Idm' / 'ModelPackageInputs.f90',
     'Utilities' / 'Idm' / 'ModflowInput.f90',
     'Utilities' / 'Idm' / 'mf6blockfile' / 'IdmMf6File.f90',
     'Utilities' / 'Idm' / 'mf6blockfile' / 'LoadMf6File.f90',

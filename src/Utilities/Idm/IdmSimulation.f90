@@ -13,7 +13,7 @@ module IdmSimulationModule
   use InputOutputModule, only: openfile, getunit
   use InputDefinitionModule, only: InputParamDefinitionType
   use ModflowInputModule, only: ModflowInputType, getModflowInput
-  use IdmMf6FileLoaderModule, only: input_load
+  use IdmMf6FileModule, only: input_load
 
   implicit none
   private
@@ -169,7 +169,7 @@ contains
   !<
   subroutine load_models(model_loadmask, iout)
     ! -- modules
-    use IdmMf6FileLoaderModule, only: load_models_mf6
+    use IdmMf6FileModule, only: load_models_mf6
     ! -- dummy
     integer(I4B), dimension(:), intent(in) :: model_loadmask
     integer(I4B), intent(in) :: iout

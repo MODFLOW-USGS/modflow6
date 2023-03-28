@@ -273,7 +273,7 @@
 		<File RelativePath="..\src\Utilities\Idm\IdmLogger.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\IdmSimulation.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\InputDefinition.f90"/>
-		<File RelativePath="..\src\Utilities\Idm\ModelPackages.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\ModelPackageInputs.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\ModflowInput.f90"/></Filter>
 		<Filter Name="Libraries">
 		<File RelativePath="..\src\Utilities\Libraries\blas\blas1_d.f90"/>

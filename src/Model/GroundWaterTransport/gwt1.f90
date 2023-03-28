@@ -178,7 +178,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use IdmPackageModule, only: NIUNIT_GWT
+    use ModelPackageInputsModule, only: NIUNIT_GWT
     ! -- dummy
     class(GwtModelType) :: this
     ! -- local

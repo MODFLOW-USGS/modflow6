@@ -189,7 +189,7 @@ contains
   !<
   subroutine gwf_df(this)
     ! -- modules
-    use IdmPackageModule, only: NIUNIT_GWF
+    use ModelPackageInputsModule, only: NIUNIT_GWF
     ! -- dummy
     class(GwfModelType) :: this
     ! -- local

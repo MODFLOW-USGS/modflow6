@@ -1,11 +1,10 @@
-!> @brief This module contains the IdmMf6FileLoaderModule
+!> @brief This module contains the IdmMf6FileModule
 !!
 !! This module contains the high-level routines for loading
-!! a MODFLOW input file into the __INPUT__ memory manager
-!! space.
+!! a MODFLOW input file to the input context.
 !!
 !<
-module IdmMf6FileLoaderModule
+module IdmMf6FileModule
 
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENMODELNAME, &
@@ -15,7 +14,7 @@ module IdmMf6FileLoaderModule
   use BlockParserModule, only: BlockParserType
   use ModflowInputModule, only: ModflowInputType, getModflowInput
   use CharacterStringModule, only: CharacterStringType
-  use IdmPackageModule, only: ModelPackageInputsType
+  use ModelPackageInputsModule, only: ModelPackageInputsType
 
   implicit none
   private
@@ -50,7 +49,7 @@ contains
   !> @brief generic procedure to MODFLOW 6 load routine
   !<
   subroutine generic_mf6_load(parser, mf6_input, iout)
-    use LoadMf6FileTypeModule, only: idm_load
+    use LoadMf6FileModule, only: idm_load
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType object that describes the input
     integer(I4B), intent(in) :: iout !< unit number for output
@@ -334,4 +333,4 @@ contains
     return
   end subroutine load_models_mf6
 
-end module IdmMf6FileLoaderModule
+end module IdmMf6FileModule
