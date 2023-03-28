@@ -210,7 +210,6 @@ modflow_sources = files(
     'Utilities' / 'List.f90',
     'Utilities' / 'ListReader.f90',
     'Utilities' / 'Message.f90',
-    'Utilities' / 'NameFile.f90',
     'Utilities' / 'OpenSpec.f90',
     'Utilities' / 'PackageBudget.f90',
     'Utilities' / 'Sim.f90',
