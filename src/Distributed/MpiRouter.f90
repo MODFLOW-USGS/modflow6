@@ -71,7 +71,7 @@ contains
     character(len=LINELENGTH) :: monitor_file
 
     ! to log or not to log
-    this%enable_monitor = .true.
+    this%enable_monitor = .false.
 
     ! initialize the MPI message builder
     call this%message_builder%init()
