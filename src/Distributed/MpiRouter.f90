@@ -102,7 +102,7 @@ contains
     end do
 
     call MPI_Allreduce(MPI_IN_PLACE, this%model_proc_ids, nr_models, &
-                       MPI_INTEGER, MPI_SUM, MF6_COMM_WORLD, ierr)
+                       MPI_INTEGER, MPI_SUM, this%mpi_world%comm, ierr)
 
     ! set the process id to the models and exchanges
     do i = 1, nr_models
@@ -277,7 +277,7 @@ contains
       end if
       call this%message_builder%create_header_rcv(hdr_rcv_t(i))
       call MPI_Irecv(headers(:, i), max_headers, hdr_rcv_t(i), rnk, stage, &
-                     MF6_COMM_WORLD, rcv_req(i), ierr)
+                     this%mpi_world%comm, rcv_req(i), ierr)
       ! don't free mpi datatype, we need the count below
     end do
 
@@ -289,7 +289,7 @@ contains
       end if
       call this%message_builder%create_header_snd(rnk, stage, hdr_snd_t(i))
       call MPI_Isend(MPI_BOTTOM, 1, hdr_snd_t(i), rnk, stage, &
-                     MF6_COMM_WORLD, snd_req(i), ierr)
+                     this%mpi_world%comm, snd_req(i), ierr)
       call MPI_Type_free(hdr_snd_t(i), ierr)
     end do
 
@@ -328,7 +328,7 @@ contains
       call MPI_Type_size(body_rcv_t(i), msg_size, ierr)
       if (msg_size > 0) then
         call MPI_Irecv(MPI_BOTTOM, 1, body_rcv_t(i), rnk, stage, &
-                       MF6_COMM_WORLD, snd_req(i), ierr)
+                       this%mpi_world%comm, snd_req(i), ierr)
       end if
 
       if (this%enable_monitor) then
@@ -347,7 +347,7 @@ contains
       call MPI_Type_size(body_snd_t(i), msg_size, ierr)
       if (msg_size > 0) then
         call MPI_Isend(MPI_Bottom, 1, body_snd_t(i), rnk, stage, &
-                       MF6_COMM_WORLD, rcv_req(i), ierr)
+                       this%mpi_world%comm, rcv_req(i), ierr)
       end if
 
       if (this%enable_monitor) then
