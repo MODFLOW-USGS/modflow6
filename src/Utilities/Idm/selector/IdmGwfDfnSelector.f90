@@ -20,6 +20,10 @@ module IdmGwfDfnSelectorModule
                                gwf_npf_aggregate_definitions, &
                                gwf_npf_block_definitions, &
                                gwf_npf_multi_package
+  use GwfNamInputModule, only: gwf_nam_param_definitions, &
+                               gwf_nam_aggregate_definitions, &
+                               gwf_nam_block_definitions, &
+                               gwf_nam_multi_package
 
   implicit none
   private
@@ -56,6 +60,8 @@ contains
       call set_param_pointer(input_definition, gwf_disv_param_definitions)
     case ('NPF')
       call set_param_pointer(input_definition, gwf_npf_param_definitions)
+    case ('NAM')
+      call set_param_pointer(input_definition, gwf_nam_param_definitions)
     case default
     end select
     return
@@ -74,6 +80,8 @@ contains
       call set_param_pointer(input_definition, gwf_disv_aggregate_definitions)
     case ('NPF')
       call set_param_pointer(input_definition, gwf_npf_aggregate_definitions)
+    case ('NAM')
+      call set_param_pointer(input_definition, gwf_nam_aggregate_definitions)
     case default
     end select
     return
@@ -92,6 +100,8 @@ contains
       call set_block_pointer(input_definition, gwf_disv_block_definitions)
     case ('NPF')
       call set_block_pointer(input_definition, gwf_npf_block_definitions)
+    case ('NAM')
+      call set_block_pointer(input_definition, gwf_nam_block_definitions)
     case default
     end select
     return
@@ -109,6 +119,8 @@ contains
       multi_package = gwf_disv_multi_package
     case ('NPF')
       multi_package = gwf_npf_multi_package
+    case ('NAM')
+      multi_package = gwf_nam_multi_package
     case default
       call store_error('Idm selector subcomponent not found; '//&
                        &'component="GWF"'//&
@@ -129,6 +141,8 @@ contains
     case ('DISV')
       integrated = .true.
     case ('NPF')
+      integrated = .true.
+    case ('NAM')
       integrated = .true.
     case default
     end select
