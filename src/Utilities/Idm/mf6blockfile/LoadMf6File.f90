@@ -1,11 +1,11 @@
-!> @brief This module contains the LoadMf6FileTypeModule
+!> @brief This module contains the LoadMf6FileModule
 !!
 !! This module contains the input data model routines for
 !! loading the data from a MODFLOW 6 input file using the
 !! block parser.
 !!
 !<
-module LoadMf6FileTypeModule
+module LoadMf6FileModule
 
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENVARNAME
@@ -24,8 +24,8 @@ module LoadMf6FileTypeModule
   use Integer2dReaderModule, only: read_int2d
   use InputOutputModule, only: parseline
   use InputDefinitionModule, only: InputParamDefinitionType
-  use IdmDfnSelectorUtilsModule, only: get_param_definition_type, &
-                                       get_aggregate_definition_type
+  use DefinitionSelectModule, only: get_param_definition_type, &
+                                    get_aggregate_definition_type
   use ModflowInputModule, only: ModflowInputType, getModflowInput
   use MemoryManagerModule, only: mem_allocate, mem_setptr
   use MemoryHelperModule, only: create_mem_path
@@ -163,7 +163,7 @@ contains
 
   subroutine parse_iofile_tag(parser, mf6_input, iblock, mshape, tag, found, &
                               iout)
-    use IdmDfnSelectorUtilsModule, only: split_record_definition
+    use DefinitionSelectModule, only: split_record_definition
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType
     integer(I4B), intent(in) :: iblock !< consecutive block number as defined in definition file
@@ -855,4 +855,4 @@ contains
 
   end subroutine get_shape_from_string
 
-end module LoadMf6FileTypeModule
+end module LoadMf6FileModule

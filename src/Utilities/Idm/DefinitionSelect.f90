@@ -1,11 +1,11 @@
-!> @brief This module contains the InputDefinitionSelectorModule
+!> @brief This module contains the DefinitionSelectModule
 !!
 !! This module contains the routines for getting parameter
 !! definitions, aggregate definitions, and block definitions
 !! for the different package types.
 !!
 !<
-module IdmDfnSelectorUtilsModule
+module DefinitionSelectModule
 
   use KindModule, only: I4B
   use SimVariablesModule, only: errmsg
@@ -155,4 +155,4 @@ contains
     end do
   end subroutine split_record_definition
 
-end module IdmDfnSelectorUtilsModule
+end module DefinitionSelectModule

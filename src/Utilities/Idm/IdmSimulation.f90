@@ -13,52 +13,49 @@ module IdmSimulationModule
   use InputOutputModule, only: openfile, getunit
   use InputDefinitionModule, only: InputParamDefinitionType
   use ModflowInputModule, only: ModflowInputType, getModflowInput
-  use IdmMf6FileLoaderModule, only: input_load
+  use IdmMf6FileModule, only: input_load
 
   implicit none
   private
   public :: simnam_load
-  public :: simnam_allocate
+  public :: load_models
 
 contains
 
-  !> @brief MODFLOW 6 mfsim.nam input load routine
+  !> @brief load simulation summary info to input context
   !<
-  subroutine simnam_load()
-    use SimVariablesModule, only: simfile
-    use GenericUtilitiesModule, only: sim_message
-    integer(I4B) :: inunit
-    logical :: lexist
-    character(len=LINELENGTH) :: line
+  subroutine simnam_load_dim()
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerModule, only: mem_allocate, mem_setptr
+    use SimVariablesModule, only: idm_context
+    use CharacterStringModule, only: CharacterStringType
+    character(len=LENMEMPATH) :: sim_mempath, simnam_mempath
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: mtypes !< model types
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: etypes !< model types
+    integer(I4B), pointer :: nummodels => null()
+    integer(I4B), pointer :: numexchanges => null()
     !
-    ! -- load mfsim.nam if it exists
-    inquire (file=trim(adjustl(simfile)), exist=lexist)
+    ! -- set memory paths
+    sim_mempath = create_mem_path(component='SIM', context=idm_context)
+    simnam_mempath = create_mem_path('SIM', 'NAM', idm_context)
     !
-    if (lexist) then
-      !
-      ! -- write name of namfile to stdout
-      write (line, '(2(1x,a))') 'Using Simulation name file:', &
-        trim(adjustl(simfile))
-      call sim_message(line, skipafter=1)
-      !
-      ! -- open namfile and load to input context
-      inunit = getunit()
-      call openfile(inunit, iout, trim(adjustl(simfile)), 'NAM')
-      call input_load('NAM6', 'SIM', 'NAM', 'SIM', 'NAM', inunit, iout)
-      !
-      close (inunit)
-      !
-      ! -- allocate any unallocated simnam params
-      call simnam_allocate()
-    else
-      !
-      ! -- allocate  simnam params
-      call simnam_allocate()
-    end if
+    ! -- set pointers to loaded simnam arrays
+    call mem_setptr(mtypes, 'MTYPE', simnam_mempath)
+    call mem_setptr(etypes, 'EXGTYPE', simnam_mempath)
     !
-    ! --return
+    ! -- allocate variables
+    call mem_allocate(nummodels, 'NUMMODELS', sim_mempath)
+    call mem_allocate(numexchanges, 'NUMEXCHANGES', sim_mempath)
+    !
+    ! -- set values
+    nummodels = size(mtypes)
+    numexchanges = size(etypes)
+    !
+    ! -- return
     return
-  end subroutine simnam_load
+  end subroutine simnam_load_dim
 
   !> @brief MODFLOW 6 mfsim.nam parameter set default value
   !<
@@ -85,8 +82,8 @@ contains
       intvar = 1
       !
     case default
-      write (errmsg, '(4x,a,a)') &
-        '**ERROR. IdmSimulation set_default_value unhandled variable: ', &
+      write (errmsg, '(a,a)') &
+        'IdmSimulation set_default_value unhandled variable: ', &
         trim(mf6varname)
       call store_error(errmsg, terminate)
     end select
@@ -99,7 +96,6 @@ contains
   !<
   subroutine simnam_allocate()
     use MemoryHelperModule, only: create_mem_path
-    use MemoryTypeModule, only: MemoryType
     use MemoryManagerModule, only: get_isize, mem_allocate
     use SimVariablesModule, only: idm_context
     use CharacterStringModule, only: CharacterStringType
@@ -108,10 +104,10 @@ contains
     type(InputParamDefinitionType), pointer :: idt
     integer(I4B) :: iparam, isize
     logical(LGP) :: terminate = .true.
-    integer(I4B), pointer :: intvar => null()
-    character(len=LINELENGTH), pointer :: cstr => null()
+    integer(I4B), pointer :: intvar
+    character(len=LINELENGTH), pointer :: cstr
     type(CharacterStringType), dimension(:), &
-      pointer, contiguous :: acharstr1d => null() !< variable for allocation
+      pointer, contiguous :: acharstr1d
     character(len=LINELENGTH) :: errmsg
     !
     ! -- set memory path
@@ -129,17 +125,19 @@ contains
       ! -- check if variable is already allocated
       call get_isize(idt%mf6varname, input_mempath, isize)
       !
-      ! -- if not, allocate and set default
       if (isize < 0) then
+        !
+        ! -- reset pointers
+        nullify (intvar)
+        nullify (acharstr1d)
+        nullify (cstr)
+        !
         select case (idt%datatype)
         case ('KEYWORD', 'INTEGER')
           !
           ! -- allocate and set default
           call mem_allocate(intvar, idt%mf6varname, input_mempath)
           call set_default_value(intvar, idt%mf6varname)
-          !
-          ! -- reset pointer
-          nullify (intvar)
         case ('STRING')
           !
           ! -- did this param originate from sim namfile RECARRAY type
@@ -148,21 +146,15 @@ contains
             ! -- allocate 0 size CharacterStringType array
             call mem_allocate(acharstr1d, LINELENGTH, 0, idt%mf6varname, &
                               input_mempath)
-            !
-            ! -- reset pointer
-            nullify (acharstr1d)
           else
             !
             ! -- allocate empty string
             call mem_allocate(cstr, LINELENGTH, idt%mf6varname, input_mempath)
             cstr = ''
-            !
-            ! -- reset pointer
-            nullify (cstr)
           end if
         case default
-          write (errmsg, '(4x,a,a)') &
-            '**ERROR. IdmSimulation unhandled datatype: ', &
+          write (errmsg, '(a,a)') &
+            'IdmSimulation unhandled datatype: ', &
             trim(idt%datatype)
           call store_error(errmsg, terminate)
         end select
@@ -172,5 +164,58 @@ contains
     ! -- return
     return
   end subroutine simnam_allocate
+
+  !> @brief source indenpendent model load entry point
+  !<
+  subroutine load_models(model_loadmask, iout)
+    ! -- modules
+    use IdmMf6FileModule, only: load_models_mf6
+    ! -- dummy
+    integer(I4B), dimension(:), intent(in) :: model_loadmask
+    integer(I4B), intent(in) :: iout
+    ! -- locals
+    !
+    ! -- mf6 blockfile model load
+    call load_models_mf6(model_loadmask, iout)
+    !
+    ! -- return
+    return
+  end subroutine load_models
+
+  !> @brief MODFLOW 6 mfsim.nam input load routine
+  !<
+  subroutine simnam_load()
+    use SimVariablesModule, only: simfile
+    use GenericUtilitiesModule, only: sim_message
+    integer(I4B) :: inunit
+    logical :: lexist
+    character(len=LINELENGTH) :: line
+    !
+    ! -- load mfsim.nam if it exists
+    inquire (file=trim(adjustl(simfile)), exist=lexist)
+    !
+    if (lexist) then
+      !
+      ! -- write name of namfile to stdout
+      write (line, '(2(1x,a))') 'Using Simulation name file:', &
+        trim(adjustl(simfile))
+      call sim_message(line, skipafter=1)
+      !
+      ! -- open namfile and load to input context
+      inunit = getunit()
+      call openfile(inunit, iout, trim(adjustl(simfile)), 'NAM')
+      call input_load('NAM6', 'SIM', 'NAM', 'SIM', 'NAM', inunit, iout)
+      close (inunit)
+    end if
+    !
+    ! -- allocate any unallocated simnam params
+    call simnam_allocate()
+    !
+    ! -- memload summary info
+    call simnam_load_dim()
+    !
+    ! --return
+    return
+  end subroutine simnam_load
 
 end module IdmSimulationModule
