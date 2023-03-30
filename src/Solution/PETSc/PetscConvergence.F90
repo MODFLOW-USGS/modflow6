@@ -98,7 +98,7 @@ contains
 
     if (norm < petsc_context%dvclose) then
       if (proc_id == 0) then
-        write(*,*) "converged: ", norm
+        write (*, *) "converged: ", norm
       end if
       flag = KSP_CONVERGED_HAPPY_BREAKDOWN ! Converged
     else

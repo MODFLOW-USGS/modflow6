@@ -2823,7 +2823,7 @@ contains
     ! local
     class(MemoryType), pointer :: mt
     integer(I4B) :: ipos
-    
+
     call mem_detailed_table(iout, memorylist%count())
     do ipos = 1, memorylist%count()
       mt => memorylist%Get(ipos)

@@ -1177,7 +1177,7 @@ contains
     class(NumericalSolutionType) :: this !< NumericalSolutionType instance
     !
     ! -- write timer output
-    if (IDEVELOPMODE == 1) then! .and. this%linmeth == 1) then
+    if (IDEVELOPMODE == 1) then
       write (iout, '(//1x,a,1x,a,1x,a)') &
         'Solution', trim(adjustl(this%name)), 'summary'
       write (iout, "(1x,70('-'))")
