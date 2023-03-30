@@ -1,3 +1,4 @@
+! ** Do Not Modify! MODFLOW 6 system generated file. **
 module GwfDisvInputModule
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
@@ -6,6 +7,7 @@ module GwfDisvInputModule
   public gwf_disv_aggregate_definitions
   public gwf_disv_block_definitions
   public GwfDisvParamFoundType
+  public gwf_disv_multi_package
 
   type GwfDisvParamFoundType
     logical :: length_units = .false.
@@ -28,6 +30,8 @@ module GwfDisvInputModule
     logical :: ncvert = .false.
     logical :: icvert = .false.
   end type GwfDisvParamFoundType
+
+  logical :: gwf_disv_multi_package = .false.
 
   type(InputParamDefinitionType), parameter :: &
     gwfdisv_length_units = InputParamDefinitionType &

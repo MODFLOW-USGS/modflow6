@@ -14,9 +14,9 @@ module ModflowInputModule
   use MemoryHelperModule, only: create_mem_path
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
-  use InputDefinitionSelectorModule, only: block_definitions, &
-                                           aggregate_definitions, &
-                                           param_definitions
+  use IdmDfnSelectorModule, only: block_definitions, &
+                                  aggregate_definitions, &
+                                  param_definitions
   use SimVariablesModule, only: idm_context
 
   implicit none
@@ -38,10 +38,9 @@ module ModflowInputModule
     character(len=LENCOMPONENTNAME) :: component_name
     character(len=LENCOMPONENTNAME) :: subcomponent_name
     character(len=LENMEMPATH) :: mempath
-    character(len=LENMEMPATH) :: component
-    type(InputBlockDefinitionType), dimension(:), pointer :: p_block_dfns
-    type(InputParamDefinitionType), dimension(:), pointer :: p_aggregate_dfns
-    type(InputParamDefinitionType), dimension(:), pointer :: p_param_dfns
+    type(InputBlockDefinitionType), dimension(:), pointer :: block_dfns
+    type(InputParamDefinitionType), dimension(:), pointer :: aggregate_dfns
+    type(InputParamDefinitionType), dimension(:), pointer :: param_dfns
   end type ModflowInputType
 
 contains
@@ -66,11 +65,11 @@ contains
 
     mf6_input%mempath = create_mem_path(component_name, subcomponent_name, &
                                         idm_context)
-    mf6_input%component = trim(component_type)//'/'//trim(subcomponent_type)
 
-    mf6_input%p_block_dfns => block_definitions(mf6_input%component)
-    mf6_input%p_aggregate_dfns => aggregate_definitions(mf6_input%component)
-    mf6_input%p_param_dfns => param_definitions(mf6_input%component)
+    mf6_input%block_dfns => block_definitions(component_type, subcomponent_type)
+    mf6_input%aggregate_dfns => aggregate_definitions(component_type, &
+                                                      subcomponent_type)
+    mf6_input%param_dfns => param_definitions(component_type, subcomponent_type)
   end function getModflowInput
 
 end module ModflowInputModule

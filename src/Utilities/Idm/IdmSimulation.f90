@@ -121,10 +121,10 @@ contains
     mf6_input = getModflowInput('NAM6', 'SIM', 'NAM', 'SIM', 'NAM')
     !
     ! -- allocate sim namfile parameters if not in input context
-    do iparam = 1, size(mf6_input%p_param_dfns)
+    do iparam = 1, size(mf6_input%param_dfns)
       !
       ! -- assign param definition pointer
-      idt => mf6_input%p_param_dfns(iparam)
+      idt => mf6_input%param_dfns(iparam)
       !
       ! -- check if variable is already allocated
       call get_isize(idt%mf6varname, input_mempath, isize)

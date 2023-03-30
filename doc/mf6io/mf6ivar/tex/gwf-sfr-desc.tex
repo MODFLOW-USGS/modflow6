@@ -47,9 +47,9 @@
 
 \item \texttt{maximum\_picard\_iterations}---integer value that defines the maximum number of Streamflow Routing picard iterations allowed when solving for reach stages and flows as part of the GWF formulate step. Picard iterations are used to minimize differences in SFR package results between subsequent GWF picard (non-linear) iterations as a result of non-optimal reach numbering. If reaches are numbered in order, from upstream to downstream, MAXIMUM\_PICARD\_ITERATIONS can be set to 1 to reduce model run time. By default, MAXIMUM\_PICARD\_ITERATIONS is equal to 100.
 
-\item \texttt{maximum\_iterations}---integer value that defines the maximum number of Streamflow Routing Newton-Raphson iterations allowed for a reach. By default, MAXIMUM\_ITERATIONS is equal to 100.
+\item \texttt{maximum\_iterations}---integer value that defines the maximum number of Streamflow Routing Newton-Raphson iterations allowed for a reach. By default, MAXIMUM\_ITERATIONS is equal to 100. MAXIMUM\_ITERATIONS would only need to be increased from the default value if one or more reach in a simulation has a large water budget error.
 
-\item \texttt{maximum\_depth\_change}---real value that defines the depth closure tolerance. By default, DMAXCHG is equal to $1 \times 10^{-5}$.
+\item \texttt{maximum\_depth\_change}---real value that defines the depth closure tolerance. By default, MAXIMUM\_DEPTH\_CHANGE is equal to $1 \times 10^{-5}$. The MAXIMUM\_STAGE\_CHANGE would only need to be increased or decreased from the default value if the water budget error for one or more reach is too small or too large, respectively.
 
 \item \texttt{length\_conversion}---real value that is used to convert user-specified Manning's roughness coefficients from meters to model length units. LENGTH\_CONVERSION should be set to 3.28081, 1.0, and 100.0 when using length units (LENGTH\_UNITS) of feet, meters, or centimeters in the simulation, respectively. LENGTH\_CONVERSION does not need to be specified if LENGTH\_UNITS are meters.
 
