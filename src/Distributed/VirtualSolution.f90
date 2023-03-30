@@ -2,7 +2,7 @@ module VirtualSolutionModule
   use KindModule, only: I4B
   use ListModule
   use VirtualDataContainerModule, only: VdcPtrType
-  use NumericalSolutionModule
+  use NumericalSolutionModule ! TODO_MJR: this should not be here!!
   use InterfaceMapModule
   implicit none
   private
