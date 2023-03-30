@@ -97,6 +97,35 @@ module mf6xmi
 
 contains
 
+  function bmi_initialize_mpi(mpi_comm) result(bmi_status) bind(C, name="initialize_mpi")
+    use MpiWorldModule
+    use SimVariablesModule, only: simulation_mode
+    !DIR$ ATTRIBUTES DLLEXPORT :: bmi_initialize_mpi
+    ! -- dummy variables
+    integer(kind=c_int) :: mpi_comm !< the Fortran communicator (as an integer)
+    integer(kind=c_int) :: bmi_status !< BMI status code
+    ! -- local variables
+    type(MpiWorldType), pointer :: mpi_world => null()
+    !
+    ! -- set parallel
+    call mpi_world%set_comm(mpi_comm)
+    simulation_mode = 'PARALLEL'
+    !
+    if (istdout_to_file > 0) then
+      ! -- open stdout file mfsim.stdout
+      istdout = getunit()
+      !
+      ! -- set STDOUT to a physical file unit
+      open (unit=istdout, file=simstdout)
+    end if
+    !
+    ! -- initialize MODFLOW 6
+    call Mf6Initialize()
+
+    bmi_status = BMI_SUCCESS
+
+  end function bmi_initialize_mpi
+  
   !> @brief Prepare a single time step
   !!
   !! The routine takes the time step \p dt as an argument. However, MODFLOW (currently)
