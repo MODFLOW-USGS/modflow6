@@ -9,9 +9,9 @@ from simulation import TestSimulation
 # Test for parallel MODFLOW running on two cpus.
 # It contains two coupled models with 
 # 
-#   (nlay,nrow,ncol) = (1,1,5),
-#   (nlay,nrow,ncol) = (1,5,5),
-#   (nlay,nrow,ncol) = (5,5,5),
+# 1d:  (nlay,nrow,ncol) = (1,1,5),
+# 2d:  (nlay,nrow,ncol) = (1,5,5),
+# 3d:  (nlay,nrow,ncol) = (5,5,5),
 #
 # constant head boundaries left=1.0, right=10.0.
 # The result should be a uniform flow field.
@@ -192,11 +192,11 @@ def get_model(idx, dir):
 def build_petsc_db(exdir):
     petsc_db_file = os.path.join(exdir, ".petscrc")
     with open(petsc_db_file, 'w') as petsc_file:
-        petsc_file.write("-sub_ksp_type bcgs\n")
+        petsc_file.write("-ksp_type cg\n")
+        petsc_file.write("-pc_type bjacobi\n")
         petsc_file.write("-sub_pc_type ilu\n")
         petsc_file.write("-dvclose 10e-7\n")
         petsc_file.write("-options_left no\n")
-        #petsc_file.write("-wait_dbg\n")
 
 def build_model(idx, exdir):
     sim = get_model(idx, exdir)
