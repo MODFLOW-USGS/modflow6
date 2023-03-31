@@ -409,7 +409,7 @@ contains
       call MPI_Type_size(body_rcv_t(i), msg_size, ierr)
       if (msg_size > 0) then
         call MPI_Irecv(MPI_BOTTOM, 1, body_rcv_t(i), rnk, stage, &
-                       this%mpi_world%comm, snd_req(i), ierr)
+                       this%mpi_world%comm, rcv_req(i), ierr)
       end if
 
       if (this%enable_monitor) then
@@ -429,7 +429,7 @@ contains
       call MPI_Type_size(body_snd_t(i), msg_size, ierr)
       if (msg_size > 0) then
         call MPI_Isend(MPI_Bottom, 1, body_snd_t(i), rnk, stage, &
-                       this%mpi_world%comm, rcv_req(i), ierr)
+                       this%mpi_world%comm, snd_req(i), ierr)
       end if
 
       if (this%enable_monitor) then
