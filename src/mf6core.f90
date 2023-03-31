@@ -285,7 +285,7 @@ contains
     model_loadmask = 0
     !
     ! -- set mask
-    if (simulation_mode == 'PARALLEL' .and.  nr_procs > 1) then
+    if (simulation_mode == 'PARALLEL' .and. nr_procs > 1) then
       ! TODO under development
       model_loadmask(proc_id + 1) = 1
     else
