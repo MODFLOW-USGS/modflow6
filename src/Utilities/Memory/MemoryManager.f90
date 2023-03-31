@@ -38,6 +38,7 @@ module MemoryManagerModule
   public :: copy_dbl1d
 
   public :: memorylist
+  public :: mem_print_detailed
 
   type(MemoryListType) :: memorylist
   type(TableType), pointer :: memtab => null()
@@ -2807,12 +2808,7 @@ contains
     !
     ! -- Write table with all variables for iprmem == 2
     if (iprmem == 2) then
-      call mem_detailed_table(iout, memorylist%count())
-      do ipos = 1, memorylist%count()
-        mt => memorylist%Get(ipos)
-        call mt%table_entry(memtab)
-      end do
-      call mem_cleanup_table()
+      call mem_print_detailed(iout)
     end if
     !
     ! -- Write total memory allocation
@@ -2821,6 +2817,21 @@ contains
     ! -- return
     return
   end subroutine mem_write_usage
+
+  subroutine mem_print_detailed(iout)
+    integer(I4B) :: iout
+    ! local
+    class(MemoryType), pointer :: mt
+    integer(I4B) :: ipos
+
+    call mem_detailed_table(iout, memorylist%count())
+    do ipos = 1, memorylist%count()
+      mt => memorylist%Get(ipos)
+      call mt%table_entry(memtab)
+    end do
+    call mem_cleanup_table()
+
+  end subroutine mem_print_detailed
 
   !> @brief Deallocate memory in the memory manager
   !<

@@ -546,7 +546,7 @@ contains
 
     if (this%owns_exchange) then
       gwfEx => this%gwfExchange
-      map => this%interface_map%exchange_map(this%interface_map%prim_exg_idx)
+      map => this%interface_map%exchange_maps(this%interface_map%prim_exg_idx)
 
       ! use (half of) the exchange map in reverse:
       do i = 1, size(map%src_idx)

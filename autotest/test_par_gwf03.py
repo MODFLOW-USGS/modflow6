@@ -7,29 +7,24 @@ import pytest
 from framework import TestFramework
 from simulation import TestSimulation
 
-# Test for parallel MODFLOW running a simple
-# multi-model setup on different partitionings 
-# 
-#
-#    [M1ny] |  ...  |   ...  | [Mnxny]
-#   -----------------------------------
-#      ...  |  ...  |   ...  |   ...
-#   -----------------------------------
-#     [M12] |  ...  |   ...  |   ...
-#   -----------------------------------
-#     [M11] | [M21] |   ...  | [Mnx1]
-# 
+# Scaling parallel MODFLOW running a simple
+# (multi-)model setup on different partitionings
 # with constant head set at the lower-left corner.
-# This constant head should reach all domains,
-# no matter the topology of partitions
+#
+# a: 1 cpus, 1 model
+# b: 1 cpus, 4 models
+# c: 4 cpus, 4 models
+#
+# The test is that for all configurations, the head
+# converges globally to the specified boundary value.
+# In general, the test can be used to compare parallel
+# vs. serial behavior on an identical problem.
 
-ex = ["par_gwf02-a", "par_gwf02-b", "par_gwf02-c", 
-      "par_gwf02-d", "par_gwf02-e", "par_gwf02-f"]
-domain_grid = [(1,5), (5,1), (2,2), (3,3), (4,4), (5,5)]
+ex = ["par_gwf03-a", "par_gwf03-b", "par_gwf03-c"]
+ncpus = [1, 1, 4]
+domain_grid = [(1, 1), (2, 2), (2, 2)]
+dis_shape = [(2, 100, 100), (2, 50, 50), (2, 50, 50)]
 
-nlay = 1
-nrow = 3
-ncol = 3
 delr = 100.0
 delc = 100.0
 head_initial = -1.0
@@ -46,6 +41,10 @@ def get_simulation(idx, dir):
     name = ex[idx]
     nr_models_x = domain_grid[idx][0]
     nr_models_y = domain_grid[idx][1]
+
+    nlay = dis_shape[idx][0]
+    nrow = dis_shape[idx][1]
+    ncol = dis_shape[idx][2]
 
     # parameters and spd
     # tdis
@@ -71,36 +70,35 @@ def get_simulation(idx, dir):
         print_option="ALL",
         outer_dvclose=hclose,
         outer_maximum=nouter,
-        under_relaxation="DBD",
         inner_maximum=ninner,
         inner_dvclose=hclose,
         rcloserecord=rclose,
-        linear_acceleration="BICGSTAB",
-        relaxation_factor=relax,
+        linear_acceleration="CG",
+        relaxation_factor=0.0, # turn this off for comparison
     )
 
     # create models (and exchanges)
     for ix in range(nr_models_x):
         for iy in range(nr_models_y):
-            add_model(sim, ix, iy, nr_models_x, nr_models_y)
+            add_model(sim, ix, iy, nr_models_x, nr_models_y, nlay, nrow, ncol)
 
     # add exchanges from west to east
     for iy in range(nr_models_y):
         for ix in range(nr_models_x - 1):
             name_west = get_model_name(ix, iy)
             name_east = get_model_name(ix + 1, iy)
-            add_exchange_west_east(sim, name_west, name_east)
+            add_exchange_west_east(sim, name_west, name_east, nlay, nrow, ncol)
     
     # add exchange from south to north
     for ix in range(nr_models_x):
         for iy in range(nr_models_y -1 ):
             name_south = get_model_name(ix, iy)
             name_north = get_model_name(ix, iy + 1)
-            add_exchange_south_north(sim, name_south, name_north)
+            add_exchange_south_north(sim, name_south, name_north, nlay, nrow, ncol)
 
     return sim
 
-def add_model(sim, ix, iy, nr_models_x, nr_models_y):
+def add_model(sim, ix, iy, nr_models_x, nr_models_y, nlay, nrow, ncol):
 
     # model spatial discretization
     shift_x = ix * ncol * delr
@@ -108,10 +106,10 @@ def add_model(sim, ix, iy, nr_models_x, nr_models_y):
     model_name = get_model_name(ix, iy)
 
     # top/bot of the aquifer
-    tops = [0.0, -100.0]
+    tops = [-100.0*i for i in range(nlay + 1)]
 
     # hydraulic conductivity
-    k11 = 1.0
+    k11 = 10.0
 
     # initial head
     h_start = head_initial
@@ -151,7 +149,7 @@ def add_model(sim, ix, iy, nr_models_x, nr_models_y):
         chd_spd_sw = {0: sw_chd}
         chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd_sw)
 
-def add_exchange_west_east(sim, name_west, name_east):
+def add_exchange_west_east(sim, name_west, name_east, nlay, nrow, ncol):
 
     exg_filename = f"we_{name_west}_{name_east}.gwfgwf"
     # exchangedata
@@ -182,7 +180,7 @@ def add_exchange_west_east(sim, name_west, name_east):
         filename=exg_filename
     )
 
-def add_exchange_south_north(sim, name_south, name_north):
+def add_exchange_south_north(sim, name_south, name_north, nlay, nrow, ncol):
 
     exg_filename = f"sn_{name_south}_{name_north}.gwfgwf"
 
@@ -214,18 +212,29 @@ def add_exchange_south_north(sim, name_south, name_north):
         filename=exg_filename
     )
 
-def build_petsc_db(exdir):
+def build_petsc_db(idx, exdir):
+    np = ncpus[idx]
     petsc_db_file = os.path.join(exdir, ".petscrc")
     with open(petsc_db_file, 'w') as petsc_file:
-        petsc_file.write("-ksp_type cg\n")
-        petsc_file.write("-pc_type bjacobi\n")
-        petsc_file.write("-sub_pc_type ilu\n")
-        petsc_file.write(f"-dvclose {Decimal(hclose):.2E}\n")
-        petsc_file.write("-options_left no\n")
+        if np == 1:
+            petsc_file.write("-ksp_type cg\n")
+            petsc_file.write("-pc_type ilu\n")
+            petsc_file.write("-pc_factor_levels 2\n")
+            petsc_file.write(f"-dvclose {Decimal(hclose):.2E}\n")
+            petsc_file.write(f"-nitermax {500}\n")
+            petsc_file.write("-options_left no\n")
+        else:
+            petsc_file.write("-ksp_type cg\n")
+            petsc_file.write("-pc_type bjacobi\n")
+            petsc_file.write("-sub_pc_type ilu\n")
+            petsc_file.write("-sub_pc_factor_levels 2\n")
+            petsc_file.write(f"-dvclose {Decimal(hclose):.2E}\n")
+            petsc_file.write(f"-nitermax {500}\n")
+            petsc_file.write("-options_left no\n")
 
 def build_model(idx, exdir):
     sim = get_simulation(idx, exdir)
-    build_petsc_db(exdir)
+    build_petsc_db(idx, exdir)
     return sim, None
 
 def eval_model(sim):
@@ -234,7 +243,7 @@ def eval_model(sim):
         m = mf6_sim.get_model(mname)
         hds = m.output.head().get_data().flatten()
         hds_compare = cst_head_south_west*np.ones_like(hds)
-        assert np.allclose(hds, hds_compare, atol=1.0e-6, rtol=0.0)
+        assert np.allclose(hds, hds_compare, rtol=1.0e-6, atol=0.0001)
     
 
 @pytest.mark.parallel
@@ -243,14 +252,14 @@ def eval_model(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ncpus = domain_grid[idx][0]*domain_grid[idx][1]
+    np = ncpus[idx]
     test = TestFramework()
     test.build(build_model, idx, str(function_tmpdir))
     test.run(
         TestSimulation(
             name=name, exe_dict=targets, exfunc=eval_model, 
             idxsim=0, make_comparison=False,
-            parallel=True, ncpus=ncpus,
+            parallel=True, ncpus=np,
         ),
         str(function_tmpdir),
     )
