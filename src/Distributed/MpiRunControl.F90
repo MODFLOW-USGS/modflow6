@@ -43,15 +43,15 @@ contains
     character(len=*), parameter :: petsc_db_file = '.petscrc'
     logical(LGP) :: petsc_db_exists, wait_dbg, is_parallel_mode
     type(MpiWorldType), pointer :: mpi_world
-    
-    wait_dbg = .false.    
+
+    wait_dbg = .false.
     mpi_world => get_mpi_world()
 
     ! if PETSc we need their initialize
 #if defined(__WITH_PETSC__)
     ! PetscInitialize calls MPI_Init only when it is not called yet,
-    ! which could be through the API. If it is already called, we 
-    ! should assign the MPI communicator to PETSC_COMM_WORLD first 
+    ! which could be through the API. If it is already called, we
+    ! should assign the MPI communicator to PETSC_COMM_WORLD first
     ! (PETSc manual)
     if (mpi_world%has_comm()) then
       PETSC_COMM_WORLD = mpi_world%comm
@@ -70,7 +70,7 @@ contains
     if (.not. mpi_world%has_comm()) then
       call mpi_world%set_comm(PETSC_COMM_WORLD)
     end if
-    
+
     call PetscOptionsHasName(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, &
                              '-wait_dbg', wait_dbg, ierr)
     CHKERRQ(ierr)
@@ -81,7 +81,7 @@ contains
     if (.not. mpi_world%has_comm()) then
       call MPI_Init(ierr)
       call mpi_world%set_comm(MPI_COMM_WORLD)
-    end if    
+    end if
 #endif
 
     call mpi_world%init()

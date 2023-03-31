@@ -98,7 +98,8 @@ module mf6xmi
 contains
 
 #if defined(__WITH_MPI__)
-  function bmi_initialize_mpi(mpi_comm) result(bmi_status) bind(C, name="initialize_mpi")
+  function bmi_initialize_mpi(mpi_comm) result(bmi_status) &
+    bind(C, name="initialize_mpi")
     use MpiWorldModule
     use SimVariablesModule, only: simulation_mode
     !DIR$ ATTRIBUTES DLLEXPORT :: bmi_initialize_mpi
@@ -118,7 +119,7 @@ contains
 
   end function bmi_initialize_mpi
 #endif
-  
+
   !> @brief Prepare a single time step
   !!
   !! The routine takes the time step \p dt as an argument. However, MODFLOW (currently)

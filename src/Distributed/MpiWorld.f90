@@ -38,7 +38,7 @@ contains
 
   !> @brief Returns true when a communicator has been set.
   !<
-  function mpiw_has_comm (this) result(has_comm)
+  function mpiw_has_comm(this) result(has_comm)
     class(MpiWorldType) :: this
     logical(LGP) :: has_comm
 
@@ -48,7 +48,7 @@ contains
 
   !> @brief Sets a communicator on this world, can
   !< be done only once.
-  subroutine mpiw_set_comm (this, comm)
+  subroutine mpiw_set_comm(this, comm)
     class(MpiWorldType) :: this
     integer(I4B) :: comm
 
@@ -97,9 +97,9 @@ contains
 
   subroutine mpiw_destroy(this)
     class(MpiWorldType) :: this
-    
+
     if (associated(this%comm)) then
-      deallocate(this%comm)
+      deallocate (this%comm)
     end if
 
     if (associated(global_mpi_world)) then

@@ -29,7 +29,7 @@ contains
     type(MpiWorldType), pointer :: mpi_world
 
     mpi_world => get_mpi_world()
-    
+
     has_converged = .false.
     global_max_dvc = huge(0.0)
     call MPI_Allreduce(max_dvc, global_max_dvc, 1, MPI_DOUBLE_PRECISION, &
