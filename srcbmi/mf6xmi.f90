@@ -97,6 +97,7 @@ module mf6xmi
 
 contains
 
+#if defined(__WITH_MPI__)
   function bmi_initialize_mpi(mpi_comm) result(bmi_status) bind(C, name="initialize_mpi")
     use MpiWorldModule
     use SimVariablesModule, only: simulation_mode
@@ -106,25 +107,17 @@ contains
     integer(kind=c_int) :: bmi_status !< BMI status code
     ! -- local variables
     type(MpiWorldType), pointer :: mpi_world => null()
-    !
-    ! -- set parallel
+
+    ! set parallel
+    mpi_world => get_mpi_world()
     call mpi_world%set_comm(mpi_comm)
     simulation_mode = 'PARALLEL'
-    !
-    if (istdout_to_file > 0) then
-      ! -- open stdout file mfsim.stdout
-      istdout = getunit()
-      !
-      ! -- set STDOUT to a physical file unit
-      open (unit=istdout, file=simstdout)
-    end if
-    !
-    ! -- initialize MODFLOW 6
-    call Mf6Initialize()
 
-    bmi_status = BMI_SUCCESS
+    ! regular initialize
+    bmi_status = bmi_initialize()
 
   end function bmi_initialize_mpi
+#endif
   
   !> @brief Prepare a single time step
   !!
