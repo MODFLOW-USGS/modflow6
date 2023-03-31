@@ -64,7 +64,9 @@ Some additional, optional tools are also discussed below.
 
 ### Fortran compiler
 
-The GNU Fortran compiler `gfortran` or the Intel Fortran compiler `ifort` can be used to compile MODFLOW 6.
+The GNU Fortran compiler `gfortran` or the Intel Fortran Classic compiler `ifort` can be used to compile MODFLOW 6.
+
+**Note:** the next-generation Intel Fortran compiler `ifx` is not yet compatible with MODFLOW 6.
 
 #### GNU Fortran
 
@@ -94,7 +96,7 @@ GNU Fortran can be installed on all three major platforms.
 
 #### Intel Fortran
 
-Intel Fortran can also be used to compile MODFLOW 6 and associated utilities. The `ifort` compiler is available in the [Intel oneAPI HPC Toolkit](https://software.intel.com/content/www/us/en/develop/tools/oneapi/hpc-toolkit/download.html). An installer is bundled with the download. A minimal
+Intel Fortran can also be used to compile MODFLOW 6 and associated utilities. The `ifort` compiler is available in the [Intel oneAPI HPC Toolkit](https://software.intel.com/content/www/us/en/develop/tools/oneapi/hpc-toolkit/download.html). An installer is bundled with the download.
 
 A number of environment variables must be set before using Intel Fortran. General information can be found [here](https://www.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup.html), with specific instructions to configure a shell session for `ifort` [here](https://www.intel.com/content/www/us/en/develop/documentation/fortran-compiler-oneapi-dev-guide-and-reference/top/compiler-setup/use-the-command-line/specifying-the-location-of-compiler-components.html).
 
@@ -102,12 +104,11 @@ A number of environment variables must be set before using Intel Fortran. Genera
 
 On Windows, [Visual Studio](https://visualstudio.microsoft.com) and a number of libraries must be installed for `ifort` to work. The required libraries can be installed by ticking the "Desktop Development with C++" checkbox in the Visual Studio Installer's Workloads tab. 
 
-**Note:** Invoking the `setvars.bat` scripts from a Powershell session will *not* put `ifort` on the path, since [batch script environments are local to their process](https://stackoverflow.com/a/49028002/6514033). Either invoke `ifort` from command prompt or relaunch PowerShell, e.g.
+**Note:** Invoking the `setvars.bat` scripts from a Powershell session will *not* put `ifort` on the path, since [batch script environments are local to their process](https://stackoverflow.com/a/49028002/6514033). To relaunch PowerShell with oneAPI variables configured:
 
 ```
 cmd.exe "/K" '"C:\Program Files (x86)\Intel\oneAPI\setvars-vcvarsall.bat" && "C:\Program Files (x86)\Intel\oneAPI\compiler\latest\env\vars.bat" && powershell'
 ```
-
 
 ### Python
 
@@ -242,13 +243,13 @@ A few tasks must be completed before running tests:
 - build local MODFLOW 6 development version
 - rebuild the last MODFLOW 6 release
 - install additional executables
-- update FloPy plugins
+- update FloPy packages and plugins
 - clone MODFLOW 6 test model and example repositories
 
 Tests expect binaries to live in the `bin` directory relative to the project root, as configured above in the `meson` commands. Binaries are organized as follows:
 
 - local development binaries in the top-level `bin` folder
-- executables rebuilt in development mode from the latest release in `bin/rebuilt`
+- binaries rebuilt in development mode from the latest release in `bin/rebuilt`
 - related programs installed from the [executables distribution](https://github.com/MODFLOW-USGS/executables/releases) live in `bin/downloaded`
 
 Tests must be run from the `autotest` folder.
@@ -424,4 +425,4 @@ Tests should ideally follow a few conventions for easier maintenance:
   - `@pytest.mark.repo` if the test relies on external model repositories
   - `@pytest.mark.regression` if the test compares results from different versions
 
-The test suite must pass before code can be merged, so be sure it passes locally before opening a PR.
+**Note:** If all three external model repositories are not installed as described above, some tests will be skipped. The full test suite includes >750 cases. All must pass before changes can be merged into this repository.
