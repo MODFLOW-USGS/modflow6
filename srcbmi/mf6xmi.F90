@@ -98,11 +98,11 @@ module mf6xmi
 contains
 
 #if defined(__WITH_MPI__)
-  function bmi_initialize_mpi(mpi_comm) result(bmi_status) &
+  function xmi_initialize_mpi(mpi_comm) result(bmi_status) &
     bind(C, name="initialize_mpi")
     use MpiWorldModule
     use SimVariablesModule, only: simulation_mode
-    !DIR$ ATTRIBUTES DLLEXPORT :: bmi_initialize_mpi
+    !DIR$ ATTRIBUTES DLLEXPORT :: xmi_initialize_mpi
     ! -- dummy variables
     integer(kind=c_int) :: mpi_comm !< the Fortran communicator (as an integer)
     integer(kind=c_int) :: bmi_status !< BMI status code
@@ -117,7 +117,7 @@ contains
     ! regular initialize
     bmi_status = bmi_initialize()
 
-  end function bmi_initialize_mpi
+  end function xmi_initialize_mpi
 #endif
 
   !> @brief Prepare a single time step
