@@ -4,10 +4,26 @@ module IdmGwtDfnSelectorModule
   use SimModule, only: store_error
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
+  use GwtDisInputModule, only: gwt_dis_param_definitions, &
+                               gwt_dis_aggregate_definitions, &
+                               gwt_dis_block_definitions, &
+                               gwt_dis_multi_package
+  use GwtDisuInputModule, only: gwt_disu_param_definitions, &
+                                gwt_disu_aggregate_definitions, &
+                                gwt_disu_block_definitions, &
+                                gwt_disu_multi_package
+  use GwtDisvInputModule, only: gwt_disv_param_definitions, &
+                                gwt_disv_aggregate_definitions, &
+                                gwt_disv_block_definitions, &
+                                gwt_disv_multi_package
   use GwtDspInputModule, only: gwt_dsp_param_definitions, &
                                gwt_dsp_aggregate_definitions, &
                                gwt_dsp_block_definitions, &
                                gwt_dsp_multi_package
+  use GwtNamInputModule, only: gwt_nam_param_definitions, &
+                               gwt_nam_aggregate_definitions, &
+                               gwt_nam_block_definitions, &
+                               gwt_nam_multi_package
 
   implicit none
   private
@@ -36,8 +52,16 @@ contains
     type(InputParamDefinitionType), dimension(:), pointer :: input_definition
     nullify (input_definition)
     select case (subcomponent)
+    case ('DIS')
+      call set_param_pointer(input_definition, gwt_dis_param_definitions)
+    case ('DISU')
+      call set_param_pointer(input_definition, gwt_disu_param_definitions)
+    case ('DISV')
+      call set_param_pointer(input_definition, gwt_disv_param_definitions)
     case ('DSP')
       call set_param_pointer(input_definition, gwt_dsp_param_definitions)
+    case ('NAM')
+      call set_param_pointer(input_definition, gwt_nam_param_definitions)
     case default
     end select
     return
@@ -48,8 +72,16 @@ contains
     type(InputParamDefinitionType), dimension(:), pointer :: input_definition
     nullify (input_definition)
     select case (subcomponent)
+    case ('DIS')
+      call set_param_pointer(input_definition, gwt_dis_aggregate_definitions)
+    case ('DISU')
+      call set_param_pointer(input_definition, gwt_disu_aggregate_definitions)
+    case ('DISV')
+      call set_param_pointer(input_definition, gwt_disv_aggregate_definitions)
     case ('DSP')
       call set_param_pointer(input_definition, gwt_dsp_aggregate_definitions)
+    case ('NAM')
+      call set_param_pointer(input_definition, gwt_nam_aggregate_definitions)
     case default
     end select
     return
@@ -60,8 +92,16 @@ contains
     type(InputBlockDefinitionType), dimension(:), pointer :: input_definition
     nullify (input_definition)
     select case (subcomponent)
+    case ('DIS')
+      call set_block_pointer(input_definition, gwt_dis_block_definitions)
+    case ('DISU')
+      call set_block_pointer(input_definition, gwt_disu_block_definitions)
+    case ('DISV')
+      call set_block_pointer(input_definition, gwt_disv_block_definitions)
     case ('DSP')
       call set_block_pointer(input_definition, gwt_dsp_block_definitions)
+    case ('NAM')
+      call set_block_pointer(input_definition, gwt_nam_block_definitions)
     case default
     end select
     return
@@ -71,8 +111,16 @@ contains
     character(len=*), intent(in) :: subcomponent
     logical :: multi_package
     select case (subcomponent)
+    case ('DIS')
+      multi_package = gwt_dis_multi_package
+    case ('DISU')
+      multi_package = gwt_disu_multi_package
+    case ('DISV')
+      multi_package = gwt_disv_multi_package
     case ('DSP')
       multi_package = gwt_dsp_multi_package
+    case ('NAM')
+      multi_package = gwt_nam_multi_package
     case default
       call store_error('Idm selector subcomponent not found; '//&
                        &'component="GWT"'//&
@@ -86,7 +134,15 @@ contains
     logical :: integrated
     integrated = .false.
     select case (subcomponent)
+    case ('DIS')
+      integrated = .true.
+    case ('DISU')
+      integrated = .true.
+    case ('DISV')
+      integrated = .true.
     case ('DSP')
+      integrated = .true.
+    case ('NAM')
       integrated = .true.
     case default
     end select

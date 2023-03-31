@@ -126,6 +126,7 @@ contains
     PetscErrorCode :: ierr
 
     this%petsc_ctx%dvclose = this%dvclose
+    this%petsc_ctx%max_its = this%nitermax
     call MatCreateVecs( &
       this%mat_petsc, this%petsc_ctx%x_old, PETSC_NULL_VEC, ierr)
     CHKERRQ(ierr)

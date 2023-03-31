@@ -14,6 +14,7 @@ module PetscConvergenceModule
     Vec :: x_old
     Vec :: delta_x
     real(DP) :: dvclose
+    integer(I4B) :: max_its
   end type PetscContextType
 
   type(ListType) :: ctx_list
@@ -53,6 +54,7 @@ contains
   !> @brief Routine to check the convergence. This is called
   !< from within PETSc.
   subroutine petsc_check_convergence(ksp, n, rnorm, flag, ctx_id, ierr)
+    use SimVariablesModule, only: proc_id
     KSP :: ksp !< Iterative context
     PetscInt :: n !< Iteration number
     PetscReal :: rnorm !< 2-norm (preconditioned) residual value
@@ -60,7 +62,7 @@ contains
     PetscInt :: ctx_id !< index into the static context list
     PetscErrorCode :: ierr !< error
     ! local
-    PetscScalar :: alpha = -1.0
+    PetscScalar :: alpha
     real(DP) :: norm
     Vec :: x
     class(PetscContextType), pointer :: petsc_context
@@ -84,6 +86,7 @@ contains
       return
     end if
 
+    alpha = -1.0
     call VecWAXPY(petsc_context%delta_x, alpha, x, petsc_context%x_old, ierr)
     CHKERRQ(ierr)
 
@@ -94,9 +97,17 @@ contains
     CHKERRQ(ierr)
 
     if (norm < petsc_context%dvclose) then
+      if (proc_id == 0) then
+        write (*, *) "converged: ", norm
+      end if
       flag = KSP_CONVERGED_HAPPY_BREAKDOWN ! Converged
     else
       flag = KSP_CONVERGED_ITERATING ! Not yet converged
+      if (n == petsc_context%max_its) then
+        ! ran out of iterations before convergence
+        ! has been reached
+        flag = KSP_DIVERGED_ITS
+      end if
     end if
 
   end subroutine petsc_check_convergence

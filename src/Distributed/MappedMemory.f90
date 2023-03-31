@@ -23,6 +23,9 @@ module MappedMemoryModule
     integer(I4B), dimension(:), pointer :: src_idx !< source indexes to copy from
     integer(I4B), dimension(:), pointer :: tgt_idx !< target indexes to copy to
     integer(I4B), dimension(:), pointer :: sign !< optional sign (or null) to negate copied value
+    integer(I4B), dimension(:), pointer :: lut !< optional lookup table (can be null()), converts
+                                               !! src_idx(i) to actual (local) idx when copying
+
   contains
     procedure :: sync
     procedure :: skip_sync !< possibility to skip synchronization, e.g. when src variable not allocated and should remain at default
@@ -81,6 +84,11 @@ contains
       do i = 1, this%tgt%isize
         this%tgt%aint1d(i) = this%src%aint1d(i)
       end do
+    else if (associated(this%lut)) then
+      do i = 1, size(this%tgt_idx)
+        this%tgt%aint1d(this%tgt_idx(i)) = &
+          this%src%aint1d(this%lut(this%src_idx(i)))
+      end do
     else
       do i = 1, size(this%tgt_idx)
         this%tgt%aint1d(this%tgt_idx(i)) = this%src%aint1d(this%src_idx(i))
@@ -117,6 +125,11 @@ contains
     if (this%copy_all) then
       do i = 1, this%tgt%isize
         this%tgt%adbl1d(i) = this%src%adbl1d(i)
+      end do
+    else if (associated(this%lut)) then
+      do i = 1, size(this%tgt_idx)
+        this%tgt%adbl1d(this%tgt_idx(i)) = &
+          this%src%adbl1d(this%lut(this%src_idx(i)))
       end do
     else
       do i = 1, size(this%tgt_idx)
@@ -155,6 +168,13 @@ contains
       do i = 1, this%tgt%isize
         do k = 1, size(this%src%adbl2d, dim=1)
           this%tgt%adbl2d(k, i) = this%src%adbl2d(k, i)
+        end do
+      end do
+    else if (associated(this%lut)) then
+      do i = 1, size(this%tgt_idx)
+        do k = 1, size(this%src%adbl2d, dim=1)
+          this%tgt%adbl2d(k, this%tgt_idx(i)) = &
+            this%src%adbl2d(k, this%lut(this%src_idx(i)))
         end do
       end do
     else

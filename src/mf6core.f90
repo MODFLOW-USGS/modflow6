@@ -260,10 +260,43 @@ contains
     !!
   !<
   subroutine static_input_load()
-    use IdmSimulationModule, only: simnam_load
+    ! -- modules
+    use ConstantsModule, only: LENMEMPATH
+    use SimVariablesModule, only: simulation_mode, proc_id, iout, nr_procs
+    use IdmSimulationModule, only: simnam_load, load_models
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerModule, only: mem_setptr
+    use SimVariablesModule, only: idm_context
+    ! -- dummy
+    ! -- locals
+    character(len=LENMEMPATH) :: input_mempath
+    integer(I4B), dimension(:), allocatable :: model_loadmask
+    integer(I4B), pointer :: nummodels => null()
     !
-    ! -- load input context
+    ! -- load simnam input context
     call simnam_load()
+    !
+    ! -- allocate model load mask
+    input_mempath = create_mem_path(component='SIM', context=idm_context)
+    call mem_setptr(nummodels, 'NUMMODELS', input_mempath)
+    allocate (model_loadmask(nummodels))
+    !
+    ! -- initialize mask
+    model_loadmask = 0
+    !
+    ! -- set mask
+    if (simulation_mode == 'PARALLEL' .and. nr_procs > 1) then
+      ! TODO under development
+      model_loadmask(proc_id + 1) = 1
+    else
+      model_loadmask = 1
+    end if
+    !
+    ! -- load selected models
+    call load_models(model_loadmask, iout)
+    !
+    ! -- deallocate mask
+    deallocate (model_loadmask)
     !
     ! -- return
     return

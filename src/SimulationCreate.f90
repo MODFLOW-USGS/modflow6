@@ -53,6 +53,7 @@ contains
     !
     ! -- Deallocate input memory
     call memorylist_remove('SIM', 'NAM', idm_context)
+    call memorylist_remove(component='SIM', context=idm_context)
     !
     ! -- variables
     deallocate (model_names)
@@ -126,9 +127,7 @@ contains
     !
     ! -- update sim options
     isimcontinue = simcontinue
-    !
     isimcheck = nocheck
-    !
     call MaxErrors(maxerror)
     !
     if (prmem /= '') then
@@ -138,8 +137,6 @@ contains
         call store_error(errmsg, .true.)
       end if
     end if
-    !
-    call MaxErrors(maxerror)
     !
     ! -- log values to list file
     if (iout > 0) then

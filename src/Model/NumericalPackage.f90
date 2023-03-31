@@ -28,6 +28,8 @@ module NumericalPackageModule
     character(len=LENMEMPATH) :: memoryPath = '' !< the location in the memory manager where the variables are stored
     character(len=LENMEMPATH) :: memoryPathModel = '' !< the location in the memory manager where the variables
                                                                                  !! of the parent model are stored
+    character(len=LENMEMPATH), pointer :: input_mempath => null() !< input context mempath
+    character(len=LINELENGTH), pointer :: input_fname => null() !< input file name
     character(len=LENFTYPE) :: filtyp = '' !< file type (CHD, DRN, RIV, etc.)
     character(len=LENFTYPE), pointer :: package_type => null() !< package type (same as filtyp) stored in memory manager
 
@@ -113,6 +115,10 @@ contains
     integer(I4B), pointer :: imodelpakcb => null()
     !
     ! -- allocate scalars
+    call mem_allocate(this%input_mempath, LENMEMPATH, 'INPUT_MEMPATH', &
+                      this%memoryPath)
+    call mem_allocate(this%input_fname, LINELENGTH, 'INPUT_FNAME', &
+                      this%memoryPath)
     call mem_allocate(this%package_type, LENFTYPE, 'PACKAGE_TYPE', &
                       this%memoryPath)
     call mem_allocate(this%id, 'ID', this%memoryPath)
@@ -134,6 +140,8 @@ contains
     call mem_setptr(imodelpakcb, 'IPAKCB', this%memoryPathModel)
     !
     ! -- initialize
+    this%input_mempath = ''
+    this%input_fname = ''
     this%package_type = this%filtyp
     this%id = 0
     this%inunit = 0
@@ -168,6 +176,8 @@ contains
     class(NumericalPackageType) :: this !< NumericalPackageType object
     !
     ! -- deallocate
+    call mem_deallocate(this%input_mempath, 'INPUT_MEMPATH', this%memoryPath)
+    call mem_deallocate(this%input_fname, 'INPUT_FNAME', this%memoryPath)
     call mem_deallocate(this%package_type, 'PACKAGE_TYPE', this%memoryPath)
     call mem_deallocate(this%id)
     call mem_deallocate(this%inunit)
