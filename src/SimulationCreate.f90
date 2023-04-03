@@ -277,6 +277,8 @@ contains
       case ('GWF6')
         if (model_ranks(n) == proc_id) then
           im = im + 1
+          write (iout, '(4x,2a,i0,a)') trim(model_type), " model ", &
+                                       n, " will be created"
           call gwf_cr(fname, n, model_names(n))
           num_model => GetNumericalModelFromList(basemodellist, im)
           model_loc_idx(n) = im
@@ -285,6 +287,8 @@ contains
       case ('GWT6')
         if (model_ranks(n) == proc_id) then
           im = im + 1
+          write (iout, '(4x,2a,i0,a)') trim(model_type), " model ", &
+                                       n, " will be created"
           call gwt_cr(fname, n, model_names(n))
           num_model => GetNumericalModelFromList(basemodellist, im)
           model_loc_idx(n) = im
