@@ -184,15 +184,17 @@ contains
     end do
 
     ! some testing
-    outunit = getunit()
-    write (monitor_file, '(a,i0,a)') "iface.p", proc_id, ".log"
-    open (unit=outunit, file=monitor_file)
-    do isol = 1, this%nr_solutions
-      write (outunit, '(a,i0,/)') "interface mape for solution ", &
-        this%virtual_solutions(isol)%solution_id
-      call this%virtual_solutions(isol)%interface_map%print_interface(outunit)
-    end do
-    close (outunit)
+    if (.false.) then
+      outunit = getunit()
+      write (monitor_file, '(a,i0,a)') "iface.p", proc_id, ".log"
+      open (unit=outunit, file=monitor_file)
+      do isol = 1, this%nr_solutions
+        write (outunit, '(a,i0,/)') "interface mape for solution ", &
+          this%virtual_solutions(isol)%solution_id
+        call this%virtual_solutions(isol)%interface_map%print_interface(outunit)
+      end do
+      close (outunit)
+    end if
 
     ! assign reduced maps to virtual data containers
     do isol = 1, this%nr_solutions
