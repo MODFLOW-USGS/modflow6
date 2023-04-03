@@ -3,8 +3,11 @@ module SimulationCreateModule
   use KindModule, only: DP, I4B, LGP, write_kindinfo
   use ConstantsModule, only: LINELENGTH, LENMODELNAME, LENBIGLINE, &
                              DZERO, LENEXCHANGENAME, LENMEMPATH, LENPACKAGETYPE
-  use SimVariablesModule, only: iout, simulation_mode, &
-                                proc_id, nr_procs, model_names, model_loc_idx
+
+  use CharacterStringModule, only: CharacterStringType
+  use SimVariablesModule, only: iout, simulation_mode, proc_id, &
+                                nr_procs, model_names, model_ranks, &
+                                model_loc_idx
   use GenericUtilitiesModule, only: sim_message, write_centered
   use SimModule, only: store_error, count_errors, &
                        store_error_filename, MaxErrors
@@ -57,6 +60,7 @@ contains
     !
     ! -- variables
     deallocate (model_names)
+    deallocate (model_ranks)
     !
     ! -- Return
     return
@@ -209,7 +213,6 @@ contains
     ! -- modules
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr
-    use CharacterStringModule, only: CharacterStringType
     use SimVariablesModule, only: idm_context
     use GwfModule, only: gwf_cr
     use GwtModule, only: gwt_cr
@@ -241,6 +244,10 @@ contains
     call mem_setptr(mtypes, 'MTYPE', input_mempath)
     call mem_setptr(mfnames, 'MFNAME', input_mempath)
     call mem_setptr(mnames, 'MNAME', input_mempath)
+    !
+    ! -- assign models to cpu cores (in serial all to rank 0)
+    allocate (model_ranks(size(mnames)))
+    call create_load_balance(mnames, mtypes, model_ranks)
     !
     ! -- open model logging block
     write (iout, '(/1x,a)') 'READING SIMULATION MODELS'
@@ -324,7 +331,6 @@ contains
     ! -- modules
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr
-    use CharacterStringModule, only: CharacterStringType
     use SimVariablesModule, only: idm_context
     use GwfGwfExchangeModule, only: gwfexchange_create
     use GwfGwtExchangeModule, only: gwfgwt_cr
@@ -473,7 +479,6 @@ contains
   subroutine solution_groups_create()
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
-    use CharacterStringModule, only: CharacterStringType
     use MemoryHelperModule, only: create_mem_path
     use SimVariablesModule, only: idm_context, simulation_mode
     use SolutionGroupModule, only: SolutionGroupType, &
@@ -758,5 +763,110 @@ contains
     ! -- return
     return
   end subroutine check_model_name
+
+  !> @brief Distribute the models over the available
+  !< processes in a parallel run
+  subroutine create_load_balance(mnames, mtypes, mranks)
+    use SimVariablesModule, only: idm_context
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerModule, only: mem_setptr
+    type(CharacterStringType), dimension(:) :: mnames
+    type(CharacterStringType), dimension(:) :: mtypes
+    integer(I4B), dimension(:) :: mranks
+    ! local
+    integer(I4B) :: im, imm, ie, ip, cnt
+    integer(I4B) :: nr_models, nr_gwf_models, nr_gwt_models
+    integer(I4B) :: nr_exchanges
+    integer(I4B) :: min_per_proc, nr_left
+    integer(I4B) :: rank
+    integer(I4B), dimension(:), allocatable :: nr_models_proc
+    character(len=:), allocatable :: model_type_str
+    character(len=LINELENGTH) :: errmsg
+    character(len=LENMEMPATH) :: input_mempath
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: etypes !< exg types
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: emnames_a !< model a names
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: emnames_b !< model b names
+
+    mranks = 0
+    if (simulation_mode /= "PARALLEL") return
+
+    ! count flow models
+    nr_models = size(mnames)
+    nr_gwf_models = 0
+    nr_gwt_models = 0
+    do im = 1, nr_models
+      if (mtypes(im) == "GWF6") then
+        nr_gwf_models = nr_gwf_models + 1
+      else if (mtypes(im) == "GWT6") then
+        nr_gwt_models = nr_gwt_models + 1
+      else
+        model_type_str = mtypes(im)
+        write (errmsg, *) "Error. Model type ", model_type_str, &
+          " not supported in parallel mode"
+        call store_error(errmsg, terminate=.true.)
+      end if
+    end do
+
+    ! calculate nr of flow models for each rank
+    allocate (nr_models_proc(nr_procs))
+    min_per_proc = nr_gwf_models / nr_procs
+    nr_left = nr_gwf_models - nr_procs * min_per_proc
+    cnt = 1
+    do ip = 1, nr_procs
+      rank = ip - 1
+      nr_models_proc(ip) = min_per_proc
+      if (rank < nr_left) then
+        nr_models_proc(ip) = nr_models_proc(ip) + 1
+      end if
+    end do
+
+    ! assign ranks for flow models
+    rank = 0
+    do im = 1, nr_models
+      if (mtypes(im) == "GWF6") then
+        if (nr_models_proc(rank + 1) == 0) then
+          rank = rank + 1
+        end if
+        mranks(im) = rank
+        nr_models_proc(rank + 1) = nr_models_proc(rank + 1) - 1
+      end if
+    end do
+
+    ! match transport to flow
+    input_mempath = create_mem_path('SIM', 'NAM', idm_context)
+    call mem_setptr(etypes, 'EXGTYPE', input_mempath)
+    call mem_setptr(emnames_a, 'EXGMNAMEA', input_mempath)
+    call mem_setptr(emnames_b, 'EXGMNAMEB', input_mempath)
+    nr_exchanges = size(etypes)
+
+    do im = 1, nr_models
+      if (.not. mtypes(im) == "GWT6") cycle
+
+      ! find match
+      do ie = 1, nr_exchanges
+        if (etypes(ie) == "GWF6-GWT6" .and. mnames(im) == emnames_b(ie)) then
+          ! this is the exchange, now find the flow model's rank
+          rank = 0
+          do imm = 1, nr_models
+            if (mnames(imm) == emnames_a(ie)) then
+              rank = mranks(imm)
+              exit
+            end if
+          end do
+
+          ! we have our rank, assign and go to next transport model
+          mranks(im) = rank
+          exit
+        end if
+      end do
+    end do
+
+    ! cleanup
+    deallocate (nr_models_proc)
+
+  end subroutine create_load_balance
 
 end module SimulationCreateModule
