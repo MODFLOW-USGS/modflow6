@@ -26,11 +26,14 @@ contains
     ! local
     real(DP) :: global_max_dvc
     integer :: ierr
+    type(MpiWorldType), pointer :: mpi_world
+
+    mpi_world => get_mpi_world()
 
     has_converged = .false.
     global_max_dvc = huge(0.0)
     call MPI_Allreduce(max_dvc, global_max_dvc, 1, MPI_DOUBLE_PRECISION, &
-                       MPI_MAX, MF6_COMM_WORLD, ierr)
+                       MPI_MAX, mpi_world%comm, ierr)
     if (global_max_dvc <= this%dvclose) then
       has_converged = .true.
     end if
