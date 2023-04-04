@@ -267,6 +267,7 @@ contains
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr
     use SimVariablesModule, only: idm_context
+    use SimulationCreateModule, only: create_load_mask
     ! -- dummy
     ! -- locals
     character(len=LENMEMPATH) :: input_mempath
@@ -282,8 +283,7 @@ contains
     allocate (model_loadmask(nummodels))
     !
     ! -- initialize mask
-    ! TODO_MJR: currently load everything...
-    model_loadmask = 1
+    call create_load_mask(model_loadmask)
     !
     ! -- load selected models
     call load_models(model_loadmask, iout)

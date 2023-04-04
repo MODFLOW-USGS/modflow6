@@ -28,6 +28,7 @@ module SimulationCreateModule
   private
   public :: simulation_cr
   public :: simulation_da
+  public :: create_load_mask ! TODO_MJR: this should go somewhere else
 
 contains
 
@@ -253,7 +254,7 @@ contains
     allocate (model_loc_idx(nr_models_glob))
     !
     ! -- assign models to cpu cores (in serial all to rank 0)
-    call create_load_balance(mnames, mtypes, model_ranks)
+    call create_load_balance(model_ranks)
     !
     ! -- open model logging block
     write (iout, '(/1x,a)') 'READING SIMULATION MODELS'
@@ -763,14 +764,33 @@ contains
     return
   end subroutine check_model_name
 
+  !> @brief Create a load mask to determine which models
+  !! should be loaded by idm on this process. This should
+  !< be in sync with models create.
+  subroutine create_load_mask(mask_array)
+    use SimVariablesModule, only: proc_id
+    integer(I4B), dimension(:) :: mask_array
+    ! local
+    integer(I4B) :: i
+
+    call create_load_balance(mask_array)
+    do i = 1, size(mask_array)
+      if (mask_array(i) == proc_id) then
+        mask_array(i) = 1
+      else
+        mask_array(i) = 0
+      end if
+    end do
+
+  end subroutine create_load_mask
+
   !> @brief Distribute the models over the available
-  !< processes in a parallel run
-  subroutine create_load_balance(mnames, mtypes, mranks)
+  !! processes in a parallel run. Expects an array sized
+  !< to the number of models in the global simulation
+  subroutine create_load_balance(mranks)
     use SimVariablesModule, only: idm_context
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr
-    type(CharacterStringType), dimension(:) :: mnames
-    type(CharacterStringType), dimension(:) :: mtypes
     integer(I4B), dimension(:) :: mranks
     ! local
     integer(I4B) :: im, imm, ie, ip, cnt
@@ -783,6 +803,10 @@ contains
     character(len=LINELENGTH) :: errmsg
     character(len=LENMEMPATH) :: input_mempath
     type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: mtypes !< model types
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: mnames !< model names
+    type(CharacterStringType), dimension(:), contiguous, &
       pointer :: etypes !< exg types
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: emnames_a !< model a names
@@ -791,6 +815,14 @@ contains
 
     mranks = 0
     if (simulation_mode /= "PARALLEL") return
+
+    ! load IDM data
+    input_mempath = create_mem_path('SIM', 'NAM', idm_context)
+    call mem_setptr(mtypes, 'MTYPE', input_mempath)
+    call mem_setptr(mnames, 'MNAME', input_mempath)
+    call mem_setptr(etypes, 'EXGTYPE', input_mempath)
+    call mem_setptr(emnames_a, 'EXGMNAMEA', input_mempath)
+    call mem_setptr(emnames_b, 'EXGMNAMEB', input_mempath)
 
     ! count flow models
     nr_models = size(mnames)
@@ -835,10 +867,6 @@ contains
     end do
 
     ! match transport to flow
-    input_mempath = create_mem_path('SIM', 'NAM', idm_context)
-    call mem_setptr(etypes, 'EXGTYPE', input_mempath)
-    call mem_setptr(emnames_a, 'EXGMNAMEA', input_mempath)
-    call mem_setptr(emnames_b, 'EXGMNAMEB', input_mempath)
     nr_exchanges = size(etypes)
 
     do im = 1, nr_models
