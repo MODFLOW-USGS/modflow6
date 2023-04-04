@@ -155,7 +155,7 @@ where:
 \begin{itemize}
 \item \texttt{BUD <budgetfile>}---is the keyword and name of the MODFLOW 6 budget file.  This file contains double precision numeric values of simulated flow.
 \item \texttt{ZON <zonefile>}---is the keyword and name of the zone input file.
-\item \texttt{GRB <binarygridfile>}---is the keyword and name of the binary grid file created by MODFLOW 6.  Note that if the NOGRB keyword is specified in the OPTIONS block of the Discretization Package input file, then MODFLOW 6 will not create the binary grid file needed to run ZONEBUDGET.  The binary grid file must be provided if the budget file is for a Groundwater Flow (GWF) Model.  The binary grid file is not needed when ZONEBUDGET is used to process the budget file from one of the advanced packages (described later).
+\item \texttt{GRB <binarygridfile>}---is the keyword and name of the binary grid file created by MODFLOW 6.  Note that if the NOGRB keyword is specified in the OPTIONS block of the Discretization Package input file, then MODFLOW 6 will not create the binary grid file needed to run ZONEBUDGET.  The binary grid file must be provided if the budget file is for a Groundwater Flow (GWF) or Groundwater Transport (GWT) Model.  The binary grid file is not needed when ZONEBUDGET is used to process the budget file from one of the advanced packages (described later).
 \end{itemize}
 
 The following is an example of a ZONEBUDGET name file:
