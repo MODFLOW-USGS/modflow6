@@ -20,6 +20,7 @@
 ! REJ-INF                   idxbudrinf    REJ-INF               q * cuze
 ! UZET                      idxbuduzet    UZET                  q * cet
 ! REJ-INF-TO-MVR            idxbudritm    REJ-INF-TO-MVR        q * cinfil?
+! THERMAL-EQUIL             idxbudtheq    THERMAL-EQUIL         residual
 
 ! -- terms from UZF that should be skipped
 
@@ -54,6 +55,7 @@ module GweUzeModule
     integer(I4B), pointer :: idxbudrinf => null() ! index of rejected infiltration terms in flowbudptr
     integer(I4B), pointer :: idxbuduzet => null() ! index of unsat et terms in flowbudptr
     integer(I4B), pointer :: idxbudritm => null() ! index of rej infil to mover rate to mover terms in flowbudptr
+    integer(I4B), pointer :: idxbudtheq => null() ! index of thermal equilibration terms in flowbudptr
     real(DP), dimension(:), pointer, contiguous :: tempinfl => null() ! infiltration temperature
     real(DP), dimension(:), pointer, contiguous :: tempuzet => null() ! unsat et temperature
 
@@ -64,6 +66,7 @@ module GweUzeModule
     procedure :: apt_allocate_arrays => uze_allocate_arrays
     procedure :: find_apt_package => find_uze_package
     procedure :: apt_fc_expanded => uze_fc_expanded
+    procedure :: apt_cfupdate => uze_cfupdate
     procedure :: pak_solve => uze_solve
     procedure :: pak_get_nbudterms => uze_get_nbudterms
     procedure :: pak_setup_budobj => uze_setup_budobj
@@ -72,6 +75,11 @@ module GweUzeModule
     procedure :: uze_rinf_term
     procedure :: uze_uzet_term
     procedure :: uze_ritm_term
+    procedure :: uze_theq_term
+    procedure :: apt_stor_term => uze_stor_term
+    procedure :: apt_tmvr_term => uze_tmvr_term
+    procedure :: apt_fmvr_term => uze_fmvr_term
+    procedure :: apt_fjf_term => uze_fjf_term
     procedure :: pak_df_obs => uze_df_obs
     procedure :: pak_rp_obs => uze_rp_obs
     procedure :: pak_bd_obs => uze_bd_obs
@@ -246,6 +254,9 @@ contains
       case ('FROM-MVR')
         this%idxbudfmvr = ip
         this%idxbudssm(ip) = 0
+      case ('THERMAL-EQUIL')
+        this%idxbudtheq= ip
+        this%idxbudssm(ip) = 0
       case ('AUXILIARY')
         this%idxbudaux = ip
         this%idxbudssm(ip) = 0
@@ -256,6 +267,10 @@ contains
         this%idxbudssm(ip) = icount
         icount = icount + 1
       end select
+      !
+      ! -- thermal equilibration term
+      this%idxbudtheq = this%flowbudptr%nbudterm + 1
+      !
       write (this%iout, '(a, i0, " = ", a,/, a, i0)') &
         '  TERM ', ip, trim(adjustl(this%flowbudptr%budterm(ip)%flowtype)), &
         '   MAX NO. OF ENTRIES = ', this%flowbudptr%budterm(ip)%maxlist
@@ -394,8 +409,8 @@ contains
 !!        !    to the host cell global row rather than the feature global row
 !!        this%idxlocnode(n) = jglo
         !    to the host cell local row index rather than the feature local
-        !    row index                   ! jiffylube: LOCAL row
-        this%idxlocnode(n) = j           ! jiffylube: LOCAL row
+        !    row index
+        this%idxlocnode(n) = j        ! kluge note: do we want to introduce a new array instead of co-opting idxlocnode???
         ! -- for connection ipos in list of feature-cell connections,
         !    global positions of feature-row diagonal and off-diagonal
         !    corresponding to the cell
@@ -481,12 +496,11 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- TODO: This needs to be cleaned up, unitadj should be based on 
-    !    scalars that are spatially constant.
+    !    scalars that are spatially constant.     ! kluge note: done
     !    At some point, unitadj's name should be adapted to represent the 
     !    physics it captures.  For example, could be something like 
     !    cpw_vol which denotes volume-based heat capacity.  Its stored 
-    !    value would represent cpw * rhow
-    unitadj = DONE    ! jiffylube: kluge debug
+    !    value would represent cpw * rhow         ! kluge note: unitadj no longer appears in this subroutine; this comment pertains to unitadj in general
     !
     ! -- add infiltration contribution
     !    uze does not put feature balance coefficients in the row 
@@ -611,8 +625,8 @@ contains
         !! -- add to gwf row for apt connection (recharge)
         !!ipossymd = this%idxsymdglo(j)
         !!ipossymoffd = this%idxsymoffdglo(j)
-        !!call matrix_sln%add_value_pos(ipossymd, -(DONE - omega) * qbnd * unitadj)
-        !!call matrix_sln%add_value_pos(ipossymoffd, -omega * qbnd * unitadj)
+        !!call matrix_sln%add_value_pos(ipossymd, -(DONE - omega) * qbnd)
+        !!call matrix_sln%add_value_pos(ipossymoffd, -omega * qbnd)
       end if
     end do
     !
@@ -629,8 +643,8 @@ contains
         end if
         iposd = this%idxfjfdglo(j)        !< position of feature-id1 column in feature id1's host-cell row
         iposoffd = this%idxfjfoffdglo(j)  !< position of feature-id2 column in feature id1's host-cell row
-        call matrix_sln%add_value_pos(iposd, omega * qbnd * unitadj)
-        call matrix_sln%add_value_pos(iposoffd, (DONE - omega) * qbnd * unitadj)
+        call matrix_sln%add_value_pos(iposd, omega * qbnd)
+        call matrix_sln%add_value_pos(iposoffd, (DONE - omega) * qbnd)
       end do
     end if
     !
@@ -638,7 +652,40 @@ contains
     return
   end subroutine uze_fc_expanded
 
-  subroutine uze_solve(this)
+  subroutine uze_cfupdate(this)
+! ******************************************************************************
+! uze_cfupdate -- calculate package hcof and rhs so gwt budget is calculated
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    ! -- dummy
+    class(GweUzeType) :: this
+    ! -- local
+    integer(I4B) :: j, n
+    real(DP) :: qbnd
+    real(DP) :: omega
+    real(DP) :: unitadj
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate hcof and rhs terms so GWF exchanges are calculated correctly
+    ! -- go through each apt-gwf connection and calculate
+    !    rhs and hcof terms for gwt/gwe matrix rows
+    call this%TspAptType%apt_cfupdate()
+    !
+    ! -- Apply scaling to units of energy per time
+    unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
+    do j = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
+      this%hcof(j) = this%hcof(j) * unitadj
+      this%rhs(j) = this%rhs(j) * unitadj
+    end do
+    !
+    ! -- Return
+    return
+  end subroutine uze_cfupdate
+
+  subroutine uze_solve(this)   ! kluge note: no explicit solve for uze
 ! ******************************************************************************
 ! uze_solve -- add terms specific to the unsaturated zone to the explicit
 !              unsaturated-zone solve
@@ -706,12 +753,13 @@ contains
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    ! -- Number of budget terms is 4
+    ! -- Number of budget terms is 5
     nbudterms = 0
     if (this%idxbudinfl /= 0) nbudterms = nbudterms + 1
     if (this%idxbudrinf /= 0) nbudterms = nbudterms + 1
     if (this%idxbuduzet /= 0) nbudterms = nbudterms + 1
     if (this%idxbudritm /= 0) nbudterms = nbudterms + 1
+    if (this%idxbudtheq /= 0) nbudterms = nbudterms + 1
     !
     ! -- Return
     return
@@ -731,8 +779,9 @@ contains
     class(GweUzeType) :: this
     integer(I4B), intent(inout) :: idx
     ! -- local
-    integer(I4B) :: maxlist, naux
+    integer(I4B) :: maxlist, naux, n, n1, n2
     character(len=LENBUDTXT) :: text
+    real(DP) :: q
 ! ------------------------------------------------------------------------------
     !
     ! --
@@ -794,14 +843,29 @@ contains
                                                this%packName, &
                                                maxlist, .false., .false., &
                                                naux)
+
     end if
+    !
+    ! --
+    text = '   THERMAL-EQUIL'
+    idx = idx + 1
+    ! -- use dimension of GWF term
+    maxlist = this%flowbudptr%budterm(this%idxbudgwf)%maxlist
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%packName, &
+                                             this%name_model, &
+                                             this%packName, &
+                                             maxlist, .false., .false., &
+                                             naux)
 
     !
     ! -- return
     return
   end subroutine uze_setup_budobj
 
-  subroutine uze_fill_budobj(this, idx, x, ccratin, ccratout)
+  subroutine uze_fill_budobj(this, idx, x, flowja, ccratin, ccratout)
 ! ******************************************************************************
 ! uze_fill_budobj -- copy flow terms into this%budobj
 ! ******************************************************************************
@@ -809,18 +873,26 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use BudgetTermModule, only : LENBUDTXT  ! kluge??
     ! -- dummy
     class(GweUzeType) :: this
     integer(I4B), intent(inout) :: idx
     real(DP), dimension(:), intent(in) :: x
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
     real(DP), intent(inout) :: ccratin
     real(DP), intent(inout) :: ccratout
     ! -- local
-    integer(I4B) :: j, n1, n2
-    integer(I4B) :: nlist
+    integer(I4B) :: j, n1, n2, i
+    integer(I4B) :: nlist, nbudterm
+    integer(I4B) :: igwfnode
+    integer(I4B) :: idiag
     real(DP) :: q
+    real(DP) :: unitadj
+    character(len=LENBUDTXT) :: flowtype  ! kluge??
     ! -- formats
 ! -----------------------------------------------------------------------------
+
+    unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
 
     ! -- INFILTRATION
     idx = idx + 1
@@ -868,6 +940,41 @@ contains
       end do
     end if
 
+    ! -- THERMAL-EQUIL
+    ! -- processed last because it is calculated from the residual
+    idx = idx + 1
+    nlist = this%flowbudptr%budterm(this%idxbudgwf)%nlist
+    nbudterm = this%budobj%nbudterm
+    call this%budobj%budterm(idx)%reset(nlist)
+     do j = 1, nlist
+      q = DZERO
+      n1 = this%flowbudptr%budterm(this%idxbudgwf)%id1(j)
+      if (this%iboundpak(n1) /= 0) then
+        igwfnode = this%flowbudptr%budterm(this%idxbudgwf)%id2(j)
+        do i = 1, nbudterm
+        flowtype = this%budobj%budterm(i)%flowtype
+        select case (trim(adjustl(flowtype)))
+          case ('THERMAL-EQUIL')
+            ! skip
+            continue
+          case ('FLOW-JA-FACE')
+            ! skip
+            continue
+          case default
+            q = q - this%budobj%budterm(i)%flow(j)
+!!            write(6,*) flowtype, this%budobj%budterm(i)%flow(j)
+!!            flush(6)
+          end select
+        end do
+        call this%budobj%budterm(idx)%update_term(n1, igwfnode, q)
+        call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
+        ! -- for gwe cell budget
+        this%simvals(n1) = this%simvals(n1) - q
+        idiag = this%dis%con%ia(igwfnode)
+        flowja(idiag) = flowja(idiag) - q
+      end if
+    end do
+
     !
     ! -- return
     return
@@ -895,12 +1002,14 @@ contains
     call mem_allocate(this%idxbudrinf, 'IDXBUDRINF', this%memoryPath)
     call mem_allocate(this%idxbuduzet, 'IDXBUDUZET', this%memoryPath)
     call mem_allocate(this%idxbudritm, 'IDXBUDRITM', this%memoryPath)
+    call mem_allocate(this%idxbudtheq, 'IDXBUDTHEQ', this%memoryPath)
     !
     ! -- Initialize
     this%idxbudinfl = 0
     this%idxbudrinf = 0
     this%idxbuduzet = 0
     this%idxbudritm = 0
+    this%idxbudtheq = 0
     !
     ! -- Return
     return
@@ -958,6 +1067,7 @@ contains
     call mem_deallocate(this%idxbudrinf)
     call mem_deallocate(this%idxbuduzet)
     call mem_deallocate(this%idxbudritm)
+    call mem_deallocate(this%idxbudtheq)
     !
     ! -- deallocate time series
     call mem_deallocate(this%tempinfl)
@@ -995,7 +1105,7 @@ contains
     ! 
     ! -- TODO: these unitadj values should be cleaned-up as denoted in
     !    uze_fc_expanded
-    unitadj = DONE    ! jiffylube: kluge debug
+    unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
     !
     n1 = this%flowbudptr%budterm(this%idxbudinfl)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudinfl)%id2(ientry)
@@ -1011,8 +1121,10 @@ contains
       r = -qbnd * ctmp
     end if
     if (present(rrate)) rrate = qbnd * ctmp * unitadj
-    if (present(rhsval)) rhsval = r * unitadj
-    if (present(hcofval)) hcofval = h * unitadj
+!!    if (present(rhsval)) rhsval = r * unitadj
+!!    if (present(hcofval)) hcofval = h * unitadj
+    if (present(rhsval)) rhsval = r
+    if (present(hcofval)) hcofval = h
     !
     ! -- return
     return
@@ -1042,15 +1154,17 @@ contains
     ! 
     ! -- TODO: these unitadj values should be cleaned-up as denoted in
     !    uze_fc_expanded
-    unitadj = DONE    ! jiffylube: kluge debug
+    unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
     !
     n1 = this%flowbudptr%budterm(this%idxbudrinf)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudrinf)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudrinf)%flow(ientry)
     ctmp = this%tempinfl(n1)
     if (present(rrate)) rrate = ctmp * qbnd * unitadj
-    if (present(rhsval)) rhsval = DZERO * unitadj
-    if (present(hcofval)) hcofval = qbnd * unitadj
+!!    if (present(rhsval)) rhsval = DZERO * unitadj
+!!    if (present(hcofval)) hcofval = qbnd * unitadj
+    if (present(rhsval)) rhsval = DZERO
+    if (present(hcofval)) hcofval = qbnd
     !
     ! -- return
     return
@@ -1082,7 +1196,7 @@ contains
     ! -- TODO: these unitadj values should be cleaned-up as denoted in
     !    uze_fc_expanded
     ! -- TODO: Latent heat will likely need to play a role here at some point
-    unitadj = DONE    ! jiffylube: kluge debug
+    unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
     !
     n1 = this%flowbudptr%budterm(this%idxbuduzet)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbuduzet)%id2(ientry)
@@ -1097,8 +1211,10 @@ contains
     if (present(rrate)) &
       rrate = (omega * qbnd * this%xnewpak(n1) + &
               (DONE - omega) * qbnd * ctmp) * unitadj   ! jiffylube: added parens so unitadj multiplies the whole expression
-    if (present(rhsval)) rhsval = -(DONE - omega) * qbnd * ctmp * unitadj
-    if (present(hcofval)) hcofval = omega * qbnd * unitadj
+!!    if (present(rhsval)) rhsval = -(DONE - omega) * qbnd * ctmp * unitadj
+!!    if (present(hcofval)) hcofval = omega * qbnd * unitadj
+    if (present(rhsval)) rhsval = -(DONE - omega) * qbnd * ctmp
+    if (present(hcofval)) hcofval = omega * qbnd
     !
     ! -- return
     return
@@ -1128,19 +1244,169 @@ contains
     ! 
     ! -- TODO: these unitadj values should be cleaned-up as denoted in
     !    uze_fc_expanded
-    unitadj = DONE    ! jiffylube: kluge debug
+    unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
     !
     n1 = this%flowbudptr%budterm(this%idxbudritm)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudritm)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudritm)%flow(ientry)
     ctmp = this%tempinfl(n1)
     if (present(rrate)) rrate = ctmp * qbnd * unitadj
-    if (present(rhsval)) rhsval = DZERO * unitadj
-    if (present(hcofval)) hcofval = qbnd * unitadj
+!!    if (present(rhsval)) rhsval = DZERO * unitadj
+!!    if (present(hcofval)) hcofval = qbnd * unitadj
+    if (present(rhsval)) rhsval = DZERO
+    if (present(hcofval)) hcofval = qbnd
     !
     ! -- return
     return
   end subroutine uze_ritm_term
+
+  subroutine uze_theq_term(this, ientry, n1, n2, rrate, &    ! kluge note: not used???
+                           rhsval, hcofval)
+! ******************************************************************************
+! uze_theq_term
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GweUzeType) :: this
+    integer(I4B), intent(in) :: ientry
+    integer(I4B), intent(inout) :: n1
+    integer(I4B), intent(inout) :: n2
+    real(DP), intent(inout), optional :: rrate
+    real(DP), intent(inout), optional :: rhsval
+    real(DP), intent(inout), optional :: hcofval
+    ! -- local
+    real(DP) :: qbnd
+    real(DP) :: ctmp
+    real(DP) :: h, r
+    real(DP) :: unitadj
+    integer(I4B) :: idiag
+! ------------------------------------------------------------------------------
+    ! 
+    ! -- TODO: these unitadj values should be cleaned-up as denoted in
+    !    uze_fc_expanded
+    unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
+    !
+!!    n1 = this%flowbudptr%budterm(this%idxbudtheq)%id1(ientry)
+!!    n2 = this%flowbudptr%budterm(this%idxbudtheq)%id2(ientry)
+    n1 = ientry                      ! kluge note: is this right in general???
+    h = DZERO
+    idiag = this%dis%con%ia(n1)
+    r = this%flowja(idiag)
+    if (present(rrate)) rrate = r * unitadj
+!!    if (present(rhsval)) rhsval = r * unitadj
+!!    if (present(hcofval)) hcofval = h * unitadj
+    if (present(rhsval)) rhsval = r
+    if (present(hcofval)) hcofval = h
+    !
+    ! -- return
+    return
+  end subroutine uze_theq_term
+
+  subroutine uze_stor_term(this, ientry, n1, n2, rrate, &
+                           rhsval, hcofval)
+    ! -- modules
+    ! -- dummy
+    class(GweUzeType) :: this
+    integer(I4B), intent(in) :: ientry
+    integer(I4B), intent(inout) :: n1
+    integer(I4B), intent(inout) :: n2
+    real(DP), intent(inout), optional :: rrate
+    real(DP), intent(inout), optional :: rhsval
+    real(DP), intent(inout), optional :: hcofval
+    ! -- local
+    real(DP) :: unitadj
+! -----------------------------------------------------------------
+    !
+    call this%TspAptType%apt_stor_term(ientry, n1, n2, rrate, &
+                                       rhsval, hcofval)
+    !
+    ! -- Apply scaling to units of energy per time
+    unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
+    if (present(rrate)) rrate = rrate * unitadj
+    !
+    ! -- return
+    return
+  end subroutine uze_stor_term
+
+  subroutine uze_tmvr_term(this, ientry, n1, n2, rrate, &
+                           rhsval, hcofval)
+    ! -- modules
+    ! -- dummy
+    class(GweUzeType) :: this
+    integer(I4B), intent(in) :: ientry
+    integer(I4B), intent(inout) :: n1
+    integer(I4B), intent(inout) :: n2
+    real(DP), intent(inout), optional :: rrate
+    real(DP), intent(inout), optional :: rhsval
+    real(DP), intent(inout), optional :: hcofval
+    ! -- local
+    real(DP) :: unitadj
+! ------------------------------------------------------------------------------
+    !
+    call this%TspAptType%apt_tmvr_term(ientry, n1, n2, rrate, &
+                                       rhsval, hcofval)
+    !
+    ! -- Apply scaling to units of energy per time
+    unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
+    if (present(rrate)) rrate = rrate * unitadj
+    !
+    ! -- return
+    return
+  end subroutine uze_tmvr_term
+
+  subroutine uze_fmvr_term(this, ientry, n1, n2, rrate, &
+                           rhsval, hcofval)
+    ! -- modules
+    ! -- dummy
+    class(GweUzeType) :: this
+    integer(I4B), intent(in) :: ientry
+    integer(I4B), intent(inout) :: n1
+    integer(I4B), intent(inout) :: n2
+    real(DP), intent(inout), optional :: rrate
+    real(DP), intent(inout), optional :: rhsval
+    real(DP), intent(inout), optional :: hcofval
+    ! -- local
+    real(DP) :: unitadj
+! ------------------------------------------------------------------------------
+    !
+    call this%TspAptType%apt_fmvr_term(ientry, n1, n2, rrate, &
+                                       rhsval, hcofval)
+    !
+    ! -- Apply scaling to units of energy per time
+    unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
+    if (present(rrate)) rrate = rrate * unitadj
+    !
+    ! -- return
+    return
+  end subroutine uze_fmvr_term
+
+  subroutine uze_fjf_term(this, ientry, n1, n2, rrate, &
+                          rhsval, hcofval)
+    ! -- modules
+    ! -- dummy
+    class(GweUzeType) :: this
+    integer(I4B), intent(in) :: ientry
+    integer(I4B), intent(inout) :: n1
+    integer(I4B), intent(inout) :: n2
+    real(DP), intent(inout), optional :: rrate
+    real(DP), intent(inout), optional :: rhsval
+    real(DP), intent(inout), optional :: hcofval
+    ! -- local
+    real(DP) :: unitadj
+! ------------------------------------------------------------------------------
+    !
+    call this%TspAptType%apt_fjf_term(ientry, n1, n2, rrate, &
+                                      rhsval, hcofval)
+    !
+    ! -- Apply scaling to units of energy per time
+    unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
+    if (present(rrate)) rrate = rrate * unitadj
+    !
+    ! -- return
+    return
+  end subroutine uze_fjf_term
 
   subroutine uze_df_obs(this)
 ! ******************************************************************************
@@ -1212,6 +1478,11 @@ contains
     call this%obs%StoreObsType('rej-inf-to-mvr', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
+    ! -- Store obs type and assign procedure pointer
+    !    for observation type.
+    call this%obs%StoreObsType('thermal-equil', .true., indx)
+    this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
+    !
     return
   end subroutine uze_df_obs
 
@@ -1236,6 +1507,8 @@ contains
     case ('UZET')
       call this%rp_obs_byfeature(obsrv)
     case ('REJ-INF-TO-MVR')
+      call this%rp_obs_byfeature(obsrv)
+    case ('THERMAL-EQUIL')
       call this%rp_obs_byfeature(obsrv)
     case default
       found = .false.
@@ -1278,6 +1551,10 @@ contains
     case ('REJ-INF-TO-MVR')
       if (this%iboundpak(jj) /= 0 .and. this%idxbudritm > 0) then
         call this%uze_ritm_term(jj, n1, n2, v)
+      end if
+    case ('THERMAL-EQUIL')
+      if (this%iboundpak(jj) /= 0 .and. this%idxbudtheq > 0) then
+        call this%uze_theq_term(jj, n1, n2, v)
       end if
     case default
       found = .false.

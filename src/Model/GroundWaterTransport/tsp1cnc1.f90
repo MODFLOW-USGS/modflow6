@@ -378,7 +378,7 @@ contains
     isuppress_output = 0
     !
     ! -- for GWE model types, storage rate needs to have units adjusted
-    if (this%tsplab%tsptype /= 'GWE') then
+    if (this%tsplab%tsptype /= 'GWE') then   ! kluge note: best to avoid checks like this if possible
       unitadj = DONE
     else
       unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow

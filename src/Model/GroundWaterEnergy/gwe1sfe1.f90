@@ -317,7 +317,7 @@ contains
     ! -- add evaporation contribution
     if (this%idxbudevap /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudevap)%nlist
-        call this%sfe_evap_term(j, n1, n2, rrate, rhsval) !, hcofval)
+        call this%sfe_evap_term(j, n1, n2, rrate, rhsval) !, hcofval)  ! kluge note: should include hcofval in the call; it'll be set to zero
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
         call matrix_sln%add_value_pos(iposd, hcofval)
@@ -522,12 +522,13 @@ contains
 
   !> @brief Copy flow terms into this%budobj
   !<
-  subroutine sfe_fill_budobj(this, idx, x, ccratin, ccratout)
+  subroutine sfe_fill_budobj(this, idx, x, flowja, ccratin, ccratout)
     ! -- modules
     ! -- dummy
     class(GweSfeType) :: this
     integer(I4B), intent(inout) :: idx
     real(DP), dimension(:), intent(in) :: x
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
     real(DP), intent(inout) :: ccratin
     real(DP), intent(inout) :: ccratout
     ! -- local
@@ -741,7 +742,7 @@ contains
     qbnd = this%flowbudptr%budterm(this%idxbudevap)%flow(ientry)
     heatlat = this%gwecommon%gwerhow * this%gwecommon%gwelatheatvap  ! kg/m^3 * J/kg = J/m^3
     if (present(rrate)) rrate = qbnd * heatlat !m^3/day * J/m^3 = J/day
-    if (present(rhsval)) rhsval = -rrate
+    if (present(rhsval)) rhsval = -rrate   ! kluge note: shouldn't this be divided by unitadj??
     if (present(hcofval)) hcofval = DZERO
     !
     ! -- return
@@ -768,7 +769,7 @@ contains
     n2 = this%flowbudptr%budterm(this%idxbudroff)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudroff)%flow(ientry)
     ctmp = this%temproff(n1)
-    if (present(rrate)) rrate = ctmp * qbnd !* this%cpw(n1) * this%rhow(n1)
+    if (present(rrate)) rrate = ctmp * qbnd !* this%cpw(n1) * this%rhow(n1)  ! kluge note: yes, multiply by unitadj
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !

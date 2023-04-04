@@ -365,10 +365,11 @@ contains
     ! -- initialize
     tled = DONE / delt
     !
+    unitadj = this%cpw * this%rhow
+    !
     ! -- Calculate storage change
     do n = 1, nodes
       this%ratesto(n) = DZERO
-      unitadj = this%cpw * this%rhow
       !
       ! -- skip if transport inactive
       if (this%ibound(n) <= 0) cycle
@@ -382,10 +383,10 @@ contains
       vsolid = vcell * (DONE - this%porosity(n))
       !
       ! -- calculate rate
-      term = vsolid * (this%rhos(n) * this%cps(n)) / (this%rhow * this%cpw)
+      term = vsolid * (this%rhos(n) * this%cps(n)) / unitadj
       hhcof = -(vwatnew + term) * tled
       rrhs = -(vwatold + term) * tled * cold(n)
-      rate = hhcof * cnew(n) - rrhs
+      rate = (hhcof * cnew(n) - rrhs) * unitadj
       this%ratesto(n) = rate
       idiag = this%dis%con%ia(n)
       flowja(idiag) = flowja(idiag) + rate
@@ -471,11 +472,11 @@ contains
     real(DP) :: rin
     real(DP) :: rout
     !
-    ! -- for GWE, storage rate needs to have units adjusted
-    do n = 1, size(this%ratesto)
-      this%ratesto(n) = this%ratesto(n) * this%cpw * this%rhow
-    end do
-    !
+!!    ! -- for GWE, storage rate needs to have units adjusted
+!!    do n = 1, size(this%ratesto)
+!!      this%ratesto(n) = this%ratesto(n) * this%cpw * this%rhow
+!!    end do
+!!    !
     ! -- sto
     call rate_accumulator(this%ratesto, rin, rout)
     call model_budget%addentry(rin, rout, delt, budtxt(1), &

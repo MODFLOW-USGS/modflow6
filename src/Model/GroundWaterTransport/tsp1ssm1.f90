@@ -312,7 +312,7 @@ contains
     rhstmp = DZERO
     ctmp = DZERO
     qbnd = DZERO
-    unitadj = DONE
+!!    unitadj = DONE
     !
     ! -- retrieve node number, qbnd and iauxpos
     n = this%fmi%gwfpackages(ipackage)%nodelist(ientry)
@@ -359,11 +359,11 @@ contains
         end if
       end if
       !
-      ! -- If GWE transport model type, adjust units to energy
-      if (this%tsplab%tsptype == "GWE") then
-        unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
-      end if
-      !
+!!      ! -- If GWE transport model type, adjust units to energy
+!!      if (this%tsplab%tsptype == "GWE") then
+!!        unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
+!!      end if
+!!      !
       ! -- Add terms based on qbnd sign
       if (qbnd <= DZERO) then
         hcoftmp = qbnd * omega
@@ -378,10 +378,11 @@ contains
     if (present(hcofval)) hcofval = hcoftmp
     if (present(rhsval)) rhsval = rhstmp
     if (present(rrate)) then
-      if (this%tsplab%tsptype /= 'GWE') then
+      if (this%tsplab%tsptype /= 'GWE') then     ! kluge note: best to avoid checks like this if possible
         rrate = hcoftmp * ctmp - rhstmp
       else
-        rrate = hcoftmp * ctmp * unitadj - rhstmp * unitadj
+        unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
+        rrate = (hcoftmp * ctmp - rhstmp) * unitadj
       endif
     end if
     if (present(cssm)) cssm = ctmp

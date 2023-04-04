@@ -76,6 +76,8 @@ module TspAptModule
     integer(I4B), pointer :: ibudcsv => null() !< unit number for csv budget output file
     integer(I4B), pointer :: ncv => null() !< number of control volumes
     integer(I4B), pointer :: igwfaptpak => null() !< package number of corresponding this package
+    integer(I4B), pointer :: idxprepak => null() !< budget-object index that precedes package-specific budget objects
+    integer(I4B), pointer :: idxlastpak => null() !< budget-object index of last package-specific budget object
     real(DP), dimension(:), pointer, contiguous :: strt => null() !< starting feature concentration (or temperature)
     integer(I4B), dimension(:), pointer, contiguous :: idxlocnode => null() !< map position in global rhs and x array of pack entry
     integer(I4B), dimension(:), pointer, contiguous :: idxpakdiag => null() !< map diag position of feature in global amat
@@ -127,10 +129,10 @@ module TspAptModule
     procedure :: bnd_ad => apt_ad
     procedure :: bnd_cf => apt_cf
     procedure :: bnd_fc => apt_fc
-    procedure, public :: apt_fc_expanded ! kluge: Made public for uze on 3/3/2023 (reston)
+    procedure, public :: apt_fc_expanded ! kluge note: Made public for uze on 3/3/2023 (reston)
     procedure :: pak_fc_expanded
     procedure, private :: apt_fc_nonexpanded
-    procedure, private :: apt_cfupdate
+    procedure, public :: apt_cfupdate    ! kluge note: made public for uze
     procedure :: apt_check_valid
     procedure :: apt_set_stressperiod
     procedure :: pak_set_stressperiod
@@ -170,7 +172,8 @@ module TspAptModule
     procedure :: pak_fill_budobj
     procedure, public :: apt_stor_term
     procedure, public :: apt_tmvr_term
-    procedure, private :: apt_fjf_term
+    procedure, public :: apt_fmvr_term   ! kluge note: new subroutine, public for uze
+    procedure, public :: apt_fjf_term    ! kluge note: made public for uze
     procedure, private :: apt_copy2flowp
     procedure, private :: apt_setup_tableobj
 
@@ -830,12 +833,10 @@ contains
     real(DP) :: cold
     real(DP) :: qbnd
     real(DP) :: omega
-    real(DP) :: unitadj
     real(DP) :: rrate
     real(DP) :: rhsval
     real(DP) :: hcofval
 ! ------------------------------------------------------------------------------
-    unitadj = DONE  !TODO: Avoid checking whether solute or energy
     !
     ! -- call the specific method for the advanced transport package, such as
     !    what would be overridden by
@@ -889,14 +890,14 @@ contains
         ! -- add to apt row
         iposd = this%idxdglo(j)
         iposoffd = this%idxoffdglo(j)
-        call matrix_sln%add_value_pos(iposd, omega * qbnd * unitadj)
-        call matrix_sln%add_value_pos(iposoffd, (DONE - omega) * qbnd * unitadj)
+        call matrix_sln%add_value_pos(iposd, omega * qbnd)
+        call matrix_sln%add_value_pos(iposoffd, (DONE - omega) * qbnd)
         !
         ! -- add to gwf row for apt connection
         ipossymd = this%idxsymdglo(j)
         ipossymoffd = this%idxsymoffdglo(j)
-        call matrix_sln%add_value_pos(ipossymd, -(DONE - omega) * qbnd * unitadj)
-        call matrix_sln%add_value_pos(ipossymoffd, -omega * qbnd * unitadj)
+        call matrix_sln%add_value_pos(ipossymd, -(DONE - omega) * qbnd)
+        call matrix_sln%add_value_pos(ipossymoffd, -omega * qbnd)
       end if
     end do
     !
@@ -906,10 +907,6 @@ contains
         n1 = this%flowbudptr%budterm(this%idxbudfjf)%id1(j)
         n2 = this%flowbudptr%budterm(this%idxbudfjf)%id2(j)
         qbnd = this%flowbudptr%budterm(this%idxbudfjf)%flow(j)
-!!        ! TODO - Clean this out   ! jiffylube: commented this out
-!!        if (associated(this%cpw).and.associated(this%rhow)) then
-!!          unitadj = this%bndtype%cpw(j) * this%bndtype%rhow(j)
-!!        end if
         if (qbnd <= DZERO) then
           omega = DONE
         else
@@ -917,8 +914,8 @@ contains
         end if
         iposd = this%idxfjfdglo(j)
         iposoffd = this%idxfjfoffdglo(j)
-        call matrix_sln%add_value_pos(iposd, omega * qbnd * unitadj)
-        call matrix_sln%add_value_pos(iposoffd, (DONE - omega) * qbnd * unitadj)
+        call matrix_sln%add_value_pos(iposd, omega * qbnd)
+        call matrix_sln%add_value_pos(iposoffd, (DONE - omega) * qbnd)
       end do
     end if
     !
@@ -966,7 +963,6 @@ contains
     integer(I4B) :: j, n
     real(DP) :: qbnd
     real(DP) :: omega
-    real(DP) :: unitadj
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate hcof and rhs terms so GWF exchanges are calculated correctly
@@ -979,13 +975,9 @@ contains
       if (this%iboundpak(n) /= 0) then
         qbnd = this%flowbudptr%budterm(this%idxbudgwf)%flow(j)
         omega = DZERO
-        unitadj = DONE  !TODO: Avoid checking whether solute or energy
         if (qbnd < DZERO) omega = DONE
-!!        if (associated(this%cpw).and.associated(this%rhow)) then
-!!          unitadj = this%cpw(j) * this%rhow(j)   ! jiffylube: kluge debug "!!" ?
-!!        end if
-        this%hcof(j) = -(DONE - omega) * unitadj * qbnd
-        this%rhs(j) = omega * unitadj * qbnd * this%xnewpak(n)
+        this%hcof(j) = -(DONE - omega) * qbnd
+        this%rhs(j) = omega * qbnd * this%xnewpak(n)
       end if
     end do
     !
@@ -1035,7 +1027,7 @@ contains
     call this%apt_copy2flowp()
     !
     ! -- fill the budget object
-    call this%apt_fill_budobj(x)
+    call this%apt_fill_budobj(x, flowja)
     !
     ! -- return
     return
@@ -1168,6 +1160,8 @@ contains
     call mem_allocate(this%idxbudfmvr, 'IDXBUDFMVR', this%memoryPath)
     call mem_allocate(this%idxbudaux, 'IDXBUDAUX', this%memoryPath)
     call mem_allocate(this%nconcbudssm, 'NCONCBUDSSM', this%memoryPath)
+    call mem_allocate(this%idxprepak, 'IDXPREPAK', this%memoryPath)
+    call mem_allocate(this%idxlastpak, 'IDXLASTPAK', this%memoryPath)
     !
     ! -- Initialize
     this%iauxfpconc = 0
@@ -1185,6 +1179,8 @@ contains
     this%idxbudfmvr = 0
     this%idxbudaux = 0
     this%nconcbudssm = 0
+    this%idxprepak = 0
+    this%idxlastpak = 0
     !
     ! -- set this package as causing asymmetric matrix terms
     this%iasym = 1
@@ -1380,6 +1376,8 @@ contains
     call mem_deallocate(this%idxbudaux)
     call mem_deallocate(this%idxbudssm)
     call mem_deallocate(this%nconcbudssm)
+    call mem_deallocate(this%idxprepak)
+    call mem_deallocate(this%idxlastpak)
 
     !
     ! -- deallocate scalars in NumericalPackageType
@@ -1861,7 +1859,6 @@ contains
     real(DP) :: ctmp
     real(DP) :: c1, qbnd
     real(DP) :: hcofval, rhsval
-    real(DP) :: unitadj
 ! ------------------------------------------------------------------------------
     !
     ! -- first initialize dbuff
@@ -1895,20 +1892,16 @@ contains
       n = this%flowbudptr%budterm(this%idxbudgwf)%id1(j)
       this%hcof(j) = DZERO
       this%rhs(j) = DZERO
-      unitadj = DONE  ! Avoid checking whether solute or energy
       igwfnode = this%flowbudptr%budterm(this%idxbudgwf)%id2(j)
       qbnd = this%flowbudptr%budterm(this%idxbudgwf)%flow(j)
-!!      if (associated(this%cpw).and.associated(this%rhow)) then
-!!        unitadj = this%cpw(j) * this%rhow(j)   ! jiffylube: kluge debug "!!" ?
-!!      end if
       if (qbnd <= DZERO) then
         ctmp = this%xnewpak(n)
-        this%rhs(j) = unitadj * qbnd * ctmp
+        this%rhs(j) = qbnd * ctmp
       else
         ctmp = this%xnew(igwfnode)
-        this%hcof(j) = -qbnd * unitadj
+        this%hcof(j) = -qbnd
       end if
-      c1 = unitadj * qbnd * ctmp
+      c1 = qbnd * ctmp
       this%dbuff(n) = this%dbuff(n) + c1
     end do
     !
@@ -2230,7 +2223,9 @@ contains
     end do
     !
     ! -- Reserve space for the package specific terms
+    this%idxprepak = idx
     call this%pak_setup_budobj(idx)
+    this%idxlastpak = idx
     !
     ! --
     text = '         STORAGE'
@@ -2341,7 +2336,7 @@ contains
     return
   end subroutine pak_setup_budobj
 
-  subroutine apt_fill_budobj(this, x)
+  subroutine apt_fill_budobj(this, x, flowja)
 ! ******************************************************************************
 ! apt_fill_budobj -- copy flow terms into this%budobj
 ! ******************************************************************************
@@ -2353,6 +2348,7 @@ contains
     ! -- dummy
     class(TspAptType) :: this
     real(DP), dimension(:), intent(in) :: x
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
     ! -- local
     integer(I4B) :: naux
     real(DP), dimension(:), allocatable :: auxvartmp
@@ -2410,8 +2406,11 @@ contains
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
 
-    ! -- individual package terms
-    call this%pak_fill_budobj(idx, x, ccratin, ccratout)
+!!    ! -- individual package terms
+!!    call this%pak_fill_budobj(idx, x, ccratin, ccratout)
+    ! -- skip individual package terms for now and process them last
+    ! -- in case they depend on the other terms (as for uze)
+    idx = this%idxlastpak
 
     ! -- STORAGE
     idx = idx + 1
@@ -2443,8 +2442,10 @@ contains
       idx = idx + 1
       nlist = this%ncv
       call this%budobj%budterm(idx)%reset(nlist)
-      do n1 = 1, nlist
-        q = this%qmfrommvr(n1)
+!!      do n1 = 1, nlist
+!!        q = this%qmfrommvr(n1)
+      do j = 1, nlist
+        call this%apt_fmvr_term(j, n1, n2, q)
         call this%budobj%budterm(idx)%update_term(n1, n1, q)
         call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
       end do
@@ -2474,6 +2475,10 @@ contains
       deallocate (auxvartmp)
     end if
     !
+    ! -- individual package terms processed last
+    idx = this%idxprepak
+    call this%pak_fill_budobj(idx, x, flowja, ccratin, ccratout)
+    !
     ! --Terms are filled, now accumulate them for this time step
     call this%budobj%accumulate_terms()
     !
@@ -2481,7 +2486,7 @@ contains
     return
   end subroutine apt_fill_budobj
 
-  subroutine pak_fill_budobj(this, idx, x, ccratin, ccratout)
+  subroutine pak_fill_budobj(this, idx, x, flowja, ccratin, ccratout)
 ! ******************************************************************************
 ! pak_fill_budobj -- copy flow terms into this%budobj, must be overridden
 ! ******************************************************************************
@@ -2493,6 +2498,7 @@ contains
     class(TspAptType) :: this
     integer(I4B), intent(inout) :: idx
     real(DP), dimension(:), intent(in) :: x
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
     real(DP), intent(inout) :: ccratin
     real(DP), intent(inout) :: ccratout
     ! -- local
@@ -2519,21 +2525,16 @@ contains
     real(DP), intent(inout), optional :: hcofval
     real(DP) :: v0, v1
     real(DP) :: c0, c1
-    real(DP) :: unitadj
 ! -----------------------------------------------------------------
     ! 
-    ! -- TODO: these unitadj values should be cleaned-up as denoted in
-    !    uze_fc_expanded
-    unitadj = DONE      ! jiffylube: kluge debug
-    !
     n1 = ientry
     n2 = ientry
     call this%get_volumes(n1, v1, v0, delt)
     c0 = this%xoldpak(n1)
     c1 = this%xnewpak(n1)
-    if (present(rrate)) rrate = (-c1 * v1 / delt + c0 * v0 / delt) * unitadj
-    if (present(rhsval)) rhsval = -c0 * v0 / delt * unitadj
-    if (present(hcofval)) hcofval = -v1 / delt * unitadj
+    if (present(rrate)) rrate = -c1 * v1 / delt + c0 * v0 / delt
+    if (present(rhsval)) rhsval = -c0 * v0 / delt
+    if (present(hcofval)) hcofval = -v1 / delt
     !
     ! -- return
     return
@@ -2553,24 +2554,44 @@ contains
     ! -- local
     real(DP) :: qbnd
     real(DP) :: ctmp
-    real(DP) :: unitadj
 ! ------------------------------------------------------------------------------
-    !
-    ! -- If GWE package, adjust for thermal units
-    unitadj = DONE      ! jiffylube: kluge debug
     !
     ! -- Calculate MVR-related terms 
     n1 = this%flowbudptr%budterm(this%idxbudtmvr)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudtmvr)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudtmvr)%flow(ientry)
     ctmp = this%xnewpak(n1)
-    if (present(rrate)) rrate = unitadj * ctmp * qbnd
+    if (present(rrate)) rrate = ctmp * qbnd
     if (present(rhsval)) rhsval = DZERO
-    if (present(hcofval)) hcofval = qbnd * unitadj
+    if (present(hcofval)) hcofval = qbnd
     !
     ! -- return
     return
   end subroutine apt_tmvr_term
+
+  subroutine apt_fmvr_term(this, ientry, n1, n2, rrate, &
+                           rhsval, hcofval)
+    ! -- modules
+    ! -- dummy
+    class(TspAptType) :: this
+    integer(I4B), intent(in) :: ientry
+    integer(I4B), intent(inout) :: n1
+    integer(I4B), intent(inout) :: n2
+    real(DP), intent(inout), optional :: rrate
+    real(DP), intent(inout), optional :: rhsval
+    real(DP), intent(inout), optional :: hcofval
+! ------------------------------------------------------------------------------
+    !
+    ! -- Calculate MVR-related terms 
+    n1 = ientry
+    n2 = n1
+    if (present(rrate)) rrate = this%qmfrommvr(n1)
+    if (present(rhsval)) rhsval = this%qmfrommvr(n1)
+    if (present(hcofval)) hcofval = DZERO
+    !
+    ! -- return
+    return
+  end subroutine apt_fmvr_term
 
   subroutine apt_fjf_term(this, ientry, n1, n2, rrate, &
                           rhsval, hcofval)
@@ -2586,11 +2607,7 @@ contains
     ! -- local
     real(DP) :: qbnd
     real(DP) :: ctmp
-    real(DP) :: unitadj
 ! ------------------------------------------------------------------------------
-    !
-    ! -- If GWE package, adjust for thermal units
-    unitadj = DONE       ! jiffylube: kluge debug
     !
     n1 = this%flowbudptr%budterm(this%idxbudfjf)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudfjf)%id2(ientry)
@@ -2600,7 +2617,7 @@ contains
     else
       ctmp = this%xnewpak(n2)
     end if
-    if (present(rrate)) rrate = unitadj * ctmp * qbnd
+    if (present(rrate)) rrate = ctmp * qbnd
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
@@ -3059,7 +3076,8 @@ contains
             end if
           case ('FROM-MVR')
             if (this%iboundpak(jj) /= 0 .and. this%idxbudfmvr > 0) then
-              v = this%qmfrommvr(jj)
+!!              v = this%qmfrommvr(jj)
+              call this%apt_fmvr_term(jj, n1, n2, v)
             end if
           case ('TO-MVR')
             if (this%idxbudtmvr > 0) then
