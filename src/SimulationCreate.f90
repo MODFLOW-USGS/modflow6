@@ -61,6 +61,7 @@ contains
     ! -- variables
     deallocate (model_names)
     deallocate (model_ranks)
+    deallocate (model_loc_idx)
     !
     ! -- Return
     return
@@ -234,7 +235,7 @@ contains
     character(len=LINELENGTH) :: model_type
     character(len=LINELENGTH) :: fname, model_name
     character(len=LINELENGTH) :: errmsg
-    integer(I4B) :: n
+    integer(I4B) :: n, nr_models_glob
     logical :: terminate = .true.
     !
     ! -- set input memory path
@@ -245,19 +246,20 @@ contains
     call mem_setptr(mfnames, 'MFNAME', input_mempath)
     call mem_setptr(mnames, 'MNAME', input_mempath)
     !
+    ! -- allocate global arrays
+    nr_models_glob = size(mnames)
+    allocate (model_ranks(nr_models_glob))
+    allocate (model_names(nr_models_glob))
+    allocate (model_loc_idx(nr_models_glob))
+    !
     ! -- assign models to cpu cores (in serial all to rank 0)
-    allocate (model_ranks(size(mnames)))
     call create_load_balance(mnames, mtypes, model_ranks)
     !
     ! -- open model logging block
     write (iout, '(/1x,a)') 'READING SIMULATION MODELS'
     !
-    ! -- initialize global and local model ids
-    im = 0
-    allocate (model_names(size(mtypes)))
-    allocate (model_loc_idx(size(mtypes)))
-    !
     ! -- create models
+    im = 0
     do n = 1, size(mtypes)
       !
       ! -- attributes for this model
