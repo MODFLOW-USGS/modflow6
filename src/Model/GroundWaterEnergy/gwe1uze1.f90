@@ -92,7 +92,7 @@ module GweUzeModule
 contains
 
   subroutine uze_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
-                        fmi, tsplab, gwecommon)
+                        fmi, tsplab, eqnsclfac, gwecommon)
 ! ******************************************************************************
 ! uze_create -- Create a New UZE Package
 ! ******************************************************************************
@@ -109,6 +109,7 @@ contains
     character(len=*), intent(in) :: pakname
     type(TspFmiType), pointer :: fmi
     type(TspLabelsType), pointer :: tsplab
+    real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
     type(GweInputDataType), intent(in), target :: gwecommon !< shared data container for use by multiple GWE packages
     ! -- local
     type(GweUzeType), pointer :: uzeobj
@@ -143,6 +144,9 @@ contains
     ! -- Store pointer to the labels module for dynamic setting of 
     !    concentration vs temperature
     uzeobj%tsplab => tsplab
+    !
+    ! -- Store pointer to governing equation scale factor
+    uzeobj%eqnsclfac => eqnsclfac
     !
     ! -- Store pointer to shared data module for accessing cpw, rhow
     !    for the budget calculations, and for accessing the latent heat of
@@ -488,19 +492,11 @@ contains
     real(DP) :: cold
     real(DP) :: qbnd
     real(DP) :: omega
-    real(DP) :: unitadj    
     real(DP) :: rrate
     real(DP) :: rhsval
     real(DP) :: hcofval
     real(DP) :: dummy
 ! ------------------------------------------------------------------------------
-    !
-    ! -- TODO: This needs to be cleaned up, unitadj should be based on 
-    !    scalars that are spatially constant.     ! kluge note: done
-    !    At some point, unitadj's name should be adapted to represent the 
-    !    physics it captures.  For example, could be something like 
-    !    cpw_vol which denotes volume-based heat capacity.  Its stored 
-    !    value would represent cpw * rhow         ! kluge note: unitadj no longer appears in this subroutine; this comment pertains to unitadj in general
     !
     ! -- add infiltration contribution
     !    uze does not put feature balance coefficients in the row 
@@ -666,7 +662,6 @@ contains
     integer(I4B) :: j, n
     real(DP) :: qbnd
     real(DP) :: omega
-    real(DP) :: unitadj
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate hcof and rhs terms so GWF exchanges are calculated correctly
@@ -675,10 +670,9 @@ contains
     call this%TspAptType%apt_cfupdate()
     !
     ! -- Apply scaling to units of energy per time
-    unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
     do j = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
-      this%hcof(j) = this%hcof(j) * unitadj
-      this%rhs(j) = this%rhs(j) * unitadj
+      this%hcof(j) = this%hcof(j) * this%eqnsclfac
+      this%rhs(j) = this%rhs(j) * this%eqnsclfac
     end do
     !
     ! -- Return
@@ -873,7 +867,6 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use BudgetTermModule, only : LENBUDTXT  ! kluge??
     ! -- dummy
     class(GweUzeType) :: this
     integer(I4B), intent(inout) :: idx
@@ -887,12 +880,8 @@ contains
     integer(I4B) :: igwfnode
     integer(I4B) :: idiag
     real(DP) :: q
-    real(DP) :: unitadj
-    character(len=LENBUDTXT) :: flowtype  ! kluge??
     ! -- formats
 ! -----------------------------------------------------------------------------
-
-    unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
 
     ! -- INFILTRATION
     idx = idx + 1
@@ -944,31 +933,13 @@ contains
     ! -- processed last because it is calculated from the residual
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudgwf)%nlist
-    nbudterm = this%budobj%nbudterm
     call this%budobj%budterm(idx)%reset(nlist)
-     do j = 1, nlist
-      q = DZERO
-      n1 = this%flowbudptr%budterm(this%idxbudgwf)%id1(j)
-      if (this%iboundpak(n1) /= 0) then
-        igwfnode = this%flowbudptr%budterm(this%idxbudgwf)%id2(j)
-        do i = 1, nbudterm
-        flowtype = this%budobj%budterm(i)%flowtype
-        select case (trim(adjustl(flowtype)))
-          case ('THERMAL-EQUIL')
-            ! skip
-            continue
-          case ('FLOW-JA-FACE')
-            ! skip
-            continue
-          case default
-            q = q - this%budobj%budterm(i)%flow(j)
-!!            write(6,*) flowtype, this%budobj%budterm(i)%flow(j)
-!!            flush(6)
-          end select
-        end do
-        call this%budobj%budterm(idx)%update_term(n1, igwfnode, q)
-        call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
-        ! -- for gwe cell budget
+    do j = 1, nlist
+      call this%uze_theq_term(j, n1, igwfnode, q)
+      call this%budobj%budterm(idx)%update_term(n1, igwfnode, q)
+      call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
+      if (this%iboundpak(n1) /= 0) then 
+        ! -- contribution to gwe cell budget
         this%simvals(n1) = this%simvals(n1) - q
         idiag = this%dis%con%ia(igwfnode)
         flowja(idiag) = flowja(idiag) - q
@@ -1100,13 +1071,8 @@ contains
     real(DP) :: qbnd
     real(DP) :: ctmp
     real(DP) :: h, r
-    real(DP) :: unitadj
 ! ------------------------------------------------------------------------------
     ! 
-    ! -- TODO: these unitadj values should be cleaned-up as denoted in
-    !    uze_fc_expanded
-    unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
-    !
     n1 = this%flowbudptr%budterm(this%idxbudinfl)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudinfl)%id2(ientry)
     ! -- note that qbnd is negative for negative infiltration
@@ -1120,9 +1086,7 @@ contains
       h = DZERO
       r = -qbnd * ctmp
     end if
-    if (present(rrate)) rrate = qbnd * ctmp * unitadj
-!!    if (present(rhsval)) rhsval = r * unitadj
-!!    if (present(hcofval)) hcofval = h * unitadj
+    if (present(rrate)) rrate = qbnd * ctmp * this%eqnsclfac
     if (present(rhsval)) rhsval = r
     if (present(hcofval)) hcofval = h
     !
@@ -1149,20 +1113,13 @@ contains
     ! -- local
     real(DP) :: qbnd
     real(DP) :: ctmp
-    real(DP) :: unitadj
 ! ------------------------------------------------------------------------------
     ! 
-    ! -- TODO: these unitadj values should be cleaned-up as denoted in
-    !    uze_fc_expanded
-    unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
-    !
     n1 = this%flowbudptr%budterm(this%idxbudrinf)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudrinf)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudrinf)%flow(ientry)
     ctmp = this%tempinfl(n1)
-    if (present(rrate)) rrate = ctmp * qbnd * unitadj
-!!    if (present(rhsval)) rhsval = DZERO * unitadj
-!!    if (present(hcofval)) hcofval = qbnd * unitadj
+    if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd
     !
@@ -1190,14 +1147,8 @@ contains
     real(DP) :: qbnd
     real(DP) :: ctmp
     real(DP) :: omega    
-    real(DP) :: unitadj
 ! ------------------------------------------------------------------------------
     ! 
-    ! -- TODO: these unitadj values should be cleaned-up as denoted in
-    !    uze_fc_expanded
-    ! -- TODO: Latent heat will likely need to play a role here at some point
-    unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
-    !
     n1 = this%flowbudptr%budterm(this%idxbuduzet)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbuduzet)%id2(ientry)
     ! -- note that qbnd is negative for uzet
@@ -1210,9 +1161,7 @@ contains
     end if
     if (present(rrate)) &
       rrate = (omega * qbnd * this%xnewpak(n1) + &
-              (DONE - omega) * qbnd * ctmp) * unitadj   ! jiffylube: added parens so unitadj multiplies the whole expression
-!!    if (present(rhsval)) rhsval = -(DONE - omega) * qbnd * ctmp * unitadj
-!!    if (present(hcofval)) hcofval = omega * qbnd * unitadj
+              (DONE - omega) * qbnd * ctmp) * this%eqnsclfac
     if (present(rhsval)) rhsval = -(DONE - omega) * qbnd * ctmp
     if (present(hcofval)) hcofval = omega * qbnd
     !
@@ -1239,20 +1188,13 @@ contains
     ! -- local
     real(DP) :: qbnd
     real(DP) :: ctmp
-    real(DP) :: unitadj
 ! ------------------------------------------------------------------------------
     ! 
-    ! -- TODO: these unitadj values should be cleaned-up as denoted in
-    !    uze_fc_expanded
-    unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
-    !
     n1 = this%flowbudptr%budterm(this%idxbudritm)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudritm)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudritm)%flow(ientry)
     ctmp = this%tempinfl(n1)
-    if (present(rrate)) rrate = ctmp * qbnd * unitadj
-!!    if (present(rhsval)) rhsval = DZERO * unitadj
-!!    if (present(hcofval)) hcofval = qbnd * unitadj
+    if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd
     !
@@ -1260,45 +1202,48 @@ contains
     return
   end subroutine uze_ritm_term
 
-  subroutine uze_theq_term(this, ientry, n1, n2, rrate, &    ! kluge note: not used???
-                           rhsval, hcofval)
+  subroutine uze_theq_term(this, ientry, n1, n2, rrate)
 ! ******************************************************************************
 ! uze_theq_term
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: LENBUDTXT
     ! -- dummy
     class(GweUzeType) :: this
     integer(I4B), intent(in) :: ientry
     integer(I4B), intent(inout) :: n1
     integer(I4B), intent(inout) :: n2
-    real(DP), intent(inout), optional :: rrate
-    real(DP), intent(inout), optional :: rhsval
-    real(DP), intent(inout), optional :: hcofval
+    real(DP), intent(inout) :: rrate
     ! -- local
     real(DP) :: qbnd
     real(DP) :: ctmp
-    real(DP) :: h, r
-    real(DP) :: unitadj
-    integer(I4B) :: idiag
+    real(DP) :: r
+    integer(I4B) :: i
+    character(len=LENBUDTXT) :: flowtype
 ! ------------------------------------------------------------------------------
-    ! 
-    ! -- TODO: these unitadj values should be cleaned-up as denoted in
-    !    uze_fc_expanded
-    unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
     !
-!!    n1 = this%flowbudptr%budterm(this%idxbudtheq)%id1(ientry)
-!!    n2 = this%flowbudptr%budterm(this%idxbudtheq)%id2(ientry)
-    n1 = ientry                      ! kluge note: is this right in general???
-    h = DZERO
-    idiag = this%dis%con%ia(n1)
-    r = this%flowja(idiag)
-    if (present(rrate)) rrate = r * unitadj
-!!    if (present(rhsval)) rhsval = r * unitadj
-!!    if (present(hcofval)) hcofval = h * unitadj
-    if (present(rhsval)) rhsval = r
-    if (present(hcofval)) hcofval = h
+    r = DZERO
+    n1 = this%flowbudptr%budterm(this%idxbudgwf)%id1(ientry)
+    n2 = this%flowbudptr%budterm(this%idxbudgwf)%id2(ientry)
+    if (this%iboundpak(n1) /= 0) then
+      do i = 1, this%budobj%nbudterm
+        flowtype = this%budobj%budterm(i)%flowtype
+        select case (trim(adjustl(flowtype)))
+        case ('THERMAL-EQUIL')
+          ! skip
+          continue
+        case ('FLOW-JA-FACE')
+          ! skip
+          continue
+        case default
+          r = r - this%budobj%budterm(i)%flow(ientry)
+        end select
+      end do
+    end if
+    rrate = r
     !
     ! -- return
     return
@@ -1316,15 +1261,13 @@ contains
     real(DP), intent(inout), optional :: rhsval
     real(DP), intent(inout), optional :: hcofval
     ! -- local
-    real(DP) :: unitadj
 ! -----------------------------------------------------------------
     !
     call this%TspAptType%apt_stor_term(ientry, n1, n2, rrate, &
                                        rhsval, hcofval)
     !
     ! -- Apply scaling to units of energy per time
-    unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
-    if (present(rrate)) rrate = rrate * unitadj
+    if (present(rrate)) rrate = rrate * this%eqnsclfac
     !
     ! -- return
     return
@@ -1342,15 +1285,13 @@ contains
     real(DP), intent(inout), optional :: rhsval
     real(DP), intent(inout), optional :: hcofval
     ! -- local
-    real(DP) :: unitadj
 ! ------------------------------------------------------------------------------
     !
     call this%TspAptType%apt_tmvr_term(ientry, n1, n2, rrate, &
                                        rhsval, hcofval)
     !
     ! -- Apply scaling to units of energy per time
-    unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
-    if (present(rrate)) rrate = rrate * unitadj
+    if (present(rrate)) rrate = rrate * this%eqnsclfac
     !
     ! -- return
     return
@@ -1368,15 +1309,13 @@ contains
     real(DP), intent(inout), optional :: rhsval
     real(DP), intent(inout), optional :: hcofval
     ! -- local
-    real(DP) :: unitadj
 ! ------------------------------------------------------------------------------
     !
     call this%TspAptType%apt_fmvr_term(ientry, n1, n2, rrate, &
                                        rhsval, hcofval)
     !
     ! -- Apply scaling to units of energy per time
-    unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
-    if (present(rrate)) rrate = rrate * unitadj
+    if (present(rrate)) rrate = rrate * this%eqnsclfac
     !
     ! -- return
     return
@@ -1394,15 +1333,13 @@ contains
     real(DP), intent(inout), optional :: rhsval
     real(DP), intent(inout), optional :: hcofval
     ! -- local
-    real(DP) :: unitadj
 ! ------------------------------------------------------------------------------
     !
     call this%TspAptType%apt_fjf_term(ientry, n1, n2, rrate, &
                                       rhsval, hcofval)
     !
     ! -- Apply scaling to units of energy per time
-    unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
-    if (present(rrate)) rrate = rrate * unitadj
+    if (present(rrate)) rrate = rrate * this%eqnsclfac
     !
     ! -- return
     return

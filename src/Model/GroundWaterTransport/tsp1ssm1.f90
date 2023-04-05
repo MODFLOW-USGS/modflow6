@@ -50,6 +50,7 @@ module TspSsmModule
     type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
     type(TableType), pointer :: outputtab => null() !< output table object
     type(GwtSpcType), dimension(:), pointer :: ssmivec => null() !< array of stress package concentration objects
+    real(DP), pointer :: eqnsclfac => null() !< governing equation scale factor; =1. for solute; =rhow*cpw for energy
 
   contains
 
@@ -84,7 +85,8 @@ contains
   !!  and initializing the parser.
   !!
   !<
-  subroutine ssm_cr(ssmobj, name_model, inunit, iout, fmi, tsplab, gwecommon)
+  subroutine ssm_cr(ssmobj, name_model, inunit, iout, fmi, tsplab, eqnsclfac,  &
+                    gwecommon)
     ! -- dummy
     type(TspSsmType), pointer :: ssmobj !< TspSsmType object
     character(len=*), intent(in) :: name_model !< name of the model
@@ -92,6 +94,7 @@ contains
     integer(I4B), intent(in) :: iout !< fortran unit for output
     type(TspFmiType), intent(in), target :: fmi !< Transport FMI package
     type(TspLabelsType), intent(in), pointer :: tsplab !< TspLabelsType object
+    real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
     type(GweInputDataType), intent(in), target, optional :: gwecommon !< shared data container for use by multiple GWE packages
     !
     ! -- Create the object
@@ -107,6 +110,7 @@ contains
     ssmobj%inunit = inunit
     ssmobj%iout = iout
     ssmobj%fmi => fmi
+    ssmobj%eqnsclfac => eqnsclfac
     !
     ! -- Initialize block parser
     call ssmobj%parser%Initialize(ssmobj%inunit, ssmobj%iout)
@@ -305,14 +309,12 @@ contains
     real(DP) :: omega
     real(DP) :: hcoftmp
     real(DP) :: rhstmp
-    real(DP) :: unitadj
     !
     ! -- initialize
     hcoftmp = DZERO
     rhstmp = DZERO
     ctmp = DZERO
     qbnd = DZERO
-!!    unitadj = DONE
     !
     ! -- retrieve node number, qbnd and iauxpos
     n = this%fmi%gwfpackages(ipackage)%nodelist(ientry)
@@ -359,11 +361,6 @@ contains
         end if
       end if
       !
-!!      ! -- If GWE transport model type, adjust units to energy
-!!      if (this%tsplab%tsptype == "GWE") then
-!!        unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
-!!      end if
-!!      !
       ! -- Add terms based on qbnd sign
       if (qbnd <= DZERO) then
         hcoftmp = qbnd * omega
@@ -377,14 +374,7 @@ contains
     ! -- set requested values
     if (present(hcofval)) hcofval = hcoftmp
     if (present(rhsval)) rhsval = rhstmp
-    if (present(rrate)) then
-      if (this%tsplab%tsptype /= 'GWE') then     ! kluge note: best to avoid checks like this if possible
-        rrate = hcoftmp * ctmp - rhstmp
-      else
-        unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
-        rrate = (hcoftmp * ctmp - rhstmp) * unitadj
-      endif
-    end if
+    if (present(rrate)) rrate = (hcoftmp * ctmp - rhstmp) * this%eqnsclfac
     if (present(cssm)) cssm = ctmp
     if (present(qssm)) qssm = qbnd
     !

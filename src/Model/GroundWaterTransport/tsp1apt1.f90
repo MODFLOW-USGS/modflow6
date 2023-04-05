@@ -108,6 +108,7 @@ module TspAptModule
     integer(I4B), pointer :: nconcbudssm => null() !< number of concbudssm terms (columns)
     real(DP), dimension(:, :), pointer, contiguous :: concbudssm => null() !< user specified concentrations (or temperatures) for flow terms
     real(DP), dimension(:), pointer, contiguous :: qmfrommvr => null() !< a mass or energy flow coming from the mover that needs to be added
+    real(DP), pointer :: eqnsclfac => null() !< governing equation scale factor; =1. for solute; =rhow*cpw for energy
     !
     ! -- pointer to flow package boundary
     type(BndType), pointer :: flowpackagebnd => null()
@@ -1378,7 +1379,6 @@ contains
     call mem_deallocate(this%nconcbudssm)
     call mem_deallocate(this%idxprepak)
     call mem_deallocate(this%idxlastpak)
-
     !
     ! -- deallocate scalars in NumericalPackageType
     call this%BndType%bnd_da()
