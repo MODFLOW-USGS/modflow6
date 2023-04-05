@@ -3,9 +3,9 @@ import os
 import flopy
 import numpy as np
 import pytest
-from cross_section_functions import get_depths
 from framework import TestFramework
 from simulation import TestSimulation
+from cross_section_functions import get_depths
 
 paktest = "sfr"
 
@@ -220,6 +220,10 @@ def eval_npointdepth(sim):
         obs["INFLOW"], np.abs(obs["OUTFLOW"])
     ), "inflow not equal to outflow"
 
+    #d = flow_to_depth_wide(
+    #    obs["WIDTH"],
+    #    inflow,
+    #)
     d = []
     for n in range(nper):
         x0 = 0.0

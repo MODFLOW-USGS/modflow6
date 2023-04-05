@@ -125,7 +125,7 @@ def get_model(ws, name, timeseries=False):
             0,
             (1 - 1, 4 - 1, 1 - 1),
             3.628e001,
-            5.0,
+            1.0,
             1.0e-003,
             0.0,
             1.0,
@@ -141,7 +141,7 @@ def get_model(ws, name, timeseries=False):
             1,
             (1 - 1, 4 - 1, 2 - 1),
             1.061e002,
-            5.0,
+            1.0,
             1.0e-003,
             0.0,
             1.0,
@@ -157,7 +157,7 @@ def get_model(ws, name, timeseries=False):
             2,
             (1 - 1, 4 - 1, 3 - 1),
             6.333e001,
-            5.0,
+            1.0,
             1.0e-003,
             0.0,
             1.0,
@@ -173,7 +173,7 @@ def get_model(ws, name, timeseries=False):
             3,
             (1 - 1, 5 - 1, 3 - 1),
             4.279e001,
-            5.0,
+            1.0,
             1.0e-003,
             0.0,
             1.0,
@@ -189,7 +189,7 @@ def get_model(ws, name, timeseries=False):
             4,
             (1 - 1, 5 - 1, 4 - 1),
             6.532e001,
-            5.0,
+            1.0,
             1.0e-003,
             0.0,
             1.0,
@@ -205,7 +205,7 @@ def get_model(ws, name, timeseries=False):
             5,
             (1 - 1, 4 - 1, 1 - 1),
             10.0,
-            5.0,
+            1.0,
             1.0e-003,
             0.0,
             1.0,
@@ -221,7 +221,7 @@ def get_model(ws, name, timeseries=False):
             6,
             (1 - 1, 4 - 1, 2 - 1),
             10.0,
-            5.0,
+            1.0,
             1.0e-003,
             0.0,
             1.0,
@@ -237,7 +237,7 @@ def get_model(ws, name, timeseries=False):
             7,
             (1 - 1, 4 - 1, 3 - 1),
             10.0,
-            5.0,
+            1.0,
             1.0e-003,
             0.0,
             1.0,
@@ -253,7 +253,7 @@ def get_model(ws, name, timeseries=False):
             8,
             (1 - 1, 4 - 1, 3 - 1),
             10.0,
-            5.0,
+            1.0,
             1.0e-003,
             0.0,
             1.0,
@@ -269,7 +269,7 @@ def get_model(ws, name, timeseries=False):
             9,
             (1 - 1, 5 - 1, 4 - 1),
             10.0,
-            5.0,
+            1.0,
             1.0e-003,
             0.0,
             1.0,
@@ -580,7 +580,7 @@ def eval_model(sim):
 
     v0 = cobj0.get_data(totim=1.0, text="EXT-OUTFLOW")[0]
     v0 = v0["q"][4:]
-    check = np.array([-0.81018072, -5e-2, -2.5e-2, -5e-2, -2.0e-2, -5e-2])
+    check = np.array([-0.80871, -5e-2, -2.5e-2, -5e-2, -2.0e-2, -5e-2])
     assert np.allclose(v0, check), "EXT-OUTFLOW failed"
 
     v0 = cobj0.get_data(totim=1.0, text="FROM-MVR")[0]

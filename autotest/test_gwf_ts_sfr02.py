@@ -113,19 +113,17 @@ def get_model(ws, name, timeseries=False):
     )
 
     # sfr file
-    rwid = 5.0
-    mann_n = 0.1
     packagedata = [
         [
             0,
             (1 - 1, 4 - 1, 1 - 1),
             3.628e001,
-            rwid,
+            1.0,
             1.0e-003,
             0.0,
             1.0,
             1.0e-4,
-            mann_n,
+            1.0e-1,
             2,
             0.0,
             1,
@@ -136,12 +134,12 @@ def get_model(ws, name, timeseries=False):
             6,
             (1 - 1, 4 - 1, 2 - 1),
             1.061e002,
-            rwid,
+            1.0,
             1.0e-003,
             0.0,
             1.0,
             1.0e-4,
-            mann_n,
+            1.0e-1,
             3,
             1.0,
             1,
@@ -152,12 +150,12 @@ def get_model(ws, name, timeseries=False):
             2,
             (1 - 1, 4 - 1, 3 - 1),
             6.333e001,
-            rwid,
+            1.0,
             1.0e-003,
             0.0,
             1.0,
             1.0e-4,
-            mann_n,
+            1.0e-1,
             4,
             1.0,
             2,
@@ -168,12 +166,12 @@ def get_model(ws, name, timeseries=False):
             3,
             (1 - 1, 5 - 1, 3 - 1),
             4.279e001,
-            rwid,
+            1.0,
             1.0e-003,
             0.0,
             1.0,
             1.0e-4,
-            mann_n,
+            1.0e-1,
             3,
             1.0,
             1,
@@ -184,12 +182,12 @@ def get_model(ws, name, timeseries=False):
             4,
             (1 - 1, 5 - 1, 4 - 1),
             6.532e001,
-            rwid,
+            1.0,
             1.0e-003,
             0.0,
             1.0,
             1.0e-4,
-            mann_n,
+            1.0e-1,
             1,
             1.0,
             0,
@@ -200,12 +198,12 @@ def get_model(ws, name, timeseries=False):
             5,
             (1 - 1, 4 - 1, 1 - 1),
             10.0,
-            rwid,
+            1.0,
             1.0e-003,
             0.0,
             1.0,
             0.0,
-            mann_n,
+            1.0e-1,
             1,
             0.0,
             0,
@@ -216,12 +214,12 @@ def get_model(ws, name, timeseries=False):
             1,
             (1 - 1, 4 - 1, 2 - 1),
             10.0,
-            rwid,
+            1.0,
             1.0e-003,
             0.0,
             1.0,
             0.0,
-            mann_n,
+            1.0e-1,
             1,
             0.0,
             0,
@@ -232,12 +230,12 @@ def get_model(ws, name, timeseries=False):
             7,
             (1 - 1, 4 - 1, 3 - 1),
             10.0,
-            rwid,
+            1.0,
             1.0e-003,
             0.0,
             1.0,
             0.0,
-            mann_n,
+            1.0e-1,
             1,
             0.0,
             0,
@@ -248,12 +246,12 @@ def get_model(ws, name, timeseries=False):
             8,
             (1 - 1, 4 - 1, 3 - 1),
             10.0,
-            rwid,
+            1.0,
             1.0e-003,
             0.0,
             1.0,
             0.0,
-            mann_n,
+            1.0e-1,
             1,
             0.0,
             0,
@@ -264,12 +262,12 @@ def get_model(ws, name, timeseries=False):
             9,
             (1 - 1, 5 - 1, 4 - 1),
             10.0,
-            rwid,
+            1.0,
             1.0e-003,
             0.0,
             1.0,
             0.0,
-            mann_n,
+            1.0e-1,
             1,
             0.0,
             0,
@@ -570,7 +568,7 @@ def eval_model(sim):
             q.append(v0["q"][idx])
     v0 = np.array(q)
     check = np.ones(v0.shape, dtype=float) * 5e-2
-    check[1] = 0.7680612
+    check[1] = 0.76743
     check[-2] = 4e-2
     assert np.allclose(v0, check), "FLOW-JA-FACE failed"
 
@@ -580,7 +578,7 @@ def eval_model(sim):
         if node in nodes:
             q.append(v0["q"][idx])
     v0 = np.array(q)
-    check = np.array([-2.5e-2, -0.81018072, -5e-2, -5e-2, -2.0e-2, -5e-2])
+    check = np.array([-2.5e-2, -0.80871, -5e-2, -5e-2, -2.0e-2, -5e-2])
     assert np.allclose(v0, check), "EXT-OUTFLOW failed"
 
     v0 = cobj0.get_data(totim=1.0, text="FROM-MVR")[0]

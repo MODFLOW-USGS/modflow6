@@ -152,7 +152,7 @@ def build_model(idx, dir):
     rtp = 0.0
     rbth = 0.1
     rhk = 0.01
-    rman = 0.03
+    rman = 1.0
     ncon = 2
     ustrf = 1.0
     ndv = 0

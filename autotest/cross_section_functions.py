@@ -2,17 +2,16 @@ import numpy as np
 
 # power for Manning's hydraulic radius term
 mpow = 2.0 / 3.0
-mpowfivethirds = 5.0 / 3.0
 
 
 def calculate_rectchan_mannings_discharge(
-    conversion_factor,
-    roughness,
-    slope,
-    width,
-    depth,
-    left_vert=False,
-    right_vert=False,
+        conversion_factor,
+        roughness,
+        slope,
+        width,
+        depth,
+        left_vert=False,
+        right_vert=False,
 ):
     """
     Calculate Manning's discharge for a rectangular channel.
@@ -67,8 +66,8 @@ def get_wetted_station(
 
 
 def get_wetted_perimeter(
-    x0, x1, h0, h1, depth, incld_vert_l=False, incld_vert_r=False
-):
+        x0, x1, h0, h1, depth, incld_vert_l=False, incld_vert_r=False
+    ):
     # -- calculate the minimum and maximum depth
     hmin = min(h0, h1)
     hmax = max(h0, h1)
@@ -111,12 +110,8 @@ def get_wetted_area(x0, x1, h0, h1, depth):
         if depth > hmax:
             area = xlen * (depth - hmax)
         # -- add the area below zmax
-        if hmax != hmin:
-            if depth > hmax:
-                area += 0.5 * (hmax - hmin) * xlen
-            elif depth > hmin:
-                x0, x1 = get_wetted_station(x0, x1, h0, h1, depth)
-                area += 0.5 * (depth - hmin) * (x1 - x0)
+        if hmax != hmin and depth > hmin:
+            area += 0.5 * (depth - hmin)
     return area
 
 
@@ -159,7 +154,6 @@ def wetted_perimeter(
 ):
     perimeter = 0.0
     if x.shape[0] == 1:
-        # Use width only, no vertically wetted sides
         perimeter = x[0]
     else:
         for idx in range(0, x.shape[0] - 1):
@@ -167,28 +161,14 @@ def wetted_perimeter(
             h0, h1 = h[idx], h[idx + 1]
 
             # get station data
-            xs0, xs1 = get_wetted_station(x0, x1, h0, h1, depth)
-
-            # if inundated edge segment, factor in vertically oriented channel face
-            incld_vert_l = False
-            incld_vert_r = False
-            if idx == 0:
-                if depth > h0:
-                    incld_vert_l = True
-            if idx + 1 == x.shape[0] - 1:
-                if depth > h1:
-                    incld_vert_r = True
+            x0, x1 = get_wetted_station(x0, x1, h0, h1, depth)
 
             # get wetted perimeter
-            perimeter += get_wetted_perimeter(
-                xs0, xs1, h0, h1, depth, incld_vert_l, incld_vert_r
-            )
+            perimeter += get_wetted_perimeter(x0, x1, h0, h1, depth)
 
             # write to screen
             if verbose:
-                print(
-                    f"{idx}->{idx + 1} ({xs0},{xs1}) - perimeter={xs1 - xs0}"
-                )
+                print(f"{idx}->{idx + 1} ({x0},{x1}) - perimeter={x1 - x0}")
 
     return perimeter
 
@@ -207,7 +187,6 @@ def manningsq(
         q = 0.0
         for i0 in range(x.shape[0] - 1):
             i1 = i0 + 1
-
             # if inundated edge segment, factor in vertically oriented channel face(s)
             incld_vert_l = False
             incld_vert_r = False
@@ -221,21 +200,20 @@ def manningsq(
             perimeter = get_wetted_perimeter(
                 x[i0], x[i1], h[i0], h[i1], depth, incld_vert_l, incld_vert_r
             )
+
             area = get_wetted_area(x[i0], x[i1], h[i0], h[i1], depth)
             if perimeter > 0.0:
                 radius = area / perimeter
                 q += (
-                    conv * area * radius ** mpow * slope ** 0.5 / roughness[i0]
+                    conv * area * radius**mpow * slope**0.5 / roughness[i0]
                 )
     else:
-        width = wetted_perimeter(x, h, depth)
-        q = (
-            conv
-            * width
-            * depth ** mpowfivethirds
-            * slope ** 0.5
-            / roughness[0]
-        )
+        perimeter = wetted_perimeter(x, h, depth)
+        area = wetted_area(x, h, depth)
+        radius = 0.0
+        if perimeter > 0.0:
+            radius = area / perimeter
+        q = conv * area * radius**mpow * slope**0.5 / roughness[0]
     return q
 
 
@@ -288,7 +266,6 @@ def qtodepth(
         slope=slope,
         conv=conv,
     )
-
     r = q0 - q
 
     iter = 0
@@ -306,8 +283,6 @@ def qtodepth(
         dq = q1 - q0
         if dq != 0.0:
             derv = dd / (q1 - q0)
-            if derv > 10:
-                derv = 10
         else:
             derv = 0.0
         h0 -= derv * r
