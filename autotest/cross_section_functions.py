@@ -5,13 +5,13 @@ mpow = 2.0 / 3.0
 
 
 def calculate_rectchan_mannings_discharge(
-        conversion_factor,
-        roughness,
-        slope,
-        width,
-        depth,
-        left_vert=False,
-        right_vert=False,
+    conversion_factor,
+    roughness,
+    slope,
+    width,
+    depth,
+    left_vert=False,
+    right_vert=False,
 ):
     """
     Calculate Manning's discharge for a rectangular channel.
@@ -21,7 +21,7 @@ def calculate_rectchan_mannings_discharge(
     hydrad = get_wetted_area(0, 0 + width, 0, 0, depth) / get_wetted_perimeter(
         0, 0 + width, 0, 0, depth, left_vert, right_vert
     )
-    return conversion_factor * area * hydrad ** mpow * slope ** 0.5 / roughness
+    return conversion_factor * area * hydrad**mpow * slope**0.5 / roughness
 
 
 # n-point cross-section functions
@@ -66,8 +66,8 @@ def get_wetted_station(
 
 
 def get_wetted_perimeter(
-        x0, x1, h0, h1, depth, incld_vert_l=False, incld_vert_r=False
-    ):
+    x0, x1, h0, h1, depth, incld_vert_l=False, incld_vert_r=False
+):
     # -- calculate the minimum and maximum depth
     hmin = min(h0, h1)
     hmax = max(h0, h1)
@@ -94,7 +94,7 @@ def get_wetted_perimeter(
     if incld_vert_r:
         vlen += depth - h1
 
-    return np.sqrt(xlen ** 2.0 + dlen ** 2.0) + vlen
+    return np.sqrt(xlen**2.0 + dlen**2.0) + vlen
 
 
 def get_wetted_area(x0, x1, h0, h1, depth):
@@ -110,8 +110,12 @@ def get_wetted_area(x0, x1, h0, h1, depth):
         if depth > hmax:
             area = xlen * (depth - hmax)
         # -- add the area below zmax
-        if hmax != hmin and depth > hmin:
-            area += 0.5 * (depth - hmin)
+        if hmax != hmin:
+            if depth > hmax:
+                area += 0.5 * (hmax - hmin) * xlen
+            elif depth > hmin:
+                x0, x1 = get_wetted_station(x0, x1, h0, h1, depth)
+                area += 0.5 * (depth - hmin) * (x1 - x0)
     return area
 
 

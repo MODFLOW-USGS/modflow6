@@ -47,6 +47,7 @@ for n in range(nper):
         "h": np.array([0.0, 0.0], dtype=float),
     }
 
+
 # depth as a function of flow for a wide cross-section
 def flow_to_depth_wide(rwid, q):
     return ((q * roughness) / (conversion_fact * rwid * np.sqrt(slope))) ** 0.6
@@ -54,7 +55,6 @@ def flow_to_depth_wide(rwid, q):
 
 #
 def build_model(idx, ws):
-
     # build MODFLOW 6 files
     name = ex[idx]
     sim = flopy.mf6.MFSimulation(
@@ -220,10 +220,6 @@ def eval_npointdepth(sim):
         obs["INFLOW"], np.abs(obs["OUTFLOW"])
     ), "inflow not equal to outflow"
 
-    #d = flow_to_depth_wide(
-    #    obs["WIDTH"],
-    #    inflow,
-    #)
     d = []
     for n in range(nper):
         x0 = 0.0
