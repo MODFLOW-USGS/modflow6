@@ -66,7 +66,6 @@ module GweUzeModule
     procedure :: apt_allocate_arrays => uze_allocate_arrays
     procedure :: find_apt_package => find_uze_package
     procedure :: apt_fc_expanded => uze_fc_expanded
-    procedure :: apt_cfupdate => uze_cfupdate
     procedure :: pak_solve => uze_solve
     procedure :: pak_get_nbudterms => uze_get_nbudterms
     procedure :: pak_setup_budobj => uze_setup_budobj
@@ -76,10 +75,6 @@ module GweUzeModule
     procedure :: uze_uzet_term
     procedure :: uze_ritm_term
     procedure :: uze_theq_term
-    procedure :: apt_stor_term => uze_stor_term
-    procedure :: apt_tmvr_term => uze_tmvr_term
-    procedure :: apt_fmvr_term => uze_fmvr_term
-    procedure :: apt_fjf_term => uze_fjf_term
     procedure :: pak_df_obs => uze_df_obs
     procedure :: pak_rp_obs => uze_rp_obs
     procedure :: pak_bd_obs => uze_bd_obs
@@ -647,37 +642,6 @@ contains
     ! -- Return
     return
   end subroutine uze_fc_expanded
-
-  subroutine uze_cfupdate(this)
-! ******************************************************************************
-! uze_cfupdate -- calculate package hcof and rhs so gwt budget is calculated
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    ! -- dummy
-    class(GweUzeType) :: this
-    ! -- local
-    integer(I4B) :: j, n
-    real(DP) :: qbnd
-    real(DP) :: omega
-! ------------------------------------------------------------------------------
-    !
-    ! -- Calculate hcof and rhs terms so GWF exchanges are calculated correctly
-    ! -- go through each apt-gwf connection and calculate
-    !    rhs and hcof terms for gwt/gwe matrix rows
-    call this%TspAptType%apt_cfupdate()
-    !
-    ! -- Apply scaling to units of energy per time
-    do j = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
-      this%hcof(j) = this%hcof(j) * this%eqnsclfac
-      this%rhs(j) = this%rhs(j) * this%eqnsclfac
-    end do
-    !
-    ! -- Return
-    return
-  end subroutine uze_cfupdate
 
   subroutine uze_solve(this)   ! kluge note: no explicit solve for uze
 ! ******************************************************************************
@@ -1248,102 +1212,6 @@ contains
     ! -- return
     return
   end subroutine uze_theq_term
-
-  subroutine uze_stor_term(this, ientry, n1, n2, rrate, &
-                           rhsval, hcofval)
-    ! -- modules
-    ! -- dummy
-    class(GweUzeType) :: this
-    integer(I4B), intent(in) :: ientry
-    integer(I4B), intent(inout) :: n1
-    integer(I4B), intent(inout) :: n2
-    real(DP), intent(inout), optional :: rrate
-    real(DP), intent(inout), optional :: rhsval
-    real(DP), intent(inout), optional :: hcofval
-    ! -- local
-! -----------------------------------------------------------------
-    !
-    call this%TspAptType%apt_stor_term(ientry, n1, n2, rrate, &
-                                       rhsval, hcofval)
-    !
-    ! -- Apply scaling to units of energy per time
-    if (present(rrate)) rrate = rrate * this%eqnsclfac
-    !
-    ! -- return
-    return
-  end subroutine uze_stor_term
-
-  subroutine uze_tmvr_term(this, ientry, n1, n2, rrate, &
-                           rhsval, hcofval)
-    ! -- modules
-    ! -- dummy
-    class(GweUzeType) :: this
-    integer(I4B), intent(in) :: ientry
-    integer(I4B), intent(inout) :: n1
-    integer(I4B), intent(inout) :: n2
-    real(DP), intent(inout), optional :: rrate
-    real(DP), intent(inout), optional :: rhsval
-    real(DP), intent(inout), optional :: hcofval
-    ! -- local
-! ------------------------------------------------------------------------------
-    !
-    call this%TspAptType%apt_tmvr_term(ientry, n1, n2, rrate, &
-                                       rhsval, hcofval)
-    !
-    ! -- Apply scaling to units of energy per time
-    if (present(rrate)) rrate = rrate * this%eqnsclfac
-    !
-    ! -- return
-    return
-  end subroutine uze_tmvr_term
-
-  subroutine uze_fmvr_term(this, ientry, n1, n2, rrate, &
-                           rhsval, hcofval)
-    ! -- modules
-    ! -- dummy
-    class(GweUzeType) :: this
-    integer(I4B), intent(in) :: ientry
-    integer(I4B), intent(inout) :: n1
-    integer(I4B), intent(inout) :: n2
-    real(DP), intent(inout), optional :: rrate
-    real(DP), intent(inout), optional :: rhsval
-    real(DP), intent(inout), optional :: hcofval
-    ! -- local
-! ------------------------------------------------------------------------------
-    !
-    call this%TspAptType%apt_fmvr_term(ientry, n1, n2, rrate, &
-                                       rhsval, hcofval)
-    !
-    ! -- Apply scaling to units of energy per time
-    if (present(rrate)) rrate = rrate * this%eqnsclfac
-    !
-    ! -- return
-    return
-  end subroutine uze_fmvr_term
-
-  subroutine uze_fjf_term(this, ientry, n1, n2, rrate, &
-                          rhsval, hcofval)
-    ! -- modules
-    ! -- dummy
-    class(GweUzeType) :: this
-    integer(I4B), intent(in) :: ientry
-    integer(I4B), intent(inout) :: n1
-    integer(I4B), intent(inout) :: n2
-    real(DP), intent(inout), optional :: rrate
-    real(DP), intent(inout), optional :: rhsval
-    real(DP), intent(inout), optional :: hcofval
-    ! -- local
-! ------------------------------------------------------------------------------
-    !
-    call this%TspAptType%apt_fjf_term(ientry, n1, n2, rrate, &
-                                      rhsval, hcofval)
-    !
-    ! -- Apply scaling to units of energy per time
-    if (present(rrate)) rrate = rrate * this%eqnsclfac
-    !
-    ! -- return
-    return
-  end subroutine uze_fjf_term
 
   subroutine uze_df_obs(this)
 ! ******************************************************************************

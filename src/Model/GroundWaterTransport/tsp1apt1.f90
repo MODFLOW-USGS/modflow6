@@ -977,8 +977,8 @@ contains
         qbnd = this%flowbudptr%budterm(this%idxbudgwf)%flow(j)
         omega = DZERO
         if (qbnd < DZERO) omega = DONE
-        this%hcof(j) = -(DONE - omega) * qbnd
-        this%rhs(j) = omega * qbnd * this%xnewpak(n)
+        this%hcof(j) = -(DONE - omega) * qbnd * this%eqnsclfac
+        this%rhs(j) = omega * qbnd * this%xnewpak(n) * this%eqnsclfac
       end if
     end do
     !
@@ -2532,7 +2532,9 @@ contains
     call this%get_volumes(n1, v1, v0, delt)
     c0 = this%xoldpak(n1)
     c1 = this%xnewpak(n1)
-    if (present(rrate)) rrate = -c1 * v1 / delt + c0 * v0 / delt
+    if (present(rrate)) then
+      rrate = (-c1 * v1 / delt + c0 * v0 / delt) * this%eqnsclfac
+    end if
     if (present(rhsval)) rhsval = -c0 * v0 / delt
     if (present(hcofval)) hcofval = -v1 / delt
     !
@@ -2561,7 +2563,7 @@ contains
     n2 = this%flowbudptr%budterm(this%idxbudtmvr)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudtmvr)%flow(ientry)
     ctmp = this%xnewpak(n1)
-    if (present(rrate)) rrate = ctmp * qbnd
+    if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd
     !
@@ -2585,7 +2587,7 @@ contains
     ! -- Calculate MVR-related terms 
     n1 = ientry
     n2 = n1
-    if (present(rrate)) rrate = this%qmfrommvr(n1)
+    if (present(rrate)) rrate = this%qmfrommvr(n1) * this%eqnsclfac
     if (present(rhsval)) rhsval = this%qmfrommvr(n1)
     if (present(hcofval)) hcofval = DZERO
     !
@@ -2617,7 +2619,7 @@ contains
     else
       ctmp = this%xnewpak(n2)
     end if
-    if (present(rrate)) rrate = ctmp * qbnd
+    if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
