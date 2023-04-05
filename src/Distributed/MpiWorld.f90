@@ -1,17 +1,20 @@
 module MpiWorldModule
-  use KindModule, only: I4B
+  use KindModule, only: I4B, LGP
   use SimVariablesModule, only: nr_procs, proc_id
   use mpi
   implicit none
   private
 
   public :: get_mpi_world
-  integer(I4B), public :: MF6_COMM_WORLD = -1
 
   type, public :: MpiWorldType
-    integer(I4B) :: mpi_rank
-    integer(I4B) :: world_size
+    integer(I4B) :: mpi_rank !< the id for this process
+    integer(I4B) :: world_size !< the total nr. of processes in the MPI job
+    integer(I4B), pointer :: comm => null() !< the MF6 communicator, either was it passed to
+                                            !! use through the API, or we created MPI_COMM_WORLD
   contains
+    procedure :: has_comm => mpiw_has_comm
+    procedure :: set_comm => mpiw_set_comm
     procedure :: init => mpiw_init
     procedure :: begin_order => mpiw_begin_order
     procedure :: end_order => mpiw_end_order
@@ -33,13 +36,34 @@ contains
 
   end function get_mpi_world
 
+  !> @brief Returns true when a communicator has been set.
+  !<
+  function mpiw_has_comm(this) result(has_comm)
+    class(MpiWorldType) :: this
+    logical(LGP) :: has_comm
+
+    has_comm = associated(this%comm)
+
+  end function mpiw_has_comm
+
+  !> @brief Sets a communicator on this world, can
+  !< be done only once.
+  subroutine mpiw_set_comm(this, comm)
+    class(MpiWorldType) :: this
+    integer(I4B) :: comm
+
+    allocate (this%comm)
+    this%comm = comm
+
+  end subroutine mpiw_set_comm
+
   subroutine mpiw_init(this)
     class(MpiWorldType) :: this
     ! local
     integer :: ierr
 
-    call MPI_Comm_size(MF6_COMM_WORLD, this%world_size, ierr)
-    call MPI_Comm_rank(MF6_COMM_WORLD, this%mpi_rank, ierr)
+    call MPI_Comm_size(this%comm, this%world_size, ierr)
+    call MPI_Comm_rank(this%comm, this%mpi_rank, ierr)
     nr_procs = this%world_size
     proc_id = this%mpi_rank
 
@@ -54,7 +78,7 @@ contains
 
     if (this%mpi_rank > 0) then
       call mpi_recv(buffer, 1, MPI_INTEGER, this%mpi_rank - 1, this%mpi_rank, &
-                    MF6_COMM_WORLD, status, ierr)
+                    this%comm, status, ierr)
     end if
 
   end subroutine mpiw_begin_order
@@ -66,13 +90,17 @@ contains
 
     if (this%mpi_rank < this%world_size - 1) then
       call mpi_send(this%mpi_rank, 1, MPI_INTEGER, this%mpi_rank + 1, &
-                    this%mpi_rank + 1, MF6_COMM_WORLD, ierr)
+                    this%mpi_rank + 1, this%comm, ierr)
     end if
 
   end subroutine mpiw_end_order
 
   subroutine mpiw_destroy(this)
     class(MpiWorldType) :: this
+
+    if (associated(this%comm)) then
+      deallocate (this%comm)
+    end if
 
     if (associated(global_mpi_world)) then
       deallocate (global_mpi_world)

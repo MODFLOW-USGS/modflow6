@@ -42,34 +42,52 @@ contains
     integer :: ierr
     character(len=*), parameter :: petsc_db_file = '.petscrc'
     logical(LGP) :: petsc_db_exists, wait_dbg, is_parallel_mode
-    class(MpiWorldType), pointer :: mpi_world
-    ! if PETSc we need their initialize
+    type(MpiWorldType), pointer :: mpi_world
+
     wait_dbg = .false.
+    mpi_world => get_mpi_world()
+
+    ! if PETSc we need their initialize
 #if defined(__WITH_PETSC__)
+    ! PetscInitialize calls MPI_Init only when it is not called yet,
+    ! which could be through the API. If it is already called, we
+    ! should assign the MPI communicator to PETSC_COMM_WORLD first
+    ! (PETSc manual)
+    if (mpi_world%has_comm()) then
+      PETSC_COMM_WORLD = mpi_world%comm
+    end if
+
     inquire (file=petsc_db_file, exist=petsc_db_exists)
     if (.not. petsc_db_exists) then
       write (*, *) 'WARNING. PETSc database file not found: '//petsc_db_file
       call PetscInitialize(ierr)
+      CHKERRQ(ierr)
     else
       call PetscInitialize(petsc_db_file, ierr)
+      CHKERRQ(ierr)
     end if
-    MF6_COMM_WORLD = PETSC_COMM_WORLD
-    CHKERRQ(ierr)
+
+    if (.not. mpi_world%has_comm()) then
+      call mpi_world%set_comm(PETSC_COMM_WORLD)
+    end if
+
     call PetscOptionsHasName(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, &
                              '-wait_dbg', wait_dbg, ierr)
+    CHKERRQ(ierr)
     call PetscOptionsHasName(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, &
                              '-p', is_parallel_mode, ierr)
     CHKERRQ(ierr)
 #else
-    call MPI_Init(ierr)
-    MF6_COMM_WORLD = MPI_COMM_WORLD
+    if (.not. mpi_world%has_comm()) then
+      call MPI_Init(ierr)
+      call mpi_world%set_comm(MPI_COMM_WORLD)
+    end if
 #endif
 
-    mpi_world => get_mpi_world()
     call mpi_world%init()
 
-    call MPI_Comm_size(MF6_COMM_WORLD, nr_procs, ierr)
-    call MPI_Comm_rank(MF6_COMM_WORLD, proc_id, ierr)
+    call MPI_Comm_size(mpi_world%comm, nr_procs, ierr)
+    call MPI_Comm_rank(mpi_world%comm, proc_id, ierr)
 
     ! possibly wait to attach debugger here
     if (wait_dbg) call this%wait_for_debugger()
@@ -88,13 +106,15 @@ contains
     ! local
     integer :: ierr
     integer(I4B) :: icnt
+    type(MpiWorldType), pointer :: mpi_world
 
+    mpi_world => get_mpi_world()
     if (proc_id == 0) then
       icnt = 0
       write (*, *) 'Hit enter to continue...'
       read (*, *)
     end if
-    call MPI_Barrier(MF6_COMM_WORLD, ierr)
+    call MPI_Barrier(mpi_world%comm, ierr)
 
   end subroutine wait_for_debugger
 
@@ -105,6 +125,8 @@ contains
 
     ! finish mpi
 #if defined(__WITH_PETSC__)
+    ! NB: PetscFinalize calls MPI_Finalize only when MPI_Init
+    ! was called before PetscInitialize
     call PetscFinalize(ierr)
     CHKERRQ(ierr)
 #else

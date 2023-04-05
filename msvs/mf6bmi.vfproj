@@ -53,5 +53,13 @@
 		<File RelativePath="..\srcbmi\mf6bmiError.f90"/>
 		<File RelativePath="..\srcbmi\mf6bmiGrid.f90"/>
 		<File RelativePath="..\srcbmi\mf6bmiUtil.f90"/>
-		<File RelativePath="..\srcbmi\mf6xmi.f90"/></Filter></Files>
+		<File RelativePath="..\srcbmi\mf6xmi.F90">
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File></Filter></Files>
 	<Globals/></VisualStudioProject>

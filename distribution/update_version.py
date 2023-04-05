@@ -231,7 +231,6 @@ def update_version_tex(
             + "{Version \\modflowversion---\\modflowdate}"
         )
         f.write(f"{line}\n")
-        f.close()
 
     log_update(path, release_type, version)
 
