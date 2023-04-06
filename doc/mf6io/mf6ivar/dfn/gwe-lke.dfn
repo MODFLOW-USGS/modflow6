@@ -1,4 +1,4 @@
-# --------------------- gwt lkt options ---------------------
+# --------------------- gwe lke options ---------------------
 # flopy multi-package
 
 block options
@@ -8,7 +8,7 @@ shape
 reader urword
 optional true
 longname keyword to specify name of corresponding flow package
-description keyword to specify the name of the corresponding flow package.  If not specified, then the corresponding flow package must have the same name as this advanced transport package (the name associated with this package in the GWT name file).
+description keyword to specify the name of the corresponding flow package.  If not specified, then the corresponding flow package must have the same name as this advanced transport package (the name associated with this package in the GWE name file).
 
 block options
 name auxiliary
@@ -17,7 +17,7 @@ shape (naux)
 reader urword
 optional true
 longname keyword to specify aux variables
-description REPLACE auxnames {'{#1}': 'Groundwater Transport'}
+description REPLACE auxnames {'{#1}': 'Groundwater Energy Transport'}
 
 block options
 name flow_package_auxiliary_name
@@ -25,8 +25,8 @@ type string
 shape
 reader urword
 optional true
-longname keyword to specify name of concentration auxiliary variable in flow package
-description keyword to specify the name of an auxiliary variable in the corresponding flow package.  If specified, then the simulated concentrations from this advanced transport package will be copied into the auxiliary variable specified with this name.  Note that the flow package must have an auxiliary variable with this name or the program will terminate with an error.  If the flows for this advanced transport package are read from a file, then this option will have no effect.
+longname keyword to specify name of temperature auxiliary variable in flow package
+description keyword to specify the name of an auxiliary variable in the corresponding flow package.  If specified, then the simulated temperatures from this advanced transport package will be copied into the auxiliary variable specified with this name.  Note that the flow package must have an auxiliary variable with this name or the program will terminate with an error.  If the flows for this advanced transport package are read from a file, then this option will have no effect.
 
 block options
 name boundnames
@@ -38,6 +38,16 @@ longname
 description REPLACE boundnames {'{#1}': 'lake'}
 
 block options
+name latentheatvapor
+type double precision
+reader urword
+optional true
+longname latent heat of vaporation of water
+description latent heat of vaporization of water. For freshwater at 25$^{\circ}C$, the latent heat of vaporization is approximately 2,450.0 kJ/kg in SI units.  Between 0 and 100$^{\circ}C$, latent heat of vaporization may vary by as much as 10 percent, but is held constant in the initial release of the GWE model.  By default, the latent heat of vaporization is 2,450.0 kJ/kg.
+default_value 2545 
+
+
+block options
 name print_input
 type keyword
 reader urword
@@ -46,12 +56,12 @@ longname print input to listing file
 description REPLACE print_input {'{#1}': 'lake'}
 
 block options
-name print_concentration
+name print_temperature
 type keyword
 reader urword
 optional true
-longname print calculated concentrations to listing file
-description REPLACE print_concentration {'{#1}': 'lake', '{#2}': 'concentration', '{#3}': 'CONCENTRATION'}
+longname print calculated temperatures to listing file
+description REPLACE print_temperature {'{#1}': 'lake', '{#2}': 'temperature', '{#3}': 'TEMPERATURE'}
 
 block options
 name print_flows
@@ -70,8 +80,8 @@ longname save lake flows to budget file
 description REPLACE save_flows {'{#1}': 'lake'}
 
 block options
-name concentration_filerecord
-type record concentration fileout concfile
+name temperature_filerecord
+type record temperature fileout tempfile
 shape
 reader urword
 tagged true
@@ -80,7 +90,7 @@ longname
 description
 
 block options
-name concentration
+name temperature
 type keyword
 shape
 in_record true
@@ -88,10 +98,10 @@ reader urword
 tagged true
 optional false
 longname stage keyword
-description keyword to specify that record corresponds to concentration.
+description keyword to specify that record corresponds to temperature.
 
 block options
-name concfile
+name tempfile
 type string
 preserve_case true
 shape
@@ -100,7 +110,7 @@ reader urword
 tagged false
 optional false
 longname file keyword
-description name of the binary output file to write concentration information.
+description name of the binary output file to write temperature information.
 
 block options
 name budget_filerecord
@@ -252,10 +262,10 @@ tagged false
 reader urword
 optional false
 longname obs6 input filename
-description REPLACE obs6_filename {'{#1}': 'LKT'}
+description REPLACE obs6_filename {'{#1}': 'LKE'}
 
 
-# --------------------- gwt lkt packagedata ---------------------
+# --------------------- gwe lke packagedata ---------------------
 
 block packagedata
 name packagedata
@@ -283,8 +293,8 @@ shape
 tagged false
 in_record true
 reader urword
-longname starting lake concentration
-description real value that defines the starting concentration for the lake.
+longname starting lake temperature
+description real value that defines the starting temperature for the lake.
 
 block packagedata
 name aux
@@ -310,7 +320,7 @@ longname lake name
 description REPLACE boundname {'{#1}': 'lake'}
 
 
-# --------------------- gwt lkt period ---------------------
+# --------------------- gwe lke period ---------------------
 
 block period
 name iper
@@ -346,13 +356,13 @@ numeric_index true
 
 block period
 name laksetting
-type keystring status concentration rainfall evaporation runoff ext-inflow auxiliaryrecord
+type keystring status temperature rainfall evaporation runoff ext-inflow auxiliaryrecord
 shape
 tagged false
 in_record true
 reader urword
 longname
-description line of information that is parsed into a keyword and values.  Keyword values that can be used to start the LAKSETTING string include: STATUS, CONCENTRATION, RAINFALL, EVAPORATION, RUNOFF, and AUXILIARY.  These settings are used to assign the concentration associated with the corresponding flow terms.  Concentrations cannot be specified for all flow terms.  For example, the Lake Package supports a ``WITHDRAWAL'' flow term.  If this withdrawal term is active, then water will be withdrawn from the lake at the calculated concentration of the lake.
+description line of information that is parsed into a keyword and values.  Keyword values that can be used to start the LAKSETTING string include: STATUS, TEMPERATURE, RAINFALL, EVAPORATION, RUNOFF, and AUXILIARY.  These settings are used to assign the temperature associated with the corresponding flow terms.  Temperatures cannot be specified for all flow terms.  For example, the Lake Package supports a ``WITHDRAWAL'' flow term.  If this withdrawal term is active, then water will be withdrawn from the lake at the calculated temperature of the lake.
 
 block period
 name status
@@ -361,19 +371,19 @@ shape
 tagged true
 in_record true
 reader urword
-longname lake concentration status
-description keyword option to define lake status.  STATUS can be ACTIVE, INACTIVE, or CONSTANT. By default, STATUS is ACTIVE, which means that concentration will be calculated for the lake.  If a lake is inactive, then there will be no solute mass fluxes into or out of the lake and the inactive value will be written for the lake concentration.  If a lake is constant, then the concentration for the lake will be fixed at the user specified value.
+longname lake temperature status
+description keyword option to define lake status.  STATUS can be ACTIVE, INACTIVE, or CONSTANT. By default, STATUS is ACTIVE, which means that temperature will be calculated for the lake.  If a lake is inactive, then there will be no solute mass fluxes into or out of the lake and the inactive value will be written for the lake temperature.  If a lake is constant, then the temperature for the lake will be fixed at the user specified value.
 
 block period
-name concentration
+name temperature
 type string
 shape
 tagged true
 in_record true
 time_series true
 reader urword
-longname lake concentration
-description real or character value that defines the concentration for the lake. The specified CONCENTRATION is only applied if the lake is a constant concentration lake. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
+longname lake temperature
+description real or character value that defines the temperature for the lake. The specified TEMPERATURE is only applied if the lake is a constant temperature lake. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
 
 block period
 name rainfall
@@ -383,19 +393,8 @@ tagged true
 in_record true
 reader urword
 time_series true
-longname rainfall concentration
-description real or character value that defines the rainfall solute concentration $(ML^{-3})$ for the lake. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
-
-block period
-name evaporation
-type string
-shape
-tagged true
-in_record true
-reader urword
-time_series true
-longname evaporation concentration
-description real or character value that defines the concentration of evaporated water $(ML^{-3})$ for the lake. If this concentration value is larger than the simulated concentration in the lake, then the evaporated water will be removed at the same concentration as the lake.  If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
+longname rainfall temperature
+description real or character value that defines the rainfall temperature for the lake. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
 
 block period
 name runoff
@@ -405,8 +404,8 @@ tagged true
 in_record true
 reader urword
 time_series true
-longname runoff concentration
-description real or character value that defines the concentration of runoff $(ML^{-3})$ for the lake. Value must be greater than or equal to zero. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
+longname runoff temperature
+description real or character value that defines the temperature of runoff for the lake. Value must be greater than or equal to zero. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
 
 block period
 name ext-inflow
@@ -416,8 +415,8 @@ tagged true
 in_record true
 reader urword
 time_series true
-longname ext-inflow concentration
-description real or character value that defines the concentration of external inflow $(ML^{-3})$ for the lake. Value must be greater than or equal to zero. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
+longname ext-inflow temperature
+description real or character value that defines the temperature of external inflow for the lake. Value must be greater than or equal to zero. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
 
 block period
 name auxiliaryrecord

@@ -1171,7 +1171,7 @@ contains
     case ('SRC6')
       call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, this%tsplab, this%gwecommon)
-      !case('LKT6')
+      !case('LKE6')
       !  call lkt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
       !                  pakname, this%fmi)
     case ('SFE6')
