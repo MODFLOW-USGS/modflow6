@@ -161,6 +161,7 @@ module NumericalSolutionModule
 
     ! 'protected' (this can be overridden)
     procedure :: sln_has_converged
+    procedure :: sln_l2norm
 
     ! private
     procedure, private :: sln_connect
@@ -169,7 +170,6 @@ module NumericalSolutionModule
     procedure, private :: sln_setouter
     procedure, private :: sln_backtracking
     procedure, private :: sln_backtracking_xupdate
-    procedure, private :: sln_l2norm
     procedure, private :: sln_maxval
     procedure, private :: sln_calcdx
     procedure, private :: sln_underrelax
@@ -468,7 +468,7 @@ contains
     else
       this%solver_mode = 'IMS'
     end if
-    !
+    ! -- create linear system matrix and compatible vectors
     this%linear_solver => create_linear_solver(this%solver_mode)
     this%system_matrix => this%linear_solver%create_matrix()
     this%vec_x => this%system_matrix%create_vector(this%neq, 'X', this%memoryPath)
@@ -2508,8 +2508,7 @@ contains
     ! -- calculate or modify pseudo transient continuation terms and add
     !    to amat diagonals
     if (iptct /= 0) then
-      call this%sln_l2norm(this%neq, this%system_matrix, this%active, &
-                           this%rhs, this%x, l2norm)
+      call this%sln_l2norm(l2norm)
       ! -- confirm that the l2norm exceeds previous l2norm
       !    if not, there is no need to add ptc terms
       if (kiter == 1) then
@@ -2731,13 +2730,11 @@ contains
     !
     ! -- calculate initial l2 norm
     if (kiter == 1) then
-      call this%sln_l2norm(this%neq, this%system_matrix, this%active, &
-                           this%rhs, this%x, this%res_prev)
+      call this%sln_l2norm(this%res_prev)
       resin = this%res_prev
       ibflag = 0
     else
-      call this%sln_l2norm(this%neq, this%system_matrix, this%active, &
-                           this%rhs, this%x, this%res_new)
+      call this%sln_l2norm(this%res_new)
       resin = this%res_new
     end if
     ibtcnt = 0
@@ -2763,8 +2760,7 @@ contains
 
           !
           ! -- calculate updated l2norm
-          call this%sln_l2norm(this%neq, this%system_matrix, this%active, &
-                               this%rhs, this%x, this%res_new)
+          call this%sln_l2norm(this%res_new)
           !
           ! -- evaluate if back tracking can be terminated
           if (nb == this%numtrack) then
@@ -2853,20 +2849,22 @@ contains
     return
   end subroutine sln_backtracking_xupdate
 
-  !> @ brief Calculate the solution L-2 norm
+  !> @ brief Calculate the solution L-2 norm for all
+  !! active cells using
   !!
-  !!  Calculate the solution L-2 norm using the coefficient matrix, the
-  !!  right-hand side vector, and the current dependent-variable vector.
+  !!  A = the linear system matrix
+  !!  x = the dependendent variable vector
+  !!  b = the right-hand side vector
+  !!  m = the mask array for inactive cells,
+  !!      where inactive == 0, active > 0
   !!
+  !!         r = A * x - b
+  !!         M = diag(if m_i > 0: 1 else: 0)
+  !!    L2norm = ||M * r||_2 with
   !<
-  subroutine sln_l2norm(this, neq, matrix_sln, active, rhs, x, l2norm)
+  subroutine sln_l2norm(this, l2norm)
     ! -- dummy variables
     class(NumericalSolutionType), intent(inout) :: this !< NumericalSolutionType instance
-    integer(I4B), intent(in) :: neq !< number of equations
-    class(MatrixBaseType), pointer :: matrix_sln !< coefficient matrix for solution
-    integer(I4B), dimension(neq), intent(in) :: active !< active cell flag vector (1) inactive (0)
-    real(DP), dimension(neq), intent(in) :: rhs !< right-hand side vector
-    real(DP), dimension(neq), intent(in) :: x !< dependent-variable vector
     real(DP), intent(inout) :: l2norm !< calculated L-2 norm
     ! -- local variables
     integer(I4B) :: n
@@ -2879,17 +2877,17 @@ contains
     residual = DZERO
     !
     ! -- calculate the L-2 norm
-    do n = 1, neq
-      if (active(n) > 0) then
+    do n = 1, this%neq
+      if (this%active(n) > 0) then
         rowsum = DZERO
-        icol_s = matrix_sln%get_first_col_pos(n)
-        icol_e = matrix_sln%get_last_col_pos(n)
+        icol_s = this%system_matrix%get_first_col_pos(n)
+        icol_e = this%system_matrix%get_last_col_pos(n)
         do ipos = icol_s, icol_e
-          jcol = matrix_sln%get_column(ipos)
-          rowsum = rowsum + (matrix_sln%get_value_pos(ipos) * x(jcol))
+          jcol = this%system_matrix%get_column(ipos)
+          rowsum = rowsum + (this%system_matrix%get_value_pos(ipos) * this%x(jcol))
         end do
         ! compute mean square residual from q of each node
-        residual = residual + (rowsum - rhs(n))**2
+        residual = residual + (rowsum - this%rhs(n))**2
       end if
     end do
     ! -- The L-2 norm is the square root of the sum of the square of the residuals

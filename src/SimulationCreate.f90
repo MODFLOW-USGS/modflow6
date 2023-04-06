@@ -50,6 +50,7 @@ contains
   !<
   subroutine simulation_da()
     ! -- modules
+    use MemoryManagerModule, only: mem_deallocate
     use MemoryManagerExtModule, only: memorylist_remove
     use SimVariablesModule, only: idm_context
     ! -- local
@@ -61,7 +62,6 @@ contains
     !
     ! -- variables
     deallocate (model_names)
-    deallocate (model_ranks)
     deallocate (model_loc_idx)
     !
     ! -- Return
@@ -214,7 +214,7 @@ contains
   subroutine models_create()
     ! -- modules
     use MemoryHelperModule, only: create_mem_path
-    use MemoryManagerModule, only: mem_setptr
+    use MemoryManagerModule, only: mem_setptr, mem_allocate
     use SimVariablesModule, only: idm_context
     use GwfModule, only: gwf_cr
     use GwtModule, only: gwt_cr
@@ -249,7 +249,7 @@ contains
     !
     ! -- allocate global arrays
     nr_models_glob = size(mnames)
-    allocate (model_ranks(nr_models_glob))
+    call mem_allocate(model_ranks, nr_models_glob, 'MRANKS', input_mempath)
     allocate (model_names(nr_models_glob))
     allocate (model_loc_idx(nr_models_glob))
     !
@@ -765,8 +765,13 @@ contains
   end subroutine check_model_name
 
   !> @brief Create a load mask to determine which models
-  !! should be loaded by idm on this process. This should
-  !< be in sync with models create.
+  !! should be loaded by idm on this process. This is in
+  !! sync with models create. The mask array should be
+  !! pre-allocated with size equal to the global number
+  !! of models. It is returned as (1, 1, 0, 0, ... 0)
+  !! with each entry being a load mask for the model
+  !! at the corresponding location in the 'MNAME' array
+  !< of the IDM.
   subroutine create_load_mask(mask_array)
     use SimVariablesModule, only: proc_id
     integer(I4B), dimension(:) :: mask_array

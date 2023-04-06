@@ -62,7 +62,7 @@ contains
     PetscInt :: ctx_id !< index into the static context list
     PetscErrorCode :: ierr !< error
     ! local
-    PetscScalar :: alpha
+    PetscScalar, parameter :: min_one = -1.0
     real(DP) :: norm
     Vec :: x
     class(PetscContextType), pointer :: petsc_context
@@ -86,8 +86,7 @@ contains
       return
     end if
 
-    alpha = -1.0
-    call VecWAXPY(petsc_context%delta_x, alpha, x, petsc_context%x_old, ierr)
+    call VecWAXPY(petsc_context%delta_x, min_one, x, petsc_context%x_old, ierr)
     CHKERRQ(ierr)
 
     call VecNorm(petsc_context%delta_x, NORM_INFINITY, norm, ierr)
@@ -98,7 +97,7 @@ contains
 
     if (norm < petsc_context%dvclose) then
       if (proc_id == 0) then
-        write (*, *) "converged: ", norm
+        write (*, *) "converged: ", norm, " iter: ", n
       end if
       flag = KSP_CONVERGED_HAPPY_BREAKDOWN ! Converged
     else
