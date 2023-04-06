@@ -648,6 +648,7 @@ contains
     integer(I4B) :: n
     integer(I4B) :: jrow
     integer(I4B) :: j
+    integer(I4B) :: jcol
     real(DP) :: v
     real(DP) :: resid
     real(DP) :: ptcdelem1
@@ -683,13 +684,19 @@ contains
         ! get the maximum volume of the cell (head at top of cell)
         v = this%dis%get_cell_volume(n, this%dis%top(n))
         !
-        ! -- calculate the residual for the cell
-        resid = DZERO
+        ! calculate the residual for the cell
+        ! diagonal element
+        resid = matrix%get_diag_value(jrow) * x(jrow)
+
+        ! off-diagonal elements
         first_col = matrix%get_first_col_pos(jrow)
         last_col = matrix%get_last_col_pos(jrow)
         do j = first_col, last_col
-          resid = resid + matrix%get_value_pos(j) * x(jrow)
+          jcol = matrix%get_column(j) + this%moffset
+          resid = resid + matrix%get_value_pos(j) * x(jcol)
         end do
+
+        ! subtract the right-hand side
         resid = resid - rhs(jrow)
         !
         ! -- calculate the reciprocal of the pseudo-time step
