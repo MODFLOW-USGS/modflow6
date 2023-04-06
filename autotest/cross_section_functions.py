@@ -287,6 +287,8 @@ def qtodepth(
         dq = q1 - q0
         if dq != 0.0:
             derv = dd / (q1 - q0)
+            if derv > 10:
+                derv = 10
         else:
             derv = 0.0
         h0 -= derv * r
