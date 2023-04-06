@@ -4271,6 +4271,7 @@ contains
       else
         derv = DZERO
       end if
+      if (derv > 10) derv = 10
       dd = derv * residual
       d = d - dd
       call this%sfr_calc_qman(n, d, q0)
