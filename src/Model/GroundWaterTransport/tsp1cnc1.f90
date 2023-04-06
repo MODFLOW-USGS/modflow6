@@ -26,6 +26,7 @@ module TspCncModule
     
     real(DP), dimension(:), pointer, contiguous :: ratecncin => null() !simulated flows into constant conc (excluding other concs)
     real(DP), dimension(:), pointer, contiguous :: ratecncout => null() !simulated flows out of constant conc (excluding to other concs)
+    real(DP), pointer :: eqnsclfac => null() !< governing equation scale factor; =1. for solute; =rhow*cpw for energy
     
   contains
   
@@ -48,7 +49,7 @@ module TspCncModule
 contains
 
   subroutine cnc_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
-                        tsplab, gwecommon)
+                        tsplab, eqnsclfac, gwecommon)
 ! ******************************************************************************
 ! cnc_create -- Create a New Constant Concentration/Temperature Package
 ! Subroutine: (1) create new-style package
@@ -66,6 +67,7 @@ contains
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
     type(TspLabelsType), pointer :: tsplab
+    real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
     type(GweInputDataType), intent(in), target, optional :: gwecommon !< shared data container for use by multiple GWE packages
     ! -- local
     type(TspCncType), pointer :: cncobj
@@ -95,6 +97,9 @@ contains
     !
     ! -- Give package access to the assigned labels based on dependent variable
     packobj%tsplab => tsplab
+    !
+    ! -- Give access to governing equation scale factor
+    cncobj%eqnsclfac => eqnsclfac
     !
     ! -- Give package access to the shared heat transport variables assigned in MST
     if (present(gwecommon)) then
@@ -373,22 +378,14 @@ contains
     real(DP) :: ratout
     real(DP) :: dum
     integer(I4B) :: isuppress_output
-    real(DP) :: unitadj
 ! ------------------------------------------------------------------------------
     isuppress_output = 0
     !
-    ! -- for GWE model types, storage rate needs to have units adjusted
-    if (this%tsplab%tsptype /= 'GWE') then
-      unitadj = DONE
-    else
-      unitadj = this%gwecommon%gwecpw * this%gwecommon%gwerhow
-    end if
-    !
     do n = 1, size(this%ratecncin)
-      this%ratecncin(n) = this%ratecncin(n) * unitadj
+      this%ratecncin(n) = this%ratecncin(n) * this%eqnsclfac
     end do
     do n = 1, size(this%ratecncout)
-      this%ratecncout(n) = this%ratecncout(n) * unitadj
+      this%ratecncout(n) = this%ratecncout(n) * this%eqnsclfac
     end do
     !
     call rate_accumulator(this%ratecncin(1:this%nbound), ratin, dum)

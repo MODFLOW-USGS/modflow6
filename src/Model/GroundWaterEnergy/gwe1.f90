@@ -242,12 +242,12 @@ contains
     call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis, this%tsplab)
     call fmi_cr(this%fmi, this%name, this%infmi, this%iout, this%tsplab)
     call mst_cr(this%mst, this%name, this%inmst, this%iout, this%fmi, &
-                this%gwecommon)
+                this%eqnsclfac, this%gwecommon)
     call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi)
     call dsp_cr(this%dsp, this%name, this%indsp, this%iout, this%fmi, &
                 this%gwecommon)
     call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, &
-                this%tsplab, this%gwecommon)
+                this%tsplab, this%eqnsclfac, this%gwecommon)
     call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
     call tsp_obs_cr(this%obs, this%inobs)    
@@ -421,6 +421,9 @@ contains
     if (this%indsp > 0) call this%dsp%dsp_ar(this%ibound, this%mst%porosity)
     if (this%inssm > 0) call this%ssm%ssm_ar(this%dis, this%ibound, this%x)
     if (this%inobs > 0) call this%obs%tsp_obs_ar(this%ic, this%x, this%flowja)
+    !
+    ! -- Set governing equation scale factor
+    this%eqnsclfac = this%gwecommon%gwerhow * this%gwecommon%gwecpw
     !
     ! -- Call dis_ar to write binary grid file
     !call this%dis%dis_ar(this%npf%icelltype)
@@ -1167,7 +1170,7 @@ contains
     select case (filtyp)
     case ('TMP6')
       call cnc_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                      pakname, this%tsplab, this%gwecommon)
+                      pakname, this%tsplab, this%eqnsclfac, this%gwecommon)
     case ('SRC6')
       call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, this%tsplab, this%gwecommon)
@@ -1176,13 +1179,15 @@ contains
       !                  pakname, this%fmi)
     case ('SFE6')
       call sfe_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                        pakname, this%fmi, this%tsplab, this%gwecommon)
+                        pakname, this%fmi, this%tsplab, this%eqnsclfac, &
+                        this%gwecommon)
       !case('MWT6')
       !  call mwt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
       !                  pakname, this%fmi)
     case ('UZE6')
       call uze_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                        pakname, this%fmi, this%tsplab, this%gwecommon)
+                        pakname, this%fmi, this%tsplab, this%eqnsclfac, &
+                        this%gwecommon)
       !case('IST6')
       !  call ist_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
       !                  pakname, this%fmi, this%mst)

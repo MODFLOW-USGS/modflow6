@@ -57,6 +57,7 @@ module TransportModelModule
     integer(I4B), pointer :: inobs => null() ! unit number OBS
     integer(I4B), pointer :: inmst => null() ! unit number MST
     integer(I4B), pointer :: indsp => null() ! unit number DSP
+    real(DP), pointer :: eqnsclfac => null() !< constant factor by which all terms in the model's governing equation are scaled (divided) for formulation and solution
 
   contains
   
@@ -220,7 +221,8 @@ module TransportModelModule
     call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis, this%tsplab)
     call fmi_cr(this%fmi, this%name, this%infmi, this%iout, this%tsplab)
     call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi)
-    call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, this%tsplab)
+    call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi,          &
+                this%tsplab, this%eqnsclfac)
     call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
     call tsp_obs_cr(this%obs, this%inobs)
@@ -680,6 +682,7 @@ module TransportModelModule
     call mem_allocate(this%inssm, 'INSSM', this%memoryPath)
     call mem_allocate(this%inoc, 'INOC ', this%memoryPath)
     call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
+    call mem_allocate(this%eqnsclfac, 'EQNSCLFAC', this%memoryPath)
     !
     this%inic = 0
     this%infmi = 0
@@ -688,6 +691,7 @@ module TransportModelModule
     this%inssm = 0
     this%inoc = 0
     this%inobs = 0
+    this%eqnsclfac = DZERO
     !
     ! -- return
     return
@@ -717,6 +721,7 @@ module TransportModelModule
     call mem_deallocate(this%inmvt)
     call mem_deallocate(this%inoc)
     call mem_deallocate(this%inobs)
+    call mem_deallocate(this%eqnsclfac)
     !
     ! -- return
     return

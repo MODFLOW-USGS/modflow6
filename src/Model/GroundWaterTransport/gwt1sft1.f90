@@ -521,7 +521,7 @@ contains
     return
   end subroutine sft_setup_budobj
 
-  subroutine sft_fill_budobj(this, idx, x, ccratin, ccratout)
+  subroutine sft_fill_budobj(this, idx, x, flowja, ccratin, ccratout)
 ! ******************************************************************************
 ! sft_fill_budobj -- copy flow terms into this%budobj
 ! ******************************************************************************
@@ -533,6 +533,7 @@ contains
     class(GwtSftType) :: this
     integer(I4B), intent(inout) :: idx
     real(DP), dimension(:), intent(in) :: x
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
     real(DP), intent(inout) :: ccratin
     real(DP), intent(inout) :: ccratout
     ! -- local

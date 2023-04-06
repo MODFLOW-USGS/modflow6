@@ -166,7 +166,7 @@ contains
     ! -- Set the pointers
     ! -- Fixed density of water to be used by GWE
     this%gwerhow = gwerhow
-    ! -- Spatially constant heat capacity of water
+    ! -- Spatially constant heat capacity of water   ! kluge note: "specific heat" (which is heat capacity per unit mass) is probably the more correct term
     this%gwecpw = gwecpw
     ! -- Latent heat of vaporization
     if (present(gwelatheatvap)) then

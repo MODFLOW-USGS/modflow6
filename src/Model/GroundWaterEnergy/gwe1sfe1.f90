@@ -95,7 +95,7 @@ module GweSfeModule
 contains
 
   subroutine sfe_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
-                        fmi, tsplab, gwecommon)
+                        fmi, tsplab, eqnsclfac, gwecommon)
 ! ******************************************************************************
 ! sfe_create -- Create a New SFE Package
 ! ******************************************************************************
@@ -112,6 +112,7 @@ contains
     character(len=*), intent(in) :: pakname
     type(TspFmiType), pointer :: fmi
     type(TspLabelsType), pointer :: tsplab
+    real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
     type(GweInputDataType), intent(in), target :: gwecommon !< shared data container for use by multiple GWE packages
     ! -- local
     type(GweSfeType), pointer :: sfeobj
@@ -146,6 +147,9 @@ contains
     ! -- Store pointer to the labels module for dynamic setting of 
     !    concentration vs temperature
     sfeobj%tsplab => tsplab
+    !
+    ! -- Store pointer to governing equation scale factor
+    sfeobj%eqnsclfac => eqnsclfac
     !
     ! -- Store pointer to shared data module for accessing cpw, rhow
     !    for the budget calculations, and for accessing the latent heat of
@@ -317,7 +321,7 @@ contains
     ! -- add evaporation contribution
     if (this%idxbudevap /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudevap)%nlist
-        call this%sfe_evap_term(j, n1, n2, rrate, rhsval) !, hcofval)
+        call this%sfe_evap_term(j, n1, n2, rrate, rhsval) !, hcofval)  ! kluge note: should include hcofval in the call; it'll be set to zero
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
         call matrix_sln%add_value_pos(iposd, hcofval)
@@ -522,12 +526,13 @@ contains
 
   !> @brief Copy flow terms into this%budobj
   !<
-  subroutine sfe_fill_budobj(this, idx, x, ccratin, ccratout)
+  subroutine sfe_fill_budobj(this, idx, x, flowja, ccratin, ccratout)
     ! -- modules
     ! -- dummy
     class(GweSfeType) :: this
     integer(I4B), intent(inout) :: idx
     real(DP), dimension(:), intent(in) :: x
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
     real(DP), intent(inout) :: ccratin
     real(DP), intent(inout) :: ccratout
     ! -- local
@@ -733,7 +738,6 @@ contains
     ! -- local
     real(DP) :: qbnd
     real(DP) :: heatlat
-    real(DP) :: unitadj
 ! ------------------------------------------------------------------------------
     n1 = this%flowbudptr%budterm(this%idxbudevap)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudevap)%id2(ientry)
@@ -741,7 +745,7 @@ contains
     qbnd = this%flowbudptr%budterm(this%idxbudevap)%flow(ientry)
     heatlat = this%gwecommon%gwerhow * this%gwecommon%gwelatheatvap  ! kg/m^3 * J/kg = J/m^3
     if (present(rrate)) rrate = qbnd * heatlat !m^3/day * J/m^3 = J/day
-    if (present(rhsval)) rhsval = -rrate
+    if (present(rhsval)) rhsval = -rrate   ! kluge note: shouldn't this be divided by this%eqnsclfac??
     if (present(hcofval)) hcofval = DZERO
     !
     ! -- return
@@ -762,13 +766,12 @@ contains
     ! -- local
     real(DP) :: qbnd
     real(DP) :: ctmp
-    real(DP) :: unitadj
 ! ------------------------------------------------------------------------------
     n1 = this%flowbudptr%budterm(this%idxbudroff)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudroff)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudroff)%flow(ientry)
     ctmp = this%temproff(n1)
-    if (present(rrate)) rrate = ctmp * qbnd !* this%cpw(n1) * this%rhow(n1)
+    if (present(rrate)) rrate = ctmp * qbnd !* this%cpw(n1) * this%rhow(n1)  ! kluge note: yes, multiply by this%eqnsclfac
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !

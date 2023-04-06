@@ -57,6 +57,7 @@ module GweMstModule
     type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
     type(GweInputDataType), pointer :: gwecommon => null() !< pointer to shared gwe data used by multiple packages but set in mst
     real(DP), pointer :: latheatvap => null() !< latent heat of vaporization
+    real(DP), pointer :: eqnsclfac => null() !< governing equation scale factor; =rhow*cpw for energy
 
   contains
 
@@ -85,13 +86,14 @@ contains
   !!  Create a new MST object
   !!
   !<
-  subroutine mst_cr(mstobj, name_model, inunit, iout, fmi, gwecommon)
+  subroutine mst_cr(mstobj, name_model, inunit, iout, fmi, eqnsclfac, gwecommon)
     ! -- dummy
     type(GweMstType), pointer :: mstobj !< unallocated new mst object to create
     character(len=*), intent(in) :: name_model !< name of the model
     integer(I4B), intent(in) :: inunit !< unit number of WEL package input file
     integer(I4B), intent(in) :: iout !< unit number of model listing file
     type(TspFmiType), intent(in), target :: fmi !< fmi package for this GWE model
+    real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
     type(GweInputDataType), intent(in), target :: gwecommon !< shared data container for use by multiple GWE packages
     !
     ! -- Create the object
@@ -107,6 +109,7 @@ contains
     mstobj%inunit = inunit
     mstobj%iout = iout
     mstobj%fmi => fmi
+    mstobj%eqnsclfac => eqnsclfac
     mstobj%gwecommon => gwecommon
     !
     ! -- Initialize block parser
@@ -360,7 +363,6 @@ contains
     real(DP) :: tled
     real(DP) :: vwatnew, vwatold, vcell, vsolid, term
     real(DP) :: hhcof, rrhs
-    real(DP) :: unitadj
     !
     ! -- initialize
     tled = DONE / delt
@@ -368,7 +370,6 @@ contains
     ! -- Calculate storage change
     do n = 1, nodes
       this%ratesto(n) = DZERO
-      unitadj = this%cpw * this%rhow
       !
       ! -- skip if transport inactive
       if (this%ibound(n) <= 0) cycle
@@ -382,10 +383,10 @@ contains
       vsolid = vcell * (DONE - this%porosity(n))
       !
       ! -- calculate rate
-      term = vsolid * (this%rhos(n) * this%cps(n)) / (this%rhow * this%cpw)
+      term = vsolid * (this%rhos(n) * this%cps(n)) / this%eqnsclfac
       hhcof = -(vwatnew + term) * tled
       rrhs = -(vwatold + term) * tled * cold(n)
-      rate = hhcof * cnew(n) - rrhs
+      rate = (hhcof * cnew(n) - rrhs) * this%eqnsclfac
       this%ratesto(n) = rate
       idiag = this%dis%con%ia(n)
       flowja(idiag) = flowja(idiag) + rate
@@ -471,11 +472,11 @@ contains
     real(DP) :: rin
     real(DP) :: rout
     !
-    ! -- for GWE, storage rate needs to have units adjusted
-    do n = 1, size(this%ratesto)
-      this%ratesto(n) = this%ratesto(n) * this%cpw * this%rhow
-    end do
-    !
+!!    ! -- for GWE, storage rate needs to have units adjusted
+!!    do n = 1, size(this%ratesto)
+!!      this%ratesto(n) = this%ratesto(n) * this%cpw * this%rhow
+!!    end do
+!!    !
     ! -- sto
     call rate_accumulator(this%ratesto, rin, rout)
     call model_budget%addentry(rin, rout, delt, budtxt(1), &
