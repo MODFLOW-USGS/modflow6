@@ -692,7 +692,7 @@ contains
         first_col = matrix%get_first_col_pos(jrow)
         last_col = matrix%get_last_col_pos(jrow)
         do j = first_col, last_col
-          jcol = matrix%get_column(j) + this%moffset
+          jcol = matrix%get_column(j)
           resid = resid + matrix%get_value_pos(j) * x(jcol)
         end do
 
