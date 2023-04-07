@@ -816,7 +816,7 @@ name cross_sectionrecord
 type record cross_section tab6 filein tab6_filename
 shape
 tagged
-in_record false
+in_record true
 reader urword
 longname
 description
