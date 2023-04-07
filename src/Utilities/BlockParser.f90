@@ -565,7 +565,7 @@ contains
   !> @ brief Development option
   !!
   !! Method that will cause the program to terminate with an error if the
-  !! IDEVELOPMODE flag is set to 1.  This is used to allow develop options
+  !! IDEVELOPMODE flag is set to 0. This is used to allow develop options
   !! to be specified for development testing but not for the public release.
   !! For the public release, IDEVELOPMODE is set to zero.
   !!
