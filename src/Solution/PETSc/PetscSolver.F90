@@ -237,7 +237,7 @@ contains
     ! collective norm
     call VecNorm(this%vec_residual, NORM_2, norm, ierr) ! 2-norm
     CHKERRQ(ierr)
-    
+
     l2norm = norm
 
   end function petsc_get_l2_norm

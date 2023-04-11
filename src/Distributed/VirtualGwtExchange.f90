@@ -77,9 +77,9 @@ contains
     ! prepare base exchange data items
     call this%VirtualExchangeType%prepare_stage(stage)
 
-    if (stage == STG_BEFORE_AR) then
+    if (stage == STG_BFR_CON_AR) then
       nexg = this%nexg%get()
-      call this%map(this%gwfsimvals%base(), nexg, (/STG_BEFORE_AD/))
+      call this%map(this%gwfsimvals%base(), nexg, (/STG_BFR_EXG_AD/))
     end if
 
   end subroutine vtx_prepare_stage

@@ -1472,7 +1472,7 @@ contains
     class(NumericalModelType), pointer :: mp => null()
 
     ! synchronize for AD
-    call this%synchronize(STG_BEFORE_AD, this%synchronize_ctx)
+    call this%synchronize(STG_BFR_EXG_AD, this%synchronize_ctx)
 
     ! -- Exchange advance
     do ic = 1, this%exchangelist%Count()
@@ -1967,7 +1967,7 @@ contains
     call this%sln_reset()
 
     ! synchronize for CF
-    call this%synchronize(STG_BEFORE_CF, this%synchronize_ctx)
+    call this%synchronize(STG_BFR_EXG_CF, this%synchronize_ctx)
 
     !
     ! -- Calculate the matrix terms for each exchange
@@ -1983,7 +1983,7 @@ contains
     end do
 
     ! synchronize for FC
-    call this%synchronize(STG_BEFORE_FC, this%synchronize_ctx)
+    call this%synchronize(STG_BFR_EXG_FC, this%synchronize_ctx)
 
     !
     ! -- Add exchange coefficients to the solution
@@ -2350,7 +2350,7 @@ contains
     end do
     !
     ! -- synchronize before AC
-    call this%synchronize(STG_BEFORE_AC, this%synchronize_ctx)
+    call this%synchronize(STG_BFR_EXG_AC, this%synchronize_ctx)
     !
     ! -- Add the cross terms to sparse
     do ic = 1, this%exchangelist%Count()
@@ -2884,7 +2884,8 @@ contains
         icol_e = this%system_matrix%get_last_col_pos(n)
         do ipos = icol_s, icol_e
           jcol = this%system_matrix%get_column(ipos)
-          rowsum = rowsum + (this%system_matrix%get_value_pos(ipos) * this%x(jcol))
+          rowsum = rowsum + &
+                   (this%system_matrix%get_value_pos(ipos) * this%x(jcol))
         end do
         ! compute mean square residual from q of each node
         residual = residual + (rowsum - this%rhs(n))**2

@@ -226,7 +226,7 @@ contains
 
   subroutine vm_deallocate_dbl1d(this)
     class(VirtualDbl1dType) :: this
-    
+
     if (this%is_remote) call mem_deallocate(this%dbl1d)
 
   end subroutine vm_deallocate_dbl1d

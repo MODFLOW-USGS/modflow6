@@ -76,7 +76,7 @@ contains
     call this%VirtualDataContainerType%vdc_create(name, id, is_local)
 
     this%local_model => model
-    
+
     call this%allocate_data()
     call this%init_virtual_data()
 
@@ -85,7 +85,7 @@ contains
   subroutine init_virtual_data(this)
     class(VirtualModelType) :: this
 
-    ! CON    
+    ! CON
     call this%set(this%con_ia%base(), 'IA', 'CON', MAP_ALL_TYPE)
     call this%set(this%con_ja%base(), 'JA', 'CON', MAP_ALL_TYPE)
     call this%set(this%con_jas%base(), 'JAS', 'CON', MAP_ALL_TYPE)
@@ -124,51 +124,51 @@ contains
     integer(I4B) :: nodes, nodesuser, nja, njas
     logical(LGP) :: is_reduced
 
-    if (stage == STG_AFTER_MDL_DF) then
+    if (stage == STG_AFT_MDL_DF) then
 
-      call this%map(this%dis_ndim%base(), (/STG_AFTER_MDL_DF/))
-      call this%map(this%dis_nodes%base(), (/STG_AFTER_MDL_DF/))
-      call this%map(this%dis_nodesuser%base(), (/STG_AFTER_MDL_DF/))
-      call this%map(this%dis_nja%base(), (/STG_AFTER_MDL_DF/))
-      call this%map(this%dis_njas%base(), (/STG_AFTER_MDL_DF/))
-    
-    else if (stage == STG_BEFORE_AC) then
+      call this%map(this%dis_ndim%base(), (/STG_AFT_MDL_DF/))
+      call this%map(this%dis_nodes%base(), (/STG_AFT_MDL_DF/))
+      call this%map(this%dis_nodesuser%base(), (/STG_AFT_MDL_DF/))
+      call this%map(this%dis_nja%base(), (/STG_AFT_MDL_DF/))
+      call this%map(this%dis_njas%base(), (/STG_AFT_MDL_DF/))
+
+    else if (stage == STG_BFR_EXG_AC) then
 
       nodes = this%dis_nodes%get()
       nodesuser = this%dis_nodesuser%get()
       is_reduced = (nodes /= nodesuser)
-      call this%map(this%moffset%base(), (/STG_BEFORE_AC/))
+      call this%map(this%moffset%base(), (/STG_BFR_EXG_AC/))
       if (is_reduced) then
-        call this%map(this%dis_nodeuser%base(), nodes, (/STG_BEFORE_AC/))
+        call this%map(this%dis_nodeuser%base(), nodes, (/STG_BFR_EXG_AC/))
       else
         ! no reduction, zero sized array, never synchronize
         call this%map(this%dis_nodeuser%base(), 0, (/STG_NEVER/))
       end if
 
-    else if (stage == STG_BEFORE_CON_DF) then
+    else if (stage == STG_BFR_CON_DF) then
 
       nodes = this%dis_nodes%get()
       nja = this%dis_nja%get()
       njas = this%dis_njas%get()
       ! DIS
-      call this%map(this%dis_xorigin%base(), (/STG_BEFORE_CON_DF/))
-      call this%map(this%dis_yorigin%base(), (/STG_BEFORE_CON_DF/))
-      call this%map(this%dis_angrot%base(), (/STG_BEFORE_CON_DF/))
-      call this%map(this%dis_xc%base(), nodes, (/STG_BEFORE_CON_DF/))
-      call this%map(this%dis_yc%base(), nodes, (/STG_BEFORE_CON_DF/))
-      call this%map(this%dis_top%base(), nodes, (/STG_BEFORE_CON_DF/))
-      call this%map(this%dis_bot%base(), nodes, (/STG_BEFORE_CON_DF/))
-      call this%map(this%dis_area%base(), nodes, (/STG_BEFORE_CON_DF/))
+      call this%map(this%dis_xorigin%base(), (/STG_BFR_CON_DF/))
+      call this%map(this%dis_yorigin%base(), (/STG_BFR_CON_DF/))
+      call this%map(this%dis_angrot%base(), (/STG_BFR_CON_DF/))
+      call this%map(this%dis_xc%base(), nodes, (/STG_BFR_CON_DF/))
+      call this%map(this%dis_yc%base(), nodes, (/STG_BFR_CON_DF/))
+      call this%map(this%dis_top%base(), nodes, (/STG_BFR_CON_DF/))
+      call this%map(this%dis_bot%base(), nodes, (/STG_BFR_CON_DF/))
+      call this%map(this%dis_area%base(), nodes, (/STG_BFR_CON_DF/))
       ! CON
-      call this%map(this%con_ia%base(), nodes + 1, (/STG_BEFORE_CON_DF/))
-      call this%map(this%con_ja%base(), nja, (/STG_BEFORE_CON_DF/))
-      call this%map(this%con_jas%base(), nja, (/STG_BEFORE_CON_DF/))
-      call this%map(this%con_ihc%base(), njas, (/STG_BEFORE_CON_DF/))
-      call this%map(this%con_hwva%base(), njas, (/STG_BEFORE_CON_DF/))
-      call this%map(this%con_cl1%base(), njas, (/STG_BEFORE_CON_DF/))
-      call this%map(this%con_cl2%base(), njas, (/STG_BEFORE_CON_DF/))
-      call this%map(this%con_anglex%base(), njas, (/STG_BEFORE_CON_DF/))
-    
+      call this%map(this%con_ia%base(), nodes + 1, (/STG_BFR_CON_DF/))
+      call this%map(this%con_ja%base(), nja, (/STG_BFR_CON_DF/))
+      call this%map(this%con_jas%base(), nja, (/STG_BFR_CON_DF/))
+      call this%map(this%con_ihc%base(), njas, (/STG_BFR_CON_DF/))
+      call this%map(this%con_hwva%base(), njas, (/STG_BFR_CON_DF/))
+      call this%map(this%con_cl1%base(), njas, (/STG_BFR_CON_DF/))
+      call this%map(this%con_cl2%base(), njas, (/STG_BFR_CON_DF/))
+      call this%map(this%con_anglex%base(), njas, (/STG_BFR_CON_DF/))
+
     end if
 
   end subroutine vm_prepare_stage

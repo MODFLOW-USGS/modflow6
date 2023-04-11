@@ -10,11 +10,10 @@ module DistVariableModule
   public :: GetDistVarFromList
 
   ! types of variables
-  integer(I4B), public, parameter :: SYNC_SCALAR = 0
-  integer(I4B), public, parameter :: SYNC_NODES = 1
-  integer(I4B), public, parameter :: SYNC_NODES_NOREDUCE = 4
-  integer(I4B), public, parameter :: SYNC_CONNECTIONS = 2
-  integer(I4B), public, parameter :: SYNC_EXCHANGES = 3
+  integer(I4B), public, parameter :: SYNC_SCL = 0 !< synchronize as scalar
+  integer(I4B), public, parameter :: SYNC_NDS = 1 !< synchronize over nodes
+  integer(I4B), public, parameter :: SYNC_CON = 2 !< synchronize over connections
+  integer(I4B), public, parameter :: SYNC_EXG = 3 !< synchronize as exchange variable
 
   type, public :: DistVarType
     character(len=LENVARNAME) :: var_name !< name of variable, e.g. "K11"

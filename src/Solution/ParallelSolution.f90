@@ -46,7 +46,7 @@ contains
   subroutine par_l2norm(this, l2norm)
     class(ParallelSolutionType), intent(inout) :: this !< parallel solution
     real(DP), intent(inout) :: l2norm !< calculated L-2 norm
-    
+
     l2norm = this%linear_solver%get_l2_norm(this%vec_x, this%vec_rhs, &
                                             this%active)
 

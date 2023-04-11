@@ -126,14 +126,14 @@ contains
     ! fields, nodem1/2 array only local when corresponding
     ! model sits on the same process
     is_nodem1_local = this%v_model1%is_local
-    is_nodem2_local = this%v_model2%is_local    
+    is_nodem2_local = this%v_model2%is_local
     call this%set(this%nexg%base(), 'NEXG', '', MAP_ALL_TYPE)
     call this%set(this%naux%base(), 'NAUX', '', MAP_ALL_TYPE)
     call this%set(this%ianglex%base(), 'IANGLEX', '', MAP_ALL_TYPE)
     call this%set(this%nodem1%base(), 'NODEM1', '', &
-                           MAP_ALL_TYPE, is_nodem1_local)
+                  MAP_ALL_TYPE, is_nodem1_local)
     call this%set(this%nodem2%base(), 'NODEM2', '', &
-                           MAP_ALL_TYPE, is_nodem2_local)
+                  MAP_ALL_TYPE, is_nodem2_local)
     call this%set(this%ihc%base(), 'IHC', '', MAP_ALL_TYPE)
     call this%set(this%cl1%base(), 'CL1', '', MAP_ALL_TYPE)
     call this%set(this%cl2%base(), 'CL2', '', MAP_ALL_TYPE)
@@ -148,25 +148,25 @@ contains
     ! local
     integer(I4B) :: nexg, naux
 
-    if (stage == STG_AFTER_EXG_DF) then
+    if (stage == STG_AFT_EXG_DF) then
 
-      call this%map(this%nexg%base(), (/STG_AFTER_EXG_DF/))
-      call this%map(this%naux%base(), (/STG_AFTER_EXG_DF/))
-      call this%map(this%ianglex%base(), (/STG_AFTER_EXG_DF/))
+      call this%map(this%nexg%base(), (/STG_AFT_EXG_DF/))
+      call this%map(this%naux%base(), (/STG_AFT_EXG_DF/))
+      call this%map(this%ianglex%base(), (/STG_AFT_EXG_DF/))
 
-    else if (stage == STG_AFTER_CON_CR) then
+    else if (stage == STG_AFT_CON_CR) then
 
       nexg = this%nexg%get()
       naux = this%naux%get()
-      call this%map(this%nodem1%base(), nexg, (/STG_AFTER_CON_CR, &
-                                                   STG_BEFORE_CON_DF/))
-      call this%map(this%nodem2%base(), nexg, (/STG_AFTER_CON_CR, &
-                                                   STG_BEFORE_CON_DF/))
-      call this%map(this%ihc%base(), nexg, (/STG_AFTER_CON_CR/))
-      call this%map(this%cl1%base(), nexg, (/STG_AFTER_CON_CR/))
-      call this%map(this%cl2%base(), nexg, (/STG_AFTER_CON_CR/))
-      call this%map(this%hwva%base(), nexg, (/STG_AFTER_CON_CR/))
-      call this%map(this%auxvar%base(), naux, nexg, (/STG_AFTER_CON_CR/))
+      call this%map(this%nodem1%base(), nexg, (/STG_AFT_CON_CR, &
+                                                STG_BFR_CON_DF/))
+      call this%map(this%nodem2%base(), nexg, (/STG_AFT_CON_CR, &
+                                                STG_BFR_CON_DF/))
+      call this%map(this%ihc%base(), nexg, (/STG_AFT_CON_CR/))
+      call this%map(this%cl1%base(), nexg, (/STG_AFT_CON_CR/))
+      call this%map(this%cl2%base(), nexg, (/STG_AFT_CON_CR/))
+      call this%map(this%hwva%base(), nexg, (/STG_AFT_CON_CR/))
+      call this%map(this%auxvar%base(), naux, nexg, (/STG_AFT_CON_CR/))
 
     end if
 

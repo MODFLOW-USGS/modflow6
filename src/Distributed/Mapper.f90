@@ -59,12 +59,12 @@ contains
       if (.not. virt_exg%v_model1%is_local) then
         virt_mem_path = virt_exg%get_vrt_mem_path('NODEM1', '')
         call this%map_data_full(0, 'NODEM1', conn%prim_exchange%memoryPath, &
-                                'NODEM1', virt_mem_path, (/STG_BEFORE_CON_DF/))
+                                'NODEM1', virt_mem_path, (/STG_BFR_CON_DF/))
       end if
       if (.not. virt_exg%v_model2%is_local) then
         virt_mem_path = virt_exg%get_vrt_mem_path('NODEM2', '')
         call this%map_data_full(0, 'NODEM2', conn%prim_exchange%memoryPath, &
-                                'NODEM2', virt_mem_path, (/STG_BEFORE_CON_DF/))
+                                'NODEM2', virt_mem_path, (/STG_BFR_CON_DF/))
       end if
     end do
 
@@ -103,13 +103,12 @@ contains
     ! loop over variables
     do i = 1, var_list%Count()
       dist_var => GetDistVarFromList(var_list, i)
-      if (dist_var%map_type == SYNC_NODES .or. & ! models
-          dist_var%map_type == SYNC_NODES_NOREDUCE .or. & ! models
-          dist_var%map_type == SYNC_CONNECTIONS) then
+      if (dist_var%map_type == SYNC_NDS .or. & ! models
+          dist_var%map_type == SYNC_CON) then
         do m = 1, iface_map%nr_models
           call this%map_model_data(sol_id, iface_map, m, dist_var)
         end do
-      else if (dist_var%map_type == SYNC_EXCHANGES) then ! exchanges
+      else if (dist_var%map_type == SYNC_EXG) then ! exchanges
         do e = 1, iface_map%nr_exchanges
           call this%map_exg_data(sol_id, iface_map, e, dist_var)
         end do
@@ -141,17 +140,19 @@ contains
     v_model => get_virtual_model(iface_map%model_ids(model_idx))
     vd => v_model%get_virtual_data(dist_var%var_name, dist_var%subcomp_name)
 
-    ! pick the right index map: connection based or node based
+    ! pick the right index map: connection based or node based,
+    ! and reduced data items require a lookup table
     lookup_table => null()
-    if (dist_var%map_type == SYNC_NODES) then
+    if (dist_var%map_type == SYNC_NDS) then
       idx_map => iface_map%node_maps(model_idx)
-      lookup_table => v_model%element_luts(MAP_NODE_TYPE)%remote_to_virtual
-    else if (dist_var%map_type == SYNC_NODES_NOREDUCE) then
-      idx_map => iface_map%node_maps(model_idx)
-      lookup_table => null()
-    else if (dist_var%map_type == SYNC_CONNECTIONS) then
+      if (vd%is_reduced) then
+        lookup_table => v_model%element_luts(MAP_NODE_TYPE)%remote_to_virtual
+      end if
+    else if (dist_var%map_type == SYNC_CON) then
       idx_map => iface_map%conn_maps(model_idx)
-      lookup_table => v_model%element_luts(MAP_CONN_TYPE)%remote_to_virtual
+      if (vd%is_reduced) then
+        lookup_table => v_model%element_luts(MAP_CONN_TYPE)%remote_to_virtual
+      end if
     else
       write (*, *) "Unknown map type for distributed variable ", dist_var%var_name
       call ustop()

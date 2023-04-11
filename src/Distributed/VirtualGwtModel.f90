@@ -77,7 +77,7 @@ contains
 
   subroutine init_virtual_data(this)
     class(VirtualGwtModelType) :: this
-    
+
     call this%set(this%dsp_idiffc%base(), 'IDIFFC', 'DSP', MAP_ALL_TYPE)
     call this%set(this%dsp_idisp%base(), 'IDISP', 'DSP', MAP_ALL_TYPE)
     call this%set(this%dsp_diffc%base(), 'DIFFC', 'DSP', MAP_NODE_TYPE)
@@ -88,7 +88,7 @@ contains
     call this%set(this%dsp_atv%base(), 'ATV', 'DSP', MAP_NODE_TYPE)
     call this%set(this%fmi_gwfhead%base(), 'GWFHEAD', 'FMI', MAP_NODE_TYPE)
     call this%set(this%fmi_gwfsat%base(), 'GWFSAT', 'FMI', MAP_NODE_TYPE)
-    call this%set(this%fmi_gwfspdis%base(), 'GWFSPDIS', 'FMI' , MAP_NODE_TYPE)
+    call this%set(this%fmi_gwfspdis%base(), 'GWFSPDIS', 'FMI', MAP_NODE_TYPE)
     call this%set(this%fmi_gwfflowja%base(), 'GWFFLOWJA', 'FMI', MAP_NODE_TYPE)
     call this%set(this%mst_porosity%base(), 'POROSITY', 'MST', MAP_NODE_TYPE)
     call this%set(this%indsp%base(), 'INDSP', '', MAP_ALL_TYPE)
@@ -108,38 +108,38 @@ contains
     nr_nodes = 0
     nr_conns = 0
 
-    if (stage == STG_AFTER_MDL_DF) then
+    if (stage == STG_AFT_MDL_DF) then
 
-      call this%map(this%dsp_idiffc%base(), (/STG_AFTER_MDL_DF/))
-      call this%map(this%dsp_idisp%base(), (/STG_AFTER_MDL_DF/))
-      call this%map(this%indsp%base(), (/STG_AFTER_MDL_DF/))
-      call this%map(this%inmst%base(), (/STG_AFTER_MDL_DF/))
+      call this%map(this%dsp_idiffc%base(), (/STG_AFT_MDL_DF/))
+      call this%map(this%dsp_idisp%base(), (/STG_AFT_MDL_DF/))
+      call this%map(this%indsp%base(), (/STG_AFT_MDL_DF/))
+      call this%map(this%inmst%base(), (/STG_AFT_MDL_DF/))
 
-    else if (stage == STG_BEFORE_AR) then
+    else if (stage == STG_BFR_CON_AR) then
 
       call this%map(this%x%base(), nr_nodes, &
-                    (/STG_BEFORE_AR, STG_BEFORE_AD, STG_BEFORE_CF/))
-      call this%map(this%ibound%base(), nr_nodes, (/STG_BEFORE_AR/))
+                    (/STG_BFR_CON_AR, STG_BFR_EXG_AD, STG_BFR_EXG_CF/))
+      call this%map(this%ibound%base(), nr_nodes, (/STG_BFR_CON_AR/))
 
       if (this%dsp_idiffc%get() > 0) then
-        call this%map(this%dsp_diffc%base(), nr_nodes, (/STG_BEFORE_AR/))
+        call this%map(this%dsp_diffc%base(), nr_nodes, (/STG_BFR_CON_AR/))
       end if
 
       if (this%dsp_idisp%get() > 0) then
-        call this%map(this%dsp_alh%base(), nr_nodes, (/STG_BEFORE_AR/))
-        call this%map(this%dsp_alv%base(), nr_nodes, (/STG_BEFORE_AR/))
-        call this%map(this%dsp_ath1%base(), nr_nodes, (/STG_BEFORE_AR/))
-        call this%map(this%dsp_ath2%base(), nr_nodes, (/STG_BEFORE_AR/))
-        call this%map(this%dsp_atv%base(), nr_nodes, (/STG_BEFORE_AR/))
+        call this%map(this%dsp_alh%base(), nr_nodes, (/STG_BFR_CON_AR/))
+        call this%map(this%dsp_alv%base(), nr_nodes, (/STG_BFR_CON_AR/))
+        call this%map(this%dsp_ath1%base(), nr_nodes, (/STG_BFR_CON_AR/))
+        call this%map(this%dsp_ath2%base(), nr_nodes, (/STG_BFR_CON_AR/))
+        call this%map(this%dsp_atv%base(), nr_nodes, (/STG_BFR_CON_AR/))
       end if
 
-      call this%map(this%fmi_gwfhead%base(), nr_nodes, (/STG_BEFORE_AD/))
-      call this%map(this%fmi_gwfsat%base(), nr_nodes, (/STG_BEFORE_AD/))
-      call this%map(this%fmi_gwfspdis%base(), 3, nr_nodes, (/STG_BEFORE_AD/))
-      call this%map(this%fmi_gwfflowja%base(), nr_conns, (/STG_BEFORE_AD/))
+      call this%map(this%fmi_gwfhead%base(), nr_nodes, (/STG_BFR_EXG_AD/))
+      call this%map(this%fmi_gwfsat%base(), nr_nodes, (/STG_BFR_EXG_AD/))
+      call this%map(this%fmi_gwfspdis%base(), 3, nr_nodes, (/STG_BFR_EXG_AD/))
+      call this%map(this%fmi_gwfflowja%base(), nr_conns, (/STG_BFR_EXG_AD/))
 
       if (this%indsp%get() > 0 .and. this%inmst%get() > 0) then
-        call this%map(this%mst_porosity%base(), nr_nodes, (/STG_AFTER_AR/))
+        call this%map(this%mst_porosity%base(), nr_nodes, (/STG_AFT_CON_AR/))
       end if
 
     end if
@@ -148,7 +148,7 @@ contains
 
   subroutine allocate_data(this)
     class(VirtualGwtModelType) :: this
-    
+
     allocate (this%dsp_idiffc)
     allocate (this%dsp_idisp)
     allocate (this%dsp_diffc)

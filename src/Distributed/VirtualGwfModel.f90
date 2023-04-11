@@ -65,7 +65,7 @@ contains
     ! create base
     call this%VirtualModelType%create(name, id, model)
     this%container_type = VDC_GWFMODEL_TYPE
-    
+
     call this%allocate_data()
     call this%init_virtual_data()
 
@@ -73,7 +73,7 @@ contains
 
   subroutine init_virtual_data(this)
     class(VirtualGwfModelType) :: this
-   
+
     call this%set(this%npf_iangle1%base(), 'IANGLE1', 'NPF', MAP_ALL_TYPE)
     call this%set(this%npf_iangle2%base(), 'IANGLE2', 'NPF', MAP_ALL_TYPE)
     call this%set(this%npf_iangle3%base(), 'IANGLE3', 'NPF', MAP_ALL_TYPE)
@@ -98,46 +98,46 @@ contains
     ! prepare base (=numerical) model data items
     call this%VirtualModelType%prepare_stage(stage)
 
-    if (stage == STG_AFTER_MDL_DF) then
+    if (stage == STG_AFT_MDL_DF) then
 
-      call this%map(this%npf_iangle1%base(), (/STG_AFTER_MDL_DF/))
-      call this%map(this%npf_iangle2%base(), (/STG_AFTER_MDL_DF/))
-      call this%map(this%npf_iangle3%base(), (/STG_AFTER_MDL_DF/))
-      call this%map(this%npf_iwetdry%base(), (/STG_AFTER_MDL_DF/))
+      call this%map(this%npf_iangle1%base(), (/STG_AFT_MDL_DF/))
+      call this%map(this%npf_iangle2%base(), (/STG_AFT_MDL_DF/))
+      call this%map(this%npf_iangle3%base(), (/STG_AFT_MDL_DF/))
+      call this%map(this%npf_iwetdry%base(), (/STG_AFT_MDL_DF/))
 
-    else if (stage == STG_BEFORE_AR) then
+    else if (stage == STG_BFR_CON_AR) then
 
       nr_nodes = this%element_maps(MAP_NODE_TYPE)%nr_virt_elems
       ! Num. model data
       call this%map(this%x%base(), nr_nodes, &
-                    (/STG_BEFORE_AR, STG_BEFORE_AD, STG_BEFORE_CF/))
+                    (/STG_BFR_CON_AR, STG_BFR_EXG_AD, STG_BFR_EXG_CF/))
       call this%map(this%ibound%base(), nr_nodes, &
-                    (/STG_BEFORE_AR, STG_BEFORE_AD, STG_BEFORE_CF/))
+                    (/STG_BFR_CON_AR, STG_BFR_EXG_AD, STG_BFR_EXG_CF/))
       call this%map(this%x_old%base(), nr_nodes, &
-                    (/STG_BEFORE_AD, STG_BEFORE_CF/))
+                    (/STG_BFR_EXG_AD, STG_BFR_EXG_CF/))
       ! NPF
-      call this%map(this%npf_icelltype%base(), nr_nodes, (/STG_BEFORE_AR/))
-      call this%map(this%npf_k11%base(), nr_nodes, (/STG_BEFORE_AR/))
-      call this%map(this%npf_k22%base(), nr_nodes, (/STG_BEFORE_AR/))
-      call this%map(this%npf_k33%base(), nr_nodes, (/STG_BEFORE_AR/))
+      call this%map(this%npf_icelltype%base(), nr_nodes, (/STG_BFR_CON_AR/))
+      call this%map(this%npf_k11%base(), nr_nodes, (/STG_BFR_CON_AR/))
+      call this%map(this%npf_k22%base(), nr_nodes, (/STG_BFR_CON_AR/))
+      call this%map(this%npf_k33%base(), nr_nodes, (/STG_BFR_CON_AR/))
 
       if (this%npf_iangle1%get() > 0) then
-        call this%map(this%npf_angle1%base(), nr_nodes, (/STG_BEFORE_AR/))
+        call this%map(this%npf_angle1%base(), nr_nodes, (/STG_BFR_CON_AR/))
       else
         call this%map(this%npf_angle1%base(), 0, (/STG_NEVER/))
       end if
       if (this%npf_iangle2%get() > 0) then
-        call this%map(this%npf_angle2%base(), nr_nodes, (/STG_BEFORE_AR/))
+        call this%map(this%npf_angle2%base(), nr_nodes, (/STG_BFR_CON_AR/))
       else
         call this%map(this%npf_angle2%base(), 0, (/STG_NEVER/))
       end if
       if (this%npf_iangle3%get() > 0) then
-        call this%map(this%npf_angle3%base(), nr_nodes, (/STG_BEFORE_AR/))
+        call this%map(this%npf_angle3%base(), nr_nodes, (/STG_BFR_CON_AR/))
       else
         call this%map(this%npf_angle3%base(), 0, (/STG_NEVER/))
       end if
       if (this%npf_iwetdry%get() > 0) then
-        call this%map(this%npf_wetdry%base(), nr_nodes, (/STG_BEFORE_AR/))
+        call this%map(this%npf_wetdry%base(), nr_nodes, (/STG_BFR_CON_AR/))
       else
         call this%map(this%npf_wetdry%base(), 0, (/STG_NEVER/))
       end if

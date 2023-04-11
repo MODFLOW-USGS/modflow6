@@ -134,6 +134,7 @@ contains
     else
       field%mem_path = create_mem_path(this%name, subcmp_name)
     end if
+    field%is_reduced = (field%is_remote .and. field%map_type > 0)
     field%remote_elem_shift => null()
     field%remote_to_virtual => null()
     field%virtual_mt => null()
@@ -256,14 +257,12 @@ contains
     logical(LGP) :: found
 
     vd%sync_stages = stages
-    vd%is_reduced = .false.
     if (vd%is_remote) then
       ! create new virtual memory item
       vm_pth = this%get_vrt_mem_path(vd%var_name, vd%subcmp_name)
       call vd%vm_allocate(vd%var_name, vm_pth, shape)
       call get_from_memorylist(vd%var_name, vm_pth, vd%virtual_mt, found)
       if (vd%map_type > 0) then
-        vd%is_reduced = .true.
         vd%remote_to_virtual => this%element_luts(vd%map_type)%remote_to_virtual
         vd%remote_elem_shift => this%element_maps(vd%map_type)%remote_elem_shift
       end if
