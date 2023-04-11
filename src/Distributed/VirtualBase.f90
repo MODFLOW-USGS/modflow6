@@ -50,7 +50,7 @@ module VirtualBaseModule
   contains
     procedure(vm_allocate_if), deferred :: vm_allocate
     procedure(vm_deallocate_if), deferred :: vm_deallocate
-    procedure :: to_base => vm_to_base
+    procedure :: base => vm_to_base
     procedure :: check_stage => vm_check_stage
     procedure :: link => vm_link
     procedure :: get_element_map
@@ -226,7 +226,7 @@ contains
 
   subroutine vm_deallocate_dbl1d(this)
     class(VirtualDbl1dType) :: this
-
+    
     if (this%is_remote) call mem_deallocate(this%dbl1d)
 
   end subroutine vm_deallocate_dbl1d

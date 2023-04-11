@@ -55,7 +55,8 @@ module VirtualModelModule
     procedure :: dis_noder_to_string
 
     ! private
-    procedure, private :: create_virtual_fields
+    procedure, private :: init_virtual_data
+    procedure, private :: allocate_data
     procedure, private :: deallocate_data
     procedure, private :: eq_virtual_model
     procedure, private :: eq_numerical_model
@@ -75,72 +76,46 @@ contains
     call this%VirtualDataContainerType%vdc_create(name, id, is_local)
 
     this%local_model => model
-
-    ! allocate fields
-    call this%create_virtual_fields()
+    
+    call this%allocate_data()
+    call this%init_virtual_data()
 
   end subroutine vm_create
 
-  subroutine create_virtual_fields(this)
+  subroutine init_virtual_data(this)
     class(VirtualModelType) :: this
 
-    ! CON
-    allocate (this%con_ia)
-    call this%create_field(this%con_ia%to_base(), 'IA', 'CON')
-    allocate (this%con_ja)
-    call this%create_field(this%con_ja%to_base(), 'JA', 'CON')
-    allocate (this%con_jas)
-    call this%create_field(this%con_jas%to_base(), 'JAS', 'CON')
-    allocate (this%con_ihc)
-    call this%create_field(this%con_ihc%to_base(), 'IHC', 'CON')
-    allocate (this%con_hwva)
-    call this%create_field(this%con_hwva%to_base(), 'HWVA', 'CON')
-    allocate (this%con_cl1)
-    call this%create_field(this%con_cl1%to_base(), 'CL1', 'CON')
-    allocate (this%con_cl2)
-    call this%create_field(this%con_cl2%to_base(), 'CL2', 'CON')
-    allocate (this%con_anglex)
-    call this%create_field(this%con_anglex%to_base(), 'ANGLEX', 'CON')
+    ! CON    
+    call this%set(this%con_ia%base(), 'IA', 'CON', MAP_ALL_TYPE)
+    call this%set(this%con_ja%base(), 'JA', 'CON', MAP_ALL_TYPE)
+    call this%set(this%con_jas%base(), 'JAS', 'CON', MAP_ALL_TYPE)
+    call this%set(this%con_ihc%base(), 'IHC', 'CON', MAP_ALL_TYPE)
+    call this%set(this%con_hwva%base(), 'HWVA', 'CON', MAP_ALL_TYPE)
+    call this%set(this%con_cl1%base(), 'CL1', 'CON', MAP_ALL_TYPE)
+    call this%set(this%con_cl2%base(), 'CL2', 'CON', MAP_ALL_TYPE)
+    call this%set(this%con_anglex%base(), 'ANGLEX', 'CON', MAP_ALL_TYPE)
     ! DIS
-    allocate (this%dis_ndim)
-    call this%create_field(this%dis_ndim%to_base(), 'NDIM', 'DIS')
-    allocate (this%dis_nodes)
-    call this%create_field(this%dis_nodes%to_base(), 'NODES', 'DIS')
-    allocate (this%dis_nodesuser)
-    call this%create_field(this%dis_nodesuser%to_base(), 'NODESUSER', 'DIS')
-    allocate (this%dis_nodeuser)
-    call this%create_field(this%dis_nodeuser%to_base(), 'NODEUSER', 'DIS')
-    allocate (this%dis_nja)
-    call this%create_field(this%dis_nja%to_base(), 'NJA', 'DIS')
-    allocate (this%dis_njas)
-    call this%create_field(this%dis_njas%to_base(), 'NJAS', 'DIS')
-    allocate (this%dis_xorigin)
-    call this%create_field(this%dis_xorigin%to_base(), 'XORIGIN', 'DIS')
-    allocate (this%dis_yorigin)
-    call this%create_field(this%dis_yorigin%to_base(), 'YORIGIN', 'DIS')
-    allocate (this%dis_angrot)
-    call this%create_field(this%dis_angrot%to_base(), 'ANGROT', 'DIS')
-    allocate (this%dis_xc)
-    call this%create_field(this%dis_xc%to_base(), 'XC', 'DIS')
-    allocate (this%dis_yc)
-    call this%create_field(this%dis_yc%to_base(), 'YC', 'DIS')
-    allocate (this%dis_top)
-    call this%create_field(this%dis_top%to_base(), 'TOP', 'DIS')
-    allocate (this%dis_bot)
-    call this%create_field(this%dis_bot%to_base(), 'BOT', 'DIS')
-    allocate (this%dis_area)
-    call this%create_field(this%dis_area%to_base(), 'AREA', 'DIS')
+    call this%set(this%dis_ndim%base(), 'NDIM', 'DIS', MAP_ALL_TYPE)
+    call this%set(this%dis_nodes%base(), 'NODES', 'DIS', MAP_ALL_TYPE)
+    call this%set(this%dis_nodesuser%base(), 'NODESUSER', 'DIS', MAP_ALL_TYPE)
+    call this%set(this%dis_nodeuser%base(), 'NODEUSER', 'DIS', MAP_ALL_TYPE)
+    call this%set(this%dis_nja%base(), 'NJA', 'DIS', MAP_ALL_TYPE)
+    call this%set(this%dis_njas%base(), 'NJAS', 'DIS', MAP_ALL_TYPE)
+    call this%set(this%dis_xorigin%base(), 'XORIGIN', 'DIS', MAP_ALL_TYPE)
+    call this%set(this%dis_yorigin%base(), 'YORIGIN', 'DIS', MAP_ALL_TYPE)
+    call this%set(this%dis_angrot%base(), 'ANGROT', 'DIS', MAP_ALL_TYPE)
+    call this%set(this%dis_xc%base(), 'XC', 'DIS', MAP_ALL_TYPE)
+    call this%set(this%dis_yc%base(), 'YC', 'DIS', MAP_ALL_TYPE)
+    call this%set(this%dis_top%base(), 'TOP', 'DIS', MAP_ALL_TYPE)
+    call this%set(this%dis_bot%base(), 'BOT', 'DIS', MAP_ALL_TYPE)
+    call this%set(this%dis_area%base(), 'AREA', 'DIS', MAP_ALL_TYPE)
     ! Numerical model
-    allocate (this%moffset)
-    call this%create_field(this%moffset%to_base(), 'MOFFSET', '')
-    allocate (this%x)
-    call this%create_field(this%x%to_base(), 'X', '')
-    allocate (this%x_old)
-    call this%create_field(this%x_old%to_base(), 'XOLD', '')
-    allocate (this%ibound)
-    call this%create_field(this%ibound%to_base(), 'IBOUND', '')
+    call this%set(this%moffset%base(), 'MOFFSET', '', MAP_ALL_TYPE)
+    call this%set(this%x%base(), 'X', '', MAP_NODE_TYPE)
+    call this%set(this%x_old%base(), 'XOLD', '', MAP_NODE_TYPE)
+    call this%set(this%ibound%base(), 'IBOUND', '', MAP_NODE_TYPE)
 
-  end subroutine create_virtual_fields
+  end subroutine init_virtual_data
 
   subroutine vm_prepare_stage(this, stage)
     class(VirtualModelType) :: this
@@ -151,71 +126,49 @@ contains
 
     if (stage == STG_AFTER_MDL_DF) then
 
-      call this%map(this%dis_ndim%to_base(), &
-                    (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
-      call this%map(this%dis_nodes%to_base(), &
-                    (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
-      call this%map(this%dis_nodesuser%to_base(), &
-                    (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
-      call this%map(this%dis_nja%to_base(), &
-                    (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
-      call this%map(this%dis_njas%to_base(), &
-                    (/STG_AFTER_MDL_DF/), MAP_ALL_TYPE)
-
+      call this%map(this%dis_ndim%base(), (/STG_AFTER_MDL_DF/))
+      call this%map(this%dis_nodes%base(), (/STG_AFTER_MDL_DF/))
+      call this%map(this%dis_nodesuser%base(), (/STG_AFTER_MDL_DF/))
+      call this%map(this%dis_nja%base(), (/STG_AFTER_MDL_DF/))
+      call this%map(this%dis_njas%base(), (/STG_AFTER_MDL_DF/))
+    
     else if (stage == STG_BEFORE_AC) then
 
       nodes = this%dis_nodes%get()
       nodesuser = this%dis_nodesuser%get()
       is_reduced = (nodes /= nodesuser)
-      call this%map(this%moffset%to_base(), &
-                    (/STG_BEFORE_AC/), MAP_ALL_TYPE)
+      call this%map(this%moffset%base(), (/STG_BEFORE_AC/))
       if (is_reduced) then
-        call this%map(this%dis_nodeuser%to_base(), nodes, &
-                      (/STG_BEFORE_AC/), MAP_ALL_TYPE)
+        call this%map(this%dis_nodeuser%base(), nodes, (/STG_BEFORE_AC/))
       else
         ! no reduction, zero sized array, never synchronize
-        call this%map(this%dis_nodeuser%to_base(), 0, &
-                      (/STG_NEVER/), MAP_ALL_TYPE)
+        call this%map(this%dis_nodeuser%base(), 0, (/STG_NEVER/))
       end if
+
     else if (stage == STG_BEFORE_CON_DF) then
 
       nodes = this%dis_nodes%get()
       nja = this%dis_nja%get()
       njas = this%dis_njas%get()
       ! DIS
-      call this%map(this%dis_xorigin%to_base(), &
-                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
-      call this%map(this%dis_yorigin%to_base(), &
-                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
-      call this%map(this%dis_angrot%to_base(), &
-                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
-      call this%map(this%dis_xc%to_base(), nodes, &
-                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
-      call this%map(this%dis_yc%to_base(), nodes, &
-                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
-      call this%map(this%dis_top%to_base(), nodes, &
-                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
-      call this%map(this%dis_bot%to_base(), nodes, &
-                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
-      call this%map(this%dis_area%to_base(), nodes, &
-                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
+      call this%map(this%dis_xorigin%base(), (/STG_BEFORE_CON_DF/))
+      call this%map(this%dis_yorigin%base(), (/STG_BEFORE_CON_DF/))
+      call this%map(this%dis_angrot%base(), (/STG_BEFORE_CON_DF/))
+      call this%map(this%dis_xc%base(), nodes, (/STG_BEFORE_CON_DF/))
+      call this%map(this%dis_yc%base(), nodes, (/STG_BEFORE_CON_DF/))
+      call this%map(this%dis_top%base(), nodes, (/STG_BEFORE_CON_DF/))
+      call this%map(this%dis_bot%base(), nodes, (/STG_BEFORE_CON_DF/))
+      call this%map(this%dis_area%base(), nodes, (/STG_BEFORE_CON_DF/))
       ! CON
-      call this%map(this%con_ia%to_base(), nodes + 1, &
-                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
-      call this%map(this%con_ja%to_base(), nja, &
-                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
-      call this%map(this%con_jas%to_base(), nja, &
-                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
-      call this%map(this%con_ihc%to_base(), njas, &
-                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
-      call this%map(this%con_hwva%to_base(), njas, &
-                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
-      call this%map(this%con_cl1%to_base(), njas, &
-                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
-      call this%map(this%con_cl2%to_base(), njas, &
-                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
-      call this%map(this%con_anglex%to_base(), njas, &
-                    (/STG_BEFORE_CON_DF/), MAP_ALL_TYPE)
+      call this%map(this%con_ia%base(), nodes + 1, (/STG_BEFORE_CON_DF/))
+      call this%map(this%con_ja%base(), nja, (/STG_BEFORE_CON_DF/))
+      call this%map(this%con_jas%base(), nja, (/STG_BEFORE_CON_DF/))
+      call this%map(this%con_ihc%base(), njas, (/STG_BEFORE_CON_DF/))
+      call this%map(this%con_hwva%base(), njas, (/STG_BEFORE_CON_DF/))
+      call this%map(this%con_cl1%base(), njas, (/STG_BEFORE_CON_DF/))
+      call this%map(this%con_cl2%base(), njas, (/STG_BEFORE_CON_DF/))
+      call this%map(this%con_anglex%base(), njas, (/STG_BEFORE_CON_DF/))
+    
     end if
 
   end subroutine vm_prepare_stage
@@ -259,6 +212,38 @@ contains
     call this%deallocate_data()
 
   end subroutine vm_destroy
+
+  subroutine allocate_data(this)
+    class(VirtualModelType) :: this
+
+    allocate (this%con_ia)
+    allocate (this%con_ja)
+    allocate (this%con_jas)
+    allocate (this%con_ihc)
+    allocate (this%con_hwva)
+    allocate (this%con_cl1)
+    allocate (this%con_cl2)
+    allocate (this%con_anglex)
+    allocate (this%dis_ndim)
+    allocate (this%dis_nodes)
+    allocate (this%dis_nodesuser)
+    allocate (this%dis_nodeuser)
+    allocate (this%dis_nja)
+    allocate (this%dis_njas)
+    allocate (this%dis_xorigin)
+    allocate (this%dis_yorigin)
+    allocate (this%dis_angrot)
+    allocate (this%dis_xc)
+    allocate (this%dis_yc)
+    allocate (this%dis_top)
+    allocate (this%dis_bot)
+    allocate (this%dis_area)
+    allocate (this%moffset)
+    allocate (this%x)
+    allocate (this%x_old)
+    allocate (this%ibound)
+
+  end subroutine allocate_data
 
   subroutine deallocate_data(this)
     class(VirtualModelType) :: this

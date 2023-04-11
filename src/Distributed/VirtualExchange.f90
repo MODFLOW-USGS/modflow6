@@ -84,7 +84,8 @@ module VirtualExchangeModule
     procedure :: get_recv_items => vx_get_recv_items
     procedure :: destroy => vx_destroy
     ! private
-    procedure, private :: create_virtual_fields
+    procedure, private :: init_virtual_data
+    procedure, private :: allocate_data
     procedure, private :: deallocate_data
   end type VirtualExchangeType
 
@@ -110,12 +111,12 @@ contains
     is_local = this%v_model1%is_local .or. this%v_model2%is_local
     call this%VirtualDataContainerType%vdc_create(name, exg_id, is_local)
 
-    ! allocate fields
-    call this%create_virtual_fields()
+    call this%allocate_data()
+    call this%init_virtual_data()
 
   end subroutine vx_create
 
-  subroutine create_virtual_fields(this)
+  subroutine init_virtual_data(this)
     class(VirtualExchangeType) :: this
     ! local
     logical(LGP) :: is_nodem1_local
@@ -125,30 +126,21 @@ contains
     ! fields, nodem1/2 array only local when corresponding
     ! model sits on the same process
     is_nodem1_local = this%v_model1%is_local
-    is_nodem2_local = this%v_model2%is_local
+    is_nodem2_local = this%v_model2%is_local    
+    call this%set(this%nexg%base(), 'NEXG', '', MAP_ALL_TYPE)
+    call this%set(this%naux%base(), 'NAUX', '', MAP_ALL_TYPE)
+    call this%set(this%ianglex%base(), 'IANGLEX', '', MAP_ALL_TYPE)
+    call this%set(this%nodem1%base(), 'NODEM1', '', &
+                           MAP_ALL_TYPE, is_nodem1_local)
+    call this%set(this%nodem2%base(), 'NODEM2', '', &
+                           MAP_ALL_TYPE, is_nodem2_local)
+    call this%set(this%ihc%base(), 'IHC', '', MAP_ALL_TYPE)
+    call this%set(this%cl1%base(), 'CL1', '', MAP_ALL_TYPE)
+    call this%set(this%cl2%base(), 'CL2', '', MAP_ALL_TYPE)
+    call this%set(this%hwva%base(), 'HWVA', '', MAP_ALL_TYPE)
+    call this%set(this%auxvar%base(), 'AUXVAR', '', MAP_ALL_TYPE)
 
-    allocate (this%nexg)
-    call this%create_field(this%nexg%to_base(), 'NEXG', '')
-    allocate (this%naux)
-    call this%create_field(this%naux%to_base(), 'NAUX', '')
-    allocate (this%ianglex)
-    call this%create_field(this%ianglex%to_base(), 'IANGLEX', '')
-    allocate (this%nodem1)
-    call this%create_field(this%nodem1%to_base(), 'NODEM1', '', is_nodem1_local)
-    allocate (this%nodem2)
-    call this%create_field(this%nodem2%to_base(), 'NODEM2', '', is_nodem2_local)
-    allocate (this%ihc)
-    call this%create_field(this%ihc%to_base(), 'IHC', '')
-    allocate (this%cl1)
-    call this%create_field(this%cl1%to_base(), 'CL1', '')
-    allocate (this%cl2)
-    call this%create_field(this%cl2%to_base(), 'CL2', '')
-    allocate (this%hwva)
-    call this%create_field(this%hwva%to_base(), 'HWVA', '')
-    allocate (this%auxvar)
-    call this%create_field(this%auxvar%to_base(), 'AUXVAR', '')
-
-  end subroutine create_virtual_fields
+  end subroutine init_virtual_data
 
   subroutine vx_prepare_stage(this, stage)
     class(VirtualExchangeType) :: this
@@ -158,33 +150,23 @@ contains
 
     if (stage == STG_AFTER_EXG_DF) then
 
-      call this%map(this%nexg%to_base(), &
-                    (/STG_AFTER_EXG_DF/), MAP_ALL_TYPE)
-      call this%map(this%naux%to_base(), &
-                    (/STG_AFTER_EXG_DF/), MAP_ALL_TYPE)
-      call this%map(this%ianglex%to_base(), &
-                    (/STG_AFTER_EXG_DF/), MAP_ALL_TYPE)
+      call this%map(this%nexg%base(), (/STG_AFTER_EXG_DF/))
+      call this%map(this%naux%base(), (/STG_AFTER_EXG_DF/))
+      call this%map(this%ianglex%base(), (/STG_AFTER_EXG_DF/))
 
     else if (stage == STG_AFTER_CON_CR) then
 
       nexg = this%nexg%get()
       naux = this%naux%get()
-      call this%map(this%nodem1%to_base(), nexg, &
-                    (/STG_AFTER_CON_CR, STG_BEFORE_CON_DF/), &
-                    MAP_ALL_TYPE)
-      call this%map(this%nodem2%to_base(), nexg, &
-                    (/STG_AFTER_CON_CR, STG_BEFORE_CON_DF/), &
-                    MAP_ALL_TYPE)
-      call this%map(this%ihc%to_base(), nexg, &
-                    (/STG_AFTER_CON_CR/), MAP_ALL_TYPE)
-      call this%map(this%cl1%to_base(), nexg, &
-                    (/STG_AFTER_CON_CR/), MAP_ALL_TYPE)
-      call this%map(this%cl2%to_base(), nexg, &
-                    (/STG_AFTER_CON_CR/), MAP_ALL_TYPE)
-      call this%map(this%hwva%to_base(), nexg, &
-                    (/STG_AFTER_CON_CR/), MAP_ALL_TYPE)
-      call this%map(this%auxvar%to_base(), naux, nexg, &
-                    (/STG_AFTER_CON_CR/), MAP_ALL_TYPE)
+      call this%map(this%nodem1%base(), nexg, (/STG_AFTER_CON_CR, &
+                                                   STG_BEFORE_CON_DF/))
+      call this%map(this%nodem2%base(), nexg, (/STG_AFTER_CON_CR, &
+                                                   STG_BEFORE_CON_DF/))
+      call this%map(this%ihc%base(), nexg, (/STG_AFTER_CON_CR/))
+      call this%map(this%cl1%base(), nexg, (/STG_AFTER_CON_CR/))
+      call this%map(this%cl2%base(), nexg, (/STG_AFTER_CON_CR/))
+      call this%map(this%hwva%base(), nexg, (/STG_AFTER_CON_CR/))
+      call this%map(this%auxvar%base(), naux, nexg, (/STG_AFTER_CON_CR/))
 
     end if
 
@@ -266,6 +248,22 @@ contains
     call this%deallocate_data()
 
   end subroutine vx_destroy
+
+  subroutine allocate_data(this)
+    class(VirtualExchangeType) :: this
+
+    allocate (this%nexg)
+    allocate (this%naux)
+    allocate (this%ianglex)
+    allocate (this%nodem1)
+    allocate (this%nodem2)
+    allocate (this%ihc)
+    allocate (this%cl1)
+    allocate (this%cl2)
+    allocate (this%hwva)
+    allocate (this%auxvar)
+
+  end subroutine allocate_data
 
   subroutine deallocate_data(this)
     class(VirtualExchangeType) :: this

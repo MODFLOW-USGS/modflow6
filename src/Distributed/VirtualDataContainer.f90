@@ -74,7 +74,7 @@ module VirtualDataContainerModule
     procedure :: get_virtual_data => vdc_get_virtual_data
     procedure :: print_items
     ! protected
-    procedure :: create_field
+    procedure :: set
     ! private
     procedure, private :: add_to_list
     procedure, private :: map_scalar
@@ -114,16 +114,18 @@ contains
 
   end subroutine vdc_create
 
-  !> @brief Create virtual data item, without allocation,
-  !< and add store it in this container.
-  subroutine create_field(this, field, var_name, subcmp_name, is_local)
+  !> @brief Init virtual data item, without allocation,
+  !< and store it in this container.
+  subroutine set(this, field, var_name, subcmp_name, map_id, is_local)
     class(VirtualDataContainerType) :: this
     class(VirtualDataType), pointer :: field
     character(len=*) :: var_name
     character(len=*) :: subcmp_name
+    integer(I4B) :: map_id
     logical(LGP), optional :: is_local
 
     field%is_remote = .not. this%is_local
+    field%map_type = map_id
     if (present(is_local)) field%is_remote = .not. is_local
     field%var_name = var_name
     field%subcmp_name = subcmp_name
@@ -137,7 +139,7 @@ contains
     field%virtual_mt => null()
     call this%add_to_list(field)
 
-  end subroutine create_field
+  end subroutine set
 
   subroutine add_to_list(this, virtual_data)
     class(VirtualDataContainerType) :: this
@@ -214,61 +216,56 @@ contains
 
   end subroutine vdc_set_element_map
 
-  subroutine map_scalar(this, field, stages, map_id)
+  subroutine map_scalar(this, vd, stages)
     class(VirtualDataContainerType) :: this
-    class(VirtualDataType), pointer :: field
+    class(VirtualDataType), pointer :: vd
     integer(I4B), dimension(:) :: stages
-    integer(I4B) :: map_id
 
-    call this%map_internal(field, (/0/), stages, map_id)
+    call this%map_internal(vd, (/0/), stages)
 
   end subroutine map_scalar
 
-  subroutine map_array1d(this, field, nrow, stages, map_id)
+  subroutine map_array1d(this, vd, nrow, stages)
     class(VirtualDataContainerType) :: this
-    class(VirtualDataType), pointer :: field
+    class(VirtualDataType), pointer :: vd
     integer(I4B) :: nrow
     integer(I4B), dimension(:) :: stages
-    integer(I4B) :: map_id
 
-    call this%map_internal(field, (/nrow/), stages, map_id)
+    call this%map_internal(vd, (/nrow/), stages)
 
   end subroutine map_array1d
 
-  subroutine map_array2d(this, field, ncol, nrow, stages, map_id)
+  subroutine map_array2d(this, vd, ncol, nrow, stages)
     class(VirtualDataContainerType) :: this
-    class(VirtualDataType), pointer :: field
+    class(VirtualDataType), pointer :: vd
     integer(I4B) :: ncol
     integer(I4B) :: nrow
     integer(I4B), dimension(:) :: stages
-    integer(I4B) :: map_id
 
-    call this%map_internal(field, (/ncol, nrow/), stages, map_id)
+    call this%map_internal(vd, (/ncol, nrow/), stages)
 
   end subroutine map_array2d
 
-  subroutine map_internal(this, field, shape, stages, map_id)
+  subroutine map_internal(this, vd, shape, stages)
     class(VirtualDataContainerType) :: this
-    class(VirtualDataType), pointer :: field
+    class(VirtualDataType), pointer :: vd
     integer(I4B), dimension(:) :: shape
     integer(I4B), dimension(:) :: stages
-    integer(I4B) :: map_id
     ! local
-    character(len=LENMEMPATH) :: vmem_path
+    character(len=LENMEMPATH) :: vm_pth
     logical(LGP) :: found
 
-    field%sync_stages = stages
-    field%map_type = map_id
-    field%is_reduced = .false.
-    if (field%is_remote) then
+    vd%sync_stages = stages
+    vd%is_reduced = .false.
+    if (vd%is_remote) then
       ! create new virtual memory item
-      vmem_path = this%get_vrt_mem_path(field%var_name, field%subcmp_name)
-      call field%vm_allocate(field%var_name, vmem_path, shape)
-      call get_from_memorylist(field%var_name, vmem_path, field%virtual_mt, found)
-      if (map_id > 0) then
-        field%is_reduced = .true.
-        field%remote_to_virtual => this%element_luts(map_id)%remote_to_virtual
-        field%remote_elem_shift => this%element_maps(map_id)%remote_elem_shift
+      vm_pth = this%get_vrt_mem_path(vd%var_name, vd%subcmp_name)
+      call vd%vm_allocate(vd%var_name, vm_pth, shape)
+      call get_from_memorylist(vd%var_name, vm_pth, vd%virtual_mt, found)
+      if (vd%map_type > 0) then
+        vd%is_reduced = .true.
+        vd%remote_to_virtual => this%element_luts(vd%map_type)%remote_to_virtual
+        vd%remote_elem_shift => this%element_maps(vd%map_type)%remote_elem_shift
       end if
     end if
 

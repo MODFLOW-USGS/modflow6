@@ -17,7 +17,8 @@ module VirtualGwtExchangeModule
     procedure :: destroy => vtx_destroy
     procedure :: prepare_stage => vtx_prepare_stage
     ! private
-    procedure, private :: create_virtual_fields
+    procedure, private :: init_virtual_data
+    procedure, private :: allocate_data
     procedure, private :: deallocate_data
   end type VirtualGwtExchangeType
 
@@ -55,18 +56,17 @@ contains
     call this%VirtualExchangeType%create(name, exg_id, m1_id, m2_id)
     this%container_type = VDC_GWTEXG_TYPE
 
-    ! allocate gwtgwt field(s)
-    call this%create_virtual_fields()
+    call this%allocate_data()
+    call this%init_virtual_data()
 
   end subroutine vtx_create
 
-  subroutine create_virtual_fields(this)
+  subroutine init_virtual_data(this)
     class(VirtualGwtExchangeType) :: this
 
-    allocate (this%gwfsimvals)
-    call this%create_field(this%gwfsimvals%to_base(), 'GWFSIMVALS', '')
+    call this%set(this%gwfsimvals%base(), 'GWFSIMVALS', '', MAP_ALL_TYPE)
 
-  end subroutine create_virtual_fields
+  end subroutine init_virtual_data
 
   subroutine vtx_prepare_stage(this, stage)
     class(VirtualGwtExchangeType) :: this
@@ -79,8 +79,7 @@ contains
 
     if (stage == STG_BEFORE_AR) then
       nexg = this%nexg%get()
-      call this%map(this%gwfsimvals%to_base(), nexg, &
-                    (/STG_BEFORE_AD/), MAP_ALL_TYPE)
+      call this%map(this%gwfsimvals%base(), nexg, (/STG_BEFORE_AD/))
     end if
 
   end subroutine vtx_prepare_stage
@@ -92,6 +91,13 @@ contains
     call this%deallocate_data()
 
   end subroutine vtx_destroy
+
+  subroutine allocate_data(this)
+    class(VirtualGwtExchangeType) :: this
+
+    allocate (this%gwfsimvals)
+
+  end subroutine allocate_data
 
   subroutine deallocate_data(this)
     class(VirtualGwtExchangeType) :: this
