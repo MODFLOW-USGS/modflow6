@@ -646,7 +646,7 @@ contains
     ! -- local
     integer(I4B) :: iptct
     integer(I4B) :: n
-    integer(I4B) :: jrow
+    integer(I4B) :: jrow, jrow_loc, matrix_offset
     integer(I4B) :: j
     real(DP) :: v
     real(DP) :: resid
@@ -675,10 +675,12 @@ contains
       diagmin = DEP20
       diagmax = DZERO
       diagcnt = DZERO
+      matrix_offset = matrix%get_row_offset()
       do n = 1, this%dis%nodes
         if (this%npf%ibound(n) < 1) cycle
         !
         jrow = n + this%moffset
+        jrow_loc = jrow - matrix_offset
         !
         ! get the maximum volume of the cell (head at top of cell)
         v = this%dis%get_cell_volume(n, this%dis%top(n))
@@ -688,9 +690,9 @@ contains
         first_col = matrix%get_first_col_pos(jrow)
         last_col = matrix%get_last_col_pos(jrow)
         do j = first_col, last_col
-          resid = resid + matrix%get_value_pos(j) * x(jrow)
+          resid = resid + matrix%get_value_pos(j) * x(jrow_loc)
         end do
-        resid = resid - rhs(jrow)
+        resid = resid - rhs(jrow_loc)
         !
         ! -- calculate the reciprocal of the pseudo-time step
         !    resid [L3/T] / volume [L3] = [1/T]

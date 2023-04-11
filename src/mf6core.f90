@@ -262,15 +262,16 @@ contains
   subroutine static_input_load()
     ! -- modules
     use ConstantsModule, only: LENMEMPATH
-    use SimVariablesModule, only: simulation_mode, proc_id, iout, nr_procs
+    use SimVariablesModule, only: iout
     use IdmSimulationModule, only: simnam_load, load_models
     use MemoryHelperModule, only: create_mem_path
-    use MemoryManagerModule, only: mem_setptr
+    use MemoryManagerModule, only: mem_setptr, mem_allocate
     use SimVariablesModule, only: idm_context
+    use SimulationCreateModule, only: create_load_mask
     ! -- dummy
     ! -- locals
     character(len=LENMEMPATH) :: input_mempath
-    integer(I4B), dimension(:), allocatable :: model_loadmask
+    integer(I4B), dimension(:), pointer, contiguous :: model_loadmask
     integer(I4B), pointer :: nummodels => null()
     !
     ! -- load simnam input context
@@ -282,20 +283,11 @@ contains
     allocate (model_loadmask(nummodels))
     !
     ! -- initialize mask
-    model_loadmask = 0
-    !
-    ! -- set mask
-    if (simulation_mode == 'PARALLEL' .and. nr_procs > 1) then
-      ! TODO under development
-      model_loadmask(proc_id + 1) = 1
-    else
-      model_loadmask = 1
-    end if
+    call create_load_mask(model_loadmask)
     !
     ! -- load selected models
     call load_models(model_loadmask, iout)
     !
-    ! -- deallocate mask
     deallocate (model_loadmask)
     !
     ! -- return
@@ -320,7 +312,7 @@ contains
     class(SpatialModelConnectionType), pointer :: mc => null()
 
     ! -- init virtual data environment
-    call run_ctrl%at_stage(STG_INIT)
+    call run_ctrl%at_stage(STG_BFR_MDL_DF)
 
     ! -- Define each model
     do im = 1, basemodellist%Count()
@@ -329,7 +321,7 @@ contains
     end do
     !
     ! -- synchronize
-    call run_ctrl%at_stage(STG_AFTER_MDL_DF)
+    call run_ctrl%at_stage(STG_AFT_MDL_DF)
     !
     ! -- Define each exchange
     do ic = 1, baseexchangelist%Count()
@@ -338,17 +330,17 @@ contains
     end do
     !
     ! -- synchronize
-    call run_ctrl%at_stage(STG_AFTER_EXG_DF)
+    call run_ctrl%at_stage(STG_AFT_EXG_DF)
     !
     ! -- when needed, this is were the interface models are
     ! created and added to the numerical solutions
     call connections_cr()
     !
     ! -- synchronize
-    call run_ctrl%at_stage(STG_AFTER_CON_CR)
+    call run_ctrl%at_stage(STG_AFT_CON_CR)
     !
     ! -- synchronize TODO_MJR: this could be merged with the above, in general
-    call run_ctrl%at_stage(STG_BEFORE_CON_DF)
+    call run_ctrl%at_stage(STG_BFR_CON_DF)
     !
     ! -- Define each connection
     do ic = 1, baseconnectionlist%Count()
@@ -357,7 +349,7 @@ contains
     end do
     !
     ! -- synchronize
-    call run_ctrl%at_stage(STG_AFTER_CON_DF)
+    call run_ctrl%at_stage(STG_AFT_CON_DF)
     !
     ! -- Define each solution
     do is = 1, basesolutionlist%Count()
@@ -400,7 +392,7 @@ contains
     end do
     !
     ! -- Synchronize
-    call run_ctrl%at_stage(STG_BEFORE_AR)
+    call run_ctrl%at_stage(STG_BFR_CON_AR)
     !
     ! -- Allocate and read all model connections
     do ic = 1, baseconnectionlist%Count()
@@ -409,7 +401,7 @@ contains
     end do
     !
     ! -- Synchronize
-    call run_ctrl%at_stage(STG_AFTER_AR)
+    call run_ctrl%at_stage(STG_AFT_CON_AR)
     !
     ! -- Allocate and read each solution
     do is = 1, basesolutionlist%Count()

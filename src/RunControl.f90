@@ -67,11 +67,11 @@ contains
     class(RunControlType) :: this
     integer(I4B) :: stage
 
-    if (stage == STG_INIT) then
+    if (stage == STG_BFR_MDL_DF) then
       call this%init_handler()
-    else if (stage == STG_BEFORE_CON_DF) then
+    else if (stage == STG_BFR_CON_DF) then
       call this%before_con_df_handler()
-    else if (stage == STG_AFTER_CON_DF) then
+    else if (stage == STG_AFT_CON_DF) then
       call this%after_con_df_handler()
     end if
 

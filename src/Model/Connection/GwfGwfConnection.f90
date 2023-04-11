@@ -46,7 +46,7 @@ module GwfGwfConnectionModule
     integer(I4B) :: iout = 0 !< the list file for the interface model
 
   contains
-    procedure, pass(this) :: gwfGwfConnection_ctor
+    procedure :: gwfGwfConnection_ctor
     generic, public :: construct => gwfGwfConnection_ctor
 
     ! overriding NumericalExchangeType
@@ -62,14 +62,15 @@ module GwfGwfConnectionModule
     procedure :: exg_ot => gwfgwfcon_ot
 
     ! overriding 'protected'
-    procedure, pass(this) :: validateConnection
+    procedure :: validateConnection
 
     ! local stuff
-    procedure, pass(this), private :: allocateScalars
-    procedure, pass(this), private :: setGridExtent
-    procedure, pass(this), private :: validateGwfExchange
-    procedure, pass(this), private :: setFlowToExchange
-    procedure, pass(this), private :: setNpfEdgeProps
+    procedure, private :: cfg_dist_vars
+    procedure, private :: allocateScalars
+    procedure, private :: setGridExtent
+    procedure, private :: validateGwfExchange
+    procedure, private :: setFlowToExchange
+    procedure, private :: setNpfEdgeProps
 
   end type GwfGwfConnectionType
 
@@ -169,30 +170,7 @@ contains
     this%gwfInterfaceModel%npf%iangle2 = this%gwfModel%npf%iangle2
     this%gwfInterfaceModel%npf%iangle3 = this%gwfModel%npf%iangle3
 
-    call this%addDistVar('X', '', SYNC_NODES, &
-                         (/STG_BEFORE_AR, STG_BEFORE_AD, STG_BEFORE_CF/))
-    call this%addDistVar('IBOUND', '', SYNC_NODES, &
-                         (/STG_BEFORE_AR, STG_BEFORE_AD, STG_BEFORE_CF/))
-    call this%addDistVar('XOLD', '', SYNC_NODES, (/STG_BEFORE_AD, STG_BEFORE_CF/))
-    call this%addDistVar('ICELLTYPE', 'NPF', SYNC_NODES, (/STG_BEFORE_AR/))
-    call this%addDistVar('K11', 'NPF', SYNC_NODES, (/STG_BEFORE_AR/))
-    call this%addDistVar('K22', 'NPF', SYNC_NODES, (/STG_BEFORE_AR/))
-    call this%addDistVar('K33', 'NPF', SYNC_NODES, (/STG_BEFORE_AR/))
-    if (this%gwfInterfaceModel%npf%iangle1 == 1) then
-      call this%addDistVar('ANGLE1', 'NPF', SYNC_NODES, (/STG_BEFORE_AR/))
-    end if
-    if (this%gwfInterfaceModel%npf%iangle2 == 1) then
-      call this%addDistVar('ANGLE2', 'NPF', SYNC_NODES, (/STG_BEFORE_AR/))
-    end if
-    if (this%gwfInterfaceModel%npf%iangle3 == 1) then
-      call this%addDistVar('ANGLE3', 'NPF', SYNC_NODES, (/STG_BEFORE_AR/))
-    end if
-    if (this%gwfInterfaceModel%npf%iwetdry == 1) then
-      call this%addDistVar('WETDRY', 'NPF', SYNC_NODES, (/STG_BEFORE_AR/))
-    end if
-    call this%addDistVar('TOP', 'DIS', SYNC_NODES, (/STG_BEFORE_AR/))
-    call this%addDistVar('BOT', 'DIS', SYNC_NODES, (/STG_BEFORE_AR/))
-    call this%addDistVar('AREA', 'DIS', SYNC_NODES, (/STG_BEFORE_AR/))
+    call this%cfg_dist_vars()
 
     if (this%gwfInterfaceModel%npf%ixt3d > 0) then
       this%gwfInterfaceModel%npf%iangle1 = 1
@@ -218,6 +196,38 @@ contains
     call this%spatialcon_connect()
 
   end subroutine gwfgwfcon_df
+
+  !> @brief Configure distributed variables for this interface model
+  !<
+  subroutine cfg_dist_vars(this)
+    class(GwfGwfConnectionType) :: this !< the connection
+
+    call this%cfg_dv('X', '', SYNC_NDS, &
+                     (/STG_BFR_CON_AR, STG_BFR_EXG_AD, STG_BFR_EXG_CF/))
+    call this%cfg_dv('IBOUND', '', SYNC_NDS, &
+                     (/STG_BFR_CON_AR, STG_BFR_EXG_AD, STG_BFR_EXG_CF/))
+    call this%cfg_dv('XOLD', '', SYNC_NDS, (/STG_BFR_EXG_AD, STG_BFR_EXG_CF/))
+    call this%cfg_dv('ICELLTYPE', 'NPF', SYNC_NDS, (/STG_BFR_CON_AR/))
+    call this%cfg_dv('K11', 'NPF', SYNC_NDS, (/STG_BFR_CON_AR/))
+    call this%cfg_dv('K22', 'NPF', SYNC_NDS, (/STG_BFR_CON_AR/))
+    call this%cfg_dv('K33', 'NPF', SYNC_NDS, (/STG_BFR_CON_AR/))
+    if (this%gwfInterfaceModel%npf%iangle1 == 1) then
+      call this%cfg_dv('ANGLE1', 'NPF', SYNC_NDS, (/STG_BFR_CON_AR/))
+    end if
+    if (this%gwfInterfaceModel%npf%iangle2 == 1) then
+      call this%cfg_dv('ANGLE2', 'NPF', SYNC_NDS, (/STG_BFR_CON_AR/))
+    end if
+    if (this%gwfInterfaceModel%npf%iangle3 == 1) then
+      call this%cfg_dv('ANGLE3', 'NPF', SYNC_NDS, (/STG_BFR_CON_AR/))
+    end if
+    if (this%gwfInterfaceModel%npf%iwetdry == 1) then
+      call this%cfg_dv('WETDRY', 'NPF', SYNC_NDS, (/STG_BFR_CON_AR/))
+    end if
+    call this%cfg_dv('TOP', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
+    call this%cfg_dv('BOT', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
+    call this%cfg_dv('AREA', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
+
+  end subroutine cfg_dist_vars
 
   !> @brief Set the required size of the interface grid from
   !< the configuration

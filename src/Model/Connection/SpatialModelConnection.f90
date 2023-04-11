@@ -82,7 +82,7 @@ module SpatialModelConnectionModule
     procedure, pass(this) :: spatialcon_setmodelptrs
     procedure, pass(this) :: spatialcon_connect
     procedure, pass(this) :: validateConnection
-    procedure, pass(this) :: addDistVar
+    procedure, pass(this) :: cfg_dv
     procedure, pass(this) :: createModelHalo
 
     ! private
@@ -568,15 +568,17 @@ contains ! module procedures
 
   end subroutine validateConnection
 
-  subroutine addDistVar(this, var_name, subcomp_name, map_type, &
-                        sync_stages, exg_var_name)
+  !> @brief Add a variable from the interface model to be
+  !! synchronized at the configured stages by copying from
+  !! the source memory in the models/exchanges that are part
+  !< of this interface.
+  subroutine cfg_dv(this, var_name, subcomp_name, map_type, &
+                    sync_stages, exg_var_name)
     class(SpatialModelConnectionType) :: this !< this connection
     character(len=*) :: var_name !< name of variable, e.g. "K11"
     character(len=*) :: subcomp_name !< subcomponent, e.g. "NPF"
-    integer(I4B) :: map_type !< can be 0 = scalar, 1 = node based, 2 = connection based,
-                             !! 3 = exchange based (connections crossing model boundaries)
-    integer(I4B), dimension(:) :: sync_stages !< when to sync, e.g. (/ STAGE_AD, STAGE_CF /)
-                                              !! which is before AD and CF
+    integer(I4B) :: map_type !< type of variable map
+    integer(I4B), dimension(:) :: sync_stages !< stages to sync
     character(len=*), optional :: exg_var_name !< needed for exchange variables, e.g. SIMVALS
     ! local
     type(DistVarType), pointer :: dist_var => null()
@@ -595,7 +597,7 @@ contains ! module procedures
     obj => dist_var
     call this%iface_dist_vars%Add(obj)
 
-  end subroutine addDistVar
+  end subroutine cfg_dv
 
   !> @brief Cast to SpatialModelConnectionType
   !<
