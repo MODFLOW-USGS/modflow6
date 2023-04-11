@@ -694,13 +694,13 @@ contains
         if (this%npf%ibound(n) > 0) then
           jrow = n + this%moffset
           jrow_loc = jrow - matrix_offset
-          
+
           ! diagonal and off-diagonal elements
           first_col = matrix%get_first_col_pos(jrow)
           last_col = matrix%get_last_col_pos(jrow)
           do j = first_col, last_col
             jcol = matrix%get_column(j)
-            if (jcol > neqsln) cycle  ! temporary protection for parallel case
+            if (jcol > neqsln) cycle ! temporary protection for parallel case
             resid = resid + matrix%get_value_pos(j) * x(jcol)
           end do
 
