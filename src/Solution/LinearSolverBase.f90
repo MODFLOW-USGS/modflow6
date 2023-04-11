@@ -18,6 +18,7 @@ module LinearSolverBaseModule
     procedure(initialize_if), deferred :: initialize
     procedure(solve_if), deferred :: solve
     procedure(get_result_if), deferred :: get_result
+    procedure(get_l2_norm_if), deferred :: get_l2_norm
     procedure(destroy_if), deferred :: destroy
 
     procedure(create_matrix_if), deferred :: create_matrix
@@ -40,6 +41,14 @@ module LinearSolverBaseModule
       import LinearSolverBaseType
       class(LinearSolverBaseType) :: this
     end subroutine
+    function get_l2_norm_if(this, x, rhs, active) result(l2norm)
+      import LinearSolverBaseType, VectorBaseType, I4B, DP
+      class(LinearSolverBaseType) :: this
+      class(VectorBaseType), pointer :: x
+      class(VectorBaseType), pointer :: rhs
+      integer(I4B), dimension(:), pointer, contiguous :: active
+      real(DP) :: l2norm
+    end function get_l2_norm_if
     subroutine destroy_if(this)
       import LinearSolverBaseType
       class(LinearSolverBaseType) :: this

@@ -647,6 +647,8 @@ contains
     integer(I4B) :: iptct
     integer(I4B) :: n
     integer(I4B) :: jrow
+    integer(I4B) :: jrow_loc
+    integer(I4B) :: matrix_offset
     integer(I4B) :: j
     integer(I4B) :: jcol
     real(DP) :: v
@@ -684,12 +686,14 @@ contains
     !
     ! -- calculate pseudo-transient continuation factor for model
     if (iptct > 0) then
+      matrix_offset = matrix%get_row_offset()
       !
       ! calculate the residual
       do n = 1, this%dis%nodes
         resid = DZERO
         if (this%npf%ibound(n) > 0) then
           jrow = n + this%moffset
+          jrow_loc = jrow - matrix_offset
           
           ! diagonal and off-diagonal elements
           first_col = matrix%get_first_col_pos(jrow)
@@ -701,7 +705,7 @@ contains
           end do
 
           ! subtract the right-hand side
-          resid = resid - rhs(jrow)
+          resid = resid - rhs(jrow_loc)
         end if
         resid_vec(n) = resid
       end do

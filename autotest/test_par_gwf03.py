@@ -13,17 +13,18 @@ from simulation import TestSimulation
 #
 # a: 1 cpus, 1 model
 # b: 1 cpus, 4 models
-# c: 4 cpus, 4 models
+# c: 2 cpus, 4 models
+# d: 4 cpus, 4 models
 #
 # The test is that for all configurations, the head
 # converges globally to the specified boundary value.
 # In general, the test can be used to compare parallel
 # vs. serial behavior on an identical problem.
 
-ex = ["par_gwf03-a", "par_gwf03-b", "par_gwf03-c"]
-ncpus = [1, 1, 4]
-domain_grid = [(1, 1), (2, 2), (2, 2)]
-dis_shape = [(2, 100, 100), (2, 50, 50), (2, 50, 50)]
+ex = ["par_gwf03-a", "par_gwf03-b", "par_gwf03-c", "par_gwf03-d"]
+ncpus = [1, 1, 2, 4]
+domain_grid = [(1, 1), (2, 2), (2, 2), (2, 2)]
+dis_shape = [(2, 100, 100), (2, 50, 50), (2, 50, 50), (2, 50, 50)]
 
 delr = 100.0
 delc = 100.0

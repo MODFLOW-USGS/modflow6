@@ -28,10 +28,13 @@ module CharacterStringModule
     procedure, pass(rhs) :: assign_from_charstring
     procedure, pass(rhs) :: character_eq_charstring
     procedure, pass(lhs) :: charstring_eq_character
+    procedure :: charstring_eq_charstring
     procedure :: write_unformatted
     procedure :: strlen
     generic :: assignment(=) => assign_to_charstring, assign_from_charstring
-    generic :: operator(==) => character_eq_charstring, charstring_eq_character
+    generic :: operator(==) => character_eq_charstring, &
+      charstring_eq_character, &
+      charstring_eq_charstring
     ! not supported by gfortran 5 and 6
     ! disable for now
     ! generic :: write (unformatted) => write_unformatted
@@ -89,6 +92,18 @@ contains
       equals = rhs == ''
     end if
   end function charstring_eq_character
+
+  elemental function charstring_eq_charstring(this, rhs) result(equals)
+    class(CharacterStringType), intent(in) :: this
+    class(CharacterStringType), intent(in) :: rhs
+    logical :: equals
+
+    equals = .false.
+    if (allocated(this%charstring)) then
+      equals = (rhs == this%charstring)
+    end if
+
+  end function charstring_eq_charstring
 
   subroutine write_unformatted(this, unit, iostat, iomsg)
     class(CharacterStringType), intent(in) :: this
