@@ -71,6 +71,7 @@ module VirtualDataContainerModule
     procedure :: set_orig_rank => vdc_set_orig_rank
     procedure :: get_send_items => vdc_get_send_items
     procedure :: get_recv_items => vdc_get_recv_items
+    procedure :: get_virtual_data => vdc_get_virtual_data
     procedure :: print_items
     ! protected
     procedure :: create_field

@@ -190,8 +190,8 @@ contains
     if (this%gwfInterfaceModel%npf%iwetdry == 1) then
       call this%addDistVar('WETDRY', 'NPF', SYNC_NODES, (/STG_BEFORE_AR/))
     end if
-    call this%addDistVar('TOP', 'DIS', SYNC_NODES, (/STG_BEFORE_AR/))
-    call this%addDistVar('BOT', 'DIS', SYNC_NODES, (/STG_BEFORE_AR/))
+    call this%addDistVar('TOP', 'DIS', SYNC_NODES_NOREDUCE, (/STG_BEFORE_AR/))
+    call this%addDistVar('BOT', 'DIS', SYNC_NODES_NOREDUCE, (/STG_BEFORE_AR/))
     call this%addDistVar('AREA', 'DIS', SYNC_NODES, (/STG_BEFORE_AR/))
 
     if (this%gwfInterfaceModel%npf%ixt3d > 0) then

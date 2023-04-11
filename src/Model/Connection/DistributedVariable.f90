@@ -12,6 +12,7 @@ module DistVariableModule
   ! types of variables
   integer(I4B), public, parameter :: SYNC_SCALAR = 0
   integer(I4B), public, parameter :: SYNC_NODES = 1
+  integer(I4B), public, parameter :: SYNC_NODES_NOREDUCE = 4
   integer(I4B), public, parameter :: SYNC_CONNECTIONS = 2
   integer(I4B), public, parameter :: SYNC_EXCHANGES = 3
 
