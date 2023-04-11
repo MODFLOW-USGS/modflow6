@@ -24,6 +24,7 @@ module GwfModule
   use SimModule, only: count_errors, store_error, store_error_filename
   use BaseModelModule, only: BaseModelType
   use MatrixBaseModule
+  use VectorBaseModule
 
   implicit none
 
@@ -630,20 +631,19 @@ contains
   !! for the current outer iteration
   !!
   !<
-  subroutine gwf_ptc(this, kiter, neqsln, matrix, &
-                     x, rhs, iptc, ptcf)
+  subroutine gwf_ptc(this, matrix, &
+                     vec_x, vec_rhs, iptc, ptcf)
     ! modules
     use ConstantsModule, only: DONE, DP9
     ! -- dummy
     class(GwfModelType) :: this
-    integer(I4B), intent(in) :: kiter
-    integer(I4B), intent(in) :: neqsln
     class(MatrixBaseType), pointer :: matrix
-    real(DP), dimension(neqsln), intent(in) :: x
-    real(DP), dimension(neqsln), intent(in) :: rhs
+    class(VectorBaseType), pointer :: vec_x
+    class(VectorBaseType), pointer :: vec_rhs
     integer(I4B), intent(inout) :: iptc
     real(DP), intent(inout) :: ptcf
     ! -- local
+    integer(I4B) :: neqsln
     integer(I4B) :: iptct
     integer(I4B) :: n
     integer(I4B) :: jrow
@@ -651,6 +651,9 @@ contains
     integer(I4B) :: jcol
     real(DP) :: v
     real(DP) :: resid
+    real(DP), dimension(this%dis%nodes) :: resid_vec
+    real(DP), contiguous, dimension(:), pointer :: x
+    real(DP), contiguous, dimension(:), pointer :: rhs
     real(DP) :: ptcdelem1
     real(DP) :: diag
     real(DP) :: diagcnt
@@ -658,6 +661,14 @@ contains
     real(DP) :: diagmax
     integer(I4B) :: first_col, last_col
 ! ------------------------------------------------------------------------------
+    !
+    ! get size of x-vector
+    neqsln = vec_x%get_size()
+    !
+    ! set pointers to vec_x and vec_rhs
+    x => vec_x%get_array()
+    rhs => vec_rhs%get_array()
+    !
     ! -- set temporary flag indicating if pseudo-transient continuation should
     !    be used for this model and time step
     iptct = 0
@@ -673,30 +684,41 @@ contains
     !
     ! -- calculate pseudo-transient continuation factor for model
     if (iptct > 0) then
+      !
+      ! calculate the residual
+      do n = 1, this%dis%nodes
+        resid = DZERO
+        if (this%npf%ibound(n) > 0) then
+          jrow = n + this%moffset
+          
+          ! diagonal and off-diagonal elements
+          first_col = matrix%get_first_col_pos(jrow)
+          last_col = matrix%get_last_col_pos(jrow)
+          do j = first_col, last_col
+            jcol = matrix%get_column(j)
+            if (jcol > neqsln) cycle  ! temporary protection for parallel case
+            resid = resid + matrix%get_value_pos(j) * x(jcol)
+          end do
+
+          ! subtract the right-hand side
+          resid = resid - rhs(jrow)
+        end if
+        resid_vec(n) = resid
+      end do
+      !
+      ! calculate the pseudo-time step with constraints
+      ! using the calculated residual
       diagmin = DEP20
       diagmax = DZERO
       diagcnt = DZERO
       do n = 1, this%dis%nodes
         if (this%npf%ibound(n) < 1) cycle
         !
-        jrow = n + this%moffset
-        !
         ! get the maximum volume of the cell (head at top of cell)
         v = this%dis%get_cell_volume(n, this%dis%top(n))
         !
-        ! initialize the residual
-        resid = DZERO
-
-        ! off-diagonal elements
-        first_col = matrix%get_first_col_pos(jrow)
-        last_col = matrix%get_last_col_pos(jrow)
-        do j = first_col, last_col
-          jcol = matrix%get_column(j)
-          resid = resid + matrix%get_value_pos(j) * x(jcol)
-        end do
-
-        ! subtract the right-hand side
-        resid = resid - rhs(jrow)
+        ! set the residual
+        resid = resid_vec(n)
         !
         ! -- calculate the reciprocal of the pseudo-time step
         !    resid [L3/T] / volume [L3] = [1/T]

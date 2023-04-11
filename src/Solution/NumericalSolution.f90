@@ -1612,8 +1612,8 @@ contains
     ptcf = DZERO
     do im = 1, this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_ptc(kiter, this%neq, this%system_matrix, &
-                        this%x, this%rhs, iptc, ptcf)
+      call mp%model_ptc(this%system_matrix, &
+                        this%vec_x, this%vec_rhs, iptc, ptcf)
     end do
     !
     ! -- Add model Newton-Raphson terms to solution

@@ -8,6 +8,7 @@ module NumericalModelModule
   use TimeArraySeriesManagerModule, only: TimeArraySeriesManagerType
   use ListModule, only: ListType
   use MatrixBaseModule
+  use VectorBaseModule
 
   implicit none
   private
@@ -123,13 +124,11 @@ contains
     iptc = 0
   end subroutine model_ptcchk
 
-  subroutine model_ptc(this, kiter, neqsln, matrix, x, rhs, iptc, ptcf)
+  subroutine model_ptc(this, matrix, vec_x, vec_rhs, iptc, ptcf)
     class(NumericalModelType) :: this
-    integer(I4B), intent(in) :: kiter
-    integer(I4B), intent(in) :: neqsln
     class(MatrixBaseType), pointer :: matrix
-    real(DP), dimension(neqsln), intent(in) :: x
-    real(DP), dimension(neqsln), intent(in) :: rhs
+    class(VectorBaseType), pointer :: vec_x
+    class(VectorBaseType), pointer :: vec_rhs
     integer(I4B), intent(inout) :: iptc
     real(DP), intent(inout) :: ptcf
   end subroutine model_ptc
