@@ -684,9 +684,8 @@ contains
         ! get the maximum volume of the cell (head at top of cell)
         v = this%dis%get_cell_volume(n, this%dis%top(n))
         !
-        ! calculate the residual for the cell
-        ! diagonal element
-        resid = matrix%get_diag_value(jrow) * x(jrow)
+        ! initialize the residual
+        resid = DZERO
 
         ! off-diagonal elements
         first_col = matrix%get_first_col_pos(jrow)
