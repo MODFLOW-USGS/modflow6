@@ -28,6 +28,7 @@ module TspMvtModule
     integer(I4B), pointer :: maxpackages !< max number of packages
     integer(I4B), pointer :: ibudgetout => null() !< unit number for budget output file
     integer(I4B), pointer :: ibudcsv => null() !< unit number for csv budget output file
+    real(DP), pointer :: eqnsclfac => null() !< governing equation scale factor; =1. for solute; =rhow*cpw for energy
     type(TspFmiType), pointer :: fmi1 => null() !< pointer to fmi object for model 1
     type(TspFmiType), pointer :: fmi2 => null() !< pointer to fmi object for model 2 (set to fmi1 for single model)
     type(BudgetType), pointer :: budget => null() !< mover transport budget object (used to write balance table)
@@ -62,8 +63,8 @@ module TspMvtModule
 
 contains
 
-  subroutine mvt_cr(mvt, name_model, inunit, iout, fmi1, gwfmodelname1, &
-                    gwfmodelname2, fmi2)
+  subroutine mvt_cr(mvt, name_model, inunit, iout, fmi1, eqnsclfac, &  ! kluge note: does this need tsplab?
+                    gwfmodelname1, gwfmodelname2, fmi2)
 ! ******************************************************************************
 ! mvt_cr -- Create a new initial conditions object
 ! ******************************************************************************
@@ -76,6 +77,7 @@ contains
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     type(TspFmiType), intent(in), target :: fmi1
+    real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
     character(len=*), intent(in), optional :: gwfmodelname1
     character(len=*), intent(in), optional :: gwfmodelname2
     type(TspFmiType), intent(in), target, optional :: fmi2
@@ -112,6 +114,9 @@ contains
     !
     ! -- create the budget object
     call budgetobject_cr(mvt%budobj, 'TRANSPORT MOVER')
+    !
+    ! -- Store pointer to governing equation scale factor
+    mvt%eqnsclfac => eqnsclfac
     !
     ! -- Return
     return
@@ -313,7 +318,7 @@ contains
           !    water into the same receiver
           if (fmi_rc%iatp(irc) /= 0) then
             fmi_rc%datp(irc)%qmfrommvr(id2) = fmi_rc%datp(irc)%qmfrommvr(id2) - &
-                                              q * cp
+                                              q * cp * this%eqnsclfac
           end if
         end do
       end if
@@ -862,7 +867,7 @@ contains
         ! -- Calculate solute mover rate
         rate = DZERO
         if (fmi_rc%iatp(irc) /= 0) then
-          rate = -q * cp
+          rate = -q * cp * this%eqnsclfac
         end if
         !
         ! -- add the rate to the budterm
