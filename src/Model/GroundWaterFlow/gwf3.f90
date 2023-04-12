@@ -732,6 +732,7 @@ contains
         if (ptcdelem1 > ptcf) ptcf = ptcdelem1
         !
         ! -- determine minimum and maximum diagonal entries
+        jrow = n + this%moffset
         diag = abs(matrix%get_diag_value(jrow))
         diagcnt = diagcnt + DONE
         if (diag > DZERO) then
