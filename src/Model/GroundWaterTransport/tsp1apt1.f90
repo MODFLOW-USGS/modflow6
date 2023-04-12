@@ -832,7 +832,7 @@ contains
     integer(I4B) :: iposd, iposoffd
     integer(I4B) :: ipossymd, ipossymoffd
     real(DP) :: cold
-    real(DP) :: qbnd
+    real(DP) :: qbnd, qbndscld
     real(DP) :: omega
     real(DP) :: rrate
     real(DP) :: rhsval
@@ -870,7 +870,7 @@ contains
     ! -- add from mover contribution
     if (this%idxbudfmvr /= 0) then
       do n = 1, this%ncv
-        rhsval = this%qmfrommvr(n)
+        rhsval = this%qmfrommvr(n)   ! kluge note: presumably already in terms of energy for heat transport???
         iloc = this%idxlocnode(n)
         rhs(iloc) = rhs(iloc) - rhsval
       end do
@@ -887,18 +887,23 @@ contains
         qbnd = this%flowbudptr%budterm(this%idxbudgwf)%flow(j)
         omega = DZERO
         if (qbnd < DZERO) omega = DONE
+        qbndscld = qbnd * this%eqnsclfac
         !
         ! -- add to apt row
         iposd = this%idxdglo(j)
         iposoffd = this%idxoffdglo(j)
-        call matrix_sln%add_value_pos(iposd, omega * qbnd)
-        call matrix_sln%add_value_pos(iposoffd, (DONE - omega) * qbnd)
+!!        call matrix_sln%add_value_pos(iposd, omega * qbnd)
+!!        call matrix_sln%add_value_pos(iposoffd, (DONE - omega) * qbnd)
+        call matrix_sln%add_value_pos(iposd, omega * qbndscld)
+        call matrix_sln%add_value_pos(iposoffd, (DONE - omega) * qbndscld)
         !
         ! -- add to gwf row for apt connection
         ipossymd = this%idxsymdglo(j)
         ipossymoffd = this%idxsymoffdglo(j)
-        call matrix_sln%add_value_pos(ipossymd, -(DONE - omega) * qbnd)
-        call matrix_sln%add_value_pos(ipossymoffd, -omega * qbnd)
+!!        call matrix_sln%add_value_pos(ipossymd, -(DONE - omega) * qbnd)
+!!        call matrix_sln%add_value_pos(ipossymoffd, -omega * qbnd)
+        call matrix_sln%add_value_pos(ipossymd, -(DONE - omega) * qbndscld)
+        call matrix_sln%add_value_pos(ipossymoffd, -omega * qbndscld)
       end if
     end do
     !
@@ -913,10 +918,13 @@ contains
         else
           omega = DZERO
         end if
+        qbndscld = qbnd * this%eqnsclfac
         iposd = this%idxfjfdglo(j)
         iposoffd = this%idxfjfoffdglo(j)
-        call matrix_sln%add_value_pos(iposd, omega * qbnd)
-        call matrix_sln%add_value_pos(iposoffd, (DONE - omega) * qbnd)
+!!        call matrix_sln%add_value_pos(iposd, omega * qbnd)
+!!        call matrix_sln%add_value_pos(iposoffd, (DONE - omega) * qbnd)
+        call matrix_sln%add_value_pos(iposd, omega * qbndscld)
+        call matrix_sln%add_value_pos(iposoffd, (DONE - omega) * qbndscld)
       end do
     end if
     !
@@ -1881,7 +1889,7 @@ contains
     ! -- add from mover contribution
     if (this%idxbudfmvr /= 0) then
       do n1 = 1, size(this%qmfrommvr)
-        rrate = this%qmfrommvr(n1)
+        rrate = this%qmfrommvr(n1)    ! kluge note: presumably in terms of energy already for heat transport???
         this%dbuff(n1) = this%dbuff(n1) + rrate
       end do
     end if
@@ -1896,12 +1904,12 @@ contains
       qbnd = this%flowbudptr%budterm(this%idxbudgwf)%flow(j)
       if (qbnd <= DZERO) then
         ctmp = this%xnewpak(n)
-        this%rhs(j) = qbnd * ctmp
+        this%rhs(j) = qbnd * ctmp * this%eqnsclfac
       else
         ctmp = this%xnew(igwfnode)
-        this%hcof(j) = -qbnd
+        this%hcof(j) = -qbnd * this%eqnsclfac
       end if
-      c1 = qbnd * ctmp
+      c1 = qbnd * ctmp * this%eqnsclfac
       this%dbuff(n) = this%dbuff(n) + c1
     end do
     !
@@ -2418,7 +2426,7 @@ contains
     allocate (auxvartmp(1))
     do n1 = 1, this%ncv
       call this%get_volumes(n1, v1, v0, delt)
-      auxvartmp(1) = v1 * this%xnewpak(n1)
+      auxvartmp(1) = v1 * this%xnewpak(n1)  ! kluge note: does this need a factor of eqnsclfac???
       q = this%qsto(n1)
       call this%budobj%budterm(idx)%update_term(n1, n1, q, auxvartmp)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
@@ -2443,9 +2451,9 @@ contains
       nlist = this%ncv
       call this%budobj%budterm(idx)%reset(nlist)
 !!      do n1 = 1, nlist
-!!        q = this%qmfrommvr(n1)
+!!        q = this%qmfrommvr(n1)   ! kluge note: presumably in terms of energy already for heat transport???
       do j = 1, nlist
-        call this%apt_fmvr_term(j, n1, n2, q)
+        call this%apt_fmvr_term(j, n1, n2, q)   ! kluge note: don't really need to do this in apt_fmvr_term now, since no override by uze
         call this%budobj%budterm(idx)%update_term(n1, n1, q)
         call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
       end do
@@ -2535,8 +2543,10 @@ contains
     if (present(rrate)) then
       rrate = (-c1 * v1 / delt + c0 * v0 / delt) * this%eqnsclfac
     end if
-    if (present(rhsval)) rhsval = -c0 * v0 / delt
-    if (present(hcofval)) hcofval = -v1 / delt
+!!    if (present(rhsval)) rhsval = -c0 * v0 / delt
+!!    if (present(hcofval)) hcofval = -v1 / delt
+    if (present(rhsval)) rhsval = -c0 * v0 * this%eqnsclfac / delt
+    if (present(hcofval)) hcofval = -v1 * this%eqnsclfac / delt
     !
     ! -- return
     return
@@ -2565,7 +2575,8 @@ contains
     ctmp = this%xnewpak(n1)
     if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = DZERO
-    if (present(hcofval)) hcofval = qbnd
+!!    if (present(hcofval)) hcofval = qbnd
+    if (present(hcofval)) hcofval = qbnd * this%eqnsclfac
     !
     ! -- return
     return
@@ -2587,7 +2598,9 @@ contains
     ! -- Calculate MVR-related terms 
     n1 = ientry
     n2 = n1
-    if (present(rrate)) rrate = this%qmfrommvr(n1) * this%eqnsclfac
+!!    if (present(rrate)) rrate = this%qmfrommvr(n1) * this%eqnsclfac
+    if (present(rrate)) rrate = this%qmfrommvr(n1)  ! presumably in terms of energy already for heat transport???
+!!    if (present(rhsval)) rhsval = this%qmfrommvr(n1) * this%eqnsclfac
     if (present(rhsval)) rhsval = this%qmfrommvr(n1)
     if (present(hcofval)) hcofval = DZERO
     !
@@ -2620,7 +2633,8 @@ contains
       ctmp = this%xnewpak(n2)
     end if
     if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
-    if (present(rhsval)) rhsval = -rrate
+!!    if (present(rhsval)) rhsval = -rrate
+    if (present(rhsval)) rhsval = -rrate * this%eqnsclfac
     if (present(hcofval)) hcofval = DZERO
     !
     ! -- return

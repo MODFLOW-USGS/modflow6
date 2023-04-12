@@ -330,7 +330,7 @@ contains
         ! -- Calculate the flow rate into the cell.
         do ipos = this%dis%con%ia(node) + 1, &
           this%dis%con%ia(node + 1) - 1
-          q = flowja(ipos)
+          q = flowja(ipos)         ! klughe note: flowja should already be in terms of energy for heat transport
           rate = rate - q
           ! -- only accumulate chin and chout for active
           !    connected cells
@@ -380,14 +380,14 @@ contains
     integer(I4B) :: isuppress_output
 ! ------------------------------------------------------------------------------
     isuppress_output = 0
-    !
-    do n = 1, size(this%ratecncin)
-      this%ratecncin(n) = this%ratecncin(n) * this%eqnsclfac
-    end do
-    do n = 1, size(this%ratecncout)
-      this%ratecncout(n) = this%ratecncout(n) * this%eqnsclfac
-    end do
-    !
+!!    !
+!!    do n = 1, size(this%ratecncin)
+!!      this%ratecncin(n) = this%ratecncin(n) * this%eqnsclfac
+!!    end do
+!!    do n = 1, size(this%ratecncout)
+!!      this%ratecncout(n) = this%ratecncout(n) * this%eqnsclfac
+!!    end do
+!!    !
     call rate_accumulator(this%ratecncin(1:this%nbound), ratin, dum)
     call rate_accumulator(this%ratecncout(1:this%nbound), ratout, dum)
     call model_budget%addentry(ratin, ratout, delt, this%text, &

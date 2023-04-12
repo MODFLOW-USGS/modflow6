@@ -240,9 +240,11 @@ contains
     call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis, this%tsplab)
     call fmi_cr(this%fmi, this%name, this%infmi, this%iout, this%tsplab)
     call mst_cr(this%mst, this%name, this%inmst, this%iout, this%fmi)
-    call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi)
+    call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi,  &
+                this%eqnsclfac)
     call dsp_cr(this%dsp, this%name, this%indsp, this%iout, this%fmi)
-    call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, this%tsplab, this%eqnsclfac)
+    call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi,  &
+                this%tsplab, this%eqnsclfac)
     call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
     call tsp_obs_cr(this%obs, this%inobs)
@@ -413,7 +415,13 @@ contains
     if (this%inssm > 0) call this%ssm%ssm_ar(this%dis, this%ibound, this%x)
     if (this%inobs > 0) call this%obs%tsp_obs_ar(this%ic, this%x, this%flowja)
     !
-    ! -- Set governing equation scale factor
+    ! -- Set governing equation scale factor. Note that this scale factor
+    ! -- cannot be set arbitrarily. For solute transport, it must be set
+    ! -- to 1.  Setting it to a different value will NOT automatically
+    ! -- scale all the terms of the governing equation correctly by that
+    ! -- value. This is because much of the coding in the associated
+    ! -- packages implicitly assumes the governing equation for solute
+    ! -- transport is scaled by 1. (effectively unscaled).
     this%eqnsclfac = DONE
     !
     ! -- Call dis_ar to write binary grid file

@@ -321,7 +321,7 @@ contains
     ! -- add evaporation contribution
     if (this%idxbudevap /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudevap)%nlist
-        call this%sfe_evap_term(j, n1, n2, rrate, rhsval) !, hcofval)  ! kluge note: should include hcofval in the call; it'll be set to zero
+        call this%sfe_evap_term(j, n1, n2, rrate, rhsval, hcofval)  ! kluge note: included hcofval in the call; it'll be set to zero
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
         call matrix_sln%add_value_pos(iposd, hcofval)
@@ -715,8 +715,8 @@ contains
     n2 = this%flowbudptr%budterm(this%idxbudrain)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudrain)%flow(ientry)
     ctmp = this%temprain(n1)
-    if (present(rrate)) rrate = ctmp * qbnd !* this%cpw(n1) * this%rhow(n1)
-    if (present(rhsval)) rhsval = -rrate
+    if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac   ! kluge note: think about budget / sensible heat issue
+    if (present(rhsval)) rhsval = -rrate   ! kluge note eqnsclfac: this was incorrect for divided-through formulation but is ok now
     if (present(hcofval)) hcofval = DZERO
     !
     ! -- return
@@ -743,9 +743,10 @@ contains
     n2 = this%flowbudptr%budterm(this%idxbudevap)%id2(ientry)
     ! -- note that qbnd is negative for evap
     qbnd = this%flowbudptr%budterm(this%idxbudevap)%flow(ientry)
-    heatlat = this%gwecommon%gwerhow * this%gwecommon%gwelatheatvap  ! kg/m^3 * J/kg = J/m^3
-    if (present(rrate)) rrate = qbnd * heatlat !m^3/day * J/m^3 = J/day
-    if (present(rhsval)) rhsval = -rrate   ! kluge note: shouldn't this be divided by this%eqnsclfac??
+    heatlat = this%gwecommon%gwerhow * this%gwecommon%gwelatheatvap  ! kg/m^3 * J/kg = J/m^3 (kluge note)
+    if (present(rrate)) rrate = qbnd * heatlat !m^3/day * J/m^3 = J/day (kluge note)
+!!    if (present(rhsval)) rhsval = -rrate / this%eqnsclfac  ! kluge note: divided by eqnsclfac for fc purposes because rrate is in terms of energy
+    if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
     ! -- return
@@ -771,8 +772,8 @@ contains
     n2 = this%flowbudptr%budterm(this%idxbudroff)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudroff)%flow(ientry)
     ctmp = this%temproff(n1)
-    if (present(rrate)) rrate = ctmp * qbnd !* this%cpw(n1) * this%rhow(n1)  ! kluge note: yes, multiply by this%eqnsclfac
-    if (present(rhsval)) rhsval = -rrate
+    if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
+    if (present(rhsval)) rhsval = -rrate   ! kluge note eqnsclfac: this was incorrect for divided-through formulation but is ok now
     if (present(hcofval)) hcofval = DZERO
     !
     ! -- return
@@ -802,8 +803,8 @@ contains
     n2 = this%flowbudptr%budterm(this%idxbudiflw)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudiflw)%flow(ientry)
     ctmp = this%tempiflw(n1)
-    if (present(rrate)) rrate = ctmp * qbnd !* this%cpw(n1) * this%rhow(n1)
-    if (present(rhsval)) rhsval = -rrate
+    if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
+    if (present(rhsval)) rhsval = -rrate   ! kluge note eqnsclfac: this was incorrect for divided-through formulation but is ok now
     if (present(hcofval)) hcofval = DZERO
     !
     ! -- return
@@ -829,9 +830,9 @@ contains
     n2 = this%flowbudptr%budterm(this%idxbudoutf)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudoutf)%flow(ientry)
     ctmp = this%xnewpak(n1)
-    if (present(rrate)) rrate = ctmp * qbnd !* this%cpw(n1) * this%rhow(n1)
+    if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = DZERO
-    if (present(hcofval)) hcofval = qbnd !* this%cpw(n1) * this%rhow(n1)
+    if (present(hcofval)) hcofval = qbnd * this%eqnsclfac
     !
     ! -- return
     return

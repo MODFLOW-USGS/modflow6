@@ -179,7 +179,8 @@ contains
         cycle
       end if
       q = this%bound(1, i)
-      this%rhs(i) = -q / (this%gwecommon%gwecpw * this%gwecommon%gwerhow)
+!!      this%rhs(i) = -q / this%eqnsclfac
+      this%rhs(i) = -q
     end do
     !
     return

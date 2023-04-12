@@ -97,7 +97,7 @@ module TransportModelModule
 
     contains
 
-  subroutine tsp_cr(this, filename, id, modelname)
+  subroutine tsp_cr(this, filename, id, modelname)  ! kluge note: not used/needed
     ! -- modules
     use SimModule, only: store_error
     use MemoryManagerModule, only: mem_allocate
@@ -220,7 +220,8 @@ module TransportModelModule
     ! -- Create packages that are tied directly to model
     call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis, this%tsplab)
     call fmi_cr(this%fmi, this%name, this%infmi, this%iout, this%tsplab)
-    call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi)
+    call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi,          &
+                this%eqnsclfac)
     call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi,          &
                 this%tsplab, this%eqnsclfac)
     call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi)

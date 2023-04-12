@@ -20,6 +20,7 @@ module TspAdvModule
     type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
     real(DP), dimension(:), pointer, contiguous :: cpw => null() ! pointer to GWE heat capacity of water
     real(DP), dimension(:), pointer, contiguous :: rhow => null() ! fixed density of water
+    real(DP), pointer :: eqnsclfac => null() !< governing equation scale factor; =1. for solute; =rhow*cpw for energy
 
   contains
 
@@ -40,7 +41,7 @@ module TspAdvModule
 
 contains
 
-  subroutine adv_cr(advobj, name_model, inunit, iout, fmi)
+  subroutine adv_cr(advobj, name_model, inunit, iout, fmi, eqnsclfac)
 ! ******************************************************************************
 ! adv_cr -- Create a new ADV object
 ! ******************************************************************************
@@ -53,6 +54,7 @@ contains
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     type(TspFmiType), intent(in), target :: fmi
+    real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -68,6 +70,7 @@ contains
     advobj%inunit = inunit
     advobj%iout = iout
     advobj%fmi => fmi
+    advobj%eqnsclfac => eqnsclfac
     !
     ! -- Return
     return
@@ -160,7 +163,8 @@ contains
         if (this%dis%con%mask(ipos) == 0) cycle
         m = this%dis%con%ja(ipos)
         if (this%ibound(m) == 0) cycle
-        qnm = this%fmi%gwfflowja(ipos)
+!!        qnm = this%fmi%gwfflowja(ipos)
+        qnm = this%fmi%gwfflowja(ipos) * this%eqnsclfac
         omega = this%adv_weight(this%iadvwt, ipos, n, m, qnm)
         call matrix_sln%add_value_pos(idxglo(ipos), qnm * (DONE - omega))
         call matrix_sln%add_value_pos(idxglo(idiag), qnm * omega)
@@ -277,6 +281,7 @@ contains
       if (smooth > DZERO) then
         alimiter = DTWO * smooth / (DONE + smooth)
         qtvd = DHALF * alimiter * qnm * (cnew(idn) - cnew(iup))
+        qtvd = qtvd * this%eqnsclfac
       end if
     end if
     !
@@ -311,7 +316,7 @@ contains
       do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
         m = this%dis%con%ja(ipos)
         if (this%ibound(m) == 0) cycle
-        qnm = this%fmi%gwfflowja(ipos)
+        qnm = this%fmi%gwfflowja(ipos) * this%eqnsclfac
         omega = this%adv_weight(this%iadvwt, ipos, n, m, qnm)
         flowja(ipos) = flowja(ipos) + qnm * omega * cnew(n) + &
                        qnm * (DONE - omega) * cnew(m) 

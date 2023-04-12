@@ -55,6 +55,7 @@ module GweDspModule
     integer(I4B), pointer :: iangle1 => null() ! flag indicating angle1 is available
     integer(I4B), pointer :: iangle2 => null() ! flag indicating angle2 is available
     integer(I4B), pointer :: iangle3 => null() ! flag indicating angle3 is available
+    real(DP), pointer :: eqnsclfac => null() !< governing equation scale factor; =rhow*cpw for energy
 
   contains
 
@@ -79,7 +80,7 @@ module GweDspModule
 
 contains
 
-  subroutine dsp_cr(dspobj, name_model, inunit, iout, fmi, gwecommon)
+  subroutine dsp_cr(dspobj, name_model, inunit, iout, fmi, eqnsclfac, gwecommon)
 ! ******************************************************************************
 ! dsp_cr -- Create a new DSP object
 ! ******************************************************************************
@@ -95,6 +96,7 @@ contains
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     type(TspFmiType), intent(in), target :: fmi
+    real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
     type(GweInputDataType), intent(in), target :: gwecommon !< shared data container for use by multiple GWE packages
     ! -- formats
     character(len=*), parameter :: fmtdsp = &
@@ -115,6 +117,7 @@ contains
     dspobj%inunit = inunit
     dspobj%iout = iout
     dspobj%fmi => fmi
+    dspobj%eqnsclfac => eqnsclfac
     dspobj%gwecommon => gwecommon
     !
     ! -- Check if input file is open
@@ -364,7 +367,7 @@ contains
     real(DP), intent(inout), dimension(:) :: flowja
     ! -- local
     integer(I4B) :: n, m, ipos, isympos
-    real(DP) :: dnm
+    real(DP) :: dnm, qnm
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate dispersion and add to flowja
@@ -378,7 +381,9 @@ contains
           if (this%fmi%ibdgwfsat0(m) == 0) cycle
           isympos = this%dis%con%jas(ipos)
           dnm = this%dispcoef(isympos)
-          flowja(ipos) = flowja(ipos) + dnm * (cnew(m) - cnew(n))
+!!          qnm = dnm * (cnew(m) - cnew(n)) * this%eqnsclfac
+          qnm = dnm * (cnew(m) - cnew(n))
+          flowja(ipos) = flowja(ipos) + qnm
         end do
       end do
     end if
@@ -777,7 +782,7 @@ contains
     real(DP) :: alh, alv, ath1, ath2, atv, a
     real(DP) :: al, at1, at2
     real(DP) :: qzoqsquared
-    real(DP) :: dstar
+!!    real(DP) :: dstar
     real(DP) :: ktbulk ! TODO: Implement additional options for characterizing ktbulk (see Markle refs)
     real(DP) :: qsw
 ! ------------------------------------------------------------------------------
@@ -821,7 +826,7 @@ contains
       end if
       !
       ! -- calculate
-      dstar = DZERO
+!!      dstar = DZERO
       !if (this%idiffc > 0) then
       !  dstar = this%diffc(n) * this%porosity(n)
       !end if
@@ -829,7 +834,13 @@ contains
       if (this%iktw > 0) ktbulk = ktbulk + this%porosity(n) * this%ktw(n) * &
                                   this%fmi%gwfsat(n)
       if (this%ikts > 0) ktbulk = ktbulk + (DONE - this%porosity(n)) * this%kts(n)
-      dstar = ktbulk / (this%gwecommon%gwecpw * this%gwecommon%gwerhow)
+!!      ! -- The division by rhow*cpw below is done to render dstar in the form
+!!      ! -- of a thermal diffusivity, and not because the governing equation
+!!      ! -- is scaled by rhow*cpw. Because of this conceptual distinction,
+!!      ! -- ktbulk is divided by the explicitly calculated product rhow*cpw,
+!!      ! -- and not by the equivalent scale factor eqnsclfac, even though it
+!!      ! -- should make no practical difference in the result.
+!!      dstar = ktbulk / (this%gwecommon%gwecpw * this%gwecommon%gwerhow)  ! kluge note eqnsclfac, define product
       !
       ! -- Calculate the longitudal and transverse dispersivities
       al = DZERO
@@ -843,10 +854,14 @@ contains
       end if
       !
       ! -- Calculate and save the diagonal components of the dispersion tensor
-      qsw = q * this%fmi%gwfsat(n)
-      this%d11(n) = al * qsw + dstar
-      this%d22(n) = at1 * qsw + dstar
-      this%d33(n) = at2 * qsw + dstar
+!!      qsw = q * this%fmi%gwfsat(n)
+!!      this%d11(n) = al * qsw + dstar
+!!      this%d22(n) = at1 * qsw + dstar
+!!      this%d33(n) = at2 * qsw + dstar
+      qsw = q * this%fmi%gwfsat(n) * this%eqnsclfac
+      this%d11(n) = al * qsw + ktbulk
+      this%d22(n) = at1 * qsw + ktbulk
+      this%d33(n) = at2 * qsw + ktbulk
       !
       ! -- Angles of rotation if velocity based dispersion tensor
       if (this%idisp > 0) then
@@ -913,7 +928,7 @@ contains
     ! -- set iavgmeth = 1 to use arithmetic averaging for effective dispersion
     iavgmeth = 1
     !
-    ! -- Proces connections
+    ! -- Process connections
     nodes = size(this%d11)
     do n = 1, nodes
       if (this%fmi%ibdgwfsat0(n) == 0) cycle

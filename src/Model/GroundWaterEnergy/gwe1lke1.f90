@@ -115,19 +115,19 @@ contains
     type(TspLabelsType), pointer :: tsplab
     type(GweInputDataType), intent(in), target :: gwecommon !< shared data container for use by multiple GWE packages
     ! -- local
-    type(GweLkeType), pointer :: lktobj
+    type(GweLkeType), pointer :: lkeobj
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
-    allocate (lktobj)
-    packobj => lktobj
+    allocate (lkeobj)
+    packobj => lkeobj
     !
     ! -- create name and memory path
     call packobj%set_names(ibcnum, namemodel, pakname, ftype)
     packobj%text = text
     !
     ! -- allocate scalars
-    call lktobj%allocate_scalars()
+    call lkeobj%allocate_scalars()
     !
     ! -- initialize package
     call packobj%pack_initialize()
@@ -142,7 +142,7 @@ contains
     ! -- Store pointer to flow model interface.  When the GwfGwt exchange is
     !    created, it sets fmi%bndlist so that the GWT model has access to all
     !    the flow packages
-    lktobj%fmi => fmi
+    lkeobj%fmi => fmi
     !
     ! -- Store pointer to the labels module for dynamic setting of 
     !    concentration vs temperature
@@ -567,7 +567,7 @@ contains
     return
   end subroutine lke_setup_budobj
 
-  subroutine lke_fill_budobj(this, idx, x, ccratin, ccratout)
+  subroutine lke_fill_budobj(this, idx, x, flowja, ccratin, ccratout)
 ! ******************************************************************************
 ! lke_fill_budobj -- copy flow terms into this%budobj
 ! ******************************************************************************
@@ -579,6 +579,7 @@ contains
     class(GweLkeType) :: this
     integer(I4B), intent(inout) :: idx
     real(DP), dimension(:), intent(in) :: x
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
     real(DP), intent(inout) :: ccratin
     real(DP), intent(inout) :: ccratout
     ! -- local

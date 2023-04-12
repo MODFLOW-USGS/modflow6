@@ -242,9 +242,12 @@ contains
       vsolid = vcell * (DONE - this%porosity(n))
       !
       ! -- add terms to diagonal and rhs accumulators
-      term = vsolid * (this%rhos(n) * this%cps(n)) / (this%rhow * this%cpw)
-      hhcof = -(vnew + term) * tled
-      rrhs = -(vold + term) * tled * cold(n)
+!!      term = vsolid * (this%rhos(n) * this%cps(n)) / this%eqnsclfac
+!!      hhcof = -(vnew + term) * tled
+!!      rrhs = -(vold + term) * tled * cold(n)
+      term = (this%rhos(n) * this%cps(n)) * vsolid
+      hhcof = -(this%eqnsclfac * vnew + term) * tled
+      rrhs = -(this%eqnsclfac * vold + term) * tled * cold(n)
       idiag = this%dis%con%ia(n)
       call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
       rhs(n) = rhs(n) + rrhs
@@ -294,9 +297,11 @@ contains
       idiag = this%dis%con%ia(n)
       if (this%idcy == 1) then
         !
-        ! -- first order decay rate is a function of temperature, so add
+        ! -- first order decay rate is a function of temperature, so add       ! kluge note: do we need/want first-order decay for temperature???
         !    to left hand side
-        hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n)
+!!        hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n)   ! kluge note: this term should NOT be divided by eqnsclfac for fc purposes because rhow*cpw is already effectively divided out
+          hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n) &
+              * this%eqnsclfac
         call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
       elseif (this%idcy == 2) then
         !
@@ -304,6 +309,7 @@ contains
         !    from the user-specified rate to prevent negative temperatures     ! kluge note: think through negative temps
         decay_rate = get_zero_order_decay(this%decay(n), this%decaylast(n), &
                                           kiter, cold(n), cnew(n), delt)
+!!        decay_rate = decay_rate / this%eqnsclfac                     ! kluge note: this term does get divided by eqnsclfac for fc purposes because it should start out being a rate of energy
         this%decaylast(n) = decay_rate
         rrhs = decay_rate * vcell * swtpdt * this%porosity(n)
         rhs(n) = rhs(n) + rrhs
@@ -383,10 +389,14 @@ contains
       vsolid = vcell * (DONE - this%porosity(n))
       !
       ! -- calculate rate
-      term = vsolid * (this%rhos(n) * this%cps(n)) / this%eqnsclfac
-      hhcof = -(vwatnew + term) * tled
-      rrhs = -(vwatold + term) * tled * cold(n)
-      rate = (hhcof * cnew(n) - rrhs) * this%eqnsclfac
+!!      term = vsolid * (this%rhos(n) * this%cps(n)) / this%eqnsclfac
+!!      hhcof = -(vwatnew + term) * tled
+!!      rrhs = -(vwatold + term) * tled * cold(n)
+!!      rate = (hhcof * cnew(n) - rrhs) * this%eqnsclfac
+      term = (this%rhos(n) * this%cps(n)) * vsolid
+      hhcof = -(this%eqnsclfac * vwatnew + term) * tled
+      rrhs = -(this%eqnsclfac * vwatold + term) * tled * cold(n)
+      rate = hhcof * cnew(n) - rrhs
       this%ratesto(n) = rate
       idiag = this%dis%con%ia(n)
       flowja(idiag) = flowja(idiag) + rate
@@ -401,7 +411,7 @@ contains
   !!  Method to calculate decay terms for the package.
   !!
   !<
-  subroutine mst_cq_dcy(this, nodes, cnew, cold, flowja)
+  subroutine mst_cq_dcy(this, nodes, cnew, cold, flowja)    ! kluge note: this handles only decay in water; need to add zero-order (but not first-order?) decay in solid
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
@@ -436,12 +446,12 @@ contains
       rate = DZERO
       hhcof = DZERO
       rrhs = DZERO
-      if (this%idcy == 1) then
-        hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n)
+      if (this%idcy == 1) then       ! kluge note: do we need/want first-order decay for temperature???
+        hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n) * this%eqnsclfac
       elseif (this%idcy == 2) then
         decay_rate = get_zero_order_decay(this%decay(n), this%decaylast(n), &
                                           0, cold(n), cnew(n), delt)
-        rrhs = decay_rate * vcell * swtpdt * this%porosity(n)
+        rrhs = decay_rate * vcell * swtpdt * this%porosity(n)   ! kluge note: this term does NOT get multiplied by eqnsclfac for cq purposes because it should already be a rate of energy
       end if
       rate = hhcof * cnew(n) - rrhs
       this%ratedcy(n) = rate
@@ -472,11 +482,6 @@ contains
     real(DP) :: rin
     real(DP) :: rout
     !
-!!    ! -- for GWE, storage rate needs to have units adjusted
-!!    do n = 1, size(this%ratesto)
-!!      this%ratesto(n) = this%ratesto(n) * this%cpw * this%rhow
-!!    end do
-!!    !
     ! -- sto
     call rate_accumulator(this%ratesto, rin, rout)
     call model_budget%addentry(rin, rout, delt, budtxt(1), &
@@ -933,7 +938,7 @@ contains
       !    temperature, so reduce the rate if it would result in
       !    removing more energy than is in the cell.          ! kluge note: think through
       if (kiter == 1) then
-        decay_rate = min(decay_rate_usr, cold / delt)
+        decay_rate = min(decay_rate_usr, cold / delt)  ! kluge note: actually want to use rhow*cpw*cold and rhow*cpw*cnew for rates here and below
       else
         decay_rate = decay_rate_last
         if (cnew < DZERO) then

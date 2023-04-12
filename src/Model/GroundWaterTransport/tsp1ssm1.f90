@@ -339,7 +339,7 @@ contains
           ctmp = this%cnew(n)
           omega = DONE ! lhs
           if (ctmp < DZERO) then
-            omega = DZERO ! concentration is negative, so set mass flux to zero
+            omega = DZERO ! concentration is negative, so set mass flux to zero  ! kluge note: think this through for temperature
           end if
         end if
       else
@@ -363,9 +363,11 @@ contains
       !
       ! -- Add terms based on qbnd sign
       if (qbnd <= DZERO) then
-        hcoftmp = qbnd * omega
+!!        hcoftmp = qbnd * omega
+        hcoftmp = qbnd * omega * this%eqnsclfac
       else
-        rhstmp = -qbnd * ctmp * (DONE - omega)
+!!        rhstmp = -qbnd * ctmp * (DONE - omega)
+        rhstmp = -qbnd * ctmp * (DONE - omega) * this%eqnsclfac
       end if
       !
       ! -- end of active ibound
@@ -374,7 +376,8 @@ contains
     ! -- set requested values
     if (present(hcofval)) hcofval = hcoftmp
     if (present(rhsval)) rhsval = rhstmp
-    if (present(rrate)) rrate = (hcoftmp * ctmp - rhstmp) * this%eqnsclfac
+!!    if (present(rrate)) rrate = (hcoftmp * ctmp - rhstmp) * this%eqnsclfac
+    if (present(rrate)) rrate = (hcoftmp * ctmp - rhstmp)
     if (present(cssm)) cssm = ctmp
     if (present(qssm)) qssm = qbnd
     !

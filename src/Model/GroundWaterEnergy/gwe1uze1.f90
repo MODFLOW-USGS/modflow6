@@ -588,7 +588,7 @@ contains
     ! -- add from mover contribution
     if (this%idxbudfmvr /= 0) then
       do n = 1, this%ncv
-        rhsval = this%qmfrommvr(n)
+        rhsval = this%qmfrommvr(n)    ! kluge note: presumably already in terms of energy
         iloc = this%idxlocnode(n)  ! for uze idxlocnode stores the host cell local row index
         rhs(iloc) = rhs(iloc) - rhsval
       end do
@@ -634,8 +634,9 @@ contains
         end if
         iposd = this%idxfjfdglo(j)        !< position of feature-id1 column in feature id1's host-cell row
         iposoffd = this%idxfjfoffdglo(j)  !< position of feature-id2 column in feature id1's host-cell row
-        call matrix_sln%add_value_pos(iposd, omega * qbnd)
-        call matrix_sln%add_value_pos(iposoffd, (DONE - omega) * qbnd)
+        call matrix_sln%add_value_pos(iposd, omega * qbnd * this%eqnsclfac)
+        call matrix_sln%add_value_pos(iposoffd, &
+                                      (DONE - omega) * qbnd * this%eqnsclfac)
       end do
     end if
     !
@@ -1051,8 +1052,10 @@ contains
       r = -qbnd * ctmp
     end if
     if (present(rrate)) rrate = qbnd * ctmp * this%eqnsclfac
-    if (present(rhsval)) rhsval = r
-    if (present(hcofval)) hcofval = h
+!!    if (present(rhsval)) rhsval = r
+!!    if (present(hcofval)) hcofval = h
+    if (present(rhsval)) rhsval = r * this%eqnsclfac
+    if (present(hcofval)) hcofval = h * this%eqnsclfac
     !
     ! -- return
     return
@@ -1085,7 +1088,8 @@ contains
     ctmp = this%tempinfl(n1)
     if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = DZERO
-    if (present(hcofval)) hcofval = qbnd
+!!    if (present(hcofval)) hcofval = qbnd
+    if (present(hcofval)) hcofval = qbnd * this%eqnsclfac
     !
     ! -- return
     return
@@ -1126,8 +1130,10 @@ contains
     if (present(rrate)) &
       rrate = (omega * qbnd * this%xnewpak(n1) + &
               (DONE - omega) * qbnd * ctmp) * this%eqnsclfac
-    if (present(rhsval)) rhsval = -(DONE - omega) * qbnd * ctmp
-    if (present(hcofval)) hcofval = omega * qbnd
+!!    if (present(rhsval)) rhsval = -(DONE - omega) * qbnd * ctmp
+!!    if (present(hcofval)) hcofval = omega * qbnd
+    if (present(rhsval)) rhsval = -(DONE - omega) * qbnd * ctmp * this%eqnsclfac
+    if (present(hcofval)) hcofval = omega * qbnd * this%eqnsclfac
     !
     ! -- return
     return
@@ -1160,7 +1166,8 @@ contains
     ctmp = this%tempinfl(n1)
     if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = DZERO
-    if (present(hcofval)) hcofval = qbnd
+!!    if (present(hcofval)) hcofval = qbnd
+    if (present(hcofval)) hcofval = qbnd * this%eqnsclfac
     !
     ! -- return
     return

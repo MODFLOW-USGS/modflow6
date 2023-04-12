@@ -243,9 +243,10 @@ contains
     call fmi_cr(this%fmi, this%name, this%infmi, this%iout, this%tsplab)
     call mst_cr(this%mst, this%name, this%inmst, this%iout, this%fmi, &
                 this%eqnsclfac, this%gwecommon)
-    call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi)
+    call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi, &
+                this%eqnsclfac)
     call dsp_cr(this%dsp, this%name, this%indsp, this%iout, this%fmi, &
-                this%gwecommon)
+                this%eqnsclfac, this%gwecommon)
     call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, &
                 this%tsplab, this%eqnsclfac, this%gwecommon)
     call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi)
