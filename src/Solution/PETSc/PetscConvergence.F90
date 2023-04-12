@@ -54,7 +54,6 @@ contains
   !> @brief Routine to check the convergence. This is called
   !< from within PETSc.
   subroutine petsc_check_convergence(ksp, n, rnorm, flag, ctx_id, ierr)
-    use SimVariablesModule, only: proc_id
     KSP :: ksp !< Iterative context
     PetscInt :: n !< Iteration number
     PetscReal :: rnorm !< 2-norm (preconditioned) residual value
@@ -96,9 +95,6 @@ contains
     CHKERRQ(ierr)
 
     if (norm < petsc_context%dvclose) then
-      if (proc_id == 0) then
-        write (*, *) "converged: ", norm, " iter: ", n
-      end if
       flag = KSP_CONVERGED_HAPPY_BREAKDOWN ! Converged
     else
       flag = KSP_CONVERGED_ITERATING ! Not yet converged
