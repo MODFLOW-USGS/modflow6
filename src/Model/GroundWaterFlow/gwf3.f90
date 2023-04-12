@@ -643,7 +643,6 @@ contains
     integer(I4B), intent(inout) :: iptc
     real(DP), intent(inout) :: ptcf
     ! -- local
-    integer(I4B) :: neqsln
     integer(I4B) :: iptct
     integer(I4B) :: n
     integer(I4B) :: jrow
@@ -651,6 +650,7 @@ contains
     integer(I4B) :: matrix_offset
     integer(I4B) :: j
     integer(I4B) :: jcol
+    integer(I4B) :: jcol_loc
     real(DP) :: v
     real(DP) :: resid
     real(DP), dimension(this%dis%nodes) :: resid_vec
@@ -663,9 +663,6 @@ contains
     real(DP) :: diagmax
     integer(I4B) :: first_col, last_col
 ! ------------------------------------------------------------------------------
-    !
-    ! get size of x-vector
-    neqsln = vec_x%get_size()
     !
     ! set pointers to vec_x and vec_rhs
     x => vec_x%get_array()
@@ -700,8 +697,9 @@ contains
           last_col = matrix%get_last_col_pos(jrow)
           do j = first_col, last_col
             jcol = matrix%get_column(j)
-            if (jcol > neqsln) cycle ! temporary protection for parallel case
-            resid = resid + matrix%get_value_pos(j) * x(jcol)
+            jcol_loc = jcol - matrix_offset
+            if (jcol_loc < 1 .or. jcol_loc > size(x)) cycle ! temporary protection for parallel case
+            resid = resid + matrix%get_value_pos(j) * x(jrow_loc)
           end do
 
           ! subtract the right-hand side
@@ -734,6 +732,7 @@ contains
         if (ptcdelem1 > ptcf) ptcf = ptcdelem1
         !
         ! -- determine minimum and maximum diagonal entries
+        jrow = n + this%moffset
         diag = abs(matrix%get_diag_value(jrow))
         diagcnt = diagcnt + DONE
         if (diag > DZERO) then
