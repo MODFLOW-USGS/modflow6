@@ -699,7 +699,7 @@ contains
             jcol = matrix%get_column(j)
             jcol_loc = jcol - matrix_offset
             if (jcol_loc < 1 .or. jcol_loc > size(x)) cycle ! temporary protection for parallel case
-            resid = resid + matrix%get_value_pos(j) * x(jrow_loc)
+            resid = resid + matrix%get_value_pos(j) * x(jcol_loc)
           end do
 
           ! subtract the right-hand side
