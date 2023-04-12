@@ -40,6 +40,7 @@ mname_right = "rightmodel"
 
 # solver criterion
 hclose_check = 1e-9
+max_inner_it = 300
 nper = 2
 
 # model spatial discretization
@@ -121,7 +122,7 @@ def get_model(idx, dir):
         tdis_rc.append((1.0, 1, 1))
 
     # solver data
-    nouter, ninner = 100, 300
+    nouter, ninner = 100, max_inner_it
     hclose, rclose, relax = hclose_check, 1e-3, 0.97
 
     sim = flopy.mf6.MFSimulation(

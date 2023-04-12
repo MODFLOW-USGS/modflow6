@@ -37,6 +37,7 @@ mname_ref = "refmodel"
 mname_left = "leftmodel"
 mname_right = "rightmodel"
 hclose_check = 1e-9
+max_inner_it = 300
 
 useXT3D = True
 
@@ -52,7 +53,7 @@ def get_model(idx, dir):
         tdis_rc.append((1.0, 1, 1))
 
     # solver data
-    nouter, ninner = 100, 300
+    nouter, ninner = 100, max_inner_it
     hclose, rclose, relax = hclose_check, 1e-3, 0.97
 
     # model spatial discretization
