@@ -27,7 +27,7 @@ module TransportModelModule
   use TspOcModule, only: TspOcType
   use TspObsModule, only: TspObsType
   use BudgetModule, only: BudgetType
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
 
@@ -114,7 +114,7 @@ module TransportModelModule
     use TspSsmModule, only: ssm_cr
     use BudgetModule, only: budget_cr
     use ConstantsModule, only: LINELENGTH
-    use NameFileModule, only: NameFileType
+    !use NameFileModule, only: NameFileType
     use InputOutputModule, only: upcase
     ! -- dummy
     class(TransportModelType) :: this
@@ -123,7 +123,7 @@ module TransportModelModule
     character(len=*), intent(in) :: modelname
     ! -- local
     class(*), pointer :: mstobjPtr
-    type(NameFileType) :: namefile_obj
+    !type(NameFileType) :: namefile_obj
     integer(I4B) :: indis, indis6, indisu6, indisv6
     character(len=LINELENGTH) :: errmsg
     integer(I4B) :: nwords
@@ -137,82 +137,82 @@ module TransportModelModule
     this%id = id
     !
     ! -- Open namefile and set iout
-    call namefile_obj%init(this%filename, 0)
-    call namefile_obj%add_cunit(niunit, cunit)
-    call namefile_obj%openlistfile(this%iout)
+    !call namefile_obj%init(this%filename, 0)
+    !call namefile_obj%add_cunit(niunit, cunit)
+    !call namefile_obj%openlistfile(this%iout)
     !
     ! -- Write header to model list file
-    call write_listfile_header(this%iout, 'GROUNDWATER TRANSPORT MODEL (GWT)')
+    !call write_listfile_header(this%iout, 'GROUNDWATER TRANSPORT MODEL (GWT)')
     !
     ! -- Open files
-    call namefile_obj%openfiles(this%iout)
+    !call namefile_obj%openfiles(this%iout)
     !
     ! --
-    if (size(namefile_obj%opts) > 0) then
-      write (this%iout, '(1x,a)') 'NAMEFILE OPTIONS:'
-    end if
+    !if (size(namefile_obj%opts) > 0) then
+    !  write (this%iout, '(1x,a)') 'NAMEFILE OPTIONS:'
+    !end if
     !
     ! -- parse options in the gwt name file
-    do i = 1, size(namefile_obj%opts)
-      call ParseLine(namefile_obj%opts(i), nwords, words)
-      call upcase(words(1))
-      select case (words(1))
-      case ('PRINT_INPUT')
-        this%iprpak = 1
-        write (this%iout, '(4x,a)') 'STRESS PACKAGE INPUT WILL BE PRINTED '// &
-          'FOR ALL MODEL STRESS PACKAGES'
-      case ('PRINT_FLOWS')
-        this%iprflow = 1
-        write (this%iout, '(4x,a)') 'PACKAGE FLOWS WILL BE PRINTED '// &
-          'FOR ALL MODEL PACKAGES'
-      case ('SAVE_FLOWS')
-        this%ipakcb = -1
-        write (this%iout, '(4x,a)') &
-          'FLOWS WILL BE SAVED TO BUDGET FILE SPECIFIED IN OUTPUT CONTROL'
-      case default
-        write (errmsg, '(4x,a,a,a,a)') &
-          'UNKNOWN GWT NAMEFILE (', &
-          trim(adjustl(this%filename)), ') OPTION: ', &
-          trim(adjustl(namefile_obj%opts(i)))
-        call store_error(errmsg, terminate=.TRUE.)
-      end select
-    end do
+    !do i = 1, size(namefile_obj%opts)
+    !  call ParseLine(namefile_obj%opts(i), nwords, words)
+    !  call upcase(words(1))
+    !  select case (words(1))
+    !  case ('PRINT_INPUT')
+    !    this%iprpak = 1
+    !    write (this%iout, '(4x,a)') 'STRESS PACKAGE INPUT WILL BE PRINTED '// &
+    !      'FOR ALL MODEL STRESS PACKAGES'
+    !  case ('PRINT_FLOWS')
+    !    this%iprflow = 1
+    !    write (this%iout, '(4x,a)') 'PACKAGE FLOWS WILL BE PRINTED '// &
+    !      'FOR ALL MODEL PACKAGES'
+    !  case ('SAVE_FLOWS')
+    !    this%ipakcb = -1
+    !    write (this%iout, '(4x,a)') &
+    !      'FLOWS WILL BE SAVED TO BUDGET FILE SPECIFIED IN OUTPUT CONTROL'
+    !  case default
+    !    write (errmsg, '(4x,a,a,a,a)') &
+    !      'UNKNOWN GWT NAMEFILE (', &
+    !      trim(adjustl(this%filename)), ') OPTION: ', &
+    !      trim(adjustl(namefile_obj%opts(i)))
+    !    call store_error(errmsg, terminate=.TRUE.)
+    !  end select
+    !end do
     !
     ! -- Assign unit numbers to attached modules, and remove
     ! -- from unitnumber (by specifying 1 for iremove)
     !
-    indis = 0
-    indis6 = 0
-    indisu6 = 0
-    indisv6 = 0
-    call namefile_obj%get_unitnumber('DIS6', indis6, 1)
-    if (indis6 > 0) indis = indis6
-    if (indis <= 0) call namefile_obj%get_unitnumber('DISU6', indisu6, 1)
-    if (indisu6 > 0) indis = indisu6
-    if (indis <= 0) call namefile_obj%get_unitnumber('DISV6', indisv6, 1)
-    if (indisv6 > 0) indis = indisv6
-    call namefile_obj%get_unitnumber('ADV6', this%inadv, 1)
-    call namefile_obj%get_unitnumber('FMI6', this%infmi, 1)
-    call namefile_obj%get_unitnumber('IC6', this%inic, 1)
-    call namefile_obj%get_unitnumber('MVT6', this%inmvt, 1)
-    call namefile_obj%get_unitnumber('OBS6', this%inobs, 1)
-    call namefile_obj%get_unitnumber('OC6', this%inoc, 1)
-    call namefile_obj%get_unitnumber('SSM6', this%inssm, 1)
+    !indis = 0
+    !indis6 = 0
+    !indisu6 = 0
+    !indisv6 = 0
+    !call namefile_obj%get_unitnumber('DIS6', indis6, 1)
+    !if (indis6 > 0) indis = indis6
+    !if (indis <= 0) call namefile_obj%get_unitnumber('DISU6', indisu6, 1)
+    !if (indisu6 > 0) indis = indisu6
+    !if (indis <= 0) call namefile_obj%get_unitnumber('DISV6', indisv6, 1)
+    !if (indisv6 > 0) indis = indisv6
+    !call namefile_obj%get_unitnumber('ADV6', this%inadv, 1)
+    !call namefile_obj%get_unitnumber('FMI6', this%infmi, 1)
+    !call namefile_obj%get_unitnumber('IC6', this%inic, 1)
+    !call namefile_obj%get_unitnumber('MVT6', this%inmvt, 1)
+    !call namefile_obj%get_unitnumber('OBS6', this%inobs, 1)
+    !call namefile_obj%get_unitnumber('OC6', this%inoc, 1)
+    !call namefile_obj%get_unitnumber('SSM6', this%inssm, 1)
     !
     ! -- Check to make sure that required ftype's have been specified
-    call this%ftype_check(namefile_obj, indis)
+    !call this%ftype_check(namefile_obj, indis)
     !
     ! -- Create discretization object
-    if (indis6 > 0) then
-      call this%load_input_context('DIS6', this%name, 'DIS', indis, this%iout)
-      call dis_cr(this%dis, this%name, indis, this%iout)
-    elseif (indisu6 > 0) then
-      call this%load_input_context('DISU6', this%name, 'DISU', indis, this%iout)
-      call disu_cr(this%dis, this%name, indis, this%iout)
-    elseif (indisv6 > 0) then
-      call this%load_input_context('DISV6', this%name, 'DISV', indis, this%iout)
-      call disv_cr(this%dis, this%name, indis, this%iout)
-    end if
+    !if (indis6 > 0) then
+    !  call this%load_input_context('DIS6', this%name, 'DIS', indis, this%iout)
+    !  call dis_cr(this%dis, this%name, indis, this%iout)
+    !elseif (indisu6 > 0) then
+    !  call this%load_input_context('DISU6', this%name, 'DISU', indis, this%iout)
+    !  call disu_cr(this%dis, this%name, indis, this%iout)
+    !elseif (indisv6 > 0) then
+    !  call this%load_input_context('DISV6', this%name, 'DISV', indis, this%iout)
+    !  call disv_cr(this%dis, this%name, indis, this%iout)
+    !end if
     !
     ! -- Create utility objects
     call budget_cr(this%budget, this%name, this%tsplab)
@@ -728,7 +728,7 @@ module TransportModelModule
     return
   end subroutine tsp_da
   
-  subroutine ftype_check(this, namefile_obj, indis)
+  subroutine ftype_check(this, indis)
 ! ******************************************************************************
 ! ftype_check -- Check to make sure required input files have been specified
 ! ******************************************************************************
@@ -737,18 +737,12 @@ module TransportModelModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error, count_errors
-    use NameFileModule, only: NameFileType
+    use SimModule, only: store_error, count_errors, store_error_filename
     ! -- dummy
     class(TransportModelType) :: this
-    type(NameFileType), intent(in) :: namefile_obj
     integer(I4B), intent(in) :: indis
     ! -- local
     character(len=LINELENGTH) :: errmsg
-    integer(I4B) :: i, iu
-    character(len=LENFTYPE), dimension(10) :: nodupftype = &
-      &(/'DIS6 ', 'DISU6', 'DISV6', 'IC6  ', 'MST6 ', 'ADV6 ', 'DSP6 ', &
-        &'SSM6 ', 'OC6  ', 'OBS6 '/)
 ! ------------------------------------------------------------------------------
     !
     ! -- Check for IC6, DIS(u), and MST. Stop if not present.
@@ -767,28 +761,11 @@ module TransportModelModule
         &PACKAGE NOT SPECIFIED.'
       call store_error(errmsg)
     end if
+    !
     if (count_errors() > 0) then
       write (errmsg, '(1x,a)') 'ERROR. REQUIRED PACKAGE(S) NOT SPECIFIED.'
       call store_error(errmsg)
-    end if
-    !
-    ! -- Check to make sure that some GWT packages are not specified more
-    !    than once
-    do i = 1, size(nodupftype)
-      call namefile_obj%get_unitnumber(trim(nodupftype(i)), iu, 0)
-      if (iu > 0) then
-        write (errmsg, '(1x, a, a, a)') &
-          'DUPLICATE ENTRIES FOR FTYPE ', trim(nodupftype(i)), &
-          ' NOT ALLOWED FOR GWT MODEL.'
-        call store_error(errmsg)
-      end if
-    end do
-    !
-    ! -- Stop if errors
-    if (count_errors() > 0) then
-      write (errmsg, '(a, a)') 'ERROR OCCURRED WHILE READING FILE: ', &
-        trim(namefile_obj%filename)
-      call store_error(errmsg, terminate=.TRUE.)
+      call store_error_filename(this%filename)
     end if
     !
     ! -- return

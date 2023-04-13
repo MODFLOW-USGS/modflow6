@@ -1,7 +1,6 @@
 import os
 import sys
 import json
-import yaml
 from pathlib import Path
 from enum import Enum
 
@@ -28,12 +27,22 @@ class Dfn2F90:
         self._param_varnames = []
         self._aggregate_varnames = []
         self._warnings = []
+        self._multi_package = False
 
         self.component, self.subcomponent = self._dfnfspec.stem.upper().split("-")
 
         print(f"\nprocessing dfn => {self._dfnfspec}")
         self._set_var_d()
         self._set_param_strs()
+
+    def add_dfn_entry(self, dfn_d=None):
+        c_key = f"{self.component.upper()}"
+        sc_key = f"{self.subcomponent.upper()}"
+
+        if c_key not in dfn_d:
+            dfn_d[c_key] = []
+
+        dfn_d[c_key].append(sc_key)
 
     def write_f90(self, ofspec=None):
         with open(ofspec, "w") as f:
@@ -43,7 +52,8 @@ class Dfn2F90:
 
             # found type
             f.write(
-                f"  type {self.component.capitalize()}{self.subcomponent.capitalize()}ParamFoundType\n"
+                f"  type {self.component.capitalize()}"
+                f"{self.subcomponent.capitalize()}ParamFoundType\n"
             )
             for var in self._param_varnames:
                 varname = var.split(
@@ -51,7 +61,17 @@ class Dfn2F90:
                 )[1]
                 f.write(f"    logical :: {varname} = .false.\n")
             f.write(
-                f"  end type {self.component.capitalize()}{self.subcomponent.capitalize()}ParamFoundType\n\n"
+                f"  end type {self.component.capitalize()}"
+                f"{self.subcomponent.capitalize()}ParamFoundType\n\n"
+            )
+
+            # multi package
+            smult = ".false."
+            if self._multi_package:
+                smult = ".true."
+            f.write(
+                f"  logical :: {self.component.lower()}_"
+                f"{self.subcomponent.lower()}_multi_package = {smult}\n\n"
             )
 
             # params
@@ -138,6 +158,9 @@ class Dfn2F90:
 
             # skip comments
             if "#" in line.strip()[0]:
+                # flopy multi-package
+                if "flopy multi-package" in line.strip():
+                    self._multi_package = True
                 continue
 
             ll = line.strip().split()
@@ -163,18 +186,26 @@ class Dfn2F90:
         self._var_d = vardict
 
     def _construct_f90_block_statement(
-        self, blockname, required=False, aggregate=False
+        self, blockname, required=False, aggregate=False, block_var=False
     ):
         f90statement = f"    InputBlockDefinitionType( &\n"
         f90statement += f"    '{blockname}', & ! blockname\n"
+
         if required:
             f90statement += f"    .true., & ! required\n"
         else:
             f90statement += f"    .false., & ! required\n"
+
         if aggregate:
-            f90statement += f"    .true. & ! aggregate\n"
+            f90statement += f"    .true., & ! aggregate\n"
         else:
-            f90statement += f"    .false. & ! aggregate\n"
+            f90statement += f"    .false., & ! aggregate\n"
+
+        if block_var:
+            f90statement += f"    .true. & ! block_variable\n"
+        else:
+            f90statement += f"    .false. & ! block_variable\n"
+
         f90statement += f"    ), &"
 
         return f90statement
@@ -183,13 +214,16 @@ class Dfn2F90:
         self, tuple_list, basename, varname, aggregate=False
     ):
         vname = f"{basename.lower()}_{varname.lower()}"
+
         if aggregate:
             self._aggregate_varnames.append(vname)
         else:
             self._param_varnames.append(vname)
+
         f90statement = f"  type(InputParamDefinitionType), parameter :: &\n"
         f90statement += f"    {vname} = InputParamDefinitionType &\n"
         f90statement += f"    ( &\n"
+
         for i, (value, varname) in enumerate(tuple_list):
             comma = ","
             if i + 1 == len(tuple_list):
@@ -198,12 +232,14 @@ class Dfn2F90:
             if value in [".false.", ".true."]:
                 v = f"{value}"
             f90statement += f"    {v}{comma} & ! {varname}\n"
+
         f90statement += f"    )\n"
 
         return f90statement
 
     def _set_param_strs(self):
         blocknames = self.get_blocknames()
+
         for b in blocknames:
             self._set_blk_param_strs(b, self.component, self.subcomponent)
 
@@ -221,6 +257,7 @@ class Dfn2F90:
 
         required_l = None
         required_l = []
+        has_block_var = False
         is_aggregate_blk = False
         aggregate_required = False
 
@@ -240,6 +277,7 @@ class Dfn2F90:
             v = self._var_d[k]
 
             if "block_variable" in v and v["block_variable"].upper() == "TRUE":
+                has_block_var = True
                 continue
 
             c = component
@@ -254,7 +292,8 @@ class Dfn2F90:
 
             if len(mf6vn) > MF6_LENVARNAME:
                 self._warnings.append(
-                    f"MF6_LENVARNAME({MF6_LENVARNAME}) exceeded: {component}-{subcomponent}-{blockname}: {mf6vn}"
+                    f"MF6_LENVARNAME({MF6_LENVARNAME}) exceeded: "
+                    f"{component}-{subcomponent}-{blockname}: {mf6vn}"
                 )
 
             t = v["type"].upper()
@@ -320,9 +359,6 @@ class Dfn2F90:
                 (layered, "layered"),
             ]
 
-            # assumes recarray type appears before and member
-            # parameter descriptions in dfn file, adjust
-            # if necessary
             if aggregate_t:
                 self._aggregate_str += (
                     self._construct_f90_param_statement(
@@ -334,7 +370,8 @@ class Dfn2F90:
                 aggregate_required = r == ".true."
                 if not shape:
                     self._warnings.append(
-                        f"Aggregate type found with no shape: {component}-{subcomponent}-{blockname}: {mf6vn}"
+                        f"Aggregate type found with no shape: "
+                        f"{component}-{subcomponent}-{blockname}: {mf6vn}"
                     )
 
             else:
@@ -349,70 +386,76 @@ class Dfn2F90:
             required = aggregate_required
         else:
             required = ".true." in required_l
+
+        if self._block_str == "" and blockname.upper() != "OPTIONS":
+            self._block_str += (
+                self._construct_f90_block_statement(
+                    "OPTIONS",
+                    required=False,
+                    aggregate=False,
+                )
+                + "\n"
+            )
+
         self._block_str += (
             self._construct_f90_block_statement(
                 blockname.upper(),
                 required=required,
                 aggregate=is_aggregate_blk,
+                block_var=has_block_var,
             )
             + "\n"
         )
 
     def _source_file_header(self, component, subcomponent):
-        s = f"module {component.title()}{subcomponent.title()}InputModule" + "\n"
-        s += (
-            "  use InputDefinitionModule, only: InputParamDefinitionType, &"
-            + "\n"
-            + "                                   InputBlockDefinitionType"
-            + "\n"
+        s = (
+            f"! ** Do Not Modify! MODFLOW 6 system generated file. **\n"
+            f"module {component.title()}{subcomponent.title()}InputModule\n"
+            f"  use InputDefinitionModule, only: InputParamDefinitionType, &\n"
+            f"                                   InputBlockDefinitionType\n"
+            f"  private\n"
+            f"  public {component.lower()}_{subcomponent.lower()}_"
+            f"param_definitions\n"
+            f"  public {component.lower()}_{subcomponent.lower()}_"
+            f"aggregate_definitions\n"
+            f"  public {component.lower()}_{subcomponent.lower()}_"
+            f"block_definitions\n"
+            f"  public {component.capitalize()}{subcomponent.capitalize()}"
+            f"ParamFoundType\n"
+            f"  public {component.lower()}_{subcomponent.lower()}_"
+            f"multi_package\n\n"
         )
-        s += "  private" + "\n"
-        s += (
-            f"  public {component.lower()}_{subcomponent.lower()}_param_definitions"
-            + "\n"
-        )
-        s += (
-            f"  public {component.lower()}_{subcomponent.lower()}_aggregate_definitions"
-            + "\n"
-        )
-        s += (
-            f"  public {component.lower()}_{subcomponent.lower()}_block_definitions"
-            + "\n"
-        )
-        s += (
-            f"  public {component.capitalize()}{subcomponent.capitalize()}ParamFoundType"
-            + "\n\n"
-        )
+
         return s
 
     def _source_params_header(self, component, subcomponent):
         s = (
-            f"  type(InputParamDefinitionType), parameter :: &"
-            + "\n"
-            + f"    {component.lower()}_{subcomponent.lower()}_param_definitions(*) = &"
-            + "\n"
+            f"  type(InputParamDefinitionType), parameter :: &\n"
+            f"    {component.lower()}_{subcomponent.lower()}_param_"
+            f"definitions(*) = &\n"
+            f"    [ &\n"
         )
-        s += "    [ &" + "\n"
+
         return s
 
     def _source_aggregates_header(self, component, subcomponent):
         s = (
-            f"  type(InputParamDefinitionType), parameter :: &"
-            + "\n"
-            + f"    {component.lower()}_{subcomponent.lower()}_aggregate_definitions(*) = &"
-            + "\n"
+            f"  type(InputParamDefinitionType), parameter :: &\n"
+            f"    {component.lower()}_{subcomponent.lower()}_aggregate_"
+            f"definitions(*) = &\n"
+            f"    [ &\n"
         )
-        s += "    [ &" + "\n"
+
         return s
 
     def _source_blocks_header(self, component, subcomponent):
         s = (
-            f"  type(InputBlockDefinitionType), parameter :: &"
-            + "\n"
-            + f"    {component.lower()}_{subcomponent.lower()}_block_definitions(*) = &"
-            + "\n"
+            f"  type(InputBlockDefinitionType), parameter :: &\n"
+            f"    {component.lower()}_{subcomponent.lower()}_block_"
+            f"definitions(*) = &\n"
+            f"    [ &\n"
         )
-        s += "    [ &" + "\n"
+
         return s
 
     def _source_list_footer(self, component, subcomponent):
@@ -420,14 +463,347 @@ class Dfn2F90:
         return s
 
     def _source_file_footer(self, component, subcomponent):
-        s = f"end module {component.title()}{subcomponent.title()}InputModule" + "\n"
+        s = f"end module {component.title()}{subcomponent.title()}InputModule\n"
         return s
+
+
+class IdmDfnSelector:
+    """generate idm f90 selector files derived from set of f90 definition files"""
+
+    def __init__(
+        self,
+        dfn_d: dict = None,
+    ):
+        """IdmDfnSelector init"""
+
+        self._d = dfn_d
+
+    def write(self):
+        self._write_selectors()
+        self._write_master()
+
+    def _write_master(self):
+        ofspec = f"../../../src/Utilities/Idm/selector/IdmDfnSelector.f90"
+        with open(ofspec, "w") as fh:
+            self._write_master_decl(fh)
+            self._write_master_defn(fh, defn="param", dtype="param")
+            self._write_master_defn(fh, defn="aggregate", dtype="param")
+            self._write_master_defn(fh, defn="block", dtype="block")
+            self._write_master_multi(fh)
+            self._write_master_integration(fh)
+            fh.write(f"end module IdmDfnSelectorModule\n")
+
+    def _write_selectors(self):
+        for c in self._d:
+            ofspec = (
+                f"../../../src/Utilities/Idm/selector/Idm{c.title()}DfnSelector.f90"
+            )
+            with open(ofspec, "w") as fh:
+                self._write_selector_decl(fh, component=c, sc_list=self._d[c])
+                self._write_selector_helpers(fh)
+                self._write_selector_defn(
+                    fh, component=c, sc_list=self._d[c], defn="param", dtype="param"
+                )
+                self._write_selector_defn(
+                    fh, component=c, sc_list=self._d[c], defn="aggregate", dtype="param"
+                )
+                self._write_selector_defn(
+                    fh, component=c, sc_list=self._d[c], defn="block", dtype="block"
+                )
+                self._write_selector_multi(fh, component=c, sc_list=self._d[c])
+                self._write_selector_integration(fh, component=c, sc_list=self._d[c])
+                fh.write(f"end module Idm{c.title()}DfnSelectorModule\n")
+
+    def _write_selector_decl(self, fh=None, component=None, sc_list=None):
+        space = " "
+        c = component
+        len_c = len(c)
+
+        s = (
+            f"! ** Do Not Modify! MODFLOW 6 system generated file. **\n"
+            f"module Idm{c.title()}DfnSelectorModule\n\n"
+            f"  use SimModule, only: store_error\n"
+            f"  use InputDefinitionModule, only: InputParamDefinitionType, &\n"
+            f"                                   InputBlockDefinitionType\n"
+        )
+
+        for sc in sc_list:
+            len_sc = len(sc)
+            spacer = space * (len_c + len_sc)
+
+            s += (
+                f"  use {c.title()}{sc.title()}InputModule, only: "
+                f"{c.lower()}_{sc.lower()}_param_definitions, &"
+                f"\n                         {spacer}"
+                f"{c.lower()}_{sc.lower()}_aggregate_definitions, &"
+                f"\n                         {spacer}"
+                f"{c.lower()}_{sc.lower()}_block_definitions, &"
+                f"\n                         {spacer}"
+                f"{c.lower()}_{sc.lower()}_multi_package\n"
+            )
+
+        s += (
+            f"\n  implicit none\n"
+            f"  private\n"
+            f"  public :: {c.lower()}_param_definitions\n"
+            f"  public :: {c.lower()}_aggregate_definitions\n"
+            f"  public :: {c.lower()}_block_definitions\n"
+            f"  public :: {c.lower()}_idm_multi_package\n"
+            f"  public :: {c.lower()}_idm_integrated\n\n"
+            f"contains\n\n"
+        )
+
+        fh.write(s)
+
+    def _write_selector_helpers(self, fh=None):
+        s = (
+            f"  subroutine set_param_pointer(input_dfn, input_dfn_target)\n"
+            f"    type(InputParamDefinitionType), dimension(:), "
+            f"pointer :: input_dfn\n"
+            f"    type(InputParamDefinitionType), dimension(:), "
+            f"target :: input_dfn_target\n"
+            f"    input_dfn => input_dfn_target\n"
+            f"  end subroutine set_param_pointer\n\n"
+        )
+
+        s += (
+            f"  subroutine set_block_pointer(input_dfn, input_dfn_target)\n"
+            f"    type(InputBlockDefinitionType), dimension(:), "
+            f"pointer :: input_dfn\n"
+            f"    type(InputBlockDefinitionType), dimension(:), "
+            f"target :: input_dfn_target\n"
+            f"    input_dfn => input_dfn_target\n"
+            f"  end subroutine set_block_pointer\n\n"
+        )
+
+        fh.write(s)
+
+    def _write_selector_defn(
+        self, fh=None, component=None, sc_list=None, defn=None, dtype=None
+    ):
+        c = component
+
+        s = (
+            f"  function {c.lower()}_{defn.lower()}_definitions(subcomponent) "
+            f"result(input_definition)\n"
+            f"    character(len=*), intent(in) :: subcomponent\n"
+            f"    type(Input{dtype.title()}DefinitionType), dimension(:), "
+            f"pointer :: input_definition\n"
+            f"    nullify (input_definition)\n"
+            f"    select case (subcomponent)\n"
+        )
+
+        for sc in sc_list:
+            s += (
+                f"    case ('{sc}')\n"
+                f"      call set_{dtype.lower()}_pointer(input_definition, "
+                f"{c.lower()}_{sc.lower()}_{defn.lower()}_definitions)\n"
+            )
+
+        s += (
+            f"    case default\n"
+            f"    end select\n"
+            f"    return\n"
+            f"  end function {c.lower()}_{defn.lower()}_definitions\n\n"
+        )
+
+        fh.write(s)
+
+    def _write_selector_multi(self, fh=None, component=None, sc_list=None):
+        c = component
+
+        s = (
+            f"  function {c.lower()}_idm_multi_package(subcomponent) "
+            f"result(multi_package)\n"
+            f"    character(len=*), intent(in) :: subcomponent\n"
+            f"    logical :: multi_package\n"
+            f"    select case (subcomponent)\n"
+        )
+
+        for sc in sc_list:
+            s += (
+                f"    case ('{sc}')\n"
+                f"      multi_package = {c.lower()}_{sc.lower()}_"
+                f"multi_package\n"
+            )
+
+        s += (
+            f"    case default\n"
+            f"      call store_error('Idm selector subcomponent "
+            f"not found; '//&\n"
+            f"                       &'component=\"{c.upper()}\"'//&\n"
+            f"                       &', subcomponent=\"'//trim(subcomponent)"
+            f"//'\".', .true.)\n"
+            f"    end select\n"
+            f"    return\n"
+            f"  end function {c.lower()}_idm_multi_package\n\n"
+        )
+
+        fh.write(s)
+
+    def _write_selector_integration(self, fh=None, component=None, sc_list=None):
+        c = component
+
+        s = (
+            f"  function {c.lower()}_idm_integrated(subcomponent) "
+            f"result(integrated)\n"
+            f"    character(len=*), intent(in) :: subcomponent\n"
+            f"    logical :: integrated\n"
+            f"    integrated = .false.\n"
+            f"    select case (subcomponent)\n"
+        )
+
+        for sc in sc_list:
+            s += f"    case ('{sc}')\n"
+            s += f"      integrated = .true.\n"
+
+        s += (
+            f"    case default\n"
+            f"    end select\n"
+            f"    return\n"
+            f"  end function {c.lower()}_idm_integrated\n\n"
+        )
+
+        fh.write(s)
+
+    def _write_master_decl(self, fh=None):
+        space = " "
+
+        s = (
+            f"! ** Do Not Modify! MODFLOW 6 system generated file. **\n"
+            f"module IdmDfnSelectorModule\n\n"
+            f"  use SimModule, only: store_error\n"
+            f"  use InputDefinitionModule, only: InputParamDefinitionType, &\n"
+            f"                                   InputBlockDefinitionType\n"
+        )
+
+        for c in self._d:
+            len_c = len(c)
+            spacer = space * (len_c)
+            s += (
+                f"  use Idm{c.title()}DfnSelectorModule, only: "
+                f"{c.lower()}_param_definitions, &"
+                f"\n                                  {spacer}"
+                f"{c.lower()}_aggregate_definitions, &"
+                f"\n                                  {spacer}"
+                f"{c.lower()}_block_definitions, &"
+                f"\n                                  {spacer}"
+                f"{c.lower()}_idm_multi_package, &"
+                f"\n                                  {spacer}"
+                f"{c.lower()}_idm_integrated\n"
+            )
+
+        s += (
+            f"\n  implicit none\n"
+            f"  private\n"
+            f"  public :: param_definitions\n"
+            f"  public :: aggregate_definitions\n"
+            f"  public :: block_definitions\n"
+            f"  public :: idm_multi_package\n"
+            f"  public :: idm_integrated\n\n"
+            f"contains\n\n"
+        )
+
+        fh.write(s)
+
+    def _write_master_defn(self, fh=None, defn=None, dtype=None):
+        s = (
+            f"  function {defn.lower()}_definitions(component, subcomponent) "
+            f"result(input_definition)\n"
+            f"    character(len=*), intent(in) :: component\n"
+            f"    character(len=*), intent(in) :: subcomponent\n"
+            f"    type(Input{dtype.title()}DefinitionType), dimension(:), "
+            f"pointer :: input_definition\n"
+            f"    nullify (input_definition)\n"
+            f"    select case (component)\n"
+        )
+
+        for c in dfn_d:
+            s += (
+                f"    case ('{c}')\n"
+                f"      input_definition => {c.lower()}_{defn.lower()}_"
+                f"definitions(subcomponent)\n"
+            )
+
+        s += (
+            f"    case default\n"
+            f"    end select\n"
+            f"    if (.not. associated(input_definition)) then\n"
+            f"      call store_error('Idm {defn.lower()} input definition "
+            f"list not found; '//&\n"
+            f"                       &'component=\"'//trim(component)//&\n"
+            f"                       &'\", subcomponent=\"'//trim(subcomponent)"
+            f"//'\".', .true.)\n"
+            f"    end if\n"
+            f"    return\n"
+            f"  end function {defn.lower()}_definitions\n\n"
+        )
+
+        fh.write(s)
+
+    def _write_master_multi(self, fh=None):
+        s = (
+            f"  function idm_multi_package(component, subcomponent) "
+            f"result(multi_package)\n"
+            f"    character(len=*), intent(in) :: component\n"
+            f"    character(len=*), intent(in) :: subcomponent\n"
+            f"    logical :: multi_package\n"
+            f"    select case (component)\n"
+        )
+
+        for c in dfn_d:
+            s += (
+                f"    case ('{c}')\n"
+                f"      multi_package = {c.lower()}_idm_multi_"
+                f"package(subcomponent)\n"
+            )
+
+        s += (
+            f"    case default\n"
+            f"      call store_error('Idm selector component not found; '//&\n"
+            f"                       &'component=\"'//trim(component)//&\n"
+            f"                       &'\", subcomponent=\"'//trim(subcomponent)"
+            f"//'\".', .true.)\n"
+            f"    end select\n"
+            f"    return\n"
+            f"  end function idm_multi_package\n\n"
+        )
+
+        fh.write(s)
+
+    def _write_master_integration(self, fh=None):
+        s = (
+            f"  function idm_integrated(component, subcomponent) "
+            f"result(integrated)\n"
+            f"    character(len=*), intent(in) :: component\n"
+            f"    character(len=*), intent(in) :: subcomponent\n"
+            f"    logical :: integrated\n"
+            f"    integrated = .false.\n"
+            f"    select case (component)\n"
+        )
+
+        for c in dfn_d:
+            s += (
+                f"    case ('{c}')\n"
+                f"      integrated = {c.lower()}_idm_"
+                f"integrated(subcomponent)\n"
+            )
+
+        s += (
+            f"    case default\n"
+            f"    end select\n"
+            f"    return\n"
+            f"  end function idm_integrated\n\n"
+        )
+
+        fh.write(s)
 
 
 if __name__ == "__main__":
 
     dfns = [
-        # list per dfn [dfn relative path, model parent dirname, output filename]
+        # ** Add a new dfn parameter set to MODFLOW 6 by adding a new entry to this list **
+        # [relative path of input dnf, relative path of output f90 definition file]
         [
             Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-dis.dfn"),
             Path("../../../src/Model/GroundWaterFlow", "gwf3dis8idm.f90"),
@@ -445,14 +821,42 @@ if __name__ == "__main__":
             Path("../../../src/Model/GroundWaterFlow", "gwf3npf8idm.f90"),
         ],
         [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-dis.dfn"),
+            Path("../../../src/Model/GroundWaterTransport", "gwt1dis1idm.f90"),
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-disu.dfn"),
+            Path("../../../src/Model/GroundWaterTransport", "gwt1disu1idm.f90"),
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-disv.dfn"),
+            Path("../../../src/Model/GroundWaterTransport", "gwt1disv1idm.f90"),
+        ],
+        [
             Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-dsp.dfn"),
             Path("../../../src/Model/GroundWaterTransport", "gwt1dspidm.f90"),
         ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-nam.dfn"),
+            Path("../../../src/Model/GroundWaterFlow", "gwf3idm.f90"),
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-nam.dfn"),
+            Path("../../../src/Model/GroundWaterTransport", "gwt1idm.f90"),
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "sim-nam.dfn"),
+            Path("../../../src", "simnamidm.f90"),
+        ],
     ]
 
+    dfn_d = {}
     for dfn in dfns:
         converter = Dfn2F90(dfnfspec=dfn[0])
         converter.write_f90(ofspec=dfn[1])
         converter.warn()
+        converter.add_dfn_entry(dfn_d=dfn_d)
 
+    selectors = IdmDfnSelector(dfn_d=dfn_d)
+    selectors.write()
     print("\n...done.")

@@ -1,34 +1,14 @@
 import os
-import sys
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["uzf_3lay"]
-exdirs = []
 iuz_cell_dict = {}
 cell_iuz_dict = {}
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
 
 
 def build_model(idx, dir):
@@ -280,8 +260,7 @@ def build_model(idx, dir):
 def eval_model(sim):
     print("evaluating model...")
 
-    name = ex[sim.idxsim]
-    ws = exdirs[sim.idxsim]
+    ws = sim.simpath
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
 
     fpth = os.path.join(ws, "uzf_3lay.hds")
@@ -391,36 +370,14 @@ def eval_model(sim):
     print("Finished running checks")
 
 
-# - No need to change any code below
-@pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
-)
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_model, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_model, idxsim=idx)
-        test.run_mf6(sim)
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+@pytest.mark.parametrize("name", ex)
+def test_mf6model(name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, 0, ws)
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_model, idxsim=0
+        ),
+        ws,
+    )

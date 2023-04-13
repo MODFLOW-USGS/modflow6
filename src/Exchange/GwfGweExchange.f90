@@ -7,7 +7,7 @@ module GwfGweExchangeModule
   use SimVariablesModule, only: errmsg
   use BaseExchangeModule, only: BaseExchangeType, AddBaseExchangeToList
   use SpatialModelConnectionModule, only: SpatialModelConnectionType, &
-                                          GetSpatialModelConnectionFromList
+                                          get_smc_from_list
   use GweGweConnectionModule, only: GweGweConnectionType, CastAsGweGweConnection
   use GwfGwfConnectionModule, only: GwfGwfConnectionType, CastAsGwfGwfConnection
   use GwfGwfExchangeModule, only: GwfExchangeType, &
@@ -23,8 +23,8 @@ module GwfGweExchangeModule
 
   type, extends(BaseExchangeType) :: GwfGweExchangeType
 
-    integer(I4B), pointer :: m1id => null()
-    integer(I4B), pointer :: m2id => null()
+    integer(I4B), pointer :: m1_idx => null() !< index into the list of base exchanges for model 1
+    integer(I4B), pointer :: m2_idx => null() !< index into the list of base exchanges for model 2
 
   contains
 
@@ -41,7 +41,7 @@ module GwfGweExchangeModule
 
 contains
 
-  subroutine gwfgwe_cr(filename, id, m1id, m2id)
+  subroutine gwfgwe_cr(filename, id, m1_id, m2_id)
 ! ******************************************************************************
 ! gwfgwe_cr -- Create a new GWF to GWE exchange object
 ! ******************************************************************************
@@ -49,11 +49,12 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use SimVariablesModule, only: model_loc_idx
     ! -- dummy
     character(len=*), intent(in) :: filename
     integer(I4B), intent(in) :: id
-    integer(I4B), intent(in) :: m1id
-    integer(I4B), intent(in) :: m2id
+    integer(I4B), intent(in) :: m1_id
+    integer(I4B), intent(in) :: m2_id
     ! -- local
     class(BaseExchangeType), pointer :: baseexchange => null()
     type(GwfGweExchangeType), pointer :: exchange => null()
@@ -73,8 +74,10 @@ contains
     !
     ! -- allocate scalars
     call exchange%allocate_scalars()
-    exchange%m1id = m1id
-    exchange%m2id = m2id
+    !
+    ! -- NB: convert from id to local model index in base model list
+    exchange%m1_idx = model_loc_idx(m1_id)
+    exchange%m2_idx = model_loc_idx(m2_id)
     !
     ! -- set model pointers
     call exchange%set_model_pointers()
@@ -101,7 +104,7 @@ contains
     !
     ! -- set gwfmodel
     gwfmodel => null()
-    mb => GetBaseModelFromList(basemodellist, this%m1id)
+    mb => GetBaseModelFromList(basemodellist, this%m1_idx)
     select type (mb)
     type is (GwfModelType)
       gwfmodel => mb
@@ -109,7 +112,7 @@ contains
     !
     ! -- set gwemodel
     gwemodel => null()
-    mb => GetBaseModelFromList(basemodellist, this%m2id)
+    mb => GetBaseModelFromList(basemodellist, this%m2_idx)
     select type (mb)
     type is (GweModelType)
       gwemodel => mb
@@ -159,14 +162,14 @@ contains
     !
     !
     ! -- set gwfmodel
-    mb => GetBaseModelFromList(basemodellist, this%m1id)
+    mb => GetBaseModelFromList(basemodellist, this%m1_idx)
     select type (mb)
     type is (GwfModelType)
       gwfmodel => mb
     end select
     !
     ! -- set gwemodel
-    mb => GetBaseModelFromList(basemodellist, this%m2id)
+    mb => GetBaseModelFromList(basemodellist, this%m2_idx)
     select type (mb)
     type is (GweModelType)
       gwemodel => mb
@@ -224,14 +227,14 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- set gwfmodel
-    mb => GetBaseModelFromList(basemodellist, this%m1id)
+    mb => GetBaseModelFromList(basemodellist, this%m1_idx)
     select type (mb)
     type is (GwfModelType)
       gwfmodel => mb
     end select
     !
     ! -- set gwemodel
-    mb => GetBaseModelFromList(basemodellist, this%m2id)
+    mb => GetBaseModelFromList(basemodellist, this%m2_idx)
     select type (mb)
     type is (GweModelType)
       gwemodel => mb
@@ -324,7 +327,7 @@ contains
     ! loop over all connections
     gweloop: do ic1 = 1, baseconnectionlist%Count()
 
-      conn => GetSpatialModelConnectionFromList(baseconnectionlist, ic1)
+      conn => get_smc_from_list(baseconnectionlist, ic1)
       if (.not. associated(conn%owner, gweModel)) cycle gweloop
 
       ! start with a GWE conn.
@@ -335,7 +338,7 @@ contains
 
       ! find matching GWF conn. in same list
       gwfloop: do ic2 = 1, baseconnectionlist%Count()
-        conn => GetSpatialModelConnectionFromList(baseconnectionlist, ic2)
+        conn => get_smc_from_list(baseconnectionlist, ic2)
 
         if (associated(conn%owner, gwfModel)) then
           objPtr => conn
@@ -343,15 +346,15 @@ contains
 
           ! for now, connecting the same nodes nrs will be
           ! sufficient evidence of equality
-          areEqual = all(gwfConn%primaryExchange%nodem1 == &
-                         gweConn%primaryExchange%nodem1)
-          areEqual = areEqual .and. all(gwfConn%primaryExchange%nodem2 == &
-                                        gweConn%primaryExchange%nodem2)
+          areEqual = all(gwfConn%prim_exchange%nodem1 == &
+                         gweConn%prim_exchange%nodem1)
+          areEqual = areEqual .and. all(gwfConn%prim_exchange%nodem2 == &
+                                        gweConn%prim_exchange%nodem2)
           if (areEqual) then
             ! same DIS, same exchange: link and go to next GWE conn.
             write (iout, '(/6a)') 'Linking exchange ', &
-              trim(gweConn%primaryExchange%name), &
-              ' to ', trim(gwfConn%primaryExchange%name), &
+              trim(gweConn%prim_exchange%name), &
+              ' to ', trim(gwfConn%prim_exchange%name), &
               ' (using interface model) for GWE model ', &
               trim(gweModel%name)
             gwfConnIdx = ic2
@@ -375,13 +378,13 @@ contains
               associated(gwfEx%model2, gwfModel)) then
             ! again, connecting the same nodes nrs will be
             ! sufficient evidence of equality
-            areEqual = all(gwfEx%nodem1 == gweConn%primaryExchange%nodem1)
+            areEqual = all(gwfEx%nodem1 == gweConn%prim_exchange%nodem1)
             areEqual = areEqual .and. &
-                       all(gwfEx%nodem2 == gweConn%primaryExchange%nodem2)
+                       all(gwfEx%nodem2 == gweConn%prim_exchange%nodem2)
             if (areEqual) then
               ! link exchange to connection
               write (iout, '(/6a)') 'Linking exchange ', &
-                trim(gweConn%primaryExchange%name), &
+                trim(gweConn%prim_exchange%name), &
                 ' to ', trim(gwfEx%name), ' for GWE model ', &
                 trim(gweModel%name)
               gwfExIdx = iex
@@ -416,7 +419,7 @@ contains
         ! none found, report
         write (errmsg, '(/6a)') 'Missing GWF-GWF exchange when connecting GWE'// &
           ' model ', trim(gweModel%name), ' with exchange ', &
-          trim(gweConn%primaryExchange%name), ' to GWF model ', &
+          trim(gweConn%prim_exchange%name), ' to GWF model ', &
           trim(gwfModel%name)
         call store_error(errmsg, terminate=.true.)
       end if
@@ -479,8 +482,8 @@ contains
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    call mem_deallocate(this%m1id)
-    call mem_deallocate(this%m2id)
+    call mem_deallocate(this%m1_idx)
+    call mem_deallocate(this%m2_idx)
     !
     ! -- return
     return
@@ -500,10 +503,10 @@ contains
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    call mem_allocate(this%m1id, 'M1ID', this%memoryPath)
-    call mem_allocate(this%m2id, 'M2ID', this%memoryPath)
-    this%m1id = 0
-    this%m2id = 0
+    call mem_allocate(this%m1_idx, 'M1ID', this%memoryPath)
+    call mem_allocate(this%m2_idx, 'M2ID', this%memoryPath)
+    this%m1_idx = 0
+    this%m2_idx = 0
     !
     ! -- return
     return
@@ -528,14 +531,14 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- set gwfmodel
-    mb => GetBaseModelFromList(basemodellist, this%m1id)
+    mb => GetBaseModelFromList(basemodellist, this%m1_idx)
     select type (mb)
     type is (GwfModelType)
       gwfmodel => mb
     end select
     !
     ! -- set gwemodel
-    mb => GetBaseModelFromList(basemodellist, this%m2id)
+    mb => GetBaseModelFromList(basemodellist, this%m2_idx)
     select type (mb)
     type is (GweModelType)
       gwemodel => mb

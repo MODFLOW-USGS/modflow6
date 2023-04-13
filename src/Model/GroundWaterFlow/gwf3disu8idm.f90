@@ -1,3 +1,4 @@
+! ** Do Not Modify! MODFLOW 6 system generated file. **
 module GwfDisuInputModule
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
@@ -6,6 +7,7 @@ module GwfDisuInputModule
   public gwf_disu_aggregate_definitions
   public gwf_disu_block_definitions
   public GwfDisuParamFoundType
+  public gwf_disu_multi_package
 
   type GwfDisuParamFoundType
     logical :: length_units = .false.
@@ -36,6 +38,8 @@ module GwfDisuInputModule
     logical :: ncvert = .false.
     logical :: icvert = .false.
   end type GwfDisuParamFoundType
+
+  logical :: gwf_disu_multi_package = .false.
 
   type(InputParamDefinitionType), parameter :: &
     gwfdisu_length_units = InputParamDefinitionType &
@@ -546,32 +550,38 @@ module GwfDisuInputModule
     InputBlockDefinitionType( &
     'OPTIONS', & ! blockname
     .false., & ! required
-    .false. & ! aggregate
+    .false., & ! aggregate
+    .false. & ! block_variable
     ), &
     InputBlockDefinitionType( &
     'DIMENSIONS', & ! blockname
     .true., & ! required
-    .false. & ! aggregate
+    .false., & ! aggregate
+    .false. & ! block_variable
     ), &
     InputBlockDefinitionType( &
     'GRIDDATA', & ! blockname
     .true., & ! required
-    .false. & ! aggregate
+    .false., & ! aggregate
+    .false. & ! block_variable
     ), &
     InputBlockDefinitionType( &
     'CONNECTIONDATA', & ! blockname
     .true., & ! required
-    .false. & ! aggregate
+    .false., & ! aggregate
+    .false. & ! block_variable
     ), &
     InputBlockDefinitionType( &
     'VERTICES', & ! blockname
     .true., & ! required
-    .true. & ! aggregate
+    .true., & ! aggregate
+    .false. & ! block_variable
     ), &
     InputBlockDefinitionType( &
     'CELL2D', & ! blockname
     .true., & ! required
-    .true. & ! aggregate
+    .true., & ! aggregate
+    .false. & ! block_variable
     ) &
     ]
 

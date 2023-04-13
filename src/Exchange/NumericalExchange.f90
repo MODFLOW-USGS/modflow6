@@ -5,7 +5,7 @@ module NumericalExchangeModule
   use BaseExchangeModule, only: BaseExchangeType, AddBaseExchangeToList
   use NumericalModelModule, only: NumericalModelType
   use ListModule, only: ListType
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
 

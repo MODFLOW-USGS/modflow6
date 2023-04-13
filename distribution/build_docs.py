@@ -2,13 +2,12 @@ import argparse
 import os
 import platform
 import shutil
+import sys
 import textwrap
-from _warnings import warn
 from datetime import datetime
 from os import PathLike
 from pathlib import Path
 from pprint import pprint
-from shutil import which
 from tempfile import TemporaryDirectory
 from typing import List, Optional
 from urllib.error import HTTPError
@@ -32,13 +31,16 @@ _release_notes_path = _project_root_path / "doc" / "ReleaseNotes"
 _distribution_path = _project_root_path / "distribution"
 _benchmarks_path = _project_root_path / "distribution" / ".benchmarks"
 _docs_path = _project_root_path / "doc"
-
-_default_tex_paths = [
-    _project_root_path / "doc" / "mf6io" / "mf6io.tex",
-    _project_root_path / "doc" / "ReleaseNotes" / "ReleaseNotes.tex",
-    _project_root_path / "doc" / "zonebudget" / "zonebudget.tex",
-    _project_root_path / "doc" / "ConverterGuide" / "converter_mf5to6.tex",
-    _project_root_path / "doc" / "SuppTechInfo" / "mf6suptechinfo.tex",
+_dev_dist_tex_paths = [
+    _docs_path / "mf6io" / "mf6io.tex",
+    _docs_path / "ReleaseNotes" / "ReleaseNotes.tex",
+]
+_full_dist_tex_paths = [
+    _docs_path / "mf6io" / "mf6io.tex",
+    _docs_path / "ReleaseNotes" / "ReleaseNotes.tex",
+    _docs_path / "zonebudget" / "zonebudget.tex",
+    _docs_path / "ConverterGuide" / "converter_mf5to6.tex",
+    _docs_path / "SuppTechInfo" / "mf6suptechinfo.tex",
 ]
 _system = platform.system()
 _eext = ".exe" if _system == "Windows" else ""
@@ -96,17 +98,17 @@ def clean_tex_files():
     assert not os.path.isfile(str(pth) + ".pdf")
 
 
-def download_benchmarks(output_path: PathLike, quiet: bool = True) -> Optional[Path]:
+def download_benchmarks(output_path: PathLike, verbose: bool = False) -> Optional[Path]:
     output_path = Path(output_path).expanduser().absolute()
     name = "run-time-comparison"
     repo = "w-bonelli/modflow6"
-    artifacts = list_artifacts(repo, name=name, quiet=quiet)
+    artifacts = list_artifacts(repo, name=name, verbose=verbose)
     artifacts = sorted(artifacts, key=lambda a: datetime.strptime(a['created_at'], '%Y-%m-%dT%H:%M:%SZ'), reverse=True)
     most_recent = next(iter(artifacts), None)
     print(f"Found most recent benchmarks (artifact {most_recent['id']})")
     if most_recent:
         print(f"Downloading benchmarks (artifact {most_recent['id']})")
-        download_artifact(repo, id=most_recent['id'], path=output_path, quiet=quiet)
+        download_artifact(repo, id=most_recent['id'], path=output_path, verbose=verbose)
         print(f"Downloaded benchmarks to {output_path}")
         path = output_path / f"{name}.md"
         assert path.is_file()
@@ -119,7 +121,7 @@ def download_benchmarks(output_path: PathLike, quiet: bool = True) -> Optional[P
 @flaky
 @requires_github
 def test_download_benchmarks(tmp_path):
-    path = download_benchmarks(tmp_path, quiet=False)
+    path = download_benchmarks(tmp_path, verbose=True)
     if path:
         assert path.name == "run-time-comparison.md"
 
@@ -145,7 +147,7 @@ def build_benchmark_tex(output_path: PathLike, overwrite: bool = False):
     with set_dir(_release_notes_path):
         tex_path = Path("run-time-comparison.tex")
         tex_path.unlink(missing_ok=True)
-        out, err, ret = run_cmd("python", "mk_runtimecomp.py", benchmarks_path, verbose=True)
+        out, err, ret = run_cmd(sys.executable, "mk_runtimecomp.py", benchmarks_path, verbose=True)
         assert not ret, out + err
         assert tex_path.is_file()
 
@@ -204,7 +206,7 @@ def build_mf6io_tex_from_dfn(overwrite: bool = False):
                 f.unlink()
 
             # run python script
-            out, err, ret = run_cmd("python", "mf6ivar.py")
+            out, err, ret = run_cmd(sys.executable, "mf6ivar.py")
             assert not ret, out + err
 
             # check that dfn and tex files match
@@ -248,7 +250,7 @@ def build_tex_folder_structure(overwrite: bool = False):
         return
 
     with set_dir(_release_notes_path):
-        out, err, ret = run_cmd("python", "mk_folder_struct.py", "-dp", _project_root_path)
+        out, err, ret = run_cmd(sys.executable, "mk_folder_struct.py", "-dp", _project_root_path)
         assert not ret, out + err
 
     assert path.is_file(), f"Failed to create {path}"
@@ -403,7 +405,7 @@ def build_documentation(bin_path: PathLike,
                         examples_repo_path: PathLike,
                         development: bool = False,
                         overwrite: bool = False):
-    print(f"Building {'development' if development else 'candidate'} documentation")
+    print(f"Building {'development' if development else 'full'} documentation")
 
     bin_path = Path(bin_path).expanduser().absolute()
     output_path = Path(output_path).expanduser().absolute()
@@ -429,7 +431,7 @@ def build_documentation(bin_path: PathLike,
 
     if development:
         # convert LaTeX to PDF
-        build_pdfs_from_tex(tex_paths=[_docs_path / "mf6io" / "mf6io.tex"], output_path=output_path)
+        build_pdfs_from_tex(tex_paths=_dev_dist_tex_paths, output_path=output_path)
     else:
         # convert benchmarks to LaTex, running them first if necessary
         build_benchmark_tex(output_path=output_path, overwrite=overwrite)
@@ -453,7 +455,7 @@ def build_documentation(bin_path: PathLike,
                     raise
 
         # convert LaTex to PDF
-        build_pdfs_from_tex(tex_paths=_default_tex_paths, output_path=output_path, overwrite=overwrite)
+        build_pdfs_from_tex(tex_paths=_full_dist_tex_paths, output_path=output_path, overwrite=overwrite)
 
     # enforce os line endings on all text files
     windows_line_endings = True
@@ -534,7 +536,7 @@ if __name__ == "__main__":
         help="Whether to recreate and overwrite existing artifacts"
     )
     args = parser.parse_args()
-    tex_paths = _default_tex_paths + ([Path(p) for p in args.tex_path] if args.tex_path else [])
+    tex_paths = _full_dist_tex_paths + ([Path(p) for p in args.tex_path] if args.tex_path else [])
     output_path = Path(args.output_path).expanduser().absolute()
     output_path.mkdir(parents=True, exist_ok=True)
     bin_path = Path(args.bin_path).expanduser().absolute()

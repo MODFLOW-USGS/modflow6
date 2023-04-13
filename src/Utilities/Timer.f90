@@ -5,14 +5,14 @@ module TimerModule
   use GenericUtilitiesModule, only: sim_message
   implicit none
   private
-  public :: start_time
+  public :: print_start_time
   public :: elapsed_time
   public :: code_timer
   integer(I4B), dimension(8) :: ibdt
 
 contains
 
-  subroutine start_time()
+  subroutine print_start_time()
 ! ******************************************************************************
 !  Start simulation timer
 ! ******************************************************************************
@@ -36,7 +36,7 @@ contains
     !
     ! -- return
     return
-  end subroutine start_time
+  end subroutine print_start_time
 
   SUBROUTINE elapsed_time(iout, iprtim)
 ! ******************************************************************************

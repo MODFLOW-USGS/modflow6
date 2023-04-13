@@ -13,8 +13,9 @@ module GweGweConnectionModule
   use SparseModule, only: sparsematrix
   use ConnectionsModule, only: ConnectionsType
   use CellWithNbrsModule, only: GlobalCellType
-  use DistributedDataModule
-  use MatrixModule
+  use DistVariableModule
+  use SimStagesModule
+  use MatrixBaseModule
 
   implicit none
   private
@@ -67,13 +68,14 @@ module GweGweConnectionModule
     procedure :: exg_ot => gwegwecon_ot
 
     ! overriding 'protected'
-    procedure, pass(this) :: validateConnection
+    procedure :: validateConnection
 
     ! local stuff
-    procedure, pass(this), private :: allocate_scalars
-    procedure, pass(this), private :: allocate_arrays
-    procedure, pass(this), private :: setGridExtent
-    procedure, pass(this), private :: setFlowToExchange
+    procedure, private :: allocate_scalars
+    procedure, private :: allocate_arrays
+    procedure, private :: cfg_dist_vars
+    procedure, private :: setGridExtent
+    procedure, private :: setFlowToExchange
 
   end type GweGweConnectionType
 
@@ -127,7 +129,7 @@ contains
     this%exgflowSign = 1
 
     allocate (this%gweInterfaceModel)
-    this%interfaceModel => this%gweInterfaceModel
+    this%interface_model => this%gweInterfaceModel
 
   end subroutine gweGweConnection_ctor
 
@@ -171,54 +173,13 @@ contains
     end if
     call this%gweInterfaceModel%gweifmod_cr(imName, &
                                             this%iout, &
-                                            this%gridConnection)
+                                            this%ig_builder)
     call this%gweInterfaceModel%set_idsoln(this%gweModel%idsoln)
     this%gweInterfaceModel%iAdvScheme = this%iIfaceAdvScheme
     this%gweInterfaceModel%ixt3d = this%iIfaceXt3d
     call this%gweInterfaceModel%model_df()
 
-    call this%addDistVar('X', '', this%gweInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR, BEFORE_AD, BEFORE_CF/))
-    call this%addDistVar('IBOUND', '', this%gweInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))
-    call this%addDistVar('TOP', 'DIS', this%gweInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))
-    call this%addDistVar('BOT', 'DIS', this%gweInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))
-    call this%addDistVar('AREA', 'DIS', this%gweInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))
-    !if (this%gweInterfaceModel%dsp%idiffc > 0) then
-    !  call this%addDistVar('DIFFC', 'DSP', this%gweInterfaceModel%name, &
-    !                       SYNC_NODES, '', (/BEFORE_AR/))
-    !end if
-    if (this%gweInterfaceModel%dsp%idisp > 0) then
-      call this%addDistVar('ALH', 'DSP', this%gweInterfaceModel%name, &
-                           SYNC_NODES, '', (/BEFORE_AR/))
-      call this%addDistVar('ALV', 'DSP', this%gweInterfaceModel%name, &
-                           SYNC_NODES, '', (/BEFORE_AR/))
-      call this%addDistVar('ATH1', 'DSP', this%gweInterfaceModel%name, &
-                           SYNC_NODES, '', (/BEFORE_AR/))
-      call this%addDistVar('ATH2', 'DSP', this%gweInterfaceModel%name, &
-                           SYNC_NODES, '', (/BEFORE_AR/))
-      call this%addDistVar('ATV', 'DSP', this%gweInterfaceModel%name, &
-                           SYNC_NODES, '', (/BEFORE_AR/))
-    end if
-    call this%addDistVar('GWFHEAD', 'FMI', this%gweInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AD/))
-    call this%addDistVar('GWFSAT', 'FMI', this%gweInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AD/))
-    call this%addDistVar('GWFSPDIS', 'FMI', this%gweInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AD/))
-    call this%addDistVar('GWFFLOWJA', 'FMI', this%gweInterfaceModel%name, &
-                         SYNC_CONNECTIONS, '', (/BEFORE_AD/))
-    call this%addDistVar('GWFFLOWJA', 'FMI', this%gweInterfaceModel%name, &
-                         SYNC_EXCHANGES, 'GWFSIMVALS', (/BEFORE_AD/))
-    ! fill porosity from mst packages, needed for dsp
-    if (this%gweModel%indsp > 0 .and. this%gweModel%inmst > 0) then
-      call this%addDistVar('POROSITY', 'MST', this%gweInterfaceModel%name, &
-                           SYNC_NODES, '', (/AFTER_AR/))
-    end if
-    call this%mapVariables()
+    call this%cfg_dist_vars()
 
     call this%allocate_arrays()
     call this%gweInterfaceModel%allocate_fmi()
@@ -235,12 +196,46 @@ contains
 
   end subroutine gwegwecon_df
 
+  !> @brief Configure distributed variables for this interface model
+  !<
+  subroutine cfg_dist_vars(this)
+    class(GweGweConnectionType) :: this !< the connection
+
+    call this%cfg_dv('X', '', SYNC_NDS, &
+                     (/STG_BFR_CON_AR, STG_BFR_EXG_AD, STG_BFR_EXG_CF/))
+    call this%cfg_dv('IBOUND', '', SYNC_NDS, (/STG_BFR_CON_AR/))
+    call this%cfg_dv('TOP', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
+    call this%cfg_dv('BOT', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
+    call this%cfg_dv('AREA', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
+    !if (this%gweInterfaceModel%dsp%idiffc > 0) then
+    !  call this%cfg_dv('DIFFC', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
+    !end if
+    if (this%gweInterfaceModel%dsp%idisp > 0) then
+      call this%cfg_dv('ALH', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
+      call this%cfg_dv('ALV', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
+      call this%cfg_dv('ATH1', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
+      call this%cfg_dv('ATH2', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
+      call this%cfg_dv('ATV', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
+    end if
+    call this%cfg_dv('GWFHEAD', 'FMI', SYNC_NDS, (/STG_BFR_EXG_AD/))
+    call this%cfg_dv('GWFSAT', 'FMI', SYNC_NDS, (/STG_BFR_EXG_AD/))
+    call this%cfg_dv('GWFSPDIS', 'FMI', SYNC_NDS, (/STG_BFR_EXG_AD/))
+    call this%cfg_dv('GWFFLOWJA', 'FMI', SYNC_CON, (/STG_BFR_EXG_AD/))
+    call this%cfg_dv('GWFFLOWJA', 'FMI', SYNC_EXG, (/STG_BFR_EXG_AD/), &
+                     exg_var_name='GWFSIMVALS')
+    ! fill porosity from mst packages, needed for dsp
+    if (this%gweModel%indsp > 0 .and. this%gweModel%inmst > 0) then
+      call this%cfg_dv('POROSITY', 'MST', SYNC_NDS, (/STG_AFT_CON_AR/))
+    end if
+
+  end subroutine cfg_dist_vars
+
   !> @brief Allocate array variables for this connection
   !<
   subroutine allocate_arrays(this)
     class(GweGweConnectionType) :: this !< the connection
 
-    call mem_allocate(this%exgflowjaGwe, this%gridConnection%nrOfBoundaryCells, &
+    call mem_allocate(this%exgflowjaGwe, this%ig_builder%nrOfBoundaryCells, &
                       'EXGFLOWJAGWT', this%memoryPath)
 
   end subroutine allocate_arrays
@@ -257,18 +252,18 @@ contains
 
     if (hasAdv) then
       if (this%iIfaceAdvScheme == 2) then
-        this%exchangeStencilDepth = 2
+        this%exg_stencil_depth = 2
         if (this%gweModel%adv%iadvwt == 2) then
-          this%internalStencilDepth = 2
+          this%int_stencil_depth = 2
         end if
       end if
     end if
 
     if (hasDsp) then
       if (this%iIfaceXt3d > 0) then
-        this%exchangeStencilDepth = 2
+        this%exg_stencil_depth = 2
         if (this%gweModel%dsp%ixt3d > 0) then
-          this%internalStencilDepth = 2
+          this%int_stencil_depth = 2
         end if
       end if
     end if
@@ -353,11 +348,11 @@ contains
     type(GlobalCellType) :: boundaryCell, connectedCell
 
     ! connections to other models
-    do ic = 1, this%gridConnection%nrOfBoundaryCells
-      boundaryCell = this%gridConnection%boundaryCells(ic)%cell
-      connectedCell = this%gridConnection%connectedCells(ic)%cell
-      iglo = boundaryCell%index + boundaryCell%dmodel%moffset
-      jglo = connectedCell%index + connectedCell%dmodel%moffset
+    do ic = 1, this%ig_builder%nrOfBoundaryCells
+      boundaryCell = this%ig_builder%boundaryCells(ic)%cell
+      connectedCell = this%ig_builder%connectedCells(ic)%cell
+      iglo = boundaryCell%index + boundaryCell%v_model%moffset%get()
+      jglo = connectedCell%index + connectedCell%v_model%moffset%get()
       call sparse%addconnection(iglo, jglo, 1)
       call sparse%addconnection(jglo, iglo, 1)
     end do
@@ -425,18 +420,18 @@ contains
     do n = 1, this%neq
       ! We only need the coefficients for our own model
       ! (i.e. rows in the matrix that belong to this%owner):
-      if (.not. this%gridConnection%idxToGlobal(n)%dmodel == this%owner) then
+      if (.not. this%ig_builder%idxToGlobal(n)%v_model == this%owner) then
         cycle
       end if
 
-      nglo = this%gridConnection%idxToGlobal(n)%index + &
-             this%gridConnection%idxToGlobal(n)%dmodel%moffset
+      nglo = this%ig_builder%idxToGlobal(n)%index + &
+             this%ig_builder%idxToGlobal(n)%v_model%moffset%get()
       rhs_sln(nglo) = rhs_sln(nglo) + this%rhs(n)
 
       icol_start = this%matrix%get_first_col_pos(n)
       icol_end = this%matrix%get_last_col_pos(n)
       do ipos = icol_start, icol_end
-        call matrix_sln%add_value_pos(this%mapIdxToSln(ipos), &
+        call matrix_sln%add_value_pos(this%ipos_to_sln(ipos), &
                                       this%matrix%get_value_pos(ipos))
       end do
     end do
@@ -463,7 +458,7 @@ contains
   !> @brief Set the flows (flowja from interface model) to the
   !< simvals in the exchange, leaving the budget calcution in there
   subroutine setFlowToExchange(this)
-    use InterfaceMapModule
+    use IndexMapModule
     class(GweGweConnectionType) :: this !< this connection
     ! local
     integer(I4B) :: i
@@ -472,9 +467,9 @@ contains
 
     if (this%exchangeIsOwned) then
       gweEx => this%gweExchange
-      map => this%interfaceMap%exchange_map(this%interfaceMap%prim_exg_idx)
+      map => this%interface_map%exchange_maps(this%interface_map%prim_exg_idx)
 
-      ! use (half of) the exchnage map in reverse:
+      ! use (half of) the exchange map in reverse:
       do i = 1, size(map%src_idx)
         if (map%sign(i) < 0) cycle ! simvals is defined from exg%m1 => exg%m2
         gweEx%simvals(map%src_idx(i)) = &

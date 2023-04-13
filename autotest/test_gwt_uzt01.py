@@ -8,33 +8,13 @@ on test_gwf_uzf03.py.  Infiltration is assigned a concentration of 100.  The
 
 import os
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["uzt01a"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-ddir = "data"
 nlay, nrow, ncol = 15, 1, 1
 
 
@@ -341,13 +321,8 @@ def build_model(idx, dir):
         if id1 < ncv - 1:
             id2list.append(id1 + 1)
         for id2 in id2list:
-            obs1.append(
-                (f"uzt{id1 + 1}x{id2 + 1}", obstype, id1 + 1, id2 + 1)
-            )
-    obs2 = [
-        (f"buzt{i + 1}", obstype, f"myuzt{i + 1}")
-        for i in range(ncv)
-    ]
+            obs1.append((f"uzt{id1 + 1}x{id2 + 1}", obstype, id1 + 1, id2 + 1))
+    obs2 = [(f"buzt{i + 1}", obstype, f"myuzt{i + 1}") for i in range(ncv)]
     uzt_obs[fname] = obs1 + obs2
 
     # append additional obs attributes to obs dictionary
@@ -403,8 +378,8 @@ def build_model(idx, dir):
 def make_plot(sim, obsvals):
     print("making plots...")
 
-    name = ex[sim.idxsim]
-    ws = exdirs[sim.idxsim]
+    name = sim.name
+    ws = sim.simpath
 
     # shows curves for times 2.5, 7.5, 12.6, 17.7
     # which are indices 24, 74, 125, and -1
@@ -438,8 +413,8 @@ def make_plot(sim, obsvals):
 
 def check_obs(sim):
     print("checking obs...")
-    name = ex[sim.idxsim]
-    ws = exdirs[sim.idxsim]
+    name = sim.name
+    ws = sim.simpath
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
@@ -467,7 +442,9 @@ def check_obs(sim):
             # print(f"  Checking control volume {icv + 1}")
 
             if ".concentration.csv" in csvfile:
-                is_same = np.allclose(conc_ra[f"BUZT{icv + 1}"], conc_uzt[:, icv])
+                is_same = np.allclose(
+                    conc_ra[f"BUZT{icv + 1}"], conc_uzt[:, icv]
+                )
                 if not is_same:
                     success = False
                     print(
@@ -506,16 +483,15 @@ def check_obs(sim):
             )
 
     assert success, "One or more UZT obs checks did not pass"
-    return
 
 
 def eval_flow(sim):
     print("evaluating flow...")
 
-    name = ex[sim.idxsim]
+    name = sim.name
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
-    ws = exdirs[sim.idxsim]
+    ws = sim.simpath
 
     # check binary grid file
     fname = os.path.join(ws, gwfname + ".dis.grb")
@@ -581,47 +557,22 @@ def eval_flow(sim):
 
     # Make plot of obs
     fpth = os.path.join(sim.simpath, gwtname + ".uzt.obs.concentration.csv")
-    try:
-        obsvals = np.genfromtxt(fpth, names=True, delimiter=",")
-    except:
-        assert False, f'could not load data from "{fpth}"'
-    if False:
-        make_plot(sim, obsvals)
-    return
+    obsvals = np.genfromtxt(fpth, names=True, delimiter=",")
+
+    # make_plot(sim, obsvals)
 
 
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "name",
+    ex,
 )
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_flow, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_flow, idxsim=idx)
-        test.run_mf6(sim)
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, 0, ws)
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_flow, idxsim=0
+        ),
+        ws,
+    )

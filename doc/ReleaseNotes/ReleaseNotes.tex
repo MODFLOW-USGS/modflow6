@@ -251,13 +251,15 @@ To run MODFLOW~6, simply type \texttt{mf6} in a terminal window.  The current wo
 
 % -------------------------------------------------
 \section{Compiling MODFLOW~6}
-MODFLOW~6 has been compiled using Intel Fortran and gfortran on the Windows, Mac, and Linux operating systems.  Because the program uses relatively new Fortran extensions, newer versions of the compilers may be required for successful compilation.  For example, to use gfortran to compile MODFLOW~6, gfortran version 4.9 or newer must be used.  If you have gfortran installed on your computer, you can tell which version it is by entering ``\verb|gfortran --version|'' at a terminal window.
+MODFLOW~6 has been compiled using Intel Fortran and GNU Fortran on the Windows, macOS, and Linux operating systems.  Because the program uses relatively new Fortran extensions, recent versions of the compilers may be required for successful compilation.  MODFLOW~6 is currently tested with gfortran 7-12 on Linux and gfortran 12 on macOS and Windows.  If you have gfortran installed on your computer, you can tell which version it is by entering ``\verb|gfortran --version|'' at a terminal window.  MODFLOW~6 is currently not compatible with the next-generation Intel Fortran Compiler; a recent version of the Intel Fortran Compiler Classic (e.g. 2021.8.0) must be used.
 
-This distribution contains the Microsoft Visual Studio solution and project files for compiling MODFLOW~6 on Windows using the Intel Fortran Compiler.  The files have been used successfully with recent versions of Microsoft Visual Studio Community 2019 and the Intel Fortran Compiler.  To compile MODFLOW~6, open the mf6.sln file in the msvs folder and click Build >  Build Solution.  A separate Visual Studio solution file is also included for building the BMI dynamically linked library version of MODFLOW~6.
+Meson is the recommended build tool for MODFLOW~6.  For more detailed compilation instructions, please refer to \url{https://github.com/MODFLOW-USGS/modflow6/blob/develop/DEVELOPER.md#building}.
+
+This distribution contains the Microsoft Visual Studio solution and project files for compiling MODFLOW~6 on Windows using the Intel Fortran Compiler Classic.  The files have been used successfully with recent versions of Microsoft Visual Studio Community 2019 and the Intel Fortran Compiler Classic.
 
 This distribution also comes with a makefile for compiling MODFLOW~6 with \texttt{gfortran}.  The makefile is contained in the \texttt{make} folder.
 
-For those familiar with Python, the pymake package can also be used to compile MODFLOW~6.  Additional information on the Python pymake utility can be found at: \url{https://github.com/modflowpy/pymake}.  
+For those familiar with Python, the pymake package can also be used to compile MODFLOW~6.  Additional information on the Python pymake utility can be found at: \url{https://github.com/modflowpy/pymake}.
 
 % -------------------------------------------------
 \section{System Requirements}

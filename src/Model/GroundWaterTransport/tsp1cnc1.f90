@@ -10,7 +10,7 @@ module TspCncModule
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
   use GweInputDataModule, only: GweInputDataType
-  use MatrixModule
+  use MatrixBaseModule
   !
   implicit none
   !

@@ -37,7 +37,7 @@ module GweUzeModule
                           apt_process_obsID12
   use TspLabelsModule, only: TspLabelsType
   use GweInputDataModule, only: GweInputDataType
-  use MatrixModule
+  use MatrixBaseModule
  
   implicit none
  

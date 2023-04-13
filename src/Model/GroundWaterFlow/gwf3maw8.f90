@@ -28,7 +28,7 @@ module MawModule
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr, &
                                  mem_deallocate
   use MemoryHelperModule, only: create_mem_path
-  use MatrixModule
+  use MatrixBaseModule
   !
   implicit none
 
@@ -1791,7 +1791,8 @@ contains
         this%iheadout = getunit()
         call openfile(this%iheadout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE', mode_opt=MNORMAL)
-        write (this%iout, fmtmawbin) 'HEAD', fname, this%iheadout
+        write (this%iout, fmtmawbin) 'HEAD', trim(adjustl(fname)), &
+          this%iheadout
       else
         call store_error('Optional maw stage keyword must be '// &
                          'followed by fileout.')
@@ -1803,7 +1804,8 @@ contains
         this%ibudgetout = getunit()
         call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE', mode_opt=MNORMAL)
-        write (this%iout, fmtmawbin) 'BUDGET', fname, this%ibudgetout
+        write (this%iout, fmtmawbin) 'BUDGET', trim(adjustl(fname)), &
+          this%ibudgetout
       else
         call store_error('Optional maw budget keyword must be '// &
                          'followed by fileout.')
@@ -1815,7 +1817,8 @@ contains
         this%ibudcsv = getunit()
         call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
                       filstat_opt='REPLACE')
-        write (this%iout, fmtmawbin) 'BUDGET CSV', fname, this%ibudcsv
+        write (this%iout, fmtmawbin) 'BUDGET CSV', trim(adjustl(fname)), &
+          this%ibudcsv
       else
         call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
           &FILEOUT')

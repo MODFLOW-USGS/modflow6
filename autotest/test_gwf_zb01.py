@@ -1,37 +1,16 @@
 import os
+from pathlib import Path
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-import targets
-from framework import running_on_CI, testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["zbud6_zb01"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-
-ddir = "data"
-
-## run all examples on Travis
-continuous_integration = [True for idx in range(len(exdirs))]
-
-# set replace_exe to None to use default executable
-replace_exe = None
-
-htol = [None for idx in range(len(exdirs))]
+htol = [None for idx in range(len(ex))]
 dtol = 1e-3
 budtol = 1e-2
-
 bud_lst = [
     "STO-SS_IN",
     "STO-SS_OUT",
@@ -132,13 +111,13 @@ ske = [6e-4, 3e-4, 6e-4]
 
 
 # variant SUB package problem 3
-def build_model(idx, dir):
+def build_model(idx, dir, exe):
     name = ex[idx]
 
     # build MODFLOW 6 files
     ws = dir
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
+        sim_name=name, version="mf6", exe_name=exe, sim_ws=ws
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -238,57 +217,47 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_zb6(sim):
-
+def eval_zb6(sim, exe):
     print("evaluating zonebudget...")
+    simpath = Path(sim.simpath)
 
     # build zonebudget files
     zones = [-1000000, 1000000, 9999999]
     nzones = len(zones)
-    fpth = os.path.join(sim.simpath, "zonebudget.nam")
-    f = open(fpth, "w")
-    f.write("BEGIN ZONEBUDGET\n")
-    f.write(f"  BUD {os.path.basename(sim.name)}.cbc\n")
-    f.write(f"  ZON {os.path.basename(sim.name)}.zon\n")
-    f.write(f"  GRB {os.path.basename(sim.name)}.dis.grb\n")
-    f.write("END ZONEBUDGET\n")
-    f.close()
+    with open(simpath / "zonebudget.nam", "w") as f:
+        f.write("BEGIN ZONEBUDGET\n")
+        f.write(f"  BUD {os.path.basename(sim.name)}.cbc\n")
+        f.write(f"  ZON {os.path.basename(sim.name)}.zon\n")
+        f.write(f"  GRB {os.path.basename(sim.name)}.dis.grb\n")
+        f.write("END ZONEBUDGET\n")
 
-    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.zon")
-    f = open(fpth, "w")
-    f.write("BEGIN DIMENSIONS\n")
-    f.write(f"  NCELLS {size3d}\n")
-    f.write("END DIMENSIONS\n\n")
-    f.write("BEGIN GRIDDATA\n")
-    f.write("  IZONE LAYERED\n")
-    for k in range(nlay):
-        f.write(f"    CONSTANT {zones[k]:>10d}\n")
-    f.write("END GRIDDATA\n")
-    f.close()
+    with open(simpath / f"{os.path.basename(sim.name)}.zon", "w") as f:
+        f.write("BEGIN DIMENSIONS\n")
+        f.write(f"  NCELLS {size3d}\n")
+        f.write("END DIMENSIONS\n\n")
+        f.write("BEGIN GRIDDATA\n")
+        f.write("  IZONE LAYERED\n")
+        for k in range(nlay):
+            f.write(f"    CONSTANT {zones[k]:>10d}\n")
+        f.write("END GRIDDATA\n")
 
     # run zonebudget
-    zbexe = os.path.abspath(targets.target_dict["zbud6"])
     success, buff = flopy.run_model(
-        zbexe,
+        exe,
         "zonebudget.nam",
         model_ws=sim.simpath,
         silent=False,
         report=True,
     )
-    if success:
-        print(f"successfully ran...{os.path.basename(zbexe)}")
-        sim.success = True
-    else:
-        sim.success = False
-        msg = f"could not run...{zbexe}"
-        assert success, msg
+
+    assert success
+    sim.success = success
 
     # read data from csv file
-    fpth = os.path.join(sim.simpath, "zonebudget.csv")
-    zbd = np.genfromtxt(fpth, names=True, delimiter=",", deletechars="")
+    zbd = np.genfromtxt(simpath / "zonebudget.csv", names=True, delimiter=",", deletechars="")
 
     # sum the data for all zones
-    nentries = int(zbd.shape[0] / 3)
+    nentries = int(zbd.shape[0] / nzones)
     zbsum = np.zeros(nentries, dtype=zbd.dtype)
     static = ["totim", "kstp", "kper"]
     ipos = 0
@@ -302,13 +271,12 @@ def eval_zb6(sim):
             else:
                 zbsum[name][ipos] += t[name]
         ion += 1
-        if ion == 3:
+        if ion == nzones:
             ipos += 1
             ion = 0
 
     # get results from listing file
-    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.lst")
-    budl = flopy.utils.Mf6ListBudget(fpth)
+    budl = flopy.utils.Mf6ListBudget(simpath / f"{os.path.basename(sim.name)}.lst")
     names = list(bud_lst)
     d0 = budl.get_budget(names=names)[0]
     dtype = d0.dtype
@@ -319,8 +287,9 @@ def eval_zb6(sim):
     d = np.recarray(nbud, dtype=dtype)
     for key in bud_lst:
         d[key] = 0.0
-    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.cbc")
-    cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
+    cobj = flopy.utils.CellBudgetFile(
+        simpath / f"{os.path.basename(sim.name)}.cbc",
+        precision="double")
     kk = cobj.get_kstpkper()
     times = cobj.get_times()
     for idx, (k, t) in enumerate(zip(kk, times)):
@@ -356,25 +325,21 @@ def eval_zb6(sim):
     msg = f"maximum absolute total-budget difference ({diffmax}) "
 
     # write summary
-    fpth = os.path.join(
-        sim.simpath, f"{os.path.basename(sim.name)}.bud.cmp.out"
-    )
-    f = open(fpth, "w")
-    for i in range(diff.shape[0]):
-        if i == 0:
-            line = f"{'TIME':>10s}"
+    with open(simpath / f"{os.path.basename(sim.name)}.bud.cmp.out", "w") as f:
+        for i in range(diff.shape[0]):
+            if i == 0:
+                line = f"{'TIME':>10s}"
+                for idx, key in enumerate(bud_lst):
+                    line += f"{key + '_LST':>25s}"
+                    line += f"{key + '_CBC':>25s}"
+                    line += f"{key + '_DIF':>25s}"
+                f.write(line + "\n")
+            line = f"{d['totim'][i]:10g}"
             for idx, key in enumerate(bud_lst):
-                line += f"{key + '_LST':>25s}"
-                line += f"{key + '_CBC':>25s}"
-                line += f"{key + '_DIF':>25s}"
+                line += f"{d0[key][i]:25g}"
+                line += f"{d[key][i]:25g}"
+                line += f"{diff[i, idx]:25g}"
             f.write(line + "\n")
-        line = f"{d['totim'][i]:10g}"
-        for idx, key in enumerate(bud_lst):
-            line += f"{d0[key][i]:25g}"
-            line += f"{d[key][i]:25g}"
-            line += f"{diff[i, idx]:25g}"
-        f.write(line + "\n")
-    f.close()
 
     # compare zone budget to cbc output
     diffzb = np.zeros((nbud, len(bud_lst)), dtype=float)
@@ -386,25 +351,21 @@ def eval_zb6(sim):
     )
 
     # write summary
-    fpth = os.path.join(
-        sim.simpath, f"{os.path.basename(sim.name)}.zbud.cmp.out"
-    )
-    f = open(fpth, "w")
-    for i in range(diff.shape[0]):
-        if i == 0:
-            line = f"{'TIME':>10s}"
-            for idx, key in enumerate(bud_lst):
-                line += f"{key + '_ZBUD':>25s}"
-                line += f"{key + '_CBC':>25s}"
-                line += f"{key + '_DIF':>25s}"
+    with open(simpath / f"{os.path.basename(sim.name)}.zbud.cmp.out", "w") as f:
+        for i in range(diff.shape[0]):
+            if i == 0:
+                line = f"{'TIME':>10s}"
+                for idx, key in enumerate(bud_lst):
+                    line += f"{key + '_ZBUD':>25s}"
+                    line += f"{key + '_CBC':>25s}"
+                    line += f"{key + '_DIF':>25s}"
+                f.write(line + "\n")
+            line = f"{d['totim'][i]:10g}"
+            for idx, (key0, key) in enumerate(zip(zone_lst, bud_lst)):
+                line += f"{zbsum[key0][i]:25g}"
+                line += f"{d[key][i]:25g}"
+                line += f"{diffzb[i, idx]:25g}"
             f.write(line + "\n")
-        line = f"{d['totim'][i]:10g}"
-        for idx, (key0, key) in enumerate(zip(zone_lst, bud_lst)):
-            line += f"{zbsum[key0][i]:25g}"
-            line += f"{d[key][i]:25g}"
-            line += f"{diffzb[i, idx]:25g}"
-        f.write(line + "\n")
-    f.close()
 
     if diffmax > budtol or diffzbmax > budtol:
         sim.success = False
@@ -414,62 +375,24 @@ def eval_zb6(sim):
         sim.success = True
         print("    " + msg)
 
-    return
 
-
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-
-    # determine if running on CI infrastructure
-    is_CI = running_on_CI()
-    r_exe = None
-    if not is_CI:
-        if replace_exe is not None:
-            r_exe = replace_exe
-
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    test.build_mf6_models_legacy(build_model, idx, dir)
-
-    # run the test model
-    if is_CI and not continuous_integration[idx]:
-        return
-    test.run_mf6(
-        Simulation(
-            dir, exfunc=eval_zb6, exe_dict=r_exe, htol=htol[idx], idxsim=idx
-        )
-    )
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models_legacy(build_model, idx, dir)
-        sim = Simulation(
-            dir,
-            exfunc=eval_zb6,
-            exe_dict=replace_exe,
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    mf6 = targets.mf6
+    zb6 = targets.zbud6
+    test = TestFramework()
+    test.build(lambda i, w: build_model(i, w, mf6), idx, ws)
+    test.run(
+        TestSimulation(
+            name=name,
+            exe_dict=targets,
+            exfunc=lambda s: eval_zb6(s, zb6),
             htol=htol[idx],
             idxsim=idx,
-        )
-        test.run_mf6(sim)
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+        ),
+        ws,
+    )

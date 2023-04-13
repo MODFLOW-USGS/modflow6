@@ -2,6 +2,7 @@ import argparse
 import os
 import platform
 import shutil
+import sys
 import textwrap
 from collections import namedtuple
 from os import PathLike, environ
@@ -42,16 +43,6 @@ _included_dir_paths = [
     "make",
     "utils",
 ]
-
-# LaTex files included in distribution docs
-_default_tex_paths = [
-    _project_root_path / "doc" / "mf6io" / "mf6io.tex",
-    _project_root_path / "doc" / "ReleaseNotes" / "ReleaseNotes.tex",
-    _project_root_path / "doc" / "zonebudget" / "zonebudget.tex",
-    _project_root_path / "doc" / "ConverterGuide" / "converter_mf5to6.tex",
-    _project_root_path / "doc" / "SuppTechInfo" / "mf6suptechinfo.tex",
-]
-
 
 Makefile = namedtuple('Makefile', ['app', 'src_path', 'out_path'])
 
@@ -162,7 +153,7 @@ def build_examples(examples_repo_path: PathLike, overwrite: bool = False):
         ]
         for script in scripts:
             argv = [
-                "python",
+                sys.executable,
                 script,
                 "--no_run",
                 "--no_plot",

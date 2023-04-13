@@ -23,27 +23,16 @@
 import os
 import sys
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 hyd_cond = [1205.49396942506, 864.0]  # Hydraulic conductivity (m/d)
 ex = ["no-vsc05-hfb", "vsc05-hfb", "no-vsc05-k"]
 viscosity_on = [False, True, False]
 hydraulic_conductivity = [hyd_cond[0], hyd_cond[1], hyd_cond[1]]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
 
 # Model units
 
@@ -350,7 +339,7 @@ def eval_results(sim):
             no_vsc_bud_last[:, 2], stored_ans[:, 2], atol=1e-3
         ), (
             "Flow in models "
-            + exdirs[0]
+            + ex[0]
             + " and the established answer should be approximately "
             "equal, but are not."
         )
@@ -362,7 +351,7 @@ def eval_results(sim):
             with_vsc_bud_last[:, 2], stored_ans[:, 2], atol=1e-3
         ), (
             "Flow in models "
-            + exdirs[1]
+            + ex[1]
             + " and the established answer should be approximately "
             "equal, but are not."
         )
@@ -375,41 +364,23 @@ def eval_results(sim):
         assert np.less(no_vsc_low_k_bud_last[:, 2], stored_ans[:, 2]).all(), (
             "Exit flow from model the established answer "
             "should be greater than flow existing "
-            + exdirs[2]
+            + ex[2]
             + ", but it is not."
         )
 
 
 # - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_results, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_results, idxsim=idx)
-        test.run_mf6(sim)
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, idx, ws)
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
+        ),
+        ws,
+    )

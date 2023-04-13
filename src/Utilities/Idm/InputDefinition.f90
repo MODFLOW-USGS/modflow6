@@ -43,6 +43,7 @@ module InputDefinitionModule
     character(len=100) :: blockname = ''
     logical(LGP) :: required = .false.
     logical(LGP) :: aggregate = .false.
+    logical(LGP) :: block_variable = .false.
   end type InputBlockDefinitionType
 
 end module InputDefinitionModule

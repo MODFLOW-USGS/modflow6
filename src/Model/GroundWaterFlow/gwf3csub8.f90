@@ -42,7 +42,7 @@ module GwfCsubModule
   use TableModule, only: TableType, table_cr
   !
   use IMSLinearMisc, only: ims_misc_thomas
-  use MatrixModule
+  use MatrixBaseModule
   !
   implicit none
   !

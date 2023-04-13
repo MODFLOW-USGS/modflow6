@@ -8,8 +8,7 @@
 module GwtModule
 
   use KindModule, only: DP, I4B
-  use InputOutputModule, only: ParseLine, upcase
-  use ConstantsModule, only: LENFTYPE, DZERO, DONE, LENPAKLOC
+  use ConstantsModule, only: LENFTYPE, LENMEMPATH, DZERO, LENPAKLOC, DONE
   use VersionModule, only: write_listfile_header
   use NumericalModelModule, only: NumericalModelType
   use BaseModelModule, only: BaseModelType
@@ -18,7 +17,7 @@ module GwtModule
   use GwtMstModule, only: GwtMstType
   use BudgetModule, only: BudgetType
   use TransportModelModule
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
 
@@ -68,7 +67,10 @@ module GwtModule
     procedure, private :: gwt_ot_dv
     procedure, private :: gwt_ot_bdsummary
     procedure, private :: gwt_ot_obs
-    procedure :: load_input_context => gwt_load_input_context
+    procedure, private :: create_packages
+    procedure, private :: create_bndpkgs
+    procedure, private :: create_lstfile
+    procedure, private :: log_namfile_options
   end type GwtModelType
 
   ! -- Module variables constant for simulation
@@ -93,12 +95,16 @@ contains
     ! -- modules
     use ListsModule, only: basemodellist
     use BaseModelModule, only: AddBaseModelToList
-    use SimModule, only: store_error, count_errors
-    use NameFileModule, only: NameFileType
     use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
-    use CompilerVersion
-    use MemoryManagerModule, only: mem_allocate
     use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_context
+    use GwfNamInputModule, only: GwfNamParamFoundType
+    use BudgetModule, only: budget_cr
+    use TspLabelsModule, only: tsplabels_cr
+    !use SimModule, only: store_error, count_errors
+    !use NameFileModule, only: NameFileType
+    !use CompilerVersion
     use GwfDisModule, only: dis_cr
     use GwfDisvModule, only: disv_cr
     use GwfDisuModule, only: disu_cr
@@ -111,9 +117,6 @@ contains
     use TspObsModule, only: tsp_obs_cr
     use GwtMstModule, only: mst_cr
     use GwtDspModule, only: dsp_cr
-    use BudgetModule, only: budget_cr
-    use TspLabelsModule, only: tsplabels_cr
-
     ! -- dummy
     character(len=*), intent(in) :: filename
     integer(I4B), intent(in) :: id
@@ -123,18 +126,20 @@ contains
     integer(I4B) :: ipakid, i, j, iu, ipaknum
     character(len=LINELENGTH) :: errmsg
     character(len=LENPACKAGENAME) :: pakname
-    type(NameFileType) :: namefile_obj
+    !type(NameFileType) :: namefile_obj
     type(GwtModelType), pointer :: this
     class(BaseModelType), pointer :: model
-    integer(I4B) :: nwords
-    character(len=LINELENGTH), allocatable, dimension(:) :: words
-    cunit(10) = 'CNC6 '
+    character(len=LENMEMPATH) :: input_mempath
+    character(len=LINELENGTH) :: lst_fname
+    type(GwfNamParamFoundType) :: found
+    cunit(10) = 'CNC6'
+    ! -- format
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate a new GWT Model (this) and add it to basemodellist
     allocate (this)
     !
-    ! -- Set this before any allocs in the memory manager can be done
+    ! -- Set memory path before allocation in memory manager can be done
     this%memoryPath = create_mem_path(modelname)
     !
     call this%allocate_scalars(modelname)
@@ -147,121 +152,38 @@ contains
     this%macronym = 'GWT'
     this%id = id
     !
+    ! -- set input model namfile memory path
+    input_mempath = create_mem_path(modelname, 'NAM', idm_context)
+    !
+    ! -- copy option params from input context
+    call mem_set_value(lst_fname, 'LIST', input_mempath, found%list)
+    call mem_set_value(this%iprpak, 'PRINT_INPUT', input_mempath, &
+                       found%print_input)
+    call mem_set_value(this%iprflow, 'PRINT_FLOWS', input_mempath, &
+                       found%print_flows)
+    call mem_set_value(this%ipakcb, 'SAVE_FLOWS', input_mempath, found%save_flows)
+    !
+    ! -- create the list file
+    call this%create_lstfile(lst_fname, filename, found%list)
+    !
+    ! -- activate save_flows if found
+    if (found%save_flows) then
+      this%ipakcb = -1
+    end if
+    !
     ! -- Instantiate generalized labels 
     call tsplabels_cr(this%tsplab, this%name)
     !
-    ! -- Open namefile and set iout
-    call namefile_obj%init(this%filename, 0)
-    call namefile_obj%add_cunit(niunit, cunit)
-    call namefile_obj%openlistfile(this%iout)
-    !
-    ! -- Write header to model list file
-    call write_listfile_header(this%iout, 'GROUNDWATER TRANSPORT MODEL (GWT)')
-    !
-    ! -- Open files
-    call namefile_obj%openfiles(this%iout)
-    !
-    ! --
-    if (size(namefile_obj%opts) > 0) then
-      write (this%iout, '(1x,a)') 'NAMEFILE OPTIONS:'
-    end if
-    !
-    ! -- parse options in the gwt name file
-    do i = 1, size(namefile_obj%opts)
-      call ParseLine(namefile_obj%opts(i), nwords, words)
-      call upcase(words(1))
-      select case (words(1))
-      case ('PRINT_INPUT')
-        this%iprpak = 1
-        write (this%iout, '(4x,a)') 'STRESS PACKAGE INPUT WILL BE PRINTED '// &
-          'FOR ALL MODEL STRESS PACKAGES'
-      case ('PRINT_FLOWS')
-        this%iprflow = 1
-        write (this%iout, '(4x,a)') 'PACKAGE FLOWS WILL BE PRINTED '// &
-          'FOR ALL MODEL PACKAGES'
-      case ('SAVE_FLOWS')
-        this%ipakcb = -1
-        write (this%iout, '(4x,a)') &
-          'FLOWS WILL BE SAVED TO BUDGET FILE SPECIFIED IN OUTPUT CONTROL'
-      case default
-        write (errmsg, '(4x,a,a,a,a)') &
-          'UNKNOWN GWT NAMEFILE (', &
-          trim(adjustl(this%filename)), ') OPTION: ', &
-          trim(adjustl(namefile_obj%opts(i)))
-        call store_error(errmsg, terminate=.TRUE.)
-      end select
-    end do
-    !
-    ! -- Assign unit numbers to attached modules, and remove
-    ! -- from unitnumber (by specifying 1 for iremove)
-    !
-    indis = 0
-    indis6 = 0
-    indisu6 = 0
-    indisv6 = 0
-    call namefile_obj%get_unitnumber('DIS6', indis6, 1)
-    if (indis6 > 0) indis = indis6
-    if (indis <= 0) call namefile_obj%get_unitnumber('DISU6', indisu6, 1)
-    if (indisu6 > 0) indis = indisu6
-    if (indis <= 0) call namefile_obj%get_unitnumber('DISV6', indisv6, 1)
-    if (indisv6 > 0) indis = indisv6
-    call namefile_obj%get_unitnumber('IC6', this%inic, 1)
-    call namefile_obj%get_unitnumber('FMI6', this%infmi, 1)
-    call namefile_obj%get_unitnumber('MVT6', this%inmvt, 1)
-    call namefile_obj%get_unitnumber('MST6', this%inmst, 1)
-    call namefile_obj%get_unitnumber('ADV6', this%inadv, 1)
-    call namefile_obj%get_unitnumber('DSP6', this%indsp, 1)
-    call namefile_obj%get_unitnumber('SSM6', this%inssm, 1)
-    call namefile_obj%get_unitnumber('OC6', this%inoc, 1)
-    call namefile_obj%get_unitnumber('OBS6', this%inobs, 1)
-    !
-    ! -- Check to make sure that required ftype's have been specified
-    call this%TransportModelType%ftype_check(namefile_obj, indis)
-    !
-    ! -- Create discretization object
-    if (indis6 > 0) then
-      call this%load_input_context('DIS6', this%name, 'DIS', indis, this%iout)
-      call dis_cr(this%dis, this%name, indis, this%iout)
-    elseif (indisu6 > 0) then
-      call this%load_input_context('DISU6', this%name, 'DISU', indis, this%iout)
-      call disu_cr(this%dis, this%name, indis, this%iout)
-    elseif (indisv6 > 0) then
-      call this%load_input_context('DISV6', this%name, 'DISV', indis, this%iout)
-      call disv_cr(this%dis, this%name, indis, this%iout)
+    ! -- log set options
+    if (this%iout > 0) then
+      call this%log_namfile_options(found)
     end if
     !
     ! -- Create utility objects
     call budget_cr(this%budget, this%name, this%tsplab)
     !
-    ! -- Load input context for currently supported packages
-    call this%load_input_context('DSP6', this%name, 'DSP', this%indsp, this%iout)
-    !
-    ! -- Create packages that are tied directly to model
-    call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis, this%tsplab)
-    call fmi_cr(this%fmi, this%name, this%infmi, this%iout, this%tsplab)
-    call mst_cr(this%mst, this%name, this%inmst, this%iout, this%fmi)
-    call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi,  &
-                this%eqnsclfac)
-    call dsp_cr(this%dsp, this%name, this%indsp, this%iout, this%fmi)
-    call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi,  &
-                this%tsplab, this%eqnsclfac)
-    call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi)
-    call oc_cr(this%oc, this%name, this%inoc, this%iout)
-    call tsp_obs_cr(this%obs, this%inobs)
-    !
-    ! -- Create stress packages
-    ipakid = 1
-    do i = 1, niunit
-      ipaknum = 1
-      do j = 1, namefile_obj%get_nval_for_row(i)
-        iu = namefile_obj%get_unitnumber_rowcol(i, j)
-        call namefile_obj%get_pakname(i, j, pakname)
-        call this%package_create(cunit(i), ipakid, ipaknum, pakname, iu, &
-                                 this%iout)
-        ipaknum = ipaknum + 1
-        ipakid = ipakid + 1
-      end do
-    end do
+    ! -- create model packages
+    call this%create_packages()
     !
     ! -- return
     return
@@ -277,6 +199,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use ModelPackageInputsModule, only: NIUNIT_GWT
     use TspLabelsModule, only: setTspLabels
     ! -- dummy
     class(GwtModelType) :: this
@@ -978,12 +901,18 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
+    use MemoryManagerExtModule, only: memorylist_remove
+    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(GwtModelType) :: this
     ! -- local
     integer(I4B) :: ip
     class(BndType), pointer :: packobj
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Deallocate idm memory
+    call memorylist_remove(this%name, 'NAM', idm_context)
+    call memorylist_remove(component=this%name, context=idm_context)
     !
     ! -- Internal flow packages deallocate
     call this%dis%dis_da()
@@ -1021,15 +950,7 @@ contains
     end do
     !
     ! -- Scalars
-    call mem_deallocate(this%inic)
-    call mem_deallocate(this%infmi)
-    call mem_deallocate(this%inadv)
-    call mem_deallocate(this%indsp)
-    call mem_deallocate(this%inssm)
-    call mem_deallocate(this%inmst)
-    call mem_deallocate(this%inmvt)
-    call mem_deallocate(this%inoc)
-    call mem_deallocate(this%inobs)
+    call this%TransportModelType%tsp_da()
     !
     ! -- NumericalModelType
     call this%NumericalModelType%model_da()
@@ -1301,38 +1222,263 @@ contains
 
   end function CastAsGwtModel
 
-  !> @brief Load input context for supported package
+  !> @brief Source package info and begin to process
   !<
-  subroutine gwt_load_input_context(this, filtyp, modelname, pkgname, inunit, &
-                                    iout, ipaknum)
+  subroutine create_bndpkgs(this, bndpkgs, pkgtypes, pkgnames, &
+                            mempaths, inunits)
     ! -- modules
-    use IdmMf6FileLoaderModule, only: input_load
+    use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
+    use CharacterStringModule, only: CharacterStringType
     ! -- dummy
     class(GwtModelType) :: this
-    character(len=*), intent(in) :: filtyp
-    character(len=*), intent(in) :: modelname
-    character(len=*), intent(in) :: pkgname
-    integer(I4B), intent(in) :: inunit
-    integer(I4B), intent(in) :: iout
-    integer(I4B), optional, intent(in) :: ipaknum
+    integer(I4B), dimension(:), allocatable, intent(inout) :: bndpkgs
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer, intent(inout) :: pkgtypes
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer, intent(inout) :: pkgnames
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer, intent(inout) :: mempaths
+    integer(I4B), dimension(:), contiguous, &
+      pointer, intent(inout) :: inunits
     ! -- local
-! ------------------------------------------------------------------------------
-    !
-    ! -- only load if there is a file to read
-    if (inunit <= 0) return
-    !
-    ! -- Load model package input to input context
-    select case (filtyp)
-    case ('DSP6')
-      call input_load('DSP6', 'GWT', 'DSP', modelname, pkgname, inunit, iout)
-    case default
-      call this%NumericalModelType%load_input_context(filtyp, modelname, &
-                                                      pkgname, inunit, iout, &
-                                                      ipaknum)
-    end select
+    integer(I4B) :: ipakid, ipaknum
+    character(len=LENFTYPE) :: pkgtype, bndptype
+    character(len=LENPACKAGENAME) :: pkgname
+    character(len=LENMEMPATH) :: mempath
+    integer(I4B), pointer :: inunit
+    integer(I4B) :: n
+
+    if (allocated(bndpkgs)) then
+      !
+      ! -- create stress packages
+      ipakid = 1
+      bndptype = ''
+      do n = 1, size(bndpkgs)
+        !
+        pkgtype = pkgtypes(bndpkgs(n))
+        pkgname = pkgnames(bndpkgs(n))
+        mempath = mempaths(bndpkgs(n))
+        inunit => inunits(bndpkgs(n))
+        !
+        if (bndptype /= pkgtype) then
+          ipaknum = 1
+          bndptype = pkgtype
+        end if
+        !
+        call this%package_create(pkgtype, ipakid, ipaknum, pkgname, inunit, &
+                                 this%iout)
+        ipakid = ipakid + 1
+        ipaknum = ipaknum + 1
+      end do
+      !
+      ! -- cleanup
+      deallocate (bndpkgs)
+    end if
     !
     ! -- return
     return
-  end subroutine gwt_load_input_context
+  end subroutine create_bndpkgs
+
+  !> @brief Source package info and begin to process
+  !<
+  subroutine create_packages(this)
+    ! -- modules
+    use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
+    use CharacterStringModule, only: CharacterStringType
+    use ArrayHandlersModule, only: expandarray
+    use MemoryManagerModule, only: mem_setptr
+    use MemoryHelperModule, only: create_mem_path
+    use SimVariablesModule, only: idm_context
+    use GwfDisModule, only: dis_cr
+    use GwfDisvModule, only: disv_cr
+    use GwfDisuModule, only: disu_cr
+    use TspIcModule, only: ic_cr
+    use TspFmiModule, only: fmi_cr
+    use GwtMstModule, only: mst_cr
+    use TspAdvModule, only: adv_cr
+    use GwtDspModule, only: dsp_cr
+    use TspSsmModule, only: ssm_cr
+    use TspMvtModule, only: mvt_cr
+    use TspOcModule, only: oc_cr
+    use TspObsModule, only: tsp_obs_cr
+    ! -- dummy
+    class(GwtModelType) :: this
+    ! -- local
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: pkgtypes => null()
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: pkgnames => null()
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: mempaths => null()
+    integer(I4B), dimension(:), contiguous, &
+      pointer :: inunits => null()
+    character(len=LENMEMPATH) :: model_mempath
+    character(len=LENFTYPE) :: pkgtype
+    character(len=LENPACKAGENAME) :: pkgname
+    character(len=LENMEMPATH) :: mempath
+    integer(I4B), pointer :: inunit
+    integer(I4B), dimension(:), allocatable :: bndpkgs
+    integer(I4B) :: n
+    integer(I4B) :: indis = 0 ! DIS enabled flag
+    character(len=LENMEMPATH) :: mempathdsp = ''
+    !
+    ! -- set input memory paths, input/model and input/model/namfile
+    model_mempath = create_mem_path(component=this%name, context=idm_context)
+    !
+    ! -- set pointers to model path package info
+    call mem_setptr(pkgtypes, 'PKGTYPES', model_mempath)
+    call mem_setptr(pkgnames, 'PKGNAMES', model_mempath)
+    call mem_setptr(mempaths, 'MEMPATHS', model_mempath)
+    call mem_setptr(inunits, 'INUNITS', model_mempath)
+    !
+    do n = 1, size(pkgtypes)
+      !
+      ! attributes for this input package
+      pkgtype = pkgtypes(n)
+      pkgname = pkgnames(n)
+      mempath = mempaths(n)
+      inunit => inunits(n)
+      !
+      ! -- create dis package as it is a prerequisite for other packages
+      select case (pkgtype)
+      case ('DIS6')
+        indis = 1
+        call dis_cr(this%dis, this%name, mempath, indis, this%iout)
+      case ('DISV6')
+        indis = 1
+        call disv_cr(this%dis, this%name, mempath, indis, this%iout)
+      case ('DISU6')
+        indis = 1
+        call disu_cr(this%dis, this%name, mempath, indis, this%iout)
+      case ('IC6')
+        this%inic = inunit
+      case ('FMI6')
+        this%infmi = inunit
+      case ('MVT6')
+        this%inmvt = inunit
+      case ('MST6')
+        this%inmst = inunit
+      case ('ADV6')
+        this%inadv = inunit
+      case ('DSP6')
+        this%indsp = 1
+        mempathdsp = mempath
+      case ('SSM6')
+        this%inssm = inunit
+      case ('OC6')
+        this%inoc = inunit
+      case ('OBS6')
+        this%inobs = inunit
+      case ('CNC6', 'SRC6', 'LKT6', 'SFT6', &
+            'MWT6', 'UZT6', 'IST6', 'API6')
+        call expandarray(bndpkgs)
+        bndpkgs(size(bndpkgs)) = n
+      case default
+        ! TODO
+      end select
+    end do
+    !
+    ! -- Create packages that are tied directly to model
+    call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis, this%tsplab)
+    call fmi_cr(this%fmi, this%name, this%infmi, this%iout, this%tsplab)
+    call mst_cr(this%mst, this%name, this%inmst, this%iout, this%fmi)
+    call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi, this%eqnsclfac)
+    call dsp_cr(this%dsp, this%name, mempathdsp, this%indsp, this%iout, this%fmi)
+    call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, this%tsplab, this%eqnsclfac)
+    call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi)
+    call oc_cr(this%oc, this%name, this%inoc, this%iout)
+    call tsp_obs_cr(this%obs, this%inobs)
+    !
+    ! -- Check to make sure that required ftype's have been specified
+    call this%ftype_check(indis)
+    !
+    call this%create_bndpkgs(bndpkgs, pkgtypes, pkgnames, mempaths, inunits)
+
+  end subroutine create_packages
+
+  subroutine create_lstfile(this, lst_fname, model_fname, defined)
+    ! -- modules
+    use KindModule, only: LGP
+    use InputOutputModule, only: openfile, getunit
+    ! -- dummy
+    class(GwtModelType) :: this
+    character(len=*), intent(inout) :: lst_fname
+    character(len=*), intent(in) :: model_fname
+    logical(LGP), intent(in) :: defined
+    ! -- local
+    integer(I4B) :: i, istart, istop
+    !
+    ! -- set list file name if not provided
+    if (.not. defined) then
+      !
+      ! -- initialize
+      lst_fname = ' '
+      istart = 0
+      istop = len_trim(model_fname)
+      !
+      ! -- identify '.' character position from back of string
+      do i = istop, 1, -1
+        if (model_fname(i:i) == '.') then
+          istart = i
+          exit
+        end if
+      end do
+      !
+      ! -- if not found start from string end
+      if (istart == 0) istart = istop + 1
+      !
+      ! -- set list file name
+      lst_fname = model_fname(1:istart)
+      istop = istart + 3
+      lst_fname(istart:istop) = '.lst'
+    end if
+    !
+    ! -- create the list file
+    this%iout = getunit()
+    call openfile(this%iout, 0, lst_fname, 'LIST', filstat_opt='REPLACE')
+    !
+    ! -- write list file header
+    call write_listfile_header(this%iout, 'GROUNDWATER TRANSPORT MODEL (GWT)')
+    !
+    ! -- return
+    return
+  end subroutine create_lstfile
+
+  !> @brief Write model namfile options to list file
+  !<
+  subroutine log_namfile_options(this, found)
+    use GwfNamInputModule, only: GwfNamParamFoundType
+    class(GwtModelType) :: this
+    type(GwfNamParamFoundType), intent(in) :: found
+
+    write (this%iout, '(1x,a)') 'NAMEFILE OPTIONS:'
+
+    if (found%newton) then
+      write (this%iout, '(4x,a)') &
+        'NEWTON-RAPHSON method enabled for the model.'
+      if (found%under_relaxation) then
+        write (this%iout, '(4x,a,a)') &
+          'NEWTON-RAPHSON UNDER-RELAXATION based on the bottom ', &
+          'elevation of the model will be applied to the model.'
+      end if
+    end if
+
+    if (found%print_input) then
+      write (this%iout, '(4x,a)') 'STRESS PACKAGE INPUT WILL BE PRINTED '// &
+        'FOR ALL MODEL STRESS PACKAGES'
+    end if
+
+    if (found%print_flows) then
+      write (this%iout, '(4x,a)') 'PACKAGE FLOWS WILL BE PRINTED '// &
+        'FOR ALL MODEL PACKAGES'
+    end if
+
+    if (found%save_flows) then
+      write (this%iout, '(4x,a)') &
+        'FLOWS WILL BE SAVED TO BUDGET FILE SPECIFIED IN OUTPUT CONTROL'
+    end if
+
+    write (this%iout, '(1x,a)') 'END NAMEFILE OPTIONS:'
+  end subroutine log_namfile_options
 
 end module GwtModule

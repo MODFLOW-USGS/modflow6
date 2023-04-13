@@ -1,7 +1,8 @@
 module RchModule
   !
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME, MAXCHARLEN
+  use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME, MAXCHARLEN, &
+                             IWETLAKE
   use MemoryHelperModule, only: create_mem_path
   use BndModule, only: BndType
   use SimModule, only: store_error, store_error_unit
@@ -11,7 +12,7 @@ module RchModule
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
   use BlockParserModule, only: BlockParserType
-  use MatrixModule
+  use MatrixBaseModule
   !
   implicit none
   !
@@ -692,7 +693,7 @@ contains
         this%rhs(i) = DZERO
         cycle
       end if
-      if (this%ibound(node) == 10000) then
+      if (this%ibound(node) == IWETLAKE) then
         this%rhs(i) = DZERO
         cycle
       end if
@@ -724,7 +725,7 @@ contains
       n = this%nodelist(i)
       if (n <= 0) cycle
       ! -- reset hcof and rhs for excluded cells
-      if (this%ibound(n) == 10000) then
+      if (this%ibound(n) == IWETLAKE) then
         this%hcof(i) = DZERO
         this%rhs(i) = DZERO
         cycle

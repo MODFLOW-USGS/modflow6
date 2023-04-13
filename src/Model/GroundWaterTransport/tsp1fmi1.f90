@@ -13,7 +13,7 @@ module TspFmiModule
   use PackageBudgetModule, only: PackageBudgetType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr_bfr
   use TspLabelsModule, only: TspLabelsType
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
   private

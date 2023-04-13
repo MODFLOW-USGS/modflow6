@@ -4,26 +4,14 @@
 # flows into the aquifer.
 
 import os
-import sys
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["mwt_01"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
 
 
 def build_model(idx, dir):
@@ -320,8 +308,8 @@ def build_model(idx, dir):
 
 def check_obs(sim):
     print("checking obs...")
-    name = ex[sim.idxsim]
-    ws = exdirs[sim.idxsim]
+    name = sim.name
+    ws = sim.simpath
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
@@ -385,14 +373,13 @@ def check_obs(sim):
             )
 
     assert success, "One or more MWT obs checks did not pass"
-    return
 
 
 def eval_results(sim):
     print("evaluating results...")
 
     # ensure mwt concentrations were saved
-    name = ex[sim.idxsim]
+    name = sim.name
     gwtname = "gwt_" + name
     fname = gwtname + ".mwt.bin"
     fname = os.path.join(sim.simpath, fname)
@@ -405,39 +392,18 @@ def eval_results(sim):
 
     check_obs(sim)
 
-    return
 
-
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_results, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_results, idxsim=idx)
-        test.run_mf6(sim)
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, idx, ws)
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
+        ),
+        ws,
+    )

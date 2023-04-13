@@ -13,6 +13,11 @@ args = parser.parse_args()
 os.environ["FC"] = args.compiler
 builddir = f"builddir_{args.compiler}_{args.buildtype}"
 
+arg_parallel = "-Dparallel=false"
+if os.getenv("BUILD_PARALLEL_MF6") is not None:
+    if os.environ["BUILD_PARALLEL_MF6"] == '1':
+        arg_parallel = "-Dparallel=true"
+
 if args.action == "rebuild" and os.path.isdir(builddir):
     shutil.rmtree(builddir)
 
@@ -30,6 +35,7 @@ if not os.path.isdir(builddir):
         os.getcwd(),
         "--libdir",
         "bin",
+        arg_parallel,
     ] + setup_flag
     print("Run:", shlex.join(command))
     subprocess.run(

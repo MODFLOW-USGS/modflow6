@@ -1,11 +1,13 @@
 % Use this template for starting initializing the release notes
 % after a release has just been made.
 	
-	\item Version mf6.x.x--Month xx, 202x
+	\item \currentmodflowversion
 	
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
-		\item xxx
+		\item The sorption formulation for the Groundwater Transport (GWT) model was modified for simulations involving a mobile domain and one or more immobile domains.  The modifications do not affect GWT Models without the Immobile Storage and Transfer (IST) Package or GWT models without sorption.  Prior to these changes, the multi-domain sorption formulation required the bulk density to be specified in both the Mobile Storage and Transfer (MST) Package and the IST Package.  To generalize the formulation, the definition for bulk density in the MST Package was changed to be the mass of aquifer solid material in the mobile domain per unit volume of aquifer.  The bulk density specified in the IST Package was changed to be the mass of aquifer solid material in the immobile domain per unit volume of aquifer.  For multi-domain GWT Models that include sorption (and prepared for MODFLOW version 6.4.1 or earlier), it will be necessary to change the bulk density values specified in the MST and IST Packages according to the new definitions.  A full description of the revised sorption formulation for multi-domain GWT Models is included in the MODFLOW 6 Supplemental Technical Information document included with the distribution.
+		\item Add LENGTH\_CONVERSION and TIME\_CONVERSION variables to replace the UNIT\_CONVERSION variable in the SFR Package input file. The LENGTH\_CONVERSION and TIME\_CONVERSION variables are used to convert user-specified Manning's roughness coefficients from SI units (sec/m$^{1/3}$) to model length and time units. LENGTH\_CONVERSION does not need to be specified if LENGTH\_UNITS are meters. TIME\_CONVERSION does not need to be specified if TIME\_UNITS are seconds. Warning messages will be issued if UNIT\_CONVERSION variable is specified. The model will terminate with an error if UNIT\_CONVERSION and LENGTH\_CONVERSION and TIME\_CONVERSION variables are specified. The UNIT\_CONVERSION variable in the SFR Package input file will eventually be deprecated. 
+		\item Add MAXIMUM\_ITERATIONS and MAXIMUM\_STAGE\_CHANGE variables in the LAK Package input file. The MAXIMUM\_ITERATIONS variable is used to change the maximum number of iterations and would only need to be increased from the default value if one or more lakes in a simulation has a large water budget error.  The MAXIMUM\_STAGE\_CHANGE variable defines the stage closure tolerance for each lake. The MAXIMUM\_STAGE\_CHANGE variable would only need to be increased or decreased from the default value if the water budget error for one or more lakes is too small or too large, respectively. 
 	%	\item xxx
 	%	\item xxx
 	\end{itemize}
@@ -21,16 +23,16 @@
 	\underline{BASIC FUNCTIONALITY}
 	\begin{itemize}
 		\item When n-point cross-sections are active in SFR, the evaporation calculation uses the variable rwid (see MF6io.pdf) to calculate the total amount of evaporation even though the wetted topwidth is less than rwid.  For example, using a trapezoidal cross-section geometry with an rwid of 10, an rlen of 100, and prescribed evaporation rate of 0.1, the calculated evaporative losses would equal 100 even when the wetted top width was only 5.0 units wide.  With this bug fix, the evaporation in this example results in only 50 units of evaporation loss.  A new autotests confirms the evaporation calculation using an n-point cross-section and common rectangular geometries in the same simulation.  It is also worth mentioning that the precipitation calculation currently uses rwid.  Since the precipitation falling outside the margins of the wetted top width but within rwid would likely be accumulated in a channel, it makes sense to leave this calculation as is.
-	%	\item xxx
+		\item The input for some stress packages is read in a list format consisting of a cellid, the form of which depends on the type of discretization package, and stress information on each line.  The cellid is checked upon reading to ensure that the cell is within the model grid.  If the cell is outside the model grid, the program issues an error message and terminates.  This cellid check was not implemented when the list was provided from an OPEN/CLOSE binary input file.  The program was modified to include this check for both text and binary input.
 	%	\item xxx
 	\end{itemize}
 
-	%\underline{INTERNAL FLOW PACKAGES}
-	%\begin{itemize}
+	\underline{INTERNAL FLOW PACKAGES}
+	\begin{itemize}
+		\item The ICELLTYPE input variable in the Node Property Flow (NPF) Package behaves differently depending on whether or not the THICKSTRT option is specified by the user.  In some cases, the program would give unexpected results if a negative value was specified for ICELLTYPE and the THICKSTRT option was not active.  For example, the Horizontal Flow Barrier (HFB) Package did not work properly when negative values for ICELLTYPE were specified by the user, but the THICKSTRT option was not activated.  The program was modified so that negative ICELLTYPE values provided by the user are automatically reassigned a value of one when the user does not activate the THICKSTRT option.  This is the intended behavior and is consistent with the input and output guide.   
 	%	\item xxx
 	%	\item xxx
-	%	\item xxx
-	%\end{itemize}
+	\end{itemize}
 
 	%\underline{STRESS PACKAGES}
 	%\begin{itemize}
@@ -42,6 +44,8 @@
 	\underline{ADVANCED STRESS PACKAGES}
 	\begin{itemize}
 		\item Added additional convergence checks to the Streamflow Routing (SFR), Lake (LAK) and Unsaturated Zone Flow (UZF) Packages to ensure that flows from the Water Mover (MVR) Package meet solver tolerance.  Mover flows are converted into depths using the time step length and area, and the depths are compared to the Iterative Model Solution (IMS) DVCLOSE input parameter.  If a depth is greater than DVCLOSE, then the iteration is marked as not converged.  The maximum depth change between iterations and the advanced package feature number is written for each outer iteration to a comma-separated value file, provided the PACKAGE\_CONVERGENCE option is specified in the options block.
+		\item Added an additional convergence check to the Lake (LAK) Package to ensure that the lake residual meets solver tolerance. In previous versions, it was possible for a time step to converge even if there was a relatively large lake residual. The lake residual is converted to a depth, using the time step length and lake surface area. This depth is compared to the Iterative Model Solution (IMS) DVCLOSE input parameter. If the residual depth is greater than DVCLOSE, then the iteration is marked as not converged. The maximum residual depth and the advanced package feature number (lake number) is written for each outer iteration to a comma-separated value file, provided the PACKAGE\_CONVERGENCE option is specified in the options block. This fix may increase the number of iterations required to reach convergence for existing models that use the LAK Package.
+		\item The secant method used in the LAK Package when Newton-Raphson iterations result in lake stages below the lake bottom or when Newton-Raphson iterations stall has been updated. The updates to the secant method improve convergence under drying and wetting conditions in a lake. 		
 	%	\item xxx
 	%	\item xxx
 	\end{itemize}

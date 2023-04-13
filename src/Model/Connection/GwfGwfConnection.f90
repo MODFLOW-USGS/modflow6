@@ -18,8 +18,9 @@ module GwfGwfConnectionModule
   use BaseDisModule, only: DisBaseType
   use ConnectionsModule, only: ConnectionsType
   use CellWithNbrsModule, only: GlobalCellType
-  use DistributedDataModule
-  use MatrixModule
+  use DistVariableModule
+  use SimStagesModule
+  use MatrixBaseModule
 
   implicit none
   private
@@ -29,20 +30,23 @@ module GwfGwfConnectionModule
   !> Connecting a GWF model to other models in space, implements
   !! NumericalExchangeType so the solution can used this object to determine
   !! the coefficients for the coupling between two adjacent models.
+  !!
+  !! Two connections are created per exchange between model1 and model2:
+  !! one to manage the coefficients in the matrix rows for model1, and
+  !! the other to do the same for model2.
   !<
   type, public, extends(SpatialModelConnectionType) :: GwfGwfConnectionType
 
     type(GwfModelType), pointer :: gwfModel => null() !< the model for which this connection exists
     type(GwfExchangeType), pointer :: gwfExchange => null() !< the primary exchange, cast to its concrete type
-    logical(LGP) :: exchangeIsOwned !< there are two connections (in serial) for an exchange,
-                                    !! one of them needs to manage/own the exchange (e.g. clean up)
+    logical(LGP) :: owns_exchange !< when true, this connection has ownership over the exchange (memory)
     type(GwfInterfaceModelType), pointer :: gwfInterfaceModel => null() !< the interface model
     integer(I4B), pointer :: iXt3dOnExchange => null() !< run XT3D on the interface,
                                                        !! 0 = don't, 1 = matrix, 2 = rhs
     integer(I4B) :: iout = 0 !< the list file for the interface model
 
   contains
-    procedure, pass(this) :: gwfGwfConnection_ctor
+    procedure :: gwfGwfConnection_ctor
     generic, public :: construct => gwfGwfConnection_ctor
 
     ! overriding NumericalExchangeType
@@ -58,14 +62,15 @@ module GwfGwfConnectionModule
     procedure :: exg_ot => gwfgwfcon_ot
 
     ! overriding 'protected'
-    procedure, pass(this) :: validateConnection
+    procedure :: validateConnection
 
     ! local stuff
-    procedure, pass(this), private :: allocateScalars
-    procedure, pass(this), private :: setGridExtent
-    procedure, pass(this), private :: validateGwfExchange
-    procedure, pass(this), private :: setFlowToExchange
-    procedure, pass(this), private :: setNpfEdgeProps
+    procedure, private :: cfg_dist_vars
+    procedure, private :: allocateScalars
+    procedure, private :: setGridExtent
+    procedure, private :: validateGwfExchange
+    procedure, private :: setFlowToExchange
+    procedure, private :: setNpfEdgeProps
 
   end type GwfGwfConnectionType
 
@@ -91,9 +96,13 @@ contains
     objPtr => gwfEx
     this%gwfExchange => CastAsGwfExchange(objPtr)
 
-    this%exchangeIsOwned = associated(gwfEx%model1, model)
+    if (gwfEx%v_model1%is_local .and. gwfEx%v_model2%is_local) then
+      this%owns_exchange = (gwfEx%v_model1 == model)
+    else
+      this%owns_exchange = .true.
+    end if
 
-    if (this%exchangeIsOwned) then
+    if (gwfEx%v_model1 == model) then
       write (name, '(a,i0)') 'GWFCON1_', gwfEx%id
     else
       write (name, '(a,i0)') 'GWFCON2_', gwfEx%id
@@ -116,10 +125,12 @@ contains
     call this%allocateScalars()
 
     this%typename = 'GWF-GWF'
-    this%iXt3dOnExchange = 0
+
+    ! determine the required size of the interface grid
+    call this%setGridExtent()
 
     allocate (this%gwfInterfaceModel)
-    this%interfaceModel => this%gwfInterfaceModel
+    this%interface_model => this%gwfInterfaceModel
 
   end subroutine gwfGwfConnection_ctor
 
@@ -132,9 +143,7 @@ contains
     class(GwfGwfConnectionType) :: this !< this connection
     ! local
     character(len=LENCOMPONENTNAME) :: imName !< the interface model's name
-
-    ! determine the required size of the interface grid
-    call this%setGridExtent()
+    integer(I4B) :: i
 
     ! this sets up the GridConnection
     call this%spatialcon_df()
@@ -142,19 +151,18 @@ contains
     ! Now grid conn is defined, we create the interface model
     ! here, and the remainder of this routine is define.
     ! we basically follow the logic that is present in sln_df()
-    if (this%exchangeIsOwned) then
+    if (this%prim_exchange%v_model1 == this%owner) then
       write (imName, '(a,i0)') 'GWFIM1_', this%gwfExchange%id
     else
       write (imName, '(a,i0)') 'GWFIM2_', this%gwfExchange%id
     end if
-    call this%gwfInterfaceModel%gwfifm_cr(imName, this%iout, this%gridConnection)
+    call this%gwfInterfaceModel%gwfifm_cr(imName, this%iout, this%ig_builder)
     call this%gwfInterfaceModel%set_idsoln(this%gwfModel%idsoln)
     this%gwfInterfaceModel%npf%satomega = this%gwfModel%npf%satomega
     this%gwfInterfaceModel%npf%ixt3d = this%iXt3dOnExchange
     call this%gwfInterfaceModel%model_df()
 
-    ! Take these settings from the owning model, TODO_MJR:
-    ! what if the owner iangle1 == 0 but the neighbor doesn't?
+    ! Take these settings from the owning model
     this%gwfInterfaceModel%npf%ik22 = this%gwfModel%npf%ik22
     this%gwfInterfaceModel%npf%ik33 = this%gwfModel%npf%ik33
     this%gwfInterfaceModel%npf%iwetdry = this%gwfModel%npf%iwetdry
@@ -162,43 +170,7 @@ contains
     this%gwfInterfaceModel%npf%iangle2 = this%gwfModel%npf%iangle2
     this%gwfInterfaceModel%npf%iangle3 = this%gwfModel%npf%iangle3
 
-    call this%addDistVar('X', '', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR, BEFORE_AD, BEFORE_CF/))
-    call this%addDistVar('IBOUND', '', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR, BEFORE_AD, BEFORE_CF/))
-    call this%addDistVar('XOLD', '', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AD, BEFORE_CF/))
-    call this%addDistVar('ICELLTYPE', 'NPF', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))
-    call this%addDistVar('K11', 'NPF', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))
-    call this%addDistVar('K22', 'NPF', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))
-    call this%addDistVar('K33', 'NPF', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))
-    if (this%gwfInterfaceModel%npf%iangle1 == 1) then
-      call this%addDistVar('ANGLE1', 'NPF', this%gwfInterfaceModel%name, &
-                           SYNC_NODES, '', (/BEFORE_AR/))
-    end if
-    if (this%gwfInterfaceModel%npf%iangle2 == 1) then
-      call this%addDistVar('ANGLE2', 'NPF', this%gwfInterfaceModel%name, &
-                           SYNC_NODES, '', (/BEFORE_AR/))
-    end if
-    if (this%gwfInterfaceModel%npf%iangle3 == 1) then
-      call this%addDistVar('ANGLE3', 'NPF', this%gwfInterfaceModel%name, &
-                           SYNC_NODES, '', (/BEFORE_AR/))
-    end if
-    if (this%gwfInterfaceModel%npf%iwetdry == 1) then
-      call this%addDistVar('WETDRY', 'NPF', this%gwfInterfaceModel%name, &
-                           SYNC_NODES, '', (/BEFORE_AR/))
-    end if
-    call this%addDistVar('TOP', 'DIS', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))
-    call this%addDistVar('BOT', 'DIS', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))
-    call this%addDistVar('AREA', 'DIS', this%gwfInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))
-    call this%mapVariables()
+    call this%cfg_dist_vars()
 
     if (this%gwfInterfaceModel%npf%ixt3d > 0) then
       this%gwfInterfaceModel%npf%iangle1 = 1
@@ -207,10 +179,15 @@ contains
     end if
 
     ! set defaults
-    ! TODO_MJR: loop this
-    this%gwfInterfaceModel%npf%angle1 = 0.0_DP
-    this%gwfInterfaceModel%npf%angle2 = 0.0_DP
-    this%gwfInterfaceModel%npf%angle3 = 0.0_DP
+    do i = 1, size(this%gwfInterfaceModel%npf%angle1)
+      this%gwfInterfaceModel%npf%angle1 = 0.0_DP
+    end do
+    do i = 1, size(this%gwfInterfaceModel%npf%angle2)
+      this%gwfInterfaceModel%npf%angle2 = 0.0_DP
+    end do
+    do i = 1, size(this%gwfInterfaceModel%npf%angle3)
+      this%gwfInterfaceModel%npf%angle3 = 0.0_DP
+    end do
 
     ! point X, RHS, IBOUND to connection
     call this%spatialcon_setmodelptrs()
@@ -220,6 +197,38 @@ contains
 
   end subroutine gwfgwfcon_df
 
+  !> @brief Configure distributed variables for this interface model
+  !<
+  subroutine cfg_dist_vars(this)
+    class(GwfGwfConnectionType) :: this !< the connection
+
+    call this%cfg_dv('X', '', SYNC_NDS, &
+                     (/STG_BFR_CON_AR, STG_BFR_EXG_AD, STG_BFR_EXG_CF/))
+    call this%cfg_dv('IBOUND', '', SYNC_NDS, &
+                     (/STG_BFR_CON_AR, STG_BFR_EXG_AD, STG_BFR_EXG_CF/))
+    call this%cfg_dv('XOLD', '', SYNC_NDS, (/STG_BFR_EXG_AD, STG_BFR_EXG_CF/))
+    call this%cfg_dv('ICELLTYPE', 'NPF', SYNC_NDS, (/STG_BFR_CON_AR/))
+    call this%cfg_dv('K11', 'NPF', SYNC_NDS, (/STG_BFR_CON_AR/))
+    call this%cfg_dv('K22', 'NPF', SYNC_NDS, (/STG_BFR_CON_AR/))
+    call this%cfg_dv('K33', 'NPF', SYNC_NDS, (/STG_BFR_CON_AR/))
+    if (this%gwfInterfaceModel%npf%iangle1 == 1) then
+      call this%cfg_dv('ANGLE1', 'NPF', SYNC_NDS, (/STG_BFR_CON_AR/))
+    end if
+    if (this%gwfInterfaceModel%npf%iangle2 == 1) then
+      call this%cfg_dv('ANGLE2', 'NPF', SYNC_NDS, (/STG_BFR_CON_AR/))
+    end if
+    if (this%gwfInterfaceModel%npf%iangle3 == 1) then
+      call this%cfg_dv('ANGLE3', 'NPF', SYNC_NDS, (/STG_BFR_CON_AR/))
+    end if
+    if (this%gwfInterfaceModel%npf%iwetdry == 1) then
+      call this%cfg_dv('WETDRY', 'NPF', SYNC_NDS, (/STG_BFR_CON_AR/))
+    end if
+    call this%cfg_dv('TOP', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
+    call this%cfg_dv('BOT', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
+    call this%cfg_dv('AREA', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
+
+  end subroutine cfg_dist_vars
+
   !> @brief Set the required size of the interface grid from
   !< the configuration
   subroutine setGridExtent(this)
@@ -228,9 +237,9 @@ contains
 
     this%iXt3dOnExchange = this%gwfExchange%ixt3d
     if (this%iXt3dOnExchange > 0) then
-      this%exchangeStencilDepth = 2
+      this%exg_stencil_depth = 2
       if (this%gwfModel%npf%ixt3d > 0) then
-        this%internalStencilDepth = 2
+        this%int_stencil_depth = 2
       end if
     end if
 
@@ -266,7 +275,7 @@ contains
     call this%gwfInterfaceModel%model_ar()
 
     ! AR the movers and obs through the exchange
-    if (this%exchangeIsOwned) then
+    if (this%owns_exchange) then
       if (this%gwfExchange%inmvr > 0) then
         call this%gwfExchange%mvr%mvr_ar()
       end if
@@ -283,7 +292,7 @@ contains
     class(GwfGwfConnectionType) :: this !< this connection
 
     ! Call exchange rp routines
-    if (this%exchangeIsOwned) then
+    if (this%owns_exchange) then
       call this%gwfExchange%exg_rp()
     end if
 
@@ -298,7 +307,7 @@ contains
     ! this triggers the BUY density calculation
     if (this%gwfInterfaceModel%inbuy > 0) call this%gwfInterfaceModel%buy%buy_ad()
 
-    if (this%exchangeIsOwned) then
+    if (this%owns_exchange) then
       call this%gwfExchange%exg_ad()
     end if
 
@@ -346,26 +355,27 @@ contains
       ! we cannot check with the mask here, because cross-terms are not
       ! necessarily from primary connections. But, we only need the coefficients
       ! for our own model (i.e. fluxes into cells belonging to this%owner):
-      if (.not. this%gridConnection%idxToGlobal(n)%dmodel == this%owner) then
+      if (.not. this%ig_builder%idxToGlobal(n)%v_model == this%owner) then
         ! only add connections for own model to global matrix
         cycle
       end if
 
-      nglo = this%gridConnection%idxToGlobal(n)%index + &
-             this%gridConnection%idxToGlobal(n)%dmodel%moffset
+      nglo = this%ig_builder%idxToGlobal(n)%index + &
+             this%ig_builder%idxToGlobal(n)%v_model%moffset%get() - &
+             matrix_sln%get_row_offset()
       rhs_sln(nglo) = rhs_sln(nglo) + this%rhs(n)
 
       icol_start = this%matrix%get_first_col_pos(n)
       icol_end = this%matrix%get_last_col_pos(n)
       do ipos = icol_start, icol_end
-        call matrix_sln%add_value_pos(this%mapIdxToSln(ipos), &
+        call matrix_sln%add_value_pos(this%ipos_to_sln(ipos), &
                                       this%matrix%get_value_pos(ipos))
       end do
     end do
 
     ! FC the movers through the exchange; we cannot call
     ! exg_fc() directly because it calculates matrix terms
-    if (this%exchangeIsOwned) then
+    if (this%owns_exchange) then
       if (this%gwfExchange%inmvr > 0) then
         call this%gwfExchange%mvr%mvr_fc()
       end if
@@ -384,8 +394,8 @@ contains
     ! local
 
     ! base validation (geometry/spatial)
-    call this%SpatialModelConnectionType%validateConnection()
-    call this%validateGwfExchange()
+    !call this%SpatialModelConnectionType%validateConnection()
+    !call this%validateGwfExchange()
 
     ! abort on errors
     if (count_errors() > 0) then
@@ -496,7 +506,7 @@ contains
     end if
 
     ! we need to deallocate the baseexchange we own:
-    if (this%exchangeIsOwned) then
+    if (this%owns_exchange) then
       call this%gwfExchange%exg_da()
     end if
 
@@ -528,7 +538,7 @@ contains
     ! to be done in setNpfEdgeProps, but there was a sign issue
     ! and flowja was only updated if icalcspdis was 1 (it should
     ! always be updated.
-    if (this%exchangeIsOwned) then
+    if (this%owns_exchange) then
       call this%gwfExchange%gwf_gwf_add_to_flowja()
     end if
 
@@ -537,16 +547,16 @@ contains
   !> @brief Set the flows (flowja from interface model) to the
   !< simvals in the exchange, leaving the budget calcution in there
   subroutine setFlowToExchange(this)
-    use InterfaceMapModule
+    use IndexMapModule
     class(GwfGwfConnectionType) :: this !< this connection
     ! local
     integer(I4B) :: i
     class(GwfExchangeType), pointer :: gwfEx
     type(IndexMapSgnType), pointer :: map
 
-    if (this%exchangeIsOwned) then
+    if (this%owns_exchange) then
       gwfEx => this%gwfExchange
-      map => this%interfaceMap%exchange_map(this%interfaceMap%prim_exg_idx)
+      map => this%interface_map%exchange_maps(this%interface_map%prim_exg_idx)
 
       ! use (half of) the exchange map in reverse:
       do i = 1, size(map%src_idx)
@@ -584,7 +594,7 @@ contains
     imDis => this%gwfInterfaceModel%dis
     imCon => this%gwfInterfaceModel%dis%con
     imNpf => this%gwfInterfaceModel%npf
-    toGlobal => this%gridConnection%idxToGlobal
+    toGlobal => this%ig_builder%idxToGlobal
 
     nozee = .false.
     if (imNpf%ixt3d > 0) then
@@ -595,7 +605,7 @@ contains
     ! for flows crossing the boundary, and set flowja for internal
     ! flows affected by the connection.
     do n = 1, this%neq
-      if (.not. toGlobal(n)%dmodel == this%owner) then
+      if (.not. toGlobal(n)%v_model == this%owner) then
         ! only add flows to own model
         cycle
       end if
@@ -611,7 +621,7 @@ contains
         m = imCon%ja(ipos)
         mLoc = toGlobal(m)%index
 
-        if (.not. toGlobal(m)%dmodel == this%owner) then
+        if (.not. toGlobal(m)%v_model == this%owner) then
           ! boundary connection, set edge properties
           isym = imCon%jas(ipos)
           ihc = imCon%ihc(isym)
@@ -639,7 +649,6 @@ contains
                                                      nx, ny, dist)
         else
           ! internal, need to set flowja for n-m
-          ! TODO_MJR: should we mask the flowja calculation in the model?
           iposLoc = getCSRIndex(nLoc, mLoc, this%gwfModel%ia, this%gwfModel%ja)
 
           ! update flowja with correct value
@@ -661,7 +670,7 @@ contains
 
     ! call exchange budget routine, also calls bd
     ! for movers.
-    if (this%exchangeIsOwned) then
+    if (this%owns_exchange) then
       call this%gwfExchange%exg_bd(icnvg, isuppress_output, isolnid)
     end if
 
@@ -676,7 +685,7 @@ contains
     ! Call exg_ot() here as it handles all output processing
     ! based on gwfExchange%simvals(:), which was correctly
     ! filled from gwfgwfcon
-    if (this%exchangeIsOwned) then
+    if (this%owns_exchange) then
       call this%gwfExchange%exg_ot()
     end if
 

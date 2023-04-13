@@ -42,7 +42,7 @@ module GwtLktModule
   use ObserveModule, only: ObserveType
   use TspAptModule, only: TspAptType, apt_process_obsID, &
                           apt_process_obsID12
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
 

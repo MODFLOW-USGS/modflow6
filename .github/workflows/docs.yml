@@ -22,8 +22,6 @@ jobs:
         shell: bash -l {0}
     env:
       GCC_V: 12
-      working-directory: .build_rtd_docs
-      distribution-directory: distribution
 
     steps:
       - name: Checkout modflow6
@@ -52,12 +50,10 @@ jobs:
 
       - name: Install additional packages for Sphinx using pip
         working-directory: modflow6/.build_rtd_docs
-        run: |
-          pip install -r requirements.rtd.txt
+        run: pip install -r requirements.rtd.txt
 
       - name: Print python package versions
-        run: |
-          pip list
+        run: pip list
 
       - name: Install TeX Live
         run: |
@@ -66,13 +62,11 @@ jobs:
 
       - name: Install USGS LaTeX style files and Univers font
         working-directory: usgslatex/usgsLaTeX
-        run: |
-          sudo ./install.sh --all-users
+        run: sudo ./install.sh --all-users
 
       - name: Test building files from dfn's for LaTeX
         working-directory: modflow6/autotest
-        run: |
-          pytest -v build_mfio_tex.py
+        run: pytest -v build_mfio_tex.py
 
       - name: Setup GNU Fortran ${{ env.GCC_V }}
         uses: awvwgk/setup-fortran@main
@@ -104,18 +98,18 @@ jobs:
       - name: Run benchmarks
         working-directory: modflow6/distribution
         run: python benchmark.py
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Run sphinx
         working-directory: modflow6/.build_rtd_docs
-        run: |
-          make html
+        run: make html
 
-      - name: Show results
+      - name: Show benchmarks
         working-directory: modflow6/distribution
-        run: |
-          cat run-time-comparison.md
+        run: cat run-time-comparison.md
 
-      - name: Upload comparison
+      - name: Upload benchmarks
         uses: actions/upload-artifact@v3
         with:
           name: run-time-comparison
@@ -126,9 +120,9 @@ jobs:
         with:
           name: rtd-files-for-${{ github.sha }}
           path: |
-            modflow6/.build_rtd_docs/
             modflow6/.build_rtd_docs/index.rst
             modflow6/.build_rtd_docs/mf6io.rst
+            # run-time-comparison is moved to _mf6run by conf.py
             modflow6/.build_rtd_docs/_mf6run/
             modflow6/.build_rtd_docs/_mf6io/
             modflow6/.build_rtd_docs/_static/

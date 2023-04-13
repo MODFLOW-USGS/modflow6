@@ -3,7 +3,7 @@ module GwfInterfaceModelModule
   use ConstantsModule, only: DZERO
   use MemoryManagerModule, only: mem_allocate
   use MemoryHelperModule, only: create_mem_path
-  use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
+  use NumericalModelModule, only: NumericalModelType
   use GwfModule, only: GwfModelType, CastAsGwfModel
   use Xt3dModule, only: xt3d_cr
   use GwfBuyModule, only: buy_cr
@@ -69,8 +69,8 @@ contains
     end if
 
     ! create discretization and packages
-    call disu_cr(this%dis, this%name, -1, this%iout)
-    call npf_cr(this%npf, this%name, -this%innpf, this%iout)
+    call disu_cr(this%dis, this%name, '', -1, this%iout)
+    call npf_cr(this%npf, this%name, '', -this%innpf, this%iout)
     call xt3d_cr(this%xt3d, this%name, -this%innpf, this%iout)
     call buy_cr(this%buy, this%name, this%inbuy, this%iout)
 

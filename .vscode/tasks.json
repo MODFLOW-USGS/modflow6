@@ -223,5 +223,47 @@
                 "clear": true
             }
         },
+        {
+            "label": "Run dfn2f90.py",
+            "type": "shell",
+            "command": "source activate modflow6; pwd; python dfn2f90.py",
+            "options": {"cwd": "${workspaceFolder}/utils/idmloader/scripts"},
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "clear": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Run update_flopy.py",
+            "type": "shell",
+            "command": "source activate modflow6; pwd; python update_flopy.py",
+            "options": {"cwd": "${workspaceFolder}/autotest"},
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "clear": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Run mf6ivar.py",
+            "type": "shell",
+            "command": "source activate modflow6; pwd; python mf6ivar.py",
+            "options": {"cwd": "${workspaceFolder}/doc/mf6io/mf6ivar"},
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "clear": true
+            },
+            "problemMatcher": []
+        },
     ]
 }

@@ -1,8 +1,8 @@
 \begin{thebibliography}{3}
 \providecommand{\natexlab}[1]{#1}
 \expandafter\ifx\csname urlstyle\endcsname\relax
-  \providecommand{\doi}[1]{doi:\discretionary{}{}{}#1}\else
-  \providecommand{\doi}{doi:\discretionary{}{}{}\begingroup
+  \providecommand{\doiagency}[1]{doi:\discretionary{}{}{}#1}\else
+  \providecommand{\doiagency}{doi:\discretionary{}{}{}\begingroup
   \urlstyle{rm}\Url}\fi
 
 \bibitem[{Harbaugh(2005)}]{modflow2005}
@@ -20,9 +20,9 @@ Mehl, S.W., and Hill, M.C., 2007, {MODFLOW-2005}, the U.S. Geological Survey
 
 \bibitem[{Niswonger and others(2011)Niswonger, Panday, and
   Ibaraki}]{modflownwt}
-Niswonger, R.G., Panday, Sorab, and Ibaraki, Motomu, 2011, MODFLOW-NWT, A
-  Newton formulation for MODFLOW-2005: {U.S. Geological Survey Techniques and
-  Methods, book 6, chap. A37, 44 p.}, accessed June 27, 2017, at
+Niswonger, R.G., Panday, S., and Ibaraki, M., 2011, MODFLOW-NWT, A Newton
+  formulation for MODFLOW-2005: {U.S. Geological Survey Techniques and Methods,
+  book 6, chap. A37, 44 p.}, accessed June 27, 2017, at
   \url{https://pubs.er.usgs.gov/publication/tm6A37}.
 
 \end{thebibliography}

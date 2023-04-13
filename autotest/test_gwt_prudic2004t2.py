@@ -7,27 +7,17 @@
 import os
 import sys
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from conftest import project_root_path
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["prudic2004t2"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-
-data_ws = "./data/prudic2004test2/"
-fname = os.path.join(data_ws, "lakibd.dat")
+data_path = project_root_path / "autotest" / "data"
+model_path = data_path / "prudic2004test2"
+fname = str(model_path / "lakibd.dat")
 lakibd = np.loadtxt(fname, dtype=int)
 
 
@@ -84,10 +74,10 @@ def build_model(idx, dir):
     delr = 405.665
     delc = 403.717
     top = 100.0
-    fname = os.path.join(data_ws, "bot1.dat")
+    fname = str(model_path / "bot1.dat")
     bot0 = np.loadtxt(fname)
     botm = [bot0] + [bot0 - (15.0 * k) for k in range(1, nlay)]
-    fname = os.path.join(data_ws, "idomain1.dat")
+    fname = str(model_path / "idomain1.dat")
     idomain0 = np.loadtxt(fname, dtype=int)
     idomain = nlay * [idomain0]
     dis = flopy.mf6.ModflowGwfdis(
@@ -100,7 +90,6 @@ def build_model(idx, dir):
         top=top,
         botm=botm,
         idomain=idomain,
-        length_units="feet",
     )
     idomain = dis.idomain.array
 
@@ -146,7 +135,7 @@ def build_model(idx, dir):
         )
 
     chdlist = []
-    fname = os.path.join(data_ws, "chd.dat")
+    fname = str(model_path / "chd.dat")
     for line in open(fname, "r").readlines():
         ll = line.strip().split()
         if len(ll) == 4:
@@ -166,7 +155,7 @@ def build_model(idx, dir):
     )
 
     rivlist = []
-    fname = os.path.join(data_ws, "riv.dat")
+    fname = str(model_path / "riv.dat")
     for line in open(fname, "r").readlines():
         ll = line.strip().split()
         if len(ll) == 7:
@@ -189,7 +178,7 @@ def build_model(idx, dir):
     )[0]
     for i, t in enumerate(rivlist):
         rivra[i] = tuple(t)
-    sfrpd = np.genfromtxt(data_ws + "sfr-packagedata.dat", names=True)
+    sfrpd = np.genfromtxt(model_path / "sfr-packagedata.dat", names=True)
     sfrpackagedata = flopy.mf6.ModflowGwfsfr.packagedata.empty(
         gwf, boundnames=True, maxbound=sfrpd.shape[0]
     )
@@ -200,7 +189,7 @@ def build_model(idx, dir):
         if name in sfrpd.dtype.names:
             sfrpackagedata[name] = sfrpd[name]
     sfrpackagedata["boundname"] = rivra["boundname"]
-    with open(data_ws + "sfr-connectiondata.dat") as f:
+    with open(model_path / "sfr-connectiondata.dat") as f:
         lines = f.readlines()
     sfrconnectiondata = []
     for line in lines:
@@ -327,16 +316,13 @@ def build_model(idx, dir):
         [1, 35.2, nlakecon[1], "lake2"],
     ]
     # <outletno> <lakein> <lakeout> <couttype> <invert> <width> <rough> <slope>
-    outlets = [
-        [0, 0, -1, "MANNING", 44.5, 3.36493214532915, 0.03, 0.2187500e-02]
-    ]
+    outlets = [[0, 0, -1, "MANNING", 44.5, 5.000000, 0.03, 0.2187500e-02]]
 
     lake_on = True
     if lake_on:
         lak = flopy.mf6.ModflowGwflak(
             gwf,
             time_conversion=86400.000,
-            length_conversion=3.28081,
             print_stage=True,
             print_flows=True,
             stage_filerecord=gwfname + ".lak.bin",
@@ -599,8 +585,8 @@ def build_model(idx, dir):
 
 def make_concentration_vs_time(sim):
     print("making plot of concentration versus time...")
-    name = ex[sim.idxsim]
-    ws = exdirs[sim.idxsim]
+    name = sim.name
+    ws = sim.simpath
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
@@ -658,8 +644,8 @@ def make_concentration_map(sim):
         500,
     ]
 
-    name = ex[sim.idxsim]
-    ws = exdirs[sim.idxsim]
+    name = sim.name
+    ws = sim.simpath
     simfp = flopy.mf6.MFSimulation.load(sim_ws=ws)
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
@@ -697,8 +683,8 @@ def make_concentration_map(sim):
 
 def check_obs(sim):
     print("checking obs...")
-    name = ex[sim.idxsim]
-    ws = exdirs[sim.idxsim]
+    name = sim.name
+    ws = sim.simpath
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
@@ -843,8 +829,8 @@ def eval_results(sim):
         make_concentration_map(sim)
 
     # ensure concentrations were saved
-    ws = exdirs[sim.idxsim]
-    name = ex[sim.idxsim]
+    ws = sim.simpath
+    name = sim.name
     gwtname = "gwt_" + name
 
     check_obs(sim)
@@ -984,39 +970,19 @@ def eval_results(sim):
     # uncomment when testing
     # assert False
 
-    return
 
-
-# - No need to change any code below
+@pytest.mark.slow
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_results, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_results, idxsim=idx)
-        test.run_mf6(sim)
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, idx, ws)
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
+        ),
+        ws,
+    )
