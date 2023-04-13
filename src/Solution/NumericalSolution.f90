@@ -1428,8 +1428,6 @@ contains
     ! -- determine if PTC will be used in any model
     n = 1
     do im = 1, this%modellist%Count()
-      mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_ptcchk(iptc)
       !
       ! -- set iallowptc
       ! -- no_ptc_option is FIRST
@@ -1443,7 +1441,14 @@ contains
       else
         iallowptc = this%iallowptc
       end if
-      iptc = iptc * iallowptc
+
+      if (iallowptc > 0) then
+        mp => GetNumericalModelFromList(this%modellist, im)
+        call mp%model_ptcchk(iptc)
+      else
+        iptc = 0
+      end if
+
       if (iptc /= 0) then
         if (n == 1) then
           write (iout, '(//)')
@@ -1607,8 +1612,8 @@ contains
     ptcf = DZERO
     do im = 1, this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_ptc(kiter, this%neq, this%system_matrix, &
-                        this%x, this%rhs, iptc, ptcf)
+      call mp%model_ptc(this%system_matrix, &
+                        this%vec_x, this%vec_rhs, iptc, ptcf)
     end do
     !
     ! -- Add model Newton-Raphson terms to solution
