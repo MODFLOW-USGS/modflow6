@@ -204,7 +204,7 @@ contains
           !
           ! -- matches, read and load file name
           idt => &
-            get_param_definition_type(mf6_input%param_dfns, &
+            get_param_definition_type(parser, mf6_input%param_dfns, &
                                       mf6_input%component_type, &
                                       mf6_input%subcomponent_type, &
                                       mf6_input%block_dfns(iblock)%blockname, &
@@ -250,7 +250,7 @@ contains
     end if
     !
     ! -- find keyword in input definition
-    idt => get_param_definition_type(mf6_input%param_dfns, &
+    idt => get_param_definition_type(parser, mf6_input%param_dfns, &
                                      mf6_input%component_type, &
                                      mf6_input%subcomponent_type, &
                                      mf6_input%block_dfns(iblock)%blockname, &
@@ -410,7 +410,7 @@ contains
       end if
       !
       ! -- set pointer to input definition for this 1d vector
-      idt => get_param_definition_type(mf6_input%param_dfns, &
+      idt => get_param_definition_type(parser, mf6_input%param_dfns, &
                                        mf6_input%component_type, &
                                        mf6_input%subcomponent_type, &
                                        mf6_input%block_dfns(iblock)%blockname, &

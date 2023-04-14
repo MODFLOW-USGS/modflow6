@@ -23,9 +23,12 @@ contains
 
   !> @brief Return parameter definition
   !<
-  function get_param_definition_type(input_definition_types, component_type, &
-                                     subcomponent_type, blockname, tagname) &
+  function get_param_definition_type(parser, input_definition_types, &
+                                     component_type, subcomponent_type, &
+                                     blockname, tagname) &
     result(idt)
+    use BlockParserModule, only: BlockParserType
+    type(BlockParserType), intent(inout) :: parser !< block parser
     type(InputParamDefinitionType), dimension(:), intent(in), target :: &
       input_definition_types
     character(len=*), intent(in) :: component_type !< component type, such as GWF or GWT
@@ -49,11 +52,12 @@ contains
     end do
     !
     if (.not. associated(idt)) then
-      write (errmsg, '(1x,a,a,a,a,a,a,a)') &
-        'Idm parameter definition not found: ', trim(tagname), &
-        '. Component="', trim(component_type), &
-        '", subcomponent="', trim(subcomponent_type), '".'
-      call store_error(errmsg, .true.)
+      write (errmsg, '(1x,a,a,a,a,a)') &
+        'Input file tag not found: "', trim(tagname), &
+        '" in block "', trim(blockname), &
+        '".'
+      call store_error(errmsg)
+      call parser%StoreErrorUnit()
     end if
     !
     ! -- return

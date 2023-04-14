@@ -33,7 +33,7 @@ module GwtNamInputModule
     '', & ! shape
     .false., & ! required
     .false., & ! multi-record
-    .false., & ! preserve case
+    .true., & ! preserve case
     .false. & ! layered
     )
 
