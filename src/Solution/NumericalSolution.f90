@@ -356,7 +356,7 @@ contains
     this%ptcdel = DZERO
     this%ptcdel0 = DZERO
     this%ptcexp = done
-    this%ptcthresh = DEM3
+    this%ptcthresh = DEM1
     this%ptcrat = DZERO
     this%atsfrac = DONETHIRD
     !

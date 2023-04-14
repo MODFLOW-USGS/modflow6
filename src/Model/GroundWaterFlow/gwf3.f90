@@ -648,20 +648,11 @@ contains
     integer(I4B) :: jrow
     integer(I4B) :: jrow_loc
     integer(I4B) :: matrix_offset
-    integer(I4B) :: j
-    integer(I4B) :: jcol
-    integer(I4B) :: jcol_loc
     real(DP) :: v
-    real(DP) :: resid
-    real(DP), dimension(this%dis%nodes) :: resid_vec
     real(DP), contiguous, dimension(:), pointer :: x
     real(DP), contiguous, dimension(:), pointer :: rhs
     real(DP) :: ptcdelem1
-    real(DP) :: diag
-    real(DP) :: diagcnt
-    real(DP) :: diagmin
-    real(DP) :: diagmax
-    integer(I4B) :: first_col, last_col
+    real(DP) :: adiag
 ! ------------------------------------------------------------------------------
     !
     ! set pointers to vec_x and vec_rhs
@@ -685,72 +676,30 @@ contains
     if (iptct > 0) then
       matrix_offset = matrix%get_row_offset()
       !
-      ! calculate the residual
-      do n = 1, this%dis%nodes
-        resid = DZERO
-        if (this%npf%ibound(n) > 0) then
-          jrow = n + this%moffset
-          jrow_loc = jrow - matrix_offset
-
-          ! diagonal and off-diagonal elements
-          first_col = matrix%get_first_col_pos(jrow)
-          last_col = matrix%get_last_col_pos(jrow)
-          do j = first_col, last_col
-            jcol = matrix%get_column(j)
-            jcol_loc = jcol - matrix_offset
-            if (jcol_loc < 1 .or. jcol_loc > size(x)) cycle ! temporary protection for parallel case
-            resid = resid + matrix%get_value_pos(j) * x(jrow_loc)
-          end do
-
-          ! subtract the right-hand side
-          resid = resid - rhs(jrow_loc)
-        end if
-        resid_vec(n) = resid
-      end do
-      !
-      ! calculate the pseudo-time step with constraints
-      ! using the calculated residual
-      diagmin = DEP20
-      diagmax = DZERO
-      diagcnt = DZERO
+      ! calculate the pseudo-time step using the diagonal times a factor
+      ! and the cell volume
       do n = 1, this%dis%nodes
         if (this%npf%ibound(n) < 1) cycle
         !
         ! get the maximum volume of the cell (head at top of cell)
         v = this%dis%get_cell_volume(n, this%dis%top(n))
         !
-        ! set the residual
-        resid = resid_vec(n)
+        ! get the diagonal and multiply by a factor
+        jrow = n + this%moffset
+        jrow_loc = jrow - matrix_offset
+        adiag = abs(matrix%get_diag_value(jrow_loc)) * DEM1
         !
         ! -- calculate the reciprocal of the pseudo-time step
         !    resid [L3/T] / volume [L3] = [1/T]
-        ptcdelem1 = abs(resid) / v
+        if (adiag > DZERO) then
+          ptcdelem1 = adiag / v
+        end if
         !
         ! -- set ptcf if the reciprocal of the pseudo-time step
         !    exceeds the current value (equivalent to using the
         !    smallest pseudo-time step)
         if (ptcdelem1 > ptcf) ptcf = ptcdelem1
-        !
-        ! -- determine minimum and maximum diagonal entries
-        jrow = n + this%moffset
-        diag = abs(matrix%get_diag_value(jrow))
-        diagcnt = diagcnt + DONE
-        if (diag > DZERO) then
-          if (diag < diagmin) diagmin = diag
-          if (diag > diagmax) diagmax = diag
-        end if
       end do
-      !
-      ! -- set the reciprocal of the pseudo-time step
-      !    to a fraction of the minimum or maximum
-      !    diagonal entry to prevent excessively small
-      !    or large values
-      if (diagcnt > DZERO) then
-        diagmin = diagmin * DEM1
-        diagmax = diagmax * DEM1
-        if (ptcf < diagmin) ptcf = diagmin
-        if (ptcf > diagmax) ptcf = diagmax
-      end if
     end if
 
     ! reset ipc if needed
