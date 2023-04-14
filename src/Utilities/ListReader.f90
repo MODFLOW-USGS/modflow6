@@ -396,6 +396,7 @@ contains
     use ConstantsModule, only: LENBOUNDNAME, LINELENGTH, DZERO
     use InputOutputModule, only: u9rdcom, urword, get_node
     use ArrayHandlersModule, only: ExpandArray
+    use TdisModule, only: kper
     ! -- dummy
     class(ListReaderType) :: this
     ! -- local
@@ -537,6 +538,13 @@ contains
           this%txtauxvar(this%ntxtauxvar) = this%line(this%istart:this%istop)
           this%idxtxtauxrow(this%ntxtauxvar) = ii
           this%idxtxtauxcol(this%ntxtauxvar) = jj
+          if (len_trim(this%txtauxvar(this%ntxtauxvar)) == 0) then
+            write (errmsg, '(a,i0,a)') 'Auxiliary data or time series name &
+                                        &expected but not found in period &
+                                        &block "', kper, '".'
+            call store_error(errmsg)
+            call store_error_unit(this%inlist)
+          end if
         end if
         !
       end do
