@@ -9,7 +9,7 @@ module DefinitionSelectModule
 
   use KindModule, only: I4B
   use SimVariablesModule, only: errmsg
-  use SimModule, only: store_error
+  use SimModule, only: store_error, store_error_filename
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
 
@@ -23,18 +23,17 @@ contains
 
   !> @brief Return parameter definition
   !<
-  function get_param_definition_type(parser, input_definition_types, &
+  function get_param_definition_type(input_definition_types, &
                                      component_type, subcomponent_type, &
-                                     blockname, tagname) &
+                                     blockname, tagname, filename) &
     result(idt)
-    use BlockParserModule, only: BlockParserType
-    type(BlockParserType), intent(inout) :: parser !< block parser
     type(InputParamDefinitionType), dimension(:), intent(in), target :: &
       input_definition_types
     character(len=*), intent(in) :: component_type !< component type, such as GWF or GWT
     character(len=*), intent(in) :: subcomponent_type !< subcomponent type, such as DIS or NPF
     character(len=*), intent(in) :: blockname !< name of the block
     character(len=*), intent(in) :: tagname !< name of the input tag
+    character(len=*), intent(in) :: filename !< input filename
     type(InputParamDefinitionType), pointer :: idt !< corresponding InputParameterDefinitionType for this tag
     type(InputParamDefinitionType), pointer :: tmp_ptr
     integer(I4B) :: i
@@ -57,7 +56,7 @@ contains
         '" in block "', trim(blockname), &
         '".'
       call store_error(errmsg)
-      call parser%StoreErrorUnit()
+      call store_error_filename(filename)
     end if
     !
     ! -- return

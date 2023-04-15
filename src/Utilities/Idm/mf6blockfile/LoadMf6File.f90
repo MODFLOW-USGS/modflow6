@@ -59,6 +59,7 @@ contains
     type(ModflowInputType) :: mf6_input !< ModflowInputType
     character(len=LENMEMPATH) :: componentMemPath
     integer(I4B), dimension(:), contiguous, pointer :: mshape => null()
+    character(len=LINELENGTH) :: filename !< input filename
     !
     ! -- construct input object
     mf6_input = getModflowInput(pkgtype, component_type, &
@@ -69,13 +70,16 @@ contains
     componentMemPath = create_mem_path(component=mf6_input%component_name, &
                                        context=idm_context)
     !
+    ! -- set filename
+    inquire (unit=parser%GetUnit(), name=filename)
+    !
     ! -- log lst file header
     call idm_log_header(mf6_input%component_name, &
                         mf6_input%subcomponent_name, iout)
     !
     ! -- process blocks
     do iblock = 1, size(mf6_input%block_dfns)
-      call parse_block(parser, mf6_input, iblock, mshape, iout, .false.)
+      call parse_block(parser, mf6_input, iblock, mshape, filename, iout, .false.)
       !
       ! -- set model shape if discretization dimensions have been read
       if (mf6_input%block_dfns(iblock)%blockname == 'DIMENSIONS' .and. &
@@ -97,14 +101,15 @@ contains
   !! calls for blocks that may appear multiple times in an input file.
   !!
   !<
-  recursive subroutine parse_block(parser, mf6_input, iblock, mshape, iout, &
-                                   recursive_call)
+  recursive subroutine parse_block(parser, mf6_input, iblock, mshape, filename, &
+                                   iout, recursive_call)
     use MemoryTypeModule, only: MemoryType
     use MemoryManagerModule, only: get_from_memorylist
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType
     integer(I4B), intent(in) :: iblock !< consecutive block number as defined in definition file
     integer(I4B), dimension(:), contiguous, pointer, intent(inout) :: mshape !< model shape
+    character(len=*), intent(in) :: filename !< input filename
     integer(I4B), intent(in) :: iout !< unit number for output
     logical(LGP), intent(in) :: recursive_call !< true if recursive call
     logical(LGP) :: isblockfound
@@ -137,7 +142,8 @@ contains
       if (mf6_input%block_dfns(iblock)%aggregate) then
         !
         ! -- process block recarray type, set of variable 1d/2d types
-        call parse_structarray_block(parser, mf6_input, iblock, mshape, iout)
+        call parse_structarray_block(parser, mf6_input, iblock, mshape, &
+                                     filename, iout)
       else
         do
           ! process each line in block
@@ -145,7 +151,8 @@ contains
           if (endOfBlock) exit
           !
           ! -- process line as tag(s)
-          call parse_tag(parser, mf6_input, iblock, mshape, iout, .false.)
+          call parse_tag(parser, mf6_input, iblock, mshape, filename, iout, &
+                         .false.)
         end do
       end if
     end if
@@ -153,7 +160,8 @@ contains
     ! -- recurse if block is reloadable and was just read
     if (mf6_input%block_dfns(iblock)%block_variable) then
       if (isblockfound) then
-        call parse_block(parser, mf6_input, iblock, mshape, iout, .true.)
+        call parse_block(parser, mf6_input, iblock, mshape, filename, iout, &
+                         .true.)
       end if
     end if
     !
@@ -162,7 +170,7 @@ contains
   end subroutine parse_block
 
   subroutine parse_iofile_tag(parser, mf6_input, iblock, mshape, tag, found, &
-                              iout)
+                              filename, iout)
     use DefinitionSelectModule, only: split_record_definition
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType
@@ -170,6 +178,7 @@ contains
     integer(I4B), dimension(:), contiguous, pointer, intent(inout) :: mshape !< model shape
     character(len=LINELENGTH), intent(in) :: tag
     logical(LGP), intent(inout) :: found !< file tag was identified and loaded
+    character(len=*), intent(in) :: filename !< input filename
     integer(I4B), intent(in) :: iout !< unit number for output
     type(InputParamDefinitionType), pointer :: idt !< input data type object describing this record
     character(len=40), dimension(:), allocatable :: words
@@ -204,11 +213,11 @@ contains
           !
           ! -- matches, read and load file name
           idt => &
-            get_param_definition_type(parser, mf6_input%param_dfns, &
+            get_param_definition_type(mf6_input%param_dfns, &
                                       mf6_input%component_type, &
                                       mf6_input%subcomponent_type, &
                                       mf6_input%block_dfns(iblock)%blockname, &
-                                      words(4))
+                                      words(4), filename)
           call load_string_type(parser, idt, mf6_input%mempath, iout)
           !
           ! -- io tag loaded
@@ -228,12 +237,13 @@ contains
   !! tags are on a single line.
   !!
   !<
-  recursive subroutine parse_tag(parser, mf6_input, iblock, mshape, iout, &
-                                 recursive_call)
+  recursive subroutine parse_tag(parser, mf6_input, iblock, mshape, filename, &
+                                 iout, recursive_call)
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType
     integer(I4B), intent(in) :: iblock !< consecutive block number as defined in definition file
     integer(I4B), dimension(:), contiguous, pointer, intent(inout) :: mshape !< model shape
+    character(len=*), intent(in) :: filename !< input filename
     integer(I4B), intent(in) :: iout !< unit number for output
     logical(LGP), intent(in) :: recursive_call !< true if recursive call
     character(len=LINELENGTH) :: tag
@@ -250,11 +260,11 @@ contains
     end if
     !
     ! -- find keyword in input definition
-    idt => get_param_definition_type(parser, mf6_input%param_dfns, &
+    idt => get_param_definition_type(mf6_input%param_dfns, &
                                      mf6_input%component_type, &
                                      mf6_input%subcomponent_type, &
                                      mf6_input%block_dfns(iblock)%blockname, &
-                                     tag)
+                                     tag, filename)
     !
     ! -- allocate and load data type
     select case (idt%datatype)
@@ -268,7 +278,7 @@ contains
         !
         ! -- identify and load the file name
         call parse_iofile_tag(parser, mf6_input, iblock, mshape, tag, &
-                              found_io_tag, iout)
+                              found_io_tag, filename, iout)
       end if
       !
       if (.not. found_io_tag) then
@@ -309,7 +319,7 @@ contains
     ! -- continue line if in same record
     if (idt%in_record) then
       ! recursively call parse tag again to read rest of line
-      call parse_tag(parser, mf6_input, iblock, mshape, iout, .true.)
+      call parse_tag(parser, mf6_input, iblock, mshape, filename, iout, .true.)
     end if
     !
     ! --
@@ -324,13 +334,15 @@ contains
   !! vector.
   !!
   !<
-  subroutine parse_structarray_block(parser, mf6_input, iblock, mshape, iout)
+  subroutine parse_structarray_block(parser, mf6_input, iblock, mshape, &
+                                     filename, iout)
     use StructArrayModule, only: StructArrayType, constructStructArray, &
                                  destructStructArray
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType
     integer(I4B), intent(in) :: iblock !< consecutive block number as defined in definition file
     integer(I4B), dimension(:), contiguous, pointer, intent(inout) :: mshape !< model shape
+    character(len=*), intent(in) :: filename !< input filename
     integer(I4B), intent(in) :: iout !< unit number for output
     type(InputParamDefinitionType), pointer :: idt !< input data type object describing this record
     integer(I4B) :: blocknum, iwords, ilen
@@ -410,11 +422,11 @@ contains
       end if
       !
       ! -- set pointer to input definition for this 1d vector
-      idt => get_param_definition_type(parser, mf6_input%param_dfns, &
+      idt => get_param_definition_type(mf6_input%param_dfns, &
                                        mf6_input%component_type, &
                                        mf6_input%subcomponent_type, &
                                        mf6_input%block_dfns(iblock)%blockname, &
-                                       words(iwords))
+                                       words(iwords), filename)
       !
       ! -- allocate variable in memory manager
       call struct_array%mem_create_vector(icol, idt%datatype, idt%mf6varname, &
