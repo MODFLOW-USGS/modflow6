@@ -728,13 +728,6 @@ class IdmDfnSelector:
         s += (
             f"    case default\n"
             f"    end select\n"
-            f"    if (.not. associated(input_definition)) then\n"
-            f"      call store_error('Idm {defn.lower()} input definition "
-            f"list not found; '//&\n"
-            f"                       &'component=\"'//trim(component)//&\n"
-            f"                       &'\", subcomponent=\"'//trim(subcomponent)"
-            f"//'\".', .true.)\n"
-            f"    end if\n"
             f"    return\n"
             f"  end function {defn.lower()}_definitions\n\n"
         )

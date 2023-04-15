@@ -44,11 +44,6 @@ contains
       input_definition => sim_param_definitions(subcomponent)
     case default
     end select
-    if (.not. associated(input_definition)) then
-      call store_error('Idm param input definition list not found; '//&
-                       &'component="'//trim(component)//&
-                       &'", subcomponent="'//trim(subcomponent)//'".', .true.)
-    end if
     return
   end function param_definitions
 
@@ -66,11 +61,6 @@ contains
       input_definition => sim_aggregate_definitions(subcomponent)
     case default
     end select
-    if (.not. associated(input_definition)) then
-      call store_error('Idm aggregate input definition list not found; '//&
-                       &'component="'//trim(component)//&
-                       &'", subcomponent="'//trim(subcomponent)//'".', .true.)
-    end if
     return
   end function aggregate_definitions
 
@@ -88,11 +78,6 @@ contains
       input_definition => sim_block_definitions(subcomponent)
     case default
     end select
-    if (.not. associated(input_definition)) then
-      call store_error('Idm block input definition list not found; '//&
-                       &'component="'//trim(component)//&
-                       &'", subcomponent="'//trim(subcomponent)//'".', .true.)
-    end if
     return
   end function block_definitions
 
