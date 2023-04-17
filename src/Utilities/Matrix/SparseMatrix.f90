@@ -291,12 +291,25 @@ contains
 
   end function spm_get_row_offset
 
-  !> @brief Calculates the matrix vector product
+  !> @brief Calculates the matrix vector product y = A*x
   !<
   subroutine spm_multiply(this, vec_x, vec_y)
     class(SparseMatrixType) :: this
     class(VectorBaseType) :: vec_x
     class(VectorBaseType) :: vec_y
+    ! local
+    integer(I4B) :: irow, icol, ipos
+    real(DP), dimension(:), pointer, contiguous :: x, y
+
+    x => vec_x%get_array()
+    y => vec_y%get_array()
+    do irow = 1, this%nrow
+      y(irow) = DZERO
+      do ipos = this%ia(irow), this%ia(irow + 1) - 1
+        icol = this%ja(ipos)
+        y(irow) = y(irow) + this%amat(ipos) * x(icol)
+      end do
+    end do
 
   end subroutine spm_multiply
 
