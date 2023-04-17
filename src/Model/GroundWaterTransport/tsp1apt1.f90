@@ -12,12 +12,12 @@
 ! FLOW-JA-FACE              idxbudfjf     FLOW-JA-FACE          cv2cv
 ! GWF (aux FLOW-AREA)       idxbudgwf     GWF                   cv2gwf
 ! STORAGE (aux VOLUME)      idxbudsto     none                  used for cv volumes
-! FROM-MVR                  idxbudfmvr    FROM-MVR              q * cext = this%qfrommvr(:)   ! kluge note: rhow*cpw also applies to various terms for heat transport
+! FROM-MVR                  idxbudfmvr    FROM-MVR              q * cext = this%qfrommvr(:)
 ! TO-MVR                    idxbudtmvr    TO-MVR                q * cfeat
 
 ! -- generalized source/sink terms (except ET?)
 ! RAINFALL                  idxbudrain    RAINFALL              q * crain
-! EVAPORATION               idxbudevap    EVAPORATION           cfeat<cevap: q*cfeat, else: q*cevap  ! kluge note: latent heat used for heat transport
+! EVAPORATION               idxbudevap    EVAPORATION           cfeat<cevap: q*cfeat, else: q*cevap
 ! RUNOFF                    idxbudroff    RUNOFF                q * croff
 ! EXT-INFLOW                idxbudiflw    EXT-INFLOW            q * ciflw
 ! WITHDRAWAL                idxbudwdrl    WITHDRAWAL            q * cfeat
