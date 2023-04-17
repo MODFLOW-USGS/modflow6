@@ -2806,46 +2806,28 @@ contains
   !!  A = the linear system matrix
   !!  x = the dependendent variable vector
   !!  b = the right-hand side vector
-  !!  m = the mask array for inactive cells,
-  !!      where inactive == 0, active > 0
   !!
-  !!         r = A * x - b
-  !!         M = diag(if m_i > 0: 1 else: 0)
-  !!    L2norm = ||M * r||_2 with
+  !!       r = A * x - b
+  !!     r_i = 0 if cell i is inactive
+  !!  L2norm = || r ||_2
   !<
   subroutine sln_l2norm(this, l2norm)
-    ! -- dummy variables
-    class(NumericalSolutionType), intent(inout) :: this !< NumericalSolutionType instance
-    real(DP), intent(inout) :: l2norm !< calculated L-2 norm
-    ! -- local variables
-    integer(I4B) :: n
-    integer(I4B) :: ipos, icol_s, icol_e
-    integer(I4B) :: jcol
-    real(DP) :: rowsum
-    real(DP) :: residual
-    !
-    ! -- initialize local variables
-    residual = DZERO
-    !
-    ! -- calculate the L-2 norm
-    do n = 1, this%neq
-      if (this%active(n) > 0) then
-        rowsum = DZERO
-        icol_s = this%system_matrix%get_first_col_pos(n)
-        icol_e = this%system_matrix%get_last_col_pos(n)
-        do ipos = icol_s, icol_e
-          jcol = this%system_matrix%get_column(ipos)
-          rowsum = rowsum + &
-                   (this%system_matrix%get_value_pos(ipos) * this%x(jcol))
-        end do
-        ! compute mean square residual from q of each node
-        residual = residual + (rowsum - this%rhs(n))**2
-      end if
-    end do
-    ! -- The L-2 norm is the square root of the sum of the square of the residuals
-    l2norm = sqrt(residual)
-    !
-    ! -- return
+    class(NumericalSolutionType) :: this !< NumericalSolutionType instance
+    real(DP) :: l2norm !< calculated L-2 norm
+    ! local
+    class(VectorBaseType), pointer :: vec_resid
+
+    ! calc. residual vector
+    vec_resid => this%system_matrix%create_vec(this%neq)
+    call this%sln_calc_residual(vec_resid)
+
+    ! 2-norm
+    l2norm = vec_resid%norm2()
+
+    ! clean up temp. vector
+    call vec_resid%destroy()
+    deallocate (vec_resid)
+
     return
   end subroutine sln_l2norm
 

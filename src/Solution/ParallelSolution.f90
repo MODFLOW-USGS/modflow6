@@ -12,7 +12,6 @@ module ParallelSolutionModule
   contains
     ! override
     procedure :: sln_has_converged => par_has_converged
-    procedure :: sln_l2norm => par_l2norm
   end type ParallelSolutionType
 
 contains
@@ -42,14 +41,5 @@ contains
     end if
 
   end function par_has_converged
-
-  subroutine par_l2norm(this, l2norm)
-    class(ParallelSolutionType), intent(inout) :: this !< parallel solution
-    real(DP), intent(inout) :: l2norm !< calculated L-2 norm
-
-    l2norm = this%linear_solver%get_l2_norm(this%vec_x, this%vec_rhs, &
-                                            this%active)
-
-  end subroutine par_l2norm
 
 end module ParallelSolutionModule

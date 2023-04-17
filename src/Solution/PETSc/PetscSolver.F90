@@ -28,7 +28,6 @@ module PetscSolverModule
     procedure :: initialize => petsc_initialize
     procedure :: solve => petsc_solve
     procedure :: get_result => petsc_get_result
-    procedure :: get_l2_norm => petsc_get_l2_norm
     procedure :: destroy => petsc_destroy
     procedure :: create_matrix => petsc_create_matrix
 
@@ -188,59 +187,6 @@ contains
   subroutine petsc_get_result(this)
     class(PetscSolverType) :: this
   end subroutine petsc_get_result
-
-  !> @brief Gets the global L2 norm for active cells using
-  !< the petsc linear system and solution's active cells array
-  function petsc_get_l2_norm(this, x, rhs, active) result(l2norm)
-    use ConstantsModule, only: DONE
-    class(PetscSolverType) :: this
-    class(VectorBaseType), pointer :: x
-    class(VectorBaseType), pointer :: rhs
-    integer(I4B), dimension(:), pointer, contiguous :: active
-    real(DP) :: l2norm
-    ! local
-    integer(I4B) :: i
-    class(PetscVectorType), pointer :: x_petsc, rhs_petsc
-    PetscScalar, parameter :: min_one = -1.0
-    PetscScalar, parameter :: zero = 0.0
-    PetscScalar :: norm
-    PetscErrorCode :: ierr
-
-    x_petsc => null()
-    select type (x)
-    class is (PetscVectorType)
-      x_petsc => x
-    end select
-    rhs_petsc => null()
-    select type (rhs)
-    class is (PetscVectorType)
-      rhs_petsc => rhs
-    end select
-
-    ! set up vector with residual elements
-    call MatMult(this%mat_petsc, x_petsc%vec_impl, this%vec_residual, ierr) ! r = A * x
-    CHKERRQ(ierr)
-    call VecAXPY(this%vec_residual, min_one, rhs_petsc%vec_impl, ierr) ! r = r - rhs
-    CHKERRQ(ierr)
-
-    ! zero out inactive cell contributions
-    do i = 1, size(active)
-      if (active(i) == 0) then
-        call VecSetValueLocal(this%vec_residual, i - 1, zero, INSERT_VALUES, ierr) ! r_i = 0 if active_i == 0
-      end if
-    end do
-    call VecAssemblyBegin(this%vec_residual, ierr)
-    CHKERRQ(ierr)
-    call VecAssemblyEnd(this%vec_residual, ierr)
-    CHKERRQ(ierr)
-
-    ! collective norm
-    call VecNorm(this%vec_residual, NORM_2, norm, ierr) ! 2-norm
-    CHKERRQ(ierr)
-
-    l2norm = norm
-
-  end function petsc_get_l2_norm
 
   subroutine petsc_destroy(this)
     class(PetscSolverType) :: this

@@ -14,7 +14,6 @@ module ImsLinearSolverModule
     procedure :: initialize => ims_initialize
     procedure :: solve => ims_solve
     procedure :: get_result => ims_get_result
-    procedure :: get_l2_norm => ims_get_l2_norm
     procedure :: destroy => ims_destroy
 
     procedure :: create_matrix => ims_create_matrix
@@ -47,15 +46,6 @@ contains
   subroutine ims_get_result(this)
     class(ImsLinearSolverType) :: this
   end subroutine ims_get_result
-
-  function ims_get_l2_norm(this, x, rhs, active) result(l2norm)
-    class(ImsLinearSolverType) :: this
-    class(VectorBaseType), pointer :: x
-    class(VectorBaseType), pointer :: rhs
-    integer(I4B), dimension(:), pointer, contiguous :: active
-    real(DP) :: l2norm
-    l2norm = 0.0_DP
-  end function ims_get_l2_norm
 
   subroutine ims_destroy(this)
     class(ImsLinearSolverType) :: this
