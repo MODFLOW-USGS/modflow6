@@ -635,6 +635,7 @@ contains
                      vec_x, vec_rhs, iptc, ptcf)
     ! modules
     use ConstantsModule, only: DONE, DP9
+    use TdisModule, only: DELT
     ! -- dummy
     class(GwfModelType) :: this
     class(MatrixBaseType), pointer :: matrix
@@ -657,11 +658,8 @@ contains
     real(DP), contiguous, dimension(:), pointer :: x
     real(DP), contiguous, dimension(:), pointer :: rhs
     real(DP) :: ptcdelem1
-    real(DP) :: diag
-    real(DP) :: diagcnt
-    real(DP) :: diagmin
-    real(DP) :: diagmax
-    integer(I4B) :: first_col, last_col
+    integer(I4B) :: first_col
+    integer(I4B) :: last_col
 ! ------------------------------------------------------------------------------
     !
     ! set pointers to vec_x and vec_rhs
@@ -699,7 +697,7 @@ contains
             jcol = matrix%get_column(j)
             jcol_loc = jcol - matrix_offset
             if (jcol_loc < 1 .or. jcol_loc > size(x)) cycle ! temporary protection for parallel case
-            resid = resid + matrix%get_value_pos(j) * x(jrow_loc)
+            resid = resid + matrix%get_value_pos(j) * x(jcol_loc)
           end do
 
           ! subtract the right-hand side
@@ -708,11 +706,8 @@ contains
         resid_vec(n) = resid
       end do
       !
-      ! calculate the pseudo-time step with constraints
-      ! using the calculated residual
-      diagmin = DEP20
-      diagmax = DZERO
-      diagcnt = DZERO
+      ! calculate the pseudo-time step using the
+      ! calculated residual
       do n = 1, this%dis%nodes
         if (this%npf%ibound(n) < 1) cycle
         !
@@ -730,26 +725,11 @@ contains
         !    exceeds the current value (equivalent to using the
         !    smallest pseudo-time step)
         if (ptcdelem1 > ptcf) ptcf = ptcdelem1
-        !
-        ! -- determine minimum and maximum diagonal entries
-        jrow = n + this%moffset
-        diag = abs(matrix%get_diag_value(jrow))
-        diagcnt = diagcnt + DONE
-        if (diag > DZERO) then
-          if (diag < diagmin) diagmin = diag
-          if (diag > diagmax) diagmax = diag
-        end if
       end do
       !
-      ! -- set the reciprocal of the pseudo-time step
-      !    to a fraction of the minimum or maximum
-      !    diagonal entry to prevent excessively small
-      !    or large values
-      if (diagcnt > DZERO) then
-        diagmin = diagmin * DEM1
-        diagmax = diagmax * DEM1
-        if (ptcf < diagmin) ptcf = diagmin
-        if (ptcf > diagmax) ptcf = diagmax
+      ! protection for the case where the residuals are zero
+      if (ptcf == DZERO) then
+        ptcf = DONE / (DELT * DTEN)
       end if
     end if
 

@@ -5,6 +5,7 @@ from simulation import TestSimulation
 excluded_models = ["alt_model", "test205_gwtbuy-henrytidal"]
 excluded_comparisons = {
     "test001e_noUZF_3lay": ["6.2.1",],
+    "test001f_hfb-xt3d-nwt": ["6.4.1",],
     "test005_advgw_tidal": ["6.2.1",],
     "test017_Crinkle": ["6.2.1",],
     "test028_sfr": ["6.2.1",],

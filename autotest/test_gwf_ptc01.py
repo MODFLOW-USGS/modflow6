@@ -1,3 +1,10 @@
+"""
+This test confirms that there is no difference in 
+steady-state Newton-Raphson simulations with PTC
+if a storage package is included in the model
+name file.
+"""
+
 import os
 
 import flopy
@@ -8,38 +15,48 @@ from framework import TestFramework
 from simulation import TestSimulation
 
 ex = ["ptc01"]
-data_path = project_root_path / "autotest" / "data"
-fpth = str(data_path / "nwtp03_bot.ref")
-botm = np.loadtxt(fpth, dtype=float)
-nlay = 1
-nrow, ncol = botm.shape
-top = 200
-laytyp = 1
-hk = 1.0
-ss = 1e-5
-sy = 0.1
-delr = delc = 100.0
-chdloc = [(0, 49, 79), (0, 50, 79), (0, 51, 79)]
-chd = 24.0
-strt = botm + 20.0
+# static model data
+# temporal discretization
+nper = 1
+tdis_rc = [(1.0, 1, 1.0)]
 
-# read recharge data
-fpth = str(data_path / "nwtp03_rch.ref")
-rch = np.loadtxt(fpth, dtype=float)
+# spatial discretization data
+nlay, nrow, ncol = 1, 1, 100
+shape3d = (nlay, nrow, ncol)
+size3d = nlay * nrow * ncol
+delr, delc = 50.0, 1.0
+top = 25.0
+botm = 0.0
+strt = 0.0
+
+# hydraulic properties
+hk = 50.0
+
+# all cells are active and layer 1 is convertible
+ib = 1
+
+# solver options
+nouter, ninner = 500, 300
+hclose, rclose, relax = 1e-9, 1e-6, 1.0
+newtonoptions = "NEWTON"
+imsla = "BICGSTAB"
+
+# chd data
+c6 = []
+ccol = [0, ncol - 1]
+hc = [20.0, 11.0]
+ss = 1e-5
+sy = 0.2
+for j, h in zip(ccol, hc):
+    c6.append([(0, 0, j), h])
+cd6 = {0: c6}
+maxchd = len(cd6[0])
+
+# recharge data
+rech = {0: 0.001}
 
 
 def build_mf6(idx, ws, storage=True):
-    c6 = []
-    for loc in chdloc:
-        c6.append([loc, chd])
-    cd6 = {0: c6}
-
-    nouter, ninner = 100, 300
-    hclose, rclose, relax = 1e-6, 0.01, 1.0
-
-    nper = 1
-    tdis_rc = [(1.0, 1, 1.0)]
-
     name = ex[idx]
 
     # build MODFLOW 6 files
@@ -47,47 +64,31 @@ def build_mf6(idx, ws, storage=True):
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
-    flopy.mf6.ModflowTdis(
+    tdis = flopy.mf6.ModflowTdis(
         sim, time_units="DAYS", nper=nper, perioddata=tdis_rc
     )
-
-    # create gwf model
-    gwf = flopy.mf6.ModflowGwf(
-        sim,
-        modelname=name,
-        model_nam_file=f"{name}.nam",
-        save_flows=True,
-        newtonoptions="NEWTON",
-    )
-
     # create iterative model solution and register the gwf model with it
     ims = flopy.mf6.ModflowIms(
         sim,
         print_option="SUMMARY",
-        outer_dvclose=1e-3,
-        outer_maximum=1500,
-        under_relaxation="dbd",
-        under_relaxation_theta=0.9,
-        under_relaxation_kappa=0.0,
-        under_relaxation_gamma=0.0,
-        under_relaxation_momentum=0.0,
-        backtracking_number=20,
-        backtracking_tolerance=2.0,
-        backtracking_reduction_factor=0.6,
-        backtracking_residual_limit=1.0,
-        inner_maximum=200,
-        inner_dvclose=1e-6,
-        rcloserecord="0. RELATIVE_RCLOSE",
-        linear_acceleration="BICGSTAB",
+        outer_dvclose=hclose,
+        outer_maximum=nouter,
+        under_relaxation="NONE",
+        inner_maximum=ninner,
+        inner_dvclose=hclose,
+        rcloserecord=rclose,
+        linear_acceleration=imsla,
         scaling_method="NONE",
         reordering_method="NONE",
-        preconditioner_levels=5,
-        number_orthogonalizations=7,
-        preconditioner_drop_tolerance=1e-4,
+        relaxation_factor=relax,
     )
-    sim.register_ims_package(ims, [gwf.name])
 
-    flopy.mf6.ModflowGwfdis(
+    # create gwf model
+    gwf = flopy.mf6.ModflowGwf(
+        sim, modelname=name, newtonoptions=newtonoptions, save_flows=True
+    )
+
+    dis = flopy.mf6.ModflowGwfdis(
         gwf,
         nlay=nlay,
         nrow=nrow,
@@ -96,15 +97,13 @@ def build_mf6(idx, ws, storage=True):
         delc=delc,
         top=top,
         botm=botm,
-        idomain=1,
-        filename=f"{name}.dis",
     )
 
     # initial conditions
-    flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{name}.ic")
+    ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
     # node property flow
-    flopy.mf6.ModflowGwfnpf(gwf, icelltype=1, k=hk)
+    npf = flopy.mf6.ModflowGwfnpf(gwf, save_flows=False, icelltype=1, k=hk)
 
     # storage
     if storage:
@@ -112,22 +111,24 @@ def build_mf6(idx, ws, storage=True):
             gwf, iconvert=1, ss=ss, sy=sy, steady_state={0: True}
         )
 
-    # chd files
-    flopy.mf6.modflow.ModflowGwfchd(gwf, stress_period_data=cd6)
+    # recharge
+    rch = flopy.mf6.ModflowGwfrcha(gwf, readasarrays=True, recharge=rech)
 
-    # rch files
-    flopy.mf6.modflow.ModflowGwfrcha(gwf, recharge={0: rch})
+    # chd files
+    chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(
+        gwf, maxbound=maxchd, stress_period_data=cd6, save_flows=False
+    )
 
     # output control
-    flopy.mf6.ModflowGwfoc(
+    oc = flopy.mf6.ModflowGwfoc(
         gwf,
         budget_filerecord=f"{name}.cbc",
         head_filerecord=f"{name}.hds",
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
-        saverecord=[("HEAD", "LAST")],
-        printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
+        saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
+        printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
     )
-
+    
     return sim
 
 
@@ -143,7 +144,6 @@ def build_model(idx, dir):
     return sim, mc
 
 
-@pytest.mark.slow
 @pytest.mark.parametrize(
     "idx, name",
     list(enumerate(ex)),
