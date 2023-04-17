@@ -19,7 +19,8 @@ module SparseMatrixModule
   contains
     procedure :: init => spm_init
     procedure :: destroy => spm_destroy
-    procedure :: create_vector => spm_create_vector
+    procedure :: create_vec_mm => spm_create_vec_mm
+    procedure :: create_vec => spm_create_vec
 
     procedure :: get_value_pos => spm_get_value_pos
     procedure :: get_diag_value => spm_get_diag_value
@@ -38,6 +39,8 @@ module SparseMatrixModule
     procedure :: get_position_diag => spm_get_position_diag
     procedure :: get_aij => spm_get_aij
     procedure :: get_row_offset => spm_get_row_offset
+
+    procedure :: multiply => spm_multiply
 
     procedure :: allocate_scalars
     procedure :: allocate_arrays
@@ -81,7 +84,7 @@ contains
 
   end subroutine spm_destroy
 
-  function spm_create_vector(this, n, name, mem_path) result(vec)
+  function spm_create_vec_mm(this, n, name, mem_path) result(vec)
     class(SparseMatrixType) :: this ! this sparse matrix
     integer(I4B) :: n !< the nr. of elements in the vector
     character(len=*) :: name !< the variable name (for access through memory manager)
@@ -91,10 +94,23 @@ contains
     class(SeqVectorType), pointer :: seq_vec
 
     allocate (seq_vec)
-    call seq_vec%create(n, name, mem_path)
+    call seq_vec%create_mm(n, name, mem_path)
     vec => seq_vec
 
-  end function spm_create_vector
+  end function spm_create_vec_mm
+
+  function spm_create_vec(this, n) result(vec)
+    class(SparseMatrixType) :: this ! this sparse matrix
+    integer(I4B) :: n !< the nr. of elements in the vector
+    class(VectorBaseType), pointer :: vec ! the vector to create
+    ! local
+    class(SeqVectorType), pointer :: seq_vec
+
+    allocate (seq_vec)
+    call seq_vec%create(n)
+    vec => seq_vec
+
+  end function spm_create_vec
 
   function spm_get_value_pos(this, ipos) result(value)
     class(SparseMatrixType) :: this
@@ -274,5 +290,14 @@ contains
     offset = 0
 
   end function spm_get_row_offset
+
+  !> @brief Calculates the matrix vector product
+  !<
+  subroutine spm_multiply(this, vec_x, vec_y)
+    class(SparseMatrixType) :: this
+    class(VectorBaseType) :: vec_x
+    class(VectorBaseType) :: vec_y
+
+  end subroutine spm_multiply
 
 end module SparseMatrixModule

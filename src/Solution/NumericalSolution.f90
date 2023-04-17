@@ -160,6 +160,8 @@ module NumericalSolutionModule
     ! 'protected' (this can be overridden)
     procedure :: sln_has_converged
     procedure :: sln_l2norm
+    procedure :: sln_calc_ptc
+    procedure :: sln_calc_residual
 
     ! private
     procedure, private :: sln_connect
@@ -465,9 +467,9 @@ contains
     ! -- create linear system matrix and compatible vectors
     this%linear_solver => create_linear_solver(this%solver_mode)
     this%system_matrix => this%linear_solver%create_matrix()
-    this%vec_x => this%system_matrix%create_vector(this%neq, 'X', this%memoryPath)
+    this%vec_x => this%system_matrix%create_vec_mm(this%neq, 'X', this%memoryPath)
     this%x => this%vec_x%get_array()
-    this%vec_rhs => this%system_matrix%create_vector(this%neq, 'RHS', &
+    this%vec_rhs => this%system_matrix%create_vec_mm(this%neq, 'RHS', &
                                                      this%memoryPath)
     this%rhs => this%vec_rhs%get_array()
     !
@@ -1580,21 +1582,14 @@ contains
     if (this%numtrack > 0) then
       call this%sln_backtracking(mp, cp, kiter)
     end if
-
+    !
     call code_timer(0, ttform, this%ttform)
-
-    ! (re)build the solution matrix
+    !
+    ! -- (re)build the solution matrix
     call this%sln_buildsystem(kiter, inewton=1)
-
     !
     ! -- Calculate pseudo-transient continuation factor for each model
-    iptc = 0
-    ptcf = DZERO
-    do im = 1, this%modellist%Count()
-      mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_ptc(this%system_matrix, &
-                        this%vec_x, this%vec_rhs, iptc, ptcf)
-    end do
+    call this%sln_calc_ptc(iptc, ptcf)
     !
     ! -- Add model Newton-Raphson terms to solution
     do im = 1, this%modellist%Count()
@@ -1734,7 +1729,7 @@ contains
     ! -- under-relaxation - only done if convergence not achieved
     if (this%icnvg /= 1) then
       if (this%nonmeth > 0) then
-        call this%sln_underrelax(kiter, this%hncg(kiter), this%neq, &
+        call this%sln_underrelax(kiter, this%hncg(kiter), this%neq, & ! TODO_MJR: this is not equiv. serial/parallel
                                  this%active, this%x, this%xtemp)
       else
         call this%sln_calcdx(this%neq, this%active, &
@@ -2920,6 +2915,56 @@ contains
     ! -- return
     return
   end subroutine sln_calcdx
+
+  !> @brief Calculate pseudo-transient continuation factor
+  !< from the models in the solution
+  subroutine sln_calc_ptc(this, iptc, ptcf)
+    class(NumericalSolutionType) :: this !< NumericalSolutionType instance
+    integer(I4B) :: iptc !< PTC (1) or not (0)
+    real(DP) :: ptcf !< the PTC factor calculated
+    ! local
+    integer(I4B) :: im
+    class(NumericalModelType), pointer :: mp
+    class(VectorBaseType), pointer :: vec_resid
+
+    iptc = 0
+    ptcf = DZERO
+
+    ! calc. residual vector
+    vec_resid => this%system_matrix%create_vec(this%neq)
+    call this%sln_calc_residual(vec_resid)
+
+    ! determine ptc
+    do im = 1, this%modellist%Count()
+      mp => GetNumericalModelFromList(this%modellist, im)
+      call mp%model_ptc(vec_resid, iptc, ptcf)
+    end do
+
+    ! clean up temp. vector
+    call vec_resid%destroy()
+    deallocate (vec_resid)
+
+  end subroutine sln_calc_ptc
+
+  !> @brief Calculate the current residual vector r = A*x - b,
+  !< zeroes out for inactive cells
+  subroutine sln_calc_residual(this, vec_resid)
+    class(NumericalSolutionType) :: this !< NumericalSolutionType instance
+    class(VectorBaseType), pointer :: vec_resid !< the residual vector
+    ! local
+    integer(I4B) :: n
+
+    call this%system_matrix%multiply(this%vec_x, vec_resid) ! r = A*x
+
+    call vec_resid%axpy(-1.0_DP, this%vec_rhs) ! r = r - b
+
+    do n = 1, this%neq
+      if (this%active(n) < 1) then
+        call vec_resid%set_value_local(n, 0.0_DP) ! r_i = 0 if inactive
+      end if
+    end do
+
+  end subroutine sln_calc_residual
 
   !> @ brief Under-relaxation
   !!
