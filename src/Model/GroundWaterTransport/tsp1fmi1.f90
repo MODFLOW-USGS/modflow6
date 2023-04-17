@@ -57,8 +57,7 @@ module TspFmiModule
     integer(I4B), pointer :: iumvr => null() !< unit number GWF mover budget file
     integer(I4B), pointer :: nflowpack => null() !< number of GWF flow packages
     integer(I4B), dimension(:), pointer, contiguous :: igwfmvrterm => null() !< flag to indicate that gwf package is a mover term
-    real(DP), pointer :: eqnsclfac => null() !< governing equation scale factor; =1. for solute; =rhow*cpw for energy
-        type(BudgetFileReaderType) :: bfr !< budget file reader
+    type(BudgetFileReaderType) :: bfr !< budget file reader
     type(HeadFileReaderType) :: hfr !< head file reader
     type(PackageBudgetType), dimension(:), allocatable :: gwfpackages !< used to get flows between a package and gwf
     type(BudgetObjectType), pointer :: mvrbudobj => null() !< pointer to the mover budget budget object
@@ -100,7 +99,7 @@ module TspFmiModule
 
 contains
 
-  subroutine fmi_cr(fmiobj, name_model, inunit, iout, tsplab, eqnsclfac)
+  subroutine fmi_cr(fmiobj, name_model, inunit, iout, tsplab)
 ! ******************************************************************************
 ! fmi_cr -- Create a new FMI object
 ! ******************************************************************************
@@ -113,7 +112,6 @@ contains
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     type(TspLabelsType), pointer, intent(in) :: tsplab
-    real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -138,9 +136,6 @@ contains
     !
     ! -- Give package access to the assigned labels based on dependent variable
     fmiobj%tsplab => tsplab
-    !
-    ! -- Store pointer to governing equation scale factor
-    fmiobj%eqnsclfac => eqnsclfac
     !
     ! -- Return
     return
@@ -355,7 +350,6 @@ contains
     real(DP), intent(inout), dimension(nodes) :: rhs
     ! -- local
     integer(I4B) :: n, idiag, idiag_sln
-    real(DP) :: qcorr
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate the flow imbalance error and make a correction for it
@@ -366,9 +360,7 @@ contains
       do n = 1, nodes
         idiag = this%dis%con%ia(n)
         idiag_sln = idxglo(idiag)
-!!        call matrix_sln%add_value_pos(idiag_sln, -this%gwfflowja(idiag))
-        qcorr = -this%gwfflowja(idiag) * this%eqnsclfac
-        call matrix_sln%add_value_pos(idiag_sln, qcorr)
+        call matrix_sln%add_value_pos(idiag_sln, -this%gwfflowja(idiag))
       end do
     end if
     !
@@ -402,7 +394,7 @@ contains
         rate = DZERO
         idiag = this%dis%con%ia(n)
         if (this%ibound(n) > 0) then
-          rate = -this%gwfflowja(idiag) * cnew(n) * this%eqnsclfac
+          rate = -this%gwfflowja(idiag) * cnew(n)
         end if
         this%flowcorrect(n) = rate
         flowja(idiag) = flowja(idiag) + rate
@@ -733,8 +725,8 @@ contains
             flownm = this%gwfflowja(ipos)
             if (flownm > 0) then
               if (this%ibound(m) /= 0) then
-                crewet = crewet + cnew(m) * flownm   ! kluge note: apparently no need to multiply flows by eqnsclfac
-                tflow = tflow + this%gwfflowja(ipos) !             since it will divide out below anyway
+                crewet = crewet + cnew(m) * flownm
+                tflow = tflow + this%gwfflowja(ipos)
               end if
             end if
           end do

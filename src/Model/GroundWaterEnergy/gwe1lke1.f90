@@ -96,7 +96,7 @@ module GweLkeModule
 contains
 
   subroutine lke_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
-                        fmi, tsplab, eqnsclfac, gwecommon)
+                        fmi, tsplab, gwecommon)
 ! ******************************************************************************
 ! mwt_create -- Create a New MWT Package
 ! ******************************************************************************
@@ -113,7 +113,6 @@ contains
     character(len=*), intent(in) :: pakname
     type(TspFmiType), pointer :: fmi
     type(TspLabelsType), pointer :: tsplab
-    real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
     type(GweInputDataType), intent(in), target :: gwecommon !< shared data container for use by multiple GWE packages
     ! -- local
     type(GweLkeType), pointer :: lkeobj
@@ -140,17 +139,14 @@ contains
     packobj%ncolbnd = 1
     packobj%iscloc = 1
 
-    ! -- Store pointer to flow model interface.  When the GwfGwe exchange is
-    !    created, it sets fmi%bndlist so that the GWE model has access to all
+    ! -- Store pointer to flow model interface.  When the GwfGwt exchange is
+    !    created, it sets fmi%bndlist so that the GWT model has access to all
     !    the flow packages
     lkeobj%fmi => fmi
     !
     ! -- Store pointer to the labels module for dynamic setting of 
     !    concentration vs temperature
     lkeobj%tsplab => tsplab
-    !
-    ! -- Store pointer to governing equation scale factor
-    lkeobj%eqnsclfac => eqnsclfac
     !
     ! -- Store pointer to shared data module for accessing cpw, rhow
     !    for the budget calculations, and for accessing the latent heat of
@@ -791,7 +787,7 @@ contains
     n2 = this%flowbudptr%budterm(this%idxbudrain)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudrain)%flow(ientry)
     ctmp = this%temprain(n1)
-    if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac   
+    if (present(rrate)) rrate = ctmp * qbnd
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
@@ -817,29 +813,24 @@ contains
     real(DP), intent(inout), optional :: hcofval
     ! -- local
     real(DP) :: qbnd
-!!    real(DP) :: ctmp
-!!    real(DP) :: omega
-    real(DP) :: heatlat
+    real(DP) :: ctmp
+    real(DP) :: omega
 ! ------------------------------------------------------------------------------
     n1 = this%flowbudptr%budterm(this%idxbudevap)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudevap)%id2(ientry)
     ! -- note that qbnd is negative for evap
     qbnd = this%flowbudptr%budterm(this%idxbudevap)%flow(ientry)
-!!    ctmp = this%tempevap(n1)
-!!    if (this%xnewpak(n1) < ctmp) then
-!!      omega = DONE
-!!    else
-!!      omega = DZERO
-!!    end if
-!!    if (present(rrate)) &
-!!      rrate = omega * qbnd * this%xnewpak(n1) + &
-!!              (DONE - omega) * qbnd * ctmp
-!!    if (present(rhsval)) rhsval = -(DONE - omega) * qbnd * ctmp
-!!    if (present(hcofval)) hcofval = omega * qbnd
-    heatlat = this%gwecommon%gwerhow * this%gwecommon%gwelatheatvap  ! kg/m^3 * J/kg = J/m^3 (kluge note)
-    if (present(rrate)) rrate = qbnd * heatlat !m^3/day * J/m^3 = J/day (kluge note)
-    if (present(rhsval)) rhsval = -rrate
-    if (present(hcofval)) hcofval = DZERO
+    ctmp = this%tempevap(n1)
+    if (this%xnewpak(n1) < ctmp) then
+      omega = DONE
+    else
+      omega = DZERO
+    end if
+    if (present(rrate)) &
+      rrate = omega * qbnd * this%xnewpak(n1) + &
+              (DONE - omega) * qbnd * ctmp
+    if (present(rhsval)) rhsval = -(DONE - omega) * qbnd * ctmp
+    if (present(hcofval)) hcofval = omega * qbnd
     !
     ! -- return
     return
@@ -869,7 +860,7 @@ contains
     n2 = this%flowbudptr%budterm(this%idxbudroff)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudroff)%flow(ientry)
     ctmp = this%temproff(n1)
-    if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
+    if (present(rrate)) rrate = ctmp * qbnd
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
@@ -901,7 +892,7 @@ contains
     n2 = this%flowbudptr%budterm(this%idxbudiflw)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudiflw)%flow(ientry)
     ctmp = this%tempiflw(n1)
-    if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
+    if (present(rrate)) rrate = ctmp * qbnd
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
@@ -933,9 +924,9 @@ contains
     n2 = this%flowbudptr%budterm(this%idxbudwdrl)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudwdrl)%flow(ientry)
     ctmp = this%xnewpak(n1)
-    if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
+    if (present(rrate)) rrate = ctmp * qbnd
     if (present(rhsval)) rhsval = DZERO
-    if (present(hcofval)) hcofval = qbnd * this%eqnsclfac
+    if (present(hcofval)) hcofval = qbnd
     !
     ! -- return
     return
@@ -965,9 +956,9 @@ contains
     n2 = this%flowbudptr%budterm(this%idxbudoutf)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudoutf)%flow(ientry)
     ctmp = this%xnewpak(n1)
-    if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
+    if (present(rrate)) rrate = ctmp * qbnd
     if (present(rhsval)) rhsval = DZERO
-    if (present(hcofval)) hcofval = qbnd * this%eqnsclfac
+    if (present(hcofval)) hcofval = qbnd
     !
     ! -- return
     return
