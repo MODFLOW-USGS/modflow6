@@ -1,25 +1,12 @@
 import os
-import sys
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["utl03_obs"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-ddir = "data"
 
 # temporal discretization
 nper = 2
@@ -61,12 +48,12 @@ nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-6, 0.01, 1.0
 
 
-def build_mf6(idx, ws, binaryobs=True):
+def build_mf6(idx, ws, exe, binaryobs=True):
     name = ex[idx]
 
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
+        sim_name=name, version="mf6", exe_name=exe, sim_ws=ws
     )
     # create tdis package
     flopy.mf6.ModflowTdis(
@@ -150,21 +137,25 @@ def build_mf6(idx, ws, binaryobs=True):
     return sim
 
 
-def build_model(idx, dir):
+def build_model(idx, dir, exe):
     ws = dir
     # build mf6 with ascii observation output
-    sim = build_mf6(idx, ws, binaryobs=False)
+    sim = build_mf6(idx, ws, exe=exe, binaryobs=False)
 
     # build mf6 with binary observation output
     wsc = os.path.join(ws, "mf6")
-    mc = build_mf6(idx, wsc, binaryobs=True)
+    mc = build_mf6(idx, wsc, exe=exe, binaryobs=True)
+
+    sim.write_simulation()
+    mc.write_simulation()
+    hack_binary_obs(idx, dir)
 
     return sim, mc
 
 
-def build_models():
-    for idx, dir in enumerate(exdirs):
-        sim, mc = build_model(idx, dir)
+def build_models(dir, exe):
+    for idx, name in enumerate(ex):
+        sim, mc = build_model(idx, dir, exe)
         sim.write_simulation()
         mc.write_simulation()
         hack_binary_obs(idx, dir)
@@ -224,41 +215,14 @@ def eval_obs(sim):
             )
             assert np.allclose(d0[name], d1[name], rtol=1e-5), msg
 
-    return
 
-
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    build_models()
-
-    # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_obs))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    build_models()
-
-    # run the test model
-    for dir in exdirs:
-        sim = Simulation(dir, exfunc=eval_obs)
-        test.run_mf6(sim)
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    mf6 = targets["mf6"]
+    test = TestFramework()
+    build_models(ws, mf6)
+    test.run(TestSimulation(name=name, exe_dict=targets, exfunc=eval_obs), ws)

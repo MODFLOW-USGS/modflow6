@@ -7,7 +7,8 @@ module NumericalModelModule
   use SparseModule, only: sparsematrix
   use TimeArraySeriesManagerModule, only: TimeArraySeriesManagerType
   use ListModule, only: ListType
-  use MatrixModule
+  use MatrixBaseModule
+  use VectorBaseModule
 
   implicit none
   private
@@ -73,7 +74,6 @@ module NumericalModelModule
     procedure :: get_mcellid
     procedure :: get_mnodeu
     procedure :: get_iasym
-    procedure :: load_input_context
   end type NumericalModelType
 
 contains
@@ -124,13 +124,11 @@ contains
     iptc = 0
   end subroutine model_ptcchk
 
-  subroutine model_ptc(this, kiter, neqsln, matrix, x, rhs, iptc, ptcf)
+  subroutine model_ptc(this, matrix, vec_x, vec_rhs, iptc, ptcf)
     class(NumericalModelType) :: this
-    integer(I4B), intent(in) :: kiter
-    integer(I4B), intent(in) :: neqsln
     class(MatrixBaseType), pointer :: matrix
-    real(DP), dimension(neqsln), intent(in) :: x
-    real(DP), dimension(neqsln), intent(in) :: rhs
+    class(VectorBaseType), pointer :: vec_x
+    class(VectorBaseType), pointer :: vec_rhs
     integer(I4B), intent(inout) :: iptc
     real(DP), intent(inout) :: ptcf
   end subroutine model_ptc
@@ -300,42 +298,51 @@ contains
     return
   end subroutine allocate_arrays
 
-  subroutine set_xptr(this, xsln, varNameTgt, memPathTgt)
+  subroutine set_xptr(this, xsln, sln_offset, varNameTgt, memPathTgt)
     use MemoryManagerModule, only: mem_checkin
     ! -- dummy
     class(NumericalModelType) :: this
     real(DP), dimension(:), pointer, contiguous, intent(in) :: xsln
+    integer(I4B) :: sln_offset
     character(len=*), intent(in) :: varNameTgt
     character(len=*), intent(in) :: memPathTgt
     ! -- local
+    integer(I4B) :: offset
     ! -- code
-    this%x => xsln(this%moffset + 1:this%moffset + this%neq)
+    offset = this%moffset - sln_offset
+    this%x => xsln(offset + 1:offset + this%neq)
     call mem_checkin(this%x, 'X', this%memoryPath, varNameTgt, memPathTgt)
   end subroutine set_xptr
 
-  subroutine set_rhsptr(this, rhssln, varNameTgt, memPathTgt)
+  subroutine set_rhsptr(this, rhssln, sln_offset, varNameTgt, memPathTgt)
     use MemoryManagerModule, only: mem_checkin
     ! -- dummy
     class(NumericalModelType) :: this
     real(DP), dimension(:), pointer, contiguous, intent(in) :: rhssln
+    integer(I4B) :: sln_offset
     character(len=*), intent(in) :: varNameTgt
     character(len=*), intent(in) :: memPathTgt
     ! -- local
+    integer(I4B) :: offset
     ! -- code
-    this%rhs => rhssln(this%moffset + 1:this%moffset + this%neq)
+    offset = this%moffset - sln_offset
+    this%rhs => rhssln(offset + 1:offset + this%neq)
     call mem_checkin(this%rhs, 'RHS', this%memoryPath, varNameTgt, memPathTgt)
   end subroutine set_rhsptr
 
-  subroutine set_iboundptr(this, iboundsln, varNameTgt, memPathTgt)
+  subroutine set_iboundptr(this, iboundsln, sln_offset, varNameTgt, memPathTgt)
     use MemoryManagerModule, only: mem_checkin
     ! -- dummy
     class(NumericalModelType) :: this
     integer(I4B), dimension(:), pointer, contiguous, intent(in) :: iboundsln
+    integer(I4B) :: sln_offset
     character(len=*), intent(in) :: varNameTgt
     character(len=*), intent(in) :: memPathTgt
     ! -- local
+    integer(I4B) :: offset
     ! -- code
-    this%ibound => iboundsln(this%moffset + 1:this%moffset + this%neq)
+    offset = this%moffset - sln_offset
+    this%ibound => iboundsln(offset + 1:offset + this%neq)
     call mem_checkin(this%ibound, 'IBOUND', this%memoryPath, varNameTgt, &
                      memPathTgt)
   end subroutine set_iboundptr
@@ -439,40 +446,5 @@ contains
     !
     return
   end function GetNumericalModelFromList
-
-  !> @brief Load input context for supported package
-  !<
-  subroutine load_input_context(this, filtyp, modelname, pkgname, inunit, iout, &
-                                ipaknum)
-    ! -- modules
-    use IdmMf6FileLoaderModule, only: input_load
-    ! -- dummy
-    class(NumericalModelType) :: this
-    character(len=*), intent(in) :: filtyp
-    character(len=*), intent(in) :: modelname
-    character(len=*), intent(in) :: pkgname
-    integer(I4B), intent(in) :: inunit
-    integer(I4B), intent(in) :: iout
-    integer(I4B), optional, intent(in) :: ipaknum
-    ! -- local
-! ------------------------------------------------------------------------------
-    !
-    ! -- only load if there is a file to read
-    if (inunit <= 0) return
-    !
-    ! -- Load model package input to input context
-    select case (filtyp)
-    case ('DIS6')
-      call input_load('DIS6', 'GWF', 'DIS', modelname, pkgname, inunit, iout)
-    case ('DISU6')
-      call input_load('DISU6', 'GWF', 'DISU', modelname, pkgname, inunit, iout)
-    case ('DISV6')
-      call input_load('DISV6', 'GWF', 'DISV', modelname, pkgname, inunit, iout)
-    case default
-    end select
-    !
-    ! -- return
-    return
-  end subroutine load_input_context
 
 end module NumericalModelModule

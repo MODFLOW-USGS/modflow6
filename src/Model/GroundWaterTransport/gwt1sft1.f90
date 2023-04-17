@@ -42,7 +42,7 @@ module GwtSftModule
   use TspAptModule, only: TspAptType, apt_process_obsID, &
                           apt_process_obsID12
   use TspLabelsModule, only: TspLabelsType
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
 

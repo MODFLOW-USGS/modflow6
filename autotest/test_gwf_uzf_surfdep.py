@@ -1,40 +1,12 @@
-import os
-import shutil
-import subprocess
-import sys
+import flopy
 
-import numpy as np
-import pytest
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-import targets
-
-mf6_exe = os.path.abspath(targets.target_dict["mf6"])
 testname = "uzf_3lay_srfdchk"
-testdir = os.path.join("temp", testname)
-os.makedirs(testdir, exist_ok=True)
-everything_was_successful = True
 
 iuz_cell_dict = {}
 cell_iuz_dict = {}
 
 
-def build_model():
+def build_model(dir, exe):
 
     nlay, nrow, ncol = 3, 1, 10
     nper = 1
@@ -61,9 +33,9 @@ def build_model():
     name = testname
 
     # build MODFLOW 6 files
-    ws = testdir
+    ws = dir
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name=mf6_exe, sim_ws=ws
+        sim_name=name, version="mf6", exe_name=exe, sim_ws=ws
     )
 
     # create tdis package
@@ -213,15 +185,15 @@ def build_model():
     return sim
 
 
-# - No need to change any code below
-def test_mf6model():
+def test_mf6model(function_tmpdir, targets):
     # build and run the test model
-    sim = build_model()
+    mf6 = targets.mf6
+    sim = build_model(str(function_tmpdir), mf6)
     sim.write_simulation()
     sim.run_simulation()
 
     # ensure that the error msg is contained in the mfsim.lst file
-    f = open(os.path.join(testdir, "mfsim.lst"), "r")
+    f = open(str(function_tmpdir / "mfsim.lst"), "r")
     lines = f.readlines()
     error_count = 0
     expected_msg = False
@@ -235,21 +207,3 @@ def test_mf6model():
     )
 
     print("Finished running surfdep check")
-
-    shutil.rmtree(testdir, ignore_errors=True)
-
-    return
-
-
-def main():
-    test_mf6model()
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()

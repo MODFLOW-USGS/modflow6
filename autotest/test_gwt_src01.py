@@ -7,36 +7,15 @@ diffusion equation of the form, F = D * (c1 - c0) / L.
 
 """
 import os
-import sys
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["src01a"]
 xt3d = [False]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-ddir = "data"
 
 
 def build_model(idx, dir):
@@ -262,17 +241,12 @@ def build_model(idx, dir):
 def eval_transport(sim):
     print("evaluating transport...")
 
-    name = ex[sim.idxsim]
+    name = sim.name
     gwtname = "gwt_" + name
 
     fpth = os.path.join(sim.simpath, f"{gwtname}.ucn")
-    try:
-        cobj = flopy.utils.HeadFile(
-            fpth, precision="double", text="CONCENTRATION"
-        )
-        conc = cobj.get_data()
-    except:
-        assert False, f'could not load data from "{fpth}"'
+    cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
+    conc = cobj.get_data()
 
     # This is the answer to this problem.  These concentrations are for
     # steady state and calculated from F = D * (c1 - c2) / L
@@ -281,42 +255,18 @@ def eval_transport(sim):
         cres, conc
     ), "simulated concentrations do not match with known solution."
 
-    return
 
-
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "name",
+    ex,
 )
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_transport, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_transport, idxsim=idx)
-        test.run_mf6(sim)
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, 0, ws)
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=0
+        ),
+        ws,
+    )

@@ -6,21 +6,23 @@ module GridConnectionModule
   use KindModule, only: I4B, DP, LGP
   use SimModule, only: ustop
   use ConstantsModule, only: LENMEMPATH, DZERO, DPIO180, LENMODELNAME
+  use CharacterStringModule
   use MemoryManagerModule, only: mem_allocate, mem_deallocate
   use MemoryHelperModule, only: create_mem_path
   use ListModule, only: ListType, isEqualIface, arePointersEqual
   use NumericalModelModule
   use GwfDisuModule
   use DisConnExchangeModule
-  use DistributedModelModule, only: DistributedModelType, GetDistModelFromList, &
-                                    AddDistModelToList
+  use VirtualModelModule, only: VirtualModelType, get_virtual_model, &
+                                get_virtual_model_from_list
+  use VirtualExchangeModule, only: VirtualExchangeType, get_virtual_exchange
   use CellWithNbrsModule
   use ConnectionsModule
   use SparseModule, only: sparsematrix
   use InterfaceMapModule
   use BaseDisModule, only: dis_transform_xy
-  use ListsModule, only: distmodellist
   use CsrUtilsModule
+  use STLVecIntModule
   implicit none
   private
 
@@ -63,19 +65,21 @@ module GridConnectionModule
     integer(I4B), pointer :: nrOfBoundaryCells => null() !< nr of boundary cells with connection to another model
     type(CellWithNbrsType), dimension(:), pointer :: boundaryCells => null() !< cells on our side of the primary connections
     type(CellWithNbrsType), dimension(:), pointer :: connectedCells => null() !< cells on the neighbors side of the primary connection
-    type(ListType) :: exchanges !< all relevant exchanges for this connection, up to the required depth
+    type(STLVecInt), pointer :: haloExchanges !< all exchanges that are potentially part of this interface
 
     integer(I4B), pointer :: nrOfCells => null() !< the total number of cells in the interface
     type(GlobalCellType), dimension(:), pointer :: idxToGlobal => null() !< a map from interface index to global coordinate
     integer(I4B), dimension(:), pointer, contiguous :: idxToGlobalIdx => null() !< a (flat) map from interface index to global index,
                                                                                 !! stored in mem. mgr. so can be used for debugging
-
-    integer(I4B), dimension(:), pointer :: regionalToInterfaceIdxMap => null() !< (sparse) mapping from regional index to interface ixd
     type(ListType) :: regionalModels !< the models participating in the interface
+    integer(I4B), dimension(:), pointer :: region_to_iface_map => null() !< (sparse) mapping from regional index to interface ixd
     integer(I4B), dimension(:), pointer :: regionalModelOffset => null() !< the new offset to compactify the range of indices
     integer(I4B), pointer :: indexCount => null() !< counts the number of cells in the interface
+
     type(ConnectionsType), pointer :: connections => null() !< sparse matrix with the connections
     integer(I4B), dimension(:), pointer :: connectionMask => null() !< to mask out connections from the amat coefficient calculation
+
+    type(InterfaceMapType), pointer :: interfaceMap => null() !< defining map for the interface
 
   contains
 
@@ -83,11 +87,11 @@ module GridConnectionModule
     procedure, pass(this) :: construct
     procedure, private, pass(this) :: allocateScalars
     procedure, pass(this) :: destroy
+    procedure, pass(this) :: addToRegionalModels
     procedure, pass(this) :: connectPrimaryExchange
-    procedure, pass(this) :: findModelNeighbors
     procedure, pass(this) :: extendConnection
     procedure, pass(this) :: getDiscretization
-    procedure, pass(this) :: getInterfaceMap
+    procedure, pass(this) :: buildInterfaceMap
 
     ! 'protected'
     procedure, pass(this) :: isPeriodic
@@ -98,9 +102,7 @@ module GridConnectionModule
     procedure, private, pass(this) :: addNeighbors
     procedure, private, pass(this) :: addNeighborCell
     procedure, private, pass(this) :: addRemoteNeighbors
-    procedure, private, pass(this) :: addModelNeighbors
-    procedure, private, pass(this) :: addToRegionalModels
-    procedure, private, pass(this) :: getRegionalModelOffset
+    procedure, private, pass(this) :: get_regional_offset
     generic, private :: getInterfaceIndex => getInterfaceIndexByCell, &
       getInterfaceIndexByIndexModel
     procedure, private, pass(this) :: getInterfaceIndexByCell
@@ -129,7 +131,7 @@ contains
     integer(I4B) :: nrOfPrimaries !> the number of primary connections between the two models
     character(len=*) :: connectionName !> the name, for memory management mostly
     ! local
-    class(DistributedModelType), pointer :: dist_model
+    class(VirtualModelType), pointer :: v_model
 
     this%model => model
     this%memoryPath = create_mem_path(connectionName, 'GC')
@@ -140,13 +142,14 @@ contains
     allocate (this%connectedCells(nrOfPrimaries))
     allocate (this%idxToGlobal(2 * nrOfPrimaries))
 
-    dist_model => GetDistModelFromList(distmodellist, model%id)
-    call this%addToRegionalModels(dist_model)
+    v_model => get_virtual_model(model%id)
+    call this%addToRegionalModels(v_model)
 
     this%nrOfBoundaryCells = 0
 
     this%internalStencilDepth = 1
     this%exchangeStencilDepth = 1
+    this%haloExchanges => null()
 
   end subroutine construct
 
@@ -163,8 +166,8 @@ contains
 
     ! connect the cells
     do iconn = 1, primEx%nexg
-      call this%connectCell(primEx%nodem1(iconn), primEx%dmodel1, &
-                            primEx%nodem2(iconn), primEx%dmodel2)
+      call this%connectCell(primEx%nodem1(iconn), primEx%v_model1, &
+                            primEx%nodem2(iconn), primEx%v_model2)
     end do
 
   end subroutine connectPrimaryExchange
@@ -173,12 +176,12 @@ contains
   !! storing them in the boundary cell and connected cell
   !! arrays
   !<
-  subroutine connectCell(this, idx1, dist_model1, idx2, dist_model2)
+  subroutine connectCell(this, idx1, v_model1, idx2, v_model2)
     class(GridConnectionType), intent(in) :: this !< this grid connection
     integer(I4B) :: idx1 !< local index cell 1
-    class(DistributedModelType), pointer :: dist_model1 !< model of cell 1
+    class(VirtualModelType), pointer :: v_model1 !< model of cell 1
     integer(I4B) :: idx2 !< local index cell 2
-    class(DistributedModelType), pointer :: dist_model2 !< model of cell 2
+    class(VirtualModelType), pointer :: v_model2 !< model of cell 2
     ! local
     type(GlobalCellType), pointer :: bnd_cell, conn_cell
 
@@ -191,16 +194,16 @@ contains
 
     bnd_cell => this%boundaryCells(this%nrOfBoundaryCells)%cell
     conn_cell => this%connectedCells(this%nrOfBoundaryCells)%cell
-    if (dist_model1 == this%model) then
+    if (v_model1 == this%model) then
       bnd_cell%index = idx1
-      bnd_cell%dmodel => dist_model1
+      bnd_cell%v_model => v_model1
       conn_cell%index = idx2
-      conn_cell%dmodel => dist_model2
-    else if (dist_model2 == this%model) then
+      conn_cell%v_model => v_model2
+    else if (v_model2 == this%model) then
       bnd_cell%index = idx2
-      bnd_cell%dmodel => dist_model2
+      bnd_cell%v_model => v_model2
       conn_cell%index = idx1
-      conn_cell%dmodel => dist_model1
+      conn_cell%v_model => v_model1
     else
       write (*, *) 'Error: unable to connect cells outside the model'
       call ustop()
@@ -208,113 +211,19 @@ contains
 
   end subroutine connectCell
 
-  !> @brief Create the tree structure with all model nbrs, nbrs-of-nbrs,
-  !< etc. for this model up to the specified depth
-  subroutine findModelNeighbors(this, globalExchanges, depth)
-    class(GridConnectionType), intent(inout) :: this !< this grid connection
-    type(ListType), intent(inout) :: globalExchanges !< list with global exchanges
-    integer(I4B) :: depth !< the maximal number of exchanges between
-                          !! any two models in the topology
-    ! local
-    class(DistributedModelType), pointer :: dist_model
-
-    dist_model => GetDistModelFromList(distmodellist, this%model%id)
-    call this%addModelNeighbors(dist_model, globalExchanges, depth)
-
-  end subroutine findModelNeighbors
-
-  !> @brief Add neighbors and nbrs-of-nbrs to the model tree
-  !<
-  recursive subroutine addModelNeighbors(this, dist_model, &
-                                         globalExchanges, &
-                                         depth, mask)
-    class(GridConnectionType), intent(inout) :: this !< this grid connection
-    class(DistributedModelType), pointer, intent(inout) :: dist_model !< the model to add neighbors for
-    type(ListType), intent(inout) :: globalExchanges !< list with all exchanges
-    integer(I4B) :: depth !< the maximal number of exchanges between
-    class(DistributedModelType), pointer, optional :: mask !< don't add this one as a neighbor
-    ! local
-    integer(I4B) :: i, n
-    class(DisConnExchangeType), pointer :: connEx
-    class(DistributedModelType), pointer :: neighborModel
-    class(DistributedModelType), pointer :: modelMask
-    type(ListType) :: nbrModels
-    class(*), pointer :: objPtr
-    procedure(isEqualIface), pointer :: areEqualMethod
-
-    if (.not. present(mask)) then
-      modelMask => null()
-    else
-      modelMask => mask
-    end if
-
-    ! first find all direct neighbors of the model and add them,
-    ! avoiding duplicates
-    do i = 1, globalExchanges%Count()
-      neighborModel => null()
-      connEx => GetDisConnExchangeFromList(globalExchanges, i)
-      if (connEx%dmodel1 == dist_model) then
-        neighborModel => connEx%dmodel2
-      else if (connEx%dmodel2 == dist_model) then
-        neighborModel => connEx%dmodel1
-      end if
-
-      ! check if there is a neighbor, and it is not masked
-      ! (to prevent back-and-forth connections)
-      if (associated(neighborModel)) then
-
-        ! check if masked
-        if (associated(modelMask)) then
-          if (neighborModel == modelMask) cycle
-        end if
-
-        ! add to neighbors
-        objPtr => neighborModel
-        if (.not. nbrModels%ContainsObject(objPtr, areEqualMethod)) then
-          call nbrModels%Add(objPtr)
-        end if
-
-        ! add to list of regional models
-        call this%addToRegionalModels(neighborModel)
-
-        ! add to list of relevant exchanges
-        objPtr => connEx
-        areEqualMethod => arePointersEqual
-        if (.not. this%exchanges%ContainsObject(objPtr, areEqualMethod)) then
-          call this%exchanges%Add(objPtr)
-        end if
-
-      end if
-    end do
-
-    ! now recurse on the neighbors up to the specified depth
-    depth = depth - 1
-    if (depth == 0) return
-
-    do n = 1, nbrModels%Count()
-      neighborModel => GetDistModelFromList(nbrModels, n)
-      call this%addModelNeighbors(neighborModel, globalExchanges, &
-                                  depth, dist_model)
-    end do
-
-    ! clear list
-    call nbrModels%Clear(destroy=.false.)
-
-  end subroutine addModelNeighbors
-
   !> @brief Add a model to a list of all regional models
   !<
-  subroutine addToRegionalModels(this, modelToAdd)
+  subroutine addToRegionalModels(this, v_model)
     class(GridConnectionType), intent(inout) :: this !< this grid connection
-    class(DistributedModelType), pointer :: modelToAdd !< the model to add to the region
+    class(VirtualModelType), pointer :: v_model !< the model to add to the region
     ! local
-    class(*), pointer :: mPtr
+    class(*), pointer :: vm_obj
     procedure(isEqualIface), pointer :: areEqualMethod
 
-    mPtr => modelToAdd
+    vm_obj => v_model
     areEqualMethod => arePointersEqual
-    if (.not. this%regionalModels%ContainsObject(mPtr, areEqualMethod)) then
-      call AddDistModelToList(this%regionalModels, modelToAdd)
+    if (.not. this%regionalModels%ContainsObject(vm_obj, areEqualMethod)) then
+      call this%regionalModels%Add(vm_obj)
     end if
 
   end subroutine addToRegionalModels
@@ -334,8 +243,8 @@ contains
     integer(I4B) :: remoteDepth, localDepth
     integer(I4B) :: icell
     integer(I4B) :: imod, regionSize, offset
-    class(DistributedModelType), pointer :: dist_model
-    integer(I4B), pointer :: nr_nodes
+    class(VirtualModelType), pointer :: v_model
+    !integer(I4B), pointer :: nr_nodes
 
     ! we need (stencildepth-1) extra cells for the interior
     remoteDepth = this%exchangeStencilDepth
@@ -361,15 +270,14 @@ contains
     regionSize = 0
     offset = 0
     do imod = 1, this%regionalModels%Count()
-      dist_model => GetDistModelFromList(this%regionalModels, imod)
-      call dist_model%load(nr_nodes, 'NODES', 'DIS')
-      regionSize = regionSize + nr_nodes
+      v_model => get_virtual_model_from_list(this%regionalModels, imod)
+      regionSize = regionSize + v_model%dis_nodes%get()
       this%regionalModelOffset(imod) = offset
-      offset = offset + nr_nodes
+      offset = offset + v_model%dis_nodes%get()
     end do
     ! init to -1, meaning 'interface index was not assigned yet'
-    allocate (this%regionalToInterfaceIdxMap(regionSize))
-    this%regionalToInterfaceIdxMap = -1
+    allocate (this%region_to_iface_map(regionSize))
+    this%region_to_iface_map = -1
 
     call this%buildConnections()
 
@@ -462,17 +370,18 @@ contains
   recursive subroutine addNeighbors(this, cellNbrs, depth, mask, interior)
     use SimModule, only: ustop
     class(GridConnectionType), intent(inout) :: this !< this grid connection
-    type(CellWithNbrsType), intent(inout) :: cellNbrs !< cell to add to
+    type(CellWithNbrsType), intent(inout), target :: cellNbrs !< cell to add to
     integer(I4B), intent(inout) :: depth !< current depth (typically decreases in recursion)
     type(GlobalCellType), optional :: mask !< mask to excluded back-and-forth connection between cells
     logical(LGP) :: interior !< when true, we are adding from the exchange back into the model
     ! local
-    integer(I4B) :: nbrIdx, ipos, inbr
+    type(GlobalCellType), pointer :: cell
+    integer(I4B) :: ipos, ipos_start, ipos_end
+    integer(I4B) :: nbrIdx, inbr
     integer(I4B) :: newDepth
 
-    ! TODO_MJR, is this how we are going to do this?
-    integer(I4B), dimension(:), pointer, contiguous :: ia
-    integer(I4B), dimension(:), pointer, contiguous :: ja
+    ! readability
+    cell => cellNbrs%cell
 
     ! if depth == 1, then we are not adding neighbors but use
     ! the boundary and connected cell only
@@ -481,15 +390,12 @@ contains
     end if
     newDepth = depth - 1
 
-    ! access through dist. model:
-    call cellNbrs%cell%dmodel%load(ia, 'IA', 'CON')
-    call cellNbrs%cell%dmodel%load(ja, 'JA', 'CON')
-
     ! find neighbors local to this cell by looping through grid connections
-    do ipos = ia(cellNbrs%cell%index) + 1, &
-      ia(cellNbrs%cell%index + 1) - 1
-      nbrIdx = ja(ipos)
-      call this%addNeighborCell(cellNbrs, nbrIdx, cellNbrs%cell%dmodel, mask)
+    ipos_start = cell%v_model%con_ia%get(cell%index) + 1
+    ipos_end = cell%v_model%con_ia%get(cell%index + 1) - 1
+    do ipos = ipos_start, ipos_end
+      nbrIdx = cell%v_model%con_ja%get(ipos)
+      call this%addNeighborCell(cellNbrs, nbrIdx, cellNbrs%cell%v_model, mask)
     end do
 
     ! add remote nbr using the data from the exchanges
@@ -499,8 +405,8 @@ contains
     do inbr = 1, cellNbrs%nrOfNbrs
 
       ! are we leaving the model through another exchange?
-      if (interior .and. cellNbrs%cell%dmodel == this%model) then
-        if (.not. cellNbrs%neighbors(inbr)%cell%dmodel == this%model) then
+      if (interior .and. cellNbrs%cell%v_model == this%model) then
+        if (.not. cellNbrs%neighbors(inbr)%cell%v_model == this%model) then
           ! decrement by 1, because the connection we are crossing is not
           ! calculated by this interface
           newDepth = newDepth - 1
@@ -521,29 +427,33 @@ contains
     type(GlobalCellType), optional :: mask !< a mask to exclude back-and-forth connections
     ! local
     integer(I4B) :: ix, iexg
-    type(DisConnExchangeType), pointer :: connEx
+    class(VirtualExchangeType), pointer :: v_exchange
+    class(VirtualModelType), pointer :: v_m1, v_m2
 
     ! loop over all exchanges
-    do ix = 1, this%exchanges%Count()
-      connEx => GetDisConnExchangeFromList(this%exchanges, ix)
+    do ix = 1, this%haloExchanges%size
+
+      v_exchange => get_virtual_exchange(this%haloExchanges%at(ix))
+      v_m1 => v_exchange%v_model1
+      v_m2 => v_exchange%v_model2
 
       ! loop over n-m links in the exchange
-      if (cellNbrs%cell%dmodel == connEx%dmodel1) then
-        do iexg = 1, connEx%nexg
-          if (connEx%nodem1(iexg) == cellNbrs%cell%index) then
+      if (cellNbrs%cell%v_model == v_m1) then
+        do iexg = 1, v_exchange%nexg%get()
+          if (v_exchange%nodem1%get(iexg) == cellNbrs%cell%index) then
             ! we have a link, now add foreign neighbor
-            call this%addNeighborCell(cellNbrs, connEx%nodem2(iexg), &
-                                      connEx%dmodel2, mask)
+            call this%addNeighborCell( &
+              cellNbrs, v_exchange%nodem2%get(iexg), v_m2, mask)
           end if
         end do
       end if
       ! and the reverse
-      if (cellNbrs%cell%dmodel == connEx%dmodel2) then
-        do iexg = 1, connEx%nexg
-          if (connEx%nodem2(iexg) == cellNbrs%cell%index) then
+      if (cellNbrs%cell%v_model == v_m2) then
+        do iexg = 1, v_exchange%nexg%get()
+          if (v_exchange%nodem2%get(iexg) == cellNbrs%cell%index) then
             ! we have a link, now add foreign neighbor
-            call this%addNeighborCell(cellNbrs, connEx%nodem1(iexg), &
-                                      connEx%dmodel1, mask)
+            call this%addNeighborCell( &
+              cellNbrs, v_exchange%nodem1%get(iexg), v_m1, mask)
           end if
         end do
       end if
@@ -554,20 +464,20 @@ contains
 
   !> @brief Add neighboring cell to tree structure
   !<
-  subroutine addNeighborCell(this, cellNbrs, newNbrIdx, nbr_dist_model, mask)
+  subroutine addNeighborCell(this, cellNbrs, newNbrIdx, v_nbr_model, mask)
     class(GridConnectionType), intent(in) :: this !< this grid connection instance
     type(CellWithNbrsType), intent(inout) :: cellNbrs !< the root cell which to add to
     integer(I4B), intent(in) :: newNbrIdx !< the neigboring cell's index
-    class(DistributedModelType), pointer :: nbr_dist_model !< the model where the new neighbor lives
+    class(VirtualModelType), pointer :: v_nbr_model !< the model where the new neighbor lives
     type(GlobalCellType), optional :: mask !< don't add connections to this cell (optional)
 
     if (present(mask)) then
-      if (newNbrIdx == mask%index .and. mask%dmodel == nbr_dist_model) then
+      if (newNbrIdx == mask%index .and. mask%v_model == v_nbr_model) then
         return
       end if
     end if
 
-    call cellNbrs%addNbrCell(newNbrIdx, nbr_dist_model)
+    call cellNbrs%addNbrCell(newNbrIdx, v_nbr_model)
 
   end subroutine addNeighborCell
 
@@ -581,14 +491,14 @@ contains
     integer(I4B) :: regionIdx ! unique idx in the region (all connected models)
     integer(I4B) :: ifaceIdx ! unique idx in the interface grid
 
-    offset = this%getRegionalModelOffset(cellWithNbrs%cell%dmodel)
+    offset = this%get_regional_offset(cellWithNbrs%cell%v_model)
     regionIdx = offset + cellWithNbrs%cell%index
     ifaceIdx = this%getInterfaceIndex(cellWithNbrs%cell)
     if (ifaceIdx == -1) then
       this%indexCount = this%indexCount + 1
       ifaceIdx = this%indexCount
       call this%addToGlobalMap(ifaceIdx, cellWithNbrs%cell)
-      this%regionalToInterfaceIdxMap(regionIdx) = ifaceIdx
+      this%region_to_iface_map(regionIdx) = ifaceIdx
     end if
 
     ! and also for its neighbors
@@ -677,17 +587,17 @@ contains
     deallocate (sortedGlobalMap)
 
     ! reorder regional lookup table
-    allocate (sortedRegionMap(size(this%regionalToInterfaceIdxMap)))
+    allocate (sortedRegionMap(size(this%region_to_iface_map)))
     do i = 1, size(sortedRegionMap)
-      if (this%regionalToInterfaceIdxMap(i) /= -1) then
-        idxOld = this%regionalToInterfaceIdxMap(i)
+      if (this%region_to_iface_map(i) /= -1) then
+        idxOld = this%region_to_iface_map(i)
         sortedRegionMap(i) = oldToNewIdx(idxOld)
       else
         sortedRegionMap(i) = -1
       end if
     end do
     do i = 1, size(sortedRegionMap)
-      this%regionalToInterfaceIdxMap(i) = sortedRegionMap(i)
+      this%region_to_iface_map(i) = sortedRegionMap(i)
     end do
     deallocate (sortedRegionMap)
 
@@ -749,11 +659,9 @@ contains
     class(GridConnectionType), intent(inout) :: this !< this grid connection instance
     ! local
     type(ConnectionsType), pointer :: conn
-    integer(I4B) :: n, m, ipos, isym, iposOrig, isymOrig
+    integer(I4B) :: n, m, ipos, isym, ipos_orig, isym_orig
     type(GlobalCellType), pointer :: ncell, mcell
-    integer(I4B), dimension(:), pointer, contiguous :: jas, ihc
-    real(DP), dimension(:), pointer, contiguous :: hwva, cl1, cl2, anglex
-    integer(I4B), dimension(:), pointer, contiguous :: ia, ja
+    class(VirtualModelType), pointer :: v_m !< pointer to virtual model (readability)
 
     conn => this%connections
 
@@ -765,14 +673,16 @@ contains
         isym = conn%jas(ipos)
         ncell => this%idxToGlobal(n)
         mcell => this%idxToGlobal(m)
-        if (ncell%dmodel == mcell%dmodel) then
+        if (ncell%v_model == mcell%v_model) then
+
+          ! for readability
+          v_m => ncell%v_model
 
           ! within same model, straight copy
-          call ncell%dmodel%load(ia, 'IA', 'CON')
-          call ncell%dmodel%load(ja, 'JA', 'CON')
-          iposOrig = getCSRIndex(ncell%index, mcell%index, ia, ja)
+          ipos_orig = getCSRIndex(ncell%index, mcell%index, &
+                                  v_m%con_ia%get_array(), v_m%con_ja%get_array())
 
-          if (iposOrig == 0) then
+          if (ipos_orig == 0) then
             ! periodic boundary conditions can add connections between cells in
             ! the same model, but they are dealt with through the exchange data
             if (this%isPeriodic(ncell%index, mcell%index)) cycle
@@ -782,63 +692,54 @@ contains
             call ustop()
           end if
 
-          ! load distributed data from memory
-          ! TODO_MJR: this should probably be cached at some point...
-          call ncell%dmodel%load(jas, 'JAS', 'CON')
-          call ncell%dmodel%load(ihc, 'IHC', 'CON')
-          call ncell%dmodel%load(hwva, 'HWVA', 'CON')
-          call ncell%dmodel%load(cl1, 'CL1', 'CON')
-          call ncell%dmodel%load(cl2, 'CL2', 'CON')
-          call ncell%dmodel%load(anglex, 'ANGLEX', 'CON')
-
-          isymOrig = jas(iposOrig)
-          conn%hwva(isym) = hwva(isymOrig)
-          conn%ihc(isym) = ihc(isymOrig)
+          isym_orig = v_m%con_jas%get(ipos_orig)
+          conn%hwva(isym) = v_m%con_hwva%get(isym_orig)
+          conn%ihc(isym) = v_m%con_ihc%get(isym_orig)
           if (ncell%index < mcell%index) then
-            conn%cl1(isym) = cl1(isymOrig)
-            conn%cl2(isym) = cl2(isymOrig)
-            conn%anglex(isym) = anglex(isymOrig)
+            conn%cl1(isym) = v_m%con_cl1%get(isym_orig)
+            conn%cl2(isym) = v_m%con_cl2%get(isym_orig)
+            conn%anglex(isym) = v_m%con_anglex%get(isym_orig)
           else
-            conn%cl1(isym) = cl2(isymOrig)
-            conn%cl2(isym) = cl1(isymOrig)
-            conn%anglex(isym) = mod(anglex(isymOrig) + DPI, DTWOPI)
+            conn%cl1(isym) = v_m%con_cl2%get(isym_orig)
+            conn%cl2(isym) = v_m%con_cl1%get(isym_orig)
+            conn%anglex(isym) = mod(v_m%con_anglex%get(isym_orig) + DPI, DTWOPI)
           end if
         end if
       end do
     end do
+
   end subroutine fillConnectionDataInternal
 
   !> @brief Fill connection data (ihc, cl1, ...) for
   !< all exchanges
   subroutine fillConnectionDataFromExchanges(this)
-    use ConstantsModule, only: DPI, DTWOPI, DPIO180
-    use ArrayHandlersModule, only: ifind
+    use ConstantsModule, only: DPIO180
     class(GridConnectionType), intent(inout) :: this !< this grid connection instance
     ! local
-    integer(I4B) :: inx, iexg, ivalAngldegx
+    integer(I4B) :: inx, iexg
     integer(I4B) :: ipos, isym
     integer(I4B) :: nOffset, mOffset, nIfaceIdx, mIfaceIdx
-    class(DisConnExchangeType), pointer :: connEx
+    class(VirtualExchangeType), pointer :: v_exg
+    class(VirtualModelType), pointer :: v_m1, v_m2
     type(ConnectionsType), pointer :: conn
 
     conn => this%connections
 
-    do inx = 1, this%exchanges%Count()
-      connEx => GetDisConnExchangeFromList(this%exchanges, inx)
+    do inx = 1, this%haloExchanges%size
+      v_exg => get_virtual_exchange(this%haloExchanges%at(inx))
 
-      ivalAngldegx = -1
-      if (connEx%naux > 0) then
-        ivalAngldegx = ifind(connEx%auxname, 'ANGLDEGX')
-        if (ivalAngldegx > 0) then
-          conn%ianglex = 1
-        end if
+      v_m1 => v_exg%v_model1
+      v_m2 => v_exg%v_model2
+
+      if (v_exg%ianglex%get() > 0) then
+        conn%ianglex = 1
       end if
 
-      nOffset = this%getRegionalModelOffset(connEx%dmodel1)
-      mOffset = this%getRegionalModelOffset(connEx%dmodel2)
-      do iexg = 1, connEx%nexg
-        nIfaceIdx = this%regionalToInterfaceIdxMap(noffset + connEx%nodem1(iexg))
-        mIfaceIdx = this%regionalToInterfaceIdxMap(moffset + connEx%nodem2(iexg))
+      nOffset = this%get_regional_offset(v_m1)
+      mOffset = this%get_regional_offset(v_m2)
+      do iexg = 1, v_exg%nexg%get()
+        nIfaceIdx = this%region_to_iface_map(noffset + v_exg%nodem1%get(iexg))
+        mIfaceIdx = this%region_to_iface_map(moffset + v_exg%nodem2%get(iexg))
         ! not all nodes from the exchanges are part of the interface grid
         ! (think of exchanges between neigboring models, and their neighbors)
         if (nIFaceIdx == -1 .or. mIFaceIdx == -1) then
@@ -857,21 +758,22 @@ contains
         ! note: cl1 equals L_nm: the length from cell n to the shared
         ! face with cell m (and cl2 analogously for L_mn)
         if (nIfaceIdx < mIfaceIdx) then
-          conn%cl1(isym) = connEx%cl1(iexg)
-          conn%cl2(isym) = connEx%cl2(iexg)
-          if (ivalAngldegx > 0) then
-            conn%anglex(isym) = connEx%auxvar(ivalAngldegx, iexg) * DPIO180
+          conn%cl1(isym) = v_exg%cl1%get(iexg)
+          conn%cl2(isym) = v_exg%cl2%get(iexg)
+          if (v_exg%ianglex%get() > 0) then
+            conn%anglex(isym) = &
+              v_exg%auxvar%get(v_exg%ianglex%get(), iexg) * DPIO180
           end if
         else
-          conn%cl1(isym) = connEx%cl2(iexg)
-          conn%cl2(isym) = connEx%cl1(iexg)
-          if (ivalAngldegx > 0) then
-            conn%anglex(isym) = mod(connEx%auxvar(ivalAngldegx, iexg) + &
-                                    180.0_DP, 360.0_DP) * DPIO180
+          conn%cl1(isym) = v_exg%cl2%get(iexg)
+          conn%cl2(isym) = v_exg%cl1%get(iexg)
+          if (v_exg%ianglex%get() > 0) then
+            conn%anglex(isym) = mod(v_exg%auxvar%get(v_exg%ianglex%get(), iexg) &
+                                    + 180.0_DP, 360.0_DP) * DPIO180
           end if
         end if
-        conn%hwva(isym) = connEx%hwva(iexg)
-        conn%ihc(isym) = connEx%ihc(iexg)
+        conn%hwva(isym) = v_exg%hwva%get(iexg)
+        conn%ihc(isym) = v_exg%ihc%get(iexg)
 
       end do
     end do
@@ -954,8 +856,8 @@ contains
 
     ! only set the mask for internal connections, leaving the
     ! others at 0
-    if (cell%cell%dmodel == this%model .and. &
-        nbrCell%cell%dmodel == this%model) then
+    if (cell%cell%v_model == this%model .and. &
+        nbrCell%cell%v_model == this%model) then
       ! this will set a mask on both diagonal, and both cross terms
       call this%setMaskOnConnection(cell, nbrCell, level)
       call this%setMaskOnConnection(nbrCell, cell, level)
@@ -1004,52 +906,55 @@ contains
 
   !> @brief Get interface index from global cell
   !<
-  function getInterfaceIndexByCell(this, cell) result(ifaceIdx)
+  function getInterfaceIndexByCell(this, cell) result(iface_idx)
     class(GridConnectionType), intent(inout) :: this !< this grid connection instance
     type(GlobalCellType), intent(in) :: cell !< the global cell to get the interface index for
-    integer(I4B) :: ifaceIdx !< the index in the interface model
+    integer(I4B) :: iface_idx !< the index in the interface model
     ! local
-    integer(I4B) :: offset, regionIdx
+    integer(I4B) :: offset, region_idx
 
-    offset = this%getRegionalModelOffset(cell%dmodel)
-    regionIdx = offset + cell%index
-    ifaceIdx = this%regionalToInterfaceIdxMap(regionIdx)
+    offset = this%get_regional_offset(cell%v_model)
+    region_idx = offset + cell%index
+    iface_idx = this%region_to_iface_map(region_idx)
+
   end function getInterfaceIndexByCell
 
   !> @brief Get interface index from a model pointer and the local index
   !<
-  function getInterfaceIndexByIndexModel(this, index, dist_model) result(ifaceIdx)
+  function getInterfaceIndexByIndexModel(this, index, v_model) result(iface_idx)
     class(GridConnectionType), intent(inout) :: this !< this grid connection instance
     integer(I4B) :: index !< the local cell index
-    class(DistributedModelType), pointer :: dist_model !< the cell's model
-    integer(I4B) :: ifaceIdx !< the index in the interface model
+    class(VirtualModelType), pointer :: v_model !< the cell's model
+    integer(I4B) :: iface_idx !< the index in the interface model
     ! local
-    integer(I4B) :: offset, regionIdx
+    integer(I4B) :: offset, region_idx
 
-    offset = this%getRegionalModelOffset(dist_model)
-    regionIdx = offset + index
-    ifaceIdx = this%regionalToInterfaceIdxMap(regionIdx)
+    offset = this%get_regional_offset(v_model)
+    region_idx = offset + index
+    iface_idx = this%region_to_iface_map(region_idx)
+
   end function getInterfaceIndexByIndexModel
 
   !> @brief Get the offset for a regional model
   !<
-  function getRegionalModelOffset(this, model) result(offset)
+  function get_regional_offset(this, v_model) result(offset)
     class(GridConnectionType), intent(inout) :: this !< this grid connection instance
-    class(DistributedModelType), pointer :: model !< the model to get the offset for
+    class(VirtualModelType), pointer :: v_model !< the model to get the offset for
     integer(I4B) :: offset !< the index offset in the regional domain
     ! local
     integer(I4B) :: im
-    class(DistributedModelType), pointer :: modelInList
+    class(VirtualModelType), pointer :: vm
+
     offset = 0
     do im = 1, this%regionalModels%Count()
-      modelInList => GetDistModelFromList(this%regionalModels, im)
-      if (modelInList == model) then
+      vm => get_virtual_model_from_list(this%regionalModels, im)
+      if (vm == v_model) then
         offset = this%regionalModelOffset(im)
         return
       end if
     end do
 
-  end function getRegionalModelOffset
+  end function get_regional_offset
 
   !> @brief Allocate scalar data
   !<
@@ -1073,9 +978,7 @@ contains
     class(GwfDisuType), pointer :: disu !< the target disu object
     ! local
     integer(I4B) :: icell, nrOfCells, idx
-    type(DistributedModelType), pointer :: dist_model
-    real(DP), dimension(:), pointer, contiguous :: dis_xc, dis_yc
-    real(DP), pointer :: dis_xorigin, dis_yorigin, dis_angrot
+    class(VirtualModelType), pointer :: v_model
     real(DP) :: xglo, yglo
 
     ! the following is similar to dis_df
@@ -1103,19 +1006,16 @@ contains
     ! copy cell x,y
     do icell = 1, nrOfCells
       idx = this%idxToGlobal(icell)%index
-      dist_model => this%idxToGlobal(icell)%dmodel
-
-      call dist_model%load(dis_xc, 'XC', 'DIS')
-      call dist_model%load(dis_yc, 'YC', 'DIS')
-      call dist_model%load(dis_xorigin, 'XORIGIN', 'DIS')
-      call dist_model%load(dis_yorigin, 'YORIGIN', 'DIS')
-      call dist_model%load(dis_angrot, 'ANGROT', 'DIS')
+      v_model => this%idxToGlobal(icell)%v_model
 
       ! we are merging grids with possibly (likely) different origins,
       ! transform to global coordinates:
-      call dis_transform_xy(dis_xc(idx), dis_yc(idx), &
-                            dis_xorigin, dis_yorigin, &
-                            dis_angrot, xglo, yglo)
+      call dis_transform_xy(v_model%dis_xc%get(idx), &
+                            v_model%dis_yc%get(idx), &
+                            v_model%dis_xorigin%get(), &
+                            v_model%dis_yorigin%get(), &
+                            v_model%dis_angrot%get(), &
+                            xglo, yglo)
 
       ! NB: usernodes equals internal nodes for interface
       disu%cellxy(1, icell) = xglo
@@ -1135,120 +1035,121 @@ contains
 
   end subroutine getDiscretization
 
-  !> @brief Build interface map object for outside use,
-  !< (caller owns the memory)
-  subroutine getInterfaceMap(this, interfaceMap)
+  !> @brief Build interface map object for outside use
+  subroutine buildInterfaceMap(this)
     use BaseModelModule, only: BaseModelType, GetBaseModelFromList
-    use VectorIntModule
+    use STLVecIntModule
     class(GridConnectionType) :: this !< this grid connection
-    type(InterfaceMapType), pointer :: interfaceMap !< a pointer to the map (not allocated yet)
     ! local
     integer(I4B) :: i, j, iloc, jloc
     integer(I4B) :: im, ix, mid, n
-    integer(I4B) :: ipos, iposModel
-    type(VectorInt) :: modelIds
-    type(VectorInt) :: srcIdxTmp, tgtIdxTmp, signTmp
-    class(DisConnExchangeType), pointer :: connEx
-    integer(I4B), dimension(:), pointer, contiguous :: ia, ja
+    integer(I4B) :: ipos, ipos_model
+    type(STLVecInt) :: model_ids
+    type(STLVecInt) :: src_idx_tmp, tgt_idx_tmp, sign_tmp
+    class(VirtualExchangeType), pointer :: v_exg
+    class(VirtualModelType), pointer :: vm
+    class(VirtualModelType), pointer :: v_model1, v_model2
+    type(InterfaceMapType), pointer :: imap
+    integer(I4B), dimension(:), pointer, contiguous :: ia_ptr, ja_ptr
 
-    allocate (interfaceMap)
+    allocate (this%interfaceMap)
+    imap => this%interfaceMap
 
     ! first get the participating models
-    call modelIds%init()
+    call model_ids%init()
     do i = 1, this%nrOfCells
-      if (.not. modelIds%contains(this%idxToGlobal(i)%dmodel%id)) then
-        call modelIds%push_back(this%idxToGlobal(i)%dmodel%id)
+      if (.not. model_ids%contains(this%idxToGlobal(i)%v_model%id)) then
+        call model_ids%push_back(this%idxToGlobal(i)%v_model%id)
       end if
     end do
 
-    ! allocate space
-    interfaceMap%nr_models = modelIds%size
-    allocate (interfaceMap%model_names(modelIds%size))
-    allocate (interfaceMap%node_map(modelIds%size))
-    allocate (interfaceMap%connection_map(modelIds%size))
+    ! initialize the map
+    call imap%init(model_ids%size, this%haloExchanges%size)
 
     ! for each model part of this interface, ...
-    do im = 1, modelIds%size
-      mid = modelIds%at(im)
-      interfaceMap%model_names(im) = get_model_name(mid)
-      call srcIdxTmp%init()
-      call tgtIdxTmp%init()
+    do im = 1, model_ids%size
+      mid = model_ids%at(im)
+      imap%model_ids(im) = mid
+      vm => get_virtual_model(mid)
+      imap%model_names(im) = vm%name
+      call src_idx_tmp%init()
+      call tgt_idx_tmp%init()
 
       ! store the node map for this model
       do i = 1, this%nrOfCells
-        if (mid == this%idxToGlobal(i)%dmodel%id) then
-          call srcIdxTmp%push_back(this%idxToGlobal(i)%index)
-          call tgtIdxTmp%push_back(i)
+        if (mid == this%idxToGlobal(i)%v_model%id) then
+          call src_idx_tmp%push_back(this%idxToGlobal(i)%index)
+          call tgt_idx_tmp%push_back(i)
         end if
       end do
 
       ! and copy into interface map
-      allocate (interfaceMap%node_map(im)%src_idx(srcIdxTmp%size))
-      allocate (interfaceMap%node_map(im)%tgt_idx(tgtIdxTmp%size))
-      do i = 1, srcIdxTmp%size
-        interfaceMap%node_map(im)%src_idx(i) = srcIdxTmp%at(i)
-        interfaceMap%node_map(im)%tgt_idx(i) = tgtIdxTmp%at(i)
+      allocate (imap%node_maps(im)%src_idx(src_idx_tmp%size))
+      allocate (imap%node_maps(im)%tgt_idx(tgt_idx_tmp%size))
+      do i = 1, src_idx_tmp%size
+        imap%node_maps(im)%src_idx(i) = src_idx_tmp%at(i)
+        imap%node_maps(im)%tgt_idx(i) = tgt_idx_tmp%at(i)
       end do
 
-      call srcIdxTmp%destroy()
-      call tgtIdxTmp%destroy()
+      call src_idx_tmp%destroy()
+      call tgt_idx_tmp%destroy()
 
       ! and for connections
-      call srcIdxTmp%init()
-      call tgtIdxTmp%init()
+      call src_idx_tmp%init()
+      call tgt_idx_tmp%init()
 
       ! store the connection map for this model
       do i = 1, this%nrOfCells
-        if (mid /= this%idxToGlobal(i)%dmodel%id) cycle
+        if (mid /= this%idxToGlobal(i)%v_model%id) cycle
         do ipos = this%connections%ia(i), this%connections%ia(i + 1) - 1
           j = this%connections%ja(ipos)
-          if (mid /= this%idxToGlobal(j)%dmodel%id) cycle
+          if (mid /= this%idxToGlobal(j)%v_model%id) cycle
 
           ! i and j are now in same model (mid)
           iloc = this%idxToGlobal(i)%index
           jloc = this%idxToGlobal(j)%index
-          call this%idxToGlobal(i)%dmodel%load(ia, 'IA', 'CON')
-          call this%idxToGlobal(i)%dmodel%load(ja, 'JA', 'CON')
-          iposModel = getCSRIndex(iloc, jloc, ia, ja)
-
-          call srcIdxTmp%push_back(iposModel)
-          call tgtIdxTmp%push_back(ipos)
+          ia_ptr => this%idxToGlobal(i)%v_model%con_ia%get_array()
+          ja_ptr => this%idxToGlobal(i)%v_model%con_ja%get_array()
+          ipos_model = getCSRIndex(iloc, jloc, ia_ptr, ja_ptr)
+          call src_idx_tmp%push_back(ipos_model)
+          call tgt_idx_tmp%push_back(ipos)
         end do
       end do
 
       ! copy into interface map
-      allocate (interfaceMap%connection_map(im)%src_idx(srcIdxTmp%size))
-      allocate (interfaceMap%connection_map(im)%tgt_idx(tgtIdxTmp%size))
-      do i = 1, srcIdxTmp%size
-        interfaceMap%connection_map(im)%src_idx(i) = srcIdxTmp%at(i)
-        interfaceMap%connection_map(im)%tgt_idx(i) = tgtIdxTmp%at(i)
+      allocate (imap%conn_maps(im)%src_idx(src_idx_tmp%size))
+      allocate (imap%conn_maps(im)%tgt_idx(tgt_idx_tmp%size))
+      do i = 1, src_idx_tmp%size
+        imap%conn_maps(im)%src_idx(i) = src_idx_tmp%at(i)
+        imap%conn_maps(im)%tgt_idx(i) = tgt_idx_tmp%at(i)
       end do
 
-      call srcIdxTmp%destroy()
-      call tgtIdxTmp%destroy()
+      call src_idx_tmp%destroy()
+      call tgt_idx_tmp%destroy()
 
     end do
 
-    call modelIds%destroy()
+    call model_ids%destroy()
 
     ! for each exchange that is part of this interface
-    interfaceMap%nr_exchanges = this%exchanges%Count()
-    allocate (interfaceMap%exchange_names(interfaceMap%nr_exchanges))
-    allocate (interfaceMap%exchange_map(interfaceMap%nr_exchanges))
-    do ix = 1, this%exchanges%Count()
+    do ix = 1, this%haloExchanges%size
 
       ! all exchanges in this list should have at
       ! least one relevant connection for this map
-      connEx => GetDisConnExchangeFromList(this%exchanges, ix)
-      interfaceMap%exchange_names(ix) = connEx%name
+      v_exg => get_virtual_exchange(this%haloExchanges%at(ix))
+      v_model1 => v_exg%v_model1
+      v_model2 => v_exg%v_model2
 
-      call srcIdxTmp%init()
-      call tgtIdxTmp%init()
-      call signTmp%init()
+      imap%exchange_ids(ix) = v_exg%id
+      imap%exchange_names(ix) = v_exg%name
 
-      do n = 1, connEx%nexg
-        i = this%getInterfaceIndex(connEx%nodem1(n), connEx%dmodel1)
-        j = this%getInterfaceIndex(connEx%nodem2(n), connEx%dmodel2)
+      call src_idx_tmp%init()
+      call tgt_idx_tmp%init()
+      call sign_tmp%init()
+
+      do n = 1, v_exg%nexg%get()
+        i = this%getInterfaceIndex(v_exg%nodem1%get(n), v_model1)
+        j = this%getInterfaceIndex(v_exg%nodem2%get(n), v_model2)
         if (i == -1 .or. j == -1) cycle ! not all exchange nodes are part of the interface
         ipos = this%connections%getjaindex(i, j)
         if (ipos == 0) then
@@ -1258,42 +1159,63 @@ contains
           ! (c.f. 'test_gwf_ifmod_mult_exg.py')
           cycle
         end if
-        call srcIdxTmp%push_back(n)
-        call tgtIdxTmp%push_back(ipos)
-        call signTmp%push_back(1)
+        call src_idx_tmp%push_back(n)
+        call tgt_idx_tmp%push_back(ipos)
+        call sign_tmp%push_back(1)
 
         ! and the reverse connection:
-        call srcIdxTmp%push_back(n)
-        call tgtIdxTmp%push_back(this%connections%isym(ipos))
-        call signTmp%push_back(-1)
+        call src_idx_tmp%push_back(n)
+        call tgt_idx_tmp%push_back(this%connections%isym(ipos))
+        call sign_tmp%push_back(-1)
       end do
 
-      allocate (interfaceMap%exchange_map(ix)%src_idx(srcIdxTmp%size))
-      allocate (interfaceMap%exchange_map(ix)%tgt_idx(tgtIdxTmp%size))
-      allocate (interfaceMap%exchange_map(ix)%sign(signTmp%size))
-      do i = 1, srcIdxTmp%size
-        interfaceMap%exchange_map(ix)%src_idx(i) = srcIdxTmp%at(i)
-        interfaceMap%exchange_map(ix)%tgt_idx(i) = tgtIdxTmp%at(i)
-        interfaceMap%exchange_map(ix)%sign(i) = signTmp%at(i)
+      allocate (imap%exchange_maps(ix)%src_idx(src_idx_tmp%size))
+      allocate (imap%exchange_maps(ix)%tgt_idx(tgt_idx_tmp%size))
+      allocate (imap%exchange_maps(ix)%sign(sign_tmp%size))
+      do i = 1, src_idx_tmp%size
+        imap%exchange_maps(ix)%src_idx(i) = src_idx_tmp%at(i)
+        imap%exchange_maps(ix)%tgt_idx(i) = tgt_idx_tmp%at(i)
+        imap%exchange_maps(ix)%sign(i) = sign_tmp%at(i)
       end do
 
-      call srcIdxTmp%destroy()
-      call tgtIdxTmp%destroy()
-      call signTmp%destroy()
+      call src_idx_tmp%destroy()
+      call tgt_idx_tmp%destroy()
+      call sign_tmp%destroy()
 
     end do
 
     ! set the primary exchange idx
     ! findloc cannot be used until gfortran 9...
-    interfaceMap%prim_exg_idx = -1
-    do i = 1, interfaceMap%nr_exchanges
-      if (interfaceMap%exchange_names(i) == this%primaryExchange%name) then
-        interfaceMap%prim_exg_idx = i
+    imap%prim_exg_idx = -1
+    do i = 1, imap%nr_exchanges
+      if (imap%exchange_names(i) == this%primaryExchange%name) then
+        imap%prim_exg_idx = i
         exit
       end if
     end do
 
-  end subroutine getInterfaceMap
+    ! sanity check
+    ! do i = 1, interfaceMap%nr_models
+    !   if (size(interfaceMap%node_map(i)%src_idx) == 0) then
+    !     write(*,*) 'Error: empty node map in interface for ', &
+    !                this%primaryExchange%name
+    !     call ustop()
+    !   end if
+    !   if (size(interfaceMap%connection_map(i)%src_idx) == 0) then
+    !     write(*,*) 'Error: empty connection map in interface for ', &
+    !                this%primaryExchange%name
+    !     call ustop()
+    !   end if
+    ! end do
+    ! do i = 1, interfaceMap%nr_exchanges
+    !   if (size(interfaceMap%exchange_map(i)%src_idx) == 0) then
+    !     write(*,*) 'Error: empty exchange map in interface for ', &
+    !                this%primaryExchange%name
+    !     call ustop()
+    !   end if
+    ! end do
+
+  end subroutine buildInterfaceMap
 
   !> @brief Deallocate grid connection resources
   !<
@@ -1326,8 +1248,8 @@ contains
 
     periodic = .false.
     do icell = 1, this%nrOfBoundaryCells
-      if (.not. this%boundaryCells(icell)%cell%dmodel == &
-          this%connectedCells(icell)%cell%dmodel) then
+      if (.not. this%boundaryCells(icell)%cell%v_model == &
+          this%connectedCells(icell)%cell%v_model) then
         cycle
       end if
 
@@ -1349,29 +1271,5 @@ contains
     end do
 
   end function
-
-  !> @brief Helper function to get model names when ids are given
-  !<
-  function get_model_name(id) result(name)
-    use ConstantsModule, only: LENMODELNAME
-    use ListsModule, only: basemodellist
-    use BaseModelModule, only: BaseModelType, GetBaseModelFromList
-    use MemoryHelperModule, only: create_mem_path
-    integer(I4B) :: id
-    character(len=LENMODELNAME) :: name
-    ! local
-    class(BaseModelType), pointer :: model
-    integer(I4B) :: im
-
-    name = ''
-    do im = 1, basemodellist%Count()
-      model => GetBaseModelFromList(basemodellist, im)
-      if (model%id == id) then
-        name = model%name
-        return
-      end if
-    end do
-
-  end function get_model_name
 
 end module GridConnectionModule

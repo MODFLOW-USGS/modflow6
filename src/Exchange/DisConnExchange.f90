@@ -2,11 +2,12 @@ module DisConnExchangeModule
   use KindModule, only: I4B, DP, LGP
   use SimVariablesModule, only: errmsg
   use ConstantsModule, only: LENAUXNAME, LENBOUNDNAME, LINELENGTH
+  use CharacterStringModule
   use ListModule, only: ListType
   use MemoryManagerModule, only: mem_allocate, mem_reallocate
   use BlockParserModule, only: BlockParserType
   use NumericalModelModule, only: NumericalModelType
-  use DistributedModelModule, only: DistributedModelType
+  use VirtualModelModule, only: VirtualModelType
   use NumericalExchangeModule, only: NumericalExchangeType
   implicit none
 
@@ -24,8 +25,10 @@ module DisConnExchangeModule
 
     class(NumericalModelType), pointer :: model1 => null() !< model 1
     class(NumericalModelType), pointer :: model2 => null() !< model 2
-    class(DistributedModelType), pointer :: dmodel1 => null() !< distributed model 1
-    class(DistributedModelType), pointer :: dmodel2 => null() !< distributed model 2
+    class(VirtualModelType), pointer :: v_model1 => null() !< virtual model 1
+    class(VirtualModelType), pointer :: v_model2 => null() !< virtual model 2
+    logical(LGP) :: is_datacopy !< when true, this exchange is just a data copy on another process and
+                                !! not responsible for controlling movers, observations, ...
 
     integer(I4B), pointer :: nexg => null() !< number of exchanges
     integer(I4B), dimension(:), pointer, contiguous :: nodem1 => null() !< node numbers in model 1
@@ -40,6 +43,8 @@ module DisConnExchangeModule
 
     character(len=LENAUXNAME), dimension(:), &
       pointer, contiguous :: auxname => null() !< vector of auxname
+    type(CharacterStringType), dimension(:), pointer, &
+      contiguous :: auxname_cst => null() !< copy of vector auxname that can be stored in memory manager
     real(DP), dimension(:, :), pointer, contiguous :: auxvar => null() !< array of auxiliary variable values
     integer(I4B), pointer :: ianglex => null() !< flag indicating anglex was read, if read, ianglex is index in auxvar
     integer(I4B), pointer :: icdist => null() !< flag indicating cdist was read, if read, icdist is index in auxvar
@@ -95,9 +100,12 @@ contains
       call urdaux(this%naux, this%parser%iuactive, iout, lloc, istart, &
                   istop, caux, line, 'GWF_GWF_Exchange')
       call mem_reallocate(this%auxname, LENAUXNAME, this%naux, &
-                          'AUXNAME', trim(this%memoryPath))
+                          'AUXNAME', this%memoryPath)
+      call mem_reallocate(this%auxname_cst, LENAUXNAME, this%naux, &
+                          'AUXNAME_CST', this%memoryPath)
       do n = 1, this%naux
         this%auxname(n) = caux(n)
+        this%auxname_cst(n) = caux(n)
       end do
       deallocate (caux)
       !
@@ -220,20 +228,28 @@ contains
         lloc = 1
         !
         ! -- Read and check node 1
-        call this%parser%GetCellid(this%model1%dis%ndim, cellid1, &
+        call this%parser%GetCellid(this%v_model1%dis_ndim%get(), cellid1, &
                                    flag_string=.true.)
-        nodem1 = this%model1%dis%noder_from_cellid(cellid1, &
-                                                   this%parser%iuactive, &
-                                                   iout, flag_string=.true.)
-        this%nodem1(iexg) = nodem1
+        if (associated(this%model1)) then
+          nodem1 = this%model1%dis%noder_from_cellid(cellid1, &
+                                                     this%parser%iuactive, &
+                                                     iout, flag_string=.true.)
+          this%nodem1(iexg) = nodem1
+        else
+          this%nodem1(iexg) = -1
+        end if
         !
         ! -- Read and check node 2
-        call this%parser%GetCellid(this%model2%dis%ndim, cellid2, &
+        call this%parser%GetCellid(this%v_model2%dis_ndim%get(), cellid2, &
                                    flag_string=.true.)
-        nodem2 = this%model2%dis%noder_from_cellid(cellid2, &
-                                                   this%parser%iuactive, &
-                                                   iout, flag_string=.true.)
-        this%nodem2(iexg) = nodem2
+        if (associated(this%model2)) then
+          nodem2 = this%model2%dis%noder_from_cellid(cellid2, &
+                                                     this%parser%iuactive, &
+                                                     iout, flag_string=.true.)
+          this%nodem2(iexg) = nodem2
+        else
+          this%nodem2(iexg) = -1
+        end if
         !
         ! -- Read rest of input line
         this%ihc(iexg) = this%parser%GetInteger()
@@ -264,21 +280,25 @@ contains
         end if
         !
         ! -- Check to see if nodem1 is outside of active domain
-        if (nodem1 <= 0) then
-          write (errmsg, *) &
-            trim(adjustl(this%model1%name))// &
-            ' Cell is outside active grid domain ('// &
-            trim(adjustl(cellid1))//').'
-          call store_error(errmsg)
+        if (associated(this%model1)) then
+          if (nodem1 <= 0) then
+            write (errmsg, *) &
+              trim(adjustl(this%model1%name))// &
+              ' Cell is outside active grid domain ('// &
+              trim(adjustl(cellid1))//').'
+            call store_error(errmsg)
+          end if
         end if
         !
         ! -- Check to see if nodem2 is outside of active domain
-        if (nodem2 <= 0) then
-          write (errmsg, *) &
-            trim(adjustl(this%model2%name))// &
-            ' Cell is outside active grid domain ('// &
-            trim(adjustl(cellid2))//').'
-          call store_error(errmsg)
+        if (associated(this%model2)) then
+          if (nodem2 <= 0) then
+            write (errmsg, *) &
+              trim(adjustl(this%model2%name))// &
+              ' Cell is outside active grid domain ('// &
+              trim(adjustl(cellid2))//').'
+            call store_error(errmsg)
+          end if
         end if
       end do
       !
@@ -318,7 +338,9 @@ contains
     call mem_allocate(this%inamedbound, 'INAMEDBOUND', this%memoryPath)
 
     call mem_allocate(this%auxname, LENAUXNAME, 0, &
-                      'AUXNAME', trim(this%memoryPath))
+                      'AUXNAME', this%memoryPath)
+    call mem_allocate(this%auxname_cst, LENAUXNAME, 0, &
+                      'AUXNAME_CST', this%memoryPath)
 
     this%nexg = 0
     this%naux = 0
@@ -360,12 +382,13 @@ contains
   !> @brief Should interface model be used to handle these
   !! exchanges, to be overridden for inheriting types
   !<
-  function use_interface_model(this) result(useIM)
+  function use_interface_model(this) result(use_im)
     class(DisConnExchangeType) :: this !< instance of exchange object
-    logical(LGP) :: useIM !< flag whether interface model should be used
-                                     !! for this exchange instead
+    logical(LGP) :: use_im !< flag whether interface model should be used
+                          !! for this exchange instead
 
-    useIM = .false.
+    ! use im when one of the models is not local
+    use_im = .not. (this%v_model1%is_local .and. this%v_model2%is_local)
 
   end function use_interface_model
 
@@ -389,7 +412,8 @@ contains
     ! scalars
     call mem_deallocate(this%nexg)
     call mem_deallocate(this%naux)
-    call mem_deallocate(this%auxname, 'AUXNAME', trim(this%memoryPath))
+    call mem_deallocate(this%auxname, 'AUXNAME', this%memoryPath)
+    call mem_deallocate(this%auxname_cst, 'AUXNAME_CST', this%memoryPath)
     call mem_deallocate(this%ianglex)
     call mem_deallocate(this%icdist)
     call mem_deallocate(this%ixt3d)

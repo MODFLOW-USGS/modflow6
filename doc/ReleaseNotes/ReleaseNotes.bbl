@@ -1,16 +1,16 @@
 \begin{thebibliography}{13}
 \providecommand{\natexlab}[1]{#1}
 \expandafter\ifx\csname urlstyle\endcsname\relax
-  \providecommand{\doi}[1]{doi:\discretionary{}{}{}#1}\else
-  \providecommand{\doi}{doi:\discretionary{}{}{}\begingroup
+  \providecommand{\doiagency}[1]{doi:\discretionary{}{}{}#1}\else
+  \providecommand{\doiagency}{doi:\discretionary{}{}{}\begingroup
   \urlstyle{rm}\Url}\fi
 
 \bibitem[{Hoffmann and others(2003)Hoffmann, Leake, Galloway, and
   Wilson}]{hoffmann2003modflow}
-Hoffmann, J{\"o}rn, Leake, S.A., Galloway, D.L., and Wilson, A.M., 2003,
-  MODFLOW-2000 Ground-Water Model---User Guide to the Subsidence and
-  Aquifer-System Compaction (SUB) Package: {U.S. Geological Survey Open-File
-  Report 03--233, 44 p.}, accessed June 27, 2017, at
+Hoffmann, J., Leake, S.A., Galloway, D.L., and Wilson, A.M., 2003, MODFLOW-2000
+  Ground-Water Model---User Guide to the Subsidence and Aquifer-System
+  Compaction (SUB) Package: {U.S. Geological Survey Open-File Report 03--233,
+  44 p.}, accessed June 27, 2017, at
   \url{https://pubs.usgs.gov/of/2003/ofr03-233/}.
 
 \bibitem[{Hughes and others(2017)Hughes, Langevin, and
@@ -24,7 +24,7 @@ Hughes, J.D., Langevin, C.D., and Banta, E.R., 2017, Documentation for the
 Hughes, J.D., Russcher, M.J., Langevin, C.D., Morway, E.D., and McDonald, R.R.,
   2022{\natexlab{a}}, The {MODFLOW Application Programming Interface} for
   simulation control and software interoperability: Environmental Modelling \&
-  Software, v. 148, 105257,
+  Software, v. 148, article 105257,
   \url{https://doi.org/10.1016/j.envsoft.2021.105257}.
 
 \bibitem[{Hughes and others(2022{\natexlab{b}})Hughes, Leake, Galloway, and
@@ -37,19 +37,19 @@ Hughes, J.D., Leake, S.A., Galloway, D.L., and White, J.T., 2022{\natexlab{b}},
 \bibitem[{Langevin and others(2017)Langevin, Hughes, Provost, Banta, Niswonger,
   and Panday}]{modflow6gwf}
 Langevin, C.D., Hughes, J.D., Provost, A.M., Banta, E.R., Niswonger, R.G., and
-  Panday, Sorab, 2017, Documentation for the MODFLOW 6 Groundwater Flow (GWF)
+  Panday, S., 2017, Documentation for the MODFLOW 6 Groundwater Flow (GWF)
   Model: {U.S. Geological Survey Techniques and Methods, book 6, chap. A55, 197
   p.}, \url{https://doi.org/10.3133/tm6A55}.
 
 \bibitem[{Langevin and others(2020)Langevin, Panday, and
   Provost}]{langevin2020hydraulic}
-Langevin, C.D., Panday, Sorab, and Provost, A.M., 2020, Hydraulic-head
-  formulation for density-dependent flow and transport: Groundwater, v.~58,
-  no.~3, p.~349--362.
+Langevin, C.D., Panday, S., and Provost, A.M., 2020, Hydraulic-head formulation
+  for density-dependent flow and transport: Groundwater, v.~58, no.~3,
+  p.~349--362.
 
 \bibitem[{Langevin and others(2022)Langevin, Provost, Panday, and
   Hughes}]{modflow6gwt}
-Langevin, C.D., Provost, A.M., Panday, Sorab, and Hughes, J.D., 2022,
+Langevin, C.D., Provost, A.M., Panday, S., and Hughes, J.D., 2022,
   Documentation for the MODFLOW 6 Groundwater Transport (GWT) Model: {U.S.
   Geological Survey Techniques and Methods, book 6, chap. A61, 56 p.},
   \url{https://doi.org/10.3133/tm6A61}.
@@ -69,17 +69,17 @@ Morway, E.D., Langevin, C.D., and Hughes, J.D., 2021, Use of the {MODFLOW 6}
 
 \bibitem[{Panday and others(2013)Panday, Langevin, Niswonger, Ibaraki, and
   Hughes}]{modflowusg}
-Panday, Sorab, Langevin, C.D., Niswonger, R.G., Ibaraki, Motomu, and Hughes,
-  J.D., 2013, MODFLOW-USG version 1---An unstructured grid version of MODFLOW
-  for simulating groundwater flow and tightly coupled processes using a control
+Panday, S., Langevin, C.D., Niswonger, R.G., Ibaraki, M., and Hughes, J.D.,
+  2013, MODFLOW-USG version 1---An unstructured grid version of MODFLOW for
+  simulating groundwater flow and tightly coupled processes using a control
   volume finite-difference formulation: {U.S. Geological Survey Techniques and
   Methods, book 6, chap. A45, 66 p.}, accessed June 27, 2017, at
   \url{https://pubs.usgs.gov/tm/06/a45/}.
 
 \bibitem[{Peckham and others(2013)Peckham, Hutton, and Norris}]{PECKHAM20133}
-Peckham, S.D., Hutton, E.W., and Norris, Boyana, 2013, A component-based
-  approach to integrated modeling in the geosciences: The design of {CSDMS}:
-  Computers \& Geosciences, v.~53, p.~3 -- 12, accessed March 24, 2020, at
+Peckham, S.D., Hutton, E.W., and Norris, B., 2013, A component-based approach
+  to integrated modeling in the geosciences: The design of {CSDMS}: Computers
+  \& Geosciences, v.~53, p.~3 -- 12, accessed March 24, 2020, at
   \url{https://doi.org/https://doi.org/10.1016/j.cageo.2012.04.002}.
 
 \bibitem[{Provost and others(2017)Provost, Langevin, and Hughes}]{modflow6xt3d}

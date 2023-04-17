@@ -51,7 +51,7 @@ module TspAptModule
   use ObserveModule, only: ObserveType
   use InputOutputModule, only: extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
 

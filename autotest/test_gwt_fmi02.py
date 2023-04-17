@@ -1,45 +1,16 @@
 # tests to ability to run flow model first followed by transport model
 
 import os
-import shutil
 
-import numpy as np
-import pytest
+import flopy
 
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-
-import targets
-
-exe_name_mf6 = targets.target_dict["mf6"]
-exe_name_mf6 = os.path.abspath(exe_name_mf6)
-testdir = "./temp"
 testgroup = "fmi02"
-d = os.path.join(testdir, testgroup)
-if os.path.isdir(d):
-    shutil.rmtree(d)
 
 
-def run_flow_model():
+def run_flow_model(dir, exe):
     name = "flow"
-    ws = os.path.join(testdir, testgroup, name)
-    sim = flopy.mf6.MFSimulation(
-        sim_name=name, sim_ws=ws, exe_name=exe_name_mf6
-    )
+    ws = os.path.join(dir, testgroup, name)
+    sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=ws, exe_name=exe)
     pd = [(1.0, 1, 1.0), (1.0, 1, 1.0)]
     tdis = flopy.mf6.ModflowTdis(sim, nper=len(pd), perioddata=pd)
     ims = flopy.mf6.ModflowIms(sim)
@@ -70,15 +41,12 @@ def run_flow_model():
     assert os.path.isfile(fname)
     fname = os.path.join(ws, head_file)
     assert os.path.isfile(fname)
-    return
 
 
-def run_transport_model():
+def run_transport_model(dir, exe):
     name = "transport"
-    ws = os.path.join(testdir, testgroup, name)
-    sim = flopy.mf6.MFSimulation(
-        sim_name=name, sim_ws=ws, exe_name=exe_name_mf6
-    )
+    ws = os.path.join(dir, testgroup, name)
+    sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=ws, exe_name=exe)
     pd = [(1.0, 10, 1.0), (1.0, 10, 1.0)]
     tdis = flopy.mf6.ModflowTdis(sim, nper=len(pd), perioddata=pd)
     ims = flopy.mf6.ModflowIms(sim, linear_acceleration="BICGSTAB")
@@ -106,21 +74,9 @@ def run_transport_model():
     assert os.path.isfile(fname)
     fname = os.path.join(ws, concentration_file)
     assert os.path.isfile(fname)
-    return
 
 
-def test_fmi():
-    run_flow_model()
-    run_transport_model()
-    d = os.path.join(testdir, testgroup)
-    if os.path.isdir(d):
-        shutil.rmtree(d)
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run tests
-    test_fmi()
+def test_fmi(function_tmpdir, targets):
+    mf6 = targets["mf6"]
+    run_flow_model(str(function_tmpdir), mf6)
+    run_transport_model(str(function_tmpdir), mf6)

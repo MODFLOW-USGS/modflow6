@@ -8,7 +8,7 @@ module GweDspModule
   use Xt3dModule, only: Xt3dType, xt3d_cr
   use GweDspOptionsModule, only: GweDspOptionsType
   use GweInputDataModule, only: GweInputDataType
-  use MatrixModule
+  use MatrixBaseModule
   
   implicit none
   private
@@ -80,7 +80,7 @@ module GweDspModule
 
 contains
 
-  subroutine dsp_cr(dspobj, name_model, inunit, iout, fmi, eqnsclfac, gwecommon)
+  subroutine dsp_cr(dspobj, name_model, input_mempath, inunit, iout, fmi, eqnsclfac, gwecommon)
 ! ******************************************************************************
 ! dsp_cr -- Create a new DSP object
 ! ******************************************************************************
@@ -88,20 +88,23 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use IdmMf6FileLoaderModule, only: input_load
-    use ConstantsModule, only: LENPACKAGETYPE
+    use KindModule, only: LGP
+    use MemoryManagerExtModule, only: mem_set_value
     ! -- dummy
     type(GweDspType), pointer :: dspobj
     character(len=*), intent(in) :: name_model
+    character(len=*), intent(in) :: input_mempath
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     type(TspFmiType), intent(in), target :: fmi
     real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
     type(GweInputDataType), intent(in), target :: gwecommon !< shared data container for use by multiple GWE packages
+    ! -- locals
+    logical(LGP) :: found_fname
     ! -- formats
     character(len=*), parameter :: fmtdsp = &
       "(1x,/1x,'DSP-- THERMAL CONDUCTION AND DISPERSION PACKAGE, VERSION 1, ', &
-      &'3/01/2023, INPUT READ FROM UNIT ', i0, //)"
+      &'5/01/2023, INPUT READ FROM MEMPATH ', A, //)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -114,18 +117,22 @@ contains
     call dspobj%allocate_scalars()
     !
     ! -- Set variables
+    dspobj%input_mempath = input_mempath
     dspobj%inunit = inunit
     dspobj%iout = iout
     dspobj%fmi => fmi
     dspobj%eqnsclfac => eqnsclfac
     dspobj%gwecommon => gwecommon
     !
-    ! -- Check if input file is open
+    ! -- set name of input file
+    call mem_set_value(dspobj%input_fname, 'INPUT_FNAME', dspobj%input_mempath, &
+                       found_fname)
+    !
     if (dspobj%inunit > 0) then
       !
       ! -- Print a message identifying the dispersion package.
       if (dspobj%iout > 0) then
-        write (dspobj%iout, fmtdsp) dspobj%inunit
+        write (dspobj%iout, fmtdsp) input_mempath
       end if
     end if
     !
@@ -247,7 +254,7 @@ contains
     ! -- formats
     character(len=*), parameter :: fmtdsp = &
       "(1x,/1x,'DSP-- THERMAL CONDUCTION AND DISPERSION PACKAGE, VERSION 1, ', &
-      &'3/01/2023, INPUT READ FROM UNIT ', i0, //)"
+      &'5/01/2023, INPUT READ FROM UNIT ', i0, //)"
 ! ------------------------------------------------------------------------------
     !
     ! -- dsp pointers to arguments that were passed in
@@ -587,25 +594,19 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     !use KindModule, only: LGP
-    use MemoryHelperModule, only: create_mem_path
-    use MemoryTypeModule, only: MemoryType
     use MemoryManagerExtModule, only: mem_set_value
-    use SimVariablesModule, only: idm_context
-    use ConstantsModule, only: LENMEMPATH
     use GweDspInputModule, only: GweDspParamFoundType
     ! -- dummy
     class(GweDspType) :: this
     ! -- locals
-    character(len=LENMEMPATH) :: idmMemoryPath
     type(GweDspParamFoundType) :: found
 ! ------------------------------------------------------------------------------
     !
-    ! -- set memory path
-    idmMemoryPath = create_mem_path(this%name_model, 'DSP', idm_context)
-    !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%ixt3doff, 'XT3D_OFF', idmMemoryPath, found%xt3d_off)
-    call mem_set_value(this%ixt3drhs, 'XT3D_RHS', idmMemoryPath, found%xt3d_rhs)
+    call mem_set_value(this%ixt3doff, 'XT3D_OFF', this%input_mempath, &
+                       found%xt3d_off)
+    call mem_set_value(this%ixt3drhs, 'XT3D_RHS', this%input_mempath, &
+                       found%xt3d_rhs)
     !
     ! -- set xt3d state flag
     if (found%xt3d_off) this%ixt3d = 0
@@ -674,38 +675,32 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: count_errors, store_error
-    use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_reallocate, mem_reassignptr
     use MemoryManagerExtModule, only: mem_set_value
-    use SimVariablesModule, only: idm_context
     use ConstantsModule, only: LENMEMPATH, LINELENGTH
     use GweDspInputModule, only: GweDspParamFoundType
     ! -- dummy
     class(GweDspType) :: this
     ! -- locals
-    character(len=LENMEMPATH) :: idmMemoryPath
     character(len=LINELENGTH) :: errmsg
     type(GweDspParamFoundType) :: found
     integer(I4B), dimension(:), pointer, contiguous :: map
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! -- set memory path
-    idmMemoryPath = create_mem_path(this%name_model, 'DSP', idm_context)
-    !
     ! -- set map
     map => null()
     if (this%dis%nodes < this%dis%nodesuser) map => this%dis%nodeuser
     !
     ! -- update defaults with idm sourced values
-    !call mem_set_value(this%diffc, 'DIFFC', idmMemoryPath, map, found%diffc)
-    call mem_set_value(this%alh, 'ALH', idmMemoryPath, map, found%alh)
-    call mem_set_value(this%alv, 'ALV', idmMemoryPath, map, found%alv)
-    call mem_set_value(this%ath1, 'ATH1', idmMemoryPath, map, found%ath1)
-    call mem_set_value(this%ath2, 'ATH2', idmMemoryPath, map, found%ath2)
-    call mem_set_value(this%atv, 'ATV', idmMemoryPath, map, found%atv)
-    call mem_set_value(this%ktw, 'KTW', idmMemoryPath, map, found%ktw)
-    call mem_set_value(this%kts, 'KTS', idmMemoryPath, map, found%kts)
+    !call mem_set_value(this%diffc, 'DIFFC', input_mempath, map, found%diffc)
+    call mem_set_value(this%alh, 'ALH', this%input_mempath, map, found%alh)
+    call mem_set_value(this%alv, 'ALV', this%input_mempath, map, found%alv)
+    call mem_set_value(this%ath1, 'ATH1', this%input_mempath, map, found%ath1)
+    call mem_set_value(this%ath2, 'ATH2', this%input_mempath, map, found%ath2)
+    call mem_set_value(this%atv, 'ATV', this%input_mempath, map, found%atv)
+    call mem_set_value(this%ktw, 'KTW', this%input_mempath, map, found%ktw)
+    call mem_set_value(this%kts, 'KTS', this%input_mempath, map, found%kts)
     !
     ! -- set active flags
     !if (found%diffc) this%idiffc = 1

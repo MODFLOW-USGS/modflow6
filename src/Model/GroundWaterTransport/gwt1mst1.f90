@@ -14,7 +14,7 @@ module GwtMstModule
   use SimVariablesModule, only: errmsg, warnmsg
   use SimModule, only: store_error, count_errors, &
                        store_warning
-  use MatrixModule
+  use MatrixBaseModule
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
   use TspFmiModule, only: TspFmiType
@@ -38,7 +38,6 @@ module GwtMstModule
     !
     ! -- storage
     real(DP), dimension(:), pointer, contiguous :: porosity => null() !< porosity
-    real(DP), dimension(:), pointer, contiguous :: prsity2 => null() !< sum of immobile porosity
     real(DP), dimension(:), pointer, contiguous :: ratesto => null() !< rate of mobile storage
     !
     ! -- decay
@@ -51,7 +50,7 @@ module GwtMstModule
     !
     ! -- sorption
     integer(I4B), pointer :: isrb => null() !< sorption active flag (0:off, 1:linear, 2:freundlich, 3:langmuir)
-    real(DP), dimension(:), pointer, contiguous :: bulk_density => null() !< bulk density
+    real(DP), dimension(:), pointer, contiguous :: bulk_density => null() !< bulk density of mobile domain; mass of mobile domain solid per aquifer volume
     real(DP), dimension(:), pointer, contiguous :: distcoef => null() !< kd distribution coefficient
     real(DP), dimension(:), pointer, contiguous :: sp2 => null() !< second sorption parameter
     real(DP), dimension(:), pointer, contiguous :: ratesrb => null() !< rate of sorption
@@ -78,9 +77,6 @@ module GwtMstModule
     procedure :: mst_ot_flow
     procedure :: mst_da
     procedure :: allocate_scalars
-    procedure :: addto_prsity2
-    procedure :: get_thetamfrac
-    procedure :: get_thetaimfrac
     procedure, private :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_data
@@ -341,8 +337,7 @@ contains
     real(DP) :: vcell
     real(DP) :: const1
     real(DP) :: const2
-    real(DP) :: thetamfrac
-    real(DP) :: rhob
+    real(DP) :: rhobm
     !
     ! -- set variables
     tled = DONE / delt
@@ -358,12 +353,11 @@ contains
       swtpdt = this%fmi%gwfsat(n)
       swt = this%fmi%gwfsatold(n, delt)
       idiag = this%dis%con%ia(n)
-      thetamfrac = this%get_thetamfrac(n)
       const1 = this%distcoef(n)
       const2 = 0.
       if (this%isrb > 1) const2 = this%sp2(n)
-      rhob = this%bulk_density(n)
-      call mst_srb_term(this%isrb, thetamfrac, rhob, vcell, tled, cnew(n), &
+      rhobm = this%bulk_density(n)
+      call mst_srb_term(this%isrb, rhobm, vcell, tled, cnew(n), &
                         cold(n), swtpdt, swt, const1, const2, &
                         hcofval=hhcof, rhsval=rrhs)
       !
@@ -382,13 +376,12 @@ contains
   !!  Subroutine to calculate sorption terms
   !!
   !<
-  subroutine mst_srb_term(isrb, thetamfrac, rhob, vcell, tled, cnew, cold, &
+  subroutine mst_srb_term(isrb, rhobm, vcell, tled, cnew, cold, &
                           swnew, swold, const1, const2, rate, hcofval, rhsval)
     ! -- modules
     ! -- dummy
     integer(I4B), intent(in) :: isrb !< sorption flag 1, 2, 3 are linear, freundlich, and langmuir
-    real(DP), intent(in) :: thetamfrac !< fraction of total porosity that is mobile
-    real(DP), intent(in) :: rhob !< bulk density
+    real(DP), intent(in) :: rhobm !< bulk density of mobile domain (fm * rhob)
     real(DP), intent(in) :: vcell !< volume of cell
     real(DP), intent(in) :: tled !< one over time step length
     real(DP), intent(in) :: cnew !< concentration at end of this time step
@@ -412,7 +405,7 @@ contains
     ! -- Calculate based on type of sorption
     if (isrb == 1) then
       ! -- linear
-      term = -thetamfrac * rhob * vcell * tled * const1
+      term = -rhobm * vcell * tled * const1
       if (present(hcofval)) hcofval = term * swnew
       if (present(rhsval)) rhsval = term * swold * cold
       if (present(rate)) rate = term * swnew * cnew - term * swold * cold
@@ -435,7 +428,7 @@ contains
       end if
       !
       ! -- calculate hcof, rhs, and rate for freundlich and langmuir
-      term = -thetamfrac * rhob * vcell * tled
+      term = -rhobm * vcell * tled
       cbaravg = (cbarold + cbarnew) * DHALF
       swavg = (swnew + swold) * DHALF
       if (present(hcofval)) then
@@ -477,7 +470,7 @@ contains
     real(DP) :: vcell
     real(DP) :: swnew
     real(DP) :: distcoef
-    real(DP) :: thetamfrac
+    real(DP) :: rhobm
     real(DP) :: term
     real(DP) :: csrb
     real(DP) :: decay_rate
@@ -497,9 +490,8 @@ contains
       swnew = this%fmi%gwfsat(n)
       distcoef = this%distcoef(n)
       idiag = this%dis%con%ia(n)
-      thetamfrac = this%get_thetamfrac(n)
-      term = this%decay_sorbed(n) * thetamfrac * this%bulk_density(n) * &
-             swnew * vcell
+      rhobm = this%bulk_density(n)
+      term = this%decay_sorbed(n) * rhobm * swnew * vcell
       !
       ! -- add sorbed mass decay rate terms to accumulators
       if (this%idcy == 1) then
@@ -541,7 +533,7 @@ contains
                                             this%decayslast(n), &
                                             kiter, csrbold, csrbnew, delt)
           this%decayslast(n) = decay_rate
-          rrhs = decay_rate * thetamfrac * this%bulk_density(n) * swnew * vcell
+          rrhs = decay_rate * rhobm * swnew * vcell
         end if
 
       end if
@@ -724,10 +716,9 @@ contains
     real(DP) :: tled
     real(DP) :: swt, swtpdt
     real(DP) :: vcell
-    real(DP) :: rhob
+    real(DP) :: rhobm
     real(DP) :: const1
     real(DP) :: const2
-    real(DP) :: thetamfrac
     !
     ! -- initialize
     tled = DONE / delt
@@ -745,12 +736,11 @@ contains
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
       swtpdt = this%fmi%gwfsat(n)
       swt = this%fmi%gwfsatold(n, delt)
-      thetamfrac = this%get_thetamfrac(n)
-      rhob = this%bulk_density(n)
+      rhobm = this%bulk_density(n)
       const1 = this%distcoef(n)
       const2 = 0.
       if (this%isrb > 1) const2 = this%sp2(n)
-      call mst_srb_term(this%isrb, thetamfrac, rhob, vcell, tled, cnew(n), &
+      call mst_srb_term(this%isrb, rhobm, vcell, tled, cnew(n), &
                         cold(n), swtpdt, swt, const1, const2, &
                         rate=rate)
       this%ratesrb(n) = rate
@@ -785,7 +775,7 @@ contains
     real(DP) :: vcell
     real(DP) :: swnew
     real(DP) :: distcoef
-    real(DP) :: thetamfrac
+    real(DP) :: rhobm
     real(DP) :: term
     real(DP) :: csrb
     real(DP) :: csrbnew
@@ -808,9 +798,8 @@ contains
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
       swnew = this%fmi%gwfsat(n)
       distcoef = this%distcoef(n)
-      thetamfrac = this%get_thetamfrac(n)
-      term = this%decay_sorbed(n) * thetamfrac * this%bulk_density(n) * &
-             swnew * vcell
+      rhobm = this%bulk_density(n)
+      term = this%decay_sorbed(n) * rhobm * swnew * vcell
       !
       ! -- add sorbed mass decay rate terms to accumulators
       if (this%idcy == 1) then
@@ -849,7 +838,7 @@ contains
           decay_rate = get_zero_order_decay(this%decay_sorbed(n), &
                                             this%decayslast(n), &
                                             0, csrbold, csrbnew, delt)
-          rrhs = decay_rate * thetamfrac * this%bulk_density(n) * swnew * vcell
+          rrhs = decay_rate * rhobm * swnew * vcell
         end if
       end if
       !
@@ -986,7 +975,6 @@ contains
     ! -- Deallocate arrays if package was active
     if (this%inunit > 0) then
       call mem_deallocate(this%porosity)
-      call mem_deallocate(this%prsity2)
       call mem_deallocate(this%ratesto)
       call mem_deallocate(this%idcy)
       call mem_deallocate(this%decay)
@@ -1058,7 +1046,6 @@ contains
     ! -- Allocate
     ! -- sto
     call mem_allocate(this%porosity, nodes, 'POROSITY', this%memoryPath)
-    call mem_allocate(this%prsity2, nodes, 'PRSITY2', this%memoryPath)
     call mem_allocate(this%ratesto, nodes, 'RATESTO', this%memoryPath)
     !
     ! -- dcy
@@ -1103,7 +1090,6 @@ contains
     ! -- Initialize
     do n = 1, nodes
       this%porosity(n) = DZERO
-      this%prsity2(n) = DZERO
       this%ratesto(n) = DZERO
     end do
     do n = 1, size(this%decay)
@@ -1399,72 +1385,6 @@ contains
     ! -- Return
     return
   end subroutine read_data
-
-  !> @ brief Add porosity values to prsity2
-  !!
-  !!  Method to add immobile domain porosities, which are stored as a
-  !!  cumulative value in prsity2.
-  !!
-  !<
-  subroutine addto_prsity2(this, thetaim)
-    ! -- modules
-    ! -- dummy
-    class(GwtMstType) :: this !< GwtMstType object
-    real(DP), dimension(:), intent(in) :: thetaim !< immobile domain porosity that contributes to total porosity
-    ! -- local
-    integer(I4B) :: n
-    !
-    ! -- Add to prsity2
-    do n = 1, this%dis%nodes
-      if (this%ibound(n) == 0) cycle
-      this%prsity2(n) = this%prsity2(n) + thetaim(n)
-    end do
-    !
-    ! -- Return
-    return
-  end subroutine addto_prsity2
-
-  !> @ brief Return mobile porosity fraction
-  !!
-  !!  Calculate and return the fraction of the total porosity that is mobile
-  !!
-  !<
-  function get_thetamfrac(this, node) result(thetamfrac)
-    ! -- modules
-    ! -- dummy
-    class(GwtMstType) :: this !< GwtMstType object
-    integer(I4B), intent(in) :: node !< node number
-    ! -- return
-    real(DP) :: thetamfrac
-    !
-    thetamfrac = this%porosity(node) / &
-                 (this%porosity(node) + this%prsity2(node))
-    !
-    ! -- Return
-    return
-  end function get_thetamfrac
-
-  !> @ brief Return immobile porosity fraction
-  !!
-  !!  Pass in an immobile domain porosity and calculate the fraction
-  !!  of the total porosity that is immobile
-  !!
-  !<
-  function get_thetaimfrac(this, node, thetaim) result(thetaimfrac)
-    ! -- modules
-    ! -- dummy
-    class(GwtMstType) :: this !< GwtMstType object
-    integer(I4B), intent(in) :: node !< node number
-    real(DP), intent(in) :: thetaim !< immobile domain porosity
-    ! -- return
-    real(DP) :: thetaimfrac
-    !
-    thetaimfrac = thetaim / &
-                  (this%porosity(node) + this%prsity2(node))
-    !
-    ! -- Return
-    return
-  end function get_thetaimfrac
 
   !> @ brief Calculate sorption concentration using Freundlich
   !!

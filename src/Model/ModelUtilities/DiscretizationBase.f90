@@ -14,7 +14,7 @@ module BaseDisModule
   use MemoryHelperModule, only: create_mem_path
   use TdisModule, only: kstp, kper, pertim, totim, delt
   use TimeSeriesManagerModule, only: TimeSeriesManagerType
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
 
@@ -25,6 +25,8 @@ module BaseDisModule
   type :: DisBaseType
     character(len=LENMEMPATH) :: memoryPath !< path for memory allocation
     character(len=LENMODELNAME), pointer :: name_model => null() !< name of the model
+    character(len=LENMEMPATH), pointer :: input_mempath => null() !< input context mempath
+    character(len=LINELENGTH), pointer :: input_fname => null() !< input file name
     integer(I4B), pointer :: inunit => null() !< unit number for input file
     integer(I4B), pointer :: iout => null() !< unit number for output file
     integer(I4B), pointer :: nodes => null() !< number of nodes in solution
@@ -259,6 +261,8 @@ contains
     !
     ! -- Strings
     deallocate (this%name_model)
+    deallocate (this%input_mempath)
+    deallocate (this%input_fname)
     !
     ! -- Scalars
     call mem_deallocate(this%inunit)
@@ -568,6 +572,8 @@ contains
     !
     ! -- Allocate
     allocate (this%name_model)
+    allocate (this%input_mempath)
+    allocate (this%input_fname)
     !
     call mem_allocate(this%inunit, 'INUNIT', this%memoryPath)
     call mem_allocate(this%iout, 'IOUT', this%memoryPath)
@@ -585,6 +591,8 @@ contains
     !
     ! -- Initialize
     this%name_model = name_model
+    this%input_mempath = ''
+    this%input_fname = ''
     this%inunit = 0
     this%iout = 0
     this%nodes = 0
@@ -636,7 +644,7 @@ contains
     end if
     !
     ! -- Allocate the arrays
-    call mem_allocate(this%dbuff, isize, 'DBUFF', this%name_model) ! TODO_MJR: is this correct??
+    call mem_allocate(this%dbuff, isize, 'DBUFF', this%name_model)
     call mem_allocate(this%ibuff, isize, 'IBUFF', this%name_model)
     !
     ! -- Return

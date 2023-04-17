@@ -9,29 +9,15 @@ boundary on the right-hand side of the model.
 """
 
 import os
-import pytest
-import sys
+
+import flopy
+import flopy.utils.cvfdutil
 import numpy as np
-
-try:
-    import flopy
-    import flopy.utils.cvfdutil
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-
-from framework import testing_framework
-from simulation import Simulation
-
+import pytest
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["disv_with_uzf"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-
 nlay = 5
 nper = 5
 perlen = [10] * 5
@@ -39,10 +25,8 @@ nstp = [5] * 5
 tsmult = len(perlen) * [1.0]
 botm = [20.0, 15.0, 10.0, 5.0, 0.0]
 strt = 20
-
 nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-9, 1e-3, 0.97
-
 ghb_ids = []
 
 
@@ -332,18 +316,14 @@ def build_model(idx, dir):
 def eval_model(sim):
     print("evaluating model...")
 
-    idx = sim.idxsim
-    name = ex[idx]
-    ws = os.path.join("temp", name)
-
     # Next, get the binary printed heads
-    fpth = os.path.join(ws, name + ".hds")
+    fpth = os.path.join(sim.simpath, sim.name + ".hds")
     hobj = flopy.utils.HeadFile(fpth, precision="double")
     hds = hobj.get_alldata()
     hds = hds.reshape((np.sum(nstp), 5, 10, 10))
 
     # Get the MF6 cell-by-cell fluxes
-    bpth = os.path.join(ws, name + ".cbc")
+    bpth = os.path.join(sim.simpath, sim.name + ".cbc")
     bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
     bobj.get_unique_record_names()
     # '          STO-SS'
@@ -361,7 +341,7 @@ def eval_model(sim):
     gwet = gwetv.reshape((np.sum(nstp), 5, 10, 10))
 
     # Also retrieve the binary UZET output
-    uzpth = os.path.join(ws, name + ".uzf.bud")
+    uzpth = os.path.join(sim.simpath, sim.name + ".uzf.bud")
     uzobj = flopy.utils.CellBudgetFile(uzpth, precision="double")
     uzobj.get_unique_record_names()
     #  b'    FLOW-JA-FACE',
@@ -473,36 +453,14 @@ def eval_model(sim):
     print("Finished running checks")
 
 
-# - No need to change any code below
-@pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
-)
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_model, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_model, idxsim=idx)
-        test.run_mf6(sim)
-
-
-if __name__ == "__main__":
-    # print message
-    print("standalone run of {}".format(os.path.basename(__file__)))
-
-    # run main routine
-    main()
+@pytest.mark.slow
+@pytest.mark.parametrize("name", ex)
+def test_mf6model(name, function_tmpdir, targets):
+    test = TestFramework()
+    test.build(build_model, 0, str(function_tmpdir))
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_model, idxsim=0
+        ),
+        str(function_tmpdir),
+    )

@@ -1,7 +1,9 @@
 module SparseMatrixModule
   use KindModule, only: I4B, DP
   use ConstantsModule, only: DZERO
-  use MatrixModule
+  use MatrixBaseModule
+  use VectorBaseModule
+  use SeqVectorModule
   use SparseModule, only: sparsematrix
   use MemoryManagerModule, only: mem_allocate, mem_deallocate
   implicit none
@@ -15,8 +17,9 @@ module SparseMatrixModule
     integer(I4B), dimension(:), pointer, contiguous :: ja
     real(DP), dimension(:), pointer, contiguous :: amat
   contains
-    procedure :: create => spm_create
+    procedure :: init => spm_init
     procedure :: destroy => spm_destroy
+    procedure :: create_vector => spm_create_vector
 
     procedure :: get_value_pos => spm_get_value_pos
     procedure :: get_diag_value => spm_get_diag_value
@@ -33,14 +36,17 @@ module SparseMatrixModule
     procedure :: get_column => spm_get_column
     procedure :: get_position => spm_get_position
     procedure :: get_position_diag => spm_get_position_diag
+    procedure :: get_aij => spm_get_aij
+    procedure :: get_row_offset => spm_get_row_offset
 
     procedure :: allocate_scalars
     procedure :: allocate_arrays
+
   end type SparseMatrixType
 
 contains
 
-  subroutine spm_create(this, sparse, mem_path)
+  subroutine spm_init(this, sparse, mem_path)
     class(SparseMatrixType) :: this
     type(sparsematrix) :: sparse
     character(len=*) :: mem_path
@@ -60,7 +66,7 @@ contains
     call sparse%filliaja(this%ia, this%ja, ierror, sort=.false.)
     call this%zero_entries()
 
-  end subroutine spm_create
+  end subroutine spm_init
 
   subroutine spm_destroy(this)
     class(SparseMatrixType) :: this
@@ -74,6 +80,21 @@ contains
     call mem_deallocate(this%amat)
 
   end subroutine spm_destroy
+
+  function spm_create_vector(this, n, name, mem_path) result(vec)
+    class(SparseMatrixType) :: this ! this sparse matrix
+    integer(I4B) :: n !< the nr. of elements in the vector
+    character(len=*) :: name !< the variable name (for access through memory manager)
+    character(len=*) :: mem_path !< memory path for storing the underlying memory items
+    class(VectorBaseType), pointer :: vec ! the vector to create
+    ! local
+    class(SeqVectorType), pointer :: seq_vec
+
+    allocate (seq_vec)
+    call seq_vec%create(n, name, mem_path)
+    vec => seq_vec
+
+  end function spm_create_vector
 
   function spm_get_value_pos(this, ipos) result(value)
     class(SparseMatrixType) :: this
@@ -233,5 +254,25 @@ contains
     end do
 
   end subroutine spm_zero_row_offdiag
+
+  subroutine spm_get_aij(this, ia, ja, amat)
+    class(SparseMatrixType) :: this
+    integer(I4B), dimension(:), pointer, contiguous :: ia
+    integer(I4B), dimension(:), pointer, contiguous :: ja
+    real(DP), dimension(:), pointer, contiguous :: amat
+
+    ia => this%ia
+    ja => this%ja
+    amat => this%amat
+
+  end subroutine spm_get_aij
+
+  function spm_get_row_offset(this) result(offset)
+    class(SparseMatrixType) :: this
+    integer(I4B) :: offset
+
+    offset = 0
+
+  end function spm_get_row_offset
 
 end module SparseMatrixModule

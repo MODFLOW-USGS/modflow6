@@ -1,34 +1,14 @@
 import os
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = [
     "bndname01",
 ]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-ddir = "data"
 
 
 def build_model(idx, exdir):
@@ -176,71 +156,28 @@ def replace_quotes(idx, exdir):
 
 
 def eval_obs(sim):
-    idx = sim.idxsim
-    ws = exdirs[idx]
-    name = ex[idx]
-    print("evaluating observations results..." f"({name})")
+    print("evaluating observations results..." f"({sim.name})")
 
-    fpth = os.path.join(ws, f"gwf_{name}.chd.obs.csv")
+    fpth = os.path.join(sim.simpath, f"gwf_{sim.name}.chd.obs.csv")
     obs0 = np.genfromtxt(fpth, delimiter=",", names=True)
     names0 = obs0.dtype.names
 
-    fpth = os.path.join(ws, "mf6", f"gwf_{name}.chd.obs.csv")
+    fpth = os.path.join(sim.simpath, "mf6", f"gwf_{sim.name}.chd.obs.csv")
     obs1 = np.genfromtxt(fpth, delimiter=",", names=True)
     names1 = obs1.dtype.names
 
     assert names0 == names1, "observation names are not identical"
-
     assert np.array_equal(obs0, obs1), "observations are not identical"
 
-    return
 
-
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, exdir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, exdir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, exdir)
-
-    # replace quotes
-    replace_quotes(idx, exdir)
-
-    # run the test model
-    test.run_mf6(
-        Simulation(
-            exdir,
-            idxsim=idx,
-        )
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework()
+    test.build(build_model, 0, str(function_tmpdir))
+    test.run(
+        TestSimulation(name=name, exe_dict=targets, idxsim=0),
+        str(function_tmpdir),
     )
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # build and run the test model
-    for idx, exdir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, exdir)
-        sim = Simulation(
-            exdir,
-            idxsim=idx,
-            exfunc=eval_obs,
-        )
-        replace_quotes(idx, exdir)
-        test.run_mf6(sim)
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()

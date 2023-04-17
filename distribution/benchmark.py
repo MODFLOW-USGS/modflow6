@@ -10,9 +10,9 @@ from pathlib import Path
 from typing import List, Tuple
 
 import flopy
-import pymake
 import pytest
 from modflow_devtools.build import meson_build
+from modflow_devtools.download import download_and_unzip, get_latest_version
 from modflow_devtools.misc import get_model_paths
 
 from utils import get_project_root_path
@@ -31,16 +31,15 @@ _soext = ".dll" if _is_windows else ".so"
 
 def download_previous_version(output_path: PathLike) -> Tuple[str, Path]:
     output_path = Path(output_path).expanduser().absolute()
-    version = pymake.repo_latest_version(github_repo=_github_repo, verify=_verify)
+    version = get_latest_version(_github_repo)
     url = (
         f"https://github.com/{_github_repo}"
         + f"/releases/download/{version}/mf{version}.zip"
     )
-    pymake.download_and_unzip(
+    download_and_unzip(
         url,
-        pth=str(output_path),
+        path=output_path,
         verbose=True,
-        verify=_verify,
     )
 
     return version, output_path / f"mf{version}"

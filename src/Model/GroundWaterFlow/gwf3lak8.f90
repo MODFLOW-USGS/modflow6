@@ -2,8 +2,9 @@ module LakModule
   !
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, LENTIMESERIESNAME, &
+                             IWETLAKE, MAXADPIT, &
                              DZERO, DPREC, DEM30, DEM9, DEM6, DEM5, &
-                             DEM4, DEM2, DEM1, DHALF, DP7, DONE, &
+                             DEM4, DEM2, DEM1, DHALF, DP7, DP999, DONE, &
                              DTWO, DPI, DTHREE, DEIGHT, DTEN, DHUNDRED, DEP20, &
                              DONETHIRD, DTWOTHIRDS, DFIVETHIRDS, &
                              DGRAVITY, DCD, &
@@ -25,11 +26,11 @@ module LakModule
   use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
   use SimModule, only: count_errors, store_error, store_error_unit
-  use GenericUtilitiesModule, only: sim_message
+  use GenericUtilitiesModule, only: sim_message, is_same
   use BlockParserModule, only: BlockParserType
   use BaseDisModule, only: DisBaseType
   use SimVariablesModule, only: errmsg
-  use MatrixModule
+  use MatrixBaseModule
   !
   implicit none
   !
@@ -52,6 +53,7 @@ module LakModule
     ! -- characters
     character(len=16), dimension(:), pointer, contiguous :: clakbudget => NULL()
     character(len=16), dimension(:), pointer, contiguous :: cauxcbc => NULL()
+    ! -- control variables
     ! -- integers
     integer(I4B), pointer :: iprhed => null()
     integer(I4B), pointer :: istageout => null()
@@ -68,7 +70,9 @@ module LakModule
     integer(I4B), pointer :: igwhcopt => NULL()
     integer(I4B), pointer :: iconvchk => NULL()
     integer(I4B), pointer :: iconvresidchk => NULL()
+    integer(I4B), pointer :: maxlakit => NULL() !< maximum number of iterations in LAK solve
     real(DP), pointer :: surfdep => NULL()
+    real(DP), pointer :: dmaxchg => NULL()
     real(DP), pointer :: delh => NULL()
     real(DP), pointer :: pdmax => NULL()
     integer(I4B), pointer :: check_attr => NULL()
@@ -260,6 +264,7 @@ module LakModule
     procedure, private :: lak_accumulate_chterm
     procedure, private :: lak_vol2stage
     procedure, private :: lak_solve
+    procedure, private :: lak_bisection
     procedure, private :: lak_calculate_available
     procedure, private :: lak_calculate_residual
     procedure, private :: lak_linear_interpolation
@@ -352,7 +357,9 @@ contains
     call mem_allocate(this%igwhcopt, 'IGWHCOPT', this%memoryPath)
     call mem_allocate(this%iconvchk, 'ICONVCHK', this%memoryPath)
     call mem_allocate(this%iconvresidchk, 'ICONVRESIDCHK', this%memoryPath)
+    call mem_allocate(this%maxlakit, 'MAXLAKIT', this%memoryPath)
     call mem_allocate(this%surfdep, 'SURFDEP', this%memoryPath)
+    call mem_allocate(this%dmaxchg, 'DMAXCHG', this%memoryPath)
     call mem_allocate(this%delh, 'DELH', this%memoryPath)
     call mem_allocate(this%pdmax, 'PDMAX', this%memoryPath)
     call mem_allocate(this%check_attr, 'CHECK_ATTR', this%memoryPath)
@@ -375,8 +382,10 @@ contains
     this%igwhcopt = 0
     this%iconvchk = 1
     this%iconvresidchk = 1
+    this%maxlakit = MAXADPIT
     this%surfdep = DZERO
-    this%delh = DEM5
+    this%dmaxchg = DEM5
+    this%delh = DP999 * this%dmaxchg
     this%pdmax = DEM1
     this%bditems = 11
     this%cbcauxitems = 1
@@ -2733,7 +2742,11 @@ contains
     call this%lak_calculate_sarea(ilak, stage, sa)
     ev = sa * this%evaporation(ilak)
     if (ev > avail) then
-      ev = -avail
+      if (is_same(avail, DPREC)) then
+        ev = DZERO
+      else
+        ev = -avail
+      end if
     else
       ev = -ev
     end if
@@ -3421,6 +3434,10 @@ contains
     character(len=*), parameter :: fmtlakbin = &
       "(4x, 'LAK ', 1x, a, 1x, ' WILL BE SAVED TO FILE: ', &
       &a, /4x, 'OPENED ON UNIT: ', I0)"
+    character(len=*), parameter :: fmtiter = &
+      &"(4x, 'MAXIMUM LAK ITERATION VALUE (',i0,') SPECIFIED.')"
+    character(len=*), parameter :: fmtdmaxchg = &
+      &"(4x, 'MAXIMUM STAGE CHANGE VALUE (',g0,') SPECIFIED.')"
 ! ------------------------------------------------------------------------------
     !
     found = .true.
@@ -3436,7 +3453,8 @@ contains
         this%istageout = getunit()
         call openfile(this%istageout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE', mode_opt=MNORMAL)
-        write (this%iout, fmtlakbin) 'STAGE', fname, this%istageout
+        write (this%iout, fmtlakbin) 'STAGE', trim(adjustl(fname)), &
+          this%istageout
       else
         call store_error('OPTIONAL STAGE KEYWORD MUST BE FOLLOWED BY FILEOUT')
       end if
@@ -3447,7 +3465,8 @@ contains
         this%ibudgetout = getunit()
         call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE', mode_opt=MNORMAL)
-        write (this%iout, fmtlakbin) 'BUDGET', fname, this%ibudgetout
+        write (this%iout, fmtlakbin) 'BUDGET', trim(adjustl(fname)), &
+          this%ibudgetout
       else
         call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
       end if
@@ -3458,7 +3477,8 @@ contains
         this%ibudcsv = getunit()
         call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
                       filstat_opt='REPLACE')
-        write (this%iout, fmtlakbin) 'BUDGET CSV', fname, this%ibudcsv
+        write (this%iout, fmtlakbin) 'BUDGET CSV', trim(adjustl(fname)), &
+          this%ibudcsv
       else
         call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
           &FILEOUT')
@@ -3470,7 +3490,8 @@ contains
         this%ipakcsv = getunit()
         call openfile(this%ipakcsv, this%iout, fname, 'CSV', &
                       filstat_opt='REPLACE', mode_opt=MNORMAL)
-        write (this%iout, fmtlakbin) 'PACKAGE_CONVERGENCE', fname, this%ipakcsv
+        write (this%iout, fmtlakbin) 'PACKAGE_CONVERGENCE', &
+          trim(adjustl(fname)), this%ipakcsv
       else
         call store_error('OPTIONAL PACKAGE_CONVERGENCE KEYWORD MUST BE '// &
                          'FOLLOWED BY FILEOUT')
@@ -3491,6 +3512,14 @@ contains
       end if
       this%surfdep = r
       write (this%iout, fmtlakeopt) 'SURFDEP', this%surfdep
+    case ('MAXIMUM_ITERATIONS')
+      this%maxlakit = this%parser%GetInteger()
+      write (this%iout, fmtiter) this%maxlakit
+    case ('MAXIMUM_STAGE_CHANGE')
+      r = this%parser%GetDouble()
+      this%dmaxchg = r
+      this%delh = DP999 * r
+      write (this%iout, fmtdmaxchg) this%dmaxchg
       !
       ! -- right now these are options that are only available in the
       !    development version and are not included in the documentation.
@@ -3871,10 +3900,10 @@ contains
           cycle
         end if
         !
-        ! -- Mark ibound for dry lakes; reset to 1 otherwise
+        ! -- Mark ibound for wet lakes or inactive lakes; reset to 1 otherwise
         blak = this%belev(j)
         if (hlak > blak .or. this%iboundpak(n) == 0) then
-          this%ibound(igwfnode) = 10000
+          this%ibound(igwfnode) = IWETLAKE
         else
           this%ibound(igwfnode) = 1
         end if
@@ -4022,6 +4051,7 @@ contains
     integer(I4B) :: icheck
     integer(I4B) :: ipakfail
     integer(I4B) :: locdhmax
+    integer(I4B) :: locresidmax
     integer(I4B) :: locdgwfmax
     integer(I4B) :: locdqoutmax
     integer(I4B) :: locdqfrommvrmax
@@ -4035,6 +4065,7 @@ contains
     real(DP) :: gwf0
     real(DP) :: gwf
     real(DP) :: dh
+    real(DP) :: resid
     real(DP) :: dgwf
     real(DP) :: hlak0
     real(DP) :: hlak
@@ -4047,6 +4078,7 @@ contains
     real(DP) :: qinf
     real(DP) :: ex
     real(DP) :: dhmax
+    real(DP) :: residmax
     real(DP) :: dgwfmax
     real(DP) :: dqoutmax
     real(DP) :: dqfrommvr
@@ -4058,10 +4090,12 @@ contains
     icheck = this%iconvchk
     ipakfail = 0
     locdhmax = 0
+    locresidmax = 0
     locdgwfmax = 0
     locdqoutmax = 0
     locdqfrommvrmax = 0
     dhmax = DZERO
+    residmax = DZERO
     dgwfmax = DZERO
     dqoutmax = DZERO
     dqfrommvrmax = DZERO
@@ -4081,7 +4115,7 @@ contains
         !
         ! -- determine the number of columns and rows
         ntabrows = 1
-        ntabcols = 9
+        ntabcols = 11
         if (this%noutlets > 0) then
           ntabcols = ntabcols + 2
         end if
@@ -4109,6 +4143,10 @@ contains
         tag = 'dvmax'
         call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
         tag = 'dvmax_loc'
+        call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        tag = 'residmax'
+        call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        tag = 'residmax_loc'
         call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
         tag = 'dgwfmax'
         call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
@@ -4145,7 +4183,15 @@ contains
         call this%lak_calculate_sarea(n, hlak, area)
         !
         ! -- set the Q to length factor
-        qtolfact = delt / area
+        if (area > DZERO) then
+          qtolfact = delt / area
+        else
+          qtolfact = DZERO
+        end if
+        !
+        ! -- difference in the residual
+        call this%lak_calculate_residual(n, hlak, resid)
+        resid = resid * qtolfact
         !
         ! -- change in gwf exchange
         dgwf = DZERO
@@ -4180,6 +4226,8 @@ contains
           locdhmax = n
           dhmax = dh
           locdgwfmax = n
+          residmax = resid
+          locresidmax = n
           dgwfmax = dgwf
           locdqoutmax = n
           dqoutmax = dqout
@@ -4189,6 +4237,10 @@ contains
           if (abs(dh) > abs(dhmax)) then
             locdhmax = n
             dhmax = dh
+          end if
+          if (abs(resid) > abs(residmax)) then
+            locresidmax = n
+            residmax = resid
           end if
           if (abs(dgwf) > abs(dgwfmax)) then
             locdgwfmax = n
@@ -4211,6 +4263,13 @@ contains
         dpak = dhmax
         write (cloc, "(a,'-',a)") &
           trim(this%packName), 'stage'
+        cpak = trim(cloc)
+      end if
+      if (ABS(residmax) > abs(dpak)) then
+        ipak = locresidmax
+        dpak = residmax
+        write (cloc, "(a,'-',a)") &
+          trim(this%packName), 'residual'
         cpak = trim(cloc)
       end if
       if (ABS(dgwfmax) > abs(dpak)) then
@@ -4249,6 +4308,8 @@ contains
         call this%pakcsvtab%add_term(kiter)
         call this%pakcsvtab%add_term(dhmax)
         call this%pakcsvtab%add_term(locdhmax)
+        call this%pakcsvtab%add_term(residmax)
+        call this%pakcsvtab%add_term(locresidmax)
         call this%pakcsvtab%add_term(dgwfmax)
         call this%pakcsvtab%add_term(locdgwfmax)
         if (this%noutlets > 0) then
@@ -4578,7 +4639,9 @@ contains
     call mem_deallocate(this%igwhcopt)
     call mem_deallocate(this%iconvchk)
     call mem_deallocate(this%iconvresidchk)
+    call mem_deallocate(this%maxlakit)
     call mem_deallocate(this%surfdep)
+    call mem_deallocate(this%dmaxchg)
     call mem_deallocate(this%delh)
     call mem_deallocate(this%pdmax)
     call mem_deallocate(this%check_attr)
@@ -5397,6 +5460,8 @@ contains
     real(DP) :: adh0
     real(DP) :: delh
     real(DP) :: ts
+    real(DP) :: area
+    real(DP) :: qtolfact
 ! --------------------------------------------------------------------------
     !
     ! -- set lupdate
@@ -5440,15 +5505,17 @@ contains
     end do
     !
     ! -- sum up overland runoff, inflows, and external flows into lake
-    !    (includes lake volume)
+    !    (includes maximum lake volume)
     do n = 1, this%nlakes
       hlak0 = this%xoldpak(n)
+      hlak = this%xnewpak(n)
       call this%lak_calculate_runoff(n, ro)
       call this%lak_calculate_inflow(n, qinf)
       call this%lak_calculate_external(n, ex)
-      ! --
       call this%lak_calculate_vol(n, hlak0, v0)
-      this%flwin(n) = this%surfin(n) + ro + qinf + ex + v0 / delt
+      call this%lak_calculate_vol(n, hlak, v1)
+      this%flwin(n) = this%surfin(n) + ro + qinf + ex + &
+                      max(v0, v1) / delt
     end do
     !
     ! -- sum up inflows from upstream outlets
@@ -5458,7 +5525,7 @@ contains
     end do
 
     iicnvg = 0
-    maxiter = 150
+    maxiter = this%maxlakit
 
     ! -- outer loop
     converge: do iter = 1, maxiter
@@ -5578,11 +5645,15 @@ contains
             !
             ! -- recalculate flwin
             hlak0 = this%xoldpak(n)
+            hlak = this%xnewpak(n)
             call this%lak_calculate_vol(n, hlak0, v0)
+            call this%lak_calculate_vol(n, hlak, v1)
             call this%lak_calculate_runoff(n, ro)
             call this%lak_calculate_inflow(n, qinf)
             call this%lak_calculate_external(n, ex)
-            this%flwin(n) = this%surfin(n) + ro + qinf + ex + v0 / delt
+            this%flwin(n) = this%surfin(n) + ro + qinf + ex + &
+                            max(v0, v1) / delt
+
             !
             ! -- compute new lake stage using Newton's method
             resid = this%precip(n) + this%evap(n) + this%withr(n) + ro + &
@@ -5591,8 +5662,6 @@ contains
             resid1 = this%precip1(n) + this%evap1(n) + this%withr1(n) + ro + &
                      qinf + ex + this%surfin(n) + &
                      this%surfout1(n) + this%seep1(n)
-
-            !call this%lak_calculate_residual(n, this%xnewpak(n), residb)
             !
             ! -- add storage changes for transient stress periods
             hlak = this%xnewpak(n)
@@ -5601,13 +5670,7 @@ contains
               resid = resid + (v0 - v1) / delt
               call this%lak_calculate_vol(n, hlak + delh, v1)
               resid1 = resid1 + (v0 - v1) / delt
-              !else
-              !  call this%lak_calculate_vol(n, hlak, v1)
-              !  resid = resid - v1 / delt
-              !  call this%lak_calculate_vol(n, hlak+delh, v1)
-              !  resid1 = resid1 - v1 / delt
             end if
-
             !
             ! -- determine the derivative and the stage change
             if (ABS(resid1 - resid) > DZERO) then
@@ -5630,14 +5693,12 @@ contains
             if (iter == 1) this%dh0(n) = dh
             adh = ABS(dh)
             adh0 = ABS(this%dh0(n))
-            if ((ts >= this%en2(n)) .or. (ts <= this%en1(n))) then
+            if ((ts >= this%en2(n)) .or. (ts < this%en1(n))) then
               ! -- use bisection if dh is increasing or updated stage is below the
               !    bottom of the lake
               if ((adh > adh0) .or. (ts - this%lakebot(n)) < DPREC) then
-                ibflg = 1
-                ts = DHALF * (this%en1(n) + this%en2(n))
-                call this%lak_calculate_residual(n, ts, residb)
-                dh = hlak - ts
+                residb = resid
+                call this%lak_bisection(n, ibflg, hlak, ts, dh, residb)
               end if
             end if
             !
@@ -5667,22 +5728,7 @@ contains
             !    or when convergence is slow
             if (ibflg == 1) then
               if (this%iseepc(n) > 7 .or. this%idhc(n) > 12) then
-                ibflg = 1
-                ts = DHALF * (this%en1(n) + this%en2(n))
-                call this%lak_calculate_residual(n, ts, residb)
-                dh = hlak - ts
-              end if
-            end if
-            if (ibflg == 1) then
-              ! -- change end points
-              ! -- root is between r1 and residb
-              if (this%r1(n) * residb < DZERO) then
-                this%en2(n) = ts
-                this%r2(n) = residb
-                ! -- root is between fp and f2
-              else
-                this%en1(n) = ts
-                this%r1(n) = residb
+                call this%lak_bisection(n, ibflg, hlak, ts, dh, residb)
               end if
             end if
           else
@@ -5694,7 +5740,23 @@ contains
           if (hlak < this%lakebot(n)) then
             hlak = this%lakebot(n)
           end if
-          if (ABS(dh) < delh) then
+          !
+          ! -- calculate surface area
+          call this%lak_calculate_sarea(n, hlak, area)
+          !
+          ! -- set the Q to length factor
+          if (area > DZERO) then
+            qtolfact = delt / area
+          else
+            qtolfact = DZERO
+          end if
+          !
+          ! -- recalculate the residual
+          call this%lak_calculate_residual(n, hlak, resid)
+          !
+          ! -- evaluate convergence
+          !if (ABS(dh) < delh) then
+          if (ABS(dh) < delh .and. abs(resid) * qtolfact < this%dmaxchg) then
             this%ncncvr(n) = 1
           end if
           this%xnewpak(n) = hlak
@@ -5721,6 +5783,59 @@ contains
     ! -- return
     return
   end subroutine lak_solve
+
+  !> @ brief Lake package bisection method
+    !!
+    !!  Use bisection method to find lake stage that reduces the residual
+    !!
+  !<
+  subroutine lak_bisection(this, n, ibflg, hlak, temporary_stage, dh, residual)
+    ! -- dummy
+    class(LakType), intent(inout) :: this
+    integer(I4B), intent(in) :: n !< lake number
+    integer(I4B), intent(inout) :: ibflg !< bisection flag
+    real(DP), intent(in) :: hlak !< lake stage
+    real(DP), intent(inout) :: temporary_stage !< temporary lake stage
+    real(DP), intent(inout) :: dh !< lake stage change
+    real(DP), intent(inout) :: residual !< lake residual
+    ! -- local
+    integer(I4B) :: i
+    real(DP) :: temporary_stage0
+    real(DP) :: residuala
+    real(DP) :: endpoint1
+    real(DP) :: endpoint2
+    ! -- code
+    ibflg = 1
+    temporary_stage0 = hlak
+    endpoint1 = this%en1(n)
+    endpoint2 = this%en2(n)
+    call this%lak_calculate_residual(n, temporary_stage, residuala)
+    if (hlak > endpoint1 .and. hlak < endpoint2) then
+      endpoint2 = hlak
+    end if
+    do i = 1, this%maxlakit
+      temporary_stage = DHALF * (endpoint1 + endpoint2)
+      call this%lak_calculate_residual(n, temporary_stage, residual)
+      if (abs(residual) == DZERO .or. &
+          abs(temporary_stage0 - temporary_stage) < this%dmaxchg) then
+        exit
+      end if
+      call this%lak_calculate_residual(n, endpoint1, residuala)
+      ! -- change end points
+      ! -- root is between temporary_stage and endpoint2
+      if (sign(DONE, residuala) == SIGN(DONE, residual)) then
+        endpoint1 = temporary_stage
+        ! -- root is between endpoint1 and temporary_stage
+      else
+        endpoint2 = temporary_stage
+      end if
+      temporary_stage0 = temporary_stage
+    end do
+    dh = hlak - temporary_stage
+    !
+    ! -- return
+    return
+  end subroutine lak_bisection
 
   subroutine lak_calculate_available(this, n, hlak, avail, &
                                      ra, ro, qinf, ex, headp)

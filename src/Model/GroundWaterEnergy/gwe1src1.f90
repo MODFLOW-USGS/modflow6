@@ -9,7 +9,7 @@ module GweSrcModule
                                   GetTimeSeriesLinkFromList
   use BlockParserModule, only: BlockParserType
   use GweInputDataModule, only: GweInputDataType
-  use MatrixModule
+  use MatrixBaseModule
   !
   implicit none
   !

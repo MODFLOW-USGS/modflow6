@@ -17,7 +17,7 @@ module GweMstModule
   use SimVariablesModule, only: errmsg, warnmsg
   use SimModule, only: store_error, count_errors, &
                        store_warning
-  use MatrixModule
+  use MatrixBaseModule
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
   use TspFmiModule, only: TspFmiType

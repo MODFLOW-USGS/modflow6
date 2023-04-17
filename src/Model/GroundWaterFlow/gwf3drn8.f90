@@ -11,7 +11,7 @@ module DrnModule
   use TdisModule, only: delt, totimc
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
-  use MatrixModule
+  use MatrixBaseModule
   !
   implicit none
   !
@@ -249,7 +249,7 @@ contains
       ! -- Error if no aux variable specified
       if (this%naux == 0) then
         write (errmsg, '(a,2(1x,a))') &
-          'AUXDDRNNAME WAS SPECIFIED AS', trim(adjustl(ddrnauxname)), &
+          'AUXDEPTHNAME WAS SPECIFIED AS', trim(adjustl(ddrnauxname)), &
           'BUT NO AUX VARIABLES SPECIFIED.'
         call store_error(errmsg)
       end if
@@ -266,7 +266,7 @@ contains
       ! -- Error if aux variable cannot be found
       if (this%iauxddrncol == 0) then
         write (errmsg, '(a,2(1x,a))') &
-          'AUXDDRNNAME WAS SPECIFIED AS', trim(adjustl(ddrnauxname)), &
+          'AUXDEPTHNAME WAS SPECIFIED AS', trim(adjustl(ddrnauxname)), &
           'BUT NO AUX VARIABLE FOUND WITH THIS NAME.'
         call store_error(errmsg)
       end if

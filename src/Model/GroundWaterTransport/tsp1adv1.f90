@@ -6,8 +6,8 @@ module TspAdvModule
   use BaseDisModule, only: DisBaseType
   use TspFmiModule, only: TspFmiType
   use TspAdvOptionsModule, only: TspAdvOptionsType
-  use MatrixModule
-  
+  use MatrixBaseModule
+
   implicit none
   private
   public :: TspAdvType

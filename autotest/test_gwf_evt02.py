@@ -1,35 +1,15 @@
 import os
-import sys
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["evt02"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
 
 
-def build_model(idx, dir):
+def build_model(idx, dir, exe):
 
     nlay, nrow, ncol = 1, 1, 3
     chdheads = list(np.linspace(1, 100))
@@ -53,7 +33,7 @@ def build_model(idx, dir):
     # build MODFLOW 6 files
     ws = dir
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
+        sim_name=name, version="mf6", exe_name=exe, sim_ws=ws
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -178,39 +158,18 @@ def eval_model(sim):
     fpth = os.path.join(sim.simpath, "evt02.cbc")
     assert os.path.isfile(fpth), "model did not run with nseg=1 in EVT input"
 
-    return
 
-
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_model, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_model, idxsim=idx)
-        test.run_mf6(sim)
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework()
+    mf6 = targets["mf6"]
+    test.build(lambda i, w: build_model(i, w, mf6), idx, str(function_tmpdir))
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_model, idxsim=idx
+        ),
+        str(function_tmpdir),
+    )

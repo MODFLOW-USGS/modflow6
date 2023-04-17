@@ -1,26 +1,13 @@
 import os
 
+import flopy
 import pytest
-
-from budget_file_compare import eval_bud_diff
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from flopy.utils.compare import eval_bud_diff
+from framework import TestFramework
+from simulation import TestSimulation
 
 paktest = "ims"
-
-ex = [
-    "ims_rcm",
-]
-exdirs = [os.path.join("temp", s) for s in ex]
+ex = ["ims_rcm"]
 
 # spatial discretization data
 nlay, nrow, ncol = 2, 5, 30
@@ -31,9 +18,8 @@ strt = 0.0
 chd_left = 10.0
 chd_right = 5.0
 
-#
-def build_model(idx, ws):
 
+def build_model(idx, ws):
     # static model data
     # temporal discretization
     nper = 1
@@ -135,20 +121,19 @@ def build_models(idx, base_ws):
 
 
 def eval_flows(sim):
-    idx = sim.idxsim
-    name = ex[idx]
+    name = sim.name
     print("evaluating flow results..." f"({name})")
 
-    fpth = os.path.join(exdirs[idx], f"{name}.dis.grb")
+    fpth = os.path.join(sim.simpath, f"{name}.dis.grb")
     ia = flopy.mf6.utils.MfGrdFile(fpth).ia
 
-    fpth = os.path.join(exdirs[idx], f"{name}.cbc")
+    fpth = os.path.join(sim.simpath, f"{name}.cbc")
     b0 = flopy.utils.CellBudgetFile(fpth, precision="double")
 
-    fpth = os.path.join(exdirs[idx], "mf6", f"{name}.cbc")
+    fpth = os.path.join(sim.simpath, "mf6", f"{name}.cbc")
     b1 = flopy.utils.CellBudgetFile(fpth, precision="double")
 
-    fpth = os.path.join(exdirs[idx], f"{name}.cbc.cmp.out")
+    fpth = os.path.join(sim.simpath, f"{name}.cbc.cmp.out")
     eval_bud_diff(fpth, b0, b1, ia=ia)
 
     # close the budget files
@@ -156,48 +141,20 @@ def eval_flows(sim):
     b1.close()
 
 
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, exdir",
-    list(enumerate(exdirs)),
+    "name",
+    ex,
 )
-def test_mf6model(idx, exdir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_models, idx, exdir)
-
-    # run the test models
-    test.run_mf6(
-        Simulation(
-            exdir,
+def test_mf6model(name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_models, 0, ws)
+    test.run(
+        TestSimulation(
+            name=name,
+            exe_dict=targets,
             exfunc=eval_flows,
-            idxsim=idx,
-        )
+            idxsim=0,
+        ),
+        ws,
     )
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test models
-    for idx, exdir in enumerate(exdirs):
-        test.build_mf6_models(build_models, idx, exdir)
-
-        sim = Simulation(
-            exdir,
-            exfunc=eval_flows,
-            idxsim=idx,
-        )
-        test.run_mf6(sim)
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()

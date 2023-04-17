@@ -20,7 +20,7 @@ module TspSsmModule
   use GweInputDataModule, only: GweInputDataType
   use TableModule, only: TableType, table_cr
   use GwtSpcModule, only: GwtSpcType
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
   public :: TspSsmType

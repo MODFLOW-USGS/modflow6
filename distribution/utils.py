@@ -10,7 +10,7 @@ from warnings import warn
 
 from modflow_devtools.markers import requires_exe
 
-_project_root_path = Path(__file__).parent.parent
+_project_root_path = Path(__file__).resolve().parent.parent
 
 
 def get_project_root_path():
@@ -69,7 +69,7 @@ def get_repo_path() -> Path:
         warn(
             f"REPOS_PATH environment variable missing, defaulting to parent of project root"
         )
-    return Path(repo_path) if repo_path else Path(__file__).parent.parent.parent
+    return Path(repo_path) if repo_path else _project_root_path
 
 
 def copytree(src: PathLike, dst: PathLike, symlinks=False, ignore=None):

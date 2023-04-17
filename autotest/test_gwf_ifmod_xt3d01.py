@@ -1,20 +1,11 @@
 import os
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
 from flopy.utils.lgrutil import Lgr
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 # Test for the interface model approach, when running
 # with a GWF-GWF exchange and XT3D applied on it.
@@ -41,9 +32,6 @@ from simulation import Simulation
 # confirm that there is no budget error.
 
 ex = ["ifmod_xt3d01"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
 
 # globally for convenience...
 useXT3D = True
@@ -314,8 +302,6 @@ def qxqyqz(fname, nlay, nrow, ncol):
 def eval_heads(sim):
     print("comparing heads and spec. discharges to analytical result...")
 
-    name = ex[sim.idxsim]
-
     fpth = os.path.join(sim.simpath, f"{parent_name}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads = hds.get_data()
@@ -487,41 +473,17 @@ def eval_heads(sim):
         obsvalues, [-50.0, 50.0, 0, 0.0]
     ), "boundname observations do not match expected results"
 
-    return
 
-
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, exdir",
-    list(enumerate(exdirs)),
+    "name",
+    ex,
 )
-def test_mf6model(idx, exdir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, exdir)
-
-    # run the test model
-    test.run_mf6(Simulation(exdir, exfunc=eval_heads, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test models
-    for idx, exdir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, exdir)
-
-        sim = Simulation(exdir, exfunc=eval_heads, idxsim=idx)
-        test.run_mf6(sim)
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(name, function_tmpdir, targets):
+    test = TestFramework()
+    test.build(build_model, 0, str(function_tmpdir))
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_heads, idxsim=0
+        ),
+        str(function_tmpdir),
+    )

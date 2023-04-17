@@ -10,7 +10,7 @@
 module GweGweExchangeModule
 
   use KindModule, only: DP, I4B, LGP
-  use SimVariablesModule, only: errmsg
+  use SimVariablesModule, only: errmsg, model_loc_idx
   use SimModule, only: store_error
   use BaseModelModule, only: BaseModelType, GetBaseModelFromList
   use BaseExchangeModule, only: BaseExchangeType, AddBaseExchangeToList
@@ -18,10 +18,10 @@ module GweGweExchangeModule
                              TABCENTER, TABLEFT, LENAUXNAME, DNODATA, &
                              LENMODELNAME
   use ListModule, only: ListType
-  use ListsModule, only: basemodellist, distmodellist
+  use ListsModule, only: basemodellist
+  use VirtualModelModule, only: get_virtual_model
   use DisConnExchangeModule, only: DisConnExchangeType
   use GweModule, only: GweModelType
-  use DistributedModelModule, only: GetDistModelFromList
   use TspMvtModule, only: TspMvtType
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
@@ -30,7 +30,7 @@ module GweGweExchangeModule
   use SimVariablesModule, only: errmsg
   use BlockParserModule, only: BlockParserType
   use TableModule, only: TableType, table_cr
-  use MatrixModule
+  use MatrixBaseModule
 
   implicit none
 
@@ -112,7 +112,7 @@ contains
   !! Create a new GWT to GWT exchange object.
   !!
   !<
-  subroutine gweexchange_create(filename, id, m1id, m2id)
+  subroutine gweexchange_create(filename, name, id, m1_id, m2_id)
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use BaseModelModule, only: BaseModelType
@@ -122,13 +122,14 @@ contains
     ! -- dummy
     character(len=*), intent(in) :: filename !< filename for reading
     integer(I4B), intent(in) :: id !< id for the exchange
-    integer(I4B), intent(in) :: m1id !< id for model 1
-    integer(I4B), intent(in) :: m2id !< id for model 2
+    character(len=*) :: name !< the exchange name
+    integer(I4B), intent(in) :: m1_id !< id for model 1
+    integer(I4B), intent(in) :: m2_id !< id for model 2
     ! -- local
     type(GweExchangeType), pointer :: exchange
     class(BaseModelType), pointer :: mb
     class(BaseExchangeType), pointer :: baseexchange
-    character(len=20) :: cint
+    integer(I4B) :: m1_index, m2_index
     !
     ! -- Create a new exchange and add it to the baseexchangelist container
     allocate (exchange)
@@ -137,8 +138,7 @@ contains
     !
     ! -- Assign id and name
     exchange%id = id
-    write (cint, '(i0)') id
-    exchange%name = 'GWE-GWE_'//trim(adjustl(cint))
+    exchange%name = name
     exchange%memoryPath = create_mem_path(exchange%name)
     !
     ! -- allocate scalars and set defaults
@@ -149,25 +149,27 @@ contains
     exchange%ixt3d = 1
     !
     ! -- set gwtmodel1
-    mb => GetBaseModelFromList(basemodellist, m1id)
+    m1_index = model_loc_idx(m1_id)
+    mb => GetBaseModelFromList(basemodellist, m1_index)
     select type (mb)
     type is (GweModelType)
       exchange%model1 => mb
       exchange%gwemodel1 => mb
     end select
-    exchange%dmodel1 => GetDistModelFromList(distmodellist, m1id)
+    exchange%v_model1 => get_virtual_model(m1_id)
     !
     ! -- set gwtmodel2
-    mb => GetBaseModelFromList(basemodellist, m2id)
+    m2_index = model_loc_idx(m2_id)
+    mb => GetBaseModelFromList(basemodellist, m2_index)
     select type (mb)
     type is (GweModelType)
       exchange%model2 => mb
       exchange%gwemodel2 => mb
     end select
-    exchange%dmodel2 => GetDistModelFromList(distmodellist, m2id)
+    exchange%v_model2 => get_virtual_model(m2_id)
     !
     ! -- Verify that gwt model1 is of the correct type
-    if (.not. associated(exchange%gwemodel1)) then
+    if (.not. associated(exchange%gwemodel1) .and. m1_index > 0) then
       write (errmsg, '(3a)') 'Problem with GWE-GWE exchange ', &
         trim(exchange%name), &
         '.  First specified GWE Model does not appear to be of the correct type.'
@@ -175,7 +177,7 @@ contains
     end if
     !
     ! -- Verify that gwf model2 is of the correct type
-    if (.not. associated(exchange%gwemodel2)) then
+    if (.not. associated(exchange%gwemodel2) .and. m2_index > 0) then
       write (errmsg, '(3a)') 'Problem with GWE-GWE exchange ', &
         trim(exchange%name), &
         '.  Second specified GWE Model does not appear to be of the correct type.'
@@ -213,9 +215,9 @@ contains
     !
     ! -- Ensure models are in same solution
     if (this%gwemodel1%idsoln /= this%gwemodel2%idsoln) then
-      call store_error('ERROR.  TWO MODELS ARE CONNECTED '// &
-                       'IN A GWE EXCHANGE BUT THEY ARE IN DIFFERENT '// &
-                       'SOLUTIONS. GWE MODELS MUST BE IN SAME SOLUTION: '// &
+      call store_error('ERROR.  TWO MODELS ARE CONNECTED IN A GWE '// &
+                       'EXCHANGE BUT THEY ARE IN DIFFERENT SOLUTIONS. '// &
+                       'GWE MODELS MUST BE IN SAME SOLUTION: '// &
                        trim(this%gwemodel1%name)//' '//trim(this%gwemodel2%name))
       call this%parser%StoreErrorUnit()
     end if
@@ -1244,17 +1246,13 @@ contains
   !! model flux calculation, then logic should be added here to
   !! set the return accordingly.
   !<
-  function use_interface_model(this) result(useIM)
-    class(GweExchangeType) :: this !<  GwtExchangeType
-    logical(LGP) :: useIM !< true when interface model should be used
+  function use_interface_model(this) result(use_im)
+    class(GweExchangeType) :: this !<  GweExchangeType
+    logical(LGP) :: use_im !< true when interface model should be used
 
-    ! if support is added in the future for simpler flow calcuation,
-    ! then set useIM as follows
-    !useIM = (this%ixt3d > 0)
-
-    ! For now set useIM to .true. since the interface model approach
+    ! For now set use_im to .true. since the interface model approach
     ! must currently be used for any GWT-GWT exchange.
-    useIM = .true.
+    use_im = .true.
 
   end function
 
@@ -1331,7 +1329,7 @@ contains
     strng = obsrv%IDstring
     icol = 1
     ! -- get exchange index
-    call urword(strng, icol, istart, istop, 0, n, r, iout, inunitobs)
+    call urword(strng, icol, istart, istop, 1, n, r, iout, inunitobs)
     read (strng(istart:istop), '(i10)', iostat=istat) iexg
     if (istat == 0) then
       obsrv%intPak1 = iexg
