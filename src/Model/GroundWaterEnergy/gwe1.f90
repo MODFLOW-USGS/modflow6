@@ -1382,7 +1382,8 @@ contains
     !
     ! -- Create packages that are tied directly to model
     call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis, this%tsplab)
-    call fmi_cr(this%fmi, this%name, this%infmi, this%iout, this%tsplab)
+    call fmi_cr(this%fmi, this%name, this%infmi, this%iout, this%tsplab, &
+                this%eqnsclfac)   ! kluge note: some are already created in TransportModel???
     call mst_cr(this%mst, this%name, this%inmst, this%iout, this%fmi, &
                 this%eqnsclfac, this%gwecommon)
     call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi, &
@@ -1391,7 +1392,8 @@ contains
                 this%fmi, this%eqnsclfac, this%gwecommon)
     call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, &
                 this%tsplab, this%eqnsclfac, this%gwecommon)
-    call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi)
+    call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi, &
+                this%eqnsclfac)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
     call tsp_obs_cr(this%obs, this%inobs)
     !

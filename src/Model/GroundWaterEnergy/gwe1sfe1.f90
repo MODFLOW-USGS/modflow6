@@ -3,22 +3,23 @@
 ! -- todo: save the sfe temperature into the sfr aux variable? (perhaps needed for GWT-GWE exchanges)
 ! -- todo: calculate the sfr VISC aux variable using temperature?
 !
-! SFR flows (sfrbudptr)     index var     SFE term              Transport Type
+! SFR flows (sfrbudptr)     index var     SFE term              Transport Type      ! kluge note: "SFE flows", etc?
 !---------------------------------------------------------------------------------
 
 ! -- terms from SFR that will be handled by parent APT Package
 ! FLOW-JA-FACE              idxbudfjf     FLOW-JA-FACE          cv2cv
 ! GWF (aux FLOW-AREA)       idxbudgwf     GWF                   cv2gwf
 ! STORAGE (aux VOLUME)      idxbudsto     none                  used for cv volumes
-! FROM-MVR                  idxbudfmvr    FROM-MVR              q * tmpext = this%qfrommvr(:)
+! FROM-MVR                  idxbudfmvr    FROM-MVR              q * tmpext = this%qfrommvr(:)  ! kluge note: include rhow*cpw in comments for various terms
 ! TO-MVR                    idxbudtmvr    TO-MVR                q * tfeat
 
 ! -- SFR terms
 ! RAINFALL                  idxbudrain    RAINFALL              q * train
-! EVAPORATION               idxbudevap    EVAPORATION           tfeat<tevap: q*tfeat, else: q*tevap (latent heat will likely need to modify these calcs in the futrue)
+! EVAPORATION               idxbudevap    EVAPORATION           tfeat<tevap: q*tfeat, else: q*tevap (latent heat will likely need to modify these calcs in the future) ! kluge note
 ! RUNOFF                    idxbudroff    RUNOFF                q * troff
 ! EXT-INFLOW                idxbudiflw    EXT-INFLOW            q * tiflw
 ! EXT-OUTFLOW               idxbudoutf    EXT-OUTFLOW           q * tfeat
+! STRMBD-COND               idxbudsbcd    STRMBD-COND           ! kluge note: expression for this
 
 ! -- terms from a flow file that should be skipped
 ! CONSTANT                  none          none                  none
@@ -63,6 +64,7 @@ module GweSfeModule
     integer(I4B), pointer :: idxbudroff => null() ! index of runoff terms in flowbudptr
     integer(I4B), pointer :: idxbudiflw => null() ! index of inflow terms in flowbudptr
     integer(I4B), pointer :: idxbudoutf => null() ! index of outflow terms in flowbudptr
+    integer(I4B), pointer :: idxbudsbcd => null() ! index of streambed conduction terms in flowbudptr
 
     real(DP), dimension(:), pointer, contiguous :: temprain => null() ! rainfall temperature
     real(DP), dimension(:), pointer, contiguous :: tempevap => null() ! evaporation temperature
@@ -258,6 +260,9 @@ contains
       case ('EXT-OUTFLOW')
         this%idxbudoutf = ip
         this%idxbudssm(ip) = 0
+      case ('STRMBD-COND')
+        this%idxbudsbcd = ip
+        this%idxbudssm(ip) = 0
       case ('TO-MVR')
         this%idxbudtmvr = ip
         this%idxbudssm(ip) = 0
@@ -299,12 +304,14 @@ contains
     integer(I4B), dimension(:), intent(in) :: idxglo
     class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
-    integer(I4B) :: j, n1, n2
+    integer(I4B) :: j, n1, n2, n
     integer(I4B) :: iloc
-    integer(I4B) :: iposd
+    integer(I4B) :: iposd, iposoffd
+    integer(I4B) :: ipossymd, ipossymoffd
     real(DP) :: rrate
     real(DP) :: rhsval
     real(DP) :: hcofval
+    real(DP) :: ctherm    ! kluge?
 ! ------------------------------------------------------------------------------
     !
     ! -- add rainfall contribution
@@ -362,13 +369,37 @@ contains
       end do
     end if
     !
+    ! -- add streambed conduction contribution
+    do j = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
+      !
+      ! -- set n to feature number and process if active feature
+      n = this%flowbudptr%budterm(this%idxbudgwf)%id1(j)
+      if (this%iboundpak(n) /= 0) then
+        !
+        ! -- set acoef and rhs to negative so they are relative to sfe and not gwe
+        ctherm = 0d0   ! kluge note: temporary placeholder until we can calculate an actual thermal conductance
+        !
+        ! -- add to sfe row
+        iposd = this%idxdglo(j)
+        iposoffd = this%idxoffdglo(j)
+        call matrix_sln%add_value_pos(iposd, ctherm)       ! kluge note: make sure the signs on ctherm are correct here and below
+        call matrix_sln%add_value_pos(iposoffd, -ctherm)
+        !
+        ! -- add to gwe row for sfe connection
+        ipossymd = this%idxsymdglo(j)
+        ipossymoffd = this%idxsymoffdglo(j)
+        call matrix_sln%add_value_pos(ipossymd, -ctherm)
+        call matrix_sln%add_value_pos(ipossymoffd, ctherm)
+      end if
+    end do
+    !
     ! -- Return
     return
   end subroutine sfe_fc_expanded
 
   !> @ brief Add terms specific to sfr to the explicit sfr solve
   !<
-  subroutine sfe_solve(this)
+  subroutine sfe_solve(this)  ! kluge note: will explicit solve still be possible/useful if there's streambed conduction???
     ! -- dummy
     class(GweSfeType) :: this
     ! -- local
@@ -416,6 +447,8 @@ contains
         this%dbuff(n1) = this%dbuff(n1) + rrate
       end do
     end if
+    !
+    ! kluge note: explicit streambed conduction terms???
     !
     ! -- Return
     return
@@ -520,6 +553,19 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
+    ! --
+    text = '     STRMBD-COND'
+    idx = idx + 1
+    maxlist = this%flowbudptr%budterm(this%idxbudsbcd)%maxlist
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%packName, &
+                                             this%name_model, &
+                                             this%packName, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    !
     ! -- return
     return
   end subroutine sfe_setup_budobj
@@ -538,7 +584,9 @@ contains
     ! -- local
     integer(I4B) :: j, n1, n2
     integer(I4B) :: nlist
+    integer(I4B) :: igwfnode
     real(DP) :: q
+    real(DP) :: ctherm   ! kluge?
     ! -- formats
 ! -----------------------------------------------------------------------------
 
@@ -592,6 +640,22 @@ contains
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
 
+    ! -- STRMBD-COND
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%maxbound)
+    do j = 1, this%flowbudptr%budterm(this%idxbudsbcd)%nlist
+      q = DZERO
+      n1 = this%flowbudptr%budterm(this%idxbudsbcd)%id1(j)
+      if (this%iboundpak(n1) /= 0) then
+        igwfnode = this%flowbudptr%budterm(this%idxbudsbcd)%id2(j)
+        ctherm = 0d0   ! kluge note: temporary placeholder until we can calculate an actual thermal conductance
+        q = ctherm * (x(igwfnode) - this%xnewpak(n1))    ! kluge note: check that sign is correct
+        q = -q ! flip sign so relative to advanced package feature
+      end if
+      call this%budobj%budterm(idx)%update_term(n1, igwfnode, q)
+      call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
+    end do
+
     !
     ! -- return
     return
@@ -620,6 +684,7 @@ contains
     call mem_allocate(this%idxbudroff, 'IDXBUDROFF', this%memoryPath)
     call mem_allocate(this%idxbudiflw, 'IDXBUDIFLW', this%memoryPath)
     call mem_allocate(this%idxbudoutf, 'IDXBUDOUTF', this%memoryPath)
+    call mem_allocate(this%idxbudsbcd, 'IDXBUDSBCD', this%memoryPath)
     !
     ! -- Initialize
     this%idxbudrain = 0
@@ -627,6 +692,7 @@ contains
     this%idxbudroff = 0
     this%idxbudiflw = 0
     this%idxbudoutf = 0
+    this%idxbudsbcd = 0
     !
     ! -- Return
     return
@@ -681,6 +747,7 @@ contains
     call mem_deallocate(this%idxbudroff)
     call mem_deallocate(this%idxbudiflw)
     call mem_deallocate(this%idxbudoutf)
+    call mem_deallocate(this%idxbudsbcd)
     !
     ! -- deallocate time series
     call mem_deallocate(this%temprain)
