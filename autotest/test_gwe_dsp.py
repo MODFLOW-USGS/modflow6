@@ -34,10 +34,9 @@ except:
     msg += " pip install flopy"
     raise Exception(msg)
 
-import targets
 
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 # Base simulation and model name and workspace
 
@@ -93,6 +92,11 @@ kd = 1.8168e-4
 strt_temp = np.zeros((nlay, nrow, ncol), dtype=float)
 dispersivity = 1.0
 dmcoef = 3.2519e-7  # Molecular diffusion coefficient
+
+# Set some static heat transport related model parameter values
+cpw = 4183.0
+rhow = 1000.0
+lhv = 2454.0
 
 # Set solver parameter values (and related)
 nouter, ninner = 100, 300
@@ -232,8 +236,8 @@ def build_model(idx, dir):
         head_filerecord="{}.hds".format(gwfname),
         budget_filerecord="{}.cbc".format(gwfname),
         headprintrecord=[("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")],
-        saverecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
-        printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
+        saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
+        printrecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
     )
 
     # Instantiating MODFLOW 6 groundwater transport package
@@ -264,6 +268,7 @@ def build_model(idx, dir):
     # Instantiating MODFLOW 6 transport discretization package
     flopy.mf6.ModflowGwedis(
         gwe,
+        nogrb=True,
         nlay=nlay,
         nrow=nrow,
         ncol=ncol,
@@ -308,10 +313,9 @@ def build_model(idx, dir):
         gwe,
         save_flows=True,
         porosity=prsity,
-        cpw=4183.0,
         cps=760.0,
-        rhow=1000.0,
         rhos=1500.0,
+        packagedata=[cpw, rhow, lhv],
         filename="{}.mst".format(gwename),
     )
 
@@ -338,8 +342,8 @@ def build_model(idx, dir):
         temperatureprintrecord=[
             ("COLUMNS", 10, "WIDTH", 15, "DIGITS", 6, "GENERAL")
         ],
-        saverecord=[("TEMPERATURE", "LAST"), ("BUDGET", "LAST")],
-        printrecord=[("TEMPERATURE", "LAST"), ("BUDGET", "LAST")],
+        saverecord=[("TEMPERATURE", "ALL"), ("BUDGET", "ALL")],
+        printrecord=[("TEMPERATURE", "ALL"), ("BUDGET", "ALL")],
     )
 
     # Instantiating MODFLOW 6 flow-transport exchange mechanism
@@ -487,10 +491,10 @@ def eval_model(sim):
 )
 def test_mf6model(idx, dir):
     # initialize testing framework
-    test = testing_framework()
+    test = TestFramework()
 
     # build the model
-    test.build_mf6_models(build_model, idx, dir)
+    test.build(build_model, idx, dir)
 
     # run the test model
     test.run_mf6(Simulation(dir, exfunc=eval_model, idxsim=idx))
@@ -498,7 +502,7 @@ def test_mf6model(idx, dir):
 
 def main():
     # initialize testing framework
-    test = testing_framework()
+    test = TestFramework()
 
     # run the test model
     for idx, dir in enumerate(exdirs):
