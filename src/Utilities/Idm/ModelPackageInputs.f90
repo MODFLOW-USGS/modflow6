@@ -162,7 +162,7 @@ contains
       allocate (pkgtypes(numpkgs))
       pkgtypes = [GWT_BASEPKG, GWT_MULTIPKG]
       !
-    case ('GWTE')
+    case ('GWE6')
       numpkgs = GWE_NBASEPKG + GWE_NMULTIPKG
       allocate (pkgtypes(numpkgs))
       pkgtypes = [GWE_BASEPKG, GWE_MULTIPKG]

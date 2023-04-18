@@ -68,7 +68,7 @@ contains
                         component_name, subcomponent_name, &
                         inunit, iout)
     character(len=*), intent(in) :: pkgtype !< pkgtype to load, such as DIS6, DISV6, NPF6
-    character(len=*), intent(in) :: component_type !< component type, such as GWF or GWT
+    character(len=*), intent(in) :: component_type !< component type, such as GWF, GWT or GWE
     character(len=*), intent(in) :: subcomponent_type !< subcomponent type, such as DIS or NPF
     character(len=*), intent(in) :: component_name !< component name, such as MYGWFMODEL
     character(len=*), intent(in) :: subcomponent_name !< subcomponent name, such as MYWELLPACKAGE
@@ -266,6 +266,12 @@ contains
     case ('GWT6')
       !
       call input_load('GWT6', 'GWT', 'NAM', mname, 'NAM', inunit, iout)
+      !
+      call modelpkgs_load(mtype, mfname, mname, iout)
+      !
+    case ('GWE6')
+      !
+      call input_load('GWE6', 'GWE', 'NAM', mname, 'NAM', inunit, iout)
       !
       call modelpkgs_load(mtype, mfname, mname, iout)
       !

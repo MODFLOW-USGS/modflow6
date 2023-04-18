@@ -124,7 +124,7 @@
 		<Filter Name="GroundWaterEnergy">
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1dsp1.f90"/>
-		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1dspidm.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1lke1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1mst1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1sfe1.f90"/>
@@ -283,6 +283,7 @@
 		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\StructVector.f90"/></Filter>
 		<Filter Name="selector">
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmDfnSelector.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\selector\IdmGweDfnSelector.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmGwfDfnSelector.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmGwtDfnSelector.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmSimDfnSelector.f90"/></Filter>
