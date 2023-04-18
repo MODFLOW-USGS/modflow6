@@ -124,11 +124,9 @@ contains
     iptc = 0
   end subroutine model_ptcchk
 
-  subroutine model_ptc(this, matrix, vec_x, vec_rhs, iptc, ptcf)
+  subroutine model_ptc(this, vec_residual, iptc, ptcf)
     class(NumericalModelType) :: this
-    class(MatrixBaseType), pointer :: matrix
-    class(VectorBaseType), pointer :: vec_x
-    class(VectorBaseType), pointer :: vec_rhs
+    class(VectorBaseType), pointer :: vec_residual
     integer(I4B), intent(inout) :: iptc
     real(DP), intent(inout) :: ptcf
   end subroutine model_ptc

@@ -11,7 +11,8 @@ module MatrixBaseModule
   contains
     procedure(init_if), deferred :: init
     procedure(destroy_if), deferred :: destroy
-    procedure(create_vector_if), deferred :: create_vector
+    procedure(create_vec_mm_if), deferred :: create_vec_mm
+    procedure(create_vec_if), deferred :: create_vec
 
     procedure(get_value_pos_if), deferred :: get_value_pos
     procedure(get_diag_value_if), deferred :: get_diag_value
@@ -32,6 +33,8 @@ module MatrixBaseModule
     procedure(get_aij_if), deferred :: get_aij
     procedure(get_row_offset_if), deferred :: get_row_offset
 
+    procedure(multiply_if), deferred :: multiply
+
   end type MatrixBaseType
 
   abstract interface
@@ -45,7 +48,7 @@ module MatrixBaseModule
       import MatrixBaseType
       class(MatrixBaseType) :: this
     end subroutine
-    function create_vector_if(this, n, name, mem_path) result(vec)
+    function create_vec_mm_if(this, n, name, mem_path) result(vec)
       import MatrixBaseType, VectorBaseType, I4B
       class(MatrixBaseType) :: this
       integer(I4B) :: n
@@ -53,6 +56,13 @@ module MatrixBaseModule
       character(len=*) :: mem_path
       class(VectorBaseType), pointer :: vec
     end function
+    function create_vec_if(this, n) result(vec)
+      import MatrixBaseType, VectorBaseType, I4B
+      class(MatrixBaseType) :: this
+      integer(I4B) :: n
+      class(VectorBaseType), pointer :: vec
+    end function
+
     function get_value_pos_if(this, ipos) result(value)
       import MatrixBaseType, I4B, DP
       class(MatrixBaseType) :: this
@@ -142,6 +152,12 @@ module MatrixBaseModule
       class(MatrixBaseType) :: this
       integer(I4B) :: offset
     end function
+    subroutine multiply_if(this, vec_x, vec_y)
+      import MatrixBaseType, VectorBaseType
+      class(MatrixBaseType) :: this
+      class(VectorBaseType) :: vec_x
+      class(VectorBaseType) :: vec_y
+    end subroutine
   end interface
 
 end module MatrixBaseModule
