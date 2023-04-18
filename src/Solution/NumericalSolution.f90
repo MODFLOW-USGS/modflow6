@@ -124,8 +124,6 @@ module NumericalSolutionModule
     real(DP), pointer :: ptcdel => null() !< PTC delta value
     real(DP), pointer :: ptcdel0 => null() !< initial PTC delta value
     real(DP), pointer :: ptcexp => null() !< PTC exponent
-    real(DP), pointer :: ptcthresh => null() !< PTC threshold value (0.001)
-    real(DP), pointer :: ptcrat => null() !< ratio of the PTC value and the minimum of the diagonal of AMAT used to determine if the PTC effect has decayed
     !
     ! -- adaptive time step
     real(DP), pointer :: atsfrac => null() !< adaptive time step faction
@@ -312,8 +310,6 @@ contains
     call mem_allocate(this%ptcdel, 'PTCDEL', this%memoryPath)
     call mem_allocate(this%ptcdel0, 'PTCDEL0', this%memoryPath)
     call mem_allocate(this%ptcexp, 'PTCEXP', this%memoryPath)
-    call mem_allocate(this%ptcthresh, 'PTCTHRESH', this%memoryPath)
-    call mem_allocate(this%ptcrat, 'PTCRAT', this%memoryPath)
     call mem_allocate(this%atsfrac, 'ATSFRAC', this%memoryPath)
     !
     ! -- initialize scalars
@@ -356,8 +352,6 @@ contains
     this%ptcdel = DZERO
     this%ptcdel0 = DZERO
     this%ptcexp = done
-    this%ptcthresh = DEM3
-    this%ptcrat = DZERO
     this%atsfrac = DONETHIRD
     !
     ! -- return
@@ -725,18 +719,6 @@ contains
             this%ptcexp = rval
             write (IOUT, '(1x,A,1x,g15.7)') &
               'PSEUDO-TRANSIENT CONTINUATION EXPONENT', this%ptcexp
-          end if
-        case ('DEV_PTC_THRESHOLD')
-          call this%parser%DevOpt()
-          rval = this%parser%GetDouble()
-          if (rval < DZERO) then
-            write (errmsg, '(a)') 'PTC_THRESHOLD MUST BE > 0.'
-            call store_error(errmsg)
-          else
-            this%iallowptc = 1
-            this%ptcthresh = rval
-            write (IOUT, '(1x,A,1x,g15.7)') &
-              'PSEUDO-TRANSIENT CONTINUATION THRESHOLD', this%ptcthresh
           end if
         case ('DEV_PTC_DEL0')
           call this%parser%DevOpt()
@@ -1301,8 +1283,6 @@ contains
     call mem_deallocate(this%ptcdel)
     call mem_deallocate(this%ptcdel0)
     call mem_deallocate(this%ptcexp)
-    call mem_deallocate(this%ptcthresh)
-    call mem_deallocate(this%ptcrat)
     call mem_deallocate(this%atsfrac)
     !
     ! -- return
@@ -1666,23 +1646,6 @@ contains
     iend = 0
     if (kiter == this%mxiter) then
       iend = 1
-    end if
-    !
-    ! -- Additional convergence check for pseudo-transient continuation
-    !    term. Evaluate if the ptc value added to the diagonal has
-    !    decayed sufficiently.
-    if (iptc > 0) then
-      if (this%icnvg /= 0) then
-        if (this%ptcrat > this%ptcthresh) then
-          this%icnvg = 0
-          cmsg = trim(cmsg)//'PTC'
-          if (iend /= 0) then
-            write (line, '(a)') &
-              'PSEUDO-TRANSIENT CONTINUATION CAUSED CONVERGENCE FAILURE'
-            call sim_message(line)
-          end if
-        end if
-      end if
     end if
     !
     ! -- write maximum dependent-variable change from linear solver to list file
@@ -2435,7 +2398,6 @@ contains
     real(DP) :: diagval
     real(DP) :: l2norm
     real(DP) :: ptcval
-    real(DP) :: diagmin
     real(DP) :: bnorm
     character(len=50) :: fname
     character(len=*), parameter :: fmtfname = "('mf6mat_', i0, '_', i0, &
@@ -2533,10 +2495,9 @@ contains
     if (iptct /= 0) then
       if (kiter == 1) then
         if (this%iptcout > 0) then
-          write (this%iptcout, '(A10,6(1x,A15),2(1x,A15))') 'OUTER ITER', &
+          write (this%iptcout, '(A10,6(1x,A15))') 'OUTER ITER', &
             '         PTCDEL', '        L2NORM0', '         L2NORM', &
-            '        RHSNORM', '       1/PTCDEL', '  DIAGONAL MIN.', &
-            ' RHSNORM/L2NORM', ' STOPPING CRIT.'
+            '        RHSNORM', '       1/PTCDEL', ' RHSNORM/L2NORM'
         end if
         if (this%ptcdel0 > DZERO) then
           this%ptcdel = this%ptcdel0
@@ -2568,23 +2529,21 @@ contains
       else
         ptcval = DONE
       end if
-      diagmin = DEP20
       bnorm = DZERO
       do ieq = 1, this%neq
         irow = ieq + this%matrix_offset
         if (this%active(ieq) > 0) then
           diagval = abs(this%system_matrix%get_diag_value(irow))
           bnorm = bnorm + this%rhs(ieq) * this%rhs(ieq)
-          if (diagval < diagmin) diagmin = diagval
           call this%system_matrix%add_diag_value(irow, -ptcval)
           this%rhs(ieq) = this%rhs(ieq) - ptcval * this%x(ieq)
         end if
       end do
       bnorm = sqrt(bnorm)
       if (this%iptcout > 0) then
-        write (this%iptcout, '(i10,6(1x,e15.7),2(1x,f15.6))') &
+        write (this%iptcout, '(i10,5(1x,e15.7),1(1x,f15.6))') &
           kiter, this%ptcdel, this%l2norm0, l2norm, bnorm, &
-          ptcval, diagmin, bnorm / l2norm, ptcval / diagmin
+          ptcval, bnorm / l2norm
       end if
       this%l2norm0 = l2norm
     end if
@@ -2631,14 +2590,6 @@ contains
       call this%linear_solver%solve(kiter, this%vec_rhs, this%vec_x)
       in_iter = this%linear_solver%iteration_number
       this%icnvg = this%linear_solver%is_converged
-    end if
-    !
-    ! -- ptc finalize - set ratio of ptc value added to the diagonal and the
-    !                   minimum value on the diagonal. This value will be used
-    !                   to determine if the make sure the ptc value has decayed
-    !                   sufficiently
-    if (iptct /= 0) then
-      this%ptcrat = ptcval / diagmin
     end if
     !
     ! -- return
