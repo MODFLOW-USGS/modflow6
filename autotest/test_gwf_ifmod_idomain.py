@@ -11,26 +11,18 @@ from simulation import TestSimulation
 # to the equivalent case where the domain is decomposed
 # and joined by a GWF-GWF exchange.
 #
-# In this case we test rewetting, which is also enabled in
-# the interface model and should give identical results.
+# In this case we test the use of idomain at the interface
 #
-# period 1: The first stress period we start almost dry and have the
-#           model fill up.
-# period 2: The BC on the left is lowered such that a part of the top
-#           layer dries. To test the interface, the value is chosen such 
-#           that the boundary cell on the left is DRY and the one on the 
-#           right isn't.
+#                   'refmodel'                 'leftmodel'     'rightmodel'
 #
-#                  'refmodel'               'leftmodel'    'rightmodel'
+#    layer 1:  1 1 1 1 0 0 1 1 1 1            1 1 1 1 0       0 1 1 1 1
+#    layer 2:  1 1 1 1 1 1 1 1 1 1     VS     1 1 1 1 1   +   1 1 1 1 1
+#    layer 3:  1 1 1 1 1 1 1 1 1 1            1 1 1 1 1       1 1 1 1 1
 #
-#    layer 1:  1 . . . . . . . 1            1 . . . . 1       1 . . 1
-#    layer 2:  1 . . . . . . . 1     VS     1 . . . . 1   +   1 . . 1
-#    layer 3:  1 . . . . . . . 1            1 . . . . 1       1 . . 1
-#
-# We assert equality on the head values. All models are part of the same
+# We assert equality on the head values. All models are part of a single
 # solution for convenience. Finally, the budget error is checked.
 
-ex = ["ifmod_rewet01"]
+ex = ["ifmod_ibound"]
 
 # some global convenience...:
 # model names
@@ -41,14 +33,23 @@ mname_right = "rightmodel"
 # solver criterion
 hclose_check = 1e-9
 max_inner_it = 300
-nper = 2
+nper = 1
 
 # model spatial discretization
 nlay = 3
-ncol = 15
-ncol_left = 10
+ncol = 10
+ncol_left = 5
 ncol_right = 5
 nrow = 1
+
+# idomain
+idomain = np.ones((nlay, nrow, ncol))
+idomain[0, 0, 4] = 0
+idomain[0, 0, 5] = 0
+idomain_left = np.ones((nlay, nrow, ncol_left))
+idomain_left[0, 0, 4] = 0
+idomain_right = np.ones((nlay, nrow, ncol_right))
+idomain_right[0, 0, 0] = 0
 
 lenx = 15.0 * 500.0
 leny = 10.0 * 500.0
@@ -68,19 +69,19 @@ tops = [150.0, 50.0, 0.0, -50.0]
 hk = 10.0
 
 # boundary stress period data for period 1 and 2
-h_left = [150.0, 20.0]
-h_right = 60.0
+h_left = 125.0
+h_right = 75.0
 
 # initial head
-h_start = -40.0
+h_start = 0.0 
 
 
 # head boundaries
-lchd1 = [
-    [(ilay, irow, 0), h_left[0]]
+lchd = [
+    [(ilay, irow, 0), h_left]
     for ilay in range(nlay)
     for irow in range(nrow)
-    if h_left[0] > tops[ilay + 1]
+    if h_left > tops[ilay + 1]
 ]
 rchd = [
     [(ilay, irow, ncol - 1), h_right]
@@ -94,25 +95,11 @@ rchd_right = [
     for irow in range(nrow)
     if h_right > tops[ilay + 1]
 ]
-chd1 = lchd1 + rchd
+chd = lchd + rchd
 
-chd_spd = {0: chd1}
-chd_spd_left = {0: lchd1}
+chd_spd = {0: chd}
+chd_spd_left = {0: lchd}
 chd_spd_right = {0: rchd_right}
-
-lchd2 = [
-    [(ilay, irow, 0), h_left[1]]
-    for ilay in range(nlay)
-    for irow in range(nrow)
-    if h_left[1] > tops[ilay + 1]
-]
-chd_spd[1] = lchd2 + rchd
-chd_spd_left[1] = lchd2
-chd_spd_right[1] = rchd_right
-
-# rewetting
-rewet_record = [("WETFCT", 1.0, "IWETIT", 1, "IHDWET", 1)]
-wetdry = -0.001
 
 
 def get_model(idx, dir):
@@ -167,14 +154,12 @@ def get_model(idx, dir):
 def add_refmodel(sim):
     global mname_ref
     global nlay, nrow, ncol
+    global idomain
     global delr, delc
     global shift_some_x
     global h_start
-    global k11
     global chd_spd
     global tops
-    global rewet_record
-    global wetdry
 
     gwf = flopy.mf6.ModflowGwf(sim, modelname=mname_ref, save_flows=True)
 
@@ -189,6 +174,7 @@ def add_refmodel(sim):
         yorigin=0.0,
         top=tops[0],
         botm=tops[1:],
+        idomain=idomain,
     )
 
     # initial conditions
@@ -198,10 +184,8 @@ def add_refmodel(sim):
     npf = flopy.mf6.ModflowGwfnpf(
         gwf,
         save_specific_discharge=True,
-        rewet_record=rewet_record,
-        icelltype=1,
+        icelltype=0,
         k=hk,
-        wetdry=wetdry,
     )
 
     # chd file
@@ -222,15 +206,12 @@ def add_refmodel(sim):
 def add_leftmodel(sim):
     global mname_left
     global nlay, nrow, ncol_left
+    global idomain_left
     global delr, delc
     global tops
     global h_start
     global h_left
-    global left_chd
-    global k11
     global chd_spd_left
-    global rewet_record
-    global wetdry
 
     gwf = flopy.mf6.ModflowGwf(sim, modelname=mname_left, save_flows=True)
     dis = flopy.mf6.ModflowGwfdis(
@@ -242,16 +223,15 @@ def add_leftmodel(sim):
         delc=delc,
         top=tops[0],
         botm=tops[1:],
+        idomain=idomain_left,
     )
     ic = flopy.mf6.ModflowGwfic(gwf, strt=h_start)
     npf = flopy.mf6.ModflowGwfnpf(
         gwf,
         save_specific_discharge=True,
         save_flows=True,
-        rewet_record=rewet_record,
-        icelltype=1,
+        icelltype=0,
         k=hk,
-        wetdry=wetdry,
     )
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd_left)
     oc = flopy.mf6.ModflowGwfoc(
@@ -268,16 +248,13 @@ def add_leftmodel(sim):
 def add_rightmodel(sim):
     global mname_right
     global nlay, nrow, ncol_right
+    global idomain_right
     global h_right
     global delr, delc
     global tops
     global h_start
-    global right_chd
-    global k11
     global shift_x, shift_y
     global chd_spd_right
-    global rewet_record
-    global wetdry
 
     gwf = flopy.mf6.ModflowGwf(sim, modelname=mname_right, save_flows=True)
     dis = flopy.mf6.ModflowGwfdis(
@@ -291,16 +268,15 @@ def add_rightmodel(sim):
         yorigin=shift_y,
         top=tops[0],
         botm=tops[1:],
+        idomain=idomain_right,
     )
     ic = flopy.mf6.ModflowGwfic(gwf, strt=h_start)
     npf = flopy.mf6.ModflowGwfnpf(
         gwf,
         save_specific_discharge=True,
         save_flows=True,
-        rewet_record=rewet_record,
-        icelltype=1,
-        k=hk,
-        wetdry=wetdry,
+        icelltype=0,   
+        k=hk
     )
     chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd_right)
     oc = flopy.mf6.ModflowGwfoc(
@@ -319,6 +295,7 @@ def add_gwfexchange(sim):
     global nrow
     global delc, delr
     global ncol_left
+    global idomain_left, idomain_right
 
     angldegx = 0.0
     cdist = delr
@@ -335,6 +312,8 @@ def add_gwfexchange(sim):
         ]
         for ilay in range(nlay)
         for irow in range(nrow)
+        if idomain_left[ilay, irow, ncol_left - 1] > 0 and 
+           idomain_right[ilay, irow, 0] > 0
     ]
     gwfgwf = flopy.mf6.ModflowGwfgwf(
         sim,
@@ -364,19 +343,15 @@ def compare_to_ref(sim):
     hds_r = flopy.utils.HeadFile(fpth)
 
     times = hds.get_times()
-    for iper, t in enumerate(times):        
+    for t in times:
         heads = hds.get_data(totim=t)
         heads_left = hds_l.get_data(totim=t)        
         heads_right = hds_r.get_data(totim=t)
         heads_2models = np.append(heads_left, heads_right, axis=2)
 
-        # in this test we want to have the top layer in the left model
-        # dry in period 2, but the cells in the right model should remain
-        # active. This tests the interface model for dealing with drying
-        # and wetting, and handling inactive cells, explicitly
-        if (iper == 1):
-            assert np.all(heads_left[0,0,:] == -1.0e+30), "left model, top layer should be DRY in period 2"
-            assert np.all(heads_right[0,0,:] > -1.0e+30), "right model, top layer should be WET in period 2"
+        # check idomain was used
+        assert heads[0, 0, 4] == 1.0e+30, "idomain was set to 0 for this cell"
+        assert heads[0, 0, 5] == 1.0e+30, "idomain was set to 0 for this cell"
 
         # compare heads
         maxdiff = np.amax(abs(heads - heads_2models))

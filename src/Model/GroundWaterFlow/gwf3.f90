@@ -631,40 +631,21 @@ contains
   !! for the current outer iteration
   !!
   !<
-  subroutine gwf_ptc(this, matrix, &
-                     vec_x, vec_rhs, iptc, ptcf)
-    ! modules
-    use ConstantsModule, only: DONE, DP9
+  subroutine gwf_ptc(this, vec_residual, iptc, ptcf)
+    ! -- modules
+    use ConstantsModule, only: DONE
     use TdisModule, only: DELT
     ! -- dummy
     class(GwfModelType) :: this
-    class(MatrixBaseType), pointer :: matrix
-    class(VectorBaseType), pointer :: vec_x
-    class(VectorBaseType), pointer :: vec_rhs
+    class(VectorBaseType), pointer :: vec_residual
     integer(I4B), intent(inout) :: iptc
     real(DP), intent(inout) :: ptcf
     ! -- local
-    integer(I4B) :: iptct
     integer(I4B) :: n
-    integer(I4B) :: jrow
-    integer(I4B) :: jrow_loc
-    integer(I4B) :: matrix_offset
-    integer(I4B) :: j
-    integer(I4B) :: jcol
-    integer(I4B) :: jcol_loc
+    integer(I4B) :: iptct
     real(DP) :: v
     real(DP) :: resid
-    real(DP), dimension(this%dis%nodes) :: resid_vec
-    real(DP), contiguous, dimension(:), pointer :: x
-    real(DP), contiguous, dimension(:), pointer :: rhs
     real(DP) :: ptcdelem1
-    integer(I4B) :: first_col
-    integer(I4B) :: last_col
-! ------------------------------------------------------------------------------
-    !
-    ! set pointers to vec_x and vec_rhs
-    x => vec_x%get_array()
-    rhs => vec_rhs%get_array()
     !
     ! -- set temporary flag indicating if pseudo-transient continuation should
     !    be used for this model and time step
@@ -681,41 +662,16 @@ contains
     !
     ! -- calculate pseudo-transient continuation factor for model
     if (iptct > 0) then
-      matrix_offset = matrix%get_row_offset()
       !
-      ! calculate the residual
-      do n = 1, this%dis%nodes
-        resid = DZERO
-        if (this%npf%ibound(n) > 0) then
-          jrow = n + this%moffset
-          jrow_loc = jrow - matrix_offset
-
-          ! diagonal and off-diagonal elements
-          first_col = matrix%get_first_col_pos(jrow)
-          last_col = matrix%get_last_col_pos(jrow)
-          do j = first_col, last_col
-            jcol = matrix%get_column(j)
-            jcol_loc = jcol - matrix_offset
-            if (jcol_loc < 1 .or. jcol_loc > size(x)) cycle ! temporary protection for parallel case
-            resid = resid + matrix%get_value_pos(j) * x(jcol_loc)
-          end do
-
-          ! subtract the right-hand side
-          resid = resid - rhs(jrow_loc)
-        end if
-        resid_vec(n) = resid
-      end do
-      !
-      ! calculate the pseudo-time step using the
-      ! calculated residual
+      ! -- calculate the pseudo-time step using the residual
       do n = 1, this%dis%nodes
         if (this%npf%ibound(n) < 1) cycle
         !
-        ! get the maximum volume of the cell (head at top of cell)
+        ! -- get the maximum volume of the cell (head at top of cell)
         v = this%dis%get_cell_volume(n, this%dis%top(n))
         !
-        ! set the residual
-        resid = resid_vec(n)
+        ! -- set the residual
+        resid = vec_residual%get_value_local(n)
         !
         ! -- calculate the reciprocal of the pseudo-time step
         !    resid [L3/T] / volume [L3] = [1/T]
@@ -727,13 +683,13 @@ contains
         if (ptcdelem1 > ptcf) ptcf = ptcdelem1
       end do
       !
-      ! protection for the case where the residuals are zero
+      ! -- protection for the case where the residuals are zero
       if (ptcf == DZERO) then
         ptcf = DONE / (DELT * DTEN)
       end if
     end if
-
-    ! reset ipc if needed
+    !
+    ! -- reset ipc if needed
     if (iptc == 0) then
       if (iptct > 0) iptc = 1
     end if
