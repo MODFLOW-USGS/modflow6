@@ -16,7 +16,7 @@ module ModelPackageInputsModule
 
   implicit none
   private
-  public :: NIUNIT_GWF, NIUNIT_GWT
+  public :: NIUNIT_GWF, NIUNIT_GWT, NIUNIT_GWE
   public :: ModelPackageInputsType
 
   ! -- GWF base package types, ordered for memload
@@ -52,9 +52,26 @@ module ModelPackageInputsModule
                    &'SFT6 ', 'MWT6 ', 'UZT6 ', 'API6 ', '     ', & ! 10
                    &40*'     '/ ! 50
 
+  ! -- GWE base package types, ordered for memload
+  integer(I4B), parameter :: GWE_NBASEPKG = 50
+  character(len=LENPACKAGETYPE), dimension(GWE_NBASEPKG) :: GWE_BASEPKG
+  data GWE_BASEPKG/'DIS6 ', 'DISV6', 'DISU6', '     ', '     ', & !  5
+                  &'IC6  ', 'FMI6 ', 'MST6 ', 'ADV6 ', '     ', & ! 10
+                  &'DSP6 ', 'SSM6 ', 'MVT6 ', 'OC6  ', '     ', & ! 15
+                  &'OBS6 ', '     ', '     ', '     ', '     ', & ! 20
+                  &30*'     '/ ! 50
+
+  ! -- GWE multi package types, ordered for memload
+  integer(I4B), parameter :: GWE_NMULTIPKG = 50
+  character(len=LENPACKAGETYPE), dimension(GWE_NMULTIPKG) :: GWE_MULTIPKG
+  data GWE_MULTIPKG/'TMP6 ', 'SRC6 ', 'LKE6 ', '     ', '     ', & !  5
+                   &'SFE6 ', 'MWE6 ', 'UZE6 ', 'API6 ', '     ', & ! 10
+                   &40*'     '/ ! 50
+
   ! -- size of supported model package arrays
   integer(I4B), parameter :: NIUNIT_GWF = GWF_NBASEPKG + GWF_NMULTIPKG
   integer(I4B), parameter :: NIUNIT_GWT = GWT_NBASEPKG + GWT_NMULTIPKG
+  integer(I4B), parameter :: NIUNIT_GWE = GWE_NBASEPKG + GWE_NMULTIPKG
 
   !> @brief derived type for loadable package type
   !!
@@ -145,6 +162,11 @@ contains
       allocate (pkgtypes(numpkgs))
       pkgtypes = [GWT_BASEPKG, GWT_MULTIPKG]
       !
+    case ('GWTE')
+      numpkgs = GWE_NBASEPKG + GWE_NMULTIPKG
+      allocate (pkgtypes(numpkgs))
+      pkgtypes = [GWE_BASEPKG, GWE_MULTIPKG]
+      !
     case default
     end select
     !
@@ -211,6 +233,14 @@ contains
       case ('GWT')
         do n = 1, GWT_NMULTIPKG
           if (GWT_MULTIPKG(n) == pkgtype) then
+            multi_pkg = .true.
+            exit
+          end if
+        end do
+        !
+      case ('GWE')
+        do  n = 1, GWE_NMULTIPKG
+          if (GWE_MULTIPKG(n) == pkgtype) then
             multi_pkg = .true.
             exit
           end if
