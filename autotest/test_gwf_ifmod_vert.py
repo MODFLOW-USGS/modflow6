@@ -27,7 +27,7 @@ layer 2/3:
 The exchange will have XT3D enabled so the head values in
 the child model should match the theory. In this case we
 just assert that they are equal for each column, something
-that is clearly not through when simulating without XT3D.
+that is clearly not true when simulating without XT3D.
 
 """
 import os
