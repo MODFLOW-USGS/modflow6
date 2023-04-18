@@ -27,6 +27,7 @@ module TransportModelModule
   use TspOcModule, only: TspOcType
   use TspObsModule, only: TspObsType
   use BudgetModule, only: BudgetType
+  use GweInputDataModule, only: GweInputDataType
   use MatrixBaseModule
 
   implicit none
@@ -100,7 +101,7 @@ module TransportModelModule
 
     contains
 
-  subroutine tsp_cr(this, filename, id, modelname, macronym, indis)  ! kluge note: not used/needed
+  subroutine tsp_cr(this, filename, id, modelname, macronym, indis, gwecommon)  ! kluge note: not used/needed
     ! -- modules
     use SimModule, only: store_error
     use MemoryManagerModule, only: mem_allocate
@@ -130,6 +131,7 @@ module TransportModelModule
     integer(I4B), intent(inout) :: indis
     character(len=*), intent(in) :: modelname
     character(len=*), intent(in) :: macronym
+    type(GweInputDataType), intent(in), optional :: gwecommon !< shared data container for use by multiple GWE packages
     ! -- local
     class(*), pointer :: mstobjPtr
     !type(NameFileType) :: namefile_obj
@@ -183,7 +185,11 @@ module TransportModelModule
     call budget_cr(this%budget, this%name, this%tsplab)
     !
     ! -- create model packages
-    call this%create_packages(indis)
+    if (present(gwecommon)) then
+      call this%create_packages(indis, gwecommon)
+    else
+      call this%create_packages(indis)
+    end if
     !
     ! -- Open namefile and set iout
     !call namefile_obj%init(this%filename, 0)
@@ -908,7 +914,7 @@ module TransportModelModule
   
   !> @brief Source package info and begin to process
   !<
-  subroutine create_packages(this, indis)
+  subroutine create_packages(this, indis, gwecommon)
     ! -- modules
     use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
     use CharacterStringModule, only: CharacterStringType
@@ -931,6 +937,7 @@ module TransportModelModule
     ! -- dummy
     class(TransportModelType) :: this
     integer(I4B), intent(inout) :: indis ! DIS enabled flag
+    type(GweInputDataType), intent(in), optional :: gwecommon !< shared data container for use by multiple GWE packages
     ! -- local
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: pkgtypes => null()
@@ -1013,10 +1020,12 @@ module TransportModelModule
     call fmi_cr(this%fmi, this%name, this%infmi, this%iout, this%tsplab,       &
                 this%eqnsclfac)
     !call mst_cr(this%mst, this%name, this%inmst, this%iout, this%fmi)
-    call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi, this%eqnsclfac)
+    call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi, & 
+                this%eqnsclfac)
     !call dsp_cr(this%dsp, this%name, mempathdsp, this%indsp, this%iout, this%fmi)
-    call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, this%tsplab, this%eqnsclfac)
-    call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi,          &
+    call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, &
+                this%tsplab, this%eqnsclfac, gwecommon)
+    call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi, &
                 this%eqnsclfac)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
     call tsp_obs_cr(this%obs, this%inobs)

@@ -712,7 +712,8 @@ contains
     ! -- Override ibudfl and idvprint flags for nonconvergence
     !    and end of period
     ibudfl = this%oc%set_print_flag('BUDGET', this%icnvg, endofperiod)
-    idvprint = this%oc%set_print_flag(trim(this%tsplab%depvartype), this%icnvg, endofperiod)
+    idvprint = this%oc%set_print_flag(trim(this%tsplab%depvartype), &
+                                      this%icnvg, endofperiod)
     !
     !   Calculate and save observations
     call this%gwt_ot_obs()

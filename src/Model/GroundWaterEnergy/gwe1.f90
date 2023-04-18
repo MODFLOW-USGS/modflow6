@@ -22,13 +22,13 @@ module GweModule
   public :: gwe_cr
   public :: GweModelType
   public :: CastAsGweModel
-
+  public :: niunit
+  
   type, extends(TransportModelType) :: GweModelType
 
     type(GweInputDataType), pointer :: gwecommon => null() !< container for data shared with multiple packages
     type(GweMstType), pointer :: mst => null() !< mass storage and transfer package
     type(GweDspType), pointer :: dsp => null() !< dispersion package
-    !type(BudgetType), pointer :: budget => null() ! budget object
     !integer(I4B), pointer :: inic => null() ! unit number IC
     !integer(I4B), pointer :: infmi => null() ! unit number FMI
     !integer(I4B), pointer :: inmvt => null() ! unit number MVT
@@ -56,7 +56,7 @@ module GweModule
     procedure :: model_da => gwe_da
     procedure :: model_bdentry => gwe_bdentry
 
-    procedure :: allocate_scalars
+    procedure :: allocate_gwe_scalars
     procedure, private :: package_create
     !procedure, private :: ftype_check
     procedure :: get_iasym => gwe_get_iasym
@@ -65,10 +65,10 @@ module GweModule
     procedure, private :: gwe_ot_dv
     procedure, private :: gwe_ot_bdsummary
     procedure, private :: gwe_ot_obs
-    procedure, private :: create_packages
+    procedure, private :: create_gwe_specific_packages
     procedure, private :: create_bndpkgs
-    procedure, private :: create_lstfile
-    procedure, private :: log_namfile_options
+    !procedure, private :: create_lstfile
+    !procedure, private :: log_namfile_options
 
   end type GweModelType
 
@@ -121,7 +121,7 @@ contains
     integer(I4B), intent(in) :: id
     character(len=*), intent(in) :: modelname
     ! -- local
-    integer(I4B) :: indis, indis6, indisu6, indisv6
+    integer(I4B) :: indis !, indis6, indisu6, indisv6
     integer(I4B) :: ipakid, i, j, iu, ipaknum
     character(len=LINELENGTH) :: errmsg
     character(len=LENPACKAGENAME) :: pakname
@@ -141,51 +141,54 @@ contains
     ! -- Set memory path before allocation in memory manager can be done
     this%memoryPath = create_mem_path(modelname)
     !
-    call this%allocate_scalars(modelname)
+    call this%allocate_tsp_scalars(modelname)
     model => this
     call AddBaseModelToList(basemodellist, model)
     !
     ! -- Assign values
-    this%filename = filename
-    this%name = modelname
-    this%macronym = 'GWE'
-    this%id = id
-    !
-    ! -- set input model namfile memory path
-    input_mempath = create_mem_path(modelname, 'NAM', idm_context)
-    !
-    ! -- copy option params from input context
-    call mem_set_value(lst_fname, 'LIST', input_mempath, found%list)
-    call mem_set_value(this%iprpak, 'PRINT_INPUT', input_mempath, &
-                       found%print_input)
-    call mem_set_value(this%iprflow, 'PRINT_FLOWS', input_mempath, &
-                       found%print_flows)
-    call mem_set_value(this%ipakcb, 'SAVE_FLOWS', input_mempath, found%save_flows)
-    !
-    ! -- create the list file
-    call this%create_lstfile(lst_fname, filename, found%list)
-    !
-    ! -- activate save_flows if found
-    if (found%save_flows) then
-      this%ipakcb = -1
-    end if
-    !
-    ! -- Instantiate generalized labels
-    call tsplabels_cr(this%tsplab, this%name)
+    !this%filename = filename
+    !this%name = modelname
+    !this%macronym = 'GWE'
+    !this%id = id
     !
     ! -- Instantiate shared data container
     call gweshared_dat_cr(this%gwecommon)
     !
+    ! -- Call parent class routine
+    call this%tsp_cr(filename, id, modelname, 'GWE', indis, this%gwecommon)
+    !
+    ! -- set input model namfile memory path
+    !input_mempath = create_mem_path(modelname, 'NAM', idm_context)
+    !
+    ! -- copy option params from input context
+    !call mem_set_value(lst_fname, 'LIST', input_mempath, found%list)
+    !call mem_set_value(this%iprpak, 'PRINT_INPUT', input_mempath, &
+    !                   found%print_input)
+    !call mem_set_value(this%iprflow, 'PRINT_FLOWS', input_mempath, &
+    !                   found%print_flows)
+    !call mem_set_value(this%ipakcb, 'SAVE_FLOWS', input_mempath, found%save_flows)
+    !
+    ! -- create the list file
+    !call this%create_lstfile(lst_fname, filename, found%list)
+    !
+    ! -- activate save_flows if found
+    !if (found%save_flows) then
+    !  this%ipakcb = -1
+    !end if
+    !
+    ! -- Instantiate generalized labels
+    !call tsplabels_cr(this%tsplab, this%name)
+    !
     ! -- log set options
-    if (this%iout > 0) then
-      call this%log_namfile_options(found)
-    end if
+    !if (this%iout > 0) then
+    !  call this%log_namfile_options(found)
+    !end if
     !
     ! -- Create utility objects
-    call budget_cr(this%budget, this%name, this%tsplab)
+    !call budget_cr(this%budget, this%name, this%tsplab)
     !
     ! -- create model packages
-    call this%create_packages()
+    call this%create_gwe_specific_packages(indis)
     !
     ! -- return
     return
@@ -201,6 +204,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use ModelPackageInputsModule, only: NIUNIT_GWE
     use TspLabelsModule, only: setTspLabels
     use GweInputDataModule, only: gweshared_dat_df
     ! -- dummy
@@ -1018,7 +1022,7 @@ contains
     return
   end function gwe_get_iasym
 
-  subroutine allocate_scalars(this, modelname)
+  subroutine allocate_gwe_scalars(this, modelname)
 ! ******************************************************************************
 ! allocate_scalars -- Allocate memory for non-allocatable members
 ! ******************************************************************************
@@ -1058,7 +1062,7 @@ contains
     !
     ! -- return
     return
-  end subroutine allocate_scalars
+  end subroutine allocate_gwe_scalars
 
   subroutine package_create(this, filtyp, ipakid, ipaknum, pakname, inunit, &
                             iout)
@@ -1283,7 +1287,7 @@ contains
 
   !> @brief Source package info and begin to process
   !<
-  subroutine create_packages(this)
+  subroutine create_gwe_specific_packages(this, indis)
     ! -- modules
     use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
     use CharacterStringModule, only: CharacterStringType
@@ -1291,20 +1295,21 @@ contains
     use MemoryManagerModule, only: mem_setptr
     use MemoryHelperModule, only: create_mem_path
     use SimVariablesModule, only: idm_context
-    use GwfDisModule, only: dis_cr
-    use GwfDisvModule, only: disv_cr
-    use GwfDisuModule, only: disu_cr
-    use TspIcModule, only: ic_cr
-    use TspFmiModule, only: fmi_cr
+    !use GwfDisModule, only: dis_cr
+    !use GwfDisvModule, only: disv_cr
+    !use GwfDisuModule, only: disu_cr
+    !use TspIcModule, only: ic_cr
+    !use TspFmiModule, only: fmi_cr
     use GweMstModule, only: mst_cr
-    use TspAdvModule, only: adv_cr
+    !use TspAdvModule, only: adv_cr
     use GweDspModule, only: dsp_cr
-    use TspSsmModule, only: ssm_cr
-    use TspMvtModule, only: mvt_cr
-    use TspOcModule, only: oc_cr
-    use TspObsModule, only: tsp_obs_cr
+    !use TspSsmModule, only: ssm_cr
+    !use TspMvtModule, only: mvt_cr
+    !use TspOcModule, only: oc_cr
+    !use TspObsModule, only: tsp_obs_cr
     ! -- dummy
     class(GweModelType) :: this
+    integer(I4B), intent(in) :: indis
     ! -- local
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: pkgtypes => null()
@@ -1321,7 +1326,7 @@ contains
     integer(I4B), pointer :: inunit
     integer(I4B), dimension(:), allocatable :: bndpkgs
     integer(I4B) :: n
-    integer(I4B) :: indis = 0 ! DIS enabled flag
+    !integer(I4B) :: indis = 0 ! DIS enabled flag
     character(len=LENMEMPATH) :: mempathdsp = ''
     !
     ! -- set input memory paths, input/model and input/model/namfile
@@ -1343,34 +1348,34 @@ contains
       !
       ! -- create dis package as it is a prerequisite for other packages
       select case (pkgtype)
-      case ('DIS6')
-        indis = 1
-        call dis_cr(this%dis, this%name, mempath, indis, this%iout)
-      case ('DISV6')
-        indis = 1
-        call disv_cr(this%dis, this%name, mempath, indis, this%iout)
-      case ('DISU6')
-        indis = 1
-        call disu_cr(this%dis, this%name, mempath, indis, this%iout)
-      case ('IC6')
-        this%inic = inunit
-      case ('FMI6')
-        this%infmi = inunit
-      case ('MVT6')
-        this%inmvt = inunit
+      !case ('DIS6')
+      !  indis = 1
+      !  call dis_cr(this%dis, this%name, mempath, indis, this%iout)
+      !case ('DISV6')
+      !  indis = 1
+      !  call disv_cr(this%dis, this%name, mempath, indis, this%iout)
+      !case ('DISU6')
+      !  indis = 1
+      !  call disu_cr(this%dis, this%name, mempath, indis, this%iout)
+      !case ('IC6')
+      !  this%inic = inunit
+      !case ('FMI6')
+      !  this%infmi = inunit
+      !case ('MVT6')
+      !  this%inmvt = inunit
       case ('MST6')
         this%inmst = inunit
-      case ('ADV6')
-        this%inadv = inunit
-    case ('DSP6')
+      !case ('ADV6')
+      !  this%inadv = inunit
+      case ('DSP6')
         this%indsp = 1
         mempathdsp = mempath
-      case ('SSM6')
-        this%inssm = inunit
-      case ('OC6')
-        this%inoc = inunit
-      case ('OBS6')
-        this%inobs = inunit
+      !case ('SSM6')
+      !  this%inssm = inunit
+      !case ('OC6')
+      !  this%inoc = inunit
+      !case ('OBS6')
+      !  this%inobs = inunit
       case ('TMP6', 'SRC6', 'LKE6', 'SFE6', &
             'MWE6', 'UZE6', '    ', 'API6')
         call expandarray(bndpkgs)
@@ -1381,112 +1386,112 @@ contains
     end do
     !
     ! -- Create packages that are tied directly to model
-    call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis, this%tsplab)
-    call fmi_cr(this%fmi, this%name, this%infmi, this%iout, this%tsplab, &
-                this%eqnsclfac)   ! kluge note: some are already created in TransportModel???
+    !call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis, this%tsplab)
+    !call fmi_cr(this%fmi, this%name, this%infmi, this%iout, this%tsplab, &
+    !            this%eqnsclfac)   ! kluge note: some are already created in TransportModel???
     call mst_cr(this%mst, this%name, this%inmst, this%iout, this%fmi, &
                 this%eqnsclfac, this%gwecommon)
-    call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi, &
-                this%eqnsclfac)
+    !call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi, &
+    !            this%eqnsclfac)
     call dsp_cr(this%dsp, this%name, mempathdsp, this%indsp, this%iout, &
                 this%fmi, this%eqnsclfac, this%gwecommon)
     call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, &
                 this%tsplab, this%eqnsclfac, this%gwecommon)
-    call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi, &
-                this%eqnsclfac)
-    call oc_cr(this%oc, this%name, this%inoc, this%iout)
-    call tsp_obs_cr(this%obs, this%inobs)
+    !call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi, &
+    !            this%eqnsclfac)
+    !call oc_cr(this%oc, this%name, this%inoc, this%iout)
+    !call tsp_obs_cr(this%obs, this%inobs)
     !
     ! -- Check to make sure that required ftype's have been specified
     call this%ftype_check(indis)
     !
     call this%create_bndpkgs(bndpkgs, pkgtypes, pkgnames, mempaths, inunits)
 
-  end subroutine create_packages
+  end subroutine create_gwe_specific_packages
 
-  subroutine create_lstfile(this, lst_fname, model_fname, defined)
-    ! -- modules
-    use KindModule, only: LGP
-    use InputOutputModule, only: openfile, getunit
-    ! -- dummy
-    class(GweModelType) :: this
-    character(len=*), intent(inout) :: lst_fname
-    character(len=*), intent(in) :: model_fname
-    logical(LGP), intent(in) :: defined
-    ! -- local
-    integer(I4B) :: i, istart, istop
-    !
-    ! -- set list file name if not provided
-    if (.not. defined) then
-      !
-      ! -- initialize
-      lst_fname = ' '
-      istart = 0
-      istop = len_trim(model_fname)
-      !
-      ! -- identify '.' character position from back of string
-      do i = istop, 1, -1
-        if (model_fname(i:i) == '.') then
-          istart = i
-          exit
-        end if
-      end do
-      !
-      ! -- if not found start from string end
-      if (istart == 0) istart = istop + 1
-      !
-      ! -- set list file name
-      lst_fname = model_fname(1:istart)
-      istop = istart + 3
-      lst_fname(istart:istop) = '.lst'
-    end if
-    !
-    ! -- create the list file
-    this%iout = getunit()
-    call openfile(this%iout, 0, lst_fname, 'LIST', filstat_opt='REPLACE')
-    !
-    ! -- write list file header
-    call write_listfile_header(this%iout, 'GROUNDWATER ENERGY TRANSPORT MODEL (GWE)')
-    !
-    ! -- return
-    return
-  end subroutine create_lstfile
+!  subroutine create_lstfile(this, lst_fname, model_fname, defined)
+!    ! -- modules
+!    use KindModule, only: LGP
+!    use InputOutputModule, only: openfile, getunit
+!    ! -- dummy
+!    class(GweModelType) :: this
+!    character(len=*), intent(inout) :: lst_fname
+!    character(len=*), intent(in) :: model_fname
+!    logical(LGP), intent(in) :: defined
+!    ! -- local
+!    integer(I4B) :: i, istart, istop
+!    !
+!    ! -- set list file name if not provided
+!    if (.not. defined) then
+!      !
+!      ! -- initialize
+!      lst_fname = ' '
+!      istart = 0
+!      istop = len_trim(model_fname)
+!      !
+!      ! -- identify '.' character position from back of string
+!      do i = istop, 1, -1
+!        if (model_fname(i:i) == '.') then
+!          istart = i
+!          exit
+!        end if
+!      end do
+!      !
+!      ! -- if not found start from string end
+!      if (istart == 0) istart = istop + 1
+!      !
+!      ! -- set list file name
+!      lst_fname = model_fname(1:istart)
+!      istop = istart + 3
+!      lst_fname(istart:istop) = '.lst'
+!    end if
+!    !
+!    ! -- create the list file
+!    this%iout = getunit()
+!    call openfile(this%iout, 0, lst_fname, 'LIST', filstat_opt='REPLACE')
+!    !
+!    ! -- write list file header
+!    call write_listfile_header(this%iout, 'GROUNDWATER ENERGY TRANSPORT MODEL (GWE)')
+!    !
+!    ! -- return
+!    return
+!  end subroutine create_lstfile
+!
+!  !> @brief Write model namfile options to list file
+!  !<
+!  subroutine log_namfile_options(this, found)
+!    use GwfNamInputModule, only: GwfNamParamFoundType
+!    class(GweModelType) :: this
+!    type(GwfNamParamFoundType), intent(in) :: found
+!
+!    write (this%iout, '(1x,a)') 'NAMEFILE OPTIONS:'
+!
+!    if (found%newton) then
+!      write (this%iout, '(4x,a)') &
+!        'NEWTON-RAPHSON method enabled for the model.'
+!      if (found%under_relaxation) then
+!        write (this%iout, '(4x,a,a)') &
+!          'NEWTON-RAPHSON UNDER-RELAXATION based on the bottom ', &
+!          'elevation of the model will be applied to the model.'
+!      end if
+!    end if
+!
+!    if (found%print_input) then
+!      write (this%iout, '(4x,a)') 'STRESS PACKAGE INPUT WILL BE PRINTED '// &
+!        'FOR ALL MODEL STRESS PACKAGES'
+!    end if
+!
+!    if (found%print_flows) then
+!      write (this%iout, '(4x,a)') 'PACKAGE FLOWS WILL BE PRINTED '// &
+!        'FOR ALL MODEL PACKAGES'
+!    end if
+!
+!    if (found%save_flows) then
+!      write (this%iout, '(4x,a)') &
+!        'FLOWS WILL BE SAVED TO BUDGET FILE SPECIFIED IN OUTPUT CONTROL'
+!    end if
 
-  !> @brief Write model namfile options to list file
-  !<
-  subroutine log_namfile_options(this, found)
-    use GwfNamInputModule, only: GwfNamParamFoundType
-    class(GweModelType) :: this
-    type(GwfNamParamFoundType), intent(in) :: found
-
-    write (this%iout, '(1x,a)') 'NAMEFILE OPTIONS:'
-
-    if (found%newton) then
-      write (this%iout, '(4x,a)') &
-        'NEWTON-RAPHSON method enabled for the model.'
-      if (found%under_relaxation) then
-        write (this%iout, '(4x,a,a)') &
-          'NEWTON-RAPHSON UNDER-RELAXATION based on the bottom ', &
-          'elevation of the model will be applied to the model.'
-      end if
-    end if
-
-    if (found%print_input) then
-      write (this%iout, '(4x,a)') 'STRESS PACKAGE INPUT WILL BE PRINTED '// &
-        'FOR ALL MODEL STRESS PACKAGES'
-    end if
-
-    if (found%print_flows) then
-      write (this%iout, '(4x,a)') 'PACKAGE FLOWS WILL BE PRINTED '// &
-        'FOR ALL MODEL PACKAGES'
-    end if
-
-    if (found%save_flows) then
-      write (this%iout, '(4x,a)') &
-        'FLOWS WILL BE SAVED TO BUDGET FILE SPECIFIED IN OUTPUT CONTROL'
-    end if
-
-    write (this%iout, '(1x,a)') 'END NAMEFILE OPTIONS:'
-  end subroutine log_namfile_options
+!    write (this%iout, '(1x,a)') 'END NAMEFILE OPTIONS:'
+!  end subroutine log_namfile_options
 
 end module GweModule

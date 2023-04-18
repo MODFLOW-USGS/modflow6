@@ -80,7 +80,8 @@ module GweDspModule
 
 contains
 
-  subroutine dsp_cr(dspobj, name_model, input_mempath, inunit, iout, fmi, eqnsclfac, gwecommon)
+  subroutine dsp_cr(dspobj, name_model, input_mempath, inunit, iout, fmi, &
+                    eqnsclfac, gwecommon)
 ! ******************************************************************************
 ! dsp_cr -- Create a new DSP object
 ! ******************************************************************************
