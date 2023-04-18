@@ -42,6 +42,7 @@ module GwtLktModule
   use ObserveModule, only: ObserveType
   use TspAptModule, only: TspAptType, apt_process_obsID, &
                           apt_process_obsID12
+  use TspLabelsModule, only: TspLabelsType
   use MatrixBaseModule
 
   implicit none
@@ -93,7 +94,7 @@ module GwtLktModule
 contains
 
   subroutine lkt_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
-                        fmi)
+                        fmi, tsplab, eqnsclfac)
 ! ******************************************************************************
 ! mwt_create -- Create a New MWT Package
 ! ******************************************************************************
@@ -109,6 +110,8 @@ contains
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
     type(TspFmiType), pointer :: fmi
+    type(TspLabelsType), pointer :: tsplab
+    real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
     ! -- local
     type(GwtLktType), pointer :: lktobj
 ! ------------------------------------------------------------------------------
@@ -138,6 +141,13 @@ contains
     !    created, it sets fmi%bndlist so that the GWT model has access to all
     !    the flow packages
     lktobj%fmi => fmi
+    !
+    ! -- Store pointer to the labels module for dynamic setting of 
+    !    concentration vs temperature
+    lktobj%tsplab => tsplab
+    !
+    ! -- Store pointer to governing equation scale factor
+    lktobj%eqnsclfac => eqnsclfac
     !
     ! -- return
     return

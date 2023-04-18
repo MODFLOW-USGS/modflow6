@@ -91,7 +91,7 @@ module GwtSftModule
 contains
 
   subroutine sft_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
-                        fmi, tsplab)
+                        fmi, tsplab, eqnsclfac)
 ! ******************************************************************************
 ! sft_create -- Create a New SFT Package
 ! ******************************************************************************
@@ -108,6 +108,7 @@ contains
     character(len=*), intent(in) :: pakname
     type(TspFmiType), pointer :: fmi
     type(TspLabelsType), pointer :: tsplab
+    real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
     ! -- local
     type(GwtSftType), pointer :: sftobj
 ! ------------------------------------------------------------------------------
@@ -137,6 +138,9 @@ contains
     !    created, it sets fmi%bndlist so that the GWT model has access to all
     !    the flow packages
     sftobj%fmi => fmi
+    !
+    ! -- Store pointer to governing equation scale factor
+    sftobj%eqnsclfac => eqnsclfac
     !
     ! -- Store pointer to the labels module for dynamic setting of 
     !    concentration vs temperature

@@ -2153,7 +2153,7 @@ contains
     integer(I4B) :: idx
     logical :: ordered_id1
     real(DP) :: q
-    character(len=LENBUDTXT) :: text
+    character(len=LENBUDTXT) :: text, textt
     character(len=LENBUDTXT), dimension(1) :: auxtxt
 ! ------------------------------------------------------------------------------
     !
@@ -2240,8 +2240,8 @@ contains
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudsto)%maxlist
     naux = 1
-    write(text, '(a)') padl(this%tsplab%depvarunit, 16)
-    auxtxt(1) = text  ! '            MASS' or '          ENERGY'
+    write(textt, '(a)') padl(this%tsplab%depvarunit, 16)
+    auxtxt(1) = textt  ! '            MASS' or '          ENERGY'
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
                                              this%packName, &
@@ -3057,7 +3057,7 @@ contains
     logical :: found
 ! ------------------------------------------------------------------------------
     !
-    ! -- Write simulated values for all LAK observations
+    ! -- Write simulated values for all Advanced Package observations
     if (this%obs%npakobs > 0) then
       call this%obs%obs_bd_clear()
       do i = 1, this%obs%npakobs
