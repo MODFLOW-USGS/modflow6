@@ -1,5 +1,6 @@
 module ParallelSolutionModule
-  use KindModule, only: DP, LGP
+  use KindModule, only: DP, LGP, I4B
+  use ConstantsModule, only: DONE, DZERO
   use NumericalSolutionModule, only: NumericalSolutionType
   use mpi
   use MpiWorldModule
@@ -12,6 +13,7 @@ module ParallelSolutionModule
   contains
     ! override
     procedure :: sln_has_converged => par_has_converged
+    procedure :: sln_calc_ptc => par_calc_ptc
   end type ParallelSolutionType
 
 contains
@@ -41,5 +43,34 @@ contains
     end if
 
   end function par_has_converged
+
+  !> @brief Calculate pseudo-transient continuation factor
+  !< for the parallel case
+  subroutine par_calc_ptc(this, iptc, ptcf)
+    class(ParallelSolutionType) :: this !< parallel solution
+    integer(I4B) :: iptc !< PTC (1) or not (0)
+    real(DP) :: ptcf !< the (global) PTC factor calculated
+    ! local
+    integer(I4B) :: iptc_loc
+    real(DP) :: ptcf_loc, ptcf_glo_max
+    integer :: ierr
+    type(MpiWorldType), pointer :: mpi_world
+
+    mpi_world => get_mpi_world()
+    call this%NumericalSolutionType%sln_calc_ptc(iptc_loc, ptcf_loc)
+    if (iptc_loc == 0) ptcf_loc = DZERO
+
+    ! now reduce
+    call MPI_Allreduce(ptcf_loc, ptcf_glo_max, 1, MPI_DOUBLE_PRECISION, &
+                       MPI_MAX, mpi_world%comm, ierr)
+
+    iptc = 0
+    ptcf = DZERO
+    if (ptcf_glo_max > DZERO) then
+      iptc = 1
+      ptcf = ptcf_glo_max
+    end if
+
+  end subroutine par_calc_ptc
 
 end module ParallelSolutionModule
