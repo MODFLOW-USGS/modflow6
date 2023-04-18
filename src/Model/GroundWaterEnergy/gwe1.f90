@@ -1395,8 +1395,8 @@ contains
     !            this%eqnsclfac)
     call dsp_cr(this%dsp, this%name, mempathdsp, this%indsp, this%iout, &
                 this%fmi, this%eqnsclfac, this%gwecommon)
-    call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, &
-                this%tsplab, this%eqnsclfac, this%gwecommon)
+    !call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, &
+    !            this%tsplab, this%eqnsclfac, this%gwecommon)
     !call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi, &
     !            this%eqnsclfac)
     !call oc_cr(this%oc, this%name, this%inoc, this%iout)
