@@ -1,3 +1,4 @@
+! ** Do Not Modify! MODFLOW 6 system generated file. **
 module GweDspInputModule
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
@@ -6,11 +7,11 @@ module GweDspInputModule
   public gwe_dsp_aggregate_definitions
   public gwe_dsp_block_definitions
   public GweDspParamFoundType
+  public gwe_dsp_multi_package
 
   type GweDspParamFoundType
     logical :: xt3d_off = .false.
     logical :: xt3d_rhs = .false.
-    !logical :: diffc = .false.
     logical :: alh = .false.
     logical :: alv = .false.
     logical :: ath1 = .false.
@@ -19,6 +20,8 @@ module GweDspInputModule
     logical :: ktw = .false.
     logical :: kts = .false.
   end type GweDspParamFoundType
+
+  logical :: gwe_dsp_multi_package = .false.
 
   type(InputParamDefinitionType), parameter :: &
     gwedsp_xt3d_off = InputParamDefinitionType &
@@ -51,22 +54,6 @@ module GweDspInputModule
     .false., & ! preserve case
     .false. & ! layered
     )
-
-  !type(InputParamDefinitionType), parameter :: &
-  !  gwtdsp_diffc = InputParamDefinitionType &
-  !  ( &
-  !  'GWT', & ! component
-  !  'DSP', & ! subcomponent
-  !  'GRIDDATA', & ! block
-  !  'DIFFC', & ! tag name
-  !  'DIFFC', & ! fortran variable
-  !  'DOUBLE1D', & ! type
-  !  'NODES', & ! shape
-  !  .false., & ! required
-  !  .false., & ! multi-record
-  !  .false., & ! preserve case
-  !  .true. & ! layered
-  !  )
 
   type(InputParamDefinitionType), parameter :: &
     gwedsp_alh = InputParamDefinitionType &
@@ -185,7 +172,6 @@ module GweDspInputModule
     [ &
     gwedsp_xt3d_off, &
     gwedsp_xt3d_rhs, &
-    !gwtdsp_diffc, &
     gwedsp_alh, &
     gwedsp_alv, &
     gwedsp_ath1, &
@@ -198,20 +184,7 @@ module GweDspInputModule
   type(InputParamDefinitionType), parameter :: &
     gwe_dsp_aggregate_definitions(*) = &
     [ &
-    InputParamDefinitionType &
-    ( &
-    '', & ! component
-    '', & ! subcomponent
-    '', & ! block
-    '', & ! tag name
-    '', & ! fortran variable
-    '', & ! type
-    '', & ! shape
-    .false., & ! required
-    .false., & ! multi-record
-    .false., & ! preserve case
-    .false. & ! layered
-    ) &
+    InputParamDefinitionType :: &
     ]
 
   type(InputBlockDefinitionType), parameter :: &
@@ -220,12 +193,14 @@ module GweDspInputModule
     InputBlockDefinitionType( &
     'OPTIONS', & ! blockname
     .false., & ! required
-    .false. & ! aggregate
+    .false., & ! aggregate
+    .false. & ! block_variable
     ), &
     InputBlockDefinitionType( &
     'GRIDDATA', & ! blockname
     .false., & ! required
-    .false. & ! aggregate
+    .false., & ! aggregate
+    .false. & ! block_variable
     ) &
     ]
 

@@ -85,6 +85,8 @@
 		<File RelativePath="..\src\Distributed\VirtualDataLists.f90"/>
 		<File RelativePath="..\src\Distributed\VirtualDataManager.f90"/>
 		<File RelativePath="..\src\Distributed\VirtualExchange.f90"/>
+		<File RelativePath="..\src\Distributed\VirtualGweExchange.f90"/>
+		<File RelativePath="..\src\Distributed\VirtualGweModel.f90"/>
 		<File RelativePath="..\src\Distributed\VirtualGwfExchange.f90"/>
 		<File RelativePath="..\src\Distributed\VirtualGwfModel.f90"/>
 		<File RelativePath="..\src\Distributed\VirtualGwtExchange.f90"/>
@@ -123,7 +125,11 @@
 		<File RelativePath="..\src\Model\Geometry\RectangularGeometry.f90"/></Filter>
 		<Filter Name="GroundWaterEnergy">
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1dis1idm.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1disu1idm.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1disv1idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1dsp1.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1dspidm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1lke1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1mst1.f90"/>

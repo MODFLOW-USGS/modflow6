@@ -4,6 +4,22 @@ module IdmGweDfnSelectorModule
   use SimModule, only: store_error
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
+  use GweDisInputModule, only: gwe_dis_param_definitions, &
+                               gwe_dis_aggregate_definitions, &
+                               gwe_dis_block_definitions, &
+                               gwe_dis_multi_package
+  use GweDisuInputModule, only: gwe_disu_param_definitions, &
+                                gwe_disu_aggregate_definitions, &
+                                gwe_disu_block_definitions, &
+                                gwe_disu_multi_package
+  use GweDisvInputModule, only: gwe_disv_param_definitions, &
+                                gwe_disv_aggregate_definitions, &
+                                gwe_disv_block_definitions, &
+                                gwe_disv_multi_package
+  use GweDspInputModule, only: gwe_dsp_param_definitions, &
+                               gwe_dsp_aggregate_definitions, &
+                               gwe_dsp_block_definitions, &
+                               gwe_dsp_multi_package
   use GweNamInputModule, only: gwe_nam_param_definitions, &
                                gwe_nam_aggregate_definitions, &
                                gwe_nam_block_definitions, &
@@ -36,6 +52,14 @@ contains
     type(InputParamDefinitionType), dimension(:), pointer :: input_definition
     nullify (input_definition)
     select case (subcomponent)
+    case ('DIS')
+      call set_param_pointer(input_definition, gwe_dis_param_definitions)
+    case ('DISU')
+      call set_param_pointer(input_definition, gwe_disu_param_definitions)
+    case ('DISV')
+      call set_param_pointer(input_definition, gwe_disv_param_definitions)
+    case ('DSP')
+      call set_param_pointer(input_definition, gwe_dsp_param_definitions)
     case ('NAM')
       call set_param_pointer(input_definition, gwe_nam_param_definitions)
     case default
@@ -48,6 +72,14 @@ contains
     type(InputParamDefinitionType), dimension(:), pointer :: input_definition
     nullify (input_definition)
     select case (subcomponent)
+    case ('DIS')
+      call set_param_pointer(input_definition, gwe_dis_aggregate_definitions)
+    case ('DISU')
+      call set_param_pointer(input_definition, gwe_disu_aggregate_definitions)
+    case ('DISV')
+      call set_param_pointer(input_definition, gwe_disv_aggregate_definitions)
+    case ('DSP')
+      call set_param_pointer(input_definition, gwe_dsp_aggregate_definitions)
     case ('NAM')
       call set_param_pointer(input_definition, gwe_nam_aggregate_definitions)
     case default
@@ -60,6 +92,14 @@ contains
     type(InputBlockDefinitionType), dimension(:), pointer :: input_definition
     nullify (input_definition)
     select case (subcomponent)
+    case ('DIS')
+      call set_block_pointer(input_definition, gwe_dis_block_definitions)
+    case ('DISU')
+      call set_block_pointer(input_definition, gwe_disu_block_definitions)
+    case ('DISV')
+      call set_block_pointer(input_definition, gwe_disv_block_definitions)
+    case ('DSP')
+      call set_block_pointer(input_definition, gwe_dsp_block_definitions)
     case ('NAM')
       call set_block_pointer(input_definition, gwe_nam_block_definitions)
     case default
@@ -71,6 +111,14 @@ contains
     character(len=*), intent(in) :: subcomponent
     logical :: multi_package
     select case (subcomponent)
+    case ('DIS')
+      multi_package = gwe_dis_multi_package
+    case ('DISU')
+      multi_package = gwe_disu_multi_package
+    case ('DISV')
+      multi_package = gwe_disv_multi_package
+    case ('DSP')
+      multi_package = gwe_dsp_multi_package
     case ('NAM')
       multi_package = gwe_nam_multi_package
     case default
@@ -86,6 +134,14 @@ contains
     logical :: integrated
     integrated = .false.
     select case (subcomponent)
+    case ('DIS')
+      integrated = .true.
+    case ('DISU')
+      integrated = .true.
+    case ('DISV')
+      integrated = .true.
+    case ('DSP')
+      integrated = .true.
     case ('NAM')
       integrated = .true.
     case default

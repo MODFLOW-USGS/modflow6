@@ -688,20 +688,7 @@ module GwfNpfInputModule
   type(InputParamDefinitionType), parameter :: &
     gwf_npf_aggregate_definitions(*) = &
     [ &
-    InputParamDefinitionType &
-    ( &
-    '', & ! component
-    '', & ! subcomponent
-    '', & ! block
-    '', & ! tag name
-    '', & ! fortran variable
-    '', & ! type
-    '', & ! shape
-    .false., & ! required
-    .false., & ! multi-record
-    .false., & ! preserve case
-    .false. & ! layered
-    ) &
+    InputParamDefinitionType :: &
     ]
 
   type(InputBlockDefinitionType), parameter :: &

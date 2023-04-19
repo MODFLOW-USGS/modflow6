@@ -1,15 +1,15 @@
 ! ** Do Not Modify! MODFLOW 6 system generated file. **
-module GwtDisInputModule
+module GweDisInputModule
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
   private
-  public gwt_dis_param_definitions
-  public gwt_dis_aggregate_definitions
-  public gwt_dis_block_definitions
-  public GwtDisParamFoundType
-  public gwt_dis_multi_package
+  public gwe_dis_param_definitions
+  public gwe_dis_aggregate_definitions
+  public gwe_dis_block_definitions
+  public GweDisParamFoundType
+  public gwe_dis_multi_package
 
-  type GwtDisParamFoundType
+  type GweDisParamFoundType
     logical :: length_units = .false.
     logical :: nogrb = .false.
     logical :: xorigin = .false.
@@ -23,14 +23,14 @@ module GwtDisInputModule
     logical :: top = .false.
     logical :: botm = .false.
     logical :: idomain = .false.
-  end type GwtDisParamFoundType
+  end type GweDisParamFoundType
 
-  logical :: gwt_dis_multi_package = .false.
+  logical :: gwe_dis_multi_package = .false.
 
   type(InputParamDefinitionType), parameter :: &
-    gwtdis_length_units = InputParamDefinitionType &
+    gwedis_length_units = InputParamDefinitionType &
     ( &
-    'GWT', & ! component
+    'GWE', & ! component
     'DIS', & ! subcomponent
     'OPTIONS', & ! block
     'LENGTH_UNITS', & ! tag name
@@ -44,9 +44,9 @@ module GwtDisInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwtdis_nogrb = InputParamDefinitionType &
+    gwedis_nogrb = InputParamDefinitionType &
     ( &
-    'GWT', & ! component
+    'GWE', & ! component
     'DIS', & ! subcomponent
     'OPTIONS', & ! block
     'NOGRB', & ! tag name
@@ -60,9 +60,9 @@ module GwtDisInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwtdis_xorigin = InputParamDefinitionType &
+    gwedis_xorigin = InputParamDefinitionType &
     ( &
-    'GWT', & ! component
+    'GWE', & ! component
     'DIS', & ! subcomponent
     'OPTIONS', & ! block
     'XORIGIN', & ! tag name
@@ -76,9 +76,9 @@ module GwtDisInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwtdis_yorigin = InputParamDefinitionType &
+    gwedis_yorigin = InputParamDefinitionType &
     ( &
-    'GWT', & ! component
+    'GWE', & ! component
     'DIS', & ! subcomponent
     'OPTIONS', & ! block
     'YORIGIN', & ! tag name
@@ -92,9 +92,9 @@ module GwtDisInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwtdis_angrot = InputParamDefinitionType &
+    gwedis_angrot = InputParamDefinitionType &
     ( &
-    'GWT', & ! component
+    'GWE', & ! component
     'DIS', & ! subcomponent
     'OPTIONS', & ! block
     'ANGROT', & ! tag name
@@ -108,9 +108,9 @@ module GwtDisInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwtdis_nlay = InputParamDefinitionType &
+    gwedis_nlay = InputParamDefinitionType &
     ( &
-    'GWT', & ! component
+    'GWE', & ! component
     'DIS', & ! subcomponent
     'DIMENSIONS', & ! block
     'NLAY', & ! tag name
@@ -124,9 +124,9 @@ module GwtDisInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwtdis_nrow = InputParamDefinitionType &
+    gwedis_nrow = InputParamDefinitionType &
     ( &
-    'GWT', & ! component
+    'GWE', & ! component
     'DIS', & ! subcomponent
     'DIMENSIONS', & ! block
     'NROW', & ! tag name
@@ -140,9 +140,9 @@ module GwtDisInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwtdis_ncol = InputParamDefinitionType &
+    gwedis_ncol = InputParamDefinitionType &
     ( &
-    'GWT', & ! component
+    'GWE', & ! component
     'DIS', & ! subcomponent
     'DIMENSIONS', & ! block
     'NCOL', & ! tag name
@@ -156,9 +156,9 @@ module GwtDisInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwtdis_delr = InputParamDefinitionType &
+    gwedis_delr = InputParamDefinitionType &
     ( &
-    'GWT', & ! component
+    'GWE', & ! component
     'DIS', & ! subcomponent
     'GRIDDATA', & ! block
     'DELR', & ! tag name
@@ -172,9 +172,9 @@ module GwtDisInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwtdis_delc = InputParamDefinitionType &
+    gwedis_delc = InputParamDefinitionType &
     ( &
-    'GWT', & ! component
+    'GWE', & ! component
     'DIS', & ! subcomponent
     'GRIDDATA', & ! block
     'DELC', & ! tag name
@@ -188,9 +188,9 @@ module GwtDisInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwtdis_top = InputParamDefinitionType &
+    gwedis_top = InputParamDefinitionType &
     ( &
-    'GWT', & ! component
+    'GWE', & ! component
     'DIS', & ! subcomponent
     'GRIDDATA', & ! block
     'TOP', & ! tag name
@@ -204,9 +204,9 @@ module GwtDisInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwtdis_botm = InputParamDefinitionType &
+    gwedis_botm = InputParamDefinitionType &
     ( &
-    'GWT', & ! component
+    'GWE', & ! component
     'DIS', & ! subcomponent
     'GRIDDATA', & ! block
     'BOTM', & ! tag name
@@ -220,9 +220,9 @@ module GwtDisInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwtdis_idomain = InputParamDefinitionType &
+    gwedis_idomain = InputParamDefinitionType &
     ( &
-    'GWT', & ! component
+    'GWE', & ! component
     'DIS', & ! subcomponent
     'GRIDDATA', & ! block
     'IDOMAIN', & ! tag name
@@ -236,31 +236,31 @@ module GwtDisInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwt_dis_param_definitions(*) = &
+    gwe_dis_param_definitions(*) = &
     [ &
-    gwtdis_length_units, &
-    gwtdis_nogrb, &
-    gwtdis_xorigin, &
-    gwtdis_yorigin, &
-    gwtdis_angrot, &
-    gwtdis_nlay, &
-    gwtdis_nrow, &
-    gwtdis_ncol, &
-    gwtdis_delr, &
-    gwtdis_delc, &
-    gwtdis_top, &
-    gwtdis_botm, &
-    gwtdis_idomain &
+    gwedis_length_units, &
+    gwedis_nogrb, &
+    gwedis_xorigin, &
+    gwedis_yorigin, &
+    gwedis_angrot, &
+    gwedis_nlay, &
+    gwedis_nrow, &
+    gwedis_ncol, &
+    gwedis_delr, &
+    gwedis_delc, &
+    gwedis_top, &
+    gwedis_botm, &
+    gwedis_idomain &
     ]
 
   type(InputParamDefinitionType), parameter :: &
-    gwt_dis_aggregate_definitions(*) = &
+    gwe_dis_aggregate_definitions(*) = &
     [ &
     InputParamDefinitionType :: &
     ]
 
   type(InputBlockDefinitionType), parameter :: &
-    gwt_dis_block_definitions(*) = &
+    gwe_dis_block_definitions(*) = &
     [ &
     InputBlockDefinitionType( &
     'OPTIONS', & ! blockname
@@ -282,4 +282,4 @@ module GwtDisInputModule
     ) &
     ]
 
-end module GwtDisInputModule
+end module GweDisInputModule
