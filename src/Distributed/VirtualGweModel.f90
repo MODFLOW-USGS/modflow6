@@ -12,9 +12,9 @@ module VirtualGweModelModule
 
   type, extends(VirtualModelType) :: VirtualGweModelType
     ! DSP
-    type(VirtualIntType), pointer :: dsp_idiffc => null()
+    !type(VirtualIntType), pointer :: dsp_idiffc => null()
     type(VirtualIntType), pointer :: dsp_idisp => null()
-    type(VirtualDbl1dType), pointer :: dsp_diffc => null()
+    !type(VirtualDbl1dType), pointer :: dsp_diffc => null()
     type(VirtualDbl1dType), pointer :: dsp_alh => null()
     type(VirtualDbl1dType), pointer :: dsp_alv => null()
     type(VirtualDbl1dType), pointer :: dsp_ath1 => null()

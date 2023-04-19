@@ -218,9 +218,11 @@ contains
     use SimVariablesModule, only: idm_context
     use GwfModule, only: gwf_cr
     use GwtModule, only: gwt_cr
+    use GweModule, only: gwe_cr
     use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
     use VirtualGwfModelModule, only: add_virtual_gwf_model
     use VirtualGwtModelModule, only: add_virtual_gwt_model
+    use VirtualGweModelModule, only: add_virtual_gwe_model
     use ConstantsModule, only: LENMODELNAME
     ! -- dummy
     ! -- locals
@@ -297,6 +299,16 @@ contains
           model_loc_idx(n) = im
         end if
         call add_virtual_gwt_model(n, model_names(n), num_model)
+      case ('GWE6')
+        if (model_ranks(n) == proc_id) then
+          im = im + 1
+          write (iout, '(4x,2a,i0,a)') trim(model_type), " model ", &
+            n, " will be created"
+          call gwe_cr(fname, n, model_names(n))
+          num_model => GetNumericalModelFromList(basemodellist, im)
+          model_loc_idx(n) = im
+        end if
+        call add_virtual_gwt_model(n, model_names(n), num_model)
       case default
         write (errmsg, '(4x,a,a)') &
           '****ERROR. UNKNOWN SIMULATION MODEL: ', &
@@ -328,9 +340,11 @@ contains
     use SimVariablesModule, only: idm_context
     use GwfGwfExchangeModule, only: gwfexchange_create
     use GwfGwtExchangeModule, only: gwfgwt_cr
+    use GwfGweExchangeModule, only: gwfgwe_cr
     use GwtGwtExchangeModule, only: gwtexchange_create
     use VirtualGwfExchangeModule, only: add_virtual_gwf_exchange
     use VirtualGwtExchangeModule, only: add_virtual_gwt_exchange
+    use VirtualGweExchangeModule, only: add_virtual_gwe_exchange
     ! -- dummy
     ! -- locals
     character(len=LENMEMPATH) :: input_mempath
@@ -414,6 +428,10 @@ contains
       case ('GWF6-GWT6')
         if (both_local) then
           call gwfgwt_cr(fname, exg_id, m1_id, m2_id)
+        end if
+      case ('GWF6-GWE6')
+        if (both_local) then
+          call gwfgwe_cr(fname, exg_id, m1_id, m2_id)
         end if
       case ('GWT6-GWT6')
         write (exg_name, '(a,i0)') 'GWT-GWT_', exg_id
