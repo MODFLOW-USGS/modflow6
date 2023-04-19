@@ -56,8 +56,8 @@ module TransportModelModule
     integer(I4B), pointer :: inssm => null() ! unit number SSM
     integer(I4B), pointer :: inoc => null() ! unit number OC
     integer(I4B), pointer :: inobs => null() ! unit number OBS
-    integer(I4B), pointer :: inmst => null() ! unit number MST
-    integer(I4B), pointer :: indsp => null() ! unit number DSP
+    !integer(I4B), pointer :: inmst => null() ! unit number MST
+    !integer(I4B), pointer :: indsp => null() ! unit number DSP
     real(DP), pointer :: eqnsclfac => null() !< constant factor by which all terms in the model's governing equation are scaled (divided) for formulation and solution
 
   contains
@@ -490,7 +490,7 @@ module TransportModelModule
     return
   end subroutine tsp_bd
 
-  subroutine tsp_ot(this)
+  subroutine tsp_ot(this, inmst)
 ! ******************************************************************************
 ! tsp_ot -- Transport Model Output
 ! ******************************************************************************
@@ -501,6 +501,7 @@ module TransportModelModule
     use TdisModule, only: kstp, kper, tdis_ot, endofperiod
     ! -- dummy
     class(TransportModelType) :: this
+    integer(I4B), intent(in) :: inmst
     ! -- local
     integer(I4B) :: idvsave
     integer(I4B) :: idvprint
@@ -534,7 +535,7 @@ module TransportModelModule
     call this%tsp_ot_obs()
     !
     !   Save and print flows
-    call this%tsp_ot_flow(icbcfl, ibudfl, icbcun)
+    call this%tsp_ot_flow(icbcfl, ibudfl, icbcun, inmst)
     !
     !   Save and print dependent variables
     call this%tsp_ot_dv(idvsave, idvprint, ipflag)
@@ -573,17 +574,18 @@ module TransportModelModule
 
   end subroutine tsp_ot_obs
   
-  subroutine tsp_ot_flow(this, icbcfl, ibudfl, icbcun)
+  subroutine tsp_ot_flow(this, icbcfl, ibudfl, icbcun, inmst)
     class(TransportModelType) :: this
     integer(I4B), intent(in) :: icbcfl
     integer(I4B), intent(in) :: ibudfl
     integer(I4B), intent(in) :: icbcun
+    integer(I4B), intent(in) :: inmst
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
 ! ------------------------------------------------------------------------------
     ! -- Save TSP flows
     call this%tsp_ot_flowja(this%nja, this%flowja, icbcfl, icbcun)
-    if (this%inmst > 0) call this%tsp_ot_flowja(this%nja, this%flowja, & 
+    if (inmst > 0) call this%tsp_ot_flowja(this%nja, this%flowja, & 
                                                 icbcfl, icbcun)
     if (this%infmi > 0) call this%fmi%fmi_ot_flow(icbcfl, icbcun)
     if (this%inssm > 0) then
@@ -771,9 +773,9 @@ module TransportModelModule
     call mem_deallocate(this%inic)
     call mem_deallocate(this%infmi)
     call mem_deallocate(this%inadv)
-    call mem_deallocate(this%indsp)
+    !call mem_deallocate(this%indsp)
     call mem_deallocate(this%inssm)
-    call mem_deallocate(this%inmst)
+    !call mem_deallocate(this%inmst)
     call mem_deallocate(this%inmvt)
     call mem_deallocate(this%inoc)
     call mem_deallocate(this%inobs)
@@ -783,7 +785,7 @@ module TransportModelModule
     return
   end subroutine tsp_da
   
-  subroutine ftype_check(this, indis)
+  subroutine ftype_check(this, indis, inmst)
 ! ******************************************************************************
 ! ftype_check -- Check to make sure required input files have been specified
 ! ******************************************************************************
@@ -796,6 +798,7 @@ module TransportModelModule
     ! -- dummy
     class(TransportModelType) :: this
     integer(I4B), intent(in) :: indis
+    integer(I4B), intent(in) :: inmst
     ! -- local
     character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
@@ -811,7 +814,7 @@ module TransportModelModule
         'ERROR. DISCRETIZATION (DIS6 or DISU6) PACKAGE NOT SPECIFIED.'
       call store_error(errmsg)
     end if
-    if (this%inmst == 0) then
+    if (inmst == 0) then
       write (errmsg, '(1x,a)') 'ERROR. MASS STORAGE AND TRANSFER (MST6) &
         &PACKAGE NOT SPECIFIED.'
       call store_error(errmsg)

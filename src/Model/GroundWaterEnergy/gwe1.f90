@@ -32,9 +32,9 @@ module GweModule
     !integer(I4B), pointer :: inic => null() ! unit number IC
     !integer(I4B), pointer :: infmi => null() ! unit number FMI
     !integer(I4B), pointer :: inmvt => null() ! unit number MVT
-    !integer(I4B), pointer :: inmst => null() ! unit number MST
+    integer(I4B), pointer :: inmst => null() ! unit number MST
     !integer(I4B), pointer :: inadv => null() ! unit number ADV
-    !integer(I4B), pointer :: indsp => null() ! unit number DSP
+    integer(I4B), pointer :: indsp => null() ! unit number DSP
     !integer(I4B), pointer :: inssm => null() ! unit number SSM
     !integer(I4B), pointer :: inoc => null() ! unit number OC
     !integer(I4B), pointer :: inobs => null() ! unit number OBS
@@ -60,11 +60,11 @@ module GweModule
     procedure, private :: package_create
     !procedure, private :: ftype_check
     procedure :: get_iasym => gwe_get_iasym
-    procedure, private :: gwe_ot_flow
-    procedure, private :: gwe_ot_flowja
-    procedure, private :: gwe_ot_dv
-    procedure, private :: gwe_ot_bdsummary
-    procedure, private :: gwe_ot_obs
+    !procedure, private :: gwe_ot_flow
+    !procedure, private :: gwe_ot_flowja
+    !procedure, private :: gwe_ot_dv
+    !procedure, private :: gwe_ot_bdsummary
+    !procedure, private :: gwe_ot_obs
     procedure, private :: create_gwe_specific_packages
     procedure, private :: create_bndpkgs
     !procedure, private :: create_lstfile
@@ -142,6 +142,7 @@ contains
     this%memoryPath = create_mem_path(modelname)
     !
     call this%allocate_tsp_scalars(modelname)
+    call this%allocate_gwe_scalars(modelname)
     model => this
     call AddBaseModelToList(basemodellist, model)
     !
@@ -683,217 +684,220 @@ contains
     use TdisModule, only: kstp, kper, tdis_ot, endofperiod
     ! -- dummy
     class(GweModelType) :: this
-    ! -- local
-    integer(I4B) :: idvsave
-    integer(I4B) :: idvprint
-    integer(I4B) :: icbcfl
-    integer(I4B) :: icbcun
-    integer(I4B) :: ibudfl
-    integer(I4B) :: ipflag
-    ! -- formats
-    character(len=*), parameter :: fmtnocnvg = &
-      "(1X,/9X,'****FAILED TO MEET SOLVER CONVERGENCE CRITERIA IN TIME STEP ', &
-      &I0,' OF STRESS PERIOD ',I0,'****')"
+!    ! -- local
+!    integer(I4B) :: idvsave
+!    integer(I4B) :: idvprint
+!    integer(I4B) :: icbcfl
+!    integer(I4B) :: icbcun
+!    integer(I4B) :: ibudfl
+!    integer(I4B) :: ipflag
+!    ! -- formats
+!    character(len=*), parameter :: fmtnocnvg = &
+!      "(1X,/9X,'****FAILED TO MEET SOLVER CONVERGENCE CRITERIA IN TIME STEP ', &
+!      &I0,' OF STRESS PERIOD ',I0,'****')"
 ! ------------------------------------------------------------------------------
     !
-    ! -- Set write and print flags
-    idvsave = 0
-    idvprint = 0
-    icbcfl = 0
-    ibudfl = 0
-    if (this%oc%oc_save(trim(this%tsplab%depvartype))) idvsave = 1
-    if (this%oc%oc_print(trim(this%tsplab%depvartype))) idvprint = 1
-    if (this%oc%oc_save('BUDGET')) icbcfl = 1
-    if (this%oc%oc_print('BUDGET')) ibudfl = 1
-    icbcun = this%oc%oc_save_unit('BUDGET')
-    !
-    ! -- Override ibudfl and idvprint flags for nonconvergence
-    !    and end of period
-    ibudfl = this%oc%set_print_flag('BUDGET', this%icnvg, endofperiod)
-    idvprint = this%oc%set_print_flag(trim(this%tsplab%depvartype), &
-                                      this%icnvg, endofperiod)
-    !
-    !   Calculate and save observations
-    call this%gwe_ot_obs()
-    !
-    !   Save and print flows
-    call this%gwe_ot_flow(icbcfl, ibudfl, icbcun)
-    !
-    !   Save and print dependent variables
-    call this%gwe_ot_dv(idvsave, idvprint, ipflag)
-    !
-    !   Print budget summaries
-    call this%gwe_ot_bdsummary(ibudfl, ipflag)
-    !
-    ! -- Timing Output; if any dependendent variables or budgets
-    !    are printed, then ipflag is set to 1.
-    if (ipflag == 1) call tdis_ot(this%iout)
-    !
-    ! -- Write non-convergence message
-    if (this%icnvg == 0) then
-      write (this%iout, fmtnocnvg) kstp, kper
-    end if
+    ! -- Call parent class _ot routines.
+    call this%tsp_ot(this%inmst)
+!    !
+!    ! -- Set write and print flags
+!    idvsave = 0
+!    idvprint = 0
+!    icbcfl = 0
+!    ibudfl = 0
+!    if (this%oc%oc_save(trim(this%tsplab%depvartype))) idvsave = 1
+!    if (this%oc%oc_print(trim(this%tsplab%depvartype))) idvprint = 1
+!    if (this%oc%oc_save('BUDGET')) icbcfl = 1
+!    if (this%oc%oc_print('BUDGET')) ibudfl = 1
+!    icbcun = this%oc%oc_save_unit('BUDGET')
+!    !
+!    ! -- Override ibudfl and idvprint flags for nonconvergence
+!    !    and end of period
+!    ibudfl = this%oc%set_print_flag('BUDGET', this%icnvg, endofperiod)
+!    idvprint = this%oc%set_print_flag(trim(this%tsplab%depvartype), &
+!                                      this%icnvg, endofperiod)
+!    !
+!    !   Calculate and save observations
+!    call this%gwe_ot_obs()
+!    !
+!    !   Save and print flows
+!    call this%gwe_ot_flow(icbcfl, ibudfl, icbcun)
+!    !
+!    !   Save and print dependent variables
+!    call this%gwe_ot_dv(idvsave, idvprint, ipflag)
+!    !
+!    !   Print budget summaries
+!    call this%gwe_ot_bdsummary(ibudfl, ipflag)
+!    !
+!    ! -- Timing Output; if any dependendent variables or budgets
+!    !    are printed, then ipflag is set to 1.
+!    if (ipflag == 1) call tdis_ot(this%iout)
+!    !
+!    ! -- Write non-convergence message
+!    if (this%icnvg == 0) then
+!      write (this%iout, fmtnocnvg) kstp, kper
+!    end if
     !
     ! -- Return
     return
   end subroutine gwe_ot
-
-  subroutine gwe_ot_obs(this)
-    class(GweModelType) :: this
-    class(BndType), pointer :: packobj
-    integer(I4B) :: ip
-
-    ! -- Calculate and save observations
-    call this%obs%obs_bd()
-    call this%obs%obs_ot()
-
-    ! -- Calculate and save package obserations
-    do ip = 1, this%bndlist%Count()
-      packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_bd_obs()
-      call packobj%bnd_ot_obs()
-    end do
-
-  end subroutine gwe_ot_obs
-
-  subroutine gwe_ot_flow(this, icbcfl, ibudfl, icbcun)
-    class(GweModelType) :: this
-    integer(I4B), intent(in) :: icbcfl
-    integer(I4B), intent(in) :: ibudfl
-    integer(I4B), intent(in) :: icbcun
-    class(BndType), pointer :: packobj
-    integer(I4B) :: ip
-
-    ! -- Save GWE flows
-    call this%gwe_ot_flowja(this%nja, this%flowja, icbcfl, icbcun)
-    if (this%inmst > 0) call this%mst%mst_ot_flow(icbcfl, icbcun)
-    if (this%infmi > 0) call this%fmi%fmi_ot_flow(icbcfl, icbcun)
-    if (this%inssm > 0) then
-      call this%ssm%ssm_ot_flow(icbcfl=icbcfl, ibudfl=0, icbcun=icbcun)
-    end if
-    do ip = 1, this%bndlist%Count()
-      packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_ot_model_flows(icbcfl=icbcfl, ibudfl=0, icbcun=icbcun)
-    end do
-
-    ! -- Save advanced package flows
-    do ip = 1, this%bndlist%Count()
-      packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_ot_package_flows(icbcfl=icbcfl, ibudfl=0)
-    end do
-    if (this%inmvt > 0) then
-      call this%mvt%mvt_ot_saveflow(icbcfl, ibudfl)
-    end if
-
-    ! -- Print GWF flows
-    ! no need to print flowja
-    ! no need to print mst
-    ! no need to print fmi
-    if (this%inssm > 0) then
-      call this%ssm%ssm_ot_flow(icbcfl=icbcfl, ibudfl=ibudfl, icbcun=0)
-    end if
-    do ip = 1, this%bndlist%Count()
-      packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_ot_model_flows(icbcfl=icbcfl, ibudfl=ibudfl, icbcun=0)
-    end do
-
-    ! -- Print advanced package flows
-    do ip = 1, this%bndlist%Count()
-      packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_ot_package_flows(icbcfl=0, ibudfl=ibudfl)
-    end do
-    if (this%inmvt > 0) then
-      call this%mvt%mvt_ot_printflow(icbcfl, ibudfl)
-    end if
-
-  end subroutine gwe_ot_flow
-
-  subroutine gwe_ot_flowja(this, nja, flowja, icbcfl, icbcun)
-! ******************************************************************************
-! gwe_ot_flowja -- Write intercell flows
-! ******************************************************************************
 !
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- dummy
-    class(GweModelType) :: this
-    integer(I4B), intent(in) :: nja
-    real(DP), dimension(nja), intent(in) :: flowja
-    integer(I4B), intent(in) :: icbcfl
-    integer(I4B), intent(in) :: icbcun
-    ! -- local
-    integer(I4B) :: ibinun
-    ! -- formats
-! ------------------------------------------------------------------------------
-    !
-    ! -- Set unit number for binary output
-    if (this%ipakcb < 0) then
-      ibinun = icbcun
-    elseif (this%ipakcb == 0) then
-      ibinun = 0
-    else
-      ibinun = this%ipakcb
-    end if
-    if (icbcfl == 0) ibinun = 0
-    !
-    ! -- Write the face flows if requested
-    if (ibinun /= 0) then
-      call this%dis%record_connection_array(flowja, ibinun, this%iout)
-    end if
-    !
-    ! -- Return
-    return
-  end subroutine gwe_ot_flowja
-
-  subroutine gwe_ot_dv(this, idvsave, idvprint, ipflag)
-    class(GweModelType) :: this
-    integer(I4B), intent(in) :: idvsave
-    integer(I4B), intent(in) :: idvprint
-    integer(I4B), intent(inout) :: ipflag
-    class(BndType), pointer :: packobj
-    integer(I4B) :: ip
-
-    ! -- Print advanced package dependent variables
-    do ip = 1, this%bndlist%Count()
-      packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_ot_dv(idvsave, idvprint)
-    end do
-
-    ! -- save head and print head
-    call this%oc%oc_ot(ipflag)
-
-  end subroutine gwe_ot_dv
-
-  subroutine gwe_ot_bdsummary(this, ibudfl, ipflag)
-    use TdisModule, only: kstp, kper, totim
-    class(GweModelType) :: this
-    integer(I4B), intent(in) :: ibudfl
-    integer(I4B), intent(inout) :: ipflag
-    class(BndType), pointer :: packobj
-    integer(I4B) :: ip
-
-    !
-    ! -- Package budget summary
-    do ip = 1, this%bndlist%Count()
-      packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_ot_bdsummary(kstp, kper, this%iout, ibudfl)
-    end do
-
-    ! -- mover budget summary
-    if (this%inmvt > 0) then
-      call this%mvt%mvt_ot_bdsummary(ibudfl)
-    end if
-
-    ! -- model budget summary
-    if (ibudfl /= 0) then
-      ipflag = 1
-      call this%budget%budget_ot(kstp, kper, this%iout)
-    end if
-
-    ! -- Write to budget csv
-    call this%budget%writecsv(totim)
-
-  end subroutine gwe_ot_bdsummary
+!  subroutine gwe_ot_obs(this)
+!    class(GweModelType) :: this
+!    class(BndType), pointer :: packobj
+!    integer(I4B) :: ip
+!
+!    ! -- Calculate and save observations
+!    call this%obs%obs_bd()
+!    call this%obs%obs_ot()
+!
+!    ! -- Calculate and save package obserations
+!    do ip = 1, this%bndlist%Count()
+!      packobj => GetBndFromList(this%bndlist, ip)
+!      call packobj%bnd_bd_obs()
+!      call packobj%bnd_ot_obs()
+!    end do
+!
+!  end subroutine gwe_ot_obs
+!
+!  subroutine gwe_ot_flow(this, icbcfl, ibudfl, icbcun)
+!    class(GweModelType) :: this
+!    integer(I4B), intent(in) :: icbcfl
+!    integer(I4B), intent(in) :: ibudfl
+!    integer(I4B), intent(in) :: icbcun
+!    class(BndType), pointer :: packobj
+!    integer(I4B) :: ip
+!
+!    ! -- Save GWE flows
+!    call this%gwe_ot_flowja(this%nja, this%flowja, icbcfl, icbcun)
+!    if (this%inmst > 0) call this%mst%mst_ot_flow(icbcfl, icbcun)
+!    if (this%infmi > 0) call this%fmi%fmi_ot_flow(icbcfl, icbcun)
+!    if (this%inssm > 0) then
+!      call this%ssm%ssm_ot_flow(icbcfl=icbcfl, ibudfl=0, icbcun=icbcun)
+!    end if
+!    do ip = 1, this%bndlist%Count()
+!      packobj => GetBndFromList(this%bndlist, ip)
+!      call packobj%bnd_ot_model_flows(icbcfl=icbcfl, ibudfl=0, icbcun=icbcun)
+!    end do
+!
+!    ! -- Save advanced package flows
+!    do ip = 1, this%bndlist%Count()
+!      packobj => GetBndFromList(this%bndlist, ip)
+!      call packobj%bnd_ot_package_flows(icbcfl=icbcfl, ibudfl=0)
+!    end do
+!    if (this%inmvt > 0) then
+!      call this%mvt%mvt_ot_saveflow(icbcfl, ibudfl)
+!    end if
+!
+!    ! -- Print GWF flows
+!    ! no need to print flowja
+!    ! no need to print mst
+!    ! no need to print fmi
+!    if (this%inssm > 0) then
+!      call this%ssm%ssm_ot_flow(icbcfl=icbcfl, ibudfl=ibudfl, icbcun=0)
+!    end if
+!    do ip = 1, this%bndlist%Count()
+!      packobj => GetBndFromList(this%bndlist, ip)
+!      call packobj%bnd_ot_model_flows(icbcfl=icbcfl, ibudfl=ibudfl, icbcun=0)
+!    end do
+!
+!    ! -- Print advanced package flows
+!    do ip = 1, this%bndlist%Count()
+!      packobj => GetBndFromList(this%bndlist, ip)
+!      call packobj%bnd_ot_package_flows(icbcfl=0, ibudfl=ibudfl)
+!    end do
+!    if (this%inmvt > 0) then
+!      call this%mvt%mvt_ot_printflow(icbcfl, ibudfl)
+!    end if
+!
+!  end subroutine gwe_ot_flow
+!
+!  subroutine gwe_ot_flowja(this, nja, flowja, icbcfl, icbcun)
+!! ******************************************************************************
+!! gwe_ot_flowja -- Write intercell flows
+!! ******************************************************************************
+!!
+!!    SPECIFICATIONS:
+!! ------------------------------------------------------------------------------
+!    ! -- dummy
+!    class(GweModelType) :: this
+!    integer(I4B), intent(in) :: nja
+!    real(DP), dimension(nja), intent(in) :: flowja
+!    integer(I4B), intent(in) :: icbcfl
+!    integer(I4B), intent(in) :: icbcun
+!    ! -- local
+!    integer(I4B) :: ibinun
+!    ! -- formats
+!! ------------------------------------------------------------------------------
+!    !
+!    ! -- Set unit number for binary output
+!    if (this%ipakcb < 0) then
+!      ibinun = icbcun
+!    elseif (this%ipakcb == 0) then
+!      ibinun = 0
+!    else
+!      ibinun = this%ipakcb
+!    end if
+!    if (icbcfl == 0) ibinun = 0
+!    !
+!    ! -- Write the face flows if requested
+!    if (ibinun /= 0) then
+!      call this%dis%record_connection_array(flowja, ibinun, this%iout)
+!    end if
+!    !
+!    ! -- Return
+!    return
+!  end subroutine gwe_ot_flowja
+!
+!  subroutine gwe_ot_dv(this, idvsave, idvprint, ipflag)
+!    class(GweModelType) :: this
+!    integer(I4B), intent(in) :: idvsave
+!    integer(I4B), intent(in) :: idvprint
+!    integer(I4B), intent(inout) :: ipflag
+!    class(BndType), pointer :: packobj
+!    integer(I4B) :: ip
+!
+!    ! -- Print advanced package dependent variables
+!    do ip = 1, this%bndlist%Count()
+!      packobj => GetBndFromList(this%bndlist, ip)
+!      call packobj%bnd_ot_dv(idvsave, idvprint)
+!    end do
+!
+!    ! -- save head and print head
+!    call this%oc%oc_ot(ipflag)
+!
+!  end subroutine gwe_ot_dv
+!
+!  subroutine gwe_ot_bdsummary(this, ibudfl, ipflag)
+!    use TdisModule, only: kstp, kper, totim
+!    class(GweModelType) :: this
+!    integer(I4B), intent(in) :: ibudfl
+!    integer(I4B), intent(inout) :: ipflag
+!    class(BndType), pointer :: packobj
+!    integer(I4B) :: ip
+!
+!    !
+!    ! -- Package budget summary
+!    do ip = 1, this%bndlist%Count()
+!      packobj => GetBndFromList(this%bndlist, ip)
+!      call packobj%bnd_ot_bdsummary(kstp, kper, this%iout, ibudfl)
+!    end do
+!
+!    ! -- mover budget summary
+!    if (this%inmvt > 0) then
+!      call this%mvt%mvt_ot_bdsummary(ibudfl)
+!    end if
+!
+!    ! -- model budget summary
+!    if (ibudfl /= 0) then
+!      ipflag = 1
+!      call this%budget%budget_ot(kstp, kper, this%iout)
+!    end if
+!
+!    ! -- Write to budget csv
+!    call this%budget%writecsv(totim)
+!
+!  end subroutine gwe_ot_bdsummary
 
   subroutine gwe_da(this)
 ! ******************************************************************************
@@ -912,6 +916,10 @@ contains
     integer(I4B) :: ip
     class(BndType), pointer :: packobj
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Scalars
+    call mem_deallocate(this%inmst)
+    call mem_deallocate(this%indsp)
     !
     ! -- Deallocate idm memory
     call memorylist_remove(this%name, 'NAM', idm_context)
@@ -1403,7 +1411,7 @@ contains
     !call tsp_obs_cr(this%obs, this%inobs)
     !
     ! -- Check to make sure that required ftype's have been specified
-    call this%ftype_check(indis)
+    call this%ftype_check(indis, this%inmst)
     !
     call this%create_bndpkgs(bndpkgs, pkgtypes, pkgnames, mempaths, inunits)
 
