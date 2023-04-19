@@ -358,7 +358,7 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_model(sim):
+def eval_transport(sim):
     print("evaluating results...")
 
     # read transport results from GWE model
@@ -486,36 +486,16 @@ def eval_model(sim):
 
 # - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # initialize testing framework
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
     test = TestFramework()
-
-    # build the model
-    test.build(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_model, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = TestFramework()
-
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_model, idxsim=idx)
-        test.run_mf6(sim)
-
-
-if __name__ == "__main__":
-    # Heat Transport in 1-dimension
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+    test.build(build_model, idx, ws)
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=idx
+        ),
+        ws,
+    )
