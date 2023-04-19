@@ -826,8 +826,24 @@ if __name__ == "__main__":
             Path("../../../src/Model/GroundWaterTransport", "gwt1disv1idm.f90"),
         ],
         [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwe-dis.dfn"),
+            Path("../../../src/Model/GroundWaterEnergy", "gwe1dis1idm.f90"),
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwe-disu.dfn"),
+            Path("../../../src/Model/GroundWaterEnergy", "gwe1disu1idm.f90"),
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwe-disv.dfn"),
+            Path("../../../src/Model/GroundWaterEnergy", "gwe1disv1idm.f90"),
+        ],
+        [
             Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-dsp.dfn"),
             Path("../../../src/Model/GroundWaterTransport", "gwt1dspidm.f90"),
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwe-dsp.dfn"),
+            Path("../../../src/Model/GroundWaterEnergy", "gwe1dspidm.f90"),
         ],
         [
             Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-nam.dfn"),
