@@ -21,16 +21,6 @@ description add xt3d terms to right-hand side, when possible.  This option uses 
 # --------------------- gwe dsp griddata ---------------------
 
 block griddata
-name diffc
-type double precision
-shape (nodes)
-reader readarray
-layered true
-optional true
-longname effective molecular diffusion coefficient
-description effective molecular diffusion coefficient.
-
-block griddata
 name alh
 type double precision
 shape (nodes)
