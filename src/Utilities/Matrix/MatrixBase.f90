@@ -155,8 +155,8 @@ module MatrixBaseModule
     subroutine multiply_if(this, vec_x, vec_y)
       import MatrixBaseType, VectorBaseType
       class(MatrixBaseType) :: this
-      class(VectorBaseType) :: vec_x
-      class(VectorBaseType) :: vec_y
+      class(VectorBaseType), pointer :: vec_x
+      class(VectorBaseType), pointer :: vec_y
     end subroutine
   end interface
 
