@@ -295,8 +295,8 @@ contains
   !<
   subroutine spm_multiply(this, vec_x, vec_y)
     class(SparseMatrixType) :: this
-    class(VectorBaseType) :: vec_x
-    class(VectorBaseType) :: vec_y
+    class(VectorBaseType), pointer :: vec_x
+    class(VectorBaseType), pointer :: vec_y
     ! local
     integer(I4B) :: irow, icol, ipos
     real(DP), dimension(:), pointer, contiguous :: x, y
