@@ -308,7 +308,7 @@ contains
           num_model => GetNumericalModelFromList(basemodellist, im)
           model_loc_idx(n) = im
         end if
-        call add_virtual_gwt_model(n, model_names(n), num_model)
+        call add_virtual_gwe_model(n, model_names(n), num_model)
       case default
         write (errmsg, '(4x,a,a)') &
           '****ERROR. UNKNOWN SIMULATION MODEL: ', &
