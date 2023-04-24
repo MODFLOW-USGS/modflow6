@@ -593,6 +593,51 @@ contains
 
   end function get_value_string
 
+  !> @brief Get a pointer to an array
+  !!
+  !! The array is located at @p c_var_address. There is no copying of data involved.
+  !! Multi-dimensional arrays are supported and the get_var_rank() function
+  !! can be used to get the variable's dimensionality, and get_var_shape() for
+  !! its shape.
+  !<
+  function get_value_ptr(c_var_address, c_arr_ptr) result(bmi_status) &
+    bind(C, name="get_value_ptr")
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_value_ptr
+    ! -- modules
+    use ConstantsModule, only: LENMEMTYPE
+    ! -- dummy variables
+    character(kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
+    type(c_ptr), intent(inout) :: c_arr_ptr !< pointer to the array
+    integer(kind=c_int) :: bmi_status !< BMI status code
+    ! -- local variables
+    character(len=LENMEMPATH) :: mem_path
+    character(len=LENMEMTYPE) :: mem_type
+    character(len=LENVARNAME) :: var_name
+    logical(LGP) :: valid
+
+    bmi_status = BMI_SUCCESS
+
+    call split_address(c_var_address, mem_path, var_name, valid)
+    if (.not. valid) then
+      bmi_status = BMI_FAILURE
+      return
+    end if
+
+    call get_mem_type(var_name, mem_path, mem_type)
+
+    if (index(mem_type, "DOUBLE") /= 0) then
+      bmi_status = get_value_ptr_double(c_var_address, c_arr_ptr)
+    else if (index(mem_type, "INTEGER") /= 0) then
+      bmi_status = get_value_ptr_int(c_var_address, c_arr_ptr)
+    else
+      write (bmi_last_error, fmt_unsupported_rank) trim(var_name)
+      call report_bmi_error(bmi_last_error)
+      bmi_status = BMI_FAILURE
+      return
+    end if
+
+  end function get_value_ptr
+
   !> @brief Get a pointer to the array of double precision numbers
   !!
   !! The array is located at @p c_var_address. There is no copying of data involved.
