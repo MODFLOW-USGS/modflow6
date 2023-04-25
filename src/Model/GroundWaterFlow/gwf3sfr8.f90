@@ -5116,7 +5116,7 @@ contains
     idx = idx + 1
     maxlist = this%maxbound - this%ianynone
     naux = 1
-    auxtxt(1) = 'WET-STRMBED-AREA'
+    auxtxt(1) = '       FLOW-AREA'
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
                                              this%packName, &

@@ -62,7 +62,7 @@ hani = 1
 laytyp = 1
 
 # Package boundary conditions
-surf_Q_in = 86400  # 1 m^3/s
+surf_Q_in = [86400, 0]  # 1 m^3/s
 sfr_evaprate = 0.1
 streambed_K = 0.0
 
@@ -261,13 +261,15 @@ def build_model(idx, dir):
             rc.append(-(irch + 1))
         connectiondata.append(rc)
 
-    sfrbndx = []
-    for i in np.arange(nreaches):
-        if i == 0:
-            sfrbndx.append([i, "INFLOW", surf_Q_in])
-        sfrbndx.append([i, "EVAPORATION", sfr_evaprate])
+    sfr_perioddata = {}
+    for t in np.arange(len(surf_Q_in)):
+        sfrbndx = []
+        for i in np.arange(nreaches):
+            if i == 0:
+                sfrbndx.append([i, "INFLOW", surf_Q_in[t]])
+            sfrbndx.append([i, "EVAPORATION", sfr_evaprate])
 
-    sfr_perioddata = {0: sfrbndx}
+        sfr_perioddata.update({t: sfrbndx})
 
     # Instantiate SFR observation points
     sfr_obs = {
@@ -338,31 +340,38 @@ def eval_results(sim):
         "Wetted streambed area of reach 2 should be less than reach 1 "
         "owing to evaporation"
     )
-    assert shared_area[1][0] > shared_area[1][1], msg
+    assert shared_area[0][0] > shared_area[0][1], msg
 
     msg = (
         "Wetted streambed area of reach 4 should be less than reach 3 "
         "owing to evaporation"
     )
-    assert shared_area[1][2] > shared_area[1][3], msg
+    assert shared_area[0][2] > shared_area[0][3], msg
 
     msg = (
         "Wetted streambed area of reach 6 should be less than reach 5 "
         "owing to evaporation"
     )
-    assert shared_area[1][4] > shared_area[1][5], msg
+    assert shared_area[0][4] > shared_area[0][5], msg
 
     msg = (
         "Wetted streambed area of reach 1 should be less than reach 3 "
         "owing to x-section geometry specification"
     )
-    assert shared_area[1][0] < shared_area[1][2], msg
+    assert shared_area[0][0] < shared_area[0][2], msg
 
     msg = (
         "Wetted streambed area of reach 3 should be less than reach 5 "
         "owing to x-section geometry specification"
     )
-    assert shared_area[1][2] < shared_area[1][4], msg
+    assert shared_area[0][2] < shared_area[0][4], msg
+
+    msg = (
+        "Wetted streambed area of all reaches should be zero in stess "
+        "period 2"
+    )
+    for i in np.arange(ncol):
+        assert shared_area[1][i] == 0.0, msg
 
 
 @pytest.mark.parametrize(
