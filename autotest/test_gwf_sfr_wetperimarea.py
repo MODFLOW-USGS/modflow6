@@ -324,7 +324,7 @@ def eval_results(sim):
     sfrobj = flopy.utils.binaryfile.CellBudgetFile(fname, precision="double")
     sfr_wetted_interface_area = sfrobj.get_data(text="gwf")
 
-    # Extract evap
+    # Extract shared wetted interfacial areas
     shared_area = []
     for t in range(len(sfr_wetted_interface_area)):
         sp_area = []
