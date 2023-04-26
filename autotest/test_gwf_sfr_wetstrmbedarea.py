@@ -5,6 +5,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+import math
 from framework import TestFramework
 from simulation import TestSimulation
 
@@ -62,9 +63,49 @@ hani = 1
 laytyp = 1
 
 # Package boundary conditions
-surf_Q_in = [86400, 0]  # 1 m^3/s
+surf_Q_in = [86400, 0]  # 86400 m^3/d = 1 m^3/s
 sfr_evaprate = 0.1
 streambed_K = 0.0
+rwid = [9.0, 10.0, 20]
+# Channel geometry: trapezoidal
+x_sec_tab1 = get_xy_pts(
+    [0.0, 2.0, 4.0, 5.0, 7.0, 9.0],
+    [0.66666667, 0.33333333, 0.0, 0.0, 0.33333333, 0.66666667],
+    rwid[0],
+)
+
+x_sec_tab2 = get_xy_pts(
+    [0.0, 2.0, 4.0, 6.0, 8.0, 10.0],
+    [0.5, 0.25, 0.0, 0.0, 0.25, 0.5],
+    rwid[1],
+)
+
+x_sec_tab3 = get_xy_pts(
+    [0.0, 4.0, 8.0, 12.0, 16.0, 20.0],
+    [0.33333333, 0.16666667, 0.0, 0.0, 0.16666667, 0.33333333],
+    rwid[2],
+)
+x_sec_tab = [x_sec_tab1, x_sec_tab2, x_sec_tab3]
+
+def calc_wp(j, stg):
+    if j < 2:
+        rise = 1 / 3
+        run = 2
+        bot_wid = 1.
+    elif j < 4:
+        rise = 1 / 4
+        run = 2
+        bot_wid = 2.
+    else:
+        rise = 1 / 6
+        run = 4
+        bot_wid = 4.
+
+    ang = math.atan2(rise, run)
+    hyp_len = stg / math.sin(ang)
+    wp = hyp_len * 2 + bot_wid
+
+    return wp
 
 # time params
 steady = {0: True, 1: False}
@@ -180,7 +221,6 @@ def build_model(idx, dir):
     # sfr data
     nreaches = ncol
     rlen = delr
-    rwid = [9.0, 10.0, 20]
     roughness = 0.035
     rbth = 1.0
     rhk = streambed_K
@@ -192,25 +232,6 @@ def build_model(idx, dir):
     strm_incision = 1.0
 
     # use trapezoidal cross-section for channel geometry
-    x_sec_tab1 = get_xy_pts(
-        [0.0, 2.0, 4.0, 5.0, 7.0, 9.0],
-        [0.66666667, 0.33333333, 0.0, 0.0, 0.33333333, 0.66666667],
-        rwid[0],
-    )
-
-    x_sec_tab2 = get_xy_pts(
-        [0.0, 2.0, 4.0, 6.0, 8.0, 10.0],
-        [0.5, 0.25, 0.0, 0.0, 0.25, 0.5],
-        rwid[1],
-    )
-
-    x_sec_tab3 = get_xy_pts(
-        [0.0, 4.0, 8.0, 12.0, 16.0, 20.0],
-        [0.33333333, 0.16666667, 0.0, 0.0, 0.16666667, 0.33333333],
-        rwid[2],
-    )
-    x_sec_tab = [x_sec_tab1, x_sec_tab2, x_sec_tab3]
-
     sfr_xsec_tab_nm1 = "{}.xsec.tab1".format(gwfname_trapezoidal)
     sfr_xsec_tab_nm2 = "{}.xsec.tab2".format(gwfname_trapezoidal)
     sfr_xsec_tab_nm3 = "{}.xsec.tab3".format(gwfname_trapezoidal)
@@ -273,7 +294,7 @@ def build_model(idx, dir):
 
     # Instantiate SFR observation points
     sfr_obs = {
-        "{}.sfrobs".format(gwfname_trapezoidal): [
+        "{}.sfr.obs.csv".format(gwfname_trapezoidal): [
             ("rch1_depth", "depth", 1),
             ("rch2_depth", "depth", 2),
             ("rch3_depth", "depth", 3),
@@ -324,6 +345,10 @@ def eval_results(sim):
     sfrobj = flopy.utils.binaryfile.CellBudgetFile(fname, precision="double")
     sfr_wetted_interface_area = sfrobj.get_data(text="gwf")
 
+    # Retrieve simulated stage of each reach
+    sfr_pth0 = os.path.join(sim.simpath, f"{gwfname}.sfr.obs.csv")
+    sfrstg = np.genfromtxt(sfr_pth0, names=True, delimiter=",")
+
     # Extract shared wetted interfacial areas
     shared_area = []
     for t in range(len(sfr_wetted_interface_area)):
@@ -335,43 +360,22 @@ def eval_results(sim):
 
     shared_area = np.array(shared_area)
 
-    # Perform relative checks
-    msg = (
-        "Wetted streambed area of reach 2 should be less than reach 1 "
-        "owing to evaporation"
-    )
-    assert shared_area[0][0] > shared_area[0][1], msg
-
-    msg = (
-        "Wetted streambed area of reach 4 should be less than reach 3 "
-        "owing to evaporation"
-    )
-    assert shared_area[0][2] > shared_area[0][3], msg
-
-    msg = (
-        "Wetted streambed area of reach 6 should be less than reach 5 "
-        "owing to evaporation"
-    )
-    assert shared_area[0][4] > shared_area[0][5], msg
-
-    msg = (
-        "Wetted streambed area of reach 1 should be less than reach 3 "
-        "owing to x-section geometry specification"
-    )
-    assert shared_area[0][0] < shared_area[0][2], msg
-
-    msg = (
-        "Wetted streambed area of reach 3 should be less than reach 5 "
-        "owing to x-section geometry specification"
-    )
-    assert shared_area[0][2] < shared_area[0][4], msg
+    # Calculate wetted streambed area for comparison
+    for j, stg in enumerate(list(sfrstg[0])[1:]):
+        wp = calc_wp(j, stg)
+        wa = wp * delr
+        msg = (
+            "Wetted streambed area for reach " + str(j) +
+            "in stress period 1 does not match explicitly-calculated answer"
+        )
+        assert np.isclose(wa, shared_area[0, j], atol=1e-4), msg
 
     msg = (
         "Wetted streambed area of all reaches should be zero in stess "
         "period 2"
     )
-    for i in np.arange(ncol):
-        assert shared_area[1][i] == 0.0, msg
+    for val in list(sfrstg[1])[1:]:
+        assert val == 0.0, msg
 
 
 @pytest.mark.parametrize(
