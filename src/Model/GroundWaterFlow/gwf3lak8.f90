@@ -6285,6 +6285,7 @@ contains
     integer(I4B) :: nlen
     real(DP) :: v, v1
     real(DP) :: q
+    real(DP) :: lkstg, gwhead, wa
     ! -- formats
 ! -----------------------------------------------------------------------------
     !
@@ -6322,6 +6323,10 @@ contains
       do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
         n2 = this%cellid(j)
         q = this%qleak(j)
+        lkstg = this%xnewpak(n)
+        gwhead = this%xnew(n2)
+        call this%lak_calculate_conn_warea(n, j, lkstg, gwhead, wa)
+        this%qauxcbc(1) = wa
         call this%budobj%budterm(idx)%update_term(n, n2, q, this%qauxcbc)
       end do
     end do
