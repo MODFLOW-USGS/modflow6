@@ -335,7 +335,14 @@ def eval_results(sim):
     # get final lake stage
     lk_pth0 = os.path.join(sim.simpath, f"{gwfname}.lak.obs.csv")
     lkstg = np.genfromtxt(lk_pth0, names=True, delimiter=",")
-    lkstg_val = lkstg["STAGE"]
+    lkstg_time = lkstg["time"].tolist()
+    lkstg_val = lkstg["STAGE"].tolist()
+
+    # Store only the values at the end of the time step
+    idx = [i for i, val in enumerate(lkstg_time) if not val.is_integer()]
+    for i in idx[::-1]:
+        lkstg_time.pop(i)
+        lkstg_val.pop(i)
 
     # Get heads
     fname = gwfname + ".hds"
@@ -362,19 +369,39 @@ def eval_results(sim):
         wetted_out.append(vals)
     wetted_out = np.array(wetted_out)
 
+    # Compare MF6 output to answer calculated here
+    msg = 'Compare value written by MF6 to a value calculated here based on ' \
+          'either lake stage or gw head'
+    for tm in np.arange(wetted_out.shape[0]):
+        for conn in np.arange(wetted_out.shape[1]):
+            stg = lkstg_val[tm]
+            # horizontal connections are stored first
+            if conn == 0:
+                gwh = hds[tm, 0, 0, 0]
+                thk = resolve_lvl(stg, gwh, top)
+                sat = calc_qSat(top, botm[0], thk)
+                wa = sat * delc * (top - botm[0])
+                mf6_wa = wetted_out[tm, conn]
+                assert np.isclose(mf6_wa, wa, atol=1e-6), msg
+
+            # vertical connection analysis
+            elif conn == 1:
+                gwh = hds[tm, 1, 0, 1]
+                if gwh >= botm[0] or stg >= botm[0]:
+                    # For a wetted vertical connection, it doesn't matter
+                    # which direction the gradient is in, the wetted area
+                    # is always delr * delc
+                    wa = delc * delr
+                    assert wetted_out[tm, conn] == wa, msg
+
     # Lake is dry in the first two stress periods. Both horiz. and vert.
     # connections
     msg = (
-        "Lake starts out dry and wets-up after stress period 2. "
-        "Wetted lakebed area should be equal to 0.0 in the first two stress periods"
+        "Lake starts out dry and wets-up after stress period 2. Horizontal "
+        "wetted lakebed area should be equal to 0.0 in the first two stress "
+        "periods"
     )
-    assert np.all(wetted_out[0:2,] == 0.0), msg
-
-    msg = (
-        "Once the lake wets, the vertical connection should reflect a wetted area "
-        "equal to delr*delc."
-    )
-    assert np.all(wetted_out[2:, 1] == delr*delc), msg
+    assert np.all(wetted_out[0:2, 0] == 0.0), msg
 
     msg = (
         "With stage rising in the lake continuously, so too should the wetted area "

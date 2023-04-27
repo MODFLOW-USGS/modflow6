@@ -6324,12 +6324,11 @@ contains
         n2 = this%cellid(j)
         q = this%qleak(j)
         lkstg = this%xnewpak(n)
-        if (lkstg <= this%lakebot(n)) then
-          wa = DZERO
-        else
-          gwhead = this%xnew(n2)
-          call this%lak_calculate_conn_warea(n, j, lkstg, gwhead, wa)
-        end if
+        ! -- For the case when the lak stage is exactly equal
+        !    to the lake bottom, the wetted area is not returned
+        !    equal to 0.0
+        gwhead = this%xnew(n2)
+        call this%lak_calculate_conn_warea(n, j, lkstg, gwhead, wa)
         this%qauxcbc(1) = wa
         call this%budobj%budterm(idx)%update_term(n, n2, q, this%qauxcbc)
       end do
