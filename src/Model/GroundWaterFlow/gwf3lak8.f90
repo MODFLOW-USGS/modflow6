@@ -835,7 +835,7 @@ contains
             '(', trim(keyword), ')'
           call store_error(errmsg)
         end select
-        write(ctypenm, '(a16)') keyword
+        write (ctypenm, '(a16)') keyword
 
         ! -- bed leakance
         !this%bedleak(ipos) = this%parser%GetDouble()
