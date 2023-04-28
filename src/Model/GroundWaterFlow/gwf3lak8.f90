@@ -716,7 +716,7 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: LINELENGTH
+    use ConstantsModule, only: LINELENGTH, LENVARNAME
     use SimModule, only: store_error, count_errors
     ! -- dummy
     class(LakType), intent(inout) :: this
@@ -731,6 +731,7 @@ contains
     integer(I4B) :: icellid, icellid0
     real(DP) :: top, bot
     integer(I4B), dimension(:), pointer, contiguous :: nboundchk
+    character(len=LENVARNAME) :: ctypenm
 
     ! -- format
     !
@@ -834,6 +835,7 @@ contains
             '(', trim(keyword), ')'
           call store_error(errmsg)
         end select
+        ctypenm = keyword
 
         ! -- bed leakance
         !this%bedleak(ipos) = this%parser%GetDouble()
@@ -858,12 +860,13 @@ contains
 
         ! -- connection length
         rval = this%parser%GetDouble()
-        if (rval < dzero) then
+        if (rval <= DZERO) then
           if (this%ictype(ipos) == 1 .or. this%ictype(ipos) == 2 .or. &
               this%ictype(ipos) == 3) then
-            write (errmsg, '(a,1x,i4,1x,a,1x,i4,1x,a)') &
-              'connection length (connlength) FOR LAKE ', n, &
-              ' HORIZONTAL CONNECTION ', j, 'MUST BE >= 0'
+            write (errmsg, '(a,1x,i4,1x,a,1x,i4,1x,a,a,1x,a)') &
+              'connection length (connlen) FOR LAKE ', n, &
+              ', CONNECTION NO.', j, ', MUST BE >= 0 FOR SPECIFIED ', &
+              'connection type (ctype)', ctypenm
             call store_error(errmsg)
           else
             rval = DZERO
@@ -6285,6 +6288,7 @@ contains
     integer(I4B) :: nlen
     real(DP) :: v, v1
     real(DP) :: q
+    real(DP) :: lkstg, gwhead, wa
     ! -- formats
 ! -----------------------------------------------------------------------------
     !
@@ -6322,6 +6326,13 @@ contains
       do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
         n2 = this%cellid(j)
         q = this%qleak(j)
+        lkstg = this%xnewpak(n)
+        ! -- For the case when the lak stage is exactly equal
+        !    to the lake bottom, the wetted area is not returned
+        !    equal to 0.0
+        gwhead = this%xnew(n2)
+        call this%lak_calculate_conn_warea(n, j, lkstg, gwhead, wa)
+        this%qauxcbc(1) = wa
         call this%budobj%budterm(idx)%update_term(n, n2, q, this%qauxcbc)
       end do
     end do
