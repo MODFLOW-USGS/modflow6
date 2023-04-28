@@ -835,7 +835,7 @@ contains
             '(', trim(keyword), ')'
           call store_error(errmsg)
         end select
-        ctypenm = keyword
+        write(ctypenm, '(a16)') keyword
 
         ! -- bed leakance
         !this%bedleak(ipos) = this%parser%GetDouble()
@@ -865,7 +865,7 @@ contains
               this%ictype(ipos) == 3) then
             write (errmsg, '(a,1x,i4,1x,a,1x,i4,1x,a,a,1x,a)') &
               'connection length (connlen) FOR LAKE ', n, &
-              ', CONNECTION NO.', j, ', MUST BE >= 0 FOR SPECIFIED ', &
+              ', CONNECTION NO.', j, ', MUST BE > 0 FOR SPECIFIED ', &
               'connection type (ctype)', ctypenm
             call store_error(errmsg)
           else
