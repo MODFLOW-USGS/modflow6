@@ -8,6 +8,7 @@ module NumericalModelModule
   use TimeArraySeriesManagerModule, only: TimeArraySeriesManagerType
   use ListModule, only: ListType
   use MatrixBaseModule
+  use VectorBaseModule
 
   implicit none
   private
@@ -73,7 +74,6 @@ module NumericalModelModule
     procedure :: get_mcellid
     procedure :: get_mnodeu
     procedure :: get_iasym
-    procedure :: load_input_context
   end type NumericalModelType
 
 contains
@@ -124,13 +124,9 @@ contains
     iptc = 0
   end subroutine model_ptcchk
 
-  subroutine model_ptc(this, kiter, neqsln, matrix, x, rhs, iptc, ptcf)
+  subroutine model_ptc(this, vec_residual, iptc, ptcf)
     class(NumericalModelType) :: this
-    integer(I4B), intent(in) :: kiter
-    integer(I4B), intent(in) :: neqsln
-    class(MatrixBaseType), pointer :: matrix
-    real(DP), dimension(neqsln), intent(in) :: x
-    real(DP), dimension(neqsln), intent(in) :: rhs
+    class(VectorBaseType), pointer :: vec_residual
     integer(I4B), intent(inout) :: iptc
     real(DP), intent(inout) :: ptcf
   end subroutine model_ptc
@@ -448,40 +444,5 @@ contains
     !
     return
   end function GetNumericalModelFromList
-
-  !> @brief Load input context for supported package
-  !<
-  subroutine load_input_context(this, filtyp, modelname, pkgname, inunit, iout, &
-                                ipaknum)
-    ! -- modules
-    use IdmMf6FileLoaderModule, only: input_load
-    ! -- dummy
-    class(NumericalModelType) :: this
-    character(len=*), intent(in) :: filtyp
-    character(len=*), intent(in) :: modelname
-    character(len=*), intent(in) :: pkgname
-    integer(I4B), intent(in) :: inunit
-    integer(I4B), intent(in) :: iout
-    integer(I4B), optional, intent(in) :: ipaknum
-    ! -- local
-! ------------------------------------------------------------------------------
-    !
-    ! -- only load if there is a file to read
-    if (inunit <= 0) return
-    !
-    ! -- Load model package input to input context
-    select case (filtyp)
-    case ('DIS6')
-      call input_load('DIS6', 'GWF', 'DIS', modelname, pkgname, inunit, iout)
-    case ('DISU6')
-      call input_load('DISU6', 'GWF', 'DISU', modelname, pkgname, inunit, iout)
-    case ('DISV6')
-      call input_load('DISV6', 'GWF', 'DISV', modelname, pkgname, inunit, iout)
-    case default
-    end select
-    !
-    ! -- return
-    return
-  end subroutine load_input_context
 
 end module NumericalModelModule

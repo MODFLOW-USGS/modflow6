@@ -9,10 +9,10 @@ from simulation import TestSimulation
 sfmt = "{:25s} - {}"
 excluded_models = ["alt_model", "mf2005"]
 excluded_comparisons = {
-    "testPr2": ("6.2.1",),
-    "testUzfLakSfr": ("6.2.1",),
-    "testUzfLakSfr_laketable": ("6.2.1",),
-    "testWetDry": ("6.2.1",),
+    "testPr2": ["6.2.1",],
+    "testUzfLakSfr": ["6.2.1",],
+    "testUzfLakSfr_laketable": ["6.2.1",],
+    "testWetDry": ["6.2.1",],
 }
 
 

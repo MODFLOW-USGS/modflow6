@@ -52,7 +52,7 @@ module GwtGwtConnectionModule
 
   contains
 
-    procedure, pass(this) :: gwtGwtConnection_ctor
+    procedure :: gwtGwtConnection_ctor
     generic, public :: construct => gwtGwtConnection_ctor
 
     procedure :: exg_ar => gwtgwtcon_ar
@@ -68,13 +68,14 @@ module GwtGwtConnectionModule
     procedure :: exg_ot => gwtgwtcon_ot
 
     ! overriding 'protected'
-    procedure, pass(this) :: validateConnection
+    procedure :: validateConnection
 
     ! local stuff
-    procedure, pass(this), private :: allocate_scalars
-    procedure, pass(this), private :: allocate_arrays
-    procedure, pass(this), private :: setGridExtent
-    procedure, pass(this), private :: setFlowToExchange
+    procedure, private :: allocate_scalars
+    procedure, private :: allocate_arrays
+    procedure, private :: cfg_dist_vars
+    procedure, private :: setGridExtent
+    procedure, private :: setFlowToExchange
 
   end type GwtGwtConnectionType
 
@@ -178,32 +179,7 @@ contains
     this%gwtInterfaceModel%ixt3d = this%iIfaceXt3d
     call this%gwtInterfaceModel%model_df()
 
-    call this%addDistVar('X', '', SYNC_NODES, &
-                         (/STG_BEFORE_AR, STG_BEFORE_AD, STG_BEFORE_CF/))
-    call this%addDistVar('IBOUND', '', SYNC_NODES, (/STG_BEFORE_AR/))
-    call this%addDistVar('TOP', 'DIS', SYNC_NODES, (/STG_BEFORE_AR/))
-    call this%addDistVar('BOT', 'DIS', SYNC_NODES, (/STG_BEFORE_AR/))
-    call this%addDistVar('AREA', 'DIS', SYNC_NODES, (/STG_BEFORE_AR/))
-    if (this%gwtInterfaceModel%dsp%idiffc > 0) then
-      call this%addDistVar('DIFFC', 'DSP', SYNC_NODES, (/STG_BEFORE_AR/))
-    end if
-    if (this%gwtInterfaceModel%dsp%idisp > 0) then
-      call this%addDistVar('ALH', 'DSP', SYNC_NODES, (/STG_BEFORE_AR/))
-      call this%addDistVar('ALV', 'DSP', SYNC_NODES, (/STG_BEFORE_AR/))
-      call this%addDistVar('ATH1', 'DSP', SYNC_NODES, (/STG_BEFORE_AR/))
-      call this%addDistVar('ATH2', 'DSP', SYNC_NODES, (/STG_BEFORE_AR/))
-      call this%addDistVar('ATV', 'DSP', SYNC_NODES, (/STG_BEFORE_AR/))
-    end if
-    call this%addDistVar('GWFHEAD', 'FMI', SYNC_NODES, (/STG_BEFORE_AD/))
-    call this%addDistVar('GWFSAT', 'FMI', SYNC_NODES, (/STG_BEFORE_AD/))
-    call this%addDistVar('GWFSPDIS', 'FMI', SYNC_NODES, (/STG_BEFORE_AD/))
-    call this%addDistVar('GWFFLOWJA', 'FMI', SYNC_CONNECTIONS, (/STG_BEFORE_AD/))
-    call this%addDistVar('GWFFLOWJA', 'FMI', SYNC_EXCHANGES, (/STG_BEFORE_AD/), &
-                         exg_var_name='GWFSIMVALS')
-    ! fill porosity from mst packages, needed for dsp
-    if (this%gwtModel%indsp > 0 .and. this%gwtModel%inmst > 0) then
-      call this%addDistVar('POROSITY', 'MST', SYNC_NODES, (/STG_AFTER_AR/))
-    end if
+    call this%cfg_dist_vars()
 
     call this%allocate_arrays()
     call this%gwtInterfaceModel%allocate_fmi()
@@ -219,6 +195,40 @@ contains
     call this%spatialcon_connect()
 
   end subroutine gwtgwtcon_df
+
+  !> @brief Configure distributed variables for this interface model
+  !<
+  subroutine cfg_dist_vars(this)
+    class(GwtGwtConnectionType) :: this !< the connection
+
+    call this%cfg_dv('X', '', SYNC_NDS, &
+                     (/STG_BFR_CON_AR, STG_BFR_EXG_AD, STG_BFR_EXG_CF/))
+    call this%cfg_dv('IBOUND', '', SYNC_NDS, (/STG_BFR_CON_AR/))
+    call this%cfg_dv('TOP', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
+    call this%cfg_dv('BOT', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
+    call this%cfg_dv('AREA', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
+    if (this%gwtInterfaceModel%dsp%idiffc > 0) then
+      call this%cfg_dv('DIFFC', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
+    end if
+    if (this%gwtInterfaceModel%dsp%idisp > 0) then
+      call this%cfg_dv('ALH', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
+      call this%cfg_dv('ALV', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
+      call this%cfg_dv('ATH1', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
+      call this%cfg_dv('ATH2', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
+      call this%cfg_dv('ATV', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
+    end if
+    call this%cfg_dv('GWFHEAD', 'FMI', SYNC_NDS, (/STG_BFR_EXG_AD/))
+    call this%cfg_dv('GWFSAT', 'FMI', SYNC_NDS, (/STG_BFR_EXG_AD/))
+    call this%cfg_dv('GWFSPDIS', 'FMI', SYNC_NDS, (/STG_BFR_EXG_AD/))
+    call this%cfg_dv('GWFFLOWJA', 'FMI', SYNC_CON, (/STG_BFR_EXG_AD/))
+    call this%cfg_dv('GWFFLOWJA', 'FMI', SYNC_EXG, (/STG_BFR_EXG_AD/), &
+                     exg_var_name='GWFSIMVALS')
+    ! fill porosity from mst packages, needed for dsp
+    if (this%gwtModel%indsp > 0 .and. this%gwtModel%inmst > 0) then
+      call this%cfg_dv('POROSITY', 'MST', SYNC_NDS, (/STG_AFT_CON_AR/))
+    end if
+
+  end subroutine cfg_dist_vars
 
   !> @brief Allocate array variables for this connection
   !<
@@ -457,7 +467,7 @@ contains
 
     if (this%exchangeIsOwned) then
       gwtEx => this%gwtExchange
-      map => this%interface_map%exchange_map(this%interface_map%prim_exg_idx)
+      map => this%interface_map%exchange_maps(this%interface_map%prim_exg_idx)
 
       ! use (half of) the exchange map in reverse:
       do i = 1, size(map%src_idx)

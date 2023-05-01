@@ -18,6 +18,7 @@ module PetscSolverModule
     KSP :: ksp_petsc
     class(PetscMatrixType), pointer :: matrix
     Mat, pointer :: mat_petsc
+    Vec, pointer :: vec_residual
 
     integer(I4B) :: lin_accel_type
     real(DP) :: dvclose
@@ -58,6 +59,8 @@ contains
   subroutine petsc_initialize(this, matrix)
     class(PetscSolverType) :: this !< This solver instance
     class(MatrixBaseType), pointer :: matrix !< The solution matrix as KSP operator
+    ! local
+    PetscErrorCode :: ierr
 
     this%mat_petsc => null()
     select type (pm => matrix)
@@ -65,6 +68,10 @@ contains
       this%matrix => pm
       this%mat_petsc => pm%mat
     end select
+
+    allocate (this%vec_residual)
+    call MatCreateVecs(this%mat_petsc, this%vec_residual, PETSC_NULL_VEC, ierr)
+    CHKERRQ(ierr)
 
     ! get options from PETSc database file
     call this%get_options()
@@ -126,6 +133,7 @@ contains
     PetscErrorCode :: ierr
 
     this%petsc_ctx%dvclose = this%dvclose
+    this%petsc_ctx%max_its = this%nitermax
     call MatCreateVecs( &
       this%mat_petsc, this%petsc_ctx%x_old, PETSC_NULL_VEC, ierr)
     CHKERRQ(ierr)
@@ -187,6 +195,11 @@ contains
 
     call KSPDestroy(this%ksp_petsc, ierr)
     CHKERRQ(ierr)
+
+    ! delete work vector
+    call VecDestroy(this%vec_residual, ierr)
+    CHKERRQ(ierr)
+    deallocate (this%vec_residual)
 
     ! delete context
     call VecDestroy(this%petsc_ctx%delta_x, ierr)

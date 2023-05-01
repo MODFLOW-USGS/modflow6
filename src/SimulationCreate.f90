@@ -3,8 +3,11 @@ module SimulationCreateModule
   use KindModule, only: DP, I4B, LGP, write_kindinfo
   use ConstantsModule, only: LINELENGTH, LENMODELNAME, LENBIGLINE, &
                              DZERO, LENEXCHANGENAME, LENMEMPATH, LENPACKAGETYPE
-  use SimVariablesModule, only: iout, simulation_mode, &
-                                proc_id, nr_procs, model_names, model_loc_idx
+
+  use CharacterStringModule, only: CharacterStringType
+  use SimVariablesModule, only: iout, simulation_mode, proc_id, &
+                                nr_procs, model_names, model_ranks, &
+                                model_loc_idx
   use GenericUtilitiesModule, only: sim_message, write_centered
   use SimModule, only: store_error, count_errors, &
                        store_error_filename, MaxErrors
@@ -25,6 +28,7 @@ module SimulationCreateModule
   private
   public :: simulation_cr
   public :: simulation_da
+  public :: create_load_mask ! TODO_MJR: this should go somewhere else
 
 contains
 
@@ -46,6 +50,7 @@ contains
   !<
   subroutine simulation_da()
     ! -- modules
+    use MemoryManagerModule, only: mem_deallocate
     use MemoryManagerExtModule, only: memorylist_remove
     use SimVariablesModule, only: idm_context
     ! -- local
@@ -53,9 +58,11 @@ contains
     !
     ! -- Deallocate input memory
     call memorylist_remove('SIM', 'NAM', idm_context)
+    call memorylist_remove(component='SIM', context=idm_context)
     !
     ! -- variables
     deallocate (model_names)
+    deallocate (model_loc_idx)
     !
     ! -- Return
     return
@@ -126,9 +133,7 @@ contains
     !
     ! -- update sim options
     isimcontinue = simcontinue
-    !
     isimcheck = nocheck
-    !
     call MaxErrors(maxerror)
     !
     if (prmem /= '') then
@@ -138,8 +143,6 @@ contains
         call store_error(errmsg, .true.)
       end if
     end if
-    !
-    call MaxErrors(maxerror)
     !
     ! -- log values to list file
     if (iout > 0) then
@@ -211,8 +214,7 @@ contains
   subroutine models_create()
     ! -- modules
     use MemoryHelperModule, only: create_mem_path
-    use MemoryManagerModule, only: mem_setptr
-    use CharacterStringModule, only: CharacterStringType
+    use MemoryManagerModule, only: mem_setptr, mem_allocate
     use SimVariablesModule, only: idm_context
     use GwfModule, only: gwf_cr
     use GwtModule, only: gwt_cr
@@ -229,12 +231,12 @@ contains
       pointer :: mfnames !< model file names
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: mnames !< model names
-    integer(I4B) :: im, id_glo
+    integer(I4B) :: im
     class(NumericalModelType), pointer :: num_model
     character(len=LINELENGTH) :: model_type
     character(len=LINELENGTH) :: fname, model_name
     character(len=LINELENGTH) :: errmsg
-    integer(I4B) :: n
+    integer(I4B) :: n, nr_models_glob
     logical :: terminate = .true.
     !
     ! -- set input memory path
@@ -245,14 +247,20 @@ contains
     call mem_setptr(mfnames, 'MFNAME', input_mempath)
     call mem_setptr(mnames, 'MNAME', input_mempath)
     !
+    ! -- allocate global arrays
+    nr_models_glob = size(mnames)
+    call mem_allocate(model_ranks, nr_models_glob, 'MRANKS', input_mempath)
+    allocate (model_names(nr_models_glob))
+    allocate (model_loc_idx(nr_models_glob))
+    !
+    ! -- assign models to cpu cores (in serial all to rank 0)
+    call create_load_balance(model_ranks)
+    !
     ! -- open model logging block
     write (iout, '(/1x,a)') 'READING SIMULATION MODELS'
     !
-    ! -- initialize global and local model ids
-    id_glo = 0
-    im = 0
-    !
     ! -- create models
+    im = 0
     do n = 1, size(mtypes)
       !
       ! -- attributes for this model
@@ -263,42 +271,32 @@ contains
       call check_model_name(model_type, model_name)
       !
       ! increment global model id
-      id_glo = id_glo + 1
-      call ExpandArray(model_names)
-      call ExpandArray(model_loc_idx)
-      model_names(id_glo) = model_name(1:LENMODELNAME)
-      model_loc_idx(id_glo) = -1
+      model_names(n) = model_name(1:LENMODELNAME)
+      model_loc_idx(n) = -1
+      num_model => null()
       !
-      if (nr_procs > 1) then
-        if (simulation_mode == 'PARALLEL') then
-          if (model_type == 'GWF6') then
-            ! for now we assume: model id == rank nr + 1
-            if (id_glo /= proc_id + 1) then
-              call add_virtual_gwf_model(id_glo, model_names(id_glo), null())
-              cycle
-            end if
-          else
-            write (errmsg, '(4x,a)') &
-              '****ERROR. ONLY GWF SUPPORT IN PARALLEL MODE FOR NOW'
-            call store_error(errmsg, terminate)
-          end if
-        end if
-      end if
-      !
-      ! -- add a new (local) model
-      im = im + 1
-      model_loc_idx(id_glo) = im
-      !
-      ! -- create appropriate models and update modelname
+      ! -- add a new (local or global) model
       select case (model_type)
       case ('GWF6')
-        call gwf_cr(fname, id_glo, model_names(id_glo))
-        num_model => GetNumericalModelFromList(basemodellist, im)
-        call add_virtual_gwf_model(id_glo, model_names(id_glo), num_model)
+        if (model_ranks(n) == proc_id) then
+          im = im + 1
+          write (iout, '(4x,2a,i0,a)') trim(model_type), " model ", &
+            n, " will be created"
+          call gwf_cr(fname, n, model_names(n))
+          num_model => GetNumericalModelFromList(basemodellist, im)
+          model_loc_idx(n) = im
+        end if
+        call add_virtual_gwf_model(n, model_names(n), num_model)
       case ('GWT6')
-        call gwt_cr(fname, id_glo, model_names(id_glo))
-        num_model => GetNumericalModelFromList(basemodellist, im)
-        call add_virtual_gwt_model(id_glo, model_names(id_glo), num_model)
+        if (model_ranks(n) == proc_id) then
+          im = im + 1
+          write (iout, '(4x,2a,i0,a)') trim(model_type), " model ", &
+            n, " will be created"
+          call gwt_cr(fname, n, model_names(n))
+          num_model => GetNumericalModelFromList(basemodellist, im)
+          model_loc_idx(n) = im
+        end if
+        call add_virtual_gwt_model(n, model_names(n), num_model)
       case default
         write (errmsg, '(4x,a,a)') &
           '****ERROR. UNKNOWN SIMULATION MODEL: ', &
@@ -327,7 +325,6 @@ contains
     ! -- modules
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr
-    use CharacterStringModule, only: CharacterStringType
     use SimVariablesModule, only: idm_context
     use GwfGwfExchangeModule, only: gwfexchange_create
     use GwfGwtExchangeModule, only: gwfgwt_cr
@@ -352,7 +349,8 @@ contains
     character(len=LENEXCHANGENAME) :: exg_name
     integer(I4B) :: n
     character(len=LINELENGTH) :: errmsg
-    logical :: terminate = .true.
+    logical(LGP) :: terminate = .true.
+    logical(LGP) :: both_remote, both_local
     ! -- formats
     character(len=*), parameter :: fmtmerr = "('Error in simulation control ', &
       &'file.  Could not find model: ', a)"
@@ -396,27 +394,32 @@ contains
       end if
 
       ! both models on other process? then don't create it here...
-      if (model_loc_idx(m1_id) == -1 .and. model_loc_idx(m2_id) == -1) then
-        ! only add virtual
-        write (exg_name, '(a,i0)') 'GWF-GWF_', exg_id
-        call add_virtual_gwf_exchange(exg_name, exg_id, m1_id, m2_id)
-        cycle
+      both_remote = (model_loc_idx(m1_id) == -1 .and. &
+                     model_loc_idx(m2_id) == -1)
+      both_local = (model_loc_idx(m1_id) > 0 .and. &
+                    model_loc_idx(m2_id) > 0)
+      if (.not. both_remote) then
+        write (iout, '(4x,a,a,i0,a,i0,a,i0)') trim(exgtype), ' exchange ', &
+          exg_id, ' will be created to connect model ', m1_id, &
+          ' with model ', m2_id
       end if
-
-      write (iout, '(4x,a,a,i0,a,i0,a,i0)') trim(exgtype), ' exchange ', &
-        exg_id, ' will be created to connect model ', m1_id, &
-        ' with model ', m2_id
 
       select case (exgtype)
       case ('GWF6-GWF6')
         write (exg_name, '(a,i0)') 'GWF-GWF_', exg_id
-        call gwfexchange_create(fname, exg_name, exg_id, m1_id, m2_id)
+        if (.not. both_remote) then
+          call gwfexchange_create(fname, exg_name, exg_id, m1_id, m2_id)
+        end if
         call add_virtual_gwf_exchange(exg_name, exg_id, m1_id, m2_id)
       case ('GWF6-GWT6')
-        call gwfgwt_cr(fname, exg_id, m1_id, m2_id)
+        if (both_local) then
+          call gwfgwt_cr(fname, exg_id, m1_id, m2_id)
+        end if
       case ('GWT6-GWT6')
         write (exg_name, '(a,i0)') 'GWT-GWT_', exg_id
-        call gwtexchange_create(fname, exg_name, exg_id, m1_id, m2_id)
+        if (.not. both_remote) then
+          call gwtexchange_create(fname, exg_name, exg_id, m1_id, m2_id)
+        end if
         call add_virtual_gwt_exchange(exg_name, exg_id, m1_id, m2_id)
       case default
         write (errmsg, '(4x,a,a)') &
@@ -476,12 +479,11 @@ contains
   subroutine solution_groups_create()
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
-    use CharacterStringModule, only: CharacterStringType
     use MemoryHelperModule, only: create_mem_path
     use SimVariablesModule, only: idm_context, simulation_mode
     use SolutionGroupModule, only: SolutionGroupType, &
                                    solutiongroup_create
-    use SolutionFactoryModule, only: create_ims_solution
+    use SolutionFactoryModule, only: create_ims_solution, create_ems_solution
     use BaseSolutionModule, only: BaseSolutionType
     use BaseModelModule, only: BaseModelType
     use BaseExchangeModule, only: BaseExchangeType
@@ -579,6 +581,44 @@ contains
         !
         ! -- create soln and add to group
         sp => create_ims_solution(simulation_mode, fname, isoln)
+        call sgp%add_solution(isoln, sp)
+        !
+        ! -- parse model names
+        parse_str = trim(mnames)//' '
+        call parseline(parse_str, nwords, words)
+        !
+        ! -- Find each model id and get model
+        do j = 1, nwords
+          call upcase(words(j))
+          glo_mid = ifind(model_names, words(j))
+          if (glo_mid == -1) then
+            write (errmsg, '(a,a)') 'Error.  Invalid model name: ', &
+              trim(words(j))
+            call store_error(errmsg, terminate)
+          end if
+          !
+          loc_idx = model_loc_idx(glo_mid)
+          if (loc_idx == -1) then
+            if (simulation_mode == 'PARALLEL') then
+              ! this is still ok
+              cycle
+            end if
+          end if
+          !
+          mp => GetBaseModelFromList(basemodellist, loc_idx)
+          !
+          ! -- Add the model to the solution
+          call sp%add_model(mp)
+          mp%idsoln = isoln
+        end do
+      case ('EMS6')
+        !
+        ! -- increment solution counters
+        isoln = isoln + 1
+        isgpsoln = isgpsoln + 1
+        !
+        ! -- create soln and add to group
+        sp => create_ems_solution(simulation_mode, fname, isoln)
         call sgp%add_solution(isoln, sp)
         !
         ! -- parse model names
@@ -723,5 +763,142 @@ contains
     ! -- return
     return
   end subroutine check_model_name
+
+  !> @brief Create a load mask to determine which models
+  !! should be loaded by idm on this process. This is in
+  !! sync with models create. The mask array should be
+  !! pre-allocated with size equal to the global number
+  !! of models. It is returned as (1, 1, 0, 0, ... 0)
+  !! with each entry being a load mask for the model
+  !! at the corresponding location in the 'MNAME' array
+  !< of the IDM.
+  subroutine create_load_mask(mask_array)
+    use SimVariablesModule, only: proc_id
+    integer(I4B), dimension(:) :: mask_array
+    ! local
+    integer(I4B) :: i
+
+    call create_load_balance(mask_array)
+    do i = 1, size(mask_array)
+      if (mask_array(i) == proc_id) then
+        mask_array(i) = 1
+      else
+        mask_array(i) = 0
+      end if
+    end do
+
+  end subroutine create_load_mask
+
+  !> @brief Distribute the models over the available
+  !! processes in a parallel run. Expects an array sized
+  !< to the number of models in the global simulation
+  subroutine create_load_balance(mranks)
+    use SimVariablesModule, only: idm_context
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerModule, only: mem_setptr
+    integer(I4B), dimension(:) :: mranks
+    ! local
+    integer(I4B) :: im, imm, ie, ip, cnt
+    integer(I4B) :: nr_models, nr_gwf_models, nr_gwt_models
+    integer(I4B) :: nr_exchanges
+    integer(I4B) :: min_per_proc, nr_left
+    integer(I4B) :: rank
+    integer(I4B), dimension(:), allocatable :: nr_models_proc
+    character(len=:), allocatable :: model_type_str
+    character(len=LINELENGTH) :: errmsg
+    character(len=LENMEMPATH) :: input_mempath
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: mtypes !< model types
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: mnames !< model names
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: etypes !< exg types
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: emnames_a !< model a names
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer :: emnames_b !< model b names
+
+    mranks = 0
+    if (simulation_mode /= "PARALLEL") return
+
+    ! load IDM data
+    input_mempath = create_mem_path('SIM', 'NAM', idm_context)
+    call mem_setptr(mtypes, 'MTYPE', input_mempath)
+    call mem_setptr(mnames, 'MNAME', input_mempath)
+    call mem_setptr(etypes, 'EXGTYPE', input_mempath)
+    call mem_setptr(emnames_a, 'EXGMNAMEA', input_mempath)
+    call mem_setptr(emnames_b, 'EXGMNAMEB', input_mempath)
+
+    ! count flow models
+    nr_models = size(mnames)
+    nr_gwf_models = 0
+    nr_gwt_models = 0
+    do im = 1, nr_models
+      if (mtypes(im) == "GWF6") then
+        nr_gwf_models = nr_gwf_models + 1
+      else if (mtypes(im) == "GWT6") then
+        nr_gwt_models = nr_gwt_models + 1
+      else
+        model_type_str = mtypes(im)
+        write (errmsg, *) "Error. Model type ", model_type_str, &
+          " not supported in parallel mode"
+        call store_error(errmsg, terminate=.true.)
+      end if
+    end do
+
+    ! calculate nr of flow models for each rank
+    allocate (nr_models_proc(nr_procs))
+    min_per_proc = nr_gwf_models / nr_procs
+    nr_left = nr_gwf_models - nr_procs * min_per_proc
+    cnt = 1
+    do ip = 1, nr_procs
+      rank = ip - 1
+      nr_models_proc(ip) = min_per_proc
+      if (rank < nr_left) then
+        nr_models_proc(ip) = nr_models_proc(ip) + 1
+      end if
+    end do
+
+    ! assign ranks for flow models
+    rank = 0
+    do im = 1, nr_models
+      if (mtypes(im) == "GWF6") then
+        if (nr_models_proc(rank + 1) == 0) then
+          rank = rank + 1
+        end if
+        mranks(im) = rank
+        nr_models_proc(rank + 1) = nr_models_proc(rank + 1) - 1
+      end if
+    end do
+
+    ! match transport to flow
+    nr_exchanges = size(etypes)
+
+    do im = 1, nr_models
+      if (.not. mtypes(im) == "GWT6") cycle
+
+      ! find match
+      do ie = 1, nr_exchanges
+        if (etypes(ie) == "GWF6-GWT6" .and. mnames(im) == emnames_b(ie)) then
+          ! this is the exchange, now find the flow model's rank
+          rank = 0
+          do imm = 1, nr_models
+            if (mnames(imm) == emnames_a(ie)) then
+              rank = mranks(imm)
+              exit
+            end if
+          end do
+
+          ! we have our rank, assign and go to next transport model
+          mranks(im) = rank
+          exit
+        end if
+      end do
+    end do
+
+    ! cleanup
+    deallocate (nr_models_proc)
+
+  end subroutine create_load_balance
 
 end module SimulationCreateModule

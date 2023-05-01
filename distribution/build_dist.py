@@ -44,16 +44,6 @@ _included_dir_paths = [
     "utils",
 ]
 
-# LaTex files included in distribution docs
-_default_tex_paths = [
-    _project_root_path / "doc" / "mf6io" / "mf6io.tex",
-    _project_root_path / "doc" / "ReleaseNotes" / "ReleaseNotes.tex",
-    _project_root_path / "doc" / "zonebudget" / "zonebudget.tex",
-    _project_root_path / "doc" / "ConverterGuide" / "converter_mf5to6.tex",
-    _project_root_path / "doc" / "SuppTechInfo" / "mf6suptechinfo.tex",
-]
-
-
 Makefile = namedtuple('Makefile', ['app', 'src_path', 'out_path'])
 
 

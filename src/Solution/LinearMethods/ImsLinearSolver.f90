@@ -1,5 +1,5 @@
 module ImsLinearSolverModule
-  use KindModule, only: I4B
+  use KindModule, only: I4B, DP
   use LinearSolverBaseModule
   use MatrixBaseModule
   use VectorBaseModule

@@ -30,18 +30,19 @@ excluded_models = [
     "ex-gwt-prudic2004t2",
 ]
 excluded_comparisons = {
-    "ex-gwf-capture": ("6.2.1",),
-    "ex-gwf-sagehen": ("6.2.1",),
-    "ex-gwf-sfr-p01b": ("6.2.1",),
-    "ex-gwf-nwt-p02a": ("6.2.1",),
-    "ex-gwf-lak-p01": ("6.2.1",),
-    "ex-gwf-lak-p02": ("6.2.1",),
-    "ex-gwf-nwt-p02b": ("6.2.1",),
-    "ex-gwf-advtidal": ("6.2.1",),
-    "ex-gwf-sfr-p01": ("6.2.1",),
-    "ex-gwf-lgr": ("6.2.2",),
-    "ex-gwt-rotate": ("6.2.2",),
-    "ex-gwt-gwtgwt-mt3dms-p10": ("6.3.0",),
+    "ex-gwf-capture": ["6.2.1"],
+    "ex-gwf-sagehen": ["6.2.1"],
+    "ex-gwf-sfr-p01b": ["6.2.1"],
+    "ex-gwf-nwt-p02a": ["6.2.1"],
+    "ex-gwf-lak-p01": ["6.2.1"],
+    "ex-gwf-lak-p02": ["6.2.1"],
+    "ex-gwf-nwt-p02b": ["6.2.1"],
+    "ex-gwf-advtidal": ["6.2.1"],
+    "ex-gwf-sfr-p01": ["6.2.1"],
+    "ex-gwf-lgr": ["6.2.2"],
+    "ex-gwt-rotate": ["6.2.2"],
+    "ex-gwt-gwtgwt-mt3dms-p10": ["6.3.0"],
+    "ex-gwf-lak-p01": ["6.4.1"],
 }
 
 

@@ -1,3 +1,4 @@
+! ** Do Not Modify! MODFLOW 6 system generated file. **
 module SimNamInputModule
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
@@ -6,6 +7,7 @@ module SimNamInputModule
   public sim_nam_aggregate_definitions
   public sim_nam_block_definitions
   public SimNamParamFoundType
+  public sim_nam_multi_package
 
   type SimNamParamFoundType
     logical :: continue = .false.
@@ -25,6 +27,8 @@ module SimNamInputModule
     logical :: slnfname = .false.
     logical :: slnmnames = .false.
   end type SimNamParamFoundType
+
+  logical :: sim_nam_multi_package = .false.
 
   type(InputParamDefinitionType), parameter :: &
     simnam_continue = InputParamDefinitionType &

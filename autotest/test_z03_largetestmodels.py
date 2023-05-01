@@ -4,10 +4,10 @@ from simulation import TestSimulation
 
 excluded_models = []
 excluded_comparisons = {
-    "test1004_mvlake_laksfr_tr": ("6.2.2",),
-    "test1004_mvlake_lak_tr": ("6.2.1",),
-    "test1003_MNW2_Fig28": ("6.2.1",),
-    "test1001_Peterson": ("6.2.1",),
+    "test1004_mvlake_laksfr_tr": ["6.4.1",],
+    "test1004_mvlake_lak_tr": ["6.4.1",],
+    "test1003_MNW2_Fig28": ["6.2.1",],
+    "test1001_Peterson": ["6.2.1",],
 }
 
 

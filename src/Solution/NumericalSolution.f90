@@ -124,8 +124,6 @@ module NumericalSolutionModule
     real(DP), pointer :: ptcdel => null() !< PTC delta value
     real(DP), pointer :: ptcdel0 => null() !< initial PTC delta value
     real(DP), pointer :: ptcexp => null() !< PTC exponent
-    real(DP), pointer :: ptcthresh => null() !< PTC threshold value (0.001)
-    real(DP), pointer :: ptcrat => null() !< ratio of the PTC value and the minimum of the diagonal of AMAT used to determine if the PTC effect has decayed
     !
     ! -- adaptive time step
     real(DP), pointer :: atsfrac => null() !< adaptive time step faction
@@ -161,6 +159,9 @@ module NumericalSolutionModule
 
     ! 'protected' (this can be overridden)
     procedure :: sln_has_converged
+    procedure :: sln_l2norm
+    procedure :: sln_calc_ptc
+    procedure :: sln_calc_residual
 
     ! private
     procedure, private :: sln_connect
@@ -169,7 +170,6 @@ module NumericalSolutionModule
     procedure, private :: sln_setouter
     procedure, private :: sln_backtracking
     procedure, private :: sln_backtracking_xupdate
-    procedure, private :: sln_l2norm
     procedure, private :: sln_maxval
     procedure, private :: sln_calcdx
     procedure, private :: sln_underrelax
@@ -312,8 +312,6 @@ contains
     call mem_allocate(this%ptcdel, 'PTCDEL', this%memoryPath)
     call mem_allocate(this%ptcdel0, 'PTCDEL0', this%memoryPath)
     call mem_allocate(this%ptcexp, 'PTCEXP', this%memoryPath)
-    call mem_allocate(this%ptcthresh, 'PTCTHRESH', this%memoryPath)
-    call mem_allocate(this%ptcrat, 'PTCRAT', this%memoryPath)
     call mem_allocate(this%atsfrac, 'ATSFRAC', this%memoryPath)
     !
     ! -- initialize scalars
@@ -356,8 +354,6 @@ contains
     this%ptcdel = DZERO
     this%ptcdel0 = DZERO
     this%ptcexp = done
-    this%ptcthresh = DEM3
-    this%ptcrat = DZERO
     this%atsfrac = DONETHIRD
     !
     ! -- return
@@ -468,12 +464,12 @@ contains
     else
       this%solver_mode = 'IMS'
     end if
-    !
+    ! -- create linear system matrix and compatible vectors
     this%linear_solver => create_linear_solver(this%solver_mode)
     this%system_matrix => this%linear_solver%create_matrix()
-    this%vec_x => this%system_matrix%create_vector(this%neq, 'X', this%memoryPath)
+    this%vec_x => this%system_matrix%create_vec_mm(this%neq, 'X', this%memoryPath)
     this%x => this%vec_x%get_array()
-    this%vec_rhs => this%system_matrix%create_vector(this%neq, 'RHS', &
+    this%vec_rhs => this%system_matrix%create_vec_mm(this%neq, 'RHS', &
                                                      this%memoryPath)
     this%rhs => this%vec_rhs%get_array()
     !
@@ -725,18 +721,6 @@ contains
             this%ptcexp = rval
             write (IOUT, '(1x,A,1x,g15.7)') &
               'PSEUDO-TRANSIENT CONTINUATION EXPONENT', this%ptcexp
-          end if
-        case ('DEV_PTC_THRESHOLD')
-          call this%parser%DevOpt()
-          rval = this%parser%GetDouble()
-          if (rval < DZERO) then
-            write (errmsg, '(a)') 'PTC_THRESHOLD MUST BE > 0.'
-            call store_error(errmsg)
-          else
-            this%iallowptc = 1
-            this%ptcthresh = rval
-            write (IOUT, '(1x,A,1x,g15.7)') &
-              'PSEUDO-TRANSIENT CONTINUATION THRESHOLD', this%ptcthresh
           end if
         case ('DEV_PTC_DEL0')
           call this%parser%DevOpt()
@@ -1172,17 +1156,18 @@ contains
   !!
   !<
   subroutine sln_fp(this)
+    use SimVariablesModule, only: iout
     ! -- dummy variables
     class(NumericalSolutionType) :: this !< NumericalSolutionType instance
     !
     ! -- write timer output
-    if (IDEVELOPMODE == 1 .and. this%linmeth == 1) then
-      write (this%imslinear%iout, '(//1x,a,1x,a,1x,a)') &
+    if (IDEVELOPMODE == 1) then
+      write (iout, '(//1x,a,1x,a,1x,a)') &
         'Solution', trim(adjustl(this%name)), 'summary'
-      write (this%imslinear%iout, "(1x,70('-'))")
-      write (this%imslinear%iout, '(1x,a,1x,g0,1x,a)') &
+      write (iout, "(1x,70('-'))")
+      write (iout, '(1x,a,1x,g0,1x,a)') &
         'Total formulate time: ', this%ttform, 'seconds'
-      write (this%imslinear%iout, '(1x,a,1x,g0,1x,a,/)') &
+      write (iout, '(1x,a,1x,g0,1x,a,/)') &
         'Total solution time:  ', this%ttsoln, 'seconds'
     end if
     !
@@ -1300,8 +1285,6 @@ contains
     call mem_deallocate(this%ptcdel)
     call mem_deallocate(this%ptcdel0)
     call mem_deallocate(this%ptcexp)
-    call mem_deallocate(this%ptcthresh)
-    call mem_deallocate(this%ptcrat)
     call mem_deallocate(this%atsfrac)
     !
     ! -- return
@@ -1427,8 +1410,6 @@ contains
     ! -- determine if PTC will be used in any model
     n = 1
     do im = 1, this%modellist%Count()
-      mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_ptcchk(iptc)
       !
       ! -- set iallowptc
       ! -- no_ptc_option is FIRST
@@ -1442,7 +1423,14 @@ contains
       else
         iallowptc = this%iallowptc
       end if
-      iptc = iptc * iallowptc
+
+      if (iallowptc > 0) then
+        mp => GetNumericalModelFromList(this%modellist, im)
+        call mp%model_ptcchk(iptc)
+      else
+        iptc = 0
+      end if
+
       if (iptc /= 0) then
         if (n == 1) then
           write (iout, '(//)')
@@ -1471,7 +1459,7 @@ contains
     class(NumericalModelType), pointer :: mp => null()
 
     ! synchronize for AD
-    call this%synchronize(STG_BEFORE_AD, this%synchronize_ctx)
+    call this%synchronize(STG_BFR_EXG_AD, this%synchronize_ctx)
 
     ! -- Exchange advance
     do ic = 1, this%exchangelist%Count()
@@ -1594,21 +1582,14 @@ contains
     if (this%numtrack > 0) then
       call this%sln_backtracking(mp, cp, kiter)
     end if
-
+    !
     call code_timer(0, ttform, this%ttform)
-
-    ! (re)build the solution matrix
+    !
+    ! -- (re)build the solution matrix
     call this%sln_buildsystem(kiter, inewton=1)
-
     !
     ! -- Calculate pseudo-transient continuation factor for each model
-    iptc = 0
-    ptcf = DZERO
-    do im = 1, this%modellist%Count()
-      mp => GetNumericalModelFromList(this%modellist, im)
-      call mp%model_ptc(kiter, this%neq, this%system_matrix, &
-                        this%x, this%rhs, iptc, ptcf)
-    end do
+    call this%sln_calc_ptc(iptc, ptcf)
     !
     ! -- Add model Newton-Raphson terms to solution
     do im = 1, this%modellist%Count()
@@ -1660,23 +1641,6 @@ contains
     iend = 0
     if (kiter == this%mxiter) then
       iend = 1
-    end if
-    !
-    ! -- Additional convergence check for pseudo-transient continuation
-    !    term. Evaluate if the ptc value added to the diagonal has
-    !    decayed sufficiently.
-    if (iptc > 0) then
-      if (this%icnvg /= 0) then
-        if (this%ptcrat > this%ptcthresh) then
-          this%icnvg = 0
-          cmsg = trim(cmsg)//'PTC'
-          if (iend /= 0) then
-            write (line, '(a)') &
-              'PSEUDO-TRANSIENT CONTINUATION CAUSED CONVERGENCE FAILURE'
-            call sim_message(line)
-          end if
-        end if
-      end if
     end if
     !
     ! -- write maximum dependent-variable change from linear solver to list file
@@ -1765,7 +1729,7 @@ contains
     ! -- under-relaxation - only done if convergence not achieved
     if (this%icnvg /= 1) then
       if (this%nonmeth > 0) then
-        call this%sln_underrelax(kiter, this%hncg(kiter), this%neq, &
+        call this%sln_underrelax(kiter, this%hncg(kiter), this%neq, & ! TODO_MJR: this is not equiv. serial/parallel
                                  this%active, this%x, this%xtemp)
       else
         call this%sln_calcdx(this%neq, this%active, &
@@ -1966,7 +1930,7 @@ contains
     call this%sln_reset()
 
     ! synchronize for CF
-    call this%synchronize(STG_BEFORE_CF, this%synchronize_ctx)
+    call this%synchronize(STG_BFR_EXG_CF, this%synchronize_ctx)
 
     !
     ! -- Calculate the matrix terms for each exchange
@@ -1982,7 +1946,7 @@ contains
     end do
 
     ! synchronize for FC
-    call this%synchronize(STG_BEFORE_FC, this%synchronize_ctx)
+    call this%synchronize(STG_BFR_EXG_FC, this%synchronize_ctx)
 
     !
     ! -- Add exchange coefficients to the solution
@@ -2349,7 +2313,7 @@ contains
     end do
     !
     ! -- synchronize before AC
-    call this%synchronize(STG_BEFORE_AC, this%synchronize_ctx)
+    call this%synchronize(STG_BFR_EXG_AC, this%synchronize_ctx)
     !
     ! -- Add the cross terms to sparse
     do ic = 1, this%exchangelist%Count()
@@ -2429,7 +2393,6 @@ contains
     real(DP) :: diagval
     real(DP) :: l2norm
     real(DP) :: ptcval
-    real(DP) :: diagmin
     real(DP) :: bnorm
     character(len=50) :: fname
     character(len=*), parameter :: fmtfname = "('mf6mat_', i0, '_', i0, &
@@ -2507,8 +2470,7 @@ contains
     ! -- calculate or modify pseudo transient continuation terms and add
     !    to amat diagonals
     if (iptct /= 0) then
-      call this%sln_l2norm(this%neq, this%system_matrix, this%active, &
-                           this%rhs, this%x, l2norm)
+      call this%sln_l2norm(l2norm)
       ! -- confirm that the l2norm exceeds previous l2norm
       !    if not, there is no need to add ptc terms
       if (kiter == 1) then
@@ -2528,10 +2490,9 @@ contains
     if (iptct /= 0) then
       if (kiter == 1) then
         if (this%iptcout > 0) then
-          write (this%iptcout, '(A10,6(1x,A15),2(1x,A15))') 'OUTER ITER', &
+          write (this%iptcout, '(A10,6(1x,A15))') 'OUTER ITER', &
             '         PTCDEL', '        L2NORM0', '         L2NORM', &
-            '        RHSNORM', '       1/PTCDEL', '  DIAGONAL MIN.', &
-            ' RHSNORM/L2NORM', ' STOPPING CRIT.'
+            '        RHSNORM', '       1/PTCDEL', ' RHSNORM/L2NORM'
         end if
         if (this%ptcdel0 > DZERO) then
           this%ptcdel = this%ptcdel0
@@ -2563,23 +2524,21 @@ contains
       else
         ptcval = DONE
       end if
-      diagmin = DEP20
       bnorm = DZERO
       do ieq = 1, this%neq
         irow = ieq + this%matrix_offset
         if (this%active(ieq) > 0) then
           diagval = abs(this%system_matrix%get_diag_value(irow))
           bnorm = bnorm + this%rhs(ieq) * this%rhs(ieq)
-          if (diagval < diagmin) diagmin = diagval
           call this%system_matrix%add_diag_value(irow, -ptcval)
           this%rhs(ieq) = this%rhs(ieq) - ptcval * this%x(ieq)
         end if
       end do
       bnorm = sqrt(bnorm)
       if (this%iptcout > 0) then
-        write (this%iptcout, '(i10,6(1x,e15.7),2(1x,f15.6))') &
+        write (this%iptcout, '(i10,5(1x,e15.7),1(1x,f15.6))') &
           kiter, this%ptcdel, this%l2norm0, l2norm, bnorm, &
-          ptcval, diagmin, bnorm / l2norm, ptcval / diagmin
+          ptcval, bnorm / l2norm
       end if
       this%l2norm0 = l2norm
     end if
@@ -2626,14 +2585,6 @@ contains
       call this%linear_solver%solve(kiter, this%vec_rhs, this%vec_x)
       in_iter = this%linear_solver%iteration_number
       this%icnvg = this%linear_solver%is_converged
-    end if
-    !
-    ! -- ptc finalize - set ratio of ptc value added to the diagonal and the
-    !                   minimum value on the diagonal. This value will be used
-    !                   to determine if the make sure the ptc value has decayed
-    !                   sufficiently
-    if (iptct /= 0) then
-      this%ptcrat = ptcval / diagmin
     end if
     !
     ! -- return
@@ -2730,13 +2681,11 @@ contains
     !
     ! -- calculate initial l2 norm
     if (kiter == 1) then
-      call this%sln_l2norm(this%neq, this%system_matrix, this%active, &
-                           this%rhs, this%x, this%res_prev)
+      call this%sln_l2norm(this%res_prev)
       resin = this%res_prev
       ibflag = 0
     else
-      call this%sln_l2norm(this%neq, this%system_matrix, this%active, &
-                           this%rhs, this%x, this%res_new)
+      call this%sln_l2norm(this%res_new)
       resin = this%res_new
     end if
     ibtcnt = 0
@@ -2762,8 +2711,7 @@ contains
 
           !
           ! -- calculate updated l2norm
-          call this%sln_l2norm(this%neq, this%system_matrix, this%active, &
-                               this%rhs, this%x, this%res_new)
+          call this%sln_l2norm(this%res_new)
           !
           ! -- evaluate if back tracking can be terminated
           if (nb == this%numtrack) then
@@ -2852,49 +2800,34 @@ contains
     return
   end subroutine sln_backtracking_xupdate
 
-  !> @ brief Calculate the solution L-2 norm
+  !> @ brief Calculate the solution L-2 norm for all
+  !! active cells using
   !!
-  !!  Calculate the solution L-2 norm using the coefficient matrix, the
-  !!  right-hand side vector, and the current dependent-variable vector.
+  !!  A = the linear system matrix
+  !!  x = the dependendent variable vector
+  !!  b = the right-hand side vector
   !!
+  !!       r = A * x - b
+  !!     r_i = 0 if cell i is inactive
+  !!  L2norm = || r ||_2
   !<
-  subroutine sln_l2norm(this, neq, matrix_sln, active, rhs, x, l2norm)
-    ! -- dummy variables
-    class(NumericalSolutionType), intent(inout) :: this !< NumericalSolutionType instance
-    integer(I4B), intent(in) :: neq !< number of equations
-    class(MatrixBaseType), pointer :: matrix_sln !< coefficient matrix for solution
-    integer(I4B), dimension(neq), intent(in) :: active !< active cell flag vector (1) inactive (0)
-    real(DP), dimension(neq), intent(in) :: rhs !< right-hand side vector
-    real(DP), dimension(neq), intent(in) :: x !< dependent-variable vector
-    real(DP), intent(inout) :: l2norm !< calculated L-2 norm
-    ! -- local variables
-    integer(I4B) :: n
-    integer(I4B) :: ipos, icol_s, icol_e
-    integer(I4B) :: jcol
-    real(DP) :: rowsum
-    real(DP) :: residual
-    !
-    ! -- initialize local variables
-    residual = DZERO
-    !
-    ! -- calculate the L-2 norm
-    do n = 1, neq
-      if (active(n) > 0) then
-        rowsum = DZERO
-        icol_s = matrix_sln%get_first_col_pos(n)
-        icol_e = matrix_sln%get_last_col_pos(n)
-        do ipos = icol_s, icol_e
-          jcol = matrix_sln%get_column(ipos)
-          rowsum = rowsum + (matrix_sln%get_value_pos(ipos) * x(jcol))
-        end do
-        ! compute mean square residual from q of each node
-        residual = residual + (rowsum - rhs(n))**2
-      end if
-    end do
-    ! -- The L-2 norm is the square root of the sum of the square of the residuals
-    l2norm = sqrt(residual)
-    !
-    ! -- return
+  subroutine sln_l2norm(this, l2norm)
+    class(NumericalSolutionType) :: this !< NumericalSolutionType instance
+    real(DP) :: l2norm !< calculated L-2 norm
+    ! local
+    class(VectorBaseType), pointer :: vec_resid
+
+    ! calc. residual vector
+    vec_resid => this%system_matrix%create_vec(this%neq)
+    call this%sln_calc_residual(vec_resid)
+
+    ! 2-norm
+    l2norm = vec_resid%norm2()
+
+    ! clean up temp. vector
+    call vec_resid%destroy()
+    deallocate (vec_resid)
+
     return
   end subroutine sln_l2norm
 
@@ -2964,6 +2897,56 @@ contains
     ! -- return
     return
   end subroutine sln_calcdx
+
+  !> @brief Calculate pseudo-transient continuation factor
+  !< from the models in the solution
+  subroutine sln_calc_ptc(this, iptc, ptcf)
+    class(NumericalSolutionType) :: this !< NumericalSolutionType instance
+    integer(I4B) :: iptc !< PTC (1) or not (0)
+    real(DP) :: ptcf !< the PTC factor calculated
+    ! local
+    integer(I4B) :: im
+    class(NumericalModelType), pointer :: mp
+    class(VectorBaseType), pointer :: vec_resid
+
+    iptc = 0
+    ptcf = DZERO
+
+    ! calc. residual vector
+    vec_resid => this%system_matrix%create_vec(this%neq)
+    call this%sln_calc_residual(vec_resid)
+
+    ! determine ptc
+    do im = 1, this%modellist%Count()
+      mp => GetNumericalModelFromList(this%modellist, im)
+      call mp%model_ptc(vec_resid, iptc, ptcf)
+    end do
+
+    ! clean up temp. vector
+    call vec_resid%destroy()
+    deallocate (vec_resid)
+
+  end subroutine sln_calc_ptc
+
+  !> @brief Calculate the current residual vector r = A*x - b,
+  !< zeroes out for inactive cells
+  subroutine sln_calc_residual(this, vec_resid)
+    class(NumericalSolutionType) :: this !< NumericalSolutionType instance
+    class(VectorBaseType), pointer :: vec_resid !< the residual vector
+    ! local
+    integer(I4B) :: n
+
+    call this%system_matrix%multiply(this%vec_x, vec_resid) ! r = A*x
+
+    call vec_resid%axpy(-1.0_DP, this%vec_rhs) ! r = r - b
+
+    do n = 1, this%neq
+      if (this%active(n) < 1) then
+        call vec_resid%set_value_local(n, 0.0_DP) ! r_i = 0 if inactive
+      end if
+    end do
+
+  end subroutine sln_calc_residual
 
   !> @ brief Under-relaxation
   !!

@@ -14,18 +14,18 @@ from simulation import TestSimulation
 # In this case we test rewetting, which is also enabled in
 # the interface model and should give identical results.
 #
-#       'refmodel'              'leftmodel'    'rightmodel'
+# period 1: The first stress period we start almost dry and have the
+#           model fill up.
+# period 2: The BC on the left is lowered such that a part of the top
+#           layer dries. To test the interface, the value is chosen such 
+#           that the boundary cell on the left is DRY and the one on the 
+#           right isn't.
 #
-#    1 . . . . . . . 1          1 . . . . 1       1 . . 1
-#    1 . . . . . . . 1          1 . . . . 1       1 . . 1
-#    1 . . . . . . . 1          1 . . . . 1       1 . . 1
-#    1 . . . . . . . 1          1 . . . . 1       1 . . 1
-#    1 . . . . . . . 1    VS    1 . . . . 1   +   1 . . 1
-#    1 . . . . . . . 1          1 . . . . 1       1 . . 1
-#    1 . . . . . . . 1          1 . . . . 1       1 . . 1
-#    1 . . . . . . . 1          1 . . . . 1       1 . . 1
-#    1 . . . . . . . 1          1 . . . . 1       1 . . 1
-#    1 . . . . . . . 1          1 . . . . 1       1 . . 1
+#                  'refmodel'               'leftmodel'    'rightmodel'
+#
+#    layer 1:  1 . . . . . . . 1            1 . . . . 1       1 . . 1
+#    layer 2:  1 . . . . . . . 1     VS     1 . . . . 1   +   1 . . 1
+#    layer 3:  1 . . . . . . . 1            1 . . . . 1       1 . . 1
 #
 # We assert equality on the head values. All models are part of the same
 # solution for convenience. Finally, the budget error is checked.
@@ -40,6 +40,7 @@ mname_right = "rightmodel"
 
 # solver criterion
 hclose_check = 1e-9
+max_inner_it = 300
 nper = 2
 
 # model spatial discretization
@@ -47,7 +48,7 @@ nlay = 3
 ncol = 15
 ncol_left = 10
 ncol_right = 5
-nrow = 10
+nrow = 1
 
 lenx = 15.0 * 500.0
 leny = 10.0 * 500.0
@@ -66,11 +67,13 @@ tops = [150.0, 50.0, 0.0, -50.0]
 # hydraulic conductivity
 hk = 10.0
 
-# boundary stress period data
-h_left = [100.0, 25.0]
+# boundary stress period data for period 1 and 2
+h_left = [150.0, 20.0]
+h_right = 60.0
 
 # initial head
 h_start = -40.0
+
 
 # head boundaries
 lchd1 = [
@@ -80,16 +83,16 @@ lchd1 = [
     if h_left[0] > tops[ilay + 1]
 ]
 rchd = [
-    [(ilay, irow, ncol - 1), h_start]
+    [(ilay, irow, ncol - 1), h_right]
     for ilay in range(nlay)
     for irow in range(nrow)
-    if h_start > tops[ilay + 1]
+    if h_right > tops[ilay + 1]
 ]
 rchd_right = [
-    [(ilay, irow, ncol_right - 1), h_start]
+    [(ilay, irow, ncol_right - 1), h_right]
     for ilay in range(nlay)
     for irow in range(nrow)
-    if h_start > tops[ilay + 1]
+    if h_right > tops[ilay + 1]
 ]
 chd1 = lchd1 + rchd
 
@@ -103,8 +106,9 @@ lchd2 = [
     for irow in range(nrow)
     if h_left[1] > tops[ilay + 1]
 ]
-chd_spd[1] = lchd2
+chd_spd[1] = lchd2 + rchd
 chd_spd_left[1] = lchd2
+chd_spd_right[1] = rchd_right
 
 # rewetting
 rewet_record = [("WETFCT", 1.0, "IWETIT", 1, "IHDWET", 1)]
@@ -121,7 +125,7 @@ def get_model(idx, dir):
         tdis_rc.append((1.0, 1, 1))
 
     # solver data
-    nouter, ninner = 100, 300
+    nouter, ninner = 100, max_inner_it
     hclose, rclose, relax = hclose_check, 1e-3, 0.97
 
     sim = flopy.mf6.MFSimulation(
@@ -352,20 +356,27 @@ def build_model(idx, exdir):
 def compare_to_ref(sim):
     print("comparing heads to single model reference...")
 
-    for iper in range(nper):
-        fpth = os.path.join(sim.simpath, f"{mname_ref}.hds")
-        hds = flopy.utils.HeadFile(fpth)
-        heads = hds.get_data(idx=iper)
+    fpth = os.path.join(sim.simpath, f"{mname_ref}.hds")
+    hds = flopy.utils.HeadFile(fpth)
+    fpth = os.path.join(sim.simpath, f"{mname_left}.hds")
+    hds_l = flopy.utils.HeadFile(fpth)
+    fpth = os.path.join(sim.simpath, f"{mname_right}.hds")
+    hds_r = flopy.utils.HeadFile(fpth)
 
-        fpth = os.path.join(sim.simpath, f"{mname_left}.hds")
-        hds = flopy.utils.HeadFile(fpth)
-        heads_left = hds.get_data(idx=iper)
-
-        fpth = os.path.join(sim.simpath, f"{mname_right}.hds")
-        hds = flopy.utils.HeadFile(fpth)
-        heads_right = hds.get_data(idx=iper)
-
+    times = hds.get_times()
+    for iper, t in enumerate(times):        
+        heads = hds.get_data(totim=t)
+        heads_left = hds_l.get_data(totim=t)        
+        heads_right = hds_r.get_data(totim=t)
         heads_2models = np.append(heads_left, heads_right, axis=2)
+
+        # in this test we want to have the top layer in the left model
+        # dry in period 2, but the cells in the right model should remain
+        # active. This tests the interface model for dealing with drying
+        # and wetting, and handling inactive cells, explicitly
+        if (iper == 1):
+            assert np.all(heads_left[0,0,:] == -1.0e+30), "left model, top layer should be DRY in period 2"
+            assert np.all(heads_right[0,0,:] > -1.0e+30), "right model, top layer should be WET in period 2"
 
         # compare heads
         maxdiff = np.amax(abs(heads - heads_2models))

@@ -3,6 +3,7 @@ module MapperModule
   use ConstantsModule, only: LENVARNAME, LENMEMPATH
   use MemoryHelperModule, only: create_mem_path
   use IndexMapModule
+  use VirtualBaseModule, only: VirtualDataType, MAP_NODE_TYPE, MAP_CONN_TYPE
   use VirtualModelModule, only: VirtualModelType, get_virtual_model
   use VirtualExchangeModule, only: VirtualExchangeType, get_virtual_exchange
   use InterfaceMapModule
@@ -58,12 +59,12 @@ contains
       if (.not. virt_exg%v_model1%is_local) then
         virt_mem_path = virt_exg%get_vrt_mem_path('NODEM1', '')
         call this%map_data_full(0, 'NODEM1', conn%prim_exchange%memoryPath, &
-                                'NODEM1', virt_mem_path, (/STG_BEFORE_CON_DF/))
+                                'NODEM1', virt_mem_path, (/STG_BFR_CON_DF/))
       end if
       if (.not. virt_exg%v_model2%is_local) then
         virt_mem_path = virt_exg%get_vrt_mem_path('NODEM2', '')
         call this%map_data_full(0, 'NODEM2', conn%prim_exchange%memoryPath, &
-                                'NODEM2', virt_mem_path, (/STG_BEFORE_CON_DF/))
+                                'NODEM2', virt_mem_path, (/STG_BFR_CON_DF/))
       end if
     end do
 
@@ -90,51 +91,26 @@ contains
 
   end subroutine add_interface_vars
 
-  subroutine add_dist_vars(this, sol_id, var_list, interface_map)
+  subroutine add_dist_vars(this, sol_id, var_list, iface_map)
     class(MapperType) :: this
     integer(I4B) :: sol_id
     type(ListType) :: var_list
-    type(InterfaceMapType) :: interface_map
+    type(InterfaceMapType), pointer :: iface_map
     ! local
     integer(I4B) :: i, m, e
-    type(DistVarType), pointer :: distvar
-    type(IndexMapType), pointer :: idx_map
+    type(DistVarType), pointer :: dist_var
 
     ! loop over variables
     do i = 1, var_list%Count()
-      distvar => GetDistVarFromList(var_list, i)
-      if (distvar%map_type == SYNC_NODES .or. &
-          distvar%map_type == SYNC_CONNECTIONS) then
-        ! map data for all models in this interface
-        do m = 1, interface_map%nr_models
-
-          ! pick the right index map: connection based or node based
-          if (distvar%map_type == SYNC_NODES) then
-            idx_map => interface_map%node_map(m)
-          else if (distvar%map_type == SYNC_CONNECTIONS) then
-            idx_map => interface_map%connection_map(m)
-          end if
-
-          ! and map ...
-          call this%map_model_data(sol_id, &
-                                   distvar%comp_name, &
-                                   distvar%subcomp_name, &
-                                   distvar%var_name, &
-                                   interface_map%model_ids(m), &
-                                   idx_map, &
-                                   distvar%sync_stages)
+      dist_var => GetDistVarFromList(var_list, i)
+      if (dist_var%map_type == SYNC_NDS .or. & ! models
+          dist_var%map_type == SYNC_CON) then
+        do m = 1, iface_map%nr_models
+          call this%map_model_data(sol_id, iface_map, m, dist_var)
         end do
-      else if (distvar%map_type == SYNC_EXCHANGES) then
-        ! map data from the exchanges to the interface
-        do e = 1, interface_map%nr_exchanges
-          call this%map_exg_data(sol_id, &
-                                 distvar%comp_name, &
-                                 distvar%subcomp_name, &
-                                 distvar%var_name, &
-                                 interface_map%exchange_ids(e), &
-                                 distvar%exg_var_name, &
-                                 interface_map%exchange_map(e), &
-                                 distvar%sync_stages)
+      else if (dist_var%map_type == SYNC_EXG) then ! exchanges
+        do e = 1, iface_map%nr_exchanges
+          call this%map_exg_data(sol_id, iface_map, e, dist_var)
         end do
       end if
     end do
@@ -144,74 +120,87 @@ contains
   !> @brief Map data from model memory to a target memory entry,
   !! with the specified map. The source and target items have
   !< the same name and (optionally) subcomponent name.
-  subroutine map_model_data(this, controller_id, tgt_model_name, &
-                            tgt_subcomp_name, tgt_var_name, src_model_id, &
-                            index_map, stages)
+  !call this%map_model_data(sol_id, interface_map%model_ids(m), &
+  !dist_var, idx_map)
+  subroutine map_model_data(this, sol_id, iface_map, model_idx, dist_var)
     use SimModule, only: ustop
-    use MemoryManagerModule, only: get_from_memorylist
-    class(MapperType) :: this
-    integer(I4B) :: controller_id !< e.g. the numerical solution where synchr. is controlled
-    character(len=*), intent(in) :: tgt_model_name
-    character(len=*), intent(in) :: tgt_subcomp_name
-    character(len=*), intent(in) :: tgt_var_name
-    integer(I4B), intent(in) :: src_model_id
-    type(IndexMapType), intent(in) :: index_map
-    integer(I4B), dimension(:), intent(in) :: stages !< array with 1 or multiple stages for synchronization
+    class(MapperType) :: this !< this mapper instance
+    integer(I4B) :: sol_id !< the numerical solution where synchr. is controlled
+    type(InterfaceMapType), pointer :: iface_map !< the full interface map
+    integer(I4B) :: model_idx !< the model index (not id) in the interface map
+    type(DistVarType), pointer :: dist_var !< the distributed variable to map
     ! local
     character(len=LENVARNAME) :: src_var_name
     character(len=LENMEMPATH) :: src_mem_path, tgt_mem_path
     class(VirtualModelType), pointer :: v_model
+    type(IndexMapType), pointer :: idx_map
+    integer(I4B), dimension(:), pointer, contiguous :: lookup_table
+    class(VirtualDataType), pointer :: vd
 
-    v_model => get_virtual_model(src_model_id)
+    v_model => get_virtual_model(iface_map%model_ids(model_idx))
+    vd => v_model%get_virtual_data(dist_var%var_name, dist_var%subcomp_name)
 
-    if (len_trim(tgt_subcomp_name) > 0) then
-      tgt_mem_path = create_mem_path(tgt_model_name, tgt_subcomp_name)
+    ! pick the right index map: connection based or node based,
+    ! and reduced data items require a lookup table
+    lookup_table => null()
+    if (dist_var%map_type == SYNC_NDS) then
+      idx_map => iface_map%node_maps(model_idx)
+      if (vd%is_reduced) then
+        lookup_table => v_model%element_luts(MAP_NODE_TYPE)%remote_to_virtual
+      end if
+    else if (dist_var%map_type == SYNC_CON) then
+      idx_map => iface_map%conn_maps(model_idx)
+      if (vd%is_reduced) then
+        lookup_table => v_model%element_luts(MAP_CONN_TYPE)%remote_to_virtual
+      end if
     else
-      tgt_mem_path = create_mem_path(tgt_model_name)
+      write (*, *) "Unknown map type for distributed variable ", dist_var%var_name
+      call ustop()
     end if
 
-    src_var_name = tgt_var_name
-    src_mem_path = v_model%get_vrt_mem_path(src_var_name, tgt_subcomp_name)
-    call this%map_data(controller_id, &
-                       tgt_var_name, tgt_mem_path, index_map%tgt_idx, &
-                       src_var_name, src_mem_path, index_map%src_idx, &
-                       null(), stages)
+    if (len_trim(dist_var%subcomp_name) > 0) then
+      tgt_mem_path = create_mem_path(dist_var%comp_name, dist_var%subcomp_name)
+    else
+      tgt_mem_path = create_mem_path(dist_var%comp_name)
+    end if
+
+    src_var_name = dist_var%var_name
+    src_mem_path = v_model%get_vrt_mem_path(src_var_name, dist_var%subcomp_name)
+    call this%map_data(sol_id, &
+                       src_var_name, tgt_mem_path, idx_map%tgt_idx, &
+                       src_var_name, src_mem_path, idx_map%src_idx, &
+                       null(), lookup_table, dist_var%sync_stages)
 
   end subroutine map_model_data
 
   !> @brief Map memory from a Exchange to the specified memory entry,
   !< using the index map
-  subroutine map_exg_data(this, controller_id, tgt_model_name, &
-                          tgt_subcomp_name, tgt_var_name, src_exg_id, &
-                          src_var_name, index_map_sgn, stages)
-    use SimModule, only: ustop
-    use MemoryManagerModule, only: get_from_memorylist
+  subroutine map_exg_data(this, sol_id, iface_map, exg_idx, dist_var)
     class(MapperType) :: this
-    integer(I4B) :: controller_id !< e.g. the numerical solution where synchr. is controlled
-    character(len=*), intent(in) :: tgt_model_name
-    character(len=*), intent(in) :: tgt_subcomp_name
-    character(len=*), intent(in) :: tgt_var_name
-    integer(I4B), intent(in) :: src_exg_id
-    character(len=*), intent(in) :: src_var_name
-    type(IndexMapSgnType), intent(in) :: index_map_sgn
-    integer(I4B), dimension(:), intent(in) :: stages !< array with 1 or multiple stages for synchronization
+    integer(I4B) :: sol_id !< the numerical solution where synchr. is controlled
+    type(InterfaceMapType), pointer :: iface_map !< the full interface map
+    integer(I4B), intent(in) :: exg_idx !< the index (not id) for the exchange
+    type(DistVarType), pointer :: dist_var !< the distributed variable to map
     ! local
     character(len=LENMEMPATH) :: src_mem_path, tgt_mem_path
     class(VirtualExchangeType), pointer :: v_exchange
+    type(IndexMapSgnType), pointer :: idx_map
 
-    v_exchange => get_virtual_exchange(src_exg_id)
+    v_exchange => get_virtual_exchange(iface_map%exchange_ids(exg_idx))
 
-    if (len_trim(tgt_subcomp_name) > 0) then
-      tgt_mem_path = create_mem_path(tgt_model_name, tgt_subcomp_name)
+    idx_map => iface_map%exchange_maps(exg_idx)
+
+    if (len_trim(dist_var%subcomp_name) > 0) then
+      tgt_mem_path = create_mem_path(dist_var%comp_name, dist_var%subcomp_name)
     else
-      tgt_mem_path = create_mem_path(tgt_model_name)
+      tgt_mem_path = create_mem_path(dist_var%comp_name)
     end if
 
-    src_mem_path = v_exchange%get_vrt_mem_path(src_var_name, '')
-    call this%map_data(controller_id, &
-                       tgt_var_name, tgt_mem_path, index_map_sgn%tgt_idx, &
-                       src_var_name, src_mem_path, index_map_sgn%src_idx, &
-                       index_map_sgn%sign, stages)
+    src_mem_path = v_exchange%get_vrt_mem_path(dist_var%exg_var_name, '')
+    call this%map_data(sol_id, &
+                       dist_var%var_name, tgt_mem_path, idx_map%tgt_idx, &
+                       dist_var%exg_var_name, src_mem_path, idx_map%src_idx, &
+                       idx_map%sign, null(), dist_var%sync_stages)
 
   end subroutine map_exg_data
 
@@ -228,14 +217,15 @@ contains
 
     call this%map_data(controller_id, tgt_name, tgt_path, null(), &
                        src_name, src_path, null(), &
-                       null(), stages)
+                       null(), null(), stages)
 
   end subroutine map_data_full
 
   !> @brief Generic mapping between two variables in memory, using
   !< an optional sign conversion
   subroutine map_data(this, controller_id, tgt_name, tgt_path, tgt_idx, &
-                      src_name, src_path, src_idx, sign_array, stages)
+                      src_name, src_path, src_idx, sign_array, &
+                      lookup_table, stages)
     class(MapperType) :: this
     integer(I4B) :: controller_id
     character(len=*), intent(in) :: tgt_name
@@ -245,6 +235,7 @@ contains
     character(len=*), intent(in) :: src_path
     integer(I4B), dimension(:), pointer :: src_idx
     integer(I4B), dimension(:), pointer :: sign_array
+    integer(I4B), dimension(:), pointer :: lookup_table
     integer(I4B), dimension(:), intent(in) :: stages
     ! local
     integer(I4B) :: istage, i
@@ -271,6 +262,7 @@ contains
     mapped_data%src_idx => src_idx
     mapped_data%tgt_idx => tgt_idx
     mapped_data%sign => sign_array
+    mapped_data%lut => lookup_table
     obj => mapped_data
     call this%mapped_data_list%Add(obj)
 

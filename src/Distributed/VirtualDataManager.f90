@@ -2,12 +2,14 @@ module VirtualDataManagerModule
   use KindModule, only: I4B
   use STLVecIntModule
   use VirtualDataListsModule, only: virtual_model_list, virtual_exchange_list
+  use VirtualBaseModule, only: MAP_NODE_TYPE, MAP_CONN_TYPE
   use VirtualModelModule, only: get_virtual_model
   use VirtualExchangeModule, only: get_virtual_exchange
   use VirtualSolutionModule
   use VirtualDataContainerModule
   use RouterBaseModule
   use RouterFactoryModule, only: create_router
+  use ListsModule, only: basesolutionlist
   use NumericalSolutionModule, only: NumericalSolutionType
   use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
   use NumericalExchangeModule, only: NumericalExchangeType, &
@@ -22,7 +24,7 @@ module VirtualDataManagerModule
   type, public :: VirtualDataManagerType
     integer(I4B) :: nr_solutions
     integer(I4B), dimension(:), allocatable :: solution_ids
-    class(VirtualSolutionType), dimension(:), pointer :: virtual_solutions
+    type(VirtualSolutionType), dimension(:), pointer :: virtual_solutions
     class(RouterBaseType), pointer :: router
   contains
     procedure :: create => vds_create
@@ -81,7 +83,7 @@ contains
     class(NumericalSolutionType), pointer :: num_sol
     ! local
     integer(I4B) :: i, im, ix, ihm, ihx
-    class(VirtualSolutionType), pointer :: virt_sol
+    type(VirtualSolutionType), pointer :: virt_sol
     class(NumericalModelType), pointer :: num_mod
     class(DisConnExchangeType), pointer :: exg
     class(SpatialModelConnectionType), pointer :: conn
@@ -98,6 +100,7 @@ contains
     ! build the virtual solution
     this%solution_ids(this%nr_solutions) = num_sol%id
     virt_sol%solution_id = num_sol%id
+    virt_sol%numerical_solution => num_sol
 
     ! 1) adding all local models from the solution
     do im = 1, num_sol%modellist%Count()
@@ -131,6 +134,8 @@ contains
 
     allocate (virt_sol%models(model_ids%size))
     allocate (virt_sol%exchanges(exchange_ids%size))
+    allocate (virt_sol%interface_map)
+    call virt_sol%interface_map%init(model_ids%size, exchange_ids%size)
 
     ! select virtual containers for models/exchanges
     do i = 1, model_ids%size
@@ -151,11 +156,58 @@ contains
   !> @brief Reduce the halo for all solutions. This will
   !< activate the mapping tables in the virtual data items.
   subroutine vds_reduce_halo(this)
+    use InputOutputModule, only: getunit
+    use SimVariablesModule, only: proc_id
+    use IndexMapModule
     class(VirtualDataManagerType) :: this
+    ! local
+    integer(I4B) :: ivm, isol, iexg
+    integer(I4B) :: outunit
+    character(len=128) :: monitor_file
+    type(VirtualSolutionType), pointer :: virt_sol
+    class(NumericalSolutionType), pointer :: num_sol
+    class(SpatialModelConnectionType), pointer :: conn
+    class(VirtualDataContainerType), pointer :: vdc
+    type(IndexMapType), pointer :: nmap, cmap
 
     ! merge the interface maps over this process
+    do isol = 1, this%nr_solutions
+      virt_sol => this%virtual_solutions(isol)
+      num_sol => virt_sol%numerical_solution
+      do iexg = 1, num_sol%exchangelist%Count()
+        conn => get_smc_from_list(num_sol%exchangelist, iexg)
+        if (.not. associated(conn)) cycle
+        ! these are interface models, now merge their
+        ! interface maps
+        call virt_sol%interface_map%add(conn%interface_map)
+      end do
+    end do
+
+    ! some testing
+    if (.false.) then
+      outunit = getunit()
+      write (monitor_file, '(a,i0,a)') "iface.p", proc_id, ".log"
+      open (unit=outunit, file=monitor_file)
+      do isol = 1, this%nr_solutions
+        write (outunit, '(a,i0,/)') "interface mape for solution ", &
+          this%virtual_solutions(isol)%solution_id
+        call this%virtual_solutions(isol)%interface_map%print_interface(outunit)
+      end do
+      close (outunit)
+    end if
 
     ! assign reduced maps to virtual data containers
+    do isol = 1, this%nr_solutions
+      virt_sol => this%virtual_solutions(isol)
+      do ivm = 1, size(virt_sol%models) ! TODO_MJR: other containers, exchanges?
+        vdc => virt_sol%models(ivm)%ptr
+        if (vdc%is_local) cycle
+        nmap => virt_sol%interface_map%get_node_map(vdc%id)
+        cmap => virt_sol%interface_map%get_connection_map(vdc%id)
+        call vdc%set_element_map(nmap%src_idx, MAP_NODE_TYPE)
+        call vdc%set_element_map(cmap%src_idx, MAP_CONN_TYPE)
+      end do
+    end do
 
   end subroutine vds_reduce_halo
 
@@ -315,6 +367,8 @@ contains
     do i = 1, this%nr_solutions
       deallocate (this%virtual_solutions(i)%models)
       deallocate (this%virtual_solutions(i)%exchanges)
+      call this%virtual_solutions(i)%interface_map%destroy()
+      deallocate (this%virtual_solutions(i)%interface_map)
     end do
     deallocate (this%virtual_solutions)
 

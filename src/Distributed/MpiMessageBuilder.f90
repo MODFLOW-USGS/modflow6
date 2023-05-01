@@ -11,31 +11,67 @@ module MpiMessageBuilderModule
   type, public :: VdcHeaderType
     integer(I4B) :: id
     integer(I4B) :: container_type
+    integer(I4B), dimension(NR_VDC_ELEMENT_MAPS) :: map_sizes
+  end type
+
+  type, public :: VdcReceiverMapsType
+    type(VdcElementMapType), dimension(NR_VDC_ELEMENT_MAPS) :: el_maps
+  contains
+    procedure :: create
+    procedure :: destroy
   end type
 
   type, public :: MpiMessageBuilderType
     type(VdcPtrType), dimension(:), pointer :: vdc_models => null() !< the models to be build the message for
     type(VdcPtrType), dimension(:), pointer :: vdc_exchanges => null() !< the exchanges to be build the message for
     integer(I4B) :: imon !< the output file unit, set from outside
-    logical(LGP) :: enable_monitor !< log when true
   contains
     procedure :: init
     procedure :: attach_data
     procedure :: release_data
     procedure :: create_header_snd
     procedure :: create_header_rcv
+    procedure :: create_map_snd
+    procedure :: create_map_rcv
     procedure :: create_body_rcv
     procedure :: create_body_snd
     procedure :: set_monitor
     ! private
     procedure, private :: get_vdc_from_hdr
     procedure, private :: create_vdc_snd_hdr
+    procedure, private :: create_vdc_snd_map
     procedure, private :: create_vdc_snd_body
     procedure, private :: create_vdc_rcv_body
-    procedure, private :: create_vdc_body
+    procedure, private :: create_element_map
   end type
 
 contains
+
+  subroutine create(this, map_sizes)
+    class(VdcReceiverMapsType) :: this
+    integer(I4B), dimension(NR_VDC_ELEMENT_MAPS) :: map_sizes
+    ! local
+    integer(I4B) :: i
+
+    do i = 1, NR_VDC_ELEMENT_MAPS
+      this%el_maps(i)%nr_virt_elems = map_sizes(i)
+      allocate (this%el_maps(i)%remote_elem_shift(map_sizes(i)))
+    end do
+
+  end subroutine create
+
+  subroutine destroy(this)
+    class(VdcReceiverMapsType) :: this
+    ! local
+    integer(I4B) :: i
+
+    do i = 1, NR_VDC_ELEMENT_MAPS
+      if (associated(this%el_maps(i)%remote_elem_shift)) then
+        deallocate (this%el_maps(i)%remote_elem_shift)
+      end if
+    end do
+
+  end subroutine destroy
 
   subroutine init(this)
     class(MpiMessageBuilderType) :: this
@@ -157,10 +193,128 @@ contains
     ! this will be for one data container, the mpi recv
     ! call will accept an array of them, no need to create
     ! an overarching contiguous type...
-    call MPI_Type_contiguous(2, MPI_INTEGER, hdr_rcv_type, ierr)
+    call MPI_Type_contiguous(NR_VDC_ELEMENT_MAPS + 2, MPI_INTEGER, &
+                             hdr_rcv_type, ierr)
     call MPI_Type_commit(hdr_rcv_type, ierr)
 
   end subroutine create_header_rcv
+
+  subroutine create_map_snd(this, rank, stage, map_snd_type)
+    class(MpiMessageBuilderType) :: this
+    integer(I4B) :: rank
+    integer(I4B) :: stage
+    integer :: map_snd_type
+    ! local
+    integer(I4B) :: i, offset, nr_types
+    class(VirtualDataContainerType), pointer :: vdc
+    integer :: ierr
+    type(STLVecInt) :: model_idxs, exg_idxs
+    integer, dimension(:), allocatable :: blk_cnts, types
+    integer(kind=MPI_ADDRESS_KIND), dimension(:), allocatable :: displs
+
+    call model_idxs%init()
+    call exg_idxs%init()
+
+    ! determine which containers to include TODO_MJR: avoid repetition
+    do i = 1, size(this%vdc_models)
+      vdc => this%vdc_models(i)%ptr
+      if (vdc%is_active .and. vdc%orig_rank == rank) then
+        call model_idxs%push_back(i)
+      end if
+    end do
+    do i = 1, size(this%vdc_exchanges)
+      vdc => this%vdc_exchanges(i)%ptr
+      if (vdc%is_active .and. vdc%orig_rank == rank) then
+        call exg_idxs%push_back(i)
+      end if
+    end do
+
+    nr_types = model_idxs%size + exg_idxs%size
+    allocate (blk_cnts(nr_types))
+    allocate (types(nr_types))
+    allocate (displs(nr_types))
+
+    if (this%imon > 0) then
+      write (this%imon, '(6x,a,*(i3))') "create maps for models: ", &
+        model_idxs%get_values()
+      write (this%imon, '(6x,a,*(i3))') "create maps for exchange: ", &
+        exg_idxs%get_values()
+    end if
+
+    ! loop over containers
+    do i = 1, model_idxs%size
+      vdc => this%vdc_models(model_idxs%at(i))%ptr
+      call MPI_Get_address(vdc%id, displs(i), ierr)
+      blk_cnts(i) = 1
+      types(i) = this%create_vdc_snd_map(vdc, stage)
+    end do
+    offset = model_idxs%size
+    do i = 1, exg_idxs%size
+      vdc => this%vdc_exchanges(exg_idxs%at(i))%ptr
+      call MPI_Get_address(vdc%id, displs(i + offset), ierr)
+      blk_cnts(i + offset) = 1
+      types(i + offset) = this%create_vdc_snd_map(vdc, stage)
+    end do
+
+    ! create a compound MPI data type for the maps
+    call MPI_Type_create_struct(nr_types, blk_cnts, displs, types, &
+                                map_snd_type, ierr)
+    call MPI_Type_commit(map_snd_type, ierr)
+
+    ! free the subtypes
+    do i = 1, nr_types
+      call MPI_Type_free(types(i), ierr)
+    end do
+
+    call model_idxs%destroy()
+    call exg_idxs%destroy()
+
+    deallocate (blk_cnts)
+    deallocate (types)
+    deallocate (displs)
+
+  end subroutine create_map_snd
+
+  subroutine create_map_rcv(this, rcv_map, nr_headers, map_rcv_type)
+    class(MpiMessageBuilderType) :: this
+    type(VdcReceiverMapsType), dimension(:) :: rcv_map
+    integer(I4B) :: nr_headers
+    integer :: map_rcv_type
+    ! local
+    integer(I4B) :: i, j, nr_elems, type_cnt
+    integer :: ierr, max_nr_maps
+    integer, dimension(:), allocatable :: types
+    integer(kind=MPI_ADDRESS_KIND), dimension(:), allocatable :: displs
+    integer, dimension(:), allocatable :: blk_cnts
+
+    max_nr_maps = nr_headers * NR_VDC_ELEMENT_MAPS
+    allocate (types(max_nr_maps))
+    allocate (displs(max_nr_maps))
+    allocate (blk_cnts(max_nr_maps))
+
+    type_cnt = 0
+    do i = 1, nr_headers
+      do j = 1, NR_VDC_ELEMENT_MAPS
+        nr_elems = rcv_map(i)%el_maps(j)%nr_virt_elems
+        if (nr_elems == 0) cycle
+
+        type_cnt = type_cnt + 1
+        call MPI_Get_address(rcv_map(i)%el_maps(j)%remote_elem_shift, &
+                             displs(type_cnt), ierr)
+        call MPI_Type_contiguous(nr_elems, MPI_Integer, types(type_cnt), ierr)
+        blk_cnts(type_cnt) = 1
+      end do
+    end do
+
+    call MPI_Type_create_struct(type_cnt, blk_cnts, displs, types, &
+                                map_rcv_type, ierr)
+    call MPI_Type_commit(map_rcv_type, ierr)
+
+    deallocate (types)
+    deallocate (displs)
+    deallocate (blk_cnts)
+
+  end subroutine create_map_rcv
 
   !> @brief Create the body to receive based on the headers
   !< that have been sent
@@ -239,11 +393,12 @@ contains
 
   !> @brief Create the body to send based on the received headers
   !<
-  subroutine create_body_snd(this, rank, stage, headers, body_snd_type)
+  subroutine create_body_snd(this, rank, stage, headers, maps, body_snd_type)
     class(MpiMessageBuilderType) :: this
     integer(I4B) :: rank
     integer(I4B) :: stage
     type(VdcHeaderType), dimension(:) :: headers
+    type(VdcReceiverMapsType), dimension(:) :: maps
     integer :: body_snd_type
     ! local
     integer(I4B) :: i, nr_headers
@@ -261,7 +416,7 @@ contains
     do i = 1, nr_headers
       vdc => this%get_vdc_from_hdr(headers(i))
       call MPI_Get_address(vdc%id, displs(i), ierr)
-      types(i) = this%create_vdc_snd_body(vdc, rank, stage)
+      types(i) = this%create_vdc_snd_body(vdc, maps(i)%el_maps, rank, stage)
       blk_cnts(i) = 1
     end do
 
@@ -287,10 +442,10 @@ contains
     integer(I4B) :: stage
     integer :: new_type ! the created MPI datatype, uncommitted
     ! local
-    integer :: ierr
-    integer, dimension(2) :: blk_cnts
-    integer(kind=MPI_ADDRESS_KIND), dimension(2) :: displs
-    integer, dimension(2) :: types
+    integer :: i, ierr
+    integer, dimension(NR_VDC_ELEMENT_MAPS + 2) :: blk_cnts
+    integer(kind=MPI_ADDRESS_KIND), dimension(NR_VDC_ELEMENT_MAPS + 2) :: displs
+    integer, dimension(NR_VDC_ELEMENT_MAPS + 2) :: types
 
     call MPI_Get_address(vdc%id, displs(1), ierr)
     types(1) = MPI_INTEGER
@@ -298,13 +453,69 @@ contains
     call MPI_Get_address(vdc%container_type, displs(2), ierr)
     types(2) = MPI_INTEGER
     blk_cnts(2) = 1
+    do i = 1, NR_VDC_ELEMENT_MAPS
+      call MPI_Get_address(vdc%element_maps(i)%nr_virt_elems, displs(i + 2), ierr)
+      types(i + 2) = MPI_INTEGER
+      blk_cnts(i + 2) = 1
+    end do
 
     ! rebase to id field
     displs = displs - displs(1)
-    call MPI_Type_create_struct(2, blk_cnts, displs, types, new_type, ierr)
+    call MPI_Type_create_struct(NR_VDC_ELEMENT_MAPS + 2, blk_cnts, &
+                                displs, types, new_type, ierr)
     call MPI_Type_commit(new_type, ierr)
 
   end function create_vdc_snd_hdr
+
+  !> @brief Create a MPI datatype for sending the maps
+  !< with the type relative to the id field
+  function create_vdc_snd_map(this, vdc, stage) result(new_type)
+    class(MpiMessageBuilderType) :: this
+    class(VirtualDataContainerType), pointer :: vdc
+    integer(I4B) :: stage
+    integer :: new_type
+    ! local
+    integer(I4B) :: i, type_cnt
+    integer :: n_elems, ierr
+    integer(kind=MPI_ADDRESS_KIND) :: offset
+    integer, dimension(:), allocatable :: types
+    integer(kind=MPI_ADDRESS_KIND), dimension(:), allocatable :: displs
+    integer, dimension(:), allocatable :: blk_cnts
+
+    allocate (types(NR_VDC_ELEMENT_MAPS))
+    allocate (displs(NR_VDC_ELEMENT_MAPS))
+    allocate (blk_cnts(NR_VDC_ELEMENT_MAPS))
+
+    ! displ relative to id field
+    call MPI_Get_address(vdc%id, offset, ierr)
+
+    type_cnt = 0
+    do i = 1, NR_VDC_ELEMENT_MAPS
+      n_elems = vdc%element_maps(i)%nr_virt_elems
+      if (n_elems == 0) cycle ! only non-empty maps are sent
+
+      type_cnt = type_cnt + 1
+      call MPI_Get_address(vdc%element_maps(i)%remote_elem_shift, &
+                           displs(type_cnt), ierr)
+      call MPI_Type_contiguous(n_elems, MPI_INTEGER, types(type_cnt), ierr)
+      call MPI_Type_commit(types(type_cnt), ierr)
+      blk_cnts(type_cnt) = 1
+      displs(type_cnt) = displs(type_cnt) - offset
+    end do
+
+    call MPI_Type_create_struct(type_cnt, blk_cnts, displs, types, &
+                                new_type, ierr)
+    call MPI_Type_commit(new_type, ierr)
+
+    do i = 1, type_cnt
+      call MPI_Type_free(types(i), ierr)
+    end do
+
+    deallocate (types)
+    deallocate (displs)
+    deallocate (blk_cnts)
+
+  end function create_vdc_snd_map
 
   function create_vdc_rcv_body(this, vdc, rank, stage) result(new_type)
     class(MpiMessageBuilderType) :: this
@@ -313,48 +524,18 @@ contains
     integer(I4B) :: stage
     integer :: new_type
     ! local
-    type(STLVecInt) :: virtual_items
-
-    call virtual_items%init()
-    call vdc%get_recv_items(stage, rank, virtual_items)
-    !if (this%imon > 0) call vdc%print_items(this%imon, virtual_items)
-    new_type = this%create_vdc_body(vdc, virtual_items)
-    call virtual_items%destroy()
-
-  end function create_vdc_rcv_body
-
-  function create_vdc_snd_body(this, vdc, rank, stage) result(new_type)
-    class(MpiMessageBuilderType) :: this
-    class(VirtualDataContainerType), pointer :: vdc
-    integer(I4B) :: rank
-    integer(I4B) :: stage
-    integer :: new_type
-    ! local
-    type(STLVecInt) :: virtual_items
-
-    call virtual_items%init()
-    call vdc%get_send_items(stage, rank, virtual_items)
-    !if (this%imon > 0) call vdc%print_items(this%imon, virtual_items)
-    new_type = this%create_vdc_body(vdc, virtual_items)
-    call virtual_items%destroy()
-
-  end function create_vdc_snd_body
-
-  !> @brief Create data type for this container, relative
-  !< to its id field. This is used for sending and receiving
-  function create_vdc_body(this, vdc, items) result(new_type)
-    class(MpiMessageBuilderType) :: this
-    class(VirtualDataContainerType), pointer :: vdc
     type(STLVecInt) :: items
-    integer :: new_type
-    ! local
-    integer(I4B) :: i
-    class(VirtualDataType), pointer :: vd
     integer :: ierr
     integer(kind=MPI_ADDRESS_KIND) :: offset
     integer, dimension(:), allocatable :: types
     integer(kind=MPI_ADDRESS_KIND), dimension(:), allocatable :: displs
     integer, dimension(:), allocatable :: blk_cnts
+    integer(I4B) :: i
+    class(VirtualDataType), pointer :: vd
+
+    call items%init()
+    call vdc%get_recv_items(stage, rank, items)
+    !if (this%imon > 0) call vdc%print_items(this%imon, items)
 
     allocate (types(items%size))
     allocate (displs(items%size))
@@ -364,7 +545,7 @@ contains
 
     do i = 1, items%size
       vd => get_virtual_data_from_list(vdc%virtual_data_list, items%at(i))
-      call get_mpi_datatype(vd, displs(i), types(i))
+      call get_mpi_datatype(this, vd, displs(i), types(i))
       blk_cnts(i) = 1
       ! rebase w.r.t. id field
       displs(i) = displs(i) - offset
@@ -383,7 +564,94 @@ contains
     deallocate (displs)
     deallocate (blk_cnts)
 
-  end function create_vdc_body
+    call items%destroy()
+
+  end function create_vdc_rcv_body
+
+  function create_vdc_snd_body(this, vdc, vdc_maps, rank, stage) result(new_type)
+    class(MpiMessageBuilderType) :: this
+    class(VirtualDataContainerType), pointer :: vdc
+    type(VdcElementMapType), dimension(:) :: vdc_maps
+    integer(I4B) :: rank
+    integer(I4B) :: stage
+    integer :: new_type
+    ! local
+    type(STLVecInt) :: items
+    integer :: ierr
+    integer(kind=MPI_ADDRESS_KIND) :: offset
+    integer, dimension(:), allocatable :: types
+    integer(kind=MPI_ADDRESS_KIND), dimension(:), allocatable :: displs
+    integer, dimension(:), allocatable :: blk_cnts
+    integer(I4B) :: i
+    class(VirtualDataType), pointer :: vd
+    integer(I4B), dimension(:), pointer, contiguous :: el_map
+
+    call items%init()
+    call vdc%get_send_items(stage, rank, items)
+    !if (this%imon > 0) call vdc%print_items(this%imon, items)
+
+    allocate (types(items%size))
+    allocate (displs(items%size))
+    allocate (blk_cnts(items%size))
+
+    call MPI_Get_address(vdc%id, offset, ierr)
+
+    do i = 1, items%size
+      vd => get_virtual_data_from_list(vdc%virtual_data_list, items%at(i))
+      if (vd%map_type > 0) then
+        el_map => vdc_maps(vd%map_type)%remote_elem_shift
+      else
+        el_map => null()
+      end if
+      call get_mpi_datatype(this, vd, displs(i), types(i), el_map)
+      blk_cnts(i) = 1
+      ! rebase w.r.t. id field
+      displs(i) = displs(i) - offset
+    end do
+
+    call MPI_Type_create_struct(items%size, blk_cnts, displs, &
+                                types, new_type, ierr)
+    call MPI_Type_commit(new_type, ierr)
+
+    do i = 1, items%size
+      vd => get_virtual_data_from_list(vdc%virtual_data_list, items%at(i))
+      call free_mpi_datatype(vd, types(i))
+    end do
+
+    deallocate (types)
+    deallocate (displs)
+    deallocate (blk_cnts)
+
+    call items%destroy()
+
+  end function create_vdc_snd_body
+
+  !> @brief Temp. function to generate a dummy (complete) map
+  !<
+  function create_element_map(this, rank, vdc, vd) result(el_map)
+    use MemoryManagerModule, only: get_mem_shape, get_mem_rank
+    use ConstantsModule, only: MAXMEMRANK
+    class(MpiMessageBuilderType) :: this
+    integer(I4B) :: rank
+    class(VirtualDataContainerType), pointer :: vdc
+    class(VirtualDataType), pointer :: vd
+    integer(I4B), dimension(:), pointer, contiguous :: el_map
+    ! local
+    integer(I4B), dimension(MAXMEMRANK) :: mem_shp
+    integer(I4B) :: i, nrow, mem_rank
+
+    el_map => null()
+    call get_mem_rank(vd%virtual_mt%name, vd%virtual_mt%path, mem_rank)
+    call get_mem_shape(vd%virtual_mt%name, vd%virtual_mt%path, mem_shp)
+    if (mem_rank > 0) then
+      nrow = mem_shp(mem_rank)
+      allocate (el_map(nrow))
+      do i = 1, nrow
+        el_map(i) = i - 1
+      end do
+    end if
+
+  end function create_element_map
 
   function get_vdc_from_hdr(this, header) result(vdc)
     class(MpiMessageBuilderType) :: this
@@ -414,35 +682,48 @@ contains
   !> @brief Local routine to get elemental mpi data types representing
   !! the virtual data items. Types are automatically committed unless
   !< they are primitives (e.g. MPI_INTEGER)
-  subroutine get_mpi_datatype(virtual_data, el_displ, el_type)
+  subroutine get_mpi_datatype(this, virtual_data, el_displ, el_type, el_map_opt)
     use SimModule, only: ustop
-    use SimVariablesModule, only: proc_id
+    class(MpiMessageBuilderType) :: this
     class(VirtualDataType), pointer :: virtual_data
     integer(kind=MPI_ADDRESS_KIND) :: el_displ
     integer :: el_type
+    integer(I4B), dimension(:), pointer, contiguous, optional :: el_map_opt !< optional, and can be null
     ! local
     type(MemoryType), pointer :: mt
+    integer(I4B), dimension(:), pointer, contiguous :: el_map
+
+    el_map => null()
+    if (present(el_map_opt)) el_map => el_map_opt
+
+    if (this%imon > 0) then
+      if (.not. associated(el_map)) then
+        write (this%imon, '(8x,2a,i0)') virtual_data%var_name, ' all ', &
+          virtual_data%virtual_mt%isize
+      else
+        write (this%imon, '(8x,2a,i0)') virtual_data%var_name, &
+          ' with map size ', size(el_map)
+      end if
+    end if
 
     mt => virtual_data%virtual_mt
-    if (.not. associated(mt)) then
-      write (*, *) 'not associated: ', virtual_data%var_name, proc_id
-    end if
+
     if (associated(mt%intsclr)) then
       call get_mpitype_for_int(mt, el_displ, el_type)
     else if (associated(mt%aint1d)) then
-      call get_mpitype_for_int1d(mt, el_displ, el_type)
+      call get_mpitype_for_int1d(mt, el_displ, el_type, el_map)
     else if (associated(mt%aint2d)) then
-      call get_mpitype_for_int2d(mt, el_displ, el_type)
+      call get_mpitype_for_int2d(mt, el_displ, el_type, el_map)
     else if (associated(mt%aint3d)) then
-      call get_mpitype_for_int3d(mt, el_displ, el_type)
+      call get_mpitype_for_int3d(mt, el_displ, el_type, el_map)
     else if (associated(mt%dblsclr)) then
       call get_mpitype_for_dbl(mt, el_displ, el_type)
     else if (associated(mt%adbl1d)) then
-      call get_mpitype_for_dbl1d(mt, el_displ, el_type)
+      call get_mpitype_for_dbl1d(mt, el_displ, el_type, el_map)
     else if (associated(mt%adbl2d)) then
-      call get_mpitype_for_dbl2d(mt, el_displ, el_type)
+      call get_mpitype_for_dbl2d(mt, el_displ, el_type, el_map)
     else if (associated(mt%adbl3d)) then
-      call get_mpitype_for_dbl3d(mt, el_displ, el_type)
+      call get_mpitype_for_dbl3d(mt, el_displ, el_type, el_map)
     else
       write (*, *) 'unsupported datatype in MPI messaging for ', &
         virtual_data%var_name, virtual_data%mem_path
@@ -492,42 +773,66 @@ contains
 
   end subroutine get_mpitype_for_int
 
-  subroutine get_mpitype_for_int1d(mem, el_displ, el_type)
+  subroutine get_mpitype_for_int1d(mem, el_displ, el_type, el_map)
     type(MemoryType), pointer :: mem
     integer(kind=MPI_ADDRESS_KIND) :: el_displ
     integer :: el_type
+    integer, dimension(:), pointer :: el_map
     ! local
     integer :: ierr
 
     call MPI_Get_address(mem%aint1d, el_displ, ierr)
-    call MPI_Type_contiguous(mem%isize, MPI_INTEGER, el_type, ierr)
+    if (associated(el_map)) then
+      call MPI_Type_create_indexed_block( &
+        size(el_map), 1, el_map, MPI_INTEGER, el_type, ierr)
+    else
+      call MPI_Type_contiguous(mem%isize, MPI_INTEGER, el_type, ierr)
+    end if
     call MPI_Type_commit(el_type, ierr)
 
   end subroutine get_mpitype_for_int1d
 
-  subroutine get_mpitype_for_int2d(mem, el_displ, el_type)
+  subroutine get_mpitype_for_int2d(mem, el_displ, el_type, el_map)
     type(MemoryType), pointer :: mem
     integer(kind=MPI_ADDRESS_KIND) :: el_displ
     integer :: el_type
+    integer, dimension(:), pointer :: el_map
     ! local
     integer :: ierr
+    integer :: two_integer_type
 
     call MPI_Get_address(mem%aint2d, el_displ, ierr)
-    call MPI_Type_contiguous(mem%isize, MPI_INTEGER, el_type, ierr)
+    if (associated(el_map)) then
+      call MPI_Type_contiguous(2, MPI_INTEGER, two_integer_type, ierr)
+      call MPI_Type_create_indexed_block( &
+        size(el_map), 1, el_map, two_integer_type, el_type, ierr)
+    else
+      call MPI_Type_contiguous(mem%isize, MPI_INTEGER, el_type, ierr)
+    end if
     call MPI_Type_commit(el_type, ierr)
+    call MPI_Type_free(two_integer_type, ierr)
 
   end subroutine get_mpitype_for_int2d
 
-  subroutine get_mpitype_for_int3d(mem, el_displ, el_type)
+  subroutine get_mpitype_for_int3d(mem, el_displ, el_type, el_map)
     type(MemoryType), pointer :: mem
     integer(kind=MPI_ADDRESS_KIND) :: el_displ
     integer :: el_type
+    integer, dimension(:), pointer :: el_map
     ! local
     integer :: ierr
+    integer :: three_integer_type
 
     call MPI_Get_address(mem%aint3d, el_displ, ierr)
-    call MPI_Type_contiguous(mem%isize, MPI_INTEGER, el_type, ierr)
+    if (associated(el_map)) then
+      call MPI_Type_contiguous(3, MPI_INTEGER, three_integer_type, ierr)
+      call MPI_Type_create_indexed_block( &
+        size(el_map), 1, el_map, three_integer_type, el_type, ierr)
+    else
+      call MPI_Type_contiguous(mem%isize, MPI_INTEGER, el_type, ierr)
+    end if
     call MPI_Type_commit(el_type, ierr)
+    call MPI_Type_free(three_integer_type, ierr)
 
   end subroutine get_mpitype_for_int3d
 
@@ -544,42 +849,66 @@ contains
 
   end subroutine get_mpitype_for_dbl
 
-  subroutine get_mpitype_for_dbl1d(mem, el_displ, el_type)
+  subroutine get_mpitype_for_dbl1d(mem, el_displ, el_type, el_map)
     type(MemoryType), pointer :: mem
     integer(kind=MPI_ADDRESS_KIND) :: el_displ
     integer :: el_type
+    integer, dimension(:), pointer :: el_map
     ! local
     integer :: ierr
 
     call MPI_Get_address(mem%adbl1d, el_displ, ierr)
-    call MPI_Type_contiguous(mem%isize, MPI_DOUBLE_PRECISION, el_type, ierr)
+    if (associated(el_map)) then
+      call MPI_Type_create_indexed_block( &
+        size(el_map), 1, el_map, MPI_DOUBLE_PRECISION, el_type, ierr)
+    else
+      call MPI_Type_contiguous(mem%isize, MPI_DOUBLE_PRECISION, el_type, ierr)
+    end if
     call MPI_Type_commit(el_type, ierr)
 
   end subroutine get_mpitype_for_dbl1d
 
-  subroutine get_mpitype_for_dbl2d(mem, el_displ, el_type)
+  subroutine get_mpitype_for_dbl2d(mem, el_displ, el_type, el_map)
     type(MemoryType), pointer :: mem
     integer(kind=MPI_ADDRESS_KIND) :: el_displ
     integer :: el_type
+    integer, dimension(:), pointer :: el_map
     ! local
     integer :: ierr
+    integer :: two_double_type
 
     call MPI_Get_address(mem%adbl2d, el_displ, ierr)
-    call MPI_Type_contiguous(mem%isize, MPI_DOUBLE_PRECISION, el_type, ierr)
+    if (associated(el_map)) then
+      call MPI_Type_contiguous(2, MPI_DOUBLE_PRECISION, two_double_type, ierr)
+      call MPI_Type_create_indexed_block( &
+        size(el_map), 1, el_map, two_double_type, el_type, ierr)
+    else
+      call MPI_Type_contiguous(mem%isize, MPI_DOUBLE_PRECISION, el_type, ierr)
+    end if
     call MPI_Type_commit(el_type, ierr)
+    call MPI_Type_free(two_double_type, ierr)
 
   end subroutine get_mpitype_for_dbl2d
 
-  subroutine get_mpitype_for_dbl3d(mem, el_displ, el_type)
+  subroutine get_mpitype_for_dbl3d(mem, el_displ, el_type, el_map)
     type(MemoryType), pointer :: mem
     integer(kind=MPI_ADDRESS_KIND) :: el_displ
     integer :: el_type
+    integer, dimension(:), pointer :: el_map
     ! local
     integer :: ierr
+    integer :: three_double_type
 
     call MPI_Get_address(mem%adbl3d, el_displ, ierr)
-    call MPI_Type_contiguous(mem%isize, MPI_DOUBLE_PRECISION, el_type, ierr)
+    if (associated(el_map)) then
+      call MPI_Type_contiguous(3, MPI_DOUBLE_PRECISION, three_double_type, ierr)
+      call MPI_Type_create_indexed_block( &
+        size(el_map), 1, el_map, three_double_type, el_type, ierr)
+    else
+      call MPI_Type_contiguous(mem%isize, MPI_DOUBLE_PRECISION, el_type, ierr)
+    end if
     call MPI_Type_commit(el_type, ierr)
+    call MPI_Type_free(three_double_type, ierr)
 
   end subroutine get_mpitype_for_dbl3d
 

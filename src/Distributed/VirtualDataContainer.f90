@@ -1,5 +1,6 @@
 module VirtualDataContainerModule
   use VirtualBaseModule
+  use SimModule, only: ustop
   use ListModule
   use KindModule, only: I4B, LGP
   use STLVecIntModule
@@ -29,6 +30,16 @@ module VirtualDataContainerModule
     class(VirtualDataContainerType), pointer :: ptr => null()
   end type VdcPtrType
 
+  type, public :: VdcElementMapType
+    integer(I4B) :: nr_virt_elems !< nr. of virtualized elements
+    integer(I4B), dimension(:), pointer, contiguous :: remote_elem_shift => null() !< array with 0-based remote indexes
+  end type VdcElementMapType
+
+  type :: VdcElementLutType
+    integer(I4B) :: max_remote_idx !< max. remote index, also size of the lookup table
+    integer(I4B), dimension(:), pointer, contiguous :: remote_to_virtual => null() !< (sparse) array with local indexes
+  end type VdcElementLutType
+
   !> @brief Container (list) of virtual data items.
   !!
   !! A virtual model or exchange derives from this base
@@ -47,19 +58,23 @@ module VirtualDataContainerModule
     integer(I4B) :: orig_rank !< the global rank of the process which holds the physical data for this container
 
     type(ListType) :: virtual_data_list !< a list with all virtual data items for this container
+    type(VdcElementMapType), dimension(NR_VDC_ELEMENT_MAPS) :: element_maps !< a list with all element maps
+    type(VdcElementLutType), dimension(NR_VDC_ELEMENT_MAPS) :: element_luts !< lookup tables from remote index to local index
   contains
     procedure :: vdc_create
     generic :: map => map_scalar, map_array1d, map_array2d
     procedure :: prepare_stage => vdc_prepare_stage
     procedure :: link_items => vdc_link_items
+    procedure :: set_element_map => vdc_set_element_map
     procedure :: get_vrt_mem_path => vdc_get_vrt_mem_path
     procedure :: destroy => vdc_destroy
     procedure :: set_orig_rank => vdc_set_orig_rank
     procedure :: get_send_items => vdc_get_send_items
     procedure :: get_recv_items => vdc_get_recv_items
+    procedure :: get_virtual_data => vdc_get_virtual_data
     procedure :: print_items
     ! protected
-    procedure :: create_field
+    procedure :: set
     ! private
     procedure, private :: add_to_list
     procedure, private :: map_scalar
@@ -77,6 +92,8 @@ contains
     character(len=*) :: name
     integer(I4B) :: id
     logical(LGP) :: is_local
+    ! local
+    integer(I4B) :: i
 
     this%name = name
     this%id = id
@@ -86,18 +103,29 @@ contains
     this%is_active = .true.
     this%container_type = VDC_UNKNOWN_TYPE
 
+    do i = 1, size(this%element_maps)
+      this%element_maps(i)%nr_virt_elems = 0
+      this%element_maps(i)%remote_elem_shift => null()
+    end do
+    do i = 1, size(this%element_luts)
+      this%element_luts(i)%max_remote_idx = 0
+      this%element_luts(i)%remote_to_virtual => null()
+    end do
+
   end subroutine vdc_create
 
-  !> @brief Create virtual data item, without allocation,
-  !< and add store it in this container.
-  subroutine create_field(this, field, var_name, subcmp_name, is_local)
+  !> @brief Init virtual data item, without allocation,
+  !< and store it in this container.
+  subroutine set(this, field, var_name, subcmp_name, map_id, is_local)
     class(VirtualDataContainerType) :: this
     class(VirtualDataType), pointer :: field
     character(len=*) :: var_name
     character(len=*) :: subcmp_name
+    integer(I4B) :: map_id
     logical(LGP), optional :: is_local
 
     field%is_remote = .not. this%is_local
+    field%map_type = map_id
     if (present(is_local)) field%is_remote = .not. is_local
     field%var_name = var_name
     field%subcmp_name = subcmp_name
@@ -106,12 +134,13 @@ contains
     else
       field%mem_path = create_mem_path(this%name, subcmp_name)
     end if
-    field%virtual_to_remote => null()
+    field%is_reduced = (field%is_remote .and. field%map_type > 0)
+    field%remote_elem_shift => null()
     field%remote_to_virtual => null()
     field%virtual_mt => null()
     call this%add_to_list(field)
 
-  end subroutine create_field
+  end subroutine set
 
   subroutine add_to_list(this, virtual_data)
     class(VirtualDataContainerType) :: this
@@ -154,56 +183,89 @@ contains
 
   end subroutine vdc_link_items
 
-  subroutine map_scalar(this, field, stages, map_type)
+  !> @brief Add the source indexes associated with map_id
+  !! as a element map to this container, such that
+  !< src_indexes(1:n) = (i_orig_1 - 1, ..., i_orig_n - 1)
+  subroutine vdc_set_element_map(this, src_indexes, map_id)
     class(VirtualDataContainerType) :: this
-    class(VirtualDataType), pointer :: field
-    integer(I4B), dimension(:) :: stages
-    integer(I4B) :: map_type
+    integer(I4B), dimension(:), pointer, contiguous :: src_indexes
+    integer(I4B) :: map_id
+    ! local
+    integer(I4B) :: i, idx_remote, max_remote_idx
 
-    call this%map_internal(field, (/0/), stages, map_type)
+    if (this%element_maps(map_id)%nr_virt_elems > 0) then
+      write (*, *) "Error, VDC element map already set"
+      call ustop()
+    end if
+
+    this%element_maps(map_id)%nr_virt_elems = size(src_indexes)
+    allocate (this%element_maps(map_id)%remote_elem_shift(size(src_indexes)))
+    do i = 1, size(src_indexes)
+      this%element_maps(map_id)%remote_elem_shift(i) = src_indexes(i) - 1
+    end do
+
+    max_remote_idx = maxval(src_indexes)
+    this%element_luts(map_id)%max_remote_idx = max_remote_idx
+    allocate (this%element_luts(map_id)%remote_to_virtual(max_remote_idx))
+    do i = 1, max_remote_idx
+      this%element_luts(map_id)%remote_to_virtual(i) = -1
+    end do
+    do i = 1, size(src_indexes)
+      idx_remote = src_indexes(i)
+      this%element_luts(map_id)%remote_to_virtual(idx_remote) = i
+    end do
+
+  end subroutine vdc_set_element_map
+
+  subroutine map_scalar(this, vd, stages)
+    class(VirtualDataContainerType) :: this
+    class(VirtualDataType), pointer :: vd
+    integer(I4B), dimension(:) :: stages
+
+    call this%map_internal(vd, (/0/), stages)
 
   end subroutine map_scalar
 
-  subroutine map_array1d(this, field, nrow, stages, map_type)
+  subroutine map_array1d(this, vd, nrow, stages)
     class(VirtualDataContainerType) :: this
-    class(VirtualDataType), pointer :: field
+    class(VirtualDataType), pointer :: vd
     integer(I4B) :: nrow
     integer(I4B), dimension(:) :: stages
-    integer(I4B) :: map_type
 
-    call this%map_internal(field, (/nrow/), stages, map_type)
+    call this%map_internal(vd, (/nrow/), stages)
 
   end subroutine map_array1d
 
-  subroutine map_array2d(this, field, ncol, nrow, stages, map_type)
+  subroutine map_array2d(this, vd, ncol, nrow, stages)
     class(VirtualDataContainerType) :: this
-    class(VirtualDataType), pointer :: field
+    class(VirtualDataType), pointer :: vd
     integer(I4B) :: ncol
     integer(I4B) :: nrow
     integer(I4B), dimension(:) :: stages
-    integer(I4B) :: map_type
 
-    call this%map_internal(field, (/ncol, nrow/), stages, map_type)
+    call this%map_internal(vd, (/ncol, nrow/), stages)
 
   end subroutine map_array2d
 
-  subroutine map_internal(this, field, shape, stages, map_type)
+  subroutine map_internal(this, vd, shape, stages)
     class(VirtualDataContainerType) :: this
-    class(VirtualDataType), pointer :: field
+    class(VirtualDataType), pointer :: vd
     integer(I4B), dimension(:) :: shape
     integer(I4B), dimension(:) :: stages
-    integer(I4B) :: map_type
     ! local
-    character(len=LENMEMPATH) :: vmem_path
+    character(len=LENMEMPATH) :: vm_pth
     logical(LGP) :: found
 
-    field%sync_stages = stages
-    field%map_type = map_type
-    if (field%is_remote) then
+    vd%sync_stages = stages
+    if (vd%is_remote) then
       ! create new virtual memory item
-      vmem_path = this%get_vrt_mem_path(field%var_name, field%subcmp_name)
-      call field%vm_allocate(field%var_name, vmem_path, shape)
-      call get_from_memorylist(field%var_name, vmem_path, field%virtual_mt, found)
+      vm_pth = this%get_vrt_mem_path(vd%var_name, vd%subcmp_name)
+      call vd%vm_allocate(vd%var_name, vm_pth, shape)
+      call get_from_memorylist(vd%var_name, vm_pth, vd%virtual_mt, found)
+      if (vd%map_type > 0) then
+        vd%remote_to_virtual => this%element_luts(vd%map_type)%remote_to_virtual
+        vd%remote_elem_shift => this%element_maps(vd%map_type)%remote_elem_shift
+      end if
     end if
 
   end subroutine map_internal
@@ -325,6 +387,17 @@ contains
     ! local
     integer(I4B) :: i
     class(*), pointer :: obj
+
+    do i = 1, size(this%element_maps)
+      if (associated(this%element_maps(i)%remote_elem_shift)) then
+        deallocate (this%element_maps(i)%remote_elem_shift)
+      end if
+    end do
+    do i = 1, size(this%element_luts)
+      if (associated(this%element_luts(i)%remote_to_virtual)) then
+        deallocate (this%element_luts(i)%remote_to_virtual)
+      end if
+    end do
 
     do i = 1, this%virtual_data_list%Count()
       obj => this%virtual_data_list%GetItem(i)

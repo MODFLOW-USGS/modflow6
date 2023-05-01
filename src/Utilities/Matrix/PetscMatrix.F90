@@ -26,7 +26,8 @@ module PetscMatrixModule
     ! override
     procedure :: init => pm_init
     procedure :: destroy => pm_destroy
-    procedure :: create_vector => pm_create_vector
+    procedure :: create_vec_mm => pm_create_vec_mm
+    procedure :: create_vec => pm_create_vec
     procedure :: get_value_pos => pm_get_value_pos
     procedure :: get_diag_value => pm_get_diag_value
     procedure :: set_diag_value => pm_set_diag_value
@@ -42,6 +43,8 @@ module PetscMatrixModule
     procedure :: get_position_diag => pm_get_position_diag
     procedure :: get_aij => pm_get_aij
     procedure :: get_row_offset => pm_get_row_offset
+
+    procedure :: multiply => pm_multiply
 
     ! public
     procedure :: update => pm_update
@@ -137,7 +140,7 @@ contains
 
   end subroutine pm_destroy
 
-  function pm_create_vector(this, n, name, mem_path) result(vec)
+  function pm_create_vec_mm(this, n, name, mem_path) result(vec)
     class(PetscMatrixType) :: this
     integer(I4B) :: n !< the nr. of elements in the vector
     character(len=*) :: name !< the variable name (for access through memory manager)
@@ -147,10 +150,23 @@ contains
     class(PetscVectorType), pointer :: petsc_vec
 
     allocate (petsc_vec)
-    call petsc_vec%create(n, name, mem_path)
+    call petsc_vec%create_mm(n, name, mem_path)
     vec => petsc_vec
 
-  end function pm_create_vector
+  end function pm_create_vec_mm
+
+  function pm_create_vec(this, n) result(vec)
+    class(PetscMatrixType) :: this
+    integer(I4B) :: n !< the nr. of elements in the vector
+    class(VectorBaseType), pointer :: vec !< the vector object to return
+    ! local
+    class(PetscVectorType), pointer :: petsc_vec
+
+    allocate (petsc_vec)
+    call petsc_vec%create(n)
+    vec => petsc_vec
+
+  end function pm_create_vec
 
   function pm_get_value_pos(this, ipos) result(value)
     class(PetscMatrixType) :: this
@@ -340,5 +356,31 @@ contains
     offset = this%offset
 
   end function pm_get_row_offset
+
+  !> @brief Calculates global matrix vector product: y = A * x
+  !<
+  subroutine pm_multiply(this, vec_x, vec_y)
+    class(PetscMatrixType) :: this
+    class(VectorBaseType), pointer :: vec_x
+    class(VectorBaseType), pointer :: vec_y
+    ! local
+    PetscErrorCode :: ierr
+    class(PetscVectorType), pointer :: x, y
+
+    x => null()
+    select type (vec_x)
+    class is (PetscVectorType)
+      x => vec_x
+    end select
+    y => null()
+    select type (vec_y)
+    class is (PetscVectorType)
+      y => vec_y
+    end select
+
+    call MatMult(this%mat, x%vec_impl, y%vec_impl, ierr)
+    CHKERRQ(ierr)
+
+  end subroutine pm_multiply
 
 end module PetscMatrixModule

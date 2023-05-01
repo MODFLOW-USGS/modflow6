@@ -14,20 +14,25 @@ module PetscVectorModule
     Vec :: vec_impl
   contains
     ! override
+    procedure :: create_mm => petsc_vec_create_mm
     procedure :: create => petsc_vec_create
     procedure :: destroy => petsc_vec_destroy
     procedure :: get_array => petsc_vec_get_array
     procedure :: get_ownership_range => petsc_vec_get_ownership_range
     procedure :: get_size => petsc_vec_get_size
+    procedure :: get_value_local => petsc_vec_get_value_local
     procedure :: zero_entries => petsc_vec_zero_entries
+    procedure :: set_value_local => petsc_vec_set_value_local
+    procedure :: axpy => petsc_vec_axpy
+    procedure :: norm2 => petsc_vec_norm2
     procedure :: print => petsc_vec_print
   end type PetscVectorType
 
 contains
 
-  !> @brief Create a PETSc vector
-  !<
-  subroutine petsc_vec_create(this, n, name, mem_path)
+  !> @brief Create a PETSc vector, with memory
+  !< in the memory manager
+  subroutine petsc_vec_create_mm(this, n, name, mem_path)
     class(PetscVectorType) :: this !< this vector
     integer(I4B) :: n !< the nr. of elements in the vector
     character(len=*) :: name !< the variable name (for access through memory manager)
@@ -35,7 +40,33 @@ contains
     ! local
     PetscErrorCode :: ierr
 
+    this%is_mem_managed = .true.
+
     call mem_allocate(this%array, n, name, mem_path)
+    if (simulation_mode == 'PARALLEL' .and. nr_procs > 1) then
+      call VecCreateMPIWithArray(PETSC_COMM_WORLD, 1, n, PETSC_DECIDE, &
+                                 this%array, this%vec_impl, ierr)
+    else
+      call VecCreateSeqWithArray(PETSC_COMM_WORLD, 1, n, this%array, &
+                                 this%vec_impl, ierr)
+    end if
+    CHKERRQ(ierr)
+
+    call this%zero_entries()
+
+  end subroutine petsc_vec_create_mm
+
+  !> @brief Create a PETSc vector, with memory
+  !< in the memory manager
+  subroutine petsc_vec_create(this, n)
+    class(PetscVectorType) :: this !< this vector
+    integer(I4B) :: n !< the nr. of elements in the vector
+    ! local
+    PetscErrorCode :: ierr
+
+    this%is_mem_managed = .false.
+
+    allocate (this%array(n))
     if (simulation_mode == 'PARALLEL' .and. nr_procs > 1) then
       call VecCreateMPIWithArray(PETSC_COMM_WORLD, 1, n, PETSC_DECIDE, &
                                  this%array, this%vec_impl, ierr)
@@ -58,7 +89,11 @@ contains
 
     call VecDestroy(this%vec_impl, ierr)
     CHKERRQ(ierr)
-    call mem_deallocate(this%array)
+    if (this%is_mem_managed) then
+      call mem_deallocate(this%array)
+    else
+      deallocate (this%array)
+    end if
 
   end subroutine petsc_vec_destroy
 
@@ -100,6 +135,17 @@ contains
 
   end function petsc_vec_get_size
 
+  !> @brief Gets a value from the vector at the local index
+  !<
+  function petsc_vec_get_value_local(this, idx) result(val)
+    class(PetscVectorType) :: this !< this vector
+    integer(I4B) :: idx !< the index in local numbering
+    real(DP) :: val !< the value
+
+    val = this%array(idx)
+
+  end function petsc_vec_get_value_local
+
   !> @brief set all elements to zero
   !<
   subroutine petsc_vec_zero_entries(this)
@@ -115,6 +161,50 @@ contains
     CHKERRQ(ierr)
 
   end subroutine petsc_vec_zero_entries
+
+  !> @brief Set vector value at local index
+  !<
+  subroutine petsc_vec_set_value_local(this, idx, val)
+    class(PetscVectorType) :: this !< this vector
+    integer(I4B) :: idx !< the index in local numbering
+    real(DP) :: val !< the value to set
+
+    this%array(idx) = val
+
+  end subroutine petsc_vec_set_value_local
+
+  !> @brief Calculate AXPY: y = a*x + y
+  !<
+  subroutine petsc_vec_axpy(this, alpha, vec_x)
+    class(PetscVectorType) :: this !< this vector
+    real(DP) :: alpha !< the factor
+    class(VectorBaseType), pointer :: vec_x !< the vector to add
+    ! local
+    PetscErrorCode :: ierr
+    class(PetscVectorType), pointer :: x
+
+    x => null()
+    select type (vec_x)
+    class is (PetscVectorType)
+      x => vec_x
+    end select
+    call VecAxpy(this%vec_impl, alpha, x%vec_impl, ierr)
+    CHKERRQ(ierr)
+
+  end subroutine petsc_vec_axpy
+
+  !> @brief Calculate this vector's (global) 2-norm
+  !<
+  function petsc_vec_norm2(this) result(n2)
+    class(PetscVectorType) :: this !< this vector
+    real(DP) :: n2 !< the calculated 2-norm
+    ! local
+    PetscErrorCode :: ierr
+
+    call VecNorm(this%vec_impl, NORM_2, n2, ierr)
+    CHKERRQ(ierr)
+
+  end function petsc_vec_norm2
 
   subroutine petsc_vec_print(this)
     class(PetscVectorType) :: this !< this vector

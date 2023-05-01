@@ -147,7 +147,7 @@ def add_model(sim, ix, iy, nr_models_x, nr_models_y):
 
     if ix == 0 and iy == 0:
         # add SW corner BC
-        sw_chd = [[(0, 0, 0), cst_head_south_west]]
+        sw_chd = [[(0, nrow - 1, 0), cst_head_south_west]]
         chd_spd_sw = {0: sw_chd}
         chd = flopy.mf6.ModflowGwfchd(gwf, stress_period_data=chd_spd_sw)
 
@@ -217,11 +217,11 @@ def add_exchange_south_north(sim, name_south, name_north):
 def build_petsc_db(exdir):
     petsc_db_file = os.path.join(exdir, ".petscrc")
     with open(petsc_db_file, 'w') as petsc_file:
-        petsc_file.write("-sub_ksp_type bcgs\n")
+        petsc_file.write("-ksp_type cg\n")
+        petsc_file.write("-pc_type bjacobi\n")
         petsc_file.write("-sub_pc_type ilu\n")
         petsc_file.write(f"-dvclose {Decimal(hclose):.2E}\n")
         petsc_file.write("-options_left no\n")
-        #petsc_file.write("-wait_dbg\n")
 
 def build_model(idx, exdir):
     sim = get_simulation(idx, exdir)
