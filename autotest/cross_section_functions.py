@@ -5,23 +5,14 @@ mpow = 2.0 / 3.0
 
 
 def calculate_rectchan_mannings_discharge(
-    conversion_factor,
-    roughness,
-    slope,
-    width,
-    depth,
-    left_vert=False,
-    right_vert=False,
+    conversion_factor, roughness, slope, width, depth
 ):
     """
     Calculate Manning's discharge for a rectangular channel.
 
     """
     area = width * depth
-    hydrad = get_wetted_area(0, 0 + width, 0, 0, depth) / get_wetted_perimeter(
-        0, 0 + width, 0, 0, depth, left_vert, right_vert
-    )
-    return conversion_factor * area * hydrad**mpow * slope**0.5 / roughness
+    return conversion_factor * area * depth**mpow * slope**0.5 / roughness
 
 
 # n-point cross-section functions
@@ -66,7 +57,11 @@ def get_wetted_station(
 
 
 def get_wetted_perimeter(
-    x0, x1, h0, h1, depth, incld_vert_l=False, incld_vert_r=False
+    x0,
+    x1,
+    h0,
+    h1,
+    depth,
 ):
     # -- calculate the minimum and maximum depth
     hmin = min(h0, h1)
@@ -74,27 +69,17 @@ def get_wetted_perimeter(
 
     # -- calculate the wetted perimeter for the segment
     xlen = x1 - x0
-    dlen = 0
     if xlen > 0.0:
         if depth > hmax:
             dlen = hmax - hmin
-        elif hmax > depth and depth > hmin:
+        else:
+            dlen = depth - hmin
+    else:
+        if depth > hmin:
             dlen = min(depth, hmax) - hmin
-            x0, x1 = get_wetted_station(x0, x1, h0, h1, depth)
-            xlen = x1 - x0
         else:
             dlen = 0.0
-            xlen = 0
-
-    vlen = 0
-    # left side
-    if incld_vert_l:
-        vlen = depth - h0
-    # right side
-    if incld_vert_r:
-        vlen += depth - h1
-
-    return np.sqrt(xlen**2.0 + dlen**2.0) + vlen
+    return np.sqrt(xlen**2.0 + dlen**2.0)
 
 
 def get_wetted_area(x0, x1, h0, h1, depth):
@@ -191,20 +176,7 @@ def manningsq(
         q = 0.0
         for i0 in range(x.shape[0] - 1):
             i1 = i0 + 1
-            # if inundated edge segment, factor in vertically oriented channel face(s)
-            incld_vert_l = False
-            incld_vert_r = False
-            if i0 == 0:
-                if depth > h[i0]:
-                    incld_vert_l = True
-            if i1 == x.shape[0] - 1:
-                if depth > h[i1]:
-                    incld_vert_r = True
-
-            perimeter = get_wetted_perimeter(
-                x[i0], x[i1], h[i0], h[i1], depth, incld_vert_l, incld_vert_r
-            )
-
+            perimeter = get_wetted_perimeter(x[i0], x[i1], h[i0], h[i1], depth)
             area = get_wetted_area(x[i0], x[i1], h[i0], h[i1], depth)
             if perimeter > 0.0:
                 radius = area / perimeter
@@ -287,8 +259,6 @@ def qtodepth(
         dq = q1 - q0
         if dq != 0.0:
             derv = dd / (q1 - q0)
-            if derv > 10:
-                derv = 10
         else:
             derv = 0.0
         h0 -= derv * r

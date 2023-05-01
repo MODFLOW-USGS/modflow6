@@ -8,6 +8,7 @@ module SfrModule
   !
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, LENTIMESERIESNAME, &
+                             MAXADPIT, &
                              DZERO, DPREC, DEM30, DEM6, DEM5, DEM4, DEM2, &
                              DONETHIRD, DHALF, DP6, DTWOTHIRDS, DP7, &
                              DP9, DP99, DP999, &
@@ -318,7 +319,7 @@ contains
     this%ipakcsv = 0
     this%idiversions = 0
     this%maxsfrpicard = 100
-    this%maxsfrit = 100
+    this%maxsfrit = MAXADPIT
     this%bditems = 8
     this%cbcauxitems = 1
     this%unitconv = DONE
@@ -4271,7 +4272,6 @@ contains
       else
         derv = DZERO
       end if
-      if (derv > 10) derv = 10
       dd = derv * residual
       d = d - dd
       call this%sfr_calc_qman(n, d, q0)
