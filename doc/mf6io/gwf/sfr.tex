@@ -94,6 +94,16 @@ Manning's roughness coefficient fractions can optionally be specified with the x
 	\label{fig:sfr-n-point}
 \end{figure}
 
+Where irregular cross-sections are used to define variable stream geometries, the wetted perimeter used in Manning’s equation [(Equation 7-7, \cite{modflow6gwf}] depends on the number of points defining the cross-section and the simulated stage.  Using only the minimum number of points (i.e., 2-point cross section), \mf will not account for the vertically wetted streambed area when the stage rises above the elevation of the defined points. For example, the 2-point cross-sections shown in fig.~\ref{fig:sfr-n-point-wp}A-C depict the cross-sectional areas (light blue) and wetted perimeters (orange) calculated by the SFR package and used in \cite{modflow6gwf} (Equation 7-7).  In applications where the wetted perimeter should account for vertically wetted sides, additional points above the maximum anticipated stage should be defined (fig.~\ref{fig:sfr-n-point-wp}D).  Note that when the simulated stream stage rises above the points representing the top of the channel, the additional cross-sectional flow area above the defined points will be accounted for but the corresponding wetted perimeter will not extend above the defined points (fig.~\ref{fig:sfr-n-point-wp}E,F).
+
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[scale=1.0]{../Figures/n-point-cross-section-wetted-perimeter}
+	\caption[Illustrations of variously defined n-point cross-sections that show how wetted perimeter will vary depending on the stage and the number of points used to define the cross-section]{Example irregular cross-section geometries showing the corresponding wetted perimeter based on the number of points that define a cross-section and the simulated stage.  (A-C) Wetted perimeters (orange lines) for variously configured 2-point cross-sections.  (D-F) Wetted perimeters for variously configurated 4-point cross-sections}
+	\label{fig:sfr-n-point-wp}
+\end{figure}
+
 Cross-Section tables are specified by including file names in the CROSSSECTIONS or PERIOD blocks of the SFR Package for specific reaches.  These file names correspond to a Streamflow Routing cross-section table input file.  The format of the Streamflow Routing cross-section table input file is described here.
 
 \vspace{5mm}
