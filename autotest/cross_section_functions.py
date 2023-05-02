@@ -69,11 +69,14 @@ def get_wetted_perimeter(
 
     # -- calculate the wetted perimeter for the segment
     xlen = x1 - x0
+    dlen = 0.0
     if xlen > 0.0:
         if depth > hmax:
             dlen = hmax - hmin
-        else:
+        elif hmax > depth and depth > hmin:
             dlen = depth - hmin
+            x0, x1 = get_wetted_station(x0, x1, h0, h1, depth)
+            xlen = x1 - x0
     else:
         if depth > hmin:
             dlen = min(depth, hmax) - hmin

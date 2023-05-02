@@ -177,13 +177,13 @@ def build_model(idx, ws, base=False):
 
     depth = simulated_depths[idx]
     qleft = calculate_rectchan_mannings_discharge(
-        conversion_fact, roughness * 10.0, slope, 10.0, depth, True, False
+        conversion_fact, roughness * 10.0, slope, 10.0, depth
     )
     qchannel = calculate_rectchan_mannings_discharge(
-        conversion_fact, roughness, slope, 10.0, depth, False, False
+        conversion_fact, roughness, slope, 10.0, depth
     )
     qright = calculate_rectchan_mannings_discharge(
-        conversion_fact, roughness * 10.0, slope, 10.0, depth, False, True
+        conversion_fact, roughness * 10.0, slope, 10.0, depth
     )
     qtotal = qleft + qchannel + qright
 
