@@ -609,7 +609,7 @@ contains
         n = this%parser%GetInteger()
 
         if (n < 1 .or. n > this%nlakes) then
-          write (errmsg, '(a,1x,i6)') 'lakeno MUST BE > 0 and <= ', this%nlakes
+          write (errmsg, '(a,1x,i0)') 'lakeno MUST BE > 0 and <= ', this%nlakes
           call store_error(errmsg)
           cycle
         end if
@@ -624,7 +624,7 @@ contains
         ival = this%parser%GetInteger()
 
         if (ival < 0) then
-          write (errmsg, '(a,1x,i6)') 'nlakeconn MUST BE >= 0 for lake ', n
+          write (errmsg, '(a,1x,i0)') 'nlakeconn MUST BE >= 0 for lake ', n
           call store_error(errmsg)
         end if
 
@@ -716,7 +716,7 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: LINELENGTH
+    use ConstantsModule, only: LINELENGTH, LENVARNAME
     use SimModule, only: store_error, count_errors
     ! -- dummy
     class(LakType), intent(inout) :: this
@@ -731,6 +731,7 @@ contains
     integer(I4B) :: icellid, icellid0
     real(DP) :: top, bot
     integer(I4B), dimension(:), pointer, contiguous :: nboundchk
+    character(len=LENVARNAME) :: ctypenm
 
     ! -- format
     !
@@ -777,7 +778,7 @@ contains
         n = this%parser%GetInteger()
 
         if (n < 1 .or. n > this%nlakes) then
-          write (errmsg, '(a,1x,i6)') 'lakeno MUST BE > 0 and <= ', this%nlakes
+          write (errmsg, '(a,1x,i0)') 'lakeno MUST BE > 0 and <= ', this%nlakes
           call store_error(errmsg)
           cycle
         end if
@@ -785,7 +786,7 @@ contains
         ! -- read connection number
         ival = this%parser%GetInteger()
         if (ival < 1 .or. ival > this%nlakeconn(n)) then
-          write (errmsg, '(a,1x,i4,1x,a,1x,i6)') &
+          write (errmsg, '(a,1x,i0,1x,a,1x,i0)') &
             'iconn FOR LAKE ', n, 'MUST BE > 1 and <= ', this%nlakeconn(n)
           call store_error(errmsg)
           cycle
@@ -808,7 +809,7 @@ contains
         !
         ! -- determine if a valid cell location was provided
         if (nn < 1) then
-          write (errmsg, '(a,1x,i4,1x,a,1x,i4)') &
+          write (errmsg, '(a,1x,i0,1x,a,1x,i0)') &
             'INVALID cellid FOR LAKE ', n, 'connection', j
           call store_error(errmsg)
         end if
@@ -829,11 +830,12 @@ contains
         case ('EMBEDDEDV')
           this%ictype(ipos) = 3
         case default
-          write (errmsg, '(a,1x,i4,1x,a,1x,i4,1x,a,a,a)') &
+          write (errmsg, '(a,1x,i0,1x,a,1x,i0,1x,a,a,a)') &
             'UNKNOWN ctype FOR LAKE ', n, 'connection', j, &
             '(', trim(keyword), ')'
           call store_error(errmsg)
         end select
+        write (ctypenm, '(a16)') keyword
 
         ! -- bed leakance
         !this%bedleak(ipos) = this%parser%GetDouble()
@@ -846,7 +848,7 @@ contains
         end select
 
         if (keyword /= 'NONE' .and. this%bedleak(ipos) < dzero) then
-          write (errmsg, '(a,1x,i4,1x,a)') 'bedleak FOR LAKE ', n, 'MUST BE >= 0'
+          write (errmsg, '(a,1x,i0,1x,a)') 'bedleak FOR LAKE ', n, 'MUST BE >= 0'
           call store_error(errmsg)
         end if
 
@@ -858,12 +860,13 @@ contains
 
         ! -- connection length
         rval = this%parser%GetDouble()
-        if (rval < dzero) then
+        if (rval <= DZERO) then
           if (this%ictype(ipos) == 1 .or. this%ictype(ipos) == 2 .or. &
               this%ictype(ipos) == 3) then
-            write (errmsg, '(a,1x,i4,1x,a,1x,i4,1x,a)') &
-              'connection length (connlength) FOR LAKE ', n, &
-              ' HORIZONTAL CONNECTION ', j, 'MUST BE >= 0'
+            write (errmsg, '(a,1x,i0,1x,a,1x,i0,1x,a,a,1x,a)') &
+              'connection length (connlen) FOR LAKE ', n, &
+              ', CONNECTION NO.', j, ', MUST BE > 0 FOR SPECIFIED ', &
+              'connection type (ctype)', ctypenm
             call store_error(errmsg)
           else
             rval = DZERO
@@ -875,7 +878,7 @@ contains
         rval = this%parser%GetDouble()
         if (rval < dzero) then
           if (this%ictype(ipos) == 1) then
-            write (errmsg, '(a,1x,i4,1x,a,1x,i4,1x,a)') &
+            write (errmsg, '(a,1x,i0,1x,a,1x,i0,1x,a)') &
               'cell width (connwidth) FOR LAKE ', n, &
               ' HORIZONTAL CONNECTION ', j, 'MUST BE >= 0'
             call store_error(errmsg)
@@ -903,7 +906,7 @@ contains
         if (this%ictype(ipos) /= 2 .and. this%ictype(ipos) /= 3) cycle
         j = j + 1
         if (j > 1) then
-          write (errmsg, '(a,1x,i4,1x,a,1x,i4,1x,a)') &
+          write (errmsg, '(a,1x,i0,1x,a,1x,i0,1x,a)') &
             'nlakeconn FOR LAKE', n, 'EMBEDDED CONNECTION', j, ' EXCEEDS 1.'
           call store_error(errmsg)
         end if
@@ -923,7 +926,7 @@ contains
           icellid = this%cellid(ipos)
           if (icellid == icellid0) then
             if (this%ictype(ipos) == 0) then
-              write (errmsg, '(a,1x,i4,1x,a,1x,i4,1x,a,1x,i4,1x,a)') &
+              write (errmsg, '(a,1x,i0,1x,a,1x,i0,1x,a,1x,i0,1x,a)') &
                 'EMBEDDED LAKE', n, &
                 'CANNOT COINCIDE WITH VERTICAL CONNECTION', j, &
                 'IN LAKE', nn, '.'
@@ -954,17 +957,17 @@ contains
             this%belev(ipos) = bot
           else
             if (this%belev(ipos) >= this%telev(ipos)) then
-              write (errmsg, '(a,1x,i4,1x,a,1x,i4,1x,a)') &
+              write (errmsg, '(a,1x,i0,1x,a,1x,i0,1x,a)') &
                 'telev FOR LAKE ', n, ' HORIZONTAL CONNECTION ', j, &
                 'MUST BE >= belev'
               call store_error(errmsg)
             else if (this%belev(ipos) < bot) then
-              write (errmsg, '(a,1x,i4,1x,a,1x,i4,1x,a,1x,g15.7,1x,a)') &
+              write (errmsg, '(a,1x,i0,1x,a,1x,i0,1x,a,1x,g15.7,1x,a)') &
                 'belev FOR LAKE ', n, ' HORIZONTAL CONNECTION ', j, &
                 'MUST BE >= cell bottom (', bot, ')'
               call store_error(errmsg)
             else if (this%telev(ipos) > top) then
-              write (errmsg, '(a,1x,i4,1x,a,1x,i4,1x,a,1x,g15.7,1x,a)') &
+              write (errmsg, '(a,1x,i0,1x,a,1x,i0,1x,a,1x,g15.7,1x,a)') &
                 'telev FOR LAKE ', n, ' HORIZONTAL CONNECTION ', j, &
                 'MUST BE <= cell top (', top, ')'
               call store_error(errmsg)
@@ -1065,7 +1068,7 @@ contains
         n = this%parser%GetInteger()
 
         if (n < 1 .or. n > this%nlakes) then
-          write (errmsg, '(a,1x,i6)') 'lakeno MUST BE > 0 and <= ', this%nlakes
+          write (errmsg, '(a,1x,i0)') 'lakeno MUST BE > 0 and <= ', this%nlakes
           call store_error(errmsg)
           cycle readtable
         end if
@@ -1088,7 +1091,7 @@ contains
           call this%parser%GetString(line)
           call this%lak_read_table(n, line, laketables(n))
         case default
-          write (errmsg, '(a,1x,i4,1x,a)') &
+          write (errmsg, '(a,1x,i0,1x,a)') &
             'LAKE TABLE ENTRY for LAKE ', n, 'MUST INCLUDE TAB6 KEYWORD'
           call store_error(errmsg)
           cycle readtable
@@ -1235,7 +1238,7 @@ contains
     type(BlockParserType) :: parser
     ! -- formats
     character(len=*), parameter :: fmttaberr = &
-      &'(a,1x,i4,1x,a,1x,g15.6,1x,a,1x,i6,1x,a,1x,i4,1x,a,1x,g15.6,1x,a)'
+      &'(a,1x,i0,1x,a,1x,g15.6,1x,a,1x,i0,1x,a,1x,i0,1x,a,1x,g15.6,1x,a)'
 ! ------------------------------------------------------------------------------
 
     ! -- format
@@ -1520,7 +1523,7 @@ contains
           n = this%parser%GetInteger()
 
           if (n < 1 .or. n > this%noutlets) then
-            write (errmsg, '(a,1x,i6)') &
+            write (errmsg, '(a,1x,i0)') &
               'outletno MUST BE > 0 and <= ', this%noutlets
             call store_error(errmsg)
             cycle readoutlet
@@ -1532,7 +1535,7 @@ contains
           ! -- read outlet lakein
           ival = this%parser%GetInteger()
           if (ival < 1 .or. ival > this%nlakes) then
-            write (errmsg, '(a,1x,i4,1x,a,1x,i6)') &
+            write (errmsg, '(a,1x,i0,1x,a,1x,i0)') &
               'lakein FOR OUTLET ', n, 'MUST BE > 0 and <= ', this%nlakes
             call store_error(errmsg)
             cycle readoutlet
@@ -1542,7 +1545,7 @@ contains
           ! -- read outlet lakeout
           ival = this%parser%GetInteger()
           if (ival < 0 .or. ival > this%nlakes) then
-            write (errmsg, '(a,1x,i4,1x,a,1x,i6)') &
+            write (errmsg, '(a,1x,i0,1x,a,1x,i0)') &
               'lakeout FOR OUTLET ', n, 'MUST BE >= 0 and <= ', this%nlakes
             call store_error(errmsg)
             cycle readoutlet
@@ -1559,7 +1562,7 @@ contains
           case ('WEIR')
             this%iouttype(n) = 2
           case default
-            write (errmsg, '(a,1x,i4,1x,a,a,a)') &
+            write (errmsg, '(a,1x,i0,1x,a,a,a)') &
               'UNKNOWN couttype FOR OUTLET ', n, '(', trim(keyword), ')'
             call store_error(errmsg)
             cycle readoutlet
@@ -3103,7 +3106,7 @@ contains
       end do secantbisection
       stage = sm
       if (ABS(ds) >= DEM6) then
-        write (this%iout, '(1x,a,1x,i5,4(1x,a,1x,g15.6))') &
+        write (this%iout, '(1x,a,1x,i0,4(1x,a,1x,g15.6))') &
      &   'LAK_VOL2STAGE failed for lake', ilak, 'volume error =', fm, &
      &   'finding stage (', stage, ') for volume =', vol, &
      &    'final change in stage =', ds
@@ -3392,10 +3395,10 @@ contains
     ! -- formats
 ! ------------------------------------------------------------------------------
     if (len(msg) == 0) then
-      write (errmsg, '(a,1x,a,1x,i6,1x,a)') &
+      write (errmsg, '(a,1x,a,1x,i0,1x,a)') &
         keyword, ' for LAKE', ilak, 'has already been set.'
     else
-      write (errmsg, '(a,1x,a,1x,i6,1x,a)') keyword, ' for LAKE', ilak, msg
+      write (errmsg, '(a,1x,a,1x,i0,1x,a)') keyword, ' for LAKE', ilak, msg
     end if
     call store_error(errmsg)
     ! -- return
@@ -6285,6 +6288,7 @@ contains
     integer(I4B) :: nlen
     real(DP) :: v, v1
     real(DP) :: q
+    real(DP) :: lkstg, gwhead, wa
     ! -- formats
 ! -----------------------------------------------------------------------------
     !
@@ -6322,6 +6326,13 @@ contains
       do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
         n2 = this%cellid(j)
         q = this%qleak(j)
+        lkstg = this%xnewpak(n)
+        ! -- For the case when the lak stage is exactly equal
+        !    to the lake bottom, the wetted area is not returned
+        !    equal to 0.0
+        gwhead = this%xnew(n2)
+        call this%lak_calculate_conn_warea(n, j, lkstg, gwhead, wa)
+        this%qauxcbc(1) = wa
         call this%budobj%budterm(idx)%update_term(n, n2, q, this%qauxcbc)
       end do
     end do
