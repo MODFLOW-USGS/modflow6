@@ -5293,6 +5293,8 @@ contains
     real(DP) :: d
     real(DP) :: ca
     real(DP) :: a
+    real(DP) :: wp
+    real(DP) :: l
     !
     ! -- initialize counter
     idx = 0
@@ -5332,7 +5334,14 @@ contains
     do n = 1, this%maxbound
       n2 = this%igwfnode(n)
       if (n2 > 0) then
-        a = this%calc_surface_area(n)
+        ! -- calc_perimeter_wet() does not enforce depth dependence
+        if (this%depth(n) > DZERO) then
+          wp = this%calc_perimeter_wet(n, this%depth(n))
+        else
+          wp = DZERO
+        end if
+        l = this%length(n)
+        a = wp * l
         this%qauxcbc(1) = a
         q = -this%gwflow(n)
         call this%budobj%budterm(idx)%update_term(n, n2, q, this%qauxcbc)
