@@ -12,7 +12,7 @@ def calculate_rectchan_mannings_discharge(
 
     """
     area = width * depth
-    return conversion_factor * area * depth**mpow * slope**0.5 / roughness
+    return conversion_factor * area * depth ** mpow * slope ** 0.5 / roughness
 
 
 # n-point cross-section functions
@@ -71,18 +71,18 @@ def get_wetted_perimeter(
     xlen = x1 - x0
     dlen = 0.0
     if xlen > 0.0:
-        if depth > hmax:
+        if depth >= hmax:
             dlen = hmax - hmin
-        elif hmax > depth and depth > hmin:
+        else:
             dlen = depth - hmin
-            x0, x1 = get_wetted_station(x0, x1, h0, h1, depth)
             xlen = x1 - x0
     else:
         if depth > hmin:
             dlen = min(depth, hmax) - hmin
         else:
             dlen = 0.0
-    return np.sqrt(xlen**2.0 + dlen**2.0)
+
+    return np.sqrt(xlen ** 2.0 + dlen ** 2.0)
 
 
 def get_wetted_area(x0, x1, h0, h1, depth):
@@ -99,7 +99,7 @@ def get_wetted_area(x0, x1, h0, h1, depth):
             area = xlen * (depth - hmax)
         # -- add the area below zmax
         if hmax != hmin:
-            if depth > hmax:
+            if depth >= hmax:
                 area += 0.5 * (hmax - hmin) * xlen
             elif depth > hmin:
                 x0, x1 = get_wetted_station(x0, x1, h0, h1, depth)
@@ -120,9 +120,6 @@ def wetted_area(
         for idx in range(0, x.shape[0] - 1):
             x0, x1 = x[idx], x[idx + 1]
             h0, h1 = h[idx], h[idx + 1]
-
-            # get station data
-            x0, x1 = get_wetted_station(x0, x1, h0, h1, depth)
 
             # get wetted area
             a = get_wetted_area(x0, x1, h0, h1, depth)
@@ -179,12 +176,16 @@ def manningsq(
         q = 0.0
         for i0 in range(x.shape[0] - 1):
             i1 = i0 + 1
-            perimeter = get_wetted_perimeter(x[i0], x[i1], h[i0], h[i1], depth)
+
+            # get station data
+            x0, x1 = get_wetted_station(x[i0], x[i1], h[i0], h[i1], depth)
+
+            perimeter = get_wetted_perimeter(x0, x1, h[i0], h[i1], depth)
             area = get_wetted_area(x[i0], x[i1], h[i0], h[i1], depth)
             if perimeter > 0.0:
                 radius = area / perimeter
                 q += (
-                    conv * area * radius**mpow * slope**0.5 / roughness[i0]
+                    conv * area * radius ** mpow * slope ** 0.5 / roughness[i0]
                 )
     else:
         perimeter = wetted_perimeter(x, h, depth)
@@ -192,7 +193,7 @@ def manningsq(
         radius = 0.0
         if perimeter > 0.0:
             radius = area / perimeter
-        q = conv * area * radius**mpow * slope**0.5 / roughness[0]
+        q = conv * area * radius ** mpow * slope ** 0.5 / roughness[0]
     return q
 
 
