@@ -1045,7 +1045,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate members from parent class
-    call this%NumericalModelType%allocate_scalars(modelname)
+    !call this%NumericalModelType%allocate_scalars(modelname)
     !
     ! -- allocate members that are part of model class
     !call mem_allocate(this%inic, 'INIC', this%memoryPath)
