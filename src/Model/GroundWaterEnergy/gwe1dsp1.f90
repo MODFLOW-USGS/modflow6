@@ -723,8 +723,6 @@ contains
     if (found%alv) this%idisp = this%idisp + 1
     if (found%ath1) this%idisp = this%idisp + 1
     if (found%ath2) this%idisp = this%idisp + 1
-    if (found%ktw) this%idisp = this%idisp + 1
-    if (found%kts) this%idisp = this%idisp + 1
     !
     ! -- manage dispersion arrays
     if (this%idisp > 0) then
