@@ -7,7 +7,7 @@ module SimulationCreateModule
   use CharacterStringModule, only: CharacterStringType
   use SimVariablesModule, only: iout, simulation_mode, proc_id, &
                                 nr_procs, model_names, model_ranks, &
-                                model_loc_idx
+                                model_loc_idx, simfile
   use GenericUtilitiesModule, only: sim_message, write_centered
   use SimModule, only: store_error, count_errors, &
                        store_error_filename, MaxErrors
@@ -215,6 +215,7 @@ contains
     ! -- modules
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr, mem_allocate
+    use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
     use GwfModule, only: gwf_cr
     use GwtModule, only: gwt_cr
@@ -237,7 +238,7 @@ contains
     character(len=LINELENGTH) :: fname, model_name
     character(len=LINELENGTH) :: errmsg
     integer(I4B) :: n, nr_models_glob
-    logical :: terminate = .true.
+    logical :: terminate = .true., found
     !
     ! -- set input memory path
     input_mempath = create_mem_path('SIM', 'NAM', idm_context)
@@ -250,6 +251,7 @@ contains
     ! -- allocate global arrays
     nr_models_glob = size(mnames)
     call mem_allocate(model_ranks, nr_models_glob, 'MRANKS', input_mempath)
+    call mem_set_value(model_ranks, 'MPARTNUM', input_mempath, found)
     allocate (model_names(nr_models_glob))
     allocate (model_loc_idx(nr_models_glob))
     !
@@ -685,7 +687,7 @@ contains
       end if
     end do
     if (count_errors() > 0) then
-      call store_error_filename('mfsim.nam')
+      call store_error_filename(simfile)
     end if
 
   end subroutine check_model_assignment
@@ -789,6 +791,62 @@ contains
 
   end subroutine create_load_mask
 
+  subroutine check_load_balance(mranks, mnames, etypes, emnames_a, emnames_b)
+    integer(I4B), dimension(:), intent(in) :: mranks
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer, intent(in) :: mnames !< model names
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer, intent(in) :: etypes !< exg types
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer, intent(in) :: emnames_a !< model a names
+    type(CharacterStringType), dimension(:), contiguous, &
+      pointer, intent(in) :: emnames_b !< model b names
+    integer(I4B) :: im, ie, im_a, im_b
+    character(len=LINELENGTH) :: model_name, model_name_b, errmsg
+    !
+    ! -- check per model partition assignments
+    do im = 1, size(mnames)
+      model_name = mnames(im)
+      if (mranks(im) < 0 .or. mranks(im) >= nr_procs) then
+        write (errmsg, '(a,i0,a)') &
+          'Model "'//trim(model_name)// &
+          '" partition number expected between 1 '// &
+          'and number of processors (', nr_procs, ').'
+        call store_error(errmsg)
+        call store_error_filename(simfile)
+      end if
+    end do
+    !
+    ! -- check GWF-GWT models coupled via an exchange
+    do ie = 1, size(etypes)
+      if (etypes(ie) == "GWF6-GWT6") then
+        im_a = 0
+        im_b = 0
+        do im = 1, size(mnames)
+          if (mnames(im) == emnames_a(ie)) then
+            im_a = im
+          elseif (mnames(im) == emnames_b(ie)) then
+            im_b = im
+          end if
+          ! break if both model indexes found
+          if (im_a > 0 .and. im_b > 0) exit
+        end do
+        ! ensure ranks are identical
+        if (mranks(im_a) /= mranks(im_b)) then
+          model_name = mnames(im_a)
+          model_name_b = mnames(im_b)
+          call store_error('Coupled models "'//trim(model_name)//'" and "'// &
+                           trim(model_name_b)//'" must reside on the same '// &
+                           'partition.')
+          call store_error_filename(simfile)
+        end if
+      end if
+    end do
+    !
+    ! -- return
+    return
+  end subroutine check_load_balance
+
   !> @brief Distribute the models over the available
   !! processes in a parallel run. Expects an array sized
   !< to the number of models in the global simulation
@@ -818,9 +876,6 @@ contains
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: emnames_b !< model b names
 
-    mranks = 0
-    if (simulation_mode /= "PARALLEL") return
-
     ! load IDM data
     input_mempath = create_mem_path('SIM', 'NAM', idm_context)
     call mem_setptr(mtypes, 'MTYPE', input_mempath)
@@ -829,10 +884,24 @@ contains
     call mem_setptr(emnames_a, 'EXGMNAMEA', input_mempath)
     call mem_setptr(emnames_b, 'EXGMNAMEB', input_mempath)
 
+    if (simulation_mode /= "PARALLEL") then
+      mranks = 0
+      return
+    elseif (any(mranks >= 0)) then
+      ! -- ranks were provided, adjust indexing and verify
+      mranks = mranks - 1
+      call check_load_balance(mranks, mnames, etypes, emnames_a, emnames_b)
+      return
+    end if
+
+    ! initialize ranks before assignment
+    mranks = 0
+
     ! count flow models
     nr_models = size(mnames)
     nr_gwf_models = 0
     nr_gwt_models = 0
+
     do im = 1, nr_models
       if (mtypes(im) == "GWF6") then
         nr_gwf_models = nr_gwf_models + 1
@@ -895,6 +964,8 @@ contains
         end if
       end do
     end do
+
+    call check_load_balance(mranks, mnames, etypes, emnames_a, emnames_b)
 
     ! cleanup
     deallocate (nr_models_proc)

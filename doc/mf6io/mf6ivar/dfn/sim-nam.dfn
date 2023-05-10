@@ -49,7 +49,7 @@ description is the name of the Temporal Discretization (TDIS) Input File.
 
 block models
 name models
-type recarray mtype mfname mname
+type recarray mtype mfname mname partition_number
 reader urword
 optional
 longname list of models
@@ -83,6 +83,16 @@ reader urword
 longname name of model
 description is the user-assigned name of the model.  The model name cannot exceed 16 characters and must not have blanks within the name.  The model name is case insensitive; any lowercase letters are converted and stored as upper case letters.
 
+block models
+name partition_number
+in_record true
+type integer
+tagged false
+reader urword
+optional true
+longname partition number of model
+description is the user-assigned partition number of the model.  The partition number cannot exceed the user-assigned number of processors and at least one model must be assigned to each of the processors or the program will terminate with an error.  Models that have sequential data dependencies must have the same PARTITION_NUMBER (for example, a GWT and GWF model that are in separate SOLUTIONS but are linked by a GWF-GWT exchange) or the program  will terminate with an error.
+mf6internal mpartnum
 
 # --------------------- sim nam exchanges ---------------------
 

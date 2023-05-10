@@ -18,6 +18,7 @@ module SimNamInputModule
     logical :: mtype = .false.
     logical :: mfname = .false.
     logical :: mname = .false.
+    logical :: mpartnum = .false.
     logical :: exgtype = .false.
     logical :: exgfile = .false.
     logical :: exgmnamea = .false.
@@ -153,6 +154,22 @@ module SimNamInputModule
     'STRING', & ! type
     '', & ! shape
     .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false. & ! layered
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    simnam_mpartnum = InputParamDefinitionType &
+    ( &
+    'SIM', & ! component
+    'NAM', & ! subcomponent
+    'MODELS', & ! block
+    'PARTITION_NUMBER', & ! tag name
+    'MPARTNUM', & ! fortran variable
+    'INTEGER', & ! type
+    '', & ! shape
+    .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
     .false. & ! layered
@@ -297,6 +314,7 @@ module SimNamInputModule
     simnam_mtype, &
     simnam_mfname, &
     simnam_mname, &
+    simnam_mpartnum, &
     simnam_exgtype, &
     simnam_exgfile, &
     simnam_exgmnamea, &
@@ -315,7 +333,7 @@ module SimNamInputModule
     'MODELS', & ! block
     'MODELS', & ! tag name
     'MODELS', & ! fortran variable
-    'RECARRAY MTYPE MFNAME MNAME', & ! type
+    'RECARRAY MTYPE MFNAME MNAME PARTITION_NUMBER', & ! type
     '', & ! shape
     .true., & ! required
     .false., & ! multi-record

@@ -266,21 +266,25 @@ contains
     use IdmSimulationModule, only: simnam_load, load_models
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr, mem_allocate
+    use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
     use SimulationCreateModule, only: create_load_mask
     ! -- dummy
     ! -- locals
-    character(len=LENMEMPATH) :: input_mempath
+    character(len=LENMEMPATH) :: input_mempath, simnam_mempath
     integer(I4B), dimension(:), pointer, contiguous :: model_loadmask
     integer(I4B), pointer :: nummodels => null()
+    logical(LGP) :: found
     !
     ! -- load simnam input context
     call simnam_load()
     !
-    ! -- allocate model load mask
+    ! -- allocate and set model load mask
     input_mempath = create_mem_path(component='SIM', context=idm_context)
+    simnam_mempath = create_mem_path('SIM', 'NAM', idm_context)
     call mem_setptr(nummodels, 'NUMMODELS', input_mempath)
     allocate (model_loadmask(nummodels))
+    call mem_set_value(model_loadmask, 'MPARTNUM', simnam_mempath, found)
     !
     ! -- initialize mask
     call create_load_mask(model_loadmask)
