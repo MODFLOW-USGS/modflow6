@@ -100,13 +100,14 @@ contains
   !> @brief create new vector in StructArrayType
   !<
   subroutine mem_create_vector(this, icol, vartype, name, memoryPath, &
-                               varname_shape, preserve_case)
+                               varname_shape, required, preserve_case)
     class(StructArrayType) :: this !< StructArrayType
     integer(I4B), intent(in) :: icol !< column to create
     character(len=*), intent(in) :: vartype !< type of column to create
     character(len=*), intent(in) :: name !< name of the column to create
     character(len=*), intent(in) :: memoryPath !< memory path for storing the vector
     character(len=*), intent(in) :: varname_shape !< shape
+    logical(LGP), intent(in) :: required !< flag indicating if variable is required
     logical(LGP), optional, intent(in) :: preserve_case !< flag indicating whether or not to preserve case
     integer(I4B), dimension(:), pointer, contiguous :: int1d
     real(DP), dimension(:), pointer, contiguous :: dbl1d
@@ -143,7 +144,7 @@ contains
       end do
       !
       ! -- initialize StructVector and add to StructArray
-      call this%add_vector_int1d(name, memoryPath, icol, int1d)
+      call this%add_vector_int1d(name, memoryPath, icol, int1d, required)
       !
     case ('DOUBLE')
       !
@@ -176,12 +177,13 @@ contains
 
   !> @brief add int1d to StructArrayType
   !<
-  subroutine add_vector_int1d(this, varname, memoryPath, icol, int1d)
+  subroutine add_vector_int1d(this, varname, memoryPath, icol, int1d, required)
     class(StructArrayType) :: this !< StructArrayType
     character(len=*), intent(in) :: varname !< name of the variable
     character(len=*), intent(in) :: memoryPath !< memory path to vector
     integer(I4B), intent(in) :: icol !< column of the vector
     integer(I4B), dimension(:), pointer, contiguous, intent(in) :: int1d !< vector to add
+    logical(LGP), intent(in) :: required !< flag indicating variable is required
     type(StructVectorType) :: sv
     !
     ! -- initialize StructVectorType
@@ -190,6 +192,7 @@ contains
     sv%mempath = memoryPath
     sv%memtype = 1
     sv%int1d => int1d
+    sv%required = required
     !
     ! -- set size
     if (this%deferred_shape) then
@@ -617,7 +620,8 @@ contains
             this%struct_vector_1d(j)%int1d(irow) = this%blocknum
           else
             ! -- read and store int
-            this%struct_vector_1d(j)%int1d(irow) = parser%GetInteger()
+            this%struct_vector_1d(j)%int1d(irow) = &
+              parser%GetInteger(this%struct_vector_1d(j)%required)
           end if
           !
         case (2) ! -- memtype real

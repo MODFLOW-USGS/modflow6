@@ -27,6 +27,7 @@ module StructVectorModule
     character(len=LENMEMPATH) :: mempath
     integer(I4B) :: memtype = 0
     integer(I4B) :: size = 0
+    logical(LGP) :: required = .true.
     logical(LGP) :: preserve_case = .false.
     integer(I4B), dimension(:), pointer, contiguous :: int1d => null()
     real(DP), dimension(:), pointer, contiguous :: dbl1d => null()

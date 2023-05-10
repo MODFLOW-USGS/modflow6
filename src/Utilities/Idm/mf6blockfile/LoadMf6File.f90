@@ -407,7 +407,7 @@ contains
           call struct_array%mem_create_vector(icol, 'INTEGER', &
                                               varname, &
                                               mf6_input%mempath, '', &
-                                              .false.)
+                                              .false., .false.)
           !
           ! -- continue as this column managed by internally SA object
           cycle
@@ -431,7 +431,7 @@ contains
       ! -- allocate variable in memory manager
       call struct_array%mem_create_vector(icol, idt%datatype, idt%mf6varname, &
                                           mf6_input%mempath, idt%shape, &
-                                          idt%preserve_case)
+                                          idt%required, idt%preserve_case)
     end do
     !
     ! -- read the structured array

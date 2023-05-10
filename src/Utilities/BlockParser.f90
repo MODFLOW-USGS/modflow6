@@ -244,15 +244,24 @@ contains
   !! Function to get a integer from the current line.
   !!
   !<
-  function GetInteger(this) result(i)
+  function GetInteger(this, varRequired) result(i)
     ! -- return variable
     integer(I4B) :: i !< integer variable
     ! -- dummy variables
     class(BlockParserType), intent(inout) :: this !< BlockParserType object
+    logical, intent(in), optional :: varRequired !< boolean indicating if the variable is required, default true
     ! -- local variables
     integer(I4B) :: istart
     integer(I4B) :: istop
     real(DP) :: rval
+    logical :: varRequiredLocal
+    !
+    ! -- process optional variables
+    if (present(varRequired)) then
+      varRequiredLocal = varRequired
+    else
+      varRequiredLocal = .true.
+    end if
     !
     ! -- get integer using urword
     call urword(this%line, this%lloc, istart, istop, 2, i, rval, &
@@ -260,7 +269,9 @@ contains
     !
     ! -- Make sure variable was read before end of line
     if (istart == istop .and. istop == len(this%line)) then
-      call this%ReadScalarError('INTEGER')
+      if (varRequiredLocal) then
+        call this%ReadScalarError('INTEGER')
+      end if
     end if
     !
     ! -- return
