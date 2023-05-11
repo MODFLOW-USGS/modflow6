@@ -27,6 +27,8 @@
 
 \item \texttt{mname}---is the user-assigned name of the model.  The model name cannot exceed 16 characters and must not have blanks within the name.  The model name is case insensitive; any lowercase letters are converted and stored as upper case letters.
 
+\item \texttt{partition\_number}---is the user-assigned partition number of the model.  The partition number cannot exceed the user-assigned number of processors and at least one model must be assigned to each of the processors or the program will terminate with an error.  Models that have sequential data dependencies must have the same PARTITION_NUMBER (for example, a GWT and GWF model that are in separate SOLUTIONS but are linked by a GWF-GWT exchange) or the program  will terminate with an error.
+
 \end{description}
 \item \textbf{Block: EXCHANGES}
 

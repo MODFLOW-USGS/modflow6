@@ -10,6 +10,7 @@
 | SIM | NAM | MODELS | MTYPE | STRING | is the type of model to add to simulation. |
 | SIM | NAM | MODELS | MFNAME | STRING | is the file name of the model name file. |
 | SIM | NAM | MODELS | MNAME | STRING | is the user-assigned name of the model.  The model name cannot exceed 16 characters and must not have blanks within the name.  The model name is case insensitive; any lowercase letters are converted and stored as upper case letters. |
+| SIM | NAM | MODELS | PARTITION_NUMBER | INTEGER | is the user-assigned partition number of the model.  The partition number cannot exceed the user-assigned number of processors and at least one model must be assigned to each of the processors or the program will terminate with an error.  Models that have sequential data dependencies must have the same PARTITION_NUMBER (for example, a GWT and GWF model that are in separate SOLUTIONS but are linked by a GWF-GWT exchange) or the program  will terminate with an error. |
 | SIM | NAM | EXCHANGES | EXGTYPE | STRING | is the exchange type. |
 | SIM | NAM | EXCHANGES | EXGFILE | STRING | is the input file for the exchange. |
 | SIM | NAM | EXCHANGES | EXGMNAMEA | STRING | is the name of the first model that is part of this exchange. |
@@ -867,8 +868,8 @@
 | GWT | DISV | DIMENSIONS | NCPL | INTEGER | is the number of cells per layer.  This is a constant value for the grid and it applies to all layers. |
 | GWT | DISV | DIMENSIONS | NVERT | INTEGER | is the total number of (x, y) vertex pairs used to characterize the horizontal configuration of the model grid. |
 | GWT | DISV | GRIDDATA | TOP | DOUBLE PRECISION (NCPL) | is the top elevation for each cell in the top model layer. |
-| GWT | DISV | GRIDDATA | BOTM | DOUBLE PRECISION (NLAY, NCPL) | is the bottom elevation for each cell. |
-| GWT | DISV | GRIDDATA | IDOMAIN | INTEGER (NLAY, NCPL) | is an optional array that characterizes the existence status of a cell.  If the IDOMAIN array is not specified, then all model cells exist within the solution.  If the IDOMAIN value for a cell is 0, the cell does not exist in the simulation.  Input and output values will be read and written for the cell, but internal to the program, the cell is excluded from the solution.  If the IDOMAIN value for a cell is 1, the cell exists in the simulation.  If the IDOMAIN value for a cell is -1, the cell does not exist in the simulation.  Furthermore, the first existing cell above will be connected to the first existing cell below.  This type of cell is referred to as a ``vertical pass through'' cell. |
+| GWT | DISV | GRIDDATA | BOTM | DOUBLE PRECISION (NCPL, NLAY) | is the bottom elevation for each cell. |
+| GWT | DISV | GRIDDATA | IDOMAIN | INTEGER (NCPL, NLAY) | is an optional array that characterizes the existence status of a cell.  If the IDOMAIN array is not specified, then all model cells exist within the solution.  If the IDOMAIN value for a cell is 0, the cell does not exist in the simulation.  Input and output values will be read and written for the cell, but internal to the program, the cell is excluded from the solution.  If the IDOMAIN value for a cell is 1, the cell exists in the simulation.  If the IDOMAIN value for a cell is -1, the cell does not exist in the simulation.  Furthermore, the first existing cell above will be connected to the first existing cell below.  This type of cell is referred to as a ``vertical pass through'' cell. |
 | GWT | DISV | VERTICES | IV | INTEGER | is the vertex number.  Records in the VERTICES block must be listed in consecutive order from 1 to NVERT. |
 | GWT | DISV | VERTICES | XV | DOUBLE PRECISION | is the x-coordinate for the vertex. |
 | GWT | DISV | VERTICES | YV | DOUBLE PRECISION | is the y-coordinate for the vertex. |

@@ -1,5 +1,5 @@
 BEGIN MODELS
-  <mtype> <mfname> <mname>
-  <mtype> <mfname> <mname>
+  <mtype> <mfname> <mname> [<partition_number>]
+  <mtype> <mfname> <mname> [<partition_number>]
   ...
 END MODELS
