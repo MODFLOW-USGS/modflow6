@@ -804,16 +804,20 @@ contains
     integer(I4B) :: im, ie, im_a, im_b
     character(len=LINELENGTH) :: model_name, model_name_b, errmsg
     !
+    ! -- That this process has model(s) is checked in models_create()
+    !
     ! -- check per model partition assignments
     do im = 1, size(mnames)
       model_name = mnames(im)
       if (mranks(im) < 0 .or. mranks(im) >= nr_procs) then
-        write (errmsg, '(a,i0,a)') &
-          'Model "'//trim(model_name)// &
-          '" partition number expected between 1 '// &
-          'and number of processors (', nr_procs, ').'
-        call store_error(errmsg)
-        call store_error_filename(simfile)
+        !-- only throw error from one process?
+        if (proc_id == 0) then
+          write (errmsg, '(a,i0,a)') &
+            'Model "'//trim(model_name)// &
+            '" partition number expected in range [1,', nr_procs, '].'
+          call store_error(errmsg)
+          call store_error_filename(simfile)
+        end if
       end if
     end do
     !
@@ -833,12 +837,14 @@ contains
         end do
         ! ensure ranks are identical
         if (mranks(im_a) /= mranks(im_b)) then
-          model_name = mnames(im_a)
-          model_name_b = mnames(im_b)
-          call store_error('Coupled models "'//trim(model_name)//'" and "'// &
-                           trim(model_name_b)//'" must reside on the same '// &
-                           'partition.')
-          call store_error_filename(simfile)
+          if (mranks(im_a) == proc_id .or. mranks(im_b) == proc_id) then
+            model_name = mnames(im_a)
+            model_name_b = mnames(im_b)
+            call store_error('GWF6-GWT6 exchange coupled models "'// &
+                             trim(model_name)//'" and "'//trim(model_name_b)// &
+                             '" must reside on the same partition.')
+            call store_error_filename(simfile)
+          end if
         end if
       end if
     end do
@@ -887,7 +893,7 @@ contains
     if (simulation_mode /= "PARALLEL") then
       mranks = 0
       return
-    elseif (any(mranks >= 0)) then
+    elseif (any(mranks >= 1)) then
       ! -- ranks were provided, adjust indexing and verify
       mranks = mranks - 1
       call check_load_balance(mranks, mnames, etypes, emnames_a, emnames_b)
@@ -965,6 +971,7 @@ contains
       end do
     end do
 
+    ! -- enforce same constraints as with input provided assignments
     call check_load_balance(mranks, mnames, etypes, emnames_a, emnames_b)
 
     ! cleanup
