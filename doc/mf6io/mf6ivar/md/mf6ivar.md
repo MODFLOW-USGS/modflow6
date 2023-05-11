@@ -10,7 +10,7 @@
 | SIM | NAM | MODELS | MTYPE | STRING | is the type of model to add to simulation. |
 | SIM | NAM | MODELS | MFNAME | STRING | is the file name of the model name file. |
 | SIM | NAM | MODELS | MNAME | STRING | is the user-assigned name of the model.  The model name cannot exceed 16 characters and must not have blanks within the name.  The model name is case insensitive; any lowercase letters are converted and stored as upper case letters. |
-| SIM | NAM | MODELS | PARTITION_NUMBER | INTEGER | is the user-assigned partition number of the model.  The partition number cannot exceed the user-assigned number of processors and at least one model must be assigned to each of the processors or the program will terminate with an error.  Models that have sequential data dependencies must have the same PARTITION_NUMBER (for example, a GWT and GWF model that are in separate SOLUTIONS but are linked by a GWF-GWT exchange) or the program  will terminate with an error. |
+| SIM | NAM | MODELS | PARTITION_NUMBER | INTEGER | is the user-assigned partition number of the model.  The partition number cannot exceed the user-assigned number of processors and at least one model must be assigned to each of the processors or the program will terminate with an error.  Models that have sequential data dependencies must have the same PARTITION\_NUMBER (for example, a GWT and GWF model that are in separate SOLUTIONS but are linked by a GWF-GWT exchange) or the program will terminate with an error. |
 | SIM | NAM | EXCHANGES | EXGTYPE | STRING | is the exchange type. |
 | SIM | NAM | EXCHANGES | EXGFILE | STRING | is the input file for the exchange. |
 | SIM | NAM | EXCHANGES | EXGMNAMEA | STRING | is the name of the first model that is part of this exchange. |
