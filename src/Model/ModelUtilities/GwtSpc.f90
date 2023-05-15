@@ -541,43 +541,43 @@ contains
     end do
     !
     ! -- Read CONCENTRATION variables as arrays
-    call this%parser%GetNextLine(endOfBlock)
-    if (endOfBlock) then
-      call store_error('LOOKING FOR CONCENTRATION.  FOUND: '//trim(line))
-      call this%parser%StoreErrorUnit()
-    end if
-    call this%parser%GetStringCaps(keyword)
-    !
-    ! -- Parse the keywords
-    select case (keyword)
-    case ('CONCENTRATION')
-      !
-      ! -- Look for keyword TIMEARRAYSERIES and time-array series
-      !    name on line, following RECHARGE
+    do
+      call this%parser%GetNextLine(endOfBlock)
+      if (endOfBlock) exit
       call this%parser%GetStringCaps(keyword)
-      if (keyword == 'TIMEARRAYSERIES') then
-        ! -- Get time-array series name
-        call this%parser%GetStringCaps(tasName)
-        bndArrayPtr => this%dblvec(:)
-        ! Make a time-array-series link and add it to the list of links
-        ! contained in the TimeArraySeriesManagerType object.
-        convertflux = .false.
-        call this%TasManager%MakeTasLink(this%packName, bndArrayPtr, &
-                                         this%iprpak, tasName, 'CONCENTRATION', &
-                                         convertFlux, nodelist, &
-                                         this%parser%iuactive)
-      else
-        !
-        ! -- Read the concentration array
-        call this%dis%read_layer_array(nodelist, this%dblvec, ncolbnd, &
-                                       this%maxbound, 1, aname(1), &
-                                       this%parser%iuactive, this%iout)
-      end if
       !
-    case default
-      call store_error('LOOKING FOR CONCENTRATION.  FOUND: '//trim(line))
-      call this%parser%StoreErrorUnit()
-    end select
+      ! -- Parse the keywords
+      select case (keyword)
+      case ('CONCENTRATION')
+        !
+        ! -- Look for keyword TIMEARRAYSERIES and time-array series
+        !    name on line, following RECHARGE
+        call this%parser%GetStringCaps(keyword)
+        if (keyword == 'TIMEARRAYSERIES') then
+          ! -- Get time-array series name
+          call this%parser%GetStringCaps(tasName)
+          bndArrayPtr => this%dblvec(:)
+          ! Make a time-array-series link and add it to the list of links
+          ! contained in the TimeArraySeriesManagerType object.
+          convertflux = .false.
+          call this%TasManager%MakeTasLink(this%packName, bndArrayPtr, &
+                                          this%iprpak, tasName, 'CONCENTRATION', &
+                                          convertFlux, nodelist, &
+                                          this%parser%iuactive)
+        else
+          !
+          ! -- Read the concentration array
+          call this%dis%read_layer_array(nodelist, this%dblvec, ncolbnd, &
+                                        this%maxbound, 1, aname(1), &
+                                        this%parser%iuactive, this%iout)
+        end if
+        !
+      case default
+        call store_error('LOOKING FOR CONCENTRATION.  FOUND: '//trim(line))
+        call this%parser%StoreErrorUnit()
+      end select
+
+    end do
     !
     return
   end subroutine spc_rp_array
