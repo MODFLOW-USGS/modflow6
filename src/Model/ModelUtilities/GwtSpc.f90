@@ -561,15 +561,16 @@ contains
           ! contained in the TimeArraySeriesManagerType object.
           convertflux = .false.
           call this%TasManager%MakeTasLink(this%packName, bndArrayPtr, &
-                                          this%iprpak, tasName, 'CONCENTRATION', &
-                                          convertFlux, nodelist, &
-                                          this%parser%iuactive)
+                                           this%iprpak, tasName, &
+                                           'CONCENTRATION', &
+                                           convertFlux, nodelist, &
+                                           this%parser%iuactive)
         else
           !
           ! -- Read the concentration array
           call this%dis%read_layer_array(nodelist, this%dblvec, ncolbnd, &
-                                        this%maxbound, 1, aname(1), &
-                                        this%parser%iuactive, this%iout)
+                                         this%maxbound, 1, aname(1), &
+                                         this%parser%iuactive, this%iout)
         end if
         !
       case default
