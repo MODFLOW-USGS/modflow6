@@ -215,7 +215,8 @@ contains
     call model_idxs%init()
     call exg_idxs%init()
 
-    ! determine which containers to include TODO_MJR: avoid repetition
+    ! determine which containers to include,
+    ! currently models + exchanges
     do i = 1, size(this%vdc_models)
       vdc => this%vdc_models(i)%ptr
       if (vdc%is_active .and. vdc%orig_rank == rank) then

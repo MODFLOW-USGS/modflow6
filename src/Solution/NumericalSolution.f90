@@ -159,9 +159,8 @@ module NumericalSolutionModule
 
     ! 'protected' (this can be overridden)
     procedure :: sln_has_converged
-    procedure :: sln_l2norm
     procedure :: sln_calc_ptc
-    procedure :: sln_calc_residual
+    procedure :: sln_underrelax
 
     ! private
     procedure, private :: sln_connect
@@ -172,7 +171,8 @@ module NumericalSolutionModule
     procedure, private :: sln_backtracking_xupdate
     procedure, private :: sln_maxval
     procedure, private :: sln_calcdx
-    procedure, private :: sln_underrelax
+    procedure, private :: sln_calc_residual
+    procedure, private :: sln_l2norm
     procedure, private :: sln_outer_check
     procedure, private :: sln_get_loc
     procedure, private :: sln_get_nodeu
@@ -2955,7 +2955,7 @@ contains
   !<
   subroutine sln_underrelax(this, kiter, bigch, neq, active, x, xtemp)
     ! -- dummy variables
-    class(NumericalSolutionType), intent(inout) :: this !< NumericalSolutionType instance
+    class(NumericalSolutionType) :: this !< NumericalSolutionType instance
     integer(I4B), intent(in) :: kiter !< Picard iteration number
     real(DP), intent(in) :: bigch !< maximum dependent-variable change
     integer(I4B), intent(in) :: neq !< number of equations

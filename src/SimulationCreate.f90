@@ -28,7 +28,7 @@ module SimulationCreateModule
   private
   public :: simulation_cr
   public :: simulation_da
-  public :: create_load_mask ! TODO_MJR: this should go somewhere else
+  public :: create_load_mask
 
 contains
 

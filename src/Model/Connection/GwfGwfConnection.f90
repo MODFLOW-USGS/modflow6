@@ -394,6 +394,7 @@ contains
     ! local
 
     ! base validation (geometry/spatial)
+    ! TODO_MJR: uncomment this...
     !call this%SpatialModelConnectionType%validateConnection()
     !call this%validateGwfExchange()
 
