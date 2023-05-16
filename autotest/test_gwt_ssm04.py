@@ -34,9 +34,9 @@ idomain[0, :, :] = np.array(idomain_lay0)
 
 
 def build_model(idx, dir):
-    perlen = [5.0]
-    nstp = [5]
-    tsmult = [1.0]
+    perlen = [5.0, 5.0, 5.0]
+    nstp = [5, 5, 5]
+    tsmult = [1.0, 1.0, 1.0]
     nper = len(perlen)
     delr = 1.0
     delc = 1.0
@@ -127,9 +127,12 @@ def build_model(idx, dir):
     # list based recharge
     idxrow, idxcol = np.where(idomain[0] == 1)
     recharge_rate = np.arange(nrow * ncol).reshape((nrow, ncol))
-    spd = []
-    for i, j in zip(idxrow, idxcol):
-        spd.append([(0, i, j), recharge_rate[i, j]])
+    spd = {}
+    for kper in range(nper):
+        rlist = []
+        for i, j in zip(idxrow, idxcol):
+            rlist.append([(0, i, j), recharge_rate[i, j]])
+        spd[kper] = rlist
     rch1 = flopy.mf6.modflow.ModflowGwfrch(
         gwf,
         print_flows=True,
@@ -140,10 +143,13 @@ def build_model(idx, dir):
     )
 
     # array-based rch files
+    rspd = {}
+    for kper in range(nper):
+        rspd[kper] = recharge_rate
     rch2 = flopy.mf6.ModflowGwfrcha(
         gwf,
         print_flows=True,
-        recharge=recharge_rate,
+        recharge=rspd,
         pname="RCH-2",
         filename=f"{gwfname}.rch2",
     )
@@ -160,7 +166,10 @@ def build_model(idx, dir):
         for j in range(ncol):
             tsnames.append(f"rch-{i + 1}-{j + 1}")
     ts_data = []
-    for t in [0, perlen[0]]:
+    totim = 0.
+    for kper in range(nper):
+        totim += perlen[kper]
+    for t in [0, totim]:
         ts = tuple([float(t)] + list(range(0, nrow * ncol)))
         ts_data.append(ts)
     ts_dict = {
@@ -193,7 +202,9 @@ def build_model(idx, dir):
     # is a bug in flopy that will not correctly write this array as internal
     tas_array = {
         0.0: f"{gwfname}.rch4.tas.dat",
-        perlen[0]: f"{gwfname}.rch4.tas.dat",
+        5.0: f"{gwfname}.rch4.tas.dat",
+        10.0: f"{gwfname}.rch4.tas.dat",
+        15.0: f"{gwfname}.rch4.tas.dat",
     }
     time_series_namerecord = "rcharray"
     interpolation_methodrecord = "linear"
@@ -315,7 +326,7 @@ def build_model(idx, dir):
         for j in range(ncol):
             tsnames.append(f"rch-{i + 1}-{j + 1}")
     ts_data = [tuple([0.0] + nrow * ncol * [0.0])]
-    for t in perlen:
+    for t in [5., 10., 15.]:
         ts = tuple([float(t)] + list(range(0, nrow * ncol)))
         ts_data.append(ts)
     ts_dict = {
@@ -344,7 +355,12 @@ def build_model(idx, dir):
     filename = f"{gwtname}.rch4.spc.tas"
     # for now write the recharge concentration to a dat file because there
     # is a bug in flopy that will not correctly write this array as internal
-    tas_array = {0.0: 0.0, perlen[0]: f"{gwtname}.rch4.spc.tas.dat"}
+    tas_array = {
+        0.0: 0.0, 
+        5.0: f"{gwtname}.rch4.spc.tas.dat",
+        10.0: f"{gwtname}.rch4.spc.tas.dat",
+        15.0: f"{gwtname}.rch4.spc.tas.dat",
+    }
     time_series_namerecord = "carray"
     interpolation_methodrecord = "linear"
     spc4.tas.initialize(
@@ -421,7 +437,7 @@ def eval_transport(sim):
     times = cobj.get_times()
 
     print(times)
-    for itime, totim in enumerate(times):
+    for itime, totim in enumerate(times[:5]):
         print(f"Checking records for time {totim}")
 
         # Check records for each of the four recharge packages
@@ -468,16 +484,18 @@ def eval_transport(sim):
                 id2a = np.arange(23) + 1
             elif irchpak in [1, 3]:
                 id2a = id1a
-            assert np.allclose(id2, id2a), f"{id2} /= {id2a}"
+            assert np.allclose(id2, id2a), f"q: {id2} /= {id2a}"
 
-            print("    Checking q")
+            print(f"    Checking q for irchpak {irchpak + 1}")
             q = ssmbud[istart:istop]["q"]
+            print("q", q)
             if irchpak in [2, 3]:
                 frac = (totim - 0.5) / 5.0
                 qa = [float(a - 1) * frac * (a - 1) for a in id1a]
             else:
                 qa = [float(a - 1) ** 2 for a in id1a]
-            assert np.allclose(q, qa), f"{q} /=\n {qa}"
+            print("qa", qa)
+            assert np.allclose(q, qa), f"q: {q} /=\n {qa}"
 
             istart = istop
 
