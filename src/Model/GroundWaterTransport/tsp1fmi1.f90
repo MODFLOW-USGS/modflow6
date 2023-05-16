@@ -198,7 +198,8 @@ contains
       call this%initialize_gwfterms_from_bfr()
     end if
     !
-    ! -- If GWF-GWT exchange is active, then setup gwfterms from bndlist
+    ! -- If GWF-GWT (or GWF-GWE) exchange is active, then setup gwfterms from 
+    !    bndlist
     if (.not. this%flows_from_file) then
       call this%initialize_gwfterms_from_gwfbndlist()
     end if

@@ -149,7 +149,7 @@ contains
     !
     ! -- Set the budget dimension
     if (present(bddim_opt)) then
-      bddim = bddim_opt
+      bddim = trim(bddim_opt)
     else
       bddim = 'L**3'
     end if

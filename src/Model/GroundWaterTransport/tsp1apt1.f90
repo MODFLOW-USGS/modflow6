@@ -79,6 +79,8 @@ module TspAptModule
     integer(I4B), pointer :: idxprepak => null() !< budget-object index that precedes package-specific budget objects
     integer(I4B), pointer :: idxlastpak => null() !< budget-object index of last package-specific budget object
     real(DP), dimension(:), pointer, contiguous :: strt => null() !< starting feature concentration (or temperature)
+    real(DP), dimension(:), pointer, contiguous :: ktf => null() !< thermal conductivity between the apt and groundwater cell
+    real(DP), dimension(:), pointer, contiguous :: rbthcnd => null() !< thickness of streambed material through with thermal conduction occurs
     integer(I4B), dimension(:), pointer, contiguous :: idxlocnode => null() !< map position in global rhs and x array of pack entry
     integer(I4B), dimension(:), pointer, contiguous :: idxpakdiag => null() !< map diag position of feature in global amat
     integer(I4B), dimension(:), pointer, contiguous :: idxdglo => null() !< map position in global array of package diagonal row entries
@@ -1334,6 +1336,8 @@ contains
     call mem_deallocate(this%qsto)
     call mem_deallocate(this%ccterm)
     call mem_deallocate(this%strt)
+    call mem_deallocate(this%ktf)
+    call mem_deallocate(this%rbthcnd)
     call mem_deallocate(this%lauxvar)
     call mem_deallocate(this%xoldpak)
     if (this%imatrows == 0) then
@@ -1626,6 +1630,8 @@ contains
     !
     ! -- allocate apt data
     call mem_allocate(this%strt, this%ncv, 'STRT', this%memoryPath)
+    call mem_allocate(this%ktf, this%ncv, 'KTF', this%memoryPath)
+    call mem_allocate(this%rbthcnd, this%ncv, 'RBTHCND', this%memoryPath)
     call mem_allocate(this%lauxvar, this%naux, this%ncv, 'LAUXVAR', &
                       this%memoryPath)
     !
@@ -1640,8 +1646,11 @@ contains
     allocate (this%featname(this%ncv)) ! ditch after boundnames allocated??
     !allocate(this%status(this%ncv))
     !
+    ! - initialize variables
     do n = 1, this%ncv
       this%strt(n) = DEP20
+      this%ktf(n) = DZERO
+      this%rbthcnd(n) = DZERO
       this%lauxvar(:, n) = DZERO
       this%xoldpak(n) = DEP20
       if (this%imatrows == 0) then
@@ -1682,13 +1691,22 @@ contains
           call store_error(errmsg)
           cycle
         end if
-
+        !
         ! -- increment nboundchk
         nboundchk(n) = nboundchk(n) + 1
-
+        !
         ! -- strt
         this%strt(n) = this%parser%GetDouble()
-
+        !
+        ! -- if GWE model, read additional thermal conductivity terms
+        if (this%tsplab%tsptype == 'GWE') then
+          ! skip for UZE
+          if (trim(adjustl(this%text)) /= 'UZE') then 
+            this%ktf(n) = this%parser%GetDouble()
+            this%rbthcnd(n) = this%parser%GetDouble()
+          end if
+        end if
+        !
         ! -- get aux data
         do iaux = 1, this%naux
           call this%parser%GetString(caux(iaux))
@@ -1718,7 +1736,7 @@ contains
                                              this%tsManager, this%iprpak, &
                                              this%auxname(jj))
         end do
-
+        !
         nlak = nlak + 1
       end do
       !
@@ -2153,6 +2171,7 @@ contains
     integer(I4B) :: idx
     logical :: ordered_id1
     real(DP) :: q
+    character(len=LENBUDTXT) :: bddim_opt
     character(len=LENBUDTXT) :: text, textt
     character(len=LENBUDTXT), dimension(1) :: auxtxt
 ! ------------------------------------------------------------------------------
@@ -2163,9 +2182,10 @@ contains
       nlen = this%flowbudptr%budterm(this%idxbudfjf)%maxlist
     end if
     !
-    ! -- Determine the number of lake budget terms. These are fixed for
-    !    the simulation and cannot change
-    ! -- the first 3 is for GWF, STORAGE, and CONSTANT
+    ! -- Determine the number of budget terms associated with apt. 
+    !    These are fixed for the simulation and cannot change
+    !
+    ! -- The first 3 are for GWF, STORAGE, and CONSTANT
     nbudterm = 3
     !
     ! -- add terms for the specific package
@@ -2173,6 +2193,14 @@ contains
     !
     ! -- add one for flow-ja-face
     if (nlen > 0) nbudterm = nbudterm + 1
+    ! 
+    ! -- add one for shared wetted area facilitating conduction in SFE, LKE, 
+    !    and MWE (but not UZE) in GWE model
+    if (this%tsplab%tsptype == 'GWE') then
+      if (adjustl(trim(this%text)) /= 'UZE') then
+        if (nlen > 0) nbudterm = nbudterm + 1
+      end if
+    end if
     !
     ! -- add for mover terms and auxiliary
     if (this%idxbudtmvr /= 0) nbudterm = nbudterm + 1
@@ -2181,8 +2209,10 @@ contains
     !
     ! -- set up budobj
     call budgetobject_cr(this%budobj, this%packName)
+    !
+    bddim_opt=this%tsplab%depvarunitabbrev
     call this%budobj%budgetobject_df(this%ncv, nbudterm, 0, 0, &
-                                     bddim_opt='M', ibudcsv=this%ibudcsv)
+                                     bddim_opt=bddim_opt, ibudcsv=this%ibudcsv)
     idx = 0
     !
     ! -- Go through and set up each budget term

@@ -241,6 +241,7 @@ contains
         this%idxbudssm(ip) = 0
       case ('GWF')
         this%idxbudgwf = ip
+        this%idxbudsbcd = ip
         this%idxbudssm(ip) = 0
       case ('STORAGE')
         this%idxbudsto = ip
@@ -259,9 +260,6 @@ contains
         this%idxbudssm(ip) = 0
       case ('EXT-OUTFLOW')
         this%idxbudoutf = ip
-        this%idxbudssm(ip) = 0
-      case ('STRMBD-COND')
-        this%idxbudsbcd = ip
         this%idxbudssm(ip) = 0
       case ('TO-MVR')
         this%idxbudtmvr = ip
@@ -308,10 +306,14 @@ contains
     integer(I4B) :: iloc
     integer(I4B) :: iposd, iposoffd
     integer(I4B) :: ipossymd, ipossymoffd
+    integer(I4B) :: auxpos
     real(DP) :: rrate
     real(DP) :: rhsval
     real(DP) :: hcofval
     real(DP) :: ctherm    ! kluge?
+    real(DP) :: wa !< wetted area
+    real(DP) :: ktf !< thermal conductivity of streambed material 
+    real(DP) :: s !< thickness of conductive streambed material
 ! ------------------------------------------------------------------------------
     !
     ! -- add rainfall contribution
@@ -377,19 +379,23 @@ contains
       if (this%iboundpak(n) /= 0) then
         !
         ! -- set acoef and rhs to negative so they are relative to sfe and not gwe
-        ctherm = 0d0   ! kluge note: temporary placeholder until we can calculate an actual thermal conductance
+        auxpos = this%flowbudptr%budterm(this%idxbudgwf)%naux
+        wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos,j) 
+        ktf = this%ktf(j)
+        s = this%rbthcnd(j)
+        ctherm = ktf * wa / s
         !
         ! -- add to sfe row
         iposd = this%idxdglo(j)
         iposoffd = this%idxoffdglo(j)
-        call matrix_sln%add_value_pos(iposd, ctherm)       ! kluge note: make sure the signs on ctherm are correct here and below
-        call matrix_sln%add_value_pos(iposoffd, -ctherm)
+        call matrix_sln%add_value_pos(iposd, -ctherm)       ! kluge note: make sure the signs on ctherm are correct here and below
+        call matrix_sln%add_value_pos(iposoffd, ctherm)
         !
         ! -- add to gwe row for sfe connection
         ipossymd = this%idxsymdglo(j)
         ipossymoffd = this%idxsymoffdglo(j)
-        call matrix_sln%add_value_pos(ipossymd, -ctherm)
-        call matrix_sln%add_value_pos(ipossymoffd, ctherm)
+        call matrix_sln%add_value_pos(ipossymd, ctherm)
+        call matrix_sln%add_value_pos(ipossymoffd, -ctherm)
       end if
     end do
     !
@@ -484,7 +490,9 @@ contains
     class(GweSfeType) :: this
     integer(I4B), intent(inout) :: idx
     ! -- local
+    integer(I4B) :: n, n1, n2
     integer(I4B) :: maxlist, naux
+    real(DP) :: q
     character(len=LENBUDTXT) :: text
 ! ------------------------------------------------------------------------------
     !
@@ -553,8 +561,8 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! --
-    text = '     STRMBD-COND'
+    ! -- conduction through the wetted streambed 
+    text = '  STREAMBED-COND'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudsbcd)%maxlist
     naux = 0
@@ -565,6 +573,13 @@ contains
                                              this%packName, &
                                              maxlist, .false., .false., &
                                              naux)
+    call this%budobj%budterm(idx)%reset(maxlist)
+    q = DZERO
+    do n = 1, maxlist
+      n1 = this%flowbudptr%budterm(this%idxbudgwf)%id1(n)
+      n2 = this%flowbudptr%budterm(this%idxbudgwf)%id2(n)
+      call this%budobj%budterm(idx)%update_term(n1, n2, q)
+    end do
     !
     ! -- return
     return
@@ -585,8 +600,12 @@ contains
     integer(I4B) :: j, n1, n2
     integer(I4B) :: nlist
     integer(I4B) :: igwfnode
+    integer(I4B) :: auxpos
     real(DP) :: q
-    real(DP) :: ctherm   ! kluge?
+    real(DP) :: ctherm
+    real(DP) :: wa !< wetted area
+    real(DP) :: ktf !< thermal conductivity of streambed material 
+    real(DP) :: s !< thickness of conductive streambed materia
     ! -- formats
 ! -----------------------------------------------------------------------------
 
@@ -648,9 +667,13 @@ contains
       n1 = this%flowbudptr%budterm(this%idxbudsbcd)%id1(j)
       if (this%iboundpak(n1) /= 0) then
         igwfnode = this%flowbudptr%budterm(this%idxbudsbcd)%id2(j)
-        ctherm = 0d0   ! kluge note: temporary placeholder until we can calculate an actual thermal conductance
+        auxpos = this%flowbudptr%budterm(this%idxbudgwf)%naux  ! for now there is only 1 aux variable under 'GWF'
+        wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos,j) 
+        ktf = this%ktf(j)
+        s = this%rbthcnd(j)
+        ctherm = ktf * wa / s   
         q = ctherm * (x(igwfnode) - this%xnewpak(n1))    ! kluge note: check that sign is correct
-        q = -q ! flip sign so relative to advanced package feature
+        !q = -q ! flip sign so relative to advanced package feature
       end if
       call this%budobj%budterm(idx)%update_term(n1, igwfnode, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
