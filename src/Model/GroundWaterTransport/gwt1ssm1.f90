@@ -283,6 +283,7 @@ contains
     ! -- local
     logical(LGP) :: lauxmixed
     integer(I4B) :: n
+    integer(I4B) :: nbound_flow
     real(DP) :: qbnd
     real(DP) :: ctmp
     real(DP) :: omega
@@ -294,6 +295,7 @@ contains
     rhstmp = DZERO
     ctmp = DZERO
     qbnd = DZERO
+    nbound_flow = this%fmi%gwfpackages(ipackage)%nbound
     n = this%fmi%gwfpackages(ipackage)%nodelist(ientry)
     !
     ! -- If cell is active (ibound > 0) then calculate values
@@ -301,7 +303,7 @@ contains
       !
       ! -- retrieve qbnd and iauxpos
       qbnd = this%fmi%gwfpackages(ipackage)%get_flow(ientry)
-      call this%get_ssm_conc(ipackage, ientry, ctmp, lauxmixed)
+      call this%get_ssm_conc(ipackage, ientry, nbound_flow, ctmp, lauxmixed)
       !
       ! -- assign values for hcoftmp, rhstmp, and ctmp for subsequent assigment
       !    of hcof, rhs, and rate
@@ -368,11 +370,13 @@ contains
   !! The mixed flag indicates whether or not
   !!
   !<
-  subroutine get_ssm_conc(this, ipackage, ientry, conc, lauxmixed)
+  subroutine get_ssm_conc(this, ipackage, ientry, nbound_flow, conc, &
+                          lauxmixed)
     ! -- dummy
     class(GwtSsmType) :: this !< GwtSsmType
     integer(I4B), intent(in) :: ipackage !< package number
     integer(I4B), intent(in) :: ientry !< bound number
+    integer(I4B), intent(in) :: nbound_flow !< size of flow package bound list
     real(DP), intent(out) :: conc !< user-specified concentration for this bound
     logical(LGP), intent(out) :: lauxmixed !< user-specified flag for marking this as a mixed boundary
     ! -- local
@@ -389,7 +393,7 @@ contains
       conc = this%fmi%gwfpackages(ipackage)%auxvar(iauxpos, ientry)
       if (isrctype == 2) lauxmixed = .true.
     case (3, 4)
-      conc = this%ssmivec(ipackage)%get_value(ientry)
+      conc = this%ssmivec(ipackage)%get_value(ientry, nbound_flow)
       if (isrctype == 4) lauxmixed = .true.
     end select
 
