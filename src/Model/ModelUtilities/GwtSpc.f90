@@ -343,11 +343,42 @@ contains
   !!  Get the floating point value from the dblvec array.
   !!
   !<
-  function get_value(this, ientry) result(value)
+  function get_value(this, ientry, nbound_flow) result(value)
     class(GwtSpcType) :: this !< GwtSpcType object
     integer(I4B), intent(in) :: ientry !< index of the data to return
+    integer(I4B), intent(in) :: nbound_flow !< size of bound list in flow package
     real(DP) :: value
-    value = this%dblvec(ientry)
+    integer(I4B) :: nu
+    if (this%readasarrays) then
+      ! Special handling for reduced grids and readasarrays
+      ! if flow and transport are in the same simulation, then
+      ! ientry is a user node number and it corresponds to the
+      ! correct position in the dblvec array.  But if flow and
+      ! transport are not in the same simulation, then ientry is
+      ! a reduced node number, because the list of flows in the
+      ! budget file do not include idomain < 1 entries. In this
+      ! case, ientry must be converted to a user node number so
+      ! that it corresponds to a user array, which includes
+      ! idomain < 1 values.
+      if (nbound_flow == this%maxbound) then
+        ! flow and transport are in the same simulation or there
+        ! are no idomain < 1 cells.
+        value = this%dblvec(ientry)
+      else
+        ! This identifies case where flow and transport must be
+        ! in a separate simulation, because nbound_flow is not
+        ! the same as this%maxbound.  Under these conditions, we
+        ! must assume that ientry corresponds to a flow list that
+        ! would be of size ncpl if flow and transport were in the
+        ! same simulation, but because boundary cells with
+        ! idomain < 1 are not written to binary budget file, the
+        ! list size is smaller.
+        nu = this%dis%get_nodeuser(ientry)
+        value = this%dblvec(nu)
+      end if
+    else
+      value = this%dblvec(ientry)
+    end if
     return
   end function get_value
 
