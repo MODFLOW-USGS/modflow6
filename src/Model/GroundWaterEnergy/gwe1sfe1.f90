@@ -241,7 +241,7 @@ contains
         this%idxbudssm(ip) = 0
       case ('GWF')
         this%idxbudgwf = ip
-        this%idxbudsbcd = ip
+!!        this%idxbudsbcd = ip
         this%idxbudssm(ip) = 0
       case ('STORAGE')
         this%idxbudsto = ip
@@ -282,6 +282,9 @@ contains
         '   MAX NO. OF ENTRIES = ', this%flowbudptr%budterm(ip)%maxlist
     end do
     write (this%iout, '(a, //)') 'DONE PROCESSING '//ftype//' INFORMATION'
+    !
+    ! -- streambed conduction term
+    this%idxbudsbcd = this%flowbudptr%nbudterm + 1
     !
     ! -- Return
     return
@@ -600,6 +603,7 @@ contains
     integer(I4B) :: j, n1, n2
     integer(I4B) :: nlist
     integer(I4B) :: igwfnode
+    integer(I4B) :: idiag
     integer(I4B) :: auxpos
     real(DP) :: q
     real(DP) :: ctherm
@@ -677,6 +681,12 @@ contains
       end if
       call this%budobj%budterm(idx)%update_term(n1, igwfnode, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
+      if (this%iboundpak(n1) /= 0) then 
+        ! -- contribution to gwe cell budget
+        this%simvals(n1) = this%simvals(n1) - q
+        idiag = this%dis%con%ia(igwfnode)
+        flowja(idiag) = flowja(idiag) - q
+      end if
     end do
 
     !
