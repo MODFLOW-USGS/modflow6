@@ -19,6 +19,7 @@
 ! EXT-INFLOW                idxbudiflw    EXT-INFLOW            q * ciflw
 ! WITHDRAWAL                idxbudwdrl    WITHDRAWAL            q * cfeat
 ! EXT-OUTFLOW               idxbudoutf    EXT-OUTFLOW           q * cfeat
+! LAKEBED-COND              idxbudlbcd    LAKEBED-COND          ! kluge note: expression for this
 
 ! -- terms from a flow file that should be skipped
 ! CONSTANT                  none          none                  none
@@ -63,6 +64,7 @@ module GweLkeModule
     integer(I4B), pointer :: idxbudiflw => null() ! index of inflow terms in flowbudptr
     integer(I4B), pointer :: idxbudwdrl => null() ! index of withdrawal terms in flowbudptr
     integer(I4B), pointer :: idxbudoutf => null() ! index of outflow terms in flowbudptr
+    integer(I4B), pointer :: idxbudlbcd => null() ! index of lakebed conduction terms in flowbudptr
 
     real(DP), dimension(:), pointer, contiguous :: temprain => null() ! rainfall temperature
     real(DP), dimension(:), pointer, contiguous :: tempevap => null() ! evaporation temperature
@@ -240,6 +242,7 @@ contains
         this%idxbudssm(ip) = 0
       case ('GWF')
         this%idxbudgwf = ip
+        this%idxbudlbcd = ip
         this%idxbudssm(ip) = 0
       case ('STORAGE')
         this%idxbudsto = ip
@@ -304,12 +307,18 @@ contains
     integer(I4B), dimension(:), intent(in) :: idxglo
     class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
-    integer(I4B) :: j, n1, n2
+    integer(I4B) :: j, n, n1, n2
     integer(I4B) :: iloc
-    integer(I4B) :: iposd
+    integer(I4B) :: iposd, iposoffd
+    integer(I4B) :: ipossymd, ipossymoffd
+    integer(I4B) :: auxpos
     real(DP) :: rrate
     real(DP) :: rhsval
     real(DP) :: hcofval
+    real(DP) :: ctherm  !< thermal conductance
+    real(DP) :: wa !< wetted area
+    real(DP) :: ktf !< thermal conductivity of streambed material 
+    real(DP) :: s !< thickness of conductive streambed material
 ! ------------------------------------------------------------------------------
     !
     ! -- add rainfall contribution
@@ -377,6 +386,34 @@ contains
         rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
+    !
+    ! -- add lakebed conduction contribution
+    do j = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
+      !
+      ! -- set n to feature number and process if active feature
+      n = this%flowbudptr%budterm(this%idxbudgwf)%id1(j)
+      if (this%iboundpak(n) /= 0) then
+        !
+        ! -- set acoef and rhs to negative so they are relative to sfe and not gwe
+        auxpos = this%flowbudptr%budterm(this%idxbudgwf)%naux
+        wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos,j) 
+        ktf = this%ktf(j)
+        s = this%rbthcnd(j)
+        ctherm = ktf * wa / s
+        !
+        ! -- add to sfe row
+        iposd = this%idxdglo(j)
+        iposoffd = this%idxoffdglo(j)
+        call matrix_sln%add_value_pos(iposd, -ctherm)       ! kluge note: make sure the signs on ctherm are correct here and below
+        call matrix_sln%add_value_pos(iposoffd, ctherm)
+        !
+        ! -- add to gwe row for sfe connection
+        ipossymd = this%idxsymdglo(j)
+        ipossymoffd = this%idxsymoffdglo(j)
+        call matrix_sln%add_value_pos(ipossymd, ctherm)
+        call matrix_sln%add_value_pos(ipossymoffd, -ctherm)
+      end if
+    end do
     !
     ! -- Return
     return
@@ -485,7 +522,9 @@ contains
     class(GweLkeType) :: this
     integer(I4B), intent(inout) :: idx
     ! -- local
+    integer(I4B) :: n, n1, n2
     integer(I4B) :: maxlist, naux
+    real(DP) :: q
     character(len=LENBUDTXT) :: text
 ! ------------------------------------------------------------------------------
     !
@@ -567,17 +606,33 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
+    ! -- conduction through the wetted lakebed
+    text = '    LAKEBED-COND'
+    idx = idx + 1
+    maxlist = this%flowbudptr%budterm(this%idxbudlbcd)%maxlist
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%packName, &
+                                             this%name_model, &
+                                             this%packName, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    call this%budobj%budterm(idx)%reset(maxlist)
+    q = DZERO
+    do n = 1, maxlist
+      n1 = this%flowbudptr%budterm(this%idxbudgwf)%id1(n)
+      n2 = this%flowbudptr%budterm(this%idxbudgwf)%id2(n)
+      call this%budobj%budterm(idx)%update_term(n1, n2, q)
+    end do
+    !
     ! -- return
     return
   end subroutine lke_setup_budobj
 
+  !> @brief Copy flow terms into this%budobj
+  !<
   subroutine lke_fill_budobj(this, idx, x, flowja, ccratin, ccratout)
-! ******************************************************************************
-! lke_fill_budobj -- copy flow terms into this%budobj
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GweLkeType) :: this
@@ -589,10 +644,16 @@ contains
     ! -- local
     integer(I4B) :: j, n1, n2
     integer(I4B) :: nlist
+    integer(I4B) :: igwfnode
+    integer(I4B) :: auxpos
     real(DP) :: q
+    real(DP) :: ctherm !< thermal conductance
+    real(DP) :: wa !< wetted area
+    real(DP) :: ktf !< thermal conductivity of streambed material 
+    real(DP) :: s !< thickness of conductive streambed materia
     ! -- formats
 ! -----------------------------------------------------------------------------
-
+    !
     ! -- RAIN
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudrain)%nlist
@@ -602,7 +663,7 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-
+    !
     ! -- EVAPORATION
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudevap)%nlist
@@ -612,7 +673,7 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-
+    !
     ! -- RUNOFF
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudroff)%nlist
@@ -622,7 +683,7 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-
+    !
     ! -- EXT-INFLOW
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudiflw)%nlist
@@ -632,7 +693,7 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-
+    !
     ! -- WITHDRAWAL
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudwdrl)%nlist
@@ -642,7 +703,7 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-
+    !
     ! -- EXT-OUTFLOW
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudoutf)%nlist
@@ -652,7 +713,26 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-
+    !
+    ! -- LAKEBED-COND
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%maxbound)
+    do j = 1, this%flowbudptr%budterm(this%idxbudlbcd)%nlist
+      q = DZERO
+      n1 = this%flowbudptr%budterm(this%idxbudlbcd)%id1(j)
+      if (this%iboundpak(n1) /= 0) then
+        igwfnode = this%flowbudptr%budterm(this%idxbudlbcd)%id2(j)
+        auxpos = this%flowbudptr%budterm(this%idxbudgwf)%naux  ! for now there is only 1 aux variable under 'GWF'
+        wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos,j) 
+        ktf = this%ktf(j)
+        s = this%rbthcnd(j)
+        ctherm = ktf * wa / s   
+        q = ctherm * (x(igwfnode) - this%xnewpak(n1))    ! kluge note: check that sign is correct
+        !q = -q ! flip sign so relative to advanced package feature
+      end if
+      call this%budobj%budterm(idx)%update_term(n1, igwfnode, q)
+      call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
+    end do
     !
     ! -- return
     return
@@ -682,6 +762,7 @@ contains
     call mem_allocate(this%idxbudiflw, 'IDXBUDIFLW', this%memoryPath)
     call mem_allocate(this%idxbudwdrl, 'IDXBUDWDRL', this%memoryPath)
     call mem_allocate(this%idxbudoutf, 'IDXBUDOUTF', this%memoryPath)
+    call mem_allocate(this%idxbudlbcd, 'IDXBUDLBCD', this%memoryPath)
     !
     ! -- Initialize
     this%idxbudrain = 0
@@ -690,6 +771,7 @@ contains
     this%idxbudiflw = 0
     this%idxbudwdrl = 0
     this%idxbudoutf = 0
+    this%idxbudlbcd = 0
     !
     ! -- Return
     return
@@ -753,6 +835,7 @@ contains
     call mem_deallocate(this%idxbudiflw)
     call mem_deallocate(this%idxbudwdrl)
     call mem_deallocate(this%idxbudoutf)
+    call mem_deallocate(this%idxbudlbcd)
     !
     ! -- deallocate time series
     call mem_deallocate(this%temprain)

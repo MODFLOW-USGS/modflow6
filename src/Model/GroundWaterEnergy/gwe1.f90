@@ -1085,7 +1085,7 @@ contains
     use SimModule, only: store_error
     use TspCncModule, only: cnc_create
     use GweSrcModule, only: src_create
-!    use GweLktModule, only: lkt_create
+    use GweLkeModule, only: lke_create
     use GweSfeModule, only: sfe_create
 !    use GweMwtModule, only: mwt_create
     use GweUzeModule, only: uze_create
@@ -1113,9 +1113,10 @@ contains
     case ('SRC6')
       call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, this%tsplab, this%gwecommon)
-      !case('LKE6')
-      !  call lkt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-      !                  pakname, this%fmi)
+    case('LKE6')
+      call lke_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname, this%fmi, this%tsplab, this%eqnsclfac, &
+                        this%gwecommon)
     case ('SFE6')
       call sfe_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                         pakname, this%fmi, this%tsplab, this%eqnsclfac, &
