@@ -253,9 +253,6 @@ contains
       case ('FROM-MVR')
         this%idxbudfmvr = ip
         this%idxbudssm(ip) = 0
-      case ('THERMAL-EQUIL')
-        this%idxbudtheq= ip
-        this%idxbudssm(ip) = 0
       case ('AUXILIARY')
         this%idxbudaux = ip
         this%idxbudssm(ip) = 0
@@ -267,14 +264,14 @@ contains
         icount = icount + 1
       end select
       !
-      ! -- thermal equilibration term
-      this%idxbudtheq = this%flowbudptr%nbudterm + 1
-      !
       write (this%iout, '(a, i0, " = ", a,/, a, i0)') &
         '  TERM ', ip, trim(adjustl(this%flowbudptr%budterm(ip)%flowtype)), &
         '   MAX NO. OF ENTRIES = ', this%flowbudptr%budterm(ip)%maxlist
     end do
     write (this%iout, '(a, //)') 'DONE PROCESSING '//ftype//' INFORMATION'
+    !
+    ! -- thermal equilibration term
+    this%idxbudtheq = this%flowbudptr%nbudterm + 1
     !
     ! -- Return
     return
