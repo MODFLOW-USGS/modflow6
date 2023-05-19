@@ -2176,6 +2176,9 @@ contains
     character(len=LENBUDTXT), dimension(1) :: auxtxt
 ! ------------------------------------------------------------------------------
     !
+    ! -- Initialize nbudterm
+    nbudterm = 0
+    !
     ! -- Determine if there are flow-ja-face terms
     nlen = 0
     if (this%idxbudfjf /= 0) then
@@ -2185,22 +2188,22 @@ contains
     ! -- Determine the number of budget terms associated with apt. 
     !    These are fixed for the simulation and cannot change
     !
-    ! -- The first 3 are for GWF, STORAGE, and CONSTANT
-    nbudterm = 3
+    ! -- add one if flow-ja-face present
+    if (this%idxbudfjf /= 0) nbudterm = nbudterm + 1
+    !
+    ! -- All the APT packages have GWF, STORAGE, and CONSTANT
+    nbudterm = nbudterm + 3
     !
     ! -- add terms for the specific package
     nbudterm = nbudterm + this%pak_get_nbudterms()
-    !
-    ! -- add one for flow-ja-face
-    if (nlen > 0) nbudterm = nbudterm + 1
     ! 
     ! -- add one for shared wetted area facilitating conduction in SFE, LKE, 
     !    and MWE (but not UZE) in GWE model
-    if (this%tsplab%tsptype == 'GWE') then
-      if (adjustl(trim(this%text)) /= 'UZE') then
-        if (nlen > 0) nbudterm = nbudterm + 1
-      end if
-    end if
+    !if (this%tsplab%tsptype == 'GWE') then
+    !  if (adjustl(trim(this%text)) /= 'UZE') then
+    !    if (nlen > 0) nbudterm = nbudterm + 1
+    !  end if
+    !end if
     !
     ! -- add for mover terms and auxiliary
     if (this%idxbudtmvr /= 0) nbudterm = nbudterm + 1

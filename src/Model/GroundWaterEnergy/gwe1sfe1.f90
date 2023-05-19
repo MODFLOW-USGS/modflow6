@@ -284,7 +284,7 @@ contains
     write (this%iout, '(a, //)') 'DONE PROCESSING '//ftype//' INFORMATION'
     !
     ! -- streambed conduction term
-    this%idxbudsbcd = this%flowbudptr%nbudterm + 1
+    this%idxbudsbcd = this%idxbudgwf
     !
     ! -- Return
     return
@@ -397,8 +397,8 @@ contains
         ! -- add to gwe row for sfe connection
         ipossymd = this%idxsymdglo(j)
         ipossymoffd = this%idxsymoffdglo(j)
-        call matrix_sln%add_value_pos(ipossymd, ctherm)
-        call matrix_sln%add_value_pos(ipossymoffd, -ctherm)
+        call matrix_sln%add_value_pos(ipossymd, -ctherm)
+        call matrix_sln%add_value_pos(ipossymoffd, ctherm)
       end if
     end do
     !
@@ -477,8 +477,14 @@ contains
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    ! -- Number of budget terms is 6
-    nbudterms = 5
+    ! -- Number of budget terms is 6:
+    !    1. rainfall
+    !    2. evaporation
+    !    3. runoff
+    !    4. ext-inflow
+    !    5. ext-outflow
+    !    6. streambed-cond
+    nbudterms = 6
     !
     ! -- Return
     return
