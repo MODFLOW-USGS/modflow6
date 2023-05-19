@@ -256,7 +256,20 @@ module GwtDisInputModule
   type(InputParamDefinitionType), parameter :: &
     gwt_dis_aggregate_definitions(*) = &
     [ &
-    InputParamDefinitionType :: &
+    InputParamDefinitionType &
+    ( &
+    '', & ! component
+    '', & ! subcomponent
+    '', & ! block
+    '', & ! tag name
+    '', & ! fortran variable
+    '', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false. & ! layered
+    ) &
     ]
 
   type(InputBlockDefinitionType), parameter :: &

@@ -253,9 +253,6 @@ contains
       case ('FROM-MVR')
         this%idxbudfmvr = ip
         this%idxbudssm(ip) = 0
-      case ('THERMAL-EQUIL')
-        this%idxbudtheq= ip
-        this%idxbudssm(ip) = 0
       case ('AUXILIARY')
         this%idxbudaux = ip
         this%idxbudssm(ip) = 0
@@ -267,14 +264,14 @@ contains
         icount = icount + 1
       end select
       !
-      ! -- thermal equilibration term
-      this%idxbudtheq = this%flowbudptr%nbudterm + 1
-      !
       write (this%iout, '(a, i0, " = ", a,/, a, i0)') &
         '  TERM ', ip, trim(adjustl(this%flowbudptr%budterm(ip)%flowtype)), &
         '   MAX NO. OF ENTRIES = ', this%flowbudptr%budterm(ip)%maxlist
     end do
     write (this%iout, '(a, //)') 'DONE PROCESSING '//ftype//' INFORMATION'
+    !
+    ! -- thermal equilibration term
+    this%idxbudtheq = this%flowbudptr%nbudterm + 1
     !
     ! -- Return
     return
@@ -840,13 +837,93 @@ contains
     real(DP), intent(inout) :: ccratin
     real(DP), intent(inout) :: ccratout
     ! -- local
-    integer(I4B) :: j, n1, n2, i
-    integer(I4B) :: nlist, nbudterm
+    integer(I4B) :: j, n1, n2, i, indx
+    integer(I4B) :: nlist, nbudterm, nlen
     integer(I4B) :: igwfnode
     integer(I4B) :: idiag
     real(DP) :: q
+    real(DP), dimension(:), allocatable :: budresid
     ! -- formats
 ! -----------------------------------------------------------------------------
+
+    allocate(budresid(this%ncv))
+    do n1 = 1, this%ncv
+      budresid(n1) = DZERO
+    end do
+    
+    indx = 0
+
+    ! -- FLOW JA FACE into budresid
+    nlen = 0
+    if (this%idxbudfjf /= 0) then
+      nlen = this%flowbudptr%budterm(this%idxbudfjf)%maxlist
+    end if
+    if (nlen > 0) then
+      indx = indx + 1
+      nlist = this%budobj%budterm(indx)%nlist
+      do j = 1, nlist
+        n1 = this%budobj%budterm(indx)%id1(j)
+        n2 = this%budobj%budterm(indx)%id2(j)
+        if (n1 < n2) then
+          q = this%budobj%budterm(indx)%flow(j)
+          budresid(n1) = budresid(n1) + q
+          budresid(n2) = budresid(n2) - q
+        end if
+      end do
+    end if
+
+    ! -- GWF (LEAKAGE) into budresid
+    indx = indx + 1
+    nlist = this%budobj%budterm(indx)%nlist
+    do j = 1, nlist
+      n1 = this%budobj%budterm(indx)%id1(j)
+      q = this%budobj%budterm(indx)%flow(j)
+      budresid(n1) = budresid(n1) + q
+    end do
+
+    ! -- skip individual package terms
+    indx = this%idxlastpak
+
+    ! -- STORAGE into budresid
+    indx = indx + 1
+    do n1 = 1, this%ncv
+      q = this%budobj%budterm(indx)%flow(n1)
+      budresid(n1) = budresid(n1) + q
+    end do
+
+    ! -- TO MOVER into budresid
+    if (this%idxbudtmvr /= 0) then
+      indx = indx + 1
+      nlist = this%budobj%budterm(indx)%nlist
+      do j = 1, nlist
+        n1 = this%budobj%budterm(indx)%id1(j)
+        q = this%budobj%budterm(indx)%flow(j)
+        budresid(n1) = budresid(n1) + q
+      end do
+    end if
+
+    ! -- FROM MOVER into budresid
+    if (this%idxbudfmvr /= 0) then
+      indx = indx + 1
+      nlist = this%budobj%budterm(indx)%nlist
+      do j = 1, nlist
+        n1 = this%budobj%budterm(indx)%id1(j)
+        q = this%budobj%budterm(indx)%flow(j)
+        budresid(n1) = budresid(n1) + q
+      end do
+    end if
+
+    ! -- CONSTANT FLOW into budresid
+    indx = indx + 1
+    do n1 = 1, this%ncv
+      q = this%budobj%budterm(indx)%flow(n1)
+      budresid(n1) = budresid(n1) + q
+    end do
+
+    ! -- AUXILIARY VARIABLES into budresid
+    ! -- (No flows associated with these)
+
+    ! -- individual package terms processed last
 
     ! -- INFILTRATION
     idx = idx + 1
@@ -856,6 +933,7 @@ contains
       call this%uze_infl_term(j, n1, n2, q)
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
+      budresid(n1) = budresid(n1) + q
     end do
 
     ! -- REJ-INF
@@ -867,6 +945,7 @@ contains
         call this%uze_rinf_term(j, n1, n2, q)
         call this%budobj%budterm(idx)%update_term(n1, n2, q)
         call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
+        budresid(n1) = budresid(n1) + q
       end do
     end if
 
@@ -879,6 +958,7 @@ contains
         call this%uze_uzet_term(j, n1, n2, q)
         call this%budobj%budterm(idx)%update_term(n1, n2, q)
         call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
+        budresid(n1) = budresid(n1) + q
       end do
     end if
 
@@ -891,6 +971,7 @@ contains
         call this%uze_ritm_term(j, n1, n2, q)
         call this%budobj%budterm(idx)%update_term(n1, n2, q)
         call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
+        budresid(n1) = budresid(n1) + q
       end do
     end if
 
@@ -900,7 +981,10 @@ contains
     nlist = this%flowbudptr%budterm(this%idxbudgwf)%nlist
     call this%budobj%budterm(idx)%reset(nlist)
     do j = 1, nlist
-      call this%uze_theq_term(j, n1, igwfnode, q)
+      n1 = this%flowbudptr%budterm(this%idxbudgwf)%id1(j)
+      igwfnode = this%flowbudptr%budterm(this%idxbudgwf)%id2(j)
+      q = - budresid(n1)
+!!      call this%uze_theq_term(j, n1, igwfnode, q)
       call this%budobj%budterm(idx)%update_term(n1, igwfnode, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
       if (this%iboundpak(n1) /= 0) then 
@@ -911,6 +995,7 @@ contains
       end if
     end do
 
+    deallocate(budresid)
     !
     ! -- return
     return
@@ -1206,9 +1291,12 @@ contains
         case ('THERMAL-EQUIL')
           ! skip
           continue
-        case ('FLOW-JA-FACE')
-          ! skip
-          continue
+!!        case ('FLOW-JA-FACE')
+!!          ! skip
+!!          continue
+!!        case ('GWF')
+!!          ! skip
+!!          continue
         case default
           r = r - this%budobj%budterm(i)%flow(ientry)
         end select
