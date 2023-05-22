@@ -397,8 +397,8 @@ contains
         ! -- set acoef and rhs to negative so they are relative to sfe and not gwe
         auxpos = this%flowbudptr%budterm(this%idxbudgwf)%naux
         wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos,j) 
-        ktf = this%ktf(j)
-        s = this%rbthcnd(j)
+        ktf = this%ktf(n)
+        s = this%rbthcnd(n)
         ctherm = ktf * wa / s
         !
         ! -- add to sfe row
@@ -410,8 +410,8 @@ contains
         ! -- add to gwe row for sfe connection
         ipossymd = this%idxsymdglo(j)
         ipossymoffd = this%idxsymoffdglo(j)
-        call matrix_sln%add_value_pos(ipossymd, ctherm)
-        call matrix_sln%add_value_pos(ipossymoffd, -ctherm)
+        call matrix_sln%add_value_pos(ipossymd, -ctherm)
+        call matrix_sln%add_value_pos(ipossymoffd, ctherm)
       end if
     end do
     !
@@ -502,8 +502,11 @@ contains
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    ! -- Number of budget terms is 6
-    nbudterms = 6
+    ! -- Number of budget terms is 7
+    !    1) rainfall; 2) evap; 3) runoff; 4) ext-inflow; 5) withdrawl; 
+    !    6) ext-outflow; 7) lakebed-cond
+    !
+    nbudterms = 7
     !
     ! -- Return
     return
@@ -645,6 +648,7 @@ contains
     integer(I4B) :: j, n1, n2
     integer(I4B) :: nlist
     integer(I4B) :: igwfnode
+    integer(I4B) :: idiag
     integer(I4B) :: auxpos
     real(DP) :: q
     real(DP) :: ctherm !< thermal conductance
@@ -724,14 +728,20 @@ contains
         igwfnode = this%flowbudptr%budterm(this%idxbudlbcd)%id2(j)
         auxpos = this%flowbudptr%budterm(this%idxbudgwf)%naux  ! for now there is only 1 aux variable under 'GWF'
         wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos,j) 
-        ktf = this%ktf(j)
-        s = this%rbthcnd(j)
+        ktf = this%ktf(n1)
+        s = this%rbthcnd(n1)
         ctherm = ktf * wa / s   
         q = ctherm * (x(igwfnode) - this%xnewpak(n1))    ! kluge note: check that sign is correct
         !q = -q ! flip sign so relative to advanced package feature
       end if
       call this%budobj%budterm(idx)%update_term(n1, igwfnode, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
+      if (this%iboundpak(n1) /= 0) then
+        ! -- contribution to gwe cell budget
+        this%simvals(n1) = this%simvals(n1) - q
+        idiag = this%dis%con%ia(igwfnode)
+        flowja(idiag) = flowja(idiag) - q
+      end if
     end do
     !
     ! -- return
@@ -1103,8 +1113,8 @@ contains
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
     ! -- Store obs type and assign procedure pointer
-    !    for observation type: lkt
-    call this%obs%StoreObsType('lkt', .true., indx)
+    !    for observation type: lke
+    call this%obs%StoreObsType('lke', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID12
     !
     ! -- Store obs type and assign procedure pointer

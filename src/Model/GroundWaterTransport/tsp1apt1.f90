@@ -3018,7 +3018,7 @@ contains
               ' must be assigned to a feature with a unique boundname.'
             call store_error(errmsg)
           end if
-        case ('LKT', 'SFT', 'MWT', 'UZT', 'UZE')
+        case ('LKT', 'SFT', 'MWT', 'UZT', 'UZE', 'LKE', 'SFE')
           call this%rp_obs_budterm(obsrv, &
                                    this%flowbudptr%budterm(this%idxbudgwf))
         case ('FLOW-JA-FACE')
@@ -3103,7 +3103,7 @@ contains
             if (this%iboundpak(jj) /= 0) then
               v = this%xnewpak(jj)
             end if
-          case ('LKT', 'SFT', 'MWT', 'UZT', 'UZE')
+          case ('LKT', 'SFT', 'MWT', 'UZT', 'LKE', 'SFE', 'MWE', 'UZE')
             n = this%flowbudptr%budterm(this%idxbudgwf)%id1(jj)
             if (this%iboundpak(n) /= 0) then
               igwfnode = this%flowbudptr%budterm(this%idxbudgwf)%id2(jj)

@@ -384,8 +384,8 @@ contains
         ! -- set acoef and rhs to negative so they are relative to sfe and not gwe
         auxpos = this%flowbudptr%budterm(this%idxbudgwf)%naux
         wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos,j) 
-        ktf = this%ktf(j)
-        s = this%rbthcnd(j)
+        ktf = this%ktf(n)
+        s = this%rbthcnd(n)
         ctherm = ktf * wa / s
         !
         ! -- add to sfe row
@@ -679,8 +679,8 @@ contains
         igwfnode = this%flowbudptr%budterm(this%idxbudsbcd)%id2(j)
         auxpos = this%flowbudptr%budterm(this%idxbudgwf)%naux  ! for now there is only 1 aux variable under 'GWF'
         wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos,j) 
-        ktf = this%ktf(j)
-        s = this%rbthcnd(j)
+        ktf = this%ktf(n1)
+        s = this%rbthcnd(n1)
         ctherm = ktf * wa / s   
         q = ctherm * (x(igwfnode) - this%xnewpak(n1))    ! kluge note: check that sign is correct
         !q = -q ! flip sign so relative to advanced package feature
