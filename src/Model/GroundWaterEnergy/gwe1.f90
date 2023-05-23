@@ -1087,7 +1087,7 @@ contains
     use GweSrcModule, only: src_create
     use GweLkeModule, only: lke_create
     use GweSfeModule, only: sfe_create
-!    use GweMwtModule, only: mwt_create
+    use GweMweModule, only: mwe_create
     use GweUzeModule, only: uze_create
 !    use ApiModule, only: api_create
     ! -- dummy
@@ -1113,21 +1113,22 @@ contains
     case ('SRC6')
       call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, this%tsplab, this%gwecommon)
-    case('LKE6')
+    case ('LKE6')
       call lke_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, this%fmi, this%tsplab, this%eqnsclfac, &
-                        this%gwecommon)
+                      this%gwecommon)
     case ('SFE6')
       call sfe_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                        pakname, this%fmi, this%tsplab, this%eqnsclfac, &
-                        this%gwecommon)
-      !case('MWT6')
-      !  call mwt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-      !                  pakname, this%fmi)
+                      pakname, this%fmi, this%tsplab, this%eqnsclfac, &
+                      this%gwecommon)
+    case ('MWE6')
+      call mwe_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname, this%fmi, this%tsplab, this%eqnsclfac, &
+                      this%gwecommon)
     case ('UZE6')
       call uze_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                        pakname, this%fmi, this%tsplab, this%eqnsclfac, &
-                        this%gwecommon)
+                      pakname, this%fmi, this%tsplab, this%eqnsclfac, &
+                      this%gwecommon)
       !case('IST6')
       !  call ist_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
       !                  pakname, this%fmi, this%mst)

@@ -133,6 +133,7 @@
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1lke1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1mst1.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1mwe1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1sfe1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1src1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterEnergy\gwe1uze1.f90"/></Filter>
