@@ -259,7 +259,7 @@ description REPLACE obs6_filename {'{#1}': 'SFT'}
 
 block packagedata
 name packagedata
-type recarray rno strt aux boundname
+type recarray rno strt ktf rbthcnd aux boundname
 shape (maxbound)
 reader urword
 longname
@@ -285,6 +285,26 @@ in_record true
 reader urword
 longname starting reach temperature
 description real value that defines the starting temperature for the reach.
+
+block packagedata
+name ktf
+type double precision
+shape
+tagged false
+in_record true
+reader urword
+longname boundary thermal conductivity
+description is the thermal conductivity of the of the interface between the aquifer cell and the stream reach.  
+
+block packagedata
+name rbthcnd
+type double precision
+shape
+tagged false
+in_record true
+reader urword
+longname streambed thickness
+description real value that defines the thickness of the streambed material through which conduction occurs.  Must be greater than 0.
 
 block packagedata
 name aux

@@ -38,16 +38,6 @@ longname
 description REPLACE boundnames {'{#1}': 'lake'}
 
 block options
-name latentheatvapor
-type double precision
-reader urword
-optional true
-longname latent heat of vaporation of water
-description latent heat of vaporization of water. For freshwater at 25$^{\circ}C$, the latent heat of vaporization is approximately 2,450.0 kJ/kg in SI units.  Between 0 and 100$^{\circ}C$, latent heat of vaporization may vary by as much as 10 percent, but is held constant in the initial release of the GWE model.  By default, the latent heat of vaporization is 2,450.0 kJ/kg.
-default_value 2545 
-
-
-block options
 name print_input
 type keyword
 reader urword
@@ -269,7 +259,7 @@ description REPLACE obs6_filename {'{#1}': 'LKE'}
 
 block packagedata
 name packagedata
-type recarray lakeno strt aux boundname
+type recarray lakeno strt ktf rbthcnd aux boundname
 shape (maxbound)
 reader urword
 longname
@@ -295,6 +285,26 @@ in_record true
 reader urword
 longname starting lake temperature
 description real value that defines the starting temperature for the lake.
+
+block packagedata
+name ktf
+type double precision
+shape
+tagged false
+in_record true
+reader urword
+longname boundary thermal conductivity
+description is the thermal conductivity of the of the interface between the aquifer cell and the lake.  
+
+block packagedata
+name rbthcnd
+type double precision
+shape
+tagged false
+in_record true
+reader urword
+longname streambed thickness
+description real value that defines the thickness of the lakebed material through which conduction occurs.  Must be greater than 0.
 
 block packagedata
 name aux
@@ -395,6 +405,18 @@ reader urword
 time_series true
 longname rainfall temperature
 description real or character value that defines the rainfall temperature for the lake. If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
+
+block period
+name evaporation
+type string
+shape
+tagged true
+in_record true
+reader urword
+time_series true
+longname evaporation temperature
+description real or character value that defines the temperature of evaporated water $(^{\circ}C)$ for the reach. If this temperature value is larger than the simulated temperature in the reach, then the evaporated water will be removed at the same temperature as the reach.  If the Options block includes a TIMESERIESFILE entry (see the ``Time-Variable Input'' section), values can be obtained from a time series by entering the time-series name in place of a numeric value.
+
 
 block period
 name runoff
