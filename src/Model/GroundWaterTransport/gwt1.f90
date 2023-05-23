@@ -101,6 +101,7 @@ contains
     use SimVariablesModule, only: idm_context
     use GwfNamInputModule, only: GwfNamParamFoundType
     use BudgetModule, only: budget_cr
+    use TspLabelsModule, only: tsplabels_cr
     !use TspLabelsModule, only: tsplabels_cr
     !use SimModule, only: store_error, count_errors
     !use NameFileModule, only: NameFileType
@@ -1121,7 +1122,7 @@ contains
                       pakname, this%fmi, this%tsplab, this%eqnsclfac)
     case ('MWT6')
       call mwt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                      pakname, this%fmi)
+                      pakname, this%fmi, this%tsplab, this%eqnsclfac)
     case ('UZT6')
       call uzt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, this%fmi)
