@@ -28,10 +28,11 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Setup Micromamba
-        uses: mamba-org/provision-with-micromamba@main
+        uses: mamba-org/setup-micromamba@v1
         with:
+          environment-file: environment.yml
+          cache-environment: true
           cache-downloads: true
-          cache-env: true
 
       - name: Check Fortran source formatting
         run: python .github/common/fortran_format_check.py
@@ -57,10 +58,11 @@ jobs:
           version: ${{ env.GCC_V }}
 
       - name: Setup Micromamba
-        uses: mamba-org/provision-with-micromamba@main
+        uses: mamba-org/setup-micromamba@v1
         with:
+          environment-file: environment.yml
+          cache-environment: true
           cache-downloads: true
-          cache-env: true
 
       - name: Meson setup
         run: meson setup builddir -Ddebug=false -Dwerror=true
@@ -93,11 +95,11 @@ jobs:
           version: ${{ env.GCC_V }}
 
       - name: Setup Micromamba
-        uses: mamba-org/provision-with-micromamba@main
+        uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: modflow6/environment.yml
+          cache-environment: true
           cache-downloads: true
-          cache-env: true
 
       - name: Build modflow6
         working-directory: modflow6
@@ -161,11 +163,14 @@ jobs:
           version: ${{ env.GCC_V }}
 
       - name: Setup Micromamba
-        uses: mamba-org/provision-with-micromamba@main
+        uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: modflow6/environment.yml
+          init-shell: >-
+            bash
+            powershell
+          cache-environment: true
           cache-downloads: true
-          cache-env: true
 
       - name: Build modflow6
         working-directory: modflow6
@@ -238,11 +243,11 @@ jobs:
           version: ${{ matrix.GCC_V }}
 
       - name: Setup Micromamba
-        uses: mamba-org/provision-with-micromamba@main
+        uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: modflow6/environment.yml
           cache-downloads: true
-          cache-env: true
+          cache-environment: true
 
       - name: Update flopy
         working-directory: modflow6/autotest
@@ -300,11 +305,14 @@ jobs:
           path: modflow6-testmodels
 
       - name: Setup Micromamba
-        uses: mamba-org/provision-with-micromamba@main
+        uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: modflow6/environment.yml
+          init-shell: >-
+            bash
+            powershell
+          cache-environment: true
           cache-downloads: true
-          cache-env: true
 
       - name: Setup Intel Fortran
         uses: modflowpy/install-intelfortran-action@v1
@@ -504,11 +512,14 @@ jobs:
           make all
 
       - name: Setup Micromamba
-        uses: mamba-org/provision-with-micromamba@main
+        uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: modflow6/environment.yml
+          init-shell: >-
+            bash
+            powershell
+          cache-environment: true
           cache-downloads: true
-          cache-env: true
 
       - name: Build modflow6
         working-directory: modflow6
@@ -537,9 +548,8 @@ jobs:
         env:
           REPOS_PATH: ${{ github.workspace }}
         run: |
-          if [ "${{ github.ref_name }}" == "master" ]; then
-            pytest -v -n auto --parallel --durations 0 -m "not large and not developmode"
-          else
-            pytest -v -n auto --parallel --durations 0 -m "not large"
-          fi
+          branch="${{ github.ref_name }}"
+          marker="not large"
+          markers=$([ "$branch" == "master" ] && echo "$marker and not developmode" || echo "$marker")
+          pytest -v -n auto --parallel --durations 0 -m "$markers"
           
