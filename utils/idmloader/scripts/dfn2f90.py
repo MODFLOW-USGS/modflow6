@@ -244,13 +244,45 @@ class Dfn2F90:
             self._set_blk_param_strs(b, self.component, self.subcomponent)
 
         if not self._param_str:
-            self._param_str += "    InputParamDefinitionType ::, &"
+            self._param_str += "    InputParamDefinitionType &\n"
+            self._param_str += "    ( &\n"
+            self._param_str += "    '', & ! component\n"
+            self._param_str += "    '', & ! subcomponent\n"
+            self._param_str += "    '', & ! block\n"
+            self._param_str += "    '', & ! tag name\n"
+            self._param_str += "    '', & ! fortran variable\n"
+            self._param_str += "    '', & ! type\n"
+            self._param_str += "    '', & ! shape\n"
+            self._param_str += "    .false., & ! required\n"
+            self._param_str += "    .false., & ! multi-record\n"
+            self._param_str += "    .false., & ! preserve case\n"
+            self._param_str += "    .false. & ! layered\n"
+            self._param_str += "    ), &\n"
 
         if not self._aggregate_str:
-            self._aggregate_str += "    InputParamDefinitionType ::, &"
+            self._aggregate_str += "    InputParamDefinitionType &\n"
+            self._aggregate_str += "    ( &\n"
+            self._aggregate_str += "    '', & ! component\n"
+            self._aggregate_str += "    '', & ! subcomponent\n"
+            self._aggregate_str += "    '', & ! block\n"
+            self._aggregate_str += "    '', & ! tag name\n"
+            self._aggregate_str += "    '', & ! fortran variable\n"
+            self._aggregate_str += "    '', & ! type\n"
+            self._aggregate_str += "    '', & ! shape\n"
+            self._aggregate_str += "    .false., & ! required\n"
+            self._aggregate_str += "    .false., & ! multi-record\n"
+            self._aggregate_str += "    .false., & ! preserve case\n"
+            self._aggregate_str += "    .false. & ! layered\n"
+            self._aggregate_str += "    ), &\n"
 
         if not self._block_str:
-            self._aggregate_str += "    InputBlockDefinitionType ::, &"
+            self._block_str += "    InputBlockDefinitionType &\n"
+            self._block_str += "    ( &\n"
+            self._block_str += "    '', & ! blockname\n"
+            self._block_str += "    .false., & ! required\n"
+            self._block_str += "    .false., & ! aggregate\n"
+            self._block_str += "    .false. & ! block_varaible\n"
+            self._block_str += "    ), &\n"
 
     def _set_blk_param_strs(self, blockname, component, subcomponent):
         print("  processing block params => ", blockname)
