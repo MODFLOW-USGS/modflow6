@@ -652,7 +652,7 @@ contains
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
       if (this%iboundpak(n1) /= 0) then 
         ! -- contribution to gwe cell budget
-        this%simvals(n1) = this%simvals(n1) - q
+        this%simvals(j) = this%simvals(j) - q
         idiag = this%dis%con%ia(igwfnode)
         flowja(idiag) = flowja(idiag) - q
       end if
