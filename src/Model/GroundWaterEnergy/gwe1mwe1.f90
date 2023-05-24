@@ -156,13 +156,9 @@ contains
     return
   end subroutine mwe_create
 
+  !> @brief find corresponding mwe package
+  !<
   subroutine find_mwe_package(this)
-! ******************************************************************************
-! find corresponding mwe package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -273,18 +269,19 @@ contains
     end do
     write (this%iout, '(a, //)') 'DONE PROCESSING '//ftype//' INFORMATION'
     !
+    ! -- streambed conduction term
+    this%idxbudmwcd = this%idxbudgwf
+    !
     ! -- Return
     return
   end subroutine find_mwe_package
 
+  !> @brief Add matrix terms related to MWE
+    !!
+    !! This routine is called from TspAptType%apt_fc_expanded() in
+    !! order to add matrix terms specifically for MWE
+  !<
   subroutine mwe_fc_expanded(this, rhs, ia, idxglo, matrix_sln)
-! ******************************************************************************
-! mwe_fc_expanded -- this will be called from TspAptType%apt_fc_expanded()
-!   in order to add matrix terms specifically for this package
-! ****************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GweMweType) :: this
@@ -293,12 +290,18 @@ contains
     integer(I4B), dimension(:), intent(in) :: idxglo
     class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
-    integer(I4B) :: j, n1, n2
+    integer(I4B) :: j, n, n1, n2
     integer(I4B) :: iloc
-    integer(I4B) :: iposd
+    integer(I4B) :: iposd, iposoffd
+    integer(I4B) :: ipossymd, ipossymoffd
+    integer(I4B) :: auxpos
     real(DP) :: rrate
     real(DP) :: rhsval
     real(DP) :: hcofval
+    real(DP) :: ctherm    ! kluge?
+    real(DP) :: wa !< wetted area
+    real(DP) :: ktf !< thermal conductivity of streambed material 
+    real(DP) :: s !< thickness of conductive wellbore material
 ! ------------------------------------------------------------------------------
     !
     ! -- add puping rate contribution
@@ -344,6 +347,34 @@ contains
         rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
+    !
+    ! -- add wellbore conduction contribution
+    do j = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
+      !
+      ! -- set n to feature number and process if active features
+      n = this%flowbudptr%budterm(this%idxbudgwf)%id1(j)
+      if (this%iboundpak(n) /= 0) then
+        !
+        ! -- set acoef and rhs to negative so they are relative to mwe and not gwe
+        auxpos = this%flowbudptr%budterm(this%idxbudgwf)%naux
+        wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos,j) 
+        ktf = this%ktf(n)
+        s = this%rfeatthk(n)
+        ctherm = ktf * wa / s
+        !
+        ! -- add to mwe row
+        iposd = this%idxdglo(j)
+        iposoffd = this%idxoffdglo(j)
+        call matrix_sln%add_value_pos(iposd, -ctherm)       ! kluge note: make sure the signs on ctherm are correct here and below
+        call matrix_sln%add_value_pos(iposoffd, ctherm)
+        !
+        ! -- add to gwe row for mwe connection
+        ipossymd = this%idxsymdglo(j)
+        ipossymoffd = this%idxsymoffdglo(j)
+        call matrix_sln%add_value_pos(ipossymd, -ctherm)
+        call matrix_sln%add_value_pos(ipossymoffd, ctherm)
+      end if
+    end do
     !
     ! -- Return
     return
@@ -417,11 +448,12 @@ contains
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    ! -- Number of budget terms is 4
-    nbudterms = 1
+    ! -- Number of potential budget terms is 5
+    nbudterms = 1  ! RATE
     if (this%idxbudfwrt /= 0) nbudterms = nbudterms + 1
     if (this%idxbudrtmv /= 0) nbudterms = nbudterms + 1
     if (this%idxbudfrtm /= 0) nbudterms = nbudterms + 1
+    if (this%idxbudmwcd /= 0) nbudterms = nbudterms + 1
     !
     ! -- Return
     return
@@ -441,11 +473,13 @@ contains
     class(GweMweType) :: this
     integer(I4B), intent(inout) :: idx
     ! -- local
+    integer(I4B) :: n, n1, n2
     integer(I4B) :: maxlist, naux
+    real(DP) :: q
     character(len=LENBUDTXT) :: text
 ! ------------------------------------------------------------------------------
     !
-    ! --
+    ! -- user-specified rate
     text = '            RATE'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudrate)%maxlist
@@ -457,9 +491,8 @@ contains
                                              this%packName, &
                                              maxlist, .false., .false., &
                                              naux)
-
     !
-    ! --
+    ! -- flowing well rate
     if (this%idxbudfwrt /= 0) then
       text = '         FW-RATE'
       idx = idx + 1
@@ -473,9 +506,8 @@ contains
                                                maxlist, .false., .false., &
                                                naux)
     end if
-
     !
-    ! --
+    ! -- user-specified flow rate to mover
     if (this%idxbudrtmv /= 0) then
       text = '     RATE-TO-MVR'
       idx = idx + 1
@@ -489,9 +521,8 @@ contains
                                                maxlist, .false., .false., &
                                                naux)
     end if
-
     !
-    ! --
+    ! -- flowing well rate to mover
     if (this%idxbudfrtm /= 0) then
       text = '  FW-RATE-TO-MVR'
       idx = idx + 1
@@ -505,19 +536,34 @@ contains
                                                maxlist, .false., .false., &
                                                naux)
     end if
-
+    !
+    ! -- conduction through wellbore (and/or filter pack)
+    text = '   WELLBORE-COND'
+    idx = idx + 1
+    maxlist = this%flowbudptr%budterm(this%idxbudmwcd)%maxlist
+    naux = 0
+    call this%budobj%budterm(idx)%initialize(text, &
+                                             this%name_model, &
+                                             this%packName, &
+                                             this%name_model, &
+                                             this%packName, &
+                                             maxlist, .false., .false., &
+                                             naux)
+    call this%budobj%budterm(idx)%reset(maxlist)
+    q = DZERO
+    do n = 1, maxlist
+      n1 = this%flowbudptr%budterm(this%idxbudgwf)%id1(n)
+      n2 = this%flowbudptr%budterm(this%idxbudgwf)%id2(n)
+      call this%budobj%budterm(idx)%update_term(n1, n2, q)
+    end do
     !
     ! -- return
     return
   end subroutine mwe_setup_budobj
 
+  !> @brief Copy flow terms into this%budobj
+  !<
   subroutine mwe_fill_budobj(this, idx, x, flowja, ccratin, ccratout)
-! ******************************************************************************
-! mwe_fill_budobj -- copy flow terms into this%budobj
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GweMweType) :: this
@@ -529,10 +575,17 @@ contains
     ! -- local
     integer(I4B) :: j, n1, n2
     integer(I4B) :: nlist
+    integer(I4B) :: igwfnode
+    integer(I4B) :: idiag
+    integer(I4B) :: auxpos
     real(DP) :: q
+    real(DP) :: ctherm
+    real(DP) :: wa !< wetted area
+    real(DP) :: ktf !< thermal conductivity of streambed material 
+    real(DP) :: s !< thickness of conductive streambed materia
     ! -- formats
 ! -----------------------------------------------------------------------------
-
+    !
     ! -- RATE
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudrate)%nlist
@@ -542,7 +595,7 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-
+    !
     ! -- FW-RATE
     if (this%idxbudfwrt /= 0) then
       idx = idx + 1
@@ -554,7 +607,7 @@ contains
         call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
       end do
     end if
-
+    !
     ! -- RATE-TO-MVR
     if (this%idxbudrtmv /= 0) then
       idx = idx + 1
@@ -566,7 +619,7 @@ contains
         call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
       end do
     end if
-
+    !
     ! -- FW-RATE-TO-MVR
     if (this%idxbudfrtm /= 0) then
       idx = idx + 1
@@ -578,7 +631,32 @@ contains
         call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
       end do
     end if
-
+    !
+    ! -- WELLBORE-COND
+    idx = idx + 1
+    call this%budobj%budterm(idx)%reset(this%maxbound)
+    do j = 1, this%flowbudptr%budterm(this%idxbudmwcd)%nlist
+      q = DZERO
+      n1 = this%flowbudptr%budterm(this%idxbudmwcd)%id1(j)
+      if (this%iboundpak(n1) /= 0) then
+        igwfnode = this%flowbudptr%budterm(this%idxbudmwcd)%id2(j)
+        auxpos = this%flowbudptr%budterm(this%idxbudgwf)%naux  ! for now there is only 1 aux variable under 'GWF'
+        wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos,j) 
+        ktf = this%ktf(n1)
+        s = this%rfeatthk(n1)
+        ctherm = ktf * wa / s   
+        q = ctherm * (x(igwfnode) - this%xnewpak(n1))    ! kluge note: check that sign is correct
+        !q = -q ! flip sign so relative to advanced package feature
+      end if
+      call this%budobj%budterm(idx)%update_term(n1, igwfnode, q)
+      call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
+      if (this%iboundpak(n1) /= 0) then 
+        ! -- contribution to gwe cell budget
+        this%simvals(n1) = this%simvals(n1) - q
+        idiag = this%dis%con%ia(igwfnode)
+        flowja(idiag) = flowja(idiag) - q
+      end if
+    end do
     !
     ! -- return
     return
@@ -606,12 +684,14 @@ contains
     call mem_allocate(this%idxbudfwrt, 'IDXBUDFWRT', this%memoryPath)
     call mem_allocate(this%idxbudrtmv, 'IDXBUDRTMV', this%memoryPath)
     call mem_allocate(this%idxbudfrtm, 'IDXBUDFRTM', this%memoryPath)
+    call mem_allocate(this%idxbudmwcd, 'IDXBUDMWCD', this%memoryPath)
     !
     ! -- Initialize
     this%idxbudrate = 0
     this%idxbudfwrt = 0
     this%idxbudrtmv = 0
     this%idxbudfrtm = 0
+    this%idxbudmwcd = 0
     !
     ! -- Return
     return
@@ -648,13 +728,9 @@ contains
     return
   end subroutine mwe_allocate_arrays
 
+  !> @brief Deallocate memory associated with MWE package
+  !<
   subroutine mwe_da(this)
-! ******************************************************************************
-! mwe_da
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
@@ -667,6 +743,7 @@ contains
     call mem_deallocate(this%idxbudfwrt)
     call mem_deallocate(this%idxbudrtmv)
     call mem_deallocate(this%idxbudfrtm)
+    call mem_deallocate(this%idxbudmwcd)
     !
     ! -- deallocate time series
     call mem_deallocate(this%temprate)
@@ -678,14 +755,11 @@ contains
     return
   end subroutine mwe_da
 
+  !> @brief Thermal transport matrix term(s) associcated with a user-specified 
+  !! flow rate (mwe_rate_term)
+  !<
   subroutine mwe_rate_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! mwe_rate_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GweMweType) :: this
     integer(I4B), intent(in) :: ientry
@@ -701,7 +775,7 @@ contains
 ! ------------------------------------------------------------------------------
     n1 = this%flowbudptr%budterm(this%idxbudrate)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudrate)%id2(ientry)
-    ! -- note that qbnd is negative for extracting well
+    ! -- note that qbnd is negative for an extracting well
     qbnd = this%flowbudptr%budterm(this%idxbudrate)%flow(ientry)
     if (qbnd < DZERO) then
       ctmp = this%xnewpak(n1)
@@ -712,22 +786,19 @@ contains
       h = DZERO
       r = -qbnd * ctmp
     end if
-    if (present(rrate)) rrate = qbnd * ctmp
-    if (present(rhsval)) rhsval = r
-    if (present(hcofval)) hcofval = h
+    if (present(rrate)) rrate = qbnd * ctmp * this%eqnsclfac
+    if (present(rhsval)) rhsval = r * this%eqnsclfac
+    if (present(hcofval)) hcofval = h * this%eqnsclfac
     !
     ! -- return
     return
   end subroutine mwe_rate_term
 
+  !> @brief Thermal transport matrix term(s) associcated with a flowing- 
+  !! well rater term (mwe_fwrt_term)
+  !<
   subroutine mwe_fwrt_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! mwe_fwrt_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GweMweType) :: this
     integer(I4B), intent(in) :: ientry
@@ -744,22 +815,19 @@ contains
     n2 = this%flowbudptr%budterm(this%idxbudfwrt)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudfwrt)%flow(ientry)
     ctmp = this%xnewpak(n1)
-    if (present(rrate)) rrate = ctmp * qbnd
+    if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = DZERO
-    if (present(hcofval)) hcofval = qbnd
+    if (present(hcofval)) hcofval = qbnd * this%eqnsclfac
     !
     ! -- return
     return
   end subroutine mwe_fwrt_term
 
+  !> @brief Thermal transport matrix term(s) associcated with pumped-water-
+  !! to-mover term (mwe_rtmv_term)
+  !<
   subroutine mwe_rtmv_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! mwe_rtmv_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GweMweType) :: this
     integer(I4B), intent(in) :: ientry
@@ -776,22 +844,19 @@ contains
     n2 = this%flowbudptr%budterm(this%idxbudrtmv)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudrtmv)%flow(ientry)
     ctmp = this%xnewpak(n1)
-    if (present(rrate)) rrate = ctmp * qbnd
+    if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = DZERO
-    if (present(hcofval)) hcofval = qbnd
+    if (present(hcofval)) hcofval = qbnd * this%eqnsclfac
     !
     ! -- return
     return
   end subroutine mwe_rtmv_term
 
+  !> @brief Thermal transport matrix term(s) associcated with the flowing-
+  !! well-rate-to-mover term (mwe_frtm_term)
+  !<
   subroutine mwe_frtm_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! mwe_frtm_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GweMweType) :: this
     integer(I4B), intent(in) :: ientry
@@ -808,9 +873,9 @@ contains
     n2 = this%flowbudptr%budterm(this%idxbudfrtm)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudfrtm)%flow(ientry)
     ctmp = this%xnewpak(n1)
-    if (present(rrate)) rrate = ctmp * qbnd
+    if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = DZERO
-    if (present(hcofval)) hcofval = qbnd
+    if (present(hcofval)) hcofval = qbnd * this%eqnsclfac
     !
     ! -- return
     return
