@@ -630,7 +630,7 @@ contains
     else if (index(mem_type, "INTEGER") /= 0) then
       bmi_status = get_value_ptr_int(c_var_address, c_arr_ptr)
     else
-      write (bmi_last_error, fmt_unsupported_rank) trim(var_name)
+      write (bmi_last_error, fmt_unsupported_type) trim(var_name)
       call report_bmi_error(bmi_last_error)
       bmi_status = BMI_FAILURE
       return
