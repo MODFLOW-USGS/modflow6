@@ -55,7 +55,7 @@ contains
     character(len=*), intent(in) :: mempath !< variable memory path
     integer(I4B) :: iout
 
-    write (iout, '(3x,a, " = ", l)') trim(varname), p_mem
+    write (iout, '(3x,a, " = ", l1)') trim(varname), p_mem
   end subroutine idm_log_var_logical
 
   !> @brief Log type specific information integer
