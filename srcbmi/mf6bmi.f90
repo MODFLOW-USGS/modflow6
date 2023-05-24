@@ -593,7 +593,6 @@ contains
 
   end function get_value_string
 
-
   !> @brief Copy the value of a variable into the array
   !!
   !! The copied variable is located at @p c_var_address. The caller should
@@ -796,7 +795,6 @@ contains
 
   end function get_value_ptr_int
 
-  
   !> @brief Set new values for a given variable
   !!
   !! The array pointed to by @p c_arr_ptr can have rank equal to 0, 1, or 2
@@ -840,7 +838,6 @@ contains
     end if
 
   end function set_value
-
 
   !> @brief Set new values for a variable of type double
   !!
