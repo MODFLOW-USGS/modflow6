@@ -94,16 +94,12 @@ module GweSfeModule
 
   end type GweSfeType
 
-contains
+    contains
 
+  !> @brief Create a new sfe package
+  !<
   subroutine sfe_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         fmi, tsplab, eqnsclfac, gwecommon)
-! ******************************************************************************
-! sfe_create -- Create a New SFE Package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
@@ -241,7 +237,6 @@ contains
         this%idxbudssm(ip) = 0
       case ('GWF')
         this%idxbudgwf = ip
-!!        this%idxbudsbcd = ip
         this%idxbudssm(ip) = 0
       case ('STORAGE')
         this%idxbudsto = ip
@@ -305,7 +300,7 @@ contains
     integer(I4B), dimension(:), intent(in) :: idxglo
     class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
-    integer(I4B) :: j, n1, n2, n
+    integer(I4B) :: j, n, n1, n2
     integer(I4B) :: iloc
     integer(I4B) :: iposd, iposoffd
     integer(I4B) :: ipossymd, ipossymoffd
@@ -385,7 +380,7 @@ contains
         auxpos = this%flowbudptr%budterm(this%idxbudgwf)%naux
         wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos,j) 
         ktf = this%ktf(n)
-        s = this%rbthcnd(n)
+        s = this%rfeatthk(n)
         ctherm = ktf * wa / s
         !
         ! -- add to sfe row
@@ -618,7 +613,7 @@ contains
     real(DP) :: s !< thickness of conductive streambed materia
     ! -- formats
 ! -----------------------------------------------------------------------------
-
+    !
     ! -- RAIN
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudrain)%nlist
@@ -628,7 +623,7 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-
+    !
     ! -- EVAPORATION
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudevap)%nlist
@@ -638,7 +633,7 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-
+    !
     ! -- RUNOFF
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudroff)%nlist
@@ -648,7 +643,7 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-
+    !
     ! -- EXT-INFLOW
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudiflw)%nlist
@@ -658,7 +653,7 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-
+    !
     ! -- EXT-OUTFLOW
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudoutf)%nlist
@@ -668,7 +663,7 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-
+    !
     ! -- STRMBD-COND
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%maxbound)
@@ -680,7 +675,7 @@ contains
         auxpos = this%flowbudptr%budterm(this%idxbudgwf)%naux  ! for now there is only 1 aux variable under 'GWF'
         wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos,j) 
         ktf = this%ktf(n1)
-        s = this%rbthcnd(n1)
+        s = this%rfeatthk(n1)
         ctherm = ktf * wa / s   
         q = ctherm * (x(igwfnode) - this%xnewpak(n1))    ! kluge note: check that sign is correct
         !q = -q ! flip sign so relative to advanced package feature
@@ -694,7 +689,6 @@ contains
         flowja(idiag) = flowja(idiag) - q
       end if
     end do
-
     !
     ! -- return
     return
