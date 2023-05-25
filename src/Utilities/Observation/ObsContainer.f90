@@ -1,9 +1,10 @@
-! This module defines derived type ObsContainerType:
-!
-! ObsContainerType -- contains a pointer to an object of type
-! ObserveType.  Its purpose is to allow ObserveType objects to be
-! stored in an array.
-!-----------------------------------------------------------------------
+!> @brief This module contains the derived type ObsContainerType
+!!
+!! This module contains the derived type ObsContainerType, which
+!! contains a pointer to an object of type ObserveType.  Its purpose is
+!! to allow ObserveType objects to be stored in an array.
+!!
+!<
 module ObsContainerModule
 
   use KindModule, only: DP, I4B
