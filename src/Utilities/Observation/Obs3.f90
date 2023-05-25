@@ -12,7 +12,6 @@
 !! NumericalExchangeType or any other type that has DF, AR, RP, AD, BD, and OT
 !! routines.
 !!
-!! ------------------------------------------------------------------------------
 !! IMPLEMENTATION OF OBSERVATIONS IN A MODEL OR PACKAGE
 !!
 !! For simple boundary packages like RIV and DRN, only steps 1-6 are
@@ -202,7 +201,7 @@ module ObsModule
     procedure, private :: get_obs_datum
     procedure, private :: obs_ar1
     procedure, private :: obs_ar2
-    procedure, private :: populate_obs_array
+    procedure, private :: set_obs_array
     procedure, private :: read_observations
     procedure, private :: read_obs_blocks
     procedure, private :: read_obs_options
@@ -414,7 +413,7 @@ contains
     deallocate (this%inputFilename)
     deallocate (this%obsData)
     !
-    ! -- obs table object
+    ! -- observation table object
     if (associated(this%obstab)) then
       call this%obstab%table_da()
       deallocate (this%obstab)
@@ -475,6 +474,7 @@ contains
       obsrv%CurrentTimeStepEndValue = simval
     end if
     !
+    ! -- return
     return
   end subroutine SaveOneSimval
 
@@ -603,7 +603,7 @@ contains
     class(ObserveType), pointer :: obsrv => null()
     !
     call this%read_observations()
-    ! -- allocate and populate observations array
+    ! -- allocate and set observation array
     call this%get_obs_array(this%npakobs, this%pakobs)
     !
     do i = 1, this%npakobs
@@ -650,7 +650,6 @@ contains
 40  format('Text output number of digits of precision set to: ', i2)
 50  format('Text output number of digits set to internal representation (G0).')
 60  format(/, 'Processing observation options:',/)
-! ------------------------------------------------------------------------------
     !
     localprecision = 0
     localdigits = -1
@@ -772,7 +771,6 @@ contains
     ! -- dummy
     class(ObsType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- Read CONTINUOUS blocks and store observations
     call this%read_obs_blocks(this%outputFilename)
@@ -895,9 +893,9 @@ contains
     if (associated(obsArray)) deallocate (obsArray)
     allocate (obsArray(nObs))
     !
-    ! Get observations
+    ! set observations in obsArray 
     if (nObs > 0) then
-      call this%populate_obs_array(nObs, obsArray)
+      call this%set_obs_array(nObs, obsArray)
     end if
     !
     ! -- return
@@ -941,7 +939,7 @@ contains
   !!  Subroutine to set values in an observation array.
   !!
   !<
-  subroutine populate_obs_array(this, nObs, obsArray)
+  subroutine set_obs_array(this, nObs, obsArray)
     ! -- dummy
     class(ObsType), intent(inout) :: this
     integer(I4B), intent(in) :: nObs !< number of observations
@@ -960,7 +958,7 @@ contains
     !
     ! -- return
     return
-  end subroutine populate_obs_array
+  end subroutine set_obs_array
 
   !> @ brief Get an ObserveType object
   !!
@@ -1168,9 +1166,6 @@ contains
         call write_unfmtd_obs(obsrv, iprec, this%obsOutputList, simval)
       end if
     end do
-    ! !
-    ! ! -- flush file
-    ! flush (obsrv%UnitNumber)
     !
     ! --return
     return

@@ -120,6 +120,8 @@ contains
     !
     ! -- Reset current value to zero.
     this%CurrentTimeStepEndValue = DZERO
+    !
+    ! -- return
     return
   end subroutine ResetCurrentValue
 
@@ -138,7 +140,6 @@ contains
     ! -- local
     character(len=12) :: tag
     character(len=80) :: fnameout
-    ! -- formats
     !
     ! -- write btagfound to tag
     if (len_trim(btagfound) > 12) then
@@ -303,6 +304,7 @@ contains
     newObservation%FormattedOutput = formatted
     newObservation%IndxObsOutput = indx
     !
+    ! -- return
     return
   end subroutine ConstructObservation
 

@@ -99,6 +99,8 @@ contains
         exit loop1
       end if
     end do loop1
+    !
+    ! -- return
     return
   end function ContainsFile
 
@@ -144,6 +146,7 @@ contains
       end if
     end do
     !
+    ! -- return
     return
   end subroutine WriteAllObsLineReturns
 
@@ -176,6 +179,7 @@ contains
     !
     call this%ObsOutputs%Clear()
     !
+    ! -- return
     return
   end subroutine Clear
 
@@ -199,6 +203,7 @@ contains
     !
     call this%ObsOutputs%Clear(.true.)
     !
+    ! -- return
     return
   end subroutine DeallocObsOutputList
 

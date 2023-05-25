@@ -42,9 +42,6 @@ contains
     character(len=20) :: ctotim
     character(len=50) :: cval
     type(ObsOutputType), pointer :: ObsOutput => null()
-    !---------------------------------------------------------------------------
-    ! -- format for totim
-10  format(G20.13)
     ! -- output unit
     nunit = obsrv%UnitNumber
     !
@@ -52,17 +49,19 @@ contains
     ObsOutput => obsOutputList%Get(indx)
     if (obsOutput%empty_line) then
       ObsOutput%empty_line = .FALSE.
-      write (ctotim, 10) totim
-      !write (nunit, '(a)', advance='NO') trim(adjustl(cval))
+      write (ctotim, '(G20.13)') totim
     else
       ctotim = ''
     end if
     ! -- append value to output line
     write (cval, fmtc) value
-    write (nunit, '(a,a,a)', advance='NO') &
+    write (nunit, '(3a)', advance='NO') &
       trim(adjustl(ctotim)), ',', trim(adjustl(cval))
     !
     ! -- flush the file
+    !    Added flush after each non-advancing write to resolve 
+    !    issue with ifort (IFORT) 19.1.0.166 20191121 for Linux
+    !    that occured on some Linux systems.
     flush (nunit)
     !
     ! -- return
@@ -92,7 +91,7 @@ contains
     real(real32) :: totimsngl, valsngl
     real(real64) :: totimdbl, valdbl
     type(ObsOutputType), pointer :: obsOutput => null()
-    !---------------------------------------------------------------------------
+    !
     ! -- output unit
     nunit = obsrv%UnitNumber
     ! -- continuous observation
