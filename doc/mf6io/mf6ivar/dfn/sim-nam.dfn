@@ -33,6 +33,14 @@ optional true
 longname maximum number of errors
 description maximum number of errors that will be stored and printed.
 
+block options
+name print_input_var
+type keyword
+reader urword
+optional true
+longname print input variables
+description keyword flag enabling the logging of variables read from input files to the simulation list file. Input variables found in mfsim.nam are excluded.
+
 # --------------------- sim nam timing ---------------------
 
 block timing

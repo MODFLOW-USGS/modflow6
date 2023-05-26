@@ -266,7 +266,7 @@ contains
     use IdmSimulationModule, only: simnam_load, load_models
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr, mem_allocate
-    use SimVariablesModule, only: idm_context
+    use SimVariablesModule, only: idm_context, iparamlog
     use SimulationCreateModule, only: create_load_mask
     ! -- dummy
     ! -- locals
@@ -275,7 +275,7 @@ contains
     integer(I4B), pointer :: nummodels => null()
     !
     ! -- load simnam input context
-    call simnam_load()
+    call simnam_load(iparamlog)
     !
     ! -- allocate model load mask
     input_mempath = create_mem_path(component='SIM', context=idm_context)
