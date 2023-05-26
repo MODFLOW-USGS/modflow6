@@ -893,7 +893,7 @@ contains
     if (associated(obsArray)) deallocate (obsArray)
     allocate (obsArray(nObs))
     !
-    ! set observations in obsArray 
+    ! set observations in obsArray
     if (nObs > 0) then
       call this%set_obs_array(nObs, obsArray)
     end if
