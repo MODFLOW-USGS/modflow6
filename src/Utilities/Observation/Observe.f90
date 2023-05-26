@@ -1,14 +1,17 @@
-! This module defines two derived types:
-!
-! ObserveType -- is designed to contain all information and
-!   functionality needed for one observation. ObserveType contains a
-!   pointer to an ObsDataType object.
-!
-! ObsDataType -- is for storing package ID, observation type, and a
-!   pointer to a subroutine that will be called to process the IDstring
-!   provided in Obs input.  The ProcessIdPtr member of ObsDataType
-!   requires a pointer to an ObserveType object.
-!-----------------------------------------------------------------------
+!> @brief This module contains the derived types ObserveType and ObsDataType
+!!
+!! This module contains the derived types ObserveType and ObsDataType.
+!!
+!! - ObserveType -- is designed to contain all information and
+!!   functionality needed for one observation. ObserveType contains a
+!!   pointer to an ObsDataType object.
+!!
+!! - ObsDataType -- is for storing package ID, observation type, and a
+!!   pointer to a subroutine that will be called to process the IDstring
+!!   provided in Obs input.  The ProcessIdPtr member of ObsDataType
+!!   requires a pointer to an ObserveType object.
+!!
+!<
 module ObserveModule
 
   use KindModule, only: DP, I4B
@@ -33,42 +36,42 @@ module ObserveModule
     ! -- Public members
     !
     ! -- For all observations
-    integer(I4B), public :: NodeNumber = 0
-    integer(I4B), public :: UnitNumber = 0
-    character(len=LENOBSNAME), public :: Name = ''
-    character(len=LENOBSTYPE), public :: ObsTypeId = ''
-    character(len=200), public :: IDstring = ''
-    character(len=LENBOUNDNAME), public :: FeatureName = ''
-    character(len=LENBOUNDNAME), public :: FeatureName2 = ''
+    integer(I4B), public :: NodeNumber = 0 !< observation node number
+    integer(I4B), public :: UnitNumber = 0 !< observation output unit number
+    character(len=LENOBSNAME), public :: Name = '' !< observation name
+    character(len=LENOBSTYPE), public :: ObsTypeId = '' !< observation type id
+    character(len=200), public :: IDstring = '' !< observation id string
+    character(len=LENBOUNDNAME), public :: FeatureName = '' !< observation feature name
+    character(len=LENBOUNDNAME), public :: FeatureName2 = '' !< observation feature name 2
     !
     ! -- members specific to NPF intercell-flow observations
-    integer(I4B), public :: NodeNumber2 = 0
-    integer(I4B), public :: JaIndex = -2
+    integer(I4B), public :: NodeNumber2 = 0 !< observation second nod number
+    integer(I4B), public :: JaIndex = -2 !< observation JA index
     !
     ! -- members that can be used as needed by packages or models
-    integer(I4B), public :: intPak1 = 0
-    real(DP), public :: Obsdepth = DZERO
-    real(DP), public :: dblPak1 = DZERO
+    integer(I4B), public :: intPak1 = 0 !<
+    real(DP), public :: Obsdepth = DZERO !<
+    real(DP), public :: dblPak1 = DZERO !<
     !
     ! -- indxbnds is intended to hold indices of position(s) in bound
     !    array of boundaries included in the observation.
-    integer(I4B), public :: indxbnds_count = 0
-    integer(I4B), allocatable, dimension(:), public :: indxbnds
+    integer(I4B), public :: indxbnds_count = 0 !< number of observations indexes when using boundname
+    integer(I4B), allocatable, dimension(:), public :: indxbnds !< node numbers for observations when using boundname
     !
     ! -- Set FormattedOutput false if output unit is opened for unformatted i/o
-    logical, public :: FormattedOutput = .true.
-    logical, public :: BndFound = .false.
-    real(DP), public :: CurrentTimeStepEndValue = DZERO
-    real(DP), public :: CurrentTimeStepEndTime = DZERO
+    logical, public :: FormattedOutput = .true. !< logical indicating if obervation output is formatted
+    logical, public :: BndFound = .false. !< logical indicating if a boundname was found
+    real(DP), public :: CurrentTimeStepEndValue = DZERO !< observation value
+    real(DP), public :: CurrentTimeStepEndTime = DZERO !< observation time
     !
     ! -- Members specific to continuous observations
-    integer(I4B), public :: indxObsOutput = -1
+    integer(I4B), public :: indxObsOutput = -1 !< index for observation output
     !
     ! -- Private members
-    type(ObsDataType), pointer, private :: obsDatum => null()
+    type(ObsDataType), pointer, private :: obsDatum => null() !< observation Datum
   contains
     ! -- Public procedures
-    procedure, public :: ResetCurrent
+    procedure, public :: ResetCurrentValue
     procedure, public :: WriteTo
     procedure, public :: AddObsIndex
     procedure, public :: ResetObsIndex
@@ -77,29 +80,28 @@ module ObserveModule
 
   type :: ObsDataType
     ! -- Public members
-    character(len=LENOBSTYPE), public :: ObsTypeID = ''
-    logical, public :: Cumulative = .false.
-    procedure(ProcessIdSub), nopass, pointer, public :: ProcessIdPtr => null()
+    character(len=LENOBSTYPE), public :: ObsTypeID = '' !< observation type id
+    logical, public :: Cumulative = .false. !< logical indicating if observations should be summed
+    procedure(ProcessIdSub), nopass, pointer, public :: ProcessIdPtr => null() !< process id pointer
   end type ObsDataType
 
   abstract interface
+
+    !> @ brief Process user-provided IDstring
+  !!
+  !!  Subroutine that processes the user-provided IDstring, which identifies
+  !!  the grid location or model feature to be observed.
+  !!
+    !<
     subroutine ProcessIdSub(obsrv, dis, inunitobs, iout)
-! **************************************************************************
-! ProcessIdSub -- A procedure that implements this subroutine processes the
-! user-provided IDstring, which identifies the grid location or model
-! feature to be observed.
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
       use KindModule, only: DP, I4B
       import :: ObserveType
       import :: DisBaseType
       ! -- dummy
-      type(ObserveType), intent(inout) :: obsrv
-      class(DisBaseType), intent(in) :: dis
-      integer(I4B), intent(in) :: inunitobs
-      integer(I4B), intent(in) :: iout
+      type(ObserveType), intent(inout) :: obsrv !< observation type
+      class(DisBaseType), intent(in) :: dis !< discretization object
+      integer(I4B), intent(in) :: inunitobs !< observation input file unit
+      integer(I4B), intent(in) :: iout !< model list file unit
     end subroutine ProcessIdSub
   end interface
 
@@ -107,37 +109,37 @@ contains
 
   ! Procedures bound to ObserveType
 
-  subroutine ResetCurrent(this)
-! **************************************************************************
-! ResetCurrent -- Reset "current" value.
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
+  !> @ brief Reset current observation value
+  !!
+  !!  Subroutine to reset the current observation value.
+  !!
+  !<
+  subroutine ResetCurrentValue(this)
     ! -- dummy
     class(ObserveType), intent(inout) :: this
     !
     ! -- Reset current value to zero.
     this%CurrentTimeStepEndValue = DZERO
+    !
+    ! -- return
     return
-  end subroutine ResetCurrent
+  end subroutine ResetCurrentValue
 
+  !> @ brief Write observation input data
+  !!
+  !!  Subroutine to write observation input data to a table in the model
+  !!  list file.
+  !!
+  !<
   subroutine WriteTo(this, obstab, btagfound, fnamein)
-! **************************************************************************
-! WriteTo -- Write information about this observation to table in list file.
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     ! -- dummy
     class(ObserveType), intent(inout) :: this
-    type(TableType), intent(inout) :: obstab
-    character(len=*), intent(in) :: btagfound
-    character(len=*), intent(in) :: fnamein
+    type(TableType), intent(inout) :: obstab !< observation table
+    character(len=*), intent(in) :: btagfound !< logical indicating if boundname was found
+    character(len=*), intent(in) :: fnamein !< observation input file name
     ! -- local
     character(len=12) :: tag
     character(len=80) :: fnameout
-    ! -- formats
     !
     ! -- write btagfound to tag
     if (len_trim(btagfound) > 12) then
@@ -164,13 +166,12 @@ contains
     return
   end subroutine WriteTo
 
+  !> @ brief Reset a observation index
+  !!
+  !!  Subroutine to reset the observation index count and array.
+  !!
+  !<
   subroutine ResetObsIndex(this)
-! **************************************************************************
-! ResetObsIndex -- Reset the observation index count and array.
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     ! -- dummy
     class(ObserveType), intent(inout) :: this
     !
@@ -189,19 +190,18 @@ contains
     return
   end subroutine ResetObsIndex
 
+  !> @ brief Add a observation index
+  !!
+  !!  Subroutine to add the observation index to the observation index
+  !!  array (indxbnds). The observation index count (indxbnds_count) is
+  !!  also incremented by one and the observation index array is
+  !!  expanded, if necessary.
+  !!
+  !<
   subroutine AddObsIndex(this, indx)
-! **************************************************************************
-! AddObsIndex -- Add the observation index to the observation index array
-!                (indbnds). The observation index count (indxbnds_count)
-!                is also incremented by one and the observation index array
-!                is expanded, if necessary.
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     ! -- dummy
     class(ObserveType), intent(inout) :: this
-    integer(I4B), intent(in) :: indx
+    integer(I4B), intent(in) :: indx !< observation index
     !
     ! -- Increment the index count
     this%indxbnds_count = this%indxbnds_count + 1
@@ -216,13 +216,12 @@ contains
     return
   end subroutine AddObsIndex
 
+  !> @ brief Deallocate a observation
+  !!
+  !!  Subroutine to deallocated a observation (ObserveType).
+  !!
+  !<
   subroutine da(this)
-! **************************************************************************
-! da -- destroy observation
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     ! -- dummy
     class(ObserveType), intent(inout) :: this
     if (allocated(this%indxbnds)) then
@@ -235,27 +234,30 @@ contains
 
   ! Non-type-bound procedures
 
+  !> @ brief Construct a new ObserveType
+  !!
+  !!  Subroutine to construct and return an ObserveType object based
+  !!  on the contents of defLine.
+  !!
+  !<
   subroutine ConstructObservation(newObservation, defLine, numunit, &
                                   formatted, indx, obsData, inunit)
-! **************************************************************************
-! ConstructObservation -- Construct and return an ObserveType object based
-! on the contents of defLine.
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     ! -- dummy variables
-    type(ObserveType), pointer :: newObservation
-    character(len=*), intent(in) :: defLine
-    integer(I4B), intent(in) :: numunit ! Output unit number
-    logical, intent(in) :: formatted ! Formatted output?
-    integer(I4B), intent(in) :: indx ! Index in ObsOutput array
-    type(ObsDataType), dimension(:), pointer, intent(in) :: obsData
-    integer(I4B), intent(in) :: inunit
+    type(ObserveType), pointer :: newObservation !< new ObserveType
+    character(len=*), intent(in) :: defLine !< string with observation data
+    integer(I4B), intent(in) :: numunit !< Output unit number
+    logical, intent(in) :: formatted !< logical indicating if formatted output will be written
+    integer(I4B), intent(in) :: indx !< Index in ObsOutput array
+    type(ObsDataType), dimension(:), pointer, intent(in) :: obsData !< obsData type
+    integer(I4B), intent(in) :: inunit !< observation input file unit
     ! -- local
     real(DP) :: r
-    integer(I4B) :: i, icol, iout, istart, istop, n
-    ! --------------------------------------------------------------------------
+    integer(I4B) :: i
+    integer(I4B) :: icol
+    integer(I4B) :: iout
+    integer(I4B) :: istart
+    integer(I4B) :: istop
+    integer(I4B) :: n
     !
     ! -- initialize
     iout = 0
@@ -302,12 +304,20 @@ contains
     newObservation%FormattedOutput = formatted
     newObservation%IndxObsOutput = indx
     !
+    ! -- return
     return
   end subroutine ConstructObservation
 
+  !> @ brief Cast a object as a ObserveType
+  !!
+  !!  Function to cast an object as a ObserveType object.
+  !!
+  !<
   function CastAsObserveType(obj) result(res)
-    class(*), pointer, intent(inout) :: obj
-    type(ObserveType), pointer :: res
+    ! -- dummy
+    class(*), pointer, intent(inout) :: obj !< object
+    ! -- return
+    type(ObserveType), pointer :: res !< returned ObserveType object
     !
     res => null()
     if (.not. associated(obj)) return
@@ -316,33 +326,48 @@ contains
     type is (ObserveType)
       res => obj
     end select
+    !
+    ! -- return
     return
   end function CastAsObserveType
 
+  !> @ brief Add a ObserveType to a list
+  !!
+  !!  Subroutine to add a ObserveType to a list.
+  !!
+  !<
   subroutine AddObsToList(list, obs)
     ! -- dummy
-    type(ListType), intent(inout) :: list
-    type(ObserveType), pointer, intent(inout) :: obs
+    type(ListType), intent(inout) :: list !< ObserveType list
+    type(ObserveType), pointer, intent(inout) :: obs !< ObserveType
     ! -- local
     class(*), pointer :: obj
     !
     obj => obs
     call list%Add(obj)
     !
+    ! -- return
     return
   end subroutine AddObsToList
 
+  !> @ brief Get an ObserveType from a list
+  !!
+  !!  Function to get an ObserveType from a list.
+  !!
+  !<
   function GetObsFromList(list, idx) result(res)
     ! -- dummy
-    type(ListType), intent(inout) :: list
-    integer(I4B), intent(in) :: idx
-    type(ObserveType), pointer :: res
+    type(ListType), intent(inout) :: list !< ObserveType list
+    integer(I4B), intent(in) :: idx !< ObserveType list index
+    ! -- return
+    type(ObserveType), pointer :: res !< returned ObserveType
     ! -- local
     class(*), pointer :: obj
     !
     obj => list%GetItem(idx)
     res => CastAsObserveType(obj)
     !
+    ! -- return
     return
   end function GetObsFromList
 

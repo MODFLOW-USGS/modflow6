@@ -1,129 +1,129 @@
-! This module defines type ObsType, which is the highest-level
-! derived type for implementing observations. All objects derived from
-! NumericalModelType or BndType already contain an ObsType member.
-!
-! Examples:
-!   NumericalModelType.obs
-!   BndType.obs
-!
-! Similarly, an ObsType member could be added to, say,
-! NumericalExchangeType or any other type that has DF, AR, RP, AD, BD, and OT
-! routines.
-!
-! ------------------------------------------------------------------------------
-! IMPLEMENTATION OF OBSERVATIONS IN A MODEL OR PACKAGE
-!
-! For simple boundary packages like RIV and DRN, only steps 1-6 are
-! needed. For models and advanced packages like MAW and SFR, additional
-! steps are needed.
-!
-! 1. (package only) Override BndType.bnd_obs_supported to return true.
-!    bnd_obs_supported is called from various places in code.
-!
-! 2. (optional) Write a subroutine that implements abstract interface
-!    ObserveModule.ProcessIdSub. (Not needed if IDstring, which identifies
-!    location in model to be observed, is either a single node number or
-!    a single {lay, row, col} set of indices).
-!
-!    Examples:
-!    gwf_process_head_drawdown_obs_id, gwf_process_intercell_obs_id
-!
-!    A package can allow IDstring to be a boundary name.
-!    Example: ObsModule.DefaultObsIdProcessor
-!
-! 3. Override BndType.bnd_df_obs() to define string(s) to be
-!    recognized as observation type(s) and (optional) assign ProcessIdPtr
-!    (not needed  if IDstring is either a node number or a {lay, row, col}
-!    set of indices).
-!
-!    Examples: gwf_df_obs, drn_df_obs
-!
-!    When boundary names are allowed and developer wants simulated value
-!    to be cumulative (flow, for example) if user specifies multiple
-!    boundaries with the same BOUNDNAME, in bnd_df_obs call to
-!    ObsPackage.StoreObsType, provide cumulative argument as true.
-!    Otherwise, simulated values are not cumulative.
-!
-! 4. In DF routine: Call bnd_df_obs
-!
-! 5. In AR routine: Call ObsType.obs_ar. This reads the OBS input
-!    file.
-!    Example (gwf_ar): call this%obs%obs_ar()
-!    Example (lak_ar): call this%obs%obs_ar()
-!
-! 6. Override BndType.bnd_rp_obs for any package that needs to
-!    check user input or process observation input in any special way.
-!    If no special processing is needed, BndType.bnd_rp_obs can
-!    be used.  This routine also expands the ObserveType%indxbnds array for
-!    each observation in a package. ObserveType%indxbnds is used to sum
-!    simulated values from multiple boundaries when BOUNDNAMES is used.
-!    Equivalent routine may or may not be needed for model observations.
-!    If needed, call it from bottom of RP routine.
-!
-!    Examples:
-!        BndType.bnd_rp_obs, which is called from gwf_rp
-!
-! 7. In AD routine: Call ObsType.obs_ad
-!    Example: gwf_ad
-!
-! 8. Write a *_bd_obs routine. This is the routine that actually
-!    calculates the simulated value for each observation type supported
-!    by the model/package.  Call *_bd_obs from the bottom of the
-!    _bd routine.
-!     *_bd_obs needs to:
-!         Call ObsType.obs_bd_clear
-!         For each observation:
-!              Calculate the simulated value
-!              Call ObsType.SaveOneSimval
-!     Examples: gwf_bd_obs, maw_bd_obs, lak_bd_obs
-!
-! 9. In BD routine:
-!          Call BndType.bnd_bd_obs
-!     Examples: BndType.bnd_bd calls bnd_bd_obs
-!               GwfModelType.gwf_bd calls gwf_bd_obs
-!               MawType.maw_bd calls maw_bd_obs
-!               LakType.lak_bd calls lak_bd_obs
-!
-! 10. Ensure that ObsType.obs_ot is called. For packages, obs_ot is called
-!     from the model _ot procedure.  The model _ot procedure should also call
-!     obs_ot for its own observations.  Do not call obs_ot from a package _ot
-!     procedure because the package _ot procedure may not be called, depending
-!     on Output Control settings (ibudfl).
-!
-!     Note: BndType.bnd_ot_obs calls:
-!               ObsType.obs_ot
-!
-!     Note: ObsType.obs_ot calls:
-!               store_all_simvals
-!               write_continuous_simvals
-!               obsOutputList.WriteOutputLines
-!
-! BINARY OUTPUT:
-!
-! When observation-output files are written, the user has the option to have
-! output written to a binary file.  Binary obs output files start with a
-! 100-byte header structured as follows:
-!
-! bytes 1-4   (ascii): Observation type contained in file; options are:
-!                        "sngl" -- Single observations
-!                        "cont" -- Continuous observations
-! byte 5: blank
-! bytes 6-11  (ascii): Precision of all floating-point values; options are:
-!                        "single" -- Single precision
-!                        "double" -- Double precision
-! bytes 12-15 (ascii): LENOBSNAME (integer; length of observation names,
-!                                  in bytes)
-! bytes 16-100: blank
-!
-! IN A FILE OF CONTINUOUS OBSERVATIONS:
-!
-! The 100-byte header is followed by:
-! NOBS (4-byte integer) -- Number of observations.
-! NOBS repetitions of OBSNAME (ascii, LENOBSNAME bytes each).
-! Any number of repetitions of:
-! TIME SIMVAL-1 SIMVAL-2 ... SIMVAL-NOBS  (floating point)
-!
-!-------------------------------------------------------------------------------
+!> @brief This module contains the derived type ObsType
+!!
+!! This module defines type ObsType, which is the highest-level
+!! derived type for implementing observations. All objects derived from
+!! NumericalModelType or BndType already contain an ObsType member.
+!!
+!! Examples:
+!!   NumericalModelType.obs
+!!   BndType.obs
+!!
+!! Similarly, an ObsType member could be added to, say,
+!! NumericalExchangeType or any other type that has DF, AR, RP, AD, BD, and OT
+!! routines.
+!!
+!! IMPLEMENTATION OF OBSERVATIONS IN A MODEL OR PACKAGE
+!!
+!! For simple boundary packages like RIV and DRN, only steps 1-6 are
+!! needed. For models and advanced packages like MAW and SFR, additional
+!! steps are needed.
+!!
+!! 1. (package only) Override BndType.bnd_obs_supported to return true.
+!!    bnd_obs_supported is called from various places in code.
+!!
+!! 2. (optional) Write a subroutine that implements abstract interface
+!!    ObserveModule.ProcessIdSub. (Not needed if IDstring, which identifies
+!!    location in model to be observed, is either a single node number or
+!!    a single {lay, row, col} set of indices).
+!!
+!!    Examples:
+!!    gwf_process_head_drawdown_obs_id, gwf_process_intercell_obs_id
+!!
+!!    A package can allow IDstring to be a boundary name.
+!!    Example: ObsModule.DefaultObsIdProcessor
+!!
+!! 3. Override BndType.bnd_df_obs() to define string(s) to be
+!!    recognized as observation type(s) and (optional) assign ProcessIdPtr
+!!    (not needed  if IDstring is either a node number or a {lay, row, col}
+!!    set of indices).
+!!
+!!    Examples: gwf_df_obs, drn_df_obs
+!!
+!!    When boundary names are allowed and developer wants simulated value
+!!    to be cumulative (flow, for example) if user specifies multiple
+!!    boundaries with the same BOUNDNAME, in bnd_df_obs call to
+!!    ObsPackage.StoreObsType, provide cumulative argument as true.
+!!    Otherwise, simulated values are not cumulative.
+!!
+!! 4. In DF routine: Call bnd_df_obs
+!!
+!! 5. In AR routine: Call ObsType.obs_ar. This reads the OBS input
+!!    file.
+!!    Example (gwf_ar): call this%obs%obs_ar()
+!!    Example (lak_ar): call this%obs%obs_ar()
+!!
+!! 6. Override BndType.bnd_rp_obs for any package that needs to
+!!    check user input or process observation input in any special way.
+!!    If no special processing is needed, BndType.bnd_rp_obs can
+!!    be used.  This routine also expands the ObserveType%indxbnds array for
+!!    each observation in a package. ObserveType%indxbnds is used to sum
+!!    simulated values from multiple boundaries when BOUNDNAMES is used.
+!!    Equivalent routine may or may not be needed for model observations.
+!!    If needed, call it from bottom of RP routine.
+!!
+!!    Examples:
+!!        BndType.bnd_rp_obs, which is called from gwf_rp
+!!
+!! 7. In AD routine: Call ObsType.obs_ad
+!!    Example: gwf_ad
+!!
+!! 8. Write a *_bd_obs routine. This is the routine that actually
+!!    calculates the simulated value for each observation type supported
+!!    by the model/package.  Call *_bd_obs from the bottom of the
+!!    _bd routine.
+!!     *_bd_obs needs to:
+!!         Call ObsType.obs_bd_clear
+!!         For each observation:
+!!              Calculate the simulated value
+!!              Call ObsType.SaveOneSimval
+!!     Examples: gwf_bd_obs, maw_bd_obs, lak_bd_obs
+!!
+!! 9. In BD routine:
+!!     Call BndType.bnd_bd_obs
+!!     Examples: BndType.bnd_bd calls bnd_bd_obs
+!!               GwfModelType.gwf_bd calls gwf_bd_obs
+!!               MawType.maw_bd calls maw_bd_obs
+!!               LakType.lak_bd calls lak_bd_obs
+!!
+!! 10. Ensure that ObsType.obs_ot is called. For packages, obs_ot is called
+!!     from the model _ot procedure.  The model _ot procedure should also call
+!!     obs_ot for its own observations.  Do not call obs_ot from a package _ot
+!!     procedure because the package _ot procedure may not be called, depending
+!!     on Output Control settings (ibudfl).
+!!
+!!     Note: BndType.bnd_ot_obs calls:
+!!               ObsType.obs_ot
+!!
+!!     Note: ObsType.obs_ot calls:
+!!               store_all_simvals
+!!               write_continuous_simvals
+!!               obsOutputList.WriteOutputLines
+!!
+!! BINARY OUTPUT:
+!!
+!! When observation-output files are written, the user has the option to have
+!! output written to a binary file.  Binary obs output files start with a
+!! 100-byte header structured as follows:
+!!
+!! bytes 1-4   (ascii): Observation type contained in file; options are:
+!!                        "cont" -- Continuous observations
+!! byte 5: blank
+!! bytes 6-11  (ascii): Precision of all floating-point values; options are:
+!!                        "single" -- Single precision
+!!                        "double" -- Double precision
+!! bytes 12-15 (ascii): LENOBSNAME (integer; length of observation names,
+!!                                  in bytes)
+!! bytes 16-100: blank
+!!
+!! IN A FILE OF CONTINUOUS OBSERVATIONS:
+!!
+!! The 100-byte header is followed by:
+!! NOBS (4-byte integer) -- Number of observations.
+!! NOBS repetitions of OBSNAME (ascii, LENOBSNAME bytes each).
+!! Any number of repetitions of:
+!! TIME SIMVAL-1 SIMVAL-2 ... SIMVAL-NOBS  (floating point)
+!!
+!<
 module ObsModule
 
   use KindModule, only: DP, I4B
@@ -144,7 +144,7 @@ module ObsModule
                            AddObsToList
   use ObsOutputListModule, only: ObsOutputListType
   use ObsOutputModule, only: ObsOutputType
-  use ObsUtilityModule, only: write_fmtd_cont, write_unfmtd_cont
+  use ObsUtilityModule, only: write_fmtd_obs, write_unfmtd_obs
   use OpenSpecModule, only: ACCESS, FORM
   use SimVariablesModule, only: errmsg
   use SimModule, only: count_errors, store_error, store_error_unit
@@ -157,15 +157,15 @@ module ObsModule
 
   type :: ObsType
     ! -- Public members
-    integer(I4B), public :: iout = 0
-    integer(I4B), public :: npakobs = 0
-    integer(I4B), pointer, public :: inUnitObs => null()
-    character(len=LINELENGTH), pointer, public :: inputFilename => null()
-    character(len=2*LENPACKAGENAME + 4), public :: pkgName = ''
-    character(len=LENFTYPE), public :: filtyp = ''
-    logical, pointer, public :: active => null()
-    type(ObsContainerType), dimension(:), pointer, public :: pakobs => null()
-    type(ObsDataType), dimension(:), pointer, public :: obsData => null()
+    integer(I4B), public :: iout = 0 !< model list file unit
+    integer(I4B), public :: npakobs = 0 !< number of observations
+    integer(I4B), pointer, public :: inUnitObs => null() !< observation input file unit
+    character(len=LINELENGTH), pointer, public :: inputFilename => null() !< observation input file name
+    character(len=2*LENPACKAGENAME + 4), public :: pkgName = '' !< package name
+    character(len=LENFTYPE), public :: filtyp = '' !< package file type
+    logical, pointer, public :: active => null() !> logical indicating if a observation is active
+    type(ObsContainerType), dimension(:), pointer, public :: pakobs => null() !< package observations
+    type(ObsDataType), dimension(:), pointer, public :: obsData => null() !< observation data
     ! -- Private members
     integer(I4B), private :: iprecision = 2 ! 2=double; 1=single
     integer(I4B), private :: idigits = 0
@@ -201,62 +201,61 @@ module ObsModule
     procedure, private :: get_obs_datum
     procedure, private :: obs_ar1
     procedure, private :: obs_ar2
-    procedure, private :: populate_obs_array
+    procedure, private :: set_obs_array
     procedure, private :: read_observations
     procedure, private :: read_obs_blocks
     procedure, private :: read_obs_options
-    procedure, private :: write_continuous_simvals
+    procedure, private :: write_obs_simvals
   end type ObsType
 
 contains
 
   ! Non-type-bound procedures
 
+  !> @ brief Create a new ObsType object
+  !!
+  !!  Subroutine to create a new ObsType object. Soubroutine
+  !!
+  !!  - creates object
+  !!  - allocates pointer
+  !!  - initilizes values
+  !!
+  !<
   subroutine obs_cr(obs, inobs)
-! ******************************************************************************
-! obs_cr -- Create a new ObsType object
-! Subroutine: (1) creates object
-!             (2) allocates pointers
-!             (3) initializes values
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    type(ObsType), pointer, intent(out) :: obs
-    integer(I4B), pointer, intent(in) :: inobs
-! ------------------------------------------------------------------------------
+    type(ObsType), pointer, intent(out) :: obs !< observation ObsType
+    integer(I4B), pointer, intent(in) :: inobs !< observation input file unit
     !
     allocate (obs)
     call obs%allocate_scalars()
     obs%inUnitObs => inobs
     !
+    ! -- return
     return
   end subroutine obs_cr
 
+  !> @ brief Process IDstring provided for each observation
+  !!
+  !!  Subroutine to process the IDstring provided for each observation. The
+  !!  IDstring identifies the location in the model of the node(s) or feature(s)
+  !!  where the simulated value is to be extracted and recorded. Subroutine
+  !!
+  !!  - interprets the IDstring
+  !!  - stores the location of interest in the ObserveType object that
+  !!    contains information about the observation
+  !!
+  !<
   subroutine DefaultObsIdProcessor(obsrv, dis, inunitobs, iout)
-! ******************************************************************************
-! DefaultObsIdProcessor -- Process IDstring provided for each observation. The
-! IDstring identifies the location in the model of the node(s) or feature(s)
-! where the simulated value is to be extracted and recorded.
-! Subroutine: (1) interprets the IDstring
-!             (2) stores the location of interest in the ObserveType object that
-!                 contains information about the observation
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    type(ObserveType), intent(inout) :: obsrv
-    class(DisBaseType), intent(in) :: dis
-    integer(I4B), intent(in) :: inunitobs
-    integer(I4B), intent(in) :: iout
+    type(ObserveType), intent(inout) :: obsrv !< observation ObserveType
+    class(DisBaseType), intent(in) :: dis !< discretization object
+    integer(I4B), intent(in) :: inunitobs !< observation input file unit
+    integer(I4B), intent(in) :: iout !< model list file
     ! -- local
     integer(I4B) :: n
     integer(I4B) :: icol, istart, istop
     character(len=LINELENGTH) :: strng
     logical :: flag_string
-! ------------------------------------------------------------------------------
     !
     ! -- Initialize variables
     strng = obsrv%IDstring
@@ -282,25 +281,24 @@ contains
       call store_error_unit(inunitobs)
     end if
     !
+    ! -- return
     return
   end subroutine DefaultObsIdProcessor
 
   ! Type-bound public procedures
 
+  !> @ brief Define some members of an ObsType object
+  !!
+  !!  Subroutine to define some members of an ObsType object.
+  !!
+  !<
   subroutine obs_df(this, iout, pkgname, filtyp, dis)
-! ******************************************************************************
-! obs_df -- Define some members of an ObsType object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType), intent(inout) :: this
-    integer(I4B), intent(in) :: iout
-    character(len=*), intent(in) :: pkgname
-    character(len=*), intent(in) :: filtyp
-    class(DisBaseType), pointer :: dis
-! ------------------------------------------------------------------------------
+    integer(I4B), intent(in) :: iout !< model list file unit
+    character(len=*), intent(in) :: pkgname !< package name
+    character(len=*), intent(in) :: filtyp !< package file type
+    class(DisBaseType), pointer :: dis !< discretization object
     !
     this%iout = iout
     this%pkgName = pkgname
@@ -310,116 +308,112 @@ contains
     ! -- Initialize block parser
     call this%parser%Initialize(this%inUnitObs, this%iout)
     !
+    ! -- return
     return
   end subroutine obs_df
 
+  !> @ brief Allocate and read package observations
+  !!
+  !!  Subroutine to allocate and read observations for a package. Subroutine
+  !!
+  !!  - reads OPTIONS block of OBS input file
+  !!  - reads CONTINUOUS blocks of OBS input file
+  !!
+  !<
   subroutine obs_ar(this)
-! ******************************************************************************
-! obs_ar -- ObsType Allocate and Read
-! Subroutine: (1) reads OPTIONS block of OBS input file
-!             (2) reads CONTINUOUS blocks of OBS input file
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType) :: this
-! ------------------------------------------------------------------------------
     !
     call this%obs_ar1(this%pkgName)
     if (this%active) then
       call this%obs_ar2(this%dis)
     end if
     !
+    ! -- return
     return
   end subroutine obs_ar
 
+  !> @ brief Advance package observations
+  !!
+  !!  Subroutine to advance each package observations by resetting the
+  !!  "current" value.
+  !!
+  !<
   subroutine obs_ad(this)
-! ******************************************************************************
-! obs_ad -- Observation Time Step Advance
-! Subroutine: (1) For each observation, resets "current" value
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType) :: this
     ! -- local
     integer(I4B) :: i, n
     class(ObserveType), pointer :: obsrv => null()
-! ------------------------------------------------------------------------------
     !
     n = this%get_num()
     do i = 1, n
       obsrv => this%get_obs(i)
-      call obsrv%ResetCurrent()
+      call obsrv%ResetCurrentValue()
     end do
     !
+    ! -- return
     return
   end subroutine obs_ad
 
+  !> @ brief Clear observation output lines
+  !!
+  !!  Subroutine to clear output lines in preparation for new rows of
+  !!  continuous observations.
+  !!
+  !<
   subroutine obs_bd_clear(this)
-! ******************************************************************************
-! obs_bd_clear -- Clear output lines in preparation for new rows of
-!                 continuous observations
-! Subroutine: (1) Clears contents of all lineout members of obsOutputList
-!                 at start of a new time step
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType), target :: this
-! ------------------------------------------------------------------------------
     !
-    call this%obsOutputList%ClearOutputLines()
+    call this%obsOutputList%ResetAllObsEmptyLines()
     !
+    ! -- return
     return
   end subroutine obs_bd_clear
 
+  !> @ brief Output observation data
+  !!
+  !!  Subroutine to output observation data. Subroutine
+  !!
+  !!  - stores each simulated value into its ObserveType object
+  !!  - writes each simulated value to it ObsOutputList object
+  !!  _ writes contents of ObsOutputList to output file
+  !!
+  !! This procedure should NOT be called from a package's _ot procedure
+  !! because the package _ot procedure may not be called every time step.
+  !!
+  !<
   subroutine obs_ot(this)
-! ******************************************************************************
-! obs_ot -- Observation Output
-! Subroutine: (1) stores each simulated value into its ObserveType object
-!             (2) writes each simulated value to it ObsOutputList object
-!             (3) writes contents of ObsOutputList to output file
-! Note: This procedure should NOT be called from a package's _ot procedure
-!       because the package _ot procedure may not be called every time step.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType), intent(inout) :: this
-! ------------------------------------------------------------------------------
     !
     if (this%npakobs > 0) then
-      call this%write_continuous_simvals()
-      call this%obsOutputList%WriteOutputLines()
+      call this%write_obs_simvals()
+      call this%obsOutputList%WriteAllObsLineReturns()
     end if
     !
+    ! -- return
     return
   end subroutine obs_ot
 
+  !> @ brief Deallocate observation data
+  !!
+  !!  Subroutine to deallocate observation data.
+  !!
+  !<
   subroutine obs_da(this)
-! ******************************************************************************
-! obs_da -- Observation Output
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i
     class(ObserveType), pointer :: obsrv => null()
-! ------------------------------------------------------------------------------
     !
     deallocate (this%active)
     deallocate (this%inputFilename)
     deallocate (this%obsData)
     !
-    ! -- obs table object
+    ! -- observation table object
     if (associated(this%obstab)) then
       call this%obstab%table_da()
       deallocate (this%obstab)
@@ -447,26 +441,24 @@ contains
     ! -- nullify
     nullify (this%inUnitObs)
     !
+    ! -- return
     return
   end subroutine obs_da
 
+  !> @ brief Save a simulated value
+  !!
+  !!  Subroutine to save or accumulate a simulated value to its ObserveType
+  !!  object.
+  !!
+  !<
   subroutine SaveOneSimval(this, obsrv, simval)
-! ******************************************************************************
-! SaveOneSimval
-! Subroutine: (1) saves or accumulates a simulated value to its ObserveType
-!                 object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType) :: this
-    class(ObserveType), intent(inout) :: obsrv
-    real(DP), intent(in) :: simval
+    class(ObserveType), intent(inout) :: obsrv !< observation ObserveType
+    real(DP), intent(in) :: simval !< simulated value
     ! -- local
     character(len=LENOBSTYPE) :: obsTypeID
     type(ObsDataType), pointer :: obsDatum => null()
-! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     obsTypeID = obsrv%ObsTypeId
@@ -482,30 +474,28 @@ contains
       obsrv%CurrentTimeStepEndValue = simval
     end if
     !
+    ! -- return
     return
   end subroutine SaveOneSimval
 
+  !> @ brief Store observation type
+  !!
+  !!  Subroutine to store type name and related information for an
+  !!  observation type that belongs to a package or model in the
+  !!  obsData array.
+  !!
+  !<
   subroutine StoreObsType(this, obsrvType, cumulative, indx)
-! ******************************************************************************
-! StoreObsType
-! Subroutine: (1) stores type name and related information for an
-!                 observation type that belongs to a package or model in
-!                 the obsData array
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType), intent(inout) :: this
-    character(len=*), intent(in) :: obsrvType
+    character(len=*), intent(in) :: obsrvType !< observation type
     ! cumulative:  Accumulate simulated values for multiple boundaries
-    logical, intent(in) :: cumulative
-    integer(I4B), intent(out) :: indx
+    logical, intent(in) :: cumulative !< logical indicating if the observation should be accumulated
+    integer(I4B), intent(out) :: indx !< observation index
     ! -- local
     integer(I4B) :: i
     character(len=LENOBSTYPE) :: obsTypeUpper
     character(len=100) :: msg
-! ------------------------------------------------------------------------------
     !
     ! -- Ensure that obsrvType is not blank
     if (obsrvType == '') then
@@ -537,21 +527,21 @@ contains
     this%obsData(indx)%ObsTypeID = obsTypeUpper
     this%obsData(indx)%Cumulative = cumulative
     !
+    ! -- return
     return
   end subroutine StoreObsType
 
   ! Type-bound private procedures
 
+  !> @ brief Allocate observation scalars
+  !!
+  !!  Subroutine to allocate and initialize memory for non-allocatable
+  !   members (scalars).
+  !!
+  !<
   subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars -- Allocate memory for non-allocatable members
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType) :: this
-! ------------------------------------------------------------------------------
     !
     allocate (this%active)
     allocate (this%inputFilename)
@@ -562,24 +552,22 @@ contains
     this%active = .false.
     this%inputFilename = ''
     !
-    ! -- Return
+    ! -- return
     return
   end subroutine allocate_scalars
 
+  !> @ brief Read observation options and output formats
+  !!
+  !!  Subroutine to read the options block in the observation input file and
+  !!  define output formats.
+  !!
+  !<
   subroutine obs_ar1(this, pkgname)
-! ******************************************************************************
-! obs_ar1
-!   -- read OPTIONS block of OBS input file and define output formats.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType), intent(inout) :: this
-    character(len=*), intent(in) :: pkgname
+    character(len=*), intent(in) :: pkgname !< package name
     ! -- formats
 10  format(/, 'The observation utility is active for "', a, '"')
-! ------------------------------------------------------------------------------
     !
     if (this%inUnitObs > 0) then
       this%active = .true.
@@ -594,30 +582,28 @@ contains
       call this%define_fmts()
     end if
     !
+    ! -- return
     return
   end subroutine obs_ar1
 
+  !> @ brief Call procedure provided by package
+  !!
+  !!  Subroutine to call procedure provided by package to interpret IDstring
+  !!  and store required data.
+  !!
+  !<
   subroutine obs_ar2(this, dis)
-! ******************************************************************************
-! obs_ar2
-!   -- Call procedure provided by package to interpret IDstring and
-!      store required data.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType), intent(inout) :: this
-    class(DisBaseType) :: dis
+    class(DisBaseType) :: dis !< discretization object
     ! -- local
     integer(I4B) :: i
     type(ObsDataType), pointer :: obsDat => null()
     character(len=LENOBSTYPE) :: obsTypeID
     class(ObserveType), pointer :: obsrv => null()
-! ------------------------------------------------------------------------------
     !
     call this%read_observations()
-    ! -- allocate and populate observations array
+    ! -- allocate and set observation array
     call this%get_obs_array(this%npakobs, this%pakobs)
     !
     do i = 1, this%npakobs
@@ -638,17 +624,16 @@ contains
       call store_error_unit(this%inunitobs)
     end if
     !
+    ! -- return
     return
   end subroutine obs_ar2
 
+  !> @ brief Read observation options block
+  !!
+  !!  Subroutine to read the options block in the observation input file.
+  !!
+  !<
   subroutine read_obs_options(this)
-! ******************************************************************************
-! read_obs_options
-!   -- read OPTIONS block of OBS input file
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType) :: this
     ! -- local
@@ -665,7 +650,6 @@ contains
 40  format('Text output number of digits of precision set to: ', i2)
 50  format('Text output number of digits set to internal representation (G0).')
 60  format(/, 'Processing observation options:',/)
-! ------------------------------------------------------------------------------
     !
     localprecision = 0
     localdigits = -1
@@ -752,43 +736,41 @@ contains
     if (localprecision > 0) this%iprecision = localprecision
     if (localdigits >= 0) this%idigits = localdigits
     !
+    ! -- return
     return
   end subroutine read_obs_options
 
+  !> @ brief Define observation output formats
+  !!
+  !!  Subroutine to define observation output formats.
+  !!
+  !<
   subroutine define_fmts(this)
-! ******************************************************************************
-! define_fmts
-!   -- define output formats for single and continuous observations
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType) :: this
     ! formats
 50  format('(g', i2.2, '.', i2.2, ')')
-! ------------------------------------------------------------------------------
     !
     if (this%idigits == 0) then
       this%obsfmtcont = '(G0)'
     else
       write (this%obsfmtcont, 50) this%idigits + 7, this%idigits
     end if
+    !
+    ! -- return
     return
   end subroutine define_fmts
 
+  !> @ brief Read observations
+  !!
+  !!  Subroutine to read the observations from the observation input file
+  !!  and build headers for the observation output files.
+  !!
+  !<
   subroutine read_observations(this)
-! ******************************************************************************
-! read_observations
-!   -- read CONTINUOUS blocks from OBS input file
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- Read CONTINUOUS blocks and store observations
     call this%read_obs_blocks(this%outputFilename)
@@ -796,37 +778,36 @@ contains
     ! -- build headers
     call this%build_headers()
     !
+    ! -- return
     return
   end subroutine read_observations
 
+  !> @ brief Get the number of observations
+  !!
+  !!  Function to get the number of observationns in this ObsType object.
+  !!
+  !<
   function get_num(this)
-! ******************************************************************************
-! get_num
-!   -- Return the number of observations contained in this ObsType object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- return
-    integer(I4B) :: get_num
+    integer(I4B) :: get_num !< number of observations
     ! -- dummy
     class(ObsType) :: this
-! ------------------------------------------------------------------------------
     !
     get_num = this%obsList%Count()
+    !
+    ! -- return
     return
   end function get_num
 
+  !> @ brief Build observation headers
+  !!
+  !!  Subroutine to build headers for CSV-formatted and unformatted
+  !!  continuous-observation output files and write them to those files.
+  !!
+  !!  Each formatted header will have the form: "time,obsname-1,obsname-2, ..."
+  !!
+  !<
   subroutine build_headers(this)
-! ******************************************************************************
-! build_headers
-! -- Build headers for CSV-formatted and unformatted continuous-observation
-! output files and write them to those files.
-! Each formatted header will have the form: "time,obsname-1,obsname-2, ..."
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- module
     use iso_fortran_env, only: int32
     ! -- dummy
@@ -841,7 +822,6 @@ contains
     character(len=4) :: clenobsname
     type(ObserveType), pointer :: obsrv => null()
     type(ObsOutputType), pointer :: obsOutput => null()
-! ------------------------------------------------------------------------------
     !
     ! -- Cycle through ObsOutputList to write headers
     !    to formatted and unformatted file(s).
@@ -897,53 +877,49 @@ contains
     return
   end subroutine build_headers
 
+  !> @ brief Get an array of observations
+  !!
+  !!  Subroutine to get an array containing all observations in this
+  !!  ObsType object.
+  !!
+  !<
   subroutine get_obs_array(this, nObs, obsArray)
-! ******************************************************************************
-! get_obs_array
-!   -- Get an array containing all observations in this ObsType object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType), intent(inout) :: this
-    integer(I4B), intent(out) :: nObs
-    type(ObsContainerType), dimension(:), pointer, intent(inout) :: obsArray
-    ! -- local
-! ------------------------------------------------------------------------------
+    integer(I4B), intent(out) :: nObs !< number of observations
+    type(ObsContainerType), dimension(:), pointer, intent(inout) :: obsArray !< observation array
     !
     nObs = this%get_num()
     if (associated(obsArray)) deallocate (obsArray)
     allocate (obsArray(nObs))
     !
-    ! Get observations
+    ! set observations in obsArray
     if (nObs > 0) then
-      call this%populate_obs_array(nObs, obsArray)
+      call this%set_obs_array(nObs, obsArray)
     end if
     !
+    ! -- return
     return
   end subroutine get_obs_array
 
+  !> @ brief Get an ObsDataType object
+  !!
+  !!  Function to get an ObsDataType object for the specified observation type.
+  !!
+  !<
   function get_obs_datum(this, obsTypeID) result(obsDatum)
-! ******************************************************************************
-! get_obs_datum
-!   -- Return an ObsDataType object for the specified observation type
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType) :: this
-    character(len=*), intent(in) :: obsTypeID
-    type(ObsDataType), pointer :: obsDatum
+    character(len=*), intent(in) :: obsTypeID !< observation type
+    ! -- return
+    type(ObsDataType), pointer :: obsDatum !< observation ObsDataType
     ! -- local
     integer(I4B) :: i
-! ------------------------------------------------------------------------------
     !
     obsDatum => null()
     do i = 1, MAXOBSTYPES
       if (this%obsData(i)%ObsTypeID == obsTypeID) then
-        obsDatum => this%obsData(I)
+        obsDatum => this%obsData(i)
         exit
       end if
     end do
@@ -954,25 +930,24 @@ contains
       call store_error_unit(this%inUnitObs)
     end if
     !
+    ! -- return
     return
   end function get_obs_datum
 
-  subroutine populate_obs_array(this, nObs, obsArray)
-! ******************************************************************************
-! populate_obs_array
-!   -- Populate obsArray with observations for specified package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @ brief Set observation array values
+  !!
+  !!  Subroutine to set values in an observation array.
+  !!
+  !<
+  subroutine set_obs_array(this, nObs, obsArray)
     ! -- dummy
     class(ObsType), intent(inout) :: this
-    integer(I4B), intent(in) :: nObs
-    type(ObsContainerType), dimension(nObs), intent(inout) :: obsArray
-! ------------------------------------------------------------------------------
+    integer(I4B), intent(in) :: nObs !< number of observations
+    type(ObsContainerType), dimension(nObs), intent(inout) :: obsArray !< observation array
     !
     ! -- local
-    integer(I4B) :: i, n
+    integer(I4B) :: i
+    integer(I4B) :: n
     type(ObserveType), pointer :: obsrv => null()
     !
     n = this%get_num()
@@ -981,37 +956,34 @@ contains
       obsArray(i)%obsrv => obsrv
     end do
     !
+    ! -- return
     return
-  end subroutine populate_obs_array
+  end subroutine set_obs_array
 
+  !> @ brief Get an ObserveType object
+  !!
+  !!  Subroutine to get an ObserveType object from the list of observations
+  !!  using an list index.
+  !!
+  !<
   function get_obs(this, indx) result(obsrv)
-! ******************************************************************************
-! get_obs
-!   -- Return the specified ObserveType object from the list of observations
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType) :: this
-    integer(I4B), intent(in) :: indx
-    class(ObserveType), pointer :: obsrv
-    ! -- local
-! ------------------------------------------------------------------------------
+    integer(I4B), intent(in) :: indx !< observation list index
+    class(ObserveType), pointer :: obsrv !< observation ObserveType
     !
     obsrv => GetObsFromList(this%obsList, indx)
     !
+    ! -- return
     return
   end function get_obs
 
+  !> @ brief Read observation blocks
+  !!
+  !!  Subroutine to read CONTIGUIUS block from the observation input file.
+  !!
+  !<
   subroutine read_obs_blocks(this, fname)
-! ******************************************************************************
-! read_obs_blocks
-!   -- read CONTINUOUS blocks from the OBS input file
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(ObsType), intent(inout) :: this
     character(len=*), intent(inout) :: fname
@@ -1028,8 +1000,6 @@ contains
     type(ObsOutputType), pointer :: obsOutput => null()
     integer(I4B) :: ntabrows
     integer(I4B) :: ntabcols
-    ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- initialize local variables
     numspec = -1
@@ -1164,22 +1134,22 @@ contains
     return
   end subroutine read_obs_blocks
 
-  subroutine write_continuous_simvals(this)
-! ******************************************************************************
-! write_continuous_simvals
-! Subroutine: (1) for each continuous observation, writes value to output
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @ brief Write observation data
+  !!
+  !!  Subroutine to write observation data for a time step for each observation
+  !!  to the observation output file.
+  !!
+  !<
+  subroutine write_obs_simvals(this)
     ! -- dummy
     class(ObsType), intent(inout) :: this
     ! -- local
-    integer(I4B) :: i, iprec, numobs
+    integer(I4B) :: i
+    integer(I4B) :: iprec
+    integer(I4B) :: numobs
     character(len=20) :: fmtc
     real(DP) :: simval
     class(ObserveType), pointer :: obsrv => null()
-! ------------------------------------------------------------------------------
     !
     ! Write simulated values for observations
     iprec = this%iprecision
@@ -1191,17 +1161,14 @@ contains
       ! -- continuous observation
       simval = obsrv%CurrentTimeStepEndValue
       if (obsrv%FormattedOutput) then
-        call write_fmtd_cont(fmtc, obsrv, this%obsOutputList, simval)
+        call write_fmtd_obs(fmtc, obsrv, this%obsOutputList, simval)
       else
-        call write_unfmtd_cont(obsrv, iprec, this%obsOutputList, simval)
+        call write_unfmtd_obs(obsrv, iprec, this%obsOutputList, simval)
       end if
     end do
     !
-    ! -- flush file
-    flush (obsrv%UnitNumber)
-    !
     ! --return
     return
-  end subroutine write_continuous_simvals
+  end subroutine write_obs_simvals
 
 end module ObsModule
