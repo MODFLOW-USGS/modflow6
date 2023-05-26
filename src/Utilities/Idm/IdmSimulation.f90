@@ -203,7 +203,6 @@ contains
     return
   end function input_param_log
 
-
   !> @brief MODFLOW 6 mfsim.nam input load routine
   !<
   subroutine simnam_load(paramlog)
