@@ -1700,6 +1700,13 @@ contains
           if (trim(adjustl(this%text)) /= 'UZE') then 
             this%ktf(n) = this%parser%GetDouble()
             this%rfeatthk(n) = this%parser%GetDouble()
+            if (this%rfeatthk(n) >= DZERO) then
+              write (errmsg, '(4x,a)') &
+              '****ERROR. Specified thickness used for thermal &
+              &conduction MUST BE > 0 else divide by zero error occurs'
+              call store_error(errmsg)
+          cycle
+        end if
           end if
         end if
         !
