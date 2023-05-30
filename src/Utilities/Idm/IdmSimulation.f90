@@ -81,7 +81,7 @@ contains
     case ('MXITER')
       intvar = 1
       !
-    case ('PRINT_INPUT_VAR')
+    case ('PRINT_INPUT')
       intvar = 0
       !
     case default
@@ -193,9 +193,9 @@ contains
     integer(I4B) :: paramlog
     integer(I4B), pointer :: p
     !
-    ! -- read and set input value of PRINT_INPUT_VAR
+    ! -- read and set input value of PRINT_INPUT
     simnam_mempath = create_mem_path('SIM', 'NAM', idm_context)
-    call mem_setptr(p, 'PRINT_INPUT_VAR', simnam_mempath)
+    call mem_setptr(p, 'PRINT_INPUT', simnam_mempath)
     !
     paramlog = p
     !

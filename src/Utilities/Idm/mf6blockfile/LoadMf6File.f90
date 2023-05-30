@@ -454,7 +454,7 @@ contains
     integer(I4B), pointer :: intvar
     call mem_allocate(intvar, idt%mf6varname, memoryPath)
     intvar = 1
-    call idm_log_var(intvar, idt%tagname, memoryPath, iout)
+    call idm_log_var(intvar, idt%tagname, memoryPath, idt%datatype, iout)
     return
   end subroutine load_keyword_type
 
@@ -484,7 +484,7 @@ contains
     integer(I4B), pointer :: intvar
     call mem_allocate(intvar, idt%mf6varname, memoryPath)
     intvar = parser%GetInteger()
-    call idm_log_var(intvar, idt%tagname, memoryPath, iout)
+    call idm_log_var(intvar, idt%tagname, memoryPath, idt%datatype, iout)
     return
   end subroutine load_integer_type
 
