@@ -81,6 +81,9 @@ contains
     case ('MXITER')
       intvar = 1
       !
+    case ('PRINT_INPUT')
+      intvar = 0
+      !
     case default
       write (errmsg, '(a,a)') &
         'IdmSimulation set_default_value unhandled variable: ', &
@@ -182,11 +185,30 @@ contains
     return
   end subroutine load_models
 
+  function input_param_log() result(paramlog)
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerModule, only: mem_setptr
+    use SimVariablesModule, only: idm_context
+    character(len=LENMEMPATH) :: simnam_mempath
+    integer(I4B) :: paramlog
+    integer(I4B), pointer :: p
+    !
+    ! -- read and set input value of PRINT_INPUT
+    simnam_mempath = create_mem_path('SIM', 'NAM', idm_context)
+    call mem_setptr(p, 'PRINT_INPUT', simnam_mempath)
+    !
+    paramlog = p
+    !
+    ! -- return
+    return
+  end function input_param_log
+
   !> @brief MODFLOW 6 mfsim.nam input load routine
   !<
-  subroutine simnam_load()
+  subroutine simnam_load(paramlog)
     use SimVariablesModule, only: simfile
     use GenericUtilitiesModule, only: sim_message
+    integer(I4B), intent(inout) :: paramlog
     integer(I4B) :: inunit
     logical :: lexist
     character(len=LINELENGTH) :: line
@@ -210,6 +232,9 @@ contains
     !
     ! -- allocate any unallocated simnam params
     call simnam_allocate()
+    !
+    ! -- read and set input parameter logging keyword
+    paramlog = input_param_log()
     !
     ! -- memload summary info
     call simnam_load_dim()

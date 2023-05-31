@@ -405,7 +405,7 @@ contains
           end if
           !
           call struct_array%mem_create_vector(icol, 'INTEGER', &
-                                              varname, &
+                                              varname, varname, &
                                               mf6_input%mempath, '', &
                                               .false.)
           !
@@ -430,8 +430,8 @@ contains
       !
       ! -- allocate variable in memory manager
       call struct_array%mem_create_vector(icol, idt%datatype, idt%mf6varname, &
-                                          mf6_input%mempath, idt%shape, &
-                                          idt%preserve_case)
+                                          idt%tagname, mf6_input%mempath, &
+                                          idt%shape, idt%preserve_case)
     end do
     !
     ! -- read the structured array
@@ -454,7 +454,7 @@ contains
     integer(I4B), pointer :: intvar
     call mem_allocate(intvar, idt%mf6varname, memoryPath)
     intvar = 1
-    call idm_log_var(intvar, idt%mf6varname, memoryPath, iout)
+    call idm_log_var(intvar, idt%tagname, memoryPath, idt%datatype, iout)
     return
   end subroutine load_keyword_type
 
@@ -470,7 +470,7 @@ contains
     ilen = LINELENGTH
     call mem_allocate(cstr, ilen, idt%mf6varname, memoryPath)
     call parser%GetString(cstr, (.not. idt%preserve_case))
-    call idm_log_var(cstr, idt%mf6varname, memoryPath, iout)
+    call idm_log_var(cstr, idt%tagname, memoryPath, iout)
     return
   end subroutine load_string_type
 
@@ -484,7 +484,7 @@ contains
     integer(I4B), pointer :: intvar
     call mem_allocate(intvar, idt%mf6varname, memoryPath)
     intvar = parser%GetInteger()
-    call idm_log_var(intvar, idt%mf6varname, memoryPath, iout)
+    call idm_log_var(intvar, idt%tagname, memoryPath, idt%datatype, iout)
     return
   end subroutine load_integer_type
 
@@ -531,7 +531,7 @@ contains
     end if
 
     ! log information on the loaded array to the list file
-    call idm_log_var(int1d, idt%mf6varname, memoryPath, iout)
+    call idm_log_var(int1d, idt%tagname, memoryPath, iout)
     return
   end subroutine load_integer1d_type
 
@@ -574,7 +574,7 @@ contains
     end if
 
     ! log information on the loaded array to the list file
-    call idm_log_var(int2d, idt%mf6varname, memoryPath, iout)
+    call idm_log_var(int2d, idt%tagname, memoryPath, iout)
     return
   end subroutine load_integer2d_type
 
@@ -622,7 +622,7 @@ contains
     end if
 
     ! log information on the loaded array to the list file
-    call idm_log_var(int3d, idt%mf6varname, memoryPath, iout)
+    call idm_log_var(int3d, idt%tagname, memoryPath, iout)
 
     return
   end subroutine load_integer3d_type
@@ -637,7 +637,7 @@ contains
     real(DP), pointer :: dblvar
     call mem_allocate(dblvar, idt%mf6varname, memoryPath)
     dblvar = parser%GetDouble()
-    call idm_log_var(dblvar, idt%mf6varname, memoryPath, iout)
+    call idm_log_var(dblvar, idt%tagname, memoryPath, iout)
     return
   end subroutine load_double_type
 
@@ -683,7 +683,7 @@ contains
     end if
 
     ! log information on the loaded array to the list file
-    call idm_log_var(dbl1d, idt%mf6varname, memoryPath, iout)
+    call idm_log_var(dbl1d, idt%tagname, memoryPath, iout)
     return
   end subroutine load_double1d_type
 
@@ -726,7 +726,7 @@ contains
     end if
 
     ! log information on the loaded array to the list file
-    call idm_log_var(dbl2d, idt%mf6varname, memoryPath, iout)
+    call idm_log_var(dbl2d, idt%tagname, memoryPath, iout)
     return
   end subroutine load_double2d_type
 
@@ -774,7 +774,7 @@ contains
     end if
 
     ! log information on the loaded array to the list file
-    call idm_log_var(dbl3d, idt%mf6varname, memoryPath, iout)
+    call idm_log_var(dbl3d, idt%tagname, memoryPath, iout)
 
     return
   end subroutine load_double3d_type

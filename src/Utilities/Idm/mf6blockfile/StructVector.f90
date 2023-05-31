@@ -23,6 +23,7 @@ module StructVectorModule
   !<
   type StructVectorType
     character(len=LENVARNAME) :: varname
+    character(len=100) :: tagname
     character(len=LENVARNAME) :: shapevar
     character(len=LENMEMPATH) :: mempath
     integer(I4B) :: memtype = 0
