@@ -39,7 +39,7 @@ type keyword
 reader urword
 optional true
 longname print input to listing file
-description summarize simulation input to the listing file as it is read. Input read from mfsim.nam is excluded.
+description keyword to activate printing of simulation input summaries to the simulation list file (mfsim.lst). With this keyword, input summaries will be written for those packages that support newer input data model routines.  Not all packages are supported yet by the newer input data model routines.
 
 # --------------------- sim nam timing ---------------------
 
