@@ -42,11 +42,11 @@ jobs:
           path: usgslatex
 
       - name: Install Conda environment from environment.yml
-        uses: mamba-org/provision-with-micromamba@main
+        uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: modflow6/environment.yml
+          cache-environment: true
           cache-downloads: true
-          cache-env: true
 
       - name: Install additional packages for Sphinx using pip
         working-directory: modflow6/.build_rtd_docs
@@ -166,10 +166,11 @@ jobs:
           sudo apt-get install doxygen graphviz
 
       - name: Install Conda environment from environment.yml
-        uses: mamba-org/provision-with-micromamba@main
+        uses: mamba-org/setup-micromamba@v1
         with:
+            environment-file: environment.yml
+            cache-environment: true
             cache-downloads: true
-            cache-env: true
 
       - name: Print python package versions
         run: pip list

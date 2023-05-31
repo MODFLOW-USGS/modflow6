@@ -1764,7 +1764,9 @@ contains
     !
     ! -- Initialize
     ierr = 0
-    this%uzfobj%pet = this%uzfobj%petmax
+    do i = 1, this%nodes
+      this%uzfobj%pet(i) = this%uzfobj%petmax(i)
+    end do
     !
     ! -- Calculate hcof and rhs for each UZF entry
     do i = 1, this%nodes
