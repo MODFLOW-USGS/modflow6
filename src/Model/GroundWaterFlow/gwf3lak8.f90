@@ -6332,6 +6332,10 @@ contains
         !    equal to 0.0
         gwhead = this%xnew(n2)
         call this%lak_calculate_conn_warea(n, j, lkstg, gwhead, wa)
+        ! -- For thermal conduction between a lake and a gw cell,
+        !    the shared wetted area should be reset to zero when the lake
+        !    stage is below the cell bottom
+        if (this%belev(j) > lkstg) wa = DZERO
         this%qauxcbc(1) = wa
         call this%budobj%budterm(idx)%update_term(n, n2, q, this%qauxcbc)
       end do
