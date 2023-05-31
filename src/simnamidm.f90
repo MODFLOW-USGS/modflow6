@@ -14,6 +14,7 @@ module SimNamInputModule
     logical :: nocheck = .false.
     logical :: prmem = .false.
     logical :: maxerrors = .false.
+    logical :: print_input = .false.
     logical :: tdis6 = .false.
     logical :: mtype = .false.
     logical :: mfname = .false.
@@ -87,6 +88,22 @@ module SimNamInputModule
     'MAXERRORS', & ! tag name
     'MAXERRORS', & ! fortran variable
     'INTEGER', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false. & ! layered
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    simnam_print_input = InputParamDefinitionType &
+    ( &
+    'SIM', & ! component
+    'NAM', & ! subcomponent
+    'OPTIONS', & ! block
+    'PRINT_INPUT', & ! tag name
+    'PRINT_INPUT', & ! fortran variable
+    'KEYWORD', & ! type
     '', & ! shape
     .false., & ! required
     .false., & ! multi-record
@@ -293,6 +310,7 @@ module SimNamInputModule
     simnam_nocheck, &
     simnam_prmem, &
     simnam_maxerrors, &
+    simnam_print_input, &
     simnam_tdis6, &
     simnam_mtype, &
     simnam_mfname, &

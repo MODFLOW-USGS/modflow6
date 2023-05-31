@@ -40,4 +40,5 @@ module SimVariablesModule
   integer(I4B) :: iunext = IUSTART !< next file unit number to assign
   integer(I4B) :: lastStepFailed = 0 !< flag indicating if the last step failed (1) if last step failed; (0) otherwise (set in converge_check)
   integer(I4B) :: iFailedStepRetry = 0 !< current retry for this time step
+  integer(I4B) :: iparamlog = 0 !< input (idm) parameter logging to simulation listing file
 end module SimVariablesModule

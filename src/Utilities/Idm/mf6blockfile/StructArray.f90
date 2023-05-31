@@ -99,12 +99,13 @@ contains
 
   !> @brief create new vector in StructArrayType
   !<
-  subroutine mem_create_vector(this, icol, vartype, name, memoryPath, &
+  subroutine mem_create_vector(this, icol, vartype, name, tagname, memoryPath, &
                                varname_shape, preserve_case)
     class(StructArrayType) :: this !< StructArrayType
     integer(I4B), intent(in) :: icol !< column to create
     character(len=*), intent(in) :: vartype !< type of column to create
     character(len=*), intent(in) :: name !< name of the column to create
+    character(len=*), intent(in) :: tagname
     character(len=*), intent(in) :: memoryPath !< memory path for storing the vector
     character(len=*), intent(in) :: varname_shape !< shape
     logical(LGP), optional, intent(in) :: preserve_case !< flag indicating whether or not to preserve case
@@ -124,8 +125,8 @@ contains
       allocate (intvector)
       !
       ! -- initialize StructVector and add to StructArray
-      call this%add_vector_intvector(name, memoryPath, varname_shape, icol, &
-                                     intvector)
+      call this%add_vector_intvector(name, tagname, memoryPath, varname_shape, &
+                                     icol, intvector)
       !
     case ('INTEGER')
       !
@@ -143,7 +144,7 @@ contains
       end do
       !
       ! -- initialize StructVector and add to StructArray
-      call this%add_vector_int1d(name, memoryPath, icol, int1d)
+      call this%add_vector_int1d(name, tagname, memoryPath, icol, int1d)
       !
     case ('DOUBLE')
       !
@@ -153,7 +154,7 @@ contains
         dbl1d(j) = DNODATA
       end do
       !
-      call this%add_vector_dbl1d(name, memoryPath, icol, dbl1d)
+      call this%add_vector_dbl1d(name, tagname, memoryPath, icol, dbl1d)
       !
     case ('STRING', 'KEYWORD')
       !
@@ -167,7 +168,7 @@ contains
         charstr1d(j) = ''
       end do
       !
-      call this%add_vector_charstr1d(name, memoryPath, icol, charstr1d, &
+      call this%add_vector_charstr1d(name, tagname, memoryPath, icol, charstr1d, &
                                      varname_shape, preserve_case)
     end select
 
@@ -176,9 +177,10 @@ contains
 
   !> @brief add int1d to StructArrayType
   !<
-  subroutine add_vector_int1d(this, varname, memoryPath, icol, int1d)
+  subroutine add_vector_int1d(this, varname, tagname, memoryPath, icol, int1d)
     class(StructArrayType) :: this !< StructArrayType
     character(len=*), intent(in) :: varname !< name of the variable
+    character(len=*), intent(in) :: tagname
     character(len=*), intent(in) :: memoryPath !< memory path to vector
     integer(I4B), intent(in) :: icol !< column of the vector
     integer(I4B), dimension(:), pointer, contiguous, intent(in) :: int1d !< vector to add
@@ -186,6 +188,7 @@ contains
     !
     ! -- initialize StructVectorType
     sv%varname = varname
+    sv%tagname = tagname
     sv%shapevar = ''
     sv%mempath = memoryPath
     sv%memtype = 1
@@ -207,9 +210,10 @@ contains
 
   !> @brief add dbl1d to StructArrayType
   !<
-  subroutine add_vector_dbl1d(this, varname, memoryPath, icol, dbl1d)
+  subroutine add_vector_dbl1d(this, varname, tagname, memoryPath, icol, dbl1d)
     class(StructArrayType) :: this !< StructArrayType
     character(len=*), intent(in) :: varname !< name of the variable
+    character(len=*), intent(in) :: tagname
     character(len=*), intent(in) :: memoryPath !< memory path to vector
     integer(I4B), intent(in) :: icol !< column of the vector
     real(DP), dimension(:), pointer, contiguous, intent(in) :: dbl1d !< vector to add
@@ -217,6 +221,7 @@ contains
     !
     ! -- initialize StructVectorType
     sv%varname = varname
+    sv%tagname = tagname
     sv%shapevar = ''
     sv%mempath = memoryPath
     sv%memtype = 2
@@ -232,11 +237,12 @@ contains
 
   !> @brief add charstr1d to StructArrayType
   !<
-  subroutine add_vector_charstr1d(this, varname, memoryPath, icol, charstr1d, &
-                                  varname_shape, preserve_case)
+  subroutine add_vector_charstr1d(this, varname, tagname, memoryPath, icol, &
+                                  charstr1d, varname_shape, preserve_case)
     class(StructArrayType) :: this !< StructArrayType
     integer(I4B), intent(in) :: icol !< column of the vector
     character(len=*), intent(in) :: varname !< name of the variable
+    character(len=*), intent(in) :: tagname
     character(len=*), intent(in) :: memoryPath !< memory path to vector
     type(CharacterStringType), dimension(:), pointer, contiguous, intent(in) :: &
       charstr1d !< vector to add
@@ -246,6 +252,7 @@ contains
     !
     ! -- initialize StructVectorType
     sv%varname = varname
+    sv%tagname = tagname
     sv%shapevar = varname_shape
     sv%mempath = memoryPath
     sv%memtype = 3
@@ -268,10 +275,11 @@ contains
 
   !> @brief add STLVecInt to StructArrayType
   !<
-  subroutine add_vector_intvector(this, varname, memoryPath, varname_shape, &
-                                  icol, intvector)
+  subroutine add_vector_intvector(this, varname, tagname, memoryPath, &
+                                  varname_shape, icol, intvector)
     class(StructArrayType) :: this !< StructArrayType
     character(len=*), intent(in) :: varname !< name of the variable
+    character(len=*), intent(in) :: tagname
     character(len=*), intent(in) :: memoryPath !< memory path to vector
     character(len=*), intent(in) :: varname_shape !< shape of variable
     integer(I4B), intent(in) :: icol !< column of the vector
@@ -286,6 +294,7 @@ contains
     !
     ! -- initialize StructVectorType
     sv%varname = varname
+    sv%tagname = tagname
     sv%shapevar = varname_shape
     sv%mempath = memoryPath
     sv%memtype = 4
@@ -459,13 +468,13 @@ contains
       case (1) ! -- memtype integer
         !
         call idm_log_var(this%struct_vector_1d(j)%int1d, &
-                         this%struct_vector_1d(j)%varname, &
+                         this%struct_vector_1d(j)%tagname, &
                          this%struct_vector_1d(j)%mempath, iout)
         !
       case (2) ! -- memtype real
         !
         call idm_log_var(this%struct_vector_1d(j)%dbl1d, &
-                         this%struct_vector_1d(j)%varname, &
+                         this%struct_vector_1d(j)%tagname, &
                          this%struct_vector_1d(j)%mempath, iout)
         !
       case (4) ! -- memtype intvector
@@ -473,7 +482,7 @@ contains
         call mem_setptr(int1d, this%struct_vector_1d(j)%varname, &
                         this%struct_vector_1d(j)%mempath)
         !
-        call idm_log_var(int1d, this%struct_vector_1d(j)%varname, &
+        call idm_log_var(int1d, this%struct_vector_1d(j)%tagname, &
                          this%struct_vector_1d(j)%mempath, iout)
         !
       end select
