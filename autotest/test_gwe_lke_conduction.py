@@ -5,7 +5,7 @@
 # no SFR or other advanced packages.  Problem set up to have only
 # conductive exchange with groundwater, then groundwater pass-through:
 # that is, gw inflow on the left side, gw outflow on the
-# right side of the lake.  
+# right side of the lake.
 #
 # starting groundwater temperature: 4.0
 # left chd boundary inflow temperature: 4.0
