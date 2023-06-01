@@ -37,7 +37,9 @@ module GwtMstModule
   type, extends(NumericalPackageType) :: GwtMstType
     !
     ! -- storage
-    real(DP), dimension(:), pointer, contiguous :: porosity => null() !< porosity
+    real(DP), dimension(:), pointer, contiguous :: porosity => null() !< mobile porosity defined as volume mobile voids per volume of mobile domain
+    real(DP), dimension(:), pointer, contiguous :: thetam => null() !< mobile porosity defined as volume mobile voids per volume of aquifer
+    real(DP), dimension(:), pointer, contiguous :: volfracim => null() !< sum of all immobile domain volume fractions
     real(DP), dimension(:), pointer, contiguous :: ratesto => null() !< rate of mobile storage
     !
     ! -- decay
@@ -77,6 +79,9 @@ module GwtMstModule
     procedure :: mst_ot_flow
     procedure :: mst_da
     procedure :: allocate_scalars
+    procedure :: addto_volfracim
+    procedure :: get_volfracm
+    procedure :: get_thetam
     procedure, private :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_data
@@ -233,7 +238,7 @@ contains
       !
       ! -- calculate new and old water volumes
       vnew = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n)) * &
-             this%fmi%gwfsat(n) * this%porosity(n)
+             this%fmi%gwfsat(n) * this%get_thetam(n)
       vold = vnew
       if (this%fmi%igwfstrgss /= 0) vold = vold + this%fmi%gwfstrgss(n) * delt
       if (this%fmi%igwfstrgsy /= 0) vold = vold + this%fmi%gwfstrgsy(n) * delt
@@ -292,7 +297,7 @@ contains
         !
         ! -- first order decay rate is a function of concentration, so add
         !    to left hand side
-        hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n)
+        hhcof = -this%decay(n) * vcell * swtpdt * this%get_thetam(n)
         call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
       elseif (this%idcy == 2) then
         !
@@ -301,7 +306,7 @@ contains
         decay_rate = get_zero_order_decay(this%decay(n), this%decaylast(n), &
                                           kiter, cold(n), cnew(n), delt)
         this%decaylast(n) = decay_rate
-        rrhs = decay_rate * vcell * swtpdt * this%porosity(n)
+        rrhs = decay_rate * vcell * swtpdt * this%get_thetam(n)
         rhs(n) = rhs(n) + rrhs
       end if
       !
@@ -619,7 +624,7 @@ contains
       !
       ! -- calculate new and old water volumes
       vnew = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n)) * &
-             this%fmi%gwfsat(n) * this%porosity(n)
+             this%fmi%gwfsat(n) * this%get_thetam(n)
       vold = vnew
       if (this%fmi%igwfstrgss /= 0) vold = vold + this%fmi%gwfstrgss(n) * delt
       if (this%fmi%igwfstrgsy /= 0) vold = vold + this%fmi%gwfstrgsy(n) * delt
@@ -678,11 +683,11 @@ contains
       hhcof = DZERO
       rrhs = DZERO
       if (this%idcy == 1) then
-        hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n)
+        hhcof = -this%decay(n) * vcell * swtpdt * this%get_thetam(n)
       elseif (this%idcy == 2) then
         decay_rate = get_zero_order_decay(this%decay(n), this%decaylast(n), &
                                           0, cold(n), cnew(n), delt)
-        rrhs = decay_rate * vcell * swtpdt * this%porosity(n)
+        rrhs = decay_rate * vcell * swtpdt * this%get_thetam(n)
       end if
       rate = hhcof * cnew(n) - rrhs
       this%ratedcy(n) = rate
@@ -975,6 +980,8 @@ contains
     ! -- Deallocate arrays if package was active
     if (this%inunit > 0) then
       call mem_deallocate(this%porosity)
+      call mem_deallocate(this%thetam)
+      call mem_deallocate(this%volfracim)
       call mem_deallocate(this%ratesto)
       call mem_deallocate(this%idcy)
       call mem_deallocate(this%decay)
@@ -1046,6 +1053,8 @@ contains
     ! -- Allocate
     ! -- sto
     call mem_allocate(this%porosity, nodes, 'POROSITY', this%memoryPath)
+    call mem_allocate(this%thetam, nodes, 'THETAM', this%memoryPath)
+    call mem_allocate(this%volfracim, nodes, 'VOLFRACIM', this%memoryPath)
     call mem_allocate(this%ratesto, nodes, 'RATESTO', this%memoryPath)
     !
     ! -- dcy
@@ -1090,6 +1099,8 @@ contains
     ! -- Initialize
     do n = 1, nodes
       this%porosity(n) = DZERO
+      this%thetam(n) = DZERO
+      this%volfracim(n) = DZERO
       this%ratesto(n) = DZERO
     end do
     do n = 1, size(this%decay)
@@ -1205,7 +1216,7 @@ contains
     ! -- local
     character(len=LINELENGTH) :: keyword
     character(len=:), allocatable :: line
-    integer(I4B) :: istart, istop, lloc, ierr
+    integer(I4B) :: istart, istop, lloc, ierr, n
     logical :: isfound, endOfBlock
     logical, dimension(6) :: lname
     character(len=24), dimension(6) :: aname
@@ -1382,9 +1393,81 @@ contains
       call this%parser%StoreErrorUnit()
     end if
     !
+    ! -- initialize thetam from porosity
+    do n = 1, size(this%porosity)
+      this%thetam(n) = this%porosity(n)
+    end do
+    !
     ! -- Return
     return
   end subroutine read_data
+
+  !> @ brief Add volfrac values to volfracim
+  !!
+  !!  Method to add immobile domain volume fracions, which are stored as a
+  !!  cumulative value in volfracim.
+  !!
+  !<
+  subroutine addto_volfracim(this, volfracim)
+    ! -- modules
+    ! -- dummy
+    class(GwtMstType) :: this !< GwtMstType object
+    real(DP), dimension(:), intent(in) :: volfracim !< immobile domain volume fraction that contributes to total immobile volume fraction
+    ! -- local
+    integer(I4B) :: n
+    !
+    ! -- Add to volfracim
+    do n = 1, this%dis%nodes
+      this%volfracim(n) = this%volfracim(n) + volfracim(n)
+    end do
+    !
+    ! -- An immobile domain is adding a volume fraction, so update thetam
+    !    accordingly.
+    do n = 1, this%dis%nodes
+      this%thetam(n) = this%get_thetam(n)
+    end do
+    !
+    ! -- Return
+    return
+  end subroutine addto_volfracim
+
+  !> @ brief Return mobile domain volume fraction
+  !!
+  !!  Calculate and return the volume fraction of the aquifer that is mobile
+  !!
+  !<
+  function get_volfracm(this, node) result(volfracm)
+    ! -- modules
+    ! -- dummy
+    class(GwtMstType) :: this !< GwtMstType object
+    integer(I4B), intent(in) :: node !< node number
+    ! -- return
+    real(DP) :: volfracm
+    !
+    volfracm = DONE - this%volfracim(node)
+    !
+    ! -- Return
+    return
+  end function get_volfracm
+
+  !> @ brief Return thetam
+  !!
+  !!  Calculate and return thetam, volume of mobile voids per volume of aquifer
+  !!
+  !<
+  function get_thetam(this, node) result(thetam)
+    ! -- modules
+    ! -- dummy
+    class(GwtMstType) :: this !< GwtMstType object
+    integer(I4B), intent(in) :: node !< node number
+    ! -- return
+    real(DP) :: thetam
+    !
+    thetam = this%get_volfracm(node) * this%porosity(node)
+    !
+    ! -- Return
+    return
+  end function get_thetam
 
   !> @ brief Calculate sorption concentration using Freundlich
   !!

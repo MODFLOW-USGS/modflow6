@@ -1,8 +1,10 @@
 BEGIN GRIDDATA
   [CIM [LAYERED]
     <cim(nodes)> -- READARRAY]
-  THETAIM [LAYERED]
-    <thetaim(nodes)> -- READARRAY
+  POROSITY [LAYERED]
+    <porosity(nodes)> -- READARRAY
+  VOLFRAC [LAYERED]
+    <volfrac(nodes)> -- READARRAY
   ZETAIM [LAYERED]
     <zetaim(nodes)> -- READARRAY
   [DECAY [LAYERED]

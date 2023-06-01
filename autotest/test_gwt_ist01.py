@@ -16,7 +16,8 @@ ex = ["ist01"]
 laytyp = [1]
 ss = [1.0e-10]
 sy = [0.1]
-thetaim = [0.05]
+porosity_im = [0.05]
+volfrac_im = [0.5]
 zetaim = [0.1]
 nlay, nrow, ncol = 1, 1, 1
 
@@ -188,7 +189,8 @@ def build_model(idx, dir):
         save_flows=True,
         cim_filerecord=cim_filerecord,
         cim=0.0,
-        thetaim=thetaim[idx],
+        porosity=porosity_im[idx],
+        volfrac=volfrac_im[idx],
         zetaim=zetaim[idx],
     )
 

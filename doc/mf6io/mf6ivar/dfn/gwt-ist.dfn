@@ -241,13 +241,22 @@ longname initial concentration of the immobile domain
 description initial concentration of the immobile domain in mass per length cubed.  If CIM is not specified, then it is assumed to be zero.
 
 block griddata
-name thetaim
+name porosity
 type double precision
 shape (nodes)
 reader readarray
 layered true
 longname porosity of the immobile domain
-description porosity of the immobile domain specified as the volume of immobile pore space per total volume (dimensionless).
+description porosity of the immobile domain specified as the volume of immobile pore space per volume of immobile domain.
+
+block griddata
+name volfrac
+type double precision
+shape (nodes)
+reader readarray
+layered true
+longname volume fraction of this immobile domain
+description fraction of the cell volume that consists of this immobile domain.
 
 block griddata
 name zetaim
@@ -285,7 +294,7 @@ shape (nodes)
 reader readarray
 layered true
 longname bulk density
-description is the bulk density of the aquifer in mass per length cubed.  bulk\_density will have no effect on simulation results unless the SORPTION keyword is specified in the options block.  Bulk density is defined as the immobile domain solid mass per aquifer volume. The definition for this input variable changed after version 6.4.1 was released.  The bulk density specified in this package is defined differently from the bulk density defined in the Mobile Storage and Transfer (MST) Package. Additional information on bulk density is included in the MODFLOW 6 Supplemental Technical Information document.
+description is the bulk density of this immobile domain in mass per length cubed.  bulk\_density will have no effect on simulation results unless the SORPTION keyword is specified in the options block.  Bulk density is defined as the immobile domain solid mass per volume of the immobile domain. The definition for this input variable changed after version 6.4.1 was released.  Additional information on bulk density is included in the MODFLOW 6 Supplemental Technical Information document.
 
 block griddata
 name distcoef

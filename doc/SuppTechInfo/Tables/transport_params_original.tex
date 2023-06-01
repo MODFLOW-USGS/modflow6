@@ -1,0 +1,35 @@
+\begin{table}[!ht]
+  \small
+  \centering
+  \caption{Symbols, descriptions, and definitions of original mobile and immobile domain model parameters (used in versions of \mf up to and including version 6.4.1) that are affected by the revised parameterization. In the original parameterization, division of the aquifer into domains is conceptualized in terms of solid mass fractions, and domain properties are defined on a per-aquifer-volume basis} \tabularnewline 
+
+  \begin{tabular}{z{1.50cm}
+                  z{3.50cm}
+                  z{5.00cm}
+                  z{3.50cm}
+                  }
+    % header
+    \hline
+    \rowcolor{Gray}
+    \multicolumn{1}{ z{1.50cm} }{\textbf{Symbol}} & 
+    \multicolumn{1}{ z{3.50cm} }{\textbf{Description}} & 
+    \multicolumn{1}{ z{5.00cm} }{\textbf{Definition}} &
+    \multicolumn{1}{ z{3.50cm} }{\textbf{Notes}} \\
+    \hline
+
+    $\theta_m$ &  porosity (mobile domain) &  $\frac{mobile \; domain \; pore \; volume}{aquifer \; volume}$ & sorption-related input parameter \\
+    
+\rowcolor{Gray}
+    $\theta_{im}$ &  porosity (immobile domain $im$) &  $\frac{immobile \; domain \; pore \; volume}{aquifer \; volume}$ & sorption-related input parameter \\
+
+    $\rho_{b}$ & overall bulk density (mobile and immobile domains combined) &  $\frac{aquifer \; solid \; mass}{aquifer \; volume}$ & sorption-related input parameter \\
+
+\rowcolor{Gray}
+    $f_{m}$ &  solid mass fraction (mobile domain) &  $\frac{mobile \; domain \; solid \; mass}{aquifer \; solid \; mass}$ & sorption-related parameter (not input; calculated by \mf from immobile-domain solid mass fractions) \\
+
+    $f_{im}$ &  solid mass fraction (immobile domain $im$) &  $\frac{immobile \; domain \; solid \; mass}{aquifer \; solid \; mass}$ & sorption-related parameter (not input; calculated by \mf from user-specified domain porosities) \\
+    
+    \hline
+  \end{tabular}
+  \label{table:origparam}
+\end{table}
