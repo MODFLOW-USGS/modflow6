@@ -86,14 +86,10 @@ module GweUzeModule
 
 contains
 
+  !> @breif Create a new UZE package
+  !<
   subroutine uze_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         fmi, tsplab, eqnsclfac, gwecommon)
-! ******************************************************************************
-! uze_create -- Create a New UZE Package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
@@ -152,13 +148,9 @@ contains
     return
   end subroutine uze_create
 
+  !> @brief Find corresponding uze package
+  !<
   subroutine find_uze_package(this)
-! ******************************************************************************
-! find corresponding uze package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -277,15 +269,13 @@ contains
     return
   end subroutine find_uze_package
   
+  !> @brief Add package connection to matrix. 
+  !!
+  !! Overrides apt_ac to fold the UZE heat balance terms into the row 
+  !! corresponding to the host cell and enforce thermal equilibrium between 
+  !! UZE and the GWE cell.
+  !<
   subroutine uze_ac(this, moffset, sparse)
-! ******************************************************************************
-! uze_ac -- Add package connection to matrix. Overrides apt_ac to fold the
-!           UZE heat balance terms into the row corresponding to the host cell
-!           and enforce thermal equilibrium between UZE and the GWE cell.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use MemoryManagerModule, only: mem_setptr
     use SparseModule, only: sparsematrix
     ! -- dummy
@@ -316,7 +306,7 @@ contains
       !
       ! -- add uze-to-gwe connections. For uze, this particular do loop
       !    is the same as its counterpart in apt_ac.
-      ! nlist: number of gwe cells with a connection to at least one uze object
+      !    nlist: number of gwe cells with a connection to at least one uze object
       do i = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
         n = this%flowbudptr%budterm(this%idxbudgwf)%id1(i) !< uze object position within uze object list
         jj = this%flowbudptr%budterm(this%idxbudgwf)%id2(i) !< position of gwe cell to which uze feature is connected
@@ -339,16 +329,14 @@ contains
           jglo = moffset + this%dis%nodes + this%ioffset + jj !< global position of connected uze feature
           ! -- if connected uze feature is upstream, find cell that hosts currently 
           !    considered uze feature and add connection to that cell's row
-!!          if (jj < n) then ! presumes that deeper uze object has id with larger integer
-            do ii = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist !< uze object id among uze objects
-              idxn = this%flowbudptr%budterm(this%idxbudgwf)%id1(ii) !< uze object position within uze object list
-              idxjj = this%flowbudptr%budterm(this%idxbudgwf)%id2(ii) !< position of gwe cell to which uze feature is connected
-              idxnglo = moffset + this%dis%nodes + this%ioffset + idxn !< uze feature global position
-              idxjglo = moffset + idxjj !< gwe cell global position
-              if (nglo == idxnglo) exit
-            end do
-            call sparse%addconnection(idxjglo, jglo, 1)
-!!          end if
+          do ii = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist !< uze object id among uze objects
+            idxn = this%flowbudptr%budterm(this%idxbudgwf)%id1(ii) !< uze object position within uze object list
+            idxjj = this%flowbudptr%budterm(this%idxbudgwf)%id2(ii) !< position of gwe cell to which uze feature is connected
+            idxnglo = moffset + this%dis%nodes + this%ioffset + idxn !< uze feature global position
+            idxjglo = moffset + idxjj !< gwe cell global position
+            if (nglo == idxnglo) exit
+          end do
+          call sparse%addconnection(idxjglo, jglo, 1)
         end do
       end if
     end if
@@ -357,13 +345,9 @@ contains
     return
   end subroutine uze_ac
   
+  !> @brief Map package connection to matrix
+  !<
   subroutine uze_mc(this, moffset, matrix_sln)
-! ******************************************************************************
-! uze_mc -- map package connection to matrix
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use SparseModule, only: sparsematrix
     ! -- dummy
     class(GweUzeType), intent(inout) :: this
@@ -375,7 +359,6 @@ contains
     integer(I4B) :: ipos, idxpos
     ! -- format
 ! ------------------------------------------------------------------------------
-    !
     !
     ! -- allocate memory for index arrays
     call this%apt_allocate_index_arrays()
@@ -390,7 +373,6 @@ contains
       !
       ! -- feature diagonal in global matrix
       do n = 1, this%ncv
-!!        this%idxlocnode(n) = this%dis%nodes + this%ioffset + n
         iglo = moffset + this%dis%nodes + this%ioffset + n
         this%idxpakdiag(n) = matrix_sln%get_position_diag(iglo)
       end do
@@ -402,11 +384,9 @@ contains
         iglo = moffset + this%dis%nodes + this%ioffset + n    !< feature row index
         jglo = j + moffset                                    !< cell row index
         ! -- Note that this is where idxlocnode is set for uze; it is set
-!!        !    to the host cell global row rather than the feature global row
-!!        this%idxlocnode(n) = jglo
         !    to the host cell local row index rather than the feature local
         !    row index
-        this%idxlocnode(n) = j        ! kluge note: do we want to introduce a new array instead of co-opting idxlocnode???
+        this%idxlocnode(n) = j  ! kluge note: do we want to introduce a new array instead of co-opting idxlocnode???
         ! -- for connection ipos in list of feature-cell connections,
         !    global positions of feature-row diagonal and off-diagonal
         !    corresponding to the cell
@@ -436,22 +416,19 @@ contains
           jglo = moffset + this%dis%nodes + this%ioffset + j !< global position of connected uze feature
           ! -- if connected uze feature is upstream, find cell that hosts currently 
           !    considered uze feature and map connection to that cell's row
-!!          if (j < n) then           ! jiffylube: determine ordering of features; is id1 always upstream of id2?
-            do idxpos = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
-              idxn = this%flowbudptr%budterm(this%idxbudgwf)%id1(idxpos) !< feature number
-              idxj = this%flowbudptr%budterm(this%idxbudgwf)%id2(idxpos) !< cell number
-              ! jiffylube: should be able to base search simply on (idxn == n)
-              idxjglo = moffset + this%dis%nodes + this%ioffset + idxn   !< feature row index
-              idxiglo = moffset + idxj                                   !< cell row index
-              if (idxjglo == iglo) exit
-            end do
-            ! -- for connection ipos in list of feature-feature connections,
-            !    global positions of host-cell-row entries corresponding to
-            !    (in the same columns as) the feature-id1-row diagonal and the
-            !    feature-id1-row off-diagonal corresponding to feature id2
-            this%idxfjfdglo(ipos) = matrix_sln%get_position_diag(idxiglo)
-            this%idxfjfoffdglo(ipos) = matrix_sln%get_position(idxiglo, jglo)
-!!          end if  
+          do idxpos = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
+            idxn = this%flowbudptr%budterm(this%idxbudgwf)%id1(idxpos) !< feature number
+            idxj = this%flowbudptr%budterm(this%idxbudgwf)%id2(idxpos) !< cell number)
+            idxjglo = moffset + this%dis%nodes + this%ioffset + idxn   !< feature row index
+            idxiglo = moffset + idxj                                   !< cell row index
+            if (idxjglo == iglo) exit
+          end do
+          ! -- for connection ipos in list of feature-feature connections,
+          !    global positions of host-cell-row entries corresponding to
+          !    (in the same columns as) the feature-id1-row diagonal and the
+          !    feature-id1-row off-diagonal corresponding to feature id2
+          this%idxfjfdglo(ipos) = matrix_sln%get_position_diag(idxiglo)
+          this%idxfjfoffdglo(ipos) = matrix_sln%get_position(idxiglo, jglo)
         end do
       end if
     end if
@@ -460,14 +437,12 @@ contains
     return
   end subroutine uze_mc
 
+  !> @brief Add matrix terms related to UZE
+  !!
+  !! This will be called from TspAptType%apt_fc_expanded()
+  !! in order to add matrix terms specifically for this package
+  !<
   subroutine uze_fc_expanded(this, rhs, ia, idxglo, matrix_sln)
-! ******************************************************************************
-! uze_fc_expanded -- this will be called from TspAptType%apt_fc_expanded()
-!   in order to add matrix terms specifically for this package
-! ****************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: kper, kstp
     ! -- dummy
@@ -498,8 +473,6 @@ contains
       do j = 1, this%flowbudptr%budterm(this%idxbudinfl)%nlist
         call this%uze_infl_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)  ! for uze idxlocnode stores the host cell local row index
-!!        iposd = this%idxpakdiag(n1)
-!!        call matrix_sln%add_value_pos(iposd, hcofval)
         ipossymoffd = this%idxsymoffdglo(j)
         call matrix_sln%add_value_pos(ipossymoffd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
@@ -511,8 +484,6 @@ contains
       do j = 1, this%flowbudptr%budterm(this%idxbudrinf)%nlist
         call this%uze_rinf_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)  ! for uze idxlocnode stores the host cell local row index
-!!        iposd = this%idxpakdiag(n1)
-!!        call matrix_sln%add_value_pos(iposd, hcofval)
         ipossymoffd = this%idxsymoffdglo(j)
         call matrix_sln%add_value_pos(ipossymoffd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
@@ -524,8 +495,6 @@ contains
       do j = 1, this%flowbudptr%budterm(this%idxbuduzet)%nlist
         call this%uze_uzet_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)  ! for uze idxlocnode stores the host cell local row index
-!!        iposd = this%idxpakdiag(n1)
-!!        call matrix_sln%add_value_pos(iposd, hcofval)
         ipossymoffd = this%idxsymoffdglo(j)
         call matrix_sln%add_value_pos(ipossymoffd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
@@ -537,8 +506,6 @@ contains
       do j = 1, this%flowbudptr%budterm(this%idxbudritm)%nlist
         call this%uze_ritm_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)  ! for uze idxlocnode stores the host cell local row index
-!!        iposd = this%idxpakdiag(n1)
-!!        call matrix_sln%add_value_pos(iposd, hcofval)
         ipossymoffd = this%idxsymoffdglo(j)
         call matrix_sln%add_value_pos(ipossymoffd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
@@ -551,12 +518,8 @@ contains
     ! -- mass (or energy) storage in features
     do n = 1, this%ncv
       cold = this%xoldpak(n)
-!!      iloc = this%idxlocnode(n)
-!!      iposd = this%idxpakdiag(n)
-!!      call this%apt_stor_term(n, n1, n2, rrate, rhsval, hcofval)
-!!      call matrix_sln%add_value_pos(iposd, hcofval)
       iloc = this%idxlocnode(n)  ! for uze idxlocnode stores the host cell local row index
-      ipossymoffd = this%idxsymoffdglo(n)  ! TO DO: convince ourselves that "n" is ok here, since it's not aloop over "j"
+      ipossymoffd = this%idxsymoffdglo(n)
       call this%apt_stor_term(n, n1, n2, rrate, rhsval, hcofval)
       call matrix_sln%add_value_pos(ipossymoffd, hcofval)
       rhs(iloc) = rhs(iloc) + rhsval
@@ -566,17 +529,12 @@ contains
     if (this%idxbudtmvr /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudtmvr)%nlist
         call this%apt_tmvr_term(j, n1, n2, rrate, rhsval, hcofval)
-!!        iloc = this%idxlocnode(n1)
-!!        iposd = this%idxpakdiag(n1)
-!!
-!!      NOTE: originally was iposd, but changed to idxsymdglo on the first 
-!!            modification.  It was later realized we needed idxsymoffdglo.
-!!           (If this works, consider changing 'ipossymd' to 'ipossymoffd'
-!! 
-!!        call matrix_sln%add_value_pos(iposd, hcofval)
+        !NOTE: originally was iposd, but changed to idxsymdglo on the first 
+        !      modification.  It was later realized we needed idxsymoffdglo.
+        !     (If this works, consider changing 'ipossymd' to 'ipossymoffd'
+        !
         iloc = this%idxlocnode(n1)  ! for uze idxlocnode stores the host cell local row index
-!!        iposd = this%idxpakdiag(n1)
-        ipossymoffd = this%idxsymoffdglo(j)  !< TODO: Need
+        ipossymoffd = this%idxsymoffdglo(j)
         call matrix_sln%add_value_pos(ipossymoffd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
       end do
@@ -598,23 +556,12 @@ contains
       n = this%flowbudptr%budterm(this%idxbudgwf)%id1(j)
       if (this%iboundpak(n) /= 0) then
         !
-!!        ! -- set acoef and rhs to negative so they are relative to apt and not gwt
-!!        qbnd = this%flowbudptr%budterm(this%idxbudgwf)%flow(j)   ! jiffylube: shouldn't need these 3 lines
-!!        omega = DZERO
-!!        if (qbnd < DZERO) omega = DONE
-!!        !
         ! -- this code altered from its counterpart appearing in apt; this equates
         !    uze temperature to cell temperature using the feature's row
         iposd = this%idxdglo(j)
         iposoffd = this%idxoffdglo(j)
         call matrix_sln%add_value_pos(iposd, DONE)
         call matrix_sln%add_value_pos(iposoffd, -DONE)
-        !
-        !! -- add to gwf row for apt connection (recharge)
-        !!ipossymd = this%idxsymdglo(j)
-        !!ipossymoffd = this%idxsymoffdglo(j)
-        !!call matrix_sln%add_value_pos(ipossymd, -(DONE - omega) * qbnd)
-        !!call matrix_sln%add_value_pos(ipossymoffd, -omega * qbnd)
       end if
     end do
     !
@@ -629,7 +576,7 @@ contains
         else
           omega = DZERO
         end if
-        iposd = this%idxfjfdglo(j)        !< position of feature-id1 column in feature id1's host-cell row
+        iposd = this%idxfjfdglo(j)  !< position of feature-id1 column in feature id1's host-cell row
         iposoffd = this%idxfjfoffdglo(j)  !< position of feature-id2 column in feature id1's host-cell row
         call matrix_sln%add_value_pos(iposd, omega * qbnd * this%eqnsclfac)
         call matrix_sln%add_value_pos(iposoffd, &
@@ -641,14 +588,12 @@ contains
     return
   end subroutine uze_fc_expanded
 
-  subroutine uze_solve(this)   ! kluge note: no explicit solve for uze
-! ******************************************************************************
-! uze_solve -- add terms specific to the unsaturated zone to the explicit
-!              unsaturated-zone solve
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Explicit solve
+  !!
+  !! There should be no explicit solve for uze.  However, if there were, then
+  !! this subroutine would add terms specific to the unsaturated zone to the 
+  !! explicit unsaturated-zone solve
+  subroutine uze_solve(this)
     ! -- dummy
     class(GweUzeType) :: this
     ! -- local
@@ -693,14 +638,12 @@ contains
     return
   end subroutine uze_solve
 
+  !> @brief Return the number of UZE-specific budget terms
+  !!
+  !! Function to return the number of budget terms just for this package.
+  !! This overrides function in parent.
+  !< 
   function uze_get_nbudterms(this) result(nbudterms)
-! ******************************************************************************
-! uze_get_nbudterms -- function to return the number of budget terms just for
-!   this package.  This overrides function in parent.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GweUzeType) :: this
@@ -721,14 +664,12 @@ contains
     return
   end function uze_get_nbudterms
 
+  !> @brief Setup budget object
+  !!
+  !! Set up the budget object that stores all the unsaturated-zone
+  !! flows
+  !<
   subroutine uze_setup_budobj(this, idx)
-! ******************************************************************************
-! uze_setup_budobj -- Set up the budget object that stores all the unsaturated-
-!                     zone flows
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LENBUDTXT
     ! -- dummy
@@ -740,7 +681,7 @@ contains
     real(DP) :: q
 ! ------------------------------------------------------------------------------
     !
-    ! --
+    ! -- Infiltration
     text = '    INFILTRATION'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudinfl)%maxlist
@@ -752,9 +693,8 @@ contains
                                              this%packName, &
                                              maxlist, .false., .false., &
                                              naux)
-
     !
-    ! --
+    ! -- Rejected infiltration (Hortonian flow)
     if (this%idxbudrinf /= 0) then
       text = '         REJ-INF'
       idx = idx + 1
@@ -768,9 +708,8 @@ contains
                                                maxlist, .false., .false., &
                                                naux)
     end if
-
     !
-    ! --
+    ! -- Evapotranspiration from the unsaturated zone
     if (this%idxbuduzet /= 0) then
       text = '            UZET'
       idx = idx + 1
@@ -784,9 +723,8 @@ contains
                                                maxlist, .false., .false., &
                                                naux)
     end if
-
     !
-    ! --
+    ! -- Rejected infiltration that is subsequently transferred by MVR
     if (this%idxbudritm /= 0) then
       text = '  INF-REJ-TO-MVR'
       idx = idx + 1
@@ -799,10 +737,9 @@ contains
                                                this%packName, &
                                                maxlist, .false., .false., &
                                                naux)
-
     end if
     !
-    ! --
+    ! -- Energy transferred to solid phase by the thermal equilibrium assumption
     text = '   THERMAL-EQUIL'
     idx = idx + 1
     ! -- use dimension of GWF term
@@ -815,19 +752,16 @@ contains
                                              this%packName, &
                                              maxlist, .false., .false., &
                                              naux)
-
     !
     ! -- return
     return
   end subroutine uze_setup_budobj
 
+  !> @brief Fill UZE budget object
+  !!
+  !! Copy flow terms into this%budobj
+  !<
   subroutine uze_fill_budobj(this, idx, x, flowja, ccratin, ccratout)
-! ******************************************************************************
-! uze_fill_budobj -- copy flow terms into this%budobj
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GweUzeType) :: this
@@ -845,14 +779,14 @@ contains
     real(DP), dimension(:), allocatable :: budresid
     ! -- formats
 ! -----------------------------------------------------------------------------
-
+    !
     allocate(budresid(this%ncv))
     do n1 = 1, this%ncv
       budresid(n1) = DZERO
     end do
-    
+    !
     indx = 0
-
+    !
     ! -- FLOW JA FACE into budresid
     nlen = 0
     if (this%idxbudfjf /= 0) then
@@ -871,7 +805,7 @@ contains
         end if
       end do
     end if
-
+    !
     ! -- GWF (LEAKAGE) into budresid
     indx = indx + 1
     nlist = this%budobj%budterm(indx)%nlist
@@ -880,17 +814,17 @@ contains
       q = this%budobj%budterm(indx)%flow(j)
       budresid(n1) = budresid(n1) + q
     end do
-
+    !
     ! -- skip individual package terms
     indx = this%idxlastpak
-
+    !
     ! -- STORAGE into budresid
     indx = indx + 1
     do n1 = 1, this%ncv
       q = this%budobj%budterm(indx)%flow(n1)
       budresid(n1) = budresid(n1) + q
     end do
-
+    !
     ! -- TO MOVER into budresid
     if (this%idxbudtmvr /= 0) then
       indx = indx + 1
@@ -901,7 +835,7 @@ contains
         budresid(n1) = budresid(n1) + q
       end do
     end if
-
+    !
     ! -- FROM MOVER into budresid
     if (this%idxbudfmvr /= 0) then
       indx = indx + 1
@@ -912,19 +846,19 @@ contains
         budresid(n1) = budresid(n1) + q
       end do
     end if
-
+    !
     ! -- CONSTANT FLOW into budresid
     indx = indx + 1
     do n1 = 1, this%ncv
       q = this%budobj%budterm(indx)%flow(n1)
       budresid(n1) = budresid(n1) + q
     end do
-
+    !
     ! -- AUXILIARY VARIABLES into budresid
     ! -- (No flows associated with these)
-
+    !
     ! -- individual package terms processed last
-
+    !
     ! -- INFILTRATION
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudinfl)%nlist
@@ -935,7 +869,7 @@ contains
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
       budresid(n1) = budresid(n1) + q
     end do
-
+    !
     ! -- REJ-INF
     if (this%idxbudrinf /= 0) then
       idx = idx + 1
@@ -948,7 +882,7 @@ contains
         budresid(n1) = budresid(n1) + q
       end do
     end if
-
+    !
     ! -- UZET
     if (this%idxbuduzet /= 0) then
       idx = idx + 1
@@ -961,7 +895,7 @@ contains
         budresid(n1) = budresid(n1) + q
       end do
     end if
-
+    !
     ! -- REJ-INF-TO-MVR
     if (this%idxbudritm /= 0) then
       idx = idx + 1
@@ -974,7 +908,7 @@ contains
         budresid(n1) = budresid(n1) + q
       end do
     end if
-
+    !
     ! -- THERMAL-EQUIL
     ! -- processed last because it is calculated from the residual
     idx = idx + 1
@@ -984,7 +918,7 @@ contains
       n1 = this%flowbudptr%budterm(this%idxbudgwf)%id1(j)
       igwfnode = this%flowbudptr%budterm(this%idxbudgwf)%id2(j)
       q = - budresid(n1)
-!!      call this%uze_theq_term(j, n1, igwfnode, q)
+      call this%uze_theq_term(j, n1, igwfnode, q)
       call this%budobj%budterm(idx)%update_term(n1, igwfnode, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
       if (this%iboundpak(n1) /= 0) then 
@@ -994,20 +928,18 @@ contains
         flowja(idiag) = flowja(idiag) - q
       end if
     end do
-
+    !
     deallocate(budresid)
     !
     ! -- return
     return
   end subroutine uze_fill_budobj
 
+  !> @brief Allocate scalars
+  !!
+  !! Allocate scalars specific to UZE package
+  !<
   subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -1036,13 +968,11 @@ contains
     return
   end subroutine allocate_scalars
 
+  !> @brief Allocate arrays
+  !!
+  !! Allocate arrays used by the UZE package
+  !<
   subroutine uze_allocate_arrays(this)
-! ******************************************************************************
-! uze_allocate_arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -1069,13 +999,9 @@ contains
     return
   end subroutine uze_allocate_arrays
 
+  !> @brief Deallocate memory
+  !<
   subroutine uze_da(this)
-! ******************************************************************************
-! uze_da
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
@@ -1101,14 +1027,13 @@ contains
     return
   end subroutine uze_da
 
+  !> @brief Infiltration term
+  !!
+  !! Accounts for energy added to the subsurface via infiltration, for example,
+  !! energy entering the model domain via rainfall or irrigation.
+  !<
   subroutine uze_infl_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! uze_infl_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GweUzeType) :: this
     integer(I4B), intent(in) :: ientry
@@ -1137,8 +1062,6 @@ contains
       r = -qbnd * ctmp
     end if
     if (present(rrate)) rrate = qbnd * ctmp * this%eqnsclfac
-!!    if (present(rhsval)) rhsval = r
-!!    if (present(hcofval)) hcofval = h
     if (present(rhsval)) rhsval = r * this%eqnsclfac
     if (present(hcofval)) hcofval = h * this%eqnsclfac
     !
@@ -1146,14 +1069,15 @@ contains
     return
   end subroutine uze_infl_term
 
+  !> @brief Rejected infiltration term
+  !!
+  !! Accounts for energy that is added to the model from specifying an 
+  !! infiltration rate and temperature, but is subsequently removed from
+  !! the model as that portion of the infiltration that is rejected (and
+  !! transferred to another advanced package via the MVR/MVT packages.
+  !<
   subroutine uze_rinf_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! uze_rinf_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GweUzeType) :: this
     integer(I4B), intent(in) :: ientry
@@ -1173,21 +1097,19 @@ contains
     ctmp = this%tempinfl(n1)
     if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
     if (present(rhsval)) rhsval = DZERO
-!!    if (present(hcofval)) hcofval = qbnd
     if (present(hcofval)) hcofval = qbnd * this%eqnsclfac
     !
     ! -- return
     return
   end subroutine uze_rinf_term
 
-  subroutine uze_uzet_term(this, ientry, n1, n2, rrate, &
-                           rhsval, hcofval)
-! ******************************************************************************
-! uze_uzet_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Evapotranspiration from the unsaturated-zone term
+  !!
+  !! Accounts for thermal cooling in the unsaturated zone as a result of 
+  !! evapotranspiration from the unsaturated zone.  Amount of water converted
+  !! to vapor phase (UZET) determined by GWF model
+  !<
+  subroutine uze_uzet_term(this, ientry, n1, n2, rrate, rhsval, hcofval)
     ! -- dummy
     class(GweUzeType) :: this
     integer(I4B), intent(in) :: ientry
@@ -1215,8 +1137,6 @@ contains
     if (present(rrate)) &
       rrate = (omega * qbnd * this%xnewpak(n1) + &
               (DONE - omega) * qbnd * ctmp) * this%eqnsclfac
-!!    if (present(rhsval)) rhsval = -(DONE - omega) * qbnd * ctmp
-!!    if (present(hcofval)) hcofval = omega * qbnd
     if (present(rhsval)) rhsval = -(DONE - omega) * qbnd * ctmp * this%eqnsclfac
     if (present(hcofval)) hcofval = omega * qbnd * this%eqnsclfac
     !
@@ -1224,14 +1144,15 @@ contains
     return
   end subroutine uze_uzet_term
 
+  !> @brief Rejected infiltration to MVR/MVT term
+  !!
+  !! Accounts for energy that is added to the model from specifying an 
+  !! infiltration rate and temperature, but does not infiltrate into the
+  !! subsurface.  This subroutine is called when the rejected infiltration
+  !! is transferred to another advanced package via the MVR/MVT packages.
+  !<
   subroutine uze_ritm_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! uze_ritm_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GweUzeType) :: this
     integer(I4B), intent(in) :: ientry
@@ -1258,13 +1179,12 @@ contains
     return
   end subroutine uze_ritm_term
 
+  !> @brief Heat transferred through thermal equilibrium with the solid phase
+  !!
+  !! Accounts for the transfer of energy from the liquid phase to the solid 
+  !! phase as a result of the instantaneous thermal equilibrium assumption.
+  !<
   subroutine uze_theq_term(this, ientry, n1, n2, rrate)
-! ******************************************************************************
-! uze_theq_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LENBUDTXT
     ! -- dummy
@@ -1291,12 +1211,6 @@ contains
         case ('THERMAL-EQUIL')
           ! skip
           continue
-!!        case ('FLOW-JA-FACE')
-!!          ! skip
-!!          continue
-!!        case ('GWF')
-!!          ! skip
-!!          continue
         case default
           r = r - this%budobj%budterm(i)%flow(ientry)
         end select
@@ -1308,15 +1222,13 @@ contains
     return
   end subroutine uze_theq_term
 
+  !> @brief Define UZE Observation
+  !!
+  !! This subroutine:
+  !!   - Stores observation types supported by the parent APT package.
+  !!   - Overrides BndType%bnd_df_obs
+  !<
   subroutine uze_df_obs(this)
-! ******************************************************************************
-! uze_df_obs -- obs are supported?
-!   -- Store observation type supported by APT package.
-!   -- Overrides BndType%bnd_df_obs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GweUzeType) :: this
@@ -1387,9 +1299,9 @@ contains
   end subroutine uze_df_obs
 
   !> @brief Process package specific obs
-    !!
-    !! Method to process specific observations for this package.
-    !!
+  !!
+  !! Method to process specific observations for this package.
+  !!
   !<
   subroutine uze_rp_obs(this, obsrv, found)
     ! -- dummy
@@ -1417,13 +1329,9 @@ contains
     return
   end subroutine uze_rp_obs
 
+  !> @brief Calculate observation value and pass it back to APT
+  !<
   subroutine uze_bd_obs(this, obstypeid, jj, v, found)
-! ******************************************************************************
-! uze_bd_obs -- calculate observation value and pass it back to APT
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GweUzeType), intent(inout) :: this
     character(len=*), intent(in) :: obstypeid
@@ -1463,13 +1371,9 @@ contains
     return
   end subroutine uze_bd_obs
 
+  !> @brief Sets the stress period attributes for keyword use.
+  !<
   subroutine uze_set_stressperiod(this, itemno, keyword, found)
-! ******************************************************************************
-! uze_set_stressperiod -- Set a stress period attribute for using keywords.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
     class(GweUzeType), intent(inout) :: this
