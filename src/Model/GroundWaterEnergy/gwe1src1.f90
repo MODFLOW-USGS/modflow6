@@ -39,16 +39,14 @@ module GweSrcModule
 
 contains
 
+  !> @brief Create an energy source loading package
+  !! 
+  !! This subroutine:
+  !!   - creates new-style package
+  !!   - points bndobj to the new package
+  !<
   subroutine src_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         tsplab, gwecommon)
-! ******************************************************************************
-! src_create -- Create a New Src Package
-! Subroutine: (1) create new-style package
-!             (2) point bndobj to the new package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
@@ -97,13 +95,9 @@ contains
     return
   end subroutine src_create
 
+  !> @brief Deallocate memory
+  !<
   subroutine src_da(this)
-! ******************************************************************************
-! src_da -- deallocate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
@@ -119,13 +113,11 @@ contains
     return
   end subroutine src_da
 
+  !> @brief Allocate scalars
+  !!
+  !! Allocate scalars specific to this energy source loading package
+  !<
   subroutine src_allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars -- allocate scalar members
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GweSrcType) :: this
@@ -142,15 +134,13 @@ contains
     return
   end subroutine src_allocate_scalars
 
+  !> @brief Formulate the HCOF and RHS terms
+  !!
+  !! This subroutine:
+  !!   - calculates hcof and rhs terms
+  !!   - skip if no sources
+  !<
   subroutine src_cf(this, reset_mover)
-! ******************************************************************************
-! src_cf -- Formulate the HCOF and RHS terms
-! Subroutine: (1) skip if no sources
-!             (2) calculate hcof and rhs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GweSrcType) :: this
     logical, intent(in), optional :: reset_mover
@@ -179,19 +169,18 @@ contains
         cycle
       end if
       q = this%bound(1, i)
-!!      this%rhs(i) = -q / this%eqnsclfac
+!!      this%rhs(i) = -q / this%eqnsclfac ! kluge Ask Alden if this can be deleted
       this%rhs(i) = -q
     end do
     !
     return
   end subroutine src_cf
 
+  !> @brief Add matrix terms related to specified energy source loading
+  !!
+  !! Copy rhs and hcof into solution rhs and amat
+  !<
   subroutine src_fc(this, rhs, ia, idxglo, matrix_sln)
-! **************************************************************************
-! src_fc -- Copy rhs and hcof into solution rhs and amat
-! **************************************************************************
-!
-!    SPECIFICATIONS:
 ! --------------------------------------------------------------------------
     ! -- dummy
     class(GweSrcType) :: this
@@ -226,13 +215,12 @@ contains
     return
   end subroutine src_fc
 
+  !> @brief Define list labels
+  !! 
+  !! Define the list heading that is written to iout when
+  !! PRINT_INPUT option is used.
+  !<
   subroutine define_listlabel(this)
-! ******************************************************************************
-! define_listlabel -- Define the list heading that is written to iout when
-!   PRINT_INPUT option is used.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     class(GweSrcType), intent(inout) :: this
 ! ------------------------------------------------------------------------------
@@ -259,14 +247,13 @@ contains
   end subroutine define_listlabel
 
   ! -- Procedures related to observations
+  !
+  !> @brief Support function for specified energy source loading observations
+  !!
+  !! This function:
+  !!   - returns true because SRC package supports observations.
+  !!   - overrides BndType%bnd_obs_supported()
   logical function src_obs_supported(this)
-    ! ******************************************************************************
-    ! src_obs_supported
-    !   -- Return true because SRC package supports observations.
-    !   -- Overrides BndType%bnd_obs_supported()
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
     ! ------------------------------------------------------------------------------
     implicit none
     class(GweSrcType) :: this
@@ -275,14 +262,13 @@ contains
     return
   end function src_obs_supported
 
+  !> @brief Define observations
+  !!
+  !! This subroutine:
+  !!   - stores observation types supported by SRC package.
+  !!   - overrides BndType%bnd_df_obs
+  !<
   subroutine src_df_obs(this)
-    ! ******************************************************************************
-    ! src_df_obs (implements bnd_df_obs)
-    !   -- Store observation type supported by SRC package.
-    !   -- Overrides BndType%bnd_df_obs
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
     ! ------------------------------------------------------------------------------
     implicit none
     ! -- dummy
@@ -303,7 +289,6 @@ contains
   end subroutine src_df_obs
 
   ! -- Procedure related to time series
-
   subroutine src_rp_ts(this)
     ! -- Assign tsLink%Text appropriately for
     !    all time series in use by package.
