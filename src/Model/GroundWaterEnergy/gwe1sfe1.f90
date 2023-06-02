@@ -3,7 +3,7 @@
 ! -- todo: save the sfe temperature into the sfr aux variable? (perhaps needed for GWT-GWE exchanges)
 ! -- todo: calculate the sfr VISC aux variable using temperature?
 !
-! SFR flows (sfrbudptr)     index var     SFE term              Transport Type      ! kluge note: "SFE flows", etc?
+! SFR flows (sfrbudptr)     index var     SFE term              Transport Type  
 !---------------------------------------------------------------------------------
 
 ! -- terms from SFR that will be handled by parent APT Package
@@ -158,13 +158,9 @@ module GweSfeModule
     return
   end subroutine sfe_create
 
+  !> @brief Find corresponding sfe package
+  !<
   subroutine find_sfe_package(this)
-! ******************************************************************************
-! find corresponding sfe package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -308,7 +304,7 @@ module GweSfeModule
     real(DP) :: rrate
     real(DP) :: rhsval
     real(DP) :: hcofval
-    real(DP) :: ctherm    ! kluge?
+    real(DP) :: ctherm
     real(DP) :: wa !< wetted area
     real(DP) :: ktf !< thermal conductivity of streambed material 
     real(DP) :: s !< thickness of conductive streambed material
@@ -386,7 +382,7 @@ module GweSfeModule
         ! -- add to sfe row
         iposd = this%idxdglo(j)
         iposoffd = this%idxoffdglo(j)
-        call matrix_sln%add_value_pos(iposd, -ctherm)       ! kluge note: make sure the signs on ctherm are correct here and below
+        call matrix_sln%add_value_pos(iposd, -ctherm)
         call matrix_sln%add_value_pos(iposoffd, ctherm)
         !
         ! -- add to gwe row for sfe connection
@@ -672,13 +668,13 @@ module GweSfeModule
       n1 = this%flowbudptr%budterm(this%idxbudsbcd)%id1(j)
       if (this%iboundpak(n1) /= 0) then
         igwfnode = this%flowbudptr%budterm(this%idxbudsbcd)%id2(j)
-        auxpos = this%flowbudptr%budterm(this%idxbudgwf)%naux  ! for now there is only 1 aux variable under 'GWF'
+        ! for now, there is only 1 aux variable under 'GWF'
+        auxpos = this%flowbudptr%budterm(this%idxbudgwf)%naux
         wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos,j) 
         ktf = this%ktf(n1)
         s = this%rfeatthk(n1)
         ctherm = ktf * wa / s   
-        q = ctherm * (x(igwfnode) - this%xnewpak(n1))    ! kluge note: check that sign is correct
-        !q = -q ! flip sign so relative to advanced package feature
+        q = ctherm * (x(igwfnode) - this%xnewpak(n1))
       end if
       call this%budobj%budterm(idx)%update_term(n1, igwfnode, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
@@ -694,13 +690,10 @@ module GweSfeModule
     return
   end subroutine sfe_fill_budobj
 
+  !> @brief Allocate scalars specific to the streamflow energy transport (SFE)
+  !! package.
+  !<
   subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -731,7 +724,8 @@ module GweSfeModule
     return
   end subroutine allocate_scalars
 
-  !> @brief Allocate arrays
+  !> @brief Allocate arrays specific to the streamflow energy transport (SFE)
+  !! package.
   !<
   subroutine sfe_allocate_arrays(this)
     ! -- modules
@@ -764,7 +758,7 @@ module GweSfeModule
     return
   end subroutine sfe_allocate_arrays
 
-  !> @brief Deallocate
+  !> @brief Deallocate 
   !<
   subroutine sfe_da(this)
     ! -- modules
@@ -843,9 +837,9 @@ module GweSfeModule
     n2 = this%flowbudptr%budterm(this%idxbudevap)%id2(ientry)
     ! -- note that qbnd is negative for evap
     qbnd = this%flowbudptr%budterm(this%idxbudevap)%flow(ientry)
-    heatlat = this%gwecommon%gwerhow * this%gwecommon%gwelatheatvap  ! kg/m^3 * J/kg = J/m^3 (kluge note)
-    if (present(rrate)) rrate = qbnd * heatlat !m^3/day * J/m^3 = J/day (kluge note)
-!!    if (present(rhsval)) rhsval = -rrate / this%eqnsclfac  ! kluge note: divided by eqnsclfac for fc purposes because rrate is in terms of energy
+    heatlat = this%gwecommon%gwerhow * this%gwecommon%gwelatheatvap
+    if (present(rrate)) rrate = qbnd * heatlat 
+    !!if (present(rhsval)) rhsval = -rrate / this%eqnsclfac  ! kluge note: divided by eqnsclfac for fc purposes because rrate is in terms of energy
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
@@ -912,6 +906,9 @@ module GweSfeModule
   end subroutine sfe_iflw_term
 
   !> @brief Outflow term
+  !!
+  !! Accounts for the energy leaving the model, for example, energy exiting the 
+  !! model domain via a flow in a stream channel.
   !<
   subroutine sfe_outf_term(this, ientry, n1, n2, rrate, rhsval, hcofval)
     ! -- dummy
