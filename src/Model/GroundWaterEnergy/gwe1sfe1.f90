@@ -282,10 +282,10 @@ module GweSfeModule
   end subroutine find_sfe_package
 
   !> @brief Add matrix terms related to SFE
-    !!
-    !! This will be called from TspAptType%apt_fc_expanded()
-    !! in order to add matrix terms specifically for SFE
-    !!
+  !!
+  !! This will be called from TspAptType%apt_fc_expanded()
+  !! in order to add matrix terms specifically for SFE
+  !!
   !<
   subroutine sfe_fc_expanded(this, rhs, ia, idxglo, matrix_sln)
     ! -- modules
@@ -455,10 +455,9 @@ module GweSfeModule
   end subroutine sfe_solve
 
   !> @brief Function to return the number of budget terms just for this package.
-    !!
-    !! This overrides function in parent.
-    !!
-  !<  
+  !!
+  !! This overrides a function in the parent class.
+  !<
   function sfe_get_nbudterms(this) result(nbudterms)
     ! -- modules
     ! -- dummy
@@ -876,9 +875,9 @@ module GweSfeModule
 
   !> @brief Inflow Term
   !!
-  !! Accounts for energy added externally, for example, energy entering the 
-  !! model domain via a specified flow in a stream channel.
-  !!
+  !! Accounts for energy added via streamflow entering into a stream channel;
+  !! for example, energy entering the model domain via a specified flow in a 
+  !! stream channel.
   !<
   subroutine sfe_iflw_term(this, ientry, n1, n2, rrate, rhsval, hcofval)
     ! -- dummy
@@ -907,8 +906,8 @@ module GweSfeModule
 
   !> @brief Outflow term
   !!
-  !! Accounts for the energy leaving the model, for example, energy exiting the 
-  !! model domain via a flow in a stream channel.
+  !! Accounts for the energy leaving a stream channel, for example, energy exiting the 
+  !! model domain via a flow in a stream channel flowing out of the active domain.
   !<
   subroutine sfe_outf_term(this, ientry, n1, n2, rrate, rhsval, hcofval)
     ! -- dummy
@@ -936,10 +935,10 @@ module GweSfeModule
   end subroutine sfe_outf_term
 
   !> @brief Observations
-    !!
-    !! Store the observation type supported by the APT package and overide
-    !! BndType%bnd_df_obs
-    !!
+  !!
+  !! Store the observation type supported by the APT package and overide
+  !! BndType%bnd_df_obs
+  !!
   !<
   subroutine sfe_df_obs(this)
     ! -- modules
@@ -1013,9 +1012,9 @@ module GweSfeModule
   end subroutine sfe_df_obs
 
   !> @brief Process package specific obs
-    !!
-    !! Method to process specific observations for this package.
-    !!
+  !!
+  !! Method to process specific observations for this package.
+  !!
   !<
   subroutine sfe_rp_obs(this, obsrv, found)
     ! -- dummy

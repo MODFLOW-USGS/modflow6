@@ -97,14 +97,10 @@ module GweLkeModule
 
 contains
 
+  !> @brief Create a new lke package
+  !<
   subroutine lke_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         fmi, tsplab, eqnsclfac, gwecommon)
-! ******************************************************************************
-! mwt_create -- Create a New MWT Package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
@@ -163,13 +159,9 @@ contains
     return
   end subroutine lke_create
 
-  subroutine find_lke_package(this)
-! ******************************************************************************
-! find corresponding lkt package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Find corresponding lke package
+  !<
+    subroutine find_lke_package(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -291,14 +283,13 @@ contains
     return
   end subroutine find_lke_package
 
+  !> @brief Add matrix terms related to LKE
+  !!
+  !! This will be called from TspAptType%apt_fc_expanded()
+  !! in order to add matrix terms specifically for LKE
+  !!
+  !<
   subroutine lke_fc_expanded(this, rhs, ia, idxglo, matrix_sln)
-! ******************************************************************************
-! lke_fc_expanded -- this will be called from TspAptType%apt_fc_expanded()
-!   in order to add matrix terms specifically for LKT
-! ****************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GweLkeType) :: this
@@ -419,13 +410,9 @@ contains
     return
   end subroutine lke_fc_expanded
 
+  !> @ brief Add terms specific to lakes to the explicit lake solve
+  !<
   subroutine lke_solve(this)
-! ******************************************************************************
-! lke_solve -- add terms specific to lakes to the explicit lake solve
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GweLkeType) :: this
     ! -- local
@@ -486,14 +473,11 @@ contains
     return
   end subroutine lke_solve
 
+  !> @brief Function to return the number of budget terms just for this package.
+  !!
+  !! This overrides a function in the parent class.
+  !<
   function lke_get_nbudterms(this) result(nbudterms)
-! ******************************************************************************
-! lke_get_nbudterms -- function to return the number of budget terms just for
-!   this package.  This overrides function in parent.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GweLkeType) :: this
@@ -503,8 +487,13 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Number of budget terms is 7
-    !    1) rainfall; 2) evap; 3) runoff; 4) ext-inflow; 5) withdrawl; 
-    !    6) ext-outflow; 7) lakebed-cond
+    !    1) rainfall 
+    !    2) evap 
+    !    3) runoff 
+    !    4) ext-inflow 
+    !    5) withdrawl
+    !    6) ext-outflow 
+    !    7) lakebed-cond
     !
     nbudterms = 7
     !
@@ -512,13 +501,9 @@ contains
     return
   end function lke_get_nbudterms
 
+  !> @brief Set up the budget object that stores all the lake flows
+  !<
   subroutine lke_setup_budobj(this, idx)
-! ******************************************************************************
-! lke_setup_budobj -- Set up the budget object that stores all the lake flows
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LENBUDTXT
     ! -- dummy
@@ -531,7 +516,7 @@ contains
     character(len=LENBUDTXT) :: text
 ! ------------------------------------------------------------------------------
     !
-    ! --
+    ! -- Addition of heat associated with rainfall 
     text = '        RAINFALL'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudrain)%maxlist
@@ -544,7 +529,7 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! --
+    ! -- Evaporative cooling from lake surface
     text = '     EVAPORATION'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudevap)%maxlist
@@ -557,7 +542,7 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! --
+    ! -- Addition of heat associated with runoff added to the lake
     text = '          RUNOFF'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudroff)%maxlist
@@ -570,7 +555,7 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! --
+    ! -- Addition of heat associated with user-specified inflow to the lake
     text = '      EXT-INFLOW'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudiflw)%maxlist
@@ -583,7 +568,7 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! --
+    ! -- Removal of heat associated with user-specified withdrawal from lake
     text = '      WITHDRAWAL'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudwdrl)%maxlist
@@ -596,7 +581,8 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! --
+    ! -- Removal of heat associated with outflow from lake that leaves 
+    !    model domain
     text = '     EXT-OUTFLOW'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudoutf)%maxlist
@@ -609,7 +595,7 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! -- conduction through the wetted lakebed
+    ! -- Conductive exchange of heat through the wetted lakebed
     text = '    LAKEBED-COND'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudlbcd)%maxlist
@@ -748,13 +734,10 @@ contains
     return
   end subroutine lke_fill_budobj
 
+  !> @brief Allocate scalars specific to the lake energy transport (LKE)
+  !! package.
+  !<
   subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -787,13 +770,10 @@ contains
     return
   end subroutine allocate_scalars
 
+  !> @brief Allocate arrays specific to the lake energy transport (LKE)
+  !! package.
+  !<
   subroutine lke_allocate_arrays(this)
-! ******************************************************************************
-! lke_allocate_arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -824,13 +804,9 @@ contains
     return
   end subroutine lke_allocate_arrays
 
+  !> @brief Deallocate
+  !<
   subroutine lke_da(this)
-! ******************************************************************************
-! lke_da
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
@@ -860,14 +836,10 @@ contains
     return
   end subroutine lke_da
 
+  !> @brief Rain term
+  !<
   subroutine lke_rain_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! lke_rain_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GweLkeType) :: this
     integer(I4B), intent(in) :: ientry
@@ -892,14 +864,10 @@ contains
     return
   end subroutine lke_rain_term
 
+  !> @brief Evaporative term
+  !<
   subroutine lke_evap_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! lke_evap_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GweLkeType) :: this
     integer(I4B), intent(in) :: ientry
@@ -910,27 +878,14 @@ contains
     real(DP), intent(inout), optional :: hcofval
     ! -- local
     real(DP) :: qbnd
-!!    real(DP) :: ctmp
-!!    real(DP) :: omega
     real(DP) :: heatlat
 ! ------------------------------------------------------------------------------
     n1 = this%flowbudptr%budterm(this%idxbudevap)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudevap)%id2(ientry)
     ! -- note that qbnd is negative for evap
     qbnd = this%flowbudptr%budterm(this%idxbudevap)%flow(ientry)
-!!    ctmp = this%tempevap(n1)
-!!    if (this%xnewpak(n1) < ctmp) then
-!!      omega = DONE
-!!    else
-!!      omega = DZERO
-!!    end if
-!!    if (present(rrate)) &
-!!      rrate = omega * qbnd * this%xnewpak(n1) + &
-!!              (DONE - omega) * qbnd * ctmp
-!!    if (present(rhsval)) rhsval = -(DONE - omega) * qbnd * ctmp
-!!    if (present(hcofval)) hcofval = omega * qbnd
-    heatlat = this%gwecommon%gwerhow * this%gwecommon%gwelatheatvap  ! kg/m^3 * J/kg = J/m^3 (kluge note)
-    if (present(rrate)) rrate = qbnd * heatlat !m^3/day * J/m^3 = J/day (kluge note)
+    heatlat = this%gwecommon%gwerhow * this%gwecommon%gwelatheatvap
+    if (present(rrate)) rrate = qbnd * heatlat
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
@@ -938,14 +893,10 @@ contains
     return
   end subroutine lke_evap_term
 
+  !> @brief Runoff term
+  !<
   subroutine lke_roff_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! lke_roff_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GweLkeType) :: this
     integer(I4B), intent(in) :: ientry
@@ -970,14 +921,13 @@ contains
     return
   end subroutine lke_roff_term
 
+  !> @brief Inflow Term
+  !!
+  !! Accounts for energy flowing into a lake from a connected stream, for 
+  !! example.
+  !<
   subroutine lke_iflw_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! lke_iflw_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GweLkeType) :: this
     integer(I4B), intent(in) :: ientry
@@ -1002,14 +952,13 @@ contains
     return
   end subroutine lke_iflw_term
 
+  !> @brief Specified withdrawal term
+  !!
+  !! Accounts for energy associated with energy removed when water is withdrawn
+  !! from a lake or group of lakes.
+  !<
   subroutine lke_wdrl_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! lke_wdrl_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GweLkeType) :: this
     integer(I4B), intent(in) :: ientry
@@ -1034,14 +983,13 @@ contains
     return
   end subroutine lke_wdrl_term
 
+  !> @brief Outflow term
+  !!
+  !! Accounts for the energy leaving a lake, for example, energy exiting a
+  !! lake via a flow in a stream channel.
+  !<
   subroutine lke_outf_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! lke_outf_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GweLkeType) :: this
     integer(I4B), intent(in) :: ientry
@@ -1066,15 +1014,12 @@ contains
     return
   end subroutine lke_outf_term
 
+  !> @brief Defined observation types
+  !!
+  !! Store the observation type supported by the APT package and overide
+  !! BndType%bnd_df_obs
+  !<
   subroutine lke_df_obs(this)
-! ******************************************************************************
-! lke_df_obs -- obs are supported?
-!   -- Store observation type supported by APT package.
-!   -- Overrides BndType%bnd_df_obs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GweLkeType) :: this
@@ -1151,9 +1096,9 @@ contains
   end subroutine lke_df_obs
 
   !> @brief Process package specific obs
-    !!
-    !! Method to process specific observations for this package.
-    !!
+  !!
+  !! Method to process specific observations for this package.
+  !!
   !<
   subroutine lke_rp_obs(this, obsrv, found)
     ! -- dummy
@@ -1186,13 +1131,9 @@ contains
     return
   end subroutine lke_rp_obs
 
+  !> @brief Calculate observation value and pass it back to APT
+  !<
   subroutine lke_bd_obs(this, obstypeid, jj, v, found)
-! ******************************************************************************
-! lke_bd_obs -- calculate observation value and pass it back to APT
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GweLkeType), intent(inout) :: this
     character(len=*), intent(in) :: obstypeid
@@ -1236,13 +1177,9 @@ contains
     return
   end subroutine lke_bd_obs
 
+  !> @brief Sets the stress period attributes for keyword use.
+  !<
   subroutine lke_set_stressperiod(this, itemno, keyword, found)
-! ******************************************************************************
-! lke_set_stressperiod -- Set a stress period attribute for using keywords.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
     class(GweLkeType), intent(inout) :: this
