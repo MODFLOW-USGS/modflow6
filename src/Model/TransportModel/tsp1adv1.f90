@@ -41,13 +41,11 @@ module TspAdvModule
 
 contains
 
+  !> @ brief Create a new ADV object
+  !!
+  !!  Create a new ADV package 
+  !<
   subroutine adv_cr(advobj, name_model, inunit, iout, fmi, eqnsclfac)
-! ******************************************************************************
-! adv_cr -- Create a new ADV object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     type(TspAdvType), pointer :: advobj
     character(len=*), intent(in) :: name_model
@@ -76,13 +74,19 @@ contains
     return
   end subroutine adv_cr
 
+  !> @brief Define ADV object
+  !! 
+  !! Define the ADV package
+  !<
   subroutine adv_df(this, adv_options)
+    ! -- dummy
     class(TspAdvType) :: this
     type(TspAdvOptionsType), optional, intent(in) :: adv_options !< the optional options, for when not constructing from file
-    ! local
+    ! -- local
     character(len=*), parameter :: fmtadv = &
       "(1x,/1x,'ADV-- ADVECTION PACKAGE, VERSION 1, 8/25/2017', &
       &' INPUT READ FROM UNIT ', i0, //)"
+! ------------------------------------------------------------------------------
     !
     ! -- Read or set advection options
     if (.not. present(adv_options)) then
@@ -101,16 +105,16 @@ contains
       ! --set options from input arg
       this%iadvwt = adv_options%iAdvScheme
     end if
-
+    !
+    ! -- Return
+    return
   end subroutine adv_df
 
+  !> @brief Allocate and read method for package
+  !!
+  !!  Method to allocate and read static data for the ADV package.
+  !<
   subroutine adv_ar(this, dis, ibound, cpw, rhow)
-! ******************************************************************************
-! adv_ar -- Allocate and Read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TspAdvType) :: this
@@ -134,13 +138,11 @@ contains
     return
   end subroutine adv_ar
 
+  !> @brief  Fill coefficient method for ADV package
+  !!
+  !!  Method to calculate coefficients and fill amat and rhs.
+  !<
   subroutine adv_fc(this, nodes, matrix_sln, idxglo, cnew, rhs)
-! ******************************************************************************
-! adv_fc -- Calculate coefficients and fill amat and rhs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TspAdvType) :: this
@@ -183,13 +185,12 @@ contains
     return
   end subroutine adv_fc
 
+  !> @brief  Calculate TVD
+  !! 
+  !! Use explicit scheme to calculate the advective component of transport.
+  !! TVD is an acronym for Total-Variation Diminishing
+  !<
   subroutine advtvd(this, n, cnew, rhs)
-! ******************************************************************************
-! advtvd -- Calculate TVD
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TspAdvType) :: this
@@ -216,13 +217,12 @@ contains
     return
   end subroutine advtvd
 
+  !> @brief  Calculate TVD
+  !! 
+  !! Use explicit scheme to calculate the advective component of transport.
+  !! TVD is an acronym for Total-Variation Diminishing
+  !<
   function advqtvd(this, n, m, iposnm, cnew) result(qtvd)
-! ******************************************************************************
-! advqtvd -- Calculate TVD
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DPREC
     ! -- return
@@ -289,13 +289,9 @@ contains
     return
   end function advqtvd
 
+  !> @brief Calculate advection contribution to flowja
+  !<
   subroutine adv_cq(this, cnew, flowja)
-! ******************************************************************************
-! adv_cq -- Calculate advection contribution to flowja
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TspAdvType) :: this
@@ -330,13 +326,8 @@ contains
     return
   end subroutine adv_cq
 
+  !> @brief Add TVD contribution to flowja
   subroutine advtvd_bd(this, cnew, flowja)
-! ******************************************************************************
-! advtvd_bd -- Add TVD contribution to flowja
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TspAdvType) :: this
@@ -364,13 +355,9 @@ contains
     return
   end subroutine advtvd_bd
 
+  !> @brief Deallocate memory
+  !<
   subroutine adv_da(this)
-! ******************************************************************************
-! adv_da -- Deallocate variables
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
@@ -396,13 +383,10 @@ contains
     return
   end subroutine adv_da
 
+  !> @brief Allocate scalars specific to the streamflow energy transport (SFE)
+  !! package.
+  !<
   subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
@@ -426,13 +410,11 @@ contains
     return
   end subroutine allocate_scalars
 
+  !> @brief Read options
+  !!
+  !! Read the options block
+  !<
   subroutine read_options(this)
-! ******************************************************************************
-! read_options -- Allocate and Read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error
@@ -493,13 +475,11 @@ contains
     return
   end subroutine read_options
 
+  !> @ brief Advection weight
+  !!
+  !! Calculate the advection weight
+  !<
   function adv_weight(this, iadvwt, ipos, n, m, qnm) result(omega)
-! ******************************************************************************
-! adv_weight -- calculate advection weight
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- return
     real(DP) :: omega
     ! -- dummy
