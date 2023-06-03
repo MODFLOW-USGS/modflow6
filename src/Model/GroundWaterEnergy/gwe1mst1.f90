@@ -81,10 +81,9 @@ module GweMstModule
 
 contains
 
-  !> @ brief Create a new package object
+  !> @ brief Create a new MST object
   !!
-  !!  Create a new MST object
-  !!
+  !!  Create a new MST package 
   !<
   subroutine mst_cr(mstobj, name_model, inunit, iout, fmi, eqnsclfac, gwecommon)
     ! -- dummy
@@ -122,7 +121,6 @@ contains
   !> @ brief Allocate and read method for package
   !!
   !!  Method to allocate and read static data for the package.
-  !!
   !<
   subroutine mst_ar(this, dis, ibound)
     ! -- modules
@@ -172,7 +170,6 @@ contains
   !> @ brief Fill coefficient method for package
   !!
   !!  Method to calculate and fill coefficients for the package.
-  !!
   !<
   subroutine mst_fc(this, nodes, cold, nja, matrix_sln, idxglo, cnew, &
                     rhs, kiter)
@@ -205,7 +202,6 @@ contains
   !> @ brief Fill storage coefficient method for package
   !!
   !!  Method to calculate and fill storage coefficients for the package.
-  !!
   !<
   subroutine mst_fc_sto(this, nodes, cold, nja, matrix_sln, idxglo, rhs)
     ! -- modules
@@ -242,9 +238,6 @@ contains
       vsolid = vcell * (DONE - this%porosity(n))
       !
       ! -- add terms to diagonal and rhs accumulators
-!!      term = vsolid * (this%rhos(n) * this%cps(n)) / this%eqnsclfac
-!!      hhcof = -(vnew + term) * tled
-!!      rrhs = -(vold + term) * tled * cold(n)
       term = (this%rhos(n) * this%cps(n)) * vsolid
       hhcof = -(this%eqnsclfac * vnew + term) * tled
       rrhs = -(this%eqnsclfac * vold + term) * tled * cold(n)
@@ -260,7 +253,6 @@ contains
   !> @ brief Fill decay coefficient method for package
   !!
   !!  Method to calculate and fill decay coefficients for the package.
-  !!
   !<
   subroutine mst_fc_dcy(this, nodes, cold, cnew, nja, matrix_sln, &
                         idxglo, rhs, kiter)
@@ -299,9 +291,8 @@ contains
         !
         ! -- first order decay rate is a function of temperature, so add       ! kluge note: do we need/want first-order decay for temperature???
         !    to left hand side
-!!        hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n)   ! kluge note: this term should NOT be divided by eqnsclfac for fc purposes because rhow*cpw is already effectively divided out
-          hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n) &
-              * this%eqnsclfac
+        hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n) &
+                 * this%eqnsclfac
         call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
       elseif (this%idcy == 2) then
         !
@@ -309,7 +300,8 @@ contains
         !    from the user-specified rate to prevent negative temperatures     ! kluge note: think through negative temps
         decay_rate = get_zero_order_decay(this%decay(n), this%decaylast(n), &
                                           kiter, cold(n), cnew(n), delt)
-!!        decay_rate = decay_rate / this%eqnsclfac                     ! kluge note: this term does get divided by eqnsclfac for fc purposes because it should start out being a rate of energy
+        ! -- This term does get divided by eqnsclfac for fc purposes because it 
+        !    should start out being a rate of energy
         this%decaylast(n) = decay_rate
         rrhs = decay_rate * vcell * swtpdt * this%porosity(n)
         rhs(n) = rhs(n) + rrhs
@@ -324,7 +316,6 @@ contains
   !> @ brief Calculate flows for package
   !!
   !!  Method to calculate flows for the package.
-  !!
   !<
   subroutine mst_cq(this, nodes, cnew, cold, flowja)
     ! -- modules
@@ -351,7 +342,6 @@ contains
   !> @ brief Calculate storage terms for package
   !!
   !!  Method to calculate storage terms for the package.
-  !!
   !<
   subroutine mst_cq_sto(this, nodes, cnew, cold, flowja)
     ! -- modules
@@ -389,10 +379,6 @@ contains
       vsolid = vcell * (DONE - this%porosity(n))
       !
       ! -- calculate rate
-!!      term = vsolid * (this%rhos(n) * this%cps(n)) / this%eqnsclfac
-!!      hhcof = -(vwatnew + term) * tled
-!!      rrhs = -(vwatold + term) * tled * cold(n)
-!!      rate = (hhcof * cnew(n) - rrhs) * this%eqnsclfac
       term = (this%rhos(n) * this%cps(n)) * vsolid
       hhcof = -(this%eqnsclfac * vwatnew + term) * tled
       rrhs = -(this%eqnsclfac * vwatold + term) * tled * cold(n)
@@ -409,7 +395,6 @@ contains
   !> @ brief Calculate decay terms for package
   !!
   !!  Method to calculate decay terms for the package.
-  !!
   !<
   subroutine mst_cq_dcy(this, nodes, cnew, cold, flowja)    ! kluge note: this handles only decay in water; need to add zero-order (but not first-order?) decay in solid
     ! -- modules
@@ -467,7 +452,6 @@ contains
   !> @ brief Calculate budget terms for package
   !!
   !!  Method to calculate budget terms for the package.
-  !!
   !<
   subroutine mst_bd(this, isuppress_output, model_budget)
     ! -- modules
@@ -501,7 +485,6 @@ contains
   !> @ brief Output flow terms for package
   !!
   !!  Method to output terms for the package.
-  !!
   !<
   subroutine mst_ot_flow(this, icbcfl, icbcun)
     ! -- dummy
@@ -549,7 +532,6 @@ contains
   !> @ brief Deallocate
   !!
   !!  Method to deallocate memory for the package.
-  !!
   !<
   subroutine mst_da(this)
     ! -- modules
@@ -587,7 +569,6 @@ contains
   !> @ brief Allocate scalar variables for package
   !!
   !!  Method to allocate scalar variables for the package.
-  !!
   !<
   subroutine allocate_scalars(this)
     ! -- modules
@@ -620,7 +601,6 @@ contains
   !> @ brief Allocate arrays for package
   !!
   !!  Method to allocate arrays for the package.
-  !!
   !<
   subroutine allocate_arrays(this, nodes)
     ! -- modules
@@ -670,7 +650,6 @@ contains
   !> @ brief Read options for package
   !!
   !!  Method to read options for the package.
-  !!
   !<
   subroutine read_options(this)
     ! -- modules
@@ -733,7 +712,6 @@ contains
   !> @ brief Read data for package
   !!
   !!  Method to read data for the package.
-  !!
   !<
   subroutine read_data(this)
     ! -- modules
@@ -850,7 +828,6 @@ contains
   !> @ brief Read data for package
   !!
   !!  Method to read data for the package.
-  !!
   !<
   subroutine read_packagedata(this)
     ! -- modules
@@ -880,40 +857,17 @@ contains
       end do
     end if
     !
-    ! -- Check for latent heat of vaporization.  May be used by multiple packages 
-    !    wherever evaporation occurs, is specified in mst instead of in multiple
-    !    GWE packages that simulate evaporation (SFE, LKE, UZE)
-    !if (this%ilhv > 0) then
-    !  if (.not. lname(7)) then
-    !    write (errmsg, '(a)') 'EVAPORATION IS EXPECTED IN A GWE PACKAGE &
-    !      &BUT THE LATENT HEAT OF VAPORIZATION IS NOT SPECIFIED.  LATHEATVAP &
-    !      &MUST BE SPECIFIED IN GRIDDATA BLOCK.'
-    !    call store_error(errmsg)
-    !  end if
-    !else
-    !  if (lname(7)) then
-    !    write (warnmsg, '(a)') 'LATENT HEAT OF VAPORIZATION FOR CALCULATING &
-    !      &EVAPORATION IS SPECIFIED, BUT CORRESPONDING OPTION NOT SET IN &
-    !      &OPTIONS BLOCK.  EVAPORATION CALCULATIONS WILL STILL USE LATHEATVAP &
-    !      &SPECIFIED IN GWE MST PACKAGE.'
-    !    call store_warning(warnmsg)
-    !    write (this%iout, '(1x,a)') 'WARNING.  '//warnmsg
-    !  end if
-    !end if
-
-    !
     ! -- Return
     return
   end subroutine read_packagedata
-
 
   !> @ brief Calculate zero-order decay rate and constrain if necessary
   !!
   !!  Function to calculate the zero-order decay rate from the user specified
   !!  decay rate.  If the decay rate is positive, then the decay rate must
   !!  be constrained so that more energy is not removed than is available.
-  !!  Without this constraint, negative temperatures could result from    ! kluge note: modified wording from mass/conc but need to think this through (no freezing)
-  !!  zero-order decay.
+  !!  Without this constraint, negative temperatures could result from   
+  !!  zero-order decay (no freezing).
   !<
   function get_zero_order_decay(decay_rate_usr, decay_rate_last, kiter, &
                                 cold, cnew, delt) result(decay_rate)
