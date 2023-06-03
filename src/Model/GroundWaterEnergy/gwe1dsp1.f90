@@ -21,8 +21,6 @@ module GweDspModule
     type(TspFmiType), pointer :: fmi => null() ! pointer to GWE fmi object
     type(GweInputDataType), pointer :: gwecommon => null() !< pointer to shared gwe data used by multiple packages but set in mst
     real(DP), dimension(:), pointer, contiguous :: porosity => null() ! pointer to GWE storage porosity
-    ! TODO: Can remove diffc from GWE
-    !real(DP), dimension(:), pointer, contiguous :: diffc => null() ! molecular diffusion coefficient for each cell
     real(DP), dimension(:), pointer, contiguous :: alh => null() ! longitudinal horizontal dispersivity
     real(DP), dimension(:), pointer, contiguous :: alv => null() ! longitudinal vertical dispersivity
     real(DP), dimension(:), pointer, contiguous :: ath1 => null() ! transverse horizontal dispersivity
@@ -30,7 +28,6 @@ module GweDspModule
     real(DP), dimension(:), pointer, contiguous :: atv => null() ! transverse vertical dispersivity
     real(DP), dimension(:), pointer, contiguous :: ktw => null() ! thermal conductivity of water
     real(DP), dimension(:), pointer, contiguous :: kts => null() ! thermal conductivity of aquifer material
-    !integer(I4B), pointer :: idiffc => null() ! flag indicating diffusion is active
     integer(I4B), pointer :: idisp => null() ! flag indicating mechanical dispersion is active
     integer(I4B), pointer :: ialh => null() ! longitudinal horizontal dispersivity data flag
     integer(I4B), pointer :: ialv => null() ! longitudinal vertical dispersivity data flag
@@ -80,14 +77,12 @@ module GweDspModule
 
 contains
 
+  !> @brief Create a new DSP object
+  !!
+  !! Create a new MST package
+  !<
   subroutine dsp_cr(dspobj, name_model, input_mempath, inunit, iout, fmi, &
                     eqnsclfac, gwecommon)
-! ******************************************************************************
-! dsp_cr -- Create a new DSP object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use KindModule, only: LGP
     use MemoryManagerExtModule, only: mem_set_value
@@ -141,13 +136,11 @@ contains
     return
   end subroutine dsp_cr
 
+  !> @brief Define MST object
+  !! 
+  !! Define the MST package
+  !<
   subroutine dsp_df(this, dis, dspOptions)
-! ******************************************************************************
-! dsp_df -- Define
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GweDspType) :: this
@@ -192,9 +185,13 @@ contains
     return
   end subroutine dsp_df
 
+  !> @brief Add connections to DSP
+  !!
+  !! Add connections for extended neighbors to the sparse matrix
+  !<
   subroutine dsp_ac(this, moffset, sparse)
 ! ******************************************************************************
-! dsp_ac -- Add connections for extended neighbors to the sparse matrix
+! dsp_ac -- 
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -216,13 +213,11 @@ contains
     return
   end subroutine dsp_ac
 
+  !> @brief Map DSP connections
+  !!
+  !! Map connections and construct iax, jax, and idxglox
+  !<
   subroutine dsp_mc(this, moffset, matrix_sln)
-! ******************************************************************************
-! dsp_mc -- Map connections and construct iax, jax, and idxglox
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -239,13 +234,11 @@ contains
     return
   end subroutine dsp_mc
 
+  !> @brief Allocate and read method for package
+  !!
+  !!  Method to allocate and read static data for the package.
+  !<
   subroutine dsp_ar(this, ibound, porosity)
-! ******************************************************************************
-! dsp_ar -- Allocate and Read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GweDspType) :: this
@@ -266,13 +259,9 @@ contains
     return
   end subroutine dsp_ar
 
+  !> @brief Advance method for the package
+  !<
   subroutine dsp_ad(this)
-! ******************************************************************************
-! dsp_ad -- Advance
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: kstp, kper
     ! -- dummy
@@ -308,13 +297,11 @@ contains
     return
   end subroutine dsp_ad
 
+  !> @brief  Fill coefficient method for package
+  !!
+  !!  Method to calculate and fill coefficients for the package.
+  !<
   subroutine dsp_fc(this, kiter, nodes, nja, matrix_sln, idxglo, rhs, cnew)
-! ******************************************************************************
-! dsp_fc -- Calculate coefficients and fill amat and rhs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GweDspType) :: this
@@ -361,13 +348,11 @@ contains
     return
   end subroutine dsp_fc
 
+  !> @ brief Calculate flows for package
+  !!
+  !!  Method to calculate dispersion contribution to flowja
+  !<
   subroutine dsp_cq(this, cnew, flowja)
-! ******************************************************************************
-! dsp_cq -- Calculate dispersion contribution to flowja
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GweDspType) :: this
@@ -400,13 +385,11 @@ contains
     return
   end subroutine dsp_cq
 
-  subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @ brief Allocate scalar variables for package
+  !!
+  !!  Method to allocate scalar variables for the package.
+  !<
+ subroutine allocate_scalars(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     use ConstantsModule, only: DZERO
@@ -419,7 +402,6 @@ contains
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate
-    !call mem_allocate(this%idiffc, 'IDIFFC', this%memoryPath)
     call mem_allocate(this%idisp, 'IDISP', this%memoryPath)
     call mem_allocate(this%ialh, 'IALH', this%memoryPath)
     call mem_allocate(this%ialv, 'IALV', this%memoryPath)
@@ -438,7 +420,6 @@ contains
     call mem_allocate(this%ikts, 'IKTS', this%memoryPath)
     !
     ! -- Initialize
-    !this%idiffc = 0
     this%idisp = 0
     this%ialh = 0
     this%ialv = 0
@@ -458,15 +439,13 @@ contains
     !
     ! -- Return
     return
-  end subroutine allocate_scalars
+ end subroutine allocate_scalars
 
+  !> @ brief Allocate arrays for package
+  !!
+  !!  Method to allocate arrays for the package.
+  !<
   subroutine allocate_arrays(this, nodes)
-! ******************************************************************************
-! allocate_arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     use ConstantsModule, only: DZERO
@@ -482,7 +461,6 @@ contains
     call mem_allocate(this%ath1, nodes, 'ATH1', trim(this%memoryPath))
     call mem_allocate(this%ath2, nodes, 'ATH2', trim(this%memoryPath))
     call mem_allocate(this%atv, nodes, 'ATV', trim(this%memoryPath))
-    !call mem_allocate(this%diffc, nodes, 'DIFFC', trim(this%memoryPath))
     call mem_allocate(this%d11, nodes, 'D11', trim(this%memoryPath))
     call mem_allocate(this%d22, nodes, 'D22', trim(this%memoryPath))
     call mem_allocate(this%d33, nodes, 'D33', trim(this%memoryPath))
@@ -504,13 +482,11 @@ contains
     return
   end subroutine allocate_arrays
 
+  !> @ brief Deallocate
+  !!
+  !!  Method to deallocate memory for the package.
+  !<
   subroutine dsp_da(this)
-! ******************************************************************************
-! dsp_da
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     use MemoryManagerExtModule, only: memorylist_remove
@@ -530,7 +506,6 @@ contains
       call mem_deallocate(this%ath1)
       call mem_deallocate(this%ath2, 'ATH2', trim(this%memoryPath))
       call mem_deallocate(this%atv, 'ATV', trim(this%memoryPath))
-      !call mem_deallocate(this%diffc)
       call mem_deallocate(this%d11)
       call mem_deallocate(this%d22)
       call mem_deallocate(this%d33)
@@ -548,7 +523,6 @@ contains
     nullify (this%gwecommon)
     !
     ! -- deallocate scalars
-    !call mem_deallocate(this%idiffc)
     call mem_deallocate(this%idisp)
     call mem_deallocate(this%ialh)
     call mem_deallocate(this%ialv)
@@ -579,20 +553,16 @@ contains
     use GweDspInputModule, only: GweDspParamFoundType
     class(GweDspType) :: this
     type(GweDspParamFoundType), intent(in) :: found
-
+    !
     write (this%iout, '(1x,a)') 'Setting DSP Options'
     write (this%iout, '(4x,a,i0)') 'XT3D formulation [0=INACTIVE, 1=ACTIVE, &
                                    &3=ACTIVE RHS] set to: ', this%ixt3d
     write (this%iout, '(1x,a,/)') 'End Setting DSP Options'
   end subroutine log_options
 
+  !> @brief Update simulation mempath options
+  !<
   subroutine source_options(this)
-! ******************************************************************************
-! source_options -- update simulation mempath options
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     !use KindModule, only: LGP
     use MemoryManagerExtModule, only: mem_set_value
@@ -628,52 +598,45 @@ contains
     use GweDspInputModule, only: GweDspParamFoundType
     class(GweDspType) :: this
     type(GweDspParamFoundType), intent(in) :: found
-
+    !
     write (this%iout, '(1x,a)') 'Setting DSP Griddata'
-
-    !if (found%diffc) then
-    !  write (this%iout, '(4x,a)') 'DIFFC set from input file'
-    !end if
-
+    !
     if (found%alh) then
       write (this%iout, '(4x,a)') 'ALH set from input file'
     end if
-
+    !
     if (found%alv) then
       write (this%iout, '(4x,a)') 'ALV set from input file'
     end if
-
+    !
     if (found%ath1) then
       write (this%iout, '(4x,a)') 'ATH1 set from input file'
     end if
-
+    !
     if (found%ath2) then
       write (this%iout, '(4x,a)') 'ATH2 set from input file'
     end if
-
+    !
     if (found%atv) then
       write (this%iout, '(4x,a)') 'ATV set from input file'
     end if
-
+    !
     if (found%ktw) then
       write (this%iout, '(4x,a)') 'KTW set from input file'
     end if
-
+    !
     if (found%kts) then
       write (this%iout, '(4x,a)') 'KTS set from input file'
     end if
-
+    !
     write (this%iout, '(1x,a,/)') 'End Setting DSP Griddata'
-
+    !
+    ! -- Return
+    return
   end subroutine log_griddata
 
+  !> @brief Update DSP simulation data from input mempath
   subroutine source_griddata(this)
-! ******************************************************************************
-! source_griddata -- update dsp simulation data from input mempath
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: count_errors, store_error
     use MemoryManagerModule, only: mem_reallocate, mem_reassignptr
@@ -694,7 +657,6 @@ contains
     if (this%dis%nodes < this%dis%nodesuser) map => this%dis%nodeuser
     !
     ! -- update defaults with idm sourced values
-    !call mem_set_value(this%diffc, 'DIFFC', input_mempath, map, found%diffc)
     call mem_set_value(this%alh, 'ALH', this%input_mempath, map, found%alh)
     call mem_set_value(this%alv, 'ALV', this%input_mempath, map, found%alv)
     call mem_set_value(this%ath1, 'ATH1', this%input_mempath, map, found%ath1)
@@ -704,7 +666,6 @@ contains
     call mem_set_value(this%kts, 'KTS', this%input_mempath, map, found%kts)
     !
     ! -- set active flags
-    !if (found%diffc) this%idiffc = 1
     if (found%alh) this%ialh = 1
     if (found%alv) this%ialv = 1
     if (found%ath1) this%iath1 = 1
@@ -712,11 +673,6 @@ contains
     if (found%atv) this%iatv = 1
     if (found%ktw) this%iktw = 1
     if (found%kts) this%ikts = 1
-    !
-    ! -- reallocate diffc if not found
-    !if (.not. found%diffc) then
-    !  call mem_reallocate(this%diffc, 0, 'DIFFC', trim(this%memoryPath))
-    !end if
     !
     ! -- set this%idisp flag
     if (found%alh) this%idisp = this%idisp + 1
@@ -760,13 +716,8 @@ contains
     return
   end subroutine source_griddata
 
+  !> @brief Calculate dispersion coefficients
   subroutine calcdispellipse(this)
-! ******************************************************************************
-! calcdispellipse -- Calculate dispersion coefficients
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GweDspType) :: this
@@ -776,7 +727,6 @@ contains
     real(DP) :: alh, alv, ath1, ath2, atv, a
     real(DP) :: al, at1, at2
     real(DP) :: qzoqsquared
-!!    real(DP) :: dstar
     real(DP) :: ktbulk ! TODO: Implement additional options for characterizing ktbulk (see Markle refs)
     real(DP) :: qsw
 ! ------------------------------------------------------------------------------
@@ -820,21 +770,18 @@ contains
       end if
       !
       ! -- calculate
-!!      dstar = DZERO
-      !if (this%idiffc > 0) then
-      !  dstar = this%diffc(n) * this%porosity(n)
-      !end if
       ktbulk = DZERO
       if (this%iktw > 0) ktbulk = ktbulk + this%porosity(n) * this%ktw(n) * &
                                   this%fmi%gwfsat(n)
       if (this%ikts > 0) ktbulk = ktbulk + (DONE - this%porosity(n)) * this%kts(n)
-!!      ! -- The division by rhow*cpw below is done to render dstar in the form
-!!      ! -- of a thermal diffusivity, and not because the governing equation
-!!      ! -- is scaled by rhow*cpw. Because of this conceptual distinction,
-!!      ! -- ktbulk is divided by the explicitly calculated product rhow*cpw,
-!!      ! -- and not by the equivalent scale factor eqnsclfac, even though it
-!!      ! -- should make no practical difference in the result.
-!!      dstar = ktbulk / (this%gwecommon%gwecpw * this%gwecommon%gwerhow)  ! kluge note eqnsclfac, define product
+      !
+      ! -- The division by rhow*cpw below is done to render dstar in the form
+      !    of a thermal diffusivity, and not because the governing equation
+      !    is scaled by rhow*cpw. Because of this conceptual distinction,
+      !    ktbulk is divided by the explicitly calculated product rhow*cpw,
+      !    and not by the equivalent scale factor eqnsclfac, even though it
+      !    should make no practical difference in the result.
+      dstar = ktbulk / (this%gwecommon%gwecpw * this%gwecommon%gwerhow)  ! kluge note eqnsclfac, define product
       !
       ! -- Calculate the longitudal and transverse dispersivities
       al = DZERO
@@ -848,10 +795,6 @@ contains
       end if
       !
       ! -- Calculate and save the diagonal components of the dispersion tensor
-!!      qsw = q * this%fmi%gwfsat(n)
-!!      this%d11(n) = al * qsw + dstar
-!!      this%d22(n) = at1 * qsw + dstar
-!!      this%d33(n) = at2 * qsw + dstar
       qsw = q * this%fmi%gwfsat(n) * this%eqnsclfac
       this%d11(n) = al * qsw + ktbulk
       this%d22(n) = at1 * qsw + ktbulk
@@ -859,11 +802,6 @@ contains
       !
       ! -- Angles of rotation if velocity based dispersion tensor
       if (this%idisp > 0) then
-        !
-        ! -- angles of rotation from model coordinates to direction of velocity
-        ! qx / q = cos(a1) * cos(a2)
-        ! qy / q = sin(a1) * cos(a2)
-        ! qz / q = sin(a2)
         !
         ! -- angle3 is zero
         this%angle3(n) = DZERO
@@ -897,13 +835,9 @@ contains
     return
   end subroutine calcdispellipse
 
+  !> @brief Calculate dispersion coefficients
+  !<
   subroutine calcdispcoef(this)
-! ******************************************************************************
-! calcdispcoef -- Calculate dispersion coefficients
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use GwfNpfModule, only: hyeff_calc
     ! -- dummy
