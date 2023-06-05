@@ -29,18 +29,16 @@ module TspObsModule
     procedure, private :: set_pointers
   end type TspObsType
 
-contains
+    contains
 
+  !> @brief Create a new TspObsType object
+  !!
+  !! This routine:
+  !!   - creates an observation object
+  !!   - allocates pointers
+  !!   - initializes values
+  !<
   subroutine tsp_obs_cr(obs, inobs)
-! ******************************************************************************
-! tsp_obs_cr -- Create a new TspObsType object
-! Subroutine: (1) creates object
-!             (2) allocates pointers
-!             (3) initializes values
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     type(TspObsType), pointer, intent(out) :: obs
     integer(I4B), pointer, intent(in) :: inobs
@@ -52,16 +50,15 @@ contains
     obs%inputFilename = ''
     obs%inUnitObs => inobs
     !
+    ! -- Return
     return
   end subroutine tsp_obs_cr
 
+  !> @brief Allocate and read method for package
+  !!
+  !!  Method to allocate and read static data for the package.
+  !<
   subroutine tsp_obs_ar(this, ic, x, flowja)
-! ******************************************************************************
-! tsp_obs_ar -- allocate and read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TspObsType), intent(inout) :: this
     type(TspIcType), pointer, intent(in) :: ic
@@ -75,16 +72,13 @@ contains
     ! set pointers
     call this%set_pointers(ic, x, flowja)
     !
+    ! -- Return
     return
   end subroutine tsp_obs_ar
 
+  !> @brief Define observation object
+  !<
   subroutine tsp_obs_df(this, iout, pkgname, filtyp, dis)
-! ******************************************************************************
-! tsp_obs_df -- define
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TspObsType), intent(inout) :: this
     integer(I4B), intent(in) :: iout
@@ -109,16 +103,13 @@ contains
     call this%StoreObsType('flow-ja-face', .true., indx)
     this%obsData(indx)%ProcessIdPtr => tsp_process_intercell_obs_id
     !
+    ! -- Return
     return
   end subroutine tsp_obs_df
 
+  !> @brief Save observations
+  !< 
   subroutine tsp_obs_bd(this)
-! ******************************************************************************
-! tsp_obs_bd -- save obs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TspObsType), intent(inout) :: this
     ! -- local
@@ -148,30 +139,25 @@ contains
       end do
     end if
     !
+    ! -- Return
     return
   end subroutine tsp_obs_bd
 
+  !> @brief If transport model observations need checks, add them here
+  !<
   subroutine tsp_obs_rp(this)
-! ******************************************************************************
-! tsp_obs_rp
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy
     class(TspObsType), intent(inout) :: this
 ! ------------------------------------------------------------------------------
     !
-    ! Do GWT observations need any checking? If so, add checks here
+    ! -- Return
     return
   end subroutine tsp_obs_rp
 
+  !> Deallocate memory
+  !!
+  !! Deallocate memory associated with transport model 
   subroutine tsp_obs_da(this)
-! ******************************************************************************
-! tsp_obs_da
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TspObsType), intent(inout) :: this
 ! ------------------------------------------------------------------------------
@@ -181,9 +167,12 @@ contains
     nullify (this%flowja)
     call this%ObsType%obs_da()
     !
+    ! -- Return
     return
   end subroutine tsp_obs_da
 
+  !> @brief Set pointers needed by the transport OBS package
+  !<
   subroutine set_pointers(this, ic, x, flowja)
 ! ******************************************************************************
 ! set_pointers
@@ -205,15 +194,11 @@ contains
     return
   end subroutine set_pointers
 
-  ! -- Procedures related to GWF observations (NOT type-bound)
-
+  !> @brief Procedure related to Tsp observations (NOT type-bound)
+  !!
+  !! Process a specific observation ID
+  !<
   subroutine gwt_process_concentration_obs_id(obsrv, dis, inunitobs, iout)
-! ******************************************************************************
-! gwt_process_concentration_obs_id
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     type(ObserveType), intent(inout) :: obsrv
     class(DisBaseType), intent(in) :: dis
@@ -242,16 +227,15 @@ contains
       call store_error_unit(inunitobs)
     end if
     !
+    ! -- Return
     return
   end subroutine gwt_process_concentration_obs_id
 
+  !> @brief Procedure related to Tsp observations (NOT type-bound)
+  !!
+  !! Process an intercell observation requested by the user
+  !<
   subroutine tsp_process_intercell_obs_id(obsrv, dis, inunitobs, iout)
-! ******************************************************************************
-! tsp_process_intercell_obs_id
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     type(ObserveType), intent(inout) :: obsrv
     class(DisBaseType), intent(in) :: dis
@@ -304,6 +288,7 @@ contains
       call store_error_unit(inunitobs)
     end if
     !
+    ! -- Return
     return
   end subroutine tsp_process_intercell_obs_id
 
