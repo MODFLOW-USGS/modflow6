@@ -1025,7 +1025,7 @@ contains
                                         aname(8))
           lname(8) = .true.
         case ('THETAIM')
-          write (errmsg, '(4x,a,a)') &
+          write (errmsg, '(a)') &
             'THETAIM is no longer supported. See Chapter 9 in &
             &mf6suptechinfo.pdf for revised parameterization of mobile and &
             &immobile domain simulations.'
