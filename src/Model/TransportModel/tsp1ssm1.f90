@@ -34,7 +34,6 @@ module TspSsmModule
   !! This derived type corresponds to the SSM Package, which adds
   !! the effects of groundwater sources and sinks to the solute transport
   !! equation.
-  !!
   !<
   type, extends(NumericalPackageType) :: TspSsmType
     
@@ -83,7 +82,6 @@ contains
   !!
   !!  Create a new SSM package by defining names, allocating scalars
   !!  and initializing the parser.
-  !!
   !<
   subroutine ssm_cr(ssmobj, name_model, inunit, iout, fmi, tsplab, eqnsclfac,  &
                     gwecommon)
@@ -133,7 +131,6 @@ contains
   !! This routine is called from gwt_df(), but does not do anything because
   !! df is typically used to set up dimensions.  For the ssm package, the
   !! total number of ssm entries is defined by the flow model.
-  !!
   !<
   subroutine ssm_df(this)
     ! -- modules
@@ -151,7 +148,6 @@ contains
   !!
   !! This routine is called from gwt_ar().  It allocates arrays, reads
   !! options and data, and sets up the output table.
-  !!
   !<
   subroutine ssm_ar(this, dis, ibound, cnew)
     ! -- modules
@@ -209,7 +205,6 @@ contains
   !! each stress period.  If any SPC input files are used to provide source
   !! and sink concentrations, then period blocks for the current stress period
   !! are read.
-  !!
   !<
   subroutine ssm_rp(this)
     ! -- modules
@@ -240,7 +235,6 @@ contains
   !! in this%nbound.  Also, if any SPC input files are used to provide source
   !! and sink concentrations and time series are referenced in those files,
   !! then ssm concenrations must be interpolated for the time step.
-  !!
   !<
   subroutine ssm_ad(this)
     ! -- modules
@@ -288,7 +282,6 @@ contains
   !! and right-hand-side value for any package and package entry.  It returns
   !! several different optional variables that are used throughout this
   !! package to update matrix terms, budget calculations, and output tables.
-  !!
   !<
   subroutine ssm_term(this, ipackage, ientry, rrate, rhsval, hcofval, &
                       cssm, qssm)
@@ -363,10 +356,8 @@ contains
       !
       ! -- Add terms based on qbnd sign
       if (qbnd <= DZERO) then
-!!        hcoftmp = qbnd * omega
         hcoftmp = qbnd * omega * this%eqnsclfac
       else
-!!        rhstmp = -qbnd * ctmp * (DONE - omega)
         rhstmp = -qbnd * ctmp * (DONE - omega) * this%eqnsclfac
       end if
       !
@@ -376,12 +367,11 @@ contains
     ! -- set requested values
     if (present(hcofval)) hcofval = hcoftmp
     if (present(rhsval)) rhsval = rhstmp
-!!    if (present(rrate)) rrate = (hcoftmp * ctmp - rhstmp) * this%eqnsclfac
     if (present(rrate)) rrate = (hcoftmp * ctmp - rhstmp)
     if (present(cssm)) cssm = ctmp
     if (present(qssm)) qssm = qbnd
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine ssm_term
 
@@ -393,7 +383,6 @@ contains
   !! the SSM bound concentration (or temperature) based on these different 
   !! approaches. The mixed flag indicates whether or not the boundary as a
   !! mixed type.
-  !!
   !<
   subroutine get_ssm_conc(this, ipackage, ientry, nbound_flow, conc, &
                           lauxmixed)
@@ -429,7 +418,6 @@ contains
   !!
   !! This routine adds the effects of the SSM to the matrix equations by
   !! updating the a matrix and right-hand side vector.
-  !!
   !<
   subroutine ssm_fc(this, matrix_sln, idxglo, rhs)
     ! -- modules
@@ -476,7 +464,6 @@ contains
   !! Calulate the resulting mass flow between the boundary and the connected
   !! GWT model cell.  Update the diagonal position of the flowja array so that
   !! it ultimately contains the solute balance residual.
-  !!
   !<
   subroutine ssm_cq(this, flowja)
     ! -- modules
@@ -516,7 +503,6 @@ contains
   !!
   !! Calculate the global SSM budget terms using separate in and out entries
   !! for each flow package.
-  !!
   !<
   subroutine ssm_bd(this, isuppress_output, model_budget)
     ! -- modules
@@ -574,7 +560,6 @@ contains
   !! Based on user-specified controls, print SSM mass flow rates to the GWT
   !! listing file and/or write the SSM mass flow rates to the GWT binary
   !! budget file.
-  !!
   !<
   subroutine ssm_ot_flow(this, icbcfl, ibudfl, icbcun)
     ! -- modules
@@ -697,14 +682,13 @@ contains
       end if
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine ssm_ot_flow
 
   !> @ brief Deallocate
   !!
   !! Deallocate the memory associated with this derived type
-  !!
   !<
   subroutine ssm_da(this)
     ! -- modules
@@ -757,7 +741,6 @@ contains
   !> @ brief Allocate scalars
   !!
   !! Allocate scalar variables for this derived type
-  !!
   !<
   subroutine allocate_scalars(this)
     ! -- modules
@@ -782,7 +765,6 @@ contains
   !> @ brief Allocate arrays
   !!
   !! Allocate array variables for this derived type
-  !!
   !<
   subroutine allocate_arrays(this)
     ! -- modules
@@ -814,7 +796,6 @@ contains
   !> @ brief Read package options
   !!
   !! Read and set the SSM Package options
-  !!
   !<
   subroutine read_options(this)
     ! -- modules
@@ -866,7 +847,6 @@ contains
   !> @ brief Read package data
   !!
   !! Read and set the SSM Package data
-  !!
   !<
   subroutine read_data(this)
     ! -- dummy
@@ -884,7 +864,6 @@ contains
   !!
   !! Read SOURCES block and look for auxiliary columns in
   !! corresponding flow data.
-  !!
   !<
   subroutine read_sources_aux(this)
     ! -- dummy
@@ -987,7 +966,6 @@ contains
   !!
   !! Read optional FILEINPUT block and initialize an
   !! SPC input file reader for each entry.
-  !!
   !<
   subroutine read_sources_fileinput(this)
     ! -- dummy
@@ -1108,7 +1086,6 @@ contains
   !!  through the auxiliary names in package ip and sets iauxpak
   !!  to the column number corresponding to the correct auxiliary
   !!  column.
-  !!
   !<
   subroutine set_iauxpak(this, ip, packname)
     ! -- dummy
@@ -1142,7 +1119,7 @@ contains
     write (this%iout, '(4x, a, i0, a, a)') 'USING AUX COLUMN ', &
       iaux, ' IN PACKAGE ', trim(packname)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine set_iauxpak
 
@@ -1151,7 +1128,6 @@ contains
   !!  The next call to parser will return the input file name for
   !!  package ip in the SSM SOURCES block.  The routine then
   !!  initializes the SPC input file.
-  !!
   !<
   subroutine set_ssmivec(this, ip, packname)
     ! -- module
@@ -1179,14 +1155,13 @@ contains
       trim(filename), ' TO SET ',trim(this%tsplab%depvartype),'S FOR PACKAGE ', &
       trim(packname)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine set_ssmivec
 
   !> @ brief Setup the output table
   !!
   !! Setup the output table by creating the column headers.
-  !!
   !<
   subroutine pak_setup_outputtab(this)
     ! -- dummy
@@ -1228,7 +1203,7 @@ contains
       !end if
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine pak_setup_outputtab
 

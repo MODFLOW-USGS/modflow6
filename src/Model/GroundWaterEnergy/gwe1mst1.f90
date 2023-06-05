@@ -529,7 +529,7 @@ contains
     return
   end subroutine mst_ot_flow
 
-  !> @ brief Deallocate
+  !> @brief Deallocate memory
   !!
   !!  Method to deallocate memory for the package.
   !<

@@ -1074,7 +1074,7 @@ contains
   !! Accounts for energy that is added to the model from specifying an 
   !! infiltration rate and temperature, but is subsequently removed from
   !! the model as that portion of the infiltration that is rejected (and
-  !! transferred to another advanced package via the MVR/MVT packages.
+  !! NOT transferred to another advanced package via the MVR/MVT packages).
   !<
   subroutine uze_rinf_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
@@ -1295,6 +1295,7 @@ contains
     call this%obs%StoreObsType('thermal-equil', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
+    ! -- Return
     return
   end subroutine uze_df_obs
 
@@ -1368,6 +1369,7 @@ contains
       found = .false.
     end select
     !
+    ! -- Return
     return
   end subroutine uze_bd_obs
 
