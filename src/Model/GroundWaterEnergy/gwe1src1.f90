@@ -41,9 +41,7 @@ contains
 
   !> @brief Create an energy source loading package
   !! 
-  !! This subroutine:
-  !!   - creates new-style package
-  !!   - points bndobj to the new package
+  !! This subroutine points bndobj to the newly created package
   !<
   subroutine src_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         tsplab, gwecommon)
@@ -221,8 +219,9 @@ contains
   !! PRINT_INPUT option is used.
   !<
   subroutine define_listlabel(this)
-! ------------------------------------------------------------------------------
+    ! -- dummy
     class(GweSrcType), intent(inout) :: this
+    ! -- local
 ! ------------------------------------------------------------------------------
     !
     ! -- create the header list label
@@ -253,12 +252,15 @@ contains
   !! This function:
   !!   - returns true because SRC package supports observations.
   !!   - overrides BndType%bnd_obs_supported()
+  !<
   logical function src_obs_supported(this)
     ! ------------------------------------------------------------------------------
     implicit none
     class(GweSrcType) :: this
     ! ------------------------------------------------------------------------------
     src_obs_supported = .true.
+    !
+    ! -- Return
     return
   end function src_obs_supported
 
@@ -269,13 +271,12 @@ contains
   !!   - overrides BndType%bnd_df_obs
   !<
   subroutine src_df_obs(this)
-    ! ------------------------------------------------------------------------------
     implicit none
     ! -- dummy
     class(GweSrcType) :: this
     ! -- local
     integer(I4B) :: indx
-    ! ------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
     call this%obs%StoreObsType('src', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
     !
@@ -284,21 +285,23 @@ contains
     call this%obs%StoreObsType('to-mvr', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine src_df_obs
 
-  ! -- Procedure related to time series
+  !> @brief Procedure related to time series
+  !!
+  !! Assign tsLink%Text appropriately for all time series in use by package.
+  !! In the SRC package only the SENERRATE variable can be controlled by time 
+  !! series.
+  !<
   subroutine src_rp_ts(this)
-    ! -- Assign tsLink%Text appropriately for
-    !    all time series in use by package.
-    !    In the SRC package only the SMASSRATE variable
-    !    can be controlled by time series.
     ! -- dummy
     class(GweSrcType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i, nlinks
     type(TimeSeriesLinkType), pointer :: tslink => null()
+! ------------------------------------------------------------------------------
     !
     nlinks = this%TsManager%boundtslinks%Count()
     do i = 1, nlinks
@@ -310,6 +313,7 @@ contains
       end if
     end do
     !
+    ! -- Return
     return
   end subroutine src_rp_ts
 
