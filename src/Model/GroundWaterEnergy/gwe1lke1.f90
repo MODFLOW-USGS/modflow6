@@ -155,7 +155,7 @@ contains
     !    vaporization for evaporative cooling.
     lkeobj%gwecommon => gwecommon
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lke_create
 
@@ -481,7 +481,7 @@ contains
     ! -- modules
     ! -- dummy
     class(GweLkeType) :: this
-    ! -- return
+    ! -- Return
     integer(I4B) :: nbudterms
     ! -- local
 ! ------------------------------------------------------------------------------
@@ -615,7 +615,7 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lke_setup_budobj
 
@@ -730,7 +730,7 @@ contains
       end if
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lke_fill_budobj
 
@@ -860,7 +860,7 @@ contains
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lke_rain_term
 
@@ -889,7 +889,7 @@ contains
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lke_evap_term
 
@@ -917,7 +917,7 @@ contains
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lke_roff_term
 
@@ -948,7 +948,7 @@ contains
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lke_iflw_term
 
@@ -979,7 +979,7 @@ contains
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd * this%eqnsclfac
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lke_wdrl_term
 
@@ -1010,7 +1010,7 @@ contains
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd * this%eqnsclfac
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lke_outf_term
 
@@ -1254,7 +1254,7 @@ contains
     !
 999 continue
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lke_set_stressperiod
 
