@@ -19,13 +19,9 @@ module TspIcModule
 
 contains
 
+  !> @brief Create a new initial conditions object
+  !< 
   subroutine ic_cr(ic, name_model, inunit, iout, dis, tsplab)
-! ******************************************************************************
-! ic_cr -- Create a new initial conditions object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     type(TspIcType), pointer :: ic
     type(TspLabelsType), pointer, intent(in) :: tsplab
@@ -60,13 +56,11 @@ contains
     return
   end subroutine ic_cr
 
+  !> @brief Read initial conditions
+  !!
+  !! Read initial concentrations or temperatures depending on model type
+  !<
   subroutine read_data(this)
-! ******************************************************************************
-! read_data
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error
