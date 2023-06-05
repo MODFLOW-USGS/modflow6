@@ -46,18 +46,14 @@ module TspCncModule
     procedure, public :: bnd_rp_ts => cnc_rp_ts
   end type TspCncType
 
-contains
+    contains
 
+  !> @brief Create a new constant concentration or temperature package
+  !!
+  !! Routine points packobj to the newly created package
+  !<
   subroutine cnc_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         tsplab, eqnsclfac, gwecommon)
-! ******************************************************************************
-! cnc_create -- Create a New Constant Concentration/Temperature Package
-! Subroutine: (1) create new-style package
-!             (2) point packobj to the new package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
@@ -106,17 +102,14 @@ contains
       cncobj%gwecommon => gwecommon
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_create
 
+  !> @brief Allocate arrays specific to the constant concentration/tempeature
+  !! package.
+  !<
   subroutine cnc_allocate_arrays(this, nodelist, auxvar)
-! ******************************************************************************
-! allocate_scalars -- allocate arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -139,17 +132,13 @@ contains
       this%ratecncout(i) = DZERO
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_allocate_arrays
 
+  !> @brief Constant concentration/temperature read and prepare (rp) routine
+  !<
   subroutine cnc_rp(this)
-! ******************************************************************************
-! cnc_rp -- Read and prepare
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use SimModule, only: store_error
     use InputOutputModule, only: lowcase
     implicit none
@@ -190,10 +179,15 @@ contains
       call this%parser%StoreErrorUnit()
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_rp
 
+  
+  !> @brief Constant concentration/temperature package advance routine 
+  !!
+  !! Add package connections to matrix
+  !<
   subroutine cnc_ad(this)
 ! ******************************************************************************
 ! cnc_ad -- Advance
@@ -226,17 +220,13 @@ contains
     !    "current" value.
     call this%obs%obs_ad()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_ad
 
+  !> @brief Check constant concentration/temperature boundary condition data
+  !<
   subroutine cnc_ck(this)
-! ******************************************************************************
-! cnc_ck -- Check cnc boundary condition data
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, count_errors, store_error_unit
@@ -268,17 +258,16 @@ contains
       call this%parser%StoreErrorUnit()
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_ck
 
+  !> @brief Override bnd_fc and do nothing
+  !!
+  !! For constant concentration/temperature boundary type, the call to bnd_fc
+  !! needs to be overwritten to prevent logic found therein from being applied
+  !<
   subroutine cnc_fc(this, rhs, ia, idxglo, matrix_sln)
-! **************************************************************************
-! cnc_fc -- Override bnd_fc and do nothing
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     ! -- dummy
     class(TspCncType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
@@ -288,17 +277,16 @@ contains
     ! -- local
 ! --------------------------------------------------------------------------
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_fc
 
+  !> @brief Calculate flow associated with constant concentration/tempearture
+  !! boundary
+  !!
+  !! This method overrides bnd_cq()
+  !<
   subroutine cnc_cq(this, x, flowja, iadv)
-! ******************************************************************************
-! cnc_cq -- Calculate constant concenration flow.  This method overrides bnd_cq().
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TspCncType), intent(inout) :: this
@@ -359,7 +347,7 @@ contains
       !
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_cq
 
@@ -380,27 +368,20 @@ contains
     integer(I4B) :: isuppress_output
 ! ------------------------------------------------------------------------------
     isuppress_output = 0
-!!    !
-!!    do n = 1, size(this%ratecncin)
-!!      this%ratecncin(n) = this%ratecncin(n) * this%eqnsclfac
-!!    end do
-!!    do n = 1, size(this%ratecncout)
-!!      this%ratecncout(n) = this%ratecncout(n) * this%eqnsclfac
-!!    end do
-!!    !
     call rate_accumulator(this%ratecncin(1:this%nbound), ratin, dum)
     call rate_accumulator(this%ratecncout(1:this%nbound), ratout, dum)
     call model_budget%addentry(ratin, ratout, delt, this%text, &
                                isuppress_output, this%packName)
+    !
+    ! -- Return
+    return
   end subroutine cnc_bd
 
+  !> @brief Deallocate memory
+  !!
+  !!  Method to deallocate memory for the package.
+  !<
   subroutine cnc_da(this)
-! ******************************************************************************
-! cnc_da -- deallocate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
@@ -417,18 +398,17 @@ contains
     ! -- pointers
     nullify (this%gwecommon)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_da
 
+  !> @brief Define labels used in list file
+  !!
+  !! Define the list heading that is written to iout when PRINT_INPUT option
+  !! is used.
+  !<
   subroutine define_listlabel(this)
-! ******************************************************************************
-! define_listlabel -- Define the list heading that is written to iout when
-!   PRINT_INPUT option is used.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy
     class(TspCncType), intent(inout) :: this
 ! ------------------------------------------------------------------------------
     !
@@ -450,40 +430,34 @@ contains
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine define_listlabel
 
-  ! -- Procedures related to observations
-
+  !> @brief Procedure related to observation processing
+  !! 
+  !! This routine:
+  !!   - returns true because the CNC package supports observations,
+  !!   - overrides packagetype%_obs_supported()
   logical function cnc_obs_supported(this)
-! ******************************************************************************
-! cnc_obs_supported
-!   -- Return true because CNC package supports observations.
-!   -- Overrides packagetype%_obs_supported()
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TspCncType) :: this
 ! ------------------------------------------------------------------------------
     !
     cnc_obs_supported = .true.
     !
-    ! -- return
+    ! -- Return
     return
   end function cnc_obs_supported
 
+  !> @brief Procedure related to observation processing
+  !!
+  !! This routine:
+  !!   - defines observations
+  !!   - stores observation types supported by the CNC package,
+  !!   - overrides BndType%bnd_df_obs
+  !< 
   subroutine cnc_df_obs(this)
-! ******************************************************************************
-! cnc_df_obs (implements bnd_df_obs)
-!   -- Store observation type supported by CNC package.
-!   -- Overrides BndType%bnd_df_obs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TspCncType) :: this
     ! -- local
@@ -493,21 +467,17 @@ contains
     call this%obs%StoreObsType('cnc', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_df_obs
 
-  ! -- Procedure related to time series
-
+  !> @brief Procedure related to time series
+  !! 
+  !! Assign tsLink%Text appropriately for all time series in use by package.
+  !! In CNC package, variable CONCENTRATION or TEMPERATURE can be controlled 
+  !! by time series.
+  !<
   subroutine cnc_rp_ts(this)
-! ******************************************************************************
-! -- Assign tsLink%Text appropriately for all time series in use by package.
-!    In CNC package variable CONCENTRATION or TEMPERATURE can be controlled 
-!    by time series.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TspCncType), intent(inout) :: this
     ! -- local
@@ -526,7 +496,7 @@ contains
       end if
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_rp_ts
 

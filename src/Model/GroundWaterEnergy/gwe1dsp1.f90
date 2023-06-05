@@ -482,7 +482,7 @@ contains
     return
   end subroutine allocate_arrays
 
-  !> @ brief Deallocate
+  !> @ brief Deallocate memory
   !!
   !!  Method to deallocate memory for the package.
   !<
