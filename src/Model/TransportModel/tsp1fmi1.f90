@@ -100,13 +100,9 @@ module TspFmiModule
 
 contains
 
+  !> @breif Create a new FMI object
+  !<
   subroutine fmi_cr(fmiobj, name_model, inunit, iout, tsplab, eqnsclfac)
-! ******************************************************************************
-! fmi_cr -- Create a new FMI object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     type(TspFmiType), pointer :: fmiobj
     character(len=*), intent(in) :: name_model
@@ -146,13 +142,9 @@ contains
     return
   end subroutine fmi_cr
 
+  !> @brief Define FMI package 
+  !<
   subroutine fmi_df(this, dis, inssm, idryinactive)
-! ******************************************************************************
-! fmi_df -- Define
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: store_error
     ! -- dummy
@@ -222,13 +214,9 @@ contains
     return
   end subroutine fmi_df
 
+  !> @brief Allocate and Read routine for FMI object
+  !<
   subroutine fmi_ar(this, ibound)
-! ******************************************************************************
-! fmi_ar -- Allocate and Read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: store_error
     ! -- dummy
@@ -248,13 +236,9 @@ contains
     return
   end subroutine fmi_ar
 
+  !> @brief Read and prepare for FMI object
+  !<
   subroutine fmi_rp(this, inmvr)
-! ******************************************************************************
-! fmi_rp -- Read and prepare
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: kper, kstp
     ! -- dummy
@@ -285,13 +269,8 @@ contains
     return
   end subroutine fmi_rp
 
+  !> @brief Advance routine for FMI object
   subroutine fmi_ad(this, cnew)
-! ******************************************************************************
-! fmi_ad -- advance
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DHDRY
     ! -- dummy
@@ -337,13 +316,10 @@ contains
     return
   end subroutine fmi_ad
 
+  !> @brief Calculate coefficients and fill matrix and rhs terms associated
+  !! with FMI object
+  !<
   subroutine fmi_fc(this, nodes, cold, nja, matrix_sln, idxglo, rhs)
-! ******************************************************************************
-! fmi_fc -- Calculate coefficients and fill matrix and rhs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     !use BndModule,              only: BndType, GetBndFromList
     ! -- dummy
@@ -377,13 +353,12 @@ contains
     return
   end subroutine fmi_fc
 
+  !> @brief Calculate flow correction
+  !!
+  !! Where there is a flow imbalance for a given cell, a correction may be 
+  !! applied if selected
+  !<
   subroutine fmi_cq(this, cnew, flowja)
-! ******************************************************************************
-! fmi_cq -- Calculate flow correction
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TspFmiType) :: this
@@ -414,13 +389,9 @@ contains
     return
   end subroutine fmi_cq
 
+  !> @brief Calculate budget terms associated with FMI object
+  !<
   subroutine fmi_bd(this, isuppress_output, model_budget)
-! ******************************************************************************
-! mst_bd -- Calculate budget terms
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: delt
     use BudgetModule, only: BudgetType, rate_accumulator
@@ -443,13 +414,9 @@ contains
     return
   end subroutine fmi_bd
 
+  !> @brief Save budget terms associated with FMI object
+  !<
   subroutine fmi_ot_flow(this, icbcfl, icbcun)
-! ******************************************************************************
-! fmi_ot_flow -- Save budget terms
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TspFmiType) :: this
     integer(I4B), intent(in) :: icbcfl
@@ -489,13 +456,11 @@ contains
     return
   end subroutine fmi_ot_flow
 
+  !> @brief Deallocate memory
+  !!
+  !! Deallocate memory associated with FMI object
+  !<
   subroutine fmi_da(this)
-! ******************************************************************************
-! fmi_da -- Deallocate variables
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
@@ -548,13 +513,11 @@ contains
     return
   end subroutine fmi_da
 
+  !> @ brief Allocate scalars
+  !!
+  !! Allocate scalar variables for an FMI object
+  !<
   subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
@@ -597,13 +560,11 @@ contains
     return
   end subroutine allocate_scalars
 
+  !> @ brief Allocate arrays for FMI object
+  !!
+  !!  Method to allocate arrays for the FMI package.
+  !<
   subroutine allocate_arrays(this, nodes)
-! ******************************************************************************
-! allocate_arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use MemoryManagerModule, only: mem_allocate
     !modules
     use ConstantsModule, only: DZERO
@@ -761,14 +722,12 @@ contains
     return
   end subroutine set_active_status
 
+  !> @brief Calculate the previous saturation level
+  !!
+  !! Calculate the groundwater cell head saturation for the end of
+  !! the last time step
+  !<
   function gwfsatold(this, n, delt) result(satold)
-! ******************************************************************************
-! gwfsatold -- calculate the groundwater cell head saturation for the end of
-!   the last time step
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TspFmiType) :: this
@@ -847,18 +806,14 @@ contains
       write (this%iout, '(1x,a)') 'END OF FMI OPTIONS'
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine read_options
 
+  !> @brief Read PACKAGEDATA block
+  !!
+  !! Read packagedata block from input file
   subroutine read_packagedata(this)
-! ******************************************************************************
-! read_packagedata -- Read PACKAGEDATA block
-! Subroutine: (1) read packagedata block from input file
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use OpenSpecModule, only: ACCESS, FORM
     use ConstantsModule, only: LINELENGTH, DEM6, LENPACKAGENAME
@@ -984,7 +939,7 @@ contains
       write (this%iout, '(1x,a)') 'END OF FMI PACKAGEDATA'
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine read_packagedata
 
@@ -1019,13 +974,9 @@ contains
     return
   end subroutine set_aptbudobj_pointer
 
+  !> @brief Initial the budget file reader
+  !<
   subroutine initialize_bfr(this)
-! ******************************************************************************
-! initialize_bfr -- initalize the budget file reader
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     class(TspFmiType) :: this
     ! -- dummy
@@ -1037,16 +988,17 @@ contains
     !
     ! -- todo: need to run through the budget terms
     !    and do some checking
+    !
+    ! -- Return
+    return
   end subroutine initialize_bfr
 
+  !> @brief Advance the budget file reader
+  !!
+  !! Advance the budget file reader by reading the next chunk of information 
+  !! for the current time step and stress period
+  !<
   subroutine advance_bfr(this)
-! ******************************************************************************
-! advance_bfr -- advance the budget file reader by reading the next chunk
-!   of information for the current time step and stress period
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: kstp, kper
     ! -- dummy
@@ -1186,15 +1138,14 @@ contains
       ! -- set the flag to indicate that flows were not updated
       this%iflowsupdated = 0
     end if
+    !
+    ! -- Return
+    return
   end subroutine advance_bfr
 
+  !> @brief Final the budget file reader
+  !<
   subroutine finalize_bfr(this)
-! ******************************************************************************
-! finalize_bfr -- finalize the budget file reader
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     class(TspFmiType) :: this
     ! -- dummy
@@ -1205,13 +1156,9 @@ contains
     !
   end subroutine finalize_bfr
 
+  !> @brief Initialize the head file reader
+  !<
   subroutine initialize_hfr(this)
-! ******************************************************************************
-! initialize_hfr -- initalize the head file reader
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     class(TspFmiType) :: this
     ! -- dummy
@@ -1222,15 +1169,14 @@ contains
     !
     ! -- todo: need to run through the head terms
     !    and do some checking
+    !
+    ! -- Return
+    return
   end subroutine initialize_hfr
 
+  !> @brief Advance the head file reader
+  !<
   subroutine advance_hfr(this)
-! ******************************************************************************
-! advance_hfr -- advance the head file reader
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: kstp, kper
     class(TspFmiType) :: this
@@ -1319,15 +1265,14 @@ contains
     else
       write (this%iout, fmthdskstpkper) kstp, kper, this%hfr%kstp, this%hfr%kper
     end if
+    !
+    ! -- Return
+    return
   end subroutine advance_hfr
 
+  !> @brief Finalize the head file reader
+  !<
   subroutine finalize_hfr(this)
-! ******************************************************************************
-! finalize_hfr -- finalize the head file reader
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     class(TspFmiType) :: this
     ! -- dummy
@@ -1336,16 +1281,17 @@ contains
     ! -- Finalize the head file reader
     close (this%iuhds)
     !
+    ! -- Return
+    return
   end subroutine finalize_hfr
 
+  !> @brief Initialize the groundwater flow terms based on the budget file 
+  !! reader
+  !!
+  !! Initalize terms and figure out how many different terms and packages 
+  !! are contained within the file
+  !<
   subroutine initialize_gwfterms_from_bfr(this)
-! ******************************************************************************
-! initialize_gwfterms_from_bfr -- initalize terms and figure out how many
-!   different terms and packages are contained within the file
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     use SimModule, only: store_error, store_error_unit, count_errors
@@ -1440,18 +1386,15 @@ contains
       call this%parser%StoreErrorUnit()
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine initialize_gwfterms_from_bfr
 
+  !> @brief Initialize groundwater flow terms from the groundwater budget
+  !!
+  !! Flows are coming from a gwf-gwt exchange object
+  !< 
   subroutine initialize_gwfterms_from_gwfbndlist(this)
-! ******************************************************************************
-! initialize_gwfterms_from_gwfbndlist -- flows are coming from a gwf-gwt
-!   exchange
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use BndModule, only: BndType, GetBndFromList
     ! -- dummy
@@ -1515,18 +1458,17 @@ contains
         iterm = iterm + 1
       end if
     end do
+    !
+    ! -- Return
     return
   end subroutine initialize_gwfterms_from_gwfbndlist
 
+  !> @brief Initialize an array for storing PackageBudget objects.
+  !!
+  !! This routine allocates gwfpackages to the proper size and initializes some
+  !! member variables.
+  !<
   subroutine allocate_gwfpackages(this, ngwfterms)
-! ******************************************************************************
-! allocate_gwfpackages -- gwfpackages is an array of PackageBudget objects.
-!   This routine allocates gwfpackages to the proper size and initializes some
-!   member variables.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LENMEMPATH
     use MemoryManagerModule, only: mem_allocate
@@ -1560,17 +1502,14 @@ contains
       call this%gwfpackages(n)%initialize(memPath)
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine allocate_gwfpackages
 
+  !> @brief Deallocate memory
+  !!
+  !! Deallocate memory that stores the gwfpackages array
   subroutine deallocate_gwfpackages(this)
-! ******************************************************************************
-! deallocate_gwfpackages -- memory in the gwfpackages array
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(TspFmiType) :: this
@@ -1583,17 +1522,13 @@ contains
       call this%gwfpackages(n)%da()
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine deallocate_gwfpackages
 
+  !> @brief Find the package index for package called name
+  !< 
   subroutine get_package_index(this, name, idx)
-! ******************************************************************************
-! get_package_index -- find the package index for package called name
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use BndModule, only: BndType, GetBndFromList
     class(TspFmiType) :: this
     character(len=*), intent(in) :: name
@@ -1615,7 +1550,7 @@ contains
                        terminate=.TRUE.)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine get_package_index
 
