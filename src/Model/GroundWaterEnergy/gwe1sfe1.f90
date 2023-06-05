@@ -285,7 +285,6 @@ module GweSfeModule
   !!
   !! This will be called from TspAptType%apt_fc_expanded()
   !! in order to add matrix terms specifically for SFE
-  !!
   !<
   subroutine sfe_fc_expanded(this, rhs, ia, idxglo, matrix_sln)
     ! -- modules
@@ -397,7 +396,7 @@ module GweSfeModule
     return
   end subroutine sfe_fc_expanded
 
-  !> @ brief Add terms specific to sfr to the explicit sfr solve
+  !> @ brief Add terms specific to sfr to the explicit sfe solve
   !<
   subroutine sfe_solve(this)  ! kluge note: will explicit solve still be possible/useful if there's streambed conduction???
     ! -- dummy
@@ -685,7 +684,7 @@ module GweSfeModule
       end if
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine sfe_fill_budobj
 
@@ -752,12 +751,11 @@ module GweSfeModule
       this%tempiflw(n) = DZERO
     end do
     !
-    !
     ! -- Return
     return
   end subroutine sfe_allocate_arrays
 
-  !> @brief Deallocate 
+  !> @brief Deallocate memory
   !<
   subroutine sfe_da(this)
     ! -- modules
@@ -812,7 +810,7 @@ module GweSfeModule
     if (present(rhsval)) rhsval = -rrate   ! kluge note eqnsclfac: this was incorrect for divided-through formulation but is ok now
     if (present(hcofval)) hcofval = DZERO
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine sfe_rain_term
 
@@ -842,7 +840,7 @@ module GweSfeModule
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine sfe_evap_term
 
@@ -900,7 +898,7 @@ module GweSfeModule
     if (present(rhsval)) rhsval = -rrate   ! kluge note eqnsclfac: this was incorrect for divided-through formulation but is ok now
     if (present(hcofval)) hcofval = DZERO
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine sfe_iflw_term
 
@@ -930,7 +928,7 @@ module GweSfeModule
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd * this%eqnsclfac
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine sfe_outf_term
 
@@ -938,7 +936,6 @@ module GweSfeModule
   !!
   !! Store the observation type supported by the APT package and overide
   !! BndType%bnd_df_obs
-  !!
   !<
   subroutine sfe_df_obs(this)
     ! -- modules
@@ -1008,13 +1005,13 @@ module GweSfeModule
     call this%obs%StoreObsType('ext-outflow', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
+    ! -- Return
     return
   end subroutine sfe_df_obs
 
   !> @brief Process package specific obs
   !!
   !! Method to process specific observations for this package.
-  !!
   !<
   subroutine sfe_rp_obs(this, obsrv, found)
     ! -- dummy
@@ -1041,6 +1038,7 @@ module GweSfeModule
       found = .false.
     end select
     !
+    ! -- Return
     return
   end subroutine sfe_rp_obs
 
@@ -1083,6 +1081,7 @@ module GweSfeModule
       found = .false.
     end select
     !
+    ! -- Return
     return
   end subroutine sfe_bd_obs
 
@@ -1163,7 +1162,7 @@ module GweSfeModule
     !
 999 continue
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine sfe_set_stressperiod
 

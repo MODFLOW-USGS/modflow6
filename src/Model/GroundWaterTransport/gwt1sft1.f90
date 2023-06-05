@@ -1,4 +1,4 @@
-! -- Stream Transport Module
+! -- Stream Mass Transport Module
 ! -- todo: what to do about reactions in stream?  Decay?
 ! -- todo: save the sft concentration into the sfr aux variable?
 ! -- todo: calculate the sfr DENSE aux variable using concentration?
@@ -90,14 +90,10 @@ module GwtSftModule
 
 contains
 
+  !> @brief Create a new sft package
+  !<
   subroutine sft_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         fmi, tsplab, eqnsclfac)
-! ******************************************************************************
-! sft_create -- Create a New SFT Package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
@@ -146,17 +142,13 @@ contains
     !    concentration vs temperature
     sftobj%tsplab => tsplab
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine sft_create
 
-  subroutine find_sft_package(this)
-! ******************************************************************************
-! find corresponding sft package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Find corresponding sft package
+  !<
+ subroutine find_sft_package(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -274,14 +266,12 @@ contains
     return
   end subroutine find_sft_package
 
+  !> @brief Add matrix terms related to SFT
+  !!
+  !! This will be called from TspAptType%apt_fc_expanded()
+  !! in order to add matrix terms specifically for SFT
+  !<
   subroutine sft_fc_expanded(this, rhs, ia, idxglo, matrix_sln)
-! ******************************************************************************
-! sft_fc_expanded -- this will be called from TspAptType%apt_fc_expanded()
-!   in order to add matrix terms specifically for SFT
-! ****************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwtSftType) :: this
@@ -357,6 +347,8 @@ contains
     return
   end subroutine sft_fc_expanded
 
+  !> @brief Add terms specific to sft to the explicit sft solve
+  !<
   subroutine sft_solve(this)
 ! ******************************************************************************
 ! sft_solve -- add terms specific to sfr to the explicit sfr solve
@@ -416,14 +408,11 @@ contains
     return
   end subroutine sft_solve
 
+  !> @brief Function to return the number of budget terms just for this package.
+  !!
+  !! This overrides a function in the parent class.
+  !<
   function sft_get_nbudterms(this) result(nbudterms)
-! ******************************************************************************
-! sft_get_nbudterms -- function to return the number of budget terms just for
-!   this package.  This overrides function in parent.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwtSftType) :: this
@@ -432,20 +421,16 @@ contains
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    ! -- Number of budget terms is 6
+    ! -- Number of budget terms is 5
     nbudterms = 5
     !
     ! -- Return
     return
   end function sft_get_nbudterms
 
+  !> @brief Set up the budget object that stores all the sft flows
+  !<
   subroutine sft_setup_budobj(this, idx)
-! ******************************************************************************
-! sft_setup_budobj -- Set up the budget object that stores all the sfr flows
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LENBUDTXT
     ! -- dummy
@@ -521,17 +506,13 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine sft_setup_budobj
 
+  !> @brief Copy flow terms into this%budobj
+  !<
   subroutine sft_fill_budobj(this, idx, x, flowja, ccratin, ccratout)
-! ******************************************************************************
-! sft_fill_budobj -- copy flow terms into this%budobj
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwtSftType) :: this
@@ -546,7 +527,7 @@ contains
     real(DP) :: q
     ! -- formats
 ! -----------------------------------------------------------------------------
-
+    !
     ! -- RAIN
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudrain)%nlist
@@ -556,7 +537,7 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-
+    !
     ! -- EVAPORATION
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudevap)%nlist
@@ -566,7 +547,7 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-
+    !
     ! -- RUNOFF
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudroff)%nlist
@@ -576,7 +557,7 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-
+    !
     ! -- EXT-INFLOW
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudiflw)%nlist
@@ -586,7 +567,7 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-
+    !
     ! -- EXT-OUTFLOW
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudoutf)%nlist
@@ -596,19 +577,15 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine sft_fill_budobj
 
+  !> @brief Allocate scalars specific to the streamflow energy transport (SFE)
+  !! package.
+  !<
   subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -637,13 +614,10 @@ contains
     return
   end subroutine allocate_scalars
 
+  !> @brief Allocate arrays specific to the streamflow energy transport (SFE)
+  !! package.
+  !<
   subroutine sft_allocate_arrays(this)
-! ******************************************************************************
-! sft_allocate_arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -669,18 +643,13 @@ contains
       this%conciflw(n) = DZERO
     end do
     !
-    !
     ! -- Return
     return
   end subroutine sft_allocate_arrays
 
+  !> @brief Deallocate memory
+  !<
   subroutine sft_da(this)
-! ******************************************************************************
-! sft_da
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
@@ -708,14 +677,10 @@ contains
     return
   end subroutine sft_da
 
+  !> @brief Rain term
+  !<
   subroutine sft_rain_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! sft_rain_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtSftType) :: this
     integer(I4B), intent(in) :: ientry
@@ -736,18 +701,14 @@ contains
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine sft_rain_term
 
+  !> @brief Evaporative term
+  !<
   subroutine sft_evap_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! sft_evap_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtSftType) :: this
     integer(I4B), intent(in) :: ientry
@@ -777,18 +738,14 @@ contains
     if (present(rhsval)) rhsval = -(DONE - omega) * qbnd * ctmp
     if (present(hcofval)) hcofval = omega * qbnd
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine sft_evap_term
 
+  !> @brief Runoff term
+  !<
   subroutine sft_roff_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! sft_roff_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtSftType) :: this
     integer(I4B), intent(in) :: ientry
@@ -809,18 +766,18 @@ contains
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine sft_roff_term
 
+  !> @brief Inflow Term
+  !!
+  !! Accounts for mass added via streamflow entering into a stream channel;
+  !! for example, energy entering the model domain via a specified flow in a 
+  !! stream channel.
+  !<
   subroutine sft_iflw_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! sft_iflw_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtSftType) :: this
     integer(I4B), intent(in) :: ientry
@@ -841,18 +798,17 @@ contains
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine sft_iflw_term
 
+  !> @brief Outflow term
+  !!
+  !! Accounts for the mass leaving a stream channel; for example, mass exiting the 
+  !! model domain via a flow in a stream channel flowing out of the active domain.
+  !<
   subroutine sft_outf_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! sft_outf_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtSftType) :: this
     integer(I4B), intent(in) :: ientry
@@ -873,19 +829,16 @@ contains
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine sft_outf_term
 
+  !> @brief Observations
+  !!
+  !! Store the observation type supported by the APT package and overide
+  !! BndType%bnd_df_obs
+  !<
   subroutine sft_df_obs(this)
-! ******************************************************************************
-! sft_df_obs -- obs are supported?
-!   -- Store observation type supported by APT package.
-!   -- Overrides BndType%bnd_df_obs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwtSftType) :: this
@@ -953,13 +906,13 @@ contains
     call this%obs%StoreObsType('ext-outflow', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
+    ! -- Return
     return
   end subroutine sft_df_obs
 
   !> @brief Process package specific obs
-    !!
-    !! Method to process specific observations for this package.
-    !!
+  !!
+  !! Method to process specific observations for this package.
   !<
   subroutine sft_rp_obs(this, obsrv, found)
     ! -- dummy
@@ -986,16 +939,13 @@ contains
       found = .false.
     end select
     !
+    ! -- Return
     return
   end subroutine sft_rp_obs
 
+  !> @brief Calculate observation value and pass it back to APT
+  !<
   subroutine sft_bd_obs(this, obstypeid, jj, v, found)
-! ******************************************************************************
-! sft_bd_obs -- calculate observation value and pass it back to APT
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtSftType), intent(inout) :: this
     character(len=*), intent(in) :: obstypeid
@@ -1032,16 +982,13 @@ contains
       found = .false.
     end select
     !
+    ! -- Return
     return
   end subroutine sft_bd_obs
 
+  !> @brief Sets the stress period attributes for keyword use.
+  !<
   subroutine sft_set_stressperiod(this, itemno, keyword, found)
-! ******************************************************************************
-! sft_set_stressperiod -- Set a stress period attribute for using keywords.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
     class(GwtSftType), intent(inout) :: this
@@ -1116,7 +1063,7 @@ contains
     !
 999 continue
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine sft_set_stressperiod
 
