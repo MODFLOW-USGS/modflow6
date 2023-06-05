@@ -786,6 +786,7 @@ contains
     real(DP) :: vcell
     real(DP) :: swnew
     real(DP) :: distcoef
+    real(DP) :: volfracm
     real(DP) :: rhobm
     real(DP) :: term
     real(DP) :: csrb
@@ -809,8 +810,9 @@ contains
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
       swnew = this%fmi%gwfsat(n)
       distcoef = this%distcoef(n)
+      volfracm = this%get_volfracm(n)
       rhobm = this%bulk_density(n)
-      term = this%decay_sorbed(n) * rhobm * swnew * vcell
+      term = this%decay_sorbed(n) * volfracm * rhobm * swnew * vcell
       !
       ! -- add sorbed mass decay rate terms to accumulators
       if (this%idcy == 1) then
@@ -849,7 +851,7 @@ contains
           decay_rate = get_zero_order_decay(this%decay_sorbed(n), &
                                             this%decayslast(n), &
                                             0, csrbold, csrbnew, delt)
-          rrhs = decay_rate * rhobm * swnew * vcell
+          rrhs = decay_rate * volfracm * rhobm * swnew * vcell
         end if
       end if
       !
