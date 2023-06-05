@@ -636,6 +636,7 @@ contains
   end subroutine log_griddata
 
   !> @brief Update DSP simulation data from input mempath
+  !<
   subroutine source_griddata(this)
     ! -- modules
     use SimModule, only: count_errors, store_error
@@ -714,9 +715,10 @@ contains
     !
     ! -- Return
     return
-  end subroutine source_griddata
+    end subroutine source_griddata
 
   !> @brief Calculate dispersion coefficients
+  !<
   subroutine calcdispellipse(this)
     ! -- modules
     ! -- dummy
@@ -728,6 +730,7 @@ contains
     real(DP) :: al, at1, at2
     real(DP) :: qzoqsquared
     real(DP) :: ktbulk ! TODO: Implement additional options for characterizing ktbulk (see Markle refs)
+    real(DP) :: dstar
     real(DP) :: qsw
 ! ------------------------------------------------------------------------------
     !

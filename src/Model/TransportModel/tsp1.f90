@@ -56,8 +56,6 @@ module TransportModelModule
     integer(I4B), pointer :: inssm => null() ! unit number SSM
     integer(I4B), pointer :: inoc => null() ! unit number OC
     integer(I4B), pointer :: inobs => null() ! unit number OBS
-    !integer(I4B), pointer :: inmst => null() ! unit number MST
-    !integer(I4B), pointer :: indsp => null() ! unit number DSP
     real(DP), pointer :: eqnsclfac => null() !< constant factor by which all terms in the model's governing equation are scaled (divided) for formulation and solution
 
   contains
@@ -101,7 +99,11 @@ module TransportModelModule
 
     contains
 
-  subroutine tsp_cr(this, filename, id, modelname, macronym, indis, gwecommon)  ! kluge note: not used/needed
+  !> @brief Create a new generalized transport model object
+  !!
+  !! Create a new transport model that will be further refined into GWT or GWE
+  !<
+  subroutine tsp_cr(this, filename, id, modelname, macronym, indis, gwecommon)
     ! -- modules
     use SimModule, only: store_error
     use MemoryManagerModule, only: mem_allocate
@@ -122,7 +124,6 @@ module TransportModelModule
     use TspSsmModule, only: ssm_cr
     use BudgetModule, only: budget_cr
     use ConstantsModule, only: LINELENGTH
-    !use NameFileModule, only: NameFileType
     use InputOutputModule, only: upcase
     ! -- dummy
     class(TransportModelType) :: this
@@ -134,8 +135,6 @@ module TransportModelModule
     type(GweInputDataType), intent(in), optional :: gwecommon !< shared data container for use by multiple GWE packages
     ! -- local
     class(*), pointer :: mstobjPtr
-    !type(NameFileType) :: namefile_obj
-    !integer(I4B) :: indis, indis6, indisu6, indisv6
     character(len=LINELENGTH) :: errmsg
     character(len=LENMEMPATH) :: input_mempath
     integer(I4B) :: nwords
@@ -144,9 +143,6 @@ module TransportModelModule
     character(len=LINELENGTH) :: lst_fname
     type(GwfNamParamFoundType) :: found
 ! ------------------------------------------------------------------------------
-    !
-    ! -- Set memory path before allocation in memory manager can be done
-    !this%memoryPath = create_mem_path(modelname)
     !
     ! -- Assign values
     this%filename = filename
@@ -191,127 +187,30 @@ module TransportModelModule
       call this%create_packages(indis)
     end if
     !
-    ! -- Open namefile and set iout
-    !call namefile_obj%init(this%filename, 0)
-    !call namefile_obj%add_cunit(niunit, cunit)
-    !call namefile_obj%openlistfile(this%iout)
-    !
-    ! -- Write header to model list file
-    !call write_listfile_header(this%iout, 'GROUNDWATER TRANSPORT MODEL (GWT)')
-    !
-    ! -- Open files
-    !call namefile_obj%openfiles(this%iout)
-    !
-    ! --
-    !if (size(namefile_obj%opts) > 0) then
-    !  write (this%iout, '(1x,a)') 'NAMEFILE OPTIONS:'
-    !end if
-    !
-    ! -- parse options in the gwt name file
-    !do i = 1, size(namefile_obj%opts)
-    !  call ParseLine(namefile_obj%opts(i), nwords, words)
-    !  call upcase(words(1))
-    !  select case (words(1))
-    !  case ('PRINT_INPUT')
-    !    this%iprpak = 1
-    !    write (this%iout, '(4x,a)') 'STRESS PACKAGE INPUT WILL BE PRINTED '// &
-    !      'FOR ALL MODEL STRESS PACKAGES'
-    !  case ('PRINT_FLOWS')
-    !    this%iprflow = 1
-    !    write (this%iout, '(4x,a)') 'PACKAGE FLOWS WILL BE PRINTED '// &
-    !      'FOR ALL MODEL PACKAGES'
-    !  case ('SAVE_FLOWS')
-    !    this%ipakcb = -1
-    !    write (this%iout, '(4x,a)') &
-    !      'FLOWS WILL BE SAVED TO BUDGET FILE SPECIFIED IN OUTPUT CONTROL'
-    !  case default
-    !    write (errmsg, '(4x,a,a,a,a)') &
-    !      'UNKNOWN GWT NAMEFILE (', &
-    !      trim(adjustl(this%filename)), ') OPTION: ', &
-    !      trim(adjustl(namefile_obj%opts(i)))
-    !    call store_error(errmsg, terminate=.TRUE.)
-    !  end select
-    !end do
-    !
-    ! -- Assign unit numbers to attached modules, and remove
-    ! -- from unitnumber (by specifying 1 for iremove)
-    !
-    !indis = 0
-    !indis6 = 0
-    !indisu6 = 0
-    !indisv6 = 0
-    !call namefile_obj%get_unitnumber('DIS6', indis6, 1)
-    !if (indis6 > 0) indis = indis6
-    !if (indis <= 0) call namefile_obj%get_unitnumber('DISU6', indisu6, 1)
-    !if (indisu6 > 0) indis = indisu6
-    !if (indis <= 0) call namefile_obj%get_unitnumber('DISV6', indisv6, 1)
-    !if (indisv6 > 0) indis = indisv6
-    !call namefile_obj%get_unitnumber('ADV6', this%inadv, 1)
-    !call namefile_obj%get_unitnumber('FMI6', this%infmi, 1)
-    !call namefile_obj%get_unitnumber('IC6', this%inic, 1)
-    !call namefile_obj%get_unitnumber('MVT6', this%inmvt, 1)
-    !call namefile_obj%get_unitnumber('OBS6', this%inobs, 1)
-    !call namefile_obj%get_unitnumber('OC6', this%inoc, 1)
-    !call namefile_obj%get_unitnumber('SSM6', this%inssm, 1)
-    !
-    ! -- Check to make sure that required ftype's have been specified
-    !call this%ftype_check(namefile_obj, indis)
-    !
-    ! -- Create discretization object
-    !if (indis6 > 0) then
-    !  call this%load_input_context('DIS6', this%name, 'DIS', indis, this%iout)
-    !  call dis_cr(this%dis, this%name, indis, this%iout)
-    !elseif (indisu6 > 0) then
-    !  call this%load_input_context('DISU6', this%name, 'DISU', indis, this%iout)
-    !  call disu_cr(this%dis, this%name, indis, this%iout)
-    !elseif (indisv6 > 0) then
-    !  call this%load_input_context('DISV6', this%name, 'DISV', indis, this%iout)
-    !  call disv_cr(this%dis, this%name, indis, this%iout)
-    !end if
-    !
-    ! -- Create utility objects
-    !call budget_cr(this%budget, this%name, this%tsplab)
-    !
-    ! -- Create packages that are tied directly to model
-    !call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis, this%tsplab)
-    !call fmi_cr(this%fmi, this%name, this%infmi, this%iout, this%tsplab)
-    !call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi,          &
-    !            this%eqnsclfac)
-    !call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi,          &
-    !            this%tsplab, this%eqnsclfac)
-    !call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi)
-    !call oc_cr(this%oc, this%name, this%inoc, this%iout)
-    !call tsp_obs_cr(this%obs, this%inobs)
-    !
     ! -- Return
     return
   end subroutine tsp_cr
   
+  !> @brief Generalized transport model define model
+  !!
+  !! This subroutine extended by either GWT or GWE.  This routine calls the
+  !! define (df) routines for each attached package and sets variables and 
+  !! pointers.
+  !<
   subroutine tsp_df(this)
-! ******************************************************************************
-! gwt_df -- Define packages of the model
-! Subroutine: (1) call df routines for each package
-!             (2) set variables and pointers
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy variables
     class(TransportModelType) :: this
-    !
-    ! -- Function extended by either GWT or GWE
     !
     ! -- return
     return
   end subroutine tsp_df
     
+  !> @brief Generalized transport model add connections
+  !!
+  !! This subroutine extended by either GWT or GWE.  This routine adds the 
+  !! internal connections of this model to the sparse matrix
+  !<
   subroutine tsp_ac(this, sparse)
-! ******************************************************************************
-! gwt_ac -- Add the internal connections of this model to the sparse matrix
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SparseModule, only: sparsematrix
     ! -- dummy variables
@@ -320,87 +219,75 @@ module TransportModelModule
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    ! -- Function extended by either GWT or GWE
-    !
     ! -- return
     return
   end subroutine tsp_ac
   
+  !> @brief Generalized transport model map coefficients
+  !! 
+  !! This subroutine extended by either GWT or GWE.  This routine maps the
+  !! positions of this models connections in the numerical solution coefficient
+  !! matrix.
+  !<
   subroutine tsp_mc(this, matrix_sln)
-! ******************************************************************************
-! gwt_mc -- Map the positions of this models connections in the
-! numerical solution coefficient matrix.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TransportModelType) :: this
     class(MatrixBaseType), pointer :: matrix_sln !< global system matrix
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    ! -- Function extended by either GWT or GWE
-    !
     ! -- return
     return
   end subroutine tsp_mc
 
+  !> @brief Generalized transport model allocate and read
+  !!
+  !! This subroutine extended by either GWT or GWE.  This routine calls
+  !! the allocate and reads (ar) routines of attached packages and allocates
+  !! memory for arrays required by the model object.
+  !<
   subroutine tsp_ar(this)
-! ******************************************************************************
-! gwt_ar -- GroundWater Transport Model Allocate and Read
-! Subroutine: (1) allocates and reads packages part of this model,
-!             (2) allocates memory for arrays part of this model object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy variables
     class(TransportModelType) :: this
 ! ------------------------------------------------------------------------------
-    !
-    ! -- Function extended by either GWT or GWE
     !
     ! -- return
     return
   end subroutine tsp_ar
 
+  !> @brief Generalized transport model read and prepare
+  !!
+  !! This subroutine extended by either GWT or GWE.  This routine calls
+  !! the read and prepare (rp) routines of attached packages.
+  !<
   subroutine tsp_rp(this)
-! ******************************************************************************
-! gwt_rp -- GroundWater Transport Model Read and Prepare
-! Subroutine: (1) calls package read and prepare routines
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy variables
     class(TransportModelType) :: this
 ! ------------------------------------------------------------------------------
-    !
-    ! -- Function extended by either GWT or GWE
     !
     ! -- Return
     return
   end subroutine tsp_rp
   
+  !> @brief Generalized transport model time step advance
+  !!
+  !! This subroutine extended by either GWT or GWE.  This routine calls
+  !! the advance time step (ad) routines of attached packages.
+  !<
   subroutine tsp_ad(this)
-! ******************************************************************************
-! gwt_ad -- GroundWater Transport Model Time Step Advance
-! Subroutine: (1) calls package advance subroutines
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy variables
     class(TransportModelType) :: this
 ! ------------------------------------------------------------------------------
-    !
-    ! -- Function extended by either GWT or GWE
     !
     ! -- return
     return
   end subroutine tsp_ad
 
+  !> @brief Generalized transport model fill coefficients
+  !!
+  !! This subroutine extended by either GWT or GWE.  This routine calls
+  !! the fill coefficients (fc) routines of attached packages.
+  !<
   subroutine tsp_fc(this, kiter, matrix_sln, inwtflag)
 ! ******************************************************************************
 ! gwt_fc -- GroundWater Transport Model fill coefficients
@@ -415,20 +302,16 @@ module TransportModelModule
     integer(I4B), intent(in) :: inwtflag
 ! ------------------------------------------------------------------------------
     !
-    ! -- Function extended by either GWT or GWE
-    !
     ! -- return
     return
   end subroutine tsp_fc
 
+  !> @brief Generalized transport model final convergence check
+  !!
+  !! This subroutine extended by either GWT or GWE.  This routine calls
+  !! the convergence check (cc) routines of attached packages.
+  !<
   subroutine tsp_cc(this, innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
-! ******************************************************************************
-! gwt_cc -- GroundWater Transport Model Final Convergence Check
-! Subroutine: (1) calls package cc routines
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TransportModelType) :: this
     integer(I4B), intent(in) :: innertot
@@ -441,20 +324,16 @@ module TransportModelModule
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    ! -- Function extended by either GWT or GWE
-    !
     ! -- return
     return
   end subroutine tsp_cc
 
+  !> @brief Generalized transport model calculate flows
+  !!
+  !! This subroutine extended by either GWT or GWE.  This routine calculates
+  !! intercell flows (flowja)
+  !<
   subroutine tsp_cq(this, icnvg, isuppress_output)
-! ******************************************************************************
-! tsp_cq -- Transport model calculate flow
-! Subroutine: (1) Calculate intercell flows (flowja)
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy variables
     class(TransportModelType) :: this
     integer(I4B), intent(in) :: icnvg
@@ -463,40 +342,31 @@ module TransportModelModule
     integer(I4B) :: i
 ! ------------------------------------------------------------------------------
     !
-    ! -- Function extended by either GWT or GWE
-    !
     ! -- Return
     return
   end subroutine tsp_cq
   
+  !> @brief Generalized transport model budget
+  !!
+  !! This subroutine extended by either GWT or GWE. This routine calculates
+  !! package contributions to model budget
+  !<
   subroutine tsp_bd(this, icnvg, isuppress_output)
-! ******************************************************************************
-! tsp_bd --GroundWater Transport Model Budget
-! Subroutine: (1) Calculate intercell flows (flowja)
-!             (2) Calculate package contributions to model budget
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TransportModelType) :: this
     integer(I4B), intent(in) :: icnvg
     integer(I4B), intent(in) :: isuppress_output
 ! ------------------------------------------------------------------------------
     !
-    ! -- Function extended by either GWT or GWE
-    !
     ! -- Return
     return
   end subroutine tsp_bd
 
+  !> @brief Generalized transport model output routine
+  !!
+  !! Generalized transport model output
+  !<
   subroutine tsp_ot(this, inmst)
-! ******************************************************************************
-! tsp_ot -- Transport Model Output
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: kstp, kper, tdis_ot, endofperiod
     ! -- dummy
@@ -556,6 +426,10 @@ module TransportModelModule
     return
   end subroutine tsp_ot
 
+  !> @brief Generalized transport model output routine
+  !!
+  !! Calculate and save observations
+  !<
   subroutine tsp_ot_obs(this)
     class(TransportModelType) :: this
     class(BndType), pointer :: packobj
@@ -574,6 +448,10 @@ module TransportModelModule
 
   end subroutine tsp_ot_obs
   
+  !> @brief Generalized transport model output routine
+  !!
+  !! Save and print flows
+  !<
   subroutine tsp_ot_flow(this, icbcfl, ibudfl, icbcun, inmst)
     class(TransportModelType) :: this
     integer(I4B), intent(in) :: icbcfl
@@ -628,13 +506,11 @@ module TransportModelModule
 
   end subroutine tsp_ot_flow
 
+  !> @brief Generalized transport model output routine
+  !!
+  !! Write intercell flows for the transport model
+  !<
   subroutine tsp_ot_flowja(this, nja, flowja, icbcfl, icbcun)
-! ******************************************************************************
-! gwt_ot_flowja -- Write intercell flows
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TransportModelType) :: this
     integer(I4B), intent(in) :: nja
@@ -665,6 +541,10 @@ module TransportModelModule
     return
   end subroutine tsp_ot_flowja
   
+  !> @brief Generalized tranpsort model output routine
+  !!
+  !! Loop through attached packages saving and printing dependent variables
+  !<
   subroutine tsp_ot_dv(this, idvsave, idvprint, ipflag)
     class(TransportModelType) :: this
     integer(I4B), intent(in) :: idvsave
@@ -681,9 +561,15 @@ module TransportModelModule
 
     ! -- save head and print head
     call this%oc%oc_ot(ipflag)
-
+    !
+    ! -- Return
+    return
   end subroutine tsp_ot_dv
 
+  !> @brief Generalized tranpsort model output budget summary
+  !!
+  !! Loop through attached packages and write budget summaries
+  !<
   subroutine tsp_ot_bdsummary(this, ibudfl, ipflag)
     use TdisModule, only: kstp, kper, totim
     class(TransportModelType) :: this
@@ -712,16 +598,16 @@ module TransportModelModule
 
     ! -- Write to budget csv
     call this%budget%writecsv(totim)
-
+    !
+    ! -- Return
+    return
   end subroutine tsp_ot_bdsummary
   
+  !> @brief Allocate scalar variables for transport model
+  !!
+  !!  Method to allocate memory for non-allocatable members.
+  !<
   subroutine allocate_tsp_scalars(this, modelname)
-! ******************************************************************************
-! allocate_scalars -- Allocate memory for non-allocatable members
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -755,13 +641,11 @@ module TransportModelModule
     return
   end subroutine allocate_tsp_scalars
   
+  !> @brief Deallocate memory
+  !!
+  !! Deallocate memmory at conclusion of model run
+  !<
   subroutine tsp_da(this)
-! ******************************************************************************
-! tsp_da -- Deallocate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
@@ -773,9 +657,7 @@ module TransportModelModule
     call mem_deallocate(this%inic)
     call mem_deallocate(this%infmi)
     call mem_deallocate(this%inadv)
-    !call mem_deallocate(this%indsp)
     call mem_deallocate(this%inssm)
-    !call mem_deallocate(this%inmst)
     call mem_deallocate(this%inmvt)
     call mem_deallocate(this%inoc)
     call mem_deallocate(this%inobs)
@@ -785,13 +667,11 @@ module TransportModelModule
     return
   end subroutine tsp_da
   
+  !> @brief Generalized tranpsort model routine
+  !!
+  !! Check to make sure required input files have been specified
+  !<
   subroutine ftype_check(this, indis, inmst)
-! ******************************************************************************
-! ftype_check -- Check to make sure required input files have been specified
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, count_errors, store_error_filename
@@ -830,6 +710,8 @@ module TransportModelModule
     return
   end subroutine ftype_check
   
+  !> @brief Create listing output file
+  !<
   subroutine create_lstfile(this, lst_fname, model_fname, defined)
     ! -- modules
     use KindModule, only: LGP
@@ -878,7 +760,7 @@ module TransportModelModule
     return
   end subroutine create_lstfile
 
-  !> @brief Write model namfile options to list file
+  !> @brief Write model name file options to list file
   !<
   subroutine log_namfile_options(this, found)
     use GwfNamInputModule, only: GwfNamParamFoundType
@@ -930,9 +812,7 @@ module TransportModelModule
     use GwfDisuModule, only: disu_cr
     use TspIcModule, only: ic_cr
     use TspFmiModule, only: fmi_cr
-    !use GwtMstModule, only: mst_cr
     use TspAdvModule, only: adv_cr
-    !use GwtDspModule, only: dsp_cr
     use TspSsmModule, only: ssm_cr
     use TspMvtModule, only: mvt_cr
     use TspOcModule, only: oc_cr
@@ -996,23 +876,14 @@ module TransportModelModule
         this%infmi = inunit
       case ('MVT6')
         this%inmvt = inunit
-      !case ('MST6')
-      !  this%inmst = inunit
       case ('ADV6')
         this%inadv = inunit
-      !case ('DSP6')
-      !  this%indsp = 1
-      !  mempathdsp = mempath
       case ('SSM6')
         this%inssm = inunit
       case ('OC6')
         this%inoc = inunit
       case ('OBS6')
         this%inobs = inunit
-      !case ('CNC6', 'SRC6', 'LKT6', 'SFT6', &
-      !      'MWT6', 'UZT6', 'IST6', 'API6')
-      !  call expandarray(bndpkgs)
-      !  bndpkgs(size(bndpkgs)) = n
       !case default
         ! TODO
       end select
@@ -1022,10 +893,8 @@ module TransportModelModule
     call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis, this%tsplab)
     call fmi_cr(this%fmi, this%name, this%infmi, this%iout, this%tsplab,       &
                 this%eqnsclfac)
-    !call mst_cr(this%mst, this%name, this%inmst, this%iout, this%fmi)
     call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi, & 
                 this%eqnsclfac)
-    !call dsp_cr(this%dsp, this%name, mempathdsp, this%indsp, this%iout, this%fmi)
     call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, &
                 this%tsplab, this%eqnsclfac, gwecommon)
     call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi, &
@@ -1033,14 +902,8 @@ module TransportModelModule
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
     call tsp_obs_cr(this%obs, this%inobs)
     !
-    ! -- Check to make sure that required ftype's have been specified
-    !call this%ftype_check(indis)
-    !
-    !call this%create_bndpkgs(bndpkgs, pkgtypes, pkgnames, mempaths, inunits)
-    !
     ! -- return
     return
   end subroutine create_packages  
   
-
 end module TransportModelModule
