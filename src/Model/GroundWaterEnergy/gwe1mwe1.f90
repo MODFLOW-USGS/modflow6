@@ -90,14 +90,10 @@ module GweMweModule
 
 contains
 
+  !> Create new MWE package 
+  !<
   subroutine mwe_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         fmi, tsplab, eqnsclfac, gwecommon)
-! ******************************************************************************
-! mwe_create -- Create a New MWE Package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
@@ -152,11 +148,11 @@ contains
     !    vaporization for evaporative cooling.
     mweobj%gwecommon => gwecommon
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mwe_create
 
-  !> @brief find corresponding mwe package
+  !> @brief Find corresponding mwe package
   !<
   subroutine find_mwe_package(this)
     ! -- modules
@@ -277,9 +273,9 @@ contains
   end subroutine find_mwe_package
 
   !> @brief Add matrix terms related to MWE
-    !!
-    !! This routine is called from TspAptType%apt_fc_expanded() in
-    !! order to add matrix terms specifically for MWE
+  !!
+  !! This routine is called from TspAptType%apt_fc_expanded() in
+  !! order to add matrix terms specifically for MWE
   !<
   subroutine mwe_fc_expanded(this, rhs, ia, idxglo, matrix_sln)
     ! -- modules
@@ -380,14 +376,10 @@ contains
     return
   end subroutine mwe_fc_expanded
 
+  !> @ brief Add terms specific to multi-aquifer wells to the explicit multi-
+  !! aquifer well energy transport solve
+  !<
   subroutine mwe_solve(this)
-! ******************************************************************************
-! mwe_solve -- add terms specific to multi-aquifer wells to the explicit multi-
-!              aquifer well solve
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GweMweType) :: this
     ! -- local
@@ -432,14 +424,11 @@ contains
     return
   end subroutine mwe_solve
 
+  !> @brief Function to return the number of budget terms just for this package
+  !!
+  !! This overrides a function in the parent class.
+  !<
   function mwe_get_nbudterms(this) result(nbudterms)
-! ******************************************************************************
-! mwe_get_nbudterms -- function to return the number of budget terms just for
-!   this package.  This overrides function in parent.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GweMweType) :: this
@@ -459,14 +448,9 @@ contains
     return
   end function mwe_get_nbudterms
 
+  !> @brief Set up the budget object that stores all the mwe flows
+  !<
   subroutine mwe_setup_budobj(this, idx)
-! ******************************************************************************
-! mwe_setup_budobj -- Set up the budget object that stores all the multi-
-!                     aquifer well flows
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LENBUDTXT
     ! -- dummy
@@ -557,7 +541,7 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mwe_setup_budobj
 
@@ -658,17 +642,14 @@ contains
       end if
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mwe_fill_budobj
 
+  !> @brief Allocate scalars specific to the multi-aquifer well energy 
+  !! transport (MWE) package.
+  !<
   subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -697,13 +678,10 @@ contains
     return
   end subroutine allocate_scalars
 
+  !> @brief Allocate arrays specific to the streamflow mass transport (SFT)
+  !! package.
+  !<
   subroutine mwe_allocate_arrays(this)
-! ******************************************************************************
-! mwe_allocate_arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -722,7 +700,6 @@ contains
     do n = 1, this%ncv
       this%temprate(n) = DZERO
     end do
-    !
     !
     ! -- Return
     return
@@ -790,12 +767,12 @@ contains
     if (present(rhsval)) rhsval = r * this%eqnsclfac
     if (present(hcofval)) hcofval = h * this%eqnsclfac
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mwe_rate_term
 
   !> @brief Thermal transport matrix term(s) associcated with a flowing- 
-  !! well rater term (mwe_fwrt_term)
+  !! well rate term associated with pumping (or injection)
   !<
   subroutine mwe_fwrt_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
@@ -819,7 +796,7 @@ contains
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd * this%eqnsclfac
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mwe_fwrt_term
 
@@ -848,7 +825,7 @@ contains
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd * this%eqnsclfac
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mwe_rtmv_term
 
@@ -877,19 +854,16 @@ contains
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd * this%eqnsclfac
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mwe_frtm_term
 
+  !> @brief Observations
+  !!
+  !! Store the observation type supported by the APT package and overide
+  !! BndType%bnd_df_obs
+  !<
   subroutine mwe_df_obs(this)
-! ******************************************************************************
-! mwe_df_obs -- obs are supported?
-!   -- Store observation type supported by APT package.
-!   -- Overrides BndType%bnd_df_obs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GweMweType) :: this
@@ -950,13 +924,14 @@ contains
     call this%obs%StoreObsType('fw-rate-to-mvr', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
+    ! -- Return
     return
   end subroutine mwe_df_obs
 
   !> @brief Process package specific obs
-    !!
-    !! Method to process specific observations for this package.
-    !!
+  !!
+  !! Method to process specific observations for this package.
+  !!
   !<
   subroutine mwe_rp_obs(this, obsrv, found)
     ! -- dummy
@@ -979,16 +954,13 @@ contains
       found = .false.
     end select
     !
+    ! -- Return
     return
   end subroutine mwe_rp_obs
 
+  !> @brief Calculate observation value and pass it back to APT
+  !<
   subroutine mwe_bd_obs(this, obstypeid, jj, v, found)
-! ******************************************************************************
-! mwe_bd_obs -- calculate observation value and pass it back to APT
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GweMweType), intent(inout) :: this
     character(len=*), intent(in) :: obstypeid
@@ -1021,16 +993,13 @@ contains
       found = .false.
     end select
     !
+    ! -- Return
     return
   end subroutine mwe_bd_obs
 
+  !> @brief Sets the stress period attributes for keyword use.
+  !<
   subroutine mwe_set_stressperiod(this, itemno, keyword, found)
-! ******************************************************************************
-! mwe_set_stressperiod -- Set a stress period attribute for using keywords.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
     class(GweMweType), intent(inout) :: this
@@ -1068,7 +1037,7 @@ contains
     !
 999 continue
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mwe_set_stressperiod
 

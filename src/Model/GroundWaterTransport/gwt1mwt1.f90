@@ -86,14 +86,10 @@ module GwtMwtModule
 
 contains
 
+  !> Create new MWT package 
+  !<
   subroutine mwt_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         fmi, tsplab, eqnsclfac)
-! ******************************************************************************
-! mwt_create -- Create a New MWT Package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
@@ -142,17 +138,13 @@ contains
     ! -- Store pointer to governing equation scale factor
     mwtobj%eqnsclfac => eqnsclfac
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mwt_create
 
+  !> @brief find corresponding mwt package
+  !<
   subroutine find_mwt_package(this)
-! ******************************************************************************
-! find corresponding mwt package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -267,14 +259,12 @@ contains
     return
   end subroutine find_mwt_package
 
+  !> @brief Add matrix terms related to MWT
+  !!
+  !! This routine is called from TspAptType%apt_fc_expanded() in
+  !! order to add matrix terms specifically for MWT
+  !<
   subroutine mwt_fc_expanded(this, rhs, ia, idxglo, matrix_sln)
-! ******************************************************************************
-! mwt_fc_expanded -- this will be called from TspAptType%apt_fc_expanded()
-!   in order to add matrix terms specifically for this package
-! ****************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwtMwtType) :: this
@@ -339,14 +329,10 @@ contains
     return
   end subroutine mwt_fc_expanded
 
+  !> @ brief Add terms specific to multi-aquifer wells to the explicit multi-
+  !! aquifer well solute transport solve
+  !<
   subroutine mwt_solve(this)
-! ******************************************************************************
-! mwt_solve -- add terms specific to multi-aquifer wells to the explicit multi-
-!              aquifer well solve
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtMwtType) :: this
     ! -- local
@@ -391,14 +377,11 @@ contains
     return
   end subroutine mwt_solve
 
+  !> @brief Function to return the number of budget terms just for this package
+  !!
+  !! This overrides a function in the parent class.
+  !<
   function mwt_get_nbudterms(this) result(nbudterms)
-! ******************************************************************************
-! mwt_get_nbudterms -- function to return the number of budget terms just for
-!   this package.  This overrides function in parent.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwtMwtType) :: this
@@ -417,14 +400,9 @@ contains
     return
   end function mwt_get_nbudterms
 
+  !> @brief Set up the budget object that stores all the mwt flows
+  !<
   subroutine mwt_setup_budobj(this, idx)
-! ******************************************************************************
-! mwt_setup_budobj -- Set up the budget object that stores all the multi-
-!                     aquifer well flows
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LENBUDTXT
     ! -- dummy
@@ -495,19 +473,14 @@ contains
                                                maxlist, .false., .false., &
                                                naux)
     end if
-
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mwt_setup_budobj
 
+  !> @brief Copy flow terms into this%budobj
+  !<
   subroutine mwt_fill_budobj(this, idx, x, flowja, ccratin, ccratout)
-! ******************************************************************************
-! mwt_fill_budobj -- copy flow terms into this%budobj
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwtMwtType) :: this
@@ -522,7 +495,7 @@ contains
     real(DP) :: q
     ! -- formats
 ! -----------------------------------------------------------------------------
-
+    !
     ! -- RATE
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudrate)%nlist
@@ -532,7 +505,7 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-
+    !
     ! -- FW-RATE
     if (this%idxbudfwrt /= 0) then
       idx = idx + 1
@@ -544,7 +517,7 @@ contains
         call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
       end do
     end if
-
+    !
     ! -- RATE-TO-MVR
     if (this%idxbudrtmv /= 0) then
       idx = idx + 1
@@ -556,7 +529,7 @@ contains
         call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
       end do
     end if
-
+    !
     ! -- FW-RATE-TO-MVR
     if (this%idxbudfrtm /= 0) then
       idx = idx + 1
@@ -568,19 +541,15 @@ contains
         call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
       end do
     end if
-
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mwt_fill_budobj
 
+  !> @brief Allocate scalars specific to the streamflow mass transport (SFT)
+  !! package.
+  !<
   subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -607,13 +576,10 @@ contains
     return
   end subroutine allocate_scalars
 
+  !> @brief Allocate arrays specific to the streamflow mass transport (SFT)
+  !! package.
+  !<
   subroutine mwt_allocate_arrays(this)
-! ******************************************************************************
-! mwt_allocate_arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -638,13 +604,9 @@ contains
     return
   end subroutine mwt_allocate_arrays
 
+  !> @brief Deallocate memory
+  !<
   subroutine mwt_da(this)
-! ******************************************************************************
-! mwt_da
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
@@ -668,14 +630,10 @@ contains
     return
   end subroutine mwt_da
 
+  !> @brief Rate term associated with pumping (or injection)
+  !<
   subroutine mwt_rate_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! mwt_rate_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtMwtType) :: this
     integer(I4B), intent(in) :: ientry
@@ -706,18 +664,15 @@ contains
     if (present(rhsval)) rhsval = r
     if (present(hcofval)) hcofval = h
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mwt_rate_term
 
+  !> @brief Transport matrix term(s) associcated with a flowing- 
+  !! well rate term associated with pumping (or injection)
+  !<
   subroutine mwt_fwrt_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! mwt_fwrt_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtMwtType) :: this
     integer(I4B), intent(in) :: ientry
@@ -738,18 +693,17 @@ contains
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mwt_fwrt_term
 
+  !> @brief Rate-to-mvr term associated with pumping (or injection)
+  !!
+  !! Pumped water that is made available to the MVR package for transfer to 
+  !! another advanced package
+  !<
   subroutine mwt_rtmv_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! mwt_rtmv_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtMwtType) :: this
     integer(I4B), intent(in) :: ientry
@@ -770,18 +724,17 @@ contains
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mwt_rtmv_term
 
+  !> @brief Flowing well rate-to-mvr term (or injection)
+  !!
+  !! Pumped water that is made available to the MVR package for transfer to 
+  !! another advanced package
+  !<
   subroutine mwt_frtm_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! mwt_frtm_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtMwtType) :: this
     integer(I4B), intent(in) :: ientry
@@ -802,19 +755,16 @@ contains
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mwt_frtm_term
 
+  !> @brief Observations
+  !!
+  !! Store the observation type supported by the APT package and overide
+  !! BndType%bnd_df_obs
+  !<
   subroutine mwt_df_obs(this)
-! ******************************************************************************
-! mwt_df_obs -- obs are supported?
-!   -- Store observation type supported by APT package.
-!   -- Overrides BndType%bnd_df_obs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwtMwtType) :: this
@@ -875,13 +825,13 @@ contains
     call this%obs%StoreObsType('fw-rate-to-mvr', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
+    ! -- Return
     return
   end subroutine mwt_df_obs
 
   !> @brief Process package specific obs
-    !!
-    !! Method to process specific observations for this package.
-    !!
+  !!
+  !! Method to process specific observations for this package.
   !<
   subroutine mwt_rp_obs(this, obsrv, found)
     ! -- dummy
@@ -904,16 +854,13 @@ contains
       found = .false.
     end select
     !
+    ! -- Return
     return
   end subroutine mwt_rp_obs
 
+  !> @brief Calculate observation value and pass it back to APT
+  !<
   subroutine mwt_bd_obs(this, obstypeid, jj, v, found)
-! ******************************************************************************
-! mwt_bd_obs -- calculate observation value and pass it back to APT
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtMwtType), intent(inout) :: this
     character(len=*), intent(in) :: obstypeid
@@ -946,16 +893,14 @@ contains
       found = .false.
     end select
     !
+    ! -- Return
     return
   end subroutine mwt_bd_obs
 
+  !> @brief Sets the stress period attributes for keyword use.
+  !<
   subroutine mwt_set_stressperiod(this, itemno, keyword, found)
-! ******************************************************************************
-! mwt_set_stressperiod -- Set a stress period attribute for using keywords.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
     class(GwtMwtType), intent(inout) :: this
@@ -993,7 +938,7 @@ contains
     !
 999 continue
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mwt_set_stressperiod
 
