@@ -605,12 +605,12 @@ jobs:
           curl https://ftp.mcs.anl.gov/pub/petsc/release-snapshots/petsc-3.18.5.tar.gz -O -J
           mkdir petsc
           tar -xzf petsc-3.18.5.tar.gz -C petsc --strip-components=1
-          pwd
 
       # start intel oneapi enabled pwsh, and from there cygwin
       - name: Configure PETSc
         shell: C:\tools\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'
         run: |
+          cd /home/runneradmin/petsc
           export PETSC_ARCH=arch-impi-opt          
           ./configure \
             --with-cc='win32fe cl' \
@@ -626,7 +626,7 @@ jobs:
       - name: Build PETSc
         shell: C:\tools\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'
         run: |
-          cd 
+          cd /home/runneradmin/petsc
           sed "s/OMAKE_PRINTDIR.*=.*/OMAKE_PRINTDIR = \/usr\/bin\/make/g" arch-impi-opt/lib/petsc/conf/petscvariables
           sed "s/OMAKE.*=.*/OMAKE = \/usr\/bin\/make/g" arch-impi-opt/lib/petsc/conf/petscvariables
           make all
