@@ -6,13 +6,13 @@ on:
       - develop
       - ci-diagnose*
     paths-ignore:
-      - '.github/workflows/release.yml'
+      - ".github/workflows/release.yml"
   pull_request:
     branches:
       - master
       - develop
     paths-ignore:
-      - '.github/workflows/release.yml'
+      - ".github/workflows/release.yml"
 jobs:
   rtd_build:
     name: Build ReadTheDocs
@@ -168,9 +168,9 @@ jobs:
       - name: Install Conda environment from environment.yml
         uses: mamba-org/setup-micromamba@v1
         with:
-            environment-file: environment.yml
-            cache-environment: true
-            cache-downloads: true
+          environment-file: environment.yml
+          cache-environment: true
+          cache-downloads: true
 
       - name: Print python package versions
         run: pip list
@@ -201,7 +201,7 @@ jobs:
       - name: run doxygen
         run: doxygen
         working-directory: ${{env.working-directory}}
-      
+
       - name: upload pages artifact
         uses: actions/upload-pages-artifact@v1
         with:
