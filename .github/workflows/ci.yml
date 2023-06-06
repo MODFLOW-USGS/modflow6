@@ -547,10 +547,10 @@ jobs:
 
   parallel_test_windows:
     name: Parallel testing on Windows
-    needs:
-      #      - lint
-      - build
-    #      - smoke_test
+    #needs:
+    #  - lint
+    #  - build
+    #  - smoke_test
     runs-on: windows-2022
     defaults:
       run:
