@@ -6,8 +6,8 @@ on:
       - develop
       - ci-diagnose*
     paths-ignore:
-      - '**.md'
-      - 'doc/**'
+      - "**.md"
+      - "doc/**"
   pull_request:
     branches:
       - master
@@ -20,7 +20,6 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-
       - name: Checkout modflow6
         uses: actions/checkout@v3
 
@@ -44,10 +43,9 @@ jobs:
       FC: gfortran
       GCC_V: 12
     steps:
-
       - name: Checkout modflow6
         uses: actions/checkout@v3
-      
+
       - name: Setup gfortran ${{ env.GCC_V }}
         uses: awvwgk/setup-fortran@main
         with:
@@ -134,7 +132,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-22.04, macos-12, windows-2022 ]
+        os: [ubuntu-22.04, macos-12, windows-2022]
     defaults:
       run:
         shell: bash -l {0}
@@ -213,15 +211,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-20.04 ]
-        GCC_V: [ 7, 8, 9, 10, 11 ]
+        os: [ubuntu-20.04]
+        GCC_V: [7, 8, 9, 10, 11]
     defaults:
       run:
         shell: bash -l {0}
     env:
       FC: gfortran
     steps:
-
       - name: Checkout modflow6
         uses: actions/checkout@v3
         with:
@@ -256,7 +253,7 @@ jobs:
           meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
           meson install -C builddir
           meson test --verbose --no-rebuild -C builddir
-      
+
       - name: Get executables
         working-directory: modflow6/autotest
         env:
@@ -284,12 +281,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, macos-latest, windows-latest ]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     defaults:
       run:
         shell: bash -l {0}
     steps:
-
       - name: Checkout modflow6
         uses: actions/checkout@v3
         with:
@@ -353,7 +349,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: pytest -v --durations 0 get_exes.py
-          
+
       - name: Get executables (Windows)
         if: runner.os == 'Windows'
         working-directory: modflow6/autotest
@@ -401,7 +397,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: pytest -v --durations 0
-        
+
   parallel_test:
     name: Parallel testing
     needs:
@@ -412,7 +408,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-22.04, macos-12 ] #, windows-2022 ]
+        os: [ubuntu-22.04, macos-12] #, windows-2022 ]
     defaults:
       run:
         shell: bash -l {0}
@@ -420,7 +416,6 @@ jobs:
       FC: gfortran
       GCC_V: 12
     steps:
-
       - name: Checkout modflow6
         uses: actions/checkout@v3
         with:
@@ -553,26 +548,23 @@ jobs:
   parallel_test_windows:
     name: Parallel testing on Windows
     needs:
-#      - lint
+      #      - lint
       - build
-#      - smoke_test
+    #      - smoke_test
     runs-on: windows-2022
-    strategy:
-      fail-fast: false
     defaults:
       run:
         shell: bash -l {0}
     steps:
-
       - name: Set up Cygwin
         uses: egor-tensin/setup-cygwin@v4
         with:
           packages: python3 make
 
       - run: |
-        ls.exe -Al
-        pwd.exe
-        which.exe make
+          ls.exe -Al
+          pwd.exe
+          which.exe make
 
       - name: Checkout modflow6
         uses: actions/checkout@v3
@@ -587,7 +579,7 @@ jobs:
             bash
             powershell
           cache-environment: true
-          cache-downloads: true   
+          cache-downloads: true
 
       - name: Setup Intel Fortran
         uses: modflowpy/install-intelfortran-action@v1
@@ -654,4 +646,3 @@ jobs:
           marker="not large"
           markers=$([ "$branch" == "master" ] && echo "$marker and not developmode" || echo "$marker")
           pytest -v -n auto --parallel --durations 0 -m "$markers"
-          
