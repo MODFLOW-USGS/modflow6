@@ -612,11 +612,12 @@ jobs:
       # start intel oneapi enabled pwsh, and from there cygwin
       - name: Configure PETSc
         shell: pwsh
-        working-directory: petsc
         run: |
           c:\tools\cygwin\cygwin.bat
           ls /cygdrive/c/Progra~2/Intel/oneAPI/mpi/latest/lib/release
-          /usr/bin/python ./configure --help
+          which ifort
+          pwd
+      #    /usr/bin/python ./configure --help
 
       # - name: Build PETSc
       #   shell: pwsh
