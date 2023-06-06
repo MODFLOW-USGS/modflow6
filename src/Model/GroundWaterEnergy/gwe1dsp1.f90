@@ -389,7 +389,7 @@ contains
   !!
   !!  Method to allocate scalar variables for the package.
   !<
- subroutine allocate_scalars(this)
+  subroutine allocate_scalars(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     use ConstantsModule, only: DZERO
@@ -439,7 +439,7 @@ contains
     !
     ! -- Return
     return
- end subroutine allocate_scalars
+  end subroutine allocate_scalars
 
   !> @ brief Allocate arrays for package
   !!
@@ -558,6 +558,8 @@ contains
     write (this%iout, '(4x,a,i0)') 'XT3D formulation [0=INACTIVE, 1=ACTIVE, &
                                    &3=ACTIVE RHS] set to: ', this%ixt3d
     write (this%iout, '(1x,a,/)') 'End Setting DSP Options'
+    ! -- Return
+    return
   end subroutine log_options
 
   !> @brief Update simulation mempath options
@@ -715,7 +717,7 @@ contains
     !
     ! -- Return
     return
-    end subroutine source_griddata
+  end subroutine source_griddata
 
   !> @brief Calculate dispersion coefficients
   !<
