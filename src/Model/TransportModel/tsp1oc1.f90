@@ -54,7 +54,7 @@ contains
 
   !> @ brief Allocate and read TspOcType
   !!
-  !!  Setup dependent variable (e.g., concentration or temperature) 
+  !!  Setup dependent variable (e.g., concentration or temperature)
   !!  and budget as output control variables.
   !!
   !<

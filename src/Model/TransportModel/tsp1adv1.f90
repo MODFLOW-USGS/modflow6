@@ -43,7 +43,7 @@ contains
 
   !> @ brief Create a new ADV object
   !!
-  !!  Create a new ADV package 
+  !!  Create a new ADV package
   !<
   subroutine adv_cr(advobj, name_model, inunit, iout, fmi, eqnsclfac)
     ! -- dummy
@@ -75,7 +75,7 @@ contains
   end subroutine adv_cr
 
   !> @brief Define ADV object
-  !! 
+  !!
   !! Define the ADV package
   !<
   subroutine adv_df(this, adv_options)
@@ -186,7 +186,7 @@ contains
   end subroutine adv_fc
 
   !> @brief  Calculate TVD
-  !! 
+  !!
   !! Use explicit scheme to calculate the advective component of transport.
   !! TVD is an acronym for Total-Variation Diminishing
   !<
@@ -218,7 +218,7 @@ contains
   end subroutine advtvd
 
   !> @brief  Calculate TVD
-  !! 
+  !!
   !! Use explicit scheme to calculate the advective component of transport.
   !! TVD is an acronym for Total-Variation Diminishing
   !<
@@ -315,7 +315,7 @@ contains
         qnm = this%fmi%gwfflowja(ipos) * this%eqnsclfac
         omega = this%adv_weight(this%iadvwt, ipos, n, m, qnm)
         flowja(ipos) = flowja(ipos) + qnm * omega * cnew(n) + &
-                       qnm * (DONE - omega) * cnew(m) 
+                       qnm * (DONE - omega) * cnew(m)
       end do
     end do
     !
@@ -370,8 +370,8 @@ contains
     !
     ! -- nullify pointers
     this%ibound => null()
-    nullify(this%cpw)
-    nullify(this%rhow)
+    nullify (this%cpw)
+    nullify (this%rhow)
     !
     ! -- Scalars
     call mem_deallocate(this%iadvwt)

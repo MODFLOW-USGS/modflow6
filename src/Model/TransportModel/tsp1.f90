@@ -59,7 +59,7 @@ module TransportModelModule
     real(DP), pointer :: eqnsclfac => null() !< constant factor by which all terms in the model's governing equation are scaled (divided) for formulation and solution
 
   contains
-  
+
     ! -- public
     procedure :: allocate_tsp_scalars
     procedure, public :: ftype_check
@@ -97,7 +97,7 @@ module TransportModelModule
     'API6 ', '     ', 'SFE6 ', 'UZE6 ', '     ', & ! 25
     75*'     '/
 
-    contains
+contains
 
   !> @brief Create a new generalized transport model object
   !!
@@ -169,7 +169,7 @@ module TransportModelModule
       this%ipakcb = -1
     end if
     !
-    ! -- Instantiate generalized labels 
+    ! -- Instantiate generalized labels
     call tsplabels_cr(this%tsplab, this%name)
     !
     ! -- log set options
@@ -190,11 +190,11 @@ module TransportModelModule
     ! -- Return
     return
   end subroutine tsp_cr
-  
+
   !> @brief Generalized transport model define model
   !!
   !! This subroutine extended by either GWT or GWE.  This routine calls the
-  !! define (df) routines for each attached package and sets variables and 
+  !! define (df) routines for each attached package and sets variables and
   !! pointers.
   !<
   subroutine tsp_df(this)
@@ -204,10 +204,10 @@ module TransportModelModule
     ! -- return
     return
   end subroutine tsp_df
-    
+
   !> @brief Generalized transport model add connections
   !!
-  !! This subroutine extended by either GWT or GWE.  This routine adds the 
+  !! This subroutine extended by either GWT or GWE.  This routine adds the
   !! internal connections of this model to the sparse matrix
   !<
   subroutine tsp_ac(this, sparse)
@@ -222,9 +222,9 @@ module TransportModelModule
     ! -- return
     return
   end subroutine tsp_ac
-  
+
   !> @brief Generalized transport model map coefficients
-  !! 
+  !!
   !! This subroutine extended by either GWT or GWE.  This routine maps the
   !! positions of this models connections in the numerical solution coefficient
   !! matrix.
@@ -268,7 +268,7 @@ module TransportModelModule
     ! -- Return
     return
   end subroutine tsp_rp
-  
+
   !> @brief Generalized transport model time step advance
   !!
   !! This subroutine extended by either GWT or GWE.  This routine calls
@@ -345,7 +345,7 @@ module TransportModelModule
     ! -- Return
     return
   end subroutine tsp_cq
-  
+
   !> @brief Generalized transport model budget
   !!
   !! This subroutine extended by either GWT or GWE. This routine calculates
@@ -399,7 +399,8 @@ module TransportModelModule
     ! -- Override ibudfl and idvprint flags for nonconvergence
     !    and end of period
     ibudfl = this%oc%set_print_flag('BUDGET', this%icnvg, endofperiod)
-    idvprint = this%oc%set_print_flag(trim(this%tsplab%depvartype), this%icnvg, endofperiod)
+    idvprint = this%oc%set_print_flag(trim(this%tsplab%depvartype), &
+                                      this%icnvg, endofperiod)
     !
     !   Calculate and save observations
     call this%tsp_ot_obs()
@@ -447,7 +448,7 @@ module TransportModelModule
     end do
 
   end subroutine tsp_ot_obs
-  
+
   !> @brief Generalized transport model output routine
   !!
   !! Save and print flows
@@ -463,8 +464,8 @@ module TransportModelModule
 ! ------------------------------------------------------------------------------
     ! -- Save TSP flows
     call this%tsp_ot_flowja(this%nja, this%flowja, icbcfl, icbcun)
-    if (inmst > 0) call this%tsp_ot_flowja(this%nja, this%flowja, & 
-                                                icbcfl, icbcun)
+    if (inmst > 0) call this%tsp_ot_flowja(this%nja, this%flowja, &
+                                           icbcfl, icbcun)
     if (this%infmi > 0) call this%fmi%fmi_ot_flow(icbcfl, icbcun)
     if (this%inssm > 0) then
       call this%ssm%ssm_ot_flow(icbcfl=icbcfl, ibudfl=0, icbcun=icbcun)
@@ -540,7 +541,7 @@ module TransportModelModule
     ! -- Return
     return
   end subroutine tsp_ot_flowja
-  
+
   !> @brief Generalized tranpsort model output routine
   !!
   !! Loop through attached packages saving and printing dependent variables
@@ -602,7 +603,7 @@ module TransportModelModule
     ! -- Return
     return
   end subroutine tsp_ot_bdsummary
-  
+
   !> @brief Allocate scalar variables for transport model
   !!
   !!  Method to allocate memory for non-allocatable members.
@@ -640,7 +641,7 @@ module TransportModelModule
     ! -- return
     return
   end subroutine allocate_tsp_scalars
-  
+
   !> @brief Deallocate memory
   !!
   !! Deallocate memmory at conclusion of model run
@@ -666,7 +667,7 @@ module TransportModelModule
     ! -- return
     return
   end subroutine tsp_da
-  
+
   !> @brief Generalized tranpsort model routine
   !!
   !! Check to make sure required input files have been specified
@@ -709,7 +710,7 @@ module TransportModelModule
     ! -- return
     return
   end subroutine ftype_check
-  
+
   !> @brief Create listing output file
   !<
   subroutine create_lstfile(this, lst_fname, model_fname, defined)
@@ -796,7 +797,7 @@ module TransportModelModule
 
     write (this%iout, '(1x,a)') 'END NAMEFILE OPTIONS:'
   end subroutine log_namfile_options
-  
+
   !> @brief Source package info and begin to process
   !<
   subroutine create_packages(this, indis, gwecommon)
@@ -884,16 +885,16 @@ module TransportModelModule
         this%inoc = inunit
       case ('OBS6')
         this%inobs = inunit
-      !case default
+        !case default
         ! TODO
       end select
     end do
     !
     ! -- Create packages that are tied directly to model
     call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis, this%tsplab)
-    call fmi_cr(this%fmi, this%name, this%infmi, this%iout, this%tsplab,       &
+    call fmi_cr(this%fmi, this%name, this%infmi, this%iout, this%tsplab, &
                 this%eqnsclfac)
-    call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi, & 
+    call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi, &
                 this%eqnsclfac)
     call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, &
                 this%tsplab, this%eqnsclfac, gwecommon)
@@ -904,6 +905,6 @@ module TransportModelModule
     !
     ! -- return
     return
-  end subroutine create_packages  
-  
+  end subroutine create_packages
+
 end module TransportModelModule

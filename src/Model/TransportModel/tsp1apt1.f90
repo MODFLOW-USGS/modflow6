@@ -99,7 +99,7 @@ module TspAptModule
     real(DP), dimension(:, :), pointer, contiguous :: lauxvar => null() !< auxiliary variable
     type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
     real(DP), dimension(:), pointer, contiguous :: qsto => null() !< mass (or energy) flux due to storage change
-    real(DP), dimension(:), pointer, contiguous :: ccterm => null() !< mass (or energy) flux required to maintain constant concentration (or temperature) 
+    real(DP), dimension(:), pointer, contiguous :: ccterm => null() !< mass (or energy) flux required to maintain constant concentration (or temperature)
     integer(I4B), pointer :: idxbudfjf => null() !< index of flow ja face in flowbudptr
     integer(I4B), pointer :: idxbudgwf => null() !< index of gwf terms in flowbudptr
     integer(I4B), pointer :: idxbudsto => null() !< index of storage terms in flowbudptr
@@ -132,10 +132,10 @@ module TspAptModule
     procedure :: bnd_ad => apt_ad
     procedure :: bnd_cf => apt_cf
     procedure :: bnd_fc => apt_fc
-    procedure, public :: apt_fc_expanded ! Made public for uze 
+    procedure, public :: apt_fc_expanded ! Made public for uze
     procedure :: pak_fc_expanded
     procedure, private :: apt_fc_nonexpanded
-    procedure, public :: apt_cfupdate    ! Made public for uze
+    procedure, public :: apt_cfupdate ! Made public for uze
     procedure :: apt_check_valid
     procedure :: apt_set_stressperiod
     procedure :: pak_set_stressperiod
@@ -175,8 +175,8 @@ module TspAptModule
     procedure :: pak_fill_budobj
     procedure, public :: apt_stor_term
     procedure, public :: apt_tmvr_term
-    procedure, public :: apt_fmvr_term   ! Made public for uze
-    procedure, public :: apt_fjf_term    ! Made public for uze
+    procedure, public :: apt_fmvr_term ! Made public for uze
+    procedure, public :: apt_fjf_term ! Made public for uze
     procedure, private :: apt_copy2flowp
     procedure, private :: apt_setup_tableobj
 
@@ -339,7 +339,7 @@ contains
     this%fmi%datp(this%igwfaptpak)%qmfrommvr => this%qmfrommvr
     !
     ! -- If there is an associated flow package and the user wishes to put
-    !    simulated concentrations (or temperatures) into a aux variable 
+    !    simulated concentrations (or temperatures) into a aux variable
     !    column, then find the column number.
     if (associated(this%flowpackagebnd)) then
       if (this%cauxfpconc /= '') then
@@ -371,7 +371,7 @@ contains
 
   !> @brief Advanced package transport read and prepare (rp) routine
   !!
-  !! This subroutine calls the attached packages' read and prepare routines. 
+  !! This subroutine calls the attached packages' read and prepare routines.
   !<
   subroutine apt_rp(this)
     use TdisModule, only: kper, nper
@@ -493,7 +493,7 @@ contains
 
   !> @brief Advanced package transport set stress period routine.
   !!
-  !! Set a stress period attribute for an advanced transport package feature 
+  !! Set a stress period attribute for an advanced transport package feature
   !! (itemno) using keywords.
   !<
   subroutine apt_set_stressperiod(this, itemno)
@@ -594,7 +594,7 @@ contains
 
   !> @brief Advanced package transport set stress period routine.
   !!
-  !! Set a stress period attribute for an individual package. This routine 
+  !! Set a stress period attribute for an individual package. This routine
   !! must be overridden.
   !<
   subroutine pak_set_stressperiod(this, itemno, keyword, found)
@@ -639,7 +639,7 @@ contains
     end if
   end function apt_check_valid
 
-  !> @brief Advanced package transport routine 
+  !> @brief Advanced package transport routine
   !!
   !! Add package connections to matrix
   !<
@@ -702,7 +702,7 @@ contains
 
   !> @ brief Formulate the package hcof and rhs terms.
   !!
-  !!  For the APT Package, the sole purpose here is to reset the qmfrommvr 
+  !!  For the APT Package, the sole purpose here is to reset the qmfrommvr
   !!  term.
   !<
   subroutine apt_cf(this, reset_mover)
@@ -753,10 +753,10 @@ contains
   end subroutine apt_fc
 
   !> @brief Advanced package transport fill coefficient (fc) method
-  !! 
+  !!
   !! Routine to formulate the nonexpanded matrix case in which feature
   !! concentrations (or temperatures) are solved explicitly
-  !< 
+  !<
   subroutine apt_fc_nonexpanded(this, rhs, ia, idxglo, matrix_sln)
     ! -- modules
     ! -- dummy
@@ -842,7 +842,7 @@ contains
     ! -- add from mover contribution
     if (this%idxbudfmvr /= 0) then
       do n = 1, this%ncv
-        rhsval = this%qmfrommvr(n)   ! kluge note: presumably already in terms of energy for heat transport???
+        rhsval = this%qmfrommvr(n) ! kluge note: presumably already in terms of energy for heat transport???
         iloc = this%idxlocnode(n)
         rhs(iloc) = rhs(iloc) - rhsval
       end do
@@ -924,9 +924,9 @@ contains
 
   !> @brief Advanced package transport routine
   !!
-  !! Calculate advanced package transport hcof and rhs so transport budget is 
+  !! Calculate advanced package transport hcof and rhs so transport budget is
   !! calculated.
-  !< 
+  !<
   subroutine apt_cfupdate(this)
     ! -- modules
     ! -- dummy
@@ -973,7 +973,7 @@ contains
     real(DP) :: rrate
 ! ------------------------------------------------------------------------------
     !
-    ! -- Solve the feature concentrations (or temperatures) again or update 
+    ! -- Solve the feature concentrations (or temperatures) again or update
     !    the feature hcof and rhs terms
     if (this%imatrows == 0) then
       call this%apt_solve()
@@ -1004,7 +1004,7 @@ contains
   end subroutine apt_cq
 
   !> @brief Save advanced package flows routine
-  !< 
+  !<
   subroutine apt_ot_package_flows(this, icbcfl, ibudfl)
     use TdisModule, only: kstp, kper, delt, pertim, totim
     class(TspAptType) :: this
@@ -1032,7 +1032,6 @@ contains
     return
   end subroutine apt_ot_package_flows
 
-  
   subroutine apt_ot_dv(this, idvsave, idvprint)
     ! -- modules
     use ConstantsModule, only: LENBUDTXT
@@ -1065,7 +1064,7 @@ contains
         end if
         this%dbuff(n) = c
       end do
-      write(text, '(a)') padl(this%tsplab%depvartype, 16)
+      write (text, '(a)') padl(this%tsplab%depvartype, 16)
       call ulasav(this%dbuff, text, kstp, kper, pertim, totim, &
                   this%ncv, 1, 1, ibinun)
     end if
@@ -1365,7 +1364,7 @@ contains
   end subroutine apt_da
 
   !> @brief Find corresponding advanced package transport package
-  !< 
+  !<
   subroutine find_apt_package(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
@@ -1650,7 +1649,7 @@ contains
         ! -- if GWE model, read additional thermal conductivity terms
         if (this%tsplab%tsptype == 'GWE') then
           ! skip for UZE
-          if (trim(adjustl(this%text)) /= 'UZE') then 
+          if (trim(adjustl(this%text)) /= 'UZE') then
             this%ktf(n) = this%parser%GetDouble()
             this%rfeatthk(n) = this%parser%GetDouble()
             if (this%rfeatthk(n) <= DZERO) then
@@ -1658,8 +1657,8 @@ contains
               '****ERROR. Specified thickness used for thermal &
               &conduction MUST BE > 0 else divide by zero error occurs'
               call store_error(errmsg)
-          cycle
-        end if
+              cycle
+            end if
           end if
         end if
         !
@@ -1782,9 +1781,9 @@ contains
   !> @brief Add terms specific to advanced package transport to the explicit
   !! solve
   !!
-  !! Explicit solve for concentration (or temperature) in advaced package 
+  !! Explicit solve for concentration (or temperature) in advaced package
   !! features, which is an alternative to the iterative implicit solve.
-  !< 
+  !<
   subroutine apt_solve(this)
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
@@ -1818,7 +1817,7 @@ contains
     ! -- add from mover contribution
     if (this%idxbudfmvr /= 0) then
       do n1 = 1, size(this%qmfrommvr)
-        rrate = this%qmfrommvr(n1)    ! kluge note: presumably in terms of energy already for heat transport???
+        rrate = this%qmfrommvr(n1) ! kluge note: presumably in terms of energy already for heat transport???
         this%dbuff(n1) = this%dbuff(n1) + rrate
       end do
     end if
@@ -1842,7 +1841,7 @@ contains
       this%dbuff(n) = this%dbuff(n) + c1
     end do
     !
-    ! -- go through each "within apt-apt" connection (e.g., lak-lak) and 
+    ! -- go through each "within apt-apt" connection (e.g., lak-lak) and
     !    accumulate total mass (or energy) in dbuff mass
     if (this%idxbudfjf /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudfjf)%nlist
@@ -1871,7 +1870,7 @@ contains
     return
   end subroutine apt_solve
 
-  !> @brief Add terms specific to advanced package transport features to the 
+  !> @brief Add terms specific to advanced package transport features to the
   !! explicit solve routine
   !!
   !! This routine must be overridden by the specific apt package
@@ -1891,7 +1890,7 @@ contains
   end subroutine pak_solve
 
   !> @brief Accumulate constant concentration (or temperature) terms for budget
-  !< 
+  !<
   subroutine apt_accumulate_ccterm(this, ilak, rrate, ccratin, ccratout)
     ! -- dummy
     class(TspAptType) :: this
@@ -1924,7 +1923,7 @@ contains
     return
   end subroutine apt_accumulate_ccterm
 
-  !> @brief Define the list heading that is written to iout when PRINT_INPUT 
+  !> @brief Define the list heading that is written to iout when PRINT_INPUT
   !! option is used.
   !<
   subroutine define_listlabel(this)
@@ -1952,7 +1951,7 @@ contains
     return
   end subroutine define_listlabel
 
-  !> @brief Set pointers to model arrays and variables so that a package has 
+  !> @brief Set pointers to model arrays and variables so that a package has
   !! access to these items.
   !<
   subroutine apt_set_pointers(this, neq, ibound, xnew, xold, flowja)
@@ -1985,7 +1984,7 @@ contains
   end subroutine apt_set_pointers
 
   !> @brief Return the feature new volume and old volume
-  !<  
+  !<
   subroutine get_volumes(this, icv, vnew, vold, delt)
     ! -- modules
     ! -- dummy
@@ -2028,7 +2027,7 @@ contains
                      terminate=.TRUE.)
     nbudterms = 0
   end function pak_get_nbudterms
-  
+
   !> @brief Function for string manipulation
   !<
   function padl(str, width) result(res)
@@ -2037,7 +2036,7 @@ contains
     integer, intent(in) :: width
     ! -- return
     character(len=max(len_trim(str), width)) :: res
-! ------------------------------------------------------------------------------    
+! ------------------------------------------------------------------------------
     res = str
     res = adjustr(res)
     !
@@ -2074,7 +2073,7 @@ contains
       nlen = this%flowbudptr%budterm(this%idxbudfjf)%maxlist
     end if
     !
-    ! -- Determine the number of budget terms associated with apt. 
+    ! -- Determine the number of budget terms associated with apt.
     !    These are fixed for the simulation and cannot change
     !
     ! -- add one if flow-ja-face present
@@ -2094,7 +2093,7 @@ contains
     ! -- set up budobj
     call budgetobject_cr(this%budobj, this%packName)
     !
-    bddim_opt=this%tsplab%depvarunitabbrev
+    bddim_opt = this%tsplab%depvarunitabbrev
     call this%budobj%budgetobject_df(this%ncv, nbudterm, 0, 0, &
                                      bddim_opt=bddim_opt, ibudcsv=this%ibudcsv)
     idx = 0
@@ -2154,8 +2153,8 @@ contains
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudsto)%maxlist
     naux = 1
-    write(textt, '(a)') padl(this%tsplab%depvarunit, 16)
-    auxtxt(1) = textt  ! '            MASS' or '          ENERGY'
+    write (textt, '(a)') padl(this%tsplab%depvarunit, 16)
+    auxtxt(1) = textt ! '            MASS' or '          ENERGY'
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
                                              this%packName, &
@@ -2256,7 +2255,7 @@ contains
   end subroutine pak_setup_budobj
 
   !> @brief Copy flow terms into this%budobj
-  !< 
+  !<
   subroutine apt_fill_budobj(this, x, flowja)
     ! -- modules
     use TdisModule, only: delt
@@ -2331,7 +2330,7 @@ contains
     allocate (auxvartmp(1))
     do n1 = 1, this%ncv
       call this%get_volumes(n1, v1, v0, delt)
-      auxvartmp(1) = v1 * this%xnewpak(n1)  ! kluge note: does this need a factor of eqnsclfac???
+      auxvartmp(1) = v1 * this%xnewpak(n1) ! kluge note: does this need a factor of eqnsclfac???
       q = this%qsto(n1)
       call this%budobj%budterm(idx)%update_term(n1, n1, q, auxvartmp)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
@@ -2356,7 +2355,7 @@ contains
       nlist = this%ncv
       call this%budobj%budterm(idx)%reset(nlist)
       do j = 1, nlist
-        call this%apt_fmvr_term(j, n1, n2, q)   ! kluge note: don't really need to do this in apt_fmvr_term now, since no override by uze
+        call this%apt_fmvr_term(j, n1, n2, q) ! kluge note: don't really need to do this in apt_fmvr_term now, since no override by uze
         call this%budobj%budterm(idx)%update_term(n1, n1, q)
         call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
       end do
@@ -2398,7 +2397,7 @@ contains
   end subroutine apt_fill_budobj
 
   !> @brief Copy flow terms into this%budobj, must be overridden
-  !< 
+  !<
   subroutine pak_fill_budobj(this, idx, x, flowja, ccratin, ccratout)
     ! -- modules
     ! -- dummy
@@ -2435,7 +2434,7 @@ contains
     real(DP) :: v0, v1
     real(DP) :: c0, c1
 ! -----------------------------------------------------------------
-    ! 
+    !
     n1 = ientry
     n2 = ientry
     call this%get_volumes(n1, v1, v0, delt)
@@ -2452,7 +2451,7 @@ contains
   end subroutine apt_stor_term
 
   !> @brief Account for mass or energy transferred to the MVR package
-  !< 
+  !<
   subroutine apt_tmvr_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
     ! -- modules
@@ -2469,7 +2468,7 @@ contains
     real(DP) :: ctmp
 ! ------------------------------------------------------------------------------
     !
-    ! -- Calculate MVR-related terms 
+    ! -- Calculate MVR-related terms
     n1 = this%flowbudptr%budterm(this%idxbudtmvr)%id1(ientry)
     n2 = this%flowbudptr%budterm(this%idxbudtmvr)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudtmvr)%flow(ientry)
@@ -2482,9 +2481,9 @@ contains
     return
   end subroutine apt_tmvr_term
 
-  !> @brief Account for mass or energy transferred to this package from the 
+  !> @brief Account for mass or energy transferred to this package from the
   !! MVR package
-  !<   
+  !<
   subroutine apt_fmvr_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
     ! -- modules
@@ -2498,10 +2497,10 @@ contains
     real(DP), intent(inout), optional :: hcofval
 ! ------------------------------------------------------------------------------
     !
-    ! -- Calculate MVR-related terms 
+    ! -- Calculate MVR-related terms
     n1 = ientry
     n2 = n1
-    if (present(rrate)) rrate = this%qmfrommvr(n1)  ! presumably in terms of energy already for heat transport???
+    if (present(rrate)) rrate = this%qmfrommvr(n1) ! presumably in terms of energy already for heat transport???
     if (present(rhsval)) rhsval = this%qmfrommvr(n1)
     if (present(hcofval)) hcofval = DZERO
     !
@@ -2509,7 +2508,7 @@ contains
     return
   end subroutine apt_fmvr_term
 
-  !> @brief Go through each "within apt-apt" connection (e.g., lkt-lkt, or 
+  !> @brief Go through each "within apt-apt" connection (e.g., lkt-lkt, or
   !! sft-sft) and accumulate total mass (or energy) in dbuff mass
   !<
   subroutine apt_fjf_term(this, ientry, n1, n2, rrate, &
@@ -2544,7 +2543,7 @@ contains
     return
   end subroutine apt_fjf_term
 
-  !> @brief Copy concentrations (or temperatures) into flow package aux 
+  !> @brief Copy concentrations (or temperatures) into flow package aux
   !! variable
   !<
   subroutine apt_copy2flowp(this)
@@ -2595,7 +2594,7 @@ contains
   !! This routine:
   !!   - stores observation types supported by APT package.
   !!   - overrides BndType%bnd_df_obs
-  !< 
+  !<
   subroutine apt_df_obs(this)
     ! -- modules
     ! -- dummy
@@ -2650,7 +2649,7 @@ contains
 
   !> @brief Prepare observation
   !!
-  !! Find the indices for this observation assuming they are indexed by 
+  !! Find the indices for this observation assuming they are indexed by
   !! feature number
   !<
   subroutine rp_obs_byfeature(this, obsrv)
@@ -2771,7 +2770,7 @@ contains
 
   !> @brief Prepare observation
   !!
-  !! Find the indices for this observation assuming they are first indexed 
+  !! Find the indices for this observation assuming they are first indexed
   !! by a feature number and secondly by a second feature number
   !<
   subroutine rp_obs_flowjaface(this, obsrv, budterm)
@@ -2871,7 +2870,7 @@ contains
           ! -- catch non-cumulative observation assigned to observation defined
           !    by a boundname that is assigned to more than one element
           if (obsrv%indxbnds_count > 1) then
-            write (errmsg, '(a, a, a, a)') & 
+            write (errmsg, '(a, a, a, a)') &
               trim(adjustl(this%tsplab%depvartype))// &
               ' for observation', trim(adjustl(obsrv%Name)), &
               ' must be assigned to a feature with a unique boundname.'
@@ -2928,7 +2927,7 @@ contains
 
   !> @brief Calculate observation values
   !!
-  !! Routine calculates observations common to SFT/LKT/MWT/UZT 
+  !! Routine calculates observations common to SFT/LKT/MWT/UZT
   !! (or SFE/LKE/MWE/UZE) for as many TspAptType observations that are common
   !! among the advanced transport packages
   !<
@@ -3024,7 +3023,7 @@ contains
   end subroutine apt_bd_obs
 
   !> @brief Check if observation exists in an advanced package
-  !< 
+  !<
   subroutine pak_bd_obs(this, obstypeid, jj, v, found)
     ! -- dummy
     class(TspAptType), intent(inout) :: this
@@ -3143,8 +3142,8 @@ contains
 
   !> @brief Setup a table object an advanced package
   !!
-  !! Set up the table object that is used to write the apt concentration 
-  !! (or temperature) data. The terms listed here must correspond in the 
+  !! Set up the table object that is used to write the apt concentration
+  !! (or temperature) data. The terms listed here must correspond in the
   !! apt_ot method.
   !<
   subroutine apt_setup_tableobj(this)

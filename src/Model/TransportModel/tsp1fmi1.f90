@@ -142,7 +142,7 @@ contains
     return
   end subroutine fmi_cr
 
-  !> @brief Define FMI package 
+  !> @brief Define FMI package
   !<
   subroutine fmi_df(this, dis, inssm, idryinactive)
     ! -- modules
@@ -190,7 +190,7 @@ contains
       call this%initialize_gwfterms_from_bfr()
     end if
     !
-    ! -- If GWF-GWT (or GWF-GWE) exchange is active, then setup gwfterms from 
+    ! -- If GWF-GWT (or GWF-GWE) exchange is active, then setup gwfterms from
     !    bndlist
     if (.not. this%flows_from_file) then
       call this%initialize_gwfterms_from_gwfbndlist()
@@ -205,8 +205,8 @@ contains
       end if
     end if
     !
-    ! -- Set flag that stops dry flows from being deactivated in a GWE 
-    !    transport model since conduction will still be simulated. 
+    ! -- Set flag that stops dry flows from being deactivated in a GWE
+    !    transport model since conduction will still be simulated.
     !    0: GWE (skip deactivation step); 1: GWT (default: use existing code)
     this%idryinactive = idryinactive
     !
@@ -355,7 +355,7 @@ contains
 
   !> @brief Calculate flow correction
   !!
-  !! Where there is a flow imbalance for a given cell, a correction may be 
+  !! Where there is a flow imbalance for a given cell, a correction may be
   !! applied if selected
   !<
   subroutine fmi_cq(this, cnew, flowja)
@@ -695,7 +695,7 @@ contains
             flownm = this%gwfflowja(ipos)
             if (flownm > 0) then
               if (this%ibound(m) /= 0) then
-                crewet = crewet + cnew(m) * flownm   ! kluge note: apparently no need to multiply flows by eqnsclfac
+                crewet = crewet + cnew(m) * flownm ! kluge note: apparently no need to multiply flows by eqnsclfac
                 tflow = tflow + this%gwfflowja(ipos) !             since it will divide out below anyway
               end if
             end if
@@ -995,7 +995,7 @@ contains
 
   !> @brief Advance the budget file reader
   !!
-  !! Advance the budget file reader by reading the next chunk of information 
+  !! Advance the budget file reader by reading the next chunk of information
   !! for the current time step and stress period
   !<
   subroutine advance_bfr(this)
@@ -1285,10 +1285,10 @@ contains
     return
   end subroutine finalize_hfr
 
-  !> @brief Initialize the groundwater flow terms based on the budget file 
+  !> @brief Initialize the groundwater flow terms based on the budget file
   !! reader
   !!
-  !! Initalize terms and figure out how many different terms and packages 
+  !! Initalize terms and figure out how many different terms and packages
   !! are contained within the file
   !<
   subroutine initialize_gwfterms_from_bfr(this)
@@ -1393,7 +1393,7 @@ contains
   !> @brief Initialize groundwater flow terms from the groundwater budget
   !!
   !! Flows are coming from a gwf-gwt exchange object
-  !< 
+  !<
   subroutine initialize_gwfterms_from_gwfbndlist(this)
     ! -- modules
     use BndModule, only: BndType, GetBndFromList
@@ -1527,7 +1527,7 @@ contains
   end subroutine deallocate_gwfpackages
 
   !> @brief Find the package index for package called name
-  !< 
+  !<
   subroutine get_package_index(this, name, idx)
     use BndModule, only: BndType, GetBndFromList
     class(TspFmiType) :: this

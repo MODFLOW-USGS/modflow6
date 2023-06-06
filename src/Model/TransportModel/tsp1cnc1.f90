@@ -21,15 +21,15 @@ module TspCncModule
   character(len=LENPACKAGENAME) :: text = '             CNC'
   !
   type, extends(BndType) :: TspCncType
-    
+
     type(GweInputDataType), pointer :: gwecommon => null() !< pointer to shared gwe data used by multiple packages but set in mst
-    
+
     real(DP), dimension(:), pointer, contiguous :: ratecncin => null() !simulated flows into constant conc (excluding other concs)
     real(DP), dimension(:), pointer, contiguous :: ratecncout => null() !simulated flows out of constant conc (excluding to other concs)
     real(DP), pointer :: eqnsclfac => null() !< governing equation scale factor; =1. for solute; =rhow*cpw for energy
-    
+
   contains
-  
+
     procedure :: bnd_rp => cnc_rp
     procedure :: bnd_ad => cnc_ad
     procedure :: bnd_ck => cnc_ck
@@ -46,7 +46,7 @@ module TspCncModule
     procedure, public :: bnd_rp_ts => cnc_rp_ts
   end type TspCncType
 
-    contains
+contains
 
   !> @brief Create a new constant concentration or temperature package
   !!
@@ -164,10 +164,10 @@ module TspCncModule
       ibd = this%ibound(node)
       if (ibd < 0) then
         call this%dis%noder_to_string(node, nodestr)
-        dvtype = trim(this%tsplab%depvartype) 
+        dvtype = trim(this%tsplab%depvartype)
         call lowcase(dvtype)
-        call store_error('Error.  Cell is already a constant ' & 
-                         // dvtype // ': ' //trim(adjustl(nodestr)))
+        call store_error('Error.  Cell is already a constant ' &
+                         //dvtype//': '//trim(adjustl(nodestr)))
         ierr = ierr + 1
       else
         this%ibound(node) = -this%ibcnum
@@ -183,8 +183,7 @@ module TspCncModule
     return
   end subroutine cnc_rp
 
-  
-  !> @brief Constant concentration/temperature package advance routine 
+  !> @brief Constant concentration/temperature package advance routine
   !!
   !! Add package connections to matrix
   !<
@@ -318,7 +317,7 @@ module TspCncModule
         ! -- Calculate the flow rate into the cell.
         do ipos = this%dis%con%ia(node) + 1, &
           this%dis%con%ia(node + 1) - 1
-          q = flowja(ipos)         ! klughe note: flowja should already be in terms of energy for heat transport
+          q = flowja(ipos) ! klughe note: flowja should already be in terms of energy for heat transport
           rate = rate - q
           ! -- only accumulate chin and chout for active
           !    connected cells
@@ -425,7 +424,7 @@ module TspCncModule
       write (this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
     end if
     write (this%listlabel, '(a, a16)') trim(this%listlabel), &
-           trim(this%tsplab%depvartype)
+      trim(this%tsplab%depvartype)
     if (this%inamedbound == 1) then
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
@@ -435,7 +434,7 @@ module TspCncModule
   end subroutine define_listlabel
 
   !> @brief Procedure related to observation processing
-  !! 
+  !!
   !! This routine:
   !!   - returns true because the CNC package supports observations,
   !!   - overrides packagetype%_obs_supported()
@@ -456,7 +455,7 @@ module TspCncModule
   !!   - defines observations
   !!   - stores observation types supported by the CNC package,
   !!   - overrides BndType%bnd_df_obs
-  !< 
+  !<
   subroutine cnc_df_obs(this)
     ! -- dummy
     class(TspCncType) :: this
@@ -472,9 +471,9 @@ module TspCncModule
   end subroutine cnc_df_obs
 
   !> @brief Procedure related to time series
-  !! 
+  !!
   !! Assign tsLink%Text appropriately for all time series in use by package.
-  !! In CNC package, variable CONCENTRATION or TEMPERATURE can be controlled 
+  !! In CNC package, variable CONCENTRATION or TEMPERATURE can be controlled
   !! by time series.
   !<
   subroutine cnc_rp_ts(this)

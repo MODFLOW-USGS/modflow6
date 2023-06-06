@@ -61,11 +61,11 @@ module TspMvtModule
     procedure, private :: mvt_print_outputtab
   end type TspMvtType
 
-    contains
+contains
 
   !> @brief Create a new mover transport object
   !<
-  subroutine mvt_cr(mvt, name_model, inunit, iout, fmi1, eqnsclfac, &  ! kluge note: does this need tsplab?
+  subroutine mvt_cr(mvt, name_model, inunit, iout, fmi1, eqnsclfac, & ! kluge note: does this need tsplab?
                     gwfmodelname1, gwfmodelname2, fmi2)
     ! -- dummy
     type(TspMvtType), pointer :: mvt
@@ -217,7 +217,7 @@ module TspMvtModule
   !!
   !! The mvt package adds the mass flow rate to the provider qmfrommvr array.
   !! The advanced packages know enough to subract any mass that is leaving, so
-  !! the mvt just adds mass coming in from elsewhere.  Because the movers 
+  !! the mvt just adds mass coming in from elsewhere.  Because the movers
   !! change by stress period, their solute effects must be added to the right-
   !! hand side of the transport matrix equations.
   !<
@@ -312,8 +312,8 @@ module TspMvtModule
   !!
   !! The fmi_pr and fmi_rc arguments are pointers to the provider and receiver
   !! FMI Packages.  If this MVT Package is owned by a single GWT model, then
-  !! these pointers are both set to the FMI Package of this GWT model's FMI 
-  !! package.  If this MVT package is owned by a GWTGWT exchange, then the 
+  !! these pointers are both set to the FMI Package of this GWT model's FMI
+  !! package.  If this MVT package is owned by a GWTGWT exchange, then the
   !! fmi_pr and fmi_rc pointers may be assigned to FMI Packages in different
   !! models.
   !<
@@ -373,13 +373,13 @@ module TspMvtModule
       print *, 'Could not find FMI Package...'
       stop "error in set_fmi_pr_rc"
     end if
-    ! 
+    !
     ! -- Return
     return
   end subroutine set_fmi_pr_rc
 
   !> @brief Extra convergence check for mover
-  !< 
+  !<
   subroutine mvt_cc(this, kiter, iend, icnvgmod, cpak, dpak)
     ! -- dummy
     class(TspMvtType) :: this
@@ -547,7 +547,6 @@ module TspMvtModule
     return
   end subroutine mvt_ot_bdsummary
 
-  
   !> @ brief Deallocate memory
   !!
   !!  Method to deallocate memory for the package.
@@ -927,7 +926,7 @@ module TspMvtModule
     return
   end subroutine mvt_setup_outputtab
 
-  !> @brief Set up mover-for-transport output table 
+  !> @brief Set up mover-for-transport output table
   subroutine mvt_print_outputtab(this)
     ! -- module
     use TdisModule, only: kstp, kper

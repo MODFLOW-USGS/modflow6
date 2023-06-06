@@ -20,7 +20,7 @@ module TspIcModule
 contains
 
   !> @brief Create a new initial conditions object
-  !< 
+  !<
   subroutine ic_cr(ic, name_model, inunit, iout, dis, tsplab)
     ! -- dummy
     type(TspIcType), pointer :: ic
@@ -76,7 +76,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Setup the label
-    write(aname(1), '(a,1x,a)') 'INITIAL', trim(adjustl(this%tsplab%depvartype))
+    write (aname(1), '(a,1x,a)') 'INITIAL', trim(adjustl(this%tsplab%depvartype))
     !
     ! -- get griddata block
     call this%parser%GetBlock('GRIDDATA', isfound, ierr)

@@ -29,7 +29,7 @@ module TspObsModule
     procedure, private :: set_pointers
   end type TspObsType
 
-    contains
+contains
 
   !> @brief Create a new TspObsType object
   !!
@@ -108,7 +108,7 @@ module TspObsModule
   end subroutine tsp_obs_df
 
   !> @brief Save observations
-  !< 
+  !<
   subroutine tsp_obs_bd(this)
     ! -- dummy
     class(TspObsType), intent(inout) :: this
@@ -156,7 +156,7 @@ module TspObsModule
 
   !> Deallocate memory
   !!
-  !! Deallocate memory associated with transport model 
+  !! Deallocate memory associated with transport model
   subroutine tsp_obs_da(this)
     ! -- dummy
     class(TspObsType), intent(inout) :: this

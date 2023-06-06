@@ -36,9 +36,9 @@ module TspSsmModule
   !! equation.
   !<
   type, extends(NumericalPackageType) :: TspSsmType
-    
+
     type(GweInputDataType), pointer :: gwecommon => null() !< pointer to shared gwe data used by multiple packages but set in mst
-    
+
     integer(I4B), pointer :: nbound !< total number of flow boundaries in this time step
     integer(I4B), dimension(:), pointer, contiguous :: isrctype => null() !< source type 0 is unspecified, 1 is aux, 2 is auxmixed, 3 is ssmi, 4 is ssmimixed
     integer(I4B), dimension(:), pointer, contiguous :: iauxpak => null() !< aux col for concentration
@@ -83,7 +83,7 @@ contains
   !!  Create a new SSM package by defining names, allocating scalars
   !!  and initializing the parser.
   !<
-  subroutine ssm_cr(ssmobj, name_model, inunit, iout, fmi, tsplab, eqnsclfac,  &
+  subroutine ssm_cr(ssmobj, name_model, inunit, iout, fmi, tsplab, eqnsclfac, &
                     gwecommon)
     ! -- dummy
     type(TspSsmType), pointer :: ssmobj !< TspSsmType object
@@ -113,7 +113,7 @@ contains
     ! -- Initialize block parser
     call ssmobj%parser%Initialize(ssmobj%inunit, ssmobj%iout)
     !
-    ! -- Store pointer to labels associated with the current model so that the 
+    ! -- Store pointer to labels associated with the current model so that the
     !    package has access to the corresponding dependent variable type
     ssmobj%tsplab => tsplab
     !
@@ -379,8 +379,8 @@ contains
   !!
   !! SSM concentrations and temperatures can be provided in auxiliary variables
   !! or through separate SPC files.  If not provided, the default
-  !! concentration (or temperature) is zero.  This single routine provides 
-  !! the SSM bound concentration (or temperature) based on these different 
+  !! concentration (or temperature) is zero.  This single routine provides
+  !! the SSM bound concentration (or temperature) based on these different
   !! approaches. The mixed flag indicates whether or not the boundary as a
   !! mixed type.
   !<
@@ -1152,8 +1152,8 @@ contains
                             trim(packname))
 
     write (this%iout, '(4x, a, a, a, a, a)') 'USING SPC INPUT FILE ', &
-      trim(filename), ' TO SET ',trim(this%tsplab%depvartype),'S FOR PACKAGE ', &
-      trim(packname)
+      trim(filename), ' TO SET ', trim(this%tsplab%depvartype), &
+      'S FOR PACKAGE ', trim(packname)
     !
     ! -- Return
     return
