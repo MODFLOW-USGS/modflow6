@@ -611,7 +611,7 @@ jobs:
 
       # start intel oneapi enabled pwsh, and from there cygwin
       - name: Configure PETSc
-        shell: C:\tools\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr
+        shell: C:\tools\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'
         run: |
           ls /cygdrive/c/Progra~2/Intel/oneAPI/mpi/latest/lib/release
           which ifort
