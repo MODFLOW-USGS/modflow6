@@ -611,7 +611,8 @@ jobs:
         shell: C:\tools\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'
         run: |
           cd /home/runneradmin/petsc
-          export PETSC_ARCH=arch-impi-opt          
+          export PETSC_ARCH=arch-impi-opt
+          export FC=ifort
           ./configure \
             --with-cc='win32fe cl' \
             --with-fc='win32fe ifort' \
