@@ -556,18 +556,6 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - name: Set up Cygwin
-        uses: egor-tensin/setup-cygwin@v4
-        with:
-          packages: python3 make
-
-      - name: Test Cygwin
-        shell: C:\tools\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'
-        run: |
-          ls -Al
-          pwd
-          which make
-
       - name: Checkout modflow6
         uses: actions/checkout@v3
         with:
@@ -592,6 +580,18 @@ jobs:
           # https://github.com/modflowpy/install-intelfortran-action#conda-scripts
           $mamba_bin = "C:\Users\runneradmin\micromamba-root\envs\modflow6\Scripts"
           echo $mamba_bin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Set up Cygwin
+        uses: egor-tensin/setup-cygwin@v4
+        with:
+          packages: python3 make
+
+      - name: Test Cygwin
+        shell: C:\tools\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'
+        run: |
+          ls -Al
+          pwd
+          which make
 
       - name: Cache PETSc
         id: cache-petsc
