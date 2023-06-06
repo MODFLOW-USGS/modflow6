@@ -561,10 +561,12 @@ jobs:
         with:
           packages: python3 make
 
-      - run: |
-          ls.exe -Al
-          pwd.exe
-          which.exe make
+      - name: Test Cygwin
+        shell: C:\tools\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'
+        run: |
+          ls -Al
+          pwd
+          which make
 
       - name: Checkout modflow6
         uses: actions/checkout@v3
