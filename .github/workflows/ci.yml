@@ -624,6 +624,11 @@ jobs:
             --with-mpiexec=/cygdrive/c/Progra~2/Intel/oneAPI/mpi/latest/bin/mpiexec.exe \
             --download-fblaslapack
       #           --with-blaslapack-dir=/cygdrive/c/Progra~2/Intel/oneAPI/mkl/latest/lib/intel64
+      - name: Show PETSc log
+        if: failure()
+        shell: C:\tools\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'
+        run: cat /home/runneradmin/petsc/arch-impi-opt/lib/petsc/conf/configure.log
+
       - name: Build PETSc
         shell: C:\tools\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'
         run: |
