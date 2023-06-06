@@ -138,7 +138,7 @@ contains
     ! -- Store pointer to governing equation scale factor
     sftobj%eqnsclfac => eqnsclfac
     !
-    ! -- Store pointer to the labels module for dynamic setting of 
+    ! -- Store pointer to the labels module for dynamic setting of
     !    concentration vs temperature
     sftobj%tsplab => tsplab
     !
@@ -148,7 +148,7 @@ contains
 
   !> @brief Find corresponding sft package
   !<
- subroutine find_sft_package(this)
+  subroutine find_sft_package(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -767,7 +767,7 @@ contains
   !> @brief Inflow Term
   !!
   !! Accounts for mass added via streamflow entering into a stream channel;
-  !! for example, energy entering the model domain via a specified flow in a 
+  !! for example, energy entering the model domain via a specified flow in a
   !! stream channel.
   !<
   subroutine sft_iflw_term(this, ientry, n1, n2, rrate, &
@@ -798,7 +798,7 @@ contains
 
   !> @brief Outflow term
   !!
-  !! Accounts for the mass leaving a stream channel; for example, mass exiting the 
+  !! Accounts for the mass leaving a stream channel; for example, mass exiting the
   !! model domain via a flow in a stream channel flowing out of the active domain.
   !<
   subroutine sft_outf_term(this, ientry, n1, n2, rrate, &

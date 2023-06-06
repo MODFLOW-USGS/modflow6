@@ -86,7 +86,7 @@ module GwtMwtModule
 
 contains
 
-  !> Create new MWT package 
+  !> Create new MWT package
   !<
   subroutine mwt_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         fmi, tsplab, eqnsclfac)
@@ -131,7 +131,7 @@ contains
     !    the flow packages
     mwtobj%fmi => fmi
     !
-    ! -- Store pointer to the labels module for dynamic setting of 
+    ! -- Store pointer to the labels module for dynamic setting of
     !    concentration vs temperature
     mwtobj%tsplab => tsplab
     !
@@ -668,7 +668,7 @@ contains
     return
   end subroutine mwt_rate_term
 
-  !> @brief Transport matrix term(s) associcated with a flowing- 
+  !> @brief Transport matrix term(s) associcated with a flowing-
   !! well rate term associated with pumping (or injection)
   !<
   subroutine mwt_fwrt_term(this, ientry, n1, n2, rrate, &
@@ -699,7 +699,7 @@ contains
 
   !> @brief Rate-to-mvr term associated with pumping (or injection)
   !!
-  !! Pumped water that is made available to the MVR package for transfer to 
+  !! Pumped water that is made available to the MVR package for transfer to
   !! another advanced package
   !<
   subroutine mwt_rtmv_term(this, ientry, n1, n2, rrate, &
@@ -730,7 +730,7 @@ contains
 
   !> @brief Flowing well rate-to-mvr term (or injection)
   !!
-  !! Pumped water that is made available to the MVR package for transfer to 
+  !! Pumped water that is made available to the MVR package for transfer to
   !! another advanced package
   !<
   subroutine mwt_frtm_term(this, ientry, n1, n2, rrate, &

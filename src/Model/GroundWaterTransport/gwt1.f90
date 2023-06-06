@@ -63,7 +63,7 @@ module GwtModule
     procedure :: get_iasym => gwt_get_iasym
     procedure, private :: create_gwt_specific_packages
     procedure, private :: create_bndpkgs
-    
+
   end type GwtModelType
 
 contains
@@ -125,7 +125,7 @@ contains
 
   !> @brief Define packages of the GWT model
   !!
-  !! This subroutine defines a gwt model type. Steps include: 
+  !! This subroutine defines a gwt model type. Steps include:
   !!   - call df routines for each package
   !!   - set variables and pointers
   !<
@@ -141,7 +141,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Set labels to be used with transport model
-    call this%tsplab%setTspLabels(this%macronym, 'CONCENTRATION', 'MASS', 'M')     
+    call this%tsplab%setTspLabels(this%macronym, 'CONCENTRATION', 'MASS', 'M')
     !
     ! -- Define packages and utility objects
     call this%dis%dis_df()
@@ -206,7 +206,7 @@ contains
     return
   end subroutine gwt_ac
 
-  !> @brief Map the positions of the GWT model connections in the numerical 
+  !> @brief Map the positions of the GWT model connections in the numerical
   !! solution coefficient matrix.
   !<
   subroutine gwt_mc(this, matrix_sln)
@@ -325,16 +325,9 @@ contains
 
   !> @brief GWT Model Time Step Advance
   !!
-  !! This subroutine calls the attached packages' advance subroutines
+  !! This subroutine calls the attached packages advance subroutines
   !<
   subroutine gwt_ad(this)
-! ******************************************************************************
-! gwt_ad -- GroundWater Transport Model Time Step Advance
-! Subroutine: (1) calls package advance subroutines
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SimVariablesModule, only: isimcheck, iFailedStepRetry
     ! -- dummy
@@ -390,7 +383,7 @@ contains
 
   !> @brief GWT Model calculate coefficients
   !!
-  !! This subroutine calls the attached packages' calculate coefficients 
+  !! This subroutine calls the attached packages' calculate coefficients
   !! subroutines
   !<
   subroutine gwt_cf(this, kiter)
@@ -415,7 +408,7 @@ contains
 
   !> @brief GWT Model fill coefficients
   !!
-  !! This subroutine calls the attached packages' fill coefficients 
+  !! This subroutine calls the attached packages' fill coefficients
   !! subroutines
   !<
   subroutine gwt_fc(this, kiter, matrix_sln, inwtflag)
@@ -721,7 +714,7 @@ contains
   end function gwt_get_iasym
 
   !> Allocate memory for non-allocatable members
-  !! 
+  !!
   !! A subroutine for allocating the scalars specific to the GWT model type.
   !! Additional scalars used by the parent class are allocated by the parent
   !! class.
@@ -824,7 +817,7 @@ contains
     !
     ! -- Return
     return
-                            end subroutine package_create
+  end subroutine package_create
 
   !> @brief Cast to GwtModelType
   !<

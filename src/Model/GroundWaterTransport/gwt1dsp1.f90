@@ -125,7 +125,7 @@ contains
   end subroutine dsp_cr
 
   !> @brief Define MST object
-  !! 
+  !!
   !! Define the MST package
   !<
   subroutine dsp_df(this, dis, dspOptions)
@@ -198,7 +198,7 @@ contains
   !> @brief Map DSP connections
   !!
   !! Map connections and construct iax, jax, and idxglox
-  !<  
+  !<
   subroutine dsp_mc(this, moffset, matrix_sln)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate

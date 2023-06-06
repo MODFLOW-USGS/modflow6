@@ -77,7 +77,7 @@ module GwtUztModule
 
 contains
 
-  !> @brief Create a new UZT package  
+  !> @brief Create a new UZT package
   !<
   subroutine uzt_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         fmi)
@@ -361,9 +361,9 @@ contains
   end subroutine uzt_solve
 
   !> @brief Function that returns the number of budget terms for this package
-  !! 
+  !!
   !! This overrides function in parent.
-  !< 
+  !<
   function uzt_get_nbudterms(this) result(nbudterms)
     ! -- modules
     ! -- dummy
@@ -661,7 +661,7 @@ contains
 
   !> @brief Rejected infiltration term
   !!
-  !! Accounts for mass that is added to the model from specifying an 
+  !! Accounts for mass that is added to the model from specifying an
   !! infiltration rate and concentration, but is subsequently removed from
   !! the model as that portion of the infiltration that is rejected (and
   !! NOT transferred to another advanced package via the MVR/MVT packages).
@@ -694,8 +694,8 @@ contains
 
   !> @brief Evapotranspiration from the unsaturated-zone term
   !!
-  !! Accounts for mass removed as a result of evapotranspiration from the 
-  !! unsaturated zone.  
+  !! Accounts for mass removed as a result of evapotranspiration from the
+  !! unsaturated zone.
   !<
   subroutine uzt_uzet_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
@@ -734,11 +734,11 @@ contains
 
   !> @brief Rejected infiltration to MVR/MVT term
   !!
-  !! Accounts for energy that is added to the model from specifying an 
+  !! Accounts for energy that is added to the model from specifying an
   !! infiltration rate and temperature, but does not infiltrate into the
   !! subsurface.  This subroutine is called when the rejected infiltration
   !! is transferred to another advanced package via the MVR/MVT packages.
-  !<                         
+  !<
   subroutine uzt_ritm_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
     ! -- dummy

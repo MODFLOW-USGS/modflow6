@@ -138,7 +138,7 @@ contains
     !    the flow packages
     lktobj%fmi => fmi
     !
-    ! -- Store pointer to the labels module for dynamic setting of 
+    ! -- Store pointer to the labels module for dynamic setting of
     !    concentration vs temperature
     lktobj%tsplab => tsplab
     !
@@ -526,7 +526,7 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! -- Removal of heat associated with outflow from lake that leaves 
+    ! -- Removal of heat associated with outflow from lake that leaves
     !    model domain
     text = '     EXT-OUTFLOW'
     idx = idx + 1
@@ -820,7 +820,7 @@ contains
 
   !> @brief Inflow Term
   !!
-  !! Accounts for mass flowing into a lake from a connected stream, for 
+  !! Accounts for mass flowing into a lake from a connected stream, for
   !! example.
   !<
   subroutine lkt_iflw_term(this, ientry, n1, n2, rrate, &
