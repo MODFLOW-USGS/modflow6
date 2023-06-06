@@ -55,7 +55,7 @@ module GweLkeModule
   character(len=16) :: text = '             LKE'
 
   type, extends(TspAptType) :: GweLkeType
-      
+
     type(GweInputDataType), pointer :: gwecommon => null() !< pointer to shared gwe data used by multiple packages but set in mst
 
     integer(I4B), pointer :: idxbudrain => null() ! index of rainfall terms in flowbudptr
@@ -143,7 +143,7 @@ contains
     !    the flow packages
     lkeobj%fmi => fmi
     !
-    ! -- Store pointer to the labels module for dynamic setting of 
+    ! -- Store pointer to the labels module for dynamic setting of
     !    concentration vs temperature
     lkeobj%tsplab => tsplab
     !
@@ -161,7 +161,7 @@ contains
 
   !> @brief Find corresponding lke package
   !<
-    subroutine find_lke_package(this)
+  subroutine find_lke_package(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -305,9 +305,9 @@ contains
     real(DP) :: rrate
     real(DP) :: rhsval
     real(DP) :: hcofval
-    real(DP) :: ctherm  !< thermal conductance
+    real(DP) :: ctherm !< thermal conductance
     real(DP) :: wa !< wetted area
-    real(DP) :: ktf !< thermal conductivity of streambed material 
+    real(DP) :: ktf !< thermal conductivity of streambed material
     real(DP) :: s !< thickness of conductive streambed material
 ! ------------------------------------------------------------------------------
     !
@@ -386,7 +386,7 @@ contains
         !
         ! -- set acoef and rhs to negative so they are relative to sfe and not gwe
         auxpos = this%flowbudptr%budterm(this%idxbudgwf)%naux
-        wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos,j) 
+        wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos, j)
         ktf = this%ktf(n)
         s = this%rfeatthk(n)
         ctherm = ktf * wa / s
@@ -394,7 +394,7 @@ contains
         ! -- add to sfe row
         iposd = this%idxdglo(j)
         iposoffd = this%idxoffdglo(j)
-        call matrix_sln%add_value_pos(iposd, -ctherm)       ! kluge note: make sure the signs on ctherm are correct here and below
+        call matrix_sln%add_value_pos(iposd, -ctherm) ! kluge note: make sure the signs on ctherm are correct here and below
         call matrix_sln%add_value_pos(iposoffd, ctherm)
         !
         ! -- add to gwe row for sfe connection
@@ -486,12 +486,12 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Number of budget terms is 7
-    !    1) rainfall 
-    !    2) evap 
-    !    3) runoff 
-    !    4) ext-inflow 
+    !    1) rainfall
+    !    2) evap
+    !    3) runoff
+    !    4) ext-inflow
     !    5) withdrawl
-    !    6) ext-outflow 
+    !    6) ext-outflow
     !    7) lakebed-cond
     !
     nbudterms = 7
@@ -580,7 +580,7 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! -- Removal of heat associated with outflow from lake that leaves 
+    ! -- Removal of heat associated with outflow from lake that leaves
     !    model domain
     text = '     EXT-OUTFLOW'
     idx = idx + 1
@@ -638,7 +638,7 @@ contains
     real(DP) :: q
     real(DP) :: ctherm !< thermal conductance
     real(DP) :: wa !< wetted area
-    real(DP) :: ktf !< thermal conductivity of streambed material 
+    real(DP) :: ktf !< thermal conductivity of streambed material
     real(DP) :: s !< thickness of conductive streambed materia
     ! -- formats
 ! -----------------------------------------------------------------------------
@@ -711,12 +711,12 @@ contains
       n1 = this%flowbudptr%budterm(this%idxbudlbcd)%id1(j)
       if (this%iboundpak(n1) /= 0) then
         igwfnode = this%flowbudptr%budterm(this%idxbudlbcd)%id2(j)
-        auxpos = this%flowbudptr%budterm(this%idxbudgwf)%naux  ! for now there is only 1 aux variable under 'GWF'
-        wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos,j) 
+        auxpos = this%flowbudptr%budterm(this%idxbudgwf)%naux ! for now there is only 1 aux variable under 'GWF'
+        wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos, j)
         ktf = this%ktf(n1)
         s = this%rfeatthk(n1)
-        ctherm = ktf * wa / s   
-        q = ctherm * (x(igwfnode) - this%xnewpak(n1))    ! kluge note: check that sign is correct
+        ctherm = ktf * wa / s
+        q = ctherm * (x(igwfnode) - this%xnewpak(n1)) ! kluge note: check that sign is correct
         !q = -q ! flip sign so relative to advanced package feature
       end if
       call this%budobj%budterm(idx)%update_term(n1, igwfnode, q)
@@ -922,7 +922,7 @@ contains
 
   !> @brief Inflow Term
   !!
-  !! Accounts for energy flowing into a lake from a connected stream, for 
+  !! Accounts for energy flowing into a lake from a connected stream, for
   !! example.
   !<
   subroutine lke_iflw_term(this, ientry, n1, n2, rrate, &

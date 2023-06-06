@@ -3,7 +3,7 @@
 ! -- todo: save the sfe temperature into the sfr aux variable? (perhaps needed for GWT-GWE exchanges)
 ! -- todo: calculate the sfr VISC aux variable using temperature?
 !
-! SFR flows (sfrbudptr)     index var     SFE term              Transport Type  
+! SFR flows (sfrbudptr)     index var     SFE term              Transport Type
 !---------------------------------------------------------------------------------
 
 ! -- terms from SFR that will be handled by parent APT Package
@@ -58,7 +58,7 @@ module GweSfeModule
   type, extends(TspAptType) :: GweSfeType
 
     type(GweInputDataType), pointer :: gwecommon => null() !< pointer to shared gwe data used by multiple packages but set in mst
-    
+
     integer(I4B), pointer :: idxbudrain => null() ! index of rainfall terms in flowbudptr
     integer(I4B), pointer :: idxbudevap => null() ! index of evaporation terms in flowbudptr
     integer(I4B), pointer :: idxbudroff => null() ! index of runoff terms in flowbudptr
@@ -94,7 +94,7 @@ module GweSfeModule
 
   end type GweSfeType
 
-    contains
+contains
 
   !> @brief Create a new sfe package
   !<
@@ -142,7 +142,7 @@ module GweSfeModule
     !    the flow packages
     sfeobj%fmi => fmi
     !
-    ! -- Store pointer to the labels module for dynamic setting of 
+    ! -- Store pointer to the labels module for dynamic setting of
     !    concentration vs temperature
     sfeobj%tsplab => tsplab
     !
@@ -305,7 +305,7 @@ module GweSfeModule
     real(DP) :: hcofval
     real(DP) :: ctherm
     real(DP) :: wa !< wetted area
-    real(DP) :: ktf !< thermal conductivity of streambed material 
+    real(DP) :: ktf !< thermal conductivity of streambed material
     real(DP) :: s !< thickness of conductive streambed material
 ! ------------------------------------------------------------------------------
     !
@@ -323,7 +323,7 @@ module GweSfeModule
     ! -- add evaporation contribution
     if (this%idxbudevap /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudevap)%nlist
-        call this%sfe_evap_term(j, n1, n2, rrate, rhsval, hcofval)  ! kluge note: included hcofval in the call; it'll be set to zero
+        call this%sfe_evap_term(j, n1, n2, rrate, rhsval, hcofval) ! kluge note: included hcofval in the call; it'll be set to zero
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
         call matrix_sln%add_value_pos(iposd, hcofval)
@@ -373,7 +373,7 @@ module GweSfeModule
         !
         ! -- set acoef and rhs to negative so they are relative to sfe and not gwe
         auxpos = this%flowbudptr%budterm(this%idxbudgwf)%naux
-        wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos,j) 
+        wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos, j)
         ktf = this%ktf(n)
         s = this%rfeatthk(n)
         ctherm = ktf * wa / s
@@ -398,7 +398,7 @@ module GweSfeModule
 
   !> @ brief Add terms specific to sfr to the explicit sfe solve
   !<
-  subroutine sfe_solve(this)  ! kluge note: will explicit solve still be possible/useful if there's streambed conduction???
+  subroutine sfe_solve(this) ! kluge note: will explicit solve still be possible/useful if there's streambed conduction???
     ! -- dummy
     class(GweSfeType) :: this
     ! -- local
@@ -559,7 +559,7 @@ module GweSfeModule
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! -- conduction through the wetted streambed 
+    ! -- conduction through the wetted streambed
     text = '  STREAMBED-COND'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudsbcd)%maxlist
@@ -603,7 +603,7 @@ module GweSfeModule
     real(DP) :: q
     real(DP) :: ctherm
     real(DP) :: wa !< wetted area
-    real(DP) :: ktf !< thermal conductivity of streambed material 
+    real(DP) :: ktf !< thermal conductivity of streambed material
     real(DP) :: s !< thickness of conductive streambed materia
     ! -- formats
 ! -----------------------------------------------------------------------------
@@ -668,15 +668,15 @@ module GweSfeModule
         igwfnode = this%flowbudptr%budterm(this%idxbudsbcd)%id2(j)
         ! for now, there is only 1 aux variable under 'GWF'
         auxpos = this%flowbudptr%budterm(this%idxbudgwf)%naux
-        wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos,j) 
+        wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos, j)
         ktf = this%ktf(n1)
         s = this%rfeatthk(n1)
-        ctherm = ktf * wa / s   
+        ctherm = ktf * wa / s
         q = ctherm * (x(igwfnode) - this%xnewpak(n1))
       end if
       call this%budobj%budterm(idx)%update_term(n1, igwfnode, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
-      if (this%iboundpak(n1) /= 0) then 
+      if (this%iboundpak(n1) /= 0) then
         ! -- contribution to gwe cell budget
         this%simvals(n1) = this%simvals(n1) - q
         idiag = this%dis%con%ia(igwfnode)
@@ -806,8 +806,8 @@ module GweSfeModule
     n2 = this%flowbudptr%budterm(this%idxbudrain)%id2(ientry)
     qbnd = this%flowbudptr%budterm(this%idxbudrain)%flow(ientry)
     ctmp = this%temprain(n1)
-    if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac   ! kluge note: think about budget / sensible heat issue
-    if (present(rhsval)) rhsval = -rrate   ! kluge note eqnsclfac: this was incorrect for divided-through formulation but is ok now
+    if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac ! kluge note: think about budget / sensible heat issue
+    if (present(rhsval)) rhsval = -rrate ! kluge note eqnsclfac: this was incorrect for divided-through formulation but is ok now
     if (present(hcofval)) hcofval = DZERO
     !
     ! -- Return
@@ -835,7 +835,7 @@ module GweSfeModule
     ! -- note that qbnd is negative for evap
     qbnd = this%flowbudptr%budterm(this%idxbudevap)%flow(ientry)
     heatlat = this%gwecommon%gwerhow * this%gwecommon%gwelatheatvap
-    if (present(rrate)) rrate = qbnd * heatlat 
+    if (present(rrate)) rrate = qbnd * heatlat
     !!if (present(rhsval)) rhsval = -rrate / this%eqnsclfac  ! kluge note: divided by eqnsclfac for fc purposes because rrate is in terms of energy
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
@@ -864,7 +864,7 @@ module GweSfeModule
     qbnd = this%flowbudptr%budterm(this%idxbudroff)%flow(ientry)
     ctmp = this%temproff(n1)
     if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
-    if (present(rhsval)) rhsval = -rrate   ! kluge note eqnsclfac: this was incorrect for divided-through formulation but is ok now
+    if (present(rhsval)) rhsval = -rrate ! kluge note eqnsclfac: this was incorrect for divided-through formulation but is ok now
     if (present(hcofval)) hcofval = DZERO
     !
     ! -- return
@@ -874,7 +874,7 @@ module GweSfeModule
   !> @brief Inflow Term
   !!
   !! Accounts for energy added via streamflow entering into a stream channel;
-  !! for example, energy entering the model domain via a specified flow in a 
+  !! for example, energy entering the model domain via a specified flow in a
   !! stream channel.
   !<
   subroutine sfe_iflw_term(this, ientry, n1, n2, rrate, rhsval, hcofval)
@@ -895,7 +895,7 @@ module GweSfeModule
     qbnd = this%flowbudptr%budterm(this%idxbudiflw)%flow(ientry)
     ctmp = this%tempiflw(n1)
     if (present(rrate)) rrate = ctmp * qbnd * this%eqnsclfac
-    if (present(rhsval)) rhsval = -rrate   ! kluge note eqnsclfac: this was incorrect for divided-through formulation but is ok now
+    if (present(rhsval)) rhsval = -rrate ! kluge note eqnsclfac: this was incorrect for divided-through formulation but is ok now
     if (present(hcofval)) hcofval = DZERO
     !
     ! -- Return
@@ -904,7 +904,7 @@ module GweSfeModule
 
   !> @brief Outflow term
   !!
-  !! Accounts for the energy leaving a stream channel, for example, energy exiting the 
+  !! Accounts for the energy leaving a stream channel, for example, energy exiting the
   !! model domain via a flow in a stream channel flowing out of the active domain.
   !<
   subroutine sfe_outf_term(this, ientry, n1, n2, rrate, rhsval, hcofval)

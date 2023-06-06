@@ -350,12 +350,6 @@ contains
   !> @brief Add terms specific to sft to the explicit sft solve
   !<
   subroutine sft_solve(this)
-! ******************************************************************************
-! sft_solve -- add terms specific to sfr to the explicit sfr solve
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtSftType) :: this
     ! -- local

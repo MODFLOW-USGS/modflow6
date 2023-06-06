@@ -56,7 +56,7 @@ module GweMweModule
   character(len=16) :: text = '             MWE'
 
   type, extends(TspAptType) :: GweMweType
-      
+
     type(GweInputDataType), pointer :: gwecommon => null() !< pointer to shared gwe data used by multiple packages but set in mst
 
     integer(I4B), pointer :: idxbudrate => null() ! index of well rate terms in flowbudptr
@@ -90,7 +90,7 @@ module GweMweModule
 
 contains
 
-  !> Create new MWE package 
+  !> Create new MWE package
   !<
   subroutine mwe_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         fmi, tsplab, eqnsclfac, gwecommon)
@@ -136,7 +136,7 @@ contains
     !    the flow packages
     mweobj%fmi => fmi
     !
-    ! -- Store pointer to the labels module for dynamic setting of 
+    ! -- Store pointer to the labels module for dynamic setting of
     !    concentration vs temperature
     mweobj%tsplab => tsplab
     !
@@ -294,9 +294,9 @@ contains
     real(DP) :: rrate
     real(DP) :: rhsval
     real(DP) :: hcofval
-    real(DP) :: ctherm    ! kluge?
+    real(DP) :: ctherm ! kluge?
     real(DP) :: wa !< wetted area
-    real(DP) :: ktf !< thermal conductivity of streambed material 
+    real(DP) :: ktf !< thermal conductivity of streambed material
     real(DP) :: s !< thickness of conductive wellbore material
 ! ------------------------------------------------------------------------------
     !
@@ -353,7 +353,7 @@ contains
         !
         ! -- set acoef and rhs to negative so they are relative to mwe and not gwe
         auxpos = this%flowbudptr%budterm(this%idxbudgwf)%naux
-        wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos,j) 
+        wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos, j)
         ktf = this%ktf(n)
         s = this%rfeatthk(n)
         ctherm = ktf * wa / s
@@ -361,7 +361,7 @@ contains
         ! -- add to mwe row
         iposd = this%idxdglo(j)
         iposoffd = this%idxoffdglo(j)
-        call matrix_sln%add_value_pos(iposd, -ctherm)       ! kluge note: make sure the signs on ctherm are correct here and below
+        call matrix_sln%add_value_pos(iposd, -ctherm) ! kluge note: make sure the signs on ctherm are correct here and below
         call matrix_sln%add_value_pos(iposoffd, ctherm)
         !
         ! -- add to gwe row for mwe connection
@@ -438,7 +438,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Number of potential budget terms is 5
-    nbudterms = 1  ! RATE
+    nbudterms = 1 ! RATE
     if (this%idxbudfwrt /= 0) nbudterms = nbudterms + 1
     if (this%idxbudrtmv /= 0) nbudterms = nbudterms + 1
     if (this%idxbudfrtm /= 0) nbudterms = nbudterms + 1
@@ -565,7 +565,7 @@ contains
     real(DP) :: q
     real(DP) :: ctherm
     real(DP) :: wa !< wetted area
-    real(DP) :: ktf !< thermal conductivity of streambed material 
+    real(DP) :: ktf !< thermal conductivity of streambed material
     real(DP) :: s !< thickness of conductive streambed materia
     ! -- formats
 ! -----------------------------------------------------------------------------
@@ -624,17 +624,17 @@ contains
       n1 = this%flowbudptr%budterm(this%idxbudmwcd)%id1(j)
       if (this%iboundpak(n1) /= 0) then
         igwfnode = this%flowbudptr%budterm(this%idxbudmwcd)%id2(j)
-        auxpos = this%flowbudptr%budterm(this%idxbudgwf)%naux  ! for now there is only 1 aux variable under 'GWF'
-        wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos,j) 
+        auxpos = this%flowbudptr%budterm(this%idxbudgwf)%naux ! for now there is only 1 aux variable under 'GWF'
+        wa = this%flowbudptr%budterm(this%idxbudgwf)%auxvar(auxpos, j)
         ktf = this%ktf(n1)
         s = this%rfeatthk(n1)
-        ctherm = ktf * wa / s   
-        q = ctherm * (x(igwfnode) - this%xnewpak(n1))    ! kluge note: check that sign is correct
+        ctherm = ktf * wa / s
+        q = ctherm * (x(igwfnode) - this%xnewpak(n1)) ! kluge note: check that sign is correct
         !q = -q ! flip sign so relative to advanced package feature
       end if
       call this%budobj%budterm(idx)%update_term(n1, igwfnode, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
-      if (this%iboundpak(n1) /= 0) then 
+      if (this%iboundpak(n1) /= 0) then
         ! -- contribution to gwe cell budget
         this%simvals(j) = this%simvals(j) - q
         idiag = this%dis%con%ia(igwfnode)
@@ -646,7 +646,7 @@ contains
     return
   end subroutine mwe_fill_budobj
 
-  !> @brief Allocate scalars specific to the multi-aquifer well energy 
+  !> @brief Allocate scalars specific to the multi-aquifer well energy
   !! transport (MWE) package.
   !<
   subroutine allocate_scalars(this)
@@ -732,7 +732,7 @@ contains
     return
   end subroutine mwe_da
 
-  !> @brief Thermal transport matrix term(s) associcated with a user-specified 
+  !> @brief Thermal transport matrix term(s) associcated with a user-specified
   !! flow rate (mwe_rate_term)
   !<
   subroutine mwe_rate_term(this, ientry, n1, n2, rrate, &
@@ -771,7 +771,7 @@ contains
     return
   end subroutine mwe_rate_term
 
-  !> @brief Thermal transport matrix term(s) associcated with a flowing- 
+  !> @brief Thermal transport matrix term(s) associcated with a flowing-
   !! well rate term associated with pumping (or injection)
   !<
   subroutine mwe_fwrt_term(this, ientry, n1, n2, rrate, &

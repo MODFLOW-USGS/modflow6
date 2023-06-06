@@ -23,7 +23,7 @@ module GweModule
   public :: GweModelType
   public :: CastAsGweModel
   public :: niunit
-  
+
   type, extends(TransportModelType) :: GweModelType
 
     type(GweInputDataType), pointer :: gwecommon => null() !< container for data shared with multiple packages
@@ -90,7 +90,7 @@ contains
     integer(I4B), intent(in) :: id
     character(len=*), intent(in) :: modelname
     ! -- local
-    integer(I4B) :: indis 
+    integer(I4B) :: indis
     integer(I4B) :: ipakid, i, j, iu, ipaknum
     character(len=LINELENGTH) :: errmsg
     character(len=LENPACKAGENAME) :: pakname
@@ -99,7 +99,7 @@ contains
     character(len=LENMEMPATH) :: input_mempath
     character(len=LINELENGTH) :: lst_fname
     type(GwfNamParamFoundType) :: found
-    
+
     cunit(10) = 'TMP6 '
 ! ------------------------------------------------------------------------------
     !
@@ -129,7 +129,7 @@ contains
 
   !> @brief Define packages of the GWE model
   !!
-  !! This subroutine defines a gwe model type. Steps include: 
+  !! This subroutine defines a gwe model type. Steps include:
   !!   - call df routines for each package
   !!   - set variables and pointers
   !<
@@ -214,7 +214,7 @@ contains
     return
   end subroutine gwe_ac
 
-  !> @brief Map the positions of the GWE model connections in the numerical 
+  !> @brief Map the positions of the GWE model connections in the numerical
   !! solution coefficient matrix.
   !<
   subroutine gwe_mc(this, matrix_sln)
@@ -384,7 +384,7 @@ contains
 
   !> @brief GWE Model calculate coefficients
   !!
-  !! This subroutine calls the attached packages' calculate coefficients 
+  !! This subroutine calls the attached packages' calculate coefficients
   !! subroutines
   !<
   subroutine gwe_cf(this, kiter)
@@ -409,7 +409,7 @@ contains
 
   !> @brief GWE Model fill coefficients
   !!
-  !! This subroutine calls the attached packages' fill coefficients 
+  !! This subroutine calls the attached packages' fill coefficients
   !! subroutines
   !<
   subroutine gwe_fc(this, kiter, matrix_sln, inwtflag)
@@ -718,7 +718,7 @@ contains
   end function gwe_get_iasym
 
   !> Allocate memory for non-allocatable members
-  !! 
+  !!
   !! A subroutine for allocating the scalars specific to the GWE model type.
   !! Additional scalars used by the parent class are allocated by the parent
   !! class.
@@ -839,7 +839,7 @@ contains
     ! -- Return
     return
   end function CastAsGweModel
-  
+
   !> @brief Source package info and begin to process
   !<
   subroutine create_bndpkgs(this, bndpkgs, pkgtypes, pkgnames, &
@@ -888,7 +888,7 @@ contains
         ipakid = ipakid + 1
         ipaknum = ipaknum + 1
       end do
-    !
+      !
       ! -- cleanup
       deallocate (bndpkgs)
     end if

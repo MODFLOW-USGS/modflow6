@@ -20,11 +20,11 @@ module GweSrcModule
   character(len=16) :: text = '             SRC'
   !
   type, extends(BndType) :: GweSrcType
-      
+
     type(GweInputDataType), pointer :: gwecommon => null() !< pointer to shared gwe data used by multiple packages but set in mst
-      
+
   contains
-  
+
     procedure :: allocate_scalars => src_allocate_scalars
     procedure :: bnd_cf => src_cf
     procedure :: bnd_fc => src_fc
@@ -40,7 +40,7 @@ module GweSrcModule
 contains
 
   !> @brief Create an energy source loading package
-  !! 
+  !!
   !! This subroutine points bndobj to the newly created package
   !<
   subroutine src_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
@@ -80,7 +80,7 @@ contains
     packobj%ncolbnd = 1
     packobj%iscloc = 1
     !
-    ! -- Store pointer to labels associated with the current model so that the 
+    ! -- Store pointer to labels associated with the current model so that the
     !    package has access to the assigned labels
     packobj%tsplab => tsplab
     !
@@ -214,7 +214,7 @@ contains
   end subroutine src_fc
 
   !> @brief Define list labels
-  !! 
+  !!
   !! Define the list heading that is written to iout when
   !! PRINT_INPUT option is used.
   !<
@@ -292,7 +292,7 @@ contains
   !> @brief Procedure related to time series
   !!
   !! Assign tsLink%Text appropriately for all time series in use by package.
-  !! In the SRC package only the SENERRATE variable can be controlled by time 
+  !! In the SRC package only the SENERRATE variable can be controlled by time
   !! series.
   !<
   subroutine src_rp_ts(this)

@@ -83,7 +83,7 @@ contains
 
   !> @ brief Create a new MST object
   !!
-  !!  Create a new MST package 
+  !!  Create a new MST package
   !<
   subroutine mst_cr(mstobj, name_model, inunit, iout, fmi, eqnsclfac, gwecommon)
     ! -- dummy
@@ -292,7 +292,7 @@ contains
         ! -- first order decay rate is a function of temperature, so add       ! kluge note: do we need/want first-order decay for temperature???
         !    to left hand side
         hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n) &
-                 * this%eqnsclfac
+                * this%eqnsclfac
         call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
       elseif (this%idcy == 2) then
         !
@@ -300,7 +300,7 @@ contains
         !    from the user-specified rate to prevent negative temperatures     ! kluge note: think through negative temps
         decay_rate = get_zero_order_decay(this%decay(n), this%decaylast(n), &
                                           kiter, cold(n), cnew(n), delt)
-        ! -- This term does get divided by eqnsclfac for fc purposes because it 
+        ! -- This term does get divided by eqnsclfac for fc purposes because it
         !    should start out being a rate of energy
         this%decaylast(n) = decay_rate
         rrhs = decay_rate * vcell * swtpdt * this%porosity(n)
@@ -374,8 +374,10 @@ contains
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
       vwatnew = vcell * this%fmi%gwfsat(n) * this%porosity(n)
       vwatold = vwatnew
-      if (this%fmi%igwfstrgss /= 0) vwatold = vwatold + this%fmi%gwfstrgss(n) * delt
-      if (this%fmi%igwfstrgsy /= 0) vwatold = vwatold + this%fmi%gwfstrgsy(n) * delt
+      if (this%fmi%igwfstrgss /= 0) vwatold = vwatold + this%fmi%gwfstrgss(n) &
+                                              * delt
+      if (this%fmi%igwfstrgsy /= 0) vwatold = vwatold + this%fmi%gwfstrgsy(n) &
+                                              * delt
       vsolid = vcell * (DONE - this%porosity(n))
       !
       ! -- calculate rate
@@ -396,7 +398,7 @@ contains
   !!
   !!  Method to calculate decay terms for the package.
   !<
-  subroutine mst_cq_dcy(this, nodes, cnew, cold, flowja)    ! kluge note: this handles only decay in water; need to add zero-order (but not first-order?) decay in solid
+  subroutine mst_cq_dcy(this, nodes, cnew, cold, flowja) ! kluge note: this handles only decay in water; need to add zero-order (but not first-order?) decay in solid
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
@@ -431,12 +433,13 @@ contains
       rate = DZERO
       hhcof = DZERO
       rrhs = DZERO
-      if (this%idcy == 1) then       ! kluge note: do we need/want first-order decay for temperature???
-        hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n) * this%eqnsclfac
+      if (this%idcy == 1) then ! kluge note: do we need/want first-order decay for temperature???
+        hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n) &
+                * this%eqnsclfac
       elseif (this%idcy == 2) then
         decay_rate = get_zero_order_decay(this%decay(n), this%decaylast(n), &
                                           0, cold(n), cnew(n), delt)
-        rrhs = decay_rate * vcell * swtpdt * this%porosity(n)   ! kluge note: this term does NOT get multiplied by eqnsclfac for cq purposes because it should already be a rate of energy
+        rrhs = decay_rate * vcell * swtpdt * this%porosity(n) ! kluge note: this term does NOT get multiplied by eqnsclfac for cq purposes because it should already be a rate of energy
       end if
       rate = hhcof * cnew(n) - rrhs
       this%ratedcy(n) = rate
@@ -866,7 +869,7 @@ contains
   !!  Function to calculate the zero-order decay rate from the user specified
   !!  decay rate.  If the decay rate is positive, then the decay rate must
   !!  be constrained so that more energy is not removed than is available.
-  !!  Without this constraint, negative temperatures could result from   
+  !!  Without this constraint, negative temperatures could result from
   !!  zero-order decay (no freezing).
   !<
   function get_zero_order_decay(decay_rate_usr, decay_rate_last, kiter, &
@@ -892,7 +895,7 @@ contains
       !    temperature, so reduce the rate if it would result in
       !    removing more energy than is in the cell.          ! kluge note: think through
       if (kiter == 1) then
-        decay_rate = min(decay_rate_usr, cold / delt)  ! kluge note: actually want to use rhow*cpw*cold and rhow*cpw*cnew for rates here and below
+        decay_rate = min(decay_rate_usr, cold / delt) ! kluge note: actually want to use rhow*cpw*cold and rhow*cpw*cnew for rates here and below
       else
         decay_rate = decay_rate_last
         if (cnew < DZERO) then

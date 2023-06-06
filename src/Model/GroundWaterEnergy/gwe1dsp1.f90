@@ -9,7 +9,7 @@ module GweDspModule
   use GweDspOptionsModule, only: GweDspOptionsType
   use GweInputDataModule, only: GweInputDataType
   use MatrixBaseModule
-  
+
   implicit none
   private
   public :: GweDspType
@@ -137,7 +137,7 @@ contains
   end subroutine dsp_cr
 
   !> @brief Define MST object
-  !! 
+  !!
   !! Define the MST package
   !<
   subroutine dsp_df(this, dis, dspOptions)
@@ -190,12 +190,6 @@ contains
   !! Add connections for extended neighbors to the sparse matrix
   !<
   subroutine dsp_ac(this, moffset, sparse)
-! ******************************************************************************
-! dsp_ac -- 
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SparseModule, only: sparsematrix
     use MemoryManagerModule, only: mem_allocate
@@ -786,7 +780,7 @@ contains
       !    ktbulk is divided by the explicitly calculated product rhow*cpw,
       !    and not by the equivalent scale factor eqnsclfac, even though it
       !    should make no practical difference in the result.
-      dstar = ktbulk / (this%gwecommon%gwecpw * this%gwecommon%gwerhow)  ! kluge note eqnsclfac, define product
+      dstar = ktbulk / (this%gwecommon%gwecpw * this%gwecommon%gwerhow) ! kluge note eqnsclfac, define product
       !
       ! -- Calculate the longitudal and transverse dispersivities
       al = DZERO
