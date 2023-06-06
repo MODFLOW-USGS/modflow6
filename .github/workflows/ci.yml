@@ -592,6 +592,7 @@ jobs:
           ls -Al
           pwd
           which make
+          curl --help
 
       - name: Cache PETSc
         id: cache-petsc
@@ -602,6 +603,7 @@ jobs:
 
       - name: Download PETSc
         if: steps.cache-petsc.outputs.cache-hit != 'true'
+        shell: C:\tools\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'
         run: |
           curl https://ftp.mcs.anl.gov/pub/petsc/release-snapshots/petsc-3.18.5.tar.gz -O -J
           mkdir petsc
