@@ -287,7 +287,6 @@ contains
   !!
   !! This will be called from TspAptType%apt_fc_expanded()
   !! in order to add matrix terms specifically for LKE
-  !!
   !<
   subroutine lke_fc_expanded(this, rhs, ia, idxglo, matrix_sln)
     ! -- modules
@@ -410,7 +409,7 @@ contains
     return
   end subroutine lke_fc_expanded
 
-  !> @ brief Add terms specific to lakes to the explicit lake solve
+  !> @brief Add terms specific to lakes to the explicit lake solve
   !<
   subroutine lke_solve(this)
     ! -- dummy
@@ -516,7 +515,7 @@ contains
     character(len=LENBUDTXT) :: text
 ! ------------------------------------------------------------------------------
     !
-    ! -- Addition of heat associated with rainfall 
+    ! -- Addition of heat associated with rainfall directly on the lake surface
     text = '        RAINFALL'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudrain)%maxlist
@@ -542,7 +541,7 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! -- Addition of heat associated with runoff added to the lake
+    ! -- Addition of heat associated with runoff that flows to the lake
     text = '          RUNOFF'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudroff)%maxlist
@@ -804,7 +803,7 @@ contains
     return
   end subroutine lke_allocate_arrays
 
-  !> @brief Deallocate
+  !> @brief Deallocate memory
   !<
   subroutine lke_da(this)
     ! -- modules
@@ -954,8 +953,8 @@ contains
 
   !> @brief Specified withdrawal term
   !!
-  !! Accounts for energy associated with energy removed when water is withdrawn
-  !! from a lake or group of lakes.
+  !! Accounts for energy associated with a withdrawal of water from a lake
+  !! or group of lakes.
   !<
   subroutine lke_wdrl_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
@@ -986,7 +985,7 @@ contains
   !> @brief Outflow term
   !!
   !! Accounts for the energy leaving a lake, for example, energy exiting a
-  !! lake via a flow in a stream channel.
+  !! lake via a flow into a draining stream channel.
   !<
   subroutine lke_outf_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
@@ -1092,13 +1091,13 @@ contains
     call this%obs%StoreObsType('ext-outflow', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
+    ! -- Return
     return
   end subroutine lke_df_obs
 
   !> @brief Process package specific obs
   !!
   !! Method to process specific observations for this package.
-  !!
   !<
   subroutine lke_rp_obs(this, obsrv, found)
     ! -- dummy
@@ -1128,6 +1127,7 @@ contains
       found = .false.
     end select
     !
+    ! -- Return
     return
   end subroutine lke_rp_obs
 
@@ -1174,6 +1174,7 @@ contains
       found = .false.
     end select
     !
+    ! -- Return
     return
   end subroutine lke_bd_obs
 
