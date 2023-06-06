@@ -613,7 +613,7 @@ jobs:
       - name: Configure PETSc
         shell: pwsh
         run: |
-          c:\tools\cygwin\cygwin.bat
+          C:\tools\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr
           ls /cygdrive/c/Progra~2/Intel/oneAPI/mpi/latest/lib/release
           which ifort
           pwd
