@@ -132,7 +132,6 @@ contains
   !! This subroutine defines a gwe model type. Steps include: 
   !!   - call df routines for each package
   !!   - set variables and pointers
-  !!
   !<
   subroutine gwe_df(this)
     ! -- modules
@@ -183,7 +182,7 @@ contains
     ! -- Store information needed for observations
     call this%obs%obs_df(this%iout, this%name, 'GWE', this%dis)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwe_df
 
@@ -211,11 +210,11 @@ contains
       call packobj%bnd_ac(this%moffset, sparse)
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwe_ac
 
-  !> @brief Map the positions of this model's connections in the numerical 
+  !> @brief Map the positions of the GWE model connections in the numerical 
   !! solution coefficient matrix.
   !<
   subroutine gwe_mc(this, matrix_sln)
@@ -239,11 +238,11 @@ contains
       call packobj%bnd_mc(this%moffset, matrix_sln)
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwe_mc
 
-  !> @brief GroundWater Energy Transport Model Allocate and Read
+  !> @brief GWE Model Allocate and Read
   !!
   !! This subroutine:
   !!   - allocates and reads packages that are part of this model,
@@ -288,13 +287,14 @@ contains
       call packobj%bnd_ar()
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwe_ar
 
-  !> @brief GroundWater Energy Transport Model Read and Prepare
+  !> @brief GWE Model Read and Prepare
   !!
   !! This subroutine calls the attached packages' read and prepare routines
+  !<
   subroutine gwe_rp(this)
     ! -- modules
     use TdisModule, only: readnewdata
@@ -325,7 +325,7 @@ contains
     return
   end subroutine gwe_rp
 
-  !> @brief GroundWater Energy Transport Model Time Step Advance
+  !> @brief GWE Model Time Step Advance
   !!
   !! This subroutine calls the attached packages' advance subroutines
   !<
@@ -378,11 +378,11 @@ contains
     ! -- Push simulated values to preceding time/subtime step
     call this%obs%obs_ad()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwe_ad
 
-  !> @brief GroundWater Energy Transport Model calculate coefficients
+  !> @brief GWE Model calculate coefficients
   !!
   !! This subroutine calls the attached packages' calculate coefficients 
   !! subroutines
@@ -403,11 +403,11 @@ contains
       call packobj%bnd_cf()
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwe_cf
 
-  !> @brief GroundWater Energy Transport Model fill coefficients
+  !> @brief GWE Model fill coefficients
   !!
   !! This subroutine calls the attached packages' fill coefficients 
   !! subroutines
@@ -452,11 +452,11 @@ contains
       call packobj%bnd_fc(this%rhs, this%ia, this%idxglo, matrix_sln)
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwe_fc
 
-  !> @brief GroundWater Energy Transport Model Final Convergence Check
+  !> @brief GWE Model Final Convergence Check
   !!
   !! If MVR/MVT is active, this subroutine calls the MVR convergence check
   !! subroutines.
@@ -478,11 +478,11 @@ contains
     ! -- If mover is on, then at least 2 outers required
     if (this%inmvt > 0) call this%mvt%mvt_cc(kiter, iend, icnvgmod, cpak, dpak)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwe_cc
 
-  !> @brief Groundwater energy transport model calculate flow
+  !> @brief GWE Model calculate flow
   !!
   !! This subroutine calls the attached packages' intercell flows (flow ja)
   !<
@@ -532,11 +532,12 @@ contains
     return
   end subroutine gwe_cq
 
-  !> @brief GroundWater Energy Transport Model Budget
+  !> @brief GWE Model Budget
   !!
   !! This subroutine:
   !!   - calculates intercell flows (flowja)
   !!   - calculates package contributions to the model budget
+  !<
   subroutine gwe_bd(this, icnvg, isuppress_output)
     use ConstantsModule, only: DZERO
     ! -- dummy
@@ -569,9 +570,9 @@ contains
     return
   end subroutine gwe_bd
 
-  !> @brief GroundWater Energy Transport Model Output
+  !> @brief GWE Model Output
   !!
-  !! This subroutine calls the parent class's output routine.
+  !! This subroutine calls the parent class output routine.
   !<
   subroutine gwe_ot(this)
     ! -- modules
@@ -665,7 +666,6 @@ contains
   !! This subroutine adds a budget entry to the flow budget.  It was added as
   !! a method for the gwe model object so that the exchange object could add its
   !! contributions.
-  !!
   !<
   subroutine gwe_bdentry(this, budterm, budtxt, rowlabel)
     ! -- modules
@@ -680,7 +680,7 @@ contains
     !
     call this%budget%addentry(budterm, delt, budtxt, rowlabel=rowlabel)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwe_bdentry
 
@@ -713,7 +713,7 @@ contains
       if (packobj%iasym /= 0) iasym = 1
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end function gwe_get_iasym
 
@@ -738,7 +738,7 @@ contains
     this%inmst = 0
     this%indsp = 0
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine allocate_gwe_scalars
 
@@ -819,7 +819,7 @@ contains
     end do
     call AddBndToList(this%bndlist, packobj)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine package_create
 
@@ -835,7 +835,9 @@ contains
     type is (GweModelType)
       gwemodel => model
     end select
-
+    !
+    ! -- Return
+    return
   end function CastAsGweModel
   
   !> @brief Source package info and begin to process
@@ -891,7 +893,7 @@ contains
       deallocate (bndpkgs)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine create_bndpkgs
 
@@ -972,7 +974,9 @@ contains
     call this%ftype_check(indis, this%inmst)
     !
     call this%create_bndpkgs(bndpkgs, pkgtypes, pkgnames, mempaths, inunits)
-
+    !
+    ! -- Return
+    return
   end subroutine create_gwe_specific_packages
 
 end module GweModule
