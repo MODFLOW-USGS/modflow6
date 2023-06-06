@@ -301,6 +301,7 @@ def qxqyqz(fname, nlay, nrow, ncol):
 
 def eval_heads(sim):
     print("comparing heads and spec. discharges to analytical result...")
+    assert False, "forcing this test to fail for now..."
 
     fpth = os.path.join(sim.simpath, f"{parent_name}.hds")
     hds = flopy.utils.HeadFile(fpth)
