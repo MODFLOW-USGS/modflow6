@@ -552,4 +552,109 @@ jobs:
           marker="not large"
           markers=$([ "$branch" == "master" ] && echo "$marker and not developmode" || echo "$marker")
           pytest -v -n auto --parallel --durations 0 -m "$markers"
+
+  parallel_test_windows:
+    name: Parallel testing on Windows
+    needs:
+#      - lint
+      - build
+#      - smoke_test
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+
+      - name: Set up Cygwin
+        uses: egor-tensin/setup-cygwin@v4
+        with:
+          packages: python3 make
+
+      - run: |
+        ls.exe -Al
+        pwd.exe
+        which.exe make
+
+      - name: Checkout modflow6
+        uses: actions/checkout@v3
+        with:
+          path: modflow6
+
+      - name: Setup Micromamba
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: modflow6/environment.yml
+          init-shell: >-
+            bash
+            powershell
+          cache-environment: true
+          cache-downloads: true   
+
+      - name: Setup Intel Fortran
+        uses: modflowpy/install-intelfortran-action@v1
+
+      - name: Fix Micromamba path (Windows)
+        shell: pwsh
+        run: |
+          # https://github.com/modflowpy/install-intelfortran-action#conda-scripts
+          $mamba_bin = "C:\Users\runneradmin\micromamba-root\envs\modflow6\Scripts"
+          echo $mamba_bin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Cache PETSc
+        id: cache-petsc
+        uses: actions/cache@v3
+        with:
+          path: petsc
+          key: ${{ runner.os }}-petsc
+
+      - name: Download PETSc
+        if: steps.cache-petsc.outputs.cache-hit != 'true'
+        run: |
+          curl https://ftp.mcs.anl.gov/pub/petsc/release-snapshots/petsc-3.18.5.tar.gz -O -J
+          mkdir petsc
+          tar -xzf petsc-3.18.5.tar.gz -C petsc --strip-components=1
+
+      - name: Configure PETSc
+        shell: pwsh
+        working-directory: petsc
+        run: |
+          c:\cygwin64\Cygwin.bat
+          ls
+          /usr/bin/python ./configure --with-mpiexec='/C/Program\ Files/Microsoft\ MPI/Bin/mpiexec' --with-shared-libraries=0
+          make all
+
+      - name: Build modflow6
+        working-directory: modflow6
+        shell: pwsh
+        run: |
+          meson setup builddir -Ddebug=false -Dparallel=true --prefix=$(pwd) --libdir=bin
+          meson install -C builddir
+          meson test --verbose --no-rebuild -C builddir
+
+      - name: Show Meson logs
+        if: failure()
+        working-directory: modflow6
+        run: cat builddir/meson-logs/meson-log.txt
+
+      - name: Update flopy
+        working-directory: modflow6/autotest
+        run: python update_flopy.py
+
+      - name: Get executables
+        working-directory: modflow6/autotest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pytest -v --durations 0 get_exes.py
+
+      - name: Test programs (parallel)
+        working-directory: modflow6/autotest
+        env:
+          REPOS_PATH: ${{ github.workspace }}
+        run: |
+          branch="${{ github.ref_name }}"
+          marker="not large"
+          markers=$([ "$branch" == "master" ] && echo "$marker and not developmode" || echo "$marker")
+          pytest -v -n auto --parallel --durations 0 -m "$markers"
           
