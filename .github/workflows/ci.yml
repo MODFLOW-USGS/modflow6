@@ -584,7 +584,7 @@ jobs:
       - name: Set up Cygwin
         uses: egor-tensin/setup-cygwin@v4
         with:
-          packages: python3 make
+          packages: python3 make curl
 
       - name: Test Cygwin
         shell: C:\tools\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'
@@ -603,7 +603,7 @@ jobs:
       - name: Download PETSc
         if: steps.cache-petsc.outputs.cache-hit != 'true'
         run: |
-          curl https://ftp.mcs.anl.gov/pub/petsc/release-snapshots/petsc-3.18.5.tar.gz -O
+          curl https://ftp.mcs.anl.gov/pub/petsc/release-snapshots/petsc-3.18.5.tar.gz -O -J
           mkdir petsc
           tar -xzf petsc-3.18.5.tar.gz -C petsc --strip-components=1
 
@@ -614,6 +614,15 @@ jobs:
         run: |
           c:\tools\cygwin\cygwin.bat
           /usr/bin/python ./configure --help
+
+      # - name: Build PETSc
+      #   shell: pwsh
+      #   working-directory: petsc
+      #   run: |
+      #     c:\tools\cygwin\cygwin.bat
+      #     sed "s/OMAKE_PRINTDIR.*=.*/OMAKE_PRINTDIR = \/usr\/bin\/make/g" arch-ci-mswin-intel-modflow6/lib/petsc/conf/petscvariables
+      #     sed "s/OMAKE.*=.*/OMAKE = \/usr\/bin\/make/g" arch-ci-mswin-intel-modflow6/lib/petsc/conf/petscvariables
+      #     make all
 
       # - name: Build modflow6
       #   working-directory: modflow6
