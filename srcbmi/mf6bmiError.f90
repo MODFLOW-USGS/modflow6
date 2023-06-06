@@ -28,6 +28,9 @@ module mf6bmiError
   character(len=*), parameter :: fmt_unsupported_rank = & !< Unsupported rank, args: variable name
                                  "('BMI Error, unsupported rank for variable: &
                                  &', a)"
+  character(len=*), parameter :: fmt_unsupported_type = & !< Unsupported type, args: variable name
+                                 "('BMI Error, unsupported type for variable: &
+                                 &', a)"
   character(len=*), parameter :: fmt_invalid_mem_access = & !< Invalid memory access, args: variable name
                                  "('Fatal BMI Error, invalid access of memory &
                                  &for variable: ', a)"

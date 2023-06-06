@@ -33,6 +33,14 @@ optional true
 longname maximum number of errors
 description maximum number of errors that will be stored and printed.
 
+block options
+name print_input
+type keyword
+reader urword
+optional true
+longname print input to listing file
+description keyword to activate printing of simulation input summaries to the simulation list file (mfsim.lst). With this keyword, input summaries will be written for those packages that support newer input data model routines.  Not all packages are supported yet by the newer input data model routines.
+
 # --------------------- sim nam timing ---------------------
 
 block timing
