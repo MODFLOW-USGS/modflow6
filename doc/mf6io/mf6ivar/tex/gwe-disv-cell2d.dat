@@ -1,0 +1,5 @@
+BEGIN CELL2D
+  <icell2d> <xc> <yc> <ncvert> <icvert(ncvert)>
+  <icell2d> <xc> <yc> <ncvert> <icvert(ncvert)>
+  ...
+END CELL2D

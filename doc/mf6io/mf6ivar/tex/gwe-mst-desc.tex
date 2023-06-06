@@ -1,0 +1,37 @@
+% DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py 
+
+\item \textbf{Block: OPTIONS}
+
+\begin{description}
+\item \texttt{SAVE\_FLOWS}---keyword to indicate that MST flow terms will be written to the file specified with ``BUDGET FILEOUT'' in Output Control.
+
+\item \texttt{FIRST\_ORDER\_DECAY}---is a text keyword to indicate that first-order decay will occur.  Use of this keyword requires that DECAY and DECAY\_SORBED (if sorption is active) are specified in the GRIDDATA block.
+
+\item \texttt{ZERO\_ORDER\_DECAY}---is a text keyword to indicate that zero-order decay will occur.  Use of this keyword requires that DECAY and DECAY\_SORBED (if sorption is active) are specified in the GRIDDATA block.
+
+\item \texttt{LATENT\_HEAT\_VAPORIZATION}---is a text keyword to indicate that cooling associated with evaporation will occur.  Use of this keyword requires that LATHEATVAP are specified in the GRIDDATA block.  While the MST package does not simulate evaporation, multiple other packages in a GWE simulation may.  For example, evaporation may occur from the surface of streams or lakes.  Owing to the energy consumed by the change in phase, the latent heat of vaporization is required.
+
+\end{description}
+\item \textbf{Block: GRIDDATA}
+
+\begin{description}
+\item \texttt{porosity}---is the aquifer porosity.
+
+\item \texttt{decay}---is the rate coefficient for first or zero-order decay for the aqueous phase of the mobile domain.  A negative value indicates solute production.  The dimensions of decay for first-order decay is one over time.  The dimensions of decay for zero-order decay is mass per length cubed per time.  decay will have no effect on simulation results unless either first- or zero-order decay is specified in the options block.
+
+\item \texttt{cps}---is the mass-based heat capacity of dry solids (aquifer material). Thus, enter value in units of J/kg/C
+
+\item \texttt{rhos}---is a user-specified value of the density of aquifer material not considering the voids. Value will remain fixed for the entire simulation.  For now, enter the value in SI units: kg/m3.  Bulk density is calculated from this value.
+
+\end{description}
+\item \textbf{Block: PACKAGEDATA}
+
+\begin{description}
+\item \texttt{cpw}---is the mass-based heat capacity of water. Thus, enter value in units of J/kg/C.
+
+\item \texttt{rhow}---is a user-specified value of the density of water. Value will remain fixed for the entire simulation.  For now, enter the value in SI units: kg/m3
+
+\item \texttt{latheatvap}---is the user-specified value for the latent heat of vaporization.  Currently, it may be specified spatially to facilitate temperature-dependent alterations in its value, though this functionality needs to be re-thought (perhaps its needs something like the VSC package approach).  Typical units are kJ/kg (which is the same as J/g).
+
+\end{description}
+

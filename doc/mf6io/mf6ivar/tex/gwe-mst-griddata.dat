@@ -1,0 +1,10 @@
+BEGIN GRIDDATA
+  POROSITY [LAYERED]
+    <porosity(nodes)> -- READARRAY
+  [DECAY [LAYERED]
+    <decay(nodes)> -- READARRAY]
+  CPS [LAYERED]
+    <cps(nodes)> -- READARRAY
+  RHOS [LAYERED]
+    <rhos(nodes)> -- READARRAY
+END GRIDDATA
