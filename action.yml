@@ -1,0 +1,251 @@
+name: Install Intel Fortran
+description: Install, cache, and configure environment for the Intel Fortran compiler
+inputs:
+  path:
+    description: Install location
+    required: false
+    default: ~/.local/bin/ifort
+  setvars:
+    description: Whether to run scripts to configure oneAPI environment variables
+    required: false
+    default: 'true'
+  cache:
+    description: Whether to cache the installation
+    required: false
+    default: 'true'
+outputs:
+  cache-hit:
+    description: Whether the installation was restored from cache
+    value: ${{ steps.cache-ifort.outputs.cache-hit }}
+runs:
+  using: composite
+  steps:
+    - name: Set install path
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        # normalize install path
+        normalized=$(python3 $GITHUB_ACTION_PATH/scripts/normalize_path.py "${{ inputs.path }}")
+        echo "normalized install dir path: $normalized"
+        echo "INTEL_HPCKIT_INSTALL_PATH=$normalized" >> $GITHUB_ENV
+        mkdir -p "$normalized"
+
+    - name: Set install path (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        # normalize install path
+        $normalized = $(python3 $(Join-Path "$env:GITHUB_ACTION_PATH" "scripts" "normalize_path.py") "${{ inputs.path }}")
+        echo "normalized install dir path: $normalized"
+        
+        # other locations fail on windows
+        $default = "C:\Program Files (x86)\Intel\oneAPI"
+        if (!($normalized -eq $default)) {
+          echo "overriding configured path with default Windows install path: '$default'"
+          $normalized = $default
+        }
+        
+        echo "INTEL_HPCKIT_INSTALL_PATH=$normalized" | Out-File -FilePath "$env:GITHUB_ENV" -Encoding utf8 -Append
+        md -Force "$normalized"  
+
+    - name: Set HPC kit environment variables
+      shell: bash
+      run: |
+        echo "setting HPC kit variables"
+        version="2022.3.0"
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          echo "INTEL_HPCKIT_INSTALLER_URL=https://registrationcenter-download.intel.com/akdlm/irc_nas/18856/l_HPCKit_p_$version.8751_offline.sh" >> $GITHUB_ENV
+          echo "INTEL_HPCKIT_COMPONENTS=intel.oneapi.lin.dpcpp-cpp-compiler-pro:intel.oneapi.lin.ifort-compiler" >> $GITHUB_ENV
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          echo "INTEL_HPCKIT_INSTALLER_URL=https://registrationcenter-download.intel.com/akdlm/irc_nas/18866/m_HPCKit_p_$version.8685_offline.dmg" >> $GITHUB_ENV
+          echo "INTEL_HPCKIT_COMPONENTS=intel.oneapi.mac.cpp-compiler:intel.oneapi.mac.ifort-compiler" >> $GITHUB_ENV
+        else
+          echo "INTEL_HPCKIT_INSTALLER_URL=https://registrationcenter-download.intel.com/akdlm/irc_nas/18857/w_HPCKit_p_$version.9564_offline.exe" >> $GITHUB_ENV
+          echo "INTEL_HPCKIT_COMPONENTS=intel.oneapi.win.cpp-compiler:intel.oneapi.win.ifort-compiler" >> $GITHUB_ENV
+        fi
+ 
+        echo "using HPC kit version $version"
+        echo "INTEL_HPCKIT_VERSION=$version" >> $GITHUB_ENV
+
+    # GNU tar can't handle symlinks on Windows, hide it so default Windows tar is used to restore cache
+    - name: Hide GNU tar
+      if: runner.os == 'windows' && inputs.cache == 'true'
+      shell: bash
+      run: mv "C:\Program Files\Git\usr\bin\tar.exe" "$RUNNER_TEMP\tar.exe"
+
+    - name: Get Date
+      if: inputs.cache == 'true'
+      id: get-date
+      shell: bash
+      run: echo "date=$(/bin/date -u "+%Y%m%d")" >> "$GITHUB_OUTPUT"
+
+    - name: Restore cache
+      if: inputs.cache == 'true'
+      id: cache-ifort
+      uses: martijnhols/actions-cache/restore@v3
+      with:
+        path: ${{ env.INTEL_HPCKIT_INSTALL_PATH }}
+        key: intelfortran-${{ runner.os }}-${{ env.INTEL_HPCKIT_VERSION }}-${{ env.INTEL_HPCKIT_COMPONENTS }}-${{ steps.get-date.outputs.date }}
+
+    # restore GNU tar
+    - name: Restore GNU tar
+      if: runner.os == 'windows' && inputs.cache == 'true'
+      shell: bash
+      run: mv "$RUNNER_TEMP\tar.exe" 'C:\Program Files\Git\usr\bin\tar.exe'
+
+    - name: Install compilers
+      if: runner.os != 'Windows' && steps.cache-ifort.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        echo "downloading and running HPC kit installer"
+        os=$(echo $RUNNER_OS | tr '[:upper:]' '[:lower:]')
+        "${{ github.action_path }}/scripts/install_$os.sh" "${{ env.INTEL_HPCKIT_INSTALL_PATH }}" "${{ env.INTEL_HPCKIT_INSTALLER_URL }}" "${{ env.INTEL_HPCKIT_COMPONENTS }}"
+
+    - name: Install MKL (Windows)
+      if: runner.os == 'Windows' && steps.cache-ifort.outputs.cache-hit != 'true'
+      shell: cmd
+      env:
+        INTEL_MKL_INSTALL_PATH: ${{ env.INTEL_HPCKIT_INSTALL_PATH }}
+        INTEL_MKL_INSTALLER_URL: "https://registrationcenter-download.intel.com/akdlm/IRC_NAS/e0195cbc-2c9b-4489-9542-c1447e70df30/w_onemkl_p_2023.1.0.46356_offline.exe"
+      run: |
+        echo downloading and running MKL installer
+        call "%GITHUB_ACTION_PATH%\scripts\install_windows.bat" "${{ env.INTEL_MKL_INSTALL_PATH }}" "${{ env.INTEL_MKL_INSTALLER_URL }}"
+
+        :: list subdirs of the install directory
+        dir "${{ env.INTEL_MKL_INSTALL_PATH }}"
+
+        :: remove everything except mkl subdirectory
+        rmdir /s /q "${{ env.INTEL_MKL_INSTALL_PATH }}\compiler"
+        rmdir /s /q "${{ env.INTEL_MKL_INSTALL_PATH }}\conda_channel"
+        rmdir /s /q "${{ env.INTEL_MKL_INSTALL_PATH }}\Installer"
+        rmdir /s /q "${{ env.INTEL_MKL_INSTALL_PATH }}\licensing"
+        rmdir /s /q "${{ env.INTEL_MKL_INSTALL_PATH }}\logs"
+        del /q "${{ env.INTEL_MKL_INSTALL_PATH }}\*.bat"
+        del /q "${{ env.INTEL_MKL_INSTALL_PATH }}\*.txt"
+
+    - name: Install compilers (Windows)
+      if: runner.os == 'Windows' && steps.cache-ifort.outputs.cache-hit != 'true'
+      shell: cmd
+      run: |
+        echo downloading and running HPC kit installer
+        call "%GITHUB_ACTION_PATH%\scripts\install_windows.bat" "${{ env.INTEL_HPCKIT_INSTALL_PATH }}" "${{ env.INTEL_HPCKIT_INSTALLER_URL }}" "${{ env.INTEL_HPCKIT_COMPONENTS }}"
+
+    - name: Save cache
+      if: inputs.cache == 'true' && steps.cache-ifort.outputs.cache-hit != 'true'
+      uses: martijnhols/actions-cache/save@v3
+      with:
+        path: ${{ env.INTEL_HPCKIT_INSTALL_PATH }}
+        key: intelfortran-${{ runner.os }}-${{ env.INTEL_HPCKIT_VERSION }}-${{ env.INTEL_HPCKIT_COMPONENTS }}-${{ steps.get-date.outputs.date }}
+
+    - name: Check compiler version
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        latest=$(ls "$INTEL_HPCKIT_INSTALL_PATH/compiler" | tail -n +2 | sort -V | tail -n 1) 
+        echo "INTEL_COMPILER_VERSION=$latest" >> $GITHUB_ENV
+
+    - name: Check compiler version (Windows)
+      if: runner.os == 'Windows'
+      shell: cmd
+      run: |
+        for /f "tokens=* usebackq" %%f in (`dir /b "%INTEL_HPCKIT_INSTALL_PATH%\compiler\" ^| findstr /V latest ^| sort`) do @set "LATEST=%%f"
+        echo INTEL_COMPILER_VERSION=%LATEST%>>"%GITHUB_ENV%"
+
+    - name: Configure system path
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          ostag="linux"
+        
+          # workaround missing libimf.so error
+          # https://stackoverflow.com/a/70700494/6514033
+          sudo mkdir -p /etc/ld.so.conf.d
+          echo "$INTEL_HPCKIT_INSTALL_PATH/compiler/latest/$ostag/compiler/lib/intel64_lin" | sudo tee -a /etc/ld.so.conf.d/intel_libs.conf
+          sudo ldconfig
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          ostag="mac"
+        else
+          ostag="windows"
+        fi
+        echo "os tag: $ostag"
+        
+        bindir="$INTEL_HPCKIT_INSTALL_PATH/compiler/latest/$ostag/bin/intel64"
+        echo "adding ifort compiler bin dir '$bindir' to path"
+        echo "$bindir" >> $GITHUB_PATH
+        echo "INTEL_COMPILER_BIN_PATH=$bindir" >> $GITHUB_ENV
+
+    - name: Configure system path (Windows)
+      if: runner.os == 'Windows'
+      shell: cmd
+      run: |
+        set bindir=%INTEL_HPCKIT_INSTALL_PATH%\compiler\%INTEL_COMPILER_VERSION%\windows\bin\intel64
+        echo adding compiler bin dir '%bindir%' to path
+        echo %bindir%>>"%GITHUB_PATH%"
+        echo INTEL_COMPILER_BIN_PATH=%bindir%>>"%GITHUB_ENV%"
+
+    - name: Set environment variables
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        echo "FC=ifort" >> $GITHUB_ENV
+        echo "CC=icc" >> $GITHUB_ENV
+        echo "ONEAPI_ROOT=$INTEL_HPCKIT_INSTALL_PATH" >> $GITHUB_ENV
+
+    - name: Set environment variables (Windows)
+      if: runner.os == 'Windows'
+      shell: cmd
+      run: |
+        echo FC=ifort>>"%GITHUB_ENV%"
+        echo CC=icl>>"%GITHUB_ENV%"
+        echo ONEAPI_ROOT=%INTEL_HPCKIT_INSTALL_PATH%>>"%GITHUB_ENV%"
+
+    - name: Run setvars scripts
+      if: runner.os != 'Windows' && inputs.setvars == 'true'
+      shell: bash
+      run: |
+        source "$INTEL_HPCKIT_INSTALL_PATH/setvars.sh"
+        env | grep oneapi >> $GITHUB_ENV
+
+    # - name: Setup MSBuild
+    #   if: runner.os == 'Windows'
+    #   uses: microsoft/setup-msbuild@v1.1
+
+    # - name: Find VS versions
+    #   id: find-vcvars
+    #   if: runner.os == 'Windows'
+    #   shell: pwsh
+    #   run: |
+    #     $products = 'Community','Professional','Enterprise','BuildTools' | %{ "Microsoft.VisualStudio.Product.$_" }
+    #     $vswhere = Get-Command 'vswhere'
+    #     $vs = & $vswhere.Path -products $products -latest -format json | ConvertFrom-Json
+    #     $script = Join-Path $vs.installationPath 'BuildTools' 'VC' 'Auxiliary' 'Build' 'vcvars64.bat'
+    #     echo "vcvars_script=$script" >> $GITHUB_OUTPUT
+
+    # - name: Run vcvars script (Windows)
+    #   if: runner.os == 'Windows'
+    #   shell: cmd
+    #   run: |
+    #     call ${{ steps.find-vcvars.outputs.vcvars_script }}
+    #     :: call "%INTEL_HPCKIT_INSTALL_PATH%\setvars-vcvarsall.bat"
+
+    - name: Run setvars script (Windows)
+      if: runner.os == 'Windows' && inputs.setvars == 'true'
+      shell: cmd
+      run: |
+        for /f "tokens=* usebackq" %%f in (`dir /b "%INTEL_HPCKIT_INSTALL_PATH%\compiler\" ^| findstr /V latest ^| sort`) do @set "LATEST=%%f"
+        :: this script fails when install location is not the default
+        call "%INTEL_HPCKIT_INSTALL_PATH%\compiler\%LATEST%\env\vars.bat"
+        set | findstr /c:"oneAPI" >> "%GITHUB_ENV%"
+
+    - name: Set SETVARS_COMPLETED
+      if: inputs.setvars == 'true'
+      shell: bash
+      run: echo "SETVARS_COMPLETED=1" >> $GITHUB_ENV
+
+    # GitHub Actions prepends GNU linker to the PATH before all bash steps, hide it so MSVC linker is found
+    - name: Hide GNU linker (Windows)
+      if: runner.os == 'Windows'
+      shell: bash
+      run: mv "/usr/bin/link" "$RUNNER_TEMP/link"
+
