@@ -575,7 +575,7 @@ jobs:
       #   uses: modflowpy/install-intelfortran-action@v1
 
       - name: Setup Intel Fortran
-        uses: ./
+        uses: ./modflow6
 
       - name: Fix Micromamba path (Windows)
         shell: pwsh
