@@ -8,11 +8,11 @@ inputs:
   setvars:
     description: Whether to run scripts to configure oneAPI environment variables
     required: false
-    default: 'true'
+    default: "true"
   cache:
     description: Whether to cache the installation
     required: false
-    default: 'true'
+    default: "true"
 outputs:
   cache-hit:
     description: Whether the installation was restored from cache
@@ -37,16 +37,16 @@ runs:
         # normalize install path
         $normalized = $(python3 $(Join-Path "$env:GITHUB_ACTION_PATH" "scripts" "normalize_path.py") "${{ inputs.path }}")
         echo "normalized install dir path: $normalized"
-        
+
         # other locations fail on windows
         $default = "C:\Program Files (x86)\Intel\oneAPI"
         if (!($normalized -eq $default)) {
           echo "overriding configured path with default Windows install path: '$default'"
           $normalized = $default
         }
-        
+
         echo "INTEL_HPCKIT_INSTALL_PATH=$normalized" | Out-File -FilePath "$env:GITHUB_ENV" -Encoding utf8 -Append
-        md -Force "$normalized"  
+        md -Force "$normalized"
 
     - name: Set HPC kit environment variables
       shell: bash
@@ -63,7 +63,7 @@ runs:
           echo "INTEL_HPCKIT_INSTALLER_URL=https://registrationcenter-download.intel.com/akdlm/irc_nas/18857/w_HPCKit_p_$version.9564_offline.exe" >> $GITHUB_ENV
           echo "INTEL_HPCKIT_COMPONENTS=intel.oneapi.win.cpp-compiler:intel.oneapi.win.ifort-compiler" >> $GITHUB_ENV
         fi
- 
+
         echo "using HPC kit version $version"
         echo "INTEL_HPCKIT_VERSION=$version" >> $GITHUB_ENV
 
@@ -94,15 +94,44 @@ runs:
       run: mv "$RUNNER_TEMP\tar.exe" 'C:\Program Files\Git\usr\bin\tar.exe'
 
     - name: Install compilers
-      if: runner.os != 'Windows' && steps.cache-ifort.outputs.cache-hit != 'true'
+      if: runner.os != 'Windows' #&& steps.cache-ifort.outputs.cache-hit != 'true'
       shell: bash
       run: |
         echo "downloading and running HPC kit installer"
         os=$(echo $RUNNER_OS | tr '[:upper:]' '[:lower:]')
         "${{ github.action_path }}/scripts/install_$os.sh" "${{ env.INTEL_HPCKIT_INSTALL_PATH }}" "${{ env.INTEL_HPCKIT_INSTALLER_URL }}" "${{ env.INTEL_HPCKIT_COMPONENTS }}"
 
-    - name: Install MKL (Windows)
+    # - name: Install MKL (Windows)
+    #   if: runner.os == 'Windows' && steps.cache-ifort.outputs.cache-hit != 'true'
+    #   shell: cmd
+    #   env:
+    #     INTEL_MKL_INSTALL_PATH: ${{ env.INTEL_HPCKIT_INSTALL_PATH }}
+    #     INTEL_MKL_INSTALLER_URL: "https://registrationcenter-download.intel.com/akdlm/IRC_NAS/e0195cbc-2c9b-4489-9542-c1447e70df30/w_onemkl_p_2023.1.0.46356_offline.exe"
+    #   run: |
+    #     echo downloading and running MKL installer
+    #     call "%GITHUB_ACTION_PATH%\scripts\install_windows.bat" "${{ env.INTEL_MKL_INSTALL_PATH }}" "${{ env.INTEL_MKL_INSTALLER_URL }}"
+
+    #     :: list subdirs of the install directory
+    #     dir "${{ env.INTEL_MKL_INSTALL_PATH }}"
+
+    #     :: remove everything except mkl subdirectory
+    #     rmdir /s /q "${{ env.INTEL_MKL_INSTALL_PATH }}\compiler"
+    #     rmdir /s /q "${{ env.INTEL_MKL_INSTALL_PATH }}\conda_channel"
+    #     rmdir /s /q "${{ env.INTEL_MKL_INSTALL_PATH }}\Installer"
+    #     rmdir /s /q "${{ env.INTEL_MKL_INSTALL_PATH }}\licensing"
+    #     rmdir /s /q "${{ env.INTEL_MKL_INSTALL_PATH }}\logs"
+    #     del /q "${{ env.INTEL_MKL_INSTALL_PATH }}\*.bat"
+    #     del /q "${{ env.INTEL_MKL_INSTALL_PATH }}\*.txt"
+
+    - name: Install compilers (Windows)
       if: runner.os == 'Windows' && steps.cache-ifort.outputs.cache-hit != 'true'
+      shell: cmd
+      run: |
+        echo downloading and running HPC kit installer
+        call "%GITHUB_ACTION_PATH%\scripts\install_windows.bat" "${{ env.INTEL_HPCKIT_INSTALL_PATH }}" "${{ env.INTEL_HPCKIT_INSTALLER_URL }}" "${{ env.INTEL_HPCKIT_COMPONENTS }}"
+
+    - name: Install MKL (Windows)
+      if: runner.os == 'Windows' # && steps.cache-ifort.outputs.cache-hit != 'true'
       shell: cmd
       env:
         INTEL_MKL_INSTALL_PATH: ${{ env.INTEL_HPCKIT_INSTALL_PATH }}
@@ -113,22 +142,6 @@ runs:
 
         :: list subdirs of the install directory
         dir "${{ env.INTEL_MKL_INSTALL_PATH }}"
-
-        :: remove everything except mkl subdirectory
-        rmdir /s /q "${{ env.INTEL_MKL_INSTALL_PATH }}\compiler"
-        rmdir /s /q "${{ env.INTEL_MKL_INSTALL_PATH }}\conda_channel"
-        rmdir /s /q "${{ env.INTEL_MKL_INSTALL_PATH }}\Installer"
-        rmdir /s /q "${{ env.INTEL_MKL_INSTALL_PATH }}\licensing"
-        rmdir /s /q "${{ env.INTEL_MKL_INSTALL_PATH }}\logs"
-        del /q "${{ env.INTEL_MKL_INSTALL_PATH }}\*.bat"
-        del /q "${{ env.INTEL_MKL_INSTALL_PATH }}\*.txt"
-
-    - name: Install compilers (Windows)
-      if: runner.os == 'Windows' && steps.cache-ifort.outputs.cache-hit != 'true'
-      shell: cmd
-      run: |
-        echo downloading and running HPC kit installer
-        call "%GITHUB_ACTION_PATH%\scripts\install_windows.bat" "${{ env.INTEL_HPCKIT_INSTALL_PATH }}" "${{ env.INTEL_HPCKIT_INSTALLER_URL }}" "${{ env.INTEL_HPCKIT_COMPONENTS }}"
 
     - name: Save cache
       if: inputs.cache == 'true' && steps.cache-ifort.outputs.cache-hit != 'true'
@@ -157,7 +170,7 @@ runs:
       run: |
         if [ "$RUNNER_OS" == "Linux" ]; then
           ostag="linux"
-        
+
           # workaround missing libimf.so error
           # https://stackoverflow.com/a/70700494/6514033
           sudo mkdir -p /etc/ld.so.conf.d
@@ -169,7 +182,7 @@ runs:
           ostag="windows"
         fi
         echo "os tag: $ostag"
-        
+
         bindir="$INTEL_HPCKIT_INSTALL_PATH/compiler/latest/$ostag/bin/intel64"
         echo "adding ifort compiler bin dir '$bindir' to path"
         echo "$bindir" >> $GITHUB_PATH
@@ -248,4 +261,3 @@ runs:
       if: runner.os == 'Windows'
       shell: bash
       run: mv "/usr/bin/link" "$RUNNER_TEMP/link"
-
