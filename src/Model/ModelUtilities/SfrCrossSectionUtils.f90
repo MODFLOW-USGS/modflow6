@@ -82,6 +82,41 @@ contains
     return
   end function get_wetted_topwidth
 
+  !> @brief Calculate wetted vertical height
+  !!
+  !! For segments flanked by vertically-oriented neighboring segments,
+  !! return the length of the submerged, vertically-oriented, neighboring face
+  !!
+  !<
+  function get_wet_vert_face(n, npts, heights, d, leftface) result(vwf)
+    ! -- dummy
+    integer(I4B), intent(in) :: n !< index to be evaluated
+    integer(I4B), intent(in) :: npts !< length of heights vector
+    real(DP), dimension(npts), intent(in) :: heights !< cross-section height data
+    real(DP), intent(in) :: d
+    logical, intent(in) :: leftface
+    ! -- local
+    real(DP) :: vwf !< vertically wetted face length
+    !
+    ! -- calculate the vertically-oriented wetted face length
+    if (leftface) then
+      if (heights(n - 1) > d) then
+        vwf = d - heights(n)
+      else if (heights(n - 1) > heights(n)) then
+        vwf = heights(n - 1) - heights(n)
+      end if
+    else
+      if (heights(n + 2) > d) then
+        vwf = d - heights(n + 1)
+      else if (heights(n + 2) > heights(n + 1)) then
+        vwf = heights(n + 2) - heights(n + 1)
+      end if
+    end if
+    !
+    ! -- return
+    return
+  end function get_wet_vert_face
+
   !> @brief Calculate the wetted perimeter for a reach
   !!
   !! Function to calculate the wetted perimeter for a reach using the
@@ -269,6 +304,47 @@ contains
 
   ! -- private functions and subroutines
 
+  !> @brief Determine vertical segments
+  !!
+  !! Subroutine to cycle through each segment (npts - 1) and determine
+  !! whether neighboring segments are vertically-oriented.
+  !!
+  !<
+  subroutine determine_vert_neighbors(npts, stations, heights, leftv, rightv)
+    ! -- dummy
+    integer(I4B), intent(in) :: npts !< number of station-height data for a reach
+    real(DP), dimension(npts), intent(in) :: stations !< cross-section station distances (x-distance)
+    real(DP), dimension(npts), intent(in) :: heights !< cross-section height data
+    logical, dimension(npts - 1), intent(inout) :: leftv
+    logical, dimension(npts - 1), intent(inout) :: rightv
+    ! -- local
+    integer(I4B) :: n
+    !
+    ! -- default neighboring segments to false unless determined otherwise
+    !    o 2 pt x-section has 1 segment (no neighbors to eval)
+    !    o 3+ pt x-section has at the very least one neighbor to eval
+    do n = 1, npts - 1
+      leftv(n) = .false.
+      rightv(n) = .false.
+      ! -- left neighbor
+      if (n > 1) then
+        if (stations(n - 1) == stations(n) .and. heights(n - 1) > heights(n)) then
+          leftv(n) = .true.
+        end if
+      end if
+      ! -- right neighbor
+      if (n < npts - 1) then
+        if (stations(n + 2) == stations(n + 1) .and. &
+            heights(n + 2) > heights(n + 1)) then
+          rightv(n) = .true.
+        end if
+      end if
+    end do
+    !
+    ! -- return
+    return
+  end subroutine determine_vert_neighbors
+
   !> @brief Calculate the wetted perimeters for each line segment
   !!
   !! Subroutine to calculate the wetted perimeter for each line segment
@@ -293,6 +369,10 @@ contains
     real(DP) :: dmin
     real(DP) :: xlen
     real(DP) :: dlen
+    logical, dimension(npts - 1) :: leftv, rightv
+    !
+    ! -- set neighbor status
+    call determine_vert_neighbors(npts, stations, heights, leftv, rightv)
     !
     ! -- iterate over the station-height data
     do n = 1, npts - 1
@@ -310,6 +390,7 @@ contains
       call get_wetted_station(x0, x1, d0, d1, dmax, dmin, d)
       !
       ! -- calculate the wetted perimeter for the segment
+      !    - bottom wetted length
       xlen = x1 - x0
       dlen = DZERO
       if (xlen > DZERO) then
@@ -326,6 +407,22 @@ contains
         end if
       end if
       p(n) = sqrt(xlen**DTWO + dlen**DTWO)
+      !
+      ! -- if neighboring segments are vertical, account for their
+      !    contribution to wetted perimeter
+      !
+      !  left neighbor (if applicable)
+      if (n > 1) then
+        if (leftv(n)) then
+          p(n) = p(n) + get_wet_vert_face(n, npts, heights, d, .true.)
+        end if
+      end if
+      !  right neighbor (if applicable)
+      if (n < npts - 1) then
+        if (rightv(n)) then
+          p(n) = p(n) + get_wet_vert_face(n, npts, heights, d, .false.)
+        end if
+      end if
     end do
     !
     ! -- return
