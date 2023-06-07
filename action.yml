@@ -79,13 +79,13 @@ runs:
       shell: bash
       run: echo "date=$(/bin/date -u "+%Y%m%d")" >> "$GITHUB_OUTPUT"
 
-    - name: Restore cache
-      if: inputs.cache == 'true'
-      id: cache-ifort
-      uses: martijnhols/actions-cache/restore@v3
-      with:
-        path: ${{ env.INTEL_HPCKIT_INSTALL_PATH }}
-        key: intelfortran-${{ runner.os }}-${{ env.INTEL_HPCKIT_VERSION }}-${{ env.INTEL_HPCKIT_COMPONENTS }}-${{ steps.get-date.outputs.date }}
+    # - name: Restore cache
+    #   if: inputs.cache == 'true'
+    #   id: cache-ifort
+    #   uses: martijnhols/actions-cache/restore@v3
+    #   with:
+    #     path: ${{ env.INTEL_HPCKIT_INSTALL_PATH }}
+    #     key: intelfortran-${{ runner.os }}-${{ env.INTEL_HPCKIT_VERSION }}-${{ env.INTEL_HPCKIT_COMPONENTS }}-${{ steps.get-date.outputs.date }}
 
     # restore GNU tar
     - name: Restore GNU tar
@@ -124,14 +124,14 @@ runs:
     #     del /q "${{ env.INTEL_MKL_INSTALL_PATH }}\*.txt"
 
     - name: Install compilers (Windows)
-      if: runner.os == 'Windows' && steps.cache-ifort.outputs.cache-hit != 'true'
+      if: runner.os == 'Windows' #&& steps.cache-ifort.outputs.cache-hit != 'true'
       shell: cmd
       run: |
         echo downloading and running HPC kit installer
         call "%GITHUB_ACTION_PATH%\scripts\install_windows.bat" "${{ env.INTEL_HPCKIT_INSTALL_PATH }}" "${{ env.INTEL_HPCKIT_INSTALLER_URL }}" "${{ env.INTEL_HPCKIT_COMPONENTS }}"
 
     - name: Install MKL (Windows)
-      if: runner.os == 'Windows' # && steps.cache-ifort.outputs.cache-hit != 'true'
+      if: runner.os == 'Windows' #&& steps.cache-ifort.outputs.cache-hit != 'true'
       shell: cmd
       env:
         INTEL_MKL_INSTALL_PATH: ${{ env.INTEL_HPCKIT_INSTALL_PATH }}
@@ -143,12 +143,12 @@ runs:
         :: list subdirs of the install directory
         dir "${{ env.INTEL_MKL_INSTALL_PATH }}"
 
-    - name: Save cache
-      if: inputs.cache == 'true' && steps.cache-ifort.outputs.cache-hit != 'true'
-      uses: martijnhols/actions-cache/save@v3
-      with:
-        path: ${{ env.INTEL_HPCKIT_INSTALL_PATH }}
-        key: intelfortran-${{ runner.os }}-${{ env.INTEL_HPCKIT_VERSION }}-${{ env.INTEL_HPCKIT_COMPONENTS }}-${{ steps.get-date.outputs.date }}
+    # - name: Save cache
+    #   if: inputs.cache == 'true' && steps.cache-ifort.outputs.cache-hit != 'true'
+    #   uses: martijnhols/actions-cache/save@v3
+    #   with:
+    #     path: ${{ env.INTEL_HPCKIT_INSTALL_PATH }}
+    #     key: intelfortran-${{ runner.os }}-${{ env.INTEL_HPCKIT_VERSION }}-${{ env.INTEL_HPCKIT_COMPONENTS }}-${{ steps.get-date.outputs.date }}
 
     - name: Check compiler version
       if: runner.os != 'Windows'
