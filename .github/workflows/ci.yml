@@ -577,6 +577,11 @@ jobs:
       - name: Setup Intel Fortran
         uses: ./modflow6
 
+      - name: Check for MKL
+        run: |
+          ls /cygdrive/c/Progra~2/Intel/oneAPI
+          ls /cygdrive/c/Progra~2/Intel/oneAPI/mkl/latest/lib/intel64
+
       - name: Fix Micromamba path (Windows)
         shell: pwsh
         run: |
