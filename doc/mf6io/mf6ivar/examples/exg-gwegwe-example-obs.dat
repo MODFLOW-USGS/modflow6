@@ -1,0 +1,12 @@
+BEGIN OPTIONS
+  DIGITS 10
+  PRINT_INPUT
+END OPTIONS
+
+# Block defining continuous observations
+BEGIN CONTINUOUS FILEOUT simulation.obs.csv
+# obsname        obstype        id or boundname
+  exg1           flow-ja-face   1
+  left-face      flow-ja-face   bnameleft
+  right-face     flow-ja-face   bnameright
+END CONTINUOUS

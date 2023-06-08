@@ -1,0 +1,55 @@
+Lake Energy Transport (LKE) Package information is read from the file that is specified by ``LKE6'' as the file type.  There can be as many LKE Packages as necessary for a GWE model. Each LKE Package is designed to work with flows from a single corresponding GWF LAK Package. By default \mf uses the LKE package name to determine which LAK Package corresponds to the LKE Package.  Therefore, the package name of the LKE Package (as specified in the GWE name file) must match with the name of the corresponding LAK Package (as specified in the GWF name file).  Alternatively, the name of the flow package can be specified using the FLOW\_PACKAGE\_NAME keyword in the options block.  The GWE LKE Package cannot be used without a corresponding GWF LAK Package.
+
+The LKE Package does not have a dimensions block; instead, dimensions for the LKE Package are set using the dimensions from the corresponding LAK Package.  For example, the LAK Package requires specification of the number of lakes (NLAKES).  LKE sets the number of lakes equal to NLAKES.  Therefore, the PACKAGEDATA block below must have NLAKES entries in it.
+
+\vspace{5mm}
+\subsubsection{Structure of Blocks}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwe-lke-options.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwe-lke-packagedata.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwe-lke-period.dat}
+
+\vspace{5mm}
+\subsubsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/gwe-lke-desc.tex}
+\end{description}
+
+\vspace{5mm}
+\subsubsection{Example Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwe-lke-example.dat}
+
+\vspace{5mm}
+\subsubsection{Available observation types}
+Lake Energy Transport Package observations include lake temperature and all of the terms that contribute to the continuity equation for each lake. Additional LKE Package observations include energy flow rates for individual outlets, lakes, or groups of lakes (\texttt{outlet}). The data required for each LKE Package observation type is defined in table~\ref{table:gwe-lkeobstype}. Negative and positive values for \texttt{lke} observations represent a loss from and gain to the GWE model, respectively. For all other flow terms, negative and positive values represent a loss from and gain from the LKE package, respectively.
+
+\begin{longtable}{p{2cm} p{2.75cm} p{2cm} p{1.25cm} p{7cm}}
+\caption{Available LKE Package observation types} \tabularnewline
+
+\hline
+\hline
+\textbf{Stress Package} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endfirsthead
+
+\captionsetup{textformat=simple}
+\caption*{\textbf{Table \arabic{table}.}{\quad}Available LKE Package observation types.---Continued} \tabularnewline
+
+\hline
+\hline
+\textbf{Stress Package} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endhead
+
+
+\hline
+\endfoot
+
+\input{../Common/gwe-lkeobs.tex}
+\label{table:gwe-lkeobstype}
+\end{longtable}
+
+\vspace{5mm}
+\subsubsection{Example Observation Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwe-lke-example-obs.dat}
+
+

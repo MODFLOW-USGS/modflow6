@@ -1,0 +1,13 @@
+% general APT observations
+MWE & temperature & mawno or boundname & -- & Well temperature. If boundname is specified, boundname must be unique for each well. \\
+%flowjaface not included
+MWE & storage & mawno or boundname & -- & Simulated energy storage flow rate for a well or group of wells. \\
+MWE & constant & mawno or boundname & -- & Simulated energy constant-flow rate for a well or group of wells. \\
+MWE & from-mvr & mawno or boundname & -- & Simulated energy inflow into a well or group of wells from the MVE package. Energy inflow is calculated as the product of provider temperature and the mover flow rate. \\
+MWE & mwe & mawno or boundname & \texttt{iconn} or -- & Energy flow rate for a well or group of wells and its aquifer connection(s). If boundname is not specified for ID, then the simulated well-aquifer flow rate at a specific well connection is observed. In this case, ID2 must be specified and is the connection number \texttt{iconn} for well \texttt{mawno}. \\
+
+% observations specific to the mwe package
+MWE & rate & mawno or boundname & -- & Simulated energy flow rate for a well or group of wells. \\
+MWE & fw-rate & mawno or boundname & -- & Simulated energy flow rate for a flowing well or group of flowing wells. \\
+MWE & rate-to-mvr & well or boundname & -- & Simulated energy flow rate that is sent to the MVE Package for a well or group of wells.\\
+MWE & fw-rate-to-mvr & well or boundname & -- & Simulated energy flow rate that is sent to the MVE Package from a flowing well or group of flowing wells. \\

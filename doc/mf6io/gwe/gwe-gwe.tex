@@ -1,0 +1,45 @@
+Input to the Groundwater Energy Transport (GWE-GWE) Exchange is read from the file that has type ``GWE6-GWE6'' in the Simulation Name File.
+
+The list of exchanges entered into the EXCHANGEDATA block must be identical to the list of exchanges entered for the GWF-GWF input file.  One way to ensure that this information is identical is to put this list into an external file and refer to this same list using the OPEN/CLOSE functionality in both this EXCHANGEDATA input block and the EXCHANGEDATA input block in the GWF-GWF input file.
+
+\vspace{5mm}
+\subsubsection{Structure of Blocks}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/exg-gwegwe-options.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/exg-gwegwe-dimensions.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/exg-gwegwe-exchangedata.dat}
+
+\vspace{5mm}
+\subsubsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/exg-gwegwe-desc.tex}
+\end{description}
+
+\vspace{5mm}
+\subsubsection{Example Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/exg-gwegwe-example.dat}
+
+\vspace{5mm}
+\subsubsection{Available observation types}
+GWE-GWE Exchange observations include the simulated flow for any exchange (\texttt{flow-ja-face}). The data required for each GWE-GWE Exchange observation type is defined in table~\ref{table:gwe-gweobstype}. For \texttt{flow-ja-face} observation types, negative and positive values represent a loss from and gain to the first model specified for this exchange.
+
+\begin{longtable}{p{2cm} p{2.75cm} p{2cm} p{1.25cm} p{7cm}}
+\caption{Available GWE-GWE Exchange observation types} \tabularnewline
+
+\hline
+\hline
+\textbf{Exchange} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endhead
+
+\hline
+\endfoot
+
+\input{../Common/gwe-gweobs.tex}
+\label{table:gwe-gweobstype}
+\end{longtable}
+
+
+\vspace{5mm}
+\subsubsection{Example Observation Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/exg-gwegwe-example-obs.dat}
+

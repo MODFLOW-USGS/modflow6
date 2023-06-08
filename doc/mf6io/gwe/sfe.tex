@@ -1,0 +1,55 @@
+Streamflow Energy Transport (SFE) Package information is read from the file that is specified by ``SFE6'' as the file type.  There can be as many SFE Packages as necessary for a GWE model. Each SFE Package is designed to work with flows from a corresponding GWF SFR Package. By default \mf uses the SFE package name to determine which SFR Package corresponds to the SFE Package.  Therefore, the package name of the SFE Package (as specified in the GWE name file) must match with the name of the corresponding SFR Package (as specified in the GWF name file).  Alternatively, the name of the flow package can be specified using the FLOW\_PACKAGE\_NAME keyword in the options block.  The GWE SFE Package cannot be used without a corresponding GWF SFR Package.
+
+The SFE Package does not have a dimensions block; instead, dimensions for the SFE Package are set using the dimensions from the corresponding SFR Package.  For example, the SFR Package requires specification of the number of reaches (NREACHES).  SFE sets the number of reaches equal to NREACHES.  Therefore, the PACKAGEDATA block below must have NREACHES entries in it.
+
+\vspace{5mm}
+\subsubsection{Structure of Blocks}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwe-sfe-options.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwe-sfe-packagedata.dat}
+\lstinputlisting[style=blockdefinition]{./mf6ivar/tex/gwe-sfe-period.dat}
+
+\vspace{5mm}
+\subsubsection{Explanation of Variables}
+\begin{description}
+\input{./mf6ivar/tex/gwe-sfe-desc.tex}
+\end{description}
+
+\vspace{5mm}
+\subsubsection{Example Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwe-sfe-example.dat}
+
+\vspace{5mm}
+\subsubsection{Available observation types}
+Streamflow Energy Transport Package observations include reach temperature and all of the terms that contribute to the continuity equation for each reach. Additional SFE Package observations include energy flow rates for individual reaches, or groups of reaches. The data required for each SFE Package observation type is defined in table~\ref{table:gwe-sfeobstype}. Negative and positive values for \texttt{sfe} observations represent a loss from and gain to the GWE model, respectively. For all other flow terms, negative and positive values represent a loss from and gain from the SFE package, respectively.
+
+\begin{longtable}{p{2cm} p{2.75cm} p{2cm} p{1.25cm} p{7cm}}
+\caption{Available SFE Package observation types} \tabularnewline
+
+\hline
+\hline
+\textbf{Stress Package} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endfirsthead
+
+\captionsetup{textformat=simple}
+\caption*{\textbf{Table \arabic{table}.}{\quad}Available SFE Package observation types.---Continued} \tabularnewline
+
+\hline
+\hline
+\textbf{Stress Package} & \textbf{Observation type} & \textbf{ID} & \textbf{ID2} & \textbf{Description} \\
+\hline
+\endhead
+
+
+\hline
+\endfoot
+
+\input{../Common/gwe-sfeobs.tex}
+\label{table:gwe-sfeobstype}
+\end{longtable}
+
+\vspace{5mm}
+\subsubsection{Example Observation Input File}
+\lstinputlisting[style=inputfile]{./mf6ivar/examples/gwe-sfe-example-obs.dat}
+
+

@@ -1,0 +1,18 @@
+% general APT observations
+LKE & temperature & lakeno or boundname & -- & Lake temperature. If boundname is specified, boundname must be unique for each lake. \\
+LKE & flow-ja-face & lakeno or boundname & lakeno or -- & Energy flow between two lakes connected by an outlet.  If more than one outlet is used to connect the same two lakes, then the energy flow for only the first outlet can be observed.  If a boundname is specified for ID1, then the result is the total energy flow for all outlets for a lake. If a boundname is specified for ID1 then ID2 is not used.\\
+LKE & storage & lakeno or boundname & -- & Simulated energy storage flow rate for a lake or group of lakes. \\
+LKE & constant & lakeno or boundname & -- & Simulated energy constant-flow rate for a lake or group of lakes. \\
+LKE & from-mvr & lakeno or boundname & -- & Simulated energy inflow into a lake or group of lakes from the MVE package. Energy inflow is calculated as the product of provider temperature and the mover flow rate. \\
+LKE & to-mvr & outletno or boundname & -- & Energy outflow from a lake outlet, a lake, or a group of lakes that is available for the MVR package. If boundname is not specified for ID, then the outflow available for the MVR package from a specific lake outlet is observed. In this case, ID is the outlet number, which must be between 1 and NOUTLETS. \\
+LKE & lke & lakeno or boundname & \texttt{iconn} or -- & Energy flow rate for a lake or group of lakes and its aquifer connection(s). If boundname is not specified for ID, then the simulated lake-aquifer flow rate at a specific lake connection is observed. In this case, ID2 must be specified and is the connection number \texttt{iconn} for lake \texttt{lakeno}. \\
+
+%observations specific to the lake package
+% rainfall evaporation runoff ext-inflow withdrawal outflow
+LKE & rainfall & lakeno or boundname & -- & Rainfall rate applied to a lake or group of lakes multiplied by the rainfall temperature. \\
+LKE & evaporation & lakeno or boundname & -- & Simulated evaporation rate from a lake or group of lakes multiplied by the latent heat of evaporation for determining the energy lost from a lake. \\
+LKE & runoff & lakeno or boundname & -- & Runoff rate applied to a lake or group of lakes multiplied by the runoff temperature. \\
+LKE & ext-inflow & lakeno or boundname & -- & Energy inflow into a lake or group of lakes calculated as the external inflow rate multiplied by the inflow temperature. \\
+LKE & withdrawal & lakeno or boundname & -- & Specified withdrawal rate from a lake or group of lakes multiplied by the simulated lake temperature. \\
+LKE & ext-outflow & lakeno or boundname & -- & External outflow from a lake or a group of lakes, through their outlets, to an external boundary.  If the water mover is active, the reported ext-outflow value plus the rate to mover is equal to the total outlet outflow.
+
