@@ -576,6 +576,8 @@ jobs:
 
       - name: Setup Intel Fortran
         uses: ./modflow6
+        with:
+          cache: false
 
       - name: Fix Micromamba path (Windows)
         shell: pwsh
