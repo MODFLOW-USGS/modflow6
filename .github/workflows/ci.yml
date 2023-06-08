@@ -577,11 +577,6 @@ jobs:
       - name: Setup Intel Fortran
         uses: ./modflow6
 
-      - name: Check for MKL
-        run: |
-          ls /cygdrive/c/Progra~2/Intel/oneAPI
-          ls /cygdrive/c/Progra~2/Intel/oneAPI/mkl/latest/lib/intel64
-
       - name: Fix Micromamba path (Windows)
         shell: pwsh
         run: |
@@ -598,6 +593,11 @@ jobs:
         shell: C:\tools\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'
         run: |
           mv /usr/bin/link.exe /usr/bin/link-cygwin.exe
+
+      - name: Check for MKL
+        run: |
+          ls /cygdrive/c/Progra~2/Intel/oneAPI
+          ls /cygdrive/c/Progra~2/Intel/oneAPI/mkl/latest/lib/intel64
 
       - name: Cache PETSc
         id: cache-petsc
