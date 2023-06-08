@@ -360,7 +360,6 @@ contains
     class(TspCncType) :: this
     type(BudgetType), intent(inout) :: model_budget
     ! -- local
-    integer(I4B) :: n
     real(DP) :: ratin
     real(DP) :: ratout
     real(DP) :: dum
