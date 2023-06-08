@@ -243,7 +243,7 @@ $(OBJDIR)/gwt1sft1.o \
 $(OBJDIR)/gwt1mwt1.o \
 $(OBJDIR)/gwt1lkt1.o \
 $(OBJDIR)/gwt1ist1.o \
-$(OBJDIR)/gwt1dsp1.o \
+$(OBJDIR)/gwt1dsp.o \
 $(OBJDIR)/gwf3api8.o \
 $(OBJDIR)/gwf3wel8.o \
 $(OBJDIR)/gwf3rch8.o \

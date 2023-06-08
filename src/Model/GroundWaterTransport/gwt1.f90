@@ -961,7 +961,7 @@ contains
     !
     ! -- Create packages that are tied directly to model
     call mst_cr(this%mst, this%name, this%inmst, this%iout, this%fmi)
-    call dsp_cr(this%dsp, this%name, mempathdsp, this%indsp, this%iout, & 
+    call dsp_cr(this%dsp, this%name, mempathdsp, this%indsp, this%iout, &
                 this%fmi)
     !
     ! -- Check to make sure that required ftype's have been specified
