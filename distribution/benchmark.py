@@ -219,12 +219,12 @@ def run_model(current_app: PathLike, previous_app: PathLike, model_path: PathLik
     if id == 0:
         success, buff = s, b
     elif id == 1:
-        sucess0, buff0 = s, b
+        success0, buff0 = s, b
     id, (s, b) = results[1].get()
     if id == 0:
         success, buff = s, b
     elif id == 1:
-        sucess0, buff0 = s, b
+        success0, buff0 = s, b
 
     if success:
         elt = get_elapsed_time(buff)
