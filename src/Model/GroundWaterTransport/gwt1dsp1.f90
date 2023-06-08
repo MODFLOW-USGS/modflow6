@@ -4,7 +4,7 @@ module GwtDspModule
   use ConstantsModule, only: DONE, DZERO, DHALF, DPI
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
-  use GwtFmiModule, only: GwtFmiType
+  use TspFmiModule, only: TspFmiType
   use Xt3dModule, only: Xt3dType, xt3d_cr
   use GwtDspOptionsModule, only: GwtDspOptionsType
   use MatrixBaseModule
@@ -17,7 +17,7 @@ module GwtDspModule
   type, extends(NumericalPackageType) :: GwtDspType
 
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() ! pointer to GWT model ibound
-    type(GwtFmiType), pointer :: fmi => null() ! pointer to GWT fmi object
+    type(TspFmiType), pointer :: fmi => null() ! pointer to GWT fmi object
     real(DP), dimension(:), pointer, contiguous :: thetam => null() ! pointer to GWT storage porosity (voids per aquifer volume)
     real(DP), dimension(:), pointer, contiguous :: diffc => null() ! molecular diffusion coefficient for each cell
     real(DP), dimension(:), pointer, contiguous :: alh => null() ! longitudinal horizontal dispersivity
@@ -72,13 +72,9 @@ module GwtDspModule
 
 contains
 
+  !> @brief Create a new DSP object
+  !<
   subroutine dsp_cr(dspobj, name_model, input_mempath, inunit, iout, fmi)
-! ******************************************************************************
-! dsp_cr -- Create a new DSP object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use KindModule, only: LGP
     use MemoryManagerExtModule, only: mem_set_value
@@ -88,7 +84,7 @@ contains
     character(len=*), intent(in) :: input_mempath
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
-    type(GwtFmiType), intent(in), target :: fmi
+    type(TspFmiType), intent(in), target :: fmi
     ! -- locals
     logical(LGP) :: found_fname
     ! -- formats
@@ -128,13 +124,11 @@ contains
     return
   end subroutine dsp_cr
 
+  !> @brief Define MST object
+  !!
+  !! Define the MST package
+  !<
   subroutine dsp_df(this, dis, dspOptions)
-! ******************************************************************************
-! dsp_df -- Define
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwtDspType) :: this
@@ -179,13 +173,11 @@ contains
     return
   end subroutine dsp_df
 
+  !> @brief Add connections to DSP
+  !!
+  !! Add connections for extended neighbors to the sparse matrix
+  !<
   subroutine dsp_ac(this, moffset, sparse)
-! ******************************************************************************
-! dsp_ac -- Add connections for extended neighbors to the sparse matrix
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SparseModule, only: sparsematrix
     use MemoryManagerModule, only: mem_allocate
@@ -203,13 +195,11 @@ contains
     return
   end subroutine dsp_ac
 
+  !> @brief Map DSP connections
+  !!
+  !! Map connections and construct iax, jax, and idxglox
+  !<
   subroutine dsp_mc(this, moffset, matrix_sln)
-! ******************************************************************************
-! dsp_mc -- Map connections and construct iax, jax, and idxglox
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -226,13 +216,11 @@ contains
     return
   end subroutine dsp_mc
 
+  !> @brief Allocate and read method for package
+  !!
+  !!  Method to allocate and read static data for the package.
+  !<
   subroutine dsp_ar(this, ibound, thetam)
-! ******************************************************************************
-! dsp_ar -- Allocate and Read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwtDspType) :: this
@@ -253,13 +241,9 @@ contains
     return
   end subroutine dsp_ar
 
+  !> @brief Advance method for the package
+  !<
   subroutine dsp_ad(this)
-! ******************************************************************************
-! dsp_ad -- Advance
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: kstp, kper
     ! -- dummy
@@ -295,13 +279,11 @@ contains
     return
   end subroutine dsp_ad
 
+  !> @brief  Fill coefficient method for package
+  !!
+  !!  Method to calculate and fill coefficients for the package.
+  !<
   subroutine dsp_fc(this, kiter, nodes, nja, matrix_sln, idxglo, rhs, cnew)
-! ******************************************************************************
-! dsp_fc -- Calculate coefficients and fill amat and rhs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwtDspType) :: this
@@ -348,13 +330,11 @@ contains
     return
   end subroutine dsp_fc
 
+  !> @ brief Calculate flows for package
+  !!
+  !!  Method to calculate dispersion contribution to flowja
+  !<
   subroutine dsp_cq(this, cnew, flowja)
-! ******************************************************************************
-! dsp_cq -- Calculate dispersion contribution to flowja
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwtDspType) :: this
@@ -385,13 +365,11 @@ contains
     return
   end subroutine dsp_cq
 
+  !> @ brief Allocate scalar variables for package
+  !!
+  !!  Method to allocate scalar variables for the package.
+  !<
   subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     use ConstantsModule, only: DZERO
@@ -441,13 +419,11 @@ contains
     return
   end subroutine allocate_scalars
 
+  !> @ brief Allocate arrays for package
+  !!
+  !!  Method to allocate arrays for the package.
+  !<
   subroutine allocate_arrays(this, nodes)
-! ******************************************************************************
-! allocate_arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     use ConstantsModule, only: DZERO
@@ -483,13 +459,11 @@ contains
     return
   end subroutine allocate_arrays
 
+  !> @ brief Deallocate memory
+  !!
+  !!  Method to deallocate memory for the package.
+  !<
   subroutine dsp_da(this)
-! ******************************************************************************
-! dsp_da
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     use MemoryManagerExtModule, only: memorylist_remove
@@ -561,15 +535,13 @@ contains
     write (this%iout, '(4x,a,i0)') 'XT3D formulation [0=INACTIVE, 1=ACTIVE, &
                                    &3=ACTIVE RHS] set to: ', this%ixt3d
     write (this%iout, '(1x,a,/)') 'End Setting DSP Options'
+    ! -- Return
+    return
   end subroutine log_options
 
+  !> @brief Update simulation mempath options
+  !<
   subroutine source_options(this)
-! ******************************************************************************
-! source_options -- update simulation mempath options
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     !use KindModule, only: LGP
     use MemoryManagerExtModule, only: mem_set_value
@@ -636,13 +608,9 @@ contains
 
   end subroutine log_griddata
 
+  !> @brief Update DSP simulation data from input mempath
+  !<
   subroutine source_griddata(this)
-! ******************************************************************************
-! source_griddata -- update dsp simulation data from input mempath
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: count_errors, store_error
     use MemoryManagerModule, only: mem_reallocate, mem_reassignptr
@@ -725,13 +693,9 @@ contains
     return
   end subroutine source_griddata
 
+  !> @brief Calculate dispersion coefficients
+  !<
   subroutine calcdispellipse(this)
-! ******************************************************************************
-! calcdispellipse -- Calculate dispersion coefficients
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwtDspType) :: this
@@ -844,13 +808,9 @@ contains
     return
   end subroutine calcdispellipse
 
+  !> @brief Calculate dispersion coefficients
+  !<
   subroutine calcdispcoef(this)
-! ******************************************************************************
-! calcdispcoef -- Calculate dispersion coefficients
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use GwfNpfModule, only: hyeff_calc
     ! -- dummy
