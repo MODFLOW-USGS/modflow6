@@ -18,7 +18,7 @@ module GwtDspModule
 
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() ! pointer to GWT model ibound
     type(GwtFmiType), pointer :: fmi => null() ! pointer to GWT fmi object
-    real(DP), dimension(:), pointer, contiguous :: porosity => null() ! pointer to GWT storage porosity
+    real(DP), dimension(:), pointer, contiguous :: thetam => null() ! pointer to GWT storage porosity (voids per aquifer volume)
     real(DP), dimension(:), pointer, contiguous :: diffc => null() ! molecular diffusion coefficient for each cell
     real(DP), dimension(:), pointer, contiguous :: alh => null() ! longitudinal horizontal dispersivity
     real(DP), dimension(:), pointer, contiguous :: alv => null() ! longitudinal vertical dispersivity
@@ -226,7 +226,7 @@ contains
     return
   end subroutine dsp_mc
 
-  subroutine dsp_ar(this, ibound, porosity)
+  subroutine dsp_ar(this, ibound, thetam)
 ! ******************************************************************************
 ! dsp_ar -- Allocate and Read
 ! ******************************************************************************
@@ -237,7 +237,7 @@ contains
     ! -- dummy
     class(GwtDspType) :: this
     integer(I4B), dimension(:), pointer, contiguous :: ibound
-    real(DP), dimension(:), pointer, contiguous :: porosity
+    real(DP), dimension(:), pointer, contiguous :: thetam
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtdsp = &
@@ -247,7 +247,7 @@ contains
     !
     ! -- dsp pointers to arguments that were passed in
     this%ibound => ibound
-    this%porosity => porosity
+    this%thetam => thetam
     !
     ! -- Return
     return
@@ -543,6 +543,9 @@ contains
     ! -- deallocate variables in NumericalPackageType
     call this%NumericalPackageType%da()
     !
+    ! -- nullify pointers
+    this%thetam => null()
+    !
     ! -- Return
     return
   end subroutine dsp_da
@@ -780,7 +783,9 @@ contains
       end if
       dstar = DZERO
       if (this%idiffc > 0) then
-        dstar = this%diffc(n) * this%porosity(n)
+        ! -- Multiply diffusion coefficient by mobile porosity, defined
+        !    as volume of voids in the mobile domain per aquifer volume
+        dstar = this%diffc(n) * this%thetam(n)
       end if
       !
       ! -- Calculate the longitudal and transverse dispersivities

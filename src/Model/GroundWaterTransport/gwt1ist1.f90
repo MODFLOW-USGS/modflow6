@@ -62,8 +62,9 @@ module GwtIstModule
     real(DP), dimension(:), pointer, contiguous :: cimnew => null() !< immobile concentration at end of current time step
     real(DP), dimension(:), pointer, contiguous :: cimold => null() !< immobile concentration at end of last time step
     real(DP), dimension(:), pointer, contiguous :: zetaim => null() !< mass transfer rate to immobile domain
-    real(DP), dimension(:), pointer, contiguous :: thetaim => null() !< porosity of the immobile domain
-    real(DP), dimension(:), pointer, contiguous :: bulk_density => null() !< bulk density
+    real(DP), dimension(:), pointer, contiguous :: porosity => null() !< immobile domain porosity defined as volume of immobile voids per volume of immobile domain
+    real(DP), dimension(:), pointer, contiguous :: volfrac => null() !< volume fraction of the immobile domain defined as volume of immobile domain per aquifer volume
+    real(DP), dimension(:), pointer, contiguous :: bulk_density => null() !< bulk density of immobile domain defined as mass of solids in immobile domain per volume of immobile domain
     real(DP), dimension(:), pointer, contiguous :: distcoef => null() !< distribution coefficient
     real(DP), dimension(:), pointer, contiguous :: decay => null() !< first or zero order rate constant for liquid
     real(DP), dimension(:), pointer, contiguous :: decaylast => null() !< decay rate used for last iteration (needed for zero order decay)
@@ -90,6 +91,7 @@ module GwtIstModule
     procedure :: allocate_scalars
     procedure :: read_dimensions => ist_read_dimensions
     procedure :: read_options
+    procedure :: get_thetaim
     procedure, private :: ist_allocate_arrays
     procedure, private :: read_data
 
@@ -160,16 +162,6 @@ contains
     class(GwtIstType), intent(inout) :: this !< GwtIstType object
     ! -- local
     integer(I4B) :: n
-    ! -- formats
-    character(len=*), parameter :: fmtist = &
-      "(1x,/1x,'IST -- IMMOBILE DOMAIN STORAGE AND TRANSFER PACKAGE, ', &
-      &'VERSION 1, 12/24/2018 INPUT READ FROM UNIT ', i0, //)"
-    !
-    ! --print a message identifying the immobile domain package.
-    write (this%iout, fmtist) this%inunit
-    !
-    ! -- Read immobile domain options
-    call this%read_options()
     !
     ! -- Allocate arrays
     call this%ist_allocate_arrays()
@@ -187,6 +179,9 @@ contains
     do n = 1, this%dis%nodes
       this%cimnew(n) = this%cim(n)
     end do
+    !
+    ! -- add volfrac to the volfracim accumulator in mst package
+    call this%mst%addto_volfracim(this%volfrac)
     !
     ! -- setup the immobile domain budget
     call budget_cr(this%budget, this%memoryPath)
@@ -287,6 +282,7 @@ contains
     real(DP) :: thetaim
     real(DP) :: zetaim
     real(DP) :: kd
+    real(DP) :: volfracim
     real(DP) :: rhobim
     real(DP) :: lambda1im
     real(DP) :: lambda2im
@@ -312,7 +308,7 @@ contains
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
       swtpdt = this%fmi%gwfsat(n)
       swt = this%fmi%gwfsatold(n, delt)
-      thetaim = this%thetaim(n)
+      thetaim = this%get_thetaim(n)
       idiag = ia(n)
       !
       ! -- set exchange coefficient
@@ -320,6 +316,7 @@ contains
       !
       ! -- Add dual domain mass transfer contributions to rhs and hcof
       kd = DZERO
+      volfracim = DZERO
       rhobim = DZERO
       lambda1im = DZERO
       lambda2im = DZERO
@@ -338,6 +335,7 @@ contains
       ! -- setup sorption variables
       if (this%isrb > 0) then
         kd = this%distcoef(n)
+        volfracim = this%volfrac(n)
         rhobim = this%bulk_density(n)
         if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
         if (this%idcy == 2) then
@@ -353,7 +351,7 @@ contains
       !
       ! -- calculate the terms and then get the hcof and rhs contributions
       call get_ddterm(thetaim, vcell, delt, swtpdt, &
-                      rhobim, kd, lambda1im, lambda2im, &
+                      volfracim, rhobim, kd, lambda1im, lambda2im, &
                       gamma1im, gamma2im, zetaim, ddterm, f)
       cimold = this%cimold(n)
       call get_hcofrhs(ddterm, f, cimold, hhcof, rrhs)
@@ -392,6 +390,7 @@ contains
     real(DP) :: thetaim
     real(DP) :: zetaim
     real(DP) :: kd
+    real(DP) :: volfracim
     real(DP) :: rhobim
     real(DP) :: lambda1im
     real(DP) :: lambda2im
@@ -420,7 +419,7 @@ contains
         vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
         swtpdt = this%fmi%gwfsat(n)
         swt = this%fmi%gwfsatold(n, delt)
-        thetaim = this%thetaim(n)
+        thetaim = this%get_thetaim(n)
         !
         ! -- set exchange coefficient
         zetaim = this%zetaim(n)
@@ -430,6 +429,7 @@ contains
         hhcof = DZERO
         rrhs = DZERO
         kd = DZERO
+        volfracim = DZERO
         rhobim = DZERO
         lambda1im = DZERO
         lambda2im = DZERO
@@ -442,6 +442,7 @@ contains
         end if
         if (this%isrb > 0) then
           kd = this%distcoef(n)
+          volfracim = this%volfrac(n)
           rhobim = this%bulk_density(n)
           if (this%idcy == 1) lambda2im = this%decay_sorbed(n)
           if (this%idcy == 2) then
@@ -456,7 +457,7 @@ contains
         !
         ! -- calculate the terms and then get the hcof and rhs contributions
         call get_ddterm(thetaim, vcell, delt, swtpdt, &
-                        rhobim, kd, lambda1im, lambda2im, &
+                        volfracim, rhobim, kd, lambda1im, lambda2im, &
                         gamma1im, gamma2im, zetaim, ddterm, f)
         cimold = this%cimold(n)
         call get_hcofrhs(ddterm, f, cimold, hhcof, rrhs)
@@ -665,7 +666,8 @@ contains
       call mem_deallocate(this%cimnew)
       call mem_deallocate(this%cimold)
       call mem_deallocate(this%zetaim)
-      call mem_deallocate(this%thetaim)
+      call mem_deallocate(this%porosity)
+      call mem_deallocate(this%volfrac)
       call mem_deallocate(this%bulk_density)
       call mem_deallocate(this%distcoef)
       call mem_deallocate(this%decay)
@@ -754,8 +756,9 @@ contains
     call mem_allocate(this%cim, this%dis%nodes, 'CIM', this%memoryPath)
     call mem_allocate(this%cimnew, this%dis%nodes, 'CIMNEW', this%memoryPath)
     call mem_allocate(this%cimold, this%dis%nodes, 'CIMOLD', this%memoryPath)
+    call mem_allocate(this%porosity, this%dis%nodes, 'POROSITY', this%memoryPath)
     call mem_allocate(this%zetaim, this%dis%nodes, 'ZETAIM', this%memoryPath)
-    call mem_allocate(this%thetaim, this%dis%nodes, 'THETAIM', this%memoryPath)
+    call mem_allocate(this%volfrac, this%dis%nodes, 'VOLFRAC', this%memoryPath)
     if (this%isrb == 0) then
       call mem_allocate(this%bulk_density, 1, 'BULK_DENSITY', this%memoryPath)
       call mem_allocate(this%distcoef, 1, 'DISTCOEF', this%memoryPath)
@@ -787,8 +790,9 @@ contains
       this%cim(n) = DZERO
       this%cimnew(n) = DZERO
       this%cimold(n) = DZERO
+      this%porosity(n) = DZERO
       this%zetaim(n) = DZERO
-      this%thetaim(n) = DZERO
+      this%volfrac(n) = DZERO
     end do
     do n = 1, size(this%decay)
       this%decay(n) = DZERO
@@ -941,8 +945,8 @@ contains
     character(len=:), allocatable :: line
     integer(I4B) :: istart, istop, lloc, ierr
     logical :: isfound, endOfBlock
-    logical, dimension(7) :: lname
-    character(len=24), dimension(7) :: aname
+    logical, dimension(8) :: lname
+    character(len=24), dimension(8) :: aname
     ! -- formats
     ! -- data
     data aname(1)/'            BULK DENSITY'/
@@ -952,6 +956,7 @@ contains
     data aname(5)/'   INITIAL IMMOBILE CONC'/
     data aname(6)/'  FIRST ORDER TRANS RATE'/
     data aname(7)/'IMMOBILE DOMAIN POROSITY'/
+    data aname(8)/'IMMOBILE VOLUME FRACTION'/
     !
     ! -- initialize
     isfound = .false.
@@ -1009,11 +1014,23 @@ contains
                                         this%parser%iuactive, this%zetaim, &
                                         aname(6))
           lname(6) = .true.
-        case ('THETAIM')
+        case ('POROSITY')
           call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
-                                        this%parser%iuactive, this%thetaim, &
+                                        this%parser%iuactive, this%porosity, &
                                         aname(7))
           lname(7) = .true.
+        case ('VOLFRAC')
+          call this%dis%read_grid_array(line, lloc, istart, istop, this%iout, &
+                                        this%parser%iuactive, this%volfrac, &
+                                        aname(8))
+          lname(8) = .true.
+        case ('THETAIM')
+          write (errmsg, '(a)') &
+            'THETAIM is no longer supported. See Chapter 9 in &
+            &mf6suptechinfo.pdf for revised parameterization of mobile and &
+            &immobile domain simulations.'
+          call store_error(errmsg)
+          call this%parser%StoreErrorUnit()
         case default
           write (errmsg, '(4x,a,a)') 'Unknown GRIDDATA tag: ', trim(keyword)
           call store_error(errmsg)
@@ -1030,35 +1047,35 @@ contains
     ! -- Check for required sorption variables
     if (this%isrb > 0) then
       if (.not. lname(1)) then
-        write (errmsg, '(1x,a)') 'ERROR.  SORPTION IS ACTIVE BUT BULK_DENSITY &
-          &NOT SPECIFIED.  BULK_DENSITY MUST BE SPECIFIED IN GRIDDATA BLOCK.'
+        write (errmsg, '(1x,a)') 'Sorption is active but BULK_DENSITY &
+          &not specified.  BULK_DENSITY must be specified in griddata block.'
         call store_error(errmsg)
       end if
       if (.not. lname(2)) then
-        write (errmsg, '(1x,a)') 'ERROR.  SORPTION IS ACTIVE BUT DISTRIBUTION &
-          &COEFFICIENT NOT SPECIFIED.  DISTCOEF MUST BE SPECIFIED IN &
-          &GRIDDATA BLOCK.'
+        write (errmsg, '(1x,a)') 'Sorption is active but distribution &
+          &coefficient not specified.  DISTCOEF must be specified in &
+          &GRIDDATA block.'
         call store_error(errmsg)
       end if
     else
       if (lname(1)) then
-        write (this%iout, '(1x,a)') 'WARNING.  SORPTION IS NOT ACTIVE BUT &
-          &BULK_DENSITY WAS SPECIFIED.  BULK_DENSITY WILL HAVE NO AFFECT ON &
-          &SIMULATION RESULTS.'
+        write (this%iout, '(1x,a)') 'Warning.  Sorption is not active but &
+          &BULK_DENSITY was specified.  BULK_DENSITY will have no affect on &
+          &simulation results.'
       end if
       if (lname(2)) then
-        write (this%iout, '(1x,a)') 'WARNING.  SORPTION IS NOT ACTIVE BUT &
-          &DISTRIBUTION COEFFICIENT WAS SPECIFIED.  DISTCOEF WILL HAVE &
-          &NO AFFECT ON SIMULATION RESULTS.'
+        write (this%iout, '(1x,a)') 'Warning.  Sorption is not active but &
+          &distribution coefficient was specified.  DISTCOEF will have &
+          &no affect on simulation results.'
       end if
     end if
     !
     ! -- Check for required decay/production rate coefficients
     if (this%idcy > 0) then
       if (.not. lname(3)) then
-        write (errmsg, '(1x,a)') 'ERROR.  FIRST OR ZERO ORDER DECAY IS &
-          &ACTIVE BUT THE FIRST RATE COEFFICIENT IS NOT SPECIFIED.  &
-          &DECAY MUST BE SPECIFIED IN GRIDDATA BLOCK.'
+        write (errmsg, '(1x,a)') 'First- or zero-order decay is &
+          &active but the first rate coefficient was not specified.  &
+          &Decay must be specified in GRIDDATA block.'
         call store_error(errmsg)
       end if
       if (.not. lname(4)) then
@@ -1074,35 +1091,43 @@ contains
       end if
     else
       if (lname(3)) then
-        write (this%iout, '(1x,a)') 'WARNING.  FIRST OR ZERO ORER DECAY &
-          &IS NOT ACTIVE BUT DECAY WAS SPECIFIED.  DECAY WILL &
-          &HAVE NO AFFECT ON SIMULATION RESULTS.'
+        write (this%iout, '(1x,a)') 'Warning.  First- or zero-orer decay &
+          &is not active but DECAY was specified.  DECAY will &
+          &have no affect on simulation results.'
       end if
       if (lname(4)) then
-        write (this%iout, '(1x,a)') 'WARNING.  FIRST OR ZERO ORER DECAY &
-          &IS NOT ACTIVE BUT DECAY_SORBED MUST  WAS SPECIFIED.  &
-          &DECAY_SORBED MUST  WILL HAVE NO AFFECT ON SIMULATION &
-          &RESULTS.'
+        write (this%iout, '(1x,a)') 'Warning.  First- or zero-orer decay &
+          &is not active but DECAY_SORBED was specified.  &
+          &DECAY_SORBED will have no affect on simulation &
+          &results.'
       end if
     end if
     !
     ! -- Check for required dual domain arrays or warn if they are specified
     !    but won't be used.
     if (.not. lname(5)) then
-      write (this%iout, '(1x,a)') 'WARNING.  DUAL DOMAIN IS ACTIVE BUT &
-        &INITIAL IMMOBILE DOMAIN CONCENTRATION WAS NOT SPECIFIED.  &
-        &SETTING CIM TO ZERO.'
+      write (this%iout, '(1x,a)') 'Warning.  Dual domain is active but &
+        &initial immobile domain concentration was not specified.  &
+        &Setting CIM to zero.'
     end if
     if (.not. lname(6)) then
-      write (errmsg, '(1x,a)') 'DUAL DOMAIN IS ACTIVE BUT DUAL &
-        &DOMAIN MASS TRANSFER RATE (ZETAIM) WAS NOT SPECIFIED.  ZETAIM &
-        &MUST BE SPECIFIED IN GRIDDATA BLOCK.'
+      write (errmsg, '(1x,a)') 'Dual domain is active but dual &
+        &domain mass transfer rate (ZETAIM) was not specified.  ZETAIM &
+        &must be specified in GRIDDATA block.'
       call store_error(errmsg)
     end if
     if (.not. lname(7)) then
-      write (errmsg, '(1x,a)') 'DUAL DOMAIN IS ACTIVE BUT &
-        &IMMOBILE DOMAIN POROSITY (THETAIM) WAS NOT SPECIFIED.  THETAIM &
-        &MUST BE SPECIFIED IN GRIDDATA BLOCK.'
+      write (errmsg, '(1x,a)') 'Dual domain is active but &
+        &immobile domain POROSITY was not specified.  POROSITY &
+        &must be specified in GRIDDATA block.'
+      call store_error(errmsg)
+    end if
+    if (.not. lname(8)) then
+      write (errmsg, '(1x,a)') 'Dual domain is active but &
+        &immobile domain VOLFRAC was not specified.  VOLFRAC &
+        &must be specified in GRIDDATA block. This is a new &
+        &requirement for MODFLOW versions later than version &
+        &6.4.1.'
       call store_error(errmsg)
     end if
     !
@@ -1115,6 +1140,25 @@ contains
     return
   end subroutine read_data
 
+  !> @ brief Return thetaim
+  !!
+  !!  Calculate and return thetaim, volume of immobile voids per aquifer volume
+  !!
+  !<
+  function get_thetaim(this, node) result(thetaim)
+    ! -- modules
+    ! -- dummy
+    class(GwtIstType) :: this !< GwtIstType object
+    integer(I4B), intent(in) :: node !< node number
+    ! -- return
+    real(DP) :: thetaim
+    !
+    thetaim = this%volfrac(node) * this%porosity(node)
+    !
+    ! -- Return
+    return
+  end function get_thetaim
+
   !> @ brief Calculate immobile domain equation terms
   !!
   !!  This subroutine calculates the immobile domain (or dual domain) terms.
@@ -1124,13 +1168,14 @@ contains
   !!
   !<
   subroutine get_ddterm(thetaim, vcell, delt, swtpdt, &
-                        rhobim, kd, lambda1im, lambda2im, &
+                        volfracim, rhobim, kd, lambda1im, lambda2im, &
                         gamma1im, gamma2im, zetaim, ddterm, f)
     ! -- dummy
     real(DP), intent(in) :: thetaim !< immobile domain porosity
     real(DP), intent(in) :: vcell !< volume of cell
     real(DP), intent(in) :: delt !< length of time step
     real(DP), intent(in) :: swtpdt !< cell saturation at end of time step
+    real(DP), intent(in) :: volfracim !< volume fraction of immobile domain
     real(DP), intent(in) :: rhobim !< bulk density for the immobile domain (fim * rhob)
     real(DP), intent(in) :: kd !< distribution coefficient for linear isotherm
     real(DP), intent(in) :: lambda1im !< first-order decay rate in aqueous phase
@@ -1147,15 +1192,17 @@ contains
     tled = DONE / delt
     !
     ! -- Calculate terms.  These terms correspond to the concentration
-    !    coefficients in equation 7-4 of the GWT model report
+    !    coefficients in equation 7-4 of the GWT model report.  However,
+    !    an updated equation is presented as 9-9 in the supplemental technical
+    !    information guide (mf6suptechinfo.pdf)
     ddterm(1) = thetaim * vcell * tled
     ddterm(2) = thetaim * vcell * tled
-    ddterm(3) = rhobim * vcell * kd * tled
-    ddterm(4) = rhobim * vcell * kd * tled
+    ddterm(3) = volfracim * rhobim * vcell * kd * tled
+    ddterm(4) = volfracim * rhobim * vcell * kd * tled
     ddterm(5) = thetaim * lambda1im * vcell
-    ddterm(6) = lambda2im * rhobim * kd * vcell
+    ddterm(6) = lambda2im * volfracim * rhobim * kd * vcell
     ddterm(7) = thetaim * gamma1im * vcell
-    ddterm(8) = gamma2im * rhobim * vcell
+    ddterm(8) = gamma2im * volfracim * rhobim * vcell
     ddterm(9) = vcell * swtpdt * zetaim
     !
     ! -- calculate denominator term, f
