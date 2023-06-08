@@ -179,6 +179,7 @@ modflow_sources = files(
     'Utilities' / 'Idm' / 'mf6blockfile' / 'StructArray.f90',
     'Utilities' / 'Idm' / 'mf6blockfile' / 'StructVector.f90',
     'Utilities' / 'Idm' / 'selector' / 'IdmDfnSelector.f90',
+    'Utilities' / 'Idm' / 'selector' / 'IdmGweDfnSelector.f90',
     'Utilities' / 'Idm' / 'selector' / 'IdmGwfDfnSelector.f90',
     'Utilities' / 'Idm' / 'selector' / 'IdmGwtDfnSelector.f90',
     'Utilities' / 'Idm' / 'selector' / 'IdmSimDfnSelector.f90',
