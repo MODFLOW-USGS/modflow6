@@ -223,9 +223,9 @@ contains
     call this%cfg_dv('GWFFLOWJA', 'FMI', SYNC_CON, (/STG_BFR_EXG_AD/))
     call this%cfg_dv('GWFFLOWJA', 'FMI', SYNC_EXG, (/STG_BFR_EXG_AD/), &
                      exg_var_name='GWFSIMVALS')
-    ! fill porosity from mst packages, needed for dsp
+    ! fill thetam from mst packages, needed for dsp
     if (this%gwtModel%indsp > 0 .and. this%gwtModel%inmst > 0) then
-      call this%cfg_dv('POROSITY', 'MST', SYNC_NDS, (/STG_AFT_CON_AR/))
+      call this%cfg_dv('THETAM', 'MST', SYNC_NDS, (/STG_AFT_CON_AR/))
     end if
 
   end subroutine cfg_dist_vars

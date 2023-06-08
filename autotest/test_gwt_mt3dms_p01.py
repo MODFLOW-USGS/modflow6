@@ -374,12 +374,23 @@ def p01mf6(
     else:
         decay_rate_sorbed = decay_rate
 
+    porosity_mobile = prsity
+    porosity_immobile = None
+    if prsity2 is not None:
+        # immobile domain is active
+        volfrac_immobile = 0.5
+        volfrac_mobile = 1.0 - volfrac_immobile
+        theta_immobile = prsity2
+        porosity_immobile = theta_immobile / volfrac_immobile
+        porosity_mobile = prsity / volfrac_mobile
+        
+
     first_order_decay = True
     if zero_order_decay:
         first_order_decay = False
     mst = flopy.mf6.ModflowGwtmst(
         gwt,
-        porosity=prsity,
+        porosity=porosity_mobile,
         first_order_decay=first_order_decay,
         zero_order_decay=zero_order_decay,
         decay=decay_rate,
@@ -413,7 +424,8 @@ def p01mf6(
             decay=decay_rate,
             decay_sorbed=decay_rate_sorbed,
             zetaim=zeta,
-            thetaim=prsity2,
+            porosity=porosity_immobile,
+            volfrac=volfrac_immobile,
             filename=f"{gwtname}.ist",
             pname="IST-1",
         )

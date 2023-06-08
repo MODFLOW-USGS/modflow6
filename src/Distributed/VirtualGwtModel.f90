@@ -26,7 +26,7 @@ module VirtualGwtModelModule
     type(VirtualDbl2dType), pointer :: fmi_gwfspdis => null()
     type(VirtualDbl1dType), pointer :: fmi_gwfflowja => null()
     ! MST
-    type(VirtualDbl1dType), pointer :: mst_porosity => null()
+    type(VirtualDbl1dType), pointer :: mst_thetam => null()
     ! GWT Model fields
     type(VirtualIntType), pointer :: indsp => null()
     type(VirtualIntType), pointer :: inmst => null()
@@ -90,7 +90,7 @@ contains
     call this%set(this%fmi_gwfsat%base(), 'GWFSAT', 'FMI', MAP_NODE_TYPE)
     call this%set(this%fmi_gwfspdis%base(), 'GWFSPDIS', 'FMI', MAP_NODE_TYPE)
     call this%set(this%fmi_gwfflowja%base(), 'GWFFLOWJA', 'FMI', MAP_NODE_TYPE)
-    call this%set(this%mst_porosity%base(), 'POROSITY', 'MST', MAP_NODE_TYPE)
+    call this%set(this%mst_thetam%base(), 'THETAM', 'MST', MAP_NODE_TYPE)
     call this%set(this%indsp%base(), 'INDSP', '', MAP_ALL_TYPE)
     call this%set(this%inmst%base(), 'INMST', '', MAP_ALL_TYPE)
 
@@ -139,7 +139,7 @@ contains
       call this%map(this%fmi_gwfflowja%base(), nr_conns, (/STG_BFR_EXG_AD/))
 
       if (this%indsp%get() > 0 .and. this%inmst%get() > 0) then
-        call this%map(this%mst_porosity%base(), nr_nodes, (/STG_AFT_CON_AR/))
+        call this%map(this%mst_thetam%base(), nr_nodes, (/STG_AFT_CON_AR/))
       end if
 
     end if
@@ -161,7 +161,7 @@ contains
     allocate (this%fmi_gwfsat)
     allocate (this%fmi_gwfspdis)
     allocate (this%fmi_gwfflowja)
-    allocate (this%mst_porosity)
+    allocate (this%mst_thetam)
     allocate (this%indsp)
     allocate (this%inmst)
 
@@ -182,7 +182,7 @@ contains
     deallocate (this%fmi_gwfsat)
     deallocate (this%fmi_gwfspdis)
     deallocate (this%fmi_gwfflowja)
-    deallocate (this%mst_porosity)
+    deallocate (this%mst_thetam)
     deallocate (this%indsp)
     deallocate (this%inmst)
 

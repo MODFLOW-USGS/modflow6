@@ -37,7 +37,9 @@ module GwtMstModule
   type, extends(NumericalPackageType) :: GwtMstType
     !
     ! -- storage
-    real(DP), dimension(:), pointer, contiguous :: porosity => null() !< porosity
+    real(DP), dimension(:), pointer, contiguous :: porosity => null() !< mobile porosity defined as volume mobile voids per volume of mobile domain
+    real(DP), dimension(:), pointer, contiguous :: thetam => null() !< mobile porosity defined as volume mobile voids per volume of aquifer
+    real(DP), dimension(:), pointer, contiguous :: volfracim => null() !< sum of all immobile domain volume fractions
     real(DP), dimension(:), pointer, contiguous :: ratesto => null() !< rate of mobile storage
     !
     ! -- decay
@@ -77,6 +79,8 @@ module GwtMstModule
     procedure :: mst_ot_flow
     procedure :: mst_da
     procedure :: allocate_scalars
+    procedure :: addto_volfracim
+    procedure :: get_volfracm
     procedure, private :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_data
@@ -233,7 +237,7 @@ contains
       !
       ! -- calculate new and old water volumes
       vnew = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n)) * &
-             this%fmi%gwfsat(n) * this%porosity(n)
+             this%fmi%gwfsat(n) * this%thetam(n)
       vold = vnew
       if (this%fmi%igwfstrgss /= 0) vold = vold + this%fmi%gwfstrgss(n) * delt
       if (this%fmi%igwfstrgsy /= 0) vold = vold + this%fmi%gwfstrgsy(n) * delt
@@ -292,7 +296,7 @@ contains
         !
         ! -- first order decay rate is a function of concentration, so add
         !    to left hand side
-        hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n)
+        hhcof = -this%decay(n) * vcell * swtpdt * this%thetam(n)
         call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
       elseif (this%idcy == 2) then
         !
@@ -301,7 +305,7 @@ contains
         decay_rate = get_zero_order_decay(this%decay(n), this%decaylast(n), &
                                           kiter, cold(n), cnew(n), delt)
         this%decaylast(n) = decay_rate
-        rrhs = decay_rate * vcell * swtpdt * this%porosity(n)
+        rrhs = decay_rate * vcell * swtpdt * this%thetam(n)
         rhs(n) = rhs(n) + rrhs
       end if
       !
@@ -337,6 +341,7 @@ contains
     real(DP) :: vcell
     real(DP) :: const1
     real(DP) :: const2
+    real(DP) :: volfracm
     real(DP) :: rhobm
     !
     ! -- set variables
@@ -356,8 +361,9 @@ contains
       const1 = this%distcoef(n)
       const2 = 0.
       if (this%isrb > 1) const2 = this%sp2(n)
+      volfracm = this%get_volfracm(n)
       rhobm = this%bulk_density(n)
-      call mst_srb_term(this%isrb, rhobm, vcell, tled, cnew(n), &
+      call mst_srb_term(this%isrb, volfracm, rhobm, vcell, tled, cnew(n), &
                         cold(n), swtpdt, swt, const1, const2, &
                         hcofval=hhcof, rhsval=rrhs)
       !
@@ -376,12 +382,13 @@ contains
   !!  Subroutine to calculate sorption terms
   !!
   !<
-  subroutine mst_srb_term(isrb, rhobm, vcell, tled, cnew, cold, &
+  subroutine mst_srb_term(isrb, volfracm, rhobm, vcell, tled, cnew, cold, &
                           swnew, swold, const1, const2, rate, hcofval, rhsval)
     ! -- modules
     ! -- dummy
     integer(I4B), intent(in) :: isrb !< sorption flag 1, 2, 3 are linear, freundlich, and langmuir
-    real(DP), intent(in) :: rhobm !< bulk density of mobile domain (fm * rhob)
+    real(DP), intent(in) :: volfracm !< volume fraction of mobile domain (fhat_m)
+    real(DP), intent(in) :: rhobm !< bulk density of mobile domain (rhob_m)
     real(DP), intent(in) :: vcell !< volume of cell
     real(DP), intent(in) :: tled !< one over time step length
     real(DP), intent(in) :: cnew !< concentration at end of this time step
@@ -405,7 +412,7 @@ contains
     ! -- Calculate based on type of sorption
     if (isrb == 1) then
       ! -- linear
-      term = -rhobm * vcell * tled * const1
+      term = -volfracm * rhobm * vcell * tled * const1
       if (present(hcofval)) hcofval = term * swnew
       if (present(rhsval)) rhsval = term * swold * cold
       if (present(rate)) rate = term * swnew * cnew - term * swold * cold
@@ -428,7 +435,7 @@ contains
       end if
       !
       ! -- calculate hcof, rhs, and rate for freundlich and langmuir
-      term = -rhobm * vcell * tled
+      term = -volfracm * rhobm * vcell * tled
       cbaravg = (cbarold + cbarnew) * DHALF
       swavg = (swnew + swold) * DHALF
       if (present(hcofval)) then
@@ -470,6 +477,7 @@ contains
     real(DP) :: vcell
     real(DP) :: swnew
     real(DP) :: distcoef
+    real(DP) :: volfracm
     real(DP) :: rhobm
     real(DP) :: term
     real(DP) :: csrb
@@ -490,8 +498,9 @@ contains
       swnew = this%fmi%gwfsat(n)
       distcoef = this%distcoef(n)
       idiag = this%dis%con%ia(n)
+      volfracm = this%get_volfracm(n)
       rhobm = this%bulk_density(n)
-      term = this%decay_sorbed(n) * rhobm * swnew * vcell
+      term = this%decay_sorbed(n) * volfracm * rhobm * swnew * vcell
       !
       ! -- add sorbed mass decay rate terms to accumulators
       if (this%idcy == 1) then
@@ -533,7 +542,7 @@ contains
                                             this%decayslast(n), &
                                             kiter, csrbold, csrbnew, delt)
           this%decayslast(n) = decay_rate
-          rrhs = decay_rate * rhobm * swnew * vcell
+          rrhs = decay_rate * volfracm * rhobm * swnew * vcell
         end if
 
       end if
@@ -619,7 +628,7 @@ contains
       !
       ! -- calculate new and old water volumes
       vnew = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n)) * &
-             this%fmi%gwfsat(n) * this%porosity(n)
+             this%fmi%gwfsat(n) * this%thetam(n)
       vold = vnew
       if (this%fmi%igwfstrgss /= 0) vold = vold + this%fmi%gwfstrgss(n) * delt
       if (this%fmi%igwfstrgsy /= 0) vold = vold + this%fmi%gwfstrgsy(n) * delt
@@ -678,11 +687,11 @@ contains
       hhcof = DZERO
       rrhs = DZERO
       if (this%idcy == 1) then
-        hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n)
+        hhcof = -this%decay(n) * vcell * swtpdt * this%thetam(n)
       elseif (this%idcy == 2) then
         decay_rate = get_zero_order_decay(this%decay(n), this%decaylast(n), &
                                           0, cold(n), cnew(n), delt)
-        rrhs = decay_rate * vcell * swtpdt * this%porosity(n)
+        rrhs = decay_rate * vcell * swtpdt * this%thetam(n)
       end if
       rate = hhcof * cnew(n) - rrhs
       this%ratedcy(n) = rate
@@ -716,6 +725,7 @@ contains
     real(DP) :: tled
     real(DP) :: swt, swtpdt
     real(DP) :: vcell
+    real(DP) :: volfracm
     real(DP) :: rhobm
     real(DP) :: const1
     real(DP) :: const2
@@ -736,11 +746,12 @@ contains
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
       swtpdt = this%fmi%gwfsat(n)
       swt = this%fmi%gwfsatold(n, delt)
+      volfracm = this%get_volfracm(n)
       rhobm = this%bulk_density(n)
       const1 = this%distcoef(n)
       const2 = 0.
       if (this%isrb > 1) const2 = this%sp2(n)
-      call mst_srb_term(this%isrb, rhobm, vcell, tled, cnew(n), &
+      call mst_srb_term(this%isrb, volfracm, rhobm, vcell, tled, cnew(n), &
                         cold(n), swtpdt, swt, const1, const2, &
                         rate=rate)
       this%ratesrb(n) = rate
@@ -775,6 +786,7 @@ contains
     real(DP) :: vcell
     real(DP) :: swnew
     real(DP) :: distcoef
+    real(DP) :: volfracm
     real(DP) :: rhobm
     real(DP) :: term
     real(DP) :: csrb
@@ -798,8 +810,9 @@ contains
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
       swnew = this%fmi%gwfsat(n)
       distcoef = this%distcoef(n)
+      volfracm = this%get_volfracm(n)
       rhobm = this%bulk_density(n)
-      term = this%decay_sorbed(n) * rhobm * swnew * vcell
+      term = this%decay_sorbed(n) * volfracm * rhobm * swnew * vcell
       !
       ! -- add sorbed mass decay rate terms to accumulators
       if (this%idcy == 1) then
@@ -838,7 +851,7 @@ contains
           decay_rate = get_zero_order_decay(this%decay_sorbed(n), &
                                             this%decayslast(n), &
                                             0, csrbold, csrbnew, delt)
-          rrhs = decay_rate * rhobm * swnew * vcell
+          rrhs = decay_rate * volfracm * rhobm * swnew * vcell
         end if
       end if
       !
@@ -975,6 +988,8 @@ contains
     ! -- Deallocate arrays if package was active
     if (this%inunit > 0) then
       call mem_deallocate(this%porosity)
+      call mem_deallocate(this%thetam)
+      call mem_deallocate(this%volfracim)
       call mem_deallocate(this%ratesto)
       call mem_deallocate(this%idcy)
       call mem_deallocate(this%decay)
@@ -1046,6 +1061,8 @@ contains
     ! -- Allocate
     ! -- sto
     call mem_allocate(this%porosity, nodes, 'POROSITY', this%memoryPath)
+    call mem_allocate(this%thetam, nodes, 'THETAM', this%memoryPath)
+    call mem_allocate(this%volfracim, nodes, 'VOLFRACIM', this%memoryPath)
     call mem_allocate(this%ratesto, nodes, 'RATESTO', this%memoryPath)
     !
     ! -- dcy
@@ -1090,6 +1107,8 @@ contains
     ! -- Initialize
     do n = 1, nodes
       this%porosity(n) = DZERO
+      this%thetam(n) = DZERO
+      this%volfracim(n) = DZERO
       this%ratesto(n) = DZERO
     end do
     do n = 1, size(this%decay)
@@ -1205,7 +1224,7 @@ contains
     ! -- local
     character(len=LINELENGTH) :: keyword
     character(len=:), allocatable :: line
-    integer(I4B) :: istart, istop, lloc, ierr
+    integer(I4B) :: istart, istop, lloc, ierr, n
     logical :: isfound, endOfBlock
     logical, dimension(6) :: lname
     character(len=24), dimension(6) :: aname
@@ -1382,9 +1401,62 @@ contains
       call this%parser%StoreErrorUnit()
     end if
     !
+    ! -- initialize thetam from porosity
+    do n = 1, size(this%porosity)
+      this%thetam(n) = this%porosity(n)
+    end do
+    !
     ! -- Return
     return
   end subroutine read_data
+
+  !> @ brief Add volfrac values to volfracim
+  !!
+  !!  Method to add immobile domain volume fracions, which are stored as a
+  !!  cumulative value in volfracim.
+  !!
+  !<
+  subroutine addto_volfracim(this, volfracim)
+    ! -- modules
+    ! -- dummy
+    class(GwtMstType) :: this !< GwtMstType object
+    real(DP), dimension(:), intent(in) :: volfracim !< immobile domain volume fraction that contributes to total immobile volume fraction
+    ! -- local
+    integer(I4B) :: n
+    !
+    ! -- Add to volfracim
+    do n = 1, this%dis%nodes
+      this%volfracim(n) = this%volfracim(n) + volfracim(n)
+    end do
+    !
+    ! -- An immobile domain is adding a volume fraction, so update thetam
+    !    accordingly.
+    do n = 1, this%dis%nodes
+      this%thetam(n) = this%get_volfracm(n) * this%porosity(n)
+    end do
+    !
+    ! -- Return
+    return
+  end subroutine addto_volfracim
+
+  !> @ brief Return mobile domain volume fraction
+  !!
+  !!  Calculate and return the volume fraction of the aquifer that is mobile
+  !!
+  !<
+  function get_volfracm(this, node) result(volfracm)
+    ! -- modules
+    ! -- dummy
+    class(GwtMstType) :: this !< GwtMstType object
+    integer(I4B), intent(in) :: node !< node number
+    ! -- return
+    real(DP) :: volfracm
+    !
+    volfracm = DONE - this%volfracim(node)
+    !
+    ! -- Return
+    return
+  end function get_volfracm
 
   !> @ brief Calculate sorption concentration using Freundlich
   !!

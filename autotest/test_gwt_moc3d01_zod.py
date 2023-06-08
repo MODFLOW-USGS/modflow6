@@ -1,7 +1,7 @@
 # This autotest is based on the MOC3D problem 1 autotest except that it
 # tests the zero-order decay for a simple one-dimensional flow problem.
 # The test ensures that concentrations do not go below zero (they do go
-# slightly negative but, it does ensure that the decay rate shuts off as
+# slightly negative but, it does ensure that the decay rate shuts off
 # where concentrations are zero.
 
 import os
@@ -214,20 +214,25 @@ def build_model(idx, dir):
     )
 
     # storage
-    porosity = 0.1
+    theta_mobile = 0.1 # vol mobile voids per cell volume
+    volfrac_immobile = 0.
+    theta_immobile = 0.
+    if ist_package[idx]:
+        # if dual domain, then assume half of cell is mobile and other half is immobile
+        volfrac_immobile = 0.5
+        theta_immobile = theta_mobile
+        porosity_immobile = theta_immobile / volfrac_immobile
+    volfrac_mobile = 1. - volfrac_immobile
+    porosity_mobile = theta_mobile / volfrac_mobile
 
     rtd = retardation[idx]
     sorption = None
     kd = None
-    rhobm = None
-    rhobim = None
+    rhob = None
     if rtd is not None:
         rhob = 1.0
-        kd = (rtd - 1.0) * porosity / rhob
+        kd = (rtd - 1.0) * theta_mobile / rhob
         rhobm = rhob
-        if ist_package[idx]:
-            rhobm = .5 * rhob
-            rhobim = .5 * rhob
         sorption = "linear"
 
     decay_rate = decay[idx]
@@ -238,13 +243,13 @@ def build_model(idx, dir):
     # mass storage and transfer
     mst = flopy.mf6.ModflowGwtmst(
         gwt,
-        porosity=porosity,
+        porosity=porosity_mobile,
         zero_order_decay=zero_order_decay,
         decay=decay_rate,
         decay_sorbed=decay_rate,
         sorption=sorption,
         distcoef=kd,
-        bulk_density=rhobm,
+        bulk_density=rhob,
     )
 
     if ist_package[idx]:
@@ -254,10 +259,11 @@ def build_model(idx, dir):
             sorption=sorption,
             zero_order_decay=True,
             cim=0.0,
-            thetaim=porosity,
+            volfrac=volfrac_immobile,
+            porosity=porosity_immobile,
             zetaim=1.0,
             decay=decay_rate,
-            bulk_density=rhobim,
+            bulk_density=rhob,
             distcoef=kd,
             decay_sorbed=decay_rate,
         )
@@ -373,6 +379,16 @@ def eval_transport(sim):
     except:
         assert False, f'could not load data from "{fpth}"'
 
+    makeplot = False
+    if makeplot:
+        fname = "fig-ct.pdf"
+        fname = os.path.join(sim.simpath, fname)
+        make_plot_ct(tssim, fname)
+
+        fname = "fig-cd.pdf"
+        fname = os.path.join(sim.simpath, fname)
+        make_plot_cd(cobj, fname)
+
     # get mobile domain budget object
     fpth = os.path.join(sim.simpath, f"{gwtname}.cbc")
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
@@ -422,16 +438,7 @@ def eval_transport(sim):
         )
         np.allclose(qim_budfile, qim_calculated), errmsg
 
-    makeplot = False
-    if makeplot:
-        fname = "fig-ct.pdf"
-        fname = os.path.join(ex[sim.idxsim], fname)
-        make_plot_ct(tssim, fname)
-
-        fname = "fig-cd.pdf"
-        fname = os.path.join(ex[sim.idxsim], fname)
-        make_plot_cd(cobj, fname)
-
+    # compare every tenth time
     tssim = tssim[::10]
     # print(tssim)
 

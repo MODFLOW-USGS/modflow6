@@ -157,8 +157,8 @@ contains
                             trim(this%dsp%memoryPath))
       end if
       allocate (this%mst)
-      call mem_allocate(this%mst%porosity, this%dis%nodes, &
-                        'POROSITY', create_mem_path(this%name, 'MST'))
+      call mem_allocate(this%mst%thetam, this%dis%nodes, &
+                        'THETAM', create_mem_path(this%name, 'MST'))
     end if
 
     ! assign or point model members to dis members
@@ -183,7 +183,7 @@ contains
       call this%adv%adv_ar(this%dis, this%ibound)
     end if
     if (this%indsp > 0) then
-      call this%dsp%dsp_ar(this%ibound, this%mst%porosity)
+      call this%dsp%dsp_ar(this%ibound, this%mst%thetam)
     end if
 
   end subroutine gwtifmod_ar
@@ -209,7 +209,7 @@ contains
     deallocate (this%dsp)
 
     if (associated(this%mst)) then
-      call mem_deallocate(this%mst%porosity)
+      call mem_deallocate(this%mst%thetam)
       deallocate (this%mst)
     end if
 

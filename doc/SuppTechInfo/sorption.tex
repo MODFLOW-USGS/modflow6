@@ -1,16 +1,18 @@
 
-The Groundwater Transport (GWT) Model \citep{modflow6gwt} in \mf can simulate solute transport in aquifer material that includes ``mobile" and ``immobile" domains. In the mobile domain, which is always simulated by the GWT Model, the evolution of solute concentration is governed by the interplay between storage, advection, dispersion (including molecular diffusion), sorption, decay or production, sources and sinks, and exchange with any immobile domains that may exist. In an immobile domain, which may be optionally defined by the user, the evolution of solute concentration is governed by storage, sorption, decay or production, and exchange with the mobile domain. Advection and dispersion (including molecular diffusion) are considered negligible, and, aside from exchange with the mobile domain and optional zero- or first-order decay or production, there are no sources or sinks that add or remove solute mass directly to or from an immobile domain. Mobile and immobile domains are conceptualized as coexisting within a model cell, and the exchange of solute between domains represents a process occurring at the sub-grid scale.
+The Groundwater Transport (GWT) Model \citep{modflow6gwt} in \mf can simulate a variety of solute-transport processes in aquifer material that includes ``mobile" and ``immobile" domains. The mobile and immobile domains are conceptualized as coexisting within a model cell and can exchange solute with each other. The mobile domain is always simulated by the GWT Model.  Transport in an immobile domain, which may be optionally defined by the user, is simulated by the Immobile Storage and Transfer (IST) Package \citep{modflow6gwt} for the GWT Model. Multiple instances of the IST Package may be invoked to represent multiple immobile domains.
 
-The Immobile Storage and Transfer (IST) Package \citep{modflow6gwt} for the GWT Model is designed to model the solute-transport processes occurring within a user-defined immobile domain and the exchange of solute between the immobile and mobile domains. Multiple instances of the IST Package may be invoked to represent multiple immobile domains.
+In \mf version 6.5.0, the parameterization of the equations that govern transport in the mobile and immobile domains has been revised, and corresponding changes have been made to the input requirements for porosity, domain fraction, and bulk density. The revised parameterization is expected to be more intutive for users in many mobile-immobile transport applications. It will also allow users to model a wider variety of solute transport scenarios involving immobile-domain sorption than the original parameterization used in versions of \mf up to and including version 6.4.1.
 
-The GWT model allows sorption, as well as decay of sorbed solute, to occur in the mobile and immobile domains. Since sorption involves interaction of solute with aquifer solid material, the rates at which sorption-related processes occur in a domain depend on the amount of solid mass that is in that domain. This chapter summarizes and clarifies sorption parameters for the mobile and immobile domains, and presents a generalized formulation that replaces the formulation presented in \cite{modflow6gwt}.  The modified formulation should not have an effect on most existing GWT Models, except for those models that include one or more IST Packages with active sorption processes.
+Input for existing \mf models that include one or more immobile domains can be converted from the original parameterization to the revised parameterization such that the simulated transport behavior remains the same. No changes to the model input are needed for existing \mf models that do not include an immobile domain.
 
-\subsection{Governing Equations} \label{sec:goveqn1}
+The remainder of this chapter begins with a review of the original parameterization of transport described in \citep{modflow6gwt}. The revised parameterization is then presented, and guidance is provided for converting existing model input from the original parameterization to the revised parameterization.
 
-The GWT Model \citep{modflow6gwt} solves a discretized form of the following partial differential equation, which represents the conservation of solute mass at each point in the mobile domain:
+\subsection{Review of the Original Parameterization} \label{sec:origparamreview}
+
+With the original parameterization used in versions of \mf up to and including version 6.4.1, the partial differential equation that represents the conservation of solute mass at points in the mobile domain is equation 2--1 of \cite{modflow6gwt}, which is reproduced here as
 
 \begin{equation}
-\label{eqn:gwtpde}
+\label{eqn:gwtpdeorig}
 \begin{aligned}
 \frac {\partial \left ( S_w \theta_m C \right )}{\partial t} = 
 - \nabla \cdot \left ( \matr{q} C  \right ) 
@@ -19,16 +21,16 @@ The GWT Model \citep{modflow6gwt} solves a discretized form of the following par
 - \lambda_1 \theta_m S_w C - \gamma_1 \theta_m S_w \\
 - f_m \rho_b \frac {\partial \left ( S_w \overline{C} \right ) }{\partial t} 
 - \lambda_2 f_m \rho_b S_w \overline{C} - \gamma_2 f_m \rho_b S_w 
-- \sum \limits_{im=1}^{nim}  \zeta_{im} S_w \left ( C - C_{im} \right ),
+- \sum \limits_{im=1}^{nim}  \zeta_{im} S_w \left ( C - C_{im} \right )
 \end{aligned}
 \end{equation}
 
-\noindent where $S_w$ is the water saturation (dimensionless) defined as the volume of water per volume of voids, $\theta_m$ is the effective porosity of the mobile domain (dimensionless), defined as volume of voids participating in mobile transport per unit volume of aquifer, $C$ is volumetric concentration of the mobile domain expressed as mass of dissolved solute per unit volume of fluid ($M/L^3$), $t$ is time ($T$), $\matr{q}$ is the vector of specific discharge ($L/T$), $\matr{D}$ is the second-order tensor of hydrodynamic dispersion coefficients ($L^2/T$), $q'_s$ is the volumetric flow rate per unit volume of aquifer (defined as positive for flow into the aquifer) for mass sources and sinks ($1/T$), $C_s$ is the volumetric solute concentration of the source or sink fluid ($M/L^3$), $M_s$ is rate of solute mass loading per unit volume of aquifer ($M/L^3T$), $\lambda_1$ is the first-order decay rate coefficient for the liquid phase ($1/T$), $\gamma_1$ is the zero-order decay rate coefficient for the liquid phase ($M/L^3T$), $\rho_b$ is the bulk density of the aquifer material ($M/L^3$), $\overline{C}$ is the sorbed concentration of solute mass in the mobile domain ($M/M$), $\lambda_2$ is the first-order decay rate coefficient ($1/T$) for the sorbed phase of the mobile domain,  $\gamma_2$ is the zero-order decay rate coefficient for the sorbed phase of the mobile domain ($M/MT$), $nim$ is the number of immobile domains, $\zeta_{im}$ is the rate coefficient for the transfer of mass between the mobile domain and immobile domain $im$ ($1/T$), and $C_{im}$ is the solute concentration for immobile domain $im$ ($M/L^3$). In this chapter, the mobile porosity is intentionally given the $\theta_m$ symbol, which is different than the $\theta$ symbol used by \cite{modflow6gwt}.  The definition of $f_m$, which appears in the three terms in equation~\ref{eqn:gwtpde} that relate to sorbed solute, is discussed and clarified later in this chapter. 
+\noindent where $S_w$ is the water saturation defined as the volume of water per volume of voids ($L^3/L^3$), $C$ is the mobile-domain volumetric concentration of solute expressed as mass of dissolved solute per unit volume of mobile-domain fluid ($M/L^3$), $t$ is time ($T$), $\matr{q}$ is the vector of specific discharge ($L/T$), $\matr{D}$ is the second-order tensor of hydrodynamic dispersion coefficients ($L^2/T$), $q'_s$ is the volumetric flow rate per unit volume of aquifer (defined as positive for flow into the aquifer) for mass sources and sinks ($1/T$), $C_s$ is the volumetric solute concentration of the source or sink fluid ($M/L^3$), $M_s$ is rate of solute mass loading per unit volume of aquifer ($M/L^3T$), $\lambda_1$ is the first-order decay rate coefficient for dissolved solute in the mobile domain ($1/T$), $\gamma_1$ is the zero-order decay rate coefficient for dissolved solute in the mobile domain ($M/L^3T$), $\overline{C}$ is the mass-fraction concentration of sorbate (sorbed solute) expressed as mass of sorbate per unit mass of solid aquifer material in the mobile domain ($M/M$), $\lambda_2$ is the first-order decay rate coefficient ($1/T$) for sorbate in the mobile domain, $\gamma_2$ is the zero-order decay rate coefficient ($M/MT$) for sorbate in the mobile domain, $nim$ is the number of immobile domains, $\zeta_{im}$ is the rate coefficient for the transfer of mass between the mobile domain and immobile domain $im$ ($1/T$), $C_{im}$ is an immobile-domain volumetric concentration of solute expressed as mass of dissolved solute per unit volume of fluid in immobile domain $im$ ($M/L^3$), $\rho_{b}$ is the bulk density of the aquifer material defined as the mass of solid aquifer material per unit volume of aquifer ($M/L^3$), $\theta_m$ is the mobile-domain effective porosity defined as defined as volume of voids participating in mobile-domain transport per unit volume of aquifer ($L^3/L^3$), and $f_m$ is the fraction of the mass of aquifer solid material that is in the mobile domain ($M/M$). To avoid potential confusion with the total porosity, in equation~\ref{eqn:gwtpdeorig} the mobile porosity is intentionally given the symbol $\theta_m$, which is different than the symbol $\theta$ used by \cite{modflow6gwt}. Also, note that \cite{modflow6gwt} define $f_m$ as ``the fraction of aquifer solid material available for sorptive exchange with the mobile phase under fully saturated conditions," which is correct only if all the aquifer solid material in the mobile domain is available for sorptive exchange and the fraction is understood to be a mass fraction.
 
-The Immobile Storage and Transfer (IST) Package for the GWT Model allows users to designate a fraction of a model cell as immobile. Solute transport in an immobile domain is represented by a discretized form of
+The Immobile Storage and Transfer (IST) Package for the GWT Model allows users to designate a fraction of a model cell as immobile. With the original parameterization used in versions of \mf up to and including version 6.4.1, the partial differential equation that represents the conservation of solute mass at points in an immobile domain is equation 7--2 of \cite{modflow6gwt}, which is reproduced here as 
 
 \begin{equation}
-\label{eqn:gwtistpde}
+\label{eqn:gwtistpdeorig}
 \begin{split}
 \theta_{im} \frac{\partial C_{im} }{\partial t} + f_{im} \rho_b \frac{\partial \overline{C}_{im}}{\partial t} = 
 - \lambda_{1,im} \theta_{im} C_{im} - \lambda_{2,im}  f_{im} \rho_b \overline{C}_{im} \\
@@ -37,35 +39,27 @@ The Immobile Storage and Transfer (IST) Package for the GWT Model allows users t
 \end{split}
 \end{equation}
 
-\noindent where $\theta_{im}$ is the volume of the immobile pores per volume of aquifer, $\overline{C}_{im}$ is the sorbed concentration of the immobile domain, expressed as the mass of the sorbed chemical per mass of solid,  $\lambda_{1,im}$ is the first-order reaction rate coefficient for the liquid phase of the immobile domain ($1/T$), $\lambda_{2,im}$ is the first-order reaction rate coefficient for the sorbed phase of the immobile domain ($1/T$), $\gamma_{1,im}$ is the zero-order reaction rate coefficient for the liquid phase of the immobile domain ($ML^{-3}T^{-1}$), and $\gamma_{2,im}$ is the zero-order reaction rate coefficient for the sorbed phase of the immobile domain ($M M^{-1}T^{-1}$). The definition of $f_{im}$, which appears in the three terms in equation~\ref{eqn:gwtistpde} that relate to sorbed solute, is discussed and clarified below along with the definition of $f_m$.
+\noindent where $\overline{C}_{im}$ is the mass-fraction concentration of sorbate (sorbed solute) expressed as mass of sorbate per unit mass of solid aquifer material in the immobile domain ($M/M$), $\lambda_{1,im}$ is the first-order reaction rate coefficient for dissolved solute in the immobile domain ($1/T$), $\lambda_{2,im}$ is the first-order reaction rate coefficient for sorbate in the immobile domain ($1/T$), $\gamma_{1,im}$ is the zero-order reaction rate coefficient for dissolved solute in the immobile domain ($ML^{-3}T^{-1}$), $\gamma_{2,im}$ is the zero-order reaction rate coefficient for sorbate in the immobile domain ($M M^{-1}T^{-1}$), $\theta_{im}$ is the effective porosity in the immobile domain defined as defined as volume of voids participating in immobile-domain transport per unit volume of immobile domain $im$ ($L^3/L^3$), and $f_{im}$ is the fraction of the mass of aquifer solid material that is in immobile domain $im$ ($M/M$). Note that \cite{modflow6gwt} define $f_{im}$ as ``the fraction of aquifer solid material available for sorptive exchange with the immobile domain under fully saturated conditions," which is correct only if all the aquifer solid material in the immobile domain is available for sorptive exchange and the fraction is understood to be a mass fraction.
 
-\subsection{Definition of Solid Mass Fractions} \label{sec:solidmassfrac0}
+The original model parameters that are affected by the revised parameterization are listed in table~\ref{table:origparam}. Note that in the original parameterization, division of the aquifer into mobile and immobile domains is conceptualized in terms solid mass fractions, and porosities and bulk densities are defined on a per-aquifer-volume basis. Note also that the user is required (in versions of \mf up to and including version 6.4.1) to provide the value of the overall bulk density, $\rho_b$, in the input for each package that represents a domain in which sorption is active (the MST Package for the mobile domain, and the IST Package for immobile domains).
 
-\cite{modflow6gwt} define $f_m$ in equation~\ref{eqn:gwtpde} as ``the fraction of aquifer solid material available for sorptive exchange with the mobile phase under fully saturated conditions." This is correct assuming all of the aquifer solid material in the mobile domain is available for sorptive exchange with the mobile phase, and the fraction considered is the mass fraction. A more generally correct and complete definition of $f_m$ is the fraction of the mass of aquifer solid material that is in the mobile domain. The product $f_m \rho_b$ is then the mass of aquifer solid material in the mobile domain per unit volume of aquifer. This product forms the basis for expressing the three terms in equation~\ref{eqn:gwtpde} that relate to sorbed solute, each of which has units of (sorbed) solute mass per volume of aquifer per time. Note that concentration $\overline{C}$ in equation~\ref{eqn:gwtpde} has units of (sorbed) solute mass per mass of aquifer solid material in the mobile domain.
+\input{./Tables/transport_params_original.tex}
 
-Similarly, $f_{im}$ is most correctly and completely defined as the fraction of the mass of aquifer solid material that is in immobile domain $im$. The product $f_{im} \rho_b$ is then the mass of aquifer solid material in immobile domain $im$ per unit volume of aquifer. This product forms the basis for expressing the three terms in equation~\ref{eqn:gwtistpde} that relate to sorbed solute, each of which has units of (sorbed) solute mass per volume of aquifer per time. Note that concentration $\overline{C}_{im}$ in equation~\ref{eqn:gwtistpde} has units of (sorbed) solute mass per mass of aquifer solid material in immobile domain $im$.
+Immobile-domain solid mass fractions, $f_{im}$, are not input by the user; rather, they are calculated by \mf (in versions up to and including 6.4.1) from user-input porosities using
 
-The solid mass fractions in the mobile and immobile domains sum to one. Therefore, the mobile solid mass fraction can be calculated from the immobile solid mass fractions according to
+\begin{equation}
+\label{eqn:fim1}
+f_{im} = \frac{\theta_{im}}{\theta_t}.
+\end{equation}
+
+\noindent where $\theta_t$ is the total porosity [which is erroneously represented by the symbol $\theta$ in the related text on p. 7--2 of \cite{modflow6gwt}]. The mobile-domain solid mass fraction is then calculated by \mf (in versions up to and including 6.4.1) using
 
 \begin{equation}
 \label{eqn:fm0}
 f_m = 1 - \sum_{im}f_{im},
 \end{equation}
 
-\noindent where the summation is over all immobile domains specified by the user.
-
-\subsection{Previous Approximation of Solid Mass Fractions} \label{sec:solidmassfrac1}
-
-Up to and including \mf version 6.4.1, the GWT Model automatically set immobile solid mass fractions to
-
-\begin{equation}
-\label{eqn:fim1}
-f_{im} = \frac{\theta_{im}}{\theta_t},
-\end{equation}
-
-\noindent where $\theta_{im}$ is the immobile domain porosity and $\theta_t$ is the total porosity. Note that the text on p. 7--2 of \cite{modflow6gwt} erroneously states that \mf sets ``$f_{im} = \theta_{im} / \theta$''. This statement is incorrect because the symbol in the denominator, ``$\theta$'', represents the mobile domain porosity rather than the total porosity, $\theta_t$, in \cite{modflow6gwt}. In actual fact, \mf used equation~\ref{eqn:fim1} to set $f_{im}$ values from user-supplied porosities.
-
-Equations~\ref{eqn:fm0} and~\ref{eqn:fim1}, together with the definition of total porosity,
+\noindent where the summation is over all immobile domains specified by the user. Equations~\ref{eqn:fm0} and~\ref{eqn:fim1}, together with the definition of total porosity,
 
 \begin{equation}
 \label{eqn:thetat1}
@@ -79,109 +73,136 @@ Equations~\ref{eqn:fm0} and~\ref{eqn:fim1}, together with the definition of tota
 f_m = 1 - \sum_{im}f_{im} = 1 - \frac{\sum_{im}\theta_{im}}{\theta_t} = \frac{\theta_m}{\theta_t}.
 \end{equation}
 
-\noindent If there are no immobile domains, the total porosity is the same as the mobile porosity and $f_m$ is one.
+\noindent If there are no immobile domains, the total porosity is the same as the mobile porosity and $f_m$ is 1.
 
-When considering the validity of equations~\ref{eqn:fim1} and~\ref{eqn:fm1}, it is important to note that the domain porosities are defined in terms of pore volume in a domain per volume of aquifer. Specifically, $\theta_m$ is the pore volume in the mobile domain per volume of aquifer (not per volume of mobile domain), and $\theta_{im}$ is the pore volume in immobile domain $im$ per volume of aquifer (not per volume of immobile domain $im$). When porosities are defined in this way, the ratios $\theta_m / \theta_t$ and $\theta_{im} / \theta_t$ can be thought of as ``pore volume fractions" in the same sense that $f_m$ and $f_{im}$ are solid mass fractions. Thus, underlying equations~\ref{eqn:fim1} and~\ref{eqn:fm1} is the assumption that the mass of aquifer solid material is distributed among the various domains in the same proportions as the pore volume is distributed among the domains. This is true, for example, when a volume of aquifer consists of a mobile domain and one immobile domain, and the local porosities (pore volume in the domain per volume of domain) and aquifer solid material densities are the same for both domains, which is a generalization of the example given by \cite{modflow6gwt}. In general, however, the aquifer solid mass need not be distributed between domains in the same proportions as pore volume, and equations~\ref{eqn:fim1} and~\ref{eqn:fm1} may not be good approximations in many cases of practical interest. As described below, the model input has been reformulated in terms of domain bulk densities to give the user the flexibility to specify how solid aquifer mass is distributed between domains.
+\subsection{Revised Parameterization} \label{sec:revisedparam}
 
-\subsection{Generalized Formulation Based on Domain Bulk Densities} \label{sec:solidmassfrac2b}
+The revised parameterization described in this chapter differs from the original parameterization, which is described in \cite{modflow6gwt} and summarized above, in the following ways:
 
-Up to and including \mf version 6.4.1 the user was required to provide a value for the overall bulk density, $\rho_b$, in the input for the MST Package.  The user was also required to again provide the value for the overall bulk density in the input for each IST Package.  A value of $f_{im}$ for each immobile domain was internally calculated by the program using equation~\ref{eqn:fim1}, and the value of $f_{m}$ for the mobile domain was internally calculated using equation~\ref{eqn:fm1}.  The generalized formulation presented in this chapter redefines the bulk densities for which the user provides values in the MST and IST Packages.  The generalized formulation is more flexible than the previous formulation and no longer requires that the aquifer solid mass be distributed between domains in the same proportions as pore volume as implied by equations~\ref{eqn:fim1} and ~\ref{eqn:fm1}.
+\begin{itemize}
+\item Two sets of parameter substitutions are implemented in governing equations~\ref{eqn:gwtpdeorig} and~\ref{eqn:gwtistpdeorig}. These substitutions recast the model input in terms of parameters that are expected be more intuitive for users in many applications.
+  \begin{itemize}
+  \item Domain porosities $\theta_{m}$ and $\theta_{im}$, which are defined on a per-aquifer-volume basis, are replaced by the mathematically equivalent expressions $\hat{f}_{m} \phi_{m}$ and $\hat{f}_{im} \phi_{im}$, respectively, where $\hat{f}_{m}$ and $\hat{f}_{im}$ are domain volume fractions (instead of mass fractions) and $\phi_{m}$ and $\phi_{im}$ are domain porosities defined on a per-domain-volume basis.
+  \item The parameter products $f_{m} \rho_{b}$ and $f_{im} \rho_{b}$ are replaced by the mathematically equivalent products $\hat{f}_{m} \rho_{b, m}$ and $\hat{f}_{im} \rho_{b, im}$, respectively, where $\rho_{b, m}$ and $\rho_{b, im}$ are domain bulk densities defined on a per-domain-volume basis.
+  \end{itemize}
+\item Unlike the domain mass fractions $f_{m}$ and $f_{im}$, which are set automatically by \mf (in versions up to and including 6.4.1) based on domain porosities in the original parameterization, the domain volume fractions $\hat{f}_{m}$ and $\hat{f}_{im}$ are specified directly by the user in the revised parameterization, offering the flexibility to accurately characterize sorption in a wider variety of mobile-immobile systems.
+\end{itemize}
 
-In equations~\ref{eqn:gwtpde} and~\ref{eqn:gwtistpde}, $f_m$ and $f_{im}$ always appear multiplied by the bulk density, $\rho_b$. As noted earlier in this chapter, the products $f_m \rho_b$ and $f_{im} \rho_b$ are the masses of aquifer solid material in the mobile domain and immobile domain $im$, respectively, per unit volume of aquifer. Thus, $f_m \rho_b$ and $f_{im} \rho_b$ are bulk densities defined on a per-aquifer-volume basis:
+With the changes to the parameterization summarized above, the partial differential equations that represent the conservation of solute mass at points in the mobile and immobile domains can be written as
 
 \begin{equation}
-\label{eqn:rho_b_m_1}
-f_m \rho_b = \frac{mobile \; domain \; solid \; mass}{aquifer \: volume} \equiv \rho_{b,m},
+\label{eqn:gwtpde}
+\begin{aligned}
+\frac {\partial \left ( S_w \theta_m C \right )}{\partial t} = 
+- \nabla \cdot \left ( \matr{q} C  \right ) 
++ \nabla \cdot \left ( S_w \theta_m \matr{D} \nabla C \right ) 
++ q'_s C_s + M_s  
+- \lambda_1 \theta_m S_w C - \gamma_1 \theta_m S_w \\
+- \hat{f}_m \rho_{b,m} \frac {\partial \left ( S_w \overline{C} \right ) }{\partial t} 
+- \lambda_2 \hat{f}_m \rho_{b,m} S_w \overline{C} - \gamma_2 \hat{f}_m \rho_{b,m} S_w 
+- \sum \limits_{im=1}^{nim}  \zeta_{im} S_w \left ( C - C_{im} \right )
+\end{aligned}
+\end{equation}
+
+\noindent where
+
+\begin{equation}
+\label{eqn:thetam_from_revparams}
+\theta_{m} = \hat{f}_{m} \phi_{m} ,
 \end{equation}
 
 \noindent and
 
 \begin{equation}
-\label{eqn:rho_b_im_1}
-f_{im} \rho_b = \frac{immobile \; domain \; im \; solid \; mass}{aquifer \: volume} \equiv \rho_{b,im},
+\label{eqn:gwtistpde}
+\begin{split}
+\theta_{im} \frac{\partial C_{im} }{\partial t} + \hat{f}_{im} \rho_{b,im} \frac{\partial \overline{C}_{im}}{\partial t} = 
+- \lambda_{1,im} \theta_{im} C_{im} - \lambda_{2,im}  \hat{f}_{im} \rho_{b,im} \overline{C}_{im} \\
+- \gamma_{1,im} \theta_{im} - \gamma_{2,im} \hat{f}_{im} \rho_{b,im} 
++ \zeta_{im} S_w \left ( C - C_{im} \right ),
+\end{split}
 \end{equation}
 
-\noindent where $\rho_{b,m}$ and $\rho_{b,im}$ are the bulk densities for the mobile domain and immobile domain $im$, respectively. Note that the domain bulk densities are defined on a per-aquifer-volume basis and sum to the overall bulk density:
+\noindent where
 
 \begin{equation}
-\label{eqn:rho_b_1}
-\rho_{b} = \rho_{b, m} + \sum_{im}{\rho_{b, im}}.
+\label{eqn:thetaim_from_revparams}
+\theta_{im} = \hat{f}_{im} \phi_{im} .
 \end{equation}
 
-With this new, generalized formulation users are required to specify $\rho_{b,m} \left ( \equiv f_m \rho_b \right )$ for the mobile domain in the MST Package and $\rho_{b,im} \left ( \equiv f_{im} \rho_b \right )$ for each immobile domain in the IST Package.  There are no additional input parameters required for this generalized formulation; users continue to specify a value of bulk density in the MST Packages and each IST Package.  Subsequent to these changes, however, the bulk densities entered into the MST and IST Packages are defined as domain bulk densities (according to equations~\ref{eqn:rho_b_m_1} and ~\ref{eqn:rho_b_im_1}) rather than multiple instances of the overall bulk density (which were required up through \mf version 6.4.1).
+\noindent respectively. Model parameters and variables in equations~\ref{eqn:gwtpde} and ~\ref{eqn:gwtistpde} are defined as in equations~\ref{eqn:gwtpdeorig} and ~\ref{eqn:gwtistpdeorig}, except for the new parameters introduced in the revised parameterization: $\hat{f}_m$ is the volume fraction of the mobile domain defined as the volume of mobile domain per volume of aquifer ($L^3/L^3$), $\hat{f}_{im}$ is the volume fraction of the immobile domain defined as the volume of mobile domain $im$ per volume of aquifer ($L^3/L^3$), $\rho_{b,m}$ is the bulk density of aquifer material in the mobile domain defined as mass of solid aquifer material per unit volume of mobile domain ($M/L^3$), $\rho_{b,im}$ is the bulk density of aquifer material in the immobile domain defined as mass of solid aquifer material per unit volume of immobile domain $im$ ($M/L^3$), $\phi_m$ is the mobile-domain effective porosity defined as defined as volume of voids participating in mobile-domain transport per unit volume of mobile domain ($L^3/L^3$), and $\phi_{im}$ is the effective porosity in the immobile domain defined as defined as volume of voids participating in immobile-domain transport per unit volume of mobile domain $im$ ($L^3/L^3$). In the \mf code, porosities $\theta_{m}$ and $\theta_{im}$ are calculated from the new input parameters using equations~\ref{eqn:thetam_from_revparams} and ~\ref{eqn:thetaim_from_revparams} before being incorporated into discretized representations of equations~\ref{eqn:gwtpde} and~\ref{eqn:gwtistpde}. The new parameters are discussed in more detail below.
 
-\subsection{Parameter Relations} \label{sec:solidmassfrac3}
+\subsubsection{Revised Parameters}
 
-Successful application of the generalized formulation presented here for mobile and immobile domain sorption depends on proper interpretation and assignment of the different input parameters.  Input parameters and related variables relevant to the generalized formulation are presented in table~\ref{table:sorptionparam1}. (As shown in equations~\ref{eqn:fm0},~\ref{eqn:thetat1} and~\ref{eqn:rho_b_1}, the domain solid mass fractions sum to 1, the domain porosities sum to the total porosity, $\theta_t$, and the domain bulk densities sum to the overall bulk density for the aquifer, $\rho_b$.) Note that division of the aquifer into mobile and immobile domains is conceptualized in terms solid mass fractions, and porosities and bulk densities are defined on a per-aquifer-volume basis.  
+The new parameters are summarized in table~\ref{table:revparam}. Note that in  the revised parameterization, division of the aquifer into mobile and immobile domains is conceptualized in terms of volume fractions, and porosities and bulk densities are defined on a per-domain-volume basis. When an aquifer can be divided into multiple domains that occupy distinct, well-defined volumes, as when the mobile and immobile domains represent different lithologies, it may be intuitive to think in terms of the domain volume fractions and local domain properties (properties defined on a per-domain-volume basis).
 
-\input{./Tables/sorption_params1.tex}
+\input{./Tables/transport_params_revised.tex}
 
-When an aquifer can be divided into multiple domains that occupy distinct, well-defined volumes, as when the mobile and immobile domains represent different lithologies, it may be intuitive to think in terms of the domain volume fractions and local domain properties (properties defined on a per-domain-volume basis) presented in table~\ref{table:sorptionparam2}.  In that case, domain volume fractions and local domain properties must be converted by the user into domain mass fractions and per-aquifer-volume domain properties for input into \mf.  This section presents the mathematical relations between the input parameters read by \mf and domain volume fractions and local domain properties.
-
-\input{./Tables/sorption_params2.tex}
-
-As with solid mass fractions, volume fractions for the mobile and immobile domains sum to one by definition, which implies that
+\noindent All parameters in table~\ref{table:revparam} are model input parameters except the mobile-domain volume fraction, $\hat{f}_m$, which is calculated by \mf from the user-specified immobile-domain volume fractions using
 
 \begin{equation}
 \label{eqn:fm5}
-\hat{f}_m = 1 -  \sum_{im}{\hat{f}_{im}}.
+\hat{f}_m = 1 -  \sum_{im}{\hat{f}_{im}},
 \end{equation}
 
-\noindent The total porosity, $\theta_t$, is the volume-weighted average of the local domain porosities:
+\noindent where the summation is over all immobile domains specified by the user. If there are no immobile domains,  $\hat{f}_m$ is set to 1.
+
+Porosities and bulk densities in table~\ref{table:revparam} are defined on a per-domain-volume basis, i.e., as an amount per unit volume of domain. The total porosity, $\theta_t$, can be calculated as the volume-weighted average of the domain porosities, $\phi_m$ and $\phi_{im}$:
 
 \begin{equation}
 \label{eqn:thetat}
-\theta_{t} =  \hat{f}_{m} \phi_{m} +  \sum_{im}{ \hat{f}_{im} \phi_{im}},
+\theta_{t} = \theta_{m} + \sum_{im}{\theta_{im}} = \hat{f}_{m} \phi_{m} + \sum_{im}{\hat{f}_{im} \phi_{im}} ,
 \end{equation}
 
-\noindent The overall bulk density for the aquifer, $\rho_b$, is the volume-weighted average of the local domain bulk densities:
+\noindent Similarly, the overall bulk density, $\rho_b$, can be calculated as the volume-weighted average of the domain bulk densities, $\rho_{b, m}$ and $\rho_{b, im}$:
 
 \begin{equation}
 \label{eqn:rhob2}
-\rho_{b} = \hat{f}_m \tilde{\rho}_{b, m} + \sum_{im}{\hat{f}_{im} \tilde{\rho}_{b, im}}.
+\rho_{b} = \hat{f}_m \rho_{b, m} + \sum_{im}{\hat{f}_{im} \rho_{b, im}}.
 \end{equation}
 
-% here present relations
-Conversion between the alternative variables in table~\ref{table:sorptionparam2} to those used in \mf (table~\ref{table:sorptionparam1}) is straightforward.  Local porosities for the mobile and immobile domains, denoted by $\phi_m$ and $\phi_{im}$, respectively, can be converted to mobile and immobile domain porosities defined on a per-aquifer-volume basis, denoted by $\theta_m$ and $\theta_{im}$, respectively, using
+\subsection{Conversion of Existing Model Input to the Revised Parameterization} \label{sec:inputconversion}
+
+Conversion of existing \mf model input to the revised parameterization such that the simulation gives the same numerical results requires that the revised mobile-domain solute conservation equation, equation~\ref{eqn:gwtpde}, be numerically equivalent to the original mobile-domain solute conservation equation, equation~\ref{eqn:gwtpdeorig}. This is achieved when $\hat{f}_{m}$ and $\phi_{m}$ satisfy
 
 \begin{equation}
-\label{eqn:theta1}
-\theta_{m} = \hat{f}_{m} \phi_{m}
+\label{eqn:equiv_porm}
+\hat{f}_{m} \phi_{m} = \theta_{m}
 \end{equation}
 
-\noindent and
+\noindent and, if sorption is active in the mobile domain, $\hat{f}_{m}$ and $\rho_{b, m}$ satisfy
 
 \begin{equation}
-\label{eqn:theta2}
-\theta_{im} = \hat{f}_{im} \phi_{im}.
+\label{eqn:equiv_rhobm}
+\hat{f}_{m} \rho_{b, m} = f_{m} \rho_{b} .
 \end{equation}
 
-\noindent Local bulk densities for the mobile and immobile domains, denoted by $\tilde{\rho}_{b, m}$ and $\tilde{\rho}_{b, im}$, respectively, can be converted to mobile and immobile domain bulk densities defined on a per-aquifer-volume basis, denoted by $\rho_{b, m}$ and $\rho_{b, im}$, respectively, using
+\noindent For a model that includes at least one immobile domain, the revised immobile-domain solute conservation equation, equation~\ref{eqn:gwtistpde}, must also be numerically equivalent to the original immobile-domain solute conservation equation, equation~\ref{eqn:gwtistpdeorig}. This is achieved when $\hat{f}_{im}$ and $\phi_{im}$ satisfy
 
 \begin{equation}
-\label{eqn:rhobm}
-\rho_{b,m} = \hat{f}_m \tilde{\rho}_{b, m}
+\label{eqn:equiv_porim}
+\hat{f}_{im} \phi_{im} = \theta_{im}
 \end{equation}
 
-\noindent and
+\noindent and, if sorption is active in immobile domain $im$, $\hat{f}_{im}$ and $\rho_{b, im}$ satisfy
 
 \begin{equation}
-\label{eqn:rhobim}
-\rho_{b, im} = \hat{f}_{im} \tilde{\rho}_{b, im}.
+\label{eqn:equiv_rhobim}
+\hat{f}_{im} \rho_{b, im} = f_{im} \rho_{b} .
 \end{equation}
 
-\noindent Volume fractions for the mobile and immobile domains, denoted by $\hat{f}_{m}$ and $\hat{f}_{im}$, respectively, can be converted to mobile and immobile domain solid mass fractions, denoted by $f_{m}$ and $f_{im}$, respectively, using
+\subsubsection{Simulation Without Immobile Domains}
 
-\begin{equation}
-\label{eqn:fmfm}
-f_{m} = \hat{f}_m \frac{\tilde{\rho}_{b, m}}{\rho_{b}}
-\end{equation}
+For an existing simulation without immobile domains, which is the most common use case, no conversion of input parameters is needed to obtain the same simulation results. In this case, \mf sets $f_{m} = 1$ in the original parameterization and $\hat{f}_{m} = 1$ in the revised parameterization. Thus, equations~\ref{eqn:equiv_porm} and~\ref{eqn:equiv_rhobm} reduce to $\phi_{m} = \theta_{m}$ and $\rho_{b, m} = \rho_{b}$, respectively, and are satisfied by default by the original input values.
 
-\noindent and 
+\subsubsection{Simulation With At Least One Immobile Domain}
 
-\begin{equation}
-\label{eqn:fimfim}
-f_{im} = \hat{f}_{im} \frac{\tilde{\rho}_{b, im}}{\rho_{b}}.
-\end{equation}
+For an existing simulation that includes at least one immobile domain, the values of the revised input parameters $\phi_{m}$, $\phi_{im}$, and $\hat{f}_{im}$ must be set such that they satisfy equations~\ref{eqn:equiv_porm} and~\ref{eqn:equiv_porim} in order to obtain the same simulation results. The value of $\hat{f}_{m}$ is calculated by \mf using equation~\ref{eqn:fm5}. Note that the immobile-domain fractions $\hat{f}_{im}$ must sum to less than one so that the resulting mobile-domain fraction, $\hat{f}_{m}$, is greater than zero.
 
-\noindent Note that although $f_{m}$ and $f_{im}$ appear in equations~\ref{eqn:gwtpde} and~\ref{eqn:gwtistpde}, they are not (and never have been) input parameters for \mf. Rather, it is the domain bulk densities, $\rho_{b, m} \left ( \equiv f_{m} \rho_b \right )$ and $\rho_{b, im} \left ( \equiv f_{im} \rho_b \right )$, that are input parameters in the new, generalized formulation of sorption.
+If the existing simulation also includes sorption, the value of the domain bulk density ($\rho_{b, m}$ or $\rho_{b, im}$) must be specified for each domain in which sorption is active. For a mobile domain with sorption, $\rho_{b, m}$ must satisfy equation~\ref{eqn:equiv_rhobm}. For an immobile domain with sorption, $\rho_{b, im}$ must satisfy equation~\ref{eqn:equiv_rhobim}.
+
+Because the revised parameterization involves more input parameters than the original parameterization, the choice of new parameter values that produce the same simulation results is not unique. One approach, for example, is to specify the values of the immobile domain fractions $\hat{f}_{im}$. The required values of $\hat{f}_{m}$, $\phi_{m}$, $\rho_{b, m}$, $\phi_{im}$, and $\rho_{b, im}$ are then determined by equations~\ref{eqn:fm5} and~\ref{eqn:equiv_porm}~--~\ref{eqn:equiv_rhobim}, respectively. If the only goal is to obtain the same simulation results, without regard for whether the revised parameter values are realistic or representative of the domains being modeled, one may, for example, set each immobile domain fraction to $\hat{f}_{im} = 1 / N_{dom}$, where $N_{dom}$ is the total number of domains including the mobile domain.
+
+\subsubsection{Unrealistic Parameter Values}
+
+It is possible that in some cases the process of converting parameters will produce revised parameter values that are unrealistic or inconsistent with independently measured or estimated values. For example, selection of apparently reasonable values of $\hat{f}_{im}$ may require setting $\hat{f}_{m}$, $\phi_{m}$, $\rho_{b, m}$, $\phi_{im}$, and/or $\rho_{b, im}$ to unreasonable values. Assuming the conversion equations have been applied correctly and the independently measured or estimated values are reasonably accurate, other possible sources of inconsistency are errors in setting the original parameter values; selection of unrealistic values for revised parameters ($\hat{f}_{im}$ values, for example) as a starting point for the conversion; and the setting of the original immobile domain fractions $f_{im}$ according to equation~\ref{eqn:fim1}, which may be a poor approxiation for some of the domains being modeled.
