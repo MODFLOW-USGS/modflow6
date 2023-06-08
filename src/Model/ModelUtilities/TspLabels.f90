@@ -47,7 +47,7 @@ module TspLabelsModule
   !!
   !<
   type TspLabelsType
-    
+
     character(len=LENVARNAME), pointer :: modname => null() !< name of the model that module is associated with
     character(len=LENVARNAME), pointer :: tsptype => null() !< "solute" or "heat"
     character(len=LENVARNAME), pointer :: depvartype => null() !< "concentration" or "temperature"

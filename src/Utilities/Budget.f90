@@ -98,7 +98,7 @@ contains
     call this%allocate_scalars(name_model)
     !
     ! -- Store pointer to labels associated with the current model in order
-    !    assign the correct transport-related labels - only necessary for 
+    !    assign the correct transport-related labels - only necessary for
     !    transport model type (i.e., GWT or GWE)
     if (present(tsplab)) this%tsplab => tsplab
     !

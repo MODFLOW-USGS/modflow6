@@ -239,7 +239,7 @@ contains
         end do
         !
       case ('GWE')
-        do  n = 1, GWE_NMULTIPKG
+        do n = 1, GWE_NMULTIPKG
           if (GWE_MULTIPKG(n) == pkgtype) then
             multi_pkg = .true.
             exit

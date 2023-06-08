@@ -190,7 +190,7 @@ contains
     call mem_checkin(gwemodel%fmi%gwfflowja, &
                      'GWFFLOWJA', gwemodel%fmi%memoryPath, &
                      'FLOWJA', gwfmodel%memoryPath)
-    
+
     !
     ! -- Set the npf flag so that specific discharge is available for
     !    transport calculations if dispersion is active
@@ -394,7 +394,6 @@ contains
                                  'GWFSIMVALS', gweConn%gweExchange%memoryPath, &
                                  'SIMVALS', gwfEx%memoryPath)
               end if
-
 
               !cdl link up mvt to mvr
               if (gwfEx%inmvr > 0) then

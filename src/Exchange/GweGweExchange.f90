@@ -529,7 +529,7 @@ contains
       call this%gwemodel1%dis%record_srcdst_list_header(budtxt(1), &
                                                         this%gwemodel1%name, &
                                                         this%name, &
-                                                        this%gwemodel2%name, & 
+                                                        this%gwemodel2%name, &
                                                         this%name, &
                                                         this%naux, this%auxname, &
                                                         ibinun1, this%nexg, &
@@ -606,7 +606,7 @@ contains
     !
     ! -- If cell-by-cell flows will be saved as a list, write header.
     if (ibinun2 /= 0) then
-      call this%gwemodel2%dis%record_srcdst_list_header(budtxt(1),  &
+      call this%gwemodel2%dis%record_srcdst_list_header(budtxt(1), &
                                                         this%gwemodel2%name, &
                                                         this%name, &
                                                         this%gwemodel1%name, &

@@ -107,12 +107,12 @@ contains
     ! -- return
     return
   end subroutine drn_create
-  
+
   !> @ brief Advance the drain boundary package
   !!
   !!  Advance data in the drain boundary package. Overides the bnd_ad()
-  !!  routine in the bndType parent class. The method advances time 
-  !!  series and observation data as well as updates the user-specified 
+  !!  routine in the bndType parent class. The method advances time
+  !!  series and observation data as well as updates the user-specified
   !!  conductance based on changes in viscosity when water enters from
   !!  the boundary
   !<

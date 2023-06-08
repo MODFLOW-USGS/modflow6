@@ -1,35 +1,35 @@
 module GweInputDataModule
-    
+
   use KindModule, only: I4B, DP
   use ConstantsModule, only: DZERO, LENMEMPATH
-  
+
   implicit none
   private
   public :: GweInputDataType
   public :: gweshared_dat_cr
   public :: gweshared_dat_df
   public :: set_gwe_dat_ptrs
-  
-  !> Data for sharing among multiple packages.  Originally read in from 
+
+  !> Data for sharing among multiple packages.  Originally read in from
   !< the MST package
-  
+
   type GweInputDataType
 
     ! dim
     integer(I4B) :: nnodes !< number of cells
-    
+
     ! strings
     character(len=LENMEMPATH) :: memoryPath = '' !< the location in the memory manager where the variables are stored
-  
+
     ! mst data to be share across multiple packages
     real(DP), pointer :: gwerhow => null() !< Density of water (for GWE purposes, a constant scalar)
     real(DP), pointer :: gwecpw => null() !< Heat capacity of water (non-spatially varying)
     real(DP), pointer :: gwelatheatvap => null() !< latent heat of vaporization
     real(DP), dimension(:), pointer, contiguous :: gwerhos => null() !< Density of the aquifer material
     real(DP), dimension(:), pointer, contiguous :: gwecps => null() !< Heat capacity of solids (spatially varying)
-  
+
   contains
-  
+
     ! -- public
     procedure, public :: gweshared_dat_df
     procedure, public :: set_gwe_dat_ptrs
@@ -38,7 +38,7 @@ module GweInputDataModule
     procedure, private :: allocate_shared_vars
     procedure, private :: set_gwe_shared_scalars
     procedure, private :: set_gwe_shared_arrays
-    
+
   end type GweInputDataType
 
 contains
@@ -58,7 +58,7 @@ contains
     ! -- return
     return
   end subroutine gweshared_dat_cr
-  
+
 !> @brief Define the shared data
 !<
   subroutine gweshared_dat_df(this, nodes)
@@ -101,7 +101,7 @@ contains
     this%gwecpw = DZERO
     this%gwerhow = DZERO
     this%gwelatheatvap = DZERO
-    do i=1, nodes
+    do i = 1, nodes
       this%gwecps(i) = DZERO
       this%gwerhos(i) = DZERO
     end do
@@ -110,13 +110,12 @@ contains
     return
   end subroutine allocate_shared_vars
 
-  
-  !> @brief Allocate and read data from MST 
+  !> @brief Allocate and read data from MST
   !!
-  !! MST data, including heat capacity of water (cpw), density of water 
-  !! (rhow), latent heat of vaporization (latheatvap), heat capacity of 
-  !! the aquifer material (cps), and density of the aquifer material 
-  !! (rhow) is used among other packages and is therefore stored in a 
+  !! MST data, including heat capacity of water (cpw), density of water
+  !! (rhow), latent heat of vaporization (latheatvap), heat capacity of
+  !! the aquifer material (cps), and density of the aquifer material
+  !! (rhow) is used among other packages and is therefore stored in a
   !! separate class
   subroutine set_gwe_dat_ptrs(this, gwerhow, gwecpw, gwerhos, gwecps, &
                               gwelatheatvap)
@@ -148,10 +147,10 @@ contains
   !! for use by other packages
   !!
   !! Set pointers to GWE-related scalars and arrays for use
-  !! by multiple packages.  For example, a package capable of 
+  !! by multiple packages.  For example, a package capable of
   !! simulating evaporation will need access to latent heat of
   !! of vaporization.
-  !! 
+  !!
   !<
   subroutine set_gwe_shared_scalars(this, gwerhow, gwecpw, gwelatheatvap)
     ! -- modules
@@ -181,8 +180,8 @@ contains
   !! for use by other packages
   !!
   !! Set pointers to GWE-related arrays for use
-  !! by multiple packages.  
-  !! 
+  !! by multiple packages.
+  !!
   !<
   subroutine set_gwe_shared_arrays(this, gwerhos, gwecps)
     ! -- modules
