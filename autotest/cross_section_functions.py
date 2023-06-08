@@ -135,6 +135,31 @@ def wetted_area(
     return area
 
 
+def add_wetted_vert(x, h, depth, vert_neighbs, idx):
+    left_wet_len = 0
+    right_wet_len = 0
+
+    # left side
+    if vert_neighbs[0]:
+        idxm1 = idx - 1
+        if h[idxm1] > depth:
+            left_wet_len = depth - h[idx]
+        else:
+            left_wet_len = h[idxm1] - h[idx]
+
+    # right side
+    if vert_neighbs[1]:
+        idxp1 = idx + 1
+        idxp2 = idxp1 + 1
+        if h[idxp2] > depth:
+            right_wet_len = depth - h[idxp1]
+        else:
+            right_wet_len = h[idxp2] - h[idxp1]
+
+    vert_len = left_wet_len + right_wet_len
+    return vert_len
+
+
 def wetted_perimeter(
     x,
     h,
@@ -155,11 +180,50 @@ def wetted_perimeter(
             # get wetted perimeter
             perimeter += get_wetted_perimeter(x0, x1, h0, h1, depth)
 
+            # set neighbor status
+            vert_neighbs = is_neighb_vert(x, h, idx)
+
+            # add wetted vertical neighbors if necessary
+            if np.any(vert_neighbs):
+                perimeter += add_wetted_vert(x, h, depth, vert_neighbs, idx)
+
             # write to screen
             if verbose:
                 print(f"{idx}->{idx + 1} ({x0},{x1}) - perimeter={x1 - x0}")
 
     return perimeter
+
+
+def is_neighb_vert(x, h, idx):
+    cnt = len(x)
+
+    # Assess left neighbor first
+    if idx > 0:
+        if (
+            cnt > 2
+        ):  # only x-sections w/ 3 or more pts may host a vertical side
+            idxm1 = idx - 1
+            if x[idxm1] == x[idx] and h[idxm1] != h[idx]:
+                leftvert = True
+            else:
+                leftvert = False
+        else:
+            leftvert = False
+    else:
+        leftvert = False
+
+    # Assess right neighbor
+    idxp1 = idx + 1
+    idxp2 = idxp1 + 1
+    if cnt > idxp2:
+        if x[idxp1] == x[idxp2] and h[idxp1] != idxp2:
+            rightvert = True
+        else:
+            rightvert = False
+    else:
+        rightvert = False
+
+    return (leftvert, rightvert)
 
 
 def manningsq(
@@ -181,6 +245,14 @@ def manningsq(
             x0, x1 = get_wetted_station(x[i0], x[i1], h[i0], h[i1], depth)
 
             perimeter = get_wetted_perimeter(x0, x1, h[i0], h[i1], depth)
+
+            # set neighbor status
+            vert_neighbs = is_neighb_vert(x, h, i0)
+
+            # add wetted vertical neighbors if necessary
+            if np.any(vert_neighbs):
+                perimeter += add_wetted_vert(x, h, depth, vert_neighbs, i0)
+
             area = get_wetted_area(x[i0], x[i1], h[i0], h[i1], depth)
             if perimeter > 0.0:
                 radius = area / perimeter
