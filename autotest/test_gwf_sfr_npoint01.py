@@ -18,6 +18,8 @@ ex = [
     "sfr_npt01g",
     "sfr_npt01h",
     "sfr_npt01i",
+    "sfr_npt01j",
+    "sfr_npt01k",
 ]
 
 xsect_types = (
@@ -30,6 +32,8 @@ xsect_types = (
     "v",
     "w",
     "v_invalid",
+    "|/",
+    "\|",
 )
 
 # spatial discretization data
@@ -99,6 +103,16 @@ np_data = {
         ),
         "h": np.array([1.0, 1.0, 0.0, 1.0, 1.0], dtype=float),
         "n": np.array([roughness] * 5, dtype=float),
+    },
+    xsect_types[9]: {
+        "x": np.array([0.0, 0.0, rwid], dtype=float),
+        "h": np.array([1.0, 0.0, 1.0], dtype=float),
+        "n": np.array([roughness] * 3, dtype=float),
+    },
+    xsect_types[10]: {
+        "x": np.array([0.0, rwid, rwid], dtype=float),
+        "h": np.array([1.0, 0.0, 1.0], dtype=float),
+        "n": np.array([roughness] * 3, dtype=float),
     },
 }
 
