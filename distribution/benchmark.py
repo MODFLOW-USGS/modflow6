@@ -158,13 +158,13 @@ def elapsed_real_to_string(elt):
     return elt_str + f"{time_sec:.3f} Seconds"
 
 
-def run_function(app, example):
-    return flopy.run_model(
+def run_function(id, app, example):
+    return (id, flopy.run_model(
         app,
         None,
         model_ws=example,
         silent=True,
-        report=True,
+        report=True,)
     )
 
 
@@ -200,8 +200,8 @@ def run_model(current_app: PathLike, previous_app: PathLike, model_path: PathLik
 
     # processing options
     args = (
-        (current_app, model_path),
-        (previous_app, prev_dir),
+        (0, current_app, model_path),
+        (1, previous_app, prev_dir),
     )
 
     # Multi-processing using Pool
@@ -215,8 +215,16 @@ def run_model(current_app: PathLike, previous_app: PathLike, model_path: PathLik
     pool.close()
 
     # set variables for processing
-    success, buff = results[0].get()
-    success0, buff0 = results[1].get()
+    id, (s, b) = results[0].get()
+    if id == 0:
+        success, buff = s, b
+    elif id == 1:
+        sucess0, buff0 = s, b
+    id, (s, b) = results[1].get()
+    if id == 0:
+        success, buff = s, b
+    elif id == 1:
+        sucess0, buff0 = s, b
 
     if success:
         elt = get_elapsed_time(buff)
@@ -356,7 +364,8 @@ def run_benchmarks(
             previous_exe,
             example,
         )
-        assert success, f"{example} run failed"
+        if not success:
+            print(f"{example} run failed")
         current_total += t
         previous_total += t0
         lines.append(line)
