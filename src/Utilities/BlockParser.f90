@@ -30,6 +30,7 @@ module BlockParserModule
     character(len=LINELENGTH), private :: blockNameFound !< block name found
     character(len=LENHUGELINE), private :: laststring !< last string read
     character(len=:), allocatable, private :: line !< current line
+    character(len=:), allocatable :: bkspc!< line stored if file was backspaced
   contains
     procedure, public :: Initialize
     procedure, public :: Clear
@@ -156,7 +157,7 @@ contains
     !
     if (blockName == '*') then
       call uget_any_block(this%inunit, this%iout, isFound, this%lloc, &
-                          this%line, blockNameFound, this%iuext)
+                          this%line, blockNameFound, this%iuext, buf=this%bkspc)
       if (isFound) then
         this%blockNameFound = blockNameFound
         ierr = 0
@@ -166,7 +167,7 @@ contains
     else
       call uget_block(this%inunit, this%iout, this%blockName, ierr, isFound, &
                       this%lloc, this%line, this%iuext, continueRead, &
-                      supportOpenCloseLocal)
+                      supportOpenCloseLocal, buf=this%bkspc)
       if (isFound) this%blockNameFound = this%blockName
     end if
     this%iuactive = this%iuext
@@ -202,7 +203,12 @@ contains
     ! -- read next line
     loop1: do
       if (lineread) exit loop1
-      call u9rdcom(this%iuext, this%iout, this%line, ierr)
+      if (len_trim(this%bkspc)==0) then
+          call u9rdcom(this%iuext, this%iout, this%line, ierr)
+      else
+        this%line = this%bkspc
+        this%bkspc = ''
+      end if
       this%lloc = 1
       call urword(this%line, this%lloc, istart, istop, 0, ival, rval, &
                   this%iout, this%iuext)

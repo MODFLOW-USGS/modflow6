@@ -327,7 +327,7 @@ module InputOutputModule
   !!
   !<
   subroutine uget_block(iin, iout, ctag, ierr, isfound, lloc, line, iuext,     &
-                        blockRequired, supportopenclose)
+                        blockRequired, supportopenclose, buf)
     implicit none
     ! -- dummy variables
     integer(I4B),         intent(in) :: iin                   !< file unit
@@ -337,6 +337,7 @@ module InputOutputModule
     logical,           intent(inout) :: isfound               !< boolean indicating if the block was found
     integer(I4B),      intent(inout) :: lloc                  !< position in line
     character (len=:), allocatable, intent(inout) :: line     !< line
+    character (len=:), allocatable, intent(inout), optional :: buf      !< linebuffer for single line
     integer(I4B),      intent(inout) :: iuext                 !< external file unit number
     logical, optional,    intent(in) :: blockRequired         !< boolean indicating if the block is required
     logical, optional,    intent(in) :: supportopenclose      !< boolean indicating if the block supports open/close
@@ -397,14 +398,18 @@ module InputOutputModule
                 if (line2(istart:istop) == '') exit chk
                 if (line2(istart:istop) == '(BINARY)' .or. &
                     line2(istart:istop) == 'SFAC') then
-                  backspace(iin)
+                  if (present(buf)) then
+                      buf = line2
+                  end if
                   exit mainloop
                 end if
               end do chk
               iuext = GetUnit()
               call openfile(iuext,iout,fname,'OPEN/CLOSE')
             else
-              backspace(iin)
+              if (present(buf)) then
+                 buf = line2
+              end if
             end if
           end if
         else
@@ -415,7 +420,9 @@ module InputOutputModule
             call store_error(ermsg)
             call store_error_unit(iuext)
           else
-            backspace(iin)
+            if (present(buf)) then
+               buf = line2
+            end if
           endif
         end if
         exit mainloop
@@ -441,7 +448,7 @@ module InputOutputModule
   !! Return isfound with true, if found, and return the block name.
   !!
   !<
-  subroutine uget_any_block(iin,iout,isfound,lloc,line,ctagfound,iuext)
+  subroutine uget_any_block(iin,iout,isfound,lloc,line,ctagfound,iuext,buf)
     implicit none
     ! -- dummy variables
     integer(I4B), intent(in) :: iin                         !< file unit number
@@ -451,6 +458,7 @@ module InputOutputModule
     character (len=:), allocatable, intent(inout) :: line   !< line
     character(len=*), intent(out) :: ctagfound              !< block name
     integer(I4B), intent(inout) :: iuext                    !< external file unit number
+    character (len=:), allocatable, intent(inout), optional :: buf      !< linebuffer for single line
     ! -- local variables
     integer(I4B) :: ierr, istart, istop
     integer(I4B) :: ival, lloc2
@@ -483,7 +491,9 @@ module InputOutputModule
             fname = line2(istart:istop)
             call openfile(iuext,iout,fname,'OPEN/CLOSE')
           else
-            backspace(iin)
+            if (present(buf)) then
+              buf = line2
+            end if
           endif
         else
           ermsg  = 'Block name missing in file.'
@@ -2243,6 +2253,7 @@ END SUBROUTINE URWORD
     !code
     !
     !readerrmsg = ''
+    
     line = comment
     pcomments: do
       call get_line(iin, line, ierr)

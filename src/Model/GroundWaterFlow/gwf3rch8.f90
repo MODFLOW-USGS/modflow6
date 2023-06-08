@@ -596,7 +596,7 @@ contains
                             this%nodelist, this%bound, this%auxvar, &
                             this%auxname, this%boundname, this%listlabel, &
                             this%packName, this%tsManager, this%iscloc, &
-                            this%indxconvertflux)
+                            this%indxconvertflux,  last_read=this%parser%bkspc)
     this%nbound = nlist
     if (this%maxbound > maxboundorig) then
       ! -- The arrays that belong to BndType have been extended.

@@ -41,6 +41,7 @@ module ListReaderModule
     integer(I4B), dimension(:), allocatable :: idxtxtauxcol ! col locations of text in auxvar
     character(len=LENTIMESERIESNAME), dimension(:), allocatable :: txtrlist ! text found in rlist
     character(len=LENTIMESERIESNAME), dimension(:), allocatable :: txtauxvar ! text found in auxvar
+    character(len=:), allocatable :: bkspc!< line stored if file was backspaced
   contains
     procedure :: read_list
     procedure :: write_list
@@ -439,7 +440,7 @@ contains
           ! If ierr < 0, backspace was already performed in u9rdcom, so only
           ! need to backspace if END was found.
           if (this%ierr == 0) then
-            backspace (this%inlist)
+            this%bkspc = this%line
           end if
           this%nlist = ii - 1
           exit readloop

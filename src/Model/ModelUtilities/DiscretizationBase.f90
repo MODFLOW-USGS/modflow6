@@ -1019,7 +1019,7 @@ contains
   subroutine read_list(this, in, iout, iprpak, nlist, inamedbound, &
                        iauxmultcol, nodelist, rlist, auxvar, auxname, &
                        boundname, label, pkgname, tsManager, iscloc, &
-                       indxconvertflux)
+                       indxconvertflux, last_read)
 ! ******************************************************************************
 ! read_list -- Read a list using the list reader object.
 !              Convert user node numbers to reduced numbers.
@@ -1058,6 +1058,7 @@ contains
     type(TimeSeriesManagerType) :: tsManager
     integer(I4B), intent(in) :: iscloc
     integer(I4B), intent(in), optional :: indxconvertflux
+    character(len=:), allocatable, intent(inout), optional :: last_read
     ! -- local
     integer(I4B) :: l
     integer(I4B) :: nodeu, noder
@@ -1169,6 +1170,9 @@ contains
     end if
     !
     ! -- return
+    if (present(last_read)) then
+	  last_read = lstrdobj%bkspc
+    end if
   end subroutine read_list
 
   subroutine read_layer_array(this, nodelist, darray, ncolbnd, maxbnd, &

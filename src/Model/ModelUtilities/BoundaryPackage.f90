@@ -369,7 +369,7 @@ contains
                               this%iauxmultcol, this%nodelist, &
                               this%bound, this%auxvar, this%auxname, &
                               this%boundname, this%listlabel, &
-                              this%packName, this%tsManager, this%iscloc)
+                              this%packName, this%tsManager, this%iscloc, last_read=this%parser%bkspc)
       this%nbound = nlist
       !
       ! -- save user-specified conductance if vsc package is active
@@ -384,6 +384,7 @@ contains
       call this%bnd_rp_ts()
       !
       ! -- Terminate the block
+
       call this%parser%terminateblock()
       !
       ! -- Copy boundname into boundname_cst
