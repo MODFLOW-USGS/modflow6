@@ -432,7 +432,7 @@ contains
     ! -- modules
     ! -- dummy
     class(GweMweType) :: this
-    ! -- return
+    ! -- Return
     integer(I4B) :: nbudterms
     ! -- local
 ! ------------------------------------------------------------------------------

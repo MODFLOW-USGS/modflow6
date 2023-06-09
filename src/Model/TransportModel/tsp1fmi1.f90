@@ -718,7 +718,7 @@ contains
     end do
 
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine set_active_status
 
@@ -970,7 +970,7 @@ contains
       end if
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine set_aptbudobj_pointer
 

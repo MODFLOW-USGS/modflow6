@@ -465,7 +465,6 @@ contains
     integer(I4B), intent(in) :: isuppress_output !< flag to supress output
     type(BudgetType), intent(inout) :: model_budget !< model budget object
     ! -- local
-    integer(I4B) :: n
     real(DP) :: rin
     real(DP) :: rout
     !
@@ -881,7 +880,7 @@ contains
     real(DP), intent(in) :: cold !< temperature at end of last time step
     real(DP), intent(in) :: cnew !< temperature at end of this time step
     real(DP), intent(in) :: delt !< length of time step
-    ! -- return
+    ! -- Return
     real(DP) :: decay_rate !< returned value for decay rate
     !
     ! -- Return user rate if production, otherwise constrain, if necessary

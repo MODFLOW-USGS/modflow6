@@ -144,7 +144,7 @@ contains
     !    vaporization
     uzeobj%gwecommon => gwecommon
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uze_create
 
@@ -341,7 +341,7 @@ contains
       end if
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uze_ac
 
@@ -433,7 +433,7 @@ contains
       end if
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uze_mc
 
@@ -443,8 +443,6 @@ contains
   !! in order to add matrix terms specifically for this package
   !<
   subroutine uze_fc_expanded(this, rhs, ia, idxglo, matrix_sln)
-    ! -- modules
-    use TdisModule, only: kper, kstp
     ! -- dummy
     class(GweUzeType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
@@ -453,16 +451,15 @@ contains
     class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     integer(I4B) :: j, n, n1, n2
-    integer(I4B) :: iloc, ihostcell
+    integer(I4B) :: iloc
     integer(I4B) :: iposd, iposoffd
-    integer(I4B) :: ipossymd, ipossymoffd
+    integer(I4B) :: ipossymoffd
     real(DP) :: cold
     real(DP) :: qbnd
     real(DP) :: omega
     real(DP) :: rrate
     real(DP) :: rhsval
     real(DP) :: hcofval
-    real(DP) :: dummy
 ! ------------------------------------------------------------------------------
     !
     ! -- add infiltration contribution
@@ -529,11 +526,7 @@ contains
     if (this%idxbudtmvr /= 0) then
       do j = 1, this%flowbudptr%budterm(this%idxbudtmvr)%nlist
         call this%apt_tmvr_term(j, n1, n2, rrate, rhsval, hcofval)
-        !NOTE: originally was iposd, but changed to idxsymdglo on the first
-        !      modification.  It was later realized we needed idxsymoffdglo.
-        !     (If this works, consider changing 'ipossymd' to 'ipossymoffd'
-        !
-        iloc = this%idxlocnode(n1) ! for uze idxlocnode stores the host cell local row index
+        iloc = this%idxlocnode(n1) ! for uze, idxlocnode stores the host cell local row index
         ipossymoffd = this%idxsymoffdglo(j)
         call matrix_sln%add_value_pos(ipossymoffd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
@@ -647,7 +640,7 @@ contains
     ! -- modules
     ! -- dummy
     class(GweUzeType) :: this
-    ! -- return
+    ! -- Return
     integer(I4B) :: nbudterms
     ! -- local
 ! ------------------------------------------------------------------------------
@@ -676,9 +669,8 @@ contains
     class(GweUzeType) :: this
     integer(I4B), intent(inout) :: idx
     ! -- local
-    integer(I4B) :: maxlist, naux, n, n1, n2
+    integer(I4B) :: maxlist, naux
     character(len=LENBUDTXT) :: text
-    real(DP) :: q
 ! ------------------------------------------------------------------------------
     !
     ! -- Infiltration
@@ -753,7 +745,7 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uze_setup_budobj
 
@@ -771,8 +763,8 @@ contains
     real(DP), intent(inout) :: ccratin
     real(DP), intent(inout) :: ccratout
     ! -- local
-    integer(I4B) :: j, n1, n2, i, indx
-    integer(I4B) :: nlist, nbudterm, nlen
+    integer(I4B) :: j, n1, n2, indx
+    integer(I4B) :: nlist, nlen
     integer(I4B) :: igwfnode
     integer(I4B) :: idiag
     real(DP) :: q
@@ -931,7 +923,7 @@ contains
     !
     deallocate (budresid)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uze_fill_budobj
 
@@ -1065,7 +1057,7 @@ contains
     if (present(rhsval)) rhsval = r * this%eqnsclfac
     if (present(hcofval)) hcofval = h * this%eqnsclfac
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uze_infl_term
 
@@ -1099,7 +1091,7 @@ contains
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd * this%eqnsclfac
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uze_rinf_term
 
@@ -1140,7 +1132,7 @@ contains
     if (present(rhsval)) rhsval = -(DONE - omega) * qbnd * ctmp * this%eqnsclfac
     if (present(hcofval)) hcofval = omega * qbnd * this%eqnsclfac
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uze_uzet_term
 
@@ -1175,7 +1167,7 @@ contains
 !!    if (present(hcofval)) hcofval = qbnd
     if (present(hcofval)) hcofval = qbnd * this%eqnsclfac
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uze_ritm_term
 
@@ -1194,8 +1186,6 @@ contains
     integer(I4B), intent(inout) :: n2
     real(DP), intent(inout) :: rrate
     ! -- local
-    real(DP) :: qbnd
-    real(DP) :: ctmp
     real(DP) :: r
     integer(I4B) :: i
     character(len=LENBUDTXT) :: flowtype
@@ -1218,7 +1208,7 @@ contains
     end if
     rrate = r
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uze_theq_term
 
@@ -1425,7 +1415,7 @@ contains
     !
 999 continue
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uze_set_stressperiod
 

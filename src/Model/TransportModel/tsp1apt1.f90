@@ -231,7 +231,7 @@ contains
       end if
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine apt_ac
 
@@ -588,7 +588,7 @@ contains
       call this%parser%StoreErrorUnit()
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine apt_set_stressperiod
 
@@ -613,7 +613,7 @@ contains
     call store_error('Program error: pak_set_stressperiod not implemented.', &
                      terminate=.TRUE.)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine pak_set_stressperiod
 
@@ -622,7 +622,7 @@ contains
   !! Determine if a valid feature number has been specified.
   !<
   function apt_check_valid(this, itemno) result(ierr)
-    ! -- return
+    ! -- Return
     integer(I4B) :: ierr
     ! -- dummy
     class(TspAptType), intent(inout) :: this
@@ -722,7 +722,7 @@ contains
       end do
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine apt_cf
 
@@ -2017,7 +2017,7 @@ contains
     ! -- modules
     ! -- dummy
     class(TspAptType) :: this
-    ! -- return
+    ! -- Return
     integer(I4B) :: nbudterms
     ! -- local
 ! ------------------------------------------------------------------------------
@@ -2034,13 +2034,13 @@ contains
     ! -- local
     character(len=*), intent(in) :: str
     integer, intent(in) :: width
-    ! -- return
+    ! -- Return
     character(len=max(len_trim(str), width)) :: res
 ! ------------------------------------------------------------------------------
     res = str
     res = adjustr(res)
     !
-    ! -- return
+    ! -- Return
     return
   end function
 

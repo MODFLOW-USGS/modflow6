@@ -154,7 +154,7 @@ contains
     !    vaporization for evaporative cooling.
     sfeobj%gwecommon => gwecommon
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine sfe_create
 
@@ -461,7 +461,7 @@ contains
     ! -- modules
     ! -- dummy
     class(GweSfeType) :: this
-    ! -- return
+    ! -- Return
     integer(I4B) :: nbudterms
     ! -- local
 ! ------------------------------------------------------------------------------
@@ -579,7 +579,7 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine sfe_setup_budobj
 
@@ -867,7 +867,7 @@ contains
     if (present(rhsval)) rhsval = -rrate ! kluge note eqnsclfac: this was incorrect for divided-through formulation but is ok now
     if (present(hcofval)) hcofval = DZERO
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine sfe_roff_term
 

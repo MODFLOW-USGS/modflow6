@@ -91,15 +91,9 @@ contains
     character(len=*), intent(in) :: modelname
     ! -- local
     integer(I4B) :: indis
-    integer(I4B) :: ipakid, i, j, iu, ipaknum
-    character(len=LINELENGTH) :: errmsg
-    character(len=LENPACKAGENAME) :: pakname
     type(GweModelType), pointer :: this
     class(BaseModelType), pointer :: model
-    character(len=LENMEMPATH) :: input_mempath
-    character(len=LINELENGTH) :: lst_fname
-    type(GwfNamParamFoundType) :: found
-
+    !
     cunit(10) = 'TMP6 '
 ! ------------------------------------------------------------------------------
     !
@@ -123,7 +117,7 @@ contains
     ! -- create model packages
     call this%create_gwe_specific_packages(indis)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwe_cr
 
@@ -575,8 +569,6 @@ contains
   !! This subroutine calls the parent class output routine.
   !<
   subroutine gwe_ot(this)
-    ! -- modules
-    use TdisModule, only: kstp, kper, tdis_ot, endofperiod
     ! -- dummy
     class(GweModelType) :: this
     ! -- local
@@ -657,7 +649,7 @@ contains
     ! -- NumericalModelType
     call this%NumericalModelType%model_da()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwe_da
 

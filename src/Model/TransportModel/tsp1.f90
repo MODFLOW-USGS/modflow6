@@ -134,12 +134,7 @@ contains
     character(len=*), intent(in) :: macronym
     type(GweInputDataType), intent(in), optional :: gwecommon !< shared data container for use by multiple GWE packages
     ! -- local
-    class(*), pointer :: mstobjPtr
-    character(len=LINELENGTH) :: errmsg
     character(len=LENMEMPATH) :: input_mempath
-    integer(I4B) :: nwords
-    integer(I4B) :: i
-    character(len=LINELENGTH), allocatable, dimension(:) :: words
     character(len=LINELENGTH) :: lst_fname
     type(GwfNamParamFoundType) :: found
 ! ------------------------------------------------------------------------------
@@ -201,7 +196,7 @@ contains
     ! -- dummy variables
     class(TransportModelType) :: this
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine tsp_df
 
@@ -219,7 +214,7 @@ contains
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine tsp_ac
 
@@ -236,7 +231,7 @@ contains
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine tsp_mc
 
@@ -251,7 +246,7 @@ contains
     class(TransportModelType) :: this
 ! ------------------------------------------------------------------------------
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine tsp_ar
 
@@ -279,7 +274,7 @@ contains
     class(TransportModelType) :: this
 ! ------------------------------------------------------------------------------
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine tsp_ad
 
@@ -302,7 +297,7 @@ contains
     integer(I4B), intent(in) :: inwtflag
 ! ------------------------------------------------------------------------------
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine tsp_fc
 
@@ -324,7 +319,7 @@ contains
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine tsp_cc
 
@@ -339,7 +334,6 @@ contains
     integer(I4B), intent(in) :: icnvg
     integer(I4B), intent(in) :: isuppress_output
     ! -- local
-    integer(I4B) :: i
 ! ------------------------------------------------------------------------------
     !
     ! -- Return
@@ -638,7 +632,7 @@ contains
     this%inobs = 0
     this%eqnsclfac = DZERO
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine allocate_tsp_scalars
 
@@ -664,7 +658,7 @@ contains
     call mem_deallocate(this%inobs)
     call mem_deallocate(this%eqnsclfac)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine tsp_da
 
@@ -707,7 +701,7 @@ contains
       call store_error_filename(this%filename)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine ftype_check
 
@@ -757,7 +751,7 @@ contains
     ! -- write list file header
     call write_listfile_header(this%iout, 'GROUNDWATER TRANSPORT MODEL (GWT)')
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine create_lstfile
 
@@ -836,9 +830,7 @@ contains
     character(len=LENPACKAGENAME) :: pkgname
     character(len=LENMEMPATH) :: mempath
     integer(I4B), pointer :: inunit
-    integer(I4B), dimension(:), allocatable :: bndpkgs
     integer(I4B) :: n
-    character(len=LENMEMPATH) :: mempathdsp = ''
     !
     ! -- Initialize
     indis = 0
@@ -903,7 +895,7 @@ contains
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
     call tsp_obs_cr(this%obs, this%inobs)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine create_packages
 

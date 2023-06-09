@@ -225,7 +225,7 @@ contains
   function advqtvd(this, n, m, iposnm, cnew) result(qtvd)
     ! -- modules
     use ConstantsModule, only: DPREC
-    ! -- return
+    ! -- Return
     real(DP) :: qtvd
     ! -- dummy
     class(TspAdvType) :: this
@@ -480,7 +480,7 @@ contains
   !! Calculate the advection weight
   !<
   function adv_weight(this, iadvwt, ipos, n, m, qnm) result(omega)
-    ! -- return
+    ! -- Return
     real(DP) :: omega
     ! -- dummy
     class(TspAdvType) :: this
@@ -515,7 +515,7 @@ contains
       end if
     end select
     !
-    ! -- return
+    ! -- Return
     return
   end function adv_weight
 

@@ -89,7 +89,7 @@ contains
     !    vaporization for evaporative cooling.
     srcobj%gwecommon => gwecommon
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine src_create
 
@@ -107,7 +107,7 @@ contains
     !
     ! -- scalars
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine src_da
 
@@ -128,7 +128,7 @@ contains
     !
     ! -- Set values
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine src_allocate_scalars
 
@@ -209,7 +209,7 @@ contains
       end if
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine src_fc
 
@@ -241,7 +241,7 @@ contains
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine define_listlabel
 

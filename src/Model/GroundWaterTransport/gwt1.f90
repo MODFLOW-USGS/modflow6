@@ -31,15 +31,8 @@ module GwtModule
 
     type(GwtMstType), pointer :: mst => null() ! mass storage and transfer package
     type(GwtDspType), pointer :: dsp => null() ! dispersion package
-    ! integer(I4B), pointer :: inic => null() ! unit number IC
-    ! integer(I4B), pointer :: infmi => null() ! unit number FMI
-    ! integer(I4B), pointer :: inmvt => null() ! unit number MVT
     integer(I4B), pointer :: inmst => null() ! unit number MST
-    ! integer(I4B), pointer :: inadv => null() ! unit number ADV
     integer(I4B), pointer :: indsp => null() ! DSP enabled flag
-    ! integer(I4B), pointer :: inssm => null() ! unit number SSM
-    ! integer(I4B), pointer :: inoc => null() ! unit number OC
-    ! integer(I4B), pointer :: inobs => null() ! unit number OBS
 
   contains
 
@@ -77,7 +70,6 @@ contains
     use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerExtModule, only: mem_set_value
-    use SimVariablesModule, only: idm_context
     use GwfNamInputModule, only: GwfNamParamFoundType
     use BudgetModule, only: budget_cr
     use TspLabelsModule, only: tsplabels_cr
@@ -88,16 +80,9 @@ contains
     integer(I4B), intent(in) :: id
     character(len=*), intent(in) :: modelname
     ! -- local
-    integer(I4B) :: indis !, indis6, indisu6, indisv6
-    integer(I4B) :: ipakid, i, j, iu, ipaknum
-    character(len=LINELENGTH) :: errmsg
-    character(len=LENPACKAGENAME) :: pakname
-    !type(NameFileType) :: namefile_obj
+    integer(I4B) :: indis 
     type(GwtModelType), pointer :: this
     class(BaseModelType), pointer :: model
-    character(len=LENMEMPATH) :: input_mempath
-    character(len=LINELENGTH) :: lst_fname
-    type(GwfNamParamFoundType) :: found
     cunit(10) = 'CNC6'
     ! -- format
 ! ------------------------------------------------------------------------------
@@ -574,8 +559,6 @@ contains
   !! This subroutine calls the parent class output routine.
   !<
   subroutine gwt_ot(this)
-    ! -- modules
-    use TdisModule, only: kstp, kper, tdis_ot, endofperiod
     ! -- dummy
     class(GwtModelType) :: this
     ! -- local
