@@ -80,7 +80,7 @@ contains
     integer(I4B), intent(in) :: id
     character(len=*), intent(in) :: modelname
     ! -- local
-    integer(I4B) :: indis 
+    integer(I4B) :: indis
     type(GwtModelType), pointer :: this
     class(BaseModelType), pointer :: model
     cunit(10) = 'CNC6'

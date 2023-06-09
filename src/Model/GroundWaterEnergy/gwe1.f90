@@ -68,7 +68,6 @@ contains
     use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
     use MemoryManagerModule, only: mem_allocate
     use MemoryHelperModule, only: create_mem_path
-    use SimVariablesModule, only: idm_context
     use GwfNamInputModule, only: GwfNamParamFoundType
     use BudgetModule, only: budget_cr
     use TspLabelsModule, only: tsplabels_cr
