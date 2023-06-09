@@ -625,9 +625,9 @@ jobs:
           export PATH=/cygdrive/c/cygwin64/bin:$PATH
           export PETSC_ARCH=arch-impi-opt
           FC=ifort ./configure \
-            --with-cc='win32fe cl' \
+            --with-cc='win32fe icl' \
             --with-fc='win32fe ifort' \
-            --with-cxx='win32fe cl' \
+            --with-cxx='win32fe icl' \
             --with-debugging=no \
             --with-mpi-include='[/cygdrive/c/Progra~2/Intel/oneAPI/mpi/latest/include,/cygdrive/c/Progra~2/Intel/oneAPI/mpi/latest/include/ilp64]' \
             --with-mpi-lib='[/cygdrive/c/Progra~2/Intel/oneAPI/mpi/latest/lib/release/impi.lib,/cygdrive/c/Progra~2/Intel/oneAPI/mpi/latest/lib/release/impicxx.lib]' \
