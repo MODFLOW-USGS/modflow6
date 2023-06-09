@@ -633,7 +633,7 @@ jobs:
             --with-mpi-include='[/cygdrive/c/Progra~2/Intel/oneAPI/mpi/latest/include,/cygdrive/c/Progra~2/Intel/oneAPI/mpi/latest/include/ilp64]' \
             --with-mpi-lib='[/cygdrive/c/Progra~2/Intel/oneAPI/mpi/latest/lib/release/impi.lib,/cygdrive/c/Progra~2/Intel/oneAPI/mpi/latest/lib/release/impicxx.lib]' \
             --with-mpiexec=/cygdrive/c/Progra~2/Intel/oneAPI/mpi/latest/bin/mpiexec.exe \
-            --with-blaslapack-lib=/cygdrive/c/Progra~2/Intel/oneAPI/mkl/latest/lib/intel64/mkl_sequential.lib'
+            --with-blaslapack-lib=/cygdrive/c/Progra~2/Intel/oneAPI/mkl/latest/lib/intel64/mkl_sequential.lib
 
       - name: Show PETSc log
         if: failure()
