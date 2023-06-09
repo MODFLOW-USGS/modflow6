@@ -143,7 +143,7 @@ contains
     this%ibinary = 0
     !
     ! -- Read to the first non-commented line
-    call u9rdcom(this%in, this%iout, this%line, this%ierr)
+    call u9rdcom(this%in, this%iout, this%line, this%bkspc, this%ierr)
     this%lloc = 1
     call urword(this%line, this%lloc, this%istart, this%istop, 1, idum, r, &
                 this%iout, this%in)
@@ -239,7 +239,7 @@ contains
     ! -- Read the first line from inlist to be consistent with how the list is
     !    read when it is included in the package input file
     if (this%ibinary /= 1) call u9rdcom(this%inlist, this%iout, this%line, &
-                                        this%ierr)
+                                        this%bkspc, this%ierr)
     !
     ! -- return
     return
@@ -428,7 +428,7 @@ contains
     readloop: do
       !
       ! -- First line was already read, so don't read again
-      if (ii /= 1) call u9rdcom(this%inlist, 0, this%line, this%ierr)
+      if (ii /= 1) call u9rdcom(this%inlist, 0, this%line, this%bkspc, this%ierr)
       !
       ! -- If this is an unknown-length list, then check for END.
       !    If found, then backspace, set nlist, and exit readloop.

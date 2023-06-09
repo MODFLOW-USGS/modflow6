@@ -327,7 +327,7 @@ module InputOutputModule
   !!
   !<
   subroutine uget_block(iin, iout, ctag, ierr, isfound, lloc, line, iuext,     &
-                        blockRequired, supportopenclose, buf)
+                        blockRequired, supportopenclose, bkspc)
     implicit none
     ! -- dummy variables
     integer(I4B),         intent(in) :: iin                   !< file unit
@@ -336,8 +336,7 @@ module InputOutputModule
     integer(I4B),        intent(out) :: ierr                  !< error 
     logical,           intent(inout) :: isfound               !< boolean indicating if the block was found
     integer(I4B),      intent(inout) :: lloc                  !< position in line
-    character (len=:), allocatable, intent(inout) :: line     !< line
-    character (len=:), allocatable, intent(inout), optional :: buf      !< linebuffer for single line
+    character (len=:), allocatable, intent(inout) :: line, bkspc   !< line and read buffer
     integer(I4B),      intent(inout) :: iuext                 !< external file unit number
     logical, optional,    intent(in) :: blockRequired         !< boolean indicating if the block is required
     logical, optional,    intent(in) :: supportopenclose      !< boolean indicating if the block supports open/close
@@ -366,7 +365,7 @@ module InputOutputModule
     isfound = .false.
     mainloop: do
       lloc = 1
-      call u9rdcom(iin, iout, line, ierr)
+      call u9rdcom(iin, iout, line, bkspc, ierr)
       if (ierr < 0) then
         if (blockRequiredLocal) then
           ermsg = 'Required block "' // trim(ctag) // &
@@ -384,7 +383,7 @@ module InputOutputModule
           isfound = .true.
           if (supportoc) then
             ! Look for OPEN/CLOSE on 1st line after line starting with BEGIN
-            call u9rdcom(iin, iout, line2, ierr)
+            call u9rdcom(iin, iout, line2, bkspc, ierr)
             if (ierr < 0) exit
             lloc2 = 1
             call urword(line2, lloc2, istart, istop, 1, ival, rval, iin, iout)
@@ -398,18 +397,14 @@ module InputOutputModule
                 if (line2(istart:istop) == '') exit chk
                 if (line2(istart:istop) == '(BINARY)' .or. &
                     line2(istart:istop) == 'SFAC') then
-                  if (present(buf)) then
-                      buf = line2
-                  end if
+                  bkspc = line2
                   exit mainloop
                 end if
               end do chk
               iuext = GetUnit()
               call openfile(iuext,iout,fname,'OPEN/CLOSE')
             else
-              if (present(buf)) then
-                 buf = line2
-              end if
+              bkspc = line2
             end if
           end if
         else
@@ -420,10 +415,8 @@ module InputOutputModule
             call store_error(ermsg)
             call store_error_unit(iuext)
           else
-            if (present(buf)) then
-               buf = line2
-            end if
-          endif
+            bkspc = line
+          end if
         end if
         exit mainloop
       else if (line(istart:istop) == 'END') then
@@ -434,7 +427,9 @@ module InputOutputModule
                   ' instead.'
           call store_error(ermsg)
           call store_error_unit(iuext)
-        endif
+        else
+          bkspc = line
+        end if
       end if
     end do mainloop
     !
@@ -448,17 +443,16 @@ module InputOutputModule
   !! Return isfound with true, if found, and return the block name.
   !!
   !<
-  subroutine uget_any_block(iin,iout,isfound,lloc,line,ctagfound,iuext,buf)
+  subroutine uget_any_block(iin,iout,isfound,lloc,line,ctagfound,iuext,bkspc)
     implicit none
     ! -- dummy variables
     integer(I4B), intent(in) :: iin                         !< file unit number
     integer(I4B), intent(in) :: iout                        !< output listing file unit
     logical, intent(inout) :: isfound                       !< boolean indicating if a block was found
     integer(I4B), intent(inout) :: lloc                     !< position in line
-    character (len=:), allocatable, intent(inout) :: line   !< line
+    character (len=:), allocatable, intent(inout) :: line, bkspc   !< line
     character(len=*), intent(out) :: ctagfound              !< block name
     integer(I4B), intent(inout) :: iuext                    !< external file unit number
-    character (len=:), allocatable, intent(inout), optional :: buf      !< linebuffer for single line
     ! -- local variables
     integer(I4B) :: ierr, istart, istop
     integer(I4B) :: ival, lloc2
@@ -473,7 +467,7 @@ module InputOutputModule
     iuext = iin
     do
       lloc = 1
-      call u9rdcom(iin,iout,line,ierr)
+      call u9rdcom(iin,iout,line,bkspc,ierr)
       if (ierr < 0) exit
       call urword(line, lloc, istart, istop, 1, ival, rval, iin, iout)
       if (line(istart:istop) == 'BEGIN') then
@@ -481,7 +475,7 @@ module InputOutputModule
         if (line(istart:istop) /= '') then
           isfound = .true.
           ctagfound = line(istart:istop)
-          call u9rdcom(iin,iout,line2,ierr)
+          call u9rdcom(iin,iout,line2,bkspc,ierr)
           if (ierr < 0) exit
           lloc2 = 1
           call urword(line2,lloc2,istart,istop,1,ival,rval,iout,iin)
@@ -491,9 +485,7 @@ module InputOutputModule
             fname = line2(istart:istop)
             call openfile(iuext,iout,fname,'OPEN/CLOSE')
           else
-            if (present(buf)) then
-              buf = line2
-            end if
+            bkspc = line2
           endif
         else
           ermsg  = 'Block name missing in file.'
@@ -2227,7 +2219,7 @@ END SUBROUTINE URWORD
     return
   end subroutine fseek_stream
   
-  subroutine u9rdcom(iin, iout, line, ierr)
+  subroutine u9rdcom(iin, iout, line, bkspc, ierr)
 ! ******************************************************************************
 ! Read until non-comment line found and then return line.  Different from
 ! u8rdcom in that line is a deferred length character string, which allows
@@ -2241,7 +2233,7 @@ END SUBROUTINE URWORD
     ! -- dummy variables
     integer(I4B),         intent(in) :: iin
     integer(I4B),         intent(in) :: iout
-    character (len=:), allocatable, intent(inout) :: line
+    character (len=:), allocatable, intent(inout) :: line, bkspc
     integer(I4B),        intent(out) :: ierr
     ! -- local variables
     character (len=:), allocatable :: linetemp
@@ -2254,6 +2246,13 @@ END SUBROUTINE URWORD
     !
     !readerrmsg = ''
     
+    if (len_trim(bkspc)>0) then
+      line = bkspc
+      bkspc = ''
+      ierr = 0
+      return
+    end if
+
     line = comment
     pcomments: do
       call get_line(iin, line, ierr)
