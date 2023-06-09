@@ -16,7 +16,7 @@ inputs:
 outputs:
   cache-hit:
     description: Whether the installation was restored from cache
-    value: ${{ steps.cache-ifort.outputs.cache-hit }}
+    value: ${{ steps.cache-ifort-dev.outputs.cache-hit }}
 runs:
   using: composite
   steps:
@@ -81,7 +81,7 @@ runs:
 
     - name: Restore cache
       if: inputs.cache == 'true'
-      id: cache-ifort
+      id: cache-ifort-dev
       uses: martijnhols/actions-cache/restore@v3
       with:
         path: ${{ env.INTEL_HPCKIT_INSTALL_PATH }}
@@ -94,7 +94,7 @@ runs:
       run: mv "$RUNNER_TEMP\tar.exe" 'C:\Program Files\Git\usr\bin\tar.exe'
 
     - name: Install compilers
-      if: runner.os != 'Windows' && steps.cache-ifort.outputs.cache-hit != 'true'
+      if: runner.os != 'Windows' && steps.cache-ifort-dev.outputs.cache-hit != 'true'
       shell: bash
       run: |
         echo "downloading and running HPC kit installer"
@@ -102,7 +102,7 @@ runs:
         "${{ github.action_path }}/scripts/install_$os.sh" "${{ env.INTEL_HPCKIT_INSTALL_PATH }}" "${{ env.INTEL_HPCKIT_INSTALLER_URL }}" "${{ env.INTEL_HPCKIT_COMPONENTS }}"
 
     - name: Install MKL (Windows)
-      if: runner.os == 'Windows' && steps.cache-ifort.outputs.cache-hit != 'true'
+      if: runner.os == 'Windows' && steps.cache-ifort-dev.outputs.cache-hit != 'true'
       shell: cmd
       env:
         INTEL_MKL_INSTALL_PATH: ${{ env.INTEL_HPCKIT_INSTALL_PATH }}
@@ -124,14 +124,14 @@ runs:
         del /q "${{ env.INTEL_MKL_INSTALL_PATH }}\*.txt"
 
     - name: Install compilers (Windows)
-      if: runner.os == 'Windows' && steps.cache-ifort.outputs.cache-hit != 'true'
+      if: runner.os == 'Windows' && steps.cache-ifort-dev.outputs.cache-hit != 'true'
       shell: cmd
       run: |
         echo downloading and running HPC kit installer
         call "%GITHUB_ACTION_PATH%\scripts\install_windows.bat" "${{ env.INTEL_HPCKIT_INSTALL_PATH }}" "${{ env.INTEL_HPCKIT_INSTALLER_URL }}" "${{ env.INTEL_HPCKIT_COMPONENTS }}"
 
     - name: Save cache
-      if: inputs.cache == 'true' && steps.cache-ifort.outputs.cache-hit != 'true'
+      if: inputs.cache == 'true' && steps.cache-ifort-dev.outputs.cache-hit != 'true'
       uses: martijnhols/actions-cache/save@v3
       with:
         path: ${{ env.INTEL_HPCKIT_INSTALL_PATH }}
