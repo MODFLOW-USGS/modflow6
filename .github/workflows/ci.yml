@@ -592,3 +592,23 @@ jobs:
           markers=$([ "$branch" == "master" ] && echo "$marker and not developmode" || echo "$marker")
           pytest -v -n auto --parallel --durations 0 -m "$markers"
           
+  dispatch_dev_build:
+    name: Dispatch development build
+    # only runs when a PR is merged into develop
+    if: ${{ github.event_name == 'push' && github.ref_name == 'develop' }}
+    needs:
+      - test_gfortran_latest
+      - test_gfortran_previous
+      - test_ifort
+      - parallel_test
+    runs-on: ubuntu-22.04
+    steps:
+
+      # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#repository_dispatch
+      - name: Send dispatch event
+        run: |
+          curl -X POST https://api.github.com/repos/MODFLOW-USGS/modflow6-nightly-build/dispatches \
+          -H 'Accept: application/vnd.github.everest-preview+json' \
+          -u ${{ github.token }} \
+          --data '{"event_type": "build" }'
+    
