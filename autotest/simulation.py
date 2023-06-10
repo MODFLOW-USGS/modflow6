@@ -218,7 +218,7 @@ class TestSimulation:
             print("running parallel on", self.ncpus, "processes")
             try:
                 success, buff = self.run_parallel(
-                    exe,
+                    exe.replace("mf6", "mf6pro"),
                 )
             except Exception as exc:                
                 msg = sfmt.format("MODFLOW 6 run", self.name)

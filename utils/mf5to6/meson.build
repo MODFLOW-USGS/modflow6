@@ -136,7 +136,10 @@ mf5to6_sources = files(
     'src' / 'WelPackageWriter.f90',
 )
 
-executable('mf5to6',
+mf6convname = 'mf5to6'
+message('MODFLOW 5 to 6 converter name:', mf6convname)
+
+executable(mf6convname,
             mf5to6_sources,
             link_with: mf6core,
             install: true,

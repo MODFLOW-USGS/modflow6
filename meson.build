@@ -2,7 +2,7 @@ project(
   'MODFLOW 6',
   'fortran',
   version: '6.5.0',
-  meson_version: '>= 0.59.0',
+  meson_version: '>= 1.1.0',
   default_options : [
     'b_vscrt=static_from_buildtype', # Link runtime libraries statically on Windows
     'optimization=2',
@@ -124,7 +124,7 @@ else
   with_mpi = false
 endif 
 
-if petsc.found() and with_mpi
+if do_parallel_build and petsc.found() and with_mpi
   extra_cmp_args = [ '-D__WITH_MPI__', '-D__WITH_PETSC__' ]
   with_petsc = true
   dependencies = [ mpi, petsc ]
@@ -138,7 +138,7 @@ add_project_arguments(fc.get_supported_arguments(compile_args), language: 'fortr
 add_project_link_arguments(fc.get_supported_arguments(link_args), language: 'fortran')
 
 if with_petsc and build_machine.system() == 'windows'
-  message('Compiling PETSc Fortran modudules')
+  message('Compiling PETSc Fortran modules')
   petsc_incdir = include_directories([petsc_dir / 'include', petsc_compiled / 'include'])
   petsc_src = petsc_dir / 'src'
   sources_petsc = [petsc_src / 'dm/f90-mod/petscdmdamod.F90',
@@ -163,12 +163,21 @@ endif
 
 subdir('src')
 subdir('srcbmi')
-subdir('utils')
+
+# do not build zbud6 or mf5to6 if parallel build
+if not do_parallel_build
+  subdir('utils')
+endif
 
 # add unit test directory
 # subdir('unittests')
 
 # meson tests to evaluate installation success
-test('Test installation version', mf6exe, args : ['-v',])
-test('Test installation compiler', mf6exe, args : ['-c',])
-test('Test installation help', mf6exe, args : ['-h',])
+if do_parallel_build
+  mpiexec = find_program('mpiexec')
+  test('Test parallel installation version', mpiexec, args : ['-n', '2', mf6exe, '-v', '-p'])
+else
+  test('Test installation version', mf6exe, args : ['-v',])
+  test('Test installation compiler', mf6exe, args : ['-c',])
+  test('Test installation help', mf6exe, args : ['-h',])
+endif
