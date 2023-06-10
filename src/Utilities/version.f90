@@ -7,25 +7,21 @@
 module VersionModule
   ! -- module imports
   use KindModule
+  use DefinedMacros, only: is_pro, using_petsc
   use ConstantsModule, only: LENBIGLINE, LENHUGELINE, DZERO
   use SimVariablesModule, only: istdout
-  use GenericUtilitiesModule, only: write_centered, write_message
+  use GenericUtilitiesModule, only: write_centered, write_message, sim_message
   use CompilerVersion, only: get_compiler, get_compile_options
   implicit none
   public
   ! -- modflow 6 version
   integer(I4B), parameter :: IDEVELOPMODE = 1
-  character(len=*), parameter :: VERSIONNUMBER = '6.5.0'
+  character(len=*), parameter :: VERSIONNUMBER = '6.4.2'
   character(len=*), parameter :: VERSIONTAG = ' Release Candidate 12/09/2022'
   character(len=40), parameter :: VERSION = VERSIONNUMBER//VERSIONTAG
-  character(len=10), parameter :: MFVNAM = ' 6'
+  character(len=2), parameter :: MFVNAM = ' 6'
   character(len=*), parameter :: MFTITLE = &
     &'U.S. GEOLOGICAL SURVEY MODULAR HYDROLOGIC MODEL'
-  character(len=*), parameter :: FMTTITLE = &
-    "(/,34X,'MODFLOW',A,/,&
-    &16X,'U.S. GEOLOGICAL SURVEY MODULAR HYDROLOGIC MODEL',&
-    &/,23X,'Version ',A/)"
-  ! -- license for MODFLOW and libraries
   character(len=*), parameter :: FMTLICENSE = &
     "(/,&
     &'As a work of the United States Government, this USGS product is ',/,&
@@ -55,6 +51,16 @@ module VersionModule
     &'      All rights reserved.',/,&
     &'      (https://github.com/jacobwilliams/daglib)',/&
     &)"
+  character(len=*), parameter :: PETSCLICENSE = &
+  "(&
+  &'The following 2-clause BSD License library is used in this',/,&
+  &'USGS product:',//,&
+  &'    PETSc, the Portable, Extensible Toolkit for Scientific',/,&
+  &'    Computation Library',/,&
+  &'      Copyright (c) 1991-2021, UChicago Argonne, LLC',/,&
+  &'      and the PETSc Development Team All rights reserved.',/,&
+  &'      (https://petsc.org/release/)',/&
+  &)"
   ! -- disclaimer must be appropriate for version (release or release candidate)
   character(len=*), parameter :: FMTDISCLAIMER = &
     "(/,&
@@ -72,9 +78,9 @@ module VersionModule
 contains
 
   !> @ brief Write program header
-      !!
-      !!  Write header for program to the program listing file.
-      !!
+  !!
+  !!  Write header for program to the program listing file.
+  !!
   !<
   subroutine write_listfile_header(iout, cmodel_type, write_sys_command, &
                                    write_kind_info)
@@ -84,15 +90,23 @@ contains
     logical(LGP), intent(in), optional :: write_sys_command !< boolean indicating if the system command should be written
     logical(LGP), intent(in), optional :: write_kind_info !< boolean indicating in program data types should be written
     ! -- local variables
+    integer(I4B), parameter :: iheader_width = 80
+    character(len=22) :: cheader
     character(len=LENBIGLINE) :: syscmd
     character(len=LENBIGLINE) :: compiler
     character(len=LENBIGLINE) :: compiler_options
-    integer(I4B) :: iheader_width = 80
     logical(LGP) :: wki
     logical(LGP) :: wsc
     !
-    ! -- Write title to list file
-    call write_centered('MODFLOW'//MFVNAM, iheader_width, iunit=iout)
+    ! -- set pro string
+    if (is_pro()) then
+      write (cheader, '(3a)') 'MODFLOW', MFVNAM, ' PROFESSIONAL'
+    else
+      write (cheader, '(2a)') 'MODFLOW', MFVNAM
+    end if
+    !
+    ! -- Write title to iout
+    call write_centered(cheader, iheader_width, iunit=iout)
     call write_centered(MFTITLE, iheader_width, iunit=iout)
     !
     ! -- Write model type to list file
@@ -118,7 +132,7 @@ contains
     !
     ! -- Write license information
     if (iout /= istdout) then
-      write (iout, FMTLICENSE)
+      call write_license(iout)
     end if
     !
     ! -- write compiler options
@@ -148,6 +162,35 @@ contains
     ! -- return
     return
   end subroutine write_listfile_header
+
+  !> @ brief Write program license
+  !!
+  !!  Write license for program to the program listing file.
+  !!
+  !<
+  subroutine write_license(iout)
+    ! -- dummy variables
+    integer(I4B), intent(in), optional :: iout !< program listing file
+    !
+    ! - write standard license
+    if (present(iout)) then
+      write (iout, FMTLICENSE)
+    else
+      call sim_message('', fmt=FMTLICENSE)
+    end if
+    !
+    ! -- write PETSc license
+    if (using_petsc()) then
+      if (present(iout)) then
+        write (iout, PETSCLICENSE)
+      else
+        call sim_message('', fmt=PETSCLICENSE)
+      end if
+    end if
+    !
+    ! -- return
+    return
+  end subroutine write_license
 
 end module VersionModule
 

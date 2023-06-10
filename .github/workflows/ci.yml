@@ -524,7 +524,7 @@ jobs:
       - name: Build modflow6
         working-directory: modflow6
         run: |
-          meson setup builddir -Ddebug=false -Dparallel=true --prefix=$(pwd) --libdir=bin
+          meson setup builddir -Ddebug=false -Dparallel=true --prefix=$(pwd) --libdir=bin -Dbuildutils=false
           meson install -C builddir
           meson test --verbose --no-rebuild -C builddir
 
