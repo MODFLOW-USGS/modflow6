@@ -257,12 +257,7 @@ endif
 
 mf6_external = static_library('mf6_external', external_libraries)
 
-if do_parallel_build
-  mf6name = 'mf6pro'
-else
-  mf6name = 'mf6'
-endif
-message('MODFLOW 6 executable name: ' + mf6name)
+message('MODFLOW 6 executable name: ' + buildname)
 
 if build_machine.system() == 'windows' and with_petsc
   mf6core = static_library('mf6core', 
@@ -270,7 +265,7 @@ if build_machine.system() == 'windows' and with_petsc
                            dependencies:  dependencies, 
                            link_with: [mf6_external], 
                            include_directories: petsc_incdir)
-  mf6exe = executable(mf6name,
+  mf6exe = executable(buildname,
                       'mf6.f90', 
                       link_with: [mf6core],
                       dependencies: dependencies, 
@@ -280,7 +275,7 @@ else
                            modflow_sources,  
                            dependencies: dependencies,
                            link_with: [mf6_external])
-  mf6exe = executable(mf6name, 
+  mf6exe = executable(buildname, 
                       'mf6.f90', 
                       link_with: [mf6core],  
                       dependencies: dependencies, 

@@ -1,7 +1,7 @@
 project(
   'MODFLOW 6',
   'fortran',
-  version: '6.5.0',
+  version: '6.4.2',
   meson_version: '>= 1.1.0',
   default_options : [
     'b_vscrt=static_from_buildtype', # Link runtime libraries statically on Windows
@@ -19,6 +19,8 @@ else
   profile = 'develop'
 endif
 
+buildname = get_option('buildname')
+buildutils = get_option('buildutils')
 do_parallel_build = get_option('parallel')
 message('The used profile is:', profile)
 message('Parallel build:', do_parallel_build)
@@ -164,8 +166,9 @@ endif
 subdir('src')
 subdir('srcbmi')
 
-# do not build zbud6 or mf5to6 if parallel build
-if not do_parallel_build
+# build zbud6 and mf5to6 utility programs
+if buildutils
+  message('Building utility programs')
   subdir('utils')
 endif
 
