@@ -1,4 +1,5 @@
 import platform
+import re
 import subprocess
 from os import environ
 from pathlib import Path
@@ -12,6 +13,11 @@ _eext = ".exe" if _system == "Windows" else ""
 _soext = ".dll" if _system == "Windows" else ".so" if _system == "Linux" else ".dylib"
 _scext = ".bat" if _system == "Windows" else ".sh"
 _fc = environ.get("FC", None)
+
+
+@pytest.fixture
+def approved(request):
+    return request.config.getoption("--approved")
 
 
 @pytest.fixture
@@ -92,14 +98,24 @@ def test_docs(dist_dir_path):
 
 
 def test_examples(dist_dir_path):
+    # make sure examples dir exists
     examples_path = dist_dir_path / "examples"
+    assert examples_path.is_dir()
+
+    # test run an example model with the provided script
     example_path = next(examples_path.iterdir(), None)
     assert example_path
     output = ' '.join(subprocess.check_output([str(example_path / f"run{_scext}")], cwd=example_path).decode().split())
     print(output)
 
 
-def test_binaries(dist_dir_path):
+def split_on_letter(s):
+    # match = re.compile("[^\W\d]").search(s)
+    match = re.compile("[^0-9]").search(s)
+    return [s[:match.start()], s[match.start():]] if match else s
+
+
+def test_binaries(dist_dir_path, approved):
     bin_path = dist_dir_path / "bin"
     assert (bin_path / f"mf6{_eext}").is_file()
     assert (bin_path / f"zbud6{_eext}").is_file()
@@ -108,17 +124,20 @@ def test_binaries(dist_dir_path):
 
     output = ' '.join(subprocess.check_output([str(bin_path / f"mf6{_eext}"), "-v"]).decode().split()).lower()
     assert output.startswith("mf6")
-    assert output.count("release") == 1
 
     # make sure binaries were built in correct mode
-    branch = get_branch()
-    if "rc" in branch or "candidate" in branch:
-        assert output.count("candidate") == 1, "Binaries were not built in development mode"
+    if approved:
+        assert "preliminary" not in output, "Binaries were not built in release mode"
     else:
-        assert "candidate" not in output, "Binaries were not built in release mode"
+        assert "preliminary" in output, "Binaries were not built in development mode"
 
     # check version string
-    version = output.lower().rpartition(":")[2].rpartition("release")[0].strip()
+    version = (
+        output.lower().split(' ')[1]
+    )
+    print(version)
     v_split = version.split(".")
     assert len(v_split) == 3
-    assert all(s.isdigit() for s in v_split)
+    assert all(s.isdigit() for s in v_split[:2])
+    sol = split_on_letter(v_split[2])
+    assert sol[0].isdigit()

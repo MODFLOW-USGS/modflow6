@@ -100,8 +100,8 @@ def clean_tex_files():
 
 def download_benchmarks(output_path: PathLike, verbose: bool = False) -> Optional[Path]:
     output_path = Path(output_path).expanduser().absolute()
-    name = "run-time-comparison"
-    repo = "w-bonelli/modflow6"
+    name = "run-time-comparison"  # todo make configurable
+    repo = "MODFLOW-USGS/modflow6"  # todo make configurable, add pytest/cli args
     artifacts = list_artifacts(repo, name=name, verbose=verbose)
     artifacts = sorted(artifacts, key=lambda a: datetime.strptime(a['created_at'], '%Y-%m-%dT%H:%M:%SZ'), reverse=True)
     most_recent = next(iter(artifacts), None)
