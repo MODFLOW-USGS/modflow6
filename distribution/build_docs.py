@@ -18,14 +18,14 @@ from flaky import flaky
 from modflow_devtools.build import meson_build
 from modflow_devtools.download import list_artifacts, download_artifact, get_release, download_and_unzip
 from modflow_devtools.markers import requires_exe, requires_github
-from modflow_devtools.misc import set_dir, run_cmd
+from modflow_devtools.misc import set_dir, run_cmd, is_in_ci
 
 from benchmark import run_benchmarks
 from utils import convert_line_endings
 from utils import get_project_root_path
 
 _project_root_path = get_project_root_path()
-_version_texf_path = _project_root_path / "doc" / "version.tex"
+_bin_path = _project_root_path / "bin"
 _examples_repo_path = _project_root_path.parent / "modflow6-examples"
 _release_notes_path = _project_root_path / "doc" / "ReleaseNotes"
 _distribution_path = _project_root_path / "distribution"
@@ -157,7 +157,6 @@ def build_benchmark_tex(output_path: PathLike, overwrite: bool = False):
 
 @flaky
 @requires_github
-@pytest.mark.skipif(not (_benchmarks_path / "run-time-comparison.md").is_file(), reason="needs benchmarks")
 def test_build_benchmark_tex(tmp_path):
     benchmarks_path = _benchmarks_path / "run-time-comparison.md"
     tex_path = _distribution_path / f"{benchmarks_path.stem}.tex"
@@ -284,7 +283,6 @@ def build_mf6io_tex_example(workspace_path: PathLike, bin_path: PathLike, exampl
     shutil.copytree(example_model_path, workspace_path)
 
     # run example model
-
     with set_dir(workspace_path):
         out, err, ret = run_cmd(cmd)
         buff = out + err
@@ -328,6 +326,7 @@ def build_mf6io_tex_example(workspace_path: PathLike, bin_path: PathLike, exampl
             f.write("}\n")
 
 
+@pytest.mark.skip(reason="todo")
 def test_build_mf6io_tex_example():
     pass
 
@@ -385,7 +384,6 @@ def test_build_pdfs_from_tex(tmp_path):
         _docs_path / "zonebudget" / "zonebudget.tex",
         _docs_path / "ConverterGuide" / "converter_mf5to6.tex",
         _docs_path / "SuppTechInfo" / "mf6suptechinfo.tex",
-        _examples_repo_path / "doc" / "mf6examples.tex",
     ]
     bbl_paths = [
         _docs_path / "ConverterGuide" / "converter_mf5to6.bbl",
@@ -403,6 +401,9 @@ def test_build_pdfs_from_tex(tmp_path):
 def build_documentation(bin_path: PathLike,
                         output_path: PathLike,
                         examples_repo_path: PathLike,
+                        # Example to use to render sample mf6 output in the docs.
+                        # Must be a valid directory in modflow6-examples/examples
+                        example_for_sample: str = "ex-gwf-twri01",
                         development: bool = False,
                         overwrite: bool = False):
     print(f"Building {'development' if development else 'full'} documentation")
@@ -423,7 +424,7 @@ def build_documentation(bin_path: PathLike,
         build_mf6io_tex_example(
             workspace_path=temp_path,
             bin_path=bin_path,
-            example_model_path=examples_repo_path / "examples" / "ex-gwf-twri01",
+            example_model_path=examples_repo_path / "examples" / example_for_sample,
         )
 
     # build LaTeX file describing distribution folder structure
@@ -474,13 +475,14 @@ def build_documentation(bin_path: PathLike,
 
 
 @requires_exe("pdflatex")
-@pytest.mark.skip(reason="manual testing")
-@pytest.mark.skipif(not (_benchmarks_path / "run-time-comparison.md").is_file(), reason="needs benchmarks")
+# skip if in CI so we don't have to build/process example models,
+# example model docs can be tested in the modflow6-examples repo
+@pytest.mark.skipif(is_in_ci(), reason="needs built/processed example models")
 def test_build_documentation(tmp_path):
     bin_path = tmp_path / "bin"
     dist_path = tmp_path / "dist"
     meson_build(_project_root_path, tmp_path / "builddir", bin_path)
-    build_documentation(bin_path, dist_path, _examples_repo_path) #, _benchmarks_path / "run-time-comparison.md")
+    build_documentation(bin_path, dist_path, _examples_repo_path)
 
 
 if __name__ == "__main__":
@@ -502,7 +504,7 @@ if __name__ == "__main__":
         "-b",
         "--bin-path",
         required=False,
-        default=os.getcwd(),
+        default=str(_bin_path),
         help="Location of modflow6 executables",
     )
     parser.add_argument(
@@ -511,6 +513,13 @@ if __name__ == "__main__":
         required=False,
         default=str(_examples_repo_path),
         help="Path to directory containing modflow6 example models"
+    )
+    parser.add_argument(
+        "-s",
+        "--example-for-sample",
+        required=False,
+        default=str(_examples_repo_path),
+        help="Name of example model to use for sample mf6 output"
     )
     parser.add_argument(
         "-o",
@@ -541,10 +550,12 @@ if __name__ == "__main__":
     output_path.mkdir(parents=True, exist_ok=True)
     bin_path = Path(args.bin_path).expanduser().absolute()
     examples_repo_path = Path(args.examples_repo_path).expanduser().absolute()
+    example_for_sample = args.example_for_sample
 
     build_documentation(
         bin_path=bin_path,
         output_path=output_path,
         examples_repo_path=examples_repo_path,
+        example_for_sample=example_for_sample,
         development=args.development,
         overwrite=args.force)
