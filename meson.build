@@ -102,9 +102,10 @@ else
 endif
 
 # find mpi
-mpi = dependency('mpi', language : 'fortran', required : petsc.found())
+mpi = dependency('mpi', language : 'fortran', required : false)
 if not mpi.found() and petsc.found()
-  mpi = dependency('mpich', language : 'fortran', required : petsc.found())
+  message('PETSc found but MPI was not found. Trying to find MPICH.')
+  mpi = dependency('mpich', method : 'pkg-config', required : petsc.found())
 endif
 
 # on windows only with intel
@@ -182,8 +183,10 @@ endif
 
 # meson tests to evaluate installation success
 if do_parallel_build
-  mpiexec = find_program('mpiexec')
-  test('Test parallel installation version', mpiexec, args : ['-n', '2', mf6exe, '-v', '-p'])
+  mpiexec = find_program('mpiexec', required : false)
+  if mpiexec.found()
+    test('Test parallel installation version', mpiexec, args : ['-n', '2', mf6exe, '-v', '-p'])
+  endif
 else
   test('Test installation version', mf6exe, args : ['-v',])
   test('Test installation compiler', mf6exe, args : ['-c',])

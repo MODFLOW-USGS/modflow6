@@ -184,7 +184,7 @@ Parallel MODFLOW has been built successfully with the following configurations:
 | MS Windows            | ?           | ?             | ?      | NA              |
 | WSL2 (Ubuntu 20.04.5) | gcc 9.4.0   | OpenMPI 4.0.3 | 3.18.2 | NA              |
 | Ubuntu 22.04          | gcc 9.5.0   | OpenMPI 4.1.4 | 3.18.5 | NA              |
-| Ubuntu 23.04      | gcc 13  | OpenMPI 4.1.4 | 3.18.1 | apt        |
+| Ubuntu 23.04          | gcc 13      | OpenMPI 4.1.4 | 3.18.1 | apt             |
 | macOS 12.6.3          | gcc 9.5.0   | OpenMPI 4.1.4 | 3.18.5 | NA              |
 | macOS 12.6.6          | gcc 13.1.0  | OpenMPI 4.1.5 | 3.19.1 | Homebrew        |
 
