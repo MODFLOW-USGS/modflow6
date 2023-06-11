@@ -100,7 +100,12 @@ if build_machine.system() == 'windows'
 else
   petsc = dependency('PETSc', required : false)
 endif
+
+# find mpi
 mpi = dependency('mpi', language : 'fortran', required : petsc.found())
+if not mpi.found() and petsc.found()
+  mpi = dependency('mpich', language : 'fortran', required : petsc.found())
+endif
 
 # on windows only with intel
 enable_mpi = do_parallel_build
