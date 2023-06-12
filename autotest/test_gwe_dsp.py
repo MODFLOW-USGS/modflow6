@@ -481,7 +481,7 @@ def eval_transport(sim):
     ]
 
     msg = f"gwe temperatures do not match stored concentrations"
-    assert np.allclose(conc1[0, 0, 0, :], c_ans, atol=1e-5), msg
+    assert np.allclose(conc1[-1, 0, 0, :], c_ans, atol=1e-5), msg
 
 
 # - No need to change any code below

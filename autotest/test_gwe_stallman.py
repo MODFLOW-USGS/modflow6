@@ -246,7 +246,7 @@ def build_model(idx, dir):
         printrecord=[("HEAD", "LAST"), ("BUDGET", "LAST")],
     )
 
-    # Instantiating MODFLOW 6 groundwater transport package
+    # Instantiating MODFLOW 6 groundwater heat transport package
     gwe = flopy.mf6.MFModel(
         sim,
         model_type="gwe6",
