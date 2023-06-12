@@ -579,7 +579,7 @@ contains
     integer(I4B) :: icol, icol1, istart, istop, n
     real(DP) :: r
     character(len=MAXCHARLEN) :: fname
-    character (len=:), allocatable :: line
+    character(len=:), allocatable :: line
     !
     ! -- Read CONSTANT, INTERNAL, or OPEN/CLOSE from array control record.
     call read_control_1(iu, iout, aname, locat, iclose, line, icol, fname)
@@ -629,7 +629,7 @@ contains
     integer(I4B) :: icol, icol1, istart, istop, n
     real(DP) :: r
     character(len=MAXCHARLEN) :: fname
-    character (len=:), allocatable :: line
+    character(len=:), allocatable :: line
     !
     ! -- Read CONSTANT, INTERNAL, or OPEN/CLOSE from array control record.
     call read_control_1(iu, iout, aname, locat, iclose, line, icol, fname)
@@ -666,7 +666,7 @@ contains
     character(len=*), intent(in) :: aname
     integer(I4B), intent(out) :: locat
     integer(I4B), intent(out) :: iclose
-    character (len=:), allocatable, intent(inout) :: line
+    character(len=:), allocatable, intent(inout) :: line
     integer(I4B), intent(inout) :: icol
     character(len=*), intent(inout) :: fname
 
