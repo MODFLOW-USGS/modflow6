@@ -90,7 +90,7 @@ $(OBJDIR)/CsrUtils.o \
 $(OBJDIR)/gwt1idm.o \
 $(OBJDIR)/gwf3disv8idm.o \
 $(OBJDIR)/blas1_d.o \
-$(OBJDIR)/gwt1dspidm.o \
+$(OBJDIR)/gwt1dsp1idm.o \
 $(OBJDIR)/CharString.o \
 $(OBJDIR)/OpenSpec.o \
 $(OBJDIR)/dag_module.o \
@@ -269,7 +269,7 @@ $(OBJDIR)/DisConnExchange.o \
 $(OBJDIR)/GhostNode.o \
 $(OBJDIR)/gwt1mvt1.o \
 $(OBJDIR)/VirtualExchange.o \
-$(OBJDIR)/gwt1dsp.o \
+$(OBJDIR)/gwt1dsp1.o \
 $(OBJDIR)/gwf3buy8.o \
 $(OBJDIR)/VirtualGwfExchange.o \
 $(OBJDIR)/gwf3hfb8.o \
