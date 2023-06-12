@@ -1,3 +1,4 @@
 option('parallel', type : 'boolean', value : false)
+option('mpich', type : 'boolean', value : false)
 option('buildname', type : 'string', value : 'mf6')
 option('buildutils', type : 'boolean', value : true)

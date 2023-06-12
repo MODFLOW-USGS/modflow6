@@ -93,29 +93,39 @@ elif fc_id == 'intel'
   link_args += '-static-intel'
 endif
 
-if build_machine.system() == 'windows'
-  # directly look for petsc
-  petsc_compiled = petsc_dir / petsc_arch
-  petsc = fc.find_library('libpetsc', dirs: petsc_compiled / 'lib', required : false)
-else
-  petsc = dependency('PETSc', required : false)
+if do_parallel_build
+  if build_machine.system() == 'windows'
+    # directly look for petsc
+    petsc_compiled = petsc_dir / petsc_arch
+    petsc = fc.find_library('libpetsc', dirs: petsc_compiled / 'lib', required : true)
+  else
+    petsc = dependency('PETSc', required : true)
+  endif
 endif
 
 # find mpi
-mpi = dependency('mpi', language : 'fortran', required : false)
-if not mpi.found() and petsc.found()
-  message('PETSc found but MPI was not found. Trying to find MPICH.')
-  mpi = dependency('mpich', method : 'pkg-config', required : petsc.found())
+enable_mpi = do_parallel_build  
+use_mpich = get_option('mpich')
+mpi_deps = [ ]
+if enable_mpi
+  if use_mpich
+    mpi = dependency('mpich', required : true)
+    mpifort = fc.find_library('mpichfort', required : mpi.found())
+    mpi_deps += [ mpi, mpifort ]
+  else
+    mpi = dependency('mpi', language : 'fortran', required : true)
+    mpi_deps += mpi
+  endif
+  enable_mpi = do_parallel_build  
 endif
 
 # on windows only with intel
-enable_mpi = do_parallel_build
-if build_machine.system() == 'windows' and do_parallel_build
+if build_machine.system() == 'windows' and enable_mpi
   if fc_id == 'intel-cl'
-    enable_mpi = true
+    message('Parallel build on Windows with intel compiler')
   else
     message('Parallel build on Windows only with intel compiler, disabling...')
-    enable_mpi
+    enable_mpi = false
   endif
 endif
 
@@ -124,18 +134,18 @@ endif
 dependencies = [ ]
 extra_cmp_args = [ ]
 
-if mpi.found() and enable_mpi
+if enable_mpi
   extra_cmp_args = [ '-D__WITH_MPI__' ]
   with_mpi = true
-  dependencies = [ mpi ]
+  dependencies += mpi_deps
 else
   with_mpi = false
 endif 
 
-if do_parallel_build and petsc.found() and with_mpi
-  extra_cmp_args = [ '-D__WITH_MPI__', '-D__WITH_PETSC__' ]
+if with_mpi and petsc.found()
+  extra_cmp_args += [ '-D__WITH_PETSC__' ]
   with_petsc = true
-  dependencies = [ mpi, petsc ]
+  dependencies += petsc
 else
   with_petsc = false
 endif
@@ -182,7 +192,7 @@ endif
 # subdir('unittests')
 
 # meson tests to evaluate installation success
-if do_parallel_build
+if enable_mpi
   mpiexec = find_program('mpiexec', required : false)
   if mpiexec.found()
     test('Test parallel installation version', mpiexec, args : ['-n', '2', mf6exe, '-v', '-p'])
