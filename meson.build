@@ -98,7 +98,17 @@ if build_machine.system() == 'windows'
 else
   petsc = dependency('PETSc', required : false)
 endif
-mpi = dependency('mpi', language : 'fortran', required : petsc.found())
+
+mpi_deps = [ ]
+mpi = dependency('mpi', language : 'fortran', required : false)
+if mpi.found()
+  mpi_deps += mpi
+else
+  message('Intel MPI/OpenMPI not found, trying MPICH...')
+  mpi = dependency('mpich', required : petsc.found())
+  mpifort = fc.find_library('mpichfort', required : mpi.found())
+  mpi_deps += [ mpi, mpifort ]
+endif
 
 # on windows only with intel
 enable_mpi = do_parallel_build
@@ -119,15 +129,15 @@ extra_cmp_args = [ ]
 if mpi.found() and enable_mpi
   extra_cmp_args = [ '-D__WITH_MPI__' ]
   with_mpi = true
-  dependencies = [ mpi ]
+  dependencies += mpi_deps
 else
   with_mpi = false
 endif 
 
 if petsc.found() and with_mpi
-  extra_cmp_args = [ '-D__WITH_MPI__', '-D__WITH_PETSC__' ]
+  extra_cmp_args += [ '-D__WITH_PETSC__' ]
   with_petsc = true
-  dependencies = [ mpi, petsc ]
+  dependencies += petsc
 else
   with_petsc = false
 endif
