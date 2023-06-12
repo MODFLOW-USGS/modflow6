@@ -146,7 +146,7 @@ $(OBJDIR)/VirtualDataContainer.o \
 $(OBJDIR)/SimStages.o \
 $(OBJDIR)/simnamidm.o \
 $(OBJDIR)/gwt1idm.o \
-$(OBJDIR)/gwt1dspidm.o \
+$(OBJDIR)/gwt1dsp1idm.o \
 $(OBJDIR)/gwt1disv1idm.o \
 $(OBJDIR)/gwt1disu1idm.o \
 $(OBJDIR)/gwt1dis1idm.o \
@@ -225,7 +225,7 @@ $(OBJDIR)/gwt1mwt1.o \
 $(OBJDIR)/gwt1mvt1.o \
 $(OBJDIR)/gwt1lkt1.o \
 $(OBJDIR)/gwt1ist1.o \
-$(OBJDIR)/gwt1dsp.o \
+$(OBJDIR)/gwt1dsp1.o \
 $(OBJDIR)/gwt1cnc1.o \
 $(OBJDIR)/gwt1adv1.o \
 $(OBJDIR)/gwf3disv8.o \
