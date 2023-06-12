@@ -110,7 +110,7 @@ mpi_deps = [ ]
 if enable_mpi
   if use_mpich
     mpi = dependency('mpich', required : true)
-    mpifort = fc.find_library('mpichfort', required : mpi.found())
+    mpifort = fc.find_library('mpichf90', required : mpi.found())
     mpi_deps += [ mpi, mpifort ]
   else
     mpi = dependency('mpi', language : 'fortran', required : true)

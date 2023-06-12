@@ -78,7 +78,7 @@ function func_env_create {
 function func_configure {
 
     # Modflow6 Meson build specific
-    CC=cc CXX=CC F77=ftn F90=ftn FC=ftn meson setup build-${Target_pe} --reconfigure --prefix=$Prefix --libdir=bin --Dparallel=true
+    CC=cc CXX=CC F77=ftn F90=ftn FC=ftn meson setup build-${Target_pe} --reconfigure --prefix=$Prefix --libdir=bin --Dparallel=true -Dmpich=true
     
     [[ $? -ne 0 ]] && errmsg_and_exit "Failed at configure step!"
 }
