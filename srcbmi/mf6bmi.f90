@@ -515,6 +515,52 @@ contains
 
   end function get_value_int
 
+  !> @brief Copy the logical scalar value into the array
+  !!
+  !! The copied variable us located at @p c_var_address. The caller should
+  !! provide @p c_arr_ptr pointing to a scalar array with rank=0.
+  !<
+  function get_value_bool(c_var_address, c_arr_ptr) result(bmi_status) &
+    bind(C, name="get_value_bool")
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_value_bool
+    ! -- modules
+    use MemorySetHandlerModule, only: on_memory_set
+    ! -- dummy variables
+    character(kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
+    type(c_ptr), intent(in) :: c_arr_ptr !< pointer to the logical array
+    integer(kind=c_int) :: bmi_status !< BMI status code
+    ! -- local variables
+    character(len=LENMEMPATH) :: mem_path
+    character(len=LENVARNAME) :: var_name
+    logical(LGP) :: valid
+    integer(I4B) :: rank
+    logical(LGP), pointer :: src_ptr, tgt_ptr
+
+    bmi_status = BMI_SUCCESS
+
+    call split_address(c_var_address, mem_path, var_name, valid)
+    if (.not. valid) then
+      bmi_status = BMI_FAILURE
+      return
+    end if
+
+    rank = -1
+    call get_mem_rank(var_name, mem_path, rank)
+
+    ! convert pointer
+    if (rank == 0) then
+      call mem_setptr(src_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, tgt_ptr)
+      tgt_ptr = src_ptr
+    else
+      write (bmi_last_error, fmt_unsupported_rank) trim(var_name)
+      call report_bmi_error(bmi_last_error)
+      bmi_status = BMI_FAILURE
+      return
+    end if
+
+  end function get_value_bool
+
   !> @brief Copy the string(s) of a variable into the array
   !!
   !! The copied variable is located at @p c_var_address. The caller should
@@ -629,6 +675,8 @@ contains
       bmi_status = get_value_double(c_var_address, c_arr_ptr)
     else if (index(mem_type, "INTEGER") /= 0) then
       bmi_status = get_value_int(c_var_address, c_arr_ptr)
+    else if (index(mem_type, "LOGICAL") /= 0) then
+      bmi_status = get_value_bool(c_var_address, c_arr_ptr)
     else if (index(mem_type, "STRING") /= 0) then
       bmi_status = get_value_string(c_var_address, c_arr_ptr)
     else
@@ -676,6 +724,8 @@ contains
       bmi_status = get_value_ptr_double(c_var_address, c_arr_ptr)
     else if (index(mem_type, "INTEGER") /= 0) then
       bmi_status = get_value_ptr_int(c_var_address, c_arr_ptr)
+    else if (index(mem_type, "LOGICAL") /= 0) then
+      bmi_status = get_value_ptr_bool(c_var_address, c_arr_ptr)
     else
       write (bmi_last_error, fmt_unsupported_type) trim(var_name)
       call report_bmi_error(bmi_last_error)
@@ -795,6 +845,46 @@ contains
 
   end function get_value_ptr_int
 
+  !> @brief Get a pointer to the logical scalar value
+  !!
+  !! Only scalar values (with rank=0) are supported.
+  !<
+  function get_value_ptr_bool(c_var_address, c_arr_ptr) result(bmi_status) &
+    bind(C, name="get_value_ptr_bool")
+    !DIR$ ATTRIBUTES DLLEXPORT :: get_value_ptr_bool
+    ! -- dummy variables
+    character(kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
+    type(c_ptr), intent(inout) :: c_arr_ptr !< pointer to the array
+    integer(kind=c_int) :: bmi_status !< BMI status code
+    ! -- local variables
+    character(len=LENMEMPATH) :: mem_path
+    character(len=LENVARNAME) :: var_name
+    logical(LGP) :: valid
+    logical(LGP), pointer :: scalar_ptr
+    integer(I4B) :: rank
+
+    bmi_status = BMI_SUCCESS
+
+    call split_address(c_var_address, mem_path, var_name, valid)
+    if (.not. valid) then
+      bmi_status = BMI_FAILURE
+      return
+    end if
+
+    rank = -1
+    call get_mem_rank(var_name, mem_path, rank)
+    if (rank == 0) then
+      call mem_setptr(scalar_ptr, var_name, mem_path)
+      c_arr_ptr = c_loc(scalar_ptr)
+    else
+      write (bmi_last_error, fmt_unsupported_rank) trim(var_name)
+      call report_bmi_error(bmi_last_error)
+      bmi_status = BMI_FAILURE
+      return
+    end if
+
+  end function get_value_ptr_bool
+
   !> @brief Set new values for a given variable
   !!
   !! The array pointed to by @p c_arr_ptr can have rank equal to 0, 1, or 2
@@ -830,6 +920,8 @@ contains
       bmi_status = set_value_double(c_var_address, c_arr_ptr)
     else if (index(mem_type, "INTEGER") /= 0) then
       bmi_status = set_value_int(c_var_address, c_arr_ptr)
+    else if (index(mem_type, "LOGICAL") /= 0) then
+      bmi_status = set_value_bool(c_var_address, c_arr_ptr)
     else
       write (bmi_last_error, fmt_unsupported_type) trim(var_name)
       call report_bmi_error(bmi_last_error)
@@ -986,6 +1078,62 @@ contains
     end if
 
   end function set_value_int
+
+  !> @brief Set new value for a logical scalar variable
+  !!
+  !! The array pointed to by @p c_arr_ptr must have a rank equal to 0.
+  !<
+  function set_value_bool(c_var_address, c_arr_ptr) result(bmi_status) &
+    bind(C, name="set_value_bool")
+    !DIR$ ATTRIBUTES DLLEXPORT :: set_value_bool
+    ! -- modules
+    use MemorySetHandlerModule, only: on_memory_set
+    ! -- dummy variables
+    character(kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
+    type(c_ptr), intent(in) :: c_arr_ptr !< pointer to the logical array
+    integer(kind=c_int) :: bmi_status !< BMI status code
+    ! -- local variables
+    character(len=LENMEMPATH) :: mem_path
+    character(len=LENVARNAME) :: var_name
+    logical(LGP) :: valid
+    integer(I4B) :: rank
+    logical(LGP), pointer :: src_ptr, tgt_ptr
+    integer(I4B) :: status
+
+    bmi_status = BMI_SUCCESS
+
+    call split_address(c_var_address, mem_path, var_name, valid)
+    if (.not. valid) then
+      bmi_status = BMI_FAILURE
+      return
+    end if
+
+    rank = -1
+    call get_mem_rank(var_name, mem_path, rank)
+
+    ! convert pointer
+    if (rank == 0) then
+      call mem_setptr(tgt_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, src_ptr)
+      tgt_ptr = src_ptr
+    else
+      write (bmi_last_error, fmt_unsupported_rank) trim(var_name)
+      call report_bmi_error(bmi_last_error)
+      bmi_status = BMI_FAILURE
+      return
+    end if
+
+    ! trigger event:
+    call on_memory_set(var_name, mem_path, status)
+    if (status /= 0) then
+      ! something went terribly wrong here, aborting
+      write (bmi_last_error, fmt_invalid_mem_access) trim(var_name)
+      call report_bmi_error(bmi_last_error)
+      bmi_status = BMI_FAILURE
+      return
+    end if
+
+  end function set_value_bool
 
   !> @brief Get the variable type as a string
   !!
