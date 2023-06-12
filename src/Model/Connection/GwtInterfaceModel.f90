@@ -1,5 +1,6 @@
 module GwtInterfaceModelModule
   use KindModule, only: I4B, DP
+  use ConstantsModule, only: DONE
   use MemoryManagerModule, only: mem_allocate, mem_deallocate, mem_reallocate
   use MemoryHelperModule, only: create_mem_path
   use NumericalModelModule, only: NumericalModelType
@@ -25,6 +26,7 @@ module GwtInterfaceModelModule
 
     integer(i4B), pointer :: iAdvScheme => null() !< the advection scheme: 0 = up, 1 = central, 2 = tvd
     integer(i4B), pointer :: ixt3d => null() !< xt3d setting: 0 = off, 1 = lhs, 2 = rhs
+    real(DP), pointer :: ieqnsclfac => null() !< governing eqn scaling factor: 1: GWT, >1: GWE
 
     class(GridConnectionType), pointer :: gridConnection => null() !< The grid connection class will provide the interface grid
     class(GwtModelType), private, pointer :: owner => null() !< the real GWT model for which the exchange coefficients
@@ -61,6 +63,7 @@ contains
     ! defaults
     this%iAdvScheme = 0
     this%ixt3d = 0
+    this%ieqnsclfac = DONE
 
     this%iout = iout
     this%gridConnection => gridConn
@@ -82,9 +85,9 @@ contains
     ! create dis and packages
     call disu_cr(this%dis, this%name, '', -1, this%iout)
     call fmi_cr(this%fmi, this%name, 0, this%iout, this%tsplab, &
-                this%eqnsclfac)
+                this%ieqnsclfac)
     call adv_cr(this%adv, this%name, adv_unit, this%iout, this%fmi, &
-                this%eqnsclfac)
+                this%ieqnsclfac)
     call dsp_cr(this%dsp, this%name, '', -dsp_unit, this%iout, this%fmi)
     call tsp_obs_cr(this%obs, inobs)
 
@@ -94,10 +97,12 @@ contains
     class(GwtInterfaceModelType) :: this !< the GWT interface model
     character(len=*), intent(in) :: modelname !< the model name
 
-    call this%GwtModelType%allocate_scalars(modelname)
+    call this%GwtModelType%allocate_tsp_scalars(modelname)
+    call this%GwtModelType%allocate_gwt_scalars(modelname)
 
     call mem_allocate(this%iAdvScheme, 'ADVSCHEME', this%memoryPath)
     call mem_allocate(this%ixt3d, 'IXT3D', this%memoryPath)
+    call mem_allocate(this%ieqnsclfac, 'IEQNSCLFAC', this%memoryPath)
 
   end subroutine allocate_scalars
 
@@ -196,6 +201,7 @@ contains
     ! this
     call mem_deallocate(this%iAdvScheme)
     call mem_deallocate(this%ixt3d)
+    call mem_deallocate(this%ieqnsclfac)
 
     ! gwt packages
     call this%dis%dis_da()
@@ -223,6 +229,7 @@ contains
     call mem_deallocate(this%inmvt)
     call mem_deallocate(this%inoc)
     call mem_deallocate(this%inobs)
+    call mem_deallocate(this%eqnsclfac)
 
     ! base
     call this%NumericalModelType%model_da()

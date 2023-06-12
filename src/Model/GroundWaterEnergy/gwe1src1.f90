@@ -167,7 +167,6 @@ contains
         cycle
       end if
       q = this%bound(1, i)
-!!      this%rhs(i) = -q / this%eqnsclfac ! kluge Ask Alden if this can be deleted
       this%rhs(i) = -q
     end do
     !
