@@ -6,32 +6,14 @@
 
 # Imports
 import os
-import sys
 
 import numpy as np
 import pytest
 import matplotlib.pyplot as plt
+import flopy
 
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-import targets
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 
 # Base simulation and model name and workspace
@@ -75,6 +57,7 @@ cpw = 4174.0
 cps = 800.0
 rhow = 1000.0
 rhos = bulk_dens
+lhv = 2454000.0  # Latent heat of vaporization ($J/kg$)
 
 # Stress period input
 per_data = []
@@ -310,10 +293,9 @@ def build_model(idx, dir):
     flopy.mf6.ModflowGwemst(
         gwe,
         porosity=porosity,
-        cpw=cpw,
         cps=cps,
-        rhow=rhow,
         rhos=rhos,
+        packagedata=[cpw, rhow, lhv],
         filename="{}.mst".format(gwename),
     )
 
@@ -352,7 +334,7 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_model(sim):
+def eval_results(sim):
     print("evaluating results...")
 
     # read transport results from GWE model
@@ -408,36 +390,17 @@ def eval_model(sim):
 
 # - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, idx, ws)
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
+        ),
+        ws,
+    )
 
-    # build the model
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_model, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_model, idxsim=idx)
-        test.run_mf6(sim)
-
-
-if __name__ == "__main__":
-    # Heat Transport in 1-dimension
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
