@@ -6,6 +6,7 @@ module ListReaderModule
                              LENAUXNAME, LENLISTLABEL, DONE
   use SimVariablesModule, only: errmsg
   use SimModule, only: store_error, count_errors, store_error_unit
+  use InputOutputModule, only: backspace
 
   implicit none
   private
@@ -439,7 +440,7 @@ contains
           ! If ierr < 0, backspace was already performed in u9rdcom, so only
           ! need to backspace if END was found.
           if (this%ierr == 0) then
-            backspace (this%inlist)
+            call backspace (this%inlist, this%line)
           end if
           this%nlist = ii - 1
           exit readloop
