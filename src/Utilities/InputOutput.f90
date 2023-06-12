@@ -5,15 +5,20 @@ module InputOutputModule
   use KindModule, only: DP, I4B, I8B
   use SimVariablesModule, only: iunext, isim_mode, errmsg
   use SimModule, only: store_error, store_error_unit
-  use ConstantsModule, only: IUSTART, IULAST,                                  &
-                             LINELENGTH, LENBIGLINE, LENBOUNDNAME,             &
-                             NAMEDBOUNDFLAG, MAXCHARLEN,                       &
-                             TABLEFT, TABCENTER, TABRIGHT,                     &
-                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL,      &
+  use ConstantsModule, only: IUSTART, IULAST, &
+                             LINELENGTH, LENBIGLINE, LENBOUNDNAME, &
+                             NAMEDBOUNDFLAG, MAXCHARLEN, &
+                             TABLEFT, TABCENTER, TABRIGHT, &
+                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL, &
                              DZERO
   use GenericUtilitiesModule, only: is_same, sim_message
   private
-  public :: GetUnit, uget_block,                                               &
+  type bkspc_buffer
+    character(len=:), allocatable :: line
+  end type bkspc_buffer
+  type(bkspc_buffer) :: bkspc(IUSTART:IULAST)
+
+  public :: GetUnit, uget_block, backspace,                                    &
             uterminate_block, UPCASE, URWORD, ULSTLB, UBDSV4,                  &
             ubdsv06, UBDSVB, UCOLNO, ULAPRW,                                   &
             ULASAV, ubdsv1, ubdsvc, ubdsvd, UWWORD,                            &
@@ -27,6 +32,20 @@ module InputOutputModule
             get_nwords, u9rdcom
 
   contains
+
+  !> @brief Backspace a single line
+  !!
+  !! Subroutine to backspace ascii files by a single line (using internal one line buffer),
+  !! implementing the fortran backspace intrinsic
+  !! Puts a line in the backspace buffer that will be picked up at the next read attempt
+  !!
+  !<
+  subroutine backspace (iu, line)
+    implicit none
+    integer(I4B), intent(in) :: iu !< unit number
+    character(len=*), intent(in) :: line !< line to be buffered
+    bkspc(iu)%line = line
+  end subroutine backspace
 
   !> @brief Open a file
   !!
@@ -278,14 +297,14 @@ module InputOutputModule
                 if (line2(istart:istop) == '') exit chk
                 if (line2(istart:istop) == '(BINARY)' .or. &
                     line2(istart:istop) == 'SFAC') then
-                  backspace(iin)
+                  call backspace (iin, line2)
                   exit mainloop
                 end if
               end do chk
               iuext = GetUnit()
               call openfile(iuext,iout,fname,'OPEN/CLOSE')
             else
-              backspace(iin)
+              call backspace (iin, line2)
             end if
           end if
         else
@@ -296,7 +315,7 @@ module InputOutputModule
             call store_error(ermsg)
             call store_error_unit(iuext)
           else
-            backspace(iin)
+            call backspace (iin, line)
           endif
         end if
         exit mainloop
@@ -364,7 +383,7 @@ module InputOutputModule
             fname = line2(istart:istop)
             call openfile(iuext,iout,fname,'OPEN/CLOSE')
           else
-            backspace(iin)
+            call backspace (iin, line2)
           endif
         else
           ermsg  = 'Block name missing in file.'
@@ -2130,7 +2149,7 @@ END SUBROUTINE URWORD
       if (ierr == IOSTAT_END) then
         ! -- End of file reached.
         ! -- Backspace is needed for gfortran.
-        backspace(iin)
+        call backspace(iin, line)
         line = ' '
         exit pcomments
       elseif (ierr /= 0) then
@@ -2219,6 +2238,15 @@ END SUBROUTINE URWORD
     character(len=:), allocatable :: linetemp
     integer(I4B) :: size_read, linesize
 ! ------------------------------------------------------------------------------
+    !
+    ! -- skip when buffer contains a line of a previous backspace for this lun
+    if (allocated(bkspc(lun)%line)) then
+      line = bkspc(lun)%line
+      iostat = 0
+      deallocate (bkspc(lun)%line)
+      return
+    end if
+
     !
     ! -- initialize
     line = ''
