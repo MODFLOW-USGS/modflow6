@@ -1,3 +1,4 @@
+import platform
 from pathlib import Path
 
 import pytest
@@ -29,6 +30,17 @@ def should_compare(
 @pytest.fixture(scope="session")
 def bin_path() -> Path:
     return project_root_path / "bin"
+
+
+@pytest.fixture(scope="session")
+def libmf6_path(bin_path) -> Path:
+    ext = {
+        "Darwin": ".dylib",
+        "Linux": ".so",
+        "Windows": ".dll",
+    }[platform.system()]
+    lib_name = bin_path / f"libmf6{ext}"
+    return lib_name
 
 
 @pytest.fixture(scope="session")
