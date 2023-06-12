@@ -29,6 +29,7 @@ module TdisModule
   logical(LGP), public, pointer :: endofsimulation => null() !< flag indicating end of simulation
   real(DP), public, pointer :: delt => null() !< length of the current time step
   real(DP), public, pointer :: pertim => null() !< time relative to start of stress period
+  real(DP), public, pointer :: topertim => null() !< simulation time at start of stress period
   real(DP), public, pointer :: totim => null() !< time relative to start of simulation
   real(DP), public, pointer :: totimc => null() !< simulation time at start of time step
   real(DP), public, pointer :: deltsav => null() !< saved value for delt, used for subtiming
@@ -194,6 +195,7 @@ contains
     adaptivePeriod = isAdaptivePeriod(kper)
     if (kstp == 1) then
       pertim = DZERO
+      topertim = DZERO
     end if
     !
     ! -- Set delt
@@ -229,7 +231,6 @@ contains
     ! -- Set end of simulation indicator
     if (endofperiod .and. kper == nper) then
       endofsimulation = .true.
-      totim = totalsimtime
     end if
     !
     ! -- return
@@ -295,10 +296,19 @@ contains
 ! ------------------------------------------------------------------------------
     !
     if (kstp == 1) then
-      delt = perlen(kper) / float(nstp(kper))
-      if (tsmult(kper) /= DONE) &
+      ! -- Calculate the first value of delt for this stress period
+      topertim = totim
+      if (tsmult(kper) /= DONE) then
+        ! -- Timestep length has a geometric progression
         delt = perlen(kper) * (DONE - tsmult(kper)) / &
                (DONE - tsmult(kper)**nstp(kper))
+      else
+        ! -- Timestep length is constant
+        delt = perlen(kper) / float(nstp(kper))
+      end if
+    elseif (kstp == nstp(kper)) then
+      ! -- Calculate exact last delt to avoid accumulation errors
+      delt = topertim + perlen(kper) - totim
     else
       delt = tsmult(kper) * delt
     end if
@@ -467,6 +477,7 @@ contains
     call mem_deallocate(endofsimulation)
     call mem_deallocate(delt)
     call mem_deallocate(pertim)
+    call mem_deallocate(topertim)
     call mem_deallocate(totim)
     call mem_deallocate(totimc)
     call mem_deallocate(deltsav)
@@ -611,6 +622,7 @@ contains
     call mem_allocate(endofsimulation, 'ENDOFSIMULATION', 'TDIS')
     call mem_allocate(delt, 'DELT', 'TDIS')
     call mem_allocate(pertim, 'PERTIM', 'TDIS')
+    call mem_allocate(topertim, 'TOPERTIM', 'TDIS')
     call mem_allocate(totim, 'TOTIM', 'TDIS')
     call mem_allocate(totimc, 'TOTIMC', 'TDIS')
     call mem_allocate(deltsav, 'DELTSAV', 'TDIS')
@@ -632,6 +644,7 @@ contains
     endofsimulation = .false.
     delt = DZERO
     pertim = DZERO
+    topertim = DZERO
     totim = DZERO
     totimc = DZERO
     deltsav = DZERO
