@@ -13,7 +13,7 @@ module InputOutputModule
                              DZERO
   use GenericUtilitiesModule, only: is_same, sim_message
   private
-  public :: GetUnit, u8rdcom, uget_block,                                      &
+  public :: GetUnit, uget_block,                                               &
             uterminate_block, UPCASE, URWORD, ULSTLB, UBDSV4,                  &
             ubdsv06, UBDSVB, UCOLNO, ULAPRW,                                   &
             ULASAV, ubdsv1, ubdsvc, ubdsvd, UWWORD,                            &
@@ -22,7 +22,7 @@ module InputOutputModule
             linear_interpolate, lowcase,                                       &
             read_line, uget_any_block,                                         &
             GetFileFromPath, extract_idnum_or_bndname, urdaux,                 &
-            get_jk, uget_block_line, print_format, BuildFixedFormat,           &
+            get_jk, print_format, BuildFixedFormat,                            &
             BuildFloatFormat, BuildIntFormat, fseek_stream,                    &
             get_nwords, u9rdcom
 
@@ -201,125 +201,6 @@ module InputOutputModule
     return
   end function getunit
   
-  !> @brief Get the next non-comment line
-  !!
-  !! Subroutine to get the next non-comment line from a file
-  !!
-  !<
-  subroutine u8rdcom(iin, iout, line, ierr)
-    use, intrinsic :: iso_fortran_env, only: IOSTAT_END
-    implicit none
-    ! -- dummy variables
-    integer(I4B),         intent(in) :: iin   !< file unit number
-    integer(I4B),         intent(in) :: iout  !< output listing file
-    character (len=*), intent(inout) :: line  !< next non-comment line
-    integer(I4B),        intent(out) :: ierr  !< error code
-    ! -- local variables
-    character (len=2), parameter :: comment = '//'
-    character(len=1), parameter  :: tab = CHAR(9)
-    logical :: iscomment
-    integer(I4B) :: i, l
-    !
-    ! -- code
-    line = comment
-    pcomments: do
-      read (iin,'(a)', iostat=ierr) line
-      if (ierr == IOSTAT_END) then
-        ! -- End of file reached.
-        ! -- Backspace is needed for gfortran.
-        backspace(iin)
-        line = ' '
-        exit pcomments
-      elseif (ierr /= 0) then
-        ! -- Other error...report it
-        call unitinquire(iin)
-        write(errmsg, *) 'u8rdcom: Could not read from unit: ',iin
-        call store_error(errmsg, terminate=.TRUE.)
-      endif
-      if (len_trim(line).lt.1) then
-        line = comment
-        cycle
-      end if
-      !
-      ! -- Ensure that any initial tab characters are treated as spaces
-      cleartabs: do
-        line = trim(adjustl(line))
-        iscomment = .false.
-        select case (line(1:1))
-          case ('#')
-            iscomment = .true.
-            exit cleartabs
-          case ('!')
-            iscomment = .true.
-            exit cleartabs
-          case (tab)
-            line(1:1) = ' '
-            cycle cleartabs
-          case default
-            if (line(1:2).eq.comment) iscomment = .true.
-            if (len_trim(line) < 1) iscomment = .true.
-            exit cleartabs
-        end select
-      end do cleartabs
-      !
-      if (.not.iscomment) then
-        exit pcomments
-      else
-        if (iout > 0) then
-          !find the last non-blank character.
-          l=len(line)
-          do i = l, 1, -1
-            if(line(i:i).ne.' ') then
-              exit
-            end if
-          end do
-          !print the line up to the last non-blank character.
-          write(iout,'(1x,a)') line(1:i)
-        end if
-      end if
-    end do pcomments
-    return
-  end subroutine u8rdcom
-
-  !> @brief Get line from a block
-  !!
-  !! Subroutine to read and return a line from an external file or from 
-  !! within a block. The line is read from an external file if iu is 
-  !! not equal to iuext.
-  !!
-  !<
-  subroutine uget_block_line(iu, iuext, iout, line, lloc, istart, istop)
-    implicit none
-    ! -- dummy variables
-    integer(I4B), intent(in) :: iu            !< file unit number
-    integer(I4B), intent(in) :: iuext         !< external file unit number
-    integer(I4B), intent(in) :: iout          !< output listing file
-    character (len=*), intent(inout) :: line  !< line
-    integer(I4B), intent(inout) :: lloc       !< position in line
-    integer(I4B), intent(inout) :: istart     !< starting position of a word
-    integer(I4B), intent(inout) :: istop      !< ending position of a word
-    ! -- local variables
-    integer(I4B) :: ierr
-    integer(I4B) :: ival
-    real(DP) :: rval
-! ------------------------------------------------------------------------------
-    lloc = 1
-    call u8rdcom(iuext, iout, line, ierr)
-    call urword(line, lloc, istart, istop, 1, ival, rval, iout, iuext)
-    ! -- determine if an empty string is returned
-    !    condition occurs if the end of the file has been read
-    if (len_trim(line) < 1) then
-      ! -- if external file, read line from package unit (iu)
-      if (iuext /= iu) then
-        lloc = 1
-        call u8rdcom(iu, iout, line, ierr)
-        call urword(line, lloc, istart, istop, 1, ival, rval, iout, iu)
-      end if
-    end if
-    return
-  end subroutine uget_block_line
-
-
   !> @brief Find a block in a file
   !!
   !! Subroutine to read from a file until the tag (ctag) for a block is
