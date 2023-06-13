@@ -530,6 +530,12 @@ jobs:
           echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/petsc/arch-darwin-gcc-debug/lib/pkgconfig" >> $GITHUB_ENV
           echo "$GITHUB_WORKSPACE/petsc/arch-darwin-gcc-debug/bin" >> $GITHUB_PATH
 
+      - name: Configure environment
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: |
+          mv /C/Strawberry/perl/bin/pkg-config.BAT /C/Strawberry/perl/bin/pkg-config-strawberry.BAT
+
       - name: Configure PETSc
         if: runner.os == 'Linux'
         working-directory: petsc
