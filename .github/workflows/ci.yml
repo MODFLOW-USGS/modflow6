@@ -480,11 +480,19 @@ jobs:
             mingw-w64-x86_64-python-pip
             mingw-w64-x86_64-python-pytest
 
-      - name: Setup MPI
+      # - name: Setup MPI
+      #   if: runner.os == 'Windows'
+      #   uses: mpi4py/setup-mpi@v1
+      #   with:
+      #     mpi: msmpi
+
+      - name: download MS-MPI setup (SDK is from MSYS2)
         if: runner.os == 'Windows'
-        uses: mpi4py/setup-mpi@v1
-        with:
-          mpi: msmpi
+        run: curl -L -O https://github.com/microsoft/Microsoft-MPI/releases/download/v10.1.1/msmpisetup.exe
+
+      - name: Install mpiexec.exe (-force needed to bypass GUI on headless)
+        if: runner.os == 'Windows'
+        run: .\msmpisetup.exe -unattend -force
 
       - name: Setup GNU Fortran ${{ env.GCC_V }}
         uses: awvwgk/setup-fortran@main
