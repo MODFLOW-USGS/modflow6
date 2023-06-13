@@ -199,7 +199,7 @@ contains
     ! assign reduced maps to virtual data containers
     do isol = 1, this%nr_solutions
       virt_sol => this%virtual_solutions(isol)
-      do ivm = 1, size(virt_sol%models) ! TODO_MJR: other containers, exchanges?
+      do ivm = 1, size(virt_sol%models)
         vdc => virt_sol%models(ivm)%ptr
         if (vdc%is_local) cycle
         nmap => virt_sol%interface_map%get_node_map(vdc%id)

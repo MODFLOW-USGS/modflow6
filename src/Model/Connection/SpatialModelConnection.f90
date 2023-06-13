@@ -458,13 +458,10 @@ contains ! module procedures
 
   end subroutine spatialcon_da
 
-  !> @brief Set up the grid connection
-  !!
-  !! This works in three steps:
-  !! 1. set the primary connections
-  !! 2. create the topology of connected models, finding
-  !!    neighbors of neighboring models when required
-  !! 3. extend the interface grid, using that information
+  !> @brief Creates the connection structure for the
+  !! interface grid, starting from primary exchanges,
+  !! then extending inward and outward, possibly across
+  !! model boundaries.
   !<
   subroutine setupGridConnection(this)
     class(SpatialModelConnectionType) :: this !< this connection

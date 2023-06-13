@@ -14,6 +14,7 @@ module ParallelSolutionModule
     ! override
     procedure :: sln_has_converged => par_has_converged
     procedure :: sln_calc_ptc => par_calc_ptc
+    procedure :: sln_underrelax => par_underrelax
   end type ParallelSolutionType
 
 contains
@@ -34,7 +35,6 @@ contains
     mpi_world => get_mpi_world()
 
     has_converged = .false.
-    global_max_dvc = huge(0.0)
     abs_max_dvc = abs(max_dvc)
     call MPI_Allreduce(abs_max_dvc, global_max_dvc, 1, MPI_DOUBLE_PRECISION, &
                        MPI_MAX, mpi_world%comm, ierr)
@@ -72,5 +72,38 @@ contains
     end if
 
   end subroutine par_calc_ptc
+
+  !> @brief apply under-relaxation in sync over all processes
+  !<
+  subroutine par_underrelax(this, kiter, bigch, neq, active, x, xtemp)
+    class(ParallelSolutionType) :: this !< parallel instance
+    integer(I4B), intent(in) :: kiter !< Picard iteration number
+    real(DP), intent(in) :: bigch !< maximum dependent-variable change
+    integer(I4B), intent(in) :: neq !< number of equations
+    integer(I4B), dimension(neq), intent(in) :: active !< active cell flag (1)
+    real(DP), dimension(neq), intent(inout) :: x !< current dependent-variable
+    real(DP), dimension(neq), intent(in) :: xtemp !< previous dependent-variable
+    ! local
+    real(DP) :: dvc_global_max, dvc_global_min
+    integer :: ierr
+    type(MpiWorldType), pointer :: mpi_world
+
+    mpi_world => get_mpi_world()
+
+    ! first reduce largest change over all processes
+    call MPI_Allreduce(bigch, dvc_global_max, 1, MPI_DOUBLE_PRECISION, &
+                       MPI_MAX, mpi_world%comm, ierr)
+    call MPI_Allreduce(bigch, dvc_global_min, 1, MPI_DOUBLE_PRECISION, &
+                       MPI_MIN, mpi_world%comm, ierr)
+
+    if (abs(dvc_global_min) > abs(dvc_global_max)) then
+      dvc_global_max = dvc_global_min
+    end if
+
+    ! call local underrelax routine
+    call this%NumericalSolutionType%sln_underrelax(kiter, dvc_global_max, &
+                                                   neq, active, x, xtemp)
+
+  end subroutine par_underrelax
 
 end module ParallelSolutionModule
