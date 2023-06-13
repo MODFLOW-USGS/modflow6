@@ -536,7 +536,7 @@ jobs:
           sudo ./configure PETSC_DIR="$GITHUB_WORKSPACE/petsc" PETSC_ARCH=arch-darwin-gcc-debug --download-fblaslapack --download-openmpi
           sudo make all
 
-      - name: Configure PETSc
+      - name: Prepare PETSc configure (install MSYS packages)
         if: runner.os == 'Windows'
         shell: msys2 {0}
         working-directory: petsc
@@ -546,8 +546,22 @@ jobs:
             mingw-w64-x86_64-toolchain patch python flex \
             pkg-config pkgfile tar unzip mingw-w64-x86_64-cmake \
             mingw-w64-x86_64-msmpi mingw-w64-x86_64-openblas mingw-w64-x86_64-jq
-          /usr/bin/python ./configure --with-mpiexec='/C/Program\ Files/Microsoft\ MPI/Bin/mpiexec' --with-shared-libraries=0
+
+      - name: Configure PETSc
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        working-directory: petsc
+        run: |
+          export PETSC_ARCH=arch-msys-msmpi
+          /usr/bin/python ./configure --with-mpiexec='/C/Program\ Files/Microsoft\ MPI/Bin/mpiexec' --with-shared-libraries=0 --with-cxx=0
+
+      - name: Build PETSc
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        working-directory: petsc
+        run: |
           make all
+          make check
 
       - name: Setup Micromamba
         uses: mamba-org/setup-micromamba@v1

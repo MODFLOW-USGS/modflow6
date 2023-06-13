@@ -22,7 +22,10 @@ else
 endif
 message('The used profile is:', profile)
 
-# parse compiler options
+# windows options:
+petsc_dir = meson.project_source_root() / '..' /'petsc-3.18.5'
+petsc_arch = 'arch-msys-msmpi'
+
 fc = meson.get_compiler('fortran')
 fc_id = fc.get_id()
 compile_args = []
