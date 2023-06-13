@@ -553,7 +553,7 @@ jobs:
         working-directory: petsc
         run: |
           export PETSC_ARCH=arch-msys-msmpi
-          /usr/bin/python ./configure --with-mpiexec='/C/Program\ Files/Microsoft\ MPI/Bin/mpiexec' --with-shared-libraries=0 --with-cxx=0
+          /usr/bin/python ./configure --with-mpiexec='/C/Program\ Files/Microsoft\ MPI/Bin/mpiexec' --with-shared-libraries=0 --with-cxx=0 --CFLAGS=-Wno-format
 
       - name: Build PETSc
         if: runner.os == 'Windows'
