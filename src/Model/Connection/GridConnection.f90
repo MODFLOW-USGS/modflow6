@@ -785,7 +785,7 @@ contains
   !! The level indicates the nr of connections away from
   !! the remote neighbor, the diagonal term holds the negated
   !! value of their nearest connection. We end with setting
-  !< a normalized mask: 0 or 1
+  !< a normalized mask to the connections object: 0 or 1
   subroutine createConnectionMask(this)
     class(GridConnectionType), intent(inout) :: this !< instance of this grid connection
     ! local

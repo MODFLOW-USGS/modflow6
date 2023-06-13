@@ -339,7 +339,7 @@ contains
     ! -- synchronize
     call run_ctrl%at_stage(STG_AFT_CON_CR)
     !
-    ! -- synchronize TODO_MJR: this could be merged with the above, in general
+    ! -- synchronize
     call run_ctrl%at_stage(STG_BFR_CON_DF)
     !
     ! -- Define each connection
