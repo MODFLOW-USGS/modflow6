@@ -110,6 +110,8 @@ if is_mpich
   endif
 endif
 message('Parallel build:', is_parallel_build)
+#mpi = dependency('mpi', language : 'fortran', required : petsc.found())
+mpi = dependency('msmpi', required : petsc.found())
 
 # windows options for petsc
 petsc_dir = meson.project_source_root() / '..' /'petsc-3.18.5'
