@@ -12,6 +12,6 @@ export PKG_CONFIG_PATH=/opt/cray/pe/mpt/7.7.19/gni/mpich-gnu/8.1/lib/pkgconfig:$
 
 srun --reservation=dev --account=impd --pty bash
 
-meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin -Dparallel=true -Dmpich=true -Dcray=true
+meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin -Dcray=true
 meson install -C builddir
 ```

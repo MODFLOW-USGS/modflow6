@@ -18,17 +18,9 @@ if get_option('optimization') == '2'
 else
   profile = 'develop'
 endif
-
-buildname = get_option('buildname')
-buildutils = get_option('buildutils')
-do_parallel_build = get_option('parallel')
 message('The used profile is:', profile)
-message('Parallel build:', do_parallel_build)
 
-# windows options:
-petsc_dir = meson.project_source_root() / '..' /'petsc-3.18.5'
-petsc_arch = 'arch-ci-mswin-intel-modflow6'
-
+# parse compiler options
 fc = meson.get_compiler('fortran')
 fc_id = fc.get_id()
 compile_args = []
@@ -93,65 +85,70 @@ elif fc_id == 'intel'
   link_args += '-static-intel'
 endif
 
-if do_parallel_build
-  if build_machine.system() == 'windows'
-    # directly look for petsc
-    petsc_compiled = petsc_dir / petsc_arch
-    petsc = fc.find_library('libpetsc', dirs: petsc_compiled / 'lib', required : true)
-  else
-    petsc = dependency('PETSc', required : true)
-  endif
-endif
 
-# find mpi
-enable_mpi = do_parallel_build  
-use_mpich = get_option('mpich')
-mpi_deps = [ ]
-if enable_mpi
-  if use_mpich
-    mpi = dependency('mpich', required : true)
-    if get_option('cray')
-      mpifort = dependency('mpichf90', required : mpi.found())
-    else
-      mpifort = fc.find_library('mpichfort', required : mpi.found())
-    endif
-    mpi_deps += [ mpi, mpifort ]
-  else
-    mpi = dependency('mpi', language : 'fortran', required : true)
-    mpi_deps += mpi
-  endif
-  enable_mpi = do_parallel_build  
+# parallel build options
+is_parallel_build = get_option('parallel')
+is_cray = get_option('cray')
+is_mpich = get_option('mpich')
+if is_cray and build_machine.system() != 'linux'
+  error('cray=true only supported on linux systems')
 endif
+if is_cray and not is_parallel_build
+  is_parallel_build = true
+  is_mpich = true
+endif
+if is_mpich
+  if is_cray
+    mpifort_name = 'mpichf90' 
+  else
+    mpifort_name = 'mpichfort'
+  endif
+endif
+message('Parallel build:', is_parallel_build)
+
+# windows options for petsc
+petsc_dir = meson.project_source_root() / '..' /'petsc-3.18.5'
+petsc_arch = 'arch-ci-mswin-intel-modflow6'
 
 # on windows only with intel
-if build_machine.system() == 'windows' and enable_mpi
-  if fc_id == 'intel-cl'
-    message('Parallel build on Windows with intel compiler')
-  else
-    message('Parallel build on Windows only with intel compiler, disabling...')
-    enable_mpi = false
+if build_machine.system() == 'windows' and is_parallel_build
+  if fc_id != 'intel-cl'
+    error('Parallel build on Windows only with intel compiler. Terminating...')
   endif
 endif
 
-# compile with mpi or petsc+mpi when found,
-# (not allowing petsc without mpi)
+# lists for parallel dependencies and compiler arguments
 dependencies = [ ]
 extra_cmp_args = [ ]
 
-if enable_mpi
-  extra_cmp_args = [ '-D__WITH_MPI__' ]
-  with_mpi = true
-  dependencies += mpi_deps
-else
-  with_mpi = false
-endif 
-
-if with_mpi and petsc.found()
+# load petsc and mpi dependencies/libraries
+if is_parallel_build
+  # find petsc
+  if build_machine.system() != 'windows'
+    petsc = dependency('PETSc', required : true)
+  else
+    # directly look for petsc
+    petsc_compiled = petsc_dir / petsc_arch
+    petsc = fc.find_library('libpetsc', dirs: petsc_compiled / 'lib', required : true)
+  endif
   extra_cmp_args += [ '-D__WITH_PETSC__' ]
-  with_petsc = true
   dependencies += petsc
+  with_petsc = true
+
+  # find mpi
+  if is_mpich
+    mpi = dependency('mpich', required : true)
+    mpifort = dependency(mpifort_name, required : mpi.found())
+    dependencies += [ mpi, mpifort ]
+  else
+    mpi = dependency('mpi', language : 'fortran', required : true)
+    dependencies += mpi
+  endif
+  extra_cmp_args += [ '-D__WITH_MPI__']
+  with_mpi = true
 else
   with_petsc = false
+  with_mpi = false
 endif
 
 compile_args += extra_cmp_args
@@ -159,7 +156,7 @@ compile_args += extra_cmp_args
 add_project_arguments(fc.get_supported_arguments(compile_args), language: 'fortran')
 add_project_link_arguments(fc.get_supported_arguments(link_args), language: 'fortran')
 
-if with_petsc and build_machine.system() == 'windows'
+if is_parallel_build and build_machine.system() == 'windows'
   message('Compiling PETSc Fortran modules')
   petsc_incdir = include_directories([petsc_dir / 'include', petsc_compiled / 'include'])
   petsc_src = petsc_dir / 'src'
@@ -183,23 +180,23 @@ if with_petsc and build_machine.system() == 'windows'
                                 include_directories: petsc_incdir)  
 endif
 
+# build mf6 and libmf6
+buildname = get_option('buildname')
 subdir('src')
 subdir('srcbmi')
 
 # build zbud6 and mf5to6 utility programs
-if buildutils
-  message('Building utility programs')
-  subdir('utils')
-endif
+subdir('utils')
 
 # add unit test directory
 # subdir('unittests')
 
 # meson tests to evaluate installation success
-if enable_mpi
+if with_mpi
   mpiexec = find_program('mpiexec', required : false)
   if mpiexec.found()
     test('Test parallel installation version', mpiexec, args : ['-n', '2', mf6exe, '-v', '-p'])
+    test('Test parallel installation compiler', mpiexec, args : ['-n', '2', mf6exe, '-c', '-p'])
   endif
 else
   test('Test installation version', mf6exe, args : ['-v',])

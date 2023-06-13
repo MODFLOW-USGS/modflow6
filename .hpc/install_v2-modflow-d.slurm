@@ -43,7 +43,7 @@ function func_env_set {
     # actually switch to the target PE module (necessary for compiler variables)
     if [ "$Target_pe" != "${PE_ENV,,}" ] # PE_ENV Defined by Cray Programming Environment
     then
-        cmd="module switch PrgEnv-${PE_ENV,,} PrgEnv-${Target_pe,,} && module petsc"
+        cmd="module switch PrgEnv-${PE_ENV,,} PrgEnv-${Target_pe,,}"
         echo $cmd
         eval $cmd || errmsg_and_exit "Failed to eval $cmd"
     fi
@@ -55,6 +55,8 @@ function func_env_set {
         ;;
         "gnu")
             Prefix="${Install_root}/${Target_pe^^}/${GNU_VERSION}"
+            module switch gcc/11.2.0 gcc/8.1.0
+            module load cray-mpich petsc
             export PKG_CONFIG_PATH=/opt/cray/pe/mpt/7.7.19/gni/mpich-gnu/8.1/lib/pkgconfig:$PKG_CONFIG_PATH
         ;;
         "intel")
@@ -78,7 +80,7 @@ function func_env_create {
 function func_configure {
 
     # Modflow6 Meson build specific
-    CC=cc CXX=CC F77=ftn F90=ftn FC=ftn meson setup build-${Target_pe} --reconfigure --prefix=$Prefix --libdir=bin --Dparallel=true -Dmpich=true -Dcray=true
+    CC=cc CXX=CC F77=ftn F90=ftn FC=ftn meson setup build-${Target_pe} --reconfigure --prefix=$Prefix --libdir=bin --Dcray=true
     
     [[ $? -ne 0 ]] && errmsg_and_exit "Failed at configure step!"
 }
@@ -131,7 +133,7 @@ function func_module_install {
 ## Function to clean package. Default is "make clean", or optional parameter like distclean, etc.
 function func_clean {
 
-    # Modflow6 6.4.2 specific
+    # Meson build specific
     rm -rf builddir
     
     [[ $? -ne 0 ]] && errmsg_and_exit "Failed at make-clean step!"
