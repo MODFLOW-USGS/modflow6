@@ -6,15 +6,15 @@ on:
       - develop
       - ci-diagnose*
     paths-ignore:
-      - '**.md'
-      - 'doc/**'
+      - "**.md"
+      - "doc/**"
   pull_request:
     branches:
       - master
       - develop
     paths-ignore:
-      - '**.md'
-      - 'doc/**'
+      - "**.md"
+      - "doc/**"
 jobs:
   # lint:
   #   name: Lint (fprettify)
@@ -50,7 +50,7 @@ jobs:
 
   #     - name: Checkout modflow6
   #       uses: actions/checkout@v3
-      
+
   #     - name: Setup gfortran ${{ env.GCC_V }}
   #       uses: awvwgk/setup-fortran@main
   #       with:
@@ -155,13 +155,13 @@ jobs:
   #       with:
   #         repository: MODFLOW-USGS/modflow6-testmodels
   #         path: modflow6-testmodels
-      
+
   #     - name: Checkout modflow6-examples
   #       uses: actions/checkout@v3
   #       with:
   #         repository: MODFLOW-USGS/modflow6-examples
   #         path: modflow6-examples
-      
+
   #     - name: Setup GNU Fortran ${{ env.GCC_V }}
   #       uses: awvwgk/setup-fortran@main
   #       with:
@@ -206,7 +206,7 @@ jobs:
   #         else
   #           pytest -v -n auto --durations 0 -m "not large"
   #         fi
-      
+
   #     # steps below run only on Linux to test distribution procedures, e.g.
   #     # compiling binaries, building documentation
   #     - name: Checkout usgslatex
@@ -306,7 +306,7 @@ jobs:
   #         meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
   #         meson install -C builddir
   #         meson test --verbose --no-rebuild -C builddir
-      
+
   #     - name: Get executables
   #       working-directory: modflow6/autotest
   #       env:
@@ -403,7 +403,7 @@ jobs:
   #       env:
   #         GITHUB_TOKEN: ${{ github.token }}
   #       run: pytest -v --durations 0 get_exes.py
-          
+
   #     - name: Get executables (Windows)
   #       if: runner.os == 'Windows'
   #       working-directory: modflow6/autotest
@@ -451,18 +451,10 @@ jobs:
   #       env:
   #         GITHUB_TOKEN: ${{ github.token }}
   #       run: pytest -v --durations 0
-        
+
   parallel_test:
     name: Parallel testing
-    needs:
-      - lint
-      - build
-      - smoke_test
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ windows-2022 ]
+    runs-on: windows-2022
     defaults:
       run:
         shell: bash -l {0}
@@ -470,7 +462,6 @@ jobs:
       FC: gfortran
       GCC_V: 12
     steps:
-
       - name: Checkout modflow6
         uses: actions/checkout@v3
         with:
@@ -599,4 +590,3 @@ jobs:
           marker="not large"
           markers=$([ "$branch" == "master" ] && echo "$marker and not developmode" || echo "$marker")
           pytest -v -n auto --parallel --durations 0 -m "$markers"
-          
