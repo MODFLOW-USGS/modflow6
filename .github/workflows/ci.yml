@@ -492,7 +492,7 @@ jobs:
 
       - name: Install mpiexec.exe (-force needed to bypass GUI on headless)
         if: runner.os == 'Windows'
-        run: .\msmpisetup.exe -unattend -force
+        run: ./msmpisetup.exe -unattend -force
 
       - name: Setup GNU Fortran ${{ env.GCC_V }}
         uses: awvwgk/setup-fortran@main
