@@ -41,7 +41,7 @@ import pytest
 from filelock import FileLock
 import yaml
 
-from utils import get_modified_time
+from utils import get_modified_time, split_nonnumeric
 
 project_name = "MODFLOW 6"
 project_root_path = Path(__file__).resolve().parent.parent
@@ -57,12 +57,6 @@ touched_file_paths = [
     project_root_path / "code.json",
     project_root_path / "src" / "Utilities" / "version.f90",
 ]
-
-
-def split_on_letter(s):
-    # match = re.compile("[^\W\d]").search(s)
-    match = re.compile("[^0-9]").search(s)
-    return [s[:match.start()], s[match.start():]] if match else s
 
 
 class Version(NamedTuple):
@@ -86,7 +80,7 @@ class Version(NamedTuple):
         assert len(t) > 2
         vmajor = int(t[0])
         vminor = int(t[1])
-        tt = split_on_letter(t[2])
+        tt = split_nonnumeric(t[2])
         vpatch = int(tt[0])
         vlabel = tt[1] if len(tt) > 1 else None
         return cls(major=vmajor, minor=vminor, patch=vpatch, label=vlabel)

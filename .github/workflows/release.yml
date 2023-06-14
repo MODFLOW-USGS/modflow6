@@ -485,7 +485,7 @@ jobs:
       - name: Upload distribution zipfile artifact
         uses: actions/upload-artifact@v3
         with:
-          name: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}.zip"
+          name: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
           path: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}.zip"
 
       - name: Upload release notes artifact

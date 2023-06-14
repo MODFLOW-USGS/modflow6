@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from utils import get_branch
+from utils import get_branch, split_nonnumeric
 
 _system = platform.system()
 _eext = ".exe" if _system == "Windows" else ""
@@ -109,12 +109,6 @@ def test_examples(dist_dir_path):
     print(output)
 
 
-def split_on_letter(s):
-    # match = re.compile("[^\W\d]").search(s)
-    match = re.compile("[^0-9]").search(s)
-    return [s[:match.start()], s[match.start():]] if match else s
-
-
 def test_binaries(dist_dir_path, approved):
     bin_path = dist_dir_path / "bin"
     assert (bin_path / f"mf6{_eext}").is_file()
@@ -139,5 +133,5 @@ def test_binaries(dist_dir_path, approved):
     v_split = version.split(".")
     assert len(v_split) == 3
     assert all(s.isdigit() for s in v_split[:2])
-    sol = split_on_letter(v_split[2])
+    sol = split_nonnumeric(v_split[2])
     assert sol[0].isdigit()

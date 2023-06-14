@@ -128,12 +128,12 @@ If no `--version` is provided, the version is not changed, only the build timest
 An optional label may be appended to the release number, e.g.
 
 ```shell
-python update_version.py -v 6.4.2dev
+python update_version.py -v 6.4.2rc
 ```
 
 The label must start immediately following the patch version number, with no space in between. The label may contain numeric characters or symbols, but *must not* start with a number (otherwise there is no way to distinguish it from the patch version number).
 
-The `--approve` (short `-a`) option can be used to approve an official release. If the `--approve` option is provided, `IDEVELOPMODE` is set to 0. If `--approve` is not provided, `(preliminary)` is substituted into version numbers throughout the repository.
+The `--approve` (short `-a`) option can be used to approve an official release. If the `--approve` option is provided, `IDEVELOPMODE` is set to 0. If `--approve` is not provided, `IDEVELOPMODE = 1` and `(preliminary)` is appended to version numbers.
 
 #### Building makefiles
 
