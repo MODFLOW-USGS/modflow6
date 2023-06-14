@@ -48,6 +48,7 @@ This repository contains an `./autotest` folder with python scripts for building
 * [MODFLOW-USGS/modflow6-testmodels](https://github.com/MODFLOW-USGS/modflow6-testmodels)
 * [MODFLOW-USGS/modflow6-largetestmodels](https://github.com/MODFLOW-USGS/modflow6-largetestmodels)
 * [MODFLOW-USGS/executables](https://github.com/MODFLOW-USGS/executables)
+* [MODFLOW-USGS/modflow-devtools](https://github.com/MODFLOW-USGS/modflow-devtools)
 * [Deltares/xmipy](https://github.com/Deltares/xmipy)
 
 ## Code Documentation
