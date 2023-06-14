@@ -1,18 +1,45 @@
 name: MODFLOW 6 release
 on:
-  push:
-    branches:
-      - master
-      - v[0-9]+.[0-9]+.[0-9]+*
-  release:
-    types:
-      - published
+  # workflow_call event lets this workflow be called either
+  # from this repo or the nightly build repo for dev builds
+  workflow_call:
+    inputs:
+      approve:
+        description: 'Whether to approve the release. Default is false for preliminary/provisional releases. Approval is only relevant for full builds: if development is true, approve is not considered.'
+        required: false
+        type: boolean
+        default: false
+      branch:
+        description: 'Branch to use for release. Default is the develop branch.'
+        required: false
+        type: string
+        default: 'develop'
+      development:
+        description: 'Toggle a minimal development build. Default is false, i.e. to perform a full release build. If true, approve is not considered.'
+        required: false
+        type: boolean
+        default: false
+      run_tests:
+        description: 'Whether to run tests after building binaries. Default is true. Can be set to false for rapid testing/debugging, or for a faster nightly/development build.'
+        required: false
+        type: boolean
+        default: true
+      version:
+        description: 'Version number to use for release.'
+        required: true
+        type: string
+    outputs:
+      version:
+        description: 'Version number used for release'
+        value: ${{ jobs.build.outputs.version }}
+      distname:
+        description: 'Distribution name used for release'
+        value: ${{ jobs.build.outputs.distname }}
 env:
   FC: ifort
 jobs:
   build:
     name: Build binaries (${{ matrix.os }})
-    if: ${{ github.event_name == 'push' && github.ref_name != 'master' }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -27,57 +54,61 @@ jobs:
     defaults:
       run:
         shell: bash -l {0}
+    outputs:
+      version: ${{ steps.set_version.outputs.version }}
+      distname: ${{ steps.set_version.outputs.distname }}
     steps:
       - name: Checkout modflow6
         uses: actions/checkout@v3
         with:
+          repository: ${{ github.repository_owner }}/modflow6
           path: modflow6
-
-      - name: Cache binaries
-        if: ${{ contains(github.ref_name, 'rc') }}
-        id: cache-bin
-        uses: actions/cache@v3
-        with:
-          key: bin-${{ runner.os }}
-          path: modflow6/bin
+          ref: ${{ inputs.branch }}
 
       - name: Setup Micromamba
-        if: ${{ steps.cache-bin.outputs.cache-hit != 'true' }}
         uses: mamba-org/setup-micromamba@v1
         with:
+          micromamba-root-path: ${{ github.workspace }}/micromamba-root
           environment-file: modflow6/environment.yml
           cache-downloads: true
           cache-environment: true
 
       - name: Setup Intel Fortran
-        if: ${{ steps.cache-bin.outputs.cache-hit != 'true' }}
         uses: modflowpy/install-intelfortran-action@v1
 
       - name: Fix Micromamba path (Windows)
-        if: ${{ runner.os == 'Windows' && steps.cache-bin.outputs.cache-hit != 'true' }}
+        if: runner.os == 'Windows'
         shell: pwsh
         run: |
           # https://github.com/modflowpy/install-intelfortran-action#conda-scripts
-          $mamba_bin = "C:\Users\runneradmin\micromamba-root\envs\modflow6\Scripts"
+          $mamba_bin = "${{ github.workspace }}\micromamba-root\envs\modflow6\Scripts"
           echo $mamba_bin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
+      - name: Set version number
+        id: set_version
+        run: |
+          # distribution name format is 'mf<major.minor.patch[label]>'
+          distname="mf${{ inputs.version }}"
+
+          # set step outputs and environment variables
+          echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          echo "VERSION=${{ inputs.version }}" >> "$GITHUB_ENV"
+          echo "distname=$distname" >> "$GITHUB_OUTPUT"
+          echo "DISTNAME=$distname" >> "$GITHUB_ENV"
+
       - name: Update version
-        if: ${{ steps.cache-bin.outputs.cache-hit != 'true' }}
+        id: update_version
         working-directory: modflow6/distribution
         run: |
-          # extract version from ref name
-          ref="${{ github.ref_name }}"
-          ver="${ref%"rc"}"
-          
-          # update version files
-          if [[ "$ver" == *"rc"* ]]; then
-            python update_version.py -v "${ver#"v"}" 
+          ver="${{ steps.set_version.outputs.version }}"
+          if [[ ("${{ inputs.development }}" == "false") && ("${{ inputs.approve }}" == "true") ]]; then
+            python update_version.py -v "$ver" --approve
           else
-            python update_version.py -v "${ver#"v"}" --approve
+            python update_version.py -v "$ver"
           fi
 
       - name: Build binaries
-        if: ${{ runner.os != 'Windows' && steps.cache-bin.outputs.cache-hit != 'true' }}
+        if: runner.os != 'Windows'
         working-directory: modflow6
         run: |
           meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
@@ -85,7 +116,7 @@ jobs:
           meson test --verbose --no-rebuild -C builddir
 
       - name: Build binaries (Windows)
-        if: ${{ runner.os == 'Windows' && steps.cache-bin.outputs.cache-hit != 'true' }}
+        if: runner.os == 'Windows'
         working-directory: modflow6
         shell: pwsh
         run: |
@@ -99,56 +130,95 @@ jobs:
           name: bin-${{ runner.os }}
           path: modflow6/bin
 
+      # only run steps below if inputs.run_tests is true
       - name: Checkout modflow6-testmodels
+        if: inputs.run_tests == true
         uses: actions/checkout@v3
         with:
           repository: MODFLOW-USGS/modflow6-testmodels
           path: modflow6-testmodels
 
       - name: Checkout modflow6-examples
+        if: inputs.run_tests == true
         uses: actions/checkout@v3
         with:
           repository: MODFLOW-USGS/modflow6-examples
           path: modflow6-examples
 
-      - name: Cache modflow6 examples
-        id: cache-examples
-        uses: actions/cache@v3
-        with:
-          path: modflow6-examples/examples
-          key: modflow6-examples-${{ hashFiles('modflow6-examples/scripts/**') }}
-
-      - name: Install extra Python packages
-        if: steps.cache-examples.outputs.cache-hit != 'true'
-        working-directory: modflow6-examples/etc
-        run: pip install -r requirements.pip.txt
-
-      - name: Build example models
-        if: steps.cache-examples.outputs.cache-hit != 'true'
-        working-directory: modflow6-examples/etc
-        run: python ci_build_files.py
-
       - name: Update flopy
+        if: inputs.run_tests == true
         working-directory: modflow6/autotest
         run: python update_flopy.py
 
       - name: Get executables
+        if: inputs.run_tests == true
         working-directory: modflow6/autotest
-        run: pytest -v --durations 0 get_exes.py
-
-      - name: Test programs
-        working-directory: modflow6/autotest
-        run: pytest -v -n auto -m "not developmode" --durations 0
-
-      - name: Test scripts
-        working-directory: modflow6/distribution
-        run: pytest -v --durations 0
         env:
           GITHUB_TOKEN: ${{ github.token }}
+        run: pytest -v --durations 0 get_exes.py
+
+      - name: Test modflow6
+        if: inputs.run_tests == true
+        working-directory: modflow6/autotest
+        env:
+          REPOS_PATH: ${{ github.workspace }}
+        run: |
+          marker="not large"
+          if [[ "${{ inputs.development }}" == "false" ]]; then
+            marker="$marker and not developmode"
+          fi
+
+          pytest -v -n auto --durations 0 -m "$marker"
+      
+      # steps below run only on Linux to test distribution procedures, e.g.
+      # compiling binaries, building documentation
+      - name: Checkout usgslatex
+        if: ${{ runner.os == 'Linux' && inputs.run_tests == true }}
+        uses: actions/checkout@v3
+        with:
+          repository: MODFLOW-USGS/usgslatex
+          path: usgslatex
+
+      - name: Install TeX Live
+        if: ${{ runner.os == 'Linux' && inputs.run_tests == true }}
+        run: |
+          sudo apt-get update
+          sudo apt install texlive-science \
+            texlive-latex-extra \
+            texlive-font-utils \
+            texlive-fonts-recommended \
+            texlive-fonts-extra
+
+      - name: Install USGS LaTeX style files and Univers font
+        if: ${{ runner.os == 'Linux' && inputs.run_tests == true }}
+        working-directory: usgslatex/usgsLaTeX
+        run: sudo ./install.sh --all-users
+
+      - name: Install dependencies for ex-gwf-twri example model
+        if: ${{ runner.os == 'Linux' && inputs.run_tests == true }}
+        working-directory: modflow6-examples/etc
+        run: |
+          # install extra Python packages
+          pip install -r requirements.pip.txt
+
+          # the example model needs executables to be on the path
+          echo "${{ github.workspace }}/modflow6/bin" >> $GITHUB_PATH
+          echo "${{ github.workspace }}/modflow6/bin/downloaded" >> $GITHUB_PATH
+
+      - name: Build ex-gwf-twri example model
+        if: ${{ runner.os == 'Linux' && inputs.run_tests == true }}
+        working-directory: modflow6-examples/scripts
+        run: python ex-gwf-twri.py
+
+      - name: Test distribution scripts
+        if: ${{ inputs.run_tests == true }}
+        working-directory: modflow6/distribution
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pytest -v --durations 0
 
   docs:
     name: Build docs
-    if: ${{ github.event_name == 'push' && github.ref_name != 'master' }}
     needs: build
     runs-on: ubuntu-22.04
     defaults:
@@ -159,13 +229,21 @@ jobs:
       - name: Checkout modflow6
         uses: actions/checkout@v3
         with:
+          repository: ${{ github.repository_owner }}/modflow6
           path: modflow6
+          ref: ${{ inputs.branch }}
 
       - name: Checkout modflow6-examples
         uses: actions/checkout@v3
         with:
           repository: MODFLOW-USGS/modflow6-examples
           path: modflow6-examples
+
+      - name: Checkout usgslatex
+        uses: actions/checkout@v3
+        with:
+          repository: MODFLOW-USGS/usgslatex
+          path: usgslatex
 
       - name: Install TeX Live
         run: |
@@ -175,12 +253,6 @@ jobs:
             texlive-font-utils \
             texlive-fonts-recommended \
             texlive-fonts-extra
-
-      - name: Checkout usgslatex
-        uses: actions/checkout@v3
-        with:
-          repository: MODFLOW-USGS/usgslatex
-          path: usgslatex
 
       - name: Install USGS LaTeX style files and Univers font
         working-directory: usgslatex/usgsLaTeX
@@ -196,73 +268,70 @@ jobs:
       - name: Setup Intel Fortran
         uses: modflowpy/install-intelfortran-action@v1
 
-      - name: Fix Micromamba path (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          # https://github.com/modflowpy/install-intelfortran-action#conda-scripts
-          $mamba_bin = "C:\Users\runneradmin\micromamba-root\envs\modflow6\Scripts"
-          echo $mamba_bin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-      - name: Install extra Python packages
-        working-directory: modflow6-examples/etc
-        run: pip install -r requirements.pip.txt
-
-      - name: Build example models
-        working-directory: modflow6-examples/etc
-        run: pytest -v -n auto ci_build_files.py
-
       - name: Update version
+        id: update_version
         working-directory: modflow6/distribution
         run: |
-          # extract version from ref name
-          ref="${{ github.ref_name }}"
-          ver="${ref%"rc"}"
-          
-          # update version files
-          if [[ "$ver" == *"rc"* ]]; then
-            python update_version.py -v "${ver#"v"}" 
+          ver="${{ needs.build.outputs.version }}"
+          if [[ ("${{ inputs.development }}" == "false") && ("${{ inputs.approve }}" == "true") ]]; then
+            python update_version.py -v "$ver" --approve
           else
-            python update_version.py -v "${ver#"v"}" --approve
+            python update_version.py -v "$ver"
           fi
-          
-          # set dist name, format is 'mf<major.minor.patch>' for docs (no os tag)
-          distname="mf${ref#"v"}"
-          echo "DISTNAME=$distname" >> $GITHUB_ENV
 
-      - name: Create directory structure
-        run: |
-          # Create a skeleton of the distribution's folder structure to include in the docs
-          mkdir -p "$DISTNAME/doc"
-          mkdir "$DISTNAME/make"
-          mkdir "$DISTNAME/msvs"
-          mkdir "$DISTNAME/srcbmi"
-          cp modflow6/code.json "$DISTNAME/code.json"
-          cp modflow6/meson.build "$DISTNAME/meson.build"
-          cp -r modflow6-examples/examples "$DISTNAME"
-          cp -r modflow6/src "$DISTNAME"
-          cp -r modflow6/utils "$DISTNAME"
-          
-          # create LaTeX file describing the folder structure
-          cd modflow6/doc/ReleaseNotes
-          python mk_folder_struct.py -dp "${{ github.workspace }}/$DISTNAME"
-
-      - name: Download artifacts
+      - name: Download pre-built binaries
         uses: actions/download-artifact@v3
         with:
           name: bin-${{ runner.os }}
           path: bin
+    
+      - name: Install dependencies for ex-gwf-twri example model
+        working-directory: modflow6-examples/etc
+        run: |
+          # install extra Python packages
+          pip install -r requirements.pip.txt
+  
+          # the example model needs executables to be on the path
+          echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
+
+          # execute permissions may not have survived artifact upload/download
+          chmod +x "${{ github.workspace }}/bin/mf6"
+          chmod +x "${{ github.workspace }}/bin/mf5to6"
+          chmod +x "${{ github.workspace }}/bin/zbud6"
+
+          # the example model also needs mf2005
+          get-modflow "${{ github.workspace }}/bin" --subset mf2005
+  
+      - name: Build ex-gwf-twri example model
+        working-directory: modflow6-examples/scripts
+        run: python ex-gwf-twri.py
+      
+      - name: Create directory structure
+        run: |
+          distname=${{ needs.build.outputs.distname }}
+
+          # Create a skeleton of the distribution's folder structure to include in the docs
+          mkdir -p "$distname/doc"
+          mkdir "$distname/make"
+          mkdir "$distname/msvs"
+          mkdir "$distname/srcbmi"
+          cp modflow6/code.json "$distname/code.json"
+          cp modflow6/meson.build "$distname/meson.build"
+          cp -r modflow6-examples/examples "$distname"
+          cp -r modflow6/src "$distname"
+          cp -r modflow6/utils "$distname"
+          
+          # create LaTeX file describing the folder structure
+          cd modflow6/doc/ReleaseNotes
+          python mk_folder_struct.py -dp "${{ github.workspace }}/$distname"
 
       - name: Build documentation
         env:
+          # need a GITHUB_TOKEN to download example doc PDF asset from modflow6-examples repo
           GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          chmod +x bin/mf6
-          chmod +x bin/mf5to6
-          chmod +x bin/zbud6
-          python modflow6/distribution/build_docs.py -b bin -o doc
+        run: python modflow6/distribution/build_docs.py -b bin -o doc
 
-      - name: Upload documentation
+      - name: Upload documentation artifact
         uses: actions/upload-artifact@v3
         with:
           name: doc
@@ -270,8 +339,9 @@ jobs:
 
   dist:
     name: Build distribution (${{ matrix.os }})
-    if: ${{ github.event_name == 'push' && github.ref_name != 'master' }}
-    needs: docs
+    needs:
+      - build
+      - docs
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -290,7 +360,9 @@ jobs:
       - name: Checkout modflow6
         uses: actions/checkout@v3
         with:
+          repository: ${{ github.repository_owner }}/modflow6
           path: modflow6
+          ref: ${{ inputs.branch }}
 
       - name: Checkout modflow6-examples
         uses: actions/checkout@v3
@@ -301,6 +373,7 @@ jobs:
       - name: Setup Micromamba
         uses: mamba-org/setup-micromamba@v1
         with:
+          micromamba-root-path: ${{ github.workspace }}/micromamba-root
           environment-file: modflow6/environment.yml
           cache-downloads: true
           cache-environment: true
@@ -313,75 +386,65 @@ jobs:
         shell: pwsh
         run: |
           # https://github.com/modflowpy/install-intelfortran-action#conda-scripts
-          $mamba_bin = "C:\Users\runneradmin\micromamba-root\envs\modflow6\Scripts"
+          $mamba_bin = "${{ github.workspace }}\micromamba-root\envs\modflow6\Scripts"
           echo $mamba_bin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-      - name: Install extra Python packages
-        working-directory: modflow6-examples/etc
-        run: pip install -r requirements.pip.txt
-
-      - name: Build example models
-        working-directory: modflow6-examples/etc
-        run: pytest -v -n auto ci_build_files.py
-
+      
       - name: Update version
+        id: update_version
         working-directory: modflow6/distribution
         run: |
-          # extract version from ref name
-          ref="${{ github.ref_name }}"
-          ver="${ref%"rc"}"
-          
-          # update version files
-          if [[ "$ver" == *"rc"* ]]; then
-            python update_version.py -v "${ver#"v"}" 
+          ver="${{ needs.build.outputs.version }}"
+          if [[ ("${{ inputs.development }}" == "false") && ("${{ inputs.approve }}" == "true") ]]; then
+            python update_version.py -v "$ver" --approve
           else
-            python update_version.py -v "${ver#"v"}" --approve
+            python update_version.py -v "$ver"
           fi
-          
-          # set dist name, format is 'mf<major.minor.patch>_<ostag>'
-          if [ "${{ runner.os }}" == "Windows" ]; then
-            distname="mf${ref#"v"}"
-          else
-            distname="mf${ref#"v"}_${{ matrix.ostag }}"
-          fi
-          echo "DISTNAME=$distname" >> $GITHUB_ENV
 
       - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
-          path: ${{ env.DISTNAME }}
+          # download artifacts to OS-specific directory
+          path: ${{ needs.build.outputs.distname }}_${{ matrix.ostag }}
 
       - name: Select artifacts for OS
         run: |
-          # move binaries for current OS to top level bin dir
-          mv "$DISTNAME/bin-${{ runner.os }}" "$DISTNAME/bin"
-          rm -rf "$DISTNAME/bin-*"
+          # create directory for OS-specific artifacts
+          distname="${{ needs.build.outputs.distname }}"
+          mkdir -p "$distname_${{ matrix.ostag }}/bin"
+
+          # move binaries for current OS to distribution bin dir
+          mv "$distname/bin-${{ runner.os }}" "$distname_${{ matrix.ostag }}/bin"
+
+          # remove binaries for other OSes
+          rm -rf "$distname/bin-*"
 
       - name: Build distribution
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          # build dist folder
-          python modflow6/distribution/build_dist.py -o "$DISTNAME" -e modflow6-examples
+          # build distribution
+          distname="${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
+          python modflow6/distribution/build_dist.py -o "$distname" -e modflow6-examples
 
-          # rename PDF docs
-          mv "$DISTNAME/doc/ReleaseNotes.pdf" "$DISTNAME/doc/release.pdf"
-          mv "$DISTNAME/doc/converter_mf5to6.pdf" "$DISTNAME/doc/mf5to6.pdf"
+          # move & rename PDF documents to dist folder
+          mv "$distname/doc/ReleaseNotes.pdf" "$distname/doc/release.pdf"
+          mv "$distname/doc/converter_mf5to6.pdf" "$distname/doc/mf5to6.pdf"
 
       - name: Zip distribution
         if: runner.os != 'Windows'
         run: |
-          zip -r ${{ env.DISTNAME }}.zip \
-            ${{ env.DISTNAME }}/bin \
-            ${{ env.DISTNAME }}/src \
-            ${{ env.DISTNAME }}/srcbmi \
-            ${{ env.DISTNAME }}/doc \
-            ${{ env.DISTNAME }}/examples \
-            ${{ env.DISTNAME }}/make \
-            ${{ env.DISTNAME }}/msvs \
-            ${{ env.DISTNAME }}/utils \
-            ${{ env.DISTNAME }}/code.json \
-            ${{ env.DISTNAME }}/meson.build \
+          distname="${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
+          zip -r $distname.zip \
+            $distname/bin \
+            $distname/src \
+            $distname/srcbmi \
+            $distname/doc \
+            $distname/examples \
+            $distname/make \
+            $distname/msvs \
+            $distname/utils \
+            $distname/code.json \
+            $distname/meson.build \
             -x '*.DS_Store' \
             -x '*libmf6.lib' \
             -x '*idmloader*' \
@@ -392,205 +455,42 @@ jobs:
       - name: Zip distribution (Windows)
         if: runner.os == 'Windows'
         run: |
-          7z a -tzip ${{ env.DISTNAME }}.zip \
-            ${{ env.DISTNAME }}/bin \
-            ${{ env.DISTNAME }}/src \
-            ${{ env.DISTNAME }}/srcbmi \
-            ${{ env.DISTNAME }}/doc \
-            ${{ env.DISTNAME }}/examples \
-            ${{ env.DISTNAME }}/make \
-            ${{ env.DISTNAME }}/msvs \
-            ${{ env.DISTNAME }}/utils \
-            ${{ env.DISTNAME }}/code.json \
-            ${{ env.DISTNAME }}/meson.build \
+          distname="${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
+          7z a -tzip $distname.zip \
+            $distname/bin \
+            $distname/src \
+            $distname/srcbmi \
+            $distname/doc \
+            $distname/examples \
+            $distname/make \
+            $distname/msvs \
+            $distname/utils \
+            $distname/code.json \
+            $distname/meson.build \
             -xr!libmf6.lib \
             -xr!idmloader \
             -xr!pymake \
             -xr!obj_temp \
             -xr!mod_temp
 
-      # validate after zipping to avoid accidentally changing the distribution files
-      - name: Check distribution
-        run: pytest -v -s modflow6/distribution/check_dist.py -P ${{ env.DISTNAME }}
+      # validate only after zipping distribution to avoid accidentally changing any files
+      - name: Validate distribution
+        run: |
+          if [[ "${{ inputs.approve }}" == "true" ]]; then
+            pytest -v -s modflow6/distribution/check_dist.py --path "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}" --approved
+          else
+            pytest -v -s modflow6/distribution/check_dist.py --path "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
+          fi
 
-      - name: Upload distribution
+      - name: Upload distribution zipfile artifact
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.DISTNAME }}
-          path: ${{ env.DISTNAME }}.zip
+          name: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
+          path: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}.zip"
 
-      - name: Upload release notes
+      - name: Upload release notes artifact
         if: runner.os == 'Linux'
         uses: actions/upload-artifact@v3
         with:
           name: release_notes
-          path: ${{ env.DISTNAME }}/doc/release.pdf
-
-  pr:
-    name: Draft release PR
-    # only runs if branch name doesn't end with 'rc' (i.e. release is approved)
-    if: ${{ github.event_name == 'push' && github.ref_name != 'master' && !(contains(github.ref_name, 'rc')) }}
-    needs: dist
-    runs-on: ubuntu-22.04
-    permissions:
-      contents: write
-      pull-requests: write
-    defaults:
-      run:
-        shell: bash -l {0}
-    steps:
-      - name: Checkout modflow6
-        uses: actions/checkout@v3
-
-      - name: Setup Micromamba
-        uses: mamba-org/setup-micromamba@v1
-        with:
-          cache-downloads: true
-          cache-environment: true
-
-      - name: Update version
-        working-directory: distribution
-        run: |
-          # extract version from branch name
-          ref="${{ github.ref_name }}"
-          ver="${ref#"v"}"
-          
-          # update version files
-          if [[ "$ver" == *"rc"* ]]; then
-            python update_version.py -v "$ver" 
-          else
-            python update_version.py -v "$ver" --approve
-          fi
-          
-          # lint version.f90
-          fprettify -c ../.fprettify.yaml ../src/Utilities/version.f90
-          
-          # commit and push
-          git config core.sharedRepository true
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "ci(release): update version to $ver release mode"
-          git push origin "$ref"
-
-      - name: Create pull request
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          ref="${{ github.ref_name }}"
-          ver="${ref#"v"}"
-          body='
-          # MODFLOW '$ver' release
-          
-          The release can be approved by merging this PR into `master`. Merging rather than squashing is necessary to preserve the commit history.
-          
-          When this PR is merged, a final job will be triggered to:
-          1) create and tag a draft GitHub release, then upload assets (OS distributions and release notes)
-          2) open a PR to update `develop` from `master`, resetting version files and setting `IDEVELOPMODE=1`
-          '
-          gh pr create -B "master" -H "$ref" --title "Release $ver" --draft --body "$body"
-
-  release:
-    name: Draft release
-    # runs only after release PR is merged to master
-    if: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
-    runs-on: ubuntu-22.04
-    defaults:
-      run:
-        shell: bash -l {0}
-    steps:
-      - name: Checkout modflow6
-        uses: actions/checkout@v3
-        with:
-          path: modflow6
-
-      - name: Setup Micromamba
-        uses: mamba-org/setup-micromamba@v1
-        with:
-          environment-file: modflow6/environment.yml
-          cache-downloads: true
-          cache-environment: true
-
-      - name: Download artifacts
-        uses: dawidd6/action-download-artifact@v2
-
-      - name: Draft release
-        working-directory: modflow6
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          # detect release version
-          version=$(python distribution/update_version.py --get)
-          
-          # create draft release
-          title="MODFLOW $version"
-          notes='
-          This is the approved USGS MODFLOW '$version' release.
-      
-          *Insert citation here*
-      
-          Visit the USGS "MODFLOW and Related Programs" site for information on MODFLOW 6 and related software: https://doi.org/10.5066/F76Q1VQV
-          '
-          gh release create "$version" ../mf*/mf*.zip ../release_notes/release.pdf --target master --title "$title" --notes "$notes" --draft --latest
-
-  reset:
-    name: Draft reset PR
-    # runs only after release is published (manually promoted from draft to public)
-    if: ${{ github.event_name == 'release' }}
-    runs-on: ubuntu-22.04
-    defaults:
-      run:
-        shell: bash -l {0}
-    steps:
-
-      - name: Checkout modflow6
-        uses: actions/checkout@v3
-        with:
-          path: modflow6
-
-      - name: Setup Micromamba
-        uses: mamba-org/setup-micromamba@v1
-        with:
-          environment-file: modflow6/environment.yml
-          cache-downloads: true
-          cache-environment: true
-
-      - name: Get release tag
-        uses: oprypin/find-latest-tag@v1
-        id: latest_tag
-        with:
-          repository: ${{ github.repository }}
-          releases-only: true
-
-      - name: Create pull request
-        working-directory: modflow6
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          # create reset branch from master
-          reset_branch="post-release-${{ steps.latest_tag.outputs.tag }}-reset"
-          git fetch origin
-          git checkout master
-          git switch -c $reset_branch
-
-          # increment minor version and reset IDEVELOPMODE to 1
-          major_version=$(echo "${{ steps.latest_tag.outputs.tag }}" | cut -d. -f1)
-          minor_version=$(echo "${{ steps.latest_tag.outputs.tag }}" | cut -d. -f2)
-          version="$major_version.$((minor_version + 1)).0"
-          python distribution/update_version.py -v "$version"
-
-          # commit and push reset branch
-          git config core.sharedRepository true
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "ci(release): update version to $version development mode"
-          git push -u origin $reset_branch
-
-          # create PR into develop
-          body='
-          # Reinitialize for development
-
-          Updates the `develop` branch from `master` following a successful release. Increments the minor version number and resets `IDEVELOPMODE` back to `1`.
-          '
-          gh pr create -B "develop" -H "$reset_branch" --title "Reinitialize develop branch" --draft --body "$body"
+          path: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}/doc/release.pdf"

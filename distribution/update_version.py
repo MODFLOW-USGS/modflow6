@@ -13,28 +13,26 @@ This script is used to update several files in the modflow6 repository, includin
   ../code.json
   ../src/Utilities/version.f90
 
-Information in these files include version number (major.minor.patch), build date, whether or not
-the release is a release candidate or an actual release, whether the source code should be compiled
-in develop mode or in release mode, and the approval status.
+Information in these files include version number major.minor.patch[-label], build timestamp,
+whether or not the release is a prerelease candidate or an official distribution, whether the
+source code should be compiled in develop mode or in release mode, and other version metadata.
 
-The version number is read in from ../../version.txt, which contains major, minor, and patch version
-numbers.  These numbers will be propagated through the source code, latex files, markdown files,
-etc.  The version numbers can be overridden using the command line argument --version major.minor.macro.
+The version number is read from ../version.txt, which contains major, minor, and patch version
+numbers, and an optional label. Version numbers are substituted into source code, latex files,
+markdown files, etc.  The version number can be overridden using argument --version, short -v.
 
-Develop mode is set to 0 if the distribution is approved.
-
-Once this script is run, these updated files will be used in compilation, latex documents, and
-other parts of the repo to mark the overall status.
+Develop mode is set to 0 if the distribution is approved with --approved, short -a, otherwise,
+it is set to 1.
 
 """
 import argparse
 import json
 import os
+import re
 import shutil
 import textwrap
 from collections import OrderedDict
 from datetime import datetime
-from enum import Enum
 from os import PathLike
 from pathlib import Path
 from typing import NamedTuple, Optional
@@ -43,7 +41,7 @@ import pytest
 from filelock import FileLock
 import yaml
 
-from utils import get_modified_time
+from utils import get_modified_time, split_nonnumeric
 
 project_name = "MODFLOW 6"
 project_root_path = Path(__file__).resolve().parent.parent
@@ -62,31 +60,36 @@ touched_file_paths = [
 
 
 class Version(NamedTuple):
-    """Semantic version number, not including extensions (e.g., 'Release Candidate')"""
+    """Semantic version number, optionally with a short label (e.g, 'rc').
+    The label may contain numbers but must begin with a letter."""
 
     major: int = 0
     minor: int = 0
     patch: int = 0
+    label: Optional[str] = None
 
     def __repr__(self):
-        return f"{self.major}.{self.minor}.{self.patch}"
+        s = f"{self.major}.{self.minor}.{self.patch}"
+        if self.label is not None and self.label != "":
+            s += self.label
+        return s
 
     @classmethod
     def from_string(cls, version: str) -> "Version":
         t = version.split(".")
-
+        assert len(t) > 2
         vmajor = int(t[0])
         vminor = int(t[1])
-        vpatch = int(t[2])
-
-        return cls(major=vmajor, minor=vminor, patch=vpatch)
+        tt = split_nonnumeric(t[2])
+        vpatch = int(tt[0])
+        vlabel = tt[1] if len(tt) > 1 else None
+        return cls(major=vmajor, minor=vminor, patch=vpatch, label=vlabel)
 
     @classmethod
     def from_file(cls, path: PathLike) -> "Version":
         path = Path(path).expanduser().absolute()
         lines = [line.rstrip("\n") for line in open(Path(path), "r")]
-
-        vmajor = vminor = vpatch = None
+        vmajor = vminor = vpatch = vlabel = None
         for line in lines:
             t = line.split()
             if "major =" in line:
@@ -95,18 +98,15 @@ class Version(NamedTuple):
                 vminor = int(t[2])
             elif "micro =" in line:
                 vpatch = int(t[2])
+            elif "label =" in line:
+                vlabel = t[2].replace("'", "")
 
-        msg = "version string must follow semantic version format: major.minor.patch"
-        assert vmajor is not None, f"Missing major number, {msg}"
-        assert vminor is not None, f"Missing minor number, {msg}"
-        assert vpatch is not None, f"Missing patch number, {msg}"
-
-        return cls(major=vmajor, minor=vminor, patch=vpatch)
-
-
-class ReleaseType(Enum):
-    CANDIDATE = "Release Candidate"
-    APPROVED = "Release"
+        msg = "version string must follow semantic version format, with optional label: major.minor.patch[label]"
+        missing = lambda v: f"Missing {v} number, {msg}"
+        assert vmajor is not None, missing("major")
+        assert vminor is not None, missing("minor")
+        assert vpatch is not None, missing("patch")
+        return cls(major=vmajor, minor=vminor, patch=vpatch, label=vlabel)
 
 
 
@@ -166,18 +166,19 @@ resulting from the authorized or unauthorized use of the software.
 """
 
 
-def get_disclaimer(release_type: ReleaseType, formatted: bool = False) -> str:
-    approved = _approved_fmtdisclaimer if formatted else _approved_disclaimer
-    preliminary = _preliminary_fmtdisclaimer if formatted else _preliminary_disclaimer
-    return approved if release_type == ReleaseType.APPROVED else preliminary
+def get_disclaimer(approved: bool = False, formatted: bool = False) -> str:
+    if approved:
+        return _approved_fmtdisclaimer if formatted else _approved_disclaimer
+    else:
+        return _preliminary_fmtdisclaimer if formatted else _preliminary_disclaimer
 
 
-def log_update(path, release_type: ReleaseType, version: Version):
-    print(f"Updated {path} with version {version}" + (f" {release_type.value}" if release_type != ReleaseType.APPROVED else ""))
+def log_update(path, version: Version):
+    print(f"Updated {path} with version {version}")
 
 
 def update_version_txt_and_py(
-    release_type: ReleaseType, timestamp: datetime, version: Version
+    version: Version, timestamp: datetime
 ):
     with open(version_file_path, "w") as f:
         f.write(
@@ -189,38 +190,34 @@ def update_version_txt_and_py(
         f.write(f"major = {version.major}\n")
         f.write(f"minor = {version.minor}\n")
         f.write(f"micro = {version.patch}\n")
+        f.write("label = " + (("'" + version.label + "'") if version.label else "''") + "\n")
         f.write("__version__ = '{:d}.{:d}.{:d}'.format(major, minor, micro)\n")
+        f.write("if label:\n")
+        f.write("\t__version__ += '{}{}'.format(__version__, label)")
         f.close()
-    log_update(version_file_path, release_type, version)
-
+    log_update(version_file_path, version)
     py_path = project_root_path / "doc" / version_file_path.name.replace(".txt", ".py")
     shutil.copyfile(version_file_path, py_path)
-    log_update(py_path, release_type, version)
+    log_update(py_path, version)
 
 
-def update_meson_build(release_type: ReleaseType, timestamp: datetime, version: Version):
+def update_meson_build(version: Version):
     path = project_root_path / "meson.build"
     lines = open(path, "r").read().splitlines()
     with open(path, "w") as f:
         for line in lines:
             if "version:" in line and "meson_version:" not in line:
-                line = f"  version: '{version.major}.{version.minor}.{version.patch}',"
+                line = f"  version: '{version.major}.{version.minor}.{version.patch}{version.label if version.label else ''}',"
             f.write(f"{line}\n")
-
-    log_update(path, release_type, version)
+    log_update(path, version)
 
 
 def update_version_tex(
-    release_type: ReleaseType, timestamp: datetime, version: Version
+    version: Version, timestamp: datetime
 ):
     path = project_root_path / "doc" / "version.tex"
-
-    version_str = str(version)
-    if release_type != ReleaseType.APPROVED:
-        version_str += "rc"
-
     with open(path, "w") as f:
-        line = "\\newcommand{\\modflowversion}{mf" + f"{version_str}" + "}"
+        line = "\\newcommand{\\modflowversion}{mf" + f"{str(version)}" + "}"
         f.write(f"{line}\n")
         line = (
             "\\newcommand{\\modflowdate}{" + f"{timestamp.strftime('%B %d, %Y')}" + "}"
@@ -231,17 +228,24 @@ def update_version_tex(
             + "{Version \\modflowversion---\\modflowdate}"
         )
         f.write(f"{line}\n")
-
-    log_update(path, release_type, version)
+    log_update(path, version)
 
 
 def update_version_f90(
-    release_type: ReleaseType, timestamp: datetime, version: Optional[Version]
+    version: Optional[Version], timestamp: datetime, approved: bool = False
 ):
     path = project_root_path / "src" / "Utilities" / "version.f90"
     lines = open(path, "r").read().splitlines()
     with open(path, "w") as f:
         skip = False
+        version_spl = str(version).rpartition("-")
+        if version_spl[1]:
+            version_num = version_spl[0]
+            version_label = version_spl[2]
+        else:
+            version_num = str(version_spl[2])
+            version_label = ""
+
         for line in lines:
             # skip all of the disclaimer text
             if skip:
@@ -251,52 +255,51 @@ def update_version_f90(
             elif ":: IDEVELOPMODE =" in line:
                 line = (
                     "  integer(I4B), parameter :: "
-                    + f"IDEVELOPMODE = {1 if release_type == ReleaseType.CANDIDATE else 0}"
+                    + f"IDEVELOPMODE = {0 if approved else 1}"
                 )
             elif ":: VERSIONNUMBER =" in line:
-                line = line.rpartition("::")[0] + f":: VERSIONNUMBER = '{version}'"
+                line = line.rpartition("::")[0] + f":: VERSIONNUMBER = '{version_num}'"
             elif ":: VERSIONTAG =" in line:
                 fmat_tstmp = timestamp.strftime("%m/%d/%Y")
-                line = line.rpartition("::")[0] + f":: VERSIONTAG = ' {release_type.value} {fmat_tstmp}'"
+                label_clause = version_label if version_label else ""
+                label_clause += " (preliminary)" if not approved else ""
+                line = line.rpartition("::")[0] + f":: VERSIONTAG = '{label_clause} {fmat_tstmp}'"
             elif ":: FMTDISCLAIMER =" in line:
-                line = get_disclaimer(release_type, formatted=True)
+                line = get_disclaimer(approved, formatted=True)
                 skip = True
             f.write(f"{line}\n")
-
-    log_update(path, release_type, version)
+    log_update(path, version)
 
 
 def update_readme_and_disclaimer(
-    release_type: ReleaseType, timestamp: datetime, version: Version
+    version: Version, approved: bool = False
 ):
-    disclaimer = get_disclaimer(release_type, formatted=False)
+    disclaimer = get_disclaimer(approved, formatted=False)
     readme_path = str(project_root_path / "README.md")
     readme_lines = open(readme_path, "r").read().splitlines()
     with open(readme_path, "w") as f:
         for line in readme_lines:
             if "## Version " in line:
                 version_line = f"### Version {version}"
-                if release_type != ReleaseType.APPROVED:
-                    version_line += f" {release_type.value}"
+                if not approved:
+                    version_line += " (preliminary)"
                 f.write(f"{version_line}\n")
             elif "Disclaimer" in line:
                 f.write(f"{disclaimer}\n")
                 break
             else:
                 f.write(f"{line}\n")
-    log_update(readme_path, release_type, version)
+    log_update(readme_path, version)
 
     disclaimer_path = project_root_path / "DISCLAIMER.md"
     with open(disclaimer_path, "w") as f:
         f.write(disclaimer)
-    log_update(disclaimer_path, release_type, version)
+    log_update(disclaimer_path, version)
 
 
-def update_citation_cff(release_type: ReleaseType, timestamp: datetime, version: Version):
+def update_citation_cff(version: Version, timestamp: datetime):
     path = project_root_path / "CITATION.cff"
     citation = yaml.safe_load(path.read_text())
-
-    # update version and date-released
     citation["version"] = str(version)
     citation["date-released"] = timestamp.strftime("%Y-%m-%d")
 
@@ -308,28 +311,28 @@ def update_citation_cff(release_type: ReleaseType, timestamp: datetime, version:
             default_flow_style=False,
             sort_keys=False,
         )
-    log_update(path, release_type, version)
+    log_update(path, version)
 
 
-def update_codejson(release_type: ReleaseType, timestamp: datetime, version: Version):
+def update_codejson(version: Version, timestamp: datetime, approved: bool = False):
     path = project_root_path / "code.json"
     with open(path, "r") as f:
         data = json.load(f, object_pairs_hook=OrderedDict)
 
     data[0]["date"]["metadataLastUpdated"] = timestamp.strftime("%Y-%m-%d")
     data[0]["version"] = str(version)
-    data[0]["status"] = release_type.value
+    data[0]["status"] = "Release" if approved else "Preliminary"
     with open(path, "w") as f:
         json.dump(data, f, indent=4)
         f.write("\n")
 
-    log_update(path, release_type, version)
+    log_update(path, version)
 
 
 def update_version(
-    release_type: ReleaseType = ReleaseType.CANDIDATE,
-    timestamp: datetime = datetime.now(),
     version: Version = None,
+    timestamp: datetime = datetime.now(),
+    approved: bool = False
 ):
     """
     Update version information stored in version.txt in the project root,
@@ -351,13 +354,13 @@ def update_version(
         )
 
         with lock:
-            update_version_txt_and_py(release_type, timestamp, version)
-            update_meson_build(release_type, timestamp, version)
-            update_version_tex(release_type, timestamp, version)
-            update_version_f90(release_type, timestamp, version)
-            update_readme_and_disclaimer(release_type, timestamp, version)
-            update_citation_cff(release_type, timestamp, version)
-            update_codejson(release_type, timestamp, version)
+            update_version_txt_and_py(version, timestamp)
+            update_meson_build(version)
+            update_version_tex(version, timestamp)
+            update_version_f90(version, timestamp, approved)
+            update_readme_and_disclaimer(version, approved)
+            update_citation_cff(version, timestamp)
+            update_codejson(version, timestamp, approved)
     finally:
         lock_path.unlink(missing_ok=True)
 
@@ -368,13 +371,12 @@ _current_version = Version.from_file(version_file_path)
 
 @pytest.mark.skip(reason="reverts repo files on cleanup, tread carefully")
 @pytest.mark.parametrize(
-    "release_type", [ReleaseType.CANDIDATE, ReleaseType.APPROVED]
-)
-@pytest.mark.parametrize(
     "version",
-    [None, Version(major=_initial_version.major, minor=_initial_version.minor, patch=_initial_version.patch)],
+    [None,
+     Version(major=_initial_version.major, minor=_initial_version.minor, patch=_initial_version.patch),
+     Version(major=_initial_version.major, minor=_initial_version.minor, patch=_initial_version.patch, label="rc")],
 )
-def test_update_version(tmp_path, release_type, version):
+def test_update_version(release_type, version):
     m_times = [get_modified_time(file) for file in touched_file_paths]
     timestamp = datetime.now()
 
@@ -391,11 +393,18 @@ def test_update_version(tmp_path, release_type, version):
             assert updated.major == _initial_version.major
             assert updated.minor == _initial_version.minor
             assert updated.patch == _initial_version.patch
+            if version.label is not None:
+                assert updated.label == version.label
         else:
             # version should not have changed
             assert updated.major == _current_version.major
             assert updated.minor == _current_version.minor
             assert updated.patch == _current_version.patch
+            if version.label is not None:
+                assert updated.label == version.label
+        
+        if version.label is not None:
+            assert updated.label == _initial_version
     finally:
         for p in touched_file_paths:
             os.system(f"git restore {p}")
@@ -489,7 +498,7 @@ if __name__ == "__main__":
                 version = Version(current.major, current.minor, current.patch + 1)
 
         update_version(
-            release_type=ReleaseType.APPROVED if args.approve else ReleaseType.CANDIDATE,
-            timestamp=datetime.now(),
             version=version,
+            timestamp=datetime.now(),
+            approved=args.approve,
         )
