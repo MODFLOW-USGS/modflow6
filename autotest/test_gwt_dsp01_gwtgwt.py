@@ -302,6 +302,7 @@ def eval_transport(sim):
     "idx, name",
     list(enumerate(ex)),
 )
+@pytest.mark.developmode
 def test_mf6model(idx, name, function_tmpdir, targets):
     ws = str(function_tmpdir)
     test = TestFramework()
