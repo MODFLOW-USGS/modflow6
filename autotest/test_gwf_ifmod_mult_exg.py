@@ -334,6 +334,7 @@ def eval_heads(sim):
     "name",
     ex,
 )
+@pytest.mark.developmode
 def test_mf6model(name, function_tmpdir, targets):
     test = TestFramework()
     test.build(build_model, 0, str(function_tmpdir))

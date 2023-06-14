@@ -37,12 +37,15 @@ excluded_comparisons = {
 
 @pytest.mark.repo
 @pytest.mark.regression
-def test_model(function_tmpdir, test_model_mf6, targets, original_regression):
+def test_model(function_tmpdir, test_model_mf6, targets, original_regression, markers):
     exdir = test_model_mf6.parent
     name = exdir.name
 
     if name in excluded_models:
-        pytest.skip(f"Excluding mf6 model: {name}")
+        pytest.skip(f"Excluding mf6 model '{name}'")
+    
+    if "dev" in name and "not developmode" in markers:
+        pytest.skip(f"Skipping mf6 model '{name}' (develop mode only)")
 
     sim = TestSimulation(
         name=name,
