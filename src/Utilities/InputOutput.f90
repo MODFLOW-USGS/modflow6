@@ -5,11 +5,11 @@ module InputOutputModule
   use KindModule, only: DP, I4B, I8B
   use SimVariablesModule, only: iunext, isim_mode, errmsg
   use SimModule, only: store_error, store_error_unit
-  use ConstantsModule, only: IUSTART, IULAST, &
-                             LINELENGTH, LENBIGLINE, LENBOUNDNAME, &
-                             NAMEDBOUNDFLAG, MAXCHARLEN, &
-                             TABLEFT, TABCENTER, TABRIGHT, &
-                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL, &
+  use ConstantsModule, only: IUSTART, IULAST,                                  &
+                             LINELENGTH, LENBIGLINE, LENBOUNDNAME,             &
+                             NAMEDBOUNDFLAG, MAXCHARLEN,                       &
+                             TABLEFT, TABCENTER, TABRIGHT,                     &
+                             TABSTRING, TABUCSTRING, TABINTEGER, TABREAL,      &
                              DZERO
   use GenericUtilitiesModule, only: is_same, sim_message
   private
