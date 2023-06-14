@@ -13,6 +13,7 @@ module InputOutputModule
                              DZERO
   use GenericUtilitiesModule, only: is_same, sim_message
   private
+
   type bkspc_buffer
     character(len=:), allocatable :: line
   end type bkspc_buffer
