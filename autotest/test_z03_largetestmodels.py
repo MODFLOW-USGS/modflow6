@@ -16,13 +16,16 @@ excluded_comparisons = {
 @pytest.mark.regression
 @pytest.mark.slow
 def test_model(
-    function_tmpdir, large_test_model, targets, original_regression
+    function_tmpdir, large_test_model, targets, original_regression, markers
 ):
     exdir = large_test_model.parent
     name = exdir.name
 
     if name in excluded_models:
-        pytest.skip(f"Excluding large mf6 model: {name}")
+        pytest.skip(f"Excluding large mf6 model '{name}'")
+    
+    if "dev" in name and "not developmode" in markers:
+        pytest.skip(f"Skipping large mf6 model '{name}' (develop mode only)")
 
     sim = TestSimulation(
         name=name,
