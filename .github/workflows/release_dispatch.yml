@@ -26,17 +26,22 @@ on:
         type: string
         default: ''
       commit_version:
-        description: 'Whether to commit version numbers back to the develop branch on a full release. Default is false. Not considered if approve is false.'
+        description: 'Whether to commit version numbers back to the develop branch. Default is false. Not considered if approve is false.'
+        required: false
+        type: boolean
+        default: false
+      reset:
+        description: 'Whether to reset the develop branch to the state of the master branch. Default is false. Not considered if approve is false.'
         required: false
         type: boolean
         default: false
       run_tests:
-        description: 'Whether to run tests after building binaries. Default is true. Can be set to false for rapid testing/debugging, or for a faster nightly/development build.'
+        description: 'Whether to run tests after building binaries. Default is true.'
         required: true
         type: boolean
         default: true
       version:
-        description: 'Version number to use for release. If a release is triggered by pushing a release branch, the version number is parsed from the branch name.'
+        description: 'Version number to use for release.'
         required: false
         type: string
         default: ''
@@ -57,6 +62,11 @@ jobs:
           # if branch was provided explicitly via workflow_dispatch, use it
           if [[ ("${{ github.event_name }}" == "workflow_dispatch") && (-n "${{ inputs.branch }}") ]]; then
             branch="${{ inputs.branch }}"
+            # prevent releases from develop or master
+            if [[ ("$branch" == "develop") || ("$branch" == "master") ]]; then
+              echo "error: releases may not be triggered from branch $branch"
+              exit 1
+            fi
             echo "using branch $branch from workflow_dispatch"
           elif [[ ("${{ github.event_name }}" == "push") && ("${{ github.ref_name }}" != "master") ]]; then
             # if release was triggered by pushing a release branch, use that branch
@@ -143,7 +153,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "ci(release): update version to $ver"
-          git push origin "$ref"
+          git push origin "${{ github.ref }}"
 
       - name: Create pull request
         env:
@@ -159,7 +169,7 @@ jobs:
           1) create and tag a draft GitHub release, then upload assets (OS distributions and release notes)
           2) open a PR to update `develop` from `master`, resetting version files and setting `IDEVELOPMODE=1`
           '
-          gh pr create -B "master" -H "$ref" --title "Release $ver" --draft --body "$body"
+          gh pr create -B "master" -H "${{ github.ref }}" --title "Release $ver" --draft --body "$body"
 
   release:
     name: Draft release
@@ -206,7 +216,8 @@ jobs:
   reset:
     name: Draft reset PR
     # runs only after GitHub release post is published (manually promoted from draft to public)
-    if: github.event_name == 'release'
+    # to bring the release commits from master back into develop
+    if: github.event_name == 'release' && inputs.reset == 'true'
     runs-on: ubuntu-22.04
     defaults:
       run:
