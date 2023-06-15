@@ -10,10 +10,9 @@ on:
         type: boolean
         default: false
       branch:
-        description: 'Branch to use for release. Default is the develop branch.'
-        required: false
+        description: 'Branch to use for release.'
+        required: true
         type: string
-        default: 'develop'
       development:
         description: 'Toggle a minimal development build. Default is false, i.e. to perform a full release build. If true, approve is not considered.'
         required: false
