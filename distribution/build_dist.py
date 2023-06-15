@@ -302,9 +302,9 @@ def build_distribution(
         build_path: PathLike,
         output_path: PathLike,
         examples_repo_path: PathLike,
-        development: bool = False,
+        full: bool = False,
         overwrite: bool = False):
-    print(f"Building {'development' if development else 'full'} distribution")
+    print(f"Building {'full' if full else 'minimal'} distribution")
 
     build_path = Path(build_path).expanduser().absolute()
     output_path = Path(output_path).expanduser().absolute()
@@ -317,7 +317,7 @@ def build_distribution(
         overwrite=overwrite)
 
     # full releases include examples, source code, makefiles and docs
-    if not development:
+    if full:
         # examples
         setup_examples(
             bin_path=output_path / "bin",
@@ -336,24 +336,27 @@ def build_distribution(
             output_path=output_path / "doc",
             examples_repo_path=examples_repo_path,
             # benchmarks_path=_benchmarks_path / "run-time-comparison.md",
-            development=development,
+            full=full,
             overwrite=overwrite)
 
 
 @requires_exe("pdflatex")
 @pytest.mark.skip(reason="manual testing")
-@pytest.mark.parametrize("dev", [True, False])
-def test_build_distribution(tmp_path, dev):
+@pytest.mark.parametrize("full", [True, False])
+def test_build_distribution(tmp_path, full):
     output_path = tmp_path / "dist"
     build_distribution(
         build_path=tmp_path / "builddir",
         output_path=output_path,
         examples_repo_path=_examples_repo_path,
-        development=dev,
+        full=full,
         overwrite=True
     )
 
-    if dev:
+    if full:
+        # todo
+        pass
+    else:
         # check binaries and libs
         system = platform.system()
         ext = ".exe" if system == "Windows" else ""
@@ -369,8 +372,6 @@ def test_build_distribution(tmp_path, dev):
 
         # check mf6io docs
         assert (output_path / "mf6io.pdf").is_file()
-    else:
-        pass
 
 
 if __name__ == "__main__":
@@ -381,6 +382,10 @@ if __name__ == "__main__":
             """\
             Create a distribution folder. If no output path is provided
             distribution files are written to the distribution/ folder.
+            By default a minimal distribution containing only binaries,
+            mf6io documentation, release notes and metadata (code.json)
+            is created. To create a full distribution including sources
+            and examples, use the --full flag.
             """
         ),
     )
@@ -412,12 +417,11 @@ if __name__ == "__main__":
     #     help="Path to directory containing benchmark results"
     # )
     parser.add_argument(
-        "-d",
-        "--development",
+        "--full",
         required=False,
         default=False,
         action="store_true",
-        help="Whether to build a development (e.g., nightly) rather than a full distribution"
+        help="Build a full rather than minimal distribution"
     )
     parser.add_argument(
         "-f",
@@ -425,7 +429,7 @@ if __name__ == "__main__":
         required=False,
         default=False,
         action="store_true",
-        help="Whether to recreate and overwrite existing artifacts"
+        help="Recreate and overwrite existing artifacts"
     )
     args = parser.parse_args()
 
@@ -445,6 +449,6 @@ if __name__ == "__main__":
         build_path=build_path,
         output_path=out_path,
         examples_repo_path=examples_repo_path,
-        development=args.development,
+        full=args.full,
         overwrite=args.force,
     )

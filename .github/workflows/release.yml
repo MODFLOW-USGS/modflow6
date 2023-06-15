@@ -5,21 +5,26 @@ on:
   workflow_call:
     inputs:
       approve:
-        description: 'Whether to approve the release. Default is false for preliminary/provisional releases. Approval is only relevant for full builds: if development is true, approve is not considered.'
+        description: 'Approve the release, modifying disclaimer language to indicate the distribution has been reviewed. If false, disclaimers & version strings indicate preliminary/provisional status.'
         required: false
         type: boolean
         default: false
       branch:
-        description: 'Branch to use for release.'
+        description: 'Branch to release from.'
         required: true
         type: string
-      development:
-        description: 'Toggle a minimal development build. Default is false, i.e. to perform a full release build. If true, approve is not considered.'
+      developmode:
+        description: 'Build binaries in develop mode. If false, IDEVELOPMODE is set to 0.'
+        required: false
+        type: boolean
+        default: true
+      full:
+        description: 'Build a full distribution containing sources, examples, and all documentation. If false, the distribution contains only binaries, mf6io, release notes, and code.json.'
         required: false
         type: boolean
         default: false
       run_tests:
-        description: 'Whether to run tests after building binaries. Default is true. Can be set to false for rapid testing/debugging, or for a faster nightly/development build.'
+        description: Run tests after building binaries.'
         required: false
         type: boolean
         default: true
@@ -94,11 +99,14 @@ jobs:
         working-directory: modflow6/distribution
         run: |
           ver="${{ steps.set_version.outputs.version }}"
-          if [[ ("${{ inputs.development }}" == "false") && ("${{ inputs.approve }}" == "true") ]]; then
-            python update_version.py -v "$ver" --approve
-          else
-            python update_version.py -v "$ver"
+          cmd="python update_version.py -v $ver"
+          if [[ "${{ inputs.approve }}" == "true" ]]; then
+            cmd="$cmd --approve"
           fi
+          if [[ "${{ inputs.developmode }}" == "false" ]]; then
+            cmd="$cmd --releasemode"
+          fi
+          eval "$cmd"
 
       - name: Build binaries
         if: runner.os != 'Windows'
@@ -156,11 +164,11 @@ jobs:
         env:
           REPOS_PATH: ${{ github.workspace }}
         run: |
-          marker="not large"
-          if [[ ("${{ inputs.development }}" == "false") && ("${{ inputs.approve }}" == "true") ]]; then
-            marker="$marker and not developmode"
+          markers="not large"
+          if [[ "${{ inputs.developmode }}" == "false" ]]; then
+            markers="$markers and not developmode"
           fi
-          pytest -v -n auto --durations 0 -m "$marker"
+          pytest -v -n auto --durations 0 -m "$markers"
       
       - name: Test modflow6 (Windows)
         if: inputs.run_tests == true && runner.os == 'Windows'
@@ -169,11 +177,11 @@ jobs:
         env:
           REPOS_PATH: ${{ github.workspace }}
         run: |
-          $marker="not large"
-          if (("${{ inputs.development }}" -eq "false") -and ("${{ inputs.approve }}" -eq "true")) {
-            $marker="$marker and not developmode"
+          $markers="not large"
+          if ("${{ inputs.developmode }}" -eq "false") {
+            $markers="$markers and not developmode"
           }
-          pytest -v -n auto --durations 0 -m "$marker"
+          pytest -v -n auto --durations 0 -m "$markers"
       
       # steps below run only on Linux to test distribution procedures, e.g.
       # compiling binaries, building documentation
@@ -278,11 +286,14 @@ jobs:
         working-directory: modflow6/distribution
         run: |
           ver="${{ needs.build.outputs.version }}"
-          if [[ ("${{ inputs.development }}" == "false") && ("${{ inputs.approve }}" == "true") ]]; then
-            python update_version.py -v "$ver" --approve
-          else
-            python update_version.py -v "$ver"
+          cmd="python update_version.py -v $ver"
+          if [[ "${{ inputs.approve }}" == "true" ]]; then
+            cmd="$cmd --approve"
           fi
+          if [[ "${{ inputs.developmode }}" == "false" ]]; then
+            cmd="$cmd --releasemode"
+          fi
+          eval "$cmd"
 
       - name: Download pre-built binaries
         uses: actions/download-artifact@v3
@@ -399,11 +410,14 @@ jobs:
         working-directory: modflow6/distribution
         run: |
           ver="${{ needs.build.outputs.version }}"
-          if [[ ("${{ inputs.development }}" == "false") && ("${{ inputs.approve }}" == "true") ]]; then
-            python update_version.py -v "$ver" --approve
-          else
-            python update_version.py -v "$ver"
+          cmd="python update_version.py -v $ver"
+          if [[ "${{ inputs.approve }}" == "true" ]]; then
+            cmd="$cmd --approve"
           fi
+          if [[ "${{ inputs.developmode }}" == "false" ]]; then
+            cmd="$cmd --releasemode"
+          fi
+          eval "$cmd"
 
       - name: Download artifacts
         uses: actions/download-artifact@v3
@@ -429,7 +443,10 @@ jobs:
         run: |
           # build distribution
           distname="${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
-          python modflow6/distribution/build_dist.py -o "$distname" -e modflow6-examples
+          cmd="python modflow6/distribution/build_dist.py -o $distname -e modflow6-examples"
+          if [[ "${{ inputs.full }}" == "false" ]]; then
+            cmd="$cmd --approve"
+          fi
 
           # move & rename PDF documents to dist folder
           mv "$distname/doc/ReleaseNotes.pdf" "$distname/doc/release.pdf"
@@ -481,11 +498,11 @@ jobs:
       # validate only after zipping distribution to avoid accidentally changing any files
       - name: Validate distribution
         run: |
-          if [[ "${{ inputs.approve }}" == "true" ]]; then
-            pytest -v -s modflow6/distribution/check_dist.py --path "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}" --approved
-          else
-            pytest -v -s modflow6/distribution/check_dist.py --path "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
+          cmd="pytest -v -s modflow6/distribution/check_dist.py --path ${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
+          if [[ "${{ inputs.developmode }}" == "false" ]]; then
+             cmd="$cmd --releasemode"
           fi
+          eval "$cmd"
 
       - name: Upload distribution zipfile artifact
         uses: actions/upload-artifact@v3
