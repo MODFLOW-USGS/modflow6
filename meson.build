@@ -2,10 +2,12 @@ project(
   'MODFLOW 6',
   'fortran',
   version: '6.4.2',
+  license: 'CC0',
   meson_version: '>= 1.1.0',
   default_options : [
     'b_vscrt=static_from_buildtype', # Link runtime libraries statically on Windows
     'optimization=2',
+    'debug=false',
     'fortran_std=f2008',
 ])
 
@@ -44,7 +46,7 @@ if fc_id == 'gcc'
   if profile == 'release'
     compile_args += ['-ffpe-summary=overflow', '-ffpe-trap=overflow,zero,invalid']
   elif profile == 'develop'
-    compile_args += ['-fcheck=all', '-ffpe-trap=overflow,zero,invalid,denormal']
+    compile_args += ['-fcheck=all', '-ffpe-trap=overflow,zero,invalid']
   endif
 
   # Define OS with gfortran for OS specific code
@@ -192,14 +194,19 @@ subdir('utils')
 # subdir('unittests')
 
 # meson tests to evaluate installation success
+testdir = meson.project_source_root() / '.mf6minsim'
 if with_mpi
   mpiexec = find_program('mpiexec', required : false)
   if mpiexec.found()
-    test('Test parallel installation version', mpiexec, args : ['-n', '2', mf6exe, '-v', '-p'])
-    test('Test parallel installation compiler', mpiexec, args : ['-n', '2', mf6exe, '-c', '-p'])
+    test('Parallel version command line test', mpiexec, args : ['-n', '2', mf6exe, '-v', '-p'])
+    test('Parallel compiler command line test', mpiexec, args : ['-n', '2', mf6exe, '-c', '-p'])
+    test('Serial simulation test', mf6exe, workdir : testdir)
+    test('Parallel simulation test - 1 core', mpiexec, workdir : testdir, args : ['-n', '1', mf6exe, '-p'])
+    test('Parallel simulation test - 2 cores', mpiexec, workdir : testdir, args : ['-n', '2', mf6exe, '-p'])
   endif
 else
-  test('Test installation version', mf6exe, args : ['-v',])
-  test('Test installation compiler', mf6exe, args : ['-c',])
+  test('Version command line test', mf6exe, args : ['-v',])
+  test('Compiler command line test', mf6exe, args : ['-c',])
   test('Test installation help', mf6exe, args : ['-h',])
+  test('Serial simulation test', mf6exe, workdir : testdir)
 endif
