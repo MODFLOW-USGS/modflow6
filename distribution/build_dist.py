@@ -78,9 +78,6 @@ def copy_sources(output_path: PathLike):
     # make sure output directory exists
     output_path.mkdir(exist_ok=True)
 
-    # copy code.json
-    shutil.copy(_project_root_path / "code.json", output_path)
-
     # Copy Visual Studio sln and project files
     print("Copying msvs files to output directory")
     (output_path / "msvs").mkdir(exist_ok=True)
@@ -315,6 +312,9 @@ def build_distribution(
         build_path=build_path,
         bin_path=output_path / "bin",
         overwrite=overwrite)
+    
+    # code.json metadata
+    shutil.copy(_project_root_path / "code.json", output_path)
 
     # full releases include examples, source code, makefiles and docs
     if full:
