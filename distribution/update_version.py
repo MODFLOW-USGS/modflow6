@@ -383,7 +383,7 @@ _current_version = Version.from_file(version_file_path)
      Version(major=_initial_version.major, minor=_initial_version.minor, patch=_initial_version.patch),
      Version(major=_initial_version.major, minor=_initial_version.minor, patch=_initial_version.patch, label="rc")],
 )
-@pytest.mark.parametrize("approve", [True, False])
+@pytest.mark.parametrize("approved", [True, False])
 @pytest.mark.parametrize("developmode", [True, False])
 def test_update_version(version, approved, developmode):
     m_times = [get_modified_time(file) for file in touched_file_paths]
