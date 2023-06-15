@@ -36,7 +36,7 @@ def dist_dir_path(request):
     return path
 
 
-def test_sources(dist_dir_path):
+def test_sources(dist_dir_path, approved):
     assert (dist_dir_path / "src").is_dir()
     assert (dist_dir_path / "src" / "mf6.f90").is_file()
 
@@ -51,7 +51,7 @@ def test_sources(dist_dir_path):
 
     # make sure IDEVELOPMODE was set correctly
     branch = get_branch()
-    idevelopmode = 1 if ("rc" in branch or "candidate" in branch) else 0
+    idevelopmode = 0 if approved else 1
     assert f"IDEVELOPMODE = {idevelopmode}" in line
 
 
