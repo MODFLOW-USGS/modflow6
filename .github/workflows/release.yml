@@ -67,21 +67,15 @@ jobs:
       - name: Setup Micromamba
         uses: mamba-org/setup-micromamba@v1
         with:
-          micromamba-root-path: ${{ github.workspace }}/micromamba-root
           environment-file: modflow6/environment.yml
+          init-shell: >-
+            bash
+            powershell
           cache-downloads: true
           cache-environment: true
 
       - name: Setup Intel Fortran
         uses: modflowpy/install-intelfortran-action@v1
-
-      - name: Fix Micromamba path (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          # https://github.com/modflowpy/install-intelfortran-action#conda-scripts
-          $mamba_bin = "${{ github.workspace }}\micromamba-root\envs\modflow6\Scripts"
-          echo $mamba_bin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Set version number
         id: set_version
@@ -157,16 +151,28 @@ jobs:
         run: pytest -v --durations 0 get_exes.py
 
       - name: Test modflow6
-        if: inputs.run_tests == true
+        if: inputs.run_tests == true && runner.os != 'Windows'
         working-directory: modflow6/autotest
         env:
           REPOS_PATH: ${{ github.workspace }}
         run: |
           marker="not large"
-          if [[ "${{ inputs.development }}" == "false" ]]; then
+          if [[ ("${{ inputs.development }}" == "false") && ("${{ inputs.approve }}" == "true") ]]; then
             marker="$marker and not developmode"
           fi
-
+          pytest -v -n auto --durations 0 -m "$marker"
+      
+      - name: Test modflow6 (Windows)
+        if: inputs.run_tests == true && runner.os == 'Windows'
+        working-directory: modflow6/autotest
+        shell: pwsh
+        env:
+          REPOS_PATH: ${{ github.workspace }}
+        run: |
+          $marker="not large"
+          if (("${{ inputs.development }}" -eq "false") -and ("${{ inputs.approve }}" -eq "true")) {
+            $marker="$marker and not developmode"
+          }
           pytest -v -n auto --durations 0 -m "$marker"
       
       # steps below run only on Linux to test distribution procedures, e.g.
