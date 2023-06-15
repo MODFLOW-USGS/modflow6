@@ -17,8 +17,6 @@ module TransportModelModule
   use NumericalPackageModule, only: NumericalPackageType
   use TspLabelsModule, only: TspLabelsType
   use BndModule, only: BndType, GetBndFromList
-  use GwtMstModule, only: GwtMstType
-  use GweMstModule, only: GweMstType
   use TspIcModule, only: TspIcType
   use TspFmiModule, only: TspFmiType
   use TspAdvModule, only: TspAdvType
