@@ -5,11 +5,12 @@ This folder contains scripts to automate MODFLOW 6 distribution tasks.
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
+
 - [Overview](#overview)
 - [Requirements](#requirements)
 - [Testing](#testing)
 - [Release procedures](#release-procedures)
-  - [Preparing a nightly release](#preparing-a-nightly-release)
+  - [Preparing a minimal development release](#preparing-a-minimal-development-release)
   - [Preparing an official release](#preparing-an-official-release)
     - [Updating version info](#updating-version-info)
     - [Building makefiles](#building-makefiles)
@@ -17,9 +18,13 @@ This folder contains scripts to automate MODFLOW 6 distribution tasks.
     - [Benchmarking example models](#benchmarking-example-models)
     - [Building documentation](#building-documentation)
     - [Building the distribution archive](#building-the-distribution-archive)
+    - [Verifying the distribution archive](#verifying-the-distribution-archive)
 - [Release automation](#release-automation)
   - [Nightly builds](#nightly-builds)
   - [Official releases](#official-releases)
+    - [Triggering with a release branch](#triggering-with-a-release-branch)
+    - [Triggering a release manually](#triggering-a-release-manually)
+  - [Release versioning](#release-versioning)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
