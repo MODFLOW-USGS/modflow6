@@ -30,6 +30,7 @@ $(OBJDIR)/kind.o \
 $(OBJDIR)/Constants.o \
 $(OBJDIR)/SimVariables.o \
 $(OBJDIR)/genericutils.o \
+$(OBJDIR)/defmacro.o \
 $(OBJDIR)/compilerversion.o \
 $(OBJDIR)/version.o \
 $(OBJDIR)/OpenSpec.o \
