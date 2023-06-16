@@ -101,7 +101,7 @@ contains
     ! -- Call parent class routine
     call this%tsp_cr(filename, id, modelname, 'GWT', indis)
     !
-    ! -- create model packages
+    ! -- Create model packages
     call this%create_gwt_specific_packages(indis)
     !
     ! -- Return

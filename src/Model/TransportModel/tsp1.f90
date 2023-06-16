@@ -38,22 +38,22 @@ module TransportModelModule
   type, extends(NumericalModelType) :: TransportModelType
 
     ! Generalized transport package types common to either GWT or GWE
-    type(TspAdvType), pointer :: adv => null() ! advection package
-    type(TspFmiType), pointer :: fmi => null() ! flow model interface
-    type(TspIcType), pointer :: ic => null() ! initial conditions package
-    type(TspMvtType), pointer :: mvt => null() ! mover transport package
-    type(TspObsType), pointer :: obs => null() ! observation package
-    type(TspOcType), pointer :: oc => null() ! output control package
-    type(TspSsmType), pointer :: ssm => null() ! source sink mixing package
-    type(TspLabelsType), pointer :: tsplab => null() ! object defining the appropriate labels
-    type(BudgetType), pointer :: budget => null() ! budget object
-    integer(I4B), pointer :: inic => null() ! unit number IC
-    integer(I4B), pointer :: infmi => null() ! unit number FMI
-    integer(I4B), pointer :: inmvt => null() ! unit number MVT
-    integer(I4B), pointer :: inadv => null() ! unit number ADV
-    integer(I4B), pointer :: inssm => null() ! unit number SSM
-    integer(I4B), pointer :: inoc => null() ! unit number OC
-    integer(I4B), pointer :: inobs => null() ! unit number OBS
+    type(TspAdvType), pointer :: adv => null() !< advection package
+    type(TspFmiType), pointer :: fmi => null() !< flow model interface
+    type(TspIcType), pointer :: ic => null() !< initial conditions package
+    type(TspMvtType), pointer :: mvt => null() !< mover transport package
+    type(TspObsType), pointer :: obs => null() !< observation package
+    type(TspOcType), pointer :: oc => null() !< output control package
+    type(TspSsmType), pointer :: ssm => null() !< source sink mixing package
+    type(TspLabelsType), pointer :: tsplab => null() !< object defining the appropriate labels
+    type(BudgetType), pointer :: budget => null() !< budget object
+    integer(I4B), pointer :: inic => null() !< unit number IC
+    integer(I4B), pointer :: infmi => null() !< unit number FMI
+    integer(I4B), pointer :: inmvt => null() !< unit number MVT
+    integer(I4B), pointer :: inadv => null() !< unit number ADV
+    integer(I4B), pointer :: inssm => null() !< unit number SSM
+    integer(I4B), pointer :: inoc => null() !< unit number OC
+    integer(I4B), pointer :: inobs => null() !< unit number OBS
     real(DP), pointer :: eqnsclfac => null() !< constant factor by which all terms in the model's governing equation are scaled (divided) for formulation and solution
 
   contains
@@ -446,11 +446,13 @@ contains
   !! Save and print flows
   !<
   subroutine tsp_ot_flow(this, icbcfl, ibudfl, icbcun, inmst)
+    ! -- dummy
     class(TransportModelType) :: this
     integer(I4B), intent(in) :: icbcfl
     integer(I4B), intent(in) :: ibudfl
     integer(I4B), intent(in) :: icbcun
     integer(I4B), intent(in) :: inmst
+    ! -- local
     class(BndType), pointer :: packobj
     integer(I4B) :: ip
 ! ------------------------------------------------------------------------------
