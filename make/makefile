@@ -5,35 +5,35 @@ include ./makedefaults
 
 # Define the source file directories
 SOURCEDIR1=../src
-SOURCEDIR2=../src/Distributed
-SOURCEDIR3=../src/Exchange
-SOURCEDIR4=../src/Model
-SOURCEDIR5=../src/Model/Connection
-SOURCEDIR6=../src/Model/Geometry
-SOURCEDIR7=../src/Model/GroundWaterFlow
-SOURCEDIR8=../src/Model/GroundWaterTransport
-SOURCEDIR9=../src/Model/ModelUtilities
-SOURCEDIR10=../src/Solution
-SOURCEDIR11=../src/Solution/LinearMethods
-SOURCEDIR12=../src/Solution/PETSc
-SOURCEDIR13=../src/Timing
-SOURCEDIR14=../src/Utilities
+SOURCEDIR2=../src/Exchange
+SOURCEDIR3=../src/Distributed
+SOURCEDIR4=../src/Solution
+SOURCEDIR5=../src/Solution/LinearMethods
+SOURCEDIR6=../src/Solution/PETSc
+SOURCEDIR7=../src/Timing
+SOURCEDIR8=../src/Utilities
+SOURCEDIR9=../src/Utilities/Idm
+SOURCEDIR10=../src/Utilities/Idm/selector
+SOURCEDIR11=../src/Utilities/Idm/mf6blockfile
+SOURCEDIR12=../src/Utilities/TimeSeries
+SOURCEDIR13=../src/Utilities/Memory
+SOURCEDIR14=../src/Utilities/OutputControl
 SOURCEDIR15=../src/Utilities/ArrayRead
-SOURCEDIR16=../src/Utilities/Idm
-SOURCEDIR17=../src/Utilities/Idm/mf6blockfile
-SOURCEDIR18=../src/Utilities/Idm/selector
-SOURCEDIR19=../src/Utilities/Libraries
-SOURCEDIR20=../src/Utilities/Libraries/blas
-SOURCEDIR21=../src/Utilities/Libraries/daglib
-SOURCEDIR22=../src/Utilities/Libraries/rcm
-SOURCEDIR23=../src/Utilities/Libraries/sparsekit
-SOURCEDIR24=../src/Utilities/Libraries/sparskit2
-SOURCEDIR25=../src/Utilities/Matrix
-SOURCEDIR26=../src/Utilities/Memory
-SOURCEDIR27=../src/Utilities/Observation
-SOURCEDIR28=../src/Utilities/OutputControl
-SOURCEDIR29=../src/Utilities/TimeSeries
-SOURCEDIR30=../src/Utilities/Vector
+SOURCEDIR16=../src/Utilities/Libraries
+SOURCEDIR17=../src/Utilities/Libraries/rcm
+SOURCEDIR18=../src/Utilities/Libraries/blas
+SOURCEDIR19=../src/Utilities/Libraries/sparskit2
+SOURCEDIR20=../src/Utilities/Libraries/daglib
+SOURCEDIR21=../src/Utilities/Libraries/sparsekit
+SOURCEDIR22=../src/Utilities/Vector
+SOURCEDIR23=../src/Utilities/Matrix
+SOURCEDIR24=../src/Utilities/Observation
+SOURCEDIR25=../src/Model
+SOURCEDIR26=../src/Model/Connection
+SOURCEDIR27=../src/Model/GroundWaterTransport
+SOURCEDIR28=../src/Model/ModelUtilities
+SOURCEDIR29=../src/Model/GroundWaterFlow
+SOURCEDIR30=../src/Model/Geometry
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -74,11 +74,11 @@ $(OBJDIR)/kind.o \
 $(OBJDIR)/Constants.o \
 $(OBJDIR)/SimVariables.o \
 $(OBJDIR)/genericutils.o \
+$(OBJDIR)/defmacro.o \
 $(OBJDIR)/compilerversion.o \
 $(OBJDIR)/ArrayHandlers.o \
 $(OBJDIR)/version.o \
 $(OBJDIR)/Message.o \
-$(OBJDIR)/defmacro.o \
 $(OBJDIR)/Sim.o \
 $(OBJDIR)/OpenSpec.o \
 $(OBJDIR)/InputOutput.o \
