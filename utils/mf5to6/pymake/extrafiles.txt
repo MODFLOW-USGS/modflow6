@@ -14,6 +14,7 @@
 ../../../src/Utilities/kind.f90
 ../../../src/Utilities/List.f90
 ../../../src/Utilities/OpenSpec.f90
+../../../src/Utilities/defmacro.F90
 ../../../src/Utilities/version.f90
 ../../../src/Utilities/Table.f90
 ../../../src/Utilities/TableTerm.f90

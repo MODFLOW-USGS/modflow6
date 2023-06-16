@@ -4,7 +4,7 @@ module CommandArguments
                              VSUMMARY, VALL, VDEBUG, &
                              MVALIDATE
   use VersionModule, only: VERSION, MFVNAM, IDEVELOPMODE, &
-                           FMTDISCLAIMER, FMTLICENSE
+                           FMTDISCLAIMER, write_license
   use CompilerVersion
   use SimVariablesModule, only: istdout, isim_level, &
                                 simfile, simlstfile, simstdout, &
@@ -167,7 +167,7 @@ contains
         simulation_mode = 'PARALLEL'
       case ('-LIC', '--LICENSE')
         lstop = .TRUE.
-        call sim_message('', fmt=FMTLICENSE)
+        call write_license()
       case ('-CO', '--COMPILER-OPT')
         lstop = .TRUE.
         call get_compile_options(coptions)
