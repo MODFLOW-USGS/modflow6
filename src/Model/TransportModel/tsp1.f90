@@ -458,8 +458,6 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- Save TSP flows
     call this%tsp_ot_flowja(this%nja, this%flowja, icbcfl, icbcun)
-    if (inmst > 0) call this%tsp_ot_flowja(this%nja, this%flowja, &
-                                           icbcfl, icbcun)
     if (this%infmi > 0) call this%fmi%fmi_ot_flow(icbcfl, icbcun)
     if (this%inssm > 0) then
       call this%ssm%ssm_ot_flow(icbcfl=icbcfl, ibudfl=0, icbcun=icbcun)

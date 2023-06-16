@@ -571,8 +571,18 @@ contains
     ! -- dummy
     class(GweModelType) :: this
     ! -- local
+    integer(I4B) :: icbcfl
+    integer(I4B) :: icbcun
     ! -- formats
 ! ------------------------------------------------------------------------------
+    !
+    ! -- Initialize
+    icbcfl = 0
+    ! 
+    ! -- Because mst belongs to gwt, call mst_ot_flow directly (and not from parent)
+    if (this%oc%oc_save('BUDGET')) icbcfl = 1
+    icbcun = this%oc%oc_save_unit('BUDGET')
+    if (this%inmst > 0) call this%mst%mst_ot_flow(icbcfl, icbcun)
     !
     ! -- Call parent class _ot routines.
     call this%tsp_ot(this%inmst)
