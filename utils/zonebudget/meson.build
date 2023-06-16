@@ -6,7 +6,11 @@ zonebudget_sources = files(
     'src' / 'zoneoutput.f90',
 )
 
-executable('zbud6',
+
+zbud6name = 'zbud6'
+message('ZONEBUDGET 6 executable name: ' + zbud6name + '\n')
+
+executable(zbud6name,
            zonebudget_sources,
            link_with: mf6core, 
            install: true,

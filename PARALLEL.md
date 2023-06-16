@@ -19,43 +19,73 @@ The design philosophy has been to maintain MODFLOW as a single codebase and have
 
 ## Prerequisites
 
+The parallel version of MODFLOW 6 requires the the Message Passing Interface (MPI) and the Portable, Extensible Toolkit for Scientific Computation (PETSc - pronounced PET-see (/ˈpɛt-siː/)) libraries. 
+
 ### MPI
 
-The parallel software uses the Message Passing Interface (MPI) to synchronize data between processes. There are a couple of implementations of the MPI standard available. Their applicability usually depends on the platform that is used:
+The parallel version of MODFLOW 6 uses MPI to synchronize data between processes. There are a couple of implementations of the MPI standard available. Their applicability usually depends on the platform that is used:
 
 - Open MPI: https://www.open-mpi.org/
 - MPICH: https://www.mpich.org/
 - Intel MPI: https://www.intel.com/content/www/us/en/developer/tools/oneapi/mpi-library.html
 - Microsoft MPI: https://learn.microsoft.com/en-us/message-passing-interface/microsoft-mpi
 
-On Linux and macOS, if you haven't installed any MPI framework yet, your best bet is to automatically download the MPI implementation upon configuring PETSc with the option flag `--download-openmpi` or `--download-mpich` (see below). Alternatively you can install OpenMPI or MPICH using the package manager of your OS. It general it would be good to check the table below for tested configurations.
+On Linux and macOS, if you haven't installed a MPI framework yet, your best bet is to automatically download the MPI implementation if building PETSc from source using the option flag `--download-openmpi` or `--download-mpich` and the `configure` approach described below. Alternatively, you can install OpenMPI or MPICH using a package manager for your OS. Tested configurations are listed in the table below.
 
 In addition to compiling, the MPI toolset is also required to run a parallel simulation. The implementations above all come with `mpiexec` (or `mpiexec.exe`) to start an executable in parallel.
 
 ### PETSc
 
-PETSc, the Portable, Extensible Toolkit for Scientific Computation, pronounced PET-see (/ˈpɛt-siː/), is a suite of data structures and routines for the scalable (parallel) solution of scientific applications modeled by partial differential equations: https://petsc.org/release/
+The PETSc library is a suite of data structures and routines for the scalable (parallel) solution of scientific applications modeled by partial differential equations: 
 
-The PETSc library is used by MODFLOW for its parallel linear solver capabilities and the distributed data formats (vectors and matrices) that go along with it. Parallel PETSc uses MPI internally as well, so setting up this library should typically be coordinated with the installation of the MPI library. A lot of obscure things can happen if the binaries are not compatible, so in general it is a good strategy to compile MPI, PETSc, and MODFLOW with the same compiler toolchain.
+https://petsc.org/release/
 
-The PETSc website gives details on a large number of configurations, depending on the target platform/OS, and many different ways to configure/make/install the library: https://petsc.org/release/install/. Building on Windows is notoriously challenging and discouraged by the PETSc development team. On Linux, however, it could be as easy as
+The PETSc library (version 3.16 or higher) is used by MODFLOW for its parallel linear solver capabilities and the distributed data formats (vectors and matrices) that go along with it. Parallel PETSc uses MPI internally as well, so setting up this library should typically be coordinated with the installation of the MPI library. A lot of obscure things can happen if the binaries are not compatible, so in general it is a good strategy to compile MPI, PETSc, and MODFLOW with the same compiler toolchain or install MPI and PETSc using a package manager and built with the same compiler being used to compile MODFLOW.
 
+## Compiling MPI and PETSC from source
+
+The PETSc website gives details on a large number of configurations, depending on the target platform/OS, and many different ways to configure/make/install the library: https://petsc.org/release/install/. Building on Windows is notoriously challenging and discouraged by the PETSc development team. On Linux, however, PETSc can be installed (configure/make/install) by executing the following command 
 ```
 $ ./configure --download-openmpi --download-fblaslapack
 $ make all
 ```
+in a terminal open in the root directory of your PETSc download
 
-### pkg-config and setting the `PKG_CONFIG_PATH` variable
 
-Eventually, the MODFLOW build process has to resolve the installation location of all external dependencies. The pkg-config tool (https://en.wikipedia.org/wiki/Pkg-config) can be used to take care of that. For PETSc, you can check the contents of the folder
+
+## Using a package manager to install MPI and PETSc
+
+Use of a package manager can simplify the process of building the parallel version of MODFLOW 6.
+
+### MacOS
+[OpenMPI](https://formulae.brew.sh/formula/open-mpi) and [PETSc](https://formulae.brew.sh/formula/petsc) are available on Homebrew for Intel and Apple Silicon (M1). Both of these depend on [gcc 13.1.0](https://formulae.brew.sh/formula/gcc). [pkg-config](https://formulae.brew.sh/formula/pkg-config) should also be installed from Homebrew, if not already installed, so that Meson will be able to resolve the installation location of MPI and PETSc.
+
+### Ubuntu
+OpenMPI and PETSc are available for a variety of Ubuntu versions using the Advanced Packaging Tool (apt). 
+
+### Windows
+
+???
+
+## Using pkg-config to check your PETSc installation
+
+Eventually, the MODFLOW build process has to resolve the installation location of all external dependencies. The pkg-config tool (https://en.wikipedia.org/wiki/Pkg-config) can be used to take care of that. 
+
+```
+pkg-config --libs petsc
+```
+
+If PETSc was build from source, you can check the contents of the folder
 ```
 $PETSC_DIR/$PETSC_ARCH/lib/pkgconfig/
 ```
+
 and confirm that there are one or more `*.pc` files in there. A similar `pkgconfig/` folder has to present for the MPI installation that was used. For example, for Open MPI on WSL2 this folder is `/lib/x86_64-linux-gnu/pkgconfig/`.
 
 To connect everything, both of these folder paths have to be added to the `PKG_CONFIG_PATH` variable so that the `pkg-config` executable can resolve the installed libraries.
 
-## Building
+
+## Building the parallel version of MODFLOW 6
 
 The primary build system for MODFLOW is Meson (https://mesonbuild.com/). The `meson.build` script takes an additional argument to activate a parallel build of the software. E.g for building and installing a parallel release version:
 
@@ -65,9 +95,9 @@ meson setup builddir -Ddebug=false -Dparallel=true \
 meson install -C builddir
 meson test --verbose --no-rebuild -C builddir
 ```
-Note that changing the option flags in the `meson setup` command requires the flag `--reconfigure` to reconfigure the build directory. If the `PKG_CONFIG_PATH` was set as desribed above, the linking to PETSc and MPI is done automatically.
+Note that changing the option flags in the `meson setup` command requires the flag `--reconfigure` to reconfigure the build directory. If the `PKG_CONFIG_PATH` was set as described above, the linking to PETSc and MPI is done automatically.
 
-It's always a good idea to check your `mf6` executable to confirm that it is successfully linked against the external dependencies. You can use the command line tools `ldd` (Linux), `otool` (macOS), or `Dependencies.exe` (Windows, https://github.com/lucasg/Dependencies) to do that. In the list of dependencies, you should be able to identify `libpetsc` and `libmpi` for parallel builds.
+It's always a good idea to check your `mf6pro` executable to confirm that it is successfully linked against the external dependencies. You can use the command line tools `ldd` (Linux), `otool` (macOS), or `Dependencies.exe` (Windows, https://github.com/lucasg/Dependencies) to do that. In the list of dependencies, you should be able to identify `libpetsc` and `libmpi` for parallel builds.
 
 The other build systems in the MODFLOW project (MS Visual Studio, `pymake`, `Makefile`) continue to be supported for *serial* builds only. `pymake` uses the `excludefiles.txt` to ignore those files that can only be build when MPI and PETSc are present on the system. In MS Visual Studio these same files are included in the solution but not in the build process. 
 
@@ -82,7 +112,7 @@ Parallel MODFLOW was designed to have all third party functionality (MPI and PET
 ---
 
 
-## Testing parallel
+## Testing the parallel of MODFLOW 6 
 
 Parallel MODFLOW can be tested using the same test framework as the serial program, with just a few modifications. To run a test inside the `autotest` folder in parallel mode, make sure to add a marker `@pytest.mark.parallel` so that the test is only executed in the Continuous Integration when running a configuration with a parallel build of MODFLOW.
 
@@ -149,12 +179,14 @@ Make sure that you work with gdb versions >= 10. We have found that earlier vers
 
 Parallel MODFLOW has been built successfully with the following configurations:
 
-| Operating System      |   Toolchain |      MPI      |  PETSc |
-|-----------------------|-------------|---------------|--------|
-| MS Windows            | ?           | ?             | ?      |
-| WSL2 (Ubuntu 20.04.5) | gcc 9.4.0   | OpenMPI 4.0.3 | 3.18.2 |
-| Ubuntu 22.04          | gcc 9.5.0   | OpenMPI 4.1.4 | 3.18.5 |
-| macOS 12.6.3          | gcc 9.5.0   | OpenMPI 4.1.4 | 3.18.5 |
+| Operating System      |   Toolchain |      MPI      |  PETSc | Package Manager |
+|-----------------------|-------------|---------------|--------|-----------------|
+| MS Windows            | ?           | ?             | ?      | NA              |
+| WSL2 (Ubuntu 20.04.5) | gcc 9.4.0   | OpenMPI 4.0.3 | 3.18.2 | NA              |
+| Ubuntu 22.04          | gcc 9.5.0   | OpenMPI 4.1.4 | 3.18.5 | NA              |
+| Ubuntu 23.04          | gcc 13      | OpenMPI 4.1.4 | 3.18.1 | apt             |
+| macOS 12.6.3          | gcc 9.5.0   | OpenMPI 4.1.4 | 3.18.5 | NA              |
+| macOS 12.6.6          | gcc 13.1.0  | OpenMPI 4.1.5 | 3.19.1 | Homebrew        |
 
 The most up-to-date configurations are available in the GitHub CI script: `.github/workflows/ci.yml` under the task `parallel_test`. These are being tested upon every change to the `develop` branch of MODFLOW.
 

@@ -7,4 +7,6 @@ bmi_sources = files(
     'mf6xmi.F90',
 )
 
-library('mf6', bmi_sources, link_with: mf6core, name_prefix: 'lib', install: true)
+message('MODFLOW 6 shared library name:', 'lib' + buildname)
+
+library(buildname, bmi_sources, link_with: mf6core, name_prefix: 'lib', install: true)
