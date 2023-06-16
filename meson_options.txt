@@ -1,1 +1,0 @@
-option('parallel', type : 'boolean', value : false)
