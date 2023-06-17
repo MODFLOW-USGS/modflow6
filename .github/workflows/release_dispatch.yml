@@ -105,7 +105,7 @@ jobs:
       # If triggered by pushing a release branch, the release is approved if the branch name doesn't contain "rc".
       approve: ${{ (github.event_name == 'workflow_dispatch' && inputs.approve == 'true') || (github.event_name != 'workflow_dispatch' && !contains(github.ref_name, 'rc')) }}
       branch: ${{ needs.set_options.outputs.branch }}
-      development: false
+      developmode: false
       run_tests: ${{ inputs.run_tests == '' || inputs.run_tests == 'true' }}
       version: ${{ needs.set_options.outputs.version }}
   pr:
