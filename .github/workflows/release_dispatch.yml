@@ -111,7 +111,9 @@ jobs:
   pr:
     name: Draft release PR
     if: ${{ github.event_name == 'push' && github.ref_name != 'master' && (github.event_name == 'workflow_dispatch' && inputs.approve == 'true') || (github.event_name != 'workflow_dispatch' && !contains(github.ref_name, 'rc')) }}
-    needs: make_dist
+    needs:
+      - set_options
+      - make_dist
     runs-on: ubuntu-22.04
     permissions:
       contents: write
@@ -137,7 +139,7 @@ jobs:
         working-directory: distribution
         run: |
           # update version files
-          ver="${{ needs.make_dist.outputs.version }}"
+          ver="${{ needs.set_options.outputs.version }}"
           if [[ "${{ inputs.approve }}" == "true" ]]; then
             python update_version.py -v "$ver" --approve
           else
@@ -159,7 +161,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          ver="${{ needs.make_dist.outputs.version }}"
+          ver="${{ needs.set_options.outputs.version }}"
           body='
           # MODFLOW '$ver' release
           

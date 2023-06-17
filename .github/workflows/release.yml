@@ -481,7 +481,7 @@ jobs:
           else
             zip -r $distname.zip \
               $distname/bin/* \
-              $distname/doc/mf6io \
+              $distname/doc/mf6io.pdf \
               $distname/doc/release.pdf \
               $distname/code.json \
               -x '*.DS_Store' \
@@ -516,7 +516,7 @@ jobs:
           else
             7z a -tzip $distname.zip \
               $distname/bin/* \
-              $distname/doc/mf6io \
+              $distname/doc/mf6io.pdf \
               $distname/doc/release.pdf \
               $distname/code.json \
               -xr!libmf6.lib \
