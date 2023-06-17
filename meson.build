@@ -1,11 +1,13 @@
 project(
   'MODFLOW 6',
   'fortran',
-  version: '6.5.0',
-  meson_version: '>= 0.59.0',
+  version: '6.4.2',
+  license: 'CC0',
+  meson_version: '>= 1.1.0',
   default_options : [
     'b_vscrt=static_from_buildtype', # Link runtime libraries statically on Windows
     'optimization=2',
+    'debug=false',
     'fortran_std=f2008',
 ])
 
@@ -18,15 +20,9 @@ if get_option('optimization') == '2'
 else
   profile = 'develop'
 endif
-
-do_parallel_build = get_option('parallel')
 message('The used profile is:', profile)
-message('Parallel build:', do_parallel_build)
 
-# windows options:
-petsc_dir = meson.project_source_root() / '..' /'petsc-3.18.5'
-petsc_arch = 'arch-ci-mswin-intel-modflow6'
-
+# parse compiler options
 fc = meson.get_compiler('fortran')
 fc_id = fc.get_id()
 compile_args = []
@@ -50,7 +46,7 @@ if fc_id == 'gcc'
   if profile == 'release'
     compile_args += ['-ffpe-summary=overflow', '-ffpe-trap=overflow,zero,invalid']
   elif profile == 'develop'
-    compile_args += ['-fcheck=all', '-ffpe-trap=overflow,zero,invalid,denormal']
+    compile_args += ['-fcheck=all', '-ffpe-trap=overflow,zero,invalid']
   endif
 
   # Define OS with gfortran for OS specific code
@@ -91,45 +87,70 @@ elif fc_id == 'intel'
   link_args += '-static-intel'
 endif
 
-if build_machine.system() == 'windows'
-  # directly look for petsc
-  petsc_compiled = petsc_dir / petsc_arch
-  petsc = fc.find_library('libpetsc', dirs: petsc_compiled / 'lib', required : false)
-else
-  petsc = dependency('PETSc', required : false)
+
+# parallel build options
+is_parallel_build = get_option('parallel')
+is_cray = get_option('cray')
+is_mpich = get_option('mpich')
+if is_cray and build_machine.system() != 'linux'
+  error('cray=true only supported on linux systems')
 endif
-mpi = dependency('mpi', language : 'fortran', required : petsc.found())
+if is_cray and not is_parallel_build
+  is_parallel_build = true
+  is_mpich = true
+endif
+if is_mpich
+  if is_cray
+    mpifort_name = 'mpichf90' 
+  else
+    mpifort_name = 'mpichfort'
+  endif
+endif
+message('Parallel build:', is_parallel_build)
+
+# windows options for petsc
+petsc_dir = meson.project_source_root() / '..' /'petsc-3.18.5'
+petsc_arch = 'arch-ci-mswin-intel-modflow6'
 
 # on windows only with intel
-enable_mpi = do_parallel_build
-if build_machine.system() == 'windows' and do_parallel_build
-  if fc_id == 'intel-cl'
-    enable_mpi = true
-  else
-    message('Parallel build on Windows only with intel compiler, disabling...')
-    enable_mpi
+if build_machine.system() == 'windows' and is_parallel_build
+  if fc_id != 'intel-cl'
+    error('Parallel build on Windows only with intel compiler. Terminating...')
   endif
 endif
 
-# compile with mpi or petsc+mpi when found,
-# (not allowing petsc without mpi)
+# lists for parallel dependencies and compiler arguments
 dependencies = [ ]
 extra_cmp_args = [ ]
 
-if mpi.found() and enable_mpi
-  extra_cmp_args = [ '-D__WITH_MPI__' ]
-  with_mpi = true
-  dependencies = [ mpi ]
-else
-  with_mpi = false
-endif 
-
-if petsc.found() and with_mpi
-  extra_cmp_args = [ '-D__WITH_MPI__', '-D__WITH_PETSC__' ]
+# load petsc and mpi dependencies/libraries
+if is_parallel_build
+  # find petsc
+  if build_machine.system() != 'windows'
+    petsc = dependency('PETSc', required : true)
+  else
+    # directly look for petsc
+    petsc_compiled = petsc_dir / petsc_arch
+    petsc = fc.find_library('libpetsc', dirs: petsc_compiled / 'lib', required : true)
+  endif
+  extra_cmp_args += [ '-D__WITH_PETSC__' ]
+  dependencies += petsc
   with_petsc = true
-  dependencies = [ mpi, petsc ]
+
+  # find mpi
+  if is_mpich
+    mpi = dependency('mpich', required : true)
+    mpifort = dependency(mpifort_name, required : mpi.found())
+    dependencies += [ mpi, mpifort ]
+  else
+    mpi = dependency('mpi', language : 'fortran', required : true)
+    dependencies += mpi
+  endif
+  extra_cmp_args += [ '-D__WITH_MPI__']
+  with_mpi = true
 else
   with_petsc = false
+  with_mpi = false
 endif
 
 compile_args += extra_cmp_args
@@ -137,8 +158,8 @@ compile_args += extra_cmp_args
 add_project_arguments(fc.get_supported_arguments(compile_args), language: 'fortran')
 add_project_link_arguments(fc.get_supported_arguments(link_args), language: 'fortran')
 
-if with_petsc and build_machine.system() == 'windows'
-  message('Compiling PETSc Fortran modudules')
+if is_parallel_build and build_machine.system() == 'windows'
+  message('Compiling PETSc Fortran modules')
   petsc_incdir = include_directories([petsc_dir / 'include', petsc_compiled / 'include'])
   petsc_src = petsc_dir / 'src'
   sources_petsc = [petsc_src / 'dm/f90-mod/petscdmdamod.F90',
@@ -161,14 +182,31 @@ if with_petsc and build_machine.system() == 'windows'
                                 include_directories: petsc_incdir)  
 endif
 
+# build mf6 and libmf6
+buildname = get_option('buildname')
 subdir('src')
 subdir('srcbmi')
+
+# build zbud6 and mf5to6 utility programs
 subdir('utils')
 
 # add unit test directory
 # subdir('unittests')
 
 # meson tests to evaluate installation success
-test('Test installation version', mf6exe, args : ['-v',])
-test('Test installation compiler', mf6exe, args : ['-c',])
-test('Test installation help', mf6exe, args : ['-h',])
+testdir = meson.project_source_root() / '.mf6minsim'
+if with_mpi
+  mpiexec = find_program('mpiexec', required : false)
+  if mpiexec.found()
+    test('Parallel version command line test', mpiexec, args : ['-n', '2', mf6exe, '-v', '-p'])
+    test('Parallel compiler command line test', mpiexec, args : ['-n', '2', mf6exe, '-c', '-p'])
+    test('Serial simulation test', mf6exe, workdir : testdir)
+    test('Parallel simulation test - 1 core', mpiexec, workdir : testdir, args : ['-n', '1', mf6exe, '-p'])
+    test('Parallel simulation test - 2 cores', mpiexec, workdir : testdir, args : ['-n', '2', mf6exe, '-p'])
+  endif
+else
+  test('Version command line test', mf6exe, args : ['-v',])
+  test('Compiler command line test', mf6exe, args : ['-c',])
+  test('Test installation help', mf6exe, args : ['-h',])
+  test('Serial simulation test', mf6exe, workdir : testdir)
+endif

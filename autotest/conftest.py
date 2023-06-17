@@ -50,8 +50,12 @@ def targets(bin_path) -> Executables:
 
 @pytest.fixture
 def original_regression(request) -> bool:
-    oreg = request.config.getoption("--original-regression")
-    return oreg
+    return request.config.getoption("--original-regression")
+
+
+@pytest.fixture(scope="session")
+def markers(pytestconfig) -> str:
+    return pytestconfig.getoption('-m')
 
 
 def pytest_addoption(parser):
