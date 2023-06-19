@@ -5,21 +5,26 @@ on:
   workflow_call:
     inputs:
       approve:
-        description: 'Whether to approve the release. Default is false for preliminary/provisional releases. Approval is only relevant for full builds: if development is true, approve is not considered.'
+        description: 'Approve the release, modifying disclaimer language to indicate the distribution has been reviewed. If false, disclaimers & version strings indicate preliminary/provisional status.'
         required: false
         type: boolean
         default: false
       branch:
-        description: 'Branch to use for release.'
+        description: 'Branch to release from.'
         required: true
         type: string
-      development:
-        description: 'Toggle a minimal development build. Default is false, i.e. to perform a full release build. If true, approve is not considered.'
+      developmode:
+        description: 'Build binaries in develop mode. If false, IDEVELOPMODE is set to 0.'
+        required: false
+        type: boolean
+        default: true
+      full:
+        description: 'Build a full distribution containing sources, examples, and all documentation. If false, the distribution contains only binaries, mf6io, release notes, and code.json.'
         required: false
         type: boolean
         default: false
       run_tests:
-        description: 'Whether to run tests after building binaries. Default is true. Can be set to false for rapid testing/debugging, or for a faster nightly/development build.'
+        description: Run tests after building binaries.'
         required: false
         type: boolean
         default: true
@@ -67,21 +72,15 @@ jobs:
       - name: Setup Micromamba
         uses: mamba-org/setup-micromamba@v1
         with:
-          micromamba-root-path: ${{ github.workspace }}/micromamba-root
           environment-file: modflow6/environment.yml
           cache-downloads: true
           cache-environment: true
+          init-shell: >-
+            bash
+            powershell
 
       - name: Setup Intel Fortran
         uses: modflowpy/install-intelfortran-action@v1
-
-      - name: Fix Micromamba path (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          # https://github.com/modflowpy/install-intelfortran-action#conda-scripts
-          $mamba_bin = "${{ github.workspace }}\micromamba-root\envs\modflow6\Scripts"
-          echo $mamba_bin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Set version number
         id: set_version
@@ -100,11 +99,14 @@ jobs:
         working-directory: modflow6/distribution
         run: |
           ver="${{ steps.set_version.outputs.version }}"
-          if [[ ("${{ inputs.development }}" == "false") && ("${{ inputs.approve }}" == "true") ]]; then
-            python update_version.py -v "$ver" --approve
-          else
-            python update_version.py -v "$ver"
+          cmd="python update_version.py -v $ver"
+          if [[ "${{ inputs.approve }}" == "true" ]]; then
+            cmd="$cmd --approve"
           fi
+          if [[ "${{ inputs.developmode }}" == "false" ]]; then
+            cmd="$cmd --releasemode"
+          fi
+          eval "$cmd"
 
       - name: Build binaries
         if: runner.os != 'Windows'
@@ -157,17 +159,29 @@ jobs:
         run: pytest -v --durations 0 get_exes.py
 
       - name: Test modflow6
-        if: inputs.run_tests == true
+        if: inputs.run_tests == true && runner.os != 'Windows'
         working-directory: modflow6/autotest
         env:
           REPOS_PATH: ${{ github.workspace }}
         run: |
-          marker="not large"
-          if [[ "${{ inputs.development }}" == "false" ]]; then
-            marker="$marker and not developmode"
+          markers="not large"
+          if [[ "${{ inputs.developmode }}" == "false" ]]; then
+            markers="$markers and not developmode"
           fi
-
-          pytest -v -n auto --durations 0 -m "$marker"
+          pytest -v -n auto --durations 0 -m "$markers"
+      
+      - name: Test modflow6 (Windows)
+        if: inputs.run_tests == true && runner.os == 'Windows'
+        working-directory: modflow6/autotest
+        shell: pwsh
+        env:
+          REPOS_PATH: ${{ github.workspace }}
+        run: |
+          $markers="not large"
+          if ("${{ inputs.developmode }}" -eq "false") {
+            $markers="$markers and not developmode"
+          }
+          pytest -v -n auto --durations 0 -m "$markers"
       
       # steps below run only on Linux to test distribution procedures, e.g.
       # compiling binaries, building documentation
@@ -272,11 +286,14 @@ jobs:
         working-directory: modflow6/distribution
         run: |
           ver="${{ needs.build.outputs.version }}"
-          if [[ ("${{ inputs.development }}" == "false") && ("${{ inputs.approve }}" == "true") ]]; then
-            python update_version.py -v "$ver" --approve
-          else
-            python update_version.py -v "$ver"
+          cmd="python update_version.py -v $ver"
+          if [[ "${{ inputs.approve }}" == "true" ]]; then
+            cmd="$cmd --approve"
           fi
+          if [[ "${{ inputs.developmode }}" == "false" ]]; then
+            cmd="$cmd --releasemode"
+          fi
+          eval "$cmd"
 
       - name: Download pre-built binaries
         uses: actions/download-artifact@v3
@@ -305,7 +322,8 @@ jobs:
         working-directory: modflow6-examples/scripts
         run: python ex-gwf-twri.py
       
-      - name: Create directory structure
+      - name: Create full docs folder structure
+        if: inputs.full == true
         run: |
           distname=${{ needs.build.outputs.distname }}
 
@@ -328,7 +346,14 @@ jobs:
         env:
           # need a GITHUB_TOKEN to download example doc PDF asset from modflow6-examples repo
           GITHUB_TOKEN: ${{ github.token }}
-        run: python modflow6/distribution/build_docs.py -b bin -o doc
+        run: |
+          mkdir -p "${{ needs.build.outputs.distname }}/doc"
+          cmd="python modflow6/distribution/build_docs.py -b bin -o doc"
+          if [[ "${{ inputs.full }}" == "true" ]]; then
+            cmd="$cmd --full"
+          fi
+          eval "$cmd"
+          mv "doc/ReleaseNotes.pdf" "doc/release.pdf"
 
       - name: Upload documentation artifact
         uses: actions/upload-artifact@v3
@@ -372,32 +397,29 @@ jobs:
       - name: Setup Micromamba
         uses: mamba-org/setup-micromamba@v1
         with:
-          micromamba-root-path: ${{ github.workspace }}/micromamba-root
           environment-file: modflow6/environment.yml
           cache-downloads: true
           cache-environment: true
+          init-shell: >-
+            bash
+            powershell
 
       - name: Setup Intel Fortran
         uses: modflowpy/install-intelfortran-action@v1
-
-      - name: Fix Micromamba path (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          # https://github.com/modflowpy/install-intelfortran-action#conda-scripts
-          $mamba_bin = "${{ github.workspace }}\micromamba-root\envs\modflow6\Scripts"
-          echo $mamba_bin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
       
       - name: Update version
         id: update_version
         working-directory: modflow6/distribution
         run: |
           ver="${{ needs.build.outputs.version }}"
-          if [[ ("${{ inputs.development }}" == "false") && ("${{ inputs.approve }}" == "true") ]]; then
-            python update_version.py -v "$ver" --approve
-          else
-            python update_version.py -v "$ver"
+          cmd="python update_version.py -v $ver"
+          if [[ "${{ inputs.approve }}" == "true" ]]; then
+            cmd="$cmd --approve"
           fi
+          if [[ "${{ inputs.developmode }}" == "false" ]]; then
+            cmd="$cmd --releasemode"
+          fi
+          eval "$cmd"
 
       - name: Download artifacts
         uses: actions/download-artifact@v3
@@ -423,63 +445,102 @@ jobs:
         run: |
           # build distribution
           distname="${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
-          python modflow6/distribution/build_dist.py -o "$distname" -e modflow6-examples
+          cmd="python modflow6/distribution/build_dist.py -o $distname -e modflow6-examples"
+          if [[ "${{ inputs.full }}" == "true" ]]; then
+            cmd="$cmd --full"
+          fi
+          eval "$cmd"
 
           # move & rename PDF documents to dist folder
-          mv "$distname/doc/ReleaseNotes.pdf" "$distname/doc/release.pdf"
-          mv "$distname/doc/converter_mf5to6.pdf" "$distname/doc/mf5to6.pdf"
+          
+          if [[ "${{ inputs.full }}" == "true" ]]; then
+            mv "$distname/doc/converter_mf5to6.pdf" "$distname/doc/mf5to6.pdf"
+          fi
 
       - name: Zip distribution
         if: runner.os != 'Windows'
         run: |
           distname="${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
-          zip -r $distname.zip \
-            $distname/bin \
-            $distname/src \
-            $distname/srcbmi \
-            $distname/doc \
-            $distname/examples \
-            $distname/make \
-            $distname/msvs \
-            $distname/utils \
-            $distname/code.json \
-            $distname/meson.build \
-            -x '*.DS_Store' \
-            -x '*libmf6.lib' \
-            -x '*idmloader*' \
-            -x '*pymake*' \
-            -x '*obj_temp*' \
-            -x '*mod_temp*'
+          if [[ "${{ inputs.full }}" == "true" ]]; then
+            zip -r $distname.zip \
+              $distname/bin \
+              $distname/src \
+              $distname/srcbmi \
+              $distname/doc \
+              $distname/examples \
+              $distname/make \
+              $distname/msvs \
+              $distname/utils \
+              $distname/code.json \
+              $distname/meson.build \
+              -x '*.DS_Store' \
+              -x '*libmf6.lib' \
+              -x '*idmloader*' \
+              -x '*pymake*' \
+              -x '*obj_temp*' \
+              -x '*mod_temp*'
+          else
+            zip -r $distname.zip \
+              $distname/bin/* \
+              $distname/doc/mf6io.pdf \
+              $distname/doc/release.pdf \
+              $distname/code.json \
+              -x '*.DS_Store' \
+              -x '*libmf6.lib' \
+              -x '*idmloader*' \
+              -x '*pymake*' \
+              -x '*obj_temp*' \
+              -x '*mod_temp*'
+          fi
 
       - name: Zip distribution (Windows)
         if: runner.os == 'Windows'
         run: |
           distname="${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
-          7z a -tzip $distname.zip \
-            $distname/bin \
-            $distname/src \
-            $distname/srcbmi \
-            $distname/doc \
-            $distname/examples \
-            $distname/make \
-            $distname/msvs \
-            $distname/utils \
-            $distname/code.json \
-            $distname/meson.build \
-            -xr!libmf6.lib \
-            -xr!idmloader \
-            -xr!pymake \
-            -xr!obj_temp \
-            -xr!mod_temp
+          if [[ "${{ inputs.full }}" == "true" ]]; then
+            7z a -tzip $distname.zip \
+              $distname/bin \
+              $distname/src \
+              $distname/srcbmi \
+              $distname/doc \
+              $distname/examples \
+              $distname/make \
+              $distname/msvs \
+              $distname/utils \
+              $distname/code.json \
+              $distname/meson.build \
+              -xr!libmf6.lib \
+              -xr!idmloader \
+              -xr!pymake \
+              -xr!obj_temp \
+              -xr!mod_temp
+          else
+            7z a -tzip $distname.zip \
+              $distname/bin/* \
+              $distname/doc/mf6io.pdf \
+              $distname/doc/release.pdf \
+              $distname/code.json \
+              -xr!libmf6.lib \
+              -xr!idmloader \
+              -xr!pymake \
+              -xr!obj_temp \
+              -xr!mod_temp
+          fi
 
       # validate only after zipping distribution to avoid accidentally changing any files
       - name: Validate distribution
         run: |
+          cmd="pytest -v -s modflow6/distribution/check_dist.py --path ${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
           if [[ "${{ inputs.approve }}" == "true" ]]; then
-            pytest -v -s modflow6/distribution/check_dist.py --path "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}" --approved
-          else
-            pytest -v -s modflow6/distribution/check_dist.py --path "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
+            cmd="$cmd --approved"
           fi
+          if [[ "${{ inputs.developmode }}" == "false" ]]; then
+             cmd="$cmd --releasemode"
+          fi
+          if [[ "${{ inputs.full }}" == "true" ]]; then
+            cmd="$cmd --full"
+          fi
+          eval "$cmd"
 
       - name: Upload distribution zipfile artifact
         uses: actions/upload-artifact@v3
