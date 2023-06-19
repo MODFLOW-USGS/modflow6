@@ -106,6 +106,7 @@ jobs:
       approve: ${{ (github.event_name == 'workflow_dispatch' && inputs.approve == 'true') || (github.event_name != 'workflow_dispatch' && !contains(github.ref_name, 'rc')) }}
       branch: ${{ needs.set_options.outputs.branch }}
       developmode: false
+      full: true
       run_tests: ${{ inputs.run_tests == '' || inputs.run_tests == 'true' }}
       version: ${{ needs.set_options.outputs.version }}
   pr:

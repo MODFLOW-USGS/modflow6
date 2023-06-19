@@ -353,6 +353,7 @@ jobs:
             cmd="$cmd --full"
           fi
           eval "$cmd"
+          mv "doc/ReleaseNotes.pdf" "doc/release.pdf"
 
       - name: Upload documentation artifact
         uses: actions/upload-artifact@v3
@@ -451,7 +452,7 @@ jobs:
           eval "$cmd"
 
           # move & rename PDF documents to dist folder
-          mv "$distname/doc/ReleaseNotes.pdf" "$distname/doc/release.pdf"
+          
           if [[ "${{ inputs.full }}" == "true" ]]; then
             mv "$distname/doc/converter_mf5to6.pdf" "$distname/doc/mf5to6.pdf"
           fi
