@@ -404,9 +404,9 @@ def build_documentation(bin_path: PathLike,
                         # Example to use to render sample mf6 output in the docs.
                         # Must be a valid directory in modflow6-examples/examples
                         example_for_sample: str = "ex-gwf-twri01",
-                        development: bool = False,
+                        full: bool = False,
                         overwrite: bool = False):
-    print(f"Building {'development' if development else 'full'} documentation")
+    print(f"Building {'full' if full else 'full'} documentation")
 
     bin_path = Path(bin_path).expanduser().absolute()
     output_path = Path(output_path).expanduser().absolute()
@@ -430,7 +430,7 @@ def build_documentation(bin_path: PathLike,
     # build LaTeX file describing distribution folder structure
     # build_tex_folder_structure(overwrite=True)
 
-    if development:
+    if not full:
         # convert LaTeX to PDF
         build_pdfs_from_tex(tex_paths=_dev_dist_tex_paths, output_path=output_path)
     else:
@@ -463,9 +463,8 @@ def build_documentation(bin_path: PathLike,
     convert_line_endings(output_path, windows_line_endings)
 
     # make sure we have expected PDFs
-    if development:
-        assert (output_path / "mf6io.pdf").is_file()
-    else:
+    assert (output_path / "mf6io.pdf").is_file()
+    if full:
         assert (output_path / "mf6io.pdf").is_file()
         assert (output_path / "ReleaseNotes.pdf").is_file()
         assert (output_path / "zonebudget.pdf").is_file()
@@ -491,7 +490,8 @@ if __name__ == "__main__":
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent(
             """\
-            Create documentation for a distribution. This includes benchmarks, release notes, the
+            Create documentation for a distribution. By default, this only includes the mf6io PDF
+            document. If the --full flag is provided this includes benchmarks, release notes, the
             MODFLOW 6 input/output specification, example model documentation, supplemental info,
             documentation for the MODFLOW 5 to 6 converter and Zonebudget 6, and several articles
             downloaded from the USGS website. These are all written to a specified --output-path.
@@ -529,12 +529,11 @@ if __name__ == "__main__":
         help="Location to create documentation artifacts",
     )
     parser.add_argument(
-        "-d",
-        "--development",
+        "--full",
         required=False,
         default=False,
         action="store_true",
-        help="Whether to build a development (e.g., nightly) rather than a full distribution"
+        help="Build docs for a full rather than minimal distribution"
     )
     parser.add_argument(
         "-f",
@@ -542,7 +541,7 @@ if __name__ == "__main__":
         required=False,
         default=False,
         action="store_true",
-        help="Whether to recreate and overwrite existing artifacts"
+        help="Recreate and overwrite existing artifacts"
     )
     args = parser.parse_args()
     tex_paths = _full_dist_tex_paths + ([Path(p) for p in args.tex_path] if args.tex_path else [])
@@ -557,5 +556,5 @@ if __name__ == "__main__":
         output_path=output_path,
         examples_repo_path=examples_repo_path,
         example_for_sample=example_for_sample,
-        development=args.development,
+        full=args.full,
         overwrite=args.force)
