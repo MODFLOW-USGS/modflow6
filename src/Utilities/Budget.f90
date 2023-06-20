@@ -26,7 +26,9 @@ module BudgetModule
   use TspLabelsModule, only: TspLabelsType
 
   implicit none
+
   private
+
   public :: BudgetType
   public :: budget_cr
   public :: rate_accumulator

@@ -95,7 +95,8 @@ contains
     class(GweInterfaceModelType) :: this !< the GWE interface model
     character(len=*), intent(in) :: modelname !< the model name
 
-    call this%GweModelType%allocate_scalars(modelname)
+    call this%GweModelType%allocate_tsp_scalars(modelname)
+    call this%GweModelType%allocate_gwe_scalars(modelname)
 
     call mem_allocate(this%iAdvScheme, 'ADVSCHEME', this%memoryPath)
     call mem_allocate(this%ixt3d, 'IXT3D', this%memoryPath)
@@ -228,6 +229,7 @@ contains
     call mem_deallocate(this%inmvt)
     call mem_deallocate(this%inoc)
     call mem_deallocate(this%inobs)
+    call mem_deallocate(this%eqnsclfac)
 
     ! base
     call this%NumericalModelType%model_da()
