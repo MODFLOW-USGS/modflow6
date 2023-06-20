@@ -320,7 +320,11 @@ jobs:
   
       - name: Build ex-gwf-twri example model
         working-directory: modflow6-examples/scripts
-        run: python ex-gwf-twri.py
+        run: |
+          python ex-gwf-twri.py
+          ls ../examples
+          echo "====================="
+          ls ../examples/ex-gwf-twri01
       
       - name: Create full docs folder structure
         if: inputs.full == true
