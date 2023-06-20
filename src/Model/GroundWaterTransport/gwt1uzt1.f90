@@ -35,6 +35,7 @@ module GwtUztModule
   use ObserveModule, only: ObserveType
   use TspAptModule, only: TspAptType, apt_process_obsID, &
                           apt_process_obsID12
+  use TspLabelsModule, only: TspLabelsType
   use MatrixBaseModule
   implicit none
 
@@ -80,7 +81,7 @@ contains
   !> @brief Create a new UZT package
   !<
   subroutine uzt_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
-                        fmi)
+                        fmi, tsplab, eqnsclfac)
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
@@ -90,6 +91,8 @@ contains
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
     type(TspFmiType), pointer :: fmi
+    type(TspLabelsType), pointer :: tsplab !< class bearing appropriate labels depending on the transport model type
+    real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
     ! -- local
     type(GwtUztType), pointer :: uztobj
 ! ------------------------------------------------------------------------------
@@ -119,6 +122,13 @@ contains
     !    created, it sets fmi%bndlist so that the GWT model has access to all
     !    the flow packages
     uztobj%fmi => fmi
+    !
+    ! -- Store pointer to the labels module for dynamic setting of
+    !    concentration vs temperature
+    uztobj%tsplab => tsplab
+    !
+    ! -- Store pointer to governing equation scale factor
+    uztobj%eqnsclfac => eqnsclfac
     !
     ! -- Return
     return

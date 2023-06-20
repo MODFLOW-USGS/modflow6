@@ -783,7 +783,7 @@ contains
                       pakname, this%fmi, this%tsplab, this%eqnsclfac)
     case ('UZT6')
       call uzt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                      pakname, this%fmi)
+                      pakname, this%fmi, this%tsplab, this%eqnsclfac)
     case ('IST6')
       call ist_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, this%fmi, this%mst)

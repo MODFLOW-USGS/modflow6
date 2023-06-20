@@ -99,7 +99,7 @@ contains
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
     type(TspFmiType), pointer :: fmi
-    type(TspLabelsType), pointer :: tsplab
+    type(TspLabelsType), pointer :: tsplab !< class bearing appropriate labels depending on the transport model type
     real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
     type(GweInputDataType), intent(in), target :: gwecommon !< shared data container for use by multiple GWE packages
     ! -- local
