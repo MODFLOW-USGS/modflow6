@@ -201,7 +201,6 @@ $(OBJDIR)/IdmGweDfnSelector.o \
 $(OBJDIR)/UzfCellGroup.o \
 $(OBJDIR)/Xt3dInterface.o \
 $(OBJDIR)/gwf3tvk8.o \
-$(OBJDIR)/gwf3vsc8_memoryMng_strings.o \
 $(OBJDIR)/GwfNpfOptions.o \
 $(OBJDIR)/NumericalSolution.o \
 $(OBJDIR)/InterfaceMap.o \
