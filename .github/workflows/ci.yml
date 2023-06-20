@@ -364,14 +364,6 @@ jobs:
       - name: Setup Intel Fortran
         uses: modflowpy/install-intelfortran-action@v1
 
-      - name: Fix Micromamba path (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          # https://github.com/modflowpy/install-intelfortran-action#conda-scripts
-          $mamba_bin = "C:\Users\runneradmin\micromamba-root\envs\modflow6\Scripts"
-          echo $mamba_bin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
       - name: Update version files
         working-directory: modflow6/distribution
         run: python update_version.py

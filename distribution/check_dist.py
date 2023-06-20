@@ -21,6 +21,16 @@ def approved(request):
 
 
 @pytest.fixture
+def releasemode(request):
+    return request.config.getoption("--releasemode")
+
+
+@pytest.fixture
+def full(request):
+    return request.config.getoption("--full")
+
+
+@pytest.fixture
 def dist_dir_path(request):
     def skip():
         pytest.skip(f"no distribution directory found at {path}")
@@ -36,7 +46,10 @@ def dist_dir_path(request):
     return path
 
 
-def test_sources(dist_dir_path, approved):
+def test_sources(dist_dir_path, approved, releasemode, full):
+    if not full:
+        pytest.skip(reason="sources not included in minimal distribution")
+
     assert (dist_dir_path / "src").is_dir()
     assert (dist_dir_path / "src" / "mf6.f90").is_file()
 
@@ -50,13 +63,15 @@ def test_sources(dist_dir_path, approved):
     assert line
 
     # make sure IDEVELOPMODE was set correctly
-    branch = get_branch()
-    idevelopmode = 0 if approved else 1
+    idevelopmode = 0 if releasemode else 1
     assert f"IDEVELOPMODE = {idevelopmode}" in line
 
 
 @pytest.mark.skipif(not _fc, reason="needs Fortran compiler")
-def test_makefiles(dist_dir_path):
+def test_makefiles(dist_dir_path, full):
+    if not full:
+        pytest.skip(reason="makefiles not included in minimal distribution")
+
     assert (dist_dir_path / "make" / "makefile").is_file()
     assert (dist_dir_path / "make" / "makedefaults").is_file()
     assert (dist_dir_path / "utils" / "zonebudget" / "make" / "makefile").is_file()
@@ -71,7 +86,10 @@ def test_makefiles(dist_dir_path):
         print(subprocess.check_output("make", cwd=dist_dir_path / "utils" / "mf5to6" / "make", shell=True))
 
 
-def test_msvs(dist_dir_path):
+def test_msvs(dist_dir_path, full):
+    if not full:
+        pytest.skip(reason="MSVS files not included in minimal distribution")
+
     assert (dist_dir_path / "msvs" / "mf6.sln").is_file()
     assert (dist_dir_path / "msvs" / "mf6.vfproj").is_file()
     assert (dist_dir_path / "msvs" / "mf6bmi.sln").is_file()
@@ -79,25 +97,33 @@ def test_msvs(dist_dir_path):
     assert (dist_dir_path / "msvs" / "mf6core.vfproj").is_file()
 
 
-def test_docs(dist_dir_path):
+def test_docs(dist_dir_path, full):
+    # mf6io should always be included
     assert (dist_dir_path / "doc" / "mf6io.pdf").is_file()
-    assert (dist_dir_path / "doc" / "release.pdf").is_file()
-    assert (dist_dir_path / "doc" / "mf5to6.pdf").is_file()
-    assert (dist_dir_path / "doc" / "zonebudget.pdf").is_file()
-    assert (dist_dir_path / "doc" / "mf6suptechinfo.pdf").is_file()
-    assert (dist_dir_path / "doc" / "mf6examples.pdf").is_file()
 
-    for pub in [
-        "tm6a55",
-        "tm6a56",
-        "tm6a57",
-        "tm6a61",
-        "tm6a62",
-    ]:
-        assert (dist_dir_path / "doc" / f"{pub}.pdf").is_file()
+    if full:
+        # check other custom-built documentation
+        assert (dist_dir_path / "doc" / "release.pdf").is_file()
+        assert (dist_dir_path / "doc" / "mf5to6.pdf").is_file()
+        assert (dist_dir_path / "doc" / "zonebudget.pdf").is_file()
+        assert (dist_dir_path / "doc" / "mf6suptechinfo.pdf").is_file()
+        assert (dist_dir_path / "doc" / "mf6examples.pdf").is_file()
+
+        # check publications downloaded from USGS site
+        for pub in [
+            "tm6a55",
+            "tm6a56",
+            "tm6a57",
+            "tm6a61",
+            "tm6a62",
+        ]:
+            assert (dist_dir_path / "doc" / f"{pub}.pdf").is_file()
 
 
-def test_examples(dist_dir_path):
+def test_examples(dist_dir_path, full):
+    if not full:
+        pytest.skip(reason="examples not included in minimal distribution")
+
     # make sure examples dir exists
     examples_path = dist_dir_path / "examples"
     assert examples_path.is_dir()
@@ -120,10 +146,7 @@ def test_binaries(dist_dir_path, approved):
     assert output.startswith("mf6")
 
     # make sure binaries were built in correct mode
-    if approved:
-        assert "preliminary" not in output, "Binaries were not built in release mode"
-    else:
-        assert "preliminary" in output, "Binaries were not built in development mode"
+    assert ("preliminary" in output) != approved
 
     # check version string
     version = (

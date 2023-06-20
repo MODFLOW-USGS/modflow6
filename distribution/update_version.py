@@ -13,17 +13,20 @@ This script is used to update several files in the modflow6 repository, includin
   ../code.json
   ../src/Utilities/version.f90
 
-Information in these files include version number major.minor.patch[-label], build timestamp,
-whether or not the release is a prerelease candidate or an official distribution, whether the
-source code should be compiled in develop mode or in release mode, and other version metadata.
+Information in these files include version number (major.minor.patch[label]), build timestamp,
+whether or not the release is preliminary/provisional or official/approved, whether the source
+code should be compiled in develop mode (IDEVELOPMODE = 1) or for release, and other metadata.
 
 The version number is read from ../version.txt, which contains major, minor, and patch version
 numbers, and an optional label. Version numbers are substituted into source code, latex files,
-markdown files, etc.  The version number can be overridden using argument --version, short -v.
+markdown files, etc. The version number can be provided explicitly using --version, short -v.
 
-Develop mode is set to 0 if the distribution is approved with --approved, short -a, otherwise,
-it is set to 1.
+If the --releasemode flag is provided, IDEVELOPMODE is set to 0 in src/Utilities/version.f90.
+Otherwise, IDEVELOPMODE is set to 1.
 
+if the --approved flag (short -a) is provided, the disclaimer in src/Utilities/version.f90 and
+the README/DISCLAIMER markdown files is modified to reflect review and approval. Otherwise the
+language reflects preliminary/provisional status, and version strings contain "(preliminary)".
 """
 import argparse
 import json
@@ -232,7 +235,10 @@ def update_version_tex(
 
 
 def update_version_f90(
-    version: Optional[Version], timestamp: datetime, approved: bool = False
+    version: Optional[Version],
+    timestamp: datetime,
+    approved: bool = False,
+    developmode: bool = True
 ):
     path = project_root_path / "src" / "Utilities" / "version.f90"
     lines = open(path, "r").read().splitlines()
@@ -255,7 +261,7 @@ def update_version_f90(
             elif ":: IDEVELOPMODE =" in line:
                 line = (
                     "  integer(I4B), parameter :: "
-                    + f"IDEVELOPMODE = {0 if approved else 1}"
+                    + f"IDEVELOPMODE = {1 if developmode else 0}"
                 )
             elif ":: VERSIONNUMBER =" in line:
                 line = line.rpartition("::")[0] + f":: VERSIONNUMBER = '{version_num}'"
@@ -332,7 +338,8 @@ def update_codejson(version: Version, timestamp: datetime, approved: bool = Fals
 def update_version(
     version: Version = None,
     timestamp: datetime = datetime.now(),
-    approved: bool = False
+    approved: bool = False,
+    developmode: bool = True
 ):
     """
     Update version information stored in version.txt in the project root,
@@ -357,7 +364,7 @@ def update_version(
             update_version_txt_and_py(version, timestamp)
             update_meson_build(version)
             update_version_tex(version, timestamp)
-            update_version_f90(version, timestamp, approved)
+            update_version_f90(version, timestamp, approved, developmode)
             update_readme_and_disclaimer(version, approved)
             update_citation_cff(version, timestamp)
             update_codejson(version, timestamp, approved)
@@ -376,18 +383,26 @@ _current_version = Version.from_file(version_file_path)
      Version(major=_initial_version.major, minor=_initial_version.minor, patch=_initial_version.patch),
      Version(major=_initial_version.major, minor=_initial_version.minor, patch=_initial_version.patch, label="rc")],
 )
-def test_update_version(release_type, version):
+@pytest.mark.parametrize("approved", [True, False])
+@pytest.mark.parametrize("developmode", [True, False])
+def test_update_version(version, approved, developmode):
     m_times = [get_modified_time(file) for file in touched_file_paths]
     timestamp = datetime.now()
 
     try:
-        update_version(release_type=release_type, timestamp=timestamp, version=version)
+        update_version(
+            timestamp=timestamp,
+            version=version,
+            approved=approved,
+            developmode=developmode
+        )
         updated = Version.from_file(version_file_path)
 
         # check files containing version info were modified
         for p, t in zip(touched_file_paths, m_times):
             assert p.stat().st_mtime > t
 
+        # check version number and optional label are correct
         if version:
             # version should be auto-incremented
             assert updated.major == _initial_version.major
@@ -402,9 +417,24 @@ def test_update_version(release_type, version):
             assert updated.patch == _current_version.patch
             if version.label is not None:
                 assert updated.label == version.label
-        
         if version.label is not None:
             assert updated.label == _initial_version
+        
+        # check IDEVELOPMODE was set correctly
+        version_f90_path = project_root_path / "src" / "Utilities" / "version.f90"
+        lines = version_f90_path.read_text().splitlines()
+        assert any(f"IDEVELOPMODE = {1 if developmode else 0}" in line for line in lines)
+
+        # check disclaimer has appropriate language
+        disclaimer_path = project_root_path / "DISCLAIMER.md"
+        disclaimer = disclaimer_path.read_text().splitlines()
+        assert any(("approved for release") in line for line in lines) == approved
+        assert any(("preliminary or provisional") in line for line in lines) != approved
+
+        # check readme has appropriate language
+        readme_path = project_root_path / "README.md"
+        readme = readme_path.read_text().splitlines()
+        assert any(("(preliminary)") in line for line in lines) != approved
     finally:
         for p in touched_file_paths:
             os.system(f"git restore {p}")
@@ -439,10 +469,17 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-a",
-        "--approve",
+        "--approved",
         required=False,
         action="store_true",
-        help="Indicate release is approved (defaults to false for preliminary/development distributions)",
+        help="Approve the release version (defaults to false for preliminary/development distributions)",
+    )
+    parser.add_argument(
+        "-r",
+        "--releasemode",
+        required=False,
+        action="store_true",
+        help="Set IDEVELOPMODE to 0 for release mode (defaults to false for development distributions)",
     )
     parser.add_argument(
         "--bump-major",
@@ -500,5 +537,6 @@ if __name__ == "__main__":
         update_version(
             version=version,
             timestamp=datetime.now(),
-            approved=args.approve,
+            approved=args.approved,
+            developmode=not args.releasemode
         )
