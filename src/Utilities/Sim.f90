@@ -414,6 +414,9 @@ contains
       end if
     end if
     !
+    ! -- write console buffer output to stdout
+    flush (istdout)
+    !
     ! -- determine if an error condition has occurred
     if (sim_errors%count_message() > 0) then
       ireturnerr = 2
