@@ -568,7 +568,7 @@ contains
     !
     ! -- Initialize
     icbcfl = 0
-    ! 
+    !
     ! -- Because mst belongs to gwt, call mst_ot_flow directly (and not from parent)
     if (this%oc%oc_save('BUDGET')) icbcfl = 1
     icbcun = this%oc%oc_save_unit('BUDGET')
