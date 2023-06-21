@@ -436,6 +436,30 @@ jobs:
           # remove binaries for other OSes
           rm -rf $distname/bin-*
           ls "$distname"
+      
+      - name: Install dependencies for example models
+        working-directory: modflow6-examples/etc
+        run: |
+          # install extra Python packages
+          pip install -r requirements.pip.txt
+  
+          # the example models need executables to be on the path
+          distname="${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
+          echo "$distname/bin" >> $GITHUB_PATH
+
+          # execute permissions may not have survived artifact upload/download
+          chmod +x "$distname/bin/mf6"
+          chmod +x "$distname/bin/mf5to6"
+          chmod +x "$distname/bin/zbud6"
+
+          # the example models also need mf2005, triangle and gridgen
+          # (install to a temporary bindir since not part of the dist)
+          mkdir -p "${{ runner.temp }}/bin"
+          get-modflow "${{ runner.temp }}/bin" --subset mf2005,triangle,gridgen
+      
+      - name: Build example models
+        working-directory: modflow6-examples/scripts
+        run: pytest -v -n auto ci_build_files.py
 
       - name: Build distribution
         env:

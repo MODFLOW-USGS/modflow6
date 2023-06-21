@@ -159,12 +159,15 @@ def elapsed_real_to_string(elt):
 
 
 def run_function(id, app, example):
-    return (id, flopy.run_model(
-        app,
-        None,
-        model_ws=example,
-        silent=True,
-        report=True,)
+    return (
+        id,
+        flopy.run_model(
+            app,
+            None,
+            model_ws=example,
+            silent=True,
+            report=True,
+        ),
     )
 
 
@@ -177,7 +180,11 @@ def run_model(current_app: PathLike, previous_app: PathLike, model_path: PathLik
     previous_time = 0.0
 
     generic_names = ["mf6gwf", "mf6gwt"]
-    name = f"{model_path.parent.name}/{model_path.name}" if model_path.name in generic_names else model_path.name
+    name = (
+        f"{model_path.parent.name}/{model_path.name}"
+        if model_path.name in generic_names
+        else model_path.name
+    )
     print(f"Running scenario: {name}")
     line = f"| {name} |"
 
@@ -315,12 +322,13 @@ def write_results(
 
 
 def run_benchmarks(
-        build_path: PathLike,
-        current_bin_path: PathLike,
-        previous_bin_path: PathLike,
-        examples_path: PathLike,
-        output_path: PathLike,
-        excluded: List[str]=[]):
+    build_path: PathLike,
+    current_bin_path: PathLike,
+    previous_bin_path: PathLike,
+    examples_path: PathLike,
+    output_path: PathLike,
+    excluded: List[str] = [],
+):
     """Benchmark current development version against previous release with example models."""
 
     build_path = Path(build_path).expanduser().absolute()
@@ -343,12 +351,20 @@ def run_benchmarks(
 
     if not current_exe.is_file():
         print(f"Building current MODFLOW 6 development version")
-        meson_build(project_path=_project_root_path, build_path=build_path, bin_path=current_bin_path)
+        meson_build(
+            project_path=_project_root_path,
+            build_path=build_path,
+            bin_path=current_bin_path,
+        )
 
     if not previous_exe.is_file():
         version, download_path = download_previous_version(output_path)
         print(f"Rebuilding latest MODFLOW 6 release {version} in development mode")
-        meson_build(project_path=download_path, build_path=build_path, bin_path=previous_bin_path)
+        meson_build(
+            project_path=download_path,
+            build_path=build_path,
+            bin_path=previous_bin_path,
+        )
 
     print(f"Benchmarking MODFLOW 6 versions:")
     print(f"    current: {current_exe}")
@@ -389,7 +405,8 @@ def test_run_benchmarks(tmp_path):
         previous_bin_path=_bin_path / "rebuilt",
         examples_path=_examples_repo_path / "examples",
         output_path=tmp_path,
-        excluded=["previous"])
+        excluded=["previous"],
+    )
     assert (tmp_path / _markdown_file_name).is_file()
 
 
@@ -448,9 +465,7 @@ if __name__ == "__main__":
     )
 
     output_path.mkdir(parents=True, exist_ok=True)
-    assert (
-        examples_repo_path.is_dir()
-    ), f"Examples repo not found: {examples_repo_path}"
+    assert examples_repo_path.is_dir(), f"Examples repo not found: {examples_repo_path}"
 
     run_benchmarks(
         build_path=build_path,
@@ -458,5 +473,5 @@ if __name__ == "__main__":
         previous_bin_path=previous_bin_path,
         examples_path=examples_repo_path / "examples",
         output_path=output_path,
-        excluded=["previous"]
+        excluded=["previous"],
     )
