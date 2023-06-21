@@ -429,15 +429,13 @@ jobs:
 
       - name: Select artifacts for OS
         run: |
-          # create directory for OS-specific artifacts
-          distname="${{ needs.build.outputs.distname }}"
-          mkdir -p "$distname_${{ matrix.ostag }}/bin"
-
-          # move binaries for current OS to distribution bin dir
-          mv "$distname/bin-${{ runner.os }}" "$distname_${{ matrix.ostag }}/bin"
+          # rename bin dir for current OS
+          distname="${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
+          mv "$distname/bin-${{ runner.os }}" "$distname/bin"
 
           # remove binaries for other OSes
-          rm -rf "$distname/bin-*"
+          rm -rf $distname/bin-*
+          ls "$distname"
 
       - name: Build distribution
         env:
@@ -451,8 +449,7 @@ jobs:
           fi
           eval "$cmd"
 
-          # move & rename PDF documents to dist folder
-          
+          # rename PDF documents
           if [[ "${{ inputs.full }}" == "true" ]]; then
             mv "$distname/doc/converter_mf5to6.pdf" "$distname/doc/mf5to6.pdf"
           fi
@@ -547,7 +544,6 @@ jobs:
         run: |
           distname="${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
           7z x $distname.zip -o$distname
-          rm -rf "$distname/bin-*"
           rm -rf "$distname/$distname"
 
       - name: Upload distribution zipfile artifact
