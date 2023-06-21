@@ -516,7 +516,8 @@ contains
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: slnmnames
     integer(I4B), dimension(:), contiguous, pointer :: blocknum
-    character(len=LINELENGTH) :: stype, fname, mnames
+    character(len=LINELENGTH) :: stype, fname
+    character(len=:), allocatable :: mnames
     type(SolutionGroupType), pointer :: sgp
     class(BaseSolutionType), pointer :: sp
     class(BaseModelType), pointer :: mp
@@ -551,6 +552,9 @@ contains
     !
     ! -- create solution groups
     do i = 1, size(blocknum)
+      !
+      ! -- allocate slnmnames string
+      allocate (character(slnmnames(i)%strlen()) :: mnames)
       !
       ! -- attributes for this solution
       stype = slntype(i)
@@ -669,6 +673,9 @@ contains
         end do
       case default
       end select
+      !
+      ! -- clean up
+      deallocate (mnames)
     end do
     !
     ! -- error check final group
