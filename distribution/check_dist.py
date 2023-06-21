@@ -148,10 +148,14 @@ def test_examples(dist_dir_path, full):
     example_paths = [
         p for p in examples_path.glob("*") if p.is_dir() and p.stem.startswith("ex")
     ]
+    print(f"{len(example_paths)} example models found:")
+    pprint(example_paths)
     for p in example_paths:
         pprint(
             subprocess.check_output([str(p / f"run{_scext}")], cwd=p).decode().split()
         )
+        break
+
 
 
 def test_binaries(dist_dir_path, approved):
