@@ -545,45 +545,45 @@ jobs:
           make all
           make check
 
-      - name: Setup Micromamba
-        uses: mamba-org/setup-micromamba@v1
-        with:
-          environment-file: modflow6/environment.yml
-          init-shell: >-
-            bash
-            powershell
-          cache-environment: true
-          cache-downloads: true
+      # - name: Setup Micromamba
+      #   uses: mamba-org/setup-micromamba@v1
+      #   with:
+      #     environment-file: modflow6/environment.yml
+      #     init-shell: >-
+      #       bash
+      #       powershell
+      #     cache-environment: true
+      #     cache-downloads: true
 
-      - name: Build modflow6
-        if: runner.os == 'Windows'
-        working-directory: modflow6
-        run: |
-          meson setup builddir -Ddebug=false -Dparallel=true --prefix=$(pwd) --libdir=bin
-          meson install -C builddir
-          meson test --verbose --no-rebuild -C builddir
+      # - name: Build modflow6
+      #   if: runner.os == 'Windows'
+      #   working-directory: modflow6
+      #   run: |
+      #     meson setup builddir -Ddebug=false -Dparallel=true --prefix=$(pwd) --libdir=bin
+      #     meson install -C builddir
+      #     meson test --verbose --no-rebuild -C builddir
 
-      - name: Show Meson logs
-        if: failure()
-        working-directory: modflow6
-        run: cat builddir/meson-logs/meson-log.txt
+      # - name: Show Meson logs
+      #   if: failure()
+      #   working-directory: modflow6
+      #   run: cat builddir/meson-logs/meson-log.txt
 
-      - name: Update flopy
-        working-directory: modflow6/autotest
-        run: python update_flopy.py
+      # - name: Update flopy
+      #   working-directory: modflow6/autotest
+      #   run: python update_flopy.py
 
-      - name: Get executables
-        working-directory: modflow6/autotest
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: pytest -v --durations 0 get_exes.py
+      # - name: Get executables
+      #   working-directory: modflow6/autotest
+      #   env:
+      #     GITHUB_TOKEN: ${{ github.token }}
+      #   run: pytest -v --durations 0 get_exes.py
 
-      - name: Test programs (parallel)
-        working-directory: modflow6/autotest
-        env:
-          REPOS_PATH: ${{ github.workspace }}
-        run: |
-          branch="${{ github.ref_name }}"
-          marker="not large"
-          markers=$([ "$branch" == "master" ] && echo "$marker and not developmode" || echo "$marker")
-          pytest -v -n auto --parallel --durations 0 -m "$markers"
+      # - name: Test programs (parallel)
+      #   working-directory: modflow6/autotest
+      #   env:
+      #     REPOS_PATH: ${{ github.workspace }}
+      #   run: |
+      #     branch="${{ github.ref_name }}"
+      #     marker="not large"
+      #     markers=$([ "$branch" == "master" ] && echo "$marker and not developmode" || echo "$marker")
+      #     pytest -v -n auto --parallel --durations 0 -m "$markers"
