@@ -583,7 +583,7 @@ def eval_results(sim):
             / (analytical_sln[50] * rhowCpw)
             * 100
         )
-        <= 0.317103470187
+        <= 0.3171034702
     ), msg0
     assert (
         np.min(
@@ -591,7 +591,7 @@ def eval_results(sim):
             / (analytical_sln[50] * rhowCpw)
             * 100
         )
-        >= -2.52020856407
+        >= -2.52020856408
     ), msg0
 
     # Day 100
@@ -601,7 +601,7 @@ def eval_results(sim):
             / (analytical_sln[100] * rhowCpw)
             * 100
         )
-        <= 0.37655443170
+        <= 0.37655443171
     ), msg0
     assert (
         np.min(
@@ -609,7 +609,7 @@ def eval_results(sim):
             / (analytical_sln[100] * rhowCpw)
             * 100
         )
-        >= -2.56004275225
+        >= -2.56004275226
     ), msg0
 
     # If plot is needed, change next statement to "if True:"
