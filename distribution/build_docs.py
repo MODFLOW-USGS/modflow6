@@ -284,7 +284,7 @@ def build_mf6io_tex_example(workspace_path: PathLike, bin_path: PathLike, exampl
 
     # run example model
     with set_dir(workspace_path):
-        out, err, ret = run_cmd(cmd)
+        out, err, ret = run_cmd(cmd, verbose=True)
         buff = out + err
         lines = buff.split("\r\n")
         with open(fname1, "w") as f:
@@ -301,7 +301,7 @@ def build_mf6io_tex_example(workspace_path: PathLike, bin_path: PathLike, exampl
 
     # run model without a namefile present
     with set_dir(workspace_path):
-        out, err, ret = run_cmd(cmd)
+        out, err, ret = run_cmd(cmd, verbose=True)
         buff = out + err
         lines = buff.split("\r\n")
         with open(fname2, "w") as f:
@@ -314,7 +314,7 @@ def build_mf6io_tex_example(workspace_path: PathLike, bin_path: PathLike, exampl
 
     with set_dir(workspace_path):
         # run mf6 command with -h to show help
-        out, err, ret = run_cmd(str(mf6_exe_path), "-h")
+        out, err, ret = run_cmd(str(mf6_exe_path), "-h", verbose=True)
         buff = out + err
         lines = buff.split("\r\n")
         with open(fname3, "w") as f:
@@ -518,7 +518,7 @@ if __name__ == "__main__":
         "-s",
         "--example-for-sample",
         required=False,
-        default=str(_examples_repo_path),
+        default="ex-gwf-twri01",
         help="Name of example model to use for sample mf6 output"
     )
     parser.add_argument(

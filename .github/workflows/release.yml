@@ -320,11 +320,7 @@ jobs:
   
       - name: Build ex-gwf-twri example model
         working-directory: modflow6-examples/scripts
-        run: |
-          python ex-gwf-twri.py
-          ls ../examples
-          echo "====================="
-          ls ../examples/ex-gwf-twri01
+        run: python ex-gwf-twri.py
       
       - name: Create full docs folder structure
         if: inputs.full == true
@@ -352,7 +348,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           mkdir -p "${{ needs.build.outputs.distname }}/doc"
-          cmd="python modflow6/distribution/build_docs.py -b bin -o doc"
+          cmd="python modflow6/distribution/build_docs.py -b bin -o doc -e modflow6-examples"
           if [[ "${{ inputs.full }}" == "true" ]]; then
             cmd="$cmd --full"
           fi
