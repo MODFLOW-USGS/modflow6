@@ -545,28 +545,28 @@ jobs:
           make all
           make check
 
-      # - name: Setup Micromamba
-      #   uses: mamba-org/setup-micromamba@v1
-      #   with:
-      #     environment-file: modflow6/environment.yml
-      #     init-shell: >-
-      #       bash
-      #       powershell
-      #     cache-environment: true
-      #     cache-downloads: true
+      - name: Setup Micromamba
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: modflow6/environment.yml
+          init-shell: >-
+            bash
+            powershell
+          cache-environment: true
+          cache-downloads: true
 
-      # - name: Build modflow6
-      #   if: runner.os == 'Windows'
-      #   working-directory: modflow6
-      #   run: |
-      #     meson setup builddir -Ddebug=false -Dparallel=true --prefix=$(pwd) --libdir=bin
-      #     meson install -C builddir
-      #     meson test --verbose --no-rebuild -C builddir
+      - name: Build modflow6
+        if: runner.os == 'Windows'
+        working-directory: modflow6
+        run: |
+          meson setup builddir -Ddebug=false -Dparallel=true --prefix=$(pwd) --libdir=bin
+          meson install -C builddir
+          meson test --verbose --no-rebuild -C builddir
 
-      # - name: Show Meson logs
-      #   if: failure()
-      #   working-directory: modflow6
-      #   run: cat builddir/meson-logs/meson-log.txt
+      - name: Show Meson logs
+        if: failure()
+        working-directory: modflow6
+        run: cat builddir/meson-logs/meson-log.txt
 
       # - name: Update flopy
       #   working-directory: modflow6/autotest
