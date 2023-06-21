@@ -116,11 +116,11 @@ petsc_dir = meson.project_source_root() / '..' /'petsc-3.18.5'
 petsc_arch = 'arch-ci-mswin-intel-modflow6'
 
 # on windows only with intel
-if build_machine.system() == 'windows' and is_parallel_build
-  if fc_id != 'intel-cl'
-    error('Parallel build on Windows only with intel compiler. Terminating...')
-  endif
-endif
+# if build_machine.system() == 'windows' and is_parallel_build
+#   if fc_id != 'intel-cl'
+#     error('Parallel build on Windows only with intel compiler. Terminating...')
+#   endif
+# endif
 
 # lists for parallel dependencies and compiler arguments
 dependencies = [ ]
