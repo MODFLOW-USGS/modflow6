@@ -528,7 +528,7 @@ jobs:
             mingw-w64-x86_64-toolchain patch python flex \
             pkg-config pkgfile tar unzip mingw-w64-x86_64-cmake \
             mingw-w64-x86_64-msmpi mingw-w64-x86_64-openblas mingw-w64-x86_64-jq \
-            meson ninja
+            mingw-w64-x86_64-meson mingw-w64-x86_64-ninja
 
       - name: Configure PETSc
         if: runner.os == 'Windows'
