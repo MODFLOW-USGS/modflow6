@@ -480,12 +480,6 @@ jobs:
             mingw-w64-x86_64-python-pip
             mingw-w64-x86_64-python-pytest
 
-      # - name: Setup MPI
-      #   if: runner.os == 'Windows'
-      #   uses: mpi4py/setup-mpi@v1
-      #   with:
-      #     mpi: msmpi
-
       - name: download MS-MPI setup (SDK is from MSYS2)
         if: runner.os == 'Windows'
         run: curl -L -O https://github.com/microsoft/Microsoft-MPI/releases/download/v10.1.1/msmpisetup.exe
@@ -519,36 +513,10 @@ jobs:
           tar -xzf petsc-3.19.1.tar.gz -C petsc --strip-components=1
 
       - name: Configure environment
-        if: runner.os == 'Linux'
-        run: |
-          echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/petsc/linux-gnu/lib/pkgconfig" >> $GITHUB_ENV
-          echo "$GITHUB_WORKSPACE/petsc/linux-gnu/bin" >> $GITHUB_PATH
-
-      - name: Configure environment
-        if: runner.os == 'macOS'
-        run: |
-          echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/petsc/arch-darwin-gcc-debug/lib/pkgconfig" >> $GITHUB_ENV
-          echo "$GITHUB_WORKSPACE/petsc/arch-darwin-gcc-debug/bin" >> $GITHUB_PATH
-
-      - name: Configure environment
         if: runner.os == 'Windows'
         shell: msys2 {0}
         run: |
           mv /C/Strawberry /C/StrawberryTEMP
-
-      - name: Configure PETSc
-        if: runner.os == 'Linux'
-        working-directory: petsc
-        run: |
-          sudo ./configure PETSC_ARCH=linux-gnu --download-fblaslapack --download-openmpi
-          sudo make all
-
-      - name: Configure PETSc
-        if: runner.os == 'macOS'
-        working-directory: petsc
-        run: |
-          sudo ./configure PETSC_DIR="$GITHUB_WORKSPACE/petsc" PETSC_ARCH=arch-darwin-gcc-debug --download-fblaslapack --download-openmpi
-          sudo make all
 
       - name: Prepare PETSc configure (install MSYS packages)
         if: runner.os == 'Windows'
@@ -588,7 +556,7 @@ jobs:
           cache-downloads: true
 
       - name: Build modflow6
-        shell: msys2 {0}
+        if: runner.os == 'Windows'
         working-directory: modflow6
         run: |
           meson setup builddir -Ddebug=false -Dparallel=true --prefix=$(pwd) --libdir=bin
