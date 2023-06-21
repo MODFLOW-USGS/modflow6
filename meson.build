@@ -146,7 +146,7 @@ if is_parallel_build
     mpifort = dependency(mpifort_name, required : mpi.found())
     dependencies += [ mpi, mpifort ]
   else
-    mpi = dependency('mpi', language : 'fortran', required : true)
+    mpi = dependency('mpi', language : 'fortran', required : false)
     if not mpi.found()
       # try MSMPI
       mpi = dependency('msmpi', required : true)
