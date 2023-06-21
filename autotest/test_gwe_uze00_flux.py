@@ -1,3 +1,6 @@
+#  - Similar to test_gwe_uze00.py; however, this looks into whether the
+#    flux input is correct without pinning the temperature of the top-most
+#    cell to a specified value.
 #
 #  - Outer columns not active for unsaturated zone, but are present to host
 #    constant head boundaries at the bottom of the model.
@@ -31,16 +34,40 @@ import os
 import flopy
 import numpy as np
 import pytest
+import math
+
+import flopy.utils.binaryfile as bf
 from framework import TestFramework
 from simulation import TestSimulation
 
-import flopy.utils.binaryfile as bf
-import math
 
-import matplotlib.pyplot as plt
+# Analytical solution derived by Alden, similar in form to
+# Barends (2010) Equation 5 - but remember that that solution
+# pins the temperature of the top cell to a specified temperature
+def flux_analyt(t, z, qt0, qtinfil, v, d):
+    if t == 0.0:
+        flux = qt0
+    else:
+        denom = 2.0 * math.sqrt(d * t)
+        ztermm = (z - v * t) / denom
+        ztermp = (z + v * t) / denom
+        vterm = v * z / d
+        if vterm < 100.0:
+            # might need to adjust this limit
+            flux = qt0 + (qtinfil - qt0) * 0.5 * (
+                math.erfc(ztermm) + math.exp(vterm) * math.erfc(ztermp)
+            )
+        else:
+            zeta = 1.0 / (1.0 + 0.47047 * ztermp)
+            polyterm = zeta * (
+                0.3480242 + zeta * (-0.0958798 + zeta * 0.7478556)
+            )
+            flux = qt0 + 0.5 * (qtinfil - qt0) * (
+                math.erfc(ztermm) + math.exp(vterm - ztermp**2) * polyterm
+            )
+    return flux
 
 
-# Analytical solution, from Barends (2010) Equation 5
 def temp_analyt(t, z, t0, tinfil, v, d):
     if t == 0.0:
         temp = t0
@@ -114,7 +141,7 @@ uzf_pkdat = [[0, (0, 0, 1), 1, 1, 0.00001, 1, 0.0001, 0.20, 0.055, 4]]
 
 # Continue building the UZF list of objects
 for iuzno in np.arange(1, 101, 1):
-    if iuzno < 99:
+    if iuzno < nlay - 1:
         ivertconn = iuzno + 1
     else:
         ivertconn = -1
@@ -139,7 +166,7 @@ uzf_spd = {
     1: [[0, finf, pet, extdp, extwc, zero, zero, zero]],
 }
 
-ex = ["uze00"]
+ex = ["uze00_flux"]
 exdirs = []
 for s in ex:
     exdirs.append(os.path.join("temp", s))
@@ -360,18 +387,6 @@ def build_model(idx, dir):
         filename=f"{gwename}.mst",
     )
 
-    # Instantiating MODFLOW 6 constant temperature boundary condition at
-    tmpspd = {0: [[(0, 0, 1), 10.0]], 1: [[(0, 0, 1), 20.0]]}
-
-    flopy.mf6.ModflowGwetmp(
-        gwe,
-        save_flows=True,
-        print_flows=True,
-        stress_period_data=tmpspd,
-        pname="CTMP",
-        filename="{}.ctmp".format(gwename),
-    )
-
     # Instantiating MODFLOW 6 transport source-sink mixing package
     srctype = "AUX"
     auxname = "TEMPERATURE"
@@ -435,7 +450,7 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_flow(sim):
+def eval_results(sim):
     print("evaluating flow...")
 
     name = ex[sim.idxsim]
@@ -448,19 +463,29 @@ def eval_flow(sim):
     wcobj = flopy.utils.HeadFile(os.path.join(ws, wc_fl), text="water-content")
     wc = wcobj.get_alldata()
 
+    # temperature output
     fl2 = gwename + ".uze.bin"
-
     uzeobj = flopy.utils.HeadFile(os.path.join(ws, fl2), text="TEMPERATURE")
     temps = uzeobj.get_alldata()
 
-    t = np.linspace(0.0, 100.0, 101)
-    z = np.arange(0.05, 10.0, 0.1)
-    z = np.insert(z, 0, 0.0)
+    # Cell flows output
+    qfile = gwename + ".cbc"
+    gweflowsobj = flopy.utils.CellBudgetFile(os.path.join(ws, qfile))
 
-    t0 = 10.0
-    tinfil = 20.0
+    # Binary grid file needed for post-processing
+    fgrb = gwfname + ".dis.grb"
+    grb_file = os.path.join(ws, fgrb)
+
+    # UZE flows
+    fuzebud = gwename + ".uze.bud"
+    uzeflowsobj = flopy.utils.CellBudgetFile(os.path.join(ws, fuzebud))
+    flowsadv = uzeflowsobj.get_data(text="FLOW-JA-FACE")
+
+    t = np.linspace(0.0, 100.0, 101)
+    z = np.linspace(0.0, 9.9, 99)
 
     q = finf  # infiltration rate
+    area = delr * delc
     rhos = 1500.0
     Cps = 760.0
     rhow = 1000.0
@@ -479,118 +504,228 @@ def eval_flow(sim):
     v = rhowCpw / rhoCp_bulk * q
     D = Kt_bulk / rhoCp_bulk
 
-    # Put analytical solution in place
+    t0 = 10.0
+    tinfil = 20.0
+    qt0 = q * t0
+    qtinfil = q * tinfil
+
+    # for converting from J/day to W
+    unitadj = 1 / 86400
+
+    # Get analytical solution
+    conv10 = []
+    cond10 = []
+    conv50 = []
+    cond50 = []
+    conv100 = []
+    cond100 = []
     analytical_sln = np.zeros((len(t), len(z)))
+    simulated_sln = np.zeros((len(t), len(z)))
     for i, tm in enumerate(t):
+        if i == 0:
+            gweflowjaface = gweflowsobj.get_data(
+                text="FLOW-JA-FACE", kstpkper=(0, 0)
+            )
+        else:
+            gweflowjaface = gweflowsobj.get_data(
+                text="FLOW-JA-FACE", kstpkper=(i - 1, 1)
+            )
+        flowscond = flopy.mf6.utils.postprocessing.get_structured_faceflows(
+            gweflowjaface[0][0], grb_file=grb_file
+        )
         for j, depth in enumerate(z):
-            temp = temp_analyt(tm, depth, t0, tinfil, v, D)
-            analytical_sln[i, j] = temp
+            fluxa = flux_analyt(tm, depth, qt0, qtinfil, v, D)
+            analytical_sln[i, j] = fluxa * rhowCpw * unitadj
+
+            (uze1, uze2, floadv) = flowsadv[i][2 * j + 1]
+            (fjunk1, flocond, fjunk2) = flowscond[1][j][0]
+            flo = floadv * rhowCpw * unitadj + flocond * rhowCpw * unitadj
+            if i == 10:
+                conv10.append(floadv * rhowCpw * unitadj)
+                cond10.append(flocond * rhowCpw * unitadj)
+            elif i == 50:
+                conv50.append(floadv * rhowCpw * unitadj)
+                cond50.append(flocond * rhowCpw * unitadj)
+            elif i == 100:
+                conv100.append(floadv * rhowCpw * unitadj)
+                cond100.append(flocond * rhowCpw * unitadj)
+
+            flux = flo / area
+            simulated_sln[i, j] = flux
 
     # Run checks
     msg0 = (
-        "Simulated solution no longer falling within"
-        " default tolerance where it previously did"
+        "Simulated solution has deviated too far from the analytical solution"
     )
-    # Compare day 1. For layer 20 and below, the defaults of allclose should work
-    assert np.allclose(analytical_sln[1, 19:], temps[1, 0, 0, 19:]), msg0
-    # Compare day 10. For layer 39 and below, the defaults of allclose should work
-    assert np.allclose(analytical_sln[10, 38:], temps[10, 0, 0, 38:]), msg0
-    # Compare day 50. For layer 84 and below, the defaults of allclose should work
-    assert np.allclose(analytical_sln[50, 83:], temps[50, 0, 0, 83:]), msg0
-    # Compare day 100, fits are generally good, but do not pass allclose default settings
+    # Following values are calculated as "percent differences" when determining if fits are acceptable
+    # Day 10
+    assert (
+        np.max(
+            ((analytical_sln[10] * rhowCpw) - simulated_sln[10])
+            / (analytical_sln[10] * rhowCpw)
+            * 100
+        )
+        <= 0.51091366512
+    ), msg0
+    assert (
+        np.min(
+            ((analytical_sln[10] * rhowCpw) - simulated_sln[10])
+            / (analytical_sln[10] * rhowCpw)
+            * 100
+        )
+        >= -2.62119104308
+    ), msg0
 
-    # Ensure that the differences in the 1st day fall within established bounds
-    msg1 = (
-        "Simulated fits to analytical solution are "
-        "falling outside established bounds on day 1"
-    )
+    # Day 50
     assert (
-        np.max(analytical_sln[1, :18] - temps[1, 0, 0, :18])
-        <= 1.52921097880
-    ), msg1
+        np.max(
+            ((analytical_sln[50] * rhowCpw) - simulated_sln[50])
+            / (analytical_sln[50] * rhowCpw)
+            * 100
+        )
+        <= 0.317103470187
+    ), msg0
     assert (
-        np.min(analytical_sln[1, :18] - temps[1, 0, 0, :18])
-        >= -0.32260871278
-    ), msg1
+        np.min(
+            ((analytical_sln[50] * rhowCpw) - simulated_sln[50])
+            / (analytical_sln[50] * rhowCpw)
+            * 100
+        )
+        >= -2.52020856407
+    ), msg0
 
-    # Ensure that the differences on day 10 fall within established bounds
-    msg2 = (
-        "Simulated fits to analytical solution are "
-        "falling outside established bounds on day 10"
-    )
+    # Day 100
     assert (
-        np.max(analytical_sln[10, :37] - temps[10, 0, 0, :37])
-        <= 0.15993441016
-    ), msg2
+        np.max(
+            ((analytical_sln[100] * rhowCpw) - simulated_sln[100])
+            / (analytical_sln[100] * rhowCpw)
+            * 100
+        )
+        <= 0.37655443170
+    ), msg0
     assert (
-        np.min(analytical_sln[10, :37] - temps[10, 0, 0, :37])
-        >= -0.22298707253
-    ), msg2
+        np.min(
+            ((analytical_sln[100] * rhowCpw) - simulated_sln[100])
+            / (analytical_sln[100] * rhowCpw)
+            * 100
+        )
+        >= -2.56004275225
+    ), msg0
 
-    # Ensure that the differences on day 50 fall within established bounds
-    msg3 = (
-        "Simulated fits to analytical solution are "
-        "falling outside established bounds on day 50"
-    )
-    assert (
-        np.max(analytical_sln[50, :82] - temps[50, 0, 0, :82])
-        <= 0.09327747258
-    ), msg3
-    assert (
-        np.min(analytical_sln[50, :82] - temps[50, 0, 0, :82])
-        >= -0.21182907402
-    ), msg3
-
-    # Ensure that the differences on day 50 fall within established bounds
-    msg3 = (
-        "Simulated fits to analytical solution are "
-        "falling outside established bounds on day 50"
-    )
-    assert (
-        np.max(analytical_sln[50, :82] - temps[50, 0, 0, :82])
-        <= 0.09327747258
-    ), msg3
-    assert (
-        np.min(analytical_sln[50, :82] - temps[50, 0, 0, :82])
-        >= -0.21182907402
-    ), msg3
-
-    # Ensure that the differences on day 100 fall within established bounds
-    msg4 = (
-        "Simulated fits to analytical solution are "
-        "falling outside established bounds on day 100"
-    )
-    assert (
-        np.max(analytical_sln[100] - temps[100]) <= 0.10680304268
-    ), msg4
-    assert (
-        np.min(analytical_sln[100] - temps[100]) >= -0.20763221276
-    ), msg4
-
-    # If a plot is needed for visual inspection, change 1st if statement to "True"
+    # If plot is needed, change next statement to "if True:"
     if False:
-        analytical_sln = np.zeros((len(t), len(z)))
-        for i, tm in enumerate(t):
-            for j, depth in enumerate(z):
-                temp = temp_analyt(tm, depth, t0, tinfil, v, D)
-                analytical_sln[i, j] = temp
+        import matplotlib.pyplot as plt
+        from matplotlib import transforms
+        from matplotlib.collections import PathCollection
+        from matplotlib.patches import Patch
+        from matplotlib.lines import Line2D
 
-        # first transient stress period
+        fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, figsize=(10, 5))
+        # 10 days
+        # -------
+        polys1 = ax1.stackplot(
+            z,
+            conv10,
+            cond10,
+            labels=["Convection", "Conduction"],
+            colors=["lightseagreen", "lightgreen"],
+        )
+        ax1.set_xlim((-0.05, 10.05))
+        xlims = ax1.get_xlim()
+        for poly in polys1:
+            for path in poly.get_paths():
+                path.vertices = path.vertices[:, ::-1]
+        ax1.set_xlim(0.095 * rhowCpw * unitadj, 0.205 * rhowCpw * unitadj)
+        ax1.set_ylim(xlims[::-1])
+        ax1.plot(simulated_sln[10], z, "-", color="blue", linewidth=1)
+        ax1.plot(analytical_sln[10], z, "-.", color="red")
+        ax1.text(4.9, 0.4, "10 Days")
+
+        legend_elements = [
+            Line2D(
+                [0],
+                [0],
+                linestyle="-",
+                color="blue",
+                lw=1,
+                label="MODFLOW 6 Total Heat Flux",
+            ),
+            Line2D(
+                [0], [0], linestyle="-.", color="red", lw=1, label="Analytical"
+            ),
+            Patch(
+                facecolor="lightseagreen",
+                edgecolor="lightseagreen",
+                label="Convection",
+            ),
+            Patch(
+                facecolor="lightgreen",
+                edgecolor="lightgreen",
+                label="Conduction",
+            ),
+        ]
+
+        ax1.legend(handles=legend_elements, loc="lower right", frameon=False)
+        ax1.set_xlabel("Energy Flux, $\dfrac{Watts}{m^2}$")
+        ax1.set_ylabel("Depth, m")
+
+        # 50 days
+        # -------
+        polys2 = ax2.stackplot(
+            z,
+            conv50,
+            cond50,
+            labels=["Convection", "Conduction"],
+            colors=["lightseagreen", "lightgreen"],
+        )
+        ax2.set_xlim((-0.05, 10.05))
+        xlims = ax2.get_xlim()
+        for poly in polys2:
+            for path in poly.get_paths():
+                path.vertices = path.vertices[:, ::-1]
+        ax2.set_xlim(0.095 * rhowCpw * unitadj, 0.205 * rhowCpw * unitadj)
+        ax2.set_ylim(xlims[::-1])
+        ax2.plot(simulated_sln[50], z, "-", color="blue", linewidth=1)
+        ax2.plot(analytical_sln[50], z, "-.", color="red")
+        ax2.set_xlabel("Energy Flux, $\dfrac{Watts}{m^2}$")
+        ax2.text(4.9, 0.4, "50 Days")
+
+        # 100 days
+        # -------
+        polys3 = ax3.stackplot(
+            z,
+            conv100,
+            cond100,
+            labels=["Convection", "Conduction"],
+            colors=["lightseagreen", "lightgreen"],
+        )
+        ax3.set_xlim((-0.05, 10.05))
+        xlims = ax3.get_xlim()
+        for poly in polys3:
+            for path in poly.get_paths():
+                path.vertices = path.vertices[:, ::-1]
+        ax3.set_xlim(0.095 * rhowCpw * unitadj, 0.205 * rhowCpw * unitadj)
+        ax3.set_ylim(xlims[::-1])
+        ax3.plot(simulated_sln[100], z, "-", color="blue", linewidth=1)
+        ax3.plot(analytical_sln[100], z, "-.", color="red")
+        ax3.set_xlabel("Energy Flux, $\dfrac{Watts}{m^2}$")
+        ax3.text(4.9, 0.4, "100 Days")
+
+        plt.tight_layout()
+        plt.savefig(os.path.join(ws, "dual_view.png"), format="png")
+
         line1 = plt.plot(
-            analytical_sln[1], z, "-", color="red", label="Analytical"
+            analytical_sln[10], z, "-", color="red", label="Analytical"
         )
         line2 = plt.plot(
-            temps[1, 0, 0], z, "-.", color="blue", label="MODFLOW 6"
+            simulated_sln[10], z, "-.", color="blue", label="MODFLOW 6"
         )
-        # 10th transient stress period
-        plt.plot(analytical_sln[10], z, "-", color="red")
-        plt.plot(temps[10, 0, 0], z, "-.", color="blue")
         # 50th transient stress period
         plt.plot(analytical_sln[50], z, "-", color="red")
-        plt.plot(temps[50, 0, 0], z, "-.", color="blue")
+        plt.plot(simulated_sln[50], z, "-.", color="blue")
         # last stress period
         plt.plot(analytical_sln[100], z, "-", color="red")
-        plt.plot(temps[100, 0, 0], z, "-.", color="blue")
+        plt.plot(simulated_sln[100], z, "-.", color="blue")
         # add labels
         plt.text(11.0, 0.85, "1 day", fontsize=10)
         plt.text(12.0, 1.65, "10 days", fontsize=10)
@@ -598,9 +733,7 @@ def eval_flow(sim):
         plt.text(16.0, 4.00, "100 days", fontsize=10)
 
         plt.gca().invert_yaxis()
-        plt.xlabel(
-            "$Temperature, C$"
-        )  # For latex replace with: '$Temperature, ^{\circ}C$'
+        plt.xlabel("$Energy Flux, -$")
         plt.ylabel("$Depth, m$")
         plt.minorticks_on()
         plt.axhline(y=0.0)
@@ -608,18 +741,17 @@ def eval_flow(sim):
         plt.savefig(os.path.join(ws, "fit_view.png"), format="png")
 
 
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "name",
-    ex,
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(name, function_tmpdir, targets):
+def test_mf6model(idx, name, function_tmpdir, targets):
     ws = str(function_tmpdir)
     test = TestFramework()
-    test.build(build_model, 0, ws)
+    test.build(build_model, idx, ws)
     test.run(
         TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_flow, idxsim=0
+            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
         ),
         ws,
     )
