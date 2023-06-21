@@ -438,12 +438,13 @@ jobs:
           ls "$distname"
       
       - name: Install dependencies for example models
-        working-directory: modflow6-examples/etc
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           # install extra Python packages
-          pip install -r requirements.pip.txt
+          pip install -r modflow6-examples/etc/requirements.pip.txt
   
-          # the example models need executables to be on the path
+          # example models need executables to be on the path
           distname="${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
           echo "$distname/bin" >> $GITHUB_PATH
 
@@ -458,7 +459,7 @@ jobs:
           get-modflow "${{ runner.temp }}/bin" --subset mf2005,triangle,gridgen
       
       - name: Build example models
-        working-directory: modflow6-examples/scripts
+        working-directory: modflow6-examples/etc
         run: pytest -v -n auto ci_build_files.py
 
       - name: Build distribution
