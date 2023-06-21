@@ -588,6 +588,7 @@ jobs:
           cache-downloads: true
 
       - name: Build modflow6
+        shell: msys2 {0}
         working-directory: modflow6
         run: |
           meson setup builddir -Ddebug=false -Dparallel=true --prefix=$(pwd) --libdir=bin
