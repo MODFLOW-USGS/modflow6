@@ -113,7 +113,7 @@ message('Parallel build:', is_parallel_build)
 
 # windows options for petsc
 petsc_dir = meson.project_source_root() / '..' /'petsc'
-petsc_arch = 'arch-ci-mswin-intel-modflow6'
+petsc_arch = 'arch-msys-msmpi'
 
 # on windows only with intel
 # if build_machine.system() == 'windows' and is_parallel_build
