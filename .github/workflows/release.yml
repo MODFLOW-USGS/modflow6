@@ -576,19 +576,12 @@ jobs:
             cmd="$cmd --full"
           fi
           eval "$cmd"
-      
-      - name: Unzip (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          distname="${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
-          7z x $distname.zip -o$distname
-          rm -rf "$distname/$distname"
 
       - name: Upload distribution
         uses: actions/upload-artifact@v3
         with:
           name: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
-          path: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
+          path: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}.zip"
 
       - name: Upload release notes
         if: runner.os == 'Linux'
