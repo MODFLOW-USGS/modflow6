@@ -863,7 +863,7 @@ contains
     ! assign ranks for flow models
     rank = 0
     do im = 1, nr_models
-      if (mtypes(im) ==  'GWF6') then
+      if (mtypes(im) == 'GWF6') then
         if (nr_models_proc(rank + 1) == 0) then
           rank = rank + 1
         end if

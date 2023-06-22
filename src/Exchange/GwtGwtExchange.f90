@@ -1292,7 +1292,7 @@ contains
             v = this%simvals(iexg)
           case default
             errmsg = 'Unrecognized observation type: '// &
-                  trim(obsrv%ObsTypeId)
+                     trim(obsrv%ObsTypeId)
             call store_error(errmsg)
             call store_error_unit(this%inobs)
           end select

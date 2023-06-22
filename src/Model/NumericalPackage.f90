@@ -214,7 +214,7 @@ contains
     !
     ! -- make check
     if (this%ionper <= this%lastonper) then
-      write(errmsg, '(a, i0, a, i0, a, i0, a)') &
+      write (errmsg, '(a, i0, a, i0, a, i0, a)') &
         'Error in stress period ', kper, &
         '. Period numbers not increasing.  Found ', this%ionper, &
         ' but last period block was assigned ', this%lastonper, '.'

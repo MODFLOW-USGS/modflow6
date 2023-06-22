@@ -318,7 +318,7 @@ contains
     !
     ! -- continue line if in same record
     if (idt%in_record) then
-      
+
       ! recursively call parse tag again to read rest of line
       call parse_tag(parser, mf6_input, iblock, mshape, filename, iout, .true.)
     end if
