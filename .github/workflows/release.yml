@@ -424,18 +424,23 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
-          # download artifacts to OS-specific directory
           path: ${{ needs.build.outputs.distname }}_${{ matrix.ostag }}
-
-      - name: Select artifacts for OS
+      
+      - name: Select artifacts
+        working-directory: ${{ needs.build.outputs.distname }}_${{ matrix.ostag }}
         run: |
-          # rename bin dir for current OS
-          distname="${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
-          mv "$distname/bin-${{ runner.os }}" "$distname/bin"
+          echo "selecting ${{ matrix.ostag }} artifacts"
+          # remove dists for other systems
+          rm -rf ${{ needs.build.outputs.distname }}_*
+          # remove release notes
+          rm -rf release_notes
+          # rename dist bin directory
+          mv bin-${{ runner.os }} bin
+          # remove binaries for other systems
+          rm -rf bin-*
 
-          # remove binaries for other OSes
-          rm -rf $distname/bin-*
-          ls "$distname"
+          echo "dist directory contains:"
+          ls
       
       - name: Install dependencies for example models
         env:
@@ -518,9 +523,7 @@ jobs:
               -x '*idmloader*' \
               -x '*pymake*' \
               -x '*obj_temp*' \
-              -x '*mod_temp*' \
-              -x '*${{ needs.build.outputs.distname }}*' \
-              -x '*release_notes*'
+              -x '*mod_temp*'
           fi
 
       - name: Zip distribution (Windows)
@@ -554,9 +557,7 @@ jobs:
               -xr!idmloader \
               -xr!pymake \
               -xr!obj_temp \
-              -xr!mod_temp \
-              -xr!${{ needs.build.outputs.distname }}* \
-              -xr!release_notes
+              -xr!mod_temp
           fi
 
       # validate only after zipping distribution to avoid accidentally changing any files
@@ -581,21 +582,13 @@ jobs:
           7z x $distname.zip -o$distname
           rm -rf "$distname/$distname"
 
-      - name: Upload distribution zipfile artifact
-        if: runner.os != 'Windows'
-        uses: actions/upload-artifact@v3
-        with:
-          name: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
-          path: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}.zip"
-
-      - name: Upload distribution zipfile artifact
-        if: runner.os == 'Windows'
+      - name: Upload distribution
         uses: actions/upload-artifact@v3
         with:
           name: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
           path: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
 
-      - name: Upload release notes artifact
+      - name: Upload release notes
         if: runner.os == 'Linux'
         uses: actions/upload-artifact@v3
         with:
