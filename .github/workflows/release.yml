@@ -518,7 +518,9 @@ jobs:
               -x '*idmloader*' \
               -x '*pymake*' \
               -x '*obj_temp*' \
-              -x '*mod_temp*'
+              -x '*mod_temp*' \
+              -x '*${{ needs.build.outputs.distname }}*' \
+              -x '*release_notes*'
           fi
 
       - name: Zip distribution (Windows)
@@ -552,7 +554,9 @@ jobs:
               -xr!idmloader \
               -xr!pymake \
               -xr!obj_temp \
-              -xr!mod_temp
+              -xr!mod_temp \
+              -xr!${{ needs.build.outputs.distname }}* \
+              -xr!release_notes
           fi
 
       # validate only after zipping distribution to avoid accidentally changing any files
