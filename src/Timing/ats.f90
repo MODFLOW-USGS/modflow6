@@ -1,6 +1,5 @@
 ! Outstanding issues for future work:
 !   CSUB state advance/restore
-!   Ensure ATS not specified for steady state period
 !   Add courant time step constraint and other stability controls for GWT model
 module AdaptiveTimeStepModule
 

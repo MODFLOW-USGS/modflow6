@@ -95,6 +95,7 @@ module GwfModule
     procedure, private :: create_bndpkgs
     procedure, private :: create_lstfile
     procedure, private :: log_namfile_options
+    procedure, private :: steady_period_check
     !
   end type GwfModelType
 
@@ -375,6 +376,9 @@ contains
       call packobj%bnd_rp()
       call packobj%bnd_rp_obs()
     end do
+    !
+    ! -- Check for steady state period
+    call this%steady_period_check()
     !
     ! -- Return
     return
@@ -1654,5 +1658,32 @@ contains
 
     write (this%iout, '(1x,a)') 'END NAMEFILE OPTIONS:'
   end subroutine log_namfile_options
+
+  !> @brief Check for steady state period
+  !!
+  !! Write warning message if steady state
+  !! period and adaptive time stepping is 
+  !! active for the period
+  !!
+  !<
+  subroutine steady_period_check(this)
+    ! -- modules
+    use TdisModule, only: kper
+    use AdaptiveTimeStepModule, only: isAdaptivePeriod
+    use SimVariablesModule, only: warnmsg
+    use SimModule, only: store_warning
+    ! -- dummy
+    class(GwfModelType) :: this
+    if (this%iss == 1) then
+      if (isAdaptivePeriod(kper)) then
+        write (warnmsg, '(a,a,a,i0,a)') &
+          'GWF Model (', trim(this%name), ') is steady state for period ', &
+          kper, ' and adaptive time stepping is active.  Adaptive time &
+          &stepping may not work properly for steady-state conditions.'
+        call store_warning(warnmsg)
+      end if
+    end if
+    return
+  end subroutine steady_period_check
 
 end module GwfModule
