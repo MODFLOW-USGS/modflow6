@@ -214,14 +214,10 @@ contains
     !
     ! -- make check
     if (this%ionper <= this%lastonper) then
-      write (errmsg, '(a, i0)') &
-        'ERROR IN STRESS PERIOD ', kper
-      call store_error(errmsg)
-      write (errmsg, '(a, i0)') &
-        'PERIOD NUMBERS NOT INCREASING.  FOUND ', this%ionper
-      call store_error(errmsg)
-      write (errmsg, '(a, i0)') &
-        'BUT LAST PERIOD BLOCK WAS ASSIGNED ', this%lastonper
+      write(errmsg, '(a, i0, a, i0, a, i0, a)') &
+        'Error in stress period ', kper, &
+        '. Period numbers not increasing.  Found ', this%ionper, &
+        ' but last period block was assigned ', this%lastonper, '.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if
@@ -288,7 +284,7 @@ contains
         end if
       end do tag_iter
       if (.not. lkeyword) then
-        write (errmsg, '(4x,a,a)') 'ERROR. UNKNOWN GRIDDATA TAG: ', &
+        write (errmsg, '(a,a)') 'Unknown GRIDDATA tag: ', &
           trim(keyword)
         call store_error(errmsg)
         call this%parser%StoreErrorUnit()

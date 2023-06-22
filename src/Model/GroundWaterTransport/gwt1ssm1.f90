@@ -156,12 +156,12 @@ contains
     !
     ! -- Check to make sure that there are flow packages
     if (this%fmi%nflowpack == 0) then
-      write (errmsg, '(a)') 'SSM PACKAGE DOES NOT DETECT ANY BOUNDARY FLOWS &
-                            &THAT REQUIRE SSM TERMS.  ACTIVATE GWF-GWT &
-                            &EXCHANGE OR ACTIVATE FMI PACKAGE AND PROVIDE A &
-                            &BUDGET FILE THAT CONTAINS BOUNDARY FLOWS.  IF NO &
-                            &BOUNDARY FLOWS ARE PRESENT IN CORRESPONDING GWF &
-                            &MODEL THEN THIS SSM PACKAGE SHOULD BE REMOVED.'
+      write (errmsg, '(a)') 'SSM package does not detect any boundary flows &
+                            &that require SSM terms.  Activate GWF-GWT &
+                            &exchange or activate FMI package and provide a &
+                            &budget file that contains boundary flows.  If no &
+                            &boundary flows are present in corresponding GWF &
+                            &model then this SSM package should be removed.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if
@@ -823,7 +823,7 @@ contains
           this%ipakcb = -1
           write (this%iout, fmtisvflow)
         case default
-          write (errmsg, '(4x,a,a)') 'UNKNOWN SSM OPTION: ', trim(keyword)
+          write (errmsg, '(a,a)') 'Unknown SSM option: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
@@ -899,7 +899,7 @@ contains
           end if
         end do
         if (.not. pakfound) then
-          write (errmsg, '(1x, a, a)') 'FLOW PACKAGE CANNOT BE FOUND: ', &
+          write (errmsg, '(a,a)') 'Flow package cannot be found: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -907,9 +907,9 @@ contains
         !
         ! -- Ensure package was not specified more than once in SOURCES block
         if (this%isrctype(ip) /= 0) then
-          write (errmsg, '(1x, a, a)') &
-            'A PACKAGE CANNOT BE SPECIFIED MORE THAN ONCE IN THE SSM SOURCES &
-            &BLOCK.  THE FOLLOWING PACKAGE WAS SPECIFIED MORE THAN ONCE: ', &
+          write (errmsg, '(a, a)') &
+            'A package cannot be specified more than once in the SSM SOURCES &
+            &block.  The following package was specified more than once: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -926,8 +926,8 @@ contains
           lauxmixed = .true.
           isrctype = 2
         case default
-          write (errmsg, '(1x, a, a)') &
-            'SRCTYPE MUST BE AUX OR AUXMIXED.  FOUND: ', trim(srctype)
+          write (errmsg, '(a, a)') &
+            'SRCTYPE must be AUX or AUXMIXED.  Found: ', trim(srctype)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
@@ -941,7 +941,7 @@ contains
       end do
       write (this%iout, '(1x,a)') 'END PROCESSING SOURCES'
     else
-      write (errmsg, '(1x,a)') 'ERROR.  REQUIRED SOURCES BLOCK NOT FOUND.'
+      write (errmsg, '(a)') 'Required SOURCES block not found.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if
@@ -1003,7 +1003,7 @@ contains
           end if
         end do
         if (.not. pakfound) then
-          write (errmsg, '(1x, a, a)') 'FLOW PACKAGE CANNOT BE FOUND: ', &
+          write (errmsg, '(a,a)') 'Flow package cannot be found: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -1011,10 +1011,10 @@ contains
         !
         ! -- Ensure package was not specified more than once in SOURCES block
         if (this%isrctype(ip) /= 0) then
-          write (errmsg, '(1x, a, a)') &
-            'A PACKAGE CANNOT BE SPECIFIED MORE THAN ONCE IN THE SSM SOURCES &
-            &AND SOURCES_FILES BLOCKS.  THE FOLLOWING PACKAGE WAS SPECIFIED &
-            &MORE THAN ONCE: ', &
+          write (errmsg, '(a, a)') &
+            'A package cannot be specified more than once in the SSM SOURCES &
+            &and SOURCES_FILES blocks.  The following package was specified &
+            &more than once: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -1048,8 +1048,8 @@ contains
               trim(keyword)
           end if
         case default
-          write (errmsg, '(1x, a, a)') &
-            'SRCTYPE MUST BE SPC6.  FOUND: ', trim(srctype)
+          write (errmsg, '(a,a)') &
+            'SRCTYPE must be SPC6.  Found: ', trim(srctype)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
@@ -1103,8 +1103,8 @@ contains
       end if
     end do
     if (.not. auxfound) then
-      write (errmsg, '(1x, a, a)') &
-        'AUXILIARY NAME CANNOT BE FOUND: ', trim(auxname)
+      write (errmsg, '(a, a)') &
+        'Auxiliary name cannot be found: ', trim(auxname)
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if

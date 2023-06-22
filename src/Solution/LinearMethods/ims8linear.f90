@@ -244,7 +244,7 @@ CONTAINS
           else
             this%ILINMETH = 0
             write (errmsg, '(3a)') &
-              'UNKNOWN IMSLINEAR LINEAR_ACCELERATION METHOD (', &
+              'Unknown IMSLINEAR LINEAR_ACCELERATION method (', &
               trim(keyword), ').'
             call store_error(errmsg)
           end if
@@ -259,7 +259,7 @@ CONTAINS
             i = 2
           else
             write (errmsg, '(3a)') &
-              'UNKNOWN IMSLINEAR SCALING_METHOD (', trim(keyword), ').'
+              'Unknown IMSLINEAR SCALING_METHOD (', trim(keyword), ').'
             call store_error(errmsg)
           end if
           this%ISCL = i
@@ -276,7 +276,7 @@ CONTAINS
             i = 2
           else
             write (errmsg, '(3a)') &
-              'UNKNOWN IMSLINEAR REORDERING_METHOD (', trim(keyword), ').'
+              'Unknown IMSLINEAR REORDERING_METHOD (', trim(keyword), ').'
             call store_error(errmsg)
           end if
           this%IORD = i
@@ -289,8 +289,8 @@ CONTAINS
           this%level = i
           if (i < 0) then
             write (errmsg, '(a,1x,a)') &
-              'IMSLINEAR PRECONDITIONER_LEVELS MUST BE GREATER THAN', &
-              'OR EQUAL TO ZERO'
+              'IMSLINEAR PRECONDITIONER_LEVELS must be greater than', &
+              'or equal to zero'
             call store_error(errmsg)
           end if
         case ('PRECONDITIONER_DROP_TOLERANCE')
@@ -299,7 +299,7 @@ CONTAINS
           if (r < DZERO) then
             write (errmsg, '(a,1x,a)') &
               'IMSLINEAR PRECONDITIONER_DROP_TOLERANCE', &
-              'MUST BE GREATER THAN OR EQUAL TO ZERO'
+              'must be greater than or equal to zero'
             call store_error(errmsg)
           end if
           !
@@ -318,14 +318,14 @@ CONTAINS
           ! -- default
         case default
           write (errmsg, '(3a)') &
-            'UNKNOWN IMSLINEAR KEYWORD (', trim(keyword), ').'
+            'Unknown IMSLINEAR keyword (', trim(keyword), ').'
           call store_error(errmsg)
         end select
       end do
       write (iout, '(1x,a)') 'END OF LINEAR DATA'
     else
       if (IFDPARAM == 0) THEN
-        write (errmsg, '(a)') 'NO LINEAR BLOCK DETECTED.'
+        write (errmsg, '(a)') 'NO LINEAR block detected.'
         call store_error(errmsg)
       end if
     end if

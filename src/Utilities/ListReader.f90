@@ -407,10 +407,10 @@ contains
     character(len=LINELENGTH) :: fname
     ! -- formats
     character(len=*), parameter :: fmtmxlsterronly = &
-      "('***ERROR READING LIST. &
-       &THE NUMBER OF RECORDS ENCOUNTERED EXCEEDS THE MAXIMUM NUMBER "// &
-       "OF RECORDS.  TRY INCREASING MAXBOUND FOR THIS LIST."// &
-       "  NUMBER OF RECORDS: ',I0,' MAXBOUND: ',I0)"
+      "('Error reading list. &
+       &The number of records encountered exceeds the maximum number "// &
+       "of records.  Try increasing MAXBOUND for this list."// &
+       "  Number of records: ',I0,' MAXBOUND: ',I0)"
 ! ------------------------------------------------------------------------------
     !
     ! -- determine array sizes

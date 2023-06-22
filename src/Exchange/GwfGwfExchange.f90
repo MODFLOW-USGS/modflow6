@@ -228,9 +228,9 @@ contains
     ! -- Ensure models are in same solution
     if (associated(this%gwfmodel1) .and. associated(this%gwfmodel2)) then
       if (this%gwfmodel1%idsoln /= this%gwfmodel2%idsoln) then
-        call store_error('ERROR.  TWO MODELS ARE CONNECTED IN A GWF '// &
-                         'EXCHANGE BUT THEY ARE IN DIFFERENT SOLUTIONS. '// &
-                         'GWF MODELS MUST BE IN SAME SOLUTION: '// &
+        call store_error('Two models are connected in a GWF '// &
+                         'exchange but they are in different solutions. '// &
+                         'GWF models must be in same solution: '// &
                          trim(this%gwfmodel1%name)//' '// &
                          trim(this%gwfmodel2%name))
         call this%parser%StoreErrorUnit()
@@ -1337,13 +1337,13 @@ contains
     case ('GNC6')
     call this%parser%GetStringCaps(subkey)
     if (subkey /= 'FILEIN') then
-      call store_error('GNC6 KEYWORD MUST BE FOLLOWED BY '// &
+      call store_error('GNC6 keyword must be followed by '// &
                        '"FILEIN" then by filename.')
       call this%parser%StoreErrorUnit()
     end if
     call this%parser%GetString(fname)
     if (fname == '') then
-      call store_error('NO GNC6 FILE SPECIFIED.')
+      call store_error('No GNC6 file specified.')
       call this%parser%StoreErrorUnit()
     end if
     this%ingnc = getunit()
@@ -1357,13 +1357,13 @@ contains
     end if
     call this%parser%GetStringCaps(subkey)
     if (subkey /= 'FILEIN') then
-      call store_error('MVR6 KEYWORD MUST BE FOLLOWED BY '// &
+      call store_error('MVR6 keyword must be followed by '// &
                        '"FILEIN" then by filename.')
       call this%parser%StoreErrorUnit()
     end if
     call this%parser%GetString(fname)
     if (fname == '') then
-      call store_error('NO MVR6 FILE SPECIFIED.')
+      call store_error('No MVR6 file specified.')
       call this%parser%StoreErrorUnit()
     end if
     this%inmvr = getunit()
@@ -1377,7 +1377,7 @@ contains
     end if
     call this%parser%GetStringCaps(subkey)
     if (subkey /= 'FILEIN') then
-      call store_error('OBS8 KEYWORD MUST BE FOLLOWED BY '// &
+      call store_error('OBS8 keyword must be followed by '// &
                        '"FILEIN" then by filename.')
       call this%parser%StoreErrorUnit()
     end if
@@ -1416,15 +1416,15 @@ contains
     !
     ! -- Verify gnc is implicit if exchange has Newton Terms
     if (.not. this%gnc%implicit .and. this%inewton /= 0) then
-      call store_error('GNC IS EXPLICIT, BUT GWF EXCHANGE HAS ACTIVE NEWTON.')
-      call store_error('ADD IMPLICIT OPTION TO GNC OR REMOVE NEWTON FROM '// &
-                       'GWF EXCHANGE.')
+      call store_error('GNC is explicit, but GWF exchange has active newton.')
+      call store_error('Add implicit option to GNC or remove NEWTON from '// &
+                       'GWF exchange.')
       call store_error_unit(this%ingnc)
     end if
     !
     ! -- Perform checks to ensure GNCs match with GWF-GWF nodes
     if (this%nexg /= this%gnc%nexg) then
-      call store_error('NUMBER OF EXCHANGES DOES NOT MATCH NUMBER OF GNCs')
+      call store_error('Number of exchanges does not match number of GNCs')
       call store_error_unit(this%ingnc)
     end if
     !
@@ -2092,6 +2092,7 @@ contains
   subroutine gwf_gwf_save_simvals(this)
     ! -- dummy
     use SimModule, only: store_error, store_error_unit
+    use SimVariablesModule, only: errmsg
     use ConstantsModule, only: DZERO
     use ObserveModule, only: ObserveType
     class(GwfExchangeType), intent(inout) :: this
@@ -2102,7 +2103,6 @@ contains
     integer(I4B) :: n2
     integer(I4B) :: iexg
     real(DP) :: v
-    character(len=100) :: msg
     type(ObserveType), pointer :: obsrv => null()
     !
     ! -- Write simulated values for all gwf-gwf observations
@@ -2119,9 +2119,9 @@ contains
             n2 = this%nodem2(iexg)
             v = this%simvals(iexg)
           case default
-            msg = 'Error: Unrecognized observation type: '// &
+            errmsg = 'Unrecognized observation type: '// &
                   trim(obsrv%ObsTypeId)
-            call store_error(msg)
+            call store_error(errmsg)
             call store_error_unit(this%inobs)
           end select
           call this%obs%SaveOneSimval(obsrv, v)

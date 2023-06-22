@@ -1198,7 +1198,7 @@ contains
           this%idcy = 2
           write (this%iout, fmtidcy2)
         case default
-          write (errmsg, '(a,a)') 'UNKNOWN MST OPTION: ', trim(keyword)
+          write (errmsg, '(a,a)') 'Unknown MST option: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
@@ -1297,64 +1297,64 @@ contains
                                         aname(6))
           lname(6) = .true.
         case default
-          write (errmsg, '(a,a)') 'UNKNOWN GRIDDATA TAG: ', trim(keyword)
+          write (errmsg, '(a,a)') 'Unknown GRIDDATA tag: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
       end do
       write (this%iout, '(1x,a)') 'END PROCESSING GRIDDATA'
     else
-      write (errmsg, '(a)') 'REQUIRED GRIDDATA BLOCK NOT FOUND.'
+      write (errmsg, '(a)') 'Required GRIDDATA block not found.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if
     !
     ! -- Check for rquired porosity
     if (.not. lname(1)) then
-      write (errmsg, '(a)') 'POROSITY NOT SPECIFIED IN GRIDDATA BLOCK.'
+      write (errmsg, '(a)') 'POROSITY not specified in GRIDDATA block.'
       call store_error(errmsg)
     end if
     !
     ! -- Check for required sorption variables
     if (this%isrb > 0) then
       if (.not. lname(2)) then
-        write (errmsg, '(a)') 'SORPTION IS ACTIVE BUT BULK_DENSITY &
-          &NOT SPECIFIED.  BULK_DENSITY MUST BE SPECIFIED IN GRIDDATA BLOCK.'
+        write (errmsg, '(a)') 'Sorption is active but BULK_DENSITY &
+          &not specified.  BULK_DENSITY must be specified in GRIDDATA block.'
         call store_error(errmsg)
       end if
       if (.not. lname(3)) then
-        write (errmsg, '(a)') 'SORPTION IS ACTIVE BUT DISTRIBUTION &
-          &COEFFICIENT NOT SPECIFIED.  DISTCOEF MUST BE SPECIFIED IN &
-          &GRIDDATA BLOCK.'
+        write (errmsg, '(a)') 'Sorption is active but distribution &
+          &coefficient not specified.  DISTCOEF must be specified in &
+          &GRIDDATA block.'
         call store_error(errmsg)
       end if
       if (this%isrb > 1) then
         if (.not. lname(6)) then
-          write (errmsg, '(a)') 'FREUNDLICH OR LANGMUIR SORPTION IS ACTIVE &
-            &BUT SP2 NOT SPECIFIED.  SP2 MUST BE SPECIFIED IN &
-            &GRIDDATA BLOCK.'
+          write (errmsg, '(a)') 'Freundlich or langmuir sorption is active &
+            &but SP2 not specified.  SP2 must be specified in &
+            &GRIDDATA block.'
           call store_error(errmsg)
         end if
       end if
     else
       if (lname(2)) then
-        write (warnmsg, '(a)') 'SORPTION IS NOT ACTIVE BUT &
-          &BULK_DENSITY WAS SPECIFIED.  BULK_DENSITY WILL HAVE NO AFFECT ON &
-          &SIMULATION RESULTS.'
+        write (warnmsg, '(a)') 'Sorption is not active but &
+          &BULK_DENSITY was specified.  BULK_DENSITY will have no affect on &
+          &simulation results.'
         call store_warning(warnmsg)
         write (this%iout, '(1x,a)') 'WARNING.  '//warnmsg
       end if
       if (lname(3)) then
-        write (warnmsg, '(a)') 'SORPTION IS NOT ACTIVE BUT &
-          &DISTRIBUTION COEFFICIENT WAS SPECIFIED.  DISTCOEF WILL HAVE &
-          &NO AFFECT ON SIMULATION RESULTS.'
+        write (warnmsg, '(a)') 'Sorption is not active but &
+          &distribution coefficient was specified.  DISTCOEF will have &
+          &no affect on simulation results.'
         call store_warning(warnmsg)
         write (this%iout, '(1x,a)') 'WARNING.  '//warnmsg
       end if
       if (lname(6)) then
-        write (warnmsg, '(a)') 'SORPTION IS NOT ACTIVE BUT &
-          &SP2 WAS SPECIFIED.  SP2 WILL HAVE &
-          &NO AFFECT ON SIMULATION RESULTS.'
+        write (warnmsg, '(a)') 'Sorption is not active but &
+          &SP2 was specified.  SP2 will have &
+          &no affect on simulation results.'
         call store_warning(warnmsg)
         write (this%iout, '(1x,a)') 'WARNING.  '//warnmsg
       end if
@@ -1363,9 +1363,9 @@ contains
     ! -- Check for required decay/production rate coefficients
     if (this%idcy > 0) then
       if (.not. lname(4)) then
-        write (errmsg, '(a)') 'FIRST OR ZERO ORDER DECAY IS &
-          &ACTIVE BUT THE FIRST RATE COEFFICIENT IS NOT SPECIFIED.  DECAY &
-          &MUST BE SPECIFIED IN GRIDDATA BLOCK.'
+        write (errmsg, '(a)') 'First or zero order decay is &
+          &active but the first rate coefficient is not specified.  DECAY &
+          &must be specified in GRIDDATA block.'
         call store_error(errmsg)
       end if
       if (.not. lname(5)) then
@@ -1381,16 +1381,16 @@ contains
       end if
     else
       if (lname(4)) then
-        write (warnmsg, '(a)') 'FIRST OR ZERO ORER DECAY &
-          &IS NOT ACTIVE BUT DECAY WAS SPECIFIED.  DECAY WILL &
-          &HAVE NO AFFECT ON SIMULATION RESULTS.'
+        write (warnmsg, '(a)') 'First or zero orer decay &
+          &is not active but decay was specified.  DECAY will &
+          &have no affect on simulation results.'
         call store_warning(warnmsg)
         write (this%iout, '(1x,a)') 'WARNING.  '//warnmsg
       end if
       if (lname(5)) then
-        write (warnmsg, '(a)') 'FIRST OR ZERO ORER DECAY &
-          &IS NOT ACTIVE BUT DECAY_SORBED WAS SPECIFIED.  &
-          &DECAY_SORBED WILL HAVE NO AFFECT ON SIMULATION RESULTS.'
+        write (warnmsg, '(a)') 'First or zero orer decay &
+          &is not active but DECAY_SORBED was specified.  &
+          &DECAY_SORBED will have no affect on simulation results.'
         call store_warning(warnmsg)
         write (this%iout, '(1x,a)') 'WARNING.  '//warnmsg
       end if

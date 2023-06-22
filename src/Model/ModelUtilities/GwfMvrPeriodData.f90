@@ -101,7 +101,7 @@ contains
       ! -- Raise error if movers exceeds maxmvr
       if (i > maxmvr) then
         call parser%GetCurrentLine(line)
-        write (errmsg, '(4x,a,a)') 'MOVERS EXCEED MAXMVR ON LINE: ', &
+        write (errmsg, '(a,a)') 'Movers exceed MAXMVR on line: ', &
           trim(adjustl(line))
         call store_error(errmsg)
         call parser%StoreErrorUnit()
@@ -137,7 +137,7 @@ contains
       case ('UPTO')
         this%imvrtype(i) = 4
       case default
-        call store_error('INVALID MOVER TYPE: '//trim(mvrtype_char))
+        call store_error('Invalid mover type: '//trim(mvrtype_char))
         call parser%StoreErrorUnit()
       end select
       this%value(i) = parser%GetDouble()

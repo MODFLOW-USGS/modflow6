@@ -243,7 +243,7 @@ contains
           write (this%iout, fmttas) trim(fname)
           call this%TasManager%add_tasfile(fname)
         case default
-          write (errmsg, '(4x,a,a)') 'UNKNOWN SPC OPTION: ', trim(keyword)
+          write (errmsg, '(a,a)') 'Unknown SPC option: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
@@ -287,20 +287,20 @@ contains
           write (this%iout, '(4x,a,i7)') 'MAXBOUND = ', this%maxbound
         case default
           write (errmsg, '(a,3(1x,a))') &
-            'UNKNOWN', trim(text), 'DIMENSION:', trim(keyword)
+            'Unknown', trim(text), 'dimension:', trim(keyword)
           call store_error(errmsg)
         end select
       end do
       !
       write (this%iout, '(1x,a)') 'END OF '//trim(adjustl(text))//' DIMENSIONS'
     else
-      call store_error('REQUIRED DIMENSIONS BLOCK NOT FOUND.')
+      call store_error('Required DIMENSIONS block not found.')
       call this%parser%StoreErrorUnit()
     end if
     !
     ! -- verify dimensions were set
     if (this%maxbound <= 0) then
-      write (errmsg, '(a)') 'MAXBOUND MUST BE AN INTEGER GREATER THAN ZERO.'
+      write (errmsg, '(a)') 'MAXBOUND must be an integer greater than zero.'
       call store_error(errmsg)
     end if
     !
@@ -605,7 +605,7 @@ contains
         end if
         !
       case default
-        call store_error('LOOKING FOR CONCENTRATION.  FOUND: '//trim(line))
+        call store_error('Looking for CONCENTRATION.  Found: '//trim(line))
         call this%parser%StoreErrorUnit()
       end select
 
@@ -692,14 +692,10 @@ contains
     !
     ! -- make check
     if (this%ionper <= this%lastonper) then
-      write (errmsg, '(a, i0)') &
-        'ERROR IN STRESS PERIOD ', kper
-      call store_error(errmsg)
-      write (errmsg, '(a, i0)') &
-        'PERIOD NUMBERS NOT INCREASING.  FOUND ', this%ionper
-      call store_error(errmsg)
-      write (errmsg, '(a, i0)') &
-        'BUT LAST PERIOD BLOCK WAS ASSIGNED ', this%lastonper
+      write(errmsg, '(a, i0, a, i0, a, i0, a)') &
+        'Error in stress period ', kper, &
+        '. Period numbers not increasing.  Found ', this%ionper, &
+        ' but last period block was assigned ', this%lastonper, '.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if

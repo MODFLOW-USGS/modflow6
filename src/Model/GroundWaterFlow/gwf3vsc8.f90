@@ -1063,8 +1063,8 @@ contains
           this%nviscspecies = this%parser%GetInteger()
           write (this%iout, '(4x,a,i0)') 'NVISCSPECIES = ', this%nviscspecies
         case default
-          write (errmsg, '(4x,a,a)') &
-            'unknown VSC dimension: ', trim(keyword)
+          write (errmsg, '(a,a)') &
+            'Unknown VSC dimension: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
@@ -1452,7 +1452,7 @@ contains
               &specified. THERMAL_A4 will not affect ', 'viscosity calculations.'
           end if
         case default
-          write (errmsg, '(4x,a,a)') '**Error. Unknown VSC option: ', &
+          write (errmsg, '(a,a)') 'Unknown VSC option: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()

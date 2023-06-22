@@ -1609,8 +1609,8 @@ contains
     ! -- check that the transmissivity weighting functions are not specified with
     !    with the this%inwtupw option
     if (this%inwtupw /= 0 .and. this%icellavg < 2) then
-      write (errmsg, '(4x,a,2(1x,a))') &
-        '****ERROR. THE DEV_MODFLOWNWT_UPSTREAM_WEIGHTING OPTION CAN', &
+      write (errmsg, '(a,2(1x,a))') &
+        'THE DEV_MODFLOWNWT_UPSTREAM_WEIGHTING OPTION CAN', &
         'ONLY BE SPECIFIED WITH THE AMT-LMK AND AMT-HMK', &
         'ALTERNATIVE_CELL_AVERAGING OPTIONS IN THE NPF PACKAGE.'
       call store_error(errmsg)
@@ -1618,8 +1618,8 @@ contains
     !
     ! -- check that this%iusgnrhc and this%inwtupw have not both been enabled
     if (this%iusgnrhc /= 0 .and. this%inwtupw /= 0) then
-      write (errmsg, '(4x,a,2(1x,a))') &
-        '****ERROR. THE DEV_MODFLOWUSG_UPSTREAM_WEIGHTED_SATURATION', &
+      write (errmsg, '(a,2(1x,a))') &
+        'THE DEV_MODFLOWUSG_UPSTREAM_WEIGHTED_SATURATION', &
         'AND DEV_MODFLOWNWT_UPSTREAM_WEIGHTING OPTIONS CANNOT BE', &
         'SPECIFIED IN THE SAME NPF PACKAGE.'
       call store_error(errmsg)
