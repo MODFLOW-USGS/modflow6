@@ -465,7 +465,7 @@ jobs:
   
       - name: Build example models
         working-directory: modflow6-examples/etc
-        run: pytest -v -n auto ci_build_files.py
+        run: python ci_build_files.py
 
       - name: Build distribution
         env:
