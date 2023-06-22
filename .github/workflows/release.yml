@@ -457,16 +457,12 @@ jobs:
       - name: Install extra executables
         uses: modflowpy/install-modflow-action@v1
         with:
-          subset: 'mf2005,triangle,gridgen'
-      
-<<<<<<< HEAD
+          subset: mf2005,triangle,gridgen
+
       - name: Update Flopy
-=======
-      - name: Update flopy
->>>>>>> 9d9bdeee1cbae0e1a44827929e1a92599f58ab78
         working-directory: modflow6/autotest
         run: python update_flopy.py
-      
+  
       - name: Build example models
         working-directory: modflow6-examples/etc
         run: pytest -v -n auto ci_build_files.py
