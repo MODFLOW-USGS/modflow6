@@ -303,6 +303,8 @@ jobs:
     
       - name: Install dependencies for ex-gwf-twri example model
         working-directory: modflow6-examples/etc
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           # install extra Python packages
           pip install -r requirements.pip.txt
