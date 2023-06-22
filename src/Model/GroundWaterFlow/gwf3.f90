@@ -1662,7 +1662,7 @@ contains
   !> @brief Check for steady state period
   !!
   !! Write warning message if steady state
-  !! period and adaptive time stepping is 
+  !! period and adaptive time stepping is
   !! active for the period
   !!
   !<
