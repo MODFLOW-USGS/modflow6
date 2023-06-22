@@ -464,6 +464,7 @@ jobs:
         run: python update_flopy.py
   
       - name: Build example models
+        if: inputs.full == true
         working-directory: modflow6-examples/etc
         run: python ci_build_files.py
 
