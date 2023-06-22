@@ -159,7 +159,7 @@ def parse_mf6var_file(fname):
                     key = (name, block)
                 else:
                     key = name
-                if name in vardict:
+                if key in vardict:
                     raise Exception(
                         'Variable already exists in dictionary: ' + name)
                 vardict[key] = vd
@@ -186,7 +186,7 @@ def parse_mf6var_file(fname):
             key = (name, block)
         else:
             key = name
-        if name in vardict:
+        if key in vardict:
             raise Exception(
                 'Variable already exists in dictionary: ' + name)
         vardict[key] = vd
@@ -194,6 +194,16 @@ def parse_mf6var_file(fname):
 
 
 COMMONDESCRIPTIONS = parse_mf6var_file(os.path.join('.', 'dfn', 'common.dfn'))
+
+VALID_TYPES = [
+    'integer',
+    'double precision',
+    'string',
+    'keystring',
+    'keyword',
+    'recarray',
+    'record',
+]
 
 
 def block_entry(varname, block, vardict, prefix='  '):
@@ -210,6 +220,18 @@ def block_entry(varname, block, vardict, prefix='  '):
     if 'time_series' in v:
         if v['time_series'] == 'true':
             tsmarker = '@'
+
+    # check valid type
+    vtype = v['type']
+    if vtype == "double precision":
+        pass
+    elif " " in vtype:
+        vtype = vtype.split(" ", 1)[0]
+    if vtype not in VALID_TYPES:
+        raise ValueError(
+            "{}: {}: {!r} is not a valid type from {}".format(
+                fname, key, vtype, VALID_TYPES)
+        )
 
     # record or recarray
     if v['type'].startswith('rec'):
