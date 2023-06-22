@@ -3,10 +3,11 @@ import re
 import subprocess
 from os import environ
 from pathlib import Path
+from pprint import pprint
 
 import pytest
 
-from utils import get_branch, split_nonnumeric
+from utils import split_nonnumeric
 
 _system = platform.system()
 _eext = ".exe" if _system == "Windows" else ""
@@ -80,10 +81,18 @@ def test_makefiles(dist_dir_path, full):
     assert (dist_dir_path / "utils" / "mf5to6" / "make" / "makedefaults").is_file()
 
     # makefiles can't be used on Windows with ifort compiler
-    if _system != 'Windows' or _fc != 'ifort':
+    if _system != "Windows" or _fc != "ifort":
         print(subprocess.check_output("make", cwd=dist_dir_path / "make", shell=True))
-        print(subprocess.check_output("make", cwd=dist_dir_path / "utils" / "zonebudget" / "make", shell=True))
-        print(subprocess.check_output("make", cwd=dist_dir_path / "utils" / "mf5to6" / "make", shell=True))
+        print(
+            subprocess.check_output(
+                "make", cwd=dist_dir_path / "utils" / "zonebudget" / "make", shell=True
+            )
+        )
+        print(
+            subprocess.check_output(
+                "make", cwd=dist_dir_path / "utils" / "mf5to6" / "make", shell=True
+            )
+        )
 
 
 def test_msvs(dist_dir_path, full):
@@ -128,11 +137,25 @@ def test_examples(dist_dir_path, full):
     examples_path = dist_dir_path / "examples"
     assert examples_path.is_dir()
 
-    # test run an example model with the provided script
-    example_path = next(examples_path.iterdir(), None)
-    assert example_path
-    output = ' '.join(subprocess.check_output([str(example_path / f"run{_scext}")], cwd=example_path).decode().split())
-    print(output)
+    # test run all example models with provided script
+    pprint(
+        subprocess.check_output(
+            [str(examples_path / f"runall{_scext}")], cwd=examples_path
+        )
+    )
+
+    # test run example models individually with provided scripts
+    example_paths = [
+        p for p in examples_path.glob("*") if p.is_dir() and p.stem.startswith("ex")
+    ]
+    print(f"{len(example_paths)} example models found:")
+    pprint(example_paths)
+    for p in example_paths:
+        pprint(
+            subprocess.check_output([str(p / f"run{_scext}")], cwd=p).decode().split()
+        )
+        break
+
 
 
 def test_binaries(dist_dir_path, approved):
@@ -142,16 +165,16 @@ def test_binaries(dist_dir_path, approved):
     assert (bin_path / f"mf5to6{_eext}").is_file()
     assert (bin_path / f"libmf6{_soext}").is_file()
 
-    output = ' '.join(subprocess.check_output([str(bin_path / f"mf6{_eext}"), "-v"]).decode().split()).lower()
+    output = " ".join(
+        subprocess.check_output([str(bin_path / f"mf6{_eext}"), "-v"]).decode().split()
+    ).lower()
     assert output.startswith("mf6")
 
     # make sure binaries were built in correct mode
     assert ("preliminary" in output) != approved
 
     # check version string
-    version = (
-        output.lower().split(' ')[1]
-    )
+    version = output.lower().split(" ")[1]
     print(version)
     v_split = version.split(".")
     assert len(v_split) == 3

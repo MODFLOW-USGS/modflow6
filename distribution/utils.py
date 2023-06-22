@@ -143,4 +143,4 @@ def test_convert_line_endings():
 
 def split_nonnumeric(s):
     match = re.compile("[^0-9]").search(s)
-    return [s[:match.start()], s[match.start():]] if match else s
+    return [s[: match.start()], s[match.start() :]] if match else s
