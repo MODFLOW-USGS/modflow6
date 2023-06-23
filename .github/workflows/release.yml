@@ -303,6 +303,8 @@ jobs:
     
       - name: Install dependencies for ex-gwf-twri example model
         working-directory: modflow6-examples/etc
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           # install extra Python packages
           pip install -r requirements.pip.txt
@@ -424,18 +426,23 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
-          # download artifacts to OS-specific directory
           path: ${{ needs.build.outputs.distname }}_${{ matrix.ostag }}
-
-      - name: Select artifacts for OS
+      
+      - name: Select artifacts
+        working-directory: ${{ needs.build.outputs.distname }}_${{ matrix.ostag }}
         run: |
-          # rename bin dir for current OS
-          distname="${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
-          mv "$distname/bin-${{ runner.os }}" "$distname/bin"
+          echo "selecting ${{ matrix.ostag }} artifacts"
+          # remove dists for other systems
+          rm -rf ${{ needs.build.outputs.distname }}_*
+          # remove release notes
+          rm -rf release_notes
+          # rename dist bin directory
+          mv bin-${{ runner.os }} bin
+          # remove binaries for other systems
+          rm -rf bin-*
 
-          # remove binaries for other OSes
-          rm -rf $distname/bin-*
-          ls "$distname"
+          echo "dist directory contains:"
+          ls
       
       - name: Install dependencies for example models
         env:
@@ -464,6 +471,7 @@ jobs:
         run: python update_flopy.py
   
       - name: Build example models
+        if: inputs.full == true
         working-directory: modflow6-examples/etc
         run: python ci_build_files.py
 
@@ -568,29 +576,14 @@ jobs:
             cmd="$cmd --full"
           fi
           eval "$cmd"
-      
-      - name: Unzip (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          distname="${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
-          7z x $distname.zip -o$distname
-          rm -rf "$distname/$distname"
 
-      - name: Upload distribution zipfile artifact
-        if: runner.os != 'Windows'
+      - name: Upload distribution
         uses: actions/upload-artifact@v3
         with:
           name: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
           path: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}.zip"
 
-      - name: Upload distribution zipfile artifact
-        if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v3
-        with:
-          name: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
-          path: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
-
-      - name: Upload release notes artifact
+      - name: Upload release notes
         if: runner.os == 'Linux'
         uses: actions/upload-artifact@v3
         with:

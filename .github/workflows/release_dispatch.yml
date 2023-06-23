@@ -46,6 +46,7 @@ on:
 jobs:
   set_options:
     name: Set release options
+    if: github.ref_name != 'master'
     runs-on: ubuntu-22.04
     defaults:
       run:
