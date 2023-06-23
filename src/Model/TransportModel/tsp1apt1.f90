@@ -352,8 +352,8 @@ contains
           end if
         end do
         if (this%iauxfpconc == 0) then
-          errmsg = 'COULD NOT FIND AUXILIARY VARIABLE '// &
-                   trim(adjustl(this%cauxfpconc))//' IN FLOW PACKAGE '// &
+          errmsg = 'Could not find auxiliary variable '// &
+                   trim(adjustl(this%cauxfpconc))//' in flow package '// &
                    trim(adjustl(this%flowpackagename))
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -632,8 +632,8 @@ contains
 ! ------------------------------------------------------------------------------
     ierr = 0
     if (itemno < 1 .or. itemno > this%ncv) then
-      write (errmsg, '(4x,a,1x,i6,1x,a,1x,i6)') &
-        '****ERROR. FEATURENO ', itemno, 'MUST BE > 0 and <= ', this%ncv
+      write (errmsg, '(a,1x,i6,1x,a,1x,i6)') &
+        'Featureno ', itemno, 'must be > 0 and <= ', this%ncv
       call store_error(errmsg)
       ierr = 1
     end if
@@ -1433,14 +1433,14 @@ contains
       if (keyword == 'FILEOUT') then
         call this%parser%GetString(fname)
         this%iconcout = getunit()
-        call openfile(this%iconcout, this%iout, fname, 'DATA(BINARY)', &
+       call openfile(this%iconcout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE')
         write (this%iout, fmtaptbin) &
           trim(adjustl(this%text)), trim(adjustl(this%tsplab%depvartype)), &
           trim(fname), this%iconcout
       else
-        write (errmsg, "('OPTIONAL', 1x, a, 1x, 'KEYWORD MUST &
-                         &BE FOLLOWED BY FILEOUT')") this%tsplab%depvartype
+        write (errmsg, "('Optional', 1x, a, 1X, 'keyword must &
+                         &be followed by FILEOUT')") this%tsplab%depvartype
         call store_error(errmsg)
       end if
     case ('BUDGET')
@@ -1453,7 +1453,7 @@ contains
         write (this%iout, fmtaptbin) trim(adjustl(this%text)), 'BUDGET', &
           trim(fname), this%ibudgetout
       else
-        call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
+        call store_error('Optional BUDGET keyword must be followed by FILEOUT')
       end if
     case ('BUDGETCSV')
       call this%parser%GetStringCaps(keyword)
@@ -1465,7 +1465,7 @@ contains
         write (this%iout, fmtaptbin) trim(adjustl(this%text)), 'BUDGET CSV', &
           trim(fname), this%ibudcsv
       else
-        call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
+        call store_error('Optional BUDGETCSV keyword must be followed by &
           &FILEOUT')
       end if
     case default
@@ -1520,8 +1520,8 @@ contains
     !
     ! -- Check for errors
     if (this%ncv < 0) then
-      write (errmsg, '(1x,a)') &
-        'ERROR:  NUMBER OF CONTROL VOLUMES COULD NOT BE DETERMINED CORRECTLY.'
+      write (errmsg, '(a)') &
+        'Number of control volumes could not be determined correctly.'
       call store_error(errmsg)
     end if
     !
@@ -1634,8 +1634,8 @@ contains
         n = this%parser%GetInteger()
 
         if (n < 1 .or. n > this%ncv) then
-          write (errmsg, '(4x,a,1x,i6)') &
-            '****ERROR. itemno MUST BE > 0 and <= ', this%ncv
+          write (errmsg, '(a,1x,i6)') &
+            'Itemno must be > 0 and <= ', this%ncv
           call store_error(errmsg)
           cycle
         end if
@@ -1698,11 +1698,11 @@ contains
       ! -- check for duplicate or missing lakes
       do n = 1, this%ncv
         if (nboundchk(n) == 0) then
-          write (errmsg, '(a,1x,i0)') 'ERROR.  NO DATA SPECIFIED FOR FEATURE', n
+          write (errmsg, '(a,1x,i0)') 'No data specified for feature', n
           call store_error(errmsg)
         else if (nboundchk(n) > 1) then
           write (errmsg, '(a,1x,i0,1x,a,1x,i0,1x,a)') &
-            'ERROR.  DATA FOR FEATURE', n, 'SPECIFIED', nboundchk(n), 'TIMES'
+            'Data for feature', n, 'specified', nboundchk(n), 'times'
           call store_error(errmsg)
         end if
       end do
@@ -1710,7 +1710,7 @@ contains
       write (this%iout, '(1x,a)') &
         'END OF '//trim(adjustl(this%text))//' PACKAGEDATA'
     else
-      call store_error('ERROR.  REQUIRED PACKAGEDATA BLOCK NOT FOUND.')
+      call store_error('Required packagedata block not found.')
     end if
     !
     ! -- terminate if any errors were detected
