@@ -678,23 +678,23 @@ contains
     !
     ! -- Check for IC6, DIS(u), and MST. Stop if not present.
     if (this%inic == 0) then
-      write (errmsg, '(1x,a)') &
-        'ERROR. INITIAL CONDITIONS (IC6) PACKAGE NOT SPECIFIED.'
+      write (errmsg, '(a)') &
+        'Initial conditions (IC6) package not specified.'
       call store_error(errmsg)
     end if
     if (indis == 0) then
-      write (errmsg, '(1x,a)') &
-        'ERROR. DISCRETIZATION (DIS6 or DISU6) PACKAGE NOT SPECIFIED.'
+      write (errmsg, '(a)') &
+        'Discretization (DIS6 or DISU6) package not specified.'
       call store_error(errmsg)
     end if
     if (inmst == 0) then
-      write (errmsg, '(1x,a)') 'ERROR. MASS STORAGE AND TRANSFER (MST6) &
-        &PACKAGE NOT SPECIFIED.'
+      write (errmsg, '(a)') 'Mass storage and transfer (MST6) &
+        &package not specified.'
       call store_error(errmsg)
     end if
     !
     if (count_errors() > 0) then
-      write (errmsg, '(1x,a)') 'ERROR. REQUIRED PACKAGE(S) NOT SPECIFIED.'
+      write (errmsg, '(a)') 'Required package(s) not specified.'
       call store_error(errmsg)
       call store_error_filename(this%filename)
     end if
