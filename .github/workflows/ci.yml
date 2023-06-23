@@ -602,7 +602,7 @@ jobs:
       # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#repository_dispatch
       - name: Send dispatch event
         run: |
-          curl -X POST https://api.github.com/repos/MODFLOW-USGS/modflow6-nightly-build/dispatches \
+          curl -X POST https://api.github.com/repos/${{ github.repository_owner }}/modflow6-nightly-build/dispatches \
           -H 'Accept: application/vnd.github.everest-preview+json' \
           -u ${{ github.token }} \
           --data '{"event_type": "build" }'
