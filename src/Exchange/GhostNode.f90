@@ -96,12 +96,12 @@ contains
     ! -- modules
     use NumericalModelModule, only: NumericalModelType
     use SimModule, only: store_error, store_error_unit
+    use SimVariablesModule, only: errmsg
     ! -- dummy
     class(GhostNodeType) :: this
     class(NumericalModelType), target :: m1
     class(NumericalModelType), target, optional :: m2
     ! -- local
-    character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
     !
     ! -- Point or set attributes
@@ -132,7 +132,7 @@ contains
     ! -- Trap for implicit gnc but models are in different solutions
     if (this%m1%idsoln /= this%m2%idsoln) then
       if (this%implicit) then
-        write (errmsg, '(a)') 'Error.  GNC is implicit but models are in '// &
+        write (errmsg, '(a)') 'GNC is implicit but models are in '// &
           'different solutions.'
         call store_error(errmsg)
         call store_error_unit(this%inunit)
@@ -198,11 +198,11 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: store_error, store_error_unit, count_errors
+    use SimVariablesModule, only: errmsg
     ! -- dummy
     class(GhostNodeType) :: this
     class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: noden, nodem, ipos, ignc, jidx, nodej
     ! -- formats
     character(len=*), parameter :: fmterr = &
@@ -740,10 +740,11 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: store_error
+    use SimVariablesModule, only: errmsg
     ! -- dummy
     class(GhostNodeType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
 ! ------------------------------------------------------------------------------
@@ -776,7 +777,7 @@ contains
           this%implicit = .false.
           write (this%iout, '(4x,a)') 'GHOST NODE CORRECTION IS EXPLICIT.'
         case default
-          write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN GNC OPTION: ', &
+          write (errmsg, '(a,a)') 'Unknown GNC option: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -802,10 +803,11 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: store_error
+    use SimVariablesModule, only: errmsg
     ! -- dummy
     class(GhostNodeType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
 ! ------------------------------------------------------------------------------
@@ -829,7 +831,7 @@ contains
           this%numjs = this%parser%GetInteger()
           write (this%iout, '(4x,a,i7)') 'NUMAPHAJ = ', this%numjs
         case default
-          write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN GNC DIMENSION: ', &
+          write (errmsg, '(a,a)') 'Unknown GNC dimension: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -854,10 +856,11 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: store_error, count_errors
+    use SimVariablesModule, only: errmsg
     ! -- dummy
     class(GhostNodeType) :: this
     ! -- local
-    character(len=LINELENGTH) :: line, errmsg, nodestr, fmtgnc, cellid, &
+    character(len=LINELENGTH) :: line, nodestr, fmtgnc, cellid, &
                                  cellidm, cellidn
     integer(I4B) :: lloc, ierr, ival
     integer(I4B) :: ignc, jidx, nodeun, nodeum, nerr
@@ -970,7 +973,7 @@ contains
       !
       write (this%iout, '(1x,a)') 'END OF GNCDATA'
     else
-      write (errmsg, '(1x,a)') 'ERROR.  REQUIRED GNCDATA BLOCK NOT FOUND.'
+      write (errmsg, '(a)') 'Required GNCDATA block not found.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if
@@ -992,13 +995,13 @@ contains
     ! -- modules
     use NumericalModelModule, only: NumericalModelType
     use SimModule, only: store_error
+    use SimVariablesModule, only: errmsg
     ! -- dummy
     class(GhostNodeType) :: this
     integer(I4B), intent(in) :: nodeu
     integer(I4B), intent(inout) :: noder
     class(NumericalModelType), intent(in) :: model
     ! -- local
-    character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
     !
     if (nodeu < 1 .or. nodeu > model%dis%nodesuser) then

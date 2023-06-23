@@ -1347,23 +1347,23 @@ contains
     !
     ! -- Check for IC8, DIS(u), and NPF. Stop if not present.
     if (this%inic == 0) then
-      write (errmsg, '(1x,a)') &
+      write (errmsg, '(a)') &
         'Initial Conditions (IC6) package not specified.'
       call store_error(errmsg)
     end if
     if (indis == 0) then
-      write (errmsg, '(1x,a)') &
+      write (errmsg, '(a)') &
         'Discretization (DIS6, DISV6, or DISU6) Package not specified.'
       call store_error(errmsg)
     end if
     if (this%innpf == 0) then
-      write (errmsg, '(1x,a)') &
+      write (errmsg, '(a)') &
         'Node Property Flow (NPF6) Package not specified.'
       call store_error(errmsg)
     end if
     !
     if (count_errors() > 0) then
-      write (errmsg, '(1x,a)') 'One or more required package(s) not specified.'
+      write (errmsg, '(a)') 'One or more required package(s) not specified.'
       call store_error(errmsg)
       call store_error_filename(this%filename)
     end if

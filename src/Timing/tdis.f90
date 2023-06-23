@@ -560,7 +560,7 @@ contains
             itmuni = 5
             write (iout, fmtitmuni) 'YEARS'
           case default
-            write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN TIME_UNITS: ', &
+            write (errmsg, '(a,a)') 'Unknown TIME_UNITS: ', &
               trim(keyword)
             call store_error(errmsg)
             call parser%StoreErrorUnit()
@@ -579,7 +579,7 @@ contains
           inats = GetUnit()
           call openfile(inats, iout, fname, 'ATS')
         case default
-          write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN TDIS OPTION: ', &
+          write (errmsg, '(a,a)') 'Unknown TDIS option: ', &
             trim(keyword)
           call store_error(errmsg)
           call parser%StoreErrorUnit()
@@ -712,7 +712,7 @@ contains
           nper = parser%GetInteger()
           write (iout, fmtnper) nper
         case default
-          write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN TDIS DIMENSION: ', &
+          write (errmsg, '(a,a)') 'Unknown TDIS dimension: ', &
             trim(keyword)
           call store_error(errmsg)
           call parser%StoreErrorUnit()
@@ -720,7 +720,7 @@ contains
       end do
       write (iout, '(1x,a)') 'END OF TDIS DIMENSIONS'
     else
-      write (errmsg, '(1x,a)') 'ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.'
+      write (errmsg, '(a)') 'Required DIMENSIONS block not found.'
       call store_error(errmsg)
       call parser%StoreErrorUnit()
     end if
@@ -779,7 +779,7 @@ contains
       end if
       write (iout, '(1x,a)') 'END OF TDIS PERIODDATA'
     else
-      write (errmsg, '(1x,a)') 'ERROR.  REQUIRED PERIODDATA BLOCK NOT FOUND.'
+      write (errmsg, '(a)') 'Required PERIODDATA block not found.'
       call store_error(errmsg)
       call parser%StoreErrorUnit()
     end if
@@ -812,13 +812,13 @@ contains
     character(len=LINELENGTH) :: errmsg
     ! -- formats
     character(len=*), parameter :: fmtpwarn = &
-      "(1X,/1X,'PERLEN IS ZERO FOR STRESS PERIOD ', I0, &
-      &'. PERLEN MUST NOT BE ZERO FOR TRANSIENT PERIODS.')"
+      "(1X,/1X,'PERLEN is zero for stress period ', I0, &
+      &'. PERLEN must not be zero for transient periods.')"
     character(len=*), parameter :: fmtsperror = &
-      &"(A,' FOR STRESS PERIOD ', I0)"
+      &"(A,' for stress period ', I0)"
     character(len=*), parameter :: fmtdterror = &
-      "('TIME STEP LENGTH OF ', G0, ' IS TOO SMALL IN PERIOD ', I0, &
-      &' AND TIME STEP ', I0)"
+      "('Time step length of ', G0, ' is too small in period ', I0, &
+      &' and time step ', I0)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize
@@ -829,7 +829,7 @@ contains
       !
       ! -- Error if nstp less than or equal to zero
       if (nstp(kper) <= 0) then
-        write (errmsg, fmtsperror) 'NUMBER OF TIME STEPS LESS THAN ONE ', kper
+        write (errmsg, fmtsperror) 'Number of time steps less than one ', kper
         call store_error(errmsg)
         return
       end if
@@ -842,14 +842,14 @@ contains
       !
       ! -- Error if tsmult is less than zero
       if (tsmult(kper) <= DZERO) then
-        write (errmsg, fmtsperror) 'TSMULT MUST BE GREATER THAN 0.0 ', kper
+        write (errmsg, fmtsperror) 'TSMULT must be greater than 0.0 ', kper
         call store_error(errmsg)
         return
       end if
       !
       ! -- Error if negative period length
       if (perlen(kper) < DZERO) then
-        write (errmsg, fmtsperror) 'PERLEN CANNOT BE LESS THAN 0.0 ', kper
+        write (errmsg, fmtsperror) 'PERLEN cannot be less than 0.0 ', kper
         call store_error(errmsg)
         return
       end if

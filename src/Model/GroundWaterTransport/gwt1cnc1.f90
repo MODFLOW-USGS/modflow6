@@ -150,7 +150,7 @@ contains
       ibd = this%ibound(node)
       if (ibd < 0) then
         call this%dis%noder_to_string(node, nodestr)
-        call store_error('Error.  Cell is already a constant concentration: ' &
+        call store_error('Cell is already a constant concentration: ' &
                          //trim(adjustl(nodestr)))
         ierr = ierr + 1
       else
@@ -222,7 +222,7 @@ contains
     integer(I4B) :: node
     ! -- formats
     character(len=*), parameter :: fmtcncerr = &
-      &"('CNC BOUNDARY ',i0,' CONC (',g0,') IS LESS THAN ZERO FOR CELL', a)"
+      &"('CNC boundary ',i0,' conc (',g0,') is less than zero for cell', a)"
 ! ------------------------------------------------------------------------------
     !
     ! -- check stress period data

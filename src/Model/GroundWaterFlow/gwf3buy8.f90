@@ -1146,7 +1146,7 @@ contains
           this%nrhospecies = this%parser%GetInteger()
           write (this%iout, '(4x,a,i0)') 'NRHOSPECIES = ', this%nrhospecies
         case default
-          write (errmsg, '(4x,a,a)') &
+          write (errmsg, '(a,a)') &
             'Unknown BUY dimension: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -1688,7 +1688,7 @@ contains
             call store_error(errmsg)
           end if
         case default
-          write (errmsg, '(4x,a,a)') '****Error. Unknown BUY option: ', &
+          write (errmsg, '(a,a)') 'Unknown BUY option: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()

@@ -204,8 +204,8 @@ contains
       ! -- Error if no aux variable specified
       if (this%naux == 0) then
         write (errmsg, '(a,2(1x,a))') &
-          'AUXDEPTHNAME WAS SPECIFIED AS', trim(adjustl(ddrnauxname)), &
-          'BUT NO AUX VARIABLES SPECIFIED.'
+          'AUXDEPTHNAME was specified as', trim(adjustl(ddrnauxname)), &
+          'but no AUX variables specified.'
         call store_error(errmsg)
       end if
       !
@@ -221,8 +221,8 @@ contains
       ! -- Error if aux variable cannot be found
       if (this%iauxddrncol == 0) then
         write (errmsg, '(a,2(1x,a))') &
-          'AUXDEPTHNAME WAS SPECIFIED AS', trim(adjustl(ddrnauxname)), &
-          'BUT NO AUX VARIABLE FOUND WITH THIS NAME.'
+          'AUXDEPTHNAME was specified as', trim(adjustl(ddrnauxname)), &
+          'but no AUX variable found with this name.'
         call store_error(errmsg)
       end if
     end if

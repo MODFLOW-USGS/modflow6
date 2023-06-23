@@ -311,13 +311,14 @@ contains
     case ('DOUBLE3D')
       call load_double3d_type(parser, idt, mf6_input%mempath, mshape, iout)
     case default
-      write (errmsg, '(4x,a,a)') 'Failure reading data for tag: ', trim(tag)
+      write (errmsg, '(a,a)') 'Failure reading data for tag: ', trim(tag)
       call store_error(errmsg)
       call parser%StoreErrorUnit()
     end select
     !
     ! -- continue line if in same record
     if (idt%in_record) then
+
       ! recursively call parse tag again to read rest of line
       call parse_tag(parser, mf6_input, iblock, mshape, filename, iout, .true.)
     end if

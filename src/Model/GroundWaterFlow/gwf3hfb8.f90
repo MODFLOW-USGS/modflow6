@@ -637,7 +637,7 @@ contains
           write (this%iout, '(4x,a)') &
             'THE LIST OF HFBS WILL BE PRINTED.'
         case default
-          write (errmsg, '(4x,a,a)') 'Unknown HFB option: ', &
+          write (errmsg, '(a,a)') 'Unknown HFB option: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -684,7 +684,7 @@ contains
           this%maxhfb = this%parser%GetInteger()
           write (this%iout, '(4x,a,i7)') 'MAXHFB = ', this%maxhfb
         case default
-          write (errmsg, '(4x,a,a)') &
+          write (errmsg, '(a,a)') &
             'Unknown HFB dimension: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -699,7 +699,7 @@ contains
     !
     ! -- verify dimensions were set
     if (this%maxhfb <= 0) then
-      write (errmsg, '(1x,a)') &
+      write (errmsg, '(a)') &
         'MAXHFB must be specified with value greater than zero.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
