@@ -344,7 +344,7 @@ contains
 
         ! -- Read remainder of record
         read (this%inlist, iostat=this%ierr) (this%rlist(jj, ii), jj=1, ldim), &
-          (this%auxvar(ii, jj), jj=1, naux)
+          (this%auxvar(jj, ii), jj=1, naux)
         if (this%ierr /= 0) then
           inquire (unit=this%inlist, name=fname)
           write (errmsg, fmtlsterronly) trim(adjustl(fname)), this%inlist
