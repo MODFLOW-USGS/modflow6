@@ -5,6 +5,7 @@ on:
       - master
       - develop
       - ci-diagnose*
+      - dispatch-dev-build
     paths-ignore:
       - '**.md'
       - 'doc/**'
@@ -598,20 +599,22 @@ jobs:
       actions: write
     runs-on: ubuntu-22.04
     # only run when a PR is merged into develop..
-    if: ${{ github.event_name == 'push' && github.ref_name == 'develop' }}
+    if: github.event_name == 'push' 
+    # # && github.ref_name == 'develop'
     # ..after everything else has passed
-    needs:
-      - lint
-      - build
-      - smoke_test
-      - test_gfortran_latest
-      - test_gfortran_previous
-      - test_ifort
-      - parallel_test
+    # needs:
+    #   - lint
+    #   - build
+    #   - smoke_test
+    #   - test_gfortran_latest
+    #   - test_gfortran_previous
+    #   - test_ifort
+    #   - parallel_test
     steps:
 
       # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#repository_dispatch
       - name: Send dispatch event
+        continue-on-error: true
         run: |
           curl -X POST \
             -H "Accept: application/vnd.github+json" \
@@ -620,3 +623,5 @@ jobs:
             -d '{"event_type": "build"}' \
             https://api.github.com/repos/${{ github.repository_owner }}/modflow6-nightly-build/dispatches
     
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
