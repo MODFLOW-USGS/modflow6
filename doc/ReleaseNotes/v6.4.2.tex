@@ -29,6 +29,7 @@
 		\item The SSM Package for the GWT Model did not work properly with Stress Package Concentration (SPC) input with the READARRAY option for transient models.  Under these conditions, the program would prematurely terminate looking for the next BEGIN PERIOD block.  The program was corrected so that SPC input can be read for transient conditions.
 		\item For some Linux systems, observations were not being correctly written to formatted observation output files when the source code was compiled with the Intel IFORT 19.1.0.166 20191121 compiler. This issue has been addressed by adding a flush statement to ObsUtilityModule::write\_unfmtd\_obs after writing each observation for a time step. This change will not affect simulated observations and should not affect simulation run times.
 		\item The wetted area written to the binary LAK package output was modified to be zero when the lake stage is below the bottom of a connected groundwater cell.  The code uses the lak\_calculate\_conn\_warea() function to determine the wetted area, which makes sense for calculating the flow conductance.
+		\item Fix issue with reading boundary package stress period data from binary files when auxiliary data is included.
 	\end{itemize}
 
 	\underline{INTERNAL FLOW PACKAGES}
