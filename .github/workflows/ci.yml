@@ -594,6 +594,8 @@ jobs:
           
   dispatch_dev_build:
     name: Dispatch development build
+    permissions:
+      actions: write
     runs-on: ubuntu-22.04
     # only run when a PR is merged into develop..
     if: ${{ github.event_name == 'push' && github.ref_name == 'develop' }}
