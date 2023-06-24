@@ -227,7 +227,7 @@ contains
             this%maxbound = this%parser%GetInteger()
             write (this%iout, '(4x,a,i7)') 'MAXBOUND = ', this%maxbound
           case default
-            write (errmsg, '(4x,a,a)') &
+            write (errmsg, '(a,a)') &
               'Unknown '//trim(this%text)//' DIMENSION: ', trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
@@ -244,7 +244,7 @@ contains
     !
     ! -- verify dimensions were set
     if (this%maxbound <= 0) then
-      write (errmsg, '(1x,a)') &
+      write (errmsg, '(a)') &
         'MAXBOUND must be an integer greater than zero.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()

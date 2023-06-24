@@ -314,7 +314,7 @@ contains
          this%gwtExchange%gwtmodel2%inadv == 0) .or. &
         (this%gwtExchange%gwtmodel2%inadv > 0 .and. &
          this%gwtExchange%gwtmodel1%inadv == 0)) then
-      write (errmsg, '(1x,a,a,a)') 'Cannot connect GWT models in exchange ', &
+      write (errmsg, '(a,a,a)') 'Cannot connect GWT models in exchange ', &
         trim(this%gwtExchange%name), ' because one model is configured with ADV &
         &and the other one is not'
       call store_error(errmsg)
@@ -324,7 +324,7 @@ contains
          this%gwtExchange%gwtmodel2%indsp == 0) .or. &
         (this%gwtExchange%gwtmodel2%indsp > 0 .and. &
          this%gwtExchange%gwtmodel1%indsp == 0)) then
-      write (errmsg, '(1x,a,a,a)') 'Cannot connect GWT models in exchange ', &
+      write (errmsg, '(a,a,a)') 'Cannot connect GWT models in exchange ', &
         trim(this%gwtExchange%name), ' because one model is configured with DSP &
         &and the other one is not'
       call store_error(errmsg)
@@ -332,7 +332,7 @@ contains
 
     ! abort on errors
     if (count_errors() > 0) then
-      write (errmsg, '(1x,a)') 'Errors occurred while processing exchange(s)'
+      write (errmsg, '(a)') 'Errors occurred while processing exchange(s)'
       call ustop()
     end if
 

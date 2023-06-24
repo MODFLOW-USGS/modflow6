@@ -16,7 +16,12 @@ from warnings import warn
 import pytest
 from flaky import flaky
 from modflow_devtools.build import meson_build
-from modflow_devtools.download import list_artifacts, download_artifact, get_release, download_and_unzip
+from modflow_devtools.download import (
+    list_artifacts,
+    download_artifact,
+    get_release,
+    download_and_unzip,
+)
 from modflow_devtools.markers import requires_exe, requires_github
 from modflow_devtools.misc import set_dir, run_cmd, is_in_ci
 
@@ -103,12 +108,16 @@ def download_benchmarks(output_path: PathLike, verbose: bool = False) -> Optiona
     name = "run-time-comparison"  # todo make configurable
     repo = "MODFLOW-USGS/modflow6"  # todo make configurable, add pytest/cli args
     artifacts = list_artifacts(repo, name=name, verbose=verbose)
-    artifacts = sorted(artifacts, key=lambda a: datetime.strptime(a['created_at'], '%Y-%m-%dT%H:%M:%SZ'), reverse=True)
+    artifacts = sorted(
+        artifacts,
+        key=lambda a: datetime.strptime(a["created_at"], "%Y-%m-%dT%H:%M:%SZ"),
+        reverse=True,
+    )
     most_recent = next(iter(artifacts), None)
     print(f"Found most recent benchmarks (artifact {most_recent['id']})")
     if most_recent:
         print(f"Downloading benchmarks (artifact {most_recent['id']})")
-        download_artifact(repo, id=most_recent['id'], path=output_path, verbose=verbose)
+        download_artifact(repo, id=most_recent["id"], path=output_path, verbose=verbose)
         print(f"Downloaded benchmarks to {output_path}")
         path = output_path / f"{name}.md"
         assert path.is_file()
@@ -141,13 +150,16 @@ def build_benchmark_tex(output_path: PathLike, overwrite: bool = False):
             current_bin_path=_project_root_path / "bin",
             previous_bin_path=_project_root_path / "bin" / "rebuilt",
             examples_path=_examples_repo_path / "examples",
-            output_path=output_path)
+            output_path=output_path,
+        )
 
     # convert markdown benchmark results to LaTeX
     with set_dir(_release_notes_path):
         tex_path = Path("run-time-comparison.tex")
         tex_path.unlink(missing_ok=True)
-        out, err, ret = run_cmd(sys.executable, "mk_runtimecomp.py", benchmarks_path, verbose=True)
+        out, err, ret = run_cmd(
+            sys.executable, "mk_runtimecomp.py", benchmarks_path, verbose=True
+        )
         assert not ret, out + err
         assert tex_path.is_file()
 
@@ -177,15 +189,15 @@ def build_mf6io_tex_from_dfn(overwrite: bool = False):
             f.stem
             for f in dfn_path.glob("*")
             if f.is_file()
-               and "dfn" in f.suffix
-               and not any(pattern in f.name for pattern in ignored)
+            and "dfn" in f.suffix
+            and not any(pattern in f.name for pattern in ignored)
         ]
         tex_names = [
             f.stem.replace("-desc", "")
             for f in tex_path.glob("*")
             if f.is_file()
-               and "tex" in f.suffix
-               and not any(pattern in f.name for pattern in ignored)
+            and "tex" in f.suffix
+            and not any(pattern in f.name for pattern in ignored)
         ]
 
         return set(tex_names) == set(dfn_names)
@@ -197,7 +209,12 @@ def build_mf6io_tex_from_dfn(overwrite: bool = False):
         tex_files = [f for f in tex_pth.glob("*") if f.is_file()]
         dfn_files = [f for f in dfn_pth.glob("*") if f.is_file()]
 
-        if not overwrite and any(tex_files) and any(dfn_files) and files_match(tex_pth, dfn_pth, ignored):
+        if (
+            not overwrite
+            and any(tex_files)
+            and any(dfn_files)
+            and files_match(tex_pth, dfn_pth, ignored)
+        ):
             print(f"DFN files already exist:")
             pprint(dfn_files)
         else:
@@ -229,13 +246,13 @@ def test_build_mf6io_tex_from_dfn(overwrite):
         for p, t in zip(file_paths, file_mtimes):
             assert overwrite == (p.stat().st_mtime > t)
     finally:
-        for p in (file_paths + [
+        for p in file_paths + [
             # should these be under version control, since they're cleaned in fn above?
             _project_root_path / "doc" / "ConverterGuide" / "converter_mf5to6.bbl",
             _project_root_path / "doc" / "ReleaseNotes" / "ReleaseNotes.bbl",
             _project_root_path / "doc" / "mf6io" / "mf6io.bbl",
-            _project_root_path / "doc" / "zonebudget" / "zonebudget.bbl"
-        ]):
+            _project_root_path / "doc" / "zonebudget" / "zonebudget.bbl",
+        ]:
             os.system(f"git restore {p}")
 
 
@@ -249,7 +266,9 @@ def build_tex_folder_structure(overwrite: bool = False):
         return
 
     with set_dir(_release_notes_path):
-        out, err, ret = run_cmd(sys.executable, "mk_folder_struct.py", "-dp", _project_root_path)
+        out, err, ret = run_cmd(
+            sys.executable, "mk_folder_struct.py", "-dp", _project_root_path
+        )
         assert not ret, out + err
 
     assert path.is_file(), f"Failed to create {path}"
@@ -263,7 +282,9 @@ def test_build_tex_folder_structure():
         os.system(f"git restore {path}")
 
 
-def build_mf6io_tex_example(workspace_path: PathLike, bin_path: PathLike, example_model_path: PathLike):
+def build_mf6io_tex_example(
+    workspace_path: PathLike, bin_path: PathLike, example_model_path: PathLike
+):
     workspace_path = Path(workspace_path) / "workspace"
     bin_path = Path(bin_path).expanduser().absolute()
     mf6_exe_path = bin_path / f"mf6{_eext}"
@@ -284,7 +305,7 @@ def build_mf6io_tex_example(workspace_path: PathLike, bin_path: PathLike, exampl
 
     # run example model
     with set_dir(workspace_path):
-        out, err, ret = run_cmd(cmd)
+        out, err, ret = run_cmd(cmd, verbose=True)
         buff = out + err
         lines = buff.split("\r\n")
         with open(fname1, "w") as f:
@@ -301,7 +322,7 @@ def build_mf6io_tex_example(workspace_path: PathLike, bin_path: PathLike, exampl
 
     # run model without a namefile present
     with set_dir(workspace_path):
-        out, err, ret = run_cmd(cmd)
+        out, err, ret = run_cmd(cmd, verbose=True)
         buff = out + err
         lines = buff.split("\r\n")
         with open(fname2, "w") as f:
@@ -314,7 +335,7 @@ def build_mf6io_tex_example(workspace_path: PathLike, bin_path: PathLike, exampl
 
     with set_dir(workspace_path):
         # run mf6 command with -h to show help
-        out, err, ret = run_cmd(str(mf6_exe_path), "-h")
+        out, err, ret = run_cmd(str(mf6_exe_path), "-h", verbose=True)
         buff = out + err
         lines = buff.split("\r\n")
         with open(fname3, "w") as f:
@@ -331,7 +352,12 @@ def test_build_mf6io_tex_example():
     pass
 
 
-def build_pdfs_from_tex(tex_paths: List[PathLike], output_path: PathLike, passes: int = 3, overwrite: bool = False):
+def build_pdfs_from_tex(
+    tex_paths: List[PathLike],
+    output_path: PathLike,
+    passes: int = 3,
+    overwrite: bool = False,
+):
     print(f"Building PDFs from LaTex:")
     pprint(tex_paths)
 
@@ -394,18 +420,20 @@ def test_build_pdfs_from_tex(tmp_path):
     try:
         build_pdfs_from_tex(tex_paths, tmp_path)
     finally:
-        for p in (tex_paths[:-1] + bbl_paths):
+        for p in tex_paths[:-1] + bbl_paths:
             os.system(f"git restore {p}")
 
 
-def build_documentation(bin_path: PathLike,
-                        output_path: PathLike,
-                        examples_repo_path: PathLike,
-                        # Example to use to render sample mf6 output in the docs.
-                        # Must be a valid directory in modflow6-examples/examples
-                        example_for_sample: str = "ex-gwf-twri01",
-                        full: bool = False,
-                        overwrite: bool = False):
+def build_documentation(
+    bin_path: PathLike,
+    output_path: PathLike,
+    examples_repo_path: PathLike,
+    # Example to use to render sample mf6 output in the docs.
+    # Must be a valid directory in modflow6-examples/examples
+    example_for_sample: str = "ex-gwf-twri01",
+    full: bool = False,
+    overwrite: bool = False,
+):
     print(f"Building {'full' if full else 'full'} documentation")
 
     bin_path = Path(bin_path).expanduser().absolute()
@@ -456,7 +484,9 @@ def build_documentation(bin_path: PathLike,
                     raise
 
         # convert LaTex to PDF
-        build_pdfs_from_tex(tex_paths=_full_dist_tex_paths, output_path=output_path, overwrite=overwrite)
+        build_pdfs_from_tex(
+            tex_paths=_full_dist_tex_paths, output_path=output_path, overwrite=overwrite
+        )
 
     # enforce os line endings on all text files
     windows_line_endings = True
@@ -499,7 +529,13 @@ if __name__ == "__main__":
             """
         ),
     )
-    parser.add_argument("-t", "--tex-path", action="append", required=False, help="Extra LaTeX files to include")
+    parser.add_argument(
+        "-t",
+        "--tex-path",
+        action="append",
+        required=False,
+        help="Extra LaTeX files to include",
+    )
     parser.add_argument(
         "-b",
         "--bin-path",
@@ -512,14 +548,14 @@ if __name__ == "__main__":
         "--examples-repo-path",
         required=False,
         default=str(_examples_repo_path),
-        help="Path to directory containing modflow6 example models"
+        help="Path to directory containing modflow6 example models",
     )
     parser.add_argument(
         "-s",
         "--example-for-sample",
         required=False,
-        default=str(_examples_repo_path),
-        help="Name of example model to use for sample mf6 output"
+        default="ex-gwf-twri01",
+        help="Name of example model to use for sample mf6 output",
     )
     parser.add_argument(
         "-o",
@@ -533,7 +569,7 @@ if __name__ == "__main__":
         required=False,
         default=False,
         action="store_true",
-        help="Build docs for a full rather than minimal distribution"
+        help="Build docs for a full rather than minimal distribution",
     )
     parser.add_argument(
         "-f",
@@ -541,10 +577,12 @@ if __name__ == "__main__":
         required=False,
         default=False,
         action="store_true",
-        help="Recreate and overwrite existing artifacts"
+        help="Recreate and overwrite existing artifacts",
     )
     args = parser.parse_args()
-    tex_paths = _full_dist_tex_paths + ([Path(p) for p in args.tex_path] if args.tex_path else [])
+    tex_paths = _full_dist_tex_paths + (
+        [Path(p) for p in args.tex_path] if args.tex_path else []
+    )
     output_path = Path(args.output_path).expanduser().absolute()
     output_path.mkdir(parents=True, exist_ok=True)
     bin_path = Path(args.bin_path).expanduser().absolute()
@@ -557,4 +595,5 @@ if __name__ == "__main__":
         examples_repo_path=examples_repo_path,
         example_for_sample=example_for_sample,
         full=args.full,
-        overwrite=args.force)
+        overwrite=args.force,
+    )

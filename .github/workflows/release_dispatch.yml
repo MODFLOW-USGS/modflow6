@@ -16,38 +16,37 @@ on:
   workflow_dispatch:
     inputs:
       approve:
-        description: 'Whether to approve the release. Default is false, i.e. a preliminary/provisional release.'
+        description: 'Approve the release. Otherwise it is preliminary/provisional.'
         required: false
         type: boolean
         default: false
       branch:
-        description: 'Branch to use for release. Defaults to the current branch (for releases triggered by pushing a release branch).'
-        required: false
+        description: 'Branch to release from.'
+        required: true
         type: string
-        default: ''
       commit_version:
-        description: 'Whether to commit version numbers back to the develop branch. Default is false. Not considered if approve is false.'
+        description: 'Commit version numbers back to the develop branch. Not considered if reset is false.'
         required: false
         type: boolean
         default: false
       reset:
-        description: 'Whether to reset the develop branch to the state of the master branch. Default is false. Not considered if approve is false.'
+        description: 'Reset the develop branch from the master branch. Not considered if approve is false.'
         required: false
         type: boolean
         default: false
       run_tests:
-        description: 'Whether to run tests after building binaries. Default is true.'
+        description: 'Run tests after building binaries.'
         required: true
         type: boolean
         default: true
       version:
         description: 'Version number to use for release.'
-        required: false
+        required: true
         type: string
-        default: ''
 jobs:
   set_options:
     name: Set release options
+    if: github.ref_name != 'master'
     runs-on: ubuntu-22.04
     defaults:
       run:

@@ -170,7 +170,7 @@ contains
       call urword(line, lloc, istart, istop, 3, ival, rval, 0, 0)
       this%radius = rval
     case default
-      write (errmsg, '(4x,a,a)') &
+      write (errmsg, '(a,a)') &
         'Unknown circular geometry attribute: ', line(istart:istop)
       call store_error(errmsg, terminate=.TRUE.)
     end select

@@ -225,7 +225,7 @@ contains
         case ('TRANSIENT')
           this%iss = 0
         case default
-          write (errmsg, '(4x,a,a)') 'Unknown STORAGE data tag: ', &
+          write (errmsg, '(a,a)') 'Unknown STORAGE data tag: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -919,7 +919,7 @@ contains
           this%iorig_ss = 0
           write (this%iout, fmtconfss)
         case default
-          write (errmsg, '(4x,a,a)') 'Unknown STO option: ', &
+          write (errmsg, '(a,a)') 'Unknown STO option: ', &
             trim(keyword)
           call store_error(errmsg, terminate=.TRUE.)
         end select
@@ -998,7 +998,7 @@ contains
                                         aname(3))
           readsy = .true.
         case default
-          write (errmsg, '(4x,a,a)') 'Unknown GRIDDATA tag: ', &
+          write (errmsg, '(a,a)') 'Unknown GRIDDATA tag: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -1006,7 +1006,7 @@ contains
       end do
       write (this%iout, '(1x,a)') 'END PROCESSING GRIDDATA'
     else
-      write (errmsg, '(1x,a)') 'Required GRIDDATA block not found.'
+      write (errmsg, '(a)') 'Required GRIDDATA block not found.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if

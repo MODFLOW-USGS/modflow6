@@ -303,7 +303,7 @@ contains
               end if
             end if
           case default
-            write (errmsg, '(4x,a,a)') &
+            write (errmsg, '(a,a)') &
               'Unknown '//trim(this%text)//' DIMENSION: ', trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
@@ -320,7 +320,7 @@ contains
     !
     ! -- verify dimensions were set
     if (this%maxbound <= 0) then
-      write (errmsg, '(1x,a)') &
+      write (errmsg, '(a)') &
         'MAXBOUND must be an integer greater than zero.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
@@ -854,8 +854,8 @@ contains
         ! -- Check to see if other variables have already been read.  If so,
         !    then terminate with an error that IEVT must be read first.
         if (ivarsread > 0) then
-          call store_error('****ERROR. IEVT IS NOT FIRST VARIABLE IN &
-            &PERIOD BLOCK OR IT IS SPECIFIED MORE THAN ONCE.')
+          call store_error('IEVT is not first variable in &
+            &period block or it is specified more than once.')
           call this%parser%StoreErrorUnit()
         end if
         !
@@ -874,8 +874,8 @@ contains
       case ('SURFACE')
         !
         if (this%inievt == 0) then
-          call store_error('Error.  IEVT must be read at least once ')
-          call store_error('prior to reading the SURFACE array.')
+          call store_error('IEVT must be read at least once &
+            &prior to reading the SURFACE array.')
           call this%parser%StoreErrorUnit()
         end if
         !
@@ -922,8 +922,8 @@ contains
       case ('DEPTH')
         !
         if (this%inievt == 0) then
-          call store_error('IEVT must be read at least once ')
-          call store_error('prior to reading the DEPTH array.')
+          call store_error('IEVT must be read at least once &
+                           &prior to reading the DEPTH array.')
           call this%parser%StoreErrorUnit()
         end if
         !
@@ -942,8 +942,8 @@ contains
         end if
         !
         if (this%inievt == 0) then
-          call store_error('IEVT must be read at least once ')
-          call store_error('prior to reading any PXDP array.')
+          call store_error('IEVT must be read at least once &
+                           &prior to reading any PXDP array.')
           call this%parser%StoreErrorUnit()
         end if
         !
@@ -970,8 +970,8 @@ contains
         end if
         !
         if (this%inievt == 0) then
-          call store_error('IEVT must be read at least once ')
-          call store_error('prior to reading any PETM array.')
+          call store_error('IEVT must be read at least once &
+                           &prior to reading any PETM array.')
           call this%parser%StoreErrorUnit()
         end if
         !
@@ -1027,7 +1027,7 @@ contains
         ! -- Nothing found
         if (.not. found) then
           call this%parser%GetCurrentLine(line)
-          call store_error('LOOKING FOR VALID VARIABLE NAME.  FOUND: ')
+          call store_error('Looking for valid variable name.  Found: ')
           call store_error(trim(line))
           call this%parser%StoreErrorUnit()
         end if

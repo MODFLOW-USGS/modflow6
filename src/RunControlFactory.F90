@@ -27,8 +27,8 @@ contains
     end if
 #else
     if (simulation_mode == 'PARALLEL') then
-      write (errmsg, '(1x,a)') &
-        'ERROR. Can not run parallel mode with this executable: no MPI'
+      write (errmsg, '(a)') &
+        'Can not run parallel mode with this executable: no MPI'
       call store_error(errmsg, terminate=.true.)
     end if
     controller => create_seq_run_control()

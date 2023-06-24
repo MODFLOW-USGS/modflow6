@@ -1400,8 +1400,8 @@ contains
       ! -- Error if no aux variable specified
       if (this%naux == 0) then
         write (errmsg, '(a,2(1x,a))') &
-          'AUXMULTNAME WAS SPECIFIED AS', trim(adjustl(sfacauxname)), &
-          'BUT NO AUX VARIABLES SPECIFIED.'
+          'AUXMULTNAME was specified as', trim(adjustl(sfacauxname)), &
+          'but no AUX variables specified.'
         call store_error(errmsg)
       end if
       !
@@ -1417,8 +1417,8 @@ contains
       ! -- Error if aux variable cannot be found
       if (this%iauxmultcol == 0) then
         write (errmsg, '(a,2(1x,a))') &
-          'AUXMULTNAME WAS SPECIFIED AS', trim(adjustl(sfacauxname)), &
-          'BUT NO AUX VARIABLE FOUND WITH THIS NAME.'
+          'AUXMULTNAME was specified as', trim(adjustl(sfacauxname)), &
+          'but no AUX variable found with this name.'
         call store_error(errmsg)
       end if
     end if
@@ -1466,7 +1466,7 @@ contains
           write (this%iout, '(4x,a,i7)') 'MAXBOUND = ', this%maxbound
         case default
           write (errmsg, '(a,3(1x,a))') &
-            'UNKNOWN', trim(this%text), 'DIMENSION:', trim(keyword)
+            'Unknown', trim(this%text), 'dimension:', trim(keyword)
           call store_error(errmsg)
         end select
       end do
@@ -1474,13 +1474,13 @@ contains
       write (this%iout, '(1x,a)') &
         'END OF '//trim(adjustl(this%text))//' DIMENSIONS'
     else
-      call store_error('REQUIRED DIMENSIONS BLOCK NOT FOUND.')
+      call store_error('Required DIMENSIONS block not found.')
       call this%parser%StoreErrorUnit()
     end if
     !
     ! -- verify dimensions were set
     if (this%maxbound <= 0) then
-      write (errmsg, '(a)') 'MAXBOUND MUST BE AN INTEGER GREATER THAN ZERO.'
+      write (errmsg, '(a)') 'MAXBOUND must be an integer greater than zero.'
       call store_error(errmsg)
     end if
     !
