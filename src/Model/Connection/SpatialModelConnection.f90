@@ -550,13 +550,13 @@ contains ! module procedures
     if (conEx%ixt3d > 0) then
       ! if XT3D, we need these angles:
       if (conEx%model1%dis%con%ianglex == 0) then
-        write (errmsg, '(1x,a,a,a,a,a)') 'XT3D configured on the exchange ', &
+        write (errmsg, '(a,a,a,a,a)') 'XT3D configured on the exchange ', &
           trim(conEx%name), ' but the discretization in model ', &
           trim(conEx%model1%name), ' has no ANGLDEGX specified'
         call store_error(errmsg)
       end if
       if (conEx%model2%dis%con%ianglex == 0) then
-        write (errmsg, '(1x,a,a,a,a,a)') 'XT3D configured on the exchange ', &
+        write (errmsg, '(a,a,a,a,a)') 'XT3D configured on the exchange ', &
           trim(conEx%name), ' but the discretization in model ', &
           trim(conEx%model2%name), ' has no ANGLDEGX specified'
         call store_error(errmsg)

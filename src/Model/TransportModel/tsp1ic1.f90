@@ -94,7 +94,7 @@ contains
                                         this%parser%iuactive, this%strt, &
                                         aname(1))
         case default
-          write (errmsg, '(4x,a,a)') 'ERROR. UNKNOWN GRIDDATA TAG: ', &
+          write (errmsg, '(a,a)') 'Unknown GRIDDATA tag: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -102,7 +102,7 @@ contains
       end do
       write (this%iout, '(1x,a)') 'END PROCESSING GRIDDATA'
     else
-      call store_error('ERROR.  REQUIRED GRIDDATA BLOCK NOT FOUND.')
+      call store_error('Required GRIDDATA block not found.')
       call this%parser%StoreErrorUnit()
     end if
     !

@@ -454,16 +454,16 @@ contains
             this%iadvwt = 2
             write (this%iout, fmtiadvwt) 'TVD'
           case default
-            write (errmsg, '(4x, a, a)') &
-              'ERROR. UNKNOWN SCHEME: ', trim(keyword)
+            write (errmsg, '(a, a)') &
+              'Unknown scheme: ', trim(keyword)
             call store_error(errmsg)
-            write (errmsg, '(4x, a, a)') &
-              'SCHEME MUST BE "UPSTREAM", "CENTRAL" OR "TVD"'
+            write (errmsg, '(a, a)') &
+              'Scheme must be "UPSTREAM", "CENTRAL" or "TVD"'
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
           end select
         case default
-          write (errmsg, '(4x,a,a)') 'Unknown ADVECTION option: ', &
+          write (errmsg, '(a,a)') 'Unknown ADVECTION option: ', &
             trim(keyword)
           call store_error(errmsg, terminate=.TRUE.)
         end select

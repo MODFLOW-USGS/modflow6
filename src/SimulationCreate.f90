@@ -199,7 +199,7 @@ contains
     if (tdis6 /= '') then
       call tdis_cr(tdis6)
     else
-      call store_error('****ERROR. TIMING block variable TDIS6 is unset'// &
+      call store_error('TIMING block variable TDIS6 is unset'// &
                        ' in simulation control input.', terminate)
     end if
     !
@@ -282,8 +282,8 @@ contains
       case ('GWF6')
         if (model_ranks(n) == proc_id) then
           im = im + 1
-          write (iout, '(4x,2a,i0,a)') trim(model_type), " model ", &
-            n, " will be created"
+          write (iout, '(4x,2a,i0,a)') trim(model_type), ' model ', &
+            n, ' will be created'
           call gwf_cr(fname, n, model_names(n))
           num_model => GetNumericalModelFromList(basemodellist, im)
           model_loc_idx(n) = im
@@ -292,8 +292,8 @@ contains
       case ('GWT6')
         if (model_ranks(n) == proc_id) then
           im = im + 1
-          write (iout, '(4x,2a,i0,a)') trim(model_type), " model ", &
-            n, " will be created"
+          write (iout, '(4x,2a,i0,a)') trim(model_type), ' model ', &
+            n, ' will be created'
           call gwt_cr(fname, n, model_names(n))
           num_model => GetNumericalModelFromList(basemodellist, im)
           model_loc_idx(n) = im
@@ -310,9 +310,8 @@ contains
         end if
         call add_virtual_gwe_model(n, model_names(n), num_model)
       case default
-        write (errmsg, '(4x,a,a)') &
-          '****ERROR. UNKNOWN SIMULATION MODEL: ', &
-          trim(model_type)
+        write (errmsg, '(a,a)') &
+          'Unknown simulation model type: ', trim(model_type)
         call store_error(errmsg, terminate)
       end select
     end do
@@ -322,8 +321,8 @@ contains
     !
     ! -- sanity check
     if (simulation_mode == 'PARALLEL' .and. im == 0) then
-      write (errmsg, '(4x,a, i0)') &
-        '****ERROR. No MODELS assigned to process ', proc_id
+      write (errmsg, '(a, i0)') &
+        'No MODELS assigned to process ', proc_id
       call store_error(errmsg, terminate)
     end if
     !
@@ -440,9 +439,8 @@ contains
         end if
         call add_virtual_gwt_exchange(exg_name, exg_id, m1_id, m2_id)
       case default
-        write (errmsg, '(4x,a,a)') &
-          '****ERROR. UNKNOWN SIMULATION EXCHANGES: ', &
-          trim(exgtype)
+        write (errmsg, '(a,a)') &
+          'Unknown simulation exchange type: ', trim(exgtype)
         call store_error(errmsg, terminate)
       end select
     end do
@@ -467,17 +465,17 @@ contains
     logical :: terminate = .true.
     ! -- formats
     character(len=*), parameter :: fmterrmxiter = &
-      "('ERROR. MXITER IS SET TO ', i0, ' BUT THERE IS ONLY ONE SOLUTION', &
-      &' IN SOLUTION GROUP ', i0, '. SET MXITER TO 1 IN SIMULATION CONTROL', &
-      &' FILE.')"
+      "('MXITER is set to ', i0, ' but there is only one solution', &
+      &' in SOLUTION GROUP ', i0, '. Set MXITER to 1 in simulation control', &
+      &' file.')"
     !
     ! -- error check completed group
     if (sgid > 0) then
       !
       ! -- Make sure there is a solution in this solution group
       if (isgpsoln == 0) then
-        write (errmsg, '(4x,a,i0)') &
-          'ERROR. THERE ARE NO SOLUTIONS FOR SOLUTION GROUP ', sgid
+        write (errmsg, '(a,i0)') &
+          'There are no solutions for solution group ', sgid
         call store_error(errmsg, terminate)
       end if
       !
@@ -614,8 +612,7 @@ contains
           call upcase(words(j))
           glo_mid = ifind(model_names, words(j))
           if (glo_mid == -1) then
-            write (errmsg, '(a,a)') 'Error.  Invalid model name: ', &
-              trim(words(j))
+            write (errmsg, '(a,a)') 'Invalid model name: ', trim(words(j))
             call store_error(errmsg, terminate)
           end if
           !
@@ -652,8 +649,7 @@ contains
           call upcase(words(j))
           glo_mid = ifind(model_names, words(j))
           if (glo_mid == -1) then
-            write (errmsg, '(a,a)') 'Error.  Invalid model name: ', &
-              trim(words(j))
+            write (errmsg, '(a,a)') 'Invalid model name: ', trim(words(j))
             call store_error(errmsg, terminate)
           end if
           !
@@ -686,7 +682,7 @@ contains
     !
     ! -- Check and make sure at least one solution group was found
     if (solutiongrouplist%Count() == 0) then
-      call store_error('ERROR.  THERE ARE NO SOLUTION GROUPS.', terminate)
+      call store_error('There are no solution groups.', terminate)
     end if
     !
     ! -- return
@@ -705,7 +701,7 @@ contains
       mp => GetBaseModelFromList(basemodellist, im)
       if (mp%idsoln == 0) then
         write (errmsg, '(a,a)') &
-          '****ERROR.  Model was not assigned to a solution: ', mp%name
+          'Model was not assigned to a solution: ', mp%name
         call store_error(errmsg)
       end if
     end do
@@ -766,21 +762,19 @@ contains
     ! ------------------------------------------------------------------------------
     ilen = len_trim(mname)
     if (ilen > LENMODELNAME) then
-      write (errmsg, '(4x,a,a)') &
-        'ERROR. INVALID MODEL NAME: ', trim(mname)
+      write (errmsg, '(a,a)') 'Invalid model name: ', trim(mname)
       call store_error(errmsg)
-      write (errmsg, '(4x,a,i0,a,i0)') &
-        'NAME LENGTH OF ', ilen, ' EXCEEDS MAXIMUM LENGTH OF ', &
+      write (errmsg, '(a,i0,a,i0)') &
+        'Name length of ', ilen, ' exceeds maximum length of ', &
         LENMODELNAME
       call store_error(errmsg, terminate)
     end if
     do i = 1, ilen
       if (mname(i:i) == ' ') then
-        write (errmsg, '(4x,a,a)') &
-          'ERROR. INVALID MODEL NAME: ', trim(mname)
+        write (errmsg, '(a,a)') 'Invalid model name: ', trim(mname)
         call store_error(errmsg)
-        write (errmsg, '(4x,a)') &
-          'MODEL NAME CANNOT HAVE SPACES WITHIN IT.'
+        write (errmsg, '(a)') &
+          'Model name cannot have spaces within it.'
         call store_error(errmsg, terminate)
       end if
     end do
@@ -844,7 +838,7 @@ contains
       pointer :: emnames_b !< model b names
 
     mranks = 0
-    if (simulation_mode /= "PARALLEL") return
+    if (simulation_mode /= 'PARALLEL') return
 
     ! load IDM data
     input_mempath = create_mem_path('SIM', 'NAM', idm_context)
@@ -859,14 +853,14 @@ contains
     nr_gwf_models = 0
     nr_gwt_models = 0
     do im = 1, nr_models
-      if (mtypes(im) == "GWF6") then
+      if (mtypes(im) == 'GWF6') then
         nr_gwf_models = nr_gwf_models + 1
-      else if (mtypes(im) == "GWT6") then
+      else if (mtypes(im) == 'GWT6') then
         nr_gwt_models = nr_gwt_models + 1
       else
         model_type_str = mtypes(im)
-        write (errmsg, *) "Error. Model type ", model_type_str, &
-          " not supported in parallel mode"
+        write (errmsg, *) 'Model type ', model_type_str, &
+          ' not supported in parallel mode.'
         call store_error(errmsg, terminate=.true.)
       end if
     end do
@@ -887,7 +881,7 @@ contains
     ! assign ranks for flow models
     rank = 0
     do im = 1, nr_models
-      if (mtypes(im) == "GWF6") then
+      if (mtypes(im) == 'GWF6') then
         if (nr_models_proc(rank + 1) == 0) then
           rank = rank + 1
         end if
@@ -900,11 +894,11 @@ contains
     nr_exchanges = size(etypes)
 
     do im = 1, nr_models
-      if (.not. mtypes(im) == "GWT6") cycle
+      if (.not. mtypes(im) == 'GWT6') cycle
 
       ! find match
       do ie = 1, nr_exchanges
-        if (etypes(ie) == "GWF6-GWT6" .and. mnames(im) == emnames_b(ie)) then
+        if (etypes(ie) == 'GWF6-GWT6' .and. mnames(im) == emnames_b(ie)) then
           ! this is the exchange, now find the flow model's rank
           rank = 0
           do imm = 1, nr_models

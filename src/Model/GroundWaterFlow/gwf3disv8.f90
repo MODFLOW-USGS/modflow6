@@ -1928,7 +1928,7 @@ contains
         nodeu = get_node(1, ir, ic, nlay, nrow, ncol)
         il = this%ibuff(nodeu)
         if (il < 1 .or. il > nlay) then
-          write (errmsg, *) 'ERROR.  INVALID LAYER NUMBER: ', il
+          write (errmsg, *) 'Invalid layer number: ', il
           call store_error(errmsg, terminate=.TRUE.)
         end if
         nodeu = get_node(il, ir, ic, nlay, nrow, ncol)
@@ -1945,9 +1945,8 @@ contains
     ! -- Check for errors
     nbound = ipos - 1
     if (ierr > 0) then
-      write (errmsg, *) 'ERROR. MAXBOUND DIMENSION IS TOO SMALL.'
-      call store_error(errmsg)
-      write (errmsg, *) 'INCREASE MAXBOUND TO: ', ierr
+      write (errmsg, '(a, i0)') &
+        'MAXBOUND dimension is too small.  Increase MAXBOUND to ', ierr
       call store_error(errmsg, terminate=.TRUE.)
     end if
     !

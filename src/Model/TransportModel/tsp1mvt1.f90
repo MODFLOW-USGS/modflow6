@@ -678,8 +678,8 @@ contains
             write (this%iout, fmtflow) 'MVT', 'BUDGET', trim(adjustl(fname)), &
               this%ibudgetout
           else
-            call store_error('OPTIONAL BUDGET KEYWORD MUST &
-                             &BE FOLLOWED BY FILEOUT')
+            call store_error('Optional BUDGET keyword must &
+                             &be followed by FILEOUT')
           end if
         case ('BUDGETCSV')
           call this%parser%GetStringCaps(keyword)
@@ -691,11 +691,11 @@ contains
             write (this%iout, fmtflow) 'MVT', 'BUDGET CSV', &
               trim(adjustl(fname)), this%ibudcsv
           else
-            call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
+            call store_error('Optional BUDGETCSV keyword must be followed by &
               &FILEOUT')
           end if
         case default
-          write (errmsg, '(4x,a,a)') '***ERROR. UNKNOWN MVT OPTION: ', &
+          write (errmsg, '(a,a)') 'Unknown MVT option: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()

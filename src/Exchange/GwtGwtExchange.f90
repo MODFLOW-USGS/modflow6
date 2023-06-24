@@ -215,9 +215,9 @@ contains
     !
     ! -- Ensure models are in same solution
     if (this%gwtmodel1%idsoln /= this%gwtmodel2%idsoln) then
-      call store_error('ERROR.  TWO MODELS ARE CONNECTED IN A GWT '// &
-                       'EXCHANGE BUT THEY ARE IN DIFFERENT SOLUTIONS. '// &
-                       'GWT MODELS MUST BE IN SAME SOLUTION: '// &
+      call store_error('Two models are connected in a GWT '// &
+                       'exchange but they are in different solutions. '// &
+                       'GWT models must be in same solution: '// &
                        trim(this%gwtmodel1%name)//' '//trim(this%gwtmodel2%name))
       call this%parser%StoreErrorUnit()
     end if
@@ -819,8 +819,8 @@ contains
       call this%parser%GetStringCaps(subkey)
       ilen = len_trim(subkey)
       if (ilen > LENMODELNAME) then
-        write (errmsg, '(4x,a,a)') &
-          'INVALID MODEL NAME: ', trim(subkey)
+        write (errmsg, '(a,a)') &
+          'Invalid model name: ', trim(subkey)
         call store_error(errmsg)
         call this%parser%StoreErrorUnit()
       end if
@@ -837,8 +837,8 @@ contains
       call this%parser%GetStringCaps(subkey)
       ilen = len_trim(subkey)
       if (ilen > LENMODELNAME) then
-        write (errmsg, '(4x,a,a)') &
-          'INVALID MODEL NAME: ', trim(subkey)
+        write (errmsg, '(a,a)') &
+          'Invalid model name: ', trim(subkey)
         call store_error(errmsg)
         call this%parser%StoreErrorUnit()
       end if
@@ -862,13 +862,13 @@ contains
     case ('MVT6')
       call this%parser%GetStringCaps(subkey)
       if (subkey /= 'FILEIN') then
-        call store_error('MVT6 KEYWORD MUST BE FOLLOWED BY '// &
+        call store_error('MVT6 keyword must be followed by '// &
                          '"FILEIN" then by filename.')
         call this%parser%StoreErrorUnit()
       end if
       call this%parser%GetString(fname)
       if (fname == '') then
-        call store_error('NO MVT6 FILE SPECIFIED.')
+        call store_error('No MVT6 file specified.')
         call this%parser%StoreErrorUnit()
       end if
       this%inmvt = getunit()
@@ -878,7 +878,7 @@ contains
     case ('OBS6')
       call this%parser%GetStringCaps(subkey)
       if (subkey /= 'FILEIN') then
-        call store_error('OBS8 KEYWORD MUST BE FOLLOWED BY '// &
+        call store_error('OBS8 keyword must be followed by '// &
                          '"FILEIN" then by filename.')
         call this%parser%StoreErrorUnit()
       end if
@@ -1265,6 +1265,7 @@ contains
   subroutine gwt_gwt_save_simvals(this)
     ! -- dummy
     use SimModule, only: store_error, store_error_unit
+    use SimVariablesModule, only: errmsg
     use ConstantsModule, only: DZERO
     use ObserveModule, only: ObserveType
     class(GwtExchangeType), intent(inout) :: this
@@ -1275,7 +1276,6 @@ contains
     integer(I4B) :: n2
     integer(I4B) :: iexg
     real(DP) :: v
-    character(len=100) :: msg
     type(ObserveType), pointer :: obsrv => null()
     !
     ! -- Write simulated values for all gwt-gwt observations
@@ -1292,9 +1292,9 @@ contains
             n2 = this%nodem2(iexg)
             v = this%simvals(iexg)
           case default
-            msg = 'Error: Unrecognized observation type: '// &
-                  trim(obsrv%ObsTypeId)
-            call store_error(msg)
+            errmsg = 'Unrecognized observation type: '// &
+                     trim(obsrv%ObsTypeId)
+            call store_error(errmsg)
             call store_error_unit(this%inobs)
           end select
           call this%obs%SaveOneSimval(obsrv, v)
