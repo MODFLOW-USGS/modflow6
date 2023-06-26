@@ -1091,12 +1091,12 @@ contains
       end if
     else
       if (lname(3)) then
-        write (this%iout, '(1x,a)') 'Warning.  First- or zero-orer decay &
+        write (this%iout, '(1x,a)') 'Warning.  First- or zero-order decay &
           &is not active but DECAY was specified.  DECAY will &
           &have no affect on simulation results.'
       end if
       if (lname(4)) then
-        write (this%iout, '(1x,a)') 'Warning.  First- or zero-orer decay &
+        write (this%iout, '(1x,a)') 'Warning.  First- or zero-order decay &
           &is not active but DECAY_SORBED was specified.  &
           &DECAY_SORBED will have no affect on simulation &
           &results.'
