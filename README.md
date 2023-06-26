@@ -3,7 +3,7 @@
 
 This is the development repository for the USGS MODFLOW 6 Hydrologic Model. The  official USGS distribution is available at [USGS Release Page](https://water.usgs.gov/ogw/modflow/MODFLOW.html).
 
-### Version 6.5.0 Release Candidate
+### Version 6.4.2 (preliminary)
 
 [![GitHub release](https://img.shields.io/github/release/MODFLOW-USGS/modflow6.svg)](https://github.com/MODFLOW-USGS/modflow6/releases/latest)
 [![MODFLOW 6 continuous integration](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci.yml/badge.svg)](https://github.com/MODFLOW-USGS/modflow6/actions/workflows/ci.yml)

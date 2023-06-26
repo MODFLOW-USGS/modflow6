@@ -306,7 +306,7 @@ name unit_conversion
 type double precision
 reader urword
 optional true
-deprecated 6.5.0
+deprecated 6.4.2
 longname conversion factor
 description real value that is used to convert user-specified Manning's roughness coefficients from seconds per meters$^{1/3}$ to model length and time units. A constant of 1.486 is used for flow units of cubic feet per second, and a constant of 1.0 is used for units of cubic meters per second. The constant must be multiplied by 86,400 when using time units of days in the simulation.
 
