@@ -169,17 +169,16 @@ contains
     integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !
+    found = .true.
     select case (option)
     case ('MOVER')
       this%imover = 1
       write (this%iout, '(4x,A)') 'MOVER OPTION ENABLED'
-      found = .true.
     case ('AUXDEPTHNAME')
       call this%parser%GetStringCaps(ddrnauxname)
       this%iauxddrncol = -1
       write (this%iout, '(4x,a,a)') &
         'AUXILIARY DRAIN DEPTH NAME: ', trim(ddrnauxname)
-      found = .true.
       !
       ! -- right now these are options that are only available in the
       !    development version and are not included in the documentation.
@@ -191,7 +190,6 @@ contains
       write (this%iout, '(4x,a,1x,a)') &
         'CUBIC SCALING will be used for drains with non-zero DDRN values', &
         'even if the NEWTON-RAPHSON method is not being used.'
-      found = .true.
     case default
       !
       ! -- No options found
