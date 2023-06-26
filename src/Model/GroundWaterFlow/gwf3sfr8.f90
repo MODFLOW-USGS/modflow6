@@ -716,7 +716,7 @@ contains
         'SETTING UNIT_CONVERSION DIRECTLY'
       !
       ! -- create deprecation warning
-      call deprecation_warning('OPTIONS', 'UNIT_CONVERSION', '6.5.0', &
+      call deprecation_warning('OPTIONS', 'UNIT_CONVERSION', '6.4.2', &
                                warnmsg, this%parser%GetUnit())
     case ('LENGTH_CONVERSION')
       this%lengthconv = this%parser%GetDouble()

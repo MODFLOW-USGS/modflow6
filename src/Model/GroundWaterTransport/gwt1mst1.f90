@@ -1381,14 +1381,14 @@ contains
       end if
     else
       if (lname(4)) then
-        write (warnmsg, '(a)') 'First or zero orer decay &
+        write (warnmsg, '(a)') 'First- or zero-order decay &
           &is not active but decay was specified.  DECAY will &
           &have no affect on simulation results.'
         call store_warning(warnmsg)
         write (this%iout, '(1x,a)') 'WARNING.  '//warnmsg
       end if
       if (lname(5)) then
-        write (warnmsg, '(a)') 'First or zero orer decay &
+        write (warnmsg, '(a)') 'First- or zero-order decay &
           &is not active but DECAY_SORBED was specified.  &
           &DECAY_SORBED will have no affect on simulation results.'
         call store_warning(warnmsg)
