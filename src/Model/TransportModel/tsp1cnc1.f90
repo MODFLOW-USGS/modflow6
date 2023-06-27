@@ -166,7 +166,7 @@ contains
         call this%dis%noder_to_string(node, nodestr)
         dvtype = trim(this%tsplab%depvartype)
         call lowcase(dvtype)
-        call store_error('Error.  Cell is already a constant ' &
+        call store_error('Cell is already a constant ' &
                          //dvtype//': '//trim(adjustl(nodestr)))
         ierr = ierr + 1
       else
@@ -238,7 +238,7 @@ contains
     integer(I4B) :: node
     ! -- formats
     character(len=*), parameter :: fmtcncerr = &
-      &"('CNC BOUNDARY ',i0,' CONC (',g0,') IS LESS THAN ZERO FOR CELL', a)"
+      &"('CNC boundary ',i0,' conc (',g0,') is less than zero for cell', a)"
 ! ------------------------------------------------------------------------------
     !
     ! -- check stress period data
