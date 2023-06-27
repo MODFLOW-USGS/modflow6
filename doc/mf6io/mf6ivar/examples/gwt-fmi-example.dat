@@ -5,7 +5,7 @@ END OPTIONS
 BEGIN PACKAGEDATA
   GWFBUDGET FILEIN ../flow/mygwfmodel.bud
   GWFHEAD FILEIN   ../flow/mygwfmodel.hds
-  GWFMOVER FILEIN  ../flow/mygwfmodel.hds
+  GWFMOVER FILEIN  ../flow/mygwfmodel.mvr.bud
   LAK-1 FILEIN     ../flow/mygwfmodel.lak.bud
   SFR-1 FILEIN     ../flow/mygwfmodel.sfr.bud
   MAW-1 FILEIN     ../flow/mygwfmodel.maw.bud

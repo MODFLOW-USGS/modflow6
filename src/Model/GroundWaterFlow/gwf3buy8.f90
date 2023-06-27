@@ -300,7 +300,7 @@ contains
     integer(I4B) :: i
     ! -- formats
     character(len=*), parameter :: fmtc = &
-      "('Buoyancy Package does not have have a concentration set &
+      "('Buoyancy Package does not have a concentration set &
        &for species ',i0,'. One or more model names may be specified &
        &incorrectly in the PACKAGEDATA block or a gwf-gwt exchange may need &
        &to be activated.')"
