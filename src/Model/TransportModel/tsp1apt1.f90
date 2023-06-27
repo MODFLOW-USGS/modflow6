@@ -1433,7 +1433,7 @@ contains
       if (keyword == 'FILEOUT') then
         call this%parser%GetString(fname)
         this%iconcout = getunit()
-       call openfile(this%iconcout, this%iout, fname, 'DATA(BINARY)', &
+        call openfile(this%iconcout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE')
         write (this%iout, fmtaptbin) &
           trim(adjustl(this%text)), trim(adjustl(this%tsplab%depvartype)), &
