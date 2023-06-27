@@ -30,6 +30,7 @@ module VirtualDataManagerModule
     procedure :: create => vds_create
     procedure :: init => vds_init
     procedure :: add_solution => vds_add_solution
+    procedure :: set_halo => vds_set_halo
     procedure :: reduce_halo => vds_reduce_halo
     procedure :: synchronize => vds_synchronize
     procedure :: synchronize_sln => vds_synchronize_sln
@@ -152,6 +153,56 @@ contains
     call exchange_ids%destroy()
 
   end subroutine vds_add_solution
+
+  !> @brief Restrict the models and exchanges in the halo
+  !< to the set that has an actual chance of being used
+  subroutine vds_set_halo(this)
+    use ListsModule, only: basesolutionlist
+    use VirtualDataListsModule
+    use VirtualModelModule
+    use SimVariablesModule, only: proc_id
+    class(VirtualDataManagerType) :: this
+    ! local
+    integer(I4B) :: i, imod, isol, iexg
+    type(STLVecInt) :: halo_model_ids
+    class(VirtualModelType), pointer :: vm
+    class(VirtualSolutionType), pointer :: virt_sol
+    class(SpatialModelConnectionType), pointer :: conn
+    class(*), pointer :: sln_ptr
+    
+    call halo_model_ids%init()
+    
+    ! add halo models to list with ids (unique)
+    do isol = 1, basesolutionlist%Count()
+      sln_ptr => basesolutionlist%GetItem(isol)
+      select type (sln_ptr)
+      class is (NumericalSolutionType)
+        do iexg = 1, sln_ptr%exchangelist%Count()
+          conn => get_smc_from_list(sln_ptr%exchangelist, iexg)
+          if (.not. associated(conn)) cycle
+          
+          ! add halo model ids to the list
+          do i = 1, conn%halo_models%size
+            call halo_model_ids%push_back_unique(conn%halo_models%at(i))
+          end do
+        end do
+      end select
+    end do
+
+    ! deactivate models that are not local, and not in halo
+    do imod = 1, virtual_model_list%Count()
+      vm => get_virtual_model_from_list(virtual_model_list, imod)
+      if (.not. vm%is_local) then
+        if (.not. halo_model_ids%contains(vm%id)) then
+          write(*,*) proc_id, ': deactivating ', vm%id
+          vm%is_active = .false.
+        end if
+      end if
+    end do
+
+    call halo_model_ids%destroy()
+
+  end subroutine vds_set_halo
 
   !> @brief Reduce the halo for all solutions. This will
   !< activate the mapping tables in the virtual data items.
