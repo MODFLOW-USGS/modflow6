@@ -1,6 +1,6 @@
 !> -- @ brief Mobile Storage and Transfer (MST) Module
 !!
-!!    The GwtMstModule is contains the GwtMstType, which is the
+!!    The GwtMstModule contains the GwtMstType, which is the
 !!    derived type responsible for adding the effects of
 !!      1. Changes in dissolved solute mass
 !!      2. Decay of dissolved solute mass
@@ -140,7 +140,7 @@ contains
       "(1x,/1x,'MST -- MOBILE STORAGE AND TRANSFER PACKAGE, VERSION 1, &
       &7/29/2020 INPUT READ FROM UNIT ', i0, //)"
     !
-    ! --print a message identifying the immobile domain package.
+    ! --print a message identifying the mobile storage and transfer package.
     write (this%iout, fmtmst) this%inunit
     !
     ! -- Read options
@@ -1309,7 +1309,7 @@ contains
       call this%parser%StoreErrorUnit()
     end if
     !
-    ! -- Check for rquired porosity
+    ! -- Check for required porosity
     if (.not. lname(1)) then
       write (errmsg, '(a)') 'POROSITY not specified in GRIDDATA block.'
       call store_error(errmsg)
