@@ -6,6 +6,7 @@ module ArrayHandlersModule
   use GenericUtilitiesModule, only: sim_message, stop_with_error
   private
   public :: ExpandArray, ExpandArrayWrapper, ExtendPtrArray
+  public :: ConcatArray
   public :: ifind
   public :: remove_character
 
@@ -24,7 +25,12 @@ module ArrayHandlersModule
 
   interface ExtendPtrArray
     ! This interface is for use with POINTERS to arrays.
-    module procedure extend_double, extend_integer
+    module procedure extend_double, extend_integer, &
+      extend_string
+  end interface
+
+  interface ConcatArray
+    module procedure concat_integer
   end interface
 
   interface ifind
@@ -337,6 +343,51 @@ contains
     call stop_with_error(138)
 
   end subroutine extend_integer
+
+  !> @brief Grows or allocated the array with the passed increment,
+  !< the old value of the array pointer is rendered invalid
+  subroutine extend_string(array, increment)
+    character(len=*), dimension(:), pointer, contiguous :: array
+    integer(I4B), optional :: increment
+    ! local
+    integer(I4B) :: inc_local
+    integer(I4B) :: i, old_size, new_size
+    character(len=len(array)), dimension(:), pointer, contiguous :: temp_array
+
+    if (present(increment)) then
+      inc_local = increment
+    else
+      inc_local = 1
+    end if
+
+    if (associated(array)) then
+      old_size = size(array)
+      new_size = old_size + inc_local
+      temp_array => array
+      allocate (array(new_size))
+      do i = 1, old_size
+        array(i) = temp_array(i)
+      end do
+      deallocate (temp_array)
+    else
+      allocate (array(inc_local))
+    end if
+
+  end subroutine extend_string
+
+  subroutine concat_integer(array, array_to_add)
+    integer(I4B), dimension(:), pointer, contiguous :: array
+    integer(I4B), dimension(:), pointer, contiguous :: array_to_add
+    ! local
+    integer(I4B) :: i, old_size
+
+    old_size = size(array)
+    call ExtendPtrArray(array, increment=size(array_to_add))
+    do i = 1, size(array_to_add)
+      array(old_size + i) = array_to_add(i)
+    end do
+
+  end subroutine concat_integer
 
   function ifind_character(array, str)
     ! -- Find the first array element containing str

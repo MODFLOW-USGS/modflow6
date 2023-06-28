@@ -1,20 +1,10 @@
 import os
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from flopy.utils.lgrutil import Lgr
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 # Test for the interface model approach.
 # It compares the result of a single, strongly anisotropic model
@@ -42,15 +32,12 @@ from simulation import Simulation
 # should be identical. Finally, the budget error is checked.
 
 ex = ["ifmod_xt3d02"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-
 # global convenience...
 mname_ref = "refmodel"
 mname_left = "leftmodel"
 mname_right = "rightmodel"
 hclose_check = 1e-9
+max_inner_it = 300
 
 useXT3D = True
 
@@ -66,7 +53,7 @@ def get_model(idx, dir):
         tdis_rc.append((1.0, 1, 1))
 
     # solver data
-    nouter, ninner = 100, 300
+    nouter, ninner = 100, max_inner_it
     hclose, rclose, relax = hclose_check, 1e-3, 0.97
 
     # model spatial discretization
@@ -423,41 +410,17 @@ def compare_to_ref(sim):
                     cumul_balance_error, mname
                 )
 
-    return
 
-
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, exdir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, exdir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, exdir)
-
-    # run the test model
-    test.run_mf6(Simulation(exdir, exfunc=compare_to_ref, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test models
-    for idx, exdir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, exdir)
-
-        sim = Simulation(exdir, exfunc=compare_to_ref, idxsim=idx)
-        test.run_mf6(sim)
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework()
+    test.build(build_model, idx, str(function_tmpdir))
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=compare_to_ref, idxsim=idx
+        ),
+        str(function_tmpdir),
+    )

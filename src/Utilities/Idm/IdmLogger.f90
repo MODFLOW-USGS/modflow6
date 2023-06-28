@@ -7,6 +7,8 @@
 module IdmLoggerModule
 
   use KindModule, only: DP, LGP, I4B
+  use SimVariablesModule, only: iparamlog
+  use ConstantsModule, only: LINELENGTH
 
   implicit none
   private
@@ -19,7 +21,7 @@ module IdmLoggerModule
       idm_log_var_int1d, idm_log_var_int2d, &
       idm_log_var_int3d, idm_log_var_dbl, &
       idm_log_var_dbl1d, idm_log_var_dbl2d, &
-      idm_log_var_dbl3d
+      idm_log_var_dbl3d, idm_log_var_str
   end interface idm_log_var
 
 contains
@@ -31,7 +33,7 @@ contains
     character(len=*), intent(in) :: subcomponent !< subcomponent name
     integer(I4B), intent(in) :: iout
 
-    if (iout > 0) then
+    if (iparamlog > 0 .and. iout > 0) then
       write (iout, '(1x,a)') 'Loading input for '//trim(component)//&
         &'/'//trim(subcomponent)
     end if
@@ -42,9 +44,11 @@ contains
   subroutine idm_log_close(component, subcomponent, iout)
     character(len=*), intent(in) :: component !< component name
     character(len=*), intent(in) :: subcomponent !< subcomponent name
-    integer(I4B) :: iout
+    integer(I4B), intent(in) :: iout
 
-    write (iout, '(1x,a,/)') 'Loading input complete...'
+    if (iparamlog > 0 .and. iout > 0) then
+      write (iout, '(1x,a,/)') 'Loading input complete...'
+    end if
   end subroutine idm_log_close
 
   !> @brief Log type specific information logical
@@ -53,20 +57,36 @@ contains
     logical(LGP), intent(in) :: p_mem !< logical scalar
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
-    integer(I4B) :: iout
+    integer(I4B), intent(in) :: iout
+    character(len=LINELENGTH) :: description
 
-    write (iout, '(3x,a, " = ", l)') trim(varname), p_mem
+    if (iparamlog > 0 .and. iout > 0) then
+      description = 'Logical detected'
+      write (iout, '(3x, a, ": ", a, " = ", l1)') &
+        trim(description), trim(varname), p_mem
+    end if
   end subroutine idm_log_var_logical
 
   !> @brief Log type specific information integer
   !<
-  subroutine idm_log_var_int(p_mem, varname, mempath, iout)
+  subroutine idm_log_var_int(p_mem, varname, mempath, datatype, iout)
     integer(I4B), intent(in) :: p_mem !< int scalar
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
-    integer(I4B) :: iout
+    character(len=*), intent(in) :: datatype !< variable data type
+    integer(I4B), intent(in) :: iout
+    character(len=LINELENGTH) :: description
 
-    write (iout, '(3x,a, " = ", i0)') trim(varname), p_mem
+    if (iparamlog > 0 .and. iout > 0) then
+      if (datatype == 'KEYWORD') then
+        description = 'Keyword detected'
+        write (iout, '(3x, a, ": ", a)') trim(description), trim(varname)
+      else
+        description = 'Integer detected'
+        write (iout, '(3x, a, ": ", a, " = ", i0)') &
+          trim(description), trim(varname), p_mem
+      end if
+    end if
   end subroutine idm_log_var_int
 
   !> @brief Log type specific information int1d
@@ -75,18 +95,23 @@ contains
     integer(I4B), dimension(:), contiguous, intent(in) :: p_mem !< 1d int array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
-    integer(I4B) :: iout
+    integer(I4B), intent(in) :: iout
     integer(I4B) :: min_val, max_val
+    character(len=LINELENGTH) :: description
 
-    min_val = minval(p_mem)
-    max_val = maxval(p_mem)
-    if (min_val == max_val) then
-      write (iout, '(3x,a, " = ", i0)') trim(varname), min_val
-    else
-      write (iout, '(3x, a, a, i0, a, i0)') &
-        trim(varname), &
-        ' = variable 1D integer array ranging from ', &
-        min_val, ' to ', max_val
+    if (iparamlog > 0 .and. iout > 0) then
+      min_val = minval(p_mem)
+      max_val = maxval(p_mem)
+      if (min_val == max_val) then
+        description = 'Integer 1D constant array detected'
+        write (iout, '(3x, a, ": ", a, " = ", i0)') &
+          trim(description), trim(varname), min_val
+      else
+        description = 'Integer 1D array detected'
+        write (iout, '(3x, a, ": ", a, a, i0, a, i0)') &
+          trim(description), trim(varname), &
+          ' ranges from ', min_val, ' to ', max_val
+      end if
     end if
   end subroutine idm_log_var_int1d
 
@@ -96,18 +121,23 @@ contains
     integer(I4B), dimension(:, :), contiguous, intent(in) :: p_mem !< 2d int array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
-    integer(I4B) :: iout
+    integer(I4B), intent(in) :: iout
     integer(I4B) :: min_val, max_val
+    character(len=LINELENGTH) :: description
 
-    min_val = minval(p_mem)
-    max_val = maxval(p_mem)
-    if (min_val == max_val) then
-      write (iout, '(3x,a, " = ", i0)') trim(varname), min_val
-    else
-      write (iout, '(3x, a, a, i0, a, i0)') &
-        trim(varname), &
-        ' = variable 2D integer array ranging from ', &
-        min_val, ' to ', max_val
+    if (iparamlog > 0 .and. iout > 0) then
+      min_val = minval(p_mem)
+      max_val = maxval(p_mem)
+      if (min_val == max_val) then
+        description = 'Integer 2D constant array detected'
+        write (iout, '(3x, a, ": ", a, " = ", i0)') &
+          trim(description), trim(varname), min_val
+      else
+        description = 'Integer 2D array detected'
+        write (iout, '(3x, a, ": ", a, a, i0, a, i0)') &
+          trim(description), trim(varname), &
+          ' ranges from ', min_val, ' to ', max_val
+      end if
     end if
   end subroutine idm_log_var_int2d
 
@@ -117,18 +147,23 @@ contains
     integer(I4B), dimension(:, :, :), contiguous, intent(in) :: p_mem !< 3d int array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
-    integer(I4B) :: iout
+    integer(I4B), intent(in) :: iout
     integer(I4B) :: min_val, max_val
+    character(len=LINELENGTH) :: description
 
-    min_val = minval(p_mem)
-    max_val = maxval(p_mem)
-    if (min_val == max_val) then
-      write (iout, '(3x,a, " = ", i0)') trim(varname), min_val
-    else
-      write (iout, '(3x, a, a, i0, a, i0)') &
-        trim(varname), &
-        ' = variable 3D integer array ranging from ', &
-        min_val, ' to ', max_val
+    if (iparamlog > 0 .and. iout > 0) then
+      min_val = minval(p_mem)
+      max_val = maxval(p_mem)
+      if (min_val == max_val) then
+        description = 'Integer 3D constant array detected'
+        write (iout, '(3x, a, ": ", a, " = ", i0)') &
+          trim(description), trim(varname), min_val
+      else
+        description = 'Integer 3D array detected'
+        write (iout, '(3x, a, ": ", a, a, i0, a, i0)') &
+          trim(description), trim(varname), &
+          ' ranges from ', min_val, ' to ', max_val
+      end if
     end if
   end subroutine idm_log_var_int3d
 
@@ -138,9 +173,14 @@ contains
     real(DP), intent(in) :: p_mem !< dbl scalar
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
-    integer(I4B) :: iout
+    integer(I4B), intent(in) :: iout
+    character(len=LINELENGTH) :: description
 
-    write (iout, '(3x,a, " = ", G0)') trim(varname), p_mem
+    if (iparamlog > 0 .and. iout > 0) then
+      description = 'Double detected'
+      write (iout, '(3x, a, ": ", a, " = ", G0)') &
+        trim(description), trim(varname), p_mem
+    end if
   end subroutine idm_log_var_dbl
 
   !> @brief Log type specific information dbl1d
@@ -149,18 +189,23 @@ contains
     real(DP), dimension(:), contiguous, intent(in) :: p_mem !< 1d real array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
-    integer(I4B) :: iout
+    integer(I4B), intent(in) :: iout
     real(DP) :: min_val, max_val
+    character(len=LINELENGTH) :: description
 
-    min_val = minval(p_mem)
-    max_val = maxval(p_mem)
-    if (min_val == max_val) then
-      write (iout, '(3x,a, " = ", G0)') trim(varname), min_val
-    else
-      write (iout, '(3x, a, a, G0, a, G0)') &
-        trim(varname), &
-        ' = variable 1D double precision array ranging from ', &
-        min_val, ' to ', max_val
+    if (iparamlog > 0 .and. iout > 0) then
+      min_val = minval(p_mem)
+      max_val = maxval(p_mem)
+      if (min_val == max_val) then
+        description = 'Double precision 1D constant array detected'
+        write (iout, '(3x, a, ": ", a, " = ", G0)') &
+          trim(description), trim(varname), min_val
+      else
+        description = 'Double precision 1D array detected'
+        write (iout, '(3x, a, ": ", a, a, G0, a, G0)') &
+          trim(description), trim(varname), &
+          ' ranges from ', min_val, ' to ', max_val
+      end if
     end if
   end subroutine idm_log_var_dbl1d
 
@@ -170,18 +215,23 @@ contains
     real(DP), dimension(:, :), contiguous, intent(in) :: p_mem !< 2d dbl array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
-    integer(I4B) :: iout
+    integer(I4B), intent(in) :: iout
     real(DP) :: min_val, max_val
+    character(len=LINELENGTH) :: description
 
-    min_val = minval(p_mem)
-    max_val = maxval(p_mem)
-    if (min_val == max_val) then
-      write (iout, '(3x,a, " = ", G0)') trim(varname), min_val
-    else
-      write (iout, '(3x, a, a, G0, a, G0)') &
-        trim(varname), &
-        ' = variable 2D double precision array ranging from ', &
-        min_val, ' to ', max_val
+    if (iparamlog > 0 .and. iout > 0) then
+      min_val = minval(p_mem)
+      max_val = maxval(p_mem)
+      if (min_val == max_val) then
+        description = 'Double precision 2D constant array detected'
+        write (iout, '(3x, a, ": ", a, " = ", G0)') &
+          trim(description), trim(varname), min_val
+      else
+        description = 'Double precision 2D array detected'
+        write (iout, '(3x, a, ": ", a, a, G0, a, G0)') &
+          trim(description), trim(varname), &
+          ' ranges from ', min_val, ' to ', max_val
+      end if
     end if
   end subroutine idm_log_var_dbl2d
 
@@ -191,19 +241,40 @@ contains
     real(DP), dimension(:, :, :), contiguous, intent(in) :: p_mem !< 3d dbl array
     character(len=*), intent(in) :: varname !< variable name
     character(len=*), intent(in) :: mempath !< variable memory path
-    integer(I4B) :: iout
+    integer(I4B), intent(in) :: iout
     real(DP) :: min_val, max_val
+    character(len=LINELENGTH) :: description
 
-    min_val = minval(p_mem)
-    max_val = maxval(p_mem)
-    if (min_val == max_val) then
-      write (iout, '(3x,a, " = ", G0)') trim(varname), min_val
-    else
-      write (iout, '(3x, a, a, G0, a, G0)') &
-        trim(varname), &
-        ' = variable 3D double precision array ranging from ', &
-        min_val, ' to ', max_val
+    if (iparamlog > 0 .and. iout > 0) then
+      min_val = minval(p_mem)
+      max_val = maxval(p_mem)
+      if (min_val == max_val) then
+        description = 'Double precision 3D constant array detected'
+        write (iout, '(3x, a, ": ", a, " = ", G0)') &
+          trim(description), trim(varname), min_val
+      else
+        description = 'Double precision 3D array detected'
+        write (iout, '(3x, a, ": ", a, a, G0, a, G0)') &
+          trim(description), trim(varname), &
+          ' ranges from ', min_val, ' to ', max_val
+      end if
     end if
   end subroutine idm_log_var_dbl3d
+
+  !> @brief Log type specific information str
+  !<
+  subroutine idm_log_var_str(p_mem, varname, mempath, iout)
+    character(len=*), intent(in) :: p_mem !< pointer to str scalar
+    character(len=*), intent(in) :: varname !< variable name
+    character(len=*), intent(in) :: mempath !< variable memory path
+    integer(I4B), intent(in) :: iout
+    character(len=LINELENGTH) :: description
+
+    if (iparamlog > 0 .and. iout > 0) then
+      description = 'String detected'
+      write (iout, '(3x, a, ": ", a, " = ", a)') &
+        trim(description), trim(varname), trim(p_mem)
+    end if
+  end subroutine idm_log_var_str
 
 end module IdmLoggerModule

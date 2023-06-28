@@ -1,4 +1,4 @@
-# makefile created by pymake (version 1.2.5) for the 'zbud6' executable.
+# makefile created by pymake (version 1.2.7) for the 'zbud6' executable.
 
 
 include ./makedefaults
@@ -18,11 +18,11 @@ $(OBJDIR)/kind.o \
 $(OBJDIR)/Constants.o \
 $(OBJDIR)/SimVariables.o \
 $(OBJDIR)/genericutils.o \
+$(OBJDIR)/defmacro.o \
 $(OBJDIR)/compilerversion.o \
 $(OBJDIR)/ArrayHandlers.o \
 $(OBJDIR)/version.o \
 $(OBJDIR)/Message.o \
-$(OBJDIR)/defmacro.o \
 $(OBJDIR)/Sim.o \
 $(OBJDIR)/OpenSpec.o \
 $(OBJDIR)/InputOutput.o \

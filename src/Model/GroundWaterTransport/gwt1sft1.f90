@@ -41,6 +41,7 @@ module GwtSftModule
   use ObserveModule, only: ObserveType
   use GwtAptModule, only: GwtAptType, apt_process_obsID, &
                           apt_process_obsID12
+  use MatrixBaseModule
 
   implicit none
 
@@ -91,7 +92,7 @@ contains
   subroutine sft_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         fmi)
 ! ******************************************************************************
-! mwt_create -- Create a New MWT Package
+! sft_create -- Create a New SFT Package
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -106,19 +107,19 @@ contains
     character(len=*), intent(in) :: pakname
     type(GwtFmiType), pointer :: fmi
     ! -- local
-    type(GwtSftType), pointer :: lktobj
+    type(GwtSftType), pointer :: sftobj
 ! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
-    allocate (lktobj)
-    packobj => lktobj
+    allocate (sftobj)
+    packobj => sftobj
     !
     ! -- create name and memory path
     call packobj%set_names(ibcnum, namemodel, pakname, ftype)
     packobj%text = text
     !
     ! -- allocate scalars
-    call lktobj%allocate_scalars()
+    call sftobj%allocate_scalars()
     !
     ! -- initialize package
     call packobj%pack_initialize()
@@ -133,7 +134,7 @@ contains
     ! -- Store pointer to flow model interface.  When the GwfGwt exchange is
     !    created, it sets fmi%bndlist so that the GWT model has access to all
     !    the flow packages
-    lktobj%fmi => fmi
+    sftobj%fmi => fmi
     !
     ! -- return
     return
@@ -141,7 +142,7 @@ contains
 
   subroutine find_sft_package(this)
 ! ******************************************************************************
-! find corresponding lkt package
+! find corresponding sft package
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -193,7 +194,7 @@ contains
     !
     ! -- error if flow package not found
     if (.not. found) then
-      write (errmsg, '(a)') 'COULD NOT FIND FLOW PACKAGE WITH NAME '&
+      write (errmsg, '(a)') 'Could not find flow package with name '&
                             &//trim(adjustl(this%flowpackagename))//'.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
@@ -263,10 +264,10 @@ contains
     return
   end subroutine find_sft_package
 
-  subroutine sft_fc_expanded(this, rhs, ia, idxglo, amatsln)
+  subroutine sft_fc_expanded(this, rhs, ia, idxglo, matrix_sln)
 ! ******************************************************************************
 ! sft_fc_expanded -- this will be called from GwtAptType%apt_fc_expanded()
-!   in order to add matrix terms specifically for LKT
+!   in order to add matrix terms specifically for SFT
 ! ****************************************************************************
 !
 !    SPECIFICATIONS:
@@ -277,7 +278,7 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     integer(I4B) :: j, n1, n2
     integer(I4B) :: iloc
@@ -293,7 +294,7 @@ contains
         call this%sft_rain_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
-        amatsln(iposd) = amatsln(iposd) + hcofval
+        call matrix_sln%add_value_pos(iposd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
@@ -304,7 +305,7 @@ contains
         call this%sft_evap_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
-        amatsln(iposd) = amatsln(iposd) + hcofval
+        call matrix_sln%add_value_pos(iposd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
@@ -315,7 +316,7 @@ contains
         call this%sft_roff_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
-        amatsln(iposd) = amatsln(iposd) + hcofval
+        call matrix_sln%add_value_pos(iposd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
@@ -326,7 +327,7 @@ contains
         call this%sft_iflw_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
-        amatsln(iposd) = amatsln(iposd) + hcofval
+        call matrix_sln%add_value_pos(iposd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
@@ -337,7 +338,7 @@ contains
         call this%sft_outf_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
-        amatsln(iposd) = amatsln(iposd) + hcofval
+        call matrix_sln%add_value_pos(iposd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if

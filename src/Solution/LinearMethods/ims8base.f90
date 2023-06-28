@@ -612,8 +612,8 @@ contains
                     iwork1, iflag)
       IF (iflag .NE. 0) THEN
         write (errmsg, '(A,1X,A)') &
-          'IMSLINEARSUB_CALC_ORDER ERROR CREATING MINIMUM DEGREE ', &
-          'ORDER PERMUTATION '
+          'IMSLINEARSUB_CALC_ORDER error creating minimum degree ', &
+          'order permutation '
         call store_error(errmsg)
       END IF
       !

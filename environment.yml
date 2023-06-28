@@ -10,7 +10,7 @@ dependencies:
   - fprettify
   - jupytext
   - matplotlib
-  - meson!=0.63.0
+  - meson>=1.1.0
   - ninja
   - numpy
   - pip
@@ -23,5 +23,6 @@ dependencies:
   - pytest
   - pytest-cases
   - pytest-dotenv
+  - pytest-order
   - pytest-xdist
   - flaky

@@ -1,29 +1,13 @@
 import os
-import sys
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
-
-sys.path.append("scripts")
-from cross_section_functions import get_depths
+from framework import TestFramework
+from simulation import TestSimulation
 
 paktest = "sfr"
-
-ex = [
-    "sfr_reorder",
-]
-exdirs = [os.path.join("temp", s) for s in ex]
+ex = ["sfr_reorder"]
 
 # spatial discretization data
 nlay, nrow, ncol = 1, 1, 1
@@ -43,7 +27,7 @@ slope = 0.001
 ustrf = 1.0
 ndv = 0
 
-#
+
 def build_model(idx, ws):
 
     # static model data
@@ -221,14 +205,13 @@ def build_models(idx, base_ws):
 
 
 def eval_flows(sim):
-    idx = sim.idxsim
-    name = ex[idx]
+    name = sim.name
     print("evaluating flow results..." f"({name})")
 
-    obs_pth = os.path.join(exdirs[idx], f"{name}.sfr.obs.csv")
+    obs_pth = os.path.join(sim.simpath, f"{name}.sfr.obs.csv")
     obs0 = flopy.utils.Mf6Obs(obs_pth).get_data()
 
-    obs_pth = os.path.join(exdirs[idx], "mf6", f"{name}.sfr.obs.csv")
+    obs_pth = os.path.join(sim.simpath, "mf6", f"{name}.sfr.obs.csv")
     obs1 = flopy.utils.Mf6Obs(obs_pth).get_data()
 
     assert np.allclose(obs0["INFLOW"], obs1["INFLOW"]), "inflows are not equal"
@@ -237,7 +220,7 @@ def eval_flows(sim):
         obs0["OUTFLOW"], obs1["OUTFLOW"]
     ), "outflows are not equal"
 
-    fpth = os.path.join(exdirs[idx], f"{name}.lst")
+    fpth = os.path.join(sim.simpath, f"{name}.lst")
     with open(fpth, "r") as f:
         lines = f.read().splitlines()
 
@@ -257,51 +240,21 @@ def eval_flows(sim):
         order, actual
     ), "DAG did not correctly reorder reaches."
 
-    return
 
-
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, exdir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, exdir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_models, idx, exdir)
-
-    # run the test models
-    test.run_mf6(
-        Simulation(
-            exdir,
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_models, idx, ws)
+    test.run(
+        TestSimulation(
+            name=name,
+            exe_dict=targets,
             exfunc=eval_flows,
             idxsim=idx,
-        )
+        ),
+        ws,
     )
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test models
-    for idx, exdir in enumerate(exdirs):
-        test.build_mf6_models(build_models, idx, exdir)
-
-        sim = Simulation(
-            exdir,
-            exfunc=eval_flows,
-            idxsim=idx,
-        )
-        test.run_mf6(sim)
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()

@@ -26,6 +26,7 @@ module UzfModule
   use SimModule, only: count_errors, store_error, store_error_unit
   use BlockParserModule, only: BlockParserType
   use TableModule, only: TableType, table_cr
+  use MatrixBaseModule
 
   implicit none
 
@@ -452,7 +453,8 @@ contains
         this%iwcontout = getunit()
         call openfile(this%iwcontout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE', mode_opt=MNORMAL)
-        write (this%iout, fmtuzfbin) 'WATER-CONTENT', fname, this%iwcontout
+        write (this%iout, fmtuzfbin) 'WATER-CONTENT', trim(adjustl(fname)), &
+          this%iwcontout
       else
         call store_error('OPTIONAL WATER_CONTENT KEYWORD &
                          &MUST BE FOLLOWED BY FILEOUT')
@@ -464,7 +466,8 @@ contains
         this%ibudgetout = getunit()
         call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE', mode_opt=MNORMAL)
-        write (this%iout, fmtuzfbin) 'BUDGET', fname, this%ibudgetout
+        write (this%iout, fmtuzfbin) 'BUDGET', trim(adjustl(fname)), &
+          this%ibudgetout
       else
         call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
       end if
@@ -475,7 +478,8 @@ contains
         this%ibudcsv = getunit()
         call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
                       filstat_opt='REPLACE')
-        write (this%iout, fmtuzfbin) 'BUDGET CSV', fname, this%ibudcsv
+        write (this%iout, fmtuzfbin) 'BUDGET CSV', trim(adjustl(fname)), &
+          this%ibudcsv
       else
         call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
           &FILEOUT')
@@ -487,7 +491,8 @@ contains
         this%ipakcsv = getunit()
         call openfile(this%ipakcsv, this%iout, fname, 'CSV', &
                       filstat_opt='REPLACE', mode_opt=MNORMAL)
-        write (this%iout, fmtuzfbin) 'PACKAGE_CONVERGENCE', fname, this%ipakcsv
+        write (this%iout, fmtuzfbin) 'PACKAGE_CONVERGENCE', &
+          trim(adjustl(fname)), this%ipakcsv
       else
         call store_error('OPTIONAL PACKAGE_CONVERGENCE KEYWORD MUST BE '// &
                          'FOLLOWED BY FILEOUT')
@@ -1104,7 +1109,7 @@ contains
     return
   end subroutine uzf_cf
 
-  subroutine uzf_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine uzf_fc(this, rhs, ia, idxglo, matrix_sln)
 ! ******************************************************************************
 ! uzf_fc -- Copy rhs and hcof into solution rhs and amat
 ! ******************************************************************************
@@ -1116,7 +1121,7 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     integer(I4B) :: i, n, ipos
 ! ------------------------------------------------------------------------------
@@ -1135,14 +1140,14 @@ contains
       n = this%nodelist(i)
       rhs(n) = rhs(n) + this%rhs(i)
       ipos = ia(n)
-      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
+      call matrix_sln%add_value_pos(idxglo(ipos), this%hcof(i))
     end do
     !
     ! -- return
     return
   end subroutine uzf_fc
 !
-  subroutine uzf_fn(this, rhs, ia, idxglo, amatsln)
+  subroutine uzf_fn(this, rhs, ia, idxglo, matrix_sln)
 ! **************************************************************************
 ! uzf_fn -- Fill newton terms
 ! **************************************************************************
@@ -1154,7 +1159,7 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     integer(I4B) :: i, n
     integer(I4B) :: ipos
@@ -1164,7 +1169,7 @@ contains
     do i = 1, this%nodes
       n = this%nodelist(i)
       ipos = ia(n)
-      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%deriv(i)
+      call matrix_sln%add_value_pos(idxglo(ipos), this%deriv(i))
       rhs(n) = rhs(n) + this%deriv(i) * this%xnew(n)
     end do
     !
@@ -1197,9 +1202,12 @@ contains
     integer(I4B) :: locdrejinfmax
     integer(I4B) :: locdrchmax
     integer(I4B) :: locdseepmax
+    integer(I4B) :: locdqfrommvrmax
     integer(I4B) :: ntabrows
     integer(I4B) :: ntabcols
     integer(I4B) :: n
+    real(DP) :: q
+    real(DP) :: q0
     real(DP) :: qtolfact
     real(DP) :: drejinf
     real(DP) :: drejinfmax
@@ -1207,6 +1215,8 @@ contains
     real(DP) :: drchmax
     real(DP) :: dseep
     real(DP) :: dseepmax
+    real(DP) :: dqfrommvr
+    real(DP) :: dqfrommvrmax
     ! format
 ! --------------------------------------------------------------------------
     !
@@ -1216,9 +1226,11 @@ contains
     locdrejinfmax = 0
     locdrchmax = 0
     locdseepmax = 0
+    locdqfrommvrmax = 0
     drejinfmax = DZERO
     drchmax = DZERO
     dseepmax = DZERO
+    dqfrommvrmax = DZERO
     !
     ! -- if not saving package convergence data on check convergence if
     !    the model is considered converged
@@ -1235,6 +1247,9 @@ contains
         ntabrows = 1
         ntabcols = 9
         if (this%iseepflag == 1) then
+          ntabcols = ntabcols + 2
+        end if
+        if (this%imover == 1) then
           ntabcols = ntabcols + 2
         end if
         !
@@ -1269,6 +1284,12 @@ contains
           tag = 'dseepmax_loc'
           call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
         end if
+        if (this%imover == 1) then
+          tag = 'dqfrommvrmax'
+          call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+          tag = 'dqfrommvrmax_loc'
+          call this%pakcsvtab%initialize_column(tag, 16, alignment=TABLEFT)
+        end if
       end if
     end if
     !
@@ -1291,6 +1312,14 @@ contains
           dseep = qtolfact * (this%gwd0(n) - this%gwd(n))
         end if
         !
+        ! -- q from mvr
+        dqfrommvr = DZERO
+        if (this%imover == 1) then
+          q = this%pakmvrobj%get_qfrommvr(n)
+          q0 = this%pakmvrobj%get_qfrommvr0(n)
+          dqfrommvr = qtolfact * (q0 - q)
+        end if
+        !
         ! -- evaluate magnitude of differences
         if (n == 1) then
           drejinfmax = drejinf
@@ -1299,6 +1328,8 @@ contains
           locdrchmax = n
           dseepmax = dseep
           locdseepmax = n
+          dqfrommvrmax = dqfrommvr
+          locdqfrommvrmax = n
         else
           if (ABS(drejinf) > abs(drejinfmax)) then
             drejinfmax = drejinf
@@ -1311,6 +1342,10 @@ contains
           if (ABS(dseep) > abs(dseepmax)) then
             dseepmax = dseep
             locdseepmax = n
+          end if
+          if (ABS(dqfrommvr) > abs(dqfrommvrmax)) then
+            dqfrommvrmax = dqfrommvr
+            locdqfrommvrmax = n
           end if
         end if
       end do final_check
@@ -1336,6 +1371,14 @@ contains
           cpak = trim(cloc)
         end if
       end if
+      if (this%imover == 1) then
+        if (ABS(dqfrommvrmax) > abs(dpak)) then
+          ipak = locdqfrommvrmax
+          dpak = dqfrommvrmax
+          write (cloc, "(a,'-',a)") trim(this%packName), 'qfrommvr'
+          cpak = trim(cloc)
+        end if
+      end if
       !
       ! -- write convergence data to package csv
       if (this%ipakcsv /= 0) then
@@ -1353,6 +1396,10 @@ contains
         if (this%iseepflag == 1) then
           call this%pakcsvtab%add_term(dseepmax)
           call this%pakcsvtab%add_term(locdseepmax)
+        end if
+        if (this%imover == 1) then
+          call this%pakcsvtab%add_term(dqfrommvrmax)
+          call this%pakcsvtab%add_term(locdqfrommvrmax)
         end if
         !
         ! -- finalize the package csv
@@ -1717,7 +1764,9 @@ contains
     !
     ! -- Initialize
     ierr = 0
-    this%uzfobj%pet = this%uzfobj%petmax
+    do i = 1, this%nodes
+      this%uzfobj%pet(i) = this%uzfobj%petmax(i)
+    end do
     !
     ! -- Calculate hcof and rhs for each UZF entry
     do i = 1, this%nodes

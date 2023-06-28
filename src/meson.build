@@ -7,6 +7,24 @@ external_libraries = files(
 )
 
 modflow_sources = files(
+    'Distributed' / 'IndexMap.f90',
+    'Distributed' / 'InterfaceMap.f90',
+    'Distributed' / 'Mapper.f90',
+    'Distributed' / 'MappedMemory.f90',
+    'Distributed' / 'RouterBase.f90',
+    'Distributed' / 'RouterFactory.F90',
+    'Distributed' / 'SerialRouter.f90',
+    'Distributed' / 'VirtualBase.f90',
+    'Distributed' / 'VirtualDataContainer.f90',
+    'Distributed' / 'VirtualDataLists.f90',
+    'Distributed' / 'VirtualDataManager.f90',
+    'Distributed' / 'VirtualExchange.f90',    
+    'Distributed' / 'VirtualGwfExchange.f90',
+    'Distributed' / 'VirtualGwtExchange.f90',
+    'Distributed' / 'VirtualModel.f90',
+    'Distributed' / 'VirtualGwfModel.f90',
+    'Distributed' / 'VirtualGwtModel.f90',
+    'Distributed' / 'VirtualSolution.f90',
     'Exchange' / 'BaseExchange.f90',
     'Exchange' / 'DisConnExchange.f90',
     'Exchange' / 'GhostNode.f90',
@@ -24,10 +42,7 @@ modflow_sources = files(
     'Model' / 'Connection' / 'GwfInterfaceModel.f90',
     'Model' / 'Connection' / 'GwtInterfaceModel.f90',
     'Model' / 'Connection' / 'SpatialModelConnection.f90',
-    'Model' / 'Connection' / 'MappedVariable.f90',
-    'Model' / 'Connection' / 'DistributedData.f90',
-    'Model' / 'Connection' / 'DistributedModel.f90',
-    'Model' / 'Connection' / 'InterfaceMap.f90',
+    'Model' / 'Connection' / 'DistributedVariable.f90',
     'Model' / 'Geometry' / 'BaseGeometry.f90',
     'Model' / 'Geometry' / 'CircularGeometry.f90',
     'Model' / 'Geometry' / 'RectangularGeometry.f90',
@@ -47,6 +62,7 @@ modflow_sources = files(
     'Model' / 'GroundWaterFlow' / 'gwf3ghb8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3hfb8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3ic8.f90',
+    'Model' / 'GroundWaterFlow' / 'gwf3idm.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3lak8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3maw8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3mvr8.f90',
@@ -68,10 +84,14 @@ modflow_sources = files(
     'Model' / 'GroundWaterTransport' / 'gwt1adv1.f90',
     'Model' / 'GroundWaterTransport' / 'gwt1apt1.f90',
     'Model' / 'GroundWaterTransport' / 'gwt1cnc1.f90',
-    'Model' / 'GroundWaterTransport' / 'gwt1dsp.f90',
-    'Model' / 'GroundWaterTransport' / 'gwt1dspidm.f90',
+    'Model' / 'GroundWaterTransport' / 'gwt1dis1idm.f90',
+    'Model' / 'GroundWaterTransport' / 'gwt1disu1idm.f90',
+    'Model' / 'GroundWaterTransport' / 'gwt1disv1idm.f90',
+    'Model' / 'GroundWaterTransport' / 'gwt1dsp1.f90',
+    'Model' / 'GroundWaterTransport' / 'gwt1dsp1idm.f90',
     'Model' / 'GroundWaterTransport' / 'gwt1fmi1.f90',
     'Model' / 'GroundWaterTransport' / 'gwt1ic1.f90',
+    'Model' / 'GroundWaterTransport' / 'gwt1idm.f90',
     'Model' / 'GroundWaterTransport' / 'gwt1ist1.f90',
     'Model' / 'GroundWaterTransport' / 'gwt1lkt1.f90',
     'Model' / 'GroundWaterTransport' / 'gwt1mst1.f90',
@@ -103,6 +123,7 @@ modflow_sources = files(
     'Model' / 'ModelUtilities' / 'Xt3dAlgorithm.f90',
     'Model' / 'ModelUtilities' / 'Xt3dInterface.f90',
     'Model' / 'BaseModel.f90',
+    'Model' / 'ExplicitModel.f90',
     'Model' / 'NumericalModel.f90',
     'Model' / 'NumericalPackage.f90',
     'Model' / 'TransportModel.f90',
@@ -110,8 +131,13 @@ modflow_sources = files(
     'Solution' / 'LinearMethods' / 'ims8linear.f90',
     'Solution' / 'LinearMethods' / 'ims8reordering.f90',
     'Solution' / 'LinearMethods' / 'ims8misc.f90',
+    'Solution' / 'LinearMethods' / 'ImsLinearSolver.f90',
     'Solution' / 'BaseSolution.f90',
+    'Solution' / 'ExplicitSolution.f90',
+    'Solution' / 'LinearSolverBase.f90',
+    'Solution' / 'LinearSolverFactory.F90',
     'Solution' / 'NumericalSolution.f90',
+    'Solution' / 'SolutionFactory.F90',
     'Solution' / 'SolutionGroup.f90',
     'Timing' / 'ats.f90',
     'Timing' / 'tdis.f90',
@@ -121,14 +147,22 @@ modflow_sources = files(
     'Utilities' / 'ArrayRead' / 'Integer1dReader.f90',
     'Utilities' / 'ArrayRead' / 'Integer2dReader.f90',
     'Utilities' / 'ArrayRead' / 'LayeredArrayReader.f90',
+    'Utilities' / 'Idm' / 'DefinitionSelect.f90',
     'Utilities' / 'Idm' / 'IdmLogger.f90',
-    'Utilities' / 'Idm' / 'IdmMf6FileLoader.f90',
-    'Utilities' / 'Idm' / 'ModflowInput.f90',
+    'Utilities' / 'Idm' / 'IdmSimulation.f90',
     'Utilities' / 'Idm' / 'InputDefinition.f90',
-    'Utilities' / 'Idm' / 'InputDefinitionSelector.f90',
-    'Utilities' / 'Idm' / 'LoadMf6FileType.f90',
-    'Utilities' / 'Idm' / 'StructArray.f90',
-    'Utilities' / 'Idm' / 'StructVector.f90',
+    'Utilities' / 'Idm' / 'ModelPackageInputs.f90',
+    'Utilities' / 'Idm' / 'ModflowInput.f90',
+    'Utilities' / 'Idm' / 'mf6blockfile' / 'IdmMf6File.f90',
+    'Utilities' / 'Idm' / 'mf6blockfile' / 'LoadMf6File.f90',
+    'Utilities' / 'Idm' / 'mf6blockfile' / 'StructArray.f90',
+    'Utilities' / 'Idm' / 'mf6blockfile' / 'StructVector.f90',
+    'Utilities' / 'Idm' / 'selector' / 'IdmDfnSelector.f90',
+    'Utilities' / 'Idm' / 'selector' / 'IdmGwfDfnSelector.f90',
+    'Utilities' / 'Idm' / 'selector' / 'IdmGwtDfnSelector.f90',
+    'Utilities' / 'Idm' / 'selector' / 'IdmSimDfnSelector.f90',
+    'Utilities' / 'Matrix' / 'MatrixBase.f90',
+    'Utilities' / 'Matrix' / 'SparseMatrix.f90',
     'Utilities' / 'Memory' / 'Memory.f90',
     'Utilities' / 'Memory' / 'MemoryHelper.f90',
     'Utilities' / 'Memory' / 'MemoryList.f90',
@@ -153,6 +187,8 @@ modflow_sources = files(
     'Utilities' / 'TimeSeries' / 'TimeSeriesLink.f90',
     'Utilities' / 'TimeSeries' / 'TimeSeriesManager.f90',
     'Utilities' / 'TimeSeries' / 'TimeSeriesRecord.f90',
+    'Utilities' / 'Vector' / 'VectorBase.f90',
+    'Utilities' / 'Vector' / 'SeqVector.f90',
     'Utilities' / 'ArrayHandlers.f90',
     'Utilities' / 'ArrayReaders.f90',
     'Utilities' / 'BlockParser.f90',
@@ -174,27 +210,74 @@ modflow_sources = files(
     'Utilities' / 'List.f90',
     'Utilities' / 'ListReader.f90',
     'Utilities' / 'Message.f90',
-    'Utilities' / 'NameFile.f90',
     'Utilities' / 'OpenSpec.f90',
     'Utilities' / 'PackageBudget.f90',
     'Utilities' / 'Sim.f90',
+    'Utilities' / 'SimStages.f90',
     'Utilities' / 'SimVariables.f90',
     'Utilities' / 'SmoothingFunctions.f90',
     'Utilities' / 'sort.f90',
-    'Utilities' / 'Sparse.f90',
+    'Utilities' / 'Sparse.f90',    
+    'Utilities' / 'STLVecInt.f90',
     'Utilities' / 'StringList.f90',
     'Utilities' / 'Table.f90',
     'Utilities' / 'TableTerm.f90',
     'Utilities' / 'Timer.f90',
-    'Utilities' / 'VectorInt.f90',
     'Utilities' / 'version.f90',
     'mf6core.f90',
     'mf6lists.f90',
-    'SimulationCreate.f90'
+    'simnamidm.f90',
+    'SimulationCreate.f90',
+    'RunControl.f90',
+    'RunControlFactory.F90'
 )
+
+modflow_petsc_sources = files(
+  'Utilities' / 'Vector' / 'PetscVector.F90',
+  'Utilities' / 'Matrix' / 'PetscMatrix.F90',
+  'Solution' / 'PETSc' / 'PetscSolver.F90',
+  'Solution' / 'PETSc' / 'PetscConvergence.F90'
+)
+
+modflow_mpi_sources = files(
+  'Distributed' / 'MpiMessageBuilder.f90',
+  'Distributed' / 'MpiRouter.f90',
+  'Distributed' / 'MpiRunControl.F90',
+  'Distributed' / 'MpiWorld.f90',
+  'Solution' / 'ParallelSolution.f90'
+)
+
+if with_petsc
+  modflow_sources += modflow_petsc_sources  
+endif
+
+if with_mpi
+  modflow_sources += modflow_mpi_sources
+endif
 
 mf6_external = static_library('mf6_external', external_libraries)
 
-mf6core = static_library('mf6core', modflow_sources, link_with: [mf6_external])
+message('MODFLOW 6 executable name: ' + buildname)
 
-mf6exe = executable('mf6', 'mf6.f90', link_with: [mf6core], install: true)
+if build_machine.system() == 'windows' and with_petsc
+  mf6core = static_library('mf6core', 
+                           modflow_sources, 
+                           dependencies:  dependencies, 
+                           link_with: [mf6_external], 
+                           include_directories: petsc_incdir)
+  mf6exe = executable(buildname,
+                      'mf6.f90', 
+                      link_with: [mf6core],
+                      dependencies: dependencies, 
+                      install: true)
+else
+  mf6core = static_library('mf6core', 
+                           modflow_sources,  
+                           dependencies: dependencies,
+                           link_with: [mf6_external])
+  mf6exe = executable(buildname, 
+                      'mf6.f90', 
+                      link_with: [mf6core],  
+                      dependencies: dependencies, 
+                      install: true)
+endif

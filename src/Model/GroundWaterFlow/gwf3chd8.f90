@@ -9,6 +9,7 @@ module ChdModule
   use ObserveModule, only: ObserveType
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
+  use MatrixBaseModule
   !
   implicit none
   !
@@ -252,7 +253,7 @@ contains
     return
   end subroutine chd_ck
 
-  subroutine chd_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine chd_fc(this, rhs, ia, idxglo, matrix_sln)
 ! **************************************************************************
 ! chd_fc -- Override bnd_fc and do nothing
 ! **************************************************************************
@@ -264,7 +265,7 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
 ! --------------------------------------------------------------------------
     !

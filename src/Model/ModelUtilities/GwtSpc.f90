@@ -243,7 +243,7 @@ contains
           write (this%iout, fmttas) trim(fname)
           call this%TasManager%add_tasfile(fname)
         case default
-          write (errmsg, '(4x,a,a)') 'UNKNOWN SPC OPTION: ', trim(keyword)
+          write (errmsg, '(a,a)') 'Unknown SPC option: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
@@ -287,20 +287,20 @@ contains
           write (this%iout, '(4x,a,i7)') 'MAXBOUND = ', this%maxbound
         case default
           write (errmsg, '(a,3(1x,a))') &
-            'UNKNOWN', trim(text), 'DIMENSION:', trim(keyword)
+            'Unknown', trim(text), 'dimension:', trim(keyword)
           call store_error(errmsg)
         end select
       end do
       !
       write (this%iout, '(1x,a)') 'END OF '//trim(adjustl(text))//' DIMENSIONS'
     else
-      call store_error('REQUIRED DIMENSIONS BLOCK NOT FOUND.')
+      call store_error('Required DIMENSIONS block not found.')
       call this%parser%StoreErrorUnit()
     end if
     !
     ! -- verify dimensions were set
     if (this%maxbound <= 0) then
-      write (errmsg, '(a)') 'MAXBOUND MUST BE AN INTEGER GREATER THAN ZERO.'
+      write (errmsg, '(a)') 'MAXBOUND must be an integer greater than zero.'
       call store_error(errmsg)
     end if
     !
@@ -343,11 +343,42 @@ contains
   !!  Get the floating point value from the dblvec array.
   !!
   !<
-  function get_value(this, ientry) result(value)
+  function get_value(this, ientry, nbound_flow) result(value)
     class(GwtSpcType) :: this !< GwtSpcType object
     integer(I4B), intent(in) :: ientry !< index of the data to return
+    integer(I4B), intent(in) :: nbound_flow !< size of bound list in flow package
     real(DP) :: value
-    value = this%dblvec(ientry)
+    integer(I4B) :: nu
+    if (this%readasarrays) then
+      ! Special handling for reduced grids and readasarrays
+      ! if flow and transport are in the same simulation, then
+      ! ientry is a user node number and it corresponds to the
+      ! correct position in the dblvec array.  But if flow and
+      ! transport are not in the same simulation, then ientry is
+      ! a reduced node number, because the list of flows in the
+      ! budget file do not include idomain < 1 entries. In this
+      ! case, ientry must be converted to a user node number so
+      ! that it corresponds to a user array, which includes
+      ! idomain < 1 values.
+      if (nbound_flow == this%maxbound) then
+        ! flow and transport are in the same simulation or there
+        ! are no idomain < 1 cells.
+        value = this%dblvec(ientry)
+      else
+        ! This identifies case where flow and transport must be
+        ! in a separate simulation, because nbound_flow is not
+        ! the same as this%maxbound.  Under these conditions, we
+        ! must assume that ientry corresponds to a flow list that
+        ! would be of size ncpl if flow and transport were in the
+        ! same simulation, but because boundary cells with
+        ! idomain < 1 are not written to binary budget file, the
+        ! list size is smaller.
+        nu = this%dis%get_nodeuser(ientry)
+        value = this%dblvec(nu)
+      end if
+    else
+      value = this%dblvec(ientry)
+    end if
     return
   end function get_value
 
@@ -541,43 +572,44 @@ contains
     end do
     !
     ! -- Read CONCENTRATION variables as arrays
-    call this%parser%GetNextLine(endOfBlock)
-    if (endOfBlock) then
-      call store_error('LOOKING FOR CONCENTRATION.  FOUND: '//trim(line))
-      call this%parser%StoreErrorUnit()
-    end if
-    call this%parser%GetStringCaps(keyword)
-    !
-    ! -- Parse the keywords
-    select case (keyword)
-    case ('CONCENTRATION')
-      !
-      ! -- Look for keyword TIMEARRAYSERIES and time-array series
-      !    name on line, following RECHARGE
+    do
+      call this%parser%GetNextLine(endOfBlock)
+      if (endOfBlock) exit
       call this%parser%GetStringCaps(keyword)
-      if (keyword == 'TIMEARRAYSERIES') then
-        ! -- Get time-array series name
-        call this%parser%GetStringCaps(tasName)
-        bndArrayPtr => this%dblvec(:)
-        ! Make a time-array-series link and add it to the list of links
-        ! contained in the TimeArraySeriesManagerType object.
-        convertflux = .false.
-        call this%TasManager%MakeTasLink(this%packName, bndArrayPtr, &
-                                         this%iprpak, tasName, 'CONCENTRATION', &
-                                         convertFlux, nodelist, &
-                                         this%parser%iuactive)
-      else
-        !
-        ! -- Read the concentration array
-        call this%dis%read_layer_array(nodelist, this%dblvec, ncolbnd, &
-                                       this%maxbound, 1, aname(1), &
-                                       this%parser%iuactive, this%iout)
-      end if
       !
-    case default
-      call store_error('LOOKING FOR CONCENTRATION.  FOUND: '//trim(line))
-      call this%parser%StoreErrorUnit()
-    end select
+      ! -- Parse the keywords
+      select case (keyword)
+      case ('CONCENTRATION')
+        !
+        ! -- Look for keyword TIMEARRAYSERIES and time-array series
+        !    name on line, following RECHARGE
+        call this%parser%GetStringCaps(keyword)
+        if (keyword == 'TIMEARRAYSERIES') then
+          ! -- Get time-array series name
+          call this%parser%GetStringCaps(tasName)
+          bndArrayPtr => this%dblvec(:)
+          ! Make a time-array-series link and add it to the list of links
+          ! contained in the TimeArraySeriesManagerType object.
+          convertflux = .false.
+          call this%TasManager%MakeTasLink(this%packName, bndArrayPtr, &
+                                           this%iprpak, tasName, &
+                                           'CONCENTRATION', &
+                                           convertFlux, nodelist, &
+                                           this%parser%iuactive)
+        else
+          !
+          ! -- Read the concentration array
+          call this%dis%read_layer_array(nodelist, this%dblvec, ncolbnd, &
+                                         this%maxbound, 1, aname(1), &
+                                         this%parser%iuactive, this%iout)
+        end if
+        !
+      case default
+        call store_error('Looking for CONCENTRATION.  Found: '//trim(line))
+        call this%parser%StoreErrorUnit()
+      end select
+
+    end do
     !
     return
   end subroutine spc_rp_array
@@ -660,14 +692,10 @@ contains
     !
     ! -- make check
     if (this%ionper <= this%lastonper) then
-      write (errmsg, '(a, i0)') &
-        'ERROR IN STRESS PERIOD ', kper
-      call store_error(errmsg)
-      write (errmsg, '(a, i0)') &
-        'PERIOD NUMBERS NOT INCREASING.  FOUND ', this%ionper
-      call store_error(errmsg)
-      write (errmsg, '(a, i0)') &
-        'BUT LAST PERIOD BLOCK WAS ASSIGNED ', this%lastonper
+      write (errmsg, '(a, i0, a, i0, a, i0, a)') &
+        'Error in stress period ', kper, &
+        '. Period numbers not increasing.  Found ', this%ionper, &
+        ' but last period block was assigned ', this%lastonper, '.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if

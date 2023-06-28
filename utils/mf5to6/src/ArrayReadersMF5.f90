@@ -2,7 +2,7 @@ module ArrayReadersMF5Module
   
   use ConstantsModule,   only: LINELENGTH, LENBIGLINE, LENBOUNDNAME, &
                                NAMEDBOUNDFLAG, LINELENGTH, DZERO
-  use InputOutputModule, only: openfile, u8rdcom, urword, ucolno, ulaprw
+  use InputOutputModule, only: openfile, u9rdcom, urword, ucolno, ulaprw
   use KindModule,        only: DP, I4B
   use OpenSpecModule,    only: ACCESS, FORM
   use SimModule,         only: store_error, ustop, store_error_unit
@@ -71,7 +71,7 @@ contains
     integer :: iclose, icol, ierr, ifree, iprn, istart, istop, j, locat, n
     real(DP) :: r, cnstnt
     character(len=20) :: fmtin
-    character(len=200) :: cntrl
+    character (len=:), allocatable :: cntrl
     character(len=200) :: fname
     character(len=linelength) :: ermsg
     integer, parameter :: nunopn=99
@@ -86,7 +86,7 @@ contains
 !   ------------------------------------------------------------------
 !
 !C1------READ ARRAY CONTROL RECORD AS CHARACTER DATA.
-    call u8rdcom(in,iout,cntrl,ierr)
+    call u9rdcom(in,iout,cntrl,ierr)
 !
 !C2------LOOK FOR ALPHABETIC WORD THAT INDICATES THAT THE RECORD IS FREE
 !C2------FORMAT.  SET A FLAG SPECIFYING IF FREE FORMAT OR FIXED FORMAT.
@@ -222,7 +222,7 @@ contains
                locat
     real(DP) :: r
     character(len=20) :: fmtin
-    character(len=200) :: cntrl
+    character (len=:), allocatable :: cntrl
     character(len=200) :: fname
     character(len=linelength) :: ermsg
     integer, parameter :: nunopn=99
@@ -237,7 +237,7 @@ contains
 !   ------------------------------------------------------------------
 !
 !C1------READ ARRAY CONTROL RECORD AS CHARACTER DATA.
-    call u8rdcom(in,iout,cntrl,ierr)
+    call u9rdcom(in,iout,cntrl,ierr)
 !C
 !C2------LOOK FOR ALPHABETIC WORD THAT INDICATES THAT THE RECORD IS FREE
 !C2------FORMAT.  SET A FLAG SPECIFYING IF FREE FORMAT OR FIXED FORMAT.
@@ -373,7 +373,7 @@ contains
                kper, kstp, locat, n, ncol, nrow
     real(DP) :: r, cnstnt, pertim, totim
     character(len=20) :: fmtin
-    character(len=200) :: cntrl
+    character (len=:), allocatable :: cntrl
     character(len=16) :: text
     character(len=200) :: fname
     character(len=20) :: ftype
@@ -400,7 +400,7 @@ contains
 !     ------------------------------------------------------------------
 !
 !C1------READ ARRAY CONTROL RECORD AS CHARACTER DATA.
-    call u8rdcom(in,iout,cntrl,ierr)
+    call u9rdcom(in,iout,cntrl,ierr)
 !
 !C2------LOOK FOR ALPHABETIC WORD THAT INDICATES THAT THE RECORD IS FREE
 !C2------FORMAT.  SET A FLAG SPECIFYING IF FREE FORMAT OR FIXED FORMAT.
@@ -569,7 +569,7 @@ contains
                istop, locat, n
     real(DP) :: r
     character(len=20) :: fmtin
-    character(len=200) :: cntrl
+    character (len=:), allocatable :: cntrl
     character(len=200) :: fname
     character(len=20) :: ftype
     character(len=LINELENGTH) :: ermsg
@@ -605,7 +605,7 @@ contains
 !     ------------------------------------------------------------------
 !
 !C1------READ ARRAY CONTROL RECORD AS CHARACTER DATA.
-    call u8rdcom(in,iout,cntrl,ierr)
+    call u9rdcom(in,iout,cntrl,ierr)
 !
 !C2------LOOK FOR ALPHABETIC WORD THAT INDICATES THAT THE RECORD IS FREE
 !C2------FORMAT.  SET A FLAG SPECIFYING IF FREE FORMAT OR FIXED FORMAT.

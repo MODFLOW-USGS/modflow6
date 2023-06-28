@@ -38,6 +38,7 @@ module MemoryManagerModule
   public :: copy_dbl1d
 
   public :: memorylist
+  public :: mem_print_detailed
 
   type(MemoryListType) :: memorylist
   type(TableType), pointer :: memtab => null()
@@ -274,13 +275,17 @@ contains
     ! -- local
     type(MemoryType), pointer :: mt => null()
     logical(LGP) :: found
+    logical(LGP) :: terminate
     ! -- code
     !
     ! -- initialize isize to a value to communicate failure
     isize = -1
     !
+    ! -- don't exit program if variable not found
+    terminate = .false.
+    !
     ! -- get the entry from the memory manager
-    call get_from_memorylist(name, mem_path, mt, found)
+    call get_from_memorylist(name, mem_path, mt, found, terminate)
     !
     ! -- set isize
     if (found) then
@@ -1233,6 +1238,7 @@ contains
       deallocate (astrtemp)
       !
       ! -- reset memory manager values
+      mt%acharstr1d => acharstr1d
       mt%element_size = ilen
       mt%isize = isize
       mt%nrealloc = mt%nrealloc + 1
@@ -2802,12 +2808,7 @@ contains
     !
     ! -- Write table with all variables for iprmem == 2
     if (iprmem == 2) then
-      call mem_detailed_table(iout, memorylist%count())
-      do ipos = 1, memorylist%count()
-        mt => memorylist%Get(ipos)
-        call mt%table_entry(memtab)
-      end do
-      call mem_cleanup_table()
+      call mem_print_detailed(iout)
     end if
     !
     ! -- Write total memory allocation
@@ -2816,6 +2817,21 @@ contains
     ! -- return
     return
   end subroutine mem_write_usage
+
+  subroutine mem_print_detailed(iout)
+    integer(I4B) :: iout
+    ! local
+    class(MemoryType), pointer :: mt
+    integer(I4B) :: ipos
+
+    call mem_detailed_table(iout, memorylist%count())
+    do ipos = 1, memorylist%count()
+      mt => memorylist%Get(ipos)
+      call mt%table_entry(memtab)
+    end do
+    call mem_cleanup_table()
+
+  end subroutine mem_print_detailed
 
   !> @brief Deallocate memory in the memory manager
   !<

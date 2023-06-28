@@ -1,25 +1,17 @@
 import os
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
+from cross_section_functions import get_depths
 
 paktest = "sfr"
 
 ex = [
     "sfr_npt02a",
 ]
-exdirs = [os.path.join("temp", s) for s in ex]
 
 # temporal discretization
 nper = 10
@@ -55,6 +47,7 @@ for n in range(nper):
         "h": np.array([0.0, 0.0], dtype=float),
     }
 
+
 # depth as a function of flow for a wide cross-section
 def flow_to_depth_wide(rwid, q):
     return ((q * roughness) / (conversion_fact * rwid * np.sqrt(slope))) ** 0.6
@@ -62,7 +55,6 @@ def flow_to_depth_wide(rwid, q):
 
 #
 def build_model(idx, ws):
-
     # build MODFLOW 6 files
     name = ex[idx]
     sim = flopy.mf6.MFSimulation(
@@ -218,71 +210,52 @@ def build_model(idx, ws):
 
 
 def eval_npointdepth(sim):
-    idx = sim.idxsim
-    name = ex[idx]
+    name = sim.name
     print("evaluating n-point cross-section results..." f"({name})")
 
-    obs_pth = os.path.join(exdirs[idx], f"{name}.sfr.obs.csv")
+    obs_pth = os.path.join(sim.simpath, f"{name}.sfr.obs.csv")
     obs = flopy.utils.Mf6Obs(obs_pth).get_data()
 
     assert np.allclose(
         obs["INFLOW"], np.abs(obs["OUTFLOW"])
     ), "inflow not equal to outflow"
 
-    d = flow_to_depth_wide(
-        obs["WIDTH"],
-        inflow,
-    )
+    d = []
+    for n in range(nper):
+        x0 = 0.0
+        x1 = rwid * (n + 1)  # generates absolute widths generated above
+        x = np.array([x0, x1])
+        cdepth = get_depths(
+            inflow,
+            x=x,
+            h=np_data[n]["h"],
+            roughness=roughness,
+            slope=slope,
+            conv=1.0,
+            dd=1e-4,
+            verbose=False,
+        )
+        d.append(cdepth[0])
 
     assert np.allclose(
         obs["DEPTH"], d
     ), "sfr depth not equal to calculated depth"
 
-    return
 
-
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, exdir",
-    list(enumerate(exdirs)),
+    "name",
+    ex,
 )
-def test_mf6model(idx, exdir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, exdir)
-
-    # run the test models
-    test.run_mf6(
-        Simulation(
-            exdir,
+def test_mf6model(name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, 0, ws)
+    test.run(
+        TestSimulation(
+            name=name,
+            exe_dict=targets,
             exfunc=eval_npointdepth,
-            idxsim=idx,
-        )
+            idxsim=0,
+        ),
+        ws,
     )
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test models
-    for idx, exdir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, exdir)
-
-        sim = Simulation(
-            exdir,
-            exfunc=eval_npointdepth,
-            idxsim=idx,
-        )
-        test.run_mf6(sim)
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()

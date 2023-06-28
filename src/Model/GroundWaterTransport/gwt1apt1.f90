@@ -51,6 +51,7 @@ module GwtAptModule
   use ObserveModule, only: ObserveType
   use InputOutputModule, only: extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
+  use MatrixBaseModule
 
   implicit none
 
@@ -232,7 +233,7 @@ contains
     return
   end subroutine apt_ac
 
-  subroutine apt_mc(this, moffset, iasln, jasln)
+  subroutine apt_mc(this, moffset, matrix_sln)
 ! ******************************************************************************
 ! apt_mc -- map package connection to matrix
 ! ******************************************************************************
@@ -243,10 +244,9 @@ contains
     ! -- dummy
     class(GwtAptType), intent(inout) :: this
     integer(I4B), intent(in) :: moffset
-    integer(I4B), dimension(:), intent(in) :: iasln
-    integer(I4B), dimension(:), intent(in) :: jasln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
-    integer(I4B) :: n, j, jj, iglo, jglo
+    integer(I4B) :: n, j, iglo, jglo
     integer(I4B) :: ipos
     ! -- format
 ! ------------------------------------------------------------------------------
@@ -265,20 +265,15 @@ contains
       do n = 1, this%ncv
         this%idxlocnode(n) = this%dis%nodes + this%ioffset + n
         iglo = moffset + this%dis%nodes + this%ioffset + n
-        this%idxpakdiag(n) = iasln(iglo)
+        this%idxpakdiag(n) = matrix_sln%get_position_diag(iglo)
       end do
       do ipos = 1, this%flowbudptr%budterm(this%idxbudgwf)%nlist
         n = this%flowbudptr%budterm(this%idxbudgwf)%id1(ipos)
         j = this%flowbudptr%budterm(this%idxbudgwf)%id2(ipos)
         iglo = moffset + this%dis%nodes + this%ioffset + n
         jglo = j + moffset
-        searchloop: do jj = iasln(iglo), iasln(iglo + 1) - 1
-          if (jglo == jasln(jj)) then
-            this%idxdglo(ipos) = iasln(iglo)
-            this%idxoffdglo(ipos) = jj
-            exit searchloop
-          end if
-        end do searchloop
+        this%idxdglo(ipos) = matrix_sln%get_position_diag(iglo)
+        this%idxoffdglo(ipos) = matrix_sln%get_position(iglo, jglo)
       end do
       !
       ! -- apt contributions to gwf portion of global matrix
@@ -287,13 +282,8 @@ contains
         j = this%flowbudptr%budterm(this%idxbudgwf)%id2(ipos)
         iglo = j + moffset
         jglo = moffset + this%dis%nodes + this%ioffset + n
-        symsearchloop: do jj = iasln(iglo), iasln(iglo + 1) - 1
-          if (jglo == jasln(jj)) then
-            this%idxsymdglo(ipos) = iasln(iglo)
-            this%idxsymoffdglo(ipos) = jj
-            exit symsearchloop
-          end if
-        end do symsearchloop
+        this%idxsymdglo(ipos) = matrix_sln%get_position_diag(iglo)
+        this%idxsymoffdglo(ipos) = matrix_sln%get_position(iglo, jglo)
       end do
       !
       ! -- apt-apt contributions to gwf portion of global matrix
@@ -303,13 +293,8 @@ contains
           j = this%flowbudptr%budterm(this%idxbudfjf)%id2(ipos)
           iglo = moffset + this%dis%nodes + this%ioffset + n
           jglo = moffset + this%dis%nodes + this%ioffset + j
-          fjfsearchloop: do jj = iasln(iglo), iasln(iglo + 1) - 1
-            if (jglo == jasln(jj)) then
-              this%idxfjfdglo(ipos) = iasln(iglo)
-              this%idxfjfoffdglo(ipos) = jj
-              exit fjfsearchloop
-            end if
-          end do fjfsearchloop
+          this%idxfjfdglo(ipos) = matrix_sln%get_position_diag(iglo)
+          this%idxfjfoffdglo(ipos) = matrix_sln%get_position(iglo, jglo)
         end do
       end if
     end if
@@ -374,8 +359,8 @@ contains
           end if
         end do
         if (this%iauxfpconc == 0) then
-          errmsg = 'COULD NOT FIND AUXILIARY VARIABLE '// &
-                   trim(adjustl(this%cauxfpconc))//' IN FLOW PACKAGE '// &
+          errmsg = 'Could not find auxiliary variable '// &
+                   trim(adjustl(this%cauxfpconc))//' in flow package '// &
                    trim(adjustl(this%flowpackagename))
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -662,8 +647,8 @@ contains
 ! ------------------------------------------------------------------------------
     ierr = 0
     if (itemno < 1 .or. itemno > this%ncv) then
-      write (errmsg, '(4x,a,1x,i6,1x,a,1x,i6)') &
-        '****ERROR. FEATURENO ', itemno, 'MUST BE > 0 and <= ', this%ncv
+      write (errmsg, '(a,1x,i6,1x,a,1x,i6)') &
+        'Featureno ', itemno, 'must be > 0 and <= ', this%ncv
       call store_error(errmsg)
       ierr = 1
     end if
@@ -759,7 +744,7 @@ contains
     return
   end subroutine apt_cf
 
-  subroutine apt_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine apt_fc(this, rhs, ia, idxglo, matrix_sln)
 ! ******************************************************************************
 ! apt_fc
 ! ****************************************************************************
@@ -772,22 +757,22 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
 ! ------------------------------------------------------------------------------
     !
     ! -- Call fc depending on whether or not a matrix is expanded or not
     if (this%imatrows == 0) then
-      call this%apt_fc_nonexpanded(rhs, ia, idxglo, amatsln)
+      call this%apt_fc_nonexpanded(rhs, ia, idxglo, matrix_sln)
     else
-      call this%apt_fc_expanded(rhs, ia, idxglo, amatsln)
+      call this%apt_fc_expanded(rhs, ia, idxglo, matrix_sln)
     end if
     !
     ! -- Return
     return
   end subroutine apt_fc
 
-  subroutine apt_fc_nonexpanded(this, rhs, ia, idxglo, amatsln)
+  subroutine apt_fc_nonexpanded(this, rhs, ia, idxglo, matrix_sln)
 ! ******************************************************************************
 ! apt_fc_nonexpanded -- formulate for the nonexpanded a matrix case in which
 !   feature concentrations are solved explicitly
@@ -801,7 +786,7 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     integer(I4B) :: j, igwfnode, idiag
 ! ------------------------------------------------------------------------------
@@ -814,7 +799,7 @@ contains
       igwfnode = this%flowbudptr%budterm(this%idxbudgwf)%id2(j)
       if (this%ibound(igwfnode) < 1) cycle
       idiag = idxglo(ia(igwfnode))
-      amatsln(idiag) = amatsln(idiag) + this%hcof(j)
+      call matrix_sln%add_value_pos(idiag, this%hcof(j))
       rhs(igwfnode) = rhs(igwfnode) + this%rhs(j)
     end do
     !
@@ -822,7 +807,7 @@ contains
     return
   end subroutine apt_fc_nonexpanded
 
-  subroutine apt_fc_expanded(this, rhs, ia, idxglo, amatsln)
+  subroutine apt_fc_expanded(this, rhs, ia, idxglo, matrix_sln)
 ! ******************************************************************************
 ! apt_fc_expanded -- formulate for the expanded matrix case in which new
 !   rows are added to the system of equations for each feature
@@ -836,7 +821,7 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     integer(I4B) :: j, n, n1, n2
     integer(I4B) :: iloc
@@ -855,7 +840,7 @@ contains
     !      GwtLktType, GwtSftType, GwtMwtType, GwtUztType
     !    This routine will add terms for rainfall, runoff, or other terms
     !    specific to the package
-    call this%pak_fc_expanded(rhs, ia, idxglo, amatsln)
+    call this%pak_fc_expanded(rhs, ia, idxglo, matrix_sln)
     !
     ! -- mass storage in features
     do n = 1, this%ncv
@@ -863,7 +848,7 @@ contains
       iloc = this%idxlocnode(n)
       iposd = this%idxpakdiag(n)
       call this%apt_stor_term(n, n1, n2, rrate, rhsval, hcofval)
-      amatsln(iposd) = amatsln(iposd) + hcofval
+      call matrix_sln%add_value_pos(iposd, hcofval)
       rhs(iloc) = rhs(iloc) + rhsval
     end do
     !
@@ -873,7 +858,7 @@ contains
         call this%apt_tmvr_term(j, n1, n2, rrate, rhsval, hcofval)
         iloc = this%idxlocnode(n1)
         iposd = this%idxpakdiag(n1)
-        amatsln(iposd) = amatsln(iposd) + hcofval
+        call matrix_sln%add_value_pos(iposd, hcofval)
         rhs(iloc) = rhs(iloc) + rhsval
       end do
     end if
@@ -902,14 +887,14 @@ contains
         ! -- add to apt row
         iposd = this%idxdglo(j)
         iposoffd = this%idxoffdglo(j)
-        amatsln(iposd) = amatsln(iposd) + omega * qbnd
-        amatsln(iposoffd) = amatsln(iposoffd) + (DONE - omega) * qbnd
+        call matrix_sln%add_value_pos(iposd, omega * qbnd)
+        call matrix_sln%add_value_pos(iposoffd, (DONE - omega) * qbnd)
         !
         ! -- add to gwf row for apt connection
         ipossymd = this%idxsymdglo(j)
         ipossymoffd = this%idxsymoffdglo(j)
-        amatsln(ipossymd) = amatsln(ipossymd) - (DONE - omega) * qbnd
-        amatsln(ipossymoffd) = amatsln(ipossymoffd) - omega * qbnd
+        call matrix_sln%add_value_pos(ipossymd, -(DONE - omega) * qbnd)
+        call matrix_sln%add_value_pos(ipossymoffd, -omega * qbnd)
       end if
     end do
     !
@@ -926,8 +911,8 @@ contains
         end if
         iposd = this%idxfjfdglo(j)
         iposoffd = this%idxfjfoffdglo(j)
-        amatsln(iposd) = amatsln(iposd) + omega * qbnd
-        amatsln(iposoffd) = amatsln(iposoffd) + (DONE - omega) * qbnd
+        call matrix_sln%add_value_pos(iposd, omega * qbnd)
+        call matrix_sln%add_value_pos(iposoffd, (DONE - omega) * qbnd)
       end do
     end if
     !
@@ -935,7 +920,7 @@ contains
     return
   end subroutine apt_fc_expanded
 
-  subroutine pak_fc_expanded(this, rhs, ia, idxglo, amatsln)
+  subroutine pak_fc_expanded(this, rhs, ia, idxglo, matrix_sln)
 ! ******************************************************************************
 ! pak_fc_expanded -- allow a subclass advanced transport package to inject
 !   terms into the matrix assembly.  This method must be overridden.
@@ -949,7 +934,7 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
 ! ------------------------------------------------------------------------------
     !
@@ -1468,8 +1453,8 @@ contains
         write (this%iout, fmtaptbin) &
           trim(adjustl(this%text)), 'CONCENTRATION', trim(fname), this%iconcout
       else
-        call store_error('OPTIONAL CONCENTRATION KEYWORD MUST &
-                         &BE FOLLOWED BY FILEOUT')
+        call store_error('Optional CONCENTRATION keyword must &
+                         &be followed by FILEOUT')
       end if
     case ('BUDGET')
       call this%parser%GetStringCaps(keyword)
@@ -1481,7 +1466,7 @@ contains
         write (this%iout, fmtaptbin) trim(adjustl(this%text)), 'BUDGET', &
           trim(fname), this%ibudgetout
       else
-        call store_error('OPTIONAL BUDGET KEYWORD MUST BE FOLLOWED BY FILEOUT')
+        call store_error('Optional BUDGET keyword must be followed by FILEOUT')
       end if
     case ('BUDGETCSV')
       call this%parser%GetStringCaps(keyword)
@@ -1493,7 +1478,7 @@ contains
         write (this%iout, fmtaptbin) trim(adjustl(this%text)), 'BUDGET CSV', &
           trim(fname), this%ibudcsv
       else
-        call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
+        call store_error('Optional BUDGETCSV keyword must be followed by &
           &FILEOUT')
       end if
     case default
@@ -1552,8 +1537,8 @@ contains
     !
     ! -- Check for errors
     if (this%ncv < 0) then
-      write (errmsg, '(1x,a)') &
-        'ERROR:  NUMBER OF CONTROL VOLUMES COULD NOT BE DETERMINED CORRECTLY.'
+      write (errmsg, '(a)') &
+        'Number of control volumes could not be determined correctly.'
       call store_error(errmsg)
     end if
     !
@@ -1665,8 +1650,8 @@ contains
         n = this%parser%GetInteger()
 
         if (n < 1 .or. n > this%ncv) then
-          write (errmsg, '(4x,a,1x,i6)') &
-            '****ERROR. itemno MUST BE > 0 and <= ', this%ncv
+          write (errmsg, '(a,1x,i6)') &
+            'Itemno must be > 0 and <= ', this%ncv
           call store_error(errmsg)
           cycle
         end if
@@ -1713,11 +1698,11 @@ contains
       ! -- check for duplicate or missing lakes
       do n = 1, this%ncv
         if (nboundchk(n) == 0) then
-          write (errmsg, '(a,1x,i0)') 'ERROR.  NO DATA SPECIFIED FOR FEATURE', n
+          write (errmsg, '(a,1x,i0)') 'No data specified for feature', n
           call store_error(errmsg)
         else if (nboundchk(n) > 1) then
           write (errmsg, '(a,1x,i0,1x,a,1x,i0,1x,a)') &
-            'ERROR.  DATA FOR FEATURE', n, 'SPECIFIED', nboundchk(n), 'TIMES'
+            'Data for feature', n, 'specified', nboundchk(n), 'times'
           call store_error(errmsg)
         end if
       end do
@@ -1725,7 +1710,7 @@ contains
       write (this%iout, '(1x,a)') &
         'END OF '//trim(adjustl(this%text))//' PACKAGEDATA'
     else
-      call store_error('ERROR.  REQUIRED PACKAGEDATA BLOCK NOT FOUND.')
+      call store_error('Required packagedata block not found.')
     end if
     !
     ! -- terminate if any errors were detected

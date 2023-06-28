@@ -23,27 +23,14 @@ TODO: (how) will this affect accuracy?
 """
 import os
 
+import flopy
 import numpy as np
 import pytest
 from flopy.utils.lgrutil import Lgr
-from modflowapi import ModflowApi
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["ifmod_mult_exg"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-
 name_parent = "parent"
 name_child = "child"
 g_delr = 10.0
@@ -275,8 +262,6 @@ def build_model(idx, exdir):
 
 
 def eval_heads(sim):
-    name = ex[sim.idxsim]
-
     fpth = os.path.join(sim.simpath, f"{name_parent}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads = hds.get_data()
@@ -344,42 +329,18 @@ def eval_heads(sim):
 
     # assert maxdiff_child_south > maxdiff_child_north
 
-    return
 
-
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, exdir",
-    list(enumerate(exdirs)),
+    "name",
+    ex,
 )
 @pytest.mark.developmode
-def test_mf6model(idx, exdir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, exdir)
-
-    # run the test model
-    test.run_mf6(Simulation(exdir, exfunc=eval_heads, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test models
-    for idx, exdir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, exdir)
-
-        sim = Simulation(exdir, exfunc=eval_heads, idxsim=idx)
-        test.run_mf6(sim)
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(name, function_tmpdir, targets):
+    test = TestFramework()
+    test.build(build_model, 0, str(function_tmpdir))
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_heads, idxsim=0
+        ),
+        str(function_tmpdir),
+    )

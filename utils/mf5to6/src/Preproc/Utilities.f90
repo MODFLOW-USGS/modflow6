@@ -4,7 +4,7 @@ module UtilitiesModule
   use GlobalVariablesModule, only: optfile, PathToPostObsMf, ScriptType, &
                                    verbose, echo
   use InputOutputModule, only: GetUnit, openfile, UPCASE, URWORD, &
-                               uget_block, uterminate_block, u8rdcom
+                               uget_block, uterminate_block, u9rdcom
   use SimModule, onlY: store_error, store_note, store_warning, ustop
 
   private
@@ -895,7 +895,7 @@ contains
       if (found) then
         do
           icol = 1
-          call u8rdcom(iu, 0, line, ierr)
+          call u9rdcom(iu, 0, line, ierr)
           call urword(line, icol, istart, istop, 1, idum, rdum, 0, iu)
           select case (line(istart:istop))
           case ('PATHTOPOSTOBSMF')

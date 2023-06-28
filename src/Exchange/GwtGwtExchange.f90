@@ -10,7 +10,7 @@
 module GwtGwtExchangeModule
 
   use KindModule, only: DP, I4B, LGP
-  use SimVariablesModule, only: errmsg
+  use SimVariablesModule, only: errmsg, model_loc_idx
   use SimModule, only: store_error
   use BaseModelModule, only: BaseModelType, GetBaseModelFromList
   use BaseExchangeModule, only: BaseExchangeType, AddBaseExchangeToList
@@ -18,10 +18,10 @@ module GwtGwtExchangeModule
                              TABCENTER, TABLEFT, LENAUXNAME, DNODATA, &
                              LENMODELNAME
   use ListModule, only: ListType
-  use ListsModule, only: basemodellist, distmodellist
+  use ListsModule, only: basemodellist
+  use VirtualModelModule, only: get_virtual_model
   use DisConnExchangeModule, only: DisConnExchangeType
   use GwtModule, only: GwtModelType
-  use DistributedModelModule, only: GetDistModelFromList
   use GwtMvtModule, only: GwtMvtType
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
@@ -30,6 +30,7 @@ module GwtGwtExchangeModule
   use SimVariablesModule, only: errmsg
   use BlockParserModule, only: BlockParserType
   use TableModule, only: TableType, table_cr
+  use MatrixBaseModule
 
   implicit none
 
@@ -111,7 +112,7 @@ contains
   !! Create a new GWT to GWT exchange object.
   !!
   !<
-  subroutine gwtexchange_create(filename, id, m1id, m2id)
+  subroutine gwtexchange_create(filename, name, id, m1_id, m2_id)
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use BaseModelModule, only: BaseModelType
@@ -121,13 +122,14 @@ contains
     ! -- dummy
     character(len=*), intent(in) :: filename !< filename for reading
     integer(I4B), intent(in) :: id !< id for the exchange
-    integer(I4B), intent(in) :: m1id !< id for model 1
-    integer(I4B), intent(in) :: m2id !< id for model 2
+    character(len=*) :: name !< the exchange name
+    integer(I4B), intent(in) :: m1_id !< id for model 1
+    integer(I4B), intent(in) :: m2_id !< id for model 2
     ! -- local
     type(GwtExchangeType), pointer :: exchange
     class(BaseModelType), pointer :: mb
     class(BaseExchangeType), pointer :: baseexchange
-    character(len=20) :: cint
+    integer(I4B) :: m1_index, m2_index
     !
     ! -- Create a new exchange and add it to the baseexchangelist container
     allocate (exchange)
@@ -136,8 +138,7 @@ contains
     !
     ! -- Assign id and name
     exchange%id = id
-    write (cint, '(i0)') id
-    exchange%name = 'GWT-GWT_'//trim(adjustl(cint))
+    exchange%name = name
     exchange%memoryPath = create_mem_path(exchange%name)
     !
     ! -- allocate scalars and set defaults
@@ -148,25 +149,27 @@ contains
     exchange%ixt3d = 1
     !
     ! -- set gwtmodel1
-    mb => GetBaseModelFromList(basemodellist, m1id)
+    m1_index = model_loc_idx(m1_id)
+    mb => GetBaseModelFromList(basemodellist, m1_index)
     select type (mb)
     type is (GwtModelType)
       exchange%model1 => mb
       exchange%gwtmodel1 => mb
     end select
-    exchange%dmodel1 => GetDistModelFromList(distmodellist, m1id)
+    exchange%v_model1 => get_virtual_model(m1_id)
     !
     ! -- set gwtmodel2
-    mb => GetBaseModelFromList(basemodellist, m2id)
+    m2_index = model_loc_idx(m2_id)
+    mb => GetBaseModelFromList(basemodellist, m2_index)
     select type (mb)
     type is (GwtModelType)
       exchange%model2 => mb
       exchange%gwtmodel2 => mb
     end select
-    exchange%dmodel2 => GetDistModelFromList(distmodellist, m2id)
+    exchange%v_model2 => get_virtual_model(m2_id)
     !
     ! -- Verify that gwt model1 is of the correct type
-    if (.not. associated(exchange%gwtmodel1)) then
+    if (.not. associated(exchange%gwtmodel1) .and. m1_index > 0) then
       write (errmsg, '(3a)') 'Problem with GWT-GWT exchange ', &
         trim(exchange%name), &
         '.  First specified GWT Model does not appear to be of the correct type.'
@@ -174,7 +177,7 @@ contains
     end if
     !
     ! -- Verify that gwf model2 is of the correct type
-    if (.not. associated(exchange%gwtmodel2)) then
+    if (.not. associated(exchange%gwtmodel2) .and. m2_index > 0) then
       write (errmsg, '(3a)') 'Problem with GWT-GWT exchange ', &
         trim(exchange%name), &
         '.  Second specified GWT Model does not appear to be of the correct type.'
@@ -212,9 +215,9 @@ contains
     !
     ! -- Ensure models are in same solution
     if (this%gwtmodel1%idsoln /= this%gwtmodel2%idsoln) then
-      call store_error('ERROR.  TWO MODELS ARE CONNECTED IN A GWT '// &
-                       'EXCHANGE BUT THEY ARE IN DIFFERENT SOLUTIONS. '// &
-                       'GWT MODELS MUST BE IN SAME SOLUTION: '// &
+      call store_error('Two models are connected in a GWT '// &
+                       'exchange but they are in different solutions. '// &
+                       'GWT models must be in same solution: '// &
                        trim(this%gwtmodel1%name)//' '//trim(this%gwtmodel2%name))
       call this%parser%StoreErrorUnit()
     end if
@@ -378,14 +381,13 @@ contains
   !! Calculate conductance and fill coefficient matrix
   !!
   !<
-  subroutine gwt_gwt_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
+  subroutine gwt_gwt_fc(this, kiter, matrix_sln, rhs_sln, inwtflag)
     ! -- modules
     ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
     integer(I4B), intent(in) :: kiter
-    integer(I4B), dimension(:), intent(in) :: iasln
-    real(DP), dimension(:), intent(inout) :: amatsln
-    real(DP), dimension(:), intent(inout) :: rhssln
+    class(MatrixBaseType), pointer :: matrix_sln
+    real(DP), dimension(:), intent(inout) :: rhs_sln
     integer(I4B), optional, intent(in) :: inwtflag
     ! -- local
     !
@@ -817,8 +819,8 @@ contains
       call this%parser%GetStringCaps(subkey)
       ilen = len_trim(subkey)
       if (ilen > LENMODELNAME) then
-        write (errmsg, '(4x,a,a)') &
-          'INVALID MODEL NAME: ', trim(subkey)
+        write (errmsg, '(a,a)') &
+          'Invalid model name: ', trim(subkey)
         call store_error(errmsg)
         call this%parser%StoreErrorUnit()
       end if
@@ -835,8 +837,8 @@ contains
       call this%parser%GetStringCaps(subkey)
       ilen = len_trim(subkey)
       if (ilen > LENMODELNAME) then
-        write (errmsg, '(4x,a,a)') &
-          'INVALID MODEL NAME: ', trim(subkey)
+        write (errmsg, '(a,a)') &
+          'Invalid model name: ', trim(subkey)
         call store_error(errmsg)
         call this%parser%StoreErrorUnit()
       end if
@@ -860,13 +862,13 @@ contains
     case ('MVT6')
       call this%parser%GetStringCaps(subkey)
       if (subkey /= 'FILEIN') then
-        call store_error('MVT6 KEYWORD MUST BE FOLLOWED BY '// &
+        call store_error('MVT6 keyword must be followed by '// &
                          '"FILEIN" then by filename.')
         call this%parser%StoreErrorUnit()
       end if
       call this%parser%GetString(fname)
       if (fname == '') then
-        call store_error('NO MVT6 FILE SPECIFIED.')
+        call store_error('No MVT6 file specified.')
         call this%parser%StoreErrorUnit()
       end if
       this%inmvt = getunit()
@@ -876,7 +878,7 @@ contains
     case ('OBS6')
       call this%parser%GetStringCaps(subkey)
       if (subkey /= 'FILEIN') then
-        call store_error('OBS8 KEYWORD MUST BE FOLLOWED BY '// &
+        call store_error('OBS8 keyword must be followed by '// &
                          '"FILEIN" then by filename.')
         call this%parser%StoreErrorUnit()
       end if
@@ -1244,17 +1246,13 @@ contains
   !! model flux calculation, then logic should be added here to
   !! set the return accordingly.
   !<
-  function use_interface_model(this) result(useIM)
+  function use_interface_model(this) result(use_im)
     class(GwtExchangeType) :: this !<  GwtExchangeType
-    logical(LGP) :: useIM !< true when interface model should be used
+    logical(LGP) :: use_im !< true when interface model should be used
 
-    ! if support is added in the future for simpler flow calcuation,
-    ! then set useIM as follows
-    !useIM = (this%ixt3d > 0)
-
-    ! For now set useIM to .true. since the interface model approach
+    ! For now set use_im to .true. since the interface model approach
     ! must currently be used for any GWT-GWT exchange.
-    useIM = .true.
+    use_im = .true.
 
   end function
 
@@ -1266,6 +1264,7 @@ contains
   subroutine gwt_gwt_save_simvals(this)
     ! -- dummy
     use SimModule, only: store_error, store_error_unit
+    use SimVariablesModule, only: errmsg
     use ConstantsModule, only: DZERO
     use ObserveModule, only: ObserveType
     class(GwtExchangeType), intent(inout) :: this
@@ -1276,7 +1275,6 @@ contains
     integer(I4B) :: n2
     integer(I4B) :: iexg
     real(DP) :: v
-    character(len=100) :: msg
     type(ObserveType), pointer :: obsrv => null()
     !
     ! -- Write simulated values for all gwt-gwt observations
@@ -1293,9 +1291,9 @@ contains
             n2 = this%nodem2(iexg)
             v = this%simvals(iexg)
           case default
-            msg = 'Error: Unrecognized observation type: '// &
-                  trim(obsrv%ObsTypeId)
-            call store_error(msg)
+            errmsg = 'Unrecognized observation type: '// &
+                     trim(obsrv%ObsTypeId)
+            call store_error(errmsg)
             call store_error_unit(this%inobs)
           end select
           call this%obs%SaveOneSimval(obsrv, v)
@@ -1331,7 +1329,7 @@ contains
     strng = obsrv%IDstring
     icol = 1
     ! -- get exchange index
-    call urword(strng, icol, istart, istop, 0, n, r, iout, inunitobs)
+    call urword(strng, icol, istart, istop, 1, n, r, iout, inunitobs)
     read (strng(istart:istop), '(i10)', iostat=istat) iexg
     if (istat == 0) then
       obsrv%intPak1 = iexg

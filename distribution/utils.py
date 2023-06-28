@@ -1,5 +1,6 @@
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -9,8 +10,9 @@ from pathlib import Path
 from warnings import warn
 
 from modflow_devtools.markers import requires_exe
+import pytest
 
-_project_root_path = Path(__file__).parent.parent
+_project_root_path = Path(__file__).resolve().parent.parent
 
 
 def get_project_root_path():
@@ -69,7 +71,7 @@ def get_repo_path() -> Path:
         warn(
             f"REPOS_PATH environment variable missing, defaulting to parent of project root"
         )
-    return Path(repo_path) if repo_path else Path(__file__).parent.parent.parent
+    return Path(repo_path) if repo_path else _project_root_path
 
 
 def copytree(src: PathLike, dst: PathLike, symlinks=False, ignore=None):
@@ -134,5 +136,11 @@ def convert_line_endings(folder, windows=True):
 
 
 @requires_exe("dos2unix", "unix2dos")
+@pytest.mark.skip(reason="todo")
 def test_convert_line_endings():
     pass
+
+
+def split_nonnumeric(s):
+    match = re.compile("[^0-9]").search(s)
+    return [s[: match.start()], s[match.start() :]] if match else s

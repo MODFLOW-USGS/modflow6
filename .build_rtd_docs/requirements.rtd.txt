@@ -6,9 +6,8 @@ nbsphinx_link
 ipython
 ipykernel
 rtds_action
-myst_parser
+myst-parser
 sphinx_rtd_theme
-
-
-
-
+pytest
+filelock
+modflow-devtools

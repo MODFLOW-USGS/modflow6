@@ -3,7 +3,7 @@ module ArrayReadersModule
   use ConstantsModule, only: DONE, LINELENGTH, LENBIGLINE, LENBOUNDNAME, &
                              NAMEDBOUNDFLAG, LINELENGTH, DZERO, MAXCHARLEN, &
                              DZERO
-  use InputOutputModule, only: openfile, u8rdcom, urword, ucolno, ulaprw, &
+  use InputOutputModule, only: openfile, u9rdcom, urword, ucolno, ulaprw, &
                                BuildFixedFormat, BuildFloatFormat, &
                                BuildIntFormat
   use KindModule, only: DP, I4B
@@ -578,7 +578,8 @@ contains
     ! -- local
     integer(I4B) :: icol, icol1, istart, istop, n
     real(DP) :: r
-    character(len=MAXCHARLEN) :: fname, line
+    character(len=MAXCHARLEN) :: fname
+    character(len=:), allocatable :: line
     !
     ! -- Read CONSTANT, INTERNAL, or OPEN/CLOSE from array control record.
     call read_control_1(iu, iout, aname, locat, iclose, line, icol, fname)
@@ -627,7 +628,8 @@ contains
     ! -- local
     integer(I4B) :: icol, icol1, istart, istop, n
     real(DP) :: r
-    character(len=MAXCHARLEN) :: fname, line
+    character(len=MAXCHARLEN) :: fname
+    character(len=:), allocatable :: line
     !
     ! -- Read CONSTANT, INTERNAL, or OPEN/CLOSE from array control record.
     call read_control_1(iu, iout, aname, locat, iclose, line, icol, fname)
@@ -664,7 +666,7 @@ contains
     character(len=*), intent(in) :: aname
     integer(I4B), intent(out) :: locat
     integer(I4B), intent(out) :: iclose
-    character(len=*), intent(inout) :: line
+    character(len=:), allocatable, intent(inout) :: line
     integer(I4B), intent(inout) :: icol
     character(len=*), intent(inout) :: fname
 
@@ -675,7 +677,7 @@ contains
     character(len=MAXCHARLEN) :: ermsg
     !
     ! -- Read array control record.
-    call u8rdcom(iu, iout, line, ierr)
+    call u9rdcom(iu, iout, line, ierr)
     !
     iclose = 0
     icol = 1

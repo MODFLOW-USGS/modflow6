@@ -3,7 +3,7 @@ BEGIN options
   PRINT_INPUT
 END options
 
-BEGIN continuous  FILEOUT  gwt_lkt02.lkt.obs.csv
+BEGIN continuous  FILEOUT  gwt_sft02.lkt.obs.csv
   sft-1-conc  CONCENTRATION  1
   sft-1-extinflow  EXT-INFLOW  1
   sft-1-rain  RAINFALL  1

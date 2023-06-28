@@ -1,0 +1,38 @@
+\begin{table}[!ht]
+  \small
+  \centering
+  \caption{Symbols, descriptions, and definitions of revised mobile and immobile domain model parameters introduced in \mf version 6.4.2. In the revised parameterization, division of the aquifer into domains is conceptualized in terms of volume fractions, and domain properties are defined on a per-domain-volume basis} \tabularnewline 
+
+  \begin{tabular}{z{1.50cm}
+                  z{3.50cm}
+                  z{5.00cm}
+                  z{3.50cm}
+                  }
+    % header
+    \hline
+    \rowcolor{Gray}
+    \multicolumn{1}{ z{1.50cm} }{\textbf{Symbol}} & 
+    \multicolumn{1}{ z{3.50cm} }{\textbf{Description}} & 
+    \multicolumn{1}{ z{5.00cm} }{\textbf{Definition}} &
+    \multicolumn{1}{ z{3.50cm} }{\textbf{Notes}} \\
+    \hline
+
+    $\phi_m$ &  porosity (mobile domain) &  $\frac{mobile \; domain \; pore \; volume}{mobile \; domain \; volume}$ & transport input parameter (not directly related to sorption) \\
+    
+\rowcolor{Gray}
+    $\phi_{im}$ &  porosity (immobile domain $im$) &  $\frac{immobile \; domain \; pore \; volume}{immobile \; domain \; volume}$ & transport input parameter (not directly related to sorption) \\
+
+    $\rho_{b,m}$ & bulk density (mobile domain) &  $\frac{mobile \; domain \; solid \; mass}{mobile \; domain \; volume}$ & sorption-related input parameter \\
+    
+\rowcolor{Gray}
+    $\rho_{b,im}$ & bulk density (immobile domain $im$) &  $\frac{immobile \; domain \; solid \; mass}{immobile \; domain \; volume}$ & sorption-related input parameter \\
+
+    $\hat{f}_{m}$ &  volume fraction (mobile domain) &  $\frac{mobile \; domain \; volume}{aquifer \; volume}$ & transport and sorption-related parameter (not input; calculated by \mf from immobile-domain volume fractions) \\
+
+\rowcolor{Gray}
+    $\hat{f}_{im}$ &  volume fraction (immobile domain $im$) &  $\frac{immobile \; domain \; volume}{aquifer \; volume}$ & transport and sorption-related input parameter \\
+
+    \hline
+  \end{tabular}
+  \label{table:revparam}
+\end{table}

@@ -376,14 +376,14 @@ contains
       do i = 1, this%nmvr
         ipos = ifind(this%pckMemPaths, this%mvr(i)%pckNameSrc)
         if (ipos < 1) then
-          write (errmsg, '(4x,a,a,a)') 'PROVIDER ', &
-            trim(this%mvr(i)%pckNameSrc), ' NOT LISTED IN PACKAGES BLOCK.'
+          write (errmsg, '(a,a,a)') 'Provider ', &
+            trim(this%mvr(i)%pckNameSrc), ' not listed in packages block.'
           call store_error(errmsg)
         end if
         ipos = ifind(this%pckMemPaths, this%mvr(i)%pckNameTgt)
         if (ipos < 1) then
-          write (errmsg, '(4x,a,a,a)') 'RECEIVER ', &
-            trim(this%mvr(i)%pckNameTgt), ' NOT LISTED IN PACKAGES BLOCK.'
+          write (errmsg, '(a,a,a)') 'Receiver ', &
+            trim(this%mvr(i)%pckNameTgt), ' not listed in packages block.'
           call store_error(errmsg)
         end if
       end do
@@ -787,7 +787,8 @@ contains
             this%ibudgetout = getunit()
             call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)', &
                           form, access, 'REPLACE')
-            write (this%iout, fmtmvrbin) 'BUDGET', fname, this%ibudgetout
+            write (this%iout, fmtmvrbin) 'BUDGET', trim(adjustl(fname)), &
+              this%ibudgetout
           else
             call store_error('OPTIONAL BUDGET KEYWORD MUST &
                              &BE FOLLOWED BY FILEOUT')
@@ -799,7 +800,8 @@ contains
             this%ibudcsv = getunit()
             call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
                           filstat_opt='REPLACE')
-            write (this%iout, fmtmvrbin) 'BUDGET CSV', fname, this%ibudcsv
+            write (this%iout, fmtmvrbin) 'BUDGET CSV', trim(adjustl(fname)), &
+              this%ibudcsv
           else
             call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
               &FILEOUT')
@@ -817,14 +819,14 @@ contains
           write (this%iout, '(4x,a)') 'ALL PACKAGE NAMES ARE PRECEDED '// &
             'BY THE NAME OF THE MODEL CONTAINING THE PACKAGE.'
           if (this%iexgmvr == 0) then
-            write (errmsg, '(4x,a,a)') &
-              'MODELNAMES CANNOT BE SPECIFIED UNLESS THE '// &
-              'MOVER PACKAGE IS FOR AN EXCHANGE.'
+            write (errmsg, '(a,a)') &
+              'MODELNAMES cannot be specified unless the '// &
+              'mover package is for an exchange.'
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
           end if
         case default
-          write (errmsg, '(4x,a,a)') 'Unknown MVR option: ', trim(keyword)
+          write (errmsg, '(a,a)') 'Unknown MVR option: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
@@ -855,18 +857,18 @@ contains
     !
     ! -- Check if not exchange mover but model names are specified
     if (this%iexgmvr == 0 .and. this%imodelnames == 1) then
-      write (errmsg, '(4x,a,a)') &
-        '****ERROR. MODELNAMES CANNOT BE SPECIFIED UNLESS THE '// &
-        'MOVER PACKAGE IS FOR AN EXCHANGE.'
+      write (errmsg, '(a,a)') &
+        'MODELNAMES cannot be specified unless the '// &
+        'mover package is for an exchange.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if
     !
     ! -- Check if exchange mover but model names not specified
     if (this%iexgmvr /= 0 .and. this%imodelnames == 0) then
-      write (errmsg, '(4x,a,a)') &
-        '****ERROR. MODELNAMES OPTION MUST BE SPECIFIED BECAUSE '// &
-        'MOVER PACKAGE IS FOR AN EXCHANGE.'
+      write (errmsg, '(a,a)') &
+        'MODELNAMES option must be specified because '// &
+        'mover package is for an exchange.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if
@@ -915,7 +917,7 @@ contains
           this%maxpackages = this%parser%GetInteger()
           write (this%iout, '(4x,a,i0)') 'MAXPACKAGES = ', this%maxpackages
         case default
-          write (errmsg, '(4x,a,a)') &
+          write (errmsg, '(a,a)') &
             'Unknown MVR dimension: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -937,13 +939,13 @@ contains
     !
     ! -- verify dimensions were set
     if (this%maxmvr < 0) then
-      write (errmsg, '(1x,a)') &
+      write (errmsg, '(a)') &
         'MAXMVR was not specified or was specified incorrectly.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if
     if (this%maxpackages < 0) then
-      write (errmsg, '(1x,a)') &
+      write (errmsg, '(a)') &
         'MAXPACKAGES was not specified or was specified incorrectly.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()

@@ -27,31 +27,19 @@ layer 2/3:
 The exchange will have XT3D enabled so the head values in
 the child model should match the theory. In this case we
 just assert that they are equal for each column, something
-that is clearly not through when simulating without XT3D.
+that is clearly not true when simulating without XT3D.
 
 """
 import os
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
 from flopy.utils.lgrutil import Lgr
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["ifmod_vert"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
 
 parent_name = "parent"
 child_name = "child"
@@ -292,41 +280,18 @@ def eval_heads(sim):
             errmsg = f"min or max residual too large {res.min()} {res.max()}"
             assert np.allclose(res, 0.0, atol=1.0e-6), errmsg
 
-    return
-
 
 @pytest.mark.parametrize(
-    "idx, exdir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
 @pytest.mark.developmode
-def test_mf6model(idx, exdir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, exdir)
-
-    # run the test model
-    test.run_mf6(Simulation(exdir, exfunc=eval_heads, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test models
-    for idx, exdir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, exdir)
-
-        sim = Simulation(exdir, exfunc=eval_heads, idxsim=idx)
-        test.run_mf6(sim)
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework()
+    test.build(build_model, idx, str(function_tmpdir))
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_heads, idxsim=idx
+        ),
+        str(function_tmpdir),
+    )

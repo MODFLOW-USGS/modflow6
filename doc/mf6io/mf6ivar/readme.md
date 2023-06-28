@@ -76,11 +76,26 @@ An example below is the second line in the ts subpackage dfn:
 
 There are three possible types (or combination of them) that can be used for "parent package type", MFPackage, MFModel, and MFSimulation. If a package supports multiple types of parents (for example, it can be either in the model namefile or in a package, like the obs package), include all the types supported, seperating each type with a / (MFPackage/MFModel). 
 
-## Creating Definition Files for a New Model
+## Creating Definition Files for New Models
 
 To create a new type of model choose a unique three letter model abbreviation ("gwf", "gwt", ...). Create a name file dfn with the naming convention \<model abbr\>-nam.dfn. The name file must have only an options and packages block (see gwf-nam.dfn as an example). Create a new dfn file for each of the packages in your new model, following the naming convention described above. 
 
 When your model is ready for release copy the dfn file to the flopy distribution in the flopy/mf6/data/dfn folder, run createpackages.py, and check in your new dfn files, the package classes, and updated init.py that createpackages.py created.
+
+## Creating Definition Files for New Solvers
+
+Create a solver definition file as you would any package definition file.  When you are done add a commented line at the top of the definition file to let FloPy know that this package is a solver (solution package type). The line should look like this:
+
+\# solution_package <solver abbreviation> <list of model abbreviations the solver supports>
+
+For example, the following would tell FloPy the IMS package supports the gwf6 and gwt6 model types:
+
+\# flopy solution_package ims gwf6 gwt6
+
+If a "*" is used instead of the list of model abbreviations, the solver is assumed to support all model types.  For example, the following would tell FloPy that the IMS package supports all models:
+
+\# flopy solution_package ims *
+
 
 # Simple Definition File Example
 
@@ -242,7 +257,7 @@ Note that in this case, both of the variables are required (optional false) and 
 
 The recarray type is pattered after the recarray type that is available in the numpy package for Python.
 
-An example of a recarray record is shown below for the drain package.  First you'll note that the recarray has a shape.  This shape is of maxbound, which is the maximum number of records that the user can enter.  Also note that following the ``recarray'' identifier is cellid, elev, cond, aux, and boundname.  These are all additional variables that are described after the recarray.  Because these are listed next to recarray, the protocol as that they will all be listed on one line.  You'll also note that the cellid, elev, cond, aux, and boundname variables have the in_record attribute set to true.  This is required so that the variables are not written again after the recarray; they are only written inside the recarray.  These variables all have the tagged attribute set to false so that they are not preceded by a keyword.
+An example of a recarray record is shown below for the drain package.  First you'll note that the recarray has a shape.  This shape is of maxbound, which is the maximum number of records that the user can enter.  Also note that following the ``recarray'' identifier is cellid, elev, cond, aux, and boundname.  These are all additional variables that are described after the recarray.  Because these are listed next to recarray, the protocol is that they will all be listed on one line.  You'll also note that the cellid, elev, cond, aux, and boundname variables have the in_record attribute set to true.  This is required so that the variables are not written again after the recarray; they are only written inside the recarray.  These variables all have the tagged attribute set to false so that they are not preceded by a keyword.
 
 ```
 block period

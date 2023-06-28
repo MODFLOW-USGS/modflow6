@@ -8,6 +8,7 @@ module GwtCncModule
   use ObserveModule, only: ObserveType
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
+  use MatrixBaseModule
   !
   implicit none
   !
@@ -149,7 +150,7 @@ contains
       ibd = this%ibound(node)
       if (ibd < 0) then
         call this%dis%noder_to_string(node, nodestr)
-        call store_error('Error.  Cell is already a constant concentration: ' &
+        call store_error('Cell is already a constant concentration: ' &
                          //trim(adjustl(nodestr)))
         ierr = ierr + 1
       else
@@ -221,7 +222,7 @@ contains
     integer(I4B) :: node
     ! -- formats
     character(len=*), parameter :: fmtcncerr = &
-      &"('CNC BOUNDARY ',i0,' CONC (',g0,') IS LESS THAN ZERO FOR CELL', a)"
+      &"('CNC boundary ',i0,' conc (',g0,') is less than zero for cell', a)"
 ! ------------------------------------------------------------------------------
     !
     ! -- check stress period data
@@ -244,7 +245,7 @@ contains
     return
   end subroutine cnc_ck
 
-  subroutine cnc_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine cnc_fc(this, rhs, ia, idxglo, matrix_sln)
 ! **************************************************************************
 ! cnc_fc -- Override bnd_fc and do nothing
 ! **************************************************************************
@@ -256,7 +257,7 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
 ! --------------------------------------------------------------------------
     !

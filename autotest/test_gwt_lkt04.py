@@ -5,27 +5,17 @@
 # should remain at zero.
 
 import os
+
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["lkt_04"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
 
 
-def build_model(idx, dir):
+def build_model(idx, dir, exe):
     lx = 5.0
     lz = 1.0
     nlay = 1
@@ -59,9 +49,8 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
+        sim_name=name, version="mf6", exe_name=exe, sim_ws=dir
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -345,14 +334,14 @@ def build_model(idx, dir):
 
 
 def get_mfsim(testsim):
-    ws = exdirs[testsim.idxsim]
+    ws = testsim.simpath
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
     return sim
 
 
 def eval_csv_information(testsim):
     sim = get_mfsim(testsim)
-    name = ex[testsim.idxsim]
+    name = testsim.name
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
     gwf = sim.get_model(gwfname)
@@ -381,8 +370,6 @@ def eval_csv_information(testsim):
 
     assert success, f"One or more errors encountered in budget checks"
 
-    return
-
 
 def eval_results(sim):
     print("evaluating results...")
@@ -391,7 +378,7 @@ def eval_results(sim):
     eval_csv_information(sim)
 
     # ensure lake concentrations were saved
-    name = ex[sim.idxsim]
+    name = sim.name
     gwtname = "gwt_" + name
     fname = gwtname + ".lkt.bin"
     fname = os.path.join(sim.simpath, fname)
@@ -485,39 +472,19 @@ def eval_results(sim):
     # uncomment when testing
     # assert False
 
-    return
 
-
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_results, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_results, idxsim=idx)
-        test.run_mf6(sim)
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    mf6 = targets["mf6"]
+    test = TestFramework()
+    test.build(lambda i, w: build_model(i, w, mf6), idx, ws)
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
+        ),
+        ws,
+    )

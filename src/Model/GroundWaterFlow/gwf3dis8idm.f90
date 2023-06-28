@@ -1,3 +1,4 @@
+! ** Do Not Modify! MODFLOW 6 system generated file. **
 module GwfDisInputModule
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
@@ -6,6 +7,7 @@ module GwfDisInputModule
   public gwf_dis_aggregate_definitions
   public gwf_dis_block_definitions
   public GwfDisParamFoundType
+  public gwf_dis_multi_package
 
   type GwfDisParamFoundType
     logical :: length_units = .false.
@@ -22,6 +24,8 @@ module GwfDisInputModule
     logical :: botm = .false.
     logical :: idomain = .false.
   end type GwfDisParamFoundType
+
+  logical :: gwf_dis_multi_package = .false.
 
   type(InputParamDefinitionType), parameter :: &
     gwfdis_length_units = InputParamDefinitionType &
@@ -252,7 +256,20 @@ module GwfDisInputModule
   type(InputParamDefinitionType), parameter :: &
     gwf_dis_aggregate_definitions(*) = &
     [ &
-    InputParamDefinitionType :: &
+    InputParamDefinitionType &
+    ( &
+    '', & ! component
+    '', & ! subcomponent
+    '', & ! block
+    '', & ! tag name
+    '', & ! fortran variable
+    '', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false. & ! layered
+    ) &
     ]
 
   type(InputBlockDefinitionType), parameter :: &
@@ -261,17 +278,20 @@ module GwfDisInputModule
     InputBlockDefinitionType( &
     'OPTIONS', & ! blockname
     .false., & ! required
-    .false. & ! aggregate
+    .false., & ! aggregate
+    .false. & ! block_variable
     ), &
     InputBlockDefinitionType( &
     'DIMENSIONS', & ! blockname
     .true., & ! required
-    .false. & ! aggregate
+    .false., & ! aggregate
+    .false. & ! block_variable
     ), &
     InputBlockDefinitionType( &
     'GRIDDATA', & ! blockname
     .true., & ! required
-    .false. & ! aggregate
+    .false., & ! aggregate
+    .false. & ! block_variable
     ) &
     ]
 

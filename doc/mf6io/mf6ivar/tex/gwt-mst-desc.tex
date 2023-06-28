@@ -15,13 +15,13 @@
 \item \textbf{Block: GRIDDATA}
 
 \begin{description}
-\item \texttt{porosity}---is the aquifer porosity.
+\item \texttt{porosity}---is the mobile domain porosity, defined as the mobile domain pore volume per mobile domain volume.  Additional information on porosity within the context of mobile and immobile domain transport simulations is included in the MODFLOW 6 Supplemental Technical Information document.
 
 \item \texttt{decay}---is the rate coefficient for first or zero-order decay for the aqueous phase of the mobile domain.  A negative value indicates solute production.  The dimensions of decay for first-order decay is one over time.  The dimensions of decay for zero-order decay is mass per length cubed per time.  decay will have no effect on simulation results unless either first- or zero-order decay is specified in the options block.
 
 \item \texttt{decay\_sorbed}---is the rate coefficient for first or zero-order decay for the sorbed phase of the mobile domain.  A negative value indicates solute production.  The dimensions of decay\_sorbed for first-order decay is one over time.  The dimensions of decay\_sorbed for zero-order decay is mass of solute per mass of aquifer per time.  If decay\_sorbed is not specified and both decay and sorption are active, then the program will terminate with an error.  decay\_sorbed will have no effect on simulation results unless the SORPTION keyword and either first- or zero-order decay are specified in the options block.
 
-\item \texttt{bulk\_density}---is the bulk density of the aquifer in mass per length cubed.  bulk\_density is not required unless the SORPTION keyword is specified.
+\item \texttt{bulk\_density}---is the bulk density of the aquifer in mass per length cubed.  bulk\_density is not required unless the SORPTION keyword is specified.  Bulk density is defined as the mobile domain solid mass per mobile domain volume.  Additional information on bulk density is included in the MODFLOW 6 Supplemental Technical Information document.
 
 \item \texttt{distcoef}---is the distribution coefficient for the equilibrium-controlled linear sorption isotherm in dimensions of length cubed per mass.  distcoef is not required unless the SORPTION keyword is specified.
 

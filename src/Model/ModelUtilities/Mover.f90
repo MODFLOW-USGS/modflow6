@@ -104,7 +104,7 @@ contains
     ! -- Check to make sure provider and receiver are not the same
     if (this%pckNameSrc == this%pckNameTgt .and. &
         this%iRchNrSrc == this%iRchNrTgt) then
-      call store_error('PROVIDER AND RECEIVER ARE THE SAME: '// &
+      call store_error('Provider and receiver are the same: '// &
                        trim(this%pckNameSrc)//' : '//trim(this%pckNameTgt))
       call store_error_unit(inunit)
     end if
@@ -121,8 +121,8 @@ contains
       end if
     end do
     if (.not. found) then
-      call store_error('MOVER CAPABILITY NOT ACTIVATED IN '//this%pckNameSrc)
-      call store_error('ADD "MOVER" KEYWORD TO PACKAGE OPTIONS BLOCK.')
+      call store_error('Mover capability not activated in '//this%pckNameSrc)
+      call store_error('Add "MOVER" keyword to package options block.')
     end if
     found = .false.
     ipakloc2 = 0
@@ -134,8 +134,8 @@ contains
       end if
     end do
     if (.not. found) then
-      call store_error('MOVER CAPABILITY NOT ACTIVATED IN '//this%pckNameTgt)
-      call store_error('ADD "MOVER" KEYWORD TO PACKAGE OPTIONS BLOCK.')
+      call store_error('Mover capability not activated in '//this%pckNameTgt)
+      call store_error('Add "MOVER" keyword to package options block.')
     end if
     if (count_errors() > 0) then
       call store_error_unit(inunit)
@@ -144,9 +144,9 @@ contains
     ! -- Set pointer to QTOMVR array in the provider boundary package
     temp_ptr => pakmovers(ipakloc1)%qtomvr
     if (this%iRchNrSrc < 1 .or. this%iRchNrSrc > size(temp_ptr)) then
-      call store_error('PROVIDER ID < 1 OR GREATER THAN PACKAGE SIZE ')
-      write (errmsg, '(4x,a,i0,a,i0)') 'PROVIDER ID = ', this%iRchNrSrc, &
-        '; PACKAGE SIZE = ', size(temp_ptr)
+      call store_error('Provider ID < 1 or greater than package size ')
+      write (errmsg, '(a,i0,a,i0)') 'Provider ID = ', this%iRchNrSrc, &
+        '; Package size = ', size(temp_ptr)
       call store_error(trim(errmsg))
       call store_error_unit(inunit)
     end if
@@ -163,9 +163,9 @@ contains
     ! -- Set pointer to QFROMMVR array in the receiver boundary package
     temp_ptr => pakmovers(ipakloc2)%qfrommvr
     if (this%iRchNrTgt < 1 .or. this%iRchNrTgt > size(temp_ptr)) then
-      call store_error('RECEIVER ID < 1 OR GREATER THAN PACKAGE SIZE ')
-      write (errmsg, '(4x,a,i0,a,i0)') 'RECEIVER ID = ', this%iRchNrTgt, &
-        '; PACKAGE SIZE = ', size(temp_ptr)
+      call store_error('Receiver ID < 1 or greater than package size ')
+      write (errmsg, '(a,i0,a,i0)') 'Receiver ID = ', this%iRchNrTgt, &
+        '; package size = ', size(temp_ptr)
       call store_error(trim(errmsg))
       call store_error_unit(inunit)
     end if

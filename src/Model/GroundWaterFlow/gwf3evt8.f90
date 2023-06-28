@@ -1,7 +1,8 @@
 module EvtModule
   !
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, DONE, LENFTYPE, LENPACKAGENAME, MAXCHARLEN
+  use ConstantsModule, only: DZERO, DONE, LENFTYPE, LENPACKAGENAME, MAXCHARLEN, &
+                             IWETLAKE
   use MemoryHelperModule, only: create_mem_path
   use BndModule, only: BndType
   use SimModule, only: store_error, store_error_unit, count_errors
@@ -11,6 +12,7 @@ module EvtModule
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
   use BlockParserModule, only: BlockParserType
+  use MatrixBaseModule
   !
   implicit none
   !
@@ -301,7 +303,7 @@ contains
               end if
             end if
           case default
-            write (errmsg, '(4x,a,a)') &
+            write (errmsg, '(a,a)') &
               'Unknown '//trim(this%text)//' DIMENSION: ', trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
@@ -318,7 +320,7 @@ contains
     !
     ! -- verify dimensions were set
     if (this%maxbound <= 0) then
-      write (errmsg, '(1x,a)') &
+      write (errmsg, '(a)') &
         'MAXBOUND must be an integer greater than zero.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
@@ -627,7 +629,7 @@ contains
       this%hcof(i) = DZERO
       !
       ! -- if ibound is positive and not overlain by a lake, then add terms
-      if (this%ibound(node) > 0 .and. this%ibound(node) /= 10000) then
+      if (this%ibound(node) > 0 .and. this%ibound(node) /= IWETLAKE) then
         !
         c = this%bound(2, i) ! RATE -- max. ET rate
         s = this%bound(1, i) ! SURFACE -- ET surface elevation
@@ -720,7 +722,7 @@ contains
     return
   end subroutine evt_cf
 
-  subroutine evt_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine evt_fc(this, rhs, ia, idxglo, matrix_sln)
 ! **************************************************************************
 ! evt_fc -- Copy rhs and hcof into solution rhs and amat
 ! **************************************************************************
@@ -732,7 +734,7 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     integer(I4B) :: i, n, ipos
 ! --------------------------------------------------------------------------
@@ -742,14 +744,14 @@ contains
       n = this%nodelist(i)
       if (n <= 0) cycle
       ! -- reset hcof and rhs for excluded cells
-      if (this%ibound(n) == 10000) then
+      if (this%ibound(n) == IWETLAKE) then
         this%hcof(i) = DZERO
         this%rhs(i) = DZERO
         cycle
       end if
       rhs(n) = rhs(n) + this%rhs(i)
       ipos = ia(n)
-      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
+      call matrix_sln%add_value_pos(idxglo(ipos), this%hcof(i))
     end do
     !
     ! -- return
@@ -852,8 +854,8 @@ contains
         ! -- Check to see if other variables have already been read.  If so,
         !    then terminate with an error that IEVT must be read first.
         if (ivarsread > 0) then
-          call store_error('****ERROR. IEVT IS NOT FIRST VARIABLE IN &
-            &PERIOD BLOCK OR IT IS SPECIFIED MORE THAN ONCE.')
+          call store_error('IEVT is not first variable in &
+            &period block or it is specified more than once.')
           call this%parser%StoreErrorUnit()
         end if
         !
@@ -872,8 +874,8 @@ contains
       case ('SURFACE')
         !
         if (this%inievt == 0) then
-          call store_error('Error.  IEVT must be read at least once ')
-          call store_error('prior to reading the SURFACE array.')
+          call store_error('IEVT must be read at least once &
+            &prior to reading the SURFACE array.')
           call this%parser%StoreErrorUnit()
         end if
         !
@@ -920,8 +922,8 @@ contains
       case ('DEPTH')
         !
         if (this%inievt == 0) then
-          call store_error('IEVT must be read at least once ')
-          call store_error('prior to reading the DEPTH array.')
+          call store_error('IEVT must be read at least once &
+                           &prior to reading the DEPTH array.')
           call this%parser%StoreErrorUnit()
         end if
         !
@@ -940,8 +942,8 @@ contains
         end if
         !
         if (this%inievt == 0) then
-          call store_error('IEVT must be read at least once ')
-          call store_error('prior to reading any PXDP array.')
+          call store_error('IEVT must be read at least once &
+                           &prior to reading any PXDP array.')
           call this%parser%StoreErrorUnit()
         end if
         !
@@ -968,8 +970,8 @@ contains
         end if
         !
         if (this%inievt == 0) then
-          call store_error('IEVT must be read at least once ')
-          call store_error('prior to reading any PETM array.')
+          call store_error('IEVT must be read at least once &
+                           &prior to reading any PETM array.')
           call this%parser%StoreErrorUnit()
         end if
         !
@@ -1025,7 +1027,7 @@ contains
         ! -- Nothing found
         if (.not. found) then
           call this%parser%GetCurrentLine(line)
-          call store_error('LOOKING FOR VALID VARIABLE NAME.  FOUND: ')
+          call store_error('Looking for valid variable name.  Found: ')
           call store_error(trim(line))
           call this%parser%StoreErrorUnit()
         end if

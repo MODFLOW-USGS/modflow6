@@ -18,6 +18,7 @@ module GwtSsmModule
   use GwtFmiModule, only: GwtFmiType
   use TableModule, only: TableType, table_cr
   use GwtSpcModule, only: GwtSpcType
+  use MatrixBaseModule
 
   implicit none
   public :: GwtSsmType
@@ -155,12 +156,12 @@ contains
     !
     ! -- Check to make sure that there are flow packages
     if (this%fmi%nflowpack == 0) then
-      write (errmsg, '(a)') 'SSM PACKAGE DOES NOT DETECT ANY BOUNDARY FLOWS &
-                            &THAT REQUIRE SSM TERMS.  ACTIVATE GWF-GWT &
-                            &EXCHANGE OR ACTIVATE FMI PACKAGE AND PROVIDE A &
-                            &BUDGET FILE THAT CONTAINS BOUNDARY FLOWS.  IF NO &
-                            &BOUNDARY FLOWS ARE PRESENT IN CORRESPONDING GWF &
-                            &MODEL THEN THIS SSM PACKAGE SHOULD BE REMOVED.'
+      write (errmsg, '(a)') 'SSM package does not detect any boundary flows &
+                            &that require SSM terms.  Activate GWF-GWT &
+                            &exchange or activate FMI package and provide a &
+                            &budget file that contains boundary flows.  If no &
+                            &boundary flows are present in corresponding GWF &
+                            &model then this SSM package should be removed.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if
@@ -282,6 +283,7 @@ contains
     ! -- local
     logical(LGP) :: lauxmixed
     integer(I4B) :: n
+    integer(I4B) :: nbound_flow
     real(DP) :: qbnd
     real(DP) :: ctmp
     real(DP) :: omega
@@ -293,6 +295,7 @@ contains
     rhstmp = DZERO
     ctmp = DZERO
     qbnd = DZERO
+    nbound_flow = this%fmi%gwfpackages(ipackage)%nbound
     n = this%fmi%gwfpackages(ipackage)%nodelist(ientry)
     !
     ! -- If cell is active (ibound > 0) then calculate values
@@ -300,7 +303,7 @@ contains
       !
       ! -- retrieve qbnd and iauxpos
       qbnd = this%fmi%gwfpackages(ipackage)%get_flow(ientry)
-      call this%get_ssm_conc(ipackage, ientry, ctmp, lauxmixed)
+      call this%get_ssm_conc(ipackage, ientry, nbound_flow, ctmp, lauxmixed)
       !
       ! -- assign values for hcoftmp, rhstmp, and ctmp for subsequent assigment
       !    of hcof, rhs, and rate
@@ -367,11 +370,13 @@ contains
   !! The mixed flag indicates whether or not
   !!
   !<
-  subroutine get_ssm_conc(this, ipackage, ientry, conc, lauxmixed)
+  subroutine get_ssm_conc(this, ipackage, ientry, nbound_flow, conc, &
+                          lauxmixed)
     ! -- dummy
     class(GwtSsmType) :: this !< GwtSsmType
     integer(I4B), intent(in) :: ipackage !< package number
     integer(I4B), intent(in) :: ientry !< bound number
+    integer(I4B), intent(in) :: nbound_flow !< size of flow package bound list
     real(DP), intent(out) :: conc !< user-specified concentration for this bound
     logical(LGP), intent(out) :: lauxmixed !< user-specified flag for marking this as a mixed boundary
     ! -- local
@@ -388,7 +393,7 @@ contains
       conc = this%fmi%gwfpackages(ipackage)%auxvar(iauxpos, ientry)
       if (isrctype == 2) lauxmixed = .true.
     case (3, 4)
-      conc = this%ssmivec(ipackage)%get_value(ientry)
+      conc = this%ssmivec(ipackage)%get_value(ientry, nbound_flow)
       if (isrctype == 4) lauxmixed = .true.
     end select
 
@@ -401,11 +406,11 @@ contains
   !! updating the a matrix and right-hand side vector.
   !!
   !<
-  subroutine ssm_fc(this, amatsln, idxglo, rhs)
+  subroutine ssm_fc(this, matrix_sln, idxglo, rhs)
     ! -- modules
     ! -- dummy
     class(GwtSsmType) :: this
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in), dimension(:) :: idxglo
     real(DP), intent(inout), dimension(:) :: rhs
     ! -- local
@@ -430,7 +435,7 @@ contains
         if (n <= 0) cycle
         call this%ssm_term(ip, i, rhsval=rhsval, hcofval=hcofval)
         idiag = idxglo(this%dis%con%ia(n))
-        amatsln(idiag) = amatsln(idiag) + hcofval
+        call matrix_sln%add_value_pos(idiag, hcofval)
         rhs(n) = rhs(n) + rhsval
         !
       end do
@@ -818,7 +823,7 @@ contains
           this%ipakcb = -1
           write (this%iout, fmtisvflow)
         case default
-          write (errmsg, '(4x,a,a)') 'UNKNOWN SSM OPTION: ', trim(keyword)
+          write (errmsg, '(a,a)') 'Unknown SSM option: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
@@ -894,7 +899,7 @@ contains
           end if
         end do
         if (.not. pakfound) then
-          write (errmsg, '(1x, a, a)') 'FLOW PACKAGE CANNOT BE FOUND: ', &
+          write (errmsg, '(a,a)') 'Flow package cannot be found: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -902,9 +907,9 @@ contains
         !
         ! -- Ensure package was not specified more than once in SOURCES block
         if (this%isrctype(ip) /= 0) then
-          write (errmsg, '(1x, a, a)') &
-            'A PACKAGE CANNOT BE SPECIFIED MORE THAN ONCE IN THE SSM SOURCES &
-            &BLOCK.  THE FOLLOWING PACKAGE WAS SPECIFIED MORE THAN ONCE: ', &
+          write (errmsg, '(a, a)') &
+            'A package cannot be specified more than once in the SSM SOURCES &
+            &block.  The following package was specified more than once: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -921,8 +926,8 @@ contains
           lauxmixed = .true.
           isrctype = 2
         case default
-          write (errmsg, '(1x, a, a)') &
-            'SRCTYPE MUST BE AUX OR AUXMIXED.  FOUND: ', trim(srctype)
+          write (errmsg, '(a, a)') &
+            'SRCTYPE must be AUX or AUXMIXED.  Found: ', trim(srctype)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
@@ -936,7 +941,7 @@ contains
       end do
       write (this%iout, '(1x,a)') 'END PROCESSING SOURCES'
     else
-      write (errmsg, '(1x,a)') 'ERROR.  REQUIRED SOURCES BLOCK NOT FOUND.'
+      write (errmsg, '(a)') 'Required SOURCES block not found.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if
@@ -998,7 +1003,7 @@ contains
           end if
         end do
         if (.not. pakfound) then
-          write (errmsg, '(1x, a, a)') 'FLOW PACKAGE CANNOT BE FOUND: ', &
+          write (errmsg, '(a,a)') 'Flow package cannot be found: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -1006,10 +1011,10 @@ contains
         !
         ! -- Ensure package was not specified more than once in SOURCES block
         if (this%isrctype(ip) /= 0) then
-          write (errmsg, '(1x, a, a)') &
-            'A PACKAGE CANNOT BE SPECIFIED MORE THAN ONCE IN THE SSM SOURCES &
-            &AND SOURCES_FILES BLOCKS.  THE FOLLOWING PACKAGE WAS SPECIFIED &
-            &MORE THAN ONCE: ', &
+          write (errmsg, '(a, a)') &
+            'A package cannot be specified more than once in the SSM SOURCES &
+            &and SOURCES_FILES blocks.  The following package was specified &
+            &more than once: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -1043,8 +1048,8 @@ contains
               trim(keyword)
           end if
         case default
-          write (errmsg, '(1x, a, a)') &
-            'SRCTYPE MUST BE SPC6.  FOUND: ', trim(srctype)
+          write (errmsg, '(a,a)') &
+            'SRCTYPE must be SPC6.  Found: ', trim(srctype)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
@@ -1098,8 +1103,8 @@ contains
       end if
     end do
     if (.not. auxfound) then
-      write (errmsg, '(1x, a, a)') &
-        'AUXILIARY NAME CANNOT BE FOUND: ', trim(auxname)
+      write (errmsg, '(a, a)') &
+        'Auxiliary name cannot be found: ', trim(auxname)
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if

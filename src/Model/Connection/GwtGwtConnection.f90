@@ -13,7 +13,9 @@ module GwtGwtConnectionModule
   use SparseModule, only: sparsematrix
   use ConnectionsModule, only: ConnectionsType
   use CellWithNbrsModule, only: GlobalCellType
-  use DistributedDataModule
+  use DistVariableModule
+  use SimStagesModule
+  use MatrixBaseModule
 
   implicit none
   private
@@ -50,7 +52,7 @@ module GwtGwtConnectionModule
 
   contains
 
-    procedure, pass(this) :: gwtGwtConnection_ctor
+    procedure :: gwtGwtConnection_ctor
     generic, public :: construct => gwtGwtConnection_ctor
 
     procedure :: exg_ar => gwtgwtcon_ar
@@ -66,13 +68,14 @@ module GwtGwtConnectionModule
     procedure :: exg_ot => gwtgwtcon_ot
 
     ! overriding 'protected'
-    procedure, pass(this) :: validateConnection
+    procedure :: validateConnection
 
     ! local stuff
-    procedure, pass(this), private :: allocate_scalars
-    procedure, pass(this), private :: allocate_arrays
-    procedure, pass(this), private :: setGridExtent
-    procedure, pass(this), private :: setFlowToExchange
+    procedure, private :: allocate_scalars
+    procedure, private :: allocate_arrays
+    procedure, private :: cfg_dist_vars
+    procedure, private :: setGridExtent
+    procedure, private :: setFlowToExchange
 
   end type GwtGwtConnectionType
 
@@ -126,7 +129,7 @@ contains
     this%exgflowSign = 1
 
     allocate (this%gwtInterfaceModel)
-    this%interfaceModel => this%gwtInterfaceModel
+    this%interface_model => this%gwtInterfaceModel
 
   end subroutine gwtGwtConnection_ctor
 
@@ -170,54 +173,13 @@ contains
     end if
     call this%gwtInterfaceModel%gwtifmod_cr(imName, &
                                             this%iout, &
-                                            this%gridConnection)
+                                            this%ig_builder)
     call this%gwtInterfaceModel%set_idsoln(this%gwtModel%idsoln)
     this%gwtInterfaceModel%iAdvScheme = this%iIfaceAdvScheme
     this%gwtInterfaceModel%ixt3d = this%iIfaceXt3d
     call this%gwtInterfaceModel%model_df()
 
-    call this%addDistVar('X', '', this%gwtInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR, BEFORE_AD, BEFORE_CF/))
-    call this%addDistVar('IBOUND', '', this%gwtInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))
-    call this%addDistVar('TOP', 'DIS', this%gwtInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))
-    call this%addDistVar('BOT', 'DIS', this%gwtInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))
-    call this%addDistVar('AREA', 'DIS', this%gwtInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AR/))
-    if (this%gwtInterfaceModel%dsp%idiffc > 0) then
-      call this%addDistVar('DIFFC', 'DSP', this%gwtInterfaceModel%name, &
-                           SYNC_NODES, '', (/BEFORE_AR/))
-    end if
-    if (this%gwtInterfaceModel%dsp%idisp > 0) then
-      call this%addDistVar('ALH', 'DSP', this%gwtInterfaceModel%name, &
-                           SYNC_NODES, '', (/BEFORE_AR/))
-      call this%addDistVar('ALV', 'DSP', this%gwtInterfaceModel%name, &
-                           SYNC_NODES, '', (/BEFORE_AR/))
-      call this%addDistVar('ATH1', 'DSP', this%gwtInterfaceModel%name, &
-                           SYNC_NODES, '', (/BEFORE_AR/))
-      call this%addDistVar('ATH2', 'DSP', this%gwtInterfaceModel%name, &
-                           SYNC_NODES, '', (/BEFORE_AR/))
-      call this%addDistVar('ATV', 'DSP', this%gwtInterfaceModel%name, &
-                           SYNC_NODES, '', (/BEFORE_AR/))
-    end if
-    call this%addDistVar('GWFHEAD', 'FMI', this%gwtInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AD/))
-    call this%addDistVar('GWFSAT', 'FMI', this%gwtInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AD/))
-    call this%addDistVar('GWFSPDIS', 'FMI', this%gwtInterfaceModel%name, &
-                         SYNC_NODES, '', (/BEFORE_AD/))
-    call this%addDistVar('GWFFLOWJA', 'FMI', this%gwtInterfaceModel%name, &
-                         SYNC_CONNECTIONS, '', (/BEFORE_AD/))
-    call this%addDistVar('GWFFLOWJA', 'FMI', this%gwtInterfaceModel%name, &
-                         SYNC_EXCHANGES, 'GWFSIMVALS', (/BEFORE_AD/))
-    ! fill porosity from mst packages, needed for dsp
-    if (this%gwtModel%indsp > 0 .and. this%gwtModel%inmst > 0) then
-      call this%addDistVar('POROSITY', 'MST', this%gwtInterfaceModel%name, &
-                           SYNC_NODES, '', (/AFTER_AR/))
-    end if
-    call this%mapVariables()
+    call this%cfg_dist_vars()
 
     call this%allocate_arrays()
     call this%gwtInterfaceModel%allocate_fmi()
@@ -234,12 +196,46 @@ contains
 
   end subroutine gwtgwtcon_df
 
+  !> @brief Configure distributed variables for this interface model
+  !<
+  subroutine cfg_dist_vars(this)
+    class(GwtGwtConnectionType) :: this !< the connection
+
+    call this%cfg_dv('X', '', SYNC_NDS, &
+                     (/STG_BFR_CON_AR, STG_BFR_EXG_AD, STG_BFR_EXG_CF/))
+    call this%cfg_dv('IBOUND', '', SYNC_NDS, (/STG_BFR_CON_AR/))
+    call this%cfg_dv('TOP', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
+    call this%cfg_dv('BOT', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
+    call this%cfg_dv('AREA', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
+    if (this%gwtInterfaceModel%dsp%idiffc > 0) then
+      call this%cfg_dv('DIFFC', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
+    end if
+    if (this%gwtInterfaceModel%dsp%idisp > 0) then
+      call this%cfg_dv('ALH', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
+      call this%cfg_dv('ALV', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
+      call this%cfg_dv('ATH1', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
+      call this%cfg_dv('ATH2', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
+      call this%cfg_dv('ATV', 'DSP', SYNC_NDS, (/STG_BFR_CON_AR/))
+    end if
+    call this%cfg_dv('GWFHEAD', 'FMI', SYNC_NDS, (/STG_BFR_EXG_AD/))
+    call this%cfg_dv('GWFSAT', 'FMI', SYNC_NDS, (/STG_BFR_EXG_AD/))
+    call this%cfg_dv('GWFSPDIS', 'FMI', SYNC_NDS, (/STG_BFR_EXG_AD/))
+    call this%cfg_dv('GWFFLOWJA', 'FMI', SYNC_CON, (/STG_BFR_EXG_AD/))
+    call this%cfg_dv('GWFFLOWJA', 'FMI', SYNC_EXG, (/STG_BFR_EXG_AD/), &
+                     exg_var_name='GWFSIMVALS')
+    ! fill thetam from mst packages, needed for dsp
+    if (this%gwtModel%indsp > 0 .and. this%gwtModel%inmst > 0) then
+      call this%cfg_dv('THETAM', 'MST', SYNC_NDS, (/STG_AFT_CON_AR/))
+    end if
+
+  end subroutine cfg_dist_vars
+
   !> @brief Allocate array variables for this connection
   !<
   subroutine allocate_arrays(this)
     class(GwtGwtConnectionType) :: this !< the connection
 
-    call mem_allocate(this%exgflowjaGwt, this%gridConnection%nrOfBoundaryCells, &
+    call mem_allocate(this%exgflowjaGwt, this%ig_builder%nrOfBoundaryCells, &
                       'EXGFLOWJAGWT', this%memoryPath)
 
   end subroutine allocate_arrays
@@ -256,18 +252,18 @@ contains
 
     if (hasAdv) then
       if (this%iIfaceAdvScheme == 2) then
-        this%exchangeStencilDepth = 2
+        this%exg_stencil_depth = 2
         if (this%gwtModel%adv%iadvwt == 2) then
-          this%internalStencilDepth = 2
+          this%int_stencil_depth = 2
         end if
       end if
     end if
 
     if (hasDsp) then
       if (this%iIfaceXt3d > 0) then
-        this%exchangeStencilDepth = 2
+        this%exg_stencil_depth = 2
         if (this%gwtModel%dsp%ixt3d > 0) then
-          this%internalStencilDepth = 2
+          this%int_stencil_depth = 2
         end if
       end if
     end if
@@ -318,7 +314,7 @@ contains
          this%gwtExchange%gwtmodel2%inadv == 0) .or. &
         (this%gwtExchange%gwtmodel2%inadv > 0 .and. &
          this%gwtExchange%gwtmodel1%inadv == 0)) then
-      write (errmsg, '(1x,a,a,a)') 'Cannot connect GWT models in exchange ', &
+      write (errmsg, '(a,a,a)') 'Cannot connect GWT models in exchange ', &
         trim(this%gwtExchange%name), ' because one model is configured with ADV &
         &and the other one is not'
       call store_error(errmsg)
@@ -328,7 +324,7 @@ contains
          this%gwtExchange%gwtmodel2%indsp == 0) .or. &
         (this%gwtExchange%gwtmodel2%indsp > 0 .and. &
          this%gwtExchange%gwtmodel1%indsp == 0)) then
-      write (errmsg, '(1x,a,a,a)') 'Cannot connect GWT models in exchange ', &
+      write (errmsg, '(a,a,a)') 'Cannot connect GWT models in exchange ', &
         trim(this%gwtExchange%name), ' because one model is configured with DSP &
         &and the other one is not'
       call store_error(errmsg)
@@ -336,7 +332,7 @@ contains
 
     ! abort on errors
     if (count_errors() > 0) then
-      write (errmsg, '(1x,a)') 'Errors occurred while processing exchange(s)'
+      write (errmsg, '(a)') 'Errors occurred while processing exchange(s)'
       call ustop()
     end if
 
@@ -352,11 +348,11 @@ contains
     type(GlobalCellType) :: boundaryCell, connectedCell
 
     ! connections to other models
-    do ic = 1, this%gridConnection%nrOfBoundaryCells
-      boundaryCell = this%gridConnection%boundaryCells(ic)%cell
-      connectedCell = this%gridConnection%connectedCells(ic)%cell
-      iglo = boundaryCell%index + boundaryCell%dmodel%moffset
-      jglo = connectedCell%index + connectedCell%dmodel%moffset
+    do ic = 1, this%ig_builder%nrOfBoundaryCells
+      boundaryCell = this%ig_builder%boundaryCells(ic)%cell
+      connectedCell = this%ig_builder%connectedCells(ic)%cell
+      iglo = boundaryCell%index + boundaryCell%v_model%moffset%get()
+      jglo = connectedCell%index + connectedCell%v_model%moffset%get()
       call sparse%addconnection(iglo, jglo, 1)
       call sparse%addconnection(jglo, iglo, 1)
     end do
@@ -397,9 +393,7 @@ contains
     integer(I4B) :: i
 
     ! reset interface system
-    do i = 1, this%nja
-      this%amat(i) = 0.0_DP
-    end do
+    call this%matrix%zero_entries()
     do i = 1, this%neq
       this%rhs(i) = 0.0_DP
     end do
@@ -408,40 +402,44 @@ contains
 
   end subroutine gwtgwtcon_cf
 
-  subroutine gwtgwtcon_fc(this, kiter, iasln, amatsln, rhssln, inwtflag)
+  subroutine gwtgwtcon_fc(this, kiter, matrix_sln, rhs_sln, inwtflag)
     class(GwtGwtConnectionType) :: this !< the connection
     integer(I4B), intent(in) :: kiter !< the iteration counter
-    integer(I4B), dimension(:), intent(in) :: iasln !< global system's IA array
-    real(DP), dimension(:), intent(inout) :: amatsln !< global system matrix coefficients
-    real(DP), dimension(:), intent(inout) :: rhssln !< global right-hand-side
+    class(MatrixBaseType), pointer :: matrix_sln !< the system matrix
+    real(DP), dimension(:), intent(inout) :: rhs_sln !< global right-hand-side
     integer(I4B), optional, intent(in) :: inwtflag !< newton-raphson flag
     ! local
-    integer(I4B) :: n, nglo, ipos
+    integer(I4B) :: n, nglo
+    integer(I4B) :: icol_start, icol_end, ipos
+    class(MatrixBaseType), pointer :: matrix_base
 
-    call this%gwtInterfaceModel%model_fc(kiter, this%amat, this%nja, inwtflag)
+    matrix_base => this%matrix
+    call this%gwtInterfaceModel%model_fc(kiter, matrix_base, inwtflag)
 
     ! map back to solution matrix
     do n = 1, this%neq
       ! We only need the coefficients for our own model
       ! (i.e. rows in the matrix that belong to this%owner):
-      if (.not. this%gridConnection%idxToGlobal(n)%dmodel == this%owner) then
+      if (.not. this%ig_builder%idxToGlobal(n)%v_model == this%owner) then
         cycle
       end if
 
-      nglo = this%gridConnection%idxToGlobal(n)%index + &
-             this%gridConnection%idxToGlobal(n)%dmodel%moffset
-      rhssln(nglo) = rhssln(nglo) + this%rhs(n)
+      nglo = this%ig_builder%idxToGlobal(n)%index + &
+             this%ig_builder%idxToGlobal(n)%v_model%moffset%get()
+      rhs_sln(nglo) = rhs_sln(nglo) + this%rhs(n)
 
-      do ipos = this%ia(n), this%ia(n + 1) - 1
-        amatsln(this%mapIdxToSln(ipos)) = amatsln(this%mapIdxToSln(ipos)) + &
-                                          this%amat(ipos)
+      icol_start = this%matrix%get_first_col_pos(n)
+      icol_end = this%matrix%get_last_col_pos(n)
+      do ipos = icol_start, icol_end
+        call matrix_sln%add_value_pos(this%ipos_to_sln(ipos), &
+                                      this%matrix%get_value_pos(ipos))
       end do
     end do
 
     ! FC the movers through the exchange; we can call
     ! exg_fc() directly because it only handles mover terms (unlike in GwfExchange%exg_fc)
     if (this%exchangeIsOwned) then
-      call this%gwtExchange%exg_fc(kiter, iasln, amatsln, rhssln, inwtflag)
+      call this%gwtExchange%exg_fc(kiter, matrix_sln, rhs_sln, inwtflag)
     end if
 
   end subroutine gwtgwtcon_fc
@@ -460,7 +458,7 @@ contains
   !> @brief Set the flows (flowja from interface model) to the
   !< simvals in the exchange, leaving the budget calcution in there
   subroutine setFlowToExchange(this)
-    use InterfaceMapModule
+    use IndexMapModule
     class(GwtGwtConnectionType) :: this !< this connection
     ! local
     integer(I4B) :: i
@@ -469,7 +467,7 @@ contains
 
     if (this%exchangeIsOwned) then
       gwtEx => this%gwtExchange
-      map => this%interfaceMap%exchange_map(this%interfaceMap%prim_exg_idx)
+      map => this%interface_map%exchange_maps(this%interface_map%prim_exg_idx)
 
       ! use (half of) the exchange map in reverse:
       do i = 1, size(map%src_idx)

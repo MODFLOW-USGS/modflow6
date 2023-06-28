@@ -13,12 +13,12 @@ module GwfNpfModule
   use GwfIcModule, only: GwfIcType
   use GwfVscModule, only: GwfVscType
   use Xt3dModule, only: Xt3dType
-  use BlockParserModule, only: BlockParserType
   use InputOutputModule, only: GetUnit, openfile
   use TvkModule, only: TvkType, tvk_cr
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, &
                                  mem_deallocate, mem_setptr, &
                                  mem_reassignptr
+  use MatrixBaseModule
 
   implicit none
 
@@ -147,7 +147,7 @@ module GwfNpfModule
 
 contains
 
-  subroutine npf_cr(npfobj, name_model, inunit, iout)
+  subroutine npf_cr(npfobj, name_model, input_mempath, inunit, iout)
 ! ******************************************************************************
 ! npf_cr -- Create a new NPF object. Pass a inunit value of 0 if npf data will
 !           initialized from memory
@@ -156,17 +156,20 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use IdmMf6FileLoaderModule, only: input_load
-    use ConstantsModule, only: LENPACKAGETYPE
+    use KindModule, only: LGP
+    use MemoryManagerExtModule, only: mem_set_value
     ! -- dummy
     type(GwfNpfType), pointer :: npfobj
     character(len=*), intent(in) :: name_model
+    character(len=*), intent(in) :: input_mempath
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
+    ! -- locals
+    logical(LGP) :: found_fname
     ! -- formats
     character(len=*), parameter :: fmtheader = &
       "(1x, /1x, 'NPF -- NODE PROPERTY FLOW PACKAGE, VERSION 1, 3/30/2015', &
-       &' INPUT READ FROM UNIT ', i0, /)"
+       &' INPUT READ FROM MEMPATH: ', A, /)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -179,22 +182,19 @@ contains
     call npfobj%allocate_scalars()
     !
     ! -- Set variables
+    npfobj%input_mempath = input_mempath
     npfobj%inunit = inunit
     npfobj%iout = iout
     !
-    ! -- Check if input file is open
+    ! -- set name of input file
+    call mem_set_value(npfobj%input_fname, 'INPUT_FNAME', npfobj%input_mempath, &
+                       found_fname)
+    !
+    ! -- check if npf is enabled
     if (inunit > 0) then
       !
       ! -- Print a message identifying the node property flow package.
-      write (iout, fmtheader) inunit
-      !
-      ! -- Initialize block parser and read options
-      call npfobj%parser%Initialize(inunit, iout)
-      !
-      ! -- Use the input data model routines to load the input data
-      !    into memory
-      call input_load(npfobj%parser, 'NPF6', 'GWF', 'NPF', npfobj%name_model, &
-                      'NPF', [character(len=LENPACKAGETYPE) :: 'TVK6'], iout)
+      write (iout, fmtheader) input_mempath
     end if
     !
     ! -- Return
@@ -294,7 +294,7 @@ contains
     return
   end subroutine npf_ac
 
-  subroutine npf_mc(this, moffset, iasln, jasln)
+  subroutine npf_mc(this, moffset, matrix_sln)
 ! ******************************************************************************
 ! npf_mc -- Map connections and construct iax, jax, and idxglox
 ! ******************************************************************************
@@ -305,12 +305,11 @@ contains
     ! -- dummy
     class(GwfNpftype) :: this
     integer(I4B), intent(in) :: moffset
-    integer(I4B), dimension(:), intent(in) :: iasln
-    integer(I4B), dimension(:), intent(in) :: jasln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    if (this%ixt3d /= 0) call this%xt3d%xt3d_mc(moffset, iasln, jasln)
+    if (this%ixt3d /= 0) call this%xt3d%xt3d_mc(moffset, matrix_sln)
     !
     ! -- Return
     return
@@ -526,7 +525,7 @@ contains
     return
   end subroutine npf_cf
 
-  subroutine npf_fc(this, kiter, njasln, amat, idxglo, rhs, hnew)
+  subroutine npf_fc(this, kiter, matrix_sln, idxglo, rhs, hnew)
 ! ******************************************************************************
 ! npf_fc -- Formulate
 ! ******************************************************************************
@@ -538,8 +537,7 @@ contains
     ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B) :: kiter
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amat
+    class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in), dimension(:) :: idxglo
     real(DP), intent(inout), dimension(:) :: rhs
     real(DP), intent(inout), dimension(:) :: hnew
@@ -553,7 +551,7 @@ contains
     ! -- Calculate conductance and put into amat
     !
     if (this%ixt3d /= 0) then
-      call this%xt3d%xt3d_fc(kiter, njasln, amat, idxglo, rhs, hnew)
+      call this%xt3d%xt3d_fc(kiter, matrix_sln, idxglo, rhs, hnew)
     else
       !
       do n = 1, this%dis%nodes
@@ -591,11 +589,11 @@ contains
                   ! -- Fill row n
                   idiag = this%dis%con%ia(n)
                   rhs(n) = rhs(n) - cond * this%dis%bot(n)
-                  amat(idxglo(idiag)) = amat(idxglo(idiag)) - cond
+                  call matrix_sln%add_value_pos(idxglo(idiag), -cond)
                   !
                   ! -- Fill row m
                   isymcon = this%dis%con%isym(ii)
-                  amat(idxglo(isymcon)) = amat(idxglo(isymcon)) + cond
+                  call matrix_sln%add_value_pos(idxglo(isymcon), cond)
                   rhs(m) = rhs(m) + cond * this%dis%bot(n)
                   !
                   ! -- cycle the connection loop
@@ -624,14 +622,14 @@ contains
           !
           ! -- Fill row n
           idiag = this%dis%con%ia(n)
-          amat(idxglo(ii)) = amat(idxglo(ii)) + cond
-          amat(idxglo(idiag)) = amat(idxglo(idiag)) - cond
+          call matrix_sln%add_value_pos(idxglo(ii), cond)
+          call matrix_sln%add_value_pos(idxglo(idiag), -cond)
           !
           ! -- Fill row m
           isymcon = this%dis%con%isym(ii)
           idiagm = this%dis%con%ia(m)
-          amat(idxglo(isymcon)) = amat(idxglo(isymcon)) + cond
-          amat(idxglo(idiagm)) = amat(idxglo(idiagm)) - cond
+          call matrix_sln%add_value_pos(idxglo(isymcon), cond)
+          call matrix_sln%add_value_pos(idxglo(idiagm), -cond)
         end do
       end do
       !
@@ -641,7 +639,7 @@ contains
     return
   end subroutine npf_fc
 
-  subroutine npf_fn(this, kiter, njasln, amat, idxglo, rhs, hnew)
+  subroutine npf_fn(this, kiter, matrix_sln, idxglo, rhs, hnew)
 ! ******************************************************************************
 ! npf_fn -- Fill newton terms
 ! ******************************************************************************
@@ -651,8 +649,7 @@ contains
     ! -- dummy
     class(GwfNpfType) :: this
     integer(I4B) :: kiter
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amat
+    class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in), dimension(:) :: idxglo
     real(DP), intent(inout), dimension(:) :: rhs
     real(DP), intent(inout), dimension(:) :: hnew
@@ -680,7 +677,7 @@ contains
     nodes = this%dis%nodes
     nja = this%dis%con%nja
     if (this%ixt3d /= 0) then
-      call this%xt3d%xt3d_fn(kiter, nodes, nja, njasln, amat, idxglo, rhs, hnew)
+      call this%xt3d%xt3d_fn(kiter, nodes, nja, matrix_sln, idxglo, rhs, hnew)
     else
       !
       do n = 1, nodes
@@ -730,7 +727,7 @@ contains
             ! compute additional term
             consterm = -cond * (hnew(iups) - hnew(idn)) !needs to use hwadi instead of hnew(idn)
             !filledterm = cond
-            filledterm = amat(idxglo(ii))
+            filledterm = matrix_sln%get_value_pos(idxglo(ii))
             derv = sQuadraticSaturationDerivative(topup, botup, hnew(iups), &
                                                   this%satomega, this%satmin)
             idiagm = this%dis%con%ia(m)
@@ -742,16 +739,18 @@ contains
               rhs(n) = rhs(n) + term * hnew(n) !+ amat(idxglo(isymcon)) * (dwadi * hds - hds) !need to add dwadi
               rhs(m) = rhs(m) - term * hnew(n) !- amat(idxglo(isymcon)) * (dwadi * hds - hds) !need to add dwadi
               ! fill in row of n
-              amat(idxglo(idiag)) = amat(idxglo(idiag)) + term
+              call matrix_sln%add_value_pos(idxglo(idiag), term)
               ! fill newton term in off diagonal if active cell
               if (this%ibound(n) > 0) then
-                amat(idxglo(ii)) = amat(idxglo(ii)) !* dwadi !need to add dwadi
+                filledterm = matrix_sln%get_value_pos(idxglo(ii))
+                call matrix_sln%set_value_pos(idxglo(ii), filledterm) !* dwadi !need to add dwadi
               end if
               !fill row of m
-              amat(idxglo(idiagm)) = amat(idxglo(idiagm)) !- filledterm * (dwadi - DONE) !need to add dwadi
+              filledterm = matrix_sln%get_value_pos(idxglo(idiagm))
+              call matrix_sln%set_value_pos(idxglo(idiagm), filledterm) !- filledterm * (dwadi - DONE) !need to add dwadi
               ! fill newton term in off diagonal if active cell
               if (this%ibound(m) > 0) then
-                amat(idxglo(isymcon)) = amat(idxglo(isymcon)) - term
+                call matrix_sln%add_value_pos(idxglo(isymcon), -term)
               end if
               ! fill jacobian for m being the upstream node
             else
@@ -760,16 +759,18 @@ contains
               rhs(n) = rhs(n) + term * hnew(m) !+ amat(idxglo(ii)) * (dwadi * hds - hds) !need to add dwadi
               rhs(m) = rhs(m) - term * hnew(m) !- amat(idxglo(ii)) * (dwadi * hds - hds) !need to add dwadi
               ! fill in row of n
-              amat(idxglo(idiag)) = amat(idxglo(idiag)) !- filledterm * (dwadi - DONE) !need to add dwadi
+              filledterm = matrix_sln%get_value_pos(idxglo(idiag))
+              call matrix_sln%set_value_pos(idxglo(idiag), filledterm) !- filledterm * (dwadi - DONE) !need to add dwadi
               ! fill newton term in off diagonal if active cell
               if (this%ibound(n) > 0) then
-                amat(idxglo(ii)) = amat(idxglo(ii)) + term
+                call matrix_sln%add_value_pos(idxglo(ii), term)
               end if
               !fill row of m
-              amat(idxglo(idiagm)) = amat(idxglo(idiagm)) - term
+              call matrix_sln%add_value_pos(idxglo(idiagm), -term)
               ! fill newton term in off diagonal if active cell
               if (this%ibound(m) > 0) then
-                amat(idxglo(isymcon)) = amat(idxglo(isymcon)) !* dwadi  !need to add dwadi
+                filledterm = matrix_sln%get_value_pos(idxglo(isymcon))
+                call matrix_sln%set_value_pos(idxglo(isymcon), filledterm) !* dwadi  !need to add dwadi
               end if
             end if
           end if
@@ -1474,55 +1475,52 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use KindModule, only: LGP
-    use MemoryHelperModule, only: create_mem_path
     use MemoryManagerExtModule, only: mem_set_value
-    use SimVariablesModule, only: idm_context
     use GwfNpfInputModule, only: GwfNpfParamFoundType
     ! -- dummy
     class(GwfNpftype) :: this
     ! -- locals
-    character(len=LENMEMPATH) :: idmMemoryPath
     character(len=LENVARNAME), dimension(3) :: cellavg_method = &
       &[character(len=LENVARNAME) :: 'LOGARITHMIC', 'AMT-LMK', 'AMT-HMK']
     type(GwfNpfParamFoundType) :: found
     character(len=LINELENGTH) :: tvk6_filename
 ! ------------------------------------------------------------------------------
     !
-    ! -- set memory path
-    idmMemoryPath = create_mem_path(this%name_model, 'NPF', idm_context)
-    !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%iprflow, 'IPRFLOW', idmMemoryPath, found%iprflow)
-    call mem_set_value(this%ipakcb, 'IPAKCB', idmMemoryPath, found%ipakcb)
-    call mem_set_value(this%icellavg, 'CELLAVG', idmMemoryPath, cellavg_method, &
-                       found%cellavg)
-    call mem_set_value(this%ithickstrt, 'ITHICKSTRT', idmMemoryPath, &
+    call mem_set_value(this%iprflow, 'IPRFLOW', this%input_mempath, found%iprflow)
+    call mem_set_value(this%ipakcb, 'IPAKCB', this%input_mempath, found%ipakcb)
+    call mem_set_value(this%icellavg, 'CELLAVG', this%input_mempath, &
+                       cellavg_method, found%cellavg)
+    call mem_set_value(this%ithickstrt, 'ITHICKSTRT', this%input_mempath, &
                        found%ithickstrt)
-    call mem_set_value(this%iperched, 'IPERCHED', idmMemoryPath, found%iperched)
-    call mem_set_value(this%ivarcv, 'IVARCV', idmMemoryPath, found%ivarcv)
-    call mem_set_value(this%idewatcv, 'IDEWATCV', idmMemoryPath, found%idewatcv)
-    call mem_set_value(this%ixt3d, 'IXT3D', idmMemoryPath, found%ixt3d)
-    call mem_set_value(this%ixt3drhs, 'IXT3DRHS', idmMemoryPath, found%ixt3drhs)
-    call mem_set_value(this%isavspdis, 'ISAVSPDIS', idmMemoryPath, &
+    call mem_set_value(this%iperched, 'IPERCHED', this%input_mempath, &
+                       found%iperched)
+    call mem_set_value(this%ivarcv, 'IVARCV', this%input_mempath, found%ivarcv)
+    call mem_set_value(this%idewatcv, 'IDEWATCV', this%input_mempath, &
+                       found%idewatcv)
+    call mem_set_value(this%ixt3d, 'IXT3D', this%input_mempath, found%ixt3d)
+    call mem_set_value(this%ixt3drhs, 'IXT3DRHS', this%input_mempath, &
+                       found%ixt3drhs)
+    call mem_set_value(this%isavspdis, 'ISAVSPDIS', this%input_mempath, &
                        found%isavspdis)
-    call mem_set_value(this%isavsat, 'ISAVSAT', idmMemoryPath, found%isavsat)
-    call mem_set_value(this%ik22overk, 'IK22OVERK', idmMemoryPath, &
+    call mem_set_value(this%isavsat, 'ISAVSAT', this%input_mempath, found%isavsat)
+    call mem_set_value(this%ik22overk, 'IK22OVERK', this%input_mempath, &
                        found%ik22overk)
-    call mem_set_value(this%ik33overk, 'IK33OVERK', idmMemoryPath, &
+    call mem_set_value(this%ik33overk, 'IK33OVERK', this%input_mempath, &
                        found%ik33overk)
-    call mem_set_value(tvk6_filename, 'TVK6_FILENAME', idmMemoryPath, &
+    call mem_set_value(tvk6_filename, 'TVK6_FILENAME', this%input_mempath, &
                        found%tvk6_filename)
-    call mem_set_value(this%inewton, 'INEWTON', idmMemoryPath, found%inewton)
-    call mem_set_value(this%iusgnrhc, 'IUSGNRHC', idmMemoryPath, &
+    call mem_set_value(this%inewton, 'INEWTON', this%input_mempath, found%inewton)
+    call mem_set_value(this%iusgnrhc, 'IUSGNRHC', this%input_mempath, &
                        found%iusgnrhc)
-    call mem_set_value(this%inwtupw, 'INWTUPW', idmMemoryPath, found%inwtupw)
-    call mem_set_value(this%satmin, 'SATMIN', idmMemoryPath, found%satmin)
-    call mem_set_value(this%satomega, 'SATOMEGA', idmMemoryPath, found%satomega)
-    call mem_set_value(this%irewet, 'IREWET', idmMemoryPath, found%irewet)
-    call mem_set_value(this%wetfct, 'WETFCT', idmMemoryPath, found%wetfct)
-    call mem_set_value(this%iwetit, 'IWETIT', idmMemoryPath, found%iwetit)
-    call mem_set_value(this%ihdwet, 'IHDWET', idmMemoryPath, found%ihdwet)
+    call mem_set_value(this%inwtupw, 'INWTUPW', this%input_mempath, found%inwtupw)
+    call mem_set_value(this%satmin, 'SATMIN', this%input_mempath, found%satmin)
+    call mem_set_value(this%satomega, 'SATOMEGA', this%input_mempath, &
+                       found%satomega)
+    call mem_set_value(this%irewet, 'IREWET', this%input_mempath, found%irewet)
+    call mem_set_value(this%wetfct, 'WETFCT', this%input_mempath, found%wetfct)
+    call mem_set_value(this%iwetit, 'IWETIT', this%input_mempath, found%iwetit)
+    call mem_set_value(this%ihdwet, 'IHDWET', this%input_mempath, found%ihdwet)
     !
     ! -- save flows option active
     if (found%ipakcb) this%ipakcb = -1
@@ -1579,7 +1577,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use SimModule, only: store_error, count_errors
+    use SimModule, only: store_error, count_errors, store_error_filename
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwfNpftype) :: this
@@ -1611,8 +1609,8 @@ contains
     ! -- check that the transmissivity weighting functions are not specified with
     !    with the this%inwtupw option
     if (this%inwtupw /= 0 .and. this%icellavg < 2) then
-      write (errmsg, '(4x,a,2(1x,a))') &
-        '****ERROR. THE DEV_MODFLOWNWT_UPSTREAM_WEIGHTING OPTION CAN', &
+      write (errmsg, '(a,2(1x,a))') &
+        'THE DEV_MODFLOWNWT_UPSTREAM_WEIGHTING OPTION CAN', &
         'ONLY BE SPECIFIED WITH THE AMT-LMK AND AMT-HMK', &
         'ALTERNATIVE_CELL_AVERAGING OPTIONS IN THE NPF PACKAGE.'
       call store_error(errmsg)
@@ -1620,8 +1618,8 @@ contains
     !
     ! -- check that this%iusgnrhc and this%inwtupw have not both been enabled
     if (this%iusgnrhc /= 0 .and. this%inwtupw /= 0) then
-      write (errmsg, '(4x,a,2(1x,a))') &
-        '****ERROR. THE DEV_MODFLOWUSG_UPSTREAM_WEIGHTED_SATURATION', &
+      write (errmsg, '(a,2(1x,a))') &
+        'THE DEV_MODFLOWUSG_UPSTREAM_WEIGHTED_SATURATION', &
         'AND DEV_MODFLOWNWT_UPSTREAM_WEIGHTING OPTIONS CANNOT BE', &
         'SPECIFIED IN THE SAME NPF PACKAGE.'
       call store_error(errmsg)
@@ -1676,7 +1674,7 @@ contains
     !
     ! -- Terminate if errors
     if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
+      call store_error_filename(this%input_fname)
     end if
     !
     ! -- Return
@@ -1741,15 +1739,12 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: count_errors, store_error
-    use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_reallocate
     use MemoryManagerExtModule, only: mem_set_value
-    use SimVariablesModule, only: idm_context
     use GwfNpfInputModule, only: GwfNpfParamFoundType
     ! -- dummy
     class(GwfNpftype) :: this
     ! -- locals
-    character(len=LENMEMPATH) :: idmMemoryPath
     character(len=LINELENGTH) :: errmsg
     type(GwfNpfParamFoundType) :: found
     logical, dimension(2) :: afound
@@ -1757,23 +1752,24 @@ contains
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! -- set memory path
-    idmMemoryPath = create_mem_path(this%name_model, 'NPF', idm_context)
-    !
     ! -- set map to convert user input data into reduced data
     map => null()
     if (this%dis%nodes < this%dis%nodesuser) map => this%dis%nodeuser
     !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%icelltype, 'ICELLTYPE', idmMemoryPath, map, &
+    call mem_set_value(this%icelltype, 'ICELLTYPE', this%input_mempath, map, &
                        found%icelltype)
-    call mem_set_value(this%k11, 'K', idmMemoryPath, map, found%k)
-    call mem_set_value(this%k33, 'K33', idmMemoryPath, map, found%k33)
-    call mem_set_value(this%k22, 'K22', idmMemoryPath, map, found%k22)
-    call mem_set_value(this%wetdry, 'WETDRY', idmMemoryPath, map, found%wetdry)
-    call mem_set_value(this%angle1, 'ANGLE1', idmMemoryPath, map, found%angle1)
-    call mem_set_value(this%angle2, 'ANGLE2', idmMemoryPath, map, found%angle2)
-    call mem_set_value(this%angle3, 'ANGLE3', idmMemoryPath, map, found%angle3)
+    call mem_set_value(this%k11, 'K', this%input_mempath, map, found%k)
+    call mem_set_value(this%k33, 'K33', this%input_mempath, map, found%k33)
+    call mem_set_value(this%k22, 'K22', this%input_mempath, map, found%k22)
+    call mem_set_value(this%wetdry, 'WETDRY', this%input_mempath, map, &
+                       found%wetdry)
+    call mem_set_value(this%angle1, 'ANGLE1', this%input_mempath, map, &
+                       found%angle1)
+    call mem_set_value(this%angle2, 'ANGLE2', this%input_mempath, map, &
+                       found%angle2)
+    call mem_set_value(this%angle3, 'ANGLE3', this%input_mempath, map, &
+                       found%angle3)
     !
     ! -- ensure ICELLTYPE was found
     if (.not. found%icelltype) then
@@ -1809,19 +1805,19 @@ contains
     !
     ! -- handle not found side effects
     if (.not. found%k33) then
-      call mem_set_value(this%k33, 'K', idmMemoryPath, map, afound(1))
+      call mem_set_value(this%k33, 'K', this%input_mempath, map, afound(1))
     end if
     if (.not. found%k22) then
-      call mem_set_value(this%k22, 'K', idmMemoryPath, map, afound(2))
+      call mem_set_value(this%k22, 'K', this%input_mempath, map, afound(2))
     end if
     if (.not. found%wetdry) call mem_reallocate(this%wetdry, 1, 'WETDRY', &
                                                 trim(this%memoryPath))
     if (.not. found%angle1 .and. this%ixt3d == 0) &
-      call mem_reallocate(this%angle1, 1, 'ANGLE1', trim(this%memoryPath))
+      call mem_reallocate(this%angle1, 0, 'ANGLE1', trim(this%memoryPath))
     if (.not. found%angle2 .and. this%ixt3d == 0) &
-      call mem_reallocate(this%angle2, 1, 'ANGLE2', trim(this%memoryPath))
+      call mem_reallocate(this%angle2, 0, 'ANGLE2', trim(this%memoryPath))
     if (.not. found%angle3 .and. this%ixt3d == 0) &
-      call mem_reallocate(this%angle3, 1, 'ANGLE3', trim(this%memoryPath))
+      call mem_reallocate(this%angle3, 0, 'ANGLE3', trim(this%memoryPath))
     !
     ! -- log griddata
     if (this%iout > 0) then
@@ -1840,7 +1836,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH, DPIO180
-    use SimModule, only: store_error, count_errors
+    use SimModule, only: store_error, count_errors, store_error_filename
     ! -- dummy
     class(GwfNpfType) :: this
     ! -- local
@@ -1985,7 +1981,7 @@ contains
     !
     ! -- terminate if data errors
     if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
+      call store_error_filename(this%input_fname)
     end if
 
     return
@@ -2003,7 +1999,7 @@ contains
   !<
   subroutine preprocess_input(this)
     use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error, count_errors
+    use SimModule, only: store_error, count_errors, store_error_filename
     class(GwfNpfType) :: this !< the instance of the NPF package
     ! local
     integer(I4B) :: n, m, ii, nn
@@ -2089,6 +2085,16 @@ contains
       end if
     end if
     !
+    ! -- If THCKSTRT is not active, then loop through icelltype and replace
+    !    any negative values with 1.
+    if (this%ithickstrt == 0) then
+      do n = 1, this%dis%nodes
+        if (this%icelltype(n) < 0) then
+          this%icelltype(n) = 1
+        end if
+      end do
+    end if
+    !
     ! -- Initialize sat to zero for ibound=0 cells, unless the cell can
     !    rewet.  Initialize sat to the saturated fraction based on strt
     !    if icelltype is negative and the THCKSTRT option is in effect.
@@ -2129,7 +2135,7 @@ contains
       end if
     end do
     if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
+      call store_error_filename(this%input_fname)
     end if
     !
     ! -- Calculate condsat, but only if xt3d is not active.  If xt3d is
@@ -2318,7 +2324,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: kstp, kper
-    use SimModule, only: store_error
+    use SimModule, only: store_error, store_error_filename
     use ConstantsModule, only: LINELENGTH
     ! -- dummy
     class(GwfNpfType) :: this
@@ -2378,7 +2384,7 @@ contains
         call store_error(errmsg)
         write (errmsg, fmttopbot) ttop, bbot
         call store_error(errmsg)
-        call this%parser%StoreErrorUnit()
+        call store_error_filename(this%input_fname)
       end if
       !
       ! -- Calculate saturated thickness
@@ -2400,7 +2406,7 @@ contains
           call this%dis%noder_to_string(n, nodestr)
           write (errmsg, fmtni) trim(adjustl(nodestr)), kiter, kstp, kper
           call store_error(errmsg)
-          call this%parser%StoreErrorUnit()
+          call store_error_filename(this%input_fname)
         end if
         this%ibound(n) = 0
       end if

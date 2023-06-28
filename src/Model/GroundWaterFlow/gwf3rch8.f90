@@ -1,7 +1,8 @@
 module RchModule
   !
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME, MAXCHARLEN
+  use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME, MAXCHARLEN, &
+                             IWETLAKE
   use MemoryHelperModule, only: create_mem_path
   use BndModule, only: BndType
   use SimModule, only: store_error, store_error_unit
@@ -11,6 +12,7 @@ module RchModule
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
   use BlockParserModule, only: BlockParserType
+  use MatrixBaseModule
   !
   implicit none
   !
@@ -225,7 +227,7 @@ contains
             this%maxbound = this%parser%GetInteger()
             write (this%iout, '(4x,a,i7)') 'MAXBOUND = ', this%maxbound
           case default
-            write (errmsg, '(4x,a,a)') &
+            write (errmsg, '(a,a)') &
               'Unknown '//trim(this%text)//' DIMENSION: ', trim(keyword)
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
@@ -242,7 +244,7 @@ contains
     !
     ! -- verify dimensions were set
     if (this%maxbound <= 0) then
-      write (errmsg, '(1x,a)') &
+      write (errmsg, '(a)') &
         'MAXBOUND must be an integer greater than zero.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
@@ -691,7 +693,7 @@ contains
         this%rhs(i) = DZERO
         cycle
       end if
-      if (this%ibound(node) == 10000) then
+      if (this%ibound(node) == IWETLAKE) then
         this%rhs(i) = DZERO
         cycle
       end if
@@ -701,7 +703,7 @@ contains
     return
   end subroutine rch_cf
 
-  subroutine rch_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine rch_fc(this, rhs, ia, idxglo, matrix_sln)
 ! **************************************************************************
 ! rch_fc -- Copy rhs and hcof into solution rhs and amat
 ! **************************************************************************
@@ -713,7 +715,7 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     integer(I4B) :: i, n, ipos
 ! --------------------------------------------------------------------------
@@ -723,14 +725,14 @@ contains
       n = this%nodelist(i)
       if (n <= 0) cycle
       ! -- reset hcof and rhs for excluded cells
-      if (this%ibound(n) == 10000) then
+      if (this%ibound(n) == IWETLAKE) then
         this%hcof(i) = DZERO
         this%rhs(i) = DZERO
         cycle
       end if
       rhs(n) = rhs(n) + this%rhs(i)
       ipos = ia(n)
-      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
+      call matrix_sln%add_value_pos(idxglo(ipos), this%hcof(i))
     end do
     !
     ! -- return

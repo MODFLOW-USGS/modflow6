@@ -8,8 +8,10 @@ module SfrModule
   !
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, LENTIMESERIESNAME, &
+                             MAXADPIT, &
                              DZERO, DPREC, DEM30, DEM6, DEM5, DEM4, DEM2, &
-                             DHALF, DP6, DTWOTHIRDS, DP7, DP9, DP99, DP999, &
+                             DONETHIRD, DHALF, DP6, DTWOTHIRDS, DP7, &
+                             DP9, DP99, DP999, &
                              DONE, D1P1, DFIVETHIRDS, DTWO, DPI, DEIGHT, &
                              DHUNDRED, DEP20, &
                              NAMEDBOUNDFLAG, LENBOUNDNAME, LENFTYPE, &
@@ -29,7 +31,7 @@ module SfrModule
   use InputOutputModule, only: extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
   use SimModule, only: count_errors, store_error, store_error_unit, &
-                       store_warning
+                       store_warning, deprecation_warning
   use SimVariablesModule, only: errmsg, warnmsg
   use GwfSfrCrossSectionUtilsModule, only: get_saturated_topwidth, &
                                            get_wetted_topwidth, &
@@ -37,6 +39,7 @@ module SfrModule
                                            get_cross_section_area, &
                                            get_mannings_section
   use dag_module, only: dag
+  use MatrixBaseModule
   !
   implicit none
   !
@@ -73,6 +76,8 @@ module SfrModule
     integer(I4B), pointer :: ianynone => null() !< number of reaches with 'none' connection
     ! -- double precision
     real(DP), pointer :: unitconv => NULL() !< unit conversion factor (SI to model units)
+    real(DP), pointer :: lengthconv => NULL() !< length conversion factor (SI to model units)
+    real(DP), pointer :: timeconv => NULL() !< time conversion factor (SI to model units)
     real(DP), pointer :: dmaxchg => NULL() !< maximum depth change allowed
     real(DP), pointer :: deps => NULL() !< perturbation value
     ! -- integer vectors
@@ -199,6 +204,7 @@ module SfrModule
     procedure, private :: sfr_calc_reach_depth
     procedure, private :: sfr_calc_xs_depth
     ! -- error checking
+    procedure, private :: sfr_check_conversion
     procedure, private :: sfr_check_reaches
     procedure, private :: sfr_check_connections
     procedure, private :: sfr_check_diversions
@@ -291,6 +297,8 @@ contains
     call mem_allocate(this%bditems, 'BDITEMS', this%memoryPath)
     call mem_allocate(this%cbcauxitems, 'CBCAUXITEMS', this%memoryPath)
     call mem_allocate(this%unitconv, 'UNITCONV', this%memoryPath)
+    call mem_allocate(this%lengthconv, 'LENGTHCONV', this%memoryPath)
+    call mem_allocate(this%timeconv, 'TIMECONV', this%memoryPath)
     call mem_allocate(this%dmaxchg, 'DMAXCHG', this%memoryPath)
     call mem_allocate(this%deps, 'DEPS', this%memoryPath)
     call mem_allocate(this%nconn, 'NCONN', this%memoryPath)
@@ -311,10 +319,12 @@ contains
     this%ipakcsv = 0
     this%idiversions = 0
     this%maxsfrpicard = 100
-    this%maxsfrit = 100
+    this%maxsfrit = MAXADPIT
     this%bditems = 8
     this%cbcauxitems = 1
     this%unitconv = DONE
+    this%lengthconv = DNODATA
+    this%timeconv = DNODATA
     this%dmaxchg = DEM5
     this%deps = DP999 * this%dmaxchg
     this%nconn = 0
@@ -625,8 +635,10 @@ contains
     character(len=MAXCHARLEN) :: fname
     character(len=MAXCHARLEN) :: keyword
     ! -- formats
-    character(len=*), parameter :: fmtunitconv = &
-      &"(4x, 'UNIT CONVERSION VALUE (',g0,') SPECIFIED.')"
+    character(len=*), parameter :: fmttimeconv = &
+      &"(4x, 'TIME CONVERSION VALUE (',g0,') SPECIFIED.')"
+    character(len=*), parameter :: fmtlengthconv = &
+      &"(4x, 'LENGTH CONVERSION VALUE (',g0,') SPECIFIED.')"
     character(len=*), parameter :: fmtpicard = &
       &"(4x, 'MAXIMUM SFR PICARD ITERATION VALUE (',i0,') SPECIFIED.')"
     character(len=*), parameter :: fmtiter = &
@@ -698,7 +710,20 @@ contains
       end if
     case ('UNIT_CONVERSION')
       this%unitconv = this%parser%GetDouble()
-      write (this%iout, fmtunitconv) this%unitconv
+      !
+      ! -- create warning message
+      write (warnmsg, '(a)') &
+        'SETTING UNIT_CONVERSION DIRECTLY'
+      !
+      ! -- create deprecation warning
+      call deprecation_warning('OPTIONS', 'UNIT_CONVERSION', '6.4.2', &
+                               warnmsg, this%parser%GetUnit())
+    case ('LENGTH_CONVERSION')
+      this%lengthconv = this%parser%GetDouble()
+      write (this%iout, fmtlengthconv) this%lengthconv
+    case ('TIME_CONVERSION')
+      this%timeconv = this%parser%GetDouble()
+      write (this%iout, fmttimeconv) this%timeconv
     case ('MAXIMUM_PICARD_ITERATIONS')
       this%maxsfrpicard = this%parser%GetInteger()
       write (this%iout, fmtpicard) this%maxsfrpicard
@@ -776,7 +801,10 @@ contains
       this%nodelist(n) = this%igwfnode(n)
     end do
     !
-    ! -- check the sfr data
+    ! -- check the sfr unit conversion data
+    call this%sfr_check_conversion()
+    !
+    ! -- check the sfr reach data
     call this%sfr_check_reaches()
 
     ! -- check the connection data
@@ -1958,13 +1986,13 @@ contains
     !!  coefficient matrix and right-hand side vector.
     !!
   !<
-  subroutine sfr_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine sfr_fc(this, rhs, ia, idxglo, matrix_sln)
     ! -- dummy variables
     class(SfrType) :: this !< SfrType object
     real(DP), dimension(:), intent(inout) :: rhs !< right-hand side vector for model
     integer(I4B), dimension(:), intent(in) :: ia !< solution CRS row pointers
     integer(I4B), dimension(:), intent(in) :: idxglo !< mapping vector for model (local) to solution (global)
-    real(DP), dimension(:), intent(inout) :: amatsln !< solution coefficient matrix
+    class(MatrixBaseType), pointer :: matrix_sln !< solution coefficient matrix
     ! -- local variables
     integer(I4B) :: i
     integer(I4B) :: j
@@ -2049,7 +2077,7 @@ contains
       if (node < 1) cycle
       rhs(node) = rhs(node) + this%rhs(n)
       ipos = ia(node)
-      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(n)
+      call matrix_sln%add_value_pos(idxglo(ipos), this%hcof(n))
     end do
     !
     ! -- return
@@ -2062,13 +2090,13 @@ contains
     !!  coefficient matrix and right-hand side vector.
     !!
   !<
-  subroutine sfr_fn(this, rhs, ia, idxglo, amatsln)
+  subroutine sfr_fn(this, rhs, ia, idxglo, matrix_sln)
     ! -- dummy variables
     class(SfrType) :: this !< SfrType object
     real(DP), dimension(:), intent(inout) :: rhs !< right-hand side vector for model
     integer(I4B), dimension(:), intent(in) :: ia !< solution CRS row pointers
     integer(I4B), dimension(:), intent(in) :: idxglo !< mapping vector for model (local) to solution (global)
-    real(DP), dimension(:), intent(inout) :: amatsln !< solution coefficient matrix
+    class(MatrixBaseType), pointer :: matrix_sln !< solution coefficient matrix
     ! -- local variables
     integer(I4B) :: i
     integer(I4B) :: j
@@ -2102,7 +2130,7 @@ contains
       drterm = (q2 - q1) / DEM4
       ! -- add terms to convert conductance formulation into
       !    newton-raphson formulation
-      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + drterm - this%hcof(i)
+      call matrix_sln%add_value_pos(idxglo(ipos), drterm - this%hcof(i))
       rhs(n) = rhs(n) - rterm + drterm * this%xnew(n)
     end do
     !
@@ -2135,13 +2163,19 @@ contains
     integer(I4B) :: ipakfail
     integer(I4B) :: locdhmax
     integer(I4B) :: locrmax
+    integer(I4B) :: locdqfrommvrmax
     integer(I4B) :: ntabrows
     integer(I4B) :: ntabcols
     integer(I4B) :: n
+    real(DP) :: q
+    real(DP) :: q0
+    real(DP) :: qtolfact
     real(DP) :: dh
     real(DP) :: r
     real(DP) :: dhmax
     real(DP) :: rmax
+    real(DP) :: dqfrommvr
+    real(DP) :: dqfrommvrmax
     !
     ! -- initialize local variables
     icheck = this%iconvchk
@@ -2151,6 +2185,8 @@ contains
     r = DZERO
     dhmax = DZERO
     rmax = DZERO
+    locdqfrommvrmax = 0
+    dqfrommvrmax = DZERO
     !
     ! -- if not saving package convergence data on check convergence if
     !    the model is considered converged
@@ -2168,6 +2204,9 @@ contains
         ! -- determine the number of columns and rows
         ntabrows = 1
         ntabcols = 9
+        if (this%imover == 1) then
+          ntabcols = ntabcols + 2
+        end if
         !
         ! -- setup table
         call table_cr(this%pakcsvtab, this%packName, '')
@@ -2194,6 +2233,12 @@ contains
         call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
         tag = 'dinflowmax_loc'
         call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+        if (this%imover == 1) then
+          tag = 'dqfrommvrmax'
+          call this%pakcsvtab%initialize_column(tag, 15, alignment=TABLEFT)
+          tag = 'dqfrommvrmax_loc'
+          call this%pakcsvtab%initialize_column(tag, 16, alignment=TABLEFT)
+        end if
       end if
     end if
     !
@@ -2201,6 +2246,11 @@ contains
     if (icheck /= 0) then
       final_check: do n = 1, this%maxbound
         if (this%iboundpak(n) == 0) cycle
+        !
+        ! -- set the Q to length factor
+        qtolfact = delt / this%calc_surface_area(n)
+        !
+        ! -- calculate stage change
         dh = this%stage0(n) - this%stage(n)
         !
         ! -- evaluate flow difference if the time step is transient
@@ -2208,7 +2258,15 @@ contains
           r = this%usflow0(n) - this%usflow(n)
           !
           ! -- normalize flow difference and convert to a depth
-          r = r * delt / this%calc_surface_area(n)
+          r = r * qtolfact
+        end if
+        !
+        ! -- q from mvr
+        dqfrommvr = DZERO
+        if (this%imover == 1) then
+          q = this%pakmvrobj%get_qfrommvr(n)
+          q0 = this%pakmvrobj%get_qfrommvr0(n)
+          dqfrommvr = qtolfact * (q0 - q)
         end if
         !
         ! -- evaluate magnitude of differences
@@ -2217,6 +2275,8 @@ contains
           dhmax = dh
           locrmax = n
           rmax = r
+          dqfrommvrmax = dqfrommvr
+          locdqfrommvrmax = n
         else
           if (abs(dh) > abs(dhmax)) then
             locdhmax = n
@@ -2225,6 +2285,10 @@ contains
           if (abs(r) > abs(rmax)) then
             locrmax = n
             rmax = r
+          end if
+          if (ABS(dqfrommvr) > abs(dqfrommvrmax)) then
+            dqfrommvrmax = dqfrommvr
+            locdqfrommvrmax = n
           end if
         end if
       end do final_check
@@ -2242,6 +2306,14 @@ contains
         write (cloc, "(a,'-',a)") trim(this%packName), 'inflow'
         cpak = trim(cloc)
       end if
+      if (this%imover == 1) then
+        if (ABS(dqfrommvrmax) > abs(dpak)) then
+          ipak = locdqfrommvrmax
+          dpak = dqfrommvrmax
+          write (cloc, "(a,'-',a)") trim(this%packName), 'qfrommvr'
+          cpak = trim(cloc)
+        end if
+      end if
       !
       ! -- write convergence data to package csv
       if (this%ipakcsv /= 0) then
@@ -2256,6 +2328,10 @@ contains
         call this%pakcsvtab%add_term(locdhmax)
         call this%pakcsvtab%add_term(rmax)
         call this%pakcsvtab%add_term(locrmax)
+        if (this%imover == 1) then
+          call this%pakcsvtab%add_term(dqfrommvrmax)
+          call this%pakcsvtab%add_term(locdqfrommvrmax)
+        end if
         !
         ! -- finalize the package csv
         if (iend == 1) then
@@ -2635,6 +2711,8 @@ contains
     call mem_deallocate(this%bditems)
     call mem_deallocate(this%cbcauxitems)
     call mem_deallocate(this%unitconv)
+    call mem_deallocate(this%lengthconv)
+    call mem_deallocate(this%timeconv)
     call mem_deallocate(this%dmaxchg)
     call mem_deallocate(this%deps)
     call mem_deallocate(this%nconn)
@@ -3272,6 +3350,7 @@ contains
     integer(I4B) :: ibflg
     real(DP) :: hgwf
     real(DP) :: sa
+    real(DP) :: sa_wet
     real(DP) :: qu
     real(DP) :: qi
     real(DP) :: qr
@@ -3355,9 +3434,10 @@ contains
     this%usflow(n) = qu
     ! -- calculate remaining terms
     sa = this%calc_surface_area(n)
+    sa_wet = this%calc_surface_area_wet(n, this%depth(n))
     qi = this%inflow(n)
     qr = this%rain(n) * sa
-    qe = this%evap(n) * sa
+    qe = this%evap(n) * sa_wet
     qro = this%runoff(n)
     !
     ! -- Water mover term; assume that it goes in at the upstream end of the reach
@@ -3831,7 +3911,7 @@ contains
     a = this%calc_surface_area(n)
     ae = this%calc_surface_area_wet(n, depth)
     qr = this%rain(n) * a
-    qe = this%evap(n) * a
+    qe = this%evap(n) * ae
     !
     ! -- calculate mover term
     qfrommvr = DZERO
@@ -4207,6 +4287,46 @@ contains
     return
   end subroutine sfr_calc_xs_depth
 
+  !> @brief Check unit conversion data
+    !!
+    !! Method to check unit conversion data for a SFR package. This method
+    !! also calculates unitconv that is used in the Manning's equation.
+    !!
+  !<
+  subroutine sfr_check_conversion(this)
+    ! -- dummy variables
+    class(SfrType) :: this !< SfrType object
+    ! -- local variables
+    ! -- formats
+    character(len=*), parameter :: fmtunitconv_error = &
+      &"('SFR (',a,') UNIT_CONVERSION SPECIFIED VALUE (',g0,') AND', &
+      &1x,'LENGTH_CONVERSION OR TIME_CONVERSION SPECIFIED.')"
+    character(len=*), parameter :: fmtunitconv = &
+      &"(1x,'SFR PACKAGE (',a,') CONVERSION DATA',&
+      &/4x,'UNIT CONVERSION VALUE (',g0,').',/)"
+    !
+    ! -- check the reach data for simple errors
+    if (this%lengthconv /= DNODATA .or. this%timeconv /= DNODATA) then
+      if (this%unitconv /= DONE) then
+        write (errmsg, fmtunitconv_error) &
+          trim(adjustl(this%packName)), this%unitconv
+        call store_error(errmsg)
+      else
+        if (this%lengthconv /= DNODATA) then
+          this%unitconv = this%unitconv * this%lengthconv**DONETHIRD
+        end if
+        if (this%timeconv /= DNODATA) then
+          this%unitconv = this%unitconv * this%timeconv
+        end if
+        write (this%iout, fmtunitconv) &
+          trim(adjustl(this%packName)), this%unitconv
+      end if
+    end if
+    !
+    ! -- return
+    return
+  end subroutine sfr_check_conversion
+
   !> @brief Check reach data
     !!
     !! Method to check specified data for a SFR package. This method
@@ -4255,6 +4375,8 @@ contains
       text = 'UPSTREAM FRACTION'
       call this%inputtab%initialize_column(text, 12, alignment=TABCENTER)
     end if
+    !
+    ! --
     !
     ! -- check the reach data for simple errors
     do n = 1, this%maxbound
@@ -5171,6 +5293,8 @@ contains
     real(DP) :: d
     real(DP) :: ca
     real(DP) :: a
+    real(DP) :: wp
+    real(DP) :: l
     !
     ! -- initialize counter
     idx = 0
@@ -5210,7 +5334,14 @@ contains
     do n = 1, this%maxbound
       n2 = this%igwfnode(n)
       if (n2 > 0) then
-        a = this%calc_surface_area(n)
+        ! -- calc_perimeter_wet() does not enforce depth dependence
+        if (this%depth(n) > DZERO) then
+          wp = this%calc_perimeter_wet(n, this%depth(n))
+        else
+          wp = DZERO
+        end if
+        l = this%length(n)
+        a = wp * l
         this%qauxcbc(1) = a
         q = -this%gwflow(n)
         call this%budobj%budterm(idx)%update_term(n, n2, q, this%qauxcbc)

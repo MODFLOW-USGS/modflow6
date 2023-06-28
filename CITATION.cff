@@ -1,0 +1,64 @@
+cff-version: 1.2.0
+message: If you use this software, please cite the software itself.
+type: software
+title: MODFLOW 6 Modular Hydrologic Model
+version: 6.4.2
+date-released: '2023-06-28'
+doi: 10.5066/F76Q1VQV
+abstract: MODFLOW 6 is an object-oriented program and framework developed to provide
+  a platform for supporting multiple models and multiple types of models within the
+  same simulation. Within this framework, a regional-scale groundwater model may be
+  coupled with multiple local-scale groundwater models. Or, a groundwater flow model
+  could be coupled to a groundwater transport model of a single solute species.
+repository-code: https://github.com/MODFLOW-USGS/modflow6
+license: CC0-1.0
+authors:
+- family-names: Langevin
+  given-names: Christian D.
+  alias: langevin-usgs
+  affiliation: U.S. Geological Survey
+  orcid: https://orcid.org/0000-0001-5610-9759
+- family-names: Hughes
+  given-names: Joseph D.
+  alias: jdhughes-usgs
+  affiliation: U.S. Geological Survey
+  orcid: https://orcid.org/0000-0003-1311-2354
+- family-names: Provost
+  given-names: Alden M.
+  alias: aprovost-usgs
+  affiliation: U.S. Geological Survey
+  orcid: https://orcid.org/0000-0002-4443-1107
+- family-names: Russcher
+  given-names: Martijn
+  alias: mjr-deltares
+  affiliation: Deltares
+  orcid: https://orcid.org/0000-0001-8799-6514
+- family-names: Niswonger
+  given-names: Richard G.
+  affiliation: U.S. Geological Survey
+  orcid: https://orcid.org/0000-0001-6397-2403
+- family-names: Panday
+  given-names: Sorab
+  affiliation: GSI Environmental
+- family-names: Merrick
+  given-names: Damian
+  alias: damianmerrick
+  affiliation: HydroAlgorithmics
+- family-names: Morway
+  given-names: Eric D.
+  alias: emorway-usgs
+  affiliation: U.S. Geological Survey
+  orcid: https://orcid.org/0000-0002-8553-6140
+- family-names: Reno
+  given-names: Michael J.
+  affiliation: U.S. Geological Survey
+  alias: mjreno
+- family-names: Bonelli
+  given-names: Wesley P.
+  alias: w-bonelli
+  affiliation: U.S. Geological Survey
+  orcid: https://orcid.org/0000-0002-2665-5078
+- family-names: Banta
+  given-names: Edward R.
+  affiliation: U.S. Geological Survey
+  orcid: https://orcid.org/0000-0001-8132-9315

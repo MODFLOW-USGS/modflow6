@@ -7,41 +7,18 @@ represents a regular MODFLOW grid.
 """
 
 import os
-import sys
 
+import flopy
 import numpy as np
 import pytest
+from flopy.utils.gridutil import get_disu_kwargs
+from framework import TestFramework
+from simulation import TestSimulation
 
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from disu_util import get_disu_kwargs
-from framework import testing_framework
-from simulation import Simulation
-
-ex = [
-    "disu01a",
-]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-ddir = "data"
+ex = ["disu01a"]
 
 
-def build_model(idx, dir):
+def build_model(idx, dir, exe):
     nlay, nrow, ncol = 1, 21, 21
     nper = 1
     perlen = [5.0]
@@ -87,7 +64,7 @@ def build_model(idx, dir):
     # build MODFLOW 6 files
     ws = dir
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
+        sim_name=name, version="mf6", exe_name=exe, sim_ws=ws
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -246,7 +223,7 @@ def build_model(idx, dir):
 def eval_transport(sim):
     print("evaluating transport...")
 
-    name = ex[sim.idxsim]
+    name = sim.name
     gwtname = "gwt_" + name
 
     fpth = os.path.join(sim.simpath, f"{gwtname}.ucn")
@@ -272,44 +249,19 @@ def eval_transport(sim):
         "symmetric in left-right direction."
     )
 
-    return
-
-
-# - No need to change any code below
-
 
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "name",
+    ex,
 )
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_transport, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_transport, idxsim=idx)
-        test.run_mf6(sim)
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    mf6 = targets.mf6
+    test = TestFramework()
+    test.build(lambda i, w: build_model(i, w, mf6), 0, ws)
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=0
+        ),
+        ws,
+    )

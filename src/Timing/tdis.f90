@@ -29,6 +29,7 @@ module TdisModule
   logical(LGP), public, pointer :: endofsimulation => null() !< flag indicating end of simulation
   real(DP), public, pointer :: delt => null() !< length of the current time step
   real(DP), public, pointer :: pertim => null() !< time relative to start of stress period
+  real(DP), public, pointer :: topertim => null() !< simulation time at start of stress period
   real(DP), public, pointer :: totim => null() !< time relative to start of simulation
   real(DP), public, pointer :: totimc => null() !< simulation time at start of time step
   real(DP), public, pointer :: deltsav => null() !< saved value for delt, used for subtiming
@@ -194,6 +195,7 @@ contains
     adaptivePeriod = isAdaptivePeriod(kper)
     if (kstp == 1) then
       pertim = DZERO
+      topertim = DZERO
     end if
     !
     ! -- Set delt
@@ -229,7 +231,6 @@ contains
     ! -- Set end of simulation indicator
     if (endofperiod .and. kper == nper) then
       endofsimulation = .true.
-      totim = totalsimtime
     end if
     !
     ! -- return
@@ -295,10 +296,19 @@ contains
 ! ------------------------------------------------------------------------------
     !
     if (kstp == 1) then
-      delt = perlen(kper) / float(nstp(kper))
-      if (tsmult(kper) /= DONE) &
+      ! -- Calculate the first value of delt for this stress period
+      topertim = totim
+      if (tsmult(kper) /= DONE) then
+        ! -- Timestep length has a geometric progression
         delt = perlen(kper) * (DONE - tsmult(kper)) / &
                (DONE - tsmult(kper)**nstp(kper))
+      else
+        ! -- Timestep length is constant
+        delt = perlen(kper) / float(nstp(kper))
+      end if
+    elseif (kstp == nstp(kper)) then
+      ! -- Calculate exact last delt to avoid accumulation errors
+      delt = topertim + perlen(kper) - totim
     else
       delt = tsmult(kper) * delt
     end if
@@ -467,6 +477,7 @@ contains
     call mem_deallocate(endofsimulation)
     call mem_deallocate(delt)
     call mem_deallocate(pertim)
+    call mem_deallocate(topertim)
     call mem_deallocate(totim)
     call mem_deallocate(totimc)
     call mem_deallocate(deltsav)
@@ -549,7 +560,7 @@ contains
             itmuni = 5
             write (iout, fmtitmuni) 'YEARS'
           case default
-            write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN TIME_UNITS: ', &
+            write (errmsg, '(a,a)') 'Unknown TIME_UNITS: ', &
               trim(keyword)
             call store_error(errmsg)
             call parser%StoreErrorUnit()
@@ -568,7 +579,7 @@ contains
           inats = GetUnit()
           call openfile(inats, iout, fname, 'ATS')
         case default
-          write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN TDIS OPTION: ', &
+          write (errmsg, '(a,a)') 'Unknown TDIS option: ', &
             trim(keyword)
           call store_error(errmsg)
           call parser%StoreErrorUnit()
@@ -611,6 +622,7 @@ contains
     call mem_allocate(endofsimulation, 'ENDOFSIMULATION', 'TDIS')
     call mem_allocate(delt, 'DELT', 'TDIS')
     call mem_allocate(pertim, 'PERTIM', 'TDIS')
+    call mem_allocate(topertim, 'TOPERTIM', 'TDIS')
     call mem_allocate(totim, 'TOTIM', 'TDIS')
     call mem_allocate(totimc, 'TOTIMC', 'TDIS')
     call mem_allocate(deltsav, 'DELTSAV', 'TDIS')
@@ -632,6 +644,7 @@ contains
     endofsimulation = .false.
     delt = DZERO
     pertim = DZERO
+    topertim = DZERO
     totim = DZERO
     totimc = DZERO
     deltsav = DZERO
@@ -699,7 +712,7 @@ contains
           nper = parser%GetInteger()
           write (iout, fmtnper) nper
         case default
-          write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN TDIS DIMENSION: ', &
+          write (errmsg, '(a,a)') 'Unknown TDIS dimension: ', &
             trim(keyword)
           call store_error(errmsg)
           call parser%StoreErrorUnit()
@@ -707,7 +720,7 @@ contains
       end do
       write (iout, '(1x,a)') 'END OF TDIS DIMENSIONS'
     else
-      write (errmsg, '(1x,a)') 'ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.'
+      write (errmsg, '(a)') 'Required DIMENSIONS block not found.'
       call store_error(errmsg)
       call parser%StoreErrorUnit()
     end if
@@ -766,7 +779,7 @@ contains
       end if
       write (iout, '(1x,a)') 'END OF TDIS PERIODDATA'
     else
-      write (errmsg, '(1x,a)') 'ERROR.  REQUIRED PERIODDATA BLOCK NOT FOUND.'
+      write (errmsg, '(a)') 'Required PERIODDATA block not found.'
       call store_error(errmsg)
       call parser%StoreErrorUnit()
     end if
@@ -799,13 +812,13 @@ contains
     character(len=LINELENGTH) :: errmsg
     ! -- formats
     character(len=*), parameter :: fmtpwarn = &
-      "(1X,/1X,'PERLEN IS ZERO FOR STRESS PERIOD ', I0, &
-      &'. PERLEN MUST NOT BE ZERO FOR TRANSIENT PERIODS.')"
+      "(1X,/1X,'PERLEN is zero for stress period ', I0, &
+      &'. PERLEN must not be zero for transient periods.')"
     character(len=*), parameter :: fmtsperror = &
-      &"(A,' FOR STRESS PERIOD ', I0)"
+      &"(A,' for stress period ', I0)"
     character(len=*), parameter :: fmtdterror = &
-      "('TIME STEP LENGTH OF ', G0, ' IS TOO SMALL IN PERIOD ', I0, &
-      &' AND TIME STEP ', I0)"
+      "('Time step length of ', G0, ' is too small in period ', I0, &
+      &' and time step ', I0)"
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize
@@ -816,7 +829,7 @@ contains
       !
       ! -- Error if nstp less than or equal to zero
       if (nstp(kper) <= 0) then
-        write (errmsg, fmtsperror) 'NUMBER OF TIME STEPS LESS THAN ONE ', kper
+        write (errmsg, fmtsperror) 'Number of time steps less than one ', kper
         call store_error(errmsg)
         return
       end if
@@ -829,14 +842,14 @@ contains
       !
       ! -- Error if tsmult is less than zero
       if (tsmult(kper) <= DZERO) then
-        write (errmsg, fmtsperror) 'TSMULT MUST BE GREATER THAN 0.0 ', kper
+        write (errmsg, fmtsperror) 'TSMULT must be greater than 0.0 ', kper
         call store_error(errmsg)
         return
       end if
       !
       ! -- Error if negative period length
       if (perlen(kper) < DZERO) then
-        write (errmsg, fmtsperror) 'PERLEN CANNOT BE LESS THAN 0.0 ', kper
+        write (errmsg, fmtsperror) 'PERLEN cannot be less than 0.0 ', kper
         call store_error(errmsg)
         return
       end if

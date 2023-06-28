@@ -5,6 +5,7 @@ module GhostNodeModule
   use NumericalModelModule, only: NumericalModelType
   use NumericalPackageModule, only: NumericalPackageType
   use BlockParserModule, only: BlockParserType
+  use MatrixBaseModule
 
   implicit none
 
@@ -95,12 +96,12 @@ contains
     ! -- modules
     use NumericalModelModule, only: NumericalModelType
     use SimModule, only: store_error, store_error_unit
+    use SimVariablesModule, only: errmsg
     ! -- dummy
     class(GhostNodeType) :: this
     class(NumericalModelType), target :: m1
     class(NumericalModelType), target, optional :: m2
     ! -- local
-    character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
     !
     ! -- Point or set attributes
@@ -131,7 +132,7 @@ contains
     ! -- Trap for implicit gnc but models are in different solutions
     if (this%m1%idsoln /= this%m2%idsoln) then
       if (this%implicit) then
-        write (errmsg, '(a)') 'Error.  GNC is implicit but models are in '// &
+        write (errmsg, '(a)') 'GNC is implicit but models are in '// &
           'different solutions.'
         call store_error(errmsg)
         call store_error_unit(this%inunit)
@@ -182,7 +183,7 @@ contains
     return
   end subroutine gnc_ac
 
-  subroutine gnc_mc(this, iasln, jasln)
+  subroutine gnc_mc(this, matrix_sln)
 ! ******************************************************************************
 ! gnc_mc -- Single or Two-Model GNC Map Connections
 ! Subroutine: (1) Fill the following mapping arrays:
@@ -197,13 +198,12 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: store_error, store_error_unit, count_errors
+    use SimVariablesModule, only: errmsg
     ! -- dummy
     class(GhostNodeType) :: this
-    integer(I4B), dimension(:), intent(in) :: iasln
-    integer(I4B), dimension(:), intent(in) :: jasln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
-    character(len=LINELENGTH) :: errmsg
-    integer(I4B) :: noden, nodem, ipos, j, ignc, jidx, nodej
+    integer(I4B) :: noden, nodem, ipos, ignc, jidx, nodej
     ! -- formats
     character(len=*), parameter :: fmterr = &
       "('GHOST NODE ERROR.  Cell ', i0, ' in model ', a, &
@@ -217,35 +217,19 @@ contains
       nodem = this%nodem2(ignc) + this%m2%moffset
       !
       ! -- store diagonal positions in idiagn and idiagm
-      this%idiagn(ignc) = iasln(noden)
-      this%idiagm(ignc) = iasln(nodem)
+      this%idiagn(ignc) = matrix_sln%get_position_diag(noden)
+      this%idiagm(ignc) = matrix_sln%get_position_diag(nodem)
       !if(this%implicit) then
       !  this%idiagn(ignc) = iasln(noden)
       !  this%idiagm(ignc) = iasln(nodem)
       !endif
       !
-      ! -- find location of m in row n of global solution
-      this%idxglo(ignc) = 0
-      searchloopnm: do ipos = iasln(noden) + 1, iasln(noden + 1) - 1
-        j = jasln(ipos)
-        if (j == nodem) then
-          this%idxglo(ignc) = ipos
-          exit searchloopnm
-        end if
-      end do searchloopnm
+      ! -- find location of m in row n of global solution, and v.v.
+      this%idxglo(ignc) = matrix_sln%get_position(noden, nodem)
+      this%idxsymglo(ignc) = matrix_sln%get_position(nodem, noden)
       !
-      ! -- find location of n in row m of global solution and store in idxsymglo
-      this%idxsymglo(ignc) = 0
-      searchloopmn: do ipos = iasln(nodem), iasln(nodem + 1) - 1
-        j = jasln(ipos)
-        if (j == noden) then
-          this%idxsymglo(ignc) = ipos
-          exit searchloopmn
-        end if
-      end do searchloopmn
-      !
-      ! -- Check to make sure idxglo is non-zero
-      if (this%idxglo(ignc) == 0) then
+      ! -- Check to make sure idxglo is set
+      if (this%idxglo(ignc) == -1) then
         write (errmsg, fmterr) this%nodem1(ignc), trim(this%m1%name), &
           this%nodem2(ignc), trim(this%m2%name)
         call store_error(errmsg)
@@ -273,13 +257,7 @@ contains
             ipos = 0
             this%jposinrown(jidx, ignc) = ipos
           else
-            searchloopn: do ipos = iasln(noden), iasln(noden + 1) - 1
-              j = jasln(ipos)
-              if (j == nodej) then
-                this%jposinrown(jidx, ignc) = ipos
-                exit searchloopn
-              end if
-            end do searchloopn
+            this%jposinrown(jidx, ignc) = matrix_sln%get_position(noden, nodej)
           end if
           !
           ! -- search for nodej in row m
@@ -287,13 +265,7 @@ contains
             ipos = 0
             this%jposinrowm(jidx, ignc) = ipos
           else
-            searchloopm: do ipos = iasln(nodem) + 1, iasln(nodem + 1) - 1
-              j = jasln(ipos)
-              if (j == nodej) then
-                this%jposinrowm(jidx, ignc) = ipos
-                exit searchloopm
-              end if
-            end do searchloopm
+            this%jposinrowm(jidx, ignc) = matrix_sln%get_position(nodem, nodej)
           end if
         end do
       end do
@@ -303,7 +275,7 @@ contains
     return
   end subroutine gnc_mc
 
-  subroutine gnc_fmsav(this, kiter, amatsln)
+  subroutine gnc_fmsav(this, kiter, matrix)
 ! ******************************************************************************
 ! gnc_fmsav -- Store the n-m Picard conductance in cond prior to the Newton
 !   terms being added.
@@ -316,7 +288,7 @@ contains
     ! -- dummy
     class(GhostNodeType) :: this
     integer(I4B), intent(in) :: kiter
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix
     ! -- local
     integer(I4B) :: ignc, ipos
     real(DP) :: cond
@@ -327,7 +299,7 @@ contains
     gncloop: do ignc = 1, this%nexg
       ipos = this%idxglo(ignc)
       if (ipos > 0) then
-        cond = amatsln(ipos)
+        cond = matrix%get_value_pos(ipos)
       else
         cond = DZERO
       end if
@@ -338,10 +310,10 @@ contains
     return
   end subroutine gnc_fmsav
 
-  subroutine gnc_fc(this, kiter, amatsln)
+  subroutine gnc_fc(this, kiter, matrix)
 ! ******************************************************************************
 ! gnc_fc -- Fill matrix terms
-! Subroutine: (1) Add the GNC terms to the solution amat or model rhs depending
+! Subroutine: (1) Add the GNC terms to the solution matrix or model rhs depending
 !                 on whether GNC is implicit or explicit
 ! ******************************************************************************
 !
@@ -352,17 +324,17 @@ contains
     ! -- dummy
     class(GhostNodeType) :: this
     integer(I4B), intent(in) :: kiter
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix
     ! -- local
     integer(I4B) :: ignc, j, noden, nodem, ipos, jidx, iposjn, iposjm
     real(DP) :: cond, alpha, aterm, rterm
 ! ------------------------------------------------------------------------------
     !
     ! -- If this is a single model gnc (not an exchange across models), then
-    !    pull conductances out of amatsln and store them in this%cond
-    if (this%smgnc) call this%gnc_fmsav(kiter, amatsln)
+    !    pull conductances out of the system matrix and store them in this%cond
+    if (this%smgnc) call this%gnc_fmsav(kiter, matrix)
     !
-    ! -- Add gnc terms to rhs or to amat depending on whether gnc is implicit
+    ! -- Add gnc terms to rhs or to the matrix depending on whether gnc is implicit
     !    or explicit
     gncloop: do ignc = 1, this%nexg
       noden = this%nodem1(ignc)
@@ -380,10 +352,10 @@ contains
         if (this%implicit) then
           iposjn = this%jposinrown(jidx, ignc)
           iposjm = this%jposinrowm(jidx, ignc)
-          amatsln(this%idiagn(ignc)) = amatsln(this%idiagn(ignc)) + aterm
-          amatsln(iposjn) = amatsln(iposjn) - aterm
-          amatsln(this%idxsymglo(ignc)) = amatsln(this%idxsymglo(ignc)) - aterm
-          amatsln(iposjm) = amatsln(iposjm) + aterm
+          call matrix%add_value_pos(this%idiagn(ignc), aterm)
+          call matrix%add_value_pos(iposjn, -aterm)
+          call matrix%add_value_pos(this%idxsymglo(ignc), -aterm)
+          call matrix%add_value_pos(iposjm, aterm)
         else
           rterm = aterm * (this%m1%x(noden) - this%m1%x(j))
           this%m1%rhs(noden) = this%m1%rhs(noden) - rterm
@@ -396,15 +368,14 @@ contains
     return
   end subroutine gnc_fc
 
-  subroutine gnc_fn(this, kiter, njasln, amatsln, condsat, ihc_opt, &
+  subroutine gnc_fn(this, kiter, matrix_sln, condsat, ihc_opt, &
                     ivarcv_opt, ictm1_opt, ictm2_opt)
 ! ******************************************************************************
 ! gnc_fn -- Fill GNC Newton terms
 !
 !  Required arguments:
 !   kiter : outer iteration number
-!   njasln : size of amatsln
-!   amatsln : coefficient matrix for the solution
+!   matrix_sln: the solution matrix
 !   condsat is of size(njas) if single model, otherwise nexg
 !
 !  Optional arguments:
@@ -423,8 +394,7 @@ contains
     ! -- dummy
     class(GhostNodeType) :: this
     integer(I4B) :: kiter
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     real(DP), dimension(:), intent(in) :: condsat
     integer(I4B), dimension(:), optional :: ihc_opt
     integer(I4B), optional :: ivarcv_opt
@@ -504,17 +474,16 @@ contains
         derv = sQuadraticSaturationDerivative(topup, botup, xup)
         term = consterm * derv
         if (iups == 0) then
-          amatsln(this%idiagn(ignc)) = amatsln(this%idiagn(ignc)) + term
+          call matrix_sln%add_value_pos(this%idiagn(ignc), term)
           if (this%m2%ibound(nodem) > 0) then
-            amatsln(this%idxsymglo(ignc)) = amatsln(this%idxsymglo(ignc)) - &
-                                            term
+            call matrix_sln%add_value_pos(this%idxsymglo(ignc), -term)
           end if
           this%m1%rhs(noden) = this%m1%rhs(noden) + term * this%m1%x(noden)
           this%m2%rhs(nodem) = this%m2%rhs(nodem) - term * this%m1%x(noden)
         else
-          amatsln(this%idiagm(ignc)) = amatsln(this%idiagm(ignc)) - term
+          call matrix_sln%add_value_pos(this%idiagm(ignc), -term)
           if (this%m1%ibound(noden) > 0) then
-            amatsln(this%idxglo(ignc)) = amatsln(this%idxglo(ignc)) + term
+            call matrix_sln%add_value_pos(this%idxglo(ignc), term)
           end if
           this%m1%rhs(noden) = this%m1%rhs(noden) + term * this%m2%x(nodem)
           this%m2%rhs(nodem) = this%m2%rhs(nodem) - term * this%m2%x(nodem)
@@ -771,10 +740,11 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: store_error
+    use SimVariablesModule, only: errmsg
     ! -- dummy
     class(GhostNodeType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
 ! ------------------------------------------------------------------------------
@@ -807,7 +777,7 @@ contains
           this%implicit = .false.
           write (this%iout, '(4x,a)') 'GHOST NODE CORRECTION IS EXPLICIT.'
         case default
-          write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN GNC OPTION: ', &
+          write (errmsg, '(a,a)') 'Unknown GNC option: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -833,10 +803,11 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: store_error
+    use SimVariablesModule, only: errmsg
     ! -- dummy
     class(GhostNodeType) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg, keyword
+    character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
 ! ------------------------------------------------------------------------------
@@ -860,7 +831,7 @@ contains
           this%numjs = this%parser%GetInteger()
           write (this%iout, '(4x,a,i7)') 'NUMAPHAJ = ', this%numjs
         case default
-          write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN GNC DIMENSION: ', &
+          write (errmsg, '(a,a)') 'Unknown GNC dimension: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -885,10 +856,11 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: store_error, count_errors
+    use SimVariablesModule, only: errmsg
     ! -- dummy
     class(GhostNodeType) :: this
     ! -- local
-    character(len=LINELENGTH) :: line, errmsg, nodestr, fmtgnc, cellid, &
+    character(len=LINELENGTH) :: line, nodestr, fmtgnc, cellid, &
                                  cellidm, cellidn
     integer(I4B) :: lloc, ierr, ival
     integer(I4B) :: ignc, jidx, nodeun, nodeum, nerr
@@ -1001,7 +973,7 @@ contains
       !
       write (this%iout, '(1x,a)') 'END OF GNCDATA'
     else
-      write (errmsg, '(1x,a)') 'ERROR.  REQUIRED GNCDATA BLOCK NOT FOUND.'
+      write (errmsg, '(a)') 'Required GNCDATA block not found.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if
@@ -1023,13 +995,13 @@ contains
     ! -- modules
     use NumericalModelModule, only: NumericalModelType
     use SimModule, only: store_error
+    use SimVariablesModule, only: errmsg
     ! -- dummy
     class(GhostNodeType) :: this
     integer(I4B), intent(in) :: nodeu
     integer(I4B), intent(inout) :: noder
     class(NumericalModelType), intent(in) :: model
     ! -- local
-    character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
     !
     if (nodeu < 1 .or. nodeu > model%dis%nodesuser) then

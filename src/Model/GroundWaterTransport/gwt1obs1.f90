@@ -141,7 +141,7 @@ contains
         case ('FLOW-JA-FACE')
           call this%SaveOneSimval(obsrv, this%flowja(jaindex))
         case default
-          msg = 'Error: Unrecognized observation type: '//trim(obsrv%ObsTypeId)
+          msg = ' Unrecognized observation type: '//trim(obsrv%ObsTypeId)
           call store_error(msg)
           call store_error_unit(this%inUnitObs)
         end select

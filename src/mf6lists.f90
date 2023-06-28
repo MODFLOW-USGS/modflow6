@@ -9,7 +9,7 @@ module ListsModule
   implicit none
   private
   public :: basemodellist, basesolutionlist, solutiongrouplist, &
-            baseexchangelist, baseconnectionlist, distmodellist
+            baseexchangelist, baseconnectionlist
   public :: lists_da
 
   ! -- list of all models in simulation
@@ -27,9 +27,6 @@ module ListsModule
   ! -- list of all connections in simulation
   type(ListType) :: baseconnectionlist
 
-  ! -- list of all distributed models
-  type(ListType) :: distmodellist
-
 contains
 
   subroutine lists_da()
@@ -46,7 +43,6 @@ contains
     call solutiongrouplist%Clear()
     call baseexchangelist%Clear()
     call baseconnectionlist%Clear()
-    call distmodellist%Clear(destroy=.true.)
 
     return
   end subroutine lists_da

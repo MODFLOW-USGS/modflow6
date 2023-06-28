@@ -28,6 +28,7 @@ module MawModule
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr, &
                                  mem_deallocate
   use MemoryHelperModule, only: create_mem_path
+  use MatrixBaseModule
   !
   implicit none
 
@@ -1681,7 +1682,7 @@ contains
     return
   end subroutine maw_ac
 
-  subroutine maw_mc(this, moffset, iasln, jasln)
+  subroutine maw_mc(this, moffset, matrix_sln)
 ! ******************************************************************************
 ! bnd_ac -- map package connection to matrix
 ! ******************************************************************************
@@ -1693,13 +1694,11 @@ contains
     ! -- dummy
     class(MawType), intent(inout) :: this
     integer(I4B), intent(in) :: moffset
-    integer(I4B), dimension(:), intent(in) :: iasln
-    integer(I4B), dimension(:), intent(in) :: jasln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     integer(I4B) :: n
     integer(I4B) :: j
     integer(I4B) :: ii
-    integer(I4B) :: jj
     integer(I4B) :: iglo
     integer(I4B) :: jglo
     integer(I4B) :: ipos
@@ -1728,13 +1727,8 @@ contains
       do ii = 1, this%ngwfnodes(n)
         j = this%get_gwfnode(n, ii)
         jglo = j + moffset
-        searchloop: do jj = iasln(iglo), iasln(iglo + 1) - 1
-          if (jglo == jasln(jj)) then
-            this%idxdglo(ipos) = iasln(iglo)
-            this%idxoffdglo(ipos) = jj
-            exit searchloop
-          end if
-        end do searchloop
+        this%idxdglo(ipos) = matrix_sln%get_position_diag(iglo)
+        this%idxoffdglo(ipos) = matrix_sln%get_position(iglo, jglo)
         ipos = ipos + 1
       end do
     end do
@@ -1744,13 +1738,8 @@ contains
       do ii = 1, this%ngwfnodes(n)
         iglo = this%get_gwfnode(n, ii) + moffset
         jglo = moffset + this%dis%nodes + this%ioffset + n
-        symsearchloop: do jj = iasln(iglo), iasln(iglo + 1) - 1
-          if (jglo == jasln(jj)) then
-            this%idxsymdglo(ipos) = iasln(iglo)
-            this%idxsymoffdglo(ipos) = jj
-            exit symsearchloop
-          end if
-        end do symsearchloop
+        this%idxsymdglo(ipos) = matrix_sln%get_position_diag(iglo)
+        this%idxsymoffdglo(ipos) = matrix_sln%get_position(iglo, jglo)
         ipos = ipos + 1
       end do
     end do
@@ -1802,7 +1791,8 @@ contains
         this%iheadout = getunit()
         call openfile(this%iheadout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE', mode_opt=MNORMAL)
-        write (this%iout, fmtmawbin) 'HEAD', fname, this%iheadout
+        write (this%iout, fmtmawbin) 'HEAD', trim(adjustl(fname)), &
+          this%iheadout
       else
         call store_error('Optional maw stage keyword must be '// &
                          'followed by fileout.')
@@ -1814,7 +1804,8 @@ contains
         this%ibudgetout = getunit()
         call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)', &
                       form, access, 'REPLACE', mode_opt=MNORMAL)
-        write (this%iout, fmtmawbin) 'BUDGET', fname, this%ibudgetout
+        write (this%iout, fmtmawbin) 'BUDGET', trim(adjustl(fname)), &
+          this%ibudgetout
       else
         call store_error('Optional maw budget keyword must be '// &
                          'followed by fileout.')
@@ -1826,7 +1817,8 @@ contains
         this%ibudcsv = getunit()
         call openfile(this%ibudcsv, this%iout, fname, 'CSV', &
                       filstat_opt='REPLACE')
-        write (this%iout, fmtmawbin) 'BUDGET CSV', fname, this%ibudcsv
+        write (this%iout, fmtmawbin) 'BUDGET CSV', trim(adjustl(fname)), &
+          this%ibudcsv
       else
         call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
           &FILEOUT')
@@ -2317,7 +2309,7 @@ contains
     return
   end subroutine maw_cf
 
-  subroutine maw_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine maw_fc(this, rhs, ia, idxglo, matrix_sln)
 ! ******************************************************************************
 ! maw_fc -- Copy rhs and hcof into solution rhs and amat
 ! ******************************************************************************
@@ -2331,7 +2323,7 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     integer(I4B) :: j
     integer(I4B) :: n
@@ -2402,7 +2394,7 @@ contains
               this%xsto(n) = bt
             end if
             this%fwcondsim(n) = cfw
-            amatsln(iposd) = amatsln(iposd) - cfw
+            call matrix_sln%add_value_pos(iposd, -cfw)
             rhs(iloc) = rhs(iloc) - cfw * bt
             ratefw = cfw * (bt - hmaw)
           end if
@@ -2411,7 +2403,7 @@ contains
         ! -- add maw storage changes
         if (this%imawiss /= 1) then
           if (this%ifwdischarge(n) /= 1) then
-            amatsln(iposd) = amatsln(iposd) - (this%area(n) / delt)
+            call matrix_sln%add_value_pos(iposd, -this%area(n) / delt)
             rhs(iloc) = rhs(iloc) - (this%area(n) * this%xoldsto(n) / delt)
           else
             cterm = this%xoldsto(n) - this%fwelev(n)
@@ -2450,8 +2442,8 @@ contains
           ! -- add to maw row
           iposd = this%idxdglo(idx)
           iposoffd = this%idxoffdglo(idx)
-          amatsln(iposd) = amatsln(iposd) - term
-          amatsln(iposoffd) = term
+          call matrix_sln%add_value_pos(iposd, -term)
+          call matrix_sln%set_value_pos(iposoffd, term)
           !
           ! -- add correction term
           rhs(iloc) = rhs(iloc) - cterm
@@ -2461,8 +2453,8 @@ contains
           isymloc = ia(isymnode)
           ipossymd = this%idxsymdglo(idx)
           ipossymoffd = this%idxsymoffdglo(idx)
-          amatsln(ipossymd) = amatsln(ipossymd) - term
-          amatsln(ipossymoffd) = term
+          call matrix_sln%add_value_pos(ipossymd, -term)
+          call matrix_sln%set_value_pos(ipossymoffd, term)
           !
           ! -- add correction term to gwf row
           rhs(isymnode) = rhs(isymnode) + cterm
@@ -2477,7 +2469,7 @@ contains
     return
   end subroutine maw_fc
 
-  subroutine maw_fn(this, rhs, ia, idxglo, amatsln)
+  subroutine maw_fn(this, rhs, ia, idxglo, matrix_sln)
 ! **************************************************************************
 ! maw_fn -- Fill newton terms
 ! **************************************************************************
@@ -2490,7 +2482,7 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     integer(I4B) :: j
     integer(I4B) :: n
@@ -2542,7 +2534,7 @@ contains
         drterm = (rate2 - rate) / DEM4
         !
         !-- fill amat and rhs with newton-raphson terms
-        amatsln(iposd) = amatsln(iposd) + drterm
+        call matrix_sln%add_value_pos(iposd, drterm)
         rhs(iloc) = rhs(iloc) + drterm * hmaw
         !
         ! -- add flowing well
@@ -2566,8 +2558,8 @@ contains
               drterm = -(cfw + this%fwcond(n) * derv * (hmaw - bt))
               !
               ! -- fill amat and rhs with newton-raphson terms
-              amatsln(iposd) = amatsln(iposd) - &
-                               this%fwcond(n) * derv * (hmaw - bt)
+              call matrix_sln%add_value_pos(iposd, &
+                                            -this%fwcond(n) * derv * (hmaw - bt))
               rhs(iloc) = rhs(iloc) - rterm + drterm * hmaw
             end if
           end if
@@ -2602,17 +2594,17 @@ contains
               rhs(iloc) = rhs(iloc) + rhsterm
               rhs(isymnode) = rhs(isymnode) - rhsterm
               if (this%iboundpak(n) > 0) then
-                amatsln(iposd) = amatsln(iposd) + term
-                amatsln(iposoffd) = amatsln(iposoffd) + term2
+                call matrix_sln%add_value_pos(iposd, term)
+                call matrix_sln%add_value_pos(iposoffd, term2)
               end if
-              amatsln(ipossymd) = amatsln(ipossymd) - term2
-              amatsln(ipossymoffd) = amatsln(ipossymoffd) - term
+              call matrix_sln%add_value_pos(ipossymd, -term2)
+              call matrix_sln%add_value_pos(ipossymoffd, -term)
             else
               rhs(iloc) = rhs(iloc) + term * hmaw
               rhs(isymnode) = rhs(isymnode) - term * hmaw
-              amatsln(iposd) = amatsln(iposd) + term
+              call matrix_sln%add_value_pos(iposd, term)
               if (this%ibound(igwfnode) > 0) then
-                amatsln(ipossymoffd) = amatsln(ipossymoffd) - term
+                call matrix_sln%add_value_pos(ipossymoffd, -term)
               end if
             end if
             !
@@ -2623,18 +2615,18 @@ contains
               rhs(iloc) = rhs(iloc) + rhsterm
               rhs(isymnode) = rhs(isymnode) - rhsterm
               if (this%iboundpak(n) > 0) then
-                amatsln(iposd) = amatsln(iposd) + term2
-                amatsln(iposoffd) = amatsln(iposoffd) + term
+                call matrix_sln%add_value_pos(iposd, term2)
+                call matrix_sln%add_value_pos(iposoffd, term)
               end if
-              amatsln(ipossymd) = amatsln(ipossymd) - term
-              amatsln(ipossymoffd) = amatsln(ipossymoffd) - term2
+              call matrix_sln%add_value_pos(ipossymd, -term)
+              call matrix_sln%add_value_pos(ipossymoffd, -term2)
             else
               rhs(iloc) = rhs(iloc) + term * hgwf
               rhs(isymnode) = rhs(isymnode) - term * hgwf
               if (this%iboundpak(n) > 0) then
-                amatsln(iposoffd) = amatsln(iposoffd) + term
+                call matrix_sln%add_value_pos(iposoffd, term)
               end if
-              amatsln(ipossymd) = amatsln(ipossymd) - term
+              call matrix_sln%add_value_pos(ipossymd, -term)
             end if
           end if
         end if

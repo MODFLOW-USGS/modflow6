@@ -7,6 +7,7 @@ module GwtSrcModule
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
   use BlockParserModule, only: BlockParserType
+  use MatrixBaseModule
   !
   implicit none
   !
@@ -166,7 +167,7 @@ contains
     return
   end subroutine src_cf
 
-  subroutine src_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine src_fc(this, rhs, ia, idxglo, matrix_sln)
 ! **************************************************************************
 ! src_fc -- Copy rhs and hcof into solution rhs and amat
 ! **************************************************************************
@@ -178,7 +179,7 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     integer(I4B) :: i, n, ipos
 ! --------------------------------------------------------------------------
@@ -193,7 +194,7 @@ contains
       n = this%nodelist(i)
       rhs(n) = rhs(n) + this%rhs(i)
       ipos = ia(n)
-      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
+      call matrix_sln%add_value_pos(idxglo(ipos), this%hcof(i))
       !
       ! -- If mover is active and mass is being withdrawn,
       !    store available mass (as positive value).

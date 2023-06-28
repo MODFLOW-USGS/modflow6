@@ -1,33 +1,16 @@
 # This autotest is based on the MOC3D problem 1 autotest except that it
 # tests the zero-order decay for a simple one-dimensional flow problem.
 # The test ensures that concentrations do not go below zero (they do go
-# slightly negative but, it does ensure that the decay rate shuts off as
+# slightly negative but, it does ensure that the decay rate shuts off
 # where concentrations are zero.
 
 import os
-import sys
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = [
     "moc3d01zoda",
@@ -38,10 +21,6 @@ ex = [
 retardation = [None, 40, None, 40]
 decay = [0.01, 0.01, 0.1, 0.1]
 ist_package = [False, False, True, True]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-ddir = "data"
 
 
 def build_model(idx, dir):
@@ -235,7 +214,16 @@ def build_model(idx, dir):
     )
 
     # storage
-    porosity = 0.1
+    theta_mobile = 0.1 # vol mobile voids per cell volume
+    volfrac_immobile = 0.
+    theta_immobile = 0.
+    if ist_package[idx]:
+        # if dual domain, then assume half of cell is mobile and other half is immobile
+        volfrac_immobile = 0.5
+        theta_immobile = theta_mobile
+        porosity_immobile = theta_immobile / volfrac_immobile
+    volfrac_mobile = 1. - volfrac_immobile
+    porosity_mobile = theta_mobile / volfrac_mobile
 
     rtd = retardation[idx]
     sorption = None
@@ -243,7 +231,8 @@ def build_model(idx, dir):
     rhob = None
     if rtd is not None:
         rhob = 1.0
-        kd = (rtd - 1.0) * porosity / rhob
+        kd = (rtd - 1.0) * theta_mobile / rhob
+        rhobm = rhob
         sorption = "linear"
 
     decay_rate = decay[idx]
@@ -254,7 +243,7 @@ def build_model(idx, dir):
     # mass storage and transfer
     mst = flopy.mf6.ModflowGwtmst(
         gwt,
-        porosity=porosity,
+        porosity=porosity_mobile,
         zero_order_decay=zero_order_decay,
         decay=decay_rate,
         decay_sorbed=decay_rate,
@@ -270,7 +259,8 @@ def build_model(idx, dir):
             sorption=sorption,
             zero_order_decay=True,
             cim=0.0,
-            thetaim=porosity,
+            volfrac=volfrac_immobile,
+            porosity=porosity_immobile,
             zetaim=1.0,
             decay=decay_rate,
             bulk_density=rhob,
@@ -389,6 +379,16 @@ def eval_transport(sim):
     except:
         assert False, f'could not load data from "{fpth}"'
 
+    makeplot = False
+    if makeplot:
+        fname = "fig-ct.pdf"
+        fname = os.path.join(sim.simpath, fname)
+        make_plot_ct(tssim, fname)
+
+        fname = "fig-cd.pdf"
+        fname = os.path.join(sim.simpath, fname)
+        make_plot_cd(cobj, fname)
+
     # get mobile domain budget object
     fpth = os.path.join(sim.simpath, f"{gwtname}.cbc")
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
@@ -438,16 +438,7 @@ def eval_transport(sim):
         )
         np.allclose(qim_budfile, qim_calculated), errmsg
 
-    makeplot = False
-    if makeplot:
-        fname = "fig-ct.pdf"
-        fname = os.path.join(exdirs[sim.idxsim], fname)
-        make_plot_ct(tssim, fname)
-
-        fname = "fig-cd.pdf"
-        fname = os.path.join(exdirs[sim.idxsim], fname)
-        make_plot_cd(cobj, fname)
-
+    # compare every tenth time
     tssim = tssim[::10]
     # print(tssim)
 
@@ -577,44 +568,18 @@ def eval_transport(sim):
     if tsres is not None:
         assert np.allclose(tsres, tssim), errmsg
 
-    return
-
-
-# - No need to change any code below
-
 
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_transport, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_transport, idxsim=idx)
-        test.run_mf6(sim)
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, idx, ws)
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=idx
+        ),
+        ws,
+    )

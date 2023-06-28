@@ -2,24 +2,9 @@ import os
 import sys
 
 import pytest
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from simulation import Simulation
+from common_regression import get_mf6_ftypes, get_namefiles
+from framework import TestFramework
+from simulation import TestSimulation
 
 exdir = os.path.join("..", "tmp_simulations")
 testpaths = os.path.join("..", exdir)
@@ -87,12 +72,10 @@ def get_mf6_models():
         found_dirs = []
         for d in dirs:
             pth = os.path.join(exdir, d)
-            namefiles = pymake.get_namefiles(pth)
+            namefiles = get_namefiles(pth)
             ftypes = []
             for namefile in namefiles:
-                ftype = pymake.autotest.get_mf6_ftypes(
-                    namefile, select_packages
-                )
+                ftype = get_mf6_ftypes(namefile, select_packages)
                 if ftype not in ftypes:
                     ftypes += ftype
             if len(ftypes) > 0:
@@ -112,7 +95,7 @@ def get_mf6_models():
     return dirs
 
 
-def run_mf6(sim):
+def run_mf6(sim, ws):
     """
     Run the MODFLOW 6 simulation and compare to existing head file or
     appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
@@ -120,49 +103,16 @@ def run_mf6(sim):
     """
     print(os.getcwd())
     src = os.path.join(exdir, sim.name)
-    dst = os.path.join("temp", sim.name)
+    dst = os.path.join(ws, sim.name)
     sim.setup(src, dst)
     sim.run()
     sim.compare()
-    sim.teardown()
 
 
 @pytest.mark.parametrize(
-    "idx, dir",
+    "idx, name",
     list(enumerate(get_mf6_models())),
 )
-def test_mf6model(idx, dir):
-    # run the test model
-    run_mf6(Simulation(dir))
-
-
-def main():
-    # write message
-    tnam = os.path.splitext(os.path.basename(__file__))[0]
-    msg = f"Running {tnam} test"
-    print(msg)
-
-    # get a list of test models to run
-    dirs = get_mf6_models()
-
-    # run the test model
-    for dir in dirs:
-        sim = Simulation(dir)
-        run_mf6(sim)
-
-    return
-
-
-if __name__ == "__main__":
-
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    delFiles = True
-    for idx, arg in enumerate(sys.argv):
-        if arg.lower() == "--keep":
-            if len(sys.argv) > idx + 1:
-                delFiles = False
-                break
-
-    # run main routine
-    main()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    run_mf6(TestSimulation(name=name, exe_dict=targets), ws)

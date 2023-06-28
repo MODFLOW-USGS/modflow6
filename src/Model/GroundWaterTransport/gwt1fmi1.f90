@@ -12,6 +12,7 @@ module GwtFmiModule
   use HeadFileReaderModule, only: HeadFileReaderType
   use PackageBudgetModule, only: PackageBudgetType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr_bfr
+  use MatrixBaseModule
 
   implicit none
   private
@@ -192,8 +193,8 @@ contains
     ! -- Make sure that ssm is on if there are any boundary packages
     if (inssm == 0) then
       if (this%nflowpack > 0) then
-        call store_error('FLOW MODEL HAS BOUNDARY PACKAGES, BUT THERE &
-          &IS NO SSM PACKAGE.  THE SSM PACKAGE MUST BE ACTIVATED.', &
+        call store_error('Flow model has boundary packages, but there &
+          &is no SSM package.  The SSM package must be activated.', &
           terminate=.TRUE.)
       end if
     end if
@@ -249,14 +250,14 @@ contains
     !   to mvrbudobj until exg_ar().
     if (kper * kstp == 1) then
       if (associated(this%mvrbudobj) .and. inmvr == 0) then
-        write (errmsg, '(4x,a)') 'GWF WATER MOVER IS ACTIVE BUT THE GWT MVT &
-          &PACKAGE HAS NOT BEEN SPECIFIED.  ACTIVATE GWT MVT PACKAGE.'
+        write (errmsg, '(a)') 'GWF water mover is active but the GWT MVT &
+          &package has not been specified.  activate GWT MVT package.'
         call store_error(errmsg, terminate=.TRUE.)
       end if
       if (.not. associated(this%mvrbudobj) .and. inmvr > 0) then
-        write (errmsg, '(4x,a)') 'GWF WATER MOVER TERMS ARE NOT AVAILABLE &
-          &BUT THE GWT MVT PACKAGE HAS BEEN ACTIVATED.  GWF-GWT EXCHANGE &
-          &OR SPECIFY GWFMOVER IN FMI PACKAGEDATA.'
+        write (errmsg, '(a)') 'GWF water mover terms are not available &
+          &but the GWT MVT package has been activated.  Activate GWF-GWT &
+          &exchange or specify GWFMOVER in FMI PACKAGEDATA.'
         call store_error(errmsg, terminate=.TRUE.)
       end if
     end if
@@ -376,9 +377,9 @@ contains
     return
   end subroutine fmi_ad
 
-  subroutine fmi_fc(this, nodes, cold, nja, njasln, amatsln, idxglo, rhs)
+  subroutine fmi_fc(this, nodes, cold, nja, matrix_sln, idxglo, rhs)
 ! ******************************************************************************
-! fmi_fc -- Calculate coefficients and fill amat and rhs
+! fmi_fc -- Calculate coefficients and fill matrix and rhs
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -390,12 +391,11 @@ contains
     integer, intent(in) :: nodes
     real(DP), intent(in), dimension(nodes) :: cold
     integer(I4B), intent(in) :: nja
-    integer(I4B), intent(in) :: njasln
-    real(DP), dimension(njasln), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in), dimension(nja) :: idxglo
     real(DP), intent(inout), dimension(nodes) :: rhs
     ! -- local
-    integer(I4B) :: n, ipos, idiag
+    integer(I4B) :: n, idiag, idiag_sln
 ! ------------------------------------------------------------------------------
     !
     ! -- Calculate the flow imbalance error and make a correction for it
@@ -404,9 +404,9 @@ contains
       ! -- Correct the transport solution for the flow imbalance by adding
       !    the flow residual to the diagonal
       do n = 1, nodes
-        idiag = idxglo(this%dis%con%ia(n))
-        ipos = this%dis%con%ia(n)
-        amatsln(idiag) = amatsln(idiag) - this%gwfflowja(ipos)
+        idiag = this%dis%con%ia(n)
+        idiag_sln = idxglo(idiag)
+        call matrix_sln%add_value_pos(idiag_sln, -this%gwfflowja(idiag))
       end do
     end if
     !
@@ -786,7 +786,7 @@ contains
           write (this%iout, fmtifc)
           this%iflowerr = 1
         case default
-          write (errmsg, '(4x,a,a)') '***ERROR. UNKNOWN FMI OPTION: ', &
+          write (errmsg, '(a,a)') 'Unknown FMI option: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -848,7 +848,7 @@ contains
         case ('GWFBUDGET')
           call this%parser%GetStringCaps(keyword)
           if (keyword /= 'FILEIN') then
-            call store_error('GWFBUDGET KEYWORD MUST BE FOLLOWED BY '// &
+            call store_error('GWFBUDGET keyword must be followed by '// &
                              '"FILEIN" then by filename.')
             call this%parser%StoreErrorUnit()
           end if
@@ -866,7 +866,7 @@ contains
         case ('GWFHEAD')
           call this%parser%GetStringCaps(keyword)
           if (keyword /= 'FILEIN') then
-            call store_error('GWFHEAD KEYWORD MUST BE FOLLOWED BY '// &
+            call store_error('GWFHEAD keyword must be followed by '// &
                              '"FILEIN" then by filename.')
             call this%parser%StoreErrorUnit()
           end if
@@ -884,7 +884,7 @@ contains
         case ('GWFMOVER')
           call this%parser%GetStringCaps(keyword)
           if (keyword /= 'FILEIN') then
-            call store_error('GWFMOVER KEYWORD MUST BE FOLLOWED BY '// &
+            call store_error('GWFMOVER keyword must be followed by '// &
                              '"FILEIN" then by filename.')
             call this%parser%StoreErrorUnit()
           end if
@@ -915,7 +915,7 @@ contains
           pname = keyword(1:LENPACKAGENAME)
           call this%parser%GetStringCaps(keyword)
           if (keyword /= 'FILEIN') then
-            call store_error('PACKAGE NAME MUST BE FOLLOWED BY '// &
+            call store_error('Package name must be followed by '// &
                              '"FILEIN" then by filename.')
             call this%parser%StoreErrorUnit()
           end if
@@ -1027,9 +1027,9 @@ contains
           readnext = .false.
         end if
       else if (this%bfr%endoffile) then
-        write (errmsg, '(4x,a)') 'REACHED END OF GWF BUDGET &
-          &FILE BEFORE READING SUFFICIENT BUDGET INFORMATION FOR THIS &
-          &GWT SIMULATION.'
+        write (errmsg, '(a)') 'Reached end of GWF budget &
+          &file before reading sufficient budget information for this &
+          &GWT simulation.'
         call store_error(errmsg)
         call store_error_unit(this%iubud)
       end if
@@ -1047,29 +1047,29 @@ contains
       do n = 1, this%bfr%nbudterms
         call this%bfr%read_record(success, this%iout)
         if (.not. success) then
-          write (errmsg, '(4x,a)') 'GWF BUDGET READ NOT SUCCESSFUL'
+          write (errmsg, '(a)') 'GWF budget read not successful'
           call store_error(errmsg)
           call store_error_unit(this%iubud)
         end if
         !
         ! -- Ensure kper is same between model and budget file
         if (kper /= this%bfr%kper) then
-          write (errmsg, '(4x,a)') 'PERIOD NUMBER IN BUDGET FILE &
-            &DOES NOT MATCH PERIOD NUMBER IN TRANSPORT MODEL.  IF THERE &
-            &IS MORE THAN ONE TIME STEP IN THE BUDGET FILE FOR A GIVEN STRESS &
-            &PERIOD, BUDGET FILE TIME STEPS MUST MATCH GWT MODEL TIME STEPS &
-            &ONE-FOR-ONE IN THAT STRESS PERIOD.'
+          write (errmsg, '(a)') 'Period number in budget file &
+            &does not match period number in transport model.  If there &
+            &is more than one time step in the budget file for a given stress &
+            &period, budget file time steps must match GWT model time steps &
+            &one-for-one in that stress period.'
           call store_error(errmsg)
           call store_error_unit(this%iubud)
         end if
         !
         ! -- if budget file kstp > 1, then kstp must match
         if (this%bfr%kstp > 1 .and. (kstp /= this%bfr%kstp)) then
-          write (errmsg, '(4x,a)') 'TIME STEP NUMBER IN BUDGET FILE &
-            &DOES NOT MATCH TIME STEP NUMBER IN TRANSPORT MODEL.  IF THERE &
-            &IS MORE THAN ONE TIME STEP IN THE BUDGET FILE FOR A GIVEN STRESS &
-            &PERIOD, BUDGET FILE TIME STEPS MUST MATCH GWT MODEL TIME STEPS &
-            &ONE-FOR-ONE IN THAT STRESS PERIOD.'
+          write (errmsg, '(a)') 'Time step number in budget file &
+            &does not match time step number in transport model.  If there &
+            &is more than one time step in the budget file for a given stress &
+            &period, budget file time steps must match gwt model time steps &
+            &one-for-one in that stress period.'
           call store_error(errmsg)
           call store_error_unit(this%iubud)
         end if
@@ -1207,9 +1207,9 @@ contains
           readnext = .false.
         end if
       else if (this%hfr%endoffile) then
-        write (errmsg, '(4x,a)') 'REACHED END OF GWF HEAD &
-          &FILE BEFORE READING SUFFICIENT HEAD INFORMATION FOR THIS &
-          &GWT SIMULATION.'
+        write (errmsg, '(a)') 'Reached end of GWF head &
+          &file before reading sufficient head information for this &
+          &GWT simulation.'
         call store_error(errmsg)
         call store_error_unit(this%iuhds)
       end if
@@ -1227,29 +1227,29 @@ contains
         ! -- read next head chunk
         call this%hfr%read_record(success, this%iout)
         if (.not. success) then
-          write (errmsg, '(4x,a)') 'GWF HEAD READ NOT SUCCESSFUL'
+          write (errmsg, '(a)') 'GWF head read not successful'
           call store_error(errmsg)
           call store_error_unit(this%iuhds)
         end if
         !
         ! -- Ensure kper is same between model and head file
         if (kper /= this%hfr%kper) then
-          write (errmsg, '(4x,a)') 'PERIOD NUMBER IN HEAD FILE &
-            &DOES NOT MATCH PERIOD NUMBER IN TRANSPORT MODEL.  IF THERE &
-            &IS MORE THAN ONE TIME STEP IN THE HEAD FILE FOR A GIVEN STRESS &
-            &PERIOD, HEAD FILE TIME STEPS MUST MATCH GWT MODEL TIME STEPS &
-            &ONE-FOR-ONE IN THAT STRESS PERIOD.'
+          write (errmsg, '(a)') 'Period number in head file &
+            &does not match period number in transport model.  If there &
+            &is more than one time step in the head file for a given stress &
+            &period, head file time steps must match gwt model time steps &
+            &one-for-one in that stress period.'
           call store_error(errmsg)
           call store_error_unit(this%iuhds)
         end if
         !
         ! -- if head file kstp > 1, then kstp must match
         if (this%hfr%kstp > 1 .and. (kstp /= this%hfr%kstp)) then
-          write (errmsg, '(4x,a)') 'TIME STEP NUMBER IN HEAD FILE &
-            &DOES NOT MATCH TIME STEP NUMBER IN TRANSPORT MODEL.  IF THERE &
-            &IS MORE THAN ONE TIME STEP IN THE HEAD FILE FOR A GIVEN STRESS &
-            &PERIOD, HEAD FILE TIME STEPS MUST MATCH GWT MODEL TIME STEPS &
-            &ONE-FOR-ONE IN THAT STRESS PERIOD.'
+          write (errmsg, '(a)') 'Time step number in head file &
+            &does not match time step number in transport model.  If there &
+            &is more than one time step in the head file for a given stress &
+            &period, head file time steps must match gwt model time steps &
+            &one-for-one in that stress period.'
           call store_error(errmsg)
           call store_error_unit(this%iuhds)
         end if
@@ -1367,21 +1367,21 @@ contains
     !
     ! -- Error if specific discharge, saturation or flowja not found
     if (.not. found_dataspdis) then
-      write (errmsg, '(4x,a)') 'SPECIFIC DISCHARGE NOT FOUND IN &
-                              &BUDGET FILE. SAVE_SPECIFIC_DISCHARGE AND &
-                              &SAVE_FLOWS MUST BE ACTIVATED IN THE NPF PACKAGE.'
+      write (errmsg, '(a)') 'Specific discharge not found in &
+                            &budget file. SAVE_SPECIFIC_DISCHARGE and &
+                            &SAVE_FLOWS must be activated in the NPF package.'
       call store_error(errmsg)
     end if
     if (.not. found_datasat) then
-      write (errmsg, '(4x,a)') 'SATURATION NOT FOUND IN &
-                              &BUDGET FILE. SAVE_SATURATION AND &
-                              &SAVE_FLOWS MUST BE ACTIVATED IN THE NPF PACKAGE.'
+      write (errmsg, '(a)') 'Saturation not found in &
+                            &budget file. SAVE_SATURATION and &
+                            &SAVE_FLOWS must be activated in the NPF package.'
       call store_error(errmsg)
     end if
     if (.not. found_flowja) then
-      write (errmsg, '(4x,a)') 'FLOWJA NOT FOUND IN &
-                              &BUDGET FILE. SAVE_FLOWS MUST &
-                              &BE ACTIVATED IN THE NPF PACKAGE.'
+      write (errmsg, '(a)') 'FLOWJA not found in &
+                            &budget file. SAVE_FLOWS must &
+                            &be activated in the NPF package.'
       call store_error(errmsg)
     end if
     if (count_errors() > 0) then

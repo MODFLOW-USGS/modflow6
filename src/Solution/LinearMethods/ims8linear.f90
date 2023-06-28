@@ -12,6 +12,7 @@ MODULE IMSLinearModule
                                  ims_base_scale, ims_base_pcu, &
                                  ims_base_residual
   use BlockParserModule, only: BlockParserType
+  use MatrixBaseModule
 
   IMPLICIT NONE
   private
@@ -104,8 +105,7 @@ CONTAINS
     !!
   !<
   SUBROUTINE imslinear_ar(this, NAME, parser, IOUT, IPRIMS, MXITER, IFDPARAM, &
-                          IMSLINEARM, NEQ, NJA, IA, JA, AMAT, RHS, X, &
-                          NINNER, LFINDBLOCK)
+                          IMSLINEARM, NEQ, matrix, RHS, X, NINNER, LFINDBLOCK)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     use MemoryHelperModule, only: create_mem_path
@@ -121,10 +121,7 @@ CONTAINS
     integer(I4B), INTENT(IN) :: IFDPARAM !< complexity option
     integer(I4B), INTENT(INOUT) :: IMSLINEARM !< linear method option (1) CG (2) BICGSTAB
     integer(I4B), TARGET, INTENT(IN) :: NEQ !< number of equations
-    integer(I4B), TARGET, INTENT(IN) :: NJA !< number of non-zero entries in the coefficient matrix
-    integer(I4B), DIMENSION(NEQ + 1), TARGET, INTENT(IN) :: IA !< pointer to the start of a row in the coefficient matrix
-    integer(I4B), DIMENSION(NJA), TARGET, INTENT(IN) :: JA !< column pointer
-    real(DP), DIMENSION(NJA), TARGET, INTENT(IN) :: AMAT !< coefficient matrix
+    class(MatrixBaseType), pointer :: matrix
     real(DP), DIMENSION(NEQ), TARGET, INTENT(INOUT) :: RHS !< right-hand side
     real(DP), DIMENSION(NEQ), TARGET, INTENT(INOUT) :: X !< dependent variables
     integer(I4B), TARGET, INTENT(INOUT) :: NINNER !< maximum number of inner iterations
@@ -163,10 +160,9 @@ CONTAINS
     ! -- SET POINTERS TO SOLUTION STORAGE
     this%IPRIMS => IPRIMS
     this%NEQ => NEQ
-    this%NJA => NJA
-    this%IA => IA
-    this%JA => JA
-    this%AMAT => AMAT
+    call matrix%get_aij(this%IA, this%JA, this%AMAT)
+    call mem_allocate(this%NJA, 'NJA', this%memoryPath)
+    this%NJA = size(this%AMAT)
     this%RHS => RHS
     this%X => X
     !
@@ -248,7 +244,7 @@ CONTAINS
           else
             this%ILINMETH = 0
             write (errmsg, '(3a)') &
-              'UNKNOWN IMSLINEAR LINEAR_ACCELERATION METHOD (', &
+              'Unknown IMSLINEAR LINEAR_ACCELERATION method (', &
               trim(keyword), ').'
             call store_error(errmsg)
           end if
@@ -263,7 +259,7 @@ CONTAINS
             i = 2
           else
             write (errmsg, '(3a)') &
-              'UNKNOWN IMSLINEAR SCALING_METHOD (', trim(keyword), ').'
+              'Unknown IMSLINEAR SCALING_METHOD (', trim(keyword), ').'
             call store_error(errmsg)
           end if
           this%ISCL = i
@@ -280,7 +276,7 @@ CONTAINS
             i = 2
           else
             write (errmsg, '(3a)') &
-              'UNKNOWN IMSLINEAR REORDERING_METHOD (', trim(keyword), ').'
+              'Unknown IMSLINEAR REORDERING_METHOD (', trim(keyword), ').'
             call store_error(errmsg)
           end if
           this%IORD = i
@@ -293,8 +289,8 @@ CONTAINS
           this%level = i
           if (i < 0) then
             write (errmsg, '(a,1x,a)') &
-              'IMSLINEAR PRECONDITIONER_LEVELS MUST BE GREATER THAN', &
-              'OR EQUAL TO ZERO'
+              'IMSLINEAR PRECONDITIONER_LEVELS must be greater than', &
+              'or equal to zero'
             call store_error(errmsg)
           end if
         case ('PRECONDITIONER_DROP_TOLERANCE')
@@ -303,7 +299,7 @@ CONTAINS
           if (r < DZERO) then
             write (errmsg, '(a,1x,a)') &
               'IMSLINEAR PRECONDITIONER_DROP_TOLERANCE', &
-              'MUST BE GREATER THAN OR EQUAL TO ZERO'
+              'must be greater than or equal to zero'
             call store_error(errmsg)
           end if
           !
@@ -322,14 +318,14 @@ CONTAINS
           ! -- default
         case default
           write (errmsg, '(3a)') &
-            'UNKNOWN IMSLINEAR KEYWORD (', trim(keyword), ').'
+            'Unknown IMSLINEAR keyword (', trim(keyword), ').'
           call store_error(errmsg)
         end select
       end do
       write (iout, '(1x,a)') 'END OF LINEAR DATA'
     else
       if (IFDPARAM == 0) THEN
-        write (errmsg, '(a)') 'NO LINEAR BLOCK DETECTED.'
+        write (errmsg, '(a)') 'NO LINEAR block detected.'
         call store_error(errmsg)
       end if
     end if
@@ -407,7 +403,7 @@ CONTAINS
       ELSE
         iwk = 0
         DO n = 1, NEQ
-          i = IA(n + 1) - IA(n)
+          i = this%IA(n + 1) - this%IA(n)
           IF (i > iwk) THEN
             iwk = i
           END IF
@@ -776,6 +772,7 @@ CONTAINS
     call mem_deallocate(this%njlu)
     call mem_deallocate(this%njw)
     call mem_deallocate(this%nwlu)
+    call mem_deallocate(this%NJA)
     !
     ! -- nullify pointers
     nullify (this%iprims)

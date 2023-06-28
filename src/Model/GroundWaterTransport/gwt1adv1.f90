@@ -6,6 +6,7 @@ module GwtAdvModule
   use BaseDisModule, only: DisBaseType
   use GwtFmiModule, only: GwtFmiType
   use GwtAdvOptionsModule, only: GwtAdvOptionsType
+  use MatrixBaseModule
 
   implicit none
   private
@@ -122,7 +123,7 @@ contains
     return
   end subroutine adv_ar
 
-  subroutine adv_fc(this, nodes, amatsln, idxglo, cnew, rhs)
+  subroutine adv_fc(this, nodes, matrix_sln, idxglo, cnew, rhs)
 ! ******************************************************************************
 ! adv_fc -- Calculate coefficients and fill amat and rhs
 ! ******************************************************************************
@@ -133,7 +134,7 @@ contains
     ! -- dummy
     class(GwtAdvType) :: this
     integer, intent(in) :: nodes
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in), dimension(:) :: idxglo
     real(DP), intent(in), dimension(:) :: cnew
     real(DP), dimension(:), intent(inout) :: rhs
@@ -153,8 +154,8 @@ contains
         if (this%ibound(m) == 0) cycle
         qnm = this%fmi%gwfflowja(ipos)
         omega = this%adv_weight(this%iadvwt, ipos, n, m, qnm)
-        amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + qnm * (DONE - omega)
-        amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + qnm * omega
+        call matrix_sln%add_value_pos(idxglo(ipos), qnm * (DONE - omega))
+        call matrix_sln%add_value_pos(idxglo(idiag), qnm * omega)
       end do
     end do
     !
@@ -456,16 +457,16 @@ contains
             this%iadvwt = 2
             write (this%iout, fmtiadvwt) 'TVD'
           case default
-            write (errmsg, '(4x, a, a)') &
-              'ERROR. UNKNOWN SCHEME: ', trim(keyword)
+            write (errmsg, '(a, a)') &
+              'Unknown scheme: ', trim(keyword)
             call store_error(errmsg)
-            write (errmsg, '(4x, a, a)') &
-              'SCHEME MUST BE "UPSTREAM", "CENTRAL" OR "TVD"'
+            write (errmsg, '(a, a)') &
+              'Scheme must be "UPSTREAM", "CENTRAL" or "TVD"'
             call store_error(errmsg)
             call this%parser%StoreErrorUnit()
           end select
         case default
-          write (errmsg, '(4x,a,a)') 'Unknown ADVECTION option: ', &
+          write (errmsg, '(a,a)') 'Unknown ADVECTION option: ', &
             trim(keyword)
           call store_error(errmsg, terminate=.TRUE.)
         end select

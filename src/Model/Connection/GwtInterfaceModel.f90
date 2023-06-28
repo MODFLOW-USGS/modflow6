@@ -78,10 +78,10 @@ contains
     end if
 
     ! create dis and packages
-    call disu_cr(this%dis, this%name, -1, this%iout)
+    call disu_cr(this%dis, this%name, '', -1, this%iout)
     call fmi_cr(this%fmi, this%name, 0, this%iout)
     call adv_cr(this%adv, this%name, adv_unit, this%iout, this%fmi)
-    call dsp_cr(this%dsp, this%name, -dsp_unit, this%iout, this%fmi)
+    call dsp_cr(this%dsp, this%name, '', -dsp_unit, this%iout, this%fmi)
     call gwt_obs_cr(this%obs, inobs)
 
   end subroutine gwtifmod_cr
@@ -153,8 +153,8 @@ contains
                             trim(this%dsp%memoryPath))
       end if
       allocate (this%mst)
-      call mem_allocate(this%mst%porosity, this%dis%nodes, &
-                        'POROSITY', create_mem_path(this%name, 'MST'))
+      call mem_allocate(this%mst%thetam, this%dis%nodes, &
+                        'THETAM', create_mem_path(this%name, 'MST'))
     end if
 
     ! assign or point model members to dis members
@@ -179,7 +179,7 @@ contains
       call this%adv%adv_ar(this%dis, this%ibound)
     end if
     if (this%indsp > 0) then
-      call this%dsp%dsp_ar(this%ibound, this%mst%porosity)
+      call this%dsp%dsp_ar(this%ibound, this%mst%thetam)
     end if
 
   end subroutine gwtifmod_ar
@@ -205,7 +205,7 @@ contains
     deallocate (this%dsp)
 
     if (associated(this%mst)) then
-      call mem_deallocate(this%mst%porosity)
+      call mem_deallocate(this%mst%thetam)
       deallocate (this%mst)
     end if
 

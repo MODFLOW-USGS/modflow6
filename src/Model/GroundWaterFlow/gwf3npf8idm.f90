@@ -1,3 +1,4 @@
+! ** Do Not Modify! MODFLOW 6 system generated file. **
 module GwfNpfInputModule
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
@@ -6,6 +7,7 @@ module GwfNpfInputModule
   public gwf_npf_aggregate_definitions
   public gwf_npf_block_definitions
   public GwfNpfParamFoundType
+  public gwf_npf_multi_package
 
   type GwfNpfParamFoundType
     logical :: ipakcb = .false.
@@ -46,6 +48,8 @@ module GwfNpfInputModule
     logical :: angle3 = .false.
     logical :: wetdry = .false.
   end type GwfNpfParamFoundType
+
+  logical :: gwf_npf_multi_package = .false.
 
   type(InputParamDefinitionType), parameter :: &
     gwfnpf_ipakcb = InputParamDefinitionType &
@@ -684,7 +688,20 @@ module GwfNpfInputModule
   type(InputParamDefinitionType), parameter :: &
     gwf_npf_aggregate_definitions(*) = &
     [ &
-    InputParamDefinitionType :: &
+    InputParamDefinitionType &
+    ( &
+    '', & ! component
+    '', & ! subcomponent
+    '', & ! block
+    '', & ! tag name
+    '', & ! fortran variable
+    '', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false. & ! layered
+    ) &
     ]
 
   type(InputBlockDefinitionType), parameter :: &
@@ -692,13 +709,15 @@ module GwfNpfInputModule
     [ &
     InputBlockDefinitionType( &
     'OPTIONS', & ! blockname
-    .true., & ! required
-    .false. & ! aggregate
+    .false., & ! required
+    .false., & ! aggregate
+    .false. & ! block_variable
     ), &
     InputBlockDefinitionType( &
     'GRIDDATA', & ! blockname
     .true., & ! required
-    .false. & ! aggregate
+    .false., & ! aggregate
+    .false. & ! block_variable
     ) &
     ]
 

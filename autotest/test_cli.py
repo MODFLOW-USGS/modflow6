@@ -1,19 +1,29 @@
+import re
 import subprocess
-from pathlib import Path
 
-_project_root_path = Path(__file__).parent.parent
-_bin_path = _project_root_path / "bin"
+from conftest import project_root_path
+
+bin_path = project_root_path / "bin"
+
+
+def split_nonnumeric(s):
+    match = re.compile("[^0-9]").search(s)
+    return [s[:match.start()], s[match.start():]] if match else s
 
 
 def test_cli_version():
-    output = ' '.join(subprocess.check_output([str(_bin_path / 'mf6'), "-v"]).decode().split())
-    assert output.startswith("mf6:")
-    assert output.lower().count("release") == 1
-    # assert output.lower().count("candidate") <= 1
-
+    output = " ".join(
+        subprocess.check_output([str(bin_path / "mf6"), "-v"]).decode().split()
+    )
     print(output)
+    assert output.startswith("mf6:")
 
-    version = output.lower().rpartition(":")[2].rpartition("release")[0].strip()
+    version = (
+        output.lower().split(' ')[1]
+    )
+    print(version)
     v_split = version.split(".")
     assert len(v_split) == 3
-    assert all(s.isdigit() for s in v_split)
+    assert all(s.isdigit() for s in v_split[:2])
+    sol = split_nonnumeric(v_split[2])
+    assert sol[0].isdigit()

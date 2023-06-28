@@ -1,40 +1,16 @@
 # tests to ability to run flow model first followed by transport model
 
 import os
-import shutil
+from os.path import join
 
+import flopy
 import numpy as np
 import pytest
+from conftest import project_root_path
 
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-
-import targets
-from framework import set_teardown_test
-
-exe_name_mf6 = targets.target_dict["mf6"]
-exe_name_mf6 = os.path.abspath(exe_name_mf6)
-
-data_ws = os.path.abspath("./data/prudic2004test2/")
-testdir = "./temp"
+data_path = project_root_path / "autotest" / "data"
+model_path = str(data_path / "prudic2004test2")
 testgroup = "prudic2004t2fmi"
-d = os.path.join(testdir, testgroup)
-if os.path.isdir(d):
-    shutil.rmtree(d)
 
 nlay = 8
 nrow = 36
@@ -42,22 +18,20 @@ ncol = 23
 delr = 405.665
 delc = 403.717
 top = 100.0
-fname = os.path.join(data_ws, "bot1.dat")
+fname = os.path.join(model_path, "bot1.dat")
 bot0 = np.loadtxt(fname)
 botm = [bot0] + [bot0 - (15.0 * k) for k in range(1, nlay)]
-fname = os.path.join(data_ws, "idomain1.dat")
+fname = os.path.join(model_path, "idomain1.dat")
 idomain0 = np.loadtxt(fname, dtype=int)
 idomain = nlay * [idomain0]
 
 
-def run_flow_model():
+def run_flow_model(dir, exe):
     global idomain
     name = "flow"
     gwfname = name
-    wsf = os.path.join(testdir, testgroup, name)
-    sim = flopy.mf6.MFSimulation(
-        sim_name=name, sim_ws=wsf, exe_name=exe_name_mf6
-    )
+    wsf = join(dir, testgroup, name)
+    sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=wsf, exe_name=exe)
     tdis_rc = [(1.0, 1, 1.0), (365.25 * 25, 1, 1.0)]
     nper = len(tdis_rc)
     tdis = flopy.mf6.ModflowTdis(
@@ -144,7 +118,7 @@ def run_flow_model():
         )
 
     chdlist = []
-    fname = os.path.join(data_ws, "chd.dat")
+    fname = os.path.join(model_path, "chd.dat")
     for line in open(fname, "r").readlines():
         ll = line.strip().split()
         if len(ll) == 4:
@@ -164,7 +138,7 @@ def run_flow_model():
     )
 
     rivlist = []
-    fname = os.path.join(data_ws, "riv.dat")
+    fname = os.path.join(model_path, "riv.dat")
     for line in open(fname, "r").readlines():
         ll = line.strip().split()
         if len(ll) == 7:
@@ -187,7 +161,7 @@ def run_flow_model():
     )[0]
     for i, t in enumerate(rivlist):
         rivra[i] = tuple(t)
-    fname = os.path.join(data_ws, "sfr-packagedata.dat")
+    fname = os.path.join(model_path, "sfr-packagedata.dat")
     sfrpd = np.genfromtxt(fname, names=True)
     sfrpackagedata = flopy.mf6.ModflowGwfsfr.packagedata.empty(
         gwf, boundnames=True, maxbound=sfrpd.shape[0]
@@ -199,7 +173,7 @@ def run_flow_model():
         if name in sfrpd.dtype.names:
             sfrpackagedata[name] = sfrpd[name]
     sfrpackagedata["boundname"] = rivra["boundname"]
-    fname = os.path.join(data_ws, "sfr-connectiondata.dat")
+    fname = os.path.join(model_path, "sfr-connectiondata.dat")
     with open(fname) as f:
         lines = f.readlines()
     sfrconnectiondata = []
@@ -243,7 +217,7 @@ def run_flow_model():
             observations=sfr_obs,
         )
 
-    fname = os.path.join(data_ws, "lakibd.dat")
+    fname = os.path.join(model_path, "lakibd.dat")
     lakibd = np.loadtxt(fname, dtype=int)
     lakeconnectiondata = []
     nlakecon = [0, 0]
@@ -354,16 +328,13 @@ def run_flow_model():
         [1, 35.2, nlakecon[1], "lake2"],
     ]
     # <outletno> <lakein> <lakeout> <couttype> <invert> <width> <rough> <slope>
-    outlets = [
-        [0, 0, -1, "MANNING", 44.5, 3.36493214532915, 0.03, 0.2187500e-02]
-    ]
+    outlets = [[0, 0, -1, "MANNING", 44.5, 5.000000, 0.03, 0.2187500e-02]]
 
     lake_on = True
     if lake_on:
         lak = flopy.mf6.ModflowGwflak(
             gwf,
             time_conversion=86400.000,
-            length_conversion=3.28081,
             print_stage=True,
             print_flows=True,
             stage_filerecord=gwfname + ".lak.bin",
@@ -458,17 +429,15 @@ def run_flow_model():
                 for node, node2, q in d:
                     print(p1, node, p2, node2, q)
 
-    return
 
-
-def run_transport_model():
+def run_transport_model(dir, exe):
     name = "transport"
     gwtname = name
-    wst = os.path.join(testdir, testgroup, name)
+    wst = join(dir, testgroup, name)
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
-        exe_name=exe_name_mf6,
+        exe_name=exe,
         sim_ws=wst,
         continue_=False,
     )
@@ -515,7 +484,6 @@ def run_transport_model():
         top=top,
         botm=botm,
         idomain=idomain,
-        length_units="feet",
     )
     ic = flopy.mf6.ModflowGwtic(gwt, strt=0.0)
     sto = flopy.mf6.ModflowGwtmst(gwt, porosity=0.3)
@@ -811,23 +779,10 @@ def run_transport_model():
             for rate1, rate2 in zip(csvra[name1], lstra[name2]):
                 print(rate1, rate2)
     assert success_all, f"Comparisons failed for {failed_list}"
-    return
 
 
-def test_prudic2004t2fmi():
-    run_flow_model()
-    run_transport_model()
-    d = os.path.join(testdir, testgroup)
-    teardowntest = set_teardown_test()
-    if teardowntest:
-        if os.path.isdir(d):
-            shutil.rmtree(d)
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run tests
-    test_prudic2004t2fmi()
+@pytest.mark.slow
+def test_prudic2004t2fmi(function_tmpdir, targets):
+    mf6 = targets.mf6
+    run_flow_model(str(function_tmpdir), mf6)
+    run_transport_model(str(function_tmpdir), mf6)

@@ -1,6 +1,6 @@
 !> -- @ brief Mobile Storage and Transfer (MST) Module
 !!
-!!    The GwtMstModule is contains the GwtMstType, which is the
+!!    The GwtMstModule contains the GwtMstType, which is the
 !!    derived type responsible for adding the effects of
 !!      1. Changes in dissolved solute mass
 !!      2. Decay of dissolved solute mass
@@ -14,6 +14,7 @@ module GwtMstModule
   use SimVariablesModule, only: errmsg, warnmsg
   use SimModule, only: store_error, count_errors, &
                        store_warning
+  use MatrixBaseModule
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
   use GwtFmiModule, only: GwtFmiType
@@ -36,8 +37,9 @@ module GwtMstModule
   type, extends(NumericalPackageType) :: GwtMstType
     !
     ! -- storage
-    real(DP), dimension(:), pointer, contiguous :: porosity => null() !< porosity
-    real(DP), dimension(:), pointer, contiguous :: prsity2 => null() !< sum of immobile porosity
+    real(DP), dimension(:), pointer, contiguous :: porosity => null() !< mobile porosity defined as volume mobile voids per volume of mobile domain
+    real(DP), dimension(:), pointer, contiguous :: thetam => null() !< mobile porosity defined as volume mobile voids per volume of aquifer
+    real(DP), dimension(:), pointer, contiguous :: volfracim => null() !< sum of all immobile domain volume fractions
     real(DP), dimension(:), pointer, contiguous :: ratesto => null() !< rate of mobile storage
     !
     ! -- decay
@@ -50,7 +52,7 @@ module GwtMstModule
     !
     ! -- sorption
     integer(I4B), pointer :: isrb => null() !< sorption active flag (0:off, 1:linear, 2:freundlich, 3:langmuir)
-    real(DP), dimension(:), pointer, contiguous :: bulk_density => null() !< bulk density
+    real(DP), dimension(:), pointer, contiguous :: bulk_density => null() !< bulk density of mobile domain; mass of mobile domain solid per aquifer volume
     real(DP), dimension(:), pointer, contiguous :: distcoef => null() !< kd distribution coefficient
     real(DP), dimension(:), pointer, contiguous :: sp2 => null() !< second sorption parameter
     real(DP), dimension(:), pointer, contiguous :: ratesrb => null() !< rate of sorption
@@ -77,9 +79,8 @@ module GwtMstModule
     procedure :: mst_ot_flow
     procedure :: mst_da
     procedure :: allocate_scalars
-    procedure :: addto_prsity2
-    procedure :: get_thetamfrac
-    procedure :: get_thetaimfrac
+    procedure :: addto_volfracim
+    procedure :: get_volfracm
     procedure, private :: allocate_arrays
     procedure, private :: read_options
     procedure, private :: read_data
@@ -139,7 +140,7 @@ contains
       "(1x,/1x,'MST -- MOBILE STORAGE AND TRANSFER PACKAGE, VERSION 1, &
       &7/29/2020 INPUT READ FROM UNIT ', i0, //)"
     !
-    ! --print a message identifying the immobile domain package.
+    ! --print a message identifying the mobile storage and transfer package.
     write (this%iout, fmtmst) this%inunit
     !
     ! -- Read options
@@ -164,7 +165,7 @@ contains
   !!  Method to calculate and fill coefficients for the package.
   !!
   !<
-  subroutine mst_fc(this, nodes, cold, nja, njasln, amatsln, idxglo, cnew, &
+  subroutine mst_fc(this, nodes, cold, nja, matrix_sln, idxglo, cnew, &
                     rhs, kiter)
     ! -- modules
     ! -- dummy
@@ -172,8 +173,7 @@ contains
     integer, intent(in) :: nodes !< number of nodes
     real(DP), intent(in), dimension(nodes) :: cold !< concentration at end of last time step
     integer(I4B), intent(in) :: nja !< number of GWT connections
-    integer(I4B), intent(in) :: njasln !< number of connections in solution
-    real(DP), dimension(njasln), intent(inout) :: amatsln !< solution coefficient matrix
+    class(MatrixBaseType), pointer :: matrix_sln !< solution matrix
     integer(I4B), intent(in), dimension(nja) :: idxglo !< mapping vector for model (local) to solution (global)
     real(DP), intent(inout), dimension(nodes) :: rhs !< right-hand side vector for model
     real(DP), intent(in), dimension(nodes) :: cnew !< concentration at end of this time step
@@ -181,22 +181,22 @@ contains
     ! -- local
     !
     ! -- storage contribution
-    call this%mst_fc_sto(nodes, cold, nja, njasln, amatsln, idxglo, rhs)
+    call this%mst_fc_sto(nodes, cold, nja, matrix_sln, idxglo, rhs)
     !
     ! -- decay contribution
     if (this%idcy /= 0) then
-      call this%mst_fc_dcy(nodes, cold, cnew, nja, njasln, amatsln, idxglo, &
+      call this%mst_fc_dcy(nodes, cold, cnew, nja, matrix_sln, idxglo, &
                            rhs, kiter)
     end if
     !
     ! -- sorption contribution
     if (this%isrb /= 0) then
-      call this%mst_fc_srb(nodes, cold, nja, njasln, amatsln, idxglo, rhs, cnew)
+      call this%mst_fc_srb(nodes, cold, nja, matrix_sln, idxglo, rhs, cnew)
     end if
     !
     ! -- decay sorbed contribution
     if (this%isrb /= 0 .and. this%idcy /= 0) then
-      call this%mst_fc_dcy_srb(nodes, cold, nja, njasln, amatsln, idxglo, rhs, &
+      call this%mst_fc_dcy_srb(nodes, cold, nja, matrix_sln, idxglo, rhs, &
                                cnew, kiter)
     end if
     !
@@ -209,7 +209,7 @@ contains
   !!  Method to calculate and fill storage coefficients for the package.
   !!
   !<
-  subroutine mst_fc_sto(this, nodes, cold, nja, njasln, amatsln, idxglo, rhs)
+  subroutine mst_fc_sto(this, nodes, cold, nja, matrix_sln, idxglo, rhs)
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
@@ -217,8 +217,7 @@ contains
     integer, intent(in) :: nodes !< number of nodes
     real(DP), intent(in), dimension(nodes) :: cold !< concentration at end of last time step
     integer(I4B), intent(in) :: nja !< number of GWT connections
-    integer(I4B), intent(in) :: njasln !< number of connections in solution
-    real(DP), dimension(njasln), intent(inout) :: amatsln !< solution coefficient matrix
+    class(MatrixBaseType), pointer :: matrix_sln !< solution coefficient matrix
     integer(I4B), intent(in), dimension(nja) :: idxglo !< mapping vector for model (local) to solution (global)
     real(DP), intent(inout), dimension(nodes) :: rhs !< right-hand side vector for model
     ! -- local
@@ -238,7 +237,7 @@ contains
       !
       ! -- calculate new and old water volumes
       vnew = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n)) * &
-             this%fmi%gwfsat(n) * this%porosity(n)
+             this%fmi%gwfsat(n) * this%thetam(n)
       vold = vnew
       if (this%fmi%igwfstrgss /= 0) vold = vold + this%fmi%gwfstrgss(n) * delt
       if (this%fmi%igwfstrgsy /= 0) vold = vold + this%fmi%gwfstrgsy(n) * delt
@@ -247,7 +246,7 @@ contains
       hhcof = -vnew * tled
       rrhs = -vold * tled * cold(n)
       idiag = this%dis%con%ia(n)
-      amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
+      call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
       rhs(n) = rhs(n) + rrhs
     end do
     !
@@ -260,7 +259,7 @@ contains
   !!  Method to calculate and fill decay coefficients for the package.
   !!
   !<
-  subroutine mst_fc_dcy(this, nodes, cold, cnew, nja, njasln, amatsln, &
+  subroutine mst_fc_dcy(this, nodes, cold, cnew, nja, matrix_sln, &
                         idxglo, rhs, kiter)
     ! -- modules
     use TdisModule, only: delt
@@ -270,8 +269,7 @@ contains
     real(DP), intent(in), dimension(nodes) :: cold !< concentration at end of last time step
     real(DP), intent(in), dimension(nodes) :: cnew !< concentration at end of this time step
     integer(I4B), intent(in) :: nja !< number of GWT connections
-    integer(I4B), intent(in) :: njasln !< number of connections in solution
-    real(DP), dimension(njasln), intent(inout) :: amatsln !< solution coefficient matrix
+    class(MatrixBaseType), pointer :: matrix_sln !< solution coefficient matrix
     integer(I4B), intent(in), dimension(nja) :: idxglo !< mapping vector for model (local) to solution (global)
     real(DP), intent(inout), dimension(nodes) :: rhs !< right-hand side vector for model
     integer(I4B), intent(in) :: kiter !< solution outer iteration number
@@ -298,8 +296,8 @@ contains
         !
         ! -- first order decay rate is a function of concentration, so add
         !    to left hand side
-        hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n)
-        amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
+        hhcof = -this%decay(n) * vcell * swtpdt * this%thetam(n)
+        call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
       elseif (this%idcy == 2) then
         !
         ! -- Call function to get zero-order decay rate, which may be changed
@@ -307,7 +305,7 @@ contains
         decay_rate = get_zero_order_decay(this%decay(n), this%decaylast(n), &
                                           kiter, cold(n), cnew(n), delt)
         this%decaylast(n) = decay_rate
-        rrhs = decay_rate * vcell * swtpdt * this%porosity(n)
+        rrhs = decay_rate * vcell * swtpdt * this%thetam(n)
         rhs(n) = rhs(n) + rrhs
       end if
       !
@@ -322,7 +320,7 @@ contains
   !!  Method to calculate and fill sorption coefficients for the package.
   !!
   !<
-  subroutine mst_fc_srb(this, nodes, cold, nja, njasln, amatsln, idxglo, rhs, &
+  subroutine mst_fc_srb(this, nodes, cold, nja, matrix_sln, idxglo, rhs, &
                         cnew)
     ! -- modules
     use TdisModule, only: delt
@@ -331,8 +329,7 @@ contains
     integer, intent(in) :: nodes !< number of nodes
     real(DP), intent(in), dimension(nodes) :: cold !< concentration at end of last time step
     integer(I4B), intent(in) :: nja !< number of GWT connections
-    integer(I4B), intent(in) :: njasln !< number of connections in solution
-    real(DP), dimension(njasln), intent(inout) :: amatsln !< solution coefficient matrix
+    class(MatrixBaseType), pointer :: matrix_sln !< solution coefficient matrix
     integer(I4B), intent(in), dimension(nja) :: idxglo !< mapping vector for model (local) to solution (global)
     real(DP), intent(inout), dimension(nodes) :: rhs !< right-hand side vector for model
     real(DP), intent(in), dimension(nodes) :: cnew !< concentration at end of this time step
@@ -344,8 +341,8 @@ contains
     real(DP) :: vcell
     real(DP) :: const1
     real(DP) :: const2
-    real(DP) :: thetamfrac
-    real(DP) :: rhob
+    real(DP) :: volfracm
+    real(DP) :: rhobm
     !
     ! -- set variables
     tled = DONE / delt
@@ -361,17 +358,17 @@ contains
       swtpdt = this%fmi%gwfsat(n)
       swt = this%fmi%gwfsatold(n, delt)
       idiag = this%dis%con%ia(n)
-      thetamfrac = this%get_thetamfrac(n)
       const1 = this%distcoef(n)
       const2 = 0.
       if (this%isrb > 1) const2 = this%sp2(n)
-      rhob = this%bulk_density(n)
-      call mst_srb_term(this%isrb, thetamfrac, rhob, vcell, tled, cnew(n), &
+      volfracm = this%get_volfracm(n)
+      rhobm = this%bulk_density(n)
+      call mst_srb_term(this%isrb, volfracm, rhobm, vcell, tled, cnew(n), &
                         cold(n), swtpdt, swt, const1, const2, &
                         hcofval=hhcof, rhsval=rrhs)
       !
       ! -- Add hhcof to diagonal and rrhs to right-hand side
-      amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
+      call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
       rhs(n) = rhs(n) + rrhs
       !
     end do
@@ -385,13 +382,13 @@ contains
   !!  Subroutine to calculate sorption terms
   !!
   !<
-  subroutine mst_srb_term(isrb, thetamfrac, rhob, vcell, tled, cnew, cold, &
+  subroutine mst_srb_term(isrb, volfracm, rhobm, vcell, tled, cnew, cold, &
                           swnew, swold, const1, const2, rate, hcofval, rhsval)
     ! -- modules
     ! -- dummy
     integer(I4B), intent(in) :: isrb !< sorption flag 1, 2, 3 are linear, freundlich, and langmuir
-    real(DP), intent(in) :: thetamfrac !< fraction of total porosity that is mobile
-    real(DP), intent(in) :: rhob !< bulk density
+    real(DP), intent(in) :: volfracm !< volume fraction of mobile domain (fhat_m)
+    real(DP), intent(in) :: rhobm !< bulk density of mobile domain (rhob_m)
     real(DP), intent(in) :: vcell !< volume of cell
     real(DP), intent(in) :: tled !< one over time step length
     real(DP), intent(in) :: cnew !< concentration at end of this time step
@@ -415,7 +412,7 @@ contains
     ! -- Calculate based on type of sorption
     if (isrb == 1) then
       ! -- linear
-      term = -thetamfrac * rhob * vcell * tled * const1
+      term = -volfracm * rhobm * vcell * tled * const1
       if (present(hcofval)) hcofval = term * swnew
       if (present(rhsval)) rhsval = term * swold * cold
       if (present(rate)) rate = term * swnew * cnew - term * swold * cold
@@ -438,7 +435,7 @@ contains
       end if
       !
       ! -- calculate hcof, rhs, and rate for freundlich and langmuir
-      term = -thetamfrac * rhob * vcell * tled
+      term = -volfracm * rhobm * vcell * tled
       cbaravg = (cbarold + cbarnew) * DHALF
       swavg = (swnew + swold) * DHALF
       if (present(hcofval)) then
@@ -460,7 +457,7 @@ contains
   !!  Method to calculate and fill sorption-decay coefficients for the package.
   !!
   !<
-  subroutine mst_fc_dcy_srb(this, nodes, cold, nja, njasln, amatsln, idxglo, &
+  subroutine mst_fc_dcy_srb(this, nodes, cold, nja, matrix_sln, idxglo, &
                             rhs, cnew, kiter)
     ! -- modules
     use TdisModule, only: delt
@@ -469,8 +466,7 @@ contains
     integer, intent(in) :: nodes !< number of nodes
     real(DP), intent(in), dimension(nodes) :: cold !< concentration at end of last time step
     integer(I4B), intent(in) :: nja !< number of GWT connections
-    integer(I4B), intent(in) :: njasln !< number of connections in solution
-    real(DP), dimension(njasln), intent(inout) :: amatsln !< solution coefficient matrix
+    class(MatrixBaseType), pointer :: matrix_sln !< solution coefficient matrix
     integer(I4B), intent(in), dimension(nja) :: idxglo !< mapping vector for model (local) to solution (global)
     real(DP), intent(inout), dimension(nodes) :: rhs !< right-hand side vector for model
     real(DP), intent(in), dimension(nodes) :: cnew !< concentration at end of this time step
@@ -481,7 +477,8 @@ contains
     real(DP) :: vcell
     real(DP) :: swnew
     real(DP) :: distcoef
-    real(DP) :: thetamfrac
+    real(DP) :: volfracm
+    real(DP) :: rhobm
     real(DP) :: term
     real(DP) :: csrb
     real(DP) :: decay_rate
@@ -501,9 +498,9 @@ contains
       swnew = this%fmi%gwfsat(n)
       distcoef = this%distcoef(n)
       idiag = this%dis%con%ia(n)
-      thetamfrac = this%get_thetamfrac(n)
-      term = this%decay_sorbed(n) * thetamfrac * this%bulk_density(n) * &
-             swnew * vcell
+      volfracm = this%get_volfracm(n)
+      rhobm = this%bulk_density(n)
+      term = this%decay_sorbed(n) * volfracm * rhobm * swnew * vcell
       !
       ! -- add sorbed mass decay rate terms to accumulators
       if (this%idcy == 1) then
@@ -545,13 +542,13 @@ contains
                                             this%decayslast(n), &
                                             kiter, csrbold, csrbnew, delt)
           this%decayslast(n) = decay_rate
-          rrhs = decay_rate * thetamfrac * this%bulk_density(n) * swnew * vcell
+          rrhs = decay_rate * volfracm * rhobm * swnew * vcell
         end if
 
       end if
       !
       ! -- Add hhcof to diagonal and rrhs to right-hand side
-      amatsln(idxglo(idiag)) = amatsln(idxglo(idiag)) + hhcof
+      call matrix_sln%add_value_pos(idxglo(idiag), hhcof)
       rhs(n) = rhs(n) + rrhs
       !
     end do
@@ -631,7 +628,7 @@ contains
       !
       ! -- calculate new and old water volumes
       vnew = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n)) * &
-             this%fmi%gwfsat(n) * this%porosity(n)
+             this%fmi%gwfsat(n) * this%thetam(n)
       vold = vnew
       if (this%fmi%igwfstrgss /= 0) vold = vold + this%fmi%gwfstrgss(n) * delt
       if (this%fmi%igwfstrgsy /= 0) vold = vold + this%fmi%gwfstrgsy(n) * delt
@@ -690,11 +687,11 @@ contains
       hhcof = DZERO
       rrhs = DZERO
       if (this%idcy == 1) then
-        hhcof = -this%decay(n) * vcell * swtpdt * this%porosity(n)
+        hhcof = -this%decay(n) * vcell * swtpdt * this%thetam(n)
       elseif (this%idcy == 2) then
         decay_rate = get_zero_order_decay(this%decay(n), this%decaylast(n), &
                                           0, cold(n), cnew(n), delt)
-        rrhs = decay_rate * vcell * swtpdt * this%porosity(n)
+        rrhs = decay_rate * vcell * swtpdt * this%thetam(n)
       end if
       rate = hhcof * cnew(n) - rrhs
       this%ratedcy(n) = rate
@@ -728,10 +725,10 @@ contains
     real(DP) :: tled
     real(DP) :: swt, swtpdt
     real(DP) :: vcell
-    real(DP) :: rhob
+    real(DP) :: volfracm
+    real(DP) :: rhobm
     real(DP) :: const1
     real(DP) :: const2
-    real(DP) :: thetamfrac
     !
     ! -- initialize
     tled = DONE / delt
@@ -749,12 +746,12 @@ contains
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
       swtpdt = this%fmi%gwfsat(n)
       swt = this%fmi%gwfsatold(n, delt)
-      thetamfrac = this%get_thetamfrac(n)
-      rhob = this%bulk_density(n)
+      volfracm = this%get_volfracm(n)
+      rhobm = this%bulk_density(n)
       const1 = this%distcoef(n)
       const2 = 0.
       if (this%isrb > 1) const2 = this%sp2(n)
-      call mst_srb_term(this%isrb, thetamfrac, rhob, vcell, tled, cnew(n), &
+      call mst_srb_term(this%isrb, volfracm, rhobm, vcell, tled, cnew(n), &
                         cold(n), swtpdt, swt, const1, const2, &
                         rate=rate)
       this%ratesrb(n) = rate
@@ -789,7 +786,8 @@ contains
     real(DP) :: vcell
     real(DP) :: swnew
     real(DP) :: distcoef
-    real(DP) :: thetamfrac
+    real(DP) :: volfracm
+    real(DP) :: rhobm
     real(DP) :: term
     real(DP) :: csrb
     real(DP) :: csrbnew
@@ -812,9 +810,9 @@ contains
       vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
       swnew = this%fmi%gwfsat(n)
       distcoef = this%distcoef(n)
-      thetamfrac = this%get_thetamfrac(n)
-      term = this%decay_sorbed(n) * thetamfrac * this%bulk_density(n) * &
-             swnew * vcell
+      volfracm = this%get_volfracm(n)
+      rhobm = this%bulk_density(n)
+      term = this%decay_sorbed(n) * volfracm * rhobm * swnew * vcell
       !
       ! -- add sorbed mass decay rate terms to accumulators
       if (this%idcy == 1) then
@@ -853,7 +851,7 @@ contains
           decay_rate = get_zero_order_decay(this%decay_sorbed(n), &
                                             this%decayslast(n), &
                                             0, csrbold, csrbnew, delt)
-          rrhs = decay_rate * thetamfrac * this%bulk_density(n) * swnew * vcell
+          rrhs = decay_rate * volfracm * rhobm * swnew * vcell
         end if
       end if
       !
@@ -990,7 +988,8 @@ contains
     ! -- Deallocate arrays if package was active
     if (this%inunit > 0) then
       call mem_deallocate(this%porosity)
-      call mem_deallocate(this%prsity2)
+      call mem_deallocate(this%thetam)
+      call mem_deallocate(this%volfracim)
       call mem_deallocate(this%ratesto)
       call mem_deallocate(this%idcy)
       call mem_deallocate(this%decay)
@@ -1062,7 +1061,8 @@ contains
     ! -- Allocate
     ! -- sto
     call mem_allocate(this%porosity, nodes, 'POROSITY', this%memoryPath)
-    call mem_allocate(this%prsity2, nodes, 'PRSITY2', this%memoryPath)
+    call mem_allocate(this%thetam, nodes, 'THETAM', this%memoryPath)
+    call mem_allocate(this%volfracim, nodes, 'VOLFRACIM', this%memoryPath)
     call mem_allocate(this%ratesto, nodes, 'RATESTO', this%memoryPath)
     !
     ! -- dcy
@@ -1107,7 +1107,8 @@ contains
     ! -- Initialize
     do n = 1, nodes
       this%porosity(n) = DZERO
-      this%prsity2(n) = DZERO
+      this%thetam(n) = DZERO
+      this%volfracim(n) = DZERO
       this%ratesto(n) = DZERO
     end do
     do n = 1, size(this%decay)
@@ -1197,7 +1198,7 @@ contains
           this%idcy = 2
           write (this%iout, fmtidcy2)
         case default
-          write (errmsg, '(a,a)') 'UNKNOWN MST OPTION: ', trim(keyword)
+          write (errmsg, '(a,a)') 'Unknown MST option: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
@@ -1223,7 +1224,7 @@ contains
     ! -- local
     character(len=LINELENGTH) :: keyword
     character(len=:), allocatable :: line
-    integer(I4B) :: istart, istop, lloc, ierr
+    integer(I4B) :: istart, istop, lloc, ierr, n
     logical :: isfound, endOfBlock
     logical, dimension(6) :: lname
     character(len=24), dimension(6) :: aname
@@ -1296,64 +1297,64 @@ contains
                                         aname(6))
           lname(6) = .true.
         case default
-          write (errmsg, '(a,a)') 'UNKNOWN GRIDDATA TAG: ', trim(keyword)
+          write (errmsg, '(a,a)') 'Unknown GRIDDATA tag: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
       end do
       write (this%iout, '(1x,a)') 'END PROCESSING GRIDDATA'
     else
-      write (errmsg, '(a)') 'REQUIRED GRIDDATA BLOCK NOT FOUND.'
+      write (errmsg, '(a)') 'Required GRIDDATA block not found.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if
     !
-    ! -- Check for rquired porosity
+    ! -- Check for required porosity
     if (.not. lname(1)) then
-      write (errmsg, '(a)') 'POROSITY NOT SPECIFIED IN GRIDDATA BLOCK.'
+      write (errmsg, '(a)') 'POROSITY not specified in GRIDDATA block.'
       call store_error(errmsg)
     end if
     !
     ! -- Check for required sorption variables
     if (this%isrb > 0) then
       if (.not. lname(2)) then
-        write (errmsg, '(a)') 'SORPTION IS ACTIVE BUT BULK_DENSITY &
-          &NOT SPECIFIED.  BULK_DENSITY MUST BE SPECIFIED IN GRIDDATA BLOCK.'
+        write (errmsg, '(a)') 'Sorption is active but BULK_DENSITY &
+          &not specified.  BULK_DENSITY must be specified in GRIDDATA block.'
         call store_error(errmsg)
       end if
       if (.not. lname(3)) then
-        write (errmsg, '(a)') 'SORPTION IS ACTIVE BUT DISTRIBUTION &
-          &COEFFICIENT NOT SPECIFIED.  DISTCOEF MUST BE SPECIFIED IN &
-          &GRIDDATA BLOCK.'
+        write (errmsg, '(a)') 'Sorption is active but distribution &
+          &coefficient not specified.  DISTCOEF must be specified in &
+          &GRIDDATA block.'
         call store_error(errmsg)
       end if
       if (this%isrb > 1) then
         if (.not. lname(6)) then
-          write (errmsg, '(a)') 'FREUNDLICH OR LANGMUIR SORPTION IS ACTIVE &
-            &BUT SP2 NOT SPECIFIED.  SP2 MUST BE SPECIFIED IN &
-            &GRIDDATA BLOCK.'
+          write (errmsg, '(a)') 'Freundlich or langmuir sorption is active &
+            &but SP2 not specified.  SP2 must be specified in &
+            &GRIDDATA block.'
           call store_error(errmsg)
         end if
       end if
     else
       if (lname(2)) then
-        write (warnmsg, '(a)') 'SORPTION IS NOT ACTIVE BUT &
-          &BULK_DENSITY WAS SPECIFIED.  BULK_DENSITY WILL HAVE NO AFFECT ON &
-          &SIMULATION RESULTS.'
+        write (warnmsg, '(a)') 'Sorption is not active but &
+          &BULK_DENSITY was specified.  BULK_DENSITY will have no affect on &
+          &simulation results.'
         call store_warning(warnmsg)
         write (this%iout, '(1x,a)') 'WARNING.  '//warnmsg
       end if
       if (lname(3)) then
-        write (warnmsg, '(a)') 'SORPTION IS NOT ACTIVE BUT &
-          &DISTRIBUTION COEFFICIENT WAS SPECIFIED.  DISTCOEF WILL HAVE &
-          &NO AFFECT ON SIMULATION RESULTS.'
+        write (warnmsg, '(a)') 'Sorption is not active but &
+          &distribution coefficient was specified.  DISTCOEF will have &
+          &no affect on simulation results.'
         call store_warning(warnmsg)
         write (this%iout, '(1x,a)') 'WARNING.  '//warnmsg
       end if
       if (lname(6)) then
-        write (warnmsg, '(a)') 'SORPTION IS NOT ACTIVE BUT &
-          &SP2 WAS SPECIFIED.  SP2 WILL HAVE &
-          &NO AFFECT ON SIMULATION RESULTS.'
+        write (warnmsg, '(a)') 'Sorption is not active but &
+          &SP2 was specified.  SP2 will have &
+          &no affect on simulation results.'
         call store_warning(warnmsg)
         write (this%iout, '(1x,a)') 'WARNING.  '//warnmsg
       end if
@@ -1362,9 +1363,9 @@ contains
     ! -- Check for required decay/production rate coefficients
     if (this%idcy > 0) then
       if (.not. lname(4)) then
-        write (errmsg, '(a)') 'FIRST OR ZERO ORDER DECAY IS &
-          &ACTIVE BUT THE FIRST RATE COEFFICIENT IS NOT SPECIFIED.  DECAY &
-          &MUST BE SPECIFIED IN GRIDDATA BLOCK.'
+        write (errmsg, '(a)') 'First or zero order decay is &
+          &active but the first rate coefficient is not specified.  DECAY &
+          &must be specified in GRIDDATA block.'
         call store_error(errmsg)
       end if
       if (.not. lname(5)) then
@@ -1380,16 +1381,16 @@ contains
       end if
     else
       if (lname(4)) then
-        write (warnmsg, '(a)') 'FIRST OR ZERO ORER DECAY &
-          &IS NOT ACTIVE BUT DECAY WAS SPECIFIED.  DECAY WILL &
-          &HAVE NO AFFECT ON SIMULATION RESULTS.'
+        write (warnmsg, '(a)') 'First- or zero-order decay &
+          &is not active but decay was specified.  DECAY will &
+          &have no affect on simulation results.'
         call store_warning(warnmsg)
         write (this%iout, '(1x,a)') 'WARNING.  '//warnmsg
       end if
       if (lname(5)) then
-        write (warnmsg, '(a)') 'FIRST OR ZERO ORER DECAY &
-          &IS NOT ACTIVE BUT DECAY_SORBED WAS SPECIFIED.  &
-          &DECAY_SORBED WILL HAVE NO AFFECT ON SIMULATION RESULTS.'
+        write (warnmsg, '(a)') 'First- or zero-order decay &
+          &is not active but DECAY_SORBED was specified.  &
+          &DECAY_SORBED will have no affect on simulation results.'
         call store_warning(warnmsg)
         write (this%iout, '(1x,a)') 'WARNING.  '//warnmsg
       end if
@@ -1400,75 +1401,62 @@ contains
       call this%parser%StoreErrorUnit()
     end if
     !
-    ! -- Return
-    return
-  end subroutine read_data
-
-  !> @ brief Add porosity values to prsity2
-  !!
-  !!  Method to add immobile domain porosities, which are stored as a
-  !!  cumulative value in prsity2.
-  !!
-  !<
-  subroutine addto_prsity2(this, thetaim)
-    ! -- modules
-    ! -- dummy
-    class(GwtMstType) :: this !< GwtMstType object
-    real(DP), dimension(:), intent(in) :: thetaim !< immobile domain porosity that contributes to total porosity
-    ! -- local
-    integer(I4B) :: n
-    !
-    ! -- Add to prsity2
-    do n = 1, this%dis%nodes
-      if (this%ibound(n) == 0) cycle
-      this%prsity2(n) = this%prsity2(n) + thetaim(n)
+    ! -- initialize thetam from porosity
+    do n = 1, size(this%porosity)
+      this%thetam(n) = this%porosity(n)
     end do
     !
     ! -- Return
     return
-  end subroutine addto_prsity2
+  end subroutine read_data
 
-  !> @ brief Return mobile porosity fraction
+  !> @ brief Add volfrac values to volfracim
   !!
-  !!  Calculate and return the fraction of the total porosity that is mobile
+  !!  Method to add immobile domain volume fracions, which are stored as a
+  !!  cumulative value in volfracim.
   !!
   !<
-  function get_thetamfrac(this, node) result(thetamfrac)
+  subroutine addto_volfracim(this, volfracim)
+    ! -- modules
+    ! -- dummy
+    class(GwtMstType) :: this !< GwtMstType object
+    real(DP), dimension(:), intent(in) :: volfracim !< immobile domain volume fraction that contributes to total immobile volume fraction
+    ! -- local
+    integer(I4B) :: n
+    !
+    ! -- Add to volfracim
+    do n = 1, this%dis%nodes
+      this%volfracim(n) = this%volfracim(n) + volfracim(n)
+    end do
+    !
+    ! -- An immobile domain is adding a volume fraction, so update thetam
+    !    accordingly.
+    do n = 1, this%dis%nodes
+      this%thetam(n) = this%get_volfracm(n) * this%porosity(n)
+    end do
+    !
+    ! -- Return
+    return
+  end subroutine addto_volfracim
+
+  !> @ brief Return mobile domain volume fraction
+  !!
+  !!  Calculate and return the volume fraction of the aquifer that is mobile
+  !!
+  !<
+  function get_volfracm(this, node) result(volfracm)
     ! -- modules
     ! -- dummy
     class(GwtMstType) :: this !< GwtMstType object
     integer(I4B), intent(in) :: node !< node number
     ! -- return
-    real(DP) :: thetamfrac
+    real(DP) :: volfracm
     !
-    thetamfrac = this%porosity(node) / &
-                 (this%porosity(node) + this%prsity2(node))
-    !
-    ! -- Return
-    return
-  end function get_thetamfrac
-
-  !> @ brief Return immobile porosity fraction
-  !!
-  !!  Pass in an immobile domain porosity and calculate the fraction
-  !!  of the total porosity that is immobile
-  !!
-  !<
-  function get_thetaimfrac(this, node, thetaim) result(thetaimfrac)
-    ! -- modules
-    ! -- dummy
-    class(GwtMstType) :: this !< GwtMstType object
-    integer(I4B), intent(in) :: node !< node number
-    real(DP), intent(in) :: thetaim !< immobile domain porosity
-    ! -- return
-    real(DP) :: thetaimfrac
-    !
-    thetaimfrac = thetaim / &
-                  (this%porosity(node) + this%prsity2(node))
+    volfracm = DONE - this%volfracim(node)
     !
     ! -- Return
     return
-  end function get_thetaimfrac
+  end function get_volfracm
 
   !> @ brief Calculate sorption concentration using Freundlich
   !!

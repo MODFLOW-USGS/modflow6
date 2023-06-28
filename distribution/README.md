@@ -5,11 +5,12 @@ This folder contains scripts to automate MODFLOW 6 distribution tasks.
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
+
 - [Overview](#overview)
 - [Requirements](#requirements)
 - [Testing](#testing)
 - [Release procedures](#release-procedures)
-  - [Preparing a nightly release](#preparing-a-nightly-release)
+  - [Preparing a minimal development release](#preparing-a-minimal-development-release)
   - [Preparing an official release](#preparing-an-official-release)
     - [Updating version info](#updating-version-info)
     - [Building makefiles](#building-makefiles)
@@ -17,9 +18,13 @@ This folder contains scripts to automate MODFLOW 6 distribution tasks.
     - [Benchmarking example models](#benchmarking-example-models)
     - [Building documentation](#building-documentation)
     - [Building the distribution archive](#building-the-distribution-archive)
+    - [Verifying the distribution archive](#verifying-the-distribution-archive)
 - [Release automation](#release-automation)
   - [Nightly builds](#nightly-builds)
   - [Official releases](#official-releases)
+    - [Triggering with a release branch](#triggering-with-a-release-branch)
+    - [Triggering a release manually](#triggering-a-release-manually)
+  - [Release versioning](#release-versioning)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -86,24 +91,23 @@ Full distributions, on the other hand, contain the items listed above, as well a
   - docs for `mf5to6` and `zbud6`
 
 
-### Preparing a nightly release
+### Preparing a minimal development release
 
-Development releases are built and [posted nightly on the `MODFLOW-USGS/modflow6-nightly-build` repository](https://github.com/MODFLOW-USGS/modflow6-nightly-build/releases). Release assets include:
+Development releases are built and [posted nightly on the `MODFLOW-USGS/modflow6-nightly-build` repository](https://github.com/MODFLOW-USGS/modflow6-nightly-build/releases). For a minimal release, distribution contents include:
 
 - platform-specific distributions containing only executables `mf6`, `zbud6`, `mf5to6` and library `libmf6`
 - MODFLOW 6 input/output documentation
+- release notes
+- `code.json` metadata
 
-The `build_dist.py` script is used to create both development and full distributions. To create a development distribution zipfile in the default location (`<project root>/distribution/`), run the script with the `--development` (short `-d`) flag:
+The `build_dist.py` script can be used to create both minimal and full distributions. By default, a minimal distribution is created. To create a full distribution, run the script with the `--full` flag:
 
-```shell
-python build_dist.py -d
-```
-
-The script has several optional command line arguments:
+The script has several other arguments:
 
 - `--build-path`: path to the build workspace, defaults to `<project root>/builddir`
 - `--output-path (-o)`: path to create a distribution zipfile, defaults to `<project root>/distribution/`
 - `--examples-repo-path (-e)`: path to the [`MODFLOW-USGS/modflow6-examples`](https://github.com/MODFLOW-USGS/modflow6-examples) repository, defaults to `modflow6-examples` side-by-side with project root
+- `--force (-f)`: whether to recreate and overwrite preexisting components of the distribution, if they already exist
 
 Default paths are resolved relative to the script's location on the filesystem, *not* the current working directory, so the script can be run from `distribution/`, from the project root, or from anywhere else. (This is true of all scripts in the `distribution/` directory.)
 
@@ -115,7 +119,7 @@ To prepare an official release for distribution, the steps are as follows:
 
 Version information is stored primarily in `version.txt` in the project root, as well as in several other files in the repository.
 
-The `update_version.py` script updates files containing version information. First a file lock is acquired, then `version.txt` is updated, and changes are propagated to other files in the repository, then the lock is released.
+The `update_version.py` script updates files containing version information. First a file lock is acquired, then repository files are updated, then the lock is released.
 
 The version can be specified with the `--version` (short `-v`) option. For instance, to set version to `6.4.1`, run from the `scripts/` folder:
 
@@ -124,6 +128,18 @@ python update_version.py -v 6.4.1
 ```
 
 If no `--version` is provided, the version is not changed, only the build timestamp.
+
+An optional label may be appended to the release number, e.g.
+
+```shell
+python update_version.py -v 6.4.2rc
+```
+
+The label must start immediately following the patch version number, with no space in between. The label may contain numeric characters or symbols, but *must not* start with a number (otherwise there is no way to distinguish it from the patch version number).
+
+The `--approved` (short `-a`) flag can be used to approve an official release. If the `--approved` flag is provided, disclaimer language is altered to reflect approval. If the flag is not provided, the language reflects preliminary/provisional status and `(preliminary)` is appended to version numbers.
+
+The `--releasemode` flag can be used to control whether binaries are built in development or release mode by editing the contents of `src/Utilities/version.f90`. If the `--releasemode` flag is provided, `IDEVELOPMODE` is set to 0. If `--releasemode` is not provided, `IDEVELOPMODE` is set to 1.
 
 #### Building makefiles
 
@@ -160,11 +176,15 @@ The above will write results to a markdown file `.benchmarks/run-time-comparison
 
 Extensive documentation is bundled with official MODFLOW 6 releases. MODFLOW 6 documentation is written in LaTeX. Some LaTeX files (in particular for MODFLOW 6 input/output documentation) is automatically generated from DFN files. The `release.yml` workflow first runs `update_version.py` to update version strings to be substituted into the docs, then runs `build_docs.py` to regenerate LaTeX files where necessary, download benchmark results (and convert the Markdown results file to LaTeX), download publications hosted on the USGS website, and finally convert LaTeX to PDFs.
 
-Manually building MODFLOW 6 documentation requires additional Python dependencies specified in `build_rtd_docs/requirements.rtd.txt`. Styles defined in the [`MODFLOW-USGS/usgslatex`](https://github.com/MODFLOW-USGS/usgslatex) are also required. (See that repository's `README` for installation instructions or this repo's [`../.github/workflows/docs.yml](../.github/workflows/docs.yml) CI workflow for an example.) A Docker image with documentation dependencies pre-installed is also available on Docker Hub: [`wbonelli/usgslatex`](https://hub.docker.com/r/wbonelli/usgslatex). This can be useful for building documentation on a system without a LaTeX installation.
+Manually building MODFLOW 6 documentation requires additional Python dependencies specified in `build_rtd_docs/requirements.rtd.txt`. Styles defined in the [`MODFLOW-USGS/usgslatex`](https://github.com/MODFLOW-USGS/usgslatex) are also required. (See that repository's `README` for installation instructions or this repo's [`../.github/workflows/docs.yml](../.github/workflows/docs.yml) CI workflow for an example.)
 
 #### Building the distribution archive
 
-After each step above is complete, the `build_dist.py` script can be used (without the `--development` flag) to bundle MODFLOW 6 official release artifacts for distribution. See [the `release.yml` workflow](../.github/workflows/release.yml) for a complete example of how to build a distribution archive.
+After each step above is complete, the `build_dist.py` script can be used to construct the MODFLOW 6 distribution. See [the `release.yml` workflow](../.github/workflows/release.yml) for a complete example of how to build a distribution archive.
+
+#### Verifying the distribution archive
+
+The `check_dist.py` script can be used to check the release distribution folder. The `--path` argument is the path to the dist folder. The `--approved` flag can be used to signal that the release is approved/official. By default the release is assumed preliminary. The script checks the version string emitted by `mf6 -v` for the presence or absence of "preliminary" depending on this flag.
 
 ## Release automation
 
@@ -176,13 +196,31 @@ As mentioned, development releases are automatically built and posted nightly on
 
 ### Official releases
 
-The procedure above to prepare an official release is reproduced in `.github/workflows/release.yml`. This workflow is configured to run whenever tags are pushed to the `MODFLOW-USGS/modflow6` repository.
+The procedure above to prepare an official release is reproduced in `.github/workflows/release.yml`. This workflow has no triggers of its own, and must be dispatched by `.github/workflows/release_dispatch.yml`. A release can be dispatched in two ways:
+
+- Push a release branch to the `MODFLOW-USGS/modflow6` repository.
+- Manually trigger the workflow via GitHub CLI or web UI.
+
+#### Triggering with a release branch
 
 To release a new version of MODFLOW 6:
 
-1. Create a release candidate branch from the tip of `develop`. The branch's name must begin with `v` followed by the version number, and ending with `rc`. The branch name must must end with `rc` for release candidate branches, e.g. `v6.4.0rc`.
-2. Push the branch to the `MODFLOW-USGS/modflow6` repository. This will trigger a dry run build, in which the distribution archive is constructed with development mode binaries (`IDEVELOPMODE` set to 1) and no release is posted to the repository. Release are cached for easier debugging on dry runs.
-3. If the release candidate build passes inspection, rename the branch (or create another) without the trailing `rc`, and push it. This will trigger another build, in which the distribution archive is constructed with production mode binaries. After binaries and docs are rebuilt, a draft PR will automatically be created on the `MODFLOW-USGS/modflow6` repository's `master` branch. To approve and finalize the release, This PR can be merged into `master`. This will trigger a final CI job to tag the revision to `master`, post a draft release to the `MODFLOW-USGS/modflow6` repository, and create another PR updating the `develop` branch from `master`, resetting version files, and setting `IDEVELOPMODE` back to 1.
+1. Create a release candidate branch from the tip of `develop` or `master`. The branch's name must begin with `v` followed by the version number. For an officially approved release, include *only* the version number. For a preliminary release candidate, append `rc` after the version number, e.g. `v6.4.0rc`. If the branch name does not end in `rc`, the release is assumed to be approved.
+2. Push the branch to the `MODFLOW-USGS/modflow6` repository. This triggers the release workflow. If the release is still an unapproved candidate (i.e. the branch name ends with `rc`) binaries are built with `IDEVELOPMODE` set to 1, and the workflow ends after uploading binaries and documentation artifacts for inspection. If the release is approved/official, the workflow drafts a pull request against the `master` branch.
+3. To continue with the release, merge the PR into `master`. This triggers another job to tag the new tip of `master` with the release number, draft a release post, upload binaries and documentation as release assets, and create another PR updating the `develop` branch from `master`, resetting version files, and setting `IDEVELOPMODE` back to 1.
+4. To finalize the release, publish the release post and merge the PR into `develop`.
+
+#### Triggering a release manually
+
+The `workflow_dispatch` event is GitHub's mechanism for manually triggering workflows. This can be accomplished from the Actions tab in the GitHub UI.
+
+Navigate to the Actions tab of this repository. Select the release dispatch workflow. A `Run workflow` button should be visible in an alert at the top of the list of workflow runs. Click the `Run workflow` button, selecting values for the various inputs:
+
+- `approve`: whether the release is officially approved, or just a release candidate
+- `branch`: the branch to release from
+- `development`: whether to build a minimal development distribution or a full distribution
+- `run_tests`: whether to run autotests after building binaries
+- `version`: the version number of the release
 
 ### Release versioning
 

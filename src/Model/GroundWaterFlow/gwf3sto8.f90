@@ -21,6 +21,7 @@ module GwfStoModule
   use GwfStorageUtilsModule, only: SsCapacity, SyCapacity, SsTerms, SyTerms
   use InputOutputModule, only: GetUnit, openfile
   use TvsModule, only: TvsType, tvs_cr
+  use MatrixBaseModule
 
   implicit none
   public :: GwfStoType, sto_cr
@@ -224,7 +225,7 @@ contains
         case ('TRANSIENT')
           this%iss = 0
         case default
-          write (errmsg, '(4x,a,a)') 'Unknown STORAGE data tag: ', &
+          write (errmsg, '(a,a)') 'Unknown STORAGE data tag: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -277,7 +278,7 @@ contains
   !!  Fill the coefficient matrix and right-hand side with the STO package terms.
   !!
   !<
-  subroutine sto_fc(this, kiter, hold, hnew, njasln, amat, idxglo, rhs)
+  subroutine sto_fc(this, kiter, hold, hnew, matrix_sln, idxglo, rhs)
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy variables
@@ -285,8 +286,7 @@ contains
     integer(I4B), intent(in) :: kiter !< outer iteration number
     real(DP), intent(in), dimension(:) :: hold !< previous heads
     real(DP), intent(in), dimension(:) :: hnew !< current heads
-    integer(I4B), intent(in) :: njasln !< size of the A matrix for the solution
-    real(DP), dimension(njasln), intent(inout) :: amat !< A matrix
+    class(MatrixBaseType), pointer :: matrix_sln !< A matrix
     integer(I4B), intent(in), dimension(:) :: idxglo !< global index model to solution
     real(DP), intent(inout), dimension(:) :: rhs !< right-hand side
     ! -- local variables
@@ -365,7 +365,7 @@ contains
                    aterm, rhsterm)
       !
       ! -- add specific storage terms to amat and rhs
-      amat(idxglo(idiag)) = amat(idxglo(idiag)) + aterm
+      call matrix_sln%add_value_pos(idxglo(idiag), aterm)
       rhs(n) = rhs(n) + rhsterm
       !
       ! -- specific yield
@@ -393,7 +393,7 @@ contains
                      aterm, rhsterm)
 !
         ! -- add specific yield terms to amat and rhs
-        amat(idxglo(idiag)) = amat(idxglo(idiag)) + aterm
+        call matrix_sln%add_value_pos(idxglo(idiag), aterm)
         rhs(n) = rhs(n) + rhsterm
       end if
     end do
@@ -408,7 +408,7 @@ contains
   !!  with Newton-Raphson terms.
   !!
   !<
-  subroutine sto_fn(this, kiter, hold, hnew, njasln, amat, idxglo, rhs)
+  subroutine sto_fn(this, kiter, hold, hnew, matrix_sln, idxglo, rhs)
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy variables
@@ -416,8 +416,7 @@ contains
     integer(I4B), intent(in) :: kiter !< outer iteration number
     real(DP), intent(in), dimension(:) :: hold !< previous heads
     real(DP), intent(in), dimension(:) :: hnew !< current heads
-    integer(I4B), intent(in) :: njasln !< size of the A matrix for the solution
-    real(DP), dimension(njasln), intent(inout) :: amat !< A matrix
+    class(MatrixBaseType), pointer :: matrix_sln !< A matrix
     integer(I4B), intent(in), dimension(:) :: idxglo !< global index model to solution
     real(DP), intent(inout), dimension(:) :: rhs !< right-hand side
     ! -- local variables
@@ -477,7 +476,7 @@ contains
           else
             drterm = -(rho1 * derv * h)
           end if
-          amat(idxglo(idiag)) = amat(idxglo(idiag)) + drterm
+          call matrix_sln%add_value_pos(idxglo(idiag), drterm)
           rhs(n) = rhs(n) + drterm * h
         end if
         !
@@ -489,7 +488,7 @@ contains
           if (snnew > DZERO) then
             rterm = -rho2 * tthk * snnew
             drterm = -rho2 * tthk * derv
-            amat(idxglo(idiag)) = amat(idxglo(idiag)) + drterm + rho2
+            call matrix_sln%add_value_pos(idxglo(idiag), drterm + rho2)
             rhs(n) = rhs(n) - rterm + drterm * h + rho2 * bt
           end if
         end if
@@ -920,7 +919,7 @@ contains
           this%iorig_ss = 0
           write (this%iout, fmtconfss)
         case default
-          write (errmsg, '(4x,a,a)') 'Unknown STO option: ', &
+          write (errmsg, '(a,a)') 'Unknown STO option: ', &
             trim(keyword)
           call store_error(errmsg, terminate=.TRUE.)
         end select
@@ -999,7 +998,7 @@ contains
                                         aname(3))
           readsy = .true.
         case default
-          write (errmsg, '(4x,a,a)') 'Unknown GRIDDATA tag: ', &
+          write (errmsg, '(a,a)') 'Unknown GRIDDATA tag: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -1007,7 +1006,7 @@ contains
       end do
       write (this%iout, '(1x,a)') 'END PROCESSING GRIDDATA'
     else
-      write (errmsg, '(1x,a)') 'Required GRIDDATA block not found.'
+      write (errmsg, '(a)') 'Required GRIDDATA block not found.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if

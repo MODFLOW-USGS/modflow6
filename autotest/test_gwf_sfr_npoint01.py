@@ -1,25 +1,13 @@
 import os
-import sys
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
-
-sys.path.append("scripts")
 from cross_section_functions import get_depths
+from framework import TestFramework
+from simulation import TestSimulation
 
 paktest = "sfr"
-
 ex = [
     "sfr_npt01a",
     "sfr_npt01b",
@@ -30,8 +18,9 @@ ex = [
     "sfr_npt01g",
     "sfr_npt01h",
     "sfr_npt01i",
+    "sfr_npt01j",
+    "sfr_npt01k",
 ]
-exdirs = [os.path.join("temp", s) for s in ex]
 
 xsect_types = (
     "wide",
@@ -43,6 +32,8 @@ xsect_types = (
     "v",
     "w",
     "v_invalid",
+    "|/",
+    "\|",
 )
 
 # spatial discretization data
@@ -112,6 +103,16 @@ np_data = {
         ),
         "h": np.array([1.0, 1.0, 0.0, 1.0, 1.0], dtype=float),
         "n": np.array([roughness] * 5, dtype=float),
+    },
+    xsect_types[9]: {
+        "x": np.array([0.0, 0.0, rwid], dtype=float),
+        "h": np.array([1.0, 0.0, 1.0], dtype=float),
+        "n": np.array([roughness] * 3, dtype=float),
+    },
+    xsect_types[10]: {
+        "x": np.array([0.0, rwid, rwid], dtype=float),
+        "h": np.array([1.0, 0.0, 1.0], dtype=float),
+        "n": np.array([roughness] * 3, dtype=float),
     },
 }
 
@@ -298,12 +299,10 @@ def build_model(idx, ws):
     return sim, None
 
 
-def eval_npointq(sim):
-    idx = sim.idxsim
-    name = ex[idx]
-    print("evaluating n-point cross-section results..." f"({name})")
+def eval_npointq(sim, idx):
+    print("evaluating n-point cross-section results..." f"({sim.name})")
 
-    obs_pth = os.path.join(exdirs[idx], f"{name}.sfr.obs.csv")
+    obs_pth = os.path.join(sim.simpath, f"{sim.name}.sfr.obs.csv")
     obs = flopy.utils.Mf6Obs(obs_pth).get_data()
 
     assert np.allclose(
@@ -327,51 +326,21 @@ def eval_npointq(sim):
         f"calculated depth: {d}"
     )
 
-    return
 
-
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, exdir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, exdir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the model
-    test.build_mf6_models(build_model, idx, exdir)
-
-    # run the test models
-    test.run_mf6(
-        Simulation(
-            exdir,
-            exfunc=eval_npointq,
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, idx, ws)
+    test.run(
+        TestSimulation(
+            name=name,
+            exe_dict=targets,
+            exfunc=lambda s: eval_npointq(s, idx),
             idxsim=idx,
-        )
+        ),
+        ws,
     )
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test models
-    for idx, exdir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, exdir)
-
-        sim = Simulation(
-            exdir,
-            exfunc=eval_npointq,
-            idxsim=idx,
-        )
-        test.run_mf6(sim)
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()

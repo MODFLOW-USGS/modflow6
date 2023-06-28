@@ -6,10 +6,9 @@ module GwfDisModule
   use BaseDisModule, only: DisBaseType
   use InputOutputModule, only: get_node, URWORD, ulasav, ulaprufw, ubdsv1, &
                                ubdsv06
-  use SimModule, only: count_errors, store_error, store_error_unit
-  use BlockParserModule, only: BlockParserType
+  use SimModule, only: count_errors, store_error, store_error_unit, &
+                       store_error_filename
   use MemoryManagerModule, only: mem_allocate
-  use MemoryHelperModule, only: create_mem_path
   use TdisModule, only: kstp, kper, pertim, totim, delt
 
   implicit none
@@ -66,7 +65,7 @@ module GwfDisModule
 
 contains
 
-  subroutine dis_cr(dis, name_model, inunit, iout)
+  subroutine dis_cr(dis, name_model, input_mempath, inunit, iout)
 ! ******************************************************************************
 ! dis_cr -- Create a new discretization 3d object
 ! ******************************************************************************
@@ -74,40 +73,39 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use IdmMf6FileLoaderModule, only: input_load
-    use ConstantsModule, only: LENPACKAGETYPE
+    use KindModule, only: LGP
+    use MemoryManagerExtModule, only: mem_set_value
     ! -- dummy
     class(DisBaseType), pointer :: dis
     character(len=*), intent(in) :: name_model
+    character(len=*), intent(in) :: input_mempath
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     ! -- locals
     type(GwfDisType), pointer :: disnew
+    logical(LGP) :: found_fname
     character(len=*), parameter :: fmtheader = &
       "(1X, /1X, 'DIS -- STRUCTURED GRID DISCRETIZATION PACKAGE,', &
-      &' VERSION 2 : 3/27/2014 - INPUT READ FROM UNIT ', I0, /)"
+      &' VERSION 2 : 3/27/2014 - INPUT READ FROM MEMPATH: ', A, /)"
 ! ------------------------------------------------------------------------------
     allocate (disnew)
     dis => disnew
     call disnew%allocate_scalars(name_model)
+    dis%input_mempath = input_mempath
     dis%inunit = inunit
     dis%iout = iout
     !
-    ! -- if reading from file
+    ! -- set name of input file
+    call mem_set_value(dis%input_fname, 'INPUT_FNAME', dis%input_mempath, &
+                       found_fname)
+    !
+    ! -- If dis enabled
     if (inunit > 0) then
       !
       ! -- Identify package
       if (iout > 0) then
-        write (iout, fmtheader) inunit
+        write (iout, fmtheader) dis%input_mempath
       end if
-      !
-      ! -- Initialize block parser
-      call dis%parser%Initialize(inunit, iout)
-      !
-      ! -- Use the input data model routines to load the input data
-      !    into memory
-      call input_load(dis%parser, 'DIS6', 'GWF', 'DIS', name_model, 'DIS', &
-                      [character(len=LENPACKAGETYPE) ::], iout)
     end if
     !
     ! -- Return
@@ -122,12 +120,10 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: DNODATA
     ! -- dummy
     class(GwfDisType) :: this
     ! -- locals
 ! ------------------------------------------------------------------------------
-    !
     ! -- Transfer the data from the memory manager into this package object
     if (this%inunit /= 0) then
       !
@@ -166,8 +162,6 @@ contains
     !
     ! -- Deallocate idm memory
     call memorylist_remove(this%name_model, 'DIS', idm_context)
-    call memorylist_remove(component=this%name_model, &
-                           context=idm_context)
     !
     ! -- DisBaseType deallocate
     call this%DisBaseType%dis_da()
@@ -196,29 +190,22 @@ contains
   !<
   subroutine source_options(this)
     ! -- modules
-    use KindModule, only: LGP
-    use MemoryTypeModule, only: MemoryType
     use MemoryManagerExtModule, only: mem_set_value
-    use SimVariablesModule, only: idm_context
     use GwfDisInputModule, only: GwfDisParamFoundType
     ! -- dummy
     class(GwfDisType) :: this
     ! -- locals
-    character(len=LENMEMPATH) :: idmMemoryPath
     character(len=LENVARNAME), dimension(3) :: lenunits = &
       &[character(len=LENVARNAME) :: 'FEET', 'METERS', 'CENTIMETERS']
     type(GwfDisParamFoundType) :: found
     !
-    ! -- set memory path
-    idmMemoryPath = create_mem_path(this%name_model, 'DIS', idm_context)
-    !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%lenuni, 'LENGTH_UNITS', idmMemoryPath, lenunits, &
-                       found%length_units)
-    call mem_set_value(this%nogrb, 'NOGRB', idmMemoryPath, found%nogrb)
-    call mem_set_value(this%xorigin, 'XORIGIN', idmMemoryPath, found%xorigin)
-    call mem_set_value(this%yorigin, 'YORIGIN', idmMemoryPath, found%yorigin)
-    call mem_set_value(this%angrot, 'ANGROT', idmMemoryPath, found%angrot)
+    call mem_set_value(this%lenuni, 'LENGTH_UNITS', this%input_mempath, &
+                       lenunits, found%length_units)
+    call mem_set_value(this%nogrb, 'NOGRB', this%input_mempath, found%nogrb)
+    call mem_set_value(this%xorigin, 'XORIGIN', this%input_mempath, found%xorigin)
+    call mem_set_value(this%yorigin, 'YORIGIN', this%input_mempath, found%yorigin)
+    call mem_set_value(this%angrot, 'ANGROT', this%input_mempath, found%angrot)
     !
     ! -- log values to list file
     if (this%iout > 0) then
@@ -267,25 +254,18 @@ contains
   !> @brief Copy dimensions from IDM into package
   !<
   subroutine source_dimensions(this)
-    use KindModule, only: LGP
-    use MemoryTypeModule, only: MemoryType
     use MemoryManagerExtModule, only: mem_set_value
-    use SimVariablesModule, only: idm_context
     use GwfDisInputModule, only: GwfDisParamFoundType
     ! -- dummy
     class(GwfDisType) :: this
     ! -- locals
-    character(len=LENMEMPATH) :: idmMemoryPath
     integer(I4B) :: i, j, k
     type(GwfDisParamFoundType) :: found
     !
-    ! -- set memory path
-    idmMemoryPath = create_mem_path(this%name_model, 'DIS', idm_context)
-    !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%nlay, 'NLAY', idmMemoryPath, found%nlay)
-    call mem_set_value(this%nrow, 'NROW', idmMemoryPath, found%nrow)
-    call mem_set_value(this%ncol, 'NCOL', idmMemoryPath, found%ncol)
+    call mem_set_value(this%nlay, 'NLAY', this%input_mempath, found%nlay)
+    call mem_set_value(this%nrow, 'NROW', this%input_mempath, found%nrow)
+    call mem_set_value(this%ncol, 'NCOL', this%input_mempath, found%ncol)
     !
     ! -- log simulation values
     if (this%iout > 0) then
@@ -296,17 +276,17 @@ contains
     if (this%nlay < 1) then
       call store_error( &
         'NLAY was not specified or was specified incorrectly.')
-      call this%parser%StoreErrorUnit()
+      call store_error_filename(this%input_fname)
     end if
     if (this%nrow < 1) then
       call store_error( &
         'NROW was not specified or was specified incorrectly.')
-      call this%parser%StoreErrorUnit()
+      call store_error_filename(this%input_fname)
     end if
     if (this%ncol < 1) then
       call store_error( &
         'NCOL was not specified or was specified incorrectly.')
-      call this%parser%StoreErrorUnit()
+      call store_error_filename(this%input_fname)
     end if
     !
     ! -- calculate nodesuser
@@ -370,25 +350,20 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerExtModule, only: mem_set_value
-    use SimVariablesModule, only: idm_context
     use GwfDisInputModule, only: GwfDisParamFoundType
     ! -- dummy
     class(GwfDisType) :: this
     ! -- locals
-    character(len=LENMEMPATH) :: idmMemoryPath
     type(GwfDisParamFoundType) :: found
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! -- set memory path
-    idmMemoryPath = create_mem_path(this%name_model, 'DIS', idm_context)
-    !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%delr, 'DELR', idmMemoryPath, found%delr)
-    call mem_set_value(this%delc, 'DELC', idmMemoryPath, found%delc)
-    call mem_set_value(this%top2d, 'TOP', idmMemoryPath, found%top)
-    call mem_set_value(this%bot3d, 'BOTM', idmMemoryPath, found%botm)
-    call mem_set_value(this%idomain, 'IDOMAIN', idmMemoryPath, found%idomain)
+    call mem_set_value(this%delr, 'DELR', this%input_mempath, found%delr)
+    call mem_set_value(this%delc, 'DELC', this%input_mempath, found%delc)
+    call mem_set_value(this%top2d, 'TOP', this%input_mempath, found%top)
+    call mem_set_value(this%bot3d, 'BOTM', this%input_mempath, found%botm)
+    call mem_set_value(this%idomain, 'IDOMAIN', this%input_mempath, found%idomain)
     !
     ! -- log simulation values
     if (this%iout > 0) then
@@ -477,7 +452,7 @@ contains
       call store_error('Model does not have any active nodes. &
                        &Ensure IDOMAIN array has some values greater &
                        &than zero.')
-      call this%parser%StoreErrorUnit()
+      call store_error_filename(this%input_fname)
     end if
     !
     ! -- Check cell thicknesses
@@ -501,7 +476,7 @@ contains
       end do
     end do
     if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
+      call store_error_filename(this%input_fname)
     end if
     !
     ! -- Write message if reduced grid
@@ -635,8 +610,7 @@ contains
     ncpl = this%nrow * this%ncol
     !
     ! -- Open the file
-    inquire (unit=this%inunit, name=fname)
-    fname = trim(fname)//'.grb'
+    fname = trim(this%input_fname)//'.grb'
     iunit = getunit()
     write (this%iout, fmtgrdsave) iunit, trim(adjustl(fname))
     call openfile(iunit, this%iout, trim(adjustl(fname)), 'DATA(BINARY)', &

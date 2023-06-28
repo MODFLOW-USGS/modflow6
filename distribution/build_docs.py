@@ -2,13 +2,12 @@ import argparse
 import os
 import platform
 import shutil
+import sys
 import textwrap
-from _warnings import warn
 from datetime import datetime
 from os import PathLike
 from pathlib import Path
 from pprint import pprint
-from shutil import which
 from tempfile import TemporaryDirectory
 from typing import List, Optional
 from urllib.error import HTTPError
@@ -17,28 +16,36 @@ from warnings import warn
 import pytest
 from flaky import flaky
 from modflow_devtools.build import meson_build
-from modflow_devtools.download import list_artifacts, download_artifact, get_release, download_and_unzip
+from modflow_devtools.download import (
+    list_artifacts,
+    download_artifact,
+    get_release,
+    download_and_unzip,
+)
 from modflow_devtools.markers import requires_exe, requires_github
-from modflow_devtools.misc import set_dir, run_cmd
+from modflow_devtools.misc import set_dir, run_cmd, is_in_ci
 
 from benchmark import run_benchmarks
 from utils import convert_line_endings
 from utils import get_project_root_path
 
 _project_root_path = get_project_root_path()
-_version_texf_path = _project_root_path / "doc" / "version.tex"
+_bin_path = _project_root_path / "bin"
 _examples_repo_path = _project_root_path.parent / "modflow6-examples"
 _release_notes_path = _project_root_path / "doc" / "ReleaseNotes"
 _distribution_path = _project_root_path / "distribution"
 _benchmarks_path = _project_root_path / "distribution" / ".benchmarks"
 _docs_path = _project_root_path / "doc"
-
-_default_tex_paths = [
-    _project_root_path / "doc" / "mf6io" / "mf6io.tex",
-    _project_root_path / "doc" / "ReleaseNotes" / "ReleaseNotes.tex",
-    _project_root_path / "doc" / "zonebudget" / "zonebudget.tex",
-    _project_root_path / "doc" / "ConverterGuide" / "converter_mf5to6.tex",
-    _project_root_path / "doc" / "SuppTechInfo" / "mf6suptechinfo.tex",
+_dev_dist_tex_paths = [
+    _docs_path / "mf6io" / "mf6io.tex",
+    _docs_path / "ReleaseNotes" / "ReleaseNotes.tex",
+]
+_full_dist_tex_paths = [
+    _docs_path / "mf6io" / "mf6io.tex",
+    _docs_path / "ReleaseNotes" / "ReleaseNotes.tex",
+    _docs_path / "zonebudget" / "zonebudget.tex",
+    _docs_path / "ConverterGuide" / "converter_mf5to6.tex",
+    _docs_path / "SuppTechInfo" / "mf6suptechinfo.tex",
 ]
 _system = platform.system()
 _eext = ".exe" if _system == "Windows" else ""
@@ -96,17 +103,21 @@ def clean_tex_files():
     assert not os.path.isfile(str(pth) + ".pdf")
 
 
-def download_benchmarks(output_path: PathLike, quiet: bool = True) -> Optional[Path]:
+def download_benchmarks(output_path: PathLike, verbose: bool = False) -> Optional[Path]:
     output_path = Path(output_path).expanduser().absolute()
-    name = "run-time-comparison"
-    repo = "w-bonelli/modflow6"
-    artifacts = list_artifacts(repo, name=name, quiet=quiet)
-    artifacts = sorted(artifacts, key=lambda a: datetime.strptime(a['created_at'], '%Y-%m-%dT%H:%M:%SZ'), reverse=True)
+    name = "run-time-comparison"  # todo make configurable
+    repo = "MODFLOW-USGS/modflow6"  # todo make configurable, add pytest/cli args
+    artifacts = list_artifacts(repo, name=name, verbose=verbose)
+    artifacts = sorted(
+        artifacts,
+        key=lambda a: datetime.strptime(a["created_at"], "%Y-%m-%dT%H:%M:%SZ"),
+        reverse=True,
+    )
     most_recent = next(iter(artifacts), None)
     print(f"Found most recent benchmarks (artifact {most_recent['id']})")
     if most_recent:
         print(f"Downloading benchmarks (artifact {most_recent['id']})")
-        download_artifact(repo, id=most_recent['id'], path=output_path, quiet=quiet)
+        download_artifact(repo, id=most_recent["id"], path=output_path, verbose=verbose)
         print(f"Downloaded benchmarks to {output_path}")
         path = output_path / f"{name}.md"
         assert path.is_file()
@@ -119,7 +130,7 @@ def download_benchmarks(output_path: PathLike, quiet: bool = True) -> Optional[P
 @flaky
 @requires_github
 def test_download_benchmarks(tmp_path):
-    path = download_benchmarks(tmp_path, quiet=False)
+    path = download_benchmarks(tmp_path, verbose=True)
     if path:
         assert path.name == "run-time-comparison.md"
 
@@ -139,13 +150,16 @@ def build_benchmark_tex(output_path: PathLike, overwrite: bool = False):
             current_bin_path=_project_root_path / "bin",
             previous_bin_path=_project_root_path / "bin" / "rebuilt",
             examples_path=_examples_repo_path / "examples",
-            output_path=output_path)
+            output_path=output_path,
+        )
 
     # convert markdown benchmark results to LaTeX
     with set_dir(_release_notes_path):
         tex_path = Path("run-time-comparison.tex")
         tex_path.unlink(missing_ok=True)
-        out, err, ret = run_cmd("python", "mk_runtimecomp.py", benchmarks_path, verbose=True)
+        out, err, ret = run_cmd(
+            sys.executable, "mk_runtimecomp.py", benchmarks_path, verbose=True
+        )
         assert not ret, out + err
         assert tex_path.is_file()
 
@@ -155,7 +169,6 @@ def build_benchmark_tex(output_path: PathLike, overwrite: bool = False):
 
 @flaky
 @requires_github
-@pytest.mark.skipif(not (_benchmarks_path / "run-time-comparison.md").is_file(), reason="needs benchmarks")
 def test_build_benchmark_tex(tmp_path):
     benchmarks_path = _benchmarks_path / "run-time-comparison.md"
     tex_path = _distribution_path / f"{benchmarks_path.stem}.tex"
@@ -176,15 +189,15 @@ def build_mf6io_tex_from_dfn(overwrite: bool = False):
             f.stem
             for f in dfn_path.glob("*")
             if f.is_file()
-               and "dfn" in f.suffix
-               and not any(pattern in f.name for pattern in ignored)
+            and "dfn" in f.suffix
+            and not any(pattern in f.name for pattern in ignored)
         ]
         tex_names = [
             f.stem.replace("-desc", "")
             for f in tex_path.glob("*")
             if f.is_file()
-               and "tex" in f.suffix
-               and not any(pattern in f.name for pattern in ignored)
+            and "tex" in f.suffix
+            and not any(pattern in f.name for pattern in ignored)
         ]
 
         return set(tex_names) == set(dfn_names)
@@ -196,7 +209,12 @@ def build_mf6io_tex_from_dfn(overwrite: bool = False):
         tex_files = [f for f in tex_pth.glob("*") if f.is_file()]
         dfn_files = [f for f in dfn_pth.glob("*") if f.is_file()]
 
-        if not overwrite and any(tex_files) and any(dfn_files) and files_match(tex_pth, dfn_pth, ignored):
+        if (
+            not overwrite
+            and any(tex_files)
+            and any(dfn_files)
+            and files_match(tex_pth, dfn_pth, ignored)
+        ):
             print(f"DFN files already exist:")
             pprint(dfn_files)
         else:
@@ -204,7 +222,7 @@ def build_mf6io_tex_from_dfn(overwrite: bool = False):
                 f.unlink()
 
             # run python script
-            out, err, ret = run_cmd("python", "mf6ivar.py")
+            out, err, ret = run_cmd(sys.executable, "mf6ivar.py")
             assert not ret, out + err
 
             # check that dfn and tex files match
@@ -228,13 +246,13 @@ def test_build_mf6io_tex_from_dfn(overwrite):
         for p, t in zip(file_paths, file_mtimes):
             assert overwrite == (p.stat().st_mtime > t)
     finally:
-        for p in (file_paths + [
+        for p in file_paths + [
             # should these be under version control, since they're cleaned in fn above?
             _project_root_path / "doc" / "ConverterGuide" / "converter_mf5to6.bbl",
             _project_root_path / "doc" / "ReleaseNotes" / "ReleaseNotes.bbl",
             _project_root_path / "doc" / "mf6io" / "mf6io.bbl",
-            _project_root_path / "doc" / "zonebudget" / "zonebudget.bbl"
-        ]):
+            _project_root_path / "doc" / "zonebudget" / "zonebudget.bbl",
+        ]:
             os.system(f"git restore {p}")
 
 
@@ -248,7 +266,9 @@ def build_tex_folder_structure(overwrite: bool = False):
         return
 
     with set_dir(_release_notes_path):
-        out, err, ret = run_cmd("python", "mk_folder_struct.py", "-dp", _project_root_path)
+        out, err, ret = run_cmd(
+            sys.executable, "mk_folder_struct.py", "-dp", _project_root_path
+        )
         assert not ret, out + err
 
     assert path.is_file(), f"Failed to create {path}"
@@ -262,7 +282,9 @@ def test_build_tex_folder_structure():
         os.system(f"git restore {path}")
 
 
-def build_mf6io_tex_example(workspace_path: PathLike, bin_path: PathLike, example_model_path: PathLike):
+def build_mf6io_tex_example(
+    workspace_path: PathLike, bin_path: PathLike, example_model_path: PathLike
+):
     workspace_path = Path(workspace_path) / "workspace"
     bin_path = Path(bin_path).expanduser().absolute()
     mf6_exe_path = bin_path / f"mf6{_eext}"
@@ -282,9 +304,8 @@ def build_mf6io_tex_example(workspace_path: PathLike, bin_path: PathLike, exampl
     shutil.copytree(example_model_path, workspace_path)
 
     # run example model
-
     with set_dir(workspace_path):
-        out, err, ret = run_cmd(cmd)
+        out, err, ret = run_cmd(cmd, verbose=True)
         buff = out + err
         lines = buff.split("\r\n")
         with open(fname1, "w") as f:
@@ -301,7 +322,7 @@ def build_mf6io_tex_example(workspace_path: PathLike, bin_path: PathLike, exampl
 
     # run model without a namefile present
     with set_dir(workspace_path):
-        out, err, ret = run_cmd(cmd)
+        out, err, ret = run_cmd(cmd, verbose=True)
         buff = out + err
         lines = buff.split("\r\n")
         with open(fname2, "w") as f:
@@ -314,7 +335,7 @@ def build_mf6io_tex_example(workspace_path: PathLike, bin_path: PathLike, exampl
 
     with set_dir(workspace_path):
         # run mf6 command with -h to show help
-        out, err, ret = run_cmd(str(mf6_exe_path), "-h")
+        out, err, ret = run_cmd(str(mf6_exe_path), "-h", verbose=True)
         buff = out + err
         lines = buff.split("\r\n")
         with open(fname3, "w") as f:
@@ -326,11 +347,17 @@ def build_mf6io_tex_example(workspace_path: PathLike, bin_path: PathLike, exampl
             f.write("}\n")
 
 
+@pytest.mark.skip(reason="todo")
 def test_build_mf6io_tex_example():
     pass
 
 
-def build_pdfs_from_tex(tex_paths: List[PathLike], output_path: PathLike, passes: int = 3, overwrite: bool = False):
+def build_pdfs_from_tex(
+    tex_paths: List[PathLike],
+    output_path: PathLike,
+    passes: int = 3,
+    overwrite: bool = False,
+):
     print(f"Building PDFs from LaTex:")
     pprint(tex_paths)
 
@@ -383,7 +410,6 @@ def test_build_pdfs_from_tex(tmp_path):
         _docs_path / "zonebudget" / "zonebudget.tex",
         _docs_path / "ConverterGuide" / "converter_mf5to6.tex",
         _docs_path / "SuppTechInfo" / "mf6suptechinfo.tex",
-        _examples_repo_path / "doc" / "mf6examples.tex",
     ]
     bbl_paths = [
         _docs_path / "ConverterGuide" / "converter_mf5to6.bbl",
@@ -394,16 +420,21 @@ def test_build_pdfs_from_tex(tmp_path):
     try:
         build_pdfs_from_tex(tex_paths, tmp_path)
     finally:
-        for p in (tex_paths[:-1] + bbl_paths):
+        for p in tex_paths[:-1] + bbl_paths:
             os.system(f"git restore {p}")
 
 
-def build_documentation(bin_path: PathLike,
-                        output_path: PathLike,
-                        examples_repo_path: PathLike,
-                        development: bool = False,
-                        overwrite: bool = False):
-    print(f"Building {'development' if development else 'candidate'} documentation")
+def build_documentation(
+    bin_path: PathLike,
+    output_path: PathLike,
+    examples_repo_path: PathLike,
+    # Example to use to render sample mf6 output in the docs.
+    # Must be a valid directory in modflow6-examples/examples
+    example_for_sample: str = "ex-gwf-twri01",
+    full: bool = False,
+    overwrite: bool = False,
+):
+    print(f"Building {'full' if full else 'full'} documentation")
 
     bin_path = Path(bin_path).expanduser().absolute()
     output_path = Path(output_path).expanduser().absolute()
@@ -421,15 +452,15 @@ def build_documentation(bin_path: PathLike,
         build_mf6io_tex_example(
             workspace_path=temp_path,
             bin_path=bin_path,
-            example_model_path=examples_repo_path / "examples" / "ex-gwf-twri01",
+            example_model_path=examples_repo_path / "examples" / example_for_sample,
         )
 
     # build LaTeX file describing distribution folder structure
     # build_tex_folder_structure(overwrite=True)
 
-    if development:
+    if not full:
         # convert LaTeX to PDF
-        build_pdfs_from_tex(tex_paths=[_docs_path / "mf6io" / "mf6io.tex"], output_path=output_path)
+        build_pdfs_from_tex(tex_paths=_dev_dist_tex_paths, output_path=output_path)
     else:
         # convert benchmarks to LaTex, running them first if necessary
         build_benchmark_tex(output_path=output_path, overwrite=overwrite)
@@ -453,16 +484,17 @@ def build_documentation(bin_path: PathLike,
                     raise
 
         # convert LaTex to PDF
-        build_pdfs_from_tex(tex_paths=_default_tex_paths, output_path=output_path, overwrite=overwrite)
+        build_pdfs_from_tex(
+            tex_paths=_full_dist_tex_paths, output_path=output_path, overwrite=overwrite
+        )
 
     # enforce os line endings on all text files
     windows_line_endings = True
     convert_line_endings(output_path, windows_line_endings)
 
     # make sure we have expected PDFs
-    if development:
-        assert (output_path / "mf6io.pdf").is_file()
-    else:
+    assert (output_path / "mf6io.pdf").is_file()
+    if full:
         assert (output_path / "mf6io.pdf").is_file()
         assert (output_path / "ReleaseNotes.pdf").is_file()
         assert (output_path / "zonebudget.pdf").is_file()
@@ -472,13 +504,14 @@ def build_documentation(bin_path: PathLike,
 
 
 @requires_exe("pdflatex")
-@pytest.mark.skip(reason="manual testing")
-@pytest.mark.skipif(not (_benchmarks_path / "run-time-comparison.md").is_file(), reason="needs benchmarks")
+# skip if in CI so we don't have to build/process example models,
+# example model docs can be tested in the modflow6-examples repo
+@pytest.mark.skipif(is_in_ci(), reason="needs built/processed example models")
 def test_build_documentation(tmp_path):
     bin_path = tmp_path / "bin"
     dist_path = tmp_path / "dist"
     meson_build(_project_root_path, tmp_path / "builddir", bin_path)
-    build_documentation(bin_path, dist_path, _examples_repo_path) #, _benchmarks_path / "run-time-comparison.md")
+    build_documentation(bin_path, dist_path, _examples_repo_path)
 
 
 if __name__ == "__main__":
@@ -487,7 +520,8 @@ if __name__ == "__main__":
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent(
             """\
-            Create documentation for a distribution. This includes benchmarks, release notes, the
+            Create documentation for a distribution. By default, this only includes the mf6io PDF
+            document. If the --full flag is provided this includes benchmarks, release notes, the
             MODFLOW 6 input/output specification, example model documentation, supplemental info,
             documentation for the MODFLOW 5 to 6 converter and Zonebudget 6, and several articles
             downloaded from the USGS website. These are all written to a specified --output-path.
@@ -495,12 +529,18 @@ if __name__ == "__main__":
             """
         ),
     )
-    parser.add_argument("-t", "--tex-path", action="append", required=False, help="Extra LaTeX files to include")
+    parser.add_argument(
+        "-t",
+        "--tex-path",
+        action="append",
+        required=False,
+        help="Extra LaTeX files to include",
+    )
     parser.add_argument(
         "-b",
         "--bin-path",
         required=False,
-        default=os.getcwd(),
+        default=str(_bin_path),
         help="Location of modflow6 executables",
     )
     parser.add_argument(
@@ -508,7 +548,14 @@ if __name__ == "__main__":
         "--examples-repo-path",
         required=False,
         default=str(_examples_repo_path),
-        help="Path to directory containing modflow6 example models"
+        help="Path to directory containing modflow6 example models",
+    )
+    parser.add_argument(
+        "-s",
+        "--example-for-sample",
+        required=False,
+        default="ex-gwf-twri01",
+        help="Name of example model to use for sample mf6 output",
     )
     parser.add_argument(
         "-o",
@@ -518,12 +565,11 @@ if __name__ == "__main__":
         help="Location to create documentation artifacts",
     )
     parser.add_argument(
-        "-d",
-        "--development",
+        "--full",
         required=False,
         default=False,
         action="store_true",
-        help="Whether to build a development (e.g., nightly) rather than a full distribution"
+        help="Build docs for a full rather than minimal distribution",
     )
     parser.add_argument(
         "-f",
@@ -531,18 +577,23 @@ if __name__ == "__main__":
         required=False,
         default=False,
         action="store_true",
-        help="Whether to recreate and overwrite existing artifacts"
+        help="Recreate and overwrite existing artifacts",
     )
     args = parser.parse_args()
-    tex_paths = _default_tex_paths + ([Path(p) for p in args.tex_path] if args.tex_path else [])
+    tex_paths = _full_dist_tex_paths + (
+        [Path(p) for p in args.tex_path] if args.tex_path else []
+    )
     output_path = Path(args.output_path).expanduser().absolute()
     output_path.mkdir(parents=True, exist_ok=True)
     bin_path = Path(args.bin_path).expanduser().absolute()
     examples_repo_path = Path(args.examples_repo_path).expanduser().absolute()
+    example_for_sample = args.example_for_sample
 
     build_documentation(
         bin_path=bin_path,
         output_path=output_path,
         examples_repo_path=examples_repo_path,
-        development=args.development,
-        overwrite=args.force)
+        example_for_sample=example_for_sample,
+        full=args.full,
+        overwrite=args.force,
+    )

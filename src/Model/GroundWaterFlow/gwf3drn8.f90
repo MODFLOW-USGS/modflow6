@@ -9,6 +9,7 @@ module DrnModule
   use ObsModule, only: DefaultObsIdProcessor
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
+  use MatrixBaseModule
   !
   implicit none
   !
@@ -168,17 +169,16 @@ contains
     integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !
+    found = .true.
     select case (option)
     case ('MOVER')
       this%imover = 1
       write (this%iout, '(4x,A)') 'MOVER OPTION ENABLED'
-      found = .true.
     case ('AUXDEPTHNAME')
       call this%parser%GetStringCaps(ddrnauxname)
       this%iauxddrncol = -1
       write (this%iout, '(4x,a,a)') &
         'AUXILIARY DRAIN DEPTH NAME: ', trim(ddrnauxname)
-      found = .true.
       !
       ! -- right now these are options that are only available in the
       !    development version and are not included in the documentation.
@@ -190,7 +190,6 @@ contains
       write (this%iout, '(4x,a,1x,a)') &
         'CUBIC SCALING will be used for drains with non-zero DDRN values', &
         'even if the NEWTON-RAPHSON method is not being used.'
-      found = .true.
     case default
       !
       ! -- No options found
@@ -203,8 +202,8 @@ contains
       ! -- Error if no aux variable specified
       if (this%naux == 0) then
         write (errmsg, '(a,2(1x,a))') &
-          'AUXDDRNNAME WAS SPECIFIED AS', trim(adjustl(ddrnauxname)), &
-          'BUT NO AUX VARIABLES SPECIFIED.'
+          'AUXDEPTHNAME was specified as', trim(adjustl(ddrnauxname)), &
+          'but no AUX variables specified.'
         call store_error(errmsg)
       end if
       !
@@ -220,8 +219,8 @@ contains
       ! -- Error if aux variable cannot be found
       if (this%iauxddrncol == 0) then
         write (errmsg, '(a,2(1x,a))') &
-          'AUXDDRNNAME WAS SPECIFIED AS', trim(adjustl(ddrnauxname)), &
-          'BUT NO AUX VARIABLE FOUND WITH THIS NAME.'
+          'AUXDEPTHNAME was specified as', trim(adjustl(ddrnauxname)), &
+          'but no AUX variable found with this name.'
         call store_error(errmsg)
       end if
     end if
@@ -343,7 +342,7 @@ contains
     return
   end subroutine drn_cf
 
-  subroutine drn_fc(this, rhs, ia, idxglo, amatsln)
+  subroutine drn_fc(this, rhs, ia, idxglo, matrix_sln)
 ! **************************************************************************
 ! drn_fc -- Copy rhs and hcof into solution rhs and amat
 ! **************************************************************************
@@ -355,7 +354,7 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: n
@@ -376,7 +375,7 @@ contains
       n = this%nodelist(i)
       rhs(n) = rhs(n) + this%rhs(i)
       ipos = ia(n)
-      amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + this%hcof(i)
+      call matrix_sln%add_value_pos(idxglo(ipos), this%hcof(i))
       !
       ! -- calculate the drainage scaling factor
       call this%get_drain_factor(i, fact, drnbot)
@@ -394,7 +393,7 @@ contains
     return
   end subroutine drn_fc
 
-  subroutine drn_fn(this, rhs, ia, idxglo, amatsln)
+  subroutine drn_fn(this, rhs, ia, idxglo, matrix_sln)
 ! **************************************************************************
 ! drn_fn -- Fill newton terms
 ! **************************************************************************
@@ -407,7 +406,7 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
-    real(DP), dimension(:), intent(inout) :: amatsln
+    class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: node
@@ -447,7 +446,7 @@ contains
           !
           ! -- fill amat and rhs with newton-raphson terms
           ipos = ia(node)
-          amatsln(idxglo(ipos)) = amatsln(idxglo(ipos)) + drterm
+          call matrix_sln%add_value_pos(idxglo(ipos), drterm)
           rhs(node) = rhs(node) + drterm * xnew
         end if
       end do

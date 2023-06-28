@@ -22,8 +22,6 @@ jobs:
         shell: bash -l {0}
     env:
       GCC_V: 12
-      working-directory: .build_rtd_docs
-      distribution-directory: distribution
 
     steps:
       - name: Checkout modflow6
@@ -44,20 +42,18 @@ jobs:
           path: usgslatex
 
       - name: Install Conda environment from environment.yml
-        uses: mamba-org/provision-with-micromamba@main
+        uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: modflow6/environment.yml
+          cache-environment: true
           cache-downloads: true
-          cache-env: true
 
       - name: Install additional packages for Sphinx using pip
         working-directory: modflow6/.build_rtd_docs
-        run: |
-          pip install -r requirements.rtd.txt
+        run: pip install -r requirements.rtd.txt
 
       - name: Print python package versions
-        run: |
-          pip list
+        run: pip list
 
       - name: Install TeX Live
         run: |
@@ -66,13 +62,11 @@ jobs:
 
       - name: Install USGS LaTeX style files and Univers font
         working-directory: usgslatex/usgsLaTeX
-        run: |
-          sudo ./install.sh --all-users
+        run: sudo ./install.sh --all-users
 
       - name: Test building files from dfn's for LaTeX
         working-directory: modflow6/autotest
-        run: |
-          pytest -v build_mfio_tex.py
+        run: pytest -v build_mfio_tex.py
 
       - name: Setup GNU Fortran ${{ env.GCC_V }}
         uses: awvwgk/setup-fortran@main
@@ -94,6 +88,11 @@ jobs:
           pip install -r requirements.pip.txt
           pip install -r requirements.usgs.txt
 
+      - name: Update FloPy
+        if: steps.cache-examples.outputs.cache-hit != 'true'
+        working-directory: modflow6/autotest
+        run: python update_flopy.py
+
       - name: Build example models
         if: steps.cache-examples.outputs.cache-hit != 'true'
         working-directory: modflow6-examples/etc
@@ -104,18 +103,18 @@ jobs:
       - name: Run benchmarks
         working-directory: modflow6/distribution
         run: python benchmark.py
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Run sphinx
         working-directory: modflow6/.build_rtd_docs
-        run: |
-          make html
+        run: make html
 
-      - name: Show results
+      - name: Show benchmarks
         working-directory: modflow6/distribution
-        run: |
-          cat run-time-comparison.md
+        run: cat run-time-comparison.md
 
-      - name: Upload comparison
+      - name: Upload benchmarks
         uses: actions/upload-artifact@v3
         with:
           name: run-time-comparison
@@ -126,9 +125,9 @@ jobs:
         with:
           name: rtd-files-for-${{ github.sha }}
           path: |
-            modflow6/.build_rtd_docs/
             modflow6/.build_rtd_docs/index.rst
             modflow6/.build_rtd_docs/mf6io.rst
+            # run-time-comparison is moved to _mf6run by conf.py
             modflow6/.build_rtd_docs/_mf6run/
             modflow6/.build_rtd_docs/_mf6io/
             modflow6/.build_rtd_docs/_static/
@@ -164,8 +163,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Print branch name
-        run: |
-          echo ${{env.branch-name}}
+        run: echo ${{env.branch-name}}
 
       - name: Install doxygen and graphviz
         run: |
@@ -173,18 +171,17 @@ jobs:
           sudo apt-get install doxygen graphviz
 
       - name: Install Conda environment from environment.yml
-        uses: mamba-org/provision-with-micromamba@main
+        uses: mamba-org/setup-micromamba@v1
         with:
+            environment-file: environment.yml
+            cache-environment: true
             cache-downloads: true
-            cache-env: true
 
       - name: Print python package versions
-        run: |
-          pip list
+        run: pip list
 
       - name: update MODFLOW 6 version
-        run: |
-          python update_version.py
+        run: python update_version.py
         working-directory: ${{env.distribution-directory}}
 
       - name: update MODFLOW 6 version in Doxyfile
@@ -207,13 +204,25 @@ jobs:
         working-directory: ${{env.working-directory}}
 
       - name: run doxygen
-        run: |
-          doxygen
+        run: doxygen
         working-directory: ${{env.working-directory}}
-
-      - name: Deploy doxygen html to gh-pages
-        uses: peaceiris/actions-gh-pages@v3.7.3
-        if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+      
+      - name: upload pages artifact
+        uses: actions/upload-pages-artifact@v1
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ${{env.working-directory}}/html
+          path: ${{env.working-directory}}/html
+
+  pages_deploy:
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    needs: doxygen_build
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2

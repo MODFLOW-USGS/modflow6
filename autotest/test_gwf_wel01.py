@@ -5,33 +5,13 @@ specified.
 """
 import os
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = ["wel01"]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-ddir = "data"
 
 # set static data
 nper = 1
@@ -52,7 +32,6 @@ hclose, rclose, relax = 1e-9, 1e-6, 1.0
 
 
 def build_model(idx, ws):
-
     name = ex[idx]
 
     # build MODFLOW 6 files
@@ -134,7 +113,11 @@ def build_model(idx, ws):
         "wel.obs.csv": [
             ["q", "wel", (0, 0, 0)],
             ["qred", "wel-reduction", (0, 0, 0)],
-        ]
+        ],
+        "wel.obs.dup.csv": [
+            ["qred", "wel-reduction", (0, 0, 0)],
+            ["q", "wel", (0, 0, 0)],
+        ],
     }
     wel_spd = {0: [[0, 0, 0, -wellq]]}
     wel = flopy.mf6.ModflowGwfwel(
@@ -146,7 +129,6 @@ def build_model(idx, ws):
         afrcsv_filerecord=f"{name}.afr.csv",
     )
     welobs = wel.obs.initialize(
-        digits=25,
         print_input=True,
         continuous=obs,
     )
@@ -164,27 +146,31 @@ def eval_obs(sim):
     print("evaluating well observations...")
 
     # MODFLOW 6 observations
-    fpth = os.path.join(sim.simpath, "wel.obs.csv")
-    try:
-        tc = np.genfromtxt(fpth, names=True, delimiter=",")
-    except:
-        assert False, f'could not load data from "{fpth}"'
-
-    qtot = tc["Q"] + tc["QRED"]
-
-    # calculate maximum absolute error
-    diff = qtot + wellq
-    diffmax = np.abs(diff).max()
     dtol = 1e-9
-    msg = f"maximum absolute well rates ({diffmax}) "
+    for file_name in (
+        "wel.obs.csv",
+        "wel.obs.dup.csv",
+    ):
+        fpth = os.path.join(sim.simpath, file_name)
+        try:
+            tc = np.genfromtxt(fpth, names=True, delimiter=",")
+        except:
+            assert False, f'could not load data from "{fpth}"'
 
-    if diffmax > dtol:
-        sim.success = False
-        msg += f"exceeds {dtol}"
-        assert diffmax < dtol, msg
-    else:
-        sim.success = True
-        print("    " + msg)
+        qtot = tc["Q"] + tc["QRED"]
+
+        # calculate maximum absolute error
+        diff = qtot + wellq
+        diffmax = np.abs(diff).max()
+        msg = f"maximum absolute well rates ({diffmax}) "
+
+        if diffmax > dtol:
+            sim.success = False
+            msg += f"exceeds {dtol}"
+            assert diffmax < dtol, msg
+        else:
+            sim.success = True
+            print("    " + msg)
 
     # MODFLOW 6 AFR CSV output file
     fpth = os.path.join(sim.simpath, "wel01.afr.csv")
@@ -201,39 +187,18 @@ def eval_obs(sim):
     errmsg += f"{a1} /= {a2}"
     assert np.allclose(a1, a2), errmsg
 
-    return
 
-
-# - No need to change any code below
 @pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(idx, dir):
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    test.run_mf6(Simulation(dir, exfunc=eval_obs, idxsim=idx))
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(dir, exfunc=eval_obs, idxsim=idx)
-        test.run_mf6(sim)
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, idx, ws)
+    test.run(
+        TestSimulation(
+            name=name, exe_dict=targets, exfunc=eval_obs, idxsim=idx
+        ),
+        ws,
+    )

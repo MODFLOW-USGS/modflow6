@@ -1,26 +1,10 @@
 import os
 
+import flopy
 import numpy as np
 import pytest
-
-try:
-    import pymake
-except:
-    msg = "Error. Pymake package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install https://github.com/modflowpy/pymake/zipball/master"
-    raise Exception(msg)
-
-try:
-    import flopy
-except:
-    msg = "Error. FloPy package is not available.\n"
-    msg += "Try installing using the following command:\n"
-    msg += " pip install flopy"
-    raise Exception(msg)
-
-from framework import running_on_CI, testing_framework
-from simulation import Simulation
+from framework import TestFramework
+from simulation import TestSimulation
 
 ex = [
     "csub_wtgeoa",
@@ -31,31 +15,19 @@ ex = [
     "csub_wtgeof",
     "csub_wtgeog",
 ]
-exdirs = []
-for s in ex:
-    exdirs.append(os.path.join("temp", s))
-constantcv = [True for idx in range(len(exdirs))]
-
-cmppth = "mf6-regression"
-compare = [True for idx in range(len(exdirs))]
+constantcv = [True for idx in range(len(ex))]
+cmppth = "mf6_regression"
+compare = [True for idx in range(len(ex))]
 tops = [0.0, 0.0, 150.0, 0.0, 0.0, 150.0, 150.0]
 ump = [None, None, True, None, True, None, True]
 iump = [0, 0, 1, 0, 1, 0, 1]
-eslag = [True for idx in range(len(exdirs) - 2)] + 2 * [False]
+eslag = [True for idx in range(len(ex) - 2)] + 2 * [False]
 # eslag = [True, True, True, False, True, False, False]
 headformulation = [True, False, False, True, True, False, False]
 ndc = [None, None, None, 19, 19, 19, 19]
 delay = [False, False, False, True, True, True, True]
 # newton = ["", "", "", "", "", None, ""]
-newton = ["NEWTON" for idx in range(len(exdirs))]
-
-ddir = "data"
-
-## run all examples on Travis
-continuous_integration = [True for idx in range(len(exdirs))]
-
-# set replace_exe to None to use default executable
-replace_exe = None
+newton = ["NEWTON" for idx in range(len(ex))]
 
 htol = [None, None, None, 0.2, None, None, None]
 dtol = 1e-3
@@ -501,15 +473,8 @@ def get_model(idx, ws):
 
 
 def build_model(idx, dir):
-
-    # build MODFLOW 6 files
-    ws = dir
-    sim = get_model(idx, ws)
-
-    # build comparision files
-    ws = os.path.join(dir, cmppth)
-    mc = get_model(idx, ws)
-
+    sim = get_model(idx, dir)  # modflow6 files
+    mc = get_model(idx, os.path.join(dir, cmppth))  # build comparison files
     return sim, mc
 
 
@@ -568,7 +533,6 @@ def eval_comp(sim):
     return
 
 
-# compare cbc and lst budgets
 def cbc_compare(sim):
     print("evaluating cbc and budget...")
     # open cbc file
@@ -663,71 +627,21 @@ def cbc_compare(sim):
         sim.success = True
         print("    " + msg)
 
-    return
 
-
-# - No need to change any code below
-
-
-@pytest.mark.parametrize(
-    "idx, dir",
-    list(enumerate(exdirs)),
-)
-def test_mf6model(idx, dir):
-    # determine if running on CI infrastructure
-    is_CI = running_on_CI()
-    r_exe = None
-    if not is_CI:
-        if replace_exe is not None:
-            r_exe = replace_exe
-
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    test.build_mf6_models(build_model, idx, dir)
-
-    # run the test model
-    if is_CI and not continuous_integration[idx]:
-        return
-    test.run_mf6(
-        Simulation(
-            dir,
+@pytest.mark.slow
+@pytest.mark.parametrize("idx, name", list(enumerate(ex)))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = str(function_tmpdir)
+    test = TestFramework()
+    test.build(build_model, idx, ws)
+    test.run(
+        TestSimulation(
+            name=name,
+            exe_dict=targets,
             exfunc=eval_comp,
-            exe_dict=r_exe,
             htol=htol[idx],
             idxsim=idx,
             mf6_regression=True,
-        )
+        ),
+        ws,
     )
-
-    return
-
-
-def main():
-    # initialize testing framework
-    test = testing_framework()
-
-    # build the models
-    # run the test model
-    for idx, dir in enumerate(exdirs):
-        test.build_mf6_models(build_model, idx, dir)
-        sim = Simulation(
-            dir,
-            exfunc=eval_comp,
-            exe_dict=replace_exe,
-            htol=htol[idx],
-            idxsim=idx,
-            mf6_regression=True,
-        )
-        test.run_mf6(sim)
-
-    return
-
-
-if __name__ == "__main__":
-    # print message
-    print(f"standalone run of {os.path.basename(__file__)}")
-
-    # run main routine
-    main()

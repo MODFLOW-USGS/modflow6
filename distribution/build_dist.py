@@ -2,6 +2,7 @@ import argparse
 import os
 import platform
 import shutil
+import sys
 import textwrap
 from collections import namedtuple
 from os import PathLike, environ
@@ -16,8 +17,12 @@ from modflow_devtools.markers import requires_exe
 from modflow_devtools.misc import get_model_paths
 
 from build_docs import build_documentation
-from build_makefiles import build_mf6_makefile, build_mf5to6_makefile, build_zbud6_makefile
-from utils import (get_project_root_path, run_command)
+from build_makefiles import (
+    build_mf6_makefile,
+    build_mf5to6_makefile,
+    build_zbud6_makefile,
+)
+from utils import get_project_root_path, run_command
 
 _project_name = "MODFLOW 6"
 
@@ -43,30 +48,22 @@ _included_dir_paths = [
     "utils",
 ]
 
-# LaTex files included in distribution docs
-_default_tex_paths = [
-    _project_root_path / "doc" / "mf6io" / "mf6io.tex",
-    _project_root_path / "doc" / "ReleaseNotes" / "ReleaseNotes.tex",
-    _project_root_path / "doc" / "zonebudget" / "zonebudget.tex",
-    _project_root_path / "doc" / "ConverterGuide" / "converter_mf5to6.tex",
-    _project_root_path / "doc" / "SuppTechInfo" / "mf6suptechinfo.tex",
-]
-
-
-Makefile = namedtuple('Makefile', ['app', 'src_path', 'out_path'])
+Makefile = namedtuple("Makefile", ["app", "src_path", "out_path"])
 
 
 # makefiles included in distribution
 _makefiles = [
-    Makefile(app="mf6",
-             src_path=_project_root_path / "src",
-             out_path=Path("make")),
-    Makefile(app="zbud6",
-             src_path=_project_root_path / "utils" / "zonebudget" / "src",
-             out_path=Path("utils") / "zonebudget" / "make"),
-    Makefile(app="mf5to6",
-             src_path=_project_root_path / "utils" / "mf5to6" / "src",
-             out_path=Path("utils") / "mf5to6" / "make")
+    Makefile(app="mf6", src_path=_project_root_path / "src", out_path=Path("make")),
+    Makefile(
+        app="zbud6",
+        src_path=_project_root_path / "utils" / "zonebudget" / "src",
+        out_path=Path("utils") / "zonebudget" / "make",
+    ),
+    Makefile(
+        app="mf5to6",
+        src_path=_project_root_path / "utils" / "mf5to6" / "src",
+        out_path=Path("utils") / "mf5to6" / "make",
+    ),
 ]
 
 # system-specific filenames, extensions, etc
@@ -86,9 +83,6 @@ def copy_sources(output_path: PathLike):
 
     # make sure output directory exists
     output_path.mkdir(exist_ok=True)
-
-    # copy code.json
-    shutil.copy(_project_root_path / "code.json", output_path)
 
     # Copy Visual Studio sln and project files
     print("Copying msvs files to output directory")
@@ -157,12 +151,12 @@ def build_examples(examples_repo_path: PathLike, overwrite: bool = False):
             fname
             for fname in scripts_folder.glob("*")
             if fname.suffix == ".py"
-               and fname.stem.startswith("ex-")
-               and fname.stem not in exclude_list
+            and fname.stem.startswith("ex-")
+            and fname.stem not in exclude_list
         ]
         for script in scripts:
             argv = [
-                "python",
+                sys.executable,
                 script,
                 "--no_run",
                 "--no_plot",
@@ -173,13 +167,17 @@ def build_examples(examples_repo_path: PathLike, overwrite: bool = False):
             run_command(argv, scripts_folder)
 
 
-def setup_examples(bin_path: PathLike, examples_path: PathLike, overwrite: bool = False):
+def setup_examples(
+    bin_path: PathLike, examples_path: PathLike, overwrite: bool = False
+):
     examples_path = Path(examples_path).expanduser().absolute()
 
     # download example models zip asset
     latest = get_release("MODFLOW-USGS/modflow6-examples", "latest")
     assets = latest["assets"]
-    asset = next(iter([a for a in assets if a["name"] == "modflow6-examples.zip"]), None)
+    asset = next(
+        iter([a for a in assets if a["name"] == "modflow6-examples.zip"]), None
+    )
     download_and_unzip(asset["browser_download_url"], examples_path, verbose=True)
 
     # list folders with mfsim.nam (recursively)
@@ -238,27 +236,33 @@ def test_setup_examples():
     pass
 
 
-def build_programs_meson(build_path: PathLike, bin_path: PathLike, overwrite: bool = False):
+def build_programs_meson(
+    build_path: PathLike, bin_path: PathLike, overwrite: bool = False
+):
     build_path = Path(build_path).expanduser().absolute()
     bin_path = Path(bin_path).expanduser().absolute()
 
     exe_paths = [
         bin_path / f"mf6{_eext}",
         bin_path / f"zbud6{_eext}",
-        bin_path / f"mf5to6{_eext}"
+        bin_path / f"mf5to6{_eext}",
     ]
-    lib_paths = [
-        bin_path / f"libmf6{_soext}"
-    ]
+    lib_paths = [bin_path / f"libmf6{_soext}"]
 
-    if not overwrite and all(p.is_file() for p in exe_paths) and all(p.is_file() for p in lib_paths):
+    if (
+        not overwrite
+        and all(p.is_file() for p in exe_paths)
+        and all(p.is_file() for p in lib_paths)
+    ):
         print(f"Binaries already exist:")
         pprint(exe_paths + lib_paths)
     else:
         print(f"Building binaries in {build_path}, installing to {bin_path}")
-        meson_build(project_path=_project_root_path, build_path=build_path, bin_path=bin_path)
+        meson_build(
+            project_path=_project_root_path, build_path=build_path, bin_path=bin_path
+        )
 
-    for target in (exe_paths + lib_paths):
+    for target in exe_paths + lib_paths:
         assert target.is_file(), f"Failed to build {target}"
         target.chmod(target.stat().st_mode | 0o111)
         print(f"Execute permission set for {target}")
@@ -274,22 +278,37 @@ def build_makefiles(output_path: PathLike):
     # create and copy mf6 makefile
     build_mf6_makefile()
     (output_path / "make").mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(_project_root_path / "make" / "makefile", output_path / "make" / "makefile")
-    shutil.copyfile(_project_root_path / "make" / "makedefaults", output_path / "make" / "makedefaults")
+    shutil.copyfile(
+        _project_root_path / "make" / "makefile", output_path / "make" / "makefile"
+    )
+    shutil.copyfile(
+        _project_root_path / "make" / "makedefaults",
+        output_path / "make" / "makedefaults",
+    )
 
     # create and copy zbud6 makefile
     build_zbud6_makefile()
     rel_path = Path("utils") / "zonebudget" / "make"
     (output_path / rel_path).mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(_project_root_path / rel_path / "makefile", output_path / rel_path / "makefile")
-    shutil.copyfile(_project_root_path / rel_path / "makedefaults", output_path / rel_path / "makedefaults")
+    shutil.copyfile(
+        _project_root_path / rel_path / "makefile", output_path / rel_path / "makefile"
+    )
+    shutil.copyfile(
+        _project_root_path / rel_path / "makedefaults",
+        output_path / rel_path / "makedefaults",
+    )
 
     # create and copy mf5to6 makefile
     build_mf5to6_makefile()
     rel_path = Path("utils") / "mf5to6" / "make"
     (output_path / rel_path).mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(_project_root_path / rel_path / "makefile", output_path / rel_path / "makefile")
-    shutil.copyfile(_project_root_path / rel_path / "makedefaults", output_path / rel_path / "makedefaults")
+    shutil.copyfile(
+        _project_root_path / rel_path / "makefile", output_path / rel_path / "makefile"
+    )
+    shutil.copyfile(
+        _project_root_path / rel_path / "makedefaults",
+        output_path / rel_path / "makedefaults",
+    )
 
 
 def test_build_makefiles(tmp_path):
@@ -308,12 +327,13 @@ def test_build_makefiles(tmp_path):
 
 
 def build_distribution(
-        build_path: PathLike,
-        output_path: PathLike,
-        examples_repo_path: PathLike,
-        development: bool = False,
-        overwrite: bool = False):
-    print(f"Building {'development' if development else 'full'} distribution")
+    build_path: PathLike,
+    output_path: PathLike,
+    examples_repo_path: PathLike,
+    full: bool = False,
+    overwrite: bool = False,
+):
+    print(f"Building {'full' if full else 'minimal'} distribution")
 
     build_path = Path(build_path).expanduser().absolute()
     output_path = Path(output_path).expanduser().absolute()
@@ -321,66 +341,74 @@ def build_distribution(
 
     # binaries
     build_programs_meson(
-        build_path=build_path,
-        bin_path=output_path / "bin",
-        overwrite=overwrite)
+        build_path=build_path, bin_path=output_path / "bin", overwrite=overwrite
+    )
 
-    if not development:
+    # code.json metadata
+    shutil.copy(_project_root_path / "code.json", output_path)
+
+    # full releases include examples, source code, makefiles and docs
+    if full:
         # examples
         setup_examples(
             bin_path=output_path / "bin",
             examples_path=output_path / "examples",
-            overwrite=overwrite)
+            overwrite=overwrite,
+        )
 
-    # docs
-    build_documentation(
-        bin_path=output_path / "bin",
-        output_path=output_path / "doc",
-        examples_repo_path=examples_repo_path,
-        # benchmarks_path=_benchmarks_path / "run-time-comparison.md",
-        development=development,
-        overwrite=overwrite)
-
-    # full releases include source code and makefiles
-    if not development:
         # copy source code files
         copy_sources(output_path=output_path)
 
         # build and copy makefiles
         build_makefiles(output_path=output_path)
 
+        # docs
+        build_documentation(
+            bin_path=output_path / "bin",
+            output_path=output_path / "doc",
+            examples_repo_path=examples_repo_path,
+            # benchmarks_path=_benchmarks_path / "run-time-comparison.md",
+            full=full,
+            overwrite=overwrite,
+        )
+
 
 @requires_exe("pdflatex")
 @pytest.mark.skip(reason="manual testing")
-@pytest.mark.parametrize("dev", [True, False])
-def test_build_distribution(tmp_path, dev):
+@pytest.mark.parametrize("full", [True, False])
+def test_build_distribution(tmp_path, full):
     output_path = tmp_path / "dist"
     build_distribution(
         build_path=tmp_path / "builddir",
         output_path=output_path,
         examples_repo_path=_examples_repo_path,
-        development=dev,
-        overwrite=True
+        full=full,
+        overwrite=True,
     )
 
-    if dev:
+    if full:
+        # todo
+        pass
+    else:
         # check binaries and libs
         system = platform.system()
         ext = ".exe" if system == "Windows" else ""
         for exe in ["mf6", "mf5to6", "zbud6"]:
             assert (output_path / f"{exe}{ext}").is_file()
         assert (
-                output_path
-                / (
-                        "libmf6"
-                        + (".so" if system == "Linux" else (".dylib" if system == "Darwin" else ".dll"))
+            output_path
+            / (
+                "libmf6"
+                + (
+                    ".so"
+                    if system == "Linux"
+                    else (".dylib" if system == "Darwin" else ".dll")
                 )
+            )
         ).is_file()
 
         # check mf6io docs
         assert (output_path / "mf6io.pdf").is_file()
-    else:
-        pass
 
 
 if __name__ == "__main__":
@@ -391,6 +419,10 @@ if __name__ == "__main__":
             """\
             Create a distribution folder. If no output path is provided
             distribution files are written to the distribution/ folder.
+            By default a minimal distribution containing only binaries,
+            mf6io documentation, release notes and metadata (code.json)
+            is created. To create a full distribution including sources
+            and examples, use the --full flag.
             """
         ),
     )
@@ -412,7 +444,7 @@ if __name__ == "__main__":
         "--examples-repo-path",
         required=False,
         default=str(_examples_repo_path),
-        help="Path to directory containing modflow6 example models"
+        help="Path to directory containing modflow6 example models",
     )
     # parser.add_argument(
     #     "-b",
@@ -422,12 +454,11 @@ if __name__ == "__main__":
     #     help="Path to directory containing benchmark results"
     # )
     parser.add_argument(
-        "-d",
-        "--development",
+        "--full",
         required=False,
         default=False,
         action="store_true",
-        help="Whether to build a development (e.g., nightly) rather than a full distribution"
+        help="Build a full rather than minimal distribution",
     )
     parser.add_argument(
         "-f",
@@ -435,7 +466,7 @@ if __name__ == "__main__":
         required=False,
         default=False,
         action="store_true",
-        help="Whether to recreate and overwrite existing artifacts"
+        help="Recreate and overwrite existing artifacts",
     )
     args = parser.parse_args()
 
@@ -455,6 +486,6 @@ if __name__ == "__main__":
         build_path=build_path,
         output_path=out_path,
         examples_repo_path=examples_repo_path,
-        development=args.development,
+        full=args.full,
         overwrite=args.force,
     )
