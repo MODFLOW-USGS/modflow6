@@ -140,7 +140,9 @@ jobs:
         run: |
           # update version files
           ver="${{ needs.set_options.outputs.version }}"
-          if [[ "${{ inputs.approve }}" == "true" ]]; then
+          # approve will be empty if workflow was triggered by pushing a release branch
+          # todo: pull approve into set_options job/output?
+          if [[ ("${{ inputs.approve }}" == "true") || (${{ inputs.approve }} == "") ]]; then
             python update_version.py -v "$ver" --approve
           else
             python update_version.py -v "$ver"
@@ -217,9 +219,9 @@ jobs:
 
   reset:
     name: Draft reset PR
-    # runs only after GitHub release post is published (manually promoted from draft to public)
-    # to bring the release commits from master back into develop
-    if: github.event_name == 'release' && inputs.reset == 'true'
+    # runs only after GitHub release post is published (promoted from draft to public)
+    # to bring release commits from master back into develop and reset IDEVELOPMODE=1.
+    if: github.event_name == 'release' && (inputs.reset == 'true' || inputs.reset == '')
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -263,7 +265,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           # updating version numbers if enabled
-          if [[ "${{ inputs.commit_version }}" == "true" ]]; then
+          if [[ ("${{ inputs.commit_version }}" == "true") || ("${{ inputs.commit_version }}" == "") ]]; then
             ver="${{ steps.latest_tag.outputs.tag }}"
             python distribution/update_version.py -v "$ver"
             git add -A
