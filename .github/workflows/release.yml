@@ -325,6 +325,10 @@ jobs:
           # the example model also needs mf2005
           get-modflow "${{ github.workspace }}/bin" --subset mf2005,triangle,gridgen
   
+      - name: Update FloPy
+        working-directory: modflow6/autotest
+        run: python update_flopy.py
+
       - name: Build ex-gwf-twri example model
         if: inputs.full != true
         working-directory: modflow6-examples/scripts
