@@ -142,7 +142,7 @@ jobs:
           ver="${{ needs.set_options.outputs.version }}"
           # approve will be empty if workflow was triggered by pushing a release branch
           # todo: pull approve into set_options job/output?
-          if [[ ("${{ inputs.approve }}" == "true") || (${{ inputs.approve }} == "") ]]; then
+          if [[ ("${{ inputs.approve }}" == "true") || ("${{ inputs.approve }}" == "") ]]; then
             python update_version.py -v "$ver" --approve
           else
             python update_version.py -v "$ver"
