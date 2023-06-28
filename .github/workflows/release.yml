@@ -365,8 +365,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           mkdir -p "${{ needs.build.outputs.distname }}/doc"
-          # using -f (--force) flag reruns benchmarks instead of using downloaded results
-          cmd="python modflow6/distribution/build_docs.py -b bin -o doc -e modflow6-examples -f"
+          cmd="python modflow6/distribution/build_docs.py -b bin -o doc -e modflow6-examples"
           if [[ "${{ inputs.full }}" == "true" ]]; then
             cmd="$cmd --full"
           fi
