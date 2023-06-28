@@ -306,7 +306,7 @@ jobs:
           name: bin-${{ runner.os }}
           path: bin
     
-      - name: Install dependencies for ex-gwf-twri example model
+      - name: Install dependencies for building models
         working-directory: modflow6-examples/etc
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -323,11 +323,17 @@ jobs:
           chmod +x "${{ github.workspace }}/bin/zbud6"
 
           # the example model also needs mf2005
-          get-modflow "${{ github.workspace }}/bin" --subset mf2005
+          get-modflow "${{ github.workspace }}/bin" --subset mf2005,triangle,gridgen
   
       - name: Build ex-gwf-twri example model
+        if: inputs.full != true
         working-directory: modflow6-examples/scripts
         run: python ex-gwf-twri.py
+
+      - name: Build example models
+        if: inputs.full == true
+        working-directory: modflow6-examples/etc
+        run: python ci_build_files.py
       
       - name: Create full docs folder structure
         if: inputs.full == true
@@ -355,7 +361,8 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           mkdir -p "${{ needs.build.outputs.distname }}/doc"
-          cmd="python modflow6/distribution/build_docs.py -b bin -o doc -e modflow6-examples"
+          # using -f (--force) flag reruns benchmarks instead of using downloaded results
+          cmd="python modflow6/distribution/build_docs.py -b bin -o doc -e modflow6-examples -f"
           if [[ "${{ inputs.full }}" == "true" ]]; then
             cmd="$cmd --full"
           fi
