@@ -1,5 +1,5 @@
 # MODFLOW 6 version file automatically created using...update_version.py
-# created on...June 27, 2023 18:08:03
+# created on...June 28, 2023 14:33:41
 
 major = 6
 minor = 4
