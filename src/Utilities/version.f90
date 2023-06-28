@@ -15,7 +15,7 @@ module VersionModule
   implicit none
   public
   ! -- modflow 6 version
-  integer(I4B), parameter :: IDEVELOPMODE = 1
+  integer(I4B), parameter :: IDEVELOPMODE = 0
   character(len=*), parameter :: VERSIONNUMBER = '6.4.2'
   character(len=*), parameter :: VERSIONTAG = ' 06/28/2023'
   character(len=40), parameter :: VERSION = VERSIONNUMBER//VERSIONTAG
