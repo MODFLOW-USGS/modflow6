@@ -1,6 +1,6 @@
 [
     {
-        "status": "Preliminary",
+        "status": "Release",
         "languages": [
             "Fortran2008"
         ],
@@ -20,7 +20,7 @@
         "laborHours": -1,
         "version": "6.4.2",
         "date": {
-            "metadataLastUpdated": "2023-06-26"
+            "metadataLastUpdated": "2023-06-28"
         },
         "organization": "U.S. Geological Survey",
         "permissions": {
