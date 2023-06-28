@@ -323,7 +323,7 @@ jobs:
           chmod +x "${{ github.workspace }}/bin/zbud6"
 
           # the example model also needs mf2005
-          get-modflow "${{ github.workspace }}/bin" --subset mf2005
+          get-modflow "${{ github.workspace }}/bin" --subset mf2005,triangle,gridgen
   
       - name: Update FloPy
         working-directory: modflow6/autotest
