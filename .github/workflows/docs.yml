@@ -88,11 +88,6 @@ jobs:
           pip install -r requirements.pip.txt
           pip install -r requirements.usgs.txt
 
-      - name: Update FloPy
-        if: steps.cache-examples.outputs.cache-hit != 'true'
-        working-directory: modflow6/autotest
-        run: python update_flopy.py
-
       - name: Build example models
         if: steps.cache-examples.outputs.cache-hit != 'true'
         working-directory: modflow6-examples/etc
