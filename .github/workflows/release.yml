@@ -306,7 +306,7 @@ jobs:
           name: bin-${{ runner.os }}
           path: bin
     
-      - name: Install dependencies for ex-gwf-twri example model
+      - name: Install dependencies for building models
         working-directory: modflow6-examples/etc
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -323,11 +323,21 @@ jobs:
           chmod +x "${{ github.workspace }}/bin/zbud6"
 
           # the example model also needs mf2005
-          get-modflow "${{ github.workspace }}/bin" --subset mf2005
+          get-modflow "${{ github.workspace }}/bin" --subset mf2005,triangle,gridgen
   
+      - name: Update FloPy
+        working-directory: modflow6/autotest
+        run: python update_flopy.py
+
       - name: Build ex-gwf-twri example model
+        if: inputs.full != true
         working-directory: modflow6-examples/scripts
         run: python ex-gwf-twri.py
+
+      - name: Build example models
+        if: inputs.full == true
+        working-directory: modflow6-examples/etc
+        run: python ci_build_files.py
       
       - name: Create full docs folder structure
         if: inputs.full == true
