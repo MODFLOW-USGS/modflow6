@@ -189,7 +189,7 @@ A list of all MODFLOW 6 releases is shown in table \ref{tab:releases}.  Changes 
 This section describes changes introduced into MODFLOW~6 for the current release.  These changes may substantially affect users.
 
 \begin{itemize}
-\input{v6.4.2.tex}
+\input{develop.tex}
 \end{itemize}
 
 % -------------------------------------------------
@@ -251,7 +251,15 @@ To run MODFLOW~6, simply type \texttt{mf6} in a terminal window.  The current wo
 
 % -------------------------------------------------
 \section{Compiling MODFLOW~6}
-MODFLOW~6 has been compiled using Intel Fortran and GNU Fortran on the Windows, macOS, and Linux operating systems.  Because the program uses relatively new Fortran functionality, recent versions of the compilers may be required for successful compilation.  MODFLOW~6 is currently tested with gfortran 7-12 on Linux and gfortran 12 on macOS and Windows.  If you have gfortran installed on your computer, you can tell which version it is by entering ``\verb|gfortran --version|'' at a terminal window.  MODFLOW~6 is currently not compatible with the next-generation Intel Fortran Compiler; a recent version of the Intel Fortran Compiler Classic (e.g. 2021.8.0) must be used.
+MODFLOW~6 has been compiled using Intel Fortran and GNU Fortran on the Windows, macOS, and Linux operating systems.  All MODFLOW~6 distributions are currently compiled with Intel Fortran.  While the program uses relatively new Fortran functionality, it is not yet compatible with the latest versions of either toolchain.
+
+MODFLOW~6 is currently tested with gfortran 7-12 on Linux and gfortran 12 on macOS and Windows. The gfortran version can be queried with ``\verb|gfortran --version|''.  Intel Fortran version 2022.3.0 is tested on all three platforms. Some 2021 versions have also been reported compatible.
+
+At this time, MODFLOW~6 is not compatible with:
+
+- GNU Fortran 13
+- Intel Fortran Compiler Classic versions 2023.y.z
+- the next-generation Intel Fortran Compiler `ifx`
 
 Meson is the recommended build tool for MODFLOW~6.  For more detailed compilation instructions, please refer to \url{https://github.com/MODFLOW-USGS/modflow6/blob/develop/DEVELOPER.md#building}.
 
