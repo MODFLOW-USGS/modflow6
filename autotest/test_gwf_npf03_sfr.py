@@ -30,7 +30,8 @@ strt = 9.5
 hbndl = [12.0, 8.0]
 
 # sfr data
-unit_conv = 1.0
+len_conv = 1.0
+time_conv = 1.0
 slope = 1.2012012e-03
 width = 20.0
 bthick = 1.5
@@ -270,7 +271,8 @@ def build_model(idx, dir):
 
         sfr = flopy.mf6.ModflowGwfsfr(
             gwf,
-            unit_conversion=unit_conv,
+            length_conversion=len_conv,
+            time_conversion=time_conv,
             print_stage=True,
             print_flows=True,
             package_convergence_filerecord=cnvgpth,
