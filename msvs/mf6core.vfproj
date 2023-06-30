@@ -259,11 +259,11 @@
 		<File RelativePath="..\src\Utilities\ArrayRead\Integer2dReader.f90"/>
 		<File RelativePath="..\src\Utilities\ArrayRead\LayeredArrayReader.f90"/></Filter>
 		<Filter Name="Idm">
-		<Filter Name="mf6blockfile">
-		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\IdmMf6File.f90"/>
-		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\LoadMf6File.f90"/>
-		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\StructArray.f90"/>
-		<File RelativePath="..\src\Utilities\Idm\mf6blockfile\StructVector.f90"/></Filter>
+		<Filter Name="mf6file">
+		<File RelativePath="..\src\Utilities\Idm\mf6file\IdmMf6File.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\mf6file\LoadMf6File.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\mf6file\StructArray.f90"/>
+		<File RelativePath="..\src\Utilities\Idm\mf6file\StructVector.f90"/></Filter>
 		<Filter Name="selector">
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmDfnSelector.f90"/>
 		<File RelativePath="..\src\Utilities\Idm\selector\IdmGwfDfnSelector.f90"/>
