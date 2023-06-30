@@ -18,6 +18,7 @@ module InputLoadTypeModule
   public :: DynamicPkgLoadBaseType
   public :: ModelDynamicPkgsType
   public :: AddDynamicModelToList, GetDynamicModelFromList
+  public :: StaticPkgLoadType, DynamicPkgLoadType
 
   !> @brief derived type for source static load
   !!
