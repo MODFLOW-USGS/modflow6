@@ -9,8 +9,6 @@ module StructArrayModule
 
   use KindModule, only: I4B, DP, LGP
   use ConstantsModule, only: DNODATA, LINELENGTH
-  use SimVariablesModule, only: errmsg
-  use SimModule, only: store_error
   use StructVectorModule, only: StructVectorType
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr
   use CharacterStringModule, only: CharacterStringType

@@ -38,6 +38,7 @@ module ModflowInputModule
     character(len=LENCOMPONENTNAME) :: component_name
     character(len=LENCOMPONENTNAME) :: subcomponent_name
     character(len=LENMEMPATH) :: mempath
+    character(len=LENMEMPATH) :: component_mempath
     type(InputBlockDefinitionType), dimension(:), pointer :: block_dfns
     type(InputParamDefinitionType), dimension(:), pointer :: aggregate_dfns
     type(InputParamDefinitionType), dimension(:), pointer :: param_dfns
@@ -65,6 +66,8 @@ contains
 
     mf6_input%mempath = create_mem_path(component_name, subcomponent_name, &
                                         idm_context)
+    mf6_input%component_mempath = create_mem_path(component=component_name, &
+                                                  context=idm_context)
 
     mf6_input%block_dfns => block_definitions(component_type, subcomponent_type)
     mf6_input%aggregate_dfns => aggregate_definitions(component_type, &

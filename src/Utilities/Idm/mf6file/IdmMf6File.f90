@@ -1,25 +1,29 @@
 !> @brief This module contains the IdmMf6FileModule
 !!
-!! This module contains the high-level routines for loading
-!! a MODFLOW input file to the input context.
+!! This module contains high-level routines for loading
+!! MODFLOW 6 ASCII source input.
 !!
 !<
 module IdmMf6FileModule
 
   use KindModule, only: DP, I4B, LGP
+  use SimVariablesModule, only: errmsg
   use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENMODELNAME, &
-                             LENPACKAGENAME, LENFTYPE, LENPACKAGETYPE
+                             LENPACKAGENAME, LENFTYPE, LENPACKAGETYPE, &
+                             LENAUXNAME, LENBOUNDNAME, LENTIMESERIESNAME, &
+                             LENLISTLABEL
   use SimModule, only: store_error, store_error_filename
   use InputOutputModule, only: openfile, getunit
   use BlockParserModule, only: BlockParserType
   use ModflowInputModule, only: ModflowInputType, getModflowInput
   use CharacterStringModule, only: CharacterStringType
-  use ModelPackageInputsModule, only: ModelPackageInputsType
+  use InputLoadTypeModule, only: StaticPkgLoadBaseType, DynamicPkgLoadBaseType
 
   implicit none
   private
-  public :: input_load ! TODO: remove
-  public :: load_models_mf6
+  public :: input_load, model_load
+  public :: Mf6FileStaticPkgLoadType, Mf6FileDynamicPkgLoadType
+  public :: open_mf6file
 
   !> @brief derived type for storing package loader
   !!
@@ -44,6 +48,26 @@ module IdmMf6FileModule
     end subroutine IPackageLoad
   end interface
 
+  !> @brief MF6File static loader derived type
+  !<
+  type, extends(StaticPkgLoadBaseType) :: Mf6FileStaticPkgLoadType
+  contains
+    procedure :: init => static_init
+    procedure :: load => static_load
+    procedure :: destroy => static_destroy
+  end type Mf6FileStaticPkgLoadType
+
+  !> @brief MF6File dynamic loader derived type
+  !<
+  type, extends(DynamicPkgLoadBaseType) :: Mf6FileDynamicPkgLoadType
+    type(BlockParserType), pointer :: parser !< parser for MF6File period blocks
+  contains
+    procedure :: init => dynamic_init
+    procedure :: set => dynamic_set
+    procedure :: period_load => dynamic_load
+    procedure :: destroy => dynamic_destroy
+  end type Mf6FileDynamicPkgLoadType
+
 contains
 
   !> @brief generic procedure to MODFLOW 6 load routine
@@ -63,274 +87,243 @@ contains
 
   !> @brief input load for traditional mf6 simulation input file
   !<
-  subroutine input_load(pkgtype, &
+  subroutine input_load(filename, pkgtype, &
                         component_type, subcomponent_type, &
                         component_name, subcomponent_name, &
-                        inunit, iout)
+                        component_filename, iout, mf6_parser)
+    character(len=*), intent(in) :: filename
     character(len=*), intent(in) :: pkgtype !< pkgtype to load, such as DIS6, DISV6, NPF6
     character(len=*), intent(in) :: component_type !< component type, such as GWF or GWT
     character(len=*), intent(in) :: subcomponent_type !< subcomponent type, such as DIS or NPF
     character(len=*), intent(in) :: component_name !< component name, such as MYGWFMODEL
     character(len=*), intent(in) :: subcomponent_name !< subcomponent name, such as MYWELLPACKAGE
-    integer(I4B), intent(in) :: inunit !< unit number for input
+    character(len=*), intent(in) :: component_filename
     integer(I4B), intent(in) :: iout !< unit number for output
-    type(BlockParserType), allocatable :: parser !< block parser
+    type(BlockParserType), pointer, optional, intent(inout) :: mf6_parser
+    type(BlockParserType), allocatable, target :: parser !< block parser
     type(ModflowInputType) :: mf6_input
     type(PackageLoad) :: pkgloader
+    integer(I4B) :: inunit, iblock
+    logical(LGP) :: clear_parser = .true.
     !
     ! -- create description of input
     mf6_input = getModflowInput(pkgtype, component_type, &
                                 subcomponent_type, component_name, &
                                 subcomponent_name)
     !
-    ! -- set mf6 parser based package loader by file type
+    ! -- set parser based package loader by file type
     select case (pkgtype)
     case default
+      !
+      ! -- open input file
+      inunit = open_mf6file(pkgtype, filename, component_filename, iout)
+      !
+      ! -- allocate and initialize parser
       allocate (parser)
       call parser%Initialize(inunit, iout)
+      !
+      ! -- set load interface
       pkgloader%load_package => generic_mf6_load
+      !
     end select
     !
     ! -- invoke the selected load routine
     call pkgloader%load_package(parser, mf6_input, iout)
     !
-    ! -- close files and deallocate
+    ! -- generate a dynamic loader parser if requested and relevant
+    if (present(mf6_parser)) then
+      !
+      ! -- initialize
+      nullify (mf6_parser)
+      !
+      ! -- check if package has dynamic input
+      do iblock = 1, size(mf6_input%block_dfns)
+        !
+        if (mf6_input%block_dfns(iblock)%blockname == 'PERIOD') then
+          !
+          ! -- dynamic package, allocate parser
+          allocate (mf6_parser, source=parser)
+          clear_parser = .false.
+          !
+          exit
+          !
+        end if
+      end do
+    end if
+    !
+    ! -- deallocate static load parser
     if (allocated(parser)) then
-      !call parser%clear()
+      !
+      if (clear_parser) call parser%clear()
       deallocate (parser)
+      !
     end if
     !
     ! -- return
     return
   end subroutine input_load
 
-  !> @brief input load model idm supported package files
-  !<
-  subroutine load_model_pkgfiles(model_pkg_inputs, iout)
-    ! -- modules
-    use IdmDfnSelectorModule, only: idm_integrated, idm_multi_package
-    ! -- dummy
-    type(ModelPackageInputsType), intent(inout) :: model_pkg_inputs
-    integer(I4B), intent(in) :: iout
-    ! -- locals
-    integer(I4B) :: n, m
-    character(len=LENPACKAGETYPE) :: pkgtype
-    character(len=LENPACKAGENAME) :: sc_name
+  subroutine static_init(this, mf6_input, modelname, modelfname, source)
+    class(Mf6FileStaticPkgLoadType), intent(inout) :: this
+    type(ModflowInputType), intent(in) :: mf6_input
+    character(len=*), intent(in) :: modelname
+    character(len=*), intent(in) :: modelfname
+    character(len=*), intent(in) :: source
     !
-    do n = 1, size(model_pkg_inputs%pkglist)
+    call this%StaticPkgLoadType%init(mf6_input, modelname, modelfname, source)
+    !
+  end subroutine static_init
+
+  function static_load(this, iout) result(period_loader)
+    class(Mf6FileStaticPkgLoadType), intent(inout) :: this
+    integer(I4B), intent(in) :: iout
+    class(DynamicPkgLoadBaseType), pointer :: period_loader
+    class(Mf6FileDynamicPkgLoadType), pointer :: mf6file_period_loader => null()
+    type(BlockParserType), pointer :: parser => null()
+    !
+    ! -- initialize
+    nullify (period_loader)
+    !
+    ! -- load model package to input context
+    call input_load(this%source, this%mf6_input%pkgtype, &
+                    this%mf6_input%component_type, &
+                    this%mf6_input%subcomponent_type, &
+                    this%mf6_input%component_name, &
+                    this%mf6_input%subcomponent_name, &
+                    this%modelfname, iout, parser)
+    !
+    if (associated(parser)) then
       !
-      ! -- this list package type
-      pkgtype = model_pkg_inputs%pkglist(n)%pkgtype
+      ! -- package is dynamic, allocate loader
+      allocate (mf6file_period_loader)
       !
-      ! -- load all idm integrated package type file instances
-      do m = 1, model_pkg_inputs%pkglist(n)%pnum
-        !
-        if (idm_integrated(model_pkg_inputs%component_type, &
-                           model_pkg_inputs%pkglist(n)%component_type)) then
-          !
-          ! -- set subcomponent name
-          if (idm_multi_package(model_pkg_inputs%component_type, &
-                                model_pkg_inputs%pkglist(n)%component_type)) then
-            !
-            sc_name = model_pkg_inputs%pkglist(n)%pkgnames(m)
-          else
-            !
-            sc_name = model_pkg_inputs%pkglist(n)%component_type
-          end if
-          !
-          ! -- load model package to input context
-          call input_load(pkgtype, model_pkg_inputs%component_type, &
-                          model_pkg_inputs%pkglist(n)%component_type, &
-                          model_pkg_inputs%modelname, sc_name, &
-                          model_pkg_inputs%pkglist(n)%inunits(m), iout)
-          !
-          ! -- close file and update unit number
-          close (model_pkg_inputs%pkglist(n)%inunits(m))
-          model_pkg_inputs%pkglist(n)%inunits(m) = 0
-          !
-        else
-          ! Not an IDM supported package, leave inunit open
-        end if
-      end do
-    end do
+      ! -- initialize dynamic loader
+      call mf6file_period_loader%init(this%mf6_input, this%modelname, &
+                                      this%modelfname, this%source, iout)
+      !
+      ! -- set parser
+      call mf6file_period_loader%set(parser, iout)
+      !
+      ! -- set return pointer to base dynamic loader
+      period_loader => mf6file_period_loader
+      !
+    end if
+    !
+  end function static_load
+
+  subroutine static_destroy(this)
+    class(Mf6FileStaticPkgLoadType), intent(inout) :: this
+    !
+    call this%StaticPkgLoadType%destroy()
+    !
+  end subroutine static_destroy
+
+  subroutine dynamic_init(this, mf6_input, modelname, modelfname, source, iout)
+    class(Mf6FileDynamicPkgLoadType), intent(inout) :: this
+    type(ModflowInputType), intent(in) :: mf6_input
+    character(len=*), intent(in) :: modelname
+    character(len=*), intent(in) :: modelfname
+    character(len=*), intent(in) :: source
+    integer(I4B), intent(in) :: iout
+    !
+    call this%DynamicPkgLoadType%init(mf6_input, modelname, modelfname, &
+                                      source, iout)
     !
     ! -- return
     return
-  end subroutine load_model_pkgfiles
+  end subroutine dynamic_init
 
-  !> @brief open all model package files
-  !<
-  subroutine open_model_pkgfiles(model_pkg_inputs, iout)
-    ! -- modules
-    ! -- dummy
-    type(ModelPackageInputsType), intent(inout) :: model_pkg_inputs
+  subroutine dynamic_set(this, parser, iout)
+    class(Mf6FileDynamicPkgLoadType), intent(inout) :: this
+    type(BlockParserType), pointer, intent(inout) :: parser
     integer(I4B), intent(in) :: iout
-    ! -- locals
-    integer(I4B) :: n, m
-    character(len=LINELENGTH) :: filename
-    character(len=LENPACKAGETYPE) :: filetype
-    character(len=LINELENGTH) :: errmsg
     !
-    do n = 1, size(model_pkg_inputs%pkglist)
-      !
-      ! -- this package type
-      filetype = model_pkg_inputs%pkglist(n)%pkgtype
-      !
-      ! -- open each package type file instance
-      do m = 1, model_pkg_inputs%pkglist(n)%pnum
-        !
-        ! -- set filename
-        filename = model_pkg_inputs%pkglist(n)%filenames(m)
-        !
-        if (filename /= '') then
-          !
-          ! -- get unit number, update object and open file
-          model_pkg_inputs%pkglist(n)%inunits(m) = getunit()
-          call openfile(model_pkg_inputs%pkglist(n)%inunits(m), iout, &
-                        trim(adjustl(filename)), filetype, 'FORMATTED', &
-                        'SEQUENTIAL', 'OLD')
-          !
-        else
-          write (errmsg, '(a,a,a,a,a)') &
-            'Package file unspecified, cannot load model package &
-            &[model=', trim(model_pkg_inputs%modelname), &
-            ', type=', trim(filetype), '].'
-          call store_error(errmsg)
-          call store_error_filename(model_pkg_inputs%modelfname)
-        end if
-      end do
-    end do
-    !
-    ! -- returh
-    return
-  end subroutine open_model_pkgfiles
-
-  !> @brief load and make pkg info available to models
-  !<
-  subroutine modelpkgs_load(mtype, mfname, mname, iout)
-    ! -- modules
-    ! -- dummy
-    character(len=*), intent(in) :: mtype
-    character(len=*), intent(in) :: mfname
-    character(len=*), intent(in) :: mname
-    integer(I4B), intent(in) :: iout
-    ! -- locals
-    type(ModelPackageInputsType) :: model_pkg_inputs
-    !
-    ! -- set baseline state for model package instances
-    call model_pkg_inputs%init(mtype, mfname, mname, iout)
-    !
-    ! -- open model package files
-    call open_model_pkgfiles(model_pkg_inputs, iout)
-    !
-    ! -- load model idm integrated package files
-    call load_model_pkgfiles(model_pkg_inputs, iout)
-    !
-    ! -- load descriptions of packages to model input context
-    call model_pkg_inputs%memload()
-    !
-    ! -- cleanup
-    call model_pkg_inputs%destroy()
+    ! -- Not currently implemented
     !
     ! -- return
     return
-  end subroutine modelpkgs_load
+  end subroutine dynamic_set
+
+  subroutine dynamic_load(this, iout)
+    ! -- modules
+    ! -- dummy
+    class(Mf6FileDynamicPkgLoadType), intent(inout) :: this
+    integer(I4B), intent(in) :: iout
+    ! -- locals
+    !
+    ! -- Not currently implemented
+    write (errmsg, '(a)') &
+      'MODFLOW 6 internal error: input context dynamic load &
+      &not implemented'
+    call store_error(errmsg)
+    call store_error_filename(this%modelfname)
+    !
+    ! -- return
+    return
+  end subroutine dynamic_load
+
+  subroutine dynamic_destroy(this)
+    class(Mf6FileDynamicPkgLoadType), intent(inout) :: this
+    !
+    call this%parser%clear()
+    deallocate (this%parser)
+    !
+    call this%DynamicPkgLoadType%destroy()
+    !
+  end subroutine dynamic_destroy
+
+  !> @brief open a model package files
+  !<
+  function open_mf6file(filetype, filename, component_fname, iout) result(inunit)
+    ! -- modules
+    ! -- dummy
+    character(len=*), intent(in) :: filetype
+    character(len=*), intent(in) :: filename
+    character(len=*), intent(in) :: component_fname
+    integer(I4B), intent(in) :: iout
+    ! -- return
+    integer(I4B) :: inunit
+    ! -- locals
+    !
+    ! -- initialize
+    inunit = 0
+    !
+    if (filename /= '') then
+      !
+      ! -- get unit number, update object and open file
+      inunit = getunit()
+      call openfile(inunit, iout, trim(adjustl(filename)), filetype, &
+                    'FORMATTED', 'SEQUENTIAL', 'OLD')
+    else
+      write (errmsg, '(a,a,a)') &
+        'File unspecified, cannot load model or package &
+        &type "', trim(filetype), '".'
+      call store_error(errmsg)
+      call store_error_filename(component_fname)
+    end if
+    !
+    ! -- return
+    return
+  end function open_mf6file
 
   !> @brief input load a single model namfile and model package files
   !<
-  subroutine model_load(mtype, mfname, mname, iout)
+  subroutine model_load(component, mtype, mfname, mname, iout)
     ! -- modules
     use SimVariablesModule, only: simfile
     ! -- dummy
+    character(len=LENFTYPE), intent(in) :: component
     character(len=*), intent(in) :: mtype
     character(len=*), intent(in) :: mfname
     character(len=*), intent(in) :: mname
     integer(I4B), intent(in) :: iout
     ! -- locals
-    character(len=LINELENGTH) :: errmsg
-    integer(I4B) :: inunit
     !
-    ! -- open namfile
-    inunit = getunit()
-    call openfile(inunit, iout, trim(mfname), 'NAM')
-    !
-    select case (mtype)
-    case ('GWF6')
-      !
-      ! -- load model namfile to the input context
-      call input_load('GWF6', 'GWF', 'NAM', mname, 'NAM', inunit, iout)
-      !
-      ! -- load and create descriptions of model package files
-      call modelpkgs_load(mtype, mfname, mname, iout)
-      !
-    case ('GWT6')
-      !
-      call input_load('GWT6', 'GWT', 'NAM', mname, 'NAM', inunit, iout)
-      !
-      call modelpkgs_load(mtype, mfname, mname, iout)
-      !
-    case default
-      write (errmsg, '(a,a,a,a,a)') &
-        'Unknown simulation model type &
-        &[model=', trim(mname), &
-        ', type=', trim(mtype), '].'
-      call store_error(errmsg)
-      call store_error_filename(simfile)
-    end select
-    !
-    ! -- close namfile
-    close (inunit)
+    ! -- load model namfile to the input context
+    call input_load(mfname, mtype, component, 'NAM', mname, 'NAM', simfile, iout)
     !
     ! -- return
     return
   end subroutine model_load
-
-  !> @brief input load model namfiles and model package files
-  !<
-  subroutine load_models_mf6(model_loadmask, iout)
-    ! -- modules
-    use MemoryHelperModule, only: create_mem_path
-    use MemoryManagerModule, only: mem_setptr
-    use CharacterStringModule, only: CharacterStringType
-    use SimVariablesModule, only: idm_context
-    ! -- dummy
-    integer(I4B), dimension(:), intent(in) :: model_loadmask
-    integer(I4B), intent(in) :: iout
-    ! -- locals
-    character(len=LENMEMPATH) :: input_mempath
-    type(CharacterStringType), dimension(:), contiguous, &
-      pointer :: mtypes !< model types
-    type(CharacterStringType), dimension(:), contiguous, &
-      pointer :: mfnames !< model file names
-    type(CharacterStringType), dimension(:), contiguous, &
-      pointer :: mnames !< model names
-    character(len=LINELENGTH) :: mtype, mfname
-    character(len=LENMODELNAME) :: mname
-    integer(I4B) :: n
-    !
-    ! -- set input memory path
-    input_mempath = create_mem_path('SIM', 'NAM', idm_context)
-    !
-    ! -- set pointers to input context model attribute arrays
-    call mem_setptr(mtypes, 'MTYPE', input_mempath)
-    call mem_setptr(mfnames, 'MFNAME', input_mempath)
-    call mem_setptr(mnames, 'MNAME', input_mempath)
-    !
-    do n = 1, size(mtypes)
-      !
-      ! -- attributes for this model
-      mtype = mtypes(n)
-      mfname = mfnames(n)
-      mname = mnames(n)
-      !
-      ! -- load model namfile
-      if (model_loadmask(n) > 0) then
-        call model_load(mtype, mfname, mname, iout)
-      end if
-    end do
-    !
-    ! -- return
-    return
-  end subroutine load_models_mf6
 
 end module IdmMf6FileModule

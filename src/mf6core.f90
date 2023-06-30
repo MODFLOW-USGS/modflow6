@@ -263,7 +263,7 @@ contains
     ! -- modules
     use ConstantsModule, only: LENMEMPATH
     use SimVariablesModule, only: iout
-    use IdmSimulationModule, only: simnam_load, load_models
+    use IdmLoadModule, only: simnam_load, load_models
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr, mem_allocate
     use SimVariablesModule, only: idm_context, iparamlog

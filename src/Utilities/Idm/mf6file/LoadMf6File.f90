@@ -8,9 +8,9 @@
 module LoadMf6FileModule
 
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENVARNAME
   use SimVariablesModule, only: errmsg
   use SimModule, only: store_error
+  use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENVARNAME
   use BlockParserModule, only: BlockParserType
   use LayeredArrayReaderModule, only: read_dbl1d_layered, &
                                       read_dbl2d_layered, &
@@ -48,6 +48,7 @@ contains
                       component_name, subcomponent_name, &
                       iout)
     use SimVariablesModule, only: idm_context
+    use SourceCommonModule, only: set_model_shape
     type(BlockParserType), intent(inout) :: parser !< block parser
     character(len=*), intent(in) :: pkgtype !< file type to load, such as DIS6, DISV6, NPF6
     character(len=*), intent(in) :: component_type !< component type, such as GWF or GWT
@@ -79,6 +80,10 @@ contains
     !
     ! -- process blocks
     do iblock = 1, size(mf6_input%block_dfns)
+      !
+      ! -- don't load dynamic input data
+      if (mf6_input%block_dfns(iblock)%blockname == 'PERIOD') exit
+      !
       call parse_block(parser, mf6_input, iblock, mshape, filename, iout, .false.)
       !
       ! -- set model shape if discretization dimensions have been read
@@ -293,7 +298,11 @@ contains
         call parser%DevOpt()
       end if
     case ('STRING')
-      call load_string_type(parser, idt, mf6_input%mempath, iout)
+      if (idt%shape == 'NAUX') then
+        call load_auxvar_names(parser, idt, mf6_input%mempath, iout)
+      else
+        call load_string_type(parser, idt, mf6_input%mempath, iout)
+      end if
     case ('INTEGER')
       call load_integer_type(parser, idt, mf6_input%mempath, iout)
     case ('INTEGER1D')
@@ -318,7 +327,7 @@ contains
     !
     ! -- continue line if in same record
     if (idt%in_record) then
-
+      !
       ! recursively call parse tag again to read rest of line
       call parse_tag(parser, mf6_input, iblock, mshape, filename, iout, .true.)
     end if
@@ -475,6 +484,42 @@ contains
     return
   end subroutine load_string_type
 
+  !> @brief load aux variable names
+  !!
+  !<
+  subroutine load_auxvar_names(parser, idt, memoryPath, iout)
+    use ConstantsModule, only: LENAUXNAME, LINELENGTH, LENPACKAGENAME
+    use InputOutputModule, only: urdaux
+    use CharacterStringModule, only: CharacterStringType
+    type(BlockParserType), intent(inout) :: parser !< block parser
+    type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
+    character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
+    integer(I4B), intent(in) :: iout !< unit number for output
+    character(len=:), allocatable :: line
+    character(len=LENAUXNAME), dimension(:), allocatable :: caux
+    integer(I4B) :: lloc
+    integer(I4B) :: istart
+    integer(I4B) :: istop
+    integer(I4B) :: i
+    character(len=LENPACKAGENAME) :: text = ''
+    integer(I4B), pointer :: intvar
+    type(CharacterStringType), dimension(:), &
+      pointer, contiguous :: acharstr1d !< variable for allocation
+    call mem_allocate(intvar, idt%shape, memoryPath)
+    intvar = 0
+    call parser%GetRemainingLine(line)
+    lloc = 1
+    call urdaux(intvar, parser%iuactive, iout, lloc, &
+                istart, istop, caux, line, text)
+    call mem_allocate(acharstr1d, LENAUXNAME, intvar, idt%mf6varname, memoryPath)
+    do i = 1, intvar
+      acharstr1d(i) = caux(i)
+    end do
+    deallocate (line)
+    deallocate (caux)
+    return
+  end subroutine load_auxvar_names
+
   !> @brief load type integer
   !<
   subroutine load_integer_type(parser, idt, memoryPath, iout)
@@ -492,6 +537,7 @@ contains
   !> @brief load type 1d integer
   !<
   subroutine load_integer1d_type(parser, idt, memoryPath, mshape, iout)
+    use SourceCommonModule, only: get_shape_from_string
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
     character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
@@ -539,6 +585,7 @@ contains
   !> @brief load type 2d integer
   !<
   subroutine load_integer2d_type(parser, idt, memoryPath, mshape, iout)
+    use SourceCommonModule, only: get_shape_from_string
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
     character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
@@ -582,6 +629,7 @@ contains
   !> @brief load type 3d integer
   !<
   subroutine load_integer3d_type(parser, idt, memoryPath, mshape, iout)
+    use SourceCommonModule, only: get_shape_from_string
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
     character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
@@ -645,6 +693,7 @@ contains
   !> @brief load type 1d double
   !<
   subroutine load_double1d_type(parser, idt, memoryPath, mshape, iout)
+    use SourceCommonModule, only: get_shape_from_string
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
     character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
@@ -691,6 +740,7 @@ contains
   !> @brief load type 2d double
   !<
   subroutine load_double2d_type(parser, idt, memoryPath, mshape, iout)
+    use SourceCommonModule, only: get_shape_from_string
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
     character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
@@ -734,6 +784,7 @@ contains
   !> @brief load type 3d double
   !<
   subroutine load_double3d_type(parser, idt, memoryPath, mshape, iout)
+    use SourceCommonModule, only: get_shape_from_string
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(InputParamDefinitionType), intent(in) :: idt !< input data type object describing this record
     character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
@@ -780,45 +831,6 @@ contains
     return
   end subroutine load_double3d_type
 
-  !> @brief routine for setting the model shape
-  !!
-  !! The model shape must be set in the memory manager because
-  !! individual packages need to know the shape of the arrays
-  !! to read.
-  !!
-  !<
-  subroutine set_model_shape(ftype, model_mempath, dis_mempath, model_shape)
-    use MemoryTypeModule, only: MemoryType
-    use MemoryManagerModule, only: get_from_memorylist
-    character(len=*), intent(in) :: ftype
-    character(len=*), intent(in) :: model_mempath
-    character(len=*), intent(in) :: dis_mempath
-    integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: model_shape
-    integer(I4B), pointer :: ndim1
-    integer(I4B), pointer :: ndim2
-    integer(I4B), pointer :: ndim3
-
-    select case (ftype)
-    case ('DIS6')
-      call mem_allocate(model_shape, 3, 'MODEL_SHAPE', model_mempath)
-      call mem_setptr(ndim1, 'NLAY', dis_mempath)
-      call mem_setptr(ndim2, 'NROW', dis_mempath)
-      call mem_setptr(ndim3, 'NCOL', dis_mempath)
-      model_shape = [ndim1, ndim2, ndim3]
-    case ('DISV6')
-      call mem_allocate(model_shape, 2, 'MODEL_SHAPE', model_mempath)
-      call mem_setptr(ndim1, 'NLAY', dis_mempath)
-      call mem_setptr(ndim2, 'NCPL', dis_mempath)
-      model_shape = [ndim1, ndim2]
-    case ('DISU6')
-      call mem_allocate(model_shape, 1, 'MODEL_SHAPE', model_mempath)
-      call mem_setptr(ndim1, 'NODES', dis_mempath)
-      model_shape = [ndim1]
-    end select
-
-    return
-  end subroutine set_model_shape
-
   subroutine get_layered_shape(mshape, nlay, layer_shape)
     integer(I4B), dimension(:), intent(in) :: mshape
     integer(I4B), intent(out) :: nlay
@@ -844,28 +856,5 @@ contains
     end if
 
   end subroutine get_layered_shape
-
-  subroutine get_shape_from_string(shape_string, array_shape, memoryPath)
-    character(len=*), intent(in) :: shape_string
-    integer(I4B), dimension(:), allocatable, intent(inout) :: array_shape
-    character(len=*), intent(in) :: memoryPath !< memorypath to put loaded information
-    integer(I4B) :: ndim
-    integer(I4B) :: i
-    integer(I4B), pointer :: int_ptr
-    character(len=16), dimension(:), allocatable :: array_shape_string
-    character(len=:), allocatable :: shape_string_copy
-
-    ! parse the string into multiple words
-    shape_string_copy = trim(shape_string)//' '
-    call ParseLine(shape_string_copy, ndim, array_shape_string)
-    allocate (array_shape(ndim))
-
-    ! find shape in memory manager and put into array_shape
-    do i = 1, ndim
-      call mem_setptr(int_ptr, array_shape_string(i), memoryPath)
-      array_shape(i) = int_ptr
-    end do
-
-  end subroutine get_shape_from_string
 
 end module LoadMf6FileModule

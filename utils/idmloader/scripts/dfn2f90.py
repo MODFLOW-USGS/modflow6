@@ -523,6 +523,7 @@ class IdmDfnSelector:
             self._write_master_defn(fh, defn="block", dtype="block")
             self._write_master_multi(fh)
             self._write_master_integration(fh)
+            self._write_master_component(fh)
             fh.write(f"end module IdmDfnSelectorModule\n")
 
     def _write_selectors(self):
@@ -732,7 +733,8 @@ class IdmDfnSelector:
             f"  public :: aggregate_definitions\n"
             f"  public :: block_definitions\n"
             f"  public :: idm_multi_package\n"
-            f"  public :: idm_integrated\n\n"
+            f"  public :: idm_integrated\n"
+            f"  public :: idm_component\n\n"
             f"contains\n\n"
         )
 
@@ -819,6 +821,31 @@ class IdmDfnSelector:
             f"    end select\n"
             f"    return\n"
             f"  end function idm_integrated\n\n"
+        )
+
+        fh.write(s)
+
+    def _write_master_component(self, fh=None):
+        s = (
+            f"  function idm_component(component) "
+            f"result(integrated)\n"
+            f"    character(len=*), intent(in) :: component\n"
+            f"    logical :: integrated\n"
+            f"    integrated = .false.\n"
+            f"    select case (component)\n"
+        )
+
+        for c in dfn_d:
+            s += (
+                f"    case ('{c}')\n"
+                f"      integrated = .true.\n"
+            )
+
+        s += (
+            f"    case default\n"
+            f"    end select\n"
+            f"    return\n"
+            f"  end function idm_component\n\n"
         )
 
         fh.write(s)

@@ -27,6 +27,7 @@ module IdmDfnSelectorModule
   public :: block_definitions
   public :: idm_multi_package
   public :: idm_integrated
+  public :: idm_component
 
 contains
 
@@ -116,5 +117,21 @@ contains
     end select
     return
   end function idm_integrated
+
+  function idm_component(component) result(integrated)
+    character(len=*), intent(in) :: component
+    logical :: integrated
+    integrated = .false.
+    select case (component)
+    case ('GWF')
+      integrated = .true.
+    case ('GWT')
+      integrated = .true.
+    case ('SIM')
+      integrated = .true.
+    case default
+    end select
+    return
+  end function idm_component
 
 end module IdmDfnSelectorModule
