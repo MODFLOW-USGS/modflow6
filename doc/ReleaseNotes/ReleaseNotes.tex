@@ -232,7 +232,7 @@ In addition to the issues shown here, a comprehensive and up-to-date list is ava
 
 % -------------------------------------------------
 \section{Distribution File}
-The following distribution file is for use on personal computers: \texttt{\modflowversion.zip}.  The distribution file is a compressed zip file. The following directory structure is incorporated in the zip file:
+The following distribution file is for use on personal computers: \texttt{\modflowversion\_[ostag].zip}.  The distribution file is a compressed zip file. The following directory structure is incorporated in the zip file:
 
 % folder structured created by python script
 \input{folder_struct.tex}
@@ -241,11 +241,11 @@ It is recommended that no user files are kept in the release directory.  If you 
 
 % -------------------------------------------------
 \section{Installation and Execution}
-There is no installation of MODFLOW~6 other than the requirement that \texttt{\modflowversion.zip} must be unzipped into a location where it can be accessed.  
+There is no installation of MODFLOW~6 other than the requirement that \texttt{\modflowversion\_[ostag].zip} must be unzipped into a location where it can be accessed.  
 
 To make the executable versions of MODFLOW~6 accessible from any directory, the directory containing the executables should be included in the PATH environment variable.  Also, if a prior release of MODFLOW~6 is installed on your system, the directory containing the executables for the prior release should be removed from the PATH environment variable.
 
-As an alternative, the executable file, named ``\texttt{mf6.exe}'' on Windows, in the \modflowversion{}/bin directory can be copied into a directory already included in the PATH environment variable.
+As an alternative, the executable file, named ``\texttt{mf6.exe}'' on Windows, in the \modflowversion\_[ostag]/bin directory can be copied into a directory already included in the PATH environment variable.
 
 To run MODFLOW~6, simply type \texttt{mf6} in a terminal window.  The current working directory must be set to a location where the model input files are located.  Upon execution, MODFLOW~6 will immediately look for file with the name \texttt{mfsim.nam} in the current working directory, and will terminate with an error if it does not find this file.
 
