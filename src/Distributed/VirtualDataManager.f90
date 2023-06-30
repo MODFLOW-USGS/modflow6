@@ -160,18 +160,21 @@ contains
     use ListsModule, only: basesolutionlist
     use VirtualDataListsModule
     use VirtualModelModule
+    use VirtualExchangeModule
     use SimVariablesModule, only: proc_id
     class(VirtualDataManagerType) :: this
     ! local
     integer(I4B) :: i, imod, isol, iexg
-    type(STLVecInt) :: halo_model_ids
+    type(STLVecInt) :: halo_model_ids, local_model_ids
     class(VirtualModelType), pointer :: vm
+    class(VirtualExchangeType), pointer :: ve
     class(VirtualSolutionType), pointer :: virt_sol
     class(SpatialModelConnectionType), pointer :: conn
     class(*), pointer :: sln_ptr
-    
+
     call halo_model_ids%init()
-    
+    call local_model_ids%init()
+
     ! add halo models to list with ids (unique)
     do isol = 1, basesolutionlist%Count()
       sln_ptr => basesolutionlist%GetItem(isol)
@@ -180,7 +183,7 @@ contains
         do iexg = 1, sln_ptr%exchangelist%Count()
           conn => get_smc_from_list(sln_ptr%exchangelist, iexg)
           if (.not. associated(conn)) cycle
-          
+
           ! add halo model ids to the list
           do i = 1, conn%halo_models%size
             call halo_model_ids%push_back_unique(conn%halo_models%at(i))
@@ -194,13 +197,31 @@ contains
       vm => get_virtual_model_from_list(virtual_model_list, imod)
       if (.not. vm%is_local) then
         if (.not. halo_model_ids%contains(vm%id)) then
-          write(*,*) proc_id, ': deactivating ', vm%id
+          !write(*,*) proc_id, ': deactivating model ', vm%id
           vm%is_active = .false.
         end if
       end if
     end do
 
+    !write(*,*) proc_id, ': halo ', halo_model_ids%get_values()
+
+    ! deactivate exchanges that are not local and outside halo
+    do iexg = 1, virtual_exchange_list%Count()
+      ve => get_virtual_exchange_from_list(virtual_exchange_list, iexg)
+      if (ve%v_model1%is_local .or. ve%v_model2%is_local) then
+        cycle
+      end if
+      if (halo_model_ids%contains(ve%v_model1%id) .and. &
+          halo_model_ids%contains(ve%v_model2%id)) then
+        cycle
+      end if
+
+      ve%is_active = .false.
+      !write(*,*) proc_id, ': deactivating exchange ', ve%id, ve%v_model1%id, ve%v_model2%id
+    end do
+
     call halo_model_ids%destroy()
+    call local_model_ids%destroy()
 
   end subroutine vds_set_halo
 
@@ -242,7 +263,8 @@ contains
       do isol = 1, this%nr_solutions
         write (outunit, '(a,i0,/)') "interface mape for solution ", &
           this%virtual_solutions(isol)%solution_id
-        call this%virtual_solutions(isol)%interface_map%print_interface(outunit)
+        virt_sol => this%virtual_solutions(isol)
+        call virt_sol%interface_map%print_interface(outunit)
       end do
       close (outunit)
     end if
