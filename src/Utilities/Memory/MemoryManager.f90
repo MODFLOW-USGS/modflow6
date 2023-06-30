@@ -2658,7 +2658,7 @@ contains
     !
     ! -- set table terms
     nterms = 2
-    nrows = 5
+    nrows = 6
     !
     ! -- set up table title
     title = 'MEMORY MANAGER TOTAL STORAGE BY DATA TYPE, IN '//trim(cunits)
@@ -2701,6 +2701,11 @@ contains
     call memtab%print_separator()
     smb = bytes * fact
     call memtab%add_term('Total')
+    call memtab%add_term(smb)
+    !
+    ! -- Virtual memory
+    smb = calc_virtual_mem() * fact
+    call memtab%add_term('Virtual')
     call memtab%add_term(smb)
     !
     ! -- deallocate table
@@ -2832,6 +2837,22 @@ contains
     call mem_cleanup_table()
 
   end subroutine mem_print_detailed
+
+  function calc_virtual_mem() result(vmem_size)
+    real(DP) :: vmem_size
+    ! local
+    integer(I4B) :: i
+    type(MemoryType), pointer :: mt
+
+    vmem_size = DZERO
+    do i = 1, memorylist%count()
+      mt => memorylist%Get(i)
+      if (index(mt%path, "__P") == 1) then
+        vmem_size = mt%element_size * mt%isize + vmem_size
+      end if
+    end do
+
+  end function calc_virtual_mem
 
   !> @brief Deallocate memory in the memory manager
   !<

@@ -161,19 +161,16 @@ contains
     use VirtualDataListsModule
     use VirtualModelModule
     use VirtualExchangeModule
-    use SimVariablesModule, only: proc_id
     class(VirtualDataManagerType) :: this
     ! local
     integer(I4B) :: i, imod, isol, iexg
-    type(STLVecInt) :: halo_model_ids, local_model_ids
+    type(STLVecInt) :: halo_model_ids
     class(VirtualModelType), pointer :: vm
     class(VirtualExchangeType), pointer :: ve
-    class(VirtualSolutionType), pointer :: virt_sol
     class(SpatialModelConnectionType), pointer :: conn
     class(*), pointer :: sln_ptr
 
     call halo_model_ids%init()
-    call local_model_ids%init()
 
     ! add halo models to list with ids (unique)
     do isol = 1, basesolutionlist%Count()
@@ -197,13 +194,10 @@ contains
       vm => get_virtual_model_from_list(virtual_model_list, imod)
       if (.not. vm%is_local) then
         if (.not. halo_model_ids%contains(vm%id)) then
-          !write(*,*) proc_id, ': deactivating model ', vm%id
           vm%is_active = .false.
         end if
       end if
     end do
-
-    !write(*,*) proc_id, ': halo ', halo_model_ids%get_values()
 
     ! deactivate exchanges that are not local and outside halo
     do iexg = 1, virtual_exchange_list%Count()
@@ -217,11 +211,9 @@ contains
       end if
 
       ve%is_active = .false.
-      !write(*,*) proc_id, ': deactivating exchange ', ve%id, ve%v_model1%id, ve%v_model2%id
     end do
 
     call halo_model_ids%destroy()
-    call local_model_ids%destroy()
 
   end subroutine vds_set_halo
 
@@ -303,13 +295,16 @@ contains
     integer(I4B) :: i
     class(VirtualDataContainerType), pointer :: vdc
 
-    ! prepare all virtual data for this stage
+    ! prepare all virtual data for this stage,
+    ! cycle inactive to avoid redundant mem allocs
     do i = 1, virtual_model_list%Count()
       vdc => get_vdc_from_list(virtual_model_list, i)
+      if (.not. vdc%is_active) cycle
       call vdc%prepare_stage(stage)
     end do
     do i = 1, virtual_exchange_list%Count()
       vdc => get_vdc_from_list(virtual_exchange_list, i)
+      if (.not. vdc%is_active) cycle
       call vdc%prepare_stage(stage)
     end do
 
