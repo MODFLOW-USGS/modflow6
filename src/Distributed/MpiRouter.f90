@@ -129,7 +129,7 @@ contains
       call this%message_builder%set_monitor(this%imon)
 
       ! write initial info
-      write (this%imon, '(a,/)') "initialize MPI Router:"
+      write (this%imon, '(a,/)') ">> initialize MPI Router:"
       write (this%imon, '(2x,a,i0)') "process id: ", proc_id
       write (this%imon, '(2x,a,i0)') "nr. of processes: ", nr_procs
       write (this%imon, '(2x,a,i0)') "nr. of models: ", nr_models
@@ -138,6 +138,7 @@ contains
       do i = 1, nr_models
         write (this%imon, '(4x,2i8)') i, this%model_proc_ids(i)
       end do
+      write (this%imon, '(a,/)') "<< initialize done"
     end if
 
   end subroutine mr_initialize
@@ -175,8 +176,7 @@ contains
     integer(I4B) :: stage
 
     if (this%enable_monitor) then
-      write (this%imon, '(/,a)') "routing all"
-      write (this%imon, '(2a)') "routing stage: ", STG_TO_STR(stage)
+      write (this%imon, '(/,2a)') ">> routing all: ", STG_TO_STR(stage)
     end if
 
     ! route all
@@ -185,7 +185,7 @@ contains
     call this%deactivate()
 
     if (this%enable_monitor) then
-      write (this%imon, '(2a,/)') "end routing all: ", STG_TO_STR(stage)
+      write (this%imon, '(a,/)') "<< end routing all"
       !call mem_print_detailed(this%imon)
     end if
 
@@ -200,8 +200,8 @@ contains
     integer(I4B) :: stage
 
     if (this%enable_monitor) then
-      write (this%imon, '(/,a,i0)') "routing solution: ", virtual_sol%solution_id
-      write (this%imon, '(2a)') "routing stage: ", STG_TO_STR(stage)
+      write (this%imon, '(/,a,i0,2a)') ">> routing solution: ", &
+        virtual_sol%solution_id, ", ", STG_TO_STR(stage)
     end if
 
     ! route for this solution
@@ -210,7 +210,7 @@ contains
     call this%deactivate()
 
     if (this%enable_monitor) then
-      write (this%imon, '(2a)') "end routing solution: ", STG_TO_STR(stage)
+      write (this%imon, '(a)') "<< end routing solution"
     end if
 
   end subroutine mr_route_sln

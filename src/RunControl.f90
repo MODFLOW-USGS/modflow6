@@ -22,6 +22,7 @@ module RunControlModule
     procedure :: finish => ctrl_finish
     ! private
     procedure, private :: init_handler
+    procedure, private :: after_con_cr_handler
     procedure, private :: before_con_df_handler
     procedure, private :: after_con_df_handler
     procedure, private :: destroy
@@ -69,6 +70,8 @@ contains
 
     if (stage == STG_BFR_MDL_DF) then
       call this%init_handler()
+    else if (stage == STG_AFT_CON_CR) then
+      call this%after_con_cr_handler()
     else if (stage == STG_BFR_CON_DF) then
       call this%before_con_df_handler()
     else if (stage == STG_AFT_CON_DF) then
@@ -89,6 +92,15 @@ contains
     call this%mapper%init()
 
   end subroutine init_handler
+
+  !> @brief Actions after connections have been created
+  !<
+  subroutine after_con_cr_handler(this)
+    class(RunControlType), target :: this
+
+    call this%virtual_data_mgr%set_halo()
+
+  end subroutine after_con_cr_handler
 
   !> @brief Actions before defining the connections
   !!
