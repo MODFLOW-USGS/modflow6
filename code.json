@@ -1,6 +1,6 @@
 [
     {
-        "status": "Release Candidate",
+        "status": "Preliminary",
         "languages": [
             "Fortran2008"
         ],
@@ -18,9 +18,9 @@
             "email": "langevin@usgs.gov"
         },
         "laborHours": -1,
-        "version": "6.5.0",
+        "version": "6.4.2+",
         "date": {
-            "metadataLastUpdated": "2022-12-09"
+            "metadataLastUpdated": "2023-06-29"
         },
         "organization": "U.S. Geological Survey",
         "permissions": {

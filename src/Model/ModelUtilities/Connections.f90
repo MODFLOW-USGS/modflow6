@@ -407,23 +407,23 @@ contains
                          this%nja, iout, 0)
           lname(2) = .true.
         case default
-          write (errmsg, '(4x,a,a)') &
-            'UNKNOWN CONNECTIONDATA TAG: ', trim(keyword)
+          write (errmsg, '(a,a)') &
+            'Unknown CONNECTIONDATA tag: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
       end do
       write (iout, '(1x,a)') 'END PROCESSING CONNECTIONDATA'
     else
-      call store_error('REQUIRED CONNECTIONDATA BLOCK NOT FOUND.')
+      call store_error('Required CONNECTIONDATA block not found.')
       call this%parser%StoreErrorUnit()
     end if
     !
     ! -- verify all items were read
     do n = 1, nname
       if (.not. lname(n)) then
-        write (errmsg, '(1x,a,a)') &
-          'REQUIRED INPUT WAS NOT SPECIFIED: ', aname(n)
+        write (errmsg, '(a,a)') &
+          'Required input was not specified: ', aname(n)
         call store_error(errmsg)
       end if
     end do

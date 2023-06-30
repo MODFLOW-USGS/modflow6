@@ -224,7 +224,7 @@ contains
     ! -- store error unit
     inquire (unit=iunit, name=fname)
     write (errmsg, '(3a)') &
-      "ERROR OCCURRED WHILE READING FILE '", trim(adjustl(fname)), "'"
+      "Error occurred while reading file '", trim(adjustl(fname)), "'"
     call sim_uniterrors%store_message(errmsg)
     !
     ! -- terminate the simulation

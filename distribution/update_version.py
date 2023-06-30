@@ -112,7 +112,6 @@ class Version(NamedTuple):
         return cls(major=vmajor, minor=vminor, patch=vpatch, label=vlabel)
 
 
-
 _approved_fmtdisclaimer = '''  character(len=*), parameter :: FMTDISCLAIMER = &
     "(/,&
     &'This software has been approved for release by the U.S. Geological ',/,&
@@ -180,9 +179,7 @@ def log_update(path, version: Version):
     print(f"Updated {path} with version {version}")
 
 
-def update_version_txt_and_py(
-    version: Version, timestamp: datetime
-):
+def update_version_txt_and_py(version: Version, timestamp: datetime):
     with open(version_file_path, "w") as f:
         f.write(
             f"# {project_name} version file automatically "
@@ -193,7 +190,9 @@ def update_version_txt_and_py(
         f.write(f"major = {version.major}\n")
         f.write(f"minor = {version.minor}\n")
         f.write(f"micro = {version.patch}\n")
-        f.write("label = " + (("'" + version.label + "'") if version.label else "''") + "\n")
+        f.write(
+            "label = " + (("'" + version.label + "'") if version.label else "''") + "\n"
+        )
         f.write("__version__ = '{:d}.{:d}.{:d}'.format(major, minor, micro)\n")
         f.write("if label:\n")
         f.write("\t__version__ += '{}{}'.format(__version__, label)")
@@ -215,9 +214,7 @@ def update_meson_build(version: Version):
     log_update(path, version)
 
 
-def update_version_tex(
-    version: Version, timestamp: datetime
-):
+def update_version_tex(version: Version, timestamp: datetime):
     path = project_root_path / "doc" / "version.tex"
     with open(path, "w") as f:
         line = "\\newcommand{\\modflowversion}{mf" + f"{str(version)}" + "}"
@@ -238,7 +235,7 @@ def update_version_f90(
     version: Optional[Version],
     timestamp: datetime,
     approved: bool = False,
-    developmode: bool = True
+    developmode: bool = True,
 ):
     path = project_root_path / "src" / "Utilities" / "version.f90"
     lines = open(path, "r").read().splitlines()
@@ -269,7 +266,10 @@ def update_version_f90(
                 fmat_tstmp = timestamp.strftime("%m/%d/%Y")
                 label_clause = version_label if version_label else ""
                 label_clause += " (preliminary)" if not approved else ""
-                line = line.rpartition("::")[0] + f":: VERSIONTAG = '{label_clause} {fmat_tstmp}'"
+                line = (
+                    line.rpartition("::")[0]
+                    + f":: VERSIONTAG = '{label_clause} {fmat_tstmp}'"
+                )
             elif ":: FMTDISCLAIMER =" in line:
                 line = get_disclaimer(approved, formatted=True)
                 skip = True
@@ -277,9 +277,7 @@ def update_version_f90(
     log_update(path, version)
 
 
-def update_readme_and_disclaimer(
-    version: Version, approved: bool = False
-):
+def update_readme_and_disclaimer(version: Version, approved: bool = False):
     disclaimer = get_disclaimer(approved, formatted=False)
     readme_path = str(project_root_path / "README.md")
     readme_lines = open(readme_path, "r").read().splitlines()
@@ -339,7 +337,7 @@ def update_version(
     version: Version = None,
     timestamp: datetime = datetime.now(),
     approved: bool = False,
-    developmode: bool = True
+    developmode: bool = True,
 ):
     """
     Update version information stored in version.txt in the project root,
@@ -379,9 +377,20 @@ _current_version = Version.from_file(version_file_path)
 @pytest.mark.skip(reason="reverts repo files on cleanup, tread carefully")
 @pytest.mark.parametrize(
     "version",
-    [None,
-     Version(major=_initial_version.major, minor=_initial_version.minor, patch=_initial_version.patch),
-     Version(major=_initial_version.major, minor=_initial_version.minor, patch=_initial_version.patch, label="rc")],
+    [
+        None,
+        Version(
+            major=_initial_version.major,
+            minor=_initial_version.minor,
+            patch=_initial_version.patch,
+        ),
+        Version(
+            major=_initial_version.major,
+            minor=_initial_version.minor,
+            patch=_initial_version.patch,
+            label="rc",
+        ),
+    ],
 )
 @pytest.mark.parametrize("approved", [True, False])
 @pytest.mark.parametrize("developmode", [True, False])
@@ -394,7 +403,7 @@ def test_update_version(version, approved, developmode):
             timestamp=timestamp,
             version=version,
             approved=approved,
-            developmode=developmode
+            developmode=developmode,
         )
         updated = Version.from_file(version_file_path)
 
@@ -419,11 +428,13 @@ def test_update_version(version, approved, developmode):
                 assert updated.label == version.label
         if version.label is not None:
             assert updated.label == _initial_version
-        
+
         # check IDEVELOPMODE was set correctly
         version_f90_path = project_root_path / "src" / "Utilities" / "version.f90"
         lines = version_f90_path.read_text().splitlines()
-        assert any(f"IDEVELOPMODE = {1 if developmode else 0}" in line for line in lines)
+        assert any(
+            f"IDEVELOPMODE = {1 if developmode else 0}" in line for line in lines
+        )
 
         # check disclaimer has appropriate language
         disclaimer_path = project_root_path / "DISCLAIMER.md"
@@ -459,7 +470,7 @@ if __name__ == "__main__":
             may not be provided. Likewise, if any of the latter are provided, the
             version number must not be specified.
             """
-        )
+        ),
     )
     parser.add_argument(
         "-v",
@@ -538,5 +549,5 @@ if __name__ == "__main__":
             version=version,
             timestamp=datetime.now(),
             approved=args.approved,
-            developmode=not args.releasemode
+            developmode=not args.releasemode,
         )

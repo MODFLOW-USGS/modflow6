@@ -400,7 +400,7 @@ contains
 
     ! abort on errors
     if (count_errors() > 0) then
-      write (errmsg, '(1x,a)') 'Errors occurred while processing exchange(s)'
+      write (errmsg, '(a)') 'Errors occurred while processing exchange(s)'
       call ustop()
     end if
 
@@ -433,7 +433,7 @@ contains
 
     ! GNC not allowed
     if (gwfEx%ingnc /= 0) then
-      write (errmsg, '(1x,2a)') 'Ghost node correction not supported '// &
+      write (errmsg, '(2a)') 'Ghost node correction not supported '// &
         'with interface model for exchange', &
         trim(gwfEx%name)
       call store_error(errmsg)
@@ -441,7 +441,7 @@ contains
 
     if ((gwfModel1%inbuy > 0 .and. gwfModel2%inbuy == 0) .or. &
         (gwfModel1%inbuy == 0 .and. gwfModel2%inbuy > 0)) then
-      write (errmsg, '(1x,2a)') 'Buoyancy package should be enabled/disabled '// &
+      write (errmsg, '(2a)') 'Buoyancy package should be enabled/disabled '// &
         'simultaneously in models connected with the '// &
         'interface model for exchange ', &
         trim(gwfEx%name)
@@ -452,7 +452,7 @@ contains
     if (gwfModel1%inbuy > 0 .and. gwfModel2%inbuy > 0) then
       ! does not work with XT3D
       if (this%iXt3dOnExchange > 0) then
-        write (errmsg, '(1x,2a)') 'Connecting models with BUY package not '// &
+        write (errmsg, '(2a)') 'Connecting models with BUY package not '// &
           'allowed with XT3D enabled on exchange ', &
           trim(gwfEx%name)
         call store_error(errmsg)
@@ -472,7 +472,7 @@ contains
       end if
 
       if (.not. compatible) then
-        write (errmsg, '(1x,6a)') 'Buoyancy packages in model ', &
+        write (errmsg, '(6a)') 'Buoyancy packages in model ', &
           trim(gwfEx%model1%name), ' and ', &
           trim(gwfEx%model2%name), &
           ' should be equivalent to construct an '// &

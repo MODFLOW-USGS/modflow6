@@ -873,8 +873,8 @@ contains
               this%ibudgetout
             found = .true.
           else
-            call store_error('OPTIONAL BUDGET KEYWORD MUST &
-                             &BE FOLLOWED BY FILEOUT')
+            call store_error('Optional BUDGET keyword must &
+                             &be followed by FILEOUT')
           end if
         case ('BUDGETCSV')
           call this%parser%GetStringCaps(keyword)
@@ -886,7 +886,7 @@ contains
             write (this%iout, fmtistbin) 'BUDGET CSV', trim(adjustl(fname)), &
               this%ibudcsv
           else
-            call store_error('OPTIONAL BUDGETCSV KEYWORD MUST BE FOLLOWED BY &
+            call store_error('Optional BUDGETCSV keyword must be followed by &
               &FILEOUT')
           end if
         case ('SORBTION', 'SORPTION')
@@ -899,7 +899,7 @@ contains
           this%idcy = 2
           write (this%iout, fmtidcy2)
         case default
-          write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN IST OPTION: ', &
+          write (errmsg, '(a,a)') 'Unknown IST option: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -1032,14 +1032,14 @@ contains
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         case default
-          write (errmsg, '(4x,a,a)') 'Unknown GRIDDATA tag: ', trim(keyword)
+          write (errmsg, '(a,a)') 'Unknown GRIDDATA tag: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
       end do
       write (this%iout, '(1x,a)') 'END PROCESSING GRIDDATA'
     else
-      write (errmsg, '(1x,a)') 'Required GRIDDATA block not found.'
+      write (errmsg, '(a)') 'Required GRIDDATA block not found.'
       call store_error(errmsg)
       call this%parser%StoreErrorUnit()
     end if
@@ -1047,12 +1047,12 @@ contains
     ! -- Check for required sorption variables
     if (this%isrb > 0) then
       if (.not. lname(1)) then
-        write (errmsg, '(1x,a)') 'Sorption is active but BULK_DENSITY &
+        write (errmsg, '(a)') 'Sorption is active but BULK_DENSITY &
           &not specified.  BULK_DENSITY must be specified in griddata block.'
         call store_error(errmsg)
       end if
       if (.not. lname(2)) then
-        write (errmsg, '(1x,a)') 'Sorption is active but distribution &
+        write (errmsg, '(a)') 'Sorption is active but distribution &
           &coefficient not specified.  DISTCOEF must be specified in &
           &GRIDDATA block.'
         call store_error(errmsg)
@@ -1073,7 +1073,7 @@ contains
     ! -- Check for required decay/production rate coefficients
     if (this%idcy > 0) then
       if (.not. lname(3)) then
-        write (errmsg, '(1x,a)') 'First- or zero-order decay is &
+        write (errmsg, '(a)') 'First- or zero-order decay is &
           &active but the first rate coefficient was not specified.  &
           &Decay must be specified in GRIDDATA block.'
         call store_error(errmsg)
@@ -1091,12 +1091,12 @@ contains
       end if
     else
       if (lname(3)) then
-        write (this%iout, '(1x,a)') 'Warning.  First- or zero-orer decay &
+        write (this%iout, '(1x,a)') 'Warning.  First- or zero-order decay &
           &is not active but DECAY was specified.  DECAY will &
           &have no affect on simulation results.'
       end if
       if (lname(4)) then
-        write (this%iout, '(1x,a)') 'Warning.  First- or zero-orer decay &
+        write (this%iout, '(1x,a)') 'Warning.  First- or zero-order decay &
           &is not active but DECAY_SORBED was specified.  &
           &DECAY_SORBED will have no affect on simulation &
           &results.'
@@ -1111,19 +1111,19 @@ contains
         &Setting CIM to zero.'
     end if
     if (.not. lname(6)) then
-      write (errmsg, '(1x,a)') 'Dual domain is active but dual &
+      write (errmsg, '(a)') 'Dual domain is active but dual &
         &domain mass transfer rate (ZETAIM) was not specified.  ZETAIM &
         &must be specified in GRIDDATA block.'
       call store_error(errmsg)
     end if
     if (.not. lname(7)) then
-      write (errmsg, '(1x,a)') 'Dual domain is active but &
+      write (errmsg, '(a)') 'Dual domain is active but &
         &immobile domain POROSITY was not specified.  POROSITY &
         &must be specified in GRIDDATA block.'
       call store_error(errmsg)
     end if
     if (.not. lname(8)) then
-      write (errmsg, '(1x,a)') 'Dual domain is active but &
+      write (errmsg, '(a)') 'Dual domain is active but &
         &immobile domain VOLFRAC was not specified.  VOLFRAC &
         &must be specified in GRIDDATA block. This is a new &
         &requirement for MODFLOW versions later than version &

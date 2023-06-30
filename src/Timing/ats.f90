@@ -1,6 +1,5 @@
 ! Outstanding issues for future work:
 !   CSUB state advance/restore
-!   Ensure ATS not specified for steady state period
 !   Add courant time step constraint and other stability controls for GWT model
 module AdaptiveTimeStepModule
 
@@ -221,7 +220,7 @@ contains
         call parser%GetStringCaps(keyword)
         select case (keyword)
         case default
-          write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN ATS OPTION: ', &
+          write (errmsg, '(a,a)') 'Unknown ATS option: ', &
             trim(keyword)
           call store_error(errmsg)
           call parser%StoreErrorUnit()
@@ -265,7 +264,7 @@ contains
           maxats = parser%GetInteger()
           write (iout, fmtmaxats) maxats
         case default
-          write (errmsg, '(4x,a,a)') '****ERROR. UNKNOWN ATS DIMENSION: ', &
+          write (errmsg, '(a,a)') 'Unknown ATS dimension: ', &
             trim(keyword)
           call store_error(errmsg)
           call parser%StoreErrorUnit()
@@ -273,7 +272,7 @@ contains
       end do
       write (iout, '(1x,a)') 'END OF ATS DIMENSIONS'
     else
-      write (errmsg, '(1x,a)') 'ERROR.  REQUIRED DIMENSIONS BLOCK NOT FOUND.'
+      write (errmsg, '(a)') 'Required DIMENSIONS block not found.'
       call store_error(errmsg)
       call parser%StoreErrorUnit()
     end if
@@ -325,7 +324,7 @@ contains
       end if
       write (iout, '(1x,a)') 'END READING ATS PERIODDATA'
     else
-      write (errmsg, '(1x,a)') 'ERROR.  REQUIRED PERIODDATA BLOCK NOT FOUND.'
+      write (errmsg, '(a)') 'Required PERIODDATA block not found.'
       call store_error(errmsg)
       call parser%StoreErrorUnit()
     end if
@@ -415,62 +414,62 @@ contains
       ! -- check iperats
       if (iperats(n) < 1) then
         write (errmsg, '(a, i0, a, i0)') &
-          'IPERATS MUST BE GREATER THAN ZERO.  FOUND ', iperats(n), &
-          ' FOR ATS PERIODDATA RECORD ', n
+          'IPERATS must be greater than zero.  Found ', iperats(n), &
+          ' for ATS PERIODDATA record ', n
         call store_error(errmsg)
       end if
       if (iperats(n) > nper) then
         write (warnmsg, '(a, i0, a, i0)') &
-          'IPERATS GREATER THAN NPER.  FOUND ', iperats(n), &
-          ' FOR ATS PERIODDATA RECORD ', n
+          'IPERATS greater than NPER.  Found ', iperats(n), &
+          ' for ATS PERIODDATA record ', n
         call store_warning(warnmsg)
       end if
       !
       ! -- check dt0
       if (dt0(n) < DZERO) then
         write (errmsg, '(a, g15.7, a, i0)') &
-          'DT0 MUST BE >= ZERO.  FOUND ', dt0(n), &
-          ' FOR ATS PERIODDATA RECORD ', n
+          'DT0 must be >= zero.  Found ', dt0(n), &
+          ' for ATS PERIODDATA record ', n
         call store_error(errmsg)
       end if
       !
       ! -- check dtmin
       if (dtmin(n) <= DZERO) then
         write (errmsg, '(a, g15.7, a, i0)') &
-          'DTMIN MUST BE > ZERO.  FOUND ', dtmin(n), &
-          ' FOR ATS PERIODDATA RECORD ', n
+          'DTMIN must be > zero.  Found ', dtmin(n), &
+          ' for ATS PERIODDATA record ', n
         call store_error(errmsg)
       end if
       !
       ! -- check dtmax
       if (dtmax(n) <= DZERO) then
         write (errmsg, '(a, g15.7, a, i0)') &
-          'DTMAX MUST BE > ZERO.  FOUND ', dtmax(n), &
-          ' FOR ATS PERIODDATA RECORD ', n
+          'DTMAX must be > zero.  Found ', dtmax(n), &
+          ' for ATS PERIODDATA record ', n
         call store_error(errmsg)
       end if
       !
       ! -- check dtmin <= dtmax
       if (dtmin(n) > dtmax(n)) then
         write (errmsg, '(a, 2g15.7, a, i0)') &
-          'DTMIN MUST BE < DTMAX.  FOUND ', dtmin(n), dtmax(n), &
-          ' FOR ATS PERIODDATA RECORD ', n
+          'DTMIN must be < dtmax.  Found ', dtmin(n), dtmax(n), &
+          ' for ATS PERIODDATA record ', n
         call store_error(errmsg)
       end if
       !
       ! -- check dtadj
       if (dtadj(n) .ne. DZERO .and. dtadj(n) < DONE) then
         write (errmsg, '(a, g15.7, a, i0)') &
-          'DTADJ MUST BE 0 or >= 1.0.  FOUND ', dtadj(n), &
-          ' FOR ATS PERIODDATA RECORD ', n
+          'DTADJ must be 0 or >= 1.0.  Found ', dtadj(n), &
+          ' for ATS PERIODDATA record ', n
         call store_error(errmsg)
       end if
       !
       ! -- check dtfailadj
       if (dtfailadj(n) .ne. DZERO .and. dtfailadj(n) < DONE) then
         write (errmsg, '(a, g15.7, a, i0)') &
-          'DTFAILADJ MUST BE 0 or >= 1.0.  FOUND ', dtfailadj(n), &
-          ' FOR ATS PERIODDATA RECORD ', n
+          'DTFAILADJ must be 0 or >= 1.0.  Found ', dtfailadj(n), &
+          ' for ATS PERIODDATA record ', n
         call store_error(errmsg)
       end if
 

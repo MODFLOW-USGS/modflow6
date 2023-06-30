@@ -122,7 +122,7 @@ contains
         indx(j) = ia
         jstack = jstack + 2
         if (jstack > nstack) then
-          write (errmsg, '(4x,a,3(1x,a))') &
+          write (errmsg, '(a,3(1x,a))') &
             'JSTACK > NSTACK IN SortModule::qsort'
           call store_error(errmsg, terminate=.TRUE.)
         end if
@@ -257,7 +257,7 @@ contains
         indx(j) = ia
         jstack = jstack + 2
         if (jstack > nstack) then
-          write (errmsg, '(4x,a,3(1x,a))') &
+          write (errmsg, '(a,3(1x,a))') &
             'JSTACK > NSTACK IN SortModule::qsort'
           call store_error(errmsg, terminate=.TRUE.)
         end if

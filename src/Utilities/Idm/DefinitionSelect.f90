@@ -51,7 +51,7 @@ contains
     end do
     !
     if (.not. associated(idt)) then
-      write (errmsg, '(1x,a,a,a,a,a)') &
+      write (errmsg, '(a,a,a,a,a)') &
         'Input file tag not found: "', trim(tagname), &
         '" in block "', trim(blockname), &
         '".'
@@ -88,7 +88,7 @@ contains
     end do
     !
     if (.not. associated(idt)) then
-      write (errmsg, '(1x,a,a,a,a,a,a,a)') &
+      write (errmsg, '(a,a,a,a,a,a,a)') &
         'Idm aggregate definition not found: ', trim(blockname), &
         '. Component="', trim(component_type), &
         '", subcomponent="', trim(subcomponent_type), '".'

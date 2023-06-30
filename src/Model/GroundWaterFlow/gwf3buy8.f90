@@ -36,7 +36,7 @@ module GwfBuyModule
     real(DP), pointer :: denseref => null() ! reference fluid density
     real(DP), dimension(:), pointer, contiguous :: dense => null() ! density
     real(DP), dimension(:), pointer, contiguous :: concbuy => null() ! concentration array if specified in buy package
-    real(DP), dimension(:), pointer, contiguous :: elev => null() ! cell center elevation (optional; if not specified, hten use (top+bot)/2)
+    real(DP), dimension(:), pointer, contiguous :: elev => null() ! cell center elevation (optional; if not specified, then use (top+bot)/2)
     integer(I4B), dimension(:), pointer :: ibound => null() ! store pointer to ibound
 
     integer(I4B), pointer :: nrhospecies => null() ! number of species used in equation of state to calculate density
@@ -300,7 +300,7 @@ contains
     integer(I4B) :: i
     ! -- formats
     character(len=*), parameter :: fmtc = &
-      "('Buoyancy Package does not have have a concentration set &
+      "('Buoyancy Package does not have a concentration set &
        &for species ',i0,'. One or more model names may be specified &
        &incorrectly in the PACKAGEDATA block or a gwf-gwt exchange may need &
        &to be activated.')"
@@ -1146,7 +1146,7 @@ contains
           this%nrhospecies = this%parser%GetInteger()
           write (this%iout, '(4x,a,i0)') 'NRHOSPECIES = ', this%nrhospecies
         case default
-          write (errmsg, '(4x,a,a)') &
+          write (errmsg, '(a,a)') &
             'Unknown BUY dimension: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
@@ -1688,7 +1688,7 @@ contains
             call store_error(errmsg)
           end if
         case default
-          write (errmsg, '(4x,a,a)') '****Error. Unknown BUY option: ', &
+          write (errmsg, '(a,a)') 'Unknown BUY option: ', &
             trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()

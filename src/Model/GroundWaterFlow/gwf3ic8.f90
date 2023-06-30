@@ -178,7 +178,7 @@ contains
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
         case default
-          write (errmsg, '(4x,a,a)') 'Unknown IC option: ', trim(keyword)
+          write (errmsg, '(a,a)') 'Unknown IC option: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select
@@ -230,7 +230,7 @@ contains
                                         this%parser%iuactive, this%strt, &
                                         aname(1))
         case default
-          write (errmsg, '(4x,a,a)') 'Unknown GRIDDATA tag: ', trim(keyword)
+          write (errmsg, '(a,a)') 'Unknown GRIDDATA tag: ', trim(keyword)
           call store_error(errmsg)
           call this%parser%StoreErrorUnit()
         end select

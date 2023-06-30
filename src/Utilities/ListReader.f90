@@ -344,7 +344,7 @@ contains
 
         ! -- Read remainder of record
         read (this%inlist, iostat=this%ierr) (this%rlist(jj, ii), jj=1, ldim), &
-          (this%auxvar(ii, jj), jj=1, naux)
+          (this%auxvar(jj, ii), jj=1, naux)
         if (this%ierr /= 0) then
           inquire (unit=this%inlist, name=fname)
           write (errmsg, fmtlsterronly) trim(adjustl(fname)), this%inlist
@@ -407,10 +407,10 @@ contains
     character(len=LINELENGTH) :: fname
     ! -- formats
     character(len=*), parameter :: fmtmxlsterronly = &
-      "('***ERROR READING LIST. &
-       &THE NUMBER OF RECORDS ENCOUNTERED EXCEEDS THE MAXIMUM NUMBER "// &
-       "OF RECORDS.  TRY INCREASING MAXBOUND FOR THIS LIST."// &
-       "  NUMBER OF RECORDS: ',I0,' MAXBOUND: ',I0)"
+      "('Error reading list. The number of records encountered exceeds &
+       &the maximum number of records. Number of records found is ',I0,&
+       &' but MAXBOUND is ', I0, '. Try increasing MAXBOUND for this list. &
+       &Error occurred reading the following line: ', a, 5x, '>>> ', a)"
 ! ------------------------------------------------------------------------------
     !
     ! -- determine array sizes
@@ -449,9 +449,8 @@ contains
       ! -- Check range
       if (ii > mxlist) then
         inquire (unit=this%inlist, name=fname)
-        write (errmsg, fmtmxlsterronly) ii, mxlist
-        call store_error(errmsg)
-        errmsg = 'Error occurred reading line: '//trim(this%line)
+        write (errmsg, fmtmxlsterronly) &
+          ii, mxlist, new_line("A"), trim(this%line)
         call store_error(errmsg)
         call store_error_unit(this%inlist)
       end if

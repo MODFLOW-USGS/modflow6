@@ -205,19 +205,19 @@ contains
         case ('NROW')
           n = parser%GetInteger()
           if (n < 1) then
-            write (errmsg, '(a)') 'TABLE NROW MUST BE > 0'
+            write (errmsg, '(a)') 'Table NROW must be > 0'
             call store_error(errmsg)
           end if
         case ('NCOL')
           j = parser%GetInteger()
           jmin = 2
           if (j < jmin) then
-            write (errmsg, '(a,1x,i0)') 'TABLE NCOL MUST BE >= ', jmin
+            write (errmsg, '(a,1x,i0)') 'Table NCOL must be >= ', jmin
             call store_error(errmsg)
           end if
         case default
           write (errmsg, '(a,a)') &
-            'UNKNOWN '//trim(adjustl(tag))//' DIMENSIONS KEYWORD: ', &
+            'UNKNOWN '//trim(adjustl(tag))//' DIMENSIONS keyword: ', &
             trim(keyword)
           call store_error(errmsg)
         end select
@@ -227,18 +227,18 @@ contains
           'END OF '//trim(adjustl(tag))//' DIMENSIONS'
       end if
     else
-      call store_error('REQUIRED DIMENSIONS BLOCK NOT FOUND.')
+      call store_error('Required DIMENSIONS block not found.')
     end if
     !
     ! -- check that ncol and nrow have been specified
     if (n < 1) then
       write (errmsg, '(a)') &
-        'NROW NOT SPECIFIED IN THE TABLE DIMENSIONS BLOCK'
+        'NROW not specified in the table DIMENSIONS block'
       call store_error(errmsg)
     end if
     if (j < 1) then
       write (errmsg, '(a)') &
-        'NCOL NOT SPECIFIED IN THE TABLE DIMENSIONS BLOCK'
+        'NCOL not specified in the table DIMENSIONS block'
       call store_error(errmsg)
     end if
     !
@@ -301,13 +301,13 @@ contains
             'END OF '//trim(adjustl(tag))//' TABLE'
         end if
       else
-        call store_error('REQUIRED TABLE BLOCK NOT FOUND.')
+        call store_error('Required TABLE block not found.')
       end if
       !
       ! -- error condition if number of rows read are not equal to nrow
       if (ipos /= this%npoints(irch)) then
         write (errmsg, '(a,1x,i0,1x,a,1x,i0,1x,a)') &
-          'NROW SET TO', this%npoints(irch), 'BUT', ipos, 'ROWS WERE READ'
+          'NROW set to', this%npoints(irch), 'but', ipos, 'rows were read'
         call store_error(errmsg)
       end if
     end if

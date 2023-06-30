@@ -23,6 +23,11 @@ on:
         required: false
         type: boolean
         default: false
+      linux_version:
+        description: 'Linux runner image to build binaries on.'
+        required: false
+        type: string
+        default: 'ubuntu-20.04'
       run_tests:
         description: Run tests after building binaries.'
         required: false
@@ -49,7 +54,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
+          - os: ${{ inputs.linux_version }}
             ostag: linux
           - os: macos-12
             ostag: mac
@@ -301,8 +306,10 @@ jobs:
           name: bin-${{ runner.os }}
           path: bin
     
-      - name: Install dependencies for ex-gwf-twri example model
+      - name: Install dependencies for building models
         working-directory: modflow6-examples/etc
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           # install extra Python packages
           pip install -r requirements.pip.txt
@@ -316,11 +323,21 @@ jobs:
           chmod +x "${{ github.workspace }}/bin/zbud6"
 
           # the example model also needs mf2005
-          get-modflow "${{ github.workspace }}/bin" --subset mf2005
+          get-modflow "${{ github.workspace }}/bin" --subset mf2005,triangle,gridgen
   
+      - name: Update FloPy
+        working-directory: modflow6/autotest
+        run: python update_flopy.py
+
       - name: Build ex-gwf-twri example model
+        if: inputs.full != true
         working-directory: modflow6-examples/scripts
         run: python ex-gwf-twri.py
+
+      - name: Build example models
+        if: inputs.full == true
+        working-directory: modflow6-examples/etc
+        run: python ci_build_files.py
       
       - name: Create full docs folder structure
         if: inputs.full == true
@@ -348,7 +365,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           mkdir -p "${{ needs.build.outputs.distname }}/doc"
-          cmd="python modflow6/distribution/build_docs.py -b bin -o doc"
+          cmd="python modflow6/distribution/build_docs.py -b bin -o doc -e modflow6-examples"
           if [[ "${{ inputs.full }}" == "true" ]]; then
             cmd="$cmd --full"
           fi
@@ -424,20 +441,54 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
-          # download artifacts to OS-specific directory
           path: ${{ needs.build.outputs.distname }}_${{ matrix.ostag }}
-
-      - name: Select artifacts for OS
+      
+      - name: Select artifacts
+        working-directory: ${{ needs.build.outputs.distname }}_${{ matrix.ostag }}
         run: |
-          # create directory for OS-specific artifacts
-          distname="${{ needs.build.outputs.distname }}"
-          mkdir -p "$distname_${{ matrix.ostag }}/bin"
+          echo "selecting ${{ matrix.ostag }} artifacts"
+          # remove dists for other systems
+          rm -rf ${{ needs.build.outputs.distname }}_*
+          # remove release notes
+          rm -rf release_notes
+          # rename dist bin directory
+          mv bin-${{ runner.os }} bin
+          # remove binaries for other systems
+          rm -rf bin-*
 
-          # move binaries for current OS to distribution bin dir
-          mv "$distname/bin-${{ runner.os }}" "$distname_${{ matrix.ostag }}/bin"
+          echo "dist directory contains:"
+          ls
+      
+      - name: Install dependencies for example models
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          # install extra Python packages
+          pip install -r modflow6-examples/etc/requirements.pip.txt
+  
+          # example models need executables to be on the path
+          distname="${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
+          echo "$distname/bin" >> $GITHUB_PATH
 
-          # remove binaries for other OSes
-          rm -rf "$distname/bin-*"
+          # execute permissions may not have survived artifact upload/download
+          chmod +x "$distname/bin/mf6"
+          chmod +x "$distname/bin/mf5to6"
+          chmod +x "$distname/bin/zbud6"
+
+      # the example models also need mf2005, triangle and gridgen
+      - name: Install extra executables
+        uses: modflowpy/install-modflow-action@v1
+        with:
+          subset: mf2005,triangle,gridgen
+
+      - name: Update Flopy
+        working-directory: modflow6/autotest
+        run: python update_flopy.py
+  
+      - name: Build example models
+        if: inputs.full == true
+        working-directory: modflow6-examples/etc
+        run: python ci_build_files.py
 
       - name: Build distribution
         env:
@@ -451,8 +502,7 @@ jobs:
           fi
           eval "$cmd"
 
-          # move & rename PDF documents to dist folder
-          
+          # rename PDF documents
           if [[ "${{ inputs.full }}" == "true" ]]; then
             mv "$distname/doc/converter_mf5to6.pdf" "$distname/doc/mf5to6.pdf"
           fi
@@ -542,13 +592,13 @@ jobs:
           fi
           eval "$cmd"
 
-      - name: Upload distribution zipfile artifact
+      - name: Upload distribution
         uses: actions/upload-artifact@v3
         with:
           name: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}"
           path: "${{ needs.build.outputs.distname }}_${{ matrix.ostag }}.zip"
 
-      - name: Upload release notes artifact
+      - name: Upload release notes
         if: runner.os == 'Linux'
         uses: actions/upload-artifact@v3
         with:

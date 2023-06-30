@@ -584,7 +584,7 @@ contains
             this%iprims = 2
           else
             write (errmsg, '(3a)') &
-              'UNKNOWN IMS PRINT OPTION (', trim(keyword), ').'
+              'Unknown IMS print option (', trim(keyword), ').'
             call store_error(errmsg)
           end if
         case ('COMPLEXITY')
@@ -600,7 +600,7 @@ contains
             WRITE (IOUT, 25)
           else
             write (errmsg, '(3a)') &
-              'UNKNOWN IMS COMPLEXITY OPTION (', trim(keyword), ').'
+              'Unknown IMS COMPLEXITY option (', trim(keyword), ').'
             call store_error(errmsg)
           end if
         case ('CSV_OUTER_OUTPUT')
@@ -612,8 +612,8 @@ contains
                           filstat_opt='REPLACE')
             write (iout, fmtcsvout) trim(fname), this%icsvouterout
           else
-            write (errmsg, '(a)') 'OPTIONAL CSV_OUTER_OUTPUT '// &
-              'KEYWORD MUST BE FOLLOWED BY FILEOUT'
+            write (errmsg, '(a)') 'Optional CSV_OUTER_OUTPUT '// &
+              'keyword must be followed by FILEOUT'
             call store_error(errmsg)
           end if
         case ('CSV_INNER_OUTPUT')
@@ -625,8 +625,8 @@ contains
                           filstat_opt='REPLACE')
             write (iout, fmtcsvout) trim(fname), this%icsvinnerout
           else
-            write (errmsg, '(a)') 'OPTIONAL CSV_INNER_OUTPUT '// &
-              'KEYWORD MUST BE FOLLOWED BY FILEOUT'
+            write (errmsg, '(a)') 'Optional CSV_INNER_OUTPUT '// &
+              'keyword must be followed by FILEOUT'
             call store_error(errmsg)
           end if
         case ('NO_PTC')
@@ -648,8 +648,8 @@ contains
         case ('ATS_OUTER_MAXIMUM_FRACTION')
           rval = this%parser%GetDouble()
           if (rval < DZERO .or. rval > DHALF) then
-            write (errmsg, '(a,G0)') 'VALUE FOR ATS_OUTER_MAXIMUM_FRAC MUST BE &
-              &BETWEEN 0 AND 0.5.  FOUND ', rval
+            write (errmsg, '(a,G0)') 'Value for ATS_OUTER_MAXIMUM_FRAC must be &
+              &between 0 and 0.5.  Found ', rval
             call store_error(errmsg)
           end if
           this%atsfrac = rval
@@ -675,8 +675,8 @@ contains
             call deprecation_warning('OPTIONS', 'CSV_OUTPUT', '6.1.1', &
                                      warnmsg, this%parser%GetUnit())
           else
-            write (errmsg, '(a)') 'OPTIONAL CSV_OUTPUT '// &
-              'KEYWORD MUST BE FOLLOWED BY FILEOUT'
+            write (errmsg, '(a)') 'Optional CSV_OUTPUT '// &
+              'keyword must be followed by FILEOUT'
             call store_error(errmsg)
           end if
           !
@@ -700,7 +700,7 @@ contains
             write (iout, fmtptcout) trim(fname), this%iptcout
           else
             write (errmsg, '(a)') &
-              'OPTIONAL PTC_OUTPUT KEYWORD MUST BE FOLLOWED BY FILEOUT'
+              'Optional PTC_OUTPUT keyword must be followed by FILEOUT'
             call store_error(errmsg)
           end if
         case ('DEV_PTC_OPTION')
@@ -714,7 +714,7 @@ contains
           call this%parser%DevOpt()
           rval = this%parser%GetDouble()
           if (rval < DZERO) then
-            write (errmsg, '(a)') 'PTC_EXPONENT MUST BE > 0.'
+            write (errmsg, '(a)') 'PTC_EXPONENT must be > 0.'
             call store_error(errmsg)
           else
             this%iallowptc = 1
@@ -726,7 +726,7 @@ contains
           call this%parser%DevOpt()
           rval = this%parser%GetDouble()
           if (rval < DZERO) then
-            write (errmsg, '(a)') 'IMS sln_ar: PTC_DEL0 MUST BE > 0.'
+            write (errmsg, '(a)') 'IMS sln_ar: PTC_DEL0 must be > 0.'
             call store_error(errmsg)
           else
             this%iallowptc = 1
@@ -736,7 +736,7 @@ contains
           end if
         case default
           write (errmsg, '(a,2(1x,a))') &
-            'UNKNOWN IMS OPTION  (', trim(keyword), ').'
+            'Unknown IMS option  (', trim(keyword), ').'
           call store_error(errmsg)
         end select
       end do
@@ -786,7 +786,7 @@ contains
             ival = 3
           else
             write (errmsg, '(3a)') &
-              'UNKNOWN UNDER_RELAXATION SPECIFIED (', trim(keyword), ').'
+              'Unknown UNDER_RELAXATION specified (', trim(keyword), ').'
             call store_error(errmsg)
           end if
           this%nonmeth = ival
@@ -798,7 +798,7 @@ contains
             ival = 1
           else
             write (errmsg, '(3a)') &
-              'UNKNOWN LINEAR_SOLVER SPECIFIED (', trim(keyword), ').'
+              'Unknown LINEAR_SOLVER specified (', trim(keyword), ').'
             call store_error(errmsg)
           end if
           this%linmeth = ival
@@ -842,14 +842,14 @@ contains
                                    warnmsg, this%parser%GetUnit())
         case default
           write (errmsg, '(3a)') &
-            'UNKNOWN IMS NONLINEAR KEYWORD (', trim(keyword), ').'
+            'Unknown IMS NONLINEAR keyword (', trim(keyword), ').'
           call store_error(errmsg)
         end select
       end do
       write (iout, '(1x,a)') 'END OF IMS NONLINEAR DATA'
     else
       if (IFDPARAM .EQ. 0) then
-        write (errmsg, '(a)') 'NO IMS NONLINEAR BLOCK DETECTED.'
+        write (errmsg, '(a)') 'NO IMS NONLINEAR block detected.'
         call store_error(errmsg)
       end if
     end if
@@ -865,7 +865,7 @@ contains
     !
     ! -- check that MXITER is greater than zero
     if (this%mxiter <= 0) then
-      write (errmsg, '(a)') 'OUTER ITERATION NUMBER MUST BE > 0.'
+      write (errmsg, '(a)') 'Outer iteration number must be > 0.'
       call store_error(errmsg)
     END IF
     !
@@ -878,7 +878,7 @@ contains
       WRITE (IOUT, *)
     else
       WRITE (errmsg, '(a)') &
-        'INCORRECT VALUE FOR VARIABLE NONMETH WAS SPECIFIED.'
+        'Incorrect value for variable NONMETH was specified.'
       call store_error(errmsg)
     end if
     !
@@ -917,7 +917,7 @@ contains
       this%isymmetric = 0
     ELSE
       WRITE (errmsg, '(a)') &
-        'INCORRECT VALUE FOR LINEAR SOLUTION METHOD SPECIFIED.'
+        'Incorrect value for linear solution method specified.'
       call store_error(errmsg)
     END IF
 
