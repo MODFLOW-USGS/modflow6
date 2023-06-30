@@ -2838,6 +2838,8 @@ contains
 
   end subroutine mem_print_detailed
 
+  !> @brief Sum up virtual memory, i.e. memory
+  !< that is owned by other processes
   function calc_virtual_mem() result(vmem_size)
     real(DP) :: vmem_size
     ! local
