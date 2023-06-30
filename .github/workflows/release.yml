@@ -295,6 +295,10 @@ jobs:
           fi
           eval "$cmd"
 
+      - name: Update FloPy classes
+        working-directory: modflow6/autotest
+        run: python update_flopy.py
+
       - name: Download pre-built binaries
         uses: actions/download-artifact@v3
         with:
@@ -302,6 +306,7 @@ jobs:
           path: bin
     
       - name: Install dependencies for building models
+        if: inputs.full == true
         working-directory: modflow6-examples/etc
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -319,10 +324,6 @@ jobs:
 
           # the example model also needs mf2005
           get-modflow "${{ github.workspace }}/bin" --subset mf2005,triangle,gridgen
-  
-      - name: Update FloPy
-        working-directory: modflow6/autotest
-        run: python update_flopy.py
 
       - name: Build example models
         if: inputs.full == true
@@ -355,7 +356,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           mkdir -p "${{ needs.build.outputs.distname }}/doc"
-          cmd="python modflow6/distribution/build_docs.py -b bin -o doc -e modflow6-examples"
+          cmd="python modflow6/distribution/build_docs.py -b bin -o doc"
           if [[ "${{ inputs.full }}" == "true" ]]; then
             cmd="$cmd --full"
           fi
