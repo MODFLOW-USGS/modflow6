@@ -92,7 +92,7 @@ contains
     call this%mapper%init()
 
   end subroutine init_handler
-  
+
   !> @brief Actions after connections have been created
   !<
   subroutine after_con_cr_handler(this)
