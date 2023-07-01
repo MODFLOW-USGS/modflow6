@@ -43,6 +43,7 @@ module NumericalSolutionModule
 
   public :: NumericalSolutionType
   public :: GetNumericalSolutionFromList
+  public :: CastAsNumericalSolutionClass
   public :: create_numerical_solution
 
   type, extends(BaseSolutionType) :: NumericalSolutionType
@@ -1729,7 +1730,7 @@ contains
     ! -- under-relaxation - only done if convergence not achieved
     if (this%icnvg /= 1) then
       if (this%nonmeth > 0) then
-        call this%sln_underrelax(kiter, this%hncg(kiter), this%neq, & ! TODO_MJR: this is not equiv. serial/parallel
+        call this%sln_underrelax(kiter, this%hncg(kiter), this%neq, &
                                  this%active, this%x, this%xtemp)
       else
         call this%sln_calcdx(this%neq, this%active, &

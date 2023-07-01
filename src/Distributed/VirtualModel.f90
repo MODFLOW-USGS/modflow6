@@ -16,6 +16,7 @@ module VirtualModelModule
   type, public, extends(VirtualDataContainerType) :: VirtualModelType
     class(NumericalModelType), pointer :: local_model
     ! CON
+    type(VirtualIntType), pointer :: con_ianglex => null()
     type(VirtualInt1dType), pointer :: con_ia => null()
     type(VirtualInt1dType), pointer :: con_ja => null()
     type(VirtualInt1dType), pointer :: con_jas => null()
@@ -86,6 +87,7 @@ contains
     class(VirtualModelType) :: this
 
     ! CON
+    call this%set(this%con_ianglex%base(), 'IANGLEX', 'CON', MAP_ALL_TYPE)
     call this%set(this%con_ia%base(), 'IA', 'CON', MAP_ALL_TYPE)
     call this%set(this%con_ja%base(), 'JA', 'CON', MAP_ALL_TYPE)
     call this%set(this%con_jas%base(), 'JAS', 'CON', MAP_ALL_TYPE)
@@ -126,6 +128,7 @@ contains
 
     if (stage == STG_AFT_MDL_DF) then
 
+      call this%map(this%con_ianglex%base(), (/STG_AFT_MDL_DF/))
       call this%map(this%dis_ndim%base(), (/STG_AFT_MDL_DF/))
       call this%map(this%dis_nodes%base(), (/STG_AFT_MDL_DF/))
       call this%map(this%dis_nodesuser%base(), (/STG_AFT_MDL_DF/))
@@ -167,7 +170,11 @@ contains
       call this%map(this%con_hwva%base(), njas, (/STG_BFR_CON_DF/))
       call this%map(this%con_cl1%base(), njas, (/STG_BFR_CON_DF/))
       call this%map(this%con_cl2%base(), njas, (/STG_BFR_CON_DF/))
-      call this%map(this%con_anglex%base(), njas, (/STG_BFR_CON_DF/))
+      if (this%con_ianglex%get() > 0) then
+        call this%map(this%con_anglex%base(), njas, (/STG_BFR_CON_DF/))
+      else
+        call this%map(this%con_anglex%base(), 0, (/STG_NEVER/))
+      end if
 
     end if
 
@@ -216,6 +223,7 @@ contains
   subroutine allocate_data(this)
     class(VirtualModelType) :: this
 
+    allocate (this%con_ianglex)
     allocate (this%con_ia)
     allocate (this%con_ja)
     allocate (this%con_jas)
@@ -249,6 +257,7 @@ contains
     class(VirtualModelType) :: this
 
     ! CON
+    deallocate (this%con_ianglex)
     deallocate (this%con_ia)
     deallocate (this%con_ja)
     deallocate (this%con_jas)
