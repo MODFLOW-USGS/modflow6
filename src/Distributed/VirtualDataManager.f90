@@ -10,7 +10,8 @@ module VirtualDataManagerModule
   use RouterBaseModule
   use RouterFactoryModule, only: create_router
   use ListsModule, only: basesolutionlist
-  use NumericalSolutionModule, only: NumericalSolutionType
+  use NumericalSolutionModule, only: NumericalSolutionType, &
+                                     CastAsNumericalSolutionClass
   use NumericalModelModule, only: NumericalModelType, GetNumericalModelFromList
   use NumericalExchangeModule, only: NumericalExchangeType, &
                                      GetNumericalExchangeFromList
@@ -237,7 +238,7 @@ contains
     ! merge the interface maps over this process
     do isol = 1, this%nr_solutions
       virt_sol => this%virtual_solutions(isol)
-      num_sol => virt_sol%numerical_solution
+      num_sol => CastAsNumericalSolutionClass(virt_sol%numerical_solution)
       do iexg = 1, num_sol%exchangelist%Count()
         conn => get_smc_from_list(num_sol%exchangelist, iexg)
         if (.not. associated(conn)) cycle

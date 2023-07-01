@@ -394,9 +394,8 @@ contains
     ! local
 
     ! base validation (geometry/spatial)
-    ! TODO_MJR: uncomment this...
-    !call this%SpatialModelConnectionType%validateConnection()
-    !call this%validateGwfExchange()
+    call this%SpatialModelConnectionType%validateConnection()
+    call this%validateGwfExchange()
 
     ! abort on errors
     if (count_errors() > 0) then
@@ -426,6 +425,11 @@ contains
     logical(LGP) :: compatible
 
     gwfEx => this%gwfExchange
+
+    ! we cannot validate this (yet) in parallel mode
+    if (.not. gwfEx%v_model1%is_local) return
+    if (.not. gwfEx%v_model2%is_local) return
+
     modelPtr => this%gwfExchange%model1
     gwfModel1 => CastAsGwfModel(modelPtr)
     modelPtr => this%gwfExchange%model2

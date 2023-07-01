@@ -549,16 +549,16 @@ contains ! module procedures
     conEx => this%prim_exchange
     if (conEx%ixt3d > 0) then
       ! if XT3D, we need these angles:
-      if (conEx%model1%dis%con%ianglex == 0) then
+      if (conEx%v_model1%con_ianglex%get() == 0) then
         write (errmsg, '(a,a,a,a,a)') 'XT3D configured on the exchange ', &
           trim(conEx%name), ' but the discretization in model ', &
-          trim(conEx%model1%name), ' has no ANGLDEGX specified'
+          trim(conEx%v_model1%name), ' has no ANGLDEGX specified'
         call store_error(errmsg)
       end if
-      if (conEx%model2%dis%con%ianglex == 0) then
+      if (conEx%v_model2%con_ianglex%get() == 0) then
         write (errmsg, '(a,a,a,a,a)') 'XT3D configured on the exchange ', &
           trim(conEx%name), ' but the discretization in model ', &
-          trim(conEx%model2%name), ' has no ANGLDEGX specified'
+          trim(conEx%v_model2%name), ' has no ANGLDEGX specified'
         call store_error(errmsg)
       end if
     end if
