@@ -402,12 +402,13 @@ def build_model(idx, dir):
 
     # chd files
     chdlist0 = []
-    chdlist0.append([(0, 0, 0), 1.0])
-    chdlist0.append([(nlay - 1, nrow - 1, ncol - 1), 0.0])
+    chdlist0.append([(0, 0, 0), 1.0, 15.])
+    chdlist0.append([(nlay - 1, nrow - 1, ncol - 1), 0.0, 20.])
 
     chdspdict = {0: chdlist0}
     chd = flopy.mf6.ModflowGwfchd(
         gwf,
+        auxiliary=["auxvar"],
         stress_period_data=chdspdict,
         save_flows=False,
         filename=f"{name}.chd",

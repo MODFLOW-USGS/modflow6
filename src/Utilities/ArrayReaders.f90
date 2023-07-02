@@ -91,8 +91,8 @@ contains
       read (locat, *, iostat=istat, iomsg=ermsgr) (iarr(j), j=1, jj)
       if (istat /= 0) then
         arrname = adjustl(aname)
-        errmsg = 'Error reading data for array: '//trim(arrname)// &
-                 '. '//trim(ermsgr)
+        errmsg = "Error reading data for array '"//trim(arrname)// &
+                 "'. "//trim(adjustl(ermsgr))
         call store_error(errmsg)
         call store_error_unit(locat)
       end if
@@ -114,8 +114,8 @@ contains
           (iarr(j), j=nvalt + 1, nvalt + nval)
         if (istat /= 0) then
           arrname = adjustl(aname)
-          errmsg = 'Error reading data for array: '//trim(arrname)// &
-                   '. '//trim(ermsgr)
+          errmsg = "Error reading data for array '"//trim(arrname)// &
+                   "'. "//trim(adjustl(ermsgr))
           call store_error(errmsg)
           call store_error_unit(locat)
         end if
@@ -190,8 +190,8 @@ contains
         read (locat, *, iostat=istat, iomsg=ermsgr) (iarr(j, i), j=1, jj)
         if (istat /= 0) then
           arrname = adjustl(aname)
-          errmsg = 'Error reading data for array: '//trim(arrname)// &
-                   '. '//trim(ermsgr)
+          errmsg = "Error reading data for array '"//trim(arrname)// &
+                   "'. "//trim(adjustl(ermsgr))
           call store_error(errmsg)
           call store_error_unit(locat)
         end if
@@ -212,8 +212,8 @@ contains
           read (locat, iostat=istat, iomsg=ermsgr) (iarr(j, i), j=1, jj)
           if (istat /= 0) then
             arrname = adjustl(aname)
-            errmsg = 'Error reading data for array: '//trim(arrname)// &
-                     '. '//trim(ermsgr)
+            errmsg = "Error reading data for array '"//trim(arrname)// &
+                     "'. "//trim(adjustl(ermsgr))
             call store_error(errmsg)
             call store_error_unit(locat)
           end if
@@ -352,8 +352,8 @@ contains
       read (locat, *, iostat=istat, iomsg=ermsgr) (darr(j), j=1, jj)
       if (istat /= 0) then
         arrname = adjustl(aname)
-        errmsg = 'Error reading data for array: '// &
-                 trim(arrname)//'. '//trim(ermsgr)
+        errmsg = "Error reading data for array '"// &
+                 trim(adjustl(arrname))//"'. "//trim(adjustl(ermsgr))
         call store_error(errmsg)
         call store_error_unit(locat)
       end if
@@ -375,8 +375,8 @@ contains
           (darr(j), j=nvalt + 1, nvalt + nval)
         if (istat /= 0) then
           arrname = adjustl(aname)
-          errmsg = 'Error reading data for array: '// &
-                   trim(arrname)//'. '//trim(ermsgr)
+          errmsg = "Error reading data for array '"// &
+                   trim(adjustl(arrname))//"'. "//trim(adjustl(ermsgr))
           call store_error(errmsg)
           call store_error_unit(locat)
         end if
@@ -452,8 +452,8 @@ contains
         read (locat, *, iostat=istat, iomsg=ermsgr) (darr(j, i), j=1, jj)
         if (istat /= 0) then
           arrname = adjustl(aname)
-          errmsg = 'Error reading data for array: '// &
-                   trim(arrname)//'. '//trim(ermsgr)
+          errmsg = "Error reading data for array '"// &
+                   trim(adjustl(arrname))//"'. "//trim(adjustl(ermsgr))
           call store_error(errmsg)
           call store_error_unit(locat)
         end if
@@ -474,8 +474,8 @@ contains
           read (locat, iostat=istat, iomsg=ermsgr) (darr(j, i), j=1, jj)
           if (istat /= 0) then
             arrname = adjustl(aname)
-            errmsg = 'Error reading data for array: '// &
-                     trim(arrname)//'. '//trim(ermsgr)
+            errmsg = "Error reading data for array '"// &
+                     trim(adjustl(arrname))//"'. "//trim(adjustl(ermsgr))
             call store_error(errmsg)
             call store_error_unit(locat)
           end if
@@ -708,7 +708,7 @@ contains
       iclose = 1
     else
       errmsg = 'READING CONTROL RECORD FOR '// &
-               trim(adjustl(aname))//'. '// &
+               trim(adjustl(aname))//"'. "// &
                'Use CONSTANT, INTERNAL, or OPEN/CLOSE.'
       call store_error(errmsg)
       call store_error_unit(iu)
@@ -1102,8 +1102,8 @@ contains
     !
     ! -- Check for errors
     if (istat /= 0) then
-      errmsg = 'Error reading data for array: '//adjustl(trim(arrname))// &
-               '. '//trim(ermsgr)
+      errmsg = "Error reading data for array '"//adjustl(trim(arrname))// &
+               "'. "//trim(adjustl(ermsgr))
       call store_error(errmsg)
       call store_error_unit(locat)
     end if
