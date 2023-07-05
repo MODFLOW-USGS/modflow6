@@ -3154,6 +3154,7 @@ contains
     integer(I4B) :: istart
     integer(I4B) :: iend
     integer(I4B) :: noder
+    integer(I4B) :: nglo
     !
     ! -- initialize dummy variables
     str = ''
@@ -3161,14 +3162,17 @@ contains
     ! -- initialize local variables
     noder = 0
     !
+    ! -- when parallel, account for offset
+    nglo = nodesln + this%matrix_offset
+    !
     ! -- calculate and set offsets
     do i = 1, this%modellist%Count()
       mp => GetNumericalModelFromList(this%modellist, i)
       istart = 0
       iend = 0
       call mp%get_mrange(istart, iend)
-      if (nodesln >= istart .and. nodesln <= iend) then
-        noder = nodesln - istart + 1
+      if (nglo >= istart .and. nglo <= iend) then
+        noder = nglo - istart + 1
         call mp%get_mcellid(noder, str)
         exit
       end if
