@@ -156,7 +156,7 @@ modflow_sources = files(
     'Utilities' / 'Idm' / 'ModflowInput.f90',
     'Utilities' / 'Idm' / 'SourceCommon.f90',
     'Utilities' / 'Idm' / 'SourceLoad.F90',
-    'Utilities' / 'Idm' / 'StressPkgInput.f90',
+    'Utilities' / 'Idm' / 'StressPackageInput.f90',
     'Utilities' / 'Idm' / 'mf6file' / 'IdmMf6File.f90',
     'Utilities' / 'Idm' / 'mf6file' / 'LoadMf6File.f90',
     'Utilities' / 'Idm' / 'mf6file' / 'StructArray.f90',

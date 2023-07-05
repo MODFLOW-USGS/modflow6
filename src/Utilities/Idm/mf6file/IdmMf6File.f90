@@ -85,6 +85,36 @@ contains
 
   end subroutine generic_mf6_load
 
+  function create_dynamic_parser(mf6_input, mf6_parser, static_parser) &
+    result(created)
+    type(ModflowInputType), intent(in) :: mf6_input
+    type(BlockParserType), pointer, intent(inout) :: mf6_parser
+    type(BlockParserType), allocatable, target, intent(inout) :: static_parser
+    logical(LGP) :: created
+    integer(I4B) :: iblock
+    !
+    ! -- initialize
+    nullify (mf6_parser)
+    created = .false.
+    !
+    ! -- check if package has dynamic input
+    do iblock = 1, size(mf6_input%block_dfns)
+      !
+      if (mf6_input%block_dfns(iblock)%blockname == 'PERIOD') then
+        !
+        ! -- dynamic package, allocate parser
+        allocate (mf6_parser, source=static_parser)
+        created = .true.
+        !
+        exit
+        !
+      end if
+    end do
+    !
+    ! -- return
+    return
+  end function
+
   !> @brief input load for traditional mf6 simulation input file
   !<
   subroutine input_load(filename, pkgtype, &
@@ -103,8 +133,8 @@ contains
     type(BlockParserType), allocatable, target :: parser !< block parser
     type(ModflowInputType) :: mf6_input
     type(PackageLoad) :: pkgloader
-    integer(I4B) :: inunit, iblock
-    logical(LGP) :: clear_parser = .true.
+    integer(I4B) :: inunit
+    logical(LGP) :: created = .false.
     !
     ! -- create description of input
     mf6_input = getModflowInput(pkgtype, component_type, &
@@ -133,28 +163,14 @@ contains
     ! -- generate a dynamic loader parser if requested and relevant
     if (present(mf6_parser)) then
       !
-      ! -- initialize
-      nullify (mf6_parser)
-      !
-      ! -- check if package has dynamic input
-      do iblock = 1, size(mf6_input%block_dfns)
-        !
-        if (mf6_input%block_dfns(iblock)%blockname == 'PERIOD') then
-          !
-          ! -- dynamic package, allocate parser
-          allocate (mf6_parser, source=parser)
-          clear_parser = .false.
-          !
-          exit
-          !
-        end if
-      end do
+      ! -- create dynamic parser
+      created = create_dynamic_parser(mf6_input, mf6_parser, parser)
     end if
     !
     ! -- deallocate static load parser
     if (allocated(parser)) then
       !
-      if (clear_parser) call parser%clear()
+      if (.not. created) call parser%clear()
       deallocate (parser)
       !
     end if

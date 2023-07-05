@@ -10,7 +10,7 @@ module InputLoadTypeModule
   use ConstantsModule, only: LINELENGTH, LENMODELNAME
   use ModflowInputModule, only: ModflowInputType
   use ListModule, only: ListType
-  use StressPkgInputModule, only: StressPkgInputType
+  use StressPackageInputModule, only: StressPackageInputType
 
   implicit none
   private
@@ -57,7 +57,7 @@ module InputLoadTypeModule
     character(len=LENMODELNAME) :: modelname !< name of model
     character(len=LINELENGTH) :: modelfname !< name of model input file
     character(len=LINELENGTH) :: sourcename !< source name, e.g. name of file
-    type(StressPkgInputType), pointer :: stresspkg !< stress pkg input context
+    type(StressPackageInputType), pointer :: stresspkg !< stress pkg input context
   contains
     procedure :: init => dynamic_init
     procedure :: destroy => dynamic_destroy
