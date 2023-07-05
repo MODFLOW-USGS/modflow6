@@ -68,8 +68,6 @@ module ModelPackageInputsModule
     character(len=LENPACKAGETYPE) :: pkgtype
     ! -- component type, e.g. 'DIS or CHD'
     character(len=LENFTYPE) :: subcomponent_type
-    ! -- source
-    character(len=LENPACKAGENAME) :: source
     ! -- package instance attribute arrays
     character(len=LINELENGTH), dimension(:), allocatable :: filenames
     character(len=LENPACKAGENAME), dimension(:), allocatable :: pkgnames
@@ -108,7 +106,6 @@ module ModelPackageInputsModule
       pointer :: mempaths => null()
     integer(I4B), dimension(:), contiguous, &
       pointer :: inunits => null()
-    integer(I4B), pointer :: ncid => null()
     ! -- loadable package type array
     type(LoadablePackageType), dimension(:), allocatable :: pkglist
     ! -- pkgtype definitions
@@ -357,10 +354,6 @@ contains
     call mem_allocate(this%mempaths, LENMEMPATH, 0, 'MEMPATHS', &
                       this%model_mempath)
     call mem_allocate(this%inunits, 0, 'INUNITS', this%model_mempath)
-    call mem_allocate(this%ncid, 'NCID', this%model_mempath)
-    !
-    ! -- initialize
-    this%ncid = 0
     !
     ! build descriptions of packages
     call this%addpkgs()

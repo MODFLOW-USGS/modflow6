@@ -30,7 +30,7 @@ module InputLoadTypeModule
     type(ModflowInputType) :: mf6_input !< description of modflow6 input
     character(len=LENMODELNAME) :: modelname !< name of model
     character(len=LINELENGTH) :: modelfname !< name of model input file
-    character(len=LINELENGTH) :: source !< source type, e.g. MF6File
+    character(len=LINELENGTH) :: sourcename !< source name, e.g. name of file
   contains
     procedure :: init => static_init
     procedure :: destroy => static_destroy
@@ -56,7 +56,7 @@ module InputLoadTypeModule
     type(ModflowInputType) :: mf6_input !< description of modflow6 input
     character(len=LENMODELNAME) :: modelname !< name of model
     character(len=LINELENGTH) :: modelfname !< name of model input file
-    character(len=LINELENGTH) :: source !< source type, e.g. MF6File
+    character(len=LINELENGTH) :: sourcename !< source name, e.g. name of file
     type(StressPkgInputType), pointer :: stresspkg !< stress pkg input context
   contains
     procedure :: init => dynamic_init
@@ -120,7 +120,7 @@ contains
     this%mf6_input = mf6_input
     this%modelname = modelname
     this%modelfname = modelfname
-    this%source = source
+    this%sourcename = source
     !
     return
   end subroutine static_init
@@ -142,7 +142,7 @@ contains
     this%mf6_input = mf6_input
     this%modelname = modelname
     this%modelfname = modelfname
-    this%source = source
+    this%sourcename = source
     !
     allocate (this%stresspkg)
     call this%stresspkg%init(this%mf6_input, iout)

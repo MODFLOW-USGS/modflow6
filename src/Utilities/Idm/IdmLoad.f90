@@ -1,7 +1,7 @@
 !> @brief This module contains the IdmLoadModule
 !!
 !! This module contains routines for managing static
-!! and dynamic input loading for all supported sources.
+!! and dynamic input loading for supported sources.
 !!
 !<
 module IdmLoadModule
@@ -56,11 +56,11 @@ contains
     !
     if (associated(dynamic_loader)) then
       !
-      ! -- set pointer to model dynamic packages loader
+      ! -- set pointer to model dynamic packages list
       dynamic_pkgs => dynamic_model_pkgs(model_pkg_inputs%modelname, &
                                          static_loader%modelfname)
       !
-      ! -- add dynamic pkg loader to model load object
+      ! -- add dynamic pkg loader to list
       call dynamic_pkgs%add(dynamic_loader)
       !
     end if
@@ -217,6 +217,8 @@ contains
     return
   end subroutine dynamic_input_load
 
+  !> @brief retrieve list of model dynamic loaders
+  !<
   function dynamic_model_pkgs(modelname, modelfname) result(model_dynamic_input)
     use InputLoadTypeModule, only: AddDynamicModelToList, GetDynamicModelFromList
     character(len=*), intent(in) :: modelname
@@ -248,6 +250,8 @@ contains
     return
   end function dynamic_model_pkgs
 
+  !> @brief idm deallocate routine
+  !<
   subroutine idm_da(iout)
     integer(I4B), intent(in) :: iout
     !
@@ -257,6 +261,8 @@ contains
     return
   end subroutine idm_da
 
+  !> @brief deallocate all model dynamic loader collections
+  !<
   subroutine dynamic_da(iout)
     use InputLoadTypeModule, only: GetDynamicModelFromList
     integer(I4B), intent(in) :: iout
@@ -276,6 +282,8 @@ contains
     return
   end subroutine dynamic_da
 
+  !> @brief return sim input context PRINT_INTPUT value
+  !<
   function input_param_log() result(paramlog)
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr
@@ -328,6 +336,8 @@ contains
     return
   end subroutine simnam_load_dim
 
+  !> @brief set sim nam input context default integer value
+  !<
   subroutine allocate_simnam_int(input_mempath, idt)
     use MemoryManagerModule, only: mem_allocate
     use SimVariablesModule, only: isimcontinue, isimcheck

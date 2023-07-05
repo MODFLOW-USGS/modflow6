@@ -43,7 +43,7 @@ module IdmMf6FileModule
       use BlockParserModule, only: BlockParserType
       use ModflowInputModule, only: ModflowInputType
       type(BlockParserType), intent(inout) :: parser !< block parser
-      type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType object that describes the input
+      type(ModflowInputType), intent(in) :: mf6_input !< description of input
       integer(I4B), intent(in) :: iout !< unit number for output
     end subroutine IPackageLoad
   end interface
@@ -75,7 +75,7 @@ contains
   subroutine generic_mf6_load(parser, mf6_input, iout)
     use LoadMf6FileModule, only: idm_load
     type(BlockParserType), intent(inout) :: parser !< block parser
-    type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType object that describes the input
+    type(ModflowInputType), intent(in) :: mf6_input !< description of input
     integer(I4B), intent(in) :: iout !< unit number for output
 
     call idm_load(parser, mf6_input%pkgtype, &
@@ -97,7 +97,7 @@ contains
     character(len=*), intent(in) :: subcomponent_type !< subcomponent type, such as DIS or NPF
     character(len=*), intent(in) :: component_name !< component name, such as MYGWFMODEL
     character(len=*), intent(in) :: subcomponent_name !< subcomponent name, such as MYWELLPACKAGE
-    character(len=*), intent(in) :: component_filename
+    character(len=*), intent(in) :: component_filename !< component (e.g. model) filename
     integer(I4B), intent(in) :: iout !< unit number for output
     type(BlockParserType), pointer, optional, intent(inout) :: mf6_parser
     type(BlockParserType), allocatable, target :: parser !< block parser
@@ -185,7 +185,7 @@ contains
     nullify (period_loader)
     !
     ! -- load model package to input context
-    call input_load(this%source, this%mf6_input%pkgtype, &
+    call input_load(this%sourcename, this%mf6_input%pkgtype, &
                     this%mf6_input%component_type, &
                     this%mf6_input%subcomponent_type, &
                     this%mf6_input%component_name, &
@@ -199,7 +199,7 @@ contains
       !
       ! -- initialize dynamic loader
       call mf6file_period_loader%init(this%mf6_input, this%modelname, &
-                                      this%modelfname, this%source, iout)
+                                      this%modelfname, this%sourcename, iout)
       !
       ! -- set parser
       call mf6file_period_loader%set(parser, iout)
