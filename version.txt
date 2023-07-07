@@ -3,8 +3,8 @@
 
 major = 6
 minor = 4
-micro = 2
-label = '+'
+micro = 3
+label = 'dev0'
 __version__ = '{:d}.{:d}.{:d}'.format(major, minor, micro)
 if label:
-	__version__ += '{}{}'.format(__version__, label)
+	__version__ += '{}.{}'.format(__version__, label)

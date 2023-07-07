@@ -24,7 +24,7 @@ BINDIR=$MODFLOW6ROOT/bin
 TESTDIR=$MODFLOW6ROOT/.mf6minsim
 
 # build MODFLOW 6
-CC=cc CXX=CC F77=ftn F90=ftn FC=ftn meson setup builddir --prefix=$(pwd) --libdir=bin -Dcray=true -Ddebug=false --wipe
+CC=cc CXX=CC F77=ftn F90=ftn FC=ftn meson setup builddir --prefix=$(pwd) --bindir=bin --libdir=bin -Dcray=true -Ddebug=false --wipe
 meson install -C builddir
 
 # test MODFLOW 6 build
