@@ -23,7 +23,7 @@ def test_cli_version():
     )
     print(version)
     v_split = version.split(".")
-    assert len(v_split) == 3
+    assert len(v_split) in (3, 4)
     assert all(s.isdigit() for s in v_split[:2])
     sol = split_nonnumeric(v_split[2])
     assert sol[0].isdigit()
