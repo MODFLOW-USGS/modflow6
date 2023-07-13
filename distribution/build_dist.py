@@ -62,8 +62,9 @@ def copy_sources(output_path: PathLike):
 
     ignored = shutil.ignore_patterns(".DS_Store")
 
-    # copy top-level meson.build
+    # copy top-level meson.build and meson.options
     shutil.copy(_project_root_path / "meson.build", output_path)
+    shutil.copy(_project_root_path / "meson.options", output_path)
 
     # copy source folder
     src_path = _project_root_path / "src"
