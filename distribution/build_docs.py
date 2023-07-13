@@ -29,6 +29,7 @@ from benchmark import run_benchmarks
 from utils import convert_line_endings
 from utils import get_project_root_path
 
+# paths
 _project_root_path = get_project_root_path()
 _bin_path = _project_root_path / "bin"
 _examples_repo_path = _project_root_path.parent / "modflow6-examples"
@@ -47,12 +48,13 @@ _full_dist_tex_paths = [
     _docs_path / "ConverterGuide" / "converter_mf5to6.tex",
     _docs_path / "SuppTechInfo" / "mf6suptechinfo.tex",
 ]
+
+# OS-specific extensions
 _system = platform.system()
 _eext = ".exe" if _system == "Windows" else ""
 _soext = ".dll" if _system == "Windows" else ".so" if _system == "Linux" else ".dylib"
 
-
-# publications included in distribution docs
+# publications included in full dist docs
 _publication_urls = [
     "https://pubs.usgs.gov/tm/06/a55/tm6a55.pdf",
     "https://pubs.usgs.gov/tm/06/a56/tm6a56.pdf",
@@ -436,7 +438,7 @@ def build_documentation(
     overwrite: bool = False,
     repo_owner: str = "MODFLOW-USGS"
 ):
-    print(f"Building {'full' if full else 'full'} documentation")
+    print(f"Building {'full' if full else 'minimal'} documentation")
 
     bin_path = Path(bin_path).expanduser().absolute()
     output_path = Path(output_path).expanduser().absolute()

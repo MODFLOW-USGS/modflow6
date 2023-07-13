@@ -1,5 +1,4 @@
 import platform
-import re
 import subprocess
 from os import environ
 from pathlib import Path
@@ -9,11 +8,30 @@ import pytest
 
 from utils import split_nonnumeric
 
+
+# OS-specific extensions
 _system = platform.system()
 _eext = ".exe" if _system == "Windows" else ""
 _soext = ".dll" if _system == "Windows" else ".so" if _system == "Linux" else ".dylib"
 _scext = ".bat" if _system == "Windows" else ".sh"
+
+# fortran compiler
 _fc = environ.get("FC", None)
+
+# directories included in full distribution
+_included_dir_paths = {"full": [
+    "bin",
+    "doc",
+    "examples",
+    "src",
+    "srcbmi",
+    "msvs",
+    "make",
+    "utils",
+], "minimal": [
+    "bin",
+    "src",
+]}
 
 
 @pytest.fixture
@@ -47,7 +65,12 @@ def dist_dir_path(request):
     return path
 
 
-def test_sources(dist_dir_path, approved, releasemode, full):
+def test_directories(dist_dir_path, full):
+    for dir_path in _included_dir_paths["full" if full else "minimal"]:
+        assert (dist_dir_path / dir_path).is_dir()
+
+
+def test_sources(dist_dir_path, releasemode, full):
     if not full:
         pytest.skip(reason="sources not included in minimal distribution")
 
