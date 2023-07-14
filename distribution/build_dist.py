@@ -4,7 +4,6 @@ import platform
 import shutil
 import sys
 import textwrap
-from collections import namedtuple
 from os import PathLike, environ
 from pathlib import Path
 from pprint import pprint
@@ -17,56 +16,16 @@ from modflow_devtools.markers import requires_exe
 from modflow_devtools.misc import get_model_paths
 
 from build_docs import build_documentation
-from build_makefiles import (
-    build_mf6_makefile,
-    build_mf5to6_makefile,
-    build_zbud6_makefile,
-)
+from build_makefiles import (build_mf5to6_makefile, build_mf6_makefile,
+                             build_zbud6_makefile)
 from utils import get_project_root_path, run_command
-
-_project_name = "MODFLOW 6"
 
 # default paths
 _project_root_path = get_project_root_path()
-_version_texf_path = _project_root_path / "doc" / "version.tex"
 _examples_repo_path = _project_root_path.parent / "modflow6-examples"
-_examples_path = _examples_repo_path / "examples"
 _build_path = _project_root_path / "builddir"
-_bin_path = _project_root_path / "bin"
-_docs_path = _project_root_path / "doc"
-_benchmarks_path = _project_root_path / "distribution" / ".benchmarks"
 
-# top-level directories included in distribution
-_included_dir_paths = [
-    "bin",
-    "doc",
-    "examples",
-    "src",
-    "srcbmi",
-    "msvs",
-    "make",
-    "utils",
-]
-
-Makefile = namedtuple("Makefile", ["app", "src_path", "out_path"])
-
-
-# makefiles included in distribution
-_makefiles = [
-    Makefile(app="mf6", src_path=_project_root_path / "src", out_path=Path("make")),
-    Makefile(
-        app="zbud6",
-        src_path=_project_root_path / "utils" / "zonebudget" / "src",
-        out_path=Path("utils") / "zonebudget" / "make",
-    ),
-    Makefile(
-        app="mf5to6",
-        src_path=_project_root_path / "utils" / "mf5to6" / "src",
-        out_path=Path("utils") / "mf5to6" / "make",
-    ),
-]
-
-# system-specific filenames, extensions, etc
+# OS-specific extensions
 _system = platform.system()
 _eext = ".exe" if _system == "Windows" else ""
 _soext = ".dll" if _system == "Windows" else ".so" if _system == "Linux" else ".dylib"
@@ -99,8 +58,9 @@ def copy_sources(output_path: PathLike):
 
     ignored = shutil.ignore_patterns(".DS_Store")
 
-    # copy top-level meson.build
+    # copy top-level meson.build and meson.options
     shutil.copy(_project_root_path / "meson.build", output_path)
+    shutil.copy(_project_root_path / "meson.options", output_path)
 
     # copy source folder
     src_path = _project_root_path / "src"
@@ -230,10 +190,6 @@ def setup_examples(
             else:
                 script_path.chmod(script_path.stat().st_mode | 0o111)
                 print(f"Execute permission set for {script_path}")
-
-
-def test_setup_examples():
-    pass
 
 
 def build_programs_meson(
@@ -446,13 +402,6 @@ if __name__ == "__main__":
         default=str(_examples_repo_path),
         help="Path to directory containing modflow6 example models",
     )
-    # parser.add_argument(
-    #     "-b",
-    #     "--benchmarks-path",
-    #     required=False,
-    #     default=str(_project_root_path / "distribution" / ".benchmarks"),
-    #     help="Path to directory containing benchmark results"
-    # )
     parser.add_argument(
         "--full",
         required=False,
@@ -469,7 +418,6 @@ if __name__ == "__main__":
         help="Recreate and overwrite existing artifacts",
     )
     args = parser.parse_args()
-
     build_path = Path(args.build_path)
     out_path = Path(args.output_path)
     examples_repo_path = (
