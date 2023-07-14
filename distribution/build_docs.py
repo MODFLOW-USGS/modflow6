@@ -5,7 +5,7 @@ import shutil
 import sys
 import textwrap
 from datetime import datetime
-from os import environ, PathLike
+from os import PathLike, environ
 from pathlib import Path
 from pprint import pprint
 from tempfile import TemporaryDirectory
@@ -16,18 +16,13 @@ from warnings import warn
 import pytest
 from flaky import flaky
 from modflow_devtools.build import meson_build
-from modflow_devtools.download import (
-    list_artifacts,
-    download_artifact,
-    get_release,
-    download_and_unzip,
-)
+from modflow_devtools.download import (download_and_unzip, download_artifact,
+                                       get_release, list_artifacts)
 from modflow_devtools.markers import requires_exe, requires_github
-from modflow_devtools.misc import set_dir, run_cmd, is_in_ci
+from modflow_devtools.misc import is_in_ci, run_cmd, set_dir
 
 from benchmark import run_benchmarks
-from utils import convert_line_endings
-from utils import get_project_root_path
+from utils import convert_line_endings, get_project_root_path
 
 # paths
 _project_root_path = get_project_root_path()
@@ -105,7 +100,9 @@ def clean_tex_files():
     assert not os.path.isfile(str(pth) + ".pdf")
 
 
-def download_benchmarks(output_path: PathLike, verbose: bool = False, repo_owner: str = "MODFLOW-USGS") -> Optional[Path]:
+def download_benchmarks(
+    output_path: PathLike, verbose: bool = False, repo_owner: str = "MODFLOW-USGS"
+) -> Optional[Path]:
     output_path = Path(output_path).expanduser().absolute()
     name = "run-time-comparison"  # todo make configurable
     repo = f"{repo_owner}/modflow6"  # todo make configurable, add pytest/cli args
@@ -137,12 +134,18 @@ def github_user() -> Optional[str]:
 @flaky
 @requires_github
 def test_download_benchmarks(tmp_path, github_user):
-    path = download_benchmarks(tmp_path, verbose=True, repo_owner=github_user if github_user else "MODFLOW-USGS")
+    path = download_benchmarks(
+        tmp_path,
+        verbose=True,
+        repo_owner=github_user if github_user else "MODFLOW-USGS",
+    )
     if path:
         assert path.name == "run-time-comparison.md"
 
 
-def build_benchmark_tex(output_path: PathLike, overwrite: bool = False, repo_owner: str = "MODFLOW-USGS"):
+def build_benchmark_tex(
+    output_path: PathLike, overwrite: bool = False, repo_owner: str = "MODFLOW-USGS"
+):
     _benchmarks_path.mkdir(parents=True, exist_ok=True)
     benchmarks_path = _benchmarks_path / "run-time-comparison.md"
 
@@ -436,7 +439,7 @@ def build_documentation(
     full: bool = False,
     output_path: Optional[PathLike] = None,
     overwrite: bool = False,
-    repo_owner: str = "MODFLOW-USGS"
+    repo_owner: str = "MODFLOW-USGS",
 ):
     print(f"Building {'full' if full else 'minimal'} documentation")
 
@@ -448,7 +451,7 @@ def build_documentation(
 
     # build LaTex input/output docs from DFN files
     build_mf6io_tex_from_dfn(overwrite=True)
- 
+
     # build LaTeX input/output example model docs
     with TemporaryDirectory() as temp:
         example_path = _project_root_path / ".mf6minsim"
@@ -466,7 +469,9 @@ def build_documentation(
         build_pdfs_from_tex(tex_paths=_dev_dist_tex_paths, output_path=output_path)
     else:
         # convert benchmarks to LaTex, running them first if necessary
-        build_benchmark_tex(output_path=output_path, overwrite=overwrite, repo_owner=repo_owner)
+        build_benchmark_tex(
+            output_path=output_path, overwrite=overwrite, repo_owner=repo_owner
+        )
 
         # download example docs
         latest = get_release(f"{repo_owner}/modflow6-examples", "latest")
@@ -565,7 +570,7 @@ if __name__ == "__main__":
         "--repo-owner",
         required=False,
         default="MODFLOW-USGS",
-        help="Repository owner (substitute your own for a fork)"
+        help="Repository owner (substitute your own for a fork)",
     )
     args = parser.parse_args()
     output_path = Path(args.output_path).expanduser().absolute()
@@ -576,5 +581,5 @@ if __name__ == "__main__":
         full=args.full,
         output_path=output_path,
         overwrite=args.force,
-        repo_owner=args.repo_owner
+        repo_owner=args.repo_owner,
     )

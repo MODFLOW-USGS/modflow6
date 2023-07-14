@@ -8,7 +8,6 @@ import pytest
 
 from utils import split_nonnumeric
 
-
 # OS-specific extensions
 _system = platform.system()
 _eext = ".exe" if _system == "Windows" else ""
@@ -19,19 +18,22 @@ _scext = ".bat" if _system == "Windows" else ".sh"
 _fc = environ.get("FC", None)
 
 # directories included in full distribution
-_included_dir_paths = {"full": [
-    "bin",
-    "doc",
-    "examples",
-    "src",
-    "srcbmi",
-    "msvs",
-    "make",
-    "utils",
-], "minimal": [
-    "bin",
-    "src",
-]}
+_included_dir_paths = {
+    "full": [
+        "bin",
+        "doc",
+        "examples",
+        "src",
+        "srcbmi",
+        "msvs",
+        "make",
+        "utils",
+    ],
+    "minimal": [
+        "bin",
+        "src",
+    ],
+}
 
 
 @pytest.fixture
@@ -168,9 +170,7 @@ def test_examples(dist_dir_path, full):
         script_path = p / f"run{_scext}"
         if not script_path.is_file():
             continue
-        pprint(
-            subprocess.check_output([str(script_path)], cwd=p).decode().split()
-        )
+        pprint(subprocess.check_output([str(script_path)], cwd=p).decode().split())
         break
 
 

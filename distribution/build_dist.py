@@ -16,13 +16,9 @@ from modflow_devtools.markers import requires_exe
 from modflow_devtools.misc import get_model_paths
 
 from build_docs import build_documentation
-from build_makefiles import (
-    build_mf6_makefile,
-    build_mf5to6_makefile,
-    build_zbud6_makefile,
-)
+from build_makefiles import (build_mf5to6_makefile, build_mf6_makefile,
+                             build_zbud6_makefile)
 from utils import get_project_root_path, run_command
-
 
 # default paths
 _project_root_path = get_project_root_path()
