@@ -13,6 +13,7 @@ module ParallelSolutionModule
   contains
     ! override
     procedure :: sln_has_converged => par_has_converged
+    procedure :: sln_nur_has_converged => par_nur_has_converged
     procedure :: sln_calc_ptc => par_calc_ptc
     procedure :: sln_underrelax => par_underrelax
   end type ParallelSolutionType
@@ -43,6 +44,34 @@ contains
     end if
 
   end function par_has_converged
+
+  function par_nur_has_converged(this, dxold_max, hncg, dpak) &
+    result(has_converged)
+    class(ParallelSolutionType) :: this !< parallel solution instance
+    real(DP) :: dxold_max !< the maximum dependent variable change for cells not adjusted by NUR
+    real(DP) :: hncg !< largest dep. var. change at end of Picard iter.
+    real(DP) :: dpak !< largest change in advanced packages
+    logical(LGP) :: has_converged !< True, when converged
+    ! local
+    integer(I4B) :: icnvg_local, icnvg_global
+    integer :: ierr
+    type(MpiWorldType), pointer :: mpi_world
+
+    has_converged = .false.
+
+    icnvg_local = 0
+    if (abs(dxold_max) <= this%dvclose .and. &
+        abs(hncg) <= this%dvclose .and. &
+        abs(dpak) <= this%dvclose) then
+      icnvg_local = 1
+    end if
+
+    call MPI_Allreduce(icnvg_local, icnvg_global, 1, MPI_INTEGER, &
+                       MPI_MIN, mpi_world%comm, ierr)
+
+    has_converged = (icnvg_global == 1)
+
+  end function par_nur_has_converged
 
   !> @brief Calculate pseudo-transient continuation factor
   !< for the parallel case

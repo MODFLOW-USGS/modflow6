@@ -160,6 +160,7 @@ module NumericalSolutionModule
 
     ! 'protected' (this can be overridden)
     procedure :: sln_has_converged
+    procedure :: sln_nur_has_converged
     procedure :: sln_calc_ptc
     procedure :: sln_underrelax
 
@@ -1526,7 +1527,7 @@ contains
     integer(I4B) :: ipos0
     integer(I4B) :: ipos1
     real(DP) :: dxmax_nur
-    real(DP) :: dxmax
+    real(DP) :: dxold_max
     real(DP) :: ptcf
     real(DP) :: ttform
     real(DP) :: ttsoln
@@ -1754,12 +1755,12 @@ contains
         !
         ! -- calculate maximum change in heads in cells that have
         !    not been adjusted by newton under-relxation
-        call this%sln_maxval(this%neq, this%dxold, dxmax)
+        call this%sln_maxval(this%neq, this%dxold, dxold_max)
         !
         ! -- evaluate convergence
-        if (abs(dxmax) <= this%dvclose .and. &
-            abs(this%hncg(kiter)) <= this%dvclose .and. &
-            abs(dpak) <= this%dvclose) then
+        if (this%sln_nur_has_converged(dxold_max, this%hncg(kiter), dpak)) then
+          !
+          ! -- converged
           this%icnvg = 1
           !
           ! -- reset outer dependent-variable change and location for output
@@ -3138,6 +3139,25 @@ contains
     end if
 
   end function sln_has_converged
+
+  !> @brief Custom convergence check for when Newton UR has been applied
+  !<
+  function sln_nur_has_converged(this, dxold_max, hncg, dpak) &
+    result(has_converged)
+    class(NumericalSolutionType) :: this !< NumericalSolutionType instance
+    real(DP) :: dxold_max !< the maximum dependent variable change for unrelaxed cells
+    real(DP) :: hncg !< largest dep. var. change at end of Picard iteration
+    real(DP) :: dpak !< largest change in advanced packages
+    logical(LGP) :: has_converged !< True, when converged
+
+    has_converged = .false.
+    if (abs(dxold_max) <= this%dvclose .and. &
+        abs(hncg) <= this%dvclose .and. &
+        abs(dpak) <= this%dvclose) then
+      has_converged = .true.
+    end if
+
+  end function sln_nur_has_converged
 
   !> @ brief Get cell location string
   !!
