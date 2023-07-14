@@ -60,9 +60,8 @@ contains
     has_converged = .false.
 
     icnvg_local = 0
-    if (abs(dxold_max) <= this%dvclose .and. &
-        abs(hncg) <= this%dvclose .and. &
-        abs(dpak) <= this%dvclose) then
+    if (this%NumericalSolutionType%sln_nur_has_converged( &
+        dxold_max, hncg, dpak)) then
       icnvg_local = 1
     end if
 
