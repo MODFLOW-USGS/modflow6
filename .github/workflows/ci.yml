@@ -230,23 +230,7 @@ jobs:
         if: runner.os == 'Linux'
         working-directory: usgslatex/usgsLaTeX
         run: sudo ./install.sh --all-users
-
-      - name: Install dependencies for ex-gwf-twri example model
-        if: runner.os == 'Linux'
-        working-directory: modflow6-examples/etc
-        run: |
-          # install extra Python packages
-          pip install -r requirements.pip.txt
-
-          # the example model needs executables to be on the path
-          echo "${{ github.workspace }}/modflow6/bin" >> $GITHUB_PATH
-          echo "${{ github.workspace }}/modflow6/bin/downloaded" >> $GITHUB_PATH
-
-      - name: Build ex-gwf-twri example model
-        if: runner.os == 'Linux'
-        working-directory: modflow6-examples/scripts
-        run: python ex-gwf-twri.py
-
+     
       - name: Test distribution scripts
         working-directory: modflow6/distribution
         env:
