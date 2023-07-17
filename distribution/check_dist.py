@@ -6,7 +6,6 @@ from pprint import pprint
 
 import pytest
 
-from utils import split_nonnumeric
 
 # OS-specific extensions
 _system = platform.system()
@@ -181,19 +180,22 @@ def test_binaries(dist_dir_path, approved):
     assert (bin_path / f"mf5to6{_eext}").is_file()
     assert (bin_path / f"libmf6{_soext}").is_file()
 
+    # get version string
     output = " ".join(
         subprocess.check_output([str(bin_path / f"mf6{_eext}"), "-v"]).decode().split()
     ).lower()
     assert output.startswith("mf6")
 
-    # make sure binaries were built in correct mode
+    # make sure version string reflects approval
     assert ("preliminary" in output) != approved
 
-    # check version string
+    # check version numbers
     version = output.lower().split(" ")[1]
     print(version)
     v_split = version.split(".")
-    assert len(v_split) == 3
-    assert all(s.isdigit() for s in v_split[:2])
-    sol = split_nonnumeric(v_split[2])
-    assert sol[0].isdigit()
+    assert len(v_split) >= 3
+    assert all(s.isdigit() for s in v_split[:3])
+    if approved:
+        assert len(v_split) == 3
+    else:
+        assert "dev" in v_split[3]
