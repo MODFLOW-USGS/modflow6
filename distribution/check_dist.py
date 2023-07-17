@@ -31,7 +31,7 @@ _included_dir_paths = {
     ],
     "minimal": [
         "bin",
-        "src",
+        "doc",
     ],
 }
 
