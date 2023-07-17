@@ -304,6 +304,14 @@ jobs:
         with:
           name: bin-${{ runner.os }}
           path: bin
+
+      # execute permissions may not have survived artifact upload/download
+      - name: Set executable permissions
+        working-directory: modflow6-examples/etc
+        run: |
+          chmod +x "${{ github.workspace }}/bin/mf6"
+          chmod +x "${{ github.workspace }}/bin/mf5to6"
+          chmod +x "${{ github.workspace }}/bin/zbud6"
     
       - name: Install dependencies for building models
         if: inputs.full == true
@@ -316,11 +324,6 @@ jobs:
   
           # the example model needs executables to be on the path
           echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
-
-          # execute permissions may not have survived artifact upload/download
-          chmod +x "${{ github.workspace }}/bin/mf6"
-          chmod +x "${{ github.workspace }}/bin/mf5to6"
-          chmod +x "${{ github.workspace }}/bin/zbud6"
 
           # the example model also needs mf2005
           get-modflow "${{ github.workspace }}/bin" --subset mf2005,triangle,gridgen
