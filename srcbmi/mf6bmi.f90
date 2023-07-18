@@ -23,19 +23,21 @@ module mf6bmi
   use iso_c_binding, only: c_int, c_char, c_double, C_NULL_CHAR, c_loc, c_ptr, &
                            c_f_pointer
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: LENMEMPATH, LENVARNAME
+  use ConstantsModule, only: LENMEMPATH, LENVARNAME, MNORMAL
   use CharacterStringModule
   use MemoryManagerModule, only: mem_setptr, get_mem_elem_size, get_isize, &
                                  get_mem_rank, get_mem_shape, get_mem_type, &
                                  memorylist, get_from_memorylist
   use MemoryTypeModule, only: MemoryType
   use MemoryHelperModule, only: create_mem_address
-  use SimVariablesModule, only: simstdout, istdout
+  use SimVariablesModule, only: simstdout, istdout, isim_mode
   use InputOutputModule, only: getunit
   implicit none
 
   integer(c_int), bind(C, name="ISTDOUTTOFILE") :: istdout_to_file = 1 !< output control: =0 to screen, >0 to file
   !DIR$ ATTRIBUTES DLLEXPORT :: istdout_to_file
+  integer(c_int), bind(C, name="ISIM_MODE") :: sim_mode = MNORMAL !< simulation mode MVALIDATE=0, MNORMAL=1, MRUN=2
+  !DIR$ ATTRIBUTES DLLEXPORT :: sim_mode
 
 contains
 
@@ -67,7 +69,10 @@ contains
     ! -- dummy variables
     integer(kind=c_int) :: bmi_status !< BMI status code
     ! -- local variables
-
+    !
+    ! -- set isim_mode
+    isim_mode = sim_mode
+    !
     if (istdout_to_file > 0) then
       ! -- open stdout file mfsim.stdout
       istdout = getunit()
