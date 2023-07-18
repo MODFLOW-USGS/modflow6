@@ -138,4 +138,4 @@ In the next example, the ``LAYERED'' keyword is absent. In this case, a single c
      OPEN/CLOSE strt.bin (BINARY)  #layers1-4
 \end{lstlisting}
 
-A consequence of the way binary input files have been implemented in \mf, simulated dependent variable binary output (for example, head and concentration) cannot be used as binary array input for a model. Instead, simulated dependent variable binary output must be processed and split into separate binary files for each layer or combined into a single three-dimensional array.
+A consequence of the way binary input files have been implemented in \mf, simulated dependent variable binary output (for example, head and concentration) cannot be used as binary array input for a model. Instead, simulated dependent variable binary output must be processed and split into separate binary files for each layer or combined into a single array equal to the size of the grid (for DIS grids this would be an array equal to NCOL * NROW * NLAY).
