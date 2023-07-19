@@ -57,8 +57,9 @@ contains
     integer :: ierr
     type(MpiWorldType), pointer :: mpi_world
 
-    has_converged = .false.
+    mpi_world => get_mpi_world()
 
+    has_converged = .false.
     icnvg_local = 0
     if (this%NumericalSolutionType%sln_nur_has_converged( &
         dxold_max, hncg, dpak)) then
@@ -67,8 +68,7 @@ contains
 
     call MPI_Allreduce(icnvg_local, icnvg_global, 1, MPI_INTEGER, &
                        MPI_MIN, mpi_world%comm, ierr)
-
-    has_converged = (icnvg_global == 1)
+    if (icnvg_global == 1) has_converged = .true.
 
   end function par_nur_has_converged
 
