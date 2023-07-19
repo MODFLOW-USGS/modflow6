@@ -314,14 +314,14 @@ contains
       !
       ! -- read layer, row, col, or cell number
       read (this%inlist, iostat=this%ierr) cellid
-
-      ! -- ensure cellid is valid, store an error otherwise
-      call check_cellid(ii, cellid, this%mshape, this%ndim)
-
+      !
       ! -- If not end of record, then store nodenumber, else
       !    calculate lstend and nlist, and exit readloop
       select case (this%ierr)
       case (0)
+        !
+        ! -- ensure cellid is valid, store an error otherwise
+        call check_cellid(ii, cellid, this%mshape, this%ndim)
         !
         ! -- Check range
         if (ii > mxlist) then

@@ -1,0 +1,88 @@
+\subsubsection{Description of Binary Array Input Files}
+All floating point variables are written to the binary input files as DOUBLE PRECISION Fortran variables. Integer variables are written to the input files as Fortran integer variables. Some variables are character strings and are indicated as so in the following descriptions. Binary array data are written using the following two records:
+
+\vspace{5mm}
+\noindent Record 1: \texttt{KSTP,KPER,PERTIM,TOTIM,TEXT,M1,M2,M3} \\
+\noindent Record 2: \texttt{DATA} \\
+
+\vspace{5mm}
+\noindent where
+
+\begin{description} \itemsep0pt \parskip0pt \parsep0pt
+\item \texttt{KSTP} is the time step number;
+\item \texttt{KPER} is the stress period number;
+\item \texttt{PERTIM} is the time value for the current stress period; 
+\item \texttt{TOTIM} is the total simulation time;
+\item \texttt{TEXT} is a character string (character*16);
+\item \texttt{M1} is the length of the data in the fastest varying direction;
+\item \texttt{M2} is the length of the data in the second fastest varying direction;
+\item \texttt{M3} can be any value but is typically 1 or the layer number for the data; and
+\item \texttt{DATA} is the array data of size (M1*M2).
+\end{description}
+ 
+\noindent The values specified for \texttt{M1}, \texttt{M2}, and \texttt{M3} in Record 1 are dependent on the grid type and if the ``LAYERED'' keyword is present on the READARRAY control line.  For binary array data, \texttt{KSTP}, \texttt{KPER}, \texttt{PERTIM}, \texttt{TOTIM}, and \texttt{TEXT} can be set to any value. Binary array input file specifications for each discretization type are given below.
+
+\paragraph{DIS Grids}
+For DIS grids,  \texttt{M1=NCOL}, \texttt{M2=NROW}, and \texttt{M3=ILAY} when the ``LAYERED'' keyword is present on the READARRAY control line. For this case, record 1 and 2 should be written as:
+
+\vspace{5mm}
+\noindent Record 1: \texttt{KSTP,KPER,PERTIM,TOTIM,TEXT,M1,M2,M3} \\
+\noindent Record 2: \texttt{((DATA(J,I,ILAY),J=1,NCOL),I=1,NROW)} \\
+
+\vspace{5mm}
+\noindent where
+
+\begin{description} \itemsep0pt \parskip0pt \parsep0pt
+\item \texttt{NCOL} is the number of columns;
+\item \texttt{NROW} is the number of rows; and
+\item \texttt{ILAY} is the layer number.
+\end{description}
+
+\noindent For DIS grids, \texttt{M1=NCOL*NROW*NLAY}, \texttt{M2=1}, and \texttt{M3=1} when the ``LAYERED'' keyword is absent on the READARRAY control line. For this case, record 1 and 2 should be written as:
+
+\vspace{5mm}
+\noindent Record 1: \texttt{KSTP,KPER,PERTIM,TOTIM,TEXT,M1,M2,M3} \\
+\noindent Record 2: \texttt{(((DATA(J,I,K),J=1,NCOL),I=1,NROW),K=1,NLAY)} \\
+
+\vspace{5mm}
+\noindent where
+
+\begin{description} \itemsep0pt \parskip0pt \parsep0pt
+\item \texttt{NLAY} is the number of layers.
+\end{description}
+
+\paragraph{DISV Grids}
+For DISV grids, \texttt{M1=NCPL}, \texttt{M2=1}, and \texttt{M3=ILAY} when the ``LAYERED'' keyword is present on the READARRAY control line. For this case, record 1 and 2 should be written as:
+
+\vspace{5mm}
+\noindent Record 1: \texttt{KSTP,KPER,PERTIM,TOTIM,TEXT,M1,M2,M3} \\
+\noindent Record 2: \texttt{(DATA(J,ILAY),J=1,NCPL)} \\
+
+\vspace{5mm}
+\noindent where
+
+\begin{description} \itemsep0pt \parskip0pt \parsep0pt
+\item \texttt{NCPL} is the number of cells per layer.
+\end{description}
+
+\noindent For DISV grids, \texttt{M1=NCPL*NLAY}, \texttt{M2=1}, and \texttt{M3=1} when the ``LAYERED'' keyword is absent on the READARRAY control line. For this case, record 1 and 2 should be written as:
+
+\vspace{5mm}
+\noindent Record 1: \texttt{KSTP,KPER,PERTIM,TOTIM,TEXT,M1,M2,M3} \\
+\noindent Record 2: \texttt{((DATA(J,K),J=1,NCPL),K=1,NLAY)} \\
+
+
+\paragraph{DISU Grids}
+For DISU grids, \texttt{M1=NODES}, \texttt{M2=1}, \texttt{M3=1}. For this case, record 1 and 2 should be written as:
+
+
+\vspace{5mm}
+\noindent Record 1: \texttt{KSTP,KPER,PERTIM,TOTIM,TEXT,M1,M2,M3} \\
+\noindent Record 2: \texttt{(DATA(N),N=1,NODES)} \\
+
+\vspace{5mm}
+\noindent where
+
+\begin{description} \itemsep0pt \parskip0pt \parsep0pt
+\item \texttt{NODES} is the number cells in the model grid.
+\end{description}
