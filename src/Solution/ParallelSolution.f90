@@ -13,9 +13,11 @@ module ParallelSolutionModule
   contains
     ! override
     procedure :: sln_has_converged => par_has_converged
+    procedure :: sln_sync_newtonur_flag => par_sync_newtonur_flag
     procedure :: sln_nur_has_converged => par_nur_has_converged
     procedure :: sln_calc_ptc => par_calc_ptc
     procedure :: sln_underrelax => par_underrelax
+
   end type ParallelSolutionType
 
 contains
@@ -45,15 +47,30 @@ contains
 
   end function par_has_converged
 
+  function par_sync_newtonur_flag(this, inewtonur) result(ivalue)
+    class(ParallelSolutionType) :: this !< parallel solution instance
+    integer(I4B), intent(in) :: inewtonur !< local Newton Under-relaxation flag
+    ! local
+    integer(I4B) :: ivalue !< Maximum of all local values (1 = under-relaxation applied)
+    integer :: ierr
+    type(MpiWorldType), pointer :: mpi_world
+
+    mpi_world => get_mpi_world()
+    call MPI_Allreduce(inewtonur, ivalue, 1, MPI_INTEGER, &
+                       MPI_MAX, mpi_world%comm, ierr)
+
+  end function par_sync_newtonur_flag
+
   function par_nur_has_converged(this, dxold_max, hncg, dpak) &
     result(has_converged)
     class(ParallelSolutionType) :: this !< parallel solution instance
-    real(DP) :: dxold_max !< the maximum dependent variable change for cells not adjusted by NUR
-    real(DP) :: hncg !< largest dep. var. change at end of Picard iter.
-    real(DP) :: dpak !< largest change in advanced packages
+    real(DP), intent(in) :: dxold_max !< the maximum dependent variable change for cells not adjusted by NUR
+    real(DP), intent(in) :: hncg !< largest dep. var. change at end of Picard iter.
+    real(DP), intent(in) :: dpak !< largest change in advanced packages
     logical(LGP) :: has_converged !< True, when converged
     ! local
-    integer(I4B) :: icnvg_local, icnvg_global
+    integer(I4B) :: icnvg_local
+    integer(I4B) :: icnvg_global
     integer :: ierr
     type(MpiWorldType), pointer :: mpi_world
 

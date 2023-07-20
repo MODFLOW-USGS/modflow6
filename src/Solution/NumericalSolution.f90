@@ -160,6 +160,7 @@ module NumericalSolutionModule
 
     ! 'protected' (this can be overridden)
     procedure :: sln_has_converged
+    procedure :: sln_sync_newtonur_flag
     procedure :: sln_nur_has_converged
     procedure :: sln_calc_ptc
     procedure :: sln_underrelax
@@ -1750,6 +1751,9 @@ contains
                           this%dxold(i0:i1), inewtonur, dxmax_nur, locmax_nur)
       end do
       !
+      ! -- synchronize Newton Under-relaxation flag
+      inewtonur = this%sln_sync_newtonur_flag(inewtonur)
+      !
       ! -- check for convergence if newton under-relaxation applied
       if (inewtonur /= 0) then
         !
@@ -3140,14 +3144,27 @@ contains
 
   end function sln_has_converged
 
+  !> @brief Syncronize Newton Under-relaxation flag
+  !<
+  function sln_sync_newtonur_flag(this, inewtonur) result(ivalue)
+    ! dummy
+    class(NumericalSolutionType) :: this !< NumericalSolutionType instance
+    integer(I4B), intent(in) :: inewtonur !< Newton Under-relaxation flag
+    ! local
+    integer(I4B) :: ivalue !< Default is set to current value (1 = under-relaxation applied)
+
+    ivalue = inewtonur
+
+  end function sln_sync_newtonur_flag
+
   !> @brief Custom convergence check for when Newton UR has been applied
   !<
   function sln_nur_has_converged(this, dxold_max, hncg, dpak) &
     result(has_converged)
     class(NumericalSolutionType) :: this !< NumericalSolutionType instance
-    real(DP) :: dxold_max !< the maximum dependent variable change for unrelaxed cells
-    real(DP) :: hncg !< largest dep. var. change at end of Picard iteration
-    real(DP) :: dpak !< largest change in advanced packages
+    real(DP), intent(in) :: dxold_max !< the maximum dependent variable change for unrelaxed cells
+    real(DP), intent(in) :: hncg !< largest dep. var. change at end of Picard iteration
+    real(DP), intent(in) :: dpak !< largest change in advanced packages
     logical(LGP) :: has_converged !< True, when converged
 
     has_converged = .false.

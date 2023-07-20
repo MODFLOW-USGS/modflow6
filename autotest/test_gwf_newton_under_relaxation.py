@@ -4,10 +4,13 @@ import flopy
 import numpy as np
 import pathlib as pl
 import pytest
+from conftest import project_root_path
 from framework import TestFramework
 from simulation import TestSimulation
 
 ex = ["nr_ur01", "nr_ur02"]
+
+data_path = project_root_path / "autotest/data/ex-gwf-bump/"
 nper = 1
 nlay = 1
 nrow = 51
@@ -25,15 +28,13 @@ shape2d = (nrow, ncol)
 shape3d = (nlay, nrow, ncol)
 nouter = 50
 ninner = 100
-hclose = 1e-6
-hclose_outer = hclose * 10.
+hclose = 1e-9
+hclose_outer = hclose * 10.0
 rclose = 1e-3
-botm = np.loadtxt(pl.Path("data/ex-gwf-bump/bottom.txt")).reshape(shape3d)
+botm = np.loadtxt(data_path / "bottom.txt").reshape(shape3d)
 chd_spd = [[0, i, 0, H1] for i in range(nrow)]
 chd_spd += [[0, i, ncol - 1, H2] for i in range(nrow)]
-base_heads = flopy.utils.HeadFile(
-    pl.Path("data/ex-gwf-bump/results.hds.cmp")
-).get_data()
+base_heads = flopy.utils.HeadFile(data_path / "results.hds.cmp").get_data()
 
 
 def build_model(idx, ws):
