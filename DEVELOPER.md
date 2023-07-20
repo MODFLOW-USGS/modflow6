@@ -444,14 +444,22 @@ Begin by creating a backup copy of the feature branch in case anything goes terr
 
 ```
 git checkout feat-xyz
-git checkout feat-xyz-backup
+git checkout -b feat-xyz-backup
+git checkout feat-xyz
 ```
 
 ### Squash Feature Branch Commits
 
 Next, consider squashing commits on the feature branch.  If there are many commits, it is beneficial to squash them before trying to rebase with develop.  There is a nice article on [squashing commits into one using git](https://www.internalpointers.com/post/squash-commits-into-one-git), which has been very useful for consolidating commits on a long-lived modflow6 feature branch.
 
-Once the commits on the feature branch have been consolidated, a force push to origin is recommended.  This will update `feat-xyz` on origin.
+An alternative to the approach described in the article mentioned above is a soft reset followed by an ammended commit.  The following commands will also squash the feature branch commits.
+
+```
+git reset --soft <first commit on the feature branch>
+git commit --amend -m "consolidated commit message"
+```
+
+Once the commits on the feature branch have been consolidated, a force push to origin is recommended.  The force push to origin is not strictly required, but it can serve an intermediate backup/checkpoint so the squashed branch state can be retrieved if rebasing fails.  The following command will push `feat-xyz` to origin.
 
 ```
 git push origin feat-xyz --force
@@ -467,7 +475,9 @@ To rebase with develop, make sure the feature branch is checked out and then typ
 git rebase develop
 ```
 
-If there are merge conflicts, they will need to be resolved before going forward.  Once any conflicts are resolved, it may be worthwhile to rebuild the MODFLOW 6 program and run the smoke tests.  
+If anything goes wrong during a rebase, there is the `rebase --abort` command to unwind a rebase that's gotten out of hand.
+
+If there are merge conflicts, they will need to be resolved before going forward.  Once any conflicts are resolved, it may be worthwhile to rebuild the MODFLOW 6 program and run the smoke tests to ensure nothing is broken.  
 
 At this point, you will want to force push the updated feature branch to origin using the same force push command as before.
 
