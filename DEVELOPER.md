@@ -452,7 +452,7 @@ git checkout feat-xyz
 
 Next, consider squashing commits on the feature branch.  If there are many commits, it is beneficial to squash them before trying to rebase with develop.  There is a nice article on [squashing commits into one using git](https://www.internalpointers.com/post/squash-commits-into-one-git), which has been very useful for consolidating commits on a long-lived modflow6 feature branch.
 
-An alternative to the approach described in the article mentioned above is a soft reset followed by an ammended commit.  The following commands will also squash the feature branch commits.
+A quick and dirty way to squash without interactive rebase (as an alternative to the approach described in the article mentioned in the preceding paragraph) is a soft reset followed by an ammended commit.  The following commands will also squash the feature branch commits, provided a backup of the branch has been made as described above (use caution; accidentally typing `--hard` will wipe out all your work).
 
 ```
 git reset --soft <first commit on the feature branch>
