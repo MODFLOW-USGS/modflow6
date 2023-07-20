@@ -43,6 +43,11 @@ To build and test a parallel version of the program, first read the instructions
     - [Selecting tests with markers](#selecting-tests-with-markers)
     - [External model tests](#external-model-tests)
     - [Writing tests](#writing-tests)
+- [Git Strategy for Managing Long-Lived Branches](#git-strategy-for-managing-long-lived-branches)
+    - [Create a Backup](#create-a-backup)
+    - [Squash Feature Branch Commits](#squash-feature-branch-commits)
+    - [Rebase Feature Branch with Develop](#rebase-feature-branch-with-develop)
+    - [Cleanup](#cleanup)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -426,3 +431,56 @@ Tests should ideally follow a few conventions for easier maintenance:
   - `@pytest.mark.regression` if the test compares results from different versions
 
 **Note:** If all three external model repositories are not installed as described above, some tests will be skipped. The full test suite includes >750 cases. All must pass before changes can be merged into this repository.
+
+## Git Strategy for Managing Long-Lived Branches
+
+When a feature branch takes a long time to develop, it is easy to become out of sync with the develop branch.  Depending on the situation, it may be advisable to periodically squash the commits on the feature branch and rebase the change set with develop.  The following approach for updating a long-lived feature branch has proven robust.
+
+In the example below, the feature branch is assumed to be called `feat-xyz`
+
+### Create a Backup
+
+Begin by creating a backup copy of the feature branch in case anything goes terribly wrong.
+
+```
+git checkout feat-xyz
+git checkout feat-xyz-backup
+```
+
+### Squash Feature Branch Commits
+
+Next, consider squashing commits on the feature branch.  If there are many commits, it is beneficial to squash them before trying to rebase with develop.  There is a nice article on [squashing commits into one using git](https://www.internalpointers.com/post/squash-commits-into-one-git), which has been very useful for consolidating commits on a long-lived modflow6 feature branch.
+
+Once the commits on the feature branch have been consolidated, a force push to origin is recommended.  This will update `feat-xyz` on origin.
+
+```
+git push origin feat-xyz --force
+```
+
+### Rebase Feature Branch with Develop
+
+Now that the commits on `feat-xyz` have been consolidated, it is time to rebase with develop.  If there are multiple commits in `feat-xyz` that make changes and undo them or rename files and move things around in subsequent commits, then there may be multiple sets of merge conflicts that will need to be resolved as the rebase works its way through the commit change sets.  This is why it is beneficial to squash the feature commits before rebasing with develop.
+
+To rebase with develop, make sure the feature branch is checked out and then type:
+
+```
+git rebase develop
+```
+
+If there are merge conflicts, they will need to be resolved before going forward.  Once any conflicts are resolved, it may be worthwhile to rebuild the MODFLOW 6 program and run the smoke tests.  
+
+At this point, you will want to force push the updated feature branch to origin using the same force push command as before.
+
+```
+git push origin feat-xyz --force
+```
+
+### Cleanup
+
+Lastly, if you are satisfied with the results and confident the procedure went well, then you can delete the backup that you created at the start.
+
+```
+git branch -d feat-xyz-backup
+```
+
+This process can be repeated periodically to stay in sync with the develop branch and keep a clean commit history.
