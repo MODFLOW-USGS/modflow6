@@ -36,8 +36,8 @@ module mf6bmi
 
   integer(c_int), bind(C, name="ISTDOUTTOFILE") :: istdout_to_file = 1 !< output control: =0 to screen, >0 to file
   !DIR$ ATTRIBUTES DLLEXPORT :: istdout_to_file
-  integer(c_int), bind(C, name="ISIM_MODE") :: sim_mode = MNORMAL !< simulation mode MVALIDATE=0, MNORMAL=1, MRUN=2
-  !DIR$ ATTRIBUTES DLLEXPORT :: sim_mode
+  integer(c_int), bind(C, name="ISIM_MODE_C_INT") :: isim_mode_c_int = MNORMAL !< simulation mode MVALIDATE=0, MNORMAL=1, MRUN=2
+  !DIR$ ATTRIBUTES DLLEXPORT :: isim_mode_c_int
 
 contains
 
@@ -71,7 +71,7 @@ contains
     ! -- local variables
     !
     ! -- set isim_mode
-    isim_mode = sim_mode
+    isim_mode = isim_mode_c_int
     !
     if (istdout_to_file > 0) then
       ! -- open stdout file mfsim.stdout
