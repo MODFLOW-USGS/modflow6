@@ -5,11 +5,13 @@ include ./makedefaults
 
 # Define the source file directories
 SOURCEDIR1=../src
-SOURCEDIR2=../../../src/Utilities
+SOURCEDIR2=../../../src/Model/ModelUtilities
+SOURCEDIR3=../../../src\Utilities
 
 VPATH = \
 ${SOURCEDIR1} \
-${SOURCEDIR2} 
+${SOURCEDIR2} \
+${SOURCEDIR3} 
 
 .SUFFIXES: .f90 .F90 .o
 
@@ -29,6 +31,7 @@ $(OBJDIR)/InputOutput.o \
 $(OBJDIR)/sort.o \
 $(OBJDIR)/BlockParser.o \
 $(OBJDIR)/ArrayReaders.o \
+$(OBJDIR)/TspLabels.o \
 $(OBJDIR)/zone.o \
 $(OBJDIR)/Budget.o \
 $(OBJDIR)/zoneoutput.o \
