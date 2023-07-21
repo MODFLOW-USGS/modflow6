@@ -1,41 +1,41 @@
-# makefile created by pymake (version 1.2.7) for the 'mf6' executable.
+# makefile created by pymake (version 1.2.9.dev0) for the 'mf6' executable.
 
 
 include ./makedefaults
 
 # Define the source file directories
-SOURCEDIR1=..\src
-SOURCEDIR2=..\src\Distributed
-SOURCEDIR3=..\src\Exchange
-SOURCEDIR4=..\src\Model
-SOURCEDIR5=..\src\Model\Connection
-SOURCEDIR6=..\src\Model\Geometry
-SOURCEDIR7=..\src\Model\GroundWaterEnergy
-SOURCEDIR8=..\src\Model\GroundWaterFlow
-SOURCEDIR9=..\src\Model\GroundWaterTransport
-SOURCEDIR10=..\src\Model\ModelUtilities
-SOURCEDIR11=..\src\Model\TransportModel
-SOURCEDIR12=..\src\Solution
-SOURCEDIR13=..\src\Solution\LinearMethods
-SOURCEDIR14=..\src\Solution\PETSc
-SOURCEDIR15=..\src\Timing
-SOURCEDIR16=..\src\Utilities
-SOURCEDIR17=..\src\Utilities\ArrayRead
-SOURCEDIR18=..\src\Utilities\Idm
-SOURCEDIR19=..\src\Utilities\Idm\mf6blockfile
-SOURCEDIR20=..\src\Utilities\Idm\selector
-SOURCEDIR21=..\src\Utilities\Libraries
-SOURCEDIR22=..\src\Utilities\Libraries\blas
-SOURCEDIR23=..\src\Utilities\Libraries\daglib
-SOURCEDIR24=..\src\Utilities\Libraries\rcm
-SOURCEDIR25=..\src\Utilities\Libraries\sparsekit
-SOURCEDIR26=..\src\Utilities\Libraries\sparskit2
-SOURCEDIR27=..\src\Utilities\Matrix
-SOURCEDIR28=..\src\Utilities\Memory
-SOURCEDIR29=..\src\Utilities\Observation
-SOURCEDIR30=..\src\Utilities\OutputControl
-SOURCEDIR31=..\src\Utilities\TimeSeries
-SOURCEDIR32=..\src\Utilities\Vector
+SOURCEDIR1=../src
+SOURCEDIR2=../src/Exchange
+SOURCEDIR3=../src/Model
+SOURCEDIR4=../src/Model/Geometry
+SOURCEDIR5=../src/Model/TransportModel
+SOURCEDIR6=../src/Model/ModelUtilities
+SOURCEDIR7=../src/Model/Connection
+SOURCEDIR8=../src/Model/GroundWaterEnergy
+SOURCEDIR9=../src/Model/GroundWaterTransport
+SOURCEDIR10=../src/Model/GroundWaterFlow
+SOURCEDIR11=../src/Distributed
+SOURCEDIR12=../src/Solution
+SOURCEDIR13=../src/Solution/PETSc
+SOURCEDIR14=../src/Solution/LinearMethods
+SOURCEDIR15=../src/Timing
+SOURCEDIR16=../src/Utilities
+SOURCEDIR17=../src/Utilities/TimeSeries
+SOURCEDIR18=../src/Utilities/Libraries
+SOURCEDIR19=../src/Utilities/Libraries/rcm
+SOURCEDIR20=../src/Utilities/Libraries/sparsekit
+SOURCEDIR21=../src/Utilities/Libraries/sparskit2
+SOURCEDIR22=../src/Utilities/Libraries/blas
+SOURCEDIR23=../src/Utilities/Libraries/daglib
+SOURCEDIR24=../src/Utilities/Idm
+SOURCEDIR25=../src/Utilities/Idm/selector
+SOURCEDIR26=../src/Utilities/Idm/mf6blockfile
+SOURCEDIR27=../src/Utilities/Matrix
+SOURCEDIR28=../src/Utilities/Vector
+SOURCEDIR29=../src/Utilities/Observation
+SOURCEDIR30=../src/Utilities/OutputControl
+SOURCEDIR31=../src/Utilities/Memory
+SOURCEDIR32=../src/Utilities/ArrayRead
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -201,6 +201,7 @@ $(OBJDIR)/IdmGweDfnSelector.o \
 $(OBJDIR)/UzfCellGroup.o \
 $(OBJDIR)/Xt3dInterface.o \
 $(OBJDIR)/gwf3tvk8.o \
+$(OBJDIR)/gwf3vsc8.o \
 $(OBJDIR)/GwfNpfOptions.o \
 $(OBJDIR)/NumericalSolution.o \
 $(OBJDIR)/InterfaceMap.o \
@@ -323,9 +324,7 @@ $(OBJDIR)/sparsekit.o \
 $(OBJDIR)/rcm.o \
 $(OBJDIR)/blas1_d.o \
 $(OBJDIR)/Iunit.o \
-$(OBJDIR)/LatHeatVapor.o \
 $(OBJDIR)/GwtAdvOptions.o \
-$(OBJDIR)/gwf3vsc8.o \
 $(OBJDIR)/RectangularGeometry.o \
 $(OBJDIR)/CircularGeometry.o
 
