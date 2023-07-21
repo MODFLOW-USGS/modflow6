@@ -7,7 +7,6 @@ To build and test a parallel version of the program, first read the instructions
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-
 - [Prerequisites](#prerequisites)
   - [Git](#git)
   - [Fortran compiler](#fortran-compiler)
@@ -43,11 +42,12 @@ To build and test a parallel version of the program, first read the instructions
     - [Selecting tests with markers](#selecting-tests-with-markers)
     - [External model tests](#external-model-tests)
     - [Writing tests](#writing-tests)
+- [Generating makefiles](#generating-makefiles)
 - [Git Strategy for Managing Long-Lived Branches](#git-strategy-for-managing-long-lived-branches)
-    - [Create a Backup](#create-a-backup)
-    - [Squash Feature Branch Commits](#squash-feature-branch-commits)
-    - [Rebase Feature Branch with Develop](#rebase-feature-branch-with-develop)
-    - [Cleanup](#cleanup)
+  - [Create a Backup](#create-a-backup)
+  - [Squash Feature Branch Commits](#squash-feature-branch-commits)
+  - [Rebase Feature Branch with Develop](#rebase-feature-branch-with-develop)
+  - [Cleanup](#cleanup)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -431,6 +431,24 @@ Tests should ideally follow a few conventions for easier maintenance:
   - `@pytest.mark.regression` if the test compares results from different versions
 
 **Note:** If all three external model repositories are not installed as described above, some tests will be skipped. The full test suite includes >750 cases. All must pass before changes can be merged into this repository.
+
+## Generating makefiles
+
+Run `build_makefiles.py` in the `distribution/` directory after adding, removing, or renaming source files.
+
+If the utilities in `utils` require a new module from the modflow6 `src/` directory, add it to `make/extrafiles.txt`.
+
+Module dependencies for features under development should be added to `make/excludefiles.txt`.
+
+Makefile generation and usage can be tested from the `distribution` directory:
+
+```shell
+pytest -v build_makefiles.py
+```
+
+Note that `make` is required to test compiling MODFLOW 6 with makefiles. If `make` is not discovered on the system path, compile tests will be skipped.
+
+On Windows, `make` is available by default in Git Bash. It is recommended to generate and test makefiles from a Unix-like shell like Git Bash rather than PowerShell or Command Prompt.
 
 ## Git Strategy for Managing Long-Lived Branches
 
