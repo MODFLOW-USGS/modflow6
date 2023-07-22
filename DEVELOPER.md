@@ -446,9 +446,27 @@ Makefile generation and usage can be tested from the `distribution` directory:
 pytest -v build_makefiles.py
 ```
 
+### Install
+
 Note that `make` is required to test compiling MODFLOW 6 with makefiles. If `make` is not discovered on the system path, compile tests will be skipped.
 
-On Windows, it is recommended to generate and test makefiles from a Unix-like shell rather than PowerShell or Command Prompt. Make can be installed via Conda or Chocolatey. It is also included with mingw.
+On Windows, it is recommended to generate and test makefiles from a Unix-like shell rather than PowerShell or Command Prompt. Make can be installed via [Conda](https://anaconda.org/conda-forge/make) or [Chocolatey](https://community.chocolatey.org/packages/make). Alternatively, it is included with [mingw](https://sourceforge.net/projects/mingw/), which is also available from [Chocolatey](https://community.chocolatey.org/packages/mingw).
+
+To use Conda from Git Bash on Windows, first run the `conda.sh` script located in your Conda installation's `/etc/profile.d` subdirectory. For instance, with Anaconda3:
+
+```shell
+. /c/Anaconda3/etc/profile.d/conda.sh
+```
+
+Or Miniconda3:
+
+```shell
+. /c/ProgramData/miniconda3/etc/profile.d/conda.sh
+```
+
+After this, `conda` commands should be available.
+
+This command may be added to a `.bashrc` or `.bash_profile` file in your home directory to permanently configure Git Bash for Conda.
 
 ## Git Strategy for Managing Long-Lived Branches
 
