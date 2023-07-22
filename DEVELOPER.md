@@ -436,7 +436,7 @@ Tests should ideally follow a few conventions for easier maintenance:
 
 Run `build_makefiles.py` in the `distribution/` directory after adding, removing, or renaming source files.
 
-If the utilities in `utils` require a new module from the modflow6 `src/` directory, add it to `make/extrafiles.txt`.
+If the utilities located in the `utils` directory require a new module that was recently added to the modflow6 `src/` directory, then the new `src\Utilites\<newUtility>.f90` file also should be added to the utility's (e.g., `mf5to6`) `make/extrafiles.txt` file.
 
 Module dependencies for features under development should be added to `make/excludefiles.txt`.
 
