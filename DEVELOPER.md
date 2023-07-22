@@ -448,7 +448,7 @@ pytest -v build_makefiles.py
 
 Note that `make` is required to test compiling MODFLOW 6 with makefiles. If `make` is not discovered on the system path, compile tests will be skipped.
 
-On Windows, `make` is available by default in Git Bash. It is recommended to generate and test makefiles from a Unix-like shell like Git Bash rather than PowerShell or Command Prompt.
+On Windows, it is recommended to generate and test makefiles from a Unix-like shell rather than PowerShell or Command Prompt. Make can be installed via Conda or Chocolatey. It is also included with mingw.
 
 ## Git Strategy for Managing Long-Lived Branches
 
