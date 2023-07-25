@@ -3,16 +3,20 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 from simulation import TestSimulation
 
 ex = ["uzf_3lay"]
+name = "model"
 iuz_cell_dict = {}
 cell_iuz_dict = {}
 
+nouter, ninner = 100, 300
+hclose, rclose, relax = 1e-9, 1e-3, 0.97
+
 
 def build_model(idx, dir):
-
     nlay, nrow, ncol = 3, 1, 10
     nper = 5
     perlen = [20.0, 20.0, 20.0, 500.0, 2000.0]
@@ -23,14 +27,9 @@ def build_model(idx, dir):
     delc = 1.0
     strt = -25
 
-    nouter, ninner = 100, 300
-    hclose, rclose, relax = 1e-9, 1e-3, 0.97
-
     tdis_rc = []
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
-
-    name = ex[idx]
 
     # build MODFLOW 6 files
     ws = dir
@@ -263,11 +262,7 @@ def eval_model(sim):
     ws = sim.simpath
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
 
-    fpth = os.path.join(ws, "uzf_3lay.hds")
-    hobj = flopy.utils.HeadFile(fpth, precision="double")
-    hds = hobj.get_alldata()
-
-    bpth = os.path.join(ws, "uzf_3lay.cbc")
+    bpth = ws / f"{name}.cbc"
     bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
     bobj.get_unique_record_names()
     # '          STO-SS'
@@ -281,7 +276,7 @@ def eval_model(sim):
     gwet = bobj.get_data(text="UZF-GWET")
     gwet = np.array(gwet)
 
-    uzpth = os.path.join(ws, "uzf_3lay.uzf.bud")
+    uzpth = os.path.join(ws, f"{name}.uzf.bud")
     uzobj = flopy.utils.CellBudgetFile(uzpth, precision="double")
     uzobj.get_unique_record_names()
     # '    FLOW-JA-FACE'
@@ -303,18 +298,18 @@ def eval_model(sim):
     gwet_arr = np.zeros(
         (
             tot_stp,
-            sim.uzf_3lay.dis.nlay.get_data(),
-            sim.uzf_3lay.dis.nrow.get_data(),
-            sim.uzf_3lay.dis.ncol.get_data(),
+            sim.model.dis.nlay.get_data(),
+            sim.model.dis.nrow.get_data(),
+            sim.model.dis.ncol.get_data(),
         )
     )
 
     uzet_arr = np.zeros(
         (
             tot_stp,
-            sim.uzf_3lay.dis.nlay.get_data(),
-            sim.uzf_3lay.dis.nrow.get_data(),
-            sim.uzf_3lay.dis.ncol.get_data(),
+            sim.model.dis.nlay.get_data(),
+            sim.model.dis.nrow.get_data(),
+            sim.model.dis.ncol.get_data(),
         )
     )
 
@@ -336,7 +331,7 @@ def eval_model(sim):
 
             uzet_arr[tm, lay, row, col] = itm[2]
 
-    uzf_strsPerDat = sim.uzf_3lay.uzf.perioddata.get_data()
+    uzf_strsPerDat = sim.model.uzf.perioddata.get_data()
     pet = 0
     for tm in range(tot_stp):
         nstps = 0
@@ -345,8 +340,8 @@ def eval_model(sim):
             if tm < nstps:
                 break
 
-        for i in range(sim.uzf_3lay.dis.nrow.get_data()):
-            for j in range(sim.uzf_3lay.dis.ncol.get_data()):
+        for i in range(sim.model.dis.nrow.get_data()):
+            for j in range(sim.model.dis.ncol.get_data()):
                 if (0, i, j) in cell_iuz_dict:
                     iuz = cell_iuz_dict[
                         (0, i, j)
@@ -370,14 +365,17 @@ def eval_model(sim):
     print("Finished running checks")
 
 
-@pytest.mark.parametrize("name", ex)
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
+@pytest.mark.parametrize("idx,name", enumerate(ex))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    ws = function_tmpdir
     test = TestFramework()
-    test.build(build_model, 0, ws)
+    test.build(build_model, idx, ws)
     test.run(
         TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_model, idxsim=0
+            name=name,
+            exe_dict=targets,
+            exfunc=eval_model,
+            idxsim=idx,
         ),
         ws,
     )

@@ -27,7 +27,7 @@ module NumericalSolutionModule
                                      AddNumericalExchangeToList, &
                                      GetNumericalExchangeFromList
   use SparseModule, only: sparsematrix
-  use SimVariablesModule, only: iout, isim_mode
+  use SimVariablesModule, only: iout, isim_mode, errmsg
   use SimStagesModule
   use BlockParserModule, only: BlockParserType
   use IMSLinearModule
@@ -160,6 +160,7 @@ module NumericalSolutionModule
 
     ! 'protected' (this can be overridden)
     procedure :: sln_has_converged
+    procedure :: sln_package_convergence
     procedure :: sln_sync_newtonur_flag
     procedure :: sln_nur_has_converged
     procedure :: sln_calc_ptc
@@ -531,7 +532,6 @@ contains
     ! -- local variables
     class(NumericalModelType), pointer :: mp => null()
     class(NumericalExchangeType), pointer :: cp => null()
-    character(len=linelength) :: errmsg
     character(len=linelength) :: warnmsg
     character(len=linelength) :: keyword
     character(len=linelength) :: fname
@@ -1502,7 +1502,6 @@ contains
     class(NumericalExchangeType), pointer :: cp => null()
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
-    character(len=LINELENGTH) :: line
     character(len=LENPAKLOC) :: cmod
     character(len=LENPAKLOC) :: cpak
     character(len=LENPAKLOC) :: cpakout
@@ -1693,15 +1692,16 @@ contains
     end do
     !
     ! -- evaluate package convergence
-    if (abs(dpak) > this%dvclose) then
-      this%icnvg = 0
-      ! -- write message to stdout
-      if (iend /= 0) then
-        write (line, '(3a)') &
-          'PACKAGE (', trim(cpakout), ') CAUSED CONVERGENCE FAILURE'
-        call sim_message(line)
-      end if
-    end if
+    this%icnvg = this%sln_package_convergence(dpak, cpakout, iend)
+    ! if (abs(dpak) > this%dvclose) then
+    !   this%icnvg = 0
+    !   ! -- write message to stdout
+    !   if (iend /= 0) then
+    !     write (line, '(3a)') &
+    !       'PACKAGE (', trim(cpakout), ') CAUSED CONVERGENCE FAILURE'
+    !     call sim_message(line)
+    !   end if
+    ! end if
     !
     ! -- write maximum change in package convergence check
     if (this%iprims > 0) then
@@ -3143,6 +3143,29 @@ contains
     end if
 
   end function sln_has_converged
+
+  !> @brief Check package convergence
+  !<
+  function sln_package_convergence(this, dpak, cpakout, iend) result(ivalue)
+    ! dummy
+    class(NumericalSolutionType) :: this !< NumericalSolutionType instance
+    real(DP), intent(in) :: dpak !< Newton Under-relaxation flag
+    character(len=LENPAKLOC), intent(in) :: cpakout
+    integer(I4B), intent(in) :: iend
+    ! local
+    integer(I4B) :: ivalue !<
+    ivalue = 1
+    if (abs(dpak) > this%dvclose) then
+      ivalue = 0
+      ! -- write message to stdout
+      if (iend /= 0) then
+        write (errmsg, '(3a)') &
+          'PACKAGE (', trim(cpakout), ') CAUSED CONVERGENCE FAILURE'
+        call sim_message(errmsg)
+      end if
+    end if
+
+  end function sln_package_convergence
 
   !> @brief Syncronize Newton Under-relaxation flag
   !<
