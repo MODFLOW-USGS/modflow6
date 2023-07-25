@@ -911,12 +911,19 @@ contains
         if (this%igwfnode(n) < 1) then
           call this%parser%GetStringCaps(keyword)
           this%ianynone = this%ianynone + 1
-          if (keyword /= 'NONE') then
+          if (keyword == 'NONE') then
+            !
+            ! -- create warning message
             write (cnum, '(i0)') n
-            errmsg = 'Cell ID ('//trim(cellid)// &
-                     ') for unconnected reach '//trim(cnum)// &
-                     ' must be NONE'
-            call store_error(errmsg)
+            warnmsg = 'CELLID for unconnected reach '//trim(cnum)// &
+                     ' specified to be NONE. Unconnected reaches '// &
+                     'should be specified with a zero for each grid '// &
+                     'dimension. For example, for a DIS grid a CELLID '// &
+                     'of 0 0 0 should be specified for unconnected reaches.'
+            !
+            ! -- create deprecation warning
+            call deprecation_warning('PACKAGEDATA', 'CELLID=NONE', '6.5.0', &
+                                    warnmsg, this%parser%GetUnit())
           end if
         end if
         ! -- get reach length
