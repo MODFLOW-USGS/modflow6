@@ -916,14 +916,14 @@ contains
             ! -- create warning message
             write (cnum, '(i0)') n
             warnmsg = 'CELLID for unconnected reach '//trim(cnum)// &
-                     ' specified to be NONE. Unconnected reaches '// &
-                     'should be specified with a zero for each grid '// &
-                     'dimension. For example, for a DIS grid a CELLID '// &
-                     'of 0 0 0 should be specified for unconnected reaches.'
+                      ' specified to be NONE. Unconnected reaches '// &
+                      'should be specified with a zero for each grid '// &
+                      'dimension. For example, for a DIS grid a CELLID '// &
+                      'of 0 0 0 should be specified for unconnected reaches.'
             !
             ! -- create deprecation warning
             call deprecation_warning('PACKAGEDATA', 'CELLID=NONE', '6.5.0', &
-                                    warnmsg, this%parser%GetUnit())
+                                     warnmsg, this%parser%GetUnit())
           end if
         end if
         ! -- get reach length
