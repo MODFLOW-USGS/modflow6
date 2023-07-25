@@ -84,12 +84,11 @@ contains
 
   end function par_sync_newtonur_flag
 
-  function par_nur_has_converged(this, dxold_max, hncg, dpak) &
+  function par_nur_has_converged(this, dxold_max, hncg) &
     result(has_converged)
     class(ParallelSolutionType) :: this !< parallel solution instance
     real(DP), intent(in) :: dxold_max !< the maximum dependent variable change for cells not adjusted by NUR
     real(DP), intent(in) :: hncg !< largest dep. var. change at end of Picard iter.
-    real(DP), intent(in) :: dpak !< largest change in advanced packages
     logical(LGP) :: has_converged !< True, when converged
     ! local
     integer(I4B) :: icnvg_local
@@ -102,7 +101,7 @@ contains
     has_converged = .false.
     icnvg_local = 0
     if (this%NumericalSolutionType%sln_nur_has_converged( &
-        dxold_max, hncg, dpak)) then
+        dxold_max, hncg)) then
       icnvg_local = 1
     end if
 

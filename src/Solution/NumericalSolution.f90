@@ -1691,8 +1691,8 @@ contains
       end if
     end do
     !
-    ! -- evaluate package convergence - only done if convergence not achieved
-    if (this%icnvg /= 0) then
+    ! -- evaluate package convergence - only done if convergence is achieved
+    if (this%icnvg == 1) then
       this%icnvg = this%sln_package_convergence(dpak, cpakout, iend)
       !
       ! -- write maximum change in package convergence check
@@ -1755,7 +1755,7 @@ contains
         call this%sln_maxval(this%neq, this%dxold, dxold_max)
         !
         ! -- evaluate convergence
-        if (this%sln_nur_has_converged(dxold_max, this%hncg(kiter), dpak)) then
+        if (this%sln_nur_has_converged(dxold_max, this%hncg(kiter))) then
           !
           ! -- converged
           this%icnvg = 1
@@ -3175,18 +3175,16 @@ contains
 
   !> @brief Custom convergence check for when Newton UR has been applied
   !<
-  function sln_nur_has_converged(this, dxold_max, hncg, dpak) &
+  function sln_nur_has_converged(this, dxold_max, hncg) &
     result(has_converged)
     class(NumericalSolutionType) :: this !< NumericalSolutionType instance
     real(DP), intent(in) :: dxold_max !< the maximum dependent variable change for unrelaxed cells
     real(DP), intent(in) :: hncg !< largest dep. var. change at end of Picard iteration
-    real(DP), intent(in) :: dpak !< largest change in advanced packages
     logical(LGP) :: has_converged !< True, when converged
 
     has_converged = .false.
     if (abs(dxold_max) <= this%dvclose .and. &
-        abs(hncg) <= this%dvclose .and. &
-        abs(dpak) <= this%dvclose) then
+        abs(hncg) <= this%dvclose) then
       has_converged = .true.
     end if
 
