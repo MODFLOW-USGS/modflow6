@@ -88,7 +88,7 @@ $(OBJDIR)/MemoryHelper.o \
 $(OBJDIR)/CharString.o \
 $(OBJDIR)/Memory.o \
 $(OBJDIR)/List.o \
-$(OBJDIR)/LineReader.o \
+$(OBJDIR)/LongLineReader.o \
 $(OBJDIR)/MemoryList.o \
 $(OBJDIR)/TimeSeriesRecord.o \
 $(OBJDIR)/BlockParser.o \
