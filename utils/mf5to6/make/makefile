@@ -46,6 +46,7 @@ $(OBJDIR)/CharString.o \
 $(OBJDIR)/Memory.o \
 $(OBJDIR)/List.o \
 $(OBJDIR)/MemoryList.o \
+$(OBJDIR)/LongLineReader.o \
 $(OBJDIR)/Utilities.o \
 $(OBJDIR)/ConstantsPHMF.o \
 $(OBJDIR)/MemoryManager.o \
