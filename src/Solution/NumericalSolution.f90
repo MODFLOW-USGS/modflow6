@@ -1691,41 +1691,34 @@ contains
       end if
     end do
     !
-    ! -- evaluate package convergence
-    this%icnvg = this%sln_package_convergence(dpak, cpakout, iend)
-    ! if (abs(dpak) > this%dvclose) then
-    !   this%icnvg = 0
-    !   ! -- write message to stdout
-    !   if (iend /= 0) then
-    !     write (line, '(3a)') &
-    !       'PACKAGE (', trim(cpakout), ') CAUSED CONVERGENCE FAILURE'
-    !     call sim_message(line)
-    !   end if
-    ! end if
-    !
-    ! -- write maximum change in package convergence check
-    if (this%iprims > 0) then
-      cval = 'Package'
-      if (this%icnvg /= 1) then
-        cmsg = ' '
-      else
-        cmsg = '*'
-      end if
-      if (len_trim(cpakout) > 0) then
-        !
-        ! -- add data to outertab
-        call this%outertab%add_term(cval)
-        call this%outertab%add_term(kiter)
-        call this%outertab%add_term(' ')
-        if (this%numtrack > 0) then
-          call this%outertab%add_term(' ')
-          call this%outertab%add_term(' ')
-          call this%outertab%add_term(' ')
-          call this%outertab%add_term(' ')
+    ! -- evaluate package convergence - only done if convergence not achieved
+    if (this%icnvg /= 0) then
+      this%icnvg = this%sln_package_convergence(dpak, cpakout, iend)
+      !
+      ! -- write maximum change in package convergence check
+      if (this%iprims > 0) then
+        cval = 'Package'
+        if (this%icnvg /= 1) then
+          cmsg = ' '
+        else
+          cmsg = '*'
         end if
-        call this%outertab%add_term(dpak)
-        call this%outertab%add_term(cmsg)
-        call this%outertab%add_term(cpakout)
+        if (len_trim(cpakout) > 0) then
+          !
+          ! -- add data to outertab
+          call this%outertab%add_term(cval)
+          call this%outertab%add_term(kiter)
+          call this%outertab%add_term(' ')
+          if (this%numtrack > 0) then
+            call this%outertab%add_term(' ')
+            call this%outertab%add_term(' ')
+            call this%outertab%add_term(' ')
+            call this%outertab%add_term(' ')
+          end if
+          call this%outertab%add_term(dpak)
+          call this%outertab%add_term(cmsg)
+          call this%outertab%add_term(cpakout)
+        end if
       end if
     end if
     !
