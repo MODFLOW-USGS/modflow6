@@ -7,7 +7,7 @@ module ObsBlockModule
   use ConstantsPHMFModule,       only: CONTINUOUS, SINGLE, LENOBSNAMENEW
   use DnmDis3dModule,            only: Dis3dType
   use GlobalVariablesPHMFModule, only: verbose
-  use InputOutputModule,         only: UPCASE, URWORD, uterminate_block
+  use InputOutputModule,         only: UPCASE, URWORD
   use ListModule,                only: ListType
   use ObserveModule,             only: ObserveType, AddObserveToList, &
                                        GetObserveFromList, ConstructObservation

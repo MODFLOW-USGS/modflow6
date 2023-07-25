@@ -364,7 +364,8 @@ contains
       call this%TasManager%Reset(this%packName)
       !
       ! -- Read data as a list
-      call this%dis%read_list(this%parser%iuactive, this%iout, &
+      call this%dis%read_list(this%parser%line_reader, &
+                              this%parser%iuactive, this%iout, &
                               this%iprpak, nlist, this%inamedbound, &
                               this%iauxmultcol, this%nodelist, &
                               this%bound, this%auxvar, this%auxname, &

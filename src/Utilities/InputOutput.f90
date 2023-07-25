@@ -13,14 +13,14 @@ module InputOutputModule
                              DZERO
   use GenericUtilitiesModule, only: is_same, sim_message
   private
-  public :: GetUnit, uget_block,                                               &
-            uterminate_block, UPCASE, URWORD, ULSTLB, UBDSV4,                  &
+  public :: GetUnit,                                                           &
+            UPCASE, URWORD, ULSTLB, UBDSV4,                                    &
             ubdsv06, UBDSVB, UCOLNO, ULAPRW,                                   &
             ULASAV, ubdsv1, ubdsvc, ubdsvd, UWWORD,                            &
             same_word, get_node, get_ijk, unitinquire,                         &
             ParseLine, ulaprufw, openfile,                                     &
             linear_interpolate, lowcase,                                       &
-            read_line, uget_any_block,                                         &
+            read_line,                                                         &
             GetFileFromPath, extract_idnum_or_bndname, urdaux,                 &
             get_jk, print_format, BuildFixedFormat,                            &
             BuildFloatFormat, BuildIntFormat, fseek_stream,                    &
@@ -201,239 +201,6 @@ module InputOutputModule
     return
   end function getunit
   
-  !> @brief Find a block in a file
-  !!
-  !! Subroutine to read from a file until the tag (ctag) for a block is
-  !! is found. Return isfound with true, if found.
-  !!
-  !<
-  subroutine uget_block(iin, iout, ctag, ierr, isfound, lloc, line, iuext,     &
-                        blockRequired, supportopenclose)
-    implicit none
-    ! -- dummy variables
-    integer(I4B),         intent(in) :: iin                   !< file unit
-    integer(I4B),         intent(in) :: iout                  !< output listing file unit 
-    character (len=*),    intent(in) :: ctag                  !< block tag
-    integer(I4B),        intent(out) :: ierr                  !< error 
-    logical,           intent(inout) :: isfound               !< boolean indicating if the block was found
-    integer(I4B),      intent(inout) :: lloc                  !< position in line
-    character (len=:), allocatable, intent(inout) :: line     !< line
-    integer(I4B),      intent(inout) :: iuext                 !< external file unit number
-    logical, optional,    intent(in) :: blockRequired         !< boolean indicating if the block is required
-    logical, optional,    intent(in) :: supportopenclose      !< boolean indicating if the block supports open/close
-    ! -- local variables
-    integer(I4B) :: istart
-    integer(I4B) :: istop
-    integer(I4B) :: ival
-    integer(I4B) :: lloc2
-    real(DP) :: rval
-    character (len=:), allocatable :: line2
-    character(len=LINELENGTH) :: fname
-    character(len=MAXCHARLEN) :: ermsg
-    logical :: supportoc, blockRequiredLocal
-    !
-    ! -- code
-    if (present(blockRequired)) then
-      blockRequiredLocal = blockRequired
-    else
-      blockRequiredLocal = .true.
-    endif
-    supportoc = .false.
-    if (present(supportopenclose)) then
-      supportoc = supportopenclose
-    endif
-    iuext = iin
-    isfound = .false.
-    mainloop: do
-      lloc = 1
-      call u9rdcom(iin, iout, line, ierr)
-      if (ierr < 0) then
-        if (blockRequiredLocal) then
-          ermsg = 'Required block "' // trim(ctag) // &
-                  '" not found.  Found end of file instead.'
-          call store_error(ermsg)
-          call store_error_unit(iuext)
-        end if
-        ! block not found so exit
-        exit
-      end if
-      call urword(line, lloc, istart, istop, 1, ival, rval, iin, iout)
-      if (line(istart:istop) == 'BEGIN') then
-        call urword(line, lloc, istart, istop, 1, ival, rval, iin, iout)
-        if (line(istart:istop) == ctag) then
-          isfound = .true.
-          if (supportoc) then
-            ! Look for OPEN/CLOSE on 1st line after line starting with BEGIN
-            call u9rdcom(iin, iout, line2, ierr)
-            if (ierr < 0) exit
-            lloc2 = 1
-            call urword(line2, lloc2, istart, istop, 1, ival, rval, iin, iout)
-            if (line2(istart:istop) == 'OPEN/CLOSE') then
-              ! -- Get filename and preserve case
-              call urword(line2, lloc2, istart, istop, 0, ival, rval, iin, iout)
-              fname = line2(istart:istop)
-              ! If line contains '(BINARY)' or 'SFAC', handle this block elsewhere
-              chk: do
-                call urword(line2, lloc2, istart, istop, 1, ival, rval, iin, iout)
-                if (line2(istart:istop) == '') exit chk
-                if (line2(istart:istop) == '(BINARY)' .or. &
-                    line2(istart:istop) == 'SFAC') then
-                  backspace(iin)
-                  exit mainloop
-                end if
-              end do chk
-              iuext = GetUnit()
-              call openfile(iuext,iout,fname,'OPEN/CLOSE')
-            else
-              backspace(iin)
-            end if
-          end if
-        else
-          if (blockRequiredLocal) then
-            ermsg = 'Error: Required block "' // trim(ctag) // &
-                    '" not found. Found block "' // line(istart:istop) // &
-                    '" instead.'
-            call store_error(ermsg)
-            call store_error_unit(iuext)
-          else
-            backspace(iin)
-          endif
-        end if
-        exit mainloop
-      else if (line(istart:istop) == 'END') then
-        call urword(line, lloc, istart, istop, 1, ival, rval, iin, iout)
-        if (line(istart:istop) == ctag) then
-          ermsg = 'Error: Looking for BEGIN ' // trim(ctag) // &
-                  ' but found END ' // line(istart:istop) // &
-                  ' instead.'
-          call store_error(ermsg)
-          call store_error_unit(iuext)
-        endif
-      end if
-    end do mainloop
-    !
-    ! -- return
-    return
-  end subroutine uget_block
-
-  !> @brief Find the next block in a file
-  !!
-  !! Subroutine to read from a file until next block is found.
-  !! Return isfound with true, if found, and return the block name.
-  !!
-  !<
-  subroutine uget_any_block(iin,iout,isfound,lloc,line,ctagfound,iuext)
-    implicit none
-    ! -- dummy variables
-    integer(I4B), intent(in) :: iin                         !< file unit number
-    integer(I4B), intent(in) :: iout                        !< output listing file unit
-    logical, intent(inout) :: isfound                       !< boolean indicating if a block was found
-    integer(I4B), intent(inout) :: lloc                     !< position in line
-    character (len=:), allocatable, intent(inout) :: line   !< line
-    character(len=*), intent(out) :: ctagfound              !< block name
-    integer(I4B), intent(inout) :: iuext                    !< external file unit number
-    ! -- local variables
-    integer(I4B) :: ierr, istart, istop
-    integer(I4B) :: ival, lloc2
-    real(DP) :: rval
-    character(len=100) :: ermsg
-    character (len=:), allocatable :: line2
-    character(len=LINELENGTH) :: fname
-    !
-    ! -- code
-    isfound = .false.
-    ctagfound = ''
-    iuext = iin
-    do
-      lloc = 1
-      call u9rdcom(iin,iout,line,ierr)
-      if (ierr < 0) exit
-      call urword(line, lloc, istart, istop, 1, ival, rval, iin, iout)
-      if (line(istart:istop) == 'BEGIN') then
-        call urword(line, lloc, istart, istop, 1, ival, rval, iin, iout)
-        if (line(istart:istop) /= '') then
-          isfound = .true.
-          ctagfound = line(istart:istop)
-          call u9rdcom(iin,iout,line2,ierr)
-          if (ierr < 0) exit
-          lloc2 = 1
-          call urword(line2,lloc2,istart,istop,1,ival,rval,iout,iin)
-          if (line2(istart:istop) == 'OPEN/CLOSE') then
-            iuext = GetUnit()
-            call urword(line2,lloc2,istart,istop,0,ival,rval,iout,iin)
-            fname = line2(istart:istop)
-            call openfile(iuext,iout,fname,'OPEN/CLOSE')
-          else
-            backspace(iin)
-          endif
-        else
-          ermsg  = 'Block name missing in file.'
-          call store_error(ermsg)
-          call store_error_unit(iin)
-        end if
-        exit
-      end if
-    end do
-    return
-  end subroutine uget_any_block
-
-  !> @brief Evaluate if the end of a block has been found
-  !!
-  !! Subroutine to evaluate if the end of a block has been found. Abnormal 
-  !! termination if 'begin' is found or if 'end' encountered with 
-  !! incorrect tag.
-  !!
-  !<
-  subroutine uterminate_block(iin,iout,key,ctag,lloc,line,ierr,iuext)
-    implicit none
-    ! -- dummy variables
-    integer(I4B), intent(in) :: iin              !< file unit number
-    integer(I4B), intent(in) :: iout             !< output listing file unit number
-    character (len=*), intent(in) :: key         !< keyword in block
-    character (len=*), intent(in) :: ctag        !< block name
-    integer(I4B), intent(inout) :: lloc          !< position in line
-    character (len=*), intent(inout) :: line     !< line
-    integer(I4B), intent(inout) :: ierr          !< error
-    integer(I4B), intent(inout) :: iuext         !< external file unit number
-    ! -- local variables
-    character(len=LENBIGLINE) :: ermsg
-    integer(I4B) :: istart
-    integer(I4B) :: istop
-    integer(I4B) :: ival
-    real(DP) :: rval
-    ! -- format
-1   format('ERROR. "',A,'" DETECTED WITHOUT "',A,'". ','"END',1X,A, &
-      '" MUST BE USED TO END ',A,'.')
-2   format('ERROR. "',A,'" DETECTED BEFORE "END',1X,A,'". ','"END',1X,A, &
-        '" MUST BE USED TO END ',A,'.')
-    !
-    ! -- code
-    ierr = 1
-    select case(key)
-      case ('END')
-        call urword(line, lloc, istart, istop, 1, ival, rval, iout, iin)
-        if (line(istart:istop) /= ctag) then
-          write(ermsg, 1) trim(key), trim(ctag), trim(ctag), trim(ctag)
-          call store_error(ermsg)
-          call store_error_unit(iin)
-        else
-          ierr = 0
-          if (iuext /= iin) then
-            ! -- close external file
-            close(iuext)
-            iuext = iin
-          endif
-        end if
-      case ('BEGIN')
-        write(ermsg, 2) trim(key), trim(ctag), trim(ctag), trim(ctag)
-        call store_error(ermsg)
-        call store_error_unit(iin)
-    end select
-    !
-    ! -- return
-    return
-  end subroutine uterminate_block
-
   !> @brief Convert to upper case
   !!
   !! Subroutine to convert a character string to upper case.
@@ -2128,9 +1895,8 @@ END SUBROUTINE URWORD
     pcomments: do
       call get_line(iin, line, ierr)
       if (ierr == IOSTAT_END) then
-        ! -- End of file reached.
-        ! -- Backspace is needed for gfortran.
-        backspace(iin)
+        ! -- End of file reached. Return with ierr = IOSTAT_END
+        !    and line as an empty string
         line = ' '
         exit pcomments
       elseif (ierr /= 0) then

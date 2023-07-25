@@ -25,6 +25,7 @@ message('The used profile is:', profile)
 # parse compiler options
 fc = meson.get_compiler('fortran')
 fc_id = fc.get_id()
+message('The fc_id is:', fc_id)
 compile_args = []
 link_args = []
 
@@ -85,8 +86,23 @@ elif fc_id == 'intel'
                    '-diag-disable:5268',  # Line too long
                   ]
   link_args += '-static-intel'
-endif
+  
+# Command line options for ifx
+elif fc_id == 'intel-llvm-cl'
+  # windows
+  compile_args += ['/fpe:0',              # Activate all floating point exceptions
+                   '/heap-arrays:0',
+                   '/traceback',
+                   '/fpp',                # Activate preprocessing
+                   '/Qdiag-disable:7416', # f2008 warning
+                   '/Qdiag-disable:7025', # f2008 warning
+                   '/Qdiag-disable:5268', # Line too long
+                  ]
+  link_args += ['/ignore:4217', # access through ddlimport might be inefficient
+                '/ignore:4286'  # same as 4217, but more general
+               ]
 
+endif
 
 # parallel build options
 is_parallel_build = get_option('parallel')

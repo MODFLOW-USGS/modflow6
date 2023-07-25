@@ -67,13 +67,43 @@ module ConnectionModule
     !
     select case (numalphaj)
     case (1)
+      if (this%alphaj1 == 0) then
+        this%k1 = 0
+        this%i1 = 0
+        this%j1 = 0
+      end if
       write(iu,10)this%kp, this%ip, this%jp, this%kc, this%ic, this%jc, &
                   this%k1, this%i1, this%j1, this%alphaj1
     case (2)
+      if (this%alphaj1 == 0.) then
+        this%k1 = 0
+        this%i1 = 0
+        this%j1 = 0
+      end if
+      if (this%alphaj2 == 0.) then
+        this%k2 = 0
+        this%i2 = 0
+        this%j2 = 0
+      end if
       write(iu,20)this%kp, this%ip, this%jp, this%kc, this%ic, this%jc, &
                   this%k1, this%i1, this%j1, this%k2, this%i2, this%j2, &
                   this%alphaj1, this%alphaj2
     case (3)
+      if (this%alphaj1 == 0.) then
+        this%k1 = 0
+        this%i1 = 0
+        this%j1 = 0
+      end if
+      if (this%alphaj2 == 0.) then
+        this%k2 = 0
+        this%i2 = 0
+        this%j2 = 0
+      end if
+      if (this%alphaj12 == 0.) then
+        this%k12 = 0
+        this%i12 = 0
+        this%j12 = 0
+      end if
       write(iu,30)this%kp, this%ip, this%jp, this%kc, this%ic, this%jc, &
                   this%k1, this%i1, this%j1, this%k2, this%i2, this%j2, &
                   this%k12, this%i12, this%j12, this%alphaj1, this%alphaj2, &

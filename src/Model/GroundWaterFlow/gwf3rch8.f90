@@ -591,7 +591,8 @@ contains
     !
     ! -- read the list of recharge values; scale the recharge by auxmultcol
     !    if it is specified.
-    call this%dis%read_list(this%parser%iuactive, this%iout, this%iprpak, &
+    call this%dis%read_list(this%parser%line_reader, &
+                            this%parser%iuactive, this%iout, this%iprpak, &
                             nlist, this%inamedbound, this%iauxmultcol, &
                             this%nodelist, this%bound, this%auxvar, &
                             this%auxname, this%boundname, this%listlabel, &
