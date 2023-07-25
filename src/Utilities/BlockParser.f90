@@ -157,8 +157,9 @@ contains
     this%blockNameFound = ''
     !
     if (blockName == '*') then
-      call uget_any_block(this%line_reader, this%inunit, this%iout, isFound, this%lloc, &
-                          this%line, blockNameFound, this%iuext)
+      call uget_any_block(this%line_reader, this%inunit, this%iout, &
+                          isFound, this%lloc, this%line, blockNameFound, &
+                          this%iuext)
       if (isFound) then
         this%blockNameFound = blockNameFound
         ierr = 0
@@ -166,7 +167,8 @@ contains
         ierr = 1
       end if
     else
-      call uget_block(this%line_reader, this%inunit, this%iout, this%blockName, ierr, isFound, &
+      call uget_block(this%line_reader, this%inunit, this%iout, &
+                      this%blockName, ierr, isFound, &
                       this%lloc, this%line, this%iuext, continueRead, &
                       supportOpenCloseLocal)
       if (isFound) this%blockNameFound = this%blockName
@@ -596,28 +598,28 @@ contains
   !! is found. Return isfound with true, if found.
   !!
   !<
-  subroutine uget_block(line_reader, iin, iout, ctag, ierr, isfound, lloc, line, iuext,     &
-                        blockRequired, supportopenclose)
+  subroutine uget_block(line_reader, iin, iout, ctag, ierr, isfound, &
+                        lloc, line, iuext, blockRequired, supportopenclose)
     implicit none
     ! -- dummy variables
     type(LongLineReaderType), intent(inout) :: line_reader
-    integer(I4B),         intent(in) :: iin                   !< file unit
-    integer(I4B),         intent(in) :: iout                  !< output listing file unit 
-    character (len=*),    intent(in) :: ctag                  !< block tag
-    integer(I4B),        intent(out) :: ierr                  !< error 
-    logical,           intent(inout) :: isfound               !< boolean indicating if the block was found
-    integer(I4B),      intent(inout) :: lloc                  !< position in line
-    character (len=:), allocatable, intent(inout) :: line     !< line
-    integer(I4B),      intent(inout) :: iuext                 !< external file unit number
-    logical, optional,    intent(in) :: blockRequired         !< boolean indicating if the block is required
-    logical, optional,    intent(in) :: supportopenclose      !< boolean indicating if the block supports open/close
+    integer(I4B), intent(in) :: iin !< file unit
+    integer(I4B), intent(in) :: iout !< output listing file unit
+    character(len=*), intent(in) :: ctag !< block tag
+    integer(I4B), intent(out) :: ierr !< error
+    logical, intent(inout) :: isfound !< boolean indicating if the block was found
+    integer(I4B), intent(inout) :: lloc !< position in line
+    character(len=:), allocatable, intent(inout) :: line !< line
+    integer(I4B), intent(inout) :: iuext !< external file unit number
+    logical, optional, intent(in) :: blockRequired !< boolean indicating if the block is required
+    logical, optional, intent(in) :: supportopenclose !< boolean indicating if the block supports open/close
     ! -- local variables
     integer(I4B) :: istart
     integer(I4B) :: istop
     integer(I4B) :: ival
     integer(I4B) :: lloc2
     real(DP) :: rval
-    character (len=:), allocatable :: line2
+    character(len=:), allocatable :: line2
     character(len=LINELENGTH) :: fname
     character(len=MAXCHARLEN) :: ermsg
     logical :: supportoc, blockRequiredLocal
@@ -627,11 +629,11 @@ contains
       blockRequiredLocal = blockRequired
     else
       blockRequiredLocal = .true.
-    endif
+    end if
     supportoc = .false.
     if (present(supportopenclose)) then
       supportoc = supportopenclose
-    endif
+    end if
     iuext = iin
     isfound = .false.
     mainloop: do
@@ -639,7 +641,7 @@ contains
       call line_reader%rdcom(iin, iout, line, ierr)
       if (ierr < 0) then
         if (blockRequiredLocal) then
-          ermsg = 'Required block "' // trim(ctag) // &
+          ermsg = 'Required block "'//trim(ctag)// &
                   '" not found.  Found end of file instead.'
           call store_error(ermsg)
           call store_error_unit(iuext)
@@ -673,32 +675,32 @@ contains
                 end if
               end do chk
               iuext = io_getunit()
-              call openfile(iuext,iout,fname,'OPEN/CLOSE')
+              call openfile(iuext, iout, fname, 'OPEN/CLOSE')
             else
               call line_reader%bkspc(iin)
             end if
           end if
         else
           if (blockRequiredLocal) then
-            ermsg = 'Error: Required block "' // trim(ctag) // &
-                    '" not found. Found block "' // line(istart:istop) // &
+            ermsg = 'Error: Required block "'//trim(ctag)// &
+                    '" not found. Found block "'//line(istart:istop)// &
                     '" instead.'
             call store_error(ermsg)
             call store_error_unit(iuext)
           else
             call line_reader%bkspc(iin)
-          endif
+          end if
         end if
         exit mainloop
       else if (line(istart:istop) == 'END') then
         call urword(line, lloc, istart, istop, 1, ival, rval, iin, iout)
         if (line(istart:istop) == ctag) then
-          ermsg = 'Error: Looking for BEGIN ' // trim(ctag) // &
-                  ' but found END ' // line(istart:istop) // &
+          ermsg = 'Error: Looking for BEGIN '//trim(ctag)// &
+                  ' but found END '//line(istart:istop)// &
                   ' instead.'
           call store_error(ermsg)
           call store_error_unit(iuext)
-        endif
+        end if
       end if
     end do mainloop
     !
@@ -712,23 +714,24 @@ contains
   !! Return isfound with true, if found, and return the block name.
   !!
   !<
-  subroutine uget_any_block(line_reader,iin,iout,isfound,lloc,line,ctagfound,iuext)
+  subroutine uget_any_block(line_reader, iin, iout, isfound, &
+                            lloc, line, ctagfound, iuext)
     implicit none
     ! -- dummy variables
     type(LongLineReaderType), intent(inout) :: line_reader
-    integer(I4B), intent(in) :: iin                         !< file unit number
-    integer(I4B), intent(in) :: iout                        !< output listing file unit
-    logical, intent(inout) :: isfound                       !< boolean indicating if a block was found
-    integer(I4B), intent(inout) :: lloc                     !< position in line
-    character (len=:), allocatable, intent(inout) :: line   !< line
-    character(len=*), intent(out) :: ctagfound              !< block name
-    integer(I4B), intent(inout) :: iuext                    !< external file unit number
+    integer(I4B), intent(in) :: iin !< file unit number
+    integer(I4B), intent(in) :: iout !< output listing file unit
+    logical, intent(inout) :: isfound !< boolean indicating if a block was found
+    integer(I4B), intent(inout) :: lloc !< position in line
+    character(len=:), allocatable, intent(inout) :: line !< line
+    character(len=*), intent(out) :: ctagfound !< block name
+    integer(I4B), intent(inout) :: iuext !< external file unit number
     ! -- local variables
     integer(I4B) :: ierr, istart, istop
     integer(I4B) :: ival, lloc2
     real(DP) :: rval
     character(len=100) :: ermsg
-    character (len=:), allocatable :: line2
+    character(len=:), allocatable :: line2
     character(len=LINELENGTH) :: fname
     !
     ! -- code
@@ -748,17 +751,17 @@ contains
           call line_reader%rdcom(iin, iout, line2, ierr)
           if (ierr < 0) exit
           lloc2 = 1
-          call urword(line2,lloc2,istart,istop,1,ival,rval,iout,iin)
+          call urword(line2, lloc2, istart, istop, 1, ival, rval, iout, iin)
           if (line2(istart:istop) == 'OPEN/CLOSE') then
-            iuext =io_getunit()
-            call urword(line2,lloc2,istart,istop,0,ival,rval,iout,iin)
+            iuext = io_getunit()
+            call urword(line2, lloc2, istart, istop, 0, ival, rval, iout, iin)
             fname = line2(istart:istop)
-            call openfile(iuext,iout,fname,'OPEN/CLOSE')
+            call openfile(iuext, iout, fname, 'OPEN/CLOSE')
           else
             call line_reader%bkspc(iin)
-          endif
+          end if
         else
-          ermsg  = 'Block name missing in file.'
+          ermsg = 'Block name missing in file.'
           call store_error(ermsg)
           call store_error_unit(iin)
         end if
@@ -770,22 +773,22 @@ contains
 
   !> @brief Evaluate if the end of a block has been found
   !!
-  !! Subroutine to evaluate if the end of a block has been found. Abnormal 
-  !! termination if 'begin' is found or if 'end' encountered with 
+  !! Subroutine to evaluate if the end of a block has been found. Abnormal
+  !! termination if 'begin' is found or if 'end' encountered with
   !! incorrect tag.
   !!
   !<
-  subroutine uterminate_block(iin,iout,key,ctag,lloc,line,ierr,iuext)
+  subroutine uterminate_block(iin, iout, key, ctag, lloc, line, ierr, iuext)
     implicit none
     ! -- dummy variables
-    integer(I4B), intent(in) :: iin              !< file unit number
-    integer(I4B), intent(in) :: iout             !< output listing file unit number
-    character (len=*), intent(in) :: key         !< keyword in block
-    character (len=*), intent(in) :: ctag        !< block name
-    integer(I4B), intent(inout) :: lloc          !< position in line
-    character (len=*), intent(inout) :: line     !< line
-    integer(I4B), intent(inout) :: ierr          !< error
-    integer(I4B), intent(inout) :: iuext         !< external file unit number
+    integer(I4B), intent(in) :: iin !< file unit number
+    integer(I4B), intent(in) :: iout !< output listing file unit number
+    character(len=*), intent(in) :: key !< keyword in block
+    character(len=*), intent(in) :: ctag !< block name
+    integer(I4B), intent(inout) :: lloc !< position in line
+    character(len=*), intent(inout) :: line !< line
+    integer(I4B), intent(inout) :: ierr !< error
+    integer(I4B), intent(inout) :: iuext !< external file unit number
     ! -- local variables
     character(len=LENBIGLINE) :: ermsg
     integer(I4B) :: istart
@@ -793,32 +796,32 @@ contains
     integer(I4B) :: ival
     real(DP) :: rval
     ! -- format
-1   format('ERROR. "',A,'" DETECTED WITHOUT "',A,'". ','"END',1X,A, &
-      '" MUST BE USED TO END ',A,'.')
-2   format('ERROR. "',A,'" DETECTED BEFORE "END',1X,A,'". ','"END',1X,A, &
-        '" MUST BE USED TO END ',A,'.')
+1   format('ERROR. "', A, '" DETECTED WITHOUT "', A, '". ', '"END', 1X, A, &
+           '" MUST BE USED TO END ', A, '.')
+2   format('ERROR. "', A, '" DETECTED BEFORE "END', 1X, A, '". ', '"END', 1X, A, &
+           '" MUST BE USED TO END ', A, '.')
     !
     ! -- code
     ierr = 1
-    select case(key)
-      case ('END')
-        call urword(line, lloc, istart, istop, 1, ival, rval, iout, iin)
-        if (line(istart:istop) /= ctag) then
-          write(ermsg, 1) trim(key), trim(ctag), trim(ctag), trim(ctag)
-          call store_error(ermsg)
-          call store_error_unit(iin)
-        else
-          ierr = 0
-          if (iuext /= iin) then
-            ! -- close external file
-            close(iuext)
-            iuext = iin
-          endif
-        end if
-      case ('BEGIN')
-        write(ermsg, 2) trim(key), trim(ctag), trim(ctag), trim(ctag)
+    select case (key)
+    case ('END')
+      call urword(line, lloc, istart, istop, 1, ival, rval, iout, iin)
+      if (line(istart:istop) /= ctag) then
+        write (ermsg, 1) trim(key), trim(ctag), trim(ctag), trim(ctag)
         call store_error(ermsg)
         call store_error_unit(iin)
+      else
+        ierr = 0
+        if (iuext /= iin) then
+          ! -- close external file
+          close (iuext)
+          iuext = iin
+        end if
+      end if
+    case ('BEGIN')
+      write (ermsg, 2) trim(key), trim(ctag), trim(ctag), trim(ctag)
+      call store_error(ermsg)
+      call store_error_unit(iin)
     end select
     !
     ! -- return

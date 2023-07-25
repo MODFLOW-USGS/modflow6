@@ -443,7 +443,7 @@ contains
         call urword(this%line, this%lloc, this%istart, this%istop, 1, idum, r, &
                     this%iout, this%inlist)
         if (this%line(this%istart:this%istop) == 'END' .or. this%ierr < 0) then
-          ! If END was found then call line_reader backspace 
+          ! If END was found then call line_reader backspace
           ! emulator so that caller can proceed with reading END.
           if (this%ierr == 0) then
             call this%line_reader%bkspc(this%inlist)

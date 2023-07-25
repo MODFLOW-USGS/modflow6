@@ -1,7 +1,7 @@
 !> @brief This module contains the LongLineReaderType
 !!
 !! The LongLineReader is a utility for reading text lines
-!! from mf6 input files.  It calls u9rdcom (which calls 
+!! from mf6 input files.  It calls u9rdcom (which calls
 !! get_line) to read the first non-commented line of an
 !! input file.  The LongLineReader can emulate the Fortran
 !! backspace command by calling the bkspc method, which stores
@@ -18,7 +18,7 @@ module LongLineReaderModule
   use KindModule, only: I4B
   use SimModule, only: store_error
   use InputOutputModule, only: u9rdcom
-  
+
   implicit none
 
   private
@@ -49,7 +49,7 @@ contains
   !> @brief Return the first non-comment line
   !!
   !! Skip through any comments and return the first
-  !! non-commented line.  If an end of file was 
+  !! non-commented line.  If an end of file was
   !! encountered previously, then return a blank line.
   !! If a backspace was called prior to this call,
   !! then do not read a new line and return last_line
@@ -74,8 +74,8 @@ contains
 
     if (this%nbackspace == 1) then
       ! If backspace was called, then return last line
-      if (allocated(line)) deallocate(line)
-      allocate(character(len=len(this%last_line) + 1) :: line)
+      if (allocated(line)) deallocate (line)
+      allocate (character(len=len(this%last_line) + 1) :: line)
       line(:) = this%last_line(:)
       this%nbackspace = 0
     else
