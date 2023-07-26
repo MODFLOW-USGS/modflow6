@@ -1,4 +1,4 @@
-# makefile created by pymake (version 1.2.7) for the 'mf5to6' executable.
+# makefile created by pymake (version 1.2.9.dev0) for the 'mf5to6' executable.
 
 
 include ./makedefaults
@@ -46,6 +46,7 @@ $(OBJDIR)/CharString.o \
 $(OBJDIR)/Memory.o \
 $(OBJDIR)/List.o \
 $(OBJDIR)/MemoryList.o \
+$(OBJDIR)/LongLineReader.o \
 $(OBJDIR)/Utilities.o \
 $(OBJDIR)/ConstantsPHMF.o \
 $(OBJDIR)/MemoryManager.o \

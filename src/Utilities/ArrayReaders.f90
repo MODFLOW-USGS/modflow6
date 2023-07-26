@@ -674,6 +674,7 @@ contains
   end subroutine read_control_dbl
 
   subroutine read_control_1(iu, iout, aname, locat, iclose, line, icol, fname)
+    use SimModule, only: ustop
     ! -- Read CONSTANT, INTERNAL, or OPEN/CLOSE from array control record.
     ! -- dummy
     integer(I4B), intent(in) :: iu
@@ -690,7 +691,8 @@ contains
     integer(I4B) :: ierr
     real(DP) :: r
     !
-    ! -- Read array control record.
+    ! -- Read array control record.  Any future refactoring
+    !    should use the LongLineReader here instead of u9rdcom
     call u9rdcom(iu, iout, line, ierr)
     !
     iclose = 0

@@ -1016,9 +1016,9 @@ contains
     return
   end subroutine fill_dbl_array
 
-  subroutine read_list(this, in, iout, iprpak, nlist, inamedbound, &
-                       iauxmultcol, nodelist, rlist, auxvar, auxname, &
-                       boundname, label, pkgname, tsManager, iscloc, &
+  subroutine read_list(this, line_reader, in, iout, iprpak, nlist, &
+                       inamedbound, iauxmultcol, nodelist, rlist, auxvar, &
+                       auxname, boundname, label, pkgname, tsManager, iscloc, &
                        indxconvertflux)
 ! ******************************************************************************
 ! read_list -- Read a list using the list reader object.
@@ -1032,6 +1032,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LENBOUNDNAME, LINELENGTH
+    use LongLineReaderModule, only: LongLineReaderType
     use ListReaderModule, only: ListReaderType
     use SimModule, only: store_error, store_error_unit, count_errors
     use InputOutputModule, only: urword
@@ -1039,6 +1040,7 @@ contains
     use TimeSeriesManagerModule, only: read_value_or_time_series
     ! -- dummy
     class(DisBaseType) :: this
+    type(LongLineReaderType), intent(inout) :: line_reader
     integer(I4B), intent(in) :: in
     integer(I4B), intent(in) :: iout
     integer(I4B), intent(in) :: iprpak
@@ -1070,8 +1072,9 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Read the list
-    call lstrdobj%read_list(in, iout, nlist, inamedbound, this%mshape, &
-                            nodelist, rlist, auxvar, auxname, boundname, label)
+    call lstrdobj%read_list(line_reader, in, iout, nlist, inamedbound, &
+                            this%mshape, nodelist, rlist, auxvar, auxname, &
+                            boundname, label)
     !
     ! -- Go through all locations where a text string was found instead of
     !    a double precision value and make time-series links to rlist
