@@ -29,7 +29,7 @@ module SimVariablesModule
   character(len=MAXCHARLEN) :: warnmsg !< warning message string
   integer(I4B) :: istdout = output_unit !< unit number for stdout
   integer(I4B) :: isim_level = VALL !< simulation output level
-  integer(I4B) :: isim_mode = MNORMAL !< simulation mode
+  integer(I4B), pointer :: isim_mode => null() !< simulation mode
   integer(I4B) :: iout !< file unit number for simulation output
   integer(I4B) :: isimcnvg !< simulation convergence flag (1) if all objects have converged, (0) otherwise
   integer(I4B) :: isimcontinue = 0 !< simulation continue flag (1) to continue if isimcnvg = 0, (0) to terminate

@@ -2,13 +2,13 @@ module CommandArguments
   use KindModule
   use ConstantsModule, only: LINELENGTH, LENBIGLINE, LENHUGELINE, &
                              VSUMMARY, VALL, VDEBUG, &
-                             MVALIDATE
+                             MVALIDATE, MNORMAL
   use VersionModule, only: VERSION, MFVNAM, IDEVELOPMODE, &
                            FMTDISCLAIMER, write_license
   use CompilerVersion
   use SimVariablesModule, only: istdout, isim_level, &
                                 simfile, simlstfile, simstdout, &
-                                isim_mode, simulation_mode
+                                simulation_mode
   use GenericUtilitiesModule, only: sim_message, write_message
   use SimModule, only: store_error, ustop
   use InputOutputModule, only: upcase, getunit
@@ -25,8 +25,9 @@ contains
   !! Subroutine to get and write information on command line arguments.
   !!
   !<
-  subroutine GetCommandLineArguments()
+  subroutine GetCommandLineArguments(isim_mode)
     ! -- dummy variables
+    integer(I4B) :: isim_mode
     ! -- local variables
     character(len=LINELENGTH) :: tag
     character(len=LINELENGTH) :: uctag
@@ -49,6 +50,9 @@ contains
     !
     ! -- initialize local variables
     lstop = .FALSE.
+    !
+    ! -- initialize isim_mode
+    isim_mode = MNORMAL
     !
     ! -- set mf6 executable name
     icountcmd = command_argument_count()

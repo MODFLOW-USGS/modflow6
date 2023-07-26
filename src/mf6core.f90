@@ -34,13 +34,14 @@ contains
     use CommandArguments, only: GetCommandLineArguments
     use TdisModule, only: endofsimulation
     ! -- local
+    integer(I4B) :: isim_mode
     logical(LGP) :: hasConverged
     !
     ! -- parse any command line arguments
-    call GetCommandLineArguments()
+    call GetCommandLineArguments(isim_mode)
     !
     ! initialize simulation
-    call Mf6Initialize()
+    call Mf6Initialize(isim_mode)
     !
     ! -- time loop
     do while (.not. endofsimulation)
@@ -66,14 +67,27 @@ contains
     !!   - allocates and reads static data
     !!
   !<
-  subroutine Mf6Initialize()
+  subroutine Mf6Initialize(isim_mode)
     ! -- modules
     use RunControlFactoryModule, only: create_run_control
     use SimulationCreateModule, only: simulation_cr
+    use ConstantsModule, only: MNORMAL
+    integer(I4B), optional, intent(in) :: isim_mode
+    integer(I4B) :: mode
+
+    ! -- set simulation mode
+    if (present(isim_mode)) then
+      mode = isim_mode
+    else
+      mode = MNORMAL
+    end if
 
     ! -- get the run controller for sequential or parallel builds
     run_ctrl => create_run_control()
     call run_ctrl%start()
+
+    ! -- set simulation mode
+    call set_sim_mode(mode)
 
     ! -- print info and start timer
     call print_info()
@@ -130,6 +144,8 @@ contains
     use ListsModule, only: lists_da
     use SimulationCreateModule, only: simulation_da
     use TdisModule, only: tdis_da
+    use MemoryManagerModule, only: mem_deallocate
+    use SimVariablesModule, only: isim_mode
     ! -- local variables
     integer(I4B) :: im
     integer(I4B) :: ic
@@ -198,6 +214,7 @@ contains
       call sgp%sgp_da()
       deallocate (sgp)
     end do
+    call mem_deallocate(isim_mode)
     call simulation_da()
     call lists_da()
     !
@@ -205,6 +222,24 @@ contains
     call run_ctrl%finish()
     !
   end subroutine Mf6Finalize
+
+  !> @brief Set the simulation mode
+  !<
+  subroutine set_sim_mode(mode)
+    ! -- modules
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerModule, only: mem_allocate
+    use SimVariablesModule, only: isim_mode
+    ! -- dummy
+    integer(I4B), intent(in) :: mode
+    !
+    ! -- allocate and set simulation mode
+    call mem_allocate(isim_mode, 'ISIM_MODE', create_mem_path('SIM'))
+    isim_mode = mode
+    !
+    ! --return
+    return
+  end subroutine set_sim_mode
 
   !> @brief print initial message
   !<
