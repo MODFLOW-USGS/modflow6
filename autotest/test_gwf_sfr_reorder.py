@@ -7,7 +7,7 @@ from framework import TestFramework
 from simulation import TestSimulation
 
 paktest = "sfr"
-ex = ["sfr_reorder", "sfr_reorder_none"]
+ex = ["sfr_reorder", "sfr_fail", "sfr_reorder_none"]
 
 # spatial discretization data
 nlay, nrow, ncol = 1, 1, 1
@@ -29,7 +29,6 @@ ndv = 0
 
 
 def build_model(idx, ws):
-
     # static model data
     # temporal discretization
     nper = 1
@@ -95,7 +94,9 @@ def build_model(idx, ws):
 
     # sfr file
     if idx == 0:
-        cellid = (0, 0, 0)
+        cellid = (-1, -1, -1)
+    elif idx == 1:
+        cellid = (0, 2, 2)
     else:
         cellid = "none"
     packagedata = []
@@ -247,7 +248,17 @@ def eval_flows(sim):
 
 @pytest.mark.parametrize(
     "idx, name",
-    list(enumerate(ex)),
+    [
+        (0, ex[0]),
+        pytest.param(
+            1,
+            ex[1],
+            marks=pytest.mark.xfail(
+                reason="cellid outside of model",
+            ),
+        ),
+        (2, ex[2]),
+    ],
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     ws = str(function_tmpdir)
