@@ -78,6 +78,7 @@ contains
       allocate (character(len=len(this%last_line) + 1) :: line)
       line(:) = this%last_line(:)
       this%nbackspace = 0
+      deallocate(this%last_line)
     else
       ! if end of file was reached previously, then return a
       ! blank line and return ierr as IOSTAT_END
