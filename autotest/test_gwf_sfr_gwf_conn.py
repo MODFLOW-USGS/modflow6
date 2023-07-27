@@ -14,7 +14,9 @@ ex = [
     "sfr_disv",
     "sfr_disv_fail",
     "sfr_disv_none",
-    # "sfr_disu", "sfr_disu_fail", "sfr_disu_none",
+    "sfr_disu", 
+    "sfr_disu_fail", 
+    "sfr_disu_none",
 ]
 dis_types = [
     "dis",
@@ -23,7 +25,9 @@ dis_types = [
     "disv",
     "disv",
     "disv",
-    # "disu", "disu", "disu",
+    "disu", 
+    "disu", 
+    "disu",
 ]
 
 # spatial discretization data
@@ -65,8 +69,9 @@ def build_model(idx, ws):
         version="mf6",
         exe_name="mf6",
         sim_ws=ws,
-        nocheck=True,
     )
+    sim.simulation_data.verify_data = False
+    
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
         sim,
@@ -98,6 +103,7 @@ def build_model(idx, ws):
             delc=delc,
             top=top,
             botm=botm,
+            idomain=1,
         )
     elif dis_type == "disv":
         dis = flopy.mf6.ModflowGwfdisv(
@@ -105,10 +111,12 @@ def build_model(idx, ws):
             length_units="meters",
             nlay=nlay,
             ncpl=1,
+            nvert=4,
             vertices=vertices,
             cell2d=cell2d,
             top=top,
             botm=botm,
+            idomain=1,
         )
     else:
         disukwargs = flopy.utils.gridutil.get_disu_kwargs(
@@ -149,7 +157,7 @@ def build_model(idx, ws):
         ]
 
     chd = flopy.mf6.modflow.ModflowGwfchd(
-        gwf, stress_period_data=spd, pname="chd-1"
+        gwf, maxbound=1, stress_period_data=spd, pname="chd-1"
     )
 
     # sfr file

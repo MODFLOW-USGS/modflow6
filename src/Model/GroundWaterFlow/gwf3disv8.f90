@@ -1073,18 +1073,30 @@ contains
     ! -- check the node number if requested
     if (icheck /= 0) then
       !
-      if (k < 1 .or. k > this%nlay) &
-        call store_error('Layer less than one or greater than nlay')
-      if (j < 1 .or. j > this%ncpl) &
-        call store_error('Node number less than one or greater than ncpl')
+      errmsg = ""
+      !
+      if (k < 1 .or. k > this%nlay) then
+        write (errmsg, '(a,i0,a)') &
+          'Layer number in list (', k, ') is outside of the grid.'
+      end if
+      if (j < 1 .or. j > this%ncpl) then
+        write (errmsg, '(a,1x,a,i0,a)') &
+          trim(adjustl(errmsg)), 'Node number in list (', j, &
+          ') is outside of the grid.'
+      end if
       !
       ! -- Error if outside of range
       if (nodeu < 1 .or. nodeu > this%nodesuser) then
-        write (errmsg, '(a,i0,a,i0,a)') &
-          'Node number (', nodeu, ') is less than 1 or greater than nodes (', &
-          this%nodesuser, ').'
+        write (errmsg, '(a,1x,a,i0,a,i0,a)') &
+          trim(adjustl(errmsg)), &
+          'Node number (', nodeu, ') is less than 1 or greater '// &
+          'than nodes (', this%nodesuser, ').'
+      end if
+      !
+      if (len_trim(adjustl(errmsg)) > 0) then
         call store_error(errmsg)
       end if
+      !
     end if
     !
     ! -- return

@@ -1444,8 +1444,7 @@ contains
     end if
     !
     if (nodeu < 1 .or. nodeu > this%nodesuser) then
-      write (errmsg, '(a,1x,a,i0,a)') &
-        trim(adjustl(errmsg)), &
+      write (errmsg, '(a,i0,a)') &
         "Node number in list (", nodeu, ") is outside of the grid. "// &
         "Cell number cannot be determined in line '"// &
         trim(adjustl(line))//"'."
@@ -1514,8 +1513,7 @@ contains
     end if
     !
     if (nodeu < 1 .or. nodeu > this%nodesuser) then
-      write (errmsg, '(a,1x,a,i0,a)') &
-        trim(adjustl(errmsg)), &
+      write (errmsg, '(a,i0,a)') &
         "Cell number cannot be determined for cellid ("// &
         trim(adjustl(cellid))//") and results in a user "// &
         "node number (", nodeu, ") that is outside of the grid."
