@@ -1020,7 +1020,7 @@ contains
     if (nodeu < 1 .or. nodeu > this%nodesuser) then
       write (errmsg, '(a,1x,a,i0,a)') &
         trim(adjustl(errmsg)), &
-        "Node number in list (", nodeu, "is outside of the grid. "// &
+        "Node number in list (", nodeu, ") is outside of the grid. "// &
         "Cell number cannot be determined in line '"// &
         trim(adjustl(line))//"'."
     end if

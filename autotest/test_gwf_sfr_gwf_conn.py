@@ -7,7 +7,24 @@ from framework import TestFramework
 from simulation import TestSimulation
 
 paktest = "sfr"
-ex = ["sfr_reorder"]
+ex = [
+    "sfr_dis",
+    "sfr_dis_fail",
+    "sfr_dis_none",
+    "sfr_disv",
+    "sfr_disv_fail",
+    "sfr_disv_none",
+    # "sfr_disu", "sfr_disu_fail", "sfr_disu_none",
+]
+dis_types = [
+    "dis",
+    "dis",
+    "dis",
+    "disv",
+    "disv",
+    "disv",
+    # "disu", "disu", "disu",
+]
 
 # spatial discretization data
 nlay, nrow, ncol = 1, 1, 1
@@ -15,6 +32,10 @@ delr, delc = 100.0, 100.0
 top = 0.0
 botm = -10.0
 strt = 0.0
+
+# spatial discretization data for disv and disu
+vertices = [(0, 0.0, 0.0), (1, 0.0, delc), (2, delr, delc), (3, delr, 0.0)]
+cell2d = [(0, delr / 2.0, delc / 2.0, 4, 0, 1, 2, 3)]
 
 # sfr data
 nreaches = 10
@@ -29,7 +50,6 @@ ndv = 0
 
 
 def build_model(idx, ws):
-
     # static model data
     # temporal discretization
     nper = 1
@@ -39,11 +59,13 @@ def build_model(idx, ws):
 
     # build MODFLOW 6 files
     name = ex[idx]
+    dis_type = dis_types[idx]
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
         exe_name="mf6",
         sim_ws=ws,
+        nocheck=True,
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -63,20 +85,47 @@ def build_model(idx, ws):
     gwf = flopy.mf6.ModflowGwf(
         sim,
         modelname=name,
-        save_flows=True,
     )
 
-    dis = flopy.mf6.ModflowGwfdis(
-        gwf,
-        length_units="meters",
-        nlay=nlay,
-        nrow=nrow,
-        ncol=ncol,
-        delr=delr,
-        delc=delc,
-        top=top,
-        botm=botm,
-    )
+    if dis_type == "dis":
+        dis = flopy.mf6.ModflowGwfdis(
+            gwf,
+            length_units="meters",
+            nlay=nlay,
+            nrow=nrow,
+            ncol=ncol,
+            delr=delr,
+            delc=delc,
+            top=top,
+            botm=botm,
+        )
+    elif dis_type == "disv":
+        dis = flopy.mf6.ModflowGwfdisv(
+            gwf,
+            length_units="meters",
+            nlay=nlay,
+            ncpl=1,
+            vertices=vertices,
+            cell2d=cell2d,
+            top=top,
+            botm=botm,
+        )
+    else:
+        disukwargs = flopy.utils.gridutil.get_disu_kwargs(
+            nlay,
+            nrow,
+            ncol,
+            [delr],
+            [delc],
+            top,
+            [botm],
+        )
+        dis = flopy.mf6.ModflowGwfdisu(
+            gwf,
+            vertices=vertices,
+            cell2d=cell2d,
+            **disukwargs,
+        )
 
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
@@ -86,14 +135,45 @@ def build_model(idx, ws):
 
     # chd files
     # chd data
-    spd = [
-        [(0, 0, 0), 0.0],
-    ]
+    if dis_type == "dis":
+        spd = [
+            [(0, 0, 0), 0.0],
+        ]
+    elif dis_type == "disv":
+        spd = [
+            [(0, 0), 0.0],
+        ]
+    else:
+        spd = [
+            [(0,), 0.0],
+        ]
+
     chd = flopy.mf6.modflow.ModflowGwfchd(
         gwf, stress_period_data=spd, pname="chd-1"
     )
 
     # sfr file
+    if dis_type == "dis":
+        if "fail" in name:
+            cellid = (2, 2, 2)
+        elif "none" in name:
+            cellid = "none"
+        else:
+            cellid = (-1, -1, -1)
+    elif dis_type == "disv":
+        if "fail" in name:
+            cellid = (2, 2)
+        elif "none" in name:
+            cellid = "none"
+        else:
+            cellid = (-1, -1)
+    else:
+        if "fail" in name:
+            cellid = (2,)
+        elif "none" in name:
+            cellid = "none"
+        else:
+            cellid = (-1,)
     packagedata = []
     for irch in range(nreaches):
         nconn = 1
@@ -101,7 +181,7 @@ def build_model(idx, ws):
             nconn += 1
         rp = [
             irch,
-            "none",
+            cellid,
             rlen,
             rwid,
             slope,
@@ -119,26 +199,15 @@ def build_model(idx, ws):
         packagedata = packagedata[::-1]
 
     connectiondata = []
-    if not ws.endswith("mf6"):
-        inflow_loc = nreaches - 1
-        ioutflow_loc = 0
-        for irch in range(inflow_loc, -1, -1):
-            rc = [irch]
-            if irch < nreaches - 1:
-                rc.append(irch + 1)
-            if irch > 0:
-                rc.append(-(float(irch - 1)))
-            connectiondata.append(rc)
-    else:
-        inflow_loc = 0
-        ioutflow_loc = nreaches - 1
-        for irch in range(nreaches):
-            rc = [irch]
-            if irch > 0:
-                rc.append(irch - 1)
-            if irch < nreaches - 1:
-                rc.append(-(irch + 1))
-            connectiondata.append(rc)
+    inflow_loc = 0
+    ioutflow_loc = nreaches - 1
+    for irch in range(nreaches):
+        rc = [irch]
+        if irch > 0:
+            rc.append(irch - 1)
+        if irch < nreaches - 1:
+            rc.append(-(irch + 1))
+        connectiondata.append(rc)
 
     ts_names = ["inflow"]
     perioddata = [
@@ -149,13 +218,11 @@ def build_model(idx, ws):
     for t, q in zip(ts_times, ts_flows):
         ts_data.append((t, q))
 
-    budpth = f"{name}.{paktest}.cbc"
     sfr = flopy.mf6.ModflowGwfsfr(
         gwf,
         print_stage=True,
         print_flows=True,
         print_input=True,
-        budget_filerecord=budpth,
         mover=True,
         nreaches=nreaches,
         packagedata=packagedata,
@@ -180,14 +247,9 @@ def build_model(idx, ws):
     sfr.obs.initialize(filename=fname, print_input=True, continuous=sfr_obs)
 
     # output control
-    budpth = f"{name}.cbc"
     oc = flopy.mf6.ModflowGwfoc(
         gwf,
-        budget_filerecord=budpth,
         printrecord=[
-            ("BUDGET", "ALL"),
-        ],
-        saverecord=[
             ("BUDGET", "ALL"),
         ],
     )
@@ -197,55 +259,15 @@ def build_model(idx, ws):
 
 def build_models(idx, base_ws):
     sim = build_model(idx, base_ws)
-
-    ws = os.path.join(base_ws, "mf6")
-    mc = build_model(idx, ws)
-
-    return sim, mc
+    return sim, None
 
 
-def eval_flows(sim):
-    name = sim.name
-    print("evaluating flow results..." f"({name})")
-
-    obs_pth = os.path.join(sim.simpath, f"{name}.sfr.obs.csv")
-    obs0 = flopy.utils.Mf6Obs(obs_pth).get_data()
-
-    obs_pth = os.path.join(sim.simpath, "mf6", f"{name}.sfr.obs.csv")
-    obs1 = flopy.utils.Mf6Obs(obs_pth).get_data()
-
-    assert np.allclose(obs0["INFLOW"], obs1["INFLOW"]), "inflows are not equal"
-
-    assert np.allclose(
-        obs0["OUTFLOW"], obs1["OUTFLOW"]
-    ), "outflows are not equal"
-
-    fpth = os.path.join(sim.simpath, f"{name}.lst")
-    with open(fpth, "r") as f:
-        lines = f.read().splitlines()
-
-    # check order in listing file
-    order = np.zeros(nreaches, dtype=int)
-    for idx, line in enumerate(lines):
-        if "SFR PACKAGE (SFR-1) REACH SOLUTION ORDER" in line:
-            for jdx in range(nreaches):
-                ipos = idx + 4 + jdx
-                t = lines[ipos].split()
-                order[int(t[0]) - 1] = int(t[1])
-            order -= 1
-            break
-    actual = np.arange(nreaches, dtype=int)[::-1]
-
-    assert np.array_equal(
-        order, actual
-    ), "DAG did not correctly reorder reaches."
-
-
-@pytest.mark.parametrize(
-    "idx, name",
-    list(enumerate(ex)),
-)
+@pytest.mark.parametrize("idx, name", enumerate(ex))
 def test_mf6model(idx, name, function_tmpdir, targets):
+    if "fail" in name:
+        require_failure = True
+    else:
+        require_failure = False
     ws = str(function_tmpdir)
     test = TestFramework()
     test.build(build_models, idx, ws)
@@ -253,8 +275,10 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         TestSimulation(
             name=name,
             exe_dict=targets,
-            exfunc=eval_flows,
             idxsim=idx,
+            mf6_regression=False,
+            make_comparison=False,
+            require_failure=require_failure,
         ),
         ws,
     )

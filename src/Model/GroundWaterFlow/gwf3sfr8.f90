@@ -920,7 +920,7 @@ contains
                       ' specified to be NONE. Unconnected reaches '// &
                       'should be specified with a zero for each grid '// &
                       'dimension. For example, for a DIS grid a CELLID '// &
-                      'of 0 0 0 should be specified for unconnected reaches.'
+                      'of 0 0 0 should be specified for unconnected reaches'
             !
             ! -- create deprecation warning
             call deprecation_warning('PACKAGEDATA', 'CELLID=NONE', '6.5.0', &
