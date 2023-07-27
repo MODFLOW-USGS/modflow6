@@ -1006,11 +1006,13 @@ contains
     end if
     if (i < 1 .or. i > nrow) then
       write (errmsg, '(a,1x,a,i0,a)') &
-     trim(adjustl(errmsg)), 'Row number in list (', i, ') is outside of the grid.'
+        trim(adjustl(errmsg)), 'Row number in list (', i, &
+        ') is outside of the grid.'
     end if
     if (j < 1 .or. j > ncol) then
       write (errmsg, '(a,1x,a,i0,a)') &
-  trim(adjustl(errmsg)), 'Column number in list (', j, ') is outside of the grid.'
+        trim(adjustl(errmsg)), 'Column number in list (', j, &
+        ') is outside of the grid.'
     end if
     !
     nodeu = get_node(k, i, j, nlay, nrow, ncol)
@@ -1104,11 +1106,13 @@ contains
     end if
     if (i < 1 .or. i > nrow) then
       write (errmsg, '(a,1x,a,i0,a)') &
-     trim(adjustl(errmsg)), 'Row number in list (', i, ') is outside of the grid.'
+        trim(adjustl(errmsg)), 'Row number in list (', i, &
+        ') is outside of the grid.'
     end if
     if (j < 1 .or. j > ncol) then
       write (errmsg, '(a,1x,a,i0,a)') &
-  trim(adjustl(errmsg)), 'Column number in list (', j, ') is outside of the grid.'
+        trim(adjustl(errmsg)), 'Column number in list (', j, &
+        ') is outside of the grid.'
     end if
     !
     nodeu = get_node(k, i, j, nlay, nrow, ncol)
