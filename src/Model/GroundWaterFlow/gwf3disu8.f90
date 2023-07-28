@@ -1156,8 +1156,9 @@ contains
     !
     if (icheck /= 0) then
       if (nodeu < 1 .or. nodeu > this%nodes) then
-        write (errmsg, '(a,i10)') &
-          'Nodenumber less than 1 or greater than nodes:', nodeu
+        write (errmsg, '(a,i0,a,i0,a)') &
+          'Node number (', nodeu, ') is less than 1 or greater than nodes (', &
+          this%nodes, ').'
         call store_error(errmsg)
       end if
     end if
@@ -1416,7 +1417,6 @@ contains
     ! -- local
     integer(I4B) :: lloclocal, ndum, istat, n
     real(DP) :: r
-    character(len=LINELENGTH) :: fname
 ! ------------------------------------------------------------------------------
     !
     if (present(flag_string)) then
@@ -1444,13 +1444,11 @@ contains
     end if
     !
     if (nodeu < 1 .or. nodeu > this%nodesuser) then
-      write (errmsg, *) ' Node number in list is outside of the grid', nodeu
+      write (errmsg, '(a,i0,a)') &
+        "Node number in list (", nodeu, ") is outside of the grid. "// &
+        "Cell number cannot be determined in line '"// &
+        trim(adjustl(line))//"'."
       call store_error(errmsg)
-      inquire (unit=in, name=fname)
-      call store_error('Error converting in file: ')
-      call store_error(trim(adjustl(fname)))
-      call store_error('Cell number cannot be determined in line: ')
-      call store_error(trim(adjustl(line)))
       call store_error_unit(in)
     end if
     !
@@ -1487,7 +1485,6 @@ contains
     integer(I4B) :: lloclocal, istart, istop, ndum, n
     integer(I4B) :: istat
     real(DP) :: r
-    character(len=LINELENGTH) :: fname
 ! ------------------------------------------------------------------------------
     !
     if (present(flag_string)) then
@@ -1516,13 +1513,11 @@ contains
     end if
     !
     if (nodeu < 1 .or. nodeu > this%nodesuser) then
-      write (errmsg, *) ' Node number in list is outside of the grid', nodeu
+      write (errmsg, '(a,i0,a)') &
+        "Cell number cannot be determined for cellid ("// &
+        trim(adjustl(cellid))//") and results in a user "// &
+        "node number (", nodeu, ") that is outside of the grid."
       call store_error(errmsg)
-      inquire (unit=inunit, name=fname)
-      call store_error('Error converting in file: ')
-      call store_error(trim(adjustl(fname)))
-      call store_error('Cell number cannot be determined in cellid: ')
-      call store_error(trim(adjustl(cellid)))
       call store_error_unit(inunit)
     end if
     !

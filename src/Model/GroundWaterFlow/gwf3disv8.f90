@@ -9,6 +9,7 @@ module GwfDisvModule
                                ubdsv06
   use SimModule, only: count_errors, store_error, store_error_unit, &
                        store_error_filename
+  use SimVariablesModule, only: errmsg
   use DisvGeom, only: DisvGeomType
   use MemoryManagerModule, only: mem_allocate
   use TdisModule, only: kstp, kper, pertim, totim, delt
@@ -444,7 +445,6 @@ contains
     integer(I4B) :: node, noder, j, k
     real(DP) :: top
     real(DP) :: dz
-    character(len=300) :: ermsg
     ! -- formats
     character(len=*), parameter :: fmtdz = &
       "('CELL (',i0,',',i0,') THICKNESS <= 0. ', &
@@ -484,8 +484,8 @@ contains
           end if
           dz = top - this%bot2d(j, k)
           if (dz <= DZERO) then
-            write (ermsg, fmt=fmtdz) k, j, top, this%bot2d(j, k)
-            call store_error(ermsg)
+            write (errmsg, fmt=fmtdz) k, j, top, this%bot2d(j, k)
+            call store_error(errmsg)
           end if
         end if
       end do
@@ -724,7 +724,6 @@ contains
     integer(I4B) :: narea_eq_zero
     integer(I4B) :: narea_lt_zero
     real(DP) :: area
-    character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
     !
     ! -- Initialize
@@ -740,14 +739,14 @@ contains
       end do
       if (area < DZERO) then
         narea_lt_zero = narea_lt_zero + 1
-        write (errmsg, '(a,i0)') &
-          &'Calculated CELL2D area less than zero for cell ', j
+        write (errmsg, '(a,i0,a)') &
+          &'Calculated CELL2D area less than zero for cell ', j, '.'
         call store_error(errmsg)
       end if
       if (area == DZERO) then
         narea_eq_zero = narea_eq_zero + 1
-        write (errmsg, '(a,i0)') &
-          'Calculated CELL2D area is zero for cell ', j
+        write (errmsg, '(a,i0,a)') &
+          'Calculated CELL2D area is zero for cell ', j, '.'
         call store_error(errmsg)
       end if
     end do
@@ -755,16 +754,16 @@ contains
     ! -- check for errors
     if (count_errors() > 0) then
       if (narea_lt_zero > 0) then
-        write (errmsg, '(i0, a)') narea_lt_zero, &
-          ' cell(s) have an area less than zero.  Calculated cell &
-          &areas must be greater than zero.  Negative areas often &
+        write (errmsg, '(i0,a)') narea_lt_zero, &
+          ' cell(s) have an area less than zero. Calculated cell &
+          &areas must be greater than zero. Negative areas often &
           &mean vertices are not listed in clockwise order.'
         call store_error(errmsg)
       end if
       if (narea_eq_zero > 0) then
-        write (errmsg, '(i0, a)') narea_eq_zero, &
-          ' cell(s) have an area equal to zero.  Calculated cell &
-          &areas must be greater than zero.  Calculated cell &
+        write (errmsg, '(i0,a)') narea_eq_zero, &
+          ' cell(s) have an area equal to zero. Calculated cell &
+          &areas must be greater than zero. Calculated cell &
           &areas equal to zero indicate that the cell is not defined &
           &by a valid polygon.'
         call store_error(errmsg)
@@ -974,7 +973,6 @@ contains
     integer(I4B), intent(in) :: nodeu
     integer(I4B), dimension(:), intent(inout) :: arr
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: isize
     integer(I4B) :: i, j, k
 ! ------------------------------------------------------------------------------
@@ -984,7 +982,7 @@ contains
     if (isize /= this%ndim) then
       write (errmsg, '(a,i0,a,i0,a)') &
         'Program error: nodeu_to_array size of array (', isize, &
-        ') is not equal to the discretization dimension (', this%ndim, ')'
+        ') is not equal to the discretization dimension (', this%ndim, ').'
       call store_error(errmsg, terminate=.TRUE.)
     end if
     !
@@ -1015,7 +1013,6 @@ contains
     integer(I4B), intent(in) :: nodeu
     integer(I4B), intent(in) :: icheck
     ! -- local
-    character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
     !
     ! -- check the node number if requested
@@ -1023,10 +1020,11 @@ contains
       !
       ! -- If within valid range, convert to reduced nodenumber
       if (nodeu < 1 .or. nodeu > this%nodesuser) then
-        write (errmsg, '(a,i10)') &
-          'Nodenumber less than 1 or greater than nodes:', nodeu
-        call store_error(errmsg)
         nodenumber = 0
+        write (errmsg, '(a,i0,a,i0,a)') &
+          'Node number (', nodeu, ') is less than 1 or greater than nodes (', &
+          this%nodesuser, ').'
+        call store_error(errmsg)
       else
         nodenumber = nodeu
         if (this%nodes < this%nodesuser) nodenumber = this%nodereduced(nodeu)
@@ -1058,7 +1056,6 @@ contains
     integer(I4B), intent(in) :: k, j
     integer(I4B), intent(in) :: icheck
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: nodeu
     ! formats
     character(len=*), parameter :: fmterr = &
@@ -1076,17 +1073,30 @@ contains
     ! -- check the node number if requested
     if (icheck /= 0) then
       !
-      if (k < 1 .or. k > this%nlay) &
-        call store_error('Layer less than one or greater than nlay')
-      if (j < 1 .or. j > this%ncpl) &
-        call store_error('Node number less than one or greater than ncpl')
+      errmsg = ""
+      !
+      if (k < 1 .or. k > this%nlay) then
+        write (errmsg, '(a,i0,a)') &
+          'Layer number in list (', k, ') is outside of the grid.'
+      end if
+      if (j < 1 .or. j > this%ncpl) then
+        write (errmsg, '(a,1x,a,i0,a)') &
+          trim(adjustl(errmsg)), 'Node number in list (', j, &
+          ') is outside of the grid.'
+      end if
       !
       ! -- Error if outside of range
       if (nodeu < 1 .or. nodeu > this%nodesuser) then
-        write (errmsg, '(a,i10)') &
-          'Nodenumber less than 1 or greater than nodes:', nodeu
+        write (errmsg, '(a,1x,a,i0,a,i0,a)') &
+          trim(adjustl(errmsg)), &
+          'Node number (', nodeu, ') is less than 1 or greater '// &
+          'than nodes (', this%nodesuser, ').'
+      end if
+      !
+      if (len_trim(adjustl(errmsg)) > 0) then
         call store_error(errmsg)
       end if
+      !
     end if
     !
     ! -- return
@@ -1378,7 +1388,6 @@ contains
     integer(I4B) :: j, k, nlay, nrow, ncpl
     integer(I4B) :: lloclocal, ndum, istat, n
     real(DP) :: r
-    character(len=LINELENGTH) :: ermsg, fname
 ! ------------------------------------------------------------------------------
     !
     if (present(flag_string)) then
@@ -1411,24 +1420,30 @@ contains
       end if
     end if
     !
+    errmsg = ''
+    !
     if (k < 1 .or. k > nlay) then
-      write (ermsg, *) ' Layer number in list is outside of the grid', k
-      call store_error(ermsg)
+      write (errmsg, '(a,i0,a)') &
+        'Layer number in list (', k, ') is outside of the grid.'
     end if
     if (j < 1 .or. j > ncpl) then
-      write (ermsg, *) ' Cell2d number in list is outside of the grid', j
-      call store_error(ermsg)
+      write (errmsg, '(a,1x,a,i0,a)') &
+        trim(adjustl(errmsg)), 'Cell2d number in list (', j, &
+        ') is outside of the grid.'
     end if
+    !
     nodeu = get_node(k, 1, j, nlay, nrow, ncpl)
     !
     if (nodeu < 1 .or. nodeu > this%nodesuser) then
-      write (ermsg, *) ' Node number in list is outside of the grid', nodeu
-      call store_error(ermsg)
-      inquire (unit=in, name=fname)
-      call store_error('Error converting in file: ')
-      call store_error(trim(adjustl(fname)))
-      call store_error('Cell number cannot be determined in line: ')
-      call store_error(trim(adjustl(line)))
+      write (errmsg, '(a,1x,a,i0,a)') &
+        trim(adjustl(errmsg)), &
+        "Node number in list (", nodeu, ") is outside of the grid. "// &
+        "Cell number cannot be determined in line '"// &
+        trim(adjustl(line))//"'."
+    end if
+    !
+    if (len_trim(adjustl(errmsg)) > 0) then
+      call store_error(errmsg)
       call store_error_unit(in)
     end if
     !
@@ -1465,7 +1480,6 @@ contains
     integer(I4B) :: lloclocal, ndum, istat, n
     integer(I4B) :: istart, istop
     real(DP) :: r
-    character(len=LINELENGTH) :: ermsg, fname
 ! ------------------------------------------------------------------------------
     !
     if (present(flag_string)) then
@@ -1499,24 +1513,30 @@ contains
       end if
     end if
     !
+    errmsg = ''
+    !
     if (k < 1 .or. k > nlay) then
-      write (ermsg, *) ' Layer number in list is outside of the grid', k
-      call store_error(ermsg)
+      write (errmsg, '(a,i0,a)') &
+        'Layer number in list (', k, ') is outside of the grid.'
     end if
     if (j < 1 .or. j > ncpl) then
-      write (ermsg, *) ' Cell2d number in list is outside of the grid', j
-      call store_error(ermsg)
+      write (errmsg, '(a,1x,a,i0,a)') &
+        trim(adjustl(errmsg)), 'Cell2d number in list (', j, &
+        ') is outside of the grid.'
     end if
+    !
     nodeu = get_node(k, 1, j, nlay, nrow, ncpl)
     !
     if (nodeu < 1 .or. nodeu > this%nodesuser) then
-      write (ermsg, *) ' Node number in list is outside of the grid', nodeu
-      call store_error(ermsg)
-      inquire (unit=inunit, name=fname)
-      call store_error('Error converting in file: ')
-      call store_error(trim(adjustl(fname)))
-      call store_error('Cell number cannot be determined in cellid: ')
-      call store_error(trim(adjustl(cellid)))
+      write (errmsg, '(a,1x,a,i0,a)') &
+        trim(adjustl(errmsg)), &
+        "Cell number cannot be determined for cellid ("// &
+        trim(adjustl(cellid))//") and results in a user "// &
+        "node number (", nodeu, ") that is outside of the grid."
+    end if
+    !
+    if (len_trim(adjustl(errmsg)) > 0) then
+      call store_error(errmsg)
       call store_error_unit(inunit)
     end if
     !
@@ -1909,7 +1929,6 @@ contains
     integer(I4B), intent(in) :: iout
     ! -- local
     integer(I4B) :: il, ir, ic, ncol, nrow, nlay, nval, nodeu, noder, ipos, ierr
-    character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
     !
     ! -- set variables
@@ -1928,7 +1947,8 @@ contains
         nodeu = get_node(1, ir, ic, nlay, nrow, ncol)
         il = this%ibuff(nodeu)
         if (il < 1 .or. il > nlay) then
-          write (errmsg, *) 'Invalid layer number: ', il
+          write (errmsg, '(a,i0,a)') &
+            'Invalid layer number (', il, ').'
           call store_error(errmsg, terminate=.TRUE.)
         end if
         nodeu = get_node(il, ir, ic, nlay, nrow, ncol)
@@ -1945,8 +1965,8 @@ contains
     ! -- Check for errors
     nbound = ipos - 1
     if (ierr > 0) then
-      write (errmsg, '(a, i0)') &
-        'MAXBOUND dimension is too small.  Increase MAXBOUND to ', ierr
+      write (errmsg, '(a,i0,a)') &
+        'MAXBOUND dimension is too small. Increase MAXBOUND to ', ierr, '.'
       call store_error(errmsg, terminate=.TRUE.)
     end if
     !

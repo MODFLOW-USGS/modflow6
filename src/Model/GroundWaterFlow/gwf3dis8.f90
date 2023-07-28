@@ -8,6 +8,7 @@ module GwfDisModule
                                ubdsv06
   use SimModule, only: count_errors, store_error, store_error_unit, &
                        store_error_filename
+  use SimVariablesModule, only: errmsg
   use MemoryManagerModule, only: mem_allocate
   use TdisModule, only: kstp, kper, pertim, totim, delt
 
@@ -420,7 +421,6 @@ contains
     ! -- dummy
     class(GwfDisType) :: this
     ! -- locals
-    character(len=300) :: ermsg
     integer(I4B) :: n, i, j, k
     integer(I4B) :: node
     integer(I4B) :: noder
@@ -469,8 +469,8 @@ contains
           dz = top - this%bot3d(j, i, k)
           if (dz <= DZERO) then
             n = n + 1
-            write (ermsg, fmt=fmtdz) k, i, j, top, this%bot3d(j, i, k)
-            call store_error(ermsg)
+            write (errmsg, fmt=fmtdz) k, i, j, top, this%bot3d(j, i, k)
+            call store_error(errmsg)
           end if
         end do
       end do
@@ -749,7 +749,6 @@ contains
     integer(I4B), intent(in) :: nodeu
     integer(I4B), dimension(:), intent(inout) :: arr
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: isize
     integer(I4B) :: i, j, k
 ! ------------------------------------------------------------------------------
@@ -792,7 +791,6 @@ contains
     integer(I4B), intent(in) :: nodeu
     integer(I4B), intent(in) :: icheck
     ! -- local
-    character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
     !
     ! -- check the node number if requested
@@ -800,8 +798,9 @@ contains
       !
       ! -- If within valid range, convert to reduced nodenumber
       if (nodeu < 1 .or. nodeu > this%nodesuser) then
-        write (errmsg, '(a,i10)') &
-          'Nodenumber less than 1 or greater than nodes:', nodeu
+        write (errmsg, '(a,i0,a)') &
+          'Node number (', nodeu, &
+          ') less than 1 or greater than the number of nodes.'
         call store_error(errmsg)
         nodenumber = 0
       else
@@ -836,7 +835,6 @@ contains
     integer(I4B), intent(in) :: k, i, j
     integer(I4B), intent(in) :: icheck
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: nodeu
     ! formats
     character(len=*), parameter :: fmterr = &
@@ -864,8 +862,8 @@ contains
       !
       ! -- Error if outside of range
       if (nodeu < 1 .or. nodeu > this%nodesuser) then
-        write (errmsg, '(a,i10)') &
-          'Nodenumber less than 1 or greater than nodes:', nodeu
+        write (errmsg, '(a,i0,a)') &
+          'Node number (', nodeu, ')less than 1 or greater than nodes.'
         call store_error(errmsg)
       end if
     end if
@@ -967,7 +965,6 @@ contains
     integer(I4B) :: k, i, j, nlay, nrow, ncol
     integer(I4B) :: lloclocal, ndum, istat, n
     real(DP) :: r
-    character(len=LINELENGTH) :: ermsg, fname
 ! ------------------------------------------------------------------------------
     !
     if (present(flag_string)) then
@@ -1001,28 +998,35 @@ contains
       end if
     end if
     !
+    errmsg = ""
+    !
     if (k < 1 .or. k > nlay) then
-      write (ermsg, *) ' Layer number in list is outside of the grid', k
-      call store_error(ermsg)
+      write (errmsg, '(a,i0,a)') &
+        'Layer number in list (', k, ') is outside of the grid.'
     end if
     if (i < 1 .or. i > nrow) then
-      write (ermsg, *) ' Row number in list is outside of the grid', i
-      call store_error(ermsg)
+      write (errmsg, '(a,1x,a,i0,a)') &
+        trim(adjustl(errmsg)), 'Row number in list (', i, &
+        ') is outside of the grid.'
     end if
     if (j < 1 .or. j > ncol) then
-      write (ermsg, *) ' Column number in list is outside of the grid', j
-      call store_error(ermsg)
+      write (errmsg, '(a,1x,a,i0,a)') &
+        trim(adjustl(errmsg)), 'Column number in list (', j, &
+        ') is outside of the grid.'
     end if
+    !
     nodeu = get_node(k, i, j, nlay, nrow, ncol)
     !
     if (nodeu < 1 .or. nodeu > this%nodesuser) then
-      write (ermsg, *) ' Node number in list is outside of the grid', nodeu
-      call store_error(ermsg)
-      inquire (unit=in, name=fname)
-      call store_error('Error converting in file: ')
-      call store_error(trim(adjustl(fname)))
-      call store_error('Cell number cannot be determined in line: ')
-      call store_error(trim(adjustl(line)))
+      write (errmsg, '(a,1x,a,i0,a)') &
+        trim(adjustl(errmsg)), &
+        "Node number in list (", nodeu, ") is outside of the grid. "// &
+        "Cell number cannot be determined in line '"// &
+        trim(adjustl(line))//"'."
+    end if
+    !
+    if (len_trim(adjustl(errmsg)) > 0) then
+      call store_error(errmsg)
       call store_error_unit(in)
     end if
     !
@@ -1060,7 +1064,6 @@ contains
     integer(I4B) :: k, i, j, nlay, nrow, ncol
     integer(I4B) :: istat
     real(DP) :: r
-    character(len=LINELENGTH) :: ermsg, fname
 ! ------------------------------------------------------------------------------
     !
     if (present(flag_string)) then
@@ -1095,28 +1098,35 @@ contains
       end if
     end if
     !
+    errmsg = ""
+    !
     if (k < 1 .or. k > nlay) then
-      write (ermsg, *) ' Layer number in list is outside of the grid', k
-      call store_error(ermsg)
+      write (errmsg, '(a,i0,a)') &
+        'Layer number in list (', k, ') is outside of the grid.'
     end if
     if (i < 1 .or. i > nrow) then
-      write (ermsg, *) ' Row number in list is outside of the grid', i
-      call store_error(ermsg)
+      write (errmsg, '(a,1x,a,i0,a)') &
+        trim(adjustl(errmsg)), 'Row number in list (', i, &
+        ') is outside of the grid.'
     end if
     if (j < 1 .or. j > ncol) then
-      write (ermsg, *) ' Column number in list is outside of the grid', j
-      call store_error(ermsg)
+      write (errmsg, '(a,1x,a,i0,a)') &
+        trim(adjustl(errmsg)), 'Column number in list (', j, &
+        ') is outside of the grid.'
     end if
+    !
     nodeu = get_node(k, i, j, nlay, nrow, ncol)
     !
     if (nodeu < 1 .or. nodeu > this%nodesuser) then
-      write (ermsg, *) ' Node number in list is outside of the grid', nodeu
-      call store_error(ermsg)
-      inquire (unit=inunit, name=fname)
-      call store_error('Error converting in file: ')
-      call store_error(trim(adjustl(fname)))
-      call store_error('Cell number cannot be determined in cellid: ')
-      call store_error(trim(adjustl(cellid)))
+      write (errmsg, '(a,1x,a,i0,a)') &
+        trim(adjustl(errmsg)), &
+        "Cell number cannot be determined for cellid ("// &
+        trim(adjustl(cellid))//") and results in a user "// &
+        "node number (", nodeu, ") that is outside of the grid."
+    end if
+    !
+    if (len_trim(adjustl(errmsg)) > 0) then
+      call store_error(errmsg)
       call store_error_unit(inunit)
     end if
     !
@@ -1674,7 +1684,6 @@ contains
     integer(I4B), intent(in) :: iout
     ! -- local
     integer(I4B) :: il, ir, ic, ncol, nrow, nlay, nval, nodeu, noder, ipos, ierr
-    character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
     !
     ! -- set variables
@@ -1696,7 +1705,7 @@ contains
           nodeu = get_node(1, ir, ic, nlay, nrow, ncol)
           il = this%ibuff(nodeu)
           if (il < 1 .or. il > nlay) then
-            write (errmsg, *) 'INVALID LAYER NUMBER: ', il
+            write (errmsg, '(a,1x,i0)') 'Invalid layer number:', il
             call store_error(errmsg, terminate=.TRUE.)
           end if
           nodeu = get_node(il, ir, ic, nlay, nrow, ncol)
@@ -1713,9 +1722,9 @@ contains
       ! -- Check for errors
       nbound = ipos - 1
       if (ierr > 0) then
-        write (errmsg, *) 'MAXBOUND DIMENSION IS TOO SMALL.'
-        call store_error(errmsg)
-        write (errmsg, *) 'INCREASE MAXBOUND TO: ', ierr
+        write (errmsg, '(a,1x,i0)') &
+          'MAXBOUND dimension is too small.'// &
+          'INCREASE MAXBOUND TO:', ierr
         call store_error(errmsg, terminate=.TRUE.)
       end if
       !
@@ -1732,7 +1741,7 @@ contains
       call ReadArray(inunit, nodelist, aname, this%ndim, maxbnd, iout, 0)
       do noder = 1, maxbnd
         if (noder < 1 .or. noder > this%nodes) then
-          write (errmsg, *) 'INVALID NODE NUMBER: ', noder
+          write (errmsg, '(a,1x,i0)') 'Invalid node number:', noder
           call store_error(errmsg, terminate=.TRUE.)
         end if
       end do

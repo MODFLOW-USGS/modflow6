@@ -28,7 +28,7 @@ module SfrModule
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
   use TableModule, only: TableType, table_cr
   use ObserveModule, only: ObserveType
-  use InputOutputModule, only: extract_idnum_or_bndname
+  use InputOutputModule, only: extract_idnum_or_bndname, upcase
   use BaseDisModule, only: DisBaseType
   use SimModule, only: count_errors, store_error, store_error_unit, &
                        store_warning, deprecation_warning
@@ -844,7 +844,6 @@ contains
     ! -- local variables
     character(len=LINELENGTH) :: text
     character(len=LINELENGTH) :: cellid
-    character(len=LINELENGTH) :: keyword
     character(len=10) :: cnum
     character(len=LENBOUNDNAME) :: bndName
     character(len=LENBOUNDNAME) :: bndNameTemp
@@ -904,19 +903,30 @@ contains
         call this%parser%GetCellid(this%dis%ndim, cellid, flag_string=.true.)
         this%igwfnode(n) = this%dis%noder_from_cellid(cellid, this%inunit, &
                                                       this%iout, &
-                                                      flag_string=.true.)
+                                                      flag_string=.true., &
+                                                      allow_zero=.true.)
         this%igwftopnode(n) = this%igwfnode(n)
         !
         ! -- read the cellid string and determine if 'none' is specified
         if (this%igwfnode(n) < 1) then
-          call this%parser%GetStringCaps(keyword)
           this%ianynone = this%ianynone + 1
-          if (keyword /= 'NONE') then
+          call upcase(cellid)
+          if (cellid == 'NONE') then
+            call this%parser%GetStringCaps(cellid)
+            !
+            ! -- create warning message
             write (cnum, '(i0)') n
-            errmsg = 'Cell ID ('//trim(cellid)// &
-                     ') for unconnected reach '//trim(cnum)// &
-                     ' must be NONE'
-            call store_error(errmsg)
+            warnmsg = 'CELLID for unconnected reach '//trim(cnum)// &
+                      ' specified to be NONE. Unconnected reaches '// &
+                      'should be specified with a zero for each grid '// &
+                      'dimension. For example, for a DIS grid a CELLID '// &
+                      'of 0 0 0 should be specified for unconnected reaches'
+            !
+            ! -- create deprecation warning
+            call deprecation_warning('PACKAGEDATA', 'CELLID=NONE', '6.5.0', &
+                                     warnmsg, this%parser%GetUnit())
+          else
+
           end if
         end if
         ! -- get reach length
