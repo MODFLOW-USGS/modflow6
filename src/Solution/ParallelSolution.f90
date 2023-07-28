@@ -1,6 +1,6 @@
 module ParallelSolutionModule
   use KindModule, only: DP, LGP, I4B
-  use ConstantsModule, only: DONE, DZERO
+  use ConstantsModule, only: LENPAKLOC, DONE, DZERO
   use NumericalSolutionModule, only: NumericalSolutionType
   use mpi
   use MpiWorldModule
@@ -13,6 +13,7 @@ module ParallelSolutionModule
   contains
     ! override
     procedure :: sln_has_converged => par_has_converged
+    procedure :: sln_package_convergence => par_package_convergence
     procedure :: sln_sync_newtonur_flag => par_sync_newtonur_flag
     procedure :: sln_nur_has_converged => par_nur_has_converged
     procedure :: sln_calc_ptc => par_calc_ptc
@@ -47,6 +48,28 @@ contains
 
   end function par_has_converged
 
+  function par_package_convergence(this, dpak, cpakout, iend) &
+    result(icnvg_global)
+    class(ParallelSolutionType) :: this !< parallel solution instance
+    real(DP), intent(in) :: dpak !< Newton Under-relaxation flag
+    character(len=LENPAKLOC), intent(in) :: cpakout
+    integer(I4B), intent(in) :: iend
+    ! local
+    integer(I4B) :: icnvg_global
+    integer(I4B) :: icnvg_local
+    integer :: ierr
+    type(MpiWorldType), pointer :: mpi_world
+
+    mpi_world => get_mpi_world()
+
+    icnvg_local = &
+      this%NumericalSolutionType%sln_package_convergence(dpak, cpakout, iend)
+
+    call MPI_Allreduce(icnvg_local, icnvg_global, 1, MPI_INTEGER, &
+                       MPI_MIN, mpi_world%comm, ierr)
+
+  end function par_package_convergence
+
   function par_sync_newtonur_flag(this, inewtonur) result(ivalue)
     class(ParallelSolutionType) :: this !< parallel solution instance
     integer(I4B), intent(in) :: inewtonur !< local Newton Under-relaxation flag
@@ -61,12 +84,11 @@ contains
 
   end function par_sync_newtonur_flag
 
-  function par_nur_has_converged(this, dxold_max, hncg, dpak) &
+  function par_nur_has_converged(this, dxold_max, hncg) &
     result(has_converged)
     class(ParallelSolutionType) :: this !< parallel solution instance
     real(DP), intent(in) :: dxold_max !< the maximum dependent variable change for cells not adjusted by NUR
     real(DP), intent(in) :: hncg !< largest dep. var. change at end of Picard iter.
-    real(DP), intent(in) :: dpak !< largest change in advanced packages
     logical(LGP) :: has_converged !< True, when converged
     ! local
     integer(I4B) :: icnvg_local
@@ -79,7 +101,7 @@ contains
     has_converged = .false.
     icnvg_local = 0
     if (this%NumericalSolutionType%sln_nur_has_converged( &
-        dxold_max, hncg, dpak)) then
+        dxold_max, hncg)) then
       icnvg_local = 1
     end if
 

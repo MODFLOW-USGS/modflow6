@@ -27,7 +27,7 @@ module NumericalSolutionModule
                                      AddNumericalExchangeToList, &
                                      GetNumericalExchangeFromList
   use SparseModule, only: sparsematrix
-  use SimVariablesModule, only: iout, isim_mode
+  use SimVariablesModule, only: iout, isim_mode, errmsg
   use SimStagesModule
   use BlockParserModule, only: BlockParserType
   use IMSLinearModule
@@ -160,6 +160,7 @@ module NumericalSolutionModule
 
     ! 'protected' (this can be overridden)
     procedure :: sln_has_converged
+    procedure :: sln_package_convergence
     procedure :: sln_sync_newtonur_flag
     procedure :: sln_nur_has_converged
     procedure :: sln_calc_ptc
@@ -531,7 +532,6 @@ contains
     ! -- local variables
     class(NumericalModelType), pointer :: mp => null()
     class(NumericalExchangeType), pointer :: cp => null()
-    character(len=linelength) :: errmsg
     character(len=linelength) :: warnmsg
     character(len=linelength) :: keyword
     character(len=linelength) :: fname
@@ -1502,7 +1502,6 @@ contains
     class(NumericalExchangeType), pointer :: cp => null()
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: tag
-    character(len=LINELENGTH) :: line
     character(len=LENPAKLOC) :: cmod
     character(len=LENPAKLOC) :: cpak
     character(len=LENPAKLOC) :: cpakout
@@ -1692,40 +1691,34 @@ contains
       end if
     end do
     !
-    ! -- evaluate package convergence
-    if (abs(dpak) > this%dvclose) then
-      this%icnvg = 0
-      ! -- write message to stdout
-      if (iend /= 0) then
-        write (line, '(3a)') &
-          'PACKAGE (', trim(cpakout), ') CAUSED CONVERGENCE FAILURE'
-        call sim_message(line)
-      end if
-    end if
-    !
-    ! -- write maximum change in package convergence check
-    if (this%iprims > 0) then
-      cval = 'Package'
-      if (this%icnvg /= 1) then
-        cmsg = ' '
-      else
-        cmsg = '*'
-      end if
-      if (len_trim(cpakout) > 0) then
-        !
-        ! -- add data to outertab
-        call this%outertab%add_term(cval)
-        call this%outertab%add_term(kiter)
-        call this%outertab%add_term(' ')
-        if (this%numtrack > 0) then
-          call this%outertab%add_term(' ')
-          call this%outertab%add_term(' ')
-          call this%outertab%add_term(' ')
-          call this%outertab%add_term(' ')
+    ! -- evaluate package convergence - only done if convergence is achieved
+    if (this%icnvg == 1) then
+      this%icnvg = this%sln_package_convergence(dpak, cpakout, iend)
+      !
+      ! -- write maximum change in package convergence check
+      if (this%iprims > 0) then
+        cval = 'Package'
+        if (this%icnvg /= 1) then
+          cmsg = ' '
+        else
+          cmsg = '*'
         end if
-        call this%outertab%add_term(dpak)
-        call this%outertab%add_term(cmsg)
-        call this%outertab%add_term(cpakout)
+        if (len_trim(cpakout) > 0) then
+          !
+          ! -- add data to outertab
+          call this%outertab%add_term(cval)
+          call this%outertab%add_term(kiter)
+          call this%outertab%add_term(' ')
+          if (this%numtrack > 0) then
+            call this%outertab%add_term(' ')
+            call this%outertab%add_term(' ')
+            call this%outertab%add_term(' ')
+            call this%outertab%add_term(' ')
+          end if
+          call this%outertab%add_term(dpak)
+          call this%outertab%add_term(cmsg)
+          call this%outertab%add_term(cpakout)
+        end if
       end if
     end if
     !
@@ -1762,7 +1755,7 @@ contains
         call this%sln_maxval(this%neq, this%dxold, dxold_max)
         !
         ! -- evaluate convergence
-        if (this%sln_nur_has_converged(dxold_max, this%hncg(kiter), dpak)) then
+        if (this%sln_nur_has_converged(dxold_max, this%hncg(kiter))) then
           !
           ! -- converged
           this%icnvg = 1
@@ -3144,6 +3137,29 @@ contains
 
   end function sln_has_converged
 
+  !> @brief Check package convergence
+  !<
+  function sln_package_convergence(this, dpak, cpakout, iend) result(ivalue)
+    ! dummy
+    class(NumericalSolutionType) :: this !< NumericalSolutionType instance
+    real(DP), intent(in) :: dpak !< Newton Under-relaxation flag
+    character(len=LENPAKLOC), intent(in) :: cpakout
+    integer(I4B), intent(in) :: iend
+    ! local
+    integer(I4B) :: ivalue !<
+    ivalue = 1
+    if (abs(dpak) > this%dvclose) then
+      ivalue = 0
+      ! -- write message to stdout
+      if (iend /= 0) then
+        write (errmsg, '(3a)') &
+          'PACKAGE (', trim(cpakout), ') CAUSED CONVERGENCE FAILURE'
+        call sim_message(errmsg)
+      end if
+    end if
+
+  end function sln_package_convergence
+
   !> @brief Syncronize Newton Under-relaxation flag
   !<
   function sln_sync_newtonur_flag(this, inewtonur) result(ivalue)
@@ -3159,18 +3175,16 @@ contains
 
   !> @brief Custom convergence check for when Newton UR has been applied
   !<
-  function sln_nur_has_converged(this, dxold_max, hncg, dpak) &
+  function sln_nur_has_converged(this, dxold_max, hncg) &
     result(has_converged)
     class(NumericalSolutionType) :: this !< NumericalSolutionType instance
     real(DP), intent(in) :: dxold_max !< the maximum dependent variable change for unrelaxed cells
     real(DP), intent(in) :: hncg !< largest dep. var. change at end of Picard iteration
-    real(DP), intent(in) :: dpak !< largest change in advanced packages
     logical(LGP) :: has_converged !< True, when converged
 
     has_converged = .false.
     if (abs(dxold_max) <= this%dvclose .and. &
-        abs(hncg) <= this%dvclose .and. &
-        abs(dpak) <= this%dvclose) then
+        abs(hncg) <= this%dvclose) then
       has_converged = .true.
     end if
 
