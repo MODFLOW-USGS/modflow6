@@ -17,7 +17,7 @@ on:
       - 'doc/**'
 jobs:
   lint:
-    name: Lint (fprettify)
+    name: Check format
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -38,14 +38,14 @@ jobs:
         run: python .github/common/fortran_format_check.py
 
   build:
-    name: Build (gfortran 12)
+    name: Build
     runs-on: ubuntu-22.04
     defaults:
       run:
         shell: bash -l {0}
     env:
       FC: gfortran
-      GCC_V: 12
+      GCC_V: 13
     steps:
 
       - name: Checkout modflow6
@@ -74,14 +74,14 @@ jobs:
         run: meson test --verbose --no-rebuild -C builddir
 
   smoke_test:
-    name: Smoke test (gfortran 12)
+    name: Smoke test
     runs-on: ubuntu-22.04
     defaults:
       run:
         shell: bash -l {0}
     env:
       FC: gfortran
-      GCC_V: 12
+      GCC_V: 13
     steps:
       - name: Checkout modflow6
         uses: actions/checkout@v3
@@ -127,8 +127,8 @@ jobs:
             pytest -v -n auto --durations 0 -S
           fi
 
-  test_gfortran_latest:
-    name: Test (gfortran 12)
+  test_gfortran:
+    name: Test (gfortran)
     needs:
       - lint
       - build
@@ -137,13 +137,33 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-22.04, macos-12, windows-2022 ]
+        # compatible combinations from https://github.com/awvwgk/setup-fortran#runner-compatibility
+        include:
+          - {os: ubuntu-20.04, gcc_v: 7, test: false}
+          - {os: ubuntu-20.04, gcc_v: 8, test: false}
+          - {os: ubuntu-20.04, gcc_v: 9, test: false}
+          - {os: ubuntu-20.04, gcc_v: 10, test: false}
+          - {os: ubuntu-20.04, gcc_v: 11, test: false}
+          - {os: ubuntu-22.04, gcc_v: 12, test: false}
+          # only run autotests on latest version on each platform
+          - {os: ubuntu-22.04, gcc_v: 13, test: true}
+          - {os: macos-12, gcc_v: 7, test: false}
+          - {os: macos-12, gcc_v: 8, test: false}
+          - {os: macos-12, gcc_v: 9, test: false}
+          - {os: macos-12, gcc_v: 10, test: false}
+          - {os: macos-12, gcc_v: 11, test: false}
+          - {os: macos-12, gcc_v: 12, test: false}
+          - {os: macos-12, gcc_v: 13, test: true}
+          - {os: windows-2022, gcc_v: 9, test: false}
+          - {os: windows-2022, gcc_v: 10, test: false}
+          - {os: windows-2022, gcc_v: 11, test: false}
+          - {os: windows-2022, gcc_v: 12, test: true}
+          
     defaults:
       run:
         shell: bash -l {0}
     env:
       FC: gfortran
-      GCC_V: 12
     steps:
       - name: Checkout modflow6
         uses: actions/checkout@v3
@@ -162,11 +182,11 @@ jobs:
           repository: MODFLOW-USGS/modflow6-examples
           path: modflow6-examples
       
-      - name: Setup GNU Fortran ${{ env.GCC_V }}
+      - name: Setup GNU Fortran ${{ matrix.gcc_v }}
         uses: awvwgk/setup-fortran@main
         with:
           compiler: gcc
-          version: ${{ env.GCC_V }}
+          version: ${{ matrix.gcc_v }}
 
       - name: Setup Micromamba
         uses: mamba-org/setup-micromamba@v1
@@ -183,13 +203,18 @@ jobs:
         run: |
           meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
           meson install -C builddir
-          meson test --verbose --no-rebuild -C builddir
+
+      - name: Unit test modflow6
+        working-directory: modflow6
+        run: meson test --verbose --no-rebuild -C builddir
 
       - name: Update flopy
+        if: matrix.test
         working-directory: modflow6/autotest
         run: python update_flopy.py
 
       - name: Get executables
+        if: matrix.test
         working-directory: modflow6/autotest
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -197,6 +222,7 @@ jobs:
           pytest -v --durations 0 get_exes.py
 
       - name: Test modflow6
+        if: matrix.test
         working-directory: modflow6/autotest
         env:
           REPOS_PATH: ${{ github.workspace }}
@@ -207,17 +233,15 @@ jobs:
             pytest -v -n auto --durations 0 -m "not large"
           fi
       
-      # steps below run only on Linux to test distribution procedures, e.g.
-      # compiling binaries, building documentation
       - name: Checkout usgslatex
-        if: runner.os == 'Linux'
+        if: matrix.test && runner.os == 'Linux'
         uses: actions/checkout@v3
         with:
           repository: MODFLOW-USGS/usgslatex
           path: usgslatex
 
       - name: Install TeX Live
-        if: runner.os == 'Linux'
+        if: matrix.test && runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt install texlive-science \
@@ -227,86 +251,16 @@ jobs:
             texlive-fonts-extra
 
       - name: Install USGS LaTeX style files and Univers font
-        if: runner.os == 'Linux'
+        if: matrix.test && runner.os == 'Linux'
         working-directory: usgslatex/usgsLaTeX
         run: sudo ./install.sh --all-users
      
       - name: Test distribution scripts
+        if: matrix.test
         working-directory: modflow6/distribution
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: pytest -v --durations 0
-
-  test_gfortran_previous:
-    name: Test gfortran (${{ matrix.GCC_V }}, ${{ matrix.os }})
-    needs:
-      - lint
-      - build
-      - smoke_test
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ ubuntu-20.04 ]
-        GCC_V: [ 7, 8, 9, 10, 11 ]
-    defaults:
-      run:
-        shell: bash -l {0}
-    env:
-      FC: gfortran
-    steps:
-
-      - name: Checkout modflow6
-        uses: actions/checkout@v3
-        with:
-          path: modflow6
-
-      - name: Checkout modflow6-testmodels
-        uses: actions/checkout@v3
-        with:
-          repository: MODFLOW-USGS/modflow6-testmodels
-          path: modflow6-testmodels
-
-      - name: Setup GNU Fortran ${{ matrix.GCC_V }}
-        uses: awvwgk/setup-fortran@main
-        with:
-          compiler: gcc
-          version: ${{ matrix.GCC_V }}
-
-      - name: Setup Micromamba
-        uses: mamba-org/setup-micromamba@v1
-        with:
-          environment-file: modflow6/environment.yml
-          cache-downloads: true
-          cache-environment: true
-
-      - name: Update flopy
-        working-directory: modflow6/autotest
-        run: python update_flopy.py
-
-      - name: Build modflow6
-        working-directory: modflow6
-        run: |
-          meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
-          meson install -C builddir
-          meson test --verbose --no-rebuild -C builddir
-      
-      - name: Get executables
-        working-directory: modflow6/autotest
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: pytest -v --durations 0 get_exes.py
-
-      - name: Test modflow6
-        working-directory: modflow6/autotest
-        env:
-          REPOS_PATH: ${{ github.workspace }}
-        run: |
-          if [ "${{ github.ref_name }}" == "master" ]; then
-            pytest -v -n auto --durations 0 -m "not large and not developmode"
-          else
-            pytest -v -n auto --durations 0 -m "not large"
-          fi
 
   test_ifort:
     name: Test (ifort)
