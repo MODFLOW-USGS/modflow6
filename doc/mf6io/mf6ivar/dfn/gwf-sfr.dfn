@@ -417,7 +417,7 @@ tagged false
 in_record true
 reader urword
 longname streambed thickness
-description real value that defines the thickness of the reach streambed. RBTH can be any value if CELLID is `NONE'. Otherwise, RBTH must be greater than zero.
+description real value that defines the thickness of the reach streambed. RBTH can be any value if the reach is not connected to an underlying GWF cell. Otherwise, RBTH must be greater than zero.
 
 block packagedata
 name rhk
@@ -427,7 +427,7 @@ tagged false
 in_record true
 reader urword
 longname
-description real value that defines the hydraulic conductivity of the reach streambed. RHK can be any positive value if CELLID is `NONE'. Otherwise, RHK must be greater than zero.
+description real value that defines the hydraulic conductivity of the reach streambed. RHK can be any positive value if the reach is not connected to an underlying GWF cell. Otherwise, RHK must be greater than zero.
 
 block packagedata
 name man
