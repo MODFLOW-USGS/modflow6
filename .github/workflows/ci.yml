@@ -139,42 +139,25 @@ jobs:
       matrix:
         # compatible combinations from https://github.com/awvwgk/setup-fortran#runner-compatibility
         include:
-          - {os: ubuntu-20.04, gcc_v: 7}
-          - {os: ubuntu-20.04, gcc_v: 8}
-          - {os: ubuntu-20.04, gcc_v: 9}
-          - {os: ubuntu-20.04, gcc_v: 10}
-          - {os: ubuntu-20.04, gcc_v: 11}
-          # - {os: ubuntu-22.04, gcc_v: 9}
-          # - {os: ubuntu-22.04, gcc_v: 10}
-          # - {os: ubuntu-22.04, gcc_v: 11}
-          - {os: ubuntu-22.04, gcc_v: 12}
-          - {os: ubuntu-22.04, gcc_v: 13}
-          # - {os: macos-11, gcc_v: 6}
-          # - {os: macos-11, gcc_v: 7}
-          # - {os: macos-11, gcc_v: 8}
-          # - {os: macos-11, gcc_v: 9}
-          # - {os: macos-11, gcc_v: 10}
-          # - {os: macos-11, gcc_v: 11}
-          # - {os: macos-11, gcc_v: 12}
-          # - {os: macos-11, gcc_v: 13}
-          # - {os: macos-12, gcc_v: 6}
-          # - {os: macos-12, gcc_v: 7}
-          # - {os: macos-12, gcc_v: 8}
-          # - {os: macos-12, gcc_v: 9}
-          # - {os: macos-12, gcc_v: 10}
-          # - {os: macos-12, gcc_v: 11}
-          # - {os: macos-12, gcc_v: 12}
-          - {os: macos-12, gcc_v: 13}
-          # - {os: windows-2019, gcc_v: 8}
-          # - {os: windows-2019, gcc_v: 9}
-          # - {os: windows-2019, gcc_v: 10}
-          # - {os: windows-2019, gcc_v: 11}
-          # - {os: windows-2019, gcc_v: 12}
-          # - {os: windows-2022, gcc_v: 8}
-          # - {os: windows-2022, gcc_v: 9}
-          # - {os: windows-2022, gcc_v: 10}
-          # - {os: windows-2022, gcc_v: 11}
-          - {os: windows-2022, gcc_v: 12}
+          - {os: ubuntu-20.04, gcc_v: 7, test: false}
+          - {os: ubuntu-20.04, gcc_v: 8, test: false}
+          - {os: ubuntu-20.04, gcc_v: 9, test: false}
+          - {os: ubuntu-20.04, gcc_v: 10, test: false}
+          - {os: ubuntu-20.04, gcc_v: 11, test: false}
+          - {os: ubuntu-22.04, gcc_v: 12, test: false}
+          # only run autotests on latest version on each platform
+          - {os: ubuntu-22.04, gcc_v: 13, test: true}
+          - {os: macos-12, gcc_v: 7, test: false}
+          - {os: macos-12, gcc_v: 8, test: false}
+          - {os: macos-12, gcc_v: 9, test: false}
+          - {os: macos-12, gcc_v: 10, test: false}
+          - {os: macos-12, gcc_v: 11, test: false}
+          - {os: macos-12, gcc_v: 12, test: false}
+          - {os: macos-12, gcc_v: 13, test: true}
+          - {os: windows-2022, gcc_v: 9, test: false}
+          - {os: windows-2022, gcc_v: 10, test: false}
+          - {os: windows-2022, gcc_v: 11, test: false}
+          - {os: windows-2022, gcc_v: 12, test: true}
           
     defaults:
       run:
@@ -220,13 +203,18 @@ jobs:
         run: |
           meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
           meson install -C builddir
-          meson test --verbose --no-rebuild -C builddir
+
+      - name: Unit test modflow6
+        working-directory: modflow6
+        run: meson test --verbose --no-rebuild -C builddir
 
       - name: Update flopy
+        if: matrix.test
         working-directory: modflow6/autotest
         run: python update_flopy.py
 
       - name: Get executables
+        if: matrix.test
         working-directory: modflow6/autotest
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -234,6 +222,7 @@ jobs:
           pytest -v --durations 0 get_exes.py
 
       - name: Test modflow6
+        if: matrix.test
         working-directory: modflow6/autotest
         env:
           REPOS_PATH: ${{ github.workspace }}
@@ -244,17 +233,15 @@ jobs:
             pytest -v -n auto --durations 0 -m "not large"
           fi
       
-      # steps below run only on Linux to test distribution procedures, e.g.
-      # compiling binaries, building documentation
       - name: Checkout usgslatex
-        if: runner.os == 'Linux'
+        if: matrix.test && runner.os == 'Linux'
         uses: actions/checkout@v3
         with:
           repository: MODFLOW-USGS/usgslatex
           path: usgslatex
 
       - name: Install TeX Live
-        if: runner.os == 'Linux'
+        if: matrix.test && runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt install texlive-science \
@@ -264,11 +251,12 @@ jobs:
             texlive-fonts-extra
 
       - name: Install USGS LaTeX style files and Univers font
-        if: runner.os == 'Linux'
+        if: matrix.test && runner.os == 'Linux'
         working-directory: usgslatex/usgsLaTeX
         run: sudo ./install.sh --all-users
      
       - name: Test distribution scripts
+        if: matrix.test
         working-directory: modflow6/distribution
         env:
           GITHUB_TOKEN: ${{ github.token }}
