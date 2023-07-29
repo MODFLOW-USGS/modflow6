@@ -1,7 +1,9 @@
 import argparse
+from os import environ
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from warnings import warn
+from platform import system
 
 import flopy
 import pytest
@@ -9,7 +11,7 @@ from conftest import project_root_path
 from flaky import flaky
 from modflow_devtools.build import meson_build
 from modflow_devtools.download import download_and_unzip, get_release
-from modflow_devtools.misc import get_ostag
+from modflow_devtools.misc import get_ostag, is_in_ci, set_env
 
 repository = "MODFLOW-USGS/modflow6"
 top_bin_path = project_root_path / "bin"
@@ -73,11 +75,21 @@ def test_rebuild_release(rebuilt_bin_path: Path):
                 f.write(f"{line}\n")
 
         # rebuild with Meson
-        meson_build(
-            project_path=source_files_path.parent,
-            build_path=download_path / "builddir",
-            bin_path=rebuilt_bin_path,
-        )
+        def rebuild():
+            meson_build(
+                project_path=source_files_path.parent,
+                build_path=download_path / "builddir",
+                bin_path=rebuilt_bin_path,
+            )
+
+        # temp workaround until next release,
+        # ifx fails to build 6.4.2 on Windows
+        # most likely due to backspace issues
+        if system() == "Windows" and environ.get("FC") == "ifx":
+            with set_env(FC="ifort", CC="icl"):
+                rebuild()
+        else:
+            rebuild()
 
 
 @flaky(max_runs=3)

@@ -70,6 +70,10 @@ jobs:
       - name: Meson compile
         run: meson compile -C builddir
 
+      - name: Show build log
+        if: failure()
+        run: cat builddir/meson-logs/meson-log.txt
+
       - name: Meson test
         run: meson test --verbose --no-rebuild -C builddir
 
@@ -106,7 +110,15 @@ jobs:
         run: |
           meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
           meson install -C builddir
-          meson test --verbose --no-rebuild -C builddir
+
+      - name: Show build log
+        if: failure()
+        working-directory: modflow6
+        run: cat builddir/meson-logs/meson-log.txt
+    
+      - name: Unit test programs
+        working-directory: modflow6
+        run: meson test --verbose --no-rebuild -C builddir
 
       - name: Update flopy
         working-directory: modflow6/autotest
@@ -204,7 +216,12 @@ jobs:
           meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
           meson install -C builddir
 
-      - name: Unit test modflow6
+      - name: Show build log
+        if: failure()
+        working-directory: modflow6
+        run: cat builddir/meson-logs/meson-log.txt
+      
+      - name: Unit test programs
         working-directory: modflow6
         run: meson test --verbose --no-rebuild -C builddir
 
@@ -262,8 +279,8 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: pytest -v --durations 0
 
-  test_ifort:
-    name: Test (ifort)
+  test_intel_fortran:
+    name: Test (Intel)
     needs:
       - lint
       - build
@@ -272,7 +289,47 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, macos-latest, windows-latest ]
+        include:
+          ### ifx
+          ## 2022.2.x autotests disabled
+          #  - mf5to6 test_evt: failure to converge
+          #  - mf6 Keating_[disu_]dev: bad head comparison
+          - {os: ubuntu-22.04, compiler: intel, version: 2022.2.1, test: false}
+          - {os: ubuntu-22.04, compiler: intel, version: 2022.2, test: false}
+          ## 2021.1 segfault in meson serial sim test
+          # - {os: ubuntu-22.04, compiler: intel, version: 2022.1, test: false}
+          ## 2022.0 & 2021.[1,2,4] segfault at compile time
+          # - {os: ubuntu-22.04, compiler: intel, version: "2022.0", test: false}
+          # - {os: ubuntu-22.04, compiler: intel, version: 2021.4, test: false}
+          # - {os: ubuntu-22.04, compiler: intel, version: 2021.2, test: false}
+          # - {os: ubuntu-22.04, compiler: intel, version: 2021.1, test: false}
+          ## ifx not yet supported on macOS
+          # - {os: macos-12, compiler: intel, version: 2023.2, test: true}
+          ## 2023.[0,1] fail to compile
+          # - {os: windows-2022, compiler: intel, version: 2023.1, test: false}
+          # - {os: windows-2022, compiler: intel, version: "2023.0", test: false}
+          - {os: windows-2022, compiler: intel, version: 2022.2, test: false}
+          ## 2022.1 fail to link
+          # - {os: windows-2022, compiler: intel, version: 2022.1, test: false}
+
+          ### ifort
+          ## only autotest latest on each platform
+          - {os: ubuntu-22.04, compiler: intel-classic, version: "2021.10", test: false}
+          - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.9, test: false}
+          - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.8, test: false}
+          - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.7, test: true}
+          - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.6, test: false}
+          - {os: macos-12, compiler: intel-classic, version: "2021.10", test: false}
+          - {os: macos-12, compiler: intel-classic, version: 2021.9, test: false}
+          - {os: macos-12, compiler: intel-classic, version: 2021.8, test: false}
+          - {os: macos-12, compiler: intel-classic, version: 2021.7, test: true}
+          - {os: macos-12, compiler: intel-classic, version: 2021.6, test: false}
+          - {os: windows-2022, compiler: intel-classic, version: "2021.10", test: false}
+          - {os: windows-2022, compiler: intel-classic, version: 2021.9, test: false}
+          - {os: windows-2022, compiler: intel-classic, version: 2021.8, test: false}
+          - {os: windows-2022, compiler: intel-classic, version: 2021.7, test: true}
+          - {os: windows-2022, compiler: intel-classic, version: 2021.6, test: false}
+
     defaults:
       run:
         shell: bash -l {0}
@@ -300,50 +357,44 @@ jobs:
           cache-downloads: true
 
       - name: Setup Intel Fortran
-        uses: modflowpy/install-intelfortran-action@v1
+        uses: awvwgk/setup-fortran@main
+        with:
+          compiler: ${{ matrix.compiler }}
+          version: ${{ matrix.version }}
 
       - name: Update version files
         working-directory: modflow6/distribution
         run: python update_version.py
 
       - name: Build modflow6
-        if: runner.os != 'Windows'
         working-directory: modflow6
         run: |
           meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
           meson install -C builddir
-          meson test --verbose --no-rebuild -C builddir
 
-      - name: Build modflow6 (Windows)
-        if: runner.os == 'Windows'
+      - name: Show build log
+        if: failure()
         working-directory: modflow6
-        shell: pwsh
-        run: |
-          meson setup builddir -Ddebug=false --prefix=$(pwd) --libdir=bin
-          meson install -C builddir
-          meson test --verbose --no-rebuild -C builddir
+        run: cat builddir/meson-logs/meson-log.txt
+
+      - name: Unit test programs
+        working-directory: modflow6
+        run: meson test --verbose --no-rebuild -C builddir
 
       - name: Update flopy
+        if: matrix.test
         working-directory: modflow6/autotest
         run: python update_flopy.py
 
       - name: Get executables
-        if: runner.os != 'Windows'
+        if: matrix.test
         working-directory: modflow6/autotest
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: pytest -v --durations 0 get_exes.py
-          
-      - name: Get executables (Windows)
-        if: runner.os == 'Windows'
-        working-directory: modflow6/autotest
-        shell: pwsh
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: pytest -v --durations 0 get_exes.py
 
       - name: Test programs
-        if: runner.os != 'Windows'
+        if: matrix.test
         working-directory: modflow6/autotest
         env:
           REPOS_PATH: ${{ github.workspace }}
@@ -354,30 +405,9 @@ jobs:
             pytest -v -n auto --durations 0 -m "not large"
           fi
 
-      - name: Test programs (Windows)
-        if: runner.os == 'Windows'
-        working-directory: modflow6/autotest
-        shell: pwsh
-        env:
-          REPOS_PATH: ${{ github.workspace }}
-        run: |
-          if ( "${{ github.ref_name }}" -eq "master" ) {
-            pytest -v -n auto --durations 0 -m "not large and not developmode"
-          } else {
-            pytest -v -n auto --durations 0 -m "not large"
-          }
-
       - name: Test scripts
-        if: runner.os != 'Windows'
+        if: matrix.test
         working-directory: modflow6/distribution
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: pytest -v --durations 0
-
-      - name: Test scripts (Windows)
-        if: runner.os == 'Windows'
-        working-directory: modflow6/distribution
-        shell: pwsh
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: pytest -v --durations 0
