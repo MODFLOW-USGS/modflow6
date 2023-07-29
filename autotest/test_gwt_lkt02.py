@@ -7,7 +7,7 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
+from simulation import TestSimulation, DNODATA
 
 ex = ["lkt_02"]
 
@@ -136,21 +136,21 @@ def build_model(idx, dir):
     # con_data=(lakeno,iconn,(cellid),claktype,bedleak,belev,telev,connlen,connwidth )
     # lake 1
     con_data.append(
-        (0, 0, (0, 0, 1), "HORIZONTAL", "None", 10, 10, connlen, connwidth)
+        (0, 0, (0, 0, 1), "HORIZONTAL", DNODATA, 10, 10, connlen, connwidth)
     )
     con_data.append(
-        (0, 1, (0, 0, 2), "VERTICAL", "None", 10, 10, connlen, connwidth)
+        (0, 1, (0, 0, 2), "VERTICAL", DNODATA, 10, 10, connlen, connwidth)
     )
     # lake 2
     con_data.append(
-        (1, 0, (0, 0, 3), "VERTICAL", "None", 10, 10, connlen, connwidth)
+        (1, 0, (0, 0, 3), "VERTICAL", DNODATA, 10, 10, connlen, connwidth)
     )
     # lake 3
     con_data.append(
-        (2, 0, (0, 0, 4), "VERTICAL", "None", 10, 10, connlen, connwidth)
+        (2, 0, (0, 0, 4), "VERTICAL", DNODATA, 10, 10, connlen, connwidth)
     )
     con_data.append(
-        (2, 1, (0, 0, 5), "HORIZONTAL", "None", 10, 10, connlen, connwidth)
+        (2, 1, (0, 0, 5), "HORIZONTAL", DNODATA, 10, 10, connlen, connwidth)
     )
 
     p_data = [
