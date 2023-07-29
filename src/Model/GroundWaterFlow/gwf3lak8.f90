@@ -847,24 +847,24 @@ contains
         case ('NONE')
           is_lake_bed = .FALSE.
           this%bedleak(ipos) = DNODATA
-            !
-            ! -- create warning message
+          !
+          ! -- create warning message
           write (warnmsg, '(2(a,1x,i0,1x),a,g0,a)') &
-            'BEDLEAK for connection', j, 'in lake', n, 'is specified to ' // &
-            'be NONE. Lake connections where the lake-GWF connection ' // &
-            'conductance is solely a function of aquifer properties ' // &
-            'in the connected GWF cell should be specified with a ' // &
+            'BEDLEAK for connection', j, 'in lake', n, 'is specified to '// &
+            'be NONE. Lake connections where the lake-GWF connection '// &
+            'conductance is solely a function of aquifer properties '// &
+            'in the connected GWF cell should be specified with a '// &
             'DNODATA (', DNODATA, ') value.'
           !
           ! -- create deprecation warning
           call deprecation_warning('CONNECTIONDATA', 'bedleak=NONE', '6.5.0', &
                                    warnmsg, this%parser%GetUnit())
-      case default
+        case default
           read (keyword, *) rval
           if (is_same(rval, DNODATA)) then
             is_lake_bed = .FALSE.
           else
-            is_lake_bed = .TRUE.  
+            is_lake_bed = .TRUE.
           end if
           this%bedleak(ipos) = rval
         end select
