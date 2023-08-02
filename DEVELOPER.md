@@ -7,6 +7,7 @@ To build and test a parallel version of the program, first read the instructions
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
+
 - [Prerequisites](#prerequisites)
   - [Git](#git)
   - [Fortran compiler](#fortran-compiler)
@@ -47,11 +48,13 @@ To build and test a parallel version of the program, first read the instructions
   - [Testing makefiles](#testing-makefiles)
   - [Installing `make` on Windows](#installing-make-on-windows)
     - [Using Conda from Git Bash](#using-conda-from-git-bash)
-- [Git Strategy for Managing Long-Lived Branches](#git-strategy-for-managing-long-lived-branches)
-  - [Create a Backup](#create-a-backup)
-  - [Squash Feature Branch Commits](#squash-feature-branch-commits)
-  - [Rebase Feature Branch with Develop](#rebase-feature-branch-with-develop)
-  - [Cleanup](#cleanup)
+- [Branching model](#branching-model)
+  - [Overview](#overview)
+  - [Managing long-lived branches](#managing-long-lived-branches)
+    - [Backup](#backup)
+    - [Squash](#squash)
+    - [Rebase](#rebase)
+    - [Cleanup](#cleanup)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -105,9 +108,26 @@ GNU Fortran can be installed on all three major platforms.
 
 #### Intel Fortran
 
-Intel Fortran can also be used to compile MODFLOW 6 and associated utilities. The `ifort` compiler is available in the [Intel oneAPI HPC Toolkit](https://software.intel.com/content/www/us/en/develop/tools/oneapi/hpc-toolkit/download.html). An installer is bundled with the download.
+Intel Fortran can also be used to compile MODFLOW 6 and associated utilities. The `ifort` and `ifx` compilers are available in the [Intel oneAPI HPC Toolkit](https://software.intel.com/content/www/us/en/develop/tools/oneapi/hpc-toolkit/download.html).
 
 A number of environment variables must be set before using Intel Fortran. General information can be found [here](https://www.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup.html), with specific instructions to configure a shell session for `ifort` [here](https://www.intel.com/content/www/us/en/develop/documentation/fortran-compiler-oneapi-dev-guide-and-reference/top/compiler-setup/use-the-command-line/specifying-the-location-of-compiler-components.html).
+
+While the current development version of MODFLOW 6 is broadly compatible with `ifort`, `ifx` compatibility is still limited. The following table documents whether MODFLOW 6 can be succesfully built with particular platform/compiler combinations, and info on relevant errors if not.
+
+**Note**: this table is not exhaustive and only details the currently tested subset of combinations.
+
+| Platform | Compiler | Version | Compatible? | Notes |
+|:---------|:---------|:--------|:------------|:------|
+| Ubuntu 22.04  | ifort    | 2021.[6-10] | &check; | |
+| Ubuntu 22.04  | ifx    | 2022.2.[0-1] | &check; | some autotests fail (convergence failure, bad head comparison) |
+| Ubuntu 22.04  | ifx    | 2022.1 | &cross; | segfault in meson serial simulation test |
+| Ubuntu 22.04  | ifx    | 2022.0, 2021.[1,2,4] | &cross; | compilation failure (segfault) |
+| macOS 12 (Monterey) | ifort    | 2021.[6-10] | &check; | |
+| macOS N | ifx    | all | &cross; | ifx support for macOS [is not planned](https://community.intel.com/t5/Blogs/Tech-Innovation/Tools/Deprecation-of-Intel-Fortran-Compiler-Classic-for-macOS/post/1472697) |
+| Windows 10 (Server 2022) | ifort    | 2021.[6-10] | &check; | |
+| Windows 10 (Server 2022) | ifx    | 2023.[0-1] | &cross; | compilation failure |
+| Windows 10 (Server 2022) | ifx    | 2022.2 | &check; | |
+| Windows 10 (Server 2022) | ifx    | 2022.1 | &cross; | linking failure |
 
 ##### Windows
 
@@ -484,13 +504,21 @@ After this, `conda` commands should be available.
 
 This command may be added to a `.bashrc` or `.bash_profile` file in your home directory to permanently configure Git Bash for Conda.
 
-## Git Strategy for Managing Long-Lived Branches
+## Branching model
+
+This section documents MODFLOW 6 branching strategy and other VCS-related procedures.
+
+### Overview
+
+This project follows the [git flow](https://nvie.com/posts/a-successful-git-branching-model/): development occurs on the `develop` branch, while `master` is reserved for the state of the latest release. Development PRs are typically squashed to `develop` to avoid merge commits. At release time, release branches are merged to `master`, and then `master` is merged back into `develop`.
+
+### Managing long-lived branches
 
 When a feature branch takes a long time to develop, it is easy to become out of sync with the develop branch.  Depending on the situation, it may be advisable to periodically squash the commits on the feature branch and rebase the change set with develop.  The following approach for updating a long-lived feature branch has proven robust.
 
 In the example below, the feature branch is assumed to be called `feat-xyz`.
 
-### Create a Backup
+#### Backup
 
 Begin by creating a backup copy of the feature branch in case anything goes terribly wrong.
 
@@ -500,7 +528,7 @@ git checkout -b feat-xyz-backup
 git checkout feat-xyz
 ```
 
-### Squash Feature Branch Commits
+#### Squash
 
 Next, consider squashing commits on the feature branch.  If there are many commits, it is beneficial to squash them before trying to rebase with develop.  There is a nice article on [squashing commits into one using git](https://www.internalpointers.com/post/squash-commits-into-one-git), which has been very useful for consolidating commits on a long-lived modflow6 feature branch.
 
@@ -519,7 +547,7 @@ git push origin feat-xyz --force
 
 The `--force` flag's short form is `-f`.
 
-### Rebase Feature Branch with Develop
+#### Rebase
 
 Now that the commits on `feat-xyz` have been consolidated, it is time to rebase with develop.  If there are multiple commits in `feat-xyz` that make changes, undo them, rename files, and/or move things around in subsequent commits, then there may be multiple sets of merge conflicts that will need to be resolved as the rebase works its way through the commit change sets.  This is why it is beneficial to squash the feature commits before rebasing with develop.
 
@@ -539,7 +567,7 @@ At this point, you will want to force push the updated feature branch to origin 
 git push origin feat-xyz --force
 ```
 
-### Cleanup
+#### Cleanup
 
 Lastly, if you are satisfied with the results and confident the procedure went well, then you can delete the backup that you created at the start.
 
