@@ -5,7 +5,7 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
+from simulation import TestSimulation, DNODATA
 
 ex = ["aux01"]
 auxvar1 = 101.0
@@ -183,8 +183,8 @@ def build_model(idx, dir):
     ]
     # <lakeno> <iconn> <cellid(ncelldim)> <claktype> <bedleak> <belev> <telev> <connlen> <connwidth>
     connectiondata = [
-        [0, 0, (0, 1, 1), "vertical", "none", 0.0, 0.0, 0.0, 0.0],
-        [1, 0, (0, 2, 2), "vertical", "none", 0.0, 0.0, 0.0, 0.0],
+        [0, 0, (0, 1, 1), "vertical", DNODATA, 0.0, 0.0, 0.0, 0.0],
+        [1, 0, (0, 2, 2), "vertical", DNODATA, 0.0, 0.0, 0.0, 0.0],
     ]
     lak = flopy.mf6.ModflowGwflak(
         gwf,
