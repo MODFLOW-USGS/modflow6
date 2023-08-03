@@ -1,6 +1,6 @@
 module LakModule
   !
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LINELENGTH, LENBOUNDNAME, LENTIMESERIESNAME, &
                              IWETLAKE, MAXADPIT, &
                              DZERO, DPREC, DEM30, DEM9, DEM6, DEM5, &
@@ -25,11 +25,12 @@ module LakModule
   use ObsModule, only: ObsType
   use InputOutputModule, only: get_node, URWORD, extract_idnum_or_bndname
   use BaseDisModule, only: DisBaseType
-  use SimModule, only: count_errors, store_error, store_error_unit
+  use SimModule, only: count_errors, store_error, store_error_unit, &
+                       deprecation_warning
   use GenericUtilitiesModule, only: sim_message, is_same
   use BlockParserModule, only: BlockParserType
   use BaseDisModule, only: DisBaseType
-  use SimVariablesModule, only: errmsg
+  use SimVariablesModule, only: errmsg, warnmsg
   use MatrixBaseModule
   !
   implicit none
@@ -487,7 +488,7 @@ contains
     character(len=9) :: cno
     character(len=50), dimension(:), allocatable :: caux
     integer(I4B) :: ierr, ival
-    logical :: isfound, endOfBlock
+    logical(LGP) :: isfound, endOfBlock
     integer(I4B) :: n
     integer(I4B) :: ii, jj
     integer(I4B) :: iaux
@@ -723,13 +724,15 @@ contains
     ! -- local
     character(len=LINELENGTH) :: keyword, cellid
     integer(I4B) :: ierr, ival
-    logical :: isfound, endOfBlock
+    logical(LGP) :: isfound, endOfBlock
+    logical(LGP) :: is_lake_bed
     real(DP) :: rval
     integer(I4B) :: j, n
     integer(I4B) :: nn
     integer(I4B) :: ipos, ipos0
     integer(I4B) :: icellid, icellid0
-    real(DP) :: top, bot
+    real(DP) :: top
+    real(DP) :: bot
     integer(I4B), dimension(:), pointer, contiguous :: nboundchk
     character(len=LENVARNAME) :: ctypenm
 
@@ -838,16 +841,35 @@ contains
         write (ctypenm, '(a16)') keyword
 
         ! -- bed leakance
-        !this%bedleak(ipos) = this%parser%GetDouble()
+        !this%bedleak(ipos) = this%parser%GetDouble() !TODO: use this when NONE keyword deprecated
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
         case ('NONE')
-          this%bedleak(ipos) = -DONE
+          is_lake_bed = .FALSE.
+          this%bedleak(ipos) = DNODATA
+          !
+          ! -- create warning message
+          write (warnmsg, '(2(a,1x,i0,1x),a,1pe7.1,a)') &
+            'BEDLEAK for connection', j, 'in lake', n, 'is specified to '// &
+            'be NONE. Lake connections where the lake-GWF connection '// &
+            'conductance is solely a function of aquifer properties '// &
+            'in the connected GWF cell should be specified with a '// &
+            'DNODATA (', DNODATA, ') value.'
+          !
+          ! -- create deprecation warning
+          call deprecation_warning('CONNECTIONDATA', 'bedleak=NONE', '6.5.0', &
+                                   warnmsg, this%parser%GetUnit())
         case default
-          read (keyword, *) this%bedleak(ipos)
+          read (keyword, *) rval
+          if (is_same(rval, DNODATA)) then
+            is_lake_bed = .FALSE.
+          else
+            is_lake_bed = .TRUE.
+          end if
+          this%bedleak(ipos) = rval
         end select
 
-        if (keyword /= 'NONE' .and. this%bedleak(ipos) < dzero) then
+        if (is_lake_bed .and. this%bedleak(ipos) < DZERO) then
           write (errmsg, '(a,1x,i0,1x,a)') 'bedleak FOR LAKE ', n, 'MUST BE >= 0'
           call store_error(errmsg)
         end if
@@ -1029,7 +1051,7 @@ contains
     character(len=LINELENGTH) :: line
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
+    logical(LGP) :: isfound, endOfBlock
     integer(I4B) :: n
     integer(I4B) :: iconn
     integer(I4B) :: ntabs
@@ -1223,7 +1245,7 @@ contains
     ! -- local
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
+    logical(LGP) :: isfound, endOfBlock
     integer(I4B) :: iu
     integer(I4B) :: n
     integer(I4B) :: ipos
@@ -1467,7 +1489,7 @@ contains
     character(len=LENBOUNDNAME) :: bndName
     character(len=9) :: citem
     integer(I4B) :: ierr, ival
-    logical :: isfound, endOfBlock
+    logical(LGP) :: isfound, endOfBlock
     integer(I4B) :: n
     integer(I4B) :: jj
     integer(I4B), dimension(:), pointer, contiguous :: nboundchk
@@ -1658,7 +1680,7 @@ contains
     ! -- local
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
+    logical(LGP) :: isfound, endOfBlock
     ! -- format
 ! ------------------------------------------------------------------------------
     !
@@ -1882,10 +1904,10 @@ contains
           end if
           length = this%connlength(j)
         end if
-        if (this%bedleak(j) < DZERO) then
-          clb(j) = -DONE
+        if (is_same(this%bedleak(j), DNODATA)) then
+          clb(j) = DNODATA
         else if (this%bedleak(j) > DZERO) then
-          clb(j) = done / this%bedleak(j)
+          clb(j) = DONE / this%bedleak(j)
         else
           clb(j) = DZERO
         end if
@@ -1894,7 +1916,7 @@ contains
         else
           caq(j) = DZERO
         end if
-        if (this%bedleak(j) < DZERO) then
+        if (is_same(this%bedleak(j), DNODATA)) then
           this%satcond(j) = area / caq(j)
         else if (clb(j) * caq(j) > DZERO) then
           this%satcond(j) = area / (clb(j) + caq(j))
@@ -1929,7 +1951,7 @@ contains
           nn = this%cellid(j)
           area = this%warea(j)
           c1 = DZERO
-          if (clb(j) < DZERO) then
+          if (is_same(clb(j), DNODATA)) then
             cbedleak = '     NONE     '
             cbedcond = '     NONE     '
           else if (clb(j) > DZERO) then
@@ -3421,7 +3443,7 @@ contains
     ! -- dummy
     class(LakType), intent(inout) :: this
     character(len=*), intent(inout) :: option
-    logical, intent(inout) :: found
+    logical(LGP), intent(inout) :: found
     ! -- local
     character(len=MAXCHARLEN) :: fname, keyword
     real(DP) :: r
@@ -3619,8 +3641,8 @@ contains
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: line
     character(len=LINELENGTH) :: text
-    logical :: isfound
-    logical :: endOfBlock
+    logical(LGP) :: isfound
+    logical(LGP) :: endOfBlock
     integer(I4B) :: ierr
     integer(I4B) :: node
     integer(I4B) :: n
@@ -3830,12 +3852,12 @@ contains
     ! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType) :: this
-    logical, intent(in), optional :: reset_mover
+    logical(LGP), intent(in), optional :: reset_mover
     ! -- local
     integer(I4B) :: j, n
     integer(I4B) :: igwfnode
     real(DP) :: hlak, blak
-    logical :: lrm
+    logical(LGP) :: lrm
     ! ------------------------------------------------------------------------------
     !!
     !! -- Calculate lak conductance and update package RHS and HCOF
@@ -5103,7 +5125,7 @@ contains
     integer(I4B) :: nn2
     integer(I4B) :: jj
     character(len=LENBOUNDNAME) :: bname
-    logical :: jfound
+    logical(LGP) :: jfound
     class(ObserveType), pointer :: obsrv => null()
     ! --------------------------------------------------------------------------
     ! -- formats
@@ -5420,11 +5442,11 @@ contains
     !    SPECIFICATIONS:
     ! --------------------------------------------------------------------------
     use TdisModule, only: delt
-    logical, intent(in), optional :: update
+    logical(LGP), intent(in), optional :: update
     ! -- dummy
     class(LakType), intent(inout) :: this
     ! -- local
-    logical :: lupdate
+    logical(LGP) :: lupdate
     integer(I4B) :: i
     integer(I4B) :: j
     integer(I4B) :: n
@@ -6639,8 +6661,8 @@ contains
     real(DP) :: elevavg
     real(DP) :: d1
     real(DP) :: d2
-    logical :: stage_below_bot
-    logical :: head_below_bot
+    logical(LGP) :: stage_below_bot
+    logical(LGP) :: head_below_bot
     ! -- formats
 ! ------------------------------------------------------------------------------
     !

@@ -17,6 +17,7 @@ from common_regression import (
 from flopy.utils.compare import compare_heads
 from modflow_devtools.misc import is_in_ci
 
+DNODATA = 3.e+30
 sfmt = "{:25s} - {}"
 extdict = {
     "hds": "head",
