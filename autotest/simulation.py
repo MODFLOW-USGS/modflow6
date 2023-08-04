@@ -17,7 +17,7 @@ from common_regression import (
 from flopy.utils.compare import compare_heads
 from modflow_devtools.misc import is_in_ci
 
-DNODATA = 3.e+30
+DNODATA = 3.0e30
 sfmt = "{:25s} - {}"
 extdict = {
     "hds": "head",
@@ -164,7 +164,6 @@ class TestSimulation:
         return
 
     def setup_comparison(self, src, dst, testModel=True):
-
         # evaluate if comparison should be made
         if not self.make_comparison:
             return
@@ -221,7 +220,7 @@ class TestSimulation:
                 success, buff = self.run_parallel(
                     exe,
                 )
-            except Exception as exc:                
+            except Exception as exc:
                 msg = sfmt.format("MODFLOW 6 run", self.name)
                 print(msg)
                 print(exc)
@@ -332,12 +331,37 @@ class TestSimulation:
         return
 
     def run_parallel(self, exe):
-        normal_msg="normal termination"
+        physical_cpus = os.cpu_count()
+        print(f"CPUs: {physical_cpus}")
+        if self.ncpus > physical_cpus:
+            print(
+                f"simulation is oversubscribed to {self.ncpus} CPUs "
+                + f"but there are only {physical_cpus} CPUs. "
+                + "Expect degraded performance."
+            )
+            is_oversubscribed = True
+            with open(f"{self.simpath}/localhost", "w") as f:
+                f.write(f"localhost slots={self.ncpus}\n")
+        else:
+            is_oversubscribed = False
+
+        normal_msg = "normal termination"
         success = False
         nr_success = 0
         buff = []
 
-        mpiexec_cmd = ["mpiexec", "--oversubscribe", "-np", str(self.ncpus), exe, "-p"]
+        # add initial parallel commands
+        mpiexec_cmd = ["mpiexec", "-np", str(self.ncpus)]
+
+        # add oversubscribed commands
+        if is_oversubscribed:
+            mpiexec_cmd.append("--hostfile")
+            mpiexec_cmd.append("localhost")
+
+        # add remainder of parallel commands
+        mpiexec_cmd.append(exe)
+        mpiexec_cmd.append("-p")
+
         proc = Popen(mpiexec_cmd, stdout=PIPE, stderr=STDOUT, cwd=self.simpath)
 
         while True:
@@ -348,7 +372,7 @@ class TestSimulation:
                 # success is when the success message appears
                 # in every process of the parallel simulation
                 if normal_msg in line.lower():
-                    nr_success = nr_success + 1
+                    nr_success += 1
                     if nr_success == self.ncpus:
                         success = True
                 line = line.rstrip("\r\n")
@@ -358,7 +382,6 @@ class TestSimulation:
                 break
 
         return success, buff
-
 
     def compare(self):
         """
@@ -411,7 +434,6 @@ class TestSimulation:
                     ext = os.path.splitext(file1)[1][1:]
 
                     if ext.lower() in head_extensions:
-
                         # simulation file
                         pth = os.path.join(self.simpath, file1)
                         files1.append(pth)
@@ -425,7 +447,6 @@ class TestSimulation:
 
                         # Check to see if there is a corresponding compare file
                         if files_cmp is not None:
-
                             if file1 + ".cmp" in files_cmp:
                                 # compare file
                                 idx = files_cmp.index(file1 + ".cmp")

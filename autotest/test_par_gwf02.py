@@ -8,7 +8,8 @@ from framework import TestFramework
 from simulation import TestSimulation
 
 # Test for parallel MODFLOW running a simple
-# multi-model setup on different partitionings 
+# multi-model setup with different numbers 
+# of partitions 
 # 
 #
 #    [M1ny] |  ...  |   ...  | [Mnxny]

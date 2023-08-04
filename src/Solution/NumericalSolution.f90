@@ -19,7 +19,7 @@ module NumericalSolutionModule
   use BaseSolutionModule, only: BaseSolutionType, AddBaseSolutionToList
   use ListModule, only: ListType
   use ListsModule, only: basesolutionlist
-  use InputOutputModule, only: getunit
+  use InputOutputModule, only: getunit, append_processor_id
   use NumericalModelModule, only: NumericalModelType, &
                                   AddNumericalModelToList, &
                                   GetNumericalModelFromList
@@ -27,7 +27,8 @@ module NumericalSolutionModule
                                      AddNumericalExchangeToList, &
                                      GetNumericalExchangeFromList
   use SparseModule, only: sparsematrix
-  use SimVariablesModule, only: iout, isim_mode, errmsg
+  use SimVariablesModule, only: iout, isim_mode, errmsg, &
+                                proc_id, nr_procs
   use SimStagesModule
   use BlockParserModule, only: BlockParserType
   use IMSLinearModule
@@ -541,7 +542,7 @@ contains
     integer(I4B) :: ifdparam, mxvl, npp
     integer(I4B) :: ims_lin_type
     integer(I4B) :: ierr
-    logical :: isfound, endOfBlock
+    logical(LGP) :: isfound, endOfBlock
     integer(I4B) :: ival
     real(DP) :: rval
     character(len=*), parameter :: fmtcsvout = &
@@ -610,6 +611,9 @@ contains
           call this%parser%GetStringCaps(keyword)
           if (keyword == 'FILEOUT') then
             call this%parser%GetString(fname)
+            if (nr_procs > 1) then
+              call append_processor_id(fname, proc_id)
+            end if
             this%icsvouterout = getunit()
             call openfile(this%icsvouterout, iout, fname, 'CSV_OUTER_OUTPUT', &
                           filstat_opt='REPLACE')
@@ -623,6 +627,9 @@ contains
           call this%parser%GetStringCaps(keyword)
           if (keyword == 'FILEOUT') then
             call this%parser%GetString(fname)
+            if (nr_procs > 1) then
+              call append_processor_id(fname, proc_id)
+            end if
             this%icsvinnerout = getunit()
             call openfile(this%icsvinnerout, iout, fname, 'CSV_INNER_OUTPUT', &
                           filstat_opt='REPLACE')
@@ -912,17 +919,19 @@ contains
       if (ims_lin_type .eq. 1) then
         this%isymmetric = 1
       end if
-      !
-      ! -- incorrect linear solver flag
+    !
+    ! -- petsc linear solver flag
     else if (this%linmeth == 2) then
       call this%linear_solver%initialize(this%system_matrix)
       this%nitermax = this%linear_solver%nitermax
       this%isymmetric = 0
-    ELSE
-      WRITE (errmsg, '(a)') &
+    !
+    ! -- incorrect linear solver flag
+    else
+      write (errmsg, '(a)') &
         'Incorrect value for linear solution method specified.'
       call store_error(errmsg)
-    END IF
+    end if
 
     !
     ! -- write message about matrix symmetry
@@ -1374,13 +1383,18 @@ contains
         'solution_inner_dvmax_node'
       write (this%icsvinnerout, '(*(G0,:,","))', advance='NO') &
         '', 'solution_inner_drmax', 'solution_inner_drmax_model', &
-        'solution_inner_drmax_node', 'solution_inner_alpha'
-      if (this%imslinear%ilinmeth == 2) then
+        'solution_inner_drmax_node'
+      ! solver items specific to ims solver
+      if (this%linmeth == 1) then
         write (this%icsvinnerout, '(*(G0,:,","))', advance='NO') &
-          '', 'solution_inner_omega'
+          '', 'solution_inner_alpha' 
+        if (this%imslinear%ilinmeth == 2) then
+          write (this%icsvinnerout, '(*(G0,:,","))', advance='NO') &
+            '', 'solution_inner_omega'
+        end if
       end if
-      ! -- check for more than one model
-      if (this%convnmod > 1) then
+      ! -- check for more than one model - ims only
+      if (this%linmeth == 1 .and. this%convnmod > 1) then
         do im = 1, this%modellist%Count()
           mp => GetNumericalModelFromList(this%modellist, im)
           write (this%icsvinnerout, '(*(G0,:,","))', advance='NO') &
@@ -2141,12 +2155,14 @@ contains
       call this%sln_get_nodeu(locdr, im, nodeu)
       write (iu, '(*(G0,:,","))', advance='NO') '', dr, im, nodeu
       !
-      ! -- write acceleration parameters
-      write (iu, '(*(G0,:,","))', advance='NO') &
-        '', trim(adjustl(this%caccel(kpos)))
+      ! -- write ims acceleration parameters
+      if (this%linmeth == 1) then
+        write (iu, '(*(G0,:,","))', advance='NO') &
+          '', trim(adjustl(this%caccel(kpos)))
+      end if
       !
-      ! -- write information for each model
-      if (this%convnmod > 1) then
+      ! -- write information for each model - ims only
+      if (this%linmeth == 1 .and. this%convnmod > 1) then
         do j = 1, this%convnmod
           locdv = this%convlocdv(j, kpos)
           dv = this%convdvmax(j, kpos)
@@ -2378,7 +2394,7 @@ contains
     integer(I4B), intent(inout) :: iptc
     real(DP), intent(in) :: ptcf
     ! -- local variables
-    logical :: lsame
+    logical(LGP) :: lsame
     integer(I4B) :: ieq
     integer(I4B) :: irow
     integer(I4B) :: itestmat
@@ -3143,10 +3159,10 @@ contains
     ! dummy
     class(NumericalSolutionType) :: this !< NumericalSolutionType instance
     real(DP), intent(in) :: dpak !< Newton Under-relaxation flag
-    character(len=LENPAKLOC), intent(in) :: cpakout
-    integer(I4B), intent(in) :: iend
+    character(len=LENPAKLOC), intent(in) :: cpakout  !< string with package that caused failure 
+    integer(I4B), intent(in) :: iend  !< flag indicating if last inner iteration (iend=1)
     ! local
-    integer(I4B) :: ivalue !<
+    integer(I4B) :: ivalue
     ivalue = 1
     if (abs(dpak) > this%dvclose) then
       ivalue = 0
