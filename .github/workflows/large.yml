@@ -3,29 +3,44 @@ on:
   schedule:
     - cron: '0 6 * * *' # run at 6 AM UTC every day
 jobs:
+  # caching only necessary on Windows
   cache_ifort:
     name: Cache Intel OneAPI compilers
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-22.04, macos-12, windows-2022 ]
+        include:
+          # ifx
+          - {os: windows-2022, compiler: intel, version: 2022.2}
+          # ifort
+          - {os: windows-2022, compiler: intel-classic, version: "2021.10"}
+          - {os: windows-2022, compiler: intel-classic, version: 2021.9}
+          - {os: windows-2022, compiler: intel-classic, version: 2021.8}
+          - {os: windows-2022, compiler: intel-classic, version: 2021.7}
+          - {os: windows-2022, compiler: intel-classic, version: 2021.6}
     steps:
-      - name: Setup Intel Fortran
-        uses: modflowpy/install-intelfortran-action@v1
+      - name: Setup ${{ matrix.compiler }} ${{ matrix.version }}
+        uses: awvwgk/setup-fortran@main
+        with:
+          compiler: ${{ matrix.compiler }}
+          version: ${{ matrix.version }}
   test:
     name: Test
     runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
-        fc: [ ifort, gfortran ]
-        repo: [ examples, largetestmodels ]
+        include:
+          - {compiler: gcc, version: 13, repo: examples}
+          - {compiler: gcc, version: 13, repo: largetestmodels}
+          - {compiler: intel, version: 2022.2.1, repo: examples}
+          - {compiler: intel, version: 2022.2.1, repo: largetestmodels}
+          - {compiler: intel-classic, version: 2021.6, repo: examples}
+          - {compiler: intel-classic, version: 2021.6, repo: largetestmodels}
     defaults:
       run:
         shell: bash -l {0}
-    env:
-      GCC_V: 12
     steps:
 
       - name: Checkout modflow6
@@ -46,16 +61,11 @@ jobs:
           cache-downloads: true
           cache-environment: true
 
-      - name: Setup gfortran ${{ env.GCC_V }}
-        if: matrix.FC == 'gfortran'
+      - name: Setup compilers (${{ matrix.compiler }} ${{ matrix.version }})
         uses: awvwgk/setup-fortran@main
         with:
-          compiler: gcc
-          version: ${{ env.GCC_V }}
-
-      - name: Setup ifort
-        if: matrix.fc == 'ifort'
-        uses: modflowpy/install-intelfortran-action@v1
+          compiler: ${{ matrix.compiler }}
+          version: ${{ matrix.version }}
 
       - name: Cache modflow6 examples
         id: cache-examples
