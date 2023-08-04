@@ -15,7 +15,7 @@ from common_regression import (
     setup_mf6_comparison,
 )
 from flopy.utils.compare import compare_heads
-from modflow_devtools.misc import is_in_ci
+from modflow_devtools.misc import is_in_ci, get_ostag
 
 DNODATA = 3.0e30
 sfmt = "{:25s} - {}"
@@ -331,36 +331,22 @@ class TestSimulation:
         return
 
     def run_parallel(self, exe):
-        physical_cpus = os.cpu_count()
-        print(f"CPUs: {physical_cpus}")
-        if self.ncpus > physical_cpus:
-            print(
-                f"simulation is oversubscribed to {self.ncpus} CPUs "
-                + f"but there are only {physical_cpus} CPUs. "
-                + "Expect degraded performance."
-            )
-            is_oversubscribed = True
+        if not is_in_ci() and get_ostag() in ["mac"]:
+            oversubscribed = ["--hostfile", "localhost"]
             with open(f"{self.simpath}/localhost", "w") as f:
                 f.write(f"localhost slots={self.ncpus}\n")
         else:
-            is_oversubscribed = False
+            oversubscribed = ["--oversubscribe"]
 
         normal_msg = "normal termination"
         success = False
         nr_success = 0
         buff = []
 
-        # add initial parallel commands
-        mpiexec_cmd = ["mpiexec", "-np", str(self.ncpus)]
-
-        # add oversubscribed commands
-        if is_oversubscribed:
-            mpiexec_cmd.append("--hostfile")
-            mpiexec_cmd.append("localhost")
-
-        # add remainder of parallel commands
-        mpiexec_cmd.append(exe)
-        mpiexec_cmd.append("-p")
+        # parallel commands
+        mpiexec_cmd = (
+            ["mpiexec"] + oversubscribed + ["-np", str(self.ncpus), exe, "-p"]
+        )
 
         proc = Popen(mpiexec_cmd, stdout=PIPE, stderr=STDOUT, cwd=self.simpath)
 
