@@ -919,14 +919,14 @@ contains
       if (ims_lin_type .eq. 1) then
         this%isymmetric = 1
       end if
-    !
-    ! -- petsc linear solver flag
+      !
+      ! -- petsc linear solver flag
     else if (this%linmeth == 2) then
       call this%linear_solver%initialize(this%system_matrix)
       this%nitermax = this%linear_solver%nitermax
       this%isymmetric = 0
-    !
-    ! -- incorrect linear solver flag
+      !
+      ! -- incorrect linear solver flag
     else
       write (errmsg, '(a)') &
         'Incorrect value for linear solution method specified.'
@@ -1387,7 +1387,7 @@ contains
       ! solver items specific to ims solver
       if (this%linmeth == 1) then
         write (this%icsvinnerout, '(*(G0,:,","))', advance='NO') &
-          '', 'solution_inner_alpha' 
+          '', 'solution_inner_alpha'
         if (this%imslinear%ilinmeth == 2) then
           write (this%icsvinnerout, '(*(G0,:,","))', advance='NO') &
             '', 'solution_inner_omega'
@@ -3159,8 +3159,8 @@ contains
     ! dummy
     class(NumericalSolutionType) :: this !< NumericalSolutionType instance
     real(DP), intent(in) :: dpak !< Newton Under-relaxation flag
-    character(len=LENPAKLOC), intent(in) :: cpakout  !< string with package that caused failure 
-    integer(I4B), intent(in) :: iend  !< flag indicating if last inner iteration (iend=1)
+    character(len=LENPAKLOC), intent(in) :: cpakout !< string with package that caused failure
+    integer(I4B), intent(in) :: iend !< flag indicating if last inner iteration (iend=1)
     ! local
     integer(I4B) :: ivalue
     ivalue = 1
