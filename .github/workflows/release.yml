@@ -13,6 +13,14 @@ on:
         description: 'Branch to release from.'
         required: true
         type: string
+      compiler_toolchain:
+        description: 'Compiler toolchain to use. See awvwgk/setup-fortran for supported options.'
+        required: true
+        type: string
+      compiler_version:
+        description: 'Compiler version to use. See awvwgk/setup-fortran for supported versions of each toolchain.'
+        required: true
+        type: string
       developmode:
         description: 'Build binaries in develop mode. If false, IDEVELOPMODE is set to 0.'
         required: false
@@ -84,8 +92,11 @@ jobs:
             bash
             powershell
 
-      - name: Setup Intel Fortran
-        uses: modflowpy/install-intelfortran-action@v1
+      - name: Setup ${{ inputs.compiler_toolchain }} ${{ inputs.compiler_version }}
+        uses: awvwgk/setup-fortran@main
+        with:
+          compiler: ${{ inputs.compiler_toolchain }}
+          version: ${{ inputs.compiler_version }}
 
       - name: Set version number
         id: set_version
@@ -278,8 +289,11 @@ jobs:
           cache-downloads: true
           cache-environment: true
 
-      - name: Setup Intel Fortran
-        uses: modflowpy/install-intelfortran-action@v1
+      - name: Setup ${{ inputs.compiler_toolchain }} ${{ inputs.compiler_version }}
+        uses: awvwgk/setup-fortran@main
+        with:
+          compiler: ${{ inputs.compiler_toolchain }}
+          version: ${{ inputs.compiler_version }}
 
       - name: Update version
         id: update_version
@@ -429,8 +443,11 @@ jobs:
             bash
             powershell
 
-      - name: Setup Intel Fortran
-        uses: modflowpy/install-intelfortran-action@v1
+      - name: Setup ${{ inputs.compiler_toolchain }} ${{ inputs.compiler_version }}
+        uses: awvwgk/setup-fortran@main
+        with:
+          compiler: ${{ inputs.compiler_toolchain }}
+          version: ${{ inputs.compiler_version }}
       
       - name: Update version
         id: update_version
