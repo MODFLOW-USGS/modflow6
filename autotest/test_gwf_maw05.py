@@ -8,6 +8,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 from simulation import TestSimulation
 
@@ -214,7 +215,6 @@ def eval_results(sim):
     # calculate current volume of water in well and aquifer and compare with
     # initial volume
     for kstp, mawstage in enumerate(stage):
-
         vgwf = 0
         for k in range(nlay):
             for j in range(ncol):

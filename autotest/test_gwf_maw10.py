@@ -12,6 +12,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 from simulation import TestSimulation
 
@@ -62,7 +63,6 @@ mawsettings = [mawsetting_a, mawsetting_b, mawsetting_c, mawsetting_d]
 
 
 def build_model(idx, dir):
-
     nlay, nrow, ncol = 1, 101, 101
     nper = 2
     perlen = [500.0, 500.0]

@@ -1,8 +1,11 @@
 import platform
+import sys
 from pathlib import Path
+from os import PathLike
+from typing import Dict
 
 import pytest
-from modflow_devtools.executables import Executables, build_default_exe_dict
+from modflow_devtools.executables import Executables, get_suffixes
 
 pytest_plugins = ["modflow_devtools.fixtures"]
 project_root_path = Path(__file__).resolve().parent.parent
@@ -45,7 +48,42 @@ def libmf6_path(bin_path) -> Path:
 
 @pytest.fixture(scope="session")
 def targets(bin_path) -> Executables:
-    return Executables(**build_default_exe_dict(bin_path))
+    exe_ext, lib_ext = get_suffixes(sys.platform)
+    dl_bin = bin_path / "downloaded"
+    rb_bin = bin_path / "rebuilt"
+    tgts = dict()
+
+    # downloaded executables
+    tgts["mf2000"] = dl_bin / f"mf2000{exe_ext}"
+    tgts["mf2005"] = dl_bin / f"mf2005dbl{exe_ext}"
+    tgts["mfnwt"] = dl_bin / f"mfnwtdbl{exe_ext}"
+    tgts["mfusg"] = dl_bin / f"mfusgdbl{exe_ext}"
+    tgts["mflgr"] = dl_bin / f"mflgrdbl{exe_ext}"
+    tgts["mf2005s"] = dl_bin / f"mf2005{exe_ext}"
+    tgts["mt3dms"] = dl_bin / f"mt3dms{exe_ext}"
+    tgts["crt"] = dl_bin / f"crt{exe_ext}"
+    tgts["gridgen"] = dl_bin / f"gridgen{exe_ext}"
+    tgts["mp6"] = dl_bin / f"mp6{exe_ext}"
+    tgts["mp7"] = dl_bin / f"mp7{exe_ext}"
+    tgts["swtv4"] = dl_bin / f"swtv4{exe_ext}"
+    tgts["sutra"] = dl_bin / f"sutra{exe_ext}"
+    tgts["triangle"] = dl_bin / f"triangle{exe_ext}"
+    tgts["vs2dt"] = dl_bin / f"vs2dt{exe_ext}"
+    tgts["zonbudusg"] = dl_bin / f"zonbudusg{exe_ext}"
+
+    # binaries rebuilt from last release
+    tgts["mf6_regression"] = rb_bin / f"mf6{exe_ext}"
+    tgts["libmf6_regression"] = rb_bin / f"libmf6{lib_ext}"
+    tgts["mf5to6_regression"] = rb_bin / f"mf5to6{exe_ext}"
+    tgts["zbud6_regression"] = rb_bin / f"zbud6{exe_ext}"
+
+    # local development binaries
+    tgts["mf6"] = bin_path / f"mf6{exe_ext}"
+    tgts["libmf6"] = bin_path / f"libmf6{lib_ext}"
+    tgts["mf5to6"] = bin_path / f"mf5to6{exe_ext}"
+    tgts["zbud6"] = bin_path / f"zbud6{exe_ext}"
+
+    return Executables(**tgts)
 
 
 @pytest.fixture
