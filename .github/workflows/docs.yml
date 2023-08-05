@@ -14,16 +14,25 @@ on:
     paths-ignore:
       - '.github/workflows/release.yml'
 jobs:
-  rtd_build:
-    name: Build ReadTheDocs
-    runs-on: ubuntu-22.04
+  benchmark:
+    runs-on: ${{ matrix.os }}
     defaults:
       run:
         shell: bash -l {0}
-    env:
-      GCC_V: 12
-
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-22.04, compiler_toolchain: gcc, compiler_version: 13}
+          - {os: macos-12, compiler_toolchain: gcc, compiler_version: 13}
+          - {os: windows-2022, compiler_toolchain: gcc, compiler_version: 12}
+          - {os: ubuntu-22.04, compiler_toolchain: intel, compiler_version: 2022.2}
+          - {os: windows-2022, compiler_toolchain: intel, compiler_version: 2022.2}
+          - {os: ubuntu-22.04, compiler_toolchain: intel-classic, compiler_version: 2021.7.0}
+          - {os: macos-12, compiler_toolchain: intel-classic, compiler_version: 2021.7.0}
+          - {os: windows-2022, compiler_toolchain: intel-classic, compiler_version: 2021.7.0}
     steps:
+
       - name: Checkout modflow6
         uses: actions/checkout@v3
         with:
@@ -34,6 +43,84 @@ jobs:
         with:
           repository: MODFLOW-USGS/modflow6-examples
           path: modflow6-examples
+
+      - name: Install Conda environment from environment.yml
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: modflow6/environment.yml
+          cache-environment: true
+          cache-downloads: true
+
+      - name: Print python package versions
+        run: pip list
+
+      - name: Setup ${{ matrix.compiler_toolchain }} ${{ matrix.compiler_version }}
+        uses: awvwgk/setup-fortran@main
+        with:
+          compiler: ${{ matrix.compiler_toolchain }}
+          version: ${{ matrix.compiler_version }}
+
+      - name: Cache modflow6 examples
+        id: cache-examples
+        uses: actions/cache@v3
+        with:
+          path: modflow6-examples/examples
+          key: modflow6-examples-${{ hashFiles('modflow6-examples/scripts/**') }}
+
+      - name: Install extra Python packages
+        if: steps.cache-examples.outputs.cache-hit != 'true'
+        working-directory: modflow6-examples/etc
+        run: |
+          pip install -r requirements.pip.txt
+          pip install -r requirements.usgs.txt
+
+      - name: Update FloPy
+        if: steps.cache-examples.outputs.cache-hit != 'true'
+        working-directory: modflow6/autotest
+        run: python update_flopy.py
+
+      - name: Build example models
+        if: steps.cache-examples.outputs.cache-hit != 'true'
+        working-directory: modflow6-examples/etc
+        run: |
+          python ci_build_files.py
+          ls -lh ../examples/
+
+      - name: Run benchmarks
+        working-directory: modflow6/distribution
+        run: python benchmark.py
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      
+      - name: Rename/show benchmarks
+        id: rename-benchmarks
+        working-directory: modflow6/distribution/.benchmarks
+        run: |
+          orig="run-time-comparison.md"
+          name="run-time-comparison-${{ matrix.os }}-${{ matrix.compiler_toolchain }}-${{ matrix.compiler_version }}.md"
+          cat $orig
+          mv $orig $name
+          echo "name=$name" >> $GITHUB_OUTPUT
+      
+      - name: Upload benchmarks
+        uses: actions/upload-artifact@v3
+        with:
+          name: run-time-comparison
+          path: modflow6/distribution/.benchmarks/${{ steps.rename-benchmarks.outputs.name }}
+
+  rtd_build:
+    name: Benchmark & build RTD
+    needs: benchmark
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+
+      - name: Checkout modflow6
+        uses: actions/checkout@v3
+        with:
+          path: modflow6
 
       - name: Checkout usgslatex
         uses: actions/checkout@v3
@@ -68,59 +155,23 @@ jobs:
         working-directory: modflow6/autotest
         run: pytest -v build_mfio_tex.py
 
-      - name: Setup GNU Fortran ${{ env.GCC_V }}
-        uses: awvwgk/setup-fortran@main
+      - name: Download benchmarks
+        uses: actions/download-artifact@v3
         with:
-          compiler: gcc
-          version: ${{ env.GCC_V }}
-
-      - name: Cache modflow6 examples
-        id: cache-examples
-        uses: actions/cache@v3
-        with:
-          path: modflow6-examples/examples
-          key: modflow6-examples-${{ hashFiles('modflow6-examples/scripts/**') }}
-
-      - name: Install extra Python packages
-        if: steps.cache-examples.outputs.cache-hit != 'true'
-        working-directory: modflow6-examples/etc
-        run: |
-          pip install -r requirements.pip.txt
-          pip install -r requirements.usgs.txt
-
-      - name: Update FloPy
-        if: steps.cache-examples.outputs.cache-hit != 'true'
-        working-directory: modflow6/autotest
-        run: python update_flopy.py
-
-      - name: Build example models
-        if: steps.cache-examples.outputs.cache-hit != 'true'
-        working-directory: modflow6-examples/etc
-        run: |
-          python ci_build_files.py
-          ls -lh ../examples/
-
-      - name: Run benchmarks
-        working-directory: modflow6/distribution
-        run: python benchmark.py
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-
-      - name: Run sphinx
-        working-directory: modflow6/.build_rtd_docs
-        run: make html
+          name: run-time-comparison
+          path: modflow6/distribution
 
       - name: Show benchmarks
         working-directory: modflow6/distribution
-        run: cat run-time-comparison.md
+        run: cat run-time-comparison-*.md
 
-      - name: Upload benchmarks
-        uses: actions/upload-artifact@v3
-        with:
-          name: run-time-comparison
-          path: modflow6/distribution/run-time-comparison.md
+      - name: Run sphinx
+        if: runner.os == 'Linux'
+        working-directory: modflow6/.build_rtd_docs
+        run: make html
 
       - name: Upload results
+        if: runner.os == 'Linux'
         uses: actions/upload-artifact@v3
         with:
           name: rtd-files-for-${{ github.sha }}

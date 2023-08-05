@@ -6,7 +6,6 @@ from pprint import pprint
 
 import pytest
 
-
 # OS-specific extensions
 _system = platform.system()
 _eext = ".exe" if _system == "Windows" else ""

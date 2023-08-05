@@ -34,13 +34,13 @@ import os
 import textwrap
 from collections import OrderedDict
 from datetime import datetime
-from packaging.version import Version
 from pathlib import Path
 from typing import Optional
 
 import pytest
-from filelock import FileLock
 import yaml
+from filelock import FileLock
+from packaging.version import Version
 
 from utils import get_modified_time
 
@@ -292,11 +292,7 @@ def update_version(
     try:
         lock = FileLock(lock_path)
         previous = Version(version_file_path.read_text().strip())
-        version = (
-            version
-            if version
-            else previous
-        )
+        version = version if version else previous
 
         with lock:
             update_version_txt_and_py(version, timestamp)
@@ -320,7 +316,9 @@ _current_version = Version(version_file_path.read_text().strip())
     [
         None,
         _initial_version,
-        Version(f"{_initial_version.major}.{_initial_version.minor}.dev{_initial_version.micro}"),
+        Version(
+            f"{_initial_version.major}.{_initial_version.minor}.dev{_initial_version.micro}"
+        ),
     ],
 )
 @pytest.mark.parametrize("approved", [True, False])

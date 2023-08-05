@@ -7,6 +7,7 @@
 # -- Path setup --------------------------------------------------------------
 
 import os
+from pathlib import Path
 import shutil
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -42,19 +43,20 @@ update_version()
 # -- import version from doc/version.py -------------------------------------
 from version import __version__
 
-# -- copy run-time comparison markdown --------------------------------------
-print("Copy the run-time comparison table")
+# -- copy run-time comparison tables ----------------------------------------
+print("Copy run-time comparison tables")
 dstdir = "_mf6run"
-fpth = "run-time-comparison.md"
-src = os.path.join("..", "distribution", fpth)
-dst = os.path.join(dstdir, fpth)
+src = Path(os.path.join("..", "distribution", ".benchmarks")) 
+srcs = list(src.glob("run-time-comparison*"))
 # clean up an existing _mf6run directory
 if os.path.isdir(dstdir):
     shutil.rmtree(dstdir)
 # make the _mf6run directory
 os.makedirs(dstdir)
-# copy the file
-shutil.copy(src, dst)
+# copy the files
+for f in srcs:
+    dst = os.path.join(dstdir, f.name)
+    shutil.copy(f, dst)
 
 # -- build the mf6io markdown files -----------------------------------------
 print("Build the mf6io markdown files")

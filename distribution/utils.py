@@ -9,8 +9,8 @@ from os import PathLike, environ
 from pathlib import Path
 from warnings import warn
 
-from modflow_devtools.markers import requires_exe
 import pytest
+from modflow_devtools.markers import requires_exe
 
 _project_root_path = Path(__file__).resolve().parent.parent
 
