@@ -298,6 +298,10 @@ Details on the numerical methods and the underlying theory for MODFLOW~6 are des
 \noindent Description of the MODFLOW~6 input and output is included in this distribution in the ``doc'' folder as mf6io.pdf.
 
 % -------------------------------------------------
+% if deprecation information exists, then include the deprecation table
+\IfFileExists{./deprecations.tex}{\input{./deprecations.tex}}{}
+
+% -------------------------------------------------
 % if runtime information exists, then include the run time comparison table
 \IfFileExists{./run-time-comparison.tex}{\input{./run-time-comparison.tex}}{}
 

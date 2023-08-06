@@ -129,10 +129,14 @@
 
 
 import os
+from pathlib import Path
 import sys
 from collections import OrderedDict
 import re
 import shutil
+from tempfile import TemporaryDirectory
+from typing import Dict, List, Optional, Tuple
+from packaging.version import Version
 
 VERBOSE = False
 for arg in sys.argv:
@@ -360,6 +364,9 @@ def write_desc(vardict, block, blk_var_list, varexcludeprefix=None):
             if 'deprecated' in v:
                 if v['deprecated'] != '':
                     addv = False
+            if 'removed' in v:
+                if v['removed'] != '':
+                    addv = False
             if addv:
                 if v['type'] == 'keyword':
                     n = name.upper()
@@ -418,6 +425,9 @@ def write_desc_md(vardict, block, blk_var_list, varexcludeprefix=None):
                 addv = False
             if 'deprecated' in v:
                 if v['deprecated'] != '':
+                    addv = False
+            if 'removed' in v:
+                if v['removed'] != '':
                     addv = False
             if addv:
                 if v['type'] == 'keyword':
@@ -603,54 +613,48 @@ def write_md(f, vardict, component, package):
 
 def write_appendix(texdir, allblocks):
     fname = os.path.join(texdir, 'appendixA.tex')
-    f = open(fname, 'w')
-    f.write('\\small\n\\begin{longtable}{p{1.5cm} p{1.5cm} p{3cm} c}\n')
-    f.write(
-        '\\caption{List of block names organized by component and input file '
-        'type.  OPEN/CLOSE indicates whether or not the block information '
-        'can be contained in separate file} \\tabularnewline \n\n')
-    # f.write(
-    #    '\\caption{List of all possible blocks} \\tabularnewline \n\\endfirsthead \n\n')
-    # f.write(
-    #    '\\caption*{List of all possible blocks} \\tabularnewline\n\n')
-    f.write('\\hline\n\\hline\n')
-    f.write(
-        '\\textbf{Component} & \\textbf{FTYPE} & \\textbf{Blockname} & \\textbf{OPEN/CLOSE} \\\\\n')
-    f.write('\\hline\n\\endfirsthead\n\n\n')
+    with open(fname, 'w') as f:
+        f.write('\\small\n\\begin{longtable}{p{1.5cm} p{1.5cm} p{3cm} c}\n')
+        f.write(
+            '\\caption{List of block names organized by component and input file '
+            'type.  OPEN/CLOSE indicates whether or not the block information '
+            'can be contained in separate file} \\tabularnewline \n\n')
+        f.write('\\hline\n\\hline\n')
+        f.write(
+            '\\textbf{Component} & \\textbf{FTYPE} & \\textbf{Blockname} & \\textbf{OPEN/CLOSE} \\\\\n')
+        f.write('\\hline\n\\endfirsthead\n\n\n')
 
-    f.write('\captionsetup{textformat=simple}\n')
-    f.write('\caption*{\\textbf{Table A--\\arabic{table}.}{\quad}List of block'
-            ' names organized by component and input file type.  OPEN/CLOSE '
-            'indicates whether or not the block information can be contained '
-            'in separate file.---Continued} \\tabularnewline\n')
+        f.write('\captionsetup{textformat=simple}\n')
+        f.write('\caption*{\\textbf{Table A--\\arabic{table}.}{\quad}List of block'
+                ' names organized by component and input file type.  OPEN/CLOSE '
+                'indicates whether or not the block information can be contained '
+                'in separate file.---Continued} \\tabularnewline\n')
 
-    f.write('\n\\hline\n\\hline\n')
-    f.write(
-        '\\textbf{Component} & \\textbf{FTYPE} & \\textbf{Blockname} & \\textbf{OPEN/CLOSE} \\\\\n')
-    f.write('\\hline\n\\endhead\n\n\\hline\n\\endfoot\n\n\n')
+        f.write('\n\\hline\n\\hline\n')
+        f.write(
+            '\\textbf{Component} & \\textbf{FTYPE} & \\textbf{Blockname} & \\textbf{OPEN/CLOSE} \\\\\n')
+        f.write('\\hline\n\\endhead\n\n\\hline\n\\endfoot\n\n\n')
 
-    lastftype = ''
-    for b in allblocks:
-        l = b.strip().split('-')
-        component, ftype, blockname = l
-        if lastftype != ftype:
-            f.write('\\hline\n')
-        oc = 'yes'
-        if 'griddata' in blockname.lower():
-            oc = 'no'
-        if 'utl' in component.lower() and \
-                'tas' in ftype.lower() and 'time' in blockname.lower():
-            oc = 'no'
-        s = '{} & {} & {} & {} \\\\ \n'.format(component.upper(),
-                                               ftype.upper(),
-                                               blockname.upper(), oc)
-        f.write(s)
-        lastftype = ftype
+        lastftype = ''
+        for b in allblocks:
+            l = b.strip().split('-')
+            component, ftype, blockname = l
+            if lastftype != ftype:
+                f.write('\\hline\n')
+            oc = 'yes'
+            if 'griddata' in blockname.lower():
+                oc = 'no'
+            if 'utl' in component.lower() and \
+                    'tas' in ftype.lower() and 'time' in blockname.lower():
+                oc = 'no'
+            s = '{} & {} & {} & {} \\\\ \n'.format(component.upper(),
+                                                ftype.upper(),
+                                                blockname.upper(), oc)
+            f.write(s)
+            lastftype = ftype
 
-    f.write(
-        '\n\n\\hline\n\\end{longtable}\n\\label{table:blocks}\n\\normalsize\n')
-    f.close()
-    return
+        f.write(
+            '\n\n\\hline\n\\end{longtable}\n\\label{table:blocks}\n\\normalsize\n')
 
 
 if __name__ == '__main__':
@@ -737,142 +741,141 @@ if __name__ == '__main__':
 
     # setup a markdown file
     fname = os.path.join(mddir, 'mf6ivar.md')
-    fmd = open(fname, 'w')
-    write_md_header(fmd)
+    with open(fname, 'w') as fmd:
+        write_md_header(fmd)
 
-    # construct list of dfn files to process in the order of file_order
-    files = os.listdir(dfndir)
-    for f in files:
-        if 'common' in f:
-            continue
-        if '.DS_Store' in f:
-            continue
-        if os.path.splitext(f)[0] not in file_order:
-            raise Exception('File not in file_order: ', f)
-    files = [fname + '.dfn' for fname in file_order if fname + '.dfn' in files]
-    # files = ['gwf-obs.dfn']
+        # construct list of dfn files to process in the order of file_order
+        files = os.listdir(dfndir)
+        for f in files:
+            if 'common' in f:
+                continue
+            if '.DS_Store' in f:
+                continue
+            if os.path.splitext(f)[0] not in file_order:
+                raise Exception('File not in file_order: ', f)
+        files = [fname + '.dfn' for fname in file_order if fname + '.dfn' in files]
+        # files = ['gwf-obs.dfn']
 
-    # # create rst file for markdown
-    # fpth = os.path.join(docdir, "mf6io.rst")
-    # frst = open(fpth, "w")
-    # s =  ".. toctree::\n"
-    # s += "   :maxdepth: 4\n"
-    # s += "   :name: mf6-io\n\n"
-    # frst.write(s)
+        # # create rst file for markdown
+        # fpth = os.path.join(docdir, "mf6io.rst")
+        # frst = open(fpth, "w")
+        # s =  ".. toctree::\n"
+        # s += "   :maxdepth: 4\n"
+        # s += "   :name: mf6-io\n\n"
+        # frst.write(s)
 
-    for txtname in files:
-        component, package = os.path.splitext(txtname)[0].split('-')[0:2]
-        vardict = parse_mf6var_file(os.path.join(dfndir, txtname))
+        for txtname in files:
+            component, package = os.path.splitext(txtname)[0].split('-')[0:2]
+            vardict = parse_mf6var_file(os.path.join(dfndir, txtname))
 
-        # make list of unique block names
-        blocks = []
-        for k in vardict:
-            v = vardict[k]
-            b = v['block']
-            if b not in blocks:
-                blocks.append(b)
+            # make list of unique block names
+            blocks = []
+            for k in vardict:
+                v = vardict[k]
+                b = v['block']
+                if b not in blocks:
+                    blocks.append(b)
 
-        # add a full block name to allblocks
-        for block in blocks:
-            b = '{}-{}-{}'.format(component, package, block)
-            allblocks.append(b)
+            # add a full block name to allblocks
+            for block in blocks:
+                b = '{}-{}-{}'.format(component, package, block)
+                allblocks.append(b)
 
-        # go through each block and write information
-        desc = '% DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py \n\n'
-        for b in blocks:
-            blk_var_list = []
+            # go through each block and write information
+            desc = '% DO NOT MODIFY THIS FILE DIRECTLY.  IT IS CREATED BY mf6ivar.py \n\n'
+            for b in blocks:
+                blk_var_list = []
 
-            # Write the name of the block to the latex file
-            desc += '\item \\textbf{}\n\n'.format('{Block: ' + b.upper() + '}')
+                # Write the name of the block to the latex file
+                desc += '\item \\textbf{}\n\n'.format('{Block: ' + b.upper() + '}')
 
-            desc += '\\begin{description}\n'
-            desc += write_desc(vardict, b, blk_var_list,
-                               varexcludeprefix='dev_')
-            desc += '\\end{description}\n'
+                desc += '\\begin{description}\n'
+                desc += write_desc(vardict, b, blk_var_list,
+                                varexcludeprefix='dev_')
+                desc += '\\end{description}\n'
 
-            fname = os.path.join(texdir, os.path.splitext(txtname)[
-                0] + '-' + b + '.dat')
+                fname = os.path.join(texdir, os.path.splitext(txtname)[
+                    0] + '-' + b + '.dat')
+                f = open(fname, 'w')
+                s = write_block(vardict, b, blk_var_list,
+                                varexcludeprefix='dev_') + '\n'
+                f.write(s)
+                if VERBOSE:
+                    print(s)
+                f.close()
+            fname = os.path.join(texdir,
+                                os.path.splitext(txtname)[0] + '-desc' + '.tex')
             f = open(fname, 'w')
-            s = write_block(vardict, b, blk_var_list,
-                            varexcludeprefix='dev_') + '\n'
+            s = desc + '\n'
             f.write(s)
             if VERBOSE:
                 print(s)
             f.close()
-        fname = os.path.join(texdir,
-                             os.path.splitext(txtname)[0] + '-desc' + '.tex')
-        f = open(fname, 'w')
-        s = desc + '\n'
-        f.write(s)
+
+            # write markdown description
+            mdname = os.path.splitext(txtname)[0]
+            fname = os.path.join(docdir, mdname + '.md')
+            f = open(fname, 'w')
+            f.write("### {}\n\n".format(mdname.upper()))
+            f.write("#### Structure of Blocks\n\n")
+            f.write("_FOR EACH SIMULATION_\n\n")
+            desc = ""
+            for b in blocks:
+                blk_var_list = []
+
+                # Write the name of the block to the latex file
+                desc += '##### Block: {}\n\n'.format(b.upper())
+
+                desc += write_desc_md(vardict, b, blk_var_list,
+                                    varexcludeprefix='dev_')
+
+                if "period" in b.lower():
+                    f.write("\n_FOR ANY STRESS PERIOD_\n\n")
+                f.write("```\n")
+                s = md_replace(write_block(vardict, b, blk_var_list,
+                                        varexcludeprefix='dev_',
+                                        indent=4)) + "\n"
+                # s = s.replace("@", "") + "\n"
+                f.write(s)
+                f.write("```\n")
+                if VERBOSE:
+                    print(s)
+
+            f.write("\n#### Explanation of Variables\n\n")
+            f.write(desc)
+
+            # add examples
+            s = get_examples(mdname)
+            if len(s) > 0:
+                f.write(s)
+
+            # add observation table
+            s = get_obs_table(mdname)
+            if len(s) > 0:
+                f.write(s)
+
+            # add observation examples
+            s = get_obs_examples(mdname)
+            if len(s) > 0:
+                f.write(s)
+
+            # close the markdown file
+            f.close()
+
+            # # add to rst catalog
+            # s = "   {}\n".format(os.path.basename(fname))
+            # frst.write(s)
+
+            # write markdown
+            write_md(fmd, vardict, component, package)
+
+        # # close restart catalog
+        # frst.write("\n\n")
+        # frst.close()
+
         if VERBOSE:
-            print(s)
-        f.close()
+            for b in allblocks:
+                print(b)
+        write_appendix(texdir, allblocks)
 
-        # write markdown description
-        mdname = os.path.splitext(txtname)[0]
-        fname = os.path.join(docdir, mdname + '.md')
-        f = open(fname, 'w')
-        f.write("### {}\n\n".format(mdname.upper()))
-        f.write("#### Structure of Blocks\n\n")
-        f.write("_FOR EACH SIMULATION_\n\n")
-        desc = ""
-        for b in blocks:
-            blk_var_list = []
-
-            # Write the name of the block to the latex file
-            desc += '##### Block: {}\n\n'.format(b.upper())
-
-            desc += write_desc_md(vardict, b, blk_var_list,
-                                  varexcludeprefix='dev_')
-
-            if "period" in b.lower():
-                f.write("\n_FOR ANY STRESS PERIOD_\n\n")
-            f.write("```\n")
-            s = md_replace(write_block(vardict, b, blk_var_list,
-                                       varexcludeprefix='dev_',
-                                       indent=4)) + "\n"
-            # s = s.replace("@", "") + "\n"
-            f.write(s)
-            f.write("```\n")
-            if VERBOSE:
-                print(s)
-
-        f.write("\n#### Explanation of Variables\n\n")
-        f.write(desc)
-
-        # add examples
-        s = get_examples(mdname)
-        if len(s) > 0:
-            f.write(s)
-
-        # add observation table
-        s = get_obs_table(mdname)
-        if len(s) > 0:
-            f.write(s)
-
-        # add observation examples
-        s = get_obs_examples(mdname)
-        if len(s) > 0:
-            f.write(s)
-
-        # close the markdown file
-        f.close()
-
-        # # add to rst catalog
-        # s = "   {}\n".format(os.path.basename(fname))
-        # frst.write(s)
-
-        # write markdown
-        write_md(fmd, vardict, component, package)
-
-    # # close restart catalog
-    # frst.write("\n\n")
-    # frst.close()
-
-    if VERBOSE:
-        for b in allblocks:
-            print(b)
-    write_appendix(texdir, allblocks)
-
-    # markdown close
-    fmd.close()
+    
