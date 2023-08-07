@@ -16,8 +16,12 @@ from warnings import warn
 import pytest
 from flaky import flaky
 from modflow_devtools.build import meson_build
-from modflow_devtools.download import (download_and_unzip, download_artifact,
-                                       get_release, list_artifacts)
+from modflow_devtools.download import (
+    download_and_unzip,
+    download_artifact,
+    get_release,
+    list_artifacts,
+)
 from modflow_devtools.markers import requires_exe, requires_github
 from modflow_devtools.misc import is_in_ci, run_cmd, set_dir
 
@@ -112,6 +116,9 @@ def download_benchmarks(
         key=lambda a: datetime.strptime(a["created_at"], "%Y-%m-%dT%H:%M:%SZ"),
         reverse=True,
     )
+    artifacts = [
+        a for a in artifacts if a["workflow_run"]["head_branch"] == "develop"  # todo make configurable
+    ]
     most_recent = next(iter(artifacts), None)
     print(f"Found most recent benchmarks (artifact {most_recent['id']})")
     if most_recent:
