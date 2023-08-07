@@ -117,7 +117,7 @@ def download_benchmarks(
         reverse=True,
     )
     artifacts = [
-        a for a in artifacts if a["head_branch"] == "develop"  # todo make configurable
+        a for a in artifacts if a["workflow_run"]["head_branch"] == "develop"  # todo make configurable
     ]
     most_recent = next(iter(artifacts), None)
     print(f"Found most recent benchmarks (artifact {most_recent['id']})")
