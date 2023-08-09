@@ -315,7 +315,7 @@ def build_model(idx, dir):
         print_flows=True,
         print_input=False,
         auxiliary=["VDUMMY", "TEMPERATURE"],
-        length_conversion=1.486,
+        length_conversion=3.281379,
         time_conversion=86400.0,
         budget_filerecord=budpth,
         mover=False,
