@@ -10,14 +10,14 @@ from pprint import pprint
 from shutil import copytree
 
 import pytest
+from build_docs import build_documentation
+from build_makefiles import (build_mf5to6_makefile, build_mf6_makefile,
+                             build_zbud6_makefile)
 from modflow_devtools.build import meson_build
 from modflow_devtools.download import download_and_unzip, get_release
 from modflow_devtools.markers import requires_exe
 from modflow_devtools.misc import get_model_paths
 
-from build_docs import build_documentation
-from build_makefiles import (build_mf5to6_makefile, build_mf6_makefile,
-                             build_zbud6_makefile)
 from utils import get_project_root_path, run_command
 
 # default paths
@@ -323,7 +323,6 @@ def build_distribution(
             bin_path=output_path / "bin",
             output_path=output_path / "doc",
             examples_repo_path=examples_repo_path,
-            # benchmarks_path=_benchmarks_path / "run-time-comparison.md",
             full=full,
             overwrite=overwrite,
         )

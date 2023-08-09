@@ -25,7 +25,6 @@ from modflow_devtools.download import (
 from modflow_devtools.markers import requires_exe, requires_github
 from modflow_devtools.misc import is_in_ci, run_cmd, set_dir
 
-from benchmark import run_benchmarks
 from utils import convert_line_endings, get_project_root_path
 
 # paths
@@ -49,6 +48,7 @@ _full_dist_tex_paths = [
 ]
 
 # OS-specific extensions
+_github_ostags = ["Linux", "macOS", "Windows"]
 _system = platform.system()
 _eext = ".exe" if _system == "Windows" else ""
 _soext = ".dll" if _system == "Windows" else ".so" if _system == "Linux" else ".dylib"
@@ -105,8 +105,8 @@ def clean_tex_files():
 
 
 def download_benchmarks(
-    output_path: PathLike, verbose: bool = False, repo_owner: str = "MODFLOW-USGS"
-) -> Optional[Path]:
+    output_path: PathLike, repo_owner: str = "MODFLOW-USGS", verbose: bool = False,
+) -> List[Optional[Path]]:
     output_path = Path(output_path).expanduser().absolute()
     name = "run-time-comparison"  # todo make configurable
     repo = f"{repo_owner}/modflow6"  # todo make configurable, add pytest/cli args
@@ -117,84 +117,80 @@ def download_benchmarks(
         reverse=True,
     )
     artifacts = [
-        a for a in artifacts if a["workflow_run"]["head_branch"] == "develop"  # todo make configurable
+        a
+        for a in artifacts
+        if a["workflow_run"]["head_branch"] == "develop"  # todo make configurable
     ]
     most_recent = next(iter(artifacts), None)
-    print(f"Found most recent benchmarks (artifact {most_recent['id']})")
     if most_recent:
-        print(f"Downloading benchmarks (artifact {most_recent['id']})")
+        if verbose:
+            print(f"Downloading benchmarks (artifact {most_recent['id']}) to {output_path}")
+
         download_artifact(repo, id=most_recent["id"], path=output_path, verbose=verbose)
-        print(f"Downloaded benchmarks to {output_path}")
-        path = output_path / f"{name}.md"
-        assert path.is_file()
-        return path
+
+        if verbose:
+            print(f"Found benchmark results:")
+            paths = list(output_path.glob(f"{name}*.md"))
+
+        assert any(paths)
+        return paths
     else:
         print(f"No benchmarks found")
-        return None
+        return []
 
 
 @pytest.fixture
 def github_user() -> Optional[str]:
-    return environ.get("GITHUB_USER", None)
+    return environ.get("GITHUB_USER", "MODFLOW-USGS")
 
 
 @flaky
 @requires_github
 def test_download_benchmarks(tmp_path, github_user):
-    path = download_benchmarks(
+    paths = download_benchmarks(
         tmp_path,
+        repo_owner=github_user,
         verbose=True,
-        repo_owner=github_user if github_user else "MODFLOW-USGS",
     )
-    if path:
-        assert path.name == "run-time-comparison.md"
+    assert any(paths)
 
 
-def build_benchmark_tex(
-    output_path: PathLike, overwrite: bool = False, repo_owner: str = "MODFLOW-USGS"
-):
+def build_benchmark_tex(output_path: PathLike, repo_owner: str = "MODFLOW-USGS", verbose: bool = False):
     _benchmarks_path.mkdir(parents=True, exist_ok=True)
-    benchmarks_path = _benchmarks_path / "run-time-comparison.md"
+    benchmarks_paths = list(_benchmarks_path.glob("run-time-comparison*.md"))
 
-    # download benchmark artifacts if any exist on GitHub
-    if not benchmarks_path.is_file():
-        benchmarks_path = download_benchmarks(_benchmarks_path, repo_owner=repo_owner)
-
-    # run benchmarks again if no benchmarks found on GitHub or overwrite requested
-    if overwrite or not benchmarks_path.is_file():
-        run_benchmarks(
-            build_path=_project_root_path / "builddir",
-            current_bin_path=_project_root_path / "bin",
-            previous_bin_path=_project_root_path / "bin" / "rebuilt",
-            examples_path=_examples_repo_path / "examples",
-            output_path=output_path,
+    # download benchmark artifacts if we don't already have one or more
+    if not any(benchmarks_paths):
+        benchmarks_paths = download_benchmarks(_benchmarks_path, repo_owner=repo_owner, verbose=verbose)
+    
+    # convert Linux markdown benchmark results to LaTeX
+    linux_benchmark_md = benchmarks_paths[0] if len(benchmarks_paths) == 1 else next(
+        iter([p for p in benchmarks_paths if "linux" in str(p)]), None
+    )
+    if not linux_benchmark_md:
+        raise ValueError(
+            "No Linux benchmark results found"
         )
 
-    # convert markdown benchmark results to LaTeX
     with set_dir(_release_notes_path):
         tex_path = Path("run-time-comparison.tex")
         tex_path.unlink(missing_ok=True)
         out, err, ret = run_cmd(
-            sys.executable, "mk_runtimecomp.py", benchmarks_path, verbose=True
+            sys.executable,
+            "mk_runtimecomp.py",
+            linux_benchmark_md,
+            verbose=True,
         )
         assert not ret, out + err
         assert tex_path.is_file()
 
-    if (_distribution_path / f"{benchmarks_path.stem}.md").is_file():
-        assert (_docs_path / "ReleaseNotes" / f"{benchmarks_path.stem}.tex").is_file()
+    assert (_docs_path / "ReleaseNotes" / f"run-time-comparison.tex").is_file()
 
 
 @flaky
 @requires_github
-def test_build_benchmark_tex(tmp_path):
-    benchmarks_path = _benchmarks_path / "run-time-comparison.md"
-    tex_path = _distribution_path / f"{benchmarks_path.stem}.tex"
-
-    try:
-        build_benchmark_tex(tmp_path)
-        assert benchmarks_path.is_file()
-    finally:
-        tex_path.unlink(missing_ok=True)
+def test_build_benchmark_tex(tmp_path, github_user):
+    build_benchmark_tex(tmp_path, repo_owner=github_user, verbose=True)
 
 
 def build_mf6io_tex_from_dfn(overwrite: bool = False):
@@ -475,10 +471,8 @@ def build_documentation(
         # convert LaTeX to PDF
         build_pdfs_from_tex(tex_paths=_dev_dist_tex_paths, output_path=output_path)
     else:
-        # convert benchmarks to LaTex, running them first if necessary
-        build_benchmark_tex(
-            output_path=output_path, overwrite=overwrite, repo_owner=repo_owner
-        )
+        # convert benchmarks to LaTex
+        build_benchmark_tex(output_path=output_path, repo_owner=repo_owner)
 
         # download example docs
         latest = get_release(f"{repo_owner}/modflow6-examples", "latest")

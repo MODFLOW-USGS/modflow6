@@ -5,35 +5,38 @@ import subprocess
 import sys
 import textwrap
 from multiprocessing import Pool
-from os import PathLike
+from os import PathLike, environ
 from pathlib import Path
+from platform import system
 from typing import List, Tuple
 
 import flopy
 import pytest
 from modflow_devtools.build import meson_build
 from modflow_devtools.download import download_and_unzip, get_latest_version
-from modflow_devtools.misc import get_model_paths
+from modflow_devtools.misc import get_model_paths, set_env
+from modflow_devtools.ostags import get_github_ostag, get_modflow_ostag
 
 from utils import get_project_root_path
 
 _verify = False
-_project_root_path = get_project_root_path()
-_examples_repo_path = _project_root_path.parent / "modflow6-examples"
-_build_path = _project_root_path / "builddir"
-_bin_path = _project_root_path / "bin"
-_github_repo = "MODFLOW-USGS/modflow6"
-_markdown_file_name = "run-time-comparison.md"
-_is_windows = sys.platform.lower() == "win32"
+_github_ostag = get_github_ostag()
+_modflow_ostag = get_modflow_ostag()
+_is_windows = _github_ostag == "Windows"
 _app_ext = ".exe" if _is_windows else ""
 _soext = ".dll" if _is_windows else ".so"
-_ostag = "win64" if _is_windows else "linux" if sys.platform.lower().startswith("linux") else "mac"
+_github_repo = "MODFLOW-USGS/modflow6"
+_markdown_file_name = "run-time-comparison.md"
+_project_root_path = get_project_root_path()
+_build_path = _project_root_path / "builddir"
+_bin_path = _project_root_path / "bin"
+_examples_repo_path = _project_root_path.parent / "modflow6-examples"
 
 
 def download_previous_version(output_path: PathLike) -> Tuple[str, Path]:
     output_path = Path(output_path).expanduser().absolute()
     version = get_latest_version(_github_repo)
-    distname = f"mf{version}_{_ostag}"
+    distname = f"mf{version}_{_modflow_ostag}"
     url = (
         f"https://github.com/{_github_repo}"
         + f"/releases/download/{version}/{distname}.zip"
@@ -331,7 +334,7 @@ def run_benchmarks(
     output_path: PathLike,
     excluded: List[str] = [],
 ):
-    """Benchmark current development version against previous release with example models."""
+    """Benchmark current development version against previous release on example models."""
 
     build_path = Path(build_path).expanduser().absolute()
     current_bin_path = Path(current_bin_path).expanduser().absolute()
@@ -339,14 +342,11 @@ def run_benchmarks(
     examples_path = Path(examples_path).expanduser().absolute()
     output_path = Path(output_path).expanduser().absolute()
 
+    # make sure example models exist
     example_dirs = get_model_paths(examples_path, excluded=excluded)
     assert any(example_dirs), f"No example model paths found, have models been built?"
 
-    # results_path = output_path / _markdown_file_name
-    # if results_path.is_file():
-    #     print(f"Benchmark results already exist: {results_path}")
-    #     return
-
+    # make sure binaries exist
     exe_name = f"mf6{_app_ext}"
     current_exe = current_bin_path / exe_name
     previous_exe = previous_bin_path / exe_name
@@ -362,11 +362,22 @@ def run_benchmarks(
     if not previous_exe.is_file():
         version, download_path = download_previous_version(output_path)
         print(f"Rebuilding latest MODFLOW 6 release {version} in development mode")
-        meson_build(
-            project_path=download_path,
-            build_path=build_path,
-            bin_path=previous_bin_path,
-        )
+
+        def rebuild_prev_release():
+            meson_build(
+                project_path=download_path,
+                build_path=build_path,
+                bin_path=previous_bin_path,
+            )
+
+        # temp workaround until next release,
+        # ifx fails to build 6.4.2 on Windows
+        # most likely due to backspace issues
+        if _github_ostag == "Windows" and environ.get("FC") == "ifx":
+            with set_env(FC="ifort", CC="icl"):
+                rebuild_prev_release()
+        else:
+            rebuild_prev_release()
 
     print(f"Benchmarking MODFLOW 6 versions:")
     print(f"    current: {current_exe}")
@@ -445,8 +456,8 @@ if __name__ == "__main__":
         "-o",
         "--output-path",
         required=False,
-        default=str(_project_root_path / "distribution" / ""),
-        help="Location to create the zip archive",
+        default=str(_project_root_path / "distribution" / ".benchmarks"),
+        help="Location to create benchmark result files",
     )
     parser.add_argument(
         "-e",

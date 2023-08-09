@@ -116,7 +116,8 @@ CMakeFiles/
 latex/
 html/
 xml/
-distribution/run-time-comparison.md
+distribution/run-time-comparison*.md
+distribution/.benchmarks/run-time-comparison*.md
 doc/ReleaseNotes/run-time-comparison.tex
 
 # Intel Fortran Visual Studio intermediate files
