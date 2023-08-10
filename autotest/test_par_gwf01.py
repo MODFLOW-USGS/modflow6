@@ -7,8 +7,8 @@ from framework import TestFramework
 from simulation import TestSimulation
 
 # Test for parallel MODFLOW running on two cpus.
-# It contains two coupled models with 
-# 
+# It contains two coupled models with
+#
 # 1d:  (nlay,nrow,ncol) = (1,1,5),
 # 2d:  (nlay,nrow,ncol) = (1,5,5),
 # 3d:  (nlay,nrow,ncol) = (5,5,5),
@@ -17,14 +17,18 @@ from simulation import TestSimulation
 # The result should be a uniform flow field.
 
 ex = ["par_gwf01-1d", "par_gwf01-2d", "par_gwf01-3d"]
-dis_shape = [(1,1,5), (1,5,5), (5,5,5)]
+dis_shape = [(1, 1, 5), (1, 5, 5), (5, 5, 5)]
 
 # global convenience...
 name_left = "leftmodel"
 name_right = "rightmodel"
 
-def get_model(idx, dir):
+# solver data
+nouter, ninner = 100, 300
+hclose, rclose, relax = 10e-9, 1e-3, 0.97
 
+
+def get_model(idx, dir):
     name = ex[idx]
 
     # parameters and spd
@@ -33,10 +37,6 @@ def get_model(idx, dir):
     tdis_rc = []
     for i in range(nper):
         tdis_rc.append((1.0, 1, 1))
-
-    # solver data
-    nouter, ninner = 100, 300
-    hclose, rclose, relax = 10e-9, 1e-3, 0.97
 
     # model spatial discretization
     nlay = dis_shape[idx][0]
@@ -66,7 +66,10 @@ def get_model(idx, dir):
     h_start = 0.0
 
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name="mf6", sim_ws=dir,
+        sim_name=name,
+        version="mf6",
+        exe_name="mf6",
+        sim_ws=dir,
     )
 
     tdis = flopy.mf6.ModflowTdis(
@@ -78,12 +81,12 @@ def get_model(idx, dir):
         print_option="ALL",
         outer_dvclose=hclose,
         outer_maximum=nouter,
-        under_relaxation="DBD",
         inner_maximum=ninner,
         inner_dvclose=hclose,
         rcloserecord=rclose,
         linear_acceleration="BICGSTAB",
         relaxation_factor=relax,
+        pname="ims",
     )
 
     # submodel on the left:
@@ -103,7 +106,7 @@ def get_model(idx, dir):
         delr=delr,
         delc=delc,
         top=tops[0],
-        botm=tops[1:nlay+1],
+        botm=tops[1 : nlay + 1],
     )
     ic = flopy.mf6.ModflowGwfic(gwf, strt=h_start)
     npf = flopy.mf6.ModflowGwfnpf(
@@ -141,7 +144,7 @@ def get_model(idx, dir):
         xorigin=shift_x,
         yorigin=shift_y,
         top=tops[0],
-        botm=tops[1:nlay+1],
+        botm=tops[1 : nlay + 1],
     )
     ic = flopy.mf6.ModflowGwfic(gwf, strt=h_start)
     npf = flopy.mf6.ModflowGwfnpf(
@@ -184,28 +187,31 @@ def get_model(idx, dir):
         exgmnamea=name_left,
         exgmnameb=name_right,
         exchangedata=gwfgwf_data,
-        auxiliary=["ANGLDEGX", "CDIST"]
+        auxiliary=["ANGLDEGX", "CDIST"],
     )
 
     return sim
 
+
 def build_petsc_db(exdir):
     petsc_db_file = os.path.join(exdir, ".petscrc")
-    with open(petsc_db_file, 'w') as petsc_file:
+    with open(petsc_db_file, "w") as petsc_file:
         petsc_file.write("-ksp_type cg\n")
         petsc_file.write("-pc_type bjacobi\n")
         petsc_file.write("-sub_pc_type ilu\n")
         petsc_file.write("-dvclose 10e-7\n")
         petsc_file.write("-options_left no\n")
 
+
 def build_model(idx, exdir):
     sim = get_model(idx, exdir)
     build_petsc_db(exdir)
     return sim, None
 
+
 def eval_model(sim):
     # two coupled models with a uniform flow field,
-    # here we assert the known head values at the 
+    # here we assert the known head values at the
     # cell centers
     fpth = os.path.join(sim.simpath, f"{name_left}.hds")
     hds = flopy.utils.HeadFile(fpth)
@@ -213,8 +219,13 @@ def eval_model(sim):
     fpth = os.path.join(sim.simpath, f"{name_right}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads_right = hds.get_data().flatten()
-    np.testing.assert_array_almost_equal(heads_left[0:5], [1.0, 2.0, 3.0, 4.0, 5.0])
-    np.testing.assert_array_almost_equal(heads_right[0:5], [6.0, 7.0, 8.0, 9.0, 10.0])
+    np.testing.assert_array_almost_equal(
+        heads_left[0:5], [1.0, 2.0, 3.0, 4.0, 5.0]
+    )
+    np.testing.assert_array_almost_equal(
+        heads_right[0:5], [6.0, 7.0, 8.0, 9.0, 10.0]
+    )
+
 
 @pytest.mark.parallel
 @pytest.mark.parametrize(
@@ -226,9 +237,13 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test.build(build_model, idx, str(function_tmpdir))
     test.run(
         TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_model, 
-            idxsim=0, make_comparison=False,
-            parallel=True, ncpus=2,
+            name=name,
+            exe_dict=targets,
+            exfunc=eval_model,
+            idxsim=0,
+            make_comparison=False,
+            parallel=True,
+            ncpus=2,
         ),
         str(function_tmpdir),
     )
