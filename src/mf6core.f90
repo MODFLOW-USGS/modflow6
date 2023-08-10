@@ -229,7 +229,7 @@ contains
   subroutine create_lstfile()
     use ConstantsModule, only: LINELENGTH
     use SimVariablesModule, only: proc_id, nr_procs, simlstfile, iout
-    use InputOutputModule, only: getunit, openfile
+    use InputOutputModule, only: getunit, openfile, append_processor_id
     use GenericUtilitiesModule, only: sim_message
     use VersionModule, only: write_listfile_header
     character(len=LINELENGTH) :: line
@@ -238,7 +238,7 @@ contains
     iout = getunit()
     !
     if (nr_procs > 1) then
-      write (simlstfile, '(a,i0,a)') 'mfsim.p', proc_id, '.lst'
+      call append_processor_id(simlstfile, proc_id)
     end if
     !
     call openfile(iout, 0, simlstfile, 'LIST', filstat_opt='REPLACE')

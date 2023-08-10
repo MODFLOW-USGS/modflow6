@@ -24,7 +24,8 @@ module InputOutputModule
             GetFileFromPath, extract_idnum_or_bndname, urdaux,                 &
             get_jk, print_format, BuildFixedFormat,                            &
             BuildFloatFormat, BuildIntFormat, fseek_stream,                    &
-            get_nwords, u9rdcom
+            get_nwords, u9rdcom,                                               &
+            append_processor_id
 
   contains
 
@@ -255,6 +256,42 @@ module InputOutputModule
     ! -- return.
     return
   end subroutine lowcase
+
+  !> @brief Append processor id to a string
+  !!
+  !! Subroutine to append the processor id to a string 
+  !! before the file extension (extension is the 
+  !! string after the last '.' in the string. If there
+  !! is no '.' in the string the processor id is appended 
+  !! to the end of the string.
+  !!
+  !<
+  subroutine append_processor_id(name, proc_id)
+    ! -- dummy variables
+    character(len=linelength), intent(inout) :: name  !< file name
+    integer(I4B), intent(in) :: proc_id  !< processor id
+    ! -- local variables
+    character(len=linelength) :: name_local
+    character(len=linelength) :: extension_local
+    integer(I4B) :: ipos0
+    integer(I4B) :: ipos1
+    !
+    name_local = name
+    call lowcase(name_local)
+    ipos0 = index(name_local, ".", back=.TRUE.)
+    ipos1 = len_trim(name)
+    if (ipos0 > 0) then
+      write(extension_local, '(a)') name(ipos0:ipos1)
+    else
+      ipos0 = ipos1
+      extension_local = ''
+    end if
+    write(name, '(a,a,i0,a)') &
+      name(1:ipos0-1), '.p', proc_id, trim(adjustl(extension_local))
+    !
+    ! -- return
+    return
+  end subroutine append_processor_id
 
   !> @brief Create a formatted line
   !!

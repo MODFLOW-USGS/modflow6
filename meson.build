@@ -42,7 +42,7 @@ if fc_id == 'gcc'
                    '-Wno-maybe-uninitialized',   # "Uninitialized" flags produce false positives with allocatables
                    '-Wno-uninitialized',
                    ]
-
+  
   # Options specific to profile
   if profile == 'release'
     compile_args += ['-ffpe-summary=overflow', '-ffpe-trap=overflow,zero,invalid']
