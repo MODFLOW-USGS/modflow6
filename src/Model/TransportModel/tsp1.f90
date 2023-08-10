@@ -92,8 +92,9 @@ module TransportModelModule
     'ADV6 ', 'DSP6 ', 'SSM6 ', '     ', 'CNC6 ', & ! 10
     'OC6  ', 'OBS6 ', 'FMI6 ', 'SRC6 ', 'IST6 ', & ! 15
     'LKT6 ', 'SFT6 ', 'MWT6 ', 'UZT6 ', 'MVT6 ', & ! 20
-    'API6 ', '     ', 'SFE6 ', 'UZE6 ', '     ', & ! 25
-    75*'     '/
+    'API6 ', '     ', 'LKE6 ', 'SFE6 ', 'MWE6 ', & ! 25
+    'UZE6 ', '     ', '     ', '     ', '     ', & ! 30
+    70*'     '/
 
 contains
 
