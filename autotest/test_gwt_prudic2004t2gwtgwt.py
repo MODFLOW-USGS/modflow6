@@ -388,7 +388,7 @@ def build_gwfgwt_combo(
                 mover=True,
                 pname=f"SFR-{isfrseg}",
                 filename=f"{gwfname}.sfr{isfrseg}",
-                length_conversion=3.281379,
+                length_conversion=3.28084,
                 time_conversion=86400.0,
                 boundnames=False,
                 nreaches=nreaches,

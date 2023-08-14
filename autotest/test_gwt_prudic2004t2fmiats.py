@@ -212,7 +212,7 @@ def run_flow_model(dir, exe):
             budget_filerecord=gwfname + ".sfr.bud",
             mover=True,
             pname="SFR-1",
-            length_conversion=3.281379,
+            length_conversion=3.28084,
             time_conversion=86400.0,
             boundnames=True,
             nreaches=len(rivlist),
