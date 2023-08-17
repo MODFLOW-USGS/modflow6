@@ -34,7 +34,7 @@ _bin_path = _project_root_path / "bin"
 _examples_repo_path = _project_root_path.parent / "modflow6-examples"
 _release_notes_path = _project_root_path / "doc" / "ReleaseNotes"
 _distribution_path = _project_root_path / "distribution"
-_benchmarks_path = _project_root_path / "distribution" / ".benchmarks"
+_benchmarks_dir_path = _project_root_path / "distribution" / ".benchmarks"
 _docs_path = _project_root_path / "doc"
 _dev_dist_tex_paths = [
     _docs_path / "mf6io" / "mf6io.tex",
@@ -153,12 +153,12 @@ def test_download_benchmarks(tmp_path, github_user):
 def build_benchmark_tex(
     output_path: PathLike, overwrite: bool = False, repo_owner: str = "MODFLOW-USGS"
 ):
-    _benchmarks_path.mkdir(parents=True, exist_ok=True)
-    benchmarks_path = _benchmarks_path / "run-time-comparison.md"
+    _benchmarks_dir_path.mkdir(parents=True, exist_ok=True)
+    benchmarks_path = _benchmarks_dir_path / "run-time-comparison.md"
 
     # download benchmark artifacts if any exist on GitHub
     if not benchmarks_path.is_file():
-        benchmarks_path = download_benchmarks(_benchmarks_path, repo_owner=repo_owner)
+        benchmarks_path = download_benchmarks(_benchmarks_dir_path, repo_owner=repo_owner)
 
     # run benchmarks again if no benchmarks found on GitHub or overwrite requested
     if overwrite or not benchmarks_path.is_file():
@@ -179,7 +179,7 @@ def build_benchmark_tex(
         )
         assert not ret, out + err
         assert tex_path.is_file()
-
+    
     if (_distribution_path / f"{benchmarks_path.stem}.md").is_file():
         assert (_docs_path / "ReleaseNotes" / f"{benchmarks_path.stem}.tex").is_file()
 
@@ -187,7 +187,7 @@ def build_benchmark_tex(
 @flaky
 @requires_github
 def test_build_benchmark_tex(tmp_path):
-    benchmarks_path = _benchmarks_path / "run-time-comparison.md"
+    benchmarks_path = _benchmarks_dir_path / "run-time-comparison.md"
     tex_path = _distribution_path / f"{benchmarks_path.stem}.tex"
 
     try:
@@ -195,6 +195,22 @@ def test_build_benchmark_tex(tmp_path):
         assert benchmarks_path.is_file()
     finally:
         tex_path.unlink(missing_ok=True)
+
+
+def build_deprecations_tex():
+    deprecations_path = _docs_path / "mf6io" / "mf6ivar" / "md" / "deprecations.md"
+
+    # convert markdown deprecations to LaTeX
+    with set_dir(_release_notes_path):
+        tex_path = Path("deprecations.tex")
+        tex_path.unlink(missing_ok=True)
+        out, err, ret = run_cmd(
+            sys.executable, "mk_deprecations.py", deprecations_path, verbose=True
+        )
+        assert not ret, out + err
+        assert tex_path.is_file()
+    
+    assert (_docs_path / "ReleaseNotes" / f"{deprecations_path.stem}.tex").is_file()
 
 
 def build_mf6io_tex_from_dfn(overwrite: bool = False):
@@ -468,8 +484,8 @@ def build_documentation(
             example_model_path=example_path,
         )
 
-    # build LaTeX file describing distribution folder structure
-    # build_tex_folder_structure(overwrite=True)
+    # build deprecations table for insertion into LaTex release notes
+    build_deprecations_tex()
 
     if not full:
         # convert LaTeX to PDF

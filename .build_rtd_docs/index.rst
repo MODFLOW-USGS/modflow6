@@ -14,4 +14,5 @@ Contents:
    MODFLOW 6 Source Code Documentation <https://modflow-usgs.github.io/modflow6/>
    mf6io
    _mf6run/run-time-comparison.md
+   _mf6run/deprecations.md
 

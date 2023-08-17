@@ -693,3 +693,5 @@ In the description attribute, the capital REPLACE instructs the processor to rep
 The Python script [mf6ivar.py](mf6ivar.py) will process all of the definition files and create a markdown file, latex files of the variable descriptions, and text files containing the blocks.
 
 
+# Deprecations
+The Python script [deprecations.py](deprecations.py) will search definition files for `deprecated` or `removed` options and create a markdown file containing a table of deprecations and removals.

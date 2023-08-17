@@ -56,6 +56,15 @@ os.makedirs(dstdir)
 # copy the file
 shutil.copy(src, dst)
 
+# -- copy deprecations markdown ---------------------------------------------
+print("Copy the deprecations table")
+dstdir = "_mf6run"
+fpth = "deprecations.md"
+src = os.path.join("..", "doc", "mf6io", "mf6ivar", "md", fpth)
+dst = os.path.join(dstdir, fpth)
+# copy the file
+shutil.copy(src, dst)
+
 # -- build the mf6io markdown files -----------------------------------------
 print("Build the mf6io markdown files")
 pth = os.path.join("..", "doc", "mf6io", "mf6ivar")

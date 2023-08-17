@@ -353,6 +353,20 @@ jobs:
           cd modflow6/doc/ReleaseNotes
           python mk_folder_struct.py -dp "${{ github.workspace }}/$distname"
 
+      - name: Collect deprecations
+        working-directory: modflow6/doc/mf6io/mf6ivar
+        run: python deprecations.py
+
+      - name: Show deprecations
+        working-directory: modflow6/doc/mf6io/mf6ivar/md
+        run: cat deprecations.md
+
+      - name: Upload deprecations
+        uses: actions/upload-artifact@v3
+        with:
+          name: deprecations
+          path: modflow6/doc/mf6io/mf6ivar/md/deprecations.md
+
       - name: Build documentation
         env:
           # need a GITHUB_TOKEN to download example doc PDF asset from modflow6-examples repo
