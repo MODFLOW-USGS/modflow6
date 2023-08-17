@@ -107,6 +107,7 @@ modflow_sources = files(
     'Model' / 'ModelUtilities' / 'Connections.f90',
     'Model' / 'ModelUtilities' / 'DiscretizationBase.f90',
     'Model' / 'ModelUtilities' / 'DisvGeom.f90',
+    'Model' / 'ModelUtilities' / 'FlowModelInterface.f90',
     'Model' / 'ModelUtilities' / 'GwfBuyInputData.f90',
     'Model' / 'ModelUtilities' / 'GwfMvrPeriodData.f90',
     'Model' / 'ModelUtilities' / 'GwfNpfOptions.f90',
