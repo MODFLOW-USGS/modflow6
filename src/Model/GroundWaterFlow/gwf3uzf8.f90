@@ -2796,9 +2796,11 @@ contains
     !
     ! -- package csv table
     if (this%ipakcsv > 0) then
-      call this%pakcsvtab%table_da()
-      deallocate (this%pakcsvtab)
-      nullify (this%pakcsvtab)
+      if (associated(this%pakcsvtab)) then
+        call this%pakcsvtab%table_da()
+        deallocate (this%pakcsvtab)
+        nullify (this%pakcsvtab)
+      end if
     end if
     !
     ! -- deallocate scalars
