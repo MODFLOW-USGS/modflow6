@@ -1,37 +1,77 @@
 ! ** Do Not Modify! MODFLOW 6 system generated file. **
 module IdmGwtDfnSelectorModule
 
+  use ConstantsModule, only: LENVARNAME
   use SimModule, only: store_error
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
-  use GwtDisInputModule, only: gwt_dis_param_definitions, &
-                               gwt_dis_aggregate_definitions, &
-                               gwt_dis_block_definitions, &
-                               gwt_dis_multi_package
-  use GwtDisuInputModule, only: gwt_disu_param_definitions, &
-                                gwt_disu_aggregate_definitions, &
-                                gwt_disu_block_definitions, &
-                                gwt_disu_multi_package
-  use GwtDisvInputModule, only: gwt_disv_param_definitions, &
-                                gwt_disv_aggregate_definitions, &
-                                gwt_disv_block_definitions, &
-                                gwt_disv_multi_package
-  use GwtDspInputModule, only: gwt_dsp_param_definitions, &
-                               gwt_dsp_aggregate_definitions, &
-                               gwt_dsp_block_definitions, &
-                               gwt_dsp_multi_package
-  use GwtNamInputModule, only: gwt_nam_param_definitions, &
-                               gwt_nam_aggregate_definitions, &
-                               gwt_nam_block_definitions, &
-                               gwt_nam_multi_package
+  use GwtDisInputModule
+  use GwtDisuInputModule
+  use GwtDisvInputModule
+  use GwtDspInputModule
+  use GwtNamInputModule
 
   implicit none
   private
+  public :: GwtParamFoundType
   public :: gwt_param_definitions
   public :: gwt_aggregate_definitions
   public :: gwt_block_definitions
   public :: gwt_idm_multi_package
+  public :: gwt_idm_sfac_param
   public :: gwt_idm_integrated
+
+  type GwtParamFoundType
+    logical :: length_units = .false.
+    logical :: nogrb = .false.
+    logical :: xorigin = .false.
+    logical :: yorigin = .false.
+    logical :: angrot = .false.
+    logical :: nlay = .false.
+    logical :: nrow = .false.
+    logical :: ncol = .false.
+    logical :: delr = .false.
+    logical :: delc = .false.
+    logical :: top = .false.
+    logical :: botm = .false.
+    logical :: idomain = .false.
+    logical :: voffsettol = .false.
+    logical :: nodes = .false.
+    logical :: nja = .false.
+    logical :: nvert = .false.
+    logical :: bot = .false.
+    logical :: area = .false.
+    logical :: iac = .false.
+    logical :: ja = .false.
+    logical :: ihc = .false.
+    logical :: cl12 = .false.
+    logical :: hwva = .false.
+    logical :: angldegx = .false.
+    logical :: iv = .false.
+    logical :: xv = .false.
+    logical :: yv = .false.
+    logical :: icell2d = .false.
+    logical :: xc = .false.
+    logical :: yc = .false.
+    logical :: ncvert = .false.
+    logical :: icvert = .false.
+    logical :: ncpl = .false.
+    logical :: xt3d_off = .false.
+    logical :: xt3d_rhs = .false.
+    logical :: diffc = .false.
+    logical :: alh = .false.
+    logical :: alv = .false.
+    logical :: ath1 = .false.
+    logical :: ath2 = .false.
+    logical :: atv = .false.
+    logical :: list = .false.
+    logical :: print_input = .false.
+    logical :: print_flows = .false.
+    logical :: save_flows = .false.
+    logical :: ftype = .false.
+    logical :: fname = .false.
+    logical :: pname = .false.
+  end type GwtParamFoundType
 
 contains
 
@@ -128,6 +168,28 @@ contains
     end select
     return
   end function gwt_idm_multi_package
+
+  function gwt_idm_sfac_param(subcomponent) result(sfac_param)
+    character(len=*), intent(in) :: subcomponent
+    character(len=LENVARNAME) :: sfac_param
+    select case (subcomponent)
+    case ('DIS')
+      sfac_param = gwt_dis_aux_sfac_param
+    case ('DISU')
+      sfac_param = gwt_disu_aux_sfac_param
+    case ('DISV')
+      sfac_param = gwt_disv_aux_sfac_param
+    case ('DSP')
+      sfac_param = gwt_dsp_aux_sfac_param
+    case ('NAM')
+      sfac_param = gwt_nam_aux_sfac_param
+    case default
+      call store_error('Idm selector subcomponent not found; '//&
+                       &'component="GWT"'//&
+                       &', subcomponent="'//trim(subcomponent)//'".', .true.)
+    end select
+    return
+  end function gwt_idm_sfac_param
 
   function gwt_idm_integrated(subcomponent) result(integrated)
     character(len=*), intent(in) :: subcomponent

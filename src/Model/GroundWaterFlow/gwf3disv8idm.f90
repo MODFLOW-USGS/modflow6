@@ -1,5 +1,6 @@
 ! ** Do Not Modify! MODFLOW 6 system generated file. **
 module GwfDisvInputModule
+  use ConstantsModule, only: LENVARNAME
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
   private
@@ -8,6 +9,7 @@ module GwfDisvInputModule
   public gwf_disv_block_definitions
   public GwfDisvParamFoundType
   public gwf_disv_multi_package
+  public gwf_disv_aux_sfac_param
 
   type GwfDisvParamFoundType
     logical :: length_units = .false.
@@ -33,6 +35,8 @@ module GwfDisvInputModule
 
   logical :: gwf_disv_multi_package = .false.
 
+  character(len=LENVARNAME) :: gwf_disv_aux_sfac_param = ''
+
   type(InputParamDefinitionType), parameter :: &
     gwfdisv_length_units = InputParamDefinitionType &
     ( &
@@ -46,7 +50,8 @@ module GwfDisvInputModule
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -62,7 +67,8 @@ module GwfDisvInputModule
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -78,7 +84,8 @@ module GwfDisvInputModule
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -94,7 +101,8 @@ module GwfDisvInputModule
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -110,7 +118,8 @@ module GwfDisvInputModule
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -126,7 +135,8 @@ module GwfDisvInputModule
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -142,7 +152,8 @@ module GwfDisvInputModule
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -158,7 +169,8 @@ module GwfDisvInputModule
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -174,7 +186,8 @@ module GwfDisvInputModule
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -190,7 +203,8 @@ module GwfDisvInputModule
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .true. & ! layered
+    .true., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -206,7 +220,8 @@ module GwfDisvInputModule
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .true. & ! layered
+    .true., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -222,7 +237,8 @@ module GwfDisvInputModule
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -238,7 +254,8 @@ module GwfDisvInputModule
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -254,7 +271,8 @@ module GwfDisvInputModule
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -270,7 +288,8 @@ module GwfDisvInputModule
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -286,7 +305,8 @@ module GwfDisvInputModule
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -302,7 +322,8 @@ module GwfDisvInputModule
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -318,7 +339,8 @@ module GwfDisvInputModule
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -334,7 +356,8 @@ module GwfDisvInputModule
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -374,7 +397,8 @@ module GwfDisvInputModule
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -390,7 +414,8 @@ module GwfDisvInputModule
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &

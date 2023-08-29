@@ -1,37 +1,109 @@
 ! ** Do Not Modify! MODFLOW 6 system generated file. **
 module IdmGwfDfnSelectorModule
 
+  use ConstantsModule, only: LENVARNAME
   use SimModule, only: store_error
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
-  use GwfDisInputModule, only: gwf_dis_param_definitions, &
-                               gwf_dis_aggregate_definitions, &
-                               gwf_dis_block_definitions, &
-                               gwf_dis_multi_package
-  use GwfDisuInputModule, only: gwf_disu_param_definitions, &
-                                gwf_disu_aggregate_definitions, &
-                                gwf_disu_block_definitions, &
-                                gwf_disu_multi_package
-  use GwfDisvInputModule, only: gwf_disv_param_definitions, &
-                                gwf_disv_aggregate_definitions, &
-                                gwf_disv_block_definitions, &
-                                gwf_disv_multi_package
-  use GwfNpfInputModule, only: gwf_npf_param_definitions, &
-                               gwf_npf_aggregate_definitions, &
-                               gwf_npf_block_definitions, &
-                               gwf_npf_multi_package
-  use GwfNamInputModule, only: gwf_nam_param_definitions, &
-                               gwf_nam_aggregate_definitions, &
-                               gwf_nam_block_definitions, &
-                               gwf_nam_multi_package
+  use GwfDisInputModule
+  use GwfDisuInputModule
+  use GwfDisvInputModule
+  use GwfNpfInputModule
+  use GwfNamInputModule
 
   implicit none
   private
+  public :: GwfParamFoundType
   public :: gwf_param_definitions
   public :: gwf_aggregate_definitions
   public :: gwf_block_definitions
   public :: gwf_idm_multi_package
+  public :: gwf_idm_sfac_param
   public :: gwf_idm_integrated
+
+  type GwfParamFoundType
+    logical :: length_units = .false.
+    logical :: nogrb = .false.
+    logical :: xorigin = .false.
+    logical :: yorigin = .false.
+    logical :: angrot = .false.
+    logical :: nlay = .false.
+    logical :: nrow = .false.
+    logical :: ncol = .false.
+    logical :: delr = .false.
+    logical :: delc = .false.
+    logical :: top = .false.
+    logical :: botm = .false.
+    logical :: idomain = .false.
+    logical :: voffsettol = .false.
+    logical :: nodes = .false.
+    logical :: nja = .false.
+    logical :: nvert = .false.
+    logical :: bot = .false.
+    logical :: area = .false.
+    logical :: iac = .false.
+    logical :: ja = .false.
+    logical :: ihc = .false.
+    logical :: cl12 = .false.
+    logical :: hwva = .false.
+    logical :: angldegx = .false.
+    logical :: iv = .false.
+    logical :: xv = .false.
+    logical :: yv = .false.
+    logical :: icell2d = .false.
+    logical :: xc = .false.
+    logical :: yc = .false.
+    logical :: ncvert = .false.
+    logical :: icvert = .false.
+    logical :: ncpl = .false.
+    logical :: ipakcb = .false.
+    logical :: iprflow = .false.
+    logical :: cellavg = .false.
+    logical :: ithickstrt = .false.
+    logical :: cvoptions = .false.
+    logical :: ivarcv = .false.
+    logical :: idewatcv = .false.
+    logical :: iperched = .false.
+    logical :: rewet_record = .false.
+    logical :: irewet = .false.
+    logical :: wetfct = .false.
+    logical :: iwetit = .false.
+    logical :: ihdwet = .false.
+    logical :: xt3doptions = .false.
+    logical :: ixt3d = .false.
+    logical :: ixt3drhs = .false.
+    logical :: isavspdis = .false.
+    logical :: isavsat = .false.
+    logical :: ik22overk = .false.
+    logical :: ik33overk = .false.
+    logical :: tvk_filerecord = .false.
+    logical :: tvk6 = .false.
+    logical :: filein = .false.
+    logical :: tvk6_filename = .false.
+    logical :: inewton = .false.
+    logical :: iusgnrhc = .false.
+    logical :: inwtupw = .false.
+    logical :: satmin = .false.
+    logical :: satomega = .false.
+    logical :: icelltype = .false.
+    logical :: k = .false.
+    logical :: k22 = .false.
+    logical :: k33 = .false.
+    logical :: angle1 = .false.
+    logical :: angle2 = .false.
+    logical :: angle3 = .false.
+    logical :: wetdry = .false.
+    logical :: list = .false.
+    logical :: print_input = .false.
+    logical :: print_flows = .false.
+    logical :: save_flows = .false.
+    logical :: newtonoptions = .false.
+    logical :: newton = .false.
+    logical :: under_relaxation = .false.
+    logical :: ftype = .false.
+    logical :: fname = .false.
+    logical :: pname = .false.
+  end type GwfParamFoundType
 
 contains
 
@@ -128,6 +200,28 @@ contains
     end select
     return
   end function gwf_idm_multi_package
+
+  function gwf_idm_sfac_param(subcomponent) result(sfac_param)
+    character(len=*), intent(in) :: subcomponent
+    character(len=LENVARNAME) :: sfac_param
+    select case (subcomponent)
+    case ('DIS')
+      sfac_param = gwf_dis_aux_sfac_param
+    case ('DISU')
+      sfac_param = gwf_disu_aux_sfac_param
+    case ('DISV')
+      sfac_param = gwf_disv_aux_sfac_param
+    case ('NPF')
+      sfac_param = gwf_npf_aux_sfac_param
+    case ('NAM')
+      sfac_param = gwf_nam_aux_sfac_param
+    case default
+      call store_error('Idm selector subcomponent not found; '//&
+                       &'component="GWF"'//&
+                       &', subcomponent="'//trim(subcomponent)//'".', .true.)
+    end select
+    return
+  end function gwf_idm_sfac_param
 
   function gwf_idm_integrated(subcomponent) result(integrated)
     character(len=*), intent(in) :: subcomponent
