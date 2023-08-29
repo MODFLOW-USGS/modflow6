@@ -187,7 +187,7 @@ contains
     !
     ! -- Create time series managers
     call tsmanager_cr(this%TsManager, this%iout)
-    call tasmanager_cr(this%TasManager, dis, this%iout)
+    call tasmanager_cr(this%TasManager, dis, this%name_model, this%iout)
     !
     ! -- create obs package
     call obs_cr(this%obs, this%inobspkg)

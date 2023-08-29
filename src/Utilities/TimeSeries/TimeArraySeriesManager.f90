@@ -3,7 +3,7 @@ module TimeArraySeriesManagerModule
   use KindModule, only: DP, I4B
   use SimVariablesModule, only: errmsg
   use ConstantsModule, only: DZERO, LENTIMESERIESNAME, LINELENGTH, &
-                             LENHUGELINE
+                             LENHUGELINE, LENMODELNAME
   use ListModule, only: ListType
   use SimModule, only: store_error, store_error_unit
   use TdisModule, only: delt, totimc, kper, kstp
@@ -22,7 +22,8 @@ module TimeArraySeriesManagerModule
   type TimeArraySeriesManagerType
     ! -- Public members
     integer(I4B), public :: iout = 0 ! output unit num
-    class(DisBaseType), pointer, public :: dis => null() ! pointer to dis
+    class(DisBaseType), pointer :: dis => null() ! pointer to dis
+    character(len=LENMODELNAME) :: modelname
     ! -- Private members
     type(ListType), pointer, private :: boundTasLinks => null() ! list of TAS links
     character(len=LINELENGTH), allocatable, dimension(:) :: tasfiles ! list of TA file names
@@ -49,7 +50,7 @@ contains
 
   ! -- Public procedures
 
-  subroutine tasmanager_cr(this, dis, iout)
+  subroutine tasmanager_cr(this, dis, modelname, iout)
 ! ******************************************************************************
 ! tasmanager_cr -- create the tasmanager
 ! ******************************************************************************
@@ -58,12 +59,17 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     type(TimeArraySeriesManagerType) :: this
-    class(DisBaseType), pointer :: dis
+    class(DisBaseType), pointer, optional :: dis
+    character(len=*), intent(in) :: modelname
     integer(I4B), intent(in) :: iout
 ! ------------------------------------------------------------------------------
     !
+    if (present(dis)) then
+      this%dis => dis
+    end if
+    !
+    this%modelname = modelname
     this%iout = iout
-    this%dis => dis
     allocate (this%boundTasLinks)
     allocate (this%tasfiles(0))
     !
@@ -94,7 +100,7 @@ contains
     ! -- Setup a time array series for each file specified
     do i = 1, nfiles
       tasptr => this%taslist(i)
-      call tasptr%tas_init(this%tasfiles(i), this%dis, &
+      call tasptr%tas_init(this%tasfiles(i), this%modelname, &
                            this%iout, this%tasnames(i))
     end do
     !
@@ -413,6 +419,7 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
     ! -- dummy
     class(TimeArraySeriesManagerType) :: this
     type(TimeArraySeriesLinkType), pointer, intent(inout) :: tasLink
@@ -420,6 +427,13 @@ contains
     integer(I4B) :: i, n, noder
     real(DP) :: area
 ! ------------------------------------------------------------------------------
+    if (.not. (associated(this%dis) .and. &
+               associated(tasLink%nodelist))) then
+      errmsg = 'Programming error. Cannot convert flux. Verify that '&
+               &'a valid DIS instance and nodelist were provided.'
+      call store_error(errmsg)
+      call store_error_unit(tasLink%TimeArraySeries%GetInunit())
+    end if
     !
     n = size(tasLink%BndArray)
     do i = 1, n
