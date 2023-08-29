@@ -327,6 +327,37 @@ contains
     return
   end subroutine parse_tag
 
+  function block_index_dfn(mf6_input, iblock, iout) result(idt)
+    type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType
+    integer(I4B), intent(in) :: iblock !< consecutive block number as defined in definition file
+    integer(I4B), intent(in) :: iout !< unit number for output
+    type(InputParamDefinitionType) :: idt !< input data type object describing this record
+    character(len=LENVARNAME) :: varname
+    integer(I4B) :: ilen
+    character(len=3) :: block_suffix = 'NUM'
+    !
+    ! -- assign first column as the block number
+    ilen = len_trim(mf6_input%block_dfns(iblock)%blockname)
+    !
+    if (ilen > (LENVARNAME - len(block_suffix))) then
+      varname = &
+        mf6_input%block_dfns(iblock)% &
+        blockname(1:(LENVARNAME - len(block_suffix)))//block_suffix
+    else
+      varname = trim(mf6_input%block_dfns(iblock)%blockname)//block_suffix
+    end if
+    !
+    idt%component_type = trim(mf6_input%component_type)
+    idt%subcomponent_type = trim(mf6_input%subcomponent_type)
+    idt%blockname = trim(mf6_input%block_dfns(iblock)%blockname)
+    idt%tagname = varname
+    idt%mf6varname = varname
+    idt%datatype = 'INTEGER'
+    !
+    ! -- return
+    return
+  end function block_index_dfn
+
   !> @brief parse a structured array record into memory manager
   !!
   !! A structarray is similar to a numpy recarray.  It it used to
@@ -346,16 +377,16 @@ contains
     character(len=*), intent(in) :: filename !< input filename
     integer(I4B), intent(in) :: iout !< unit number for output
     type(InputParamDefinitionType), pointer :: idt !< input data type object describing this record
-    integer(I4B) :: blocknum, iwords, ilen
+    type(InputParamDefinitionType), target :: blockvar_idt
+    integer(I4B) :: blocknum, iwords
     integer(I4B), pointer :: nrow => null()
+    integer(I4B) :: nrows, nrowsread
     integer(I4B) :: icol
     integer(I4B) :: ncol
     integer(I4B) :: nwords
     character(len=16), dimension(:), allocatable :: words
     type(StructArrayType), pointer :: struct_array
     character(len=:), allocatable :: parse_str
-    character(len=100) :: varname
-    character(len=3) :: block_suffix = 'num'
     !
     ! -- set input definition for this block
     idt => get_aggregate_definition_type(mf6_input%aggregate_dfns, &
@@ -381,11 +412,15 @@ contains
     ! -- use shape to set the max num of rows
     if (idt%shape /= '') then
       call mem_setptr(nrow, idt%shape, mf6_input%mempath)
+      nrows = nrow
+    else
+      nrows = 0
     end if
     !
     ! -- create a structured array
-    struct_array => constructStructArray(ncol, nrow, blocknum)
-    nullify (nrow)
+    struct_array => constructStructArray(ncol, nrows, blocknum, &
+                                         mf6_input%mempath, &
+                                         mf6_input%component_mempath)
     !
     ! -- create structarray vectors for each column
     do icol = 1, ncol
@@ -394,21 +429,10 @@ contains
       if (blocknum > 0) then
         if (icol == 1) then
           !
-          ! -- assign first column as the block number
-          ilen = len_trim(mf6_input%block_dfns(iblock)%blockname)
+          blockvar_idt = block_index_dfn(mf6_input, iblock, iout)
+          idt => blockvar_idt
           !
-          if (ilen > (LENVARNAME - len(block_suffix))) then
-            varname = &
-              mf6_input%block_dfns(iblock)% &
-              blockname(1:(LENVARNAME - len(block_suffix)))//block_suffix
-          else
-            varname = trim(mf6_input%block_dfns(iblock)%blockname)//block_suffix
-          end if
-          !
-          call struct_array%mem_create_vector(icol, 'INTEGER', &
-                                              varname, varname, &
-                                              mf6_input%mempath, '', &
-                                              .false.)
+          call struct_array%mem_create_vector(icol, idt)
           !
           ! -- continue as this column managed by internally SA object
           cycle
@@ -430,13 +454,11 @@ contains
                                        words(iwords), filename)
       !
       ! -- allocate variable in memory manager
-      call struct_array%mem_create_vector(icol, idt%datatype, idt%mf6varname, &
-                                          idt%tagname, mf6_input%mempath, &
-                                          idt%shape, idt%preserve_case)
+      call struct_array%mem_create_vector(icol, idt)
     end do
     !
     ! -- read the structured array
-    call struct_array%read_from_parser(parser, iout)
+    nrowsread = struct_array%read_from_parser(parser, .false., iout)
     !
     ! -- destroy the structured array reader
     call destructStructArray(struct_array)
