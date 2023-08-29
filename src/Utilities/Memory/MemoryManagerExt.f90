@@ -16,7 +16,8 @@ module MemoryManagerExtModule
       mem_set_value_int1d, mem_set_value_int1d_mapped, &
       mem_set_value_int2d, mem_set_value_int3d, mem_set_value_dbl, &
       mem_set_value_dbl1d, mem_set_value_dbl1d_mapped, &
-      mem_set_value_dbl2d, mem_set_value_dbl3d, mem_set_value_str
+      mem_set_value_dbl2d, mem_set_value_dbl3d, mem_set_value_str, &
+      mem_set_value_charstr1d
   end interface mem_set_value
 
 contains
@@ -41,8 +42,6 @@ contains
         mt => memorylist%Get(ipos)
         if (mt%path == memory_path .and. mt%mt_associated()) then
           call mt%mt_deallocate()
-          deallocate (mt)
-          call memorylist%remove(ipos, .false.)
           removed = .true.
           exit
         end if
@@ -61,8 +60,12 @@ contains
     logical(LGP) :: checkfail = .false.
 
     call get_from_memorylist(varname, memory_path, mt, found, checkfail)
-    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'LOGICAL') then
-      p_mem = mt%logicalsclr
+    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'INTEGER') then
+      if (mt%intsclr == 0) then
+        p_mem = .false.
+      else
+        p_mem = .true.
+      end if
     end if
   end subroutine mem_set_value_logical
 
@@ -365,5 +368,24 @@ contains
       p_mem = mt%strsclr
     end if
   end subroutine mem_set_value_str
+
+  subroutine mem_set_value_charstr1d(p_mem, varname, memory_path, found)
+    use CharacterStringModule, only: CharacterStringType
+    type(CharacterStringType), dimension(:), &
+      pointer, contiguous, intent(inout) :: p_mem !< pointer to charstr 1d array
+    character(len=*), intent(in) :: varname !< variable name
+    character(len=*), intent(in) :: memory_path !< path where variable is stored
+    logical(LGP), intent(inout) :: found
+    type(MemoryType), pointer :: mt
+    logical(LGP) :: checkfail = .false.
+    integer(I4B) :: n
+
+    call get_from_memorylist(varname, memory_path, mt, found, checkfail)
+    if (found .and. mt%memtype(1:index(mt%memtype, ' ')) == 'STRING') then
+      do n = 1, size(mt%acharstr1d)
+        p_mem(n) = mt%acharstr1d(n)
+      end do
+    end if
+  end subroutine mem_set_value_charstr1d
 
 end module MemoryManagerExtModule
