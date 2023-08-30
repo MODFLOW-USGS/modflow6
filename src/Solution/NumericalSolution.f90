@@ -1467,6 +1467,8 @@ contains
   !!
   !<
   subroutine prepareSolve(this)
+    ! -- modules
+    use IdmLoadModule, only: idm_ad
     ! -- dummy variables
     class(NumericalSolutionType) :: this !< NumericalSolutionType instance
     ! -- local variables
@@ -1477,6 +1479,9 @@ contains
 
     ! synchronize for AD
     call this%synchronize(STG_BFR_EXG_AD, this%synchronize_ctx)
+
+    ! -- IDM advance
+    call idm_ad()
 
     ! -- Exchange advance
     do ic = 1, this%exchangelist%Count()

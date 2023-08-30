@@ -259,11 +259,16 @@ contains
   !> @ brief Solution prepare to solve
   !<
   subroutine prepareSolve(this)
+    ! -- modules
+    use IdmLoadModule, only: idm_ad
     ! -- dummy variables
     class(ExplicitSolutionType) :: this !< ExplicitSolutionType instance
     ! -- local variables
     integer(I4B) :: im
     class(ExplicitModelType), pointer :: mp => null()
+
+    ! -- IDM advance
+    call idm_ad()
 
     ! -- Model advance
     do im = 1, this%modellist%Count()
