@@ -110,9 +110,9 @@ $(OBJDIR)/SmoothingFunctions.o \
 $(OBJDIR)/MatrixBase.o \
 $(OBJDIR)/ListReader.o \
 $(OBJDIR)/Connections.o \
-$(OBJDIR)/DiscretizationBase.o \
 $(OBJDIR)/TimeArray.o \
 $(OBJDIR)/ObsOutput.o \
+$(OBJDIR)/DiscretizationBase.o \
 $(OBJDIR)/TimeArraySeries.o \
 $(OBJDIR)/ObsOutputList.o \
 $(OBJDIR)/Observe.o \
@@ -291,7 +291,11 @@ $(OBJDIR)/RunControlFactory.o \
 $(OBJDIR)/IdmSimulation.o \
 $(OBJDIR)/ConnectionBuilder.o \
 $(OBJDIR)/comarg.o \
+$(OBJDIR)/InputLoadType.o \
 $(OBJDIR)/mf6core.o \
+$(OBJDIR)/BoundInputContext.o \
+$(OBJDIR)/AsciiInputLoadType.o \
+$(OBJDIR)/SourceCommon.o \
 $(OBJDIR)/BaseGeometry.o \
 $(OBJDIR)/mf6.o \
 $(OBJDIR)/StringList.o \
@@ -301,6 +305,8 @@ $(OBJDIR)/sparsekit.o \
 $(OBJDIR)/rcm.o \
 $(OBJDIR)/blas1_d.o \
 $(OBJDIR)/Iunit.o \
+$(OBJDIR)/StressListInput.o \
+$(OBJDIR)/StressGridInput.o \
 $(OBJDIR)/RectangularGeometry.o \
 $(OBJDIR)/CircularGeometry.o
 
