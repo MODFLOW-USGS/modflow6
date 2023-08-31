@@ -55,7 +55,6 @@ module StructVectorModule
     ! TimeSeries strings
     type(ListType) :: ts_strlocs
   contains
-    !procedure :: init => sv_init
     procedure :: clear => sv_clear
     procedure :: read_token => sv_read_token
     procedure :: add_ts_strloc => sv_add_ts_strloc

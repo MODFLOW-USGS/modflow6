@@ -1,3 +1,10 @@
+!> @brief This module contains the AsciiInputLoadTypeModule
+!!
+!! This module defines an abstract type that support generic
+!! IDP dynamic input loading for traditional MODFLOW 6 ascii
+!! files.
+!!
+!<
 module AsciiInputLoadTypeModule
 
   use KindModule, only: DP, I4B, LGP

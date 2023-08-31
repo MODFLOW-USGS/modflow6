@@ -838,8 +838,8 @@ contains
     integer(I4B) :: intval, numval
     character(len=LINELENGTH) :: fname
     character(len=*), parameter :: fmtlsterronly = &
-      "('Error Reading LIST from file: ',&
-      &1x,a,1x,' On UNIT: ',I0)"
+      "('Error reading LIST from file: ',&
+      &1x,a,1x,' on UNIT: ',I0)"
     !
     ! -- set error and exit if deferred shape
     if (this%deferred_shape) then
@@ -910,7 +910,7 @@ contains
           ! no error
         case (:-1)
           !
-          ! -- End of record was encountered
+          ! -- End of block was encountered
           irow = irow - 1
           exit readloop
           !

@@ -91,38 +91,6 @@ contains
 
   end subroutine generic_mf6_load
 
-  !> @brief allocate dynamic load parser if expecting dynamic input
-  !<
-  function create_dynamic_parser(mf6_input, mf6_parser, static_parser) &
-    result(created)
-    type(ModflowInputType), intent(in) :: mf6_input
-    type(BlockParserType), pointer, intent(inout) :: mf6_parser
-    type(BlockParserType), allocatable, target, intent(inout) :: static_parser
-    logical(LGP) :: created
-    integer(I4B) :: iblock
-    !
-    ! -- initialize
-    nullify (mf6_parser)
-    created = .false.
-    !
-    ! -- check if package has dynamic input
-    do iblock = 1, size(mf6_input%block_dfns)
-      !
-      if (mf6_input%block_dfns(iblock)%blockname == 'PERIOD') then
-        !
-        ! -- dynamic package, allocate parser
-        allocate (mf6_parser, source=static_parser)
-        created = .true.
-        !
-        exit
-        !
-      end if
-    end do
-    !
-    ! -- return
-    return
-  end function
-
   !> @brief input load for traditional mf6 simulation input file
   !<
   subroutine input_load(filename, mf6_input, component_filename, iout, &
@@ -135,10 +103,6 @@ contains
     type(BlockParserType), allocatable, target :: parser !< block parser
     type(PackageLoad) :: pkgloader
     integer(I4B) :: inunit
-    logical(LGP) :: created
-    !
-    ! -- initialize
-    created = .false.
     !
     ! -- set parser based package loader by file type
     select case (mf6_input%pkgtype)
@@ -163,16 +127,15 @@ contains
     if (present(mf6_parser)) then
       !
       ! -- create dynamic parser
-      created = create_dynamic_parser(mf6_input, mf6_parser, parser)
+      allocate (mf6_parser, source=parser)
+    else
+      !
+      ! -- clear parser file handles
+      call parser%clear()
     end if
     !
-    ! -- deallocate static load parser
-    if (allocated(parser)) then
-      !
-      if (.not. created) call parser%clear()
-      deallocate (parser)
-      !
-    end if
+    ! -- cleanup
+    deallocate (parser)
     !
     ! -- return
     return
@@ -197,35 +160,42 @@ contains
     class(Mf6FileStaticPkgLoadType), intent(inout) :: this
     integer(I4B), intent(in) :: iout
     class(DynamicPkgLoadBaseType), pointer :: period_loader
-    class(Mf6FileDynamicPkgLoadType), pointer :: mf6file_period_loader => null()
+    class(Mf6FileDynamicPkgLoadType), pointer :: mf6_loader => null()
     type(BlockParserType), pointer :: parser => null()
     !
     ! -- initialize
     nullify (period_loader)
     !
     ! -- load model package to input context
-    call input_load(this%sourcename, this%mf6_input, &
-                    this%modelfname, iout, parser)
-    !
-    !
-    if (associated(parser)) then
+    if (this%iperblock > 0) then
       !
       ! -- package is dynamic, allocate loader
-      allocate (mf6file_period_loader)
+      allocate (mf6_loader)
+      !
+      ! -- load static input
+      call input_load(this%sourcename, this%mf6_input, &
+                      this%modelfname, iout, parser)
       !
       ! -- initialize dynamic loader
-      call mf6file_period_loader%init(this%mf6_input, this%modelname, &
-                                      this%modelfname, this%sourcename, &
-                                      iout)
+      call mf6_loader%init(this%mf6_input, this%modelname, &
+                           this%modelfname, this%sourcename, &
+                           this%iperblock, iout)
       !
       ! -- set parser
-      call mf6file_period_loader%set(parser)
+      call mf6_loader%set(parser)
       !
       ! -- set return pointer to base dynamic loader
-      period_loader => mf6file_period_loader
+      period_loader => mf6_loader
       !
+    else
+      !
+      ! -- load static input
+      call input_load(this%sourcename, this%mf6_input, &
+                      this%modelfname, iout)
     end if
     !
+    ! -- return
+    return
   end function static_load
 
   !> @brief static loader destroy
@@ -239,7 +209,8 @@ contains
 
   !> @brief dynamic loader init
   !<
-  subroutine dynamic_init(this, mf6_input, modelname, modelfname, source, iout)
+  subroutine dynamic_init(this, mf6_input, modelname, modelfname, source, &
+                          iperblock, iout)
     use InputDefinitionModule, only: InputParamDefinitionType
     use DefinitionSelectModule, only: get_param_definition_type
     use MemoryManagerModule, only: mem_allocate
@@ -248,10 +219,11 @@ contains
     character(len=*), intent(in) :: modelname
     character(len=*), intent(in) :: modelfname
     character(len=*), intent(in) :: source
+    integer(I4B), intent(in) :: iperblock
     integer(I4B), intent(in) :: iout
     !
     call this%DynamicPkgLoadType%init(mf6_input, modelname, modelfname, &
-                                      source, iout)
+                                      source, iperblock, iout)
     !
     call mem_allocate(this%iper, 'IPER', this%mf6_input%mempath)
     call mem_allocate(this%ionper, 'IONPER', this%mf6_input%mempath)
@@ -413,6 +385,7 @@ contains
                                 this%modelname, &
                                 this%modelfname, &
                                 this%sourcename, &
+                                this%iperblock, &
                                 this%iout)
     !
     ! -- return

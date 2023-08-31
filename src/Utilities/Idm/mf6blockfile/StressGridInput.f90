@@ -1,7 +1,7 @@
 !> @brief This module contains the StressGridInputModule
 !!
-!! This module contains the routines for reading
-!! period block array based input
+!! This module contains the routines for reading period block
+!! array based input.
 !!
 !<
 module StressGridInputModule
@@ -63,23 +63,22 @@ module StressGridInputModule
 contains
 
   subroutine ingrid_init(this, mf6_input, modelname, modelfname, &
-                         source, iout)
+                         source, iperblock, iout)
     use MemoryManagerModule, only: get_isize
     class(StressGridInputType), intent(inout) :: this
     type(ModflowInputType), intent(in) :: mf6_input
     character(len=*), intent(in) :: modelname
     character(len=*), intent(in) :: modelfname
     character(len=*), intent(in) :: source
+    integer(I4B), intent(in) :: iperblock
     integer(I4B), intent(in) :: iout
     type(CharacterStringType), dimension(:), pointer, &
       contiguous :: tas_fnames
     character(len=LINELENGTH) :: fname
     integer(I4B) :: tas6_size, n
-
     !
     call this%DynamicPkgLoadType%init(mf6_input, modelname, modelfname, &
-                                      source, iout)
-    !
+                                      source, iperblock, iout)
     ! -- initialize
     this%tas_active = 0
     this%nparam = 0
@@ -92,7 +91,7 @@ contains
     !
     ! -- determine if TAS6 files were provided in OPTIONS block
     call get_isize('TAS6_FILENAME', this%mf6_input%mempath, tas6_size)
-
+    !
     if (tas6_size > 0) then
       !
       this%tas_active = 1
@@ -190,8 +189,10 @@ contains
       ! -- look for TAS keyword if tas is active
       if (this%tas_active /= 0) then
         call parser%GetStringCaps(keyword)
+        !
         if (keyword == 'TIMEARRAYSERIES') then
           call parser%GetStringCaps(tas_name)
+          !
           if (param_tag == 'AUX') then
             this%aux_tasnames(iaux) = tas_name
           else
@@ -203,6 +204,7 @@ contains
           ! -- cycle to next input param
           cycle
         end if
+        !
       end if
       !
       ! -- read and load the parameter

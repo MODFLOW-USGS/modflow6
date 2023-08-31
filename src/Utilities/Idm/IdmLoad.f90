@@ -441,7 +441,7 @@ contains
       end if
     case default
       write (errmsg, '(a,a)') &
-        'Programming error. Idm Load unhandled datatype: ', &
+        'Programming error. IdmLoad unhandled datatype: ', &
         trim(idt%datatype)
       call store_error(errmsg)
       call store_error_filename(simfile)

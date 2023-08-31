@@ -1,8 +1,7 @@
 !> @brief This module contains the StressListInputModule
 !!
-!! This module contains the routines for reading a
-!! structured list, which consists of a separate vector
-!! for each column in the list.
+!! This module contains the routines for reading period block
+!! list based input.
 !!
 !<
 module StressListInputModule
@@ -55,13 +54,14 @@ module StressListInputModule
 contains
 
   subroutine inlist_init(this, mf6_input, modelname, modelfname, &
-                         source, iout)
+                         source, iperblock, iout)
     use MemoryManagerModule, only: get_isize
     class(StressListInputType), intent(inout) :: this
     type(ModflowInputType), intent(in) :: mf6_input
     character(len=*), intent(in) :: modelname
     character(len=*), intent(in) :: modelfname
     character(len=*), intent(in) :: source
+    integer(I4B), intent(in) :: iperblock
     integer(I4B), intent(in) :: iout
     type(CharacterStringType), dimension(:), pointer, &
       contiguous :: ts_fnames
@@ -69,7 +69,7 @@ contains
     integer(I4B) :: ts6_size, n
     !
     call this%DynamicPkgLoadType%init(mf6_input, modelname, modelfname, &
-                                      source, iout)
+                                      source, iperblock, iout)
     !
     ! -- initialize
     this%ts_active = 0
@@ -194,9 +194,7 @@ contains
     class(StressListInputType), intent(inout) :: this !< StressListInputType
     !
     ! -- reset tsmanager
-    if (this%ts_active /= 0) then
-      call this%tsmanager%reset(this%mf6_input%subcomponent_name)
-    end if
+    call this%tsmanager%reset(this%mf6_input%subcomponent_name)
     !
     ! -- return
     return
@@ -276,6 +274,7 @@ contains
           boundname = sv_bound%charstr1d(ts_strloc%row)
           tsLinkAux%BndName = boundname
         end if
+        !
       end if
       !
     case default

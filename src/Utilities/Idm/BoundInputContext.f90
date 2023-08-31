@@ -1,4 +1,9 @@
-! -- Generic List Reader Module
+!> @brief This module contains the BoundInputContextModule
+!!
+!! This module contains a type that stores and creates context
+!! relevant to stress package inputs.
+!!
+!<
 module BoundInputContextModule
 
   use KindModule, only: DP, I4B, LGP
@@ -12,7 +17,7 @@ module BoundInputContextModule
 
   !> @brief derived type for boundary package input context
   !!
-  !! This derived type is input context used by dynamic package loaders.
+  !! This derived type defines input context used by dynamic package loaders.
   !! Some variables (e.g. iprpak) in the type may have already been created
   !! by a static loader whereas others (e.g. nboound) are created by this
   !! type, updated by to dynamic loader, and accessed from the model package.
@@ -143,7 +148,7 @@ contains
   !!
   !! This routine should be invoked after the loader allocates dynamic
   !! input params. This routine will assign pointers to arrays if they
-  !! have been allocoated or allocate the arrays if they have not been.
+  !! have been allocated and allocate the arrays if not.
   !!
   !<
   subroutine enable(this)

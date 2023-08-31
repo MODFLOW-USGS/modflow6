@@ -1,7 +1,7 @@
 !> @brief This module contains the SourceLoadModule
 !!
 !! This module contains the routines needed to generate
-!! a loading object for an input source and routines
+!! a loader object for an input source and routines
 !! that distribute processing to a particular source.
 !!
 !<

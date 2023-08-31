@@ -31,6 +31,7 @@ module InputLoadTypeModule
     character(len=LENMODELNAME) :: modelname !< name of model
     character(len=LINELENGTH) :: modelfname !< name of model input file
     character(len=LINELENGTH) :: sourcename !< source name, e.g. name of file
+    integer(I4B) :: iperblock
   contains
     procedure :: init => static_init
     procedure :: destroy => static_destroy
@@ -89,7 +90,6 @@ module InputLoadTypeModule
     subroutine period_load_if(this)
       import DynamicPkgLoadBaseType, I4B
       class(DynamicPkgLoadBaseType), intent(inout) :: this
-      !integer(I4B), intent(in) :: iout
     end subroutine
   end interface
 
@@ -125,11 +125,22 @@ contains
     character(len=*), intent(in) :: modelname
     character(len=*), intent(in) :: modelfname
     character(len=*), intent(in) :: source
+    integer(I4B) :: iblock
     !
     this%mf6_input = mf6_input
     this%modelname = modelname
     this%modelfname = modelfname
     this%sourcename = source
+    this%iperblock = 0
+    !
+    ! -- identify period block definition
+    do iblock = 1, size(mf6_input%block_dfns)
+      !
+      if (mf6_input%block_dfns(iblock)%blockname == 'PERIOD') then
+        this%iperblock = iblock
+        exit
+      end if
+    end do
     !
     return
   end subroutine static_init
@@ -146,7 +157,8 @@ contains
   !! must be allocated when derived dynamic loader is initialized.
   !!
   !<
-  subroutine dynamic_init(this, mf6_input, modelname, modelfname, source, iout)
+  subroutine dynamic_init(this, mf6_input, modelname, modelfname, source, &
+                          iperblock, iout)
     use SimVariablesModule, only: errmsg
     use SimModule, only: store_error, store_error_filename
     class(DynamicPkgLoadType), intent(inout) :: this
@@ -154,25 +166,15 @@ contains
     character(len=*), intent(in) :: modelname
     character(len=*), intent(in) :: modelfname
     character(len=*), intent(in) :: source
+    integer(I4B), intent(in) :: iperblock
     integer(I4B), intent(in) :: iout
-    integer(I4B) :: iblock
     !
     this%mf6_input = mf6_input
     this%modelname = modelname
     this%modelfname = modelfname
     this%sourcename = source
-    this%iperblock = 0
+    this%iperblock = iperblock
     this%iout = iout
-    !
-    ! -- identify period block definition
-    do iblock = 1, size(mf6_input%block_dfns)
-      !
-      if (mf6_input%block_dfns(iblock)%blockname == 'PERIOD') then
-        this%iperblock = iblock
-        this%readasarrays = .not. mf6_input%block_dfns(iblock)%aggregate
-        exit
-      end if
-    end do
     !
     ! -- throw error and exit if not found
     if (this%iperblock == 0) then
@@ -182,6 +184,9 @@ contains
         trim(mf6_input%subcomponent_name)
       call store_error(errmsg)
       call store_error_filename(this%sourcename)
+    else
+      !
+      this%readasarrays = (.not. mf6_input%block_dfns(iperblock)%aggregate)
     end if
     !
     ! -- return
