@@ -3,7 +3,6 @@
 #SBATCH --job-name=meson-MODFLOW-build
 #SBATCH --nodes=1
 #SBATCH --ntasks=2
-#SBATCH --account=impd
 #SBATCH --time=00:10:00
 #SBATCH --output=slurm-%j.out
 

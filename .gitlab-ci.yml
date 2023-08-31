@@ -1,0 +1,28 @@
+image: ubuntu:20.04
+before_script:
+  # install ssh agent
+  - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client git -y )'
+  # configure ssh agent
+  - eval $(ssh-agent -s)
+  # set private key permissions
+  - chmod 400 "$SSH_PRIVATE_KEY"
+  # add key to the agent store
+  - ssh-add "$SSH_PRIVATE_KEY"
+  # configure known hosts
+  - mkdir -p ~/.ssh
+  - cp "$SSH_KNOWN_HOSTS" ~/.ssh/known_hosts
+  - chmod 644 ~/.ssh/known_hosts
+deploy_denali:
+  stage: deploy
+  script: |
+    # fetch and checkout latest
+    ssh -l "$SSH_USERNAME" "$SSH_HOSTNAME" "cd $MF6_PROJ_ROOT && git fetch $GIT_REMOTE && git checkout $GIT_BRANCH && git pull"
+    echo "Updated repository $MF6_PROJ_ROOT"
+    # submit a job to build mf6
+    jobid=$(ssh -l "$SSH_USERNAME" "$SSH_HOSTNAME" "sbatch --account=$SLURM_ACCOUNT --reservation=$SLURM_RESERVATION --parsable -D $MF6_PROJ_ROOT/.hpc $MF6_PROJ_ROOT/$BUILD_SCRIPT" | tail -n 1)
+    echo "Submitted build job $jobid"
+    # submit a job to update the mf6 module
+    jobid=$(ssh -l "$SSH_USERNAME" "$SSH_HOSTNAME" "sbatch --export=ALL,INTEL_VERSION=$INTEL_VERSION,MF6_PROJ_ROOT=$MF6_PROJ_ROOT,MODULES_PATH=$MODULES_PATH --account=$SLURM_ACCOUNT --reservation=$SLURM_RESERVATION --parsable -D $MF6_PROJ_ROOT/.hpc -d afterok:$jobid $MF6_PROJ_ROOT/$MODULE_SCRIPT" | tail -n 1)
+    echo "Submitted module update job $jobid"
+  environment: denali
+
