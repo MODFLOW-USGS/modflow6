@@ -54,7 +54,6 @@ module StressGridInputModule
     procedure :: destroy => ingrid_destroy
     procedure :: reset => ingrid_reset
     procedure :: params_alloc => ingrid_params_alloc
-    procedure :: param_init => ingrid_param_init
     procedure :: param_load => ingrid_param_load
     procedure :: tas_arrays_alloc => ingrid_tas_arrays_alloc
     procedure :: tas_links_create => ingrid_tas_links_create
@@ -111,9 +110,6 @@ contains
     !
     ! -- allocate dfn params
     call this%params_alloc()
-    !
-    ! -- enable package input context
-    call this%bndctx%enable()
     !
     ! -- allocate memory for storing TAS strings
     call this%tas_arrays_alloc()
@@ -249,8 +245,10 @@ contains
       call this%tasmanager%reset(this%mf6_input%subcomponent_name)
       !
       ! -- reinitialize tas name arrays
-      call this%param_init('CHARSTR1D', 'AUXTASNAME', this%mf6_input%mempath)
-      call this%param_init('CHARSTR1D', 'PARAMTASNAME', this%mf6_input%mempath)
+      call this%bndctx%param_init('CHARSTR1D', 'AUXTASNAME', &
+                                  this%mf6_input%mempath, this%sourcename)
+      call this%bndctx%param_init('CHARSTR1D', 'PARAMTASNAME', &
+                                  this%mf6_input%mempath, this%sourcename)
     end if
     !
     ! -- reset input context memory for parameters
@@ -267,8 +265,8 @@ contains
         if (idt%mf6varname == sfac_param) then
           if (this%tas_active == 0) then
             ! -- reinit if TAS is not active
-            call this%param_init(idt%datatype, idt%mf6varname, &
-                                 this%mf6_input%mempath)
+            call this%bndctx%param_init(idt%datatype, idt%mf6varname, &
+                                        this%mf6_input%mempath, this%sourcename)
           end if
         end if
         !
@@ -292,11 +290,11 @@ contains
     class(StressGridInputType), intent(inout) :: this !< StressGridInputType
     type(InputParamDefinitionType), pointer :: idt
     character(len=LENVARNAME), dimension(:), allocatable :: read_state_varnames
-    integer(I4B), dimension(:), pointer, contiguous :: int1d
-    real(DP), dimension(:), pointer, contiguous :: dbl1d
-    real(DP), dimension(:, :), pointer, contiguous :: dbl2d
     integer(I4B), pointer :: intvar
     integer(I4B) :: iparam
+    !
+    ! -- allocate period dfn params
+    call this%bndctx%bound_params_allocate(this%sourcename)
     !
     ! -- allocate dfn input params
     do iparam = 1, size(this%mf6_input%param_dfns)
@@ -305,33 +303,6 @@ contains
       idt => this%mf6_input%param_dfns(iparam)
       !
       if (idt%blockname == 'PERIOD') then
-        !
-        ! allocate based on dfn datatype
-        select case (idt%datatype)
-        case ('INTEGER1D')
-          !
-          call mem_allocate(int1d, this%bndctx%ncpl, idt%mf6varname, &
-                            this%mf6_input%mempath)
-          !
-        case ('DOUBLE1D')
-          !
-          call mem_allocate(dbl1d, this%bndctx%ncpl, idt%mf6varname, &
-                            this%mf6_input%mempath)
-          !
-        case ('DOUBLE2D')
-          !
-          call mem_allocate(dbl2d, this%bndctx%naux, this%bndctx%ncpl, &
-                            idt%mf6varname, this%mf6_input%mempath)
-          !
-        case default
-          call store_error('Programming error. (IDM) unsupported allocation '&
-                           &'data type for param='//trim(idt%tagname))
-          call store_error_filename(this%sourcename)
-        end select
-        !
-        ! -- initialize allocated parameter
-        call this%param_init(idt%datatype, idt%mf6varname, &
-                             this%mf6_input%mempath)
         !
         ! -- store parameter info
         if (idt%tagname /= 'AUX') then
@@ -370,65 +341,6 @@ contains
     ! -- return
     return
   end subroutine ingrid_params_alloc
-
-  subroutine ingrid_param_init(this, datatype, varname, mempath)
-    ! -- modules
-    use MemoryManagerModule, only: mem_setptr
-    ! -- dummy
-    class(StressGridInputType), intent(inout) :: this !< StressGridInputType
-    character(len=*), intent(in) :: datatype
-    character(len=*), intent(in) :: varname
-    character(len=*), intent(in) :: mempath
-    ! -- locals
-    integer(I4B), dimension(:), pointer, contiguous :: int1d
-    real(DP), dimension(:), pointer, contiguous :: dbl1d
-    real(DP), dimension(:, :), pointer, contiguous :: dbl2d
-    type(CharacterStringType), dimension(:), pointer, &
-      contiguous :: charstr1d => null()
-    integer(I4B) :: n, m
-    !
-    select case (datatype)
-    case ('INTEGER1D')
-      !
-      call mem_setptr(int1d, varname, mempath)
-      do n = 1, this%bndctx%ncpl
-        int1d(n) = IZERO
-      end do
-      !
-    case ('DOUBLE1D')
-      !
-      call mem_setptr(dbl1d, varname, mempath)
-      do n = 1, this%bndctx%ncpl
-        dbl1d(n) = DZERO
-      end do
-      !
-    case ('DOUBLE2D')
-      !
-      call mem_setptr(dbl2d, varname, mempath)
-      do m = 1, this%bndctx%ncpl
-        do n = 1, this%bndctx%naux
-          dbl2d(n, m) = DZERO
-        end do
-      end do
-      !
-    case ('CHARSTR1D')
-      !
-      call mem_setptr(charstr1d, varname, mempath)
-      do n = 1, size(charstr1d)
-        charstr1d(n) = ''
-      end do
-      !
-    case default
-      !
-      call store_error('Programming error. (IDM) unsupported initialization '&
-                       &'data type for param='//trim(varname))
-      call store_error_filename(this%sourcename)
-      !
-    end select
-    !
-    ! -- return
-    return
-  end subroutine ingrid_param_init
 
   subroutine ingrid_param_load(this, parser, datatype, varname, &
                                tagname, mempath, iaux)
@@ -506,8 +418,12 @@ contains
       call mem_allocate(this%param_tasnames, LENTIMESERIESNAME, this%nparam, &
                         'PARAMTASNAME', this%mf6_input%mempath)
       !
-      call this%param_init('CHARSTR1D', 'AUXTASNAME', this%mf6_input%mempath)
-      call this%param_init('CHARSTR1D', 'PARAMTASNAME', this%mf6_input%mempath)
+      call this%bndctx%param_init('CHARSTR1D', 'AUXTASNAME', &
+                                  this%mf6_input%mempath, &
+                                  this%sourcename)
+      call this%bndctx%param_init('CHARSTR1D', 'PARAMTASNAME', &
+                                  this%mf6_input%mempath, &
+                                  this%sourcename)
       !
     else
       !

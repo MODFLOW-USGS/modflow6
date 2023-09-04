@@ -98,7 +98,7 @@ contains
     ! -- initialize package input context
     call this%bndctx%init(mf6_input, .false.)
     !
-    ! -- set SA cols relevant for list input
+    ! -- set SA cols in scope for list input
     call this%bndctx%filtered_cols(this%cols, this%ncol)
     !
     ! -- construct and set up the struct array object
@@ -266,7 +266,7 @@ contains
         !
         ! TODO
         ! -- set variable name
-        !tsLinkAux%Text = structvector%idt%mf6varname
+        tsLinkAux%Text = this%bndctx%auxname_cst(ts_strloc%col)
         !
         ! -- set boundname if provided
         if (this%bndctx%inamedbound > 0) then
@@ -330,7 +330,7 @@ contains
                                              0, this%mf6_input%mempath, &
                                              this%mf6_input%component_mempath)
     !
-    ! -- set up struct array and allocate read state variables
+    ! -- set up struct array
     do icol = 1, this%ncol
       !
       idt => get_param_definition_type(this%mf6_input%param_dfns, &

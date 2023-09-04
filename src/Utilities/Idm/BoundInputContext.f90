@@ -7,7 +7,9 @@
 module BoundInputContextModule
 
   use KindModule, only: DP, I4B, LGP
-  use ConstantsModule, only: LENAUXNAME, LENVARNAME, LENBOUNDNAME
+  use ConstantsModule, only: DZERO, IZERO, LENAUXNAME, LENVARNAME, LENBOUNDNAME
+  use SimVariablesModule, only: errmsg
+  use SimModule, only: store_error, store_error_filename
   use ModflowInputModule, only: ModflowInputType
   use CharacterStringModule, only: CharacterStringType
 
@@ -45,6 +47,8 @@ module BoundInputContextModule
     procedure :: init => bndctx_init
     procedure :: create_context
     procedure :: enable
+    procedure :: bound_params_allocate
+    procedure :: param_init
     procedure :: allocate_read_state_var
     procedure :: destroy => bndctx_destroy
     procedure :: set_filtered_cols
@@ -217,6 +221,139 @@ contains
     ! -- return
     return
   end function allocate_read_state_var
+
+  !> @brief allocate dfn period block parameters
+  !!
+  !! Currently supports numeric (i.e. array based) params
+  !!
+  !<
+  subroutine bound_params_allocate(this, sourcename)
+    ! -- modules
+    use MemoryManagerModule, only: mem_allocate
+    use InputDefinitionModule, only: InputParamDefinitionType
+    ! -- dummy
+    class(BoundInputContextType) :: this
+    character(len=*) :: sourcename
+    type(InputParamDefinitionType), pointer :: idt
+    integer(I4B), dimension(:), pointer, contiguous :: int1d
+    real(DP), dimension(:), pointer, contiguous :: dbl1d
+    real(DP), dimension(:, :), pointer, contiguous :: dbl2d
+    integer(I4B) :: iparam, n, m
+    !
+    ! -- allocate dfn input params
+    do iparam = 1, size(this%mf6_input%param_dfns)
+      !
+      ! -- assign param definition pointer
+      idt => this%mf6_input%param_dfns(iparam)
+      !
+      if (idt%blockname == 'PERIOD') then
+        !
+        ! allocate based on dfn datatype
+        select case (idt%datatype)
+        case ('INTEGER1D')
+          !
+          call mem_allocate(int1d, this%ncpl, idt%mf6varname, &
+                            this%mf6_input%mempath)
+          !
+          do n = 1, this%ncpl
+            int1d(n) = IZERO
+          end do
+          !
+        case ('DOUBLE1D')
+          !
+          call mem_allocate(dbl1d, this%ncpl, idt%mf6varname, &
+                            this%mf6_input%mempath)
+          !
+          do n = 1, this%ncpl
+            dbl1d(n) = DZERO
+          end do
+          !
+        case ('DOUBLE2D')
+          !
+          call mem_allocate(dbl2d, this%naux, this%ncpl, &
+                            idt%mf6varname, this%mf6_input%mempath)
+          !
+          do m = 1, this%ncpl
+            do n = 1, this%naux
+              dbl2d(n, m) = DZERO
+            end do
+          end do
+          !
+        case default
+          call store_error('Programming error. (IDM) Bound context unsupported &
+                           &data type allocation for param='//trim(idt%tagname))
+          call store_error_filename(sourcename)
+        end select
+        !
+      end if
+    end do
+    !
+    ! -- enable
+    call this%enable()
+    !
+    ! -- return
+    return
+  end subroutine bound_params_allocate
+
+  subroutine param_init(this, datatype, varname, mempath, sourcename)
+    ! -- modules
+    use MemoryManagerModule, only: mem_setptr
+    ! -- dummy
+    class(BoundInputContextType) :: this
+    character(len=*), intent(in) :: datatype
+    character(len=*), intent(in) :: varname
+    character(len=*), intent(in) :: mempath
+    character(len=*), intent(in) :: sourcename
+    ! -- locals
+    integer(I4B), dimension(:), pointer, contiguous :: int1d
+    real(DP), dimension(:), pointer, contiguous :: dbl1d
+    real(DP), dimension(:, :), pointer, contiguous :: dbl2d
+    type(CharacterStringType), dimension(:), pointer, &
+      contiguous :: charstr1d => null()
+    integer(I4B) :: n, m
+    !
+    select case (datatype)
+    case ('INTEGER1D')
+      !
+      call mem_setptr(int1d, varname, mempath)
+      do n = 1, this%ncpl
+        int1d(n) = IZERO
+      end do
+      !
+    case ('DOUBLE1D')
+      !
+      call mem_setptr(dbl1d, varname, mempath)
+      do n = 1, this%ncpl
+        dbl1d(n) = DZERO
+      end do
+      !
+    case ('DOUBLE2D')
+      !
+      call mem_setptr(dbl2d, varname, mempath)
+      do m = 1, this%ncpl
+        do n = 1, this%naux
+          dbl2d(n, m) = DZERO
+        end do
+      end do
+      !
+    case ('CHARSTR1D')
+      !
+      call mem_setptr(charstr1d, varname, mempath)
+      do n = 1, size(charstr1d)
+        charstr1d(n) = ''
+      end do
+      !
+    case default
+      !
+      call store_error('Programming error. (IDM) Bound context unsupported &
+                       &data type initialization for param='//trim(varname))
+      call store_error_filename(sourcename)
+      !
+    end select
+    !
+    ! -- return
+    return
+  end subroutine param_init
 
   !> @brief destroy boundary input context
   !!

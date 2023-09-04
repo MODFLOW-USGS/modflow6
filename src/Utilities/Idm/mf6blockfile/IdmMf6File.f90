@@ -123,7 +123,7 @@ contains
     ! -- invoke the selected load routine
     call pkgloader%load_package(parser, mf6_input, iout)
     !
-    ! -- generate a dynamic loader parser if requested and relevant
+    ! -- generate a dynamic loader parser if requested
     if (present(mf6_parser)) then
       !
       ! -- create dynamic parser
@@ -283,7 +283,6 @@ contains
   subroutine dynamic_rp(this)
     ! -- modules
     use TdisModule, only: kper, nper
-    !use TdisModule, only: readnewdata
     use MemoryManagerModule, only: mem_setptr
     ! -- dummy
     class(Mf6FileDynamicPkgLoadType), intent(inout) :: this
@@ -291,7 +290,6 @@ contains
     !
     ! -- check if ready to load
     if (this%ionper /= kper) return
-    !if (.not. readnewdata) return
     !
     ! -- dynamic load
     call this%block_loader%rp(this%parser)
