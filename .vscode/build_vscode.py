@@ -24,7 +24,7 @@ if args.action == "rebuild" and os.path.isdir(builddir):
 if args.buildtype == "release":
     setup_flag = ["-Doptimization=2"]
 elif args.buildtype == "debug":
-    setup_flag = ["-Doptimization=0"]
+    setup_flag = ["-Ddebug=true", "-Doptimization=0"]
 
 if not os.path.isdir(builddir):
     command = [
