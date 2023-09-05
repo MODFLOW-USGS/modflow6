@@ -123,7 +123,7 @@ jobs:
         shell: bash -l {0}
     steps:
       - name: Checkout modflow6
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ${{ github.repository_owner }}/modflow6
           ref: ${{ github.ref }}
@@ -185,7 +185,7 @@ jobs:
         shell: bash -l {0}
     steps:
       - name: Checkout modflow6
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ${{ github.repository_owner }}/modflow6
           path: modflow6
@@ -229,7 +229,7 @@ jobs:
     steps:
 
       - name: Checkout modflow6
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ${{ github.repository_owner }}/modflow6
           path: modflow6

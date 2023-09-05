@@ -44,12 +44,12 @@ jobs:
     steps:
 
       - name: Checkout modflow6
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: modflow6
 
       - name: Checkout modflow6-${{ matrix.repo }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: MODFLOW-USGS/modflow6-${{ matrix.repo }}
           path: modflow6-${{ matrix.repo }}
