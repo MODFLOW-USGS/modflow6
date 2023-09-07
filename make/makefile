@@ -33,7 +33,8 @@ SOURCEDIR26=../src/Model/Connection
 SOURCEDIR27=../src/Model/GroundWaterTransport
 SOURCEDIR28=../src/Model/ModelUtilities
 SOURCEDIR29=../src/Model/GroundWaterFlow
-SOURCEDIR30=../src/Model/Geometry
+SOURCEDIR30=../src/Model/TransportModel
+SOURCEDIR31=../src/Model/Geometry
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -65,7 +66,8 @@ ${SOURCEDIR26} \
 ${SOURCEDIR27} \
 ${SOURCEDIR28} \
 ${SOURCEDIR29} \
-${SOURCEDIR30} 
+${SOURCEDIR30} \
+${SOURCEDIR31}
 
 .SUFFIXES: .f90 .F90 .o
 
@@ -207,6 +209,7 @@ $(OBJDIR)/gwf3disu8.o \
 $(OBJDIR)/GridSorting.o \
 $(OBJDIR)/DisConnExchange.o \
 $(OBJDIR)/CsrUtils.o \
+$(OBJDIR)/tsp1.o \
 $(OBJDIR)/TransportModel.o \
 $(OBJDIR)/ModelPackageInputs.o \
 $(OBJDIR)/gwt1uzt1.o \
