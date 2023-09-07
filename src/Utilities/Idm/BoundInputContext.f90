@@ -240,6 +240,13 @@ contains
     real(DP), dimension(:, :), pointer, contiguous :: dbl2d
     integer(I4B) :: iparam, n, m
     !
+    ! -- list input allocates via structarray
+    if (.not. this%readasarrays) then
+      call store_error('Programming error. (IDM) Bound context unsupported &
+                       &list based param allocation.')
+      call store_error_filename(sourcename)
+    end if
+    !
     ! -- allocate dfn input params
     do iparam = 1, size(this%mf6_input%param_dfns)
       !

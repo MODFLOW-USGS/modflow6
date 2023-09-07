@@ -370,8 +370,8 @@ contains
       sv%intshape => nseg_1
       !
     else
-      errmsg = 'Programming error. IDM SA 2d real input param unsupported '&
-               &'shape "'//trim(sv%idt%shape)//'".'
+      errmsg = 'Programming error. IDM SA 2d real input param unsupported &
+               &shape "'//trim(sv%idt%shape)//'".'
       call store_error(errmsg, terminate=.TRUE.)
     end if
     !
@@ -844,8 +844,8 @@ contains
     ! -- set error and exit if deferred shape
     if (this%deferred_shape) then
       !
-      errmsg = 'Programming error. IDM SA deferred shape currently not '&
-               &' supported for binary inputs.'
+      errmsg = 'Programming error. IDM SA deferred shape currently not &
+               &supported for binary inputs.'
       call store_error(errmsg, terminate=.TRUE.)
       !
     end if
@@ -870,8 +870,8 @@ contains
           read (inunit, iostat=ierr) this%struct_vectors(j)%dbl1d(irow)
         case (3) ! -- memtype charstring
           !
-          errmsg = 'Programming error. IDM SA input string types currently not '&
-                   &' supported for binary inputs.'
+          errmsg = 'Programming error. IDM SA input string types currently not &
+                   &supported for binary inputs.'
           call store_error(errmsg, terminate=.TRUE.)
           !
         case (4) ! -- memtype intvector

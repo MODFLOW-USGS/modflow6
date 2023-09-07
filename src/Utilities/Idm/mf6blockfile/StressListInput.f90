@@ -357,7 +357,6 @@ contains
     use OpenSpecModule, only: form, access
     use ConstantsModule, only: LINELENGTH
     use BlockParserModule, only: BlockParserType
-    use SimModule, only: store_error_unit
     ! -- dummy
     class(StressListInputType), intent(inout) :: this
     type(BlockParserType), intent(inout) :: parser

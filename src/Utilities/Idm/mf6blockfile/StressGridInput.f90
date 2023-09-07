@@ -388,8 +388,8 @@ contains
       !
     case default
       !
-      call store_error('Programming error. (IDM) unsupported memload '&
-                       &'data type for param='//trim(tagname))
+      call store_error('Programming error. (IDM) unsupported memload &
+                       &data type for param='//trim(tagname))
       call store_error_filename(this%sourcename)
       !
     end select
