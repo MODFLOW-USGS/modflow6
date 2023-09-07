@@ -166,6 +166,7 @@ module NumericalSolutionModule
     procedure :: sln_nur_has_converged
     procedure :: sln_calc_ptc
     procedure :: sln_underrelax
+    procedure :: sln_backtracking_xupdate
 
     ! private
     procedure, private :: sln_connect
@@ -173,7 +174,6 @@ module NumericalSolutionModule
     procedure, private :: sln_ls
     procedure, private :: sln_setouter
     procedure, private :: sln_backtracking
-    procedure, private :: sln_backtracking_xupdate
     procedure, private :: sln_maxval
     procedure, private :: sln_calcdx
     procedure, private :: sln_calc_residual

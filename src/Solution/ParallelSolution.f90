@@ -18,6 +18,7 @@ module ParallelSolutionModule
     procedure :: sln_nur_has_converged => par_nur_has_converged
     procedure :: sln_calc_ptc => par_calc_ptc
     procedure :: sln_underrelax => par_underrelax
+    procedure :: sln_backtracking_xupdate => par_backtracking_xupdate
 
   end type ParallelSolutionType
 
@@ -172,5 +173,26 @@ contains
                                                    neq, active, x, xtemp)
 
   end subroutine par_underrelax
+
+  !> @brief synchronize backtracking flag over processes
+  !<
+  subroutine par_backtracking_xupdate(this, btflag)
+    ! -- dummy variables
+    class(ParallelSolutionType), intent(inout) :: this !< ParallelSolutionType instance
+    integer(I4B), intent(inout) :: btflag !< global backtracking flag (1) backtracking performed (0) backtracking not performed
+    ! -- local variables
+    integer(I4B) :: btflag_local
+    type(MpiWorldType), pointer :: mpi_world
+    integer :: ierr
+
+    mpi_world => get_mpi_world()
+
+    btflag_local = 0
+    call this%NumericalSolutionType%sln_backtracking_xupdate(btflag_local)
+
+    call MPI_Allreduce(btflag_local, btflag, 1, MPI_INTEGER, &
+                       MPI_MAX, mpi_world%comm, ierr)
+
+  end subroutine par_backtracking_xupdate
 
 end module ParallelSolutionModule
