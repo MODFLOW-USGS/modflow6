@@ -311,6 +311,18 @@ def eval_results(sim):
             + ex[2]
             + ", but it is not."
         )
+    
+    # Ensure that binary output file is readable (has the correct header)
+    vsc_filerecord = "{}.vsc.bin".format(gwfname)
+    fname = os.path.join(sim.simpath, vsc_filerecord)
+    if os.path.isfile(fname):
+        vscobj = flopy.utils.HeadFile(fname, precision='double', text="VISCOSITY")
+        try:
+            data = vscobj.get_alldata()
+            print(data.shape)
+            data.shape == (500, 1, 10, 80)
+        except:
+            print("Binary viscosity output file was not read successfully")
 
 
 # - No need to change any code below
