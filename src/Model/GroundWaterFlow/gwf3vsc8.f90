@@ -969,7 +969,7 @@ contains
       if (this%ioutvisc /= 0) then
         ibinun = this%ioutvisc
         call this%dis%record_array(this%visc, this%iout, iprint, ibinun, &
-                                   '         VISCOSITY', cdatafmp, nvaluesp, &
+                                   '       VISCOSITY', cdatafmp, nvaluesp, &
                                    nwidthp, editdesc, dinact)
       end if
     end if
