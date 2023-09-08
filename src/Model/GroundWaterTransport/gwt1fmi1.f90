@@ -5,7 +5,7 @@ module GwtFmiModule
                              LENPACKAGENAME
   use SimModule, only: store_error, store_error_unit
   use SimVariablesModule, only: errmsg
-  use NumericalPackageModule, only: NumericalPackageType
+  use FlowModelInterfaceModule, only: FlowModelInterfaceType
   use BaseDisModule, only: DisBaseType
   use ListModule, only: ListType
   use BudgetFileReaderModule, only: BudgetFileReaderType
@@ -18,6 +18,8 @@ module GwtFmiModule
   private
   public :: GwtFmiType
   public :: fmi_cr
+
+  character(len=LENPACKAGENAME) :: text = '    GWTFMI'
 
   integer(I4B), parameter :: NBDITEMS = 2
   character(len=LENBUDTXT), dimension(NBDITEMS) :: budtxt
@@ -32,96 +34,55 @@ module GwtFmiModule
     type(BudgetObjectType), pointer :: ptr
   end type BudObjPtrArray
 
-  type, extends(NumericalPackageType) :: GwtFmiType
+  type, extends(FlowModelInterfaceType) :: GwtFmiType
 
-    logical, pointer :: flows_from_file => null() !< if .false., then flows come from GWF through GWF-GWT exg
     integer(I4B), dimension(:), pointer, contiguous :: iatp => null() !< advanced transport package applied to gwfpackages
-    type(ListType), pointer :: gwfbndlist => null() !< list of gwf stress packages
-    integer(I4B), pointer :: iflowsupdated => null() !< flows were updated for this time step
     integer(I4B), pointer :: iflowerr => null() !< add the flow error correction
     real(DP), dimension(:), pointer, contiguous :: flowcorrect => null() !< mass flow correction
-    integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to GWT ibound
-    real(DP), dimension(:), pointer, contiguous :: gwfflowja => null() !< pointer to the GWF flowja array
-    real(DP), dimension(:, :), pointer, contiguous :: gwfspdis => null() !< pointer to npf specific discharge array
-    real(DP), dimension(:), pointer, contiguous :: gwfhead => null() !< pointer to the GWF head array
-    real(DP), dimension(:), pointer, contiguous :: gwfsat => null() !< pointer to the GWF saturation array
-    integer(I4B), dimension(:), pointer, contiguous :: ibdgwfsat0 => null() !< mark cells with saturation = 0 to exclude from dispersion
-    real(DP), dimension(:), pointer, contiguous :: gwfstrgss => null() !< pointer to flow model QSTOSS
-    real(DP), dimension(:), pointer, contiguous :: gwfstrgsy => null() !< pointer to flow model QSTOSY
-    integer(I4B), pointer :: igwfstrgss => null() !< indicates if gwfstrgss is available
-    integer(I4B), pointer :: igwfstrgsy => null() !< indicates if gwfstrgsy is available
-    integer(I4B), pointer :: iubud => null() !< unit number GWF budget file
-    integer(I4B), pointer :: iuhds => null() !< unit number GWF head file
-    integer(I4B), pointer :: iumvr => null() !< unit number GWF mover budget file
-    integer(I4B), pointer :: nflowpack => null() !< number of GWF flow packages
-    integer(I4B), dimension(:), pointer, contiguous :: igwfmvrterm => null() !< flag to indicate that gwf package is a mover term
-    type(BudgetFileReaderType) :: bfr !< budget file reader
-    type(HeadFileReaderType) :: hfr !< head file reader
-    type(PackageBudgetType), dimension(:), allocatable :: gwfpackages !< used to get flows between a package and gwf
-    type(BudgetObjectType), pointer :: mvrbudobj => null() !< pointer to the mover budget budget object
     type(DataAdvancedPackageType), &
       dimension(:), pointer, contiguous :: datp => null()
-    character(len=16), dimension(:), allocatable :: flowpacknamearray !< array of boundary package names (e.g. LAK-1, SFR-3, etc.)
     type(BudObjPtrArray), dimension(:), allocatable :: aptbudobj !< flow budget objects for the advanced packages
   contains
 
-    procedure :: fmi_df
-    procedure :: fmi_ar
+    procedure :: allocate_arrays => gwtfmi_allocate_arrays
+    procedure :: allocate_gwfpackages => gwtfmi_allocate_gwfpackages
+    procedure :: allocate_scalars => gwtfmi_allocate_scalars
+    procedure :: deallocate_gwfpackages => gwtfmi_deallocate_gwfpackages
     procedure :: fmi_rp
     procedure :: fmi_ad
     procedure :: fmi_fc
     procedure :: fmi_cq
     procedure :: fmi_bd
     procedure :: fmi_ot_flow
-    procedure :: fmi_da
-    procedure :: allocate_scalars
-    procedure :: allocate_arrays
+    procedure :: fmi_da => gwtfmi_da
     procedure :: gwfsatold
-    procedure :: read_options
-    procedure :: read_packagedata
-    procedure :: initialize_bfr
-    procedure :: advance_bfr
-    procedure :: finalize_bfr
-    procedure :: initialize_hfr
-    procedure :: advance_hfr
-    procedure :: finalize_hfr
     procedure :: initialize_gwfterms_from_bfr
     procedure :: initialize_gwfterms_from_gwfbndlist
-    procedure :: allocate_gwfpackages
-    procedure :: deallocate_gwfpackages
-    procedure :: get_package_index
+    procedure :: read_options => gwtfmi_read_options
+    procedure :: read_packagedata => gwtfmi_read_packagedata
     procedure :: set_aptbudobj_pointer
 
   end type GwtFmiType
 
 contains
 
+  !> @brief Create a new FMI object
   subroutine fmi_cr(fmiobj, name_model, inunit, iout)
-! ******************************************************************************
-! fmi_cr -- Create a new FMI object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     type(GwtFmiType), pointer :: fmiobj
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
-! ------------------------------------------------------------------------------
     !
     ! -- Create the object
     allocate (fmiobj)
     !
     ! -- create name and memory path
     call fmiobj%set_names(1, name_model, 'FMI', 'FMI')
+    fmiobj%text = text
     !
     ! -- Allocate scalars
     call fmiobj%allocate_scalars()
-    !
-    ! -- if inunit == 0, then there is no file to read, but it still needs
-    !    to be active in order to manage pointers to gwf model
-    !if (inunit == 0) inunit = 1
     !
     ! -- Set variables
     fmiobj%inunit = inunit
@@ -134,108 +95,8 @@ contains
     return
   end subroutine fmi_cr
 
-  subroutine fmi_df(this, dis, inssm)
-! ******************************************************************************
-! fmi_df -- Define
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use SimModule, only: store_error
-    ! -- dummy
-    class(GwtFmiType) :: this
-    class(DisBaseType), pointer, intent(in) :: dis
-    integer(I4B), intent(in) :: inssm
-    ! -- local
-    ! -- formats
-    character(len=*), parameter :: fmtfmi = &
-      "(1x,/1x,'FMI -- FLOW MODEL INTERFACE, VERSION 1, 8/29/2017', &
-      &' INPUT READ FROM UNIT ', i0, //)"
-    character(len=*), parameter :: fmtfmi0 = &
-      &"(1x,/1x,'FMI -- FLOW MODEL INTERFACE, VERSION 1, 8/29/2017')"
-! ------------------------------------------------------------------------------
-    !
-    ! --print a message identifying the FMI package.
-    if (this%iout > 0) then
-      if (this%inunit /= 0) then
-        write (this%iout, fmtfmi) this%inunit
-      else
-        write (this%iout, fmtfmi0)
-        if (this%flows_from_file) then
-          write (this%iout, '(a)') '  FLOWS ARE ASSUMED TO BE ZERO.'
-        else
-          write (this%iout, '(a)') '  FLOWS PROVIDED BY A GWF MODEL IN THIS &
-            &SIMULATION'
-        end if
-      end if
-    end if
-    !
-    ! -- store pointers to arguments that were passed in
-    this%dis => dis
-    !
-    ! -- Read fmi options
-    if (this%inunit /= 0) then
-      call this%read_options()
-    end if
-    !
-    ! -- Read packagedata options
-    if (this%inunit /= 0 .and. this%flows_from_file) then
-      call this%read_packagedata()
-      call this%initialize_gwfterms_from_bfr()
-    end if
-    !
-    ! -- If GWF-GWT exchange is active, then setup gwfterms from bndlist
-    if (.not. this%flows_from_file) then
-      call this%initialize_gwfterms_from_gwfbndlist()
-    end if
-    !
-    ! -- Make sure that ssm is on if there are any boundary packages
-    if (inssm == 0) then
-      if (this%nflowpack > 0) then
-        call store_error('Flow model has boundary packages, but there &
-          &is no SSM package.  The SSM package must be activated.', &
-          terminate=.TRUE.)
-      end if
-    end if
-    !
-    ! -- Return
-    return
-  end subroutine fmi_df
-
-  subroutine fmi_ar(this, ibound)
-! ******************************************************************************
-! fmi_ar -- Allocate and Read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use SimModule, only: store_error
-    ! -- dummy
-    class(GwtFmiType) :: this
-    integer(I4B), dimension(:), pointer, contiguous :: ibound
-    ! -- local
-    ! -- formats
-! ------------------------------------------------------------------------------
-    !
-    ! -- store pointers to arguments that were passed in
-    this%ibound => ibound
-    !
-    ! -- Allocate arrays
-    call this%allocate_arrays(this%dis%nodes)
-    !
-    ! -- Return
-    return
-  end subroutine fmi_ar
-
+  !> @brief Read and prepare
   subroutine fmi_rp(this, inmvr)
-! ******************************************************************************
-! fmi_rp -- Read and prepare
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: kper, kstp
     ! -- dummy
@@ -243,7 +104,6 @@ contains
     integer(I4B), intent(in) :: inmvr
     ! -- local
     ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! --Check to make sure MVT Package is active if mvr flows are available.
     !   This cannot be checked until RP because exchange doesn't set a pointer
@@ -266,13 +126,8 @@ contains
     return
   end subroutine fmi_rp
 
+  !> @brief Advance
   subroutine fmi_ad(this, cnew)
-! ******************************************************************************
-! fmi_ad -- advance
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DHDRY
     ! -- dummy
@@ -290,7 +145,6 @@ contains
     character(len=*), parameter :: fmtrewet = &
      &"(/1X,'DRY CELL REACTIVATED AT ', a,&
      &' WITH STARTING CONCENTRATION =',G13.5)"
-! ------------------------------------------------------------------------------
     !
     ! -- Set flag to indicated that flows are being updated.  For the case where
     !    flows may be reused (only when flows are read from a file) then set
@@ -526,7 +380,7 @@ contains
     return
   end subroutine fmi_ot_flow
 
-  subroutine fmi_da(this)
+  subroutine gwtfmi_da(this)
 ! ******************************************************************************
 ! fmi_da -- Deallocate variables
 ! ******************************************************************************
@@ -582,21 +436,15 @@ contains
     !
     ! -- Return
     return
-  end subroutine fmi_da
+  end subroutine gwtfmi_da
 
-  subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Allocate scalars
+  subroutine gwtfmi_allocate_scalars(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
     class(GwtFmiType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- allocate scalars in NumericalPackageType
     call this%NumericalPackageType%allocate_scalars()
@@ -629,15 +477,10 @@ contains
     !
     ! -- Return
     return
-  end subroutine allocate_scalars
+  end subroutine gwtfmi_allocate_scalars
 
-  subroutine allocate_arrays(this, nodes)
-! ******************************************************************************
-! allocate_arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Allocate arrays
+  subroutine gwtfmi_allocate_arrays(this, nodes)
     use MemoryManagerModule, only: mem_allocate
     !modules
     use ConstantsModule, only: DZERO
@@ -646,7 +489,6 @@ contains
     integer(I4B), intent(in) :: nodes
     ! -- local
     integer(I4B) :: n
-! ------------------------------------------------------------------------------
     !
     ! -- Allocate variables needed for all cases
     if (this%iflowerr == 0) then
@@ -707,7 +549,7 @@ contains
     !
     ! -- Return
     return
-  end subroutine allocate_arrays
+  end subroutine gwtfmi_allocate_arrays
 
   function gwfsatold(this, n, delt) result(satold)
 ! ******************************************************************************
@@ -742,14 +584,8 @@ contains
     return
   end function gwfsatold
 
-  subroutine read_options(this)
-! ******************************************************************************
-! read_options -- Read Options
-! Subroutine: (1) read options from input file
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Read options from input file
+  subroutine gwtfmi_read_options(this)
     ! -- modules
     use ConstantsModule, only: LINELENGTH, DEM6
     use InputOutputModule, only: getunit, openfile, urdaux
@@ -765,7 +601,6 @@ contains
       &WHENEVER ICBCFL IS NOT ZERO AND FLOW IMBALANCE CORRECTION ACTIVE.')"
     character(len=*), parameter :: fmtifc = &
       &"(4x,'MASS WILL BE ADDED OR REMOVED TO COMPENSATE FOR FLOW IMBALANCE.')"
-! ------------------------------------------------------------------------------
     !
     ! -- get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, blockRequired=.false., &
@@ -797,16 +632,10 @@ contains
     !
     ! -- return
     return
-  end subroutine read_options
+  end subroutine gwtfmi_read_options
 
-  subroutine read_packagedata(this)
-! ******************************************************************************
-! read_packagedata -- Read PACKAGEDATA block
-! Subroutine: (1) read packagedata block from input file
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Read packagedata block from input file
+  subroutine gwtfmi_read_packagedata(this)
     ! -- modules
     use OpenSpecModule, only: ACCESS, FORM
     use ConstantsModule, only: LINELENGTH, DEM6, LENPACKAGENAME
@@ -826,7 +655,6 @@ contains
     logical :: blockrequired
     logical :: exist
     type(BudObjPtrArray), dimension(:), allocatable :: tmpbudobj
-! ------------------------------------------------------------------------------
     !
     ! -- initialize
     iapt = 0
@@ -934,18 +762,17 @@ contains
     !
     ! -- return
     return
-  end subroutine read_packagedata
+  end subroutine gwtfmi_read_packagedata
 
+  !> @brief Set the pointer to a budget object
+  !!
+  !! An advanced transport can pass in a name and a
+  !! pointer budget object, and this routine will look through the budget
+  !! objects managed by FMI and point to the one with the same name, such as
+  !! LAK-1, SFR-1, etc.
+  !!
+  !<
   subroutine set_aptbudobj_pointer(this, name, budobjptr)
-! ******************************************************************************
-! set_aptbudobj_pointer -- an advanced transport can pass in a name and a
-!   pointer budget object, and this routine will look through the budget
-!   objects managed by FMI and point to the one with the same name, such as
-!   LAK-1, SFR-1, etc.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     class(GwtFmiType) :: this
     ! -- dumm
@@ -953,7 +780,6 @@ contains
     type(BudgetObjectType), pointer :: budobjptr
     ! -- local
     integer(I4B) :: i
-! ------------------------------------------------------------------------------
     !
     ! -- find and set the pointer
     do i = 1, size(this%aptbudobj)
@@ -967,333 +793,8 @@ contains
     return
   end subroutine set_aptbudobj_pointer
 
-  subroutine initialize_bfr(this)
-! ******************************************************************************
-! initialize_bfr -- initalize the budget file reader
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    class(GwtFmiType) :: this
-    ! -- dummy
-    integer(I4B) :: ncrbud
-! ------------------------------------------------------------------------------
-    !
-    ! -- Initialize the budget file reader
-    call this%bfr%initialize(this%iubud, this%iout, ncrbud)
-    !
-    ! -- todo: need to run through the budget terms
-    !    and do some checking
-  end subroutine initialize_bfr
-
-  subroutine advance_bfr(this)
-! ******************************************************************************
-! advance_bfr -- advance the budget file reader by reading the next chunk
-!   of information for the current time step and stress period
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use TdisModule, only: kstp, kper
-    ! -- dummy
-    class(GwtFmiType) :: this
-    ! -- local
-    logical :: success
-    integer(I4B) :: n
-    integer(I4B) :: ipos
-    integer(I4B) :: nu, nr
-    integer(I4B) :: ip, i
-    logical :: readnext
-    ! -- format
-    character(len=*), parameter :: fmtkstpkper = &
-      &"(1x,/1x,'FMI READING BUDGET TERMS FOR KSTP ', i0, ' KPER ', i0)"
-    character(len=*), parameter :: fmtbudkstpkper = &
-      "(1x,/1x, 'FMI SETTING BUDGET TERMS FOR KSTP ', i0, ' AND KPER ', &
-      &i0, ' TO BUDGET FILE TERMS FROM KSTP ', i0, ' AND KPER ', i0)"
-! ------------------------------------------------------------------------------
-    !
-    ! -- If the latest record read from the budget file is from a stress
-    ! -- period with only one time step, reuse that record (do not read a
-    ! -- new record) if the GWT model is still in that same stress period,
-    ! -- or if that record is the last one in the budget file.
-    readnext = .true.
-    if (kstp * kper > 1) then
-      if (this%bfr%kstp == 1) then
-        if (this%bfr%kpernext == kper + 1) then
-          readnext = .false.
-        else if (this%bfr%endoffile) then
-          readnext = .false.
-        end if
-      else if (this%bfr%endoffile) then
-        write (errmsg, '(a)') 'Reached end of GWF budget &
-          &file before reading sufficient budget information for this &
-          &GWT simulation.'
-        call store_error(errmsg)
-        call store_error_unit(this%iubud)
-      end if
-    end if
-    !
-    ! -- Read the next record
-    if (readnext) then
-      !
-      ! -- Write the current time step and stress period
-      write (this%iout, fmtkstpkper) kstp, kper
-      !
-      ! -- loop through the budget terms for this stress period
-      !    i is the counter for gwf flow packages
-      ip = 1
-      do n = 1, this%bfr%nbudterms
-        call this%bfr%read_record(success, this%iout)
-        if (.not. success) then
-          write (errmsg, '(a)') 'GWF budget read not successful'
-          call store_error(errmsg)
-          call store_error_unit(this%iubud)
-        end if
-        !
-        ! -- Ensure kper is same between model and budget file
-        if (kper /= this%bfr%kper) then
-          write (errmsg, '(a)') 'Period number in budget file &
-            &does not match period number in transport model.  If there &
-            &is more than one time step in the budget file for a given stress &
-            &period, budget file time steps must match GWT model time steps &
-            &one-for-one in that stress period.'
-          call store_error(errmsg)
-          call store_error_unit(this%iubud)
-        end if
-        !
-        ! -- if budget file kstp > 1, then kstp must match
-        if (this%bfr%kstp > 1 .and. (kstp /= this%bfr%kstp)) then
-          write (errmsg, '(a)') 'Time step number in budget file &
-            &does not match time step number in transport model.  If there &
-            &is more than one time step in the budget file for a given stress &
-            &period, budget file time steps must match gwt model time steps &
-            &one-for-one in that stress period.'
-          call store_error(errmsg)
-          call store_error_unit(this%iubud)
-        end if
-        !
-        ! -- parse based on the type of data, and compress all user node
-        !    numbers into reduced node numbers
-        select case (trim(adjustl(this%bfr%budtxt)))
-        case ('FLOW-JA-FACE')
-          !
-          ! -- bfr%flowja contains only reduced connections so there is
-          !    a one-to-one match with this%gwfflowja
-          do ipos = 1, size(this%bfr%flowja)
-            this%gwfflowja(ipos) = this%bfr%flowja(ipos)
-          end do
-        case ('DATA-SPDIS')
-          do i = 1, this%bfr%nlist
-            nu = this%bfr%nodesrc(i)
-            nr = this%dis%get_nodenumber(nu, 0)
-            if (nr <= 0) cycle
-            this%gwfspdis(1, nr) = this%bfr%auxvar(1, i)
-            this%gwfspdis(2, nr) = this%bfr%auxvar(2, i)
-            this%gwfspdis(3, nr) = this%bfr%auxvar(3, i)
-          end do
-        case ('DATA-SAT')
-          do i = 1, this%bfr%nlist
-            nu = this%bfr%nodesrc(i)
-            nr = this%dis%get_nodenumber(nu, 0)
-            if (nr <= 0) cycle
-            this%gwfsat(nr) = this%bfr%auxvar(1, i)
-          end do
-        case ('STO-SS')
-          do nu = 1, this%dis%nodesuser
-            nr = this%dis%get_nodenumber(nu, 0)
-            if (nr <= 0) cycle
-            this%gwfstrgss(nr) = this%bfr%flow(nu)
-          end do
-        case ('STO-SY')
-          do nu = 1, this%dis%nodesuser
-            nr = this%dis%get_nodenumber(nu, 0)
-            if (nr <= 0) cycle
-            this%gwfstrgsy(nr) = this%bfr%flow(nu)
-          end do
-        case default
-          call this%gwfpackages(ip)%copy_values( &
-            this%bfr%nlist, &
-            this%bfr%nodesrc, &
-            this%bfr%flow, &
-            this%bfr%auxvar)
-          do i = 1, this%gwfpackages(ip)%nbound
-            nu = this%gwfpackages(ip)%nodelist(i)
-            nr = this%dis%get_nodenumber(nu, 0)
-            this%gwfpackages(ip)%nodelist(i) = nr
-          end do
-          ip = ip + 1
-        end select
-      end do
-    else
-      !
-      ! -- write message to indicate that flows are being reused
-      write (this%iout, fmtbudkstpkper) kstp, kper, this%bfr%kstp, this%bfr%kper
-      !
-      ! -- set the flag to indicate that flows were not updated
-      this%iflowsupdated = 0
-    end if
-  end subroutine advance_bfr
-
-  subroutine finalize_bfr(this)
-! ******************************************************************************
-! finalize_bfr -- finalize the budget file reader
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    class(GwtFmiType) :: this
-    ! -- dummy
-! ------------------------------------------------------------------------------
-    !
-    ! -- Finalize the budget file reader
-    call this%bfr%finalize()
-    !
-  end subroutine finalize_bfr
-
-  subroutine initialize_hfr(this)
-! ******************************************************************************
-! initialize_hfr -- initalize the head file reader
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    class(GwtFmiType) :: this
-    ! -- dummy
-! ------------------------------------------------------------------------------
-    !
-    ! -- Initialize the budget file reader
-    call this%hfr%initialize(this%iuhds, this%iout)
-    !
-    ! -- todo: need to run through the head terms
-    !    and do some checking
-  end subroutine initialize_hfr
-
-  subroutine advance_hfr(this)
-! ******************************************************************************
-! advance_hfr -- advance the head file reader
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use TdisModule, only: kstp, kper
-    class(GwtFmiType) :: this
-    integer(I4B) :: nu, nr, i, ilay
-    integer(I4B) :: ncpl
-    real(DP) :: val
-    logical :: readnext
-    logical :: success
-    character(len=*), parameter :: fmtkstpkper = &
-      &"(1x,/1x,'FMI READING HEAD FOR KSTP ', i0, ' KPER ', i0)"
-    character(len=*), parameter :: fmthdskstpkper = &
-      "(1x,/1x, 'FMI SETTING HEAD FOR KSTP ', i0, ' AND KPER ', &
-      &i0, ' TO BINARY FILE HEADS FROM KSTP ', i0, ' AND KPER ', i0)"
-! ------------------------------------------------------------------------------
-    !
-    ! -- If the latest record read from the head file is from a stress
-    ! -- period with only one time step, reuse that record (do not read a
-    ! -- new record) if the GWT model is still in that same stress period,
-    ! -- or if that record is the last one in the head file.
-    readnext = .true.
-    if (kstp * kper > 1) then
-      if (this%hfr%kstp == 1) then
-        if (this%hfr%kpernext == kper + 1) then
-          readnext = .false.
-        else if (this%hfr%endoffile) then
-          readnext = .false.
-        end if
-      else if (this%hfr%endoffile) then
-        write (errmsg, '(a)') 'Reached end of GWF head &
-          &file before reading sufficient head information for this &
-          &GWT simulation.'
-        call store_error(errmsg)
-        call store_error_unit(this%iuhds)
-      end if
-    end if
-    !
-    ! -- Read the next record
-    if (readnext) then
-      !
-      ! -- write to list file that heads are being read
-      write (this%iout, fmtkstpkper) kstp, kper
-      !
-      ! -- loop through the layered heads for this time step
-      do ilay = 1, this%hfr%nlay
-        !
-        ! -- read next head chunk
-        call this%hfr%read_record(success, this%iout)
-        if (.not. success) then
-          write (errmsg, '(a)') 'GWF head read not successful'
-          call store_error(errmsg)
-          call store_error_unit(this%iuhds)
-        end if
-        !
-        ! -- Ensure kper is same between model and head file
-        if (kper /= this%hfr%kper) then
-          write (errmsg, '(a)') 'Period number in head file &
-            &does not match period number in transport model.  If there &
-            &is more than one time step in the head file for a given stress &
-            &period, head file time steps must match gwt model time steps &
-            &one-for-one in that stress period.'
-          call store_error(errmsg)
-          call store_error_unit(this%iuhds)
-        end if
-        !
-        ! -- if head file kstp > 1, then kstp must match
-        if (this%hfr%kstp > 1 .and. (kstp /= this%hfr%kstp)) then
-          write (errmsg, '(a)') 'Time step number in head file &
-            &does not match time step number in transport model.  If there &
-            &is more than one time step in the head file for a given stress &
-            &period, head file time steps must match gwt model time steps &
-            &one-for-one in that stress period.'
-          call store_error(errmsg)
-          call store_error_unit(this%iuhds)
-        end if
-        !
-        ! -- fill the head array for this layer and
-        !    compress into reduced form
-        ncpl = size(this%hfr%head)
-        do i = 1, ncpl
-          nu = (ilay - 1) * ncpl + i
-          nr = this%dis%get_nodenumber(nu, 0)
-          val = this%hfr%head(i)
-          if (nr > 0) this%gwfhead(nr) = val
-        end do
-      end do
-    else
-      write (this%iout, fmthdskstpkper) kstp, kper, this%hfr%kstp, this%hfr%kper
-    end if
-  end subroutine advance_hfr
-
-  subroutine finalize_hfr(this)
-! ******************************************************************************
-! finalize_hfr -- finalize the head file reader
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    class(GwtFmiType) :: this
-    ! -- dummy
-! ------------------------------------------------------------------------------
-    !
-    ! -- Finalize the head file reader
-    close (this%iuhds)
-    !
-  end subroutine finalize_hfr
-
+  !> @brief Initialize terms and count unique terms/packages in file
   subroutine initialize_gwfterms_from_bfr(this)
-! ******************************************************************************
-! initialize_gwfterms_from_bfr -- initalize terms and figure out how many
-!   different terms and packages are contained within the file
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     use SimModule, only: store_error, store_error_unit, count_errors
@@ -1309,7 +810,6 @@ contains
     logical :: found_stoss
     logical :: found_stosy
     integer(I4B), dimension(:), allocatable :: imap
-! ------------------------------------------------------------------------------
     !
     ! -- Calculate the number of gwf flow packages
     allocate (imap(this%bfr%nbudterms))
@@ -1392,14 +892,8 @@ contains
     return
   end subroutine initialize_gwfterms_from_bfr
 
+  !> @brief Initialize flow terms from a gwf-gwt exchange
   subroutine initialize_gwfterms_from_gwfbndlist(this)
-! ******************************************************************************
-! initialize_gwfterms_from_gwfbndlist -- flows are coming from a gwf-gwt
-!   exchange
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use BndModule, only: BndType, GetBndFromList
     ! -- dummy
@@ -1413,7 +907,6 @@ contains
     integer(I4B) :: iterm
     character(len=LENPACKAGENAME) :: budtxt
     class(BndType), pointer :: packobj => null()
-! ------------------------------------------------------------------------------
     !
     ! -- determine size of gwf terms
     ngwfpack = this%gwfbndlist%Count()
@@ -1466,15 +959,13 @@ contains
     return
   end subroutine initialize_gwfterms_from_gwfbndlist
 
-  subroutine allocate_gwfpackages(this, ngwfterms)
-! ******************************************************************************
-! allocate_gwfpackages -- gwfpackages is an array of PackageBudget objects.
-!   This routine allocates gwfpackages to the proper size and initializes some
-!   member variables.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Allocate GWF packages
+  !!
+  !! This routine allocates gwfpackages (an array of PackageBudget
+  !! objects) to the proper size and initializes member variables.
+  !!
+  !<
+  subroutine gwtfmi_allocate_gwfpackages(this, ngwfterms)
     ! -- modules
     use ConstantsModule, only: LENMEMPATH
     use MemoryManagerModule, only: mem_allocate
@@ -1484,7 +975,6 @@ contains
     ! -- local
     integer(I4B) :: n
     character(len=LENMEMPATH) :: memPath
-! ------------------------------------------------------------------------------
     !
     ! -- direct allocate
     allocate (this%gwfpackages(ngwfterms))
@@ -1510,21 +1000,15 @@ contains
     !
     ! -- return
     return
-  end subroutine allocate_gwfpackages
+  end subroutine gwtfmi_allocate_gwfpackages
 
-  subroutine deallocate_gwfpackages(this)
-! ******************************************************************************
-! deallocate_gwfpackages -- memory in the gwfpackages array
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Deallocate memory in the gwfpackages array
+  subroutine gwtfmi_deallocate_gwfpackages(this)
     ! -- modules
     ! -- dummy
     class(GwtFmiType) :: this
     ! -- local
     integer(I4B) :: n
-! ------------------------------------------------------------------------------
     !
     ! -- initialize
     do n = 1, this%nflowpack
@@ -1533,38 +1017,6 @@ contains
     !
     ! -- return
     return
-  end subroutine deallocate_gwfpackages
-
-  subroutine get_package_index(this, name, idx)
-! ******************************************************************************
-! get_package_index -- find the package index for package called name
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    use BndModule, only: BndType, GetBndFromList
-    class(GwtFmiType) :: this
-    character(len=*), intent(in) :: name
-    integer(I4B), intent(inout) :: idx
-    ! -- local
-    integer(I4B) :: ip
-! ------------------------------------------------------------------------------
-    !
-    ! -- Look through all the packages and return the index with name
-    idx = 0
-    do ip = 1, size(this%flowpacknamearray)
-      if (this%flowpacknamearray(ip) == name) then
-        idx = ip
-        exit
-      end if
-    end do
-    if (idx == 0) then
-      call store_error('Error in get_package_index.  Could not find '//name, &
-                       terminate=.TRUE.)
-    end if
-    !
-    ! -- return
-    return
-  end subroutine get_package_index
+  end subroutine gwtfmi_deallocate_gwfpackages
 
 end module GwtFmiModule
