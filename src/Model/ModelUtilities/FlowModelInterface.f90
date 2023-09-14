@@ -435,10 +435,10 @@ contains
   end subroutine initialize_bfr
 
   !> @brief Advance the budget file reader
-  !!
-  !! Advance the budget file reader by reading the next chunk
-  !! of information for the current time step and stress period.
-  !!
+  !
+  ! Advance the budget file reader by reading the next chunk
+  ! of information for the current time step and stress period.
+  !
   !<
   subroutine advance_bfr(this)
     ! -- modules
@@ -504,9 +504,9 @@ contains
         if (kper /= this%bfr%kper) then
           write (errmsg, '(4x,a)') 'PERIOD NUMBER IN BUDGET FILE &
             &DOES NOT MATCH PERIOD NUMBER IN TRANSPORT MODEL.  IF THERE &
-            &IS MORE THAN ONE TIME STEP IN THE BUDGET FILE FOR A GIVEN STRESS &
-            &PERIOD, BUDGET FILE TIME STEPS MUST MATCH GWT MODEL TIME STEPS &
-            &ONE-FOR-ONE IN THAT STRESS PERIOD.'
+            &IS MORE THAN ONE TIME STEP IN THE BUDGET FILE FOR A GIVEN &
+            &STRESS PERIOD, BUDGET FILE TIME STEPS MUST MATCH GWT MODEL &
+            &TIME STEPS ONE-FOR-ONE IN THAT STRESS PERIOD.'
           call store_error(errmsg)
           call store_error_unit(this%iubud)
         end if
@@ -515,7 +515,7 @@ contains
         if (this%bfr%kstp > 1 .and. (kstp /= this%bfr%kstp)) then
           write (errmsg, '(4x,a)') 'TIME STEP NUMBER IN BUDGET FILE &
             &DOES NOT MATCH TIME STEP NUMBER IN TRANSPORT MODEL.  IF THERE &
-            &IS MORE THAN ONE TIME STEP IN THE BUDGET FILE FOR A GIVEN STRESS &
+           &IS MORE THAN ONE TIME STEP IN THE BUDGET FILE FOR A GIVEN STRESS &
             &PERIOD, BUDGET FILE TIME STEPS MUST MATCH GWT MODEL TIME STEPS &
             &ONE-FOR-ONE IN THAT STRESS PERIOD.'
           call store_error(errmsg)
@@ -712,10 +712,10 @@ contains
   end subroutine finalize_hfr
 
   !> @brief Initialize gwf terms from budget file
-  !!
-  !! initalize terms and figure out how many
-  !! different terms and packages are contained within the file
-  !!
+  !
+  ! initalize terms and figure out how many
+  ! different terms and packages are contained within the file
+  !
   !<
   subroutine initialize_gwfterms_from_bfr(this)
     ! -- modules
@@ -879,11 +879,11 @@ contains
   end subroutine initialize_gwfterms_from_gwfbndlist
 
   !> @brief Allocate budget packages
-  !!
-  !! gwfpackages is an array of PackageBudget objects.
-  !! This routine allocates gwfpackages to the proper size and initializes some
-  !! member variables.
-  !!
+  !
+  ! gwfpackages is an array of PackageBudget objects.
+  ! This routine allocates gwfpackages to the proper size and initializes some
+  ! member variables.
+  !
   !<
   subroutine allocate_gwfpackages(this, ngwfterms)
     ! -- modules
