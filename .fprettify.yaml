@@ -1,6 +1,6 @@
 # MODFLOW 6 configuration for fprettify
 # run from root directory using
-# fprettify -c distribution/.fprettify.yaml SRC
+# fprettify -c .fprettify.yaml SRC
 whitespace-plusminus: 1
 whitespace-multdiv: 1
 line-length: 82
