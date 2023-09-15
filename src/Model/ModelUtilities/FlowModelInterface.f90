@@ -435,10 +435,10 @@ contains
   end subroutine initialize_bfr
 
   !> @brief Advance the budget file reader
-  !
-  ! Advance the budget file reader by reading the next chunk
-  ! of information for the current time step and stress period.
-  !
+  !!
+  !! Advance the budget file reader by reading the next chunk
+  !! of information for the current time step and stress period.
+  !!
   !<
   subroutine advance_bfr(this)
     ! -- modules
@@ -712,10 +712,10 @@ contains
   end subroutine finalize_hfr
 
   !> @brief Initialize gwf terms from budget file
-  !
-  ! initalize terms and figure out how many
-  ! different terms and packages are contained within the file
-  !
+  !!
+  !! initalize terms and figure out how many
+  !! different terms and packages are contained within the file
+  !!
   !<
   subroutine initialize_gwfterms_from_bfr(this)
     ! -- modules
@@ -879,11 +879,11 @@ contains
   end subroutine initialize_gwfterms_from_gwfbndlist
 
   !> @brief Allocate budget packages
-  !
-  ! gwfpackages is an array of PackageBudget objects.
-  ! This routine allocates gwfpackages to the proper size and initializes some
-  ! member variables.
-  !
+  !!
+  !! gwfpackages is an array of PackageBudget objects.
+  !! This routine allocates gwfpackages to the proper size and initializes some
+  !! member variables.
+  !!
   !<
   subroutine allocate_gwfpackages(this, ngwfterms)
     ! -- modules
