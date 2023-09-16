@@ -12,6 +12,7 @@ MODULE IMSLinearBaseModule
   use GenericUtilitiesModule, only: sim_message, is_same
   use BlockParserModule, only: BlockParserType
   use IMSReorderingModule, only: ims_odrv
+  use ConvergenceSummaryModule
 
   IMPLICIT NONE
 
@@ -266,7 +267,7 @@ contains
                            NJLU, IW, JLU, &
                            NCONV, CONVNMOD, CONVMODSTART, LOCDV, LOCDR, &
                            CACCEL, ITINNER, CONVLOCDV, CONVLOCDR, &
-                           DVMAX, DRMAX, CONVDVMAX, CONVDRMAX)
+                           DVMAX, DRMAX, CONVDVMAX, CONVDRMAX, summary)
     ! -- dummy variables
     integer(I4B), INTENT(INOUT) :: ICNVG !< convergence flag (1) non-convergence (0)
     integer(I4B), INTENT(IN) :: ITMAX !< maximum number of inner iterations
@@ -319,6 +320,7 @@ contains
     real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DRMAX !< maximum flow change in the solution
     real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDVMAX !< maximum dependent-variable change in each model in the solution
     real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDRMAX !< maximum flow change in each model in the solution
+    type(ConvergenceSummaryType), pointer, intent(in) :: summary !< Convergence summary report
     ! -- local variables
     LOGICAL :: LORTH
     logical :: lsame
@@ -358,6 +360,7 @@ contains
     INNER: DO iiter = 1, itmax
       INNERIT = INNERIT + 1
       NITERC = NITERC + 1
+      summary%iter_cnt = summary%iter_cnt + 1
       !
       ! -- CALCULATE rho
       rho = ddot(NEQ, DHAT, 1, D, 1)
@@ -506,11 +509,16 @@ contains
         WRITE (cval2, '(g15.7)') omega
         CACCEL(n) = trim(adjustl(cval1))//','//trim(adjustl(cval2))
         ITINNER(n) = iiter
+        summary%itinner(n) = iiter
         DO im = 1, CONVNMOD
           CONVLOCDV(im, n) = LOCDV(im)
           CONVLOCDR(im, n) = LOCDR(im)
           CONVDVMAX(im, n) = DVMAX(im)
           CONVDRMAX(im, n) = DRMAX(im)
+          summary%convdvmax(im, n) = DVMAX(im)
+          summary%convlocdv(im, n) = LOCDV(im)
+          summary%convdrmax(im, n) = DRMAX(im)
+          summary%convlocdr(im, n) = LOCDR(im)
         END DO
       END IF
       !

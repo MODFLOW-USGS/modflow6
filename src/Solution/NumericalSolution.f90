@@ -38,6 +38,7 @@ module NumericalSolutionModule
   use LinearSolverFactory, only: create_linear_solver
   use SparseMatrixModule
   use MatrixBaseModule
+  use ConvergenceSummaryModule
 
   implicit none
   private
@@ -48,7 +49,7 @@ module NumericalSolutionModule
   public :: create_numerical_solution
 
   type, extends(BaseSolutionType) :: NumericalSolutionType
-    character(len=LENMEMPATH) :: memoryPath !< the path for storing solution variables in the memory manager
+    character(len=LENMEMPATH) :: memory_path !< the path for storing solution variables in the memory manager
     character(len=LINELENGTH) :: fname !< input file name
     character(len=16) :: solver_mode !< the type of solve: sequential, parallel, mayve block, etc.
     type(ListType), pointer :: modellist !< list of models in solution
@@ -117,6 +118,9 @@ module NumericalSolutionModule
     real(DP), dimension(:), pointer, contiguous :: drmax => null() !< maximum flow change in the solution
     real(DP), pointer, dimension(:, :), contiguous :: convdvmax => null() !< maximum dependent-variable change in each model in the solution
     real(DP), pointer, dimension(:, :), contiguous :: convdrmax => null() !< maximum flow change in each model in the solution
+    !
+    ! -- refactoring
+    type(ConvergenceSummaryType), pointer :: cnvg_summary => null() !< details on the convergence behavior within a timestep
     !
     ! -- pseudo-transient continuation
     integer(I4B), pointer :: iallowptc => null() !< flag indicating if ptc applied this time step
@@ -234,7 +238,7 @@ contains
     write (solutionname, '(a, i0)') 'SLN_', id
     !
     num_sol%name = solutionname
-    num_sol%memoryPath = create_mem_path(solutionname)
+    num_sol%memory_path = create_mem_path(solutionname)
     allocate (num_sol%modellist)
     allocate (num_sol%exchangelist)
     !
@@ -276,48 +280,48 @@ contains
     class(NumericalSolutionType) :: this
     !
     ! -- allocate scalars
-    call mem_allocate(this%id, 'ID', this%memoryPath)
-    call mem_allocate(this%iu, 'IU', this%memoryPath)
-    call mem_allocate(this%ttform, 'TTFORM', this%memoryPath)
-    call mem_allocate(this%ttsoln, 'TTSOLN', this%memoryPath)
-    call mem_allocate(this%isymmetric, 'ISYMMETRIC', this%memoryPath)
-    call mem_allocate(this%neq, 'NEQ', this%memoryPath)
-    call mem_allocate(this%matrix_offset, 'MATRIX_OFFSET', this%memoryPath)
-    call mem_allocate(this%dvclose, 'DVCLOSE', this%memoryPath)
-    call mem_allocate(this%bigchold, 'BIGCHOLD', this%memoryPath)
-    call mem_allocate(this%bigch, 'BIGCH', this%memoryPath)
-    call mem_allocate(this%relaxold, 'RELAXOLD', this%memoryPath)
-    call mem_allocate(this%res_prev, 'RES_PREV', this%memoryPath)
-    call mem_allocate(this%res_new, 'RES_NEW', this%memoryPath)
-    call mem_allocate(this%icnvg, 'ICNVG', this%memoryPath)
-    call mem_allocate(this%itertot_timestep, 'ITERTOT_TIMESTEP', this%memoryPath)
-    call mem_allocate(this%iouttot_timestep, 'IOUTTOT_TIMESTEP', this%memoryPath)
-    call mem_allocate(this%itertot_sim, 'INNERTOT_SIM', this%memoryPath)
-    call mem_allocate(this%mxiter, 'MXITER', this%memoryPath)
-    call mem_allocate(this%linmeth, 'LINMETH', this%memoryPath)
-    call mem_allocate(this%nonmeth, 'NONMETH', this%memoryPath)
-    call mem_allocate(this%iprims, 'IPRIMS', this%memoryPath)
-    call mem_allocate(this%theta, 'THETA', this%memoryPath)
-    call mem_allocate(this%akappa, 'AKAPPA', this%memoryPath)
-    call mem_allocate(this%gamma, 'GAMMA', this%memoryPath)
-    call mem_allocate(this%amomentum, 'AMOMENTUM', this%memoryPath)
-    call mem_allocate(this%breduc, 'BREDUC', this%memoryPath)
-    call mem_allocate(this%btol, 'BTOL', this%memoryPath)
-    call mem_allocate(this%res_lim, 'RES_LIM', this%memoryPath)
-    call mem_allocate(this%numtrack, 'NUMTRACK', this%memoryPath)
-    call mem_allocate(this%ibflag, 'IBFLAG', this%memoryPath)
-    call mem_allocate(this%icsvouterout, 'ICSVOUTEROUT', this%memoryPath)
-    call mem_allocate(this%icsvinnerout, 'ICSVINNEROUT', this%memoryPath)
-    call mem_allocate(this%nitermax, 'NITERMAX', this%memoryPath)
-    call mem_allocate(this%convnmod, 'CONVNMOD', this%memoryPath)
-    call mem_allocate(this%iallowptc, 'IALLOWPTC', this%memoryPath)
-    call mem_allocate(this%iptcopt, 'IPTCOPT', this%memoryPath)
-    call mem_allocate(this%iptcout, 'IPTCOUT', this%memoryPath)
-    call mem_allocate(this%l2norm0, 'L2NORM0', this%memoryPath)
-    call mem_allocate(this%ptcdel, 'PTCDEL', this%memoryPath)
-    call mem_allocate(this%ptcdel0, 'PTCDEL0', this%memoryPath)
-    call mem_allocate(this%ptcexp, 'PTCEXP', this%memoryPath)
-    call mem_allocate(this%atsfrac, 'ATSFRAC', this%memoryPath)
+    call mem_allocate(this%id, 'ID', this%memory_path)
+    call mem_allocate(this%iu, 'IU', this%memory_path)
+    call mem_allocate(this%ttform, 'TTFORM', this%memory_path)
+    call mem_allocate(this%ttsoln, 'TTSOLN', this%memory_path)
+    call mem_allocate(this%isymmetric, 'ISYMMETRIC', this%memory_path)
+    call mem_allocate(this%neq, 'NEQ', this%memory_path)
+    call mem_allocate(this%matrix_offset, 'MATRIX_OFFSET', this%memory_path)
+    call mem_allocate(this%dvclose, 'DVCLOSE', this%memory_path)
+    call mem_allocate(this%bigchold, 'BIGCHOLD', this%memory_path)
+    call mem_allocate(this%bigch, 'BIGCH', this%memory_path)
+    call mem_allocate(this%relaxold, 'RELAXOLD', this%memory_path)
+    call mem_allocate(this%res_prev, 'RES_PREV', this%memory_path)
+    call mem_allocate(this%res_new, 'RES_NEW', this%memory_path)
+    call mem_allocate(this%icnvg, 'ICNVG', this%memory_path)
+    call mem_allocate(this%itertot_timestep, 'ITERTOT_TIMESTEP', this%memory_path)
+    call mem_allocate(this%iouttot_timestep, 'IOUTTOT_TIMESTEP', this%memory_path)
+    call mem_allocate(this%itertot_sim, 'INNERTOT_SIM', this%memory_path)
+    call mem_allocate(this%mxiter, 'MXITER', this%memory_path)
+    call mem_allocate(this%linmeth, 'LINMETH', this%memory_path)
+    call mem_allocate(this%nonmeth, 'NONMETH', this%memory_path)
+    call mem_allocate(this%iprims, 'IPRIMS', this%memory_path)
+    call mem_allocate(this%theta, 'THETA', this%memory_path)
+    call mem_allocate(this%akappa, 'AKAPPA', this%memory_path)
+    call mem_allocate(this%gamma, 'GAMMA', this%memory_path)
+    call mem_allocate(this%amomentum, 'AMOMENTUM', this%memory_path)
+    call mem_allocate(this%breduc, 'BREDUC', this%memory_path)
+    call mem_allocate(this%btol, 'BTOL', this%memory_path)
+    call mem_allocate(this%res_lim, 'RES_LIM', this%memory_path)
+    call mem_allocate(this%numtrack, 'NUMTRACK', this%memory_path)
+    call mem_allocate(this%ibflag, 'IBFLAG', this%memory_path)
+    call mem_allocate(this%icsvouterout, 'ICSVOUTEROUT', this%memory_path)
+    call mem_allocate(this%icsvinnerout, 'ICSVINNEROUT', this%memory_path)
+    call mem_allocate(this%nitermax, 'NITERMAX', this%memory_path)
+    call mem_allocate(this%convnmod, 'CONVNMOD', this%memory_path)
+    call mem_allocate(this%iallowptc, 'IALLOWPTC', this%memory_path)
+    call mem_allocate(this%iptcopt, 'IPTCOPT', this%memory_path)
+    call mem_allocate(this%iptcout, 'IPTCOUT', this%memory_path)
+    call mem_allocate(this%l2norm0, 'L2NORM0', this%memory_path)
+    call mem_allocate(this%ptcdel, 'PTCDEL', this%memory_path)
+    call mem_allocate(this%ptcdel0, 'PTCDEL0', this%memory_path)
+    call mem_allocate(this%ptcexp, 'PTCEXP', this%memory_path)
+    call mem_allocate(this%atsfrac, 'ATSFRAC', this%memory_path)
     !
     ! -- initialize scalars
     this%isymmetric = 0
@@ -384,29 +388,29 @@ contains
     this%convnmod = this%modellist%Count()
     !
     ! -- allocate arrays
-    call mem_allocate(this%active, this%neq, 'IACTIVE', this%memoryPath)
-    call mem_allocate(this%xtemp, this%neq, 'XTEMP', this%memoryPath)
-    call mem_allocate(this%dxold, this%neq, 'DXOLD', this%memoryPath)
-    call mem_allocate(this%hncg, 0, 'HNCG', this%memoryPath)
-    call mem_allocate(this%lrch, 3, 0, 'LRCH', this%memoryPath)
-    call mem_allocate(this%wsave, 0, 'WSAVE', this%memoryPath)
-    call mem_allocate(this%hchold, 0, 'HCHOLD', this%memoryPath)
-    call mem_allocate(this%deold, 0, 'DEOLD', this%memoryPath)
+    call mem_allocate(this%active, this%neq, 'IACTIVE', this%memory_path)
+    call mem_allocate(this%xtemp, this%neq, 'XTEMP', this%memory_path)
+    call mem_allocate(this%dxold, this%neq, 'DXOLD', this%memory_path)
+    call mem_allocate(this%hncg, 0, 'HNCG', this%memory_path)
+    call mem_allocate(this%lrch, 3, 0, 'LRCH', this%memory_path)
+    call mem_allocate(this%wsave, 0, 'WSAVE', this%memory_path)
+    call mem_allocate(this%hchold, 0, 'HCHOLD', this%memory_path)
+    call mem_allocate(this%deold, 0, 'DEOLD', this%memory_path)
     call mem_allocate(this%convmodstart, this%convnmod + 1, 'CONVMODSTART', &
-                      this%memoryPath)
-    call mem_allocate(this%locdv, this%convnmod, 'LOCDV', this%memoryPath)
-    call mem_allocate(this%locdr, this%convnmod, 'LOCDR', this%memoryPath)
-    call mem_allocate(this%itinner, 0, 'ITINNER', this%memoryPath)
+                      this%memory_path)
+    call mem_allocate(this%locdv, this%convnmod, 'LOCDV', this%memory_path)
+    call mem_allocate(this%locdr, this%convnmod, 'LOCDR', this%memory_path)
+    call mem_allocate(this%itinner, 0, 'ITINNER', this%memory_path)
     call mem_allocate(this%convlocdv, this%convnmod, 0, 'CONVLOCDV', &
-                      this%memoryPath)
+                      this%memory_path)
     call mem_allocate(this%convlocdr, this%convnmod, 0, 'CONVLOCDR', &
-                      this%memoryPath)
-    call mem_allocate(this%dvmax, this%convnmod, 'DVMAX', this%memoryPath)
-    call mem_allocate(this%drmax, this%convnmod, 'DRMAX', this%memoryPath)
+                      this%memory_path)
+    call mem_allocate(this%dvmax, this%convnmod, 'DVMAX', this%memory_path)
+    call mem_allocate(this%drmax, this%convnmod, 'DRMAX', this%memory_path)
     call mem_allocate(this%convdvmax, this%convnmod, 0, 'CONVDVMAX', &
-                      this%memoryPath)
+                      this%memory_path)
     call mem_allocate(this%convdrmax, this%convnmod, 0, 'CONVDRMAX', &
-                      this%memoryPath)
+                      this%memory_path)
     !
     ! -- initialize allocated arrays
     do i = 1, this%neq
@@ -472,10 +476,11 @@ contains
     ! -- create linear system matrix and compatible vectors
     this%linear_solver => create_linear_solver(this%solver_mode)
     this%system_matrix => this%linear_solver%create_matrix()
-    this%vec_x => this%system_matrix%create_vec_mm(this%neq, 'X', this%memoryPath)
+    this%vec_x => this%system_matrix%create_vec_mm(this%neq, 'X', &
+                                                   this%memory_path)
     this%x => this%vec_x%get_array()
     this%vec_rhs => this%system_matrix%create_vec_mm(this%neq, 'RHS', &
-                                                     this%memoryPath)
+                                                     this%memory_path)
     this%rhs => this%vec_rhs%get_array()
     !
     call this%vec_rhs%get_ownership_range(irow_start, irow_end)
@@ -492,6 +497,11 @@ contains
     !
     ! -- Allocate and initialize solution arrays
     call this%allocate_arrays()
+    !
+    ! -- Create convergence summary report
+    allocate (this%cnvg_summary)
+    call this%cnvg_summary%init(this%modellist%Count(), this%convmodstart, &
+                                this%memory_path)
     !
     ! -- Go through each model and point x, ibound, and rhs to solution
     do i = 1, this%modellist%Count()
@@ -922,7 +932,7 @@ contains
       !
       ! -- petsc linear solver flag
     else if (this%linmeth == 2) then
-      call this%linear_solver%initialize(this%system_matrix)
+      call this%linear_solver%initialize(this%system_matrix, this%cnvg_summary)
       this%nitermax = this%linear_solver%nitermax
       this%isymmetric = 0
       !
@@ -1007,6 +1017,8 @@ contains
     ! -- linear solver data
     if (this%linmeth == 1) then
       call this%imslinear%imslinear_summary(this%mxiter)
+    else
+      call this%linear_solver%print_summary()
     end if
 
     ! -- write summary of solver error messages
@@ -1063,6 +1075,9 @@ contains
       end do
     end do
     !
+    ! -- resize convergence report
+    call this%cnvg_summary%reinit(this%nitermax)
+    !
     ! -- check for numerical solution errors
     ierr = count_errors()
     if (ierr > 0) then
@@ -1114,7 +1129,7 @@ contains
       end if
       !
       ! -- submit stable dt for upcoming step
-      call ats_submit_delt(kstp, kper, delt_temp, this%memoryPath, idir=idir)
+      call ats_submit_delt(kstp, kper, delt_temp, this%memory_path, idir=idir)
     end if
     !
     return
@@ -1254,6 +1269,10 @@ contains
     call mem_deallocate(this%drmax)
     call mem_deallocate(this%convdvmax)
     call mem_deallocate(this%convdrmax)
+    !
+    ! -- convergence report
+    call this%cnvg_summary%destroy()
+    deallocate (this%cnvg_summary)
     !
     ! -- Scalars
     call mem_deallocate(this%id)
@@ -1565,7 +1584,7 @@ contains
         end if
         !
         ! -- initialize table and define columns
-        title = trim(this%memoryPath)//' OUTER ITERATION SUMMARY'
+        title = trim(this%memory_path)//' OUTER ITERATION SUMMARY'
         call table_cr(this%outertab, this%name, title)
         call this%outertab%table_df(ntabrows, ntabcols, iout, &
                                     finalize=.FALSE.)
@@ -1996,7 +2015,7 @@ contains
     character(len=LENPAKLOC) :: strr
     integer(I4B) :: ntabrows
     integer(I4B) :: ntabcols
-    integer(I4B) :: i
+    integer(I4B) :: iinner
     integer(I4B) :: i0
     integer(I4B) :: iouter
     integer(I4B) :: j
@@ -2022,7 +2041,7 @@ contains
       ntabcols = 7
       !
       ! -- initialize table and define columns
-      title = trim(this%memoryPath)//' INNER ITERATION SUMMARY'
+      title = trim(this%memory_path)//' INNER ITERATION SUMMARY'
       call table_cr(this%innertab, this%name, title)
       call this%innertab%table_df(ntabrows, ntabcols, iu)
       tag = 'TOTAL ITERATION'
@@ -2049,28 +2068,28 @@ contains
     ! -- write the inner iteration summary to unit iu
     i0 = 0
     do k = 1, itertot_timestep
-      i = this%itinner(k)
-      if (i <= i0) then
+      iinner = this%cnvg_summary%itinner(k)
+      if (iinner <= i0) then
         iouter = iouter + 1
       end if
       if (im > this%convnmod) then
         dv = DZERO
         dr = DZERO
         do j = 1, this%convnmod
-          if (ABS(this%convdvmax(j, k)) > ABS(dv)) then
-            locdv = this%convlocdv(j, k)
-            dv = this%convdvmax(j, k)
+          if (ABS(this%cnvg_summary%convdvmax(j, k)) > ABS(dv)) then
+            locdv = this%cnvg_summary%convlocdv(j, k)
+            dv = this%cnvg_summary%convdvmax(j, k)
           end if
-          if (ABS(this%convdrmax(j, k)) > ABS(dr)) then
-            locdr = this%convlocdr(j, k)
-            dr = this%convdrmax(j, k)
+          if (ABS(this%cnvg_summary%convdrmax(j, k)) > ABS(dr)) then
+            locdr = this%cnvg_summary%convlocdr(j, k)
+            dr = this%cnvg_summary%convdrmax(j, k)
           end if
         end do
       else
-        locdv = this%convlocdv(im, k)
-        locdr = this%convlocdr(im, k)
-        dv = this%convdvmax(im, k)
-        dr = this%convdrmax(im, k)
+        locdv = this%cnvg_summary%convlocdv(im, k)
+        locdr = this%cnvg_summary%convlocdr(im, k)
+        dv = this%cnvg_summary%convdvmax(im, k)
+        dr = this%cnvg_summary%convdrmax(im, k)
       end if
       call this%sln_get_loc(locdv, strh)
       call this%sln_get_loc(locdr, strr)
@@ -2078,14 +2097,14 @@ contains
       ! -- add data to innertab
       call this%innertab%add_term(k)
       call this%innertab%add_term(iouter)
-      call this%innertab%add_term(i)
+      call this%innertab%add_term(iinner)
       call this%innertab%add_term(dv)
       call this%innertab%add_term(adjustr(trim(strh)))
       call this%innertab%add_term(dr)
       call this%innertab%add_term(adjustr(trim(strr)))
       !
       ! -- update i0
-      i0 = i
+      i0 = iinner
     end do
     !
     ! -- return
@@ -2595,9 +2614,11 @@ contains
                                           this%caccel, this%itinner, &
                                           this%convlocdv, this%convlocdr, &
                                           this%dvmax, this%drmax, &
-                                          this%convdvmax, this%convdrmax)
+                                          this%convdvmax, this%convdrmax, &
+                                          this%cnvg_summary)
     else if (this%linmeth == 2) then
-      call this%linear_solver%solve(kiter, this%vec_rhs, this%vec_x)
+      call this%linear_solver%solve(kiter, this%vec_rhs, &
+                                    this%vec_x, this%cnvg_summary)
       in_iter = this%linear_solver%iteration_number
       this%icnvg = this%linear_solver%is_converged
     end if

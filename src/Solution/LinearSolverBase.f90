@@ -2,6 +2,7 @@ module LinearSolverBaseModule
   use KindModule, only: I4B, DP
   use MatrixBaseModule
   use VectorBaseModule
+  use ConvergenceSummaryModule
   implicit none
   private
 
@@ -16,6 +17,7 @@ module LinearSolverBaseModule
     integer(I4B) :: is_converged
   contains
     procedure(initialize_if), deferred :: initialize
+    procedure(print_summary_if), deferred :: print_summary
     procedure(solve_if), deferred :: solve
     procedure(get_result_if), deferred :: get_result
     procedure(destroy_if), deferred :: destroy
@@ -24,17 +26,23 @@ module LinearSolverBaseModule
   end type LinearSolverBaseType
 
   abstract interface
-    subroutine initialize_if(this, matrix)
-      import LinearSolverBaseType, MatrixBaseType
+    subroutine initialize_if(this, matrix, convergence_summary)
+      import LinearSolverBaseType, MatrixBaseType, ConvergenceSummaryType
       class(LinearSolverBaseType) :: this
       class(MatrixBaseType), pointer :: matrix
+      type(ConvergenceSummaryType), pointer :: convergence_summary
     end subroutine
-    subroutine solve_if(this, kiter, rhs, x)
-      import LinearSolverBaseType, I4B, VectorBaseType
+    subroutine print_summary_if(this)
+      import LinearSolverBaseType
+      class(LinearSolverBaseType) :: this
+    end subroutine
+    subroutine solve_if(this, kiter, rhs, x, cnvg_summary)
+      import LinearSolverBaseType, I4B, VectorBaseType, ConvergenceSummaryType
       class(LinearSolverBaseType) :: this
       integer(I4B) :: kiter
       class(VectorBaseType), pointer :: rhs
       class(VectorBaseType), pointer :: x
+      type(ConvergenceSummaryType) :: cnvg_summary
     end subroutine
     subroutine get_result_if(this)
       import LinearSolverBaseType

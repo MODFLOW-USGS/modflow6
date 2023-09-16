@@ -13,6 +13,7 @@ MODULE IMSLinearModule
                                  ims_base_residual
   use BlockParserModule, only: BlockParserType
   use MatrixBaseModule
+  use ConvergenceSummaryModule
 
   IMPLICIT NONE
   private
@@ -857,7 +858,7 @@ CONTAINS
   SUBROUTINE imslinear_ap(this, ICNVG, KSTP, KITER, IN_ITER, &
                           NCONV, CONVNMOD, CONVMODSTART, LOCDV, LOCDR, &
                           CACCEL, ITINNER, CONVLOCDV, CONVLOCDR, &
-                          DVMAX, DRMAX, CONVDVMAX, CONVDRMAX)
+                          DVMAX, DRMAX, CONVDVMAX, CONVDRMAX, summary)
     ! -- modules
     USE SimModule
     ! -- dummy variables
@@ -880,6 +881,7 @@ CONTAINS
     real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DRMAX !<
     real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDVMAX !<
     real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDRMAX !<
+    type(ConvergenceSummaryType), pointer, intent(in) :: summary !< Convergence summary report
     ! -- local variables
     integer(I4B) :: n
     integer(I4B) :: innerit
@@ -932,7 +934,10 @@ CONTAINS
                       this%NWLU, this%JLU, this%JW, this%WLU)
     !
     ! -- INITIALIZE SOLUTION VARIABLE AND ARRAYS
-    IF (KITER == 1) this%NITERC = 0
+    IF (KITER == 1) then
+      this%NITERC = 0
+      summary%iter_cnt = 0
+    end if
     irc = 1
     ICNVG = 0
     DO n = 1, this%NEQ
@@ -982,7 +987,7 @@ CONTAINS
                          this%NJLU, this%IW, this%JLU, &
                          NCONV, CONVNMOD, CONVMODSTART, LOCDV, LOCDR, &
                          CACCEL, ITINNER, CONVLOCDV, CONVLOCDR, &
-                         DVMAX, DRMAX, CONVDVMAX, CONVDRMAX)
+                         DVMAX, DRMAX, CONVDVMAX, CONVDRMAX, summary)
     END IF
     !
     ! -- BACK PERMUTE AMAT, SOLUTION, AND RHS

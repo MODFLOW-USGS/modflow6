@@ -1,65 +1,73 @@
 module ImsLinearSolverModule
-  use KindModule, only: I4B, DP
-  use LinearSolverBaseModule
-  use MatrixBaseModule
-  use VectorBaseModule
-  use SparseMatrixModule
-  implicit none
-  private
+   use KindModule, only: I4B, DP
+   use LinearSolverBaseModule
+   use MatrixBaseModule
+   use VectorBaseModule
+   use SparseMatrixModule
+   use ConvergenceSummaryModule
+   implicit none
+   private
 
-  public :: create_ims_solver
+   public :: create_ims_solver
 
-  type, public, extends(LinearSolverBaseType) :: ImsLinearSolverType
-  contains
-    procedure :: initialize => ims_initialize
-    procedure :: solve => ims_solve
-    procedure :: get_result => ims_get_result
-    procedure :: destroy => ims_destroy
+   type, public, extends(LinearSolverBaseType) :: ImsLinearSolverType
+   contains
+      procedure :: initialize => ims_initialize
+      procedure :: print_summary => ims_print_summary
+      procedure :: solve => ims_solve
+      procedure :: get_result => ims_get_result
+      procedure :: destroy => ims_destroy
 
-    procedure :: create_matrix => ims_create_matrix
-  end type
+      procedure :: create_matrix => ims_create_matrix
+   end type
 
 contains
 
-  function create_ims_solver() result(solver)
-    class(LinearSolverBaseType), pointer :: solver
-    ! local
-    class(ImsLinearSolverType), pointer :: ims_solver
+   function create_ims_solver() result(solver)
+      class(LinearSolverBaseType), pointer :: solver
+      ! local
+      class(ImsLinearSolverType), pointer :: ims_solver
 
-    allocate (ims_solver)
-    solver => ims_solver
+      allocate (ims_solver)
+      solver => ims_solver
 
-  end function create_ims_solver
+   end function create_ims_solver
 
-  subroutine ims_initialize(this, matrix)
-    class(ImsLinearSolverType) :: this
-    class(MatrixBaseType), pointer :: matrix
-  end subroutine ims_initialize
+   subroutine ims_initialize(this, matrix, convergence_summary)
+      class(ImsLinearSolverType) :: this
+      class(MatrixBaseType), pointer :: matrix
+      type(ConvergenceSummaryType), pointer :: convergence_summary
+   end subroutine ims_initialize
 
-  subroutine ims_solve(this, kiter, rhs, x)
-    class(ImsLinearSolverType) :: this
-    integer(I4B) :: kiter
-    class(VectorBaseType), pointer :: rhs
-    class(VectorBaseType), pointer :: x
-  end subroutine ims_solve
+   subroutine ims_print_summary(this)
+      class(ImsLinearSolverType) :: this
+   end subroutine ims_print_summary
 
-  subroutine ims_get_result(this)
-    class(ImsLinearSolverType) :: this
-  end subroutine ims_get_result
+   subroutine ims_solve(this, kiter, rhs, x, cnvg_summary)
+      class(ImsLinearSolverType) :: this
+      integer(I4B) :: kiter
+      class(VectorBaseType), pointer :: rhs
+      class(VectorBaseType), pointer :: x
+      type(ConvergenceSummaryType) :: cnvg_summary
+   end subroutine ims_solve
 
-  subroutine ims_destroy(this)
-    class(ImsLinearSolverType) :: this
-  end subroutine ims_destroy
+   subroutine ims_get_result(this)
+      class(ImsLinearSolverType) :: this
+   end subroutine ims_get_result
 
-  function ims_create_matrix(this) result(matrix)
-    class(ImsLinearSolverType) :: this
-    class(MatrixBaseType), pointer :: matrix
-    ! local
-    class(SparseMatrixType), pointer :: ims_matrix
+   subroutine ims_destroy(this)
+      class(ImsLinearSolverType) :: this
+   end subroutine ims_destroy
 
-    allocate (ims_matrix)
-    matrix => ims_matrix
+   function ims_create_matrix(this) result(matrix)
+      class(ImsLinearSolverType) :: this
+      class(MatrixBaseType), pointer :: matrix
+      ! local
+      class(SparseMatrixType), pointer :: ims_matrix
 
-  end function ims_create_matrix
+      allocate (ims_matrix)
+      matrix => ims_matrix
+
+   end function ims_create_matrix
 
 end module ImsLinearSolverModule

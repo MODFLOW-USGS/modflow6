@@ -8,6 +8,8 @@ module PetscSolverModule
   use PetscMatrixModule
   use PetscVectorModule
   use PetscConvergenceModule
+  use ConvergenceSummaryModule
+  use SimVariablesModule, only: iout
 
   implicit none
   private
@@ -20,14 +22,16 @@ module PetscSolverModule
     Mat, pointer :: mat_petsc
     Vec, pointer :: vec_residual
 
-    integer(I4B) :: lin_accel_type
     real(DP) :: dvclose
     class(PetscContextType), pointer :: petsc_ctx
     integer(I4B) :: ctx_idx
+    type(ConvergenceSummaryType), pointer :: convergence_summary => null()
+
   contains
     procedure :: initialize => petsc_initialize
     procedure :: solve => petsc_solve
     procedure :: get_result => petsc_get_result
+    procedure :: print_summary => petsc_print_summary
     procedure :: destroy => petsc_destroy
     procedure :: create_matrix => petsc_create_matrix
 
@@ -56,11 +60,27 @@ contains
 
   !> @brief Initialize PETSc KSP solver with
   !<  options from the petsc database file
-  subroutine petsc_initialize(this, matrix)
+  subroutine petsc_initialize(this, matrix, convergence_summary)
     class(PetscSolverType) :: this !< This solver instance
     class(MatrixBaseType), pointer :: matrix !< The solution matrix as KSP operator
+    type(ConvergenceSummaryType), pointer :: convergence_summary
     ! local
     PetscErrorCode :: ierr
+    PetscInt :: major, minor, subminor, release
+    character(len=128) :: petsc_version, release_str
+
+    call PetscGetVersionNumber(major, minor, subminor, release, ierr)
+    if (release == 1) then
+      release_str = "(release)"
+    else
+      release_str = "(unofficial)"
+    end if
+    write (petsc_version, '(i0,a,i0,a,i0,a,a)') &
+      major, ".", minor, ".", subminor, " ", trim(release_str)
+
+    CHKERRQ(ierr)
+    write (iout, '(1x,2a,/)') &
+      "PETSc Linear Solver will be used: version ", petsc_version
 
     this%mat_petsc => null()
     select type (pm => matrix)
@@ -80,7 +100,7 @@ contains
     call this%create_ksp()
 
     ! Create custom convergence check
-    call this%create_convergence_check()
+    call this%create_convergence_check(convergence_summary)
 
   end subroutine petsc_initialize
 
@@ -127,18 +147,26 @@ contains
 
   !> @brief Create and assign a custom convergence
   !< check for this solver
-  subroutine create_convergence_check(this)
+  subroutine create_convergence_check(this, convergence_summary)
     class(PetscSolverType) :: this !< This solver instance
+    type(ConvergenceSummaryType), pointer :: convergence_summary
     ! local
     PetscErrorCode :: ierr
 
     this%petsc_ctx%dvclose = this%dvclose
     this%petsc_ctx%max_its = this%nitermax
+    this%petsc_ctx%cnvg_summary => convergence_summary
     call MatCreateVecs( &
       this%mat_petsc, this%petsc_ctx%x_old, PETSC_NULL_VEC, ierr)
     CHKERRQ(ierr)
     call MatCreateVecs( &
       this%mat_petsc, this%petsc_ctx%delta_x, PETSC_NULL_VEC, ierr)
+    CHKERRQ(ierr)
+    call MatCreateVecs( &
+      this%mat_petsc, this%petsc_ctx%res_old, PETSC_NULL_VEC, ierr)
+    CHKERRQ(ierr)
+    call MatCreateVecs( &
+      this%mat_petsc, this%petsc_ctx%delta_res, PETSC_NULL_VEC, ierr)
     CHKERRQ(ierr)
     call petsc_add_context(this%petsc_ctx, this%ctx_idx)
 
@@ -148,15 +176,17 @@ contains
 
   end subroutine create_convergence_check
 
-  subroutine petsc_solve(this, kiter, rhs, x)
+  subroutine petsc_solve(this, kiter, rhs, x, cnvg_summary)
     class(PetscSolverType) :: this
     integer(I4B) :: kiter
     class(VectorBaseType), pointer :: rhs
     class(VectorBaseType), pointer :: x
+    type(ConvergenceSummaryType) :: cnvg_summary
     ! local
     PetscErrorCode :: ierr
     class(PetscVectorType), pointer :: rhs_petsc, x_petsc
     KSPConvergedReason :: icnvg
+    integer :: it_number
 
     rhs_petsc => null()
     select type (rhs)
@@ -172,13 +202,17 @@ contains
 
     this%iteration_number = 0
     this%is_converged = 0
+    if (kiter == 1) then
+      this%petsc_ctx%cnvg_summary%iter_cnt = 0
+    end if
 
     ! update matrix coefficients
     call this%matrix%update()
     call KSPSolve(this%ksp_petsc, rhs_petsc%vec_impl, x_petsc%vec_impl, ierr)
     CHKERRQ(ierr)
 
-    call KSPGetIterationNumber(this%ksp_petsc, this%iteration_number, ierr)
+    call KSPGetIterationNumber(this%ksp_petsc, it_number, ierr)
+    this%iteration_number = it_number
     call KSPGetConvergedReason(this%ksp_petsc, icnvg, ierr)
     if (icnvg > 0) this%is_converged = 1
 
@@ -187,6 +221,31 @@ contains
   subroutine petsc_get_result(this)
     class(PetscSolverType) :: this
   end subroutine petsc_get_result
+
+  subroutine petsc_print_summary(this)
+    class(PetscSolverType) :: this
+    ! local
+    character(len=128) :: ksp_type, pc_type, dvclose_str
+    integer :: ierr
+    PC :: pc
+
+    call KSPGetType(this%ksp_petsc, ksp_type, ierr)
+    CHKERRQ(ierr)
+    call KSPGetPC(this%ksp_petsc, pc, ierr)
+    CHKERRQ(ierr)
+    call PCGetType(pc, pc_type, ierr)
+    CHKERRQ(ierr)
+    write (dvclose_str, '(e15.5)') this%dvclose
+
+    write (iout, '(/,7x,a)') "PETSc linear solver settings: "
+    write (iout, '(1x,a)') repeat('-', 66)
+    write (iout, '(1x,a,a)') "Linear acceleration method:   ", ksp_type
+    write (iout, '(1x,a,a)') "Preconditioner type:          ", pc_type
+    write (iout, '(1x,a,i0)') "Maximum nr. of iterations:    ", this%nitermax
+    write (iout, '(1x,a,a,/)') &
+      "Dep. var. closure criterion:  ", adjustl(dvclose_str)
+
+  end subroutine petsc_print_summary
 
   subroutine petsc_destroy(this)
     class(PetscSolverType) :: this
