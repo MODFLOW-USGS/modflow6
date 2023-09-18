@@ -151,21 +151,25 @@ contains
     ! -- set gwtmodel1
     m1_index = model_loc_idx(m1_id)
     mb => GetBaseModelFromList(basemodellist, m1_index)
-    select type (mb)
-    type is (GwtModelType)
-      exchange%model1 => mb
-      exchange%gwtmodel1 => mb
-    end select
+    if (m1_index > 0) then
+      select type (mb)
+      type is (GwtModelType)
+        exchange%model1 => mb
+        exchange%gwtmodel1 => mb
+      end select
+    end if
     exchange%v_model1 => get_virtual_model(m1_id)
     !
     ! -- set gwtmodel2
     m2_index = model_loc_idx(m2_id)
-    mb => GetBaseModelFromList(basemodellist, m2_index)
-    select type (mb)
-    type is (GwtModelType)
-      exchange%model2 => mb
-      exchange%gwtmodel2 => mb
-    end select
+    if (m2_index > 0) then
+      mb => GetBaseModelFromList(basemodellist, m2_index)
+      select type (mb)
+      type is (GwtModelType)
+        exchange%model2 => mb
+        exchange%gwtmodel2 => mb
+      end select
+    end if
     exchange%v_model2 => get_virtual_model(m2_id)
     !
     ! -- Verify that gwt model1 is of the correct type
@@ -176,7 +180,7 @@ contains
       call store_error(errmsg, terminate=.true.)
     end if
     !
-    ! -- Verify that gwf model2 is of the correct type
+    ! -- Verify that gwt model2 is of the correct type
     if (.not. associated(exchange%gwtmodel2) .and. m2_index > 0) then
       write (errmsg, '(3a)') 'Problem with GWT-GWT exchange ', &
         trim(exchange%name), &
@@ -214,12 +218,15 @@ contains
     call this%parser%Initialize(inunit, iout)
     !
     ! -- Ensure models are in same solution
-    if (this%gwtmodel1%idsoln /= this%gwtmodel2%idsoln) then
-      call store_error('Two models are connected in a GWT '// &
-                       'exchange but they are in different solutions. '// &
-                       'GWT models must be in same solution: '// &
-                       trim(this%gwtmodel1%name)//' '//trim(this%gwtmodel2%name))
-      call this%parser%StoreErrorUnit()
+    if (associated(this%gwtmodel1) .and. associated(this%gwtmodel2)) then
+      if (this%gwtmodel1%idsoln /= this%gwtmodel2%idsoln) then
+        call store_error('Two models are connected in a GWT '// &
+                        'exchange but they are in different solutions. '// &
+                        'GWT models must be in same solution: '// &
+                        trim(this%gwtmodel1%name)//' '// &
+                        trim(this%gwtmodel2%name))
+        call this%parser%StoreErrorUnit()
+      end if
     end if
     !
     ! -- read options
@@ -245,7 +252,9 @@ contains
     !
     ! -- Store obs
     call this%gwt_gwt_df_obs()
-    call this%obs%obs_df(iout, this%name, 'GWT-GWT', this%gwtmodel1%dis)
+    if (associated(this%gwtmodel1)) then
+      call this%obs%obs_df(iout, this%name, 'GWT-GWT', this%gwtmodel1%dis)
+    end if
     !
     ! -- validate
     call this%validate_exchange()
@@ -287,13 +296,15 @@ contains
     ! Check to see if dispersion is on in either model1 or model2.
     ! If so, then ANGLDEGX must be provided as an auxiliary variable for this
     ! GWT-GWT exchange (this%ianglex > 0).
-    if (this%gwtmodel1%indsp /= 0 .or. this%gwtmodel2%indsp /= 0) then
-      if (this%ianglex == 0) then
-        write (errmsg, '(3a)') 'GWT-GWT exchange ', trim(this%name), &
-          ' requires that ANGLDEGX be specified as an'// &
-          ' auxiliary variable because dispersion was '// &
-          'specified in one or both transport models.'
-        call store_error(errmsg)
+    if (associated(this%gwtmodel1) .and. associated(this%gwtmodel2)) then
+      if (this%gwtmodel1%indsp /= 0 .or. this%gwtmodel2%indsp /= 0) then
+        if (this%ianglex == 0) then
+          write (errmsg, '(3a)') 'GWT-GWT exchange ', trim(this%name), &
+            ' requires that ANGLDEGX be specified as an'// &
+            ' auxiliary variable because dispersion was '// &
+            'specified in one or both transport models.'
+          call store_error(errmsg)
+        end if
       end if
     end if
 
@@ -425,14 +436,18 @@ contains
     call rate_accumulator(this%simvals, ratin, ratout)
     !
     ! -- Add the budget terms to model 1
-    budterm(1, 1) = ratin
-    budterm(2, 1) = ratout
-    call this%gwtmodel1%model_bdentry(budterm, budtxt, this%name)
+    if (associated(this%gwtmodel1)) then
+      budterm(1, 1) = ratin
+      budterm(2, 1) = ratout
+      call this%gwtmodel1%model_bdentry(budterm, budtxt, this%name)
+    end if
     !
     ! -- Add the budget terms to model 2
-    budterm(1, 1) = ratout
-    budterm(2, 1) = ratin
-    call this%gwtmodel2%model_bdentry(budterm, budtxt, this%name)
+    if (associated(this%gwtmodel2)) then
+      budterm(1, 1) = ratout
+      budterm(2, 1) = ratin
+      call this%gwtmodel2%model_bdentry(budterm, budtxt, this%name)
+    end if
     !
     ! -- Call mvt bd routine
     if (this%inmvt > 0) call this%mvt%mvt_bd(this%gwtmodel1%x, this%gwtmodel2%x)
