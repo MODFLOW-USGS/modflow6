@@ -16,7 +16,7 @@ module ConvergenceSummaryModule
     integer(I4B), pointer :: convnmod => null() !< number of models in the solution
     integer(I4B), dimension(:), pointer :: model_bounds => null() !< the start and stop index of the models in the solution
     integer(I4B), pointer :: nitermax => null() !< max. nr. of iterations in a timestep
-    integer(I4B), dimension(:), pointer, contiguous :: itinner => null() !< inner iteration number within each picard iteration    
+    integer(I4B), dimension(:), pointer, contiguous :: itinner => null() !< inner iteration number within each picard iteration
     integer(I4B), dimension(:), pointer, contiguous :: locdv => null() !< location of the maximum dependent-variable change in the solution
     real(DP), dimension(:), pointer, contiguous :: dvmax => null() !< maximum dependent-variable change in the solution
     integer(I4B), dimension(:), pointer, contiguous :: locdr => null() !< location of the maximum flow change in the solution
@@ -120,7 +120,7 @@ contains
     ! scalars
     call mem_deallocate(this%convnmod)
     call mem_deallocate(this%nitermax)
-    
+
     call mem_deallocate(this%locdr)
     call mem_deallocate(this%drmax)
     call mem_deallocate(this%locdv)
