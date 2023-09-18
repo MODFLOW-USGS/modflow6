@@ -519,7 +519,6 @@ contains
     return
   end subroutine set_active_status
 
-
   !> @brief Calculate the previous saturation level
   !!
   !! Calculate the groundwater cell head saturation for the end of
