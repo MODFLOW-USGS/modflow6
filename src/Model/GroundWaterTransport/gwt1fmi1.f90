@@ -59,8 +59,8 @@ module GwtFmiModule
     procedure :: initialize_gwfterms_from_bfr
     procedure :: initialize_gwfterms_from_gwfbndlist
     procedure :: read_options => gwtfmi_read_options
-    procedure :: read_packagedata => gwtfmi_read_packagedata
     procedure :: set_aptbudobj_pointer
+    procedure :: read_packagedata => gwtfmi_read_packagedata
 
   end type GwtFmiType
 
@@ -231,15 +231,8 @@ contains
     return
   end subroutine fmi_ad
 
+  !> @brief Calculate coefficients and fill matrix and rhs
   subroutine fmi_fc(this, nodes, cold, nja, matrix_sln, idxglo, rhs)
-! ******************************************************************************
-! fmi_fc -- Calculate coefficients and fill matrix and rhs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    !use BndModule,              only: BndType, GetBndFromList
     ! -- dummy
     class(GwtFmiType) :: this
     integer, intent(in) :: nodes
@@ -250,7 +243,6 @@ contains
     real(DP), intent(inout), dimension(nodes) :: rhs
     ! -- local
     integer(I4B) :: n, idiag, idiag_sln
-! ------------------------------------------------------------------------------
     !
     ! -- Calculate the flow imbalance error and make a correction for it
     if (this%iflowerr /= 0) then
@@ -268,14 +260,8 @@ contains
     return
   end subroutine fmi_fc
 
+  !> @brief Calculate flow correction
   subroutine fmi_cq(this, cnew, flowja)
-! ******************************************************************************
-! fmi_cq -- Calculate flow correction
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(GwtFmiType) :: this
     real(DP), intent(in), dimension(:) :: cnew
@@ -284,7 +270,6 @@ contains
     integer(I4B) :: n
     integer(I4B) :: idiag
     real(DP) :: rate
-! ------------------------------------------------------------------------------
     !
     ! -- If not adding flow error correction, return
     if (this%iflowerr /= 0) then
@@ -305,13 +290,8 @@ contains
     return
   end subroutine fmi_cq
 
+  !> @brief Calculate budget terms
   subroutine fmi_bd(this, isuppress_output, model_budget)
-! ******************************************************************************
-! mst_bd -- Calculate budget terms
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: delt
     use BudgetModule, only: BudgetType, rate_accumulator
@@ -322,7 +302,6 @@ contains
     ! -- local
     real(DP) :: rin
     real(DP) :: rout
-! ------------------------------------------------------------------------------
     !
     ! -- flow correction
     if (this%iflowerr /= 0) then
@@ -334,13 +313,8 @@ contains
     return
   end subroutine fmi_bd
 
+  !> @brief Save budget terms
   subroutine fmi_ot_flow(this, icbcfl, icbcun)
-! ******************************************************************************
-! fmi_ot_flow -- Save budget terms
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtFmiType) :: this
     integer(I4B), intent(in) :: icbcfl
@@ -350,7 +324,6 @@ contains
     integer(I4B) :: iprint, nvaluesp, nwidthp
     character(len=1) :: cdatafmp = ' ', editdesc = ' '
     real(DP) :: dinact
-! ------------------------------------------------------------------------------
     !
     ! -- Set unit number for binary output
     if (this%ipakcb < 0) then
@@ -380,18 +353,12 @@ contains
     return
   end subroutine fmi_ot_flow
 
+  !> @brief Deallocate variables
   subroutine gwtfmi_da(this)
-! ******************************************************************************
-! fmi_da -- Deallocate variables
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(GwtFmiType) :: this
-! ------------------------------------------------------------------------------
     ! -- todo: finalize hfr and bfr either here or in a finalize routine
     !
     ! -- deallocate any memory stored with gwfpackages
@@ -446,34 +413,18 @@ contains
     class(GwtFmiType) :: this
     ! -- local
     !
-    ! -- allocate scalars in NumericalPackageType
-    call this%NumericalPackageType%allocate_scalars()
+    ! -- allocate scalars in parent
+    call this%FlowModelInterfaceType%allocate_scalars()
     !
     ! -- Allocate
-    call mem_allocate(this%flows_from_file, 'FLOWS_FROM_FILE', this%memoryPath)
-    call mem_allocate(this%iflowsupdated, 'IFLOWSUPDATED', this%memoryPath)
     call mem_allocate(this%iflowerr, 'IFLOWERR', this%memoryPath)
-    call mem_allocate(this%igwfstrgss, 'IGWFSTRGSS', this%memoryPath)
-    call mem_allocate(this%igwfstrgsy, 'IGWFSTRGSY', this%memoryPath)
-    call mem_allocate(this%iubud, 'IUBUD', this%memoryPath)
-    call mem_allocate(this%iuhds, 'IUHDS', this%memoryPath)
-    call mem_allocate(this%iumvr, 'IUMVR', this%memoryPath)
-    call mem_allocate(this%nflowpack, 'NFLOWPACK', this%memoryPath)
     !
     ! -- Although not a scalar, allocate the advanced package transport
     !    budget object to zero so that it can be dynamically resized later
     allocate (this%aptbudobj(0))
     !
     ! -- Initialize
-    this%flows_from_file = .true.
-    this%iflowsupdated = 1
     this%iflowerr = 0
-    this%igwfstrgss = 0
-    this%igwfstrgsy = 0
-    this%iubud = 0
-    this%iuhds = 0
-    this%iumvr = 0
-    this%nflowpack = 0
     !
     ! -- Return
     return
@@ -490,6 +441,9 @@ contains
     ! -- local
     integer(I4B) :: n
     !
+    ! -- allocate parent arrays
+    call this%FlowModelInterfaceType%allocate_arrays(nodes)
+    !
     ! -- Allocate variables needed for all cases
     if (this%iflowerr == 0) then
       call mem_allocate(this%flowcorrect, 1, 'FLOWCORRECT', this%memoryPath)
@@ -500,66 +454,12 @@ contains
       this%flowcorrect(n) = DZERO
     end do
     !
-    ! -- Allocate ibdgwfsat0, which is an indicator array marking cells with
-    !    saturation greater than 0.0 with a value of 1
-    call mem_allocate(this%ibdgwfsat0, nodes, 'IBDGWFSAT0', this%memoryPath)
-    do n = 1, nodes
-      this%ibdgwfsat0(n) = 1
-    end do
-    !
-    ! -- Allocate differently depending on whether or not flows are
-    !    being read from a file.
-    if (this%flows_from_file) then
-      call mem_allocate(this%gwfflowja, this%dis%con%nja, 'GWFFLOWJA', &
-                        this%memoryPath)
-      call mem_allocate(this%gwfsat, nodes, 'GWFSAT', this%memoryPath)
-      call mem_allocate(this%gwfhead, nodes, 'GWFHEAD', this%memoryPath)
-      call mem_allocate(this%gwfspdis, 3, nodes, 'GWFSPDIS', this%memoryPath)
-      do n = 1, nodes
-        this%gwfsat(n) = DONE
-        this%gwfhead(n) = DZERO
-        this%gwfspdis(:, n) = DZERO
-      end do
-      do n = 1, size(this%gwfflowja)
-        this%gwfflowja(n) = DZERO
-      end do
-      !
-      ! -- allocate and initialize storage arrays
-      if (this%igwfstrgss == 0) then
-        call mem_allocate(this%gwfstrgss, 1, 'GWFSTRGSS', this%memoryPath)
-      else
-        call mem_allocate(this%gwfstrgss, nodes, 'GWFSTRGSS', this%memoryPath)
-      end if
-      if (this%igwfstrgsy == 0) then
-        call mem_allocate(this%gwfstrgsy, 1, 'GWFSTRGSY', this%memoryPath)
-      else
-        call mem_allocate(this%gwfstrgsy, nodes, 'GWFSTRGSY', this%memoryPath)
-      end if
-      do n = 1, size(this%gwfstrgss)
-        this%gwfstrgss(n) = DZERO
-      end do
-      do n = 1, size(this%gwfstrgsy)
-        this%gwfstrgsy(n) = DZERO
-      end do
-      !
-      ! -- If there is no fmi package, then there are no flows at all or a
-      !    connected GWF model, so allocate gwfpackages to zero
-      if (this%inunit == 0) call this%allocate_gwfpackages(this%nflowpack)
-    end if
-    !
-    ! -- Return
+    ! -- return
     return
   end subroutine gwtfmi_allocate_arrays
 
+  !> @brief Calculate groundwater cell head saturation for end of last time step
   function gwfsatold(this, n, delt) result(satold)
-! ******************************************************************************
-! gwfsatold -- calculate the groundwater cell head saturation for the end of
-!   the last time step
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(GwtFmiType) :: this
     integer(I4B), intent(in) :: n
@@ -570,7 +470,6 @@ contains
     real(DP) :: vcell
     real(DP) :: vnew
     real(DP) :: vold
-! ------------------------------------------------------------------------------
     !
     ! -- calculate the value
     vcell = this%dis%area(n) * (this%dis%top(n) - this%dis%bot(n))
@@ -851,7 +750,8 @@ contains
       call this%gwfpackages(ip)%set_name(this%bfr%dstpackagenamearray(i), &
                                          this%bfr%budtxtarray(i))
       naux = this%bfr%nauxarray(i)
-      call this%gwfpackages(ip)%set_auxname(naux, this%bfr%auxtxtarray(1:naux, i))
+      call this%gwfpackages(ip)%set_auxname(naux, &
+                                            this%bfr%auxtxtarray(1:naux, i))
       ip = ip + 1
     end do
     !
