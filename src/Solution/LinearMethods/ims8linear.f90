@@ -856,9 +856,8 @@ CONTAINS
     !!
   !<
   SUBROUTINE imslinear_ap(this, ICNVG, KSTP, KITER, IN_ITER, &
-                          NCONV, CONVNMOD, CONVMODSTART, LOCDV, LOCDR, &
-                          CACCEL, ITINNER, CONVLOCDV, CONVLOCDR, &
-                          DVMAX, DRMAX, CONVDVMAX, CONVDRMAX, summary)
+                          NCONV, CONVNMOD, CONVMODSTART, &
+                          CACCEL, summary)
     ! -- modules
     USE SimModule
     ! -- dummy variables
@@ -871,16 +870,7 @@ CONTAINS
     integer(I4B), INTENT(IN) :: NCONV !<
     integer(I4B), INTENT(IN) :: CONVNMOD !<
     integer(I4B), DIMENSION(CONVNMOD + 1), INTENT(INOUT) :: CONVMODSTART !<
-    integer(I4B), DIMENSION(CONVNMOD), INTENT(INOUT) :: LOCDV !<
-    integer(I4B), DIMENSION(CONVNMOD), INTENT(INOUT) :: LOCDR !<
     character(len=31), DIMENSION(NCONV), INTENT(INOUT) :: CACCEL !<
-    integer(I4B), DIMENSION(NCONV), INTENT(INOUT) :: ITINNER !<
-    integer(I4B), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVLOCDV !<
-    integer(I4B), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVLOCDR !<
-    real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DVMAX !<
-    real(DP), DIMENSION(CONVNMOD), INTENT(INOUT) :: DRMAX !<
-    real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDVMAX !<
-    real(DP), DIMENSION(CONVNMOD, NCONV), INTENT(INOUT) :: CONVDRMAX !<
     type(ConvergenceSummaryType), pointer, intent(in) :: summary !< Convergence summary report
     ! -- local variables
     integer(I4B) :: n
@@ -963,21 +953,20 @@ CONTAINS
     IF (this%ILINMETH == 1) THEN
       CALL ims_base_cg(ICNVG, itmax, innerit, &
                        this%NEQ, this%NJA, this%NIAPC, this%NJAPC, &
-                       this%IPC, this%NITERC, this%ICNVGOPT, this%NORTH, &
+                       this%IPC, this%ICNVGOPT, this%NORTH, &
                        this%DVCLOSE, this%RCLOSE, this%L2NORM0, &
                        this%EPFACT, this%IA0, this%JA0, this%A0, &
                        this%IAPC, this%JAPC, this%APC, &
                        this%X, this%RHS, this%D, this%P, this%Q, this%Z, &
                        this%NJLU, this%IW, this%JLU, &
-                       NCONV, CONVNMOD, CONVMODSTART, LOCDV, LOCDR, &
-                       CACCEL, ITINNER, CONVLOCDV, CONVLOCDR, &
-                       DVMAX, DRMAX, CONVDVMAX, CONVDRMAX)
+                       NCONV, CONVNMOD, CONVMODSTART, &
+                       CACCEL, summary)
       !
       ! -- SOLUTION BY THE BICONJUGATE GRADIENT STABILIZED METHOD
     ELSE IF (this%ILINMETH == 2) THEN
       CALL ims_base_bcgs(ICNVG, itmax, innerit, &
                          this%NEQ, this%NJA, this%NIAPC, this%NJAPC, &
-                         this%IPC, this%NITERC, this%ICNVGOPT, this%NORTH, &
+                         this%IPC, this%ICNVGOPT, this%NORTH, &
                          this%ISCL, this%DSCALE, &
                          this%DVCLOSE, this%RCLOSE, this%L2NORM0, &
                          this%EPFACT, this%IA0, this%JA0, this%A0, &
@@ -985,9 +974,8 @@ CONTAINS
                          this%X, this%RHS, this%D, this%P, this%Q, &
                          this%T, this%V, this%DHAT, this%PHAT, this%QHAT, &
                          this%NJLU, this%IW, this%JLU, &
-                         NCONV, CONVNMOD, CONVMODSTART, LOCDV, LOCDR, &
-                         CACCEL, ITINNER, CONVLOCDV, CONVLOCDR, &
-                         DVMAX, DRMAX, CONVDVMAX, CONVDRMAX, summary)
+                         NCONV, CONVNMOD, CONVMODSTART, &
+                         CACCEL, summary)
     END IF
     !
     ! -- BACK PERMUTE AMAT, SOLUTION, AND RHS

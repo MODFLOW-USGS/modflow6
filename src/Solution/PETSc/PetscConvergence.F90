@@ -111,7 +111,7 @@ contains
     iter_cnt = summary%iter_cnt
 
     summary%itinner(iter_cnt) = n
-    do i = 1, summary%convmod
+    do i = 1, summary%convnmod
       summary%convdvmax(i, iter_cnt) = -huge(dvmax_model)
       summary%convlocdv(i, iter_cnt) = -1
       summary%convdrmax(i, iter_cnt) = -huge(drmax_model)
@@ -138,7 +138,7 @@ contains
     CHKERRQ(ierr)
     call VecGetArrayF90(petsc_ctx%delta_res, local_dr, ierr)
     CHKERRQ(ierr)
-    do i = 1, summary%convmod
+    do i = 1, summary%convnmod
       ! reset
       dvmax_model = 0.0
       idx_dv = -1

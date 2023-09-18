@@ -109,15 +109,6 @@ module NumericalSolutionModule
     integer(I4B), pointer :: nitermax => null() !< maximum number of iterations in a time step (maxiter * maxinner)
     integer(I4B), pointer :: convnmod => null() !< number of models in the solution
     integer(I4B), dimension(:), pointer, contiguous :: convmodstart => null() !< pointer to the start of each model in the convmod* arrays
-    integer(I4B), dimension(:), pointer, contiguous :: locdv => null() !< location of the maximum dependent-variable change in the solution
-    integer(I4B), dimension(:), pointer, contiguous :: locdr => null() !< location of the maximum flow change in the solution
-    integer(I4B), dimension(:), pointer, contiguous :: itinner => null() !< actual number of inner iterations in each Picard iteration
-    integer(I4B), pointer, dimension(:, :), contiguous :: convlocdv => null() !< location of the maximum dependent-variable change in each model in the solution
-    integer(I4B), pointer, dimension(:, :), contiguous :: convlocdr => null() !< location of the maximum flow change in each model in the solution
-    real(DP), dimension(:), pointer, contiguous :: dvmax => null() !< maximum dependent-variable change in the solution
-    real(DP), dimension(:), pointer, contiguous :: drmax => null() !< maximum flow change in the solution
-    real(DP), pointer, dimension(:, :), contiguous :: convdvmax => null() !< maximum dependent-variable change in each model in the solution
-    real(DP), pointer, dimension(:, :), contiguous :: convdrmax => null() !< maximum flow change in each model in the solution
     !
     ! -- refactoring
     type(ConvergenceSummaryType), pointer :: cnvg_summary => null() !< details on the convergence behavior within a timestep
@@ -398,31 +389,12 @@ contains
     call mem_allocate(this%deold, 0, 'DEOLD', this%memory_path)
     call mem_allocate(this%convmodstart, this%convnmod + 1, 'CONVMODSTART', &
                       this%memory_path)
-    call mem_allocate(this%locdv, this%convnmod, 'LOCDV', this%memory_path)
-    call mem_allocate(this%locdr, this%convnmod, 'LOCDR', this%memory_path)
-    call mem_allocate(this%itinner, 0, 'ITINNER', this%memory_path)
-    call mem_allocate(this%convlocdv, this%convnmod, 0, 'CONVLOCDV', &
-                      this%memory_path)
-    call mem_allocate(this%convlocdr, this%convnmod, 0, 'CONVLOCDR', &
-                      this%memory_path)
-    call mem_allocate(this%dvmax, this%convnmod, 'DVMAX', this%memory_path)
-    call mem_allocate(this%drmax, this%convnmod, 'DRMAX', this%memory_path)
-    call mem_allocate(this%convdvmax, this%convnmod, 0, 'CONVDVMAX', &
-                      this%memory_path)
-    call mem_allocate(this%convdrmax, this%convnmod, 0, 'CONVDRMAX', &
-                      this%memory_path)
     !
     ! -- initialize allocated arrays
     do i = 1, this%neq
       this%xtemp(i) = DZERO
       this%dxold(i) = DZERO
       this%active(i) = 1 !default is active
-    end do
-    do i = 1, this%convnmod
-      this%locdv(i) = 0
-      this%locdr(i) = 0
-      this%dvmax(i) = DZERO
-      this%drmax(i) = DZERO
     end do
     !
     ! -- initialize convmodstart
@@ -548,7 +520,6 @@ contains
     character(len=linelength) :: fname
     character(len=linelength) :: msg
     integer(I4B) :: i
-    integer(I4B) :: im
     integer(I4B) :: ifdparam, mxvl, npp
     integer(I4B) :: ims_lin_type
     integer(I4B) :: ierr
@@ -1054,26 +1025,6 @@ contains
 
     allocate (this%caccel(this%nitermax))
 
-    im = this%convnmod
-    call mem_reallocate(this%itinner, this%nitermax, 'ITINNER', &
-                        trim(this%name))
-    call mem_reallocate(this%convlocdv, im, this%nitermax, 'CONVLOCDV', &
-                        trim(this%name))
-    call mem_reallocate(this%convlocdr, im, this%nitermax, 'CONVLOCDR', &
-                        trim(this%name))
-    call mem_reallocate(this%convdvmax, im, this%nitermax, 'CONVDVMAX', &
-                        trim(this%name))
-    call mem_reallocate(this%convdrmax, im, this%nitermax, 'CONVDRMAX', &
-                        trim(this%name))
-    do i = 1, this%nitermax
-      this%itinner(i) = 0
-      do im = 1, this%convnmod
-        this%convlocdv(im, i) = 0
-        this%convlocdr(im, i) = 0
-        this%convdvmax(im, i) = DZERO
-        this%convdrmax(im, i) = DZERO
-      end do
-    end do
     !
     ! -- resize convergence report
     call this%cnvg_summary%reinit(this%nitermax)
@@ -1260,15 +1211,6 @@ contains
     call mem_deallocate(this%hchold)
     call mem_deallocate(this%deold)
     call mem_deallocate(this%convmodstart)
-    call mem_deallocate(this%locdv)
-    call mem_deallocate(this%locdr)
-    call mem_deallocate(this%itinner)
-    call mem_deallocate(this%convlocdv)
-    call mem_deallocate(this%convlocdr)
-    call mem_deallocate(this%dvmax)
-    call mem_deallocate(this%drmax)
-    call mem_deallocate(this%convdvmax)
-    call mem_deallocate(this%convdrmax)
     !
     ! -- convergence report
     call this%cnvg_summary%destroy()
@@ -2156,13 +2098,13 @@ contains
       dv = DZERO
       dr = DZERO
       do j = 1, this%convnmod
-        if (ABS(this%convdvmax(j, kpos)) > ABS(dv)) then
-          locdv = this%convlocdv(j, kpos)
-          dv = this%convdvmax(j, kpos)
+        if (ABS(this%cnvg_summary%convdvmax(j, kpos)) > ABS(dv)) then
+          locdv = this%cnvg_summary%convlocdv(j, kpos)
+          dv = this%cnvg_summary%convdvmax(j, kpos)
         end if
-        if (ABS(this%convdrmax(j, kpos)) > ABS(dr)) then
-          locdr = this%convlocdr(j, kpos)
-          dr = this%convdrmax(j, kpos)
+        if (ABS(this%cnvg_summary%convdrmax(j, kpos)) > ABS(dr)) then
+          locdr = this%cnvg_summary%convlocdr(j, kpos)
+          dr = this%cnvg_summary%convdrmax(j, kpos)
         end if
       end do
       !
@@ -2182,11 +2124,11 @@ contains
       !
       ! -- write information for each model - ims only
       if (this%linmeth == 1 .and. this%convnmod > 1) then
-        do j = 1, this%convnmod
-          locdv = this%convlocdv(j, kpos)
-          dv = this%convdvmax(j, kpos)
-          locdr = this%convlocdr(j, kpos)
-          dr = this%convdrmax(j, kpos)
+        do j = 1, this%cnvg_summary%convnmod
+          locdv = this%cnvg_summary%convlocdv(j, kpos)
+          dv = this%cnvg_summary%convdvmax(j, kpos)
+          locdr = this%cnvg_summary%convlocdr(j, kpos)
+          dr = this%cnvg_summary%convdrmax(j, kpos)
           !
           ! -- get model number and user node number for dv
           call this%sln_get_nodeu(locdv, im, nodeu)
@@ -2608,13 +2550,8 @@ contains
     ! -- ims linear solver - linmeth option 1
     if (this%linmeth == 1) then
       call this%imslinear%imslinear_apply(this%icnvg, kstp, kiter, in_iter, &
-                                          this%nitermax, &
-                                          this%convnmod, this%convmodstart, &
-                                          this%locdv, this%locdr, &
-                                          this%caccel, this%itinner, &
-                                          this%convlocdv, this%convlocdr, &
-                                          this%dvmax, this%drmax, &
-                                          this%convdvmax, this%convdrmax, &
+                                          this%nitermax, this%convnmod, &
+                                          this%convmodstart, this%caccel, &
                                           this%cnvg_summary)
     else if (this%linmeth == 2) then
       call this%linear_solver%solve(kiter, this%vec_rhs, &
