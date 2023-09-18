@@ -1,6 +1,6 @@
 """
 Test of GWF DISV Package.  Use the flopy disv tool to create
-a simple regular grid example, but using DISV instead of DISU.
+a simple regular grid example, but using DISV instead of DIS.
 Use a large offset for x and y vertices to ensure that the area
 calculation in MODFLOW 6 is correct.  For the second case, set
 one of the cells inactive and test to make sure connectivity
