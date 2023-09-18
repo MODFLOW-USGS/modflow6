@@ -1,23 +1,26 @@
-module GwtAdvModule
+module TspAdvModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DONE, DZERO, DHALF, DTWO
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
-  use GwtFmiModule, only: GwtFmiType
-  use GwtAdvOptionsModule, only: GwtAdvOptionsType
+  use TspFmiModule, only: TspFmiType
+  use TspAdvOptionsModule, only: TspAdvOptionsType
   use MatrixBaseModule
 
   implicit none
   private
-  public :: GwtAdvType
+  public :: TspAdvType
   public :: adv_cr
 
-  type, extends(NumericalPackageType) :: GwtAdvType
+  type, extends(NumericalPackageType) :: TspAdvType
 
     integer(I4B), pointer :: iadvwt => null() !< advection scheme (0 up, 1 central, 2 tvd)
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
-    type(GwtFmiType), pointer :: fmi => null() !< pointer to fmi object
+    type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
+    real(DP), dimension(:), pointer, contiguous :: cpw => null() ! pointer to GWE heat capacity of water
+    real(DP), dimension(:), pointer, contiguous :: rhow => null() ! fixed density of water
+    real(DP), pointer :: eqnsclfac => null() !< governing equation scale factor; =1. for solute; =rhow*cpw for energy
 
   contains
 
@@ -34,23 +37,22 @@ module GwtAdvModule
     procedure :: adv_weight
     procedure :: advtvd
 
-  end type GwtAdvType
+  end type TspAdvType
 
 contains
 
-  subroutine adv_cr(advobj, name_model, inunit, iout, fmi)
-! ******************************************************************************
-! adv_cr -- Create a new ADV object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @ brief Create a new ADV object
+  !!
+  !!  Create a new ADV package
+  !<
+  subroutine adv_cr(advobj, name_model, inunit, iout, fmi, eqnsclfac)
     ! -- dummy
-    type(GwtAdvType), pointer :: advobj
+    type(TspAdvType), pointer :: advobj
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
-    type(GwtFmiType), intent(in), target :: fmi
+    type(TspFmiType), intent(in), target :: fmi
+    real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -66,18 +68,25 @@ contains
     advobj%inunit = inunit
     advobj%iout = iout
     advobj%fmi => fmi
+    advobj%eqnsclfac => eqnsclfac
     !
     ! -- Return
     return
   end subroutine adv_cr
 
+  !> @brief Define ADV object
+  !!
+  !! Define the ADV package
+  !<
   subroutine adv_df(this, adv_options)
-    class(GwtAdvType) :: this
-    type(GwtAdvOptionsType), optional, intent(in) :: adv_options !< the optional options, for when not constructing from file
-    ! local
+    ! -- dummy
+    class(TspAdvType) :: this
+    type(TspAdvOptionsType), optional, intent(in) :: adv_options !< the optional options, for when not constructing from file
+    ! -- local
     character(len=*), parameter :: fmtadv = &
       "(1x,/1x,'ADV-- ADVECTION PACKAGE, VERSION 1, 8/25/2017', &
       &' INPUT READ FROM UNIT ', i0, //)"
+! ------------------------------------------------------------------------------
     !
     ! -- Read or set advection options
     if (.not. present(adv_options)) then
@@ -96,21 +105,23 @@ contains
       ! --set options from input arg
       this%iadvwt = adv_options%iAdvScheme
     end if
-
+    !
+    ! -- Return
+    return
   end subroutine adv_df
 
-  subroutine adv_ar(this, dis, ibound)
-! ******************************************************************************
-! adv_ar -- Allocate and Read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Allocate and read method for package
+  !!
+  !!  Method to allocate and read static data for the ADV package.
+  !<
+  subroutine adv_ar(this, dis, ibound, cpw, rhow)
     ! -- modules
     ! -- dummy
-    class(GwtAdvType) :: this
+    class(TspAdvType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
-    integer(I4B), dimension(:), pointer, contiguous :: ibound
+    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: ibound
+    real(DP), dimension(:), pointer, contiguous, optional, intent(in) :: cpw
+    real(DP), dimension(:), pointer, contiguous, optional, intent(in) :: rhow
     ! -- local
     ! -- formats
 ! ------------------------------------------------------------------------------
@@ -119,20 +130,22 @@ contains
     this%dis => dis
     this%ibound => ibound
     !
+    ! -- if part of a GWE simulation, need heat capacity(cpw) and density (rhow)
+    if (present(cpw)) this%cpw => cpw
+    if (present(rhow)) this%rhow => rhow
+    !
     ! -- Return
     return
   end subroutine adv_ar
 
+  !> @brief  Fill coefficient method for ADV package
+  !!
+  !!  Method to calculate coefficients and fill amat and rhs.
+  !<
   subroutine adv_fc(this, nodes, matrix_sln, idxglo, cnew, rhs)
-! ******************************************************************************
-! adv_fc -- Calculate coefficients and fill amat and rhs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAdvType) :: this
+    class(TspAdvType) :: this
     integer, intent(in) :: nodes
     class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in), dimension(:) :: idxglo
@@ -152,7 +165,8 @@ contains
         if (this%dis%con%mask(ipos) == 0) cycle
         m = this%dis%con%ja(ipos)
         if (this%ibound(m) == 0) cycle
-        qnm = this%fmi%gwfflowja(ipos)
+!!        qnm = this%fmi%gwfflowja(ipos)
+        qnm = this%fmi%gwfflowja(ipos) * this%eqnsclfac
         omega = this%adv_weight(this%iadvwt, ipos, n, m, qnm)
         call matrix_sln%add_value_pos(idxglo(ipos), qnm * (DONE - omega))
         call matrix_sln%add_value_pos(idxglo(idiag), qnm * omega)
@@ -171,16 +185,15 @@ contains
     return
   end subroutine adv_fc
 
+  !> @brief  Calculate TVD
+  !!
+  !! Use explicit scheme to calculate the advective component of transport.
+  !! TVD is an acronym for Total-Variation Diminishing
+  !<
   subroutine advtvd(this, n, cnew, rhs)
-! ******************************************************************************
-! advtvd -- Calculate TVD
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAdvType) :: this
+    class(TspAdvType) :: this
     integer(I4B), intent(in) :: n
     real(DP), dimension(:), intent(in) :: cnew
     real(DP), dimension(:), intent(inout) :: rhs
@@ -204,19 +217,18 @@ contains
     return
   end subroutine advtvd
 
+  !> @brief  Calculate TVD
+  !!
+  !! Use explicit scheme to calculate the advective component of transport.
+  !! TVD is an acronym for Total-Variation Diminishing
+  !<
   function advqtvd(this, n, m, iposnm, cnew) result(qtvd)
-! ******************************************************************************
-! advqtvd -- Calculate TVD
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DPREC
-    ! -- return
+    ! -- Return
     real(DP) :: qtvd
     ! -- dummy
-    class(GwtAdvType) :: this
+    class(TspAdvType) :: this
     integer(I4B), intent(in) :: n
     integer(I4B), intent(in) :: m
     integer(I4B), intent(in) :: iposnm
@@ -269,6 +281,7 @@ contains
       if (smooth > DZERO) then
         alimiter = DTWO * smooth / (DONE + smooth)
         qtvd = DHALF * alimiter * qnm * (cnew(idn) - cnew(iup))
+        qtvd = qtvd * this%eqnsclfac
       end if
     end if
     !
@@ -276,16 +289,12 @@ contains
     return
   end function advqtvd
 
+  !> @brief Calculate advection contribution to flowja
+  !<
   subroutine adv_cq(this, cnew, flowja)
-! ******************************************************************************
-! adv_cq -- Calculate advection contribution to flowja
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAdvType) :: this
+    class(TspAdvType) :: this
     real(DP), intent(in), dimension(:) :: cnew
     real(DP), intent(inout), dimension(:) :: flowja
     ! -- local
@@ -303,7 +312,7 @@ contains
       do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
         m = this%dis%con%ja(ipos)
         if (this%ibound(m) == 0) cycle
-        qnm = this%fmi%gwfflowja(ipos)
+        qnm = this%fmi%gwfflowja(ipos) * this%eqnsclfac
         omega = this%adv_weight(this%iadvwt, ipos, n, m, qnm)
         flowja(ipos) = flowja(ipos) + qnm * omega * cnew(n) + &
                        qnm * (DONE - omega) * cnew(m)
@@ -317,16 +326,11 @@ contains
     return
   end subroutine adv_cq
 
+  !> @brief Add TVD contribution to flowja
   subroutine advtvd_bd(this, cnew, flowja)
-! ******************************************************************************
-! advtvd_bd -- Add TVD contribution to flowja
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtAdvType) :: this
+    class(TspAdvType) :: this
     real(DP), dimension(:), intent(in) :: cnew
     real(DP), dimension(:), intent(inout) :: flowja
     ! -- local
@@ -351,17 +355,13 @@ contains
     return
   end subroutine advtvd_bd
 
+  !> @brief Deallocate memory
+  !<
   subroutine adv_da(this)
-! ******************************************************************************
-! adv_da -- Deallocate variables
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(GwtAdvType) :: this
+    class(TspAdvType) :: this
 ! ------------------------------------------------------------------------------
     !
     ! -- Deallocate arrays if package was active
@@ -370,6 +370,8 @@ contains
     !
     ! -- nullify pointers
     this%ibound => null()
+    nullify (this%cpw)
+    nullify (this%rhow)
     !
     ! -- Scalars
     call mem_deallocate(this%iadvwt)
@@ -381,17 +383,14 @@ contains
     return
   end subroutine adv_da
 
+  !> @brief Allocate scalars specific to the streamflow energy transport (SFE)
+  !! package.
+  !<
   subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
-    class(GwtAdvType) :: this
+    class(TspAdvType) :: this
     ! -- local
 ! ------------------------------------------------------------------------------
     !
@@ -411,18 +410,16 @@ contains
     return
   end subroutine allocate_scalars
 
+  !> @brief Read options
+  !!
+  !! Read the options block
+  !<
   subroutine read_options(this)
-! ******************************************************************************
-! read_options -- Allocate and Read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error
     ! -- dummy
-    class(GwtAdvType) :: this
+    class(TspAdvType) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg, keyword
     integer(I4B) :: ierr
@@ -478,17 +475,15 @@ contains
     return
   end subroutine read_options
 
+  !> @ brief Advection weight
+  !!
+  !! Calculate the advection weight
+  !<
   function adv_weight(this, iadvwt, ipos, n, m, qnm) result(omega)
-! ******************************************************************************
-! adv_weight -- calculate advection weight
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- return
+    ! -- Return
     real(DP) :: omega
     ! -- dummy
-    class(GwtAdvType) :: this
+    class(TspAdvType) :: this
     integer, intent(in) :: iadvwt
     integer, intent(in) :: ipos
     integer, intent(in) :: n
@@ -520,8 +515,8 @@ contains
       end if
     end select
     !
-    ! -- return
+    ! -- Return
     return
   end function adv_weight
 
-end module GwtAdvModule
+end module TspAdvModule

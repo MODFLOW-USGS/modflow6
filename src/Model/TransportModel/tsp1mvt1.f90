@@ -2,7 +2,7 @@
 ! -- This module is responsible for sending mass from providers into
 ! -- receiver qmfrommvr arrays and writing a mover transport budget
 
-module GwtMvtModule
+module TspMvtModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH, MAXCHARLEN, DZERO, LENPAKLOC, &
@@ -11,7 +11,7 @@ module GwtMvtModule
   use SimModule, only: store_error
   use BaseDisModule, only: DisBaseType
   use NumericalPackageModule, only: NumericalPackageType
-  use GwtFmiModule, only: GwtFmiType
+  use TspFmiModule, only: TspFmiType
   use BudgetModule, only: BudgetType, budget_cr
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
   use TableModule, only: TableType, table_cr
@@ -19,17 +19,18 @@ module GwtMvtModule
   implicit none
 
   private
-  public :: GwtMvtType
+  public :: TspMvtType
   public :: mvt_cr
 
-  type, extends(NumericalPackageType) :: GwtMvtType
+  type, extends(NumericalPackageType) :: TspMvtType
     character(len=LENMODELNAME) :: gwfmodelname1 = '' !< name of model 1
     character(len=LENMODELNAME) :: gwfmodelname2 = '' !< name of model 2 (set to modelname 1 for single model MVT)
     integer(I4B), pointer :: maxpackages !< max number of packages
     integer(I4B), pointer :: ibudgetout => null() !< unit number for budget output file
     integer(I4B), pointer :: ibudcsv => null() !< unit number for csv budget output file
-    type(GwtFmiType), pointer :: fmi1 => null() !< pointer to fmi object for model 1
-    type(GwtFmiType), pointer :: fmi2 => null() !< pointer to fmi object for model 2 (set to fmi1 for single model)
+    real(DP), pointer :: eqnsclfac => null() !< governing equation scale factor; =1. for solute; =rhow*cpw for energy
+    type(TspFmiType), pointer :: fmi1 => null() !< pointer to fmi object for model 1
+    type(TspFmiType), pointer :: fmi2 => null() !< pointer to fmi object for model 2 (set to fmi1 for single model)
     type(BudgetType), pointer :: budget => null() !< mover transport budget object (used to write balance table)
     type(BudgetObjectType), pointer :: budobj => null() !< budget container (used to write binary file)
     type(BudgetObjectType), pointer :: mvrbudobj => null() !< pointer to the water mover budget object
@@ -58,27 +59,24 @@ module GwtMvtModule
     procedure :: set_fmi_pr_rc
     procedure, private :: mvt_setup_outputtab
     procedure, private :: mvt_print_outputtab
-  end type GwtMvtType
+  end type TspMvtType
 
 contains
 
-  subroutine mvt_cr(mvt, name_model, inunit, iout, fmi1, gwfmodelname1, &
-                    gwfmodelname2, fmi2)
-! ******************************************************************************
-! mvt_cr -- Create a new initial conditions object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Create a new mover transport object
+  !<
+  subroutine mvt_cr(mvt, name_model, inunit, iout, fmi1, eqnsclfac, & ! kluge note: does this need tsplab?
+                    gwfmodelname1, gwfmodelname2, fmi2)
     ! -- dummy
-    type(GwtMvtType), pointer :: mvt
+    type(TspMvtType), pointer :: mvt
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
-    type(GwtFmiType), intent(in), target :: fmi1
+    type(TspFmiType), intent(in), target :: fmi1
+    real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
     character(len=*), intent(in), optional :: gwfmodelname1
     character(len=*), intent(in), optional :: gwfmodelname2
-    type(GwtFmiType), intent(in), target, optional :: fmi2
+    type(TspFmiType), intent(in), target, optional :: fmi2
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -113,20 +111,19 @@ contains
     ! -- create the budget object
     call budgetobject_cr(mvt%budobj, 'TRANSPORT MOVER')
     !
+    ! -- Store pointer to governing equation scale factor
+    mvt%eqnsclfac => eqnsclfac
+    !
     ! -- Return
     return
   end subroutine mvt_cr
 
+  !> @brief Define mover transport object
+  !<
   subroutine mvt_df(this, dis)
-! ******************************************************************************
-! mvt_df -- Define
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtMvtType) :: this
+    class(TspMvtType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
     ! -- local
     ! -- formats
@@ -162,21 +159,17 @@ contains
   !!
   !<
   subroutine set_pointer_mvrbudobj(this, mvrbudobj)
-    class(GwtMvtType) :: this
+    class(TspMvtType) :: this
     type(BudgetObjectType), intent(in), target :: mvrbudobj
     this%mvrbudobj => mvrbudobj
   end subroutine set_pointer_mvrbudobj
 
+  !> @brief Allocate and read mover-for-transport information
+  !<
   subroutine mvt_ar(this)
-! ******************************************************************************
-! mvt_ar -- Allocate and read water mover information
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtMvtType) :: this
+    class(TspMvtType) :: this
     ! -- locals
 ! ------------------------------------------------------------------------------
     !
@@ -187,17 +180,13 @@ contains
     return
   end subroutine mvt_ar
 
+  !> @brief Read and prepare mover transport object
+  !<
   subroutine mvt_rp(this)
-! ******************************************************************************
-! mvt_rp -- Read and prepare
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: kper, kstp
     ! -- dummy
-    class(GwtMvtType) :: this
+    class(TspMvtType) :: this
     ! -- local
     ! -- formats
 ! ------------------------------------------------------------------------------
@@ -224,22 +213,18 @@ contains
     return
   end subroutine mvt_rp
 
+  !> @brief Calculate coefficients and fill amat and rhs
+  !!
+  !! The mvt package adds the mass flow rate to the provider qmfrommvr array.
+  !! The advanced packages know enough to subract any mass that is leaving, so
+  !! the mvt just adds mass coming in from elsewhere.  Because the movers
+  !! change by stress period, their solute effects must be added to the right-
+  !! hand side of the transport matrix equations.
+  !<
   subroutine mvt_fc(this, cnew1, cnew2)
-! ******************************************************************************
-! mvt_fc -- Calculate coefficients and fill amat and rhs
-!
-!   The mvt package adds the mass flow rate to the provider qmfrommvr
-!   array.  The advanced packages know enough to subract any mass that is
-!   leaving, so the mvt just adds mass coming in from elsewhere.  Because the
-!   movers change change by stress period, their solute effects must be
-!   added to the right-hand side of the gwt matrix equations.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtMvtType) :: this
+    class(TspMvtType) :: this
     real(DP), intent(in), dimension(:), contiguous, target :: cnew1
     real(DP), intent(in), dimension(:), contiguous, target :: cnew2
     ! -- local
@@ -251,8 +236,8 @@ contains
     real(DP) :: q, cp
     real(DP), dimension(:), pointer :: concpak
     real(DP), dimension(:), contiguous, pointer :: cnew
-    type(GwtFmiType), pointer :: fmi_pr !< pointer to provider model fmi package
-    type(GwtFmiType), pointer :: fmi_rc !< pointer to receiver model fmi package
+    type(TspFmiType), pointer :: fmi_pr !< pointer to provider model fmi package
+    type(TspFmiType), pointer :: fmi_rc !< pointer to receiver model fmi package
 ! ------------------------------------------------------------------------------
     !
     ! -- Add mover QC terms to the receiver packages
@@ -313,7 +298,7 @@ contains
           !    water into the same receiver
           if (fmi_rc%iatp(irc) /= 0) then
             fmi_rc%datp(irc)%qmfrommvr(id2) = fmi_rc%datp(irc)%qmfrommvr(id2) - &
-                                              q * cp
+                                              q * cp * this%eqnsclfac
           end if
         end do
       end if
@@ -325,20 +310,19 @@ contains
 
   !> @ brief Set the fmi_pr and fmi_rc pointers
   !!
-  !! The fmi_pr and fmi_rc arguments are pointers to the provider
-  !! and receiver FMI Packages.  If this MVT Package is owned by
-  !! a single GWT model, then these pointers are both set to the
-  !! FMI Package of this GWT model's FMI Package.  If this MVT
-  !! Package is owned by a GWTGWT Exchange, then the fmi_pr and
-  !! fmi_rc pointers may be assigned to FMI Packages in different models.
-  !!
+  !! The fmi_pr and fmi_rc arguments are pointers to the provider and receiver
+  !! FMI Packages.  If this MVT Package is owned by a single GWT model, then
+  !! these pointers are both set to the FMI Package of this GWT model's FMI
+  !! package.  If this MVT package is owned by a GWTGWT exchange, then the
+  !! fmi_pr and fmi_rc pointers may be assigned to FMI Packages in different
+  !! models.
   !<
   subroutine set_fmi_pr_rc(this, ibudterm, fmi_pr, fmi_rc)
     ! -- dummy
-    class(GwtMvtType) :: this
+    class(TspMvtType) :: this
     integer(I4B), intent(in) :: ibudterm
-    type(GwtFmiType), pointer :: fmi_pr
-    type(GwtFmiType), pointer :: fmi_rc
+    type(TspFmiType), pointer :: fmi_pr
+    type(TspFmiType), pointer :: fmi_rc
 
     fmi_pr => null()
     fmi_rc => null()
@@ -389,19 +373,16 @@ contains
       print *, 'Could not find FMI Package...'
       stop "error in set_fmi_pr_rc"
     end if
-
+    !
+    ! -- Return
     return
   end subroutine set_fmi_pr_rc
 
+  !> @brief Extra convergence check for mover
+  !<
   subroutine mvt_cc(this, kiter, iend, icnvgmod, cpak, dpak)
-! ******************************************************************************
-! mvt_cc -- extra convergence check for mover
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtMvtType) :: this
+    class(TspMvtType) :: this
     integer(I4B), intent(in) :: kiter
     integer(I4B), intent(in) :: iend
     integer(I4B), intent(in) :: icnvgmod
@@ -423,20 +404,16 @@ contains
       end if
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mvt_cc
 
+  !> @brief Write mover terms to listing file
+  !<
   subroutine mvt_bd(this, cnew1, cnew2)
-! ******************************************************************************
-! mvt_bd -- Write mover terms to listing file
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtMvtType) :: this
+    class(TspMvtType) :: this
     real(DP), dimension(:), contiguous, intent(in) :: cnew1
     real(DP), dimension(:), contiguous, intent(in) :: cnew2
     ! -- local
@@ -445,21 +422,17 @@ contains
     ! -- fill the budget object
     call this%mvt_fill_budobj(cnew1, cnew2)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mvt_bd
 
+  !> @brief Write mover budget terms
+  !<
   subroutine mvt_ot_saveflow(this, icbcfl, ibudfl)
-! ******************************************************************************
-! mvt_bd -- Write mover terms
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: kstp, kper, delt, pertim, totim
     ! -- dummy
-    class(GwtMvttype) :: this
+    class(TspMvttype) :: this
     integer(I4B), intent(in) :: icbcfl
     integer(I4B), intent(in) :: ibudfl
     ! -- locals
@@ -481,16 +454,12 @@ contains
     return
   end subroutine mvt_ot_saveflow
 
+  !> @brief Print mover flow table
+  !<
   subroutine mvt_ot_printflow(this, icbcfl, ibudfl)
-! ******************************************************************************
-! mvr_ot_printflow -- Print mover flow table
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtMvtType) :: this
+    class(TspMvtType) :: this
     integer(I4B), intent(in) :: icbcfl
     integer(I4B), intent(in) :: ibudfl
     ! -- locals
@@ -505,18 +474,14 @@ contains
     return
   end subroutine mvt_ot_printflow
 
+  !> @brief Write mover budget to listing file
+  !<
   subroutine mvt_ot_bdsummary(this, ibudfl)
-! ******************************************************************************
-! mvt_ot_bdsummary -- Write mover budget to listing file
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: kstp, kper, delt, totim
     use ArrayHandlersModule, only: ifind, expandarray
     ! -- dummy
-    class(GwtMvtType) :: this
+    class(TspMvtType) :: this
     integer(I4B), intent(in) :: ibudfl
     ! -- locals
     integer(I4B) :: i, j, n
@@ -582,17 +547,15 @@ contains
     return
   end subroutine mvt_ot_bdsummary
 
+  !> @ brief Deallocate memory
+  !!
+  !!  Method to deallocate memory for the package.
+  !<
   subroutine mvt_da(this)
-! ******************************************************************************
-! mvt_da -- deallocate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(GwtMvtType) :: this
+    class(TspMvtType) :: this
     ! -- local
 ! ------------------------------------------------------------------------------
     !
@@ -634,17 +597,15 @@ contains
     return
   end subroutine mvt_da
 
+  !> @ brief Allocate scalar variables for package
+  !!
+  !!  Method to allocate scalar variables for the MVT package.
+  !<
   subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
-    class(GwtMvtType) :: this
+    class(TspMvtType) :: this
     ! -- local
 ! ------------------------------------------------------------------------------
     !
@@ -665,18 +626,14 @@ contains
     return
   end subroutine allocate_scalars
 
+  !> @brief Read mover-for-transport options block
+  !<
   subroutine read_options(this)
-! ******************************************************************************
-! read_options -- Read Options
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use OpenSpecModule, only: access, form
     use InputOutputModule, only: getunit, openfile
     ! -- dummy
-    class(GwtMvtType) :: this
+    class(TspMvtType) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg, keyword
     character(len=MAXCHARLEN) :: fname
@@ -747,21 +704,17 @@ contains
       write (this%iout, '(1x,a)') 'END OF MVT OPTIONS'
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine read_options
 
+  !> @brief Set up the budget object that stores all the mvr flows
+  !<
   subroutine mvt_setup_budobj(this)
-! ******************************************************************************
-! mvt_setup_budobj -- Set up the budget object that stores all the mvr flows
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LENBUDTXT
     ! -- dummy
-    class(GwtMvtType) :: this
+    class(TspMvtType) :: this
     ! -- local
     integer(I4B) :: nbudterm
     integer(I4B) :: ncv
@@ -798,27 +751,22 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     end do
-
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mvt_setup_budobj
 
+  !> @brief Copy mover-for-transport flow terms into this%budobj
+  !<
   subroutine mvt_fill_budobj(this, cnew1, cnew2)
-! ******************************************************************************
-! mvt_fill_budobj -- copy flow terms into this%budobj
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtMvtType) :: this
+    class(TspMvtType) :: this
     real(DP), intent(in), dimension(:), contiguous, target :: cnew1
     real(DP), intent(in), dimension(:), contiguous, target :: cnew2
     ! -- local
-    type(GwtFmiType), pointer :: fmi_pr
-    type(GwtFmiType), pointer :: fmi_rc
+    type(TspFmiType), pointer :: fmi_pr
+    type(TspFmiType), pointer :: fmi_rc
     real(DP), dimension(:), contiguous, pointer :: cnew
     integer(I4B) :: nbudterm
     integer(I4B) :: nlist
@@ -864,7 +812,7 @@ contains
         ! -- Calculate solute mover rate
         rate = DZERO
         if (fmi_rc%iatp(irc) /= 0) then
-          rate = -q * cp
+          rate = -q * cp * this%eqnsclfac
         end if
         !
         ! -- add the rate to the budterm
@@ -875,19 +823,17 @@ contains
     ! --Terms are filled, now accumulate them for this time step
     call this%budobj%accumulate_terms()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mvt_fill_budobj
 
+  !> @brief Determine max number of packages in use
+  !!
+  !! Scan through the gwf water mover budget object and determine the maximum
+  !! number of packages and unique package names
+  !<
   subroutine mvt_scan_mvrbudobj(this)
-! ******************************************************************************
-! mvt_scan_mvrbudobj -- scan through the gwf water mover budget object and
-!   determine the maximum number of packages and unique package names
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwtMvtType) :: this
+    class(TspMvtType) :: this
     integer(I4B) :: nbudterm
     integer(I4B) :: maxpackages
     integer(I4B) :: i, j
@@ -931,15 +877,11 @@ contains
     return
   end subroutine mvt_scan_mvrbudobj
 
+  !> @brief Set up the mover-for-transport output table
+  !<
   subroutine mvt_setup_outputtab(this)
-! ******************************************************************************
-! mvt_setup_outputtab -- set up output table
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtMvtType), intent(inout) :: this
+    class(TspMvtType), intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: text
@@ -980,21 +922,16 @@ contains
 
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mvt_setup_outputtab
 
+  !> @brief Set up mover-for-transport output table
   subroutine mvt_print_outputtab(this)
-! ******************************************************************************
-! mvt_print_outputtab -- set up output table
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- module
     use TdisModule, only: kstp, kper
     ! -- dummy
-    class(GwtMvttype), intent(inout) :: this
+    class(TspMvttype), intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: title
     character(len=LENMODELNAME + LENPACKAGENAME + 1) :: cloc1, cloc2
@@ -1041,9 +978,9 @@ contains
       end do
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine mvt_print_outputtab
 
-end module GwtMvtModule
+end module TspMvtModule
 

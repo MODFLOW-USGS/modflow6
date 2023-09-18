@@ -34,13 +34,13 @@
 module GwtLktModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, DONE, LINELENGTH
+  use ConstantsModule, only: DZERO, DONE, LINELENGTH, LENVARNAME
   use SimModule, only: store_error
   use BndModule, only: BndType, GetBndFromList
-  use GwtFmiModule, only: GwtFmiType
+  use TspFmiModule, only: TspFmiType
   use LakModule, only: LakType
   use ObserveModule, only: ObserveType
-  use GwtAptModule, only: GwtAptType, apt_process_obsID, &
+  use TspAptModule, only: TspAptType, apt_process_obsID, &
                           apt_process_obsID12
   use MatrixBaseModule
 
@@ -52,7 +52,7 @@ module GwtLktModule
   character(len=*), parameter :: flowtype = 'LAK'
   character(len=16) :: text = '             LKT'
 
-  type, extends(GwtAptType) :: GwtLktType
+  type, extends(TspAptType) :: GwtLktType
 
     integer(I4B), pointer :: idxbudrain => null() ! index of rainfall terms in flowbudptr
     integer(I4B), pointer :: idxbudevap => null() ! index of evaporation terms in flowbudptr
@@ -92,14 +92,11 @@ module GwtLktModule
 
 contains
 
+  !> @brief Create a new lkt package
+  !<
   subroutine lkt_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
-                        fmi)
-! ******************************************************************************
-! mwt_create -- Create a New MWT Package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+                        fmi, eqnsclfac, depvartype, depvarunit, &
+                        depvarunitabbrev)
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
@@ -108,7 +105,11 @@ contains
     integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
-    type(GwtFmiType), pointer :: fmi
+    type(TspFmiType), pointer :: fmi
+    real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
+    character(len=LENVARNAME), intent(in) :: depvartype
+    character(len=LENVARNAME), intent(in) :: depvarunit
+    character(len=LENVARNAME), intent(in) :: depvarunitabbrev
     ! -- local
     type(GwtLktType), pointer :: lktobj
 ! ------------------------------------------------------------------------------
@@ -133,23 +134,27 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 1
     packobj%iscloc = 1
-
+    !
     ! -- Store pointer to flow model interface.  When the GwfGwt exchange is
     !    created, it sets fmi%bndlist so that the GWT model has access to all
     !    the flow packages
     lktobj%fmi => fmi
     !
-    ! -- return
+    ! -- Store labels for dynamic setting of concentration vs temperature
+    lktobj%depvartype = depvartype
+    lktobj%depvarunit = depvarunit
+    lktobj%depvarunitabbrev = depvarunitabbrev
+    !
+    ! -- Store pointer to governing equation scale factor
+    lktobj%eqnsclfac => eqnsclfac
+    !
+    ! -- Return
     return
   end subroutine lkt_create
 
+  !> @brief Find corresponding lkt package
+  !<
   subroutine find_lkt_package(this)
-! ******************************************************************************
-! find corresponding lkt package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -270,14 +275,12 @@ contains
     return
   end subroutine find_lkt_package
 
+  !> @brief Add matrix terms related to LKT
+  !!
+  !! This will be called from TspAptType%apt_fc_expanded()
+  !! in order to add matrix terms specifically for LKT
+  !<
   subroutine lkt_fc_expanded(this, rhs, ia, idxglo, matrix_sln)
-! ******************************************************************************
-! lkt_fc_expanded -- this will be called from GwtAptType%apt_fc_expanded()
-!   in order to add matrix terms specifically for LKT
-! ****************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwtLktType) :: this
@@ -364,13 +367,9 @@ contains
     return
   end subroutine lkt_fc_expanded
 
+  !> @brief Add terms specific to lakes to the explicit lake solve
+  !<
   subroutine lkt_solve(this)
-! ******************************************************************************
-! lkt_solve -- add terms specific to lakes to the explicit lake solve
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtLktType) :: this
     ! -- local
@@ -431,14 +430,11 @@ contains
     return
   end subroutine lkt_solve
 
+  !> @brief Function to return the number of budget terms just for this package.
+  !!
+  !! This overrides a function in the parent class.
+  !<
   function lkt_get_nbudterms(this) result(nbudterms)
-! ******************************************************************************
-! lkt_get_nbudterms -- function to return the number of budget terms just for
-!   this package.  This overrides function in parent.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwtLktType) :: this
@@ -454,13 +450,9 @@ contains
     return
   end function lkt_get_nbudterms
 
+  !> @brief Set up the budget object that stores all the lake flows
+  !<
   subroutine lkt_setup_budobj(this, idx)
-! ******************************************************************************
-! lkt_setup_budobj -- Set up the budget object that stores all the lake flows
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LENBUDTXT
     ! -- dummy
@@ -471,7 +463,7 @@ contains
     character(len=LENBUDTXT) :: text
 ! ------------------------------------------------------------------------------
     !
-    ! --
+    ! -- Addition of mass associated with rainfall directly on lake surface
     text = '        RAINFALL'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudrain)%maxlist
@@ -484,7 +476,8 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! --
+    ! -- Loss of dissolved mass associated with evaporation when a non-zero
+    !    evaporative concentration is specified
     text = '     EVAPORATION'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudevap)%maxlist
@@ -497,7 +490,7 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! --
+    ! -- Addition of mass associated with runoff that flows to the lake
     text = '          RUNOFF'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudroff)%maxlist
@@ -510,7 +503,7 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! --
+    ! -- Addition of mass associated with user-specified inflow to the lake
     text = '      EXT-INFLOW'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudiflw)%maxlist
@@ -523,7 +516,7 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! --
+    ! -- Removal of mass associated with user-specified withdrawal from lake
     text = '      WITHDRAWAL'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudwdrl)%maxlist
@@ -536,7 +529,8 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! --
+    ! -- Removal of heat associated with outflow from lake that leaves
+    !    model domain
     text = '     EXT-OUTFLOW'
     idx = idx + 1
     maxlist = this%flowbudptr%budterm(this%idxbudoutf)%maxlist
@@ -549,22 +543,19 @@ contains
                                              maxlist, .false., .false., &
                                              naux)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lkt_setup_budobj
 
-  subroutine lkt_fill_budobj(this, idx, x, ccratin, ccratout)
-! ******************************************************************************
-! lkt_fill_budobj -- copy flow terms into this%budobj
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Copy flow terms into this%budobj
+  !<
+  subroutine lkt_fill_budobj(this, idx, x, flowja, ccratin, ccratout)
     ! -- modules
     ! -- dummy
     class(GwtLktType) :: this
     integer(I4B), intent(inout) :: idx
     real(DP), dimension(:), intent(in) :: x
+    real(DP), dimension(:), contiguous, intent(inout) :: flowja
     real(DP), intent(inout) :: ccratin
     real(DP), intent(inout) :: ccratout
     ! -- local
@@ -573,7 +564,7 @@ contains
     real(DP) :: q
     ! -- formats
 ! -----------------------------------------------------------------------------
-
+    !
     ! -- RAIN
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudrain)%nlist
@@ -583,7 +574,7 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-
+    !
     ! -- EVAPORATION
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudevap)%nlist
@@ -593,7 +584,7 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-
+    !
     ! -- RUNOFF
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudroff)%nlist
@@ -603,7 +594,7 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-
+    !
     ! -- EXT-INFLOW
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudiflw)%nlist
@@ -613,7 +604,7 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-
+    !
     ! -- WITHDRAWAL
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudwdrl)%nlist
@@ -623,7 +614,7 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-
+    !
     ! -- EXT-OUTFLOW
     idx = idx + 1
     nlist = this%flowbudptr%budterm(this%idxbudoutf)%nlist
@@ -633,19 +624,15 @@ contains
       call this%budobj%budterm(idx)%update_term(n1, n2, q)
       call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
     end do
-
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lkt_fill_budobj
 
+  !> @brief Allocate scalars specific to the lake mass transport (LKT)
+  !! package.
+  !<
   subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -653,8 +640,8 @@ contains
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    ! -- allocate scalars in GwtAptType
-    call this%GwtAptType%allocate_scalars()
+    ! -- allocate scalars in TspAptType
+    call this%TspAptType%allocate_scalars()
     !
     ! -- Allocate
     call mem_allocate(this%idxbudrain, 'IDXBUDRAIN', this%memoryPath)
@@ -676,13 +663,10 @@ contains
     return
   end subroutine allocate_scalars
 
+  !> @brief Allocate arrays specific to the lake mass transport (LKT)
+  !! package.
+  !<
   subroutine lkt_allocate_arrays(this)
-! ******************************************************************************
-! lkt_allocate_arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -697,8 +681,8 @@ contains
     call mem_allocate(this%concroff, this%ncv, 'CONCROFF', this%memoryPath)
     call mem_allocate(this%conciflw, this%ncv, 'CONCIFLW', this%memoryPath)
     !
-    ! -- call standard GwtApttype allocate arrays
-    call this%GwtAptType%apt_allocate_arrays()
+    ! -- call standard TspAptType allocate arrays
+    call this%TspAptType%apt_allocate_arrays()
     !
     ! -- Initialize
     do n = 1, this%ncv
@@ -713,13 +697,9 @@ contains
     return
   end subroutine lkt_allocate_arrays
 
+  !> @brief Deallocate memory
+  !<
   subroutine lkt_da(this)
-! ******************************************************************************
-! lkt_da
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
@@ -741,21 +721,17 @@ contains
     call mem_deallocate(this%concroff)
     call mem_deallocate(this%conciflw)
     !
-    ! -- deallocate scalars in GwtAptType
-    call this%GwtAptType%bnd_da()
+    ! -- deallocate scalars in TspAptType
+    call this%TspAptType%bnd_da()
     !
     ! -- Return
     return
   end subroutine lkt_da
 
+  !> @brief Rain term
+  !<
   subroutine lkt_rain_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! lkt_rain_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtLktType) :: this
     integer(I4B), intent(in) :: ientry
@@ -776,18 +752,14 @@ contains
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lkt_rain_term
 
+  !> @brief Evaporative term
+  !<
   subroutine lkt_evap_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! lkt_evap_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtLktType) :: this
     integer(I4B), intent(in) :: ientry
@@ -817,18 +789,14 @@ contains
     if (present(rhsval)) rhsval = -(DONE - omega) * qbnd * ctmp
     if (present(hcofval)) hcofval = omega * qbnd
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lkt_evap_term
 
+  !> @brief Runoff term
+  !<
   subroutine lkt_roff_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! lkt_roff_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtLktType) :: this
     integer(I4B), intent(in) :: ientry
@@ -849,18 +817,17 @@ contains
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lkt_roff_term
 
+  !> @brief Inflow Term
+  !!
+  !! Accounts for mass flowing into a lake from a connected stream, for
+  !! example.
+  !<
   subroutine lkt_iflw_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! lkt_iflw_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtLktType) :: this
     integer(I4B), intent(in) :: ientry
@@ -881,18 +848,17 @@ contains
     if (present(rhsval)) rhsval = -rrate
     if (present(hcofval)) hcofval = DZERO
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lkt_iflw_term
 
+  !> @brief Specified withdrawal term
+  !!
+  !! Accounts for mass associated with a withdrawal of water from a lake
+  !! or group of lakes.
+  !<
   subroutine lkt_wdrl_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! lkt_wdrl_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtLktType) :: this
     integer(I4B), intent(in) :: ientry
@@ -913,18 +879,17 @@ contains
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lkt_wdrl_term
 
+  !> @brief Outflow term
+  !!
+  !! Accounts for the mass leaving a lake, for example, mass exiting a
+  !! lake via a flow into a draining stream channel.
+  !<
   subroutine lkt_outf_term(this, ientry, n1, n2, rrate, &
                            rhsval, hcofval)
-! ******************************************************************************
-! lkt_outf_term
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtLktType) :: this
     integer(I4B), intent(in) :: ientry
@@ -945,19 +910,16 @@ contains
     if (present(rhsval)) rhsval = DZERO
     if (present(hcofval)) hcofval = qbnd
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lkt_outf_term
 
+  !> @brief Defined observation types
+  !!
+  !! Store the observation type supported by the APT package and overide
+  !! BndType%bnd_df_obs
+  !<
   subroutine lkt_df_obs(this)
-! ******************************************************************************
-! lkt_df_obs -- obs are supported?
-!   -- Store observation type supported by APT package.
-!   -- Overrides BndType%bnd_df_obs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(GwtLktType) :: this
@@ -1030,13 +992,13 @@ contains
     call this%obs%StoreObsType('ext-outflow', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => apt_process_obsID
     !
+    ! -- Return
     return
   end subroutine lkt_df_obs
 
   !> @brief Process package specific obs
-    !!
-    !! Method to process specific observations for this package.
-    !!
+  !!
+  !! Method to process specific observations for this package.
   !<
   subroutine lkt_rp_obs(this, obsrv, found)
     ! -- dummy
@@ -1066,16 +1028,13 @@ contains
       found = .false.
     end select
     !
+    ! -- Return
     return
   end subroutine lkt_rp_obs
 
+  !> @brief Calculate observation value and pass it back to APT
+  !<
   subroutine lkt_bd_obs(this, obstypeid, jj, v, found)
-! ******************************************************************************
-! lkt_bd_obs -- calculate observation value and pass it back to APT
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtLktType), intent(inout) :: this
     character(len=*), intent(in) :: obstypeid
@@ -1116,16 +1075,13 @@ contains
       found = .false.
     end select
     !
+    ! -- Return
     return
   end subroutine lkt_bd_obs
 
+  !> @brief Sets the stress period attributes for keyword use.
+  !<
   subroutine lkt_set_stressperiod(this, itemno, keyword, found)
-! ******************************************************************************
-! lkt_set_stressperiod -- Set a stress period attribute for using keywords.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
     class(GwtLktType), intent(inout) :: this
@@ -1200,7 +1156,7 @@ contains
     !
 999 continue
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lkt_set_stressperiod
 

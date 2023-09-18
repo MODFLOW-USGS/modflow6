@@ -1,7 +1,7 @@
 module GwtSrcModule
   !
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, DEM1, DONE, LENFTYPE
+  use ConstantsModule, only: DZERO, DEM1, DONE, LENFTYPE, LENVARNAME
   use BndModule, only: BndType
   use ObsModule, only: DefaultObsIdProcessor
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
@@ -18,7 +18,11 @@ module GwtSrcModule
   character(len=16) :: text = '             SRC'
   !
   type, extends(BndType) :: GwtSrcType
+
+    character(len=LENVARNAME) :: depvartype = '' !< stores string of dependent variable type, depending on model type
+
   contains
+
     procedure :: allocate_scalars => src_allocate_scalars
     procedure :: bnd_cf => src_cf
     procedure :: bnd_fc => src_fc
@@ -29,19 +33,17 @@ module GwtSrcModule
     procedure, public :: bnd_df_obs => src_df_obs
     ! -- methods for time series
     procedure, public :: bnd_rp_ts => src_rp_ts
+
   end type GwtSrcType
 
 contains
 
-  subroutine src_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname)
-! ******************************************************************************
-! src_create -- Create a New Src Package
-! Subroutine: (1) create new-style package
-!             (2) point bndobj to the new package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Create an energy source loading package
+  !!
+  !! This subroutine points bndobj to the newly created package
+  !<
+  subroutine src_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
+                        depvartype)
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
@@ -50,6 +52,7 @@ contains
     integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
+    character(len=LENVARNAME), intent(in) :: depvartype
     ! -- local
     type(GwtSrcType), pointer :: srcobj
 ! ------------------------------------------------------------------------------
@@ -75,17 +78,16 @@ contains
     packobj%ncolbnd = 1
     packobj%iscloc = 1
     !
-    ! -- return
+    ! -- Store the appropriate label based on the dependent variable
+    srcobj%depvartype = depvartype
+    !
+    ! -- Return
     return
   end subroutine src_create
 
+  !> @brief Deallocate memory
+  !<
   subroutine src_da(this)
-! ******************************************************************************
-! src_da -- deallocate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
@@ -97,17 +99,15 @@ contains
     !
     ! -- scalars
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine src_da
 
+  !> @brief Allocate scalars
+  !!
+  !! Allocate scalars specific to this energy source loading package
+  !<
   subroutine src_allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars -- allocate scalar members
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwtSrcType) :: this
@@ -120,19 +120,17 @@ contains
     !
     ! -- Set values
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine src_allocate_scalars
 
+  !> @brief Formulate the HCOF and RHS terms
+  !!
+  !! This subroutine:
+  !!   - calculates hcof and rhs terms
+  !!   - skip if no sources
+  !<
   subroutine src_cf(this, reset_mover)
-! ******************************************************************************
-! src_cf -- Formulate the HCOF and RHS terms
-! Subroutine: (1) skip if no sources
-!             (2) calculate hcof and rhs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtSrcType) :: this
     logical, intent(in), optional :: reset_mover
@@ -164,16 +162,15 @@ contains
       this%rhs(i) = -q
     end do
     !
+    ! -- Return
     return
   end subroutine src_cf
 
+  !> @brief Add matrix terms related to specified mass source loading
+  !!
+  !! Copy rhs and hcof into solution rhs and amat
+  !<
   subroutine src_fc(this, rhs, ia, idxglo, matrix_sln)
-! **************************************************************************
-! src_fc -- Copy rhs and hcof into solution rhs and amat
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     ! -- dummy
     class(GwtSrcType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
@@ -203,19 +200,19 @@ contains
       end if
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine src_fc
 
+  !> @brief Define list labels
+  !!
+  !! Define the list heading that is written to iout when PRINT_INPUT
+  !! option is used.
+  !<
   subroutine define_listlabel(this)
-! ******************************************************************************
-! define_listlabel -- Define the list heading that is written to iout when
-!   PRINT_INPUT option is used.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy
     class(GwtSrcType), intent(inout) :: this
+    ! -- local
 ! ------------------------------------------------------------------------------
     !
     ! -- create the header list label
@@ -235,42 +232,41 @@ contains
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine define_listlabel
 
   ! -- Procedures related to observations
+  !> @brief Support function for specified mass source loading observations
+  !!
+  !! This function:
+  !!   - returns true because SRC package supports observations.
+  !!   - overrides BndType%bnd_obs_supported()
+  !<
   logical function src_obs_supported(this)
-    ! ******************************************************************************
-    ! src_obs_supported
-    !   -- Return true because SRC package supports observations.
-    !   -- Overrides BndType%bnd_obs_supported()
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
     implicit none
+    ! -- dummy
     class(GwtSrcType) :: this
-    ! ------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
     src_obs_supported = .true.
+    !
+    ! -- Return
     return
   end function src_obs_supported
 
+  !> @brief Define observations
+  !!
+  !! This subroutine:
+  !!   - stores observation types supported by SRC package.
+  !!   - overrides BndType%bnd_df_obs
+  !<
   subroutine src_df_obs(this)
-    ! ******************************************************************************
-    ! src_df_obs (implements bnd_df_obs)
-    !   -- Store observation type supported by SRC package.
-    !   -- Overrides BndType%bnd_df_obs
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
     implicit none
     ! -- dummy
     class(GwtSrcType) :: this
     ! -- local
     integer(I4B) :: indx
-    ! ------------------------------------------------------------------------------
+! ------------------------------------------------------------------------------
     call this%obs%StoreObsType('src', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
     !
@@ -279,22 +275,23 @@ contains
     call this%obs%StoreObsType('to-mvr', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine src_df_obs
 
-  ! -- Procedure related to time series
-
+  !> @brief Procedure related to time series
+  !!
+  !! Assign tsLink%Text appropriately for all time series in use by package.
+  !! In the SRC package only the SENERRATE variable can be controlled by time
+  !! series.
+  !<
   subroutine src_rp_ts(this)
-    ! -- Assign tsLink%Text appropriately for
-    !    all time series in use by package.
-    !    In the SRC package only the SMASSRATE variable
-    !    can be controlled by time series.
     ! -- dummy
     class(GwtSrcType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i, nlinks
     type(TimeSeriesLinkType), pointer :: tslink => null()
+! ------------------------------------------------------------------------------
     !
     nlinks = this%TsManager%boundtslinks%Count()
     do i = 1, nlinks
@@ -306,6 +303,7 @@ contains
       end if
     end do
     !
+    ! -- Return
     return
   end subroutine src_rp_ts
 

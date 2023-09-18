@@ -25,7 +25,9 @@ module BudgetModule
                              DTWO, DHUNDRED
 
   implicit none
+
   private
+
   public :: BudgetType
   public :: budget_cr
   public :: rate_accumulator
@@ -56,6 +58,7 @@ module BudgetModule
     integer(I4B), pointer :: icsvheader => null()
 
   contains
+
     procedure :: budget_df
     procedure :: budget_ot
     procedure :: budget_da
@@ -70,6 +73,7 @@ module BudgetModule
     procedure, private :: allocate_arrays
     procedure, private :: resize
     procedure, private :: write_csv_header
+
   end type BudgetType
 
 contains
@@ -300,11 +304,11 @@ contains
             , ' TIME STEP', I5, ', STRESS PERIOD', I4 / 2X, 78('-'))
 261 FORMAT(//2X, a, ' BUDGET FOR ', a, ' AT END OF' &
             , ' TIME STEP', I5, ', STRESS PERIOD', I4 / 2X, 99('-'))
-265 FORMAT(1X, /5X, 'CUMULATIVE ', a, 6X, a, 7X &
-           , 'RATES FOR THIS TIME STEP', 6X, a, '/T'/5X, 18('-'), 17X, 24('-') &
+265 FORMAT(1X, /5X, 'CUMULATIVE ', a, 11X, a, 6X &
+           , 'RATES FOR THIS TIME STEP', 8X, a, '/T'/5X, 18('-'), 17X, 24('-') &
            //11X, 'IN:', 38X, 'IN:'/11X, '---', 38X, '---')
-266 FORMAT(1X, /5X, 'CUMULATIVE ', a, 6X, a, 7X &
-           , 'RATES FOR THIS TIME STEP', 6X, a, '/T', 10X, A16, &
+266 FORMAT(1X, /5X, 'CUMULATIVE ', a, 11X, a, 6X &
+           , 'RATES FOR THIS TIME STEP', 8X, a, '/T', 10X, A16, &
            /5X, 18('-'), 17X, 24('-'), 21X, 16('-') &
            //11X, 'IN:', 38X, 'IN:'/11X, '---', 38X, '---')
 275 FORMAT(1X, 3X, A16, ' =', A17, 6X, A16, ' =', A17)

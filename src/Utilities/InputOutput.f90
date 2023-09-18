@@ -17,7 +17,7 @@ module InputOutputModule
             UPCASE, URWORD, ULSTLB, UBDSV4,                                    &
             ubdsv06, UBDSVB, UCOLNO, ULAPRW,                                   &
             ULASAV, ubdsv1, ubdsvc, ubdsvd, UWWORD,                            &
-            same_word, get_node, get_ijk, unitinquire,                         &
+            same_word, get_node, get_ijk, padl, unitinquire,                   &
             ParseLine, ulaprufw, openfile,                                     &
             linear_interpolate, lowcase,                                       &
             read_line,                                                         &
@@ -1197,6 +1197,22 @@ END SUBROUTINE URWORD
     !
     return
   end subroutine get_ijk
+  
+  !> @brief Function for string manipulation
+  !<
+  function padl(str, width) result(res)
+    ! -- local
+    character(len=*), intent(in) :: str
+    integer, intent(in) :: width
+    ! -- Return
+    character(len=max(len_trim(str), width)) :: res
+! ------------------------------------------------------------------------------
+    res = str
+    res = adjustr(res)
+    !
+    ! -- Return
+    return
+  end function
 
   subroutine get_jk(nodenumber, ncpl, nlay, icpl, ilay)
     ! Calculate icpl, and ilay from the nodenumber and grid

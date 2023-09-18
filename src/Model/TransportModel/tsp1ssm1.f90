@@ -1,27 +1,27 @@
-!> @brief This module contains the GwtSsm Module
+!> @brief This module contains the TspSsm Module
 !!
 !! This module contains the code for handling sources and sinks
 !! associated with groundwater flow model stress packages.
 !!
 !! todo: need observations for SSM terms
 !<
-module GwtSsmModule
+module TspSsmModule
 
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: DONE, DZERO, LENAUXNAME, LENFTYPE, &
                              LENPACKAGENAME, LINELENGTH, &
-                             TABLEFT, TABCENTER, LENBUDROWLABEL
+                             TABLEFT, TABCENTER, LENBUDROWLABEL, LENVARNAME
   use SimModule, only: store_error, count_errors, store_error_unit
   use SimVariablesModule, only: errmsg
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
-  use GwtFmiModule, only: GwtFmiType
+  use TspFmiModule, only: TspFmiType
   use TableModule, only: TableType, table_cr
   use GwtSpcModule, only: GwtSpcType
   use MatrixBaseModule
 
   implicit none
-  public :: GwtSsmType
+  public :: TspSsmType
   public :: ssm_cr
 
   character(len=LENFTYPE) :: ftype = 'SSM'
@@ -32,18 +32,21 @@ module GwtSsmModule
   !! This derived type corresponds to the SSM Package, which adds
   !! the effects of groundwater sources and sinks to the solute transport
   !! equation.
-  !!
   !<
-  type, extends(NumericalPackageType) :: GwtSsmType
+  type, extends(NumericalPackageType) :: TspSsmType
 
     integer(I4B), pointer :: nbound !< total number of flow boundaries in this time step
     integer(I4B), dimension(:), pointer, contiguous :: isrctype => null() !< source type 0 is unspecified, 1 is aux, 2 is auxmixed, 3 is ssmi, 4 is ssmimixed
     integer(I4B), dimension(:), pointer, contiguous :: iauxpak => null() !< aux col for concentration
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
     real(DP), dimension(:), pointer, contiguous :: cnew => null() !< pointer to gwt%x
-    type(GwtFmiType), pointer :: fmi => null() !< pointer to fmi object
+    real(DP), dimension(:), pointer, contiguous :: cpw => null() !< pointer to gwe%cpw
+    real(DP), dimension(:), pointer, contiguous :: rhow => null() !< pointer to gwe%rhow
+    type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
     type(TableType), pointer :: outputtab => null() !< output table object
     type(GwtSpcType), dimension(:), pointer :: ssmivec => null() !< array of stress package concentration objects
+    real(DP), pointer :: eqnsclfac => null() !< governing equation scale factor; =1. for solute; =rhow*cpw for energy
+    character(len=LENVARNAME) :: depvartype = ''
 
   contains
 
@@ -68,7 +71,7 @@ module GwtSsmModule
     procedure, private :: set_ssmivec
     procedure, private :: get_ssm_conc
 
-  end type GwtSsmType
+  end type TspSsmType
 
 contains
 
@@ -76,15 +79,17 @@ contains
   !!
   !!  Create a new SSM package by defining names, allocating scalars
   !!  and initializing the parser.
-  !!
   !<
-  subroutine ssm_cr(ssmobj, name_model, inunit, iout, fmi)
+  subroutine ssm_cr(ssmobj, name_model, inunit, iout, fmi, eqnsclfac, &
+                    depvartype)
     ! -- dummy
-    type(GwtSsmType), pointer :: ssmobj !< GwtSsmType object
+    type(TspSsmType), pointer :: ssmobj !< TspSsmType object
     character(len=*), intent(in) :: name_model !< name of the model
     integer(I4B), intent(in) :: inunit !< fortran unit for input
     integer(I4B), intent(in) :: iout !< fortran unit for output
-    type(GwtFmiType), intent(in), target :: fmi !< GWT FMI package
+    type(TspFmiType), intent(in), target :: fmi !< Transport FMI package
+    real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
+    character(len=LENVARNAME), intent(in) :: depvartype
     !
     ! -- Create the object
     allocate (ssmobj)
@@ -99,9 +104,14 @@ contains
     ssmobj%inunit = inunit
     ssmobj%iout = iout
     ssmobj%fmi => fmi
+    ssmobj%eqnsclfac => eqnsclfac
     !
     ! -- Initialize block parser
     call ssmobj%parser%Initialize(ssmobj%inunit, ssmobj%iout)
+    !
+    ! -- Store pointer to labels associated with the current model so that the
+    !    package has access to the corresponding dependent variable type
+    ssmobj%depvartype = depvartype
     !
     ! -- Return
     return
@@ -112,13 +122,12 @@ contains
   !! This routine is called from gwt_df(), but does not do anything because
   !! df is typically used to set up dimensions.  For the ssm package, the
   !! total number of ssm entries is defined by the flow model.
-  !!
   !<
   subroutine ssm_df(this)
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
     ! -- dummy
-    class(GwtSsmType) :: this !< GwtSsmType object
+    class(TspSsmType) :: this !< TspSsmType object
     ! -- local
     ! -- formats
     !
@@ -130,13 +139,12 @@ contains
   !!
   !! This routine is called from gwt_ar().  It allocates arrays, reads
   !! options and data, and sets up the output table.
-  !!
   !<
   subroutine ssm_ar(this, dis, ibound, cnew)
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
     ! -- dummy
-    class(GwtSsmType) :: this !< GwtSsmType object
+    class(TspSsmType) :: this !< TspSsmType object
     class(DisBaseType), pointer, intent(in) :: dis !< discretization package
     integer(I4B), dimension(:), pointer, contiguous :: ibound !< GWT model ibound
     real(DP), dimension(:), pointer, contiguous :: cnew !< GWT model dependent variable
@@ -188,12 +196,11 @@ contains
   !! each stress period.  If any SPC input files are used to provide source
   !! and sink concentrations, then period blocks for the current stress period
   !! are read.
-  !!
   !<
   subroutine ssm_rp(this)
     ! -- modules
     ! -- dummy
-    class(GwtSsmType) :: this !< GwtSsmType object
+    class(TspSsmType) :: this !< TspSsmType object
     ! -- local
     integer(I4B) :: ip
     type(GwtSpcType), pointer :: ssmiptr
@@ -219,12 +226,11 @@ contains
   !! in this%nbound.  Also, if any SPC input files are used to provide source
   !! and sink concentrations and time series are referenced in those files,
   !! then ssm concenrations must be interpolated for the time step.
-  !!
   !<
   subroutine ssm_ad(this)
     ! -- modules
     ! -- dummy
-    class(GwtSsmType) :: this !< GwtSsmType object
+    class(TspSsmType) :: this !< TspSsmType object
     ! -- local
     integer(I4B) :: ip
     type(GwtSpcType), pointer :: ssmiptr
@@ -267,12 +273,11 @@ contains
   !! and right-hand-side value for any package and package entry.  It returns
   !! several different optional variables that are used throughout this
   !! package to update matrix terms, budget calculations, and output tables.
-  !!
   !<
   subroutine ssm_term(this, ipackage, ientry, rrate, rhsval, hcofval, &
                       cssm, qssm)
     ! -- dummy
-    class(GwtSsmType) :: this !< GwtSsmType
+    class(TspSsmType) :: this !< TspSsmType
     integer(I4B), intent(in) :: ipackage !< package number
     integer(I4B), intent(in) :: ientry !< bound number
     real(DP), intent(out), optional :: rrate !< calculated mass flow rate
@@ -342,9 +347,9 @@ contains
       !
       ! -- Add terms based on qbnd sign
       if (qbnd <= DZERO) then
-        hcoftmp = qbnd * omega
+        hcoftmp = qbnd * omega * this%eqnsclfac
       else
-        rhstmp = -qbnd * ctmp * (DONE - omega)
+        rhstmp = -qbnd * ctmp * (DONE - omega) * this%eqnsclfac
       end if
       !
       ! -- end of active ibound
@@ -357,23 +362,23 @@ contains
     if (present(cssm)) cssm = ctmp
     if (present(qssm)) qssm = qbnd
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine ssm_term
 
-  !> @ brief Provide bound concentration and mixed flag
+  !> @ brief Provide bound concentration (or temperature) and mixed flag
   !!
-  !! SSM concentrations can be provided in auxiliary variables or
-  !! through separate SPC files.  If not provided, the default
-  !! concentration is zero.  This single routine provides the SSM
-  !! bound concentration based on these different approaches.
-  !! The mixed flag indicates whether or not
-  !!
+  !! SSM concentrations and temperatures can be provided in auxiliary variables
+  !! or through separate SPC files.  If not provided, the default
+  !! concentration (or temperature) is zero.  This single routine provides
+  !! the SSM bound concentration (or temperature) based on these different
+  !! approaches. The mixed flag indicates whether or not the boundary as a
+  !! mixed type.
   !<
   subroutine get_ssm_conc(this, ipackage, ientry, nbound_flow, conc, &
                           lauxmixed)
     ! -- dummy
-    class(GwtSsmType) :: this !< GwtSsmType
+    class(TspSsmType) :: this !< TspSsmType
     integer(I4B), intent(in) :: ipackage !< package number
     integer(I4B), intent(in) :: ientry !< bound number
     integer(I4B), intent(in) :: nbound_flow !< size of flow package bound list
@@ -404,12 +409,11 @@ contains
   !!
   !! This routine adds the effects of the SSM to the matrix equations by
   !! updating the a matrix and right-hand side vector.
-  !!
   !<
   subroutine ssm_fc(this, matrix_sln, idxglo, rhs)
     ! -- modules
     ! -- dummy
-    class(GwtSsmType) :: this
+    class(TspSsmType) :: this
     class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in), dimension(:) :: idxglo
     real(DP), intent(inout), dimension(:) :: rhs
@@ -451,12 +455,11 @@ contains
   !! Calulate the resulting mass flow between the boundary and the connected
   !! GWT model cell.  Update the diagonal position of the flowja array so that
   !! it ultimately contains the solute balance residual.
-  !!
   !<
   subroutine ssm_cq(this, flowja)
     ! -- modules
     ! -- dummy
-    class(GwtSsmType) :: this !< GwtSsmType object
+    class(TspSsmType) :: this !< TspSsmType object
     real(DP), dimension(:), contiguous, intent(inout) :: flowja !< flow across each face in the model grid
     ! -- local
     integer(I4B) :: ip
@@ -491,14 +494,13 @@ contains
   !!
   !! Calculate the global SSM budget terms using separate in and out entries
   !! for each flow package.
-  !!
   !<
   subroutine ssm_bd(this, isuppress_output, model_budget)
     ! -- modules
     use TdisModule, only: delt
     use BudgetModule, only: BudgetType
     ! -- dummy
-    class(GwtSsmType) :: this !< GwtSsmType object
+    class(TspSsmType) :: this !< TspSsmType object
     integer(I4B), intent(in) :: isuppress_output !< flag to suppress output
     type(BudgetType), intent(inout) :: model_budget !< budget object for the GWT model
     ! -- local
@@ -549,14 +551,13 @@ contains
   !! Based on user-specified controls, print SSM mass flow rates to the GWT
   !! listing file and/or write the SSM mass flow rates to the GWT binary
   !! budget file.
-  !!
   !<
   subroutine ssm_ot_flow(this, icbcfl, ibudfl, icbcun)
     ! -- modules
     use TdisModule, only: kstp, kper
     use ConstantsModule, only: LENPACKAGENAME, LENBOUNDNAME, LENAUXNAME, DZERO
     ! -- dummy
-    class(GwtSsmType) :: this !< GwtSsmType object
+    class(TspSsmType) :: this !< TspSsmType object
     integer(I4B), intent(in) :: icbcfl !< flag for writing binary budget terms
     integer(I4B), intent(in) :: ibudfl !< flag for printing budget terms to list file
     integer(I4B), intent(in) :: icbcun !< fortran unit number for binary budget file
@@ -672,20 +673,19 @@ contains
       end if
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine ssm_ot_flow
 
   !> @ brief Deallocate
   !!
   !! Deallocate the memory associated with this derived type
-  !!
   !<
   subroutine ssm_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(GwtSsmType) :: this !< GwtSsmType object
+    class(TspSsmType) :: this !< TspSsmType object
     ! -- local
     integer(I4B) :: ip
     type(GwtSpcType), pointer :: ssmiptr
@@ -729,13 +729,12 @@ contains
   !> @ brief Allocate scalars
   !!
   !! Allocate scalar variables for this derived type
-  !!
   !<
   subroutine allocate_scalars(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
-    class(GwtSsmType) :: this !< GwtSsmType object
+    class(TspSsmType) :: this !< TspSsmType object
     ! -- local
     !
     ! -- allocate scalars in NumericalPackageType
@@ -754,13 +753,12 @@ contains
   !> @ brief Allocate arrays
   !!
   !! Allocate array variables for this derived type
-  !!
   !<
   subroutine allocate_arrays(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
-    class(GwtSsmType) :: this !< GwtSsmType object
+    class(TspSsmType) :: this !< TspSsmType object
     ! -- local
     integer(I4B) :: nflowpack
     integer(I4B) :: i
@@ -786,12 +784,11 @@ contains
   !> @ brief Read package options
   !!
   !! Read and set the SSM Package options
-  !!
   !<
   subroutine read_options(this)
     ! -- modules
     ! -- dummy
-    class(GwtSSMType) :: this !< GwtSsmType object
+    class(TspSsmType) :: this !< TspSsmType object
     ! -- local
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
@@ -838,11 +835,10 @@ contains
   !> @ brief Read package data
   !!
   !! Read and set the SSM Package data
-  !!
   !<
   subroutine read_data(this)
     ! -- dummy
-    class(GwtSsmtype) :: this !< GwtSsmtype object
+    class(TspSsmType) :: this !< TspSsmType object
     !
     ! -- read and process required SOURCES block
     call this%read_sources_aux()
@@ -856,11 +852,10 @@ contains
   !!
   !! Read SOURCES block and look for auxiliary columns in
   !! corresponding flow data.
-  !!
   !<
   subroutine read_sources_aux(this)
     ! -- dummy
-    class(GwtSsmtype) :: this !< GwtSsmtype object
+    class(TspSsmType) :: this !< TspSsmType object
     ! -- local
     character(len=LINELENGTH) :: keyword
     character(len=20) :: srctype
@@ -959,11 +954,10 @@ contains
   !!
   !! Read optional FILEINPUT block and initialize an
   !! SPC input file reader for each entry.
-  !!
   !<
   subroutine read_sources_fileinput(this)
     ! -- dummy
-    class(GwtSsmtype) :: this !< GwtSsmtype object
+    class(TspSsmType) :: this !< TspSsmType object
     ! -- local
     character(len=LINELENGTH) :: keyword
     character(len=LINELENGTH) :: keyword2
@@ -1080,11 +1074,10 @@ contains
   !!  through the auxiliary names in package ip and sets iauxpak
   !!  to the column number corresponding to the correct auxiliary
   !!  column.
-  !!
   !<
   subroutine set_iauxpak(this, ip, packname)
     ! -- dummy
-    class(GwtSsmtype), intent(inout) :: this !< GwtSsmtype
+    class(TspSsmType), intent(inout) :: this !< TspSsmType
     integer(I4B), intent(in) :: ip !< package number
     character(len=*), intent(in) :: packname !< name of package
     ! -- local
@@ -1114,7 +1107,7 @@ contains
     write (this%iout, '(4x, a, i0, a, a)') 'USING AUX COLUMN ', &
       iaux, ' IN PACKAGE ', trim(packname)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine set_iauxpak
 
@@ -1123,13 +1116,12 @@ contains
   !!  The next call to parser will return the input file name for
   !!  package ip in the SSM SOURCES block.  The routine then
   !!  initializes the SPC input file.
-  !!
   !<
   subroutine set_ssmivec(this, ip, packname)
     ! -- module
     use InputOutputModule, only: openfile, getunit
     ! -- dummy
-    class(GwtSsmtype), intent(inout) :: this !< GwtSsmtype
+    class(TspSsmType), intent(inout) :: this !< TspSsmType
     integer(I4B), intent(in) :: ip !< package number
     character(len=*), intent(in) :: packname !< name of package
     ! -- local
@@ -1147,21 +1139,21 @@ contains
     call ssmiptr%initialize(this%dis, ip, inunit, this%iout, this%name_model, &
                             trim(packname))
 
-    write (this%iout, '(4x, a, a, a, a)') 'USING SPC INPUT FILE ', &
-      trim(filename), ' TO SET CONCENTRATIONS FOR PACKAGE ', trim(packname)
+    write (this%iout, '(4x, a, a, a, a, a)') 'USING SPC INPUT FILE ', &
+      trim(filename), ' TO SET ', trim(this%depvartype), &
+      'S FOR PACKAGE ', trim(packname)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine set_ssmivec
 
   !> @ brief Setup the output table
   !!
   !! Setup the output table by creating the column headers.
-  !!
   !<
   subroutine pak_setup_outputtab(this)
     ! -- dummy
-    class(GwtSsmtype), intent(inout) :: this
+    class(TspSsmType), intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: text
@@ -1199,8 +1191,8 @@ contains
       !end if
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine pak_setup_outputtab
 
-end module GwtSsmModule
+end module TspSsmModule

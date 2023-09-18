@@ -1,9 +1,9 @@
-module GwtObsModule
+module TspObsModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH, MAXOBSTYPES
   use BaseDisModule, only: DisBaseType
-  use GwtIcModule, only: GwtIcType
+  use TspIcModule, only: TspIcType
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
   use SimModule, only: count_errors, store_error, &
@@ -11,38 +11,36 @@ module GwtObsModule
   implicit none
 
   private
-  public :: GwtObsType, gwt_obs_cr
+  public :: TspObsType, tsp_obs_cr
 
-  type, extends(ObsType) :: GwtObsType
+  type, extends(ObsType) :: TspObsType
     ! -- Private members
-    type(GwtIcType), pointer, private :: ic => null() ! initial conditions
+    type(TspIcType), pointer, private :: ic => null() ! initial conditions
     real(DP), dimension(:), pointer, contiguous, private :: x => null() ! concentration
     real(DP), dimension(:), pointer, contiguous, private :: flowja => null() ! intercell flows
   contains
     ! -- Public procedures
-    procedure, public :: gwt_obs_ar
-    procedure, public :: obs_bd => gwt_obs_bd
-    procedure, public :: obs_df => gwt_obs_df
-    procedure, public :: obs_rp => gwt_obs_rp
-    procedure, public :: obs_da => gwt_obs_da
+    procedure, public :: tsp_obs_ar
+    procedure, public :: obs_bd => tsp_obs_bd
+    procedure, public :: obs_df => tsp_obs_df
+    procedure, public :: obs_rp => tsp_obs_rp
+    procedure, public :: obs_da => tsp_obs_da
     ! -- Private procedures
     procedure, private :: set_pointers
-  end type GwtObsType
+  end type TspObsType
 
 contains
 
-  subroutine gwt_obs_cr(obs, inobs)
-! ******************************************************************************
-! gwt_obs_cr -- Create a new GwtObsType object
-! Subroutine: (1) creates object
-!             (2) allocates pointers
-!             (3) initializes values
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Create a new TspObsType object
+  !!
+  !! This routine:
+  !!   - creates an observation object
+  !!   - allocates pointers
+  !!   - initializes values
+  !<
+  subroutine tsp_obs_cr(obs, inobs)
     ! -- dummy
-    type(GwtObsType), pointer, intent(out) :: obs
+    type(TspObsType), pointer, intent(out) :: obs
     integer(I4B), pointer, intent(in) :: inobs
 ! ------------------------------------------------------------------------------
     !
@@ -52,19 +50,18 @@ contains
     obs%inputFilename = ''
     obs%inUnitObs => inobs
     !
+    ! -- Return
     return
-  end subroutine gwt_obs_cr
+  end subroutine tsp_obs_cr
 
-  subroutine gwt_obs_ar(this, ic, x, flowja)
-! ******************************************************************************
-! gwt_obs_ar -- allocate and read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Allocate and read method for package
+  !!
+  !!  Method to allocate and read static data for the package.
+  !<
+  subroutine tsp_obs_ar(this, ic, x, flowja)
     ! -- dummy
-    class(GwtObsType), intent(inout) :: this
-    type(GwtIcType), pointer, intent(in) :: ic
+    class(TspObsType), intent(inout) :: this
+    type(TspIcType), pointer, intent(in) :: ic
     real(DP), dimension(:), pointer, contiguous, intent(in) :: x
     real(DP), dimension(:), pointer, contiguous, intent(in) :: flowja
 ! ------------------------------------------------------------------------------
@@ -75,18 +72,15 @@ contains
     ! set pointers
     call this%set_pointers(ic, x, flowja)
     !
+    ! -- Return
     return
-  end subroutine gwt_obs_ar
+  end subroutine tsp_obs_ar
 
-  subroutine gwt_obs_df(this, iout, pkgname, filtyp, dis)
-! ******************************************************************************
-! gwt_obs_df -- define
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Define observation object
+  !<
+  subroutine tsp_obs_df(this, iout, pkgname, filtyp, dis)
     ! -- dummy
-    class(GwtObsType), intent(inout) :: this
+    class(TspObsType), intent(inout) :: this
     integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: pkgname
     character(len=*), intent(in) :: filtyp
@@ -107,20 +101,17 @@ contains
     !
     ! -- Store obs type and assign procedure pointer for flow-ja-face observation type
     call this%StoreObsType('flow-ja-face', .true., indx)
-    this%obsData(indx)%ProcessIdPtr => gwt_process_intercell_obs_id
+    this%obsData(indx)%ProcessIdPtr => tsp_process_intercell_obs_id
     !
+    ! -- Return
     return
-  end subroutine gwt_obs_df
+  end subroutine tsp_obs_df
 
-  subroutine gwt_obs_bd(this)
-! ******************************************************************************
-! gwt_obs_bd -- save obs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Save observations
+  !<
+  subroutine tsp_obs_bd(this)
     ! -- dummy
-    class(GwtObsType), intent(inout) :: this
+    class(TspObsType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i, jaindex, nodenumber
     character(len=100) :: msg
@@ -148,32 +139,27 @@ contains
       end do
     end if
     !
+    ! -- Return
     return
-  end subroutine gwt_obs_bd
+  end subroutine tsp_obs_bd
 
-  subroutine gwt_obs_rp(this)
-! ******************************************************************************
-! gwt_obs_rp
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwtObsType), intent(inout) :: this
+  !> @brief If transport model observations need checks, add them here
+  !<
+  subroutine tsp_obs_rp(this)
+    ! -- dummy
+    class(TspObsType), intent(inout) :: this
 ! ------------------------------------------------------------------------------
     !
-    ! Do GWT observations need any checking? If so, add checks here
+    ! -- Return
     return
-  end subroutine gwt_obs_rp
+  end subroutine tsp_obs_rp
 
-  subroutine gwt_obs_da(this)
-! ******************************************************************************
-! gwt_obs_da
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> Deallocate memory
+  !!
+  !! Deallocate memory associated with transport model
+  subroutine tsp_obs_da(this)
     ! -- dummy
-    class(GwtObsType), intent(inout) :: this
+    class(TspObsType), intent(inout) :: this
 ! ------------------------------------------------------------------------------
     !
     nullify (this%ic)
@@ -181,9 +167,12 @@ contains
     nullify (this%flowja)
     call this%ObsType%obs_da()
     !
+    ! -- Return
     return
-  end subroutine gwt_obs_da
+  end subroutine tsp_obs_da
 
+  !> @brief Set pointers needed by the transport OBS package
+  !<
   subroutine set_pointers(this, ic, x, flowja)
 ! ******************************************************************************
 ! set_pointers
@@ -192,8 +181,8 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtObsType), intent(inout) :: this
-    type(GwtIcType), pointer, intent(in) :: ic
+    class(TspObsType), intent(inout) :: this
+    type(TspIcType), pointer, intent(in) :: ic
     real(DP), dimension(:), pointer, contiguous, intent(in) :: x
     real(DP), dimension(:), pointer, contiguous, intent(in) :: flowja
 ! ------------------------------------------------------------------------------
@@ -205,15 +194,11 @@ contains
     return
   end subroutine set_pointers
 
-  ! -- Procedures related to GWF observations (NOT type-bound)
-
+  !> @brief Procedure related to Tsp observations (NOT type-bound)
+  !!
+  !! Process a specific observation ID
+  !<
   subroutine gwt_process_concentration_obs_id(obsrv, dis, inunitobs, iout)
-! ******************************************************************************
-! gwt_process_concentration_obs_id
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     type(ObserveType), intent(inout) :: obsrv
     class(DisBaseType), intent(in) :: dis
@@ -242,16 +227,15 @@ contains
       call store_error_unit(inunitobs)
     end if
     !
+    ! -- Return
     return
   end subroutine gwt_process_concentration_obs_id
 
-  subroutine gwt_process_intercell_obs_id(obsrv, dis, inunitobs, iout)
-! ******************************************************************************
-! gwt_process_intercell_obs_id
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Procedure related to Tsp observations (NOT type-bound)
+  !!
+  !! Process an intercell observation requested by the user
+  !<
+  subroutine tsp_process_intercell_obs_id(obsrv, dis, inunitobs, iout)
     ! -- dummy
     type(ObserveType), intent(inout) :: obsrv
     class(DisBaseType), intent(in) :: dis
@@ -304,7 +288,8 @@ contains
       call store_error_unit(inunitobs)
     end if
     !
+    ! -- Return
     return
-  end subroutine gwt_process_intercell_obs_id
+  end subroutine tsp_process_intercell_obs_id
 
-end module GwtObsModule
+end module TspObsModule

@@ -19,7 +19,7 @@ module GwtIstModule
                              LENBUDTXT, DHNOFLO
   use BndModule, only: BndType
   use BudgetModule, only: BudgetType
-  use GwtFmiModule, only: GwtFmiType
+  use TspFmiModule, only: TspFmiType
   use GwtMstModule, only: GwtMstType, get_zero_order_decay
   use OutputControlDataModule, only: OutputControlDataType
   use MatrixBaseModule
@@ -49,7 +49,7 @@ module GwtIstModule
   !<
   type, extends(BndType) :: GwtIstType
 
-    type(GwtFmiType), pointer :: fmi => null() !< pointer to fmi object
+    type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
     type(GwtMstType), pointer :: mst => null() !< pointer to mst object
 
     integer(I4B), pointer :: icimout => null() !< unit number for binary cim output
@@ -116,7 +116,7 @@ contains
     character(len=*), intent(in) :: pakname !< name of the package
     ! -- local
     type(GwtIstType), pointer :: istobj
-    type(GwtFmiType), pointer :: fmi
+    type(TspFmiType), pointer :: fmi
     type(GwtMstType), pointer :: mst
     !
     ! -- allocate the object and assign values to object variables

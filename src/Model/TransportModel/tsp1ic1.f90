@@ -1,36 +1,39 @@
-module GwtIcModule
+module TspIcModule
 
   use KindModule, only: DP, I4B
+  use ConstantsModule, only: LENVARNAME
   use GwfIcModule, only: GwfIcType
   use BlockParserModule, only: BlockParserType
   use BaseDisModule, only: DisBaseType
 
   implicit none
   private
-  public :: GwtIcType
+  public :: TspIcType
   public :: ic_cr
 
-  ! -- Most of the GwtIcType functionality comes from GwfIcType
-  type, extends(GwfIcType) :: GwtIcType
+  ! -- Most of the TspIcType functionality comes from GwfIcType
+  type, extends(GwfIcType) :: TspIcType
+    ! -- strings
+    character(len=LENVARNAME) :: depvartype = ''
+
   contains
+
     procedure :: read_data
-  end type GwtIcType
+
+  end type TspIcType
 
 contains
 
-  subroutine ic_cr(ic, name_model, inunit, iout, dis)
-! ******************************************************************************
-! ic_cr -- Create a new initial conditions object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Create a new initial conditions object
+  !<
+  subroutine ic_cr(ic, name_model, inunit, iout, dis, depvartype)
     ! -- dummy
-    type(GwtIcType), pointer :: ic
+    type(TspIcType), pointer :: ic
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     class(DisBaseType), pointer, intent(in) :: dis
+    character(len=LENVARNAME), intent(in) :: depvartype
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -48,6 +51,9 @@ contains
     ! -- set pointers
     ic%dis => dis
     !
+    ! -- Give package access to the assigned labelsd based on dependent variable
+    ic%depvartype = depvartype
+    !
     ! -- Initialize block parser
     call ic%parser%Initialize(ic%inunit, ic%iout)
     !
@@ -55,18 +61,16 @@ contains
     return
   end subroutine ic_cr
 
+  !> @brief Read initial conditions
+  !!
+  !! Read initial concentrations or temperatures depending on model type
+  !<
   subroutine read_data(this)
-! ******************************************************************************
-! read_data
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error
     ! -- dummy
-    class(GwtIcType) :: this
+    class(TspIcType) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg, keyword
     character(len=:), allocatable :: line
@@ -77,7 +81,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Setup the label
-    aname(1) = 'INITIAL CONCENTRATION'
+    write (aname(1), '(a,1x,a)') 'INITIAL', trim(adjustl(this%depvartype))
     !
     ! -- get griddata block
     call this%parser%GetBlock('GRIDDATA', isfound, ierr)
@@ -111,4 +115,4 @@ contains
     return
   end subroutine read_data
 
-end module GwtIcModule
+end module TspIcModule

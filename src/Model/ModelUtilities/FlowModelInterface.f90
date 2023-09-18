@@ -2,7 +2,7 @@ module FlowModelInterfaceModule
 
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: DONE, DZERO, DHALF, LINELENGTH, LENBUDTXT, &
-                             LENPACKAGENAME
+                             LENPACKAGENAME, LENVARNAME
   use SimModule, only: store_error, store_error_unit
   use SimVariablesModule, only: errmsg
   use NumericalPackageModule, only: NumericalPackageType
@@ -29,6 +29,7 @@ module FlowModelInterfaceModule
     real(DP), dimension(:), pointer, contiguous :: gwfhead => null() !< pointer to the GWF head array
     real(DP), dimension(:), pointer, contiguous :: gwfsat => null() !< pointer to the GWF saturation array
     integer(I4B), dimension(:), pointer, contiguous :: ibdgwfsat0 => null() !< mark cells with saturation = 0 to exclude from dispersion
+    integer(I4B), pointer :: idryinactive => null() !< mark cells with an additional flag to exclude from deactivation (gwe will simulate conduction through dry cells)
     real(DP), dimension(:), pointer, contiguous :: gwfstrgss => null() !< pointer to flow model QSTOSS
     real(DP), dimension(:), pointer, contiguous :: gwfstrgsy => null() !< pointer to flow model QSTOSY
     integer(I4B), pointer :: igwfstrgss => null() !< indicates if gwfstrgss is available
@@ -43,6 +44,8 @@ module FlowModelInterfaceModule
     type(PackageBudgetType), dimension(:), allocatable :: gwfpackages !< used to get flows between a package and gwf
     type(BudgetObjectType), pointer :: mvrbudobj => null() !< pointer to the mover budget budget object
     character(len=16), dimension(:), allocatable :: flowpacknamearray !< array of boundary package names (e.g. LAK-1, SFR-3, etc.)
+    character(len=LENVARNAME) :: depvartype = ''
+
   contains
 
     procedure :: advance_bfr
@@ -69,12 +72,13 @@ module FlowModelInterfaceModule
 contains
 
   !> @brief Define the flow model interface
-  subroutine fmi_df(this, dis)
+  subroutine fmi_df(this, dis, idryinactive)
     ! -- modules
     use SimModule, only: store_error
     ! -- dummy
     class(FlowModelInterfaceType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
+    integer(I4B), intent(in) :: idryinactive
     ! -- formats
     character(len=*), parameter :: fmtfmi = &
       "(1x,/1x,'FMI -- FLOW MODEL INTERFACE, VERSION 2, 8/17/2023',            &
@@ -115,6 +119,11 @@ contains
       call this%initialize_gwfterms_from_gwfbndlist()
     end if
     !
+    ! -- Set flag that stops dry flows from being deactivated in a GWE
+    !    transport model since conduction will still be simulated.
+    !    0: GWE (skip deactivation step); 1: GWT (default: use existing code)
+    this%idryinactive = idryinactive
+    !
     ! -- Return
     return
   end subroutine fmi_df
@@ -138,6 +147,7 @@ contains
   end subroutine fmi_ar
 
   !> @brief Deallocate variables
+  !<
   subroutine fmi_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
@@ -153,6 +163,7 @@ contains
     deallocate (this%flowpacknamearray)
     call mem_deallocate(this%igwfmvrterm)
     call mem_deallocate(this%ibdgwfsat0)
+    call mem_deallocate(this%idryinactive)
     !
     if (this%flows_from_file) then
       call mem_deallocate(this%gwfstrgss)
@@ -202,6 +213,7 @@ contains
     call mem_allocate(this%iuhds, 'IUHDS', this%memoryPath)
     call mem_allocate(this%iumvr, 'IUMVR', this%memoryPath)
     call mem_allocate(this%nflowpack, 'NFLOWPACK', this%memoryPath)
+    call mem_allocate(this%idryinactive, "IDRYINACTIVE", this%memoryPath)
     !
     ! !
     ! -- Initialize
@@ -213,6 +225,7 @@ contains
     this%iuhds = 0
     this%iumvr = 0
     this%nflowpack = 0
+    this%idryinactive = 1
     !
     ! -- Return
     return

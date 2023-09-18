@@ -1,17 +1,18 @@
 module GwtInterfaceModelModule
   use KindModule, only: I4B, DP
+  use ConstantsModule, only: DONE
   use MemoryManagerModule, only: mem_allocate, mem_deallocate, mem_reallocate
   use MemoryHelperModule, only: create_mem_path
   use NumericalModelModule, only: NumericalModelType
   use GwtModule, only: GwtModelType, CastAsGwtModel
   use GwfDisuModule, only: disu_cr, CastAsDisuType
-  use GwtFmiModule, only: fmi_cr, GwtFmiType
-  use GwtAdvModule, only: adv_cr, GwtAdvType
-  use GwtAdvOptionsModule, only: GwtAdvOptionsType
+  use TspFmiModule, only: fmi_cr, TspFmiType
+  use TspAdvModule, only: adv_cr, TspAdvType
+  use TspAdvOptionsModule, only: TspAdvOptionsType
   use GwtDspModule, only: dsp_cr, GwtDspType
   use GwtDspOptionsModule, only: GwtDspOptionsType
   use GwtMstModule, only: mst_cr
-  use GwtObsModule, only: gwt_obs_cr
+  use TspObsModule, only: tsp_obs_cr
   use GridConnectionModule
 
   implicit none
@@ -25,12 +26,16 @@ module GwtInterfaceModelModule
 
     integer(i4B), pointer :: iAdvScheme => null() !< the advection scheme: 0 = up, 1 = central, 2 = tvd
     integer(i4B), pointer :: ixt3d => null() !< xt3d setting: 0 = off, 1 = lhs, 2 = rhs
+    real(DP), pointer :: ieqnsclfac => null() !< governing eqn scaling factor: 1: GWT, >1: GWE
 
     class(GridConnectionType), pointer :: gridConnection => null() !< The grid connection class will provide the interface grid
     class(GwtModelType), private, pointer :: owner => null() !< the real GWT model for which the exchange coefficients
                                                              !! are calculated with this interface model
 
+    real(DP), dimension(:), pointer, contiguous :: porosity => null() !< to be filled with MST porosity
+
   contains
+
     procedure, pass(this) :: gwtifmod_cr
     procedure :: model_df => gwtifmod_df
     procedure :: model_ar => gwtifmod_ar
@@ -59,6 +64,7 @@ contains
     ! defaults
     this%iAdvScheme = 0
     this%ixt3d = 0
+    this%ieqnsclfac = DONE
 
     this%iout = iout
     this%gridConnection => gridConn
@@ -79,10 +85,12 @@ contains
 
     ! create dis and packages
     call disu_cr(this%dis, this%name, '', -1, this%iout)
-    call fmi_cr(this%fmi, this%name, 0, this%iout)
-    call adv_cr(this%adv, this%name, adv_unit, this%iout, this%fmi)
+    call fmi_cr(this%fmi, this%name, 0, this%iout, this%ieqnsclfac, &
+                this%depvartype)
+    call adv_cr(this%adv, this%name, adv_unit, this%iout, this%fmi, &
+                this%ieqnsclfac)
     call dsp_cr(this%dsp, this%name, '', -dsp_unit, this%iout, this%fmi)
-    call gwt_obs_cr(this%obs, inobs)
+    call tsp_obs_cr(this%obs, inobs)
 
   end subroutine gwtifmod_cr
 
@@ -94,6 +102,7 @@ contains
 
     call mem_allocate(this%iAdvScheme, 'ADVSCHEME', this%memoryPath)
     call mem_allocate(this%ixt3d, 'IXT3D', this%memoryPath)
+    call mem_allocate(this%ieqnsclfac, 'IEQNSCLFAC', this%memoryPath)
 
   end subroutine allocate_scalars
 
@@ -117,7 +126,7 @@ contains
     class(GwtInterfaceModelType) :: this !< the GWT interface model
     ! local
     class(*), pointer :: disPtr
-    type(GwtAdvOptionsType) :: adv_options
+    type(TspAdvOptionsType) :: adv_options
     type(GwtDspOptionsType) :: dsp_options
 
     this%moffset = 0
@@ -127,7 +136,7 @@ contains
     ! define DISU
     disPtr => this%dis
     call this%gridConnection%getDiscretization(CastAsDisuType(disPtr))
-    call this%fmi%fmi_df(this%dis)
+    call this%fmi%fmi_df(this%dis, 1)
 
     if (this%inadv > 0) then
       call this%adv%adv_df(adv_options)
@@ -192,6 +201,7 @@ contains
     ! this
     call mem_deallocate(this%iAdvScheme)
     call mem_deallocate(this%ixt3d)
+    call mem_deallocate(this%ieqnsclfac)
 
     ! gwt packages
     call this%dis%dis_da()
@@ -219,6 +229,7 @@ contains
     call mem_deallocate(this%inmvt)
     call mem_deallocate(this%inoc)
     call mem_deallocate(this%inobs)
+    call mem_deallocate(this%eqnsclfac)
 
     ! base
     call this%NumericalModelType%model_da()

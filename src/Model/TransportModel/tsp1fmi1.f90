@@ -1,8 +1,8 @@
-module GwtFmiModule
+module TspFmiModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DONE, DZERO, DHALF, LINELENGTH, LENBUDTXT, &
-                             LENPACKAGENAME
+                             LENPACKAGENAME, LENVARNAME
   use SimModule, only: store_error, store_error_unit
   use SimVariablesModule, only: errmsg
   use FlowModelInterfaceModule, only: FlowModelInterfaceType
@@ -16,7 +16,7 @@ module GwtFmiModule
 
   implicit none
   private
-  public :: GwtFmiType
+  public :: TspFmiType
   public :: fmi_cr
 
   character(len=LENPACKAGENAME) :: text = '    GWTFMI'
@@ -34,14 +34,16 @@ module GwtFmiModule
     type(BudgetObjectType), pointer :: ptr
   end type BudObjPtrArray
 
-  type, extends(FlowModelInterfaceType) :: GwtFmiType
+  type, extends(FlowModelInterfaceType) :: TspFmiType
 
     integer(I4B), dimension(:), pointer, contiguous :: iatp => null() !< advanced transport package applied to gwfpackages
     integer(I4B), pointer :: iflowerr => null() !< add the flow error correction
     real(DP), dimension(:), pointer, contiguous :: flowcorrect => null() !< mass flow correction
+    real(DP), pointer :: eqnsclfac => null() !< governing equation scale factor; =1. for solute; =rhow*cpw for energy
     type(DataAdvancedPackageType), &
       dimension(:), pointer, contiguous :: datp => null()
     type(BudObjPtrArray), dimension(:), allocatable :: aptbudobj !< flow budget objects for the advanced packages
+
   contains
 
     procedure :: allocate_arrays => gwtfmi_allocate_arrays
@@ -61,18 +63,22 @@ module GwtFmiModule
     procedure :: read_options => gwtfmi_read_options
     procedure :: set_aptbudobj_pointer
     procedure :: read_packagedata => gwtfmi_read_packagedata
+    procedure :: set_active_status
 
-  end type GwtFmiType
+  end type TspFmiType
 
 contains
 
-  !> @brief Create a new FMI object
-  subroutine fmi_cr(fmiobj, name_model, inunit, iout)
+  !> @breif Create a new FMI object
+  !<
+  subroutine fmi_cr(fmiobj, name_model, inunit, iout, eqnsclfac, depvartype)
     ! -- dummy
-    type(GwtFmiType), pointer :: fmiobj
+    type(TspFmiType), pointer :: fmiobj
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
+    real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
+    character(len=LENVARNAME), intent(in) :: depvartype
     !
     ! -- Create the object
     allocate (fmiobj)
@@ -91,16 +97,23 @@ contains
     ! -- Initialize block parser
     call fmiobj%parser%Initialize(fmiobj%inunit, fmiobj%iout)
     !
+    ! -- Assign label based on dependent variable
+    fmiobj%depvartype = depvartype
+    !
+    ! -- Store pointer to governing equation scale factor
+    fmiobj%eqnsclfac => eqnsclfac
+    !
     ! -- Return
     return
   end subroutine fmi_cr
 
   !> @brief Read and prepare
+  !<
   subroutine fmi_rp(this, inmvr)
     ! -- modules
     use TdisModule, only: kper, kstp
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     integer(I4B), intent(in) :: inmvr
     ! -- local
     ! -- formats
@@ -126,25 +139,16 @@ contains
     return
   end subroutine fmi_rp
 
-  !> @brief Advance
+  !> @brief Advance routine for FMI object
+  !<
   subroutine fmi_ad(this, cnew)
     ! -- modules
     use ConstantsModule, only: DHDRY
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     real(DP), intent(inout), dimension(:) :: cnew
     ! -- local
     integer(I4B) :: n
-    integer(I4B) :: m
-    integer(I4B) :: ipos
-    real(DP) :: crewet, tflow, flownm
-    character(len=15) :: nodestr
-    character(len=*), parameter :: fmtdry = &
-     &"(/1X,'WARNING: DRY CELL ENCOUNTERED AT ',a,';  RESET AS INACTIVE &
-     &WITH DRY CONCENTRATION = ', G13.5)"
-    character(len=*), parameter :: fmtrewet = &
-     &"(/1X,'DRY CELL REACTIVATED AT ', a,&
-     &' WITH STARTING CONCENTRATION =',G13.5)"
     !
     ! -- Set flag to indicated that flows are being updated.  For the case where
     !    flows may be reused (only when flows are read from a file) then set
@@ -173,68 +177,23 @@ contains
       end do
     end if
     !
-    ! -- if flow cell is dry, then set gwt%ibound = 0 and conc to dry
-    do n = 1, this%dis%nodes
-      !
-      ! -- Calculate the ibound-like array that has 0 if saturation
-      !    is zero and 1 otherwise
-      if (this%gwfsat(n) > DZERO) then
-        this%ibdgwfsat0(n) = 1
-      else
-        this%ibdgwfsat0(n) = 0
-      end if
-      !
-      ! -- Check if active transport cell is inactive for flow
-      if (this%ibound(n) > 0) then
-        if (this%gwfhead(n) == DHDRY) then
-          ! -- transport cell should be made inactive
-          this%ibound(n) = 0
-          cnew(n) = DHDRY
-          call this%dis%noder_to_string(n, nodestr)
-          write (this%iout, fmtdry) trim(nodestr), DHDRY
-        end if
-      end if
-      !
-      ! -- Convert dry transport cell to active if flow has rewet
-      if (cnew(n) == DHDRY) then
-        if (this%gwfhead(n) /= DHDRY) then
-          !
-          ! -- obtain weighted concentration
-          crewet = DZERO
-          tflow = DZERO
-          do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
-            m = this%dis%con%ja(ipos)
-            flownm = this%gwfflowja(ipos)
-            if (flownm > 0) then
-              if (this%ibound(m) /= 0) then
-                crewet = crewet + cnew(m) * flownm
-                tflow = tflow + this%gwfflowja(ipos)
-              end if
-            end if
-          end do
-          if (tflow > DZERO) then
-            crewet = crewet / tflow
-          else
-            crewet = DZERO
-          end if
-          !
-          ! -- cell is now wet
-          this%ibound(n) = 1
-          cnew(n) = crewet
-          call this%dis%noder_to_string(n, nodestr)
-          write (this%iout, fmtrewet) trim(nodestr), crewet
-        end if
-      end if
-    end do
+    ! -- set inactive transport cell status
+    if (this%idryinactive /= 0) then
+      call this%set_active_status(cnew)
+    end if
     !
     ! -- Return
     return
   end subroutine fmi_ad
 
-  !> @brief Calculate coefficients and fill matrix and rhs
+  !> @brief Calculate coefficients and fill matrix and rhs terms associated
+  !! with FMI object
+  !<
   subroutine fmi_fc(this, nodes, cold, nja, matrix_sln, idxglo, rhs)
+    ! -- modules
+    !use BndModule,              only: BndType, GetBndFromList
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     integer, intent(in) :: nodes
     real(DP), intent(in), dimension(nodes) :: cold
     integer(I4B), intent(in) :: nja
@@ -261,9 +220,14 @@ contains
   end subroutine fmi_fc
 
   !> @brief Calculate flow correction
+  !!
+  !! Where there is a flow imbalance for a given cell, a correction may be
+  !! applied if selected
+  !<
   subroutine fmi_cq(this, cnew, flowja)
+    ! -- modules
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     real(DP), intent(in), dimension(:) :: cnew
     real(DP), dimension(:), contiguous, intent(inout) :: flowja
     ! -- local
@@ -279,7 +243,7 @@ contains
         rate = DZERO
         idiag = this%dis%con%ia(n)
         if (this%ibound(n) > 0) then
-          rate = -this%gwfflowja(idiag) * cnew(n)
+          rate = -this%gwfflowja(idiag) * cnew(n) * this%eqnsclfac
         end if
         this%flowcorrect(n) = rate
         flowja(idiag) = flowja(idiag) + rate
@@ -290,13 +254,14 @@ contains
     return
   end subroutine fmi_cq
 
-  !> @brief Calculate budget terms
+  !> @brief Calculate budget terms associated with FMI object
+  !<
   subroutine fmi_bd(this, isuppress_output, model_budget)
     ! -- modules
     use TdisModule, only: delt
     use BudgetModule, only: BudgetType, rate_accumulator
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     integer(I4B), intent(in) :: isuppress_output
     type(BudgetType), intent(inout) :: model_budget
     ! -- local
@@ -313,10 +278,11 @@ contains
     return
   end subroutine fmi_bd
 
-  !> @brief Save budget terms
+  !> @brief Save budget terms associated with FMI object
+  !<
   subroutine fmi_ot_flow(this, icbcfl, icbcun)
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     integer(I4B), intent(in) :: icbcfl
     integer(I4B), intent(in) :: icbcun
     ! -- local
@@ -354,11 +320,14 @@ contains
   end subroutine fmi_ot_flow
 
   !> @brief Deallocate variables
+  !!
+  !! Deallocate memory associated with FMI object
+  !<
   subroutine gwtfmi_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     ! -- todo: finalize hfr and bfr either here or in a finalize routine
     !
     ! -- deallocate any memory stored with gwfpackages
@@ -397,6 +366,7 @@ contains
     call mem_deallocate(this%iuhds)
     call mem_deallocate(this%iumvr)
     call mem_deallocate(this%nflowpack)
+    call mem_deallocate(this%idryinactive)
     !
     ! -- deallocate parent
     call this%NumericalPackageType%da()
@@ -405,12 +375,15 @@ contains
     return
   end subroutine gwtfmi_da
 
-  !> @brief Allocate scalars
+  !> @ brief Allocate scalars
+  !!
+  !! Allocate scalar variables for an FMI object
+  !<
   subroutine gwtfmi_allocate_scalars(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     ! -- local
     !
     ! -- allocate scalars in parent
@@ -430,13 +403,16 @@ contains
     return
   end subroutine gwtfmi_allocate_scalars
 
-  !> @brief Allocate arrays
+  !> @ brief Allocate arrays for FMI object
+  !!
+  !!  Method to allocate arrays for the FMI package.
+  !<
   subroutine gwtfmi_allocate_arrays(this, nodes)
     use MemoryManagerModule, only: mem_allocate
-    !modules
+    ! -- modules
     use ConstantsModule, only: DZERO
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     integer(I4B), intent(in) :: nodes
     ! -- local
     integer(I4B) :: n
@@ -458,10 +434,101 @@ contains
     return
   end subroutine gwtfmi_allocate_arrays
 
-  !> @brief Calculate groundwater cell head saturation for end of last time step
-  function gwfsatold(this, n, delt) result(satold)
+  !> @brief set gwt transport cell status
+  !!
+  !! Dry GWF cells are treated differently by GWT and GWE.  Transport does not
+  !! occur in deactivated GWF cells; however, GWE still simulates conduction
+  !! through dry cells.
+  !<
+  subroutine set_active_status(this, cnew)
+    ! -- modules
+    use ConstantsModule, only: DHDRY
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
+    real(DP), intent(inout), dimension(:) :: cnew
+    ! -- local
+    integer(I4B) :: n
+    integer(I4B) :: m
+    integer(I4B) :: ipos
+    real(DP) :: crewet, tflow, flownm
+    character(len=15) :: nodestr
+    !
+    do n = 1, this%dis%nodes
+      ! -- Calculate the ibound-like array that has 0 if saturation
+      !    is zero and 1 otherwise
+      if (this%gwfsat(n) > DZERO) then
+        this%ibdgwfsat0(n) = 1
+      else
+        this%ibdgwfsat0(n) = 0
+      end if
+      !
+      ! -- Check if active transport cell is inactive for flow
+      if (this%ibound(n) > 0) then
+        if (this%gwfhead(n) == DHDRY) then
+          ! -- transport cell should be made inactive
+          this%ibound(n) = 0
+          cnew(n) = DHDRY
+          call this%dis%noder_to_string(n, nodestr)
+          write (this%iout, '(/1x,a,1x,a,a,1x,a,1x,a,1x,G13.5)') &
+            'WARNING: DRY CELL ENCOUNTERED AT', trim(nodestr), ';  RESET AS &
+              &INACTIVE WITH DRY', trim(adjustl(this%depvartype)), &
+              '=', DHDRY
+        end if
+      end if
+    end do
+    !
+    ! -- if flow cell is dry, then set gwt%ibound = 0 and conc to dry
+    do n = 1, this%dis%nodes
+      !
+      ! -- Convert dry transport cell to active if flow has rewet
+      if (cnew(n) == DHDRY) then
+        if (this%gwfhead(n) /= DHDRY) then
+          !
+          ! -- obtain weighted concentration/temperature
+          crewet = DZERO
+          tflow = DZERO
+          do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
+            m = this%dis%con%ja(ipos)
+            flownm = this%gwfflowja(ipos)
+            if (flownm > 0) then
+              if (this%ibound(m) /= 0) then
+                crewet = crewet + cnew(m) * flownm ! kluge note: apparently no need to multiply flows by eqnsclfac
+                tflow = tflow + this%gwfflowja(ipos) !             since it will divide out below anyway
+              end if
+            end if
+          end do
+          if (tflow > DZERO) then
+            crewet = crewet / tflow
+          else
+            crewet = DZERO
+          end if
+          !
+          ! -- cell is now wet
+          this%ibound(n) = 1
+          cnew(n) = crewet
+          call this%dis%noder_to_string(n, nodestr)
+          write (this%iout, '(/1x,a,1x,a,1x,a,1x,a,1x,a,1x,G13.5)') &
+            'DRY CELL REACTIVATED AT', trim(nodestr), 'WITH STARTING', &
+            trim(adjustl(this%depvartype)), '=', crewet
+        end if
+      end if
+    end do
+
+    !
+    ! -- Return
+    return
+  end subroutine set_active_status
+
+
+  !> @brief Calculate the previous saturation level
+  !!
+  !! Calculate the groundwater cell head saturation for the end of
+  !! the last time step
+  !<
+  function gwfsatold(this, n, delt) result(satold)
+    ! -- modules
+    ! -- dummy
+    class(TspFmiType) :: this
     integer(I4B), intent(in) :: n
     real(DP), intent(in) :: delt
     ! -- result
@@ -484,13 +551,14 @@ contains
   end function gwfsatold
 
   !> @brief Read options from input file
+  !<
   subroutine gwtfmi_read_options(this)
     ! -- modules
     use ConstantsModule, only: LINELENGTH, DEM6
     use InputOutputModule, only: getunit, openfile, urdaux
     use SimModule, only: store_error, store_error_unit
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     ! -- local
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
@@ -529,11 +597,14 @@ contains
       write (this%iout, '(1x,a)') 'END OF FMI OPTIONS'
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwtfmi_read_options
 
-  !> @brief Read packagedata block from input file
+  !> @brief Read PACKAGEDATA block
+  !!
+  !! Read packagedata block from input file
+  !<
   subroutine gwtfmi_read_packagedata(this)
     ! -- modules
     use OpenSpecModule, only: ACCESS, FORM
@@ -541,7 +612,7 @@ contains
     use InputOutputModule, only: getunit, openfile, urdaux
     use SimModule, only: store_error, store_error_unit
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     ! -- local
     type(BudgetObjectType), pointer :: budobjptr
     character(len=LINELENGTH) :: keyword, fname
@@ -659,7 +730,7 @@ contains
       write (this%iout, '(1x,a)') 'END OF FMI PACKAGEDATA'
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwtfmi_read_packagedata
 
@@ -669,11 +740,10 @@ contains
   !! pointer budget object, and this routine will look through the budget
   !! objects managed by FMI and point to the one with the same name, such as
   !! LAK-1, SFR-1, etc.
-  !!
   !<
   subroutine set_aptbudobj_pointer(this, name, budobjptr)
     ! -- modules
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     ! -- dumm
     character(len=*), intent(in) :: name
     type(BudgetObjectType), pointer :: budobjptr
@@ -688,17 +758,22 @@ contains
       end if
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine set_aptbudobj_pointer
 
-  !> @brief Initialize terms and count unique terms/packages in file
+  !> @brief Initialize the groundwater flow terms based on the budget file
+  !! reader
+  !!
+  !! Initalize terms and figure out how many different terms and packages
+  !! are contained within the file
+  !<
   subroutine initialize_gwfterms_from_bfr(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     use SimModule, only: store_error, store_error_unit, count_errors
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     ! -- local
     integer(I4B) :: nflowpack
     integer(I4B) :: i, ip
@@ -788,16 +863,19 @@ contains
       call this%parser%StoreErrorUnit()
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine initialize_gwfterms_from_bfr
 
-  !> @brief Initialize flow terms from a gwf-gwt exchange
+  !> @brief Initialize groundwater flow terms from the groundwater budget
+  !!
+  !! Flows are coming from a gwf-gwt exchange object
+  !<
   subroutine initialize_gwfterms_from_gwfbndlist(this)
     ! -- modules
     use BndModule, only: BndType, GetBndFromList
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     ! -- local
     integer(I4B) :: ngwfpack
     integer(I4B) :: ngwfterms
@@ -856,21 +934,22 @@ contains
         iterm = iterm + 1
       end if
     end do
+    !
+    ! -- Return
     return
   end subroutine initialize_gwfterms_from_gwfbndlist
 
-  !> @brief Allocate GWF packages
+  !> @brief Initialize an array for storing PackageBudget objects.
   !!
   !! This routine allocates gwfpackages (an array of PackageBudget
   !! objects) to the proper size and initializes member variables.
-  !!
   !<
   subroutine gwtfmi_allocate_gwfpackages(this, ngwfterms)
     ! -- modules
     use ConstantsModule, only: LENMEMPATH
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     integer(I4B), intent(in) :: ngwfterms
     ! -- local
     integer(I4B) :: n
@@ -898,15 +977,18 @@ contains
       call this%gwfpackages(n)%initialize(memPath)
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwtfmi_allocate_gwfpackages
 
-  !> @brief Deallocate memory in the gwfpackages array
+  !> @brief Deallocate memory
+  !!
+  !! Deallocate memory that stores the gwfpackages array
+  !<
   subroutine gwtfmi_deallocate_gwfpackages(this)
     ! -- modules
     ! -- dummy
-    class(GwtFmiType) :: this
+    class(TspFmiType) :: this
     ! -- local
     integer(I4B) :: n
     !
@@ -915,8 +997,8 @@ contains
       call this%gwfpackages(n)%da()
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwtfmi_deallocate_gwfpackages
 
-end module GwtFmiModule
+end module TspFmiModule
