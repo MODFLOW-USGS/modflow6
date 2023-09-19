@@ -41,6 +41,8 @@ module SpatialModelConnectionModule
     integer(I4B), pointer :: nr_connections => null() !< total nr. of connected cells (primary)
 
     class(DisConnExchangeType), pointer :: prim_exchange => null() !< the exchange for which the interface model is created
+    logical(LGP) :: owns_exchange !< there are two connections (in serial) for an exchange,
+                                  !! one of them needs to manage/own the exchange (e.g. clean up)
     type(STLVecInt), pointer :: halo_models !< models that are potentially in the halo of this interface
     type(STLVecInt), pointer :: halo_exchanges !< exchanges that are potentially part of the halo of this interface (includes primary)
     integer(I4B), pointer :: int_stencil_depth => null() !< size of the computational stencil for the interior

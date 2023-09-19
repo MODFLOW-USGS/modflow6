@@ -117,6 +117,8 @@ contains
 
     else if (stage == STG_BFR_CON_AR) then
 
+      nr_nodes = this%element_maps(MAP_NODE_TYPE)%nr_virt_elems
+
       call this%map(this%x%base(), nr_nodes, &
                     (/STG_BFR_CON_AR, STG_BFR_EXG_AD, STG_BFR_EXG_CF/))
       call this%map(this%ibound%base(), nr_nodes, (/STG_BFR_CON_AR/))

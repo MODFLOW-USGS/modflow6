@@ -30,8 +30,6 @@ module GwtGwtConnectionModule
 
     class(GwtModelType), pointer :: gwtModel => null() !< the model for which this connection exists
     class(GwtExchangeType), pointer :: gwtExchange => null() !< the primary exchange, cast to GWT-GWT
-    logical(LGP) :: exchangeIsOwned !< there are two connections (in serial) for an exchange,
-                                    !! one of them needs to manage/own the exchange (e.g. clean up)
     class(GwtInterfaceModelType), pointer :: gwtInterfaceModel => null() !< the interface model
     integer(I4B), pointer :: iIfaceAdvScheme => null() !< the advection scheme at the interface:
                                                        !! 0 = upstream, 1 = central, 2 = TVD
@@ -98,9 +96,14 @@ contains
     objPtr => gwtEx
     this%gwtExchange => CastAsGwtExchange(objPtr)
 
-    this%exchangeIsOwned = associated(model, gwtEx%model1)
+    if (this%gwtExchange%v_model1%is_local .and. &
+        this%gwtExchange%v_model2%is_local) then
+      this%owns_exchange = associated(model, gwtEx%model1)
+    else
+      this%owns_exchange = .true.
+    end if
 
-    if (this%exchangeIsOwned) then
+    if (this%owns_exchange) then
       write (name, '(a,i0)') 'GWTCON1_', gwtEx%id
     else
       write (name, '(a,i0)') 'GWTCON2_', gwtEx%id
@@ -164,7 +167,7 @@ contains
 
     ! we have to 'catch up' and create the interface model
     ! here, then the remainder of this routine will be define
-    if (this%exchangeIsOwned) then
+    if (this%owns_exchange) then
       write (imName, '(a,i0)') 'GWTIM1_', this%gwtExchange%id
     else
       write (imName, '(a,i0)') 'GWTIM2_', this%gwtExchange%id
@@ -285,7 +288,7 @@ contains
     call this%gwtInterfaceModel%model_ar()
 
     ! AR the movers and obs through the exchange
-    if (this%exchangeIsOwned) then
+    if (this%owns_exchange) then
       !cdl implement this when MVT is ready
       !cdl if (this%gwtExchange%inmvt > 0) then
       !cdl   call this%gwtExchange%mvt%mvt_ar()
@@ -344,7 +347,7 @@ contains
     class(GwtGwtConnectionType) :: this !< the connection
 
     ! Call exchange rp routines
-    if (this%exchangeIsOwned) then
+    if (this%owns_exchange) then
       call this%gwtExchange%exg_rp()
     end if
 
@@ -358,7 +361,7 @@ contains
     ! recalculate dispersion ellipse
     if (this%gwtInterfaceModel%indsp > 0) call this%gwtInterfaceModel%dsp%dsp_ad()
 
-    if (this%exchangeIsOwned) then
+    if (this%owns_exchange) then
       call this%gwtExchange%exg_ad()
     end if
 
@@ -376,7 +379,7 @@ contains
       kiter, matrix_sln, rhs_sln, inwtflag)
 
     ! FC the movers through the exchange
-    if (this%exchangeIsOwned) then
+    if (this%owns_exchange) then
       if (this%gwtExchange%inmvt > 0) then
         call this%gwtExchange%mvt%mvt_fc(this%gwtExchange%gwtmodel1%x, &
                                          this%gwtExchange%gwtmodel2%x)
@@ -406,7 +409,7 @@ contains
     class(GwtExchangeType), pointer :: gwtEx
     type(IndexMapSgnType), pointer :: map
 
-    if (this%exchangeIsOwned) then
+    if (this%owns_exchange) then
       gwtEx => this%gwtExchange
       map => this%interface_map%exchange_maps(this%interface_map%prim_exg_idx)
 
@@ -429,7 +432,7 @@ contains
 
     ! call exchange budget routine, also calls bd
     ! for movers.
-    if (this%exchangeIsOwned) then
+    if (this%owns_exchange) then
       call this%gwtExchange%exg_bd(icnvg, isuppress_output, isolnid)
     end if
 
@@ -441,7 +444,7 @@ contains
     ! Call exg_ot() here as it handles all output processing
     ! based on gwtExchange%simvals(:), which was correctly
     ! filled from gwtgwtcon
-    if (this%exchangeIsOwned) then
+    if (this%owns_exchange) then
       call this%gwtExchange%exg_ot()
     end if
 
@@ -473,7 +476,7 @@ contains
     end if
 
     ! we need to deallocate the exchange we own:
-    if (this%exchangeIsOwned) then
+    if (this%owns_exchange) then
       call this%gwtExchange%exg_da()
     end if
 

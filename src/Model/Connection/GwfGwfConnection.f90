@@ -39,7 +39,6 @@ module GwfGwfConnectionModule
 
     class(GwfModelType), pointer :: gwfModel => null() !< the model for which this connection exists
     class(GwfExchangeType), pointer :: gwfExchange => null() !< the primary exchange, cast to its concrete type
-    logical(LGP) :: owns_exchange !< when true, this connection has ownership over the exchange (memory)
     class(GwfInterfaceModelType), pointer :: gwfInterfaceModel => null() !< the interface model
     integer(I4B), pointer :: iXt3dOnExchange => null() !< run XT3D on the interface,
                                                        !! 0 = don't, 1 = matrix, 2 = rhs
