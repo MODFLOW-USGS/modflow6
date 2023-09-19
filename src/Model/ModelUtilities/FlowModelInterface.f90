@@ -504,9 +504,9 @@ contains
         if (kper /= this%bfr%kper) then
           write (errmsg, '(4x,a)') 'PERIOD NUMBER IN BUDGET FILE &
             &DOES NOT MATCH PERIOD NUMBER IN TRANSPORT MODEL.  IF THERE &
-            &IS MORE THAN ONE TIME STEP IN THE BUDGET FILE FOR A GIVEN STRESS &
-            &PERIOD, BUDGET FILE TIME STEPS MUST MATCH GWT MODEL TIME STEPS &
-            &ONE-FOR-ONE IN THAT STRESS PERIOD.'
+            &IS MORE THAN ONE TIME STEP IN THE BUDGET FILE FOR A GIVEN &
+            &STRESS PERIOD, BUDGET FILE TIME STEPS MUST MATCH GWT MODEL &
+            &TIME STEPS ONE-FOR-ONE IN THAT STRESS PERIOD.'
           call store_error(errmsg)
           call store_error_unit(this%iubud)
         end if
@@ -515,7 +515,7 @@ contains
         if (this%bfr%kstp > 1 .and. (kstp /= this%bfr%kstp)) then
           write (errmsg, '(4x,a)') 'TIME STEP NUMBER IN BUDGET FILE &
             &DOES NOT MATCH TIME STEP NUMBER IN TRANSPORT MODEL.  IF THERE &
-            &IS MORE THAN ONE TIME STEP IN THE BUDGET FILE FOR A GIVEN STRESS &
+           &IS MORE THAN ONE TIME STEP IN THE BUDGET FILE FOR A GIVEN STRESS &
             &PERIOD, BUDGET FILE TIME STEPS MUST MATCH GWT MODEL TIME STEPS &
             &ONE-FOR-ONE IN THAT STRESS PERIOD.'
           call store_error(errmsg)

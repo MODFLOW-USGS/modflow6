@@ -14,7 +14,6 @@ BEGIN DIMENSIONS
 END DIMENSIONS
 
 BEGIN PERIOD 1
-  RECHARGE
   # Lay  Row  Col  Rate   Var1  Var2   mult  BoundName
      1    1    1   rch_1   1.0   2.0     1.0       Rch-1-1
      1    1    2   rch_1   1.1   2.1     1.0       Rch-1-2
