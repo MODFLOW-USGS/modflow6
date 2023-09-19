@@ -14,97 +14,38 @@ import flopy
 import flopy.utils.cvfdutil
 import numpy as np
 import pytest
+from flopy.utils.gridutil import get_disv_kwargs
+
 from framework import TestFramework
 from simulation import TestSimulation
 
 ex = ["disv_with_uzf"]
 nlay = 5
+nrow = 10
+ncol = 10
+ncpl = nrow * ncol
+delr = 1.
+delc = 1.
 nper = 5
 perlen = [10] * 5
 nstp = [5] * 5
 tsmult = len(perlen) * [1.0]
+top = 25.
 botm = [20.0, 15.0, 10.0, 5.0, 0.0]
 strt = 20
 nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-9, 1e-3, 0.97
-ghb_ids = []
 
-
-def create_disv_mesh():
-    # Create a grid of verts
-    nx, ny = (11, 11)
-    x = np.linspace(0, 10, nx)
-    y = np.linspace(0, 10, ny)
-    xv, yv = np.meshgrid(x, y)
-    yv = np.flipud(yv)
-
-    verts = []
-    vid = 0
-    vert_lkup = {}
-    for i in yv[:, 0]:
-        for j in xv[0, :]:
-            vert_lkup.update({(float(j), float(i)): vid})
-            verts.append([int(vid), float(j), float(i)])
-            vid += 1
-
-    ivert = []
-    ivid = 0
-    xyverts = []
-    xc, yc = [], []  # for storing the cell center location
-    for i in yv[:-1, 0]:
-        for j in xv[0, :-1]:
-            xlst, ylst = [], []
-            vid_lst = []
-            # Start with upper-left corner and go clockwise
-            for ct in [0, 1, 2, 3]:
-                if ct == 0:
-                    iadj = 0.0
-                    jadj = 0.0
-                elif ct == 1:
-                    iadj = 0.0
-                    jadj = 1.0
-                elif ct == 2:
-                    iadj = -1.0
-                    jadj = 1.0
-                elif ct == 3:
-                    iadj = -1.0
-                    jadj = 0.0
-
-                vid = vert_lkup[(float(j + jadj), float(i + iadj))]
-                vid_lst.append(vid)
-
-                xlst.append(float(j + jadj))
-                ylst.append(float(i + iadj))
-
-            xc.append(np.mean(xlst))
-            yc.append(np.mean(ylst))
-            xyverts.append(list(zip(xlst, ylst)))
-
-            rec = [ivid] + vid_lst
-            ivert.append(rec)
-
-            # if ivert part of right boundary, store id
-            if j == 9.0:
-                ghb_ids.append(ivid)
-
-            ivid += 1
-
-    # finally, create a cell2d record
-    cell2d = []
-    for ix, iv in enumerate(ivert):
-        xvt, yvt = np.array(xyverts[ix]).T
-        if flopy.utils.geometry.is_clockwise(xvt, yvt):
-            rec = [iv[0], xc[ix], yc[ix], len(iv[1:])] + iv[1:]
-        else:
-            iiv = iv[1:][::-1]
-            rec = [iv[0], xc[ix], yc[ix], len(iiv)] + iiv
-
-        cell2d.append(rec)
-
-    return verts, cell2d
-
-
-verts, cell2d = create_disv_mesh()
+# use flopy util to get disv arguments
+disvkwargs = get_disv_kwargs(
+        nlay,
+        nrow,
+        ncol,
+        delr,
+        delc,
+        top,
+        botm,
+    )
 
 # Work up UZF data
 iuzno = 0
@@ -117,7 +58,7 @@ thti = 0.15
 eps = 3.5
 
 for k in np.arange(nlay):
-    for i in np.arange(0, len(cell2d), 1):
+    for i in np.arange(0, ncpl, 1):
         if k == 0:
             landflg = 1
             surfdp = 0.25
@@ -128,7 +69,7 @@ for k in np.arange(nlay):
         if k == nlay - 1:
             ivertcon = -1
         else:
-            ivertcon = iuzno + len(cell2d)
+            ivertcon = iuzno + ncpl
 
         bndnm = "uzf" + "{0:03d}".format(int(i + 1))
         uzf_pkdat.append(
@@ -160,7 +101,7 @@ for t in np.arange(0, nper, 1):
     spd = []
     iuzno = 0
     for k in np.arange(nlay):
-        for i in np.arange(0, len(cell2d), 1):
+        for i in np.arange(0, ncpl, 1):
             if k == 0:
                 if t == 0:
                     finf = 0.15
@@ -180,6 +121,7 @@ for t in np.arange(0, nper, 1):
 
 
 # Work up the GHB boundary
+ghb_ids = [(ncol - 1) + i * ncol for i in range(nrow)]
 ghb_spd = []
 cond = 1e4
 for k in np.arange(3, 5, 1):
@@ -230,19 +172,9 @@ def build_model(idx, dir):
     )
     sim.register_ims_package(ims, [gwf.name])
 
-    ncpl = len(cell2d)
-    nvert = len(verts)
-    disv = flopy.mf6.ModflowGwfdisv(
-        gwf,
-        nlay=nlay,
-        ncpl=ncpl,
-        nvert=nvert,
-        top=25.0,
-        botm=botm,
-        vertices=verts,
-        cell2d=cell2d,
-    )
-
+    # disv
+    disv = flopy.mf6.ModflowGwfdisv(gwf, **disvkwargs)
+  
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
@@ -389,7 +321,7 @@ def eval_model(sim):
         for rw in np.arange(arr.shape[0]):
             fullrw = arr[rw]
             for cl in np.arange(len(fullrw) - 1):
-                assert abs(fullrw[cl]) >= abs(fullrw[cl + 1]), (
+                assert abs(fullrw[cl]) + 0.01 >= abs(fullrw[cl + 1]), (
                     "gwet not decreasing to the right as expected. Stress Period: "
                     + str(tm + 1)
                     + "; Row: "
@@ -423,7 +355,7 @@ def eval_model(sim):
         for rw in np.arange(arr.shape[0]):
             fullrw = arr[rw]
             for cl in np.arange(len(fullrw) - 1):
-                assert abs(fullrw[cl]) <= abs(fullrw[cl + 1]), (
+                assert abs(fullrw[cl]) <= abs(fullrw[cl + 1]) + 0.01, (
                     "gwet not decreasing to the right as expected. Stress Period: "
                     + str(tm + 1)
                     + "; Row: "

@@ -1,7 +1,8 @@
 """
-Test of GWF DISU Package.  Use the flopy disu tool to create
-a simple regular grid example, but using DISU instead of DIS.
-The first case is just a simple test.  For the second case, set
+Test of GWF DISV Package.  Use the flopy disv tool to create
+a simple regular grid example, but using DISV instead of DIS.
+Use a large offset for x and y vertices to ensure that the area
+calculation in MODFLOW 6 is correct.  For the second case, set
 one of the cells inactive and test to make sure connectivity
 in binary grid file is correct.
 
@@ -12,12 +13,12 @@ import os
 import flopy
 import numpy as np
 import pytest
-from flopy.utils.gridutil import get_disu_kwargs
+from flopy.utils.gridutil import get_disv_kwargs
 
 from framework import TestFramework
 from simulation import TestSimulation
 
-ex = ["disu01a", "disu01b"]
+ex = ["disv01a", "disv01b"]
 
 
 def build_model(idx, dir, mf6):
@@ -26,11 +27,13 @@ def build_model(idx, dir, mf6):
     nlay = 3
     nrow = 3
     ncol = 3
-    delr = 10.0 * np.ones(ncol)
-    delc = 10.0 * np.ones(nrow)
+    delr = 10.0
+    delc = 10.0
     top = 0
     botm = [-10, -20, -30]
-    disukwargs = get_disu_kwargs(
+    xoff = 100000000.0
+    yoff = 100000000.0
+    disvkwargs = get_disv_kwargs(
         nlay,
         nrow,
         ncol,
@@ -38,12 +41,14 @@ def build_model(idx, dir, mf6):
         delc,
         top,
         botm,
+        xoff,
+        yoff,
     )
     if idx == 1:
         # for the second test, set one cell to idomain = 0
         idomain = np.ones((nlay, nrow * ncol), dtype=int)
         idomain[0, 1] = 0
-        disukwargs["idomain"] = idomain
+        disvkwargs["idomain"] = idomain
 
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
@@ -54,10 +59,10 @@ def build_model(idx, dir, mf6):
     tdis = flopy.mf6.ModflowTdis(sim)
     gwf = flopy.mf6.ModflowGwf(sim, modelname=name)
     ims = flopy.mf6.ModflowIms(sim, print_option="SUMMARY")
-    disu = flopy.mf6.ModflowGwfdisu(gwf, **disukwargs)
+    disv = flopy.mf6.ModflowGwfdisv(gwf, **disvkwargs)
     ic = flopy.mf6.ModflowGwfic(gwf, strt=0.0)
     npf = flopy.mf6.ModflowGwfnpf(gwf)
-    spd = {0: [[(0,), 1.0], [(nrow * ncol - 1), 0.0]]}
+    spd = {0: [[(0, 0), 1.0], [(0, nrow * ncol - 1), 0.0]]}
     chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(gwf, stress_period_data=spd)
     return sim, None
 
@@ -67,13 +72,14 @@ def eval_results(sim):
 
     name = sim.name
 
-    fname = os.path.join(sim.simpath, name + ".disu.grb")
+    fname = os.path.join(sim.simpath, name + ".disv.grb")
     grbobj = flopy.mf6.utils.MfGrdFile(fname)
-    nodes = grbobj._datadict["NODES"]
+    ncpl = grbobj._datadict["NCPL"]
     ia = grbobj._datadict["IA"]
     ja = grbobj._datadict["JA"]
 
     if sim.idxsim == 1:
+        # assert ncpl == disvkwargs["ncpl"]
         assert np.array_equal(ia[0:4], np.array([1, 4, 4, 7]))
         assert np.array_equal(ja[:6], np.array([1, 4, 10, 3, 6, 12]))
         assert ia[-1] == 127
