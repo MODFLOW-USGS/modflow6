@@ -28,11 +28,11 @@ module GwtGwtConnectionModule
   !<
   type, public, extends(SpatialModelConnectionType) :: GwtGwtConnectionType
 
-    type(GwtModelType), pointer :: gwtModel => null() !< the model for which this connection exists
-    type(GwtExchangeType), pointer :: gwtExchange => null() !< the primary exchange, cast to GWT-GWT
+    class(GwtModelType), pointer :: gwtModel => null() !< the model for which this connection exists
+    class(GwtExchangeType), pointer :: gwtExchange => null() !< the primary exchange, cast to GWT-GWT
     logical(LGP) :: exchangeIsOwned !< there are two connections (in serial) for an exchange,
                                     !! one of them needs to manage/own the exchange (e.g. clean up)
-    type(GwtInterfaceModelType), pointer :: gwtInterfaceModel => null() !< the interface model
+    class(GwtInterfaceModelType), pointer :: gwtInterfaceModel => null() !< the interface model
     integer(I4B), pointer :: iIfaceAdvScheme => null() !< the advection scheme at the interface:
                                                        !! 0 = upstream, 1 = central, 2 = TVD
     integer(I4B), pointer :: iIfaceXt3d => null() !< XT3D in the interface DSP package: 0 = no, 1 = lhs, 2 = rhs
@@ -57,10 +57,8 @@ module GwtGwtConnectionModule
 
     procedure :: exg_ar => gwtgwtcon_ar
     procedure :: exg_df => gwtgwtcon_df
-    procedure :: exg_ac => gwtgwtcon_ac
     procedure :: exg_rp => gwtgwtcon_rp
     procedure :: exg_ad => gwtgwtcon_ad
-    procedure :: exg_cf => gwtgwtcon_cf
     procedure :: exg_fc => gwtgwtcon_fc
     procedure :: exg_da => gwtgwtcon_da
     procedure :: exg_cq => gwtgwtcon_cq
@@ -342,30 +340,6 @@ contains
 
   end subroutine validateConnection
 
-  !> @brief add connections to the global system for
-  !< this connection
-  subroutine gwtgwtcon_ac(this, sparse)
-    class(GwtGwtConnectionType) :: this !< this connection
-    type(sparsematrix), intent(inout) :: sparse !< sparse matrix to store the connections
-    ! local
-    integer(I4B) :: ic, iglo, jglo
-    type(GlobalCellType) :: boundaryCell, connectedCell
-
-    ! connections to other models
-    do ic = 1, this%ig_builder%nrOfBoundaryCells
-      boundaryCell = this%ig_builder%boundaryCells(ic)%cell
-      connectedCell = this%ig_builder%connectedCells(ic)%cell
-      iglo = boundaryCell%index + boundaryCell%v_model%moffset%get()
-      jglo = connectedCell%index + connectedCell%v_model%moffset%get()
-      call sparse%addconnection(iglo, jglo, 1)
-      call sparse%addconnection(jglo, iglo, 1)
-    end do
-
-    ! and internal connections
-    call this%spatialcon_ac(sparse)
-
-  end subroutine gwtgwtcon_ac
-
   subroutine gwtgwtcon_rp(this)
     class(GwtGwtConnectionType) :: this !< the connection
 
@@ -390,22 +364,6 @@ contains
 
   end subroutine gwtgwtcon_ad
 
-  subroutine gwtgwtcon_cf(this, kiter)
-    class(GwtGwtConnectionType) :: this !< the connection
-    integer(I4B), intent(in) :: kiter !< the iteration counter
-    ! local
-    integer(I4B) :: i
-
-    ! reset interface system
-    call this%matrix%zero_entries()
-    do i = 1, this%neq
-      this%rhs(i) = 0.0_DP
-    end do
-
-    call this%gwtInterfaceModel%model_cf(kiter)
-
-  end subroutine gwtgwtcon_cf
-
   subroutine gwtgwtcon_fc(this, kiter, matrix_sln, rhs_sln, inwtflag)
     class(GwtGwtConnectionType) :: this !< the connection
     integer(I4B), intent(in) :: kiter !< the iteration counter
@@ -413,32 +371,9 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs_sln !< global right-hand-side
     integer(I4B), optional, intent(in) :: inwtflag !< newton-raphson flag
     ! local
-    integer(I4B) :: n, nglo
-    integer(I4B) :: icol_start, icol_end, ipos
-    class(MatrixBaseType), pointer :: matrix_base
 
-    matrix_base => this%matrix
-    call this%gwtInterfaceModel%model_fc(kiter, matrix_base, inwtflag)
-
-    ! map back to solution matrix
-    do n = 1, this%neq
-      ! We only need the coefficients for our own model
-      ! (i.e. rows in the matrix that belong to this%owner):
-      if (.not. this%ig_builder%idxToGlobal(n)%v_model == this%owner) then
-        cycle
-      end if
-
-      nglo = this%ig_builder%idxToGlobal(n)%index + &
-             this%ig_builder%idxToGlobal(n)%v_model%moffset%get()
-      rhs_sln(nglo) = rhs_sln(nglo) + this%rhs(n)
-
-      icol_start = this%matrix%get_first_col_pos(n)
-      icol_end = this%matrix%get_last_col_pos(n)
-      do ipos = icol_start, icol_end
-        call matrix_sln%add_value_pos(this%ipos_to_sln(ipos), &
-                                      this%matrix%get_value_pos(ipos))
-      end do
-    end do
+    call this%SpatialModelConnectionType%spatialcon_fc( &
+      kiter, matrix_sln, rhs_sln, inwtflag)
 
     ! FC the movers through the exchange
     if (this%exchangeIsOwned) then
