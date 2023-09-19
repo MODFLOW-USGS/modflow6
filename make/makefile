@@ -5,36 +5,36 @@ include ./makedefaults
 
 # Define the source file directories
 SOURCEDIR1=../src
-SOURCEDIR2=../src/Distributed
-SOURCEDIR3=../src/Exchange
-SOURCEDIR4=../src/Model
-SOURCEDIR5=../src/Model/Connection
-SOURCEDIR6=../src/Model/Geometry
-SOURCEDIR7=../src/Model/GroundWaterFlow
+SOURCEDIR2=../src/Exchange
+SOURCEDIR3=../src/Model
+SOURCEDIR4=../src/Model/Geometry
+SOURCEDIR5=../src/Model/TransportModel
+SOURCEDIR6=../src/Model/ModelUtilities
+SOURCEDIR7=../src/Model/Connection
 SOURCEDIR8=../src/Model/GroundWaterTransport
-SOURCEDIR9=../src/Model/ModelUtilities
-SOURCEDIR10=../src/Model/TransportModel
+SOURCEDIR9=../src/Model/GroundWaterFlow
+SOURCEDIR10=../src/Distributed
 SOURCEDIR11=../src/Solution
-SOURCEDIR12=../src/Solution/LinearMethods
-SOURCEDIR13=../src/Solution/PETSc
+SOURCEDIR12=../src/Solution/PETSc
+SOURCEDIR13=../src/Solution/LinearMethods
 SOURCEDIR14=../src/Timing
 SOURCEDIR15=../src/Utilities
-SOURCEDIR16=../src/Utilities/ArrayRead
-SOURCEDIR17=../src/Utilities/Idm
-SOURCEDIR18=../src/Utilities/Idm/mf6blockfile
-SOURCEDIR19=../src/Utilities/Idm/selector
-SOURCEDIR20=../src/Utilities/Libraries
+SOURCEDIR16=../src/Utilities/TimeSeries
+SOURCEDIR17=../src/Utilities/Libraries
+SOURCEDIR18=../src/Utilities/Libraries/rcm
+SOURCEDIR19=../src/Utilities/Libraries/sparsekit
+SOURCEDIR20=../src/Utilities/Libraries/sparskit2
 SOURCEDIR21=../src/Utilities/Libraries/blas
 SOURCEDIR22=../src/Utilities/Libraries/daglib
-SOURCEDIR23=../src/Utilities/Libraries/rcm
-SOURCEDIR24=../src/Utilities/Libraries/sparsekit
-SOURCEDIR25=../src/Utilities/Libraries/sparskit2
+SOURCEDIR23=../src/Utilities/Idm
+SOURCEDIR24=../src/Utilities/Idm/selector
+SOURCEDIR25=../src/Utilities/Idm/mf6blockfile
 SOURCEDIR26=../src/Utilities/Matrix
-SOURCEDIR27=../src/Utilities/Memory
+SOURCEDIR27=../src/Utilities/Vector
 SOURCEDIR28=../src/Utilities/Observation
 SOURCEDIR29=../src/Utilities/OutputControl
-SOURCEDIR30=../src/Utilities/TimeSeries
-SOURCEDIR31=../src/Utilities/Vector
+SOURCEDIR30=../src/Utilities/Memory
+SOURCEDIR31=../src/Utilities/ArrayRead
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -114,35 +114,6 @@ $(OBJDIR)/InputDefinition.o \
 $(OBJDIR)/TimeArray.o \
 $(OBJDIR)/ObsOutput.o \
 $(OBJDIR)/DiscretizationBase.o \
-$(OBJDIR)/TimeArraySeries.o \
-$(OBJDIR)/ObsOutputList.o \
-$(OBJDIR)/Observe.o \
-$(OBJDIR)/TimeArraySeriesLink.o \
-$(OBJDIR)/ObsUtility.o \
-$(OBJDIR)/ObsContainer.o \
-$(OBJDIR)/BudgetFileReader.o \
-$(OBJDIR)/TimeArraySeriesManager.o \
-$(OBJDIR)/PackageMover.o \
-$(OBJDIR)/Obs3.o \
-$(OBJDIR)/NumericalPackage.o \
-$(OBJDIR)/Budget.o \
-$(OBJDIR)/BudgetTerm.o \
-$(OBJDIR)/sort.o \
-$(OBJDIR)/SfrCrossSectionUtils.o \
-$(OBJDIR)/VirtualBase.o \
-$(OBJDIR)/STLVecInt.o \
-$(OBJDIR)/BoundaryPackage.o \
-$(OBJDIR)/BaseModel.o \
-$(OBJDIR)/InputDefinition.o \
-$(OBJDIR)/PackageBudget.o \
-$(OBJDIR)/HeadFileReader.o \
-$(OBJDIR)/BudgetObject.o \
-$(OBJDIR)/SfrCrossSectionManager.o \
-$(OBJDIR)/dag_module.o \
-$(OBJDIR)/VirtualDataLists.o \
-$(OBJDIR)/VirtualDataContainer.o \
-$(OBJDIR)/SimStages.o \
-$(OBJDIR)/NumericalModel.o \
 $(OBJDIR)/simnamidm.o \
 $(OBJDIR)/gwt1idm.o \
 $(OBJDIR)/gwt1dsp1idm.o \
@@ -154,6 +125,49 @@ $(OBJDIR)/gwf3idm.o \
 $(OBJDIR)/gwf3disv8idm.o \
 $(OBJDIR)/gwf3disu8idm.o \
 $(OBJDIR)/gwf3dis8idm.o \
+$(OBJDIR)/TimeArraySeries.o \
+$(OBJDIR)/ObsOutputList.o \
+$(OBJDIR)/Observe.o \
+$(OBJDIR)/IdmSimDfnSelector.o \
+$(OBJDIR)/IdmGwtDfnSelector.o \
+$(OBJDIR)/IdmGwfDfnSelector.o \
+$(OBJDIR)/TimeArraySeriesLink.o \
+$(OBJDIR)/ObsUtility.o \
+$(OBJDIR)/ObsContainer.o \
+$(OBJDIR)/BudgetFileReader.o \
+$(OBJDIR)/IdmDfnSelector.o \
+$(OBJDIR)/ArrayReaderBase.o \
+$(OBJDIR)/TimeArraySeriesManager.o \
+$(OBJDIR)/PackageMover.o \
+$(OBJDIR)/Obs3.o \
+$(OBJDIR)/NumericalPackage.o \
+$(OBJDIR)/Budget.o \
+$(OBJDIR)/BudgetTerm.o \
+$(OBJDIR)/sort.o \
+$(OBJDIR)/SfrCrossSectionUtils.o \
+$(OBJDIR)/STLVecInt.o \
+$(OBJDIR)/ModflowInput.o \
+$(OBJDIR)/MemoryManagerExt.o \
+$(OBJDIR)/Integer2dReader.o \
+$(OBJDIR)/VirtualBase.o \
+$(OBJDIR)/BoundaryPackage.o \
+$(OBJDIR)/BaseModel.o \
+$(OBJDIR)/PackageBudget.o \
+$(OBJDIR)/HeadFileReader.o \
+$(OBJDIR)/BudgetObject.o \
+$(OBJDIR)/SfrCrossSectionManager.o \
+$(OBJDIR)/dag_module.o \
+$(OBJDIR)/StructVector.o \
+$(OBJDIR)/IdmLogger.o \
+$(OBJDIR)/DefinitionSelect.o \
+$(OBJDIR)/InputLoadType.o \
+$(OBJDIR)/Integer1dReader.o \
+$(OBJDIR)/Double2dReader.o \
+$(OBJDIR)/Double1dReader.o \
+$(OBJDIR)/VirtualDataLists.o \
+$(OBJDIR)/VirtualDataContainer.o \
+$(OBJDIR)/SimStages.o \
+$(OBJDIR)/NumericalModel.o \
 $(OBJDIR)/FlowModelInterface.o \
 $(OBJDIR)/PrintSaveManager.o \
 $(OBJDIR)/Xt3dAlgorithm.o \
@@ -294,6 +308,10 @@ $(OBJDIR)/sparsekit.o \
 $(OBJDIR)/rcm.o \
 $(OBJDIR)/blas1_d.o \
 $(OBJDIR)/Iunit.o \
+$(OBJDIR)/BoundaryPackageExt.o \
+$(OBJDIR)/gwf3rcha8idm.o \
+$(OBJDIR)/gwf3rch8idm.o \
+$(OBJDIR)/gwf3chd8idm.o \
 $(OBJDIR)/RectangularGeometry.o \
 $(OBJDIR)/CircularGeometry.o
 
