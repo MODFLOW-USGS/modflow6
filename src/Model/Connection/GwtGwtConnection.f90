@@ -309,6 +309,10 @@ contains
     ! base validation, the spatial/geometry part
     call this%SpatialModelConnectionType%validateConnection()
 
+    ! we cannot validate this (yet) in parallel mode
+    if (.not. this%gwtExchange%v_model1%is_local) return
+    if (.not. this%gwtExchange%v_model2%is_local) return
+
     ! GWT related matters
     if ((this%gwtExchange%gwtmodel1%inadv > 0 .and. &
          this%gwtExchange%gwtmodel2%inadv == 0) .or. &
@@ -436,10 +440,12 @@ contains
       end do
     end do
 
-    ! FC the movers through the exchange; we can call
-    ! exg_fc() directly because it only handles mover terms (unlike in GwfExchange%exg_fc)
+    ! FC the movers through the exchange
     if (this%exchangeIsOwned) then
-      call this%gwtExchange%exg_fc(kiter, matrix_sln, rhs_sln, inwtflag)
+      if (this%gwtExchange%inmvt > 0) then
+        call this%gwtExchange%mvt%mvt_fc(this%gwtExchange%gwtmodel1%x, &
+                                         this%gwtExchange%gwtmodel2%x)
+      end if
     end if
 
   end subroutine gwtgwtcon_fc

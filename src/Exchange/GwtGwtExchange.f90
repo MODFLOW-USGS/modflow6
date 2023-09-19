@@ -22,6 +22,7 @@ module GwtGwtExchangeModule
   use VirtualModelModule, only: get_virtual_model
   use DisConnExchangeModule, only: DisConnExchangeType
   use GwtModule, only: GwtModelType
+  use VirtualModelModule, only: VirtualModelType
   use GwtMvtModule, only: GwtMvtType
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
@@ -54,8 +55,8 @@ module GwtGwtExchangeModule
     real(DP), dimension(:), pointer, contiguous :: gwfsimvals => null() !< simulated gwf flow rate for each exchange
     !
     ! -- pointers to gwt models
-    type(GwtModelType), pointer :: gwtmodel1 => null() !< pointer to GWT Model 1
-    type(GwtModelType), pointer :: gwtmodel2 => null() !< pointer to GWT Model 2
+    class(GwtModelType), pointer :: gwtmodel1 => null() !< pointer to GWT Model 1
+    class(GwtModelType), pointer :: gwtmodel2 => null() !< pointer to GWT Model 2
     !
     ! -- GWT specific option block:
     integer(I4B), pointer :: inewton => null() !< unneeded newton flag allows for mvt to be used here
@@ -99,6 +100,7 @@ module GwtGwtExchangeModule
     procedure :: parse_option
     procedure :: read_mvt
     procedure :: gwt_gwt_bdsav
+    procedure, private :: gwt_gwt_bdsav_model
     procedure, private :: gwt_gwt_df_obs
     procedure, private :: gwt_gwt_rp_obs
     procedure, public :: gwt_gwt_save_simvals
@@ -463,225 +465,20 @@ contains
   !<
   subroutine gwt_gwt_bdsav(this)
     ! -- modules
-    use ConstantsModule, only: DZERO, LENBUDTXT, LENPACKAGENAME
-    use TdisModule, only: kstp, kper
     ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
     ! -- local
-    character(len=LENBOUNDNAME) :: bname
-    character(len=LENPACKAGENAME + 4) :: packname1
-    character(len=LENPACKAGENAME + 4) :: packname2
-    character(len=LENBUDTXT), dimension(1) :: budtxt
-    character(len=20) :: nodestr
-    integer(I4B) :: ntabrows
-    integer(I4B) :: nodeu
-    integer(I4B) :: i, n1, n2, n1u, n2u
-    integer(I4B) :: ibinun1, ibinun2
     integer(I4B) :: icbcfl, ibudfl
-    real(DP) :: ratin, ratout, rrate
-    integer(I4B) :: isuppress_output
-    ! -- formats
     !
-    ! -- initialize local variables
-    isuppress_output = 0
-    budtxt(1) = '    FLOW-JA-FACE'
-    packname1 = 'EXG '//this%name
-    packname1 = adjustr(packname1)
-    packname2 = 'EXG '//this%name
-    packname2 = adjustr(packname2)
-    !
-    ! -- update output tables
-    if (this%iprflow /= 0) then
-      !
-      ! -- update titles
-      if (this%gwtmodel1%oc%oc_save('BUDGET')) then
-        call this%outputtab1%set_title(packname1)
-      end if
-      if (this%gwtmodel2%oc%oc_save('BUDGET')) then
-        call this%outputtab2%set_title(packname2)
-      end if
-      !
-      ! -- set table kstp and kper
-      call this%outputtab1%set_kstpkper(kstp, kper)
-      call this%outputtab2%set_kstpkper(kstp, kper)
-      !
-      ! -- update maxbound of tables
-      ntabrows = 0
-      do i = 1, this%nexg
-        n1 = this%nodem1(i)
-        n2 = this%nodem2(i)
-        !
-        ! -- If both cells are active then calculate flow rate
-        if (this%gwtmodel1%ibound(n1) /= 0 .and. &
-            this%gwtmodel2%ibound(n2) /= 0) then
-          ntabrows = ntabrows + 1
-        end if
-      end do
-      if (ntabrows > 0) then
-        call this%outputtab1%set_maxbound(ntabrows)
-        call this%outputtab2%set_maxbound(ntabrows)
-      end if
+    ! -- budget for model1
+    if (associated(this%gwtmodel1)) then
+      call this%gwt_gwt_bdsav_model(this%gwtmodel1)
     end if
     !
-    ! -- Print and write budget terms for model 1
-    !
-    ! -- Set binary unit numbers for saving flows
-    if (this%ipakcb /= 0) then
-      ibinun1 = this%gwtmodel1%oc%oc_save_unit('BUDGET')
-    else
-      ibinun1 = 0
+    ! -- budget for model2
+    if (associated(this%gwtmodel2)) then
+      call this%gwt_gwt_bdsav_model(this%gwtmodel2)
     end if
-    !
-    ! -- If save budget flag is zero for this stress period, then
-    !    shut off saving
-    if (.not. this%gwtmodel1%oc%oc_save('BUDGET')) ibinun1 = 0
-    if (isuppress_output /= 0) then
-      ibinun1 = 0
-    end if
-    !
-    ! -- If cell-by-cell flows will be saved as a list, write header.
-    if (ibinun1 /= 0) then
-      call this%gwtmodel1%dis%record_srcdst_list_header(budtxt(1), &
-                                                        this%gwtmodel1%name, &
-                                                        this%name, &
-                                                        this%gwtmodel2%name, &
-                                                        this%name, &
-                                                        this%naux, this%auxname, &
-                                                        ibinun1, this%nexg, &
-                                                        this%gwtmodel1%iout)
-    end if
-    !
-    ! Initialize accumulators
-    ratin = DZERO
-    ratout = DZERO
-    !
-    ! -- Loop through all exchanges
-    do i = 1, this%nexg
-      !
-      ! -- Assign boundary name
-      if (this%inamedbound > 0) then
-        bname = this%boundname(i)
-      else
-        bname = ''
-      end if
-      !
-      ! -- Calculate the flow rate between n1 and n2
-      rrate = DZERO
-      n1 = this%nodem1(i)
-      n2 = this%nodem2(i)
-      !
-      ! -- If both cells are active then calculate flow rate
-      if (this%gwtmodel1%ibound(n1) /= 0 .and. &
-          this%gwtmodel2%ibound(n2) /= 0) then
-        rrate = this%simvals(i)
-        !
-        ! -- Print the individual rates to model list files if requested
-        if (this%iprflow /= 0) then
-          if (this%gwtmodel1%oc%oc_save('BUDGET')) then
-            !
-            ! -- set nodestr and write outputtab table
-            nodeu = this%gwtmodel1%dis%get_nodeuser(n1)
-            call this%gwtmodel1%dis%nodeu_to_string(nodeu, nodestr)
-            call this%outputtab1%print_list_entry(i, trim(adjustl(nodestr)), &
-                                                  rrate, bname)
-          end if
-        end if
-        if (rrate < DZERO) then
-          ratout = ratout - rrate
-        else
-          ratin = ratin + rrate
-        end if
-      end if
-      !
-      ! -- If saving cell-by-cell flows in list, write flow
-      n1u = this%gwtmodel1%dis%get_nodeuser(n1)
-      n2u = this%gwtmodel2%dis%get_nodeuser(n2)
-      if (ibinun1 /= 0) &
-        call this%gwtmodel1%dis%record_mf6_list_entry( &
-        ibinun1, n1u, n2u, rrate, this%naux, this%auxvar(:, i), &
-        .false., .false.)
-      !
-    end do
-    !
-    ! -- Print and write budget terms for model 2
-    !
-    ! -- Set binary unit numbers for saving flows
-    if (this%ipakcb /= 0) then
-      ibinun2 = this%gwtmodel2%oc%oc_save_unit('BUDGET')
-    else
-      ibinun2 = 0
-    end if
-    !
-    ! -- If save budget flag is zero for this stress period, then
-    !    shut off saving
-    if (.not. this%gwtmodel2%oc%oc_save('BUDGET')) ibinun2 = 0
-    if (isuppress_output /= 0) then
-      ibinun2 = 0
-    end if
-    !
-    ! -- If cell-by-cell flows will be saved as a list, write header.
-    if (ibinun2 /= 0) then
-      call this%gwtmodel2%dis%record_srcdst_list_header(budtxt(1), &
-                                                        this%gwtmodel2%name, &
-                                                        this%name, &
-                                                        this%gwtmodel1%name, &
-                                                        this%name, &
-                                                        this%naux, this%auxname, &
-                                                        ibinun2, this%nexg, &
-                                                        this%gwtmodel2%iout)
-    end if
-    !
-    ! Initialize accumulators
-    ratin = DZERO
-    ratout = DZERO
-    !
-    ! -- Loop through all exchanges
-    do i = 1, this%nexg
-      !
-      ! -- Assign boundary name
-      if (this%inamedbound > 0) then
-        bname = this%boundname(i)
-      else
-        bname = ''
-      end if
-      !
-      ! -- Calculate the flow rate between n1 and n2
-      rrate = DZERO
-      n1 = this%nodem1(i)
-      n2 = this%nodem2(i)
-      !
-      ! -- If both cells are active then calculate flow rate
-      if (this%gwtmodel1%ibound(n1) /= 0 .and. &
-          this%gwtmodel2%ibound(n2) /= 0) then
-        rrate = this%simvals(i)
-        !
-        ! -- Print the individual rates to model list files if requested
-        if (this%iprflow /= 0) then
-          if (this%gwtmodel2%oc%oc_save('BUDGET')) then
-            !
-            ! -- set nodestr and write outputtab table
-            nodeu = this%gwtmodel2%dis%get_nodeuser(n2)
-            call this%gwtmodel2%dis%nodeu_to_string(nodeu, nodestr)
-            call this%outputtab2%print_list_entry(i, trim(adjustl(nodestr)), &
-                                                  -rrate, bname)
-          end if
-        end if
-        if (rrate < DZERO) then
-          ratout = ratout - rrate
-        else
-          ratin = ratin + rrate
-        end if
-      end if
-      !
-      ! -- If saving cell-by-cell flows in list, write flow
-      n1u = this%gwtmodel1%dis%get_nodeuser(n1)
-      n2u = this%gwtmodel2%dis%get_nodeuser(n2)
-      if (ibinun2 /= 0) &
-        call this%gwtmodel2%dis%record_mf6_list_entry( &
-        ibinun2, n2u, n1u, -rrate, this%naux, this%auxvar(:, i), &
-        .false., .false.)
-      !
-    end do
     !
     ! -- Set icbcfl, ibudfl to zero so that flows will be printed and
     !    saved, if the options were set in the MVT package
@@ -699,6 +496,175 @@ contains
     ! -- return
     return
   end subroutine gwt_gwt_bdsav
+
+  !> @ brief Budget save
+  !!
+  !! Output individual flows to listing file and binary budget files
+  !!
+  !<
+  subroutine gwt_gwt_bdsav_model(this, model)
+    ! -- modules
+    use ConstantsModule, only: DZERO, LENBUDTXT, LENPACKAGENAME
+    use TdisModule, only: kstp, kper
+    ! -- dummy
+    class(GwtExchangeType) :: this !<  GwtExchangeType
+    class(GwtModelType), pointer :: model
+    ! -- local
+    character(len=LENBOUNDNAME) :: bname
+    character(len=LENPACKAGENAME + 4) :: packname
+    character(len=LENBUDTXT), dimension(1) :: budtxt
+    type(TableType), pointer :: output_tab
+    class(VirtualModelType), pointer :: nbr_model
+    character(len=20) :: nodestr
+    integer(I4B) :: ntabrows
+    integer(I4B) :: nodeu
+    integer(I4B) :: i, n1, n2, n1u, n2u
+    integer(I4B) :: ibinun
+    real(DP) :: ratin, ratout, rrate
+    logical(LGP) :: is_for_model1
+    integer(I4B) :: isuppress_output
+    ! -- formats
+    !
+    ! -- initialize local variables
+    isuppress_output = 0
+    budtxt(1) = '    FLOW-JA-FACE'
+    packname = 'EXG '//this%name
+    packname = adjustr(packname)
+    if (associated(model, this%gwtmodel1)) then
+      output_tab => this%outputtab1
+      nbr_model => this%v_model2
+      is_for_model1 = .true.
+    else
+      output_tab => this%outputtab2
+      nbr_model => this%v_model1
+      is_for_model1 = .false.
+    end if
+    !
+    ! -- update output tables
+    if (this%iprflow /= 0) then
+      !
+      ! -- update titles
+      if (model%oc%oc_save('BUDGET')) then
+        call output_tab%set_title(packname)
+      end if
+      !
+      ! -- set table kstp and kper
+      call output_tab%set_kstpkper(kstp, kper)
+      !
+      ! -- update maxbound of tables
+      ntabrows = 0
+      do i = 1, this%nexg
+        n1 = this%nodem1(i)
+        n2 = this%nodem2(i)
+        !
+        ! -- If both cells are active then calculate flow rate
+        if (this%v_model1%ibound%get(n1) /= 0 .and. &
+            this%v_model2%ibound%get(n2) /= 0) then
+          ntabrows = ntabrows + 1
+        end if
+      end do
+      if (ntabrows > 0) then
+        call output_tab%set_maxbound(ntabrows)
+      end if
+    end if
+    !
+    ! -- Print and write budget terms for model 1
+    !
+    ! -- Set binary unit numbers for saving flows
+    if (this%ipakcb /= 0) then
+      ibinun = model%oc%oc_save_unit('BUDGET')
+    else
+      ibinun = 0
+    end if
+    !
+    ! -- If save budget flag is zero for this stress period, then
+    !    shut off saving
+    if (.not. model%oc%oc_save('BUDGET')) ibinun = 0
+    if (isuppress_output /= 0) then
+      ibinun = 0
+    end if
+    !
+    ! -- If cell-by-cell flows will be saved as a list, write header.
+    if (ibinun /= 0) then
+      call model%dis%record_srcdst_list_header(budtxt(1), &
+                                               model%name, &
+                                               this%name, &
+                                               nbr_model%name, &
+                                               this%name, &
+                                               this%naux, this%auxname, &
+                                               ibinun, this%nexg, &
+                                               model%iout)
+    end if
+    !
+    ! Initialize accumulators
+    ratin = DZERO
+    ratout = DZERO
+    !
+    ! -- Loop through all exchanges
+    do i = 1, this%nexg
+      !
+      ! -- Assign boundary name
+      if (this%inamedbound > 0) then
+        bname = this%boundname(i)
+      else
+        bname = ''
+      end if
+      !
+      ! -- Calculate the flow rate between n1 and n2
+      rrate = DZERO
+      n1 = this%nodem1(i)
+      n2 = this%nodem2(i)
+      !
+      ! -- If both cells are active then calculate flow rate
+      if (this%v_model1%ibound%get(n1) /= 0 .and. &
+          this%v_model2%ibound%get(n2) /= 0) then
+        rrate = this%simvals(i)
+        !
+        ! -- Print the individual rates to model list files if requested
+        if (this%iprflow /= 0) then
+          if (model%oc%oc_save('BUDGET')) then
+            !
+            ! -- set nodestr and write outputtab table
+            if (is_for_model1) then
+              nodeu = model%dis%get_nodeuser(n1)
+              call model%dis%nodeu_to_string(nodeu, nodestr)
+              call output_tab%print_list_entry(i, trim(adjustl(nodestr)), &
+                                               rrate, bname)
+            else
+              nodeu = model%dis%get_nodeuser(n2)
+              call model%dis%nodeu_to_string(nodeu, nodestr)
+              call output_tab%print_list_entry(i, trim(adjustl(nodestr)), &
+                                               -rrate, bname)
+            end if
+          end if
+        end if
+        if (rrate < DZERO) then
+          ratout = ratout - rrate
+        else
+          ratin = ratin + rrate
+        end if
+      end if
+      !
+      ! -- If saving cell-by-cell flows in list, write flow
+      n1u = this%v_model1%dis_get_nodeuser(n1)
+      n2u = this%v_model2%dis_get_nodeuser(n2)
+      if (ibinun /= 0) then
+        if (is_for_model1) then
+          call model%dis%record_mf6_list_entry( &
+            ibinun, n1u, n2u, rrate, this%naux, this%auxvar(:, i), &
+            .false., .false.)
+        else
+          call model%dis%record_mf6_list_entry( &
+            ibinun, n2u, n1u, -rrate, this%naux, this%auxvar(:, i), &
+            .false., .false.)
+        end if
+      end if
+      !
+    end do
+    !
+    ! -- return
+    return
+  end subroutine gwt_gwt_bdsav_model
 
   !> @ brief Output
   !!
@@ -737,12 +703,12 @@ contains
         n1 = this%nodem1(iexg)
         n2 = this%nodem2(iexg)
         flow = this%simvals(iexg)
-        call this%gwtmodel1%dis%noder_to_string(n1, node1str)
-        call this%gwtmodel2%dis%noder_to_string(n2, node2str)
+        call this%v_model1%dis_noder_to_string(n1, node1str)
+        call this%v_model2%dis_noder_to_string(n2, node2str)
         write (iout, fmtdata) trim(adjustl(node1str)), &
           trim(adjustl(node2str)), &
-          this%cond(iexg), this%gwtmodel1%x(n1), &
-          this%gwtmodel2%x(n2), flow
+          this%cond(iexg), this%v_model1%x%get(n1), &
+          this%v_model2%x%get(n2), flow
       end do
     end if
     !
@@ -1092,32 +1058,36 @@ contains
       !
       ! -- initialize the output table objects
       !    outouttab1
-      call table_cr(this%outputtab1, this%name, '    ')
-      call this%outputtab1%table_df(this%nexg, ntabcol, this%gwtmodel1%iout, &
-                                    transient=.TRUE.)
-      text = 'NUMBER'
-      call this%outputtab1%initialize_column(text, 10, alignment=TABCENTER)
-      text = 'CELLID'
-      call this%outputtab1%initialize_column(text, 20, alignment=TABLEFT)
-      text = 'RATE'
-      call this%outputtab1%initialize_column(text, 15, alignment=TABCENTER)
-      if (this%inamedbound > 0) then
-        text = 'NAME'
+      if (this%v_model1%is_local) then
+        call table_cr(this%outputtab1, this%name, '    ')
+        call this%outputtab1%table_df(this%nexg, ntabcol, this%gwtmodel1%iout, &
+                                      transient=.TRUE.)
+        text = 'NUMBER'
+        call this%outputtab1%initialize_column(text, 10, alignment=TABCENTER)
+        text = 'CELLID'
         call this%outputtab1%initialize_column(text, 20, alignment=TABLEFT)
+        text = 'RATE'
+        call this%outputtab1%initialize_column(text, 15, alignment=TABCENTER)
+        if (this%inamedbound > 0) then
+          text = 'NAME'
+          call this%outputtab1%initialize_column(text, 20, alignment=TABLEFT)
+        end if
       end if
       !    outouttab2
-      call table_cr(this%outputtab2, this%name, '    ')
-      call this%outputtab2%table_df(this%nexg, ntabcol, this%gwtmodel2%iout, &
-                                    transient=.TRUE.)
-      text = 'NUMBER'
-      call this%outputtab2%initialize_column(text, 10, alignment=TABCENTER)
-      text = 'CELLID'
-      call this%outputtab2%initialize_column(text, 20, alignment=TABLEFT)
-      text = 'RATE'
-      call this%outputtab2%initialize_column(text, 15, alignment=TABCENTER)
-      if (this%inamedbound > 0) then
-        text = 'NAME'
+      if (this%v_model2%is_local) then
+        call table_cr(this%outputtab2, this%name, '    ')
+        call this%outputtab2%table_df(this%nexg, ntabcol, this%gwtmodel2%iout, &
+                                      transient=.TRUE.)
+        text = 'NUMBER'
+        call this%outputtab2%initialize_column(text, 10, alignment=TABCENTER)
+        text = 'CELLID'
         call this%outputtab2%initialize_column(text, 20, alignment=TABLEFT)
+        text = 'RATE'
+        call this%outputtab2%initialize_column(text, 15, alignment=TABCENTER)
+        if (this%inamedbound > 0) then
+          text = 'NAME'
+          call this%outputtab2%initialize_column(text, 20, alignment=TABLEFT)
+        end if
       end if
     end if
     !

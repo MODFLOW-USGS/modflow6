@@ -46,8 +46,8 @@ module GwfGwfExchangeModule
   !!
   !<
   type, extends(DisConnExchangeType) :: GwfExchangeType
-    type(GwfModelType), pointer :: gwfmodel1 => null() !< pointer to GWF Model 1
-    type(GwfModelType), pointer :: gwfmodel2 => null() !< pointer to GWF Model 2
+    class(GwfModelType), pointer :: gwfmodel1 => null() !< pointer to GWF Model 1
+    class(GwfModelType), pointer :: gwfmodel2 => null() !< pointer to GWF Model 2
     !
     ! -- GWF specific option block:
     integer(I4B), pointer :: iprflow => null() !< print flag for cell by cell flows
@@ -994,7 +994,7 @@ contains
     use ConstantsModule, only: DZERO, LENBUDTXT, LENPACKAGENAME
     use TdisModule, only: kstp, kper
     class(GwfExchangeType) :: this !< this exchange
-    type(GwfModelType), pointer :: model !< the model to save budget for
+    class(GwfModelType), pointer :: model !< the model to save budget for
     ! local
     character(len=LENPACKAGENAME + 4) :: packname
     character(len=LENBUDTXT), dimension(1) :: budtxt
@@ -1115,7 +1115,6 @@ contains
               call output_tab%print_list_entry(i, trim(adjustl(nodestr)), &
                                                -rrate, bname)
             end if
-
           end if
         end if
         if (rrate < DZERO) then
