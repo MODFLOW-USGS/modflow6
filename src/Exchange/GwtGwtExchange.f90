@@ -223,10 +223,10 @@ contains
     if (associated(this%gwtmodel1) .and. associated(this%gwtmodel2)) then
       if (this%gwtmodel1%idsoln /= this%gwtmodel2%idsoln) then
         call store_error('Two models are connected in a GWT '// &
-                        'exchange but they are in different solutions. '// &
-                        'GWT models must be in same solution: '// &
-                        trim(this%gwtmodel1%name)//' '// &
-                        trim(this%gwtmodel2%name))
+                         'exchange but they are in different solutions. '// &
+                         'GWT models must be in same solution: '// &
+                         trim(this%gwtmodel1%name)//' '// &
+                         trim(this%gwtmodel2%name))
         call this%parser%StoreErrorUnit()
       end if
     end if
