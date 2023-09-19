@@ -110,13 +110,15 @@ contains
     summary%iter_cnt = summary%iter_cnt + 1
     iter_cnt = summary%iter_cnt
 
-    summary%itinner(iter_cnt) = n
-    do i = 1, summary%convnmod
-      summary%convdvmax(i, iter_cnt) = -huge(dvmax_model)
-      summary%convlocdv(i, iter_cnt) = -1
-      summary%convdrmax(i, iter_cnt) = -huge(drmax_model)
-      summary%convlocdr(i, iter_cnt) = -1
-    end do
+    if (summary%nitermax > 1) then
+      summary%itinner(iter_cnt) = n
+      do i = 1, summary%convnmod
+        summary%convdvmax(i, iter_cnt) = -huge(dvmax_model)
+        summary%convlocdv(i, iter_cnt) = -1
+        summary%convdrmax(i, iter_cnt) = -huge(drmax_model)
+        summary%convlocdr(i, iter_cnt) = -1
+      end do
+    end if
 
     call VecWAXPY(petsc_ctx%delta_x, min_one, petsc_ctx%x_old, x, ierr)
     CHKERRQ(ierr)
@@ -157,10 +159,12 @@ contains
           idx_dr = j
         end if
       end do
-      summary%convdvmax(i, iter_cnt) = dvmax_model
-      summary%convlocdv(i, iter_cnt) = idx_dv
-      summary%convdrmax(i, iter_cnt) = drmax_model
-      summary%convlocdr(i, iter_cnt) = idx_dr
+      if (summary%nitermax > 1) then
+        summary%convdvmax(i, iter_cnt) = dvmax_model
+        summary%convlocdv(i, iter_cnt) = idx_dv
+        summary%convdrmax(i, iter_cnt) = drmax_model
+        summary%convlocdr(i, iter_cnt) = idx_dr
+      end if
     end do
     call VecRestoreArrayF90(x, local_dx, ierr)
     CHKERRQ(ierr)
