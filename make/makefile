@@ -308,10 +308,6 @@ $(OBJDIR)/sparsekit.o \
 $(OBJDIR)/rcm.o \
 $(OBJDIR)/blas1_d.o \
 $(OBJDIR)/Iunit.o \
-$(OBJDIR)/BoundaryPackageExt.o \
-$(OBJDIR)/gwf3rcha8idm.o \
-$(OBJDIR)/gwf3rch8idm.o \
-$(OBJDIR)/gwf3chd8idm.o \
 $(OBJDIR)/RectangularGeometry.o \
 $(OBJDIR)/CircularGeometry.o
 
