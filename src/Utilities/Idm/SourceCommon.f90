@@ -232,9 +232,11 @@ contains
   !! to read.
   !!
   !<
-  subroutine set_model_shape(ftype, model_mempath, dis_mempath, model_shape)
-    use MemoryManagerModule, only: mem_allocate, mem_setptr
+  subroutine set_model_shape(ftype, fname, model_mempath, dis_mempath, &
+                             model_shape)
+    use MemoryManagerModule, only: mem_allocate, mem_setptr, get_isize
     character(len=*), intent(in) :: ftype
+    character(len=*), intent(in) :: fname
     character(len=*), intent(in) :: model_mempath
     character(len=*), intent(in) :: dis_mempath
     integer(I4B), dimension(:), pointer, contiguous, intent(inout) :: model_shape
@@ -242,21 +244,80 @@ contains
     integer(I4B), pointer :: ndim2
     integer(I4B), pointer :: ndim3
     integer(I4B), pointer :: ncelldim
+    integer(I4B) :: dim1_size, dim2_size, dim3_size
     !
     ! -- allocate and set model shape in model input context
     select case (ftype)
     case ('DIS6')
-      call mem_allocate(model_shape, 3, 'MODEL_SHAPE', model_mempath)
-      call mem_setptr(ndim1, 'NLAY', dis_mempath)
-      call mem_setptr(ndim2, 'NROW', dis_mempath)
-      call mem_setptr(ndim3, 'NCOL', dis_mempath)
-      model_shape = [ndim1, ndim2, ndim3]
+      !
+      call get_isize('NLAY', dis_mempath, dim1_size)
+      call get_isize('NROW', dis_mempath, dim2_size)
+      call get_isize('NCOL', dis_mempath, dim3_size)
+      !
+      if (dim1_size <= 0) then
+        write (errmsg, '(a)') &
+          'Required input dimension "NLAY" not found.'
+        call store_error(errmsg)
+      end if
+      !
+      if (dim2_size <= 0) then
+        write (errmsg, '(a)') &
+          'Required input dimension "NROW" not found.'
+        call store_error(errmsg)
+      end if
+      !
+      if (dim3_size <= 0) then
+        write (errmsg, '(a)') &
+          'Required input dimension "NCOL" not found.'
+        call store_error(errmsg)
+      end if
+      !
+      if (dim1_size >= 1 .and. dim2_size >= 1 .and. dim3_size >= 1) then
+        call mem_allocate(model_shape, 3, 'MODEL_SHAPE', model_mempath)
+        call mem_setptr(ndim1, 'NLAY', dis_mempath)
+        call mem_setptr(ndim2, 'NROW', dis_mempath)
+        call mem_setptr(ndim3, 'NCOL', dis_mempath)
+        model_shape = [ndim1, ndim2, ndim3]
+      else
+        call store_error_filename(fname)
+      end if
+      !
     case ('DISV6')
-      call mem_allocate(model_shape, 2, 'MODEL_SHAPE', model_mempath)
-      call mem_setptr(ndim1, 'NLAY', dis_mempath)
-      call mem_setptr(ndim2, 'NCPL', dis_mempath)
-      model_shape = [ndim1, ndim2]
+      !
+      call get_isize('NLAY', dis_mempath, dim1_size)
+      call get_isize('NCPL', dis_mempath, dim2_size)
+      !
+      if (dim1_size <= 0) then
+        write (errmsg, '(a)') &
+          'Required input dimension "NLAY" not found.'
+        call store_error(errmsg)
+      end if
+      !
+      if (dim2_size <= 0) then
+        write (errmsg, '(a)') &
+          'Required input dimension "NCPL" not found.'
+        call store_error(errmsg)
+      end if
+      !
+      if (dim1_size >= 1 .and. dim2_size >= 1) then
+        call mem_allocate(model_shape, 2, 'MODEL_SHAPE', model_mempath)
+        call mem_setptr(ndim1, 'NLAY', dis_mempath)
+        call mem_setptr(ndim2, 'NCPL', dis_mempath)
+        model_shape = [ndim1, ndim2]
+      else
+        call store_error_filename(fname)
+      end if
     case ('DISU6')
+      !
+      call get_isize('NODES', dis_mempath, dim1_size)
+      !
+      if (dim1_size <= 0) then
+        write (errmsg, '(a)') &
+          'Required input dimension "NODES" not found.'
+        call store_error(errmsg)
+        call store_error_filename(fname)
+      end if
+      !
       call mem_allocate(model_shape, 1, 'MODEL_SHAPE', model_mempath)
       call mem_setptr(ndim1, 'NODES', dis_mempath)
       model_shape = [ndim1]

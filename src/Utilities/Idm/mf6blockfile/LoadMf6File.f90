@@ -76,7 +76,7 @@ contains
       !
       ! --
       call block_post_process(mf6_input, mf6_input%block_dfns(iblock)%blockname, &
-                              mshape)
+                              mshape, filename)
       !
     end do
     !
@@ -85,11 +85,12 @@ contains
                        mf6_input%subcomponent_name, iout)
   end subroutine idm_load
 
-  subroutine block_post_process(mf6_input, blockname, mshape)
+  subroutine block_post_process(mf6_input, blockname, mshape, filename)
     use SourceCommonModule, only: set_model_shape, mem_allocate_naux
     type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType
     character(len=*), intent(in) :: blockname
     integer(I4B), dimension(:), contiguous, pointer, intent(inout) :: mshape
+    character(len=*), intent(in) :: filename
     type(InputParamDefinitionType), pointer :: idt
     integer(I4B) :: iparam
     !
@@ -108,7 +109,7 @@ contains
     case ('DIMENSIONS')
       ! -- set model shape if discretization dimensions have been read
       if (mf6_input%pkgtype(1:3) == 'DIS') then
-        call set_model_shape(mf6_input%pkgtype, &
+        call set_model_shape(mf6_input%pkgtype, filename, &
                              mf6_input%component_mempath, &
                              mf6_input%mempath, mshape)
       end if
