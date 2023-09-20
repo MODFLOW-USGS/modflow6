@@ -3938,8 +3938,8 @@ contains
     real(DP) :: hcell
     real(DP) :: hbar
     real(DP) :: gs_conn
-    real(DP) :: area_node
-    real(DP) :: area_conn
+    ! real(DP) :: area_node
+    ! real(DP) :: area_conn
     real(DP) :: es
     real(DP) :: phead
     real(DP) :: sadd
@@ -3985,9 +3985,9 @@ contains
       !
       ! -- calculate geostatic stress above cell
       do node = 1, this%dis%nodes
-        !
-        ! -- area of cell
-        area_node = this%dis%get_area(node)
+        ! !
+        ! ! -- area of cell
+        ! area_node = this%dis%get_area(node)
         !
         ! -- geostatic stress of cell
         gs = this%cg_gs(node)
@@ -4013,8 +4013,9 @@ contains
                 ! -- disu discretization
                 !    *** this needs to be checked ***
               else
-                area_conn = this%dis%con%hwva(iis)
-                va_scale = area_conn / area_node
+                ! area_conn = this%dis%con%hwva(iis)
+                ! va_scale = area_conn / area_node
+                va_scale = this%dis%get_area_factor(node, iis)
                 gs_conn = this%cg_gs(m)
                 gs = gs + (gs_conn * va_scale)
               end if

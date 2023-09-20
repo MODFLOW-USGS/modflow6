@@ -107,6 +107,7 @@ module BaseDisModule
     procedure, public :: nlarray_to_nodelist
     procedure, public :: highest_active
     procedure, public :: get_area
+    procedure, public :: get_area_factor
 
   end type DisBaseType
 
@@ -1505,4 +1506,37 @@ contains
     return
   end function get_area
 
+  !> @ brief Calculate the area factor for the cell connection
+  !!
+  !!  Function calculates the area factor for the cell connection. The sum of 
+  !!  all area factors for all cell connections to overlying or underlying
+  !!  cells cells will be 1. 
+  !!
+  !!  TODO: confirm that this works for cells that are only partially covered
+  !!        by overlying or underlying cells.
+  !!
+  !<
+  function get_area_factor(this, node, m) result(area_factor)
+        ! -- return
+        real(DP) :: area_factor  !< connection cell area factor
+        ! -- dummy
+        class(DisBaseType) :: this
+        integer(I4B), intent(in) :: node !< cell node number
+        integer(I4B), intent(in) :: m  !< connected cell node number
+        ! -- local
+        real(DP) :: area_node
+        real(DP) :: area_conn
+    ! ------------------------------------------------------------------------------
+        !
+        ! -- calculate the cell area fraction
+        area_node = this%area(node)
+        area_conn = this%con%hwva(m)
+        !
+        ! -- return the cell area factor
+        area_factor = area_conn / area_node
+        !
+        ! -- return
+        return
+      end function get_area_factor
+    
 end module BaseDisModule
