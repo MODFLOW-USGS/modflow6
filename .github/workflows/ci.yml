@@ -38,7 +38,7 @@ jobs:
         run: python .github/common/fortran_format_check.py
 
   build:
-    name: Build
+    name: Build (meson)
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -76,6 +76,37 @@ jobs:
 
       - name: Meson test
         run: meson test --verbose --no-rebuild -C builddir
+  
+  build_msvs:
+    name: Build (MSVS)
+    runs-on: windows-2019
+    env:
+      FC: ifort
+    steps:
+
+      - name: Checkout modflow6
+        uses: actions/checkout@v4
+      
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          vsversion: 2019
+      
+      # - name: Prepare MSVC
+      #   uses: bus1/cabuild/action/msdevshell@v1
+      #   with:
+      #     architecture: x64
+
+      - name: Setup Intel Fortran
+        uses: wpbonelli/install-intelfortran-action@vs-integration
+        with:
+          vs2019: 'true'
+
+      - name: Build modflow6
+        run: devenv msvs/mf6.sln /Build
+      
+      - name: Show build log
+        shell: bash
+        run: cat "D:\a\modflow6\modflow6\msvs\UpgradeLog.htm"
 
   smoke_test:
     name: Smoke test
