@@ -247,7 +247,7 @@ module GwfCsubModule
     procedure, private :: csub_read_packagedata
     !
     ! -- helper methods
-    procedure, private :: csub_calc_void
+    procedure, private :: csub_calc_void_ratio
     procedure, private :: csub_calc_theta
     procedure, private :: csub_calc_znode
     procedure, private :: csub_calc_adjes
@@ -3942,7 +3942,6 @@ contains
     real(DP) :: area_conn
     real(DP) :: es
     real(DP) :: phead
-    real(DP) :: hwva
     real(DP) :: sadd
     !
     ! -- calculate geostatic stress if necessary
@@ -4014,9 +4013,8 @@ contains
                 ! -- disu discretization
                 !    *** this needs to be checked ***
               else
-                area_conn = this%dis%get_area(m)
-                hwva = this%dis%con%hwva(iis)
-                va_scale = this%dis%con%hwva(iis) / this%dis%get_area(m)
+                area_conn = this%dis%con%hwva(iis)
+                va_scale = area_conn / area_node
                 gs_conn = this%cg_gs(m)
                 gs = gs + (gs_conn * va_scale)
               end if
@@ -4356,7 +4354,7 @@ contains
     real(DP) :: fact
     real(DP) :: top
     real(DP) :: bot
-    real(DP) :: void
+    real(DP) :: void_ratio
     real(DP) :: es
     real(DP) :: znode
     real(DP) :: hcell
@@ -4450,7 +4448,7 @@ contains
           ! -- convert specific storage values since they are simulated to
           !    be a function of the average effective stress
         else
-          void = this%csub_calc_void(this%cg_theta(node))
+          void_ratio = this%csub_calc_void_ratio(this%cg_theta(node))
           es = this%cg_es(node)
           hcell = hnew(node)
           !
@@ -4460,7 +4458,7 @@ contains
           ! -- calculate znode and factor
           znode = this%csub_calc_znode(top, bot, hbar)
           fact = this%csub_calc_adjes(node, es, bot, znode)
-          fact = fact * (DONE + void)
+          fact = fact * (DONE + void_ratio)
         end if
         !
         ! -- user-specified compression indices - multiply by dlog10es
@@ -4496,7 +4494,7 @@ contains
           ! -- convert specific storage values since they are simulated to
           !    be a function of the average effective stress
         else
-          void = this%csub_calc_void(this%theta(ib))
+          void_ratio = this%csub_calc_void_ratio(this%theta(ib))
           es = this%cg_es(node)
           hcell = hnew(node)
           !
@@ -4506,7 +4504,7 @@ contains
           ! -- calculate zone and factor
           znode = this%csub_calc_znode(top, bot, hbar)
           fact = this%csub_calc_adjes(node, es, bot, znode)
-          fact = fact * (DONE + void)
+          fact = fact * (DONE + void_ratio)
         end if
         !
         ! -- user-specified compression indices - multiply by dlog10es
@@ -5426,18 +5424,18 @@ contains
   !!
   !! @return      void                void ratio
   !<
-  function csub_calc_void(this, theta) result(void)
+  function csub_calc_void_ratio(this, theta) result(void_ratio)
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
     real(DP), intent(in) :: theta !< porosity
     ! -- local variables
-    real(DP) :: void
+    real(DP) :: void_ratio
     ! -- calculate void ratio
-    void = theta / (DONE - theta)
+    void_ratio = theta / (DONE - theta)
     !
     ! -- return
     return
-  end function csub_calc_void
+  end function csub_calc_void_ratio
 
   !> @brief Calculate the porosity
   !!
@@ -5445,15 +5443,15 @@ contains
   !!
   !! @return      theta               porosity
   !<
-  function csub_calc_theta(this, void) result(theta)
+  function csub_calc_theta(this, void_ratio) result(theta)
     ! -- dummy variables
     class(GwfCsubType), intent(inout) :: this
-    real(DP), intent(in) :: void
+    real(DP), intent(in) :: void_ratio
     ! -- local variables
     real(DP) :: theta
     !
     ! -- calculate theta
-    theta = void / (DONE + void)
+    theta = void_ratio / (DONE + void_ratio)
     !
     ! -- return
     return
@@ -5678,10 +5676,10 @@ contains
     real(DP), intent(in) :: theta !< porosity
     real(DP), intent(in) :: es !< current effective stress
     real(DP), intent(in) :: es0 !< previous effective stress
-    real(DP), intent(inout) :: fact !< skeletal storage coefficient factor (1/((1+void)*bar(es)))
+    real(DP), intent(inout) :: fact !< skeletal storage coefficient factor (1/((1+void_ratio)*bar(es)))
     ! -- local variables
     real(DP) :: esv
-    real(DP) :: void
+    real(DP) :: void_ratio
     real(DP) :: denom
     !
     ! -- initialize variables
@@ -5693,9 +5691,9 @@ contains
     end if
     !
     ! -- calculate storage factors for the effective stress case
-    void = this%csub_calc_void(theta)
+    void_ratio = this%csub_calc_void_ratio(theta)
     denom = this%csub_calc_adjes(node, esv, bot, znode)
-    denom = denom * (DONE + void)
+    denom = denom * (DONE + void_ratio)
     if (denom /= DZERO) then
       fact = DONE / denom
     end if
@@ -5720,18 +5718,18 @@ contains
     real(DP), intent(inout) :: theta !< porosity
     ! -- local variables
     real(DP) :: strain
-    real(DP) :: void
+    real(DP) :: void_ratio
     !
     ! -- initialize variables
     strain = DZERO
-    void = this%csub_calc_void(theta)
+    void_ratio = this%csub_calc_void_ratio(theta)
     !
     ! -- calculate strain
     if (thick > DZERO) strain = -comp / thick
     !
     ! -- update void ratio, theta, and thickness
-    void = void + strain * (DONE + void)
-    theta = this%csub_calc_theta(void)
+    void_ratio = void_ratio + strain * (DONE + void_ratio)
+    theta = this%csub_calc_theta(void_ratio)
     thick = thick - comp
     !
     ! -- return
