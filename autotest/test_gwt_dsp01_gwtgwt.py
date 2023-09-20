@@ -15,6 +15,9 @@ from simulation import TestSimulation
 ex = ["dsp01_gwtgwt"]
 gdelr = 1.0
 
+# solver settings
+nouter, ninner = 100, 300
+hclose, rclose, relax = 1e-6, 1e-6, 1.0
 
 def get_gwf_model(sim, gwfname, gwfpath, modelshape):
     nlay, nrow, ncol, xshift, yshift = modelshape
