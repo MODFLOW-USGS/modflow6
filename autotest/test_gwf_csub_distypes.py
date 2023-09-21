@@ -174,19 +174,27 @@ def build_temp_gwf(ws):
     return gridgen_gwf
 
 
-def build_disv(ws, gwf):
+def build_disv(ws, gwf, gridgen):
     temp_gwf = build_temp_gwf(ws)
     dis = build_dis(temp_gwf)
-    g = Gridgen(temp_gwf.modelgrid, model_ws=get_gridgen_ws(ws))
+    g = Gridgen(
+        temp_gwf.modelgrid,
+        model_ws=get_gridgen_ws(ws),
+        exe_name=gridgen,
+    )
     g.build()
     gridprops = g.get_gridprops_disv()
     return flopy.mf6.ModflowGwfdisv(gwf, **gridprops)
 
 
-def build_disu(ws, gwf, refinement_layer):
+def build_disu(ws, gwf, refinement_layer, gridgen):
     temp_gwf = build_temp_gwf(ws)
     dis = build_dis(temp_gwf)
-    g = Gridgen(temp_gwf.modelgrid, model_ws=get_gridgen_ws(ws))
+    g = Gridgen(
+        temp_gwf.modelgrid,
+        model_ws=get_gridgen_ws(ws),
+        exe_name=gridgen,
+    )
     if refinement_layer is not None:
         x0, x1, y0, y1 = temp_gwf.modelgrid.extent
         polys = [[[(x0, y0), (x1, y0), (x1, y1), (x0, y1), (x0, y0)]]]
@@ -242,12 +250,12 @@ def build_well_data(modelgrid):
     return {1: well_spd}
 
 
-def build_model(idx, ws):
-    return build_mf6(idx, ws), None
+def build_model(idx, ws, gridgen):
+    return build_mf6(idx, ws, gridgen), None
 
 
 # build MODFLOW 6 files
-def build_mf6(idx, ws):
+def build_mf6(idx, ws, gridgen):
     name = ex[idx]
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
@@ -288,9 +296,9 @@ def build_mf6(idx, ws):
     )
 
     if "disv" in name:
-        dis = build_disv(ws, gwf)
+        dis = build_disv(ws, gwf, gridgen)
     elif "disu" in name:
-        dis = build_disu(ws, gwf, ex_dict[name])
+        dis = build_disu(ws, gwf, ex_dict[name], gridgen)
     else:
         dis = build_dis(gwf)
 
@@ -434,7 +442,7 @@ def eval_comp(sim):
 def test_mf6model(idx, name, function_tmpdir, targets):
     ws = function_tmpdir
     test = TestFramework()
-    test.build(build_model, idx, ws)
+    test.build(lambda i, w: build_model(i, w, targets.gridgen), idx, ws)
     test.run(
         TestSimulation(
             name=name,
