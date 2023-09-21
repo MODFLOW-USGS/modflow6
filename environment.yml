@@ -14,6 +14,7 @@ dependencies:
   - ninja
   - numpy
   - pyshp
+  - shapely
   - pip
   - pip:
       - git+https://github.com/modflowpy/flopy.git
