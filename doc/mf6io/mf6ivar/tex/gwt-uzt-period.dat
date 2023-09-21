@@ -1,5 +1,5 @@
 BEGIN PERIOD <iper>
-  <uzfno> <uztsetting>
-  <uzfno> <uztsetting>
+  <ifno> <uztsetting>
+  <ifno> <uztsetting>
   ...
 END PERIOD
