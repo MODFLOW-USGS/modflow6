@@ -2,6 +2,7 @@ module PetscSolverModule
 #include <petsc/finclude/petscksp.h>
   use petscksp
   use KindModule, only: I4B, DP, LGP
+  use ConstantsModule, only: LINELENGTH
   use LinearSolverBaseModule
   use MatrixBaseModule
   use VectorBaseModule
@@ -9,7 +10,9 @@ module PetscSolverModule
   use PetscVectorModule
   use PetscConvergenceModule
   use ConvergenceSummaryModule
-  use SimVariablesModule, only: iout
+  use ImsLinearSettingsModule
+  use SimVariablesModule, only: iout, simulation_mode
+  use SimModule, only: store_error
 
   implicit none
   private
@@ -23,6 +26,11 @@ module PetscSolverModule
     Vec, pointer :: vec_residual
 
     real(DP) :: dvclose
+    integer(I4B) :: pc_levels
+    real(DP) :: drop_tolerance
+    KSPType :: ksp_type
+    PCType :: pc_type
+    PCType :: sub_pc_type
     class(PetscContextType), pointer :: petsc_ctx
     integer(I4B) :: ctx_idx
     type(ConvergenceSummaryType), pointer :: convergence_summary => null()
@@ -36,10 +44,11 @@ module PetscSolverModule
     procedure :: create_matrix => petsc_create_matrix
 
     ! private
-    procedure, private :: get_options
+    procedure, private :: get_options_mf6
     procedure, private :: create_ksp
     procedure, private :: create_convergence_check
     procedure, private :: print_vec
+    procedure, private :: print_petsc_version
   end type PetscSolverType
 
 contains
@@ -60,27 +69,16 @@ contains
 
   !> @brief Initialize PETSc KSP solver with
   !<  options from the petsc database file
-  subroutine petsc_initialize(this, matrix, convergence_summary)
+  subroutine petsc_initialize(this, matrix, linear_settings, convergence_summary)
     class(PetscSolverType) :: this !< This solver instance
     class(MatrixBaseType), pointer :: matrix !< The solution matrix as KSP operator
-    type(ConvergenceSummaryType), pointer :: convergence_summary
+    type(ImsLinearSettingsType), pointer :: linear_settings !< the settings for the linear solver from the .ims file
+    type(ConvergenceSummaryType), pointer :: convergence_summary !< a convergence record for diagnostics
     ! local
     PetscErrorCode :: ierr
-    PetscInt :: major, minor, subminor, release
-    character(len=128) :: petsc_version, release_str
+    character(len=LINELENGTH) :: errmsg
 
-    call PetscGetVersionNumber(major, minor, subminor, release, ierr)
-    if (release == 1) then
-      release_str = "(release)"
-    else
-      release_str = "(unofficial)"
-    end if
-    write (petsc_version, '(i0,a,i0,a,i0,a,a)') &
-      major, ".", minor, ".", subminor, " ", trim(release_str)
-
-    CHKERRQ(ierr)
-    write (iout, '(1x,2a,/)') &
-      "PETSc Linear Solver will be used: version ", petsc_version
+    call this%print_petsc_version()
 
     this%mat_petsc => null()
     select type (pm => matrix)
@@ -93,8 +91,30 @@ contains
     call MatCreateVecs(this%mat_petsc, this%vec_residual, PETSC_NULL_VEC, ierr)
     CHKERRQ(ierr)
 
-    ! get options from PETSc database file
-    call this%get_options()
+    ! configure from IMS settings
+    this%dvclose = linear_settings%dvclose
+    this%nitermax = linear_settings%iter1
+
+    if (linear_settings%ilinmeth == 1) then
+      this%ksp_type = KSPCG
+    else if (linear_settings%ilinmeth == 2) then
+      this%ksp_type = KSPBCGS
+    else
+      write (errmsg, '(a)') 'PETSc: unknown linear solver method.'
+      call store_error(errmsg)
+    end if
+
+    if (simulation_mode == "PARALLEL") then
+      this%pc_type = PCBJACOBI
+      this%sub_pc_type = PCILU
+    else
+      this%pc_type = PCILU
+    end if
+    this%pc_levels = linear_settings%level
+    this%drop_tolerance = linear_settings%droptol
+
+    ! get MODFLOW options from PETSc database file
+    call this%get_options_mf6()
 
     ! create the solver object
     call this%create_ksp()
@@ -104,43 +124,98 @@ contains
 
   end subroutine petsc_initialize
 
-  !> @brief Get the PETSc options from the database
+  !> @brief Print PETSc version string from shared lib
   !<
-  subroutine get_options(this)
+  subroutine print_petsc_version(this)
+    class(PetscSolverType) :: this
+    ! local
+    PetscErrorCode :: ierr
+    PetscInt :: major, minor, subminor, release
+    character(len=128) :: petsc_version, release_str
+
+    call PetscGetVersionNumber(major, minor, subminor, release, ierr)
+    CHKERRQ(ierr)
+
+    if (release == 1) then
+      release_str = "(release)"
+    else
+      release_str = "(unofficial)"
+    end if
+    write (petsc_version, '(i0,a,i0,a,i0,a,a)') &
+      major, ".", minor, ".", subminor, " ", trim(release_str)
+    write (iout, '(1x,2a,/)') &
+      "PETSc Linear Solver will be used: version ", petsc_version
+
+  end subroutine print_petsc_version
+
+  !> @brief Get the MODFLOW specific options from the PETSc database
+  !<
+  subroutine get_options_mf6(this)
     class(PetscSolverType) :: this
     ! local
     PetscErrorCode :: ierr
     logical(LGP) :: found
 
-    this%dvclose = 0.01_DP
     call PetscOptionsGetReal(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, &
                              '-dvclose', this%dvclose, found, ierr)
     CHKERRQ(ierr)
 
-    this%nitermax = 100
     call PetscOptionsGetInt(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, &
                             '-nitermax', this%nitermax, found, ierr)
     CHKERRQ(ierr)
 
-  end subroutine get_options
+  end subroutine get_options_mf6
 
   !> @brief Create the PETSc KSP object
   !<
   subroutine create_ksp(this)
     class(PetscSolverType) :: this !< This solver instance
     ! local
+    PC :: pc, sub_pc
+    KSP, dimension(1) :: sub_ksp
+    PetscInt :: n_local, n_first
     PetscErrorCode :: ierr
 
     call KSPCreate(PETSC_COMM_WORLD, this%ksp_petsc, ierr)
     CHKERRQ(ierr)
 
+    call KSPSetOperators(this%ksp_petsc, this%mat_petsc, this%mat_petsc, ierr)
+    CHKERRQ(ierr)
+
     call KSPSetInitialGuessNonzero(this%ksp_petsc, .true., ierr)
     CHKERRQ(ierr)
 
-    call KSPSetFromOptions(this%ksp_petsc, ierr)
+    call KSPSetType(this%ksp_petsc, this%ksp_type, ierr)
     CHKERRQ(ierr)
 
-    call KSPSetOperators(this%ksp_petsc, this%mat_petsc, this%mat_petsc, ierr)
+    call KSPGetPC(this%ksp_petsc, pc, ierr)
+    CHKERRQ(ierr)
+
+    call PCSetType(pc, this%pc_type, ierr)
+    CHKERRQ(ierr)
+
+    call PCSetUp(pc, ierr)
+    CHKERRQ(ierr)
+
+    if (simulation_mode == "PARALLEL") then
+      ! PCBJacobiSetTotalBlocks maybe later, but default is 1 per process
+      call PCBJacobiGetSubKSP(pc, n_local, n_first, sub_ksp, ierr)
+      CHKERRQ(ierr)
+      call KSPGetPC(sub_ksp(1), sub_pc, ierr)
+      CHKERRQ(ierr)
+      call PCSetType(sub_pc, this%sub_pc_type, ierr)
+      CHKERRQ(ierr)
+      call PCFactorSetLevels(sub_pc, this%pc_levels, ierr)
+      CHKERRQ(ierr)
+      ! PCFactorSetDropTolerance
+    else
+      call PCFactorSetLevels(pc, this%pc_levels, ierr)
+      CHKERRQ(ierr)
+      ! PCFactorSetDropTolerance
+    end if
+
+    ! finally override these options from the .petscrc file
+    call KSPSetFromOptions(this%ksp_petsc, ierr)
     CHKERRQ(ierr)
 
   end subroutine create_ksp
@@ -239,8 +314,8 @@ contains
 
     write (iout, '(/,7x,a)') "PETSc linear solver settings: "
     write (iout, '(1x,a)') repeat('-', 66)
-    write (iout, '(1x,a,a)') "Linear acceleration method:   ", ksp_type
-    write (iout, '(1x,a,a)') "Preconditioner type:          ", pc_type
+    write (iout, '(1x,a,a)') "Linear acceleration method:   ", this%ksp_type
+    write (iout, '(1x,a,a)') "Preconditioner type:          ", this%pc_type
     write (iout, '(1x,a,i0)') "Maximum nr. of iterations:    ", this%nitermax
     write (iout, '(1x,a,a,/)') &
       "Dep. var. closure criterion:  ", adjustl(dvclose_str)

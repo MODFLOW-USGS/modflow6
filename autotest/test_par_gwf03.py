@@ -213,21 +213,8 @@ def add_exchange_south_north(sim, name_south, name_north, nlay, nrow, ncol):
         filename=exg_filename
     )
 
-def build_petsc_db(idx, exdir):
-    np = ncpus[idx]
-    petsc_db_file = os.path.join(exdir, ".petscrc")
-    with open(petsc_db_file, 'w') as petsc_file:
-        petsc_file.write("-ksp_type cg\n")
-        petsc_file.write("-pc_type bjacobi\n")
-        petsc_file.write("-sub_pc_type ilu\n")
-        petsc_file.write("-sub_pc_factor_levels 2\n")
-        petsc_file.write(f"-dvclose {Decimal(hclose):.2E}\n")
-        petsc_file.write(f"-nitermax {500}\n")
-        petsc_file.write("-options_left no\n")
-
 def build_model(idx, exdir):
     sim = get_simulation(idx, exdir)
-    build_petsc_db(idx, exdir)
     return sim, None
 
 def eval_model(sim):

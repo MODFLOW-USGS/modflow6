@@ -4,7 +4,9 @@ module ImsLinearSolverModule
   use MatrixBaseModule
   use VectorBaseModule
   use SparseMatrixModule
+  use ImsLinearSettingsModule
   use ConvergenceSummaryModule
+
   implicit none
   private
 
@@ -33,9 +35,10 @@ contains
 
   end function create_ims_solver
 
-  subroutine ims_initialize(this, matrix, convergence_summary)
+  subroutine ims_initialize(this, matrix, linear_settings, convergence_summary)
     class(ImsLinearSolverType) :: this
     class(MatrixBaseType), pointer :: matrix
+    type(ImsLinearSettingsType), pointer :: linear_settings
     type(ConvergenceSummaryType), pointer :: convergence_summary
   end subroutine ims_initialize
 

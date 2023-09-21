@@ -182,6 +182,7 @@ $(OBJDIR)/gwf3vsc8.o \
 $(OBJDIR)/GwfNpfOptions.o \
 $(OBJDIR)/InterfaceMap.o \
 $(OBJDIR)/SeqVector.o \
+$(OBJDIR)/ImsLinearSettings.o \
 $(OBJDIR)/ConvergenceSummary.o \
 $(OBJDIR)/CellWithNbrs.o \
 $(OBJDIR)/NumericalExchange.o \

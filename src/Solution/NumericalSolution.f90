@@ -35,6 +35,7 @@ module NumericalSolutionModule
   use MatrixBaseModule
   use VectorBaseModule
   use LinearSolverBaseModule
+  use ImsLinearSettingsModule
   use LinearSolverFactory, only: create_linear_solver
   use SparseMatrixModule
   use MatrixBaseModule
@@ -112,6 +113,7 @@ module NumericalSolutionModule
     !
     ! -- refactoring
     type(ConvergenceSummaryType), pointer :: cnvg_summary => null() !< details on the convergence behavior within a timestep
+    type(ImsLinearSettingsType), pointer :: linear_settings => null() !< IMS settings for linear solver
     !
     ! -- pseudo-transient continuation
     integer(I4B), pointer :: iallowptc => null() !< flag indicating if ptc applied this time step
@@ -445,6 +447,10 @@ contains
     else
       this%solver_mode = 'IMS'
     end if
+    !
+    ! -- allocate settings structure
+    allocate (this%linear_settings)
+    !
     ! -- create linear system matrix and compatible vectors
     this%linear_solver => create_linear_solver(this%solver_mode)
     this%system_matrix => this%linear_solver%create_matrix()
@@ -886,6 +892,11 @@ contains
       this%linmeth = 2
     end if
 
+    ! configure linear settings
+    call this%linear_settings%init(this%memory_path)
+    call this%linear_settings%preset_config(ifdparam)
+    call this%linear_settings%read_from_file(this%parser, iout)
+
     !
     ! -- call secondary subroutine to initialize and read linear
     !    solver parameters IMSLINEAR solver
@@ -896,15 +907,16 @@ contains
                                              this%iprims, this%mxiter, &
                                              ifdparam, ims_lin_type, &
                                              this%neq, this%system_matrix, &
-                                             this%rhs, this%x, this%nitermax)
+                                             this%rhs, this%x)
       if (ims_lin_type .eq. 1) then
         this%isymmetric = 1
       end if
       !
       ! -- petsc linear solver flag
     else if (this%linmeth == 2) then
-      call this%linear_solver%initialize(this%system_matrix, this%cnvg_summary)
-      this%nitermax = this%linear_solver%nitermax
+      call this%linear_solver%initialize(this%system_matrix, &
+                                         this%linear_settings, &
+                                         this%cnvg_summary)
       this%isymmetric = 0
       !
       ! -- incorrect linear solver flag
@@ -1018,7 +1030,7 @@ contains
 
     ! allocate space for saving solver convergence history
     if (this%iprims == 2 .or. this%icsvinnerout > 0) then
-      this%nitermax = this%nitermax * this%mxiter
+      this%nitermax = this%linear_settings%iter1 * this%mxiter
     else
       this%nitermax = 1
     end if
@@ -1215,6 +1227,10 @@ contains
     ! -- convergence report
     call this%cnvg_summary%destroy()
     deallocate (this%cnvg_summary)
+    !
+    ! -- linear solver settings
+    call this%linear_settings%destroy()
+    deallocate (this%linear_settings)
     !
     ! -- Scalars
     call mem_deallocate(this%id)

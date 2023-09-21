@@ -2,7 +2,9 @@ module LinearSolverBaseModule
   use KindModule, only: I4B, DP
   use MatrixBaseModule
   use VectorBaseModule
+  use ImsLinearSettingsModule
   use ConvergenceSummaryModule
+
   implicit none
   private
 
@@ -26,10 +28,12 @@ module LinearSolverBaseModule
   end type LinearSolverBaseType
 
   abstract interface
-    subroutine initialize_if(this, matrix, convergence_summary)
-      import LinearSolverBaseType, MatrixBaseType, ConvergenceSummaryType
+    subroutine initialize_if(this, matrix, linear_settings, convergence_summary)
+      import LinearSolverBaseType, MatrixBaseType, &
+        ImsLinearSettingsType, ConvergenceSummaryType
       class(LinearSolverBaseType) :: this
       class(MatrixBaseType), pointer :: matrix
+      type(ImsLinearSettingsType), pointer :: linear_settings
       type(ConvergenceSummaryType), pointer :: convergence_summary
     end subroutine
     subroutine print_summary_if(this)

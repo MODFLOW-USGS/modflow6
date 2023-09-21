@@ -129,6 +129,7 @@ modflow_sources = files(
     'Model' / 'NumericalModel.f90',
     'Model' / 'NumericalPackage.f90',
     'Solution' / 'ConvergenceSummary.f90',
+    'Solution' / 'LinearMethods' / 'ImsLinearSettings.f90',
     'Solution' / 'LinearMethods' / 'ims8base.f90',
     'Solution' / 'LinearMethods' / 'ims8linear.f90',
     'Solution' / 'LinearMethods' / 'ims8reordering.f90',

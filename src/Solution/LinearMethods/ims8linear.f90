@@ -106,7 +106,7 @@ CONTAINS
     !!
   !<
   SUBROUTINE imslinear_ar(this, NAME, parser, IOUT, IPRIMS, MXITER, IFDPARAM, &
-                          IMSLINEARM, NEQ, matrix, RHS, X, NINNER, LFINDBLOCK)
+                          IMSLINEARM, NEQ, matrix, RHS, X, LFINDBLOCK)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     use MemoryHelperModule, only: create_mem_path
@@ -125,7 +125,6 @@ CONTAINS
     class(MatrixBaseType), pointer :: matrix
     real(DP), DIMENSION(NEQ), TARGET, INTENT(INOUT) :: RHS !< right-hand side
     real(DP), DIMENSION(NEQ), TARGET, INTENT(INOUT) :: X !< dependent variables
-    integer(I4B), TARGET, INTENT(INOUT) :: NINNER !< maximum number of inner iterations
     integer(I4B), INTENT(IN), OPTIONAL :: LFINDBLOCK !< flag indicating if the linear block is present (1) or missing (0)
 
     ! -- local variables
@@ -198,7 +197,6 @@ CONTAINS
     !
     ! -- SET DEFAULT IMSLINEAR PARAMETERS
     CALL this%SET_IMSLINEAR_INPUT(IFDPARAM)
-    NINNER = this%iter1
     !
     ! -- get IMSLINEAR block
     if (lreaddata) then
@@ -235,7 +233,6 @@ CONTAINS
         case ('INNER_MAXIMUM')
           i = parser%GetInteger()
           this%iter1 = i
-          NINNER = i
         case ('LINEAR_ACCELERATION')
           call parser%GetStringCaps(keyword)
           if (keyword .eq. 'CG') then
