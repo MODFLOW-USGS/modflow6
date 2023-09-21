@@ -1,3 +1,5 @@
+import pathlib as pl
+
 import flopy
 import numpy as np
 import pytest
@@ -26,6 +28,7 @@ for idx in range(nper):
 # base spatial discretization
 nlay, nrow, ncol = 3, 9, 9
 shape3d = (nlay, nrow, ncol)
+shape2d = (nrow, ncol)
 size3d = nlay * nrow * ncol
 
 delr = delc = 1000.0
@@ -59,49 +62,6 @@ sgs = 2.0
 beta = 0.0
 # beta = 4.65120000e-10
 gammaw = 9806.65000000
-
-
-def get_ske():
-    # gsb = np.zeros((nlay), dtype=float)
-    # ub = np.zeros((nlay), dtype=float)
-    # esb = np.zeros((nlay), dtype=float)
-    # ske = np.zeros((nlay), dtype=float)
-    #
-    # # calculate incremental geostatic stress and hydrostatic stress
-    # for k in range(nlay):
-    #     zt = zelv[k]
-    #     zb = zelv[k + 1]
-    #     b = zthick[k]
-    #     if strt >= zt:
-    #         gs = b * sgs
-    #     elif strt < zb:
-    #         gs = b * sgm
-    #     else:
-    #         gs = (zt - strt) * sgm + (strt - zb) * sgs
-    #     gsb[k] = gs
-    #     ub[k] = strt - zb
-    #
-    # # calculate geostatic and effective stress at the bottom of the layer
-    # gsb = np.cumsum(gsb)
-    # esb = gsb - ub
-    #
-    # # calculate ske
-    # fact = 0.4342942
-    # ggammaw = 1.0  # gammaw * (60. * 60. * 24.)**2.
-    # for k in range(nlay):
-    #     zt = zelv[k]
-    #     zb = zelv[k + 1]
-    #     if strt >= zt:
-    #         z = 0.5 * (zt + zb)
-    #     elif strt < zb:
-    #         z = zb
-    #     else:
-    #         z = 0.5 * (strt + zb)
-    #     es = esb[k] - (z - zb) * (sgs - 1.0)
-    #     ske[k] = fact * cr * ggammaw / (es * (1 + void))
-    #
-    # return ske.tolist()
-    return
 
 
 def get_interbed(modelgrid):
@@ -329,24 +289,21 @@ def build_mf6(idx, ws, gridgen):
         transient={0: True},
     )
 
-    # wel files
+    # well
     wel = flopy.mf6.ModflowGwfwel(
         gwf,
         stress_period_data=build_well_data(gwf.modelgrid),
         save_flows=False,
     )
 
-    # csub files
+    # csub
     cg_ske_cr = build_3d_array(gwf.modelgrid, ss)
     packagedata = get_interbed(gwf.modelgrid)
 
-    # if interbed:
-    #     cg_ske_cr[2] = 0
-    # opth = f"{name}.csub.obs"
     csub = flopy.mf6.ModflowGwfcsub(
         gwf,
         zdisplacement_filerecord=f"{name}.csub.zdis.bin",
-        # compression_indices=ci,
+        compaction_filerecord=f"{name}.csub.comp.bin",
         ninterbeds=len(packagedata),
         sgs=sgs,
         sgm=sgm,
@@ -377,61 +334,42 @@ def build_mf6(idx, ws, gridgen):
     return sim
 
 
-def eval_comp(sim):
-    print("evaluating compaction...")
+def eval_zdis(sim):
+    print("evaluating z-displacement...")
 
-    # # MODFLOW 6 without interbeds
-    # fpth = os.path.join(sim.simpath, "csub_obs.csv")
-    # try:
-    #     tc = np.genfromtxt(fpth, names=True, delimiter=",")
-    # except:
-    #     assert False, f'could not load data from "{fpth}"'
+    name = ex[sim.idxsim]
+    ws = pl.Path(sim.simpath)
+    comp_obj = flopy.utils.HeadFile(
+        ws / f"{name}.csub.comp.bin",
+        text="CSUB-COMPACTION",
+        precision="double",
+    )
+    zdis_obj = flopy.utils.HeadFile(
+        ws / f"{name}.csub.zdis.bin",
+        text="CSUB-ZDISPLACE",
+        precision="double",
+    )
 
-    # # MODFLOW 6 with interbeds
-    # fpth = os.path.join(sim.simpath, cmppth, "csub_obs.csv")
-    # try:
-    #     tci = np.genfromtxt(fpth, names=True, delimiter=",")
-    # except:
-    #     assert False, f'could not load data from "{fpth}"'
+    if ex_dict[name] is None:
+        for totim in comp_obj.get_times():
+            comp = (
+                comp_obj.get_data(totim=totim)
+                .flatten()
+                .reshape(shape3d)
+                .sum(axis=0)
+            )
+            zdis = (
+                zdis_obj.get_data(totim=totim)
+                .flatten()
+                .reshape(shape3d)[0]
+                .reshape(shape2d)
+            )
+            assert np.allclose(
+                comp, zdis
+            ), f"sum of compaction is not equal to the z-displacement"
+    else:
+        pass
 
-    # diffmax = 0.0
-    # tagmax = None
-    # for tag in tc.dtype.names[1:]:
-    #     diff = tc[tag] - tci[tag]
-    #     diffmaxt = np.abs(diff).max()
-    #     if diffmaxt > diffmax:
-    #         diffmax = diffmaxt
-    #         tagmax = tag
-
-    # msg = "maximum compaction difference " + f"({diffmax}) in tag: {tagmax}"
-
-    # # write summary
-    # fpth = os.path.join(
-    #     sim.simpath, f"{os.path.basename(sim.name)}.comp.cmp.out"
-    # )
-    # f = open(fpth, "w")
-    # line = f"{'TOTIM':>15s}"
-    # for tag in tc.dtype.names[1:]:
-    #     line += f" {f'{tag}_SK':>15s}"
-    #     line += f" {f'{tag}_SKIB':>15s}"
-    #     line += f" {f'{tag}_DIFF':>15s}"
-    # f.write(line + "\n")
-    # for i in range(diff.shape[0]):
-    #     line = f"{tc['time'][i]:15g}"
-    #     for tag in tc.dtype.names[1:]:
-    #         line += f" {tc[tag][i]:15g}"
-    #         line += f" {tci[tag][i]:15g}"
-    #         line += f" {tc[tag][i] - tci[tag][i]:15g}"
-    #     f.write(line + "\n")
-    # f.close()
-
-    # if diffmax > dtol:
-    #     sim.success = False
-    #     msg += f"exceeds {dtol}"
-    #     assert diffmax < dtol, msg
-    # else:
-    #     sim.success = True
-    #     print("    " + msg)
     return
 
 
@@ -447,8 +385,9 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         TestSimulation(
             name=name,
             exe_dict=targets,
-            exfunc=eval_comp,
+            exfunc=eval_zdis,
             cmp_verbose=False,
+            idxsim=idx,
         ),
         ws,
     )

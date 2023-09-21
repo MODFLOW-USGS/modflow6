@@ -3691,10 +3691,14 @@ contains
     integer(I4B) :: nodem
     integer(I4B) :: nodeu
     integer(I4B) :: i
+    integer(I4B) :: ii
+    integer(I4B) :: iis
     integer(I4B) :: k
     integer(I4B) :: ncpl
     integer(I4B) :: nlay
+    integer(I4B) :: ihc
     real(DP) :: dinact
+    real(DP) :: va_scale
     ! -- formats
     character(len=*), parameter :: fmtnconv = &
     "(/4x, 'DELAY INTERBED CELL HEADS IN ', i0, ' INTERBEDS IN', &
@@ -3752,8 +3756,27 @@ contains
         !
         ! -- disu
         if (this%dis%ndim == 1) then
-          ! TO DO -
           ! -- disv or dis
+          do node = this%dis%nodes, 1, -1
+            do ii = this%dis%con%ia(node) + 1, this%dis%con%ia(node + 1) - 1
+              !
+              ! -- Set the m cell number
+              nodem = this%dis%con%ja(ii)
+              iis = this%dis%con%jas(ii)
+              !
+              ! -- vertical connection
+              ihc = this%dis%con%ihc(iis)
+              if (ihc == 0) then
+                !
+                ! -- node has an underlying cell
+                if (node < nodem) then
+                  va_scale = this%dis%get_area_factor(node, iis)
+                  this%buffusr(node) = this%buffusr(node) + &
+                                       va_scale * this%buffusr(nodem)
+                end if
+              end if
+            end do
+          end do
         else
           nlay = this%dis%nodesuser / ncpl
           do k = nlay - 1, 1, -1
@@ -3938,8 +3961,6 @@ contains
     real(DP) :: hcell
     real(DP) :: hbar
     real(DP) :: gs_conn
-    ! real(DP) :: area_node
-    ! real(DP) :: area_conn
     real(DP) :: es
     real(DP) :: phead
     real(DP) :: sadd
@@ -3985,9 +4006,6 @@ contains
       !
       ! -- calculate geostatic stress above cell
       do node = 1, this%dis%nodes
-        ! !
-        ! ! -- area of cell
-        ! area_node = this%dis%get_area(node)
         !
         ! -- geostatic stress of cell
         gs = this%cg_gs(node)
@@ -4011,15 +4029,11 @@ contains
                 gs = gs + this%cg_gs(m)
                 !
                 ! -- disu discretization
-                !    *** this needs to be checked ***
               else
-                ! area_conn = this%dis%con%hwva(iis)
-                ! va_scale = area_conn / area_node
                 va_scale = this%dis%get_area_factor(node, iis)
                 gs_conn = this%cg_gs(m)
                 gs = gs + (gs_conn * va_scale)
               end if
-
             end if
           end if
         end do
