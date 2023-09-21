@@ -132,14 +132,14 @@ def build_model(idx, dir):
     mstrt = mawstrt[idx]
     mawcondeqn = "SPECIFIED"
     mawngwfnodes = nlay
-    # <wellno> <radius> <bottom> <strt> <condeqn> <ngwfnodes>
+    # <ifno> <radius> <bottom> <strt> <condeqn> <ngwfnodes>
     mawpackagedata = [[0, mawradius, bot, mstrt, mawcondeqn, mawngwfnodes]]
-    # <wellno> <icon> <cellid(ncelldim)> <scrn_top> <scrn_bot> <hk_skin> <radius_skin>
+    # <ifno> <icon> <cellid(ncelldim)> <scrn_top> <scrn_bot> <hk_skin> <radius_skin>
     mawconnectiondata = [
         [0, icon, (icon, 0, 0), top, bot, mawcond, -999]
         for icon in range(nlay)
     ]
-    # <wellno> <mawsetting>
+    # <ifno> <mawsetting>
     mawperioddata = [[0, "STATUS", "ACTIVE"]]
     mbin = f"{gwfname}.maw.bin"
     mbud = f"{gwfname}.maw.bud"
