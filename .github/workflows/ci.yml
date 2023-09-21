@@ -8,6 +8,18 @@ on:
     paths-ignore:
       - '**.md'
       - 'doc/**'
+      - '**.pdf'
+      - '**.tex'
+      - '**.jpg'
+      - '**.jpeg'
+      - '**.png'
+      - '**.bbl'
+      - '**.bib'
+      - 'doc/**.dat'
+      - 'doc/**.ipynb'
+      - 'doc/**.py'
+      - 'doc/**.sh'
+      - 'doc/**.xlsx'
   pull_request:
     branches:
       - master
@@ -15,6 +27,18 @@ on:
     paths-ignore:
       - '**.md'
       - 'doc/**'
+      - '**.pdf'
+      - '**.tex'
+      - '**.jpg'
+      - '**.jpeg'
+      - '**.png'
+      - '**.bbl'
+      - '**.bib'
+      - 'doc/**.dat'
+      - 'doc/**.ipynb'
+      - 'doc/**.py'
+      - 'doc/**.sh'
+      - 'doc/**.xlsx'
 jobs:
   lint:
     name: Check format
