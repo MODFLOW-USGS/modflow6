@@ -577,6 +577,7 @@ contains
     use ListsModule, only: solutiongrouplist
     use SimVariablesModule, only: iFailedStepRetry
     use SolutionGroupModule, only: SolutionGroupType, GetSolutionGroupFromList
+    use IdmLoadModule, only: idm_ad
     ! -- local variables
     class(SolutionGroupType), pointer :: sgp => null()
     integer(I4B) :: isg
@@ -589,6 +590,9 @@ contains
     !    can be obtained.
     iFailedStepRetry = 0
     retryloop: do
+
+      ! -- idm advance
+      call idm_ad()
 
       do isg = 1, solutiongrouplist%Count()
         sgp => GetSolutionGroupFromList(solutiongrouplist, isg)
