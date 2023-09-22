@@ -7,6 +7,9 @@ module ImsLinearSettingsModule
   implicit none
   private
 
+  integer(I4B), public, parameter :: CG_METHOD = 1
+  integer(I4B), public, parameter :: BCGS_METHOD = 2
+
   type, public :: ImsLinearSettingsType
     real(DP), pointer :: dvclose => null() !< dependent variable closure criterion
     real(DP), pointer :: rclose => null() !< residual closure criterion

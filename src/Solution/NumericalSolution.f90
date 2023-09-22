@@ -49,6 +49,9 @@ module NumericalSolutionModule
   public :: CastAsNumericalSolutionClass
   public :: create_numerical_solution
 
+  integer(I4B), parameter :: IMS_SOLVER = 1
+  integer(I4B), parameter :: PETSC_SOLVER = 2
+
   type, extends(BaseSolutionType) :: NumericalSolutionType
     character(len=LENMEMPATH) :: memory_path !< the path for storing solution variables in the memory manager
     character(len=LINELENGTH) :: fname !< input file name
@@ -91,7 +94,7 @@ module NumericalSolutionModule
     integer(I4B), pointer :: iouttot_timestep => null() !< total nr. of outer iterations per call to sln_ca
     integer(I4B), pointer :: itertot_sim => null() !< total nr. of inner iterations for simulation
     integer(I4B), pointer :: mxiter => null() !< maximum number of Picard iterations
-    integer(I4B), pointer :: linmeth => null() !< linear acceleration method used
+    integer(I4B), pointer :: linsolver => null() !< linear acceleration method used
     integer(I4B), pointer :: nonmeth => null() !< under-relaxation method used
     integer(I4B), pointer :: numtrack => null() !< maximum number of backtracks
     integer(I4B), pointer :: iprims => null() !< solver print option
@@ -291,7 +294,7 @@ contains
     call mem_allocate(this%iouttot_timestep, 'IOUTTOT_TIMESTEP', this%memory_path)
     call mem_allocate(this%itertot_sim, 'INNERTOT_SIM', this%memory_path)
     call mem_allocate(this%mxiter, 'MXITER', this%memory_path)
-    call mem_allocate(this%linmeth, 'LINMETH', this%memory_path)
+    call mem_allocate(this%linsolver, 'LINSOLVER', this%memory_path)
     call mem_allocate(this%nonmeth, 'NONMETH', this%memory_path)
     call mem_allocate(this%iprims, 'IPRIMS', this%memory_path)
     call mem_allocate(this%theta, 'THETA', this%memory_path)
@@ -333,7 +336,7 @@ contains
     this%iouttot_timestep = 0
     this%itertot_sim = 0
     this%mxiter = 0
-    this%linmeth = 1
+    this%linsolver = IMS_SOLVER
     this%nonmeth = 0
     this%iprims = 0
     this%theta = DONE
@@ -527,7 +530,6 @@ contains
     character(len=linelength) :: msg
     integer(I4B) :: i
     integer(I4B) :: ifdparam, mxvl, npp
-    integer(I4B) :: ims_lin_type
     integer(I4B) :: ierr
     logical(LGP) :: isfound, endOfBlock
     integer(I4B) :: ival
@@ -789,16 +791,16 @@ contains
           this%nonmeth = ival
         case ('LINEAR_SOLVER')
           call this%parser%GetStringCaps(keyword)
-          ival = 1
+          ival = IMS_SOLVER
           if (keyword .eq. 'DEFAULT' .or. &
               keyword .eq. 'LINEAR') then
-            ival = 1
+            ival = IMS_SOLVER
           else
             write (errmsg, '(3a)') &
               'Unknown LINEAR_SOLVER specified (', trim(keyword), ').'
             call store_error(errmsg)
           end if
-          this%linmeth = ival
+          this%linsolver = ival
         case ('UNDER_RELAXATION_THETA')
           this%theta = this%parser%GetDouble()
         case ('UNDER_RELAXATION_KAPPA')
@@ -889,35 +891,33 @@ contains
     end if
 
     if (this%solver_mode == 'PETSC') then
-      this%linmeth = 2
+      this%linsolver = PETSC_SOLVER
     end if
 
     ! configure linear settings
     call this%linear_settings%init(this%memory_path)
     call this%linear_settings%preset_config(ifdparam)
     call this%linear_settings%read_from_file(this%parser, iout)
-
+    !
+    if (this%linear_settings%ilinmeth == CG_METHOD) then
+      this%isymmetric = 1
+    end if
     !
     ! -- call secondary subroutine to initialize and read linear
     !    solver parameters IMSLINEAR solver
-    if (this%linmeth == 1) then
+    if (this%solver_mode == "IMS") then
       allocate (this%imslinear)
       WRITE (IOUT, *) '***IMS LINEAR SOLVER WILL BE USED***'
       call this%imslinear%imslinear_allocate(this%name, this%parser, IOUT, &
-                                             this%iprims, this%mxiter, &
-                                             ifdparam, ims_lin_type, &
+                                             this%iprims, this%mxiter, ifdparam, &
                                              this%neq, this%system_matrix, &
                                              this%rhs, this%x)
-      if (ims_lin_type .eq. 1) then
-        this%isymmetric = 1
-      end if
       !
       ! -- petsc linear solver flag
-    else if (this%linmeth == 2) then
+    else if (this%solver_mode == "PETSC") then
       call this%linear_solver%initialize(this%system_matrix, &
                                          this%linear_settings, &
                                          this%cnvg_summary)
-      this%isymmetric = 0
       !
       ! -- incorrect linear solver flag
     else
@@ -925,7 +925,6 @@ contains
         'Incorrect value for linear solution method specified.'
       call store_error(errmsg)
     end if
-
     !
     ! -- write message about matrix symmetry
     if (this%isymmetric == 1) then
@@ -962,7 +961,7 @@ contains
     !
     ! -- non-linear solver data
     WRITE (IOUT, 9002) this%dvclose, this%mxiter, &
-      this%iprims, this%nonmeth, this%linmeth
+      this%iprims, this%nonmeth, this%linsolver
     !
     ! -- standard outer iteration formats
 9002 FORMAT(1X, 'OUTER ITERATION CONVERGENCE CRITERION    (DVCLOSE) = ', E15.6, &
@@ -998,7 +997,7 @@ contains
            /1X, 'BACKTRACKING RESIDUAL LIMIT              (RES_LIM) = ', E15.6)
     !
     ! -- linear solver data
-    if (this%linmeth == 1) then
+    if (this%linsolver == IMS_SOLVER) then
       call this%imslinear%imslinear_summary(this%mxiter)
     else
       call this%linear_solver%print_summary()
@@ -1177,7 +1176,7 @@ contains
     class(NumericalSolutionType) :: this !< NumericalSolutionType instance
     !
     ! -- IMSLinearModule
-    if (this%linmeth == 1) then
+    if (this%linsolver == IMS_SOLVER) then
       call this%imslinear%imslinear_da()
       deallocate (this%imslinear)
     end if
@@ -1251,7 +1250,7 @@ contains
     call mem_deallocate(this%iouttot_timestep)
     call mem_deallocate(this%itertot_sim)
     call mem_deallocate(this%mxiter)
-    call mem_deallocate(this%linmeth)
+    call mem_deallocate(this%linsolver)
     call mem_deallocate(this%nonmeth)
     call mem_deallocate(this%iprims)
     call mem_deallocate(this%theta)
@@ -1362,7 +1361,7 @@ contains
         '', 'solution_inner_drmax', 'solution_inner_drmax_model', &
         'solution_inner_drmax_node'
       ! solver items specific to ims solver
-      if (this%linmeth == 1) then
+      if (this%linsolver == IMS_SOLVER) then
         write (this%icsvinnerout, '(*(G0,:,","))', advance='NO') &
           '', 'solution_inner_alpha'
         if (this%imslinear%ilinmeth == 2) then
@@ -1371,7 +1370,7 @@ contains
         end if
       end if
       ! -- check for more than one model - ims only
-      if (this%linmeth == 1 .and. this%convnmod > 1) then
+      if (this%linsolver == IMS_SOLVER .and. this%convnmod > 1) then
         do im = 1, this%modellist%Count()
           mp => GetNumericalModelFromList(this%modellist, im)
           write (this%icsvinnerout, '(*(G0,:,","))', advance='NO') &
@@ -2133,13 +2132,13 @@ contains
       write (iu, '(*(G0,:,","))', advance='NO') '', dr, im, nodeu
       !
       ! -- write ims acceleration parameters
-      if (this%linmeth == 1) then
+      if (this%linsolver == IMS_SOLVER) then
         write (iu, '(*(G0,:,","))', advance='NO') &
           '', trim(adjustl(this%caccel(kpos)))
       end if
       !
       ! -- write information for each model - ims only
-      if (this%linmeth == 1 .and. this%convnmod > 1) then
+      if (this%linsolver == IMS_SOLVER .and. this%convnmod > 1) then
         do j = 1, this%cnvg_summary%convnmod
           locdv = this%cnvg_summary%convlocdv(j, kpos)
           dv = this%cnvg_summary%convdvmax(j, kpos)
@@ -2564,12 +2563,12 @@ contains
     ! -- call appropriate linear solver
     !
     ! -- ims linear solver - linmeth option 1
-    if (this%linmeth == 1) then
+    if (this%linsolver == IMS_SOLVER) then
       call this%imslinear%imslinear_apply(this%icnvg, kstp, kiter, in_iter, &
                                           this%nitermax, this%convnmod, &
                                           this%convmodstart, this%caccel, &
                                           this%cnvg_summary)
-    else if (this%linmeth == 2) then
+    else if (this%linsolver == PETSC_SOLVER) then
       call this%linear_solver%solve(kiter, this%vec_rhs, &
                                     this%vec_x, this%cnvg_summary)
       in_iter = this%linear_solver%iteration_number

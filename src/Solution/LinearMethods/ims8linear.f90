@@ -106,7 +106,7 @@ CONTAINS
     !!
   !<
   SUBROUTINE imslinear_ar(this, NAME, parser, IOUT, IPRIMS, MXITER, IFDPARAM, &
-                          IMSLINEARM, NEQ, matrix, RHS, X, LFINDBLOCK)
+                          NEQ, matrix, RHS, X, LFINDBLOCK)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     use MemoryHelperModule, only: create_mem_path
@@ -120,7 +120,6 @@ CONTAINS
     integer(I4B), TARGET, INTENT(IN) :: IPRIMS !< print option
     integer(I4B), INTENT(IN) :: MXITER !< maximum outer iterations
     integer(I4B), INTENT(IN) :: IFDPARAM !< complexity option
-    integer(I4B), INTENT(INOUT) :: IMSLINEARM !< linear method option (1) CG (2) BICGSTAB
     integer(I4B), TARGET, INTENT(IN) :: NEQ !< number of equations
     class(MatrixBaseType), pointer :: matrix
     real(DP), DIMENSION(NEQ), TARGET, INTENT(INOUT) :: RHS !< right-hand side
@@ -327,8 +326,6 @@ CONTAINS
         call store_error(errmsg)
       end if
     end if
-
-    IMSLINEARM = this%ILINMETH
     !
     ! -- DETERMINE PRECONDITIONER
     IF (this%LEVEL > 0 .OR. this%DROPTOL > DZERO) THEN
