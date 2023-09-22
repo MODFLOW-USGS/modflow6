@@ -259,7 +259,7 @@ contains
       call PCSetType(pc, this%pc_type, ierr)
       CHKERRQ(ierr)
       call PCSetUp(pc, ierr)
-      CHKERRQ(ierr)      
+      CHKERRQ(ierr)
       call PCBJacobiGetSubKSP(pc, n_local, n_first, sub_ksp, ierr)
       CHKERRQ(ierr)
       call KSPGetPC(sub_ksp(1), sub_pc, ierr)
@@ -290,7 +290,7 @@ contains
       call PCShellSetContext(pc, this%pc_context, ierr)
       CHKERRQ(ierr)
     end if
-    
+
   end subroutine set_ims_pc
 
   !> @brief Create and assign a custom convergence
@@ -365,7 +365,7 @@ contains
     if (icnvg > 0) this%is_converged = 1
 
   end subroutine petsc_solve
-  
+
   subroutine petsc_get_result(this)
     class(PetscSolverType) :: this
   end subroutine petsc_get_result

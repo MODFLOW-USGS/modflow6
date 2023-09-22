@@ -1,7 +1,7 @@
 module PetscImsPreconditionerModule
 #include <petsc/finclude/petscksp.h>
   use petscksp
-  
+
   implicit none
   private
 
@@ -14,9 +14,9 @@ module PetscImsPreconditionerModule
     Vec :: diag
   end type
 
-  interface 
+  interface
     subroutine PCShellGetContext(pc, ctx, ierr)
-    import PcShellCtxType, tPC
+      import PcShellCtxType, tPC
       type(tPC) :: pc
       type(PcShellCtxType), pointer :: ctx
       integer :: ierr
@@ -34,7 +34,6 @@ contains
     PetscErrorCode :: ierr !< PETSc error code
 
   end subroutine pcshell_apply
-
 
   !> @brief Set up the custom preconditioner
   !<
