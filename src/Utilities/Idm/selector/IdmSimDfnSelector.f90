@@ -1,21 +1,41 @@
 ! ** Do Not Modify! MODFLOW 6 system generated file. **
 module IdmSimDfnSelectorModule
 
+  use ConstantsModule, only: LENVARNAME
   use SimModule, only: store_error
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
-  use SimNamInputModule, only: sim_nam_param_definitions, &
-                               sim_nam_aggregate_definitions, &
-                               sim_nam_block_definitions, &
-                               sim_nam_multi_package
+  use SimNamInputModule
 
   implicit none
   private
+  public :: SimParamFoundType
   public :: sim_param_definitions
   public :: sim_aggregate_definitions
   public :: sim_block_definitions
   public :: sim_idm_multi_package
+  public :: sim_idm_sfac_param
   public :: sim_idm_integrated
+
+  type SimParamFoundType
+    logical :: continue = .false.
+    logical :: nocheck = .false.
+    logical :: prmem = .false.
+    logical :: maxerrors = .false.
+    logical :: print_input = .false.
+    logical :: tdis6 = .false.
+    logical :: mtype = .false.
+    logical :: mfname = .false.
+    logical :: mname = .false.
+    logical :: exgtype = .false.
+    logical :: exgfile = .false.
+    logical :: exgmnamea = .false.
+    logical :: exgmnameb = .false.
+    logical :: mxiter = .false.
+    logical :: slntype = .false.
+    logical :: slnfname = .false.
+    logical :: slnmnames = .false.
+  end type SimParamFoundType
 
 contains
 
@@ -80,6 +100,20 @@ contains
     end select
     return
   end function sim_idm_multi_package
+
+  function sim_idm_sfac_param(subcomponent) result(sfac_param)
+    character(len=*), intent(in) :: subcomponent
+    character(len=LENVARNAME) :: sfac_param
+    select case (subcomponent)
+    case ('NAM')
+      sfac_param = sim_nam_aux_sfac_param
+    case default
+      call store_error('Idm selector subcomponent not found; '//&
+                       &'component="SIM"'//&
+                       &', subcomponent="'//trim(subcomponent)//'".', .true.)
+    end select
+    return
+  end function sim_idm_sfac_param
 
   function sim_idm_integrated(subcomponent) result(integrated)
     character(len=*), intent(in) :: subcomponent
