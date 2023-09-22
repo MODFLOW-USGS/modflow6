@@ -365,6 +365,22 @@ def eval_zdis(sim):
     )
 
     layer_refinement = ex_dict[name]
+
+    # create reusable mapping dictionary so it can be used for all time step
+    # with refined disu grids - which do not have naturally ordered node
+    # numbers in refined layers
+    map_dict = {}
+    if layer_refinement is not None:
+        z = z_node[layer_refinement]
+        icnt = 0
+        for i in range(nrow_refined):
+            y = y1 - delc_refined * (i + 0.5)
+            for j in range(ncol_refined):
+                x = x0 + delr_refined * (j + 0.5)
+                node = gwf.modelgrid.intersect(x, y, z=z)
+                map_dict[icnt] = {"node": node, "cellid": (i, j)}
+                icnt += 1
+
     for totim in comp_obj.get_times():
         if layer_refinement is None:
             comp = comp_obj.get_data(totim=totim).flatten().reshape(shape3d)
@@ -387,16 +403,11 @@ def eval_zdis(sim):
                 comp_slice = comp1d[ia0:ia1].copy()
                 zdis_slice = zdis1d[ia0:ia1].copy()
                 if k == layer_refinement:
-                    z = z_node[k]
                     comp_temp = np.zeros(shape2d_refined, dtype=float)
                     zdis_temp = np.zeros(shape2d_refined, dtype=float)
-                    for i in range(nrow_refined):
-                        y = y1 - delc_refined * (i + 0.5)
-                        for j in range(ncol_refined):
-                            x = x0 + delr_refined * (j + 0.5)
-                            node = gwf.modelgrid.intersect(x, y, z=z)
-                            comp_temp[i, j] = comp1d[node]
-                            zdis_temp[i, j] = zdis1d[node]
+                    for key, value in map_dict.items():
+                        comp_temp[value["cellid"]] = comp1d[value["node"]]
+                        zdis_temp[value["cellid"]] = zdis1d[value["node"]]
                     comp[k] = comp_temp.reshape(
                         nrow_refined // 2, 2, ncol_refined // 2, 2
                     ).mean(axis=(1, -1))
