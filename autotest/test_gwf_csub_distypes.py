@@ -27,9 +27,16 @@ for idx in range(nper):
 
 # base spatial discretization
 nlay, nrow, ncol = 3, 9, 9
+refinement_level = 2
+nrow_refined, ncol_refined = nrow * refinement_level, ncol * refinement_level
 shape3d = (nlay, nrow, ncol)
+shape3d_refined = (nlay, nrow_refined, ncol_refined)
 shape2d = (nrow, ncol)
+shape2d_refined = (nrow_refined, ncol_refined)
 size3d = nlay * nrow * ncol
+size3d_refined = nlay * nrow_refined * ncol_refined
+size2d = nrow * ncol
+size2d_refined = nrow_refined * ncol_refined
 
 delr = delc = 1000.0
 top = 0.0
@@ -37,6 +44,9 @@ bot = -100.0
 dz = (top - bot) / nlay
 botm = [top - k * dz for k in range(1, nlay + 1)]
 z_node = [z + 0.5 * dz for z in botm]
+
+delr_refined = delr / refinement_level
+delc_refined = delc / refinement_level
 
 hk = [1.0, 0.001, 1.0]
 sy = [0.25, 0.45, 0.25]
@@ -339,6 +349,10 @@ def eval_zdis(sim):
 
     name = ex[sim.idxsim]
     ws = pl.Path(sim.simpath)
+    sim = flopy.mf6.MFSimulation.load(sim_name=name, sim_ws=ws)
+    gwf = sim.get_model()
+    x0, x1, y0, y1 = gwf.modelgrid.extent
+
     comp_obj = flopy.utils.HeadFile(
         ws / f"{name}.csub.comp.bin",
         text="CSUB-COMPACTION",
@@ -350,25 +364,55 @@ def eval_zdis(sim):
         precision="double",
     )
 
-    if ex_dict[name] is None:
-        for totim in comp_obj.get_times():
-            comp = (
-                comp_obj.get_data(totim=totim)
-                .flatten()
-                .reshape(shape3d)
-                .sum(axis=0)
-            )
-            zdis = (
-                zdis_obj.get_data(totim=totim)
-                .flatten()
-                .reshape(shape3d)[0]
-                .reshape(shape2d)
-            )
-            assert np.allclose(
-                comp, zdis
-            ), f"sum of compaction is not equal to the z-displacement"
-    else:
-        pass
+    layer_refinement = ex_dict[name]
+    for totim in comp_obj.get_times():
+        if layer_refinement is None:
+            comp = comp_obj.get_data(totim=totim).flatten().reshape(shape3d)
+            zdis = zdis_obj.get_data(totim=totim).flatten().reshape(shape3d)
+        else:
+            comp1d = comp_obj.get_data(totim=totim).squeeze()
+            zdis1d = zdis_obj.get_data(totim=totim).squeeze()
+            ia = [0]
+            for k in range(nlay):
+                if k == layer_refinement:
+                    ia.append(ia[k] + size2d_refined)
+                else:
+                    ia.append(ia[k] + size2d)
+
+            comp = np.zeros(shape3d, dtype=float)
+            zdis = np.zeros(shape3d, dtype=float)
+            for k in range(nlay):
+                ia0 = ia[k]
+                ia1 = ia[k + 1]
+                comp_slice = comp1d[ia0:ia1].copy()
+                zdis_slice = zdis1d[ia0:ia1].copy()
+                if k == layer_refinement:
+                    z = z_node[k]
+                    comp_temp = np.zeros(shape2d_refined, dtype=float)
+                    zdis_temp = np.zeros(shape2d_refined, dtype=float)
+                    for i in range(nrow_refined):
+                        y = y1 - delc_refined * (i + 0.5)
+                        for j in range(ncol_refined):
+                            x = x0 + delr_refined * (j + 0.5)
+                            node = gwf.modelgrid.intersect(x, y, z=z)
+                            comp_temp[i, j] = comp1d[node]
+                            zdis_temp[i, j] = zdis1d[node]
+                    comp[k] = comp_temp.reshape(
+                        nrow_refined // 2, 2, ncol_refined // 2, 2
+                    ).mean(axis=(1, -1))
+                    zdis[k] = zdis_temp.reshape(
+                        nrow_refined // 2, 2, ncol_refined // 2, 2
+                    ).mean(axis=(1, -1))
+                else:
+                    comp[k] = comp_slice.reshape(shape2d)
+                    zdis[k] = zdis_slice.reshape(shape2d)
+
+        comp = comp.sum(axis=0)
+        zdis = zdis[0]
+        assert np.allclose(comp, zdis), (
+            "sum of compaction is not equal to the "
+            + f"z-displacement at time {totim}"
+        )
 
     return
 

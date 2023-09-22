@@ -3756,7 +3756,6 @@ contains
         !
         ! -- disu
         if (this%dis%ndim == 1) then
-          ! -- disv or dis
           do node = this%dis%nodes, 1, -1
             do ii = this%dis%con%ia(node) + 1, this%dis%con%ia(node + 1) - 1
               !
@@ -3777,6 +3776,7 @@ contains
               end if
             end do
           end do
+        ! -- disv or dis
         else
           nlay = this%dis%nodesuser / ncpl
           do k = nlay - 1, 1, -1
