@@ -128,16 +128,16 @@ def build_model(idx, dir):
     mawstrt = 3.5
     mawcondeqn = "THIEM"
     mawngwfnodes = nlay
-    # <wellno> <radius> <bottom> <strt> <condeqn> <ngwfnodes>
+    # <ifno> <radius> <bottom> <strt> <condeqn> <ngwfnodes>
     mawpackagedata = [
         [0, mawradius, mawbottom, mawstrt, mawcondeqn, mawngwfnodes, mawdense]
     ]
-    # <wellno> <icon> <cellid(ncelldim)> <scrn_top> <scrn_bot> <hk_skin> <radius_skin>
+    # <ifno> <icon> <cellid(ncelldim)> <scrn_top> <scrn_bot> <hk_skin> <radius_skin>
     mawconnectiondata = [
         [0, icon, (icon, 0, 0), top, mawbottom, -999.0, -999.0]
         for icon in range(nlay)
     ]
-    # <wellno> <mawsetting>
+    # <ifno> <mawsetting>
     mawperioddata = [[0, "STATUS", "ACTIVE"]]
     maw = flopy.mf6.ModflowGwfmaw(
         gwf,

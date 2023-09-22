@@ -1,5 +1,5 @@
 BEGIN PERIOD <iper>
-  <mawno> <mwtsetting>
-  <mawno> <mwtsetting>
+  <ifno> <mwtsetting>
+  <ifno> <mwtsetting>
   ...
 END PERIOD

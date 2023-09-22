@@ -1,13 +1,13 @@
 % general APT observations
-MWT & concentration & mawno or boundname & -- & Well concentration. If boundname is specified, boundname must be unique for each well. \\
+MWT & concentration & ifno or boundname & -- & Well concentration. If boundname is specified, boundname must be unique for each well. \\
 %flowjaface not included
-MWT & storage & mawno or boundname & -- & Simulated mass storage flow rate for a well or group of wells. \\
-MWT & constant & mawno or boundname & -- & Simulated mass constant-flow rate for a well or group of wells. \\
-MWT & from-mvr & mawno or boundname & -- & Simulated mass inflow into a well or group of wells from the MVT package. Mass inflow is calculated as the product of provider concentration and the mover flow rate. \\
-MWT & mwt & mawno or boundname & \texttt{iconn} or -- & Mass flow rate for a well or group of wells and its aquifer connection(s). If boundname is not specified for ID, then the simulated well-aquifer flow rate at a specific well connection is observed. In this case, ID2 must be specified and is the connection number \texttt{iconn} for well \texttt{mawno}. \\
+MWT & storage & ifno or boundname & -- & Simulated mass storage flow rate for a well or group of wells. \\
+MWT & constant & ifno or boundname & -- & Simulated mass constant-flow rate for a well or group of wells. \\
+MWT & from-mvr & ifno or boundname & -- & Simulated mass inflow into a well or group of wells from the MVT package. Mass inflow is calculated as the product of provider concentration and the mover flow rate. \\
+MWT & mwt & ifno or boundname & \texttt{iconn} or -- & Mass flow rate for a well or group of wells and its aquifer connection(s). If boundname is not specified for ID, then the simulated well-aquifer flow rate at a specific well connection is observed. In this case, ID2 must be specified and is the connection number \texttt{iconn} for well \texttt{ifno}. \\
 
 % observations specific to the mwt package
-MWT & rate & mawno or boundname & -- & Simulated mass flow rate for a well or group of wells. \\
-MWT & fw-rate & mawno or boundname & -- & Simulated mass flow rate for a flowing well or group of flowing wells. \\
+MWT & rate & ifno or boundname & -- & Simulated mass flow rate for a well or group of wells. \\
+MWT & fw-rate & ifno or boundname & -- & Simulated mass flow rate for a flowing well or group of flowing wells. \\
 MWT & rate-to-mvr & well or boundname & -- & Simulated mass flow rate that is sent to the MVT Package for a well or group of wells.\\
 MWT & fw-rate-to-mvr & well or boundname & -- & Simulated mass flow rate that is sent to the MVT Package from a flowing well or group of flowing wells. \\
