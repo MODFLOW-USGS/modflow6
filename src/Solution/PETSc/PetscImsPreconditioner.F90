@@ -32,6 +32,15 @@ contains
     Vec :: x !< the input vector
     Vec :: y !< the output vector
     PetscErrorCode :: ierr !< PETSc error code
+    ! local
+    type(PcShellCtxType), pointer :: pc_ctx => null()
+
+    ! this applies an example jacobi pc,
+    ! to be replaced by others (MILUT)
+    call PCShellGetContext(pc, pc_ctx, ierr)
+    CHKERRQ(ierr)
+    call VecPointwiseMult(y, x, pc_ctx%diag, ierr)
+    CHKERRQ(ierr)
 
   end subroutine pcshell_apply
 
@@ -44,6 +53,8 @@ contains
     Mat :: pmat
     type(PcShellCtxType), pointer :: pc_ctx => null()
 
+    ! this currently sets up an example jacobi pc,
+    ! to be replaced by others (MILUT)
     call PCShellGetContext(pc, pc_ctx, ierr)
     CHKERRQ(ierr)
     call PCGetOperators(pc, PETSC_NULL_MAT, pmat, ierr)
@@ -66,6 +77,8 @@ contains
     type(PcShellCtxType), pointer :: pc_ctx => null()
 
     call PCShellGetContext(pc, pc_ctx, ierr)
+    CHKERRQ(ierr)
+    call VecDestroy(pc_ctx%diag, ierr)
     CHKERRQ(ierr)
 
   end subroutine pcshell_destroy

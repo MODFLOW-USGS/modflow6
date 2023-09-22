@@ -84,6 +84,7 @@ contains
     character(len=LINELENGTH) :: errmsg
 
     this%use_ims_pc = .false.
+    allocate (this%pc_context)
 
     call this%print_petsc_version()
 
@@ -116,6 +117,7 @@ contains
       this%sub_pc_type = PCILU
     else
       this%pc_type = PCILU
+      this%sub_pc_type = PCNONE
     end if
     this%pc_levels = linear_settings%level
     this%drop_tolerance = linear_settings%droptol
@@ -150,7 +152,7 @@ contains
     end if
     write (petsc_version, '(i0,a,i0,a,i0,a,a)') &
       major, ".", minor, ".", subminor, " ", trim(release_str)
-    write (iout, '(1x,2a,/)') &
+    write (iout, '(/,1x,2a,/)') &
       "PETSc Linear Solver will be used: version ", petsc_version
 
   end subroutine print_petsc_version
@@ -254,6 +256,8 @@ contains
     PetscErrorCode :: ierr
 
     if (simulation_mode == "PARALLEL") then
+      this%sub_pc_type = PCSHELL
+
       call KSPGetPC(this%ksp_petsc, pc, ierr)
       CHKERRQ(ierr)
       call PCSetType(pc, this%pc_type, ierr)
@@ -264,8 +268,7 @@ contains
       CHKERRQ(ierr)
       call KSPGetPC(sub_ksp(1), sub_pc, ierr)
       CHKERRQ(ierr)
-      ! set custom PC
-      call PCSetType(sub_pc, PCSHELL, ierr)
+      call PCSetType(sub_pc, this%sub_pc_type, ierr)
       CHKERRQ(ierr)
       call PCShellSetApply(sub_pc, pcshell_apply, ierr)
       CHKERRQ(ierr)
@@ -276,9 +279,10 @@ contains
       call PCShellSetContext(sub_pc, this%pc_context, ierr)
       CHKERRQ(ierr)
     else
+      this%pc_type = PCSHELL
+
       call KSPGetPC(this%ksp_petsc, pc, ierr)
       CHKERRQ(ierr)
-      ! set custom PC
       call PCSetType(pc, PCSHELL, ierr)
       CHKERRQ(ierr)
       call PCShellSetApply(pc, pcshell_apply, ierr)
@@ -387,11 +391,14 @@ contains
 
     write (iout, '(/,7x,a)') "PETSc linear solver settings: "
     write (iout, '(1x,a)') repeat('-', 66)
-    write (iout, '(1x,a,a)') "Linear acceleration method:   ", this%ksp_type
-    write (iout, '(1x,a,a)') "Preconditioner type:          ", this%pc_type
+    write (iout, '(1x,a,a)') "Linear acceleration method:   ", trim(this%ksp_type)
+    write (iout, '(1x,a,a)') "Preconditioner type:          ", trim(this%pc_type)
+    if (simulation_mode == "PARALLEL") then
+      write (iout, '(1x,a,a)') "Sub-preconditioner type:      ", trim(this%sub_pc_type)
+    end if
     write (iout, '(1x,a,i0)') "Maximum nr. of iterations:    ", this%nitermax
     write (iout, '(1x,a,a,/)') &
-      "Dep. var. closure criterion:  ", adjustl(dvclose_str)
+      "Dep. var. closure criterion:  ", trim(adjustl(dvclose_str))
 
   end subroutine petsc_print_summary
 
@@ -414,6 +421,8 @@ contains
     call VecDestroy(this%petsc_ctx%x_old, ierr)
     CHKERRQ(ierr)
     deallocate (this%petsc_ctx)
+
+    allocate (this%pc_context)
 
   end subroutine petsc_destroy
 
