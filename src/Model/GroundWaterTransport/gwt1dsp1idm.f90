@@ -1,5 +1,6 @@
 ! ** Do Not Modify! MODFLOW 6 system generated file. **
 module GwtDspInputModule
+  use ConstantsModule, only: LENVARNAME
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
   private
@@ -8,6 +9,7 @@ module GwtDspInputModule
   public gwt_dsp_block_definitions
   public GwtDspParamFoundType
   public gwt_dsp_multi_package
+  public gwt_dsp_aux_sfac_param
 
   type GwtDspParamFoundType
     logical :: xt3d_off = .false.
@@ -22,6 +24,8 @@ module GwtDspInputModule
 
   logical :: gwt_dsp_multi_package = .false.
 
+  character(len=LENVARNAME) :: gwt_dsp_aux_sfac_param = ''
+
   type(InputParamDefinitionType), parameter :: &
     gwtdsp_xt3d_off = InputParamDefinitionType &
     ( &
@@ -35,7 +39,8 @@ module GwtDspInputModule
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -51,7 +56,8 @@ module GwtDspInputModule
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -67,7 +73,8 @@ module GwtDspInputModule
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .true. & ! layered
+    .true., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -83,7 +90,8 @@ module GwtDspInputModule
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .true. & ! layered
+    .true., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -99,7 +107,8 @@ module GwtDspInputModule
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .true. & ! layered
+    .true., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -115,7 +124,8 @@ module GwtDspInputModule
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .true. & ! layered
+    .true., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -131,7 +141,8 @@ module GwtDspInputModule
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .true. & ! layered
+    .true., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -147,7 +158,8 @@ module GwtDspInputModule
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .true. & ! layered
+    .true., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -178,7 +190,8 @@ module GwtDspInputModule
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     ) &
     ]
 

@@ -130,6 +130,8 @@ contains
     use ListsModule, only: lists_da
     use SimulationCreateModule, only: simulation_da
     use TdisModule, only: tdis_da
+    use IdmLoadModule, only: idm_da
+    use SimVariablesModule, only: iout
     ! -- local variables
     integer(I4B) :: im
     integer(I4B) :: ic
@@ -140,6 +142,7 @@ contains
     class(BaseModelType), pointer :: mp => null()
     class(BaseExchangeType), pointer :: ep => null()
     class(SpatialModelConnectionType), pointer :: mc => null()
+    !
     !
     ! -- FINAL PROCESSING (FP)
     ! -- Final processing for each model
@@ -198,6 +201,8 @@ contains
       call sgp%sgp_da()
       deallocate (sgp)
     end do
+    !
+    call idm_da(iout)
     call simulation_da()
     call lists_da()
     !
@@ -263,7 +268,7 @@ contains
     ! -- modules
     use ConstantsModule, only: LENMEMPATH
     use SimVariablesModule, only: iout
-    use IdmSimulationModule, only: simnam_load, load_models
+    use IdmLoadModule, only: simnam_load, load_models
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr, mem_allocate
     use SimVariablesModule, only: idm_context, iparamlog
@@ -302,6 +307,8 @@ contains
     !!
   !<
   subroutine simulation_df()
+    ! -- modules
+    use IdmLoadModule, only: idm_df
     ! -- local variables
     integer(I4B) :: im
     integer(I4B) :: ic
@@ -356,6 +363,9 @@ contains
       sp => GetBaseSolutionFromList(basesolutionlist, is)
       call sp%sln_df()
     end do
+
+    ! idm df
+    call idm_df()
 
   end subroutine simulation_df
 
@@ -468,6 +478,7 @@ contains
     use BaseSolutionModule, only: BaseSolutionType, GetBaseSolutionFromList
     use SimModule, only: converge_reset
     use SimVariablesModule, only: isim_mode
+    use IdmLoadModule, only: idm_rp
     ! -- local variables
     class(BaseModelType), pointer :: mp => null()
     class(BaseExchangeType), pointer :: ep => null()
@@ -497,6 +508,9 @@ contains
     case (MNORMAL)
       line = trim(line)//'normal"'
     end select
+
+    ! -- load dynamic input
+    call idm_rp()
 
     ! -- Read and prepare each model
     do im = 1, basemodellist%Count()
@@ -563,6 +577,7 @@ contains
     use ListsModule, only: solutiongrouplist
     use SimVariablesModule, only: iFailedStepRetry
     use SolutionGroupModule, only: SolutionGroupType, GetSolutionGroupFromList
+    use IdmLoadModule, only: idm_ad
     ! -- local variables
     class(SolutionGroupType), pointer :: sgp => null()
     integer(I4B) :: isg
@@ -575,6 +590,9 @@ contains
     !    can be obtained.
     iFailedStepRetry = 0
     retryloop: do
+
+      ! -- idm advance
+      call idm_ad()
 
       do isg = 1, solutiongrouplist%Count()
         sgp => GetSolutionGroupFromList(solutiongrouplist, isg)

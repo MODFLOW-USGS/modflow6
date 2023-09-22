@@ -7,7 +7,6 @@ on:
       - ci-diagnose*
     paths-ignore:
       - '**.md'
-      - 'doc/**'
       - '**.pdf'
       - '**.tex'
       - '**.jpg'
@@ -15,6 +14,7 @@ on:
       - '**.png'
       - '**.bbl'
       - '**.bib'
+      - 'doc/**'
       - 'doc/**.dat'
       - 'doc/**.ipynb'
       - 'doc/**.py'
@@ -26,7 +26,6 @@ on:
       - develop
     paths-ignore:
       - '**.md'
-      - 'doc/**'
       - '**.pdf'
       - '**.tex'
       - '**.jpg'
@@ -34,6 +33,7 @@ on:
       - '**.png'
       - '**.bbl'
       - '**.bib'
+      - 'doc/**'
       - 'doc/**.dat'
       - 'doc/**.ipynb'
       - 'doc/**.py'

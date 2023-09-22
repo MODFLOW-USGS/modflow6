@@ -1,5 +1,6 @@
 module GwfNpfModule
   use KindModule, only: DP, I4B
+  use SimVariablesModule, only: errmsg
   use ConstantsModule, only: DZERO, DEM9, DEM8, DEM7, DEM6, DEM2, &
                              DHALF, DP9, DONE, DTWO, &
                              DLNLOW, DLNHIGH, &
@@ -1475,7 +1476,10 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use SimModule, only: store_error, store_error_filename
+    use MemoryManagerModule, only: mem_setptr, get_isize
     use MemoryManagerExtModule, only: mem_set_value
+    use CharacterStringModule, only: CharacterStringType
     use GwfNpfInputModule, only: GwfNpfParamFoundType
     ! -- dummy
     class(GwfNpftype) :: this
@@ -1483,7 +1487,10 @@ contains
     character(len=LENVARNAME), dimension(3) :: cellavg_method = &
       &[character(len=LENVARNAME) :: 'LOGARITHMIC', 'AMT-LMK', 'AMT-HMK']
     type(GwfNpfParamFoundType) :: found
+    type(CharacterStringType), dimension(:), pointer, &
+      contiguous :: tvk6_fnames
     character(len=LINELENGTH) :: tvk6_filename
+    integer(I4B) :: tvk6_isize, n
 ! ------------------------------------------------------------------------------
     !
     ! -- update defaults with idm sourced values
@@ -1508,8 +1515,6 @@ contains
                        found%ik22overk)
     call mem_set_value(this%ik33overk, 'IK33OVERK', this%input_mempath, &
                        found%ik33overk)
-    call mem_set_value(tvk6_filename, 'TVK6_FILENAME', this%input_mempath, &
-                       found%tvk6_filename)
     call mem_set_value(this%inewton, 'INEWTON', this%input_mempath, found%inewton)
     call mem_set_value(this%iusgnrhc, 'IUSGNRHC', this%input_mempath, &
                        found%iusgnrhc)
@@ -1531,17 +1536,30 @@ contains
     ! -- save specific discharge active
     if (found%isavspdis) this%icalcspdis = this%isavspdis
     !
-    ! -- TVK6 subpackage file spec provided
-    if (found%tvk6_filename) then
-      this%intvk = GetUnit()
-      call openfile(this%intvk, this%iout, tvk6_filename, 'TVK')
-      call tvk_cr(this%tvk, this%name_model, this%intvk, this%iout)
-    end if
-    !
     ! -- no newton specified
     if (found%inewton) then
       this%inewton = 0
       this%iasym = 0
+    end if
+    !
+    call get_isize('TVK6_FILENAME', this%input_mempath, tvk6_isize)
+    !
+    if (tvk6_isize > 0) then
+      !
+      if (tvk6_isize /= 1) then
+        errmsg = 'Multiple TVK6 keywords detected in OPTIONS block.'// &
+                 ' Only one TVK6 entry allowed.'
+        call store_error(errmsg)
+        call store_error_filename(this%input_fname)
+      end if
+      !
+      call mem_setptr(tvk6_fnames, 'TVK6_FILENAME', this%input_mempath)
+      !
+      do n = 1, tvk6_isize
+        tvk6_filename = tvk6_fnames(n)
+        call openfile(this%intvk, this%iout, tvk6_filename, 'TVK')
+        call tvk_cr(this%tvk, this%name_model, this%intvk, this%iout)
+      end do
     end if
     !
     ! -- log options
@@ -1582,7 +1600,6 @@ contains
     ! -- dummy
     class(GwfNpftype) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
     ! -- check if this%iusgnrhc has been enabled for a model that is not using
     !    the Newton-Raphson formulation

@@ -1,5 +1,5 @@
 BEGIN PACKAGEDATA
-  <rno> <strt> [<@aux(naux)@>] [<boundname>]
-  <rno> <strt> [<@aux(naux)@>] [<boundname>]
+  <ifno> <strt> [<@aux(naux)@>] [<boundname>]
+  <ifno> <strt> [<@aux(naux)@>] [<boundname>]
   ...
 END PACKAGEDATA

@@ -1,5 +1,6 @@
 ! ** Do Not Modify! MODFLOW 6 system generated file. **
 module GwfNamInputModule
+  use ConstantsModule, only: LENVARNAME
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
   private
@@ -8,6 +9,7 @@ module GwfNamInputModule
   public gwf_nam_block_definitions
   public GwfNamParamFoundType
   public gwf_nam_multi_package
+  public gwf_nam_aux_sfac_param
 
   type GwfNamParamFoundType
     logical :: list = .false.
@@ -24,6 +26,8 @@ module GwfNamInputModule
 
   logical :: gwf_nam_multi_package = .false.
 
+  character(len=LENVARNAME) :: gwf_nam_aux_sfac_param = ''
+
   type(InputParamDefinitionType), parameter :: &
     gwfnam_list = InputParamDefinitionType &
     ( &
@@ -37,7 +41,8 @@ module GwfNamInputModule
     .false., & ! required
     .false., & ! multi-record
     .true., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -53,7 +58,8 @@ module GwfNamInputModule
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -69,7 +75,8 @@ module GwfNamInputModule
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -85,7 +92,8 @@ module GwfNamInputModule
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -101,7 +109,8 @@ module GwfNamInputModule
     .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -117,7 +126,8 @@ module GwfNamInputModule
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -133,7 +143,8 @@ module GwfNamInputModule
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -149,7 +160,8 @@ module GwfNamInputModule
     .true., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -165,7 +177,8 @@ module GwfNamInputModule
     .true., & ! required
     .true., & ! multi-record
     .true., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -181,7 +194,8 @@ module GwfNamInputModule
     .false., & ! required
     .true., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &
@@ -212,7 +226,8 @@ module GwfNamInputModule
     .true., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
-    .false. & ! layered
+    .false., & ! layered
+    .false. & ! timeseries
     )
 
   type(InputParamDefinitionType), parameter :: &

@@ -331,7 +331,7 @@ def build_model(idx, ws):
                             # by setting belev==telev, MF6 will automatically
                             # re-assign elevations based on cell dimensions
                             h = [
-                                ilak,  # <lakeno>
+                                ilak,  # <ifno>
                                 ilakconn,  # <iconn>
                                 (k, i - 1, j),  # <cellid(ncelldim)>
                                 "horizontal",  # <claktype>

@@ -124,7 +124,7 @@ def build_model(idx, dir):
         filename=f"{gwfname}.chd",
     )
 
-    # pak_data = [lakeno, strt, nlakeconn, CONC, dense, boundname]
+    # pak_data = [ifno, strt, nlakeconn, CONC, dense, boundname]
     pak_data = [
         (0, -0.4, 2, 0.0, 1025.0),
         (1, -0.4, 1, 0.0, 1025.0),
@@ -133,7 +133,7 @@ def build_model(idx, dir):
 
     connlen = connwidth = delr / 2.0
     con_data = []
-    # con_data=(lakeno,iconn,(cellid),claktype,bedleak,belev,telev,connlen,connwidth )
+    # con_data=(ifno,iconn,(cellid),claktype,bedleak,belev,telev,connlen,connwidth )
     # lake 1
     con_data.append(
         (0, 0, (0, 0, 1), "HORIZONTAL", DNODATA, 10, 10, connlen, connwidth)

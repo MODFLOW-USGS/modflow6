@@ -176,12 +176,12 @@ def build_model(idx, dir):
     )
     # sfr.remove()
 
-    # <lakeno> <strt> <nlakeconn> [<aux(naux)>] [<boundname>]
+    # <ifno> <strt> <nlakeconn> [<aux(naux)>] [<boundname>]
     packagedata = [
         [0, 100.0, 1, auxvar1, auxvar2, "lake1"],
         [1, 100.0, 1, auxvar1, auxvar2, "lake2"],
     ]
-    # <lakeno> <iconn> <cellid(ncelldim)> <claktype> <bedleak> <belev> <telev> <connlen> <connwidth>
+    # <ifno> <iconn> <cellid(ncelldim)> <claktype> <bedleak> <belev> <telev> <connlen> <connwidth>
     connectiondata = [
         [0, 0, (0, 1, 1), "vertical", DNODATA, 0.0, 0.0, 0.0, 0.0],
         [1, 0, (0, 2, 2), "vertical", DNODATA, 0.0, 0.0, 0.0, 0.0],

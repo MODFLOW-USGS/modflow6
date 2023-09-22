@@ -7,6 +7,7 @@
 module ModelPackageInputsModule
 
   use KindModule, only: DP, I4B, LGP
+  use SimVariablesModule, only: errmsg
   use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENMODELNAME, LENFTYPE, &
                              LENPACKAGETYPE, LENPACKAGENAME
   use SimModule, only: store_error, store_error_filename
@@ -66,7 +67,7 @@ module ModelPackageInputsModule
     ! -- package type, e.g. 'DIS6 or CHD6'
     character(len=LENPACKAGETYPE) :: pkgtype
     ! -- component type, e.g. 'DIS or CHD'
-    character(len=LENFTYPE) :: component_type
+    character(len=LENFTYPE) :: subcomponent_type
     ! -- package instance attribute arrays
     character(len=LINELENGTH), dimension(:), allocatable :: filenames
     character(len=LENPACKAGENAME), dimension(:), allocatable :: pkgnames
@@ -93,7 +94,8 @@ module ModelPackageInputsModule
     character(len=LENMODELNAME) :: modelname
     ! -- component type
     character(len=LENFTYPE) :: component_type ! -- e.g. 'GWF'
-    ! -- model mempath
+    ! -- mempaths
+    character(len=LENMEMPATH) :: input_mempath
     character(len=LENMEMPATH) :: model_mempath
     ! -- pointers to created managed memory
     type(CharacterStringType), dimension(:), contiguous, &
@@ -152,30 +154,6 @@ contains
     return
   end subroutine supported_model_packages
 
-  !> @brief component from package or model type
-  !<
-  function component_type(pkgtype) !result(componenttype)
-    ! -- modules
-    ! -- dummy
-    character(len=LENPACKAGETYPE), intent(in) :: pkgtype
-    ! -- return
-    character(len=LENFTYPE) :: component_type
-    ! -- local
-    integer(I4B) :: i, ilen
-    !
-    component_type = ''
-    !
-    ilen = len_trim(pkgtype)
-    do i = 1, ilen
-      if (pkgtype(i:i) == '6') then
-        write (component_type, '(a)') trim(pkgtype(1:i - 1))
-      end if
-    end do
-    !
-    ! -- return
-    return
-  end function component_type
-
   !> @brief does model support multiple instances of this package type
   !<
   function multi_pkg_type(mtype_component, ptype_component, pkgtype) &
@@ -226,17 +204,19 @@ contains
 
   !> @brief create a new package type
   !<
-  subroutine pkgtype_create(this, modelname, pkgtype)
+  subroutine pkgtype_create(this, modeltype, modelname, pkgtype)
     ! -- modules
+    use SourceCommonModule, only: idm_subcomponent_type
     ! -- dummy
     class(LoadablePackageType) :: this
+    character(len=*), intent(in) :: modeltype
     character(len=*), intent(in) :: modelname
     character(len=*), intent(in) :: pkgtype
     ! -- local
     !
     ! -- initialize
     this%pkgtype = pkgtype
-    this%component_type = component_type(pkgtype)
+    this%subcomponent_type = idm_subcomponent_type(modeltype, pkgtype)
     this%pnum = 0
     !
     ! -- allocate arrays
@@ -256,8 +236,10 @@ contains
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
     use IdmDfnSelectorModule, only: idm_integrated, idm_multi_package
+    use SourceCommonModule, only: subcomponent_name
     ! -- dummy
     class(LoadablePackageType) :: this
     character(len=*), intent(in) :: modelname
@@ -267,7 +249,7 @@ contains
     character(len=*), intent(in) :: pkgname
     integer(I4B), intent(in) :: iout
     ! -- local
-    character(len=LENPACKAGENAME) :: sc_name
+    character(len=LENPACKAGENAME) :: sc_name, pname
     character(len=LENMEMPATH) :: mempath
     character(len=LINELENGTH), pointer :: cstr
     !
@@ -283,17 +265,18 @@ contains
     this%pkgnames(this%pnum) = pkgname
     this%inunits(this%pnum) = 0
     !
+    ! -- set pkgname if empty
+    if (this%pkgnames(this%pnum) == '') then
+      write (pname, '(a,i0)') trim(this%subcomponent_type)//'-', this%pnum
+      this%pkgnames(this%pnum) = pname
+    end if
+    !
     ! -- set up input context for model
-    if (idm_integrated(mtype_component, this%component_type)) then
+    if (idm_integrated(mtype_component, this%subcomponent_type)) then
       !
       ! -- set subcomponent name
-      if (idm_multi_package(mtype_component, this%component_type)) then
-        !
-        sc_name = pkgname
-      else
-        !
-        sc_name = this%component_type
-      end if
+      sc_name = subcomponent_name(mtype_component, this%subcomponent_type, &
+                                  this%pkgnames(this%pnum))
       !
       ! -- create and store the mempath
       this%mempaths(this%pnum) = &
@@ -303,6 +286,7 @@ contains
       mempath = create_mem_path(modelname, sc_name, idm_context)
       call mem_allocate(cstr, LINELENGTH, 'INPUT_FNAME', mempath)
       cstr = filename
+      !
     else
       !
       ! -- set mempath empty
@@ -338,6 +322,7 @@ contains
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_allocate
     use SimVariablesModule, only: idm_context
+    use SourceCommonModule, only: idm_component_type
     ! -- dummy
     class(ModelPackageInputsType) :: this
     character(len=*), intent(in) :: modeltype
@@ -350,13 +335,14 @@ contains
     this%modeltype = modeltype
     this%modelfname = modelfname
     this%modelname = modelname
-    this%component_type = component_type(modeltype)
+    this%component_type = idm_component_type(modeltype)
     this%iout = iout
     !
     ! -- allocate and set model supported package types
     call supported_model_packages(modeltype, this%cunit, this%niunit)
     !
-    ! -- set model memory path
+    ! -- set memory paths
+    this%input_mempath = create_mem_path(this%modelname, 'NAM', idm_context)
     this%model_mempath = create_mem_path(component=this%modelname, &
                                          context=idm_context)
     !
@@ -390,7 +376,6 @@ contains
     character(len=LENPACKAGETYPE) :: ftype
     integer(I4B) :: n, m
     logical(LGP) :: found
-    character(len=LINELENGTH) :: errmsg
     !
     ! -- allocate
     allocate (cunit_idxs(0))
@@ -398,7 +383,7 @@ contains
     ! -- identify input packages and check that each is supported
     do n = 1, size(ftypes)
       !
-      ! -- type from model name file packages block
+      ! -- type from model nam file packages block
       ftype = ftypes(n)
       found = .false.
       !
@@ -440,7 +425,8 @@ contains
     !
     ! -- create sorted LoadablePackageType object list
     do n = 1, size(cunit_idxs)
-      call this%pkglist(n)%create(this%modelname, this%cunit(cunit_idxs(n)))
+      call this%pkglist(n)%create(this%modeltype, this%modelname, &
+                                  this%cunit(cunit_idxs(n)))
     end do
     !
     ! -- cleanup
@@ -482,9 +468,7 @@ contains
   !<
   subroutine modelpkgs_addpkgs(this)
     ! -- modules
-    use MemoryHelperModule, only: create_mem_path
     use MemoryManagerModule, only: mem_setptr
-    use SimVariablesModule, only: idm_context
     ! -- dummy
     class(ModelPackageInputsType) :: this
     ! -- local
@@ -494,17 +478,13 @@ contains
       pointer :: fnames !< file names
     type(CharacterStringType), dimension(:), contiguous, &
       pointer :: pnames !< package names
-    character(len=LENMEMPATH) :: input_mempath
     character(len=LINELENGTH) :: ftype, fname, pname
     integer(I4B) :: n
     !
-    ! -- set input memory path
-    input_mempath = create_mem_path(this%modelname, 'NAM', idm_context)
-    !
     ! -- set pointers to input context model package attribute arrays
-    call mem_setptr(ftypes, 'FTYPE', input_mempath)
-    call mem_setptr(fnames, 'FNAME', input_mempath)
-    call mem_setptr(pnames, 'PNAME', input_mempath)
+    call mem_setptr(ftypes, 'FTYPE', this%input_mempath)
+    call mem_setptr(fnames, 'FNAME', this%input_mempath)
+    call mem_setptr(pnames, 'PNAME', this%input_mempath)
     !
     ! -- create the package list
     call this%create(ftypes)
@@ -516,9 +496,6 @@ contains
       ftype = ftypes(n)
       fname = fnames(n)
       pname = pnames(n)
-      !
-      ! TODO: name pkg here if not provided, this is expected to cause
-      !       failures for multi-pkg types when names aren't provided
       !
       ! -- add this instance to package list
       call this%add(ftype, fname, pname)
@@ -539,7 +516,6 @@ contains
     integer(I4B) :: pnum
     ! -- local
     integer(I4B) :: n
-    character(len=LINELENGTH) :: errmsg
     !
     ! -- initialize
     pnum = 0
@@ -548,7 +524,7 @@ contains
     do n = 1, size(this%pkglist)
       !
       if (multi_pkg_type(this%component_type, &
-                         this%pkglist(n)%component_type, &
+                         this%pkglist(n)%subcomponent_type, &
                          this%pkglist(n)%pkgtype)) then
         ! multiple instances ok
       else

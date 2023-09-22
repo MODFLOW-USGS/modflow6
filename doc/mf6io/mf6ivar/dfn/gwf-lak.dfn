@@ -349,21 +349,21 @@ description value specifying the number of lakes tables that will be used to def
 
 block packagedata
 name packagedata
-type recarray lakeno strt nlakeconn aux boundname
+type recarray ifno strt nlakeconn aux boundname
 shape (maxbound)
 reader urword
 longname
 description
 
 block packagedata
-name lakeno
+name ifno
 type integer
 shape
 tagged false
 in_record true
 reader urword
 longname lake number for this entry
-description integer value that defines the lake number associated with the specified PACKAGEDATA data on the line. LAKENO must be greater than zero and less than or equal to NLAKES. Lake information must be specified for every lake or the program will terminate with an error.  The program will also terminate with an error if information for a lake is specified more than once.
+description integer value that defines the feature (lake) number associated with the specified PACKAGEDATA data on the line. IFNO must be greater than zero and less than or equal to NLAKES. Lake information must be specified for every lake or the program will terminate with an error.  The program will also terminate with an error if information for a lake is specified more than once.
 numeric_index true
 
 block packagedata
@@ -384,7 +384,7 @@ tagged false
 in_record true
 reader urword
 longname number of lake connections
-description integer value that defines the number of GWF cells connected to this (LAKENO) lake. There can only be one vertical lake connection to each GWF cell. NLAKECONN must be greater than zero.
+description integer value that defines the number of GWF cells connected to this (IFNO) lake. There can only be one vertical lake connection to each GWF cell. NLAKECONN must be greater than zero.
 
 block packagedata
 name aux
@@ -414,21 +414,21 @@ description REPLACE boundname {'{#1}': 'lake'}
 
 block connectiondata
 name connectiondata
-type recarray lakeno iconn cellid claktype bedleak belev telev connlen connwidth
+type recarray ifno iconn cellid claktype bedleak belev telev connlen connwidth
 shape (sum(nlakeconn))
 reader urword
 longname
 description
 
 block connectiondata
-name lakeno
+name ifno
 type integer
 shape
 tagged false
 in_record true
 reader urword
 longname lake number for this entry
-description integer value that defines the lake number associated with the specified CONNECTIONDATA data on the line. LAKENO must be greater than zero and less than or equal to NLAKES. Lake connection information must be specified for every lake connection to the GWF model (NLAKECONN) or the program will terminate with an error.  The program will also terminate with an error if connection information for a lake connection to the GWF model is specified more than once.
+description integer value that defines the feature (lake) number associated with the specified CONNECTIONDATA data on the line. IFNO must be greater than zero and less than or equal to NLAKES. Lake connection information must be specified for every lake connection to the GWF model (NLAKECONN) or the program will terminate with an error.  The program will also terminate with an error if connection information for a lake connection to the GWF model is specified more than once.
 numeric_index true
 
 block connectiondata
@@ -439,7 +439,7 @@ tagged false
 in_record true
 reader urword
 longname connection number for this entry
-description integer value that defines the GWF connection number for this lake connection entry. ICONN must be greater than zero and less than or equal to NLAKECONN for lake LAKENO.
+description integer value that defines the GWF connection number for this lake connection entry. ICONN must be greater than zero and less than or equal to NLAKECONN for lake IFNO.
 numeric_index true
 
 block connectiondata
@@ -517,21 +517,21 @@ description real value that defines the connection face width for a HORIZONTAL l
 
 block tables
 name tables
-type recarray lakeno tab6 filein tab6_filename
+type recarray ifno tab6 filein tab6_filename
 shape (ntables)
 reader urword
 longname
 description
 
 block tables
-name lakeno
+name ifno
 type integer
 shape
 tagged false
 in_record true
 reader urword
 longname lake number for this entry
-description integer value that defines the lake number associated with the specified TABLES data on the line. LAKENO must be greater than zero and less than or equal to NLAKES. The program will terminate with an error if table information for a lake is specified more than once or the number of specified tables is less than NTABLES.
+description integer value that defines the feature (lake) number associated with the specified TABLES data on the line. IFNO must be greater than zero and less than or equal to NLAKES. The program will terminate with an error if table information for a lake is specified more than once or the number of specified tables is less than NTABLES.
 numeric_index true
 
 block tables
