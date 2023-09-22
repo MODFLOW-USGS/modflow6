@@ -116,12 +116,12 @@ def build_model(idx, dir):
     else:
         bedleak = DNODATA
 
-    # <lakeno> <strt> <nlakeconn> [<aux(naux)>] [<boundname>]
+    # <ifno> <strt> <nlakeconn> [<aux(naux)>] [<boundname>]
     packagedata = [
         [0, 100.0, 1, "lake1"],
         [1, 100.0, 1, "lake2"],
     ]
-    # <lakeno> <iconn> <cellid(ncelldim)> <claktype> <bedleak> <belev> <telev> <connlen> <connwidth>
+    # <ifno> <iconn> <cellid(ncelldim)> <claktype> <bedleak> <belev> <telev> <connlen> <connwidth>
     connectiondata = [
         [0, 0, (0, 1, 1), "vertical", bedleak, 0.0, 0.0, 0.0, 0.0],
         [1, 0, (0, 2, 2), "vertical", bedleak, 0.0, 0.0, 0.0, 0.0],

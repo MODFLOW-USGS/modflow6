@@ -130,14 +130,14 @@ def build_model(idx, dir):
         )
 
     nlakeconn = 11  # note: number of connections for this lake
-    # pak_data = [lakeno, strt, nlakeconn, dense, boundname]
+    # pak_data = [ifno, strt, nlakeconn, dense, boundname]
     pak_data = [(0, 2.25, nlakeconn, lake_dense)]
 
     connlen = delr / 2.0
     connwidth = delc
     bedleak = "None"
     con_data = [
-        # con_data=(lakeno,iconn,(cellid),claktype,bedleak,belev,telev,connlen,connwidth )
+        # con_data=(ifno,iconn,(cellid),claktype,bedleak,belev,telev,connlen,connwidth )
         (0, 0, (0, 0, 0), "HORIZONTAL", bedleak, 10, 10, connlen, connwidth),
         (0, 1, (1, 0, 1), "VERTICAL", bedleak, 10, 10, connlen, connwidth),
         (0, 2, (1, 0, 1), "HORIZONTAL", bedleak, 10, 10, connlen, connwidth),

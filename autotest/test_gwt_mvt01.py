@@ -142,7 +142,7 @@ def build_model(idx, dir):
     )
 
     nlakeconn = 1  # note: this is the number of connectiosn for a lake, not total number of connections
-    # pak_data = [lakeno, strt, nlakeconn, CONC, dense, boundname]
+    # pak_data = [ifno, strt, nlakeconn, CONC, dense, boundname]
     pak_data = [
         (0, 1.0, nlakeconn, 0.0, 1025.0),
         (1, 1.0, nlakeconn, 0.0, 1025.0),
@@ -150,7 +150,7 @@ def build_model(idx, dir):
 
     connlen = connwidth = delr / 2.0
     con_data = []
-    # con_data=(lakeno,iconn,(cellid),claktype,bedleak,belev,telev,connlen,connwidth )
+    # con_data=(ifno,iconn,(cellid),claktype,bedleak,belev,telev,connlen,connwidth )
     con_data.append(
         (0, 0, (0, 0, 0), "VERTICAL", 0.0, 0, 0, connlen, connwidth)
     )
