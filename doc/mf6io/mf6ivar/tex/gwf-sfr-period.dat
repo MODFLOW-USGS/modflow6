@@ -1,5 +1,5 @@
 BEGIN PERIOD <iper>
-  <rno> <sfrsetting>
-  <rno> <sfrsetting>
+  <ifno> <sfrsetting>
+  <ifno> <sfrsetting>
   ...
 END PERIOD

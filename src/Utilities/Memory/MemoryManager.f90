@@ -67,6 +67,7 @@ module MemoryManagerModule
   interface mem_checkin
     module procedure &
       checkin_int1d, &
+      checkin_int2d, &
       checkin_dbl1d, &
       checkin_dbl2d
   end interface mem_checkin
@@ -996,6 +997,49 @@ contains
     ! -- return
     return
   end subroutine checkin_int1d
+
+  !> @brief Check in an existing 2d integer array with a new address (name + path)
+  !<
+  subroutine checkin_int2d(aint2d, name, mem_path, name2, mem_path2)
+    integer(I4B), dimension(:, :), pointer, contiguous, intent(inout) :: aint2d !< the existing 2d array
+    character(len=*), intent(in) :: name !< new variable name
+    character(len=*), intent(in) :: mem_path !< new path where variable is stored
+    character(len=*), intent(in) :: name2 !< existing variable name
+    character(len=*), intent(in) :: mem_path2 !< existing path where variable is stored
+    ! -- local
+    type(MemoryType), pointer :: mt
+    integer(I4B) :: ncol, nrow, isize
+    ! -- code
+    !
+    ! -- check the variable name length
+    call mem_check_length(name, LENVARNAME, "variable")
+    !
+    ! -- set isize
+    ncol = size(aint2d, dim=1)
+    nrow = size(aint2d, dim=2)
+    isize = ncol * nrow
+    !
+    ! -- allocate memory type
+    allocate (mt)
+    !
+    ! -- set memory type
+    mt%aint2d => aint2d
+    mt%isize = isize
+    mt%name = name
+    mt%path = mem_path
+    write (mt%memtype, "(a,' (',i0,',',i0,')')") 'INTEGER', ncol, nrow
+    !
+    ! -- set master information
+    mt%master = .false.
+    mt%mastername = name2
+    mt%masterPath = mem_path2
+    !
+    ! -- add memory type to the memory list
+    call memorylist%add(mt)
+    !
+    ! -- return
+    return
+  end subroutine checkin_int2d
 
   !> @brief Check in an existing 1d double precision array with a new address (name + path)
   !<

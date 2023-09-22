@@ -3,7 +3,7 @@ module TimeArraySeriesModule
   use ArrayReadersModule, only: ReadArray
   use BlockParserModule, only: BlockParserType
   use ConstantsModule, only: LINELENGTH, UNDEFINED, STEPWISE, LINEAR, &
-                             LENTIMESERIESNAME, DZERO, DONE
+                             LENTIMESERIESNAME, LENMODELNAME, DZERO, DONE
   use GenericUtilitiesModule, only: is_same
   use InputOutputModule, only: GetUnit, openfile
   use KindModule, only: DP, I4B
@@ -13,7 +13,6 @@ module TimeArraySeriesModule
   use TimeArrayModule, only: TimeArrayType, ConstructTimeArray, &
                              AddTimeArrayToList, CastAsTimeArrayType, &
                              GetTimeArrayFromList
-  use BaseDisModule, only: DisBaseType
   use, intrinsic :: iso_fortran_env, only: IOSTAT_END
 
   implicit none
@@ -32,7 +31,7 @@ module TimeArraySeriesModule
     character(len=LINELENGTH), private :: dataFile = ''
     logical, private :: autoDeallocate = .true.
     type(ListType), pointer, private :: list => null()
-    class(DisBaseType), pointer, private :: dis => null()
+    character(len=LENMODELNAME) :: modelname
     type(BlockParserType), private :: parser
   contains
     ! -- Public procedures
@@ -86,7 +85,7 @@ contains
 
   ! -- Public procedures
 
-  subroutine tas_init(this, fname, dis, iout, tasname, autoDeallocate)
+  subroutine tas_init(this, fname, modelname, iout, tasname, autoDeallocate)
 ! ******************************************************************************
 ! tas_init -- initialize the time array series
 ! ******************************************************************************
@@ -96,7 +95,7 @@ contains
     ! -- dummy
     class(TimeArraySeriesType), intent(inout) :: this
     character(len=*), intent(in) :: fname
-    class(DisBaseType), pointer, intent(inout) :: dis
+    character(len=*), intent(in) :: modelname
     integer(I4B), intent(in) :: iout
     character(len=*), intent(inout) :: tasname
     logical, optional, intent(in) :: autoDeallocate
@@ -114,7 +113,7 @@ contains
     allocate (this%list)
     !
     ! -- assign members
-    this%dis => dis
+    this%modelname = modelname
     this%iout = iout
     !
     ! -- open time-array series input file
@@ -371,28 +370,43 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: LENMEMPATH
+    use MemoryManagerModule, only: mem_setptr
+    use MemoryHelperModule, only: create_mem_path
     ! -- dummy
     class(TimeArraySeriesType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i, ierr, istart, istat, istop, lloc, nrow, ncol, nodesperlayer
     logical :: lopen, isFound
     type(TimeArrayType), pointer :: ta => null()
+    character(len=LENMEMPATH) :: mempath
+    integer(I4B), dimension(:), contiguous, &
+      pointer :: mshape
 ! ------------------------------------------------------------------------------
     !
+    ! -- initialize
     istart = 1
     istat = 0
     istop = 1
     lloc = 1
+    nullify (mshape)
+    !
+    ! -- create mempath
+    mempath = create_mem_path(component=this%modelname, subcomponent='DIS')
+    !
+    ! -- set mshape pointer
+    call mem_setptr(mshape, 'MSHAPE', mempath)
+    !
     ! Get dimensions for supported discretization type
-    if (this%dis%supports_layers()) then
-      nodesperlayer = this%dis%get_ncpl()
-      if (size(this%dis%mshape) == 3) then
-        nrow = this%dis%mshape(2)
-        ncol = this%dis%mshape(3)
-      else
-        nrow = 1
-        ncol = this%dis%mshape(2)
-      end if
+    if (size(mshape) == 2) then
+      nodesperlayer = mshape(2)
+      nrow = 1
+      ncol = mshape(2)
+    else if (size(mshape) == 3) then
+      nodesperlayer = mshape(2) * mshape(3)
+      nrow = mshape(2)
+      ncol = mshape(3)
     else
       errmsg = 'Time array series is not supported for selected &
                &discretization type.'
@@ -403,7 +417,7 @@ contains
     read_next_array = .false.
     inquire (unit=this%inunit, opened=lopen)
     if (lopen) then
-      call ConstructTimeArray(ta, this%dis)
+      call ConstructTimeArray(ta, this%modelname)
       ! -- read a time and an array from the input file
       ! -- Get a TIME block and read the time
       call this%parser%GetBlock('TIME', isFound, ierr, &
@@ -412,7 +426,7 @@ contains
         ta%taTime = this%parser%GetDouble()
         ! -- Read the array
         call ReadArray(this%parser%iuactive, ta%taArray, this%Name, &
-                       this%dis%ndim, ncol, nrow, 1, nodesperlayer, &
+                       size(mshape), ncol, nrow, 1, nodesperlayer, &
                        this%iout, 0, 0)
         !
         ! -- multiply values by sfac

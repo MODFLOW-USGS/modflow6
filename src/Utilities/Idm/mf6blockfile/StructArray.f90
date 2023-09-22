@@ -8,15 +8,15 @@
 module StructArrayModule
 
   use KindModule, only: I4B, DP, LGP
-  use ConstantsModule, only: DNODATA, LINELENGTH
+  use ConstantsModule, only: DZERO, IZERO, LINELENGTH, LENMEMPATH, LENVARNAME
   use SimVariablesModule, only: errmsg
   use SimModule, only: store_error
   use StructVectorModule, only: StructVectorType
+  use InputDefinitionModule, only: InputParamDefinitionType
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr
   use CharacterStringModule, only: CharacterStringType
   use STLVecIntModule, only: STLVecInt
   use IdmLoggerModule, only: idm_log_var
-  use MemoryManagerModule, only: mem_setptr
   use BlockParserModule, only: BlockParserType
 
   implicit none
@@ -37,14 +37,21 @@ module StructArrayModule
     integer(I4B) :: blocknum
     logical(LGP) :: deferred_shape = .false.
     integer(I4B) :: deferred_size_init = 5
-    type(StructVectorType), dimension(:), allocatable :: struct_vector_1d
+    character(len=LENMEMPATH) :: mempath
+    character(len=LENMEMPATH) :: component_mempath
+    type(StructVectorType), dimension(:), allocatable :: struct_vectors
+    integer(I4B), dimension(:), allocatable :: startidx, numcols
   contains
     procedure :: mem_create_vector
-    procedure :: add_vector_int1d
-    procedure :: add_vector_dbl1d
-    procedure :: add_vector_charstr1d
-    procedure :: add_vector_intvector
+    procedure :: count
+    procedure :: get
+    procedure :: allocate_int_type
+    procedure :: allocate_dbl_type
+    procedure :: allocate_charstr_type
+    procedure :: allocate_int1d_type
+    procedure :: allocate_dbl1d_type
     procedure :: read_from_parser
+    procedure :: read_from_binary
     procedure :: memload_vectors
     procedure :: load_deferred_vector
     procedure :: log_structarray_vars
@@ -56,10 +63,13 @@ contains
 
   !> @brief constructor for a struct_array
   !<
-  function constructStructArray(ncol, nrow, blocknum) result(struct_array)
+  function constructStructArray(ncol, nrow, blocknum, mempath, &
+                                component_mempath) result(struct_array)
     integer(I4B), intent(in) :: ncol !< number of columns in the StructArrayType
-    integer(I4B), pointer, intent(in) :: nrow !< number of rows in the StructArrayType
+    integer(I4B), intent(in) :: nrow !< number of rows in the StructArrayType
     integer(I4B), intent(in) :: blocknum !< valid block number or 0
+    character(len=*), intent(in) :: mempath !< memory path for storing the vector
+    character(len=*), intent(in) :: component_mempath
     type(StructArrayType), pointer :: struct_array !< new StructArrayType
     !
     ! -- allocate StructArrayType
@@ -69,10 +79,8 @@ contains
     struct_array%ncol = ncol
     !
     ! -- set rows if known or set deferred
-    if (associated(nrow)) then
-      struct_array%nrow = nrow
-    else
-      struct_array%nrow = 0
+    struct_array%nrow = nrow
+    if (struct_array%nrow == 0) then
       struct_array%deferred_shape = .true.
     end if
     !
@@ -83,8 +91,14 @@ contains
       struct_array%blocknum = 0
     end if
     !
+    !
+    struct_array%mempath = mempath
+    struct_array%component_mempath = component_mempath
+    !
     ! -- allocate StructVectorType objects
-    allocate (struct_array%struct_vector_1d(ncol))
+    allocate (struct_array%struct_vectors(ncol))
+    allocate (struct_array%startidx(ncol))
+    allocate (struct_array%numcols(ncol))
   end function constructStructArray
 
   !> @brief destructor for a struct_array
@@ -92,317 +106,386 @@ contains
   subroutine destructStructArray(struct_array)
     type(StructArrayType), pointer, intent(inout) :: struct_array !< StructArrayType to destroy
 
-    deallocate (struct_array%struct_vector_1d)
+    deallocate (struct_array%struct_vectors)
+    deallocate (struct_array%startidx)
+    deallocate (struct_array%numcols)
     deallocate (struct_array)
     nullify (struct_array)
   end subroutine destructStructArray
 
   !> @brief create new vector in StructArrayType
   !<
-  subroutine mem_create_vector(this, icol, vartype, name, tagname, memoryPath, &
-                               varname_shape, preserve_case)
+  subroutine mem_create_vector(this, icol, idt)
     class(StructArrayType) :: this !< StructArrayType
     integer(I4B), intent(in) :: icol !< column to create
-    character(len=*), intent(in) :: vartype !< type of column to create
-    character(len=*), intent(in) :: name !< name of the column to create
-    character(len=*), intent(in) :: tagname
-    character(len=*), intent(in) :: memoryPath !< memory path for storing the vector
-    character(len=*), intent(in) :: varname_shape !< shape
-    logical(LGP), optional, intent(in) :: preserve_case !< flag indicating whether or not to preserve case
-    integer(I4B), dimension(:), pointer, contiguous :: int1d
-    real(DP), dimension(:), pointer, contiguous :: dbl1d
-    type(CharacterStringType), dimension(:), pointer, contiguous :: charstr1d
-    type(STLVecInt), pointer :: intvector
-    integer(I4B) :: j
-    integer(I4B) :: inodata = 999 !todo: create INODATA in constants?
+    type(InputParamDefinitionType), pointer :: idt
+    type(StructVectorType) :: sv
+    integer(I4B) :: numcol
+    !
+    numcol = 1
+    !
+    sv%idt => idt
+    sv%icol = icol
+    !
+    ! -- set size
+    if (this%deferred_shape) then
+      sv%size = this%deferred_size_init
+    else
+      sv%size = this%nrow
+    end if
     !
     ! -- allocate array memory for StructVectorType
-    select case (vartype)
+    select case (idt%datatype)
+      !
+    case ('INTEGER')
+      !
+      call this%allocate_int_type(sv)
+      !
+    case ('DOUBLE')
+      !
+      call this%allocate_dbl_type(sv)
+      !
+    case ('STRING', 'KEYWORD')
+      !
+      call this%allocate_charstr_type(sv)
       !
     case ('INTEGER1D')
+      !
+      call this%allocate_int1d_type(sv)
+      if (sv%memtype == 5) then
+        numcol = sv%intshape
+      end if
+      !
+    case ('DOUBLE1D')
+      !
+      call this%allocate_dbl1d_type(sv)
+      numcol = sv%intshape
+      !
+    end select
+    !
+    ! -- set the object in the Struct Array
+    this%struct_vectors(icol) = sv
+    !
+    this%numcols(icol) = numcol
+    if (icol == 1) then
+      this%startidx(icol) = 1
+    else
+      this%startidx(icol) = this%startidx(icol - 1) + this%numcols(icol - 1)
+    end if
+    !
+    ! -- return
+    return
+  end subroutine mem_create_vector
+
+  function count(this)
+    class(StructArrayType) :: this !< StructArrayType
+    integer(I4B) :: count
+    count = size(this%struct_vectors)
+  end function count
+
+  subroutine set_pointer(sv, sv_target)
+    type(StructVectorType), pointer :: sv
+    type(StructVectorType), target :: sv_target
+    sv => sv_target
+  end subroutine set_pointer
+
+  function get(this, idx) result(sv)
+    class(StructArrayType) :: this !< StructArrayType
+    integer(I4B), intent(in) :: idx
+    type(StructVectorType), pointer :: sv
+    call set_pointer(sv, this%struct_vectors(idx))
+  end function get
+
+  !> @brief allocate integer input type
+  !<
+  subroutine allocate_int_type(this, sv)
+    class(StructArrayType) :: this !< StructArrayType
+    type(StructVectorType), intent(inout) :: sv
+    integer(I4B), dimension(:), pointer, contiguous :: int1d
+    integer(I4B) :: j
+    !
+    if (this%deferred_shape) then
+      ! -- shape not known, allocate locally
+      allocate (int1d(this%deferred_size_init))
+    else
+      ! -- shape known, allocate in managed memory
+      call mem_allocate(int1d, this%nrow, sv%idt%mf6varname, this%mempath)
+    end if
+    !
+    ! -- initialize vector values
+    do j = 1, this%nrow
+      int1d(j) = IZERO
+    end do
+    !
+    sv%memtype = 1
+    sv%int1d => int1d
+    !
+    ! -- return
+    return
+  end subroutine allocate_int_type
+
+  !> @brief allocate double input type
+  !<
+  subroutine allocate_dbl_type(this, sv)
+    class(StructArrayType) :: this !< StructArrayType
+    type(StructVectorType), intent(inout) :: sv
+    real(DP), dimension(:), pointer, contiguous :: dbl1d
+    integer(I4B) :: j
+    !
+    if (this%deferred_shape) then
+      ! -- shape not known, allocate locally
+      allocate (dbl1d(this%deferred_size_init))
+    else
+      ! -- shape known, allocate in managed memory
+      call mem_allocate(dbl1d, this%nrow, sv%idt%mf6varname, this%mempath)
+    end if
+    !
+    do j = 1, this%nrow
+      dbl1d(j) = DZERO
+    end do
+    !
+    sv%memtype = 2
+    sv%dbl1d => dbl1d
+    !
+    ! -- return
+    return
+  end subroutine allocate_dbl_type
+
+  !> @brief allocate charstr input type
+  !<
+  subroutine allocate_charstr_type(this, sv)
+    class(StructArrayType) :: this !< StructArrayType
+    type(StructVectorType), intent(inout) :: sv
+    type(CharacterStringType), dimension(:), pointer, contiguous :: charstr1d
+    integer(I4B) :: j
+    !
+    if (this%deferred_shape) then
+      allocate (charstr1d(this%deferred_size_init))
+    else
+      call mem_allocate(charstr1d, LINELENGTH, this%nrow, &
+                        sv%idt%mf6varname, this%mempath)
+    end if
+    !
+    do j = 1, this%nrow
+      charstr1d(j) = ''
+    end do
+    !
+    sv%memtype = 3
+    sv%charstr1d => charstr1d
+    !
+    ! -- return
+    return
+  end subroutine allocate_charstr_type
+
+  !> @brief allocate int1d input type
+  !<
+  subroutine allocate_int1d_type(this, sv)
+    class(StructArrayType) :: this !< StructArrayType
+    type(StructVectorType), intent(inout) :: sv
+    integer(I4B), dimension(:, :), pointer, contiguous :: int2d
+    type(STLVecInt), pointer :: intvector
+    integer(I4B), pointer :: ncelldim
+    !
+    if (sv%idt%shape == 'NCELLDIM') then
+      !
+      call mem_setptr(ncelldim, sv%idt%shape, this%component_mempath)
+      !
+      if (this%deferred_shape) then
+        ! -- shape not known, allocate locally
+        allocate (int2d(ncelldim, this%deferred_size_init))
+      else
+        ! -- shape known, allocate in managed memory
+        call mem_allocate(int2d, ncelldim, this%nrow, &
+                          sv%idt%mf6varname, this%mempath)
+      end if
+      !
+      ! -- initialize
+      int2d = IZERO
+      !
+      sv%memtype = 5
+      sv%int2d => int2d
+      sv%intshape => ncelldim
+      !
+    else
       !
       ! -- allocate intvector object
       allocate (intvector)
       !
-      ! -- initialize StructVector and add to StructArray
-      call this%add_vector_intvector(name, tagname, memoryPath, varname_shape, &
-                                     icol, intvector)
+      ! -- initialize STLVecInt
+      call intvector%init()
       !
-    case ('INTEGER')
+      sv%memtype = 4
+      sv%intvector => intvector
+      sv%size = -1
       !
-      if (this%deferred_shape) then
-        ! -- shape not known, allocate locally
-        allocate (int1d(this%deferred_size_init))
-      else
-        ! -- shape known, allocate in managed memory
-        call mem_allocate(int1d, this%nrow, name, memoryPath)
-      end if
-      !
-      ! -- initialize vector values
-      do j = 1, this%nrow
-        int1d(j) = inodata
-      end do
-      !
-      ! -- initialize StructVector and add to StructArray
-      call this%add_vector_int1d(name, tagname, memoryPath, icol, int1d)
-      !
-    case ('DOUBLE')
-      !
-      call mem_allocate(dbl1d, this%nrow, name, memoryPath)
-      !
-      do j = 1, this%nrow
-        dbl1d(j) = DNODATA
-      end do
-      !
-      call this%add_vector_dbl1d(name, tagname, memoryPath, icol, dbl1d)
-      !
-    case ('STRING', 'KEYWORD')
-      !
-      if (this%deferred_shape) then
-        allocate (charstr1d(this%deferred_size_init))
-      else
-        call mem_allocate(charstr1d, LINELENGTH, this%nrow, name, memoryPath)
-      end if
-      !
-      do j = 1, this%nrow
-        charstr1d(j) = ''
-      end do
-      !
-      call this%add_vector_charstr1d(name, tagname, memoryPath, icol, charstr1d, &
-                                     varname_shape, preserve_case)
-    end select
-
-    return
-  end subroutine mem_create_vector
-
-  !> @brief add int1d to StructArrayType
-  !<
-  subroutine add_vector_int1d(this, varname, tagname, memoryPath, icol, int1d)
-    class(StructArrayType) :: this !< StructArrayType
-    character(len=*), intent(in) :: varname !< name of the variable
-    character(len=*), intent(in) :: tagname
-    character(len=*), intent(in) :: memoryPath !< memory path to vector
-    integer(I4B), intent(in) :: icol !< column of the vector
-    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: int1d !< vector to add
-    type(StructVectorType) :: sv
-    !
-    ! -- initialize StructVectorType
-    sv%varname = varname
-    sv%tagname = tagname
-    sv%shapevar = ''
-    sv%mempath = memoryPath
-    sv%memtype = 1
-    sv%int1d => int1d
-    !
-    ! -- set size
-    if (this%deferred_shape) then
-      sv%size = this%deferred_size_init
-    else
-      sv%size = this%nrow
+      ! -- set pointer to dynamic shape
+      call mem_setptr(sv%intvector_shape, sv%idt%shape, this%mempath)
     end if
     !
-    ! -- set the object in the Struct Array
-    this%struct_vector_1d(icol) = sv
-    !
     ! -- return
     return
-  end subroutine add_vector_int1d
+  end subroutine allocate_int1d_type
 
-  !> @brief add dbl1d to StructArrayType
+  !> @brief allocate dbl1d input type
   !<
-  subroutine add_vector_dbl1d(this, varname, tagname, memoryPath, icol, dbl1d)
+  subroutine allocate_dbl1d_type(this, sv)
+    use MemoryManagerModule, only: get_isize
     class(StructArrayType) :: this !< StructArrayType
-    character(len=*), intent(in) :: varname !< name of the variable
-    character(len=*), intent(in) :: tagname
-    character(len=*), intent(in) :: memoryPath !< memory path to vector
-    integer(I4B), intent(in) :: icol !< column of the vector
-    real(DP), dimension(:), pointer, contiguous, intent(in) :: dbl1d !< vector to add
-    type(StructVectorType) :: sv
+    type(StructVectorType), intent(inout) :: sv
+    real(DP), dimension(:, :), pointer, contiguous :: dbl2d
+    integer(I4B), pointer :: naux, nseg, nseg_1
+    integer(I4B) :: nseg1_isize
     !
-    ! -- initialize StructVectorType
-    sv%varname = varname
-    sv%tagname = tagname
-    sv%shapevar = ''
-    sv%mempath = memoryPath
-    sv%memtype = 2
-    sv%dbl1d => dbl1d
-    sv%size = this%nrow
-    !
-    ! -- set the object in the Struct Array
-    this%struct_vector_1d(icol) = sv
-    !
-    ! -- return
-    return
-  end subroutine add_vector_dbl1d
-
-  !> @brief add charstr1d to StructArrayType
-  !<
-  subroutine add_vector_charstr1d(this, varname, tagname, memoryPath, icol, &
-                                  charstr1d, varname_shape, preserve_case)
-    class(StructArrayType) :: this !< StructArrayType
-    integer(I4B), intent(in) :: icol !< column of the vector
-    character(len=*), intent(in) :: varname !< name of the variable
-    character(len=*), intent(in) :: tagname
-    character(len=*), intent(in) :: memoryPath !< memory path to vector
-    type(CharacterStringType), dimension(:), pointer, contiguous, intent(in) :: &
-      charstr1d !< vector to add
-    character(len=*), intent(in) :: varname_shape !< shape of variable
-    logical(LGP), intent(in) :: preserve_case
-    type(StructVectorType) :: sv
-    !
-    ! -- initialize StructVectorType
-    sv%varname = varname
-    sv%tagname = tagname
-    sv%shapevar = varname_shape
-    sv%mempath = memoryPath
-    sv%memtype = 3
-    sv%preserve_case = preserve_case
-    sv%charstr1d => charstr1d
-    !
-    ! -- set size
-    if (this%deferred_shape) then
-      sv%size = this%deferred_size_init
+    if (sv%idt%shape == 'NAUX') then
+      call mem_setptr(naux, sv%idt%shape, this%mempath)
+      !
+      call mem_allocate(dbl2d, naux, this%nrow, sv%idt%mf6varname, this%mempath)
+      !
+      ! -- initialize
+      dbl2d = DZERO
+      !
+      sv%memtype = 6
+      sv%dbl2d => dbl2d
+      sv%intshape => naux
+      !
+    else if (sv%idt%shape == 'NSEG-1') then
+      call mem_setptr(nseg, 'NSEG', this%mempath)
+      !
+      call get_isize('NSEG_1', this%mempath, nseg1_isize)
+      !
+      if (nseg1_isize < 0) then
+        call mem_allocate(nseg_1, 'NSEG_1', this%mempath)
+        nseg_1 = nseg - 1
+      else
+        call mem_setptr(nseg_1, 'NSEG_1', this%mempath)
+      end if
+      !
+      call mem_allocate(dbl2d, nseg_1, this%nrow, sv%idt%mf6varname, this%mempath)
+      !
+      ! -- initialize
+      dbl2d = DZERO
+      !
+      sv%memtype = 6
+      sv%dbl2d => dbl2d
+      sv%intshape => nseg_1
+      !
     else
-      sv%size = this%nrow
+      errmsg = 'Programming error. IDM SA 2d real input param unsupported &
+               &shape "'//trim(sv%idt%shape)//'".'
+      call store_error(errmsg, terminate=.TRUE.)
     end if
     !
-    ! -- set the object in the Struct Array
-    this%struct_vector_1d(icol) = sv
-    !
     ! -- return
     return
-  end subroutine add_vector_charstr1d
-
-  !> @brief add STLVecInt to StructArrayType
-  !<
-  subroutine add_vector_intvector(this, varname, tagname, memoryPath, &
-                                  varname_shape, icol, intvector)
-    class(StructArrayType) :: this !< StructArrayType
-    character(len=*), intent(in) :: varname !< name of the variable
-    character(len=*), intent(in) :: tagname
-    character(len=*), intent(in) :: memoryPath !< memory path to vector
-    character(len=*), intent(in) :: varname_shape !< shape of variable
-    integer(I4B), intent(in) :: icol !< column of the vector
-    type(STLVecInt), pointer, intent(in) :: intvector !< vector to add
-    type(StructVectorType) :: sv
-    !
-    ! -- initialize STLVecInt
-    call intvector%init()
-    !
-    ! -- set pointer to dynamic shape
-    call mem_setptr(sv%intvector_shape, varname_shape, memoryPath)
-    !
-    ! -- initialize StructVectorType
-    sv%varname = varname
-    sv%tagname = tagname
-    sv%shapevar = varname_shape
-    sv%mempath = memoryPath
-    sv%memtype = 4
-    sv%intvector => intvector
-    sv%size = -1
-    !
-    ! -- set the object in the Struct Array
-    this%struct_vector_1d(icol) = sv
-    !
-    ! -- return
-    return
-  end subroutine add_vector_intvector
+  end subroutine allocate_dbl1d_type
 
   subroutine load_deferred_vector(this, icol)
     use MemoryManagerModule, only: get_isize
     class(StructArrayType) :: this !< StructArrayType
     integer(I4B), intent(in) :: icol
-    integer(I4B) :: i, isize
+    integer(I4B) :: i, j, isize
     integer(I4B), dimension(:), pointer, contiguous :: p_int1d
+    integer(I4B), dimension(:, :), pointer, contiguous :: p_int2d
     real(DP), dimension(:), pointer, contiguous :: p_dbl1d
     type(CharacterStringType), dimension(:), pointer, contiguous :: p_charstr1d
+    character(len=LENVARNAME) :: varname
+    !
+    ! -- set varname
+    varname = this%struct_vectors(icol)%idt%mf6varname
     !
     ! -- check if already mem managed variable
-    call get_isize(this%struct_vector_1d(icol)%varname, &
-                   this%struct_vector_1d(icol)%mempath, isize)
+    call get_isize(varname, this%mempath, isize)
     !
     ! -- allocate and load based on memtype
-    select case (this%struct_vector_1d(icol)%memtype)
+    select case (this%struct_vectors(icol)%memtype)
       !
     case (1) ! -- memtype integer
       !
       if (isize > 0) then
         ! -- variable exists, reallocate and append
-        call mem_setptr(p_int1d, this%struct_vector_1d(icol)%varname, &
-                        this%struct_vector_1d(icol)%mempath)
+        call mem_setptr(p_int1d, varname, this%mempath)
         ! -- Currently deferred vectors are appended to managed
         !    memory vectors when they are already allocated
         !    (e.g. SIMNAM SolutionGroup)
-        call mem_reallocate(p_int1d, this%nrow + isize, &
-                            this%struct_vector_1d(icol)%varname, &
-                            this%struct_vector_1d(icol)%mempath)
+        call mem_reallocate(p_int1d, this%nrow + isize, varname, this%mempath)
 
         do i = 1, this%nrow
-          p_int1d(isize + i) = this%struct_vector_1d(icol)%int1d(i)
+          p_int1d(isize + i) = this%struct_vectors(icol)%int1d(i)
         end do
       else
         !
         ! -- allocate memory manager vector
-        call mem_allocate(p_int1d, this%nrow, &
-                          this%struct_vector_1d(icol)%varname, &
-                          this%struct_vector_1d(icol)%mempath)
+        call mem_allocate(p_int1d, this%nrow, varname, this%mempath)
         !
         ! -- load local vector to managed memory
         do i = 1, this%nrow
-          p_int1d(i) = this%struct_vector_1d(icol)%int1d(i)
+          p_int1d(i) = this%struct_vectors(icol)%int1d(i)
         end do
       end if
       !
       ! -- deallocate local memory
-      deallocate (this%struct_vector_1d(icol)%int1d)
+      deallocate (this%struct_vectors(icol)%int1d)
       !
       ! -- update structvector
-      this%struct_vector_1d(icol)%int1d => p_int1d
-      this%struct_vector_1d(icol)%size = this%nrow
+      this%struct_vectors(icol)%int1d => p_int1d
+      this%struct_vectors(icol)%size = this%nrow
       !
     case (2) ! -- memtype real
       !
-      call mem_allocate(p_dbl1d, this%nrow, &
-                        this%struct_vector_1d(icol)%varname, &
-                        this%struct_vector_1d(icol)%mempath)
+      call mem_allocate(p_dbl1d, this%nrow, varname, this%mempath)
       !
       do i = 1, this%nrow
-        p_dbl1d(i) = this%struct_vector_1d(icol)%dbl1d(i)
+        p_dbl1d(i) = this%struct_vectors(icol)%dbl1d(i)
       end do
       !
-      deallocate (this%struct_vector_1d(icol)%dbl1d)
+      deallocate (this%struct_vectors(icol)%dbl1d)
       !
       ! --
-      this%struct_vector_1d(icol)%dbl1d => p_dbl1d
-      this%struct_vector_1d(icol)%size = this%nrow
+      this%struct_vectors(icol)%dbl1d => p_dbl1d
+      this%struct_vectors(icol)%size = this%nrow
       !
     case (3) ! -- memtype charstring
       if (isize > 0) then
-        call mem_setptr(p_charstr1d, this%struct_vector_1d(icol)%varname, &
-                        this%struct_vector_1d(icol)%mempath)
-        call mem_reallocate(p_charstr1d, LINELENGTH, this%nrow + isize, &
-                            this%struct_vector_1d(icol)%varname, &
-                            this%struct_vector_1d(icol)%mempath)
+        call mem_setptr(p_charstr1d, varname, this%mempath)
+        call mem_reallocate(p_charstr1d, LINELENGTH, this%nrow + isize, varname, &
+                            this%mempath)
 
         do i = 1, this%nrow
-          p_charstr1d(isize + i) = this%struct_vector_1d(icol)%charstr1d(i)
+          p_charstr1d(isize + i) = this%struct_vectors(icol)%charstr1d(i)
         end do
       else
         !
-        call mem_allocate(p_charstr1d, LINELENGTH, this%nrow, &
-                          this%struct_vector_1d(icol)%varname, &
-                          this%struct_vector_1d(icol)%mempath)
+        call mem_allocate(p_charstr1d, LINELENGTH, this%nrow, varname, &
+                          this%mempath)
         !
         do i = 1, this%nrow
-          p_charstr1d(i) = this%struct_vector_1d(icol)%charstr1d(i)
+          p_charstr1d(i) = this%struct_vectors(icol)%charstr1d(i)
         end do
       end if
       !
-      deallocate (this%struct_vector_1d(icol)%charstr1d)
+      deallocate (this%struct_vectors(icol)%charstr1d)
       !
     case (4) ! -- memtype intvector
       ! no-op
+    case (5)
+      call mem_allocate(p_int2d, this%struct_vectors(icol)%intshape, this%nrow, &
+                        varname, this%mempath)
+      !
+      do i = 1, this%nrow
+        do j = 1, this%struct_vectors(icol)%intshape
+          p_int2d(j, i) = this%struct_vectors(icol)%int2d(j, i)
+        end do
+      end do
+      !
+      deallocate (this%struct_vectors(icol)%int2d)
+      !
+      this%struct_vectors(icol)%int2d => p_int2d
+      this%struct_vectors(icol)%size = this%nrow
+      !
+      ! TODO: case (6)
     case default
+      errmsg = 'Programming error. IDM load_deferred_vector unsupported memtype.'
+      call store_error(errmsg, terminate=.TRUE.)
     end select
     !
     ! -- return
@@ -415,30 +498,33 @@ contains
     class(StructArrayType) :: this !< StructArrayType
     integer(I4B) :: icol, j
     integer(I4B), dimension(:), pointer, contiguous :: p_intvector
+    character(len=LENVARNAME) :: varname
     !
     do icol = 1, this%ncol
       !
-      if (this%struct_vector_1d(icol)%memtype == 4) then
+      ! -- set varname
+      varname = this%struct_vectors(icol)%idt%mf6varname
+      !
+      if (this%struct_vectors(icol)%memtype == 4) then
         ! -- intvectors always need to be loaded
         !
         ! -- size intvector to number of values read
-        call this%struct_vector_1d(icol)%intvector%shrink_to_fit()
+        call this%struct_vectors(icol)%intvector%shrink_to_fit()
         !
         ! -- allocate memory manager vector
         call mem_allocate(p_intvector, &
-                          this%struct_vector_1d(icol)%intvector%size, &
-                          this%struct_vector_1d(icol)%varname, &
-                          this%struct_vector_1d(icol)%mempath)
+                          this%struct_vectors(icol)%intvector%size, &
+                          varname, this%mempath)
         !
         ! -- load local vector to managed memory
-        do j = 1, this%struct_vector_1d(icol)%intvector%size
-          p_intvector(j) = this%struct_vector_1d(icol)%intvector%at(j)
+        do j = 1, this%struct_vectors(icol)%intvector%size
+          p_intvector(j) = this%struct_vectors(icol)%intvector%at(j)
         end do
         !
         ! -- cleanup local memory
-        call this%struct_vector_1d(icol)%intvector%destroy()
-        deallocate (this%struct_vector_1d(icol)%intvector)
-        nullify (this%struct_vector_1d(icol)%intvector_shape)
+        call this%struct_vectors(icol)%intvector%destroy()
+        deallocate (this%struct_vectors(icol)%intvector)
+        nullify (this%struct_vectors(icol)%intvector_shape)
         !
       else if (this%deferred_shape) then
         !
@@ -463,27 +549,39 @@ contains
     do j = 1, this%ncol
       !
       ! -- log based on memtype
-      select case (this%struct_vector_1d(j)%memtype)
+      select case (this%struct_vectors(j)%memtype)
         !
       case (1) ! -- memtype integer
         !
-        call idm_log_var(this%struct_vector_1d(j)%int1d, &
-                         this%struct_vector_1d(j)%tagname, &
-                         this%struct_vector_1d(j)%mempath, iout)
+        call idm_log_var(this%struct_vectors(j)%int1d, &
+                         this%struct_vectors(j)%idt%tagname, &
+                         this%mempath, iout)
         !
       case (2) ! -- memtype real
         !
-        call idm_log_var(this%struct_vector_1d(j)%dbl1d, &
-                         this%struct_vector_1d(j)%tagname, &
-                         this%struct_vector_1d(j)%mempath, iout)
+        call idm_log_var(this%struct_vectors(j)%dbl1d, &
+                         this%struct_vectors(j)%idt%tagname, &
+                         this%mempath, iout)
         !
       case (4) ! -- memtype intvector
         !
-        call mem_setptr(int1d, this%struct_vector_1d(j)%varname, &
-                        this%struct_vector_1d(j)%mempath)
+        call mem_setptr(int1d, this%struct_vectors(j)%idt%mf6varname, &
+                        this%mempath)
         !
-        call idm_log_var(int1d, this%struct_vector_1d(j)%tagname, &
-                         this%struct_vector_1d(j)%mempath, iout)
+        call idm_log_var(int1d, this%struct_vectors(j)%idt%tagname, &
+                         this%mempath, iout)
+        !
+      case (5) ! -- memtype int2d
+        !
+        call idm_log_var(this%struct_vectors(j)%int2d, &
+                         this%struct_vectors(j)%idt%tagname, &
+                         this%mempath, iout)
+        !
+      case (6) ! -- memtype dbl2d
+        !
+        call idm_log_var(this%struct_vectors(j)%dbl2d, &
+                         this%struct_vectors(j)%idt%tagname, &
+                         this%mempath, iout)
         !
       end select
       !
@@ -497,8 +595,9 @@ contains
   !<
   subroutine check_reallocate(this)
     class(StructArrayType) :: this !< StructArrayType
-    integer(I4B) :: i, j, newsize
+    integer(I4B) :: i, j, k, newsize
     integer(I4B), dimension(:), pointer, contiguous :: p_int1d
+    integer(I4B), dimension(:, :), pointer, contiguous :: p_int2d
     real(DP), dimension(:), pointer, contiguous :: p_dbl1d
     type(CharacterStringType), dimension(:), pointer, contiguous :: p_charstr1d
     integer(I4B) :: reallocate_mult
@@ -509,66 +608,87 @@ contains
     do j = 1, this%ncol
       !
       ! -- reallocate based on memtype
-      select case (this%struct_vector_1d(j)%memtype)
+      select case (this%struct_vectors(j)%memtype)
         !
       case (1) ! -- memtype integer
         !
         ! -- check if more space needed
-        if (this%nrow > this%struct_vector_1d(j)%size) then
+        if (this%nrow > this%struct_vectors(j)%size) then
           !
           ! -- calculate new size
-          newsize = this%struct_vector_1d(j)%size * reallocate_mult
+          newsize = this%struct_vectors(j)%size * reallocate_mult
           !
           ! -- allocate new vector
           allocate (p_int1d(newsize))
           !
           ! -- copy from old to new
-          do i = 1, this%struct_vector_1d(j)%size
-            p_int1d(i) = this%struct_vector_1d(j)%int1d(i)
+          do i = 1, this%struct_vectors(j)%size
+            p_int1d(i) = this%struct_vectors(j)%int1d(i)
           end do
           !
           ! -- deallocate old vector
-          deallocate (this%struct_vector_1d(j)%int1d)
+          deallocate (this%struct_vectors(j)%int1d)
           !
           ! -- update struct array object
-          this%struct_vector_1d(j)%int1d => p_int1d
-          this%struct_vector_1d(j)%size = newsize
+          this%struct_vectors(j)%int1d => p_int1d
+          this%struct_vectors(j)%size = newsize
         end if
         !
       case (2) ! -- memtype real
-        if (this%nrow > this%struct_vector_1d(j)%size) then
+        if (this%nrow > this%struct_vectors(j)%size) then
           !
-          newsize = this%struct_vector_1d(j)%size * reallocate_mult
+          newsize = this%struct_vectors(j)%size * reallocate_mult
           !
           allocate (p_dbl1d(newsize))
           !
-          do i = 1, this%struct_vector_1d(j)%size
-            p_dbl1d(i) = this%struct_vector_1d(j)%dbl1d(i)
+          do i = 1, this%struct_vectors(j)%size
+            p_dbl1d(i) = this%struct_vectors(j)%dbl1d(i)
           end do
           !
-          deallocate (this%struct_vector_1d(j)%dbl1d)
+          deallocate (this%struct_vectors(j)%dbl1d)
           !
-          this%struct_vector_1d(j)%dbl1d => p_dbl1d
-          this%struct_vector_1d(j)%size = newsize
+          this%struct_vectors(j)%dbl1d => p_dbl1d
+          this%struct_vectors(j)%size = newsize
         end if
         !
       case (3) ! -- memtype charstring
-        if (this%nrow > this%struct_vector_1d(j)%size) then
+        if (this%nrow > this%struct_vectors(j)%size) then
           !
-          newsize = this%struct_vector_1d(j)%size * reallocate_mult
+          newsize = this%struct_vectors(j)%size * reallocate_mult
           !
           allocate (p_charstr1d(newsize))
           !
-          do i = 1, this%struct_vector_1d(j)%size
-            p_charstr1d(i) = this%struct_vector_1d(j)%charstr1d(i)
+          do i = 1, this%struct_vectors(j)%size
+            p_charstr1d(i) = this%struct_vectors(j)%charstr1d(i)
           end do
           !
-          deallocate (this%struct_vector_1d(j)%charstr1d)
+          deallocate (this%struct_vectors(j)%charstr1d)
           !
-          this%struct_vector_1d(j)%charstr1d => p_charstr1d
-          this%struct_vector_1d(j)%size = newsize
+          this%struct_vectors(j)%charstr1d => p_charstr1d
+          this%struct_vectors(j)%size = newsize
         end if
+      case (5)
+        if (this%nrow > this%struct_vectors(j)%size) then
+          !
+          newsize = this%struct_vectors(j)%size * reallocate_mult
+          !
+          allocate (p_int2d(this%struct_vectors(j)%intshape, newsize))
+          !
+          do i = 1, this%struct_vectors(j)%size
+            do k = 1, this%struct_vectors(j)%intshape
+              p_int2d(k, i) = this%struct_vectors(j)%int2d(k, i)
+            end do
+          end do
+          !
+          deallocate (this%struct_vectors(j)%int2d)
+          !
+          this%struct_vectors(j)%int2d => p_int2d
+          this%struct_vectors(j)%size = newsize
+        end if
+        ! TODO: case (6)
       case default
+        errmsg = 'Programming error. IDM check_reallocate unsupported memtype.'
+        call store_error(errmsg, terminate=.TRUE.)
       end select
     end do
     !
@@ -578,12 +698,14 @@ contains
 
   !> @brief read from the block parser to fill the StructArrayType
   !<
-  subroutine read_from_parser(this, parser, iout)
+  function read_from_parser(this, parser, timeseries, iout) result(irow)
     class(StructArrayType) :: this !< StructArrayType
     type(BlockParserType) :: parser !< block parser to read from
+    logical(LGP), intent(in) :: timeseries
     integer(I4B), intent(in) :: iout !< unit number for output
-    logical(LGP) :: endOfBlock
-    integer(I4B) :: irow, j, k
+    integer(I4B) :: irow
+    logical(LGP) :: endOfBlock, preserve_case
+    integer(I4B) :: j, k
     integer(I4B) :: intval, numval
     character(len=LINELENGTH) :: str
     character(len=:), allocatable :: line
@@ -616,51 +738,79 @@ contains
       ! -- handle line reads by column memtype
       do j = 1, this%ncol
         !
-        select case (this%struct_vector_1d(j)%memtype)
+        select case (this%struct_vectors(j)%memtype)
           !
         case (1) ! -- memtype integer
           !
           ! -- if reloadable block and first col, store blocknum
           if (j == 1 .and. this%blocknum > 0) then
             ! -- store blocknum
-            this%struct_vector_1d(j)%int1d(irow) = this%blocknum
+            this%struct_vectors(j)%int1d(irow) = this%blocknum
           else
             ! -- read and store int
-            this%struct_vector_1d(j)%int1d(irow) = parser%GetInteger()
+            this%struct_vectors(j)%int1d(irow) = parser%GetInteger()
           end if
           !
         case (2) ! -- memtype real
           !
-          this%struct_vector_1d(j)%dbl1d(irow) = parser%GetDouble()
+          if (this%struct_vectors(j)%idt%timeseries .and. timeseries) then
+            call parser%GetString(str)
+            this%struct_vectors(j)%dbl1d(irow) = &
+              this%struct_vectors(j)%read_token(str, this%startidx(j), 1, irow)
+          else
+            this%struct_vectors(j)%dbl1d(irow) = parser%GetDouble()
+          end if
           !
         case (3) ! -- memtype charstring
           !
-          !if (this%struct_vector_1d(j)%shapevar == ':') then
-          if (this%struct_vector_1d(j)%shapevar /= '') then
+          !if (this%struct_vectors(j)%idt%shape == ':') then
+          if (this%struct_vectors(j)%idt%shape /= '') then
             ! -- if last column with any shape, store rest of line
             if (j == this%ncol) then
               call parser%GetRemainingLine(line)
-              this%struct_vector_1d(j)%charstr1d(irow) = line
+              this%struct_vectors(j)%charstr1d(irow) = line
               deallocate (line)
             end if
           else
             !
             ! -- read string token
-            call parser%GetString(str, &
-                                  (.not. this%struct_vector_1d(j)%preserve_case))
-            this%struct_vector_1d(j)%charstr1d(irow) = str
+            preserve_case = (.not. this%struct_vectors(j)%idt%preserve_case)
+            call parser%GetString(str, preserve_case)
+            this%struct_vectors(j)%charstr1d(irow) = str
           end if
           !
         case (4) ! -- memtype intvector
           !
           ! -- get shape for this row
-          numval = this%struct_vector_1d(j)%intvector_shape(irow)
+          numval = this%struct_vectors(j)%intvector_shape(irow)
           !
           ! -- read and store row values
           do k = 1, numval
             intval = parser%GetInteger()
-            call this%struct_vector_1d(j)%intvector%push_back(intval)
+            call this%struct_vectors(j)%intvector%push_back(intval)
           end do
+          !
+        case (5) ! -- memtype int2d
+          !
+          ! -- read and store row values
+          do k = 1, this%struct_vectors(j)%intshape
+            this%struct_vectors(j)%int2d(k, irow) = parser%GetInteger()
+          end do
+          !
+        case (6) ! -- memtype dbl2d
+          !
+          ! -- read and store row values
+          do k = 1, this%struct_vectors(j)%intshape
+            if (this%struct_vectors(j)%idt%timeseries .and. timeseries) then
+              call parser%GetString(str)
+              this%struct_vectors(j)%dbl2d(k, irow) = &
+                this%struct_vectors(j)%read_token(str, this%startidx(j) + k - 1, &
+                                                  k, irow)
+            else
+              this%struct_vectors(j)%dbl2d(k, irow) = parser%GetDouble()
+            end if
+          end do
+          !
         end select
       end do
     end do
@@ -669,8 +819,132 @@ contains
     call this%memload_vectors()
     !
     ! -- log loaded variables
-    call this%log_structarray_vars(iout)
+    if (iout > 0) then
+      call this%log_structarray_vars(iout)
+    end if
+    !
+    ! -- return
+    return
+  end function read_from_parser
 
-  end subroutine read_from_parser
+  !> @brief read from binary input to fill the StructArrayType
+  !<
+  function read_from_binary(this, inunit, iout) result(irow)
+    class(StructArrayType) :: this !< StructArrayType
+    integer(I4B), intent(in) :: inunit !< unit number for binary input
+    integer(I4B), intent(in) :: iout !< unit number for output
+    integer(I4B) :: irow, ierr
+    integer(I4B) :: j, k
+    integer(I4B) :: intval, numval
+    character(len=LINELENGTH) :: fname
+    character(len=*), parameter :: fmtlsterronly = &
+      "('Error reading LIST from file: ',&
+      &1x,a,1x,' on UNIT: ',I0)"
+    !
+    ! -- set error and exit if deferred shape
+    if (this%deferred_shape) then
+      !
+      errmsg = 'Programming error. IDM SA deferred shape currently not &
+               &supported for binary inputs.'
+      call store_error(errmsg, terminate=.TRUE.)
+      !
+    end if
+    !
+    ! -- initialize
+    irow = 0
+    ierr = 0
+    !
+    readloop: do
+      !
+      ! -- update irow index
+      irow = irow + 1
+      !
+      ! -- handle line reads by column memtype
+      do j = 1, this%ncol
+        !
+        select case (this%struct_vectors(j)%memtype)
+          !
+        case (1) ! -- memtype integer
+          read (inunit, iostat=ierr) this%struct_vectors(j)%int1d(irow)
+        case (2) ! -- memtype real
+          read (inunit, iostat=ierr) this%struct_vectors(j)%dbl1d(irow)
+        case (3) ! -- memtype charstring
+          !
+          errmsg = 'Programming error. IDM SA input string types currently not &
+                   &supported for binary inputs.'
+          call store_error(errmsg, terminate=.TRUE.)
+          !
+        case (4) ! -- memtype intvector
+          !
+          ! -- get shape for this row
+          numval = this%struct_vectors(j)%intvector_shape(irow)
+          !
+          ! -- read and store row values
+          do k = 1, numval
+            if (ierr == 0) then
+              read (inunit, iostat=ierr) intval
+              call this%struct_vectors(j)%intvector%push_back(intval)
+            end if
+          end do
+          !
+        case (5) ! -- memtype int2d
+          !
+          ! -- read and store row values
+          do k = 1, this%struct_vectors(j)%intshape
+            if (ierr == 0) then
+              read (inunit, iostat=ierr) this%struct_vectors(j)%int2d(k, irow)
+            end if
+          end do
+          !
+        case (6) ! -- memtype dbl2d
+          do k = 1, this%struct_vectors(j)%intshape
+            if (ierr == 0) then
+              read (inunit, iostat=ierr) this%struct_vectors(j)%dbl2d(k, irow)
+            end if
+          end do
+        end select
+        !
+        ! -- handle error cases
+        select case (ierr)
+        case (0)
+          ! no error
+        case (:-1)
+          !
+          ! -- End of block was encountered
+          irow = irow - 1
+          exit readloop
+          !
+        case (1:)
+          !
+          ! -- Error
+          inquire (unit=inunit, name=fname)
+          write (errmsg, fmtlsterronly) trim(adjustl(fname)), inunit
+          call store_error(errmsg, terminate=.TRUE.)
+          !
+        case default
+        end select
+        !
+      end do
+      !
+      if (irow == this%nrow) exit readloop
+      !
+    end do readloop
+    !
+    ! -- Stop if errors were detected
+    !if (count_errors() > 0) then
+    !  call store_error_unit(inunit)
+    !end if
+    !
+    ! -- if deferred shape vectors were read, load to input path
+    call this%memload_vectors()
+    !
+    ! -- log loaded variables
+    if (iout > 0) then
+      call this%log_structarray_vars(iout)
+    end if
+    !
+    ! -- return
+    return
+  end function read_from_binary
 
 end module StructArrayModule

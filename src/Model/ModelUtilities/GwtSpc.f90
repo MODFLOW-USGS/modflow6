@@ -117,7 +117,7 @@ contains
     !
     ! -- Setup the time series manager
     call tsmanager_cr(this%TsManager, this%iout)
-    call tasmanager_cr(this%TasManager, dis, this%iout)
+    call tasmanager_cr(this%TasManager, dis, name_model, this%iout)
     !
     ! -- read options
     call this%read_options()
