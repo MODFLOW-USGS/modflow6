@@ -3776,7 +3776,7 @@ contains
               end if
             end do
           end do
-        ! -- disv or dis
+          ! -- disv or dis
         else
           nlay = this%dis%nodesuser / ncpl
           do k = nlay - 1, 1, -1
