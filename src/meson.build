@@ -240,7 +240,8 @@ modflow_petsc_sources = files(
   'Utilities' / 'Vector' / 'PetscVector.F90',
   'Utilities' / 'Matrix' / 'PetscMatrix.F90',
   'Solution' / 'PETSc' / 'PetscSolver.F90',
-  'Solution' / 'PETSc' / 'PetscConvergence.F90'
+  'Solution' / 'PETSc' / 'PetscConvergence.F90',
+  'Solution' / 'PETSc' / 'PetscImsPreconditioner.F90'
 )
 
 modflow_mpi_sources = files(

@@ -28,7 +28,7 @@ module NumericalSolutionModule
                                      GetNumericalExchangeFromList
   use SparseModule, only: sparsematrix
   use SimVariablesModule, only: iout, isim_mode, errmsg, &
-                                proc_id, nr_procs
+                                proc_id, nr_procs, simulation_mode
   use SimStagesModule
   use BlockParserModule, only: BlockParserType
   use IMSLinearModule
@@ -94,7 +94,7 @@ module NumericalSolutionModule
     integer(I4B), pointer :: iouttot_timestep => null() !< total nr. of outer iterations per call to sln_ca
     integer(I4B), pointer :: itertot_sim => null() !< total nr. of inner iterations for simulation
     integer(I4B), pointer :: mxiter => null() !< maximum number of Picard iterations
-    integer(I4B), pointer :: linsolver => null() !< linear acceleration method used
+    integer(I4B), pointer :: linsolver => null() !< linear solver used (IMS, PETSC, ...)
     integer(I4B), pointer :: nonmeth => null() !< under-relaxation method used
     integer(I4B), pointer :: numtrack => null() !< maximum number of backtracks
     integer(I4B), pointer :: iprims => null() !< solver print option
@@ -2372,7 +2372,7 @@ contains
     ! -- local variables
     logical(LGP) :: lsame
     integer(I4B) :: ieq
-    integer(I4B) :: irow
+    integer(I4B) :: irow_glo
     integer(I4B) :: itestmat
     integer(I4B) :: ipos
     integer(I4B) :: icol_s
@@ -2393,7 +2393,7 @@ contains
     do ieq = 1, this%neq
       !
       ! -- get (global) cell id
-      irow = ieq + this%matrix_offset
+      irow_glo = ieq + this%matrix_offset
       !
       ! -- store x in temporary location
       this%xtemp(ieq) = this%x(ieq)
@@ -2402,35 +2402,33 @@ contains
       ! -- adjust small diagonal coefficient in an active cell
       if (this%active(ieq) > 0) then
         diagval = -DONE
-        adiag = abs(this%system_matrix%get_diag_value(irow))
+        adiag = abs(this%system_matrix%get_diag_value(irow_glo))
         if (adiag < DEM15) then
-          call this%system_matrix%set_diag_value(irow, diagval)
+          call this%system_matrix%set_diag_value(irow_glo, diagval)
           this%rhs(ieq) = this%rhs(ieq) + diagval * this%x(ieq)
         end if
         ! -- Dirichlet boundary or no-flow cell
       else
-        call this%system_matrix%set_diag_value(irow, DONE)
-        call this%system_matrix%zero_row_offdiag(irow)
+        call this%system_matrix%set_diag_value(irow_glo, DONE)
+        call this%system_matrix%zero_row_offdiag(irow_glo)
         this%rhs(ieq) = this%x(ieq)
       end if
     end do
     !
     ! -- complete adjustments for Dirichlet boundaries for a symmetric matrix
-    if (this%isymmetric == 1) then
+    ! -- TODO_MJR: add this for PETSc/parallel
+    if (this%isymmetric == 1 .and. simulation_mode == "SEQUENTIAL") then
       do ieq = 1, this%neq
-        !
-        ! -- get (global) row number
-        irow = ieq + this%matrix_offset
         if (this%active(ieq) > 0) then
-          icol_s = this%system_matrix%get_first_col_pos(irow)
-          icol_e = this%system_matrix%get_last_col_pos(irow)
+          icol_s = this%system_matrix%get_first_col_pos(ieq)
+          icol_e = this%system_matrix%get_last_col_pos(ieq)
           do ipos = icol_s, icol_e
             jcol = this%system_matrix%get_column(ipos)
-            if (jcol == irow) cycle
-            if (this%active(jcol - this%matrix_offset) < 0) then
+            if (jcol == ieq) cycle
+            if (this%active(jcol) < 0) then
               this%rhs(ieq) = this%rhs(ieq) - &
                               (this%system_matrix%get_value_pos(ipos) * &
-                               this%x(jcol - this%matrix_offset))
+                               this%x(jcol))
               call this%system_matrix%set_value_pos(ipos, DZERO)
             end if
 
@@ -2517,11 +2515,11 @@ contains
       end if
       bnorm = DZERO
       do ieq = 1, this%neq
-        irow = ieq + this%matrix_offset
+        irow_glo = ieq + this%matrix_offset
         if (this%active(ieq) > 0) then
-          diagval = abs(this%system_matrix%get_diag_value(irow))
+          diagval = abs(this%system_matrix%get_diag_value(irow_glo))
           bnorm = bnorm + this%rhs(ieq) * this%rhs(ieq)
-          call this%system_matrix%add_diag_value(irow, -ptcval)
+          call this%system_matrix%add_diag_value(irow_glo, -ptcval)
           this%rhs(ieq) = this%rhs(ieq) - ptcval * this%x(ieq)
         end if
       end do
@@ -2546,11 +2544,11 @@ contains
       open (itestmat, file=trim(adjustl(fname)))
       write (itestmat, *) 'NODE, RHS, AMAT FOLLOW'
       do ieq = 1, this%neq
-        irow = ieq + this%matrix_offset
-        icol_s = this%system_matrix%get_first_col_pos(irow)
-        icol_e = this%system_matrix%get_last_col_pos(irow)
+        irow_glo = ieq + this%matrix_offset
+        icol_s = this%system_matrix%get_first_col_pos(irow_glo)
+        icol_e = this%system_matrix%get_last_col_pos(irow_glo)
         write (itestmat, '(*(G0,:,","))') &
-          irow, &
+          irow_glo, &
           this%rhs(ieq), &
           (this%system_matrix%get_column(ipos), ipos=icol_s, icol_e), &
           (this%system_matrix%get_value_pos(ipos), ipos=icol_s, icol_e)

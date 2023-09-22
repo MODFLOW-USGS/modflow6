@@ -9,6 +9,7 @@ module PetscSolverModule
   use PetscMatrixModule
   use PetscVectorModule
   use PetscConvergenceModule
+  use PetscImsPreconditionerModule
   use ConvergenceSummaryModule
   use ImsLinearSettingsModule
   use SimVariablesModule, only: iout, simulation_mode
@@ -21,17 +22,19 @@ module PetscSolverModule
 
   type, public, extends(LinearSolverBaseType) :: PetscSolverType
     KSP :: ksp_petsc
-    class(PetscMatrixType), pointer :: matrix
-    Mat, pointer :: mat_petsc
-    Vec, pointer :: vec_residual
+    class(PetscMatrixType), pointer :: matrix => null()
+    Mat, pointer :: mat_petsc => null()
+    Vec, pointer :: vec_residual => null()
 
+    logical(LGP) :: use_ims_pc !< when true, use custom IMS-style preconditioning
     real(DP) :: dvclose
     integer(I4B) :: pc_levels
     real(DP) :: drop_tolerance
     KSPType :: ksp_type
     PCType :: pc_type
     PCType :: sub_pc_type
-    class(PetscContextType), pointer :: petsc_ctx
+    class(PetscContextType), pointer :: petsc_ctx => null()
+    type(PcShellCtxType), pointer :: pc_context => null()
     integer(I4B) :: ctx_idx
     type(ConvergenceSummaryType), pointer :: convergence_summary => null()
 
@@ -47,6 +50,8 @@ module PetscSolverModule
     procedure, private :: get_options_mf6
     procedure, private :: create_ksp
     procedure, private :: create_convergence_check
+    procedure, private :: set_petsc_pc
+    procedure, private :: set_ims_pc
     procedure, private :: print_vec
     procedure, private :: print_petsc_version
   end type PetscSolverType
@@ -77,6 +82,8 @@ contains
     ! local
     PetscErrorCode :: ierr
     character(len=LINELENGTH) :: errmsg
+
+    this%use_ims_pc = .false.
 
     call this%print_petsc_version()
 
@@ -164,6 +171,10 @@ contains
                             '-nitermax', this%nitermax, found, ierr)
     CHKERRQ(ierr)
 
+    call PetscOptionsGetBool(PETSC_NULL_OPTIONS, PETSC_NULL_CHARACTER, &
+                             '-ims_pc', this%use_ims_pc, found, ierr)
+    CHKERRQ(ierr)
+
   end subroutine get_options_mf6
 
   !> @brief Create the PETSc KSP object
@@ -171,9 +182,6 @@ contains
   subroutine create_ksp(this)
     class(PetscSolverType) :: this !< This solver instance
     ! local
-    PC :: pc, sub_pc
-    KSP, dimension(1) :: sub_ksp
-    PetscInt :: n_local, n_first
     PetscErrorCode :: ierr
 
     call KSPCreate(PETSC_COMM_WORLD, this%ksp_petsc, ierr)
@@ -188,6 +196,28 @@ contains
     call KSPSetType(this%ksp_petsc, this%ksp_type, ierr)
     CHKERRQ(ierr)
 
+    if (this%use_ims_pc) then
+      call this%set_ims_pc()
+    else
+      call this%set_petsc_pc()
+    end if
+
+    ! finally override these options from the .petscrc file
+    call KSPSetFromOptions(this%ksp_petsc, ierr)
+    CHKERRQ(ierr)
+
+  end subroutine create_ksp
+
+  !> @brief Set up a standard PETSc preconditioner from
+  !< the configured settings
+  subroutine set_petsc_pc(this)
+    class(PetscSolverType) :: this !< This solver instance
+    ! local
+    PC :: pc, sub_pc
+    KSP, dimension(1) :: sub_ksp
+    PetscInt :: n_local, n_first
+    PetscErrorCode :: ierr
+
     call KSPGetPC(this%ksp_petsc, pc, ierr)
     CHKERRQ(ierr)
 
@@ -198,7 +228,6 @@ contains
     CHKERRQ(ierr)
 
     if (simulation_mode == "PARALLEL") then
-      ! PCBJacobiSetTotalBlocks maybe later, but default is 1 per process
       call PCBJacobiGetSubKSP(pc, n_local, n_first, sub_ksp, ierr)
       CHKERRQ(ierr)
       call KSPGetPC(sub_ksp(1), sub_pc, ierr)
@@ -207,18 +236,62 @@ contains
       CHKERRQ(ierr)
       call PCFactorSetLevels(sub_pc, this%pc_levels, ierr)
       CHKERRQ(ierr)
-      ! PCFactorSetDropTolerance
     else
       call PCFactorSetLevels(pc, this%pc_levels, ierr)
       CHKERRQ(ierr)
-      ! PCFactorSetDropTolerance
     end if
 
-    ! finally override these options from the .petscrc file
-    call KSPSetFromOptions(this%ksp_petsc, ierr)
-    CHKERRQ(ierr)
+  end subroutine set_petsc_pc
 
-  end subroutine create_ksp
+  !> @brief Set up a custom preconditioner following the ones
+  !< we have in IMS, i.e. Modified ILU(T)
+  subroutine set_ims_pc(this)
+    class(PetscSolverType) :: this !< This solver instance
+    ! local
+    PC :: pc, sub_pc
+    KSP, dimension(1) :: sub_ksp
+    PetscInt :: n_local, n_first
+    PetscErrorCode :: ierr
+
+    if (simulation_mode == "PARALLEL") then
+      call KSPGetPC(this%ksp_petsc, pc, ierr)
+      CHKERRQ(ierr)
+      call PCSetType(pc, this%pc_type, ierr)
+      CHKERRQ(ierr)
+      call PCSetUp(pc, ierr)
+      CHKERRQ(ierr)      
+      call PCBJacobiGetSubKSP(pc, n_local, n_first, sub_ksp, ierr)
+      CHKERRQ(ierr)
+      call KSPGetPC(sub_ksp(1), sub_pc, ierr)
+      CHKERRQ(ierr)
+      ! set custom PC
+      call PCSetType(sub_pc, PCSHELL, ierr)
+      CHKERRQ(ierr)
+      call PCShellSetApply(sub_pc, pcshell_apply, ierr)
+      CHKERRQ(ierr)
+      call PCShellSetSetUp(sub_pc, pcshell_setup, ierr)
+      CHKERRQ(ierr)
+      call PCShellSetDestroy(sub_pc, pcshell_destroy, ierr)
+      CHKERRQ(ierr)
+      call PCShellSetContext(sub_pc, this%pc_context, ierr)
+      CHKERRQ(ierr)
+    else
+      call KSPGetPC(this%ksp_petsc, pc, ierr)
+      CHKERRQ(ierr)
+      ! set custom PC
+      call PCSetType(pc, PCSHELL, ierr)
+      CHKERRQ(ierr)
+      call PCShellSetApply(pc, pcshell_apply, ierr)
+      CHKERRQ(ierr)
+      call PCShellSetSetUp(pc, pcshell_setup, ierr)
+      CHKERRQ(ierr)
+      call PCShellSetDestroy(pc, pcshell_destroy, ierr)
+      CHKERRQ(ierr)
+      call PCShellSetContext(pc, this%pc_context, ierr)
+      CHKERRQ(ierr)
+    end if
+    
+  end subroutine set_ims_pc
 
   !> @brief Create and assign a custom convergence
   !< check for this solver
@@ -292,7 +365,7 @@ contains
     if (icnvg > 0) this%is_converged = 1
 
   end subroutine petsc_solve
-
+  
   subroutine petsc_get_result(this)
     class(PetscSolverType) :: this
   end subroutine petsc_get_result
