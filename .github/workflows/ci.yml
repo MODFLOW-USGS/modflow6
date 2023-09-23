@@ -62,7 +62,7 @@ jobs:
         run: python .github/common/fortran_format_check.py
 
       - name: Check msvs project files
-        run: python .github/common/msvs_file_check.py
+        run: python .github/common/msvs_vfproj_check.py
 
   build:
     name: Build
