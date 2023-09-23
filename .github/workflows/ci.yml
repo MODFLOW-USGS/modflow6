@@ -61,6 +61,9 @@ jobs:
       - name: Check Fortran source formatting
         run: python .github/common/fortran_format_check.py
 
+      - name: Check msvs project files are valid
+        run: python .github/common/msvs_file_check.py
+
   build:
     name: Build
     runs-on: ubuntu-22.04
