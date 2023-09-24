@@ -166,7 +166,6 @@ contains
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     ! -- locals
-    logical(LGP) :: found_fname
     ! -- formats
     character(len=*), parameter :: fmtheader = &
       "(1x, /1x, 'NPF -- NODE PROPERTY FLOW PACKAGE, VERSION 1, 3/30/2015', &
@@ -177,19 +176,14 @@ contains
     allocate (npfobj)
     !
     ! -- create name and memory path
-    call npfobj%set_names(1, name_model, 'NPF', 'NPF')
+    call npfobj%set_names(1, name_model, 'NPF', 'NPF', input_mempath)
     !
     ! -- Allocate scalars
     call npfobj%allocate_scalars()
     !
     ! -- Set variables
-    npfobj%input_mempath = input_mempath
     npfobj%inunit = inunit
     npfobj%iout = iout
-    !
-    ! -- set name of input file
-    call mem_set_value(npfobj%input_fname, 'INPUT_FNAME', npfobj%input_mempath, &
-                       found_fname)
     !
     ! -- check if npf is enabled
     if (inunit > 0) then

@@ -100,7 +100,6 @@ contains
     integer(I4B), intent(in) :: iout
     ! -- local
     type(GwfDisuType), pointer :: disnew
-    logical(LGP) :: found_fname
     character(len=*), parameter :: fmtheader = &
       "(1X, /1X, 'DISU -- UNSTRUCTURED GRID DISCRETIZATION PACKAGE,', &
       &' VERSION 2 : 3/27/2014 - INPUT READ FROM MEMPATH: ', A, //)"
@@ -111,14 +110,9 @@ contains
     dis => disnew
     !
     ! -- Allocate scalars and assign data
-    call dis%allocate_scalars(name_model)
-    dis%input_mempath = input_mempath
+    call dis%allocate_scalars(name_model, input_mempath)
     dis%inunit = inunit
     dis%iout = iout
-    !
-    ! -- set name of input file
-    call mem_set_value(dis%input_fname, 'INPUT_FNAME', dis%input_mempath, &
-                       found_fname)
     !
     ! -- If disu is enabled
     if (inunit > 0) then
@@ -1311,7 +1305,7 @@ contains
 
   end subroutine get_dis_type
 
-  subroutine allocate_scalars(this, name_model)
+  subroutine allocate_scalars(this, name_model, input_mempath)
 ! ******************************************************************************
 ! allocate_scalars -- Allocate and initialize scalar variables in this class
 ! ******************************************************************************
@@ -1323,11 +1317,12 @@ contains
     ! -- dummy
     class(GwfDisuType) :: this
     character(len=*), intent(in) :: name_model
+    character(len=*), intent(in) :: input_mempath
     ! -- local
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate parent scalars
-    call this%DisBaseType%allocate_scalars(name_model)
+    call this%DisBaseType%allocate_scalars(name_model, input_mempath)
     !
     ! -- Allocate variables for DISU
     call mem_allocate(this%njausr, 'NJAUSR', this%memoryPath)
