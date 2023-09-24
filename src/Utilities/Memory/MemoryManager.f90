@@ -69,7 +69,8 @@ module MemoryManagerModule
       checkin_int1d, &
       checkin_int2d, &
       checkin_dbl1d, &
-      checkin_dbl2d
+      checkin_dbl2d, &
+      checkin_charstr1d
   end interface mem_checkin
 
   interface mem_reallocate
@@ -1125,6 +1126,50 @@ contains
     ! -- return
     return
   end subroutine checkin_dbl2d
+
+  !> @brief Check in an existing 1d CharacterStringType array with a new address (name + path)
+  !<
+  subroutine checkin_charstr1d(acharstr1d, ilen, name, mem_path, name2, mem_path2)
+    type(CharacterStringType), dimension(:), &
+      pointer, contiguous, intent(inout) :: acharstr1d !< the existing array
+    integer(I4B), intent(in) :: ilen
+    character(len=*), intent(in) :: name !< new variable name
+    character(len=*), intent(in) :: mem_path !< new path where variable is stored
+    character(len=*), intent(in) :: name2 !< existing variable name
+    character(len=*), intent(in) :: mem_path2 !< existing path where variable is stored
+    ! --local
+    type(MemoryType), pointer :: mt
+    integer(I4B) :: isize
+    ! -- code
+    !
+    ! -- check variable name length
+    call mem_check_length(name, LENVARNAME, "variable")
+    !
+    ! -- set isize
+    isize = size(acharstr1d)
+    !
+    ! -- allocate memory type
+    allocate (mt)
+    !
+    ! -- set memory type
+    mt%acharstr1d => acharstr1d
+    mt%element_size = ilen
+    mt%isize = isize
+    mt%name = name
+    mt%path = mem_path
+    write (mt%memtype, "(a,' LEN=',i0,' (',i0,')')") 'STRING', ilen, isize
+    !
+    ! -- set master information
+    mt%master = .false.
+    mt%mastername = name2
+    mt%masterPath = mem_path2
+    !
+    ! -- add memory type to the memory list
+    call memorylist%add(mt)
+    !
+    ! -- return
+    return
+  end subroutine checkin_charstr1d
 
   !> @brief Reallocate a 1-dimensional defined length string array
   !<
