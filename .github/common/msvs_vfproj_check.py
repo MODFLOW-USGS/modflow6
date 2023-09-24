@@ -1,12 +1,12 @@
-from pathlib import Path
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
 
 def get_source_files(src_folder):
     p = Path(".")
     src_files = []
     print(f"Processing {src_folder} folder")
-    ftypes = ('*.[fF]9[05]', '*.inc')
+    ftypes = ("*.[fF]9[05]", "*.inc")
     src_files = []
     for ft in ftypes:
         src_files.extend(p.glob(f"{src_folder}/**/{ft}"))
@@ -18,7 +18,7 @@ def get_msvs_files(vfproj_file):
     tree = ET.parse(vfproj_file)
     root = tree.getroot()
     msvs_files = []
-    for f in root.iter('File'):
+    for f in root.iter("File"):
         s = f.attrib["RelativePath"]
         s = s.replace("\\", "/")
         s = s.replace("../", "")
@@ -28,20 +28,20 @@ def get_msvs_files(vfproj_file):
 
 
 def check_files(name, src_files, msvs_files):
-    print(f"Verifying {name} src files are referenced in msvs project files...")
-    number_failures = 0
-    for f in src_files:
-        if f not in msvs_files:
-            print(f"{f} not found in msvs project file")
-            number_failures += 1
+    print(
+        f"Verifying {name} files referenced in msvs project files are in src folder..."
+    )
+    s, m = set(src_files), set(msvs_files)
+    diff = s ^ m
+    from pprint import pformat
 
-    print(f"Verifying {name} files referenced in msvs project files are in src folder...")
-    for f in msvs_files:
-        if f not in src_files:
-            print(f"{f} not found in src folder")
-            number_failures += 1
-
-    return number_failures
+    assert not any(diff), (
+        f"{name} src files don't match msvs project file\n"
+        f"=> symmetric difference:\n{pformat(diff)}\n"
+        f"=> src - msvs:\n{pformat(s - m)}\n"
+        f"=> msvs - src:\n{pformat(m - s)}\n"
+        "Check to make sure msvs project file is consistent with source files."
+    )
 
 
 def check_mf6():
@@ -50,8 +50,7 @@ def check_mf6():
     msvs_files = []
     for vfproj in ["./msvs/mf6core.vfproj", "./msvs/mf6.vfproj"]:
         msvs_files.extend(get_msvs_files(vfproj))
-    number_failures = check_files("MF6", src_files, msvs_files)
-    assert number_failures == 0, "MF6 msvs project files not up to date..."
+    check_files("MF6", src_files, msvs_files)
 
 
 def check_bmi():
@@ -60,12 +59,10 @@ def check_bmi():
     msvs_files = []
     for vfproj in ["./msvs/mf6bmi.vfproj"]:
         msvs_files.extend(get_msvs_files(vfproj))
-    number_failures = check_files("BMI", src_files, msvs_files)
-    assert number_failures == 0, "BMI msvs project files not up to date..."
+    check_files("BMI", src_files, msvs_files)
 
 
 if __name__ == "__main__":
-
     check_mf6()
     check_bmi()
-    print ("msvs project (vfproj) files appear up-to-date...")
+    print("msvs project (vfproj) files appear up-to-date...")
