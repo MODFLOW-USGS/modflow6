@@ -31,9 +31,9 @@ module IdmLoadModule
 
 contains
 
-  !> @brief enforce and set a single input provided via FILEIN param
+  !> @brief enforce and set a single input filename provided via FILEIN keyword
   !!
-  !! Set a FILEIN file name provided via an OPTIONS block.
+  !! Set a FILEIN filename provided via an OPTIONS block.
   !! Only use this function if a maximum of one FILEIN file name
   !! string is expected.
   !!

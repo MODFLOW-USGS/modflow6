@@ -969,6 +969,10 @@ if __name__ == "__main__":
         # ** Add a new dfn parameter set to MODFLOW 6 by adding a new entry to this list **
         # [relative path of input dnf, relative path of output f90 definition file]
         [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-chd.dfn"),
+            Path("../../../src/Model/GroundWaterFlow", "gwf3chd8idm.f90"),
+        ],
+        [
             Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-dis.dfn"),
             Path("../../../src/Model/GroundWaterFlow", "gwf3dis8idm.f90"),
         ],
