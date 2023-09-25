@@ -521,7 +521,7 @@ contains
     call mem_setptr(slntype, 'SLNTYPE', input_mempath)
     call mem_setptr(slnfname, 'SLNFNAME', input_mempath)
     call mem_setptr(slnmnames, 'SLNMNAMES', input_mempath)
-    call mem_setptr(blocknum, 'SOLUTIONGROUPnum', input_mempath)
+    call mem_setptr(blocknum, 'SOLUTIONGROUPNUM', input_mempath)
     !
     ! -- open solution group logging block
     write (iout, '(/1x,a)') 'READING SOLUTIONGROUP'

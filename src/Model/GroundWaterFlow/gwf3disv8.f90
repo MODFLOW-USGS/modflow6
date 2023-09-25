@@ -1325,13 +1325,19 @@ contains
     integer(I4B) :: ivert
     integer(I4B) :: nvert
     integer(I4B) :: icount
+    integer(I4B) :: iv1
     real(DP) :: x
     real(DP) :: y
+    real(DP) :: x1
+    real(DP) :: y1
 ! ------------------------------------------------------------------------------
     !
     area = DZERO
     nvert = this%iavert(icell2d + 1) - this%iavert(icell2d)
     icount = 1
+    iv1 = this%javert(this%iavert(icell2d))
+    x1 = this%vertices(1, iv1)
+    y1 = this%vertices(2, iv1)
     do ivert = this%iavert(icell2d), this%iavert(icell2d + 1) - 1
       x = this%vertices(1, this%javert(ivert))
       if (icount < nvert) then
@@ -1339,7 +1345,7 @@ contains
       else
         y = this%vertices(2, this%javert(this%iavert(icell2d)))
       end if
-      area = area + x * y
+      area = area + (x - x1) * (y - y1)
       icount = icount + 1
     end do
     !
@@ -1351,7 +1357,7 @@ contains
       else
         x = this%vertices(1, this%javert(this%iavert(icell2d)))
       end if
-      area = area - x * y
+      area = area - (x - x1) * (y - y1)
       icount = icount + 1
     end do
     !

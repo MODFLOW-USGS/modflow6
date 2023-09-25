@@ -335,13 +335,19 @@ contains
     integer(I4B) :: ivert
     integer(I4B) :: nvert
     integer(I4B) :: icount
+    integer(I4B) :: iv1
     real(DP) :: x
     real(DP) :: y
+    real(DP) :: x1
+    real(DP) :: y1
 ! ------------------------------------------------------------------------------
     !
     area = DZERO
     nvert = this%iavert(this%j + 1) - this%iavert(this%j)
     icount = 1
+    iv1 = this%javert(this%iavert(this%j))
+    x1 = this%vertex_grid(1, iv1)
+    y1 = this%vertex_grid(2, iv1)
     do ivert = this%iavert(this%j), this%iavert(this%j + 1) - 1
       x = this%vertex_grid(1, this%javert(ivert))
       if (icount < nvert) then
@@ -349,7 +355,7 @@ contains
       else
         y = this%vertex_grid(2, this%javert(this%iavert(this%j)))
       end if
-      area = area + x * y
+      area = area + (x - x1) * (y - y1)
       icount = icount + 1
     end do
     !
@@ -361,7 +367,7 @@ contains
       else
         x = this%vertex_grid(1, this%javert(this%iavert(this%j)))
       end if
-      area = area - x * y
+      area = area - (x - x1) * (y - y1)
       icount = icount + 1
     end do
     !

@@ -4,23 +4,24 @@ BEGIN options
 END options
 
 BEGIN continuous  FILEOUT  gwt_lkt02.lkt.obs.csv
-  lkt-1-conc  CONCENTRATION  1
-  lkt-1-extinflow  EXT-INFLOW  1
-  lkt-1-rain  RAINFALL  1
-  lkt-1-roff  RUNOFF  1
-  lkt-1-evap  EVAPORATION  1
-  lkt-1-wdrl  WITHDRAWAL  1
-  lkt-1-stor  STORAGE  1
-  lkt-1-const  CONSTANT  1
-  lkt-1-gwt1  LKT  1  1
-  lkt-1-gwt2  LKT  1  2
-  lkt-2-gwt1  LKT  2  1
-  lkt-1-mylake1  LKT  MYLAKE1
-  lkt-1-fjf  FLOW-JA-FACE  1  2
-  lkt-2-fjf  FLOW-JA-FACE  2  1
-  lkt-3-fjf  FLOW-JA-FACE  2  3
-  lkt-4-fjf  FLOW-JA-FACE  3  2
-  lkt-5-fjf  FLOW-JA-FACE  MYLAKE1
-  lkt-6-fjf  FLOW-JA-FACE  MYLAKE2
-  lkt-7-fjf  FLOW-JA-FACE  MYLAKE3
+# obs_name              obs_type  ID       ID2
+  lkt-1-conc       CONCENTRATION   1
+  lkt-1-extinflow  EXT-INFLOW      1
+  lkt-1-rain       RAINFALL        1
+  lkt-1-roff       RUNOFF          1
+  lkt-1-evap       EVAPORATION     1
+  lkt-1-wdrl       WITHDRAWAL      1
+  lkt-1-stor       STORAGE         1
+  lkt-1-const      CONSTANT        1
+  lkt-1-gwt1       LKT             1         1
+  lkt-1-gwt2       LKT             1         2
+  lkt-2-gwt1       LKT             2         1
+  lkt-1-mylake1    LKT             MYLAKE1   
+  lkt-1-fjf        FLOW-JA-FACE    1         2
+  lkt-2-fjf        FLOW-JA-FACE    2         1
+  lkt-3-fjf        FLOW-JA-FACE    2         3
+  lkt-4-fjf        FLOW-JA-FACE    3         2
+  lkt-5-fjf        FLOW-JA-FACE    MYLAKE1
+  lkt-6-fjf        FLOW-JA-FACE    MYLAKE2
+  lkt-7-fjf        FLOW-JA-FACE    MYLAKE3
 END continuous

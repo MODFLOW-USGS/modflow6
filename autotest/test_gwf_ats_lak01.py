@@ -152,7 +152,7 @@ def build_model(idx, dir):
             irch[i, j] = k + 1
     nlakeconn = len(lake_vconnect)
 
-    # pak_data = [lakeno, strt, nlakeconn]
+    # pak_data = [ifno, strt, nlakeconn]
     initial_stage = 0.1
     pak_data = [(0, initial_stage, nlakeconn)]
 

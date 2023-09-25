@@ -7,14 +7,38 @@ on:
       - ci-diagnose*
     paths-ignore:
       - '**.md'
+      - '**.pdf'
+      - '**.tex'
+      - '**.jpg'
+      - '**.jpeg'
+      - '**.png'
+      - '**.bbl'
+      - '**.bib'
       - 'doc/**'
+      - 'doc/**.dat'
+      - 'doc/**.ipynb'
+      - 'doc/**.py'
+      - 'doc/**.sh'
+      - 'doc/**.xlsx'
   pull_request:
     branches:
       - master
       - develop
     paths-ignore:
       - '**.md'
+      - '**.pdf'
+      - '**.tex'
+      - '**.jpg'
+      - '**.jpeg'
+      - '**.png'
+      - '**.bbl'
+      - '**.bib'
       - 'doc/**'
+      - 'doc/**.dat'
+      - 'doc/**.ipynb'
+      - 'doc/**.py'
+      - 'doc/**.sh'
+      - 'doc/**.xlsx'
 jobs:
   lint:
     name: Check format
@@ -36,6 +60,9 @@ jobs:
 
       - name: Check Fortran source formatting
         run: python .github/common/fortran_format_check.py
+
+      - name: Check msvs project files
+        run: python .github/common/msvs_vfproj_check.py
 
   build:
     name: Build

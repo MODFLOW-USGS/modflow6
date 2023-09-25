@@ -11,14 +11,14 @@ begin dimensions
 end dimensions
 
 begin packagedata
-#  wellno radius bottom strt   condeqn ngwnodes name
-        1   0.15 -514.9 9.14 specified        2 ntwell
+# ifno radius bottom strt   condeqn ngwnodes name
+     1   0.15 -514.9 9.14 specified        2 ntwell
 end packagedata
 
 begin connectiondata
-# wellno conn l  r  c  stop   sbot         k  rskin
-       1    1 1 51 51   -50 -514.9  111.3763      0
-       1    2 2 51 51   -50 -514.9  445.9849      0
+# ifno conn l  r  c  stop   sbot         k  rskin
+     1    1 1 51 51   -50 -514.9  111.3763      0
+     1    2 2 51 51   -50 -514.9  445.9849      0
 end connectiondata
 
 begin period 1

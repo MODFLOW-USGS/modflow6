@@ -144,14 +144,14 @@ class GwfBuyLakCases:
             buy = flopy.mf6.ModflowGwfbuy(gwf, denseref=1000.0, packagedata=pd)
 
         nlakeconn = 11  # note: number of connections for this lake
-        # pak_data = [lakeno, strt, nlakeconn, testauxvar, concentration, boundname]
+        # pak_data = [ifno, strt, nlakeconn, testauxvar, concentration, boundname]
         pak_data = [(0, 2.25, nlakeconn, 0.0, 0.0)]
 
         connlen = delr / 2.0
         connwidth = delc
         bedleak = "None"
         con_data = [
-            # con_data=(lakeno,iconn,(cellid),claktype,bedleak,belev,telev,connlen,connwidth )
+            # con_data=(ifno,iconn,(cellid),claktype,bedleak,belev,telev,connlen,connwidth )
             (
                 0,
                 0,

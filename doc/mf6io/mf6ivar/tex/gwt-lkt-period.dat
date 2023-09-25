@@ -1,5 +1,5 @@
 BEGIN PERIOD <iper>
-  <lakeno> <laksetting>
-  <lakeno> <laksetting>
+  <ifno> <laksetting>
+  <ifno> <laksetting>
   ...
 END PERIOD

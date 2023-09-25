@@ -122,7 +122,7 @@ def build_model(idx, dir):
         k33=Kv,
     )
 
-    # <wellno> <radius> <bottom> <strt> <condeqn> <ngwfnodes>
+    # <ifno> <radius> <bottom> <strt> <condeqn> <ngwfnodes>
     mawpackagedata = flopy.mf6.ModflowGwfmaw.packagedata.empty(gwf, maxbound=1)
     mawpackagedata["radius"] = radius
     mawpackagedata["bottom"] = maw_bot
@@ -130,7 +130,7 @@ def build_model(idx, dir):
     mawpackagedata["condeqn"] = "thiem"
     mawpackagedata["ngwfnodes"] = 2
 
-    # <wellno> <icon> <cellid(ncelldim)> <scrn_top> <scrn_bot> <hk_skin> <radius_skin>
+    # <ifno> <icon> <cellid(ncelldim)> <scrn_top> <scrn_bot> <hk_skin> <radius_skin>
     mawconnectiondata = flopy.mf6.ModflowGwfmaw.connectiondata.empty(
         gwf, maxbound=2
     )

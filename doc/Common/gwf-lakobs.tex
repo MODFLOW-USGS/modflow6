@@ -1,19 +1,19 @@
-LAK & stage & lakeno or boundname & -- & Surface-water stage in a lake. If boundname is specified, boundname must be unique for each lake. \\
-LAK & ext-inflow & lakeno or boundname & -- & Specified inflow into a lake or group of lakes. \\
-LAK & outlet-inflow & lakeno or boundname & -- & Simulated inflow from upstream lake outlets into a lake or group of lakes. \\
-LAK & inflow & lakeno or boundname & -- & Sum of specified inflow and simulated inflow from upstream lake outlets into a lake or group of lakes. \\
-LAK & from-mvr & lakeno or boundname & -- & Inflow into a lake or group of lakes from the MVR package. \\
-LAK & rainfall & lakeno or boundname & -- & Rainfall rate applied to a lake or group of lakes. \\
-LAK & runoff & lakeno or boundname & -- & Runoff rate applied to a lake or group of lakes. \\
-LAK & lak & lakeno or boundname & \texttt{iconn} or -- & Simulated flow rate for a lake or group of lakes and its aquifer connection(s). If boundname is not specified for ID, then the simulated lake-aquifer flow rate at a specific lake connection is observed. In this case, ID2 must be specified and is the connection number \texttt{iconn}. \\
-LAK & withdrawal & lakeno or boundname & -- & Specified withdrawal rate from a lake or group of lakes. \\
-LAK & evaporation & lakeno or boundname & -- & Simulated evaporation rate from a lake or group of lakes. \\
+LAK & stage & ifno or boundname & -- & Surface-water stage in a lake. If boundname is specified, boundname must be unique for each lake. \\
+LAK & ext-inflow & ifno or boundname & -- & Specified inflow into a lake or group of lakes. \\
+LAK & outlet-inflow & ifno or boundname & -- & Simulated inflow from upstream lake outlets into a lake or group of lakes. \\
+LAK & inflow & ifno or boundname & -- & Sum of specified inflow and simulated inflow from upstream lake outlets into a lake or group of lakes. \\
+LAK & from-mvr & ifno or boundname & -- & Inflow into a lake or group of lakes from the MVR package. \\
+LAK & rainfall & ifno or boundname & -- & Rainfall rate applied to a lake or group of lakes. \\
+LAK & runoff & ifno or boundname & -- & Runoff rate applied to a lake or group of lakes. \\
+LAK & lak & ifno or boundname & \texttt{iconn} or -- & Simulated flow rate for a lake or group of lakes and its aquifer connection(s). If boundname is not specified for ID, then the simulated lake-aquifer flow rate at a specific lake connection is observed. In this case, ID2 must be specified and is the connection number \texttt{iconn}. \\
+LAK & withdrawal & ifno or boundname & -- & Specified withdrawal rate from a lake or group of lakes. \\
+LAK & evaporation & ifno or boundname & -- & Simulated evaporation rate from a lake or group of lakes. \\
 LAK & ext-outflow & outletno or boundname & -- & External outflow from a lake outlet, a lake, or a group of lakes to an external boundary. If boundname is not specified for ID, then the external outflow from a specific lake outlet is observed. In this case, ID is the outlet number outletno. \\
 LAK & to-mvr & outletno or boundname & -- & Outflow from a lake outlet, a lake, or a group of lakes that is available for the MVR package. If boundname is not specified for ID, then the outflow available for the MVR package from a specific lake outlet is observed. In this case, ID is the outlet number outletno. \\
-LAK & storage & lakeno or boundname & -- & Simulated storage flow rate for a lake or group of lakes. \\
-LAK & constant & lakeno or boundname & -- & Simulated constant-flow rate for a lake or group of lakes. \\
+LAK & storage & ifno or boundname & -- & Simulated storage flow rate for a lake or group of lakes. \\
+LAK & constant & ifno or boundname & -- & Simulated constant-flow rate for a lake or group of lakes. \\
 LAK & outlet & outletno or boundname & -- & Simulated outlet flow rate from a lake outlet, a lake, or a group of lakes. If boundname is not specified for ID, then the flow from a specific lake outlet is observed. In this case, ID is the outlet number outletno. \\
-LAK & volume & lakeno or boundname & -- & Simulated lake volume or group of lakes. \\
-LAK & surface-area & lakeno or boundname & -- & Simulated surface area for a lake or group of lakes. \\
-LAK & wetted-area & lakeno or boundname & \texttt{iconn} or -- & Simulated wetted-area for a lake or group of lakes and its aquifer connection(s). If boundname is not specified for ID, then the wetted area of a specific lake connection is observed. In this case, ID2 must be specified and is the connection number \texttt{iconn}. \\
-LAK & conductance & lakeno or boundname & \texttt{iconn} or -- & Calculated conductance for a lake or group of lakes and its aquifer connection(s). If boundname is not specified for ID, then the calculated conductance of a specific lake connection is observed. In this case, ID2 must be specified and is the connection number \texttt{iconn}.
+LAK & volume & ifno or boundname & -- & Simulated lake volume or group of lakes. \\
+LAK & surface-area & ifno or boundname & -- & Simulated surface area for a lake or group of lakes. \\
+LAK & wetted-area & ifno or boundname & \texttt{iconn} or -- & Simulated wetted-area for a lake or group of lakes and its aquifer connection(s). If boundname is not specified for ID, then the wetted area of a specific lake connection is observed. In this case, ID2 must be specified and is the connection number \texttt{iconn}. \\
+LAK & conductance & ifno or boundname & \texttt{iconn} or -- & Calculated conductance for a lake or group of lakes and its aquifer connection(s). If boundname is not specified for ID, then the calculated conductance of a specific lake connection is observed. In this case, ID2 must be specified and is the connection number \texttt{iconn}.

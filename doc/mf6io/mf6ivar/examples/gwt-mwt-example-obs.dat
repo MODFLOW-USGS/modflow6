@@ -4,40 +4,41 @@ BEGIN options
 END options
 
 BEGIN continuous  FILEOUT  gwt_mwt_02.mwt.obs.csv
-  mwt1mwt  MWT  1  1
-  mwt2mwt  MWT  2  1
-  mwt3mwt  MWT  3  1
-  mwt4mwt  MWT  4  1
-  mwt1conc  CONCENTRATION  1
-  mwt2conc  CONCENTRATION  2
-  mwt3conc  CONCENTRATION  3
-  mwt4conc  CONCENTRATION  4
-  mwt1stor  STORAGE  1
-  mwt2stor  STORAGE  2
-  mwt3stor  STORAGE  3
-  mwt4stor  STORAGE  4
-  mwt1cnst  CONSTANT  1
-  mwt2cnst  CONSTANT  2
-  mwt3cnst  CONSTANT  3
-  mwt4cnst  CONSTANT  4
-  mwt1fmvr  FROM-MVR  1
-  mwt2fmvr  FROM-MVR  2
-  mwt3fmvr  FROM-MVR  3
-  mwt4fmvr  FROM-MVR  4
-  mwt1rate  RATE  1
-  mwt2rate  RATE  2
-  mwt3rate  RATE  3
-  mwt4rate  RATE  4
-  mwt1rtmv  RATE-TO-MVR  1
-  mwt2rtmv  RATE-TO-MVR  2
-  mwt3rtmv  RATE-TO-MVR  3
-  mwt4rtmv  RATE-TO-MVR  4
-  mwt1fwrt  FW-RATE  1
-  mwt2fwrt  FW-RATE  2
-  mwt3fwrt  FW-RATE  3
-  mwt4fwrt  FW-RATE  4
-  mwt1frtm  FW-RATE-TO-MVR  1
-  mwt2frtm  FW-RATE-TO-MVR  2
-  mwt3frtm  FW-RATE-TO-MVR  3
-  mwt4frtm  FW-RATE-TO-MVR  4
+# obs_name    obs_type         ID   ID2
+  mwt1mwt     MWT               1     1
+  mwt2mwt     MWT               2     1
+  mwt3mwt     MWT               3     1
+  mwt4mwt     MWT               4     1
+  mwt1conc    CONCENTRATION     1
+  mwt2conc    CONCENTRATION     2
+  mwt3conc    CONCENTRATION     3
+  mwt4conc    CONCENTRATION     4
+  mwt1stor    STORAGE           1
+  mwt2stor    STORAGE           2
+  mwt3stor    STORAGE           3
+  mwt4stor    STORAGE           4
+  mwt1cnst    CONSTANT          1
+  mwt2cnst    CONSTANT          2
+  mwt3cnst    CONSTANT          3
+  mwt4cnst    CONSTANT          4
+  mwt1fmvr    FROM-MVR          1
+  mwt2fmvr    FROM-MVR          2
+  mwt3fmvr    FROM-MVR          3
+  mwt4fmvr    FROM-MVR          4
+  mwt1rate    RATE              1
+  mwt2rate    RATE              2
+  mwt3rate    RATE              3
+  mwt4rate    RATE              4
+  mwt1rtmv    RATE-TO-MVR       1
+  mwt2rtmv    RATE-TO-MVR       2
+  mwt3rtmv    RATE-TO-MVR       3
+  mwt4rtmv    RATE-TO-MVR       4
+  mwt1fwrt    FW-RATE           1
+  mwt2fwrt    FW-RATE           2
+  mwt3fwrt    FW-RATE           3
+  mwt4fwrt    FW-RATE           4
+  mwt1frtm    FW-RATE-TO-MVR    1
+  mwt2frtm    FW-RATE-TO-MVR    2
+  mwt3frtm    FW-RATE-TO-MVR    3
+  mwt4frtm    FW-RATE-TO-MVR    4
 END continuous  FILEOUT  gwt_mwt_02.mwt.obs.csv
