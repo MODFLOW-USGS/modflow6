@@ -11,6 +11,7 @@ module ImsLinearSettingsModule
   integer(I4B), public, parameter :: BCGS_METHOD = 2
 
   type, public :: ImsLinearSettingsType
+    character(len=LENMEMPATH) :: memory_path
     real(DP), pointer :: dvclose => null() !< dependent variable closure criterion
     real(DP), pointer :: rclose => null() !< residual closure criterion
     integer(I4B), pointer :: icnvgopt => null() !< convergence option
@@ -33,21 +34,24 @@ module ImsLinearSettingsModule
 contains
 
   subroutine init(this, mem_path)
+    use MemoryHelperModule, only: create_mem_path
     class(ImsLinearSettingsType) :: this !< linear settings
     character(len=LENMEMPATH) :: mem_path !< solution memory path
 
-    call mem_allocate(this%dvclose, 'DVCLOSE', mem_path)
-    call mem_allocate(this%rclose, 'RCLOSE', mem_path)
-    call mem_allocate(this%icnvgopt, 'ICNVGOPT', mem_path)
-    call mem_allocate(this%iter1, 'ITER1', mem_path)
-    call mem_allocate(this%ilinmeth, 'ILINMETH', mem_path)
-    call mem_allocate(this%iscl, 'ISCL', mem_path)
-    call mem_allocate(this%iord, 'IORD', mem_path)
-    call mem_allocate(this%north, 'NORTH', mem_path)
-    call mem_allocate(this%relax, 'RELAX', mem_path)
-    call mem_allocate(this%level, 'LEVEL', mem_path)
-    call mem_allocate(this%droptol, 'DROPTOL', mem_path)
-    call mem_allocate(this%ifdparam, 'IDFPARAM', mem_path)
+    this%memory_path = create_mem_path(mem_path, 'IMSLINEAR')
+
+    call mem_allocate(this%dvclose, 'DVCLOSE', this%memory_path)
+    call mem_allocate(this%rclose, 'RCLOSE', this%memory_path)
+    call mem_allocate(this%icnvgopt, 'ICNVGOPT', this%memory_path)
+    call mem_allocate(this%iter1, 'ITER1', this%memory_path)
+    call mem_allocate(this%ilinmeth, 'ILINMETH', this%memory_path)
+    call mem_allocate(this%iscl, 'ISCL', this%memory_path)
+    call mem_allocate(this%iord, 'IORD', this%memory_path)
+    call mem_allocate(this%north, 'NORTH', this%memory_path)
+    call mem_allocate(this%relax, 'RELAX', this%memory_path)
+    call mem_allocate(this%level, 'LEVEL', this%memory_path)
+    call mem_allocate(this%droptol, 'DROPTOL', this%memory_path)
+    call mem_allocate(this%ifdparam, 'IDFPARAM', this%memory_path)
 
   end subroutine init
 

@@ -394,7 +394,8 @@ contains
     write (iout, '(1x,a,a)') "Linear acceleration method:   ", trim(this%ksp_type)
     write (iout, '(1x,a,a)') "Preconditioner type:          ", trim(this%pc_type)
     if (simulation_mode == "PARALLEL") then
-      write (iout, '(1x,a,a)') "Sub-preconditioner type:      ", trim(this%sub_pc_type)
+      write (iout, '(1x,a,a)') "Sub-preconditioner type:      ", &
+        trim(this%sub_pc_type)
     end if
     write (iout, '(1x,a,i0)') "Maximum nr. of iterations:    ", this%nitermax
     write (iout, '(1x,a,a,/)') &

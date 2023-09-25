@@ -14,6 +14,7 @@ MODULE IMSLinearModule
   use BlockParserModule, only: BlockParserType
   use MatrixBaseModule
   use ConvergenceSummaryModule
+  use ImsLinearSettingsModule
 
   IMPLICIT NONE
   private
@@ -22,26 +23,28 @@ MODULE IMSLinearModule
     character(len=LENMEMPATH) :: memoryPath !< the path for storing variables in the memory manager
     integer(I4B), POINTER :: iout => NULL() !< simulation listing file unit
     integer(I4B), POINTER :: IPRIMS => NULL() !< print flag
-    integer(I4B), POINTER :: ILINMETH => NULL() !< linear accelerator (1) cg, (2) bicgstab
-    integer(I4B), POINTER :: ITER1 => NULL() !< maximum inner iterations
+    ! input variables (pointing to fields in input structure)
+    real(DP), pointer :: DVCLOSE => null() !< dependent variable closure criterion
+    real(DP), pointer :: RCLOSE => null() !< residual closure criterion
+    integer(I4B), pointer :: ICNVGOPT => null() !< convergence option
+    integer(I4B), pointer :: ITER1 => null() !< max. iterations
+    integer(I4B), pointer :: ILINMETH => null() !< linear solver method
+    integer(I4B), pointer :: iSCL => null() !< scaling method
+    integer(I4B), pointer :: IORD => null() !< reordering method
+    integer(I4B), pointer :: NORTH => null() !< number of orthogonalizations
+    real(DP), pointer :: RELAX => null() !< relaxation factor
+    integer(I4B), pointer :: LEVEL => null() !< nr. of preconditioner levels
+    real(DP), pointer :: DROPTOL => null() !< drop tolerance for preconditioner
+    !
     integer(I4B), POINTER :: IPC => NULL() !< preconditioner flag
-    integer(I4B), POINTER :: ISCL => NULL() !< scaling flag
-    integer(I4B), POINTER :: IORD => NULL() !< reordering flag
-    integer(I4B), POINTER :: NORTH => NULL() !< orthogonalization interval
-    integer(I4B), POINTER :: ICNVGOPT => NULL() !< rclose convergence option flag
     integer(I4B), POINTER :: IACPC => NULL() !< preconditioner CRS row pointers
     integer(I4B), POINTER :: NITERC => NULL() !<
     integer(I4B), POINTER :: NIABCGS => NULL() !< size of working vectors for BCGS linear accelerator
     integer(I4B), POINTER :: NIAPC => NULL() !< preconditioner number of rows
     integer(I4B), POINTER :: NJAPC => NULL() !< preconditioner number of non-zero entries
-    real(DP), POINTER :: DVCLOSE => NULL() !< dependent variable convergence criteria
-    real(DP), POINTER :: RCLOSE => NULL() !< flow convergence criteria
-    real(DP), POINTER :: RELAX => NULL() !< preconditioner MILU0/MILUT relaxation factor
     real(DP), POINTER :: EPFACT => NULL() !< factor for decreasing convergence criteria in seubsequent Picard iterations
     real(DP), POINTER :: L2NORM0 => NULL() !< initial L2 norm
     ! -- ilut variables
-    integer(I4B), POINTER :: LEVEL => NULL() !< preconditioner number of levels
-    real(DP), POINTER :: DROPTOL => NULL() !< preconditioner drop tolerance
     integer(I4B), POINTER :: NJLU => NULL() !< length of jlu work vector
     integer(I4B), POINTER :: NJW => NULL() !< length of jw work vector
     integer(I4B), POINTER :: NWLU => NULL() !< length of wlu work vector
@@ -105,8 +108,8 @@ CONTAINS
     !!  Allocate storage for linear accelerators and read data
     !!
   !<
-  SUBROUTINE imslinear_ar(this, NAME, parser, IOUT, IPRIMS, MXITER, IFDPARAM, &
-                          NEQ, matrix, RHS, X, LFINDBLOCK)
+  SUBROUTINE imslinear_ar(this, NAME, IOUT, IPRIMS, MXITER, &
+                          NEQ, matrix, RHS, X, linear_settings)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     use MemoryHelperModule, only: create_mem_path
@@ -115,46 +118,39 @@ CONTAINS
     ! -- dummy variables
     CLASS(ImsLinearDataType), INTENT(INOUT) :: this !< ImsLinearDataType instance
     CHARACTER(LEN=LENSOLUTIONNAME), INTENT(IN) :: NAME !< solution name
-    type(BlockParserType) :: parser !< block parser
     integer(I4B), INTENT(IN) :: IOUT !< simulation listing file unit
     integer(I4B), TARGET, INTENT(IN) :: IPRIMS !< print option
     integer(I4B), INTENT(IN) :: MXITER !< maximum outer iterations
-    integer(I4B), INTENT(IN) :: IFDPARAM !< complexity option
     integer(I4B), TARGET, INTENT(IN) :: NEQ !< number of equations
     class(MatrixBaseType), pointer :: matrix
     real(DP), DIMENSION(NEQ), TARGET, INTENT(INOUT) :: RHS !< right-hand side
     real(DP), DIMENSION(NEQ), TARGET, INTENT(INOUT) :: X !< dependent variables
-    integer(I4B), INTENT(IN), OPTIONAL :: LFINDBLOCK !< flag indicating if the linear block is present (1) or missing (0)
-
+    type(ImsLinearSettingsType), pointer :: linear_settings !< the settings form the IMS file
     ! -- local variables
-    LOGICAL :: lreaddata
     character(len=LINELENGTH) :: errmsg
-    character(len=LINELENGTH) :: warnmsg
-    character(len=LINELENGTH) :: keyword
     integer(I4B) :: i, n
     integer(I4B) :: i0
     integer(I4B) :: iscllen, iolen
-    integer(I4B) :: ierr
-    real(DP) :: r
-    logical :: isfound, endOfBlock
     integer(I4B) :: ijlu
     integer(I4B) :: ijw
     integer(I4B) :: iwlu
     integer(I4B) :: iwk
     !
-    ! -- SET LREADDATA
-    IF (PRESENT(LFINDBLOCK)) THEN
-      IF (LFINDBLOCK < 1) THEN
-        lreaddata = .FALSE.
-      ELSE
-        lreaddata = .TRUE.
-      END IF
-    ELSE
-      lreaddata = .TRUE.
-    END IF
-    !
     ! -- DEFINE NAME
     this%memoryPath = create_mem_path(name, 'IMSLINEAR')
+    !
+    ! -- SET pointers to IMS settings
+    this%DVCLOSE => linear_settings%dvclose
+    this%RCLOSE => linear_settings%rclose
+    this%ICNVGOPT => linear_settings%icnvgopt
+    this%ITER1 => linear_settings%iter1
+    this%ILINMETH => linear_settings%ilinmeth
+    this%iSCL => linear_settings%iscl
+    this%IORD => linear_settings%iord
+    this%NORTH => linear_settings%north
+    this%RELAX => linear_settings%relax
+    this%LEVEL => linear_settings%level
+    this%DROPTOL => linear_settings%droptol
     !
     ! -- SET POINTERS TO SOLUTION STORAGE
     this%IPRIMS => IPRIMS
@@ -172,160 +168,14 @@ CONTAINS
     this%iout = iout
     !
     ! -- DEFAULT VALUES
-    this%IORD = 0
-    this%ISCL = 0
     this%IPC = 0
-    this%LEVEL = 0
     !
-    ! -- TRANSFER COMMON VARIABLES FROM IMS TO IMSLINEAR
-    this%ILINMETH = 0
-
     this%IACPC = 0
-    this%RELAX = DZERO !0.97
-
-    this%DROPTOL = DZERO
-
-    this%NORTH = 0
-
-    this%ICNVGOPT = 0
     !
     ! -- PRINT A MESSAGE IDENTIFYING IMSLINEAR SOLVER PACKAGE
     write (iout, 2000)
 02000 FORMAT(1X, /1X, 'IMSLINEAR -- UNSTRUCTURED LINEAR SOLUTION', &
            ' PACKAGE, VERSION 8, 04/28/2017')
-    !
-    ! -- SET DEFAULT IMSLINEAR PARAMETERS
-    CALL this%SET_IMSLINEAR_INPUT(IFDPARAM)
-    !
-    ! -- get IMSLINEAR block
-    if (lreaddata) then
-      call parser%GetBlock('LINEAR', isfound, ierr, &
-                           supportOpenClose=.true., blockRequired=.FALSE.)
-    else
-      isfound = .FALSE.
-    end if
-    !
-    ! -- parse IMSLINEAR block if detected
-    if (isfound) then
-      write (iout, '(/1x,a)') 'PROCESSING LINEAR DATA'
-      do
-        call parser%GetNextLine(endOfBlock)
-        if (endOfBlock) exit
-        call parser%GetStringCaps(keyword)
-        ! -- parse keyword
-        select case (keyword)
-        case ('INNER_DVCLOSE')
-          this%DVCLOSE = parser%GetDouble()
-        case ('INNER_RCLOSE')
-          this%rclose = parser%GetDouble()
-          ! -- look for additional key words
-          call parser%GetStringCaps(keyword)
-          if (keyword == 'STRICT') then
-            this%ICNVGOPT = 1
-          else if (keyword == 'L2NORM_RCLOSE') then
-            this%ICNVGOPT = 2
-          else if (keyword == 'RELATIVE_RCLOSE') then
-            this%ICNVGOPT = 3
-          else if (keyword == 'L2NORM_RELATIVE_RCLOSE') then
-            this%ICNVGOPT = 4
-          end if
-        case ('INNER_MAXIMUM')
-          i = parser%GetInteger()
-          this%iter1 = i
-        case ('LINEAR_ACCELERATION')
-          call parser%GetStringCaps(keyword)
-          if (keyword .eq. 'CG') then
-            this%ILINMETH = 1
-          else if (keyword .eq. 'BICGSTAB') then
-            this%ILINMETH = 2
-          else
-            this%ILINMETH = 0
-            write (errmsg, '(3a)') &
-              'Unknown IMSLINEAR LINEAR_ACCELERATION method (', &
-              trim(keyword), ').'
-            call store_error(errmsg)
-          end if
-        case ('SCALING_METHOD')
-          call parser%GetStringCaps(keyword)
-          i = 0
-          if (keyword .eq. 'NONE') then
-            i = 0
-          else if (keyword .eq. 'DIAGONAL') then
-            i = 1
-          else if (keyword .eq. 'L2NORM') then
-            i = 2
-          else
-            write (errmsg, '(3a)') &
-              'Unknown IMSLINEAR SCALING_METHOD (', trim(keyword), ').'
-            call store_error(errmsg)
-          end if
-          this%ISCL = i
-        case ('RED_BLACK_ORDERING')
-          i = 0
-        case ('REORDERING_METHOD')
-          call parser%GetStringCaps(keyword)
-          i = 0
-          if (keyword == 'NONE') then
-            i = 0
-          else if (keyword == 'RCM') then
-            i = 1
-          else if (keyword == 'MD') then
-            i = 2
-          else
-            write (errmsg, '(3a)') &
-              'Unknown IMSLINEAR REORDERING_METHOD (', trim(keyword), ').'
-            call store_error(errmsg)
-          end if
-          this%IORD = i
-        case ('NUMBER_ORTHOGONALIZATIONS')
-          this%north = parser%GetInteger()
-        case ('RELAXATION_FACTOR')
-          this%relax = parser%GetDouble()
-        case ('PRECONDITIONER_LEVELS')
-          i = parser%GetInteger()
-          this%level = i
-          if (i < 0) then
-            write (errmsg, '(a,1x,a)') &
-              'IMSLINEAR PRECONDITIONER_LEVELS must be greater than', &
-              'or equal to zero'
-            call store_error(errmsg)
-          end if
-        case ('PRECONDITIONER_DROP_TOLERANCE')
-          r = parser%GetDouble()
-          this%DROPTOL = r
-          if (r < DZERO) then
-            write (errmsg, '(a,1x,a)') &
-              'IMSLINEAR PRECONDITIONER_DROP_TOLERANCE', &
-              'must be greater than or equal to zero'
-            call store_error(errmsg)
-          end if
-          !
-          ! -- deprecated variables
-        case ('INNER_HCLOSE')
-          this%DVCLOSE = parser%GetDouble()
-          !
-          ! -- create warning message
-          write (warnmsg, '(a)') &
-            'SETTING INNER_DVCLOSE TO INNER_HCLOSE VALUE'
-          !
-          ! -- create deprecation warning
-          call deprecation_warning('LINEAR', 'INNER_HCLOSE', '6.1.1', &
-                                   warnmsg, parser%GetUnit())
-          !
-          ! -- default
-        case default
-          write (errmsg, '(3a)') &
-            'Unknown IMSLINEAR keyword (', trim(keyword), ').'
-          call store_error(errmsg)
-        end select
-      end do
-      write (iout, '(1x,a)') 'END OF LINEAR DATA'
-    else
-      if (IFDPARAM == 0) THEN
-        write (errmsg, '(a)') 'NO LINEAR block detected.'
-        call store_error(errmsg)
-      end if
-    end if
     !
     ! -- DETERMINE PRECONDITIONER
     IF (this%LEVEL > 0 .OR. this%DROPTOL > DZERO) THEN
@@ -366,11 +216,6 @@ CONTAINS
       WRITE (errmsg, '(A)') 'IMSLINEAR7AR RELAX MUST BE <= 1.0'
       call store_error(errmsg)
     END IF
-    !
-    ! -- CHECK FOR ERRORS IN IMSLINEAR
-    if (count_errors() > 0) then
-      call parser%StoreErrorUnit()
-    end if
     !
     ! -- INITIALIZE IMSLINEAR VARIABLES
     this%NITERC = 0
@@ -653,50 +498,28 @@ CONTAINS
     !
     ! -- allocate scalars
     call mem_allocate(this%iout, 'IOUT', this%memoryPath)
-    call mem_allocate(this%ilinmeth, 'ILINMETH', this%memoryPath)
-    call mem_allocate(this%iter1, 'ITER1', this%memoryPath)
     call mem_allocate(this%ipc, 'IPC', this%memoryPath)
-    call mem_allocate(this%iscl, 'ISCL', this%memoryPath)
-    call mem_allocate(this%iord, 'IORD', this%memoryPath)
-    call mem_allocate(this%north, 'NORTH', this%memoryPath)
-    call mem_allocate(this%icnvgopt, 'ICNVGOPT', this%memoryPath)
     call mem_allocate(this%iacpc, 'IACPC', this%memoryPath)
     call mem_allocate(this%niterc, 'NITERC', this%memoryPath)
     call mem_allocate(this%niabcgs, 'NIABCGS', this%memoryPath)
     call mem_allocate(this%niapc, 'NIAPC', this%memoryPath)
     call mem_allocate(this%njapc, 'NJAPC', this%memoryPath)
-    call mem_allocate(this%dvclose, 'DVCLOSE', this%memoryPath)
-    call mem_allocate(this%rclose, 'RCLOSE', this%memoryPath)
-    call mem_allocate(this%relax, 'RELAX', this%memoryPath)
     call mem_allocate(this%epfact, 'EPFACT', this%memoryPath)
     call mem_allocate(this%l2norm0, 'L2NORM0', this%memoryPath)
-    call mem_allocate(this%droptol, 'DROPTOL', this%memoryPath)
-    call mem_allocate(this%level, 'LEVEL', this%memoryPath)
     call mem_allocate(this%njlu, 'NJLU', this%memoryPath)
     call mem_allocate(this%njw, 'NJW', this%memoryPath)
     call mem_allocate(this%nwlu, 'NWLU', this%memoryPath)
     !
     ! -- initialize scalars
     this%iout = 0
-    this%ilinmeth = 0
-    this%iter1 = 0
     this%ipc = 0
-    this%iscl = 0
-    this%iord = 0
-    this%north = 0
-    this%icnvgopt = 0
     this%iacpc = 0
     this%niterc = 0
     this%niabcgs = 0
     this%niapc = 0
     this%njapc = 0
-    this%dvclose = DZERO
-    this%rclose = DZERO
-    this%relax = DZERO
     this%epfact = DZERO
     this%l2norm0 = 0
-    this%droptol = DZERO
-    this%level = 0
     this%njlu = 0
     this%njw = 0
     this%nwlu = 0
@@ -745,25 +568,14 @@ CONTAINS
     !
     ! -- scalars
     call mem_deallocate(this%iout)
-    call mem_deallocate(this%ilinmeth)
-    call mem_deallocate(this%iter1)
     call mem_deallocate(this%ipc)
-    call mem_deallocate(this%iscl)
-    call mem_deallocate(this%iord)
-    call mem_deallocate(this%north)
-    call mem_deallocate(this%icnvgopt)
     call mem_deallocate(this%iacpc)
     call mem_deallocate(this%niterc)
     call mem_deallocate(this%niabcgs)
     call mem_deallocate(this%niapc)
     call mem_deallocate(this%njapc)
-    call mem_deallocate(this%dvclose)
-    call mem_deallocate(this%rclose)
-    call mem_deallocate(this%relax)
     call mem_deallocate(this%epfact)
     call mem_deallocate(this%l2norm0)
-    call mem_deallocate(this%droptol)
-    call mem_deallocate(this%level)
     call mem_deallocate(this%njlu)
     call mem_deallocate(this%njw)
     call mem_deallocate(this%nwlu)

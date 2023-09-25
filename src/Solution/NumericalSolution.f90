@@ -908,10 +908,10 @@ contains
     if (this%solver_mode == "IMS") then
       allocate (this%imslinear)
       WRITE (IOUT, *) '***IMS LINEAR SOLVER WILL BE USED***'
-      call this%imslinear%imslinear_allocate(this%name, this%parser, IOUT, &
-                                             this%iprims, this%mxiter, ifdparam, &
-                                             this%neq, this%system_matrix, &
-                                             this%rhs, this%x)
+      call this%imslinear%imslinear_allocate(this%name, IOUT, this%iprims, &
+                                             this%mxiter, this%neq, &
+                                             this%system_matrix, this%rhs, &
+                                             this%x, this%linear_settings)
       !
       ! -- petsc linear solver flag
     else if (this%solver_mode == "PETSC") then
