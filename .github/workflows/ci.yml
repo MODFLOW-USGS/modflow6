@@ -92,7 +92,7 @@ jobs:
           cache-downloads: true
 
       - name: Meson setup
-        run: meson setup builddir -Ddebug=true -Dwerror=true
+        run: meson setup builddir -Ddebug=false -Dwerror=true
 
       - name: Meson compile
         run: meson compile -C builddir
