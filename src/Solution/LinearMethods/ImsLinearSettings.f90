@@ -53,6 +53,20 @@ contains
     call mem_allocate(this%droptol, 'DROPTOL', this%memory_path)
     call mem_allocate(this%ifdparam, 'IDFPARAM', this%memory_path)
 
+    ! defaults
+    this%dvclose = DZERO
+    this%rclose = DZERO
+    this%icnvgopt = 0
+    this%iter1 = 0
+    this%ilinmeth = 0
+    this%iscl = 0
+    this%iord = 0
+    this%north = 0
+    this%relax = DZERO
+    this%level = 0
+    this%droptol = DZERO
+    this%ifdparam = 0
+
   end subroutine init
 
   !> @brief Set solver pre-configured settings based on complexity option
