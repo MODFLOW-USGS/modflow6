@@ -3692,7 +3692,7 @@ contains
     integer(I4B) :: nodeu
     integer(I4B) :: i
     integer(I4B) :: ii
-    integer(I4B) :: iis
+    integer(I4B) :: idx_conn
     integer(I4B) :: k
     integer(I4B) :: ncpl
     integer(I4B) :: nlay
@@ -3761,15 +3761,15 @@ contains
               !
               ! -- Set the m cell number
               nodem = this%dis%con%ja(ii)
-              iis = this%dis%con%jas(ii)
+              idx_conn = this%dis%con%jas(ii)
               !
               ! -- vertical connection
-              ihc = this%dis%con%ihc(iis)
+              ihc = this%dis%con%ihc(idx_conn)
               if (ihc == 0) then
                 !
                 ! -- node has an underlying cell
                 if (node < nodem) then
-                  va_scale = this%dis%get_area_factor(node, iis)
+                  va_scale = this%dis%get_area_factor(node, idx_conn)
                   this%buffusr(node) = this%buffusr(node) + &
                                        va_scale * this%buffusr(nodem)
                 end if
@@ -3952,7 +3952,7 @@ contains
     integer(I4B) :: ii
     integer(I4B) :: nn
     integer(I4B) :: m
-    integer(I4B) :: iis
+    integer(I4B) :: idx_conn
     real(DP) :: gs
     real(DP) :: top
     real(DP) :: bot
@@ -4016,10 +4016,10 @@ contains
           !
           ! -- Set the m cell number
           m = this%dis%con%ja(ii)
-          iis = this%dis%con%jas(ii)
+          idx_conn = this%dis%con%jas(ii)
           !
           ! -- vertical connection
-          if (this%dis%con%ihc(iis) == 0) then
+          if (this%dis%con%ihc(idx_conn) == 0) then
             !
             ! -- node has an overlying cell
             if (m < node) then
@@ -4030,7 +4030,7 @@ contains
                 !
                 ! -- disu discretization
               else
-                va_scale = this%dis%get_area_factor(node, iis)
+                va_scale = this%dis%get_area_factor(node, idx_conn)
                 gs_conn = this%cg_gs(m)
                 gs = gs + (gs_conn * va_scale)
               end if

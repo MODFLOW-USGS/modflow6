@@ -1516,13 +1516,13 @@ contains
   !!        by overlying or underlying cells.
   !!
   !<
-  function get_area_factor(this, node, m) result(area_factor)
+  function get_area_factor(this, node, idx_conn) result(area_factor)
     ! -- return
     real(DP) :: area_factor !< connection cell area factor
     ! -- dummy
     class(DisBaseType) :: this
     integer(I4B), intent(in) :: node !< cell node number
-    integer(I4B), intent(in) :: m !< connected cell node number
+    integer(I4B), intent(in) :: idx_conn !< connection index
     ! -- local
     real(DP) :: area_node
     real(DP) :: area_conn
@@ -1530,7 +1530,7 @@ contains
     !
     ! -- calculate the cell area fraction
     area_node = this%area(node)
-    area_conn = this%con%hwva(m)
+    area_conn = this%con%hwva(idx_conn)
     !
     ! -- return the cell area factor
     area_factor = area_conn / area_node
