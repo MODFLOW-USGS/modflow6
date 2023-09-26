@@ -104,9 +104,9 @@ contains
       this%itinner(i) = 0
       do j = 1, this%convnmod
         this%convdvmax(j, i) = DZERO
-        this%convlocdv = 0
+        this%convlocdv(j, i) = 0
         this%convdrmax(j, i) = DZERO
-        this%convlocdr = 0
+        this%convlocdr(j, i) = 0
       end do
     end do
 
