@@ -150,13 +150,13 @@ contains
     class(BndExtType) :: this !< BndExtType object
     !
     ! -- deallocate checkin paths
-    call mem_deallocate(this%boundname_cst, 'IDMBOUNDNAME_CST', this%memoryPath)
     call mem_deallocate(this%cellid, 'CELLID', this%memoryPath)
+    call mem_deallocate(this%boundname_cst, 'BOUNDNAME_IDM', this%memoryPath)
     call mem_deallocate(this%auxvar, 'AUXVAR_IDM', this%memoryPath)
     !
     ! -- reassign pointers for base class _da
-    call mem_setptr(this%auxvar, 'AUXVAR', this%memoryPath)
     call mem_setptr(this%boundname_cst, 'BOUNDNAME_CST', this%memoryPath)
+    call mem_setptr(this%auxvar, 'AUXVAR', this%memoryPath)
     !
     ! -- scalars
     nullify (this%iper)
@@ -218,19 +218,15 @@ contains
     ! -- allocate base BndType arrays
     call this%BndType%allocate_arrays(nodelist, auxvar)
     !
-    ! -- set boundname_cst input context pointer
+    ! -- set input context pointers
+    call mem_setptr(this%cellid, 'CELLID', this%input_mempath)
     call mem_setptr(this%boundname_cst, 'BOUNDNAME', this%input_mempath)
     !
-    ! -- checkin boundname_cst input context pointer
-    call mem_checkin(this%boundname_cst, LENBOUNDNAME, 'IDMBOUNDNAME_CST', &
-                     this%memoryPath, 'BOUNDNAME', this%input_mempath)
-    !
-    ! -- set cellid input context pointer
-    call mem_setptr(this%cellid, 'CELLID', this%input_mempath)
-    !
-    ! -- checkin cellid input context pointer
+    ! -- checkin input context pointers
     call mem_checkin(this%cellid, 'CELLID', this%memoryPath, &
                      'CELLID', this%input_mempath)
+    call mem_checkin(this%boundname_cst, LENBOUNDNAME, 'BOUNDNAME_IDM', &
+                     this%memoryPath, 'BOUNDNAME', this%input_mempath)
     !
     if (present(auxvar)) then
       ! no-op
