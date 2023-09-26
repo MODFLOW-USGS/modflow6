@@ -1254,8 +1254,8 @@ contains
   !! (2) add a pointer to the package
   !!
   !<
-  subroutine package_create(this, filtyp, ipakid, ipaknum, pakname, inunit, &
-                            iout)
+  subroutine package_create(this, filtyp, ipakid, ipaknum, pakname, mempath, &
+                            inunit, iout)
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error
@@ -1278,6 +1278,7 @@ contains
     integer(I4B), intent(in) :: ipakid
     integer(I4B), intent(in) :: ipaknum
     character(len=*), intent(in) :: pakname
+    character(len=*), intent(in) :: mempath
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     ! -- local
@@ -1289,7 +1290,8 @@ contains
     ! -- This part creates the package object
     select case (filtyp)
     case ('CHD6')
-      call chd_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
+      call chd_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname, mempath)
     case ('WEL6')
       call wel_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
     case ('DRN6')
@@ -1432,8 +1434,8 @@ contains
           bndptype = pkgtype
         end if
         !
-        call this%package_create(pkgtype, ipakid, ipaknum, pkgname, inunit, &
-                                 this%iout)
+        call this%package_create(pkgtype, ipakid, ipaknum, pkgname, mempath, &
+                                 inunit, this%iout)
         ipakid = ipakid + 1
         ipaknum = ipaknum + 1
       end do
@@ -1541,8 +1543,9 @@ contains
         this%inoc = inunit
       case ('OBS6')
         this%inobs = inunit
-      case ('WEL6', 'DRN6', 'RIV6', 'GHB6', 'RCH6', 'EVT6', &
-            'API6', 'CHD6', 'MAW6', 'SFR6', 'LAK6', 'UZF6')
+      case ('WEL6', 'DRN6', 'RIV6', 'GHB6', 'RCH6', &
+            'EVT6', 'API6', 'CHD6', 'MAW6', 'SFR6', &
+            'LAK6', 'UZF6')
         call expandarray(bndpkgs)
         bndpkgs(size(bndpkgs)) = n
       case default
