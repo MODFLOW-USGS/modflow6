@@ -423,7 +423,9 @@ contains
     CHKERRQ(ierr)
     deallocate (this%petsc_ctx)
 
-    allocate (this%pc_context)
+    call VecDestroy(this%pc_context%diag, ierr)
+    CHKERRQ(ierr)
+    deallocate (this%pc_context)
 
   end subroutine petsc_destroy
 

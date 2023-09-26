@@ -74,12 +74,6 @@ contains
     PC :: pc !< the shell preconditioner
     PetscErrorCode :: ierr !< PETSc error code
     ! local
-    type(PcShellCtxType), pointer :: pc_ctx => null()
-
-    call PCShellGetContext(pc, pc_ctx, ierr)
-    CHKERRQ(ierr)
-    call VecDestroy(pc_ctx%diag, ierr)
-    CHKERRQ(ierr)
 
   end subroutine pcshell_destroy
 
