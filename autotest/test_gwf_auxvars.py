@@ -202,14 +202,14 @@ def build_model(idx, dir):
     )
     # lak.remove()
 
-    # <iuzno> <cellid(ncelldim)> <landflag> <ivertcon> <surfdep> <vks> <thtr> <thts> <thti> <eps> [<boundname>]
+    # <ifno> <cellid(ncelldim)> <landflag> <ivertcon> <surfdep> <vks> <thtr> <thts> <thti> <eps> [<boundname>]
     packagedata = [
         [0, (0, nrow - 1, 5), 1, -1, 0.1, 0.01, 0.01, 0.1, 0.01, 3.5, "uz1"],
         [1, (0, nrow - 1, 6), 1, -1, 0.1, 0.01, 0.01, 0.1, 0.01, 3.5, "uz1"],
         [2, (0, nrow - 1, 7), 1, -1, 0.1, 0.01, 0.01, 0.1, 0.01, 3.5, "uz1"],
         [3, (0, nrow - 1, 8), 1, -1, 0.1, 0.01, 0.01, 0.1, 0.01, 3.5, "uz1"],
     ]
-    # <iuzno> <finf> <pet> <extdp> <extwc> <ha> <hroot> <rootact> [<aux(naux)>]
+    # <ifno> <finf> <pet> <extdp> <extwc> <ha> <hroot> <rootact> [<aux(naux)>]
     perioddata = []
     for p in packagedata:
         perioddata.append(

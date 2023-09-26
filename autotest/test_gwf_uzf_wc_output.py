@@ -49,7 +49,7 @@ ghbspd = {
     3: [[(2, 0, 0), ghbelv2, ghbcond], [(2, 0, ncol - 1), ghbelv2, ghbcond]],
 }
 
-# iuzno  cellid landflg ivertcn surfdp vks thtr thts thti eps [bndnm]
+# ifno  cellid landflg ivertcn surfdp vks thtr thts thti eps [bndnm]
 surfdep1 = 1.0
 surfdep2 = 0.001
 vks = 0.5
