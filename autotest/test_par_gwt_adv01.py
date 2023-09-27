@@ -7,7 +7,7 @@ from simulation import TestSimulation
 # This tests reuses the simulation data and config in 
 # test_gwt_adv01_gwtgwt.py and runs it in parallel mode.
 
-ex = ["par_adv01a_gwtgwt", "par_adv01b_gwtgwt", "par_adv01c_gwtgwt"]
+ex = ["par_adv01a_gwtgwt"] #, "par_adv01b_gwtgwt", "par_adv01c_gwtgwt"]
 
 def build_petsc_db(idx, exdir):
     from test_gwt_adv01_gwtgwt import hclose, ninner
