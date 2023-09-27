@@ -712,6 +712,9 @@ class TestSimulation:
         outfile = os.path.splitext(os.path.basename(fpth0))[0]
         outfile = os.path.join(self.simpath, outfile + f".{extension}.cmp.out")
         fcmp = open(outfile, "w")
+        fcmp.write("Performing CELL-BY-CELL to CELL-BY-CELL comparison\n")
+        fcmp.write(f"{fpth0}\n")
+        fcmp.write(f"{fpth1}\n\n")
 
         # open the files
         cbc0 = flopy.utils.CellBudgetFile(
@@ -762,6 +765,9 @@ class TestSimulation:
                 if vmin < 1e-6:
                     vmin = 1e-6
                 vmin_tol = 5.0 * vmin
+                if v0.shape != v1.shape:
+                    v0 = v0.flatten()
+                    v1 = v1.flatten()
                 idx = (abs(v0) > vmin) & (abs(v1) > vmin)
                 diff = np.zeros(v0.shape, dtype=v0.dtype)
                 diff[idx] = abs(v0[idx] - v1[idx])

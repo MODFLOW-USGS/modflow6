@@ -15,17 +15,15 @@ dis_types = (
 problems = (
     "ps1a",
     "ps2a",
-    "ps2a_list",
     "ps2b",
+    "ps2c",
+    "ps2c1",
+    "ps2d",
+    "ps2e",
 )
 ex = []
 for problem in problems:
     ex += [f"{problem}_{dis_type}" for dis_type in dis_types]
-# remove invalid combinations
-for tag in ("ps2a_disu", "ps2b_disu"):
-    ex.remove(tag)
-
-paktest = "csub"
 
 # base spatial discretization
 nlay, nrow, ncol = 3, 21, 20
@@ -46,15 +44,21 @@ vk = [10.0, 0.01, 20.0]
 
 canal_head = 330.0
 canal_coordinates = [
-    (0.5 * delr, y1_base - delr * (i + 0.5)) for i in range(nrow)
+    (0.5 * delr, y1_base - delc * (i + 0.5)) for i in range(nrow)
 ]
 
 river_head = 320.0
 river_coordinates = [
-    (x1_base - 0.5 * delr, y1_base - delr * (i + 0.5)) for i in range(nrow)
+    (x1_base - 0.5 * delr, y1_base - delc * (i + 0.5)) for i in range(nrow)
 ]
 
 rch_rate = 0.005
+
+drain_coordinates = [
+    (x0_base + (j + 0.5) * delr, y1_base - 14.5 * delc) for j in range(9, ncol)
+]
+
+well_coordinates = [(x0_base + 9.5 * delr, y1_base - 10.5 * delc)]
 
 
 def build_dis(gwf):
@@ -167,8 +171,31 @@ def build_riv_data(modelgrid):
     return {0: spd}
 
 
-def build_rch_package(gwf, name):
-    if "list" in name or name.endswith("disu"):
+def build_drn_data(modelgrid):
+    cond = 100000.0
+    drain_elev = 322.5
+    spd = []
+    for x, y in drain_coordinates:
+        cellid = modelgrid.intersect(x, y, z=z_node[0])
+        if isinstance(cellid, int):
+            cellid = (cellid,)
+        spd.append((*cellid, drain_elev, cond))
+    return {0: spd}
+
+
+def build_well_data(modelgrid):
+    wellq = -75000.0
+    spd = []
+    for x, y in well_coordinates:
+        cellid = modelgrid.intersect(x, y, z=z_node[0])
+        if isinstance(cellid, int):
+            cellid = (cellid,)
+        spd.append((*cellid, wellq))
+    return {0: spd}
+
+
+def build_rch_package(gwf, list_recharge):
+    if list_recharge:
         spd = []
         for i in range(nrow):
             y = y1_base - delr * (i + 0.5)
@@ -199,6 +226,11 @@ def build_mf6(idx, ws, gridgen):
     else:
         raise ValueError(f"Invalid discretization type in {str(ws)}")
 
+    if "disu" in str(ws):
+        list_recharge = True
+    else:
+        list_recharge = False
+
     name = ex[idx]
     if dis_type == "dis":
         name = get_dis_name(name)
@@ -209,9 +241,23 @@ def build_mf6(idx, ws, gridgen):
         sim_ws=ws,
     )
     # create tdis package
+    if "ps2e" in name:
+        nper = 3
+        perioddata = (
+            (300000.0, 1, 1.0),
+            (36500.0, 10, 1.5),
+            (300000.0, 1, 1.0),
+        )
+
+    else:
+        nper = 1
+        perioddata = ((1.0, 1, 1.0),)
+
     tdis = flopy.mf6.ModflowTdis(
         sim,
         time_units="DAYS",
+        nper=nper,
+        perioddata=perioddata,
     )
 
     # create iterative model solution and register the gwf model with it
@@ -226,6 +272,7 @@ def build_mf6(idx, ws, gridgen):
         sim,
         modelname=name,
         print_input=True,
+        print_flows=True,
         save_flows=True,
     )
 
@@ -259,6 +306,16 @@ def build_mf6(idx, ws, gridgen):
         k33=k33,
     )
 
+    if nper > 1:
+        sto = flopy.mf6.ModflowGwfsto(
+            gwf,
+            ss=0.0001,
+            sy=0.1,
+            iconvert=1,
+            steady_state={0: True, 2: True},
+            transient={1: True},
+        )
+
     # canal chd
     if name.startswith("ps1"):
         canal_chd = flopy.mf6.ModflowGwfchd(
@@ -283,7 +340,7 @@ def build_mf6(idx, ws, gridgen):
                 river_head,
             ),
         )
-    elif name.startswith("ps2b"):
+    else:
         river_riv = flopy.mf6.ModflowGwfriv(
             gwf,
             pname="river",
@@ -293,7 +350,24 @@ def build_mf6(idx, ws, gridgen):
         )
 
     if name.startswith("ps2"):
-        rch = build_rch_package(gwf, name)
+        rch = build_rch_package(gwf, list_recharge)
+
+    if "ps2c" in name or "ps2d" in name or "ps2e" in name:
+        if "ps2c1" in name:
+            ghb = flopy.mf6.ModflowGwfghb(
+                gwf,
+                stress_period_data=build_drn_data(gwf.modelgrid),
+            )
+        else:
+            drn = flopy.mf6.ModflowGwfdrn(
+                gwf,
+                stress_period_data=build_drn_data(gwf.modelgrid),
+            )
+
+    if "ps2d" in name or "ps2e" in name:
+        wel = flopy.mf6.ModflowGwfwel(
+            gwf, stress_period_data=build_well_data(gwf.modelgrid)
+        )
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(
