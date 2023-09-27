@@ -691,97 +691,105 @@ class TestSimulation:
         extension = "cbc"
         ipos = 0
         for idx, (fpth0, fpth1) in enumerate(zip(files0, files1)):
-            if os.stat(fpth0).st_size * os.stat(fpth0).st_size == 0:
-                continue
-            outfile = os.path.splitext(os.path.basename(fpth0))[0]
-            outfile = os.path.join(
-                self.simpath, outfile + f".{extension}.cmp.out"
-            )
-            fcmp = open(outfile, "w")
-
-            # open the files
-            cbc0 = flopy.utils.CellBudgetFile(
-                fpth0, precision="double", verbose=self.cmp_verbose
-            )
-            cbc1 = flopy.utils.CellBudgetFile(
-                fpth1, precision="double", verbose=self.cmp_verbose
-            )
-
-            # build list of cbc data to retrieve
-            avail0 = cbc0.get_unique_record_names()
-            avail1 = cbc1.get_unique_record_names()
-            avail0 = [t.decode().strip() for t in avail0]
-            avail1 = [t.decode().strip() for t in avail1]
-
-            # initialize list for storing totals for each budget term terms
-            cbc_keys0 = []
-            cbc_keys1 = []
-            for t in avail0:
-                t1 = t
-                if t not in avail1:
-                    # check if RCHA or EVTA is available and use that instead
-                    # should be able to remove this once v6.3.0 is released
-                    if t[:-1] in avail1:
-                        t1 = t[:-1]
-                    else:
-                        raise Exception(f"Could not find {t} in {fpth1}")
-                cbc_keys0.append(t)
-                cbc_keys1.append(t1)
-
-            # get list of times and kstpkper
-            kk = cbc0.get_kstpkper()
-            times = cbc0.get_times()
-
-            # process data
-            success_tst = True
-            for key, key1 in zip(cbc_keys0, cbc_keys1):
-                for idx, (k, t) in enumerate(zip(kk, times)):
-                    v0 = cbc0.get_data(kstpkper=k, text=key)[0]
-                    v1 = cbc1.get_data(kstpkper=k, text=key1)[0]
-                    if v0.dtype.names is not None:
-                        v0 = v0["q"]
-                        v1 = v1["q"]
-                    # skip empty vectors
-                    if v0.size < 1:
-                        continue
-                    vmin = self.rclose
-                    if vmin < 1e-6:
-                        vmin = 1e-6
-                    vmin_tol = 5.0 * vmin
-                    idx = (abs(v0) > vmin) & (abs(v1) > vmin)
-                    diff = np.zeros(v0.shape, dtype=v0.dtype)
-                    diff[idx] = abs(v0[idx] - v1[idx])
-                    diffmax = diff.max()
-                    indices = np.where(diff == diffmax)[0]
-                    if diffmax > vmin_tol:
-                        success_tst = False
-                        msg = (
-                            f"{os.path.basename(fpth0)} - "
-                            + f"{key:16s} "
-                            + f"difference ({diffmax:10.4g}) "
-                            + f"> {vmin_tol:10.4g} "
-                            + f"at {indices.size} nodes "
-                            + f" [first location ({indices[0] + 1})] "
-                            + f"at time {t} "
-                        )
-                        fcmp.write(f"{msg}\n")
-                        if self.cmp_verbose:
-                            print(msg)
-
-            msg = sfmt.format(
-                f"{extdict[extension]} comparison {ipos + 1}",
-                f"{self.name} ({os.path.basename(fpth0)})",
+            success_tst, msg = self.compare_budget_files(
+                ipos,
+                extension,
+                fpth0,
+                fpth1,
             )
             ipos += 1
-            print(msg)
-
-            fcmp.close()
 
             if not success_tst:
                 success = False
                 msgall += msg + " ... FAILED\n"
 
         return success, msgall
+
+    def compare_budget_files(self, ipos, extension, fpth0, fpth1):
+        success = True
+        if os.stat(fpth0).st_size * os.stat(fpth0).st_size == 0:
+            return success, ""
+        outfile = os.path.splitext(os.path.basename(fpth0))[0]
+        outfile = os.path.join(self.simpath, outfile + f".{extension}.cmp.out")
+        fcmp = open(outfile, "w")
+
+        # open the files
+        cbc0 = flopy.utils.CellBudgetFile(
+            fpth0, precision="double", verbose=self.cmp_verbose
+        )
+        cbc1 = flopy.utils.CellBudgetFile(
+            fpth1, precision="double", verbose=self.cmp_verbose
+        )
+
+        # build list of cbc data to retrieve
+        avail0 = cbc0.get_unique_record_names()
+        avail1 = cbc1.get_unique_record_names()
+        avail0 = [t.decode().strip() for t in avail0]
+        avail1 = [t.decode().strip() for t in avail1]
+
+        # initialize list for storing totals for each budget term terms
+        cbc_keys0 = []
+        cbc_keys1 = []
+        for t in avail0:
+            t1 = t
+            if t not in avail1:
+                # check if RCHA or EVTA is available and use that instead
+                # should be able to remove this once v6.3.0 is released
+                if t[:-1] in avail1:
+                    t1 = t[:-1]
+                else:
+                    raise Exception(f"Could not find {t} in {fpth1}")
+            cbc_keys0.append(t)
+            cbc_keys1.append(t1)
+
+        # get list of times and kstpkper
+        kk = cbc0.get_kstpkper()
+        times = cbc0.get_times()
+
+        # process data
+        success_tst = True
+        for key, key1 in zip(cbc_keys0, cbc_keys1):
+            for idx, (k, t) in enumerate(zip(kk, times)):
+                v0 = cbc0.get_data(kstpkper=k, text=key)[0]
+                v1 = cbc1.get_data(kstpkper=k, text=key1)[0]
+                if v0.dtype.names is not None:
+                    v0 = v0["q"]
+                    v1 = v1["q"]
+                # skip empty vectors
+                if v0.size < 1:
+                    continue
+                vmin = self.rclose
+                if vmin < 1e-6:
+                    vmin = 1e-6
+                vmin_tol = 5.0 * vmin
+                idx = (abs(v0) > vmin) & (abs(v1) > vmin)
+                diff = np.zeros(v0.shape, dtype=v0.dtype)
+                diff[idx] = abs(v0[idx] - v1[idx])
+                diffmax = diff.max()
+                indices = np.where(diff == diffmax)[0]
+                if diffmax > vmin_tol:
+                    success = False
+                    msg = (
+                        f"{os.path.basename(fpth0)} - "
+                        + f"{key:16s} "
+                        + f"difference ({diffmax:10.4g}) "
+                        + f"> {vmin_tol:10.4g} "
+                        + f"at {indices.size} nodes "
+                        + f" [first location ({indices[0] + 1})] "
+                        + f"at time {t} "
+                    )
+                    fcmp.write(f"{msg}\n")
+                    if self.cmp_verbose:
+                        print(msg)
+
+        msg = sfmt.format(
+            f"{extdict[extension]} comparison {ipos + 1}",
+            f"{self.name} ({os.path.basename(fpth0)})",
+        )
+        print(msg)
+        fcmp.close()
+
+        return success, msg
 
 
 def api_return(success, model_ws):

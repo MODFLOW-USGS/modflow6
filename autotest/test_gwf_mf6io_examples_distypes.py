@@ -9,7 +9,6 @@ from framework import TestFramework
 from simulation import TestSimulation
 
 dis_types = (
-    "dis",
     "disv",
     "disu",
 )
@@ -23,7 +22,7 @@ ex = []
 for problem in problems:
     ex += [f"{problem}_{dis_type}" for dis_type in dis_types]
 # remove invalid combinations
-for tag in ("ps2a_disu",):
+for tag in ("ps2a_disu", "ps2b_disu"):
     ex.remove(tag)
 
 paktest = "csub"
@@ -75,6 +74,10 @@ def get_gridgen_ws(ws):
     gridgen_ws = ws / "gridgen"
     gridgen_ws.mkdir(parents=True, exist_ok=True)
     return gridgen_ws
+
+
+def get_dis_name(name):
+    return name.replace("disv", "dis").replace("disu", "dis")
 
 
 def build_temp_gwf(ws):
@@ -182,12 +185,23 @@ def build_rch_package(gwf, name):
 
 
 def build_model(idx, ws, gridgen):
-    return build_mf6(idx, ws, gridgen), None
+    return build_mf6(idx, ws, gridgen), build_mf6(idx, ws / "mf6", gridgen)
 
 
 # build MODFLOW 6 files
 def build_mf6(idx, ws, gridgen):
+    if ws.name == "mf6":
+        dis_type = "dis"
+    elif "disv" in str(ws):
+        dis_type = "disv"
+    elif "disu" in str(ws):
+        dis_type = "disu"
+    else:
+        raise ValueError(f"Invalid discretization type in {str(ws)}")
+
     name = ex[idx]
+    if dis_type == "dis":
+        name = get_dis_name(name)
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -215,9 +229,9 @@ def build_mf6(idx, ws, gridgen):
         save_flows=True,
     )
 
-    if "disv" in name:
+    if dis_type == "disv":
         dis = build_disv(ws, gwf, gridgen)
-    elif "disu" in name:
+    elif dis_type == "disu":
         dis = build_disu(ws, gwf, gridgen)
     else:
         dis = build_dis(gwf)
@@ -228,14 +242,14 @@ def build_mf6(idx, ws, gridgen):
         strt=top,
     )
 
-    if name.endswith("dis"):
+    if dis_type in ("dis", "disv"):
         k11 = hk
         k33 = vk
-        icelltype = [0, 0, 0]
+        icelltype = [1, 0, 0]
     else:
         k11 = build_3d_array(gwf.modelgrid, hk)
         k33 = build_3d_array(gwf.modelgrid, vk)
-        icelltype = build_3d_array(gwf.modelgrid, [0, 0, 0], dtype=int)
+        icelltype = build_3d_array(gwf.modelgrid, [1, 0, 0], dtype=int)
 
     # node property flow
     npf = flopy.mf6.ModflowGwfnpf(
@@ -302,75 +316,75 @@ def eval_head(sim):
     if name.startswith("ps1"):
         row_values = np.array(
             [
-                330.0,
-                329.32282902,
-                328.69917882,
-                328.12080967,
-                327.58024448,
-                327.07064659,
-                326.58570186,
-                326.11951283,
-                325.66649864,
-                325.22130154,
-                324.77869596,
-                324.33349909,
-                323.88048514,
-                323.41429613,
-                322.92935186,
-                322.41975442,
-                321.87918959,
-                321.30082044,
-                320.67717093,
-                320.0,
+                330.000,
+                329.259,
+                328.600,
+                328.008,
+                327.473,
+                326.983,
+                326.529,
+                326.102,
+                325.694,
+                325.297,
+                324.903,
+                324.504,
+                324.092,
+                323.659,
+                323.195,
+                322.691,
+                322.133,
+                321.510,
+                320.805,
+                320.000,
             ]
         )
     elif name.startswith("ps2a"):
         row_values = np.array(
             [
-                338.7727826,
-                338.7030565,
-                338.56285698,
-                338.35067753,
-                338.06422624,
-                337.7003874,
-                337.25516901,
-                336.72363512,
-                336.09982217,
-                335.37663815,
-                334.54574351,
-                333.5974106,
-                332.52035785,
-                331.30155897,
-                329.92602474,
-                328.37654948,
-                326.63341884,
-                324.67407807,
-                322.47275007,
-                320.0,
+                346.054,
+                345.979,
+                345.828,
+                345.598,
+                345.286,
+                344.886,
+                344.391,
+                343.792,
+                343.079,
+                342.238,
+                341.251,
+                340.099,
+                338.755,
+                337.189,
+                335.362,
+                333.224,
+                330.714,
+                327.750,
+                324.227,
+                320.000,
             ]
         )
     elif name.startswith("ps2b"):
         row_values = np.array(
             [
-                339.023,
-                338.953,
-                338.813,
-                338.601,
-                338.314,
-                337.950,
-                337.505,
-                336.974,
-                336.350,
-                335.627,
-                334.796,
-                333.847,
-                332.770,
-                331.552,
-                330.176,
-                328.627,
-                326.883,
-                324.924,
-                322.723,
+                346.268,
+                346.193,
+                346.042,
+                345.813,
+                345.500,
+                345.100,
+                344.606,
+                344.008,
+                343.295,
+                342.454,
+                341.468,
+                340.316,
+                338.974,
+                337.410,
+                335.584,
+                333.449,
+                330.943,
+                327.984,
+                324.468,
                 320.250,
             ]
         )
@@ -383,16 +397,20 @@ def eval_head(sim):
         for i in range(nrow):
             answer[i, :] = row_values[:]
 
-    sim = flopy.mf6.MFSimulation.load(sim_name=name, sim_ws=ws)
-    gwf = sim.get_model()
+    # get disv or disu simulation
+    sim_base = flopy.mf6.MFSimulation.load(sim_name=name, sim_ws=ws)
+    gwf_base = sim_base.get_model()
 
-    head = gwf.output.head().get_data().flatten().reshape(shape3d)
-    # if name.startswith("ps2"):
-    #     v = head[0, 0, :]
+    head = gwf_base.output.head().get_data().flatten().reshape(shape3d)
     if answer is not None:
         assert np.allclose(
             head[0], answer
         ), "head data for first layer does not match know result"
+
+    extension = "cbc"
+    fpth0 = ws / f"{name}.{extension}"
+    fpth1 = ws / f"mf6/{get_dis_name(name)}.{extension}"
+    sim.compare_budget_files(0, extension, fpth0, fpth1)
 
     return
 
@@ -412,6 +430,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
             exfunc=eval_head,
             cmp_verbose=False,
             idxsim=idx,
+            make_comparison=True,
         ),
         ws,
     )
