@@ -104,6 +104,7 @@ $(OBJDIR)/gwt1dsp1idm.o \
 $(OBJDIR)/gwt1disv1idm.o \
 $(OBJDIR)/gwt1disu1idm.o \
 $(OBJDIR)/gwt1dis1idm.o \
+$(OBJDIR)/gwf3wel8idm.o \
 $(OBJDIR)/gwf3npf8idm.o \
 $(OBJDIR)/gwf3idm.o \
 $(OBJDIR)/gwf3disv8idm.o \
@@ -217,13 +218,13 @@ $(OBJDIR)/gwt1mst1.o \
 $(OBJDIR)/GwtDspOptions.o \
 $(OBJDIR)/gwf3npf8.o \
 $(OBJDIR)/GwtAdvOptions.o \
+$(OBJDIR)/BoundaryPackageExt.o \
 $(OBJDIR)/gwf3tvs8.o \
 $(OBJDIR)/GwfStorageUtils.o \
 $(OBJDIR)/Mover.o \
 $(OBJDIR)/GwfMvrPeriodData.o \
 $(OBJDIR)/ims8misc.o \
 $(OBJDIR)/GwfBuyInputData.o \
-$(OBJDIR)/BoundaryPackageExt.o \
 $(OBJDIR)/VirtualSolution.o \
 $(OBJDIR)/SparseMatrix.o \
 $(OBJDIR)/LinearSolverBase.o \
