@@ -20,13 +20,8 @@ def build_petsc_db(idx, exdir):
 
     petsc_db_file = os.path.join(exdir, ".petscrc")
     with open(petsc_db_file, "w") as petsc_file:
-        petsc_file.write("-ksp_type bicg\n")
-        petsc_file.write("-pc_type bjacobi\n")
-        petsc_file.write("-sub_pc_type ilu\n")
+        # PETSc doesn't converge on this example without setting the level
         petsc_file.write("-sub_pc_factor_levels 2\n")
-        petsc_file.write(f"-dvclose {Decimal(hclose):.2E}\n")
-        petsc_file.write(f"-nitermax {ninner}\n")
-        petsc_file.write("-options_left no\n")
 
 
 def build_model(idx, exdir):

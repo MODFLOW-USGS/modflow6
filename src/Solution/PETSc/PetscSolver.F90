@@ -203,7 +203,8 @@ contains
       call this%set_petsc_pc()
     end if
 
-    ! finally override these options from the .petscrc file
+    ! finally override these options from the
+    ! optional .petscrc file
     call KSPSetFromOptions(this%ksp_petsc, ierr)
     CHKERRQ(ierr)
 

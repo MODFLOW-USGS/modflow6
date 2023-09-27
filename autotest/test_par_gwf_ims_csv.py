@@ -31,28 +31,12 @@ def update_ims(idx, ims):
     return
 
 
-def build_petsc_db(exdir):
-    from test_par_gwf01 import hclose, ninner
-
-    petsc_db_file = os.path.join(exdir, ".petscrc")
-    with open(petsc_db_file, "w") as petsc_file:
-        petsc_file.write("-ksp_type cg\n")
-        petsc_file.write("-pc_type bjacobi\n")
-        petsc_file.write("-sub_pc_type ilu\n")
-        petsc_file.write("-sub_pc_factor_levels 2\n")
-        petsc_file.write(f"-dvclose {hclose}\n")
-        petsc_file.write(f"-nitermax {ninner}\n")
-        petsc_file.write("-options_left no\n")
-        # petsc_file.write("-log_view\n")
-
-
 def build_model(idx, exdir):
     from test_par_gwf01 import get_model as get_model_ext
     from test_par_gwf01 import ex as ex_ext
 
     sim = get_model_ext(idx, exdir)
     update_ims(idx, sim.get_solution_package(f"{ex_ext[idx]}.ims"))
-    build_petsc_db(exdir)
     return sim, None
 
 
