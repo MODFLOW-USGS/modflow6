@@ -8,8 +8,7 @@ module PetscConvergenceModule
   private
 
   public :: petsc_check_convergence
-  public :: petsc_add_context
-  public :: petsc_remove_context
+  public :: KSPSetConvergenceTest
 
   type, public :: PetscContextType
     Vec :: x_old
@@ -21,48 +20,44 @@ module PetscConvergenceModule
     type(ConvergenceSummaryType), pointer :: cnvg_summary => null()
   end type PetscContextType
 
-  type(ListType) :: ctx_list
+  interface
+    subroutine CnvgCheckFunc(ksp, n, rnorm, flag, context, ierr)
+      import tKSP, PetscContextType
+      type(tKSP) :: ksp
+      PetscInt :: n
+      PetscReal :: rnorm
+      KSPConvergedReason :: flag
+      class(PetscContextType), pointer :: context
+      PetscErrorCode :: ierr
+    end subroutine
+
+    subroutine CnvgDestroyFunc(context, ierr)
+      import PetscContextType
+      class(PetscContextType), pointer :: context
+      PetscErrorCode :: ierr
+    end subroutine
+
+    subroutine KSPSetConvergenceTest(ksp, check_convergence, context, &
+                                     destroy, ierr)
+      import tKSP, CnvgCheckFunc, PetscContextType, CnvgDestroyFunc
+      type(tKSP) :: ksp
+      procedure(CnvgCheckFunc) :: check_convergence
+      class(PetscContextType), pointer :: context
+      procedure(CnvgDestroyFunc) :: destroy
+      PetscErrorCode :: ierr
+    end subroutine
+  end interface
 
 contains
 
-  !> @brief Add a context to the static list. The
-  !! generated idx can then be used as a handle when
-  !! calling 'KSPSetConvergenceTest'. Make sure to remove
-  !< the context from this global list when done.
-  subroutine petsc_add_context(ctx, idx)
-    class(PetscContextType), pointer, intent(in) :: ctx
-    integer(I4B), intent(out) :: idx
-    ! local
-    class(*), pointer :: obj_ptr
-
-    obj_ptr => ctx
-    call ctx_list%Add(obj_ptr)
-    idx = ctx_list%Count()
-
-  end subroutine petsc_add_context
-
-  !> @brief This will clear the list with context pointers
-  !<
-  subroutine petsc_remove_context(ctx)
-    class(PetscContextType), pointer, intent(in) :: ctx
-    ! local
-    integer(I4B) :: idx
-    class(*), pointer :: obj_ptr
-
-    obj_ptr => ctx
-    idx = ctx_list%GetIndex(obj_ptr)
-    call ctx_list%RemoveNode(idx, .false.)
-
-  end subroutine petsc_remove_context
-
   !> @brief Routine to check the convergence. This is called
   !< from within PETSc.
-  subroutine petsc_check_convergence(ksp, n, rnorm, flag, ctx_id, ierr)
+  subroutine petsc_check_convergence(ksp, n, rnorm, flag, context, ierr)
     KSP :: ksp !< Iterative context
     PetscInt :: n !< Iteration number
     PetscReal :: rnorm !< 2-norm (preconditioned) residual value
     KSPConvergedReason :: flag !< Converged reason
-    PetscInt :: ctx_id !< index into the static context list
+    class(PetscContextType), pointer :: context !< context
     PetscErrorCode :: ierr !< error
     ! local
     PetscScalar, parameter :: min_one = -1.0
@@ -70,21 +65,11 @@ contains
     PetscScalar :: norm, dvmax_model, drmax_model
     PetscInt :: idx_dv, idx_dr
     Vec :: x, res
-    class(PetscContextType), pointer :: petsc_ctx
     type(ConvergenceSummaryType), pointer :: summary
-    class(*), pointer :: obj_ptr
     PetscInt :: iter_cnt
     PetscInt :: i, j, istart, iend
 
-    ! get the context from the list
-    petsc_ctx => null()
-    obj_ptr => ctx_list%GetItem(ctx_id)
-    select type (obj_ptr)
-    class is (PetscContextType)
-      petsc_ctx => obj_ptr
-    end select
-
-    summary => petsc_ctx%cnvg_summary
+    summary => context%cnvg_summary
 
     call KSPBuildSolution(ksp, PETSC_NULL_VEC, x, ierr)
     CHKERRQ(ierr)
@@ -97,9 +82,9 @@ contains
         ! exact solution found
         flag = KSP_CONVERGED_HAPPY_BREAKDOWN
       else
-        call VecCopy(x, petsc_ctx%x_old, ierr)
+        call VecCopy(x, context%x_old, ierr)
         CHKERRQ(ierr)
-        call VecCopy(res, petsc_ctx%res_old, ierr)
+        call VecCopy(res, context%res_old, ierr)
         CHKERRQ(ierr)
         flag = KSP_CONVERGED_ITERATING
       end if
@@ -120,25 +105,25 @@ contains
       end do
     end if
 
-    call VecWAXPY(petsc_ctx%delta_x, min_one, petsc_ctx%x_old, x, ierr)
+    call VecWAXPY(context%delta_x, min_one, context%x_old, x, ierr)
     CHKERRQ(ierr)
 
-    call VecWAXPY(petsc_ctx%delta_res, min_one, petsc_ctx%res_old, res, ierr)
+    call VecWAXPY(context%delta_res, min_one, context%res_old, res, ierr)
     CHKERRQ(ierr)
 
-    call VecNorm(petsc_ctx%delta_x, NORM_INFINITY, norm, ierr)
+    call VecNorm(context%delta_x, NORM_INFINITY, norm, ierr)
     CHKERRQ(ierr)
 
-    call VecCopy(x, petsc_ctx%x_old, ierr)
+    call VecCopy(x, context%x_old, ierr)
     CHKERRQ(ierr)
 
-    call VecCopy(res, petsc_ctx%res_old, ierr)
+    call VecCopy(res, context%res_old, ierr)
     CHKERRQ(ierr)
 
     ! get dv and dr per local model
-    call VecGetArrayF90(petsc_ctx%delta_x, local_dx, ierr)
+    call VecGetArrayF90(context%delta_x, local_dx, ierr)
     CHKERRQ(ierr)
-    call VecGetArrayF90(petsc_ctx%delta_res, local_dr, ierr)
+    call VecGetArrayF90(context%delta_res, local_dr, ierr)
     CHKERRQ(ierr)
     do i = 1, summary%convnmod
       ! reset
@@ -171,11 +156,11 @@ contains
     call VecRestoreArrayF90(x, local_dr, ierr)
     CHKERRQ(ierr)
 
-    if (norm < petsc_ctx%dvclose) then
+    if (norm < context%dvclose) then
       flag = KSP_CONVERGED_HAPPY_BREAKDOWN ! Converged
     else
       flag = KSP_CONVERGED_ITERATING ! Not yet converged
-      if (n == petsc_ctx%max_its) then
+      if (n == context%max_its) then
         ! ran out of iterations before convergence
         ! has been reached
         flag = KSP_DIVERGED_ITS

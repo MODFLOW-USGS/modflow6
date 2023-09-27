@@ -35,7 +35,6 @@ module PetscSolverModule
     PCType :: sub_pc_type
     class(PetscContextType), pointer :: petsc_ctx => null()
     type(PcShellCtxType), pointer :: pc_context => null()
-    integer(I4B) :: ctx_idx
     type(ConvergenceSummaryType), pointer :: convergence_summary => null()
 
   contains
@@ -320,10 +319,9 @@ contains
     call MatCreateVecs( &
       this%mat_petsc, this%petsc_ctx%delta_res, PETSC_NULL_VEC, ierr)
     CHKERRQ(ierr)
-    call petsc_add_context(this%petsc_ctx, this%ctx_idx)
 
     call KSPSetConvergenceTest(this%ksp_petsc, petsc_check_convergence, &
-                               this%ctx_idx, PETSC_NULL_FUNCTION, ierr)
+                               this%petsc_ctx, PETSC_NULL_FUNCTION, ierr)
     CHKERRQ(ierr)
 
   end subroutine create_convergence_check
