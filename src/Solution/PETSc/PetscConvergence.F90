@@ -20,6 +20,8 @@ module PetscConvergenceModule
     type(ConvergenceSummaryType), pointer :: cnvg_summary => null()
   end type PetscContextType
 
+  ! passing our context into PETSc requires an explicit interface
+  ! on KSPSetConvergenceTest, it is defined here:
   interface
     subroutine CnvgCheckFunc(ksp, n, rnorm, flag, context, ierr)
       import tKSP, PetscContextType
