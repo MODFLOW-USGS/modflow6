@@ -37,7 +37,6 @@ module NumericalSolutionModule
   use LinearSolverBaseModule
   use ImsLinearSettingsModule
   use LinearSolverFactory, only: create_linear_solver
-  use SparseMatrixModule
   use MatrixBaseModule
   use ConvergenceSummaryModule
 
@@ -65,10 +64,10 @@ module NumericalSolutionModule
     integer(I4B), pointer :: isymmetric => null() !< flag indicating if matrix symmetry is required
     integer(I4B), pointer :: neq => null() !< number of equations
     integer(I4B), pointer :: matrix_offset => null() !< offset of linear system when part of distributed solution
-    class(LinearSolverBaseType), pointer :: linear_solver !< the linear solver for this solution
-    class(MatrixBaseType), pointer :: system_matrix !< sparse A-matrix for the system of equations
-    class(VectorBaseType), pointer :: vec_rhs !< the right-hand side vector
-    class(VectorBaseType), pointer :: vec_x !< the dependent-variable vector
+    class(LinearSolverBaseType), pointer :: linear_solver => null() !< the linear solver for this solution
+    class(MatrixBaseType), pointer :: system_matrix => null() !< sparse A-matrix for the system of equations
+    class(VectorBaseType), pointer :: vec_rhs => null() !< the right-hand side vector
+    class(VectorBaseType), pointer :: vec_x => null() !< the dependent-variable vector
     real(DP), dimension(:), pointer, contiguous :: rhs => null() !< right-hand side vector values
     real(DP), dimension(:), pointer, contiguous :: x => null() !< dependent-variable vector values
     integer(I4B), dimension(:), pointer, contiguous :: active => null() !< active cell array
@@ -227,7 +226,6 @@ contains
     integer(I4B) :: inunit
     class(BaseSolutionType), pointer :: solbase => null()
     character(len=LENSOLUTIONNAME) :: solutionname
-    class(SparseMatrixType), pointer :: matrix_impl
     !
     ! -- Create a new solution and add it to the basesolutionlist container
     solbase => num_sol
@@ -237,9 +235,6 @@ contains
     num_sol%memory_path = create_mem_path(solutionname)
     allocate (num_sol%modellist)
     allocate (num_sol%exchangelist)
-    !
-    allocate (matrix_impl)
-    num_sol%system_matrix => matrix_impl
     !
     call num_sol%allocate_scalars()
     !
@@ -2176,6 +2171,7 @@ contains
   !!
   !<
   subroutine save(this, filename)
+    use SparseMatrixModule
     ! -- modules
     use InputOutputModule, only: getunit
     ! -- dummy variables
