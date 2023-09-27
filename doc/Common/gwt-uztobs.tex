@@ -1,14 +1,14 @@
 % general APT observations
-UZT & concentration & uztno or boundname & -- & uzt cell concentration. If boundname is specified, boundname must be unique for each uzt cell. \\
-UZT & flow-ja-face & uztno or boundname & uztno or -- & Mass flow between two uzt cells.  If a boundname is specified for ID1, then the result is the total mass flow for all uzt cells. If a boundname is specified for ID1 then ID2 is not used.\\
-UZT & storage & uztno or boundname & -- & Simulated mass storage flow rate for a uzt cell or group of uzt cells. \\
-UZT & constant & uztno or boundname & -- & Simulated mass constant-flow rate for a uzt cell or a group of uzt cells. \\
-UZT & from-mvr & uztno or boundname & -- & Simulated mass inflow into a uzt cell or group of uzt cells from the MVT package. Mass inflow is calculated as the product of provider concentration and the mover flow rate. \\
-UZT & uzt & uztno or boundname & -- & Mass flow rate for a uzt cell or group of uzt cells and its aquifer connection(s). \\
+UZT & concentration & ifno or boundname & -- & uzt cell concentration. If boundname is specified, boundname must be unique for each uzt cell. \\
+UZT & flow-ja-face & ifno or boundname & ifno or -- & Mass flow between two uzt cells.  If a boundname is specified for ID1, then the result is the total mass flow for all uzt cells. If a boundname is specified for ID1 then ID2 is not used.\\
+UZT & storage & ifno or boundname & -- & Simulated mass storage flow rate for a uzt cell or group of uzt cells. \\
+UZT & constant & ifno or boundname & -- & Simulated mass constant-flow rate for a uzt cell or a group of uzt cells. \\
+UZT & from-mvr & ifno or boundname & -- & Simulated mass inflow into a uzt cell or group of uzt cells from the MVT package. Mass inflow is calculated as the product of provider concentration and the mover flow rate. \\
+UZT & uzt & ifno or boundname & -- & Mass flow rate for a uzt cell or group of uzt cells and its aquifer connection(s). \\
 
 %observations specific to the uzt package
 % infiltration rej-inf uzet rej-inf-to-mvr
-UZT & infiltration & uztno or boundname & -- & Infiltration rate applied to a uzt cell or group of uzt cells multiplied by the infiltration concentration. \\
-UZT & rej-inf & uztno or boundname & -- & Rejected infiltration rate applied to a uzt cell or group of uzt cells multiplied by the infiltration concentration. \\
-UZT & uzet & uztno or boundname & -- & Unsaturated zone evapotranspiration rate applied to a uzt cell or group of uzt cells multiplied by the uzt cell concentration. \\
-UZT & rej-inf-to-mvr & uztno or boundname & -- & Rejected infiltration rate applied to a uzt cell or group of uzt cells multiplied by the infiltration concentration that is sent to the mover package. \\
+UZT & infiltration & ifno or boundname & -- & Infiltration rate applied to a uzt cell or group of uzt cells multiplied by the infiltration concentration. \\
+UZT & rej-inf & ifno or boundname & -- & Rejected infiltration rate applied to a uzt cell or group of uzt cells multiplied by the infiltration concentration. \\
+UZT & uzet & ifno or boundname & -- & Unsaturated zone evapotranspiration rate applied to a uzt cell or group of uzt cells multiplied by the uzt cell concentration. \\
+UZT & rej-inf-to-mvr & ifno or boundname & -- & Rejected infiltration rate applied to a uzt cell or group of uzt cells multiplied by the infiltration concentration that is sent to the mover package. \\

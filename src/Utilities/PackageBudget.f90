@@ -119,10 +119,20 @@ contains
   !!  GWF Package members stored in BndType.
   !!
   !<
-  subroutine set_pointers(this, flowvarname, mem_path_target)
+  subroutine set_pointers(this, flowvarname, mem_path_target, input_mempath)
+    use ConstantsModule, only: LENVARNAME
     class(PackageBudgetType) :: this !< PackageBudgetType object
     character(len=*), intent(in) :: flowvarname !< name of variable storing flow (SIMVALS, SIMTOMVR)
     character(len=*), intent(in) :: mem_path_target !< path where target variable is stored
+    character(len=*), intent(in) :: input_mempath
+    character(len=LENVARNAME) :: auxvarname
+    !
+    ! -- set memory manager aux varname
+    if (input_mempath /= '') then
+      auxvarname = 'AUXVAR_IDM'
+    else
+      auxvarname = 'AUXVAR'
+    end if
     !
     ! -- Reassign pointers to variables in the flow model
     call mem_reassignptr(this%nbound, 'NBOUND', this%memoryPath, &
@@ -132,7 +142,8 @@ contains
     call mem_reassignptr(this%flow, 'FLOW', this%memoryPath, &
                          flowvarname, mem_path_target)
     call mem_reassignptr(this%auxvar, 'AUXVAR', this%memoryPath, &
-                         'AUXVAR', mem_path_target)
+                         auxvarname, mem_path_target)
+    !
     return
   end subroutine set_pointers
 

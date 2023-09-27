@@ -551,7 +551,7 @@ contains
       packobj => GetBndFromList(gwfmodel%bndlist, ip)
       call gwtmodel%fmi%gwfpackages(iterm)%set_pointers( &
         'SIMVALS', &
-        packobj%memoryPath)
+        packobj%memoryPath, packobj%input_mempath)
       iterm = iterm + 1
       !
       ! -- If a mover is active for this package, then establish a separate
@@ -561,7 +561,7 @@ contains
       if (imover /= 0) then
         call gwtmodel%fmi%gwfpackages(iterm)%set_pointers( &
           'SIMTOMVR', &
-          packobj%memoryPath)
+          packobj%memoryPath, packobj%input_mempath)
         iterm = iterm + 1
       end if
     end do

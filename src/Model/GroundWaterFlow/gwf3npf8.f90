@@ -166,7 +166,6 @@ contains
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     ! -- locals
-    logical(LGP) :: found_fname
     ! -- formats
     character(len=*), parameter :: fmtheader = &
       "(1x, /1x, 'NPF -- NODE PROPERTY FLOW PACKAGE, VERSION 1, 3/30/2015', &
@@ -177,19 +176,14 @@ contains
     allocate (npfobj)
     !
     ! -- create name and memory path
-    call npfobj%set_names(1, name_model, 'NPF', 'NPF')
+    call npfobj%set_names(1, name_model, 'NPF', 'NPF', input_mempath)
     !
     ! -- Allocate scalars
     call npfobj%allocate_scalars()
     !
     ! -- Set variables
-    npfobj%input_mempath = input_mempath
     npfobj%inunit = inunit
     npfobj%iout = iout
-    !
-    ! -- set name of input file
-    call mem_set_value(npfobj%input_fname, 'INPUT_FNAME', npfobj%input_mempath, &
-                       found_fname)
     !
     ! -- check if npf is enabled
     if (inunit > 0) then
@@ -1481,16 +1475,14 @@ contains
     use MemoryManagerExtModule, only: mem_set_value
     use CharacterStringModule, only: CharacterStringType
     use GwfNpfInputModule, only: GwfNpfParamFoundType
+    use IdmLoadModule, only: filein_fname
     ! -- dummy
     class(GwfNpftype) :: this
     ! -- locals
     character(len=LENVARNAME), dimension(3) :: cellavg_method = &
       &[character(len=LENVARNAME) :: 'LOGARITHMIC', 'AMT-LMK', 'AMT-HMK']
     type(GwfNpfParamFoundType) :: found
-    type(CharacterStringType), dimension(:), pointer, &
-      contiguous :: tvk6_fnames
     character(len=LINELENGTH) :: tvk6_filename
-    integer(I4B) :: tvk6_isize, n
 ! ------------------------------------------------------------------------------
     !
     ! -- update defaults with idm sourced values
@@ -1542,24 +1534,11 @@ contains
       this%iasym = 0
     end if
     !
-    call get_isize('TVK6_FILENAME', this%input_mempath, tvk6_isize)
-    !
-    if (tvk6_isize > 0) then
-      !
-      if (tvk6_isize /= 1) then
-        errmsg = 'Multiple TVK6 keywords detected in OPTIONS block.'// &
-                 ' Only one TVK6 entry allowed.'
-        call store_error(errmsg)
-        call store_error_filename(this%input_fname)
-      end if
-      !
-      call mem_setptr(tvk6_fnames, 'TVK6_FILENAME', this%input_mempath)
-      !
-      do n = 1, tvk6_isize
-        tvk6_filename = tvk6_fnames(n)
-        call openfile(this%intvk, this%iout, tvk6_filename, 'TVK')
-        call tvk_cr(this%tvk, this%name_model, this%intvk, this%iout)
-      end do
+    ! -- enforce 0 or 1 TVK6_FILENAME entries in option block
+    if (filein_fname(tvk6_filename, 'TVK6_FILENAME', this%input_mempath, &
+                     this%input_fname)) then
+      call openfile(this%intvk, this%iout, tvk6_filename, 'TVK')
+      call tvk_cr(this%tvk, this%name_model, this%intvk, this%iout)
     end if
     !
     ! -- log options

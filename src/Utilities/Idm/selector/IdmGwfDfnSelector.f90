@@ -5,6 +5,7 @@ module IdmGwfDfnSelectorModule
   use SimModule, only: store_error
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
+  use GwfChdInputModule
   use GwfDisInputModule
   use GwfDisuInputModule
   use GwfDisvInputModule
@@ -22,6 +23,25 @@ module IdmGwfDfnSelectorModule
   public :: gwf_idm_integrated
 
   type GwfParamFoundType
+    logical :: auxiliary = .false.
+    logical :: auxmultname = .false.
+    logical :: boundnames = .false.
+    logical :: iprpak = .false.
+    logical :: iprflow = .false.
+    logical :: ipakcb = .false.
+    logical :: ts_filerecord = .false.
+    logical :: ts6 = .false.
+    logical :: filein = .false.
+    logical :: ts6_filename = .false.
+    logical :: obs_filerecord = .false.
+    logical :: obs6 = .false.
+    logical :: obs6_filename = .false.
+    logical :: inewton = .false.
+    logical :: maxbound = .false.
+    logical :: cellid = .false.
+    logical :: head = .false.
+    logical :: auxvar = .false.
+    logical :: boundname = .false.
     logical :: length_units = .false.
     logical :: nogrb = .false.
     logical :: xorigin = .false.
@@ -56,8 +76,6 @@ module IdmGwfDfnSelectorModule
     logical :: ncvert = .false.
     logical :: icvert = .false.
     logical :: ncpl = .false.
-    logical :: ipakcb = .false.
-    logical :: iprflow = .false.
     logical :: cellavg = .false.
     logical :: ithickstrt = .false.
     logical :: cvoptions = .false.
@@ -78,9 +96,7 @@ module IdmGwfDfnSelectorModule
     logical :: ik33overk = .false.
     logical :: tvk_filerecord = .false.
     logical :: tvk6 = .false.
-    logical :: filein = .false.
     logical :: tvk6_filename = .false.
-    logical :: inewton = .false.
     logical :: iusgnrhc = .false.
     logical :: inwtupw = .false.
     logical :: satmin = .false.
@@ -124,6 +140,8 @@ contains
     type(InputParamDefinitionType), dimension(:), pointer :: input_definition
     nullify (input_definition)
     select case (subcomponent)
+    case ('CHD')
+      call set_param_pointer(input_definition, gwf_chd_param_definitions)
     case ('DIS')
       call set_param_pointer(input_definition, gwf_dis_param_definitions)
     case ('DISU')
@@ -144,6 +162,8 @@ contains
     type(InputParamDefinitionType), dimension(:), pointer :: input_definition
     nullify (input_definition)
     select case (subcomponent)
+    case ('CHD')
+      call set_param_pointer(input_definition, gwf_chd_aggregate_definitions)
     case ('DIS')
       call set_param_pointer(input_definition, gwf_dis_aggregate_definitions)
     case ('DISU')
@@ -164,6 +184,8 @@ contains
     type(InputBlockDefinitionType), dimension(:), pointer :: input_definition
     nullify (input_definition)
     select case (subcomponent)
+    case ('CHD')
+      call set_block_pointer(input_definition, gwf_chd_block_definitions)
     case ('DIS')
       call set_block_pointer(input_definition, gwf_dis_block_definitions)
     case ('DISU')
@@ -183,6 +205,8 @@ contains
     character(len=*), intent(in) :: subcomponent
     logical :: multi_package
     select case (subcomponent)
+    case ('CHD')
+      multi_package = gwf_chd_multi_package
     case ('DIS')
       multi_package = gwf_dis_multi_package
     case ('DISU')
@@ -205,6 +229,8 @@ contains
     character(len=*), intent(in) :: subcomponent
     character(len=LENVARNAME) :: sfac_param
     select case (subcomponent)
+    case ('CHD')
+      sfac_param = gwf_chd_aux_sfac_param
     case ('DIS')
       sfac_param = gwf_dis_aux_sfac_param
     case ('DISU')
@@ -228,6 +254,8 @@ contains
     logical :: integrated
     integrated = .false.
     select case (subcomponent)
+    case ('CHD')
+      integrated = .true.
     case ('DIS')
       integrated = .true.
     case ('DISU')
