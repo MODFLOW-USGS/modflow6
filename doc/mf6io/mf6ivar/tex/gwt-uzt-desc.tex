@@ -47,7 +47,7 @@
 \item \textbf{Block: PACKAGEDATA}
 
 \begin{description}
-\item \texttt{uzfno}---integer value that defines the UZF cell number associated with the specified PACKAGEDATA data on the line. UZFNO must be greater than zero and less than or equal to NUZFCELLS. Unsaturated zone flow information must be specified for every UZF cell or the program will terminate with an error.  The program will also terminate with an error if information for a UZF cell is specified more than once.
+\item \texttt{ifno}---integer value that defines the feature (UZF object) number associated with the specified PACKAGEDATA data on the line. IFNO must be greater than zero and less than or equal to NUZFCELLS. Unsaturated zone flow information must be specified for every UZF cell or the program will terminate with an error.  The program will also terminate with an error if information for a UZF cell is specified more than once.
 
 \item \texttt{strt}---real value that defines the starting concentration for the unsaturated zone flow cell.
 
@@ -61,7 +61,7 @@
 \begin{description}
 \item \texttt{iper}---integer value specifying the starting stress period number for which the data specified in the PERIOD block apply.  IPER must be less than or equal to NPER in the TDIS Package and greater than zero.  The IPER value assigned to a stress period block must be greater than the IPER value assigned for the previous PERIOD block.  The information specified in the PERIOD block will continue to apply for all subsequent stress periods, unless the program encounters another PERIOD block.
 
-\item \texttt{uzfno}---integer value that defines the UZF cell number associated with the specified PERIOD data on the line. UZFNO must be greater than zero and less than or equal to NUZFCELLS.
+\item \texttt{ifno}---integer value that defines the feature (UZF object) number associated with the specified PERIOD data on the line. IFNO must be greater than zero and less than or equal to NUZFCELLS.
 
 \item \texttt{uztsetting}---line of information that is parsed into a keyword and values.  Keyword values that can be used to start the UZTSETTING string include: STATUS, CONCENTRATION, INFILTRATION, UZET, and AUXILIARY.  These settings are used to assign the concentration of associated with the corresponding flow terms.  Concentrations cannot be specified for all flow terms.
 

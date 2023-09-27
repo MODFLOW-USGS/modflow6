@@ -1,24 +1,13 @@
 ! ** Do Not Modify! MODFLOW 6 system generated file. **
 module IdmDfnSelectorModule
 
+  use ConstantsModule, only: LENVARNAME
   use SimModule, only: store_error
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
-  use IdmGwfDfnSelectorModule, only: gwf_param_definitions, &
-                                     gwf_aggregate_definitions, &
-                                     gwf_block_definitions, &
-                                     gwf_idm_multi_package, &
-                                     gwf_idm_integrated
-  use IdmGwtDfnSelectorModule, only: gwt_param_definitions, &
-                                     gwt_aggregate_definitions, &
-                                     gwt_block_definitions, &
-                                     gwt_idm_multi_package, &
-                                     gwt_idm_integrated
-  use IdmSimDfnSelectorModule, only: sim_param_definitions, &
-                                     sim_aggregate_definitions, &
-                                     sim_block_definitions, &
-                                     sim_idm_multi_package, &
-                                     sim_idm_integrated
+  use IdmGwfDfnSelectorModule
+  use IdmGwtDfnSelectorModule
+  use IdmSimDfnSelectorModule
 
   implicit none
   private
@@ -26,7 +15,9 @@ module IdmDfnSelectorModule
   public :: aggregate_definitions
   public :: block_definitions
   public :: idm_multi_package
+  public :: idm_sfac_param
   public :: idm_integrated
+  public :: idm_component
 
 contains
 
@@ -100,6 +91,25 @@ contains
     return
   end function idm_multi_package
 
+  function idm_sfac_param(component, subcomponent) result(sfac_param)
+    character(len=*), intent(in) :: component
+    character(len=*), intent(in) :: subcomponent
+    character(len=LENVARNAME) :: sfac_param
+    select case (component)
+    case ('GWF')
+      sfac_param = gwf_idm_sfac_param(subcomponent)
+    case ('GWT')
+      sfac_param = gwt_idm_sfac_param(subcomponent)
+    case ('SIM')
+      sfac_param = sim_idm_sfac_param(subcomponent)
+    case default
+      call store_error('Idm selector component not found; '//&
+                       &'component="'//trim(component)//&
+                       &'", subcomponent="'//trim(subcomponent)//'".', .true.)
+    end select
+    return
+  end function idm_sfac_param
+
   function idm_integrated(component, subcomponent) result(integrated)
     character(len=*), intent(in) :: component
     character(len=*), intent(in) :: subcomponent
@@ -116,5 +126,21 @@ contains
     end select
     return
   end function idm_integrated
+
+  function idm_component(component) result(integrated)
+    character(len=*), intent(in) :: component
+    logical :: integrated
+    integrated = .false.
+    select case (component)
+    case ('GWF')
+      integrated = .true.
+    case ('GWT')
+      integrated = .true.
+    case ('SIM')
+      integrated = .true.
+    case default
+    end select
+    return
+  end function idm_component
 
 end module IdmDfnSelectorModule

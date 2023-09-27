@@ -112,7 +112,7 @@ def get_model(idx, ws):
     ]
     nlakeconn = 1
 
-    # pak_data = [lakeno, strt, nlakeconn]
+    # pak_data = [ifno, strt, nlakeconn]
     pak_data = [(0, lakestage[idx], nlakeconn)]
 
     belev = top

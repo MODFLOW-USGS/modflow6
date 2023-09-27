@@ -1,6 +1,5 @@
 module TimeArrayModule
 
-  use BaseDisModule, only: DisBaseType
   use KindModule, only: DP, I4B
   use ListModule, only: ListType
   use SimVariablesModule, only: errmsg
@@ -25,7 +24,7 @@ module TimeArrayModule
 
 contains
 
-  subroutine ConstructTimeArray(newTa, dis)
+  subroutine ConstructTimeArray(newTa, modelname)
 ! ******************************************************************************
 ! ConstructTimeArray -- construct time array
 !   Allocate and assign members of a new TimeArrayType object.
@@ -35,20 +34,39 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use ConstantsModule, only: LENMEMPATH
+    use MemoryManagerModule, only: mem_setptr
+    use MemoryHelperModule, only: create_mem_path
     ! -- dummy
     type(TimeArrayType), pointer, intent(out) :: newTa
-    class(DisBaseType), pointer, intent(in) :: dis
+    character(len=*), intent(in) :: modelname
     ! -- local
+    integer(I4B), dimension(:), contiguous, &
+      pointer :: mshape
+    character(len=LENMEMPATH) :: mempath
     integer(I4B) :: isize
 ! ------------------------------------------------------------------------------
     !
+    ! -- initialize
+    nullify (mshape)
+    !
+    ! -- create mempath
+    mempath = create_mem_path(component=modelname, subcomponent='DIS')
+    !
+    ! -- set mshape pointer
+    call mem_setptr(mshape, 'MSHAPE', mempath)
+    !
     ! Get dimensions for supported discretization type
-    if (dis%supports_layers()) then
-      isize = dis%get_ncpl()
+    if (size(mshape) == 2) then
+      isize = mshape(2)
+    else if (size(mshape) == 3) then
+      isize = mshape(2) * mshape(3)
     else
       errmsg = 'Time array series is not supported for discretization type'
       call store_error(errmsg, terminate=.TRUE.)
     end if
+    !
     allocate (newTa)
     allocate (newTa%taArray(isize))
     return

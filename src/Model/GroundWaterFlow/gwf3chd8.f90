@@ -3,9 +3,12 @@ module ChdModule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, DONE, NAMEDBOUNDFLAG, LENFTYPE, &
                              LINELENGTH, LENPACKAGENAME
+  use SimVariablesModule, only: errmsg
+  use SimModule, only: count_errors, store_error, store_error_filename
   use MemoryHelperModule, only: create_mem_path
   use ObsModule, only: DefaultObsIdProcessor
   use BndModule, only: BndType
+  use BndExtModule, only: BndExtType
   use ObserveModule, only: ObserveType
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
@@ -19,7 +22,8 @@ module ChdModule
   character(len=LENFTYPE) :: ftype = 'CHD'
   character(len=LENPACKAGENAME) :: text = '             CHD'
   !
-  type, extends(BndType) :: ChdType
+  type, extends(BndExtType) :: ChdType
+    real(DP), dimension(:), pointer, contiguous :: head => null() !< constant head array
     real(DP), dimension(:), pointer, contiguous :: ratechdin => null() !simulated flows into constant head (excluding other chds)
     real(DP), dimension(:), pointer, contiguous :: ratechdout => null() !simulated flows out of constant head (excluding to other chds)
   contains
@@ -32,16 +36,16 @@ module ChdModule
     procedure :: bnd_da => chd_da
     procedure :: allocate_arrays => chd_allocate_arrays
     procedure :: define_listlabel
+    procedure :: bound_value => chd_bound_value
     ! -- methods for observations
     procedure, public :: bnd_obs_supported => chd_obs_supported
     procedure, public :: bnd_df_obs => chd_df_obs
-    ! -- method for time series
-    procedure, public :: bnd_rp_ts => chd_rp_ts
   end type ChdType
 
 contains
 
-  subroutine chd_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname)
+  subroutine chd_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
+                        mempath)
 ! ******************************************************************************
 ! chd_create -- Create a New Constant Head Package
 ! Subroutine: (1) create new-style package
@@ -58,6 +62,7 @@ contains
     integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
+    character(len=*), intent(in) :: mempath
     ! -- local
     type(ChdType), pointer :: chdobj
 ! ------------------------------------------------------------------------------
@@ -67,11 +72,11 @@ contains
     packobj => chdobj
     !
     ! -- create name and memory path
-    call packobj%set_names(ibcnum, namemodel, pakname, ftype)
+    call packobj%set_names(ibcnum, namemodel, pakname, ftype, mempath)
     packobj%text = text
     !
     ! -- allocate scalars
-    call packobj%allocate_scalars()
+    call chdobj%allocate_scalars()
     !
     ! -- initialize package
     call packobj%pack_initialize()
@@ -91,13 +96,13 @@ contains
 
   subroutine chd_allocate_arrays(this, nodelist, auxvar)
 ! ******************************************************************************
-! allocate_scalars -- allocate arrays
+! chd_allocate_arrays -- allocate arrays
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use MemoryManagerModule, only: mem_allocate
+    use MemoryManagerModule, only: mem_allocate, mem_setptr, mem_checkin
     ! -- dummy
     class(ChdType) :: this
     integer(I4B), dimension(:), pointer, contiguous, optional :: nodelist
@@ -107,7 +112,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- call standard BndType allocate scalars
-    call this%BndType%allocate_arrays()
+    call this%BndExtType%allocate_arrays(nodelist, auxvar)
     !
     ! -- allocate ratechdex
     call mem_allocate(this%ratechdin, this%maxbound, 'RATECHDIN', this%memoryPath)
@@ -117,6 +122,13 @@ contains
       this%ratechdin(i) = DZERO
       this%ratechdout(i) = DZERO
     end do
+    !
+    ! -- set constant head array input context pointer
+    call mem_setptr(this%head, 'HEAD', this%input_mempath)
+    !
+    ! -- checkin constant head array input context pointer
+    call mem_checkin(this%head, 'HEAD', this%memoryPath, &
+                     'HEAD', this%input_mempath)
     !
     ! -- return
     return
@@ -129,23 +141,23 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use SimModule, only: store_error
+    use TdisModule, only: kper
     ! -- dummy
     class(ChdType), intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=30) :: nodestr
     integer(I4B) :: i, node, ibd, ierr
 ! ------------------------------------------------------------------------------
+    if (this%iper /= kper) return
     !
     ! -- Reset previous CHDs to active cell
     do i = 1, this%nbound
       node = this%nodelist(i)
       this%ibound(node) = this%ibcnum
     end do
-    !
+    !!
     ! -- Call the parent class read and prepare
-    call this%BndType%bnd_rp()
+    call this%BndExtType%bnd_rp()
     !
     ! -- Set ibound to -(ibcnum + 1) for constant head cells
     ierr = 0
@@ -165,7 +177,12 @@ contains
     !
     ! -- Stop if errors detected
     if (ierr > 0) then
-      call this%parser%StoreErrorUnit()
+      call store_error_filename(this%input_fname)
+    end if
+    !
+    ! -- Write the list to iout if requested
+    if (this%iprpak /= 0) then
+      call this%write_list()
     end if
     !
     ! -- return
@@ -188,13 +205,14 @@ contains
     ! -- formats
 ! ------------------------------------------------------------------------------
     !
-    ! -- Advance the time series
-    call this%TsManager%ad()
-    !
     ! -- Process each entry in the specified-head cell list
     do i = 1, this%nbound
       node = this%nodelist(i)
-      hb = this%bound(1, i)
+      if (this%iauxmultcol > 0) then
+        hb = this%head(i) * this%auxvar(this%iauxmultcol, i)
+      else
+        hb = this%head(i)
+      end if
       this%xnew(node) = hb
       this%xold(node) = this%xnew(node)
     end do
@@ -216,12 +234,9 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error, count_errors
     ! -- dummy
     class(ChdType), intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=30) :: nodestr
     integer(I4B) :: i
     integer(I4B) :: node
@@ -237,16 +252,16 @@ contains
       node = this%nodelist(i)
       bt = this%dis%bot(node)
       ! -- accumulate errors
-      if (this%bound(1, i) < bt .and. this%icelltype(node) /= 0) then
+      if (this%head(i) < bt .and. this%icelltype(node) /= 0) then
         call this%dis%noder_to_string(node, nodestr)
-        write (errmsg, fmt=fmtchderr) i, this%bound(1, i), bt, trim(nodestr)
+        write (errmsg, fmt=fmtchderr) i, this%head(i), bt, trim(nodestr)
         call store_error(errmsg)
       end if
     end do
     !
     !write summary of chd package error messages
     if (count_errors() > 0) then
-      call this%parser%StoreErrorUnit()
+      call store_error_filename(this%input_fname)
     end if
     !
     ! -- return
@@ -375,11 +390,12 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Deallocate parent package
-    call this%BndType%bnd_da()
+    call this%BndExtType%bnd_da()
     !
     ! -- arrays
     call mem_deallocate(this%ratechdin)
     call mem_deallocate(this%ratechdout)
+    call mem_deallocate(this%head, 'HEAD', this%memoryPath)
     !
     ! -- return
     return
@@ -455,31 +471,34 @@ contains
     return
   end subroutine chd_df_obs
 
-  ! -- Procedure related to time series
-
-  subroutine chd_rp_ts(this)
-    ! -- Assign tsLink%Text appropriately for
-    !    all time series in use by package.
-    !    In CHD package variable HEAD
-    !    can be controlled by time series.
-    ! -- dummy
-    class(ChdType), intent(inout) :: this
-    ! -- local
-    integer(I4B) :: i, nlinks
-    type(TimeSeriesLinkType), pointer :: tslink => null()
+  !> @ brief Return a bound value
+    !!
+    !!  Return a bound value associated with an ncolbnd index
+    !!  and row.
+    !!
+  !<
+  function chd_bound_value(this, col, row) result(bndval)
+    ! -- modules
+    use ConstantsModule, only: DZERO
+    ! -- dummy variables
+    class(ChdType), intent(inout) :: this !< BndType object
+    integer(I4B), intent(in) :: col
+    integer(I4B), intent(in) :: row
+    ! -- result
+    real(DP) :: bndval
     !
-    nlinks = this%TsManager%boundtslinks%Count()
-    do i = 1, nlinks
-      tslink => GetTimeSeriesLinkFromList(this%TsManager%boundtslinks, i)
-      if (associated(tslink)) then
-        select case (tslink%JCol)
-        case (1)
-          tslink%Text = 'HEAD'
-        end select
-      end if
-    end do
+    select case (col)
+    case (1)
+      bndval = this%head(row)
+    case default
+      errmsg = 'Programming error. CHD bound value requested column '&
+               &'outside range of ncolbnd (1).'
+      call store_error(errmsg)
+      call store_error_filename(this%input_fname)
+    end select
     !
+    ! -- return
     return
-  end subroutine chd_rp_ts
+  end function chd_bound_value
 
 end module ChdModule

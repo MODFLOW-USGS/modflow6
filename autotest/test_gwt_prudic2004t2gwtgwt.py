@@ -247,7 +247,7 @@ def sfr_packagedata_to_list(
         dt[14] = ("boundname", "S40")
     ra = np.genfromtxt(fname, dtype=dt)
     if convert_to_zero_base:
-        ra["rno"] -= 1
+        ra["ifno"] -= 1
         ra["layer"] -= 1
         ra["row"] -= 1
         ra["column"] -= 1
@@ -649,8 +649,8 @@ def build_gwfgwt_combo(
                 sfrpack = gwf.get_package(pname)
                 nreaches = sfrpack.nreaches.get_data()
                 sftpackagedata = []
-                for irno in range(nreaches):
-                    t = (irno, 0.0, 99.0, 999.0, f"myreach{irno + 1}")
+                for ifno in range(nreaches):
+                    t = (ifno, 0.0, 99.0, 999.0, f"myreach{ifno + 1}")
                     sftpackagedata.append(t)
 
                 sft_obs = {

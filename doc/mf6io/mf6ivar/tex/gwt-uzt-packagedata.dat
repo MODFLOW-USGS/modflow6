@@ -1,5 +1,5 @@
 BEGIN PACKAGEDATA
-  <uzfno> <strt> [<@aux(naux)@>] [<boundname>]
-  <uzfno> <strt> [<@aux(naux)@>] [<boundname>]
+  <ifno> <strt> [<@aux(naux)@>] [<boundname>]
+  <ifno> <strt> [<@aux(naux)@>] [<boundname>]
   ...
 END PACKAGEDATA

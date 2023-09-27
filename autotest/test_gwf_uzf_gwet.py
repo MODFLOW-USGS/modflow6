@@ -97,7 +97,7 @@ def build_model(idx, dir):
     )
 
     # transient uzf info
-    # iuzno  cellid landflg ivertcn surfdp vks thtr thts thti eps [bndnm]
+    # ifno  cellid landflg ivertcn surfdp vks thtr thts thti eps [bndnm]
     uzf_pkdat = [
         [0, (0, 0, 1), 1, 8, 1, 1, 0.05, 0.35, 0.05, 4, "uzf01"],
         [1, (0, 0, 2), 1, 9, 1, 1, 0.05, 0.35, 0.05, 4, "uzf02"],

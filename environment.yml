@@ -13,6 +13,8 @@ dependencies:
   - meson>=1.1.0
   - ninja
   - numpy
+  - pyshp
+  - shapely
   - pip
   - pip:
       - git+https://github.com/modflowpy/flopy.git

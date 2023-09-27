@@ -1,5 +1,6 @@
 module GwfNpfModule
   use KindModule, only: DP, I4B
+  use SimVariablesModule, only: errmsg
   use ConstantsModule, only: DZERO, DEM9, DEM8, DEM7, DEM6, DEM2, &
                              DHALF, DP9, DONE, DTWO, &
                              DLNLOW, DLNHIGH, &
@@ -165,7 +166,6 @@ contains
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     ! -- locals
-    logical(LGP) :: found_fname
     ! -- formats
     character(len=*), parameter :: fmtheader = &
       "(1x, /1x, 'NPF -- NODE PROPERTY FLOW PACKAGE, VERSION 1, 3/30/2015', &
@@ -176,19 +176,14 @@ contains
     allocate (npfobj)
     !
     ! -- create name and memory path
-    call npfobj%set_names(1, name_model, 'NPF', 'NPF')
+    call npfobj%set_names(1, name_model, 'NPF', 'NPF', input_mempath)
     !
     ! -- Allocate scalars
     call npfobj%allocate_scalars()
     !
     ! -- Set variables
-    npfobj%input_mempath = input_mempath
     npfobj%inunit = inunit
     npfobj%iout = iout
-    !
-    ! -- set name of input file
-    call mem_set_value(npfobj%input_fname, 'INPUT_FNAME', npfobj%input_mempath, &
-                       found_fname)
     !
     ! -- check if npf is enabled
     if (inunit > 0) then
@@ -1475,8 +1470,12 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
+    use SimModule, only: store_error, store_error_filename
+    use MemoryManagerModule, only: mem_setptr, get_isize
     use MemoryManagerExtModule, only: mem_set_value
+    use CharacterStringModule, only: CharacterStringType
     use GwfNpfInputModule, only: GwfNpfParamFoundType
+    use IdmLoadModule, only: filein_fname
     ! -- dummy
     class(GwfNpftype) :: this
     ! -- locals
@@ -1508,8 +1507,6 @@ contains
                        found%ik22overk)
     call mem_set_value(this%ik33overk, 'IK33OVERK', this%input_mempath, &
                        found%ik33overk)
-    call mem_set_value(tvk6_filename, 'TVK6_FILENAME', this%input_mempath, &
-                       found%tvk6_filename)
     call mem_set_value(this%inewton, 'INEWTON', this%input_mempath, found%inewton)
     call mem_set_value(this%iusgnrhc, 'IUSGNRHC', this%input_mempath, &
                        found%iusgnrhc)
@@ -1531,17 +1528,17 @@ contains
     ! -- save specific discharge active
     if (found%isavspdis) this%icalcspdis = this%isavspdis
     !
-    ! -- TVK6 subpackage file spec provided
-    if (found%tvk6_filename) then
-      this%intvk = GetUnit()
-      call openfile(this%intvk, this%iout, tvk6_filename, 'TVK')
-      call tvk_cr(this%tvk, this%name_model, this%intvk, this%iout)
-    end if
-    !
     ! -- no newton specified
     if (found%inewton) then
       this%inewton = 0
       this%iasym = 0
+    end if
+    !
+    ! -- enforce 0 or 1 TVK6_FILENAME entries in option block
+    if (filein_fname(tvk6_filename, 'TVK6_FILENAME', this%input_mempath, &
+                     this%input_fname)) then
+      call openfile(this%intvk, this%iout, tvk6_filename, 'TVK')
+      call tvk_cr(this%tvk, this%name_model, this%intvk, this%iout)
     end if
     !
     ! -- log options
@@ -1582,7 +1579,6 @@ contains
     ! -- dummy
     class(GwfNpftype) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
     ! -- check if this%iusgnrhc has been enabled for a model that is not using
     !    the Newton-Raphson formulation

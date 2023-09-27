@@ -88,21 +88,15 @@ contains
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     type(GwfDisvType), pointer :: disnew
-    logical(LGP) :: found_fname
     character(len=*), parameter :: fmtheader = &
       "(1X, /1X, 'DISV -- VERTEX GRID DISCRETIZATION PACKAGE,', &
       &' VERSION 1 : 12/23/2015 - INPUT READ FROM MEMPATH: ', A, //)"
 ! ------------------------------------------------------------------------------
     allocate (disnew)
     dis => disnew
-    call disnew%allocate_scalars(name_model)
-    dis%input_mempath = input_mempath
+    call disnew%allocate_scalars(name_model, input_mempath)
     dis%inunit = inunit
     dis%iout = iout
-    !
-    ! -- set name of input file
-    call mem_set_value(dis%input_fname, 'INPUT_FNAME', dis%input_mempath, &
-                       found_fname)
     !
     ! -- If disv enabled
     if (inunit > 0) then
@@ -1240,7 +1234,7 @@ contains
 
   end subroutine get_dis_type
 
-  subroutine allocate_scalars(this, name_model)
+  subroutine allocate_scalars(this, name_model, input_mempath)
 ! ******************************************************************************
 ! allocate_scalars -- Allocate and initialize scalars
 ! ******************************************************************************
@@ -1252,10 +1246,11 @@ contains
     ! -- dummy
     class(GwfDisvType) :: this
     character(len=*), intent(in) :: name_model
+    character(len=*), intent(in) :: input_mempath
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate parent scalars
-    call this%DisBaseType%allocate_scalars(name_model)
+    call this%DisBaseType%allocate_scalars(name_model, input_mempath)
     !
     ! -- Allocate
     call mem_allocate(this%nlay, 'NLAY', this%memoryPath)
@@ -1325,13 +1320,19 @@ contains
     integer(I4B) :: ivert
     integer(I4B) :: nvert
     integer(I4B) :: icount
+    integer(I4B) :: iv1
     real(DP) :: x
     real(DP) :: y
+    real(DP) :: x1
+    real(DP) :: y1
 ! ------------------------------------------------------------------------------
     !
     area = DZERO
     nvert = this%iavert(icell2d + 1) - this%iavert(icell2d)
     icount = 1
+    iv1 = this%javert(this%iavert(icell2d))
+    x1 = this%vertices(1, iv1)
+    y1 = this%vertices(2, iv1)
     do ivert = this%iavert(icell2d), this%iavert(icell2d + 1) - 1
       x = this%vertices(1, this%javert(ivert))
       if (icount < nvert) then
@@ -1339,7 +1340,7 @@ contains
       else
         y = this%vertices(2, this%javert(this%iavert(icell2d)))
       end if
-      area = area + x * y
+      area = area + (x - x1) * (y - y1)
       icount = icount + 1
     end do
     !
@@ -1351,7 +1352,7 @@ contains
       else
         x = this%vertices(1, this%javert(this%iavert(icell2d)))
       end if
-      area = area - x * y
+      area = area - (x - x1) * (y - y1)
       icount = icount + 1
     end do
     !

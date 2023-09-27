@@ -4,6 +4,9 @@ module ImsLinearSolverModule
   use MatrixBaseModule
   use VectorBaseModule
   use SparseMatrixModule
+  use ImsLinearSettingsModule
+  use ConvergenceSummaryModule
+
   implicit none
   private
 
@@ -12,6 +15,7 @@ module ImsLinearSolverModule
   type, public, extends(LinearSolverBaseType) :: ImsLinearSolverType
   contains
     procedure :: initialize => ims_initialize
+    procedure :: print_summary => ims_print_summary
     procedure :: solve => ims_solve
     procedure :: get_result => ims_get_result
     procedure :: destroy => ims_destroy
@@ -31,16 +35,23 @@ contains
 
   end function create_ims_solver
 
-  subroutine ims_initialize(this, matrix)
+  subroutine ims_initialize(this, matrix, linear_settings, convergence_summary)
     class(ImsLinearSolverType) :: this
     class(MatrixBaseType), pointer :: matrix
+    type(ImsLinearSettingsType), pointer :: linear_settings
+    type(ConvergenceSummaryType), pointer :: convergence_summary
   end subroutine ims_initialize
 
-  subroutine ims_solve(this, kiter, rhs, x)
+  subroutine ims_print_summary(this)
+    class(ImsLinearSolverType) :: this
+  end subroutine ims_print_summary
+
+  subroutine ims_solve(this, kiter, rhs, x, cnvg_summary)
     class(ImsLinearSolverType) :: this
     integer(I4B) :: kiter
     class(VectorBaseType), pointer :: rhs
     class(VectorBaseType), pointer :: x
+    type(ConvergenceSummaryType) :: cnvg_summary
   end subroutine ims_solve
 
   subroutine ims_get_result(this)

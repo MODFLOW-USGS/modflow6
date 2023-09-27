@@ -13,17 +13,17 @@ BEGIN DIMENSIONS
 END DIMENSIONS
 
 BEGIN PACKAGEDATA
-#rno k  i j rlen rwid        rgrd      rtp   rbth     rhk   man  ncon ustrf  ndv  boundname
-   1 1  1 1 1000.  10    8.67E-04 1093.048    3.0 0.00003  0.03     1   1.0    0    trapezoidal
-   2 1  2 2 2000.  11    8.67E-04 1088.059    3.0 0.00003  0.03     2   1.0    0    trapezoidal
-   3 1  3 3 3000.  12    8.67E-04 1082.419    3.0 0.00003  0.03     2   1.0    0    trapezoidal
-   4 1  3 4 4000.  13    8.67E-04 1077.408    3.0 0.00003  0.03     2   1.0    0    trapezoidal
-   5 1  4 5 5000.  14    9.43E-04 1071.934    3.0 0.00003  0.03     2   1.0    0    rect
-   6 1  5 6 5000.  15    9.43E-04 1066.509    3.0 0.00003  0.03     2   1.0    0    rect
-   7 1  6 6 5000.  16    9.43E-04 1061.792    3.0 0.00003  0.03     2   1.0    0    rect
-   8 1  7 6 5000.  17    9.43E-04 1057.075    3.0 0.00003  0.03     2   1.0    0    rect
-   9 1  8 6 5000.  18    9.43E-04 1052.359    3.0 0.00003  0.03     2   1.0    0    rect
-  10 1  3 5 5000.  19    5.45E-04 1073.636    2.0 0.00003  0.03     1   0.0    0    rect
+#ifno k  i j rlen rwid        rgrd      rtp   rbth     rhk   man  ncon ustrf  ndv  boundname
+    1 1  1 1 1000.  10    8.67E-04 1093.048    3.0 0.00003  0.03     1   1.0    0    trapezoidal
+    2 1  2 2 2000.  11    8.67E-04 1088.059    3.0 0.00003  0.03     2   1.0    0    trapezoidal
+    3 1  3 3 3000.  12    8.67E-04 1082.419    3.0 0.00003  0.03     2   1.0    0    trapezoidal
+    4 1  3 4 4000.  13    8.67E-04 1077.408    3.0 0.00003  0.03     2   1.0    0    trapezoidal
+    5 1  4 5 5000.  14    9.43E-04 1071.934    3.0 0.00003  0.03     2   1.0    0    rect
+    6 1  5 6 5000.  15    9.43E-04 1066.509    3.0 0.00003  0.03     2   1.0    0    rect
+    7 1  6 6 5000.  16    9.43E-04 1061.792    3.0 0.00003  0.03     2   1.0    0    rect
+    8 1  7 6 5000.  17    9.43E-04 1057.075    3.0 0.00003  0.03     2   1.0    0    rect
+    9 1  8 6 5000.  18    9.43E-04 1052.359    3.0 0.00003  0.03     2   1.0    0    rect
+   10 1  3 5 5000.  19    5.45E-04 1073.636    2.0 0.00003  0.03     1   0.0    0    rect
 END PACKAGEDATA
 
 # CROSSSECTIONS BLOCK is optional
@@ -34,21 +34,21 @@ BEGIN CROSSSECTIONS
 END CROSSSECTIONS
 
 BEGIN CONNECTIONDATA
-#rno ic1 ic2 ic3
-   1  -2
-   2   1  -3
-   3   2  -4
-   4   3  -5
-   5   4  -6
-   6   5  -7
-   7   6  -8
-   8   7  -9
-   9   8 -10
-  10   9
+# ifno ic1 ic2 ic3
+     1  -2
+     2   1  -3
+     3   2  -4
+     4   3  -5
+     5   4  -6
+     6   5  -7
+     7   6  -8
+     8   7  -9
+     9   8 -10
+    10   9
 END CONNECTIONDATA
 
 BEGIN PERIOD 1
-# rno sfrsetting
-    1 inflow 25.
-    4 crosssection TAB6 FILEIN trapezoidal.tab
+# ifno sfrsetting
+     1 inflow 25.
+     4 crosssection TAB6 FILEIN trapezoidal.tab
 END PERIOD

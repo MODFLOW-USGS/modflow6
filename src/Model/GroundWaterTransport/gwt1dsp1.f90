@@ -90,7 +90,6 @@ contains
     integer(I4B), intent(in) :: iout
     type(GwtFmiType), intent(in), target :: fmi
     ! -- locals
-    logical(LGP) :: found_fname
     ! -- formats
     character(len=*), parameter :: fmtdsp = &
       "(1x,/1x,'DSP-- DISPERSION PACKAGE, VERSION 1, 1/24/2018', &
@@ -101,20 +100,15 @@ contains
     allocate (dspobj)
     !
     ! -- create name and memory path
-    call dspobj%set_names(1, name_model, 'DSP', 'DSP')
+    call dspobj%set_names(1, name_model, 'DSP', 'DSP', input_mempath)
     !
     ! -- Allocate scalars
     call dspobj%allocate_scalars()
     !
     ! -- Set variables
-    dspobj%input_mempath = input_mempath
     dspobj%inunit = inunit
     dspobj%iout = iout
     dspobj%fmi => fmi
-    !
-    ! -- set name of input file
-    call mem_set_value(dspobj%input_fname, 'INPUT_FNAME', dspobj%input_mempath, &
-                       found_fname)
     !
     if (dspobj%inunit > 0) then
       !

@@ -121,7 +121,7 @@ def build_model(idx, dir):
 
     # MAW
     opth = f"{name}.maw.obs"
-    # <wellno> <radius> <bottom> <strt> <condeqn> <ngwfnodes> [<aux(naux)>] [<boundname>]
+    # <ifno> <radius> <bottom> <strt> <condeqn> <ngwfnodes> [<aux(naux)>] [<boundname>]
     wellbottom = 0.0
     wellradius = 0.1
     ngwfnodes = 1
@@ -130,7 +130,7 @@ def build_model(idx, dir):
         [iwell, wellradius, wellbottom, strt, "THIEM", ngwfnodes, concwell]
         for iwell in range(4)
     ]
-    # <wellno> <icon> <cellid(ncelldim)> <scrn_top> <scrn_bot> <hk_skin> <radius_skin>
+    # <ifno> <icon> <cellid(ncelldim)> <scrn_top> <scrn_bot> <hk_skin> <radius_skin>
     wellconnectionsrecarray = [
         [0, 0, (0, 15, 15), 10.0, 0.0, 10.0, 0.1],
         [1, 0, (0, 15, 20), 10.0, 0.0, 10.0, 0.1],

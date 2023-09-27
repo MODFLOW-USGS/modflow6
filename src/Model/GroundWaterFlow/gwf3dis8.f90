@@ -84,21 +84,15 @@ contains
     integer(I4B), intent(in) :: iout
     ! -- locals
     type(GwfDisType), pointer :: disnew
-    logical(LGP) :: found_fname
     character(len=*), parameter :: fmtheader = &
       "(1X, /1X, 'DIS -- STRUCTURED GRID DISCRETIZATION PACKAGE,', &
       &' VERSION 2 : 3/27/2014 - INPUT READ FROM MEMPATH: ', A, /)"
 ! ------------------------------------------------------------------------------
     allocate (disnew)
     dis => disnew
-    call disnew%allocate_scalars(name_model)
-    dis%input_mempath = input_mempath
+    call disnew%allocate_scalars(name_model, input_mempath)
     dis%inunit = inunit
     dis%iout = iout
-    !
-    ! -- set name of input file
-    call mem_set_value(dis%input_fname, 'INPUT_FNAME', dis%input_mempath, &
-                       found_fname)
     !
     ! -- If dis enabled
     if (inunit > 0) then
@@ -872,7 +866,7 @@ contains
     return
   end function get_nodenumber_idx3
 
-  subroutine allocate_scalars(this, name_model)
+  subroutine allocate_scalars(this, name_model, input_mempath)
 ! ******************************************************************************
 ! allocate_scalars -- Allocate and initialize scalars
 ! ******************************************************************************
@@ -883,10 +877,11 @@ contains
     ! -- dummy
     class(GwfDisType) :: this
     character(len=*), intent(in) :: name_model
+    character(len=*), intent(in) :: input_mempath
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate parent scalars
-    call this%DisBaseType%allocate_scalars(name_model)
+    call this%DisBaseType%allocate_scalars(name_model, input_mempath)
     !
     ! -- Allocate
     call mem_allocate(this%nlay, 'NLAY', this%memoryPath)

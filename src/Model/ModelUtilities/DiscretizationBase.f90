@@ -1,6 +1,6 @@
 module BaseDisModule
 
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LENMODELNAME, LENAUXNAME, LINELENGTH, &
                              DZERO, LENMEMPATH, DPIO180
   use SmoothingModule, only: sQuadraticSaturation
@@ -24,8 +24,8 @@ module BaseDisModule
 
   type :: DisBaseType
     character(len=LENMEMPATH) :: memoryPath !< path for memory allocation
+    character(len=LENMEMPATH) :: input_mempath = '' !< input context mempath
     character(len=LENMODELNAME), pointer :: name_model => null() !< name of the model
-    character(len=LENMEMPATH), pointer :: input_mempath => null() !< input context mempath
     character(len=LINELENGTH), pointer :: input_fname => null() !< input file name
     integer(I4B), pointer :: inunit => null() !< unit number for input file
     integer(I4B), pointer :: iout => null() !< unit number for output file
@@ -107,6 +107,7 @@ module BaseDisModule
     procedure, public :: nlarray_to_nodelist
     procedure, public :: highest_active
     procedure, public :: get_area
+    procedure, public :: get_area_factor
 
   end type DisBaseType
 
@@ -261,7 +262,6 @@ contains
     !
     ! -- Strings
     deallocate (this%name_model)
-    deallocate (this%input_mempath)
     deallocate (this%input_fname)
     !
     ! -- Scalars
@@ -552,7 +552,7 @@ contains
 
   end subroutine get_dis_type
 
-  subroutine allocate_scalars(this, name_model)
+  subroutine allocate_scalars(this, name_model, input_mempath)
 ! ******************************************************************************
 ! allocate_scalars -- Allocate and initialize scalar variables in this class
 ! ******************************************************************************
@@ -561,9 +561,12 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
+    use MemoryManagerExtModule, only: mem_set_value
     ! -- dummy
     class(DisBaseType) :: this
     character(len=*), intent(in) :: name_model
+    character(len=*), intent(in) :: input_mempath
+    logical(LGP) :: found
     ! -- local
 ! ------------------------------------------------------------------------------
     !
@@ -572,7 +575,6 @@ contains
     !
     ! -- Allocate
     allocate (this%name_model)
-    allocate (this%input_mempath)
     allocate (this%input_fname)
     !
     call mem_allocate(this%inunit, 'INUNIT', this%memoryPath)
@@ -591,7 +593,7 @@ contains
     !
     ! -- Initialize
     this%name_model = name_model
-    this%input_mempath = ''
+    this%input_mempath = input_mempath
     this%input_fname = ''
     this%inunit = 0
     this%iout = 0
@@ -606,6 +608,10 @@ contains
     this%nja = 0
     this%njas = 0
     this%lenuni = 0
+    !
+    ! -- update input filename
+    call mem_set_value(this%input_fname, 'INPUT_FNAME', &
+                       this%input_mempath, found)
     !
     ! -- Return
     return
@@ -1504,5 +1510,38 @@ contains
     ! -- return
     return
   end function get_area
+
+  !> @ brief Calculate the area factor for the cell connection
+  !!
+  !!  Function calculates the area factor for the cell connection. The sum of
+  !!  all area factors for all cell connections to overlying or underlying
+  !!  cells cells will be 1.
+  !!
+  !!  TODO: confirm that this works for cells that are only partially covered
+  !!        by overlying or underlying cells.
+  !!
+  !<
+  function get_area_factor(this, node, idx_conn) result(area_factor)
+    ! -- return
+    real(DP) :: area_factor !< connection cell area factor
+    ! -- dummy
+    class(DisBaseType) :: this
+    integer(I4B), intent(in) :: node !< cell node number
+    integer(I4B), intent(in) :: idx_conn !< connection index
+    ! -- local
+    real(DP) :: area_node
+    real(DP) :: area_conn
+    ! ------------------------------------------------------------------------------
+    !
+    ! -- calculate the cell area fraction
+    area_node = this%area(node)
+    area_conn = this%con%hwva(idx_conn)
+    !
+    ! -- return the cell area factor
+    area_factor = area_conn / area_node
+    !
+    ! -- return
+    return
+  end function get_area_factor
 
 end module BaseDisModule
