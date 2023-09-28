@@ -52,8 +52,8 @@ module WelModule
     procedure :: bnd_fn => wel_fn
     procedure :: bnd_da => wel_da
     procedure :: define_listlabel
-    procedure :: q_sfac
     procedure :: bound_value => wel_bound_value
+    procedure :: q_mult
     ! -- methods for observations
     procedure, public :: bnd_obs_supported => wel_obs_supported
     procedure, public :: bnd_df_obs => wel_df_obs
@@ -146,7 +146,7 @@ contains
     ! -- dummy variables
     class(WelType) :: this !< WelType object
     !
-    ! -- call BndExtType allocate scalars
+    ! -- call base type allocate scalars
     call this%BndExtType%allocate_scalars()
     !
     ! -- allocate the object and assign values to object variables
@@ -272,7 +272,7 @@ contains
     end if
     !
     if (found%afrcsvfile) then
-      ! TODO
+      ! -- currently no-op
     end if
     !
     if (found%mover) then
@@ -347,7 +347,7 @@ contains
         this%rhs(i) = DZERO
         cycle
       end if
-      q = this%q_sfac(i)
+      q = this%q_mult(i)
       if (this%iflowred /= 0 .and. q < DZERO) then
         ict = this%icelltype(node)
         if (ict /= 0) then
@@ -451,7 +451,7 @@ contains
           thick = tp - bt
           tp = bt + this%flowred * thick
           drterm = sQSaturationDerivative(tp, bt, this%xnew(node))
-          drterm = drterm * this%q_sfac(i)
+          drterm = drterm * this%q_mult(i)
           !--fill amat and rhs with newton-raphson terms
           call matrix_sln%add_value_pos(idxglo(ipos), drterm)
           rhs(node) = rhs(node) + drterm * this%xnew(node)
@@ -503,11 +503,11 @@ contains
       if (this%ibound(nodereduced) <= 0) then
         cycle
       end if
-      v = this%q_sfac(i) + this%rhs(i)
+      v = this%q_mult(i) + this%rhs(i)
       if (v < DZERO) then
         nodeuser = this%dis%get_nodeuser(nodereduced)
         write (this%ioutafrcsv, '(*(G0,:,","))') &
-          totim, kper, kstp, i, nodeuser, this%q_sfac(i), this%simvals(i), v
+          totim, kper, kstp, i, nodeuser, this%q_mult(i), this%simvals(i), v
       end if
     end do
   end subroutine wel_afr_csv_write
@@ -630,7 +630,7 @@ contains
             v = this%simvals(jj)
           case ('WEL-REDUCTION')
             if (this%iflowred > 0) then
-              v = this%q_sfac(jj) + this%rhs(jj)
+              v = this%q_mult(jj) + this%rhs(jj)
             end if
           case default
             errmsg = 'Unrecognized observation type: '//trim(obsrv%ObsTypeId)
@@ -652,7 +652,7 @@ contains
     return
   end subroutine wel_bd_obs
 
-  function q_sfac(this, row) result(q)
+  function q_mult(this, row) result(q)
     ! -- modules
     use ConstantsModule, only: DZERO
     ! -- dummy variables
@@ -669,7 +669,7 @@ contains
     !
     ! -- return
     return
-  end function q_sfac
+  end function q_mult
 
   !> @ brief Return a bound value
     !!
@@ -689,8 +689,7 @@ contains
     !
     select case (col)
     case (1)
-      ! TODO: scaled or no?
-      bndval = this%q(row)
+      bndval = this%q_mult(row)
     case default
       errmsg = 'Programming error. WEL bound value requested column '&
                &'outside range of ncolbnd (1).'
