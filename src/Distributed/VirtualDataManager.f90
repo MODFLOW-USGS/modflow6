@@ -3,8 +3,9 @@ module VirtualDataManagerModule
   use STLVecIntModule
   use VirtualDataListsModule, only: virtual_model_list, virtual_exchange_list
   use VirtualBaseModule, only: MAP_NODE_TYPE, MAP_CONN_TYPE
-  use VirtualModelModule, only: get_virtual_model
-  use VirtualExchangeModule, only: get_virtual_exchange
+  use VirtualModelModule, only: get_virtual_model, get_virtual_model_from_list
+  use VirtualExchangeModule, only: get_virtual_exchange, &
+                                   get_virtual_exchange_from_list
   use VirtualSolutionModule
   use VirtualDataContainerModule
   use RouterBaseModule
@@ -92,6 +93,7 @@ contains
     integer(I4B) :: model_id, exg_id
     type(STLVecInt) :: model_ids, exchange_ids
     class(VirtualDataContainerType), pointer :: vdc
+    logical :: found
 
     this%nr_solutions = this%nr_solutions + 1
     virt_sol => this%virtual_solutions(this%nr_solutions)
@@ -104,16 +106,34 @@ contains
     virt_sol%solution_id = num_sol%id
     virt_sol%numerical_solution => num_sol
 
-    ! 1) adding all local models from the solution
+    ! 1) adding all local models with a virtual model counterpart from the solution
     do im = 1, num_sol%modellist%Count()
       num_mod => GetNumericalModelFromList(num_sol%modellist, im)
-      call model_ids%push_back(num_mod%id)
+      found = .false.
+      do i = 1, virtual_model_list%Count()
+        vdc => get_virtual_model_from_list(virtual_model_list, i)
+        if (num_mod%id == vdc%id) then
+          found = .true.
+          exit
+        end if
+      end do
+      if (found) then
+        call model_ids%push_back(num_mod%id)
+      end if
     end do
 
-    ! 2) adding all local exchanges
+    ! 2) adding all local exchanges with a virtual exchange counterpart
     do ix = 1, num_sol%exchangelist%Count()
       exg => GetDisConnExchangeFromList(num_sol%exchangelist, ix)
       if (.not. associated(exg)) cycle ! interface model is handled separately
+      found = .false.
+      do i = 1, virtual_exchange_list%Count()
+        vdc => get_virtual_exchange_from_list(virtual_exchange_list, i)
+        if (exg%id == vdc%id) then
+          found = .true.
+          exit
+        end if
+      end do
       call exchange_ids%push_back_unique(exg%id)
     end do
 
