@@ -89,7 +89,7 @@ contains
     call this%set(this%fmi_gwfhead%base(), 'GWFHEAD', 'FMI', MAP_NODE_TYPE)
     call this%set(this%fmi_gwfsat%base(), 'GWFSAT', 'FMI', MAP_NODE_TYPE)
     call this%set(this%fmi_gwfspdis%base(), 'GWFSPDIS', 'FMI', MAP_NODE_TYPE)
-    call this%set(this%fmi_gwfflowja%base(), 'GWFFLOWJA', 'FMI', MAP_NODE_TYPE)
+    call this%set(this%fmi_gwfflowja%base(), 'GWFFLOWJA', 'FMI', MAP_CONN_TYPE)
     call this%set(this%mst_thetam%base(), 'THETAM', 'MST', MAP_NODE_TYPE)
     call this%set(this%indsp%base(), 'INDSP', '', MAP_ALL_TYPE)
     call this%set(this%inmst%base(), 'INMST', '', MAP_ALL_TYPE)
@@ -118,6 +118,7 @@ contains
     else if (stage == STG_BFR_CON_AR) then
 
       nr_nodes = this%element_maps(MAP_NODE_TYPE)%nr_virt_elems
+      nr_conns = this%element_maps(MAP_CONN_TYPE)%nr_virt_elems
 
       call this%map(this%x%base(), nr_nodes, &
                     (/STG_BFR_CON_AR, STG_BFR_EXG_AD, STG_BFR_EXG_CF/))

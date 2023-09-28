@@ -96,14 +96,13 @@ contains
     objPtr => gwtEx
     this%gwtExchange => CastAsGwtExchange(objPtr)
 
-    if (this%gwtExchange%v_model1%is_local .and. &
-        this%gwtExchange%v_model2%is_local) then
+    if (gwtEx%v_model1%is_local .and. gwtEx%v_model2%is_local) then
       this%owns_exchange = associated(model, gwtEx%model1)
     else
       this%owns_exchange = .true.
     end if
 
-    if (this%owns_exchange) then
+    if (gwtEx%v_model1 == model) then
       write (name, '(a,i0)') 'GWTCON1_', gwtEx%id
     else
       write (name, '(a,i0)') 'GWTCON2_', gwtEx%id
@@ -167,7 +166,7 @@ contains
 
     ! we have to 'catch up' and create the interface model
     ! here, then the remainder of this routine will be define
-    if (this%owns_exchange) then
+    if (this%prim_exchange%v_model1 == this%owner) then
       write (imName, '(a,i0)') 'GWTIM1_', this%gwtExchange%id
     else
       write (imName, '(a,i0)') 'GWTIM2_', this%gwtExchange%id
