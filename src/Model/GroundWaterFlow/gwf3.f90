@@ -1296,7 +1296,8 @@ contains
       call wel_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, mempath)
     case ('DRN6')
-      call drn_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
+      call drn_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname, mempath)
     case ('RIV6')
       call riv_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
     case ('GHB6')

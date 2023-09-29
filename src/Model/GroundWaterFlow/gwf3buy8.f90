@@ -721,6 +721,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use BndModule, only: BndType
+    use DrnModule, only: DrnType
     class(BndType), pointer :: packobj
     ! -- dummy
     real(DP), intent(in), dimension(:) :: hnew
@@ -737,19 +738,22 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Process density terms for each DRN
-    do n = 1, packobj%nbound
-      node = packobj%nodelist(n)
-      if (packobj%ibound(node) <= 0) cycle
-      rho = dense(node)
-      hbnd = packobj%bound(1, n)
-      cond = packobj%bound(2, n)
-      if (hnew(node) > hbnd) then
-        hcofterm = -cond * (rho / denseref - DONE)
-        rhsterm = hcofterm * hbnd
-        packobj%hcof(n) = packobj%hcof(n) + hcofterm
-        packobj%rhs(n) = packobj%rhs(n) + rhsterm
-      end if
-    end do
+    select type (packobj)
+    type is (DrnType)
+      do n = 1, packobj%nbound
+        node = packobj%nodelist(n)
+        if (packobj%ibound(node) <= 0) cycle
+        rho = dense(node)
+        hbnd = packobj%elev(n)
+        cond = packobj%cond(n)
+        if (hnew(node) > hbnd) then
+          hcofterm = -cond * (rho / denseref - DONE)
+          rhsterm = hcofterm * hbnd
+          packobj%hcof(n) = packobj%hcof(n) + hcofterm
+          packobj%rhs(n) = packobj%rhs(n) + rhsterm
+        end if
+      end do
+    end select
     !
     ! -- Return
     return

@@ -2,13 +2,14 @@ module DrnModule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, DONE, DTWO, &
                              LENFTYPE, LENPACKAGENAME, LENAUXNAME, LINELENGTH
+  use SimVariablesModule, only: errmsg
+  use SimModule, only: count_errors, store_error, store_error_filename
   use MemoryHelperModule, only: create_mem_path
   use SmoothingModule, only: sQSaturation, sQSaturationDerivative, &
                              sQuadraticSaturation
   use BndModule, only: BndType
+  use BndExtModule, only: BndExtType
   use ObsModule, only: DefaultObsIdProcessor
-  use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
-                                  GetTimeSeriesLinkFromList
   use MatrixBaseModule
   !
   implicit none
@@ -20,14 +21,19 @@ module DrnModule
   character(len=LENFTYPE) :: ftype = 'DRN'
   character(len=LENPACKAGENAME) :: text = '             DRN'
   !
-  type, extends(BndType) :: DrnType
+  type, extends(BndExtType) :: DrnType
 
+    real(DP), dimension(:), pointer, contiguous :: elev => null() !< DRN elevation
+    real(DP), dimension(:), pointer, contiguous :: cond => null() !< DRN conductance at aquifer interface
     integer(I4B), pointer :: iauxddrncol => null()
     integer(I4B), pointer :: icubic_scaling => null()
 
   contains
     procedure :: allocate_scalars => drn_allocate_scalars
-    procedure :: bnd_options => drn_options
+    procedure :: allocate_arrays => drn_allocate_arrays
+    procedure :: source_options => drn_options
+    procedure :: log_drn_options
+    procedure :: bnd_rp => drn_rp
     procedure :: bnd_ck => drn_ck
     procedure :: bnd_cf => drn_cf
     procedure :: bnd_fc => drn_fc
@@ -36,16 +42,18 @@ module DrnModule
     procedure :: define_listlabel
     procedure :: get_drain_elevations
     procedure :: get_drain_factor
+    procedure :: bound_value => drn_bound_value
+    procedure :: cond_mult
     ! -- methods for observations
     procedure, public :: bnd_obs_supported => drn_obs_supported
     procedure, public :: bnd_df_obs => drn_df_obs
-    ! -- method for time series
-    procedure, public :: bnd_rp_ts => drn_rp_ts
+    procedure, public :: drn_store_user_cond
   end type DrnType
 
 contains
 
-  subroutine drn_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname)
+  subroutine drn_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
+                        mempath)
 ! ******************************************************************************
 ! drn_create -- Create a New Drn Package
 ! Subroutine: (1) create new-style package
@@ -62,6 +70,7 @@ contains
     integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
+    character(len=*), intent(in) :: mempath
     ! -- local
     type(DrnType), pointer :: drnobj
 ! ------------------------------------------------------------------------------
@@ -71,7 +80,7 @@ contains
     packobj => drnobj
     !
     ! -- create name and memory path
-    call packobj%set_names(ibcnum, namemodel, pakname, ftype)
+    call packobj%set_names(ibcnum, namemodel, pakname, ftype, mempath)
     packobj%text = text
     !
     ! -- allocate scalars
@@ -107,11 +116,15 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Deallocate parent package
-    call this%BndType%bnd_da()
+    call this%BndExtType%bnd_da()
     !
     ! -- scalars
     call mem_deallocate(this%iauxddrncol)
     call mem_deallocate(this%icubic_scaling)
+    !
+    ! -- arrays
+    call mem_deallocate(this%elev, 'ELEV', this%memoryPath)
+    call mem_deallocate(this%cond, 'COND', this%memoryPath)
     !
     ! -- return
     return
@@ -129,8 +142,8 @@ contains
     class(DrnType) :: this
 ! ------------------------------------------------------------------------------
     !
-    ! -- call standard BndType allocate scalars
-    call this%BndType%allocate_scalars()
+    ! -- call base type allocate scalars
+    call this%BndExtType%allocate_scalars()
     !
     ! -- allocate the object and assign values to object variables
     call mem_allocate(this%iauxddrncol, 'IAUXDDRNCOL', this%memoryPath)
@@ -148,56 +161,101 @@ contains
     return
   end subroutine drn_allocate_scalars
 
-  subroutine drn_options(this, option, found)
+  subroutine drn_allocate_arrays(this, nodelist, auxvar)
 ! ******************************************************************************
-! drn_options -- set options specific to DrnType
+! drn_allocate_arrays -- allocate arrays
+! ******************************************************************************
 !
-! drn_options overrides BndType%bnd_options
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_allocate, mem_setptr, mem_checkin
+    ! -- dummy
+    class(DrnType) :: this
+    integer(I4B), dimension(:), pointer, contiguous, optional :: nodelist
+    real(DP), dimension(:, :), pointer, contiguous, optional :: auxvar
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- call base type allocate arrays
+    call this%BndExtType%allocate_arrays(nodelist, auxvar)
+    !
+    ! -- set drn input context pointers
+    call mem_setptr(this%elev, 'ELEV', this%input_mempath)
+    call mem_setptr(this%cond, 'COND', this%input_mempath)
+    !
+    ! --checkin drn input context pointers
+    call mem_checkin(this%elev, 'ELEV', this%memoryPath, &
+                     'ELEV', this%input_mempath)
+    call mem_checkin(this%cond, 'COND', this%memoryPath, &
+                     'COND', this%input_mempath)
+    !
+    ! -- return
+    return
+  end subroutine drn_allocate_arrays
+
+  subroutine drn_rp(this)
+! ******************************************************************************
+! drn_rp -- Read and prepare
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    use TdisModule, only: kper
+    ! -- dummy
+    class(DrnType), intent(inout) :: this
+    ! -- local
+! ------------------------------------------------------------------------------
+    if (this%iper /= kper) return
+    !
+    ! -- Call the parent class read and prepare
+    call this%BndExtType%bnd_rp()
+    !
+    ! -- store user cond
+    if (this%ivsc == 1) then
+      call this%drn_store_user_cond()
+    end if
+    !
+    ! -- Write the list to iout if requested
+    if (this%iprpak /= 0) then
+      call this%write_list()
+    end if
+    !
+    ! -- return
+    return
+  end subroutine drn_rp
+
+  subroutine drn_options(this)
+! ******************************************************************************
+! drn_options -- source options specific to DrnType
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use InputOutputModule, only: urword
-    use SimModule, only: store_error
+    use MemoryManagerExtModule, only: mem_set_value
+    use CharacterStringModule, only: CharacterStringType
+    use GwfDrnInputModule, only: GwfDrnParamFoundType
     ! -- dummy
     class(DrnType), intent(inout) :: this
-    character(len=*), intent(inout) :: option
-    logical, intent(inout) :: found
     ! -- local
-    character(len=LINELENGTH) :: errmsg
+    type(GwfDrnParamFoundType) :: found
     character(len=LENAUXNAME) :: ddrnauxname
     integer(I4B) :: n
 ! ------------------------------------------------------------------------------
     !
-    found = .true.
-    select case (option)
-    case ('MOVER')
-      this%imover = 1
-      write (this%iout, '(4x,A)') 'MOVER OPTION ENABLED'
-    case ('AUXDEPTHNAME')
-      call this%parser%GetStringCaps(ddrnauxname)
-      this%iauxddrncol = -1
-      write (this%iout, '(4x,a,a)') &
-        'AUXILIARY DRAIN DEPTH NAME: ', trim(ddrnauxname)
-      !
-      ! -- right now these are options that are only available in the
-      !    development version and are not included in the documentation.
-      !    These options are only available when IDEVELOPMODE in
-      !    constants module is set to 1
-    case ('DEV_CUBIC_SCALING')
-      call this%parser%DevOpt()
-      this%icubic_scaling = 1
-      write (this%iout, '(4x,a,1x,a)') &
-        'CUBIC SCALING will be used for drains with non-zero DDRN values', &
-        'even if the NEWTON-RAPHSON method is not being used.'
-    case default
-      !
-      ! -- No options found
-      found = .false.
-    end select
+    ! -- source base class options
+    call this%BndExtType%source_options()
     !
-    ! -- DDRN was specified, so find column of auxvar that will be used
-    if (this%iauxddrncol < 0) then
+    ! -- source drain options
+    call mem_set_value(this%imover, 'MOVER', this%input_mempath, found%mover)
+    call mem_set_value(ddrnauxname, 'AUXDEPTHNAME', this%input_mempath, &
+                       found%auxdepthname)
+    call mem_set_value(this%icubic_scaling, 'ICUBICSFAC', this%input_mempath, &
+                       found%icubicsfac)
+    !
+    if (found%auxdepthname) then
+      this%iauxddrncol = -1
       !
       ! -- Error if no aux variable specified
       if (this%naux == 0) then
@@ -225,9 +283,49 @@ contains
       end if
     end if
     !
+    if (found%icubicsfac) then
+      call this%parser%DevOpt()
+    end if
+    !
+    ! -- log DRN specific options
+    call this%log_drn_options(found)
+    !
     ! -- return
     return
   end subroutine drn_options
+
+  !> @ brief Log DRN specific package options
+  !<
+  subroutine log_drn_options(this, found)
+    ! -- modules
+    use GwfDrnInputModule, only: GwfDrnParamFoundType
+    ! -- dummy variables
+    class(DrnType), intent(inout) :: this !< BndExtType object
+    type(GwfDrnParamFoundType), intent(in) :: found
+    ! -- local variables
+    ! -- format
+    !
+    ! -- log found options
+    write (this%iout, '(/1x,a)') 'PROCESSING '//trim(adjustl(this%text)) &
+      //' OPTIONS'
+    !
+    if (found%mover) then
+      write (this%iout, '(4x,A)') 'MOVER OPTION ENABLED'
+    end if
+    !
+    if (found%icubicsfac) then
+      write (this%iout, '(4x,a,1x,a)') &
+        'CUBIC SCALING will be used for drains with non-zero DDRN values', &
+        'even if the NEWTON-RAPHSON method is not being used.'
+    end if
+    !
+    ! -- close logging block
+    write (this%iout, '(1x,a)') &
+      'END OF '//trim(adjustl(this%text))//' OPTIONS'
+    !
+    ! -- return
+    return
+  end subroutine log_drn_options
 
   subroutine drn_ck(this)
 ! ******************************************************************************
@@ -237,12 +335,9 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error, count_errors, store_error_unit
     ! -- dummy
     class(DrnType), intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: i
     integer(I4B) :: node
     real(DP) :: bt
@@ -280,7 +375,7 @@ contains
     !
     ! -- write summary of drain package error messages
     if (count_errors() > 0) then
-      call store_error_unit(this%inunit)
+      call store_error_filename(this%input_fname)
     end if
     !
     ! -- return
@@ -328,7 +423,8 @@ contains
       end if
       !
       ! -- set local variables for this drain
-      cdrn = this%bound(2, i)
+      cdrn = this%cond_mult(i)
+
       !
       ! -- calculate the drainage scaling factor
       call this%get_drain_factor(i, fact, drnbot)
@@ -383,7 +479,7 @@ contains
       ! -- If mover is active and this drain is discharging,
       !    store available water (as positive value).
       if (this%imover == 1 .and. fact > DZERO) then
-        drncond = this%bound(2, i)
+        drncond = this%cond_mult(i)
         qdrn = fact * drncond * (this%xnew(n) - drnbot)
         call this%pakmvrobj%accumulate_qformvr(i, qdrn)
       end if
@@ -431,7 +527,7 @@ contains
         end if
         !
         ! -- set local variables for this drain
-        cdrn = this%bound(2, i)
+        cdrn = this%cond_mult(i)
         xnew = this%xnew(node)
         !
         ! -- calculate the drainage depth and the top and bottom of
@@ -510,7 +606,7 @@ contains
     !
     ! -- initialize dummy and local variables
     drndepth = DZERO
-    drnelev = this%bound(1, i)
+    drnelev = this%elev(i)
     !
     ! -- set the drain depth
     if (this%iauxddrncol > 0) then
@@ -630,33 +726,71 @@ contains
     return
   end subroutine drn_df_obs
 
-  ! -- Procedure related to time series
-
-  subroutine drn_rp_ts(this)
-    ! -- Assign tsLink%Text appropriately for
-    !    all time series in use by package.
-    !    In DRN package variables ELEV and COND
-    !    can be controlled by time series.
-    ! -- dummy
-    class(DrnType), intent(inout) :: this
-    ! -- local
-    integer(I4B) :: i, nlinks
-    type(TimeSeriesLinkType), pointer :: tslink => null()
+  subroutine drn_store_user_cond(this)
+    ! -- modules
+    ! -- dummy variables
+    class(DrnType), intent(inout) :: this !< BndExtType object
+    ! -- local variables
+    integer(I4B) :: n
     !
-    nlinks = this%TsManager%boundtslinks%Count()
-    do i = 1, nlinks
-      tslink => GetTimeSeriesLinkFromList(this%TsManager%boundtslinks, i)
-      if (associated(tslink)) then
-        select case (tslink%JCol)
-        case (1)
-          tslink%Text = 'ELEV'
-        case (2)
-          tslink%Text = 'COND'
-        end select
-      end if
+    ! -- store backup copy of conductance values
+    do n = 1, this%nbound
+      this%condinput(n) = this%cond_mult(n)
     end do
     !
+    ! -- return
     return
-  end subroutine drn_rp_ts
+  end subroutine drn_store_user_cond
+
+  function cond_mult(this, row) result(cond)
+    ! -- modules
+    use ConstantsModule, only: DZERO
+    ! -- dummy variables
+    class(DrnType), intent(inout) :: this !< BndExtType object
+    integer(I4B), intent(in) :: row
+    ! -- result
+    real(DP) :: cond
+    !
+    if (this%iauxmultcol > 0) then
+      cond = this%cond(row) * this%auxvar(this%iauxmultcol, row)
+    else
+      cond = this%cond(row)
+    end if
+    !
+    ! -- return
+    return
+  end function cond_mult
+
+! ******************************************************************************
+! drn_bound_value -- return requested boundary value
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+  function drn_bound_value(this, col, row) result(bndval)
+    ! -- modules
+    use ConstantsModule, only: DZERO
+    ! -- dummy variables
+    class(DrnType), intent(inout) :: this !< BndExtType object
+    integer(I4B), intent(in) :: col
+    integer(I4B), intent(in) :: row
+    ! -- result
+    real(DP) :: bndval
+    !
+    select case (col)
+    case (1)
+      bndval = this%elev(row)
+    case (2)
+      bndval = this%cond_mult(row)
+    case default
+      errmsg = 'Programming error. DRN bound value requested column '&
+               &'outside range of ncolbnd (2).'
+      call store_error(errmsg)
+      call store_error_filename(this%input_fname)
+    end select
+    !
+    ! -- return
+    return
+  end function drn_bound_value
 
 end module DrnModule
