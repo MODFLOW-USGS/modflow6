@@ -42,6 +42,8 @@ z_node = [310.0, 210.0, 100.0]
 hk = [50.0, 0.01, 200.0]
 vk = [10.0, 0.01, 20.0]
 
+concentration = 1.0
+
 canal_head = 330.0
 canal_coordinates = [
     (0.5 * delr, y1_base - delc * (i + 0.5)) for i in range(nrow)
@@ -64,6 +66,7 @@ well_coordinates = [(x0_base + 9.5 * delr, y1_base - 10.5 * delc)]
 def build_dis(gwf):
     return flopy.mf6.ModflowGwfdis(
         gwf,
+        length_units="FEET",
         nlay=nlay,
         nrow=nrow,
         ncol=ncol,
@@ -103,7 +106,13 @@ def build_disv(ws, gwf, gridgen):
     )
     g.build()
     gridprops = g.get_gridprops_disv()
-    return flopy.mf6.ModflowGwfdisv(gwf, **gridprops)
+    gridprops["top"] = top
+    gridprops["botm"] = botm
+    return flopy.mf6.ModflowGwfdisv(
+        gwf,
+        length_units="FEET",
+        **gridprops,
+    )
 
 
 def build_disu(ws, gwf, gridgen):
@@ -116,7 +125,11 @@ def build_disu(ws, gwf, gridgen):
     )
     g.build()
     gridprops = g.get_gridprops_disu6()
-    return flopy.mf6.ModflowGwfdisu(gwf, **gridprops)
+    return flopy.mf6.ModflowGwfdisu(
+        gwf,
+        length_units="FEET",
+        **gridprops,
+    )
 
 
 def get_node_number(modelgrid, cellid):
@@ -149,14 +162,13 @@ def build_3d_array(modelgrid, values, dtype=float):
     return arr.reshape(modelgrid.shape)
 
 
-def build_chd_data(modelgrid, coordinates, head, layer_number=0):
+def build_chd_data(modelgrid, coordinates, head, layer_number=0, boundname="canal",):
     chd_spd = []
     for x, y in coordinates:
         cellid = modelgrid.intersect(x, y, z=z_node[layer_number])
-        if isinstance(cellid, tuple):
-            chd_spd.append((*cellid, head))
-        else:
-            chd_spd.append((cellid, head))
+        if isinstance(cellid, int):
+            cellid = (cellid,)
+        chd_spd.append((cellid, head, concentration, boundname))
     return {0: chd_spd}
 
 
@@ -167,11 +179,11 @@ def build_riv_data(modelgrid):
         cellid = modelgrid.intersect(x, y, z=z_node[0])
         if isinstance(cellid, int):
             cellid = (cellid,)
-        spd.append((*cellid, river_head, cond, 317.0))
+        spd.append((*cellid, river_head, cond, 317.0, concentration, "river"))
     return {0: spd}
 
 
-def build_drn_data(modelgrid):
+def build_drn_data(modelgrid, boundname="drain"):
     cond = 100000.0
     drain_elev = 322.5
     spd = []
@@ -179,7 +191,7 @@ def build_drn_data(modelgrid):
         cellid = modelgrid.intersect(x, y, z=z_node[0])
         if isinstance(cellid, int):
             cellid = (cellid,)
-        spd.append((*cellid, drain_elev, cond))
+        spd.append((*cellid, drain_elev, cond, concentration, boundname))
     return {0: spd}
 
 
@@ -190,7 +202,7 @@ def build_well_data(modelgrid):
         cellid = modelgrid.intersect(x, y, z=z_node[0])
         if isinstance(cellid, int):
             cellid = (cellid,)
-        spd.append((*cellid, wellq))
+        spd.append((*cellid, wellq, concentration, "well-1"))
     return {0: spd}
 
 
@@ -204,8 +216,11 @@ def build_rch_package(gwf, list_recharge):
                 cellid = gwf.modelgrid.intersect(x, y, z=z_node[0])
                 if isinstance(cellid, int):
                     cellid = (cellid,)
-                spd.append((*cellid, rch_rate))
-        rch = flopy.mf6.ModflowGwfrch(gwf, stress_period_data=spd)
+                spd.append((*cellid, rch_rate, concentration, "recharge"))
+        rch = flopy.mf6.ModflowGwfrch(gwf,
+                                      auxiliary=["concentration"],
+                                      boundnames=True,
+                                      stress_period_data=spd,)
     else:
         rch = flopy.mf6.ModflowGwfrcha(gwf, recharge=rch_rate)
     return rch
@@ -284,9 +299,13 @@ def build_mf6(idx, ws, gridgen):
         dis = build_dis(gwf)
 
     # initial conditions
+    if dis_type == "disu":
+        strt = top
+    else:
+        strt = [top, top, top]
     ic = flopy.mf6.ModflowGwfic(
         gwf,
-        strt=top,
+        strt=strt,
     )
 
     if dis_type in ("dis", "disv"):
@@ -320,29 +339,37 @@ def build_mf6(idx, ws, gridgen):
     if name.startswith("ps1"):
         canal_chd = flopy.mf6.ModflowGwfchd(
             gwf,
+            auxiliary=["concentration"],
+            boundnames=True,
             filename=f"{name}.canal.chd",
             pname="canal",
             stress_period_data=build_chd_data(
                 gwf.modelgrid,
                 canal_coordinates,
                 canal_head,
+                boundname="canal",
             ),
         )
 
     if name.startswith("ps1") or name.startswith("ps2a"):
         river_chd = flopy.mf6.ModflowGwfchd(
             gwf,
+            auxiliary=["concentration"],
+            boundnames=True,
             filename=f"{name}.river.chd",
             pname="river",
             stress_period_data=build_chd_data(
                 gwf.modelgrid,
                 river_coordinates,
                 river_head,
+                boundname="river",
             ),
         )
     else:
         river_riv = flopy.mf6.ModflowGwfriv(
             gwf,
+            auxiliary=["concentration"],
+            boundnames=True,
             pname="river",
             stress_period_data=build_riv_data(
                 gwf.modelgrid,
@@ -356,17 +383,24 @@ def build_mf6(idx, ws, gridgen):
         if "ps2c1" in name:
             ghb = flopy.mf6.ModflowGwfghb(
                 gwf,
-                stress_period_data=build_drn_data(gwf.modelgrid),
+                auxiliary=["concentration"],
+                boundnames=True,
+                stress_period_data=build_drn_data(gwf.modelgrid, boundname="ghb-1",),
             )
         else:
             drn = flopy.mf6.ModflowGwfdrn(
                 gwf,
+                auxiliary=["concentration"],
+                boundnames=True,
                 stress_period_data=build_drn_data(gwf.modelgrid),
             )
 
     if "ps2d" in name or "ps2e" in name:
         wel = flopy.mf6.ModflowGwfwel(
-            gwf, stress_period_data=build_well_data(gwf.modelgrid)
+            gwf,
+            auxiliary=["concentration"],
+            boundnames=True,
+            stress_period_data=build_well_data(gwf.modelgrid),
         )
 
     # output control

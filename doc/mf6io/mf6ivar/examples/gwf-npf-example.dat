@@ -5,14 +5,20 @@ END OPTIONS
 BEGIN GRIDDATA
   #
   #icelltype(nodes) is 0:confined, 1:convertible
-  ICELLTYPE
-    constant 0
+  icelltype  LAYERED
+    CONSTANT  1
+    CONSTANT  0
+    CONSTANT  0
   #
   # horizontal hydraulic conductivity
-  K
-    constant 1.0
+  k  LAYERED
+    CONSTANT      50.00000000
+    CONSTANT       0.01000000
+    CONSTANT     200.00000000
   #
   # vertical hydraulic conductivity
-  K33
-    constant 0.1
+  k33  LAYERED
+    CONSTANT      10.00000000
+    CONSTANT       0.01000000
+    CONSTANT      20.00000000
 END GRIDDATA
