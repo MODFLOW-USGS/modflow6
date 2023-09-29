@@ -23,8 +23,8 @@ module DrnModule
   !
   type, extends(BndExtType) :: DrnType
 
-    real(DP), dimension(:), pointer, contiguous :: elev => null() !< DRN boundary elevation array
-    real(DP), dimension(:), pointer, contiguous :: cond => null() !< DRN boundary condiation array
+    real(DP), dimension(:), pointer, contiguous :: elev => null() !< DRN elevation
+    real(DP), dimension(:), pointer, contiguous :: cond => null() !< DRN conductance at aquifer interface
     integer(I4B), pointer :: iauxddrncol => null()
     integer(I4B), pointer :: icubic_scaling => null()
 
@@ -180,13 +180,13 @@ contains
     ! -- call base type allocate arrays
     call this%BndExtType%allocate_arrays(nodelist, auxvar)
     !
-    ! -- set elev pointer to input context and checkin
+    ! -- set drn input context pointers
     call mem_setptr(this%elev, 'ELEV', this%input_mempath)
+    call mem_setptr(this%cond, 'COND', this%input_mempath)
+    !
+    ! --checkin drn input context pointers
     call mem_checkin(this%elev, 'ELEV', this%memoryPath, &
                      'ELEV', this%input_mempath)
-    !
-    ! --set cond pointer to input context and checkin
-    call mem_setptr(this%cond, 'COND', this%input_mempath)
     call mem_checkin(this%cond, 'COND', this%memoryPath, &
                      'COND', this%input_mempath)
     !

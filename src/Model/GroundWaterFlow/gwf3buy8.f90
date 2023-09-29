@@ -375,6 +375,13 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use BndModule, only: BndType
+    use GhbModule, only: GhbType
+    use RivModule, only: RivType
+    use DrnModule, only: DrnType
+    use LakModule, only: LakType
+    use SfrModule, only: SfrType
+    use MawModule, only: MawType
+
     ! -- dummy
     class(GwfBuyType) :: this
     class(BndType), pointer :: packobj
@@ -423,39 +430,62 @@ contains
     ! -- Add density terms based on boundary package type
     select case (packobj%filtyp)
     case ('GHB')
+      select type (packobj)
+      type is (GhbType)
+        !
+        ! -- general head boundary
+        call buy_cf_ghb(packobj, hnew, this%dense, this%elev, this%denseref, &
+                        locelev, locdense, locconc, this%drhodc, this%crhoref, &
+                        this%ctemp, this%iform)
+      end select
       !
-      ! -- general head boundary
-      call buy_cf_ghb(packobj, hnew, this%dense, this%elev, this%denseref, &
-                      locelev, locdense, locconc, this%drhodc, this%crhoref, &
-                      this%ctemp, this%iform)
     case ('RIV')
+      select type (packobj)
+      type is (RivType)
+        !
+        ! -- river
+        call buy_cf_riv(packobj, hnew, this%dense, this%elev, this%denseref, &
+                        locelev, locdense, locconc, this%drhodc, this%crhoref, &
+                        this%ctemp, this%iform)
+      end select
       !
-      ! -- river
-      call buy_cf_riv(packobj, hnew, this%dense, this%elev, this%denseref, &
-                      locelev, locdense, locconc, this%drhodc, this%crhoref, &
-                      this%ctemp, this%iform)
     case ('DRN')
+      select type (packobj)
+      type is (DrnType)
+        !
+        ! -- drain
+        call buy_cf_drn(packobj, hnew, this%dense, this%denseref)
+      end select
       !
-      ! -- drain
-      call buy_cf_drn(packobj, hnew, this%dense, this%denseref)
     case ('LAK')
+      select type (packobj)
+      type is (LakType)
+        !
+        ! -- lake
+        call buy_cf_lak(packobj, hnew, this%dense, this%elev, this%denseref, &
+                        locdense, locconc, this%drhodc, this%crhoref, &
+                        this%ctemp, this%iform)
+      end select
       !
-      ! -- lake
-      call buy_cf_lak(packobj, hnew, this%dense, this%elev, this%denseref, &
-                      locdense, locconc, this%drhodc, this%crhoref, &
-                      this%ctemp, this%iform)
     case ('SFR')
+      select type (packobj)
+      type is (SfrType)
+        !
+        ! -- sfr
+        call buy_cf_sfr(packobj, hnew, this%dense, this%elev, this%denseref, &
+                        locdense, locconc, this%drhodc, this%crhoref, &
+                        this%ctemp, this%iform)
+      end select
       !
-      ! -- sfr
-      call buy_cf_sfr(packobj, hnew, this%dense, this%elev, this%denseref, &
-                      locdense, locconc, this%drhodc, this%crhoref, &
-                      this%ctemp, this%iform)
     case ('MAW')
-      !
-      ! -- maw
-      call buy_cf_maw(packobj, hnew, this%dense, this%elev, this%denseref, &
-                      locdense, locconc, this%drhodc, this%crhoref, &
-                      this%ctemp, this%iform)
+      select type (packobj)
+      type is (MawType)
+        !
+        ! -- maw
+        call buy_cf_maw(packobj, hnew, this%dense, this%elev, this%denseref, &
+                        locdense, locconc, this%drhodc, this%crhoref, &
+                        this%ctemp, this%iform)
+      end select
     case default
       !
       ! -- nothing
@@ -528,8 +558,8 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use BndModule, only: BndType
-    class(BndType), pointer :: packobj
+    use GhbModule, only: GhbType
+    type(GhbType), pointer, intent(in) :: packobj
     ! -- dummy
     real(DP), intent(in), dimension(:) :: hnew
     real(DP), intent(in), dimension(:) :: dense
@@ -647,8 +677,8 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use BndModule, only: BndType
-    class(BndType), pointer :: packobj
+    use RivModule, only: RivType
+    type(RivType), pointer, intent(in) :: packobj
     ! -- dummy
     real(DP), intent(in), dimension(:) :: hnew
     real(DP), intent(in), dimension(:) :: dense
@@ -720,8 +750,8 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use BndModule, only: BndType
-    class(BndType), pointer :: packobj
+    use DrnModule, only: DrnType
+    type(DrnType), pointer, intent(in) :: packobj
     ! -- dummy
     real(DP), intent(in), dimension(:) :: hnew
     real(DP), intent(in), dimension(:) :: dense
@@ -741,8 +771,8 @@ contains
       node = packobj%nodelist(n)
       if (packobj%ibound(node) <= 0) cycle
       rho = dense(node)
-      hbnd = packobj%bound(1, n)
-      cond = packobj%bound(2, n)
+      hbnd = packobj%elev(n)
+      cond = packobj%cond(n)
       if (hnew(node) > hbnd) then
         hcofterm = -cond * (rho / denseref - DONE)
         rhsterm = hcofterm * hbnd
@@ -766,9 +796,8 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use BndModule, only: BndType
     use LakModule, only: LakType
-    class(BndType), pointer :: packobj
+    type(LakType), pointer, intent(in) :: packobj
     ! -- dummy
     real(DP), intent(in), dimension(:) :: hnew
     real(DP), intent(in), dimension(:) :: dense
@@ -788,29 +817,26 @@ contains
     !
     ! -- Insert the lake and gwf relative densities into col 1 and 2 and the
     !    gwf elevation into col 3 of the lake package denseterms array
-    select type (packobj)
-    type is (LakType)
-      do n = 1, packobj%nbound
-        !
-        ! -- get gwf node number
-        node = packobj%nodelist(n)
-        if (packobj%ibound(node) <= 0) cycle
-        !
-        ! -- Determine lak density
-        denselak = get_bnd_density(n, locdense, locconc, denseref, &
-                                   drhodc, crhoref, ctemp, packobj%auxvar)
-        !
-        ! -- fill lak relative density into column 1 of denseterms
-        packobj%denseterms(1, n) = denselak / denseref
-        !
-        ! -- fill gwf relative density into column 2 of denseterms
-        packobj%denseterms(2, n) = dense(node) / denseref
-        !
-        ! -- fill gwf elevation into column 3 of denseterms
-        packobj%denseterms(3, n) = elev(node)
-        !
-      end do
-    end select
+    do n = 1, packobj%nbound
+      !
+      ! -- get gwf node number
+      node = packobj%nodelist(n)
+      if (packobj%ibound(node) <= 0) cycle
+      !
+      ! -- Determine lak density
+      denselak = get_bnd_density(n, locdense, locconc, denseref, &
+                                 drhodc, crhoref, ctemp, packobj%auxvar)
+      !
+      ! -- fill lak relative density into column 1 of denseterms
+      packobj%denseterms(1, n) = denselak / denseref
+      !
+      ! -- fill gwf relative density into column 2 of denseterms
+      packobj%denseterms(2, n) = dense(node) / denseref
+      !
+      ! -- fill gwf elevation into column 3 of denseterms
+      packobj%denseterms(3, n) = elev(node)
+      !
+    end do
     !
     ! -- Return
     return
@@ -827,9 +853,8 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use BndModule, only: BndType
     use SfrModule, only: SfrType
-    class(BndType), pointer :: packobj
+    type(SfrType), pointer, intent(in) :: packobj
     ! -- dummy
     real(DP), intent(in), dimension(:) :: hnew
     real(DP), intent(in), dimension(:) :: dense
@@ -849,29 +874,26 @@ contains
     !
     ! -- Insert the sfr and gwf relative densities into col 1 and 2 and the
     !    gwf elevation into col 3 of the sfr package denseterms array
-    select type (packobj)
-    type is (SfrType)
-      do n = 1, packobj%nbound
-        !
-        ! -- get gwf node number
-        node = packobj%nodelist(n)
-        if (packobj%ibound(node) <= 0) cycle
-        !
-        ! -- Determine sfr density
-        densesfr = get_bnd_density(n, locdense, locconc, denseref, &
-                                   drhodc, crhoref, ctemp, packobj%auxvar)
-        !
-        ! -- fill sfr relative density into column 1 of denseterms
-        packobj%denseterms(1, n) = densesfr / denseref
-        !
-        ! -- fill gwf relative density into column 2 of denseterms
-        packobj%denseterms(2, n) = dense(node) / denseref
-        !
-        ! -- fill gwf elevation into column 3 of denseterms
-        packobj%denseterms(3, n) = elev(node)
-        !
-      end do
-    end select
+    do n = 1, packobj%nbound
+      !
+      ! -- get gwf node number
+      node = packobj%nodelist(n)
+      if (packobj%ibound(node) <= 0) cycle
+      !
+      ! -- Determine sfr density
+      densesfr = get_bnd_density(n, locdense, locconc, denseref, &
+                                 drhodc, crhoref, ctemp, packobj%auxvar)
+      !
+      ! -- fill sfr relative density into column 1 of denseterms
+      packobj%denseterms(1, n) = densesfr / denseref
+      !
+      ! -- fill gwf relative density into column 2 of denseterms
+      packobj%denseterms(2, n) = dense(node) / denseref
+      !
+      ! -- fill gwf elevation into column 3 of denseterms
+      packobj%denseterms(3, n) = elev(node)
+      !
+    end do
     !
     ! -- Return
     return
@@ -888,9 +910,8 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use BndModule, only: BndType
     use MawModule, only: MawType
-    class(BndType), pointer :: packobj
+    type(MawType), pointer, intent(in) :: packobj
     ! -- dummy
     real(DP), intent(in), dimension(:) :: hnew
     real(DP), intent(in), dimension(:) :: dense
@@ -910,29 +931,26 @@ contains
     !
     ! -- Insert the maw and gwf relative densities into col 1 and 2 and the
     !    gwf elevation into col 3 of the maw package denseterms array
-    select type (packobj)
-    type is (MawType)
-      do n = 1, packobj%nbound
-        !
-        ! -- get gwf node number
-        node = packobj%nodelist(n)
-        if (packobj%ibound(node) <= 0) cycle
-        !
-        ! -- Determine maw density
-        densemaw = get_bnd_density(n, locdense, locconc, denseref, &
-                                   drhodc, crhoref, ctemp, packobj%auxvar)
-        !
-        ! -- fill maw relative density into column 1 of denseterms
-        packobj%denseterms(1, n) = densemaw / denseref
-        !
-        ! -- fill gwf relative density into column 2 of denseterms
-        packobj%denseterms(2, n) = dense(node) / denseref
-        !
-        ! -- fill gwf elevation into column 3 of denseterms
-        packobj%denseterms(3, n) = elev(node)
-        !
-      end do
-    end select
+    do n = 1, packobj%nbound
+      !
+      ! -- get gwf node number
+      node = packobj%nodelist(n)
+      if (packobj%ibound(node) <= 0) cycle
+      !
+      ! -- Determine maw density
+      densemaw = get_bnd_density(n, locdense, locconc, denseref, &
+                                 drhodc, crhoref, ctemp, packobj%auxvar)
+      !
+      ! -- fill maw relative density into column 1 of denseterms
+      packobj%denseterms(1, n) = densemaw / denseref
+      !
+      ! -- fill gwf relative density into column 2 of denseterms
+      packobj%denseterms(2, n) = dense(node) / denseref
+      !
+      ! -- fill gwf elevation into column 3 of denseterms
+      packobj%denseterms(3, n) = elev(node)
+      !
+    end do
     !
     ! -- Return
     return
