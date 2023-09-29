@@ -11,6 +11,7 @@ module IdmGwfDfnSelectorModule
   use GwfDisvInputModule
   use GwfDrnInputModule
   use GwfNpfInputModule
+  use GwfRivInputModule
   use GwfWelInputModule
   use GwfNamInputModule
 
@@ -116,6 +117,10 @@ module IdmGwfDfnSelectorModule
     logical :: angle2 = .false.
     logical :: angle3 = .false.
     logical :: wetdry = .false.
+    logical :: mover = .false.
+    logical :: stage = .false.
+    logical :: cond = .false.
+    logical :: rbot = .false.
     logical :: flowred = .false.
     logical :: afrcsv_rec = .false.
     logical :: afrcsv = .false.
@@ -165,6 +170,8 @@ contains
       call set_param_pointer(input_definition, gwf_drn_param_definitions)
     case ('NPF')
       call set_param_pointer(input_definition, gwf_npf_param_definitions)
+    case ('RIV')
+      call set_param_pointer(input_definition, gwf_riv_param_definitions)
     case ('WEL')
       call set_param_pointer(input_definition, gwf_wel_param_definitions)
     case ('NAM')
@@ -191,6 +198,8 @@ contains
       call set_param_pointer(input_definition, gwf_drn_aggregate_definitions)
     case ('NPF')
       call set_param_pointer(input_definition, gwf_npf_aggregate_definitions)
+    case ('RIV')
+      call set_param_pointer(input_definition, gwf_riv_aggregate_definitions)
     case ('WEL')
       call set_param_pointer(input_definition, gwf_wel_aggregate_definitions)
     case ('NAM')
@@ -217,6 +226,8 @@ contains
       call set_block_pointer(input_definition, gwf_drn_block_definitions)
     case ('NPF')
       call set_block_pointer(input_definition, gwf_npf_block_definitions)
+    case ('RIV')
+      call set_block_pointer(input_definition, gwf_riv_block_definitions)
     case ('WEL')
       call set_block_pointer(input_definition, gwf_wel_block_definitions)
     case ('NAM')
@@ -242,6 +253,8 @@ contains
       multi_package = gwf_drn_multi_package
     case ('NPF')
       multi_package = gwf_npf_multi_package
+    case ('RIV')
+      multi_package = gwf_riv_multi_package
     case ('WEL')
       multi_package = gwf_wel_multi_package
     case ('NAM')
@@ -270,6 +283,8 @@ contains
       sfac_param = gwf_drn_aux_sfac_param
     case ('NPF')
       sfac_param = gwf_npf_aux_sfac_param
+    case ('RIV')
+      sfac_param = gwf_riv_aux_sfac_param
     case ('WEL')
       sfac_param = gwf_wel_aux_sfac_param
     case ('NAM')
@@ -298,6 +313,8 @@ contains
     case ('DRN')
       integrated = .true.
     case ('NPF')
+      integrated = .true.
+    case ('RIV')
       integrated = .true.
     case ('WEL')
       integrated = .true.

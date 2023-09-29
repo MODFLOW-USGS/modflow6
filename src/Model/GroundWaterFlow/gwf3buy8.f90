@@ -648,6 +648,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use BndModule, only: BndType
+    use RivModule, only: RivType
     class(BndType), pointer :: packobj
     ! -- dummy
     real(DP), intent(in), dimension(:) :: hnew
@@ -674,39 +675,45 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Process density terms for each RIV
-    do n = 1, packobj%nbound
-      node = packobj%nodelist(n)
-      if (packobj%ibound(node) <= 0) cycle
-      !
-      ! -- density
-      denseriv = get_bnd_density(n, locdense, locconc, denseref, &
-                                 drhodc, crhoref, ctemp, packobj%auxvar)
-      !
-      ! -- elevation
-      elevriv = elev(node)
-      if (locelev > 0) elevriv = packobj%auxvar(locelev, n)
-      !
-      ! -- boundary head and conductance
-      hriv = packobj%bound(1, n)
-      cond = packobj%bound(2, n)
-      rbot = packobj%bound(3, n)
-      !
-      ! -- calculate and add terms depending on whether head is above rbot
-      if (hnew(node) > rbot) then
+    select type (packobj)
+    type is (RivType)
+      do n = 1, packobj%nbound
+        node = packobj%nodelist(n)
+        if (packobj%ibound(node) <= 0) cycle
         !
-        ! --calculate HCOF and RHS terms, similar to GHB in this case
-        call calc_ghb_hcof_rhs_terms(denseref, denseriv, dense(node), &
-                                     elevriv, elev(node), hriv, hnew(node), &
-                                     cond, iform, rhsterm, hcofterm)
-      else
-        hcofterm = DZERO
-        rhsterm = cond * (denseriv / denseref - DONE) * (hriv - rbot)
-      end if
-      !
-      ! -- Add terms to package hcof and rhs accumulators
-      packobj%hcof(n) = packobj%hcof(n) + hcofterm
-      packobj%rhs(n) = packobj%rhs(n) - rhsterm
-    end do
+        ! -- density
+        denseriv = get_bnd_density(n, locdense, locconc, denseref, &
+                                   drhodc, crhoref, ctemp, packobj%auxvar)
+        !
+        ! -- elevation
+        elevriv = elev(node)
+        if (locelev > 0) elevriv = packobj%auxvar(locelev, n)
+        !
+        ! -- boundary head and conductance
+        !hriv = packobj%bound(1, n)
+        !cond = packobj%bound(2, n)
+        !rbot = packobj%bound(3, n)
+        hriv = packobj%stage(n)
+        cond = packobj%cond(n)
+        rbot = packobj%rbot(n)
+        !
+        ! -- calculate and add terms depending on whether head is above rbot
+        if (hnew(node) > rbot) then
+          !
+          ! --calculate HCOF and RHS terms, similar to GHB in this case
+          call calc_ghb_hcof_rhs_terms(denseref, denseriv, dense(node), &
+                                       elevriv, elev(node), hriv, hnew(node), &
+                                       cond, iform, rhsterm, hcofterm)
+        else
+          hcofterm = DZERO
+          rhsterm = cond * (denseriv / denseref - DONE) * (hriv - rbot)
+        end if
+        !
+        ! -- Add terms to package hcof and rhs accumulators
+        packobj%hcof(n) = packobj%hcof(n) + hcofterm
+        packobj%rhs(n) = packobj%rhs(n) - rhsterm
+      end do
+    end select
     !
     ! -- Return
     return

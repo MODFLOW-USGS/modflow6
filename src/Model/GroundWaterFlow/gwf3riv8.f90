@@ -1,11 +1,12 @@
 module rivmodule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME
+  use SimVariablesModule, only: errmsg
+  use SimModule, only: count_errors, store_error, store_error_filename
   use MemoryHelperModule, only: create_mem_path
   use BndModule, only: BndType
+  use BndExtModule, only: BndExtType
   use ObsModule, only: DefaultObsIdProcessor
-  use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
-                                  GetTimeSeriesLinkFromList
   use MatrixBaseModule
   !
   implicit none
@@ -17,23 +18,32 @@ module rivmodule
   character(len=LENFTYPE) :: ftype = 'RIV'
   character(len=LENPACKAGENAME) :: text = '             RIV'
   !
-  type, extends(BndType) :: RivType
+  type, extends(BndExtType) :: RivType
+    real(DP), dimension(:), pointer, contiguous :: stage => null()
+    real(DP), dimension(:), pointer, contiguous :: cond => null()
+    real(DP), dimension(:), pointer, contiguous :: rbot => null()
   contains
-    procedure :: bnd_options => riv_options
+    procedure :: allocate_arrays => riv_allocate_arrays
+    procedure :: source_options => riv_options
+    procedure :: log_riv_options
+    procedure :: bnd_rp => riv_rp
     procedure :: bnd_ck => riv_ck
     procedure :: bnd_cf => riv_cf
     procedure :: bnd_fc => riv_fc
+    procedure :: bnd_da => riv_da
     procedure :: define_listlabel
+    procedure :: bound_value => riv_bound_value
+    procedure :: cond_mult
     ! -- methods for observations
     procedure, public :: bnd_obs_supported => riv_obs_supported
     procedure, public :: bnd_df_obs => riv_df_obs
-    ! -- method for time series
-    procedure, public :: bnd_rp_ts => riv_rp_ts
+    procedure, public :: riv_store_user_cond
   end type RivType
 
 contains
 
-  subroutine riv_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname)
+  subroutine riv_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
+                        mempath)
 ! ******************************************************************************
 ! riv_create -- Create a New Riv Package
 ! Subroutine: (1) create new-style package
@@ -50,6 +60,7 @@ contains
     integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
+    character(len=*), intent(in) :: mempath
     ! -- local
     type(RivType), pointer :: rivobj
 ! ------------------------------------------------------------------------------
@@ -59,7 +70,7 @@ contains
     packobj => rivobj
     !
     ! -- create name and memory path
-    call packobj%set_names(ibcnum, namemodel, pakname, ftype)
+    call packobj%set_names(ibcnum, namemodel, pakname, ftype, mempath)
     packobj%text = text
     !
     ! -- allocate scalars
@@ -80,37 +91,156 @@ contains
     return
   end subroutine riv_create
 
-  subroutine riv_options(this, option, found)
+  subroutine riv_da(this)
 ! ******************************************************************************
-! riv_options -- set options specific to RivType
-!
-! riv_options overrides BndType%bnd_options
+! riv_da -- deallocate
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use InputOutputModule, only: urword
+    ! -- modules
+    use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(RivType), intent(inout) :: this
-    character(len=*), intent(inout) :: option
-    logical, intent(inout) :: found
-    ! -- local
+    class(RivType) :: this
 ! ------------------------------------------------------------------------------
     !
-    select case (option)
-    case ('MOVER')
-      this%imover = 1
-      write (this%iout, '(4x,A)') 'MOVER OPTION ENABLED'
-      found = .true.
-    case default
-      !
-      ! -- No options found
-      found = .false.
-    end select
+    ! -- Deallocate parent package
+    call this%BndExtType%bnd_da()
+    !
+    ! -- arrays
+    call mem_deallocate(this%stage, 'STAGE', this%memoryPath)
+    call mem_deallocate(this%cond, 'COND', this%memoryPath)
+    call mem_deallocate(this%rbot, 'RBOT', this%memoryPath)
+    !
+    ! -- return
+    return
+  end subroutine riv_da
+
+  subroutine riv_options(this)
+! ******************************************************************************
+! riv_options -- set options specific to RivType
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    use MemoryManagerExtModule, only: mem_set_value
+    use CharacterStringModule, only: CharacterStringType
+    use GwfRivInputModule, only: GwfRivParamFoundType
+    ! -- dummy
+    class(RivType), intent(inout) :: this
+    ! -- local
+    type(GwfRivParamFoundType) :: found
+! ------------------------------------------------------------------------------
+    !
+    ! -- source base class options
+    call this%BndExtType%source_options()
+    !
+    ! -- source options from input context
+    call mem_set_value(this%imover, 'MOVER', this%input_mempath, found%mover)
+    !
+    ! -- log riv specific options
+    call this%log_riv_options(found)
     !
     ! -- return
     return
   end subroutine riv_options
+
+  subroutine log_riv_options(this, found)
+! ******************************************************************************
+! log_riv_options -- log options specific to RivType
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    use GwfRivInputModule, only: GwfRivParamFoundType
+    ! -- dummy variables
+    class(RivType), intent(inout) :: this !< BndExtType object
+    type(GwfRivParamFoundType), intent(in) :: found
+    ! -- local variables
+    ! -- format
+    !
+    ! -- log found options
+    write (this%iout, '(/1x,a)') 'PROCESSING '//trim(adjustl(this%text)) &
+      //' OPTIONS'
+    !
+    if (found%mover) then
+      write (this%iout, '(4x,A)') 'MOVER OPTION ENABLED'
+    end if
+    !
+    ! -- close logging block
+    write (this%iout, '(1x,a)') &
+      'END OF '//trim(adjustl(this%text))//' OPTIONS'
+    !
+    ! -- return
+    return
+  end subroutine log_riv_options
+
+  subroutine riv_allocate_arrays(this, nodelist, auxvar)
+! ******************************************************************************
+! riv_allocate_arrays -- allocate arrays
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_allocate, mem_setptr, mem_checkin
+    ! -- dummy
+    class(RivType) :: this
+    integer(I4B), dimension(:), pointer, contiguous, optional :: nodelist
+    real(DP), dimension(:, :), pointer, contiguous, optional :: auxvar
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- call base type allocate arrays
+    call this%BndExtType%allocate_arrays(nodelist, auxvar)
+    !
+    ! -- set riv input context pointers
+    call mem_setptr(this%stage, 'STAGE', this%input_mempath)
+    call mem_setptr(this%cond, 'COND', this%input_mempath)
+    call mem_setptr(this%rbot, 'RBOT', this%input_mempath)
+    !
+    ! --checkin riv input context pointers
+    call mem_checkin(this%stage, 'STAGE', this%memoryPath, &
+                     'STAGE', this%input_mempath)
+    call mem_checkin(this%cond, 'COND', this%memoryPath, &
+                     'COND', this%input_mempath)
+    call mem_checkin(this%rbot, 'RBOT', this%memoryPath, &
+                     'RBOT', this%input_mempath)
+    !
+    ! -- return
+    return
+  end subroutine riv_allocate_arrays
+
+  subroutine riv_rp(this)
+! ******************************************************************************
+! riv_rp -- Read and prepare
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    use TdisModule, only: kper
+    ! -- dummy
+    class(RivType), intent(inout) :: this
+    ! -- local
+! ------------------------------------------------------------------------------
+    if (this%iper /= kper) return
+    !
+    ! -- Call the parent class read and prepare
+    call this%BndExtType%bnd_rp()
+    !
+    ! -- store user cond
+    if (this%ivsc == 1) then
+      call this%riv_store_user_cond()
+    end if
+    !
+    ! -- Write the list to iout if requested
+    if (this%iprpak /= 0) then
+      call this%write_list()
+    end if
+    !
+    ! -- return
+    return
+  end subroutine riv_rp
 
   subroutine riv_ck(this)
 ! ******************************************************************************
@@ -147,8 +277,8 @@ contains
     do i = 1, this%nbound
       node = this%nodelist(i)
       bt = this%dis%bot(node)
-      stage = this%bound(1, i)
-      rbot = this%bound(3, i)
+      stage = this%stage(i)
+      rbot = this%rbot(i)
       ! -- accumulate errors
       if (rbot < bt .and. this%icelltype(node) /= 0) then
         write (errmsg, fmt=fmtriverr) i, rbot, bt
@@ -209,9 +339,9 @@ contains
         this%rhs(i) = DZERO
         cycle
       end if
-      hriv = this%bound(1, i)
-      criv = this%bound(2, i)
-      rbot = this%bound(3, i)
+      hriv = this%stage(i)
+      criv = this%cond_mult(i)
+      rbot = this%rbot(i)
       if (this%xnew(node) <= rbot) then
         this%rhs(i) = -criv * (hriv - rbot)
         this%hcof(i) = DZERO
@@ -257,9 +387,9 @@ contains
       !
       ! -- If mover is active and this river cell is discharging,
       !    store available water (as positive value).
-      stage = this%bound(1, i)
+      stage = this%stage(i)
       if (this%imover == 1 .and. this%xnew(n) > stage) then
-        cond = this%bound(2, i)
+        cond = this%cond_mult(i)
         qriv = cond * (this%xnew(n) - stage)
         call this%pakmvrobj%accumulate_qformvr(i, qriv)
       end if
@@ -348,35 +478,73 @@ contains
     return
   end subroutine riv_df_obs
 
-  ! -- Procedure related to time series
-
-  subroutine riv_rp_ts(this)
-    ! -- Assign tsLink%Text appropriately for
-    !    all time series in use by package.
-    !    In RIV package variables STAGE, COND, and RBOT
-    !    can be controlled by time series.
-    ! -- dummy
-    class(RivType), intent(inout) :: this
-    ! -- local
-    integer(I4B) :: i, nlinks
-    type(TimeSeriesLinkType), pointer :: tslink => null()
+  subroutine riv_store_user_cond(this)
+    ! -- modules
+    ! -- dummy variables
+    class(RivType), intent(inout) :: this !< BndExtType object
+    ! -- local variables
+    integer(I4B) :: n
     !
-    nlinks = this%TsManager%boundtslinks%Count()
-    do i = 1, nlinks
-      tslink => GetTimeSeriesLinkFromList(this%TsManager%boundtslinks, i)
-      if (associated(tslink)) then
-        select case (tslink%JCol)
-        case (1)
-          tslink%Text = 'STAGE'
-        case (2)
-          tslink%Text = 'COND'
-        case (3)
-          tslink%Text = 'RBOT'
-        end select
-      end if
+    ! -- store backup copy of conductance values
+    do n = 1, this%nbound
+      this%condinput(n) = this%cond_mult(n)
     end do
     !
+    ! -- return
     return
-  end subroutine riv_rp_ts
+  end subroutine riv_store_user_cond
+
+  function cond_mult(this, row) result(cond)
+    ! -- modules
+    use ConstantsModule, only: DZERO
+    ! -- dummy variables
+    class(RivType), intent(inout) :: this !< BndExtType object
+    integer(I4B), intent(in) :: row
+    ! -- result
+    real(DP) :: cond
+    !
+    if (this%iauxmultcol > 0) then
+      cond = this%cond(row) * this%auxvar(this%iauxmultcol, row)
+    else
+      cond = this%cond(row)
+    end if
+    !
+    ! -- return
+    return
+  end function cond_mult
+
+! ******************************************************************************
+! riv_bound_value -- return requested boundary value
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+  function riv_bound_value(this, col, row) result(bndval)
+    ! -- modules
+    use ConstantsModule, only: DZERO
+    ! -- dummy variables
+    class(RivType), intent(inout) :: this !< BndExtType object
+    integer(I4B), intent(in) :: col
+    integer(I4B), intent(in) :: row
+    ! -- result
+    real(DP) :: bndval
+    !
+    select case (col)
+    case (1)
+      bndval = this%stage(row)
+    case (2)
+      bndval = this%cond_mult(row)
+    case (3)
+      bndval = this%rbot(row)
+    case default
+      errmsg = 'Programming error. RIV bound value requested column '&
+               &'outside range of ncolbnd (3).'
+      call store_error(errmsg)
+      call store_error_filename(this%input_fname)
+    end select
+    !
+    ! -- return
+    return
+  end function riv_bound_value
 
 end module rivmodule
