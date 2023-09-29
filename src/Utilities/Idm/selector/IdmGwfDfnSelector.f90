@@ -121,7 +121,6 @@ module IdmGwfDfnSelectorModule
     logical :: afrcsv = .false.
     logical :: fileout = .false.
     logical :: afrcsvfile = .false.
-    logical :: mover = .false.
     logical :: q = .false.
     logical :: list = .false.
     logical :: print_input = .false.

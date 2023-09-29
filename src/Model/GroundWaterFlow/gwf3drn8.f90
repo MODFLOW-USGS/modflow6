@@ -47,7 +47,7 @@ module DrnModule
     ! -- methods for observations
     procedure, public :: bnd_obs_supported => drn_obs_supported
     procedure, public :: bnd_df_obs => drn_df_obs
-    procedure, public :: bndext_store_user_cond => drn_store_user_cond
+    procedure, public :: drn_store_user_cond
   end type DrnType
 
 contains
@@ -213,7 +213,7 @@ contains
     !
     ! -- store user cond
     if (this%ivsc == 1) then
-      call this%bndext_store_user_cond()
+      call this%drn_store_user_cond()
     end if
     !
     ! -- Write the list to iout if requested
