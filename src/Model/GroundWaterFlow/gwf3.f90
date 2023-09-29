@@ -1293,7 +1293,8 @@ contains
       call chd_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, mempath)
     case ('WEL6')
-      call wel_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
+      call wel_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname, mempath)
     case ('DRN6')
       call drn_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
     case ('RIV6')

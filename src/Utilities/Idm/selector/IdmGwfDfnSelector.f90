@@ -10,6 +10,7 @@ module IdmGwfDfnSelectorModule
   use GwfDisuInputModule
   use GwfDisvInputModule
   use GwfNpfInputModule
+  use GwfWelInputModule
   use GwfNamInputModule
 
   implicit none
@@ -109,6 +110,13 @@ module IdmGwfDfnSelectorModule
     logical :: angle2 = .false.
     logical :: angle3 = .false.
     logical :: wetdry = .false.
+    logical :: flowred = .false.
+    logical :: afrcsv_rec = .false.
+    logical :: afrcsv = .false.
+    logical :: fileout = .false.
+    logical :: afrcsvfile = .false.
+    logical :: mover = .false.
+    logical :: q = .false.
     logical :: list = .false.
     logical :: print_input = .false.
     logical :: print_flows = .false.
@@ -150,6 +158,8 @@ contains
       call set_param_pointer(input_definition, gwf_disv_param_definitions)
     case ('NPF')
       call set_param_pointer(input_definition, gwf_npf_param_definitions)
+    case ('WEL')
+      call set_param_pointer(input_definition, gwf_wel_param_definitions)
     case ('NAM')
       call set_param_pointer(input_definition, gwf_nam_param_definitions)
     case default
@@ -172,6 +182,8 @@ contains
       call set_param_pointer(input_definition, gwf_disv_aggregate_definitions)
     case ('NPF')
       call set_param_pointer(input_definition, gwf_npf_aggregate_definitions)
+    case ('WEL')
+      call set_param_pointer(input_definition, gwf_wel_aggregate_definitions)
     case ('NAM')
       call set_param_pointer(input_definition, gwf_nam_aggregate_definitions)
     case default
@@ -194,6 +206,8 @@ contains
       call set_block_pointer(input_definition, gwf_disv_block_definitions)
     case ('NPF')
       call set_block_pointer(input_definition, gwf_npf_block_definitions)
+    case ('WEL')
+      call set_block_pointer(input_definition, gwf_wel_block_definitions)
     case ('NAM')
       call set_block_pointer(input_definition, gwf_nam_block_definitions)
     case default
@@ -215,6 +229,8 @@ contains
       multi_package = gwf_disv_multi_package
     case ('NPF')
       multi_package = gwf_npf_multi_package
+    case ('WEL')
+      multi_package = gwf_wel_multi_package
     case ('NAM')
       multi_package = gwf_nam_multi_package
     case default
@@ -239,6 +255,8 @@ contains
       sfac_param = gwf_disv_aux_sfac_param
     case ('NPF')
       sfac_param = gwf_npf_aux_sfac_param
+    case ('WEL')
+      sfac_param = gwf_wel_aux_sfac_param
     case ('NAM')
       sfac_param = gwf_nam_aux_sfac_param
     case default
@@ -263,6 +281,8 @@ contains
     case ('DISV')
       integrated = .true.
     case ('NPF')
+      integrated = .true.
+    case ('WEL')
       integrated = .true.
     case ('NAM')
       integrated = .true.

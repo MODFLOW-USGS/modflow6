@@ -367,7 +367,7 @@ contains
     !
     ! -- log found options
     write (this%iout, '(/1x,a)') 'PROCESSING '//trim(adjustl(this%text)) &
-      //' OPTIONS'
+      //' BASE OPTIONS'
     !
     if (found%ipakcb) then
       write (this%iout, fmtflow)
@@ -400,7 +400,7 @@ contains
     !
     ! -- close logging block
     write (this%iout, '(1x,a)') &
-      'END OF '//trim(adjustl(this%text))//' OPTIONS'
+      'END OF '//trim(adjustl(this%text))//' BASE OPTIONS'
     !
     ! -- return
     return
