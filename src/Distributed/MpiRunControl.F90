@@ -59,7 +59,6 @@ contains
 
     inquire (file=petsc_db_file, exist=petsc_db_exists)
     if (.not. petsc_db_exists) then
-      write (*, *) 'WARNING. PETSc database file not found: '//petsc_db_file
       call PetscInitialize(PETSC_NULL_CHARACTER, ierr)
       CHKERRQ(ierr)
     else

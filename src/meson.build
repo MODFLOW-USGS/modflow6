@@ -131,6 +131,8 @@ modflow_sources = files(
     'Model' / 'ExplicitModel.f90',
     'Model' / 'NumericalModel.f90',
     'Model' / 'NumericalPackage.f90',
+    'Solution' / 'ConvergenceSummary.f90',
+    'Solution' / 'LinearMethods' / 'ImsLinearSettings.f90',
     'Solution' / 'LinearMethods' / 'ims8base.f90',
     'Solution' / 'LinearMethods' / 'ims8linear.f90',
     'Solution' / 'LinearMethods' / 'ims8reordering.f90',
@@ -248,7 +250,8 @@ modflow_petsc_sources = files(
   'Utilities' / 'Vector' / 'PetscVector.F90',
   'Utilities' / 'Matrix' / 'PetscMatrix.F90',
   'Solution' / 'PETSc' / 'PetscSolver.F90',
-  'Solution' / 'PETSc' / 'PetscConvergence.F90'
+  'Solution' / 'PETSc' / 'PetscConvergence.F90',
+  'Solution' / 'PETSc' / 'PetscImsPreconditioner.F90'
 )
 
 modflow_mpi_sources = files(
