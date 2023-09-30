@@ -103,6 +103,7 @@ $(OBJDIR)/gwf3wel8idm.o \
 $(OBJDIR)/gwf3riv8idm.o \
 $(OBJDIR)/gwf3npf8idm.o \
 $(OBJDIR)/gwf3idm.o \
+$(OBJDIR)/gwf3ghb8idm.o \
 $(OBJDIR)/gwf3drn8idm.o \
 $(OBJDIR)/gwf3disv8idm.o \
 $(OBJDIR)/gwf3disu8idm.o \
