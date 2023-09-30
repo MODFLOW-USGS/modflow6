@@ -178,8 +178,12 @@ def api_func(exe, idx, model_ws=None):
     end_time = mf6.get_end_time()
 
     # get copy of (multi-dim) array with river parameters
-    riv_tag = mf6.get_var_address("BOUND", name, riv_packname)
-    new_spd = mf6.get_value(riv_tag)
+    stage_tag = mf6.get_var_address("STAGE", name, riv_packname)
+    cond_tag = mf6.get_var_address("COND", name, riv_packname)
+    rbot_tag = mf6.get_var_address("RBOT", name, riv_packname)
+    new_stage = mf6.get_value(stage_tag)
+    new_cond = mf6.get_value(cond_tag)
+    new_rbot = mf6.get_value(rbot_tag)
 
     # model time loop
     idx = 0
@@ -192,16 +196,18 @@ def api_func(exe, idx, model_ws=None):
         mf6.prepare_time_step(dt)
 
         # set the RIV data through the BMI
+        # change cond and rbot data
+        new_cond[:] = [riv_cond]
+        new_rbot[:] = [riv_bot]
+        mf6.set_value(cond_tag, new_cond)
+        mf6.set_value(rbot_tag, new_rbot)
+        # change stage data
         if current_time < 5:
-            # set columns of BOUND data (we're setting entire columns of the
-            # 2D array for convenience, setting only the value for the active
-            # stress period should work too)
-            new_spd[:] = [riv_stage, riv_cond, riv_bot]
-            mf6.set_value(riv_tag, new_spd)
+            new_stage[:] = [riv_stage]
+            mf6.set_value(stage_tag, new_stage)
         else:
-            # change only stage data
-            new_spd[:] = [riv_stage2, riv_cond, riv_bot]
-            mf6.set_value(riv_tag, new_spd)
+            new_stage[:] = [riv_stage2]
+            mf6.set_value(stage_tag, new_stage)
 
         kiter = 0
         mf6.prepare_solve()
