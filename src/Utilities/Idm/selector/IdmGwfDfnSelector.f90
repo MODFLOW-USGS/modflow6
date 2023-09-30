@@ -10,6 +10,7 @@ module IdmGwfDfnSelectorModule
   use GwfDisuInputModule
   use GwfDisvInputModule
   use GwfDrnInputModule
+  use GwfGhbInputModule
   use GwfNpfInputModule
   use GwfRivInputModule
   use GwfWelInputModule
@@ -84,6 +85,7 @@ module IdmGwfDfnSelectorModule
     logical :: icubicsfac = .false.
     logical :: elev = .false.
     logical :: cond = .false.
+    logical :: bhead = .false.
     logical :: cellavg = .false.
     logical :: ithickstrt = .false.
     logical :: cvoptions = .false.
@@ -166,6 +168,8 @@ contains
       call set_param_pointer(input_definition, gwf_disv_param_definitions)
     case ('DRN')
       call set_param_pointer(input_definition, gwf_drn_param_definitions)
+    case ('GHB')
+      call set_param_pointer(input_definition, gwf_ghb_param_definitions)
     case ('NPF')
       call set_param_pointer(input_definition, gwf_npf_param_definitions)
     case ('RIV')
@@ -194,6 +198,8 @@ contains
       call set_param_pointer(input_definition, gwf_disv_aggregate_definitions)
     case ('DRN')
       call set_param_pointer(input_definition, gwf_drn_aggregate_definitions)
+    case ('GHB')
+      call set_param_pointer(input_definition, gwf_ghb_aggregate_definitions)
     case ('NPF')
       call set_param_pointer(input_definition, gwf_npf_aggregate_definitions)
     case ('RIV')
@@ -222,6 +228,8 @@ contains
       call set_block_pointer(input_definition, gwf_disv_block_definitions)
     case ('DRN')
       call set_block_pointer(input_definition, gwf_drn_block_definitions)
+    case ('GHB')
+      call set_block_pointer(input_definition, gwf_ghb_block_definitions)
     case ('NPF')
       call set_block_pointer(input_definition, gwf_npf_block_definitions)
     case ('RIV')
@@ -249,6 +257,8 @@ contains
       multi_package = gwf_disv_multi_package
     case ('DRN')
       multi_package = gwf_drn_multi_package
+    case ('GHB')
+      multi_package = gwf_ghb_multi_package
     case ('NPF')
       multi_package = gwf_npf_multi_package
     case ('RIV')
@@ -279,6 +289,8 @@ contains
       sfac_param = gwf_disv_aux_sfac_param
     case ('DRN')
       sfac_param = gwf_drn_aux_sfac_param
+    case ('GHB')
+      sfac_param = gwf_ghb_aux_sfac_param
     case ('NPF')
       sfac_param = gwf_npf_aux_sfac_param
     case ('RIV')
@@ -309,6 +321,8 @@ contains
     case ('DISV')
       integrated = .true.
     case ('DRN')
+      integrated = .true.
+    case ('GHB')
       integrated = .true.
     case ('NPF')
       integrated = .true.

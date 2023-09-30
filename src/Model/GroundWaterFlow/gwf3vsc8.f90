@@ -521,6 +521,7 @@ contains
     use BndModule, only: BndType
     use DrnModule, only: DrnType
     use RivModule, only: RivType
+    use GhbModule, only: GhbType
     class(BndType), pointer :: packobj
     ! -- dummy
     real(DP), intent(in), dimension(:) :: hnew
@@ -557,6 +558,12 @@ contains
       case ('DRN')
         select type (packobj)
         type is (DrnType)
+          packobj%cond(n) = update_bnd_cond(viscbnd, viscref, &
+                                            packobj%condinput(n))
+        end select
+      case ('GHB')
+        select type (packobj)
+        type is (GhbType)
           packobj%cond(n) = update_bnd_cond(viscbnd, viscref, &
                                             packobj%condinput(n))
         end select
