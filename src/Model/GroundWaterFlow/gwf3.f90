@@ -1305,7 +1305,8 @@ contains
       call ghb_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, mempath)
     case ('RCH6')
-      call rch_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
+      call rch_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname, mempath)
     case ('EVT6')
       call evt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
     case ('MAW6')
