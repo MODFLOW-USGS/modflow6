@@ -19,9 +19,9 @@ module rivmodule
   character(len=LENPACKAGENAME) :: text = '             RIV'
   !
   type, extends(BndExtType) :: RivType
-    real(DP), dimension(:), pointer, contiguous :: stage => null()
-    real(DP), dimension(:), pointer, contiguous :: cond => null()
-    real(DP), dimension(:), pointer, contiguous :: rbot => null()
+    real(DP), dimension(:), pointer, contiguous :: stage => null() !< RIV head
+    real(DP), dimension(:), pointer, contiguous :: cond => null() !< RIV bed hydraulic conductance
+    real(DP), dimension(:), pointer, contiguous :: rbot => null() !< RIV bed bottom elevation
   contains
     procedure :: allocate_arrays => riv_allocate_arrays
     procedure :: source_options => riv_options

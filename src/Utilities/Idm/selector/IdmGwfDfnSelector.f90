@@ -117,9 +117,7 @@ module IdmGwfDfnSelectorModule
     logical :: angle2 = .false.
     logical :: angle3 = .false.
     logical :: wetdry = .false.
-    logical :: mover = .false.
     logical :: stage = .false.
-    logical :: cond = .false.
     logical :: rbot = .false.
     logical :: flowred = .false.
     logical :: afrcsv_rec = .false.

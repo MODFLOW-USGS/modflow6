@@ -690,9 +690,6 @@ contains
         if (locelev > 0) elevriv = packobj%auxvar(locelev, n)
         !
         ! -- boundary head and conductance
-        !hriv = packobj%bound(1, n)
-        !cond = packobj%bound(2, n)
-        !rbot = packobj%bound(3, n)
         hriv = packobj%stage(n)
         cond = packobj%cond(n)
         rbot = packobj%rbot(n)
