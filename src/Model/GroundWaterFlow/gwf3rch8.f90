@@ -320,7 +320,6 @@ contains
     ! -- dummy
     class(RchType), intent(inout) :: this
     ! -- local
-    !integer(I4B) :: maxboundorig
 ! ------------------------------------------------------------------------------
     !
     if (this%iper /= kper) return
@@ -328,25 +327,12 @@ contains
     if (this%read_as_arrays) then
       !
       ! -- update nodelist based on IRCH input
-      call rp_nodelist_update(this%nodelist, this%nbound, this%maxbound, &
-                              this%dis, this%input_mempath)
+      call nodelist_update(this%nodelist, this%nbound, this%maxbound, &
+                           this%dis, this%input_mempath)
       !
     else
-      !maxboundorig = this%maxbound
       !
       call this%BndExtType%bnd_rp()
-      !
-      ! TODO: how is maxbound getting reset?
-      !if (this%maxbound > maxboundorig) then
-      !  write(this%iout, '(a,i0)') 'IDM RCH maxbound RESET!'
-      !  call store_error('IDM rch maxbound RESET!', .true.)
-      !  ! -- The arrays that belong to BndType have been extended.
-      !  ! Now, RCH array nodesontop needs to be recreated.
-      !  if (associated(this%nodesontop)) then
-      !    deallocate (this%nodesontop)
-      !  end if
-      !end if
-      !
       !
     end if
     !
@@ -683,8 +669,8 @@ contains
   !! the nodelist.
   !!
   !<
-  subroutine rp_nodelist_update(nodelist, nbound, maxbound, &
-                                dis, input_mempath)
+  subroutine nodelist_update(nodelist, nbound, maxbound, &
+                             dis, input_mempath)
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
     use BaseDisModule, only: DisBaseType
@@ -701,21 +687,24 @@ contains
       pointer :: irch => null()
     integer(I4B), pointer :: inirch => NULL()
     !
-    ! -- set pointers to input context IRCH and INIRCH
-    call mem_setptr(irch, 'IRCH', input_mempath)
+    ! -- set pointer to input context INIRCH
     call mem_setptr(inirch, 'INIRCH', input_mempath)
     !
     ! -- check INIRCH read state
     if (inirch == 1) then
       ! -- irch was read this period
       !
+      ! -- set pointer to input context IRCH
+      call mem_setptr(irch, 'IRCH', input_mempath)
+      !
+      ! -- update nodelist
       call dis%nlarray_to_nodelist2(irch, nodelist, &
                                     maxbound, nbound, aname)
     end if
     !
     ! -- return
     return
-  end subroutine rp_nodelist_update
+  end subroutine nodelist_update
 
 end module RchModule
 
