@@ -27,6 +27,7 @@ $(OBJDIR)/Sim.o \
 $(OBJDIR)/OpenSpec.o \
 $(OBJDIR)/InputOutput.o \
 $(OBJDIR)/LongLineReader.o \
+$(OBJDIR)/DevFeature.o \
 $(OBJDIR)/sort.o \
 $(OBJDIR)/BlockParser.o \
 $(OBJDIR)/ArrayReaders.o \

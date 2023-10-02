@@ -7,8 +7,8 @@
 module BlockParserModule
 
   use KindModule, only: DP, I4B
+  use DevFeatureModule, only: dev_feature
   use ConstantsModule, only: LENBIGLINE, LENHUGELINE, LINELENGTH, MAXCHARLEN
-  use VersionModule, only: IDEVELOPMODE
   use InputOutputModule, only: urword, upcase, openfile, &
                                io_getunit => GetUnit
   use SimModule, only: store_error, store_error_unit
@@ -566,28 +566,20 @@ contains
     return
   end function GetUnit
 
-  !> @ brief Development option
+  !> @ brief Disable development option in release mode
   !!
-  !! Method that will cause the program to terminate with an error if the
-  !! IDEVELOPMODE flag is set to 1.  This is used to allow develop options
-  !! to be specified for development testing but not for the public release.
-  !! For the public release, IDEVELOPMODE is set to zero.
+  !! Terminate with an error if in release mode (IDEVELOPMODE = 0). Enables
+  !! options for development and testing while disabling for public release.
   !!
   !<
   subroutine DevOpt(this)
     ! -- dummy variables
-    class(BlockParserType), intent(inout) :: this !< BlockParserType object
+    class(BlockParserType), intent(inout) :: this
     !
-    ! -- If release mode (not develop mode), then option not available.
-    !    Terminate with an error.
-    if (IDEVELOPMODE == 0) then
-      errmsg = "Invalid keyword '"//trim(this%laststring)// &
-               "' detected in block '"//trim(this%blockname)//"'."
-      call store_error(errmsg)
-      call this%StoreErrorUnit()
-    end if
+    errmsg = "Invalid keyword '"//trim(this%laststring)// &
+             "' detected in block '"//trim(this%blockname)//"'."
+    call dev_feature(errmsg, this%iuext)
     !
-    ! -- Return
     return
   end subroutine DevOpt
 
