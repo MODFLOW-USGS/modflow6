@@ -109,6 +109,8 @@ $(OBJDIR)/gwf3rcha8idm.o \
 $(OBJDIR)/gwf3npf8idm.o \
 $(OBJDIR)/gwf3idm.o \
 $(OBJDIR)/gwf3ghb8idm.o \
+$(OBJDIR)/gwf3evt8idm.o \
+$(OBJDIR)/gwf3evta8idm.o \
 $(OBJDIR)/gwf3drn8idm.o \
 $(OBJDIR)/gwf3disv8idm.o \
 $(OBJDIR)/gwf3disu8idm.o \
