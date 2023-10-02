@@ -1308,7 +1308,8 @@ contains
       call rch_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, mempath)
     case ('EVT6')
-      call evt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
+      call evt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname, mempath)
     case ('MAW6')
       call maw_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
     case ('SFR6')
