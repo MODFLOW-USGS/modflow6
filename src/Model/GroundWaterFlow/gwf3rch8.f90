@@ -94,10 +94,6 @@ contains
     packobj%ncolbnd = 1
     packobj%iscloc = 1 ! sfac applies to recharge rate
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
-    ! indxconvertflux is Column index of bound that will be multiplied by
-    ! cell area to convert flux rates to flow rates
-    packobj%indxconvertflux = 1
-    packobj%AllowTimeArraySeries = .true.
     !
     ! -- return
     return
@@ -185,13 +181,8 @@ contains
     call mem_set_value(this%read_as_arrays, 'READASARRAYS', this%input_mempath, &
                        found%readasarrays)
     !
-    if (found%fixed_cell) then
-      this%fixed_cell = .true.
-    end if
-    !
     if (found%readasarrays) then
       if (this%dis%supports_layers()) then
-        this%read_as_arrays = .true.
         this%text = texta
       else
         errmsg = 'READASARRAYS option is not compatible with selected'// &
@@ -275,14 +266,15 @@ contains
         call store_error_filename(this%input_fname)
       end if
       !
-      ! -- Call define_listlabel to construct the list label that is written
-      !    when PRINT_INPUT option is used.
-      call this%define_listlabel()
     else
       !
       ! -- source maxbound
       call this%BndExtType%source_dimensions()
     end if
+    !
+    ! -- Call define_listlabel to construct the list label that is written
+    !    when PRINT_INPUT option is used.
+    call this%define_listlabel()
     !
     ! -- return
     return
@@ -338,6 +330,11 @@ contains
     !
     ! -- copy nodelist to nodesontop if not fixed cell
     if (.not. this%fixed_cell) call this%set_nodesontop()
+    !
+    ! -- Write the list to iout if requested
+    if (this%iprpak /= 0) then
+      call this%write_list()
+    end if
     !
     ! -- return
     return
