@@ -529,6 +529,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use BndModule, only: BndType
+    use GhbModule, only: GhbType
     class(BndType), pointer :: packobj
     ! -- dummy
     real(DP), intent(in), dimension(:) :: hnew
@@ -553,30 +554,33 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Process density terms for each GHB
-    do n = 1, packobj%nbound
-      node = packobj%nodelist(n)
-      if (packobj%ibound(node) <= 0) cycle
-      !
-      ! -- density
-      denseghb = get_bnd_density(n, locdense, locconc, denseref, &
-                                 drhodc, crhoref, ctemp, packobj%auxvar)
-      !
-      ! -- elevation
-      elevghb = elev(node)
-      if (locelev > 0) elevghb = packobj%auxvar(locelev, n)
-      !
-      ! -- boundary head and conductance
-      hghb = packobj%bound(1, n)
-      cond = packobj%bound(2, n)
-      !
-      ! -- calculate HCOF and RHS terms
-      call calc_ghb_hcof_rhs_terms(denseref, denseghb, dense(node), &
-                                   elevghb, elev(node), hghb, hnew(node), &
-                                   cond, iform, rhsterm, hcofterm)
-      packobj%hcof(n) = packobj%hcof(n) + hcofterm
-      packobj%rhs(n) = packobj%rhs(n) - rhsterm
-      !
-    end do
+    select type (packobj)
+    type is (GhbType)
+      do n = 1, packobj%nbound
+        node = packobj%nodelist(n)
+        if (packobj%ibound(node) <= 0) cycle
+        !
+        ! -- density
+        denseghb = get_bnd_density(n, locdense, locconc, denseref, &
+                                   drhodc, crhoref, ctemp, packobj%auxvar)
+        !
+        ! -- elevation
+        elevghb = elev(node)
+        if (locelev > 0) elevghb = packobj%auxvar(locelev, n)
+        !
+        ! -- boundary head and conductance
+        hghb = packobj%bhead(n)
+        cond = packobj%cond(n)
+        !
+        ! -- calculate HCOF and RHS terms
+        call calc_ghb_hcof_rhs_terms(denseref, denseghb, dense(node), &
+                                     elevghb, elev(node), hghb, hnew(node), &
+                                     cond, iform, rhsterm, hcofterm)
+        packobj%hcof(n) = packobj%hcof(n) + hcofterm
+        packobj%rhs(n) = packobj%rhs(n) - rhsterm
+        !
+      end do
+    end select
     !
     ! -- Return
     return
