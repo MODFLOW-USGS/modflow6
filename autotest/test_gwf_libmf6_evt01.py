@@ -184,7 +184,7 @@ def api_func(exe, idx, model_ws=None):
     max_iter = mf6.get_value(mxit_tag)
 
     # get copy of well data
-    well_tag = mf6.get_var_address("BOUND", name, "WEL_0")
+    well_tag = mf6.get_var_address("Q", name, "WEL_0")
     well = mf6.get_value(well_tag)
 
     # check NPF type
@@ -215,7 +215,7 @@ def api_func(exe, idx, model_ws=None):
 
             # update well rate
             twell[:] = head2et_wellrate(head[0])
-            well[:, 0] = twell[:]
+            well[:] = twell[:]
             mf6.set_value(well_tag, well)
 
             # solve with updated well rate

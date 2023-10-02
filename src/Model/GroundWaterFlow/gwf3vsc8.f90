@@ -519,6 +519,8 @@ contains
                                  ivisc, a2, a3, a4, ctemp)
     ! -- modules
     use BndModule, only: BndType
+    use DrnModule, only: DrnType
+    use RivModule, only: RivType
     class(BndType), pointer :: packobj
     ! -- dummy
     real(DP), intent(in), dimension(:) :: hnew
@@ -551,8 +553,23 @@ contains
                                    packobj%auxvar)
       !
       ! -- update boundary conductance based on viscosity effects
-      packobj%bound(2, n) = update_bnd_cond(viscbnd, viscref, &
+      select case (packobj%filtyp)
+      case ('DRN')
+        select type (packobj)
+        type is (DrnType)
+          packobj%cond(n) = update_bnd_cond(viscbnd, viscref, &
                                             packobj%condinput(n))
+        end select
+      case ('RIV')
+        select type (packobj)
+        type is (RivType)
+          packobj%cond(n) = update_bnd_cond(viscbnd, viscref, &
+                                            packobj%condinput(n))
+        end select
+      case default
+        packobj%bound(2, n) = update_bnd_cond(viscbnd, viscref, &
+                                              packobj%condinput(n))
+      end select
       !
     end do
     !

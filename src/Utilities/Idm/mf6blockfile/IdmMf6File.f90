@@ -249,9 +249,6 @@ contains
     ! -- set the parser
     this%parser => parser
     !
-    ! -- read first iper
-    call this%read_ionper()
-    !
     ! -- return
     return
   end subroutine dynamic_set
@@ -260,6 +257,9 @@ contains
   !<
   subroutine dynamic_df(this)
     class(Mf6FileDynamicPkgLoadType), intent(inout) :: this
+    !
+    ! -- read first iper
+    call this%read_ionper()
     !
     call this%block_loader%df()
     !
