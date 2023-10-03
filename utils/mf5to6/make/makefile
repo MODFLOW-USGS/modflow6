@@ -5,10 +5,10 @@ include ./makedefaults
 
 # Define the source file directories
 SOURCEDIR1=../src
-SOURCEDIR2=../src/LGR
-SOURCEDIR3=../src/Preproc
-SOURCEDIR4=../src/MF2005
-SOURCEDIR5=../src/NWT
+SOURCEDIR2=../src/NWT
+SOURCEDIR3=../src/LGR
+SOURCEDIR4=../src/Preproc
+SOURCEDIR5=../src/MF2005
 SOURCEDIR6=../../../src/Utilities/Memory
 SOURCEDIR7=../../../src/Utilities/TimeSeries
 SOURCEDIR8=../../../src/Utilities
@@ -47,6 +47,7 @@ $(OBJDIR)/Memory.o \
 $(OBJDIR)/List.o \
 $(OBJDIR)/MemoryList.o \
 $(OBJDIR)/LongLineReader.o \
+$(OBJDIR)/DevFeature.o \
 $(OBJDIR)/Utilities.o \
 $(OBJDIR)/ConstantsPHMF.o \
 $(OBJDIR)/MemoryManager.o \
