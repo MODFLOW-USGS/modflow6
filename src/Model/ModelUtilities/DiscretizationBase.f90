@@ -105,7 +105,6 @@ module BaseDisModule
     procedure, private :: record_srcdst_list_entry
     generic, public :: record_mf6_list_entry => record_srcdst_list_entry
     procedure, public :: nlarray_to_nodelist
-    procedure, public :: nlarray_to_nodelist2
     procedure, public :: highest_active
     procedure, public :: get_area
     procedure, public :: get_area_factor
@@ -1413,40 +1412,9 @@ contains
     return
   end subroutine record_srcdst_list_entry
 
-  subroutine nlarray_to_nodelist(this, nodelist, maxbnd, nbound, aname, &
-                                 inunit, iout)
+  subroutine nlarray_to_nodelist(this, darray, nodelist, maxbnd, nbound, aname)
 ! ******************************************************************************
-! nlarray_to_nodelist -- Read an integer array into nodelist. For structured
-!                        model, integer array is layer number; for unstructured
-!                        model, integer array is node number.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    use SimModule, only: store_error
-    use ConstantsModule, only: LINELENGTH
-    ! -- dummy
-    class(DisBaseType) :: this
-    integer(I4B), intent(in) :: maxbnd
-    integer(I4B), dimension(maxbnd), intent(inout) :: nodelist
-    integer(I4B), intent(inout) :: nbound
-    character(len=*), intent(in) :: aname
-    integer(I4B), intent(in) :: inunit
-    integer(I4B), intent(in) :: iout
-    !
-    ! --
-    errmsg = 'Programmer error: nlarray_to_nodelist needs to be &
-            &overridden in any DIS type that extends DisBaseType'
-    call store_error(errmsg, terminate=.TRUE.)
-    !
-    ! -- return
-    return
-  end subroutine nlarray_to_nodelist
-
-  subroutine nlarray_to_nodelist2(this, darray, nodelist, maxbnd, nbound, aname)
-! ******************************************************************************
-! nlarray_to_nodelist -- Read an integer array into nodelist. For structured
+! nlarray_to_nodelist -- Convert an integer array into nodelist. For structured
 !                        model, integer array is layer number; for unstructured
 !                        model, integer array is node number.
 ! ******************************************************************************
@@ -1471,7 +1439,7 @@ contains
     !
     ! -- return
     return
-  end subroutine nlarray_to_nodelist2
+  end subroutine nlarray_to_nodelist
 
   subroutine highest_active(this, n, ibound)
 ! ******************************************************************************
