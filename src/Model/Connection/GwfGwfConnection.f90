@@ -224,6 +224,9 @@ contains
     call this%cfg_dv('TOP', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
     call this%cfg_dv('BOT', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
     call this%cfg_dv('AREA', 'DIS', SYNC_NDS, (/STG_BFR_CON_AR/))
+    if (this%gwfInterfaceModel%inbuy > 0) then
+      call this%cfg_dv('DENSE', 'BUY', SYNC_NDS, (/STG_BFR_EXG_CF/))
+    end if
 
   end subroutine cfg_dist_vars
 
@@ -303,7 +306,7 @@ contains
     class(GwfGwfConnectionType) :: this !< this connection
 
     ! this triggers the BUY density calculation
-    if (this%gwfInterfaceModel%inbuy > 0) call this%gwfInterfaceModel%buy%buy_ad()
+    !if (this%gwfInterfaceModel%inbuy > 0) call this%gwfInterfaceModel%buy%buy_ad()
 
     if (this%owns_exchange) then
       call this%gwfExchange%exg_ad()
