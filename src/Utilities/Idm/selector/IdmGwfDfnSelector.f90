@@ -137,12 +137,7 @@ module IdmGwfDfnSelectorModule
     logical :: angle2 = .false.
     logical :: angle3 = .false.
     logical :: wetdry = .false.
-    logical :: fixed_cell = .false.
     logical :: recharge = .false.
-    logical :: readasarrays = .false.
-    logical :: tas_filerecord = .false.
-    logical :: tas6 = .false.
-    logical :: tas6_filename = .false.
     logical :: irch = .false.
     logical :: stage = .false.
     logical :: rbot = .false.

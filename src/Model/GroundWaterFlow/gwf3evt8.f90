@@ -59,18 +59,6 @@ module EvtModule
     procedure, public :: bnd_df_obs => evt_df_obs
   end type EvtType
 
-  ! EVT uses BndType%bound array columns:
-  ! Index                  Description                   old name  Keyword
-  !  (1,n)                 ET Surface elevation            ETSS    SURFACE
-  !  (2,n)                 Max ET Rate                     ETSR    RATE
-  !  (3,n)                 Extinction Depth                ETSX    DEPTH
-  ! Used only if nseg > 1 and surfratespecified is false:
-  !   4->2+nseg            Proportion of Extinction Depth  PXDP    PXDP
-  !   3+nseg->3+2(nseg-1)  Proportion of Max ET Rate       PETM    PETM
-  ! If nseg > 1 and surfratespecified is true:
-  !   4->3+nseg            Proportion of Extinction Depth  PXDP    PXDP
-  !   4+nseg->3+2(nseg)    Proportion of Max ET Rate       PETM    PETM
-
 contains
 
   subroutine evt_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
@@ -366,10 +354,6 @@ contains
       ! -- source maxbound
       call this%BndExtType%source_dimensions()
       !
-      ! -- Call define_listlabel to construct the list label that is written
-      !    when PRINT_INPUT option is used.
-      call this%define_listlabel()
-      !
       ! -- log found options
       write (this%iout, '(/1x,a)') 'PROCESSING '//trim(adjustl(this%text)) &
         //' DIMENSIONS'
@@ -414,6 +398,10 @@ contains
         'END OF '//trim(adjustl(this%text))//' DIMENSIONS'
       !
     end if
+    !
+    ! -- Call define_listlabel to construct the list label that is written
+    !    when PRINT_INPUT option is used.
+    call this%define_listlabel()
     !
     ! -- return
     return
@@ -480,24 +468,6 @@ contains
     !
     ! -- copy nodelist to nodesontop if not fixed cell
     if (.not. this%fixed_cell) call this%set_nodesontop()
-    !
-    ! -- Ensure that all required PXDP and PETM arrays
-    !    have been defined or redefined.
-    !    this%segsdefined defaults to true in current code
-    !if (this%surfratespecified) then
-    !  if (kpxdp == this%nseg .and. kpetm == this%nseg) then
-    !    this%segsdefined = .true.
-    !  end if
-    !else
-    !  if (kpxdp == this%nseg - 1 .and. kpxdp == this%nseg - 1) then
-    !    this%segsdefined = .true.
-    !  end if
-    !end if
-    !if (.not. this%segsdefined) then
-    !  msg = 'Error in EVT input: Definition of PXDP or PETM is incomplete.'
-    !  call store_error(msg)
-    !  call this%parser%StoreErrorUnit()
-    !end if
     !
     ! -- return
     return
@@ -800,21 +770,15 @@ contains
     call mem_deallocate(this%surface, 'SURFACE', this%memoryPath)
     call mem_deallocate(this%rate, 'RATE', this%memoryPath)
     call mem_deallocate(this%depth, 'DEPTH', this%memoryPath)
-    nullify (this%surface)
-    nullify (this%rate)
-    nullify (this%depth)
     !
     if (.not. this%read_as_arrays) then
       if (this%nseg > 1) then
         call mem_deallocate(this%pxdp, 'PXDP', this%memoryPath)
         call mem_deallocate(this%petm, 'PETM', this%memoryPath)
-        nullify (this%pxdp)
-        nullify (this%petm)
       end if
       !
       if (this%surfratespecified) then
         call mem_deallocate(this%petm0, 'PETM0', this%memoryPath)
-        nullify (this%petm0)
       end if
     end if
     !
@@ -1038,9 +1002,9 @@ contains
       !
       ! -- set error if idx not found
       if (idx == 0) then
-        ! -- TODO: ncolbnd
-        errmsg = 'Programming error. EVT bound value requested column '&
-                 &'outside range of ncolbnd ().'
+        write (errmsg, '(a,i0,a)') &
+          'Programming error. EVT bound value requested column '&
+          &'outside range of ncolbnd (', this%ncolbnd, ').'
         call store_error(errmsg)
         call store_error_filename(this%input_fname)
       end if
@@ -1090,8 +1054,8 @@ contains
       call mem_setptr(ievt, 'IEVT', input_mempath)
       !
       ! -- update nodelist
-      call dis%nlarray_to_nodelist2(ievt, nodelist, &
-                                    maxbound, nbound, aname)
+      call dis%nlarray_to_nodelist(ievt, nodelist, &
+                                   maxbound, nbound, aname)
     end if
     !
     ! -- return

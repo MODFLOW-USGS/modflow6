@@ -695,8 +695,8 @@ contains
       call mem_setptr(irch, 'IRCH', input_mempath)
       !
       ! -- update nodelist
-      call dis%nlarray_to_nodelist2(irch, nodelist, &
-                                    maxbound, nbound, aname)
+      call dis%nlarray_to_nodelist(irch, nodelist, &
+                                   maxbound, nbound, aname)
     end if
     !
     ! -- return

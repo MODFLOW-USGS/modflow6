@@ -6,36 +6,35 @@ include ./makedefaults
 # Define the source file directories
 SOURCEDIR1=../src
 SOURCEDIR2=../src/Exchange
-SOURCEDIR3=../src/Distributed
-SOURCEDIR4=../src/Solution
-SOURCEDIR5=../src/Solution/LinearMethods
-SOURCEDIR6=../src/Solution/ParticleTracker
-SOURCEDIR7=../src/Solution/PETSc
-SOURCEDIR8=../src/Timing
-SOURCEDIR9=../src/Utilities
-SOURCEDIR10=../src/Utilities/Idm
-SOURCEDIR11=../src/Utilities/Idm/selector
-SOURCEDIR12=../src/Utilities/Idm/mf6blockfile
-SOURCEDIR13=../src/Utilities/TimeSeries
-SOURCEDIR14=../src/Utilities/Memory
-SOURCEDIR15=../src/Utilities/OutputControl
-SOURCEDIR16=../src/Utilities/ArrayRead
+SOURCEDIR3=../src/Model
+SOURCEDIR4=../src/Model/Geometry
+SOURCEDIR5=../src/Model/TransportModel
+SOURCEDIR6=../src/Model/ModelUtilities
+SOURCEDIR7=../src/Model/Connection
+SOURCEDIR8=../src/Model/GroundWaterTransport
+SOURCEDIR9=../src/Model/GroundWaterFlow
+SOURCEDIR10=../src/Distributed
+SOURCEDIR11=../src/Solution
+SOURCEDIR12=../src/Solution/PETSc
+SOURCEDIR13=../src/Solution/LinearMethods
+SOURCEDIR14=../src/Timing
+SOURCEDIR15=../src/Utilities
+SOURCEDIR16=../src/Utilities/TimeSeries
 SOURCEDIR17=../src/Utilities/Libraries
 SOURCEDIR18=../src/Utilities/Libraries/rcm
-SOURCEDIR19=../src/Utilities/Libraries/blas
+SOURCEDIR19=../src/Utilities/Libraries/sparsekit
 SOURCEDIR20=../src/Utilities/Libraries/sparskit2
-SOURCEDIR21=../src/Utilities/Libraries/daglib
-SOURCEDIR22=../src/Utilities/Libraries/sparsekit
-SOURCEDIR23=../src/Utilities/Vector
-SOURCEDIR24=../src/Utilities/Matrix
-SOURCEDIR25=../src/Utilities/Observation
-SOURCEDIR26=../src/Model
-SOURCEDIR27=../src/Model/Connection
-SOURCEDIR28=../src/Model/GroundWaterTransport
-SOURCEDIR29=../src/Model/ModelUtilities
-SOURCEDIR30=../src/Model/GroundWaterFlow
-SOURCEDIR31=../src/Model/TransportModel
-SOURCEDIR32=../src/Model/Geometry
+SOURCEDIR21=../src/Utilities/Libraries/blas
+SOURCEDIR22=../src/Utilities/Libraries/daglib
+SOURCEDIR23=../src/Utilities/Idm
+SOURCEDIR24=../src/Utilities/Idm/selector
+SOURCEDIR25=../src/Utilities/Idm/mf6blockfile
+SOURCEDIR26=../src/Utilities/Matrix
+SOURCEDIR27=../src/Utilities/Vector
+SOURCEDIR28=../src/Utilities/Observation
+SOURCEDIR29=../src/Utilities/OutputControl
+SOURCEDIR30=../src/Utilities/Memory
+SOURCEDIR31=../src/Utilities/ArrayRead
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -68,8 +67,7 @@ ${SOURCEDIR27} \
 ${SOURCEDIR28} \
 ${SOURCEDIR29} \
 ${SOURCEDIR30} \
-${SOURCEDIR31} \
-${SOURCEDIR32} 
+${SOURCEDIR31} 
 
 .SUFFIXES: .f90 .F90 .o
 
