@@ -67,9 +67,6 @@ else
 		FFLAGS ?= -no-heap-arrays -fpe0 -traceback -Qdiag-disable:7416 -Qdiag-disable:7025 -Qdiag-disable:5268 -fpp
 		MODSWITCH = -module $(MODDIR)
 	endif
-	ifeq ($(FC), $(filter $(FC), ftn))
-		FFLAGS ?= -h noheap_allocate
-	endif
 endif
 
 # set the ldflgs
@@ -82,9 +79,6 @@ else
 		LDFLAGS ?= -lc
 	endif
 	ifeq ($(FC), $(filter $(FC), ifort mpiifort))
-		LDFLAGS ?= -lc
-	endif
-	ifeq ($(FC), $(filter $(FC), ftn))
 		LDFLAGS ?= -lc
 	endif
 endif
