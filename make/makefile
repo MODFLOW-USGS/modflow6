@@ -104,6 +104,8 @@ $(OBJDIR)/gwt1disu1idm.o \
 $(OBJDIR)/gwt1dis1idm.o \
 $(OBJDIR)/gwf3wel8idm.o \
 $(OBJDIR)/gwf3riv8idm.o \
+$(OBJDIR)/gwf3rch8idm.o \
+$(OBJDIR)/gwf3rcha8idm.o \
 $(OBJDIR)/gwf3npf8idm.o \
 $(OBJDIR)/gwf3idm.o \
 $(OBJDIR)/gwf3ghb8idm.o \

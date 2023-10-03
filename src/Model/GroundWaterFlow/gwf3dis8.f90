@@ -36,6 +36,7 @@ module GwfDisModule
     procedure, public :: read_layer_array
     procedure, public :: record_srcdst_list_header
     procedure, public :: nlarray_to_nodelist
+    procedure, public :: nlarray_to_nodelist2
     ! -- helper functions
     procedure :: get_nodenumber_idx1
     procedure :: get_nodenumber_idx3
@@ -1746,5 +1747,92 @@ contains
     !
     ! -- return
   end subroutine nlarray_to_nodelist
+
+  subroutine nlarray_to_nodelist2(this, darray, nodelist, maxbnd, nbound, aname)
+! ******************************************************************************
+! nlarray_to_nodelist -- Read an integer array into nodelist. For structured
+!                        model, integer array is layer number; for unstructured
+!                        model, integer array is node number.
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use InputOutputModule, only: get_node
+    use ConstantsModule, only: LINELENGTH
+    ! -- dummy
+    class(GwfDisType) :: this
+    integer(I4B), intent(in) :: maxbnd
+    integer(I4B), dimension(:), pointer, contiguous :: darray
+    integer(I4B), dimension(maxbnd), intent(inout) :: nodelist
+    integer(I4B), intent(inout) :: nbound
+    character(len=*), intent(in) :: aname
+    ! -- local
+    integer(I4B) :: il, ir, ic, ncol, nrow, nlay, nval, nodeu, noder, ipos, ierr
+! ------------------------------------------------------------------------------
+    !
+    ! -- set variables
+    nlay = this%mshape(1)
+    nrow = this%mshape(2)
+    ncol = this%mshape(3)
+    !
+    if (this%ndim > 1) then
+      !
+      nval = ncol * nrow
+      !
+      ! -- Copy array into nodelist
+      ipos = 1
+      ierr = 0
+      do ir = 1, nrow
+        do ic = 1, ncol
+          nodeu = get_node(1, ir, ic, nlay, nrow, ncol)
+          il = darray(nodeu)
+          if (il < 1 .or. il > nlay) then
+            write (errmsg, '(a,1x,i0)') 'Invalid layer number:', il
+            call store_error(errmsg, terminate=.TRUE.)
+          end if
+          nodeu = get_node(il, ir, ic, nlay, nrow, ncol)
+          noder = this%get_nodenumber(nodeu, 0)
+          if (ipos > maxbnd) then
+            ierr = ipos
+          else
+            nodelist(ipos) = noder
+          end if
+          ipos = ipos + 1
+        end do
+      end do
+      !
+      ! -- Check for errors
+      nbound = ipos - 1
+      if (ierr > 0) then
+        write (errmsg, '(a,1x,i0)') &
+          'MAXBOUND dimension is too small.'// &
+          'INCREASE MAXBOUND TO:', ierr
+        call store_error(errmsg, terminate=.TRUE.)
+      end if
+      !
+      ! -- If nbound < maxbnd, then initialize nodelist to zero in this range
+      if (nbound < maxbnd) then
+        do ipos = nbound + 1, maxbnd
+          nodelist(ipos) = 0
+        end do
+      end if
+      !
+    else
+      !
+      ! -- For unstructured, read nodelist directly, then check node numbers
+      nodelist = darray
+      do noder = 1, maxbnd
+        if (noder < 1 .or. noder > this%nodes) then
+          write (errmsg, '(a,1x,i0)') 'Invalid node number:', noder
+          call store_error(errmsg, terminate=.TRUE.)
+        end if
+      end do
+      nbound = maxbnd
+      !
+    end if
+    !
+    ! -- return
+  end subroutine nlarray_to_nodelist2
 
 end module GwfDisModule
