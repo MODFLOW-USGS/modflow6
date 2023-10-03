@@ -1,7 +1,7 @@
 !> @brief This module contains the OutputControlModule
 !!
 !! This module defines the OutputControlType.  This type
-!! is overriden by GWF and GWT to create an Output Control
+!! is overridden by GWF and GWT to create an Output Control
 !! package for the model.
 !!
 !<

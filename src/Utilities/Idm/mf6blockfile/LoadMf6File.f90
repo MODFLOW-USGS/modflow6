@@ -469,7 +469,7 @@ contains
           cycle
         end if
         !
-        ! -- set indexex (where first column is blocknum)
+        ! -- set indexes (where first column is blocknum)
         iwords = icol
       else
         !
