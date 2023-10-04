@@ -226,7 +226,6 @@ contains
     call mem_deallocate(this%inmvt)
     call mem_deallocate(this%inoc)
     call mem_deallocate(this%inobs)
-    
 
     ! base
     call this%NumericalModelType%model_da()
