@@ -44,7 +44,7 @@ module GwtAptModule
   use SimModule, only: store_error, store_error_unit, count_errors
   use SimVariablesModule, only: errmsg
   use BndModule, only: BndType
-  use GwtFmiModule, only: GwtFmiType
+  use TspFmiModule, only: TspFmiType
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
   use BudgetTermModule, only: BudgetTermType
   use TableModule, only: TableType, table_cr
@@ -93,7 +93,7 @@ module GwtAptModule
       dimension(:), pointer, contiguous :: featname => null()
     real(DP), dimension(:), pointer, contiguous :: concfeat => null() !< concentration of the feature
     real(DP), dimension(:, :), pointer, contiguous :: lauxvar => null() !< auxiliary variable
-    type(GwtFmiType), pointer :: fmi => null() !< pointer to fmi object
+    type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
     real(DP), dimension(:), pointer, contiguous :: qsto => null() !< mass flux due to storage change
     real(DP), dimension(:), pointer, contiguous :: ccterm => null() !< mass flux required to maintain constant concentration
     integer(I4B), pointer :: idxbudfjf => null() !< index of flow ja face in flowbudptr

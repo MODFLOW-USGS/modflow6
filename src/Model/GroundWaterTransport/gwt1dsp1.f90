@@ -4,7 +4,7 @@ module GwtDspModule
   use ConstantsModule, only: DONE, DZERO, DHALF, DPI
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
-  use GwtFmiModule, only: GwtFmiType
+  use TspFmiModule, only: TspFmiType
   use Xt3dModule, only: Xt3dType, xt3d_cr
   use GwtDspOptionsModule, only: GwtDspOptionsType
   use MatrixBaseModule
@@ -17,7 +17,7 @@ module GwtDspModule
   type, extends(NumericalPackageType) :: GwtDspType
 
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() ! pointer to GWT model ibound
-    type(GwtFmiType), pointer :: fmi => null() ! pointer to GWT fmi object
+    type(TspFmiType), pointer :: fmi => null() ! pointer to GWT fmi object
     real(DP), dimension(:), pointer, contiguous :: thetam => null() ! pointer to GWT storage porosity (voids per aquifer volume)
     real(DP), dimension(:), pointer, contiguous :: diffc => null() ! molecular diffusion coefficient for each cell
     real(DP), dimension(:), pointer, contiguous :: alh => null() ! longitudinal horizontal dispersivity
@@ -88,7 +88,7 @@ contains
     character(len=*), intent(in) :: input_mempath
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
-    type(GwtFmiType), intent(in), target :: fmi
+    type(TspFmiType), intent(in), target :: fmi
     ! -- locals
     ! -- formats
     character(len=*), parameter :: fmtdsp = &

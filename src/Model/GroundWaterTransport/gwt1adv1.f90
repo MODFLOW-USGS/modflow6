@@ -4,7 +4,7 @@ module GwtAdvModule
   use ConstantsModule, only: DONE, DZERO, DHALF, DTWO
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
-  use GwtFmiModule, only: GwtFmiType
+  use TspFmiModule, only: TspFmiType
   use GwtAdvOptionsModule, only: GwtAdvOptionsType
   use MatrixBaseModule
 
@@ -17,7 +17,8 @@ module GwtAdvModule
 
     integer(I4B), pointer :: iadvwt => null() !< advection scheme (0 up, 1 central, 2 tvd)
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
-    type(GwtFmiType), pointer :: fmi => null() !< pointer to fmi object
+    type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
+    real(DP), pointer :: eqnsclfac => null() !< governing equation scale factor; =1. for solute; =rhow*cpw for energy
 
   contains
 
@@ -38,7 +39,7 @@ module GwtAdvModule
 
 contains
 
-  subroutine adv_cr(advobj, name_model, inunit, iout, fmi)
+  subroutine adv_cr(advobj, name_model, inunit, iout, fmi, eqnsclfac)
 ! ******************************************************************************
 ! adv_cr -- Create a new ADV object
 ! ******************************************************************************
@@ -50,7 +51,8 @@ contains
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
-    type(GwtFmiType), intent(in), target :: fmi
+    type(TspFmiType), intent(in), target :: fmi
+    real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -66,6 +68,7 @@ contains
     advobj%inunit = inunit
     advobj%iout = iout
     advobj%fmi => fmi
+    advobj%eqnsclfac => eqnsclfac
     !
     ! -- Return
     return
@@ -152,7 +155,7 @@ contains
         if (this%dis%con%mask(ipos) == 0) cycle
         m = this%dis%con%ja(ipos)
         if (this%ibound(m) == 0) cycle
-        qnm = this%fmi%gwfflowja(ipos)
+        qnm = this%fmi%gwfflowja(ipos) * this%eqnsclfac
         omega = this%adv_weight(this%iadvwt, ipos, n, m, qnm)
         call matrix_sln%add_value_pos(idxglo(ipos), qnm * (DONE - omega))
         call matrix_sln%add_value_pos(idxglo(idiag), qnm * omega)
@@ -269,6 +272,7 @@ contains
       if (smooth > DZERO) then
         alimiter = DTWO * smooth / (DONE + smooth)
         qtvd = DHALF * alimiter * qnm * (cnew(idn) - cnew(iup))
+        qtvd = qtvd * this%eqnsclfac
       end if
     end if
     !
@@ -299,7 +303,7 @@ contains
     nodes = this%dis%nodes
     do n = 1, nodes
       if (this%ibound(n) == 0) cycle
-      idiag = this%dis%con%ia(n)
+      idiag = this%dis%con%ia(n) * this%eqnsclfac
       do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
         m = this%dis%con%ja(ipos)
         if (this%ibound(m) == 0) cycle
