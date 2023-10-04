@@ -77,7 +77,7 @@ contains
   subroutine adv_df(this, adv_options)
     class(GwtAdvType) :: this
     type(GwtAdvOptionsType), optional, intent(in) :: adv_options !< the optional options, for when not constructing from file
-    ! local
+    ! -- local
     character(len=*), parameter :: fmtadv = &
       "(1x,/1x,'ADV-- ADVECTION PACKAGE, VERSION 1, 8/25/2017', &
       &' INPUT READ FROM UNIT ', i0, //)"
@@ -99,7 +99,9 @@ contains
       ! --set options from input arg
       this%iadvwt = adv_options%iAdvScheme
     end if
-
+    !
+    ! -- Return
+    return
   end subroutine adv_df
 
   subroutine adv_ar(this, dis, ibound)
@@ -113,7 +115,7 @@ contains
     ! -- dummy
     class(GwtAdvType) :: this
     class(DisBaseType), pointer, intent(in) :: dis
-    integer(I4B), dimension(:), pointer, contiguous :: ibound
+    integer(I4B), dimension(:), pointer, contiguous, intent(in) :: ibound
     ! -- local
     ! -- formats
 ! ------------------------------------------------------------------------------
@@ -303,11 +305,11 @@ contains
     nodes = this%dis%nodes
     do n = 1, nodes
       if (this%ibound(n) == 0) cycle
-      idiag = this%dis%con%ia(n) * this%eqnsclfac
+      idiag = this%dis%con%ia(n)
       do ipos = this%dis%con%ia(n) + 1, this%dis%con%ia(n + 1) - 1
         m = this%dis%con%ja(ipos)
         if (this%ibound(m) == 0) cycle
-        qnm = this%fmi%gwfflowja(ipos)
+        qnm = this%fmi%gwfflowja(ipos) * this%eqnsclfac
         omega = this%adv_weight(this%iadvwt, ipos, n, m, qnm)
         flowja(ipos) = flowja(ipos) + qnm * omega * cnew(n) + &
                        qnm * (DONE - omega) * cnew(m)
