@@ -131,8 +131,12 @@
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3disv8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3disv8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3drn8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3drn8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3evt8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3evt8idm.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3evta8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3ghb8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3ghb8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3hfb8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3ic8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3idm.f90"/>
@@ -144,7 +148,10 @@
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3obs8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3oc8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3rch8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3rch8idm.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3rcha8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3riv8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3riv8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3sfr8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3sto8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3tvbase8.f90"/>
@@ -152,7 +159,8 @@
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3tvs8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3uzf8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3vsc8.f90"/>
-		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3wel8.f90"/></Filter>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3wel8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3wel8idm.f90"/></Filter>
 		<Filter Name="GroundWaterTransport">
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1adv1.f90"/>
@@ -212,9 +220,15 @@
 		<File RelativePath="..\src\Solution\LinearMethods\ims8linear.f90"/>
 		<File RelativePath="..\src\Solution\LinearMethods\ims8misc.f90"/>
 		<File RelativePath="..\src\Solution\LinearMethods\ims8reordering.f90"/>
+		<File RelativePath="..\src\Solution\LinearMethods\ImsLinearSettings.f90"/>
 		<File RelativePath="..\src\Solution\LinearMethods\ImsLinearSolver.f90"/></Filter>
 		<Filter Name="PETSc">
 		<File RelativePath="..\src\Solution\PETSc\PetscConvergence.F90">
+			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\src\Solution\PETSc\PetscImsPreconditioner.F90">
 			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
@@ -225,6 +239,7 @@
 			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/></File></Filter>
 		<File RelativePath="..\src\Solution\BaseSolution.f90"/>
+		<File RelativePath="..\src\Solution\ConvergenceSummary.f90"/>
 		<File RelativePath="..\src\Solution\ExplicitSolution.f90"/>
 		<File RelativePath="..\src\Solution\LinearSolverBase.f90"/>
 		<File RelativePath="..\src\Solution\LinearSolverFactory.F90">
@@ -365,6 +380,7 @@
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFFortranCompilerTool" Preprocess="preprocessYes"/></FileConfiguration></File>
+		<File RelativePath="..\src\Utilities\DevFeature.f90"/>
 		<File RelativePath="..\src\Utilities\genericutils.f90"/>
 		<File RelativePath="..\src\Utilities\HashTable.f90"/>
 		<File RelativePath="..\src\Utilities\HeadFileReader.f90"/>

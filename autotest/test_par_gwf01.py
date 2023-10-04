@@ -193,19 +193,8 @@ def get_model(idx, dir):
     return sim
 
 
-def build_petsc_db(exdir):
-    petsc_db_file = os.path.join(exdir, ".petscrc")
-    with open(petsc_db_file, "w") as petsc_file:
-        petsc_file.write("-ksp_type cg\n")
-        petsc_file.write("-pc_type bjacobi\n")
-        petsc_file.write("-sub_pc_type ilu\n")
-        petsc_file.write("-dvclose 10e-7\n")
-        petsc_file.write("-options_left no\n")
-
-
 def build_model(idx, exdir):
     sim = get_model(idx, exdir)
-    build_petsc_db(exdir)
     return sim, None
 
 

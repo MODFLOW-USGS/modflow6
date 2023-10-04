@@ -985,8 +985,40 @@ if __name__ == "__main__":
             Path("../../../src/Model/GroundWaterFlow", "gwf3disv8idm.f90"),
         ],
         [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-drn.dfn"),
+            Path("../../../src/Model/GroundWaterFlow", "gwf3drn8idm.f90"),
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-evt.dfn"),
+            Path("../../../src/Model/GroundWaterFlow", "gwf3evt8idm.f90"),
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-evta.dfn"),
+            Path("../../../src/Model/GroundWaterFlow", "gwf3evta8idm.f90"),
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-ghb.dfn"),
+            Path("../../../src/Model/GroundWaterFlow", "gwf3ghb8idm.f90"),
+        ],
+        [
             Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-npf.dfn"),
             Path("../../../src/Model/GroundWaterFlow", "gwf3npf8idm.f90"),
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-rch.dfn"),
+            Path("../../../src/Model/GroundWaterFlow", "gwf3rch8idm.f90"),
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-rcha.dfn"),
+            Path("../../../src/Model/GroundWaterFlow", "gwf3rcha8idm.f90"),
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-riv.dfn"),
+            Path("../../../src/Model/GroundWaterFlow", "gwf3riv8idm.f90"),
+        ],
+        [
+            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-wel.dfn"),
+            Path("../../../src/Model/GroundWaterFlow", "gwf3wel8idm.f90"),
         ],
         [
             Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-dis.dfn"),

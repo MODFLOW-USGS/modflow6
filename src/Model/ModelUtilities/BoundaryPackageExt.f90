@@ -367,7 +367,7 @@ contains
     !
     ! -- log found options
     write (this%iout, '(/1x,a)') 'PROCESSING '//trim(adjustl(this%text)) &
-      //' OPTIONS'
+      //' BASE OPTIONS'
     !
     if (found%ipakcb) then
       write (this%iout, fmtflow)
@@ -400,7 +400,7 @@ contains
     !
     ! -- close logging block
     write (this%iout, '(1x,a)') &
-      'END OF '//trim(adjustl(this%text))//' OPTIONS'
+      'END OF '//trim(adjustl(this%text))//' BASE OPTIONS'
     !
     ! -- return
     return
@@ -418,7 +418,7 @@ contains
     !
     ! -- open dimensions logging block
     write (this%iout, '(/1x,a)') 'PROCESSING '//trim(adjustl(this%text))// &
-      ' DIMENSIONS'
+      ' BASE DIMENSIONS'
     !
     ! -- update defaults with idm sourced values
     call mem_set_value(this%maxbound, 'MAXBOUND', this%input_mempath, &
@@ -428,7 +428,7 @@ contains
     !
     ! -- close logging block
     write (this%iout, '(1x,a)') &
-      'END OF '//trim(adjustl(this%text))//' DIMENSIONS'
+      'END OF '//trim(adjustl(this%text))//' BASE DIMENSIONS'
     !
     ! -- verify dimensions were set
     if (this%maxbound <= 0) then

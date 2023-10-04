@@ -47,6 +47,7 @@ $(OBJDIR)/Memory.o \
 $(OBJDIR)/List.o \
 $(OBJDIR)/MemoryList.o \
 $(OBJDIR)/LongLineReader.o \
+$(OBJDIR)/DevFeature.o \
 $(OBJDIR)/Utilities.o \
 $(OBJDIR)/ConstantsPHMF.o \
 $(OBJDIR)/MemoryManager.o \

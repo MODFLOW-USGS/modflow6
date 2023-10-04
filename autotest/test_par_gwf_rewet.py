@@ -15,21 +15,9 @@ from simulation import TestSimulation
 # with a serial 'refmodel'
 ex = ["par_rewet"]
 
-def build_petsc_db(idx, exdir):
-    from test_gwf_ifmod_rewet import hclose_check, max_inner_it
-    petsc_db_file = os.path.join(exdir, ".petscrc")
-    with open(petsc_db_file, 'w') as petsc_file:
-        petsc_file.write("-ksp_type bicg\n")
-        petsc_file.write("-pc_type bjacobi\n")
-        petsc_file.write("-sub_pc_type ilu\n")
-        petsc_file.write("-sub_pc_factor_levels 2\n")
-        petsc_file.write(f"-dvclose {Decimal(hclose_check):.2E}\n")
-        petsc_file.write(f"-nitermax {max_inner_it}\n")
-        petsc_file.write("-options_left no\n")
 
 def build_model(idx, exdir):
     from test_gwf_ifmod_rewet import build_model as build_model_ext
-    build_petsc_db(idx, exdir)
     sim, dummy = build_model_ext(idx, exdir)
     return sim, dummy
 

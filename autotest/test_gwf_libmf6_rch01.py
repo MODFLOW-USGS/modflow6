@@ -177,7 +177,7 @@ def api_func(exe, idx, model_ws=None):
     max_iter = mf6.get_value(mxit_tag)
 
     # get copy of recharge array
-    rch_tag = mf6.get_var_address("BOUND", name, rch_pname)
+    rch_tag = mf6.get_var_address("RECHARGE", name, rch_pname)
     new_recharge = mf6.get_value(rch_tag)
 
     # model time loop
@@ -193,7 +193,7 @@ def api_func(exe, idx, model_ws=None):
         mf6.prepare_solve()
 
         # update recharge
-        new_recharge[:, 0] = rch_spd[idx] * area
+        new_recharge[:] = rch_spd[idx]
         mf6.set_value(rch_tag, new_recharge)
 
         while kiter < max_iter:

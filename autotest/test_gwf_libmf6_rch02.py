@@ -172,7 +172,7 @@ def run_perturbation(mf6, max_iter, recharge, tag, rch):
     kiter = 0
     while kiter < max_iter:
         # update recharge
-        recharge[:, 0] = rch * area
+        recharge[:] = rch
         mf6.set_value(tag, recharge)
         # solve with updated well rate
         has_converged = mf6.solve()
@@ -222,7 +222,7 @@ def api_func(exe, idx, model_ws=None):
     max_iter = mf6.get_value(mxit_tag)
 
     # get copy of recharge array
-    rch_tag = mf6.get_var_address("BOUND", name, rch_pname)
+    rch_tag = mf6.get_var_address("RECHARGE", name, rch_pname)
     new_recharge = mf6.get_value(rch_tag).copy()
 
     # determine initial recharge value

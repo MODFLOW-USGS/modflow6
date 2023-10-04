@@ -1412,10 +1412,9 @@ contains
     return
   end subroutine record_srcdst_list_entry
 
-  subroutine nlarray_to_nodelist(this, nodelist, maxbnd, nbound, aname, &
-                                 inunit, iout)
+  subroutine nlarray_to_nodelist(this, darray, nodelist, maxbnd, nbound, aname)
 ! ******************************************************************************
-! nlarray_to_nodelist -- Read an integer array into nodelist. For structured
+! nlarray_to_nodelist -- Convert an integer array into nodelist. For structured
 !                        model, integer array is layer number; for unstructured
 !                        model, integer array is node number.
 ! ******************************************************************************
@@ -1428,11 +1427,10 @@ contains
     ! -- dummy
     class(DisBaseType) :: this
     integer(I4B), intent(in) :: maxbnd
+    integer(I4B), dimension(:), pointer, contiguous :: darray
     integer(I4B), dimension(maxbnd), intent(inout) :: nodelist
     integer(I4B), intent(inout) :: nbound
     character(len=*), intent(in) :: aname
-    integer(I4B), intent(in) :: inunit
-    integer(I4B), intent(in) :: iout
     !
     ! --
     errmsg = 'Programmer error: nlarray_to_nodelist needs to be &

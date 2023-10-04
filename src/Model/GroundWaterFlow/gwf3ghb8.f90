@@ -1,11 +1,12 @@
 module ghbmodule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, LENFTYPE, LENPACKAGENAME
+  use SimVariablesModule, only: errmsg
+  use SimModule, only: count_errors, store_error, store_error_filename
   use MemoryHelperModule, only: create_mem_path
   use BndModule, only: BndType
+  use BndExtModule, only: BndExtType
   use ObsModule, only: DefaultObsIdProcessor
-  use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
-                                  GetTimeSeriesLinkFromList
   use MatrixBaseModule
   !
   implicit none
@@ -17,23 +18,31 @@ module ghbmodule
   character(len=LENFTYPE) :: ftype = 'GHB'
   character(len=LENPACKAGENAME) :: text = '             GHB'
   !
-  type, extends(BndType) :: GhbType
+  type, extends(BndExtType) :: GhbType
+    real(DP), dimension(:), pointer, contiguous :: bhead => null() !< GHB boundary head
+    real(DP), dimension(:), pointer, contiguous :: cond => null() !< GHB hydraulic conductance
   contains
-    procedure :: bnd_options => ghb_options
+    procedure :: allocate_arrays => ghb_allocate_arrays
+    procedure :: source_options => ghb_options
+    procedure :: log_ghb_options
+    procedure :: bnd_rp => ghb_rp
     procedure :: bnd_ck => ghb_ck
     procedure :: bnd_cf => ghb_cf
     procedure :: bnd_fc => ghb_fc
+    procedure :: bnd_da => ghb_da
     procedure :: define_listlabel
+    procedure :: bound_value => ghb_bound_value
+    procedure :: cond_mult
     ! -- methods for observations
     procedure, public :: bnd_obs_supported => ghb_obs_supported
     procedure, public :: bnd_df_obs => ghb_df_obs
-    ! -- method for time series
-    procedure, public :: bnd_rp_ts => ghb_rp_ts
+    procedure, public :: ghb_store_user_cond
   end type GhbType
 
 contains
 
-  subroutine ghb_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname)
+  subroutine ghb_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
+                        mempath)
 ! ******************************************************************************
 ! ghb_create -- Create a New Ghb Package
 ! Subroutine: (1) create new-style package
@@ -50,6 +59,7 @@ contains
     integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
+    character(len=*), intent(in) :: mempath
     ! -- local
     type(GhbType), pointer :: ghbobj
 ! ------------------------------------------------------------------------------
@@ -59,7 +69,7 @@ contains
     packobj => ghbobj
     !
     ! -- create name and memory path
-    call packobj%set_names(ibcnum, namemodel, pakname, ftype)
+    call packobj%set_names(ibcnum, namemodel, pakname, ftype, mempath)
     packobj%text = text
     !
     ! -- allocate scalars
@@ -80,35 +90,152 @@ contains
     return
   end subroutine ghb_create
 
-  subroutine ghb_options(this, option, found)
+  subroutine ghb_da(this)
 ! ******************************************************************************
-! ghb_options -- set options specific to GhbType
-!
-! ghb_options overrides BndType%bnd_options
+! ghb_da -- deallocate
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(GhbType), intent(inout) :: this
-    character(len=*), intent(inout) :: option
-    logical, intent(inout) :: found
+    class(GhbType) :: this
 ! ------------------------------------------------------------------------------
     !
-    select case (option)
-    case ('MOVER')
-      this%imover = 1
-      write (this%iout, '(4x,A)') 'MOVER OPTION ENABLED'
-      found = .true.
-    case default
-      !
-      ! -- No options found
-      found = .false.
-    end select
+    ! -- Deallocate parent package
+    call this%BndExtType%bnd_da()
+    !
+    ! -- arrays
+    call mem_deallocate(this%bhead, 'BHEAD', this%memoryPath)
+    call mem_deallocate(this%cond, 'COND', this%memoryPath)
+    !
+    ! -- return
+    return
+  end subroutine ghb_da
+
+  subroutine ghb_options(this)
+! ******************************************************************************
+! ghb_options -- set options specific to GhbType
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    use MemoryManagerExtModule, only: mem_set_value
+    use CharacterStringModule, only: CharacterStringType
+    use GwfGhbInputModule, only: GwfGhbParamFoundType
+    ! -- dummy
+    class(GhbType), intent(inout) :: this
+    ! -- local
+    type(GwfGhbParamFoundType) :: found
+! ------------------------------------------------------------------------------
+    !
+    ! -- source base class options
+    call this%BndExtType%source_options()
+    !
+    ! -- source options from input context
+    call mem_set_value(this%imover, 'MOVER', this%input_mempath, found%mover)
+    !
+    ! -- log ghb specific options
+    call this%log_ghb_options(found)
     !
     ! -- return
     return
   end subroutine ghb_options
+
+  subroutine log_ghb_options(this, found)
+! ******************************************************************************
+! log_ghb_options -- log options specific to GhbType
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    use GwfGhbInputModule, only: GwfGhbParamFoundType
+    ! -- dummy variables
+    class(GhbType), intent(inout) :: this !< BndExtType object
+    type(GwfGhbParamFoundType), intent(in) :: found
+    ! -- local variables
+    ! -- format
+    !
+    ! -- log found options
+    write (this%iout, '(/1x,a)') 'PROCESSING '//trim(adjustl(this%text)) &
+      //' OPTIONS'
+    !
+    if (found%mover) then
+      write (this%iout, '(4x,A)') 'MOVER OPTION ENABLED'
+    end if
+    !
+    ! -- close logging block
+    write (this%iout, '(1x,a)') &
+      'END OF '//trim(adjustl(this%text))//' OPTIONS'
+    !
+    ! -- return
+    return
+  end subroutine log_ghb_options
+
+  subroutine ghb_allocate_arrays(this, nodelist, auxvar)
+! ******************************************************************************
+! ghb_allocate_arrays -- allocate arrays
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- modules
+    use MemoryManagerModule, only: mem_allocate, mem_setptr, mem_checkin
+    ! -- dummy
+    class(GhbType) :: this
+    integer(I4B), dimension(:), pointer, contiguous, optional :: nodelist
+    real(DP), dimension(:, :), pointer, contiguous, optional :: auxvar
+    ! -- local
+! ------------------------------------------------------------------------------
+    !
+    ! -- call base type allocate arrays
+    call this%BndExtType%allocate_arrays(nodelist, auxvar)
+    !
+    ! -- set ghb input context pointers
+    call mem_setptr(this%bhead, 'BHEAD', this%input_mempath)
+    call mem_setptr(this%cond, 'COND', this%input_mempath)
+    !
+    ! --checkin ghb input context pointers
+    call mem_checkin(this%bhead, 'BHEAD', this%memoryPath, &
+                     'BHEAD', this%input_mempath)
+    call mem_checkin(this%cond, 'COND', this%memoryPath, &
+                     'COND', this%input_mempath)
+    !
+    ! -- return
+    return
+  end subroutine ghb_allocate_arrays
+
+  subroutine ghb_rp(this)
+! ******************************************************************************
+! ghb_rp -- Read and prepare
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    use TdisModule, only: kper
+    ! -- dummy
+    class(GhbType), intent(inout) :: this
+    ! -- local
+! ------------------------------------------------------------------------------
+    if (this%iper /= kper) return
+    !
+    ! -- Call the parent class read and prepare
+    call this%BndExtType%bnd_rp()
+    !
+    ! -- store user cond
+    if (this%ivsc == 1) then
+      call this%ghb_store_user_cond()
+    end if
+    !
+    ! -- Write the list to iout if requested
+    if (this%iprpak /= 0) then
+      call this%write_list()
+    end if
+    !
+    ! -- return
+    return
+  end subroutine ghb_rp
 
   subroutine ghb_ck(this)
 ! ******************************************************************************
@@ -138,8 +265,8 @@ contains
       node = this%nodelist(i)
       bt = this%dis%bot(node)
       ! -- accumulate errors
-      if (this%bound(1, i) < bt .and. this%icelltype(node) /= 0) then
-        write (errmsg, fmt=fmtghberr) i, this%bound(1, i), bt
+      if (this%bhead(i) < bt .and. this%icelltype(node) /= 0) then
+        write (errmsg, fmt=fmtghberr) i, this%bhead(i), bt
         call store_error(errmsg)
       end if
     end do
@@ -188,8 +315,8 @@ contains
         this%rhs(i) = DZERO
         cycle
       end if
-      this%hcof(i) = -this%bound(2, i)
-      this%rhs(i) = -this%bound(2, i) * this%bound(1, i)
+      this%hcof(i) = -this%cond_mult(i)
+      this%rhs(i) = -this%cond_mult(i) * this%bhead(i)
     end do
     !
     ! -- return
@@ -228,9 +355,9 @@ contains
       !
       ! -- If mover is active and this boundary is discharging,
       !    store available water (as positive value).
-      bhead = this%bound(1, i)
+      bhead = this%bhead(i)
       if (this%imover == 1 .and. this%xnew(n) > bhead) then
-        cond = this%bound(2, i)
+        cond = this%cond_mult(i)
         qghb = cond * (this%xnew(n) - bhead)
         call this%pakmvrobj%accumulate_qformvr(i, qghb)
       end if
@@ -317,34 +444,72 @@ contains
     ! -- return
     return
   end subroutine ghb_df_obs
-  !
-  ! -- Procedure related to time series
-  !
-  subroutine ghb_rp_ts(this)
-    ! -- Assign tsLink%Text appropriately for
-    !    all time series in use by package.
-    !    In GHB package variables BHEAD and COND
-    !    can be controlled by time series.
-    ! -- dummy
-    class(GhbType), intent(inout) :: this
-    ! -- local
-    integer(I4B) :: i, nlinks
-    type(TimeSeriesLinkType), pointer :: tslink => null()
+
+  subroutine ghb_store_user_cond(this)
+    ! -- modules
+    ! -- dummy variables
+    class(GhbType), intent(inout) :: this !< BndExtType object
+    ! -- local variables
+    integer(I4B) :: n
     !
-    nlinks = this%TsManager%boundtslinks%Count()
-    do i = 1, nlinks
-      tslink => GetTimeSeriesLinkFromList(this%TsManager%boundtslinks, i)
-      if (associated(tslink)) then
-        select case (tslink%JCol)
-        case (1)
-          tslink%Text = 'BHEAD'
-        case (2)
-          tslink%Text = 'COND'
-        end select
-      end if
+    ! -- store backup copy of conductance values
+    do n = 1, this%nbound
+      this%condinput(n) = this%cond_mult(n)
     end do
     !
+    ! -- return
     return
-  end subroutine ghb_rp_ts
+  end subroutine ghb_store_user_cond
+
+  function cond_mult(this, row) result(cond)
+    ! -- modules
+    use ConstantsModule, only: DZERO
+    ! -- dummy variables
+    class(GhbType), intent(inout) :: this !< BndExtType object
+    integer(I4B), intent(in) :: row
+    ! -- result
+    real(DP) :: cond
+    !
+    if (this%iauxmultcol > 0) then
+      cond = this%cond(row) * this%auxvar(this%iauxmultcol, row)
+    else
+      cond = this%cond(row)
+    end if
+    !
+    ! -- return
+    return
+  end function cond_mult
+
+! ******************************************************************************
+! ghb_bound_value -- return requested boundary value
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+  function ghb_bound_value(this, col, row) result(bndval)
+    ! -- modules
+    use ConstantsModule, only: DZERO
+    ! -- dummy variables
+    class(GhbType), intent(inout) :: this !< BndExtType object
+    integer(I4B), intent(in) :: col
+    integer(I4B), intent(in) :: row
+    ! -- result
+    real(DP) :: bndval
+    !
+    select case (col)
+    case (1)
+      bndval = this%bhead(row)
+    case (2)
+      bndval = this%cond_mult(row)
+    case default
+      errmsg = 'Programming error. GHB bound value requested column '&
+               &'outside range of ncolbnd (2).'
+      call store_error(errmsg)
+      call store_error_filename(this%input_fname)
+    end select
+    !
+    ! -- return
+    return
+  end function ghb_bound_value
 
 end module ghbmodule

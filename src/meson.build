@@ -59,8 +59,12 @@ modflow_sources = files(
     'Model' / 'GroundWaterFlow' / 'gwf3disv8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3disv8idm.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3drn8.f90',
+    'Model' / 'GroundWaterFlow' / 'gwf3drn8idm.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3evt8.f90',
+    'Model' / 'GroundWaterFlow' / 'gwf3evt8idm.f90',
+    'Model' / 'GroundWaterFlow' / 'gwf3evta8idm.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3ghb8.f90',
+    'Model' / 'GroundWaterFlow' / 'gwf3ghb8idm.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3hfb8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3ic8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3idm.f90',
@@ -72,7 +76,10 @@ modflow_sources = files(
     'Model' / 'GroundWaterFlow' / 'gwf3obs8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3oc8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3rch8.f90',
+    'Model' / 'GroundWaterFlow' / 'gwf3rch8idm.f90',
+    'Model' / 'GroundWaterFlow' / 'gwf3rcha8idm.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3riv8.f90',
+    'Model' / 'GroundWaterFlow' / 'gwf3riv8idm.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3sfr8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3sto8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3tvbase8.f90',
@@ -81,6 +88,7 @@ modflow_sources = files(
     'Model' / 'GroundWaterFlow' / 'gwf3uzf8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3vsc8.f90',
     'Model' / 'GroundWaterFlow' / 'gwf3wel8.f90',
+    'Model' / 'GroundWaterFlow' / 'gwf3wel8idm.f90',
     'Model' / 'GroundWaterTransport' / 'gwt1.f90',
     'Model' / 'GroundWaterTransport' / 'gwt1adv1.f90',
     'Model' / 'GroundWaterTransport' / 'gwt1apt1.f90',
@@ -130,6 +138,8 @@ modflow_sources = files(
     'Model' / 'ExplicitModel.f90',
     'Model' / 'NumericalModel.f90',
     'Model' / 'NumericalPackage.f90',
+    'Solution' / 'ConvergenceSummary.f90',
+    'Solution' / 'LinearMethods' / 'ImsLinearSettings.f90',
     'Solution' / 'LinearMethods' / 'ims8base.f90',
     'Solution' / 'LinearMethods' / 'ims8linear.f90',
     'Solution' / 'LinearMethods' / 'ims8reordering.f90',
@@ -211,6 +221,7 @@ modflow_sources = files(
     'Utilities' / 'compilerversion.F90',
     'Utilities' / 'Constants.f90',
     'Utilities' / 'defmacro.F90',
+    'Utilities' / 'DevFeature.f90',
     'Utilities' / 'genericutils.f90',
     'Utilities' / 'HashTable.f90',
     'Utilities' / 'HeadFileReader.f90',
@@ -247,7 +258,8 @@ modflow_petsc_sources = files(
   'Utilities' / 'Vector' / 'PetscVector.F90',
   'Utilities' / 'Matrix' / 'PetscMatrix.F90',
   'Solution' / 'PETSc' / 'PetscSolver.F90',
-  'Solution' / 'PETSc' / 'PetscConvergence.F90'
+  'Solution' / 'PETSc' / 'PetscConvergence.F90',
+  'Solution' / 'PETSc' / 'PetscImsPreconditioner.F90'
 )
 
 modflow_mpi_sources = files(
