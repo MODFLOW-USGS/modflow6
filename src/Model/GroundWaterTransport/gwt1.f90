@@ -838,6 +838,7 @@ contains
     call this%dsp%dsp_da()
     call this%ssm%ssm_da()
     call this%mst%mst_da()
+    call this%adv%adv_da()
     call this%mvt%mvt_da()
     call this%budget%budget_da()
     call this%oc%oc_da()
@@ -849,6 +850,7 @@ contains
     deallocate (this%dsp)
     deallocate (this%ssm)
     deallocate (this%mst)
+    deallocate (this%adv)
     deallocate (this%mvt)
     deallocate (this%budget)
     deallocate (this%oc)
@@ -863,6 +865,7 @@ contains
     !
     ! -- Scalars
     call mem_deallocate(this%inic)
+    call mem_deallocate(this%inadv)
     call mem_deallocate(this%indsp)
     call mem_deallocate(this%inssm)
     call mem_deallocate(this%inmst)
@@ -951,6 +954,7 @@ contains
     !
     ! -- allocate members that are part of model class
     call mem_allocate(this%inic, 'INIC', this%memoryPath)
+    call mem_allocate(this%inadv, 'INADV', this%memoryPath)
     call mem_allocate(this%inmvt, 'INMVT', this%memoryPath)
     call mem_allocate(this%inmst, 'INMST', this%memoryPath)
     call mem_allocate(this%indsp, 'INDSP', this%memoryPath)
@@ -959,6 +963,7 @@ contains
     call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
     !
     this%inic = 0
+    this%inadv = 0
     this%inmvt = 0
     this%inmst = 0
     this%indsp = 0
