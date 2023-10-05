@@ -57,7 +57,7 @@ def build_model(idx, dir, mf6):
     disu = flopy.mf6.ModflowGwfdisu(gwf, **disukwargs)
     ic = flopy.mf6.ModflowGwfic(gwf, strt=0.0)
     npf = flopy.mf6.ModflowGwfnpf(gwf)
-    spd = {0: [[(0,), 1.0], [(nrow * ncol - 1), 0.0]]}
+    spd = {0: [[(0,), 1.0], [((nrow * ncol - 1),), 0.0]]}
     chd = flopy.mf6.modflow.mfgwfchd.ModflowGwfchd(gwf, stress_period_data=spd)
     return sim, None
 
