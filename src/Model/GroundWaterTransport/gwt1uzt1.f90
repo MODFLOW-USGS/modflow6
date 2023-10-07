@@ -30,7 +30,7 @@ module GwtUztModule
   use ConstantsModule, only: DZERO, DONE, LINELENGTH
   use SimModule, only: store_error
   use BndModule, only: BndType, GetBndFromList
-  use GwtFmiModule, only: GwtFmiType
+  use TspFmiModule, only: TspFmiType
   use UzfModule, only: UzfType
   use ObserveModule, only: ObserveType
   use GwtAptModule, only: GwtAptType, apt_process_obsID, &
@@ -93,7 +93,7 @@ contains
     integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
-    type(GwtFmiType), pointer :: fmi
+    type(TspFmiType), pointer :: fmi
     ! -- local
     type(GwtUztType), pointer :: uztobj
 ! ------------------------------------------------------------------------------

@@ -11,7 +11,7 @@ module GwtMvtModule
   use SimModule, only: store_error
   use BaseDisModule, only: DisBaseType
   use NumericalPackageModule, only: NumericalPackageType
-  use GwtFmiModule, only: GwtFmiType
+  use TspFmiModule, only: TspFmiType
   use BudgetModule, only: BudgetType, budget_cr
   use BudgetObjectModule, only: BudgetObjectType, budgetobject_cr
   use TableModule, only: TableType, table_cr
@@ -28,8 +28,8 @@ module GwtMvtModule
     integer(I4B), pointer :: maxpackages !< max number of packages
     integer(I4B), pointer :: ibudgetout => null() !< unit number for budget output file
     integer(I4B), pointer :: ibudcsv => null() !< unit number for csv budget output file
-    type(GwtFmiType), pointer :: fmi1 => null() !< pointer to fmi object for model 1
-    type(GwtFmiType), pointer :: fmi2 => null() !< pointer to fmi object for model 2 (set to fmi1 for single model)
+    type(TspFmiType), pointer :: fmi1 => null() !< pointer to fmi object for model 1
+    type(TspFmiType), pointer :: fmi2 => null() !< pointer to fmi object for model 2 (set to fmi1 for single model)
     type(BudgetType), pointer :: budget => null() !< mover transport budget object (used to write balance table)
     type(BudgetObjectType), pointer :: budobj => null() !< budget container (used to write binary file)
     type(BudgetObjectType), pointer :: mvrbudobj => null() !< pointer to the water mover budget object
@@ -75,10 +75,10 @@ contains
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
-    type(GwtFmiType), intent(in), target :: fmi1
+    type(TspFmiType), intent(in), target :: fmi1
     character(len=*), intent(in), optional :: gwfmodelname1
     character(len=*), intent(in), optional :: gwfmodelname2
-    type(GwtFmiType), intent(in), target, optional :: fmi2
+    type(TspFmiType), intent(in), target, optional :: fmi2
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -251,8 +251,8 @@ contains
     real(DP) :: q, cp
     real(DP), dimension(:), pointer :: concpak
     real(DP), dimension(:), contiguous, pointer :: cnew
-    type(GwtFmiType), pointer :: fmi_pr !< pointer to provider model fmi package
-    type(GwtFmiType), pointer :: fmi_rc !< pointer to receiver model fmi package
+    type(TspFmiType), pointer :: fmi_pr !< pointer to provider model fmi package
+    type(TspFmiType), pointer :: fmi_rc !< pointer to receiver model fmi package
 ! ------------------------------------------------------------------------------
     !
     ! -- Add mover QC terms to the receiver packages
@@ -337,8 +337,8 @@ contains
     ! -- dummy
     class(GwtMvtType) :: this
     integer(I4B), intent(in) :: ibudterm
-    type(GwtFmiType), pointer :: fmi_pr
-    type(GwtFmiType), pointer :: fmi_rc
+    type(TspFmiType), pointer :: fmi_pr
+    type(TspFmiType), pointer :: fmi_rc
 
     fmi_pr => null()
     fmi_rc => null()
@@ -817,8 +817,8 @@ contains
     real(DP), intent(in), dimension(:), contiguous, target :: cnew1
     real(DP), intent(in), dimension(:), contiguous, target :: cnew2
     ! -- local
-    type(GwtFmiType), pointer :: fmi_pr
-    type(GwtFmiType), pointer :: fmi_rc
+    type(TspFmiType), pointer :: fmi_pr
+    type(TspFmiType), pointer :: fmi_rc
     real(DP), dimension(:), contiguous, pointer :: cnew
     integer(I4B) :: nbudterm
     integer(I4B) :: nlist
