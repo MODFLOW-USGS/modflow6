@@ -20,6 +20,7 @@ excludedirs = [
 # Exclude these files from checks
 excludefiles = ["src/Utilities/InputOutput.f90"]  # excluded until refactored
 
+
 class FortranFormatCheck:
     """
     Verify MODFLOW 6 fortran source code format
@@ -99,6 +100,7 @@ class FortranFormatCheck:
 
         return False
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         "MODFLOW 6 fortran format source code verification"
@@ -106,9 +108,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-r", "--root", help="path to MODFLOW 6 repository root directory"
     )
-    parser.add_argument(
-        "-v", "--verbose", action="store_true", help="verbose"
-    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="verbose")
     args = parser.parse_args()
 
     # set MODFLOW 6 repository root
