@@ -12,6 +12,7 @@ module TransportModelModule
   use SimVariablesModule, only: errmsg
   use NumericalModelModule, only: NumericalModelType
   use TspFmiModule, only: TspFmiType
+  use TspAdvModule, only: TspAdvType
   use BudgetModule, only: BudgetType
   use MatrixBaseModule
 
@@ -24,8 +25,10 @@ module TransportModelModule
   type, extends(NumericalModelType) :: TransportModelType
 
     type(TspFmiType), pointer :: fmi => null() ! flow model interface
+    type(TspAdvType), pointer :: adv => null() !< advection package
     type(BudgetType), pointer :: budget => null() !< budget object
     integer(I4B), pointer :: infmi => null() ! unit number FMI
+    integer(I4B), pointer :: inadv => null() !< unit number ADV
     real(DP), pointer :: eqnsclfac => null() !< constant factor by which all terms in the model's governing equation are scaled (divided) for formulation and solution
     ! Labels that will be defined
     character(len=LENVARNAME) :: tsptype = '' !< "solute" or "heat"
@@ -277,9 +280,11 @@ contains
     !
     ! -- allocate members that are part of model class
     call mem_allocate(this%infmi, 'INFMI', this%memoryPath)
+    call mem_allocate(this%inadv, 'INADV', this%memoryPath)
     call mem_allocate(this%eqnsclfac, 'EQNSCLFAC', this%memoryPath)
     !
     this%infmi = 0
+    this%inadv = 0
     this%eqnsclfac = DZERO
     !
     ! -- Return
@@ -334,6 +339,7 @@ contains
     !
     ! -- Scalars
     call mem_deallocate(this%infmi)
+    call mem_deallocate(this%inadv)
     call mem_deallocate(this%eqnsclfac)
     !
     ! -- Return
@@ -384,6 +390,8 @@ contains
     return
   end subroutine ftype_check
 
+  !> @brief Create listing output file
+  !<
   subroutine create_lstfile(this, lst_fname, model_fname, defined)
     ! -- modules
     use KindModule, only: LGP
@@ -432,7 +440,7 @@ contains
     return
   end subroutine create_lstfile
 
-  !> @brief Write model namfile options to list file
+  !> @brief Write model name file options to list file
   !<
   subroutine log_namfile_options(this, found)
     use GwfNamInputModule, only: GwfNamParamFoundType
@@ -486,6 +494,7 @@ contains
     use GwfDisvModule, only: disv_cr
     use GwfDisuModule, only: disu_cr
     use TspFmiModule, only: fmi_cr
+    use TspAdvModule, only: adv_cr
     ! -- dummy
     class(TransportModelType) :: this
     integer(I4B), intent(inout) :: indis ! DIS enabled flag
@@ -538,12 +547,16 @@ contains
         call disu_cr(this%dis, this%name, mempath, indis, this%iout)
       case ('FMI6')
         this%infmi = inunit
+      case ('ADV6')
+        this%inadv = inunit
       end select
     end do
     !
     ! -- Create packages that are tied directly to model
     call fmi_cr(this%fmi, this%name, this%infmi, this%iout, this%eqnsclfac, &
                 this%depvartype)
+    call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi, &
+                this%eqnsclfac)
     !
     ! -- Return
     return
