@@ -331,12 +331,6 @@ contains
     class(TransportModelType) :: this
     ! -- local
     !
-    ! -- Internal flow packages deallocate
-    call this%fmi%fmi_da()
-    !
-    ! -- Internal package objects
-    deallocate (this%fmi)
-    !
     ! -- Scalars
     call mem_deallocate(this%infmi)
     call mem_deallocate(this%inadv)
