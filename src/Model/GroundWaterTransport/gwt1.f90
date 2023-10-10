@@ -15,7 +15,6 @@ module GwtModule
   use TransportModelModule, only: TransportModelType
   use BaseModelModule, only: BaseModelType
   use BndModule, only: BndType, AddBndToList, GetBndFromList
-  use GwtIcModule, only: GwtIcType
   use TspFmiModule, only: TspFmiType
   use GwtDspModule, only: GwtDspType
   use GwtSsmModule, only: GwtSsmType
@@ -38,14 +37,12 @@ module GwtModule
 
   type, extends(TransportModelType) :: GwtModelType
 
-    type(GwtIcType), pointer :: ic => null() ! initial conditions package
     type(GwtMstType), pointer :: mst => null() ! mass storage and transfer package
     type(GwtDspType), pointer :: dsp => null() ! dispersion package
     type(GwtSsmType), pointer :: ssm => null() ! source sink mixing package
     type(GwtMvtType), pointer :: mvt => null() ! mover transport package
     type(GwtOcType), pointer :: oc => null() ! output control package
     type(GwtObsType), pointer :: obs => null() ! observation package
-    integer(I4B), pointer :: inic => null() ! unit number IC
     integer(I4B), pointer :: inmvt => null() ! unit number MVT
     integer(I4B), pointer :: inmst => null() ! unit number MST
     integer(I4B), pointer :: indsp => null() ! DSP enabled flag
@@ -158,10 +155,11 @@ contains
     return
   end subroutine gwt_cr
 
-  !> @brief Define packages of the model
-  !
-  ! (1) call df routines for each package
-  ! (2) set variables and pointers
+  !> @brief Define packages of the GWT model
+  !!
+  !! This subroutine defines a gwt model type. Steps include:
+  !!  (1) call df routines for each package
+  !!  (2) set variables and pointers
   !<
   subroutine gwt_df(this)
     ! -- modules
@@ -243,7 +241,8 @@ contains
     return
   end subroutine gwt_ac
 
-  !> @brief Map connection positions in numerical solution coefficient matrix.
+  !> @brief Map the positions of the GWT model connections in the numerical
+  !! solution coefficient matrix.
   !<
   subroutine gwt_mc(this, matrix_sln)
     ! -- dummy
@@ -256,6 +255,7 @@ contains
     ! -- Find the position of each connection in the global ia, ja structure
     !    and store them in idxglo.
     call this%dis%dis_mc(this%moffset, this%idxglo, matrix_sln)
+    !
     if (this%indsp > 0) call this%dsp%dsp_mc(this%moffset, matrix_sln)
     !
     ! -- Map any package connections
@@ -268,10 +268,11 @@ contains
     return
   end subroutine gwt_mc
 
-  !> @brief Allocate and Read
-  !
-  ! (1) allocates and reads packages part of this model,
-  ! (2) allocates memory for arrays part of this model object
+  !> @brief GWT Model Allocate and Read
+  !!
+  !! This subroutine:
+  !!   - allocates and reads packages that are part of this model,
+  !!   - allocates memory for arrays used by this model object
   !<
   subroutine gwt_ar(this)
     ! -- modules
@@ -321,7 +322,9 @@ contains
     return
   end subroutine gwt_ar
 
-  !> @brief Read and prepare (calls package read and prepare routines)
+  !> @brief GWT Model Read and Prepare
+  !!
+  !! Call the read and prepare routines of the attached packages
   !<
   subroutine gwt_rp(this)
     ! -- modules
@@ -352,7 +355,9 @@ contains
     return
   end subroutine gwt_rp
 
-  !> @brief Time step advance (calls package advance subroutines)
+  !> @brief GWT Model Time Step Advance
+  !!
+  !! Call the advance subroutines of the attached packages
   !<
   subroutine gwt_ad(this)
     ! -- modules
@@ -407,9 +412,12 @@ contains
     return
   end subroutine gwt_ad
 
-  !> @brief Calculate coefficients
+  !> @brief GWT Model calculate coefficients
+  !!
+  !! Call the calculate coefficients subroutines of the attached packages
   !<
   subroutine gwt_cf(this, kiter)
+    ! -- modules
     ! -- dummy
     class(GwtModelType) :: this
     integer(I4B), intent(in) :: kiter
@@ -427,9 +435,12 @@ contains
     return
   end subroutine gwt_cf
 
-  !> @brief Fill coefficients
+  !> @brief GWT Model fill coefficients
+  !!
+  !! Call the fill coefficients subroutines attached packages
   !<
   subroutine gwt_fc(this, kiter, matrix_sln, inwtflag)
+    ! -- modules
     ! -- dummy
     class(GwtModelType) :: this
     integer(I4B), intent(in) :: kiter
@@ -471,7 +482,9 @@ contains
     return
   end subroutine gwt_fc
 
-  !> @brief Final convergence check (calls package cc routines)
+  !> @brief GWT Model Final Convergence Check
+  !!
+  !! If MVR/MVT is active, call the MVR convergence check subroutines
   !<
   subroutine gwt_cc(this, innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
     ! -- dummy
@@ -501,7 +514,9 @@ contains
     return
   end subroutine gwt_cc
 
-  !> @brief Calculate intercell flows (flowja)
+  !> @brief GWT Model calculate flow
+  !!
+  !! Call the intercell flows (flow ja) subroutine
   !<
   subroutine gwt_cq(this, icnvg, isuppress_output)
     ! -- modules
@@ -548,10 +563,11 @@ contains
     return
   end subroutine gwt_cq
 
-  !> @brief Model budget
-  !
-  ! (1) Calculate intercell flows (flowja)
-  ! (2) Calculate package contributions to model budget
+  !> @brief GWT Model Budget
+  !!
+  !! This subroutine:
+  !!  (1) calculates intercell flows (flowja)
+  !!  (2) calculates package contributions to the model budget
   !<
   subroutine gwt_bd(this, icnvg, isuppress_output)
     use ConstantsModule, only: DZERO
@@ -579,13 +595,14 @@ contains
       packobj => GetBndFromList(this%bndlist, ip)
       call packobj%bnd_bd(this%budget)
     end do
-
     !
     ! -- Return
     return
   end subroutine gwt_bd
 
   !> @brief Print and/or save model output
+  !!
+  !! Call the parent class output routine
   !<
   subroutine gwt_ot(this)
     ! -- modules
@@ -813,6 +830,8 @@ contains
   end subroutine gwt_ot_bdsummary
 
   !> @brief Deallocate
+  !!
+  !! Deallocate memmory at conclusion of model run
   !<
   subroutine gwt_da(this)
     ! -- modules
@@ -862,7 +881,6 @@ contains
     end do
     !
     ! -- Scalars
-    call mem_deallocate(this%inic)
     call mem_deallocate(this%indsp)
     call mem_deallocate(this%inssm)
     call mem_deallocate(this%inmst)
@@ -885,8 +903,6 @@ contains
   !! This subroutine adds a budget entry to the flow budget.  It was added as
   !! a method for the gwt model object so that the exchange object could add its
   !! contributions.
-  !!
-  !! (1) adds the entry to the budget object
   !<
   subroutine gwt_bdentry(this, budterm, budtxt, rowlabel)
     ! -- modules
@@ -937,7 +953,11 @@ contains
     return
   end function gwt_get_iasym
 
-  !> @brief Allocate memory for non-allocatable members
+  !> Allocate memory for non-allocatable members
+  !!
+  !! A subroutine for allocating the scalars specific to the GWT model type.
+  !! Additional scalars used by the parent class are allocated by the parent
+  !! class.
   !<
   subroutine allocate_scalars(this, modelname)
     ! -- modules
@@ -950,7 +970,6 @@ contains
     call this%allocate_tsp_scalars(modelname)
     !
     ! -- allocate members that are part of model class
-    call mem_allocate(this%inic, 'INIC', this%memoryPath)
     call mem_allocate(this%inmvt, 'INMVT', this%memoryPath)
     call mem_allocate(this%inmst, 'INMST', this%memoryPath)
     call mem_allocate(this%indsp, 'INDSP', this%memoryPath)
@@ -958,7 +977,6 @@ contains
     call mem_allocate(this%inoc, 'INOC ', this%memoryPath)
     call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
     !
-    this%inic = 0
     this%inmvt = 0
     this%inmst = 0
     this%indsp = 0
@@ -971,6 +989,8 @@ contains
   end subroutine allocate_scalars
 
   !> @brief Create boundary condition packages for this model
+  !!
+  !! Call the package create routines for packages activated by the user.
   !<
   subroutine package_create(this, filtyp, ipakid, ipaknum, pakname, inunit, &
                             iout)
@@ -1056,6 +1076,7 @@ contains
     type is (GwtModelType)
       gwtmodel => model
     end select
+    !
     ! -- Return
     return
   end function CastAsGwtModel
@@ -1127,7 +1148,6 @@ contains
     use MemoryManagerModule, only: mem_setptr
     use MemoryHelperModule, only: create_mem_path
     use SimVariablesModule, only: idm_context
-    use GwtIcModule, only: ic_cr
     use GwtMstModule, only: mst_cr
     use GwtDspModule, only: dsp_cr
     use GwtSsmModule, only: ssm_cr
@@ -1174,8 +1194,6 @@ contains
       !
       ! -- create dis package first as it is a prerequisite for other packages
       select case (pkgtype)
-      case ('IC6')
-        this%inic = inunit
       case ('MVT6')
         this%inmvt = inunit
       case ('MST6')
@@ -1199,7 +1217,6 @@ contains
     end do
     !
     ! -- Create packages that are tied directly to model
-    call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis)
     call mst_cr(this%mst, this%name, this%inmst, this%iout, this%fmi)
     call dsp_cr(this%dsp, this%name, mempathdsp, this%indsp, this%iout, &
                 this%fmi)
@@ -1209,7 +1226,7 @@ contains
     call gwt_obs_cr(this%obs, this%inobs)
     !
     ! -- Check to make sure that required ftype's have been specified
-    call this%ftype_check(indis, this%inmst, this%inic)
+    call this%ftype_check(indis, this%inmst)
     !
     call this%create_bndpkgs(bndpkgs, pkgtypes, pkgnames, mempaths, inunits)
     !

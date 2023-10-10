@@ -206,11 +206,11 @@ $(OBJDIR)/gwf3drn8.o \
 $(OBJDIR)/IndexMap.o \
 $(OBJDIR)/VirtualModel.o \
 $(OBJDIR)/BaseExchange.o \
+$(OBJDIR)/gwf3ic8.o \
 $(OBJDIR)/tsp1fmi1.o \
 $(OBJDIR)/TspAdvOptions.o \
 $(OBJDIR)/UzfCellGroup.o \
 $(OBJDIR)/OutputControlData.o \
-$(OBJDIR)/gwf3ic8.o \
 $(OBJDIR)/Xt3dInterface.o \
 $(OBJDIR)/gwf3tvk8.o \
 $(OBJDIR)/gwf3vsc8.o \
@@ -221,6 +221,7 @@ $(OBJDIR)/ImsLinearSettings.o \
 $(OBJDIR)/ConvergenceSummary.o \
 $(OBJDIR)/CellWithNbrs.o \
 $(OBJDIR)/NumericalExchange.o \
+$(OBJDIR)/tsp1ic1.o \
 $(OBJDIR)/tsp1adv1.o \
 $(OBJDIR)/gwf3disv8.o \
 $(OBJDIR)/gwf3disu8.o \
@@ -229,7 +230,6 @@ $(OBJDIR)/gwf3uzf8.o \
 $(OBJDIR)/gwt1apt1.o \
 $(OBJDIR)/GwtSpc.o \
 $(OBJDIR)/OutputControl.o \
-$(OBJDIR)/gwt1ic1.o \
 $(OBJDIR)/gwt1mst1.o \
 $(OBJDIR)/GwtDspOptions.o \
 $(OBJDIR)/gwf3npf8.o \

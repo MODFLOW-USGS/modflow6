@@ -11,6 +11,7 @@ module TransportModelModule
                              LENMEMPATH, LENVARNAME
   use SimVariablesModule, only: errmsg
   use NumericalModelModule, only: NumericalModelType
+  use TspIcModule, only: TspIcType
   use TspFmiModule, only: TspFmiType
   use TspAdvModule, only: TspAdvType
   use BudgetModule, only: BudgetType
@@ -26,9 +27,11 @@ module TransportModelModule
 
     type(TspFmiType), pointer :: fmi => null() ! flow model interface
     type(TspAdvType), pointer :: adv => null() !< advection package
+    type(TspIcType), pointer :: ic => null() !< initial conditions package
     type(BudgetType), pointer :: budget => null() !< budget object
     integer(I4B), pointer :: infmi => null() ! unit number FMI
     integer(I4B), pointer :: inadv => null() !< unit number ADV
+    integer(I4B), pointer :: inic => null() !< unit number IC
     real(DP), pointer :: eqnsclfac => null() !< constant factor by which all terms in the model's governing equation are scaled (divided) for formulation and solution
     ! Labels that will be defined
     character(len=LENVARNAME) :: tsptype = '' !< "solute" or "heat"
@@ -279,10 +282,12 @@ contains
     call this%NumericalModelType%allocate_scalars(modelname)
     !
     ! -- allocate members that are part of model class
+    call mem_allocate(this%inic, 'INIC', this%memoryPath)
     call mem_allocate(this%infmi, 'INFMI', this%memoryPath)
     call mem_allocate(this%inadv, 'INADV', this%memoryPath)
     call mem_allocate(this%eqnsclfac, 'EQNSCLFAC', this%memoryPath)
     !
+    this%inic = 0
     this%infmi = 0
     this%inadv = 0
     this%eqnsclfac = DZERO
@@ -332,6 +337,7 @@ contains
     ! -- local
     !
     ! -- Scalars
+    call mem_deallocate(this%inic)
     call mem_deallocate(this%infmi)
     call mem_deallocate(this%inadv)
     call mem_deallocate(this%eqnsclfac)
@@ -344,7 +350,7 @@ contains
   !!
   !! Check to make sure required input files have been specified
   !<
-  subroutine ftype_check(this, indis, inmst, inic)
+  subroutine ftype_check(this, indis, inmst)
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, count_errors, store_error_filename
@@ -352,13 +358,12 @@ contains
     class(TransportModelType) :: this
     integer(I4B), intent(in) :: indis
     integer(I4B), intent(in) :: inmst
-    integer(I4B), intent(in) :: inic
     ! -- local
     character(len=LINELENGTH) :: errmsg
 ! ------------------------------------------------------------------------------
     !
     ! -- Check for IC6, DIS(u), and MST. Stop if not present.
-    if (inic == 0) then
+    if (this%inic == 0) then
       write (errmsg, '(a)') &
         'Initial conditions (IC6) package not specified.'
       call store_error(errmsg)
@@ -487,6 +492,7 @@ contains
     use GwfDisModule, only: dis_cr
     use GwfDisvModule, only: disv_cr
     use GwfDisuModule, only: disu_cr
+    use TspIcModule, only: ic_cr
     use TspFmiModule, only: fmi_cr
     use TspAdvModule, only: adv_cr
     ! -- dummy
@@ -539,6 +545,8 @@ contains
       case ('DISU6')
         indis = 1
         call disu_cr(this%dis, this%name, mempath, indis, this%iout)
+      case ('IC6')
+        this%inic = inunit
       case ('FMI6')
         this%infmi = inunit
       case ('ADV6')
@@ -547,6 +555,8 @@ contains
     end do
     !
     ! -- Create packages that are tied directly to model
+    call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis, &
+               this%depvartype)
     call fmi_cr(this%fmi, this%name, this%infmi, this%iout, this%eqnsclfac, &
                 this%depvartype)
     call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi, &
