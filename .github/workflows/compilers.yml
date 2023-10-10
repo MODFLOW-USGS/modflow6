@@ -254,8 +254,9 @@ jobs:
       - name: Concatenate reports
         working-directory: .github/compat
         run: |
-          echo "runner,compiler,version,support" > long_comp.csv
-          echo "runner,compiler,version,support" > long_test.csv
+          cols="runner,compiler,version,support"
+          echo "$cols" > long_comp.csv
+          echo "$cols" > long_test.csv
           cat new/comp*.csv >> long_comp.csv
           cat new/test*.csv >> long_test.csv
 
