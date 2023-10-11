@@ -272,6 +272,7 @@ module InputOutputModule
     integer(I4B), intent(in) :: proc_id  !< processor id
     ! -- local variables
     character(len=linelength) :: name_local
+    character(len=linelength) :: name_processor
     character(len=linelength) :: extension_local
     integer(I4B) :: ipos0
     integer(I4B) :: ipos1
@@ -286,8 +287,9 @@ module InputOutputModule
       ipos0 = ipos1
       extension_local = ''
     end if
-    write(name, '(a,a,i0,a)') &
+    write(name_processor, '(a,a,i0,a)') &
       name(1:ipos0-1), '.p', proc_id, trim(adjustl(extension_local))
+    name = name_processor
     !
     ! -- return
     return

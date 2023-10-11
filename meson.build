@@ -155,9 +155,14 @@ if is_parallel_build
 
   # find mpi
   if is_mpich
-    mpi = dependency('mpich', required : true)
-    mpifort = dependency(mpifort_name, required : mpi.found())
-    dependencies += [ mpi, mpifort ]
+    if is_cray
+      mpi = dependency('mpich', required : true)
+      mpifort = dependency(mpifort_name, required : mpi.found())
+      dependencies += [ mpi, mpifort ]
+    else
+      mpifort = dependency(mpifort_name, required : true)
+      dependencies += [ mpifort ]
+    endif
   else
     mpi = dependency('mpi', language : 'fortran', required : true)
     dependencies += mpi

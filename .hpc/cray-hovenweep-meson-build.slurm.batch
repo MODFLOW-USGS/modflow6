@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=denali-build
+#SBATCH --job-name=hovenweep-build
 #SBATCH --nodes=1
 #SBATCH --ntasks=2
 #SBATCH --account=impd
@@ -10,8 +10,8 @@
 
 # load appropriate modules
 module switch PrgEnv-${PE_ENV,,} PrgEnv-intel
-module load cray-petsc meson ninja
-export PKG_CONFIG_PATH=/opt/cray/pe/mpt/7.7.19/gni/mpich-intel/16.0/lib/pkgconfig:/opt/cray/pe/petsc/3.14.5.0/real/INTEL/19.1/x86_skylake/lib/pkgconfig:$PKG_CONFIG_PATH
+module load petsc/3.15.5
+export PKG_CONFIG_PATH=$CRAY_MPICH_DIR/lib/pkgconfig:$PKG_CONFIG_PATH
 
 # list loaded modules
 module list
@@ -29,10 +29,10 @@ BINDIR=$BUILDDIR/src
 TESTDIR=$MODFLOW6ROOT/.mf6minsim
 
 # define the installation location
-PREFIX=/home/software/denali/contrib/impd/apps/modflow/$VERSION/$PE_ENV/19.1.0.166
+PREFIX=/home/software/hovenweep/contrib/impd/apps/modflow/$VERSION/$PE_ENV/2023.2.0
 
 # build MODFLOW 6
-CC=cc CXX=CC F77=ftn F90=ftn FC=ftn meson setup $BUILDDIR --prefix=$PREFIX --bindir=bin --libdir=lib -Dcray=true -Ddebug=false
+CC=cc CXX=CC F77=ftn F90=ftn FC=ftn meson setup $BUILDDIR --prefix=$PREFIX --bindir=bin --libdir=lib -Dcray=true -Ddebug=false --wipe
 meson compile -C $BUILDDIR
 
 # install MODFLOW 6
