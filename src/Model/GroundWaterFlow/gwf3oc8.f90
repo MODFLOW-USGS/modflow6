@@ -59,7 +59,7 @@ contains
   !<
   subroutine oc_ar(this, head, dis, dnodata)
     ! -- dummy
-    class(GwfOcType) :: this !< GwtOcType object
+    class(GwfOcType) :: this !< GwfOcType object
     real(DP), dimension(:), pointer, contiguous, intent(in) :: head !< model head
     class(DisBaseType), pointer, intent(in) :: dis !< model discretization package
     real(DP), intent(in) :: dnodata !< no data value
