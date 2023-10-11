@@ -33,7 +33,7 @@ module GwfRchaInputModule
 
   logical :: gwf_rcha_multi_package = .true.
 
-  character(len=LENVARNAME) :: gwf_rcha_aux_sfac_param = 'RECHARGE'
+  character(len=LENVARNAME) :: gwf_rcha_aux_sfac_param = ''
 
   type(InputParamDefinitionType), parameter :: &
     gwfrcha_readasarrays = InputParamDefinitionType &
