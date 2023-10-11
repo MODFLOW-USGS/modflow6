@@ -15,7 +15,7 @@ module GwtSsmModule
   use SimVariablesModule, only: errmsg
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
-  use GwtFmiModule, only: GwtFmiType
+  use TspFmiModule, only: TspFmiType
   use TableModule, only: TableType, table_cr
   use GwtSpcModule, only: GwtSpcType
   use MatrixBaseModule
@@ -41,7 +41,7 @@ module GwtSsmModule
     integer(I4B), dimension(:), pointer, contiguous :: iauxpak => null() !< aux col for concentration
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
     real(DP), dimension(:), pointer, contiguous :: cnew => null() !< pointer to gwt%x
-    type(GwtFmiType), pointer :: fmi => null() !< pointer to fmi object
+    type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
     type(TableType), pointer :: outputtab => null() !< output table object
     type(GwtSpcType), dimension(:), pointer :: ssmivec => null() !< array of stress package concentration objects
 
@@ -84,7 +84,7 @@ contains
     character(len=*), intent(in) :: name_model !< name of the model
     integer(I4B), intent(in) :: inunit !< fortran unit for input
     integer(I4B), intent(in) :: iout !< fortran unit for output
-    type(GwtFmiType), intent(in), target :: fmi !< GWT FMI package
+    type(TspFmiType), intent(in), target :: fmi !< GWT FMI package
     !
     ! -- Create the object
     allocate (ssmobj)

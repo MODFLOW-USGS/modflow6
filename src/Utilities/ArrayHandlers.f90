@@ -5,7 +5,7 @@ module ArrayHandlersModule
   use SimVariablesModule, only: iout
   use GenericUtilitiesModule, only: sim_message, stop_with_error
   private
-  public :: ExpandArray, ExpandArrayWrapper, ExtendPtrArray
+  public :: ExpandArray, ExpandArray2D, ExpandArrayWrapper, ExtendPtrArray
   public :: ConcatArray
   public :: ifind
   public :: remove_character
@@ -19,9 +19,16 @@ module ArrayHandlersModule
     ! IMPORTANT: Do not use pointers to elements of arrays when using
     ! ExpandArray to increase the array size!  The locations of array
     ! elements in memory are changed when ExpandArray is invoked.
-    module procedure expand_integer, expand_double, &
-      expand_character !, expand_real
+    module procedure expand_integer, expand_double, expand_character
   end interface ExpandArray
+
+  interface ExpandArray2D
+    ! This interface is for use with ALLOCATABLE arrays.
+    ! IMPORTANT: Do not use pointers to elements of arrays when using
+    ! ExpandArray2D to increase the array size!  The locations of array
+    ! elements in memory are changed when ExpandArray2D is invoked.
+    module procedure expand_integer_2d, expand_double_2d
+  end interface ExpandArray2D
 
   interface ExtendPtrArray
     ! This interface is for use with POINTERS to arrays.
@@ -224,6 +231,88 @@ contains
     return
   end subroutine expand_character
 
+  ! -- Specific procedures that implement ExtendArray2D
+
+  subroutine expand_integer_2d(array, increment1, increment2)
+    implicit none
+    ! -- dummy
+    integer(I4B), allocatable, intent(inout) :: array(:, :)
+    integer(I4B), optional, intent(in) :: increment1
+    integer(I4B), optional, intent(in) :: increment2
+    ! -- local
+    integer(I4B) :: inclocal1, inclocal2, isize1, isize2, newsize1, newsize2
+    integer(I4B), allocatable, dimension(:, :) :: array_temp
+    !
+    ! -- initialize
+    if (present(increment1)) then
+      inclocal1 = increment1
+    else
+      inclocal1 = 1
+    end if
+    if (present(increment2)) then
+      inclocal2 = increment2
+    else
+      inclocal2 = 1
+    end if
+    !
+    ! -- increase size of array by inclocal corresponding to each dim,
+    !    retaining contained data
+    if (allocated(array)) then
+      isize1 = size(array, 1)
+      isize2 = size(array, 2)
+      newsize1 = isize1 + inclocal1
+      newsize2 = isize2 + inclocal2
+      allocate (array_temp(newsize1, newsize2))
+      array_temp(1:isize1, 1:isize2) = array
+      deallocate (array)
+      call move_alloc(array_temp, array)
+    else
+      allocate (array(inclocal1, inclocal2))
+    end if
+    !
+    return
+  end subroutine expand_integer_2d
+
+  subroutine expand_double_2d(array, increment1, increment2)
+    implicit none
+    ! -- dummy
+    real(DP), allocatable, intent(inout) :: array(:, :)
+    integer(I4B), optional, intent(in) :: increment1
+    integer(I4B), optional, intent(in) :: increment2
+    ! -- local
+    integer(I4B) :: inclocal1, inclocal2, isize1, isize2, newsize1, newsize2
+    real(DP), allocatable, dimension(:, :) :: array_temp
+    !
+    ! -- initialize
+    if (present(increment1)) then
+      inclocal1 = increment1
+    else
+      inclocal1 = 1
+    end if
+    if (present(increment2)) then
+      inclocal2 = increment2
+    else
+      inclocal2 = 1
+    end if
+    !
+    ! -- increase size of array by inclocal corresponding to each dim,
+    !    retaining contained data
+    if (allocated(array)) then
+      isize1 = size(array, 1)
+      isize2 = size(array, 2)
+      newsize1 = isize1 + inclocal1
+      newsize2 = isize2 + inclocal2
+      allocate (array_temp(newsize1, newsize2))
+      array_temp(1:isize1, 1:isize2) = array
+      deallocate (array)
+      call move_alloc(array_temp, array)
+    else
+      allocate (array(inclocal1, inclocal2))
+    end if
+    !
+    return
+  end subroutine expand_double_2d
+
   ! -- Specific procedures that implement ExtendPtrArray for pointer arrays
 
   subroutine extend_double(array, increment)
@@ -344,7 +433,7 @@ contains
 
   end subroutine extend_integer
 
-  !> @brief Grows or allocated the array with the passed increment,
+  !> @brief Grows or allocates the array with the passed increment,
   !< the old value of the array pointer is rendered invalid
   subroutine extend_string(array, increment)
     character(len=*), dimension(:), pointer, contiguous :: array

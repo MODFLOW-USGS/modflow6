@@ -1,40 +1,40 @@
-# makefile created by pymake (version 1.2.9.dev0) for the 'mf6' executable.
+# makefile created by pymake (version 1.2.7) for the 'mf6' executable.
 
 
 include ./makedefaults
 
 # Define the source file directories
 SOURCEDIR1=../src
-SOURCEDIR2=../src/Exchange
-SOURCEDIR3=../src/Model
-SOURCEDIR4=../src/Model/Geometry
-SOURCEDIR5=../src/Model/TransportModel
-SOURCEDIR6=../src/Model/ModelUtilities
-SOURCEDIR7=../src/Model/Connection
+SOURCEDIR2=../src/Distributed
+SOURCEDIR3=../src/Exchange
+SOURCEDIR4=../src/Model
+SOURCEDIR5=../src/Model/Connection
+SOURCEDIR6=../src/Model/Geometry
+SOURCEDIR7=../src/Model/GroundWaterFlow
 SOURCEDIR8=../src/Model/GroundWaterTransport
-SOURCEDIR9=../src/Model/GroundWaterFlow
-SOURCEDIR10=../src/Distributed
+SOURCEDIR9=../src/Model/ModelUtilities
+SOURCEDIR10=../src/Model/TransportModel
 SOURCEDIR11=../src/Solution
-SOURCEDIR12=../src/Solution/PETSc
-SOURCEDIR13=../src/Solution/LinearMethods
+SOURCEDIR12=../src/Solution/LinearMethods
+SOURCEDIR13=../src/Solution/PETSc
 SOURCEDIR14=../src/Timing
 SOURCEDIR15=../src/Utilities
-SOURCEDIR16=../src/Utilities/TimeSeries
-SOURCEDIR17=../src/Utilities/Libraries
-SOURCEDIR18=../src/Utilities/Libraries/rcm
-SOURCEDIR19=../src/Utilities/Libraries/sparsekit
-SOURCEDIR20=../src/Utilities/Libraries/sparskit2
+SOURCEDIR16=../src/Utilities/ArrayRead
+SOURCEDIR17=../src/Utilities/Idm
+SOURCEDIR18=../src/Utilities/Idm/mf6blockfile
+SOURCEDIR19=../src/Utilities/Idm/selector
+SOURCEDIR20=../src/Utilities/Libraries
 SOURCEDIR21=../src/Utilities/Libraries/blas
 SOURCEDIR22=../src/Utilities/Libraries/daglib
-SOURCEDIR23=../src/Utilities/Idm
-SOURCEDIR24=../src/Utilities/Idm/selector
-SOURCEDIR25=../src/Utilities/Idm/mf6blockfile
+SOURCEDIR23=../src/Utilities/Libraries/rcm
+SOURCEDIR24=../src/Utilities/Libraries/sparsekit
+SOURCEDIR25=../src/Utilities/Libraries/sparskit2
 SOURCEDIR26=../src/Utilities/Matrix
-SOURCEDIR27=../src/Utilities/Vector
+SOURCEDIR27=../src/Utilities/Memory
 SOURCEDIR28=../src/Utilities/Observation
 SOURCEDIR29=../src/Utilities/OutputControl
-SOURCEDIR30=../src/Utilities/Memory
-SOURCEDIR31=../src/Utilities/ArrayRead
+SOURCEDIR30=../src/Utilities/TimeSeries
+SOURCEDIR31=../src/Utilities/Vector
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -206,8 +206,9 @@ $(OBJDIR)/gwf3drn8.o \
 $(OBJDIR)/IndexMap.o \
 $(OBJDIR)/VirtualModel.o \
 $(OBJDIR)/BaseExchange.o \
+$(OBJDIR)/tsp1fmi1.o \
+$(OBJDIR)/TspAdvOptions.o \
 $(OBJDIR)/UzfCellGroup.o \
-$(OBJDIR)/gwt1fmi1.o \
 $(OBJDIR)/OutputControlData.o \
 $(OBJDIR)/gwf3ic8.o \
 $(OBJDIR)/Xt3dInterface.o \
@@ -220,6 +221,10 @@ $(OBJDIR)/ImsLinearSettings.o \
 $(OBJDIR)/ConvergenceSummary.o \
 $(OBJDIR)/CellWithNbrs.o \
 $(OBJDIR)/NumericalExchange.o \
+$(OBJDIR)/tsp1adv1.o \
+$(OBJDIR)/gwf3disv8.o \
+$(OBJDIR)/gwf3disu8.o \
+$(OBJDIR)/gwf3dis8.o \
 $(OBJDIR)/gwf3uzf8.o \
 $(OBJDIR)/gwt1apt1.o \
 $(OBJDIR)/GwtSpc.o \
@@ -228,7 +233,6 @@ $(OBJDIR)/gwt1ic1.o \
 $(OBJDIR)/gwt1mst1.o \
 $(OBJDIR)/GwtDspOptions.o \
 $(OBJDIR)/gwf3npf8.o \
-$(OBJDIR)/GwtAdvOptions.o \
 $(OBJDIR)/gwf3tvs8.o \
 $(OBJDIR)/GwfStorageUtils.o \
 $(OBJDIR)/Mover.o \
@@ -240,7 +244,6 @@ $(OBJDIR)/SparseMatrix.o \
 $(OBJDIR)/LinearSolverBase.o \
 $(OBJDIR)/ims8reordering.o \
 $(OBJDIR)/VirtualExchange.o \
-$(OBJDIR)/gwf3disu8.o \
 $(OBJDIR)/GridSorting.o \
 $(OBJDIR)/DisConnExchange.o \
 $(OBJDIR)/CsrUtils.o \
@@ -257,9 +260,6 @@ $(OBJDIR)/gwt1lkt1.o \
 $(OBJDIR)/gwt1ist1.o \
 $(OBJDIR)/gwt1dsp1.o \
 $(OBJDIR)/gwt1cnc1.o \
-$(OBJDIR)/gwt1adv1.o \
-$(OBJDIR)/gwf3disv8.o \
-$(OBJDIR)/gwf3dis8.o \
 $(OBJDIR)/gwf3api8.o \
 $(OBJDIR)/gwf3wel8.o \
 $(OBJDIR)/gwf3rch8.o \

@@ -2,7 +2,7 @@ module FlowModelInterfaceModule
 
   use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: DONE, DZERO, DHALF, LINELENGTH, LENBUDTXT, &
-                             LENPACKAGENAME
+                             LENPACKAGENAME, LENVARNAME
   use SimModule, only: store_error, store_error_unit
   use SimVariablesModule, only: errmsg
   use NumericalPackageModule, only: NumericalPackageType
@@ -43,6 +43,8 @@ module FlowModelInterfaceModule
     type(PackageBudgetType), dimension(:), allocatable :: gwfpackages !< used to get flows between a package and gwf
     type(BudgetObjectType), pointer :: mvrbudobj => null() !< pointer to the mover budget budget object
     character(len=16), dimension(:), allocatable :: flowpacknamearray !< array of boundary package names (e.g. LAK-1, SFR-3, etc.)
+    character(len=LENVARNAME) :: depvartype = ''
+
   contains
 
     procedure :: advance_bfr
@@ -69,6 +71,7 @@ module FlowModelInterfaceModule
 contains
 
   !> @brief Define the flow model interface
+  !<
   subroutine fmi_df(this, dis)
     ! -- modules
     use SimModule, only: store_error
@@ -120,6 +123,7 @@ contains
   end subroutine fmi_df
 
   !> @brief Allocate the package
+  !<
   subroutine fmi_ar(this, ibound)
     ! -- modules
     use SimModule, only: store_error
@@ -138,6 +142,7 @@ contains
   end subroutine fmi_ar
 
   !> @brief Deallocate variables
+  !<
   subroutine fmi_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
@@ -183,6 +188,7 @@ contains
   end subroutine fmi_da
 
   !> @brief Allocate scalars
+  !<
   subroutine allocate_scalars(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
@@ -219,6 +225,7 @@ contains
   end subroutine allocate_scalars
 
   !> @brief Allocate arrays
+  !<
   subroutine allocate_arrays(this, nodes)
     use MemoryManagerModule, only: mem_allocate
     !modules
@@ -281,6 +288,7 @@ contains
   end subroutine allocate_arrays
 
   !> @brief Read options from input file
+  !<
   subroutine read_options(this)
     ! -- modules
     use ConstantsModule, only: LINELENGTH, DEM6
@@ -322,6 +330,7 @@ contains
   end subroutine read_options
 
   !> @brief Read packagedata block from input file
+  !<
   subroutine read_packagedata(this)
     ! -- modules
     use OpenSpecModule, only: ACCESS, FORM
@@ -421,6 +430,7 @@ contains
   end subroutine read_packagedata
 
   !> @brief Initialize the budget file reader
+  !<
   subroutine initialize_bfr(this)
     ! -- modules
     class(FlowModelInterfaceType) :: this
@@ -585,6 +595,7 @@ contains
   end subroutine advance_bfr
 
   !> @brief Finalize the budget file reader
+  !<
   subroutine finalize_bfr(this)
     ! -- modules
     class(FlowModelInterfaceType) :: this
@@ -596,6 +607,7 @@ contains
   end subroutine finalize_bfr
 
   !> @brief Initialize the head file reader
+  !<
   subroutine initialize_hfr(this)
     ! -- modules
     class(FlowModelInterfaceType) :: this
@@ -609,6 +621,7 @@ contains
   end subroutine initialize_hfr
 
   !> @brief Advance the head file reader
+  !<
   subroutine advance_hfr(this)
     ! -- modules
     use TdisModule, only: kstp, kper
@@ -701,6 +714,7 @@ contains
   end subroutine advance_hfr
 
   !> @brief Finalize the head file reader
+  !<
   subroutine finalize_hfr(this)
     ! -- modules
     class(FlowModelInterfaceType) :: this
@@ -816,6 +830,7 @@ contains
   end subroutine initialize_gwfterms_from_bfr
 
   !> @brief Initialize gwf terms from a GWF exchange
+  !<
   subroutine initialize_gwfterms_from_gwfbndlist(this)
     ! -- modules
     use BndModule, only: BndType, GetBndFromList
@@ -883,7 +898,6 @@ contains
   !! gwfpackages is an array of PackageBudget objects.
   !! This routine allocates gwfpackages to the proper size and initializes some
   !! member variables.
-  !!
   !<
   subroutine allocate_gwfpackages(this, ngwfterms)
     ! -- modules
@@ -920,6 +934,7 @@ contains
   end subroutine allocate_gwfpackages
 
   !> @brief Deallocate memory in the gwfpackages array
+  !<
   subroutine deallocate_gwfpackages(this)
     ! -- modules
     ! -- dummy
@@ -937,6 +952,7 @@ contains
   end subroutine deallocate_gwfpackages
 
   !> @brief Find the package index for the package with the given name
+  !<
   subroutine get_package_index(this, name, idx)
     use BndModule, only: BndType, GetBndFromList
     class(FlowModelInterfaceType) :: this

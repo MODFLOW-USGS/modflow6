@@ -17,7 +17,7 @@ module GwtMstModule
   use MatrixBaseModule
   use NumericalPackageModule, only: NumericalPackageType
   use BaseDisModule, only: DisBaseType
-  use GwtFmiModule, only: GwtFmiType
+  use TspFmiModule, only: TspFmiType
 
   implicit none
   public :: GwtMstType
@@ -60,7 +60,7 @@ module GwtMstModule
     !
     ! -- misc
     integer(I4B), dimension(:), pointer, contiguous :: ibound => null() !< pointer to model ibound
-    type(GwtFmiType), pointer :: fmi => null() !< pointer to fmi object
+    type(TspFmiType), pointer :: fmi => null() !< pointer to fmi object
 
   contains
 
@@ -100,7 +100,7 @@ contains
     character(len=*), intent(in) :: name_model !< name of the model
     integer(I4B), intent(in) :: inunit !< unit number of WEL package input file
     integer(I4B), intent(in) :: iout !< unit number of model listing file
-    type(GwtFmiType), intent(in), target :: fmi !< fmi package for this GWT model
+    type(TspFmiType), intent(in), target :: fmi !< fmi package for this GWT model
     !
     ! -- Create the object
     allocate (mstobj)

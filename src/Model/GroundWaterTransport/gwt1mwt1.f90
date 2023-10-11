@@ -38,7 +38,7 @@ module GwtMwtModule
   use ConstantsModule, only: DZERO, LINELENGTH
   use SimModule, only: store_error
   use BndModule, only: BndType, GetBndFromList
-  use GwtFmiModule, only: GwtFmiType
+  use TspFmiModule, only: TspFmiType
   use MawModule, only: MawType
   use ObserveModule, only: ObserveType
   use GwtAptModule, only: GwtAptType, apt_process_obsID, &
@@ -101,7 +101,7 @@ contains
     integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
-    type(GwtFmiType), pointer :: fmi
+    type(TspFmiType), pointer :: fmi
     ! -- local
     type(GwtMwtType), pointer :: mwtobj
 ! ------------------------------------------------------------------------------
