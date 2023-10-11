@@ -206,8 +206,9 @@ $(OBJDIR)/gwf3drn8.o \
 $(OBJDIR)/IndexMap.o \
 $(OBJDIR)/VirtualModel.o \
 $(OBJDIR)/BaseExchange.o \
-$(OBJDIR)/UzfCellGroup.o \
 $(OBJDIR)/tsp1fmi1.o \
+$(OBJDIR)/TspAdvOptions.o \
+$(OBJDIR)/UzfCellGroup.o \
 $(OBJDIR)/OutputControlData.o \
 $(OBJDIR)/gwf3ic8.o \
 $(OBJDIR)/Xt3dInterface.o \
@@ -220,6 +221,7 @@ $(OBJDIR)/ImsLinearSettings.o \
 $(OBJDIR)/ConvergenceSummary.o \
 $(OBJDIR)/CellWithNbrs.o \
 $(OBJDIR)/NumericalExchange.o \
+$(OBJDIR)/tsp1adv1.o \
 $(OBJDIR)/gwf3disv8.o \
 $(OBJDIR)/gwf3disu8.o \
 $(OBJDIR)/gwf3dis8.o \
@@ -231,7 +233,6 @@ $(OBJDIR)/gwt1ic1.o \
 $(OBJDIR)/gwt1mst1.o \
 $(OBJDIR)/GwtDspOptions.o \
 $(OBJDIR)/gwf3npf8.o \
-$(OBJDIR)/GwtAdvOptions.o \
 $(OBJDIR)/gwf3tvs8.o \
 $(OBJDIR)/GwfStorageUtils.o \
 $(OBJDIR)/Mover.o \
@@ -259,7 +260,6 @@ $(OBJDIR)/gwt1lkt1.o \
 $(OBJDIR)/gwt1ist1.o \
 $(OBJDIR)/gwt1dsp1.o \
 $(OBJDIR)/gwt1cnc1.o \
-$(OBJDIR)/gwt1adv1.o \
 $(OBJDIR)/gwf3api8.o \
 $(OBJDIR)/gwf3wel8.o \
 $(OBJDIR)/gwf3rch8.o \

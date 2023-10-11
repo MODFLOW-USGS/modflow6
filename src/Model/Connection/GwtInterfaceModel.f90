@@ -7,8 +7,8 @@ module GwtInterfaceModelModule
   use GwtModule, only: GwtModelType, CastAsGwtModel
   use GwfDisuModule, only: disu_cr, CastAsDisuType
   use TspFmiModule, only: fmi_cr, TspFmiType
-  use GwtAdvModule, only: adv_cr, GwtAdvType
-  use GwtAdvOptionsModule, only: GwtAdvOptionsType
+  use TspAdvModule, only: adv_cr, TspAdvType
+  use TspAdvOptionsModule, only: TspAdvOptionsType
   use GwtDspModule, only: dsp_cr, GwtDspType
   use GwtDspOptionsModule, only: GwtDspOptionsType
   use GwtMstModule, only: mst_cr
@@ -123,7 +123,7 @@ contains
     class(GwtInterfaceModelType) :: this !< the GWT interface model
     ! local
     class(*), pointer :: disPtr
-    type(GwtAdvOptionsType) :: adv_options
+    type(TspAdvOptionsType) :: adv_options
     type(GwtDspOptionsType) :: dsp_options
 
     this%moffset = 0

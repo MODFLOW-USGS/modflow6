@@ -17,7 +17,6 @@ module GwtModule
   use BndModule, only: BndType, AddBndToList, GetBndFromList
   use GwtIcModule, only: GwtIcType
   use TspFmiModule, only: TspFmiType
-  use GwtAdvModule, only: GwtAdvType
   use GwtDspModule, only: GwtDspType
   use GwtSsmModule, only: GwtSsmType
   use GwtMvtModule, only: GwtMvtType
@@ -41,7 +40,6 @@ module GwtModule
 
     type(GwtIcType), pointer :: ic => null() ! initial conditions package
     type(GwtMstType), pointer :: mst => null() ! mass storage and transfer package
-    type(GwtAdvType), pointer :: adv => null() ! advection package
     type(GwtDspType), pointer :: dsp => null() ! dispersion package
     type(GwtSsmType), pointer :: ssm => null() ! source sink mixing package
     type(GwtMvtType), pointer :: mvt => null() ! mover transport package
@@ -50,7 +48,6 @@ module GwtModule
     integer(I4B), pointer :: inic => null() ! unit number IC
     integer(I4B), pointer :: inmvt => null() ! unit number MVT
     integer(I4B), pointer :: inmst => null() ! unit number MST
-    integer(I4B), pointer :: inadv => null() ! unit number ADV
     integer(I4B), pointer :: indsp => null() ! DSP enabled flag
     integer(I4B), pointer :: inssm => null() ! unit number SSM
     integer(I4B), pointer :: inoc => null() ! unit number OC
@@ -88,6 +85,7 @@ module GwtModule
 contains
 
   !> @brief Create a new groundwater transport model object
+  !<
   subroutine gwt_cr(filename, id, modelname)
     ! -- modules
     use ListsModule, only: basemodellist
@@ -156,7 +154,7 @@ contains
     ! -- create model packages
     call this%create_packages(indis)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwt_cr
 
@@ -214,7 +212,7 @@ contains
     ! -- Store information needed for observations
     call this%obs%obs_df(this%iout, this%name, 'GWT', this%dis)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwt_df
 
@@ -241,11 +239,12 @@ contains
       call packobj%bnd_ac(this%moffset, sparse)
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwt_ac
 
   !> @brief Map connection positions in numerical solution coefficient matrix.
+  !<
   subroutine gwt_mc(this, matrix_sln)
     ! -- dummy
     class(GwtModelType) :: this
@@ -265,7 +264,7 @@ contains
       call packobj%bnd_mc(this%moffset, matrix_sln)
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwt_mc
 
@@ -273,7 +272,6 @@ contains
   !
   ! (1) allocates and reads packages part of this model,
   ! (2) allocates memory for arrays part of this model object
-  !
   !<
   subroutine gwt_ar(this)
     ! -- modules
@@ -319,7 +317,7 @@ contains
       call packobj%bnd_ar()
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwt_ar
 
@@ -405,7 +403,7 @@ contains
     ! -- Push simulated values to preceding time/subtime step
     call this%obs%obs_ad()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwt_ad
 
@@ -425,7 +423,7 @@ contains
       call packobj%bnd_cf()
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwt_cf
 
@@ -469,7 +467,7 @@ contains
       call packobj%bnd_fc(this%rhs, this%ia, this%idxglo, matrix_sln)
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwt_fc
 
@@ -499,7 +497,7 @@ contains
     !   call packobj%bnd_cc(iend, icnvg, hclose, rclose)
     ! enddo
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwt_cc
 
@@ -554,7 +552,6 @@ contains
   !
   ! (1) Calculate intercell flows (flowja)
   ! (2) Calculate package contributions to model budget
-  !
   !<
   subroutine gwt_bd(this, icnvg, isuppress_output)
     use ConstantsModule, only: DZERO
@@ -835,10 +832,11 @@ contains
     ! -- Internal flow packages deallocate
     call this%dis%dis_da()
     call this%ic%ic_da()
+    call this%fmi%fmi_da()
+    call this%adv%adv_da()
     call this%dsp%dsp_da()
     call this%ssm%ssm_da()
     call this%mst%mst_da()
-    call this%adv%adv_da()
     call this%mvt%mvt_da()
     call this%budget%budget_da()
     call this%oc%oc_da()
@@ -865,7 +863,6 @@ contains
     !
     ! -- Scalars
     call mem_deallocate(this%inic)
-    call mem_deallocate(this%inadv)
     call mem_deallocate(this%indsp)
     call mem_deallocate(this%inssm)
     call mem_deallocate(this%inmst)
@@ -954,7 +951,6 @@ contains
     !
     ! -- allocate members that are part of model class
     call mem_allocate(this%inic, 'INIC', this%memoryPath)
-    call mem_allocate(this%inadv, 'INADV', this%memoryPath)
     call mem_allocate(this%inmvt, 'INMVT', this%memoryPath)
     call mem_allocate(this%inmst, 'INMST', this%memoryPath)
     call mem_allocate(this%indsp, 'INDSP', this%memoryPath)
@@ -963,7 +959,6 @@ contains
     call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
     !
     this%inic = 0
-    this%inadv = 0
     this%inmvt = 0
     this%inmst = 0
     this%indsp = 0
@@ -1050,6 +1045,7 @@ contains
   end subroutine package_create
 
   !> @brief Cast to GwtModelType
+  !<
   function CastAsGwtModel(model) result(gwtmodel)
     class(*), pointer :: model !< The object to be cast
     class(GwtModelType), pointer :: gwtmodel !< The GWT model
@@ -1133,7 +1129,6 @@ contains
     use SimVariablesModule, only: idm_context
     use GwtIcModule, only: ic_cr
     use GwtMstModule, only: mst_cr
-    use GwtAdvModule, only: adv_cr
     use GwtDspModule, only: dsp_cr
     use GwtSsmModule, only: ssm_cr
     use GwtMvtModule, only: mvt_cr
@@ -1185,8 +1180,6 @@ contains
         this%inmvt = inunit
       case ('MST6')
         this%inmst = inunit
-      case ('ADV6')
-        this%inadv = inunit
       case ('DSP6')
         this%indsp = 1
         mempathdsp = mempath
@@ -1208,8 +1201,6 @@ contains
     ! -- Create packages that are tied directly to model
     call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis)
     call mst_cr(this%mst, this%name, this%inmst, this%iout, this%fmi)
-    call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi, &
-                this%eqnsclfac)
     call dsp_cr(this%dsp, this%name, mempathdsp, this%indsp, this%iout, &
                 this%fmi)
     call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi)
