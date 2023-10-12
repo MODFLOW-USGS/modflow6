@@ -181,10 +181,10 @@ $(OBJDIR)/IdmLoad.o \
 $(OBJDIR)/BoundaryPackage.o \
 $(OBJDIR)/VirtualBase.o \
 $(OBJDIR)/BaseModel.o \
-$(OBJDIR)/PrintSaveManager.o \
 $(OBJDIR)/PackageBudget.o \
 $(OBJDIR)/HeadFileReader.o \
 $(OBJDIR)/BudgetObject.o \
+$(OBJDIR)/PrintSaveManager.o \
 $(OBJDIR)/SfrCrossSectionManager.o \
 $(OBJDIR)/dag_module.o \
 $(OBJDIR)/BoundaryPackageExt.o \
@@ -192,8 +192,8 @@ $(OBJDIR)/VirtualDataLists.o \
 $(OBJDIR)/VirtualDataContainer.o \
 $(OBJDIR)/SimStages.o \
 $(OBJDIR)/NumericalModel.o \
-$(OBJDIR)/OutputControlData.o \
 $(OBJDIR)/FlowModelInterface.o \
+$(OBJDIR)/OutputControlData.o \
 $(OBJDIR)/Xt3dAlgorithm.o \
 $(OBJDIR)/gwf3tvbase8.o \
 $(OBJDIR)/gwf3sfr8.o \
@@ -207,9 +207,10 @@ $(OBJDIR)/gwf3drn8.o \
 $(OBJDIR)/IndexMap.o \
 $(OBJDIR)/VirtualModel.o \
 $(OBJDIR)/BaseExchange.o \
+$(OBJDIR)/tsp1fmi1.o \
+$(OBJDIR)/GwtSpc.o \
 $(OBJDIR)/OutputControl.o \
 $(OBJDIR)/gwf3ic8.o \
-$(OBJDIR)/tsp1fmi1.o \
 $(OBJDIR)/TspAdvOptions.o \
 $(OBJDIR)/UzfCellGroup.o \
 $(OBJDIR)/Xt3dInterface.o \
@@ -222,6 +223,7 @@ $(OBJDIR)/ImsLinearSettings.o \
 $(OBJDIR)/ConvergenceSummary.o \
 $(OBJDIR)/CellWithNbrs.o \
 $(OBJDIR)/NumericalExchange.o \
+$(OBJDIR)/tsp1ssm1.o \
 $(OBJDIR)/tsp1oc1.o \
 $(OBJDIR)/tsp1ic1.o \
 $(OBJDIR)/tsp1adv1.o \
@@ -230,7 +232,6 @@ $(OBJDIR)/gwf3disu8.o \
 $(OBJDIR)/gwf3dis8.o \
 $(OBJDIR)/gwf3uzf8.o \
 $(OBJDIR)/gwt1apt1.o \
-$(OBJDIR)/GwtSpc.o \
 $(OBJDIR)/gwt1mst1.o \
 $(OBJDIR)/GwtDspOptions.o \
 $(OBJDIR)/gwf3npf8.o \
@@ -250,7 +251,6 @@ $(OBJDIR)/DisConnExchange.o \
 $(OBJDIR)/CsrUtils.o \
 $(OBJDIR)/tsp1.o \
 $(OBJDIR)/gwt1uzt1.o \
-$(OBJDIR)/gwt1ssm1.o \
 $(OBJDIR)/gwt1src1.o \
 $(OBJDIR)/gwt1sft1.o \
 $(OBJDIR)/gwt1obs1.o \

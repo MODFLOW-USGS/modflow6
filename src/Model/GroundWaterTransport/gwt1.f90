@@ -16,7 +16,7 @@ module GwtModule
   use BaseModelModule, only: BaseModelType
   use BndModule, only: BndType, AddBndToList, GetBndFromList
   use GwtDspModule, only: GwtDspType
-  use GwtSsmModule, only: GwtSsmType
+  use TspSsmModule, only: TspSsmType
   use GwtMvtModule, only: GwtMvtType
   use GwtMstModule, only: GwtMstType
   use GwtObsModule, only: GwtObsType
@@ -37,13 +37,11 @@ module GwtModule
 
     type(GwtMstType), pointer :: mst => null() ! mass storage and transfer package
     type(GwtDspType), pointer :: dsp => null() ! dispersion package
-    type(GwtSsmType), pointer :: ssm => null() ! source sink mixing package
     type(GwtMvtType), pointer :: mvt => null() ! mover transport package
     type(GwtObsType), pointer :: obs => null() ! observation package
     integer(I4B), pointer :: inmvt => null() ! unit number MVT
     integer(I4B), pointer :: inmst => null() ! unit number MST
     integer(I4B), pointer :: indsp => null() ! DSP enabled flag
-    integer(I4B), pointer :: inssm => null() ! unit number SSM
     integer(I4B), pointer :: inobs => null() ! unit number OBS
 
   contains
@@ -878,7 +876,6 @@ contains
     !
     ! -- Scalars
     call mem_deallocate(this%indsp)
-    call mem_deallocate(this%inssm)
     call mem_deallocate(this%inmst)
     call mem_deallocate(this%inmvt)
     call mem_deallocate(this%inobs)
@@ -968,13 +965,11 @@ contains
     call mem_allocate(this%inmvt, 'INMVT', this%memoryPath)
     call mem_allocate(this%inmst, 'INMST', this%memoryPath)
     call mem_allocate(this%indsp, 'INDSP', this%memoryPath)
-    call mem_allocate(this%inssm, 'INSSM', this%memoryPath)
     call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
     !
     this%inmvt = 0
     this%inmst = 0
     this%indsp = 0
-    this%inssm = 0
     this%inobs = 0
     !
     ! -- Return
@@ -1143,7 +1138,6 @@ contains
     use SimVariablesModule, only: idm_context
     use GwtMstModule, only: mst_cr
     use GwtDspModule, only: dsp_cr
-    use GwtSsmModule, only: ssm_cr
     use GwtMvtModule, only: mvt_cr
     use GwtObsModule, only: gwt_obs_cr
     ! -- dummy
@@ -1210,7 +1204,6 @@ contains
     call mst_cr(this%mst, this%name, this%inmst, this%iout, this%fmi)
     call dsp_cr(this%dsp, this%name, mempathdsp, this%indsp, this%iout, &
                 this%fmi)
-    call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi)
     call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi)
     call gwt_obs_cr(this%obs, this%inobs)
     !

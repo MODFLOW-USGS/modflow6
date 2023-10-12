@@ -14,6 +14,7 @@ module TransportModelModule
   use TspIcModule, only: TspIcType
   use TspFmiModule, only: TspFmiType
   use TspAdvModule, only: TspAdvType
+  use TspSsmModule, only: TspSsmType
   use TspOcModule, only: TspOcType
   use BudgetModule, only: BudgetType
   use MatrixBaseModule
@@ -30,11 +31,14 @@ module TransportModelModule
     type(TspAdvType), pointer :: adv => null() !< advection package
     type(TspIcType), pointer :: ic => null() !< initial conditions package
     type(TspOcType), pointer :: oc => null() !< output control package
+    type(TspSsmType), pointer :: ssm => null() !< source sink mixing package
     type(BudgetType), pointer :: budget => null() !< budget object
     integer(I4B), pointer :: infmi => null() ! unit number FMI
     integer(I4B), pointer :: inadv => null() !< unit number ADV
     integer(I4B), pointer :: inic => null() !< unit number IC
     integer(I4B), pointer :: inoc => null() !< unit number OC
+
+    integer(I4B), pointer :: inssm => null() !< unit number SSM
     real(DP), pointer :: eqnsclfac => null() !< constant factor by which all terms in the model's governing equation are scaled (divided) for formulation and solution
     ! Labels that will be defined
     character(len=LENVARNAME) :: tsptype = '' !< "solute" or "heat"
@@ -288,12 +292,14 @@ contains
     call mem_allocate(this%inic, 'INIC', this%memoryPath)
     call mem_allocate(this%infmi, 'INFMI', this%memoryPath)
     call mem_allocate(this%inadv, 'INADV', this%memoryPath)
+    call mem_allocate(this%inssm, 'INSSM', this%memoryPath)
     call mem_allocate(this%inoc, 'INOC ', this%memoryPath)
     call mem_allocate(this%eqnsclfac, 'EQNSCLFAC', this%memoryPath)
     !
     this%inic = 0
     this%infmi = 0
     this%inadv = 0
+    this%inssm = 0
     this%inoc = 0
     this%eqnsclfac = DZERO
     !
@@ -345,6 +351,7 @@ contains
     call mem_deallocate(this%inic)
     call mem_deallocate(this%infmi)
     call mem_deallocate(this%inadv)
+    call mem_deallocate(this%inssm)
     call mem_deallocate(this%inoc)
     call mem_deallocate(this%eqnsclfac)
     !
@@ -501,6 +508,7 @@ contains
     use TspIcModule, only: ic_cr
     use TspFmiModule, only: fmi_cr
     use TspAdvModule, only: adv_cr
+    use TspSsmModule, only: ssm_cr
     use TspOcModule, only: oc_cr
     ! -- dummy
     class(TransportModelType) :: this
@@ -558,6 +566,8 @@ contains
         this%infmi = inunit
       case ('ADV6')
         this%inadv = inunit
+      case ('SSM6')
+        this%inssm = inunit
       case ('OC6')
         this%inoc = inunit
       end select
@@ -570,6 +580,8 @@ contains
                 this%depvartype)
     call adv_cr(this%adv, this%name, this%inadv, this%iout, this%fmi, &
                 this%eqnsclfac)
+    call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, &
+                this%eqnsclfac, this%depvartype)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
 
     !
