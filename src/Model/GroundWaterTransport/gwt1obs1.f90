@@ -3,7 +3,7 @@ module GwtObsModule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH, MAXOBSTYPES
   use BaseDisModule, only: DisBaseType
-  use GwtIcModule, only: GwtIcType
+  use TspIcModule, only: TspIcType
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
   use SimModule, only: count_errors, store_error, &
@@ -15,7 +15,7 @@ module GwtObsModule
 
   type, extends(ObsType) :: GwtObsType
     ! -- Private members
-    type(GwtIcType), pointer, private :: ic => null() ! initial conditions
+    type(TspIcType), pointer, private :: ic => null() ! initial conditions
     real(DP), dimension(:), pointer, contiguous, private :: x => null() ! concentration
     real(DP), dimension(:), pointer, contiguous, private :: flowja => null() ! intercell flows
   contains
@@ -64,7 +64,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtObsType), intent(inout) :: this
-    type(GwtIcType), pointer, intent(in) :: ic
+    type(TspIcType), pointer, intent(in) :: ic
     real(DP), dimension(:), pointer, contiguous, intent(in) :: x
     real(DP), dimension(:), pointer, contiguous, intent(in) :: flowja
 ! ------------------------------------------------------------------------------
@@ -193,7 +193,7 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(GwtObsType), intent(inout) :: this
-    type(GwtIcType), pointer, intent(in) :: ic
+    type(TspIcType), pointer, intent(in) :: ic
     real(DP), dimension(:), pointer, contiguous, intent(in) :: x
     real(DP), dimension(:), pointer, contiguous, intent(in) :: flowja
 ! ------------------------------------------------------------------------------
