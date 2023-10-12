@@ -15,12 +15,10 @@ module GwtModule
   use TransportModelModule, only: TransportModelType
   use BaseModelModule, only: BaseModelType
   use BndModule, only: BndType, AddBndToList, GetBndFromList
-  use TspFmiModule, only: TspFmiType
   use GwtDspModule, only: GwtDspType
   use GwtSsmModule, only: GwtSsmType
   use GwtMvtModule, only: GwtMvtType
   use GwtMstModule, only: GwtMstType
-  use GwtOcModule, only: GwtOcType
   use GwtObsModule, only: GwtObsType
   use BudgetModule, only: BudgetType
   use MatrixBaseModule
@@ -41,13 +39,11 @@ module GwtModule
     type(GwtDspType), pointer :: dsp => null() ! dispersion package
     type(GwtSsmType), pointer :: ssm => null() ! source sink mixing package
     type(GwtMvtType), pointer :: mvt => null() ! mover transport package
-    type(GwtOcType), pointer :: oc => null() ! output control package
     type(GwtObsType), pointer :: obs => null() ! observation package
     integer(I4B), pointer :: inmvt => null() ! unit number MVT
     integer(I4B), pointer :: inmst => null() ! unit number MST
     integer(I4B), pointer :: indsp => null() ! DSP enabled flag
     integer(I4B), pointer :: inssm => null() ! unit number SSM
-    integer(I4B), pointer :: inoc => null() ! unit number OC
     integer(I4B), pointer :: inobs => null() ! unit number OBS
 
   contains
@@ -885,7 +881,6 @@ contains
     call mem_deallocate(this%inssm)
     call mem_deallocate(this%inmst)
     call mem_deallocate(this%inmvt)
-    call mem_deallocate(this%inoc)
     call mem_deallocate(this%inobs)
     !
     ! -- Parent class members
@@ -974,14 +969,12 @@ contains
     call mem_allocate(this%inmst, 'INMST', this%memoryPath)
     call mem_allocate(this%indsp, 'INDSP', this%memoryPath)
     call mem_allocate(this%inssm, 'INSSM', this%memoryPath)
-    call mem_allocate(this%inoc, 'INOC ', this%memoryPath)
     call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
     !
     this%inmvt = 0
     this%inmst = 0
     this%indsp = 0
     this%inssm = 0
-    this%inoc = 0
     this%inobs = 0
     !
     ! -- Return
@@ -1152,7 +1145,6 @@ contains
     use GwtDspModule, only: dsp_cr
     use GwtSsmModule, only: ssm_cr
     use GwtMvtModule, only: mvt_cr
-    use GwtOcModule, only: oc_cr
     use GwtObsModule, only: gwt_obs_cr
     ! -- dummy
     class(GwtModelType) :: this
@@ -1203,8 +1195,6 @@ contains
         mempathdsp = mempath
       case ('SSM6')
         this%inssm = inunit
-      case ('OC6')
-        this%inoc = inunit
       case ('OBS6')
         this%inobs = inunit
       case ('CNC6', 'SRC6', 'LKT6', 'SFT6', &
@@ -1222,7 +1212,6 @@ contains
                 this%fmi)
     call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi)
     call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi)
-    call oc_cr(this%oc, this%name, this%inoc, this%iout)
     call gwt_obs_cr(this%obs, this%inobs)
     !
     ! -- Check to make sure that required ftype's have been specified
