@@ -1145,7 +1145,6 @@ contains
     use GwtDspModule, only: dsp_cr
     use GwtSsmModule, only: ssm_cr
     use GwtMvtModule, only: mvt_cr
-    use GwtOcModule, only: oc_cr
     use GwtObsModule, only: gwt_obs_cr
     ! -- dummy
     class(GwtModelType) :: this
