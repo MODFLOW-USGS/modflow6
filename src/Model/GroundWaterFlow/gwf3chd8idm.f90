@@ -35,7 +35,7 @@ module GwfChdInputModule
 
   logical :: gwf_chd_multi_package = .true.
 
-  character(len=LENVARNAME) :: gwf_chd_aux_sfac_param = 'HEAD'
+  character(len=LENVARNAME) :: gwf_chd_aux_sfac_param = ''
 
   type(InputParamDefinitionType), parameter :: &
     gwfchd_auxiliary = InputParamDefinitionType &

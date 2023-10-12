@@ -35,7 +35,7 @@ module GwfEvtaInputModule
 
   logical :: gwf_evta_multi_package = .true.
 
-  character(len=LENVARNAME) :: gwf_evta_aux_sfac_param = 'RATE'
+  character(len=LENVARNAME) :: gwf_evta_aux_sfac_param = ''
 
   type(InputParamDefinitionType), parameter :: &
     gwfevta_readasarrays = InputParamDefinitionType &
