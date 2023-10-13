@@ -1,6 +1,6 @@
 # --------------------- gwf chd options ---------------------
 # flopy multi-package
-# modflow6 aux-sfac-param head
+# package-type stress-package
 
 block options
 name auxiliary

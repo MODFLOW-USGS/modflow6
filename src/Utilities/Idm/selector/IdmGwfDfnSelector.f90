@@ -10,7 +10,12 @@ module IdmGwfDfnSelectorModule
   use GwfDisuInputModule
   use GwfDisvInputModule
   use GwfDrnInputModule
+  use GwfEvtInputModule
+  use GwfEvtaInputModule
+  use GwfGhbInputModule
   use GwfNpfInputModule
+  use GwfRchInputModule
+  use GwfRchaInputModule
   use GwfRivInputModule
   use GwfWelInputModule
   use GwfNamInputModule
@@ -84,6 +89,21 @@ module IdmGwfDfnSelectorModule
     logical :: icubicsfac = .false.
     logical :: elev = .false.
     logical :: cond = .false.
+    logical :: fixed_cell = .false.
+    logical :: surfratespec = .false.
+    logical :: nseg = .false.
+    logical :: surface = .false.
+    logical :: rate = .false.
+    logical :: depth = .false.
+    logical :: pxdp = .false.
+    logical :: petm = .false.
+    logical :: petm0 = .false.
+    logical :: readasarrays = .false.
+    logical :: tas_filerecord = .false.
+    logical :: tas6 = .false.
+    logical :: tas6_filename = .false.
+    logical :: ievt = .false.
+    logical :: bhead = .false.
     logical :: cellavg = .false.
     logical :: ithickstrt = .false.
     logical :: cvoptions = .false.
@@ -117,6 +137,8 @@ module IdmGwfDfnSelectorModule
     logical :: angle2 = .false.
     logical :: angle3 = .false.
     logical :: wetdry = .false.
+    logical :: recharge = .false.
+    logical :: irch = .false.
     logical :: stage = .false.
     logical :: rbot = .false.
     logical :: flowred = .false.
@@ -166,8 +188,18 @@ contains
       call set_param_pointer(input_definition, gwf_disv_param_definitions)
     case ('DRN')
       call set_param_pointer(input_definition, gwf_drn_param_definitions)
+    case ('EVT')
+      call set_param_pointer(input_definition, gwf_evt_param_definitions)
+    case ('EVTA')
+      call set_param_pointer(input_definition, gwf_evta_param_definitions)
+    case ('GHB')
+      call set_param_pointer(input_definition, gwf_ghb_param_definitions)
     case ('NPF')
       call set_param_pointer(input_definition, gwf_npf_param_definitions)
+    case ('RCH')
+      call set_param_pointer(input_definition, gwf_rch_param_definitions)
+    case ('RCHA')
+      call set_param_pointer(input_definition, gwf_rcha_param_definitions)
     case ('RIV')
       call set_param_pointer(input_definition, gwf_riv_param_definitions)
     case ('WEL')
@@ -194,8 +226,18 @@ contains
       call set_param_pointer(input_definition, gwf_disv_aggregate_definitions)
     case ('DRN')
       call set_param_pointer(input_definition, gwf_drn_aggregate_definitions)
+    case ('EVT')
+      call set_param_pointer(input_definition, gwf_evt_aggregate_definitions)
+    case ('EVTA')
+      call set_param_pointer(input_definition, gwf_evta_aggregate_definitions)
+    case ('GHB')
+      call set_param_pointer(input_definition, gwf_ghb_aggregate_definitions)
     case ('NPF')
       call set_param_pointer(input_definition, gwf_npf_aggregate_definitions)
+    case ('RCH')
+      call set_param_pointer(input_definition, gwf_rch_aggregate_definitions)
+    case ('RCHA')
+      call set_param_pointer(input_definition, gwf_rcha_aggregate_definitions)
     case ('RIV')
       call set_param_pointer(input_definition, gwf_riv_aggregate_definitions)
     case ('WEL')
@@ -222,8 +264,18 @@ contains
       call set_block_pointer(input_definition, gwf_disv_block_definitions)
     case ('DRN')
       call set_block_pointer(input_definition, gwf_drn_block_definitions)
+    case ('EVT')
+      call set_block_pointer(input_definition, gwf_evt_block_definitions)
+    case ('EVTA')
+      call set_block_pointer(input_definition, gwf_evta_block_definitions)
+    case ('GHB')
+      call set_block_pointer(input_definition, gwf_ghb_block_definitions)
     case ('NPF')
       call set_block_pointer(input_definition, gwf_npf_block_definitions)
+    case ('RCH')
+      call set_block_pointer(input_definition, gwf_rch_block_definitions)
+    case ('RCHA')
+      call set_block_pointer(input_definition, gwf_rcha_block_definitions)
     case ('RIV')
       call set_block_pointer(input_definition, gwf_riv_block_definitions)
     case ('WEL')
@@ -249,8 +301,18 @@ contains
       multi_package = gwf_disv_multi_package
     case ('DRN')
       multi_package = gwf_drn_multi_package
+    case ('EVT')
+      multi_package = gwf_evt_multi_package
+    case ('EVTA')
+      multi_package = gwf_evta_multi_package
+    case ('GHB')
+      multi_package = gwf_ghb_multi_package
     case ('NPF')
       multi_package = gwf_npf_multi_package
+    case ('RCH')
+      multi_package = gwf_rch_multi_package
+    case ('RCHA')
+      multi_package = gwf_rcha_multi_package
     case ('RIV')
       multi_package = gwf_riv_multi_package
     case ('WEL')
@@ -279,8 +341,18 @@ contains
       sfac_param = gwf_disv_aux_sfac_param
     case ('DRN')
       sfac_param = gwf_drn_aux_sfac_param
+    case ('EVT')
+      sfac_param = gwf_evt_aux_sfac_param
+    case ('EVTA')
+      sfac_param = gwf_evta_aux_sfac_param
+    case ('GHB')
+      sfac_param = gwf_ghb_aux_sfac_param
     case ('NPF')
       sfac_param = gwf_npf_aux_sfac_param
+    case ('RCH')
+      sfac_param = gwf_rch_aux_sfac_param
+    case ('RCHA')
+      sfac_param = gwf_rcha_aux_sfac_param
     case ('RIV')
       sfac_param = gwf_riv_aux_sfac_param
     case ('WEL')
@@ -310,7 +382,17 @@ contains
       integrated = .true.
     case ('DRN')
       integrated = .true.
+    case ('EVT')
+      integrated = .true.
+    case ('EVTA')
+      integrated = .true.
+    case ('GHB')
+      integrated = .true.
     case ('NPF')
+      integrated = .true.
+    case ('RCH')
+      integrated = .true.
+    case ('RCHA')
       integrated = .true.
     case ('RIV')
       integrated = .true.

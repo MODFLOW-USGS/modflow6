@@ -1,17 +1,18 @@
 ! ** Do Not Modify! MODFLOW 6 system generated file. **
-module GwfChdInputModule
+module GwfEvtInputModule
   use ConstantsModule, only: LENVARNAME
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
   private
-  public gwf_chd_param_definitions
-  public gwf_chd_aggregate_definitions
-  public gwf_chd_block_definitions
-  public GwfChdParamFoundType
-  public gwf_chd_multi_package
-  public gwf_chd_aux_sfac_param
+  public gwf_evt_param_definitions
+  public gwf_evt_aggregate_definitions
+  public gwf_evt_block_definitions
+  public GwfEvtParamFoundType
+  public gwf_evt_multi_package
+  public gwf_evt_aux_sfac_param
 
-  type GwfChdParamFoundType
+  type GwfEvtParamFoundType
+    logical :: fixed_cell = .false.
     logical :: auxiliary = .false.
     logical :: auxmultname = .false.
     logical :: boundnames = .false.
@@ -25,23 +26,46 @@ module GwfChdInputModule
     logical :: obs_filerecord = .false.
     logical :: obs6 = .false.
     logical :: obs6_filename = .false.
-    logical :: inewton = .false.
+    logical :: surfratespec = .false.
     logical :: maxbound = .false.
+    logical :: nseg = .false.
     logical :: cellid = .false.
-    logical :: head = .false.
+    logical :: surface = .false.
+    logical :: rate = .false.
+    logical :: depth = .false.
+    logical :: pxdp = .false.
+    logical :: petm = .false.
+    logical :: petm0 = .false.
     logical :: auxvar = .false.
     logical :: boundname = .false.
-  end type GwfChdParamFoundType
+  end type GwfEvtParamFoundType
 
-  logical :: gwf_chd_multi_package = .true.
+  logical :: gwf_evt_multi_package = .true.
 
-  character(len=LENVARNAME) :: gwf_chd_aux_sfac_param = ''
+  character(len=LENVARNAME) :: gwf_evt_aux_sfac_param = ''
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_auxiliary = InputParamDefinitionType &
+    gwfevt_fixed_cell = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'EVT', & ! subcomponent
+    'OPTIONS', & ! block
+    'FIXED_CELL', & ! tag name
+    'FIXED_CELL', & ! fortran variable
+    'KEYWORD', & ! type
+    '', & ! shape
+    .false., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfevt_auxiliary = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'EVT', & ! subcomponent
     'OPTIONS', & ! block
     'AUXILIARY', & ! tag name
     'AUXILIARY', & ! fortran variable
@@ -55,10 +79,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_auxmultname = InputParamDefinitionType &
+    gwfevt_auxmultname = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'EVT', & ! subcomponent
     'OPTIONS', & ! block
     'AUXMULTNAME', & ! tag name
     'AUXMULTNAME', & ! fortran variable
@@ -72,10 +96,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_boundnames = InputParamDefinitionType &
+    gwfevt_boundnames = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'EVT', & ! subcomponent
     'OPTIONS', & ! block
     'BOUNDNAMES', & ! tag name
     'BOUNDNAMES', & ! fortran variable
@@ -89,10 +113,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_iprpak = InputParamDefinitionType &
+    gwfevt_iprpak = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'EVT', & ! subcomponent
     'OPTIONS', & ! block
     'PRINT_INPUT', & ! tag name
     'IPRPAK', & ! fortran variable
@@ -106,10 +130,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_iprflow = InputParamDefinitionType &
+    gwfevt_iprflow = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'EVT', & ! subcomponent
     'OPTIONS', & ! block
     'PRINT_FLOWS', & ! tag name
     'IPRFLOW', & ! fortran variable
@@ -123,10 +147,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_ipakcb = InputParamDefinitionType &
+    gwfevt_ipakcb = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'EVT', & ! subcomponent
     'OPTIONS', & ! block
     'SAVE_FLOWS', & ! tag name
     'IPAKCB', & ! fortran variable
@@ -140,10 +164,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_ts_filerecord = InputParamDefinitionType &
+    gwfevt_ts_filerecord = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'EVT', & ! subcomponent
     'OPTIONS', & ! block
     'TS_FILERECORD', & ! tag name
     'TS_FILERECORD', & ! fortran variable
@@ -157,10 +181,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_ts6 = InputParamDefinitionType &
+    gwfevt_ts6 = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'EVT', & ! subcomponent
     'OPTIONS', & ! block
     'TS6', & ! tag name
     'TS6', & ! fortran variable
@@ -174,10 +198,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_filein = InputParamDefinitionType &
+    gwfevt_filein = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'EVT', & ! subcomponent
     'OPTIONS', & ! block
     'FILEIN', & ! tag name
     'FILEIN', & ! fortran variable
@@ -191,10 +215,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_ts6_filename = InputParamDefinitionType &
+    gwfevt_ts6_filename = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'EVT', & ! subcomponent
     'OPTIONS', & ! block
     'TS6_FILENAME', & ! tag name
     'TS6_FILENAME', & ! fortran variable
@@ -208,10 +232,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_obs_filerecord = InputParamDefinitionType &
+    gwfevt_obs_filerecord = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'EVT', & ! subcomponent
     'OPTIONS', & ! block
     'OBS_FILERECORD', & ! tag name
     'OBS_FILERECORD', & ! fortran variable
@@ -225,10 +249,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_obs6 = InputParamDefinitionType &
+    gwfevt_obs6 = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'EVT', & ! subcomponent
     'OPTIONS', & ! block
     'OBS6', & ! tag name
     'OBS6', & ! fortran variable
@@ -242,10 +266,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_obs6_filename = InputParamDefinitionType &
+    gwfevt_obs6_filename = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'EVT', & ! subcomponent
     'OPTIONS', & ! block
     'OBS6_FILENAME', & ! tag name
     'OBS6_FILENAME', & ! fortran variable
@@ -259,13 +283,13 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_inewton = InputParamDefinitionType &
+    gwfevt_surfratespec = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'EVT', & ! subcomponent
     'OPTIONS', & ! block
-    'DEV_NO_NEWTON', & ! tag name
-    'INEWTON', & ! fortran variable
+    'SURF_RATE_SPECIFIED', & ! tag name
+    'SURFRATESPEC', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
     .false., & ! required
@@ -276,10 +300,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_maxbound = InputParamDefinitionType &
+    gwfevt_maxbound = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'EVT', & ! subcomponent
     'DIMENSIONS', & ! block
     'MAXBOUND', & ! tag name
     'MAXBOUND', & ! fortran variable
@@ -293,10 +317,27 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_cellid = InputParamDefinitionType &
+    gwfevt_nseg = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'EVT', & ! subcomponent
+    'DIMENSIONS', & ! block
+    'NSEG', & ! tag name
+    'NSEG', & ! fortran variable
+    'INTEGER', & ! type
+    '', & ! shape
+    .true., & ! required
+    .false., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .false. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfevt_cellid = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'EVT', & ! subcomponent
     'PERIOD', & ! block
     'CELLID', & ! tag name
     'CELLID', & ! fortran variable
@@ -310,13 +351,13 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_head = InputParamDefinitionType &
+    gwfevt_surface = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'EVT', & ! subcomponent
     'PERIOD', & ! block
-    'HEAD', & ! tag name
-    'HEAD', & ! fortran variable
+    'SURFACE', & ! tag name
+    'SURFACE', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
     .true., & ! required
@@ -327,10 +368,95 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_auxvar = InputParamDefinitionType &
+    gwfevt_rate = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'EVT', & ! subcomponent
+    'PERIOD', & ! block
+    'RATE', & ! tag name
+    'RATE', & ! fortran variable
+    'DOUBLE', & ! type
+    '', & ! shape
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .true. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfevt_depth = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'EVT', & ! subcomponent
+    'PERIOD', & ! block
+    'DEPTH', & ! tag name
+    'DEPTH', & ! fortran variable
+    'DOUBLE', & ! type
+    '', & ! shape
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .true. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfevt_pxdp = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'EVT', & ! subcomponent
+    'PERIOD', & ! block
+    'PXDP', & ! tag name
+    'PXDP', & ! fortran variable
+    'DOUBLE1D', & ! type
+    'NSEG-1', & ! shape
+    .false., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .true. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfevt_petm = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'EVT', & ! subcomponent
+    'PERIOD', & ! block
+    'PETM', & ! tag name
+    'PETM', & ! fortran variable
+    'DOUBLE1D', & ! type
+    'NSEG-1', & ! shape
+    .false., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .true. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfevt_petm0 = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'EVT', & ! subcomponent
+    'PERIOD', & ! block
+    'PETM0', & ! tag name
+    'PETM0', & ! fortran variable
+    'DOUBLE', & ! type
+    '', & ! shape
+    .false., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .true. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfevt_auxvar = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'EVT', & ! subcomponent
     'PERIOD', & ! block
     'AUX', & ! tag name
     'AUXVAR', & ! fortran variable
@@ -344,10 +470,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_boundname = InputParamDefinitionType &
+    gwfevt_boundname = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'EVT', & ! subcomponent
     'PERIOD', & ! block
     'BOUNDNAME', & ! tag name
     'BOUNDNAME', & ! fortran variable
@@ -361,38 +487,45 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwf_chd_param_definitions(*) = &
+    gwf_evt_param_definitions(*) = &
     [ &
-    gwfchd_auxiliary, &
-    gwfchd_auxmultname, &
-    gwfchd_boundnames, &
-    gwfchd_iprpak, &
-    gwfchd_iprflow, &
-    gwfchd_ipakcb, &
-    gwfchd_ts_filerecord, &
-    gwfchd_ts6, &
-    gwfchd_filein, &
-    gwfchd_ts6_filename, &
-    gwfchd_obs_filerecord, &
-    gwfchd_obs6, &
-    gwfchd_obs6_filename, &
-    gwfchd_inewton, &
-    gwfchd_maxbound, &
-    gwfchd_cellid, &
-    gwfchd_head, &
-    gwfchd_auxvar, &
-    gwfchd_boundname &
+    gwfevt_fixed_cell, &
+    gwfevt_auxiliary, &
+    gwfevt_auxmultname, &
+    gwfevt_boundnames, &
+    gwfevt_iprpak, &
+    gwfevt_iprflow, &
+    gwfevt_ipakcb, &
+    gwfevt_ts_filerecord, &
+    gwfevt_ts6, &
+    gwfevt_filein, &
+    gwfevt_ts6_filename, &
+    gwfevt_obs_filerecord, &
+    gwfevt_obs6, &
+    gwfevt_obs6_filename, &
+    gwfevt_surfratespec, &
+    gwfevt_maxbound, &
+    gwfevt_nseg, &
+    gwfevt_cellid, &
+    gwfevt_surface, &
+    gwfevt_rate, &
+    gwfevt_depth, &
+    gwfevt_pxdp, &
+    gwfevt_petm, &
+    gwfevt_petm0, &
+    gwfevt_auxvar, &
+    gwfevt_boundname &
     ]
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_spd = InputParamDefinitionType &
+    gwfevt_spd = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'EVT', & ! subcomponent
     'PERIOD', & ! block
     'STRESS_PERIOD_DATA', & ! tag name
     'SPD', & ! fortran variable
-    'RECARRAY CELLID HEAD AUX BOUNDNAME', & ! type
+    'RECARRAY CELLID SURFACE RATE DEPTH PXDP PETM PETM0 AUX BOUNDNAME', & ! type
     'MAXBOUND', & ! shape
     .true., & ! required
     .false., & ! multi-record
@@ -402,13 +535,13 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwf_chd_aggregate_definitions(*) = &
+    gwf_evt_aggregate_definitions(*) = &
     [ &
-    gwfchd_spd &
+    gwfevt_spd &
     ]
 
   type(InputBlockDefinitionType), parameter :: &
-    gwf_chd_block_definitions(*) = &
+    gwf_evt_block_definitions(*) = &
     [ &
     InputBlockDefinitionType( &
     'OPTIONS', & ! blockname
@@ -430,4 +563,4 @@ module GwfChdInputModule
     ) &
     ]
 
-end module GwfChdInputModule
+end module GwfEvtInputModule

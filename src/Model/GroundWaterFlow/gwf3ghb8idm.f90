@@ -1,17 +1,17 @@
 ! ** Do Not Modify! MODFLOW 6 system generated file. **
-module GwfChdInputModule
+module GwfGhbInputModule
   use ConstantsModule, only: LENVARNAME
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
   private
-  public gwf_chd_param_definitions
-  public gwf_chd_aggregate_definitions
-  public gwf_chd_block_definitions
-  public GwfChdParamFoundType
-  public gwf_chd_multi_package
-  public gwf_chd_aux_sfac_param
+  public gwf_ghb_param_definitions
+  public gwf_ghb_aggregate_definitions
+  public gwf_ghb_block_definitions
+  public GwfGhbParamFoundType
+  public gwf_ghb_multi_package
+  public gwf_ghb_aux_sfac_param
 
-  type GwfChdParamFoundType
+  type GwfGhbParamFoundType
     logical :: auxiliary = .false.
     logical :: auxmultname = .false.
     logical :: boundnames = .false.
@@ -25,23 +25,24 @@ module GwfChdInputModule
     logical :: obs_filerecord = .false.
     logical :: obs6 = .false.
     logical :: obs6_filename = .false.
-    logical :: inewton = .false.
+    logical :: mover = .false.
     logical :: maxbound = .false.
     logical :: cellid = .false.
-    logical :: head = .false.
+    logical :: bhead = .false.
+    logical :: cond = .false.
     logical :: auxvar = .false.
     logical :: boundname = .false.
-  end type GwfChdParamFoundType
+  end type GwfGhbParamFoundType
 
-  logical :: gwf_chd_multi_package = .true.
+  logical :: gwf_ghb_multi_package = .true.
 
-  character(len=LENVARNAME) :: gwf_chd_aux_sfac_param = ''
+  character(len=LENVARNAME) :: gwf_ghb_aux_sfac_param = ''
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_auxiliary = InputParamDefinitionType &
+    gwfghb_auxiliary = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'GHB', & ! subcomponent
     'OPTIONS', & ! block
     'AUXILIARY', & ! tag name
     'AUXILIARY', & ! fortran variable
@@ -55,10 +56,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_auxmultname = InputParamDefinitionType &
+    gwfghb_auxmultname = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'GHB', & ! subcomponent
     'OPTIONS', & ! block
     'AUXMULTNAME', & ! tag name
     'AUXMULTNAME', & ! fortran variable
@@ -72,10 +73,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_boundnames = InputParamDefinitionType &
+    gwfghb_boundnames = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'GHB', & ! subcomponent
     'OPTIONS', & ! block
     'BOUNDNAMES', & ! tag name
     'BOUNDNAMES', & ! fortran variable
@@ -89,10 +90,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_iprpak = InputParamDefinitionType &
+    gwfghb_iprpak = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'GHB', & ! subcomponent
     'OPTIONS', & ! block
     'PRINT_INPUT', & ! tag name
     'IPRPAK', & ! fortran variable
@@ -106,10 +107,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_iprflow = InputParamDefinitionType &
+    gwfghb_iprflow = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'GHB', & ! subcomponent
     'OPTIONS', & ! block
     'PRINT_FLOWS', & ! tag name
     'IPRFLOW', & ! fortran variable
@@ -123,10 +124,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_ipakcb = InputParamDefinitionType &
+    gwfghb_ipakcb = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'GHB', & ! subcomponent
     'OPTIONS', & ! block
     'SAVE_FLOWS', & ! tag name
     'IPAKCB', & ! fortran variable
@@ -140,10 +141,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_ts_filerecord = InputParamDefinitionType &
+    gwfghb_ts_filerecord = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'GHB', & ! subcomponent
     'OPTIONS', & ! block
     'TS_FILERECORD', & ! tag name
     'TS_FILERECORD', & ! fortran variable
@@ -157,10 +158,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_ts6 = InputParamDefinitionType &
+    gwfghb_ts6 = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'GHB', & ! subcomponent
     'OPTIONS', & ! block
     'TS6', & ! tag name
     'TS6', & ! fortran variable
@@ -174,10 +175,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_filein = InputParamDefinitionType &
+    gwfghb_filein = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'GHB', & ! subcomponent
     'OPTIONS', & ! block
     'FILEIN', & ! tag name
     'FILEIN', & ! fortran variable
@@ -191,10 +192,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_ts6_filename = InputParamDefinitionType &
+    gwfghb_ts6_filename = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'GHB', & ! subcomponent
     'OPTIONS', & ! block
     'TS6_FILENAME', & ! tag name
     'TS6_FILENAME', & ! fortran variable
@@ -208,10 +209,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_obs_filerecord = InputParamDefinitionType &
+    gwfghb_obs_filerecord = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'GHB', & ! subcomponent
     'OPTIONS', & ! block
     'OBS_FILERECORD', & ! tag name
     'OBS_FILERECORD', & ! fortran variable
@@ -225,10 +226,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_obs6 = InputParamDefinitionType &
+    gwfghb_obs6 = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'GHB', & ! subcomponent
     'OPTIONS', & ! block
     'OBS6', & ! tag name
     'OBS6', & ! fortran variable
@@ -242,10 +243,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_obs6_filename = InputParamDefinitionType &
+    gwfghb_obs6_filename = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'GHB', & ! subcomponent
     'OPTIONS', & ! block
     'OBS6_FILENAME', & ! tag name
     'OBS6_FILENAME', & ! fortran variable
@@ -259,13 +260,13 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_inewton = InputParamDefinitionType &
+    gwfghb_mover = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'GHB', & ! subcomponent
     'OPTIONS', & ! block
-    'DEV_NO_NEWTON', & ! tag name
-    'INEWTON', & ! fortran variable
+    'MOVER', & ! tag name
+    'MOVER', & ! fortran variable
     'KEYWORD', & ! type
     '', & ! shape
     .false., & ! required
@@ -276,10 +277,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_maxbound = InputParamDefinitionType &
+    gwfghb_maxbound = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'GHB', & ! subcomponent
     'DIMENSIONS', & ! block
     'MAXBOUND', & ! tag name
     'MAXBOUND', & ! fortran variable
@@ -293,10 +294,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_cellid = InputParamDefinitionType &
+    gwfghb_cellid = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'GHB', & ! subcomponent
     'PERIOD', & ! block
     'CELLID', & ! tag name
     'CELLID', & ! fortran variable
@@ -310,13 +311,13 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_head = InputParamDefinitionType &
+    gwfghb_bhead = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'GHB', & ! subcomponent
     'PERIOD', & ! block
-    'HEAD', & ! tag name
-    'HEAD', & ! fortran variable
+    'BHEAD', & ! tag name
+    'BHEAD', & ! fortran variable
     'DOUBLE', & ! type
     '', & ! shape
     .true., & ! required
@@ -327,10 +328,27 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_auxvar = InputParamDefinitionType &
+    gwfghb_cond = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'GHB', & ! subcomponent
+    'PERIOD', & ! block
+    'COND', & ! tag name
+    'COND', & ! fortran variable
+    'DOUBLE', & ! type
+    '', & ! shape
+    .true., & ! required
+    .true., & ! multi-record
+    .false., & ! preserve case
+    .false., & ! layered
+    .true. & ! timeseries
+    )
+
+  type(InputParamDefinitionType), parameter :: &
+    gwfghb_auxvar = InputParamDefinitionType &
+    ( &
+    'GWF', & ! component
+    'GHB', & ! subcomponent
     'PERIOD', & ! block
     'AUX', & ! tag name
     'AUXVAR', & ! fortran variable
@@ -344,10 +362,10 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_boundname = InputParamDefinitionType &
+    gwfghb_boundname = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'GHB', & ! subcomponent
     'PERIOD', & ! block
     'BOUNDNAME', & ! tag name
     'BOUNDNAME', & ! fortran variable
@@ -361,38 +379,39 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwf_chd_param_definitions(*) = &
+    gwf_ghb_param_definitions(*) = &
     [ &
-    gwfchd_auxiliary, &
-    gwfchd_auxmultname, &
-    gwfchd_boundnames, &
-    gwfchd_iprpak, &
-    gwfchd_iprflow, &
-    gwfchd_ipakcb, &
-    gwfchd_ts_filerecord, &
-    gwfchd_ts6, &
-    gwfchd_filein, &
-    gwfchd_ts6_filename, &
-    gwfchd_obs_filerecord, &
-    gwfchd_obs6, &
-    gwfchd_obs6_filename, &
-    gwfchd_inewton, &
-    gwfchd_maxbound, &
-    gwfchd_cellid, &
-    gwfchd_head, &
-    gwfchd_auxvar, &
-    gwfchd_boundname &
+    gwfghb_auxiliary, &
+    gwfghb_auxmultname, &
+    gwfghb_boundnames, &
+    gwfghb_iprpak, &
+    gwfghb_iprflow, &
+    gwfghb_ipakcb, &
+    gwfghb_ts_filerecord, &
+    gwfghb_ts6, &
+    gwfghb_filein, &
+    gwfghb_ts6_filename, &
+    gwfghb_obs_filerecord, &
+    gwfghb_obs6, &
+    gwfghb_obs6_filename, &
+    gwfghb_mover, &
+    gwfghb_maxbound, &
+    gwfghb_cellid, &
+    gwfghb_bhead, &
+    gwfghb_cond, &
+    gwfghb_auxvar, &
+    gwfghb_boundname &
     ]
 
   type(InputParamDefinitionType), parameter :: &
-    gwfchd_spd = InputParamDefinitionType &
+    gwfghb_spd = InputParamDefinitionType &
     ( &
     'GWF', & ! component
-    'CHD', & ! subcomponent
+    'GHB', & ! subcomponent
     'PERIOD', & ! block
     'STRESS_PERIOD_DATA', & ! tag name
     'SPD', & ! fortran variable
-    'RECARRAY CELLID HEAD AUX BOUNDNAME', & ! type
+    'RECARRAY CELLID BHEAD COND AUX BOUNDNAME', & ! type
     'MAXBOUND', & ! shape
     .true., & ! required
     .false., & ! multi-record
@@ -402,13 +421,13 @@ module GwfChdInputModule
     )
 
   type(InputParamDefinitionType), parameter :: &
-    gwf_chd_aggregate_definitions(*) = &
+    gwf_ghb_aggregate_definitions(*) = &
     [ &
-    gwfchd_spd &
+    gwfghb_spd &
     ]
 
   type(InputBlockDefinitionType), parameter :: &
-    gwf_chd_block_definitions(*) = &
+    gwf_ghb_block_definitions(*) = &
     [ &
     InputBlockDefinitionType( &
     'OPTIONS', & ! blockname
@@ -430,4 +449,4 @@ module GwfChdInputModule
     ) &
     ]
 
-end module GwfChdInputModule
+end module GwfGhbInputModule

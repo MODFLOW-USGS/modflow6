@@ -1,40 +1,40 @@
-# makefile created by pymake (version 1.2.9.dev0) for the 'mf6' executable.
+# makefile created by pymake (version 1.2.7) for the 'mf6' executable.
 
 
 include ./makedefaults
 
 # Define the source file directories
 SOURCEDIR1=../src
-SOURCEDIR2=../src/Model
-SOURCEDIR3=../src/Model/TransportModel
-SOURCEDIR4=../src/Model/GroundWaterFlow
-SOURCEDIR5=../src/Model/Geometry
-SOURCEDIR6=../src/Model/ModelUtilities
-SOURCEDIR7=../src/Model/GroundWaterTransport
-SOURCEDIR8=../src/Model/Connection
-SOURCEDIR9=../src/Distributed
-SOURCEDIR10=../src/Utilities
-SOURCEDIR11=../src/Utilities/Idm
-SOURCEDIR12=../src/Utilities/Idm/mf6blockfile
-SOURCEDIR13=../src/Utilities/Idm/selector
-SOURCEDIR14=../src/Utilities/Vector
-SOURCEDIR15=../src/Utilities/Matrix
-SOURCEDIR16=../src/Utilities/Observation
-SOURCEDIR17=../src/Utilities/ArrayRead
-SOURCEDIR18=../src/Utilities/OutputControl
-SOURCEDIR19=../src/Utilities/Libraries
-SOURCEDIR20=../src/Utilities/Libraries/blas
-SOURCEDIR21=../src/Utilities/Libraries/rcm
-SOURCEDIR22=../src/Utilities/Libraries/sparsekit
-SOURCEDIR23=../src/Utilities/Libraries/sparskit2
-SOURCEDIR24=../src/Utilities/Libraries/daglib
-SOURCEDIR25=../src/Utilities/Memory
-SOURCEDIR26=../src/Utilities/TimeSeries
-SOURCEDIR27=../src/Timing
-SOURCEDIR28=../src/Solution
-SOURCEDIR29=../src/Solution/PETSc
-SOURCEDIR30=../src/Solution/LinearMethods
-SOURCEDIR31=../src/Exchange
+SOURCEDIR2=../src/Distributed
+SOURCEDIR3=../src/Exchange
+SOURCEDIR4=../src/Model
+SOURCEDIR5=../src/Model/Connection
+SOURCEDIR6=../src/Model/Geometry
+SOURCEDIR7=../src/Model/GroundWaterFlow
+SOURCEDIR8=../src/Model/GroundWaterTransport
+SOURCEDIR9=../src/Model/ModelUtilities
+SOURCEDIR10=../src/Model/TransportModel
+SOURCEDIR11=../src/Solution
+SOURCEDIR12=../src/Solution/LinearMethods
+SOURCEDIR13=../src/Solution/PETSc
+SOURCEDIR14=../src/Timing
+SOURCEDIR15=../src/Utilities
+SOURCEDIR16=../src/Utilities/ArrayRead
+SOURCEDIR17=../src/Utilities/Idm
+SOURCEDIR18=../src/Utilities/Idm/mf6blockfile
+SOURCEDIR19=../src/Utilities/Idm/selector
+SOURCEDIR20=../src/Utilities/Libraries
+SOURCEDIR21=../src/Utilities/Libraries/blas
+SOURCEDIR22=../src/Utilities/Libraries/daglib
+SOURCEDIR23=../src/Utilities/Libraries/rcm
+SOURCEDIR24=../src/Utilities/Libraries/sparsekit
+SOURCEDIR25=../src/Utilities/Libraries/sparskit2
+SOURCEDIR26=../src/Utilities/Matrix
+SOURCEDIR27=../src/Utilities/Memory
+SOURCEDIR28=../src/Utilities/Observation
+SOURCEDIR29=../src/Utilities/OutputControl
+SOURCEDIR30=../src/Utilities/TimeSeries
+SOURCEDIR31=../src/Utilities/Vector
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -92,6 +92,7 @@ $(OBJDIR)/Memory.o \
 $(OBJDIR)/List.o \
 $(OBJDIR)/InputDefinition.o \
 $(OBJDIR)/LongLineReader.o \
+$(OBJDIR)/DevFeature.o \
 $(OBJDIR)/MemoryList.o \
 $(OBJDIR)/simnamidm.o \
 $(OBJDIR)/gwt1idm.o \
@@ -101,8 +102,13 @@ $(OBJDIR)/gwt1disu1idm.o \
 $(OBJDIR)/gwt1dis1idm.o \
 $(OBJDIR)/gwf3wel8idm.o \
 $(OBJDIR)/gwf3riv8idm.o \
+$(OBJDIR)/gwf3rch8idm.o \
+$(OBJDIR)/gwf3rcha8idm.o \
 $(OBJDIR)/gwf3npf8idm.o \
 $(OBJDIR)/gwf3idm.o \
+$(OBJDIR)/gwf3ghb8idm.o \
+$(OBJDIR)/gwf3evt8idm.o \
+$(OBJDIR)/gwf3evta8idm.o \
 $(OBJDIR)/gwf3drn8idm.o \
 $(OBJDIR)/gwf3disv8idm.o \
 $(OBJDIR)/gwf3disu8idm.o \
@@ -178,6 +184,7 @@ $(OBJDIR)/BaseModel.o \
 $(OBJDIR)/PackageBudget.o \
 $(OBJDIR)/HeadFileReader.o \
 $(OBJDIR)/BudgetObject.o \
+$(OBJDIR)/PrintSaveManager.o \
 $(OBJDIR)/SfrCrossSectionManager.o \
 $(OBJDIR)/dag_module.o \
 $(OBJDIR)/BoundaryPackageExt.o \
@@ -186,7 +193,7 @@ $(OBJDIR)/VirtualDataContainer.o \
 $(OBJDIR)/SimStages.o \
 $(OBJDIR)/NumericalModel.o \
 $(OBJDIR)/FlowModelInterface.o \
-$(OBJDIR)/PrintSaveManager.o \
+$(OBJDIR)/OutputControlData.o \
 $(OBJDIR)/Xt3dAlgorithm.o \
 $(OBJDIR)/gwf3tvbase8.o \
 $(OBJDIR)/gwf3sfr8.o \
@@ -200,10 +207,12 @@ $(OBJDIR)/gwf3drn8.o \
 $(OBJDIR)/IndexMap.o \
 $(OBJDIR)/VirtualModel.o \
 $(OBJDIR)/BaseExchange.o \
-$(OBJDIR)/UzfCellGroup.o \
-$(OBJDIR)/gwt1fmi1.o \
-$(OBJDIR)/OutputControlData.o \
+$(OBJDIR)/tsp1fmi1.o \
+$(OBJDIR)/GwtSpc.o \
+$(OBJDIR)/OutputControl.o \
 $(OBJDIR)/gwf3ic8.o \
+$(OBJDIR)/TspAdvOptions.o \
+$(OBJDIR)/UzfCellGroup.o \
 $(OBJDIR)/Xt3dInterface.o \
 $(OBJDIR)/gwf3tvk8.o \
 $(OBJDIR)/gwf3vsc8.o \
@@ -214,15 +223,18 @@ $(OBJDIR)/ImsLinearSettings.o \
 $(OBJDIR)/ConvergenceSummary.o \
 $(OBJDIR)/CellWithNbrs.o \
 $(OBJDIR)/NumericalExchange.o \
+$(OBJDIR)/tsp1ssm1.o \
+$(OBJDIR)/tsp1oc1.o \
+$(OBJDIR)/tsp1ic1.o \
+$(OBJDIR)/tsp1adv1.o \
+$(OBJDIR)/gwf3disv8.o \
+$(OBJDIR)/gwf3disu8.o \
+$(OBJDIR)/gwf3dis8.o \
 $(OBJDIR)/gwf3uzf8.o \
 $(OBJDIR)/gwt1apt1.o \
-$(OBJDIR)/GwtSpc.o \
-$(OBJDIR)/OutputControl.o \
-$(OBJDIR)/gwt1ic1.o \
 $(OBJDIR)/gwt1mst1.o \
 $(OBJDIR)/GwtDspOptions.o \
 $(OBJDIR)/gwf3npf8.o \
-$(OBJDIR)/GwtAdvOptions.o \
 $(OBJDIR)/gwf3tvs8.o \
 $(OBJDIR)/GwfStorageUtils.o \
 $(OBJDIR)/Mover.o \
@@ -234,16 +246,13 @@ $(OBJDIR)/SparseMatrix.o \
 $(OBJDIR)/LinearSolverBase.o \
 $(OBJDIR)/ims8reordering.o \
 $(OBJDIR)/VirtualExchange.o \
-$(OBJDIR)/gwf3disu8.o \
 $(OBJDIR)/GridSorting.o \
 $(OBJDIR)/DisConnExchange.o \
 $(OBJDIR)/CsrUtils.o \
 $(OBJDIR)/tsp1.o \
 $(OBJDIR)/gwt1uzt1.o \
-$(OBJDIR)/gwt1ssm1.o \
 $(OBJDIR)/gwt1src1.o \
 $(OBJDIR)/gwt1sft1.o \
-$(OBJDIR)/gwt1oc1.o \
 $(OBJDIR)/gwt1obs1.o \
 $(OBJDIR)/gwt1mwt1.o \
 $(OBJDIR)/gwt1mvt1.o \
@@ -251,9 +260,6 @@ $(OBJDIR)/gwt1lkt1.o \
 $(OBJDIR)/gwt1ist1.o \
 $(OBJDIR)/gwt1dsp1.o \
 $(OBJDIR)/gwt1cnc1.o \
-$(OBJDIR)/gwt1adv1.o \
-$(OBJDIR)/gwf3disv8.o \
-$(OBJDIR)/gwf3dis8.o \
 $(OBJDIR)/gwf3api8.o \
 $(OBJDIR)/gwf3wel8.o \
 $(OBJDIR)/gwf3rch8.o \

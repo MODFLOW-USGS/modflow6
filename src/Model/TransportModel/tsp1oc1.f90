@@ -1,4 +1,4 @@
-module GwtOcModule
+module TspOcModule
 
   use BaseDisModule, only: DisBaseType
   use KindModule, only: DP, I4B
@@ -8,29 +8,28 @@ module GwtOcModule
 
   implicit none
   private
-  public GwtOcType, oc_cr
+  public TspOcType, oc_cr
 
-  !> @ brief Output control for GWT
+  !> @ brief Output control
   !!
-  !!  Concrete implementation of OutputControlType for the
-  !!  GWT Model
+  !!  Concrete implementation of OutputControlType for a
+  !!  Transport Model
   !<
-  type, extends(OutputControlType) :: GwtOcType
+  type, extends(OutputControlType) :: TspOcType
   contains
     procedure :: oc_ar
-  end type GwtOcType
+  end type TspOcType
 
 contains
 
-  !> @ brief Create GwtOcType
+  !> @ brief Create TspOcType
   !!
-  !!  Create by allocating a new GwtOcType object and initializing
+  !!  Create by allocating a new TspOcType object and initializing
   !!  member variables.
-  !!
   !<
   subroutine oc_cr(ocobj, name_model, inunit, iout)
     ! -- dummy
-    type(GwtOcType), pointer :: ocobj !< GwtOcType object
+    type(TspOcType), pointer :: ocobj !< TspOcType object
     character(len=*), intent(in) :: name_model !< name of the model
     integer(I4B), intent(in) :: inunit !< unit number for input
     integer(I4B), intent(in) :: iout !< unit number for output
@@ -52,14 +51,13 @@ contains
     return
   end subroutine oc_cr
 
-  !> @ brief Allocate and read GwtOcType
+  !> @ brief Allocate and read TspOcType
   !!
   !!  Setup concentration and budget as output control variables.
-  !!
   !<
   subroutine oc_ar(this, conc, dis, dnodata)
     ! -- dummy
-    class(GwtOcType) :: this !< GwtOcType object
+    class(TspOcType) :: this !< TspOcType object
     real(DP), dimension(:), pointer, contiguous, intent(in) :: conc !< model concentration
     class(DisBaseType), pointer, intent(in) :: dis !< model discretization package
     real(DP), intent(in) :: dnodata !< no data value
@@ -97,4 +95,4 @@ contains
     return
   end subroutine oc_ar
 
-end module GwtOcModule
+end module TspOcModule

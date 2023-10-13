@@ -1302,11 +1302,14 @@ contains
       call riv_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, mempath)
     case ('GHB6')
-      call ghb_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
+      call ghb_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname, mempath)
     case ('RCH6')
-      call rch_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
+      call rch_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname, mempath)
     case ('EVT6')
-      call evt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
+      call evt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname, mempath)
     case ('MAW6')
       call maw_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
     case ('SFR6')
