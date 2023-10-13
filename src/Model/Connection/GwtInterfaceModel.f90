@@ -12,7 +12,7 @@ module GwtInterfaceModelModule
   use GwtDspModule, only: dsp_cr, GwtDspType
   use GwtDspOptionsModule, only: GwtDspOptionsType
   use GwtMstModule, only: mst_cr
-  use GwtObsModule, only: gwt_obs_cr
+  use TspObsModule, only: tsp_obs_cr
   use GridConnectionModule
 
   implicit none
@@ -87,7 +87,7 @@ contains
     call adv_cr(this%adv, this%name, adv_unit, this%iout, this%fmi, &
                 this%ieqnsclfac)
     call dsp_cr(this%dsp, this%name, '', -dsp_unit, this%iout, this%fmi)
-    call gwt_obs_cr(this%obs, inobs)
+    call tsp_obs_cr(this%obs, inobs)
 
   end subroutine gwtifmod_cr
 

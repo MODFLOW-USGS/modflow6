@@ -194,6 +194,7 @@ $(OBJDIR)/SimStages.o \
 $(OBJDIR)/NumericalModel.o \
 $(OBJDIR)/FlowModelInterface.o \
 $(OBJDIR)/OutputControlData.o \
+$(OBJDIR)/gwf3ic8.o \
 $(OBJDIR)/Xt3dAlgorithm.o \
 $(OBJDIR)/gwf3tvbase8.o \
 $(OBJDIR)/gwf3sfr8.o \
@@ -210,7 +211,7 @@ $(OBJDIR)/BaseExchange.o \
 $(OBJDIR)/tsp1fmi1.o \
 $(OBJDIR)/GwtSpc.o \
 $(OBJDIR)/OutputControl.o \
-$(OBJDIR)/gwf3ic8.o \
+$(OBJDIR)/tsp1ic1.o \
 $(OBJDIR)/TspAdvOptions.o \
 $(OBJDIR)/UzfCellGroup.o \
 $(OBJDIR)/Xt3dInterface.o \
@@ -225,8 +226,8 @@ $(OBJDIR)/CellWithNbrs.o \
 $(OBJDIR)/NumericalExchange.o \
 $(OBJDIR)/tsp1ssm1.o \
 $(OBJDIR)/tsp1oc1.o \
+$(OBJDIR)/tsp1obs1.o \
 $(OBJDIR)/tsp1mvt1.o \
-$(OBJDIR)/tsp1ic1.o \
 $(OBJDIR)/tsp1adv1.o \
 $(OBJDIR)/gwf3disv8.o \
 $(OBJDIR)/gwf3disu8.o \
@@ -254,7 +255,6 @@ $(OBJDIR)/tsp1.o \
 $(OBJDIR)/gwt1uzt1.o \
 $(OBJDIR)/gwt1src1.o \
 $(OBJDIR)/gwt1sft1.o \
-$(OBJDIR)/gwt1obs1.o \
 $(OBJDIR)/gwt1mwt1.o \
 $(OBJDIR)/gwt1lkt1.o \
 $(OBJDIR)/gwt1ist1.o \
