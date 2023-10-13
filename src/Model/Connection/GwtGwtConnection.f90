@@ -125,7 +125,7 @@ contains
     call this%allocate_scalars()
     this%typename = 'GWT-GWT'
     this%iIfaceAdvScheme = 0
-    this%iIfaceXt3d = 1
+    this%iIfaceXt3d = 0
     this%exgflowSign = 1
 
     allocate (this%gwtInterfaceModel)
@@ -155,8 +155,13 @@ contains
     ! has been read at this point)
     this%iIfaceAdvScheme = this%gwtExchange%iAdvScheme
 
-    ! determine xt3d setting on interface
+    ! determine xt3d setting on interface- (TODO_MJR: default is on?)
     this%iIfaceXt3d = this%gwtExchange%ixt3d
+
+    ! turn off when off in the owning model
+    if (this%gwtModel%indsp > 0) then
+      this%iIfaceXt3d = this%gwtModel%dsp%ixt3d
+    end if
 
     ! determine the required size of the interface model grid
     call this%setGridExtent()
