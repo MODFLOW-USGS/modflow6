@@ -51,7 +51,16 @@ jobs:
           - {os: windows-2022, compiler: gcc, version: 11}
           - {os: windows-2022, compiler: gcc, version: 12}
           # ifx
-          # setup-fortran doesn't yet support intel on ubuntu-20.04
+          - {os: ubuntu-20.04, compiler: intel, version: 2023.2}
+          - {os: ubuntu-20.04, compiler: intel, version: 2023.1}
+          - {os: ubuntu-20.04, compiler: intel, version: "2023.0"}
+          - {os: ubuntu-20.04, compiler: intel, version: 2022.2.1}
+          - {os: ubuntu-20.04, compiler: intel, version: 2022.2}
+          - {os: ubuntu-20.04, compiler: intel, version: 2022.1}
+          - {os: ubuntu-20.04, compiler: intel, version: "2022.0"}
+          - {os: ubuntu-20.04, compiler: intel, version: 2021.4}
+          - {os: ubuntu-20.04, compiler: intel, version: 2021.2}
+          - {os: ubuntu-20.04, compiler: intel, version: 2021.1}
           - {os: ubuntu-22.04, compiler: intel, version: 2023.2}
           - {os: ubuntu-22.04, compiler: intel, version: 2023.1}
           - {os: ubuntu-22.04, compiler: intel, version: "2023.0"}
@@ -62,7 +71,7 @@ jobs:
           - {os: ubuntu-22.04, compiler: intel, version: 2021.4}
           - {os: ubuntu-22.04, compiler: intel, version: 2021.2}
           - {os: ubuntu-22.04, compiler: intel, version: 2021.1}
-          # no ifx on mac (yet? ever?)
+          # no ifx on mac
           - {os: windows-2019, compiler: intel, version: 2023.2}
           - {os: windows-2019, compiler: intel, version: 2023.1}
           - {os: windows-2019, compiler: intel, version: "2023.0"}
@@ -74,12 +83,26 @@ jobs:
           - {os: windows-2022, compiler: intel, version: 2022.2}
           - {os: windows-2022, compiler: intel, version: 2022.1}
           # ifort
-          # setup-fortran doesn't yet support intel on ubuntu-20.04
+          - {os: ubuntu-20.04, compiler: intel-classic, version: "2021.10"}
+          - {os: ubuntu-20.04, compiler: intel-classic, version: 2021.9}
+          - {os: ubuntu-20.04, compiler: intel-classic, version: 2021.8}
+          - {os: ubuntu-20.04, compiler: intel-classic, version: 2021.7}
+          - {os: ubuntu-20.04, compiler: intel-classic, version: 2021.6}
+          - {os: ubuntu-20.04, compiler: intel-classic, version: 2021.5}
+          - {os: ubuntu-20.04, compiler: intel-classic, version: 2021.4}
+          - {os: ubuntu-20.04, compiler: intel-classic, version: 2021.3}
+          - {os: ubuntu-20.04, compiler: intel-classic, version: 2021.2}
+          - {os: ubuntu-20.04, compiler: intel-classic, version: 2021.1}
           - {os: ubuntu-22.04, compiler: intel-classic, version: "2021.10"}
           - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.9}
           - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.8}
           - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.7}
           - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.6}
+          - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.5}
+          - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.4}
+          - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.3}
+          - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.2}
+          - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.1}
           - {os: macos-11, compiler: intel-classic, version: "2021.10"}
           - {os: macos-11, compiler: intel-classic, version: 2021.9}
           - {os: macos-11, compiler: intel-classic, version: 2021.8}
