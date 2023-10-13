@@ -155,7 +155,7 @@ jobs:
           path: modflow6-examples
     
       - name: Setup ${{ matrix.compiler }} ${{ matrix.version }}
-        uses: awvwgk/setup-fortran@main
+        uses: awvwgk/setup-fortran@v1
         with:
           compiler: ${{ matrix.compiler}}
           version: ${{ matrix.version }}

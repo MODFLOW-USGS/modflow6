@@ -21,7 +21,7 @@ jobs:
           - {os: windows-2022, compiler: intel-classic, version: 2021.6}
     steps:
       - name: Setup ${{ matrix.compiler }} ${{ matrix.version }}
-        uses: awvwgk/setup-fortran@main
+        uses: awvwgk/setup-fortran@v1
         with:
           compiler: ${{ matrix.compiler }}
           version: ${{ matrix.version }}
@@ -62,7 +62,7 @@ jobs:
           cache-environment: true
 
       - name: Setup compilers (${{ matrix.compiler }} ${{ matrix.version }})
-        uses: awvwgk/setup-fortran@main
+        uses: awvwgk/setup-fortran@v1
         with:
           compiler: ${{ matrix.compiler }}
           version: ${{ matrix.version }}
