@@ -11,12 +11,14 @@ module TransportModelModule
                              LENMEMPATH, LENVARNAME
   use SimVariablesModule, only: errmsg
   use NumericalModelModule, only: NumericalModelType
+  use BndModule, only: BndType, GetBndFromList
   use TspIcModule, only: TspIcType
   use TspFmiModule, only: TspFmiType
   use TspAdvModule, only: TspAdvType
   use TspSsmModule, only: TspSsmType
   use TspMvtModule, only: TspMvtType
   use TspOcModule, only: TspOcType
+  use TspObsModule, only: TspObsType
   use BudgetModule, only: BudgetType
   use MatrixBaseModule
 
@@ -28,10 +30,12 @@ module TransportModelModule
 
   type, extends(NumericalModelType) :: TransportModelType
 
-    type(TspFmiType), pointer :: fmi => null() ! flow model interface
+    ! Generalized transport package types common to either GWT or GWE
     type(TspAdvType), pointer :: adv => null() !< advection package
+    type(TspFmiType), pointer :: fmi => null() !< flow model interface
     type(TspIcType), pointer :: ic => null() !< initial conditions package
     type(TspMvtType), pointer :: mvt => null() !< mover transport package
+    type(TspObsType), pointer :: obs => null() !< observation package
     type(TspOcType), pointer :: oc => null() !< output control package
     type(TspSsmType), pointer :: ssm => null() !< source sink mixing package
     type(BudgetType), pointer :: budget => null() !< budget object
@@ -40,6 +44,7 @@ module TransportModelModule
     integer(I4B), pointer :: inic => null() !< unit number IC
     integer(I4B), pointer :: inmvt => null() !< unit number MVT
     integer(I4B), pointer :: inoc => null() !< unit number OC
+    integer(I4B), pointer :: inobs => null() !< unit number OBS
 
     integer(I4B), pointer :: inssm => null() !< unit number SSM
     real(DP), pointer :: eqnsclfac => null() !< constant factor by which all terms in the model's governing equation are scaled (divided) for formulation and solution
@@ -64,10 +69,16 @@ module TransportModelModule
     procedure, public :: tsp_cc
     procedure, public :: tsp_cq
     procedure, public :: tsp_bd
+    procedure, public :: tsp_ot
     procedure, public :: allocate_tsp_scalars
     procedure, public :: set_tsp_labels
     procedure, public :: ftype_check
     ! -- private
+    procedure, private :: tsp_ot_obs
+    procedure, private :: tsp_ot_flow
+    procedure, private :: tsp_ot_flowja
+    procedure, private :: tsp_ot_dv
+    procedure, private :: tsp_ot_bdsummary
     procedure, private :: create_lstfile
     procedure, private :: create_tsp_packages
     procedure, private :: log_namfile_options
@@ -267,6 +278,244 @@ contains
     return
   end subroutine tsp_bd
 
+  !> @brief Generalized transport model output routine
+  !!
+  !! Generalized transport model output
+  !<
+  subroutine tsp_ot(this, inmst)
+    ! -- modules
+    use TdisModule, only: kstp, kper, tdis_ot, endofperiod
+    ! -- dummy
+    class(TransportModelType) :: this
+    integer(I4B), intent(in) :: inmst
+    ! -- local
+    integer(I4B) :: idvsave
+    integer(I4B) :: idvprint
+    integer(I4B) :: icbcfl
+    integer(I4B) :: icbcun
+    integer(I4B) :: ibudfl
+    integer(I4B) :: ipflag
+    ! -- formats
+    character(len=*), parameter :: fmtnocnvg = &
+      "(1X,/9X,'****FAILED TO MEET SOLVER CONVERGENCE CRITERIA IN TIME STEP ', &
+      &I0,' OF STRESS PERIOD ',I0,'****')"
+    !
+    ! -- Set write and print flags
+    idvsave = 0
+    idvprint = 0
+    icbcfl = 0
+    ibudfl = 0
+    if (this%oc%oc_save(trim(this%depvartype))) idvsave = 1
+    if (this%oc%oc_print(trim(this%depvartype))) idvprint = 1
+    if (this%oc%oc_save('BUDGET')) icbcfl = 1
+    if (this%oc%oc_print('BUDGET')) ibudfl = 1
+    icbcun = this%oc%oc_save_unit('BUDGET')
+    !
+    ! -- Override ibudfl and idvprint flags for nonconvergence
+    !    and end of period
+    ibudfl = this%oc%set_print_flag('BUDGET', this%icnvg, endofperiod)
+    idvprint = this%oc%set_print_flag(trim(this%depvartype), &
+                                      this%icnvg, endofperiod)
+    !
+    !   Calculate and save observations
+    call this%tsp_ot_obs()
+    !
+    !   Save and print flows
+    call this%tsp_ot_flow(icbcfl, ibudfl, icbcun, inmst)
+    !
+    !   Save and print dependent variables
+    call this%tsp_ot_dv(idvsave, idvprint, ipflag)
+    !
+    !   Print budget summaries
+    call this%tsp_ot_bdsummary(ibudfl, ipflag)
+    !
+    ! -- Timing Output; if any dependendent variables or budgets
+    !    are printed, then ipflag is set to 1.
+    if (ipflag == 1) call tdis_ot(this%iout)
+    !
+    ! -- Write non-convergence message
+    if (this%icnvg == 0) then
+      write (this%iout, fmtnocnvg) kstp, kper
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine tsp_ot
+
+  !> @brief Generalized transport model output routine
+  !!
+  !! Calculate and save observations
+  !<
+  subroutine tsp_ot_obs(this)
+    class(TransportModelType) :: this
+    class(BndType), pointer :: packobj
+    integer(I4B) :: ip
+    ! -- Calculate and save observations
+    call this%obs%obs_bd()
+    call this%obs%obs_ot()
+
+    ! -- Calculate and save package obserations
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_bd_obs()
+      call packobj%bnd_ot_obs()
+    end do
+
+  end subroutine tsp_ot_obs
+
+  !> @brief Generalized transport model output routine
+  !!
+  !! Save and print flows
+  !<
+  subroutine tsp_ot_flow(this, icbcfl, ibudfl, icbcun, inmst)
+    ! -- dummy
+    class(TransportModelType) :: this
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: ibudfl
+    integer(I4B), intent(in) :: icbcun
+    integer(I4B), intent(in) :: inmst
+    ! -- local
+    class(BndType), pointer :: packobj
+    integer(I4B) :: ip
+    !
+    ! -- Save TSP flows
+    call this%tsp_ot_flowja(this%nja, this%flowja, icbcfl, icbcun)
+    if (this%infmi > 0) call this%fmi%fmi_ot_flow(icbcfl, icbcun)
+    if (this%inssm > 0) then
+      call this%ssm%ssm_ot_flow(icbcfl=icbcfl, ibudfl=0, icbcun=icbcun)
+    end if
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_ot_model_flows(icbcfl=icbcfl, ibudfl=0, icbcun=icbcun)
+    end do
+
+    ! -- Save advanced package flows
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_ot_package_flows(icbcfl=icbcfl, ibudfl=0)
+    end do
+    if (this%inmvt > 0) then
+      call this%mvt%mvt_ot_saveflow(icbcfl, ibudfl)
+    end if
+
+    ! -- Print Model (GWT or GWE) flows
+    ! no need to print flowja
+    ! no need to print mst
+    ! no need to print fmi
+    if (this%inssm > 0) then
+      call this%ssm%ssm_ot_flow(icbcfl=icbcfl, ibudfl=ibudfl, icbcun=0)
+    end if
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_ot_model_flows(icbcfl=icbcfl, ibudfl=ibudfl, icbcun=0)
+    end do
+
+    ! -- Print advanced package flows
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_ot_package_flows(icbcfl=0, ibudfl=ibudfl)
+    end do
+    if (this%inmvt > 0) then
+      call this%mvt%mvt_ot_printflow(icbcfl, ibudfl)
+    end if
+
+  end subroutine tsp_ot_flow
+
+  !> @brief Generalized transport model output routine
+  !!
+  !! Write intercell flows for the transport model
+  !<
+  subroutine tsp_ot_flowja(this, nja, flowja, icbcfl, icbcun)
+    ! -- dummy
+    class(TransportModelType) :: this
+    integer(I4B), intent(in) :: nja
+    real(DP), dimension(nja), intent(in) :: flowja
+    integer(I4B), intent(in) :: icbcfl
+    integer(I4B), intent(in) :: icbcun
+    ! -- local
+    integer(I4B) :: ibinun
+    ! -- formats
+    !
+    ! -- Set unit number for binary output
+    if (this%ipakcb < 0) then
+      ibinun = icbcun
+    elseif (this%ipakcb == 0) then
+      ibinun = 0
+    else
+      ibinun = this%ipakcb
+    end if
+    if (icbcfl == 0) ibinun = 0
+    !
+    ! -- Write the face flows if requested
+    if (ibinun /= 0) then
+      call this%dis%record_connection_array(flowja, ibinun, this%iout)
+    end if
+    !
+    ! -- Return
+    return
+  end subroutine tsp_ot_flowja
+
+  !> @brief Generalized tranpsort model output routine
+  !!
+  !! Loop through attached packages saving and printing dependent variables
+  !<
+  subroutine tsp_ot_dv(this, idvsave, idvprint, ipflag)
+    class(TransportModelType) :: this
+    integer(I4B), intent(in) :: idvsave
+    integer(I4B), intent(in) :: idvprint
+    integer(I4B), intent(inout) :: ipflag
+    class(BndType), pointer :: packobj
+    integer(I4B) :: ip
+    !
+    ! -- Print advanced package dependent variables
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_ot_dv(idvsave, idvprint)
+    end do
+
+    ! -- save head and print head
+    call this%oc%oc_ot(ipflag)
+    !
+    ! -- Return
+    return
+  end subroutine tsp_ot_dv
+
+  !> @brief Generalized tranpsort model output budget summary
+  !!
+  !! Loop through attached packages and write budget summaries
+  !<
+  subroutine tsp_ot_bdsummary(this, ibudfl, ipflag)
+    use TdisModule, only: kstp, kper, totim
+    class(TransportModelType) :: this
+    integer(I4B), intent(in) :: ibudfl
+    integer(I4B), intent(inout) :: ipflag
+    class(BndType), pointer :: packobj
+    integer(I4B) :: ip
+    !
+    ! -- Package budget summary
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_ot_bdsummary(kstp, kper, this%iout, ibudfl)
+    end do
+
+    ! -- mover budget summary
+    if (this%inmvt > 0) then
+      call this%mvt%mvt_ot_bdsummary(ibudfl)
+    end if
+
+    ! -- model budget summary
+    if (ibudfl /= 0) then
+      ipflag = 1
+      call this%budget%budget_ot(kstp, kper, this%iout)
+    end if
+
+    ! -- Write to budget csv
+    call this%budget%writecsv(totim)
+    !
+    ! -- Return
+    return
+  end subroutine tsp_ot_bdsummary
+
   !> @brief Allocate scalar variables for transport model
   !!
   !!  Method to allocate memory for non-allocatable members.
@@ -288,6 +537,7 @@ contains
     call mem_allocate(this%inadv, 'INADV', this%memoryPath)
     call mem_allocate(this%inssm, 'INSSM', this%memoryPath)
     call mem_allocate(this%inoc, 'INOC ', this%memoryPath)
+    call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
     call mem_allocate(this%eqnsclfac, 'EQNSCLFAC', this%memoryPath)
     !
     this%inic = 0
@@ -296,6 +546,7 @@ contains
     this%inadv = 0
     this%inssm = 0
     this%inoc = 0
+    this%inobs = 0
     this%eqnsclfac = DZERO
     !
     ! -- Return
@@ -349,6 +600,7 @@ contains
     call mem_deallocate(this%inssm)
     call mem_deallocate(this%inmvt)
     call mem_deallocate(this%inoc)
+    call mem_deallocate(this%inobs)
     call mem_deallocate(this%eqnsclfac)
     !
     ! -- Return
@@ -507,6 +759,7 @@ contains
     use TspSsmModule, only: ssm_cr
     use TspMvtModule, only: mvt_cr
     use TspOcModule, only: oc_cr
+    use TspObsModule, only: tsp_obs_cr
     ! -- dummy
     class(TransportModelType) :: this
     integer(I4B), intent(inout) :: indis ! DIS enabled flag
@@ -569,6 +822,10 @@ contains
         this%inssm = inunit
       case ('OC6')
         this%inoc = inunit
+      case ('OBS6')
+        this%inobs = inunit
+        !case default
+        ! TODO
       end select
     end do
     !
@@ -584,7 +841,7 @@ contains
     call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi, &
                 this%eqnsclfac)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
-
+    call tsp_obs_cr(this%obs, this%inobs)
     !
     ! -- Return
     return
