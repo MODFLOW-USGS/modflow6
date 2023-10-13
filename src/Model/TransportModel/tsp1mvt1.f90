@@ -65,7 +65,7 @@ contains
 
   !> @brief Create a new mover transport object
   !<
-  subroutine mvt_cr(mvt, name_model, inunit, iout, fmi1, eqnsclfac, & ! kluge note: does this need tsplab?
+  subroutine mvt_cr(mvt, name_model, inunit, iout, fmi1, eqnsclfac, & 
                     gwfmodelname1, gwfmodelname2, fmi2)
     ! -- dummy
     type(TspMvtType), pointer :: mvt
