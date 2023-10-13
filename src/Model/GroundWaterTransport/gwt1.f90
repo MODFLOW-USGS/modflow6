@@ -16,8 +16,6 @@ module GwtModule
   use BaseModelModule, only: BaseModelType
   use BndModule, only: BndType, AddBndToList, GetBndFromList
   use GwtDspModule, only: GwtDspType
-  use TspSsmModule, only: TspSsmType
-  use GwtMvtModule, only: GwtMvtType
   use GwtMstModule, only: GwtMstType
   use GwtObsModule, only: GwtObsType
   use BudgetModule, only: BudgetType
@@ -37,9 +35,7 @@ module GwtModule
 
     type(GwtMstType), pointer :: mst => null() ! mass storage and transfer package
     type(GwtDspType), pointer :: dsp => null() ! dispersion package
-    type(GwtMvtType), pointer :: mvt => null() ! mover transport package
     type(GwtObsType), pointer :: obs => null() ! observation package
-    integer(I4B), pointer :: inmvt => null() ! unit number MVT
     integer(I4B), pointer :: inmst => null() ! unit number MST
     integer(I4B), pointer :: indsp => null() ! DSP enabled flag
     integer(I4B), pointer :: inobs => null() ! unit number OBS
@@ -877,7 +873,6 @@ contains
     ! -- Scalars
     call mem_deallocate(this%indsp)
     call mem_deallocate(this%inmst)
-    call mem_deallocate(this%inmvt)
     call mem_deallocate(this%inobs)
     !
     ! -- Parent class members
@@ -962,12 +957,10 @@ contains
     call this%allocate_tsp_scalars(modelname)
     !
     ! -- allocate members that are part of model class
-    call mem_allocate(this%inmvt, 'INMVT', this%memoryPath)
     call mem_allocate(this%inmst, 'INMST', this%memoryPath)
     call mem_allocate(this%indsp, 'INDSP', this%memoryPath)
     call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
     !
-    this%inmvt = 0
     this%inmst = 0
     this%indsp = 0
     this%inobs = 0
@@ -1138,7 +1131,6 @@ contains
     use SimVariablesModule, only: idm_context
     use GwtMstModule, only: mst_cr
     use GwtDspModule, only: dsp_cr
-    use GwtMvtModule, only: mvt_cr
     use GwtObsModule, only: gwt_obs_cr
     ! -- dummy
     class(GwtModelType) :: this
@@ -1178,10 +1170,8 @@ contains
       mempath = mempaths(n)
       inunit => inunits(n)
       !
-      ! -- create dis package first as it is a prerequisite for other packages
+      ! -- create dis package as it is a prerequisite for other packages
       select case (pkgtype)
-      case ('MVT6')
-        this%inmvt = inunit
       case ('MST6')
         this%inmst = inunit
       case ('DSP6')
@@ -1204,7 +1194,6 @@ contains
     call mst_cr(this%mst, this%name, this%inmst, this%iout, this%fmi)
     call dsp_cr(this%dsp, this%name, mempathdsp, this%indsp, this%iout, &
                 this%fmi)
-    call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi)
     call gwt_obs_cr(this%obs, this%inobs)
     !
     ! -- Check to make sure that required ftype's have been specified
