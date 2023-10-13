@@ -15,6 +15,7 @@ module TransportModelModule
   use TspFmiModule, only: TspFmiType
   use TspAdvModule, only: TspAdvType
   use TspSsmModule, only: TspSsmType
+  use TspMvtModule, only: TspMvtType
   use TspOcModule, only: TspOcType
   use BudgetModule, only: BudgetType
   use MatrixBaseModule
@@ -30,12 +31,14 @@ module TransportModelModule
     type(TspFmiType), pointer :: fmi => null() ! flow model interface
     type(TspAdvType), pointer :: adv => null() !< advection package
     type(TspIcType), pointer :: ic => null() !< initial conditions package
+    type(TspMvtType), pointer :: mvt => null() !< mover transport package
     type(TspOcType), pointer :: oc => null() !< output control package
     type(TspSsmType), pointer :: ssm => null() !< source sink mixing package
     type(BudgetType), pointer :: budget => null() !< budget object
     integer(I4B), pointer :: infmi => null() ! unit number FMI
     integer(I4B), pointer :: inadv => null() !< unit number ADV
     integer(I4B), pointer :: inic => null() !< unit number IC
+    integer(I4B), pointer :: inmvt => null() !< unit number MVT
     integer(I4B), pointer :: inoc => null() !< unit number OC
 
     integer(I4B), pointer :: inssm => null() !< unit number SSM
@@ -135,7 +138,6 @@ contains
     class(TransportModelType) :: this
     type(sparsematrix), intent(inout) :: sparse
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- Return
     return
@@ -152,7 +154,6 @@ contains
     class(TransportModelType) :: this
     class(MatrixBaseType), pointer :: matrix_sln !< global system matrix
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- Return
     return
@@ -167,7 +168,6 @@ contains
   subroutine tsp_ar(this)
     ! -- dummy variables
     class(TransportModelType) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- Return
     return
@@ -181,7 +181,6 @@ contains
   subroutine tsp_rp(this)
     ! -- dummy variables
     class(TransportModelType) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- Return
     return
@@ -195,7 +194,6 @@ contains
   subroutine tsp_ad(this)
     ! -- dummy variables
     class(TransportModelType) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- Return
     return
@@ -212,7 +210,6 @@ contains
     integer(I4B), intent(in) :: kiter
     class(MatrixBaseType), pointer :: matrix_sln
     integer(I4B), intent(in) :: inwtflag
-! ------------------------------------------------------------------------------
     !
     ! -- Return
     return
@@ -234,7 +231,6 @@ contains
     integer(I4B), intent(inout) :: ipak
     real(DP), intent(inout) :: dpak
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- Return
     return
@@ -251,7 +247,6 @@ contains
     integer(I4B), intent(in) :: icnvg
     integer(I4B), intent(in) :: isuppress_output
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- Return
     return
@@ -267,7 +262,6 @@ contains
     class(TransportModelType) :: this
     integer(I4B), intent(in) :: icnvg
     integer(I4B), intent(in) :: isuppress_output
-! ------------------------------------------------------------------------------
     !
     ! -- Return
     return
@@ -283,7 +277,6 @@ contains
     ! -- dummy
     class(TransportModelType) :: this
     character(len=*), intent(in) :: modelname
-! ------------------------------------------------------------------------------
     !
     ! -- allocate members from (grand)parent class
     call this%NumericalModelType%allocate_scalars(modelname)
@@ -291,6 +284,7 @@ contains
     ! -- allocate members that are part of model class
     call mem_allocate(this%inic, 'INIC', this%memoryPath)
     call mem_allocate(this%infmi, 'INFMI', this%memoryPath)
+    call mem_allocate(this%inmvt, 'INMVT', this%memoryPath)
     call mem_allocate(this%inadv, 'INADV', this%memoryPath)
     call mem_allocate(this%inssm, 'INSSM', this%memoryPath)
     call mem_allocate(this%inoc, 'INOC ', this%memoryPath)
@@ -298,6 +292,7 @@ contains
     !
     this%inic = 0
     this%infmi = 0
+    this%inmvt = 0
     this%inadv = 0
     this%inssm = 0
     this%inoc = 0
@@ -352,6 +347,7 @@ contains
     call mem_deallocate(this%infmi)
     call mem_deallocate(this%inadv)
     call mem_deallocate(this%inssm)
+    call mem_deallocate(this%inmvt)
     call mem_deallocate(this%inoc)
     call mem_deallocate(this%eqnsclfac)
     !
@@ -509,6 +505,7 @@ contains
     use TspFmiModule, only: fmi_cr
     use TspAdvModule, only: adv_cr
     use TspSsmModule, only: ssm_cr
+    use TspMvtModule, only: mvt_cr
     use TspOcModule, only: oc_cr
     ! -- dummy
     class(TransportModelType) :: this
@@ -564,6 +561,8 @@ contains
         this%inic = inunit
       case ('FMI6')
         this%infmi = inunit
+      case ('MVT6')
+        this%inmvt = inunit
       case ('ADV6')
         this%inadv = inunit
       case ('SSM6')
@@ -582,6 +581,8 @@ contains
                 this%eqnsclfac)
     call ssm_cr(this%ssm, this%name, this%inssm, this%iout, this%fmi, &
                 this%eqnsclfac, this%depvartype)
+    call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi, &
+                this%eqnsclfac)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
 
     !

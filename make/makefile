@@ -225,6 +225,7 @@ $(OBJDIR)/CellWithNbrs.o \
 $(OBJDIR)/NumericalExchange.o \
 $(OBJDIR)/tsp1ssm1.o \
 $(OBJDIR)/tsp1oc1.o \
+$(OBJDIR)/tsp1mvt1.o \
 $(OBJDIR)/tsp1ic1.o \
 $(OBJDIR)/tsp1adv1.o \
 $(OBJDIR)/gwf3disv8.o \
@@ -255,7 +256,6 @@ $(OBJDIR)/gwt1src1.o \
 $(OBJDIR)/gwt1sft1.o \
 $(OBJDIR)/gwt1obs1.o \
 $(OBJDIR)/gwt1mwt1.o \
-$(OBJDIR)/gwt1mvt1.o \
 $(OBJDIR)/gwt1lkt1.o \
 $(OBJDIR)/gwt1ist1.o \
 $(OBJDIR)/gwt1dsp1.o \
