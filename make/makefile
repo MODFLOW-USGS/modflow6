@@ -251,6 +251,7 @@ $(OBJDIR)/VirtualExchange.o \
 $(OBJDIR)/GridSorting.o \
 $(OBJDIR)/DisConnExchange.o \
 $(OBJDIR)/CsrUtils.o \
+$(OBJDIR)/tsp1cnc1.o \
 $(OBJDIR)/tsp1.o \
 $(OBJDIR)/gwt1uzt1.o \
 $(OBJDIR)/gwt1src1.o \
@@ -259,7 +260,6 @@ $(OBJDIR)/gwt1mwt1.o \
 $(OBJDIR)/gwt1lkt1.o \
 $(OBJDIR)/gwt1ist1.o \
 $(OBJDIR)/gwt1dsp1.o \
-$(OBJDIR)/gwt1cnc1.o \
 $(OBJDIR)/gwf3api8.o \
 $(OBJDIR)/gwf3wel8.o \
 $(OBJDIR)/gwf3rch8.o \

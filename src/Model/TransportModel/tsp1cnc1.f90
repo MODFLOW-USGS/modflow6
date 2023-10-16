@@ -1,8 +1,8 @@
-module GwtCncModule
+module TspCncModule
   !
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, DONE, NAMEDBOUNDFLAG, LENFTYPE, &
-                             LENPACKAGENAME
+                             LENPACKAGENAME, LENVARNAME
   use ObsModule, only: DefaultObsIdProcessor
   use BndModule, only: BndType
   use ObserveModule, only: ObserveType
@@ -18,10 +18,14 @@ module GwtCncModule
   character(len=LENFTYPE) :: ftype = 'CNC'
   character(len=LENPACKAGENAME) :: text = '             CNC'
   !
-  type, extends(BndType) :: GwtCncType
+  type, extends(BndType) :: TspCncType
+
     real(DP), dimension(:), pointer, contiguous :: ratecncin => null() !simulated flows into constant conc (excluding other concs)
     real(DP), dimension(:), pointer, contiguous :: ratecncout => null() !simulated flows out of constant conc (excluding to other concs)
+    character(len=LENVARNAME) :: depvartype = '' !< stores string of dependent variable type, depending on model type
+
   contains
+
     procedure :: bnd_rp => cnc_rp
     procedure :: bnd_ad => cnc_ad
     procedure :: bnd_ck => cnc_ck
@@ -36,19 +40,17 @@ module GwtCncModule
     procedure, public :: bnd_df_obs => cnc_df_obs
     ! -- method for time series
     procedure, public :: bnd_rp_ts => cnc_rp_ts
-  end type GwtCncType
+
+  end type TspCncType
 
 contains
 
-  subroutine cnc_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname)
-! ******************************************************************************
-! cnc_create -- Create a New Constant Concentration Package
-! Subroutine: (1) create new-style package
-!             (2) point packobj to the new package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Create a new constant concentration or temperature package
+  !!
+  !! Routine points packobj to the newly created package
+  !<
+  subroutine cnc_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
+                        depvartype)
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
@@ -57,9 +59,9 @@ contains
     integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
+    character(len=LENVARNAME), intent(in) :: depvartype
     ! -- local
-    type(GwtCncType), pointer :: cncobj
-! ------------------------------------------------------------------------------
+    type(TspCncType), pointer :: cncobj
     !
     ! -- allocate the object and assign values to object variables
     allocate (cncobj)
@@ -83,26 +85,25 @@ contains
     packobj%ncolbnd = 1
     packobj%iscloc = 1
     !
-    ! -- return
+    ! -- Store the appropriate label based on the dependent variable
+    cncobj%depvartype = depvartype
+    !
+    ! -- Return
     return
   end subroutine cnc_create
 
+  !> @brief Allocate arrays specific to the constant concentration/tempeature
+  !! package.
+  !<
   subroutine cnc_allocate_arrays(this, nodelist, auxvar)
-! ******************************************************************************
-! allocate_scalars -- allocate arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(GwtCncType) :: this
+    class(TspCncType) :: this
     integer(I4B), dimension(:), pointer, contiguous, optional :: nodelist
     real(DP), dimension(:, :), pointer, contiguous, optional :: auxvar
     ! -- local
     integer(I4B) :: i
-! ------------------------------------------------------------------------------
     !
     ! -- call standard BndType allocate scalars
     call this%BndType%allocate_arrays()
@@ -116,23 +117,20 @@ contains
       this%ratecncout(i) = DZERO
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_allocate_arrays
 
+  !> @brief Constant concentration/temperature read and prepare (rp) routine
+  !<
   subroutine cnc_rp(this)
-! ******************************************************************************
-! cnc_rp -- Read and prepare
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use SimModule, only: store_error
+    use InputOutputModule, only: lowcase
     implicit none
-    class(GwtCncType), intent(inout) :: this
+    class(TspCncType), intent(inout) :: this
     integer(I4B) :: i, node, ibd, ierr
     character(len=30) :: nodestr
-! ------------------------------------------------------------------------------
+    character(len=LENVARNAME) :: dvtype
     !
     ! -- Reset previous CNCs to active cell
     do i = 1, this%nbound
@@ -143,15 +141,17 @@ contains
     ! -- Call the parent class read and prepare
     call this%BndType%bnd_rp()
     !
-    ! -- Set ibound to -(ibcnum + 1) for constant concentration cells
+    ! -- Set ibound to -(ibcnum + 1) for constant concentration/temperature cells
     ierr = 0
     do i = 1, this%nbound
       node = this%nodelist(i)
       ibd = this%ibound(node)
       if (ibd < 0) then
         call this%dis%noder_to_string(node, nodestr)
-        call store_error('Cell is already a constant concentration: ' &
-                         //trim(adjustl(nodestr)))
+        dvtype = trim(this%depvartype)
+        call lowcase(dvtype)
+        call store_error('Cell is already a constant ' &
+                         //dvtype//': '//trim(adjustl(nodestr)))
         ierr = ierr + 1
       else
         this%ibound(node) = -this%ibcnum
@@ -163,30 +163,27 @@ contains
       call this%parser%StoreErrorUnit()
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_rp
 
+  !> @brief Constant concentration/temperature package advance routine
+  !!
+  !! Add package connections to matrix
+  !<
   subroutine cnc_ad(this)
-! ******************************************************************************
-! cnc_ad -- Advance
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtCncType) :: this
+    class(TspCncType) :: this
     ! -- local
     integer(I4B) :: i, node
     real(DP) :: cb
     ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- Advance the time series
     call this%TsManager%ad()
     !
-    ! -- Process each entry in the constant concentration cell list
+    ! -- Process each entry in the constant concentration/temperature cell list
     do i = 1, this%nbound
       node = this%nodelist(i)
       cb = this%bound(1, i)
@@ -199,22 +196,18 @@ contains
     !    "current" value.
     call this%obs%obs_ad()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_ad
 
+  !> @brief Check constant concentration/temperature boundary condition data
+  !<
   subroutine cnc_ck(this)
-! ******************************************************************************
-! cnc_ck -- Check cnc boundary condition data
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, count_errors, store_error_unit
     ! -- dummy
-    class(GwtCncType), intent(inout) :: this
+    class(TspCncType), intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg
     character(len=30) :: nodestr
@@ -223,7 +216,6 @@ contains
     ! -- formats
     character(len=*), parameter :: fmtcncerr = &
       &"('CNC boundary ',i0,' conc (',g0,') is less than zero for cell', a)"
-! ------------------------------------------------------------------------------
     !
     ! -- check stress period data
     do i = 1, this%nbound
@@ -241,40 +233,37 @@ contains
       call this%parser%StoreErrorUnit()
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_ck
 
+  !> @brief Override bnd_fc and do nothing
+  !!
+  !! For constant concentration/temperature boundary type, the call to bnd_fc
+  !! needs to be overwritten to prevent logic found therein from being applied
+  !<
   subroutine cnc_fc(this, rhs, ia, idxglo, matrix_sln)
-! **************************************************************************
-! cnc_fc -- Override bnd_fc and do nothing
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     ! -- dummy
-    class(GwtCncType) :: this
+    class(TspCncType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
     class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
-! --------------------------------------------------------------------------
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_fc
 
+  !> @brief Calculate flow associated with constant concentration/tempearture
+  !! boundary
+  !!
+  !! This method overrides bnd_cq()
+  !<
   subroutine cnc_cq(this, x, flowja, iadv)
-! ******************************************************************************
-! cnc_cq -- Calculate constant concenration flow.  This method overrides bnd_cq().
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
-    class(GwtCncType), intent(inout) :: this
+    class(TspCncType), intent(inout) :: this
     real(DP), dimension(:), intent(in) :: x
     real(DP), dimension(:), contiguous, intent(inout) :: flowja
     integer(I4B), optional, intent(in) :: iadv
@@ -287,7 +276,6 @@ contains
     real(DP) :: rate
     real(DP) :: ratein, rateout
     real(DP) :: q
-! ------------------------------------------------------------------------------
     !
     ! -- If no boundaries, skip flow calculations.
     if (this%nbound > 0) then
@@ -303,6 +291,7 @@ contains
         ! -- Calculate the flow rate into the cell.
         do ipos = this%dis%con%ia(node) + 1, &
           this%dis%con%ia(node + 1) - 1
+          ! flowja is already in terms of energy for heat transport
           q = flowja(ipos)
           rate = rate - q
           ! -- only accumulate chin and chout for active
@@ -332,39 +321,44 @@ contains
       !
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_cq
 
+  !> @brief Add package ratin/ratout to model budget
+  !<
   subroutine cnc_bd(this, model_budget)
-    ! -- add package ratin/ratout to model budget
+    ! -- modules
     use TdisModule, only: delt
     use BudgetModule, only: BudgetType, rate_accumulator
-    class(GwtCncType) :: this
+    ! -- dummy
+    class(TspCncType) :: this
     type(BudgetType), intent(inout) :: model_budget
+    ! -- local
     real(DP) :: ratin
     real(DP) :: ratout
     real(DP) :: dum
     integer(I4B) :: isuppress_output
+    !
     isuppress_output = 0
     call rate_accumulator(this%ratecncin(1:this%nbound), ratin, dum)
     call rate_accumulator(this%ratecncout(1:this%nbound), ratout, dum)
     call model_budget%addentry(ratin, ratout, delt, this%text, &
                                isuppress_output, this%packName)
+    !
+    ! -- Return
+    return
   end subroutine cnc_bd
 
+  !> @brief Deallocate memory
+  !!
+  !!  Method to deallocate memory for the package.
+  !<
   subroutine cnc_da(this)
-! ******************************************************************************
-! cnc_da -- deallocate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(GwtCncType) :: this
-! ------------------------------------------------------------------------------
+    class(TspCncType) :: this
     !
     ! -- Deallocate parent package
     call this%BndType%bnd_da()
@@ -373,20 +367,18 @@ contains
     call mem_deallocate(this%ratecncin)
     call mem_deallocate(this%ratecncout)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_da
 
+  !> @brief Define labels used in list file
+  !!
+  !! Define the list heading that is written to iout when PRINT_INPUT option
+  !! is used.
+  !<
   subroutine define_listlabel(this)
-! ******************************************************************************
-! define_listlabel -- Define the list heading that is written to iout when
-!   PRINT_INPUT option is used.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    class(GwtCncType), intent(inout) :: this
-! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(TspCncType), intent(inout) :: this
     !
     ! -- create the header list label
     this%listlabel = trim(this%filtyp)//' NO.'
@@ -400,76 +392,63 @@ contains
     else
       write (this%listlabel, '(a, a7)') trim(this%listlabel), 'NODE'
     end if
-    write (this%listlabel, '(a, a16)') trim(this%listlabel), 'CONCENTRATION'
+    write (this%listlabel, '(a, a16)') trim(this%listlabel), &
+      trim(this%depvartype)
     if (this%inamedbound == 1) then
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine define_listlabel
 
-  ! -- Procedures related to observations
-
+  !> @brief Procedure related to observation processing
+  !!
+  !! This routine:
+  !!   - returns true because the CNC package supports observations,
+  !!   - overrides packagetype%_obs_supported()
   logical function cnc_obs_supported(this)
-! ******************************************************************************
-! cnc_obs_supported
-!   -- Return true because CNC package supports observations.
-!   -- Overrides packagetype%_obs_supported()
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtCncType) :: this
-! ------------------------------------------------------------------------------
+    class(TspCncType) :: this
     !
     cnc_obs_supported = .true.
     !
-    ! -- return
+    ! -- Return
     return
   end function cnc_obs_supported
 
+  !> @brief Procedure related to observation processing
+  !!
+  !! This routine:
+  !!   - defines observations
+  !!   - stores observation types supported by the CNC package,
+  !!   - overrides BndType%bnd_df_obs
+  !<
   subroutine cnc_df_obs(this)
-! ******************************************************************************
-! cnc_df_obs (implements bnd_df_obs)
-!   -- Store observation type supported by CNC package.
-!   -- Overrides BndType%bnd_df_obs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtCncType) :: this
+    class(TspCncType) :: this
     ! -- local
     integer(I4B) :: indx
-! ------------------------------------------------------------------------------
     !
     call this%obs%StoreObsType('cnc', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_df_obs
 
-  ! -- Procedure related to time series
-
+  !> @brief Procedure related to time series
+  !!
+  !! Assign tsLink%Text appropriately for all time series in use by package.
+  !! In CNC package, variable CONCENTRATION or TEMPERATURE can be controlled
+  !! by time series.
+  !<
   subroutine cnc_rp_ts(this)
-! ******************************************************************************
-! -- Assign tsLink%Text appropriately for
-!    all time series in use by package.
-!    In CNC package variable CONCENTRATION
-!    can be controlled by time series.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
-    class(GwtCncType), intent(inout) :: this
+    class(TspCncType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i, nlinks
     type(TimeSeriesLinkType), pointer :: tslink => null()
-! ------------------------------------------------------------------------------
     !
     nlinks = this%TsManager%boundtslinks%Count()
     do i = 1, nlinks
@@ -477,13 +456,13 @@ contains
       if (associated(tslink)) then
         select case (tslink%JCol)
         case (1)
-          tslink%Text = 'CONCENTRATION'
+          tslink%Text = trim(this%depvartype)
         end select
       end if
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_rp_ts
 
-end module GwtCncModule
+end module TspCncModule

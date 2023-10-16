@@ -761,7 +761,7 @@ contains
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error
-    use GwtCncModule, only: cnc_create
+    use TspCncModule, only: cnc_create
     use GwtSrcModule, only: src_create
     use GwtIstModule, only: ist_create
     use GwtLktModule, only: lkt_create
@@ -786,7 +786,8 @@ contains
     ! -- This part creates the package object
     select case (filtyp)
     case ('CNC6')
-      call cnc_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
+      call cnc_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname, dvt)
     case ('SRC6')
       call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
     case ('LKT6')
