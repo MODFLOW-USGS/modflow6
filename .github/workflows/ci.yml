@@ -116,6 +116,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: modflow6
+      
+      - name: Checkout test-drive
+        uses: actions/checkout@v4
+        with:
+          repository: fortran-lang/test-drive
+          path: test-drive
 
       - name: Setup GNU Fortran ${{ env.GCC_V }}
         uses: awvwgk/setup-fortran@main
@@ -129,6 +135,13 @@ jobs:
           environment-file: modflow6/environment.yml
           cache-environment: true
           cache-downloads: true
+
+      - name: Build test-drive
+        working-directory: test-drive
+        run: |
+          meson setup builddir --prefix=$(pwd) --libdir=lib
+          meson install -C builddir
+          echo "PKG_CONFIG_PATH=$(pwd)/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
       - name: Build modflow6
         working-directory: modflow6

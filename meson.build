@@ -206,8 +206,8 @@ subdir('srcbmi')
 # build zbud6 and mf5to6 utility programs
 subdir('utils')
 
-# add unit test directory
-# subdir('unittests')
+# add autotest directory
+subdir('autotest')
 
 # meson tests to evaluate installation success
 testdir = meson.project_source_root() / '.mf6minsim'
