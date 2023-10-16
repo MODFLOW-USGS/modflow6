@@ -12,15 +12,13 @@ module GwtModule
                              LENPAKLOC, LENVARNAME
   use VersionModule, only: write_listfile_header
   use NumericalModelModule, only: NumericalModelType
-  use TransportModelModule, only: TransportModelType
+
   use BaseModelModule, only: BaseModelType
   use BndModule, only: BndType, AddBndToList, GetBndFromList
   use GwtDspModule, only: GwtDspType
-  use TspSsmModule, only: TspSsmType
-  use GwtMvtModule, only: GwtMvtType
   use GwtMstModule, only: GwtMstType
-  use GwtObsModule, only: GwtObsType
   use BudgetModule, only: BudgetType
+  use TransportModelModule
   use MatrixBaseModule
 
   implicit none
@@ -37,12 +35,8 @@ module GwtModule
 
     type(GwtMstType), pointer :: mst => null() ! mass storage and transfer package
     type(GwtDspType), pointer :: dsp => null() ! dispersion package
-    type(GwtMvtType), pointer :: mvt => null() ! mover transport package
-    type(GwtObsType), pointer :: obs => null() ! observation package
-    integer(I4B), pointer :: inmvt => null() ! unit number MVT
     integer(I4B), pointer :: inmst => null() ! unit number MST
     integer(I4B), pointer :: indsp => null() ! DSP enabled flag
-    integer(I4B), pointer :: inobs => null() ! unit number OBS
 
   contains
 
@@ -62,11 +56,6 @@ module GwtModule
     procedure :: model_bdentry => gwt_bdentry
     procedure :: allocate_scalars
     procedure :: get_iasym => gwt_get_iasym
-    procedure, private :: gwt_ot_flow
-    procedure, private :: gwt_ot_flowja
-    procedure, private :: gwt_ot_dv
-    procedure, private :: gwt_ot_bdsummary
-    procedure, private :: gwt_ot_obs
     procedure :: create_packages => create_gwt_packages
     procedure, private :: create_bndpkgs
     procedure, private :: package_create
@@ -81,7 +70,7 @@ contains
     ! -- modules
     use ListsModule, only: basemodellist
     use BaseModelModule, only: AddBaseModelToList
-    use ConstantsModule, only: LINELENGTH
+    use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
@@ -285,7 +274,7 @@ contains
     if (this%inadv > 0) call this%adv%adv_ar(this%dis, this%ibound)
     if (this%indsp > 0) call this%dsp%dsp_ar(this%ibound, this%mst%thetam)
     if (this%inssm > 0) call this%ssm%ssm_ar(this%dis, this%ibound, this%x)
-    if (this%inobs > 0) call this%obs%gwt_obs_ar(this%ic, this%x, this%flowja)
+    if (this%inobs > 0) call this%obs%tsp_obs_ar(this%ic, this%x, this%flowja)
     !
     ! -- Set governing equation scale factor. Note that this scale factor
     ! -- cannot be set arbitrarily. For solute transport, it must be set
@@ -599,229 +588,27 @@ contains
   !! Call the parent class output routine
   !<
   subroutine gwt_ot(this)
-    ! -- modules
-    use TdisModule, only: kstp, kper, tdis_ot, endofperiod
     ! -- dummy
     class(GwtModelType) :: this
     ! -- local
-    integer(I4B) :: idvsave
-    integer(I4B) :: idvprint
     integer(I4B) :: icbcfl
     integer(I4B) :: icbcun
-    integer(I4B) :: ibudfl
-    integer(I4B) :: ipflag
-    ! -- formats
-    character(len=*), parameter :: fmtnocnvg = &
-      "(1X,/9X,'****FAILED TO MEET SOLVER CONVERGENCE CRITERIA IN TIME STEP ', &
-      &I0,' OF STRESS PERIOD ',I0,'****')"
     !
-    ! -- Set write and print flags
-    idvsave = 0
-    idvprint = 0
+    !
+    ! -- Initialize
     icbcfl = 0
-    ibudfl = 0
-    if (this%oc%oc_save('CONCENTRATION')) idvsave = 1
-    if (this%oc%oc_print('CONCENTRATION')) idvprint = 1
+    !
+    ! -- Because mst belongs to gwt, call mst_ot_flow directly (and not from parent)
     if (this%oc%oc_save('BUDGET')) icbcfl = 1
-    if (this%oc%oc_print('BUDGET')) ibudfl = 1
     icbcun = this%oc%oc_save_unit('BUDGET')
+    if (this%inmst > 0) call this%mst%mst_ot_flow(icbcfl, icbcun)
     !
-    ! -- Override ibudfl and idvprint flags for nonconvergence
-    !    and end of period
-    ibudfl = this%oc%set_print_flag('BUDGET', this%icnvg, endofperiod)
-    idvprint = this%oc%set_print_flag('CONCENTRATION', this%icnvg, endofperiod)
-    !
-    !   Calculate and save observations
-    call this%gwt_ot_obs()
-    !
-    !   Save and print flows
-    call this%gwt_ot_flow(icbcfl, ibudfl, icbcun)
-    !
-    !   Save and print dependent variables
-    call this%gwt_ot_dv(idvsave, idvprint, ipflag)
-    !
-    !   Print budget summaries
-    call this%gwt_ot_bdsummary(ibudfl, ipflag)
-    !
-    ! -- Timing Output; if any dependendent variables or budgets
-    !    are printed, then ipflag is set to 1.
-    if (ipflag == 1) call tdis_ot(this%iout)
-    !
-    ! -- Write non-convergence message
-    if (this%icnvg == 0) then
-      write (this%iout, fmtnocnvg) kstp, kper
-    end if
+    ! -- Call parent class _ot routines.
+    call this%tsp_ot(this%inmst)
     !
     ! -- Return
     return
   end subroutine gwt_ot
-
-  !> @brief Calculate and save observations
-  !<
-  subroutine gwt_ot_obs(this)
-    class(GwtModelType) :: this
-    class(BndType), pointer :: packobj
-    integer(I4B) :: ip
-
-    ! -- Calculate and save observations
-    call this%obs%obs_bd()
-    call this%obs%obs_ot()
-
-    ! -- Calculate and save package obserations
-    do ip = 1, this%bndlist%Count()
-      packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_bd_obs()
-      call packobj%bnd_ot_obs()
-    end do
-    !
-    ! -- Return
-    return
-  end subroutine gwt_ot_obs
-
-  !> @brief Save flows
-  !<
-  subroutine gwt_ot_flow(this, icbcfl, ibudfl, icbcun)
-    class(GwtModelType) :: this
-    integer(I4B), intent(in) :: icbcfl
-    integer(I4B), intent(in) :: ibudfl
-    integer(I4B), intent(in) :: icbcun
-    class(BndType), pointer :: packobj
-    integer(I4B) :: ip
-
-    ! -- Save GWT flows
-    call this%gwt_ot_flowja(this%nja, this%flowja, icbcfl, icbcun)
-    if (this%inmst > 0) call this%mst%mst_ot_flow(icbcfl, icbcun)
-    if (this%infmi > 0) call this%fmi%fmi_ot_flow(icbcfl, icbcun)
-    if (this%inssm > 0) then
-      call this%ssm%ssm_ot_flow(icbcfl=icbcfl, ibudfl=0, icbcun=icbcun)
-    end if
-    do ip = 1, this%bndlist%Count()
-      packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_ot_model_flows(icbcfl=icbcfl, ibudfl=0, icbcun=icbcun)
-    end do
-
-    ! -- Save advanced package flows
-    do ip = 1, this%bndlist%Count()
-      packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_ot_package_flows(icbcfl=icbcfl, ibudfl=0)
-    end do
-    if (this%inmvt > 0) then
-      call this%mvt%mvt_ot_saveflow(icbcfl, ibudfl)
-    end if
-    !
-    ! -- Print GWF flows
-    ! no need to print flowja
-    ! no need to print mst
-    ! no need to print fmi
-    if (this%inssm > 0) then
-      call this%ssm%ssm_ot_flow(icbcfl=icbcfl, ibudfl=ibudfl, icbcun=0)
-    end if
-    do ip = 1, this%bndlist%Count()
-      packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_ot_model_flows(icbcfl=icbcfl, ibudfl=ibudfl, icbcun=0)
-    end do
-    !
-    ! -- Print advanced package flows
-    do ip = 1, this%bndlist%Count()
-      packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_ot_package_flows(icbcfl=0, ibudfl=ibudfl)
-    end do
-    if (this%inmvt > 0) then
-      call this%mvt%mvt_ot_printflow(icbcfl, ibudfl)
-    end if
-    !
-    ! -- Return
-    return
-  end subroutine gwt_ot_flow
-
-  !> @brief Write intercell flows
-  !<
-  subroutine gwt_ot_flowja(this, nja, flowja, icbcfl, icbcun)
-    ! -- dummy
-    class(GwtModelType) :: this
-    integer(I4B), intent(in) :: nja
-    real(DP), dimension(nja), intent(in) :: flowja
-    integer(I4B), intent(in) :: icbcfl
-    integer(I4B), intent(in) :: icbcun
-    ! -- local
-    integer(I4B) :: ibinun
-    ! -- formats
-    !
-    ! -- Set unit number for binary output
-    if (this%ipakcb < 0) then
-      ibinun = icbcun
-    elseif (this%ipakcb == 0) then
-      ibinun = 0
-    else
-      ibinun = this%ipakcb
-    end if
-    if (icbcfl == 0) ibinun = 0
-    !
-    ! -- Write the face flows if requested
-    if (ibinun /= 0) then
-      call this%dis%record_connection_array(flowja, ibinun, this%iout)
-    end if
-    !
-    ! -- Return
-    return
-  end subroutine gwt_ot_flowja
-
-  !> @brief Print dependent variables
-  !<
-  subroutine gwt_ot_dv(this, idvsave, idvprint, ipflag)
-    class(GwtModelType) :: this
-    integer(I4B), intent(in) :: idvsave
-    integer(I4B), intent(in) :: idvprint
-    integer(I4B), intent(inout) :: ipflag
-    class(BndType), pointer :: packobj
-    integer(I4B) :: ip
-    !
-    ! -- Print advanced package dependent variables
-    do ip = 1, this%bndlist%Count()
-      packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_ot_dv(idvsave, idvprint)
-    end do
-    !
-    ! -- save head and print head
-    call this%oc%oc_ot(ipflag)
-    !
-    ! -- Return
-    return
-  end subroutine gwt_ot_dv
-
-  !> @brief Print budget summary
-  !<
-  subroutine gwt_ot_bdsummary(this, ibudfl, ipflag)
-    use TdisModule, only: kstp, kper, totim
-    class(GwtModelType) :: this
-    integer(I4B), intent(in) :: ibudfl
-    integer(I4B), intent(inout) :: ipflag
-    class(BndType), pointer :: packobj
-    integer(I4B) :: ip
-    !
-    ! -- Package budget summary
-    do ip = 1, this%bndlist%Count()
-      packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_ot_bdsummary(kstp, kper, this%iout, ibudfl)
-    end do
-    !
-    ! -- mover budget summary
-    if (this%inmvt > 0) then
-      call this%mvt%mvt_ot_bdsummary(ibudfl)
-    end if
-    !
-    ! -- model budget summary
-    if (ibudfl /= 0) then
-      ipflag = 1
-      call this%budget%budget_ot(kstp, kper, this%iout)
-    end if
-    !
-    ! -- Write to budget csv
-    call this%budget%writecsv(totim)
-    !
-    ! -- Return
-    return
-  end subroutine gwt_ot_bdsummary
 
   !> @brief Deallocate
   !!
@@ -877,8 +664,6 @@ contains
     ! -- Scalars
     call mem_deallocate(this%indsp)
     call mem_deallocate(this%inmst)
-    call mem_deallocate(this%inmvt)
-    call mem_deallocate(this%inobs)
     !
     ! -- Parent class members
     call this%TransportModelType%tsp_da()
@@ -961,16 +746,12 @@ contains
     ! -- allocate parent class scalars
     call this%allocate_tsp_scalars(modelname)
     !
-    ! -- allocate members that are part of model class
-    call mem_allocate(this%inmvt, 'INMVT', this%memoryPath)
+    ! -- allocate additional members specific to GWT model type
     call mem_allocate(this%inmst, 'INMST', this%memoryPath)
     call mem_allocate(this%indsp, 'INDSP', this%memoryPath)
-    call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
     !
-    this%inmvt = 0
     this%inmst = 0
     this%indsp = 0
-    this%inobs = 0
     !
     ! -- Return
     return
@@ -1138,8 +919,6 @@ contains
     use SimVariablesModule, only: idm_context
     use GwtMstModule, only: mst_cr
     use GwtDspModule, only: dsp_cr
-    use GwtMvtModule, only: mvt_cr
-    use GwtObsModule, only: gwt_obs_cr
     ! -- dummy
     class(GwtModelType) :: this
     integer(I4B), intent(in) :: indis
@@ -1178,19 +957,13 @@ contains
       mempath = mempaths(n)
       inunit => inunits(n)
       !
-      ! -- create dis package first as it is a prerequisite for other packages
+      ! -- create dis package as it is a prerequisite for other packages
       select case (pkgtype)
-      case ('MVT6')
-        this%inmvt = inunit
       case ('MST6')
         this%inmst = inunit
       case ('DSP6')
         this%indsp = 1
         mempathdsp = mempath
-      case ('SSM6')
-        this%inssm = inunit
-      case ('OBS6')
-        this%inobs = inunit
       case ('CNC6', 'SRC6', 'LKT6', 'SFT6', &
             'MWT6', 'UZT6', 'IST6', 'API6')
         call expandarray(bndpkgs)
@@ -1204,8 +977,6 @@ contains
     call mst_cr(this%mst, this%name, this%inmst, this%iout, this%fmi)
     call dsp_cr(this%dsp, this%name, mempathdsp, this%indsp, this%iout, &
                 this%fmi)
-    call mvt_cr(this%mvt, this%name, this%inmvt, this%iout, this%fmi)
-    call gwt_obs_cr(this%obs, this%inobs)
     !
     ! -- Check to make sure that required ftype's have been specified
     call this%ftype_check(indis, this%inmst)
