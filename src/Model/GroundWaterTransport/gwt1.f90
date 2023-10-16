@@ -467,7 +467,12 @@ contains
 
   !> @brief GWT Model Final Convergence Check
   !!
-  !! If MVR/MVT is active, call the MVR convergence check subroutines
+  !! If MVR/MVT is active, call the MVR convergence check subroutines to force
+  !! at least 2 outer iterations. The other advanced transport packages are
+  !! solved in the matrix equations directly which means the solver is
+  !! completing the necessary checks thereby eliminating need to call package
+  !! cc routines.  That is, no need to loop over active packages and run:
+  !! call packobj%bnd_cc(iend, icnvg, hclose, rclose)
   !<
   subroutine gwt_cc(this, innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
     ! -- dummy
@@ -479,19 +484,9 @@ contains
     character(len=LENPAKLOC), intent(inout) :: cpak
     integer(I4B), intent(inout) :: ipak
     real(DP), intent(inout) :: dpak
-    ! -- local
-    ! class(BndType), pointer :: packobj
-    ! integer(I4B) :: ip
-    ! -- formats
     !
     ! -- If mover is on, then at least 2 outers required
     if (this%inmvt > 0) call this%mvt%mvt_cc(kiter, iend, icnvgmod, cpak, dpak)
-    !
-    ! -- Call package cc routines
-    ! do ip = 1, this%bndlist%Count()
-    !   packobj => GetBndFromList(this%bndlist, ip)
-    !   call packobj%bnd_cc(iend, icnvg, hclose, rclose)
-    ! enddo
     !
     ! -- Return
     return
