@@ -24,8 +24,7 @@
 image: ubuntu:20.04
 workflow:
   rules:
-    # - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == 'push'
-    - if: $CI_COMMIT_REF_NAME == "parallel-update" && $CI_PIPELINE_SOURCE == 'push'
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == 'push'
 before_script:
   # install ssh agent
   - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client git -y )'
