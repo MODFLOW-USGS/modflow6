@@ -17,7 +17,7 @@ module InputOutputModule
             UPCASE, URWORD, ULSTLB, UBDSV4,                                    &
             ubdsv06, UBDSVB, UCOLNO, ULAPRW,                                   &
             ULASAV, ubdsv1, ubdsvc, ubdsvd, UWWORD,                            &
-            same_word, get_node, get_ijk, padl, unitinquire,                   &
+            same_word, get_node, get_ijk, str_pad_left, unitinquire,           &
             ParseLine, ulaprufw, openfile,                                     &
             linear_interpolate, lowcase,                                       &
             read_line,                                                         &
@@ -1200,7 +1200,7 @@ END SUBROUTINE URWORD
   
   !> @brief Function for string manipulation
   !<
-  function padl(str, width) result(res)
+  function str_pad_left(str, width) result(res)
     ! -- local
     character(len=*), intent(in) :: str
     integer, intent(in) :: width
