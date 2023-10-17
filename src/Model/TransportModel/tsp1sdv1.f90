@@ -16,9 +16,6 @@ module TspSdvModule
   private
   public :: sdv_create
   !
-  character(len=LENFTYPE) :: ftype = '   '
-  character(len=LENPACKAGENAME) :: text = ''
-  !
   type, extends(BndType) :: TspSdvType
 
     real(DP), dimension(:), pointer, contiguous :: ratesdvin => null() !simulated flows into constant conc (excluding other concs)
@@ -426,7 +423,7 @@ contains
   !!
   !! This routine:
   !!   - defines observations
-  !!   - stores observation types supported by either of the SDV packages 
+  !!   - stores observation types supported by either of the SDV packages
   !!     (CNC or CNT),
   !!   - overrides BndType%bnd_df_obs
   !<
