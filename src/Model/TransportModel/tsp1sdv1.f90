@@ -1,4 +1,4 @@
-module TspCncModule
+module TspSdvModule
   !
   use KindModule, only: DP, I4B
   use ConstantsModule, only: DZERO, DONE, NAMEDBOUNDFLAG, LENFTYPE, &
@@ -8,40 +8,41 @@ module TspCncModule
   use ObserveModule, only: ObserveType
   use TimeSeriesLinkModule, only: TimeSeriesLinkType, &
                                   GetTimeSeriesLinkFromList
+  use InputOutputModule, only: str_pad_left
   use MatrixBaseModule
   !
   implicit none
   !
   private
-  public :: cnc_create
+  public :: sdv_create
   !
-  character(len=LENFTYPE) :: ftype = 'CNC'
-  character(len=LENPACKAGENAME) :: text = '             CNC'
+  character(len=LENFTYPE) :: ftype = '   '
+  character(len=LENPACKAGENAME) :: text = ''
   !
-  type, extends(BndType) :: TspCncType
+  type, extends(BndType) :: TspSdvType
 
-    real(DP), dimension(:), pointer, contiguous :: ratecncin => null() !simulated flows into constant conc (excluding other concs)
-    real(DP), dimension(:), pointer, contiguous :: ratecncout => null() !simulated flows out of constant conc (excluding to other concs)
+    real(DP), dimension(:), pointer, contiguous :: ratesdvin => null() !simulated flows into constant conc (excluding other concs)
+    real(DP), dimension(:), pointer, contiguous :: ratesdvout => null() !simulated flows out of constant conc (excluding to other concs)
     character(len=LENVARNAME) :: depvartype = '' !< stores string of dependent variable type, depending on model type
 
   contains
 
-    procedure :: bnd_rp => cnc_rp
-    procedure :: bnd_ad => cnc_ad
-    procedure :: bnd_ck => cnc_ck
-    procedure :: bnd_fc => cnc_fc
-    procedure :: bnd_cq => cnc_cq
-    procedure :: bnd_bd => cnc_bd
-    procedure :: bnd_da => cnc_da
-    procedure :: allocate_arrays => cnc_allocate_arrays
+    procedure :: bnd_rp => sdv_rp
+    procedure :: bnd_ad => sdv_ad
+    procedure :: bnd_ck => sdv_ck
+    procedure :: bnd_fc => sdv_fc
+    procedure :: bnd_cq => sdv_cq
+    procedure :: bnd_bd => sdv_bd
+    procedure :: bnd_da => sdv_da
+    procedure :: allocate_arrays => sdv_allocate_arrays
     procedure :: define_listlabel
     ! -- methods for observations
-    procedure, public :: bnd_obs_supported => cnc_obs_supported
-    procedure, public :: bnd_df_obs => cnc_df_obs
+    procedure, public :: bnd_obs_supported => sdv_obs_supported
+    procedure, public :: bnd_df_obs => sdv_df_obs
     ! -- method for time series
-    procedure, public :: bnd_rp_ts => cnc_rp_ts
+    procedure, public :: bnd_rp_ts => sdv_rp_ts
 
-  end type TspCncType
+  end type TspSdvType
 
 contains
 
@@ -49,8 +50,8 @@ contains
   !!
   !! Routine points packobj to the newly created package
   !<
-  subroutine cnc_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
-                        depvartype)
+  subroutine sdv_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
+                        depvartype, ftype)
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
@@ -60,15 +61,18 @@ contains
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
     character(len=LENVARNAME), intent(in) :: depvartype
+    character(len=LENFTYPE), intent(in) :: ftype
     ! -- local
-    type(TspCncType), pointer :: cncobj
+    type(TspSdvType), pointer :: sdvobj
+    character(len=LENPACKAGENAME) :: text
     !
     ! -- allocate the object and assign values to object variables
-    allocate (cncobj)
-    packobj => cncobj
+    allocate (sdvobj)
+    packobj => sdvobj
     !
     ! -- create name and memory path
     call packobj%set_names(ibcnum, namemodel, pakname, ftype)
+    text = str_pad_left(ftype, LENPACKAGENAME)
     packobj%text = text
     !
     ! -- allocate scalars
@@ -86,20 +90,20 @@ contains
     packobj%iscloc = 1
     !
     ! -- Store the appropriate label based on the dependent variable
-    cncobj%depvartype = depvartype
+    sdvobj%depvartype = depvartype
     !
     ! -- Return
     return
-  end subroutine cnc_create
+  end subroutine sdv_create
 
   !> @brief Allocate arrays specific to the constant concentration/tempeature
   !! package.
   !<
-  subroutine cnc_allocate_arrays(this, nodelist, auxvar)
+  subroutine sdv_allocate_arrays(this, nodelist, auxvar)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
-    class(TspCncType) :: this
+    class(TspSdvType) :: this
     integer(I4B), dimension(:), pointer, contiguous, optional :: nodelist
     real(DP), dimension(:, :), pointer, contiguous, optional :: auxvar
     ! -- local
@@ -108,31 +112,31 @@ contains
     ! -- call standard BndType allocate scalars
     call this%BndType%allocate_arrays()
     !
-    ! -- allocate ratecncex
-    call mem_allocate(this%ratecncin, this%maxbound, 'RATECNCIN', this%memoryPath)
-    call mem_allocate(this%ratecncout, this%maxbound, 'RATECNCOUT', &
+    ! -- allocate ratesdvex
+    call mem_allocate(this%ratesdvin, this%maxbound, 'RATESDVIN', this%memoryPath)
+    call mem_allocate(this%ratesdvout, this%maxbound, 'RATESDVOUT', &
                       this%memoryPath)
     do i = 1, this%maxbound
-      this%ratecncin(i) = DZERO
-      this%ratecncout(i) = DZERO
+      this%ratesdvin(i) = DZERO
+      this%ratesdvout(i) = DZERO
     end do
     !
     ! -- Return
     return
-  end subroutine cnc_allocate_arrays
+  end subroutine sdv_allocate_arrays
 
   !> @brief Constant concentration/temperature read and prepare (rp) routine
   !<
-  subroutine cnc_rp(this)
+  subroutine sdv_rp(this)
     use SimModule, only: store_error
     use InputOutputModule, only: lowcase
     implicit none
-    class(TspCncType), intent(inout) :: this
+    class(TspSdvType), intent(inout) :: this
     integer(I4B) :: i, node, ibd, ierr
     character(len=30) :: nodestr
     character(len=LENVARNAME) :: dvtype
     !
-    ! -- Reset previous CNCs to active cell
+    ! -- Reset previous CNCs (or CNTs) to active cell
     do i = 1, this%nbound
       node = this%nodelist(i)
       this%ibound(node) = this%ibcnum
@@ -165,16 +169,16 @@ contains
     !
     ! -- Return
     return
-  end subroutine cnc_rp
+  end subroutine sdv_rp
 
   !> @brief Constant concentration/temperature package advance routine
   !!
   !! Add package connections to matrix
   !<
-  subroutine cnc_ad(this)
+  subroutine sdv_ad(this)
     ! -- modules
     ! -- dummy
-    class(TspCncType) :: this
+    class(TspSdvType) :: this
     ! -- local
     integer(I4B) :: i, node
     real(DP) :: cb
@@ -198,24 +202,25 @@ contains
     !
     ! -- Return
     return
-  end subroutine cnc_ad
+  end subroutine sdv_ad
 
   !> @brief Check constant concentration/temperature boundary condition data
   !<
-  subroutine cnc_ck(this)
+  subroutine sdv_ck(this)
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, count_errors, store_error_unit
     ! -- dummy
-    class(TspCncType), intent(inout) :: this
+    class(TspSdvType), intent(inout) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg
     character(len=30) :: nodestr
     integer(I4B) :: i
     integer(I4B) :: node
     ! -- formats
-    character(len=*), parameter :: fmtcncerr = &
-      &"('CNC boundary ',i0,' conc (',g0,') is less than zero for cell', a)"
+    character(len=*), parameter :: fmtsdverr = &
+      &"('Specified dependent variable (SDV) boundary ',i0, &
+      &' conc (',g0,') is less than zero for cell', a)"
     !
     ! -- check stress period data
     do i = 1, this%nbound
@@ -223,28 +228,28 @@ contains
       ! -- accumulate errors
       if (this%bound(1, i) < DZERO) then
         call this%dis%noder_to_string(node, nodestr)
-        write (errmsg, fmt=fmtcncerr) i, this%bound(1, i), trim(nodestr)
+        write (errmsg, fmt=fmtsdverr) i, this%bound(1, i), trim(nodestr)
         call store_error(errmsg)
       end if
     end do
     !
-    ! -- write summary of cnc package error messages
+    ! -- write summary of SDV package error messages
     if (count_errors() > 0) then
       call this%parser%StoreErrorUnit()
     end if
     !
     ! -- Return
     return
-  end subroutine cnc_ck
+  end subroutine sdv_ck
 
   !> @brief Override bnd_fc and do nothing
   !!
   !! For constant concentration/temperature boundary type, the call to bnd_fc
   !! needs to be overwritten to prevent logic found therein from being applied
   !<
-  subroutine cnc_fc(this, rhs, ia, idxglo, matrix_sln)
+  subroutine sdv_fc(this, rhs, ia, idxglo, matrix_sln)
     ! -- dummy
-    class(TspCncType) :: this
+    class(TspSdvType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
     integer(I4B), dimension(:), intent(in) :: ia
     integer(I4B), dimension(:), intent(in) :: idxglo
@@ -253,17 +258,17 @@ contains
     !
     ! -- Return
     return
-  end subroutine cnc_fc
+  end subroutine sdv_fc
 
   !> @brief Calculate flow associated with constant concentration/temperature
   !! boundary
   !!
   !! This method overrides bnd_cq()
   !<
-  subroutine cnc_cq(this, x, flowja, iadv)
+  subroutine sdv_cq(this, x, flowja, iadv)
     ! -- modules
     ! -- dummy
-    class(TspCncType), intent(inout) :: this
+    class(TspSdvType), intent(inout) :: this
     real(DP), dimension(:), intent(in) :: x
     real(DP), dimension(:), contiguous, intent(inout) :: flowja
     integer(I4B), optional, intent(in) :: iadv
@@ -306,15 +311,15 @@ contains
           end if
         end do
         !
-        ! -- For CNC, store total flow in rhs so it is available for other
+        ! -- For SDV, store total flow in rhs so it is available for other
         !    calculations
         this%rhs(i) = -rate
         this%hcof(i) = DZERO
         !
         ! -- Save simulated value to simvals array.
         this%simvals(i) = rate
-        this%ratecncin(i) = ratein
-        this%ratecncout(i) = rateout
+        this%ratesdvin(i) = ratein
+        this%ratesdvout(i) = rateout
         flowja(idiag) = flowja(idiag) + rate
         !
       end do
@@ -323,16 +328,16 @@ contains
     !
     ! -- Return
     return
-  end subroutine cnc_cq
+  end subroutine sdv_cq
 
   !> @brief Add package ratin/ratout to model budget
   !<
-  subroutine cnc_bd(this, model_budget)
+  subroutine sdv_bd(this, model_budget)
     ! -- modules
     use TdisModule, only: delt
     use BudgetModule, only: BudgetType, rate_accumulator
     ! -- dummy
-    class(TspCncType) :: this
+    class(TspSdvType) :: this
     type(BudgetType), intent(inout) :: model_budget
     ! -- local
     real(DP) :: ratin
@@ -341,35 +346,35 @@ contains
     integer(I4B) :: isuppress_output
     !
     isuppress_output = 0
-    call rate_accumulator(this%ratecncin(1:this%nbound), ratin, dum)
-    call rate_accumulator(this%ratecncout(1:this%nbound), ratout, dum)
+    call rate_accumulator(this%ratesdvin(1:this%nbound), ratin, dum)
+    call rate_accumulator(this%ratesdvout(1:this%nbound), ratout, dum)
     call model_budget%addentry(ratin, ratout, delt, this%text, &
                                isuppress_output, this%packName)
     !
     ! -- Return
     return
-  end subroutine cnc_bd
+  end subroutine sdv_bd
 
   !> @brief Deallocate memory
   !!
   !!  Method to deallocate memory for the package.
   !<
-  subroutine cnc_da(this)
+  subroutine sdv_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
-    class(TspCncType) :: this
+    class(TspSdvType) :: this
     !
     ! -- Deallocate parent package
     call this%BndType%bnd_da()
     !
     ! -- arrays
-    call mem_deallocate(this%ratecncin)
-    call mem_deallocate(this%ratecncout)
+    call mem_deallocate(this%ratesdvin)
+    call mem_deallocate(this%ratesdvout)
     !
     ! -- Return
     return
-  end subroutine cnc_da
+  end subroutine sdv_da
 
   !> @brief Define labels used in list file
   !!
@@ -378,7 +383,7 @@ contains
   !<
   subroutine define_listlabel(this)
     ! -- dummy
-    class(TspCncType), intent(inout) :: this
+    class(TspSdvType), intent(inout) :: this
     !
     ! -- create the header list label
     this%listlabel = trim(this%filtyp)//' NO.'
@@ -405,47 +410,48 @@ contains
   !> @brief Procedure related to observation processing
   !!
   !! This routine:
-  !!   - returns true because the CNC package supports observations,
+  !!   - returns true because the SDV package supports observations,
   !!   - overrides packagetype%_obs_supported()
-  logical function cnc_obs_supported(this)
+  logical function sdv_obs_supported(this)
     ! -- dummy
-    class(TspCncType) :: this
+    class(TspSdvType) :: this
     !
-    cnc_obs_supported = .true.
+    sdv_obs_supported = .true.
     !
     ! -- Return
     return
-  end function cnc_obs_supported
+  end function sdv_obs_supported
 
   !> @brief Procedure related to observation processing
   !!
   !! This routine:
   !!   - defines observations
-  !!   - stores observation types supported by the CNC package,
+  !!   - stores observation types supported by either of the SDV packages 
+  !!     (CNC or CNT),
   !!   - overrides BndType%bnd_df_obs
   !<
-  subroutine cnc_df_obs(this)
+  subroutine sdv_df_obs(this)
     ! -- dummy
-    class(TspCncType) :: this
+    class(TspSdvType) :: this
     ! -- local
     integer(I4B) :: indx
     !
-    call this%obs%StoreObsType('cnc', .true., indx)
+    call this%obs%StoreObsType(this%filtyp, .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
     !
     ! -- Return
     return
-  end subroutine cnc_df_obs
+  end subroutine sdv_df_obs
 
   !> @brief Procedure related to time series
   !!
   !! Assign tsLink%Text appropriately for all time series in use by package.
-  !! In CNC package, variable CONCENTRATION or TEMPERATURE can be controlled
+  !! In SDV package, variable CONCENTRATION or TEMPERATURE can be controlled
   !! by time series.
   !<
-  subroutine cnc_rp_ts(this)
+  subroutine sdv_rp_ts(this)
     ! -- dummy
-    class(TspCncType), intent(inout) :: this
+    class(TspSdvType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i, nlinks
     type(TimeSeriesLinkType), pointer :: tslink => null()
@@ -463,6 +469,6 @@ contains
     !
     ! -- Return
     return
-  end subroutine cnc_rp_ts
+  end subroutine sdv_rp_ts
 
-end module TspCncModule
+end module TspSdvModule

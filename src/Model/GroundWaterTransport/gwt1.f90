@@ -30,6 +30,7 @@ module GwtModule
   character(len=LENVARNAME), parameter :: dvt = 'CONCENTRATION   ' !< dependent variable type, varies based on model type
   character(len=LENVARNAME), parameter :: dvu = 'MASS            ' !< dependent variable unit of measure, either "mass" or "energy"
   character(len=LENVARNAME), parameter :: dvua = 'M               ' !< abbreviation of the dependent variable unit of measure, either "M" or "E"
+  character(len=LENFTYPE), parameter :: sdvtype = 'CNC' !< establish type of specified dependent variable, either constant concentration (CNC) or constant temperature (CNT)
 
   type, extends(TransportModelType) :: GwtModelType
 
@@ -761,7 +762,7 @@ contains
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error
-    use TspCncModule, only: cnc_create
+    use TspSdvModule, only: sdv_create
     use GwtSrcModule, only: src_create
     use GwtIstModule, only: ist_create
     use GwtLktModule, only: lkt_create
@@ -786,8 +787,8 @@ contains
     ! -- This part creates the package object
     select case (filtyp)
     case ('CNC6')
-      call cnc_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                      pakname, dvt)
+      call sdv_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname, dvt, sdvtype)
     case ('SRC6')
       call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
     case ('LKT6')

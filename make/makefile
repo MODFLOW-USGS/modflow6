@@ -1,40 +1,40 @@
-# makefile created by pymake (version 1.2.9.dev0) for the 'mf6' executable.
+# makefile created by pymake (version 1.2.7) for the 'mf6' executable.
 
 
 include ./makedefaults
 
 # Define the source file directories
 SOURCEDIR1=../src
-SOURCEDIR2=../src/Model
-SOURCEDIR3=../src/Model/TransportModel
-SOURCEDIR4=../src/Model/GroundWaterFlow
-SOURCEDIR5=../src/Model/Geometry
-SOURCEDIR6=../src/Model/ModelUtilities
-SOURCEDIR7=../src/Model/GroundWaterTransport
-SOURCEDIR8=../src/Model/Connection
-SOURCEDIR9=../src/Distributed
-SOURCEDIR10=../src/Utilities
-SOURCEDIR11=../src/Utilities/Idm
-SOURCEDIR12=../src/Utilities/Idm/mf6blockfile
-SOURCEDIR13=../src/Utilities/Idm/selector
-SOURCEDIR14=../src/Utilities/Vector
-SOURCEDIR15=../src/Utilities/Matrix
-SOURCEDIR16=../src/Utilities/Observation
-SOURCEDIR17=../src/Utilities/ArrayRead
-SOURCEDIR18=../src/Utilities/OutputControl
-SOURCEDIR19=../src/Utilities/Libraries
-SOURCEDIR20=../src/Utilities/Libraries/blas
-SOURCEDIR21=../src/Utilities/Libraries/rcm
-SOURCEDIR22=../src/Utilities/Libraries/sparsekit
-SOURCEDIR23=../src/Utilities/Libraries/sparskit2
-SOURCEDIR24=../src/Utilities/Libraries/daglib
-SOURCEDIR25=../src/Utilities/Memory
-SOURCEDIR26=../src/Utilities/TimeSeries
-SOURCEDIR27=../src/Timing
-SOURCEDIR28=../src/Solution
-SOURCEDIR29=../src/Solution/PETSc
-SOURCEDIR30=../src/Solution/LinearMethods
-SOURCEDIR31=../src/Exchange
+SOURCEDIR2=../src/Distributed
+SOURCEDIR3=../src/Exchange
+SOURCEDIR4=../src/Model
+SOURCEDIR5=../src/Model/Connection
+SOURCEDIR6=../src/Model/Geometry
+SOURCEDIR7=../src/Model/GroundWaterFlow
+SOURCEDIR8=../src/Model/GroundWaterTransport
+SOURCEDIR9=../src/Model/ModelUtilities
+SOURCEDIR10=../src/Model/TransportModel
+SOURCEDIR11=../src/Solution
+SOURCEDIR12=../src/Solution/LinearMethods
+SOURCEDIR13=../src/Solution/PETSc
+SOURCEDIR14=../src/Timing
+SOURCEDIR15=../src/Utilities
+SOURCEDIR16=../src/Utilities/ArrayRead
+SOURCEDIR17=../src/Utilities/Idm
+SOURCEDIR18=../src/Utilities/Idm/mf6blockfile
+SOURCEDIR19=../src/Utilities/Idm/selector
+SOURCEDIR20=../src/Utilities/Libraries
+SOURCEDIR21=../src/Utilities/Libraries/blas
+SOURCEDIR22=../src/Utilities/Libraries/daglib
+SOURCEDIR23=../src/Utilities/Libraries/rcm
+SOURCEDIR24=../src/Utilities/Libraries/sparsekit
+SOURCEDIR25=../src/Utilities/Libraries/sparskit2
+SOURCEDIR26=../src/Utilities/Matrix
+SOURCEDIR27=../src/Utilities/Memory
+SOURCEDIR28=../src/Utilities/Observation
+SOURCEDIR29=../src/Utilities/OutputControl
+SOURCEDIR30=../src/Utilities/TimeSeries
+SOURCEDIR31=../src/Utilities/Vector
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -251,7 +251,7 @@ $(OBJDIR)/VirtualExchange.o \
 $(OBJDIR)/GridSorting.o \
 $(OBJDIR)/DisConnExchange.o \
 $(OBJDIR)/CsrUtils.o \
-$(OBJDIR)/tsp1cnc1.o \
+$(OBJDIR)/tsp1sdv1.o \
 $(OBJDIR)/tsp1.o \
 $(OBJDIR)/gwt1uzt1.o \
 $(OBJDIR)/gwt1src1.o \
