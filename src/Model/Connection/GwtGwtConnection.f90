@@ -28,11 +28,9 @@ module GwtGwtConnectionModule
   !<
   type, public, extends(SpatialModelConnectionType) :: GwtGwtConnectionType
 
-    type(GwtModelType), pointer :: gwtModel => null() !< the model for which this connection exists
-    type(GwtExchangeType), pointer :: gwtExchange => null() !< the primary exchange, cast to GWT-GWT
-    logical(LGP) :: exchangeIsOwned !< there are two connections (in serial) for an exchange,
-                                    !! one of them needs to manage/own the exchange (e.g. clean up)
-    type(GwtInterfaceModelType), pointer :: gwtInterfaceModel => null() !< the interface model
+    class(GwtModelType), pointer :: gwtModel => null() !< the model for which this connection exists
+    class(GwtExchangeType), pointer :: gwtExchange => null() !< the primary exchange, cast to GWT-GWT
+    class(GwtInterfaceModelType), pointer :: gwtInterfaceModel => null() !< the interface model
     integer(I4B), pointer :: iIfaceAdvScheme => null() !< the advection scheme at the interface:
                                                        !! 0 = upstream, 1 = central, 2 = TVD
     integer(I4B), pointer :: iIfaceXt3d => null() !< XT3D in the interface DSP package: 0 = no, 1 = lhs, 2 = rhs
@@ -57,10 +55,8 @@ module GwtGwtConnectionModule
 
     procedure :: exg_ar => gwtgwtcon_ar
     procedure :: exg_df => gwtgwtcon_df
-    procedure :: exg_ac => gwtgwtcon_ac
     procedure :: exg_rp => gwtgwtcon_rp
     procedure :: exg_ad => gwtgwtcon_ad
-    procedure :: exg_cf => gwtgwtcon_cf
     procedure :: exg_fc => gwtgwtcon_fc
     procedure :: exg_da => gwtgwtcon_da
     procedure :: exg_cq => gwtgwtcon_cq
@@ -100,9 +96,13 @@ contains
     objPtr => gwtEx
     this%gwtExchange => CastAsGwtExchange(objPtr)
 
-    this%exchangeIsOwned = associated(model, gwtEx%model1)
+    if (gwtEx%v_model1%is_local .and. gwtEx%v_model2%is_local) then
+      this%owns_exchange = associated(model, gwtEx%model1)
+    else
+      this%owns_exchange = .true.
+    end if
 
-    if (this%exchangeIsOwned) then
+    if (gwtEx%v_model1 == model) then
       write (name, '(a,i0)') 'GWTCON1_', gwtEx%id
     else
       write (name, '(a,i0)') 'GWTCON2_', gwtEx%id
@@ -125,7 +125,7 @@ contains
     call this%allocate_scalars()
     this%typename = 'GWT-GWT'
     this%iIfaceAdvScheme = 0
-    this%iIfaceXt3d = 1
+    this%iIfaceXt3d = 0
     this%exgflowSign = 1
 
     allocate (this%gwtInterfaceModel)
@@ -155,8 +155,13 @@ contains
     ! has been read at this point)
     this%iIfaceAdvScheme = this%gwtExchange%iAdvScheme
 
-    ! determine xt3d setting on interface
+    ! determine xt3d setting on interface- (TODO_MJR: default is on?)
     this%iIfaceXt3d = this%gwtExchange%ixt3d
+
+    ! turn off when off in the owning model
+    if (this%gwtModel%indsp > 0) then
+      this%iIfaceXt3d = this%gwtModel%dsp%ixt3d
+    end if
 
     ! determine the required size of the interface model grid
     call this%setGridExtent()
@@ -166,7 +171,7 @@ contains
 
     ! we have to 'catch up' and create the interface model
     ! here, then the remainder of this routine will be define
-    if (this%exchangeIsOwned) then
+    if (this%prim_exchange%v_model1 == this%owner) then
       write (imName, '(a,i0)') 'GWTIM1_', this%gwtExchange%id
     else
       write (imName, '(a,i0)') 'GWTIM2_', this%gwtExchange%id
@@ -287,7 +292,7 @@ contains
     call this%gwtInterfaceModel%model_ar()
 
     ! AR the movers and obs through the exchange
-    if (this%exchangeIsOwned) then
+    if (this%owns_exchange) then
       !cdl implement this when MVT is ready
       !cdl if (this%gwtExchange%inmvt > 0) then
       !cdl   call this%gwtExchange%mvt%mvt_ar()
@@ -308,6 +313,10 @@ contains
 
     ! base validation, the spatial/geometry part
     call this%SpatialModelConnectionType%validateConnection()
+
+    ! we cannot validate this (yet) in parallel mode
+    if (.not. this%gwtExchange%v_model1%is_local) return
+    if (.not. this%gwtExchange%v_model2%is_local) return
 
     ! GWT related matters
     if ((this%gwtExchange%gwtmodel1%inadv > 0 .and. &
@@ -338,35 +347,11 @@ contains
 
   end subroutine validateConnection
 
-  !> @brief add connections to the global system for
-  !< this connection
-  subroutine gwtgwtcon_ac(this, sparse)
-    class(GwtGwtConnectionType) :: this !< this connection
-    type(sparsematrix), intent(inout) :: sparse !< sparse matrix to store the connections
-    ! local
-    integer(I4B) :: ic, iglo, jglo
-    type(GlobalCellType) :: boundaryCell, connectedCell
-
-    ! connections to other models
-    do ic = 1, this%ig_builder%nrOfBoundaryCells
-      boundaryCell = this%ig_builder%boundaryCells(ic)%cell
-      connectedCell = this%ig_builder%connectedCells(ic)%cell
-      iglo = boundaryCell%index + boundaryCell%v_model%moffset%get()
-      jglo = connectedCell%index + connectedCell%v_model%moffset%get()
-      call sparse%addconnection(iglo, jglo, 1)
-      call sparse%addconnection(jglo, iglo, 1)
-    end do
-
-    ! and internal connections
-    call this%spatialcon_ac(sparse)
-
-  end subroutine gwtgwtcon_ac
-
   subroutine gwtgwtcon_rp(this)
     class(GwtGwtConnectionType) :: this !< the connection
 
     ! Call exchange rp routines
-    if (this%exchangeIsOwned) then
+    if (this%owns_exchange) then
       call this%gwtExchange%exg_rp()
     end if
 
@@ -380,27 +365,11 @@ contains
     ! recalculate dispersion ellipse
     if (this%gwtInterfaceModel%indsp > 0) call this%gwtInterfaceModel%dsp%dsp_ad()
 
-    if (this%exchangeIsOwned) then
+    if (this%owns_exchange) then
       call this%gwtExchange%exg_ad()
     end if
 
   end subroutine gwtgwtcon_ad
-
-  subroutine gwtgwtcon_cf(this, kiter)
-    class(GwtGwtConnectionType) :: this !< the connection
-    integer(I4B), intent(in) :: kiter !< the iteration counter
-    ! local
-    integer(I4B) :: i
-
-    ! reset interface system
-    call this%matrix%zero_entries()
-    do i = 1, this%neq
-      this%rhs(i) = 0.0_DP
-    end do
-
-    call this%gwtInterfaceModel%model_cf(kiter)
-
-  end subroutine gwtgwtcon_cf
 
   subroutine gwtgwtcon_fc(this, kiter, matrix_sln, rhs_sln, inwtflag)
     class(GwtGwtConnectionType) :: this !< the connection
@@ -409,37 +378,16 @@ contains
     real(DP), dimension(:), intent(inout) :: rhs_sln !< global right-hand-side
     integer(I4B), optional, intent(in) :: inwtflag !< newton-raphson flag
     ! local
-    integer(I4B) :: n, nglo
-    integer(I4B) :: icol_start, icol_end, ipos
-    class(MatrixBaseType), pointer :: matrix_base
 
-    matrix_base => this%matrix
-    call this%gwtInterfaceModel%model_fc(kiter, matrix_base, inwtflag)
+    call this%SpatialModelConnectionType%spatialcon_fc( &
+      kiter, matrix_sln, rhs_sln, inwtflag)
 
-    ! map back to solution matrix
-    do n = 1, this%neq
-      ! We only need the coefficients for our own model
-      ! (i.e. rows in the matrix that belong to this%owner):
-      if (.not. this%ig_builder%idxToGlobal(n)%v_model == this%owner) then
-        cycle
+    ! FC the movers through the exchange
+    if (this%owns_exchange) then
+      if (this%gwtExchange%inmvt > 0) then
+        call this%gwtExchange%mvt%mvt_fc(this%gwtExchange%gwtmodel1%x, &
+                                         this%gwtExchange%gwtmodel2%x)
       end if
-
-      nglo = this%ig_builder%idxToGlobal(n)%index + &
-             this%ig_builder%idxToGlobal(n)%v_model%moffset%get()
-      rhs_sln(nglo) = rhs_sln(nglo) + this%rhs(n)
-
-      icol_start = this%matrix%get_first_col_pos(n)
-      icol_end = this%matrix%get_last_col_pos(n)
-      do ipos = icol_start, icol_end
-        call matrix_sln%add_value_pos(this%ipos_to_sln(ipos), &
-                                      this%matrix%get_value_pos(ipos))
-      end do
-    end do
-
-    ! FC the movers through the exchange; we can call
-    ! exg_fc() directly because it only handles mover terms (unlike in GwfExchange%exg_fc)
-    if (this%exchangeIsOwned) then
-      call this%gwtExchange%exg_fc(kiter, matrix_sln, rhs_sln, inwtflag)
     end if
 
   end subroutine gwtgwtcon_fc
@@ -465,7 +413,7 @@ contains
     class(GwtExchangeType), pointer :: gwtEx
     type(IndexMapSgnType), pointer :: map
 
-    if (this%exchangeIsOwned) then
+    if (this%owns_exchange) then
       gwtEx => this%gwtExchange
       map => this%interface_map%exchange_maps(this%interface_map%prim_exg_idx)
 
@@ -488,7 +436,7 @@ contains
 
     ! call exchange budget routine, also calls bd
     ! for movers.
-    if (this%exchangeIsOwned) then
+    if (this%owns_exchange) then
       call this%gwtExchange%exg_bd(icnvg, isuppress_output, isolnid)
     end if
 
@@ -500,7 +448,7 @@ contains
     ! Call exg_ot() here as it handles all output processing
     ! based on gwtExchange%simvals(:), which was correctly
     ! filled from gwtgwtcon
-    if (this%exchangeIsOwned) then
+    if (this%owns_exchange) then
       call this%gwtExchange%exg_ot()
     end if
 
@@ -532,7 +480,7 @@ contains
     end if
 
     ! we need to deallocate the exchange we own:
-    if (this%exchangeIsOwned) then
+    if (this%owns_exchange) then
       call this%gwtExchange%exg_da()
     end if
 

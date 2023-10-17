@@ -226,6 +226,9 @@ contains
     call PCSetType(pc, this%pc_type, ierr)
     CHKERRQ(ierr)
 
+    call PCSetFromOptions(pc, ierr)
+    CHKERRQ(ierr)
+
     call PCSetUp(pc, ierr)
     CHKERRQ(ierr)
 

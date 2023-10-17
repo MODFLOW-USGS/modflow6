@@ -17,6 +17,10 @@ ex = ["adv01a_gwtgwt", "adv01b_gwtgwt", "adv01c_gwtgwt"]
 scheme = ["upstream", "central", "tvd"]
 gdelr = 1.0
 
+# solver settings
+nouter, ninner = 100, 300
+hclose, rclose, relax = 1e-6, 1e-6, 1.0
+
 
 def get_gwf_model(sim, gwfname, gwfpath, modelshape, chdspd=None, welspd=None):
     nlay, nrow, ncol, xshift, yshift = modelshape
@@ -197,10 +201,6 @@ def build_model(idx, dir):
     tdis = flopy.mf6.ModflowTdis(
         sim, time_units="DAYS", nper=nper, perioddata=tdis_rc, pname="sim.tdis"
     )
-
-    # solver settings
-    nouter, ninner = 100, 300
-    hclose, rclose, relax = 1e-6, 1e-6, 1.0
 
     # grid information
     nlay, nrow, ncol = 1, 1, 50

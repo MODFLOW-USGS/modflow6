@@ -388,7 +388,7 @@ contains
                 ' to ', trim(gwfEx%name), ' for GWT model ', &
                 trim(gwtModel%name)
               gwfExIdx = iex
-              if (gwtConn%exchangeIsOwned) then
+              if (gwtConn%owns_exchange) then
                 gwtConn%gwtExchange%gwfsimvals => gwfEx%simvals
                 call mem_checkin(gwtConn%gwtExchange%gwfsimvals, &
                                  'GWFSIMVALS', gwtConn%gwtExchange%memoryPath, &
@@ -397,7 +397,7 @@ contains
 
               !cdl link up mvt to mvr
               if (gwfEx%inmvr > 0) then
-                if (gwtConn%exchangeIsOwned) then
+                if (gwtConn%owns_exchange) then
                   !cdl todo: check and make sure gwtEx has mvt active
                   call gwtConn%gwtExchange%mvt%set_pointer_mvrbudobj( &
                     gwfEx%mvr%budobj)
@@ -436,7 +436,7 @@ contains
     class(GwfGwfConnectionType), pointer :: gwfConn !< GWF connection
 
     !gwtConn%exgflowja => gwfConn%exgflowja
-    if (gwtConn%exchangeIsOwned) then
+    if (gwtConn%owns_exchange) then
       gwtConn%gwtExchange%gwfsimvals => gwfConn%gwfExchange%simvals
       call mem_checkin(gwtConn%gwtExchange%gwfsimvals, &
                        'GWFSIMVALS', gwtConn%gwtExchange%memoryPath, &
@@ -445,7 +445,7 @@ contains
 
     !cdl link up mvt to mvr
     if (gwfConn%gwfExchange%inmvr > 0) then
-      if (gwtConn%exchangeIsOwned) then
+      if (gwtConn%owns_exchange) then
         !cdl todo: check and make sure gwtEx has mvt active
         call gwtConn%gwtExchange%mvt%set_pointer_mvrbudobj( &
           gwfConn%gwfExchange%mvr%budobj)
@@ -460,10 +460,10 @@ contains
     gwtConn%gwtInterfaceModel%fmi%flows_from_file = .false.
 
     ! set concentration pointer for buoyancy
-    call gwfConn%gwfInterfaceModel%buy%set_concentration_pointer( &
-      gwtConn%gwtModel%name, &
-      gwtConn%conc, &
-      gwtConn%icbound)
+    ! call gwfConn%gwfInterfaceModel%buy%set_concentration_pointer( &
+    !   gwtConn%gwtModel%name, &
+    !   gwtConn%conc, &
+    !   gwtConn%icbound)
 
   end subroutine link_connections
 
