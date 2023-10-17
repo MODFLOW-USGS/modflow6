@@ -24,7 +24,6 @@ module GwtGwtExchangeModule
   use GwtModule, only: GwtModelType
   use TspMvtModule, only: TspMvtType
   use VirtualModelModule, only: VirtualModelType
-  use GwtMvtModule, only: GwtMvtType
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
   use SimModule, only: count_errors, store_error, &
