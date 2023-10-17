@@ -3,33 +3,29 @@
 #SBATCH --job-name=update-mf6-module
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
+#SBATCH --account=impd
 #SBATCH --time=00:05:00
 #SBATCH --output=slurm-%j.out
+#SBATCH --chdir=../
 
-# variables
+set -euxo pipefail
+
+# this script expects cwd to be mf6 project root, with env vars...
+# - MF6_PREV_VERSION, mf6 modulefile version to use as a template
+# - MODULES_PATH, the base path of the module system
+MF6_PROJ_ROOT=$(pwd)
 MF6_BINDIR="$MF6_PROJ_ROOT/bin"
-MF6_VERSION=$(cat "$MF6_PROJ_ROOT/version.txt")
-MF6_MODULEFILE_PATH="$MODULES_PATH/modulefiles/modflow/$MF6_VERSION"
+MF6_LOCAL_VERSION=$(cat "$MF6_PROJ_ROOT/version.txt")
+
+# ...and assumes the module system is laid out as follows
+MF6_MODULEFILE_PATH="$MODULES_PATH/modulefiles/modflow/$MF6_LOCAL_VERSION"
 MF6_MODULES_PATH="$MODULES_PATH/apps/modflow"
-MF6_MODULE_PATH="$MF6_MODULES_PATH/$MF6_VERSION"
+MF6_MODULE_PATH="$MF6_MODULES_PATH/$MF6_LOCAL_VERSION"
 
-if [ -d "$MF6_MODULE_PATH" ]; then
-  echo "Updating module modflow/$MF6_VERSION"
-else
-  echo "Creating module modflow/$MF6_VERSION"
-
-  mkdir -p "$MF6_MODULE_PATH/$INTEL_VERSION/bin"
-  mkdir -p "$MF6_MODULE_PATH/$INTEL_VERSION/lib"
-  echo "Created bin/lib dirs in $MF6_MODULE_PATH/$INTEL_VERSION/"
-
-  rsync "$MODULES_PATH/modulefiles/modflow/6.4.2" "$MF6_MODULEFILE_PATH"
-  sed -i -e "s/6.4.2/$MF6_VERSION/g" "$MF6_MODULEFILE_PATH"
-  echo "Created module file"
+# create mf6 modulefile if needed (the build script
+# will have already created the module directory)
+if [ ! -f "$MF6_MODULEFILE_PATH" ]; then
+  rsync "$MODULES_PATH/modulefiles/modflow/$MF6_PREV_VERSION" "$MF6_MODULEFILE_PATH"
+  sed -i -e "s/$MF6_PREV_VERSION/$MF6_LOCAL_VERSION/g" "$MF6_MODULEFILE_PATH"
+  echo "Created module file: $MF6_MODULEFILE_PATH"
 fi
-
-# copy binaries from build dir
-rsync "$MF6_BINDIR/mf6" "$MF6_MODULE_PATH/$INTEL_VERSION/bin/"
-rsync "$MF6_BINDIR/zbud6" "$MF6_MODULE_PATH/$INTEL_VERSION/bin/"
-rsync "$MF6_BINDIR/libmf6.so" "$MF6_MODULE_PATH/$INTEL_VERSION/lib/"
-echo "Copied binaries to $MF6_MODULE_PATH/$INTEL_VERSION lib/bin dirs"
-

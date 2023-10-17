@@ -8,6 +8,8 @@
 #SBATCH --output=slurm-%j.out
 #SBATCH --chdir=../
 
+set -euxo pipefail
+
 # load appropriate modules
 module switch PrgEnv-${PE_ENV,,} PrgEnv-intel
 module load petsc/3.15.5
@@ -16,7 +18,7 @@ export PKG_CONFIG_PATH=$CRAY_MPICH_DIR/lib/pkgconfig:$PKG_CONFIG_PATH
 # list loaded modules
 module list
 
-# define the root directory
+# define the project root (expected to be cwd)
 MODFLOW6ROOT=$(pwd)
 
 # define the version
