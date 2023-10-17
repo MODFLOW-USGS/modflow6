@@ -255,7 +255,7 @@ contains
     return
   end subroutine cnc_fc
 
-  !> @brief Calculate flow associated with constant concentration/tempearture
+  !> @brief Calculate flow associated with constant concentration/temperature
   !! boundary
   !!
   !! This method overrides bnd_cq()
