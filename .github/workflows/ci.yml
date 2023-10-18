@@ -15,6 +15,7 @@ on:
       - 'doc/**.py'
       - 'doc/**.sh'
       - 'doc/**.xlsx'
+      - '.hpc/**'
   pull_request:
     branches:
       - master
@@ -33,6 +34,7 @@ on:
       - 'doc/**.py'
       - 'doc/**.sh'
       - 'doc/**.xlsx'
+      - '.hpc/**'
 jobs:
   lint:
     name: Check format
