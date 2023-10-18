@@ -214,7 +214,7 @@ jobs:
         uses: awvwgk/setup-fortran@v1
         with:
           compiler: gcc
-          version: ${{ runner.os == 'Windows' && 12 || env.GCC }}
+          version: ${{ env.GCC }}
 
       - name: Setup Micromamba
         uses: mamba-org/setup-micromamba@v1
