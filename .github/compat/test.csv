@@ -5,5 +5,5 @@ macos-11,&check;,&check;,&check;,&check;,&check;,&check;,&check;,&check;,,&check
 macos-12,&check;,&check;,&check;,&check;,,,,&check;,,&check;,&check;,&check;,&check;,&check;,&check;,,,,,,,,,,,,
 ubuntu-20.04,&check;,&check;,,,&check;,&check;,&check;,,,,,,,,,,,,,,,,,,,,
 ubuntu-22.04,&check;,&check;,&check;,&check;,,,&check;,,,,,,,&check;,&check;,,,,,,,,,,,,
-windows-2019,,,,,,,,,,,,,,,&check;,,,,,,,,,,,,
-windows-2022,&check;,&check;,&check;,,,,&check;,,,,,,,&check;,&check;,,,,,,,,,,,,
+windows-2019,&check;,&check;,&check;,&check;,,,,,,,,,,,&check;,,,,,,,,,,,,
+windows-2022,&check;,&check;,&check;,&check;,,,&check;,,,,,,,&check;,&check;,,,,,,,,,,,,

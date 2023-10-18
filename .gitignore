@@ -133,3 +133,6 @@ unittests/
 
 **/__pycache__
 **/.benchmarks
+
+# compiler compatibility markdown tables
+.github/compat/*.md

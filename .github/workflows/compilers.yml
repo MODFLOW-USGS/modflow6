@@ -46,10 +46,16 @@ jobs:
           - {os: macos-12, compiler: gcc, version: 11}
           - {os: macos-12, compiler: gcc, version: 12}
           - {os: macos-12, compiler: gcc, version: 13}
+          - {os: windows-2019, compiler: gcc, version: 9}
+          - {os: windows-2019, compiler: gcc, version: 10}
+          - {os: windows-2019, compiler: gcc, version: 11}
+          - {os: windows-2019, compiler: gcc, version: 12}
+          - {os: windows-2019, compiler: gcc, version: 13}
           - {os: windows-2022, compiler: gcc, version: 9}
           - {os: windows-2022, compiler: gcc, version: 10}
           - {os: windows-2022, compiler: gcc, version: 11}
           - {os: windows-2022, compiler: gcc, version: 12}
+          - {os: windows-2022, compiler: gcc, version: 13}
           # ifx
           - {os: ubuntu-20.04, compiler: intel, version: 2023.2}
           - {os: ubuntu-20.04, compiler: intel, version: 2023.1}
@@ -354,5 +360,5 @@ jobs:
           git push -u origin "$updated_branch"
 
           # open PR
-          cat <(echo '### Compile') <(echo) .github/compat/comp.md <(echo) <(echo '### Autotest') <(echo) .github/compat/test.md > compat.md
+          cat <(echo '### Compile') <(echo) .github/compat/comp.md <(echo) <(echo '### Test') <(echo) .github/compat/test.md > compat.md
           gh pr create -B "$default_branch" -H "$updated_branch" --title "Update compile/test compatibility tables" --body-file compat.md
