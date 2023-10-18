@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # combinations from https://github.com/awvwgk/setup-fortran#runner-compatibility
+        # combinations from https://github.com/fortran-lang/setup-fortran#runner-compatibility
         include:
           # gfortran
           - {os: ubuntu-20.04, compiler: gcc, version: 7}
@@ -161,7 +161,7 @@ jobs:
           path: modflow6-examples
     
       - name: Setup ${{ matrix.compiler }} ${{ matrix.version }}
-        uses: awvwgk/setup-fortran@v1
+        uses: fortran-lang/setup-fortran@v1
         with:
           compiler: ${{ matrix.compiler}}
           version: ${{ matrix.version }}
