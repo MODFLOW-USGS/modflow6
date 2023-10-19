@@ -67,7 +67,7 @@ jobs:
         run: pytest -v build_mfio_tex.py
 
       - name: Setup GNU Fortran ${{ env.GCC_V }}
-        uses: awvwgk/setup-fortran@main
+        uses: fortran-lang/setup-fortran@v1
         with:
           compiler: gcc
           version: ${{ env.GCC_V }}
