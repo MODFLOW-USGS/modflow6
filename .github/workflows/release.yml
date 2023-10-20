@@ -13,6 +13,16 @@ on:
         description: 'Branch to release from.'
         required: true
         type: string
+      compiler_toolchain:
+        description: 'Compiler toolchain to use. For supported options see https://github.com/MODFLOW-USGS/modflow6/blob/develop/DEVELOPER.md#compiler-compatibility.'
+        required: false
+        type: string
+        default: 'intel-classic'
+      compiler_version:
+        description: 'Compiler version to use. For supported options see https://github.com/MODFLOW-USGS/modflow6/blob/develop/DEVELOPER.md#compiler-compatibility.'
+        required: false
+        type: string
+        default: '2021.7'
       developmode:
         description: 'Build binaries in develop mode. If false, IDEVELOPMODE is set to 0.'
         required: false
@@ -84,8 +94,11 @@ jobs:
             bash
             powershell
 
-      - name: Setup Intel Fortran
-        uses: modflowpy/install-intelfortran-action@v1
+      - name: Setup ${{ inputs.compiler_toolchain }} ${{ inputs.compiler_version }}
+        uses: fortran-lang/setup-fortran@v1
+        with:
+          compiler: ${{ inputs.compiler_toolchain }}
+          version: ${{ inputs.compiler_version }}
 
       - name: Set version number
         id: set_version
@@ -278,8 +291,11 @@ jobs:
           cache-downloads: true
           cache-environment: true
 
-      - name: Setup Intel Fortran
-        uses: modflowpy/install-intelfortran-action@v1
+      - name: Setup ${{ inputs.compiler_toolchain }} ${{ inputs.compiler_version }}
+        uses: fortran-lang/setup-fortran@v1
+        with:
+          compiler: ${{ inputs.compiler_toolchain }}
+          version: ${{ inputs.compiler_version }}
 
       - name: Update version
         id: update_version
@@ -429,8 +445,11 @@ jobs:
             bash
             powershell
 
-      - name: Setup Intel Fortran
-        uses: modflowpy/install-intelfortran-action@v1
+      - name: Setup ${{ inputs.compiler_toolchain }} ${{ inputs.compiler_version }}
+        uses: fortran-lang/setup-fortran@v1
+        with:
+          compiler: ${{ inputs.compiler_toolchain }}
+          version: ${{ inputs.compiler_version }}
       
       - name: Update version
         id: update_version
