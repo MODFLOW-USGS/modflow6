@@ -14,13 +14,15 @@ on:
         required: true
         type: string
       compiler_toolchain:
-        description: 'Compiler toolchain to use. See awvwgk/setup-fortran for supported options.'
-        required: true
+        description: 'Compiler toolchain to use. For supported options see https://github.com/MODFLOW-USGS/modflow6/blob/develop/DEVELOPER.md#compiler-compatibility.'
+        required: false
         type: string
+        default: 'intel-classic'
       compiler_version:
-        description: 'Compiler version to use. See awvwgk/setup-fortran for supported versions of each toolchain.'
-        required: true
+        description: 'Compiler version to use. For supported options see https://github.com/MODFLOW-USGS/modflow6/blob/develop/DEVELOPER.md#compiler-compatibility.'
+        required: false
         type: string
+        default: '2021.7'
       developmode:
         description: 'Build binaries in develop mode. If false, IDEVELOPMODE is set to 0.'
         required: false
@@ -93,7 +95,7 @@ jobs:
             powershell
 
       - name: Setup ${{ inputs.compiler_toolchain }} ${{ inputs.compiler_version }}
-        uses: awvwgk/setup-fortran@main
+        uses: fortran-lang/setup-fortran@v1
         with:
           compiler: ${{ inputs.compiler_toolchain }}
           version: ${{ inputs.compiler_version }}
@@ -290,7 +292,7 @@ jobs:
           cache-environment: true
 
       - name: Setup ${{ inputs.compiler_toolchain }} ${{ inputs.compiler_version }}
-        uses: awvwgk/setup-fortran@main
+        uses: fortran-lang/setup-fortran@v1
         with:
           compiler: ${{ inputs.compiler_toolchain }}
           version: ${{ inputs.compiler_version }}
@@ -444,7 +446,7 @@ jobs:
             powershell
 
       - name: Setup ${{ inputs.compiler_toolchain }} ${{ inputs.compiler_version }}
-        uses: awvwgk/setup-fortran@main
+        uses: fortran-lang/setup-fortran@v1
         with:
           compiler: ${{ inputs.compiler_toolchain }}
           version: ${{ inputs.compiler_version }}

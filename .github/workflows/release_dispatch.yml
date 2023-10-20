@@ -25,15 +25,15 @@ on:
         required: true
         type: string
       compiler_toolchain:
-        description: 'Compiler toolchain to use. Options are gcc, intel, or intel-classic, as supported by awvwgk/setup-fortran.'
-        required: true
+        description: 'Compiler toolchain to use. For supported options see https://github.com/MODFLOW-USGS/modflow6/blob/develop/DEVELOPER.md#compiler-compatibility.'
+        required: false
         type: string
-        default: intel-classic
+        default: 'intel-classic'
       compiler_version:
-        description: 'Compiler version to use. See awvwgk/setup-fortran for supported versions of each toolchain.'
-        required: true
+        description: 'Compiler version to use. For supported options see https://github.com/MODFLOW-USGS/modflow6/blob/develop/DEVELOPER.md#compiler-compatibility.'
+        required: false
         type: string
-        default: 2021.7.0
+        default: '2021.7'
       commit_version:
         description: 'Commit version numbers back to the develop branch. Not considered if reset is false.'
         required: false
@@ -46,7 +46,7 @@ on:
         default: false
       run_tests:
         description: 'Run tests after building binaries.'
-        required: true
+        required: false
         type: boolean
         default: true
       version:
@@ -100,7 +100,7 @@ jobs:
           elif [[ ("${{ github.event_name }}" == "push") && ("${{ github.ref_name }}" != "master") ]]; then
             # if release was triggered by pushing a release branch, use the default toolchain and version
             compiler_toolchain="intel-classic"
-            compiler_version="2021.7.0"
+            compiler_version="2021.7"
             echo "using default compiler toolchain $compiler_toolchain version $compiler_version"
           else
             # otherwise exit with an error
