@@ -4,7 +4,7 @@ module DefinedMacros
   use ConstantsModule, only: OSUNDEF, OSLINUX, OSMAC, OSWIN
   implicit none
   private
-  public :: get_os, is_pro, using_petsc
+  public :: get_os, is_extended, using_petsc, using_netcdf
 contains
 
   !> @brief Get operating system
@@ -48,33 +48,47 @@ contains
     return
   end function get_os
 
-  !> @brief Determine if this is the professional version
+  !> @brief Determine if this is the extended version
   !!
   !! Function to get a logical indicating if this is the
-  !! professional version of MODFLOW.
+  !! extended version of MODFLOW.
   !!
-  !! @return      ispro                pro version logical
+  !! @return      isextended           extended version logical
   !<
-  function is_pro() result(ispro)
+  function is_extended() result(isextended)
+    ! -- return variables
+    logical(LGP) :: isextended !< extended version logical
     ! -- local variables
-    logical(LGP) :: ispro !< pro version logical
+    logical(LGP) :: ispetsc
+    logical(LGP) :: isnetcdf
+    !
+    ! -- initialize isextended
+    isextended = .FALSE.
     !
     ! -- check if using petsc
-    ispro = using_petsc()
+    ispetsc = using_petsc()
+    !
+    ! -- check if using netcf
+    isnetcdf = using_netcdf()
+    !
+    !
+    if (ispetsc .EQV. .TRUE. .OR. isnetcdf .EQV. .TRUE.) then
+      isextended = .TRUE.
+    end if
     !
     ! return
     return
-  end function is_pro
+  end function is_extended
 
   !> @brief Determine if using petsc
   !!
   !! Function to get a logical indicating if petsc is
   !! being used.
   !!
-  !! @return      petscavail                petsc used logical
+  !! @return      petscused                petsc used logical
   !<
   function using_petsc() result(petscused)
-    ! -- local variables
+    ! -- return variable
     logical(LGP) :: petscused !< petsc used logical
     !
     ! -- initialize petscavail
@@ -88,5 +102,28 @@ contains
     ! return
     return
   end function using_petsc
+
+  !> @brief Determine if using netcdf
+  !!
+  !! Function to get a logical indicating if netcdf is
+  !! being used.
+  !!
+  !! @return      netcdfused                netcdf used logical
+  !<
+  function using_netcdf() result(netcdfused)
+    ! -- return variable
+    logical(LGP) :: netcdfused !< netcdf used logical
+    !
+    ! -- initialize petscavail
+    netcdfused = .FALSE.
+    !
+    ! -- set operating system variables
+#ifdef __WITH_NETCDF__
+    netcdfused = .TRUE.
+#endif
+    !
+    ! return
+    return
+  end function using_netcdf
 
 end module DefinedMacros
