@@ -173,7 +173,7 @@ if is_extended_build
   else
     # For CI testing only; Windows not yet supported
     nc_dir = meson.project_source_root() / '..' / 'ncf' / 'netcdf-fortran-4.6.1' / 'fortran'
-    netcdf = fc.find_library('netcdff', dirs: [ nc_dir ], required : true, static : false)
+    netcdf = fc.find_library('netcdff', dirs: [ nc_dir ], required : false, static : false)
     #nc_incdir = include_directories([ nc_dir ])
   endif
   if netcdf.found()
