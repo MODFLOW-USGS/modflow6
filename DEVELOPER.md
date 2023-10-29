@@ -191,7 +191,7 @@ These are each described briefly below. The Conda `environment.yml` contains a n
 
 ##### `fprettify`
 
-[`fprettify`](https://github.com/pseewald/fprettify) can be used to format Fortran source code and in combination with the [MODFLOW 6 fprettify configuration](https://github.com/MODFLOW-USGS/modflow6/blob/develop/distribution/.fprettify.yaml) establishes a contribution standard for properly formatted MODFLOW 6 Fortran source. This tool can be installed with `pip` or `conda` and used from the command line or integrated with a [VSCode](https://github.com/MODFLOW-USGS/modflow6/blob/develop/.vscode/README.md) or Visual Studio development environment. The `fprettify` package is included in the Conda environment in `environment.yml`. See [contribution guidelines](https://github.com/MODFLOW-USGS/modflow6/blob/develop/CONTRIBUTING.md) for additional information.
+[`fprettify`](https://github.com/pseewald/fprettify) can be used to format Fortran source code and in combination with the [MODFLOW 6 fprettify configuration](.fprettify.yaml) establishes a contribution standard for properly formatted MODFLOW 6 Fortran source. This tool can be installed with `pip` or `conda` and used from the command line or integrated with a [VSCode](.vscode/README.md) or Visual Studio development environment. The `fprettify` package is included in the Conda environment in `environment.yml`. See [contribution guidelines](CONTRIBUTING.md) for additional information.
 
 ##### `mfpymake`
 

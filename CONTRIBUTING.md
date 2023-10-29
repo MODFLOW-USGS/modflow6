@@ -141,7 +141,7 @@ To ensure consistency throughout the source code, keep these rules in mind as yo
 ## <a name="format"></a> Format Rules
 
 Fortran souce code format rules are met by running the
-[fprettify formatter](https://github.com/pseewald/fprettify) while specifying the [MODFLOW 6 fprettify configuration](https://github.com/MODFLOW-USGS/modflow6/blob/develop/distribution/.fprettify.yaml). `fprettify` is included in the Conda `environment.yml` and can be run on the command line or integrated into a [VSCode](https://github.com/MODFLOW-USGS/modflow6/blob/develop/.vscode/README.md) or Visual Studio environment.
+[fprettify formatter](https://github.com/pseewald/fprettify) while specifying the [MODFLOW 6 fprettify configuration](.fprettify.yaml). `fprettify` is included in the Conda `environment.yml` and can be run on the command line or integrated into a [VSCode](.vscode/README.md) or Visual Studio environment.
 
 The configuration file reflects the current minimum standard for Fortran source
 formatting.  The main goal, however, is consistent and readable Fortran source code and as such pay particular attention to consistency within and across files. As the formatting tool may at times shift code in unexpected ways, check for formatting consistency after running.
@@ -234,9 +234,3 @@ The body should include the motivation for the change and contrast this with pre
 The footer should contain any information about **Breaking Changes** and is also the place to reference GitHub issues that this commit **Closes**.
 
 **Breaking Changes** should start with the word `BREAKING CHANGE:` with a space or two newlines. The rest of the commit message is then used for this.
-
-
-[coc]: https://github.com/MODFLOW-USGS/modflow6/blob/develop/CODE_OF_CONDUCT.md
-[dev-doc]: https://github.com/MODFLOW-USGS/modflow6/blob/develop/DEVELOPER.md
-[github]: https://github.com/MODFLOW-USGS/modflow6
-[stackoverflow]: http://stackoverflow.com/questions/tagged/modflow6
