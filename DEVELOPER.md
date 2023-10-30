@@ -97,8 +97,16 @@ GNU Fortran can be installed on all three major platforms.
 
 ##### macOS
 
-- [Homebrew](https://brew.sh/): `brew install gcc`
-- [MacPorts](https://www.macports.org/): `sudo port install gcc10`
+- [Homebrew](https://brew.sh/): `brew install gcc@13`
+- [MacPorts](https://www.macports.org/): `sudo port install gcc13`
+
+**Note:** Xcode 15 includes a new linker implementation which breaks GNU Fortran compatibility. A workaround is to set `LDFLAGS` to use the classic linker, for instance:
+
+```shell
+export LDFLAGS="$LDFLAGS -Wl,-ld_classic"
+```
+
+See [this ticket](https://github.com/mesonbuild/meson/issues/12282) on the Meson repository for more information.
 
 ##### Windows
 
