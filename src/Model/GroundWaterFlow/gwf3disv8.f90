@@ -4,7 +4,7 @@ module GwfDisvModule
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENVARNAME, DZERO, DONE, &
                              DHALF
-  use BaseDisModule, only: DisBaseType
+  use BaseDisModule, only: DisBaseType, dis_da
   use InputOutputModule, only: get_node, URWORD, ulasav, ulaprufw, ubdsv1, &
                                ubdsv06
   use SimModule, only: count_errors, store_error, store_error_unit, &
@@ -62,8 +62,8 @@ module GwfDisvModule
     procedure :: grid_finalize
     procedure :: connect
     procedure :: write_grb
-    procedure :: allocate_scalars
-    procedure :: allocate_arrays
+    procedure :: allocate_scalars => allocate_scalars_disv
+    procedure :: allocate_arrays => allocate_arrays_disv
     procedure :: get_cell2d_area
     !
     procedure :: read_int_array
@@ -180,7 +180,7 @@ contains
                            context=idm_context)
     !
     ! -- DisBaseType deallocate
-    call this%DisBaseType%dis_da()
+    call dis_da(this)
     !
     ! -- Deallocate scalars
     call mem_deallocate(this%nlay)
@@ -1234,7 +1234,7 @@ contains
 
   end subroutine get_dis_type
 
-  subroutine allocate_scalars(this, name_model, input_mempath)
+  subroutine allocate_scalars_disv(this, name_model, input_mempath)
 ! ******************************************************************************
 ! allocate_scalars -- Allocate and initialize scalars
 ! ******************************************************************************
@@ -1250,7 +1250,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate parent scalars
-    call this%DisBaseType%allocate_scalars(name_model, input_mempath)
+    call this%allocate_scalars_default(name_model, input_mempath)
     !
     ! -- Allocate
     call mem_allocate(this%nlay, 'NLAY', this%memoryPath)
@@ -1265,9 +1265,9 @@ contains
     !
     ! -- Return
     return
-  end subroutine allocate_scalars
+  end subroutine allocate_scalars_disv
 
-  subroutine allocate_arrays(this)
+  subroutine allocate_arrays_disv(this)
 ! ******************************************************************************
 ! allocate_arrays -- Allocate arrays
 ! ******************************************************************************
@@ -1281,7 +1281,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate arrays in DisBaseType (mshape, top, bot, area)
-    call this%DisBaseType%allocate_arrays()
+    call this%allocate_arrays_default()
     !
     ! -- Allocate arrays for GwfDisvType
     if (this%nodes < this%nodesuser) then
@@ -1298,7 +1298,7 @@ contains
     !
     ! -- Return
     return
-  end subroutine allocate_arrays
+  end subroutine allocate_arrays_disv
 
   function get_cell2d_area(this, icell2d) result(area)
 ! ******************************************************************************
