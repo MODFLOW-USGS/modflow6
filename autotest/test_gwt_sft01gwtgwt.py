@@ -60,7 +60,6 @@ across_model_mvt_on = True and across_model_mvr_on
 
 
 def build_model(idx, ws):
-
     name = "mf6sim"
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
@@ -180,8 +179,7 @@ def build_model(idx, ws):
         mvrspd = [
             ["flow1", "sfr-1", ncol - 1, "flow2", "sfr-1", 0, "FACTOR", 1.00]
         ]
-        mvr = flopy.mf6.ModflowMvr(
-            sim,
+        gwfgwf.mvr.initialize(
             modelnames=True,
             maxmvr=maxmvr,
             print_flows=True,
@@ -212,14 +210,13 @@ def build_model(idx, ws):
 
     # simulation GWT-GWT Mover
     if across_model_mvt_on:
-        mvt = flopy.mf6.modflow.ModflowGwtmvt(sim, filename=mvt_filerecord)
+        gwtgwt.mvt.initialize(filename=mvt_filerecord)
 
     regression = None
     return sim, regression
 
 
 def build_gwfgwt_combo(sim, gwfname, gwtname, icombo):
-
     # create gwf model
     gwf = flopy.mf6.ModflowGwf(sim, modelname=gwfname)
 
