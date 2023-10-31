@@ -316,6 +316,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
             exfunc=eval_results,
             idxsim=idx,
             make_comparison=False,
+            run_comparison=True,
         ),
         ws,
     )
