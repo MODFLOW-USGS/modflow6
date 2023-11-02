@@ -48,6 +48,7 @@ class TestSimulation:
         api_func=None,
         mf6_regression=False,
         make_comparison=True,
+        run_comparison=None,
         simpath=None,
     ):
         msg = sfmt.format("Initializing test", name)
@@ -65,6 +66,10 @@ class TestSimulation:
         self.api_func = api_func
         self.mf6_regression = mf6_regression
         self.make_comparison = make_comparison
+        if run_comparison is None:
+            self.run_comparison = make_comparison
+        else:
+            self.run_comparison = run_comparison
         self.action = None
 
         # set htol for comparisons
@@ -165,7 +170,7 @@ class TestSimulation:
 
     def setup_comparison(self, src, dst, testModel=True):
         # evaluate if comparison should be made
-        if not self.make_comparison:
+        if not self.run_comparison:
             return
 
         # adjust htol if it is smaller than IMS outer_dvclose

@@ -48,6 +48,7 @@ module NumericalModelModule
     procedure :: model_mc
     procedure :: model_rp
     procedure :: model_ad
+    procedure :: model_reset
     procedure :: model_cf
     procedure :: model_fc
     procedure :: model_ptcchk
@@ -105,6 +106,20 @@ contains
   subroutine model_ad(this)
     class(NumericalModelType) :: this
   end subroutine model_ad
+
+  subroutine model_reset(this)
+    use BndModule, only: BndType, GetBndFromList
+    class(NumericalModelType) :: this
+    ! local
+    class(BndType), pointer :: packobj
+    integer(I4B) :: ip
+
+    do ip = 1, this%bndlist%Count()
+      packobj => GetBndFromList(this%bndlist, ip)
+      call packobj%bnd_reset()
+    end do
+
+  end subroutine model_reset
 
   subroutine model_cf(this, kiter)
     class(NumericalModelType) :: this

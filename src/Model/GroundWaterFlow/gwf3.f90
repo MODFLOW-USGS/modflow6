@@ -792,7 +792,7 @@ contains
     !    head solution.
     do ip = 1, this%bndlist%Count()
       packobj => GetBndFromList(this%bndlist, ip)
-      call packobj%bnd_cf(reset_mover=.false.)
+      call packobj%bnd_cf()
       if (this%inbuy > 0) call this%buy%buy_cf_bnd(packobj, this%x)
       call packobj%bnd_cq(this%x, this%flowja)
     end do

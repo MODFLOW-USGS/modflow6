@@ -7,7 +7,7 @@
 module VersionModule
   ! -- module imports
   use KindModule
-  use DefinedMacros, only: is_pro, using_petsc
+  use DefinedMacros, only: is_extended, using_petsc, using_netcdf
   use ConstantsModule, only: LENBIGLINE, LENHUGELINE, DZERO
   use SimVariablesModule, only: istdout
   use GenericUtilitiesModule, only: write_centered, write_message, sim_message
@@ -61,6 +61,16 @@ module VersionModule
   &'      and the PETSc Development Team All rights reserved.',/,&
   &'      (https://petsc.org/release/)',/&
   &)"
+  character(len=*), parameter :: NETCDFLICENSE = &
+  "(&
+  &'The following library is used in this USGS product:',//,&
+  &'    NetCDF, network Common Data Form software library',/,&
+  &'      Copyright (c) 1993-2014 University Corporation for Atmospheric',/,&
+  &'      Research/Unidata. Redistribution and use in source and binary',/,&
+  &'      forms, with or without modification, are permitted provided that',/,&
+  &'      the conditions in the NetCDF copyright are met',/,&
+  &'        (https://www.unidata.ucar.edu/software/netcdf/copyright.html)',/&
+  &)"
   ! -- disclaimer must be appropriate for version (release or release candidate)
   character(len=*), parameter :: FMTDISCLAIMER = &
     "(/,&
@@ -99,8 +109,8 @@ contains
     logical(LGP) :: wsc
     !
     ! -- set pro string
-    if (is_pro()) then
-      write (cheader, '(3a)') 'MODFLOW', MFVNAM, ' PROFESSIONAL'
+    if (is_extended()) then
+      write (cheader, '(3a)') 'MODFLOW', MFVNAM, ' EXTENDED'
     else
       write (cheader, '(2a)') 'MODFLOW', MFVNAM
     end if
@@ -177,6 +187,15 @@ contains
       write (iout, FMTLICENSE)
     else
       call sim_message('', fmt=FMTLICENSE)
+    end if
+    !
+    ! -- write NetCDF license
+    if (using_netcdf()) then
+      if (present(iout)) then
+        write (iout, NETCDFLICENSE)
+      else
+        call sim_message('', fmt=NETCDFLICENSE)
+      end if
     end if
     !
     ! -- write PETSc license

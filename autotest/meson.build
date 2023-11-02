@@ -2,6 +2,7 @@ test_drive = dependency('test-drive', required : false)
 if test_drive.found()
   tests = [
     'ArrayHandlers',
+    'GeomUtil'
   ]
 
   test_srcs = files(

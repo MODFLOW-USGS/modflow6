@@ -105,14 +105,17 @@ elif fc_id == 'intel-llvm-cl'
 endif
 
 # parallel build options
-is_parallel_build = get_option('parallel')
+is_extended_build = get_option('extended')
 is_cray = get_option('cray')
 is_mpich = get_option('mpich')
 if is_cray and build_machine.system() != 'linux'
   error('cray=true only supported on linux systems')
 endif
-if is_cray and not is_parallel_build
-  is_parallel_build = true
+if not is_extended_build
+ is_extended_build = get_option('parallel')
+endif
+if is_cray and not is_extended_build
+  is_extended_build = true
   is_mpich = true
 endif
 if is_mpich
@@ -122,14 +125,14 @@ if is_mpich
     mpifort_name = 'mpichfort'
   endif
 endif
-message('Parallel build:', is_parallel_build)
+message('Extended build:', is_extended_build)
 
 # windows options for petsc
 petsc_dir = meson.project_source_root() / '..' /'petsc-3.18.5'
 petsc_arch = 'arch-ci-mswin-intel-modflow6'
 
 # on windows only with intel
-if build_machine.system() == 'windows' and is_parallel_build
+if build_machine.system() == 'windows' and is_extended_build
   if fc_id != 'intel-cl'
     error('Parallel build on Windows only with intel compiler. Terminating...')
   endif
@@ -139,8 +142,8 @@ endif
 dependencies = [ ]
 extra_cmp_args = [ ]
 
-# load petsc and mpi dependencies/libraries
-if is_parallel_build
+# load petsc, mpi, and netcdf dependencies/libraries
+if is_extended_build
   # find petsc
   if build_machine.system() != 'windows'
     petsc = dependency('PETSc', required : true)
@@ -163,7 +166,23 @@ if is_parallel_build
   endif
   extra_cmp_args += [ '-D__WITH_MPI__']
   with_mpi = true
+
+  # find netcdf
+  if build_machine.system() != 'windows'
+    netcdf = dependency('netcdf', language : 'fortran', required : false)
+  else
+    # For CI testing only; Windows not yet supported
+    nc_dir = meson.project_source_root() / '..' / 'ncf' / 'netcdf-fortran-4.6.1' / 'fortran'
+    netcdf = fc.find_library('netcdff', dirs: [ nc_dir ], required : false, static : false)
+    #nc_incdir = include_directories([ nc_dir ])
+  endif
+  if netcdf.found()
+    with_netcdf = true
+    extra_cmp_args += [ '-D__WITH_NETCDF__' ]
+    dependencies += [ netcdf ]    
+  endif
 else
+  with_netcdf = false
   with_petsc = false
   with_mpi = false
 endif
@@ -173,7 +192,7 @@ compile_args += extra_cmp_args
 add_project_arguments(fc.get_supported_arguments(compile_args), language: 'fortran')
 add_project_link_arguments(fc.get_supported_arguments(link_args), language: 'fortran')
 
-if is_parallel_build and build_machine.system() == 'windows'
+if is_extended_build and build_machine.system() == 'windows'
   message('Compiling PETSc Fortran modules')
   petsc_incdir = include_directories([petsc_dir / 'include', petsc_compiled / 'include'])
   petsc_src = petsc_dir / 'src'

@@ -316,10 +316,9 @@ contains
     !!  added to the coefficient matrix and right-hand side vector.
     !!
   !<
-  subroutine wel_cf(this, reset_mover)
+  subroutine wel_cf(this)
     ! -- dummy variables
     class(WelType) :: this !< WelType object
-    logical, intent(in), optional :: reset_mover !< boolean for resetting mover
     ! -- local variables
     integer(I4B) :: i, node, ict
     real(DP) :: qmult
@@ -327,17 +326,9 @@ contains
     real(DP) :: tp
     real(DP) :: bt
     real(DP) :: thick
-    logical :: lrm
     !
     ! -- Return if no wells
     if (this%nbound == 0) return
-    !
-    ! -- pakmvrobj cf
-    lrm = .true.
-    if (present(reset_mover)) lrm = reset_mover
-    if (this%imover == 1 .and. lrm) then
-      call this%pakmvrobj%cf()
-    end if
     !
     ! -- Calculate hcof and rhs for each well entry
     do i = 1, this%nbound

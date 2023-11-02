@@ -5,10 +5,11 @@ channels:
   - defaults
 
 dependencies:
-  - python<=3.11
+  - python
   - appdirs
   - filelock
   - fprettify
+  - fortran-language-server
   - jupytext
   - matplotlib
   - meson>=1.1.0

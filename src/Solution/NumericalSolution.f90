@@ -1904,7 +1904,6 @@ contains
     class(NumericalSolutionType) :: this
     integer(I4B), intent(in) :: kiter
     integer(I4B), intent(in) :: inewton
-
     ! local
     integer(I4B) :: im, ic
     class(NumericalModelType), pointer :: mp
@@ -1912,6 +1911,12 @@ contains
     !
     ! -- Set amat and rhs to zero
     call this%sln_reset()
+
+    ! reset models
+    do im = 1, this%modellist%Count()
+      mp => GetNumericalModelFromList(this%modellist, im)
+      call mp%model_reset()
+    end do
 
     ! synchronize for CF
     call this%synchronize(STG_BFR_EXG_CF, this%synchronize_ctx)

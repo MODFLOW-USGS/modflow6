@@ -382,7 +382,7 @@ contains
     return
   end subroutine drn_ck
 
-  subroutine drn_cf(this, reset_mover)
+  subroutine drn_cf(this)
 ! ******************************************************************************
 ! drn_cf -- Formulate the HCOF and RHS terms
 ! Subroutine: (1) skip if no drains
@@ -393,25 +393,16 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(DrnType) :: this
-    logical, intent(in), optional :: reset_mover
     ! -- local
     integer(I4B) :: i
     integer(I4B) :: node
     real(DP) :: cdrn
     real(DP) :: drnbot
     real(DP) :: fact
-    logical :: lrm
 ! ------------------------------------------------------------------------------
     !
     ! -- Return if no drains
     if (this%nbound == 0) return
-    !
-    ! -- pakmvrobj cf
-    lrm = .true.
-    if (present(reset_mover)) lrm = reset_mover
-    if (this%imover == 1 .and. lrm) then
-      call this%pakmvrobj%cf()
-    end if
     !
     ! -- Calculate hcof and rhs for each drn entry
     do i = 1, this%nbound

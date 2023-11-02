@@ -15,6 +15,7 @@ on:
       - 'doc/**.py'
       - 'doc/**.sh'
       - 'doc/**.xlsx'
+      - '.hpc/**'
   pull_request:
     branches:
       - master
@@ -33,6 +34,7 @@ on:
       - 'doc/**.py'
       - 'doc/**.sh'
       - 'doc/**.xlsx'
+      - '.hpc/**'
 jobs:
   lint:
     name: Check format
@@ -73,7 +75,7 @@ jobs:
         uses: actions/checkout@v4
       
       - name: Setup gfortran ${{ env.GCC_V }}
-        uses: awvwgk/setup-fortran@main
+        uses: fortran-lang/setup-fortran@v1
         with:
           compiler: gcc
           version: ${{ env.GCC_V }}
@@ -106,7 +108,7 @@ jobs:
         shell: bash -l {0}
     env:
       FC: gfortran
-      GCC_V: 13
+      GCC: 13
     steps:
       - name: Checkout modflow6
         uses: actions/checkout@v4
@@ -119,11 +121,11 @@ jobs:
           repository: fortran-lang/test-drive
           path: test-drive
 
-      - name: Setup GNU Fortran ${{ env.GCC_V }}
-        uses: awvwgk/setup-fortran@main
+      - name: Setup GNU Fortran ${{ env.GCC }}
+        uses: fortran-lang/setup-fortran@v1
         with:
           compiler: gcc
-          version: ${{ env.GCC_V }}
+          version: ${{ env.GCC }}
 
       - name: Setup Micromamba
         uses: mamba-org/setup-micromamba@v1
@@ -174,7 +176,7 @@ jobs:
           fi
 
   test_gfortran:
-    name: Test (gfortran)
+    name: Test gnu fortran
     needs:
       - lint
       - build
@@ -183,33 +185,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # compatible combinations from https://github.com/awvwgk/setup-fortran#runner-compatibility
-        include:
-          - {os: ubuntu-20.04, gcc_v: 7, test: false}
-          - {os: ubuntu-20.04, gcc_v: 8, test: false}
-          - {os: ubuntu-20.04, gcc_v: 9, test: false}
-          - {os: ubuntu-20.04, gcc_v: 10, test: false}
-          - {os: ubuntu-20.04, gcc_v: 11, test: false}
-          - {os: ubuntu-22.04, gcc_v: 12, test: false}
-          # only run autotests on latest version on each platform
-          - {os: ubuntu-22.04, gcc_v: 13, test: true}
-          - {os: macos-12, gcc_v: 7, test: false}
-          - {os: macos-12, gcc_v: 8, test: false}
-          - {os: macos-12, gcc_v: 9, test: false}
-          - {os: macos-12, gcc_v: 10, test: false}
-          - {os: macos-12, gcc_v: 11, test: false}
-          - {os: macos-12, gcc_v: 12, test: false}
-          - {os: macos-12, gcc_v: 13, test: true}
-          - {os: windows-2022, gcc_v: 9, test: false}
-          - {os: windows-2022, gcc_v: 10, test: false}
-          - {os: windows-2022, gcc_v: 11, test: false}
-          - {os: windows-2022, gcc_v: 12, test: true}
-          
+        os: [ ubuntu-22.04, macos-12, windows-2022 ]
     defaults:
       run:
         shell: bash -l {0}
     env:
       FC: gfortran
+      GCC: 13
     steps:
       - name: Checkout modflow6
         uses: actions/checkout@v4
@@ -228,11 +210,11 @@ jobs:
           repository: MODFLOW-USGS/modflow6-examples
           path: modflow6-examples
       
-      - name: Setup GNU Fortran ${{ matrix.gcc_v }}
-        uses: awvwgk/setup-fortran@main
+      - name: Setup GNU Fortran ${{ env.GCC }}
+        uses: fortran-lang/setup-fortran@v1
         with:
           compiler: gcc
-          version: ${{ matrix.gcc_v }}
+          version: ${{ env.GCC }}
 
       - name: Setup Micromamba
         uses: mamba-org/setup-micromamba@v1
@@ -260,12 +242,10 @@ jobs:
         run: meson test --verbose --no-rebuild -C builddir
 
       - name: Update flopy
-        if: matrix.test
         working-directory: modflow6/autotest
         run: python update_flopy.py
 
       - name: Get executables
-        if: matrix.test
         working-directory: modflow6/autotest
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -273,7 +253,6 @@ jobs:
           pytest -v --durations 0 get_exes.py
 
       - name: Test modflow6
-        if: matrix.test
         working-directory: modflow6/autotest
         env:
           REPOS_PATH: ${{ github.workspace }}
@@ -285,14 +264,14 @@ jobs:
           fi
       
       - name: Checkout usgslatex
-        if: matrix.test && runner.os == 'Linux'
+        if: runner.os == 'Linux'
         uses: actions/checkout@v4
         with:
           repository: MODFLOW-USGS/usgslatex
           path: usgslatex
 
       - name: Install TeX Live
-        if: matrix.test && runner.os == 'Linux'
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt install texlive-science \
@@ -302,19 +281,18 @@ jobs:
             texlive-fonts-extra
 
       - name: Install USGS LaTeX style files and Univers font
-        if: matrix.test && runner.os == 'Linux'
+        if: runner.os == 'Linux'
         working-directory: usgslatex/usgsLaTeX
         run: sudo ./install.sh --all-users
      
       - name: Test distribution scripts
-        if: matrix.test
         working-directory: modflow6/distribution
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: pytest -v --durations 0
 
   test_intel_fortran:
-    name: Test (Intel)
+    name: Test intel fortran
     needs:
       - lint
       - build
@@ -324,45 +302,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          ### ifx
-          ## 2022.2.x autotests disabled
-          #  - mf5to6 test_evt: failure to converge
-          #  - mf6 Keating_[disu_]dev: bad head comparison
-          - {os: ubuntu-22.04, compiler: intel, version: 2022.2.1, test: false}
-          - {os: ubuntu-22.04, compiler: intel, version: 2022.2, test: false}
-          ## 2021.1 segfault in meson serial sim test
-          # - {os: ubuntu-22.04, compiler: intel, version: 2022.1, test: false}
-          ## 2022.0 & 2021.[1,2,4] segfault at compile time
-          # - {os: ubuntu-22.04, compiler: intel, version: "2022.0", test: false}
-          # - {os: ubuntu-22.04, compiler: intel, version: 2021.4, test: false}
-          # - {os: ubuntu-22.04, compiler: intel, version: 2021.2, test: false}
-          # - {os: ubuntu-22.04, compiler: intel, version: 2021.1, test: false}
-          ## ifx not yet supported on macOS
-          # - {os: macos-12, compiler: intel, version: 2023.2, test: true}
-          ## 2023.[0,1] fail to compile
-          # - {os: windows-2022, compiler: intel, version: 2023.1, test: false}
-          # - {os: windows-2022, compiler: intel, version: "2023.0", test: false}
-          - {os: windows-2022, compiler: intel, version: 2022.2, test: false}
-          ## 2022.1 fail to link
-          # - {os: windows-2022, compiler: intel, version: 2022.1, test: false}
-
-          ### ifort
-          ## only autotest latest on each platform
-          - {os: ubuntu-22.04, compiler: intel-classic, version: "2021.10", test: false}
-          - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.9, test: false}
-          - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.8, test: false}
-          - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.7, test: true}
-          - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.6, test: false}
-          - {os: macos-12, compiler: intel-classic, version: "2021.10", test: false}
-          - {os: macos-12, compiler: intel-classic, version: 2021.9, test: false}
-          - {os: macos-12, compiler: intel-classic, version: 2021.8, test: false}
-          - {os: macos-12, compiler: intel-classic, version: 2021.7, test: true}
-          - {os: macos-12, compiler: intel-classic, version: 2021.6, test: false}
-          - {os: windows-2022, compiler: intel-classic, version: "2021.10", test: false}
-          - {os: windows-2022, compiler: intel-classic, version: 2021.9, test: false}
-          - {os: windows-2022, compiler: intel-classic, version: 2021.8, test: false}
-          - {os: windows-2022, compiler: intel-classic, version: 2021.7, test: true}
-          - {os: windows-2022, compiler: intel-classic, version: 2021.6, test: false}
+          - {os: ubuntu-22.04, compiler: intel-classic, version: 2021.7}
+          - {os: macos-12, compiler: intel-classic, version: 2021.7}
+          - {os: windows-2022, compiler: intel-classic, version: 2021.7}
 
     defaults:
       run:
@@ -391,7 +333,7 @@ jobs:
           cache-downloads: true
 
       - name: Setup Intel Fortran
-        uses: awvwgk/setup-fortran@main
+        uses: fortran-lang/setup-fortran@v1
         with:
           compiler: ${{ matrix.compiler }}
           version: ${{ matrix.version }}
@@ -416,19 +358,16 @@ jobs:
         run: meson test --verbose --no-rebuild -C builddir
 
       - name: Update flopy
-        if: matrix.test
         working-directory: modflow6/autotest
         run: python update_flopy.py
 
       - name: Get executables
-        if: matrix.test
         working-directory: modflow6/autotest
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: pytest -v --durations 0 get_exes.py
 
       - name: Test programs
-        if: matrix.test
         working-directory: modflow6/autotest
         env:
           REPOS_PATH: ${{ github.workspace }}
@@ -440,7 +379,6 @@ jobs:
           fi
 
       - name: Test scripts
-        if: matrix.test
         working-directory: modflow6/distribution
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -490,7 +428,7 @@ jobs:
           mpi: msmpi
 
       - name: Setup GNU Fortran ${{ env.GCC_V }}
-        uses: awvwgk/setup-fortran@main
+        uses: fortran-lang/setup-fortran@v1
         with:
           compiler: gcc
           version: ${{ env.GCC_V }}

@@ -568,7 +568,7 @@ contains
     return
   end subroutine set_nodesontop
 
-  subroutine evt_cf(this, reset_mover)
+  subroutine evt_cf(this)
 ! ******************************************************************************
 ! evt_cf -- Formulate the HCOF and RHS terms
 ! ******************************************************************************
@@ -577,7 +577,6 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(EvtType) :: this
-    logical, intent(in), optional :: reset_mover
     ! -- local
     integer(I4B) :: i, iseg, node
     integer(I4B) :: idxdepth, idxrate

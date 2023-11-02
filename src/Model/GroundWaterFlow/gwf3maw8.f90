@@ -2279,7 +2279,7 @@ contains
     return
   end subroutine maw_ad
 
-  subroutine maw_cf(this, reset_mover)
+  subroutine maw_cf(this)
     ! ******************************************************************************
     ! maw_cf -- Formulate the HCOF and RHS terms
     ! Subroutine: (1) skip if no multi-aquifer wells
@@ -2290,20 +2290,11 @@ contains
     ! ------------------------------------------------------------------------------
     ! -- dummy
     class(MawType) :: this
-    logical, intent(in), optional :: reset_mover
     ! -- local
-    logical :: lrm
     ! ------------------------------------------------------------------------------
     !
     ! -- Calculate maw conductance and update package RHS and HCOF
     call this%maw_cfupdate()
-    !
-    ! -- pakmvrobj cf
-    lrm = .true.
-    if (present(reset_mover)) lrm = reset_mover
-    if (this%imover == 1 .and. lrm) then
-      call this%pakmvrobj%cf()
-    end if
     !
     ! -- Return
     return
