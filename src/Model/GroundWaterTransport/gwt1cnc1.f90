@@ -66,7 +66,6 @@ contains
     character(len=*), intent(in) :: mempath
     ! -- local
     type(GwtCncType), pointer :: cncobj
-    character(len=LENPACKAGENAME) :: text
     !
     ! -- allocate the object and assign values to object variables
     allocate (cncobj)
