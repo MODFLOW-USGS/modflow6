@@ -39,6 +39,7 @@ module GwtCncModule
     procedure :: allocate_arrays => cnc_allocate_arrays
     procedure :: define_listlabel
     procedure :: bound_value => cnc_bound_value
+    procedure :: conc_mult
     ! -- methods for observations
     procedure, public :: bnd_obs_supported => cnc_obs_supported
     procedure, public :: bnd_df_obs => cnc_df_obs
@@ -92,7 +93,7 @@ contains
     ! -- Store the appropriate label based on the dependent variable
     cncobj%depvartype = depvartype
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_create
 
@@ -128,7 +129,7 @@ contains
                      'TSPVAR', this%input_mempath)
     !
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_allocate_arrays
 
@@ -179,7 +180,7 @@ contains
       call this%write_list()
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_rp
 
@@ -216,7 +217,7 @@ contains
     !    "current" value.
     call this%obs%obs_ad()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_ad
 
@@ -251,14 +252,14 @@ contains
       call store_error_filename(this%input_fname)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_ck
 
   !> @brief Override bnd_fc and do nothing
   !!
   !! For constant concentration/temperature boundary type, the call to bnd_fc
-  !! needs to be overwritten to prevent logic found therein from being applied
+  !! needs to be overwritten to prevent logic found in bnd from being executed
   !<
   subroutine cnc_fc(this, rhs, ia, idxglo, matrix_sln)
     ! -- dummy
@@ -269,7 +270,7 @@ contains
     class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_fc
 
@@ -338,7 +339,7 @@ contains
       !
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_cq
 
@@ -385,7 +386,7 @@ contains
     call mem_deallocate(this%ratecncout)
     call mem_deallocate(this%tspvar, 'TSPVAR', this%memoryPath)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_da
 
@@ -416,7 +417,7 @@ contains
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine define_listlabel
 
@@ -452,7 +453,7 @@ contains
     call this%obs%StoreObsType(this%filtyp, .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_df_obs
 
@@ -483,9 +484,31 @@ contains
       end if
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine cnc_rp_ts
+  
+  !> @brief Apply auxiliary multiplier to specified concentration if 
+  !< appropriate
+  function conc_mult(this, row) result(conc)
+    ! -- modules
+    use ConstantsModule, only: DZERO
+    ! -- dummy variables
+    class(GwtCncType), intent(inout) :: this !< BndExtType object
+    integer(I4B), intent(in) :: row
+    ! -- result
+    real(DP) :: conc
+    !
+    if (this%iauxmultcol > 0) then
+      conc = this%tspvar(row) * this%auxvar(this%iauxmultcol, row)
+    else
+      conc = this%tspvar(row)
+    end if
+    !
+    ! -- Return
+    return
+  end function conc_mult
+
 
   !> @ brief Return a bound value
   !!
@@ -503,7 +526,7 @@ contains
     !
     select case (col)
     case (1)
-      bndval = this%tspvar(row)
+      bndval = this%conc_mult(row)
     case default
       write (errmsg, '(3a)') 'Programming error. ', &
                & adjustl(trim(this%filtyp)), ' bound value requested column '&
