@@ -303,7 +303,7 @@ contains
     return
   end subroutine riv_ck
 
-  subroutine riv_cf(this, reset_mover)
+  subroutine riv_cf(this)
 ! ******************************************************************************
 ! riv_cf -- Formulate the HCOF and RHS terms
 ! Subroutine: (1) skip in no rivs
@@ -314,22 +314,13 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(RivType) :: this
-    logical, intent(in), optional :: reset_mover
     ! -- local
     integer(I4B) :: i, node
     real(DP) :: hriv, criv, rbot
-    logical :: lrm
 ! ------------------------------------------------------------------------------
     !
     ! -- Return if no rivs
     if (this%nbound .eq. 0) return
-    !
-    ! -- pakmvrobj cf
-    lrm = .true.
-    if (present(reset_mover)) lrm = reset_mover
-    if (this%imover == 1 .and. lrm) then
-      call this%pakmvrobj%cf()
-    end if
     !
     ! -- Calculate hcof and rhs for each riv entry
     do i = 1, this%nbound

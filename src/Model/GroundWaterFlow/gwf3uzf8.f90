@@ -1069,7 +1069,7 @@ contains
     return
   end subroutine uzf_ad
 
-  subroutine uzf_cf(this, reset_mover)
+  subroutine uzf_cf(this)
 ! ******************************************************************************
 ! uzf_cf -- Formulate the HCOF and RHS terms
 ! Subroutine: (1) skip if no UZF cells
@@ -1081,10 +1081,8 @@ contains
     ! -- modules
     ! -- dummy
     class(UzfType) :: this
-    logical, intent(in), optional :: reset_mover
     ! -- locals
     integer(I4B) :: n
-    logical :: lrm
 ! ------------------------------------------------------------------------------
     !
     ! -- Return if no UZF cells
@@ -1097,13 +1095,6 @@ contains
       this%rch0(n) = this%rch(n)
       this%gwd0(n) = this%gwd(n)
     end do
-    !
-    ! -- pakmvrobj cf
-    lrm = .true.
-    if (present(reset_mover)) lrm = reset_mover
-    if (this%imover == 1 .and. lrm) then
-      call this%pakmvrobj%cf()
-    end if
     !
     ! -- return
     return

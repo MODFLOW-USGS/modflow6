@@ -369,7 +369,7 @@ contains
     return
   end subroutine set_nodesontop
 
-  subroutine rch_cf(this, reset_mover)
+  subroutine rch_cf(this)
 ! ******************************************************************************
 ! rch_cf -- Formulate the HCOF and RHS terms
 ! Subroutine: (1) skip if no recharge
@@ -380,7 +380,6 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- dummy
     class(rchtype) :: this
-    logical, intent(in), optional :: reset_mover
     ! -- local
     integer(I4B) :: i, node
 ! ------------------------------------------------------------------------------
