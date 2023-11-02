@@ -487,8 +487,8 @@ contains
     ! -- Return
     return
   end subroutine cnc_rp_ts
-  
-  !> @brief Apply auxiliary multiplier to specified concentration if 
+
+  !> @brief Apply auxiliary multiplier to specified concentration if
   !< appropriate
   function conc_mult(this, row) result(conc)
     ! -- modules
@@ -508,7 +508,6 @@ contains
     ! -- Return
     return
   end function conc_mult
-
 
   !> @ brief Return a bound value
   !!
