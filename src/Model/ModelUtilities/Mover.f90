@@ -6,7 +6,7 @@
 !<
 module MvrModule
 
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LENMODELNAME, LINELENGTH, LENBUDTXT, &
                              LENAUXNAME, LENBOUNDNAME, DZERO, DONE, &
                              LENMEMPATH
@@ -33,6 +33,8 @@ module MvrModule
     integer(I4B), pointer :: iRchNrTgt => null() !< receiver reach number
     integer(I4B), pointer :: imvrtype => null() !< mover type (1, 2, 3, 4) corresponds to mvrtypes
     real(DP), pointer :: value => null() !< factor or rate depending on mvrtype
+    logical(LGP) :: is_provider_active = .true.
+    logical(LGP) :: is_receiver_active = .true.
     real(DP) :: qpactual = DZERO !< rate provided to the receiver
     real(DP) :: qavailable = DZERO !< rate available at time of providing
     real(DP), pointer :: qtformvr_ptr => null() !< pointer to total available flow (qtformvr)
@@ -44,7 +46,8 @@ module MvrModule
     procedure :: prepare
     procedure :: echo
     procedure :: advance
-    procedure :: fc
+    procedure :: update_provider
+    procedure :: update_receiver
     procedure :: qrcalc
     procedure :: writeflow
   end type MvrType
@@ -140,36 +143,42 @@ contains
     if (count_errors() > 0) then
       call store_error_unit(inunit)
     end if
-    !
-    ! -- Set pointer to QTOMVR array in the provider boundary package
-    temp_ptr => pakmovers(ipakloc1)%qtomvr
-    if (this%iRchNrSrc < 1 .or. this%iRchNrSrc > size(temp_ptr)) then
-      call store_error('Provider ID < 1 or greater than package size ')
-      write (errmsg, '(a,i0,a,i0)') 'Provider ID = ', this%iRchNrSrc, &
-        '; Package size = ', size(temp_ptr)
-      call store_error(trim(errmsg))
-      call store_error_unit(inunit)
+
+    if (this%is_provider_active) then
+      !
+      ! -- Set pointer to QTOMVR array in the provider boundary package
+      temp_ptr => pakmovers(ipakloc1)%qtomvr
+      if (this%iRchNrSrc < 1 .or. this%iRchNrSrc > size(temp_ptr)) then
+        call store_error('Provider ID < 1 or greater than package size ')
+        write (errmsg, '(a,i0,a,i0)') 'Provider ID = ', this%iRchNrSrc, &
+          '; Package size = ', size(temp_ptr)
+        call store_error(trim(errmsg))
+        call store_error_unit(inunit)
+      end if
+      this%qtomvr_ptr => temp_ptr(this%iRchNrSrc)
+      !
+      ! -- Set pointer to QFORMVR array in the provider boundary package
+      temp_ptr => pakmovers(ipakloc1)%qformvr
+      this%qformvr_ptr => temp_ptr(this%iRchNrSrc)
+      !
+      ! -- Set pointer to QTFORMVR array in the provider boundary package
+      temp_ptr => pakmovers(ipakloc1)%qtformvr
+      this%qtformvr_ptr => temp_ptr(this%iRchNrSrc)
     end if
-    this%qtomvr_ptr => temp_ptr(this%iRchNrSrc)
-    !
-    ! -- Set pointer to QFORMVR array in the provider boundary package
-    temp_ptr => pakmovers(ipakloc1)%qformvr
-    this%qformvr_ptr => temp_ptr(this%iRchNrSrc)
-    !
-    ! -- Set pointer to QTFORMVR array in the provider boundary package
-    temp_ptr => pakmovers(ipakloc1)%qtformvr
-    this%qtformvr_ptr => temp_ptr(this%iRchNrSrc)
-    !
-    ! -- Set pointer to QFROMMVR array in the receiver boundary package
-    temp_ptr => pakmovers(ipakloc2)%qfrommvr
-    if (this%iRchNrTgt < 1 .or. this%iRchNrTgt > size(temp_ptr)) then
-      call store_error('Receiver ID < 1 or greater than package size ')
-      write (errmsg, '(a,i0,a,i0)') 'Receiver ID = ', this%iRchNrTgt, &
-        '; package size = ', size(temp_ptr)
-      call store_error(trim(errmsg))
-      call store_error_unit(inunit)
+
+    if (this%is_receiver_active) then
+      !
+      ! -- Set pointer to QFROMMVR array in the receiver boundary package
+      temp_ptr => pakmovers(ipakloc2)%qfrommvr
+      if (this%iRchNrTgt < 1 .or. this%iRchNrTgt > size(temp_ptr)) then
+        call store_error('Receiver ID < 1 or greater than package size ')
+        write (errmsg, '(a,i0,a,i0)') 'Receiver ID = ', this%iRchNrTgt, &
+          '; package size = ', size(temp_ptr)
+        call store_error(trim(errmsg))
+        call store_error_unit(inunit)
+      end if
+      this%qfrommvr_ptr => temp_ptr(this%iRchNrTgt)
     end if
-    this%qfrommvr_ptr => temp_ptr(this%iRchNrTgt)
     !
     ! -- return
     return
@@ -215,10 +224,10 @@ contains
 
   !> @ brief Formulate coefficients
   !!
-  !! Make mover calculations.
+  !! Make mover calculations for provider.
   !!
   !<
-  subroutine fc(this)
+  subroutine update_provider(this)
     ! -- modules
     ! -- dummy
     class(MvrType) :: this !< MvrType
@@ -237,10 +246,6 @@ contains
     ! -- Store qpactual
     this%qpactual = qpactual
     !
-    ! -- Add the calculated qpactual term directly into the receiver package
-    !    qfrommvr array.
-    this%qfrommvr_ptr = this%qfrommvr_ptr + qpactual
-    !
     ! -- Add the calculated qpactual term directly into the provider package
     !    qtomvr array.
     this%qtomvr_ptr = this%qtomvr_ptr + qpactual
@@ -251,7 +256,22 @@ contains
     !
     ! -- return
     return
-  end subroutine fc
+  end subroutine update_provider
+
+  !> @ brief Formulate coefficients
+  !!
+  !! Make mover calculations for receiver.
+  !!
+  !<
+  subroutine update_receiver(this)
+    class(MvrType) :: this !< MvrType
+    ! -- Add the calculated qpactual term directly into the receiver package
+    !    qfrommvr array.
+    this%qfrommvr_ptr = this%qfrommvr_ptr + this%qpactual
+    !
+    ! -- return
+    return
+  end subroutine update_receiver
 
   !> @ brief Flow to receiver
   !!

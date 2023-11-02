@@ -22,7 +22,7 @@ module GwfGwfExchangeModule
   use GwfModule, only: GwfModelType
   use VirtualModelModule, only: VirtualModelType
   use GhostNodeModule, only: GhostNodeType
-  use GwfMvrModule, only: GwfMvrType
+  use GwfExgMoverModule, only: GwfExgMoverType
   use ObserveModule, only: ObserveType
   use ObsModule, only: ObsType
   use SimModule, only: count_errors, store_error, store_error_unit
@@ -59,7 +59,7 @@ module GwfGwfExchangeModule
     integer(I4B), pointer :: ingnc => null() !< unit number for gnc (0 if off)
     type(GhostNodeType), pointer :: gnc => null() !< gnc object
     integer(I4B), pointer :: inmvr => null() !< unit number for mover (0 if off)
-    type(GwfMvrType), pointer :: mvr => null() !< water mover object
+    class(GwfExgMoverType), pointer :: mvr => null() !< water mover object
     integer(I4B), pointer :: inobs => null() !< unit number for GWF-GWF observations
     type(ObsType), pointer :: obs => null() !< observation object
     !
@@ -512,6 +512,9 @@ contains
     class(GwfExchangeType) :: this !<  GwfExchangeType
     integer(I4B), intent(in) :: kiter
     ! -- local
+    !
+    ! -- Call mvr fc routine
+    if (this%inmvr > 0) call this%mvr%xmvr_cf()
     !
     ! -- Rewet cells across models using the wetdry parameters in each model's
     !    npf package, and the head in the connected model.
@@ -1457,7 +1460,7 @@ contains
   !<
   subroutine read_mvr(this, iout)
     ! -- modules
-    use GwfMvrModule, only: mvr_cr
+    use GwfExgMoverModule, only: exg_mvr_cr
     ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
     integer(I4B), intent(in) :: iout
@@ -1469,8 +1472,7 @@ contains
     !    the dis object does not convert from reduced to user node numbers.
     !    So in this case, the dis object is just writing unconverted package
     !    numbers to the binary budget file.
-    call mvr_cr(this%mvr, this%name, this%inmvr, iout, this%gwfmodel1%dis, &
-                iexgmvr=1)
+    call exg_mvr_cr(this%mvr, this%name, this%inmvr, iout, this%gwfmodel1%dis)
     !
     ! -- Return
     return

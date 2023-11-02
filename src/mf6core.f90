@@ -519,6 +519,9 @@ contains
       call mp%model_rp()
     end do
     !
+    ! -- Synchronize
+    call run_ctrl%at_stage(STG_BFR_EXG_RP)
+    !
     ! -- Read and prepare each exchange
     do ie = 1, baseexchangelist%Count()
       ep => GetBaseExchangeFromList(baseexchangelist, ie)

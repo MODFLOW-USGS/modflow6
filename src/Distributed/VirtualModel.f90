@@ -13,6 +13,11 @@ module VirtualModelModule
   public :: get_virtual_model_from_list
   public :: get_virtual_model
 
+  interface get_virtual_model
+    module procedure get_virtual_model_by_id, &
+                     get_virtual_model_by_name
+  end interface
+  
   type, public, extends(VirtualDataContainerType) :: VirtualModelType
     class(NumericalModelType), pointer :: local_model
     ! CON
@@ -331,9 +336,9 @@ contains
 
   end function eq_numerical_model
 
-!> @brief Returns a virtual model with the specified id
-!< from the global list
-  function get_virtual_model(model_id) result(virtual_model)
+  !> @brief Returns a virtual model with the specified id
+  !< from the global list, or null
+  function get_virtual_model_by_id(model_id) result(virtual_model)
     use VirtualDataListsModule, only: virtual_model_list
     integer(I4B) :: model_id
     class(VirtualModelType), pointer :: virtual_model
@@ -353,6 +358,30 @@ contains
       end select
     end do
 
-  end function get_virtual_model
+  end function get_virtual_model_by_id
+
+  !> @brief Returns a virtual model with the specified name
+  !< from the global list, or null
+  function get_virtual_model_by_name(model_name) result(virtual_model)
+    use VirtualDataListsModule, only: virtual_model_list
+    character(len=*) :: model_name
+    class(VirtualModelType), pointer :: virtual_model
+    ! local
+    integer(I4B) :: i
+    class(*), pointer :: vm
+
+    virtual_model => null()
+    do i = 1, virtual_model_list%Count()
+      vm => virtual_model_list%GetItem(i)
+      select type (vm)
+      class is (VirtualModelType)
+        if (vm%name == model_name) then
+          virtual_model => vm
+          return
+        end if
+      end select
+    end do
+
+  end function get_virtual_model_by_name
 
 end module VirtualModelModule

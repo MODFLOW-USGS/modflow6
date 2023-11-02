@@ -146,6 +146,7 @@ module GwfMvrModule
     ! -- table objects
     type(TableType), pointer :: outputtab => null()
   contains
+    procedure :: mvr_init
     procedure :: mvr_ar
     procedure :: mvr_rp
     procedure :: mvr_ad
@@ -163,6 +164,7 @@ module GwfMvrModule
     procedure :: read_packages
     procedure :: check_packages
     procedure :: assign_packagemovers
+    procedure :: reinitialize_movers
     procedure :: allocate_scalars
     procedure :: allocate_arrays
     procedure, private :: mvr_setup_budobj
@@ -173,7 +175,7 @@ module GwfMvrModule
 
 contains
 
-  subroutine mvr_cr(mvrobj, name_parent, inunit, iout, dis, iexgmvr)
+subroutine mvr_cr(mvrobj, name_parent, inunit, iout, dis, iexgmvr)
 ! ******************************************************************************
 ! mvr_cr -- Create a new mvr object
 ! ******************************************************************************
@@ -192,37 +194,52 @@ contains
     ! -- Create the object
     allocate (mvrobj)
     !
-    ! -- create name and memory paths. name_parent will either be model name or the
-    !    exchange name.
-    call mvrobj%set_names(1, name_parent, 'MVR', 'MVR')
-    !
-    ! -- Allocate scalars
-    call mvrobj%allocate_scalars()
-    !
-    ! -- Set pointer to dis
-    mvrobj%dis => dis
-    !
-    ! -- Set variables
-    mvrobj%inunit = inunit
-    mvrobj%iout = iout
-    !
-    ! -- Set iexgmvr
-    if (present(iexgmvr)) mvrobj%iexgmvr = iexgmvr
-    !
-    ! -- Create the budget object
-    if (inunit > 0) then
-      call budget_cr(mvrobj%budget, mvrobj%memoryPath)
-      !
-      ! -- Initialize block parser
-      call mvrobj%parser%Initialize(mvrobj%inunit, mvrobj%iout)
-    end if
-    !
-    ! -- instantiate the budget object
-    call budgetobject_cr(mvrobj%budobj, 'WATER MOVER')
+    ! -- Init
+    call mvrobj%mvr_init(name_parent, inunit, iout, dis, iexgmvr)
     !
     ! -- Return
     return
   end subroutine mvr_cr
+
+  subroutine mvr_init(this, name_parent, inunit, iout, dis, iexgmvr)
+    class(GwfMvrType) :: this
+    character(len=*), intent(in) :: name_parent
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: iout
+    class(DisBaseType), pointer, intent(in) :: dis
+    integer(I4B), optional :: iexgmvr
+    !
+    ! -- create name and memory paths. name_parent will either be model name or the
+    !    exchange name.
+    call this%set_names(1, name_parent, 'MVR', 'MVR')
+    !
+    ! -- Allocate scalars
+    call this%allocate_scalars()
+    !
+    ! -- Set pointer to dis
+    this%dis => dis
+    !
+    ! -- Set variables
+    this%inunit = inunit
+    this%iout = iout
+    !
+    ! -- Set iexgmvr
+    if (present(iexgmvr)) this%iexgmvr = iexgmvr
+    !
+    ! -- Create the budget object
+    if (inunit > 0) then
+      call budget_cr(this%budget, this%memoryPath)
+      !
+      ! -- Initialize block parser
+      call this%parser%Initialize(this%inunit, this%iout)
+    end if
+    !
+    ! -- instantiate the budget object
+    call budgetobject_cr(this%budobj, 'WATER MOVER')
+    !
+    ! -- Return
+    return
+  end subroutine mvr_init
 
   subroutine mvr_ar(this)
 ! ******************************************************************************
@@ -351,15 +368,10 @@ contains
       call this%gwfmvrperioddata%read_from_parser(this%parser, nlist, mname)
       !
       ! -- Process the input data into the individual mover objects
-      do i = 1, nlist
-        call this%mvr(i)%set_values(this%gwfmvrperioddata%mname1(i), &
-                                    this%gwfmvrperioddata%pname1(i), &
-                                    this%gwfmvrperioddata%id1(i), &
-                                    this%gwfmvrperioddata%mname2(i), &
-                                    this%gwfmvrperioddata%pname2(i), &
-                                    this%gwfmvrperioddata%id2(i), &
-                                    this%gwfmvrperioddata%imvrtype(i), &
-                                    this%gwfmvrperioddata%value(i))
+      call this%reinitialize_movers(nlist)
+      !
+      ! -- assign the pointers
+      do i = 1, nlist        
         call this%mvr(i)%prepare(this%parser%iuactive, &
                                  this%pckMemPaths, &
                                  this%pakmovers)
@@ -412,6 +424,25 @@ contains
     return
   end subroutine mvr_rp
 
+  subroutine reinitialize_movers(this, nr_active_movers)
+    class(GwfMvrType) :: this
+    integer(I4B) :: nr_active_movers
+    ! local
+    integer(I4B) :: i
+
+    do i = 1, nr_active_movers
+      call this%mvr(i)%set_values(this%gwfmvrperioddata%mname1(i), &
+                                  this%gwfmvrperioddata%pname1(i), &
+                                  this%gwfmvrperioddata%id1(i), &
+                                  this%gwfmvrperioddata%mname2(i), &
+                                  this%gwfmvrperioddata%pname2(i), &
+                                  this%gwfmvrperioddata%id2(i), &
+                                  this%gwfmvrperioddata%imvrtype(i), &
+                                  this%gwfmvrperioddata%value(i))
+    end do
+
+  end subroutine reinitialize_movers
+
   subroutine mvr_ad(this)
 ! ******************************************************************************
 ! mvr_ad -- Advance mover
@@ -435,25 +466,15 @@ contains
   end subroutine mvr_ad
 
   subroutine mvr_fc(this)
-! ******************************************************************************
-! mvr_fc -- Calculate qfrommvr as a function of qtomvr
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    ! -- dummy
     class(GwfMvrType) :: this
-    ! -- locals
+    ! local
     integer(I4B) :: i
-! ------------------------------------------------------------------------------
-    !
+
     do i = 1, this%nmvr
-      call this%mvr(i)%fc()
+      call this%mvr(i)%update_provider()
+      call this%mvr(i)%update_receiver()
     end do
-    !
-    ! -- Return
-    return
+
   end subroutine mvr_fc
 
   subroutine mvr_cc(this, innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
@@ -998,9 +1019,8 @@ contains
           this%pckMemPaths(npak) = create_mem_path(this%name_model, word1)
           word = word1
         else
-          this%pckMemPaths(npak) = trim(word1)
           call this%parser%GetStringCaps(word2)
-          this%pckMemPaths(npak) = create_mem_path(this%pckMemPaths(npak), word2)
+          this%pckMemPaths(npak) = create_mem_path(word1, word2)
           word = word2
         end if
         this%paknames(npak) = trim(word)
