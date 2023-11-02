@@ -26,7 +26,7 @@ module PackageMoverModule
   contains
     procedure :: ar
     procedure :: ad
-    procedure :: cf
+    procedure :: reset
     procedure :: fc
     procedure :: da
     procedure :: allocate_scalars
@@ -100,7 +100,7 @@ contains
     return
   end subroutine ad
 
-  subroutine cf(this)
+  subroutine reset(this)
     class(PackageMoverType) :: this
     integer :: i
     !
@@ -116,7 +116,7 @@ contains
     !
     ! -- return
     return
-  end subroutine cf
+  end subroutine reset
 
   subroutine fc(this)
     class(PackageMoverType) :: this

@@ -3841,7 +3841,7 @@ contains
     return
   end subroutine lak_ad
 
-  subroutine lak_cf(this, reset_mover)
+  subroutine lak_cf(this)
     ! ******************************************************************************
     ! lak_cf -- Formulate the HCOF and RHS terms
     ! Subroutine: (1) skip if no lakes
@@ -3852,12 +3852,10 @@ contains
     ! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType) :: this
-    logical(LGP), intent(in), optional :: reset_mover
     ! -- local
     integer(I4B) :: j, n
     integer(I4B) :: igwfnode
     real(DP) :: hlak, blak
-    logical(LGP) :: lrm
     ! ------------------------------------------------------------------------------
     !!
     !! -- Calculate lak conductance and update package RHS and HCOF
@@ -3873,13 +3871,6 @@ contains
       this%s0(n) = this%xnewpak(n)
       call this%lak_calculate_exchange(n, this%s0(n), this%qgwf0(n))
     end do
-    !
-    ! -- pakmvrobj cf
-    lrm = .true.
-    if (present(reset_mover)) lrm = reset_mover
-    if (this%imover == 1 .and. lrm) then
-      call this%pakmvrobj%cf()
-    end if
     !
     ! -- find highest active cell
     do n = 1, this%nlakes

@@ -1955,14 +1955,12 @@ contains
     !!  added to the coefficient matrix and right-hand side vector.
     !!
   !<
-  subroutine sfr_cf(this, reset_mover)
+  subroutine sfr_cf(this)
     ! -- dummy variables
     class(SfrType) :: this !< SfrType object
-    logical(LGP), intent(in), optional :: reset_mover !< boolean for resetting mover
     ! -- local variables
     integer(I4B) :: n
     integer(I4B) :: igwfnode
-    logical(LGP) :: lrm
     !
     ! -- return if no sfr reaches
     if (this%nbound == 0) return
@@ -1978,13 +1976,6 @@ contains
       this%igwfnode(n) = igwfnode
       this%nodelist(n) = igwfnode
     end do
-    !
-    ! -- pakmvrobj cf
-    lrm = .true.
-    if (present(reset_mover)) lrm = reset_mover
-    if (this%imover == 1 .and. lrm) then
-      call this%pakmvrobj%cf()
-    end if
     !
     ! -- return
     return

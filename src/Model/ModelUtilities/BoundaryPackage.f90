@@ -120,6 +120,7 @@ module BndModule
     procedure :: bnd_rp
     procedure :: bnd_ad
     procedure :: bnd_ck
+    procedure :: bnd_reset
     procedure :: bnd_cf
     procedure :: bnd_fc
     procedure :: bnd_fn
@@ -445,6 +446,17 @@ contains
     return
   end subroutine bnd_ck
 
+  !> @ brief Reset bnd package before formulating
+  !<
+  subroutine bnd_reset(this)
+    class(BndType) :: this !< BndType object
+
+    if (this%imover == 1) then
+      call this%pakmvrobj%reset()
+    end if
+
+  end subroutine bnd_reset
+
   !> @ brief Formulate the package hcof and rhs terms.
     !!
     !!  Formulate the hcof and rhs terms for the package that will be
@@ -453,10 +465,9 @@ contains
     !!  boundary package.
     !!
   !<
-  subroutine bnd_cf(this, reset_mover)
+  subroutine bnd_cf(this)
     ! -- modules
     class(BndType) :: this !< BndType object
-    logical(LGP), intent(in), optional :: reset_mover !< boolean for resetting mover
     !
     ! -- bnd has no cf routine
     !
