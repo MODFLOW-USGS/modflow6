@@ -788,7 +788,7 @@ contains
     select case (filtyp)
     case ('CNC6')
       call cnc_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                      pakname, dvt, filtyp, mempath)
+                      pakname, dvt, mempath)
     case ('SRC6')
       call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
     case ('LKT6')

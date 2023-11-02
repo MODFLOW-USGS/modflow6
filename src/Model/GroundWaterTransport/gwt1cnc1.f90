@@ -53,7 +53,7 @@ contains
   !! Routine points packobj to the newly created package
   !<
   subroutine cnc_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
-                        depvartype, ftype, mempath)
+                        depvartype, mempath)
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
@@ -63,7 +63,6 @@ contains
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
     character(len=LENVARNAME), intent(in) :: depvartype
-    character(len=LENFTYPE), intent(in) :: ftype
     character(len=*), intent(in) :: mempath
     ! -- local
     type(GwtCncType), pointer :: cncobj
@@ -75,7 +74,6 @@ contains
     !
     ! -- create name and memory path
     call packobj%set_names(ibcnum, namemodel, pakname, ftype, mempath)
-    text = str_pad_left(ftype(1:3), LENPACKAGENAME)
     packobj%text = text
     !
     ! -- allocate scalars
