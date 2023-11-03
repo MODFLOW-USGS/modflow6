@@ -9,7 +9,6 @@ module GwfNamInputModule
   public gwf_nam_block_definitions
   public GwfNamParamFoundType
   public gwf_nam_multi_package
-  public gwf_nam_aux_sfac_param
 
   type GwfNamParamFoundType
     logical :: list = .false.
@@ -25,8 +24,6 @@ module GwfNamInputModule
   end type GwfNamParamFoundType
 
   logical :: gwf_nam_multi_package = .false.
-
-  character(len=LENVARNAME) :: gwf_nam_aux_sfac_param = ''
 
   type(InputParamDefinitionType), parameter :: &
     gwfnam_list = InputParamDefinitionType &
