@@ -24,7 +24,7 @@ module GwtCncModule
   !
   type, extends(BndExtType) :: GwtCncType
 
-    real(DP), dimension(:), pointer, contiguous :: tspvar => null() !< constant head array
+    real(DP), dimension(:), pointer, contiguous :: tspvar => null() !< constant concentration array
     real(DP), dimension(:), pointer, contiguous :: ratecncin => null() !simulated flows into constant conc (excluding other concs)
     real(DP), dimension(:), pointer, contiguous :: ratecncout => null() !simulated flows out of constant conc (excluding to other concs)
     character(len=LENVARNAME) :: depvartype = '' !< stores string of dependent variable type, depending on model type
@@ -203,11 +203,8 @@ contains
     ! -- Process each entry in the constant concentration cell list
     do i = 1, this%nbound
       node = this%nodelist(i)
-      if (this%iauxmultcol > 0) then
-        cb = this%tspvar(i) * this%auxvar(this%iauxmultcol, i)
-      else
-        cb = this%tspvar(i)
-      end if
+      cb = this%conc_mult(i)
+      !
       this%xnew(node) = cb
       this%xold(node) = this%xnew(node)
     end do
@@ -240,7 +237,7 @@ contains
     do i = 1, this%nbound
       node = this%nodelist(i)
       ! -- accumulate errors
-      if (this%tspvar(i) < DZERO) then
+      if (this%conc_mult(i) < DZERO) then
         call this%dis%noder_to_string(node, nodestr)
         write (errmsg, fmt=fmtcncerr) i, this%tspvar(i), trim(nodestr)
         call store_error(errmsg)
