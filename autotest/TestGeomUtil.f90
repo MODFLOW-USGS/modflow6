@@ -1,90 +1,245 @@
 module TestGeomUtil
   use KindModule, only: I4B, DP
-  use testdrive, only: error_type, unittest_type, new_unittest, check, test_failed
+  use testdrive, only: check, error_type, new_unittest, test_failed, &
+                       to_string, unittest_type
   use GeomUtilModule, only: point_in_polygon
   use ConstantsModule, only: LINELENGTH
   implicit none
   private
   public :: collect_geomutil
+  private :: test_point_in_polygon
 
 contains
 
   subroutine collect_geomutil(testsuite)
     type(unittest_type), allocatable, intent(out) :: testsuite(:)
     testsuite = [ &
-                new_unittest("point_in_polygon_rect", &
-                             test_point_in_polygon_rect) &
+                new_unittest("point_in_polygon_sq", &
+                             test_point_in_polygon_sq), &
+                new_unittest("point_in_polygon_tri", &
+                             test_point_in_polygon_tri), &
+                new_unittest("point_in_polygon_irr", &
+                             test_point_in_polygon_irr) &
                 ]
   end subroutine collect_geomutil
 
-  subroutine test_point_in_polygon_rect(error)
+  subroutine test_point_in_polygon(error, shape, &
+                                   poly, in_pts, out_pts, vert_pts, face_pts)
+    type(error_type), allocatable, intent(inout) :: error
+    character(len=*), intent(in) :: shape
+    real(DP), allocatable, intent(in) :: poly(:, :)
+    real(DP), allocatable, intent(in) :: in_pts(:, :)
+    real(DP), allocatable, intent(in) :: out_pts(:, :)
+    real(DP), allocatable, intent(in) :: vert_pts(:, :)
+    real(DP), allocatable, intent(in) :: face_pts(:, :)
+    integer(I4B) :: i
+    real(DP) :: x, y
+
+    ! test inside points
+    do i = 1, size(in_pts, 1)
+      x = in_pts(i, 1)
+      y = in_pts(i, 2)
+      call check(error, point_in_polygon(x, y, poly), &
+                 "point inside "//shape//" failed: " &
+                 //to_string(x)//", "//to_string(y))
+      if (allocated(error)) return
+    end do
+
+    ! test outside points
+    do i = 1, size(out_pts, 1)
+      x = out_pts(i, 1)
+      y = out_pts(i, 2)
+      call check(error, (.not. point_in_polygon(x, y, poly)), &
+                 "point outside "//shape//" failed: " &
+                 //to_string(x)//", "//to_string(y))
+      if (allocated(error)) return
+    end do
+
+    ! test vertex points
+    do i = 1, size(vert_pts, 1)
+      x = vert_pts(i, 1)
+      y = vert_pts(i, 2)
+      call check(error, point_in_polygon(x, y, poly), &
+                 "point on "//shape//" vertex failed: " &
+                 //to_string(x)//", "//to_string(y))
+      if (allocated(error)) return
+    end do
+
+    ! test face points
+    do i = 1, size(face_pts, 1)
+      x = face_pts(i, 1)
+      y = face_pts(i, 2)
+      call check(error, point_in_polygon(x, y, poly), &
+                 "point on "//shape//" face failed: " &
+                 //to_string(x)//", "//to_string(y))
+      if (allocated(error)) return
+    end do
+  end subroutine test_point_in_polygon
+
+  !> @brief Test a unit square
+  subroutine test_point_in_polygon_sq(error)
     type(error_type), allocatable, intent(out) :: error
     real(DP), allocatable :: poly(:, :)
+    real(DP), allocatable :: in_pts(:, :)
+    real(DP), allocatable :: out_pts(:, :)
+    real(DP), allocatable :: vert_pts(:, :)
+    real(DP), allocatable :: face_pts(:, :)
 
-    ! allocate and define polygon
     allocate (poly(4, 2))
-    ! vertices in clockwise order
+
+    allocate (in_pts(3, 2))
+    in_pts(1, :) = (/0.99_DP, 0.01_DP/)
+    in_pts(2, :) = (/0.5_DP, 0.5_DP/)
+    in_pts(3, :) = (/0.0001_DP, 0.9999_DP/)
+
+    allocate (out_pts(2, 2))
+    out_pts(1, :) = (/0.5_DP, 1.00001_DP/)
+    out_pts(2, :) = (/-0.5_DP, 34.0_DP/)
+
+    allocate (vert_pts(4, 2))
+    vert_pts(1, :) = (/0.0_DP, 0.0_DP/)
+    vert_pts(2, :) = (/1.0_DP, 0.0_DP/)
+    vert_pts(3, :) = (/0.0_DP, 1.0_DP/)
+    vert_pts(4, :) = (/1.0_DP, 1.0_DP/)
+
+    allocate (face_pts(4, 2))
+    face_pts(1, :) = (/0.0_DP, 0.5_DP/)
+    face_pts(2, :) = (/0.5_DP, 0.0_DP/)
+    face_pts(3, :) = (/1.0_DP, 0.5_DP/)
+    face_pts(4, :) = (/0.5_DP, 1.0_DP/)
+
     poly(1, :) = (/0.0_DP, 0.0_DP/)
     poly(2, :) = (/0.0_DP, 1.0_DP/)
     poly(3, :) = (/1.0_DP, 1.0_DP/)
     poly(4, :) = (/1.0_DP, 0.0_DP/)
-
-    ! points inside polygon
-    call check(error, point_in_polygon(0.99_DP, 0.01_DP, poly))
-    call check(error, point_in_polygon(0.5_DP, 0.5_DP, poly))
-    call check(error, point_in_polygon(0.0001_DP, 0.9999_DP, poly))
+    call test_point_in_polygon(error, "clockwise square", &
+                               poly, in_pts, out_pts, vert_pts, face_pts)
     if (allocated(error)) return
 
-    ! points outside polygon
-    call check(error, (.not. point_in_polygon(0.5_DP, 1.00001_DP, poly)))
-    call check(error, (.not. point_in_polygon(-0.5_DP, 34.0_DP, poly)))
-    if (allocated(error)) return
-
-    ! points on vertices
-    call check(error, point_in_polygon(0.0_DP, 0.0_DP, poly))
-    call check(error, point_in_polygon(1.0_DP, 0.0_DP, poly))
-    call check(error, point_in_polygon(0.0_DP, 1.0_DP, poly))
-    call check(error, point_in_polygon(1.0_DP, 1.0_DP, poly))
-    if (allocated(error)) return
-
-    ! points on faces
-    call check(error, point_in_polygon(0.0_DP, 0.5_DP, poly))
-    call check(error, point_in_polygon(0.5_DP, 0.0_DP, poly))
-    call check(error, point_in_polygon(1.0_DP, 0.5_DP, poly))
-    call check(error, point_in_polygon(0.5_DP, 1.0_DP, poly))
-    if (allocated(error)) return
-
-    ! vertices counter-clockwise
     poly(1, :) = (/0.0_DP, 0.0_DP/)
     poly(2, :) = (/1.0_DP, 0.0_DP/)
     poly(3, :) = (/1.0_DP, 1.0_DP/)
     poly(4, :) = (/0.0_DP, 1.0_DP/)
-
-    ! points inside polygon
-    call check(error, point_in_polygon(0.99_DP, 0.01_DP, poly))
-    call check(error, point_in_polygon(0.5_DP, 0.5_DP, poly))
-    call check(error, point_in_polygon(0.0001_DP, 0.9999_DP, poly))
+    call test_point_in_polygon(error, "counter-clockwise square", &
+                               poly, in_pts, out_pts, vert_pts, face_pts)
     if (allocated(error)) return
 
-    ! points outside polygon
-    call check(error, (.not. point_in_polygon(0.5_DP, 1.00001_DP, poly)))
-    call check(error, (.not. point_in_polygon(-0.5_DP, 34.0_DP, poly)))
+    deallocate (poly)
+    deallocate (in_pts)
+    deallocate (out_pts)
+    deallocate (vert_pts)
+    deallocate (face_pts)
+  end subroutine test_point_in_polygon_sq
+
+  !> @brief Test a right triangle
+  subroutine test_point_in_polygon_tri(error)
+    type(error_type), allocatable, intent(out) :: error
+    real(DP), allocatable :: poly(:, :)
+    real(DP), allocatable :: in_pts(:, :)
+    real(DP), allocatable :: out_pts(:, :)
+    real(DP), allocatable :: vert_pts(:, :)
+    real(DP), allocatable :: face_pts(:, :)
+
+    allocate (poly(3, 2))
+
+    allocate (in_pts(3, 2))
+    in_pts(1, :) = (/0.8_DP, 0.0001_DP/)
+    in_pts(2, :) = (/0.5_DP, 0.49999_DP/)
+    in_pts(3, :) = (/0.0001_DP, 0.8_DP/)
+
+    allocate (out_pts(2, 2))
+    out_pts(1, :) = (/0.5_DP, 0.50001_DP/)
+    out_pts(2, :) = (/-0.5_DP, 34.0_DP/)
+
+    allocate (vert_pts(3, 2))
+    vert_pts(1, :) = (/0.0_DP, 0.0_DP/)
+    vert_pts(2, :) = (/1.0_DP, 0.0_DP/)
+    vert_pts(3, :) = (/0.0_DP, 1.0_DP/)
+
+    allocate (face_pts(3, 2))
+    face_pts(1, :) = (/0.0_DP, 0.5_DP/)
+    face_pts(2, :) = (/0.5_DP, 0.0_DP/)
+    face_pts(3, :) = (/0.5_DP, 0.5_DP/)
+
+    poly(1, :) = (/0.0_DP, 0.0_DP/)
+    poly(2, :) = (/0.0_DP, 1.0_DP/)
+    poly(3, :) = (/1.0_DP, 0.0_DP/)
+    call test_point_in_polygon(error, "clockwise triangle", &
+                               poly, in_pts, out_pts, vert_pts, face_pts)
     if (allocated(error)) return
 
-    ! points on vertices
-    call check(error, point_in_polygon(0.0_DP, 0.0_DP, poly))
-    call check(error, point_in_polygon(1.0_DP, 0.0_DP, poly))
-    call check(error, point_in_polygon(0.0_DP, 1.0_DP, poly))
-    call check(error, point_in_polygon(1.0_DP, 1.0_DP, poly))
+    poly(1, :) = (/0.0_DP, 0.0_DP/)
+    poly(2, :) = (/1.0_DP, 0.0_DP/)
+    poly(3, :) = (/0.0_DP, 1.0_DP/)
+    call test_point_in_polygon(error, "counter-clockwise triangle", &
+                               poly, in_pts, out_pts, vert_pts, face_pts)
     if (allocated(error)) return
 
-    ! points on faces
-    call check(error, point_in_polygon(0.0_DP, 0.5_DP, poly))
-    call check(error, point_in_polygon(0.5_DP, 0.0_DP, poly))
-    call check(error, point_in_polygon(1.0_DP, 0.5_DP, poly))
-    call check(error, point_in_polygon(0.5_DP, 1.0_DP, poly))
+    deallocate (poly)
+    deallocate (in_pts)
+    deallocate (out_pts)
+    deallocate (vert_pts)
+    deallocate (face_pts)
+  end subroutine test_point_in_polygon_tri
+
+  !> @brief Test an irregular polygon
+  subroutine test_point_in_polygon_irr(error)
+    type(error_type), allocatable, intent(out) :: error
+    real(DP), allocatable :: poly(:, :)
+    real(DP), allocatable :: in_pts(:, :)
+    real(DP), allocatable :: out_pts(:, :)
+    real(DP), allocatable :: vert_pts(:, :)
+    real(DP), allocatable :: face_pts(:, :)
+
+    allocate (poly(5, 2))
+
+    allocate (in_pts(3, 2))
+    in_pts(1, :) = (/0.5_DP, 0.1_DP/)
+    in_pts(2, :) = (/0.5_DP, 0.49_DP/)
+    in_pts(3, :) = (/1.999_DP, 1.999_DP/)
+
+    allocate (out_pts(3, 2))
+    out_pts(1, :) = (/0.5_DP, -0.1_DP/)
+    out_pts(2, :) = (/0.5_DP, 0.51_DP/)
+    out_pts(3, :) = (/-0.5_DP, 34.0_DP/)
+
+    allocate (vert_pts(5, 2))
+    vert_pts(1, :) = (/0.0_DP, 0.0_DP/)
+    vert_pts(2, :) = (/1.0_DP, 1.0_DP/)
+    vert_pts(3, :) = (/1.0_DP, 2.0_DP/)
+    vert_pts(4, :) = (/2.0_DP, 2.0_DP/)
+    vert_pts(5, :) = (/2.0_DP, 0.0_DP/)
+
+    allocate (face_pts(3, 2))
+    face_pts(1, :) = (/0.5_DP, 0.5_DP/)
+    face_pts(2, :) = (/2.0_DP, 1.0_DP/)
+    face_pts(3, :) = (/1.5_DP, 2.0_DP/)
+
+    poly(1, :) = (/0.0_DP, 0.0_DP/)
+    poly(2, :) = (/1.0_DP, 1.0_DP/)
+    poly(3, :) = (/1.0_DP, 2.0_DP/)
+    poly(4, :) = (/2.0_DP, 2.0_DP/)
+    poly(5, :) = (/2.0_DP, 0.0_DP/)
+    call test_point_in_polygon(error, &
+                               "clockwise irregular polygon", &
+                               poly, in_pts, out_pts, vert_pts, face_pts)
     if (allocated(error)) return
 
-  end subroutine test_point_in_polygon_rect
+    poly(1, :) = (/0.0_DP, 0.0_DP/)
+    poly(2, :) = (/2.0_DP, 0.0_DP/)
+    poly(3, :) = (/2.0_DP, 2.0_DP/)
+    poly(4, :) = (/1.0_DP, 2.0_DP/)
+    poly(5, :) = (/1.0_DP, 1.0_DP/)
+    call test_point_in_polygon(error, &
+                               "counter-clockwise irregular polygon", &
+                               poly, in_pts, out_pts, vert_pts, face_pts)
+    if (allocated(error)) return
+
+    deallocate (poly)
+    deallocate (in_pts)
+    deallocate (out_pts)
+    deallocate (vert_pts)
+    deallocate (face_pts)
+  end subroutine test_point_in_polygon_irr
 
 end module TestGeomUtil
