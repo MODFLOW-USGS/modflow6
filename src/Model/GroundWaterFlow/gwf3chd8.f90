@@ -229,7 +229,7 @@ contains
       node = this%nodelist(i)
       bt = this%dis%bot(node)
       ! -- accumulate errors
-      if (this%head(i) < bt .and. this%icelltype(node) /= 0) then
+      if (this%head_mult(i) < bt .and. this%icelltype(node) /= 0) then
         call this%dis%noder_to_string(node, nodestr)
         write (errmsg, fmt=fmtchderr) i, this%head(i), bt, trim(nodestr)
         call store_error(errmsg)
