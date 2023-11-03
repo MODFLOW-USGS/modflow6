@@ -1,41 +1,41 @@
-# makefile created by pymake (version 1.2.9.dev0) for the 'mf6' executable.
+# makefile created by pymake (version 1.2.7) for the 'mf6' executable.
 
 
 include ./makedefaults
 
 # Define the source file directories
 SOURCEDIR1=../src
-SOURCEDIR2=../src/Exchange
-SOURCEDIR3=../src/Distributed
-SOURCEDIR4=../src/Solution
-SOURCEDIR5=../src/Solution/LinearMethods
-SOURCEDIR6=../src/Solution/ParticleTracker
-SOURCEDIR7=../src/Solution/PETSc
-SOURCEDIR8=../src/Timing
-SOURCEDIR9=../src/Utilities
-SOURCEDIR10=../src/Utilities/Idm
-SOURCEDIR11=../src/Utilities/Idm/selector
-SOURCEDIR12=../src/Utilities/Idm/mf6blockfile
-SOURCEDIR13=../src/Utilities/TimeSeries
-SOURCEDIR14=../src/Utilities/Memory
-SOURCEDIR15=../src/Utilities/OutputControl
-SOURCEDIR16=../src/Utilities/ArrayRead
-SOURCEDIR17=../src/Utilities/Libraries
-SOURCEDIR18=../src/Utilities/Libraries/rcm
-SOURCEDIR19=../src/Utilities/Libraries/blas
-SOURCEDIR20=../src/Utilities/Libraries/sparskit2
-SOURCEDIR21=../src/Utilities/Libraries/daglib
-SOURCEDIR22=../src/Utilities/Libraries/sparsekit
-SOURCEDIR23=../src/Utilities/Vector
-SOURCEDIR24=../src/Utilities/Matrix
-SOURCEDIR25=../src/Utilities/Observation
-SOURCEDIR26=../src/Model
-SOURCEDIR27=../src/Model/Connection
-SOURCEDIR28=../src/Model/GroundWaterTransport
-SOURCEDIR29=../src/Model/ModelUtilities
-SOURCEDIR30=../src/Model/GroundWaterFlow
-SOURCEDIR31=../src/Model/TransportModel
-SOURCEDIR32=../src/Model/Geometry
+SOURCEDIR2=../src/Distributed
+SOURCEDIR3=../src/Exchange
+SOURCEDIR4=../src/Model
+SOURCEDIR5=../src/Model/Connection
+SOURCEDIR6=../src/Model/Geometry
+SOURCEDIR7=../src/Model/GroundWaterFlow
+SOURCEDIR8=../src/Model/GroundWaterTransport
+SOURCEDIR9=../src/Model/ModelUtilities
+SOURCEDIR10=../src/Model/TransportModel
+SOURCEDIR11=../src/Solution
+SOURCEDIR12=../src/Solution/LinearMethods
+SOURCEDIR13=../src/Solution/ParticleTracker
+SOURCEDIR14=../src/Solution/PETSc
+SOURCEDIR15=../src/Timing
+SOURCEDIR16=../src/Utilities
+SOURCEDIR17=../src/Utilities/ArrayRead
+SOURCEDIR18=../src/Utilities/Idm
+SOURCEDIR19=../src/Utilities/Idm/mf6blockfile
+SOURCEDIR20=../src/Utilities/Idm/selector
+SOURCEDIR21=../src/Utilities/Libraries
+SOURCEDIR22=../src/Utilities/Libraries/blas
+SOURCEDIR23=../src/Utilities/Libraries/daglib
+SOURCEDIR24=../src/Utilities/Libraries/rcm
+SOURCEDIR25=../src/Utilities/Libraries/sparsekit
+SOURCEDIR26=../src/Utilities/Libraries/sparskit2
+SOURCEDIR27=../src/Utilities/Matrix
+SOURCEDIR28=../src/Utilities/Memory
+SOURCEDIR29=../src/Utilities/Observation
+SOURCEDIR30=../src/Utilities/OutputControl
+SOURCEDIR31=../src/Utilities/TimeSeries
+SOURCEDIR32=../src/Utilities/Vector
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -69,7 +69,7 @@ ${SOURCEDIR28} \
 ${SOURCEDIR29} \
 ${SOURCEDIR30} \
 ${SOURCEDIR31} \
-${SOURCEDIR32} 
+$(SOURCEDIR32)
 
 .SUFFIXES: .f90 .F90 .o
 
@@ -102,6 +102,7 @@ $(OBJDIR)/gwt1dsp1idm.o \
 $(OBJDIR)/gwt1disv1idm.o \
 $(OBJDIR)/gwt1disu1idm.o \
 $(OBJDIR)/gwt1dis1idm.o \
+$(OBJDIR)/gwt1cnc1idm.o \
 $(OBJDIR)/gwf3wel8idm.o \
 $(OBJDIR)/gwf3riv8idm.o \
 $(OBJDIR)/gwf3rch8idm.o \

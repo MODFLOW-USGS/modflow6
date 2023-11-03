@@ -756,8 +756,8 @@ contains
   !!
   !! Call the package create routines for packages activated by the user.
   !<
-  subroutine package_create(this, filtyp, ipakid, ipaknum, pakname, inunit, &
-                            iout)
+  subroutine package_create(this, filtyp, ipakid, ipaknum, pakname, mempath, &
+                            inunit, iout)
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error
@@ -776,6 +776,7 @@ contains
     integer(I4B), intent(in) :: ipakid
     integer(I4B), intent(in) :: ipaknum
     character(len=*), intent(in) :: pakname
+    character(len=*), intent(in) :: mempath
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     ! -- local
@@ -786,7 +787,8 @@ contains
     ! -- This part creates the package object
     select case (filtyp)
     case ('CNC6')
-      call cnc_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
+      call cnc_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      pakname, dvt, mempath)
     case ('SRC6')
       call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
     case ('LKT6')
@@ -888,8 +890,8 @@ contains
           bndptype = pkgtype
         end if
         !
-        call this%package_create(pkgtype, ipakid, ipaknum, pkgname, inunit, &
-                                 this%iout)
+        call this%package_create(pkgtype, ipakid, ipaknum, pkgname, mempath, &
+                                 inunit, this%iout)
         ipakid = ipakid + 1
         ipaknum = ipaknum + 1
       end do
