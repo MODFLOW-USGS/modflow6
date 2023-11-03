@@ -94,6 +94,8 @@ The GWT model for MODFLOW 6 simulates three-dimensional transport of a single so
 
 [Hughes, J.D., Leake, S.A., Galloway, D.L., and White, J.T., 2022, Documentation for the Skeletal Storage, Compaction, and Subsidence (CSUB) Package of MODFLOW 6: U.S. Geological Survey Techniques and Methods, book 6, chap. A62, 57 p., https://doi.org/10.3133/tm6A62](https://doi.org/10.3133/tm6A62)
 
+[Langevin, C.D., Hughes, J.D., Provost, A.M., Russcher, M.J. and Panday, S., 2023, MODFLOW as a Configurable Multi-Model Hydrologic Simulator: Groundwater, https://doi.org/10.1111/gwat.13351](https://doi.org/10.1111/gwat.13351)
+
 #### ***Software/Code***
 
 The following is the general citation for the MODFLOW 6 software.
