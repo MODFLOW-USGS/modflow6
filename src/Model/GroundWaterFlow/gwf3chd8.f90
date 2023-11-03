@@ -37,6 +37,7 @@ module ChdModule
     procedure :: allocate_arrays => chd_allocate_arrays
     procedure :: define_listlabel
     procedure :: bound_value => chd_bound_value
+    procedure :: head_mult
     ! -- methods for observations
     procedure, public :: bnd_obs_supported => chd_obs_supported
     procedure, public :: bnd_df_obs => chd_df_obs
@@ -44,16 +45,12 @@ module ChdModule
 
 contains
 
+  !> @brief Create a new constant head package
+  !!
+  !! Routine points packobj to the newly created package
+  !<
   subroutine chd_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         mempath)
-! ******************************************************************************
-! chd_create -- Create a New Constant Head Package
-! Subroutine: (1) create new-style package
-!             (2) point packobj to the new package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
@@ -65,7 +62,6 @@ contains
     character(len=*), intent(in) :: mempath
     ! -- local
     type(ChdType), pointer :: chdobj
-! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
     allocate (chdobj)
@@ -90,17 +86,13 @@ contains
     packobj%iscloc = 1
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine chd_create
 
+  !> @brief Allocate arrays specific to the constant head package
+  !<
   subroutine chd_allocate_arrays(this, nodelist, auxvar)
-! ******************************************************************************
-! chd_allocate_arrays -- allocate arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr, mem_checkin
     ! -- dummy
@@ -109,7 +101,6 @@ contains
     real(DP), dimension(:, :), pointer, contiguous, optional :: auxvar
     ! -- local
     integer(I4B) :: i
-! ------------------------------------------------------------------------------
     !
     ! -- call standard BndType allocate scalars
     call this%BndExtType%allocate_arrays(nodelist, auxvar)
@@ -130,24 +121,21 @@ contains
     call mem_checkin(this%head, 'HEAD', this%memoryPath, &
                      'HEAD', this%input_mempath)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine chd_allocate_arrays
 
+  !> @brief Constant concentration/temperature read and prepare (rp) routine
+  !<
   subroutine chd_rp(this)
-! ******************************************************************************
-! chd_rp -- Read and prepare
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    !
     use TdisModule, only: kper
     ! -- dummy
     class(ChdType), intent(inout) :: this
     ! -- local
     character(len=30) :: nodestr
     integer(I4B) :: i, node, ibd, ierr
-! ------------------------------------------------------------------------------
+    !
     if (this%iper /= kper) return
     !
     ! -- Reset previous CHDs to active cell
@@ -155,7 +143,7 @@ contains
       node = this%nodelist(i)
       this%ibound(node) = this%ibcnum
     end do
-    !!
+    !
     ! -- Call the parent class read and prepare
     call this%BndExtType%bnd_rp()
     !
@@ -185,17 +173,15 @@ contains
       call this%write_list()
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine chd_rp
 
+  !> @brief Constant head package advance routine
+  !!
+  !! Add package connections to matrix
+  !<
   subroutine chd_ad(this)
-! ******************************************************************************
-! chd_ad -- Advance
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(ChdType) :: this
@@ -203,16 +189,12 @@ contains
     integer(I4B) :: i, node
     real(DP) :: hb
     ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- Process each entry in the specified-head cell list
     do i = 1, this%nbound
       node = this%nodelist(i)
-      if (this%iauxmultcol > 0) then
-        hb = this%head(i) * this%auxvar(this%iauxmultcol, i)
-      else
-        hb = this%head(i)
-      end if
+      hb = this%head_mult(i)
+      !
       this%xnew(node) = hb
       this%xold(node) = this%xnew(node)
     end do
@@ -222,17 +204,13 @@ contains
     !    "current" value.
     call this%obs%obs_ad()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine chd_ad
 
+  !> @brief Check constant concentration/temperature boundary condition data
+  !<
   subroutine chd_ck(this)
-! ******************************************************************************
-! chd_ck -- Check chd boundary condition data
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(ChdType), intent(inout) :: this
@@ -245,7 +223,6 @@ contains
     character(len=*), parameter :: fmtchderr = &
       "('CHD BOUNDARY ',i0,' HEAD (',g0,') IS LESS THAN CELL &
       &BOTTOM (',g0,')',' FOR CELL ',a)"
-! ------------------------------------------------------------------------------
     !
     ! -- check stress period data
     do i = 1, this%nbound
@@ -259,22 +236,21 @@ contains
       end if
     end do
     !
-    !write summary of chd package error messages
+    ! write summary of chd package error messages
     if (count_errors() > 0) then
       call store_error_filename(this%input_fname)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine chd_ck
 
+  !> @brief Override bnd_fc and do nothing
+  !!
+  !! For constant head boundary type, the call to bnd_fc
+  !! needs to be overwritten to do nothing
+  !<
   subroutine chd_fc(this, rhs, ia, idxglo, matrix_sln)
-! **************************************************************************
-! chd_fc -- Override bnd_fc and do nothing
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     ! -- dummy
     class(ChdType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
@@ -282,19 +258,16 @@ contains
     integer(I4B), dimension(:), intent(in) :: idxglo
     class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
-! --------------------------------------------------------------------------
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine chd_fc
 
+  !> @brief Calculate flow associated with constant head bondary
+  !!
+  !! This method overrides bnd_cq()
+  !<
   subroutine chd_cq(this, x, flowja, iadv)
-! ******************************************************************************
-! chd_cq -- Calculate constant head flow.  This method overrides bnd_cq().
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(ChdType), intent(inout) :: this
@@ -310,7 +283,6 @@ contains
     real(DP) :: rate
     real(DP) :: ratein, rateout
     real(DP) :: q
-! ------------------------------------------------------------------------------
     !
     ! -- If no boundaries, skip flow calculations.
     if (this%nbound > 0) then
@@ -355,10 +327,12 @@ contains
       !
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine chd_cq
 
+  !> @brief Add package ratin/ratout to model budget
+  !<
   subroutine chd_bd(this, model_budget)
     ! -- add package ratin/ratout to model budget
     use TdisModule, only: delt
@@ -376,18 +350,13 @@ contains
                                isuppress_output, this%packName)
   end subroutine chd_bd
 
+  !> @brief Deallocate memory
+  !<
   subroutine chd_da(this)
-! ******************************************************************************
-! chd_da -- deallocate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(ChdType) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- Deallocate parent package
     call this%BndExtType%bnd_da()
@@ -397,20 +366,15 @@ contains
     call mem_deallocate(this%ratechdout)
     call mem_deallocate(this%head, 'HEAD', this%memoryPath)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine chd_da
 
+  !> @brief Define the list heading that is written to iout when PRINT_INPUT
+  !! option is used.
+  !<
   subroutine define_listlabel(this)
-! ******************************************************************************
-! define_listlabel -- Define the list heading that is written to iout when
-!   PRINT_INPUT option is used.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     class(ChdType), intent(inout) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- create the header list label
     this%listlabel = trim(this%filtyp)//' NO.'
@@ -429,53 +393,71 @@ contains
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine define_listlabel
 
   ! -- Procedures related to observations
 
+  !> @brief Overrides bnd_obs_supported from bndType class
+  !!
+  !! Return true since CHD package supports observations
+  !<
   logical function chd_obs_supported(this)
-! ******************************************************************************
-! chd_obs_supported
-!   -- Return true because CHD package supports observations.
-!   -- Overrides packagetype%_obs_supported()
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     implicit none
+    !
     class(ChdType) :: this
-! ------------------------------------------------------------------------------
+    !
     chd_obs_supported = .true.
+    !
+    ! -- Return
     return
   end function chd_obs_supported
 
+  !> @brief Overrides bnd_df_obs from bndType class
+  !!
+  !! (1) Store observation type supported by CHD package and (2) override
+  !! BndType%bnd_df_obs
+  !<
   subroutine chd_df_obs(this)
-! ******************************************************************************
-! chd_df_obs (implements bnd_df_obs)
-!   -- Store observation type supported by CHD package.
-!   -- Overrides BndType%bnd_df_obs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     implicit none
     ! -- dummy
     class(ChdType) :: this
     ! -- local
     integer(I4B) :: indx
-! ------------------------------------------------------------------------------
+    !
     call this%obs%StoreObsType('chd', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
+    !
+    ! -- Return
     return
   end subroutine chd_df_obs
 
+  !> @brief Apply auxiliary multiplier to specified head if appropriate
+  !<
+  function head_mult(this, row) result(head)
+    ! -- modules
+    use ConstantsModule, only: DZERO
+    ! -- dummy variables
+    class(ChdType), intent(inout) :: this !< BndExtType object
+    integer(I4B), intent(in) :: row
+    ! -- result
+    real(DP) :: head
+    !
+    if (this%iauxmultcol > 0) then
+      head = this%head(row) * this%auxvar(this%iauxmultcol, row)
+    else
+      head = this%head(row)
+    end if
+    !
+    ! -- Return
+    return
+  end function head_mult
+
   !> @ brief Return a bound value
-    !!
-    !!  Return a bound value associated with an ncolbnd index
-    !!  and row.
-    !!
+  !!
+  !!  Return a bound value associated with an ncolbnd index
+  !!  and row.
   !<
   function chd_bound_value(this, col, row) result(bndval)
     ! -- modules
@@ -489,7 +471,7 @@ contains
     !
     select case (col)
     case (1)
-      bndval = this%head(row)
+      bndval = this%head_mult(row)
     case default
       errmsg = 'Programming error. CHD bound value requested column '&
                &'outside range of ncolbnd (1).'
@@ -497,7 +479,7 @@ contains
       call store_error_filename(this%input_fname)
     end select
     !
-    ! -- return
+    ! -- Return
     return
   end function chd_bound_value
 
