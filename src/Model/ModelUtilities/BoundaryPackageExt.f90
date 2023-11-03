@@ -47,6 +47,23 @@ module BndExtModule
     procedure :: bound_value
   end type BndExtType
 
+  !> @ brief BndExtFoundType
+  !!
+  !!  This type is used to simplify the tracking of common parameters
+  !!  that are sourced from the input context.
+  !<
+  type BndExtFoundType
+    logical :: naux = .false.
+    logical :: ipakcb = .false.
+    logical :: iprpak = .false.
+    logical :: iprflow = .false.
+    logical :: boundnames = .false.
+    logical :: auxmultname = .false.
+    logical :: inewton = .false.
+    logical :: auxiliary = .false.
+    logical :: maxbound = .false.
+  end type BndExtFoundType
+
 contains
 
   !> @ brief Define boundary package options and dimensions
@@ -252,17 +269,15 @@ contains
     use InputOutputModule, only: GetUnit, openfile
     use CharacterStringModule, only: CharacterStringType
     use IdmLoadModule, only: filein_fname
-    use IdmGwfDfnSelectorModule, only: GwfParamFoundType
     ! -- dummy variables
     class(BndExtType), intent(inout) :: this !< BndExtType object
     ! -- local variables
+    type(BndExtFoundType) :: found
     character(len=LENAUXNAME) :: sfacauxname
     integer(I4B) :: n
-    type(GwfParamFoundType) :: found
-    logical :: found_naux
     !
     ! -- update defaults with idm sourced values
-    call mem_set_value(this%naux, 'NAUX', this%input_mempath, found_naux)
+    call mem_set_value(this%naux, 'NAUX', this%input_mempath, found%naux)
     call mem_set_value(this%ipakcb, 'IPAKCB', this%input_mempath, found%ipakcb)
     call mem_set_value(this%iprpak, 'IPRPAK', this%input_mempath, found%iprpak)
     call mem_set_value(this%iprflow, 'IPRFLOW', this%input_mempath, found%iprflow)
@@ -276,7 +291,7 @@ contains
     call this%log_options(found, sfacauxname)
     !
     ! -- reallocate aux arrays if aux variables provided
-    if (found_naux .and. this%naux > 0) then
+    if (found%naux .and. this%naux > 0) then
       call mem_reallocate(this%auxname, LENAUXNAME, this%naux, &
                           'AUXNAME', this%memoryPath)
       call mem_reallocate(this%auxname_cst, LENAUXNAME, this%naux, &
@@ -349,10 +364,9 @@ contains
   !<
   subroutine log_options(this, found, sfacauxname)
     ! -- modules
-    use IdmGwfDfnSelectorModule, only: GwfParamFoundType
     ! -- dummy variables
     class(BndExtType), intent(inout) :: this !< BndExtType object
-    type(GwfParamFoundType), intent(in) :: found
+    type(BndExtFoundType), intent(in) :: found
     character(len=*), intent(in) :: sfacauxname
     ! -- local variables
     ! -- format
@@ -410,11 +424,10 @@ contains
   !<
   subroutine source_dimensions(this)
     use MemoryManagerExtModule, only: mem_set_value
-    use IdmGwfDfnSelectorModule, only: GwfParamFoundType
     ! -- dummy variables
     class(BndExtType), intent(inout) :: this !< BndExtType object
     ! -- local variables
-    type(GwfParamFoundType) :: found
+    type(BndExtFoundType) :: found
     !
     ! -- open dimensions logging block
     write (this%iout, '(/1x,a)') 'PROCESSING '//trim(adjustl(this%text))// &

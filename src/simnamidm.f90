@@ -9,7 +9,6 @@ module SimNamInputModule
   public sim_nam_block_definitions
   public SimNamParamFoundType
   public sim_nam_multi_package
-  public sim_nam_aux_sfac_param
 
   type SimNamParamFoundType
     logical :: continue = .false.
@@ -32,8 +31,6 @@ module SimNamInputModule
   end type SimNamParamFoundType
 
   logical :: sim_nam_multi_package = .false.
-
-  character(len=LENVARNAME) :: sim_nam_aux_sfac_param = ''
 
   type(InputParamDefinitionType), parameter :: &
     simnam_continue = InputParamDefinitionType &

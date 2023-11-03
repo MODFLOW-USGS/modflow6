@@ -9,7 +9,6 @@ module GwfNpfInputModule
   public gwf_npf_block_definitions
   public GwfNpfParamFoundType
   public gwf_npf_multi_package
-  public gwf_npf_aux_sfac_param
 
   type GwfNpfParamFoundType
     logical :: ipakcb = .false.
@@ -52,8 +51,6 @@ module GwfNpfInputModule
   end type GwfNpfParamFoundType
 
   logical :: gwf_npf_multi_package = .false.
-
-  character(len=LENVARNAME) :: gwf_npf_aux_sfac_param = ''
 
   type(InputParamDefinitionType), parameter :: &
     gwfnpf_ipakcb = InputParamDefinitionType &

@@ -9,7 +9,6 @@ module GwfGhbInputModule
   public gwf_ghb_block_definitions
   public GwfGhbParamFoundType
   public gwf_ghb_multi_package
-  public gwf_ghb_aux_sfac_param
 
   type GwfGhbParamFoundType
     logical :: auxiliary = .false.
@@ -35,8 +34,6 @@ module GwfGhbInputModule
   end type GwfGhbParamFoundType
 
   logical :: gwf_ghb_multi_package = .true.
-
-  character(len=LENVARNAME) :: gwf_ghb_aux_sfac_param = ''
 
   type(InputParamDefinitionType), parameter :: &
     gwfghb_auxiliary = InputParamDefinitionType &

@@ -9,7 +9,6 @@ module GwfDisInputModule
   public gwf_dis_block_definitions
   public GwfDisParamFoundType
   public gwf_dis_multi_package
-  public gwf_dis_aux_sfac_param
 
   type GwfDisParamFoundType
     logical :: length_units = .false.
@@ -28,8 +27,6 @@ module GwfDisInputModule
   end type GwfDisParamFoundType
 
   logical :: gwf_dis_multi_package = .false.
-
-  character(len=LENVARNAME) :: gwf_dis_aux_sfac_param = ''
 
   type(InputParamDefinitionType), parameter :: &
     gwfdis_length_units = InputParamDefinitionType &

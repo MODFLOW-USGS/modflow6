@@ -164,12 +164,12 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use MemoryManagerExtModule, only: mem_set_value
-    use IdmGwfDfnSelectorModule, only: GwfParamFoundType
     implicit none
     ! -- dummy
     class(RchType), intent(inout) :: this
     ! -- local
-    type(GwfParamFoundType) :: found
+    logical(LGP) :: found_fixed_cell = .false.
+    logical(LGP) :: found_readasarrays = .false.
 ! ------------------------------------------------------------------------------
     !
     ! -- source common bound options
@@ -177,11 +177,11 @@ contains
     !
     ! -- update defaults with idm sourced values
     call mem_set_value(this%fixed_cell, 'FIXED_CELL', this%input_mempath, &
-                       found%fixed_cell)
+                       found_fixed_cell)
     call mem_set_value(this%read_as_arrays, 'READASARRAYS', this%input_mempath, &
-                       found%readasarrays)
+                       found_readasarrays)
     !
-    if (found%readasarrays) then
+    if (found_readasarrays) then
       if (this%dis%supports_layers()) then
         this%text = texta
       else
@@ -193,24 +193,24 @@ contains
     end if
     !
     ! -- log rch params
-    call this%log_rch_options(found)
+    call this%log_rch_options(found_fixed_cell, found_readasarrays)
     !
     ! -- return
     return
   end subroutine rch_source_options
 
-  subroutine log_rch_options(this, found)
+  subroutine log_rch_options(this, found_fixed_cell, found_readasarrays)
 ! ******************************************************************************
 ! log_rch_options -- log options specific to RchType
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use IdmGwfDfnSelectorModule, only: GwfParamFoundType
     implicit none
     ! -- dummy
     class(RchType), intent(inout) :: this
-    type(GwfParamFoundType), intent(in) :: found
+    logical(LGP), intent(in) :: found_fixed_cell
+    logical(LGP), intent(in) :: found_readasarrays
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtfixedcell = &
@@ -223,11 +223,11 @@ contains
     write (this%iout, '(/1x,a)') 'PROCESSING '//trim(adjustl(this%text)) &
       //' OPTIONS'
     !
-    if (found%fixed_cell) then
+    if (found_fixed_cell) then
       write (this%iout, fmtfixedcell)
     end if
     !
-    if (found%readasarrays) then
+    if (found_readasarrays) then
       write (this%iout, fmtreadasarrays)
     end if
     !

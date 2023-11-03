@@ -217,11 +217,12 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerExtModule, only: mem_set_value
-    use IdmGwfDfnSelectorModule, only: GwfParamFoundType
     ! -- dummy
     class(EvtType), intent(inout) :: this
     ! -- local
-    type(GwfParamFoundType) :: found
+    logical(LGP) :: found_fixed_cell = .false.
+    logical(LGP) :: found_readasarrays = .false.
+    logical(LGP) :: found_surfratespec = .false.
 ! ------------------------------------------------------------------------------
     !
     ! -- source common bound options
@@ -229,13 +230,13 @@ contains
     !
     ! -- update defaults with idm sourced values
     call mem_set_value(this%fixed_cell, 'FIXED_CELL', &
-                       this%input_mempath, found%fixed_cell)
+                       this%input_mempath, found_fixed_cell)
     call mem_set_value(this%read_as_arrays, 'READASARRAYS', &
-                       this%input_mempath, found%readasarrays)
+                       this%input_mempath, found_readasarrays)
     call mem_set_value(this%surfratespecified, 'SURFRATESPEC', &
-                       this%input_mempath, found%surfratespec)
+                       this%input_mempath, found_surfratespec)
     !
-    if (found%readasarrays) then
+    if (found_readasarrays) then
       if (this%dis%supports_layers()) then
         this%text = texta
       else
@@ -246,7 +247,7 @@ contains
       end if
     end if
     !
-    if (found%readasarrays .and. found%surfratespec) then
+    if (found_readasarrays .and. found_surfratespec) then
       if (this%read_as_arrays) then
         errmsg = 'READASARRAYS option is not compatible with the'// &
                  ' SURF_RATE_SPECIFIED option.'
@@ -256,13 +257,15 @@ contains
     end if
     !
     ! -- log evt specific options
-    call this%evt_log_options(found)
+    call this%evt_log_options(found_fixed_cell, found_readasarrays, &
+                              found_surfratespec)
     !
     ! -- return
     return
   end subroutine evt_source_options
 
-  subroutine evt_log_options(this, found)
+  subroutine evt_log_options(this, found_fixed_cell, found_readasarrays, &
+                             found_surfratespec)
 ! ******************************************************************************
 ! evt_log_options -- source options specific to EvtType
 ! ******************************************************************************
@@ -273,10 +276,11 @@ contains
     use MemoryManagerModule, only: mem_reallocate, mem_setptr
     use MemoryManagerExtModule, only: mem_set_value
     use CharacterStringModule, only: CharacterStringType
-    use IdmGwfDfnSelectorModule, only: GwfParamFoundType
     ! -- dummy
     class(EvtType), intent(inout) :: this
-    type(GwfParamFoundType), intent(in) :: found
+    logical(LGP), intent(in) :: found_fixed_cell
+    logical(LGP), intent(in) :: found_readasarrays
+    logical(LGP), intent(in) :: found_surfratespec
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtihact = &
@@ -295,15 +299,15 @@ contains
     write (this%iout, '(/1x,a)') 'PROCESSING '//trim(adjustl(this%text)) &
       //' OPTIONS'
     !
-    if (found%fixed_cell) then
+    if (found_fixed_cell) then
       write (this%iout, fmtfixedcell)
     end if
     !
-    if (found%readasarrays) then
+    if (found_readasarrays) then
       write (this%iout, fmtreadasarrays)
     end if
     !
-    if (found%surfratespec) then
+    if (found_surfratespec) then
       write (this%iout, fmtsrs)
     end if
     !
@@ -325,11 +329,10 @@ contains
 ! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerExtModule, only: mem_set_value
-    use GwfEvtInputModule, only: GwfEvtParamFoundType
     ! -- dummy
     class(EvtType), intent(inout) :: this
     ! -- local
-    type(GwfEvtParamFoundType) :: found
+    logical(LGP) :: found_nseg = .false.
     ! -- format
     character(len=*), parameter :: fmtnsegerr = &
       &"('Error: In EVT, NSEG must be > 0 but is specified as ',i0)"
@@ -359,9 +362,9 @@ contains
         //' DIMENSIONS'
       !
       ! -- update defaults with idm sourced values
-      call mem_set_value(this%nseg, 'NSEG', this%input_mempath, found%nseg)
+      call mem_set_value(this%nseg, 'NSEG', this%input_mempath, found_nseg)
       !
-      if (found%nseg) then
+      if (found_nseg) then
         !
         write (this%iout, '(4x,a,i0)') 'NSEG = ', this%nseg
         !

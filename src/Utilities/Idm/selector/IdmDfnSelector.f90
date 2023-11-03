@@ -15,7 +15,6 @@ module IdmDfnSelectorModule
   public :: aggregate_definitions
   public :: block_definitions
   public :: idm_multi_package
-  public :: idm_sfac_param
   public :: idm_integrated
   public :: idm_component
 
@@ -90,25 +89,6 @@ contains
     end select
     return
   end function idm_multi_package
-
-  function idm_sfac_param(component, subcomponent) result(sfac_param)
-    character(len=*), intent(in) :: component
-    character(len=*), intent(in) :: subcomponent
-    character(len=LENVARNAME) :: sfac_param
-    select case (component)
-    case ('GWF')
-      sfac_param = gwf_idm_sfac_param(subcomponent)
-    case ('GWT')
-      sfac_param = gwt_idm_sfac_param(subcomponent)
-    case ('SIM')
-      sfac_param = sim_idm_sfac_param(subcomponent)
-    case default
-      call store_error('Idm selector component not found; '//&
-                       &'component="'//trim(component)//&
-                       &'", subcomponent="'//trim(subcomponent)//'".', .true.)
-    end select
-    return
-  end function idm_sfac_param
 
   function idm_integrated(component, subcomponent) result(integrated)
     character(len=*), intent(in) :: component
