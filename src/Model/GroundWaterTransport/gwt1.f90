@@ -269,7 +269,7 @@ contains
     ! -- Allocate and read modules attached to model
     call this%fmi%fmi_ar(this%ibound)
     if (this%inmvt > 0) call this%mvt%mvt_ar()
-    if (this%inic > 0) call this%ic%ic_ar(this%x)
+    if (this%inic > 0) call this%ic%ic_load(this%x)
     if (this%inmst > 0) call this%mst%mst_ar(this%dis, this%ibound)
     if (this%inadv > 0) call this%adv%adv_ar(this%dis, this%ibound)
     if (this%indsp > 0) call this%dsp%dsp_ar(this%ibound, this%mst%thetam)

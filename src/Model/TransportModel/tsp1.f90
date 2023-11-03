@@ -778,6 +778,7 @@ contains
     character(len=LENMEMPATH) :: mempath
     integer(I4B), pointer :: inunit
     integer(I4B) :: n
+    character(len=LENMEMPATH) :: mempathic = ''
     !
     ! -- Initialize
     indis = 0
@@ -811,7 +812,8 @@ contains
         indis = 1
         call disu_cr(this%dis, this%name, mempath, indis, this%iout)
       case ('IC6')
-        this%inic = inunit
+        this%inic = 1
+        mempathic = mempath
       case ('FMI6')
         this%infmi = inunit
       case ('MVT6')
@@ -830,7 +832,7 @@ contains
     end do
     !
     ! -- Create packages that are tied directly to model
-    call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis, &
+    call ic_cr(this%ic, this%name, mempathic, this%inic, this%iout, this%dis, &
                this%depvartype)
     call fmi_cr(this%fmi, this%name, this%infmi, this%iout, this%eqnsclfac, &
                 this%depvartype)
