@@ -14,8 +14,9 @@ module GwfIcModule
   type, extends(NumericalPackageType) :: GwfIcType
     real(DP), dimension(:), pointer, contiguous :: strt => null() ! starting head
   contains
-    procedure :: ic_load
+    procedure :: ic_ar
     procedure :: ic_da
+    procedure, private :: ic_load
     procedure, private :: allocate_arrays
     procedure, private :: source_griddata
   end type GwfIcType
@@ -37,50 +38,54 @@ contains
     character(len=*), parameter :: fmtic = &
       "(1x, /1x, 'IC -- Initial Conditions Package, Version 8, 3/28/2015', &
       &' input read from mempath: ', A, //)"
-    !
+
     ! -- create IC object
     allocate (ic)
-    !
+
     ! -- create name and memory path
     call ic%set_names(1, name_model, 'IC', 'IC', input_mempath)
-    !
+
     ! -- allocate scalars
     call ic%allocate_scalars()
-    !
+
     ! -- set variables
     ic%inunit = inunit
     ic%iout = iout
-    !
-    ! -- set points
+
+    ! -- set pointers
     ic%dis => dis
-    !
-    ! -- if package is enabled, print message identifying it
-    if (inunit > 0) &
+
+    ! -- check if pkg is enabled,
+    if (inunit > 0) then
+      ! print message identifying pkg
       write (ic%iout, fmtic) input_mempath
+    end if
   end subroutine ic_cr
 
-  !> @brief Load initial conditions
-  subroutine ic_load(this, x)
-    ! -- modules
+  !> @brief Load data from IDM into package
+  subroutine ic_load(this)
     use BaseDisModule, only: DisBaseType
-    use SimModule, only: store_error
-    ! -- dummy
+    class(GwfIcType) :: this
+    call this%source_griddata()
+  end subroutine ic_load
+
+  !> @brief Allocate arrays, load from IDM, and assign head.
+  subroutine ic_ar(this, x)
     class(GwfIcType) :: this
     real(DP), dimension(:), intent(inout) :: x
-    ! -- locals
     integer(I4B) :: n
-    !
+
     ! -- allocate arrays
     call this%allocate_arrays(this%dis%nodes)
-    !
-    ! -- read grid data
-    call this%source_griddata()
-    !
+
+    ! -- load from IDM
+    call this%ic_load()
+
     ! -- assign starting head
     do n = 1, this%dis%nodes
       x(n) = this%strt(n)
     end do
-  end subroutine ic_load
+  end subroutine ic_ar
 
   !> @brief Deallocate
   subroutine ic_da(this)
@@ -116,7 +121,7 @@ contains
   !> @brief Copy grid data from IDM into package
   subroutine source_griddata(this)
     ! -- modules
-    use SimModule, only: store_error
+    use SimModule, only: store_error, store_error_filename
     use MemoryManagerExtModule, only: mem_set_value
     use GwfIcInputModule, only: GwfIcParamFoundType
     ! -- dummy
@@ -136,7 +141,8 @@ contains
     ! -- ensure STRT was found
     if (.not. found%strt) then
       write (errmsg, '(a)') 'Error in GRIDDATA block: STRT not found.'
-      call store_error(errmsg)
+      call store_error(errmsg, terminate=.false.)
+      call store_error_filename(this%input_fname)
     else if (this%iout > 0) then
       write (this%iout, '(4x,a)') 'STRT set from input file'
     end if
