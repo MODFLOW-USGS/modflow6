@@ -350,7 +350,7 @@ module GwfEvtaInputModule
     'AUXVAR', & ! fortran variable
     'DOUBLE2D', & ! type
     'NAUX NCPL', & ! shape
-    .true., & ! required
+    .false., & ! required
     .false., & ! multi-record
     .false., & ! preserve case
     .false., & ! layered
