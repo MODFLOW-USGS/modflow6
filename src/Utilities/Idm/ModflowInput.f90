@@ -10,7 +10,8 @@ module ModflowInputModule
 
   use KindModule, only: I4B, LGP
   use ConstantsModule, only: LENMEMPATH, LENCOMPONENTNAME, &
-                             LENPACKAGETYPE
+                             LENPACKAGETYPE, LENPACKAGENAME, &
+                             LINELENGTH
   use MemoryHelperModule, only: create_mem_path
   use InputDefinitionModule, only: InputParamDefinitionType, &
                                    InputBlockDefinitionType
@@ -23,9 +24,9 @@ module ModflowInputModule
   private
   public :: ModflowInputType, getModflowInput
 
-  !> @brief derived type for storing input definition for a file
+  !> @brief type for storing input definition for a file
   !!
-  !! This derived type contains the information needed to read
+  !! This type contains the information needed to read
   !! a specific modflow input file, including block definitions,
   !! aggregate definitions (structarrays), and individual
   !! parameter definitions.
@@ -63,7 +64,8 @@ contains
     ! -- set subcomponent type
     if (present(filename)) then
       dfn_subcomponent_type = update_sc_type(pkgtype, filename, component_type, &
-                                             subcomponent_type)
+                                             subcomponent_type, component_name, &
+                                             subcomponent_name)
     else
       dfn_subcomponent_type = trim(subcomponent_type)
     end if
@@ -90,23 +92,45 @@ contains
                                               mf6_input%subcomponent_type)
   end function getModflowInput
 
-  function update_sc_type(filetype, filename, component_type, subcomponent_type) &
+  function update_sc_type(filetype, filename, component_type, subcomponent_type, &
+                          component_name, subcomponent_name) &
     result(sc_type)
-    character(len=*), intent(in) :: component_type
-    character(len=*), intent(in) :: subcomponent_type
+    use SourceCommonModule, only: package_source_type
+    use InputModelContextModule, only: GetModelNC4Context
+    use NC4ModelInputsModule, only: NC4ModelInputsType, NC4ModelPackageInputType
     character(len=*), intent(in) :: filetype
     character(len=*), intent(in) :: filename
+    character(len=*), intent(in) :: component_type
+    character(len=*), intent(in) :: subcomponent_type
+    character(len=*), intent(in) :: component_name
+    character(len=*), intent(in) :: subcomponent_name
     ! -- result
     character(len=LENPACKAGETYPE) :: sc_type
+    ! -- local
+    character(len=LENPACKAGENAME) :: source_type
+    type(NC4ModelInputsType), pointer :: nc4_context
+    type(NC4ModelPackageInputType), pointer :: ncpkg
     !
     sc_type = subcomponent_type
+    source_type = package_source_type(filename)
     !
-    select case (subcomponent_type)
-    case ('RCH', 'EVT', 'SCP')
-      sc_type = read_as_arrays(filetype, filename, component_type, &
-                               subcomponent_type)
-    case default
-    end select
+    if (source_type == 'MF6FILE') then
+      select case (subcomponent_type)
+      case ('RCH', 'EVT', 'SCP')
+        sc_type = read_as_arrays(filetype, filename, component_type, &
+                                 subcomponent_type)
+      case default
+      end select
+    else if (source_type == 'NETCDF4') then
+      select case (subcomponent_type)
+      case ('RCH', 'EVT', 'SCP')
+        nc4_context => GetModelNC4Context(component_name)
+        ncpkg => nc4_context%get_package(component_name, &
+                                         subcomponent_name)
+        sc_type = trim(ncpkg%subcomponent_type)
+      case default
+      end select
+    end if
     !
     ! -- return
     return
