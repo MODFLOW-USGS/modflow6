@@ -19,7 +19,7 @@ module StructVectorModule
   private
   public :: StructVectorType, TSStringLocType
 
-  !> @brief derived type which describes time series string field
+  !> @brief type which describes time series string field
   !<
   type :: TSStringLocType
     integer(I4B) :: structarray_col !< global SA column index
@@ -29,9 +29,9 @@ module StructVectorModule
   contains
   end type TSStringLocType
 
-  !> @brief derived type for generic vector
+  !> @brief type for generic vector
   !!
-  !! This derived type is used in the StructArrayType to
+  !! This type is used in the StructArrayType to
   !! store any type of vector.
   !!
   !<

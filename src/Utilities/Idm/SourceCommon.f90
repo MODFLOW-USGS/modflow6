@@ -21,6 +21,13 @@ module SourceCommonModule
   public :: mem_allocate_naux
   public :: file_ext
   public :: ifind_charstr
+  public :: ReadStateVarType
+
+  !> @brief Pointer type for read state variable
+  !<
+  type ReadStateVarType
+    integer, pointer :: invar
+  end type ReadStateVarType
 
 contains
 
@@ -37,12 +44,14 @@ contains
     character(len=*), intent(in) :: sourcename
     ! -- result
     character(len=LENPACKAGENAME) :: sourcetype
+    character(len=LENPACKAGENAME) :: ext
     ! -- locals
     !
-    sourcetype = sourcename
-    call upcase(sourcetype)
+    ext = file_ext(sourcename)
     !
-    select case (sourcetype)
+    select case (ext)
+    case ('nc')
+      sourcetype = 'NETCDF4'
     case default
       sourcetype = 'MF6FILE'
     end select
@@ -67,18 +76,18 @@ contains
     ! -- return
     character(len=LENFTYPE) :: component_type
     ! -- local
-    integer(I4B) :: i, ilen
+    integer(I4B) :: idx
     !
     ! -- initialize
     component_type = ''
+    idx = 0
     !
-    ilen = len_trim(component)
-    do i = 1, ilen
-      if (component(i:i) == '6') then
-        component_type = ''
-        write (component_type, '(a)') trim(component(1:i - 1))
-      end if
-    end do
+    ! -- identify version index
+    idx = index(component, '6', back=.true.)
+    !
+    if (idx > 0) then
+      write (component_type, '(a)') component(1:idx - 1)
+    end if
     !
     if (.not. idm_component(component_type)) then
       write (errmsg, '(a)') &
@@ -108,7 +117,7 @@ contains
     character(len=LENFTYPE) :: subcomponent_type
     ! -- local
     character(len=LENFTYPE) :: component_type
-    integer(I4B) :: i, ilen
+    integer(I4B) :: idx
     !
     ! -- initialize
     subcomponent_type = ''
@@ -116,13 +125,12 @@ contains
     ! -- verify component
     component_type = idm_component_type(component)
     !
-    ilen = len_trim(subcomponent)
-    do i = 1, ilen
-      if (subcomponent(i:i) == '6') then
-        subcomponent_type = ''
-        write (subcomponent_type, '(a)') trim(subcomponent(1:i - 1))
-      end if
-    end do
+    ! -- indentify version index
+    idx = index(subcomponent, '6', back=.true.)
+    !
+    if (idx > 0) then
+      write (subcomponent_type, '(a)') subcomponent(1:idx - 1)
+    end if
     !
     ! -- return
     return
@@ -162,7 +170,7 @@ contains
 
   !> @brief input file extension
   !!
-  !! Return the input file extension, or an empty string if
+  !! Return a file extension, or an empty string if
   !! not identified.
   !!
   !<
@@ -174,24 +182,18 @@ contains
     ! -- return
     character(len=LENPACKAGETYPE) :: ext
     ! -- local
-    integer(I4B) :: i, istart, istop
+    integer(I4B) :: idx
     !
     ! -- initialize
     ext = ''
-    istart = 0
-    istop = len_trim(filename)
+    idx = 0
     !
     ! -- identify '.' character position from back of string
-    do i = istop, 1, -1
-      if (filename(i:i) == '.') then
-        istart = i
-        exit
-      end if
-    end do
+    idx = index(filename, '.', back=.true.)
     !
     !
-    if (istart > 0) then
-      ext = filename(istart + 1:istop)
+    if (idx > 0) then
+      ext = filename(idx + 1:len_trim(filename))
     end if
     !
     ! -- return

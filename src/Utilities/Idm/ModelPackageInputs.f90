@@ -19,6 +19,7 @@ module ModelPackageInputsModule
   private
   public :: NIUNIT_GWF, NIUNIT_GWT
   public :: ModelPackageInputsType
+  public :: LoadablePackageType
 
   ! -- GWF base package types, ordered for memload
   integer(I4B), parameter :: GWF_NBASEPKG = 50
@@ -57,16 +58,16 @@ module ModelPackageInputsModule
   integer(I4B), parameter :: NIUNIT_GWF = GWF_NBASEPKG + GWF_NMULTIPKG
   integer(I4B), parameter :: NIUNIT_GWT = GWT_NBASEPKG + GWT_NMULTIPKG
 
-  !> @brief derived type for loadable package type
+  !> @brief type for loadable package type
   !!
-  !!  This derived type is used to store package instance
+  !!  This type is used to store package instance
   !!  desriptions for a supported package type.
   !!
   !<
   type :: LoadablePackageType
-    ! -- package type, e.g. 'DIS6 or CHD6'
+    ! -- package type, e.g. 'DIS6' or 'CHD6'
     character(len=LENPACKAGETYPE) :: pkgtype
-    ! -- component type, e.g. 'DIS or CHD'
+    ! -- component type, e.g. 'DIS' or 'CHD'
     character(len=LENFTYPE) :: subcomponent_type
     ! -- package instance attribute arrays
     character(len=LINELENGTH), dimension(:), allocatable :: filenames
@@ -81,9 +82,9 @@ module ModelPackageInputsModule
     procedure :: destroy => pkgtype_destroy
   end type LoadablePackageType
 
-  !> @brief derived type for model package inputs type
+  !> @brief type for model package inputs type
   !!
-  !!  This derived type is used to define input package
+  !!  This type is used to define input package
   !!  descriptors for a model and load to managed memory.
   !!
   !<

@@ -14,9 +14,9 @@ module InputDefinitionModule
   public :: InputParamDefinitionType, &
             InputBlockDefinitionType
 
-  !> @brief derived type for storing input definition
+  !> @brief type for storing input definition
   !!
-  !! This derived type is used to store information for
+  !! This type is used to store information for
   !! each modflow input record
   !!
   !<
@@ -35,9 +35,9 @@ module InputDefinitionModule
     logical(LGP) :: timeseries = .false.
   end type InputParamDefinitionType
 
-  !> @brief derived type for storing block information
+  !> @brief type for storing block information
   !!
-  !! This derived type is used to store information for
+  !! This type is used to store information for
   !! how to read a modflow block
   !!
   !<

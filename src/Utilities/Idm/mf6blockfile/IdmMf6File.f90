@@ -27,9 +27,9 @@ module IdmMf6FileModule
   public :: Mf6FileStaticPkgLoadType, Mf6FileDynamicPkgLoadType
   public :: open_mf6file
 
-  !> @brief derived type for storing package loader
+  !> @brief type for storing package loader
   !!
-  !! This derived type is used to store a pointer to a
+  !! This type is used to store a pointer to a
   !! package load procedure.  This could be used to write
   !! a custom package loader as a way to override the
   !! generic_mf6_load routine.
@@ -50,7 +50,7 @@ module IdmMf6FileModule
     end subroutine IPackageLoad
   end interface
 
-  !> @brief MF6File static loader derived type
+  !> @brief MF6File static loader type
   !<
   type, extends(StaticPkgLoadBaseType) :: Mf6FileStaticPkgLoadType
   contains
@@ -59,7 +59,7 @@ module IdmMf6FileModule
     procedure :: destroy => static_destroy
   end type Mf6FileStaticPkgLoadType
 
-  !> @brief MF6File dynamic loader derived type
+  !> @brief MF6File dynamic loader type
   !<
   type, extends(DynamicPkgLoadBaseType) :: Mf6FileDynamicPkgLoadType
     type(BlockParserType), pointer :: parser !< parser for MF6File period blocks
@@ -394,9 +394,6 @@ contains
   !<
   subroutine dynamic_destroy(this)
     class(Mf6FileDynamicPkgLoadType), intent(inout) :: this
-    !
-    ! -- deallocate input context
-    !call this%DynamicPkgLoadType%destroy()
     !
     ! -- deallocate loader
     call this%block_loader%destroy()

@@ -20,16 +20,11 @@ module StressGridInputModule
   use TimeArraySeriesManagerModule, only: TimeArraySeriesManagerType, &
                                           tasmanager_cr
   use AsciiInputLoadTypeModule, only: AsciiDynamicPkgLoadBaseType
+  use SourceCommonModule, only: ReadStateVarType
 
   implicit none
   private
   public :: StressGridInputType
-
-  !> @brief Pointer type for read state variable
-  !<
-  type ReadStateVar
-    integer, pointer :: invar
-  end type ReadStateVar
 
   !> @brief Ascii grid based dynamic loader type
   !<
@@ -42,8 +37,7 @@ module StressGridInputModule
       pointer :: param_tasnames => null() !< array of dynamic param TAS names
     character(len=LENVARNAME), dimension(:), &
       allocatable :: param_names !< dynamic param names
-    type(ReadStateVar), dimension(:), allocatable :: param_reads !< read states for current load
-    integer(I4B), dimension(:), allocatable :: idt_idxs !< idt indexes corresponding to dfn param list
+    type(ReadStateVarType), dimension(:), allocatable :: param_reads !< read states for current load
     type(TimeArraySeriesManagerType), pointer :: tasmanager => null() !< TAS manager object
     type(BoundInputContextType) :: bndctx !< boundary package input context
   contains
@@ -230,11 +224,7 @@ contains
 
   subroutine ingrid_reset(this)
     ! -- modules
-    use MemoryManagerModule, only: mem_deallocate, mem_setptr, get_isize
-    use InputDefinitionModule, only: InputParamDefinitionType
-    use DefinitionSelectModule, only: get_param_definition_type
     class(StressGridInputType), intent(inout) :: this !< StressGridInputType
-    type(InputParamDefinitionType), pointer :: idt
     integer(I4B) :: n
     !
     if (this%tas_active /= 0) then
@@ -249,18 +239,14 @@ contains
                                   this%mf6_input%mempath, this%sourcename)
     end if
     !
-    ! -- reset input context memory for parameters
     do n = 1, this%nparam
-      if (this%param_reads(n)%invar /= 0) then
-        !
-        ! -- set definition
-        idt => this%mf6_input%param_dfns(this%idt_idxs(n))
-        !
-        ! -- reset read state
-        this%param_reads(n)%invar = 0
-
-      end if
+      ! -- reset read state
+      this%param_reads(n)%invar = 0
     end do
+    !
+    ! TODO: verify change, from mf6io:
+    ! "If an array is not specified for an auxiliary variable, then a value of zero is assigned."
+    this%bndctx%auxvar = DZERO
     !
     ! -- return
     return
@@ -268,61 +254,29 @@ contains
 
   subroutine ingrid_params_alloc(this)
     ! -- modules
-    use MemoryManagerModule, only: mem_allocate
-    use InputDefinitionModule, only: InputParamDefinitionType
-    use DefinitionSelectModule, only: get_param_definition_type
-    use ArrayHandlersModule, only: expandarray
     ! -- dummy
     class(StressGridInputType), intent(inout) :: this !< StressGridInputType
-    type(InputParamDefinitionType), pointer :: idt
-    character(len=LENVARNAME), dimension(:), allocatable :: read_state_varnames
+    character(len=LENVARNAME) :: rs_varname
     integer(I4B), pointer :: intvar
     integer(I4B) :: iparam
     !
     ! -- allocate period dfn params
-    call this%bndctx%bound_params_allocate(this%sourcename)
+    call this%bndctx%alloc(this%sourcename)
     !
-    ! -- allocate dfn input params
-    do iparam = 1, size(this%mf6_input%param_dfns)
-      !
-      ! -- assign param definition pointer
-      idt => this%mf6_input%param_dfns(iparam)
-      !
-      if (idt%blockname == 'PERIOD') then
-        !
-        ! -- store parameter info
-        if (idt%tagname /= 'AUX') then
-          this%nparam = this%nparam + 1
-          !
-          ! -- reallocate param info arrays
-          call expandarray(this%param_names)
-          call expandarray(this%idt_idxs)
-          call expandarray(read_state_varnames)
-          !
-          ! -- internal mf6 param name
-          this%param_names(this%nparam) = idt%mf6varname
-          ! -- idt list index of param
-          this%idt_idxs(this%nparam) = iparam
-          ! -- allocate and store name of read state variable
-          read_state_varnames(this%nparam) = &
-            this%bndctx%allocate_read_state_var(idt%mf6varname)
-          !
-        end if
-        !
-      end if
-    end do
+    ! -- set in scope param names
+    call this%bndctx%filtered_params(this%param_names, this%nparam)
     !
     ! -- allocate and set param_reads pointer array
     allocate (this%param_reads(this%nparam))
     !
     ! store read state variable pointers
     do iparam = 1, this%nparam
-      call mem_setptr(intvar, read_state_varnames(iparam), this%mf6_input%mempath)
+      ! -- allocate and store name of read state variable
+      rs_varname = this%bndctx%rsv_alloc(this%param_names(iparam))
+      call mem_setptr(intvar, rs_varname, this%mf6_input%mempath)
       this%param_reads(iparam)%invar => intvar
+      this%param_reads(iparam)%invar = 0
     end do
-    !
-    ! -- cleanup
-    deallocate (read_state_varnames)
     !
     ! -- return
     return
@@ -374,8 +328,9 @@ contains
       !
     case default
       !
-      call store_error('Programming error. (IDM) unsupported memload &
-                       &data type for param='//trim(tagname))
+      errmsg = 'IDM UNIMPLEMENTED StressGridInput::ingrid_param_load &
+               &datatype='//trim(datatype)
+      call store_error(errmsg)
       call store_error_filename(this%sourcename)
       !
     end select
@@ -428,6 +383,7 @@ contains
   subroutine ingrid_tas_links_create(this, inunit)
     ! -- modules
     use InputDefinitionModule, only: InputParamDefinitionType
+    use DefinitionSelectModule, only: get_param_definition_type
     ! -- dummy
     class(StressGridInputType), intent(inout) :: this !< StressGridInputType
     integer(I4B), intent(in) :: inunit
@@ -471,7 +427,11 @@ contains
     do n = 1, this%nparam
       !
       ! -- assign param definition pointer
-      idt => this%mf6_input%param_dfns(this%idt_idxs(n))
+      idt => get_param_definition_type(this%mf6_input%param_dfns, &
+                                       this%mf6_input%component_type, &
+                                       this%mf6_input%subcomponent_type, &
+                                       'PERIOD', this%param_names(n), &
+                                       this%sourcename)
       !
       if (idt%timeseries) then
         !

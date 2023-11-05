@@ -24,9 +24,9 @@ module StructArrayModule
   public :: StructArrayType
   public :: constructStructArray, destructStructArray
 
-  !> @brief derived type for structured array
+  !> @brief type for structured array
   !!
-  !! This derived type is used to read and store a
+  !! This type is used to read and store a
   !! list that consists of multiple one-dimensional
   !! vectors.
   !!

@@ -20,9 +20,9 @@ module InputLoadTypeModule
   public :: AddDynamicModelToList, GetDynamicModelFromList
   public :: StaticPkgLoadType, DynamicPkgLoadType
 
-  !> @brief derived type for source static load
+  !> @brief type for source static load
   !!
-  !! This derived type is a base concrete type for a model
+  !! This type is a base concrete type for a model
   !! package static load
   !!
   !<
@@ -47,9 +47,9 @@ module InputLoadTypeModule
     procedure(load_if), deferred :: load
   end type StaticPkgLoadBaseType
 
-  !> @brief derived type for source dynamic load
+  !> @brief type for source dynamic load
   !!
-  !! This derived type is a base concrete type for a model
+  !! This type is a base concrete type for a model
   !! package dynamic (period) load
   !!
   !<
@@ -93,9 +93,9 @@ module InputLoadTypeModule
     end subroutine
   end interface
 
-  !> @brief derived type for storing a dynamic package load list
+  !> @brief type for storing a dynamic package load list
   !!
-  !! This derived type is used to store a list of package
+  !! This type is used to store a list of package
   !! dynamic load types for a model
   !!
   !<

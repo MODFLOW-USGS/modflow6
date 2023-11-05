@@ -99,7 +99,7 @@ contains
     call this%bndctx%init(mf6_input, .false.)
     !
     ! -- set SA cols in scope for list input
-    call this%bndctx%filtered_cols(this%cols, this%ncol)
+    call this%bndctx%filtered_params(this%cols, this%ncol)
     !
     ! -- construct and set up the struct array object
     call this%create_structarray()
@@ -264,7 +264,6 @@ contains
 
       if (associated(tsLinkAux)) then
         !
-        ! TODO
         ! -- set variable name
         tsLinkAux%Text = this%bndctx%auxname_cst(ts_strloc%col)
         !

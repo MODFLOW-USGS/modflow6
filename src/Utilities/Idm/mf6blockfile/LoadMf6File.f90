@@ -44,19 +44,17 @@ contains
   !!
   !<
   subroutine idm_load(parser, mf6_input, iout)
-    use SimVariablesModule, only: idm_context
-    use SourceCommonModule, only: set_model_shape, mem_allocate_naux
+    use MemoryManagerModule, only: get_isize
     type(BlockParserType), intent(inout) :: parser !< block parser
     type(ModflowInputType), intent(in) :: mf6_input !< ModflowInputType
     integer(I4B), intent(in) :: iout !< unit number for output
     integer(I4B) :: iblock !< consecutive block number as defined in definition file
-    character(len=LENMEMPATH) :: componentMemPath
-    integer(I4B), dimension(:), contiguous, pointer :: mshape => null()
+    integer(I4B), dimension(:), contiguous, pointer :: mshape !< model shape
     character(len=LINELENGTH) :: filename !< input filename
+    integer(I4B) :: isize
     !
-    ! -- model shape memory path
-    componentMemPath = create_mem_path(component=mf6_input%component_name, &
-                                       context=idm_context)
+    ! -- initialize
+    nullify (mshape)
     !
     ! -- set filename
     inquire (unit=parser%GetUnit(), name=filename)
@@ -64,6 +62,12 @@ contains
     ! -- log lst file header
     call idm_log_header(mf6_input%component_name, &
                         mf6_input%subcomponent_name, iout)
+    !
+    call get_isize('MODEL_SHAPE', mf6_input%component_mempath, isize)
+    !
+    if (isize > 0) then
+      call mem_setptr(mshape, 'MODEL_SHAPE', mf6_input%component_mempath)
+    end if
     !
     ! -- process blocks
     do iblock = 1, size(mf6_input%block_dfns)
@@ -83,6 +87,9 @@ contains
     ! -- close logging statement
     call idm_log_close(mf6_input%component_name, &
                        mf6_input%subcomponent_name, iout)
+    !
+    ! -- return
+    return
   end subroutine idm_load
 
   subroutine block_post_process(mf6_input, blockname, mshape, filename)
