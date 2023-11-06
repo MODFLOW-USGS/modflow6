@@ -3,7 +3,7 @@
 set -euxo pipefail
 
 # fetch and checkout latest
-ssh -l "$SSH_USERNAME" "$SSH_HOSTNAME" "cd $MF6_PROJ_ROOT && git fetch $GIT_REMOTE && git checkout $GIT_BRANCH && git pull"
+ssh -l "$SSH_USERNAME" "$SSH_HOSTNAME" "cd $MF6_PROJ_ROOT && git fetch $GIT_REMOTE && git checkout $GIT_REMOTE/$GIT_BRANCH"
 echo "Updated repository $MF6_PROJ_ROOT"
 # submit a job to build mf6
 jobid=$(ssh -l "$SSH_USERNAME" "$SSH_HOSTNAME" "sbatch --account=$SLURM_ACCOUNT --reservation=$SLURM_RESERVATION --parsable -D $MF6_PROJ_ROOT $MF6_PROJ_ROOT/$BUILD_SCRIPT" | tail -n 1)
