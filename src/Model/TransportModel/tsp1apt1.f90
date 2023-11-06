@@ -1275,8 +1275,6 @@ contains
     call mem_deallocate(this%qsto)
     call mem_deallocate(this%ccterm)
     call mem_deallocate(this%strt)
-    call mem_deallocate(this%ktf)
-    call mem_deallocate(this%rfeatthk)
     call mem_deallocate(this%lauxvar)
     call mem_deallocate(this%xoldpak)
     if (this%imatrows == 0) then

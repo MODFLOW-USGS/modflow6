@@ -793,16 +793,16 @@ contains
       call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
     case ('LKT6')
       call lkt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                      pakname, this%fmi)
+                      pakname, this%fmi, this%eqnsclfac)
     case ('SFT6')
       call sft_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                      pakname, this%fmi)
+                      pakname, this%fmi, this%eqnsclfac)
     case ('MWT6')
       call mwt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                      pakname, this%fmi)
+                      pakname, this%fmi, this%eqnsclfac)
     case ('UZT6')
       call uzt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
-                      pakname, this%fmi)
+                      pakname, this%fmi, this%eqnsclfac)
     case ('IST6')
       call ist_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, this%fmi, this%mst)
