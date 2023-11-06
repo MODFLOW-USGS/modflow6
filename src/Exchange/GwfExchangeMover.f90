@@ -1,8 +1,8 @@
 module GwfExgMoverModule
-  use KindModule, only: I4B, DP
-  use ConstantsModule, only: LENMODELNAME, LENPACKAGENAME
+  use KindModule, only: I4B, DP, LGP
+  use ConstantsModule, only: LENMODELNAME, LENPACKAGENAME, DZERO, DNODATA
   use MemoryManagerModule, only: mem_allocate, mem_deallocate
-  use MemoryHelperModule, only: split_mem_path  
+  use MemoryHelperModule, only: split_mem_path
   use VirtualModelModule
   use BaseDisModule
   use GwfMvrModule
@@ -12,6 +12,9 @@ module GwfExgMoverModule
   public :: exg_mvr_cr
 
   type, public, extends(GwfMvrType) :: GwfExgMoverType
+    class(VirtualModelType), pointer :: model1 => null()
+    class(VirtualModelType), pointer :: model2 => null()
+    logical(LGP), dimension(:), pointer, contiguous :: prov_is_m1 => null()
     real(DP), dimension(:), pointer, contiguous :: qpactual_m1 => null()
     real(DP), dimension(:), pointer, contiguous :: qpactual_m2 => null()
   contains
@@ -20,7 +23,7 @@ module GwfExgMoverModule
     procedure :: mvr_fc => xmvr_fc
     procedure :: check_packages => xmvr_check_packages
     procedure :: assign_packagemovers => xmvr_assign_packagemovers
-    procedure :: reinitialize_movers => xmvr_reinitialize_movers
+    procedure :: initialize_movers => xmvr_initialize_movers
     procedure :: allocate_arrays => xmvr_allocate_arrays
   end type
 
@@ -32,9 +35,9 @@ contains
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
     class(DisBaseType), pointer :: dis
-    
+
     allocate (exg_mvr)
-    
+
     ! Init through base
     call exg_mvr%mvr_init(name_parent, inunit, iout, dis, 1)
 
@@ -46,27 +49,34 @@ contains
     use SimModule, only: store_error, count_errors, store_error_unit
     class(GwfExgMoverType), intent(inout) :: this
     ! local
-    !character(len=LINELENGTH) :: errmsg
-    !integer(I4B) :: i
-    !integer(I4B), pointer :: imover_ptr
+    character(len=LENMODELNAME) :: mname
+    character(len=LENPACKAGENAME) :: pname
+    class(VirtualModelType), pointer :: vm
+    character(len=LINELENGTH) :: errmsg
+    integer(I4B) :: i
+    integer(I4B), pointer :: imover_ptr
 
-    return
-    ! TODO_MJR:
-    ! do i = 1, size(this%pckMemPaths)
-    !   imover_ptr => null()
-    !   call mem_setptr(imover_ptr, 'IMOVER', trim(this%pckMemPaths(i)))
-    !   if (imover_ptr == 0) then
-    !     write (errmsg, '(a, a, a)') &
-    !       'ERROR.  MODEL AND PACKAGE "', &
-    !       trim(this%pckMemPaths(i)), &
-    !       '" DOES NOT HAVE MOVER SPECIFIED IN OPTIONS BLOCK.'
-    !     call store_error(errmsg)
-    !   end if
-    ! end do
+    do i = 1, size(this%pckMemPaths)
+      ! check only when local
+      call split_mem_path(this%pckMemPaths(i), mname, pname)
+      vm => get_virtual_model(mname)
+      if (vm%is_local) then
+        ! check if PackageMover is active in package:
+        imover_ptr => null()
+        call mem_setptr(imover_ptr, 'IMOVER', trim(this%pckMemPaths(i)))
+        if (imover_ptr == 0) then
+          write (errmsg, '(a, a, a)') &
+            'ERROR.  MODEL AND PACKAGE "', &
+            trim(this%pckMemPaths(i)), &
+            '" DOES NOT HAVE MOVER SPECIFIED IN OPTIONS BLOCK.'
+          call store_error(errmsg)
+        end if
+      end if
+    end do
 
-    ! if (count_errors() > 0) then
-    !   call this%parser%StoreErrorUnit()
-    ! end if
+    if (count_errors() > 0) then
+      call this%parser%StoreErrorUnit()
+    end if
 
   end subroutine xmvr_check_packages
 
@@ -84,7 +94,7 @@ contains
         ! is it local?
         call split_mem_path(this%pckMemPaths(i), mname, pname)
         vm => get_virtual_model(mname)
-        if(vm%is_local) then
+        if (vm%is_local) then
           ! yes, we need the pointers
           call set_packagemover_pointer(this%pakmovers(i), &
                                         trim(this%pckMemPaths(i)))
@@ -93,7 +103,7 @@ contains
     end do
   end subroutine xmvr_assign_packagemovers
 
-  subroutine xmvr_reinitialize_movers(this, nr_active_movers)
+  subroutine xmvr_initialize_movers(this, nr_active_movers)
     class(GwfExgMoverType) :: this
     integer(I4B) :: nr_active_movers
     ! local
@@ -102,28 +112,45 @@ contains
     character(len=LENPACKAGENAME) :: pname
     class(VirtualModelType), pointer :: vm
 
-    call this%GwfMvrType%reinitialize_movers(nr_active_movers)
+    call this%GwfMvrType%initialize_movers(nr_active_movers)
+
+    this%prov_is_m1 = .false.
 
     ! deactivate remote parts
     do i = 1, nr_active_movers
       call split_mem_path(this%mvr(i)%pckNameSrc, mname, pname)
       vm => get_virtual_model(mname)
       this%mvr(i)%is_provider_active = vm%is_local
+      this%prov_is_m1(i) = associated(vm, this%model1)
       call split_mem_path(this%mvr(i)%pckNameTgt, mname, pname)
       vm => get_virtual_model(mname)
       this%mvr(i)%is_receiver_active = vm%is_local
     end do
 
-  end subroutine xmvr_reinitialize_movers
+  end subroutine xmvr_initialize_movers
 
   subroutine xmvr_cf(this)
     class(GwfExgMoverType) :: this
     ! local
     integer(I4B) :: i
 
-    ! do i = 1, this%nmvr
-    !   call this%mvr(i)%update_provider()
-    ! end do
+    do i = 1, this%nmvr
+      if (this%mvr(i)%is_provider_active) then
+
+        call this%mvr(i)%update_provider()
+
+        ! copy calculated rate to arrays for synchronization:
+        if (this%prov_is_m1(i)) then
+          !write(*,*) proc_id, ", set m1: ", this%mvr(i)%qpactual
+          this%qpactual_m1(i) = this%mvr(i)%qpactual
+          this%qpactual_m2(i) = DNODATA
+        else
+          !write(*,*) proc_id, ", set m2: ", this%mvr(i)%qpactual
+          this%qpactual_m1(i) = DNODATA
+          this%qpactual_m2(i) = this%mvr(i)%qpactual
+        end if
+      end if
+    end do
 
   end subroutine xmvr_cf
 
@@ -133,10 +160,19 @@ contains
     integer(I4B) :: i
 
     do i = 1, this%nmvr
-      call this%mvr(i)%update_provider()
-    end do
-    do i = 1, this%nmvr
-      call this%mvr(i)%update_receiver()
+      if (this%mvr(i)%is_receiver_active) then
+
+        ! copy from synchronization arrays back into movers:
+        if (this%prov_is_m1(i)) then
+          !write(*,*) proc_id, ", read m1: ", this%qpactual_m1(i)
+          this%mvr(i)%qpactual = this%qpactual_m1(i)
+        else
+          !write(*,*) proc_id, ", read m2: ", this%qpactual_m2(i)
+          this%mvr(i)%qpactual = this%qpactual_m2(i)
+        end if
+
+        call this%mvr(i)%update_receiver()
+      end if
     end do
 
   end subroutine xmvr_fc
@@ -145,8 +181,12 @@ contains
     class(GwfExgMoverType) :: this
 
     call this%GwfMvrType%allocate_arrays()
-    call mem_allocate(this%qpactual_m1, this%maxmvr, 'QPACTUAL_M1', this%memoryPath)
-    call mem_allocate(this%qpactual_m2, this%maxmvr, 'QPACTUAL_M2', this%memoryPath)
+
+    allocate (this%prov_is_m1(this%maxmvr))
+    call mem_allocate(this%qpactual_m1, this%maxmvr, 'QPACTUAL_M1', &
+                      this%memoryPath)
+    call mem_allocate(this%qpactual_m2, this%maxmvr, 'QPACTUAL_M2', &
+                      this%memoryPath)
 
   end subroutine xmvr_allocate_arrays
 
@@ -154,6 +194,8 @@ contains
     class(GwfExgMoverType) :: this
 
     call this%GwfMvrType%mvr_da()
+
+    deallocate (this%prov_is_m1)
     call mem_deallocate(this%qpactual_m1)
     call mem_deallocate(this%qpactual_m2)
 

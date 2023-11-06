@@ -14,6 +14,7 @@ module GwfGwfExchangeModule
   use SimModule, only: store_error
   use BaseModelModule, only: BaseModelType, GetBaseModelFromList
   use BaseExchangeModule, only: BaseExchangeType, AddBaseExchangeToList
+  use BaseDisModule, only: DisBaseType
   use ConstantsModule, only: LENBOUNDNAME, NAMEDBOUNDFLAG, LINELENGTH, &
                              TABCENTER, TABLEFT, LENAUXNAME, DNODATA
   use ListModule, only: ListType
@@ -1353,10 +1354,6 @@ contains
     write (iout, '(4x,a)') &
       'GHOST NODES WILL BE READ FROM ', trim(fname)
     case ('MVR6')
-    if (this%is_datacopy) then
-      call this%parser%GetRemainingLine(line)
-      exit sel_opt
-    end if
     call this%parser%GetStringCaps(subkey)
     if (subkey /= 'FILEIN') then
       call store_error('MVR6 keyword must be followed by '// &
@@ -1464,6 +1461,7 @@ contains
     ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
     integer(I4B), intent(in) :: iout
+    class(DisBaseType), pointer :: dis
     ! -- local
     !
     ! -- Create and initialize the mover object  Here, dis is set to the one
@@ -1472,7 +1470,15 @@ contains
     !    the dis object does not convert from reduced to user node numbers.
     !    So in this case, the dis object is just writing unconverted package
     !    numbers to the binary budget file.
-    call exg_mvr_cr(this%mvr, this%name, this%inmvr, iout, this%gwfmodel1%dis)
+    dis => null()
+    if (this%v_model1%is_local) then
+      dis => this%gwfmodel1%dis
+    else if (this%v_model2%is_local) then
+      dis => this%gwfmodel2%dis
+    end if
+    call exg_mvr_cr(this%mvr, this%name, this%inmvr, iout, dis)
+    this%mvr%model1 => this%v_model1
+    this%mvr%model2 => this%v_model2
     !
     ! -- Return
     return

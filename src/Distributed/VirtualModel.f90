@@ -15,9 +15,9 @@ module VirtualModelModule
 
   interface get_virtual_model
     module procedure get_virtual_model_by_id, &
-                     get_virtual_model_by_name
+      get_virtual_model_by_name
   end interface
-  
+
   type, public, extends(VirtualDataContainerType) :: VirtualModelType
     class(NumericalModelType), pointer :: local_model
     ! CON

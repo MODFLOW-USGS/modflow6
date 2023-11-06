@@ -51,7 +51,7 @@ contains
     integer(I4B) :: iconn
     class(SpatialModelConnectionType), pointer :: conn
     class(VirtualExchangeType), pointer :: virt_exg
-    character(len=LENMEMPATH) :: virt_mem_path
+    character(len=LENMEMPATH) :: virt_mem_path, local_mem_path
 
     do iconn = 1, baseconnectionlist%Count()
       conn => get_smc_from_list(baseconnectionlist, iconn)
@@ -60,11 +60,21 @@ contains
         virt_mem_path = virt_exg%get_vrt_mem_path('NODEM1', '')
         call this%map_data_full(0, 'NODEM1', conn%prim_exchange%memoryPath, &
                                 'NODEM1', virt_mem_path, (/STG_BFR_CON_DF/))
+        virt_mem_path = virt_exg%get_vrt_mem_path('QPACTUAL_M1', 'MVR')
+        local_mem_path = create_mem_path(virt_exg%name, 'MVR')
+        call this%map_data_full(conn%owner%idsoln, 'QPACTUAL_M1', &
+                                local_mem_path, 'QPACTUAL_M1', &
+                                virt_mem_path, (/STG_BFR_EXG_FC/))
       end if
       if (.not. virt_exg%v_model2%is_local) then
         virt_mem_path = virt_exg%get_vrt_mem_path('NODEM2', '')
         call this%map_data_full(0, 'NODEM2', conn%prim_exchange%memoryPath, &
                                 'NODEM2', virt_mem_path, (/STG_BFR_CON_DF/))
+        virt_mem_path = virt_exg%get_vrt_mem_path('QPACTUAL_M2', 'MVR')
+        local_mem_path = create_mem_path(virt_exg%name, 'MVR')
+        call this%map_data_full(conn%owner%idsoln, 'QPACTUAL_M2', &
+                                local_mem_path, 'QPACTUAL_M2', &
+                                virt_mem_path, (/STG_BFR_EXG_FC/))
       end if
     end do
 

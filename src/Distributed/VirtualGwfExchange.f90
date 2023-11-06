@@ -14,8 +14,8 @@ module VirtualGwfExchangeModule
   type, public, extends(VirtualExchangeType) :: VirtualGwfExchangeType
     type(VirtualIntType), pointer :: inmvr => null()
     type(VirtualIntType), pointer :: maxmvr => null()
-    type(VirtualInt1dType), pointer :: qpactual_m1 => null()
-    type(VirtualInt1dType), pointer :: qpactual_m2 => null()
+    type(VirtualDbl1dType), pointer :: qpactual_m1 => null()
+    type(VirtualDbl1dType), pointer :: qpactual_m2 => null()
   contains
     procedure :: create => vfx_create
     procedure :: prepare_stage => vfx_prepare_stage
@@ -71,10 +71,10 @@ contains
     ! local
     logical(LGP) :: is_nodem1_local
     logical(LGP) :: is_nodem2_local
-    
+
     is_nodem1_local = this%v_model1%is_local
     is_nodem2_local = this%v_model2%is_local
-    call this%set(this%inmvr%base(), 'INMVR', '', MAP_ALL_TYPE)               
+    call this%set(this%inmvr%base(), 'INMVR', '', MAP_ALL_TYPE)
     call this%set(this%maxmvr%base(), 'MAXMVR', 'MVR', MAP_ALL_TYPE)
     ! these follow locality of nodem1,2
     call this%set(this%qpactual_m1%base(), 'QPACTUAL_M1', 'MVR', &
@@ -97,20 +97,20 @@ contains
 
       call this%map(this%inmvr%base(), (/STG_AFT_EXG_DF/))
 
-    else if (stage == STG_AFT_CON_CR) then
+    else if (stage == STG_BFR_CON_AR) then
 
       ! only when MVR is active
       if (this%inmvr%get() > 0) then
-        call this%map(this%maxmvr%base(), (/STG_AFT_CON_CR/))
+        call this%map(this%maxmvr%base(), (/STG_BFR_CON_AR/))
       end if
 
-    else if (stage == STG_BFR_CON_DF) then
+    else if (stage == STG_AFT_CON_AR) then
 
       ! only when MVR is active
       if (this%inmvr%get() > 0) then
         maxmvr = this%maxmvr%get()
-        call this%map(this%qpactual_m1%base(), maxmvr, (/STG_BFR_EXG_RP/))
-        call this%map(this%qpactual_m2%base(), maxmvr, (/STG_BFR_EXG_RP/))
+        call this%map(this%qpactual_m1%base(), maxmvr, (/STG_BFR_EXG_FC/))
+        call this%map(this%qpactual_m2%base(), maxmvr, (/STG_BFR_EXG_FC/))
       end if
 
     end if
@@ -128,7 +128,7 @@ contains
 
     ! get base items to receive
     call this%VirtualExchangeType%get_recv_items(stage, rank, &
-                                            virtual_items)
+                                                 virtual_items)
 
     ! add MVR items (follows nodem1 and nodem2 pattern)
     vdi => this%qpactual_m1
@@ -164,7 +164,7 @@ contains
 
     ! get base items to send
     call this%VirtualExchangeType%get_send_items(stage, rank, &
-                                            virtual_items)
+                                                 virtual_items)
 
     ! add MVR items (follows nodem1,2 patter)
     vdi => this%qpactual_m1

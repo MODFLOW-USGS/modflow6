@@ -164,7 +164,7 @@ module GwfMvrModule
     procedure :: read_packages
     procedure :: check_packages
     procedure :: assign_packagemovers
-    procedure :: reinitialize_movers
+    procedure :: initialize_movers
     procedure :: allocate_scalars
     procedure :: allocate_arrays
     procedure, private :: mvr_setup_budobj
@@ -175,7 +175,7 @@ module GwfMvrModule
 
 contains
 
-subroutine mvr_cr(mvrobj, name_parent, inunit, iout, dis, iexgmvr)
+  subroutine mvr_cr(mvrobj, name_parent, inunit, iout, dis, iexgmvr)
 ! ******************************************************************************
 ! mvr_cr -- Create a new mvr object
 ! ******************************************************************************
@@ -368,10 +368,10 @@ subroutine mvr_cr(mvrobj, name_parent, inunit, iout, dis, iexgmvr)
       call this%gwfmvrperioddata%read_from_parser(this%parser, nlist, mname)
       !
       ! -- Process the input data into the individual mover objects
-      call this%reinitialize_movers(nlist)
+      call this%initialize_movers(nlist)
       !
       ! -- assign the pointers
-      do i = 1, nlist        
+      do i = 1, nlist
         call this%mvr(i)%prepare(this%parser%iuactive, &
                                  this%pckMemPaths, &
                                  this%pakmovers)
@@ -424,7 +424,7 @@ subroutine mvr_cr(mvrobj, name_parent, inunit, iout, dis, iexgmvr)
     return
   end subroutine mvr_rp
 
-  subroutine reinitialize_movers(this, nr_active_movers)
+  subroutine initialize_movers(this, nr_active_movers)
     class(GwfMvrType) :: this
     integer(I4B) :: nr_active_movers
     ! local
@@ -441,7 +441,7 @@ subroutine mvr_cr(mvrobj, name_parent, inunit, iout, dis, iexgmvr)
                                   this%gwfmvrperioddata%value(i))
     end do
 
-  end subroutine reinitialize_movers
+  end subroutine initialize_movers
 
   subroutine mvr_ad(this)
 ! ******************************************************************************
@@ -1349,7 +1349,7 @@ subroutine mvr_cr(mvrobj, name_parent, inunit, iout, dis, iexgmvr)
               !
               ! -- map from irch1 to feature (needed for lake to map outlet to lake number)
               n1 = this%mvr(n)%iRchNrSrc
-              n1 = this%pakmovers(i)%iprmap(n1)
+              !n1 = this%pakmovers(i)%iprmap(n1) TODO_MJR: uncomment
               !
               ! -- set receiver id to irch2
               n2 = this%mvr(n)%iRchNrTgt
