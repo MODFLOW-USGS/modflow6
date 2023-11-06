@@ -236,7 +236,7 @@ $(OBJDIR)/gwf3disv8.o \
 $(OBJDIR)/gwf3disu8.o \
 $(OBJDIR)/gwf3dis8.o \
 $(OBJDIR)/gwf3uzf8.o \
-$(OBJDIR)/gwt1apt1.o \
+$(OBJDIR)/tsp1apt1.o \
 $(OBJDIR)/gwt1mst1.o \
 $(OBJDIR)/GwtDspOptions.o \
 $(OBJDIR)/gwf3npf8.o \

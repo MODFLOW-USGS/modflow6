@@ -33,7 +33,7 @@ module GwtUztModule
   use TspFmiModule, only: TspFmiType
   use UzfModule, only: UzfType
   use ObserveModule, only: ObserveType
-  use GwtAptModule, only: GwtAptType, apt_process_obsID, &
+  use TspAptModule, only: TspAptType, apt_process_obsID, &
                           apt_process_obsID12
   use MatrixBaseModule
   implicit none
@@ -44,7 +44,7 @@ module GwtUztModule
   character(len=*), parameter :: flowtype = 'UZF'
   character(len=16) :: text = '             UZT'
 
-  type, extends(GwtAptType) :: GwtUztType
+  type, extends(TspAptType) :: GwtUztType
 
     integer(I4B), pointer :: idxbudinfl => null() ! index of uzf infiltration terms in flowbudptr
     integer(I4B), pointer :: idxbudrinf => null() ! index of rejected infiltration terms in flowbudptr
@@ -251,7 +251,7 @@ contains
 
   subroutine uzt_fc_expanded(this, rhs, ia, idxglo, matrix_sln)
 ! ******************************************************************************
-! uzt_fc_expanded -- this will be called from GwtAptType%apt_fc_expanded()
+! uzt_fc_expanded -- this will be called from TspAptType%apt_fc_expanded()
 !   in order to add matrix terms specifically for this package
 ! ****************************************************************************
 !
@@ -570,8 +570,8 @@ contains
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    ! -- allocate scalars in GwtAptType
-    call this%GwtAptType%allocate_scalars()
+    ! -- allocate scalars in TspAptType
+    call this%TspAptType%allocate_scalars()
     !
     ! -- Allocate
     call mem_allocate(this%idxbudinfl, 'IDXBUDINFL', this%memoryPath)
@@ -608,8 +608,8 @@ contains
     call mem_allocate(this%concinfl, this%ncv, 'CONCINFL', this%memoryPath)
     call mem_allocate(this%concuzet, this%ncv, 'CONCUZET', this%memoryPath)
     !
-    ! -- call standard GwtApttype allocate arrays
-    call this%GwtAptType%apt_allocate_arrays()
+    ! -- call standard TspAptType allocate arrays
+    call this%TspAptType%apt_allocate_arrays()
     !
     ! -- Initialize
     do n = 1, this%ncv
@@ -646,8 +646,8 @@ contains
     call mem_deallocate(this%concinfl)
     call mem_deallocate(this%concuzet)
     !
-    ! -- deallocate scalars in GwtAptType
-    call this%GwtAptType%bnd_da()
+    ! -- deallocate scalars in TspAptType
+    call this%TspAptType%bnd_da()
     !
     ! -- Return
     return

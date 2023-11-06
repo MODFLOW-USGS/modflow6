@@ -40,7 +40,7 @@ module GwtLktModule
   use TspFmiModule, only: TspFmiType
   use LakModule, only: LakType
   use ObserveModule, only: ObserveType
-  use GwtAptModule, only: GwtAptType, apt_process_obsID, &
+  use TspAptModule, only: TspAptType, apt_process_obsID, &
                           apt_process_obsID12
   use MatrixBaseModule
 
@@ -52,7 +52,7 @@ module GwtLktModule
   character(len=*), parameter :: flowtype = 'LAK'
   character(len=16) :: text = '             LKT'
 
-  type, extends(GwtAptType) :: GwtLktType
+  type, extends(TspAptType) :: GwtLktType
 
     integer(I4B), pointer :: idxbudrain => null() ! index of rainfall terms in flowbudptr
     integer(I4B), pointer :: idxbudevap => null() ! index of evaporation terms in flowbudptr
@@ -272,7 +272,7 @@ contains
 
   subroutine lkt_fc_expanded(this, rhs, ia, idxglo, matrix_sln)
 ! ******************************************************************************
-! lkt_fc_expanded -- this will be called from GwtAptType%apt_fc_expanded()
+! lkt_fc_expanded -- this will be called from TspAptType%apt_fc_expanded()
 !   in order to add matrix terms specifically for LKT
 ! ****************************************************************************
 !
@@ -653,8 +653,8 @@ contains
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    ! -- allocate scalars in GwtAptType
-    call this%GwtAptType%allocate_scalars()
+    ! -- allocate scalars in TspAptType
+    call this%TspAptType%allocate_scalars()
     !
     ! -- Allocate
     call mem_allocate(this%idxbudrain, 'IDXBUDRAIN', this%memoryPath)
@@ -697,8 +697,8 @@ contains
     call mem_allocate(this%concroff, this%ncv, 'CONCROFF', this%memoryPath)
     call mem_allocate(this%conciflw, this%ncv, 'CONCIFLW', this%memoryPath)
     !
-    ! -- call standard GwtApttype allocate arrays
-    call this%GwtAptType%apt_allocate_arrays()
+    ! -- call standard TspAptType allocate arrays
+    call this%TspAptType%apt_allocate_arrays()
     !
     ! -- Initialize
     do n = 1, this%ncv
@@ -741,8 +741,8 @@ contains
     call mem_deallocate(this%concroff)
     call mem_deallocate(this%conciflw)
     !
-    ! -- deallocate scalars in GwtAptType
-    call this%GwtAptType%bnd_da()
+    ! -- deallocate scalars in TspAptType
+    call this%TspAptType%bnd_da()
     !
     ! -- Return
     return

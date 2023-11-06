@@ -164,7 +164,6 @@
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3wel8idm.f90"/></Filter>
 		<Filter Name="GroundWaterTransport">
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1.f90"/>
-		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1apt1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1cnc1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1cnc1idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1dis1idm.f90"/>
@@ -206,6 +205,7 @@
 		<Filter Name="TransportModel">
 		<File RelativePath="..\src\Model\TransportModel\tsp1.f90"/>
 		<File RelativePath="..\src\Model\TransportModel\tsp1adv1.f90"/>
+		<File RelativePath="..\src\Model\TransportModel\tsp1apt1.f90"/>
 		<File RelativePath="..\src\Model\TransportModel\tsp1fmi1.f90"/>
 		<File RelativePath="..\src\Model\TransportModel\tsp1ic1.f90"/>
 		<File RelativePath="..\src\Model\TransportModel\tsp1mvt1.f90"/>

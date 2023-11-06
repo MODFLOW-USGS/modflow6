@@ -41,7 +41,7 @@ module GwtMwtModule
   use TspFmiModule, only: TspFmiType
   use MawModule, only: MawType
   use ObserveModule, only: ObserveType
-  use GwtAptModule, only: GwtAptType, apt_process_obsID, &
+  use TspAptModule, only: TspAptType, apt_process_obsID, &
                           apt_process_obsID12
   use MatrixBaseModule
 
@@ -53,7 +53,7 @@ module GwtMwtModule
   character(len=*), parameter :: flowtype = 'MAW'
   character(len=16) :: text = '             MWT'
 
-  type, extends(GwtAptType) :: GwtMwtType
+  type, extends(TspAptType) :: GwtMwtType
 
     integer(I4B), pointer :: idxbudrate => null() ! index of well rate terms in flowbudptr
     integer(I4B), pointer :: idxbudfwrt => null() ! index of flowing well rate terms in flowbudptr
@@ -259,7 +259,7 @@ contains
 
   subroutine mwt_fc_expanded(this, rhs, ia, idxglo, matrix_sln)
 ! ******************************************************************************
-! mwt_fc_expanded -- this will be called from GwtAptType%apt_fc_expanded()
+! mwt_fc_expanded -- this will be called from TspAptType%apt_fc_expanded()
 !   in order to add matrix terms specifically for this package
 ! ****************************************************************************
 !
@@ -577,8 +577,8 @@ contains
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    ! -- allocate scalars in GwtAptType
-    call this%GwtAptType%allocate_scalars()
+    ! -- allocate scalars in TspAptType
+    call this%TspAptType%allocate_scalars()
     !
     ! -- Allocate
     call mem_allocate(this%idxbudrate, 'IDXBUDRATE', this%memoryPath)
@@ -614,8 +614,8 @@ contains
     ! -- time series
     call mem_allocate(this%concrate, this%ncv, 'CONCRATE', this%memoryPath)
     !
-    ! -- call standard GwtApttype allocate arrays
-    call this%GwtAptType%apt_allocate_arrays()
+    ! -- call standard TspAptType allocate arrays
+    call this%TspAptType%apt_allocate_arrays()
     !
     ! -- Initialize
     do n = 1, this%ncv
@@ -650,8 +650,8 @@ contains
     ! -- deallocate time series
     call mem_deallocate(this%concrate)
     !
-    ! -- deallocate scalars in GwtAptType
-    call this%GwtAptType%bnd_da()
+    ! -- deallocate scalars in TspAptType
+    call this%TspAptType%bnd_da()
     !
     ! -- Return
     return
