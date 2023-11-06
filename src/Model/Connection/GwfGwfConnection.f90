@@ -318,7 +318,7 @@ contains
   subroutine gwfgwfcon_cf(this, kiter)
     class(GwfGwfConnectionType) :: this !< this connection
     integer(I4B), intent(in) :: kiter !< the iteration counter
-    
+
     call this%SpatialModelConnectionType%spatialcon_cf(kiter)
 
     ! CF the movers through the exchange
