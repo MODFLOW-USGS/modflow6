@@ -790,7 +790,8 @@ contains
       call cnc_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, dvt, mempath)
     case ('SRC6')
-      call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, pakname)
+      call src_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
+                      this%depvartype, pakname)
     case ('LKT6')
       call lkt_create(packobj, ipakid, ipaknum, inunit, iout, this%name, &
                       pakname, this%fmi)
