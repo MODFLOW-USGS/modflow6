@@ -35,7 +35,7 @@
 module GwtMwtModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, LINELENGTH, LENVARNAME
+  use ConstantsModule, only: DZERO, LINELENGTH
   use SimModule, only: store_error
   use BndModule, only: BndType, GetBndFromList
   use TspFmiModule, only: TspFmiType
@@ -99,9 +99,9 @@ contains
     character(len=*), intent(in) :: pakname
     type(TspFmiType), pointer :: fmi
     real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
-    character(len=LENVARNAME), intent(in) :: dvt !< For GWT, set to "CONCENTRATION" in TspAptType
-    character(len=LENVARNAME), intent(in) :: dvu !< For GWT, set to "mass" in TspAptType
-    character(len=LENVARNAME), intent(in) :: dvua !< For GWT, set to "M" in TspAptType
+    character(len=*), intent(in) :: dvt !< For GWT, set to "CONCENTRATION" in TspAptType
+    character(len=*), intent(in) :: dvu !< For GWT, set to "mass" in TspAptType
+    character(len=*), intent(in) :: dvua !< For GWT, set to "M" in TspAptType
     ! -- local
     type(GwtMwtType), pointer :: mwtobj
     !

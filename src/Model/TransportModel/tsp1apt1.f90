@@ -60,7 +60,7 @@ module TspAptModule
   public :: apt_process_obsID12
 
   character(len=LENFTYPE) :: ftype = 'APT'
-  character(len=16) :: text = '             APT'
+  character(len=LENVARNAME) :: text = '             APT'
   character(len=LENVARNAME) :: tsptype = 'GWT' !< to be removed once TSP refactor is further sorted out
 
   type, extends(BndType) :: TspAptType
@@ -80,7 +80,6 @@ module TspAptModule
     integer(I4B), pointer :: idxprepak => null() !< budget-object index that precedes package-specific budget objects
     integer(I4B), pointer :: idxlastpak => null() !< budget-object index of last package-specific budget object
     real(DP), dimension(:), pointer, contiguous :: strt => null() !< starting feature concentration (or temperature)
-    real(DP), dimension(:), pointer, contiguous :: ktf => null() !< thermal conductivity between the apt and groundwater cell
     real(DP), dimension(:), pointer, contiguous :: rfeatthk => null() !< thickness of streambed/lakebed/filter-pack material through which thermal conduction occurs
     integer(I4B), dimension(:), pointer, contiguous :: idxlocnode => null() !< map position in global rhs and x array of pack entry
     integer(I4B), dimension(:), pointer, contiguous :: idxpakdiag => null() !< map diag position of feature in global amat
@@ -1039,7 +1038,7 @@ contains
         end if
         this%dbuff(n) = c
       end do
-      write (text, '(a)') str_pad_left(this%depvartype, 16)
+      write (text, '(a)') str_pad_left(this%depvartype, LENVARNAME)
       call ulasav(this%dbuff, text, kstp, kper, pertim, totim, &
                   this%ncv, 1, 1, ibinun)
     end if
@@ -2280,7 +2279,7 @@ contains
       nlist = this%ncv
       call this%budobj%budterm(idx)%reset(nlist)
       do j = 1, nlist
-        call this%apt_fmvr_term(j, n1, n2, q) ! kluge note: don't really need to do this in apt_fmvr_term now, since no override by uze
+        call this%apt_fmvr_term(j, n1, n2, q)
         call this%budobj%budterm(idx)%update_term(n1, n1, q)
         call this%apt_accumulate_ccterm(n1, q, ccratin, ccratout)
       end do
@@ -2420,7 +2419,7 @@ contains
     ! -- Calculate MVR-related terms
     n1 = ientry
     n2 = n1
-    if (present(rrate)) rrate = this%qmfrommvr(n1) ! presumably in terms of energy already for heat transport???
+    if (present(rrate)) rrate = this%qmfrommvr(n1) ! NOTE: When bringing in GWE, ensure this is in terms of energy. Might need to apply eqnsclfac here.
     if (present(rhsval)) rhsval = this%qmfrommvr(n1)
     if (present(hcofval)) hcofval = DZERO
     !
