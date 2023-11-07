@@ -1497,6 +1497,7 @@ contains
     integer(I4B) :: n
     integer(I4B) :: indis = 0 ! DIS enabled flag
     character(len=LENMEMPATH) :: mempathnpf = ''
+    character(len=LENMEMPATH) :: mempathic = ''
     !
     ! -- set input model memory path
     model_mempath = create_mem_path(component=this%name, context=idm_context)
@@ -1542,7 +1543,8 @@ contains
       case ('CSUB6')
         this%incsub = inunit
       case ('IC6')
-        this%inic = inunit
+        this%inic = 1
+        mempathic = mempath
       case ('MVR6')
         this%inmvr = inunit
       case ('OC6')
@@ -1569,7 +1571,7 @@ contains
     call sto_cr(this%sto, this%name, this%insto, this%iout)
     call csub_cr(this%csub, this%name, this%insto, this%sto%packName, &
                  this%incsub, this%iout)
-    call ic_cr(this%ic, this%name, this%inic, this%iout, this%dis)
+    call ic_cr(this%ic, this%name, mempathic, this%inic, this%iout, this%dis)
     call mvr_cr(this%mvr, this%name, this%inmvr, this%iout, this%dis)
     call oc_cr(this%oc, this%name, this%inoc, this%iout)
     call gwf_obs_cr(this%obs, this%inobs)

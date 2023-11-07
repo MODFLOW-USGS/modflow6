@@ -13,6 +13,7 @@ module IdmGwfDfnSelectorModule
   use GwfEvtInputModule
   use GwfEvtaInputModule
   use GwfGhbInputModule
+  use GwfIcInputModule
   use GwfNpfInputModule
   use GwfRchInputModule
   use GwfRchaInputModule
@@ -63,6 +64,8 @@ contains
       call set_param_pointer(input_definition, gwf_evta_param_definitions)
     case ('GHB')
       call set_param_pointer(input_definition, gwf_ghb_param_definitions)
+    case ('IC')
+      call set_param_pointer(input_definition, gwf_ic_param_definitions)
     case ('NPF')
       call set_param_pointer(input_definition, gwf_npf_param_definitions)
     case ('RCH')
@@ -101,6 +104,8 @@ contains
       call set_param_pointer(input_definition, gwf_evta_aggregate_definitions)
     case ('GHB')
       call set_param_pointer(input_definition, gwf_ghb_aggregate_definitions)
+    case ('IC')
+      call set_param_pointer(input_definition, gwf_ic_aggregate_definitions)
     case ('NPF')
       call set_param_pointer(input_definition, gwf_npf_aggregate_definitions)
     case ('RCH')
@@ -139,6 +144,8 @@ contains
       call set_block_pointer(input_definition, gwf_evta_block_definitions)
     case ('GHB')
       call set_block_pointer(input_definition, gwf_ghb_block_definitions)
+    case ('IC')
+      call set_block_pointer(input_definition, gwf_ic_block_definitions)
     case ('NPF')
       call set_block_pointer(input_definition, gwf_npf_block_definitions)
     case ('RCH')
@@ -176,6 +183,8 @@ contains
       multi_package = gwf_evta_multi_package
     case ('GHB')
       multi_package = gwf_ghb_multi_package
+    case ('IC')
+      multi_package = gwf_ic_multi_package
     case ('NPF')
       multi_package = gwf_npf_multi_package
     case ('RCH')
@@ -216,6 +225,8 @@ contains
     case ('EVTA')
       integrated = .true.
     case ('GHB')
+      integrated = .true.
+    case ('IC')
       integrated = .true.
     case ('NPF')
       integrated = .true.

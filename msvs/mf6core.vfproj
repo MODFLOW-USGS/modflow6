@@ -139,6 +139,7 @@
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3ghb8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3hfb8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3ic8.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3ic8idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3lak8.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterFlow\gwf3maw8.f90"/>
@@ -171,6 +172,7 @@
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1disv1idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1dsp1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1dsp1idm.f90"/>
+		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1ic1idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1idm.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1ist1.f90"/>
 		<File RelativePath="..\src\Model\GroundWaterTransport\gwt1lkt1.f90"/>
