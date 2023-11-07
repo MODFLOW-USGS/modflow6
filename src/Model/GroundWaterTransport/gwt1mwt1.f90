@@ -35,7 +35,7 @@
 module GwtMwtModule
 
   use KindModule, only: DP, I4B
-  use ConstantsModule, only: DZERO, LINELENGTH
+  use ConstantsModule, only: DZERO, LINELENGTH, LENVARNAME
   use SimModule, only: store_error
   use BndModule, only: BndType, GetBndFromList
   use TspFmiModule, only: TspFmiType
@@ -88,7 +88,7 @@ contains
   !> Create new MWT package
   !<
   subroutine mwt_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
-                        fmi, eqnsclfac)
+                        fmi, eqnsclfac, dvt, dvu, dvua)
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
@@ -99,6 +99,9 @@ contains
     character(len=*), intent(in) :: pakname
     type(TspFmiType), pointer :: fmi
     real(DP), intent(in), pointer :: eqnsclfac !< governing equation scale factor
+    character(len=LENVARNAME), intent(in) :: dvt !< For GWT, set to "CONCENTRATION" in TspAptType
+    character(len=LENVARNAME), intent(in) :: dvu !< For GWT, set to "mass" in TspAptType
+    character(len=LENVARNAME), intent(in) :: dvua !< For GWT, set to "M" in TspAptType
     ! -- local
     type(GwtMwtType), pointer :: mwtobj
     !
@@ -130,6 +133,11 @@ contains
     !
     ! -- Store pointer to governing equation scale factor
     mwtobj%eqnsclfac => eqnsclfac
+    !
+    ! -- Set labels that will be used in generalized APT class
+    mwtobj%depvartype = dvt
+    mwtobj%depvarunit = dvu
+    mwtobj%depvarunitabbrev = dvua
     !
     ! -- Return
     return
