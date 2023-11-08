@@ -38,7 +38,7 @@ module GwtSrcModule
 
 contains
 
-  !> @brief Create an energy source loading package
+  !> @brief Create a source loading package
   !!
   !! This subroutine points bndobj to the newly created package
   !<
