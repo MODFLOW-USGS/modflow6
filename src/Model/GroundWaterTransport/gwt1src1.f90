@@ -267,7 +267,7 @@ contains
   !> @brief Procedure related to time series
   !!
   !! Assign tsLink%Text appropriately for all time series in use by package.
-  !! In the SRC package only the SENERRATE variable can be controlled by time
+  !! In the SRC package only the SMASSRATE variable can be controlled by time
   !! series.
   !<
   subroutine src_rp_ts(this)
