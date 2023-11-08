@@ -103,7 +103,7 @@ contains
 
   !> @brief Allocate scalars
   !!
-  !! Allocate scalars specific to this energy source loading package
+  !! Allocate scalars specific to this source loading package
   !<
   subroutine src_allocate_scalars(this)
     use MemoryManagerModule, only: mem_allocate
