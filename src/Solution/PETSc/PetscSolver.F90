@@ -421,7 +421,7 @@ contains
     ! delete context
     call this%petsc_ctx%destroy()
     deallocate (this%petsc_ctx)
-    
+
     deallocate (this%pc_context)
 
   end subroutine petsc_destroy
