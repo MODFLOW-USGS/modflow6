@@ -1222,6 +1222,10 @@ contains
     call this%cnvg_summary%destroy()
     deallocate (this%cnvg_summary)
     !
+    ! -- linear solver
+    call this%linear_solver%destroy()
+    deallocate (this%linear_solver)
+    !
     ! -- linear solver settings
     call this%linear_settings%destroy()
     deallocate (this%linear_settings)

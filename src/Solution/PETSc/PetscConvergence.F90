@@ -18,6 +18,8 @@ module PetscConvergenceModule
     real(DP) :: dvclose
     integer(I4B) :: max_its
     type(ConvergenceSummaryType), pointer :: cnvg_summary => null()
+  contains
+    procedure :: destroy
   end type PetscContextType
 
   ! passing our context into PETSc requires an explicit interface
@@ -73,6 +75,8 @@ contains
 
     summary => context%cnvg_summary
 
+    ! NB: KSPBuildResidual needs to have its vector destroyed
+    ! to avoid a memory leak, KSPBuildSolution doesn't...
     call KSPBuildSolution(ksp, PETSC_NULL_VEC, x, ierr)
     CHKERRQ(ierr)
     call KSPBuildResidual(ksp, PETSC_NULL_VEC, PETSC_NULL_VEC, res, ierr)
@@ -87,6 +91,8 @@ contains
         call VecCopy(x, context%x_old, ierr)
         CHKERRQ(ierr)
         call VecCopy(res, context%res_old, ierr)
+        CHKERRQ(ierr)
+        call VecDestroy(res, ierr)
         CHKERRQ(ierr)
         flag = KSP_CONVERGED_ITERATING
       end if
@@ -120,6 +126,9 @@ contains
     CHKERRQ(ierr)
 
     call VecCopy(res, context%res_old, ierr)
+    CHKERRQ(ierr)
+
+    call VecDestroy(res, ierr)
     CHKERRQ(ierr)
 
     ! get dv and dr per local model
@@ -170,5 +179,21 @@ contains
     end if
 
   end subroutine petsc_check_convergence
+
+  subroutine destroy(this)
+    class(PetscContextType) :: this
+    ! local
+    integer(I4B) :: ierr
+
+    call VecDestroy(this%x_old, ierr)
+    CHKERRQ(ierr)
+    call VecDestroy(this%res_old, ierr)
+    CHKERRQ(ierr)
+    call VecDestroy(this%delta_x, ierr)
+    CHKERRQ(ierr)
+    call VecDestroy(this%delta_res, ierr)
+    CHKERRQ(ierr)
+
+  end subroutine destroy
 
 end module PetscConvergenceModule
