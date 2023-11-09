@@ -421,9 +421,7 @@ contains
     ! delete context
     call this%petsc_ctx%destroy()
     deallocate (this%petsc_ctx)
-
-    call VecDestroy(this%pc_context%diag, ierr)
-    CHKERRQ(ierr)
+    
     deallocate (this%pc_context)
 
   end subroutine petsc_destroy
