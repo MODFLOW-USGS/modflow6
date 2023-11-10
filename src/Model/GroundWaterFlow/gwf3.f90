@@ -3,7 +3,7 @@ module GwfModule
   use KindModule, only: DP, I4B
   use InputOutputModule, only: ParseLine, upcase, lowcase
   use ConstantsModule, only: LENFTYPE, LENMEMPATH, LENPAKLOC, DZERO, &
-                             DEM1, DTEN, DEP20
+                             DEM1, DTEN, DEP20, LENPACKAGETYPE
   use VersionModule, only: write_listfile_header
   use NumericalModelModule, only: NumericalModelType
   use BaseDisModule, only: DisBaseType
@@ -32,6 +32,8 @@ module GwfModule
   public :: gwf_cr
   public :: GwfModelType
   public :: CastAsGwfModel
+  public :: GWF_NBASEPKG, GWF_NMULTIPKG
+  public :: GWF_BASEPKG, GWF_MULTIPKG
 
   type, extends(NumericalModelType) :: GwfModelType
 
@@ -98,6 +100,34 @@ module GwfModule
     procedure, private :: steady_period_check
     !
   end type GwfModelType
+
+  !> @brief GWF base package array descriptors
+  !!
+  !! GWF6 model base package types.  Only listed packages are candidates
+  !! for input and these will be loaded in the order specified.
+  !<
+  integer(I4B), parameter :: GWF_NBASEPKG = 50
+  character(len=LENPACKAGETYPE), dimension(GWF_NBASEPKG) :: GWF_BASEPKG
+  data GWF_BASEPKG/'DIS6 ', 'DISV6', 'DISU6', '     ', '     ', & !  5
+                  &'NPF6 ', 'BUY6 ', 'VSC6 ', 'GNC6 ', '     ', & ! 10
+                  &'HFB6 ', 'STO6 ', 'IC6  ', '     ', '     ', & ! 15
+                  &'MVR6 ', 'OC6  ', 'OBS6 ', '     ', '     ', & ! 20
+                  &30*'     '/ ! 50
+
+  !> @brief GWF multi package array descriptors
+  !!
+  !! GWF6 model multi-instance package types.  Only listed packages are
+  !! candidates for input and these will be loaded in the order specified.
+  !<
+  integer(I4B), parameter :: GWF_NMULTIPKG = 50
+  character(len=LENPACKAGETYPE), dimension(GWF_NMULTIPKG) :: GWF_MULTIPKG
+  data GWF_MULTIPKG/'WEL6 ', 'DRN6 ', 'RIV6 ', 'GHB6 ', '     ', & !  5
+                   &'RCH6 ', 'EVT6 ', 'CHD6 ', 'CSUB6', '     ', & ! 10
+                   &'MAW6 ', 'SFR6 ', 'LAK6 ', 'UZF6 ', 'API6 ', & ! 15
+                   &35*'     '/ ! 50
+
+  ! -- size of supported model package arrays
+  integer(I4B), parameter :: NIUNIT_GWF = GWF_NBASEPKG + GWF_NMULTIPKG
 
 contains
 
@@ -191,7 +221,6 @@ contains
   !<
   subroutine gwf_df(this)
     ! -- modules
-    use ModelPackageInputsModule, only: NIUNIT_GWF
     ! -- dummy
     class(GwfModelType) :: this
     ! -- local

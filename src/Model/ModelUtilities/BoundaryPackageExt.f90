@@ -268,7 +268,7 @@ contains
     use MemoryManagerExtModule, only: mem_set_value
     use InputOutputModule, only: GetUnit, openfile
     use CharacterStringModule, only: CharacterStringType
-    use IdmLoadModule, only: filein_fname
+    use SourceCommonModule, only: filein_fname
     ! -- dummy variables
     class(BndExtType), intent(inout) :: this !< BndExtType object
     ! -- local variables

@@ -9,7 +9,7 @@ module GwtModule
 
   use KindModule, only: DP, I4B
   use ConstantsModule, only: LENFTYPE, LENMEMPATH, DZERO, DONE, &
-                             LENPAKLOC, LENVARNAME
+                             LENPAKLOC, LENVARNAME, LENPACKAGETYPE
   use VersionModule, only: write_listfile_header
   use NumericalModelModule, only: NumericalModelType
 
@@ -27,6 +27,8 @@ module GwtModule
   public :: gwt_cr
   public :: GwtModelType
   public :: CastAsGwtModel
+  public :: GWT_NBASEPKG, GWT_NMULTIPKG
+  public :: GWT_BASEPKG, GWT_MULTIPKG
   character(len=LENVARNAME), parameter :: dvt = 'CONCENTRATION   ' !< dependent variable type, varies based on model type
   character(len=LENVARNAME), parameter :: dvu = 'MASS            ' !< dependent variable unit of measure, either "mass" or "energy"
   character(len=LENVARNAME), parameter :: dvua = 'M               ' !< abbreviation of the dependent variable unit of measure, either "M" or "E"
@@ -62,6 +64,33 @@ module GwtModule
 
   end type GwtModelType
 
+  !> @brief GWT base package array descriptors
+  !!
+  !! GWT6 model base package types.  Only listed packages are candidates
+  !! for input and these will be loaded in the order specified.
+  !<
+  integer(I4B), parameter :: GWT_NBASEPKG = 50
+  character(len=LENPACKAGETYPE), dimension(GWT_NBASEPKG) :: GWT_BASEPKG
+  data GWT_BASEPKG/'DIS6 ', 'DISV6', 'DISU6', '     ', '     ', & !  5
+                  &'IC6  ', 'FMI6 ', 'MST6 ', 'ADV6 ', '     ', & ! 10
+                  &'DSP6 ', 'SSM6 ', 'MVT6 ', 'OC6  ', '     ', & ! 15
+                  &'OBS6 ', '     ', '     ', '     ', '     ', & ! 20
+                  &30*'     '/ ! 50
+
+  !> @brief GWT multi package array descriptors
+  !!
+  !! GWT6 model multi-instance package types.  Only listed packages are
+  !! candidates for input and these will be loaded in the order specified.
+  !<
+  integer(I4B), parameter :: GWT_NMULTIPKG = 50
+  character(len=LENPACKAGETYPE), dimension(GWT_NMULTIPKG) :: GWT_MULTIPKG
+  data GWT_MULTIPKG/'CNC6 ', 'SRC6 ', 'LKT6 ', 'IST6 ', '     ', & !  5
+                   &'SFT6 ', 'MWT6 ', 'UZT6 ', 'API6 ', '     ', & ! 10
+                   &40*'     '/ ! 50
+
+  ! -- size of supported model package arrays
+  integer(I4B), parameter :: NIUNIT_GWT = GWT_NBASEPKG + GWT_NMULTIPKG
+
 contains
 
   !> @brief Create a new groundwater transport model object
@@ -74,7 +103,7 @@ contains
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerExtModule, only: mem_set_value
     use SimVariablesModule, only: idm_context
-    use GwfNamInputModule, only: GwfNamParamFoundType
+    use GwtNamInputModule, only: GwtNamParamFoundType
     use BudgetModule, only: budget_cr
     ! -- dummy
     character(len=*), intent(in) :: filename
@@ -86,7 +115,7 @@ contains
     class(BaseModelType), pointer :: model
     character(len=LENMEMPATH) :: input_mempath
     character(len=LINELENGTH) :: lst_fname
-    type(GwfNamParamFoundType) :: found
+    type(GwtNamParamFoundType) :: found
     !
     ! -- Allocate a new GWT Model (this)
     allocate (this)
@@ -146,7 +175,6 @@ contains
   !<
   subroutine gwt_df(this)
     ! -- modules
-    use ModelPackageInputsModule, only: NIUNIT_GWT
     use SimModule, only: store_error
     ! -- dummy
     class(GwtModelType) :: this
