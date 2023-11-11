@@ -2,23 +2,31 @@ import platform
 import sys
 from pathlib import Path
 from os import PathLike
-from typing import Dict
+from typing import Dict, Optional
 
 import pytest
 from modflow_devtools.executables import Executables, get_suffixes
+from modflow_devtools.misc import run_cmd
 
 pytest_plugins = ["modflow_devtools.fixtures"]
 project_root_path = Path(__file__).resolve().parent.parent
+
+
+def get_version(path: PathLike = None, flag: str = "-v") -> Optional[str]:
+    out, err, ret = run_cmd(str(path), flag)
+    if ret == 0:
+        out = "".join(out).strip()
+        return out.split(":")[1].strip().split(" ")[0]
+    else:
+        raise ValueError(f"Failed to parse version from:\n{out + err}")
 
 
 def should_compare(
     test: str, comparisons: dict, executables: Executables
 ) -> bool:
     if test in comparisons.keys():
-        dev_ver = Executables.get_version(path=executables.mf6).split(" ")[0]
-        reg_ver = Executables.get_version(
-            path=executables.mf6_regression
-        ).split(" ")[0]
+        dev_ver = get_version(path=executables.mf6)
+        reg_ver = get_version(path=executables.mf6_regression)
         print(f"MODFLOW 6 development version: {dev_ver}")
         print(f"MODFLOW 6 regression version: {reg_ver}")
         excluded = list(comparisons[test])
@@ -93,7 +101,7 @@ def original_regression(request) -> bool:
 
 @pytest.fixture(scope="session")
 def markers(pytestconfig) -> str:
-    return pytestconfig.getoption('-m')
+    return pytestconfig.getoption("-m")
 
 
 def pytest_addoption(parser):
@@ -104,10 +112,10 @@ def pytest_addoption(parser):
         help="TODO",
     )
     parser.addoption(
-        "--parallel", 
-        action="store_true", 
-        default=False, 
-        help="include parallel test cases"
+        "--parallel",
+        action="store_true",
+        default=False,
+        help="include parallel test cases",
     )
 
 
