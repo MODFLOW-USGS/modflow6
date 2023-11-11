@@ -194,6 +194,7 @@
 		<File RelativePath="..\src\Model\ModelUtilities\GwfVscInputData.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwtDspOptions.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\GwtSpc.f90"/>
+		<File RelativePath="..\src\Model\ModelUtilities\ModelPackageInput.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\Mover.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\PackageMover.f90"/>
 		<File RelativePath="..\src\Model\ModelUtilities\SfrCrossSectionManager.f90"/>

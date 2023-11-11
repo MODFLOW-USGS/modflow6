@@ -1475,7 +1475,7 @@ contains
     use MemoryManagerExtModule, only: mem_set_value
     use CharacterStringModule, only: CharacterStringType
     use GwfNpfInputModule, only: GwfNpfParamFoundType
-    use IdmLoadModule, only: filein_fname
+    use SourceCommonModule, only: filein_fname
     ! -- dummy
     class(GwfNpftype) :: this
     ! -- locals

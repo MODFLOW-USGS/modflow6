@@ -21,7 +21,6 @@ module IdmLoadModule
   private
   public :: simnam_load
   public :: load_models
-  public :: filein_fname
   public :: idm_df
   public :: idm_rp
   public :: idm_ad
@@ -30,56 +29,6 @@ module IdmLoadModule
   type(ListType) :: model_dynamic_pkgs
 
 contains
-
-  !> @brief enforce and set a single input filename provided via FILEIN keyword
-  !!
-  !! Set a FILEIN filename provided via an OPTIONS block.
-  !! Only use this function if a maximum of one FILEIN file name
-  !! string is expected.
-  !!
-  !! Return true if single FILEIN file name found and set, return
-  !! false if FILEIN tag not found.
-  !!
-  !<
-  function filein_fname(filename, tagname, input_mempath, input_fname) &
-    result(found)
-    use SimModule, only: store_error, store_error_filename
-    use MemoryManagerModule, only: mem_setptr, get_isize
-    use CharacterStringModule, only: CharacterStringType
-    character(len=*), intent(inout) :: filename
-    character(len=*), intent(in) :: tagname
-    character(len=*), intent(in) :: input_mempath
-    character(len=*), intent(in) :: input_fname
-    logical(LGP) :: found
-    type(CharacterStringType), dimension(:), pointer, &
-      contiguous :: fnames
-    integer(I4B) :: isize
-    !
-    ! -- initialize
-    found = .false.
-    filename = ''
-    !
-    call get_isize(tagname, input_mempath, isize)
-    !
-    if (isize > 0) then
-      !
-      if (isize /= 1) then
-        errmsg = 'Multiple FILEIN keywords detected for tag "'//trim(tagname)// &
-                 '" in OPTIONS block. Only one entry allowed.'
-        call store_error(errmsg)
-        call store_error_filename(input_fname)
-      end if
-      !
-      call mem_setptr(fnames, tagname, input_mempath)
-      !
-      filename = fnames(1)
-      found = .true.
-      !
-    end if
-    !
-    ! -- return
-    return
-  end function filein_fname
 
   !> @brief advance package dynamic data for period steps
   !<
