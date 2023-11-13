@@ -9,7 +9,7 @@ module GwfDisuModule
   use SimModule, only: count_errors, store_error, store_error_unit, &
                        store_error_filename
   use SimVariablesModule, only: errmsg
-  use BaseDisModule, only: DisBaseType
+  use BaseDisModule, only: DisBaseType, dis_da
   use MemoryManagerModule, only: mem_allocate
   use TdisModule, only: kstp, kper, pertim, totim, delt
 
@@ -59,8 +59,8 @@ module GwfDisuModule
     procedure, public :: record_array
     procedure, public :: record_srcdst_list_header
     ! -- private
-    procedure :: allocate_scalars
-    procedure :: allocate_arrays
+    procedure :: allocate_scalars => allocate_scalars_disu
+    procedure :: allocate_arrays => allocate_arrays_disu
     procedure :: allocate_arrays_mem
     procedure :: source_options
     procedure :: source_dimensions
@@ -78,6 +78,9 @@ module GwfDisuModule
     ! -- Read a node-sized model array (reduced or not)
     procedure :: read_int_array
     procedure :: read_dbl_array
+    !
+    procedure :: nlarray_to_nodelist
+    procedure :: read_layer_array
   end type GwfDisuType
 
 contains
@@ -482,7 +485,7 @@ contains
     call mem_deallocate(this%nodereduced)
     !
     ! -- DisBaseType deallocate
-    call this%DisBaseType%dis_da()
+    call dis_da(this)
     !
     ! -- Return
     return
@@ -1305,7 +1308,7 @@ contains
 
   end subroutine get_dis_type
 
-  subroutine allocate_scalars(this, name_model, input_mempath)
+  subroutine allocate_scalars_disu(this, name_model, input_mempath)
 ! ******************************************************************************
 ! allocate_scalars -- Allocate and initialize scalar variables in this class
 ! ******************************************************************************
@@ -1322,7 +1325,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate parent scalars
-    call this%DisBaseType%allocate_scalars(name_model, input_mempath)
+    call this%allocate_scalars_default(name_model, input_mempath)
     !
     ! -- Allocate variables for DISU
     call mem_allocate(this%njausr, 'NJAUSR', this%memoryPath)
@@ -1340,9 +1343,9 @@ contains
     !
     ! -- Return
     return
-  end subroutine allocate_scalars
+  end subroutine allocate_scalars_disu
 
-  subroutine allocate_arrays(this)
+  subroutine allocate_arrays_disu(this)
 ! ******************************************************************************
 ! allocate_arrays -- Read discretization information from file
 ! ******************************************************************************
@@ -1357,7 +1360,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate arrays in DisBaseType (mshape, top, bot, area)
-    call this%DisBaseType%allocate_arrays()
+    call this%allocate_arrays_default()
     !
     ! -- Allocate arrays in DISU
     if (this%nodes < this%nodesuser) then
@@ -1374,7 +1377,7 @@ contains
     !
     ! -- Return
     return
-  end subroutine allocate_arrays
+  end subroutine allocate_arrays_disu
 
   subroutine allocate_arrays_mem(this)
     use MemoryManagerModule, only: mem_allocate
@@ -1808,5 +1811,44 @@ contains
     end select
 
   end function CastAsDisuType
+
+  ! todo: routines below are not used for disu, remove from DisBaseType?
+
+  subroutine nlarray_to_nodelist(this, darray, nodelist, maxbnd, nbound, aname)
+    ! -- modules
+    use SimModule, only: store_error
+    use ConstantsModule, only: LINELENGTH
+    ! -- dummy
+    class(GwfDisuType) :: this
+    integer(I4B), intent(in) :: maxbnd
+    integer(I4B), dimension(:), pointer, contiguous :: darray
+    integer(I4B), dimension(maxbnd), intent(inout) :: nodelist
+    integer(I4B), intent(inout) :: nbound
+    character(len=*), intent(in) :: aname
+    !
+    errmsg = 'Programmer error: nlarray_to_nodelist called for DISU grid.'
+    call store_error(errmsg, terminate=.TRUE.)
+
+  end subroutine nlarray_to_nodelist
+
+  subroutine read_layer_array(this, nodelist, darray, ncolbnd, maxbnd, &
+                              icolbnd, aname, inunit, iout)
+    ! -- dummy
+    class(GwfDisuType) :: this
+    integer(I4B), intent(in) :: ncolbnd
+    integer(I4B), intent(in) :: maxbnd
+    integer(I4B), dimension(maxbnd) :: nodelist
+    real(DP), dimension(ncolbnd, maxbnd), intent(inout) :: darray
+    integer(I4B), intent(in) :: icolbnd
+    character(len=*), intent(in) :: aname
+    integer(I4B), intent(in) :: inunit
+    integer(I4B), intent(in) :: iout
+    !
+    !
+    errmsg = 'Programmer error: read_layer_array called for DISU grid.'
+    call store_error(errmsg, terminate=.TRUE.)
+    !
+    ! -- return
+  end subroutine read_layer_array
 
 end module GwfDisuModule
