@@ -91,8 +91,11 @@ contains
   !!
   !! Create a new transport model that will be further refined into GWT or GWE
   !<
-  subroutine tsp_cr(this, filename, id, modelname, indis)
+  subroutine tsp_cr(this, filename, id, modelname, macronym, indis)
     ! -- modules
+    use MemoryHelperModule, only: create_mem_path
+    use MemoryManagerExtModule, only: mem_set_value
+    use SimVariablesModule, only: idm_context
     use GwfNamInputModule, only: GwfNamParamFoundType
     use BudgetModule, only: budget_cr
     ! -- dummy
@@ -101,12 +104,36 @@ contains
     integer(I4B), intent(in) :: id
     integer(I4B), intent(inout) :: indis
     character(len=*), intent(in) :: modelname
+    character(len=*), intent(in) :: macronym
     ! -- local
+    character(len=LENMEMPATH) :: input_mempath
     character(len=LINELENGTH) :: lst_fname
     type(GwfNamParamFoundType) :: found
     !
+    ! -- Assign values
+    this%filename = filename
+    this%name = modelname
+    this%id = id
+    this%macronym = macronym
+    !
+    ! -- set input model namfile memory path
+    input_mempath = create_mem_path(modelname, 'NAM', idm_context)
+    !
+    ! -- copy option params from input context
+    call mem_set_value(lst_fname, 'LIST', input_mempath, found%list)
+    call mem_set_value(this%iprpak, 'PRINT_INPUT', input_mempath, &
+                       found%print_input)
+    call mem_set_value(this%iprflow, 'PRINT_FLOWS', input_mempath, &
+                       found%print_flows)
+    call mem_set_value(this%ipakcb, 'SAVE_FLOWS', input_mempath, found%save_flows)
+    !
     ! -- create the list file
     call this%create_lstfile(lst_fname, filename, found%list)
+    !
+    ! -- activate save_flows if found
+    if (found%save_flows) then
+      this%ipakcb = -1
+    end if
     !
     ! -- log set options
     if (this%iout > 0) then

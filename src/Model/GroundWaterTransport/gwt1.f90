@@ -102,7 +102,6 @@ contains
     use ConstantsModule, only: LINELENGTH, LENPACKAGENAME
     use MemoryHelperModule, only: create_mem_path
     use MemoryManagerExtModule, only: mem_set_value
-    use SimVariablesModule, only: idm_context
     use GwtNamInputModule, only: GwtNamParamFoundType
     use BudgetModule, only: budget_cr
     ! -- dummy
@@ -132,33 +131,8 @@ contains
     model => this
     call AddBaseModelToList(basemodellist, model)
     !
-    ! -- Assign values
-    this%filename = filename
-    this%name = modelname
-    this%macronym = 'GWT'
-    this%id = id
-    !
-    ! -- set input model namfile memory path
-    input_mempath = create_mem_path(modelname, 'NAM', idm_context)
-    !
-    ! -- copy option params from input context
-    call mem_set_value(lst_fname, 'LIST', input_mempath, found%list)
-    call mem_set_value(this%iprpak, 'PRINT_INPUT', input_mempath, &
-                       found%print_input)
-    call mem_set_value(this%iprflow, 'PRINT_FLOWS', input_mempath, &
-                       found%print_flows)
-    call mem_set_value(this%ipakcb, 'SAVE_FLOWS', input_mempath, found%save_flows)
-    !
-    ! -- activate save_flows if found
-    if (found%save_flows) then
-      this%ipakcb = -1
-    end if
-    !
-    ! -- Create utility objects
-    call budget_cr(this%budget, this%name)
-    !
     ! -- Call parent class routine
-    call this%tsp_cr(filename, id, modelname, indis)
+    call this%tsp_cr(filename, id, modelname, 'GWT', indis)
     !
     ! -- create model packages
     call this%create_packages(indis)
@@ -190,7 +164,8 @@ contains
     if (this%indsp > 0) call this%dsp%dsp_df(this%dis)
     if (this%inssm > 0) call this%ssm%ssm_df()
     call this%oc%oc_df()
-    call this%budget%budget_df(NIUNIT_GWT, 'MASS', 'M')
+    call this%budget%budget_df(NIUNIT_GWT, this%depvarunit, &
+                               this%depvarunitabbrev)
     !
     ! -- Check for SSM package
     if (this%inssm == 0) then
@@ -317,7 +292,7 @@ contains
     !call this%dis%dis_ar(this%npf%icelltype)
     !
     ! -- set up output control
-    call this%oc%oc_ar(this%x, this%dis, DHNOFLO)
+    call this%oc%oc_ar(this%x, this%dis, DHNOFLO, this%depvartype)
     call this%budget%set_ibudcsv(this%oc%ibudcsv)
     !
     ! -- Package input files now open, so allocate and read
@@ -512,6 +487,8 @@ contains
     character(len=LENPAKLOC), intent(inout) :: cpak
     integer(I4B), intent(inout) :: ipak
     real(DP), intent(inout) :: dpak
+    ! -- local
+    ! -- formats
     !
     ! -- If mover is on, then at least 2 outers required
     if (this%inmvt > 0) call this%mvt%mvt_cc(kiter, iend, icnvgmod, cpak, dpak)
