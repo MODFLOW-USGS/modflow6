@@ -112,9 +112,6 @@ contains
     integer(I4B) :: indis
     type(GwtModelType), pointer :: this
     class(BaseModelType), pointer :: model
-    character(len=LENMEMPATH) :: input_mempath
-    character(len=LINELENGTH) :: lst_fname
-    type(GwtNamParamFoundType) :: found
     !
     ! -- Allocate a new GWT Model (this)
     allocate (this)
