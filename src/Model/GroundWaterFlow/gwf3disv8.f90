@@ -1,7 +1,7 @@
 module GwfDisvModule
 
   use ArrayReadersModule, only: ReadArray
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LINELENGTH, LENMEMPATH, LENVARNAME, DZERO, DONE, &
                              DHALF
   use BaseDisModule, only: DisBaseType
@@ -49,6 +49,7 @@ module GwfDisvModule
     procedure :: connection_vector
     procedure :: supports_layers
     procedure :: get_ncpl
+    procedure :: get_polyverts
     ! -- private
     procedure :: source_options
     procedure :: source_dimensions
@@ -1574,6 +1575,49 @@ contains
     ! -- Return
     return
   end function get_ncpl
+
+  !> @brief Get a 2D array of polygon vertices
+  subroutine get_polyverts(this, ic, polyverts, wrap)
+    ! -- dummy
+    class(GwfDisvType), intent(inout) :: this
+    integer(I4B), intent(in) :: ic !< cell number (reduced)
+    real(DP), allocatable, intent(out) :: polyverts(:, :) !< polygon vertices
+    logical(LGP), intent(in), optional :: wrap !< whether to wrap around (duplicating a vertex)
+    ! -- local
+    integer(I4B) :: icu, icu2d, iavert, ncpl, nverts, m, j
+    logical(LGP) :: lwrap
+
+    ! count vertices
+    ncpl = this%get_ncpl()
+    icu = this%get_nodeuser(ic)
+    icu2d = icu - ((icu - 1) / ncpl) * ncpl
+    nverts = this%iavert(icu2d + 1) - this%iavert(icu2d) - 1
+    if (nverts .le. 0) nverts = nverts + size(this%javert)
+
+    ! check wraparound option
+    if (.not. (present(wrap))) then
+      lwrap = .false.
+    else
+      lwrap = wrap
+      if (lwrap) &
+        nverts = nverts + 1
+    end if
+
+    ! allocate vertices array
+    allocate (polyverts(nverts, 2))
+
+    ! set vertices
+    iavert = this%iavert(icu2d)
+    do m = 1, nverts - 1
+      j = this%javert(iavert - 1 + m)
+      polyverts(m, :) = (/this%vertices(1, j), this%vertices(2, j)/)
+    end do
+
+    ! wraparound if enabled
+    if (lwrap) &
+      polyverts(nverts, :) = polyverts(1, :)
+
+  end subroutine
 
   subroutine read_int_array(this, line, lloc, istart, istop, iout, in, &
                             iarray, aname)

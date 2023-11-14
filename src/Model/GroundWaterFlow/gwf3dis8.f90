@@ -1,7 +1,7 @@
 module GwfDisModule
 
   use ArrayReadersModule, only: ReadArray
-  use KindModule, only: DP, I4B
+  use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LINELENGTH, DHALF, DZERO, LENMEMPATH, LENVARNAME
   use BaseDisModule, only: DisBaseType
   use InputOutputModule, only: get_node, URWORD, ulasav, ulaprufw, ubdsv1, &
@@ -45,6 +45,7 @@ module GwfDisModule
     procedure :: nodeu_from_cellid
     procedure :: supports_layers
     procedure :: get_ncpl
+    procedure :: get_polyverts
     procedure :: connection_vector
     procedure :: connection_normal
     ! -- private
@@ -1308,14 +1309,58 @@ contains
     return
   end subroutine
 
-  ! return discretization type
+  !> @brief return discretization type
   subroutine get_dis_type(this, dis_type)
     class(GwfDisType), intent(in) :: this
     character(len=*), intent(out) :: dis_type
 
     dis_type = "DIS"
-
   end subroutine get_dis_type
+
+  !> @brief Get a 2D array of polygon vertices
+  subroutine get_polyverts(this, ic, polyverts, wrap)
+    ! -- modules
+    use InputOutputModule, only: get_ijk
+    ! -- dummy
+    class(GwfDisType), intent(inout) :: this
+    integer(I4B), intent(in) :: ic !< cell number (reduced)
+    real(DP), allocatable, intent(out) :: polyverts(:, :) !< polygon vertices
+    logical(LGP), intent(in), optional :: wrap !< whether to wrap around (duplicating a vertex)
+    ! -- local
+    integer(I4B) :: icu, nverts, irow, jcol, klay
+    real(DP) :: cellx, celly, dxhalf, dyhalf
+    logical(LGP) :: lwrap
+
+    ! check wraparound option
+    if (.not. (present(wrap))) then
+      lwrap = .false.
+      nverts = 4
+    else
+      lwrap = wrap
+      if (lwrap) &
+        nverts = 5
+    end if
+
+    ! allocate vertices array
+    allocate (polyverts(nverts, 2))
+
+    ! set vertices
+    icu = this%get_nodeuser(ic)
+    call get_ijk(icu, this%nrow, this%ncol, this%nlay, irow, jcol, klay)
+    cellx = this%cellx(jcol)
+    celly = this%celly(irow)
+    dxhalf = DHALF * this%delr(jcol)
+    dyhalf = DHALF * this%delc(irow)
+    polyverts(1, :) = (/cellx - dxhalf, celly - dyhalf/) ! SW
+    polyverts(2, :) = (/cellx - dxhalf, celly + dyhalf/) ! NW
+    polyverts(3, :) = (/cellx + dxhalf, celly + dyhalf/) ! NE
+    polyverts(4, :) = (/cellx + dxhalf, celly - dyhalf/) ! SE
+
+    ! wraparound if enabled
+    if (lwrap) &
+      polyverts(5, :) = polyverts(1, :)
+
+  end subroutine
 
   subroutine read_int_array(this, line, lloc, istart, istop, iout, in, &
                             iarray, aname)
