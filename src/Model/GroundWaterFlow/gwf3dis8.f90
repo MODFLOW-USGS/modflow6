@@ -1317,32 +1317,36 @@ contains
     dis_type = "DIS"
   end subroutine get_dis_type
 
-  !> @brief Get a 2D array of polygon vertices
-  subroutine get_polyverts(this, ic, polyverts, wrap)
+  !> @brief Get a 2D array of polygon vertices, listed in
+  !! clockwise order beginning with the lower left corner
+  subroutine get_polyverts(this, ic, polyverts, closed)
     ! -- modules
     use InputOutputModule, only: get_ijk
     ! -- dummy
     class(GwfDisType), intent(inout) :: this
     integer(I4B), intent(in) :: ic !< cell number (reduced)
-    real(DP), allocatable, intent(out) :: polyverts(:, :) !< polygon vertices
-    logical(LGP), intent(in), optional :: wrap !< whether to wrap around (duplicating a vertex)
+    real(DP), allocatable, intent(out) :: polyverts(:, :) !< polygon vertices (column-major indexing)
+    logical(LGP), intent(in), optional :: closed !< whether to close the polygon, duplicating a vertex
     ! -- local
     integer(I4B) :: icu, nverts, irow, jcol, klay
     real(DP) :: cellx, celly, dxhalf, dyhalf
-    logical(LGP) :: lwrap
+    logical(LGP) :: lclosed
 
-    ! check wraparound option
-    if (.not. (present(wrap))) then
-      lwrap = .false.
-      nverts = 4
+    nverts = 4
+
+    ! check closed option
+    if (.not. (present(closed))) then
+      lclosed = .false.
     else
-      lwrap = wrap
-      if (lwrap) &
-        nverts = 5
+      lclosed = closed
     end if
 
     ! allocate vertices array
-    allocate (polyverts(nverts, 2))
+    if (lclosed) then
+      allocate (polyverts(2, nverts + 1))
+    else
+      allocate (polyverts(2, nverts))
+    end if
 
     ! set vertices
     icu = this%get_nodeuser(ic)
@@ -1351,14 +1355,14 @@ contains
     celly = this%celly(irow)
     dxhalf = DHALF * this%delr(jcol)
     dyhalf = DHALF * this%delc(irow)
-    polyverts(1, :) = (/cellx - dxhalf, celly - dyhalf/) ! SW
-    polyverts(2, :) = (/cellx - dxhalf, celly + dyhalf/) ! NW
-    polyverts(3, :) = (/cellx + dxhalf, celly + dyhalf/) ! NE
-    polyverts(4, :) = (/cellx + dxhalf, celly - dyhalf/) ! SE
+    polyverts(:, 1) = (/cellx - dxhalf, celly - dyhalf/) ! SW
+    polyverts(:, 2) = (/cellx - dxhalf, celly + dyhalf/) ! NW
+    polyverts(:, 3) = (/cellx + dxhalf, celly + dyhalf/) ! NE
+    polyverts(:, 4) = (/cellx + dxhalf, celly - dyhalf/) ! SE
 
-    ! wraparound if enabled
-    if (lwrap) &
-      polyverts(5, :) = polyverts(1, :)
+    ! close if enabled
+    if (lclosed) &
+      polyverts(:, nverts + 1) = polyverts(:, 1)
 
   end subroutine
 

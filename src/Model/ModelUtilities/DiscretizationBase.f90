@@ -680,12 +680,13 @@ contains
     get_cell_volume = this%area(n) * thick
   end function get_cell_volume
 
-  !> @brief Get a 2D array of polygon vertices
-  subroutine get_polyverts(this, ic, polyverts, wrap)
+  !> @brief Get a 2D array of polygon vertices, listed in
+  !! clockwise order beginning with the lower left corner.
+  subroutine get_polyverts(this, ic, polyverts, closed)
     class(DisBaseType), intent(inout) :: this
     integer(I4B), intent(in) :: ic !< cell number (reduced)
-    real(DP), allocatable, intent(out) :: polyverts(:, :) !< polygon vertices
-    logical(LGP), intent(in), optional :: wrap !< whether to wrap around (duplicating a vertex)
+    real(DP), allocatable, intent(out) :: polyverts(:, :) !< polygon vertices (column-major indexing)
+    logical(LGP), intent(in), optional :: closed !< whether to close the polygon, duplicating a vertex
 
     errmsg = 'Programmer error: get_polyverts must be overridden'
     call store_error(errmsg, terminate=.true.)

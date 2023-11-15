@@ -1576,16 +1576,17 @@ contains
     return
   end function get_ncpl
 
-  !> @brief Get a 2D array of polygon vertices
-  subroutine get_polyverts(this, ic, polyverts, wrap)
+  !> @brief Get a 2D array of polygon vertices, listed in
+  !! clockwise order beginning with the lower left corner
+  subroutine get_polyverts(this, ic, polyverts, closed)
     ! -- dummy
     class(GwfDisvType), intent(inout) :: this
     integer(I4B), intent(in) :: ic !< cell number (reduced)
-    real(DP), allocatable, intent(out) :: polyverts(:, :) !< polygon vertices
-    logical(LGP), intent(in), optional :: wrap !< whether to wrap around (duplicating a vertex)
+    real(DP), allocatable, intent(out) :: polyverts(:, :) !< polygon vertices (column-major indexing)
+    logical(LGP), intent(in), optional :: closed !< whether to close the polygon, duplicating a vertex
     ! -- local
     integer(I4B) :: icu, icu2d, iavert, ncpl, nverts, m, j
-    logical(LGP) :: lwrap
+    logical(LGP) :: lclosed
 
     ! count vertices
     ncpl = this%get_ncpl()
@@ -1594,28 +1595,30 @@ contains
     nverts = this%iavert(icu2d + 1) - this%iavert(icu2d) - 1
     if (nverts .le. 0) nverts = nverts + size(this%javert)
 
-    ! check wraparound option
-    if (.not. (present(wrap))) then
-      lwrap = .false.
+    ! check closed option
+    if (.not. (present(closed))) then
+      lclosed = .false.
     else
-      lwrap = wrap
-      if (lwrap) &
-        nverts = nverts + 1
+      lclosed = closed
     end if
 
     ! allocate vertices array
-    allocate (polyverts(nverts, 2))
+    if (lclosed) then
+      allocate (polyverts(2, nverts + 1))
+    else
+      allocate (polyverts(2, nverts))
+    end if
 
     ! set vertices
     iavert = this%iavert(icu2d)
-    do m = 1, nverts - 1
+    do m = 1, nverts
       j = this%javert(iavert - 1 + m)
-      polyverts(m, :) = (/this%vertices(1, j), this%vertices(2, j)/)
+      polyverts(:, m) = (/this%vertices(1, j), this%vertices(2, j)/)
     end do
 
-    ! wraparound if enabled
-    if (lwrap) &
-      polyverts(nverts, :) = polyverts(1, :)
+    ! close if enabled
+    if (lclosed) &
+      polyverts(:, nverts + 1) = polyverts(:, 1)
 
   end subroutine
 
