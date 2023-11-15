@@ -86,6 +86,7 @@ $(OBJDIR)/version.o \
 $(OBJDIR)/Message.o \
 $(OBJDIR)/Sim.o \
 $(OBJDIR)/OpenSpec.o \
+$(OBJDIR)/MathUtil.o \
 $(OBJDIR)/InputOutput.o \
 $(OBJDIR)/TableTerm.o \
 $(OBJDIR)/Table.o \

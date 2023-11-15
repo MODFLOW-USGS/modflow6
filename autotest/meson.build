@@ -5,6 +5,7 @@ if test_drive.found() and not fc_id.contains('intel')
     'DevFeature',
     'GeomUtil',
     'InputOutput',
+    'MathUtil',
     'Sim'
   ]
 
