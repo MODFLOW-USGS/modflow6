@@ -2,7 +2,10 @@ test_drive = dependency('test-drive', required : false)
 if test_drive.found()
   tests = [
     'ArrayHandlers',
-    'GeomUtil'
+    'DevFeature',
+    'GeomUtil',
+    'InputOutput',
+    'Sim'
   ]
 
   test_srcs = files(
