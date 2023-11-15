@@ -13,8 +13,8 @@ module NumericalSolutionModule
                              LENMEMPATH
   use MemoryHelperModule, only: create_mem_path
   use TableModule, only: TableType, table_cr
-  use GenericUtilitiesModule, only: is_same
   Use MessageModule, only: write_message
+  use MathUtilModule, only: is_close
   use VersionModule, only: IDEVELOPMODE
   use BaseModelModule, only: BaseModelType
   use BaseExchangeModule, only: BaseExchangeType

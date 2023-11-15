@@ -2,7 +2,7 @@ module GridSorting
   use KindModule, only: I4B, DP, LGP
   use ConstantsModule, only: DHALF
   use CellWithNbrsModule, only: GlobalCellType
-  use GenericUtilitiesModule, only: is_same
+  use MathUtilModule, only: is_same
   use BaseDisModule, only: dis_transform_xy
   implicit none
   private

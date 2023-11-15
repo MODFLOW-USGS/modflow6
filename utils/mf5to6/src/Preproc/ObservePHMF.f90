@@ -15,7 +15,7 @@ module ObserveModule
   use ConstantsModule,        only: DONE, DZERO, LENOBSNAME,  &
                                     LENOBSTYPE, MAXCHARLEN
   use ConstantsPHMFModule,    only: LENOBSNAMENEW, HUGEDBL, HDRYDEFAULT
-  use GenericUtilitiesModule, only: is_same
+  use MathUtilModule,         only: is_same
   use ListModule,             only: ListType
   use SimModule,              only: store_warning, store_error, &
                                     store_error_unit, ustop

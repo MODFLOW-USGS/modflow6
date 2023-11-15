@@ -18,8 +18,8 @@ module GwfCsubModule
                              TABLEFT, TABCENTER, TABRIGHT, &
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use MemoryHelperModule, only: create_mem_path
-  use GenericUtilitiesModule, only: is_same
   use MessageModule, only: write_message
+  use MathUtilModule, only: is_close
   use SmoothingModule, only: sQuadraticSaturation, &
                              sQuadraticSaturationDerivative, &
                              sQuadratic0sp, &

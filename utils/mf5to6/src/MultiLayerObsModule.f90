@@ -1,8 +1,8 @@
 module MultiLayerObs
-  
-  use ConstantsModule,        only: DONE, MAXCHARLEN
-  use ConstantsPHMFModule,    only: LENOBSNAMENEW
-  use GenericUtilitiesModule, only: is_same
+
+  use ConstantsModule, only: DONE, MAXCHARLEN
+  use ConstantsPHMFModule, only: LENOBSNAMENEW
+  use MathUtilModule, only: is_same
   use ListModule, only: ListType
   use SimModule, only: store_error, ustop
 
@@ -26,7 +26,7 @@ module MultiLayerObs
     procedure, public :: CheckWeightSum
   end type
 
-  contains
+contains
 
   ! Non-type-bound procedures
 
@@ -43,7 +43,7 @@ module MultiLayerObs
     end select
     return
   end function CastAsLayerObsType
-  
+
   subroutine ConstructLayerObs(newLayerObs, layobname, layer, weight)
     ! dummy
     type(LayerObsType), pointer :: newLayerObs
@@ -51,7 +51,7 @@ module MultiLayerObs
     integer, intent(in) :: layer
     double precision, intent(in) :: weight
     !
-    allocate(newLayerObs)
+    allocate (newLayerObs)
     newLayerObs%lobsname = layobname
     newLayerObs%layer = layer
     newLayerObs%weight = weight
@@ -71,7 +71,7 @@ module MultiLayerObs
     !
     return
   end subroutine AddLayerObsToList
-  
+
   function GetLayerObsFromList(list, indx) result(res)
     ! dummy
     type(ListType), intent(inout) :: list
@@ -88,18 +88,18 @@ module MultiLayerObs
     !
     return
   end function GetLayerObsFromList
-  
+
   subroutine ConstructMLObs(newMLObs, obsname)
     ! dummy
     type(MLObsType), pointer, intent(inout) :: newMLObs
     character(len=LENOBSNAMENEW), intent(in) :: obsname
     !
-    allocate(newMLObs)
+    allocate (newMLObs)
     newMLObs%mlobsname = obsname
     !
     return
   end subroutine ConstructMLObs
-  
+
   subroutine AddMLObsToList(list, mlobs)
     ! dummy
     type(ListType), intent(inout) :: list
@@ -112,7 +112,7 @@ module MultiLayerObs
     !
     return
   end subroutine AddMLObsToList
-  
+
   function GetMLObsFromList(list, indx) result(res)
     ! dummy
     type(ListType), intent(inout) :: list
@@ -129,37 +129,37 @@ module MultiLayerObs
     !
     return
   end function GetMLObsFromList
-  
+
   ! Type-bound procedures of MLObsType
-  
+
   subroutine CheckWeightSum(this)
     ! dummy
     class(MLObsType) :: this
     ! local
     double precision :: weightsum
     integer :: i, nlayers
-    type(LayerObsType), pointer :: layobs =>  null()
+    type(LayerObsType), pointer :: layobs => null()
     character(len=MAXCHARLEN) :: ermsg
     ! formats
-    10 format('Weights of layer observations do not sum to 1.0 for', &
-              ' multilayer observation: ',a)
+10  format('Weights of layer observations do not sum to 1.0 for', &
+           ' multilayer observation: ', a)
     !
     if (this%summ) return
     !
     weightsum = 0.0d0
     nlayers = this%LayerObsList%Count()
-    do i=1,nlayers
+    do i = 1, nlayers
       layobs => GetLayerObsFromList(this%LayerObsList, i)
       weightsum = weightsum + layobs%weight
-    enddo
+    end do
     !
     if (.not. is_same(weightsum, DONE)) then
-      write(ermsg,10)trim(this%mlobsname)
+      write (ermsg, 10) trim(this%mlobsname)
       call store_error(ermsg)
       call ustop()
-    endif
+    end if
     !
     return
   end subroutine
-  
+
 end module MultiLayerObs

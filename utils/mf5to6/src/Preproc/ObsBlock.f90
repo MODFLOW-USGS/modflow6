@@ -3,7 +3,7 @@ module ObsBlockModule
   use BlockParserModule,         only: BlockParserType
   use ConstantsModule,           only: DONE, DZERO, &
                                        LINELENGTH, MAXCHARLEN, LENOBSNAME
-  use GenericUtilitiesModule,    only: is_same
+  use MathUtilModule,    only: is_same
   use ConstantsPHMFModule,       only: CONTINUOUS, SINGLE, LENOBSNAMENEW
   use DnmDis3dModule,            only: Dis3dType
   use GlobalVariablesPHMFModule, only: verbose

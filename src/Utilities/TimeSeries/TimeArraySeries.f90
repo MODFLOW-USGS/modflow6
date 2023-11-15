@@ -4,7 +4,7 @@ module TimeArraySeriesModule
   use BlockParserModule, only: BlockParserType
   use ConstantsModule, only: LINELENGTH, UNDEFINED, STEPWISE, LINEAR, &
                              LENTIMESERIESNAME, LENMODELNAME, DZERO, DONE
-  use GenericUtilitiesModule, only: is_same
+  use MathUtilModule, only: is_same
   use InputOutputModule, only: GetUnit, openfile
   use KindModule, only: DP, I4B
   use ListModule, only: ListType, ListNodeType
