@@ -15,21 +15,23 @@ contains
   !! Vertices and edge points are considered in.
   !! Reference: https://stackoverflow.com/a/63436180/6514033
   logical function point_in_polygon(x, y, poly)
-    real(DP), intent(in) :: x
-    real(DP), intent(in) :: y
-    real(DP), allocatable, intent(in) :: poly(:, :)
+    ! dummy
+    real(DP), intent(in) :: x !< x point coordinate
+    real(DP), intent(in) :: y !< y point coordinate
+    real(DP), allocatable, intent(in) :: poly(:, :) !< polygon vertices (column-major indexing)
+    ! local
     integer(I4B) :: i, ii, num_verts
     real(DP) :: xa, xb, ya, yb, c = 0.0_DP
 
     point_in_polygon = .false.
-    num_verts = size(poly, 1)
-    xa = poly(num_verts, 1)
-    ya = poly(num_verts, 2)
+    num_verts = size(poly, 2)
+    xa = poly(1, num_verts)
+    ya = poly(2, num_verts)
 
     do i = 0, num_verts - 1
       ii = mod(i, num_verts) + 1
-      xb = poly(ii, 1)
-      yb = poly(ii, 2)
+      xb = poly(1, ii)
+      yb = poly(2, ii)
 
       if ((x == xa .and. y == ya) .or. (x == xb .and. y == yb)) then
         ! on vertex
