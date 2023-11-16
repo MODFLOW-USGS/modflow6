@@ -25,7 +25,7 @@ $(OBJDIR)/compilerversion.o \
 $(OBJDIR)/version.o \
 $(OBJDIR)/Sim.o \
 $(OBJDIR)/OpenSpec.o \
-$(OBJDIR)/genericutils.o \
+$(OBJDIR)/MathUtil.o \
 $(OBJDIR)/InputOutput.o \
 $(OBJDIR)/LongLineReader.o \
 $(OBJDIR)/DevFeature.o \
