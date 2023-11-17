@@ -5,12 +5,13 @@ module BaseDisModule
                              DZERO, LENMEMPATH, DPIO180
   use SmoothingModule, only: sQuadraticSaturation
   use ConnectionsModule, only: ConnectionsType
-  use InputOutputModule, only: URWORD, ubdsv1
+  use InputOutputModule, only: URWORD, ubdsv1, ubdsvd
   use SimVariablesModule, only: errmsg
   use SimModule, only: count_errors, store_error, &
                        store_error_unit
   use BlockParserModule, only: BlockParserType
   use MemoryManagerModule, only: mem_allocate
+  use MemoryManagerExtModule, only: mem_set_value
   use MemoryHelperModule, only: create_mem_path
   use TdisModule, only: kstp, kper, pertim, totim, delt
   use TimeSeriesManagerModule, only: TimeSeriesManagerType
@@ -116,9 +117,7 @@ contains
 
   !> @brief Define the discretization
   subroutine dis_df(this)
-    ! -- dummy
     class(DisBaseType) :: this
-
     call store_error('Programmer error: dis_df must be overridden', &
                      terminate=.true.)
   end subroutine dis_df
@@ -189,10 +188,8 @@ contains
 
   !> @brief Write a binary grid file
   subroutine write_grb(this, icelltype)
-    ! -- dummy
     class(DisBaseType) :: this
     integer(I4B), dimension(:), intent(in) :: icelltype
-    !
     call store_error('Programmer error: write_grb must be overridden', &
                      terminate=.true.)
   end subroutine write_grb
@@ -240,34 +237,30 @@ contains
 
   !> @brief Convert a user nodenumber to a string (nodenumber), (k,j), or (k,i,j)
   subroutine nodeu_to_string(this, nodeu, str)
-    ! -- dummy
     class(DisBaseType) :: this
     integer(I4B), intent(in) :: nodeu
     character(len=*), intent(inout) :: str
-    !
+
     call store_error('Programmer error: nodeu_to_string must be overridden', &
                      terminate=.true.)
   end subroutine nodeu_to_string
 
   !> @brief Convert a user nodenumber to an array (nodenumber), (k,j), or (k,i,j)
   subroutine nodeu_to_array(this, nodeu, arr)
-    ! -- dummy
     class(DisBaseType) :: this
     integer(I4B), intent(in) :: nodeu
     integer(I4B), dimension(:), intent(inout) :: arr
-    !
+
     call store_error('Programmer error: nodeu_to_array must be overridden', &
                      terminate=.true.)
   end subroutine nodeu_to_array
 
   !> @brief Convert a reduced nodenumber to a user node number
   function get_nodeuser(this, noder) result(nodenumber)
-    ! -- return
-    integer(I4B) :: nodenumber
-    ! -- dummy
     class(DisBaseType) :: this
     integer(I4B), intent(in) :: noder
-    !
+    integer(I4B) :: nodenumber
+
     if (this%nodes < this%nodesuser) then
       nodenumber = this%nodeuser(noder)
     else
@@ -276,14 +269,9 @@ contains
   end function get_nodeuser
 
   function get_nodenumber_idx1(this, nodeu, icheck) result(nodenumber)
-    ! -- modules
-    use ConstantsModule, only: LINELENGTH
-    use SimModule, only: store_error
-    ! -- dummy
     class(DisBaseType), intent(in) :: this
     integer(I4B), intent(in) :: nodeu
     integer(I4B), intent(in) :: icheck
-    ! -- local
     integer(I4B) :: nodenumber
 
     nodenumber = 0
@@ -292,8 +280,6 @@ contains
   end function get_nodenumber_idx1
 
   function get_nodenumber_idx2(this, k, j, icheck) result(nodenumber)
-    use SimModule, only: store_error
-    ! -- dummy
     class(DisBaseType), intent(in) :: this
     integer(I4B), intent(in) :: k, j
     integer(I4B), intent(in) :: icheck
@@ -305,8 +291,6 @@ contains
   end function get_nodenumber_idx2
 
   function get_nodenumber_idx3(this, k, i, j, icheck) result(nodenumber)
-    use SimModule, only: store_error
-    ! -- dummy
     class(DisBaseType), intent(in) :: this
     integer(I4B), intent(in) :: k, i, j
     integer(I4B), intent(in) :: icheck
@@ -318,11 +302,9 @@ contains
   end function get_nodenumber_idx3
 
   !> @brief Get normal vector components between the cell and a given neighbor.
+  !! The normal points outward from the shared face between noden and nodem.
   subroutine connection_normal(this, noden, nodem, ihc, xcomp, ycomp, zcomp, &
                                ipos)
-    ! -- modules
-    use SimModule, only: store_error
-    ! -- dummy
     class(DisBaseType) :: this
     integer(I4B), intent(in) :: noden !< cell (reduced nn)
     integer(I4B), intent(in) :: nodem !< neighbor (reduced nn)
@@ -341,9 +323,6 @@ contains
   !! Also return the straight-line connection length.
   subroutine connection_vector(this, noden, nodem, nozee, satn, satm, ihc, &
                                xcomp, ycomp, zcomp, conlen)
-    ! -- modules
-    use SimModule, only: store_error
-    ! -- dummy
     class(DisBaseType) :: this
     integer(I4B), intent(in) :: noden !< cell (reduced nn)
     integer(I4B), intent(in) :: nodem !< neighbor (reduced nn)
@@ -392,7 +371,6 @@ contains
     class(DisBaseType), intent(in) :: this
     character(len=*), intent(out) :: dis_type
 
-    ! suppress warning
     dis_type = "Not implemented"
     call store_error('Programmer error: get_dis_type must be overridden', &
                      terminate=.true.)
@@ -400,9 +378,6 @@ contains
 
   !> @brief Allocate and initialize scalar variables
   subroutine allocate_scalars(this, name_model, input_mempath)
-    ! -- modules
-    use MemoryManagerModule, only: mem_allocate
-    use MemoryManagerExtModule, only: mem_set_value
     ! -- dummy
     class(DisBaseType) :: this
     character(len=*), intent(in) :: name_model
@@ -455,9 +430,6 @@ contains
 
   !> @brief Allocate and initialize arrays
   subroutine allocate_arrays(this)
-    ! -- modules
-    use MemoryManagerModule, only: mem_allocate
-    ! -- dummy
     class(DisBaseType) :: this
     integer :: isize
     !
@@ -486,11 +458,10 @@ contains
 
   !> @brief Convert a string to a user nodenumber.
   !!
-  !! If the model is unstructured; just read user nodenumber.
-  !! If flag_string argument is present and true, the first token in string
-  !! is allowed to be a string (e.g. boundary name). In this case, if a string
-  !! is encountered, return value as -2.
-  !
+  !! If DIS or DISV, read indices. If DISU, read user node number directly.
+  !! If flag_string is present and true, the first token may be
+  !! non-numeric (e.g. boundary name). In this case, return -2.
+  !<
   function nodeu_from_string(this, lloc, istart, istop, in, iout, line, &
                              flag_string, allow_zero) result(nodeu)
     ! -- dummy
@@ -512,10 +483,10 @@ contains
 
   !> @brief Convert a cellid string to a user nodenumber.
   !!
-  !! If flag_string argument is present and true, the first token in string
-  !! is allowed to be a string (e.g. boundary name). In this case, if a string
-  !! is encountered, return value as -2.
-  !! If allow_zero argument is present and true, if all indices equal zero, the
+  !! If flag_string is present and true, the first token may be
+  !! non-numeric (e.g. boundary name). In this case, return -2.
+  !!
+  !! If allow_zero is present and true, and all indices are zero, the
   !! result can be zero. If allow_zero is false, a zero in any index is an error.
   !<
   function nodeu_from_cellid(this, cellid, inunit, iout, flag_string, &
@@ -637,9 +608,7 @@ contains
 
   !> @brief Indicates whether the grid discretization supports layers.
   logical function supports_layers(this)
-    ! -- dummy
     class(DisBaseType) :: this
-
     supports_layers = .false.
     call store_error('Programmer error: supports_layers must be overridden', &
                      terminate=.true.)
@@ -648,11 +617,8 @@ contains
   !> @brief Return number of cells per layer.
   !! This is nodes for a DISU grid, as there are no layers.
   function get_ncpl(this)
-    ! -- return
     integer(I4B) :: get_ncpl
-    ! -- dummy
     class(DisBaseType) :: this
-
     get_ncpl = 0
     call store_error('Programmer error: get_ncpl must be overridden', &
                      terminate=.true.)
@@ -1004,7 +970,6 @@ contains
   subroutine record_srcdst_list_header(this, text, textmodel, textpackage, &
                                        dstmodel, dstpackage, naux, auxtxt, &
                                        ibdchn, nlist, iout)
-    ! -- dummy
     class(DisBaseType) :: this
     character(len=16), intent(in) :: text
     character(len=16), intent(in) :: textmodel
@@ -1024,8 +989,6 @@ contains
   !> @brief Record list header
   subroutine record_srcdst_list_entry(this, ibdchn, noder, noder2, q, &
                                       naux, aux, olconv, olconv2)
-    ! -- modules
-    use InputOutputModule, only: ubdsvd
     ! -- dummy
     class(DisBaseType) :: this
     integer(I4B), intent(in) :: ibdchn
@@ -1066,16 +1029,11 @@ contains
     call ubdsvd(ibdchn, nodeu, nodeu2, q, naux, aux)
   end subroutine record_srcdst_list_entry
 
-  !> @brief Convert an integer array into nodelist
+  !> @brief Convert an integer array to nodelist.
   !!
-  !! For structured model, integer array is layer number.
-  !! For unstructured model, integer array is node number.
+  !! For DIS/DISV, the array is layer number, for DISU it's node number.
   !<
   subroutine nlarray_to_nodelist(this, darray, nodelist, maxbnd, nbound, aname)
-    ! -- modules
-    use SimModule, only: store_error
-    use ConstantsModule, only: LINELENGTH
-    ! -- dummy
     class(DisBaseType) :: this
     integer(I4B), intent(in) :: maxbnd
     integer(I4B), dimension(:), pointer, contiguous :: darray
@@ -1125,15 +1083,12 @@ contains
     end do
   end subroutine highest_active
 
-  !> @brief Return the cell area for this node
+  !> @brief Return the cell area for the given node
   function get_area(this, node) result(area)
-    ! -- return
-    real(DP) :: area
-    ! -- dummy
     class(DisBaseType) :: this
-    integer(I4B), intent(in) :: node
-    !
-    ! -- Return the cell area
+    integer(I4B), intent(in) :: node !< reduced node number
+    real(DP) :: area
+
     area = this%area(node)
   end function get_area
 
