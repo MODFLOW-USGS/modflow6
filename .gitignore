@@ -136,3 +136,5 @@ unittests/
 
 # compiler compatibility markdown tables
 .github/compat/*.md
+
+**.DS_Store
