@@ -128,7 +128,7 @@ contains
       lrtol = rtol
     end if
     if (.not. present(atol)) then
-      latol = DSAME
+      latol = DZERO
     else
       latol = atol
     end if
