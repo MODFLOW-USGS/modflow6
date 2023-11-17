@@ -494,16 +494,29 @@ jobs:
         uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: modflow6/environment.yml
+          create-args: >-
+            netcdf-fortran
           init-shell: >-
             bash
             powershell
           cache-environment: true
           cache-downloads: true
 
+      - name: Fix pc file and set PKG_CONFIG_PATH
+        working-directory: modflow6
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            sed -i "s|libdir=/home/runner/micromamba/envs/modflow6//home/runner/micromamba/envs/modflow6/lib|libdir=/home/runner/micromamba/envs/modflow6/lib|g" /home/runner/micromamba/envs/modflow6/lib/pkgconfig/netcdf-fortran.pc
+            echo "PKG_CONFIG_PATH=/home/runner/micromamba/envs/modflow6/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+            sed -i '' -e "s|libdir=/Users/runner/micromamba/envs/modflow6//Users/runner/micromamba/envs/modflow6/lib|libdir=/Users/runner/micromamba/envs/modflow6/lib|g" /Users/runner/micromamba/envs/modflow6/lib/pkgconfig/netcdf-fortran.pc
+            echo "PKG_CONFIG_PATH=/Users/runner/micromamba/envs/modflow6/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+          fi
+
       - name: Build modflow6
         working-directory: modflow6
         run: |
-          meson setup builddir -Ddebug=false -Dparallel=true --prefix=$(pwd) --libdir=bin
+          meson setup builddir -Ddebug=false -Dextended=true --prefix=$(pwd) --libdir=bin
           meson install -C builddir
           meson test --verbose --no-rebuild -C builddir
 
@@ -521,6 +534,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: pytest -v --durations 0 get_exes.py
+
+      - name: Confirm netcdf build
+        working-directory: modflow6/autotest
+        env:
+          REPOS_PATH: ${{ github.workspace }}
+        run: |
+          pytest test_gwf_chd01.py --keep temp
+          if grep -Fx "    NetCDF, network Common Data Form software library" temp/test_mf6model[chd01]0/mfsim.lst
+          then
+            echo "NetCDF dependency confirmed."
+          else
+            echo "NetCDF dependency not found."
+            exit 1
+          fi
 
       - name: Test programs (parallel)
         working-directory: modflow6/autotest
