@@ -200,7 +200,9 @@ module LakModule
     real(DP), dimension(:, :), pointer, contiguous :: viscratios => null() !< viscosity ratios (1: lak vsc ratio; 2: gwf vsc ratio)
     !
     ! -- type bound procedures
+
   contains
+
     procedure :: lak_allocate_scalars
     procedure :: lak_allocate_arrays
     procedure :: bnd_options => lak_options
@@ -283,15 +285,10 @@ module LakModule
 
 contains
 
+  !> @brief Create a new LAK Package and point bndobj to the new package
+  !<
   subroutine lak_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname)
-! ******************************************************************************
-! lak_create -- Create a New LAKE Package
-! Subroutine: (1) create new-style package
-!             (2) point bndobj to the new package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
     integer(I4B), intent(in) :: ibcnum
@@ -299,8 +296,8 @@ contains
     integer(I4B), intent(in) :: iout
     character(len=*), intent(in) :: namemodel
     character(len=*), intent(in) :: pakname
+    ! -- local
     type(LakType), pointer :: lakobj
-! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
     allocate (lakobj)
@@ -315,7 +312,7 @@ contains
     !
     ! -- initialize package
     call packobj%pack_initialize()
-
+    !
     packobj%inunit = inunit
     packobj%iout = iout
     packobj%id = id
@@ -325,20 +322,15 @@ contains
     packobj%isadvpak = 1
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_create
 
+  !> @brief Allocate scalar members
+  !<
   subroutine lak_allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars -- allocate scalar members
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- call standard BndType allocate scalars
     call this%BndType%allocate_scalars()
@@ -393,23 +385,18 @@ contains
     this%idense = 0
     this%ivsc = 0
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_allocate_scalars
 
+  !> @brief Allocate scalar members
+  !<
   subroutine lak_allocate_arrays(this)
-! ******************************************************************************
-! allocate_scalars -- allocate scalar members
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     ! -- dummy
     class(LakType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i
-! ------------------------------------------------------------------------------
     !
     ! -- call standard BndType allocate scalars
     call this%BndType%allocate_arrays()
@@ -465,17 +452,13 @@ contains
     ! -- allocate viscratios to size 0
     call mem_allocate(this%viscratios, 2, 0, 'VISCRATIOS', this%memoryPath)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_allocate_arrays
 
+  !> @brief Read the dimensions for this package
+  !<
   subroutine lak_read_lakes(this)
-! ******************************************************************************
-! pak1read_dimensions -- Read the dimensions for this package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, count_errors, store_error_unit
@@ -497,9 +480,6 @@ contains
     integer(I4B) :: nconn
     integer(I4B), dimension(:), pointer, contiguous :: nboundchk
     real(DP), pointer :: bndElem => null()
-    ! -- format
-    !
-    ! -- code
     !
     ! -- initialize itmp
     itmp = 0
@@ -608,39 +588,39 @@ contains
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         n = this%parser%GetInteger()
-
+        !
         if (n < 1 .or. n > this%nlakes) then
           write (errmsg, '(a,1x,i0)') 'lakeno MUST BE > 0 and <= ', this%nlakes
           call store_error(errmsg)
           cycle
         end if
-
+        !
         ! -- increment nboundchk
         nboundchk(n) = nboundchk(n) + 1
-
+        !
         ! -- strt
         this%strt(n) = this%parser%GetDouble()
-
+        !
         ! nlakeconn
         ival = this%parser%GetInteger()
-
+        !
         if (ival < 0) then
           write (errmsg, '(a,1x,i0)') 'nlakeconn MUST BE >= 0 for lake ', n
           call store_error(errmsg)
         end if
-
+        !
         nconn = nconn + ival
         this%nlakeconn(n) = ival
-
+        !
         ! -- get aux data
         do iaux = 1, this%naux
           call this%parser%GetString(caux(iaux))
         end do
-
+        !
         ! -- set default bndName
         write (cno, '(i9.9)') n
         bndName = 'Lake'//cno
-
+        !
         ! -- lakename
         if (this%inamedbound /= 0) then
           call this%parser%GetStringCaps(bndNameTemp)
@@ -649,7 +629,7 @@ contains
           end if
         end if
         this%lakename(n) = bndName
-
+        !
         ! -- fill time series aware data
         ! -- fill aux data
         do jj = 1, this%naux
@@ -661,7 +641,7 @@ contains
                                              this%tsManager, this%iprpak, &
                                              this%auxname(jj))
         end do
-
+        !
         nlak = nlak + 1
       end do
       !
@@ -676,7 +656,7 @@ contains
           call store_error(errmsg)
         end if
       end do
-
+      !
       write (this%iout, '(1x,a)') 'END OF '//trim(adjustl(this%text))// &
         ' PACKAGEDATA'
     else
@@ -691,7 +671,7 @@ contains
     ! -- set MAXBOUND
     this%MAXBOUND = nconn
     write (this%iout, '(//4x,a,i7)') 'MAXBOUND = ', this%maxbound
-
+    !
     ! -- set idxlakeconn
     this%idxlakeconn(1) = 1
     do n = 1, this%nlakes
@@ -706,17 +686,13 @@ contains
     ! -- deallocate local storage for nboundchk
     deallocate (nboundchk)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_read_lakes
 
+  !> @brief Read the lake connections for this package
+  !<
   subroutine lak_read_lake_connections(this)
-! ******************************************************************************
-! lak_read_lake_connections -- Read the lake connections for this package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH, LENVARNAME
     use SimModule, only: store_error, count_errors
     ! -- dummy
@@ -735,10 +711,6 @@ contains
     real(DP) :: bot
     integer(I4B), dimension(:), pointer, contiguous :: nboundchk
     character(len=LENVARNAME) :: ctypenm
-
-    ! -- format
-    !
-    ! -- code
     !
     ! -- allocate local storage
     allocate (nboundchk(this%MAXBOUND))
@@ -752,7 +724,6 @@ contains
     !
     ! -- parse connectiondata block if detected
     if (isfound) then
-
       ! -- allocate connection data using memory manager
       call mem_allocate(this%imap, this%MAXBOUND, 'IMAP', this%memoryPath)
       call mem_allocate(this%cellid, this%MAXBOUND, 'CELLID', this%memoryPath)
@@ -771,7 +742,7 @@ contains
       call mem_allocate(this%satcond, this%MAXBOUND, 'SATCOND', this%memoryPath)
       call mem_allocate(this%simcond, this%MAXBOUND, 'SIMCOND', this%memoryPath)
       call mem_allocate(this%simlakgw, this%MAXBOUND, 'SIMLAKGW', this%memoryPath)
-
+      !
       ! -- process the lake connection data
       write (this%iout, '(/1x,a)') 'PROCESSING '//trim(adjustl(this%text))// &
         ' LAKE_CONNECTIONS'
@@ -779,13 +750,13 @@ contains
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         n = this%parser%GetInteger()
-
+        !
         if (n < 1 .or. n > this%nlakes) then
           write (errmsg, '(a,1x,i0)') 'lakeno MUST BE > 0 and <= ', this%nlakes
           call store_error(errmsg)
           cycle
         end if
-
+        !
         ! -- read connection number
         ival = this%parser%GetInteger()
         if (ival < 1 .or. ival > this%nlakeconn(n)) then
@@ -794,17 +765,17 @@ contains
           call store_error(errmsg)
           cycle
         end if
-
+        !
         j = ival
         ipos = this%idxlakeconn(n) + ival - 1
-
+        !
         ! -- set imap
         this%imap(ipos) = n
-
+        !
         !
         ! -- increment nboundchk
         nboundchk(ipos) = nboundchk(ipos) + 1
-
+        !
         ! -- read gwfnodes from the line
         call this%parser%GetCellid(this%dis%ndim, cellid)
         nn = this%dis%noder_from_cellid(cellid, &
@@ -816,11 +787,11 @@ contains
             'INVALID cellid FOR LAKE ', n, 'connection', j
           call store_error(errmsg)
         end if
-
+        !
         ! -- set gwf cellid for connection
         this%cellid(ipos) = nn
         this%nodesontop(ipos) = nn
-
+        !
         ! -- read ictype
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
@@ -839,7 +810,7 @@ contains
           call store_error(errmsg)
         end select
         write (ctypenm, '(a16)') keyword
-
+        !
         ! -- bed leakance
         !this%bedleak(ipos) = this%parser%GetDouble() !TODO: use this when NONE keyword deprecated
         call this%parser%GetStringCaps(keyword)
@@ -868,18 +839,18 @@ contains
           end if
           this%bedleak(ipos) = rval
         end select
-
+        !
         if (is_lake_bed .and. this%bedleak(ipos) < DZERO) then
           write (errmsg, '(a,1x,i0,1x,a)') 'bedleak FOR LAKE ', n, 'MUST BE >= 0'
           call store_error(errmsg)
         end if
-
+        !
         ! -- belev
         this%belev(ipos) = this%parser%GetDouble()
-
+        !
         ! -- telev
         this%telev(ipos) = this%parser%GetDouble()
-
+        !
         ! -- connection length
         rval = this%parser%GetDouble()
         if (rval <= DZERO) then
@@ -895,7 +866,7 @@ contains
           end if
         end if
         this%connlength(ipos) = rval
-
+        !
         ! -- connection width
         rval = this%parser%GetDouble()
         if (rval < dzero) then
@@ -1031,17 +1002,13 @@ contains
       call this%parser%StoreErrorUnit()
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_read_lake_connections
 
+  !> @brief Read the lake tables for this package
+  !<
   subroutine lak_read_tables(this)
-! ******************************************************************************
-! lak_read_tables -- Read the lake tables for this package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, count_errors
     ! -- dummy
@@ -1056,11 +1023,6 @@ contains
     integer(I4B) :: iconn
     integer(I4B) :: ntabs
     integer(I4B), dimension(:), pointer, contiguous :: nboundchk
-! ------------------------------------------------------------------------------
-
-    ! -- format
-    !
-    ! -- code
     !
     ! -- skip of no outlets
     if (this%ntables < 1) return
@@ -1088,17 +1050,17 @@ contains
         call this%parser%GetNextLine(endOfBlock)
         if (endOfBlock) exit
         n = this%parser%GetInteger()
-
+        !
         if (n < 1 .or. n > this%nlakes) then
           write (errmsg, '(a,1x,i0)') 'lakeno MUST BE > 0 and <= ', this%nlakes
           call store_error(errmsg)
           cycle readtable
         end if
-
+        !
         ! -- increment ntab and nboundchk
         ntabs = ntabs + 1
         nboundchk(n) = nboundchk(n) + 1
-
+        !
         ! -- read FILE keyword
         call this%parser%GetStringCaps(keyword)
         select case (keyword)
@@ -1119,7 +1081,7 @@ contains
           cycle readtable
         end select
       end do readtable
-
+      !
       write (this%iout, '(1x,a)') &
         'END OF '//trim(adjustl(this%text))//' LAKE_TABLES'
       !
@@ -1166,18 +1128,14 @@ contains
     end do
     deallocate (laketables)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_read_tables
 
+  !> @brief Copy the laketables structure data into flattened vectors that are
+  !! stored in the memory manager
+  !<
   subroutine laktables_to_vectors(this, laketables)
-! ******************************************************************************
-! laktables_to_vectors -- Copy the laketables structure data into flattened
-!   vectors that are stored in the memory manager
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     class(LakType), intent(inout) :: this
     type(LakTabType), intent(in), dimension(:), contiguous :: laketables
     integer(I4B) :: n
@@ -1185,7 +1143,6 @@ contains
     integer(I4B) :: j
     integer(I4B) :: ipos
     integer(I4B) :: iconn
-! ------------------------------------------------------------------------------
     !
     ! -- allocate index array for lak tables
     call mem_allocate(this%ialaktab, this%nlakes + 1, 'IALAKTAB', this%memoryPath)
@@ -1223,17 +1180,13 @@ contains
       end do
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine laktables_to_vectors
 
+  !> @brief Read the lake table for this package
+  !<
   subroutine lak_read_table(this, ilak, filename, laketable)
-! ******************************************************************************
-! lak_read_table -- Read the lake table for this package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use InputOutputModule, only: openfile
     use SimModule, only: store_error, count_errors
@@ -1261,11 +1214,6 @@ contains
     ! -- formats
     character(len=*), parameter :: fmttaberr = &
       &'(a,1x,i0,1x,a,1x,g15.6,1x,a,1x,i0,1x,a,1x,i0,1x,a,1x,g15.6,1x,a)'
-! ------------------------------------------------------------------------------
-
-    ! -- format
-    !
-    ! -- code
     !
     ! -- initialize locals
     n = 0
@@ -1310,7 +1258,7 @@ contains
             write (errmsg, '(a,1x,i0)') 'LAKE TABLE NCOL MUST BE >= ', jmin
             call store_error(errmsg)
           end if
-
+          !
         case default
           write (errmsg, '(a,a)') &
             'UNKNOWN '//trim(this%text)//' DIMENSIONS KEYWORD: ', trim(keyword)
@@ -1350,13 +1298,13 @@ contains
       if (this%ictype(ipos) == 2 .or. this%ictype(ipos) == 3) then
         allocate (laketable%tabwarea(n))
       end if
-
+      !
       ! -- get table block
       call parser%GetBlock('TABLE', isfound, ierr, supportOpenClose=.true.)
       !
       ! -- parse well_connections block if detected
       if (isfound) then
-
+        !
         ! -- process the table data
         if (this%iprpak /= 0) then
           write (this%iout, '(/1x,a)') &
@@ -1378,7 +1326,7 @@ contains
             laketable%tabwarea(ipos) = parser%GetDouble()
           end if
         end do readtabledata
-
+        !
         if (this%iprpak /= 0) then
           write (this%iout, '(1x,a)') &
             'END OF '//trim(adjustl(this%text))//' TABLE'
@@ -1468,17 +1416,13 @@ contains
     ! Close the table file and clear other parser members
     call parser%Clear()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_read_table
 
+  !> @brief Read the lake outlets for this package
+  !<
   subroutine lak_read_outlets(this)
-! ******************************************************************************
-! lak_read_outlets -- Read the lake outlets for this package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, count_errors
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
@@ -1494,11 +1438,6 @@ contains
     integer(I4B) :: jj
     integer(I4B), dimension(:), pointer, contiguous :: nboundchk
     real(DP), pointer :: bndElem => null()
-    !
-    ! -- format
-    !
-    ! -- code
-! ------------------------------------------------------------------------------
     !
     ! -- get well_connections block
     call this%parser%GetBlock('OUTLETS', isfound, ierr, &
@@ -1535,7 +1474,7 @@ contains
         do n = 1, this%noutlets
           this%outrate(n) = DZERO
         end do
-
+        !
         ! -- process the lake connection data
         write (this%iout, '(/1x,a)') &
           'PROCESSING '//trim(adjustl(this%text))//' OUTLETS'
@@ -1563,7 +1502,7 @@ contains
             cycle readoutlet
           end if
           this%lakein(n) = ival
-
+          !
           ! -- read outlet lakeout
           ival = this%parser%GetInteger()
           if (ival < 0 .or. ival > this%nlakes) then
@@ -1573,7 +1512,7 @@ contains
             cycle readoutlet
           end if
           this%lakeout(n) = ival
-
+          !
           ! -- read ictype
           call this%parser%GetStringCaps(keyword)
           select case (keyword)
@@ -1589,11 +1528,11 @@ contains
             call store_error(errmsg)
             cycle readoutlet
           end select
-
+          !
           ! -- build bndname for outlet
           write (citem, '(i9.9)') n
           bndName = 'OUTLET'//citem
-
+          !
           ! -- set a few variables for timeseries aware variables
           jj = 1
           !
@@ -1649,7 +1588,7 @@ contains
           'SPECIFIED OR IS SPECIFIED TO BE 0.'
         call store_error(errmsg)
       end if
-
+      !
     else
       if (this%noutlets > 0) then
         call store_error('REQUIRED OUTLETS BLOCK NOT FOUND.')
@@ -1662,17 +1601,13 @@ contains
       call this%parser%StoreErrorUnit()
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_read_outlets
 
+  !> @brief Read the dimensions for this package
+  !<
   subroutine lak_read_dimensions(this)
-! ******************************************************************************
-! pak1read_dimensions -- Read the dimensions for this package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, count_errors
     ! -- dummy
@@ -1681,8 +1616,6 @@ contains
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical(LGP) :: isfound, endOfBlock
-    ! -- format
-! ------------------------------------------------------------------------------
     !
     ! -- initialize dimensions to -1
     this%nlakes = -1
@@ -1721,7 +1654,7 @@ contains
     else
       call store_error('REQUIRED DIMENSIONS BLOCK NOT FOUND.')
     end if
-
+    !
     if (this%nlakes < 0) then
       write (errmsg, '(a)') &
         'NLAKES WAS NOT SPECIFIED OR WAS SPECIFIED INCORRECTLY.'
@@ -1755,17 +1688,13 @@ contains
     ! -- setup the stage table object
     call this%lak_setup_tableobj()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_read_dimensions
 
+  !> @brief Read the initial parameters for this package
+  !<
   subroutine lak_read_initial_attr(this)
-! ******************************************************************************
-! pak1read_dimensions -- Read the initial parameters for this package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use MemoryHelperModule, only: create_mem_path
     use SimModule, only: store_error, count_errors
@@ -1802,8 +1731,6 @@ contains
     data ctype(1)/'HORIZONTAL'/
     data ctype(2)/'EMBEDDEDH '/
     data ctype(3)/'EMBEDDEDV '/
-    ! -- format
-! ------------------------------------------------------------------------------
     !
     ! -- initialize xnewpak and set stage
     do n = 1, this%nlakes
@@ -1849,7 +1776,7 @@ contains
     ! -- allocate temporary storage
     allocate (clb(this%MAXBOUND))
     allocate (caq(this%MAXBOUND))
-
+    !
     ! -- calculate saturated conductance for each connection
     do n = 1, this%nlakes
       do j = this%idxlakeconn(n), this%idxlakeconn(n + 1) - 1
@@ -1983,7 +1910,7 @@ contains
       write (this%iout, '(1x,a)') &
         'IF EMBEDDED CONNECTION, CONDUCTANCES ARE PER &
         &UNIT EXCHANGE AREA (1/T).'
-
+      !
       !        write(this%iout,*) n, idx, nodestr, this%sarea(j), this%warea(j)
       !
       ! -- calculate stage, surface area, wetted area, volume relation
@@ -2004,7 +1931,7 @@ contains
           s = s + dx
         end do
         write (this%iout, "(1x,70('-'))")
-
+        !
         write (this%iout, '(//1x,a,1x,i10)') 'STAGE/VOLUME RELATION FOR LAKE  ', n
         write (this%iout, '(/1x,4(a14))') '              ', '              ', &
     &                                    '    CALCULATED', '         STAGE'
@@ -2032,12 +1959,14 @@ contains
     deallocate (clb)
     deallocate (caq)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_read_initial_attr
 
-! -- simple subroutine for linear interpolation of two vectors
-!       function assumes x data is sorted in ascending order
+  !> @brief Perform linear interpolation of two vectors.
+  !!
+  !! Function assumes x data is sorted in ascending order
+  !<
   subroutine lak_linear_interpolation(this, n, x, y, z, v)
     ! -- dummy
     class(LakType), intent(inout) :: this
@@ -2079,17 +2008,14 @@ contains
         end if
       end do
     end if
-    ! return
+    !
+    ! -- Return
     return
   end subroutine lak_linear_interpolation
 
+  !> @brief Calculate the surface area of a lake at a given stage
+  !<
   subroutine lak_calculate_sarea(this, ilak, stage, sarea)
-! ******************************************************************************
-! lak_calculate_sarea -- Calculate the surface area of a lake at a given stage.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
@@ -2103,8 +2029,7 @@ contains
     real(DP) :: botl
     real(DP) :: sat
     real(DP) :: sa
-    ! -- formats
-! ------------------------------------------------------------------------------
+    !
     sarea = DZERO
     i = this%ntabrow(ilak)
     if (i > 0) then
@@ -2129,17 +2054,13 @@ contains
       end do
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_calculate_sarea
 
+  !> @brief Calculate the wetted area of a lake at a given stage.
+  !<
   subroutine lak_calculate_warea(this, ilak, stage, warea, hin)
-! ******************************************************************************
-! lak_calculate_warea -- Calculate the wetted area of a lake at a given stage.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
@@ -2151,8 +2072,7 @@ contains
     integer(I4B) :: igwfnode
     real(DP) :: head
     real(DP) :: wa
-    ! -- formats
-! ------------------------------------------------------------------------------
+    !
     warea = DZERO
     do i = this%idxlakeconn(ilak), this%idxlakeconn(ilak + 1) - 1
       if (present(hin)) then
@@ -2165,18 +2085,13 @@ contains
       warea = warea + wa
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_calculate_warea
 
+  !> @brief Calculate the wetted area of a lake connection at a given stage
+  !<
   subroutine lak_calculate_conn_warea(this, ilak, iconn, stage, head, wa)
-! ******************************************************************************
-! lak_calculate_conn_warea -- Calculate the wetted area of a lake connection
-!                             at a given stage.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
@@ -2193,8 +2108,7 @@ contains
     real(DP) :: botl
     real(DP) :: vv
     real(DP) :: sat
-    ! -- formats
-! ------------------------------------------------------------------------------
+    !
     wa = DZERO
     topl = this%telev(iconn)
     botl = this%belev(iconn)
@@ -2225,17 +2139,13 @@ contains
       wa = sat * this%warea(iconn)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_calculate_conn_warea
 
+  !> @brief Calculate the volume of a lake at a given stage
+  !<
   subroutine lak_calculate_vol(this, ilak, stage, volume)
-! ******************************************************************************
-! lak_calculate_vol -- Calculate the volume of a lake at a given stage.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
@@ -2251,8 +2161,7 @@ contains
     real(DP) :: sa
     real(DP) :: v
     real(DP) :: sat
-    ! -- formats
-! ------------------------------------------------------------------------------
+    !
     volume = DZERO
     i = this%ntabrow(ilak)
     if (i > 0) then
@@ -2286,18 +2195,13 @@ contains
       end do
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_calculate_vol
 
+  !> @brief Calculate the total conductance for a lake at a provided stage
+  !<
   subroutine lak_calculate_conductance(this, ilak, stage, conductance)
-! ******************************************************************************
-! lak_calculate_conductance -- Calculate the total conductance for a lake at a
-!                              provided stage.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
@@ -2306,28 +2210,22 @@ contains
     ! -- local
     integer(I4B) :: i
     real(DP) :: c
-    ! -- formats
-! ------------------------------------------------------------------------------
+    !
     conductance = DZERO
     do i = this%idxlakeconn(ilak), this%idxlakeconn(ilak + 1) - 1
       call this%lak_calculate_conn_conductance(ilak, i, stage, stage, c)
       conductance = conductance + c
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_calculate_conductance
 
+  !> @brief Calculate the controlling lake stage or groundwater head used to
+  !! calculate the conductance for a lake connection from a provided stage and
+  !! groundwater head
+  !<
   subroutine lak_calculate_cond_head(this, iconn, stage, head, vv)
-! ******************************************************************************
-! lak_calculate_conn_head -- Calculate the controlling lake stage or groundwater
-!                            head used to calculate the conductance for a lake
-!                            connection from a provided stage and groundwater
-!                            head.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: iconn
@@ -2339,8 +2237,7 @@ contains
     real(DP) :: hh
     real(DP) :: topl
     real(DP) :: botl
-    ! -- formats
-! ------------------------------------------------------------------------------
+    !
     topl = this%telev(iconn)
     botl = this%belev(iconn)
     ss = min(stage, topl)
@@ -2353,19 +2250,14 @@ contains
       vv = DHALF * (ss + hh)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_calculate_cond_head
 
+  !> @brief Calculate the conductance for a lake connection at a provided stage
+  !! and groundwater head
+  !<
   subroutine lak_calculate_conn_conductance(this, ilak, iconn, stage, head, cond)
-! ******************************************************************************
-! lak_calculate_conn_conductance -- Calculate the conductance for a lake
-!                                   connection at a provided stage
-!                                   and groundwater head.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
@@ -2383,8 +2275,7 @@ contains
     real(DP) :: sat
     real(DP) :: wa
     real(DP) :: vscratio
-    ! -- formats
-! ------------------------------------------------------------------------------
+    !
     cond = DZERO
     vscratio = DONE
     topl = this%telev(iconn)
@@ -2429,18 +2320,13 @@ contains
     end if
     cond = sat * this%satcond(iconn) * vscratio
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_calculate_conn_conductance
 
+  !> @brief Calculate the total groundwater-lake flow at a provided stage
+  !<
   subroutine lak_calculate_exchange(this, ilak, stage, totflow)
-! ******************************************************************************
-! lak_calculate_exchange -- Calculate the total groundwater-lake flow at a
-!                           provided stage.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
@@ -2451,8 +2337,7 @@ contains
     integer(I4B) :: igwfnode
     real(DP) :: flow
     real(DP) :: hgwf
-    ! -- formats
-! ------------------------------------------------------------------------------
+    !
     totflow = DZERO
     do j = this%idxlakeconn(ilak), this%idxlakeconn(ilak + 1) - 1
       igwfnode = this%cellid(j)
@@ -2461,19 +2346,15 @@ contains
       totflow = totflow + flow
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_calculate_exchange
 
+  !> @brief Calculate the groundwater-lake flow at a provided stage and
+  !! groundwater head
+  !<
   subroutine lak_calculate_conn_exchange(this, ilak, iconn, stage, head, flow, &
                                          gwfhcof, gwfrhs)
-! ******************************************************************************
-! lak_calculate_conn_exchange -- Calculate the groundwater-lake flow at a
-!                                provided stage and groundwater head.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
@@ -2490,8 +2371,7 @@ contains
     real(DP) :: hh
     real(DP) :: gwfhcof0
     real(DP) :: gwfrhs0
-    ! -- formats
-! ------------------------------------------------------------------------------
+    !
     flow = DZERO
     call this%lak_calculate_conn_conductance(ilak, iconn, stage, head, cond)
     botl = this%belev(iconn)
@@ -2532,19 +2412,15 @@ contains
     if (present(gwfhcof)) gwfhcof = gwfhcof0
     if (present(gwfrhs)) gwfrhs = gwfrhs0
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_calculate_conn_exchange
 
+  !> @brief Calculate the groundwater-lake flow at a provided stage and
+  !! groundwater head
+  !<
   subroutine lak_estimate_conn_exchange(this, iflag, ilak, iconn, idry, stage, &
                                         head, flow, source, gwfhcof, gwfrhs)
-! ******************************************************************************
-! lak_estimate_conn_exchange -- Calculate the groundwater-lake flow at a
-!                               provided stage and groundwater head.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: iflag
@@ -2559,8 +2435,7 @@ contains
     real(DP), intent(inout), optional :: gwfrhs
     ! -- local
     real(DP) :: gwfhcof0, gwfrhs0
-    ! -- formats
-! ------------------------------------------------------------------------------
+    !
     flow = DZERO
     idry = 0
     call this%lak_calculate_conn_exchange(ilak, iconn, stage, head, flow, &
@@ -2583,18 +2458,14 @@ contains
     if (present(gwfhcof)) gwfhcof = gwfhcof0
     if (present(gwfrhs)) gwfrhs = gwfrhs0
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_estimate_conn_exchange
 
+  !> @brief Calculate the storage change in a lake based on provided stages
+  !! and a passed delt
+  !<
   subroutine lak_calculate_storagechange(this, ilak, stage, stage0, delt, dvr)
-! ******************************************************************************
-! lak_calculate_storagechange -- Calculate the storage change in a lake based on
-!                         provided stages and a passed delt.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
@@ -2605,8 +2476,7 @@ contains
     ! -- local
     real(DP) :: v
     real(DP) :: v0
-    ! -- formats
-! ------------------------------------------------------------------------------
+    !
     dvr = DZERO
     if (this%gwfiss /= 1) then
       call this%lak_calculate_vol(ilak, stage, v)
@@ -2614,17 +2484,13 @@ contains
       dvr = (v0 - v) / delt
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_calculate_storagechange
 
+  !> @brief Calculate the rainfall for a lake
+  !<
   subroutine lak_calculate_rainfall(this, ilak, stage, ra)
-! ******************************************************************************
-! lak_calculate_rainfall -- Calculate the rainfall for a lake .
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
@@ -2633,8 +2499,7 @@ contains
     ! -- local
     integer(I4B) :: iconn
     real(DP) :: sa
-    ! -- formats
-! ------------------------------------------------------------------------------
+    !
     ! -- rainfall
     iconn = this%idxlakeconn(ilak)
     if (this%ictype(iconn) == 2 .or. this%ictype(iconn) == 3) then
@@ -2644,64 +2509,47 @@ contains
     end if
     ra = this%rainfall(ilak) * sa
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_calculate_rainfall
 
+  !> @brief Calculate runoff to a lake
+  !<
   subroutine lak_calculate_runoff(this, ilak, ro)
-! ******************************************************************************
-! lak_calculate_runoff -- Calculate runoff to a lake.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
     real(DP), intent(inout) :: ro
-    ! -- formats
-! ------------------------------------------------------------------------------
+    !
     ! -- runoff
     ro = this%runoff(ilak)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_calculate_runoff
 
+  !> @brief Calculate specified inflow to a lake
+  !<
   subroutine lak_calculate_inflow(this, ilak, qin)
-! ******************************************************************************
-! lak_calculate_inflow -- Calculate specified inflow to a lake.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
     real(DP), intent(inout) :: qin
-    ! -- formats
-! ------------------------------------------------------------------------------
+    !
     ! -- inflow to lake
     qin = this%inflow(ilak)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_calculate_inflow
 
+  !> @brief Calculate the external flow terms to a lake
+  !<
   subroutine lak_calculate_external(this, ilak, ex)
-! ******************************************************************************
-! lak_calculate_external -- Calculate the external flow terms to a lake.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
     real(DP), intent(inout) :: ex
-    ! -- local
-    ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- If mover is active, add receiver water to rhs and
     !    store available water (as positive value)
@@ -2710,26 +2558,19 @@ contains
       ex = this%pakmvrobj%get_qfrommvr(ilak)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_calculate_external
 
+  !> @brief Calculate the withdrawal from a lake subject to an available volume
+  !<
   subroutine lak_calculate_withdrawal(this, ilak, avail, wr)
-! ******************************************************************************
-! lak_calculate_withdrawal -- Calculate the withdrawal from a lake subject to
-!                             an available volume.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
     real(DP), intent(inout) :: avail
     real(DP), intent(inout) :: wr
-    ! -- local
-    ! -- formats
-! ------------------------------------------------------------------------------
+    !
     ! -- withdrawals - limit to sum of inflows and available volume
     wr = this%withdrawal(ilak)
     if (wr > avail) then
@@ -2741,18 +2582,14 @@ contains
     end if
     avail = avail + wr
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_calculate_withdrawal
 
+  !> @brief Calculate the evaporation from a lake at a provided stage subject
+  !! to an available volume
+  !<
   subroutine lak_calculate_evaporation(this, ilak, stage, avail, ev)
-! ******************************************************************************
-! lak_calculate_evaporation -- Calculate the evaporation from a lake at a
-!                              provided stage subject to an available volume.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
@@ -2761,8 +2598,7 @@ contains
     real(DP), intent(inout) :: ev
     ! -- local
     real(DP) :: sa
-    ! -- formats
-! ------------------------------------------------------------------------------
+    !
     ! -- evaporation - limit to sum of inflows and available volume
     call this%lak_calculate_sarea(ilak, stage, sa)
     ev = sa * this%evaporation(ilak)
@@ -2777,25 +2613,19 @@ contains
     end if
     avail = avail + ev
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_calculate_evaporation
 
+  !> @brief Calculate the outlet inflow to a lake
+  !<
   subroutine lak_calculate_outlet_inflow(this, ilak, outinf)
-! ******************************************************************************
-! lak_calculate_outlet_inflow -- Calculate the outlet inflow to a lake.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
     real(DP), intent(inout) :: outinf
     ! -- local
     integer(I4B) :: n
-    ! -- formats
-! ------------------------------------------------------------------------------
     !
     outinf = DZERO
     do n = 1, this%noutlets
@@ -2807,17 +2637,13 @@ contains
       end if
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_calculate_outlet_inflow
 
+  !> @brief Calculate the outlet outflow from a lake
+  !<
   subroutine lak_calculate_outlet_outflow(this, ilak, stage, avail, outoutf)
-! ******************************************************************************
-! lak_calculate_outlet_outflow -- Calculate the outlet outflow from a lake.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
@@ -2831,8 +2657,6 @@ contains
     real(DP) :: c
     real(DP) :: gsm
     real(DP) :: rate
-    ! -- formats
-! ------------------------------------------------------------------------------
     !
     outoutf = DZERO
     do n = 1, this%noutlets
@@ -2874,25 +2698,20 @@ contains
       end if
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_calculate_outlet_outflow
 
+  !> @brief Get the outlet inflow to a lake from another lake
+  !<
   subroutine lak_get_internal_inlet(this, ilak, outinf)
-! ******************************************************************************
-! lak_get_internal_inlet -- Get the outlet inflow to a lake from another lake.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
     real(DP), intent(inout) :: outinf
     ! -- local
     integer(I4B) :: n
-    ! -- formats
-! ------------------------------------------------------------------------------
+    !
     outinf = DZERO
     do n = 1, this%noutlets
       if (this%lakeout(n) == ilak) then
@@ -2903,25 +2722,20 @@ contains
       end if
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_get_internal_inlet
 
+  !> @brief Get the outlet from a lake to another lake
+  !<
   subroutine lak_get_internal_outlet(this, ilak, outoutf)
-! ******************************************************************************
-! lak_get_internal_outlet -- Get the outlet from a lake to another lake.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
     real(DP), intent(inout) :: outoutf
     ! -- local
     integer(I4B) :: n
-    ! -- formats
-! ------------------------------------------------------------------------------
+    !
     outoutf = DZERO
     do n = 1, this%noutlets
       if (this%lakein(n) == ilak) then
@@ -2930,26 +2744,20 @@ contains
       end if
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_get_internal_outlet
 
+  !> @brief Get the outlet outflow from a lake to an external boundary
+  !<
   subroutine lak_get_external_outlet(this, ilak, outoutf)
-! ******************************************************************************
-! lak_get_external_outlet -- Get the outlet outflow from a lake to an external
-!                            boundary.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
     real(DP), intent(inout) :: outoutf
     ! -- local
     integer(I4B) :: n
-    ! -- formats
-! ------------------------------------------------------------------------------
+    !
     outoutf = DZERO
     do n = 1, this%noutlets
       if (this%lakein(n) == ilak) then
@@ -2958,26 +2766,20 @@ contains
       end if
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_get_external_outlet
 
+  !> @brief Get the mover outflow from a lake to an external boundary
+  !<
   subroutine lak_get_external_mover(this, ilak, outoutf)
-! ******************************************************************************
-! lak_get_external_mover -- Get the mover outflow from a lake to an external
-!                           boundary.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
     real(DP), intent(inout) :: outoutf
     ! -- local
     integer(I4B) :: n
-    ! -- formats
-! ------------------------------------------------------------------------------
+    !
     outoutf = DZERO
     if (this%imover == 1) then
       do n = 1, this%noutlets
@@ -2988,25 +2790,20 @@ contains
       end do
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_get_external_mover
 
+  !> @brief Get the mover outflow from a lake to another lake
+  !<
   subroutine lak_get_internal_mover(this, ilak, outoutf)
-! ******************************************************************************
-! lak_get_internal_mover -- Get the mover outflow from a lake to another lake.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
     real(DP), intent(inout) :: outoutf
     ! -- local
     integer(I4B) :: n
-    ! -- formats
-! ------------------------------------------------------------------------------
+    !
     outoutf = DZERO
     if (this%imover == 1) then
       do n = 1, this%noutlets
@@ -3017,25 +2814,20 @@ contains
       end do
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_get_internal_mover
 
+  !> @brief Get the outlet to mover from a lake
+  !<
   subroutine lak_get_outlet_tomover(this, ilak, outoutf)
-! ******************************************************************************
-! lak_get_outlet_tomover -- Get the outlet to mover from a lake.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
     real(DP), intent(inout) :: outoutf
     ! -- local
     integer(I4B) :: n
-    ! -- formats
-! ------------------------------------------------------------------------------
+    !
     outoutf = DZERO
     if (this%imover == 1) then
       do n = 1, this%noutlets
@@ -3045,17 +2837,13 @@ contains
       end do
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_get_outlet_tomover
 
+  !> @brief Determine the stage from a provided volume
+  !<
   subroutine lak_vol2stage(this, ilak, vol, stage)
-! ******************************************************************************
-! lak_vol2stage-- Determine the stage from a provided volume.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
@@ -3071,8 +2859,7 @@ contains
     real(DP) :: en0, en1
     real(DP) :: ds, ds0
     real(DP) :: denom
-    ! -- formats
-! ------------------------------------------------------------------------------
+    !
     s0 = this%lakebot(ilak)
     call this%lak_calculate_vol(ilak, s0, v0)
     s1 = this%laketop(ilak)
@@ -3135,15 +2922,13 @@ contains
       end if
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_vol2stage
 
+  !> @brief Determine if a valid lake or outlet number has been specified
   function lak_check_valid(this, itemno) result(ierr)
-! ******************************************************************************
-!  lak_check_valid -- Determine if a valid lake or outlet number has been
-!                     specified.
-! ******************************************************************************
+    ! -- modules
     use SimModule, only: store_error
     ! -- return
     integer(I4B) :: ierr
@@ -3152,8 +2937,7 @@ contains
     integer(I4B), intent(in) :: itemno
     ! -- local
     integer(I4B) :: ival
-    ! -- formats
-! ------------------------------------------------------------------------------
+    !
     ierr = 0
     ival = abs(itemno)
     if (itemno > 0) then
@@ -3173,16 +2957,15 @@ contains
         ierr = 1
       end if
     end if
+    !
+    ! -- Return
+    return
   end function lak_check_valid
 
+  !> @brief Set a stress period attribute for lakweslls(itemno) using keywords
+  !<
   subroutine lak_set_stressperiod(this, itemno)
-! ******************************************************************************
-! lak_set_stressperiod -- Set a stress period attribute for lakweslls(itemno)
-!                         using keywords.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     use SimModule, only: store_error
     ! -- dummy
@@ -3196,8 +2979,6 @@ contains
     integer(I4B) :: ii
     integer(I4B) :: jj
     real(DP), pointer :: bndElem => null()
-    ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- read line
     call this%parser%GetStringCaps(keyword)
@@ -3394,28 +3175,23 @@ contains
         trim(keyword)//'.'
     end select
     !
-    ! -- return
+    ! -- Return
 999 return
   end subroutine lak_set_stressperiod
 
+  !> @brief Issue a parameter error for lakweslls(ilak)
+  !!
+  !! Read itmp and new boundaries if itmp > 0
+  !<
   subroutine lak_set_attribute_error(this, ilak, keyword, msg)
-! ******************************************************************************
-! lak_set_attribute_error -- Issue a parameter error for lakweslls(ilak)
-! Subroutine: (1) read itmp
-!             (2) read new boundaries if itmp>0
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use SimModule, only: store_error
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: ilak
     character(len=*), intent(in) :: keyword
     character(len=*), intent(in) :: msg
-    ! -- local
-    ! -- formats
-! ------------------------------------------------------------------------------
+    !
     if (len(msg) == 0) then
       write (errmsg, '(a,1x,a,1x,i0,1x,a)') &
         keyword, ' for LAKE', ilak, 'has already been set.'
@@ -3423,19 +3199,16 @@ contains
       write (errmsg, '(a,1x,a,1x,i0,1x,a)') keyword, ' for LAKE', ilak, msg
     end if
     call store_error(errmsg)
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_set_attribute_error
 
+  !> @brief Set options specific to LakType
+  !!
+  !! lak_options overrides BndType%bnd_options
+  !<
   subroutine lak_options(this, option, found)
-! ******************************************************************************
-! lak_options -- set options specific to LakType
-!
-! lak_options overrides BndType%bnd_options
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use ConstantsModule, only: MAXCHARLEN, DZERO, MNORMAL
     use OpenSpecModule, only: access, form
     use SimModule, only: store_error
@@ -3463,7 +3236,6 @@ contains
       &"(4x, 'MAXIMUM LAK ITERATION VALUE (',i0,') SPECIFIED.')"
     character(len=*), parameter :: fmtdmaxchg = &
       &"(4x, 'MAXIMUM STAGE CHANGE VALUE (',g0,') SPECIFIED.')"
-! ------------------------------------------------------------------------------
     !
     found = .true.
     select case (option)
@@ -3586,24 +3358,17 @@ contains
       found = .false.
     end select
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_options
 
+  !> @brief Allocate and Read
+  !!
+  !! Create new LAK package and point bndobj to the new package
+  !<
   subroutine lak_ar(this)
-    ! ******************************************************************************
-    ! lak_ar -- Allocate and Read
-    ! Subroutine: (1) create new-style package
-    !             (2) point bndobj to the new package
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
-    ! -- local
-    ! -- format
-    ! ------------------------------------------------------------------------------
     !
     call this%obs%obs_ar()
     !
@@ -3619,19 +3384,16 @@ contains
       call this%pakmvrobj%ar(this%noutlets, this%nlakes, this%memoryPath)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_ar
 
+  !> @brief Read and Prepare
+  !!
+  !! Read itmp and read new boundaries if itmp > 0
+  !<
   subroutine lak_rp(this)
-! ******************************************************************************
-! lak_rp -- Read and Prepare
-! Subroutine: (1) read itmp
-!             (2) read new boundaries if itmp>0
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use ConstantsModule, only: LINELENGTH
     use TdisModule, only: kper, nper
     use SimModule, only: store_error, count_errors
@@ -3653,7 +3415,6 @@ contains
       &"('Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
     character(len=*), parameter :: fmtlsp = &
       &"(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
-! ------------------------------------------------------------------------------
     !
     ! -- set nbound to maxbound
     this%nbound = this%maxbound
@@ -3729,7 +3490,7 @@ contains
           call this%inputtab%line_to_columns(line)
         end if
       end do stressperiod
-
+      !
       if (this%iprpak /= 0) then
         call this%inputtab%finalize_table()
       end if
@@ -3762,17 +3523,13 @@ contains
       end do
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_rp
 
+  !> @brief Add package connection to matrix
+  !<
   subroutine lak_ad(this)
-! ******************************************************************************
-! lak_ad -- Add package connection to matrix
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SimVariablesModule, only: iFailedStepRetry
     ! -- dummy
@@ -3781,7 +3538,6 @@ contains
     integer(I4B) :: n
     integer(I4B) :: j
     integer(I4B) :: iaux
-! ------------------------------------------------------------------------------
     !
     ! -- Advance the time series
     call this%TsManager%ad()
@@ -3837,28 +3593,23 @@ contains
     !    "current" value.
     call this%obs%obs_ad()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_ad
 
+  !> @brief Formulate the HCOF and RHS terms
+  !!
+  !! Skip if no lakes, otherwise calculate hcof and rhs
+  !<
   subroutine lak_cf(this)
-    ! ******************************************************************************
-    ! lak_cf -- Formulate the HCOF and RHS terms
-    ! Subroutine: (1) skip if no lakes
-    !             (2) calculate hcof and rhs
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType) :: this
     ! -- local
     integer(I4B) :: j, n
     integer(I4B) :: igwfnode
     real(DP) :: hlak, blak
-    ! ------------------------------------------------------------------------------
-    !!
-    !! -- Calculate lak conductance and update package RHS and HCOF
+    !
+    ! -- Calculate lak conductance and update package RHS and HCOF
     !call this%lak_cfupdate()
     !
     ! -- save groundwater seepage for lake solution
@@ -3924,7 +3675,7 @@ contains
           this%ibound(igwfnode) = 1
         end if
       end do
-
+      !
     end do
     !
     ! -- Store the lake stage and cond in bound array for other
@@ -3935,13 +3686,9 @@ contains
     return
   end subroutine lak_cf
 
+  !> @brief Copy rhs and hcof into solution rhs and amat
+  !<
   subroutine lak_fc(this, rhs, ia, idxglo, matrix_sln)
-    ! **************************************************************************
-    ! lak_fc -- Copy rhs and hcof into solution rhs and amat
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
     ! -- dummy
     class(LakType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
@@ -3952,7 +3699,6 @@ contains
     integer(I4B) :: j, n
     integer(I4B) :: igwfnode
     integer(I4B) :: ipossymd
-! --------------------------------------------------------------------------
     !
     ! -- pakmvrobj fc
     if (this%imover == 1) then
@@ -3973,17 +3719,13 @@ contains
       end do
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_fc
 
+  !> @brief Fill newton terms
+  !<
   subroutine lak_fn(this, rhs, ia, idxglo, matrix_sln)
-! **************************************************************************
-! lak_fn -- Fill newton terms
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     ! -- dummy
     class(LakType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
@@ -4006,7 +3748,7 @@ contains
     real(DP) :: q1
     real(DP) :: rterm
     real(DP) :: drterm
-! --------------------------------------------------------------------------
+    !
     do n = 1, this%nlakes
       if (this%iboundpak(n) == 0) cycle
       hlak = this%xnewpak(n)
@@ -4038,19 +3780,15 @@ contains
         end if
       end do
     end do
-
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_fn
 
+  !> @brief Final convergence check for package
+  !<
   subroutine lak_cc(this, innertot, kiter, iend, icnvgmod, cpak, ipak, dpak)
-! **************************************************************************
-! lak_cc -- Final convergence check for package
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
+    ! -- modules
     use TdisModule, only: totim, kstp, kper, delt
     ! -- dummy
     class(LakType), intent(inout) :: this
@@ -4099,8 +3837,6 @@ contains
     real(DP) :: dqoutmax
     real(DP) :: dqfrommvr
     real(DP) :: dqfrommvrmax
-    ! format
-! --------------------------------------------------------------------------
     !
     ! -- initialize local variables
     icheck = this%iconvchk
@@ -4344,17 +4080,13 @@ contains
       end if
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_cc
 
+  !> @brief Calculate flows
+  !<
   subroutine lak_cq(this, x, flowja, iadv)
-! ******************************************************************************
-! lak_cq -- Calculate flows
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
@@ -4369,7 +4101,6 @@ contains
     integer(I4B) :: j, n
     real(DP) :: hlak
     real(DP) :: v0, v1
-! ------------------------------------------------------------------------------
     !
     call this%lak_solve(update=.false.)
     !
@@ -4453,10 +4184,12 @@ contains
     ! -- fill the budget object
     call this%lak_fill_budobj()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_cq
 
+  !> @brief Output LAK package flow terms
+  !<
   subroutine lak_ot_package_flows(this, icbcfl, ibudfl)
     use TdisModule, only: kstp, kper, delt, pertim, totim
     class(LakType) :: this
@@ -4479,9 +4212,13 @@ contains
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
       call this%budobj%write_flowtable(this%dis, kstp, kper)
     end if
-
+    !
+    ! -- Return
+    return
   end subroutine lak_ot_package_flows
 
+  !> @brief Write flows to binary file and/or print flows to budget
+  !<
   subroutine lak_ot_model_flows(this, icbcfl, ibudfl, icbcun, imap)
     class(LakType) :: this
     integer(I4B), intent(in) :: icbcfl
@@ -4491,8 +4228,13 @@ contains
     !
     ! -- write the flows from the budobj
     call this%BndType%bnd_ot_model_flows(icbcfl, ibudfl, icbcun, this%imap)
+    !
+    ! -- Return
+    return
   end subroutine lak_ot_model_flows
 
+  !> @brief Save LAK-calculated values to binary file
+  !<
   subroutine lak_ot_dv(this, idvsave, idvprint)
     use TdisModule, only: kstp, kper, pertim, totim
     use ConstantsModule, only: DHNOFLO, DHDRY
@@ -4507,7 +4249,6 @@ contains
     real(DP) :: stage
     real(DP) :: sa
     real(DP) :: wa
-    !
     !
     ! -- set unit number for binary dependent variable output
     ibinun = 0
@@ -4554,9 +4295,13 @@ contains
         call this%stagetab%add_term(v)
       end do
     end if
-
+    !
+    ! -- Return
+    return
   end subroutine lak_ot_dv
 
+  !> @brief Write LAK budget to listing file
+  !<
   subroutine lak_ot_bdsummary(this, kstp, kper, iout, ibudfl)
     ! -- module
     use TdisModule, only: totim
@@ -4569,23 +4314,17 @@ contains
     !
     call this%budobj%write_budtable(kstp, kper, iout, ibudfl, totim)
     !
+    ! -- Return
     return
   end subroutine lak_ot_bdsummary
 
+  !> @brief Deallocate objects
+  !<
   subroutine lak_da(this)
-    ! **************************************************************************
-    ! lak_da -- Deallocate objects
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(LakType) :: this
-    ! -- local
-    ! -- format
-    ! --------------------------------------------------------------------------
     !
     ! -- arrays
     deallocate (this%lakename)
@@ -4745,16 +4484,12 @@ contains
     return
   end subroutine lak_da
 
+  !> @brief Define the list heading that is written to iout when PRINT_INPUT
+  !! option is used
+  !<
   subroutine define_listlabel(this)
-! ******************************************************************************
-! define_listlabel -- Define the list heading that is written to iout when
-!   PRINT_INPUT option is used.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     class(LakType), intent(inout) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- create the header list label
     this%listlabel = trim(this%filtyp)//' NO.'
@@ -4773,26 +4508,21 @@ contains
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine define_listlabel
 
+  !> @brief Set pointers to model arrays and variables so that a package has
+  !! access to these things
+  !<
   subroutine lak_set_pointers(this, neq, ibound, xnew, xold, flowja)
-! ******************************************************************************
-! set_pointers -- Set pointers to model arrays and variables so that a package
-!                 has access to these things.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy
     class(LakType) :: this
     integer(I4B), pointer :: neq
     integer(I4B), dimension(:), pointer, contiguous :: ibound
     real(DP), dimension(:), pointer, contiguous :: xnew
     real(DP), dimension(:), pointer, contiguous :: xold
     real(DP), dimension(:), pointer, contiguous :: flowja
-    ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- call base BndType set_pointers
     call this%BndType%set_pointers(neq, ibound, xnew, xold, flowja)
@@ -4810,40 +4540,33 @@ contains
     !  this%xnewpak(n) = DEP20
     !end do
     !
-    ! -- return
+    ! -- Return
+    return
   end subroutine lak_set_pointers
 
-  !
-  ! -- Procedures related to observations (type-bound)
+  !> @brief Procedures related to observations (type-bound)
+  !!
+  !! Return true because LAK package supports observations. Overrides
+  !! BndType%bnd_obs_supported()
+  !<
   logical function lak_obs_supported(this)
-    ! ******************************************************************************
-    ! lak_obs_supported
-    !   -- Return true because LAK package supports observations.
-    !   -- Overrides BndType%bnd_obs_supported()
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
-    ! ------------------------------------------------------------------------------
+    ! -- dummy
     class(LakType) :: this
+    !
     lak_obs_supported = .true.
+    !
+    ! -- Return
     return
   end function lak_obs_supported
 
+  !> @brief Store observation type supported by LAK package. Overrides
+  !! BndType%bnd_df_obs
+  !<
   subroutine lak_df_obs(this)
-    ! ******************************************************************************
-    ! lak_df_obs (implements bnd_df_obs)
-    !   -- Store observation type supported by LAK package.
-    !   -- Overrides BndType%bnd_df_obs
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType) :: this
     ! -- local
     integer(I4B) :: indx
-    ! ------------------------------------------------------------------------------
     !
     ! -- Store obs type and assign procedure pointer
     !    for stage observation type.
@@ -4940,18 +4663,14 @@ contains
     call this%obs%StoreObsType('conductance', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => lak_process_obsID
     !
+    ! -- Return
     return
   end subroutine lak_df_obs
 
+  !> @brief Calculate observations this time step and call ObsType%SaveOneSimval
+  !! for each LakType observation.
+  !<
   subroutine lak_bd_obs(this)
-    ! **************************************************************************
-    ! lak_bd_obs
-    !   -- Calculate observations this time step and call
-    !      ObsType%SaveOneSimval for each LakType observation.
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
     ! -- dummy
     class(LakType) :: this
     ! -- local
@@ -4965,7 +4684,6 @@ contains
     real(DP) :: v
     real(DP) :: v2
     type(ObserveType), pointer :: obsrv => null()
-    !---------------------------------------------------------------------------
     !
     ! Write simulated values for all LAK observations
     if (this%obs%npakobs > 0) then
@@ -5104,9 +4822,15 @@ contains
       end if
     end if
     !
+    ! -- Return
     return
   end subroutine lak_bd_obs
 
+  !> @brief Process each observation
+  !!
+  !! Only done the first stress period since boundaries are fixed for the
+  !! simulation
+  !<
   subroutine lak_rp_obs(this)
     use TdisModule, only: kper
     ! -- dummy
@@ -5120,7 +4844,6 @@ contains
     character(len=LENBOUNDNAME) :: bname
     logical(LGP) :: jfound
     class(ObserveType), pointer :: obsrv => null()
-    ! --------------------------------------------------------------------------
     ! -- formats
 10  format('Boundary "', a, '" for observation "', a, &
            '" is invalid in package "', a, '"')
@@ -5252,14 +4975,18 @@ contains
       end if
     end if
     !
+    ! -- Return
     return
   end subroutine lak_rp_obs
 
   !
   ! -- Procedures related to observations (NOT type-bound)
+
+  !> @brief This procedure is pointed to by ObsDataType%ProcesssIdPtr. It
+  !! processes the ID string of an observation definition for LAK package
+  !! observations.
+  !<
   subroutine lak_process_obsID(obsrv, dis, inunitobs, iout)
-    ! -- This procedure is pointed to by ObsDataType%ProcesssIdPtr. It processes
-    !    the ID string of an observation definition for LAK package observations.
     ! -- dummy
     type(ObserveType), intent(inout) :: obsrv
     class(DisBaseType), intent(in) :: dis
@@ -5270,7 +4997,6 @@ contains
     integer(I4B) :: icol, istart, istop
     character(len=LINELENGTH) :: strng
     character(len=LENBOUNDNAME) :: bndname
-    ! formats
     !
     strng = obsrv%IDstring
     ! -- Extract lake number from strng and store it.
@@ -5305,19 +5031,17 @@ contains
     ! -- store lake number (NodeNumber)
     obsrv%NodeNumber = nn1
     !
+    ! -- Return
     return
   end subroutine lak_process_obsID
 
   !
   ! -- private LAK methods
   !
+
+  !> @brief Accumulate constant head terms for budget
+  !<
   subroutine lak_accumulate_chterm(this, ilak, rrate, chratin, chratout)
-    ! **************************************************************************
-    ! lak_accumulate_chterm -- Accumulate constant head terms for budget.
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
     ! -- dummy
     class(LakType) :: this
     integer(I4B), intent(in) :: ilak
@@ -5326,7 +5050,7 @@ contains
     real(DP), intent(inout) :: chratout
     ! -- locals
     real(DP) :: q
-    ! format
+    !
     ! code
     if (this%iboundpak(ilak) < 0) then
       q = -rrate
@@ -5343,21 +5067,19 @@ contains
         chratin = chratin + q
       end if
     end if
-    ! -- return
+    !
+    ! -- Return
     return
   end subroutine lak_accumulate_chterm
 
+  !> @brief Update LAK satcond and package rhs and hcof
+  !<
   subroutine lak_cfupdate(this)
-    ! ******************************************************************************
-    ! lak_cfupdate -- Update LAK satcond and package rhs and hcof
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
+    ! -- dummy
     class(LakType), intent(inout) :: this
+    ! -- local
     integer(I4B) :: j, n, node
     real(DP) :: hlak, head, clak, blak
-    ! ------------------------------------------------------------------------------
     !
     ! -- Return if no lak lakes
     if (this%nbound .eq. 0) return
@@ -5395,18 +5117,14 @@ contains
     return
   end subroutine lak_cfupdate
 
+  !> @brief Store the lake head and connection conductance in the bound array
+  !<
   subroutine lak_bound_update(this)
-    ! ******************************************************************************
-    ! lak_bound_update -- store the lake head and connection conductance in the
-    !   bound array
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
+    ! -- dummy
     class(LakType), intent(inout) :: this
+    ! -- local
     integer(I4B) :: j, n, node
     real(DP) :: hlak, head, clak
-    ! ------------------------------------------------------------------------------
     !
     ! -- Return if no lak lakes
     if (this%nbound == 0) return
@@ -5427,17 +5145,14 @@ contains
     return
   end subroutine lak_bound_update
 
+  !> @brief Solve for lake stage
+  !<
   subroutine lak_solve(this, update)
-    ! **************************************************************************
-    ! lak_solve -- Solve for lake stage
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
+    ! -- modules
     use TdisModule, only: delt
-    logical(LGP), intent(in), optional :: update
     ! -- dummy
     class(LakType), intent(inout) :: this
+    logical(LGP), intent(in), optional :: update
     ! -- local
     logical(LGP) :: lupdate
     integer(I4B) :: i
@@ -5480,7 +5195,6 @@ contains
     real(DP) :: ts
     real(DP) :: area
     real(DP) :: qtolfact
-! --------------------------------------------------------------------------
     !
     ! -- set lupdate
     if (present(update)) then
@@ -5541,10 +5255,10 @@ contains
       call this%lak_calculate_outlet_inflow(n, outinf)
       this%flwin(n) = this%flwin(n) + outinf
     end do
-
+    !
     iicnvg = 0
     maxiter = this%maxlakit
-
+    !
     ! -- outer loop
     converge: do iter = 1, maxiter
       ncnv = 0
@@ -5553,7 +5267,7 @@ contains
       end do
       if (iter == maxiter) ncnv = 0
       if (ncnv == 0) iicnvg = 1
-
+      !
       ! -- initialize variables
       do n = 1, this%nlakes
         this%evap(n) = DZERO
@@ -5573,7 +5287,7 @@ contains
           this%flwiter1(n) = DEP20 !1.D+10
         end if
       end do
-
+      !
       estseep: do i = 1, 2
         lakseep: do n = 1, this%nlakes
           ! -- skip inactive lakes
@@ -5617,11 +5331,11 @@ contains
                 end if
               end if
             end if
-
+            !
           end do calcconnseep
         end do lakseep
       end do estseep
-
+      !
       laklevel: do n = 1, this%nlakes
         ibflg = 0
         hlak = this%xnewpak(n)
@@ -5671,7 +5385,6 @@ contains
             call this%lak_calculate_external(n, ex)
             this%flwin(n) = this%surfin(n) + ro + qinf + ex + &
                             max(v0, v1) / delt
-
             !
             ! -- compute new lake stage using Newton's method
             resid = this%precip(n) + this%evap(n) + this%withr(n) + ro + &
@@ -5784,9 +5497,9 @@ contains
           this%dh0(n) = dh
         end if
       end do laklevel
-
+      !
       if (iicnvg == 1) exit converge
-
+      !
     end do converge
     !
     ! -- Mover terms: store outflow after diversion loss
@@ -5798,14 +5511,13 @@ contains
       end do
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_solve
 
   !> @ brief Lake package bisection method
-    !!
-    !!  Use bisection method to find lake stage that reduces the residual
-    !!
+  !!
+  !!  Use bisection method to find lake stage that reduces the residual
   !<
   subroutine lak_bisection(this, n, ibflg, hlak, temporary_stage, dh, residual)
     ! -- dummy
@@ -5851,19 +5563,16 @@ contains
     end do
     dh = hlak - temporary_stage
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_bisection
 
+  !> @brief Calculate the available volumetric rate for a lake given a passed
+  !! stage
+  !<
   subroutine lak_calculate_available(this, n, hlak, avail, &
                                      ra, ro, qinf, ex, headp)
-    ! **************************************************************************
-    ! lak_calculate_available -- Calculate the available volumetric rate for
-    !                            a lake given a passed stage
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
+    ! -- modules
     use TdisModule, only: delt
     ! -- dummy
     class(LakType), intent(inout) :: this
@@ -5883,7 +5592,6 @@ contains
     real(DP) :: head
     real(DP) :: qlakgw
     real(DP) :: v0
-    ! code
     !
     ! -- set hp
     if (present(headp)) then
@@ -5924,18 +5632,14 @@ contains
     call this%lak_calculate_vol(n, this%xoldpak(n), v0)
     avail = avail + v0 / delt
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_calculate_available
 
+  !> @brief Calculate the residual for a lake given a passed stage
+  !<
   subroutine lak_calculate_residual(this, n, hlak, resid, headp)
-    ! **************************************************************************
-    ! lak_calculate_residual -- Calculate the residual for a lake given a
-    !                           passed stage
-    ! **************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! --------------------------------------------------------------------------
+    ! -- modules
     use TdisModule, only: delt
     ! -- dummy
     class(LakType), intent(inout) :: this
@@ -5963,8 +5667,6 @@ contains
     real(DP) :: hlak0
     real(DP) :: v0
     real(DP) :: v1
-    !
-    ! -- code
     !
     ! -- set hp
     if (present(headp)) then
@@ -6015,17 +5717,13 @@ contains
       resid = resid + (v0 - v1) / delt
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_calculate_residual
 
+  !> @brief Set up the budget object that stores all the lake flows
+  !<
   subroutine lak_setup_budobj(this)
-! ******************************************************************************
-! lak_setup_budobj -- Set up the budget object that stores all the lake flows
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LENBUDTXT
     ! -- dummy
@@ -6039,7 +5737,6 @@ contains
     real(DP) :: q
     character(len=LENBUDTXT) :: text
     character(len=LENBUDTXT), dimension(1) :: auxtxt
-! ------------------------------------------------------------------------------
     !
     ! -- Determine the number of lake budget terms. These are fixed for
     !    the simulation and cannot change
@@ -6275,18 +5972,13 @@ contains
       call this%budobj%flowtable_df(this%iout)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_setup_budobj
 
+  !> @brief Copy flow terms into this%budobj
+  !<
   subroutine lak_fill_budobj(this)
-! ******************************************************************************
-! lak_fill_budobj -- copy flow terms into this%budobj
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(LakType) :: this
     ! -- local
@@ -6304,8 +5996,6 @@ contains
     real(DP) :: v, v1
     real(DP) :: q
     real(DP) :: lkstg, gwhead, wa
-    ! -- formats
-! -----------------------------------------------------------------------------
     !
     ! -- initialize counter
     idx = 0
@@ -6333,7 +6023,7 @@ contains
         end if
       end do
     end if
-
+    !
     ! -- GWF (LEAKAGE)
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%maxbound)
@@ -6355,7 +6045,7 @@ contains
         call this%budobj%budterm(idx)%update_term(n, n2, q, this%qauxcbc)
       end do
     end do
-
+    !
     ! -- RAIN
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%nlakes)
@@ -6363,7 +6053,7 @@ contains
       q = this%precip(n)
       call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
-
+    !
     ! -- EVAPORATION
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%nlakes)
@@ -6371,7 +6061,7 @@ contains
       q = this%evap(n)
       call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
-
+    !
     ! -- RUNOFF
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%nlakes)
@@ -6379,7 +6069,7 @@ contains
       q = this%runoff(n)
       call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
-
+    !
     ! -- INFLOW
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%nlakes)
@@ -6387,7 +6077,7 @@ contains
       q = this%inflow(n)
       call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
-
+    !
     ! -- WITHDRAWAL
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%nlakes)
@@ -6395,7 +6085,7 @@ contains
       q = this%withr(n)
       call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
-
+    !
     ! -- EXTERNAL OUTFLOW
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%nlakes)
@@ -6406,7 +6096,7 @@ contains
       q = q + v
       call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
-
+    !
     ! -- STORAGE
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%nlakes)
@@ -6416,7 +6106,7 @@ contains
       this%qauxcbc(1) = v1
       call this%budobj%budterm(idx)%update_term(n, n, q, this%qauxcbc)
     end do
-
+    !
     ! -- CONSTANT FLOW
     idx = idx + 1
     call this%budobj%budterm(idx)%reset(this%nlakes)
@@ -6424,10 +6114,10 @@ contains
       q = this%chterm(n)
       call this%budobj%budterm(idx)%update_term(n, n, q)
     end do
-
+    !
     ! -- MOVER
     if (this%imover == 1) then
-
+      !
       ! -- FROM MOVER
       idx = idx + 1
       call this%budobj%budterm(idx)%reset(this%nlakes)
@@ -6435,7 +6125,7 @@ contains
         q = this%pakmvrobj%get_qfrommvr(n)
         call this%budobj%budterm(idx)%update_term(n, n, q)
       end do
-
+      !
       ! -- TO MOVER
       idx = idx + 1
       call this%budobj%budterm(idx)%reset(this%noutlets)
@@ -6447,9 +6137,9 @@ contains
         end if
         call this%budobj%budterm(idx)%update_term(n1, n1, q)
       end do
-
+      !
     end if
-
+    !
     ! -- AUXILIARY VARIABLES
     naux = this%naux
     if (naux > 0) then
@@ -6470,20 +6160,16 @@ contains
     ! --Terms are filled, now accumulate them for this time step
     call this%budobj%accumulate_terms()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_fill_budobj
 
+  !> @brief Set up the table object that is used to write the lak stage data
+  !!
+  !! The terms listed here must correspond in number and order to the ones
+  !! written to the stage table in the lak_ot method
+  !<
   subroutine lak_setup_tableobj(this)
-! ******************************************************************************
-! lak_setup_tableobj -- Set up the table object that is used to write the lak
-!                       stage data. The terms listed here must correspond in
-!                       number and order to the ones written to the stage table
-!                       in the lak_ot method.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH, LENBUDTXT
     ! -- dummy
@@ -6492,7 +6178,6 @@ contains
     integer(I4B) :: nterms
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: text
-! ------------------------------------------------------------------------------
     !
     ! -- setup stage table
     if (this%iprhed > 0) then
@@ -6542,23 +6227,17 @@ contains
       call this%stagetab%initialize_column(text, 12, alignment=TABCENTER)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_setup_tableobj
 
+  !> @brief Activate addition of density terms
+  !<
   subroutine lak_activate_density(this)
-! ******************************************************************************
-! lak_activate_density -- Activate addition of density terms
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i, j
-    ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- Set idense and reallocate denseterms to be of size MAXBOUND
     this%idense = 1
@@ -6572,14 +6251,13 @@ contains
     write (this%iout, '(/1x,a)') 'DENSITY TERMS HAVE BEEN ACTIVATED FOR LAKE &
       &PACKAGE: '//trim(adjustl(this%packName))
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_activate_density
 
   !> @brief Activate viscosity terms
-    !!
-    !! Method to activate addition of viscosity terms for a LAK package reach.
-    !!
+  !!
+  !! Method to activate addition of viscosity terms for a LAK package reach.
   !<
   subroutine lak_activate_viscosity(this)
     ! -- modules
@@ -6602,36 +6280,30 @@ contains
     write (this%iout, '(/1x,a)') 'VISCOSITY HAS BEEN ACTIVATED FOR LAK &
       &PACKAGE: '//trim(adjustl(this%packName))
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_activate_viscosity
 
+  !> @brief Calculate the groundwater-lake density exchange terms
+  !!
+  !! Arguments are as follows:
+  !!     iconn       : lak-gwf connection number
+  !!     stage       : lake stage
+  !!     head        : gwf head
+  !!     cond        : conductance
+  !!     botl        : bottom elevation of this connection
+  !!     flow        : calculated flow, updated here with density terms
+  !!     gwfhcof     : gwf head coefficient, updated here with density terms
+  !!     gwfrhs      : gwf right-hand-side value, updated here with density terms
+  !!
+  !! Member variable used here
+  !!     denseterms  : shape (3, MAXBOUND), filled by buoyancy package
+  !!                     col 1 is relative density of lake (denselak / denseref)
+  !!                     col 2 is relative density of gwf cell (densegwf / denseref)
+  !!                     col 3 is elevation of gwf cell
+  !<
   subroutine lak_calculate_density_exchange(this, iconn, stage, head, cond, &
                                             botl, flow, gwfhcof, gwfrhs)
-! ******************************************************************************
-! lak_calculate_density_exchange -- Calculate the groundwater-lake density
-!                                   exchange terms.
-!
-! -- Arguments are as follows:
-!     iconn       : lak-gwf connection number
-!     stage       : lake stage
-!     head        : gwf head
-!     cond        : conductance
-!     botl        : bottom elevation of this connection
-!     flow        : calculated flow, updated here with density terms
-!     gwfhcof     : gwf head coefficient, updated here with density terms
-!     gwfrhs      : gwf right-hand-side value, updated here with density terms
-!
-! -- Member variable used here
-!     denseterms  : shape (3, MAXBOUND), filled by buoyancy package
-!                     col 1 is relative density of lake (denselak / denseref)
-!                     col 2 is relative density of gwf cell (densegwf / denseref)
-!                     col 3 is elevation of gwf cell
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(LakType), intent(inout) :: this
     integer(I4B), intent(in) :: iconn
@@ -6656,8 +6328,6 @@ contains
     real(DP) :: d2
     logical(LGP) :: stage_below_bot
     logical(LGP) :: head_below_bot
-    ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- Set lak density to lak density or gwf density
     if (stage >= botl) then
@@ -6723,7 +6393,7 @@ contains
       end if
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine lak_calculate_density_exchange
 
