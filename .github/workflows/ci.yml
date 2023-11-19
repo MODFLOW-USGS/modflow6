@@ -502,14 +502,12 @@ jobs:
           cache-environment: true
           cache-downloads: true
 
-      - name: Fix pc file and set PKG_CONFIG_PATH
+      - name: Update PKG_CONFIG_PATH
         working-directory: modflow6
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
-            sed -i "s|libdir=/home/runner/micromamba/envs/modflow6//home/runner/micromamba/envs/modflow6/lib|libdir=/home/runner/micromamba/envs/modflow6/lib|g" /home/runner/micromamba/envs/modflow6/lib/pkgconfig/netcdf-fortran.pc
             echo "PKG_CONFIG_PATH=/home/runner/micromamba/envs/modflow6/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
           elif [ "$RUNNER_OS" == "macOS" ]; then
-            sed -i '' -e "s|libdir=/Users/runner/micromamba/envs/modflow6//Users/runner/micromamba/envs/modflow6/lib|libdir=/Users/runner/micromamba/envs/modflow6/lib|g" /Users/runner/micromamba/envs/modflow6/lib/pkgconfig/netcdf-fortran.pc
             echo "PKG_CONFIG_PATH=/Users/runner/micromamba/envs/modflow6/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
           fi
 
@@ -535,7 +533,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: pytest -v --durations 0 get_exes.py
 
-      - name: Confirm netcdf build
+      - name: Confirm netcdf license logged
         working-directory: modflow6/autotest
         env:
           REPOS_PATH: ${{ github.workspace }}
@@ -543,9 +541,9 @@ jobs:
           pytest test_gwf_chd01.py --keep temp
           if grep -Fx "    NetCDF, network Common Data Form software library" temp/test_mf6model[chd01]0/mfsim.lst
           then
-            echo "NetCDF dependency confirmed."
+            echo "NetCDF license logging confirmed."
           else
-            echo "NetCDF dependency not found."
+            echo "NetCDF license logging not found."
             exit 1
           fi
 
