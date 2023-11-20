@@ -12,6 +12,7 @@ module UzfCellGroupModule
   public :: UzfCellGroupType
 
   type :: UzfCellGroupType
+
     integer(I4B) :: imem_manager
     real(DP), pointer, dimension(:), contiguous :: thtr => null()
     real(DP), pointer, dimension(:), contiguous :: thts => null()
@@ -53,7 +54,9 @@ module UzfCellGroupModule
     real(DP), pointer, dimension(:), contiguous :: gwpet => null()
     integer(I4B), pointer, dimension(:), contiguous :: landflag => null()
     integer(I4B), pointer, dimension(:), contiguous :: ivertcon => null()
+
   contains
+
     procedure :: init
     procedure :: setdata
     procedure :: sethead
@@ -86,18 +89,12 @@ module UzfCellGroupModule
     procedure :: get_water_content_at_depth
     procedure :: get_wcnew
   end type UzfCellGroupType
-!
-contains
-!
-! ------------------------------------------------------------------------------
 
+contains
+
+  !> @brief Allocate and set uzf object variables
+  !<
   subroutine init(this, ncells, nwav, memory_path)
-! ******************************************************************************
-! init -- allocate and set uzf object variables
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
@@ -107,7 +104,6 @@ contains
     character(len=*), intent(in), optional :: memory_path
     ! -- local
     integer(I4B) :: icell
-! ------------------------------------------------------------------------------
     !
     ! -- Use mem_allocate if memory path is passed in, otherwise it's a temp object
     if (present(memory_path)) then
@@ -238,23 +234,17 @@ contains
       this%ivertcon(icell) = 0
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine init
 
+  !> @brief Deallocate uzf object variables
+  !<
   subroutine dealloc(this)
-! ******************************************************************************
-! dealloc -- deallocate uzf object variables
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(UzfCellGroupType) :: this
-    ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- deallocate based on whether or not memory manager was used
     if (this%imem_manager == 0) then
@@ -341,19 +331,14 @@ contains
       call mem_deallocate(this%ivertcon)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine dealloc
 
+  !> @brief Set uzf object material properties
+  !<
   subroutine setdata(this, icell, area, top, bot, surfdep, vks, thtr, thts, &
                      thti, eps, ntrail, landflag, ivertcon)
-! ******************************************************************************
-! setdata -- set uzf object material properties
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: icell
@@ -369,7 +354,6 @@ contains
     integer(I4B), intent(in) :: ntrail
     integer(I4B), intent(in) :: landflag
     integer(I4B), intent(in) :: ivertcon
-! ------------------------------------------------------------------------------
     !
     ! -- set the values for uzf cell icell
     this%landflag(icell) = landflag
@@ -396,19 +380,13 @@ contains
     this%hroot(icell) = DZERO
   end subroutine setdata
 
+  !> @brief Set initial head for uzf object
+  !<
   subroutine sethead(this, icell, hgwf)
-! ******************************************************************************
-! sethead -- set uzf object material properties
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: icell
     real(DP), intent(in) :: hgwf
-! ------------------------------------------------------------------------------
     !
     ! -- set initial head
     this%watab(icell) = this%celbot(icell)
@@ -416,22 +394,19 @@ contains
     if (this%watab(icell) > this%celtop(icell)) &
       this%watab(icell) = this%celtop(icell)
     this%watabold(icell) = this%watab(icell)
+    !
+    ! -- Return
+    return
   end subroutine sethead
 
+  !> @brief Set infiltration
+  !<
   subroutine setdatafinf(this, icell, finf)
-! ******************************************************************************
-! setdatafinf -- set infiltration
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: icell
     real(DP), intent(in) :: finf
-! ------------------------------------------------------------------------------
+    !
     if (this%landflag(icell) == 1) then
       this%sinf(icell) = finf
       this%finf(icell) = finf
@@ -442,39 +417,29 @@ contains
     this%finf_rej(icell) = DZERO
     this%surflux(icell) = DZERO
     this%surfluxbelow(icell) = DZERO
+    !
+    ! -- Return
+    return
   end subroutine setdatafinf
 
+  !> @brief Set uzfarea using cellarea and areamult
+  !<
   subroutine setdatauzfarea(this, icell, areamult)
-! ******************************************************************************
-! setdatauzfarea -- set uzfarea using cellarea and areamult
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: icell
     real(DP), intent(in) :: areamult
-! ------------------------------------------------------------------------------
     !
     ! -- set uzf area
     this%uzfarea(icell) = this%cellarea(icell) * areamult
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine setdatauzfarea
 
-! ------------------------------------------------------------------------------
-!
+  !> @brief Set unsaturated ET-related variables
+  !<
   subroutine setdataet(this, icell, jbelow, pet, extdp)
-! ******************************************************************************
-! setdataet -- set unsat. et variables
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: icell
@@ -483,7 +448,7 @@ contains
     real(DP), intent(in) :: extdp
     ! -- local
     real(DP) :: thick
-! ------------------------------------------------------------------------------
+    !
     if (this%landflag(icell) == 1) then
       this%pet(icell) = pet
       this%gwpet(icell) = pet
@@ -515,18 +480,13 @@ contains
       this%petmax(jbelow) = this%petmax(icell)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine setdataet
 
+  !> @brief Subtract aet from pet to calculate residual et for gw
+  !<
   subroutine setgwpet(this, icell)
-! ******************************************************************************
-! setgwpet -- subtract aet from pet to calculate residual et for gw
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
@@ -534,7 +494,7 @@ contains
     integer(I4B), intent(in) :: icell
     ! -- dummy
     real(DP) :: pet
-! ------------------------------------------------------------------------------
+    !
     pet = DZERO
     !
     ! -- reduce pet for gw by uzet
@@ -542,18 +502,13 @@ contains
     if (pet < DZERO) pet = DZERO
     this%gwpet(icell) = pet
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine setgwpet
 
+  !> @brief Subtract aet from pet to calculate residual et for deeper cells
+  !<
   subroutine setbelowpet(this, icell, jbelow)
-! ******************************************************************************
-! setbelowpet -- subtract aet from pet to calculate residual et
-!                for deeper cells
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
@@ -562,7 +517,7 @@ contains
     integer(I4B), intent(in) :: jbelow
     ! -- dummy
     real(DP) :: pet
-! ------------------------------------------------------------------------------
+    !
     pet = DZERO
     !
     ! -- transfer unmet pet to lower cell
@@ -574,39 +529,30 @@ contains
     end if
     this%pet(jbelow) = pet
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine setbelowpet
 
+  !> @brief Set extinction water content
+  !<
   subroutine setdataetwc(this, icell, jbelow, extwc)
-! ******************************************************************************
-! setdataetwc -- set extinction water content
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: icell
     integer(I4B), intent(in) :: jbelow
     real(DP), intent(in) :: extwc
-! ------------------------------------------------------------------------------
     !
     ! -- set extinction water content
     this%extwc(icell) = extwc
     if (jbelow > 0) this%extwc(jbelow) = extwc
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine setdataetwc
 
+  !> @brief Set variables for head-based unsaturated flow
+  !<
   subroutine setdataetha(this, icell, jbelow, ha, hroot, rootact)
-! ******************************************************************************
-! setdataetha -- set variables for head-based unsat. flow
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: icell
@@ -614,7 +560,6 @@ contains
     real(DP), intent(in) :: ha
     real(DP), intent(in) :: hroot
     real(DP), intent(in) :: rootact
-! ------------------------------------------------------------------------------
     !
     ! -- set variables
     this%ha(icell) = ha
@@ -626,39 +571,30 @@ contains
       this%rootact(jbelow) = rootact
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine setdataetha
 
+  !> @brief Set variables to advance to new time step. nothing yet.
+  !<
   subroutine advance(this, icell)
-! ******************************************************************************
-! advance -- set variables to advance to new time step. nothing yet.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: icell
-! ------------------------------------------------------------------------------
     !
     ! -- set variables
     this%surfseep(icell) = DZERO
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine advance
 
+  !> @brief Formulate the unsaturated flow object, calculate terms for gwf
+  !! equation
+  !<
   subroutine solve(this, thiswork, jbelow, icell, totfluxtot, ietflag, &
                    issflag, iseepflag, hgwf, qfrommvr, ierr, &
                    reset_state, trhs, thcof, deriv, watercontent)
-! ******************************************************************************
-! formulate -- formulate the unsaturated flow object, calculate terms for
-!              gwf equation
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use TdisModule, only: delt
     ! -- dummy
@@ -689,8 +625,7 @@ contains
     real(DP) :: trhsseep
     real(DP) :: thcofseep
     real(DP) :: deriv1
-    real(DP) :: deriv2
-! ------------------------------------------------------------------------------
+    real(DP) :: deriv2 -
     !
     ! -- initialize variables
     totfluxtot = DZERO
@@ -721,7 +656,7 @@ contains
     if (reset_state) then
       call thiswork%wave_shift(this, 1, icell, 0, 1, this%nwavst(icell), 1)
     end if
-
+    !
     if (this%watab(icell) > this%celtop(icell)) &
       this%watab(icell) = this%celtop(icell)
     !
@@ -791,17 +726,13 @@ contains
       call this%wave_shift(thiswork, icell, 1, 0, 1, thiswork%nwavst(1), 1)
     end if
     !
+    ! -- Return
     return
   end subroutine solve
 
+  !> @brief Add recharge or infiltration to cells
+  !<
   subroutine addrech(this, icell, jbelow, hgwf, trhs, thcof, deriv, delt)
-! ******************************************************************************
-! addrech -- add recharge or infiltration to cells
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: icell
@@ -814,7 +745,6 @@ contains
     ! -- local
     real(DP) :: fcheck
     real(DP) :: x, scale, range
-! ------------------------------------------------------------------------------
     !
     ! -- initialize
     range = DEM5
@@ -838,18 +768,13 @@ contains
     this%totflux(icell) = scale * this%totflux(icell) + fcheck * delt
     trhs = this%uzfarea(icell) * this%totflux(icell) / delt
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine addrech
 
+  !> @brief Reject applied infiltration due to low vks
+  !<
   subroutine rejfinf(this, icell, deriv, hgwf, trhs, thcof, finfact)
-! ******************************************************************************
-! rejfinf -- reject applied infiltration due to low vks
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: icell
@@ -860,7 +785,7 @@ contains
     real(DP), intent(in) :: hgwf
     ! -- local
     real(DP) :: x, range, scale, q
-! ------------------------------------------------------------------------------
+    !
     range = this%surfdep(icell)
     q = this%surflux(icell)
     finfact = q
@@ -874,18 +799,13 @@ contains
       thcof = finfact * this%uzfarea(icell) / range
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine rejfinf
 
+  !> @brief Calculate groudwater discharge to land surface
+  !<
   subroutine gwseep(this, icell, deriv, scale, hgwf, trhs, thcof, seep)
-! ******************************************************************************
-! gwseep -- calc. groudwater discharge to land surface
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: icell
@@ -897,7 +817,7 @@ contains
     real(DP), intent(in) :: hgwf
     ! -- local
     real(DP) :: x, range, y, deriv1, d1, d2, Q
-! ------------------------------------------------------------------------------
+    !
     seep = DZERO
     deriv = DZERO
     deriv1 = DZERO
@@ -922,18 +842,13 @@ contains
       thcof = DZERO
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwseep
 
+  !> @brief Calculate gwf et using residual uzf pet
+  !<
   subroutine simgwet(this, igwetflag, icell, hgwf, trhs, thcof, det)
-! ******************************************************************************
-! simgwet -- calc. gwf et using residual uzf pet
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: igwetflag
@@ -944,7 +859,6 @@ contains
     real(DP), intent(inout) :: det
     ! -- local
     real(DP) :: s, x, c, b, et
-! ------------------------------------------------------------------------------
     !
     this%gwet(icell) = DZERO
     trhs = DZERO
@@ -962,26 +876,20 @@ contains
     else if (igwetflag == 2) then
       et = etfunc_nlin(s, x, c, det, trhs, thcof, hgwf)
     end if
-!    this%gwet(icell) = et * this%uzfarea(icell)
+    ! this%gwet(icell) = et * this%uzfarea(icell)
     trhs = trhs * this%uzfarea(icell)
     thcof = thcof * this%uzfarea(icell)
     this%gwet(icell) = trhs - (thcof * hgwf)
-    !    write(99,*)'in group', icell, this%gwet(icell)
+    ! write(99,*)'in group', icell, this%gwet(icell)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine simgwet
 
+  !> @brief Calculate gwf et using linear ET function from mf-2005
+  !<
   function etfunc_lin(s, x, c, det, trhs, thcof, hgwf, celtop, celbot)
-! ******************************************************************************
-! etfunc_lin -- calc. gwf et using linear ET function from mf-2005
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
-    ! -- return
+    ! -- Return
     real(DP) :: etfunc_lin
     ! -- dummy
     real(DP), intent(in) :: s
@@ -997,7 +905,6 @@ contains
     real(DP) :: etgw
     real(DP) :: range
     real(DP) :: depth, scale, thick
-! ------------------------------------------------------------------------------
     !
     ! -- Between ET surface and extinction depth
     if (hgwf > (s - x) .and. hgwf < s) THEN
@@ -1033,18 +940,14 @@ contains
     det = -det * etgw
     etfunc_lin = etgw
     !
-    ! -- return
+    ! -- Return
     return
   end function etfunc_lin
 
+  !> @brief Square-wave ET function with smoothing at extinction depth
+  !<
   function etfunc_nlin(s, x, c, det, trhs, thcof, hgwf)
-! ******************************************************************************
-! etfunc_nlin -- Square-wave ET function with smoothing at extinction depth
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- return
+    ! -- Return
     real(DP) :: etfunc_nlin
     ! -- dummy
     real(DP), intent(in) :: s
@@ -1058,7 +961,7 @@ contains
     real(DP) :: etgw
     real(DP) :: range
     real(DP) :: depth, scale
-! ------------------------------------------------------------------------------
+    !
     depth = hgwf - (s - x)
     if (depth < DZERO) depth = DZERO
     etgw = c
@@ -1069,24 +972,19 @@ contains
     det = -det * etgw
     etfunc_nlin = etgw
     !
-    ! -- return
+    ! -- Return
     return
   end function etfunc_nlin
 
+  !> @brief Calculate recharge due to a rise in the gwf head
+  !<
   subroutine uz_rise(this, icell, totfluxtot)
-! ******************************************************************************
-! uz_rise -- calculate recharge due to a rise in the gwf head
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: icell
     real(DP), intent(inout) :: totfluxtot
     ! -- local
     real(DP) :: fm1, fm2, d1
-! ------------------------------------------------------------------------------
     !
     ! -- additional recharge from a rising water table
     if (this%watab(icell) - this%watabold(icell) > DEM30) then
@@ -1097,17 +995,13 @@ contains
       totfluxtot = totfluxtot + (fm1 - fm2)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uz_rise
 
+  !> @brief Reset waves to default values at start of simulation
+  !<
   subroutine setwaves(this, icell)
-! ******************************************************************************
-! setwaves -- reset waves to default values at start of simulation
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(UzfCellGroupType) :: this
     ! -- local
@@ -1115,7 +1009,6 @@ contains
     real(DP) :: bottom, top
     integer(I4B) :: jk
     real(DP) :: thick
-! ------------------------------------------------------------------------------
     !
     ! -- initialize
     this%totflux(icell) = DZERO
@@ -1154,18 +1047,13 @@ contains
       this%uzthst(1, icell) = this%thtr(icell)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine
 
+  !> @brief Prepare and route waves over time step
+  !<
   subroutine routewaves(this, totfluxtot, delt, ietflag, icell, ierr)
-! ******************************************************************************
-! routewaves -- prepare and route waves over time step
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    !
     ! -- dummy
     class(UzfCellGroupType) :: this
     real(DP), intent(inout) :: totfluxtot
@@ -1176,7 +1064,6 @@ contains
     ! -- local
     real(DP) :: thick, thickold
     integer(I4B) :: idelt, iwav, ik
-! ------------------------------------------------------------------------------
     !
     ! -- initialize
     this%totflux(icell) = DZERO
@@ -1201,17 +1088,13 @@ contains
       totfluxtot = totfluxtot + this%totflux(icell)
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine routewaves
 
+  !> @brief Copy waves or shift waves in arrays
+  !<
   subroutine wave_shift(this, this2, icell, icell2, shft, strt, stp, cntr)
-! ******************************************************************************
-! wave_shift -- copy waves or shift waves in arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(UzfCellGroupType) :: this
     type(UzfCellGroupType) :: this2
@@ -1223,7 +1106,6 @@ contains
     integer(I4B), intent(in) :: cntr
     ! -- local
     integer(I4B) :: j
-! ------------------------------------------------------------------------------
     !
     ! -- copy waves from one uzf cell group to another
     do j = strt, stp, cntr
@@ -1234,17 +1116,13 @@ contains
     end do
     this%nwavst(icell) = this2%nwavst(icell2)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine
 
+  !> @brief Method of Characteristics solution for kinematic wave equation
+  !<
   subroutine uzflow(this, thick, thickold, delt, ietflag, icell, ierr)
-! ******************************************************************************
-! uzflow -- moc solution for kinematic wave equation
-! ******************************************************************************
-!     SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(UzfCellGroupType) :: this
     real(DP), intent(inout) :: thickold
@@ -1257,7 +1135,7 @@ contains
     real(DP) :: ffcheck, time, feps1, feps2
     real(DP) :: thetadif, thetab, fluxb, oldsflx
     integer(I4B) :: itrailflg, itester
-! ------------------------------------------------------------------------------
+    !
     time = DZERO
     this%totflux(icell) = DZERO
     itrailflg = 0
@@ -1330,24 +1208,18 @@ contains
     if (ietflag > 0) call this%uzet(icell, delt, ietflag, ierr)
     if (ierr > 0) return
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uzflow
 
+  !> @brief Calculate unit specific tolerances
+  !<
   subroutine factors(feps1, feps2)
-! ******************************************************************************
-!   factors----calculate unit specific tolerances
-! ******************************************************************************
-!
-!     SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     real(DP), intent(out) :: feps1
     real(DP), intent(out) :: feps2
     real(DP) :: factor1
     real(DP) :: factor2
-! ------------------------------------------------------------------------------
     !
     ! calculate constants for uzflow
     factor1 = DONE
@@ -1367,18 +1239,13 @@ contains
     feps1 = feps1 * factor1 * factor2
     feps2 = feps2 * factor1 * factor2
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine factors
 
+  !> @brief Create and set trail waves
+  !<
   subroutine trailwav(this, icell, ierr)
-! ******************************************************************************
-! trailwav----create and set trail waves
-! ******************************************************************************
-!
-!     SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: icell
@@ -1389,7 +1256,6 @@ contains
     real(DP) :: flux1, flux2, theta1, theta2
     real(DP) :: fnuminc
     integer(I4B) :: j, jj, jk, nwavstm1
-! ------------------------------------------------------------------------------
     !
     ! -- initialize
     eps_m1 = dble(this%eps(icell)) - DONE
@@ -1462,19 +1328,14 @@ contains
                   this%thtr(icell), this%eps(icell), this%vks(icell))
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine trailwav
 
+  !> @brief Create a lead wave and route over time step
+  !<
   subroutine leadwav(this, time, itester, itrailflg, thetab, fluxb, &
                      ffcheck, feps2, delt, icell)
-! ******************************************************************************
-! leadwav----create a lead wave and route over time step
-! ******************************************************************************
-!
-!     SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(UzfCellGroupType) :: this
     real(DP), intent(inout) :: thetab
@@ -1495,7 +1356,7 @@ contains
     integer(I4B) :: iflx, iremove, j, l
     integer(I4B) :: nwavp1, jshort
     integer(I4B), allocatable, dimension(:) :: more
-! ------------------------------------------------------------------------------
+    !
     allocate (checktime(this%nwavst(icell)))
     allocate (more(this%nwavst(icell)))
     ftest = DZERO
@@ -1671,19 +1532,14 @@ contains
     deallocate (checktime)
     deallocate (more)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine leadwav
 
+  !> @brief Calculates waves speed from dflux/dtheta
+  !<
   function leadspeed(theta1, theta2, flux1, flux2, thts, thtr, eps, vks)
-! ******************************************************************************
-! leadspeed----calculates waves speed from dflux/dtheta
-! ******************************************************************************
-!     SPECIFICATIONS:
-!
-! ------------------------------------------------------------------------------
-    ! -- modules
-    ! -- return
+    ! -- Return
     real(DP) :: leadspeed
     ! -- dummy
     real(DP), intent(in) :: theta1
@@ -1697,7 +1553,6 @@ contains
     ! -- local
     real(DP) :: comp1, comp2, thsrinv, epsfksths
     real(DP) :: eps_m1, fhold, comp3
-! ------------------------------------------------------------------------------
     !
     eps_m1 = eps - DONE
     thsrinv = DONE / (thts - thtr)
@@ -1715,19 +1570,14 @@ contains
     end if
     if (leadspeed < DEM30) leadspeed = DEM30
     !
-    ! -- return
+    ! -- Return
     return
   end function leadspeed
 
+  !> @brief Sums up mobile water over depth interval
+  !<
   function unsat_stor(this, icell, d1)
-! ******************************************************************************
-! unsat_stor---- sums up mobile water over depth interval
-! ******************************************************************************
-!     SPECIFICATIONS:
-!
-! ------------------------------------------------------------------------------
-    ! -- modules
-    ! -- return
+    ! -- Return
     real(DP) :: unsat_stor
     ! -- dummy
     class(UzfCellGroupType) :: this
@@ -1736,7 +1586,7 @@ contains
     ! -- local
     real(DP) :: fm
     integer(I4B) :: j, k, nwavm1, jj
-! ------------------------------------------------------------------------------
+    !
     fm = DZERO
     j = this%nwavst(icell) + 1
     k = this%nwavst(icell)
@@ -1766,16 +1616,14 @@ contains
       fm = fm + (this%uzthst(1, icell) - this%thtr(icell)) * d1
     end if
     unsat_stor = fm
+    !
+    ! -- Return
+    return
   end function unsat_stor
 
+  !> @brief Update to new state of uz at end of time step
+  !<
   subroutine update_wav(this, icell, delt, iss, itest)
-! ******************************************************************************
-! update_wav -- update to new state of uz at end of time step
-! ******************************************************************************
-!     SPECIFICATIONS:
-!
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: icell
@@ -1786,7 +1634,6 @@ contains
     real(DP) :: bot, depthsave, top
     real(DP) :: thick, thtsrinv
     integer(I4B) :: nwavhld, k, j
-! ------------------------------------------------------------------------------
     !
     bot = this%watab(icell)
     top = this%celtop(icell)
@@ -1848,16 +1695,14 @@ contains
       end if
       this%watabold(icell) = this%watab(icell)
     end if
+    !
+    ! -- Return
+    return
   end subroutine update_wav
 
+  !> @brief Remove water from uz due to et
+  !<
   subroutine uzet(this, icell, delt, ietflag, ierr)
-! ******************************************************************************
-!     uzet -- remove water from uz due to et
-! ******************************************************************************
-!     SPECIFICATIONS:
-!
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: icell
@@ -1894,7 +1739,6 @@ contains
     integer(I4B) :: k
     integer(I4B) :: nwv
     integer(I4B) :: itest
-! ------------------------------------------------------------------------------
     !
     ! -- initialize
     this%etact(icell) = DZERO
@@ -2189,25 +2033,20 @@ contains
     ! -- deallocate temporary worker
     call uzfktemp%dealloc()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine uzet
 
+  !> @brief Calculate capillary pressure head from B-C equation
+  !<
   function caph(this, icell, tho)
-! ******************************************************************************
-!     caph---- calculate capillary pressure head from B-C equation
-! ******************************************************************************
-!     SPECIFICATIONS:
-!
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: icell
     real(DP), intent(in) :: tho
     ! -- local
     real(DP) :: caph, lambda, star
-! ------------------------------------------------------------------------------
+    !
     caph = -DEM6
     star = (tho - this%thtr(icell)) / (this%thts(icell) - this%thtr(icell))
     if (star < DEM15) star = DEM15
@@ -2219,37 +2058,45 @@ contains
         caph = DZERO
       end if
     end if
+    !
+    ! -- Return
+    return
   end function caph
 
+  !> @brief Calculate capillary pressure-based uz et
   function rate_et_z(this, icell, factor, fktho, h)
-! ******************************************************************************
-!     rate_et_z---- capillary pressure based uz et
-! ******************************************************************************
-!     SPECIFICATIONS:
-!
-! ------------------------------------------------------------------------------
-    ! -- modules
-    ! -- return
+    ! -- Return
     real(DP) :: rate_et_z
     ! -- dummy
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: icell
     real(DP), intent(in) :: factor, fktho, h
-    ! -- local
-! ------------------------------------------------------------------------------
+    !
     rate_et_z = factor * fktho * (h - this%hroot(icell))
     if (rate_et_z < DZERO) rate_et_z = DZERO
+    !
+    ! -- Return
+    return
   end function rate_et_z
 
+  !> @brief Determine the water content at a specific depth
+  !!
+  !! Because UZF-calculated waves are internal to UZF objects, different water
+  !! contents exists at different depths.
+  !<
   function get_water_content_at_depth(this, icell, depth) result(theta_at_depth)
+    ! -- dummy
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: icell !< uzf cell containing depth
     real(DP), intent(in) :: depth !< depth within the cell
+    ! -- return
     real(DP) :: theta_at_depth
+    ! -- local
     real(DP) :: d1
     real(DP) :: d2
     real(DP) :: f1
     real(DP) :: f2
+    !
     if (this%watab(icell) < this%celtop(icell)) then
       if (this%celtop(icell) - depth > this%watab(icell)) then
         d1 = depth - DEM3
@@ -2263,14 +2110,20 @@ contains
     else
       theta_at_depth = this%thts(icell)
     end if
+    !
+    ! -- Return
     return
   end function get_water_content_at_depth
 
+  !> @brief Calculate and return the cell-based water content value
+  !<
   function get_wcnew(this, icell) result(watercontent)
+    ! -- dummy
     class(UzfCellGroupType) :: this
     integer(I4B), intent(in) :: icell !< uzf cell containing depth
-    !
+    ! -- return
     real(DP) :: watercontent
+    ! -- local
     real(DP) :: top
     real(DP) :: bot
     real(DP) :: theta_r
@@ -2292,6 +2145,8 @@ contains
     else
       watercontent = DZERO
     end if
+    !
+    ! -- Return
     return
   end function get_wcnew
 
