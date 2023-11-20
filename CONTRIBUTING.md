@@ -13,7 +13,7 @@ Contributions to MODFLOW 6 are welcome from the community. As a contributor, her
  - [Commit Message Guidelines](#commit)
 
 ## <a name="coc"></a> Code of Conduct
-Help us keep MODFLOW 6 open and inclusive. Please read and follow our [Code of Conduct][coc].
+Help us keep MODFLOW 6 open and inclusive. Please read and follow our [Code of Conduct](./CODE_OF_CONDUCT.md).
 
 ## <a name="question"></a> Got a Question or Problem?
 
@@ -141,20 +141,83 @@ To ensure consistency throughout the source code, keep these rules in mind as yo
 ## <a name="format"></a> Format Rules
 
 Fortran source code format rules are met by running the
-[fprettify formatter](https://github.com/pseewald/fprettify) while specifying the [MODFLOW 6 fprettify configuration](.fprettify.yaml). `fprettify` is included in the conda and pixi environments and can be run on the command line or integrated into a [VSCode](.vscode/README.md) or Visual Studio environment.
+[fprettify formatter](https://github.com/pseewald/fprettify)
+while specifying the [MODFLOW 6 fprettify configuration](.fprettify.yaml).
+`fprettify` is included in the conda and pixi environments and can be run
+on the command line or integrated into a [VSCode](.vscode/README.md) or
+Visual Studio environment.
 
-The configuration file reflects the current minimum standard for Fortran source
-formatting.  The main goal, however, is consistent and readable Fortran source code and as such pay particular attention to consistency within and across files. As the formatting tool may at times shift code in unexpected ways, check for formatting consistency after running.
+### Automatic formatting
 
-An example run of the command line tool from the MODFLOW 6 root directory:
-`fprettify -c .fprettify.yaml ./utils/zonebudget/src/zbud6.f90`
+Some Fortran source code formatting can be achieved automatically by the
+[fprettify formatter](https://github.com/pseewald/fprettify). Format rules
+are specified in the [fprettify configuration file](.fprettify.yaml). The
+configuration file reflects the current minimum standard for Fortran source
+formatting. 
 
-When run in this way, the tool will modify the file in place and generate no output if successful. The
-tool will write stderr warnings when unable to complete formatting. In general, these warnings (e.g.
-for excess line length) must be manually fixed before attempting to rerun the tool.
+The `fprettify` package is included in the Conda `environment.yml` and can be
+run on the command line or integrated into a [VSCode](.vscode/README.md)
+or Visual Studio development environment.
 
-Fortran source files can be excluded from the formatting standard if necessary, as is the case
-for Fortran source found under the `modflow6/src/Utilities/Libraries` path.
+For instance, to format a single file:
+
+```shell
+fprettify -c .fprettify.yaml ./utils/zonebudget/src/zbud6.f90
+```
+
+When run in this way, the tool will modify the file in place and generate no output if successful.
+If unresolvable formatting errors are encountered (e.g. for excess line length), these are written
+to standard output and must be manually fixed before attempting to rerun the tool.
+
+**Note**: as `fprettify` may shift code in unexpected ways, it is a good idea to visually
+check source files afterwards. 
+
+**Note**: while `fprettify` can be invoked on a directory, and will format all Fortran files within
+it, this should be done with care &mdash; the repository includes some files which `fprettify` can't
+properly format. To format the repository all at once, run the
+[provided Python script](.github/common/check_format.py) from the project root:
+
+```shell
+python .github/common/check_format.py
+```
+
+This script excludes the proper files from formatting, including vendored library sources in [`src/Utilities/Libraries`](src/Utilities/Libraries/). 
+
+### Style guide
+
+Automated tools like `fprettify` cannot directly address all style concerns.
+New development should aim to follow some guidelines:
+
+* Source file names should use `CamelCase`.
+* Procedure names should use `snake_case`.
+* Procedure names should be a verb or verb phrase.
+* Module and derived type names should use `CamelCase`.
+* Module and derived type names should be a noun or noun phrase.
+* Module names should end with `...Module`.
+* Derived type names may, but need not, end with `...Type`.
+* Source file names and module names should correspond, except for the trailing `...Module`.
+* If a module exists mainly to host a type, the module and type names should correspond, except for trailing `...Module` and `...Type`.
+* Statements `end module`, `end subroutine` and `end function` should include the module/subroutine/function name.
+* Procedures should not end with a `return` statement; use `return` only to return early.
+* Avoid `goto` statements.
+* Use `implicit none` in all modules.
+* Avoid `implicit none` in procedures except where necessary (e.g. interface bodies).
+* Don't use implicit dummy arguments or local variables.
+* All modules should be `private` by default, with `public` types and procedures explicitly marked.
+* Avoid empty comments.
+* Avoid comments starting with `--`.
+* Include blank lines between:
+  - module declaration and `use...` statements
+  - `use...` statements and procedure declarations
+  - derived type declaration and member variables
+  - member variables and `contains` statements
+* Prefer explicitly specified imports with `use ..., only: ...`, rather than merely `use ...`.
+* Prefer importing items used throughout a module with a module-scoped `use` statement, rather than separately in multiple procedures.
+* Use [Doxygen format](https://www.doxygen.nl/manual/docblocks.html#fortranblocks) for docstrings. For dummy arguments, use either `@param ...` above the signature or `!< ...` next to the dummy argument.
+* Type-bound procedures' first dummy argument should be named `this`. A suitable docstring is `!< this instance`.
+* Avoid deeply nested control structures where possible.
+* Prefer verbosity in naming. Math-related names for which the purpose is clear from the source and/or docstring may be single letters, as may well-known index variables, e.g. `i`, j`, `m`, `n`.
+
 
 ## <a name="commit"></a> Commit Message Guidelines
 
