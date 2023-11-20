@@ -625,7 +625,7 @@ contains
     real(DP) :: trhsseep
     real(DP) :: thcofseep
     real(DP) :: deriv1
-    real(DP) :: deriv2 -
+    real(DP) :: deriv2
     !
     ! -- initialize variables
     totfluxtot = DZERO
