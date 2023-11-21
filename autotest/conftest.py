@@ -1,8 +1,9 @@
 import platform
 import sys
-from pathlib import Path
 from os import PathLike
-from typing import Dict, Optional
+from pathlib import Path
+from typing import Optional
+from warnings import warn
 
 import pytest
 from modflow_devtools.executables import Executables, get_suffixes
@@ -59,39 +60,57 @@ def targets(bin_path) -> Executables:
     exe_ext, lib_ext = get_suffixes(sys.platform)
     dl_bin = bin_path / "downloaded"
     rb_bin = bin_path / "rebuilt"
-    tgts = dict()
-
-    # downloaded executables
-    tgts["mf2000"] = dl_bin / f"mf2000{exe_ext}"
-    tgts["mf2005"] = dl_bin / f"mf2005dbl{exe_ext}"
-    tgts["mfnwt"] = dl_bin / f"mfnwtdbl{exe_ext}"
-    tgts["mfusg"] = dl_bin / f"mfusgdbl{exe_ext}"
-    tgts["mflgr"] = dl_bin / f"mflgrdbl{exe_ext}"
-    tgts["mf2005s"] = dl_bin / f"mf2005{exe_ext}"
-    tgts["mt3dms"] = dl_bin / f"mt3dms{exe_ext}"
-    tgts["crt"] = dl_bin / f"crt{exe_ext}"
-    tgts["gridgen"] = dl_bin / f"gridgen{exe_ext}"
-    tgts["mp6"] = dl_bin / f"mp6{exe_ext}"
-    tgts["mp7"] = dl_bin / f"mp7{exe_ext}"
-    tgts["swtv4"] = dl_bin / f"swtv4{exe_ext}"
-    tgts["sutra"] = dl_bin / f"sutra{exe_ext}"
-    tgts["triangle"] = dl_bin / f"triangle{exe_ext}"
-    tgts["vs2dt"] = dl_bin / f"vs2dt{exe_ext}"
-    tgts["zonbudusg"] = dl_bin / f"zonbudusg{exe_ext}"
-
-    # binaries rebuilt from last release
-    tgts["mf6_regression"] = rb_bin / f"mf6{exe_ext}"
-    tgts["libmf6_regression"] = rb_bin / f"libmf6{lib_ext}"
-    tgts["mf5to6_regression"] = rb_bin / f"mf5to6{exe_ext}"
-    tgts["zbud6_regression"] = rb_bin / f"zbud6{exe_ext}"
+    targets = dict()
 
     # local development binaries
-    tgts["mf6"] = bin_path / f"mf6{exe_ext}"
-    tgts["libmf6"] = bin_path / f"libmf6{lib_ext}"
-    tgts["mf5to6"] = bin_path / f"mf5to6{exe_ext}"
-    tgts["zbud6"] = bin_path / f"zbud6{exe_ext}"
+    development = [
+        ("mf6", bin_path / f"mf6{exe_ext}"),
+        ("libmf6", bin_path / f"libmf6{lib_ext}"),
+        ("mf5to6", bin_path / f"mf5to6{exe_ext}"),
+        ("zbud6", bin_path / f"zbud6{exe_ext}"),
+    ]
 
-    return Executables(**tgts)
+    # downloaded executables
+    downloaded = [
+        ("mf2000", dl_bin / f"mf2000{exe_ext}"),
+        ("mf2005", dl_bin / f"mf2005dbl{exe_ext}"),
+        ("mfnwt", dl_bin / f"mfnwtdbl{exe_ext}"),
+        ("mfusg", dl_bin / f"mfusgdbl{exe_ext}"),
+        ("mflgr", dl_bin / f"mflgrdbl{exe_ext}"),
+        ("mf2005s", dl_bin / f"mf2005{exe_ext}"),
+        ("mt3dms", dl_bin / f"mt3dms{exe_ext}"),
+        ("crt", dl_bin / f"crt{exe_ext}"),
+        ("gridgen", dl_bin / f"gridgen{exe_ext}"),
+        ("mp6", dl_bin / f"mp6{exe_ext}"),
+        ("mp7", dl_bin / f"mp7{exe_ext}"),
+        ("swtv4", dl_bin / f"swtv4{exe_ext}"),
+        ("sutra", dl_bin / f"sutra{exe_ext}"),
+        ("triangle", dl_bin / f"triangle{exe_ext}"),
+        ("vs2dt", dl_bin / f"vs2dt{exe_ext}"),
+        ("zonbudusg", dl_bin / f"zonbudusg{exe_ext}"),
+    ]
+
+    # binaries rebuilt from last release
+    rebuilt = [
+        ("mf6_regression", rb_bin / f"mf6{exe_ext}"),
+        ("libmf6_regression", rb_bin / f"libmf6{lib_ext}"),
+        ("mf5to6_regression", rb_bin / f"mf5to6{exe_ext}"),
+        ("zbud6_regression", rb_bin / f"zbud6{exe_ext}"),
+    ]
+
+    # require development binaries
+    for k, v in development:
+        assert v.is_file(), f"Couldn't find binary '{k}' expected at: {v}"
+        targets[k] = v
+
+    # downloaded/rebuilt binaries are optional
+    for k, v in downloaded + rebuilt:
+        if v.is_file():
+            targets[k] = v
+        else:
+            warn(f"Couldn't find binary '{k}' expected at: {v}")
+
+    return Executables(**targets)
 
 
 @pytest.fixture
