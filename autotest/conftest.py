@@ -39,78 +39,102 @@ def should_compare(
     return True
 
 
+_lib_exts = {
+    "Darwin": ".dylib",
+    "Linux": ".so",
+    "Windows": ".dll",
+}
+_exe_ext, _lib_ext = get_suffixes(sys.platform)
+_binaries_path = project_root_path / "bin"
+_dl_bin_path = _binaries_path / "downloaded"
+_rb_bin_path = _binaries_path / "rebuilt"
+_binaries = {
+    "development": [
+        ("mf6", _binaries_path / f"mf6{_exe_ext}"),
+        ("libmf6", _binaries_path / f"libmf6{_lib_ext}"),
+        ("mf5to6", _binaries_path / f"mf5to6{_exe_ext}"),
+        ("zbud6", _binaries_path / f"zbud6{_exe_ext}"),
+    ],
+    "downloaded": [
+        ("mf2000", _dl_bin_path / f"mf2000{_exe_ext}"),
+        ("mf2005", _dl_bin_path / f"mf2005dbl{_exe_ext}"),
+        ("mfnwt", _dl_bin_path / f"mfnwtdbl{_exe_ext}"),
+        ("mfusg", _dl_bin_path / f"mfusgdbl{_exe_ext}"),
+        ("mflgr", _dl_bin_path / f"mflgrdbl{_exe_ext}"),
+        ("mf2005s", _dl_bin_path / f"mf2005{_exe_ext}"),
+        ("mt3dms", _dl_bin_path / f"mt3dms{_exe_ext}"),
+        ("crt", _dl_bin_path / f"crt{_exe_ext}"),
+        ("gridgen", _dl_bin_path / f"gridgen{_exe_ext}"),
+        ("mp6", _dl_bin_path / f"mp6{_exe_ext}"),
+        ("mp7", _dl_bin_path / f"mp7{_exe_ext}"),
+        ("swtv4", _dl_bin_path / f"swtv4{_exe_ext}"),
+        ("sutra", _dl_bin_path / f"sutra{_exe_ext}"),
+        ("triangle", _dl_bin_path / f"triangle{_exe_ext}"),
+        ("vs2dt", _dl_bin_path / f"vs2dt{_exe_ext}"),
+        ("zonbudusg", _dl_bin_path / f"zonbudusg{_exe_ext}"),
+    ],
+    "rebuilt": [
+        ("mf6_regression", _rb_bin_path / f"mf6{_exe_ext}"),
+        ("libmf6_regression", _rb_bin_path / f"libmf6{_lib_ext}"),
+        ("mf5to6_regression", _rb_bin_path / f"mf5to6{_exe_ext}"),
+        ("zbud6_regression", _rb_bin_path / f"zbud6{_exe_ext}"),
+    ],
+}
+
+
 @pytest.fixture(scope="session")
 def bin_path() -> Path:
-    return project_root_path / "bin"
+    return _binaries_path
 
 
 @pytest.fixture(scope="session")
-def libmf6_path(bin_path) -> Path:
-    ext = {
-        "Darwin": ".dylib",
-        "Linux": ".so",
-        "Windows": ".dll",
-    }[platform.system()]
-    lib_name = bin_path / f"libmf6{ext}"
-    return lib_name
+def libmf6_path() -> Path:
+    return _binaries_path / f"libmf6{_lib_exts[platform.system()]}"
 
 
 @pytest.fixture(scope="session")
-def targets(bin_path) -> Executables:
-    exe_ext, lib_ext = get_suffixes(sys.platform)
-    dl_bin = bin_path / "downloaded"
-    rb_bin = bin_path / "rebuilt"
-    targets = dict()
-
-    # local development binaries
-    development = [
-        ("mf6", bin_path / f"mf6{exe_ext}"),
-        ("libmf6", bin_path / f"libmf6{lib_ext}"),
-        ("mf5to6", bin_path / f"mf5to6{exe_ext}"),
-        ("zbud6", bin_path / f"zbud6{exe_ext}"),
-    ]
-
-    # downloaded executables
-    downloaded = [
-        ("mf2000", dl_bin / f"mf2000{exe_ext}"),
-        ("mf2005", dl_bin / f"mf2005dbl{exe_ext}"),
-        ("mfnwt", dl_bin / f"mfnwtdbl{exe_ext}"),
-        ("mfusg", dl_bin / f"mfusgdbl{exe_ext}"),
-        ("mflgr", dl_bin / f"mflgrdbl{exe_ext}"),
-        ("mf2005s", dl_bin / f"mf2005{exe_ext}"),
-        ("mt3dms", dl_bin / f"mt3dms{exe_ext}"),
-        ("crt", dl_bin / f"crt{exe_ext}"),
-        ("gridgen", dl_bin / f"gridgen{exe_ext}"),
-        ("mp6", dl_bin / f"mp6{exe_ext}"),
-        ("mp7", dl_bin / f"mp7{exe_ext}"),
-        ("swtv4", dl_bin / f"swtv4{exe_ext}"),
-        ("sutra", dl_bin / f"sutra{exe_ext}"),
-        ("triangle", dl_bin / f"triangle{exe_ext}"),
-        ("vs2dt", dl_bin / f"vs2dt{exe_ext}"),
-        ("zonbudusg", dl_bin / f"zonbudusg{exe_ext}"),
-    ]
-
-    # binaries rebuilt from last release
-    rebuilt = [
-        ("mf6_regression", rb_bin / f"mf6{exe_ext}"),
-        ("libmf6_regression", rb_bin / f"libmf6{lib_ext}"),
-        ("mf5to6_regression", rb_bin / f"mf5to6{exe_ext}"),
-        ("zbud6_regression", rb_bin / f"zbud6{exe_ext}"),
-    ]
+def targets() -> Executables:
+    d = dict()
 
     # require development binaries
-    for k, v in development:
+    for k, v in _binaries["development"]:
         assert v.is_file(), f"Couldn't find binary '{k}' expected at: {v}"
-        targets[k] = v
+        d[k] = v
 
     # downloaded/rebuilt binaries are optional
-    for k, v in downloaded + rebuilt:
+    for k, v in _binaries["downloaded"] + _binaries["rebuilt"]:
         if v.is_file():
-            targets[k] = v
+            d[k] = v
         else:
             warn(f"Couldn't find binary '{k}' expected at: {v}")
 
-    return Executables(**targets)
+    return Executables(**d)
+
+
+def try_get_target(targets: Executables, name: str) -> Path:
+    """Try to retrieve the path to a binary. If the binary is a development
+    target and can't be found, an error is raised. Otherwise (if the binary
+    is downloaded or rebuilt) the test is skipped. This is to allow testing
+    without downloaded or rebuilt binaries, e.g. if the network is down."""
+
+    try:
+        # modflow-devtools >= 1.3
+        exe = targets.get(name)
+        if exe:
+            return exe
+        elif name in _binaries["development"]:
+            raise ValueError(f"Couldn't find binary '{name}'")
+        else:
+            pytest.skip(f"Couldn't find binary '{name}'")
+    except AttributeError:
+        # modflow-devtools < 1.3
+        try:
+            return targets[name]
+        except:
+            if name in _binaries["development"]:
+                raise ValueError(f"Couldn't find binary '{name}'")
+            else:
+                pytest.skip(f"Couldn't find binary 'gridgen'")
 
 
 @pytest.fixture

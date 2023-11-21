@@ -27,6 +27,8 @@ import flopy
 import numpy as np
 import pytest
 
+from conftest import try_get_target
+
 testgroup = "mt3dms_p01"
 
 
@@ -472,18 +474,12 @@ def p01mf6(
     return sim, conc
 
 
-def get_binaries(targets) -> Tuple[Path, Path]:
-    mf6 = targets["mf6"]
-    mf2005 = targets.get("mf2005s")
-    mt3dms = targets.get("mt3dms")
-
-    assert mf6, f"Couldn't find binary 'mf6'"
-    if not mf2005:
-        pytest.skip(f"Couldn't find binary 'mf2005s'")
-    if not mt3dms:
-        pytest.skip(f"Couldn't find binary 'mt3dms'")
-
-    return mf6, mf2005, mt3dms
+def get_binaries(targets) -> Tuple[Path, Path, Path]:
+    return (
+        targets.mf6,
+        try_get_target(targets, "mf2005s"),
+        try_get_target(targets, "mt3dms"),
+    )
 
 
 def test_mt3dmsp01a(function_tmpdir, targets):
