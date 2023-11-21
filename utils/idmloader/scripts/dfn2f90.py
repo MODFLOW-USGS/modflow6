@@ -1,11 +1,11 @@
-import os
 import sys
-import json
 from pathlib import Path
-from enum import Enum
 
 MF6_LENVARNAME = 16
 F90_LINELEN = 82
+PROJ_ROOT = Path(__file__).parents[3]
+DFN_PATH = PROJ_ROOT / "doc" / "mf6io" / "mf6ivar" / "dfn"
+SRC_PATH = PROJ_ROOT / "src"
 
 
 class Dfn2F90:
@@ -46,7 +46,6 @@ class Dfn2F90:
 
     def write_f90(self, ofspec=None):
         with open(ofspec, "w") as f:
-
             # file header
             f.write(self._source_file_header(self.component, self.subcomponent))
 
@@ -138,7 +137,6 @@ class Dfn2F90:
         vd = {}
 
         for line in lines:
-
             # skip blank lines
             if len(line.strip()) == 0:
                 if len(vd) > 0:
@@ -303,7 +301,6 @@ class Dfn2F90:
             r = ".false."
 
         for k in self._var_d:
-
             varname, bname = k
             if bname != blockname:
                 continue
@@ -341,7 +338,7 @@ class Dfn2F90:
                 shape = shape.replace(")", "")
                 shape = shape.replace(",", "")
                 shape = shape.upper()
-                if (shape == "NCOL*NROW; NCPL"):
+                if shape == "NCOL*NROW; NCPL":
                     # grid array input syntax
                     if mf6vn == "AUXVAR":
                         # for grid, set AUX as DOUBLE2D
@@ -534,7 +531,7 @@ class IdmDfnSelector:
         self._write_master()
 
     def _write_master(self):
-        ofspec = f"../../../src/Utilities/Idm/selector/IdmDfnSelector.f90"
+        ofspec = SRC_PATH / "Utilities" / "Idm" / "selector" / "IdmDfnSelector.f90"
         with open(ofspec, "w") as fh:
             self._write_master_decl(fh)
             self._write_master_defn(fh, defn="param", dtype="param")
@@ -548,7 +545,11 @@ class IdmDfnSelector:
     def _write_selectors(self):
         for c in self._d:
             ofspec = (
-                f"../../../src/Utilities/Idm/selector/Idm{c.title()}DfnSelector.f90"
+                SRC_PATH
+                / "Utilities"
+                / "Idm"
+                / "selector"
+                / f"Idm{c.title()}DfnSelector.f90"
             )
             with open(ofspec, "w") as fh:
                 self._write_selector_decl(fh, component=c, sc_list=self._d[c])
@@ -584,9 +585,7 @@ class IdmDfnSelector:
             len_sc = len(sc)
             spacer = space * (len_c + len_sc)
 
-            s += (
-                f"  use {c.title()}{sc.title()}InputModule\n"
-            )
+            s += f"  use {c.title()}{sc.title()}InputModule\n"
 
         s += (
             f"\n  implicit none\n"
@@ -597,7 +596,7 @@ class IdmDfnSelector:
             f"  public :: {c.lower()}_idm_multi_package\n"
             f"  public :: {c.lower()}_idm_integrated\n\n"
         )
-        s += (f"contains\n\n")
+        s += f"contains\n\n"
 
         fh.write(s)
 
@@ -727,9 +726,7 @@ class IdmDfnSelector:
         for c in self._d:
             len_c = len(c)
             spacer = space * (len_c)
-            s += (
-                f"  use Idm{c.title()}DfnSelectorModule\n"
-            )
+            s += f"  use Idm{c.title()}DfnSelectorModule\n"
 
         s += (
             f"\n  implicit none\n"
@@ -841,10 +838,7 @@ class IdmDfnSelector:
         )
 
         for c in dfn_d:
-            s += (
-                f"    case ('{c}')\n"
-                f"      integrated = .true.\n"
-            )
+            s += f"    case ('{c}')\n" f"      integrated = .true.\n"
 
         s += (
             f"    case default\n"
@@ -857,101 +851,100 @@ class IdmDfnSelector:
 
 
 if __name__ == "__main__":
-
     dfns = [
         # ** Add a new dfn parameter set to MODFLOW 6 by adding a new entry to this list **
         # [relative path of input dnf, relative path of output f90 definition file]
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-chd.dfn"),
-            Path("../../../src/Model/GroundWaterFlow", "gwf3chd8idm.f90"),
+            DFN_PATH / "gwf-chd.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3chd8idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-dis.dfn"),
-            Path("../../../src/Model/GroundWaterFlow", "gwf3dis8idm.f90"),
+            DFN_PATH / "gwf-dis.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3dis8idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-disu.dfn"),
-            Path("../../../src/Model/GroundWaterFlow", "gwf3disu8idm.f90"),
+            DFN_PATH / "gwf-disu.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3disu8idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-disv.dfn"),
-            Path("../../../src/Model/GroundWaterFlow", "gwf3disv8idm.f90"),
+            DFN_PATH / "gwf-disv.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3disv8idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-drn.dfn"),
-            Path("../../../src/Model/GroundWaterFlow", "gwf3drn8idm.f90"),
+            DFN_PATH / "gwf-drn.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3drn8idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-evt.dfn"),
-            Path("../../../src/Model/GroundWaterFlow", "gwf3evt8idm.f90"),
+            DFN_PATH / "gwf-evt.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3evt8idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-evta.dfn"),
-            Path("../../../src/Model/GroundWaterFlow", "gwf3evta8idm.f90"),
+            DFN_PATH / "gwf-evta.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3evta8idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-ghb.dfn"),
-            Path("../../../src/Model/GroundWaterFlow", "gwf3ghb8idm.f90"),
+            DFN_PATH / "gwf-ghb.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3ghb8idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-ic.dfn"),
-            Path("../../../src/Model/GroundWaterFlow", "gwf3ic8idm.f90"),
+            DFN_PATH / "gwf-ic.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3ic8idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-npf.dfn"),
-            Path("../../../src/Model/GroundWaterFlow", "gwf3npf8idm.f90"),
+            DFN_PATH / "gwf-npf.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3npf8idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-rch.dfn"),
-            Path("../../../src/Model/GroundWaterFlow", "gwf3rch8idm.f90"),
+            DFN_PATH / "gwf-rch.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3rch8idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-rcha.dfn"),
-            Path("../../../src/Model/GroundWaterFlow", "gwf3rcha8idm.f90"),
+            DFN_PATH / "gwf-rcha.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3rcha8idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-riv.dfn"),
-            Path("../../../src/Model/GroundWaterFlow", "gwf3riv8idm.f90"),
+            DFN_PATH / "gwf-riv.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3riv8idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-wel.dfn"),
-            Path("../../../src/Model/GroundWaterFlow", "gwf3wel8idm.f90"),
+            DFN_PATH / "gwf-wel.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3wel8idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-dis.dfn"),
-            Path("../../../src/Model/GroundWaterTransport", "gwt1dis1idm.f90"),
+            DFN_PATH / "gwt-dis.dfn",
+            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1dis1idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-disu.dfn"),
-            Path("../../../src/Model/GroundWaterTransport", "gwt1disu1idm.f90"),
+            DFN_PATH / "gwt-disu.dfn",
+            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1disu1idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-disv.dfn"),
-            Path("../../../src/Model/GroundWaterTransport", "gwt1disv1idm.f90"),
+            DFN_PATH / "gwt-disv.dfn",
+            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1disv1idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-dsp.dfn"),
-            Path("../../../src/Model/GroundWaterTransport", "gwt1dsp1idm.f90"),
+            DFN_PATH / "gwt-dsp.dfn",
+            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1dsp1idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-cnc.dfn"),
-            Path("../../../src/Model/GroundWaterTransport", "gwt1cnc1idm.f90"),
+            DFN_PATH / "gwt-cnc.dfn",
+            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1cnc1idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-ic.dfn"),
-            Path("../../../src/Model/GroundWaterTransport", "gwt1ic1idm.f90"),
+            DFN_PATH / "gwt-ic.dfn",
+            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1ic1idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwf-nam.dfn"),
-            Path("../../../src/Model/GroundWaterFlow", "gwf3idm.f90"),
+            DFN_PATH / "gwf-nam.dfn",
+            SRC_PATH / "Model" / "GroundWaterFlow" / "gwf3idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "gwt-nam.dfn"),
-            Path("../../../src/Model/GroundWaterTransport", "gwt1idm.f90"),
+            DFN_PATH / "gwt-nam.dfn",
+            SRC_PATH / "Model" / "GroundWaterTransport" / "gwt1idm.f90",
         ],
         [
-            Path("../../../doc/mf6io/mf6ivar/dfn", "sim-nam.dfn"),
-            Path("../../../src", "simnamidm.f90"),
+            DFN_PATH / "sim-nam.dfn",
+            SRC_PATH / "simnamidm.f90",
         ],
     ]
 
