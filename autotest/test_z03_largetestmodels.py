@@ -1,13 +1,22 @@
 import pytest
+
 from conftest import should_compare
 from simulation import TestSimulation
 
 excluded_models = []
 excluded_comparisons = {
-    "test1004_mvlake_laksfr_tr": ["6.4.1",],
-    "test1004_mvlake_lak_tr": ["6.4.1",],
-    "test1003_MNW2_Fig28": ["6.2.1",],
-    "test1001_Peterson": ["6.2.1",],
+    "test1004_mvlake_laksfr_tr": [
+        "6.4.1",
+    ],
+    "test1004_mvlake_lak_tr": [
+        "6.4.1",
+    ],
+    "test1003_MNW2_Fig28": [
+        "6.2.1",
+    ],
+    "test1001_Peterson": [
+        "6.2.1",
+    ],
 }
 
 
@@ -23,13 +32,13 @@ def test_model(
 
     if name in excluded_models:
         pytest.skip(f"Excluding large mf6 model '{name}'")
-    
+
     if "dev" in name and "not developmode" in markers:
         pytest.skip(f"Skipping large mf6 model '{name}' (develop mode only)")
 
     sim = TestSimulation(
         name=name,
-        exe_dict=targets.as_dict(),
+        exe_dict=targets,
         mf6_regression=not original_regression,
         cmp_verbose=False,
         make_comparison=should_compare(name, excluded_comparisons, targets),

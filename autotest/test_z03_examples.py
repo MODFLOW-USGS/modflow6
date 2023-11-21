@@ -1,4 +1,5 @@
 import pytest
+
 from conftest import should_compare
 from simulation import TestSimulation
 
@@ -62,7 +63,7 @@ def test_scenario(function_tmpdir, example_scenario, targets):
         workspace = function_tmpdir / model_name
         sim = TestSimulation(
             name=model_name,
-            exe_dict=targets.as_dict(),
+            exe_dict=targets,
             mf6_regression=True,
             cmp_verbose=False,
             make_comparison=should_compare(

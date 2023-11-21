@@ -20,9 +20,14 @@ dispersion, and reaction (sorption and decay):
 """
 
 import os
+from pathlib import Path
+from typing import Tuple
 
 import flopy
 import numpy as np
+import pytest
+
+from conftest import try_get_target
 
 testgroup = "mt3dms_p01"
 
@@ -383,7 +388,6 @@ def p01mf6(
         theta_immobile = prsity2
         porosity_immobile = theta_immobile / volfrac_immobile
         porosity_mobile = prsity / volfrac_mobile
-        
 
     first_order_decay = True
     if zero_order_decay:
@@ -470,6 +474,14 @@ def p01mf6(
     return sim, conc
 
 
+def get_binaries(targets) -> Tuple[Path, Path, Path]:
+    return (
+        targets.mf6,
+        try_get_target(targets, "mf2005s"),
+        try_get_target(targets, "mt3dms"),
+    )
+
+
 def test_mt3dmsp01a(function_tmpdir, targets):
     longitudinal_dispersivity = 0.0
     retardation = 1.0
@@ -478,8 +490,10 @@ def test_mt3dmsp01a(function_tmpdir, targets):
     zeta = None
     prsity2 = None
 
-    mf6 = targets["mf6"]
-    mf6_ws = str(function_tmpdir / (testgroup + "a"))
+    mf6, mf2005, mt3dms = get_binaries(targets)
+    mf6_ws = function_tmpdir / f"{testgroup}a"
+    mt3d_ws = mf6_ws / "mt3d"
+
     sim, conc_mf6 = p01mf6(
         mf6_ws,
         longitudinal_dispersivity,
@@ -491,9 +505,6 @@ def test_mt3dmsp01a(function_tmpdir, targets):
         exe=mf6,
     )
 
-    mf2005 = targets["mf2005s"]
-    mt3dms = targets["mt3dms"]
-    mt3d_ws = os.path.join(mf6_ws, "mt3d")
     mf, mt, conc_mt3d, cvt, mvt = p01mt3d(
         mt3d_ws,
         longitudinal_dispersivity,
@@ -506,8 +517,9 @@ def test_mt3dmsp01a(function_tmpdir, targets):
         mt3dms=mt3dms,
     )
 
-    msg = f"concentrations not equal {conc_mt3d} {conc_mf6}"
-    assert np.allclose(conc_mt3d, conc_mf6, atol=1e-4), msg
+    assert np.allclose(
+        conc_mt3d, conc_mf6, atol=1e-4
+    ), f"concentrations not equal {conc_mt3d} {conc_mf6}"
 
     # load transport budget
     # budget text:
@@ -543,8 +555,10 @@ def test_mt3dmsp01b(function_tmpdir, targets):
     zeta = None
     prsity2 = None
 
-    mf6 = targets["mf6"]
-    mf6_ws = str(function_tmpdir / (testgroup + "b"))
+    mf6, mf2005, mt3dms = get_binaries(targets)
+    mf6_ws = function_tmpdir / f"{testgroup}b"
+    mt3d_ws = mf6_ws / "mt3d"
+
     sim, conc_mf6 = p01mf6(
         mf6_ws,
         longitudinal_dispersivity,
@@ -556,9 +570,6 @@ def test_mt3dmsp01b(function_tmpdir, targets):
         exe=mf6,
     )
 
-    mf2005 = targets["mf2005s"]
-    mt3dms = targets["mt3dms"]
-    mt3d_ws = os.path.join(mf6_ws, "mt3d")
     mf, mt, conc_mt3d, cvt, mvt = p01mt3d(
         mt3d_ws,
         longitudinal_dispersivity,
@@ -571,8 +582,9 @@ def test_mt3dmsp01b(function_tmpdir, targets):
         mt3dms=mt3dms,
     )
 
-    msg = f"concentrations not equal {conc_mt3d} {conc_mf6}"
-    assert np.allclose(conc_mt3d, conc_mf6, atol=1e-4), msg
+    assert np.allclose(
+        conc_mt3d, conc_mf6, atol=1e-4
+    ), f"concentrations not equal {conc_mt3d} {conc_mf6}"
 
 
 def test_mt3dmsp01c(function_tmpdir, targets):
@@ -583,8 +595,10 @@ def test_mt3dmsp01c(function_tmpdir, targets):
     zeta = None
     prsity2 = None
 
-    mf6 = targets["mf6"]
-    mf6_ws = str(function_tmpdir / (testgroup + "c"))
+    mf6, mf2005, mt3dms = get_binaries(targets)
+    mf6_ws = function_tmpdir / f"{testgroup}c"
+    mt3d_ws = mf6_ws / "mt3d"
+
     sim, conc_mf6 = p01mf6(
         mf6_ws,
         longitudinal_dispersivity,
@@ -596,9 +610,6 @@ def test_mt3dmsp01c(function_tmpdir, targets):
         exe=mf6,
     )
 
-    mf2005 = targets["mf2005s"]
-    mt3dms = targets["mt3dms"]
-    mt3d_ws = os.path.join(mf6_ws, "mt3d")
     mf, mt, conc_mt3d, cvt, mvt = p01mt3d(
         mt3d_ws,
         longitudinal_dispersivity,
@@ -611,8 +622,9 @@ def test_mt3dmsp01c(function_tmpdir, targets):
         mt3dms=mt3dms,
     )
 
-    msg = f"concentrations not equal {conc_mt3d} {conc_mf6}"
-    assert np.allclose(conc_mt3d, conc_mf6, atol=1e-4), msg
+    assert np.allclose(
+        conc_mt3d, conc_mf6, atol=1e-4
+    ), f"concentrations not equal {conc_mt3d} {conc_mf6}"
 
 
 def test_mt3dmsp01d(function_tmpdir, targets):
@@ -623,8 +635,10 @@ def test_mt3dmsp01d(function_tmpdir, targets):
     zeta = None
     prsity2 = None
 
-    mf6 = targets["mf6"]
-    mf6_ws = str(function_tmpdir / (testgroup + "d"))
+    mf6, mf2005, mt3dms = get_binaries(targets)
+    mf6_ws = function_tmpdir / f"{testgroup}d"
+    mt3d_ws = mf6_ws / "mt3d"
+
     sim, conc_mf6 = p01mf6(
         mf6_ws,
         longitudinal_dispersivity,
@@ -636,9 +650,6 @@ def test_mt3dmsp01d(function_tmpdir, targets):
         exe=mf6,
     )
 
-    mf2005 = targets["mf2005s"]
-    mt3dms = targets["mt3dms"]
-    mt3d_ws = os.path.join(mf6_ws, "mt3d")
     mf, mt, conc_mt3d, cvt, mvt = p01mt3d(
         mt3d_ws,
         longitudinal_dispersivity,
@@ -651,8 +662,9 @@ def test_mt3dmsp01d(function_tmpdir, targets):
         mt3dms=mt3dms,
     )
 
-    msg = f"concentrations not equal {conc_mt3d} {conc_mf6}"
-    assert np.allclose(conc_mt3d, conc_mf6, atol=1e-4), msg
+    assert np.allclose(
+        conc_mt3d, conc_mf6, atol=1e-4
+    ), f"concentrations not equal {conc_mt3d} {conc_mf6}"
 
 
 def test_mt3dmsp01e(function_tmpdir, targets):
@@ -663,8 +675,10 @@ def test_mt3dmsp01e(function_tmpdir, targets):
     zeta = 0.1
     prsity2 = 0.05
 
-    mf6 = targets["mf6"]
-    mf6_ws = str(function_tmpdir / (testgroup + "e"))
+    mf6, mf2005, mt3dms = get_binaries(targets)
+    mf6_ws = function_tmpdir / f"{testgroup}e"
+    mt3d_ws = mf6_ws / "mt3d"
+
     sim, conc_mf6 = p01mf6(
         mf6_ws,
         longitudinal_dispersivity,
@@ -676,9 +690,6 @@ def test_mt3dmsp01e(function_tmpdir, targets):
         exe=mf6,
     )
 
-    mf2005 = targets["mf2005s"]
-    mt3dms = targets["mt3dms"]
-    mt3d_ws = os.path.join(mf6_ws, "mt3d")
     mf, mt, conc_mt3d, cvt, mvt = p01mt3d(
         mt3d_ws,
         longitudinal_dispersivity,
@@ -691,8 +702,9 @@ def test_mt3dmsp01e(function_tmpdir, targets):
         mt3dms=mt3dms,
     )
 
-    msg = f"concentrations not equal {conc_mt3d} {conc_mf6}"
-    assert np.allclose(conc_mt3d, conc_mf6, atol=1e-1), msg
+    assert np.allclose(
+        conc_mt3d, conc_mf6, atol=1e-1
+    ), f"concentrations not equal {conc_mt3d} {conc_mf6}"
 
 
 def test_mt3dmsp01f(function_tmpdir, targets):
@@ -703,8 +715,10 @@ def test_mt3dmsp01f(function_tmpdir, targets):
     zeta = 0.1
     prsity2 = 0.05
 
-    mf6 = targets["mf6"]
-    mf6_ws = str(function_tmpdir / (testgroup + "f"))
+    mf6, mf2005, mt3dms = get_binaries(targets)
+    mf6_ws = function_tmpdir / f"{testgroup}f"
+    mt3d_ws = mf6_ws / "mt3d"
+
     sim, conc_mf6 = p01mf6(
         mf6_ws,
         longitudinal_dispersivity,
@@ -717,9 +731,6 @@ def test_mt3dmsp01f(function_tmpdir, targets):
         exe=mf6,
     )
 
-    mf2005 = targets["mf2005s"]
-    mt3dms = targets["mt3dms"]
-    mt3d_ws = os.path.join(mf6_ws, "mt3d")
     mf, mt, conc_mt3d, cvt, mvt = p01mt3d(
         mt3d_ws,
         longitudinal_dispersivity,
@@ -732,8 +743,9 @@ def test_mt3dmsp01f(function_tmpdir, targets):
         mt3dms=mt3dms,
     )
 
-    msg = f"concentrations not equal {conc_mt3d} {conc_mf6}"
-    assert np.allclose(conc_mt3d, conc_mf6, atol=1e-1), msg
+    assert np.allclose(
+        conc_mt3d, conc_mf6, atol=1e-1
+    ), f"concentrations not equal {conc_mt3d} {conc_mf6}"
 
 
 def test_mt3dmsp01g(function_tmpdir, targets):
@@ -744,8 +756,10 @@ def test_mt3dmsp01g(function_tmpdir, targets):
     zeta = None
     prsity2 = None
 
-    mf6 = targets["mf6"]
-    mf6_ws = str(function_tmpdir / (testgroup + "g"))
+    mf6, mf2005, mt3dms = get_binaries(targets)
+    mf6_ws = function_tmpdir / f"{testgroup}g"
+    mt3d_ws = mf6_ws / "mt3d"
+
     sim, conc_mf6 = p01mf6(
         mf6_ws,
         longitudinal_dispersivity,
@@ -758,9 +772,6 @@ def test_mt3dmsp01g(function_tmpdir, targets):
         exe=mf6,
     )
 
-    mf2005 = targets["mf2005s"]
-    mt3dms = targets["mt3dms"]
-    mt3d_ws = os.path.join(mf6_ws, "mt3d")
     mf, mt, conc_mt3d, cvt, mvt = p01mt3d(
         mt3d_ws,
         longitudinal_dispersivity,
@@ -775,5 +786,6 @@ def test_mt3dmsp01g(function_tmpdir, targets):
         mt3dms=mt3dms,
     )
 
-    msg = f"concentrations not equal {conc_mt3d} {conc_mf6}"
-    assert np.allclose(conc_mt3d, conc_mf6, atol=1.0e-4), msg
+    assert np.allclose(
+        conc_mt3d, conc_mf6, atol=1.0e-4
+    ), f"concentrations not equal {conc_mt3d} {conc_mf6}"

@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 from flopy.utils.gridgen import Gridgen
 
+from conftest import try_get_target
 from framework import TestFramework
 from simulation import TestSimulation
 
@@ -425,17 +426,16 @@ def eval_zdis(sim):
             + f"z-displacement at time {totim}"
         )
 
-    return
-
 
 @pytest.mark.parametrize(
     "idx, name",
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
+    gridgen = try_get_target(targets, "gridgen")
     ws = function_tmpdir
     test = TestFramework()
-    test.build(lambda i, w: build_model(i, w, targets.gridgen), idx, ws)
+    test.build(lambda i, w: build_model(i, w, gridgen), idx, ws)
     test.run(
         TestSimulation(
             name=name,
