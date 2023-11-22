@@ -209,5 +209,4 @@ def test_mf6model(function_tmpdir, targets):
 
     # rerun the model, should be no errors
     success, buff = sim.run_simulation()
-
-    assert success, "model rerun failed"
+    assert success, buff

@@ -18,7 +18,6 @@ import flopy
 import pytest
 from framework import TestFramework
 from modflowapi import ModflowApi
-from simulation import TestSimulation
 
 ex = ["libgwf_ifmod01"]
 
@@ -28,7 +27,6 @@ name_right = "rightmodel"
 
 
 def get_model(dir, name):
-
     useXT3D = True
 
     # parameters and spd
@@ -312,12 +310,11 @@ def check_interface_models(mf6):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, idxsim=idx, api_func=api_func
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        targets=targets,
+        api_func=lambda exe, ws: api_func(exe, idx, ws),
     )
+    test.run()

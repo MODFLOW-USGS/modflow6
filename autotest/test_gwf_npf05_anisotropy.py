@@ -10,13 +10,11 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["npf05a"]
 
 
 def build_model(idx, dir):
-
     nlay, nrow, ncol = 2, 1, 5
     chdheads = [100.0]
     nper = len(chdheads)
@@ -127,7 +125,7 @@ def build_model(idx, dir):
 
 def eval_model(sim):
     print("evaluating model...")
-    fpth = os.path.join(sim.simpath, "npf.hds")
+    fpth = os.path.join(sim.workspace, "npf.hds")
     hobj = flopy.utils.HeadFile(fpth, precision="double")
     heads = hobj.get_alldata()
     # answer was obtained from running problem without anistropy
@@ -152,12 +150,11 @@ def eval_model(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_model, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_model,
+        targets=targets,
     )
+    test.run()

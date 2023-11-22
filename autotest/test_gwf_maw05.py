@@ -10,7 +10,6 @@ import numpy as np
 import pytest
 
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["maw_05a", "maw_05b", "maw_05c"]
 mawstrt = [4.0, 3.5, 2.5]  # add 3.0
@@ -178,26 +177,26 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_results(sim):
+def eval_results(idx, test):
     print("evaluating results...")
 
     # calculate volume of water and make sure it is conserved
-    name = ex[sim.idxsim]
+    name = ex[idx]
     gwfname = "gwf_" + name
     fname = gwfname + ".maw.bin"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     bobj = flopy.utils.HeadFile(fname, text="HEAD")
     stage = bobj.get_alldata().flatten()
 
     fname = gwfname + ".hds"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     hobj = flopy.utils.HeadFile(fname)
     head = hobj.get_alldata()
 
     # calculate initial volume of water in well and aquifer
-    v0maw = mawstrt[sim.idxsim] * np.pi * 0.1**2
+    v0maw = mawstrt[idx] * np.pi * 0.1**2
     v0gwf = 4 * 7 * 0.3
     v0 = v0maw + v0gwf
     top = [4.0, 3.0, 2.0, 1.0]
@@ -246,12 +245,12 @@ def eval_results(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=lambda t: eval_results(idx, t),
+        targets=targets,
+        mf6_regression=True,
     )
+    test.run()

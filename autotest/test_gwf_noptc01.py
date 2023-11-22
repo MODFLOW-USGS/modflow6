@@ -3,7 +3,6 @@ import os
 import flopy
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["gwf_noptc01", "gwf_noptc02", "gwf_noptc03"]
 no_ptcrecords = ["FIRST", "ALL", None]
@@ -138,7 +137,10 @@ def build_model(idx, dir):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(TestSimulation(name=name, exe_dict=targets, idxsim=idx), ws)
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        targets=targets,
+    )
+    test.run()

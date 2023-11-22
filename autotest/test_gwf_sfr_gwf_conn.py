@@ -4,7 +4,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 paktest = "sfr"
 ex = [
@@ -14,8 +13,8 @@ ex = [
     "sfr_disv",
     "sfr_disv_fail",
     "sfr_disv_none",
-    "sfr_disu", 
-    "sfr_disu_fail", 
+    "sfr_disu",
+    "sfr_disu_fail",
     "sfr_disu_none",
 ]
 dis_types = [
@@ -25,8 +24,8 @@ dis_types = [
     "disv",
     "disv",
     "disv",
-    "disu", 
-    "disu", 
+    "disu",
+    "disu",
     "disu",
 ]
 
@@ -71,7 +70,7 @@ def build_model(idx, ws):
         sim_ws=ws,
     )
     sim.simulation_data.verify_data = False
-    
+
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
         sim,
@@ -203,7 +202,7 @@ def build_model(idx, ws):
         ]
         packagedata.append(rp)
 
-    if not ws.endswith("mf6"):
+    if not str(ws).endswith("mf6"):
         packagedata = packagedata[::-1]
 
     connectiondata = []
@@ -272,21 +271,13 @@ def build_models(idx, base_ws):
 
 @pytest.mark.parametrize("idx, name", enumerate(ex))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    if "fail" in name:
-        require_failure = True
-    else:
-        require_failure = False
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_models, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            idxsim=idx,
-            mf6_regression=False,
-            make_comparison=False,
-            require_failure=require_failure,
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        targets=targets,
+        mf6_regression=False,
+        make_comparison=False,
+        require_failure="fail" in name,
     )
+    test.run()

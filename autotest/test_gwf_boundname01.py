@@ -4,7 +4,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = [
     "bndname01",
@@ -12,7 +11,6 @@ ex = [
 
 
 def build_model(idx, exdir):
-
     sim = get_model(idx, exdir)
 
     ws = os.path.join(exdir, "mf6")
@@ -22,7 +20,6 @@ def build_model(idx, exdir):
 
 
 def get_model(idx, ws):
-
     nlay, nrow, ncol = 1, 1, 100
     nper = 1
     perlen = [5.0]
@@ -155,14 +152,14 @@ def replace_quotes(idx, exdir):
                 f.write(line.replace("'", '"').replace('face"s', "face's"))
 
 
-def eval_obs(sim):
-    print("evaluating observations results..." f"({sim.name})")
+def eval_results(test):
+    print("evaluating observations results..." f"({test.name})")
 
-    fpth = os.path.join(sim.simpath, f"gwf_{sim.name}.chd.obs.csv")
+    fpth = os.path.join(test.workspace, f"gwf_{test.name}.chd.obs.csv")
     obs0 = np.genfromtxt(fpth, delimiter=",", names=True)
     names0 = obs0.dtype.names
 
-    fpth = os.path.join(sim.simpath, "mf6", f"gwf_{sim.name}.chd.obs.csv")
+    fpth = os.path.join(test.workspace, "mf6", f"gwf_{test.name}.chd.obs.csv")
     obs1 = np.genfromtxt(fpth, delimiter=",", names=True)
     names1 = obs1.dtype.names
 
@@ -175,9 +172,11 @@ def eval_obs(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, 0, str(function_tmpdir))
-    test.run(
-        TestSimulation(name=name, exe_dict=targets, idxsim=0),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_results,
+        targets=targets,
     )
+    test.run()

@@ -1,7 +1,7 @@
 import pytest
 
 from conftest import should_compare
-from simulation import TestSimulation
+from framework import TestFramework
 
 # skip nested models
 # ex-gwf-csub-p02c has subdirs like 'es-001', 'hb-100'
@@ -61,22 +61,19 @@ def test_scenario(function_tmpdir, example_scenario, targets):
     for exdir in exdirs:
         model_name = f"{name}_{exdir.name}"
         workspace = function_tmpdir / model_name
-        sim = TestSimulation(
+        test = TestFramework(
             name=model_name,
-            exe_dict=targets,
+            workspace=exdir,
+            targets=targets,
             mf6_regression=True,
             cmp_verbose=False,
             make_comparison=should_compare(
                 name, excluded_comparisons, targets
             ),
-            simpath=str(exdir),
         )
-
-        src = sim.simpath
-        dst = str(workspace)
 
         # Run the MODFLOW 6 simulation and compare to existing head file or
         # appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
-        sim.setup(src, dst)
-        sim.run()
-        sim.compare()
+        test.setup(test.workspace, workspace)
+        test.run()
+        test.compare()

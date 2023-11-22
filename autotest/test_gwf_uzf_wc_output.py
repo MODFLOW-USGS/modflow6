@@ -5,7 +5,6 @@ import flopy.utils.binaryfile as bf
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 include_NWT = False
 
@@ -223,7 +222,6 @@ uzf_spd = {
 
 
 def build_mf6_model(idx, ws):
-
     tdis_rc = []
     for i in range(nper):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
@@ -343,7 +341,6 @@ def build_mf6_model(idx, ws):
 
 
 def build_mfnwt_model(idx, ws):
-
     name = ex[idx]
 
     # build MODFLOW-NWT files
@@ -453,7 +450,7 @@ def eval_model(sim):
     print("evaluating model...")
 
     name = sim.name
-    ws = sim.simpath
+    ws = sim.workspace
 
     # Get the MF6 heads
     fpth = os.path.join(ws, "uzf_3lay_wc_chk.hds")
@@ -542,19 +539,15 @@ def eval_model(sim):
 
 
 @pytest.mark.parametrize(
-    "name",
-    ex,
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_model,
-            idxsim=0,
-        ),
-        ws,
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_model,
+        targets=targets,
     )
+    test.run()

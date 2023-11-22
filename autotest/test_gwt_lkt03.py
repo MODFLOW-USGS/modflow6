@@ -6,8 +6,7 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation, DNODATA
+from framework import TestFramework, DNODATA
 
 ex = ["lkt_03"]
 
@@ -339,7 +338,7 @@ def eval_results(sim):
     name = sim.name
     gwtname = "gwt_" + name
     fname = gwtname + ".lkt.bin"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(sim.workspace, fname)
     assert os.path.isfile(fname)
 
     # load the lake concentrations and make sure all values are correct
@@ -350,7 +349,7 @@ def eval_results(sim):
 
     # load the aquifer concentrations and make sure all values are correct
     fname = gwtname + ".ucn"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(sim.workspace, fname)
     cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")
     caq = cobj.get_data()
     answer = np.zeros((7,))
@@ -358,7 +357,7 @@ def eval_results(sim):
 
     # load the lake budget file
     fname = gwtname + ".lkt.bud"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(sim.workspace, fname)
     assert os.path.isfile(fname)
     bobj = flopy.utils.CellBudgetFile(fname, precision="double", verbose=False)
 
@@ -383,16 +382,15 @@ def eval_results(sim):
 
 
 @pytest.mark.parametrize(
-    "name",
-    ex,
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=0
-        ),
-        ws,
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_results, 
     )
+    test.run()

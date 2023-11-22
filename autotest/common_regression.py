@@ -375,7 +375,7 @@ def setup_mf6(
     create_dir = False
     if os.path.exists(dst):
         if remove_existing:
-            print("Removing folder " + dst)
+            print("Removing folder ", dst)
             shutil.rmtree(dst)
             create_dir = True
     else:

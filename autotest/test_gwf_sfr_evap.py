@@ -6,7 +6,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["sfr-evap"]
 
@@ -378,16 +377,16 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_results(sim):
+def eval_results(idx, test):
     print("evaluating results...")
 
     # read flow results from model
-    name = ex[sim.idxsim]
+    name = ex[idx]
     gwfname_t = "gwf-" + name + "-t"
     gwfname_r = "gwf-" + name + "-r"
 
     fname = gwfname_t + ".sfr.cbc"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
 
     sfrobj = flopy.utils.binaryfile.CellBudgetFile(fname, precision="double")
@@ -416,7 +415,7 @@ def eval_results(sim):
 
     # Now check results from standard rectangular x-section setup (not an n-point channel)
     fname2 = gwfname_r + ".sfr.cbc"
-    fname2 = os.path.join(sim.simpath, fname2)
+    fname2 = os.path.join(test.workspace, fname2)
     assert os.path.isfile(fname2)
 
     sfrobj = flopy.utils.binaryfile.CellBudgetFile(fname2, precision="double")
@@ -441,12 +440,11 @@ def eval_results(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=lambda t: eval_results(idx, t),
+        targets=targets,
     )
+    test.run()

@@ -1,6 +1,6 @@
 import pytest
 from conftest import should_compare
-from simulation import TestSimulation
+from framework import TestFramework
 
 excluded_models = ["alt_model", "test205_gwtbuy-henrytidal"]
 excluded_comparisons = {
@@ -47,21 +47,21 @@ def test_model(function_tmpdir, test_model_mf6, targets, original_regression, ma
     if "dev" in name and "not developmode" in markers:
         pytest.skip(f"Skipping mf6 model '{name}' (develop mode only)")
 
-    sim = TestSimulation(
+    test = TestFramework(
         name=name,
-        exe_dict=targets,
+        workspace=exdir,
+        targets=targets,
         mf6_regression=not original_regression,
         cmp_verbose=False,
         make_comparison=should_compare(name, excluded_comparisons, targets),
-        simpath=str(exdir),
     )
 
     src = exdir
-    dst = str(function_tmpdir)
+    dst = function_tmpdir
 
     # Run the MODFLOW 6 simulation and compare to results generated using
     # 1) the current MODFLOW 6 release, 2) an existing head file, or 3) or
     # appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
-    sim.setup(src, dst)
-    sim.run()
-    sim.compare()
+    test.setup(src, dst)
+    test.run()
+    test.compare()

@@ -9,7 +9,6 @@ import numpy as np
 import pytest
 
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["maw_06a", "maw_06b"]
 
@@ -198,27 +197,27 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_results(sim):
+def eval_results(idx, test):
     print("evaluating results...")
 
     # calculate volume of water and make sure it is conserved
-    name = ex[sim.idxsim]
+    name = ex[idx]
     gwfname = "gwf_" + name
     fname = gwfname + ".maw.bin"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     bobj = flopy.utils.HeadFile(fname, text="HEAD")
     stage = bobj.get_alldata().flatten()
 
     fname = gwfname + ".hds"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     hobj = flopy.utils.HeadFile(fname)
     head = hobj.get_alldata()
 
     # calculate initial volume of water in well and aquifer
-    v0maw = mawstrt[sim.idxsim] * mawarea
-    v0gwf = (gwfstrt[sim.idxsim] - bot) * sy * gwfarea
+    v0maw = mawstrt[idx] * mawarea
+    v0gwf = (gwfstrt[idx] - bot) * sy * gwfarea
     v0 = v0maw + v0gwf
 
     print(
@@ -258,13 +257,13 @@ def eval_results(sim):
 
     # compare the maw-gwf flows with the gwf-maw flows
     fname = gwfname + ".maw.bud"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     mbud = flopy.utils.CellBudgetFile(fname, precision="double")
     maw_gwf = mbud.get_data(text="GWF")
 
     fname = gwfname + ".cbc"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     gbud = flopy.utils.CellBudgetFile(fname, precision="double")
     gwf_maw = gbud.get_data(text="MAW")
@@ -285,12 +284,12 @@ def eval_results(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=lambda t: eval_results(idx, t),
+        targets=targets,
+        mf6_regression=True,
     )
+    test.run()

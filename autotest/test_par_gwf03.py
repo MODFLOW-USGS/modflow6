@@ -5,7 +5,6 @@ import numpy as np
 from decimal import Decimal
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 # Scaling parallel MODFLOW running a simple
 # (multi-)model setup on different partitionings
@@ -218,7 +217,7 @@ def build_model(idx, exdir):
     return sim, None
 
 def eval_model(sim):
-    mf6_sim = flopy.mf6.MFSimulation.load(sim_ws=sim.simpath)
+    mf6_sim = flopy.mf6.MFSimulation.load(sim_ws=sim.workspace)
     for mname in mf6_sim.model_names:
         m = mf6_sim.get_model(mname)
         hds = m.output.head().get_data().flatten()
@@ -232,14 +231,15 @@ def eval_model(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    np = ncpus[idx]
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_model, 
-            idxsim=0, make_comparison=False,
-            parallel=True, ncpus=np,
-        ),
-        str(function_tmpdir),
+    ncpus = ncpus[idx]
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_model, 
+        make_comparison=False,
+        parallel=True,
+        ncpus=ncpus,
     )
+    test.run()

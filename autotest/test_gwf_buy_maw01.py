@@ -10,13 +10,11 @@
 #  3.  Buoyancy package with maw and aquifer density = 1024.5
 
 import os
-import sys
 
 import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["buy_maw_01a"]  # , 'buy_maw_01b', 'buy_maw_01c']
 buy_on_list = [False]  # , True, True]
@@ -191,13 +189,13 @@ def eval_results(sim):
     # calculate volume of water and make sure it is conserved
     gwfname = "gwf_" + sim.name
     fname = gwfname + ".maw.bin"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(sim.workspace, fname)
     assert os.path.isfile(fname)
     bobj = flopy.utils.HeadFile(fname, text="HEAD")
     stage = bobj.get_alldata().flatten()
 
     fname = gwfname + ".hds"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(sim.workspace, fname)
     assert os.path.isfile(fname)
     hobj = flopy.utils.HeadFile(fname)
     head = hobj.get_alldata()
@@ -214,7 +212,6 @@ def eval_results(sim):
     # calculate current volume of water in well and aquifer and compare with
     # initial volume
     for kstp, mawstage in enumerate(stage):
-
         vgwf = 0
         for k in range(nlay):
             for j in range(ncol):
@@ -229,13 +226,13 @@ def eval_results(sim):
     # compare the maw-gwf flows in maw budget file with the gwf-maw flows in
     # gwf budget file.  Values should be the same but reversed in sign
     fname = gwfname + ".maw.bud"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(sim.workspace, fname)
     assert os.path.isfile(fname)
     mbud = flopy.utils.CellBudgetFile(fname, precision="double")
     maw_gwf = mbud.get_data(text="GWF")
 
     fname = gwfname + ".cbc"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(sim.workspace, fname)
     assert os.path.isfile(fname)
     gbud = flopy.utils.CellBudgetFile(fname, precision="double")
     gwf_maw = gbud.get_data(text="MAW")
@@ -256,11 +253,11 @@ def eval_results(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, 0, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=0
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_results,
+        targets=targets,
     )
+    test.run()

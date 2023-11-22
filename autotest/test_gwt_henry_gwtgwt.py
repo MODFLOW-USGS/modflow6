@@ -4,7 +4,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["henry01-gwtgwt-ups", "henry01-gwtgwt-cen", "henry01-gwtgwt-tvd"]
 advection_scheme = ["UPSTREAM", "CENTRAL", "TVD"]
@@ -348,15 +347,15 @@ def build_model(idx, dir):
 def eval_transport(sim):
     print("evaluating transport...")
 
-    fpth = os.path.join(sim.simpath, "gwf_ref.hds")
+    fpth = os.path.join(sim.workspace, "gwf_ref.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads = hds.get_data()
 
-    fpth = os.path.join(sim.simpath, "gwf_left.hds")
+    fpth = os.path.join(sim.workspace, "gwf_left.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads_left = hds.get_data()
 
-    fpth = os.path.join(sim.simpath, "gwf_right.hds")
+    fpth = os.path.join(sim.workspace, "gwf_right.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads_right = hds.get_data()
 
@@ -371,21 +370,21 @@ def eval_transport(sim):
         maxdiff, 10 * hclose
     )
 
-    fpth = os.path.join(sim.simpath, f"gwt_ref.ucn")
+    fpth = os.path.join(sim.workspace, f"gwt_ref.ucn")
     try:
         cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
         conc_ref = cobj.get_data()
     except:
         assert False, f'could not load data from "{fpth}"'
 
-    fpth = os.path.join(sim.simpath, f"gwt_left.ucn")
+    fpth = os.path.join(sim.workspace, f"gwt_left.ucn")
     try:
         cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
         conc_left = cobj.get_data()
     except:
         assert False, f'could not load data from "{fpth}"'
 
-    fpth = os.path.join(sim.simpath, f"gwt_right.ucn")
+    fpth = os.path.join(sim.workspace, f"gwt_right.ucn")
     try:
         cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
         conc_right = cobj.get_data()
@@ -409,10 +408,11 @@ def eval_transport(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(name=name, exe_dict=targets, exfunc=eval_transport, idxsim=0),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_transport, 
     )
+    test.run()

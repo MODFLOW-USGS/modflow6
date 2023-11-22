@@ -8,7 +8,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["gwf_ats_lak_01a"]
 gwf = None
@@ -257,7 +256,7 @@ def make_plot_xsect(sim, headall, stageall):
         # ax.set_ylim(-10, 5)
 
     fname = "fig-xsect.pdf"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(sim.workspace, fname)
     plt.savefig(fname, bbox_inches="tight")
 
 
@@ -274,7 +273,7 @@ def make_plot(sim, times, headall, stageall):
     ax.plot(times, h, "bo-", label="max head")
 
     fname = "fig-timeseries.pdf"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(sim.workspace, fname)
     plt.savefig(fname, bbox_inches="tight")
 
 
@@ -293,14 +292,14 @@ def eval_results(sim):
 
     # calculate volume of water and make sure it is conserved
     fname = sim.name + ".lak.bin"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(sim.workspace, fname)
     assert os.path.isfile(fname)
     bobj = flopy.utils.HeadFile(fname, text="STAGE")
     times = bobj.get_times()
     stage = bobj.get_alldata()
 
     fname = sim.name + ".cbc"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(sim.workspace, fname)
     bobj = flopy.utils.CellBudgetFile(fname, precision="double", verbose=False)
     times = bobj.get_times()
     idomain = gwf.dis.idomain.array
@@ -308,7 +307,6 @@ def eval_results(sim):
 
     all_passed = True
     for itime, t in enumerate(times):
-
         print(f"processing totim {t}")
         stage_current = stage[itime].flatten()
         print(f"lake stage = {stage_current}")
@@ -344,7 +342,7 @@ def eval_results(sim):
     assert all_passed, "found recharge applied to cell beneath active lake"
 
     fname = sim.name + ".hds"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(sim.workspace, fname)
     assert os.path.isfile(fname)
     hobj = flopy.utils.HeadFile(fname)
     head = hobj.get_alldata()
@@ -415,11 +413,11 @@ def eval_results(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, 0, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=0
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_results,
+        targets=targets,
     )
+    test.run()

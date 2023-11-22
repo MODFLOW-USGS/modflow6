@@ -14,7 +14,6 @@ import flopy.utils.cvfdutil
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["adv03a", "adv03b", "adv03c"]
 scheme = ["upstream", "central", "tvd"]
@@ -331,13 +330,13 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_transport(sim):
+def eval_transport(idx, test):
     print("evaluating transport...")
 
-    name = ex[sim.idxsim]
+    name = ex[idx]
     gwtname = "gwt_" + name
 
-    fpth = os.path.join(sim.simpath, f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
     try:
         cobj = flopy.utils.HeadFile(
             fpth, precision="double", text="CONCENTRATION"
@@ -482,14 +481,14 @@ def eval_transport(sim):
     # dimensional
     creslist = [cres1, cres2, cres3]
     ncellsperrow = cres1.shape[0]
-    assert np.allclose(creslist[sim.idxsim], conc[0, 0, 0:ncellsperrow]), (
+    assert np.allclose(creslist[idx], conc[0, 0, 0:ncellsperrow]), (
         "simulated concentrations do not match with known solution.",
-        creslist[sim.idxsim],
+        creslist[idx],
         conc[0, 0, -ncellsperrow:],
     )
-    assert np.allclose(creslist[sim.idxsim], conc[0, 0, -ncellsperrow:]), (
+    assert np.allclose(creslist[idx], conc[0, 0, -ncellsperrow:]), (
         "simulated concentrations do not match with known solution.",
-        creslist[sim.idxsim],
+        creslist[idx],
         conc[0, 0, -ncellsperrow:],
     )
 
@@ -499,12 +498,11 @@ def eval_transport(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda ws: build_model(idx, ws),
+        check=lambda t: eval_transport(idx, t), 
     )
+    test.run()

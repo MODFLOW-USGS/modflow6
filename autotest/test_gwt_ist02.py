@@ -17,7 +17,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["ist02"]
 nlay, nrow, ncol = 1, 1, 300
@@ -321,7 +320,7 @@ def build_model(idx, dir):
 def make_plot(sim):
     print("making plots...")
     name = sim.name
-    ws = sim.simpath
+    ws = sim.workspace
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
@@ -359,7 +358,7 @@ def eval_transport(sim):
     gwfname = "gwf_" + name
 
     # load the observed concentrations in column 300
-    fname = os.path.join(sim.simpath, gwtname + ".obs.csv")
+    fname = os.path.join(sim.workspace, gwtname + ".obs.csv")
     assert os.path.isfile(fname), f"file not found: {fname}"
     simvals = np.genfromtxt(fname, names=True, delimiter=",", deletechars="")
 
@@ -381,16 +380,15 @@ def eval_transport(sim):
 
 
 @pytest.mark.parametrize(
-    "name",
-    ex,
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=0
-        ),
-        ws,
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_transport, 
     )
+    test.run()

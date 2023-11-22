@@ -9,7 +9,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["gwf_utl05"]
 laytyp = [1]
@@ -19,7 +18,6 @@ nlay, nrow, ncol = 1, 1, 1
 
 
 def build_model(idx, dir):
-
     nper = 2
     perlen = [2.0, 2.0]
     nstp = [14, 14]
@@ -147,7 +145,7 @@ def eval_flow(sim):
     gwfname = "gwf_" + sim.name
 
     # This will fail if budget numbers cannot be read
-    fpth = os.path.join(sim.simpath, f"{gwfname}.lst")
+    fpth = os.path.join(sim.workspace, f"{gwfname}.lst")
     mflist = flopy.utils.Mf6ListBudget(fpth)
     names = mflist.get_record_names()
     print(names)
@@ -160,16 +158,15 @@ def eval_flow(sim):
 
 
 @pytest.mark.parametrize(
-    "name",
-    ex,
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_flow, idxsim=0
-        ),
-        ws,
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_flow,
+        targets=targets,
     )
+    test.run()

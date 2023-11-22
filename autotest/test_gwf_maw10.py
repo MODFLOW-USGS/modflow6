@@ -14,7 +14,6 @@ import numpy as np
 import pytest
 
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["maw10a", "maw10b", "maw10c", "maw10d"]
 mawsetting_a = {
@@ -212,14 +211,13 @@ def build_model(idx, dir):
 # 1. within the .maw-reduction.csv file, do values of actual + reduction = requested?
 # 2. do the values in .maw-reduction.csv file match with the .maw.obs.csv file at each time
 #  (and all are reduction times present in the obs file)?
-def eval_mawred(sim):
+def eval_results(idx, test):
     print("evaluating MAW flow reduction outputs...")
 
     # MODFLOW 6 maw results
-    idx = sim.idxsim
     name = ex[idx]
-    fpthobs = os.path.join(sim.simpath, f"{name}.maw.obs.csv")
-    fpthmfr = os.path.join(sim.simpath, f"{name}.maw-reduction.csv")
+    fpthobs = os.path.join(test.workspace, f"{name}.maw.obs.csv")
+    fpthmfr = os.path.join(test.workspace, f"{name}.maw-reduction.csv")
     try:
         tcobs = np.genfromtxt(fpthobs, names=True, delimiter=",")
     except:
@@ -271,12 +269,11 @@ def eval_mawred(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_mawred, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=lambda t: eval_results(idx, t),
+        targets=targets,
     )
+    test.run()

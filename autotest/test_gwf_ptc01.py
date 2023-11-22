@@ -10,9 +10,7 @@ import os
 import flopy
 import numpy as np
 import pytest
-from conftest import project_root_path
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["ptc01"]
 # static model data
@@ -128,7 +126,7 @@ def build_mf6(idx, ws, storage=True):
         saverecord=[("HEAD", "ALL"), ("BUDGET", "ALL")],
         printrecord=[("HEAD", "LAST"), ("BUDGET", "ALL")],
     )
-    
+
     return sim
 
 
@@ -149,7 +147,10 @@ def build_model(idx, dir):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(TestSimulation(name=name, exe_dict=targets), ws)
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        targets=targets,
+    )
+    test.run()

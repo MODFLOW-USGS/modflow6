@@ -4,7 +4,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["newton01"]
 nlay = 2
@@ -99,7 +98,7 @@ def build_model(idx, ws):
 
 def eval_head(sim):
     print("evaluating heads...")
-    fpth = os.path.join(sim.simpath, oname)
+    fpth = os.path.join(sim.workspace, oname)
     v = np.genfromtxt(fpth, delimiter=",", names=True)
 
     msg = f"head in layer 1 != 8. ({v['H1']})"
@@ -114,7 +113,11 @@ def eval_head(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(TestSimulation(name=name, exe_dict=targets, exfunc=eval_head), ws)
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_head,
+        targets=targets,
+    )
+    test.run()

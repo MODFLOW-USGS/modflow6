@@ -4,7 +4,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 paktest = "sfr"
 ex = ["sfr_reorder"]
@@ -29,7 +28,6 @@ ndv = 0
 
 
 def build_model(idx, ws):
-
     # static model data
     # temporal discretization
     nper = 1
@@ -115,11 +113,11 @@ def build_model(idx, ws):
         ]
         packagedata.append(rp)
 
-    if not ws.endswith("mf6"):
+    if not str(ws).endswith("mf6"):
         packagedata = packagedata[::-1]
 
     connectiondata = []
-    if not ws.endswith("mf6"):
+    if not str(ws).endswith("mf6"):
         inflow_loc = nreaches - 1
         ioutflow_loc = 0
         for irch in range(inflow_loc, -1, -1):
@@ -208,10 +206,10 @@ def eval_flows(sim):
     name = sim.name
     print("evaluating flow results..." f"({name})")
 
-    obs_pth = os.path.join(sim.simpath, f"{name}.sfr.obs.csv")
+    obs_pth = os.path.join(sim.workspace, f"{name}.sfr.obs.csv")
     obs0 = flopy.utils.Mf6Obs(obs_pth).get_data()
 
-    obs_pth = os.path.join(sim.simpath, "mf6", f"{name}.sfr.obs.csv")
+    obs_pth = os.path.join(sim.workspace, "mf6", f"{name}.sfr.obs.csv")
     obs1 = flopy.utils.Mf6Obs(obs_pth).get_data()
 
     assert np.allclose(obs0["INFLOW"], obs1["INFLOW"]), "inflows are not equal"
@@ -220,7 +218,7 @@ def eval_flows(sim):
         obs0["OUTFLOW"], obs1["OUTFLOW"]
     ), "outflows are not equal"
 
-    fpth = os.path.join(sim.simpath, f"{name}.lst")
+    fpth = os.path.join(sim.workspace, f"{name}.lst")
     with open(fpth, "r") as f:
         lines = f.read().splitlines()
 
@@ -246,15 +244,11 @@ def eval_flows(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_models, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_flows,
-            idxsim=idx,
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_models(idx, ws),
+        check=eval_flows,
+        targets=targets,
     )
+    test.run()

@@ -4,7 +4,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 # Test for the interface model approach.
 # It compares the result of a single, strongly anisotropic model
@@ -312,24 +311,24 @@ def qxqyqz(fname, nlay, nrow, ncol):
 def compare_to_ref(sim):
     print("comparing heads and spec. discharge to single model reference...")
 
-    fpth = os.path.join(sim.simpath, f"{mname_ref}.hds")
+    fpth = os.path.join(sim.workspace, f"{mname_ref}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads = hds.get_data()
-    fpth = os.path.join(sim.simpath, f"{mname_ref}.cbc")
+    fpth = os.path.join(sim.workspace, f"{mname_ref}.cbc")
     nlay, nrow, ncol = heads.shape
     qxb, qyb, qzb = qxqyqz(fpth, nlay, nrow, ncol)
 
-    fpth = os.path.join(sim.simpath, f"{mname_left}.hds")
+    fpth = os.path.join(sim.workspace, f"{mname_left}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads_left = hds.get_data()
-    fpth = os.path.join(sim.simpath, f"{mname_left}.cbc")
+    fpth = os.path.join(sim.workspace, f"{mname_left}.cbc")
     nlay, nrow, ncol = heads_left.shape
     qxb_left, qyb_left, qzb_left = qxqyqz(fpth, nlay, nrow, ncol)
 
-    fpth = os.path.join(sim.simpath, f"{mname_right}.hds")
+    fpth = os.path.join(sim.workspace, f"{mname_right}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads_right = hds.get_data()
-    fpth = os.path.join(sim.simpath, f"{mname_right}.cbc")
+    fpth = os.path.join(sim.workspace, f"{mname_right}.cbc")
     nlay, nrow, ncol = heads_right.shape
     qxb_right, qyb_right, qzb_right = qxqyqz(fpth, nlay, nrow, ncol)
 
@@ -400,7 +399,7 @@ def compare_to_ref(sim):
 
     # check budget error from .lst file
     for mname in [mname_ref, mname_left, mname_right]:
-        fpth = os.path.join(sim.simpath, f"{mname}.lst")
+        fpth = os.path.join(sim.workspace, f"{mname}.lst")
         for line in open(fpth):
             if line.lstrip().startswith("PERCENT"):
                 cumul_balance_error = float(line.split()[3])
@@ -416,11 +415,11 @@ def compare_to_ref(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=compare_to_ref, idxsim=idx
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=compare_to_ref,
+        targets=targets,
     )
+    test.run()

@@ -5,19 +5,19 @@ import flopy
 import numpy as np
 from framework import TestFramework
 from pytest_cases import parametrize, parametrize_with_cases
-from simulation import TestSimulation
+
+
+dtol = 1e-3
+budtol = 0.01
+bud_lst = [
+    "CSUB-CGELASTIC_IN",
+    "CSUB-CGELASTIC_OUT",
+    "CSUB-WATERCOMP_IN",
+    "CSUB-WATERCOMP_OUT",
+]
 
 
 class GwfCsubSkCases:
-    dtol: float = 1e-3
-    budtol: float = 0.01
-    bud_lst: List[str] = [
-        "CSUB-CGELASTIC_IN",
-        "CSUB-CGELASTIC_OUT",
-        "CSUB-WATERCOMP_IN",
-        "CSUB-WATERCOMP_OUT",
-    ]
-
     class Data(NamedTuple):
         name: str
         cvopt: str
@@ -37,7 +37,7 @@ class GwfCsubSkCases:
     def case_generator(self, function_tmpdir, data):
         sim = self.get_model(data, function_tmpdir)
         cmp = self.get_model(data, function_tmpdir / "mf6_regression")
-        return data, sim, cmp, self.eval_case
+        return data, sim, cmp
 
     def get_model(self, data, function_tmpdir):
         name = data.name
@@ -352,116 +352,117 @@ class GwfCsubSkCases:
 
         return sim
 
-    def eval_case(self, sim, data):
-        print("evaluating compaction...")
 
-        # MODFLOW 6 total compaction results
-        fpth = os.path.join(sim.simpath, "csub_obs.csv")
-        tc = np.genfromtxt(fpth, names=True, delimiter=",")
+def eval_case(test):
+    print("evaluating compaction...")
 
-        # regression compaction results
-        cpth = "mf6_regression"
-        fpth = os.path.join(sim.simpath, cpth, "csub_obs.csv")
-        tc0 = np.genfromtxt(fpth, names=True, delimiter=",")
+    # MODFLOW 6 total compaction results
+    fpth = os.path.join(test.workspace, "csub_obs.csv")
+    tc = np.genfromtxt(fpth, names=True, delimiter=",")
 
-        # calculate maximum absolute error
-        diff = tc["TCOMP3"] - tc0["TCOMP3"]
-        diffmax = np.abs(diff).max()
-        msg = f"maximum absolute total-compaction difference ({diffmax}) "
+    # regression compaction results
+    cpth = "mf6_regression"
+    fpth = os.path.join(test.workspace, cpth, "csub_obs.csv")
+    tc0 = np.genfromtxt(fpth, names=True, delimiter=",")
 
-        # write summary
-        fpth = os.path.join(
-            sim.simpath, f"{os.path.basename(sim.name)}.comp.cmp.out"
-        )
-        f = open(fpth, "w")
-        for i in range(diff.shape[0]):
-            line = f"{tc0['time'][i]:10.2g}"
-            line += f"{tc['TCOMP3'][i]:10.2g}"
-            line += f"{tc0['TCOMP3'][i]:10.2g}"
-            line += f"{diff[i]:10.2g}"
+    # calculate maximum absolute error
+    diff = tc["TCOMP3"] - tc0["TCOMP3"]
+    diffmax = np.abs(diff).max()
+    msg = f"maximum absolute total-compaction difference ({diffmax}) "
+
+    # write summary
+    fpth = os.path.join(
+        test.workspace, f"{os.path.basename(test.name)}.comp.cmp.out"
+    )
+    f = open(fpth, "w")
+    for i in range(diff.shape[0]):
+        line = f"{tc0['time'][i]:10.2g}"
+        line += f"{tc['TCOMP3'][i]:10.2g}"
+        line += f"{tc0['TCOMP3'][i]:10.2g}"
+        line += f"{diff[i]:10.2g}"
+        f.write(line + "\n")
+    f.close()
+
+    if diffmax > dtol:
+        test.success = False
+        msg += f"exceeds {dtol}"
+        assert diffmax < dtol, msg
+    else:
+        test.success = True
+        print("    " + msg)
+
+    # get results from listing file
+    fpth = os.path.join(test.workspace, f"{os.path.basename(test.name)}.lst")
+    budl = flopy.utils.Mf6ListBudget(fpth)
+    names = list(bud_lst)
+    d0 = budl.get_budget(names=names)[0]
+    dtype = d0.dtype
+    nbud = d0.shape[0]
+
+    # get results from cbc file
+    cbc_bud = ["CSUB-CGELASTIC", "CSUB-WATERCOMP"]
+    d = np.recarray(nbud, dtype=dtype)
+    for key in bud_lst:
+        d[key] = 0.0
+    fpth = os.path.join(test.workspace, f"{os.path.basename(test.name)}.cbc")
+    cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
+    kk = cobj.get_kstpkper()
+    times = cobj.get_times()
+    for idx, (k, t) in enumerate(zip(kk, times)):
+        for text in cbc_bud:
+            qin = 0.0
+            qout = 0.0
+            v = cobj.get_data(kstpkper=k, text=text)[0]
+            for kk in range(v.shape[0]):
+                for ii in range(v.shape[1]):
+                    for jj in range(v.shape[2]):
+                        vv = v[kk, ii, jj]
+                        if vv < 0.0:
+                            qout -= vv
+                        else:
+                            qin += vv
+            d["totim"][idx] = t
+            d["time_step"][idx] = k[0]
+            d["stress_period"] = k[1]
+            key = f"{text}_IN"
+            d[key][idx] = qin
+            key = f"{text}_OUT"
+            d[key][idx] = qout
+
+    diff = np.zeros((nbud, len(bud_lst)), dtype=float)
+    for idx, key in enumerate(bud_lst):
+        diff[:, idx] = d0[key] - d[key]
+    diffmax = np.abs(diff).max()
+    msg = f"maximum absolute total-budget difference ({diffmax}) "
+
+    # write summary
+    fpth = os.path.join(
+        test.workspace, f"{os.path.basename(test.name)}.bud.cmp.out"
+    )
+    f = open(fpth, "w")
+    for i in range(diff.shape[0]):
+        if i == 0:
+            line = f"{'TIME':>10s}"
+            for idx, key in enumerate(bud_lst):
+                line += f"{key + '_LST':>25s}"
+                line += f"{key + '_CBC':>25s}"
+                line += f"{key + '_DIF':>25s}"
             f.write(line + "\n")
-        f.close()
+        line = f"{d['totim'][i]:10g}"
+        for idx, key in enumerate(bud_lst):
+            line += f"{d0[key][i]:25g}"
+            line += f"{d[key][i]:25g}"
+            line += f"{diff[i, idx]:25g}"
+        f.write(line + "\n")
+    f.close()
 
-        if diffmax > self.dtol:
-            sim.success = False
-            msg += f"exceeds {self.dtol}"
-            assert diffmax < self.dtol, msg
-        else:
-            sim.success = True
-            print("    " + msg)
-
-        # get results from listing file
-        fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.lst")
-        budl = flopy.utils.Mf6ListBudget(fpth)
-        names = list(self.bud_lst)
-        d0 = budl.get_budget(names=names)[0]
-        dtype = d0.dtype
-        nbud = d0.shape[0]
-
-        # get results from cbc file
-        cbc_bud = ["CSUB-CGELASTIC", "CSUB-WATERCOMP"]
-        d = np.recarray(nbud, dtype=dtype)
-        for key in self.bud_lst:
-            d[key] = 0.0
-        fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.cbc")
-        cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
-        kk = cobj.get_kstpkper()
-        times = cobj.get_times()
-        for idx, (k, t) in enumerate(zip(kk, times)):
-            for text in cbc_bud:
-                qin = 0.0
-                qout = 0.0
-                v = cobj.get_data(kstpkper=k, text=text)[0]
-                for kk in range(v.shape[0]):
-                    for ii in range(v.shape[1]):
-                        for jj in range(v.shape[2]):
-                            vv = v[kk, ii, jj]
-                            if vv < 0.0:
-                                qout -= vv
-                            else:
-                                qin += vv
-                d["totim"][idx] = t
-                d["time_step"][idx] = k[0]
-                d["stress_period"] = k[1]
-                key = f"{text}_IN"
-                d[key][idx] = qin
-                key = f"{text}_OUT"
-                d[key][idx] = qout
-
-        diff = np.zeros((nbud, len(self.bud_lst)), dtype=float)
-        for idx, key in enumerate(self.bud_lst):
-            diff[:, idx] = d0[key] - d[key]
-        diffmax = np.abs(diff).max()
-        msg = f"maximum absolute total-budget difference ({diffmax}) "
-
-        # write summary
-        fpth = os.path.join(
-            sim.simpath, f"{os.path.basename(sim.name)}.bud.cmp.out"
-        )
-        f = open(fpth, "w")
-        for i in range(diff.shape[0]):
-            if i == 0:
-                line = f"{'TIME':>10s}"
-                for idx, key in enumerate(self.bud_lst):
-                    line += f"{key + '_LST':>25s}"
-                    line += f"{key + '_CBC':>25s}"
-                    line += f"{key + '_DIF':>25s}"
-                f.write(line + "\n")
-            line = f"{d['totim'][i]:10g}"
-            for idx, key in enumerate(self.bud_lst):
-                line += f"{d0[key][i]:25g}"
-                line += f"{d[key][i]:25g}"
-                line += f"{diff[i, idx]:25g}"
-            f.write(line + "\n")
-        f.close()
-
-        if diffmax > self.budtol:
-            sim.success = False
-            msg += f"exceeds {self.dtol}"
-            assert diffmax < self.dtol, msg
-        else:
-            sim.success = True
-            print("    " + msg)
+    if diffmax > budtol:
+        test.success = False
+        msg += f"exceeds {dtol}"
+        assert diffmax < dtol, msg
+    else:
+        test.success = True
+        print("    " + msg)
 
 
 @parametrize_with_cases(
@@ -471,18 +472,16 @@ class GwfCsubSkCases:
     ],
 )
 def test_mf6model(case, targets):
-    data, sim, cmp, evl = case
+    data, sim, cmp = case
     sim.write_simulation()
     if cmp:
         cmp.write_simulation()
-    test = TestSimulation(
+    test = TestFramework(
         name=data.name,
-        exe_dict=targets,
-        exfunc=evl,
-        idxsim=0,
+        workspace=sim.sim_path,
+        check=eval_case,
+        targets=targets,
         mf6_regression=True,
     )
-    test.set_model(sim.simulation_data.mfpath.get_sim_path(), testModel=False)
     test.run()
-    test.compare()
-    evl(test, data)
+    eval_case(test)

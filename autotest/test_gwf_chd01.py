@@ -4,7 +4,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = [
     "chd01",
@@ -118,12 +117,12 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_model(sim):
+def eval_results(test):
     print("evaluating model...")
 
-    gwfname = "gwf_" + sim.name
+    gwfname = "gwf_" + test.name
 
-    fpth = os.path.join(sim.simpath, f"{gwfname}.hds")
+    fpth = os.path.join(test.workspace, f"{gwfname}.hds")
     hobj = flopy.utils.HeadFile(fpth, precision="double")
     head = hobj.get_data().flatten()
 
@@ -134,13 +133,13 @@ def eval_model(sim):
     ), "simulated head do not match with known solution."
 
 
-@pytest.mark.parametrize("name", ex)
-def test_mf6model(name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, 0, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_model, idxsim=0
-        ),
-        str(function_tmpdir),
+@pytest.mark.parametrize("idx, name", list(enumerate(ex)))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_results,
+        targets=targets,
     )
+    test.run()

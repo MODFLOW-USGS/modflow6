@@ -9,8 +9,7 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation, DNODATA
+from framework import TestFramework, DNODATA
 
 ex = ["lkt_04"]
 
@@ -334,7 +333,7 @@ def build_model(idx, dir, exe):
 
 
 def get_mfsim(testsim):
-    ws = testsim.simpath
+    ws = testsim.workspace
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
     return sim
 
@@ -381,7 +380,7 @@ def eval_results(sim):
     name = sim.name
     gwtname = "gwt_" + name
     fname = gwtname + ".lkt.bin"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(sim.workspace, fname)
     assert os.path.isfile(fname)
 
     # load the lake concentrations and make sure all values are 100.
@@ -405,7 +404,7 @@ def eval_results(sim):
 
     # load the aquifer concentrations and make sure all values are correct
     fname = gwtname + ".ucn"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(sim.workspace, fname)
     cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")
     caq = cobj.get_alldata()
     answer = np.zeros(5)
@@ -414,7 +413,7 @@ def eval_results(sim):
     ), f"{caq[-1].flatten()} {answer}"
 
     # lkt observation results
-    fpth = os.path.join(sim.simpath, gwtname + ".lkt.obs.csv")
+    fpth = os.path.join(sim.workspace, gwtname + ".lkt.obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -478,13 +477,12 @@ def eval_results(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
     mf6 = targets["mf6"]
-    test = TestFramework()
-    test.build(lambda i, w: build_model(i, w, mf6), idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda ws: build_model(idx, ws, mf6),
+        check=eval_results, 
     )
+    test.run()

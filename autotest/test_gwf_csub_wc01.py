@@ -5,7 +5,6 @@ import numpy as np
 import pytest
 from conftest import project_root_path
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["csub_wc01a", "csub_wc02b"]
 cmppth = "mf6"
@@ -223,7 +222,6 @@ def build_model(idx, dir):
 
 # build MODFLOW 6 files
 def build_mf6(idx, ws, interbed=False):
-
     name = ex[idx]
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
@@ -348,14 +346,14 @@ def eval_wcomp(sim):
     print("evaluating compaction...")
 
     # MODFLOW 6 without interbeds water compressibility
-    fpth = os.path.join(sim.simpath, "csub_obs.csv")
+    fpth = os.path.join(sim.workspace, "csub_obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
         assert False, f'could not load data from "{fpth}"'
 
     # MODFLOW 6 with interbeds water compressibility
-    fpth = os.path.join(sim.simpath, cmppth, "csub_obs.csv")
+    fpth = os.path.join(sim.workspace, cmppth, "csub_obs.csv")
     try:
         tci = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -377,7 +375,7 @@ def eval_wcomp(sim):
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, f"{os.path.basename(sim.name)}.wcomp.cmp.out"
+        sim.workspace, f"{os.path.basename(sim.name)}.wcomp.cmp.out"
     )
     f = open(fpth, "w")
     line = f"{'TOTIM':>15s}"
@@ -411,7 +409,7 @@ def eval_wcomp(sim):
 def cbc_compare(sim):
     print("evaluating cbc and budget...")
     # open cbc file
-    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.cbc")
+    fpth = os.path.join(sim.workspace, f"{os.path.basename(sim.name)}.cbc")
     cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # build list of cbc data to retrieve
@@ -428,7 +426,7 @@ def cbc_compare(sim):
             bud_lst.append(f"{t}_OUT")
 
     # get results from listing file
-    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.lst")
+    fpth = os.path.join(sim.workspace, f"{os.path.basename(sim.name)}.lst")
     budl = flopy.utils.Mf6ListBudget(fpth)
     names = list(bud_lst)
     d0 = budl.get_budget(names=names)[0]
@@ -475,7 +473,7 @@ def cbc_compare(sim):
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, f"{os.path.basename(sim.name)}.bud.cmp.out"
+        sim.workspace, f"{os.path.basename(sim.name)}.bud.cmp.out"
     )
     f = open(fpth, "w")
     for i in range(diff.shape[0]):
@@ -509,9 +507,11 @@ def cbc_compare(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(name=name, exe_dict=targets, exfunc=eval_wcomp),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_wcomp,
+        targets=targets,
     )
+    test.run()

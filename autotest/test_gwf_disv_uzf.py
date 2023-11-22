@@ -17,20 +17,19 @@ import pytest
 from flopy.utils.gridutil import get_disv_kwargs
 
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["disv_with_uzf"]
 nlay = 5
 nrow = 10
 ncol = 10
 ncpl = nrow * ncol
-delr = 1.
-delc = 1.
+delr = 1.0
+delc = 1.0
 nper = 5
 perlen = [10] * 5
 nstp = [5] * 5
 tsmult = len(perlen) * [1.0]
-top = 25.
+top = 25.0
 botm = [20.0, 15.0, 10.0, 5.0, 0.0]
 strt = 20
 nouter, ninner = 100, 300
@@ -38,14 +37,14 @@ hclose, rclose, relax = 1e-9, 1e-3, 0.97
 
 # use flopy util to get disv arguments
 disvkwargs = get_disv_kwargs(
-        nlay,
-        nrow,
-        ncol,
-        delr,
-        delc,
-        top,
-        botm,
-    )
+    nlay,
+    nrow,
+    ncol,
+    delr,
+    delc,
+    top,
+    botm,
+)
 
 # Work up UZF data
 iuzno = 0
@@ -130,7 +129,6 @@ for k in np.arange(3, 5, 1):
 
 
 def build_model(idx, dir):
-
     name = ex[idx]
 
     # build MODFLOW 6 files
@@ -174,7 +172,7 @@ def build_model(idx, dir):
 
     # disv
     disv = flopy.mf6.ModflowGwfdisv(gwf, **disvkwargs)
-  
+
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt)
 
@@ -249,13 +247,13 @@ def eval_model(sim):
     print("evaluating model...")
 
     # Next, get the binary printed heads
-    fpth = os.path.join(sim.simpath, sim.name + ".hds")
+    fpth = os.path.join(sim.workspace, sim.name + ".hds")
     hobj = flopy.utils.HeadFile(fpth, precision="double")
     hds = hobj.get_alldata()
     hds = hds.reshape((np.sum(nstp), 5, 10, 10))
 
     # Get the MF6 cell-by-cell fluxes
-    bpth = os.path.join(sim.simpath, sim.name + ".cbc")
+    bpth = os.path.join(sim.workspace, sim.name + ".cbc")
     bobj = flopy.utils.CellBudgetFile(bpth, precision="double")
     bobj.get_unique_record_names()
     # '          STO-SS'
@@ -273,7 +271,7 @@ def eval_model(sim):
     gwet = gwetv.reshape((np.sum(nstp), 5, 10, 10))
 
     # Also retrieve the binary UZET output
-    uzpth = os.path.join(sim.simpath, sim.name + ".uzf.bud")
+    uzpth = os.path.join(sim.workspace, sim.name + ".uzf.bud")
     uzobj = flopy.utils.CellBudgetFile(uzpth, precision="double")
     uzobj.get_unique_record_names()
     #  b'    FLOW-JA-FACE',
@@ -386,13 +384,13 @@ def eval_model(sim):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("name", ex)
-def test_mf6model(name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, 0, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_model, idxsim=0
-        ),
-        str(function_tmpdir),
+@pytest.mark.parametrize("idx, name", list(enumerate(ex)))
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_model,
+        targets=targets,
     )
+    test.run()

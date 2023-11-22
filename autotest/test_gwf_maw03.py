@@ -5,9 +5,6 @@ import flopy
 import numpy as np
 import pytest
 
-from framework import TestFramework
-from simulation import TestSimulation
-
 budtol = 1e-2
 bud_lst = ["GWF_IN", "GWF_OUT", "RATE_IN", "RATE_OUT"]
 
@@ -174,15 +171,15 @@ def build_model(idx, ws, mf6):
         continuous=obs_recarray,
     )
 
-    return sim, None
+    return sim
 
 
-def eval_results(sim):
+def eval_results(name, workspace):
     print("evaluating MAW heads...")
 
     # MODFLOW 6 maw results
-    test_name = sim.name
-    fpth = os.path.join(sim.simpath, f"{test_name}.maw.obs.csv")
+    test_name = name
+    fpth = os.path.join(workspace, f"{test_name}.maw.obs.csv")
     tc = np.genfromtxt(fpth, names=True, delimiter=",")
 
     if test_name.endswith("a"):
@@ -213,17 +210,7 @@ def eval_results(sim):
 @pytest.mark.parametrize("idx, name", list(enumerate(ex)))
 def test_mf6model(idx, name, function_tmpdir, targets):
     ws = str(function_tmpdir)
-    sim, _ = build_model(idx, ws, targets.mf6)
+    sim = build_model(idx, ws, targets.mf6)
     sim.write_simulation()
     sim.run_simulation()
-    test = TestFramework()
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_results,
-            idxsim=idx,
-            make_comparison=False,
-        ),
-        ws,
-    )
+    eval_results(name, ws)

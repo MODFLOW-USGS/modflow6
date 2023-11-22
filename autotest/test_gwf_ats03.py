@@ -16,7 +16,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["gwf_ats03a"]
 nlay, nrow, ncol = 1, 1, 10
@@ -195,7 +194,7 @@ def eval_flow(sim):
     print("evaluating flow...")
 
     # ensure obs2 (a constant head time series) drops linearly from 100 to 50
-    fpth = os.path.join(sim.simpath, sim.name + ".obs.csv")
+    fpth = os.path.join(sim.workspace, sim.name + ".obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -212,11 +211,11 @@ def eval_flow(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, 0, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_flow, idxsim=0
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_flow,
+        targets=targets,
     )
+    test.run()

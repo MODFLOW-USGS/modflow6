@@ -33,7 +33,6 @@ import numpy as np
 import pytest
 from framework import TestFramework
 from modflowapi import ModflowApi
-from simulation import TestSimulation
 
 ex = ["libgwf_ifmod03"]
 
@@ -44,7 +43,6 @@ global_delr = 8.0
 
 
 def get_model(dir, name):
-
     # parameters and spd
     # tdis
     nper = 1
@@ -294,11 +292,11 @@ def check_interface_models(mf6):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, idxsim=idx, api_func=api_func
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        targets=targets,
+        api_func=lambda exe, ws: api_func(exe, idx, ws),
     )
+    test.run()

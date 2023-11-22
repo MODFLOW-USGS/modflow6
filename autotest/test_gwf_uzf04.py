@@ -15,7 +15,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["gwf_uzf04a"]
 nlay, nrow, ncol = 1, 1, 1
@@ -26,7 +25,6 @@ strt = -20.0
 
 
 def build_model(idx, dir):
-
     perlen = [1.0]
     nper = len(perlen)
     nstp = [1]
@@ -219,7 +217,7 @@ def eval_flow(sim):
     print("evaluating flow...")
 
     name = sim.name
-    ws = sim.simpath
+    ws = sim.workspace
 
     fname = os.path.join(ws, f"{name}.uzf.bin")
     wobj = flopy.utils.HeadFile(fname, text="WATER-CONTENT")
@@ -262,12 +260,11 @@ def eval_flow(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_flow, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_flow,
+        targets=targets,
     )
+    test.run()

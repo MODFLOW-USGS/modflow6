@@ -4,13 +4,11 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["evt01"]
 
 
 def build_model(idx, dir):
-
     nlay, nrow, ncol = 1, 1, 3
     chdheads = list(np.linspace(1, 100))
     nper = len(chdheads)
@@ -156,11 +154,11 @@ def etfunc(h, qmax, surf, exdp, petm, pxdp, petm0=1.0):
 def eval_model(sim):
     print("evaluating model...")
 
-    fpth = os.path.join(sim.simpath, "evt01.cbc")
+    fpth = os.path.join(sim.workspace, "evt01.cbc")
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     records = bobj.get_data(text="evt")
 
-    fpth = os.path.join(sim.simpath, "evt01.hds")
+    fpth = os.path.join(sim.workspace, "evt01.hds")
     hobj = flopy.utils.HeadFile(fpth, precision="double")
     heads = hobj.get_alldata()
 
@@ -182,11 +180,11 @@ def eval_model(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_model, idxsim=idx
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_model,
+        targets=targets,
     )
+    test.run()

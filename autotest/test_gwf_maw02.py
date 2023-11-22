@@ -5,9 +5,6 @@ import flopy
 import numpy as np
 import pytest
 
-from framework import TestFramework
-from simulation import TestSimulation
-
 budtol = 1e-2
 bud_lst = ["GWF_IN", "GWF_OUT", "RATE_IN", "RATE_OUT"]
 
@@ -184,14 +181,14 @@ def build_model(idx, ws, mf6):
     return sim, None
 
 
-def eval_results(sim):
+def eval_results(name, workspace):
     print("evaluating MAW budgets...")
 
     shape3d = (nlay, nrow, ncol)
     size3d = nlay * nrow * ncol
 
     # get results from listing file
-    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.lst")
+    fpth = os.path.join(workspace, f"{os.path.basename(name)}.lst")
     budl = flopy.utils.Mf6ListBudget(
         fpth, budgetkey="MAW-1 BUDGET FOR ENTIRE MODEL AT END OF TIME STEP"
     )
@@ -205,7 +202,7 @@ def eval_results(sim):
     d = np.recarray(nbud, dtype=dtype)
     for key in bud_lst:
         d[key] = 0.0
-    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.maw.cbc")
+    fpth = os.path.join(workspace, f"{os.path.basename(name)}.maw.cbc")
     cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     kk = cobj.get_kstpkper()
     times = cobj.get_times()
@@ -264,9 +261,7 @@ def eval_results(sim):
     msg += f"maximum absolute total-budget difference ({diffmax}) "
 
     # write summary
-    fpth = os.path.join(
-        sim.simpath, f"{os.path.basename(sim.name)}.bud.cmp.out"
-    )
+    fpth = os.path.join(workspace, f"{os.path.basename(name)}.bud.cmp.out")
     f = open(fpth, "w")
     for i in range(diff.shape[0]):
         if i == 0:
@@ -284,13 +279,10 @@ def eval_results(sim):
         f.write(line + "\n")
     f.close()
 
-    if diffmax > budtol or diffv > budtol:
-        sim.success = False
-        msg += f"\n...exceeds {budtol}"
-        assert diffmax < budtol, msg
-    else:
-        sim.success = True
-        print("    " + msg)
+    assert diffmax < budtol, (
+        msg + f"diffmax {diffmax} exceeds tolerance {budtol}"
+    )
+    assert diffv < budtol, msg + f"diffv {diffv} exceeds tolerance {budtol}"
 
 
 @pytest.mark.parametrize("idx, name", list(enumerate(ex)))
@@ -299,14 +291,4 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     sim, _ = build_model(idx, ws, targets.mf6)
     sim.write_simulation()
     sim.run_simulation()
-    test = TestFramework()
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_results,
-            idxsim=idx,
-            make_comparison=False,
-        ),
-        ws,
-    )
+    eval_results(name, ws)

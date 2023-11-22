@@ -8,7 +8,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 cell_dimensions = (300,)
 ex = ["gwf_obs02"]
@@ -130,7 +129,7 @@ def eval_model(sim):
     for i in range(nrow):
         fname = f"{sim.name}.{i}.obs.csv"
         print(f"Loading and testing {fname}")
-        fname = os.path.join(sim.simpath, fname)
+        fname = os.path.join(sim.workspace, fname)
         rec = np.genfromtxt(fname, names=True, delimiter=",", deletechars="")
         for j in range(ncol):
             obsname_true = f"h_{i}_{j}".upper()
@@ -142,7 +141,7 @@ def eval_model(sim):
             assert obsname_true == obsname_found, errmsg
         headcsv[0, i, :] = np.array(rec.tolist()[1:])
 
-    fn = os.path.join(sim.simpath, f"{sim.name}.hds")
+    fn = os.path.join(sim.workspace, f"{sim.name}.hds")
     hobj = flopy.utils.HeadFile(fn)
     headbin = hobj.get_data()
 
@@ -152,16 +151,15 @@ def eval_model(sim):
 
 
 @pytest.mark.parametrize(
-    "name",
-    ex,
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_model, idxsim=0
-        ),
-        ws,
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_model,
+        targets=targets,
     )
+    test.run()

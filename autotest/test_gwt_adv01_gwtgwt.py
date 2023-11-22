@@ -11,7 +11,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["adv01a_gwtgwt", "adv01b_gwtgwt", "adv01c_gwtgwt"]
 scheme = ["upstream", "central", "tvd"]
@@ -37,8 +36,6 @@ def get_gwf_model(sim, gwfname, gwfpath, modelshape, chdspd=None, welspd=None):
         modelname=gwfname,
         save_flows=True,
     )
-    # this doesn't work here
-    # gwf.set_model_relative_path(gwfname)
 
     dis = flopy.mf6.ModflowGwfdis(
         gwf,
@@ -335,12 +332,12 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_transport(sim):
+def eval_transport(idx, test):
     print("evaluating transport...")
 
     gwtname = "transport1"
 
-    fpth = os.path.join(sim.simpath, gwtname, f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, gwtname, f"{gwtname}.ucn")
     try:
         cobj = flopy.utils.HeadFile(
             fpth, precision="double", text="CONCENTRATION"
@@ -351,7 +348,7 @@ def eval_transport(sim):
 
     gwtname = "transport2"
 
-    fpth = os.path.join(sim.simpath, gwtname, f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, gwtname, f"{gwtname}.ucn")
     try:
         cobj = flopy.utils.HeadFile(
             fpth, precision="double", text="CONCENTRATION"
@@ -689,12 +686,12 @@ def eval_transport(sim):
     creslist = [cres1, cres2, cres3]
 
     assert np.allclose(
-        creslist[sim.idxsim], conc
+        creslist[idx], conc
     ), "simulated concentrations do not match with known solution."
 
     # check budget
     for mname in ["transport1", "transport2"]:
-        fpth = os.path.join(sim.simpath, mname, f"{mname}.lst")
+        fpth = os.path.join(test.workspace, mname, f"{mname}.lst")
         for line in open(fpth):
             if line.lstrip().startswith("PERCENT"):
                 cumul_balance_error = float(line.split()[3])
@@ -706,13 +703,13 @@ def eval_transport(sim):
 
         # get grid data (from GWF)
         gwfname = "flow1" if mname == "transport1" else "flow2"
-        fpth = os.path.join(sim.simpath, gwfname, f"{gwfname}.dis.grb")
+        fpth = os.path.join(test.workspace, gwfname, f"{gwfname}.dis.grb")
         grb = flopy.mf6.utils.MfGrdFile(fpth)
 
         # Check on residual, which is stored in diagonal position of
         # flow-ja-face.  Residual should be less than convergence tolerance,
         # or this means the residual term is not added correctly.
-        fpth = os.path.join(sim.simpath, mname, f"{mname}.cbc")
+        fpth = os.path.join(test.workspace, mname, f"{mname}.cbc")
         cbb = flopy.utils.CellBudgetFile(fpth)
         flow_ja_face = cbb.get_data(text="FLOW-JA-FACE")
         ia = grb._datadict["IA"] - 1
@@ -732,12 +729,11 @@ def eval_transport(sim):
 )
 @pytest.mark.developmode
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda ws: build_model(idx, ws),
+        check=lambda t: eval_transport(idx, t), 
     )
+    test.run()

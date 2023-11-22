@@ -4,7 +4,7 @@ import flopy
 import pytest
 from common_regression import get_namefiles, model_setup
 from conftest import should_compare
-from simulation import TestSimulation
+from framework import TestFramework
 
 sfmt = "{:25s} - {}"
 excluded_models = ["alt_model", "mf2005"]
@@ -27,17 +27,17 @@ def test_model(
     if name in excluded_models:
         pytest.skip(f"Excluding mf5to6 model: {name}")
 
-    sim = TestSimulation(
+    test = TestFramework(
         name=exdir.name,
-        exe_dict=targets,
+        workspace=exdir,
+        targets=targets,
         mf6_regression=not original_regression,
         cmp_verbose=False,
         make_comparison=should_compare(name, excluded_comparisons, targets),
-        simpath=str(exdir),
     )
 
-    src = sim.simpath
-    dst = str(function_tmpdir)
+    src = test.workspace
+    dst = function_tmpdir
 
     # set lgrpth to None
     lgrpth = None
@@ -97,9 +97,9 @@ def test_model(
     # model setup
     src = dst
     dst = function_tmpdir / "models"
-    sim.setup(src, dst)
+    test.setup(src, dst)
 
     # Run the MODFLOW 6 simulation and compare to existing head file or
     # appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
-    sim.run()
-    sim.compare()
+    test.run()
+    test.compare()

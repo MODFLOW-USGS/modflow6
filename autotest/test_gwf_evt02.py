@@ -4,13 +4,11 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["evt02"]
 
 
 def build_model(idx, dir, exe):
-
     nlay, nrow, ncol = 1, 1, 3
     chdheads = list(np.linspace(1, 100))
     nper = len(chdheads)
@@ -155,7 +153,7 @@ def eval_model(sim):
     print("evaluating model...")
 
     # The nature of the bug is that the model crashes with nseg=1
-    fpth = os.path.join(sim.simpath, "evt02.cbc")
+    fpth = os.path.join(sim.workspace, "evt02.cbc")
     assert os.path.isfile(fpth), "model did not run with nseg=1 in EVT input"
 
 
@@ -164,12 +162,12 @@ def eval_model(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
     mf6 = targets["mf6"]
-    test.build(lambda i, w: build_model(i, w, mf6), idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_model, idxsim=idx
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws, mf6),
+        check=eval_model,
+        targets=targets,
     )
+    test.run()

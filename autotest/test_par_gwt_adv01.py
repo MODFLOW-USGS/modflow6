@@ -1,8 +1,5 @@
-import os
-from decimal import Decimal
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 # This tests reuses the simulation data and config in 
 # test_gwt_adv01_gwtgwt.py and runs it in parallel mode.
@@ -25,13 +22,14 @@ def eval_model(test_sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_model, 
-            idxsim=idx, make_comparison=False,
-            parallel=True, ncpus=2,
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_model, 
+        make_comparison=False,
+        parallel=True,
+        ncpus=2,
     )
+    test.run()

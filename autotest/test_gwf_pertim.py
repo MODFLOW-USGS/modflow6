@@ -4,7 +4,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = [
     "gwf_pertim",
@@ -115,10 +114,9 @@ def build_model(idx, dir):
 
 
 def eval_model(sim):
-
     print("evaluating results...")
 
-    fpth = os.path.join(sim.simpath, f"{sim.name}.lst")
+    fpth = os.path.join(sim.workspace, f"{sim.name}.lst")
     mflist = flopy.utils.Mf6ListBudget(fpth)
     inc = mflist.get_incremental()
 
@@ -138,15 +136,11 @@ def eval_model(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_model,
-            idxsim=idx,
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_model,
+        targets=targets,
     )
+    test.run()

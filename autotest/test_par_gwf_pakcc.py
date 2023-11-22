@@ -7,7 +7,6 @@ import numpy as np
 import pytest
 
 from framework import TestFramework
-from simulation import TestSimulation
 
 # This tests reuses the simulation data in test_gwf_uzf_gwet
 # and runs it in parallel on one and two cpus with
@@ -44,20 +43,14 @@ def build_model(idx, exdir):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, function_tmpdir)
-    if idx == 1:
-        ncpus = 2
-    else:
-        ncpus = 1
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            idxsim=idx,
-            make_comparison=False,
-            parallel=True,
-            ncpus=ncpus,
-        ),
-        str(function_tmpdir),
+    ncpus = 2 if idx == 1 else 1
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda ws: build_model(idx, ws),
+        make_comparison=False,
+        parallel=True,
+        ncpus=ncpus,
     )
+    test.run()

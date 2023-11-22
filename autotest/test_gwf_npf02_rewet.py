@@ -4,7 +4,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["npf02_hreweta", "npf02_hrewetb", "npf02_hrewetc", "npf02_hrewetd"]
 ncols = [[15], [10, 5], [15], [10, 5]]
@@ -207,7 +206,7 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_hds(sim):
+def eval_hds(idx, test):
     print("evaluating rewet heads...")
 
     hdata01lay = [
@@ -283,7 +282,6 @@ def eval_hds(sim):
         ],
     ]
 
-    idx = sim.idxsim
     ncolst, nmodels, mnames = get_local_data(idx)
     nlay = nlays[idx]
 
@@ -295,7 +293,7 @@ def eval_hds(sim):
     imid = int(nrow / 2)
 
     for j in range(nmodels):
-        fn = os.path.join(sim.simpath, f"{mnames[j]}.hds")
+        fn = os.path.join(test.workspace, f"{mnames[j]}.hds")
         hobj = flopy.utils.HeadFile(fn)
         times = hobj.get_times()
         ioff = 0
@@ -313,7 +311,7 @@ def eval_hds(sim):
             hval[n, ioff:i1] = ht.copy()
 
     # # save results if the know results change slightly
-    # fpth = os.path.join(sim.simpath, "results.dat")
+    # fpth = os.path.join(sim.workspace, "results.dat")
     # np.savetxt(fpth, hval, delimiter=",")
 
     # known results
@@ -329,11 +327,11 @@ def eval_hds(sim):
     msg = f"maximum absolute maw head difference ({diffmax}) "
 
     if diffmax > dtol:
-        sim.success = False
+        test.success = False
         msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
-        sim.success = True
+        test.success = True
         print("    " + msg)
 
 
@@ -342,12 +340,11 @@ def eval_hds(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_hds, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=lambda t: eval_hds(idx, t),
+        targets=targets,
     )
+    test.run()

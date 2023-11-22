@@ -5,7 +5,6 @@ import numpy as np
 import pytest
 from cross_section_functions import get_depths
 from framework import TestFramework
-from simulation import TestSimulation
 
 paktest = "sfr"
 ex = [
@@ -119,7 +118,6 @@ np_data = {
 
 #
 def build_model(idx, ws):
-
     xsect_type = xsect_types[idx]
 
     # static model data
@@ -302,7 +300,7 @@ def build_model(idx, ws):
 def eval_npointq(sim, idx):
     print("evaluating n-point cross-section results..." f"({sim.name})")
 
-    obs_pth = os.path.join(sim.simpath, f"{sim.name}.sfr.obs.csv")
+    obs_pth = os.path.join(sim.workspace, f"{sim.name}.sfr.obs.csv")
     obs = flopy.utils.Mf6Obs(obs_pth).get_data()
 
     assert np.allclose(
@@ -332,15 +330,11 @@ def eval_npointq(sim, idx):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=lambda s: eval_npointq(s, idx),
-            idxsim=idx,
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=lambda s: eval_npointq(s, idx),
+        targets=targets,
     )
+    test.run()

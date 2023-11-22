@@ -17,7 +17,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["ssm04"]
 
@@ -426,12 +425,12 @@ def eval_transport(sim):
     gwtname = "gwt_" + name
 
     # load concentration file
-    fpth = os.path.join(sim.simpath, f"{gwtname}.ucn")
+    fpth = os.path.join(sim.workspace, f"{gwtname}.ucn")
     cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
     conc = cobj.get_data()
 
     # load transport budget file
-    fpth = os.path.join(sim.simpath, f"{gwtname}.cbc")
+    fpth = os.path.join(sim.workspace, f"{gwtname}.cbc")
     bobj = flopy.utils.CellBudgetFile(
         fpth,
         precision="double",
@@ -506,16 +505,15 @@ def eval_transport(sim):
 
 
 @pytest.mark.parametrize(
-    "name",
-    ex,
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=0
-        ),
-        ws,
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_transport, 
     )
+    test.run()

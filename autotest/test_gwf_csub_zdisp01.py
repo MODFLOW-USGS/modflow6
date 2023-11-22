@@ -5,7 +5,6 @@ import numpy as np
 import pytest
 from flopy.utils.compare import compare_heads
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["csub_zdisp01"]
 cmppth = "mfnwt"
@@ -393,9 +392,6 @@ def get_model(idx, dir):
         idroptol=0,
     )
 
-    sim.write_simulation()
-    mc.write_input()
-
     return sim, mc
 
 
@@ -403,7 +399,7 @@ def eval_zdisplacement(sim):
     print("evaluating z-displacement...")
 
     # MODFLOW 6 total compaction results
-    fpth = os.path.join(sim.simpath, "csub_obs.csv")
+    fpth = os.path.join(sim.workspace, "csub_obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -411,9 +407,9 @@ def eval_zdisplacement(sim):
 
     # MODFLOW-2005 total compaction results
     fn = f"{os.path.basename(sim.name)}.total_comp.hds"
-    fpth = os.path.join(sim.simpath, "mfnwt", fn)
+    fpth = os.path.join(sim.workspace, "mfnwt", fn)
     try:
-        sobj = flopy.utils.HeadFile(fpth, text="LAYER COMPACTION")
+        sobj = flopy.utils.HeadFile(fpth, text="LAYER COMPACTION", verbose=False)
         tc0 = sobj.get_ts((2, wrp[0], wcp[0]))
     except:
         assert False, f'could not load data from "{fpth}"'
@@ -432,7 +428,7 @@ def eval_zdisplacement(sim):
         print("    " + msg)
 
     # get results from listing file
-    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.lst")
+    fpth = os.path.join(sim.workspace, f"{os.path.basename(sim.name)}.lst")
     budl = flopy.utils.Mf6ListBudget(fpth)
     names = list(bud_lst)
     d0 = budl.get_budget(names=names)[0]
@@ -451,8 +447,8 @@ def eval_zdisplacement(sim):
     d = np.recarray(nbud, dtype=dtype)
     for key in bud_lst:
         d[key] = 0.0
-    fpth = os.path.join(sim.simpath, f"{os.path.basename(sim.name)}.cbc")
-    cobj = flopy.utils.CellBudgetFile(fpth, precision="double")
+    fpth = os.path.join(sim.workspace, f"{os.path.basename(sim.name)}.cbc")
+    cobj = flopy.utils.CellBudgetFile(fpth, precision="double", verbose=False)
     kk = cobj.get_kstpkper()
     times = cobj.get_times()
     for idx, (k, t) in enumerate(zip(kk, times)):
@@ -489,7 +485,7 @@ def eval_zdisplacement(sim):
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, f"{os.path.basename(sim.name)}.bud.cmp.out"
+        sim.workspace, f"{os.path.basename(sim.name)}.bud.cmp.out"
     )
     f = open(fpth, "w")
     for i in range(diff.shape[0]):
@@ -518,14 +514,14 @@ def eval_zdisplacement(sim):
 
     # compare z-displacement data
     fpth1 = os.path.join(
-        sim.simpath,
+        sim.workspace,
         f"{os.path.basename(sim.name)}.zdisplacement.gridbin",
     )
-    fpth2 = os.path.join(sim.simpath, cmppth, "csub_zdisp01.vert_disp.hds")
+    fpth2 = os.path.join(sim.workspace, cmppth, "csub_zdisp01.vert_disp.hds")
     text1 = "CSUB-ZDISPLACE"
     text2 = "Z DISPLACEMENT"
     fout = os.path.join(
-        sim.simpath,
+        sim.workspace,
         f"{os.path.basename(sim.name)}.z-displacement.bin.out",
     )
     success_tst = compare_heads(
@@ -555,15 +551,13 @@ def eval_zdisplacement(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    sim, mc = get_model(idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_zdisplacement,
-            htol=htol[idx],
-            idxsim=idx,
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: get_model(idx, ws),
+        check=eval_zdisplacement,
+        targets=targets,
+        htol=htol[idx],
+        cmp_verbose=False
     )
+    test.run()

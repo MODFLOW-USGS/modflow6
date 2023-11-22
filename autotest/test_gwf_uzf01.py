@@ -10,14 +10,12 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["gwf_uzf01a"]
 nlay, nrow, ncol = 100, 1, 1
 
 
 def build_model(idx, exdir):
-
     name = ex[idx]
 
     perlen = [500.0]
@@ -217,7 +215,7 @@ def eval_flow(sim):
     print("evaluating flow...")
 
     name = sim.name
-    ws = sim.simpath
+    ws = sim.workspace
 
     # check binary grid file
     fname = os.path.join(ws, name + ".dis.grb")
@@ -267,12 +265,11 @@ def eval_flow(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_flow, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_flow,
+        targets=targets,
     )
+    test.run()

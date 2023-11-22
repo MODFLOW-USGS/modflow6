@@ -4,7 +4,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = [
     "gwf_sto03a",
@@ -174,14 +173,11 @@ def get_model(name, ws, newton_bool, offset=0.0):
 # variant SUB package problem 3
 def build_model(idx, dir):
     name = ex[idx]
-    ws = dir
-
     # build model with no offset
-    sim = get_model(name, ws, newton_bool=newton[idx])
+    sim = get_model(name, dir, newton_bool=newton[idx])
 
     # build model with offset
-    ws = os.path.join(dir, cmppth)
-    mc = get_model(name, ws, newton_bool=newton[idx], offset=cmp_offset)
+    mc = get_model(name, os.path.join(dir, cmppth), newton_bool=newton[idx], offset=cmp_offset)
     return sim, mc
 
 
@@ -200,15 +196,14 @@ def eval_hmax(fpth):
         + f"- maximum difference {(bv - sv).max()}"
     )
     assert np.allclose(bv, sv), msg
-    return
 
 
-def eval_sto(sim):
+def eval_sto(idx, test):
     print("evaluating head differences...")
-    fpth = os.path.join(sim.simpath, "head.obs.csv")
+    fpth = os.path.join(test.workspace, "head.obs.csv")
     base_obs = flopy.utils.Mf6Obs(fpth).get_data()[obsname]
 
-    fpth = os.path.join(sim.simpath, cmppth, "head.obs.csv")
+    fpth = os.path.join(test.workspace, cmppth, "head.obs.csv")
     offset_obs = flopy.utils.Mf6Obs(fpth).get_data()[obsname]
     offset_obs -= cmp_offset
 
@@ -219,9 +214,9 @@ def eval_sto(sim):
     assert np.allclose(base_obs, offset_obs, atol=1e-6), msg
 
     print("evaluating maximum heads...")
-    fpth = os.path.join(sim.simpath, "head.obs.csv")
+    fpth = os.path.join(test.workspace, "head.obs.csv")
     eval_hmax(fpth)
-    fpth = os.path.join(sim.simpath, cmppth, "head.obs.csv")
+    fpth = os.path.join(test.workspace, cmppth, "head.obs.csv")
     eval_hmax(fpth)
 
     base_obs = flopy.utils.Mf6Obs(fpth)
@@ -230,8 +225,8 @@ def eval_sto(sim):
     base_cmp = np.zeros(cmp_times.shape, dtype=float)
     base_cmp[:] = base_obs.get_data(totim=1.0)[obsname]
     offset_cmp = np.zeros(cmp_times.shape, dtype=float)
-    for idx, t in enumerate(cmp_times):
-        offset_cmp[idx] = base_obs.get_data(totim=t)[obsname]
+    for i, t in enumerate(cmp_times):
+        offset_cmp[i] = base_obs.get_data(totim=t)[obsname]
 
     msg = (
         "maximum heads exceed tolerance when offset removed "
@@ -240,10 +235,10 @@ def eval_sto(sim):
     assert np.allclose(base_cmp, offset_cmp), msg
 
     print("evaluating storage...")
-    name = ex[sim.idxsim]
-    fpth = os.path.join(sim.simpath, f"{name}.cbc")
+    name = ex[idx]
+    fpth = os.path.join(test.workspace, f"{name}.cbc")
     base_cbc = flopy.utils.CellBudgetFile(fpth, precision="double")
-    fpth = os.path.join(sim.simpath, cmppth, f"{name}.cbc")
+    fpth = os.path.join(test.workspace, cmppth, f"{name}.cbc")
     offset_cbc = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # get results from cbc file
@@ -266,16 +261,12 @@ def eval_sto(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_sto,
-            htol=htol[idx],
-            idxsim=idx,
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=lambda t: eval_sto(idx, t),
+        targets=targets,
+        htol=htol[idx],
     )
+    test.run()

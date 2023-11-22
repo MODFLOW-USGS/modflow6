@@ -12,7 +12,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["issue655a", "issue655b"]
 newton = [
@@ -249,21 +248,21 @@ def build_model(idx, ws):
     return sim, None
 
 
-def eval_transport(sim):
+def eval_transport(idx, test):
     print("evaluating transport...")
 
-    name = ex[sim.idxsim]
+    name = ex[idx]
     gwtname = "gwt_" + name
     gwfname = "gwf_" + name
 
-    fpth = os.path.join(sim.simpath, f"{gwfname}.hds")
+    fpth = os.path.join(test.workspace, f"{gwfname}.hds")
     try:
         hobj = flopy.utils.HeadFile(fpth, precision="double")
         head = hobj.get_alldata().flatten()
     except:
         assert False, f'could not load data from "{fpth}"'
 
-    fpth = os.path.join(sim.simpath, f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
     try:
         cobj = flopy.utils.HeadFile(
             fpth, precision="double", text="CONCENTRATION"
@@ -297,12 +296,11 @@ def eval_transport(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda ws: build_model(idx, ws),
+        check=lambda t: eval_transport(idx, t), 
     )
+    test.run()

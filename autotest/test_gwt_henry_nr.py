@@ -11,7 +11,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["henrynr01"]
 
@@ -377,7 +376,7 @@ def make_plot(sim, headall, concall):
     print("making plots...")
 
     name = sim.name
-    ws = sim.simpath
+    ws = sim.workspace
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
@@ -465,7 +464,7 @@ def eval_transport(sim):
     print("evaluating transport...")
 
     name = sim.name
-    ws = sim.simpath
+    ws = sim.workspace
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
 
@@ -533,12 +532,11 @@ def eval_transport(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_transport, 
     )
+    test.run()

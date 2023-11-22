@@ -6,14 +6,10 @@
 
 
 import os
-import shutil
-import sys
 
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
-from simulation import TestSimulation
 
 ex = "gwf_lakobs_01a"
 gwf = None
@@ -207,9 +203,6 @@ def build_model(dir, exe):
 
 def test_mf6model(function_tmpdir, targets):
     mf6 = targets["mf6"]
-
-    # initialize testing framework
-    test = TestFramework()
 
     # build the models
     sim = build_model(str(function_tmpdir), mf6)

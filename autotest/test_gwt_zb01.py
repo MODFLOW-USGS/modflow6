@@ -9,7 +9,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 
 name = "zbud6_zb01"
@@ -237,7 +236,7 @@ def build_model(dir, exe):
 
 def eval_zb6(sim, exe):
     print("evaluating zonebudget...")
-    ws = Path(sim.simpath)
+    ws = Path(sim.workspace)
 
     # build zonebudget files
     # start with 1 since budget isn't calculated for zone 0
@@ -405,18 +404,14 @@ def eval_zb6(sim, exe):
 
 
 def test_mf6model(function_tmpdir, targets):
-    ws = str(function_tmpdir)
     mf6 = targets.mf6
     zb6 = targets.zbud6
-    test = TestFramework()
-    test.build(lambda _, w: build_model(w, mf6), 0, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=lambda s: eval_zb6(s, zb6),
-            htol=htol,
-            idxsim=0,
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda ws: build_model(ws, mf6),
+        check=lambda s: eval_zb6(s, zb6), 
+        htol=htol
     )
+    test.run()

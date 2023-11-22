@@ -134,7 +134,7 @@ def try_get_target(targets: Executables, name: str) -> Path:
             if name in _binaries["development"]:
                 raise ValueError(f"Couldn't find binary '{name}'")
             else:
-                pytest.skip(f"Couldn't find binary 'gridgen'")
+                pytest.skip(f"Couldn't find binary '{name}'")
 
 
 @pytest.fixture

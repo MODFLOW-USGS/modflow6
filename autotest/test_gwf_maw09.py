@@ -8,7 +8,6 @@ import numpy as np
 import pytest
 
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ("maw_09a", "maw_09b", "maw_09c", "maw_09d")
 dis_option = ("dis", "dis", "disv", "disv")
@@ -221,21 +220,21 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_results(sim):
+def eval_results(idx, test):
     print("evaluating results...")
 
-    name = ex[sim.idxsim]
+    name = ex[idx]
     gwfname = "gwf_" + name
 
     # get well observations
     fname = f"{gwfname}.gwf.obs.csv"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     gobs = np.genfromtxt(fname, delimiter=",", names=True)
 
     # get well observations
     fname = f"{gwfname}.maw.obs.csv"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     wobs = np.genfromtxt(fname, delimiter=",", names=True)["WHEAD"]
 
@@ -277,20 +276,20 @@ def eval_results(sim):
     ), f"final simulated maw head ({well_head}) does not equal 17.25."
 
     fname = gwfname + ".hds"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     hobj = flopy.utils.HeadFile(fname)
     head = hobj.get_alldata()[1:]
 
     # compare the maw-gwf flows with the gwf-maw flows
     fname = gwfname + ".maw.bud"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     mbud = flopy.utils.CellBudgetFile(fname, precision="double")
     maw_gwf = mbud.get_data(text="GWF")
 
     fname = gwfname + ".cbc"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     gbud = flopy.utils.CellBudgetFile(fname, precision="double")
     gwf_maw = gbud.get_data(text="MAW")
@@ -311,12 +310,12 @@ def eval_results(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=lambda t: eval_results(idx, t),
+        targets=targets,
+        mf6_regression=True,
     )
+    test.run()

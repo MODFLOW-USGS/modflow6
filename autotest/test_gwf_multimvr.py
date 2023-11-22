@@ -6,7 +6,6 @@ import numpy as np
 import pytest
 from flopy.utils.lgrutil import Lgr
 from framework import TestFramework
-from simulation import TestSimulation
 
 mvr_scens = ["mltmvr", "mltmvr5050", "mltmvr7525"]
 sim_workspaces = []
@@ -973,7 +972,6 @@ def add_sim_mvr(sim, gwfname, gwfnamec, remaining_frac=None):
 
 
 def build_model(idx, sim_ws):
-
     scen_nm, conns, frac = (
         mvr_scens[idx],
         scen_conns[idx],
@@ -998,9 +996,7 @@ def build_model(idx, sim_ws):
     return sim, None
 
 
-def check_simulation_output(sim):
-    idx = sim.idxsim
-
+def eval_results(idx, test):
     gwf_srch_str1 = (
         " SFR-PARENT PACKAGE - SUMMARY OF FLOWS FOR EACH CONTROL VOLUME"
     )
@@ -1008,7 +1004,7 @@ def check_simulation_output(sim):
     sim_srch_str = " WATER MOVER PACKAGE (MVR) FLOW RATES "
 
     # cur_ws, gwfparent = ex[idx], gwf_names[idx]
-    cur_ws = sim.simpath
+    cur_ws = test.workspace
     gwfparent = "gwf_" + mvr_scens[idx] + "_p"
     with open(os.path.join(cur_ws, gwfparent + ".lst"), "r") as gwf_lst, open(
         os.path.join(cur_ws, "mfsim.lst"), "r"
@@ -1070,7 +1066,11 @@ def check_simulation_output(sim):
     #    - 50/50: ~107 units of flow in each
     #    - 75/25: 75% goes through the gwf mvr, 25% through the simulation mvr
     q_target = 214.25
-    assert math.isclose(parent_sfr_last_reach_flow, q_target, rel_tol=0.1,), (
+    assert math.isclose(
+        parent_sfr_last_reach_flow,
+        q_target,
+        rel_tol=0.1,
+    ), (
         "Flow in the last reach of scenario "
         + mvr_scens[idx]
         + " = "
@@ -1121,14 +1121,11 @@ def check_simulation_output(sim):
     list(enumerate(mvr_scens)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=check_simulation_output,
-            idxsim=idx,
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=lambda t: eval_results(idx, t),
+        targets=targets,
     )
+    test.run()

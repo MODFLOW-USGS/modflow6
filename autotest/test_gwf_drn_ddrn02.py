@@ -4,7 +4,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 paktest = "drn"
 budtol = 1e-2
@@ -126,14 +125,14 @@ def eval_disch(sim):
     print("evaluating drain discharge and uzf discharge to land surface...")
 
     # MODFLOW 6 drain discharge results
-    fpth = os.path.join(sim.simpath, "drn_obs.csv")
+    fpth = os.path.join(sim.workspace, "drn_obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
         assert False, f'could not load data from "{fpth}"'
 
     # MODFLOW 6 uzf discharge results
-    fpth = os.path.join(sim.simpath, "mf6", "uzf_obs.csv")
+    fpth = os.path.join(sim.workspace, "mf6", "uzf_obs.csv")
     try:
         tc0 = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -147,7 +146,7 @@ def eval_disch(sim):
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, f"{os.path.basename(sim.name)}.disc.cmp.out"
+        sim.workspace, f"{os.path.basename(sim.name)}.disc.cmp.out"
     )
     f = open(fpth, "w")
     line = f"{'TOTIM':>15s}"
@@ -177,14 +176,11 @@ def eval_disch(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=str(function_tmpdir),
-            exe_dict=targets,
-            exfunc=eval_disch,
-            idxsim=idx,
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_disch,
+        targets=targets,
     )
+    test.run()

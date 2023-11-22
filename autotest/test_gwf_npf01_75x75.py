@@ -4,7 +4,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["npf01a_75x75", "npf01b_75x75"]
 top = [100.0, 0.0]
@@ -132,7 +131,7 @@ def build_model(idx, dir):
         gwf,
         print_input=True,
         print_flows=True,
-        maxbound=len(ws),
+        maxbound=len(str(ws)),
         stress_period_data=wd6,
         save_flows=False,
     )
@@ -190,12 +189,15 @@ def build_model(idx, dir):
     return sim, mc
 
 
-# - No need to change any code below
 @pytest.mark.parametrize(
     "idx, name",
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(TestSimulation(name=name, exe_dict=targets), str(function_tmpdir))
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        targets=targets,
+    )
+    test.run()

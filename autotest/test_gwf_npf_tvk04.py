@@ -4,7 +4,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["tvk05"]
 time_varying_k = [1.0, 10.0]
@@ -161,7 +160,7 @@ def eval_model(sim):
     # budget
     try:
         fname = f"gwf_{sim.name}.lst"
-        ws = sim.simpath
+        ws = sim.workspace
         fname = os.path.join(ws, fname)
         lst = flopy.utils.Mf6ListBudget(
             fname, budgetkey="VOLUME BUDGET FOR ENTIRE MODEL"
@@ -185,16 +184,15 @@ def eval_model(sim):
 
 
 @pytest.mark.parametrize(
-    "name",
-    ex,
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_model, idxsim=0
-        ),
-        ws,
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_model,
+        targets=targets,
     )
+    test.run()

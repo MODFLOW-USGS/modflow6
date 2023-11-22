@@ -10,7 +10,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["mvt_01"]
 
@@ -488,7 +487,7 @@ def eval_results(sim):
     name = sim.name
     gwtname = "gwt_" + name
     fname = gwtname + ".sft.bin"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(sim.workspace, fname)
     assert os.path.isfile(fname)
 
     # load the lake concentrations and make sure all values are correct
@@ -497,14 +496,14 @@ def eval_results(sim):
 
     # load the aquifer concentrations and make sure all values are correct
     fname = gwtname + ".ucn"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(sim.workspace, fname)
     cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")
     caq = cobj.get_data().flatten()
 
     assert np.allclose(csft, caq), f"{csft} {caq}"
 
     # sft observation results
-    fpth = os.path.join(sim.simpath, gwtname + ".sft.obs.csv")
+    fpth = os.path.join(sim.workspace, gwtname + ".sft.obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -518,7 +517,7 @@ def eval_results(sim):
 
     # load the sft budget file
     fname = gwtname + ".sft.bud"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(sim.workspace, fname)
     assert os.path.isfile(fname)
     bobj = flopy.utils.CellBudgetFile(fname, precision="double", verbose=False)
     # check the flow-ja-face terms
@@ -532,7 +531,7 @@ def eval_results(sim):
     # get mvt results from listing file
     bud_lst = ["SFR-1_IN", "SFR-1_OUT", "LAK-1_IN", "LAK-1_OUT"]
     fname = gwtname + ".lst"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(sim.workspace, fname)
     budl = flopy.utils.Mf6ListBudget(
         fname, budgetkey="TRANSPORT MOVER BUDGET FOR ENTIRE MODEL"
     )
@@ -548,16 +547,15 @@ def eval_results(sim):
 
 
 @pytest.mark.parametrize(
-    "name",
-    ex,
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=0
-        ),
-        ws,
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_results, 
     )
+    test.run()

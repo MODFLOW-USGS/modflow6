@@ -12,7 +12,6 @@ import numpy as np
 import pytest
 from conftest import project_root_path
 from framework import TestFramework
-from simulation import TestSimulation
 
 data_path = project_root_path / "autotest" / "data"
 model_path = str(data_path / "prudic2004test2gwtgwt")
@@ -897,7 +896,7 @@ def eval_results(sim):
         if arg.lower() == "--makeplot":
             makeplot = True
 
-    ws = sim.simpath
+    ws = sim.workspace
     simfp = flopy.mf6.MFSimulation.load(sim_ws=ws, strict=False)
 
     if makeplot:
@@ -907,7 +906,7 @@ def eval_results(sim):
             make_concentration_map(simfp, ws)
 
     # ensure concentrations were saved
-    ws = sim.simpath
+    ws = sim.workspace
     gwfname = gwfnames[0]
     gwtname = gwtnames[0]
 
@@ -968,12 +967,11 @@ def eval_results(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_results, 
     )
+    test.run()

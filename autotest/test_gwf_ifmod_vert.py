@@ -37,7 +37,6 @@ import numpy as np
 import pytest
 from flopy.utils.lgrutil import Lgr
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["ifmod_vert"]
 
@@ -242,11 +241,11 @@ def build_model(idx, exdir):
 def eval_heads(sim):
     print("comparing heads  for child model to analytical result...")
 
-    fpth = os.path.join(sim.simpath, f"{child_name}.hds")
+    fpth = os.path.join(sim.workspace, f"{child_name}.hds")
     hds_c = flopy.utils.HeadFile(fpth)
     heads_c = hds_c.get_data()
 
-    fpth = os.path.join(sim.simpath, f"{child_name}.dis.grb")
+    fpth = os.path.join(sim.workspace, f"{child_name}.dis.grb")
     grb_c = flopy.mf6.utils.MfGrdFile(fpth)
 
     # (note that without XT3D on the exchange, the 'error'
@@ -262,11 +261,11 @@ def eval_heads(sim):
     for mname in [parent_name, child_name]:
         print(f"Checking flowja residual for model {mname}")
 
-        fpth = os.path.join(sim.simpath, f"{mname}.dis.grb")
+        fpth = os.path.join(sim.workspace, f"{mname}.dis.grb")
         grb = flopy.mf6.utils.MfGrdFile(fpth)
         ia = grb._datadict["IA"] - 1
 
-        fpth = os.path.join(sim.simpath, f"{mname}.cbc")
+        fpth = os.path.join(sim.workspace, f"{mname}.cbc")
         assert os.path.isfile(fpth)
         cbb = flopy.utils.CellBudgetFile(fpth, precision="double")
         flow_ja_face = cbb.get_data(idx=0)
@@ -287,11 +286,11 @@ def eval_heads(sim):
 )
 @pytest.mark.developmode
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_heads, idxsim=idx
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_heads,
+        targets=targets,
     )
+    test.run()

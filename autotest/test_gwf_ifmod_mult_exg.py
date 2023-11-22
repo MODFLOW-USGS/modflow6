@@ -28,7 +28,6 @@ import numpy as np
 import pytest
 from flopy.utils.lgrutil import Lgr
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["ifmod_mult_exg"]
 name_parent = "parent"
@@ -262,19 +261,19 @@ def build_model(idx, exdir):
 
 
 def eval_heads(sim):
-    fpth = os.path.join(sim.simpath, f"{name_parent}.hds")
+    fpth = os.path.join(sim.workspace, f"{name_parent}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads = hds.get_data()
 
-    fpth = os.path.join(sim.simpath, f"{name_child}.hds")
+    fpth = os.path.join(sim.workspace, f"{name_child}.hds")
     hds_c = flopy.utils.HeadFile(fpth)
     heads_c = hds_c.get_data()
 
-    fpth = os.path.join(sim.simpath, f"{name_parent}.dis.grb")
+    fpth = os.path.join(sim.workspace, f"{name_parent}.dis.grb")
     grb = flopy.mf6.utils.MfGrdFile(fpth)
     mg = grb.modelgrid
 
-    fpth = os.path.join(sim.simpath, f"{name_child}.dis.grb")
+    fpth = os.path.join(sim.workspace, f"{name_child}.dis.grb")
     grb_c = flopy.mf6.utils.MfGrdFile(fpth)
     mg_c = grb_c.modelgrid
 
@@ -331,16 +330,16 @@ def eval_heads(sim):
 
 
 @pytest.mark.parametrize(
-    "name",
-    ex,
+    "idx, name",
+    list(enumerate(ex)),
 )
 @pytest.mark.developmode
-def test_mf6model(name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, 0, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_heads, idxsim=0
-        ),
-        str(function_tmpdir),
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_heads,
+        targets=targets,
     )
+    test.run()

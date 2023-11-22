@@ -1,7 +1,7 @@
 import pytest
 
 from conftest import should_compare
-from simulation import TestSimulation
+from framework import TestFramework
 
 excluded_models = []
 excluded_comparisons = {
@@ -36,20 +36,20 @@ def test_model(
     if "dev" in name and "not developmode" in markers:
         pytest.skip(f"Skipping large mf6 model '{name}' (develop mode only)")
 
-    sim = TestSimulation(
+    test = TestFramework(
         name=name,
-        exe_dict=targets,
+        workspace=exdir,
+        targets=targets,
         mf6_regression=not original_regression,
         cmp_verbose=False,
         make_comparison=should_compare(name, excluded_comparisons, targets),
-        simpath=str(exdir),
     )
 
-    src = sim.simpath
+    src = test.workspace
     dst = str(function_tmpdir)
 
     # Run the MODFLOW 6 simulation and compare to existing head file or
     # appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
-    sim.setup(src, dst)
-    sim.run()
-    sim.compare()
+    test.setup(src, dst)
+    test.run()
+    test.check()

@@ -12,7 +12,6 @@ import numpy as np
 import pytest
 from conftest import project_root_path
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["prudic2004t2"]
 data_path = project_root_path / "autotest" / "data"
@@ -587,7 +586,7 @@ def build_model(idx, dir):
 def make_concentration_vs_time(sim):
     print("making plot of concentration versus time...")
     name = sim.name
-    ws = sim.simpath
+    ws = sim.workspace
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
@@ -646,7 +645,7 @@ def make_concentration_map(sim):
     ]
 
     name = sim.name
-    ws = sim.simpath
+    ws = sim.workspace
     simfp = flopy.mf6.MFSimulation.load(sim_ws=ws)
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
@@ -685,7 +684,7 @@ def make_concentration_map(sim):
 def check_obs(sim):
     print("checking obs...")
     name = sim.name
-    ws = sim.simpath
+    ws = sim.workspace
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
@@ -830,7 +829,7 @@ def eval_results(sim):
         make_concentration_map(sim)
 
     # ensure concentrations were saved
-    ws = sim.simpath
+    ws = sim.workspace
     name = sim.name
     gwtname = "gwt_" + name
 
@@ -978,12 +977,11 @@ def eval_results(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_results, 
     )
+    test.run()

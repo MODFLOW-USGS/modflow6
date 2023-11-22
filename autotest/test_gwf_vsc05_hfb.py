@@ -21,13 +21,11 @@
 # Imports
 
 import os
-import sys
 
 import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 hyd_cond = [1205.49396942506, 864.0]  # Hydraulic conductivity (m/d)
 ex = ["no-vsc05-hfb", "vsc05-hfb", "no-vsc05-k"]
@@ -282,22 +280,22 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_results(sim):
+def eval_results(idx, test):
     print("evaluating results...")
 
     # read flow results from model
-    name = ex[sim.idxsim]
+    name = ex[idx]
     gwfname = "gwf-" + name
-    sim1 = flopy.mf6.MFSimulation.load(sim_ws=sim.simpath, load_only=["dis"])
+    sim1 = flopy.mf6.MFSimulation.load(sim_ws=test.workspace, load_only=["dis"])
     gwf = sim1.get_model(gwfname)
 
     # Get grid data
     grdname = gwfname + ".dis.grb"
-    bgf = flopy.mf6.utils.MfGrdFile(os.path.join(sim.simpath, grdname))
+    bgf = flopy.mf6.utils.MfGrdFile(os.path.join(test.workspace, grdname))
     ia, ja = bgf.ia, bgf.ja
 
     fname = gwfname + ".bud"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     budobj = flopy.utils.CellBudgetFile(fname, precision="double")
     outbud = budobj.get_data(text="    FLOW-JA-FACE")[-1].squeeze()
@@ -330,7 +328,7 @@ def eval_results(sim):
             if cellm == celln - 1:
                 vals_to_store.append([cellm, celln, outbud[ipos]])
 
-    if sim.idxsim == 0:
+    if idx == 0:
         no_vsc_bud_last = np.array(vals_to_store)
 
         # Ensure with and without VSC simulations give nearly identical flow results
@@ -344,7 +342,7 @@ def eval_results(sim):
             "equal, but are not."
         )
 
-    elif sim.idxsim == 1:
+    elif idx == 1:
         with_vsc_bud_last = np.array(vals_to_store)
 
         assert np.allclose(
@@ -356,7 +354,7 @@ def eval_results(sim):
             "equal, but are not."
         )
 
-    elif sim.idxsim == 2:
+    elif idx == 2:
         no_vsc_low_k_bud_last = np.array(vals_to_store)
 
         # Ensure the cell-to-cell flow between columns 5 and 6 in model
@@ -375,12 +373,11 @@ def eval_results(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=lambda t: eval_results(idx, t),
+        targets=targets,
     )
+    test.run()

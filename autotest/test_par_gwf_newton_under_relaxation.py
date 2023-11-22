@@ -2,7 +2,6 @@ import os
 from decimal import Decimal
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 # This tests reuses the simulation data in test_gwf_newton_under_relaxation
 # and runs it in parallel on one and two cpus with
@@ -49,21 +48,15 @@ def eval_model(test_sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    if idx == 1:
-        ncpus = 2
-    else:
-        ncpus = 1
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_model,
-            idxsim=idx,
-            make_comparison=False,
-            parallel=True,
-            ncpus=ncpus,
-        ),
-        str(function_tmpdir),
+    ncpus = 2 if idx == 1 else 1
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_model, 
+        make_comparison=False,
+        parallel=True,
+        ncpus=ncpus,
     )
+    test.run()

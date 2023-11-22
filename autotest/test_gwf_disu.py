@@ -15,7 +15,6 @@ import pytest
 from flopy.utils.gridutil import get_disu_kwargs
 
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["disu01a", "disu01b"]
 
@@ -62,18 +61,18 @@ def build_model(idx, dir, mf6):
     return sim, None
 
 
-def eval_results(sim):
+def eval_results(idx, test):
     print("evaluating results...")
 
-    name = sim.name
+    name = test.name
 
-    fname = os.path.join(sim.simpath, name + ".disu.grb")
+    fname = os.path.join(test.workspace, name + ".disu.grb")
     grbobj = flopy.mf6.utils.MfGrdFile(fname)
     nodes = grbobj._datadict["NODES"]
     ia = grbobj._datadict["IA"]
     ja = grbobj._datadict["JA"]
 
-    if sim.idxsim == 1:
+    if idx == 1:
         assert np.array_equal(ia[0:4], np.array([1, 4, 4, 7]))
         assert np.array_equal(ja[:6], np.array([1, 4, 10, 3, 6, 12]))
         assert ia[-1] == 127
@@ -83,18 +82,12 @@ def eval_results(sim):
 
 @pytest.mark.parametrize("idx, name", list(enumerate(ex)))
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    sim, _ = build_model(idx, ws, targets.mf6)
-    sim.write_simulation()
-    sim.run_simulation()
-    test = TestFramework()
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_results,
-            idxsim=idx,
-            make_comparison=False,
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws, targets.mf6),
+        check=lambda t: eval_results(idx, t),
+        targets=targets,
+        make_comparison=False
     )
+    test.run()

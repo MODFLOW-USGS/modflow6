@@ -9,7 +9,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["wel01"]
 
@@ -151,7 +150,7 @@ def eval_obs(sim):
         "wel.obs.csv",
         "wel.obs.dup.csv",
     ):
-        fpth = os.path.join(sim.simpath, file_name)
+        fpth = os.path.join(sim.workspace, file_name)
         try:
             tc = np.genfromtxt(fpth, names=True, delimiter=",")
         except:
@@ -173,7 +172,7 @@ def eval_obs(sim):
             print("    " + msg)
 
     # MODFLOW 6 AFR CSV output file
-    fpth = os.path.join(sim.simpath, "wel01.afr.csv")
+    fpth = os.path.join(sim.workspace, "wel01.afr.csv")
     try:
         afroutput = np.genfromtxt(
             fpth, names=True, delimiter=",", deletechars=""
@@ -193,12 +192,11 @@ def eval_obs(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_obs, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_obs,
     )
+    test.run()

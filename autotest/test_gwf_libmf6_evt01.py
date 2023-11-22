@@ -12,7 +12,6 @@ import numpy as np
 import pytest
 from framework import TestFramework
 from modflowapi import ModflowApi
-from simulation import TestSimulation
 
 ex = ["libgwf_evt01"]
 
@@ -202,7 +201,6 @@ def api_func(exe, idx, model_ws=None):
     # model time loop
     idx = 0
     while current_time < end_time:
-
         # get dt and prepare for non-linear iterations
         dt = mf6.get_time_step()
         mf6.prepare_time_step(dt)
@@ -212,7 +210,6 @@ def api_func(exe, idx, model_ws=None):
         mf6.prepare_solve()
 
         while kiter < max_iter:
-
             # update well rate
             twell[:] = head2et_wellrate(head[0])
             well[:] = twell[:]
@@ -259,11 +256,11 @@ def api_func(exe, idx, model_ws=None):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, idxsim=idx, api_func=api_func
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        targets=targets,
+        api_func=lambda exe, ws: api_func(exe, idx, ws),
     )
+    test.run()

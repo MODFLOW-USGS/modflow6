@@ -10,7 +10,6 @@ import numpy as np
 import pytest
 from conftest import should_compare
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["gwf_henrynr01"]
 
@@ -231,7 +230,6 @@ def build_model(idx, dir, exe):
     return sim, None
 
 
-# - No need to change any code below
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "idx, name",
@@ -241,16 +239,13 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     name = "gwf-henry-nr"
     comparisons = {name: ("6.2.1",)}
     mf6 = targets["mf6"]
-    test = TestFramework()
-    test.build(lambda i, w: build_model(i, w, mf6), idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            idxsim=idx,
-            mf6_regression=True,
-            cmp_verbose=False,
-            make_comparison=should_compare(name, comparisons, targets),
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws, mf6),
+        targets=targets,
+        mf6_regression=True,
+        cmp_verbose=False,
+        make_comparison=should_compare(name, comparisons, targets),
     )
+    test.run()

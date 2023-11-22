@@ -4,7 +4,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 paktest = "csub"
 budtol = 1e-2
@@ -211,10 +210,10 @@ def calc_void(theta):
 def eval_void(sim):
     print("evaluating void ratio...")
 
-    fpth = os.path.join(sim.simpath, "csub_obs.csv")
+    fpth = os.path.join(sim.workspace, "csub_obs.csv")
     cd = np.genfromtxt(fpth, delimiter=",", names=True)
 
-    fpth = os.path.join(sim.simpath, "mf6", "csub_obs.csv")
+    fpth = os.path.join(sim.workspace, "mf6", "csub_obs.csv")
     cd2 = np.genfromtxt(fpth, delimiter=",", names=True)
 
     v = calc_comp2void(cd["COMP"])
@@ -228,7 +227,7 @@ def eval_void(sim):
 
     # write summary
     fpth = os.path.join(
-        sim.simpath, f"{os.path.basename(sim.name)}.comp.cmp.out"
+        sim.workspace, f"{os.path.basename(sim.name)}.comp.cmp.out"
     )
     f = open(fpth, "w")
     line = f"{'TOTIM':>15s}"
@@ -259,11 +258,11 @@ def eval_void(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_void, idxsim=idx
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_void,
+        targets=targets,
     )
+    test.run()

@@ -10,7 +10,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = [
     "gwt_obs01a",
@@ -249,12 +248,12 @@ def eval_transport(sim):
     gwtname = "gwt_" + name
 
     # MODFLOW 6 output control concentrations
-    fpth = os.path.join(sim.simpath, f"{gwtname}.ucn")
+    fpth = os.path.join(sim.workspace, f"{gwtname}.ucn")
     cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
     conc = cobj.get_alldata()
 
     # MODFLOW 6 observation package concentrations
-    fpth = os.path.join(sim.simpath, "conc_obs.csv")
+    fpth = os.path.join(sim.workspace, "conc_obs.csv")
     tc = np.genfromtxt(fpth, names=True, delimiter=",")
 
     assert np.allclose(
@@ -267,16 +266,15 @@ def eval_transport(sim):
 
 
 @pytest.mark.parametrize(
-    "name",
-    ex,
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=0
-        ),
-        ws,
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_transport, 
     )
+    test.run()

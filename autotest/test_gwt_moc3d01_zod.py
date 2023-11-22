@@ -10,7 +10,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = [
     "moc3d01zoda",
@@ -362,14 +361,14 @@ def make_plot_cd(cobj, fname=None):
     return
 
 
-def eval_transport(sim):
+def eval_transport(idx, test):
     print("evaluating transport...")
 
-    name = ex[sim.idxsim]
+    name = ex[idx]
     gwtname = "gwt_" + name
 
     # get mobile domain concentration object
-    fpth = os.path.join(sim.simpath, f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
     try:
         cobj = flopy.utils.HeadFile(
             fpth, precision="double", text="CONCENTRATION"
@@ -382,15 +381,15 @@ def eval_transport(sim):
     makeplot = False
     if makeplot:
         fname = "fig-ct.pdf"
-        fname = os.path.join(sim.simpath, fname)
+        fname = os.path.join(test.workspace, fname)
         make_plot_ct(tssim, fname)
 
         fname = "fig-cd.pdf"
-        fname = os.path.join(sim.simpath, fname)
+        fname = os.path.join(test.workspace, fname)
         make_plot_cd(cobj, fname)
 
     # get mobile domain budget object
-    fpth = os.path.join(sim.simpath, f"{gwtname}.cbc")
+    fpth = os.path.join(test.workspace, f"{gwtname}.cbc")
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # Check to make sure decay rates in budget file are correct.  If there is
@@ -402,7 +401,7 @@ def eval_transport(sim):
     delt = 0.5
     vcell = 0.1 * 0.1 * 1.0
     porosity = 0.1
-    decay_rate = decay[sim.idxsim]
+    decay_rate = decay[idx]
     for i in range(122):
         if conc[i] / delt > decay_rate:
             qknown = -decay_rate * vcell * porosity
@@ -414,7 +413,7 @@ def eval_transport(sim):
         # print(i, qdecay_budfile[i], conc[i])
 
     # get immobile domain concentration object
-    fpth = os.path.join(sim.simpath, f"{gwtname}.ist.ucn")
+    fpth = os.path.join(test.workspace, f"{gwtname}.ist.ucn")
     cimobj = None
     if os.path.isfile(fpth):
         try:
@@ -560,7 +559,7 @@ def eval_transport(sim):
     tsresc = np.array(tsresc)
     tsresd = np.array(tsresd)
     tsreslist = [tsresa, tsresb, tsresc, tsresd]
-    tsres = tsreslist[sim.idxsim]
+    tsres = tsreslist[idx]
     errmsg = (
         "Simulated concentrations do not match with known solution.\n"
         "{} /= {}".format(tssim, tsres)
@@ -574,12 +573,11 @@ def eval_transport(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_transport, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda ws: build_model(idx, ws),
+        check=lambda t: eval_transport(idx, t), 
     )
+    test.run()

@@ -15,7 +15,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["buy_lak_01a"]  # , 'buy_lak_01b', 'buy_lak_01c']
 buy_on_list = [False]  # , True, True]
@@ -214,14 +213,14 @@ def eval_results(sim):
     # calculate volume of water and make sure it is conserved
     gwfname = "gwf_" + sim.name
     fname = gwfname + ".lak.bin"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(sim.workspace, fname)
     assert os.path.isfile(fname)
     bobj = flopy.utils.HeadFile(fname, text="STAGE")
     stage = bobj.get_alldata().flatten()
     # print(stage)
 
     fname = gwfname + ".hds"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(sim.workspace, fname)
     assert os.path.isfile(fname)
     hobj = flopy.utils.HeadFile(fname)
     head = hobj.get_data()
@@ -257,11 +256,11 @@ def eval_results(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, 0, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=0
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_results,
+        targets=targets,
     )
+    test.run()

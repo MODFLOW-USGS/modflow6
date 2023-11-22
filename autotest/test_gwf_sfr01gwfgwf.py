@@ -14,7 +14,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 # from flopy.mf6.utils import Mf6Splitter
 
@@ -280,7 +279,7 @@ def eval_results(sim):
     print("evaluating sfr stage results...")
 
     # base simulations stage
-    ws = sim.simpath
+    ws = sim.workspace
     fpth = ws / "mf6/single.sfr.stg"
     single_stage_obj = flopy.utils.HeadFile(fpth, text="STAGE")
     single_stage = single_stage_obj.get_data().squeeze()
@@ -306,17 +305,13 @@ def eval_results(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = function_tmpdir
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_results,
-            idxsim=idx,
-            make_comparison=False,
-            run_comparison=True,
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_results,
+        targets=targets,
+        make_comparison=False,
+        run_comparison=True,
     )
+    test.run()

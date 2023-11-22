@@ -4,7 +4,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 # General test for the interface model approach.
 # It compares the result of a single reference model
@@ -17,8 +16,8 @@ from simulation import TestSimulation
 # period 1: The first stress period we start almost dry and have the
 #           model fill up.
 # period 2: The BC on the left is lowered such that a part of the top
-#           layer dries. To test the interface, the value is chosen such 
-#           that the boundary cell on the left is DRY and the one on the 
+#           layer dries. To test the interface, the value is chosen such
+#           that the boundary cell on the left is DRY and the one on the
 #           right isn't.
 #
 #                  'refmodel'               'leftmodel'    'rightmodel'
@@ -356,17 +355,17 @@ def build_model(idx, exdir):
 def compare_to_ref(sim):
     print("comparing heads to single model reference...")
 
-    fpth = os.path.join(sim.simpath, f"{mname_ref}.hds")
+    fpth = os.path.join(sim.workspace, f"{mname_ref}.hds")
     hds = flopy.utils.HeadFile(fpth)
-    fpth = os.path.join(sim.simpath, f"{mname_left}.hds")
+    fpth = os.path.join(sim.workspace, f"{mname_left}.hds")
     hds_l = flopy.utils.HeadFile(fpth)
-    fpth = os.path.join(sim.simpath, f"{mname_right}.hds")
+    fpth = os.path.join(sim.workspace, f"{mname_right}.hds")
     hds_r = flopy.utils.HeadFile(fpth)
 
     times = hds.get_times()
-    for iper, t in enumerate(times):        
+    for iper, t in enumerate(times):
         heads = hds.get_data(totim=t)
-        heads_left = hds_l.get_data(totim=t)        
+        heads_left = hds_l.get_data(totim=t)
         heads_right = hds_r.get_data(totim=t)
         heads_2models = np.append(heads_left, heads_right, axis=2)
 
@@ -374,9 +373,13 @@ def compare_to_ref(sim):
         # dry in period 2, but the cells in the right model should remain
         # active. This tests the interface model for dealing with drying
         # and wetting, and handling inactive cells, explicitly
-        if (iper == 1):
-            assert np.all(heads_left[0,0,:] == -1.0e+30), "left model, top layer should be DRY in period 2"
-            assert np.all(heads_right[0,0,:] > -1.0e+30), "right model, top layer should be WET in period 2"
+        if iper == 1:
+            assert np.all(
+                heads_left[0, 0, :] == -1.0e30
+            ), "left model, top layer should be DRY in period 2"
+            assert np.all(
+                heads_right[0, 0, :] > -1.0e30
+            ), "right model, top layer should be WET in period 2"
 
         # compare heads
         maxdiff = np.amax(abs(heads - heads_2models))
@@ -389,7 +392,7 @@ def compare_to_ref(sim):
 
     # check budget error from .lst file
     for mname in [mname_ref, mname_left, mname_right]:
-        fpth = os.path.join(sim.simpath, f"{mname}.lst")
+        fpth = os.path.join(sim.workspace, f"{mname}.lst")
         for line in open(fpth):
             if line.lstrip().startswith("PERCENT"):
                 cumul_balance_error = float(line.split()[3])
@@ -406,11 +409,11 @@ def compare_to_ref(sim):
 )
 @pytest.mark.developmode
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework()
-    test.build(build_model, idx, str(function_tmpdir))
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=compare_to_ref, idxsim=idx
-        ),
-        str(function_tmpdir),
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=compare_to_ref,
+        targets=targets,
     )
+    test.run()

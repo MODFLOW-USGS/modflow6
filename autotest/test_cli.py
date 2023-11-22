@@ -17,9 +17,7 @@ def test_cli_version():
     print(output)
     assert output.startswith(f"{app}:"), f"found: {output}"
 
-    version = (
-        output.lower().split(' ')[1]
-    )
+    version = output.lower().split(" ")[1]
     print(version)
     v_split = version.split(".")
     assert len(v_split) >= 2

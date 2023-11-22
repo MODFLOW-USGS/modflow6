@@ -5,7 +5,6 @@ import numpy as np
 import pytest
 from flopy.utils.compare import eval_bud_diff
 from framework import TestFramework
-from simulation import TestSimulation
 
 paktest = "uzf"
 ex = ["ts_uzf01"]
@@ -414,7 +413,12 @@ def get_model(ws, name, timeseries=False):
         (7, (0, 7, 2), 1, -1, 1.0, kv, 0.2, 0.4, 0.3, 3.5),
         (8, (0, 7, 3), 1, -1, 1.0, kv, 0.2, 0.4, 0.3, 3.5),
     ]
-    finf, pet, extdp, extwc, = (
+    (
+        finf,
+        pet,
+        extdp,
+        extwc,
+    ) = (
         1e-8,
         5e-9,
         1.0,
@@ -651,38 +655,38 @@ def eval_model(sim):
 
     # get ia/ja from binary grid file
     fname = f"{os.path.basename(sim.name)}.dis.grb"
-    fpth = os.path.join(sim.simpath, fname)
+    fpth = os.path.join(sim.workspace, fname)
     grbobj = flopy.mf6.utils.MfGrdFile(fpth)
     ia = grbobj._datadict["IA"] - 1
 
     fname = f"{os.path.basename(sim.name)}.cbc"
 
     # open first gwf cbc file
-    fpth = os.path.join(sim.simpath, fname)
+    fpth = os.path.join(sim.workspace, fname)
     cobj0 = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # open second gwf cbc file
-    fpth = os.path.join(sim.simpath, "mf6", fname)
+    fpth = os.path.join(sim.workspace, "mf6", fname)
     cobj1 = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # define file path and evaluate difference
     fname = f"{os.path.basename(sim.name)}.cbc.cmp.out"
-    fpth = os.path.join(sim.simpath, fname)
+    fpth = os.path.join(sim.workspace, fname)
     eval_bud_diff(fpth, cobj0, cobj1, ia)
 
     # evaluate the sfr package budget file
     fname = f"{os.path.basename(sim.name)}.{paktest}.cbc"
     # open first sfr cbc file
-    fpth = os.path.join(sim.simpath, fname)
+    fpth = os.path.join(sim.workspace, fname)
     cobj0 = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # open second sfr cbc file
-    fpth = os.path.join(sim.simpath, "mf6", fname)
+    fpth = os.path.join(sim.workspace, "mf6", fname)
     cobj1 = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # define file path and evaluate difference
     fname = f"{os.path.basename(sim.name)}.{paktest}.cbc.cmp.out"
-    fpth = os.path.join(sim.simpath, fname)
+    fpth = os.path.join(sim.workspace, fname)
     eval_bud_diff(fpth, cobj0, cobj1)
 
 
@@ -691,12 +695,11 @@ def eval_model(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_model, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_model,
+        targets=targets,
     )
+    test.run()

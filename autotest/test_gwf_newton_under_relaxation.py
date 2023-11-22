@@ -6,7 +6,6 @@ import pathlib as pl
 import pytest
 from conftest import project_root_path
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["nr_ur01", "nr_ur02"]
 
@@ -105,13 +104,13 @@ def build_model(idx, ws):
         return sim, None
 
 
-def eval_head(sim):
-    print(f"evaluating heads...{sim.idxsim}")
-    mf6sim = flopy.mf6.MFSimulation.load(sim_ws=sim.simpath)
-    if sim.idxsim == 1:
+def eval_head(idx, test):
+    print(f"evaluating heads...{idx}")
+    mf6sim = flopy.mf6.MFSimulation.load(sim_ws=test.workspace)
+    if idx == 1:
         mfsplit = flopy.mf6.utils.Mf6Splitter(mf6sim)
         mfsplit.load_node_mapping(
-            mf6sim, pl.Path(f"{sim.simpath}/mapping.json")
+            mf6sim, pl.Path(f"{test.workspace}/mapping.json")
         )
         head_dict = {}
         for modelname in mf6sim.model_names:
@@ -131,15 +130,11 @@ def eval_head(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_head,
-            idxsim=idx,
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=lambda t: eval_head(idx, t),
+        targets=targets,
     )
+    test.run()

@@ -14,14 +14,12 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["rch01a", "rch01b", "rch01c"]
 irch = [None, 0, [1, 1, 0, 1, 1]]
 
 
 def build_model(idx, dir):
-
     nlay, nrow, ncol = 2, 1, 5
     chdheads = [25.0]
     nper = len(chdheads)
@@ -124,7 +122,7 @@ def build_model(idx, dir):
 def eval_model(sim):
     print("evaluating model...")
 
-    fpth = os.path.join(sim.simpath, "rch.cbc")
+    fpth = os.path.join(sim.workspace, "rch.cbc")
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     records = bobj.get_data(text="rch")[0]
 
@@ -136,7 +134,7 @@ def eval_model(sim):
     assert np.allclose(records["node2"], answer["node2"])
     assert np.allclose(records["q"], answer["q"])
 
-    fpth = os.path.join(sim.simpath, "rch.hds")
+    fpth = os.path.join(sim.workspace, "rch.hds")
     hobj = flopy.utils.HeadFile(fpth, precision="double")
     heads = hobj.get_alldata()
 
@@ -146,12 +144,11 @@ def eval_model(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_model, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_model,
+        targets=targets,
     )
+    test.run()

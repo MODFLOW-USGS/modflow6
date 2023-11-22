@@ -7,7 +7,6 @@ cell_iuz_dict = {}
 
 
 def build_model(dir, exe):
-
     nlay, nrow, ncol = 3, 1, 10
     nper = 1
     perlen = [20.0]

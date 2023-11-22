@@ -5,7 +5,6 @@ import flopy
 import numpy as np
 from framework import TestFramework
 from pytest_cases import parametrize, parametrize_with_cases
-from simulation import TestSimulation
 
 
 class GwfBuyLakCases:
@@ -374,86 +373,87 @@ class GwfBuyLakCases:
                 filename=f"{data.name}.gwfgwt",
             )
 
-        return data, sim, None, self.eval_results
+        return data, sim
 
-    def eval_results(self, sim, data):
-        print("evaluating results...")
 
-        # calculate volume of water and make sure it is conserved
-        gwfname = "gwf_" + data.name
-        gwtname = "gwt_" + data.name
-        fname = gwfname + ".lak.bin"
-        fname = os.path.join(sim.simpath, fname)
-        assert os.path.isfile(fname)
-        bobj = flopy.utils.HeadFile(fname, text="STAGE")
-        stage = bobj.get_alldata().flatten()
-        # print(stage)
+def eval_results(test, data):
+    print("evaluating results...")
 
-        fname = gwfname + ".hds"
-        fname = os.path.join(sim.simpath, fname)
-        assert os.path.isfile(fname)
-        hobj = flopy.utils.HeadFile(fname)
-        head = hobj.get_data()
-        # print(head)
+    # calculate volume of water and make sure it is conserved
+    gwfname = "gwf_" + data.name
+    gwtname = "gwt_" + data.name
+    fname = gwfname + ".lak.bin"
+    fname = os.path.join(test.workspace, fname)
+    assert os.path.isfile(fname)
+    bobj = flopy.utils.HeadFile(fname, text="STAGE")
+    stage = bobj.get_alldata().flatten()
+    # print(stage)
 
-        fname = gwtname + ".ucn"
-        fname = os.path.join(sim.simpath, fname)
-        assert os.path.isfile(fname)
-        cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")
-        conc = cobj.get_data()
+    fname = gwfname + ".hds"
+    fname = os.path.join(test.workspace, fname)
+    assert os.path.isfile(fname)
+    hobj = flopy.utils.HeadFile(fname)
+    head = hobj.get_data()
+    # print(head)
 
-        fname = gwtname + ".lkt.bin"
-        fname = os.path.join(sim.simpath, fname)
-        assert os.path.isfile(fname)
-        cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")
-        clak = cobj.get_data().flatten()
+    fname = gwtname + ".ucn"
+    fname = os.path.join(test.workspace, fname)
+    assert os.path.isfile(fname)
+    cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")
+    conc = cobj.get_data()
 
-        # calculate initial water volume
-        v0 = 3.5 * 2  # outermost columns
-        v0 += 2.5 * 2  # next innermost columns
-        v0 += 2.0 * 2  # next innermost columns
-        v0 += 1.0 * 1  # middle column
-        v0 = v0 * 0.3  # specific yield
+    fname = gwtname + ".lkt.bin"
+    fname = os.path.join(test.workspace, fname)
+    assert os.path.isfile(fname)
+    cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")
+    clak = cobj.get_data().flatten()
 
-        m0 = v0 * data.gwt_conc
-        vl0 = (2.25 - 2.0) * 2 + (2.25 - 1.0)
-        m0 += vl0 * data.lak_conc
-        v0 += vl0
-        print(f"initial volume of water in model = {v0}")
-        print(f"initial mass of solute in model = {m0}")
+    # calculate initial water volume
+    v0 = 3.5 * 2  # outermost columns
+    v0 += 2.5 * 2  # next innermost columns
+    v0 += 2.0 * 2  # next innermost columns
+    v0 += 1.0 * 1  # middle column
+    v0 = v0 * 0.3  # specific yield
 
-        # calculate ending water volume in model
-        head = np.where(head > 1e10, -1e10, head)
-        botm = [3, 2, 1, 0]
-        top = [4, 3, 2, 1]
-        nlay, nrow, ncol = head.shape
-        v = 0
-        m = 0.0
-        for k in range(nlay):
-            for i in range(nrow):
-                for j in range(ncol):
-                    h = min(head[k, i, j], top[k])
-                    dz = h - botm[k]
-                    vcell = max(dz, 0.0) * 0.3
-                    v += vcell
-                    m += vcell * conc[k, i, j]
+    m0 = v0 * data.gwt_conc
+    vl0 = (2.25 - 2.0) * 2 + (2.25 - 1.0)
+    m0 += vl0 * data.lak_conc
+    v0 += vl0
+    print(f"initial volume of water in model = {v0}")
+    print(f"initial mass of solute in model = {m0}")
 
-        s = stage[-1]
-        vl = (s - 2.0) * 2 + (s - 1.0)
-        v = v + vl
-        m += vl * clak[0]
-        print(f"final volume of water in model = {v}")
-        print(f"final mass of solute in model = {m}")
+    # calculate ending water volume in model
+    head = np.where(head > 1e10, -1e10, head)
+    botm = [3, 2, 1, 0]
+    top = [4, 3, 2, 1]
+    nlay, nrow, ncol = head.shape
+    v = 0
+    m = 0.0
+    for k in range(nlay):
+        for i in range(nrow):
+            for j in range(ncol):
+                h = min(head[k, i, j], top[k])
+                dz = h - botm[k]
+                vcell = max(dz, 0.0) * 0.3
+                v += vcell
+                m += vcell * conc[k, i, j]
 
-        # check to make sure starting water volume same as equalized final volume
-        errmsg = f"initial and final water volume not equal: {v0} {v}"
-        assert np.allclose(v0, v), errmsg
+    s = stage[-1]
+    vl = (s - 2.0) * 2 + (s - 1.0)
+    v = v + vl
+    m += vl * clak[0]
+    print(f"final volume of water in model = {v}")
+    print(f"final mass of solute in model = {m}")
 
-        # check to make sure starting starting solute mass same as equalized solute mass
-        errmsg = f"initial and final solute mass not equal: {m0} {m}"
-        assert np.allclose(m0, m), errmsg
+    # check to make sure starting water volume same as equalized final volume
+    errmsg = f"initial and final water volume not equal: {v0} {v}"
+    assert np.allclose(v0, v), errmsg
 
-        # todo: add a better check of the lake concentrations
+    # check to make sure starting starting solute mass same as equalized solute mass
+    errmsg = f"initial and final solute mass not equal: {m0} {m}"
+    assert np.allclose(m0, m), errmsg
+
+    # todo: add a better check of the lake concentrations
 
 
 @parametrize_with_cases(
@@ -463,17 +463,13 @@ class GwfBuyLakCases:
     ],
 )
 def test_mf6model(case, targets):
-    data, sim, cmp, evl = case
+    data, sim = case
     sim.write_simulation()
-    if cmp:
-        cmp.write_simulation()
-
-    simulation = TestSimulation(
-        name=data.name, exe_dict=targets, exfunc=evl, idxsim=0
+    framework = TestFramework(
+        name=data.name,
+        workspace=sim.sim_path,
+        check=lambda fw: eval_results(fw, data),
+        targets=targets,
     )
-    simulation.set_model(
-        sim.simulation_data.mfpath.get_sim_path(), testModel=False
-    )
-    simulation.run()
-    simulation.compare()
-    evl(simulation, data)
+    framework.run()
+    eval_results(framework, data)

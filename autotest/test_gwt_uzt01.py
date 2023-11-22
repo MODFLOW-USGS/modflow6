@@ -12,7 +12,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["uzt01a"]
 nlay, nrow, ncol = 15, 1, 1
@@ -379,7 +378,7 @@ def make_plot(sim, obsvals):
     print("making plots...")
 
     name = sim.name
-    ws = sim.simpath
+    ws = sim.workspace
 
     # shows curves for times 2.5, 7.5, 12.6, 17.7
     # which are indices 24, 74, 125, and -1
@@ -414,7 +413,7 @@ def make_plot(sim, obsvals):
 def check_obs(sim):
     print("checking obs...")
     name = sim.name
-    ws = sim.simpath
+    ws = sim.workspace
     sim = flopy.mf6.MFSimulation.load(sim_ws=ws)
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
@@ -491,7 +490,7 @@ def eval_flow(sim):
     name = sim.name
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
-    ws = sim.simpath
+    ws = sim.workspace
 
     # check binary grid file
     fname = os.path.join(ws, gwfname + ".dis.grb")
@@ -556,23 +555,22 @@ def eval_flow(sim):
     check_obs(sim)
 
     # Make plot of obs
-    fpth = os.path.join(sim.simpath, gwtname + ".uzt.obs.concentration.csv")
+    fpth = os.path.join(sim.workspace, gwtname + ".uzt.obs.concentration.csv")
     obsvals = np.genfromtxt(fpth, names=True, delimiter=",")
 
     # make_plot(sim, obsvals)
 
 
 @pytest.mark.parametrize(
-    "name",
-    ex,
+    "idx, name",
+    list(enumerate(ex)),
 )
-def test_mf6model(name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, 0, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_flow, idxsim=0
-        ),
-        ws,
+def test_mf6model(idx, name, function_tmpdir, targets):
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        targets=targets,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_flow, 
     )
+    test.run()

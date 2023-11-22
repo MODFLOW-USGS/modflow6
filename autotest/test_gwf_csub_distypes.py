@@ -7,14 +7,11 @@ from flopy.utils.gridgen import Gridgen
 
 from conftest import try_get_target
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["csub_dis", "csub_disv", "csub_disu", "csub_disu01", "csub_disu02"]
-# ex = ["csub_dis"]
 ex_dict = {name: None for name in ex}
 ex_dict["csub_disu01"] = 0
 ex_dict["csub_disu02"] = 2
-
 paktest = "csub"
 
 # temporal discretization
@@ -345,13 +342,13 @@ def build_mf6(idx, ws, gridgen):
     return sim
 
 
-def eval_zdis(sim):
+def eval_zdis(idx, test):
     print("evaluating z-displacement...")
 
-    name = ex[sim.idxsim]
-    ws = pl.Path(sim.simpath)
-    sim = flopy.mf6.MFSimulation.load(sim_name=name, sim_ws=ws)
-    gwf = sim.get_model()
+    name = ex[idx]
+    ws = pl.Path(test.workspace)
+    test = flopy.mf6.MFSimulation.load(sim_name=name, sim_ws=ws)
+    gwf = test.get_model()
     x0, x1, y0, y1 = gwf.modelgrid.extent
 
     comp_obj = flopy.utils.HeadFile(
@@ -433,16 +430,12 @@ def eval_zdis(sim):
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
     gridgen = try_get_target(targets, "gridgen")
-    ws = function_tmpdir
-    test = TestFramework()
-    test.build(lambda i, w: build_model(i, w, gridgen), idx, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_zdis,
-            cmp_verbose=False,
-            idxsim=idx,
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws, gridgen),
+        check=lambda t: eval_zdis(idx, t),
+        targets=targets,
+        cmp_verbose=False,
     )
+    test.run()

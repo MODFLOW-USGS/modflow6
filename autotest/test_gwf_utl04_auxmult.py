@@ -10,13 +10,11 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["auxmult01"]
 
 
 def build_model(idx, dir):
-
     nlay, nrow, ncol = 1, 3, 3
     perlen = [1.0, 1.0, 1.0, 1.0]
     nstp = [10, 1, 1, 1]
@@ -163,7 +161,7 @@ def build_model(idx, dir):
 def eval_model(sim):
     print("evaluating model...")
 
-    fpth = os.path.join(sim.simpath, "auxmult01.bud")
+    fpth = os.path.join(sim.workspace, "auxmult01.bud")
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double", verbose=False)
     records = bobj.get_data(text="wel")
 
@@ -185,9 +183,11 @@ def eval_model(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(name=name, exe_dict=targets, exfunc=eval_model), ws
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=eval_model,
+        targets=targets,
     )
+    test.run()

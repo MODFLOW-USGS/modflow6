@@ -16,7 +16,6 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 # Setup scenario input
 hyd_cond = [1205.49396942506, 864.0]  # Hydraulic conductivity (m/d)
@@ -256,15 +255,15 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_results(sim):
+def eval_results(idx, test):
     print("evaluating results...")
 
     # read flow results from model
-    name = ex[sim.idxsim]
+    name = ex[idx]
     gwfname = "gwf-" + name
 
     fname = gwfname + ".bud"
-    fname = os.path.join(sim.simpath, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     budobj = flopy.utils.CellBudgetFile(fname, precision="double")
     outbud = budobj.get_data(text="             GHB")
@@ -272,7 +271,7 @@ def eval_results(sim):
     # Establish known answer:
     stored_ans = 452.5316256451224
 
-    if sim.idxsim == 0:
+    if idx == 0:
         no_vsc_bud_last = np.array(outbud[-1].tolist())
         sim_val_1 = no_vsc_bud_last[:, 2].sum()
 
@@ -287,7 +286,7 @@ def eval_results(sim):
             sim_val_1
         )
 
-    elif sim.idxsim == 1:
+    elif idx == 1:
         with_vsc_bud_last = np.array(outbud[-1].tolist())
         sim_val_2 = with_vsc_bud_last[:, 2].sum()
 
@@ -302,7 +301,7 @@ def eval_results(sim):
             sim_val_2
         )
 
-    elif sim.idxsim == 2:
+    elif idx == 2:
         no_vsc_low_k_bud_last = np.array(outbud[-1].tolist())
         sim_val_3 = no_vsc_low_k_bud_last[:, 2].sum()
 
@@ -321,12 +320,11 @@ def eval_results(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name, exe_dict=targets, exfunc=eval_results, idxsim=idx
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=lambda t: eval_results(idx, t),
+        targets=targets,
     )
+    test.run()

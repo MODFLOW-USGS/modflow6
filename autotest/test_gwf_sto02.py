@@ -9,18 +9,19 @@ import flopy
 import numpy as np
 import pytest
 from framework import TestFramework
-from simulation import TestSimulation
 
 ex = ["gwf_sto02a", "gwf_sto02b"]
 ncols = [1, 2]
-nlay, nrow, = (
+(
+    nlay,
+    nrow,
+) = (
     1,
     1,
 )
 
 
 def build_model(idx, dir):
-
     perlen = [10]
     nper = len(perlen)
     nstp = [1]
@@ -140,14 +141,14 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_flow(sim):
+def eval_flow(idx, test):
     print("evaluating flow...")
 
-    name = ex[sim.idxsim]
+    name = ex[idx]
     gwfname = "gwf_" + name
 
     # This will fail if budget numbers cannot be read
-    fpth = os.path.join(sim.simpath, f"{gwfname}.lst")
+    fpth = os.path.join(test.workspace, f"{gwfname}.lst")
     mflist = flopy.utils.Mf6ListBudget(fpth)
     names = mflist.get_record_names()
     print(names)
@@ -161,15 +162,11 @@ def eval_flow(sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    ws = str(function_tmpdir)
-    test = TestFramework()
-    test.build(build_model, idx, ws)
-    test.run(
-        TestSimulation(
-            name=name,
-            exe_dict=targets,
-            exfunc=eval_flow,
-            idxsim=idx,
-        ),
-        ws,
+    test = TestFramework(
+        name=name,
+        workspace=function_tmpdir,
+        build=lambda ws: build_model(idx, ws),
+        check=lambda t: eval_flow(idx, t),
+        targets=targets,
     )
+    test.run()
