@@ -45,7 +45,7 @@ def model_setup(namefile, dst, remove_existing=True, extrafiles=None):
     create_dir = False
     if os.path.exists(dst):
         if remove_existing:
-            print("Removing folder " + dst)
+            print("Removing folder ", dst)
             shutil.rmtree(dst)
             create_dir = True
     else:
@@ -160,15 +160,15 @@ def setup_comparison(namefile, dst, remove_existing=True):
                 print("Could not make " + dst)
         # clean directory
         else:
-            print(f"cleaning...{dst}")
+            print("Cleaning ", dst)
             for root, dirs, files in os.walk(dst):
                 for f in files:
                     tpth = os.path.join(root, f)
-                    print(f"  removing...{tpth}")
+                    print("Removing ", tpth)
                     os.remove(tpth)
                 for d in dirs:
                     tdir = os.path.join(root, d)
-                    print(f"  removing...{tdir}")
+                    print("Removing ", tdir)
                     shutil.rmtree(tdir)
         # copy files
         cmppth = os.path.join(src, action)
@@ -375,7 +375,7 @@ def setup_mf6(
     create_dir = False
     if os.path.exists(dst):
         if remove_existing:
-            print("Removing folder ", dst)
+            print("Removing ", dst)
             shutil.rmtree(dst)
             create_dir = True
     else:
@@ -500,15 +500,15 @@ def setup_mf6_comparison(src, dst, remove_existing=True):
                 print("Could not make " + dst)
         # clean directory
         else:
-            print(f"cleaning...{dst}")
+            print("Cleaning ", dst)
             for root, dirs, files in os.walk(dst):
                 for f in files:
                     tpth = os.path.join(root, f)
-                    print(f"  removing...{tpth}")
+                    print("Removing ", tpth)
                     os.remove(tpth)
                 for d in dirs:
                     tdir = os.path.join(root, d)
-                    print(f"  removing...{tdir}")
+                    print("Removing ", tdir)
                     shutil.rmtree(tdir)
         # copy files
         cmppth = os.path.join(src, action)
