@@ -12,7 +12,6 @@ import sys
 import flopy
 import numpy as np
 import pytest
-
 from conftest import project_root_path
 from framework import TestFramework
 

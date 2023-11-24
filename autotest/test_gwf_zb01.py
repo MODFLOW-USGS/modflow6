@@ -4,7 +4,6 @@ from pathlib import Path
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 ex = ["zbud6_zb01"]

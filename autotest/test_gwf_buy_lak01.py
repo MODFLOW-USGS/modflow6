@@ -14,7 +14,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 ex = ["buy_lak_01a"]  # , 'buy_lak_01b', 'buy_lak_01c']

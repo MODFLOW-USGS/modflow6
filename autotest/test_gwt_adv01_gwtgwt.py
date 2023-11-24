@@ -8,7 +8,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 ex = ["adv01a_gwtgwt", "adv01b_gwtgwt", "adv01c_gwtgwt"]

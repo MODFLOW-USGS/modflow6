@@ -12,7 +12,6 @@ from os.path import join
 import flopy
 import numpy as np
 import pytest
-
 from conftest import project_root_path
 
 data_path = project_root_path / "autotest" / "data"

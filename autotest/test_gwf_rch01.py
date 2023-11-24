@@ -13,7 +13,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 ex = ["rch01a", "rch01b", "rch01c"]

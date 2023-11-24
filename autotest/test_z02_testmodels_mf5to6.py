@@ -2,7 +2,6 @@ import os
 
 import flopy
 import pytest
-
 from common_regression import get_namefiles, model_setup
 from conftest import should_compare
 from framework import TestFramework

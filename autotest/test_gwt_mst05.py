@@ -9,7 +9,6 @@ import numpy as np
 import pytest
 from flopy.utils.binaryfile import write_budget, write_head
 from flopy.utils.gridutil import uniform_flow_field
-
 from framework import TestFramework
 
 ex = ["mst05a", "mst05b"]

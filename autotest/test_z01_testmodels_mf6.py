@@ -1,5 +1,4 @@
 import pytest
-
 from conftest import should_compare
 from framework import TestFramework
 

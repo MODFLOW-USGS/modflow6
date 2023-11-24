@@ -2,7 +2,6 @@ import os
 from decimal import Decimal
 
 import pytest
-
 from framework import TestFramework
 
 """
@@ -33,18 +32,17 @@ def build_petsc_db(idx, exdir):
 
 
 def build_models(idx, test):
-    from test_gwf_newton_under_relaxation import \
-        build_models as build_model_ext
+    from test_gwf_newton_under_relaxation import build_models as build
 
     build_petsc_db(idx, test.workspace)
-    sim, dummy = build_model_ext(idx, test)
+    sim, dummy = build(idx, test)
     return sim, dummy
 
 
-def check_output(test):
-    from test_gwf_newton_under_relaxation import check_output as compare_to_ref
+def check_output(idx, test):
+    from test_gwf_newton_under_relaxation import check_output as check
 
-    compare_to_ref(test)
+    check(idx, test)
 
 
 @pytest.mark.parallel
@@ -59,7 +57,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=check_output,
+        check=lambda t: check_output(idx, t),
         make_comparison=False,
         parallel=True,
         ncpus=ncpus,

@@ -1,6 +1,5 @@
 import flopy
 import numpy as np
-
 from framework import TestFramework
 
 paktest = "sfr"

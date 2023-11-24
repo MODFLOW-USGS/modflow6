@@ -2,7 +2,6 @@ import os
 
 import flopy
 import pytest
-
 from framework import TestFramework
 
 ex = ["gwf_noptc01", "gwf_noptc02", "gwf_noptc03"]

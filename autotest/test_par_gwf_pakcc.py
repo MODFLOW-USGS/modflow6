@@ -3,7 +3,6 @@ import pathlib as pl
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 """
@@ -24,14 +23,14 @@ def build_models(idx, test):
 
     sim, dummy = build_model_ext(idx, test)
     if idx == 1:
-        sim.set_sim_path(test / "working")
+        sim.set_sim_path(test.workspace / "working")
         sim.write_simulation(silent=True)
         mfsplit = flopy.mf6.utils.Mf6Splitter(sim)
         split_array = np.zeros((10), dtype=int)
         split_array[5:] = 1
         new_sim = mfsplit.split_model(split_array)
-        new_sim.set_sim_path(test)
-        mfsplit.save_node_mapping(pl.Path(f"{test}/mapping.json"))
+        new_sim.set_sim_path(test.workspace)
+        mfsplit.save_node_mapping(pl.Path(f"{test.workspace}/mapping.json"))
         return new_sim, None
     else:
         return sim, dummy

@@ -4,7 +4,6 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.compare import eval_bud_diff
-
 from framework import TestFramework
 
 paktest = "maw"

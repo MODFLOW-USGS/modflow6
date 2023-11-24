@@ -25,7 +25,6 @@ from typing import Tuple
 import flopy
 import numpy as np
 import pytest
-
 from conftest import try_get_target
 
 testgroup = "mt3dms_p01"

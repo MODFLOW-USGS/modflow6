@@ -15,9 +15,8 @@ import os
 
 import flopy
 import pytest
-from modflowapi import ModflowApi
-
 from framework import TestFramework
+from modflowapi import ModflowApi
 
 ex = ["libgwf_ifmod01"]
 

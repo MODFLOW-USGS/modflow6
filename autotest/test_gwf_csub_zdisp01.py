@@ -4,7 +4,6 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.compare import compare_heads
-
 from framework import TestFramework
 
 ex = ["csub_zdisp01"]

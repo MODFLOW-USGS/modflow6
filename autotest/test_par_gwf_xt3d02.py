@@ -2,7 +2,6 @@ import os
 from decimal import Decimal
 
 import pytest
-
 from framework import TestFramework
 
 # This tests reuses the simulation data in test_gwf_ifmod_xt3d02.py

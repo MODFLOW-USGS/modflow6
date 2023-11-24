@@ -3,9 +3,8 @@ from typing import NamedTuple
 
 import flopy
 import numpy as np
-from pytest_cases import parametrize, parametrize_with_cases
-
 from framework import TestFramework
+from pytest_cases import parametrize, parametrize_with_cases
 
 dtol = 1e-3
 budtol = 0.01

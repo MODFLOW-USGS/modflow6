@@ -9,7 +9,6 @@ from pathlib import Path
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 name = "zbud6_zb01"

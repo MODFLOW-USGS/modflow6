@@ -11,7 +11,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 ex = ["maw10a", "maw10b", "maw10c", "maw10d"]

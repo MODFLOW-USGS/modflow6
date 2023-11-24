@@ -16,7 +16,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 ex = ["no-vsc-sfr01", "vsc-sfr01"]

@@ -21,7 +21,6 @@ should match exactly with the gwf flows and the gwf concentrations.
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 ex = ["sft01gwtgwt"]

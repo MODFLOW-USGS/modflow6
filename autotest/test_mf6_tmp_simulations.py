@@ -2,7 +2,6 @@ import os
 import sys
 
 import pytest
-
 from common_regression import get_mf6_ftypes, get_namefiles
 from framework import TestFramework
 

@@ -4,7 +4,6 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.gridgen import Gridgen
-
 from framework import TestFramework
 
 dis_types = (

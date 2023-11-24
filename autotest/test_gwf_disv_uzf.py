@@ -14,7 +14,6 @@ import flopy.utils.cvfdutil
 import numpy as np
 import pytest
 from flopy.utils.gridutil import get_disv_kwargs
-
 from framework import TestFramework
 
 ex = ["disv_with_uzf"]

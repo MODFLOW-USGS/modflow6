@@ -11,7 +11,6 @@ import flopy
 import flopy.utils.cvfdutil
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 ex = ["dsp03a", "dsp03b"]

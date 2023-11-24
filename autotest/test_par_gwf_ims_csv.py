@@ -1,6 +1,5 @@
 import flopy
 import pytest
-
 from framework import TestFramework
 
 """
@@ -32,17 +31,17 @@ def update_ims(idx, ims):
 
 def build_models(idx, test):
     from test_par_gwf01 import ex as ex_ext
-    from test_par_gwf01 import get_model as get_model_ext
+    from test_par_gwf01 import get_model
 
-    sim = get_model_ext(idx, test)
+    sim = get_model(idx, test.workspace)
     update_ims(idx, sim.get_solution_package(f"{ex_ext[idx]}.ims"))
     return sim, None
 
 
 def check_output(test):
-    from test_par_gwf01 import check_output as eval_model_ext
+    from test_par_gwf01 import check_output as check
 
-    eval_model_ext(test)
+    check(test)
 
 
 @pytest.mark.parallel

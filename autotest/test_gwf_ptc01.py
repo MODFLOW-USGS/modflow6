@@ -9,7 +9,6 @@ import os
 
 import flopy
 import pytest
-
 from framework import TestFramework
 
 ex = ["ptc01"]

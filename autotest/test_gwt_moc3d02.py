@@ -3,7 +3,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 ex = ["moc3d02a", "moc3d02b"]
@@ -45,7 +44,7 @@ def build_models(idx, test):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = test
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )

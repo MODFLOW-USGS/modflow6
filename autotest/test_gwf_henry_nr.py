@@ -10,7 +10,6 @@ the effects of tides on the aquifer.
 import flopy
 import numpy as np
 import pytest
-
 from conftest import should_compare
 from framework import TestFramework
 

@@ -40,9 +40,8 @@ import os
 import flopy
 import numpy as np
 import pytest
-from modflowapi import ModflowApi
-
 from framework import TestFramework
+from modflowapi import ModflowApi
 
 ex = ["libgwf_ifmod02"]
 

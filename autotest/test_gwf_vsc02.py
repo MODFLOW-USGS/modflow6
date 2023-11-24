@@ -16,7 +16,6 @@ import sys
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 # Setup scenario input

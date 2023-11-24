@@ -26,7 +26,6 @@ import os
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 hyd_cond = [1205.49396942506, 864.0]  # Hydraulic conductivity (m/d)

@@ -13,7 +13,6 @@
 import flopy
 import numpy as np
 import pytest
-
 from framework import TestFramework
 
 # from flopy.mf6.utils import Mf6Splitter
