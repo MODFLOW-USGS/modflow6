@@ -1,6 +1,5 @@
 import os
 import shutil
-import sys
 
 ignore_ext = (
     ".hds",
@@ -242,7 +241,6 @@ def get_input_files(namefile):
         try:
             f = open(fname, "r")
             for line in f:
-
                 # Skip invalid lines
                 ll = line.strip().split()
                 if len(ll) < 2:
@@ -588,7 +586,6 @@ def get_mf6_mshape(disfile):
 
     d = {}
     for line in lines:
-
         # Skip over blank and commented lines
         ll = line.strip().split()
         if len(ll) < 2:
@@ -638,12 +635,10 @@ def get_mf6_files(mfnamefile):
     namefiles = []
 
     with open(mfnamefile) as f:
-
         # Read line and skip comments
         lines = f.readlines()
 
     for line in lines:
-
         # Skip over blank and commented lines
         ll = line.strip().split()
         if len(ll) < 2:
@@ -731,7 +726,6 @@ def _get_mf6_external_files(srcdir, outplist, files):
         try:
             f = open(fname, "r")
             for line in f:
-
                 # Skip invalid lines
                 ll = line.strip().split()
                 if len(ll) < 2:
@@ -829,7 +823,6 @@ def get_mf6_ftypes(namefile, ftypekeys):
 
     ftypes = []
     for line in lines:
-
         # Skip over blank and commented lines
         ll = line.strip().split()
         if len(ll) < 2:

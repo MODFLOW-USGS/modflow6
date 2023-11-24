@@ -3,6 +3,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from conftest import project_root_path
 from framework import TestFramework
 
@@ -54,7 +55,7 @@ def get_local_data(idx):
     return ncolst, nmodels, mnames
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     name = ex[idx]
 
     # set local data for this model
@@ -72,7 +73,7 @@ def build_model(idx, dir):
     cd6right = {0: c6right}
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         memory_print_option="all",
@@ -335,7 +336,7 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_hds(idx, test):
+def check_output(idx, test):
     print("evaluating mover test heads...")
 
     hdata = np.array(
@@ -5785,8 +5786,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=lambda t: eval_hds(idx, t),
         targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
     test.run()

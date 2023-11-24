@@ -3,6 +3,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 cmppth = "mf6"
@@ -175,28 +176,25 @@ def build_mf6(idx, ws, newton=None):
     return sim
 
 
-def build_model(idx, dir):
-    ws = dir
-    sim = build_mf6(idx, ws)
-
-    ws = os.path.join(ws, cmppth)
+def build_models(idx, test):
+    sim = build_mf6(idx, test.workspace)
+    ws = os.path.join(test.workspace, cmppth)
     mc = build_mf6(idx, ws, newton="NEWTON")
-
     return sim, mc
 
 
-def eval_sub(sim):
+def check_output(test):
     print("evaluating subsidence...")
 
     # MODFLOW 6 total compaction results
-    fpth = os.path.join(sim.workspace, "csub_obs.csv")
+    fpth = os.path.join(test.workspace, "csub_obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
         assert False, f'could not load data from "{fpth}"'
 
     # MODFLOW 6 with newton-raphson
-    fpth = os.path.join(sim.workspace, cmppth, "csub_obs.csv")
+    fpth = os.path.join(test.workspace, cmppth, "csub_obs.csv")
     try:
         tci = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -215,7 +213,7 @@ def eval_sub(sim):
 
     # write summary
     fpth = os.path.join(
-        sim.workspace, f"{os.path.basename(sim.name)}.comp.cmp.out"
+        test.workspace, f"{os.path.basename(test.name)}.comp.cmp.out"
     )
     f = open(fpth, "w")
     line = f"{'TOTIM':>15s}"
@@ -234,15 +232,15 @@ def eval_sub(sim):
     f.close()
 
     if diffmax > dtol:
-        sim.success = False
+        test.success = False
         msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
-        sim.success = True
+        test.success = True
         print("    " + msg)
 
     # compare budgets
-    cbc_compare(sim)
+    cbc_compare(test)
 
     return
 
@@ -350,8 +348,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_sub,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
         targets=targets,
     )
     test.run()

@@ -1,8 +1,6 @@
 """
-MODFLOW 6 Autotest
-Test the bmi which is used update the calculate a head-based pumping rate that
-is equivalent to use of the evapotranspiration package in the
-non-bmi simulation.
+Test bmi with a head-based pumping rate equivalent to
+the evapotranspiration package in a non-bmi simulation.
 """
 
 import os
@@ -10,8 +8,9 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
 from modflowapi import ModflowApi
+
+from framework import TestFramework
 
 ex = ["libgwf_evt01"]
 
@@ -127,14 +126,14 @@ def get_model(ws, name, bmi=False):
     return sim
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     name = ex[idx]
     sim = get_model(ws, name)
 
     # build comparison model
-    ws = os.path.join(dir, "libmf6")
+    ws = os.path.join(test.workspace, "libmf6")
     mc = get_model(ws, name, bmi=True)
 
     return sim, mc
@@ -259,8 +258,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
         targets=targets,
+        build=lambda t: build_models(idx, t),
         api_func=lambda exe, ws: api_func(exe, idx, ws),
     )
     test.run()

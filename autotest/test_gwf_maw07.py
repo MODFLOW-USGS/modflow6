@@ -1,6 +1,8 @@
-# Modifiy the previous test by having a first stress period where the
-# MAW well is inactive.  Test ensures that gwf-maw and maw-gwf flows reported
-# in the gwf and maw budget files are zero for this first period.
+"""
+Modify the previous test by having a first stress period where the
+MAW well is inactive. Test ensures that gwf-maw and maw-gwf flows
+in the gwf and maw budget files are zero for this first period.
+"""
 
 import os
 
@@ -47,7 +49,7 @@ mawradius = np.sqrt(mawarea / np.pi)  # .65
 mawcond = Kh * delc * dz / (0.5 * delr)
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nper = 2
     perlen = [10.0, 10.0]
     nstp = [1, 100]
@@ -63,7 +65,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -199,7 +201,7 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_results(idx, test):
+def check_output(idx, test):
     print("evaluating results...")
 
     # calculate volume of water and make sure it is conserved
@@ -293,9 +295,9 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=lambda t: eval_results(idx, t),
         targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
         mf6_regression=True,
     )
     test.run()

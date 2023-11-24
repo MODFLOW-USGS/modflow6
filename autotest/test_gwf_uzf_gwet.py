@@ -15,7 +15,7 @@ nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-9, 1e-3, 0.97
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nlay, nrow, ncol = 3, 1, 10
     nper = 5
     perlen = [20.0, 20.0, 20.0, 500.0, 2000.0]
@@ -31,7 +31,7 @@ def build_model(idx, dir):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -255,7 +255,7 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_model(sim):
+def check_output(sim):
     print("evaluating model...")
 
     ws = sim.workspace
@@ -369,8 +369,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_model,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
         targets=targets,
     )
     test.run()

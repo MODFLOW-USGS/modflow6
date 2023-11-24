@@ -1,28 +1,29 @@
+"""
+Test the buoyancy package and the variable density flows between the lake
+and the gwf model.  This model has 4 layers and a lake incised within it.
+The model is transient and has heads in the aquifer higher than the initial
+stage in the lake.  As the model runs, the lake and aquifer equalize and
+should end up at the same level.  The test ensures that the initial and
+final water volumes in the entire system are the same.  This test is different
+from the previous test in that transport is active.  There are four
+different cases:
+    1.  lak and aquifer have concentration of 0.
+    2.  lak and aquifer have concentration of 35.
+    3.  lak has concentration of 0., aquifer is 35.
+    4.  lak has concentration of 35., aquifer is 0.
+"""
+
 import os
 from typing import NamedTuple
 
 import flopy
 import numpy as np
-from framework import TestFramework
 from pytest_cases import parametrize, parametrize_with_cases
+
+from framework import TestFramework
 
 
 class GwfBuyLakCases:
-    """
-    Test the buoyancy package and the variable density flows between the lake
-    and the gwf model.  This model has 4 layers and a lake incised within it.
-    The model is transient and has heads in the aquifer higher than the initial
-    stage in the lake.  As the model runs, the lake and aquifer equalize and
-    should end up at the same level.  The test ensures that the initial and
-    final water volumes in the entire system are the same.  This test is different
-    from the previous test in that transport is active.  There are four
-    different cases:
-     1.  lak and aquifer have concentration of 0.
-     2.  lak and aquifer have concentration of 35.
-     3.  lak has concentration of 0., aquifer is 35.
-     4.  lak has concentration of 35., aquifer is 0.
-    """
-
     class Data(NamedTuple):
         name: str
         gwt_conc: float
@@ -376,7 +377,7 @@ class GwfBuyLakCases:
         return data, sim
 
 
-def eval_results(test, data):
+def check_output(test, data):
     print("evaluating results...")
 
     # calculate volume of water and make sure it is conserved
@@ -468,8 +469,8 @@ def test_mf6model(case, targets):
     framework = TestFramework(
         name=data.name,
         workspace=sim.sim_path,
-        check=lambda fw: eval_results(fw, data),
+        check=lambda t: check_output(t, data),
         targets=targets,
     )
     framework.run()
-    eval_results(framework, data)
+    check_output(framework, data)

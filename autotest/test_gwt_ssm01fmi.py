@@ -1,7 +1,9 @@
-# multiple ssm sources and sinks using a flow model followed by a
-# transport model.  Initial conditions and all inflows and outflows are
-# assigned a concentration of 100.0 so the simulated concentration must also
-# be 100.
+"""
+multiple ssm sources and sinks using a flow model followed by a
+transport model.  Initial conditions and all inflows and outflows are
+assigned a concentration of 100.0 so the simulated concentration must also
+be 100.
+"""
 
 import os
 from os.path import join

@@ -3,6 +3,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from conftest import project_root_path
 from framework import TestFramework
 
@@ -406,22 +407,22 @@ def get_model(idx, ws):
     return sim
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = get_model(idx, ws)
 
     # build comparision files
-    ws = os.path.join(dir, cmppth)
+    ws = os.path.join(test.workspace, cmppth)
     mc = get_model(idx, ws)
 
     return sim, mc
 
 
-def eval_comp(sim):
+def check_output(test):
     print("evaluating compaction...")
     # MODFLOW 6 total compaction results
-    fpth = os.path.join(sim.workspace, "csub_obs.csv")
+    fpth = os.path.join(test.workspace, "csub_obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -429,7 +430,7 @@ def eval_comp(sim):
 
     # comparision total compaction results
     cpth = cmppth
-    fpth = os.path.join(sim.workspace, cmppth, "csub_obs.csv")
+    fpth = os.path.join(test.workspace, cmppth, "csub_obs.csv")
     try:
         tc0 = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -443,7 +444,7 @@ def eval_comp(sim):
 
     # write summary
     fpth = os.path.join(
-        sim.workspace, f"{os.path.basename(sim.name)}.comp.cmp.out"
+        test.workspace, f"{os.path.basename(test.name)}.comp.cmp.out"
     )
     f = open(fpth, "w")
     line = f"{'TOTIM':>15s}"
@@ -460,15 +461,15 @@ def eval_comp(sim):
     f.close()
 
     if diffmax > dtol:
-        sim.success = False
+        test.success = False
         msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
-        sim.success = True
+        test.success = True
         print("    " + msg)
 
     # compare budgets
-    cbc_compare(sim)
+    cbc_compare(test)
 
     return
 
@@ -578,10 +579,10 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_comp,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
         targets=targets,
         htol=htol[idx],
-        mf6_regression=True
+        mf6_regression=True,
     )
     test.run()

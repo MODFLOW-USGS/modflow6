@@ -3,6 +3,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from cross_section_functions import calculate_rectchan_mannings_discharge
 from framework import TestFramework
 
@@ -268,13 +269,13 @@ def build_model(idx, ws, base=False):
     return sim
 
 
-def build_models(idx, ws):
-    sim = build_model(idx, ws)
-    mc = build_model(idx, ws, base=True)
+def build_models(idx, test):
+    sim = build_model(idx, test.workspace)
+    mc = build_model(idx, test.workspace, base=True)
     return sim, mc
 
 
-def eval_npointdepth(test):
+def check_output(test):
     print("evaluating n-point cross-section results..." f"({test.name})")
 
     obs_pth0 = os.path.join(test.workspace, f"{test.name}.sfr.obs.csv")
@@ -285,11 +286,15 @@ def eval_npointdepth(test):
 
     q0 = obs0["OUTFLOW_DOWNSTREAM"]
     q1 = obs1["OUTFLOW_DOWNSTREAM"]
-    assert np.allclose(q0, q1), f"downstream outflows not equal ('{test.name}')"
+    assert np.allclose(
+        q0, q1
+    ), f"downstream outflows not equal ('{test.name}')"
 
     d0 = obs0["DEPTH_UPSTREAM"]
     d1 = obs1["DEPTH_UPSTREAM"]
-    assert np.allclose(d0, d1), f"upstream depths are not equal ('{test.name}')"
+    assert np.allclose(
+        d0, d1
+    ), f"upstream depths are not equal ('{test.name}')"
 
 
 @pytest.mark.parametrize(
@@ -300,8 +305,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_models(idx, ws),
-        check=eval_npointdepth,
         targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
     test.run()

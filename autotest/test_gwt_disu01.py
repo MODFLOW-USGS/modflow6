@@ -1,9 +1,7 @@
 """
-MODFLOW 6 Autotest
 Two-dimensional injection of solute into the middle of a square grid.  The test will pass
 if the results are symmetric.  Based on test_gwt_adv04, this tests the disu package, which
 represents a regular MODFLOW grid.
-
 """
 
 import os
@@ -12,12 +10,13 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.gridutil import get_disu_kwargs
+
 from framework import TestFramework
 
 ex = ["disu01a"]
 
 
-def build_model(idx, dir, exe):
+def build_models(idx, test):
     nlay, nrow, ncol = 1, 21, 21
     nper = 1
     perlen = [5.0]
@@ -61,9 +60,9 @@ def build_model(idx, dir, exe):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name=exe, sim_ws=ws
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -219,13 +218,13 @@ def build_model(idx, dir, exe):
     return sim, None
 
 
-def eval_transport(sim):
+def check_output(test):
     print("evaluating transport...")
 
-    name = sim.name
+    name = test.name
     gwtname = "gwt_" + name
 
-    fpth = os.path.join(sim.workspace, f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
     try:
         cobj = flopy.utils.HeadFile(
             fpth, precision="double", text="CONCENTRATION"
@@ -258,7 +257,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda ws: build_model(idx, ws, targets.mf6),
-        check=eval_transport, 
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
     test.run()

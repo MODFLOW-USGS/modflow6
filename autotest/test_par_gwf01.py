@@ -3,17 +3,20 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-# Test for parallel MODFLOW running on two cpus.
-# It contains two coupled models with
-#
-# 1d:  (nlay,nrow,ncol) = (1,1,5),
-# 2d:  (nlay,nrow,ncol) = (1,5,5),
-# 3d:  (nlay,nrow,ncol) = (5,5,5),
-#
-# constant head boundaries left=1.0, right=10.0.
-# The result should be a uniform flow field.
+"""
+Test for parallel MODFLOW running on two cpus.
+It contains two coupled models with
+
+1d:  (nlay,nrow,ncol) = (1,1,5),
+2d:  (nlay,nrow,ncol) = (1,5,5),
+3d:  (nlay,nrow,ncol) = (5,5,5),
+
+constant head boundaries left=1.0, right=10.0.
+The result should be a uniform flow field.
+"""
 
 ex = ["par_gwf01-1d", "par_gwf01-2d", "par_gwf01-3d"]
 dis_shape = [(1, 1, 5), (1, 5, 5), (5, 5, 5)]
@@ -192,19 +195,19 @@ def get_model(idx, dir):
     return sim
 
 
-def build_model(idx, exdir):
-    sim = get_model(idx, exdir)
+def build_models(idx, test):
+    sim = get_model(idx, test.workspace)
     return sim, None
 
 
-def eval_model(sim):
+def check_output(test):
     # two coupled models with a uniform flow field,
     # here we assert the known head values at the
     # cell centers
-    fpth = os.path.join(sim.workspace, f"{name_left}.hds")
+    fpth = os.path.join(test.workspace, f"{name_left}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads_left = hds.get_data().flatten()
-    fpth = os.path.join(sim.workspace, f"{name_right}.hds")
+    fpth = os.path.join(test.workspace, f"{name_right}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads_right = hds.get_data().flatten()
     np.testing.assert_array_almost_equal(
@@ -225,8 +228,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_model, 
+        build=lambda t: build_models(idx, t),
+        check=check_output,
         make_comparison=False,
         parallel=True,
         ncpus=2,

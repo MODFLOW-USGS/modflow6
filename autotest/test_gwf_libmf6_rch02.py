@@ -1,5 +1,4 @@
 """
-MODFLOW 6 Autotest
 Test the bmi which is used to calculate a recharge rate that results in a
 simulated head in the center of the model domain to be equal to the
 simulated head in the non-bmi simulation.
@@ -10,8 +9,9 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
 from modflowapi import ModflowApi
+
+from framework import TestFramework
 
 ex = ["libgwf_rch02"]
 
@@ -152,15 +152,15 @@ def get_model(ws, name, exe, rech=rch_spd):
     return sim
 
 
-def build_model(idx, dir, exe):
+def build_models(idx, test):
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     name = ex[idx]
-    sim = get_model(ws, name, exe)
+    sim = get_model(ws, name, "mf6")
 
     # build comparison model
-    ws = os.path.join(dir, "libmf6")
-    mc = get_model(ws, name, exe, rech=0.0)
+    ws = os.path.join(test.workspace, "libmf6")
+    mc = get_model(ws, name, "mf6", rech=0.0)
 
     return sim, mc
 
@@ -313,7 +313,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws, targets.mf6),
+        build=lambda t: build_models(idx, t),
         targets=targets,
         api_func=lambda exe, ws: api_func(exe, idx, ws),
     )

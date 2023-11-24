@@ -1,17 +1,17 @@
-# This is the reinjection problem described in the MT3D supplementary
-# information.
+"""This is the reinjection problem described in the MT3D supplementary information."""
 
 import os
 
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["mwt_02"]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nlay = 1
     nrow = 31
     ncol = 46
@@ -40,7 +40,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -427,7 +427,7 @@ def make_plot(sim):
     return
 
 
-def eval_results(idx, test):
+def check_output(idx, test):
     print("evaluating results...")
 
     makeplot = False
@@ -484,7 +484,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda ws: build_model(idx, ws),
-        check=lambda t: eval_results(idx, t), 
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
     test.run()

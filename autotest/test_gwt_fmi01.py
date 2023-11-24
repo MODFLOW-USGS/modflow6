@@ -5,13 +5,14 @@ import numpy as np
 import pytest
 from flopy.utils.binaryfile import write_budget, write_head
 from flopy.utils.gridutil import uniform_flow_field
+
 from framework import TestFramework
 
 ex = ["fmi01a_fc"]
 xt3d = [False, True]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nlay, nrow, ncol = 1, 1, 3
     nper = 1
     perlen = [1.0]
@@ -40,7 +41,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -172,13 +173,13 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_transport(sim):
+def check_output(test):
     print("evaluating transport...")
 
-    name = sim.name
+    name = test.name
     gwtname = "gwt_" + name
 
-    fpth = os.path.join(sim.workspace, f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
     cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
     conc = cobj.get_data()
 
@@ -199,7 +200,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_transport, 
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
     test.run()

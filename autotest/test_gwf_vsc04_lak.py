@@ -1,23 +1,25 @@
-# Simple single lake model.  Lake cut into top two layers of a 5 layer
-# model.  Model is loosely based on the first example problem in
-# Merritt and Konikow (2000) which also is one of the MT3D-USGS test
-# problems.  This test developed to isolate lake-aquifer interaction;
-# no SFR or other advanced packages.  Problem set up to have groundwater
-# pass through the lake: gw inflow on the left side, gw outflow on the
-# right side of the lake.  Uses constant stage boundary in the lake to
-# ensure desired flow conditions for testing budget changes with and
-# without VSC active.
-#
-# starting groundwater temperature: 30.0
-# left chd boundary inflow temperature: 30.0
-# starting lake temperature: 4.0
-#
+"""
+Simple single lake model.  Lake cut into top two layers of a 5 layer
+model.  Model is loosely based on the first example problem in
+Merritt and Konikow (2000) which also is one of the MT3D-USGS test
+problems.  This test developed to isolate lake-aquifer interaction;
+no SFR or other advanced packages.  Problem set up to have groundwater
+pass through the lake: gw inflow on the left side, gw outflow on the
+right side of the lake.  Uses constant stage boundary in the lake to
+ensure desired flow conditions for testing budget changes with and
+without VSC active.
+
+starting groundwater temperature: 30.0
+left chd boundary inflow temperature: 30.0
+starting lake temperature: 4.0
+"""
 
 import os
 
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["no-vsc04-lak", "vsc04-lak"]
@@ -156,12 +158,8 @@ leftTemp = 30.0  # Temperature of inflow from left constant head ($C$)
 # Viscosity related parameters
 tviscref = 20.0
 
-#
-# MODFLOW 6 flopy GWF & GWT simulation object (sim) is returned
-#
 
-
-def build_model(idx, ws):
+def build_models(idx, test):
     global lak_lkup_dict
 
     # Base simulation and model name and workspace
@@ -174,7 +172,7 @@ def build_model(idx, ws):
     gwtname = "gwt-" + name
 
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, sim_ws=ws, exe_name="mf6", version="mf6"
+        sim_name=name, sim_ws=test.workspace, exe_name="mf6", version="mf6"
     )
 
     tdis_rc = []
@@ -613,7 +611,7 @@ def build_model(idx, ws):
     return sim, None
 
 
-def eval_results(idx, test):
+def check_output(idx, test):
     print("evaluating results...")
 
     # read flow results from model
@@ -781,8 +779,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=lambda t: eval_results(idx, t),
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
         targets=targets,
     )
     test.run()

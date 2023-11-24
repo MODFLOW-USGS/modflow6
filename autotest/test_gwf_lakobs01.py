@@ -1,8 +1,10 @@
-# Test for checking lak observation input.  The following observation types:
-# 'lak', 'wetted-area', and 'conductance,' require that ID2 be provided when
-# ID is an integer corresponding to a lake number and not BOUNDNAME.
-# See table in LAK Package section of mf6io.pdf for an explanation of ID,
-# ID2, and Observation Type.
+"""
+Test for checking lak observation input.  The following observation types:
+'lak', 'wetted-area', and 'conductance,' require that ID2 be provided when
+ID is an integer corresponding to a lake number and not BOUNDNAME.
+See table in LAK Package section of mf6io.pdf for an explanation of ID,
+ID2, and Observation Type.
+"""
 
 
 import os
@@ -202,10 +204,8 @@ def build_model(dir, exe):
 
 
 def test_mf6model(function_tmpdir, targets):
-    mf6 = targets["mf6"]
-
     # build the models
-    sim = build_model(str(function_tmpdir), mf6)
+    sim = build_model(str(function_tmpdir), targets.mf6)
 
     # write model input
     sim.write_simulation()

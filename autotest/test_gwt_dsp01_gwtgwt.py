@@ -1,7 +1,5 @@
 """
-MODFLOW 6 Autotest
 Test basic dispersion for two coupled gwt models.
-
 """
 
 import os
@@ -9,6 +7,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["dsp01_gwtgwt"]
@@ -17,6 +16,7 @@ gdelr = 1.0
 # solver settings
 nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-6, 1e-6, 1.0
+
 
 def get_gwf_model(sim, gwfname, gwfpath, modelshape):
     nlay, nrow, ncol, xshift, yshift = modelshape
@@ -139,8 +139,7 @@ def get_gwt_model(sim, gwtname, gwtpath, modelshape):
     return gwt
 
 
-def build_model(idx, dir):
-
+def build_models(idx, test):
     # temporal discretization
     nper = 1
     perlen = [5.0]
@@ -151,7 +150,7 @@ def build_model(idx, dir):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=ws, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -268,10 +267,9 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_transport(sim):
-
+def check_output(test):
     gwtname = "transport1"
-    fpth = os.path.join(sim.workspace, "transport1", f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, "transport1", f"{gwtname}.ucn")
     try:
         cobj = flopy.utils.HeadFile(
             fpth, precision="double", text="CONCENTRATION"
@@ -281,7 +279,7 @@ def eval_transport(sim):
         assert False, f'could not load data from "{fpth}"'
 
     gwtname = "transport2"
-    fpth = os.path.join(sim.workspace, "transport2", f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, "transport2", f"{gwtname}.ucn")
     try:
         cobj = flopy.utils.HeadFile(
             fpth, precision="double", text="CONCENTRATION"
@@ -308,7 +306,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_transport, 
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
     test.run()

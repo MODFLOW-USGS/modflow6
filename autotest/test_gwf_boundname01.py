@@ -3,6 +3,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = [
@@ -10,12 +11,9 @@ ex = [
 ]
 
 
-def build_model(idx, exdir):
-    sim = get_model(idx, exdir)
-
-    ws = os.path.join(exdir, "mf6")
-    mc = get_model(idx, ws)
-
+def build_models(idx, test):
+    sim = get_model(idx, test.workspace)
+    mc = get_model(idx, os.path.join(test.workspace, "mf6"))
     return sim, mc
 
 
@@ -152,7 +150,7 @@ def replace_quotes(idx, exdir):
                 f.write(line.replace("'", '"').replace('face"s', "face's"))
 
 
-def eval_results(test):
+def check_output(test):
     print("evaluating observations results..." f"({test.name})")
 
     fpth = os.path.join(test.workspace, f"gwf_{test.name}.chd.obs.csv")
@@ -175,8 +173,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_results,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
         targets=targets,
     )
     test.run()

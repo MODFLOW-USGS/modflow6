@@ -3,6 +3,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = [
@@ -171,13 +172,17 @@ def get_model(name, ws, newton_bool, offset=0.0):
 
 
 # variant SUB package problem 3
-def build_model(idx, dir):
+def build_model(idx, test):
     name = ex[idx]
-    # build model with no offset
-    sim = get_model(name, dir, newton_bool=newton[idx])
-
-    # build model with offset
-    mc = get_model(name, os.path.join(dir, cmppth), newton_bool=newton[idx], offset=cmp_offset)
+    # model with no offset
+    sim = get_model(name, test.workspace, newton_bool=newton[idx])
+    # model with offset
+    mc = get_model(
+        name,
+        os.path.join(test.workspace, cmppth),
+        newton_bool=newton[idx],
+        offset=cmp_offset,
+    )
     return sim, mc
 
 
@@ -264,9 +269,9 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=lambda t: eval_sto(idx, t),
         targets=targets,
+        build=lambda t: build_model(idx, t),
+        check=lambda t: eval_sto(idx, t),
         htol=htol[idx],
     )
     test.run()

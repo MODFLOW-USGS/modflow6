@@ -1,5 +1,4 @@
 """
-MODFLOW 6 Autotest
 Test the interface model approach for multiple (2) exchanges between
 the same two models. One exchange has XT3D and the other one doesn't.
 
@@ -19,14 +18,15 @@ exchange_north and the others of exchange_south. The former
 will have the XT3D calculation enabled.
 
 TODO: (how) will this affect accuracy?
-
 """
+
 import os
 
 import flopy
 import numpy as np
 import pytest
 from flopy.utils.lgrutil import Lgr
+
 from framework import TestFramework
 
 ex = ["ifmod_mult_exg"]
@@ -255,25 +255,25 @@ def get_model(idx, dir):
     return sim
 
 
-def build_model(idx, exdir):
-    sim = get_model(idx, exdir)
+def build_models(idx, test):
+    sim = get_model(idx, test.workspace)
     return sim, None
 
 
-def eval_heads(sim):
-    fpth = os.path.join(sim.workspace, f"{name_parent}.hds")
+def check_output(test):
+    fpth = os.path.join(test.workspace, f"{name_parent}.hds")
     hds = flopy.utils.HeadFile(fpth)
     heads = hds.get_data()
 
-    fpth = os.path.join(sim.workspace, f"{name_child}.hds")
+    fpth = os.path.join(test.workspace, f"{name_child}.hds")
     hds_c = flopy.utils.HeadFile(fpth)
     heads_c = hds_c.get_data()
 
-    fpth = os.path.join(sim.workspace, f"{name_parent}.dis.grb")
+    fpth = os.path.join(test.workspace, f"{name_parent}.dis.grb")
     grb = flopy.mf6.utils.MfGrdFile(fpth)
     mg = grb.modelgrid
 
-    fpth = os.path.join(sim.workspace, f"{name_child}.dis.grb")
+    fpth = os.path.join(test.workspace, f"{name_child}.dis.grb")
     grb_c = flopy.mf6.utils.MfGrdFile(fpth)
     mg_c = grb_c.modelgrid
 
@@ -338,8 +338,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_heads,
         targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
     test.run()

@@ -9,13 +9,14 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["gwf_uzf03a"]
 nlay, nrow, ncol = 15, 1, 1
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     perlen = [17.7]
     nper = len(perlen)
     nstp = [177]
@@ -48,7 +49,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -256,11 +257,11 @@ def make_plot(sim, obsvals):
     plt.savefig(fname, bbox_inches="tight")
 
 
-def eval_flow(sim):
+def check_output(test):
     print("evaluating flow...")
 
-    name = sim.name
-    ws = sim.workspace
+    name = test.name
+    ws = test.workspace
 
     # check binary grid file
     fname = os.path.join(ws, name + ".dis.grb")
@@ -297,13 +298,12 @@ def eval_flow(sim):
         assert np.allclose(uz["q"], uz_answer), "unsat ET is not correct"
 
     # Make plot of obs
-    fpth = os.path.join(sim.workspace, name + ".uzf.obs.csv")
+    fpth = os.path.join(test.workspace, name + ".uzf.obs.csv")
     try:
         obsvals = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
         assert False, f'could not load data from "{fpth}"'
-    if False:
-        make_plot(sim, obsvals)
+    # make_plot(test, obsvals)
 
 
 @pytest.mark.parametrize(
@@ -314,8 +314,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_flow,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
         targets=targets,
     )
     test.run()

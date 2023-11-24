@@ -3,6 +3,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 paktest = "sfr"
@@ -193,16 +194,13 @@ def build_model(idx, ws):
     return sim
 
 
-def build_models(idx, base_ws):
-    sim = build_model(idx, base_ws)
-
-    ws = os.path.join(base_ws, "mf6")
-    mc = build_model(idx, ws)
-
+def build_models(idx, test):
+    sim = build_model(idx, test.workspace)
+    mc = build_model(idx, os.path.join(test.workspace, "mf6"))
     return sim, mc
 
 
-def eval_flows(sim):
+def check_output(sim):
     name = sim.name
     print("evaluating flow results..." f"({name})")
 
@@ -247,8 +245,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_models(idx, ws),
-        check=eval_flows,
         targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
     test.run()

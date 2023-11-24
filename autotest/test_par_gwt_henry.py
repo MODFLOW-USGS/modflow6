@@ -1,6 +1,5 @@
-import os
-from decimal import Decimal
 import pytest
+
 from framework import TestFramework
 
 # This tests reuses the simulation data and config in
@@ -9,17 +8,15 @@ from framework import TestFramework
 ex = ["par-henry-ups", "par-henry-cen", "par-henry-tvd"]
 
 
-def build_model(idx, exdir):
-    from test_gwt_henry_gwtgwt import build_model as build_model_ext
-
-    sim, dummy = build_model_ext(idx, exdir)
+def build_models(idx, test):
+    from test_gwt_henry_gwtgwt import build_models as build_model_ext
+    sim, dummy = build_model_ext(idx, test)
     return sim, dummy
 
 
-def eval_model(test_sim):
-    from test_gwt_henry_gwtgwt import eval_transport
-
-    eval_transport(test_sim)
+def check_transport(test):
+    from test_gwt_henry_gwtgwt import check_output
+    check_output(test)
 
 
 @pytest.mark.parallel
@@ -28,14 +25,16 @@ def eval_model(test_sim):
     list(enumerate(ex)),
 )
 def test_mf6model(idx, name, function_tmpdir, targets):
-    test = TestFramework(
-        name=name,
-        workspace=function_tmpdir,
-        targets=targets,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_model,
-        make_comparison=False,
-        parallel=True,
-        ncpus=2,
-    ),
+    test = (
+        TestFramework(
+            name=name,
+            workspace=function_tmpdir,
+            targets=targets,
+            build=lambda t: build_models(idx, t),
+            check=check_transport,
+            make_comparison=False,
+            parallel=True,
+            ncpus=2,
+        ),
+    )
     test.run()

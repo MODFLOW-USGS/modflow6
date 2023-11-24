@@ -3,12 +3,13 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["evt01"]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nlay, nrow, ncol = 1, 1, 3
     chdheads = list(np.linspace(1, 100))
     nper = len(chdheads)
@@ -29,7 +30,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -151,14 +152,14 @@ def etfunc(h, qmax, surf, exdp, petm, pxdp, petm0=1.0):
     return q, hcof, rhs
 
 
-def eval_model(sim):
+def check_output(test):
     print("evaluating model...")
 
-    fpth = os.path.join(sim.workspace, "evt01.cbc")
+    fpth = os.path.join(test.workspace, "evt01.cbc")
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     records = bobj.get_data(text="evt")
 
-    fpth = os.path.join(sim.workspace, "evt01.hds")
+    fpth = os.path.join(test.workspace, "evt01.hds")
     hobj = flopy.utils.HeadFile(fpth, precision="double")
     heads = hobj.get_alldata()
 
@@ -183,8 +184,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_model,
         targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
     test.run()

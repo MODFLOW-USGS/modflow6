@@ -8,6 +8,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["wel01"]
@@ -30,7 +31,7 @@ nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-9, 1e-6, 1.0
 
 
-def build_model(idx, ws):
+def build_models(idx, test):
     name = ex[idx]
 
     # build MODFLOW 6 files
@@ -38,7 +39,7 @@ def build_model(idx, ws):
         sim_name=name,
         version="mf6",
         exe_name="mf6",
-        sim_ws=ws,
+        sim_ws=test.workspace,
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -141,7 +142,7 @@ def build_model(idx, ws):
     return sim, None
 
 
-def eval_obs(sim):
+def check_output(test):
     print("evaluating well observations...")
 
     # MODFLOW 6 observations
@@ -150,7 +151,7 @@ def eval_obs(sim):
         "wel.obs.csv",
         "wel.obs.dup.csv",
     ):
-        fpth = os.path.join(sim.workspace, file_name)
+        fpth = os.path.join(test.workspace, file_name)
         try:
             tc = np.genfromtxt(fpth, names=True, delimiter=",")
         except:
@@ -164,15 +165,15 @@ def eval_obs(sim):
         msg = f"maximum absolute well rates ({diffmax}) "
 
         if diffmax > dtol:
-            sim.success = False
+            test.success = False
             msg += f"exceeds {dtol}"
             assert diffmax < dtol, msg
         else:
-            sim.success = True
+            test.success = True
             print("    " + msg)
 
     # MODFLOW 6 AFR CSV output file
-    fpth = os.path.join(sim.workspace, "wel01.afr.csv")
+    fpth = os.path.join(test.workspace, "wel01.afr.csv")
     try:
         afroutput = np.genfromtxt(
             fpth, names=True, delimiter=",", deletechars=""
@@ -196,7 +197,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_obs,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
     test.run()

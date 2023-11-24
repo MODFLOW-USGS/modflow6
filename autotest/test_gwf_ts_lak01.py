@@ -4,6 +4,7 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.compare import eval_bud_diff
+
 from framework import TestFramework
 
 paktest = "lak"
@@ -312,42 +313,42 @@ def get_model(ws, name, timeseries=False):
     return sim
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = get_model(ws, name)
 
     # build MODFLOW 6 files with UZF package
-    ws = os.path.join(dir, "mf6")
+    ws = os.path.join(test.workspace, "mf6")
     mc = get_model(ws, name, timeseries=True)
 
     return sim, mc
 
 
-def eval_budget(sim):
+def check_output(test):
     print("evaluating budgets...")
 
     # get ia/ja from binary grid file
-    fname = f"{os.path.basename(sim.name)}.dis.grb"
-    fpth = os.path.join(sim.workspace, fname)
+    fname = f"{os.path.basename(test.name)}.dis.grb"
+    fpth = os.path.join(test.workspace, fname)
     grbobj = flopy.mf6.utils.MfGrdFile(fpth)
     ia = grbobj._datadict["IA"] - 1
 
-    fname = f"{os.path.basename(sim.name)}.cbc"
+    fname = f"{os.path.basename(test.name)}.cbc"
 
     # open first cbc file
-    fpth = os.path.join(sim.workspace, fname)
+    fpth = os.path.join(test.workspace, fname)
     cobj0 = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # open second cbc file
-    fpth = os.path.join(sim.workspace, "mf6", fname)
+    fpth = os.path.join(test.workspace, "mf6", fname)
     cobj1 = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # define file path and evaluate difference
-    fname = f"{os.path.basename(sim.name)}.cbc.cmp.out"
-    fpth = os.path.join(sim.workspace, fname)
+    fname = f"{os.path.basename(test.name)}.cbc.cmp.out"
+    fpth = os.path.join(test.workspace, fname)
     eval_bud_diff(fpth, cobj0, cobj1, ia, dtol=0.1)
 
 
@@ -360,8 +361,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_budget,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
         targets=targets,
     )
     test.run()

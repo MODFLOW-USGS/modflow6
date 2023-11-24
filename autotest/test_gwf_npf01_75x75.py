@@ -3,6 +3,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["npf01a_75x75", "npf01b_75x75"]
@@ -12,7 +13,7 @@ ss = [0.0, 1.0e-4]
 sy = [0.1, 0.0]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nlay, nrow, ncol = 1, 75, 75
     nper = 3
     perlen = [1.0, 1000.0, 1.0]
@@ -56,7 +57,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -147,7 +148,7 @@ def build_model(idx, dir):
     )
 
     # build MODFLOW-2005 files
-    ws = os.path.join(dir, "mf2005")
+    ws = os.path.join(test.workspace, "mf2005")
     mc = flopy.modflow.Modflow(name, model_ws=ws)
     dis = flopy.modflow.ModflowDis(
         mc,
@@ -197,7 +198,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
         targets=targets,
+        build=lambda t: build_models(idx, t),
     )
     test.run()

@@ -1,12 +1,11 @@
 """
-# Test uzf mass balance.  One cell model with starting water table at -20
-# and GHB with stage of -25.  Uzf infiltration is applied, but water table
-# still falls.  This test looks at the simulated unsat zone storage and
-# unsat volume (stored as an auxiliary variable) and compares the results
-# to calculated values.  Although the Uzf unsat storage and unsat volume
-# should probably be for total water instead of just mobile water (theta -
-# thetar), this is not how Uzf was designed.
-
+Test uzf mass balance.  One cell model with starting water table at -20
+and GHB with stage of -25.  Uzf infiltration is applied, but water table
+still falls.  This test looks at the simulated unsat zone storage and
+unsat volume (stored as an auxiliary variable) and compares the results
+to calculated values.  Although the Uzf unsat storage and unsat volume
+should probably be for total water instead of just mobile water (theta -
+thetar), this is not how Uzf was designed.
 """
 
 import os
@@ -14,6 +13,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["gwf_uzf04a"]
@@ -24,7 +24,7 @@ thti = 0.10  # initial water content
 strt = -20.0
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     perlen = [1.0]
     nper = len(perlen)
     nstp = [1]
@@ -52,7 +52,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -213,11 +213,11 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_flow(sim):
+def check_output(test):
     print("evaluating flow...")
 
-    name = sim.name
-    ws = sim.workspace
+    name = test.name
+    ws = test.workspace
 
     fname = os.path.join(ws, f"{name}.uzf.bin")
     wobj = flopy.utils.HeadFile(fname, text="WATER-CONTENT")
@@ -263,8 +263,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_flow,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
         targets=targets,
     )
     test.run()

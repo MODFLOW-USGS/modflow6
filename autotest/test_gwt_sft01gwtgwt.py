@@ -1,24 +1,27 @@
-# Based on sft01, but split into two gwf models and two gwt models
-# in order to test gwf-gwf and gwt-gwt.  There are sfr and sft models
-# for flow and transport.  The sfr flows and the sft concentrations
-# should match exactly with the gwf flows and the gwf concentrations.
+"""
+Based on sft01, but split into two gwf models and two gwt models
+in order to test gwf-gwf and gwt-gwt.  There are sfr and sft models
+for flow and transport.  The sfr flows and the sft concentrations
+should match exactly with the gwf flows and the gwf concentrations.
 
-#       flow1                        flow2
-#  sfr  1 2 3 4 5 6 7  gwfgwf-mvr => 1 2 3 4 5 6 7
-#       -------------                -------------   (sfr leakance is zero so no flow between sfr and gwf)
-#  gwf  1 2 3 4 5 6 7  gwfgwf     => 1 2 3 4 5 6 7
-#           |                            |
-#  gwfgwt (flow1-transport1)    gwfgwt (flow2-transport2)
-#           |                            |
-#       transport1                   transport2
-#  sft  1 2 3 4 5 6 7  gwtgwt-mvt => 1 2 3 4 5 6 7
-#       -------------                -------------
-#  gwt  1 2 3 4 5 6 7  gwtgwt     => 1 2 3 4 5 6 7
+      flow1                        flow2
+ sfr  1 2 3 4 5 6 7  gwfgwf-mvr => 1 2 3 4 5 6 7
+      -------------                -------------   (sfr leakance is zero so no flow between sfr and gwf)
+ gwf  1 2 3 4 5 6 7  gwfgwf     => 1 2 3 4 5 6 7
+          |                            |
+ gwfgwt (flow1-transport1)    gwfgwt (flow2-transport2)
+          |                            |
+      transport1                   transport2
+ sft  1 2 3 4 5 6 7  gwtgwt-mvt => 1 2 3 4 5 6 7
+      -------------                -------------
+ gwt  1 2 3 4 5 6 7  gwtgwt     => 1 2 3 4 5 6 7
+"""
 
 
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["sft01gwtgwt"]
@@ -58,13 +61,13 @@ within_model_mvt_on = True and within_model_mvr_on
 across_model_mvt_on = True and across_model_mvr_on
 
 
-def build_model(idx, ws):
+def build_models(idx, test):
     name = "mf6sim"
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
         exe_name="mf6",
-        sim_ws=ws,
+        sim_ws=test.workspace,
         continue_=False,
     )
 
@@ -477,7 +480,7 @@ def build_gwfgwt_combo(sim, gwfname, gwtname, icombo):
     return sim, None
 
 
-def eval_results(sim):
+def check_output(sim):
     print("evaluating results...")
 
     # load the simulations
@@ -518,7 +521,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_results, 
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
     test.run()

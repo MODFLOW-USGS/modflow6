@@ -8,6 +8,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["gwf_sto02a", "gwf_sto02b"]
@@ -21,7 +22,7 @@ ncols = [1, 2]
 )
 
 
-def build_model(idx, dir):
+def build_model(idx, test):
     perlen = [10]
     nper = len(perlen)
     nstp = [1]
@@ -44,7 +45,7 @@ def build_model(idx, dir):
     ncol = ncols[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -165,8 +166,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=lambda t: eval_flow(idx, t),
         targets=targets,
+        build=lambda t: build_model(idx, t),
+        check=lambda t: eval_flow(idx, t),
     )
     test.run()

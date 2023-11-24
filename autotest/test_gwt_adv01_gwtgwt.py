@@ -1,8 +1,6 @@
 """
-MODFLOW 6 Autotest
 Test the advection schemes in the gwt advection package for a one-dimensional
 model grid of square cells.
-
 """
 
 import os
@@ -10,6 +8,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["adv01a_gwtgwt", "adv01b_gwtgwt", "adv01c_gwtgwt"]
@@ -178,8 +177,7 @@ def get_gwt_model(
     return gwt
 
 
-def build_model(idx, dir):
-
+def build_models(idx, test):
     # temporal discretization
     nper = 1
     perlen = [5.0]
@@ -190,7 +188,7 @@ def build_model(idx, dir):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=ws, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -733,7 +731,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda ws: build_model(idx, ws),
-        check=lambda t: eval_transport(idx, t), 
+        build=lambda t: build_models(idx, t),
+        check=lambda t: eval_transport(idx, t),
     )
     test.run()

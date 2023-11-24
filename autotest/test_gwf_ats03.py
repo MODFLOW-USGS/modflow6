@@ -7,7 +7,6 @@ for the new totim value.  For this problem, the constant head starts at 100 at
 time zero and drops to 50.0 at time 100.  So the constant head values, which
 are observed and written to and obs output file must fall on a line between
 (0, 100) and (100, 50), which is ensured by this test.
-
 """
 
 import os
@@ -15,13 +14,14 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["gwf_ats03a"]
 nlay, nrow, ncol = 1, 1, 10
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     perlen = [100.0]
     nper = len(perlen)
     nstp = [1]
@@ -43,7 +43,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -190,11 +190,11 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_flow(sim):
+def check_output(test):
     print("evaluating flow...")
 
     # ensure obs2 (a constant head time series) drops linearly from 100 to 50
-    fpth = os.path.join(sim.workspace, sim.name + ".obs.csv")
+    fpth = os.path.join(test.workspace, test.name + ".obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -214,8 +214,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_flow,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
         targets=targets,
     )
     test.run()

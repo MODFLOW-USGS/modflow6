@@ -1,11 +1,11 @@
 import os
-from typing import List, NamedTuple
+from typing import NamedTuple
 
 import flopy
 import numpy as np
-from framework import TestFramework
 from pytest_cases import parametrize, parametrize_with_cases
 
+from framework import TestFramework
 
 dtol = 1e-3
 budtol = 0.01
@@ -353,7 +353,7 @@ class GwfCsubSkCases:
         return sim
 
 
-def eval_case(test):
+def check_output(test):
     print("evaluating compaction...")
 
     # MODFLOW 6 total compaction results
@@ -479,9 +479,9 @@ def test_mf6model(case, targets):
     test = TestFramework(
         name=data.name,
         workspace=sim.sim_path,
-        check=eval_case,
+        check=check_output,
         targets=targets,
         mf6_regression=True,
     )
     test.run()
-    eval_case(test)
+    check_output(test)

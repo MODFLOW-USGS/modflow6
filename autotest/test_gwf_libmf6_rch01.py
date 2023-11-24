@@ -1,5 +1,4 @@
 """
-MODFLOW 6 Autotest
 Test to make sure that recharge is passed to the highest active layer and
 verify that recharge is in the highest active layer by looking at the
 individual budget terms.  For this test, there are two layers and five
@@ -13,8 +12,9 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
 from modflowapi import ModflowApi
+
+from framework import TestFramework
 
 ex = ["libgwf_rch01"]
 
@@ -134,14 +134,14 @@ def get_model(ws, name, rech):
     return sim
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     name = ex[idx]
     sim = get_model(ws, name, rech=rch_spd)
 
     # build comparison model
-    ws = os.path.join(dir, "libmf6")
+    ws = os.path.join(test.workspace, "libmf6")
     mc = get_model(ws, name, rech=0.0)
 
     return sim, mc
@@ -238,8 +238,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
         targets=targets,
+        build=lambda t: build_models(idx, t),
         api_func=lambda exe, ws: api_func(exe, idx, ws),
     )
     test.run()

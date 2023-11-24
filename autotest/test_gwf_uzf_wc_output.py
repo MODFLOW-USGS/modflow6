@@ -4,6 +4,7 @@ import flopy
 import flopy.utils.binaryfile as bf
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 include_NWT = False
@@ -432,25 +433,25 @@ def build_mfnwt_model(idx, ws):
     return mf
 
 
-def build_model(idx, ws):
+def build_models(idx, test):
     # Start by building the MF6 model
-    sim = build_mf6_model(idx, ws)
+    sim = build_mf6_model(idx, test.workspace)
 
     # Construct MF-NWT model for comparing water contents
     #   Commented out to avoid NWT dependency, but left behind for
     #   local testing if needed in the future.
     if include_NWT:
-        mc = build_mfnwt_model(idx, ws)
+        mc = build_mfnwt_model(idx, test.workspace)
     else:
         mc = None
     return sim, mc
 
 
-def eval_model(sim):
+def eval_model(test):
     print("evaluating model...")
 
-    name = sim.name
-    ws = sim.workspace
+    name = test.name
+    ws = test.workspace
 
     # Get the MF6 heads
     fpth = os.path.join(ws, "uzf_3lay_wc_chk.hds")
@@ -546,7 +547,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
+        build=lambda t: build_models(idx, t),
         check=eval_model,
         targets=targets,
     )

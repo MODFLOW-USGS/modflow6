@@ -4,7 +4,6 @@ remove water at a concentration of zero for the first stress period, which
 will cause the concentration to increase.  Then for the second stress period
 add recharge water with a concentration of zero which will dilute the solute
 concentration.  Simulation results are compared against a simple calculation.
-
 """
 
 import os
@@ -12,6 +11,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["ssm02"]
@@ -21,8 +21,7 @@ sy = [0.1]
 nlay, nrow, ncol = 1, 1, 1
 
 
-def build_model(idx, dir):
-
+def build_models(idx, test):
     nper = 2
     perlen = [2.0, 2.0]
     nstp = [14, 14]
@@ -44,7 +43,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -216,18 +215,18 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_transport(sim):
+def check_output(test):
     print("evaluating transport...")
 
-    name = sim.name
+    name = test.name
     gwtname = "gwt_" + name
     gwfname = "gwf_" + name
 
-    fpth = os.path.join(sim.workspace, f"{gwfname}.hds")
+    fpth = os.path.join(test.workspace, f"{gwfname}.hds")
     hobj = flopy.utils.HeadFile(fpth, precision="double")
     head = hobj.get_alldata().flatten()
 
-    fpth = os.path.join(sim.workspace, f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
     cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
     conc = cobj.get_alldata().flatten()
 
@@ -260,7 +259,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_transport, 
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
     test.run()

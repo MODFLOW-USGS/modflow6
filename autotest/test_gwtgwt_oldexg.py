@@ -3,28 +3,31 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
-# Test compatibility of GWT-GWT with the 'classic' GWF exchange.
-# It compares the result of a single reference model
-# to the equivalent case where the domain is decomposed:
-#
-#        'refmodel'              'leftmodel'     'rightmodel'
-#
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1    VS    1 1 1 1 1   +   1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#    1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
-#
-# We assert equality on the head values and the (components of)
-# specific discharges. All models are part of the same solution
-# for convenience. Finally, the budget error is checked.
+"""
+Test compatibility of GWT-GWT with the 'classic' GWF exchange.
+It compares the result of a single reference model
+to the equivalent case where the domain is decomposed:
+
+       'refmodel'              'leftmodel'     'rightmodel'
+
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1    VS    1 1 1 1 1   +   1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+   1 1 1 1 1 1 1 1 1 1          1 1 1 1 1       1 1 1 1 1
+
+We assert equality on the head values and the (components of)
+specific discharges. All models are part of the same solution
+for convenience. Finally, the budget error is checked.
+"""
 
 ex = ["gwtgwt_oldexg"]
 use_ifmod = False
@@ -553,8 +556,8 @@ def add_gwtexchange(sim):
     )
 
 
-def build_model(idx, exdir):
-    sim = get_model(idx, exdir)
+def build_models(idx, test):
+    sim = get_model(idx, test.workspace)
     return sim, None
 
 
@@ -776,7 +779,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda ws: build_model(idx, ws),
-        check=compare_to_ref, 
+        build=lambda t: build_models(idx, t),
+        check=compare_to_ref,
     )
     test.run()

@@ -1,18 +1,21 @@
-# test reading of binary initial heads (float) and also binary icelltype (int).
-# 1. Have binary data in a separate record for each layer
-# 2. Have binary data in a single record for all layers
+"""
+test reading of binary initial heads (float) and also binary icelltype (int).
+1. Have binary data in a separate record for each layer
+2. Have binary data in a single record for all layers
+"""
 
 import os
 
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["binary01", "binary02"]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nlay, nrow, ncol = 5, 6, 7
     nper = 1
     perlen = 1.0
@@ -36,7 +39,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -74,7 +77,7 @@ def build_model(idx, dir):
     # write top to a binary file
     text = "TOP"
     fname = "top.bin"
-    pth = os.path.join(dir, fname)
+    pth = os.path.join(test.workspace, fname)
     f = open(pth, "wb")
     header = flopy.utils.BinaryHeader.create(
         bintype="HEAD",
@@ -109,7 +112,7 @@ def build_model(idx, dir):
         for k in range(nlay):
             text = f"BOTM_L{k + 1}"
             fname = f"botm.l{k + 1:02d}.bin"
-            pth = os.path.join(dir, fname)
+            pth = os.path.join(test.workspace, fname)
             f = open(pth, "wb")
             header = flopy.utils.BinaryHeader.create(
                 bintype="HEAD",
@@ -141,7 +144,7 @@ def build_model(idx, dir):
             )
     elif idx == 1:
         fname = "botm.bin"
-        pth = os.path.join(dir, fname)
+        pth = os.path.join(test.workspace, fname)
         f = open(pth, "wb")
         tarr = np.ones((nlay, nrow, ncol), dtype=np.float64)
         for k in range(nlay):
@@ -175,7 +178,7 @@ def build_model(idx, dir):
         for k in range(nlay):
             text = f"IDOMAIN_L{k + 1}"
             fname = f"idomain.l{k + 1:02d}.bin"
-            pth = os.path.join(dir, fname)
+            pth = os.path.join(test.workspace, fname)
             f = open(pth, "wb")
             header = flopy.utils.BinaryHeader.create(
                 bintype="HEAD",
@@ -207,7 +210,7 @@ def build_model(idx, dir):
             )
     elif idx == 1:
         fname = "idomain.bin"
-        pth = os.path.join(dir, fname)
+        pth = os.path.join(test.workspace, fname)
         f = open(pth, "wb")
         header = flopy.utils.BinaryHeader.create(
             bintype="HEAD",
@@ -256,7 +259,7 @@ def build_model(idx, dir):
         for k in range(nlay):
             text = f"IC_L{k + 1}"
             fname = f"ic.strt_l{k + 1:02d}.bin"
-            pth = os.path.join(dir, fname)
+            pth = os.path.join(test.workspace, fname)
             f = open(pth, "wb")
             header = flopy.utils.BinaryHeader.create(
                 bintype="HEAD",
@@ -288,7 +291,7 @@ def build_model(idx, dir):
             )
     elif idx == 1:
         fname = "ic.strt.bin"
-        pth = os.path.join(dir, fname)
+        pth = os.path.join(test.workspace, fname)
         f = open(pth, "wb")
         header = flopy.utils.BinaryHeader.create(
             bintype="HEAD",
@@ -325,7 +328,7 @@ def build_model(idx, dir):
         icelltype = []
         for k in range(nlay):
             fname = f"npf.icelltype.l{k + 1}.bin"
-            pth = os.path.join(dir, fname)
+            pth = os.path.join(test.workspace, fname)
             f = open(pth, "wb")
             header = flopy.utils.BinaryHeader.create(
                 bintype="head",
@@ -358,7 +361,7 @@ def build_model(idx, dir):
             )
     elif idx == 1:
         fname = "npf.icelltype.bin"
-        pth = os.path.join(dir, fname)
+        pth = os.path.join(test.workspace, fname)
         f = open(pth, "wb")
         header = flopy.utils.BinaryHeader.create(
             bintype="head",
@@ -433,7 +436,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
+        build=lambda t: build_models(idx, t),
         targets=targets,
     )
     test.run()

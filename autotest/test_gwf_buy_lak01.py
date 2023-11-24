@@ -14,6 +14,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["buy_lak_01a"]  # , 'buy_lak_01b', 'buy_lak_01c']
@@ -21,7 +22,7 @@ buy_on_list = [False]  # , True, True]
 concbuylist = [0.0]  # , 0., 35.]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     lx = 7.0
     lz = 4.0
     nlay = 4
@@ -51,7 +52,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -207,20 +208,20 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_results(sim):
+def check_output(test):
     print("evaluating results...")
 
     # calculate volume of water and make sure it is conserved
-    gwfname = "gwf_" + sim.name
+    gwfname = "gwf_" + test.name
     fname = gwfname + ".lak.bin"
-    fname = os.path.join(sim.workspace, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     bobj = flopy.utils.HeadFile(fname, text="STAGE")
     stage = bobj.get_alldata().flatten()
     # print(stage)
 
     fname = gwfname + ".hds"
-    fname = os.path.join(sim.workspace, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     hobj = flopy.utils.HeadFile(fname)
     head = hobj.get_data()
@@ -259,8 +260,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_results,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
         targets=targets,
     )
     test.run()

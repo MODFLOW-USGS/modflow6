@@ -1,21 +1,20 @@
 """
-MODFLOW 6 Autotest
 Test zero-order decay by running a one-cell model with ten 1-day time steps
 with a decay rate of 1.  And a starting concentration of 8.  Result should be
 0 at the end and decay should shot off once concentration is zero.
-
 """
 import os
 
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["mst06_noadv"]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nlay, nrow, ncol = 1, 1, 1
     nper = 1
     perlen = [10.0]
@@ -36,7 +35,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -118,13 +117,13 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_transport(sim):
+def check_output(test):
     print("evaluating transport...")
 
-    name = sim.name
+    name = test.name
     gwtname = "gwt_" + name
 
-    fpth = os.path.join(sim.workspace, f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
     cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
     conc = cobj.get_ts((0, 0, 0))
 
@@ -138,7 +137,7 @@ def eval_transport(sim):
     assert np.allclose(cres, conc[:, 1]), msg
 
     # Check budget file
-    fpth = os.path.join(sim.workspace, f"{gwtname}.bud")
+    fpth = os.path.join(test.workspace, f"{gwtname}.bud")
     try:
         bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     except:
@@ -173,7 +172,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_transport, 
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
     test.run()

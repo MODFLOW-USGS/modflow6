@@ -7,6 +7,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 cell_dimensions = (300,)
@@ -15,7 +16,7 @@ h0, h1 = 1.0, 0.0
 nlay, nrow, ncol = 1, 10, 10
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nper = 1
     perlen = [5.0]
     nstp = [1]
@@ -37,7 +38,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -123,13 +124,13 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_model(sim):
+def check_output(test):
     print("evaluating model observations...")
     headcsv = np.empty((nlay, nrow, ncol), dtype=float)
     for i in range(nrow):
-        fname = f"{sim.name}.{i}.obs.csv"
+        fname = f"{test.name}.{i}.obs.csv"
         print(f"Loading and testing {fname}")
-        fname = os.path.join(sim.workspace, fname)
+        fname = os.path.join(test.workspace, fname)
         rec = np.genfromtxt(fname, names=True, delimiter=",", deletechars="")
         for j in range(ncol):
             obsname_true = f"h_{i}_{j}".upper()
@@ -141,7 +142,7 @@ def eval_model(sim):
             assert obsname_true == obsname_found, errmsg
         headcsv[0, i, :] = np.array(rec.tolist()[1:])
 
-    fn = os.path.join(sim.workspace, f"{sim.name}.hds")
+    fn = os.path.join(test.workspace, f"{test.name}.hds")
     hobj = flopy.utils.HeadFile(fn)
     headbin = hobj.get_data()
 
@@ -158,8 +159,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_model,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
         targets=targets,
     )
     test.run()

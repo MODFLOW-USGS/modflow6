@@ -1,7 +1,5 @@
 """
-MODFLOW 6 Autotest
 Test to make sure that auxmultcol is working when used with a time series
-
 """
 
 import os
@@ -9,12 +7,13 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["auxmult01"]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nlay, nrow, ncol = 1, 3, 3
     perlen = [1.0, 1.0, 1.0, 1.0]
     nstp = [10, 1, 1, 1]
@@ -35,7 +34,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -158,7 +157,7 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_model(sim):
+def check_output(sim):
     print("evaluating model...")
 
     fpth = os.path.join(sim.workspace, "auxmult01.bud")
@@ -186,8 +185,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_model,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
         targets=targets,
     )
     test.run()

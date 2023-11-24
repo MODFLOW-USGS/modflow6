@@ -3,6 +3,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from cross_section_functions import get_depths
 from framework import TestFramework
 
@@ -116,8 +117,7 @@ np_data = {
 }
 
 
-#
-def build_model(idx, ws):
+def build_models(idx, test):
     xsect_type = xsect_types[idx]
 
     # static model data
@@ -133,7 +133,7 @@ def build_model(idx, ws):
         sim_name=name,
         version="mf6",
         exe_name="mf6",
-        sim_ws=ws,
+        sim_ws=test.workspace,
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -297,10 +297,10 @@ def build_model(idx, ws):
     return sim, None
 
 
-def eval_npointq(sim, idx):
-    print("evaluating n-point cross-section results..." f"({sim.name})")
+def check_output(idx, test):
+    print("evaluating n-point cross-section results..." f"({test.name})")
 
-    obs_pth = os.path.join(sim.workspace, f"{sim.name}.sfr.obs.csv")
+    obs_pth = os.path.join(test.workspace, f"{test.name}.sfr.obs.csv")
     obs = flopy.utils.Mf6Obs(obs_pth).get_data()
 
     assert np.allclose(
@@ -333,8 +333,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=lambda s: eval_npointq(s, idx),
         targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
     test.run()

@@ -3,6 +3,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["gwf_sto01"]
@@ -95,11 +96,11 @@ ske = [6e-4, 3e-4, 6e-4]
 
 
 # variant SUB package problem 3
-def build_model(idx, dir):
+def build_model(idx, test):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -200,7 +201,7 @@ def build_model(idx, dir):
 
     # build MODFLOW-NWT files
     cpth = cmppth
-    ws = os.path.join(dir, cpth)
+    ws = os.path.join(test.workspace, cpth)
     mc = flopy.modflow.Modflow(name, model_ws=ws, version=cpth)
     dis = flopy.modflow.ModflowDis(
         mc,
@@ -345,7 +346,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
+        build=lambda t: build_model(idx, t),
         check=eval_sto,
         targets=targets,
         htol=htol[idx],

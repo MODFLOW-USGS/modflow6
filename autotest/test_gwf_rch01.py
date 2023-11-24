@@ -13,13 +13,14 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["rch01a", "rch01b", "rch01c"]
 irch = [None, 0, [1, 1, 0, 1, 1]]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nlay, nrow, ncol = 2, 1, 5
     chdheads = [25.0]
     nper = len(chdheads)
@@ -41,7 +42,7 @@ def build_model(idx, dir):
     name = "rch"
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -119,10 +120,10 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_model(sim):
+def check_output(test):
     print("evaluating model...")
 
-    fpth = os.path.join(sim.workspace, "rch.cbc")
+    fpth = os.path.join(test.workspace, "rch.cbc")
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     records = bobj.get_data(text="rch")[0]
 
@@ -134,7 +135,7 @@ def eval_model(sim):
     assert np.allclose(records["node2"], answer["node2"])
     assert np.allclose(records["q"], answer["q"])
 
-    fpth = os.path.join(sim.workspace, "rch.hds")
+    fpth = os.path.join(test.workspace, "rch.hds")
     hobj = flopy.utils.HeadFile(fpth, precision="double")
     heads = hobj.get_alldata()
 
@@ -147,8 +148,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_model,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
         targets=targets,
     )
     test.run()

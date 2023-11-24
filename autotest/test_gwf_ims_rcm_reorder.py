@@ -3,6 +3,7 @@ import os
 import flopy
 import pytest
 from flopy.utils.compare import eval_bud_diff
+
 from framework import TestFramework
 
 paktest = "ims"
@@ -19,7 +20,7 @@ chd_left = 10.0
 chd_right = 5.0
 
 
-def build_model(idx, ws, mf6):
+def build_model(idx, ws):
     # static model data
     # temporal discretization
     nper = 1
@@ -30,7 +31,7 @@ def build_model(idx, ws, mf6):
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
-        exe_name=mf6,
+        exe_name="mf6",
         sim_ws=ws,
     )
     # create tdis package
@@ -111,11 +112,13 @@ def build_model(idx, ws, mf6):
     return sim
 
 
-def build_models(idx, base_ws, mf6):
-    return build_model(idx, base_ws, mf6), build_model(idx, os.path.join(base_ws, cmp_prefix), mf6)
+def build_models(idx, test):
+    return build_model(idx, test.workspace), build_model(
+        idx, os.path.join(test.workspace, cmp_prefix)
+    )
 
 
-def eval_flows(test):
+def check_output(test):
     name = test.name
     print("evaluating flow results..." f"({name})")
 
@@ -144,9 +147,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_models(idx, ws, targets.mf6),
-        check=eval_flows,
         targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
     test.run()
-    

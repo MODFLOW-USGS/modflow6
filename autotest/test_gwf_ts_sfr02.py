@@ -4,6 +4,7 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.compare import eval_bud_diff
+
 from framework import TestFramework
 
 paktest = "sfr"
@@ -504,57 +505,57 @@ def get_model(ws, name, timeseries=False):
     return sim
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = get_model(ws, name)
 
     # build MODFLOW 6 files with timeseries
-    ws = os.path.join(dir, "mf6")
+    ws = os.path.join(test.workspace, "mf6")
     mc = get_model(ws, name, timeseries=True)
 
     return sim, mc
 
 
-def eval_model(sim):
+def check_output(test):
     print("evaluating model budgets...")
 
     # get ia/ja from binary grid file
-    fname = f"{os.path.basename(sim.name)}.dis.grb"
-    fpth = os.path.join(sim.workspace, fname)
+    fname = f"{os.path.basename(test.name)}.dis.grb"
+    fpth = os.path.join(test.workspace, fname)
     grbobj = flopy.mf6.utils.MfGrdFile(fpth)
     ia = grbobj._datadict["IA"] - 1
 
-    fname = f"{os.path.basename(sim.name)}.cbc"
+    fname = f"{os.path.basename(test.name)}.cbc"
 
     # open first gwf cbc file
-    fpth = os.path.join(sim.workspace, fname)
+    fpth = os.path.join(test.workspace, fname)
     cobj0 = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # open second gwf cbc file
-    fpth = os.path.join(sim.workspace, "mf6", fname)
+    fpth = os.path.join(test.workspace, "mf6", fname)
     cobj1 = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # define file path and evaluate difference
-    fname = f"{os.path.basename(sim.name)}.cbc.cmp.out"
-    fpth = os.path.join(sim.workspace, fname)
+    fname = f"{os.path.basename(test.name)}.cbc.cmp.out"
+    fpth = os.path.join(test.workspace, fname)
     eval_bud_diff(fpth, cobj0, cobj1, ia)
 
     # evaluate the sfr package budget file
-    fname = f"{os.path.basename(sim.name)}.{paktest}.cbc"
+    fname = f"{os.path.basename(test.name)}.{paktest}.cbc"
     # open first sfr cbc file
-    fpth = os.path.join(sim.workspace, fname)
+    fpth = os.path.join(test.workspace, fname)
     cobj0 = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # open second sfr cbc file
-    fpth = os.path.join(sim.workspace, "mf6", fname)
+    fpth = os.path.join(test.workspace, "mf6", fname)
     cobj1 = flopy.utils.CellBudgetFile(fpth, precision="double")
 
     # define file path and evaluate difference
-    fname = f"{os.path.basename(sim.name)}.{paktest}.cbc.cmp.out"
-    fpth = os.path.join(sim.workspace, fname)
+    fname = f"{os.path.basename(test.name)}.{paktest}.cbc.cmp.out"
+    fpth = os.path.join(test.workspace, fname)
     eval_bud_diff(fpth, cobj0, cobj1)
 
     # do some spot checks on the first sfr cbc file
@@ -607,8 +608,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_model,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
         targets=targets,
     )
     test.run()

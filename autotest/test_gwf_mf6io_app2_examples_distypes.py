@@ -252,8 +252,10 @@ def build_rch_package(gwf, list_recharge):
     return rch
 
 
-def build_model(idx, ws, gridgen):
-    return build_mf6(idx, ws, gridgen), build_mf6(idx, ws / "mf6", gridgen)
+def build_model(idx, test, gridgen):
+    return build_mf6(idx, test.workspace, gridgen), build_mf6(
+        idx, test.workspace / "mf6", gridgen
+    )
 
 
 # build MODFLOW 6 files
@@ -553,8 +555,6 @@ def eval_head(idx, test):
     fpth1 = ws / f"mf6/{sim_name}.{extension}"
     test._compare_budget_files(0, extension, fpth0, fpth1)
 
-    return
-
 
 @pytest.mark.parametrize(
     "idx, name",
@@ -564,9 +564,9 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws, targets.gridgen),
-        check=lambda t: eval_head(idx, t),
         targets=targets,
+        build=lambda t: build_model(idx, t, targets.gridgen),
+        check=lambda t: eval_head(idx, t),
         cmp_verbose=False,
         make_comparison=True,
     )

@@ -28,14 +28,15 @@ There is no xt3d here or anything fancy. We just want to
 ensure that vertical flows and horizontal flows are added
 correctly to each model flowja diagonal terms.  This diagonal
 term contains the flow residual for the cell.
-
 """
+
 import os
 
 import flopy
 import numpy as np
 import pytest
 from flopy.utils.lgrutil import Lgr
+
 from framework import TestFramework
 
 ex = ["gwfgwf_lgr_classic", "gwfgwf_lgr_ifmod"]
@@ -51,7 +52,7 @@ k11 = 1.0
 k33 = 1.0
 
 
-def get_model(idx, dir):
+def get_model(idx, test):
     global child_domain
     global hclose
 
@@ -108,7 +109,7 @@ def get_model(idx, dir):
     chd_spd = {0: chd_data}
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -237,12 +238,12 @@ def get_model(idx, dir):
     return sim
 
 
-def build_model(idx, exdir):
+def build_models(idx, exdir):
     sim = get_model(idx, exdir)
     return sim, None
 
 
-def eval_heads(sim):
+def check_output(sim):
     print("comparing heads  for child model to analytical result...")
 
     fpth = os.path.join(sim.workspace, f"{child_name}.hds")
@@ -285,8 +286,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_heads,
-        
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
     test.run()

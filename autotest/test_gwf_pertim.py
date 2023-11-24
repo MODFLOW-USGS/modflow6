@@ -3,6 +3,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = [
@@ -37,11 +38,11 @@ canal_spd = [(0, i, 0, 330.0, "canal") for i in range(nrow)]
 river_spd = [(0, i, ncol - 1, 320.0, "river") for i in range(nrow)]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -113,10 +114,10 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_model(sim):
+def check_output(test):
     print("evaluating results...")
 
-    fpth = os.path.join(sim.workspace, f"{sim.name}.lst")
+    fpth = os.path.join(test.workspace, f"{test.name}.lst")
     mflist = flopy.utils.Mf6ListBudget(fpth)
     inc = mflist.get_incremental()
 
@@ -139,8 +140,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_model,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
         targets=targets,
     )
     test.run()

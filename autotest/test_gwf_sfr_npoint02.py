@@ -3,8 +3,9 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
+
 from cross_section_functions import get_depths
+from framework import TestFramework
 
 paktest = "sfr"
 
@@ -52,15 +53,14 @@ def flow_to_depth_wide(rwid, q):
     return ((q * roughness) / (conversion_fact * rwid * np.sqrt(slope))) ** 0.6
 
 
-#
-def build_model(idx, ws):
+def build_models(idx, test):
     # build MODFLOW 6 files
     name = ex[idx]
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
         exe_name="mf6",
-        sim_ws=ws,
+        sim_ws=test.workspace,
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -208,7 +208,7 @@ def build_model(idx, ws):
     return sim, None
 
 
-def eval_npointdepth(sim):
+def check_output(sim):
     name = sim.name
     print("evaluating n-point cross-section results..." f"({name})")
 
@@ -249,8 +249,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_npointdepth,
         targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
     test.run()

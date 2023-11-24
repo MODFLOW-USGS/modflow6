@@ -6,12 +6,13 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["buy_sfr_01"]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     lx = 7.0
     lz = 1.0
     nlay = 1
@@ -45,7 +46,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -370,16 +371,16 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_results(sim):
+def check_output(test):
     print("evaluating results...")
 
     # assign names
-    gwtname = "gwt_" + sim.name
-    gwfname = "gwf_" + sim.name
+    gwtname = "gwt_" + test.name
+    gwfname = "gwf_" + test.name
 
     # load the sft concentrations and make sure all values are correct
     fname = gwtname + ".sft.bin"
-    fname = os.path.join(sim.workspace, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")
     csftall = cobj.get_alldata()
@@ -389,21 +390,21 @@ def eval_results(sim):
 
     # load the aquifer concentrations
     fname = gwtname + ".ucn"
-    fname = os.path.join(sim.workspace, fname)
+    fname = os.path.join(test.workspace, fname)
     cobj = flopy.utils.HeadFile(fname, text="CONCENTRATION")
     cgwfall = cobj.get_alldata()
     cgwf = cgwfall[-2].flatten()
 
     # load the aquifer heads
     fname = gwfname + ".hds"
-    fname = os.path.join(sim.workspace, fname)
+    fname = os.path.join(test.workspace, fname)
     hobj = flopy.utils.HeadFile(fname, text="HEAD")
     headall = hobj.get_alldata()
     head = headall[-1].flatten()
 
     # load the sfr budget file and get sfr/gwf flows
     fname = gwfname + ".sfr.bud"
-    fname = os.path.join(sim.workspace, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     bobj = flopy.utils.CellBudgetFile(fname, precision="double", verbose=False)
     qsfrgwfsimall = bobj.get_data(text="GWF")
@@ -413,7 +414,7 @@ def eval_results(sim):
     # load the sfr budget and check to make sure that concentrations are set
     # correctly from sft concentrations
     fname = gwfname + ".sfr.bud"
-    fname = os.path.join(sim.workspace, fname)
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     bobj = flopy.utils.CellBudgetFile(fname, precision="double", verbose=False)
     b = bobj.get_data(text="AUXILIARY")
@@ -425,7 +426,7 @@ def eval_results(sim):
     # load the sfr stage file
     # load the aquifer concentrations and make sure all values are correct
     fname = gwfname + ".sfr.stg"
-    fname = os.path.join(sim.workspace, fname)
+    fname = os.path.join(test.workspace, fname)
     stgobj = flopy.utils.HeadFile(fname, text="STAGE")
     stageall = stgobj.get_alldata()
     stage = stageall[-1]
@@ -460,8 +461,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_results,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
         targets=targets,
     )
     test.run()

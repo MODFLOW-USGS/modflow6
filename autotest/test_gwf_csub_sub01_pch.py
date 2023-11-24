@@ -3,6 +3,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 paktest = "csub"
@@ -68,11 +69,11 @@ ini_head = 1.0
 thick = [1.0]
 
 
-def build_model(idx, dir):
-    sim = get_model(idx, dir, pch=True)
+def build_models(idx, test):
+    sim = get_model(idx, test.workspace, pch=True)
 
     # build MODFLOW-6 with constant material properties
-    pth = os.path.join(dir, compdir)
+    pth = os.path.join(test.workspace, compdir)
     mc = get_model(idx, pth)
 
     return sim, mc
@@ -220,18 +221,18 @@ def get_model(idx, dir, pch=None):
     return sim
 
 
-def eval_sub(sim):
+def check_output(test):
     print("evaluating subsidence...")
 
     # MODFLOW 6 compaction results
-    fpth = os.path.join(sim.workspace, "csub_obs.csv")
+    fpth = os.path.join(test.workspace, "csub_obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
         assert False, f'could not load data from "{fpth}"'
 
     # MODFLOW 6 base compaction results
-    fpth = os.path.join(sim.workspace, compdir, "csub_obs.csv")
+    fpth = os.path.join(test.workspace, compdir, "csub_obs.csv")
     try:
         tcb = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -245,7 +246,7 @@ def eval_sub(sim):
 
     # write summary
     fpth = os.path.join(
-        sim.workspace, f"{os.path.basename(sim.name)}.comp.cmp.out"
+        test.workspace, f"{os.path.basename(test.name)}.comp.cmp.out"
     )
     f = open(fpth, "w")
     line = f"{'TOTIM':>15s}"
@@ -262,15 +263,15 @@ def eval_sub(sim):
     f.close()
 
     if diffmax > dtol:
-        sim.success = False
+        test.success = False
         msg += f"exceeds {dtol:15.7g}"
         assert diffmax < dtol, msg
     else:
-        sim.success = True
+        test.success = True
         print("    " + msg)
 
     # compare budgets
-    cbc_compare(sim)
+    cbc_compare(test)
 
 
 # compare cbc and lst budgets
@@ -378,8 +379,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_sub,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
         targets=targets,
     )
     test.run()

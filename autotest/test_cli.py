@@ -1,22 +1,19 @@
-import subprocess
 import platform
+import subprocess
 
 from conftest import project_root_path
 
 bin_path = project_root_path / "bin"
-
-app = "mf6"
 ext = ".exe" if platform.system() == "Windows" else ""
-app = f"{app}{ext}"
+exe = f"mf6{ext}"
 
 
 def test_cli_version():
     output = " ".join(
-        subprocess.check_output([str(bin_path / app), "-v"]).decode().split()
+        subprocess.check_output([str(bin_path / exe), "-v"]).decode().split()
     )
     print(output)
-    assert output.startswith(f"{app}:"), f"found: {output}"
-
+    assert output.startswith(f"{exe}:"), f"found: {output}"
     version = output.lower().split(" ")[1]
     print(version)
     v_split = version.split(".")

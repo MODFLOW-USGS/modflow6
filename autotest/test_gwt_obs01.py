@@ -1,7 +1,5 @@
 """
-MODFLOW 6 Autotest
 Test that the obs concentrations match the oc concentrations
-
 """
 
 import os
@@ -9,6 +7,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = [
@@ -17,7 +16,7 @@ ex = [
 scheme = ["upstream"]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nlay, nrow, ncol = 1, 1, 100
     nper = 1
     perlen = [5.0]
@@ -45,7 +44,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -241,19 +240,19 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_transport(sim):
+def check_output(test):
     print("evaluating transport...")
 
-    name = sim.name
+    name = test.name
     gwtname = "gwt_" + name
 
     # MODFLOW 6 output control concentrations
-    fpth = os.path.join(sim.workspace, f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
     cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
     conc = cobj.get_alldata()
 
     # MODFLOW 6 observation package concentrations
-    fpth = os.path.join(sim.workspace, "conc_obs.csv")
+    fpth = os.path.join(test.workspace, "conc_obs.csv")
     tc = np.genfromtxt(fpth, names=True, delimiter=",")
 
     assert np.allclose(
@@ -274,7 +273,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_transport, 
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
     test.run()

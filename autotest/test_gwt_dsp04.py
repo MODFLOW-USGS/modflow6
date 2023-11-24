@@ -3,6 +3,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 # test dispersion without and with xt3d
@@ -10,7 +11,7 @@ ex = ["dsp04a", "dsp04b"]
 xt3d = [None, True]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nlay, nrow, ncol = 1, 21, 21
     nper = 1
     perlen = [5.0]
@@ -47,7 +48,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -221,7 +222,7 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_transport(idx, test):
+def check_output(idx, test):
     print("evaluating transport...")
 
     name = ex[idx]
@@ -259,7 +260,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda ws: build_model(idx, ws),
-        check=lambda t: eval_transport(idx, t), 
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
     test.run()

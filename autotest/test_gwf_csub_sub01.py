@@ -3,6 +3,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 paktest = "csub"
@@ -214,30 +215,29 @@ def get_model(idx, ws):
     return sim
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     # build MODFLOW 6 files
-    ws = dir
-    sim = get_model(idx, ws)
+    sim = get_model(idx, test.workspace)
 
     # build MODFLOW-2005 files
-    ws = os.path.join(dir, "mf6_regression")
+    ws = os.path.join(test.workspace, "mf6_regression")
     mc = get_model(idx, ws)
 
     return sim, mc
 
 
-def eval_sub(sim):
+def check_output(test):
     print("evaluating subsidence...")
 
     # MODFLOW 6 total compaction results
-    fpth = os.path.join(sim.workspace, "csub_obs.csv")
+    fpth = os.path.join(test.workspace, "csub_obs.csv")
     try:
         tc = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
         assert False, f'could not load data from "{fpth}"'
 
     # comparison total compaction results
-    fpth = os.path.join(sim.workspace, "mf6_regression", "csub_obs.csv")
+    fpth = os.path.join(test.workspace, "mf6_regression", "csub_obs.csv")
     try:
         tc0 = np.genfromtxt(fpth, names=True, delimiter=",")
     except:
@@ -251,7 +251,7 @@ def eval_sub(sim):
 
     # write summary
     fpth = os.path.join(
-        sim.workspace, f"{os.path.basename(sim.name)}.comp.cmp.out"
+        test.workspace, f"{os.path.basename(test.name)}.comp.cmp.out"
     )
     f = open(fpth, "w")
     line = f"{'TOTIM':>15s}"
@@ -268,15 +268,15 @@ def eval_sub(sim):
     f.close()
 
     if diffmax > dtol:
-        sim.success = False
+        test.success = False
         msg += f"exceeds {dtol}"
         assert diffmax < dtol, msg
     else:
-        sim.success = True
+        test.success = True
         print("    " + msg)
 
     # compare budgets
-    cbc_compare(sim)
+    cbc_compare(test)
 
     return
 
@@ -384,9 +384,9 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_sub,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
         targets=targets,
-        mf6_regression=True
+        mf6_regression=True,
     )
     test.run()

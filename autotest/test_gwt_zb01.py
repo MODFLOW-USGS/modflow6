@@ -1,6 +1,7 @@
-# test that zonebudget works on a cell budget file from GWT
-# https://github.com/MODFLOW-USGS/modflow6/discussions/1181
-
+"""
+test that zonebudget works on a cell budget file from GWT
+https://github.com/MODFLOW-USGS/modflow6/discussions/1181
+"""
 
 import os
 from pathlib import Path
@@ -8,17 +9,14 @@ from pathlib import Path
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
 
+from framework import TestFramework
 
 name = "zbud6_zb01"
 htol = None
 dtol = 1e-3
 budtol = 1e-2
-bud_lst = [
-    "STORAGE-AQUEOUS_IN",
-    "STORAGE-AQUEOUS_OUT"
-]
+bud_lst = ["STORAGE-AQUEOUS_IN", "STORAGE-AQUEOUS_OUT"]
 zone_lst = []
 for n in bud_lst:
     s = n.replace("_", "-")
@@ -43,7 +41,7 @@ shape3d = (nlay, nrow, ncol)
 size3d = nlay * nrow * ncol
 
 
-def build_model(dir, exe):
+def build_models(test):
     perlen = [timetoend]
     nstp = [50]
     tsmult = [1.0]
@@ -57,9 +55,9 @@ def build_model(dir, exe):
         tdis_rc.append((perlen[i], nstp[i], tsmult[i]))
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name=exe, sim_ws=ws
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -107,11 +105,18 @@ def build_model(dir, exe):
     w = {0: wellist}
 
     # grid discretization
-    dis = flopy.mf6.ModflowGwfdis(gwf, nlay=nlay, nrow=nrow, ncol=ncol,
-                                 delr=delr, delc=delc,
-                                 top=top, botm=botm,
-                                 idomain=np.ones((nlay, nrow, ncol), dtype=int),
-                                 filename=f"{gwfname}.dis")
+    dis = flopy.mf6.ModflowGwfdis(
+        gwf,
+        nlay=nlay,
+        nrow=nrow,
+        ncol=ncol,
+        delr=delr,
+        delc=delc,
+        top=top,
+        botm=botm,
+        idomain=np.ones((nlay, nrow, ncol), dtype=int),
+        filename=f"{gwfname}.dis",
+    )
 
     # initial conditions
     ic = flopy.mf6.ModflowGwfic(gwf, strt=strt, filename=f"{gwfname}.ic")
@@ -187,11 +192,18 @@ def build_model(dir, exe):
     sim.register_ims_package(imsgwt, [gwt.name])
 
     # gwt grid discretization
-    dis = flopy.mf6.ModflowGwtdis(gwt, nlay=nlay, nrow=nrow, ncol=ncol,
-                                 delr=delr, delc=delc,
-                                 top=top, botm=botm,
-                                 idomain=np.ones((nlay, nrow, ncol), dtype=int),
-                                 filename=f"{gwtname}.dis")
+    dis = flopy.mf6.ModflowGwtdis(
+        gwt,
+        nlay=nlay,
+        nrow=nrow,
+        ncol=ncol,
+        delr=delr,
+        delc=delc,
+        top=top,
+        botm=botm,
+        idomain=np.ones((nlay, nrow, ncol), dtype=int),
+        filename=f"{gwtname}.dis",
+    )
 
     # initial conditions
     ic = flopy.mf6.ModflowGwtic(gwt, strt=0.0, filename=f"{gwtname}.ic")
@@ -234,13 +246,13 @@ def build_model(dir, exe):
     return sim, None
 
 
-def eval_zb6(sim, exe):
+def check_output(sim, zb6):
     print("evaluating zonebudget...")
     ws = Path(sim.workspace)
 
     # build zonebudget files
     # start with 1 since budget isn't calculated for zone 0
-    zones = [k + 1 for k in range(nlay)]  
+    zones = [k + 1 for k in range(nlay)]
     nzones = len(zones)
     with open(ws / "zonebudget.nam", "w") as f:
         f.write("BEGIN ZONEBUDGET\n")
@@ -261,7 +273,7 @@ def eval_zb6(sim, exe):
 
     # run zonebudget
     success, buff = flopy.run_model(
-        exe,
+        zb6,
         "zonebudget.nam",
         model_ws=ws,
         silent=False,
@@ -272,7 +284,9 @@ def eval_zb6(sim, exe):
     sim.success = success
 
     # read data from csv file
-    zbd = np.genfromtxt(ws / "zonebudget.csv", names=True, delimiter=",", deletechars="")
+    zbd = np.genfromtxt(
+        ws / "zonebudget.csv", names=True, delimiter=",", deletechars=""
+    )
 
     # sum the data for all zones
     nentries = int(zbd.shape[0] / nzones)
@@ -297,7 +311,7 @@ def eval_zb6(sim, exe):
     # todo: should flopy have a subclass for GWT list file?
     budl = flopy.utils.mflistfile.ListBudget(
         ws / f"gwt_{os.path.basename(sim.name)}.lst",
-        budgetkey="MASS BUDGET FOR ENTIRE MODEL"
+        budgetkey="MASS BUDGET FOR ENTIRE MODEL",
     )
     names = list(bud_lst)
     found_names = budl.get_record_names()
@@ -306,15 +320,13 @@ def eval_zb6(sim, exe):
     nbud = d0.shape[0]
 
     # get results from cbc file
-    cbc_bud = [
-        "STORAGE-AQUEOUS"
-    ]
+    cbc_bud = ["STORAGE-AQUEOUS"]
     d = np.recarray(nbud, dtype=dtype)
     for key in bud_lst:
         d[key] = 0.0
     cobj = flopy.utils.CellBudgetFile(
-        ws / f"gwt_{os.path.basename(sim.name)}.cbc",
-        precision="double")
+        ws / f"gwt_{os.path.basename(sim.name)}.cbc", precision="double"
+    )
     rec = cobj.list_records()
     kk = cobj.get_kstpkper()
     times = cobj.get_times()
@@ -404,14 +416,12 @@ def eval_zb6(sim, exe):
 
 
 def test_mf6model(function_tmpdir, targets):
-    mf6 = targets.mf6
-    zb6 = targets.zbud6
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda ws: build_model(ws, mf6),
-        check=lambda s: eval_zb6(s, zb6), 
-        htol=htol
+        build=lambda t: build_models(t),
+        check=lambda t: check_output(t, targets.zbud6),
+        htol=htol,
     )
     test.run()

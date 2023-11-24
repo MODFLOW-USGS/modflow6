@@ -1,7 +1,9 @@
-# Test maw package ability to equalize.
-# maw_05a - well and aquifer start at 4; should be now flow
-# maw_05b - well starts at 3.5 and aquifer starts at 4; should equalize
-# maw_05c - well starts at or below 3.0; not working yet
+"""
+Test maw package ability to equalize.
+maw_05a - well and aquifer start at 4; should be now flow
+maw_05b - well starts at 3.5 and aquifer starts at 4; should equalize
+maw_05c - well starts at or below 3.0; not working yet
+"""
 
 import os
 
@@ -15,7 +17,7 @@ ex = ["maw_05a", "maw_05b", "maw_05c"]
 mawstrt = [4.0, 3.5, 2.5]  # add 3.0
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     lx = 7.0
     lz = 4.0
     nlay = 4
@@ -45,7 +47,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -177,7 +179,7 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_results(idx, test):
+def check_output(idx, test):
     print("evaluating results...")
 
     # calculate volume of water and make sure it is conserved
@@ -248,9 +250,9 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=lambda t: eval_results(idx, t),
         targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
         mf6_regression=True,
     )
     test.run()

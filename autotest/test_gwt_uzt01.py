@@ -1,9 +1,8 @@
 """
-# Test uzt for one-d transport in a vertical column.  This problem is based
+Test uzt for one-d transport in a vertical column.  This problem is based
 on test_gwf_uzf03.py.  Infiltration is assigned a concentration of 100.  The
-# uzet concentration is also assigned as 100. so that the calculated uzf cells
-# should have a concentration of 100.
-
+uzet concentration is also assigned as 100. so that the calculated uzf cells
+should have a concentration of 100.
 """
 
 import os
@@ -11,14 +10,14 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["uzt01a"]
 nlay, nrow, ncol = 15, 1, 1
 
 
-def build_model(idx, dir):
-
+def build_models(idx, test):
     perlen = [17.7]
     nper = len(perlen)
     nstp = [177]
@@ -51,7 +50,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -484,13 +483,13 @@ def check_obs(sim):
     assert success, "One or more UZT obs checks did not pass"
 
 
-def eval_flow(sim):
+def check_output(test):
     print("evaluating flow...")
 
-    name = sim.name
+    name = test.name
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
-    ws = sim.workspace
+    ws = test.workspace
 
     # check binary grid file
     fname = os.path.join(ws, gwfname + ".dis.grb")
@@ -552,10 +551,10 @@ def eval_flow(sim):
     assert np.allclose(c, canswer)
 
     # check observations
-    check_obs(sim)
+    check_obs(test)
 
     # Make plot of obs
-    fpth = os.path.join(sim.workspace, gwtname + ".uzt.obs.concentration.csv")
+    fpth = os.path.join(test.workspace, gwtname + ".uzt.obs.concentration.csv")
     obsvals = np.genfromtxt(fpth, names=True, delimiter=",")
 
     # make_plot(sim, obsvals)
@@ -570,7 +569,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_flow, 
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
     test.run()

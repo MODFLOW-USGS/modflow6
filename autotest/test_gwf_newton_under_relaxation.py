@@ -1,9 +1,10 @@
 import os
+import pathlib as pl
 
 import flopy
 import numpy as np
-import pathlib as pl
 import pytest
+
 from conftest import project_root_path
 from framework import TestFramework
 
@@ -36,12 +37,12 @@ chd_spd += [[0, i, ncol - 1, H2] for i in range(nrow)]
 base_heads = flopy.utils.HeadFile(data_path / "results.hds.cmp").get_data()
 
 
-def build_model(idx, ws):
+def build_models(idx, test):
     name = ex[idx]
     if idx == 1:
-        sim_ws = pl.Path(f"{ws}/working")
+        sim_ws = pl.Path(f"{test.workspace}/working")
     else:
-        sim_ws = ws
+        sim_ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         sim_ws=str(sim_ws),
@@ -97,14 +98,14 @@ def build_model(idx, ws):
         mfsplit = flopy.mf6.utils.Mf6Splitter(sim)
         split_array = np.tri(nrow, ncol).astype(int)
         new_sim = mfsplit.split_model(split_array)
-        new_sim.set_sim_path(ws)
-        mfsplit.save_node_mapping(pl.Path(f"{ws}/mapping.json"))
+        new_sim.set_sim_path(test.workspace)
+        mfsplit.save_node_mapping(pl.Path(f"{test.workspace}/mapping.json"))
         return new_sim, None
     else:
         return sim, None
 
 
-def eval_head(idx, test):
+def check_output(idx, test):
     print(f"evaluating heads...{idx}")
     mf6sim = flopy.mf6.MFSimulation.load(sim_ws=test.workspace)
     if idx == 1:
@@ -133,8 +134,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=lambda t: eval_head(idx, t),
         targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
     test.run()

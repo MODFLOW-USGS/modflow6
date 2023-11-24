@@ -3,7 +3,6 @@ Test the GWT with initial concentration of 0 in the model domain and right-hand
 side GWT boundary conditions. Versions 6.2.1 and earlier failed because of a
 divide by zero error in IMS. This test confirms the fix implemented as part
 of the version 6.2.2 release that addressed Issue 655.
-
 """
 
 import os
@@ -11,6 +10,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["issue655a", "issue655b"]
@@ -24,7 +24,7 @@ sy = [0.1]
 nlay, nrow, ncol = 1, 11, 11
 
 
-def build_model(idx, ws):
+def build_models(idx, test):
     nper = 1
     perlen = [1000.0]
     nstp = [5]
@@ -68,7 +68,7 @@ def build_model(idx, ws):
 
     # build MODFLOW 6 files
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=test.workspace
     )
     # create tdis package
     tdis = flopy.mf6.ModflowTdis(
@@ -248,7 +248,7 @@ def build_model(idx, ws):
     return sim, None
 
 
-def eval_transport(idx, test):
+def check_output(idx, test):
     print("evaluating transport...")
 
     name = ex[idx]
@@ -300,7 +300,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda ws: build_model(idx, ws),
-        check=lambda t: eval_transport(idx, t), 
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
     test.run()

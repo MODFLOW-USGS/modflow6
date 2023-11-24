@@ -8,6 +8,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["lak-wetlkbd"]
@@ -200,9 +201,9 @@ def calc_qSat(top, bot, thk):
 #
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     # Base simulation and model name and workspace
-    ws = dir
+    ws = test.workspace
     name = ex[idx]
 
     print("Building model...{}".format(name))
@@ -329,7 +330,7 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_results(idx, test):
+def check_output(idx, test):
     print("evaluating results...")
 
     # read flow results from model
@@ -337,7 +338,9 @@ def eval_results(idx, test):
     gwfname = "gwf-" + name
 
     # read flow results from model
-    sim1 = flopy.mf6.MFSimulation.load(sim_ws=test.workspace, load_only=["dis"])
+    sim1 = flopy.mf6.MFSimulation.load(
+        sim_ws=test.workspace, load_only=["dis"]
+    )
     gwf = sim1.get_model(gwfname)
 
     # get final lake stage
@@ -403,8 +406,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=lambda t: eval_results(idx, t),
         targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
     test.run()

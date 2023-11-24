@@ -28,14 +28,15 @@ The exchange will have XT3D enabled so the head values in
 the child model should match the theory. In this case we
 just assert that they are equal for each column, something
 that is clearly not true when simulating without XT3D.
-
 """
+
 import os
 
 import flopy
 import numpy as np
 import pytest
 from flopy.utils.lgrutil import Lgr
+
 from framework import TestFramework
 
 ex = ["ifmod_vert"]
@@ -233,19 +234,19 @@ def get_model(idx, dir):
     return sim
 
 
-def build_model(idx, exdir):
-    sim = get_model(idx, exdir)
+def build_models(idx, test):
+    sim = get_model(idx, test.workspace)
     return sim, None
 
 
-def eval_heads(sim):
+def check_output(test):
     print("comparing heads  for child model to analytical result...")
 
-    fpth = os.path.join(sim.workspace, f"{child_name}.hds")
+    fpth = os.path.join(test.workspace, f"{child_name}.hds")
     hds_c = flopy.utils.HeadFile(fpth)
     heads_c = hds_c.get_data()
 
-    fpth = os.path.join(sim.workspace, f"{child_name}.dis.grb")
+    fpth = os.path.join(test.workspace, f"{child_name}.dis.grb")
     grb_c = flopy.mf6.utils.MfGrdFile(fpth)
 
     # (note that without XT3D on the exchange, the 'error'
@@ -261,11 +262,11 @@ def eval_heads(sim):
     for mname in [parent_name, child_name]:
         print(f"Checking flowja residual for model {mname}")
 
-        fpth = os.path.join(sim.workspace, f"{mname}.dis.grb")
+        fpth = os.path.join(test.workspace, f"{mname}.dis.grb")
         grb = flopy.mf6.utils.MfGrdFile(fpth)
         ia = grb._datadict["IA"] - 1
 
-        fpth = os.path.join(sim.workspace, f"{mname}.cbc")
+        fpth = os.path.join(test.workspace, f"{mname}.cbc")
         assert os.path.isfile(fpth)
         cbb = flopy.utils.CellBudgetFile(fpth, precision="double")
         flow_ja_face = cbb.get_data(idx=0)
@@ -289,8 +290,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_heads,
         targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
     test.run()

@@ -1,9 +1,7 @@
 """
-MODFLOW 6 Autotest
 Test to make sure that mf6 is failing with the correct error messages.  This
 test script is set up to be extensible so that simple models can be created
 very easily and tested with different options to succeed or fail correctly.
-
 """
 
 import subprocess

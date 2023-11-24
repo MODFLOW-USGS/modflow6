@@ -1,8 +1,6 @@
 """
-MODFLOW 6 Autotest
 Test the SSM FILEINPUT option for specifying source and sink
 concentrations.
-
 """
 
 import os
@@ -10,12 +8,13 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["ssm03"]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nlay, nrow, ncol = 3, 5, 5
     perlen = [5.0]
     nstp = [5]
@@ -39,7 +38,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -228,19 +227,19 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_transport(sim):
+def check_output(test):
     print("evaluating transport...")
 
-    name = sim.name
+    name = test.name
     gwtname = "gwt_" + name
 
     # load concentration file
-    fpth = os.path.join(sim.workspace, f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
     cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
     conc = cobj.get_data()
 
     # load transport budget file
-    fpth = os.path.join(sim.workspace, f"{gwtname}.cbc")
+    fpth = os.path.join(test.workspace, f"{gwtname}.cbc")
     bobj = flopy.utils.CellBudgetFile(
         fpth,
         precision="double",
@@ -248,7 +247,6 @@ def eval_transport(sim):
 
     ssmbudall = bobj.get_data(text="SOURCE-SINK MIX")
     for ssmbud in ssmbudall:
-
         node, node2, q = ssmbud[0]
         assert node == 25, "node location for well must be 25 (GWT cell 25)"
         assert node2 == 1, "node2 location for well must be 1 (first well)"
@@ -269,7 +267,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_transport, 
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
     test.run()

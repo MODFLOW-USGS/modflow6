@@ -2,11 +2,12 @@ import os
 
 import flopy
 import pytest
+
 from framework import TestFramework
 
 ex = ["gwf_noptc01", "gwf_noptc02", "gwf_noptc03"]
 no_ptcrecords = ["FIRST", "ALL", None]
-htol = [None for idx in range(len(ex))]
+htol = [None for _ in range(len(ex))]
 
 # static model data
 # temporal discretization
@@ -122,11 +123,11 @@ def get_model(idx, dir, no_ptcrecord):
 
 
 # water table recharge problem
-def build_model(idx, dir):
-    sim = get_model(idx, dir, no_ptcrecords[idx])
+def build_model(idx, test):
+    sim = get_model(idx, test.workspace, no_ptcrecords[idx])
 
     # build MODFLOW-6 without no_ptc option
-    pth = os.path.join(dir, "mf6")
+    pth = os.path.join(test.workspace, "mf6")
     mc = get_model(idx, pth, None)
 
     return sim, mc
@@ -140,7 +141,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
         targets=targets,
+        build=lambda t: build_model(idx, t),
     )
     test.run()

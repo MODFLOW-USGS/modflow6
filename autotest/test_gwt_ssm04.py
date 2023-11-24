@@ -1,5 +1,4 @@
 """
-MODFLOW 6 Autotest
 Test the SSM FILEINPUT option for specifying source and sink
 concentrations.
 
@@ -8,7 +7,6 @@ Four different recharge packages are tested with the SSM FILEINPUT
 2.  array-based recharge, no time array series
 3.  list-based recharge with time series
 4.  array-based recharge with time array series
-
 """
 
 import os
@@ -16,6 +14,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["ssm04"]
@@ -32,7 +31,7 @@ idomain = np.ones((nlay, nrow, ncol), dtype=int)
 idomain[0, :, :] = np.array(idomain_lay0)
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     perlen = [5.0, 5.0, 5.0]
     nstp = [5, 5, 5]
     tsmult = [1.0, 1.0, 1.0]
@@ -55,7 +54,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -167,7 +166,7 @@ def build_model(idx, dir):
             nodeu = i * nrow + j
             tsnames.append(f"rch-{nodeu + 1}")
     ts_data = []
-    totim = 0.
+    totim = 0.0
     for kper in range(nper):
         totim += perlen[kper]
     for t in [0, totim]:
@@ -329,7 +328,7 @@ def build_model(idx, dir):
             nodeu = i * ncol + j
             tsnames.append(f"crch-{nodeu + 1}")
     ts_data = [tuple([0.0] + list(range(1, nrow * ncol + 1)))]
-    for t in [5., 10., 15.]:
+    for t in [5.0, 10.0, 15.0]:
         ts = tuple([float(t)] + list(range(1, nrow * ncol + 1)))
         ts_data.append(ts)
     ts_dict = {
@@ -359,7 +358,7 @@ def build_model(idx, dir):
     # for now write the recharge concentration to a dat file because there
     # is a bug in flopy that will not correctly write this array as internal
     tas_array = {
-        0.0: f"{gwtname}.rch4.spc.tas.dat", 
+        0.0: f"{gwtname}.rch4.spc.tas.dat",
         5.0: f"{gwtname}.rch4.spc.tas.dat",
         10.0: f"{gwtname}.rch4.spc.tas.dat",
         15.0: f"{gwtname}.rch4.spc.tas.dat",
@@ -418,19 +417,19 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_transport(sim):
+def check_output(test):
     print("evaluating transport...")
 
-    name = sim.name
+    name = test.name
     gwtname = "gwt_" + name
 
     # load concentration file
-    fpth = os.path.join(sim.workspace, f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
     cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
     conc = cobj.get_data()
 
     # load transport budget file
-    fpth = os.path.join(sim.workspace, f"{gwtname}.cbc")
+    fpth = os.path.join(test.workspace, f"{gwtname}.cbc")
     bobj = flopy.utils.CellBudgetFile(
         fpth,
         precision="double",
@@ -513,7 +512,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_transport, 
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
     test.run()

@@ -2,6 +2,7 @@ import os
 
 import flopy
 import pytest
+
 from framework import TestFramework
 
 ex = [
@@ -199,11 +200,9 @@ def get_model(idx, ws):
     return sim
 
 
-def build_model(idx, dir):
-    ws = dir
-    sim = get_model(idx, ws)
-
-    ws = os.path.join(dir, cmppth)
+def build_models(idx, test):
+    sim = get_model(idx, test.workspace)
+    ws = os.path.join(test.workspace, cmppth)
     mc = get_model(idx, ws)
     return sim, mc
 
@@ -216,8 +215,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
+        build=lambda t: build_models(idx, t),
         targets=targets,
-        mf6_regression=True
+        mf6_regression=True,
     )
     test.run()

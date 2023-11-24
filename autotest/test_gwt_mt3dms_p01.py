@@ -1,5 +1,4 @@
 """
-MODFLOW 6 Autotest
 Test to compare MODFLOW 6 groundwater transport simulation results to MT3DMS
 results.  This test was first documented in Zheng and Wang (1999) (MT3DMS:
 A Modular Three-Dimensional Multispecies Transport Model for Simulation of

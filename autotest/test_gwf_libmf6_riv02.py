@@ -1,5 +1,4 @@
 """
-MODFLOW 6 Autotest
 Test the api which is used set hcof and rhs in api package compare to river
 package in the non-api simulation.
 """
@@ -8,8 +7,9 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
 from modflowapi import ModflowApi
+
+from framework import TestFramework
 
 ex = ["libgwf_riv02"]
 
@@ -131,9 +131,9 @@ def get_model(ws, name, riv_spd, api=False):
     return sim
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     name = ex[idx]
 
     # create river data
@@ -148,7 +148,7 @@ def build_model(idx, dir):
     sim = get_model(ws, name, riv_spd={0: rd, 5: rd2})
 
     # build comparison model with zeroed values
-    ws = os.path.join(dir, "libmf6")
+    ws = os.path.join(test.workspace, "libmf6")
     rd_api = [[(0, 0, icol), 999.0, 999.0, 0.0] for icol in range(1, ncol - 1)]
     mc = get_model(ws, name, riv_spd={0: rd_api}, api=True)
 
@@ -279,8 +279,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
         targets=targets,
+        build=lambda t: build_models(idx, t),
         api_func=lambda exe, ws: api_func(exe, idx, ws),
     )
     test.run()

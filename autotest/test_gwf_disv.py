@@ -5,7 +5,6 @@ Use a large offset for x and y vertices to ensure that the area
 calculation in MODFLOW 6 is correct.  For the second case, set
 one of the cells inactive and test to make sure connectivity
 in binary grid file is correct.
-
 """
 
 import os
@@ -20,9 +19,9 @@ from framework import TestFramework
 ex = ["disv01a", "disv01b"]
 
 
-def build_model(idx, dir, mf6):
+def build_models(idx, test):
     name = ex[idx]
-    ws = dir
+    ws = test.workspace
     nlay = 3
     nrow = 3
     ncol = 3
@@ -52,7 +51,7 @@ def build_model(idx, dir, mf6):
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
-        exe_name=mf6,
+        exe_name="mf6",
         sim_ws=ws,
     )
     tdis = flopy.mf6.ModflowTdis(sim)
@@ -66,7 +65,7 @@ def build_model(idx, dir, mf6):
     return sim, None
 
 
-def eval_results(idx, test):
+def check_output(idx, test):
     print("evaluating results...")
 
     name = test.name
@@ -91,9 +90,9 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws, targets.mf6),
-        check=lambda t: eval_results(idx, t),
         targets=targets,
-        make_comparison=False
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
+        make_comparison=False,
     )
     test.run()

@@ -4,6 +4,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["csub_sk03a"]
@@ -499,20 +500,19 @@ def get_model(idx, ws):
 
 
 # SUB package problem 3
-def build_model(idx, dir):
+def build_models(idx, test):
     # build MODFLOW 6 files
-    ws = dir
-    sim = get_model(idx, ws)
+    sim = get_model(idx, test.workspace)
 
     # build comparison files
     cpth = cmppths[idx]
-    ws = os.path.join(dir, cpth)
+    ws = os.path.join(test.workspace, cpth)
     mc = get_model(idx, ws)
 
     return sim, mc
 
 
-def eval_comp(test):
+def check_output(test):
     print("evaluating compaction...")
 
     # MODFLOW 6 total compaction results
@@ -605,9 +605,9 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_comp,
         targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
         htol=htol[idx],
         mf6_regression=True,
     )

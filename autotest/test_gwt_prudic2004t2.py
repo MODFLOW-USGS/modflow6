@@ -1,8 +1,10 @@
-# Second problem described by Prudic et al (2004)
-# This problem involves transport through an aquifers, lakes and streams.
-# It requires the use of the Water Mover Package to send water from a stream,
-# into a lake, and then back into another stream. Solute is also transport
-# through the system.
+"""
+Second problem described by Prudic et al (2004)
+This problem involves transport through an aquifers, lakes and streams.
+It requires the use of the Water Mover Package to send water from a stream,
+into a lake, and then back into another stream. Solute is also transport
+through the system.
+"""
 
 import os
 import sys
@@ -10,6 +12,7 @@ import sys
 import flopy
 import numpy as np
 import pytest
+
 from conftest import project_root_path
 from framework import TestFramework
 
@@ -20,9 +23,8 @@ fname = str(model_path / "lakibd.dat")
 lakibd = np.loadtxt(fname, dtype=int)
 
 
-def build_model(idx, dir):
-
-    ws = dir
+def build_models(idx, test):
+    ws = test.workspace
     name = ex[idx]
     gwfname = "gwf_" + name
     gwtname = "gwt_" + name
@@ -356,7 +358,6 @@ def build_model(idx, dir):
 
     transport = True
     if transport:
-
         gwt = flopy.mf6.ModflowGwt(sim, modelname=gwtname)
 
         # ims
@@ -813,10 +814,8 @@ def check_obs(sim):
 
     assert success, "One or more SFT-LKT obs checks did not pass"
 
-    return
 
-
-def eval_results(sim):
+def check_output(test):
     print("evaluating results...")
 
     makeplot = False
@@ -825,15 +824,15 @@ def eval_results(sim):
             makeplot = True
 
     if makeplot:
-        make_concentration_vs_time(sim)
-        make_concentration_map(sim)
+        make_concentration_vs_time(test)
+        make_concentration_map(test)
 
     # ensure concentrations were saved
-    ws = sim.workspace
-    name = sim.name
+    ws = test.workspace
+    name = test.name
     gwtname = "gwt_" + name
 
-    check_obs(sim)
+    check_obs(test)
 
     fname = gwtname + ".lkt.bin"
     fname = os.path.join(ws, fname)
@@ -981,7 +980,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_results, 
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
     test.run()

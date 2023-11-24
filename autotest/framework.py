@@ -1,22 +1,16 @@
 import os
 import shutil
 import time
-from traceback import format_exc
 from subprocess import PIPE, STDOUT, Popen
 
 import flopy
 import numpy as np
-from common_regression import (
-    get_mf6_comparison,
-    get_mf6_files,
-    get_namefiles,
-    setup_mf6,
-    setup_mf6_comparison,
-)
 from flopy.utils.compare import compare_heads
-from modflow_devtools.misc import is_in_ci, get_ostag
 from modflow_devtools.executables import Executables
+from modflow_devtools.misc import get_ostag, is_in_ci
 
+from common_regression import (get_mf6_comparison, get_mf6_files,
+                               get_namefiles, setup_mf6, setup_mf6_comparison)
 
 DNODATA = 3.0e30
 sfmt = "{:25s} - {}"
@@ -67,6 +61,7 @@ class TestFramework:
     htol : float
         Tolerance for result comparisons.
     """
+
     def __init__(
         self,
         name: str,
@@ -527,7 +522,7 @@ class TestFramework:
 
         Parameters
         ----------
-        
+
         verbose : bool
             whether to show verbose output
         """
@@ -537,21 +532,27 @@ class TestFramework:
                 print(f"No build function, nothing to build")
             return
 
-        sims = self.build(self.workspace)
+        sims = self.build(self)
         if not isinstance(sims, tuple):
             sims = [sims]
         sims = [sim for sim in sims if sim]
         for sim in sims:
             if isinstance(sim, flopy.mf6.MFSimulation):
                 if verbose:
-                    print(f"Writing mf6 simulation '{sim.name}' to: {sim.sim_path}")
+                    print(
+                        f"Writing mf6 simulation '{sim.name}' to: {sim.sim_path}"
+                    )
                 sim.write_simulation()
             elif isinstance(sim, flopy.mbase.BaseModel):
                 if verbose:
-                    print(f"Writing {type(sim)} model '{sim.name}' to: {sim.model_ws}")
+                    print(
+                        f"Writing {type(sim)} model '{sim.name}' to: {sim.model_ws}"
+                    )
                 sim.write_input()
             else:
-                raise ValueError(f"Unsupported simulation/model type: {type(sim)}")
+                raise ValueError(
+                    f"Unsupported simulation/model type: {type(sim)}"
+                )
 
     def run_all(self):
         """
@@ -564,9 +565,7 @@ class TestFramework:
         self.outp = mf6outp
 
         # determine comparison model
-        self._setup_comparison(
-            self.workspace, self.workspace, testModel=False
-        )
+        self._setup_comparison(self.workspace, self.workspace, testModel=False)
         if self.action is not None:
             if "mf6" in self.action or "mf6_regression" in self.action:
                 cinp, self.coutp = get_mf6_files(namfile_path)
@@ -668,9 +667,7 @@ class TestFramework:
                                 report=True,
                             )
                         else:
-                            success_cmp, buff = self.api_func(
-                                exe, cpth
-                            )
+                            success_cmp, buff = self.api_func(exe, cpth)
                         msg = sfmt.format(
                             "Comparison run", self.name + "/" + key
                         )
@@ -689,6 +686,7 @@ class TestFramework:
                         )
                         print(msg)
                         import traceback
+
                         traceback.print_exc()
 
                     assert success_cmp, "Unsuccessful comparison run"

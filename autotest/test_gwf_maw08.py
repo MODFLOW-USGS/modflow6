@@ -1,5 +1,7 @@
-# test to evaluate Newton-Raphson solution for a single column steady-state
-# dry multi-aquifer well problem. Developed to address issue #546
+"""
+Test Newton-Raphson solution for a single column steady-state
+dry multi-aquifer well problem. Developed to address issue #546
+"""
 
 import os
 
@@ -42,13 +44,13 @@ Kv = 1.0
 radius = 0.05
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     dvclose, rclose, relax = 1e-9, 1e-9, 1.0
 
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -248,7 +250,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
+        build=lambda t: build_models(idx, t),
         check=lambda t: eval_results(idx, t),
         targets=targets,
     )

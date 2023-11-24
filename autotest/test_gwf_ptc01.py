@@ -8,8 +8,8 @@ name file.
 import os
 
 import flopy
-import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["ptc01"]
@@ -130,15 +130,11 @@ def build_mf6(idx, ws, storage=True):
     return sim
 
 
-def build_model(idx, dir):
-    ws = dir
+def build_models(idx, test):
     # build mf6 with storage package but steady state stress periods
-    sim = build_mf6(idx, ws, storage=True)
-
+    sim = build_mf6(idx, test.workspace, storage=True)
     # build mf6 with no storage package
-    wsc = os.path.join(ws, "mf6")
-    mc = build_mf6(idx, wsc, storage=False)
-
+    mc = build_mf6(idx, os.path.join(test.workspace, "mf6"), storage=False)
     return sim, mc
 
 
@@ -150,7 +146,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
+        build=lambda t: build_models(idx, t),
         targets=targets,
     )
     test.run()

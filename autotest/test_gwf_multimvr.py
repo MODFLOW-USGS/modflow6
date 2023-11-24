@@ -5,6 +5,7 @@ import flopy
 import numpy as np
 import pytest
 from flopy.utils.lgrutil import Lgr
+
 from framework import TestFramework
 
 mvr_scens = ["mltmvr", "mltmvr5050", "mltmvr7525"]
@@ -971,7 +972,7 @@ def add_sim_mvr(sim, gwfname, gwfnamec, remaining_frac=None):
     )
 
 
-def build_model(idx, sim_ws):
+def build_models(idx, test):
     scen_nm, conns, frac = (
         mvr_scens[idx],
         scen_conns[idx],
@@ -980,7 +981,7 @@ def build_model(idx, sim_ws):
     scen_nm_parent = "gwf_" + scen_nm + "_p"
     scen_nm_child = "gwf_" + scen_nm + "_c"
     sim, gwf, gwfc = instantiate_base_simulation(
-        sim_ws, scen_nm_parent, scen_nm_child
+        test.workspace, scen_nm_parent, scen_nm_child
     )
     # add the sfr packages
     add_parent_sfr(gwf, scen_nm_parent, conns)
@@ -996,7 +997,7 @@ def build_model(idx, sim_ws):
     return sim, None
 
 
-def eval_results(idx, test):
+def check_output(idx, test):
     gwf_srch_str1 = (
         " SFR-PARENT PACKAGE - SUMMARY OF FLOWS FOR EACH CONTROL VOLUME"
     )
@@ -1124,8 +1125,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=lambda t: eval_results(idx, t),
         targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
     test.run()

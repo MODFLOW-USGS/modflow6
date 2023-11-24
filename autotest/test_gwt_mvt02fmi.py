@@ -1,8 +1,10 @@
-# Simple one-layer model with a drn and sfr network on top.  Purpose is to
-# test movement of solute between stress and advanced packages.  In this case
-# water from a drain is moved into the first sfr reach.  The test confirms
-# that the solute from the drain is moved into the sfr reach.
-# There is no flow between the stream and the aquifer.
+"""
+Simple one-layer model with a drn and sfr network on top.  Purpose is to
+test movement of solute between stress and advanced packages.  In this case
+water from a drain is moved into the first sfr reach.  The test confirms
+that the solute from the drain is moved into the sfr reach.
+There is no flow between the stream and the aquifer.
+"""
 
 import os
 from os.path import join

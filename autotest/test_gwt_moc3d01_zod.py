@@ -1,14 +1,17 @@
-# This autotest is based on the MOC3D problem 1 autotest except that it
-# tests the zero-order decay for a simple one-dimensional flow problem.
-# The test ensures that concentrations do not go below zero (they do go
-# slightly negative but, it does ensure that the decay rate shuts off
-# where concentrations are zero.
+"""
+This autotest is based on the MOC3D problem 1 autotest except that it
+tests the zero-order decay for a simple one-dimensional flow problem.
+The test ensures that concentrations do not go below zero (they do go
+slightly negative but, it does ensure that the decay rate shuts off
+where concentrations are zero.
+"""
 
 import os
 
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = [
@@ -22,7 +25,7 @@ decay = [0.01, 0.01, 0.1, 0.1]
 ist_package = [False, False, True, True]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nlay, nrow, ncol = 1, 122, 1
     nper = 1
     perlen = [120]
@@ -53,7 +56,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name,
         version="mf6",
@@ -213,15 +216,15 @@ def build_model(idx, dir):
     )
 
     # storage
-    theta_mobile = 0.1 # vol mobile voids per cell volume
-    volfrac_immobile = 0.
-    theta_immobile = 0.
+    theta_mobile = 0.1  # vol mobile voids per cell volume
+    volfrac_immobile = 0.0
+    theta_immobile = 0.0
     if ist_package[idx]:
         # if dual domain, then assume half of cell is mobile and other half is immobile
         volfrac_immobile = 0.5
         theta_immobile = theta_mobile
         porosity_immobile = theta_immobile / volfrac_immobile
-    volfrac_mobile = 1. - volfrac_immobile
+    volfrac_mobile = 1.0 - volfrac_immobile
     porosity_mobile = theta_mobile / volfrac_mobile
 
     rtd = retardation[idx]
@@ -361,7 +364,7 @@ def make_plot_cd(cobj, fname=None):
     return
 
 
-def eval_transport(idx, test):
+def check_output(idx, test):
     print("evaluating transport...")
 
     name = ex[idx]
@@ -577,7 +580,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda ws: build_model(idx, ws),
-        check=lambda t: eval_transport(idx, t), 
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
     test.run()

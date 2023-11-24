@@ -3,13 +3,13 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["gwtbuy"]
 
 
-def build_model(idx, dir):
-
+def build_models(idx, test):
     lx = 2000.0
     lz = 1000.0
 
@@ -37,7 +37,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -409,7 +409,7 @@ def make_plot(sim):
     return
 
 
-def eval_transport(sim):
+def check_output(sim):
     print("evaluating transport...")
 
     makeplot = False
@@ -447,7 +447,6 @@ def eval_transport(sim):
     densecalculated = 1000.0 + 0.7 * c - 0.375 * (t - 25.0)
 
     if not np.allclose(d, densecalculated):
-
         print("density is not correct")
         fname = os.path.join(ws, "a-dense.txt")
         np.savetxt(fname, d.reshape(200, 100))
@@ -470,7 +469,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_transport, 
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
     test.run()

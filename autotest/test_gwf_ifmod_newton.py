@@ -1,31 +1,34 @@
+"""
+General test for the interface model approach.
+It compares the result of a single reference model
+to the equivalent case where the domain is decomposed
+and joined by a GWF-GWF exchange.
+
+In this case we test newton option, which is also enabled in
+the interface model and should give identical results.
+
+period 1: The first stress period we start almost dry and have the
+          model fill up.
+period 2: The BC on the left is lowered such that a part of the top
+          layer is drained.
+
+                 'refmodel'               'leftmodel'    'rightmodel'
+
+   layer 1:  1 . . . . . . . 1            1 . . . . 1       1 . . 1
+   layer 2:  1 . . . . . . . 1     VS     1 . . . . 1   +   1 . . 1
+   layer 3:  1 . . . . . . . 1            1 . . . . 1       1 . . 1
+
+We assert equality on the head values. All models are part of the same
+solution for convenience. Finally, the budget error is checked.
+"""
+
 import os
 
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework
 
-# General test for the interface model approach.
-# It compares the result of a single reference model
-# to the equivalent case where the domain is decomposed
-# and joined by a GWF-GWF exchange.
-#
-# In this case we test newton option, which is also enabled in
-# the interface model and should give identical results.
-#
-# period 1: The first stress period we start almost dry and have the
-#           model fill up.
-# period 2: The BC on the left is lowered such that a part of the top
-#           layer is drained.
-#
-#                  'refmodel'               'leftmodel'    'rightmodel'
-#
-#    layer 1:  1 . . . . . . . 1            1 . . . . 1       1 . . 1
-#    layer 2:  1 . . . . . . . 1     VS     1 . . . . 1   +   1 . . 1
-#    layer 3:  1 . . . . . . . 1            1 . . . . 1       1 . . 1
-#
-# We assert equality on the head values. All models are part of the same
-# solution for convenience. Finally, the budget error is checked.
+from framework import TestFramework
 
 ex = ["ifmod_newton01"]
 
@@ -108,7 +111,7 @@ chd_spd_left[1] = lchd2
 chd_spd_right[1] = rchd_right
 
 
-def get_model(idx, dir):
+def get_model(idx, ws):
     name = ex[idx]
 
     # parameters and spd
@@ -122,7 +125,7 @@ def get_model(idx, dir):
     hclose, rclose, relax = hclose_check, 1e-3, 0.97
 
     sim = flopy.mf6.MFSimulation(
-        sim_name=name, version="mf6", exe_name="mf6", sim_ws=dir
+        sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
 
     tdis = flopy.mf6.ModflowTdis(
@@ -338,19 +341,19 @@ def add_gwfexchange(sim):
     )
 
 
-def build_model(idx, exdir):
-    sim = get_model(idx, exdir)
+def build_models(idx, test):
+    sim = get_model(idx, test.workspace)
     return sim, None
 
 
-def compare_to_ref(sim):
+def check_output(test):
     print("comparing heads to single model reference...")
 
-    fpth = os.path.join(sim.workspace, f"{mname_ref}.hds")
+    fpth = os.path.join(test.workspace, f"{mname_ref}.hds")
     hds = flopy.utils.HeadFile(fpth)
-    fpth = os.path.join(sim.workspace, f"{mname_left}.hds")
+    fpth = os.path.join(test.workspace, f"{mname_left}.hds")
     hds_l = flopy.utils.HeadFile(fpth)
-    fpth = os.path.join(sim.workspace, f"{mname_right}.hds")
+    fpth = os.path.join(test.workspace, f"{mname_right}.hds")
     hds_r = flopy.utils.HeadFile(fpth)
 
     times = hds.get_times()
@@ -371,7 +374,7 @@ def compare_to_ref(sim):
 
     # check budget error from .lst file
     for mname in [mname_ref, mname_left, mname_right]:
-        fpth = os.path.join(sim.workspace, f"{mname}.lst")
+        fpth = os.path.join(test.workspace, f"{mname}.lst")
         for line in open(fpth):
             if line.lstrip().startswith("PERCENT"):
                 cumul_balance_error = float(line.split()[3])
@@ -391,8 +394,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=compare_to_ref,
         targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
     test.run()

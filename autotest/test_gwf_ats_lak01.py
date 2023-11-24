@@ -1,12 +1,15 @@
-# Same as test_gwf_lak01 except it uses ATS.  Test works by trying a
-# large time step that does not converge.  ATS must then retry using
-# a smaller time step.
+"""
+Same as test_gwf_lak01 except it uses ATS.  Test works by trying a
+large time step that does not converge.  ATS must then retry using
+a smaller time step.
+"""
 
 import os
 
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["gwf_ats_lak_01a"]
@@ -20,7 +23,7 @@ def get_idomain(nlay, nrow, ncol, lakend):
     return idomain
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     lx = 300.0
     lz = 45.0
     nlay = 45
@@ -50,7 +53,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -287,19 +290,19 @@ def get_kij_from_node(node, nrow, ncol):
     return k, i, j
 
 
-def eval_results(sim):
+def check_output(test):
     print("evaluating results...")
 
     # calculate volume of water and make sure it is conserved
-    fname = sim.name + ".lak.bin"
-    fname = os.path.join(sim.workspace, fname)
+    fname = test.name + ".lak.bin"
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     bobj = flopy.utils.HeadFile(fname, text="STAGE")
     times = bobj.get_times()
     stage = bobj.get_alldata()
 
-    fname = sim.name + ".cbc"
-    fname = os.path.join(sim.workspace, fname)
+    fname = test.name + ".cbc"
+    fname = os.path.join(test.workspace, fname)
     bobj = flopy.utils.CellBudgetFile(fname, precision="double", verbose=False)
     times = bobj.get_times()
     idomain = gwf.dis.idomain.array
@@ -341,8 +344,8 @@ def eval_results(sim):
                     print(msg)
     assert all_passed, "found recharge applied to cell beneath active lake"
 
-    fname = sim.name + ".hds"
-    fname = os.path.join(sim.workspace, fname)
+    fname = test.name + ".hds"
+    fname = os.path.join(test.workspace, fname)
     assert os.path.isfile(fname)
     hobj = flopy.utils.HeadFile(fname)
     head = hobj.get_alldata()
@@ -416,8 +419,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_results,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
         targets=targets,
     )
     test.run()

@@ -1,22 +1,23 @@
-# ## Test problem for VSC and HFB
-#
-# Uses constant head and general-head boundaries on the left and right
-# sides of a 10 row by 10 column by 1 layer model to drive flow from left to
-# right.  Tests that a horizontal flow barrier accounts for changes in
-# viscosity when temperature is simulated. Barrier is between middle two
-# columns, but only cuts across the bottom 5 rows.
-# Model 1: VSC inactive, uses a higher speified K that matches what the VSC
-#          package will come up with
-# Model 2: VSC active, uses a lower K so that when VSC is applied, resulting
-#          K's match model 1 and should result in the same flows across the
-#          model domain
-# Model 3: VSC inactive, uses the lower K of model 2 and checks that flows
-#          in model 3 are indeed lower than in model 2 when turning VSC off.
-#          Model simulates hot groundwater with lower viscosity resulting in
-#          more gw flow through the model domain.Flows that are checked are
-#          the row-wise flows between columns 5 and 6 (e.g., cell 5 to 6, 15
-#          to 16, etc.)
-#
+"""
+Test problem for VSC and HFB
+
+Uses constant head and general-head boundaries on the left and right
+sides of a 10 row by 10 column by 1 layer model to drive flow from left to
+right.  Tests that a horizontal flow barrier accounts for changes in
+viscosity when temperature is simulated. Barrier is between middle two
+columns, but only cuts across the bottom 5 rows.
+Model 1: VSC inactive, uses a higher speified K that matches what the VSC
+         package will come up with
+Model 2: VSC active, uses a lower K so that when VSC is applied, resulting
+         K's match model 1 and should result in the same flows across the
+         model domain
+Model 3: VSC inactive, uses the lower K of model 2 and checks that flows
+         in model 3 are indeed lower than in model 2 when turning VSC off.
+         Model simulates hot groundwater with lower viscosity resulting in
+         more gw flow through the model domain.Flows that are checked are
+         the row-wise flows between columns 5 and 6 (e.g., cell 5 to 6, 15
+         to 16, etc.)
+"""
 
 # Imports
 
@@ -25,6 +26,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 hyd_cond = [1205.49396942506, 864.0]  # Hydraulic conductivity (m/d)
@@ -66,14 +68,10 @@ botm = [top - k * delv for k in range(1, nlay + 1)]
 nouter, ninner = 100, 300
 hclose, rclose, relax = 1e-10, 1e-6, 0.97
 
-#
-# MODFLOW 6 flopy GWF simulation object (sim) is returned
-#
 
-
-def build_model(idx, dir):
+def build_models(idx, test):
     # Base simulation and model name and workspace
-    ws = dir
+    ws = test.workspace
     name = ex[idx]
 
     print("Building model...{}".format(name))
@@ -280,13 +278,15 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_results(idx, test):
+def check_output(idx, test):
     print("evaluating results...")
 
     # read flow results from model
     name = ex[idx]
     gwfname = "gwf-" + name
-    sim1 = flopy.mf6.MFSimulation.load(sim_ws=test.workspace, load_only=["dis"])
+    sim1 = flopy.mf6.MFSimulation.load(
+        sim_ws=test.workspace, load_only=["dis"]
+    )
     gwf = sim1.get_model(gwfname)
 
     # Get grid data
@@ -376,8 +376,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=lambda t: eval_results(idx, t),
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
         targets=targets,
     )
     test.run()

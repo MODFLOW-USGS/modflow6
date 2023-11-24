@@ -3,14 +3,15 @@ import os
 import flopy
 import numpy as np
 import pytest
-from framework import TestFramework, DNODATA
+
+from framework import DNODATA, TestFramework
 
 ex = ["aux01"]
 auxvar1 = 101.0
 auxvar2 = 102.0
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nlay, nrow, ncol = 1, 10, 10
     nper = 3
     perlen = [1.0, 1.0, 1.0]
@@ -31,7 +32,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -242,11 +243,11 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_model(sim):
+def check_output(test):
     print("evaluating model...")
 
     # maw budget aux variables
-    fpth = os.path.join(sim.workspace, "aux01.maw.bud")
+    fpth = os.path.join(test.workspace, "aux01.maw.bud")
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     records = bobj.get_data(text="auxiliary")
     for r in records:
@@ -254,7 +255,7 @@ def eval_model(sim):
         assert np.allclose(r["AUX2"], auxvar2)
 
     # sfr budget aux variables
-    fpth = os.path.join(sim.workspace, "aux01.sfr.bud")
+    fpth = os.path.join(test.workspace, "aux01.sfr.bud")
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     records = bobj.get_data(text="auxiliary")
     for r in records:
@@ -262,7 +263,7 @@ def eval_model(sim):
         assert np.allclose(r["AUX2"], auxvar2)
 
     # lak budget aux variables
-    fpth = os.path.join(sim.workspace, "aux01.maw.bud")
+    fpth = os.path.join(test.workspace, "aux01.maw.bud")
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     records = bobj.get_data(text="auxiliary")
     for r in records:
@@ -270,7 +271,7 @@ def eval_model(sim):
         assert np.allclose(r["AUX2"], auxvar2)
 
     # uzf budget aux variables
-    fpth = os.path.join(sim.workspace, "aux01.uzf.bud")
+    fpth = os.path.join(test.workspace, "aux01.uzf.bud")
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     records = bobj.get_data(text="auxiliary")
     for r in records:
@@ -278,7 +279,7 @@ def eval_model(sim):
         assert np.allclose(r["AUX2"], auxvar2)
 
     # gwf budget maw aux variables
-    fpth = os.path.join(sim.workspace, "aux01.cbc")
+    fpth = os.path.join(test.workspace, "aux01.cbc")
     bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
     records = bobj.get_data(text="maw")
     for r in records:
@@ -306,8 +307,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_model,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
         targets=targets,
     )
     test.run()

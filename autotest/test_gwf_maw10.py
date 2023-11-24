@@ -1,5 +1,4 @@
 """
-MODFLOW 6 Autotest
 Test to confirm that the sum of rate-actual and maw-reduction observations
 is equal to the specified MAW extraction or injection pumping rate when
 reported using the MAW_FLOW_REDUCE_CSV option. Injection and extraction
@@ -61,7 +60,7 @@ mawsetting_d = {
 mawsettings = [mawsetting_a, mawsetting_b, mawsetting_c, mawsetting_d]
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     nlay, nrow, ncol = 1, 101, 101
     nper = 2
     perlen = [500.0, 500.0]
@@ -83,7 +82,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(sim_name=name, sim_ws=ws)
 
     # create tdis package
@@ -272,7 +271,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
+        build=lambda t: build_models(idx, t),
         check=lambda t: eval_results(idx, t),
         targets=targets,
     )

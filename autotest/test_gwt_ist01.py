@@ -1,7 +1,6 @@
 """
 Test the IST Package with a one cell model with water added and then
 removed.
-
 """
 
 import os
@@ -9,6 +8,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["ist01"]
@@ -21,8 +21,7 @@ zetaim = [0.1]
 nlay, nrow, ncol = 1, 1, 1
 
 
-def build_model(idx, dir):
-
+def build_models(idx, test):
     perlen = [
         2.0,
     ]
@@ -46,7 +45,7 @@ def build_model(idx, dir):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -221,25 +220,25 @@ def build_model(idx, dir):
     return sim, None
 
 
-def eval_transport(sim):
+def check_output(test):
     print("evaluating transport...")
 
-    name = sim.name
+    name = test.name
     gwtname = "gwt_" + name
     gwfname = "gwf_" + name
 
     # head
-    fpth = os.path.join(sim.workspace, f"{gwfname}.hds")
+    fpth = os.path.join(test.workspace, f"{gwfname}.hds")
     hobj = flopy.utils.HeadFile(fpth, precision="double")
     head = hobj.get_alldata().flatten()
 
     # mobile concentration
-    fpth = os.path.join(sim.workspace, f"{gwtname}.ucn")
+    fpth = os.path.join(test.workspace, f"{gwtname}.ucn")
     cobj = flopy.utils.HeadFile(fpth, precision="double", text="CONCENTRATION")
     conc = cobj.get_alldata().flatten()
 
     # immobile concentration
-    fpth = os.path.join(sim.workspace, f"{gwtname}.ist.ucn")
+    fpth = os.path.join(test.workspace, f"{gwtname}.ist.ucn")
     try:
         cobj = flopy.utils.HeadFile(fpth, precision="double", text="CIM")
         cim = cobj.get_alldata().flatten()
@@ -247,7 +246,7 @@ def eval_transport(sim):
         assert False, f'could not load data from "{fpth}"'
 
     # budget
-    fpth = os.path.join(sim.workspace, f"{gwtname}.cbc")
+    fpth = os.path.join(test.workspace, f"{gwtname}.cbc")
     try:
         bobj = flopy.utils.CellBudgetFile(fpth, precision="double")
         print(bobj.get_unique_record_names())
@@ -275,7 +274,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_transport, 
+        build=lambda t: build_models(idx, t),
+        check=check_output,
     )
     test.run()

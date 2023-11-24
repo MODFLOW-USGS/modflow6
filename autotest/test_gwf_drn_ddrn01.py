@@ -3,6 +3,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 paktest = "drn"
@@ -110,11 +111,11 @@ def get_model(idx, ws, name):
     return sim
 
 
-def build_model(idx, dir):
+def build_model(idx, test):
     name = ex[idx]
 
     # build MODFLOW 6 files
-    ws = dir
+    ws = test.workspace
     sim = get_model(idx, ws, name)
 
     return sim, None
@@ -196,8 +197,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=lambda t: eval_disch(idx, t),
         targets=targets,
+        build=lambda t: build_model(idx, t),
+        check=lambda t: eval_disch(idx, t),
     )
     test.run()

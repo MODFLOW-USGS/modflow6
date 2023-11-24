@@ -1,7 +1,6 @@
 """
-# Test the ability of a uzf to route waves through a simple 1d vertical
-# column.
-
+Test the ability of a uzf to route waves through a simple 1d vertical
+column.
 """
 
 import os
@@ -9,13 +8,14 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = ["gwf_uzf01a"]
 nlay, nrow, ncol = 100, 1, 1
 
 
-def build_model(idx, exdir):
+def build_models(idx, test):
     name = ex[idx]
 
     perlen = [500.0]
@@ -38,7 +38,7 @@ def build_model(idx, exdir):
         tdis_rc.append((perlen[idx], nstp[idx], tsmult[idx]))
 
     # build MODFLOW 6 files
-    ws = exdir
+    ws = test.workspace
     sim = flopy.mf6.MFSimulation(
         sim_name=name, version="mf6", exe_name="mf6", sim_ws=ws
     )
@@ -211,11 +211,11 @@ def build_model(idx, exdir):
     return sim, None
 
 
-def eval_flow(sim):
+def check_output(test):
     print("evaluating flow...")
 
-    name = sim.name
-    ws = sim.workspace
+    name = test.name
+    ws = test.workspace
 
     # check binary grid file
     fname = os.path.join(ws, name + ".dis.grb")
@@ -268,8 +268,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_flow,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
         targets=targets,
     )
     test.run()

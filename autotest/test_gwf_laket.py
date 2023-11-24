@@ -1,4 +1,4 @@
-# Test for checking lak evaporation.
+"""Test for checking lak evaporation."""
 
 
 import os
@@ -8,6 +8,7 @@ import sys
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = [
@@ -174,14 +175,13 @@ def get_model(idx, ws):
     return sim
 
 
-def build_model(idx, dir):
+def build_models(idx, test):
     # build MODFLOW 6 files
-    sim = get_model(idx, dir)
-
+    sim = get_model(idx, test.workspace)
     return sim, None
 
 
-def eval_laket(idx, test):
+def check_output(idx, test):
     msg = "Evaluating Lake ET. "
 
     fpth = os.path.join(test.workspace, f"{test.name}.lak.obs.csv")
@@ -304,8 +304,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=lambda t: eval_laket(idx, t),
         targets=targets,
+        build=lambda t: build_models(idx, t),
+        check=lambda t: check_output(idx, t),
     )
     test.run()

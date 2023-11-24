@@ -2,6 +2,7 @@ import os
 
 import flopy
 import pytest
+
 from common_regression import get_namefiles, model_setup
 from conftest import should_compare
 from framework import TestFramework
@@ -9,10 +10,18 @@ from framework import TestFramework
 sfmt = "{:25s} - {}"
 excluded_models = ["alt_model", "mf2005"]
 excluded_comparisons = {
-    "testPr2": ["6.2.1",],
-    "testUzfLakSfr": ["6.2.1",],
-    "testUzfLakSfr_laketable": ["6.2.1",],
-    "testWetDry": ["6.2.1",],
+    "testPr2": [
+        "6.2.1",
+    ],
+    "testUzfLakSfr": [
+        "6.2.1",
+    ],
+    "testUzfLakSfr_laketable": [
+        "6.2.1",
+    ],
+    "testWetDry": [
+        "6.2.1",
+    ],
 }
 
 
@@ -95,9 +104,7 @@ def test_model(
     assert success, msg
 
     # model setup
-    src = dst
-    dst = function_tmpdir / "models"
-    test.setup(src, dst)
+    test.setup(dst, function_tmpdir / "models")
 
     # Run the MODFLOW 6 simulation and compare to existing head file or
     # appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.

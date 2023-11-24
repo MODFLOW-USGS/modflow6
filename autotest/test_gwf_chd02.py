@@ -4,6 +4,7 @@ import os
 import flopy
 import numpy as np
 import pytest
+
 from framework import TestFramework
 
 ex = [
@@ -11,10 +12,10 @@ ex = [
 ]
 
 
-def build_model(idx, workspace):
+def build_models(idx, test):
     name = ex[idx]
     nlay, nrow, ncol = 1, 1, 10
-    sim = flopy.mf6.MFSimulation(sim_ws=workspace, sim_name=name)
+    sim = flopy.mf6.MFSimulation(sim_ws=test.workspace, sim_name=name)
     flopy.mf6.ModflowTdis(sim)
     flopy.mf6.ModflowIms(sim, complexity="simple")
     gwf = flopy.mf6.ModflowGwf(sim, modelname=name, print_input=True)
@@ -62,12 +63,12 @@ def build_model(idx, workspace):
     return sim, None
 
 
-def eval_model(sim):
+def check_output(test):
     print("evaluating model...")
 
-    name = sim.name
+    name = test.name
 
-    fpth = os.path.join(sim.workspace, f"{name}.hds")
+    fpth = os.path.join(test.workspace, f"{name}.hds")
     hobj = flopy.utils.HeadFile(fpth, precision="double")
     head = hobj.get_data().flatten()
 
@@ -96,8 +97,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws),
-        check=eval_model,
+        build=lambda t: build_models(idx, t),
+        check=check_output,
         targets=targets,
     )
     test.run()

@@ -218,8 +218,8 @@ def build_well_data(modelgrid):
     return {1: well_spd}
 
 
-def build_model(idx, ws, gridgen):
-    return build_mf6(idx, ws, gridgen), None
+def build_models(idx, test, gridgen):
+    return build_mf6(idx, test.workspace, gridgen), None
 
 
 # build MODFLOW 6 files
@@ -342,7 +342,7 @@ def build_mf6(idx, ws, gridgen):
     return sim
 
 
-def eval_zdis(idx, test):
+def check_output(idx, test):
     print("evaluating z-displacement...")
 
     name = ex[idx]
@@ -433,8 +433,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
     test = TestFramework(
         name=name,
         workspace=function_tmpdir,
-        build=lambda ws: build_model(idx, ws, gridgen),
-        check=lambda t: eval_zdis(idx, t),
+        build=lambda t: build_models(idx, t, gridgen),
+        check=lambda t: check_output(idx, t),
         targets=targets,
         cmp_verbose=False,
     )
