@@ -12,7 +12,8 @@ module MemoryManagerModule
   use SimModule, only: store_error, count_errors
   use MemoryTypeModule, only: MemoryType
   use MemoryListModule, only: MemoryListType
-  use MemoryHelperModule, only: mem_check_length, split_mem_path
+  use MemoryHelperModule, only: mem_check_length, split_mem_path, &
+                                strip_context_mem_path
   use TableModule, only: TableType, table_cr
   use CharacterStringModule, only: CharacterStringType
 
@@ -2829,6 +2830,7 @@ contains
     ! -- local
     class(MemoryType), pointer :: mt
     character(len=LENMEMPATH), allocatable, dimension(:) :: cunique
+    character(len=LENMEMPATH) :: mem_path
     character(LEN=10) :: cunits
     integer(I4B) :: ipos
     integer(I4B) :: icomp
@@ -2872,7 +2874,8 @@ contains
         ilen = len_trim(cunique(icomp))
         do ipos = 1, memorylist%count()
           mt => memorylist%Get(ipos)
-          if (cunique(icomp) /= mt%path(1:ilen)) cycle
+          call strip_context_mem_path(mt%path, mem_path)
+          if (cunique(icomp) /= mem_path(1:ilen)) cycle
           if (.not. mt%master) cycle
           if (mt%memtype(1:6) == 'STRING') then
             nchars = nchars + mt%isize * mt%element_size

@@ -155,7 +155,6 @@ contains
 
   end subroutine strip_context_mem_path
 
-
   !> @brief Generic routine to check the length of (parts of) the memory address
   !!
   !! The string will be trimmed before the measurement.
