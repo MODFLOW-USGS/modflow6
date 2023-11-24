@@ -101,14 +101,16 @@ contains
     character(len=*), intent(in) :: mem_path !< path to the memory object
     character(len=LENCOMPONENTNAME), intent(out) :: component !< name of the component (solution, model, exchange)
     character(len=LENCOMPONENTNAME), intent(out) :: subcomponent !< name of the subcomponent (package)
-
     ! local
+    character(len=LENMEMPATH) :: local_mem_path
     integer(I4B) :: idx
 
-    idx = index(mem_path, memPathSeparator, back=.true.)
+    call strip_context_mem_path(mem_path, local_mem_path)
+
+    idx = index(local_mem_path, memPathSeparator, back=.true.)
     ! if the separator is found at the end of the string,
     ! the path is invalid:
-    if (idx == len(mem_path)) then
+    if (idx == len_trim(local_mem_path)) then
       write (errmsg, '(*(G0))') &
         'Fatal error in Memory Manager, cannot split invalid memory path: ', &
         mem_path
@@ -119,21 +121,40 @@ contains
 
     if (idx > 0) then
       ! when found:
-      component = mem_path(:idx - 1)
-      subcomponent = mem_path(idx + 1:)
+      component = local_mem_path(:idx - 1)
+      subcomponent = local_mem_path(idx + 1:)
     else
       ! when not found, there apparently is no subcomponent:
-      component = mem_path
+      component = local_mem_path(:LENCOMPONENTNAME)
       subcomponent = ''
     end if
 
-    ! remove context specifier if prepended to component
-    idx = index(component, memPathSeparator, back=.true.)
-    if (idx > 0 .and. component(1:2) == '__') then
-      component = component(idx + 1:)
+  end subroutine split_mem_path
+
+  !> @brief Remove the context from the memory path
+  !!
+  !! NB: when there is no context in the memory path, the
+  !! original memory path is returned.
+  !<
+  subroutine strip_context_mem_path(mem_path, mem_path_no_context)
+    character(len=*), intent(in) :: mem_path !< path to the memory object
+    character(len=LENMEMPATH), intent(inout) :: mem_path_no_context !< path to the memory object without the context
+    ! local
+    integer(I4B) :: idx
+
+    ! initialize the local mem_path
+    mem_path_no_context = mem_path
+
+    if (mem_path(1:2) == '__') then
+      idx = index(mem_path, memPathSeparator)
+      if (idx > 0) then
+        mem_path_no_context = ' '
+        mem_path_no_context = mem_path(idx + 1:)
+      end if
     end if
 
-  end subroutine split_mem_path
+  end subroutine strip_context_mem_path
+
 
   !> @brief Generic routine to check the length of (parts of) the memory address
   !!
