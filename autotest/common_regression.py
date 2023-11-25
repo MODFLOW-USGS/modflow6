@@ -609,36 +609,28 @@ def get_mf6_mshape(disfile):
     return mshape
 
 
-def get_mf6_files(mfnamefile):
-    """Return a list of all the MODFLOW 6 input and output files in this model.
+def get_mf6_files(namefile):
+    """Get all MODFLOW 6 input and output files in this simulation.
 
     Parameters
     ----------
-    mfnamefile : str
+    namefile : pathlike
         path to the MODFLOW 6 simulation name file
 
     Returns
     -------
-    filelist : list
-        list of MODFLOW 6 input files in a simulation
-    outplist : list
-        list of MODFLOW 6 output files in a simulation
-
+    A tuple of lists of paths (input files, output files)
     """
 
-    srcdir = os.path.dirname(mfnamefile)
-    filelist = []
-    outplist = []
+    srcdir = os.path.dirname(namefile)
+    mdl_files = []
+    pkg_files = []
+    out_files = []
+    pkg_keys = ["TDIS6", "GWF6", "GWT", "GWF6-GWF6", "GWF-GWT", "IMS6"]
+    mdl_keys = ["GWF6", "GWT"]
 
-    filekeys = ["TDIS6", "GWF6", "GWT", "GWF6-GWF6", "GWF-GWT", "IMS6"]
-    namefilekeys = ["GWF6", "GWT"]
-    namefiles = []
-
-    with open(mfnamefile) as f:
-        # Read line and skip comments
-        lines = f.readlines()
-
-    for line in lines:
+    # find model and simulation-level package input files in simulation namefile
+    for line in open(namefile).readlines():
         # Skip over blank and commented lines
         ll = line.strip().split()
         if len(ll) < 2:
@@ -646,21 +638,20 @@ def get_mf6_files(mfnamefile):
         if line.strip()[0] in ["#", "!"]:
             continue
 
-        for key in filekeys:
+        for key in pkg_keys:
             if key in ll[0].upper():
                 fname = ll[1]
-                filelist.append(fname)
+                pkg_files.append(fname)
 
-        for key in namefilekeys:
+        for key in mdl_keys:
             if key in ll[0].upper():
                 fname = ll[1]
-                namefiles.append(fname)
+                mdl_files.append(fname)
 
-    # Go through name files and get files
-    for namefile in namefiles:
+    # find model-level package input files in model namefiles
+    for namefile in mdl_files:
         fname = os.path.join(srcdir, namefile)
-        with open(fname, "r") as f:
-            lines = f.readlines()
+        lines = open(fname, "r").readlines()
         insideblock = False
 
         for line in lines:
@@ -679,28 +670,23 @@ def get_mf6_files(mfnamefile):
                     continue
                 if line.strip()[0] in ["#", "!"]:
                     continue
-                filelist.append(ll[1])
+                pkg_files.append(ll[1])
 
-    # Recursively go through every file and look for other files to copy,
-    # such as 'OPEN/CLOSE' and 'TIMESERIESFILE'.  If found, then
-    # add that file to the list of files to copy.
-    flist = filelist
-    # olist = outplist
+    # Recurse through package input files and look for input or
+    # output file entries, e.g. 'OPEN/CLOSE',  'TIMESERIESFILE'
+    # or similar
+    flist = pkg_files
     while True:
         olist = []
         flist, olist = _get_mf6_external_files(srcdir, olist, flist)
-        # add to filelist
-        if len(flist) > 0:
-            filelist = filelist + flist
-        # add to outplist
-        if len(olist) > 0:
-            outplist = outplist + olist
+        pkg_files += flist
+        out_files += olist
         # terminate loop if no additional files
         # if len(flist) < 1 and len(olist) < 1:
         if len(flist) < 1:
             break
 
-    return filelist, outplist
+    return pkg_files, out_files
 
 
 def _get_mf6_external_files(srcdir, outplist, files):
