@@ -88,11 +88,6 @@ def bin_path() -> Path:
 
 
 @pytest.fixture(scope="session")
-def libmf6_path() -> Path:
-    return _binaries_path / f"libmf6{_lib_exts[platform.system()]}"
-
-
-@pytest.fixture(scope="session")
 def targets() -> Executables:
     d = dict()
 
