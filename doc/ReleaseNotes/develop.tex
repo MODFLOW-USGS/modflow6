@@ -43,7 +43,8 @@
 	\underline{ADVANCED STRESS PACKAGES}
 	\begin{itemize}
 		\item Added functionality to support zero values for each grid dimension when specifying the CELLID for SFR reaches that are not connected to an underlying groundwater grid cell. For example, for a DIS grid a CELLID of 0 0 0 should be specified for unconnected reaches. Warning messages will be issued if NONE is specified for unconnected reaches. Specifying a CELLID of NONE will eventually be deprecated and will cause MODFLOW 6 to terminate with an error.
-	\item Added functionality to support specification of a DNODATA (3.0E+30) BEDLEAK value for LAK package connections to identify lake-GWF connections where conductance is solely a function of aquifer properties in the connected GWF cell and lakebed sediments are assumed to be absent. Warning messages will be issued if NONE is specified for LAK package connections. Specifying a BEDLEAK value equal to NONE will eventually be deprecated and will cause MODFLOW 6 to terminate with an error.
+		\item Added functionality to support specification of a DNODATA (3.0E+30) BEDLEAK value for LAK package connections to identify lake-GWF connections where conductance is solely a function of aquifer properties in the connected GWF cell and lakebed sediments are assumed to be absent. Warning messages will be issued if NONE is specified for LAK package connections. Specifying a BEDLEAK value equal to NONE will eventually be deprecated and will cause MODFLOW 6 to terminate with an error.
+		\item SFR diverion would not be updated if the outflow of its upstream reach is zero. If diversion was not zero in the previous stress period, it would report mass balance error in the SFR budget. This bug was fixed by always updating the diversion.
 	%	\item xxx
 	\end{itemize}
 
