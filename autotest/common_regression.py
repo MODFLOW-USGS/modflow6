@@ -1,5 +1,7 @@
 import os
 import shutil
+from pathlib import Path
+from warnings import warn
 
 ignore_ext = (
     ".hds",
@@ -467,83 +469,87 @@ def get_mf6_comparison(src):
                 return oc
 
 
-def setup_mf6_comparison(src, dst, remove_existing=True):
-    """Setup comparision for MODFLOW 6 simulation.
+def setup_mf6_comparison(
+    src, dst, action="compare", overwrite=True, verbose=False
+):
+    """Setup comparison for MODFLOW 6 simulation.
 
     Parameters
     ----------
-    src : src
-        directory path with original MODFLOW 6 input files
-    dst : str
-        directory path that original MODFLOW 6 input files will be copied to
-    remove_existing : bool
-        boolean indicating if existing file in dst should be removed (default
-        is True)
+    src : path-like
+        directory with original MODFLOW 6 input files
+    dst : path-like
+        directory to copy MODFLOW 6 input files to
+    action : str
+        type of comparison to use (compare, mf2005, etc)
+    overwrite : bool
+        whether to overwrite the destination directory if it exists (default is True)
 
     Returns
     -------
     action : str
-        comparison type
+        comparison type (also the name of the comparison subdirectory in dst)
 
     """
-    # get the type of comparison to use (compare, mf2005, etc.)
-    action = get_mf6_comparison(src)
 
-    if action is not None:
-        dst = os.path.join(dst, f"{action}")
-        if not os.path.isdir(dst):
-            try:
-                os.mkdir(dst)
-            except:
-                print("Could not make " + dst)
-        # clean directory
-        else:
+    if action is None:
+        warn(f"No action provided, aborting")
+        return
+
+    # create and/or clean dest dir if needed
+    dst = Path(dst) / action
+    dst.mkdir(exist_ok=True)
+    dls = list(os.walk(dst))
+    if overwrite and any(dls):
+        if verbose:
             print("Cleaning ", dst)
-            for root, dirs, files in os.walk(dst):
-                for f in files:
-                    tpth = os.path.join(root, f)
+        for root, dirs, files in dls:
+            for f in files:
+                tpth = os.path.join(root, f)
+                if verbose:
                     print("Removing ", tpth)
-                    os.remove(tpth)
-                for d in dirs:
-                    tdir = os.path.join(root, d)
+                os.remove(tpth)
+            for d in dirs:
+                tdir = os.path.join(root, d)
+                if verbose:
                     print("Removing ", tdir)
-                    shutil.rmtree(tdir)
-        # copy files
-        cmppth = os.path.join(src, action)
-        files = os.listdir(cmppth)
-        files2copy = []
-        if action.lower() == "compare" or action.lower() == ".cmp":
-            for file in files:
-                if ".cmp" in os.path.splitext(file)[1].lower():
-                    files2copy.append(os.path.join(cmppth, file))
-            for srcf in files2copy:
-                f = os.path.basename(srcf)
-                dstf = os.path.join(dst, f)
-                # Now copy the file
-                if os.path.exists(srcf):
-                    print("Copy file '" + srcf + "' -> '" + dstf + "'")
-                    shutil.copy(srcf, dstf)
-                else:
-                    print(srcf + " does not exist")
-        else:
-            if "mf6" in action.lower():
-                for file in files:
-                    if "mfsim.nam" in file.lower():
-                        srcf = os.path.join(cmppth, os.path.basename(file))
-                        files2copy.append(srcf)
-                        srcdir = os.path.join(src, action)
-                        setup_mf6(srcdir, dst, remove_existing=remove_existing)
-                        break
-            else:
-                for file in files:
-                    if ".nam" in os.path.splitext(file)[1].lower():
-                        srcf = os.path.join(cmppth, os.path.basename(file))
-                        files2copy.append(srcf)
-                        nf = os.path.join(src, action, os.path.basename(file))
-                        model_setup(nf, dst, remove_existing=remove_existing)
-                        break
+                shutil.rmtree(tdir)
+    else:
+        raise ValueError(f"Destination exists but overwrite disabled: {dst}")
 
-    return action
+    # copy files
+    cmppth = os.path.join(src, action)
+    files = os.listdir(cmppth)
+    files2copy = []
+    if action.lower() == "compare" or action.lower() == ".cmp":
+        for file in files:
+            if ".cmp" in os.path.splitext(file)[1].lower():
+                files2copy.append(os.path.join(cmppth, file))
+        for srcf in files2copy:
+            f = os.path.basename(srcf)
+            dstf = os.path.join(dst, f)
+            if os.path.exists(srcf):
+                print("Copy file '" + srcf + "' -> '" + dstf + "'")
+                shutil.copy(srcf, dstf)
+            else:
+                print(srcf + " does not exist")
+    else:
+        if "mf6" in action.lower():
+            for file in files:
+                if "mfsim.nam" in file.lower():
+                    srcf = os.path.join(cmppth, os.path.basename(file))
+                    files2copy.append(srcf)
+                    srcdir = os.path.join(src, action)
+                    setup_mf6(srcdir, dst, remove_existing=overwrite)
+                    break
+        else:
+            for file in files:
+                if ".nam" in os.path.splitext(file)[1].lower():
+                    srcf = os.path.join(cmppth, os.path.basename(file))
+                    files2copy.append(srcf)
+                    nf = os.path.join(src, action, os.path.basename(file))
+                    model_setup(nf, dst, remove_existing=overwrite)
+                    break
 
 
 def get_mf6_nper(tdisfile):

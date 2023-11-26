@@ -1,16 +1,17 @@
 import os
 import shutil
 import time
+from enum import Enum
 from subprocess import PIPE, STDOUT, Popen
+from warnings import warn
 
 import flopy
 import numpy as np
+from common_regression import (get_mf6_comparison, get_mf6_files,
+                               get_namefiles, setup_mf6, setup_mf6_comparison)
 from flopy.utils.compare import compare_heads
 from modflow_devtools.executables import Executables
 from modflow_devtools.misc import get_ostag, is_in_ci
-
-from common_regression import (get_mf6_comparison, get_mf6_files,
-                               get_namefiles, setup_mf6, setup_mf6_comparison)
 
 DNODATA = 3.0e30
 sfmt = "{:25s} - {}"
@@ -29,6 +30,23 @@ def api_return(success, model_ws):
     """
     fpth = os.path.join(model_ws, "mfsim.stdout")
     return success, open(fpth).readlines()
+
+
+# class TestAction(Enum):
+#     "compare",
+#     ".cmp",
+#     "mf2005",
+#     "mf2005.cmp",
+#     "mfnwt",
+#     "mfnwt.cmp",
+#     "mfusg",
+#     "mfusg.cmp",
+#     "mflgr",
+#     "mflgr.cmp",
+#     "libmf6",
+#     "libmf6.cmp",
+#     "mf6",
+#     "mf6.cmp",
 
 
 class TestFramework:
@@ -181,11 +199,14 @@ class TestFramework:
                 shutil.rmtree(pth)
             shutil.copytree(dst, pth)
         elif testModel:
-            action = setup_mf6_comparison(src, dst, remove_existing=True)
+            # get the type of comparison to use
+            action = get_mf6_comparison(src)
+            setup_mf6_comparison(src, dst, action, overwrite=True)
         else:
             action = get_mf6_comparison(dst)
 
         self.action = action
+        return action
 
     def _run_parallel(self, exe):
         if not is_in_ci() and get_ostag() in ["mac"]:
@@ -308,10 +329,119 @@ class TestFramework:
                         break
         return files0, files1
 
-    def _compare_heads(self, msgall, extensions="hds"):
+    def _compare_heads(self, cpth=None, extensions="hds"):
         if isinstance(extensions, str):
             extensions = [extensions]
-        success = True
+
+        # if a comparison path is provided, compare with the reference model results
+        if cpth:
+            files_cmp = None
+            if self.action.lower() == "compare":
+                files_cmp = []
+                files = os.listdir(cpth)
+                for file in files:
+                    files_cmp.append(file)
+
+            files1 = []
+            files2 = []
+            exfiles = []
+            ipos = 0
+            for file1 in self.outp:
+                ext = os.path.splitext(file1)[1][1:]
+
+                if ext.lower() in extensions:
+                    # simulation file
+                    pth = os.path.join(self.workspace, file1)
+                    files1.append(pth)
+
+                    # look for an exclusion file
+                    pth = os.path.join(self.workspace, file1 + ".ex")
+                    if os.path.isfile(pth):
+                        exfiles.append(pth)
+                    else:
+                        exfiles.append(None)
+
+                    # Check to see if there is a corresponding compare file
+                    if files_cmp is not None:
+                        if file1 + ".cmp" in files_cmp:
+                            # compare file
+                            idx = files_cmp.index(file1 + ".cmp")
+                            pth = os.path.join(cpth, files_cmp[idx])
+                            files2.append(pth)
+                            txt = sfmt.format(
+                                f"Comparison file {ipos + 1}",
+                                os.path.basename(pth),
+                            )
+                            print(txt)
+                    else:
+                        if self.coutp is not None:
+                            for file2 in self.coutp:
+                                ext = os.path.splitext(file2)[1][1:]
+
+                                if ext.lower() in extensions:
+                                    # simulation file
+                                    pth = os.path.join(cpth, file2)
+                                    files2.append(pth)
+
+                        else:
+                            files2.append(None)
+
+            if self.nam_cmp is None:
+                pth = None
+            else:
+                pth = os.path.join(cpth, self.nam_cmp)
+
+            for ipos in range(len(files1)):
+                file1 = files1[ipos]
+                ext = os.path.splitext(file1)[1][1:].lower()
+                outfile = os.path.splitext(os.path.basename(file1))[0]
+                outfile = os.path.join(
+                    self.workspace, outfile + "." + ext + ".cmp.out"
+                )
+                if files2 is None:
+                    file2 = None
+                else:
+                    file2 = files2[ipos]
+
+                # set exfile
+                exfile = None
+                if file2 is None:
+                    if len(exfiles) > 0:
+                        exfile = exfiles[ipos]
+                        if exfile is not None:
+                            txt = sfmt.format(
+                                f"Exclusion file {ipos + 1}",
+                                os.path.basename(exfile),
+                            )
+                            print(txt)
+
+                # make comparison
+                success = compare_heads(
+                    None,
+                    pth,
+                    precision="double",
+                    text=extdict[ext],
+                    outfile=outfile,
+                    files1=file1,
+                    files2=file2,
+                    htol=self.htol,
+                    difftol=True,
+                    # Change to true to have list of all nodes exceeding htol
+                    verbose=self.cmp_verbose,
+                    exfile=exfile,
+                )
+                msg = sfmt.format(
+                    f"{extdict[ext]} comparison {ipos + 1}",
+                    self.name,
+                )
+                print(msg)
+
+                if not success:
+                    break
+
+            return True
+
+        # otherwise it's a regression comparison
         files0, files1 = self._regression_files(extensions)
         extension = "hds"
         ipos = 0
@@ -320,7 +450,7 @@ class TestFramework:
             outfile = os.path.join(
                 self.workspace, outfile + f".{extension}.cmp.out"
             )
-            success_tst = compare_heads(
+            success = compare_heads(
                 None,
                 None,
                 precision="double",
@@ -338,25 +468,24 @@ class TestFramework:
             ipos += 1
             print(msg)
 
-            if not success_tst:
-                success = False
-                msgall += msg + " ... FAILED\n"
+            if not success:
+                break
 
-        return success, msgall
+        return success
 
-    def _compare_concentrations(self, msgall, extensions="ucn"):
+    def _compare_concentrations(self, extensions="ucn"):
         if isinstance(extensions, str):
             extensions = [extensions]
         success = True
         files0, files1 = self._regression_files(extensions)
         extension = "ucn"
         ipos = 0
-        for idx, (fpth0, fpth1) in enumerate(zip(files0, files1)):
+        for fpth0, fpth1 in zip(files0, files1):
             outfile = os.path.splitext(os.path.basename(fpth0))[0]
             outfile = os.path.join(
                 self.workspace, outfile + f".{extension}.cmp.out"
             )
-            success_tst = compare_heads(
+            success = compare_heads(
                 None,
                 None,
                 precision="double",
@@ -374,13 +503,12 @@ class TestFramework:
             ipos += 1
             print(msg)
 
-            if not success_tst:
-                success = False
-                msgall += msg + " ... FAILED\n"
+            if not success:
+                break
 
-        return success, msgall
+        return success
 
-    def _compare_budgets(self, msgall, extensions="cbc"):
+    def _compare_budgets(self, extensions="cbc"):
         if isinstance(extensions, str):
             extensions = [extensions]
         success = True
@@ -388,7 +516,7 @@ class TestFramework:
         extension = "cbc"
         ipos = 0
         for idx, (fpth0, fpth1) in enumerate(zip(files0, files1)):
-            success_tst, msg = self._compare_budget_files(
+            success, msg = self._compare_budget_files(
                 ipos,
                 extension,
                 fpth0,
@@ -396,11 +524,10 @@ class TestFramework:
             )
             ipos += 1
 
-            if not success_tst:
-                success = False
-                msgall += msg + " ... FAILED\n"
+            if not success:
+                break
 
-        return success, msgall
+        return success
 
     def _compare_budget_files(self, ipos, extension, fpth0, fpth1):
         success = True
@@ -698,155 +825,37 @@ class TestFramework:
                 print(f"No comparison to make")
             return
 
-        msgall = ""
         msg = sfmt.format("Comparison test", self.name)
         print(msg)
 
-        if self.action is not None:
-            cpth = os.path.join(self.workspace, self.action)
-            files_cmp = None
-            if self.action.lower() == "compare":
-                files_cmp = []
-                files = os.listdir(cpth)
-                for file in files:
-                    files_cmp.append(file)
-            elif "mf6" in self.action:
-                fpth = os.path.join(cpth, "mfsim.nam")
-                cinp, self.coutp = get_mf6_files(fpth)
+        if self.action is None:
+            warn(f"No comparison action, aborting")
+            return
 
-            head_extensions = (
-                "hds",
-                "hed",
-                "bhd",
-                "ahd",
-                "bin",
-            )
-            if "mf6_regression" in self.action:
-                success, msgall = self._compare_heads(
-                    msgall,
-                    extensions=head_extensions,
-                )
-                if not success:
-                    self.success = False
-            # non-regression runs - for new features
-            else:
-                files1 = []
-                files2 = []
-                exfiles = []
-                ipos = 0
-                for file1 in self.outp:
-                    ext = os.path.splitext(file1)[1][1:]
-
-                    if ext.lower() in head_extensions:
-                        # simulation file
-                        pth = os.path.join(self.workspace, file1)
-                        files1.append(pth)
-
-                        # look for an exclusion file
-                        pth = os.path.join(self.workspace, file1 + ".ex")
-                        if os.path.isfile(pth):
-                            exfiles.append(pth)
-                        else:
-                            exfiles.append(None)
-
-                        # Check to see if there is a corresponding compare file
-                        if files_cmp is not None:
-                            if file1 + ".cmp" in files_cmp:
-                                # compare file
-                                idx = files_cmp.index(file1 + ".cmp")
-                                pth = os.path.join(cpth, files_cmp[idx])
-                                files2.append(pth)
-                                txt = sfmt.format(
-                                    f"Comparison file {ipos + 1}",
-                                    os.path.basename(pth),
-                                )
-                                print(txt)
-                        else:
-                            if self.coutp is not None:
-                                for file2 in self.coutp:
-                                    ext = os.path.splitext(file2)[1][1:]
-
-                                    if ext.lower() in head_extensions:
-                                        # simulation file
-                                        pth = os.path.join(cpth, file2)
-                                        files2.append(pth)
-
-                            else:
-                                files2.append(None)
-
-                if self.nam_cmp is None:
-                    pth = None
-                else:
-                    pth = os.path.join(cpth, self.nam_cmp)
-
-                for ipos in range(len(files1)):
-                    file1 = files1[ipos]
-                    ext = os.path.splitext(file1)[1][1:].lower()
-                    outfile = os.path.splitext(os.path.basename(file1))[0]
-                    outfile = os.path.join(
-                        self.workspace, outfile + "." + ext + ".cmp.out"
-                    )
-                    if files2 is None:
-                        file2 = None
-                    else:
-                        file2 = files2[ipos]
-
-                    # set exfile
-                    exfile = None
-                    if file2 is None:
-                        if len(exfiles) > 0:
-                            exfile = exfiles[ipos]
-                            if exfile is not None:
-                                txt = sfmt.format(
-                                    f"Exclusion file {ipos + 1}",
-                                    os.path.basename(exfile),
-                                )
-                                print(txt)
-
-                    # make comparison
-                    success_tst = compare_heads(
-                        None,
-                        pth,
-                        precision="double",
-                        text=extdict[ext],
-                        outfile=outfile,
-                        files1=file1,
-                        files2=file2,
-                        htol=self.htol,
-                        difftol=True,
-                        # Change to true to have list of all nodes exceeding htol
-                        verbose=self.cmp_verbose,
-                        exfile=exfile,
-                    )
-                    msg = sfmt.format(
-                        f"{extdict[ext]} comparison {ipos + 1}",
-                        self.name,
-                    )
-                    print(msg)
-
-                    if not success_tst:
-                        self.success = False
-                        msgall += msg + " ... FAILED\n"
-
-            # compare concentrations
-            if "mf6_regression" in self.action:
-                success, msgall = self._compare_concentrations(msgall)
-                if not success:
-                    self.success = False
-
-            # compare cbc files
-            if "mf6_regression" in self.action:
-                cbc_extensions = (
-                    "cbc",
-                    "bud",
-                )
-                success, msgall = self._compare_budgets(
-                    msgall, extensions=cbc_extensions
-                )
-                if not success:
-                    self.success = False
-
-        assert self.success, msgall
+        hds_ext = (
+            "hds",
+            "hed",
+            "bhd",
+            "ahd",
+            "bin",
+        )
+        cbc_ext = (
+            "cbc",
+            "bud",
+        )
+        cmp_path = self.workspace / self.action
+        if "mf6" in self.action:
+            _, self.coutp = get_mf6_files(cmp_path / "mfsim.nam")
+        if "mf6_regression" in self.action:
+            success = self._compare_heads(extensions=hds_ext)
+            assert success, "head comparison failed"
+            success = self._compare_budgets(extensions=cbc_ext)
+            assert success, "budget comparison failed"
+            success = self._compare_concentrations()
+            assert success, "concentration comparison failed"
+        else:
+            success = self._compare_heads(cmp_path, extensions=hds_ext)
+            assert success, "head comparison failed"
 
     def run(self):
         """
