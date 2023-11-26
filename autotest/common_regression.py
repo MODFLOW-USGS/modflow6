@@ -425,7 +425,11 @@ def setup_mf6(
 
 
 def get_mf6_comparison(src):
-    """Determine comparison type for MODFLOW 6 simulation.
+    """
+    Determine the comparison type for a MODFLOW 6 simulation.
+    The comparison type is a function of the files present in
+    the simulation workspace. Some file types take precedence
+    over others.
 
     Parameters
     ----------
@@ -438,7 +442,6 @@ def get_mf6_comparison(src):
         comparison type
 
     """
-    action = None
     # Possible comparison - the order matters
     optcomp = (
         "compare",
@@ -457,14 +460,11 @@ def get_mf6_comparison(src):
         "mf6.cmp",
     )
     # Construct src pth from namefile
-    action = None
     for _, dirs, _ in os.walk(src):
         dl = [d.lower() for d in dirs]
         for oc in optcomp:
             if any(oc in s for s in dl):
-                action = oc
-                break
-    return action
+                return oc
 
 
 def setup_mf6_comparison(src, dst, remove_existing=True):

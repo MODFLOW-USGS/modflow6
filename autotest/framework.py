@@ -148,9 +148,6 @@ class TestFramework:
 
         self.success = False
 
-        # set is_ci
-        self.is_CI = is_in_ci()
-
     def __repr__(self):
         return self.name
 
@@ -506,15 +503,12 @@ class TestFramework:
         print(msg)
         self.originpath = src
         self.workspace = dst
-        success = False
         print(f"source:      {src}")
         print(f"destination: {dst}")
         self.inpt, self.outp = setup_mf6(src=src, dst=dst)
         print("waiting...")
         time.sleep(0.5)
-        success = True
-        if success:
-            self._setup_comparison(src, dst)
+        self._setup_comparison(src, dst)
 
     def prepare(self, verbose=True):
         """
@@ -533,7 +527,7 @@ class TestFramework:
             return
 
         sims = self.build(self)
-        if not isinstance(sims, tuple):
+        if not isinstance(sims, (tuple, list)):
             sims = [sims]
         sims = [sim for sim in sims if sim]
         for sim in sims:
@@ -628,9 +622,9 @@ class TestFramework:
                     failure = True
 
         # print end of mfsim.lst to the screen
-        if failure and self.is_CI:
-            fpth = os.path.join(self.workspace, "mfsim.lst")
-            msg = self._get_mfsim_listing(fpth) + msg
+        lst_file = self.workspace / "mfsim.lst"
+        if failure and lst_file.is_file():
+            msg = self._get_mfsim_listing(lst_file) + msg
 
         # test for failure
         assert not failure, msg
@@ -642,7 +636,7 @@ class TestFramework:
                     msg = sfmt.format("Comparison files", self.name)
                     print(msg)
                 else:
-                    cpth = os.path.join(self.workspace, self.action)
+                    cpth = self.workspace / self.action
                     key = self.action.lower().replace(".cmp", "")
                     exe = str(self.targets[key].absolute())
                     msg = sfmt.format("comparison executable", exe)
@@ -675,9 +669,9 @@ class TestFramework:
 
                         # print end of mfsim.lst to the screen
                         if "mf6" in key:
-                            if not success and self.is_CI:
-                                fpth = os.path.join(cpth, "mfsim.lst")
-                                print(self._get_mfsim_listing(fpth))
+                            lst_file = cpth / "mfsim.lst"
+                            if not success and lst_file.is_file():
+                                print(self._get_mfsim_listing(lst_file))
 
                     except:
                         success_cmp = False
