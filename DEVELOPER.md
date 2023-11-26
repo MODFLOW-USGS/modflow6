@@ -446,26 +446,12 @@ Tests using models from external repositories can be selected with the `repo` ma
 pytest -v -n auto -m "repo"
 ```
 
+All tests using models from external repositories are in `autotest/example`.
+
 The `large` marker is a subset of the `repo` marker. To test models excluded from commit-triggered CI and only run on GitHub Actions nightly:
 
 ```shell
 pytest -v -n auto -m "large"
-```
-
-Test scripts for external model repositories can also be run independently:
-
-```shell
-# MODFLOW 6 test models
-pytest -v -n auto test_z01_testmodels_mf6.py
-
-# MODFLOW 5 to 6 conversion test models
-pytest -v -n auto test_z02_testmodels_mf5to6.py
-
-# models from modflow6-examples repo
-pytest -v -n auto test_z03_examples.py
-
-# models from modflow6-largetestmodels repo
-pytest -v -n auto test_z03_largetestmodels.py
 ```
 
 Tests load external models from fixtures provided by `modflow-devtools`. External model tests can be selected by model or simulation name, or by packages used. See the [`modflow-devtools` documentation](https://modflow-devtools.readthedocs.io/en/latest/md/fixtures.html#filtering) for usage examples. Note that filtering options only apply to tests using external models, and will not filter tests defining models in code &mdash; for that, the `pytest` built-in `-k` option may be used.
