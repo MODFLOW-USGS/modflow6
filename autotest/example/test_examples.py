@@ -64,7 +64,7 @@ def test_scenario(function_tmpdir, example_scenario, targets):
             name=model_name,
             workspace=exdir,
             targets=targets,
-            mf6_regression=True,
+            comparison="mf6_regression",
             cmp_verbose=False,
             make_comparison=should_compare(
                 name, excluded_comparisons, targets
@@ -75,4 +75,3 @@ def test_scenario(function_tmpdir, example_scenario, targets):
         # appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
         test.setup(test.workspace, workspace)
         test.run()
-        test.compare_output(test.action)

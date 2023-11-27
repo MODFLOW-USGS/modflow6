@@ -216,6 +216,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
         targets=targets,
-        mf6_regression=True,
+        comparison="mf6_regression",
     )
     test.run()

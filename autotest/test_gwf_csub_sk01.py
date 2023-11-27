@@ -480,7 +480,7 @@ def test_mf6model(case, targets):
         workspace=sim.sim_path,
         check=check_output,
         targets=targets,
-        mf6_regression=True,
+        comparison="mf6_regression",
     )
     test.run()
     check_output(test)

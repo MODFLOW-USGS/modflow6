@@ -96,27 +96,26 @@ excluded_comparisons = {
 def test_model(
     function_tmpdir, test_model_mf6, targets, original_regression, markers
 ):
-    exdir = test_model_mf6.parent
-    name = exdir.name
+    model_path = test_model_mf6.parent
+    model_name = model_path.name
 
-    if name in excluded_models:
-        pytest.skip(f"Excluding mf6 model '{name}'")
+    if model_name in excluded_models:
+        pytest.skip(f"Excluding mf6 model '{model_name}'")
 
-    if "dev" in name and "not developmode" in markers:
-        pytest.skip(f"Skipping mf6 model '{name}' (develop mode only)")
+    if "dev" in model_name and "not developmode" in markers:
+        pytest.skip(f"Skipping mf6 model '{model_name}' (develop mode only)")
 
     test = TestFramework(
-        name=name,
-        workspace=exdir,
+        name=model_name,
+        workspace=model_path,
         targets=targets,
-        mf6_regression=not original_regression,
+        comparison="auto" if original_regression else "mf6_regression",
         cmp_verbose=False,
-        make_comparison=should_compare(name, excluded_comparisons, targets),
+        make_comparison=should_compare(model_name, excluded_comparisons, targets),
     )
 
     # Run the MODFLOW 6 simulation and compare to results generated using
     # 1) the current MODFLOW 6 release, 2) an existing head file, or 3) or
     # appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
-    test.setup(exdir, function_tmpdir)
+    test.setup(model_path, function_tmpdir)
     test.run()
-    test.compare_output(test.action)

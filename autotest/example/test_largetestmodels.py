@@ -26,29 +26,23 @@ excluded_comparisons = {
 def test_model(
     function_tmpdir, large_test_model, targets, original_regression, markers
 ):
-    exdir = large_test_model.parent
-    name = exdir.name
+    model_path = large_test_model.parent
+    model_name = model_path.name
 
-    if name in excluded_models:
-        pytest.skip(f"Excluding large mf6 model '{name}'")
+    if model_name in excluded_models:
+        pytest.skip(f"Excluding large mf6 model '{model_name}'")
 
-    if "dev" in name and "not developmode" in markers:
-        pytest.skip(f"Skipping large mf6 model '{name}' (develop mode only)")
+    if "dev" in model_name and "not developmode" in markers:
+        pytest.skip(f"Skipping large mf6 model '{model_name}' (develop mode only)")
 
     test = TestFramework(
-        name=name,
-        workspace=exdir,
+        name=model_name,
+        workspace=model_path,
         targets=targets,
-        mf6_regression=not original_regression,
+        comparison="auto" if original_regression else "mf6_regression",
         cmp_verbose=False,
-        make_comparison=should_compare(name, excluded_comparisons, targets),
+        make_comparison=should_compare(model_name, excluded_comparisons, targets),
     )
 
-    src = test.workspace
-    dst = str(function_tmpdir)
-
-    # Run the MODFLOW 6 simulation and compare to existing head file or
-    # appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
-    test.setup(src, dst)
+    test.setup(model_path, function_tmpdir)
     test.run()
-    test.check()

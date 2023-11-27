@@ -29,19 +29,19 @@ excluded_comparisons = {
 def test_model(
     function_tmpdir, test_model_mf5to6, targets, original_regression
 ):
-    exdir = test_model_mf5to6.parent
-    name = exdir.name
+    model_path = test_model_mf5to6.parent
+    model_name = model_path.name
 
-    if name in excluded_models:
-        pytest.skip(f"Excluding mf5to6 model: {name}")
+    if model_name in excluded_models:
+        pytest.skip(f"Excluding mf5to6 model: {model_name}")
 
     test = TestFramework(
-        name=exdir.name,
-        workspace=exdir,
+        name=model_path.name,
+        workspace=model_path,
         targets=targets,
-        mf6_regression=not original_regression,
+        comparison="auto" if original_regression else "mf6_regression",
         cmp_verbose=False,
-        make_comparison=should_compare(name, excluded_comparisons, targets),
+        make_comparison=should_compare(model_name, excluded_comparisons, targets),
     )
 
     src = test.workspace
@@ -81,12 +81,10 @@ def test_model(
     nmsg = "Program terminated normally"
     try:
         nam = os.path.basename(npth)
-        success, buff = flopy.run_model(
+        success, _ = flopy.run_model(
             exe,
             nam,
             model_ws=dst,
-            silent=False,
-            report=True,
             normal_msg=nmsg,
             cargs="mf6",
         )
@@ -102,10 +100,8 @@ def test_model(
 
     assert success, msg
 
-    # model setup
-    test.setup(dst, function_tmpdir / "models")
-
     # Run the MODFLOW 6 simulation and compare to existing head file or
     # appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
+    test.setup(dst, function_tmpdir / "models")
     test.run()
-    test.compare_output(test.action)
+    test.compare_output(test.comparison)

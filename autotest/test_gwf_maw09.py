@@ -221,7 +221,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def eval_results(idx, test):
+def check_output(idx, test):
     print("evaluating results...")
 
     name = ex[idx]
@@ -315,8 +315,8 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         build=lambda t: build_models(idx, t),
-        check=lambda t: eval_results(idx, t),
+        check=lambda t: check_output(idx, t),
         targets=targets,
-        mf6_regression=True,
+        comparison="mf6_regression",
     )
     test.run()

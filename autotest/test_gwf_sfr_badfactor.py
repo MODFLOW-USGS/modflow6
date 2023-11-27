@@ -529,6 +529,6 @@ def test_mf6model(function_tmpdir, targets):
         targets=targets,
         build=build_models,
         check=check_output,
-        require_failure=True,
+        xfail=True,
     )
     test.run()

@@ -198,7 +198,7 @@ def build_models(idx, test):
     return sim, None
 
 
-def eval_results(idx, test):
+def check_output(idx, test):
     print("evaluating results...")
 
     # calculate volume of water and make sure it is conserved
@@ -290,7 +290,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        check=lambda t: eval_results(idx, t),
-        mf6_regression=True,
+        check=lambda t: check_output(idx, t),
+        comparison="mf6_regression",
     )
     test.run()

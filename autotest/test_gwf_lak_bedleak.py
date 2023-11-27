@@ -178,6 +178,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         targets=targets,
         build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
-        require_failure="fail" in str(function_tmpdir),
+        xfail="fail" in str(function_tmpdir),
     )
     test.run()
