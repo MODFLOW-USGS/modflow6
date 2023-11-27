@@ -465,6 +465,7 @@ class TestFramework:
         files0, files1 = self._regression_files(extensions)
         extension = "hds"
         ipos = 0
+        success = True
         for idx, (fpth0, fpth1) in enumerate(zip(files0, files1)):
             outfile = os.path.splitext(os.path.basename(fpth0))[0]
             outfile = os.path.join(
