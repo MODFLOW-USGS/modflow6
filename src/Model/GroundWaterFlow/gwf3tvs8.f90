@@ -27,7 +27,9 @@ module TvsModule
     integer(I4B), pointer :: iusesy => null() !< STO flag set if any cell is convertible (0, 1)
     real(DP), dimension(:), pointer, contiguous :: ss => null() !< STO specfic storage or storage coefficient
     real(DP), dimension(:), pointer, contiguous :: sy => null() !< STO specific yield
+    
   contains
+  
     procedure :: da => tvs_da
     procedure :: ar_set_pointers => tvs_ar_set_pointers
     procedure :: read_option => tvs_read_option
@@ -42,10 +44,9 @@ contains
   !> @brief Create a new TvsType object
   !!
   !! Create a new time-varying storage (TVS) object.
-  !!
   !<
   subroutine tvs_cr(tvs, name_model, inunit, iout)
-    ! -- dummy variables
+    ! -- dummy
     type(TvsType), pointer, intent(out) :: tvs
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
@@ -54,6 +55,7 @@ contains
     allocate (tvs)
     call tvs%init(name_model, 'TVS', 'TVS', inunit, iout)
     !
+    ! -- Return
     return
   end subroutine tvs_cr
 
@@ -61,12 +63,11 @@ contains
   !!
   !! Announce package version, set array and variable pointers from the STO
   !! package for access by TVS, and enable storage change integration.
-  !!
   !<
   subroutine tvs_ar_set_pointers(this)
-    ! -- dummy variables
+    ! -- dummy
     class(TvsType) :: this
-    ! -- local variables
+    ! -- local
     character(len=LENMEMPATH) :: stoMemoryPath
     ! -- formats
     character(len=*), parameter :: fmttvs = &
@@ -87,6 +88,7 @@ contains
     ! -- Instruct STO to integrate storage changes, since TVS is active
     this%integratechanges = 1
     !
+    ! -- Return
     return
   end subroutine tvs_ar_set_pointers
 
@@ -94,10 +96,9 @@ contains
   !!
   !! Process a single TVS-specific option. Used when reading the OPTIONS block
   !! of the TVS package input file.
-  !!
   !<
   function tvs_read_option(this, keyword) result(success)
-    ! -- dummy variables
+    ! -- dummy
     class(TvsType) :: this
     character(len=*), intent(in) :: keyword
     ! -- return
@@ -116,6 +117,7 @@ contains
       success = .false.
     end select
     !
+    ! -- Return
     return
   end function tvs_read_option
 
@@ -123,10 +125,9 @@ contains
   !!
   !! Return a pointer to the given node's value in the appropriate STO array
   !! based on the given variable name string.
-  !!
   !<
   function tvs_get_pointer_to_value(this, n, varName) result(bndElem)
-    ! -- dummy variables
+    ! -- dummy
     class(TvsType) :: this
     integer(I4B), intent(in) :: n
     character(len=*), intent(in) :: varName
@@ -142,6 +143,7 @@ contains
       bndElem => null()
     end select
     !
+    ! -- Return
     return
   end function tvs_get_pointer_to_value
 
@@ -149,10 +151,9 @@ contains
   !!
   !! Deferred procedure implementation called by the TvBaseType code when a
   !! property value change occurs at (kper, kstp).
-  !!
   !<
   subroutine tvs_set_changed_at(this, kper, kstp)
-    ! -- dummy variables
+    ! -- dummy
     class(TvsType) :: this
     integer(I4B), intent(in) :: kper
     integer(I4B), intent(in) :: kstp
@@ -160,6 +161,7 @@ contains
     ! -- No need to record TVS/STO changes, as no other packages cache
     ! -- Ss or Sy values
     !
+    ! -- Return
     return
   end subroutine tvs_set_changed_at
 
@@ -168,14 +170,15 @@ contains
   !! Deferred procedure implementation called by the TvBaseType code when a
   !! new time step commences, indicating that any previously set per-node
   !! property value change flags should be reset.
-  !!
   !<
   subroutine tvs_reset_change_flags(this)
+    ! -- dummy
     class(TvsType) :: this
     !
     ! -- No need to record TVS/STO changes, as no other packages cache
     ! -- Ss or Sy values
     !
+    ! -- Return
     return
   end subroutine tvs_reset_change_flags
 
@@ -184,14 +187,13 @@ contains
   !! Deferred procedure implementation called by the TvBaseType code after a
   !! property value change occurs. Check if the property value of the given
   !! variable at the given node is invalid, and log an error if so.
-  !!
   !<
   subroutine tvs_validate_change(this, n, varName)
-    ! -- dummy variables
+    ! -- dummy
     class(TvsType) :: this
     integer(I4B), intent(in) :: n
     character(len=*), intent(in) :: varName
-    ! -- local variables
+    ! -- local
     character(len=LINELENGTH) :: cellstr
     ! -- formats
     character(len=*), parameter :: fmtserr = &
@@ -223,16 +225,16 @@ contains
       end if
     end if
     !
+    ! -- Return
     return
   end subroutine tvs_validate_change
 
   !> @brief Deallocate package memory
   !!
   !! Deallocate TVS package scalars and arrays.
-  !!
   !<
   subroutine tvs_da(this)
-    ! -- dummy variables
+    ! -- dummy
     class(TvsType) :: this
     !
     ! -- Nullify pointers to other package variables
@@ -244,6 +246,7 @@ contains
     ! -- Deallocate parent
     call tvbase_da(this)
     !
+    ! -- Return
     return
   end subroutine tvs_da
 
