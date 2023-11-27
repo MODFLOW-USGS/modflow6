@@ -75,4 +75,4 @@ def test_scenario(function_tmpdir, example_scenario, targets):
         # appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
         test.setup(test.workspace, workspace)
         test.run()
-        test.compare()
+        test.compare_output(test.action)

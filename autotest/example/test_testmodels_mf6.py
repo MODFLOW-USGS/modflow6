@@ -119,4 +119,4 @@ def test_model(
     # appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
     test.setup(exdir, function_tmpdir)
     test.run()
-    test.compare()
+    test.compare_output(test.action)

@@ -7,21 +7,42 @@ from warnings import warn
 
 import flopy
 import numpy as np
-from common_regression import (get_mf6_comparison, get_mf6_files,
-                               get_namefiles, setup_mf6, setup_mf6_comparison)
+from common_regression import (
+    get_mf6_comparison,
+    get_mf6_files,
+    get_namefiles,
+    setup_mf6,
+    setup_mf6_comparison,
+)
 from flopy.utils.compare import compare_heads
 from modflow_devtools.executables import Executables
 from modflow_devtools.misc import get_ostag, is_in_ci
 
+COMPARE_OPTIONS = [
+    "compare",
+    ".cmp",
+    "mf2005",
+    "mf2005.cmp",
+    "mfnwt",
+    "mfnwt.cmp",
+    "mfusg",
+    "mfusg.cmp",
+    "mflgr",
+    "mflgr.cmp",
+    "libmf6",
+    "libmf6.cmp",
+    "mf6",
+    "mf6.cmp",
+]
 DNODATA = 3.0e30
-sfmt = "{:25s} - {}"
-extdict = {
+EXTS = {
     "hds": "head",
     "hed": "head",
     "bhd": "head",
     "ucn": "concentration",
     "cbc": "cell-by-cell",
 }
+SFMT = "{:25s} - {}"
 
 
 def api_return(success, model_ws):
@@ -32,28 +53,21 @@ def api_return(success, model_ws):
     return success, open(fpth).readlines()
 
 
-# class TestAction(Enum):
-#     "compare",
-#     ".cmp",
-#     "mf2005",
-#     "mf2005.cmp",
-#     "mfnwt",
-#     "mfnwt.cmp",
-#     "mfusg",
-#     "mfusg.cmp",
-#     "mflgr",
-#     "mflgr.cmp",
-#     "libmf6",
-#     "libmf6.cmp",
-#     "mf6",
-#     "mf6.cmp",
-
-
 class TestFramework:
-    # tell pytest this isn't a test class, don't collect it
+    # tell pytest this class doesn't contain tests, don't collect it
     __test__ = False
 
     """
+    Test harness for MODFLOW 6.
+
+    Supports:
+     * custom hooks to build models/simulations at test time
+     * custom hooks to check model/simulation result correctness
+     * testing some modflow6 extended features (currently: parallel)
+     * comparing MODFLOW 6 with MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR
+
+    Parameters
+    ----------
     name : str
         The test case name
     workspace : pathlike
@@ -99,7 +113,7 @@ class TestFramework:
         make_comparison=True,
         run_comparison=None,
     ):
-        msg = sfmt.format("Initializing test", name)
+        msg = SFMT.format("Initializing test", name)
         print(msg)
 
         self.name = name
@@ -131,7 +145,7 @@ class TestFramework:
         if htol is None:
             htol = 0.001
         else:
-            msg = sfmt.format("User specified comparison htol", htol)
+            msg = SFMT.format("User specified comparison htol", htol)
             print(msg)
 
         self.htol = htol
@@ -140,7 +154,7 @@ class TestFramework:
         if pdtol is None:
             pdtol = 0.001
         else:
-            msg = sfmt.format(
+            msg = SFMT.format(
                 "User specified percent difference comparison pdtol", pdtol
             )
             print(msg)
@@ -151,7 +165,7 @@ class TestFramework:
         if rclose is None:
             rclose = 0.001
         else:
-            msg = sfmt.format(
+            msg = SFMT.format(
                 "User specified percent difference comparison rclose", rclose
             )
             print(msg)
@@ -172,10 +186,6 @@ class TestFramework:
     # private methods
 
     def _setup_comparison(self, src, dst, testModel=True):
-        # evaluate if comparison should be made
-        if not self.run_comparison:
-            return
-
         # adjust htol if it is smaller than IMS outer_dvclose
         dvclose = self._get_dvclose(dst)
         if dvclose is not None:
@@ -368,7 +378,7 @@ class TestFramework:
                             idx = files_cmp.index(file1 + ".cmp")
                             pth = os.path.join(cpth, files_cmp[idx])
                             files2.append(pth)
-                            txt = sfmt.format(
+                            txt = SFMT.format(
                                 f"Comparison file {ipos + 1}",
                                 os.path.basename(pth),
                             )
@@ -409,7 +419,7 @@ class TestFramework:
                     if len(exfiles) > 0:
                         exfile = exfiles[ipos]
                         if exfile is not None:
-                            txt = sfmt.format(
+                            txt = SFMT.format(
                                 f"Exclusion file {ipos + 1}",
                                 os.path.basename(exfile),
                             )
@@ -420,7 +430,7 @@ class TestFramework:
                     None,
                     pth,
                     precision="double",
-                    text=extdict[ext],
+                    text=EXTS[ext],
                     outfile=outfile,
                     files1=file1,
                     files2=file2,
@@ -430,8 +440,8 @@ class TestFramework:
                     verbose=self.cmp_verbose,
                     exfile=exfile,
                 )
-                msg = sfmt.format(
-                    f"{extdict[ext]} comparison {ipos + 1}",
+                msg = SFMT.format(
+                    f"{EXTS[ext]} comparison {ipos + 1}",
                     self.name,
                 )
                 print(msg)
@@ -455,14 +465,14 @@ class TestFramework:
                 None,
                 precision="double",
                 htol=self.htol,
-                text=extdict[extension],
+                text=EXTS[extension],
                 outfile=outfile,
                 files1=fpth0,
                 files2=fpth1,
                 verbose=self.cmp_verbose,
             )
-            msg = sfmt.format(
-                f"{extdict[extension]} comparison {ipos + 1}",
+            msg = SFMT.format(
+                f"{EXTS[extension]} comparison {ipos + 1}",
                 f"{self.name} ({os.path.basename(fpth0)})",
             )
             ipos += 1
@@ -490,14 +500,14 @@ class TestFramework:
                 None,
                 precision="double",
                 htol=self.htol,
-                text=extdict[extension],
+                text=EXTS[extension],
                 outfile=outfile,
                 files1=fpth0,
                 files2=fpth1,
                 verbose=self.cmp_verbose,
             )
-            msg = sfmt.format(
-                f"{extdict[extension]} comparison {ipos + 1}",
+            msg = SFMT.format(
+                f"{EXTS[extension]} comparison {ipos + 1}",
                 f"{self.name} ({os.path.basename(fpth0)})",
             )
             ipos += 1
@@ -614,8 +624,8 @@ class TestFramework:
                     if self.cmp_verbose:
                         print(msg)
 
-        msg = sfmt.format(
-            f"{extdict[extension]} comparison {ipos + 1}",
+        msg = SFMT.format(
+            f"{EXTS[extension]} comparison {ipos + 1}",
             f"{self.name} ({os.path.basename(fpth0)})",
         )
         print(msg)
@@ -626,7 +636,7 @@ class TestFramework:
     # public methods
 
     def setup(self, src, dst):
-        msg = sfmt.format("Setting up test workspace", self.name)
+        msg = SFMT.format("Setting up test workspace", self.name)
         print(msg)
         self.originpath = src
         self.workspace = dst
@@ -637,7 +647,7 @@ class TestFramework:
         time.sleep(0.5)
         self._setup_comparison(src, dst)
 
-    def prepare(self, verbose=True):
+    def build_all_models(self, build, verbose=True):
         """
         Build simulations/models and write input files.
 
@@ -648,15 +658,16 @@ class TestFramework:
             whether to show verbose output
         """
 
-        if self.build is None:
-            if verbose:
-                print(f"No build function, nothing to build")
-            return
+        if build is None:
+            raise ValueError("No build function")
 
-        sims = self.build(self)
+        # build models/simulations
+        sims = build(self)
         if not isinstance(sims, (tuple, list)):
-            sims = [sims]
-        sims = [sim for sim in sims if sim]
+            sims = [sims]  # make sure we have a list
+        sims = [sim for sim in sims if sim]  # filter Nones
+
+        # write input files for each model or simulation
         for sim in sims:
             if isinstance(sim, flopy.mf6.MFSimulation):
                 if verbose:
@@ -675,162 +686,141 @@ class TestFramework:
                     f"Unsupported simulation/model type: {type(sim)}"
                 )
 
-    def run_all(self):
+    def run_main_model(self):
         """
-        Run simulations and assert successful termination
+        Run primary model(s) and check successful termination
         """
 
-        # get expected input/output files
-        namfile_path = self.workspace / "mfsim.nam"
-        mf6inp, mf6outp = get_mf6_files(namfile_path)
-        self.outp = mf6outp
-
-        # determine comparison model
-        self._setup_comparison(self.workspace, self.workspace, testModel=False)
-        if self.action is not None:
-            if "mf6" in self.action or "mf6_regression" in self.action:
-                cinp, self.coutp = get_mf6_files(namfile_path)
-
-        # Set nam as namefile name without path
         nam = None
-
-        # run mf6 models
         exe = str(self.targets["mf6"].absolute())
 
+        # parallel test if configured
         if self.parallel:
             print("running parallel on", self.ncpus, "processes")
             try:
-                success, buff = self._run_parallel(
+                success, _ = self._run_parallel(
                     exe,
                 )
             except Exception as exc:
-                msg = sfmt.format("MODFLOW 6 run", self.name)
+                msg = SFMT.format("MODFLOW 6 run", self.name)
                 print(msg)
                 print(exc)
                 success = False
         else:
+            # otherwise serial run
             try:
-                success, buff = flopy.run_model(
+                msg = SFMT.format("MODFLOW 6 run", self.name)
+                print(msg)
+                success, _ = flopy.run_model(
                     exe,
                     nam,
                     model_ws=self.workspace,
                     silent=False,
                     report=True,
                 )
-                msg = sfmt.format("MODFLOW 6 run", self.name)
-                if success:
-                    print(msg)
-                else:
-                    print(msg)
             except:
-                msg = sfmt.format("MODFLOW 6 run", self.name)
-                print(msg)
                 success = False
 
         # set failure based on success and require_failure setting
         if self.require_failure is None:
             msg = "MODFLOW 6 model did not terminate normally"
-            if success:
-                failure = False
-            else:
-                failure = True
         else:
             if self.require_failure:
                 msg = "MODFLOW 6 model should have failed"
-                if not success:
-                    failure = False
-                else:
-                    failure = True
+                success = not success
             else:
                 msg = "MODFLOW 6 model should not have failed"
-                if success:
-                    failure = False
-                else:
-                    failure = True
 
         # print end of mfsim.lst to the screen
         lst_file = self.workspace / "mfsim.lst"
-        if failure and lst_file.is_file():
+        if not success and lst_file.is_file():
             msg = self._get_mfsim_listing(lst_file) + msg
 
         # test for failure
-        assert not failure, msg
+        assert success, msg
 
-        self.nam_cmp = None
-        if success:
-            if self.action is not None:
-                if self.action.lower() == "compare":
-                    msg = sfmt.format("Comparison files", self.name)
-                    print(msg)
-                else:
-                    cpth = self.workspace / self.action
-                    key = self.action.lower().replace(".cmp", "")
-                    exe = str(self.targets[key].absolute())
-                    msg = sfmt.format("comparison executable", exe)
-                    print(msg)
-                    if (
-                        "mf6" in key
-                        or "libmf6" in key
-                        or "mf6_regression" in key
-                    ):
-                        nam = None
-                    else:
-                        npth = get_namefiles(cpth)[0]
-                        nam = os.path.basename(npth)
-                    self.nam_cmp = nam
-                    try:
-                        if self.api_func is None:
-                            success_cmp, buff = flopy.run_model(
-                                exe,
-                                nam,
-                                model_ws=cpth,
-                                silent=False,
-                                report=True,
-                            )
-                        else:
-                            success_cmp, buff = self.api_func(exe, cpth)
-                        msg = sfmt.format(
-                            "Comparison run", self.name + "/" + key
-                        )
-                        print(msg)
-
-                        # print end of mfsim.lst to the screen
-                        if "mf6" in key:
-                            lst_file = cpth / "mfsim.lst"
-                            if not success and lst_file.is_file():
-                                print(self._get_mfsim_listing(lst_file))
-
-                    except:
-                        success_cmp = False
-                        msg = sfmt.format(
-                            "Comparison run", self.name + "/" + key
-                        )
-                        print(msg)
-                        import traceback
-
-                        traceback.print_exc()
-
-                    assert success_cmp, "Unsuccessful comparison run"
-
-    def compare(self, verbose=True):
+    def run_comparison_model(self, action="compare"):
         """
-        Compare the model results
+        Run comparison model(s).
 
+        action : str
+            The comparison action
         """
-        self.success = True
 
-        # evaluate if comparison should be made
-        if not self.make_comparison:
-            if verbose:
-                print(f"No comparison to make")
+        if action is None:
+            raise ValueError(f"No comparison action")
+
+        # if default comparison (reference files), no way to tell which program to use, skip model run
+        if action.lower() == "compare":
+            msg = SFMT.format(
+                "Comparison files provided separately, skipping model run for",
+                self.name,
+            )
+            print(msg)
             return
 
-        msg = sfmt.format("Comparison test", self.name)
+        # determine which binary to use
+        cpth = self.workspace / action
+        key = action.lower().replace(".cmp", "")
+        exe = str(self.targets[key].absolute())
+
+        # logging
+        msg = SFMT.format("comparison executable", exe)
+        print(msg)
+        msg = SFMT.format("comparison run", self.name + "/" + key)
         print(msg)
 
-        if self.action is None:
-            warn(f"No comparison action, aborting")
-            return
+        # if mf6 no need to specify namefile
+        if "mf6" in key or "libmf6" in key or "mf6_regression" in key:
+            self.nam_cmp = None
+        else:
+            # otherwise just find first namefile
+            npth = get_namefiles(cpth)[0]
+            self.nam_cmp = os.path.basename(npth)
+
+        # run the model via API or per usual
+        try:
+            success, _ = (
+                self.api_func(exe, cpth)
+                if self.api_func
+                else flopy.run_model(
+                    exe,
+                    self.nam_cmp,
+                    model_ws=cpth,
+                    silent=False,
+                    report=True,
+                )
+            )
+
+            # print end of mfsim.lst
+            if "mf6" in key:
+                lst_file = cpth / "mfsim.lst"
+                if not success and lst_file.is_file():
+                    print(self._get_mfsim_listing(lst_file))
+        except:
+            success = False
+            msg = SFMT.format("Comparison run", self.name + "/" + key)
+            print(msg)
+            import traceback
+
+            traceback.print_exc()
+
+        return success
+
+    def compare_output(self, action="compare"):
+        """
+        Compare the main model's output with a reference or regression model's output.
+
+        action : str
+            The comparison action
+        """
+
+        if action is None:
+            raise ValueError(f"No comparison action")
+
+        success = True
+        msg = SFMT.format("Comparison test", self.name)
+        print(msg)
 
         hds_ext = (
             "hds",
@@ -859,17 +849,36 @@ class TestFramework:
 
     def run(self):
         """
-        Run the MODFLOW 6 simulation and compare to existing head file or
-        appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
+        Run the test framework end-to-end.
 
-        Parameters
-        ----------
-        workspace : pathlike, optional
-            The path to the workspace where the test is run.
         """
 
-        self.prepare()
-        self.run_all()
-        self.compare()
+        # build model(s) and write input files
+        if self.build:
+            self.build_all_models(self.build)
+
+        # run main model(s) and get expected output files
+        self.run_main_model()
+        _, self.outp = get_mf6_files(self.workspace / "mfsim.nam")
+
+        # setup and run comparison model(s), if enabled
+        action = None
+        if self.run_comparison:
+            action = self._setup_comparison(
+                self.workspace, self.workspace, testModel=False
+            )
+            if action is not None:
+                self.run_comparison_model(action)
+                if "mf6" in action:
+                    _, self.coutp = get_mf6_files(self.workspace / "mfsim.nam")
+
+        # compare model results, if enabled
+        if self.make_comparison:
+            if action:
+                self.compare_output(action)
+            else:
+                warn(f"Comparison enabled but no action specified, skipping")
+
+        # check results, if enabled
         if self.check is not None:
             self.check(self)

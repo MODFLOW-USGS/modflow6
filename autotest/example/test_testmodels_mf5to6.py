@@ -108,4 +108,4 @@ def test_model(
     # Run the MODFLOW 6 simulation and compare to existing head file or
     # appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
     test.run()
-    test.compare()
+    test.compare_output(test.action)
