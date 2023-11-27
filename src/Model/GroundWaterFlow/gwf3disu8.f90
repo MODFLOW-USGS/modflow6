@@ -45,7 +45,9 @@ module GwfDisuModule
     integer(I4B), dimension(:), pointer, contiguous :: javert => null() ! cell vertex pointer ja array
     integer(I4B), dimension(:), pointer, contiguous :: idomain => null() ! idomain (nodes)
     logical(LGP) :: readFromFile ! True, when DIS is read from file (almost always)
+
   contains
+
     procedure :: dis_df => disu_df
     procedure :: disu_load
     procedure :: dis_da => disu_da
@@ -83,11 +85,13 @@ module GwfDisuModule
     ! -- Read a node-sized model array (reduced or not)
     procedure :: read_int_array
     procedure :: read_dbl_array
+
   end type GwfDisuType
 
 contains
 
   !> @brief Create a new unstructured discretization object
+  !<
   subroutine disu_cr(dis, name_model, input_mempath, inunit, iout)
     ! -- dummy
     class(DisBaseType), pointer :: dis
@@ -121,10 +125,11 @@ contains
       ! -- load disu
       call disnew%disu_load()
     end if
-
+    !
   end subroutine disu_cr
 
   !> @brief Transfer IDM data into this discretization object
+  !<
   subroutine disu_load(this)
     ! -- dummy
     class(GwfDisuType) :: this
@@ -147,16 +152,21 @@ contains
     ! -- Make some final disu checks on the non-reduced user-provided
     !    input
     call this%disu_ck()
-
+    !
   end subroutine disu_load
 
   !> @brief Define the discretization
+  !<
   subroutine disu_df(this)
+    ! -- dummy
     class(GwfDisuType) :: this
+    !
     call this%grid_finalize()
+    !
   end subroutine disu_df
 
   !> @brief Finalize the grid
+  !<
   subroutine grid_finalize(this)
     ! -- dummy
     class(GwfDisuType) :: this
@@ -262,10 +272,11 @@ contains
                                   this%iangledegx)
     this%nja = this%con%nja
     this%njas = this%con%njas
-
+    !
   end subroutine grid_finalize
 
   !> @brief Check discretization info
+  !<
   subroutine disu_ck(this)
     ! -- dummy
     class(GwfDisuType) :: this
@@ -381,10 +392,11 @@ contains
         call store_error_filename(this%input_fname)
       end if
     end if
-
+    !
   end subroutine disu_ck
 
   !> @brief Deallocate variables
+  !<
   subroutine disu_da(this)
     ! -- dummy
     class(GwfDisuType) :: this
@@ -417,19 +429,20 @@ contains
       call mem_deallocate(this%hwvainp)
       call mem_deallocate(this%angldegxinp)
     end if
-
+    !
     call mem_deallocate(this%idomain)
     call mem_deallocate(this%cellxy)
-
+    !
     call mem_deallocate(this%nodeuser)
     call mem_deallocate(this%nodereduced)
     !
     ! -- DisBaseType deallocate
     call this%DisBaseType%dis_da()
-
+    !
   end subroutine disu_da
 
   !> @brief Convert a user nodenumber to a string (nodenumber)
+  !<
   subroutine nodeu_to_string(this, nodeu, str)
     ! -- dummy
     class(GwfDisuType) :: this
@@ -440,9 +453,11 @@ contains
     !
     write (nstr, '(i0)') nodeu
     str = '('//trim(adjustl(nstr))//')'
+    !
   end subroutine nodeu_to_string
 
   !> @brief Convert a user nodenumber to an array (nodenumber)
+  !<
   subroutine nodeu_to_array(this, nodeu, arr)
     class(GwfDisuType) :: this
     integer(I4B), intent(in) :: nodeu
@@ -461,47 +476,51 @@ contains
     !
     ! -- fill array
     arr(1) = nodeu
+    !
   end subroutine nodeu_to_array
 
   !> @brief Write user options to list file
+  !<
   subroutine log_options(this, found)
+    ! -- dummy
     class(GwfDisuType) :: this
     type(GwfDisuParamFoundType), intent(in) :: found
-
+    !
     write (this%iout, '(1x,a)') 'Setting Discretization Options'
-
+    !
     if (found%length_units) then
       write (this%iout, '(4x,a,i0)') 'Model length unit [0=UND, 1=FEET, &
       &2=METERS, 3=CENTIMETERS] set as ', this%lenuni
     end if
-
+    !
     if (found%nogrb) then
       write (this%iout, '(4x,a,i0)') 'Binary grid file [0=GRB, 1=NOGRB] &
         &set as ', this%nogrb
     end if
-
+    !
     if (found%xorigin) then
       write (this%iout, '(4x,a,G0)') 'XORIGIN = ', this%xorigin
     end if
-
+    !
     if (found%yorigin) then
       write (this%iout, '(4x,a,G0)') 'YORIGIN = ', this%yorigin
     end if
-
+    !
     if (found%angrot) then
       write (this%iout, '(4x,a,G0)') 'ANGROT = ', this%angrot
     end if
-
+    !
     if (found%voffsettol) then
       write (this%iout, '(4x,a,G0)') 'VERTICAL_OFFSET_TOLERANCE = ', &
         this%voffsettol
     end if
-
+    !
     write (this%iout, '(1x,a,/)') 'End Setting Discretization Options'
-
+    !
   end subroutine log_options
 
   !> @brief Copy options from IDM into package
+  !<
   subroutine source_options(this)
     ! -- dummy
     class(GwfDisuType) :: this
@@ -524,33 +543,35 @@ contains
     if (this%iout > 0) then
       call this%log_options(found)
     end if
-
+    !
   end subroutine source_options
 
   !> @brief Write dimensions to list file
+  !<
   subroutine log_dimensions(this, found)
     class(GwfDisuType) :: this
     type(GwfDisuParamFoundType), intent(in) :: found
-
+    !
     write (this%iout, '(1x,a)') 'Setting Discretization Dimensions'
-
+    !
     if (found%nodes) then
       write (this%iout, '(4x,a,i0)') 'NODES = ', this%nodesuser
     end if
-
+    !
     if (found%nja) then
       write (this%iout, '(4x,a,i0)') 'NJA = ', this%njausr
     end if
-
+    !
     if (found%nvert) then
       write (this%iout, '(4x,a,i0)') 'NVERT = ', this%nvert
     end if
-
+    !
     write (this%iout, '(1x,a,/)') 'End Setting Discretization Dimensions'
-
+    !
   end subroutine log_dimensions
 
   !> @brief Copy dimensions from IDM into package
+  !<
   subroutine source_dimensions(this)
     ! -- dummy
     class(GwfDisuType) :: this
@@ -607,37 +628,40 @@ contains
     do n = 1, this%nodesuser
       this%idomain(n) = 1
     end do
-
+    !
   end subroutine source_dimensions
 
   !> @brief Write griddata found to list file
+  !<
   subroutine log_griddata(this, found)
+    ! -- dummy
     class(GwfDisuType) :: this
     type(GwfDisuParamFoundType), intent(in) :: found
-
+    !
     write (this%iout, '(1x,a)') 'Setting Discretization Griddata'
-
+    !
     if (found%top) then
       write (this%iout, '(4x,a)') 'TOP set from input file'
     end if
-
+    !
     if (found%bot) then
       write (this%iout, '(4x,a)') 'BOT set from input file'
     end if
-
+    !
     if (found%area) then
       write (this%iout, '(4x,a)') 'AREA set from input file'
     end if
-
+    !
     if (found%idomain) then
       write (this%iout, '(4x,a)') 'IDOMAIN set from input file'
     end if
-
+    !
     write (this%iout, '(1x,a,/)') 'End Setting Discretization Griddata'
-
+    !
   end subroutine log_griddata
 
   !> @brief Copy grid data from IDM into package
+  !<
   subroutine source_griddata(this)
     ! -- dummy
     class(GwfDisuType) :: this
@@ -654,46 +678,48 @@ contains
     if (this%iout > 0) then
       call this%log_griddata(found)
     end if
-
+    !
   end subroutine source_griddata
 
   !> @brief Write griddata found to list file
+  !<
   subroutine log_connectivity(this, found, iac)
     class(GwfDisuType) :: this
     type(GwfDisuParamFoundType), intent(in) :: found
     integer(I4B), dimension(:), contiguous, pointer, intent(in) :: iac
-
+    !
     write (this%iout, '(1x,a)') 'Setting Discretization Connectivity'
-
+    !
     if (associated(iac)) then
       write (this%iout, '(4x,a)') 'IAC set from input file'
     end if
-
+    !
     if (found%ja) then
       write (this%iout, '(4x,a)') 'JA set from input file'
     end if
-
+    !
     if (found%ihc) then
       write (this%iout, '(4x,a)') 'IHC set from input file'
     end if
-
+    !
     if (found%cl12) then
       write (this%iout, '(4x,a)') 'CL12 set from input file'
     end if
-
+    !
     if (found%hwva) then
       write (this%iout, '(4x,a)') 'HWVA set from input file'
     end if
-
+    !
     if (found%angldegx) then
       write (this%iout, '(4x,a)') 'ANGLDEGX set from input file'
     end if
-
+    !
     write (this%iout, '(1x,a,/)') 'End Setting Discretization Connectivity'
-
+    !
   end subroutine log_connectivity
 
   !> @brief Copy grid connectivity info from IDM into package
+  !<
   subroutine source_connectivity(this)
     ! -- dummy
     class(GwfDisuType) :: this
@@ -723,10 +749,11 @@ contains
     if (this%iout > 0) then
       call this%log_connectivity(found, iac)
     end if
-
+    !
   end subroutine source_connectivity
 
   !> @brief Copy grid vertex data from IDM into package
+  !<
   subroutine source_vertices(this)
     ! -- dummy
     class(GwfDisuType) :: this
@@ -754,9 +781,11 @@ contains
     if (this%iout > 0) then
       write (this%iout, '(1x,a)') 'Discretization Vertex data loaded'
     end if
+    !
   end subroutine source_vertices
 
   !> @brief Build data structures to hold cell vertex info
+  !<
   subroutine define_cellverts(this, icell2d, ncvert, icvert)
     ! -- modules
     use SparseModule, only: sparsematrix
@@ -793,10 +822,11 @@ contains
     call mem_allocate(this%javert, vert_spm%nnz, 'JAVERT', this%memoryPath)
     call vert_spm%filliaja(this%iavert, this%javert, ierr)
     call vert_spm%destroy()
-
+    !
   end subroutine define_cellverts
 
   !> @brief Copy cell2d data from IDM into package
+  !<
   subroutine source_cell2d(this)
     ! -- dummy
     class(GwfDisuType) :: this
@@ -839,10 +869,11 @@ contains
     if (this%iout > 0) then
       write (this%iout, '(1x,a)') 'Discretization Cell2d data loaded'
     end if
-
+    !
   end subroutine source_cell2d
 
   !> @brief Write a binary grid file
+  !<
   subroutine write_grb(this, icelltype)
     ! -- modules
     use OpenSpecModule, only: access, form
@@ -959,10 +990,11 @@ contains
     !
     ! -- Close the file
     close (iunit)
-
+    !
   end subroutine write_grb
 
   !> @brief Get reduced node number from user node number
+  !<
   function get_nodenumber_idx1(this, nodeu, icheck) result(nodenumber)
     class(GwfDisuType), intent(in) :: this
     integer(I4B), intent(in) :: nodeu
@@ -985,11 +1017,13 @@ contains
     else
       nodenumber = this%nodereduced(nodeu)
     end if
-
+    !
   end function get_nodenumber_idx1
 
-  !> @brief Get normal vector components between the cell and a given neighbor.
+  !> @brief Get normal vector components between the cell and a given neighbor
+  !!
   !! The normal points outward from the shared face between noden and nodem.
+  !<
   subroutine connection_normal(this, noden, nodem, ihc, xcomp, ycomp, zcomp, &
                                ipos)
     ! -- dummy
@@ -1029,12 +1063,14 @@ contains
       ycomp = sin(angle) * dmult
       zcomp = DZERO
     end if
-
+    !
   end subroutine connection_normal
 
-  !> @brief Get unit vector components between the cell and a given neighbor.
+  !> @brief Get unit vector components between the cell and a given neighbor
+  !!
   !! Saturation must be provided to compute cell center vertical coordinates.
   !! Also return the straight-line connection length.
+  !<
   subroutine connection_vector(this, noden, nodem, nozee, satn, satm, ihc, &
                                xcomp, ycomp, zcomp, conlen)
     ! -- dummy
@@ -1089,17 +1125,22 @@ contains
     ! -- Use coords to find vector components and connection length
     call line_unit_vector(xn, yn, zn, xm, ym, zm, xcomp, ycomp, zcomp, &
                           conlen)
-
+    !
   end subroutine connection_vector
 
   !> @brief Get the discretization type
+  !<
   subroutine get_dis_type(this, dis_type)
+    ! -- dummy
     class(GwfDisuType), intent(in) :: this
     character(len=*), intent(out) :: dis_type
+    !
     dis_type = "DISU"
+    !
   end subroutine get_dis_type
 
   !> @brief Allocate and initialize scalar variables
+  !<
   subroutine allocate_scalars(this, name_model, input_mempath)
     ! -- dummy
     class(GwfDisuType) :: this
@@ -1122,10 +1163,11 @@ contains
     this%voffsettol = DZERO
     this%iangledegx = 0
     this%readFromFile = .false.
-
+    !
   end subroutine allocate_scalars
 
   !> @brief Allocate and initialize arrays
+  !<
   subroutine allocate_arrays(this)
     ! -- dummy
     class(GwfDisuType) :: this
@@ -1145,21 +1187,24 @@ contains
     !
     ! -- Initialize
     this%mshape(1) = this%nodesuser
-
+    !
   end subroutine allocate_arrays
 
   !> @brief Allocate arrays in memory manager
+  !<
   subroutine allocate_arrays_mem(this)
+    ! -- modules
     use MemoryManagerModule, only: mem_allocate
+    ! -- dummy
     class(GwfDisuType) :: this
-
+    !
     call mem_allocate(this%idomain, this%nodes, 'IDOMAIN', this%memoryPath)
     call mem_allocate(this%vertices, 2, this%nvert, 'VERTICES', this%memoryPath)
     call mem_allocate(this%cellxy, 2, this%nodes, 'CELLXY', this%memoryPath)
-
+    !
   end subroutine allocate_arrays_mem
 
-  !> @brief Convert a string to a user nodenumber.
+  !> @brief Convert a string to a user nodenumber
   !!
   !! Parse and return user nodenumber.
   !! If flag_string is present and true, the first token may be
@@ -1214,10 +1259,10 @@ contains
       call store_error(errmsg)
       call store_error_unit(in)
     end if
-
+    !
   end function nodeu_from_string
 
-  !> @brief Convert a cellid string to a user nodenumber.
+  !> @brief Convert a cellid string to a user nodenumber
   !!
   !! If flag_string is present and true, the first token may be
   !! non-numeric (e.g. boundary name). In this case, return -2.
@@ -1274,23 +1319,33 @@ contains
       call store_error(errmsg)
       call store_error_unit(inunit)
     end if
-
+    !
   end function nodeu_from_cellid
 
-  !> @brief Indicates whether the grid discretization supports layers.
+  !> @brief Indicates whether the grid discretization supports layers
+  !<
   logical function supports_layers(this)
+    ! -- dummy
     class(GwfDisuType) :: this
+    !
     supports_layers = .false.
+    !
   end function supports_layers
 
   !> @brief Get number of cells per layer (total nodes since DISU isn't layered)
+  !<
   function get_ncpl(this)
+    ! -- return
     integer(I4B) :: get_ncpl
+    ! -- dummy
     class(GwfDisuType) :: this
+    !
     get_ncpl = this%nodesuser
+    !
   end function get_ncpl
 
   !> @brief Read an integer array
+  !<
   subroutine read_int_array(this, line, lloc, istart, istop, iout, in, &
                             iarray, aname)
     ! -- dummy
@@ -1327,10 +1382,11 @@ contains
     if (this%nodes < this%nodesuser) then
       call this%fill_grid_array(itemp, iarray)
     end if
-
+    !
   end subroutine read_int_array
 
   !> @brief Read a double precision array
+  !<
   subroutine read_dbl_array(this, line, lloc, istart, istop, iout, in, &
                             darray, aname)
     ! -- dummy
@@ -1366,10 +1422,10 @@ contains
     if (this%nodes < this%nodesuser) then
       call this%fill_grid_array(dtemp, darray)
     end if
-
+    !
   end subroutine read_dbl_array
 
-  !> @brief Record a double precision array.
+  !> @brief Record a double precision array
   !!
   !! The array is written to a formatted or unformatted external file
   !! depending on the arguments.
@@ -1457,10 +1513,11 @@ contains
       call ubdsv1(kstp, kper, aname, -idataun, dtemp, ncol, nrow, nlay, &
                   iout, delt, pertim, totim)
     end if
-
+    !
   end subroutine record_array
 
   !> @brief Record list header for imeth=6
+  !<
   subroutine record_srcdst_list_header(this, text, textmodel, textpackage, &
                                        dstmodel, dstpackage, naux, auxtxt, &
                                        ibdchn, nlist, iout)
@@ -1487,20 +1544,23 @@ contains
     call ubdsv06(kstp, kper, text, textmodel, textpackage, dstmodel, dstpackage, &
                  ibdchn, naux, auxtxt, ncol, nrow, nlay, &
                  nlist, iout, delt, pertim, totim)
-
+    !
   end subroutine record_srcdst_list_header
 
   !> @brief Cast base to DISU
+  !<
   function CastAsDisuType(dis) result(disu)
+    ! -- dummy
     class(*), pointer :: dis !< base pointer to DISU object
+    ! -- return
     class(GwfDisuType), pointer :: disu !< the resulting DISU pointer
-
+    !
     disu => null()
     select type (dis)
     class is (GwfDisuType)
       disu => dis
     end select
-
+    !
   end function CastAsDisuType
 
 end module GwfDisuModule

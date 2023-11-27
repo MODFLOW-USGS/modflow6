@@ -31,7 +31,9 @@ module GwfDisModule
     real(DP), dimension(:, :, :), pointer :: botm => null() ! top and bottom elevations for each cell (ncol, nrow, nlay)
     real(DP), dimension(:), pointer, contiguous :: cellx => null() ! cell center x coordinate for column j
     real(DP), dimension(:), pointer, contiguous :: celly => null() ! cell center y coordinate for row i
+
   contains
+
     procedure :: dis_df => dis3d_df
     procedure :: dis_da => dis3d_da
     procedure :: get_dis_type => get_dis_type
@@ -71,6 +73,7 @@ module GwfDisModule
 contains
 
   !> @brief Create a new structured discretization object
+  !<
   subroutine dis_cr(dis, name_model, input_mempath, inunit, iout)
     ! -- dummy
     class(DisBaseType), pointer :: dis
@@ -84,7 +87,7 @@ contains
     character(len=*), parameter :: fmtheader = &
       "(1X, /1X, 'DIS -- STRUCTURED GRID DISCRETIZATION PACKAGE,', &
       &' VERSION 2 : 3/27/2014 - INPUT READ FROM MEMPATH: ', A, /)"
-
+    !
     allocate (disnew)
     dis => disnew
     call disnew%allocate_scalars(name_model, input_mempath)
@@ -99,14 +102,15 @@ contains
         write (iout, fmtheader) dis%input_mempath
       end if
     end if
-
+    !
   end subroutine dis_cr
 
   !> @brief Define the discretization
+  !<
   subroutine dis3d_df(this)
     ! -- dummy
     class(GwfDisType) :: this
-
+    !
     ! -- Transfer the data from the memory manager into this package object
     if (this%inunit /= 0) then
       !
@@ -122,10 +126,11 @@ contains
     !
     ! -- Final grid initialization
     call this%grid_finalize()
-
+    !
   end subroutine dis3d_df
 
   !> @brief Deallocate variables
+  !<
   subroutine dis3d_da(this)
     ! -- dummy
     class(GwfDisType) :: this
@@ -151,10 +156,11 @@ contains
     call mem_deallocate(this%top2d)
     call mem_deallocate(this%bot3d)
     call mem_deallocate(this%idomain)
-
+    !
   end subroutine dis3d_da
 
   !> @brief Copy options from IDM into package
+  !<
   subroutine source_options(this)
     ! -- dummy
     class(GwfDisType) :: this
@@ -175,43 +181,46 @@ contains
     if (this%iout > 0) then
       call this%log_options(found)
     end if
-
+    !
   end subroutine source_options
 
   !> @brief Write user options to list file
+  !<
   subroutine log_options(this, found)
+    ! -- dummy
     class(GwfDisType) :: this
     type(GwfDisParamFoundType), intent(in) :: found
-
+    !
     write (this%iout, '(1x,a)') 'Setting Discretization Options'
-
+    !
     if (found%length_units) then
       write (this%iout, '(4x,a,i0)') 'Model length unit [0=UND, 1=FEET, &
       &2=METERS, 3=CENTIMETERS] set as ', this%lenuni
     end if
-
+    !
     if (found%nogrb) then
       write (this%iout, '(4x,a,i0)') 'Binary grid file [0=GRB, 1=NOGRB] &
         &set as ', this%nogrb
     end if
-
+    !
     if (found%xorigin) then
       write (this%iout, '(4x,a,G0)') 'XORIGIN = ', this%xorigin
     end if
-
+    !
     if (found%yorigin) then
       write (this%iout, '(4x,a,G0)') 'YORIGIN = ', this%yorigin
     end if
-
+    !
     if (found%angrot) then
       write (this%iout, '(4x,a,G0)') 'ANGROT = ', this%angrot
     end if
-
+    !
     write (this%iout, '(1x,a,/)') 'End Setting Discretization Options'
-
+    !
   end subroutine log_options
 
   !> @brief Copy dimensions from IDM into package
+  !<
   subroutine source_dimensions(this)
     ! -- dummy
     class(GwfDisType) :: this
@@ -268,34 +277,38 @@ contains
         end do
       end do
     end do
-
+    !
   end subroutine source_dimensions
 
   !> @brief Write dimensions to list file
+  !<
   subroutine log_dimensions(this, found)
+    ! -- dummy
     class(GwfDisType) :: this
     type(GwfDisParamFoundType), intent(in) :: found
-
+    !
     write (this%iout, '(1x,a)') 'Setting Discretization Dimensions'
-
+    !
     if (found%nlay) then
       write (this%iout, '(4x,a,i0)') 'NLAY = ', this%nlay
     end if
-
+    !
     if (found%nrow) then
       write (this%iout, '(4x,a,i0)') 'NROW = ', this%nrow
     end if
-
+    !
     if (found%ncol) then
       write (this%iout, '(4x,a,i0)') 'NCOL = ', this%ncol
     end if
-
+    !
     write (this%iout, '(1x,a,/)') 'End Setting Discretization Dimensions'
-
+    !
   end subroutine log_dimensions
 
   !> @brief Copy grid data from IDM into package
+  !<
   subroutine source_griddata(this)
+    ! -- dummy
     class(GwfDisType) :: this
     type(GwfDisParamFoundType) :: found
     !
@@ -310,41 +323,44 @@ contains
     if (this%iout > 0) then
       call this%log_griddata(found)
     end if
-
+    !
   end subroutine source_griddata
 
   !> @brief Write dimensions to list file
+  !<
   subroutine log_griddata(this, found)
+    ! -- dummy
     class(GwfDisType) :: this
     type(GwfDisParamFoundType), intent(in) :: found
-
+    !
     write (this%iout, '(1x,a)') 'Setting Discretization Griddata'
-
+    !
     if (found%delr) then
       write (this%iout, '(4x,a)') 'DELR set from input file'
     end if
-
+    !
     if (found%delc) then
       write (this%iout, '(4x,a)') 'DELC set from input file'
     end if
-
+    !
     if (found%top) then
       write (this%iout, '(4x,a)') 'TOP set from input file'
     end if
-
+    !
     if (found%botm) then
       write (this%iout, '(4x,a)') 'BOTM set from input file'
     end if
-
+    !
     if (found%idomain) then
       write (this%iout, '(4x,a)') 'IDOMAIN set from input file'
     end if
-
+    !
     write (this%iout, '(1x,a,/)') 'End Setting Discretization Griddata'
-
+    !
   end subroutine log_griddata
 
   !> @brief Finalize grid (check properties, allocate arrays, compute connections)
+  !<
   subroutine grid_finalize(this)
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
@@ -504,10 +520,11 @@ contains
                                  this%nodeuser)
     this%nja = this%con%nja
     this%njas = this%con%njas
-
+    !
   end subroutine grid_finalize
 
   !> @brief Write a binary grid file
+  !<
   subroutine write_grb(this, icelltype)
     ! -- modules
     use OpenSpecModule, only: access, form
@@ -619,11 +636,13 @@ contains
     !
     ! -- Close the file
     close (iunit)
-
+    !
   end subroutine write_grb
 
   !> @brief Convert a user nodenumber to a string (nodenumber) or (k,i,j)
+  !<
   subroutine nodeu_to_string(this, nodeu, str)
+    ! -- dummy
     class(GwfDisType) :: this
     integer(I4B), intent(in) :: nodeu
     character(len=*), intent(inout) :: str
@@ -638,11 +657,13 @@ contains
     str = '('//trim(adjustl(kstr))//','// &
           trim(adjustl(istr))//','// &
           trim(adjustl(jstr))//')'
-
+    !
   end subroutine nodeu_to_string
 
   !> @brief Convert a user nodenumber to an array (nodenumber) or (k,i,j)
+  !<
   subroutine nodeu_to_array(this, nodeu, arr)
+    ! -- dummy
     class(GwfDisType) :: this
     integer(I4B), intent(in) :: nodeu
     integer(I4B), dimension(:), intent(inout) :: arr
@@ -666,10 +687,11 @@ contains
     arr(1) = k
     arr(2) = i
     arr(3) = j
-
+    !
   end subroutine nodeu_to_array
 
   !> @brief Get reduced node number from user node number
+  !<
   function get_nodenumber_idx1(this, nodeu, icheck) result(nodenumber)
     ! -- return
     integer(I4B) :: nodenumber
@@ -696,10 +718,11 @@ contains
       nodenumber = nodeu
       if (this%nodes < this%nodesuser) nodenumber = this%nodereduced(nodeu)
     end if
-
+    !
   end function get_nodenumber_idx1
 
   !> @brief Get reduced node number from layer, row and column indices
+  !<
   function get_nodenumber_idx3(this, k, i, j, icheck) result(nodenumber)
     ! -- return
     integer(I4B) :: nodenumber
@@ -739,10 +762,11 @@ contains
         call store_error(errmsg)
       end if
     end if
-
+    !
   end function get_nodenumber_idx3
 
   !> @brief Allocate and initialize scalar variables
+  !<
   subroutine allocate_scalars(this, name_model, input_mempath)
     ! -- dummy
     class(GwfDisType) :: this
@@ -762,10 +786,11 @@ contains
     this%nrow = 0
     this%ncol = 0
     this%ndim = 3
-
+    !
   end subroutine allocate_scalars
 
   !> @brief Allocate and initialize arrays
+  !<
   subroutine allocate_arrays(this)
     ! -- dummy
     class(GwfDisType) :: this
@@ -787,10 +812,10 @@ contains
     this%mshape(1) = this%nlay
     this%mshape(2) = this%nrow
     this%mshape(3) = this%ncol
-
+    !
   end subroutine allocate_arrays
 
-  !> @brief Convert a string to a user nodenumber.
+  !> @brief Convert a string to a user nodenumber
   !!
   !! Parse layer, row and column and return user nodenumber.
   !! If flag_string is present and true, the first token may be
@@ -876,10 +901,10 @@ contains
       call store_error(errmsg)
       call store_error_unit(in)
     end if
-
+    !
   end function nodeu_from_string
 
-  !> @brief Convert a cellid string to a user nodenumber.
+  !> @brief Convert a cellid string to a user nodenumber
   !!
   !! If flag_string is present and true, the first token may be
   !! non-numeric (e.g. boundary name). In this case, return -2.
@@ -967,24 +992,31 @@ contains
       call store_error(errmsg)
       call store_error_unit(inunit)
     end if
-
+    !
   end function nodeu_from_cellid
 
-  !> @brief Indicates whether the grid discretization supports layers.
+  !> @brief Indicates whether the grid discretization supports layers
+  !<
   logical function supports_layers(this)
+    ! -- dummy
     class(GwfDisType) :: this
+    !
     supports_layers = .true.
+    !
   end function supports_layers
 
-  !> @brief Return number of cells per layer (nrow * ncol).
+  !> @brief Return number of cells per layer (nrow * ncol)
+  !<
   function get_ncpl(this)
     integer(I4B) :: get_ncpl
     class(GwfDisType) :: this
     get_ncpl = this%nrow * this%ncol
   end function get_ncpl
 
-  !> @brief Get normal vector components between the cell and a given neighbor.
+  !> @brief Get normal vector components between the cell and a given neighbor
+  !!
   !! The normal points outward from the shared face between noden and nodem.
+  !<
   subroutine connection_normal(this, noden, nodem, ihc, xcomp, ycomp, zcomp, &
                                ipos)
     ! -- dummy
@@ -1032,12 +1064,14 @@ contains
       end if
       !
     end if
-
+    !
   end subroutine connection_normal
 
-  !> @brief Get unit vector components between the cell and a given neighbor.
+  !> @brief Get unit vector components between the cell and a given neighbor
+  !!
   !! Saturation must be provided to compute cell center vertical coordinates.
   !! Also return the straight-line connection length.
+  !<
   subroutine connection_vector(this, noden, nodem, nozee, satn, satm, ihc, &
                                xcomp, ycomp, zcomp, conlen)
     ! -- modules
@@ -1105,18 +1139,24 @@ contains
       end if
       call line_unit_vector(x1, y1, z1, x2, y2, z2, xcomp, ycomp, zcomp, conlen)
     end if
-
+    !
   end subroutine
 
   !> @brief Get the discretization type
+  !<
   subroutine get_dis_type(this, dis_type)
+    ! -- dummy
     class(GwfDisType), intent(in) :: this
     character(len=*), intent(out) :: dis_type
+    !
     dis_type = "DIS"
+    !
   end subroutine get_dis_type
 
   !> @brief Get a 2D array of polygon vertices, listed in
+  !!
   !! clockwise order beginning with the lower left corner
+  !<
   subroutine get_polyverts(this, ic, polyverts, closed)
     ! -- dummy
     class(GwfDisType), intent(inout) :: this
@@ -1127,23 +1167,23 @@ contains
     integer(I4B) :: icu, nverts, irow, jcol, klay
     real(DP) :: cellx, celly, dxhalf, dyhalf
     logical(LGP) :: lclosed
-
+    !
     nverts = 4
-
+    !
     ! check closed option
     if (.not. (present(closed))) then
       lclosed = .false.
     else
       lclosed = closed
     end if
-
+    !
     ! allocate vertices array
     if (lclosed) then
       allocate (polyverts(2, nverts + 1))
     else
       allocate (polyverts(2, nverts))
     end if
-
+    !
     ! set vertices
     icu = this%get_nodeuser(ic)
     call get_ijk(icu, this%nrow, this%ncol, this%nlay, irow, jcol, klay)
@@ -1155,14 +1195,15 @@ contains
     polyverts(:, 2) = (/cellx - dxhalf, celly + dyhalf/) ! NW
     polyverts(:, 3) = (/cellx + dxhalf, celly + dyhalf/) ! NE
     polyverts(:, 4) = (/cellx + dxhalf, celly - dyhalf/) ! SE
-
+    !
     ! close if enabled
     if (lclosed) &
       polyverts(:, nverts + 1) = polyverts(:, 1)
-
+    !
   end subroutine
 
   !> @brief Read an integer array
+  !<
   subroutine read_int_array(this, line, lloc, istart, istop, iout, in, &
                             iarray, aname)
     ! -- dummy
@@ -1217,10 +1258,11 @@ contains
     if (this%nodes < this%nodesuser) then
       call this%fill_grid_array(itemp, iarray)
     end if
-
+    !
   end subroutine read_int_array
 
   !> @brief Read a double precision array
+  !<
   subroutine read_dbl_array(this, line, lloc, istart, istop, iout, in, &
                             darray, aname)
     ! -- dummy
@@ -1275,10 +1317,10 @@ contains
     if (this%nodes < this%nodesuser) then
       call this%fill_grid_array(dtemp, darray)
     end if
-
+    !
   end subroutine read_dbl_array
 
-  !> @brief Read a 2d double array into col icolbnd of darray.
+  !> @brief Read a 2d double array into col icolbnd of darray
   !!
   !! For cells that are outside of the active domain,
   !! do not copy the array value into darray.
@@ -1321,7 +1363,7 @@ contains
         !
       end do
     end do
-
+    !
   end subroutine read_layer_array
 
   !> @brief Record a double precision array.
@@ -1412,10 +1454,11 @@ contains
       call ubdsv1(kstp, kper, aname, -idataun, dtemp, ncol, nrow, nlay, &
                   iout, delt, pertim, totim)
     end if
-
+    !
   end subroutine record_array
 
   !> @brief Record list header for imeth=6
+  !<
   subroutine record_srcdst_list_header(this, text, textmodel, textpackage, &
                                        dstmodel, dstpackage, naux, auxtxt, &
                                        ibdchn, nlist, iout)
@@ -1442,10 +1485,11 @@ contains
     call ubdsv06(kstp, kper, text, textmodel, textpackage, dstmodel, dstpackage, &
                  ibdchn, naux, auxtxt, ncol, nrow, nlay, &
                  nlist, iout, delt, pertim, totim)
-
+    !
   end subroutine record_srcdst_list_header
 
   !> @brief Convert an integer array (layer numbers) to nodelist
+  !<
   subroutine nlarray_to_nodelist(this, darray, nodelist, maxbnd, nbound, aname)
     ! -- dummy
     class(GwfDisType) :: this
@@ -1517,7 +1561,7 @@ contains
       nbound = maxbnd
       !
     end if
-
+    !
   end subroutine nlarray_to_nodelist
 
 end module GwfDisModule
