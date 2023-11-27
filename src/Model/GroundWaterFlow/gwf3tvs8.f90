@@ -27,9 +27,9 @@ module TvsModule
     integer(I4B), pointer :: iusesy => null() !< STO flag set if any cell is convertible (0, 1)
     real(DP), dimension(:), pointer, contiguous :: ss => null() !< STO specfic storage or storage coefficient
     real(DP), dimension(:), pointer, contiguous :: sy => null() !< STO specific yield
-    
+
   contains
-  
+
     procedure :: da => tvs_da
     procedure :: ar_set_pointers => tvs_ar_set_pointers
     procedure :: read_option => tvs_read_option

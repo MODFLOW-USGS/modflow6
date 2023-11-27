@@ -31,9 +31,9 @@ module TvkModule
     integer(I4B), pointer :: kchangeper => null() !< NPF last stress period in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
     integer(I4B), pointer :: kchangestp => null() !< NPF last time step in which any node K (or K22, or K33) values were changed (0 if unchanged from start of simulation)
     integer(I4B), dimension(:), pointer, contiguous :: nodekchange => null() !< NPF grid array of flags indicating for each node whether its K (or K22, or K33) value changed (1) at (kchangeper, kchangestp) or not (0)
-    
+
   contains
-  
+
     procedure :: da => tvk_da
     procedure :: ar_set_pointers => tvk_ar_set_pointers
     procedure :: read_option => tvk_read_option
