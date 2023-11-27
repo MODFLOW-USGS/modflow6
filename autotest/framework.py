@@ -74,6 +74,7 @@ def get_dvclose(dir_pth):
 
     return dvclose
 
+
 def get_rclose(dir_pth):
     """Get inner_rclose value from MODFLOW 6 ims file"""
     rclose = None
@@ -115,7 +116,7 @@ def write_models(sims, verbose=True):
 
     # make sure we have a list
     if not isinstance(sims, (tuple, list, np.ndarray)):
-        sims = [sims]  
+        sims = [sims]
 
     # write input files for each model or simulation
     for sim in sims:
@@ -135,9 +136,7 @@ def write_models(sims, verbose=True):
                 )
             sim.write_input()
         else:
-            raise ValueError(
-                f"Unsupported simulation/model type: {type(sim)}"
-            )
+            raise ValueError(f"Unsupported simulation/model type: {type(sim)}")
 
 
 class TestFramework:
@@ -198,7 +197,7 @@ class TestFramework:
         cmp_verbose=True,
         xfail=None,
         api_func=None,
-        comparison="auto",
+        comparison="compare",
         make_comparison=True,
         run_comparison=None,
     ):
@@ -330,8 +329,6 @@ class TestFramework:
                 msg += f"{line}\n"
         msg += 79 * "-" + "\n\n"
         return msg
-
-    
 
     def _regression_files(self, extensions):
         if isinstance(extensions, str):
@@ -649,7 +646,11 @@ class TestFramework:
     # public
 
     def setup(self, src, dst):
-        print(SFMT.format("Setting up MF6 test", self.name, "from existing model"))
+        print(
+            SFMT.format(
+                "Setting up MF6 test", self.name, "from existing model"
+            )
+        )
         self.workspace = dst
         print(f"source:      {src}")
         print(f"destination: {dst}")
@@ -682,7 +683,7 @@ class TestFramework:
         else:
             # get the type of comparison to use
             self.comparison = get_mf6_comparison(src)
-        setup_mf6_comparison(src, dst, self.comparison, overwrite=True)
+            setup_mf6_comparison(src, dst, self.comparison, overwrite=True)
 
     def run_main_model(self):
         """
@@ -695,20 +696,30 @@ class TestFramework:
 
         # parallel test if configured
         if self.parallel:
-            print(f"MODFLOW 6 parallel test {self.name} on", self.ncpus, "processes")
+            print(
+                f"MODFLOW 6 parallel test {self.name} on",
+                self.ncpus,
+                "processes",
+            )
             try:
                 success, _ = self._run_parallel(exe)
             except Exception as exc:
-                print(SFMT.format("MODFLOW 6 parallel test", self.name, "failed"))
+                print(
+                    SFMT.format("MODFLOW 6 parallel test", self.name, "failed")
+                )
                 print(exc)
                 success = False
         else:
             # otherwise serial run
             try:
                 print(SFMT.format("MODFLOW 6 test", self.name))
-                success, _ = flopy.run_model(exe, nam_file, model_ws=self.workspace)
+                success, _ = flopy.run_model(
+                    exe, nam_file, model_ws=self.workspace
+                )
             except Exception as exc:
-                print(SFMT.format("MODFLOW 6 serial test", self.name, "failed"))
+                print(
+                    SFMT.format("MODFLOW 6 serial test", self.name, "failed")
+                )
                 print(exc)
                 success = False
 
@@ -749,11 +760,16 @@ class TestFramework:
         cmp_key = comparison.lower().replace(".cmp", "")
         cmp_exe = str(self.targets[cmp_key].absolute())
         cmp_listfile = cmp_workspace / "mfsim.lst"
-        self.cmp_namefile = None if "mf6" in cmp_key or "libmf6" in cmp_key or "mf6_regression" in cmp_key \
-                        else os.path.basename(get_namefiles(cmp_workspace)[0])
+        self.cmp_namefile = (
+            None
+            if "mf6" in cmp_key
+            or "libmf6" in cmp_key
+            or "mf6_regression" in cmp_key
+            else os.path.basename(get_namefiles(cmp_workspace)[0])
+        )
         print(SFMT.format("comparison executable", cmp_exe))
         print(SFMT.format("comparison run", self.name + "/" + cmp_key))
-        
+
         # run the model via API or per usual
         try:
             success, _ = (
@@ -765,16 +781,24 @@ class TestFramework:
                     cmp_workspace,
                 )
             )
-            
+
             if not success and cmp_listfile.is_file():
                 # print end of mfsim.lst
                 if "mf6" in cmp_key:
-                    warn("Comparison model run failed:\n" + \
-                          self._get_mfsim_listing(cmp_listfile))
+                    warn(
+                        "Comparison model run failed:\n"
+                        + self._get_mfsim_listing(cmp_listfile)
+                    )
         except:
             success = False
-            warn(SFMT.format("Unhandled error in comparison model run ", self.name + "/" + cmp_key))
+            warn(
+                SFMT.format(
+                    "Unhandled error in comparison model run ",
+                    self.name + "/" + cmp_key,
+                )
+            )
             import traceback
+
             traceback.print_exc()
 
         return success
@@ -807,14 +831,19 @@ class TestFramework:
         if "mf6" in comparison:
             _, self.coutp = get_mf6_files(cmp_path / "mfsim.nam")
         if "mf6_regression" in comparison:
-            assert self._compare_heads(extensions=hds_ext), "head comparison failed"
-            assert self._compare_budgets(extensions=cbc_ext), "budget comparison failed"
-            assert self._compare_concentrations(), "concentration comparison failed"
+            assert self._compare_heads(
+                extensions=hds_ext
+            ), "head comparison failed"
+            assert self._compare_budgets(
+                extensions=cbc_ext
+            ), "budget comparison failed"
+            assert (
+                self._compare_concentrations()
+            ), "concentration comparison failed"
         else:
             assert self._compare_heads(
-                comparison=comparison,
-                cpth=cmp_path,
-                extensions=hds_ext), "head comparison failed"
+                comparison=comparison, cpth=cmp_path, extensions=hds_ext
+            ), "head comparison failed"
 
     def run(self):
         """
@@ -827,8 +856,7 @@ class TestFramework:
             write_models(self.build(self))
 
         # run main model(s) and get expected output files
-        assert self.run_main_model(), \
-            "main model(s) failed"
+        assert self.run_main_model(), "main model(s) failed"
         _, self.outp = get_mf6_files(self.workspace / "mfsim.nam")
 
         # setup and run comparison model(s), if enabled
@@ -855,13 +883,14 @@ class TestFramework:
                     shutil.rmtree(cmp_path)
                 shutil.copytree(self.workspace, cmp_path)
             # detect comparison type if enabled
-            elif self.comparison == "auto":
+            else:
                 self.comparison = get_mf6_comparison(self.workspace)
 
             # run comparison model if enabled
             if self.comparison:
-                assert self.run_comparison_model(self.comparison), \
-                    "comparison model(s) failed"
+                assert self.run_comparison_model(
+                    self.comparison
+                ), "comparison model(s) failed"
                 if "mf6" in self.comparison:
                     _, self.coutp = get_mf6_files(self.workspace / "mfsim.nam")
 

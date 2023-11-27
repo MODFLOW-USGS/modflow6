@@ -39,7 +39,7 @@ def test_model(
         name=model_path.name,
         workspace=model_path,
         targets=targets,
-        comparison="auto" if original_regression else "mf6_regression",
+        comparison="compare" if original_regression else "mf6_regression",
         cmp_verbose=False,
         make_comparison=should_compare(model_name, excluded_comparisons, targets),
     )
