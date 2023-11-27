@@ -22,7 +22,9 @@ module rivmodule
     real(DP), dimension(:), pointer, contiguous :: stage => null() !< RIV head
     real(DP), dimension(:), pointer, contiguous :: cond => null() !< RIV bed hydraulic conductance
     real(DP), dimension(:), pointer, contiguous :: rbot => null() !< RIV bed bottom elevation
+
   contains
+
     procedure :: allocate_arrays => riv_allocate_arrays
     procedure :: source_options => riv_options
     procedure :: log_riv_options
@@ -42,16 +44,10 @@ module rivmodule
 
 contains
 
+  !> @brief Create a New Riv Package and point packobj to the new package
+  !<
   subroutine riv_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         mempath)
-! ******************************************************************************
-! riv_create -- Create a New Riv Package
-! Subroutine: (1) create new-style package
-!             (2) point packobj to the new package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
@@ -63,7 +59,6 @@ contains
     character(len=*), intent(in) :: mempath
     ! -- local
     type(RivType), pointer :: rivobj
-! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
     allocate (rivobj)
@@ -78,7 +73,7 @@ contains
     !
     ! -- initialize package
     call packobj%pack_initialize()
-
+    !
     packobj%inunit = inunit
     packobj%iout = iout
     packobj%id = id
@@ -87,22 +82,17 @@ contains
     packobj%iscloc = 2 !sfac applies to conductance
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine riv_create
 
+  !> @brief Deallocate memory
+  !<
   subroutine riv_da(this)
-! ******************************************************************************
-! riv_da -- deallocate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(RivType) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- Deallocate parent package
     call this%BndExtType%bnd_da()
@@ -112,17 +102,14 @@ contains
     call mem_deallocate(this%cond, 'COND', this%memoryPath)
     call mem_deallocate(this%rbot, 'RBOT', this%memoryPath)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine riv_da
 
+  !> @brief Set options specific to RivType
+  !<
   subroutine riv_options(this)
-! ******************************************************************************
-! riv_options -- set options specific to RivType
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use MemoryManagerExtModule, only: mem_set_value
     use CharacterStringModule, only: CharacterStringType
     use GwfRivInputModule, only: GwfRivParamFoundType
@@ -130,7 +117,6 @@ contains
     class(RivType), intent(inout) :: this
     ! -- local
     type(GwfRivParamFoundType) :: found
-! ------------------------------------------------------------------------------
     !
     ! -- source base class options
     call this%BndExtType%source_options()
@@ -141,23 +127,18 @@ contains
     ! -- log riv specific options
     call this%log_riv_options(found)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine riv_options
 
+  !> @brief Log options specific to RivType
+  !<
   subroutine log_riv_options(this, found)
-! ******************************************************************************
-! log_riv_options -- log options specific to RivType
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use GwfRivInputModule, only: GwfRivParamFoundType
     ! -- dummy variables
     class(RivType), intent(inout) :: this !< BndExtType object
     type(GwfRivParamFoundType), intent(in) :: found
-    ! -- local variables
-    ! -- format
     !
     ! -- log found options
     write (this%iout, '(/1x,a)') 'PROCESSING '//trim(adjustl(this%text)) &
@@ -171,25 +152,19 @@ contains
     write (this%iout, '(1x,a)') &
       'END OF '//trim(adjustl(this%text))//' OPTIONS'
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine log_riv_options
 
+  !> @brief Allocate package arrays
+  !<
   subroutine riv_allocate_arrays(this, nodelist, auxvar)
-! ******************************************************************************
-! riv_allocate_arrays -- allocate arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr, mem_checkin
     ! -- dummy
     class(RivType) :: this
     integer(I4B), dimension(:), pointer, contiguous, optional :: nodelist
     real(DP), dimension(:, :), pointer, contiguous, optional :: auxvar
-    ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- call base type allocate arrays
     call this%BndExtType%allocate_arrays(nodelist, auxvar)
@@ -207,22 +182,18 @@ contains
     call mem_checkin(this%rbot, 'RBOT', this%memoryPath, &
                      'RBOT', this%input_mempath)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine riv_allocate_arrays
 
+  !> @brief Read and prepare
+  !<
   subroutine riv_rp(this)
-! ******************************************************************************
-! riv_rp -- Read and prepare
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use TdisModule, only: kper
     ! -- dummy
     class(RivType), intent(inout) :: this
-    ! -- local
-! ------------------------------------------------------------------------------
+    !
     if (this%iper /= kper) return
     !
     ! -- Call the parent class read and prepare
@@ -238,17 +209,13 @@ contains
       call this%write_list()
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine riv_rp
 
+  !> @brief Check river boundary condition data
+  !<
   subroutine riv_ck(this)
-! ******************************************************************************
-! riv_ck -- Check river boundary condition data
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, count_errors, store_error_unit
@@ -271,7 +238,6 @@ contains
     character(len=*), parameter :: fmtriverr3 = &
       "('RIV BOUNDARY (',i0,') RIVER STAGE (',f10.4,') IS LESS &
       &THAN CELL BOTTOM (',f10.4,')')"
-! ------------------------------------------------------------------------------
     !
     ! -- check stress period data
     do i = 1, this%nbound
@@ -299,25 +265,20 @@ contains
       call store_error_unit(this%inunit)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine riv_ck
 
+  !> @brief Formulate the HCOF and RHS terms
+  !!
+  !! Skip in no rivs, otherwise calculate hcof and rhs
+  !<
   subroutine riv_cf(this)
-! ******************************************************************************
-! riv_cf -- Formulate the HCOF and RHS terms
-! Subroutine: (1) skip in no rivs
-!             (2) calculate hcof and rhs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(RivType) :: this
     ! -- local
     integer(I4B) :: i, node
     real(DP) :: hriv, criv, rbot
-! ------------------------------------------------------------------------------
     !
     ! -- Return if no rivs
     if (this%nbound .eq. 0) return
@@ -342,17 +303,13 @@ contains
       end if
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine riv_cf
 
+  !> @brief Copy rhs and hcof into solution rhs and amat
+  !<
   subroutine riv_fc(this, rhs, ia, idxglo, matrix_sln)
-! **************************************************************************
-! riv_fc -- Copy rhs and hcof into solution rhs and amat
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     ! -- dummy
     class(RivType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
@@ -362,7 +319,6 @@ contains
     ! -- local
     integer(I4B) :: i, n, ipos
     real(DP) :: cond, stage, qriv !, rbot
-! --------------------------------------------------------------------------
     !
     ! -- pakmvrobj fc
     if (this%imover == 1) then
@@ -386,20 +342,16 @@ contains
       end if
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine riv_fc
 
+  !> @brief Define the list heading that is written to iout when PRINT_INPUT
+  !! option is used.
+  !<
   subroutine define_listlabel(this)
-! ******************************************************************************
-! define_listlabel -- Define the list heading that is written to iout when
-!   PRINT_INPUT option is used.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     class(RivType), intent(inout) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- create the header list label
     this%listlabel = trim(this%filtyp)//' NO.'
@@ -420,43 +372,38 @@ contains
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine define_listlabel
 
   ! -- Procedures related to observations
 
+  !> @brief Return true because RIV package supports observations
+  !!
+  !! Return true because RIV package supports observations.
+  !>
   logical function riv_obs_supported(this)
-! ******************************************************************************
-! riv_obs_supported
-!   -- Return true because RIV package supports observations.
-!   -- Overrides BndType%bnd_obs_supported()
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     implicit none
+    ! -- dummy
     class(RivType) :: this
-! ------------------------------------------------------------------------------
+    !
     riv_obs_supported = .true.
+    !
+    ! -- Return
     return
   end function riv_obs_supported
 
+  !> @brief Store observation type supported by RIV package
+  !!
+  !! Overrides BndType%bnd_df_obs
+  !<
   subroutine riv_df_obs(this)
-    ! ******************************************************************************
-    ! riv_df_obs (implements bnd_df_obs)
-    !   -- Store observation type supported by RIV package.
-    !   -- Overrides BndType%bnd_df_obs
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
     implicit none
     ! -- dummy
     class(RivType) :: this
     ! -- local
     integer(I4B) :: indx
-    ! ------------------------------------------------------------------------------
+    !
     call this%obs%StoreObsType('riv', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
     !
@@ -465,15 +412,16 @@ contains
     call this%obs%StoreObsType('to-mvr', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine riv_df_obs
 
+  !> @brief Store user-specified conductance value
+  !<
   subroutine riv_store_user_cond(this)
-    ! -- modules
-    ! -- dummy variables
+    ! -- dummy
     class(RivType), intent(inout) :: this !< BndExtType object
-    ! -- local variables
+    ! -- local
     integer(I4B) :: n
     !
     ! -- store backup copy of conductance values
@@ -481,14 +429,16 @@ contains
       this%condinput(n) = this%cond_mult(n)
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine riv_store_user_cond
 
+  !> @brief Apply multiplier to conductance if auxmultcol option is in use
+  !<
   function cond_mult(this, row) result(cond)
     ! -- modules
     use ConstantsModule, only: DZERO
-    ! -- dummy variables
+    ! -- dummy
     class(RivType), intent(inout) :: this !< BndExtType object
     integer(I4B), intent(in) :: row
     ! -- result
@@ -500,20 +450,16 @@ contains
       cond = this%cond(row)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end function cond_mult
 
-! ******************************************************************************
-! riv_bound_value -- return requested boundary value
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Return requested boundary value
+  !<
   function riv_bound_value(this, col, row) result(bndval)
     ! -- modules
     use ConstantsModule, only: DZERO
-    ! -- dummy variables
+    ! -- dummy
     class(RivType), intent(inout) :: this !< BndExtType object
     integer(I4B), intent(in) :: col
     integer(I4B), intent(in) :: row
@@ -534,7 +480,7 @@ contains
       call store_error_filename(this%input_fname)
     end select
     !
-    ! -- return
+    ! -- Return
     return
   end function riv_bound_value
 
