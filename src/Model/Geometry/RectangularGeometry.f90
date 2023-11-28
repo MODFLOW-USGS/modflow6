@@ -147,7 +147,7 @@ contains
   end subroutine set_attribute
 
   !> @brief Print the attributes for this object
-  !< 
+  !<
   subroutine print_attributes(this, iout)
     ! -- dummy
     class(RectangularGeometryType) :: this

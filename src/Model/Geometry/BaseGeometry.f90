@@ -12,9 +12,9 @@ module BaseGeometryModule
     character(len=20) :: geo_type = 'UNDEFINED'
     integer(I4B) :: id = 0
     character(len=GEONAMELEN) :: name = ''
-    
+
   contains
-  
+
     procedure :: area_sat
     procedure :: perimeter_sat
     procedure :: area_wet
@@ -85,7 +85,7 @@ contains
   end subroutine set_attribute
 
   !> @brief Print the attributes for this object
-  !< 
+  !<
   subroutine print_attributes(this, iout)
     ! -- dummy
     class(BaseGeometryType) :: this

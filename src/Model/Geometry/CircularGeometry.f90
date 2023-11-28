@@ -10,9 +10,9 @@ module CircularGeometryModule
 
   type, extends(BaseGeometryType) :: CircularGeometryType
     real(DP) :: radius = DZERO
-    
+
   contains
-  
+
     procedure :: area_sat
     procedure :: perimeter_sat
     procedure :: area_wet
@@ -24,7 +24,7 @@ module CircularGeometryModule
 contains
 
   !> @brief Return area as if geometry is fully saturated
-  !< 
+  !<
   function area_sat(this)
     ! -- modules
     use ConstantsModule, only: DTWO, DPI
