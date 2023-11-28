@@ -12,7 +12,9 @@ module BaseGeometryModule
     character(len=20) :: geo_type = 'UNDEFINED'
     integer(I4B) :: id = 0
     character(len=GEONAMELEN) :: name = ''
+    
   contains
+  
     procedure :: area_sat
     procedure :: perimeter_sat
     procedure :: area_wet
@@ -28,8 +30,10 @@ contains
     real(DP) :: area_sat
     ! -- dummy
     class(BaseGeometryType) :: this
+    !
     area_sat = 0.d0
-    ! -- return
+    !
+    ! -- Return
     return
   end function area_sat
 
@@ -38,8 +42,10 @@ contains
     real(DP) :: perimeter_sat
     ! -- dummy
     class(BaseGeometryType) :: this
+    !
     perimeter_sat = 0.d0
-    ! -- return
+    !
+    ! -- Return
     return
   end function perimeter_sat
 
@@ -49,8 +55,10 @@ contains
     ! -- dummy
     class(BaseGeometryType) :: this
     real(DP), intent(in) :: depth
+    !
     area_wet = 0.d0
-    ! -- return
+    !
+    ! -- Return
     return
   end function area_wet
 
@@ -60,8 +68,10 @@ contains
     ! -- dummy
     class(BaseGeometryType) :: this
     real(DP), intent(in) :: depth
+    !
     perimeter_wet = 0.d0
-    ! -- return
+    !
+    ! -- Return
     return
   end function perimeter_wet
 
@@ -69,17 +79,14 @@ contains
     ! -- dummy
     class(BaseGeometryType) :: this
     character(len=*), intent(inout) :: line
-    ! -- return
+    !
+    ! -- Return
     return
   end subroutine set_attribute
 
+  !> @brief Print the attributes for this object
+  !< 
   subroutine print_attributes(this, iout)
-! ******************************************************************************
-! print_attributes -- print the attributes for this object
-! *****************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(BaseGeometryType) :: this
     ! -- local
@@ -87,13 +94,12 @@ contains
     ! -- formats
     character(len=*), parameter :: fmtid = "(4x,a,i0)"
     character(len=*), parameter :: fmtnm = "(4x,a,a)"
-! ------------------------------------------------------------------------------
     !
     write (iout, fmtid) 'ID = ', this%id
     write (iout, fmtnm) 'NAME = ', trim(adjustl(this%name))
     write (iout, fmtnm) 'GEOMETRY TYPE = ', trim(adjustl(this%geo_type))
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine print_attributes
 
