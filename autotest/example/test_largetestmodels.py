@@ -1,4 +1,5 @@
 import pytest
+
 from conftest import should_compare
 from framework import TestFramework
 
@@ -28,12 +29,15 @@ def test_model(
 ):
     model_path = large_test_model.parent
     model_name = model_path.name
+    workspace = function_tmpdir / model_name
 
     if model_name in excluded_models:
         pytest.skip(f"Excluding large mf6 model '{model_name}'")
 
     if "dev" in model_name and "not developmode" in markers:
-        pytest.skip(f"Skipping large mf6 model '{model_name}' (develop mode only)")
+        pytest.skip(
+            f"Skipping large mf6 model '{model_name}' (develop mode only)"
+        )
 
     test = TestFramework(
         name=model_name,
@@ -41,8 +45,10 @@ def test_model(
         targets=targets,
         comparison="compare" if original_regression else "mf6_regression",
         cmp_verbose=False,
-        make_comparison=should_compare(model_name, excluded_comparisons, targets),
+        make_comparison=should_compare(
+            model_name, excluded_comparisons, targets
+        ),
     )
 
-    test.setup(model_path, function_tmpdir)
+    test.setup(model_path, workspace)
     test.run()

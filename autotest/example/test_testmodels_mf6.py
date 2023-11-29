@@ -1,4 +1,5 @@
 import pytest
+
 from conftest import should_compare
 from framework import TestFramework
 
@@ -98,6 +99,7 @@ def test_model(
 ):
     model_path = test_model_mf6.parent
     model_name = model_path.name
+    workspace = function_tmpdir / model_name
 
     if model_name in excluded_models:
         pytest.skip(f"Excluding mf6 model '{model_name}'")
@@ -111,11 +113,13 @@ def test_model(
         targets=targets,
         comparison="compare" if original_regression else "mf6_regression",
         cmp_verbose=False,
-        make_comparison=should_compare(model_name, excluded_comparisons, targets),
+        make_comparison=should_compare(
+            model_name, excluded_comparisons, targets
+        ),
     )
 
     # Run the MODFLOW 6 simulation and compare to results generated using
     # 1) the current MODFLOW 6 release, 2) an existing head file, or 3) or
     # appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
-    test.setup(model_path, function_tmpdir)
+    test.setup(model_path, workspace)
     test.run()

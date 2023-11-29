@@ -1,4 +1,5 @@
 import pytest
+
 from conftest import should_compare
 from framework import TestFramework
 
@@ -52,17 +53,17 @@ excluded_comparisons = {
 @pytest.mark.slow
 def test_scenario(function_tmpdir, example_scenario, targets):
     name, namefiles = example_scenario
-    exdirs = [nf.parent for nf in namefiles]
+    model_paths = [nf.parent for nf in namefiles]
 
     if name in excluded_models:
         pytest.skip(f"Excluding mf6 model: {name}")
 
-    for exdir in exdirs:
-        model_name = f"{name}_{exdir.name}"
+    for model_path in model_paths:
+        model_name = f"{name}_{model_path.name}"
         workspace = function_tmpdir / model_name
         test = TestFramework(
             name=model_name,
-            workspace=exdir,
+            workspace=model_path,
             targets=targets,
             comparison="mf6_regression",
             cmp_verbose=False,
@@ -73,5 +74,5 @@ def test_scenario(function_tmpdir, example_scenario, targets):
 
         # Run the MODFLOW 6 simulation and compare to existing head file or
         # appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
-        test.setup(test.workspace, workspace)
+        test.setup(model_path, workspace)
         test.run()
