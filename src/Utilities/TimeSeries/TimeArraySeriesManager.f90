@@ -29,7 +29,9 @@ module TimeArraySeriesManagerModule
     character(len=LINELENGTH), allocatable, dimension(:) :: tasfiles ! list of TA file names
     type(TimeArraySeriesType), dimension(:), pointer, contiguous :: taslist ! array of TA pointers
     character(len=LENTIMESERIESNAME), allocatable, dimension(:) :: tasnames ! array of TA names
+
   contains
+
     ! -- Public procedures
     procedure, public :: tasmanager_df
     procedure, public :: ad => tasmgr_ad
@@ -50,19 +52,14 @@ contains
 
   ! -- Public procedures
 
+  !> @brief Create the time-array series manager
+  !<
   subroutine tasmanager_cr(this, dis, modelname, iout)
-! ******************************************************************************
-! tasmanager_cr -- create the tasmanager
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     type(TimeArraySeriesManagerType) :: this
     class(DisBaseType), pointer, optional :: dis
     character(len=*), intent(in) :: modelname
     integer(I4B), intent(in) :: iout
-! ------------------------------------------------------------------------------
     !
     if (present(dis)) then
       this%dis => dis
@@ -73,23 +70,19 @@ contains
     allocate (this%boundTasLinks)
     allocate (this%tasfiles(0))
     !
+    ! -- Return
     return
   end subroutine tasmanager_cr
 
+  !> @brief Define the time-array series manager
+  !<
   subroutine tasmanager_df(this)
-! ******************************************************************************
-! tasmanager_df -- define
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeArraySeriesManagerType) :: this
     ! -- local
     type(TimeArraySeriesType), pointer :: tasptr => null()
     integer(I4B) :: nfiles
     integer(I4B) :: i
-! ------------------------------------------------------------------------------
     !
     ! -- determine how many tasfiles.  This is the number of time array series
     !    so allocate arrays to store them
@@ -104,17 +97,15 @@ contains
                            this%iout, this%tasnames(i))
     end do
     !
+    ! -- Return
     return
   end subroutine tasmanager_df
 
+  !> @brief Time step (or subtime step) advance.
+  !!
+  !! Call this each time step or subtime step.
+  !<
   subroutine tasmgr_ad(this)
-! ******************************************************************************
-! tasmgr_ad -- time step (or subtime step) advance.
-!   Call this each time step or subtime step.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeArraySeriesManagerType) :: this
     ! -- local
@@ -122,13 +113,12 @@ contains
     type(TimeArraySeriesType), pointer :: timearrayseries => null()
     integer(I4B) :: i, j, nlinks, nvals, isize1, isize2, inunit
     real(DP) :: begintime, endtime
-    ! formats
+    ! -- formats
     character(len=*), parameter :: fmt5 = &
       "(/,'Time-array-series controlled arrays in stress period ', &
       &i0, ', time step ', i0, ':')"
 10  format('"', a, '" package: ', a, ' array obtained from time-array series "', &
            a, '"')
-! ------------------------------------------------------------------------------
     !
     ! -- Initialize time variables
     begintime = totimc
@@ -195,22 +185,18 @@ contains
       end do
     end if
     !
+    ! -- Return
     return
   end subroutine tasmgr_ad
 
+  !> @brief Deallocate
+  !<
   subroutine tasmgr_da(this)
-! ******************************************************************************
-! tasmgr_da -- deallocate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeArraySeriesManagerType) :: this
     ! -- local
     integer :: i, n
     type(TimeArraySeriesLinkType), pointer :: tasLink => null()
-! ------------------------------------------------------------------------------
     !
     ! -- Deallocate contents of each TimeArraySeriesType object in list
     !    of time-array series links.
@@ -238,16 +224,13 @@ contains
     this%dis => null()
     this%boundTasLinks => null()
     !
+    ! -- Return
     return
   end subroutine tasmgr_da
 
+  !> @brief Add a time-array series file
+  !<
   subroutine add_tasfile(this, fname)
-! ******************************************************************************
-! add_tasfile -- add a tas file
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ArrayHandlersModule, only: ExpandArray
     ! -- dummy
@@ -255,32 +238,27 @@ contains
     character(len=*), intent(in) :: fname
     ! -- local
     integer(I4B) :: indx
-! ------------------------------------------------------------------------------
     !
     call ExpandArray(this%tasfiles, 1)
     indx = size(this%tasfiles)
     this%tasfiles(indx) = fname
     !
+    ! -- Return
     return
   end subroutine add_tasfile
 
+  !> @brief Zero out arrays that are represented with time series
+  !!
+  !! Delete all existing links from time array series to package arrays as they
+  !! will need to be created with a new BEGIN PERIOD block
+  !<
   subroutine Reset(this, pkgName)
-! ******************************************************************************
-! Reset -- zero out arrays that are represented with time series.
-!   Delete all existing links from time array series to package arrays as they
-!   will need to be created with a new BEGIN PERIOD block.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(TimeArraySeriesManagerType) :: this
     character(len=*), intent(in) :: pkgName
     ! -- local
     integer(I4B) :: i, j, nlinks
     type(TimeArraySeriesLinkType), pointer :: taslink
-! ------------------------------------------------------------------------------
     !
     ! -- Reassign all linked elements to zero
     nlinks = this%boundTasLinks%Count()
@@ -306,17 +284,14 @@ contains
       end do
     end if
     !
+    ! -- Return
     return
   end subroutine Reset
 
+  !> @brief Make link from time-array series to package array
+  !<
   subroutine MakeTasLink(this, pkgName, bndArray, iprpak, &
                          tasName, text, convertFlux, nodelist, inunit)
-! ******************************************************************************
-! MakeTasLink -- Make link from TAS to package array
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeArraySeriesManagerType) :: this
     character(len=*), intent(in) :: pkgName
@@ -332,7 +307,6 @@ contains
     character(LINELENGTH) :: ermsg
     type(TimeArraySeriesLinkType), pointer :: newTasLink
     type(TimeArraySeriesType), pointer :: tasptr => null()
-! ------------------------------------------------------------------------------
     !
     ! -- Find the time array series
     nfiles = size(this%tasnames)
@@ -361,22 +335,18 @@ contains
     ! -- Add link to list of links
     call this%tasmgr_add_link(newTasLink)
     !
+    ! -- Return
     return
   end subroutine MakeTasLink
 
+  !> @brief Get link from the boundtaslinks list
+  !<
   function GetLink(this, indx) result(tasLink)
-! ******************************************************************************
-! GetLink -- get link from the boundtaslinks list
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeArraySeriesManagerType) :: this
     integer(I4B), intent(in) :: indx
+    ! -- return
     type(TimeArraySeriesLinkType), pointer :: tasLink
-    ! -- local
-! ------------------------------------------------------------------------------
     !
     tasLink => null()
     !
@@ -384,21 +354,17 @@ contains
       tasLink => GetTimeArraySeriesLinkFromList(this%boundTasLinks, indx)
     end if
     !
+    ! -- Return
     return
   end function GetLink
 
+  !> @brief Count number of links in the boundtaslinks list
+  !<
   function CountLinks(this)
-! ******************************************************************************
-! CountLinks -- count number of links in the boundtaslinks list
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- return
     integer(I4B) :: CountLinks
     ! -- dummy
     class(TimeArraySeriesManagerType) :: this
-! ------------------------------------------------------------------------------
     !
     if (associated(this%boundtaslinks)) then
       CountLinks = this%boundTasLinks%Count()
@@ -406,27 +372,23 @@ contains
       CountLinks = 0
     end if
     !
+    ! -- Return
     return
   end function CountLinks
 
   ! -- Private procedures
 
+  !> @brief Convert the array from a flux to a flow rate by multiplying by the
+  !! cell area
+  !<
   subroutine tasmgr_convert_flux(this, tasLink)
-! ******************************************************************************
-! tasmgr_convert_flux -- convert the array from a flux to a flow rate by
-!   multiplying by the cell area
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(TimeArraySeriesManagerType) :: this
     type(TimeArraySeriesLinkType), pointer, intent(inout) :: tasLink
     ! -- local
     integer(I4B) :: i, n, noder
     real(DP) :: area
-! ------------------------------------------------------------------------------
+    !
     if (.not. (associated(this%dis) .and. &
                associated(tasLink%nodelist))) then
       errmsg = 'Programming error. Cannot convert flux. Verify that '&
@@ -444,24 +406,21 @@ contains
       end if
     end do
     !
+    ! -- Return
     return
   end subroutine tasmgr_convert_flux
 
+  !> @brief Add a time arrays series link
+  !<
   subroutine tasmgr_add_link(this, tasLink)
-! ******************************************************************************
-! tasmgr_add_link -- add a time arrays series link
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeArraySeriesManagerType) :: this
     type(TimeArraySeriesLinkType), pointer :: tasLink
     ! -- local
-! ------------------------------------------------------------------------------
     !
     call AddTimeArraySeriesLinkToList(this%boundTasLinks, tasLink)
     !
+    ! -- Return
     return
   end subroutine tasmgr_add_link
 
