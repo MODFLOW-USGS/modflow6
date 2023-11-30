@@ -293,7 +293,7 @@ The binaries can then be found in the `bin` folder. `meson install` also trigger
 
 MODFLOW 6 unit tests are written in Fortran with [`test-drive`](https://github.com/fortran-lang/test-drive).
 
-MODFLOW 6 integration tests are written in Python with [`pytest`](https://docs.pytest.org/en/7.1.x/), with the help of plugins like `pytest-xdist` and `pytest-cases`. Integration testing dependencies are included in the Conda environment `environment.yml`.
+MODFLOW 6 integration tests are written in Python with [`pytest`](https://docs.pytest.org/en/7.1.x/). Integration testing dependencies are included in the Conda environment `environment.yml`.
 
 **Note:** the entire test suite should pass before a pull request is submitted. Tests run in GitHub Actions CI and a PR can only be merged with passing tests. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for more information.
 
