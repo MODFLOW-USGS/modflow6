@@ -13,3 +13,8 @@
 *.png binary
 *.jpg binary
 *.pdf binary
+
+# Configure github-linguist
+*.inc linguist-language=Fortran
+.build_rtd_docs/** linguist-documentation
+.doc/** linguist-documentation
