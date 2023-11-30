@@ -99,7 +99,7 @@ def test_model(
 ):
     model_path = test_model_mf6.parent
     model_name = model_path.name
-    workspace = function_tmpdir / model_name
+    workspace = function_tmpdir
 
     if model_name in excluded_models:
         pytest.skip(f"Excluding mf6 model '{model_name}'")
