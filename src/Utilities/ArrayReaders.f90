@@ -16,6 +16,7 @@ module ArrayReadersModule
   private
   public :: ReadArray
   public :: read_binary_header
+  public :: check_binary_size
 
   interface ReadArray
     module procedure &

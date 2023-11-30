@@ -5,7 +5,7 @@ module Double1dReaderModule
   use BlockParserModule, only: BlockParserType
   use SimVariablesModule, only: errmsg
   use SimModule, only: store_error, store_error_unit
-  use ArrayReadersModule, only: read_binary_header
+  use ArrayReadersModule, only: read_binary_header, check_binary_size
   use ArrayReaderBaseModule, only: ArrayReaderBaseType
 
   implicit none
@@ -85,17 +85,31 @@ contains
   subroutine read_binary(this)
     class(Double1dReaderType) :: this
     integer(I4B) :: i
-    integer(I4B) :: nvals
+    integer(I4B) :: nvals ! values this read
+    integer(I4B) :: nval ! total values read
     integer(I4B) :: istat
-    call read_binary_header(this%input_unit, this%iout, this%array_name, nvals)
-    read (this%input_unit, iostat=istat, iomsg=errmsg) &
-      (this%dbl1d(i), i=1, size(this%dbl1d))
-    if (istat /= 0) then
-      errmsg = 'Error reading data for array '//trim(this%array_name)// &
-               '.  '//trim(errmsg)
-      call store_error(errmsg)
-      call store_error_unit(this%input_unit)
-    end if
+    logical(LGP) :: valid
+
+    nval = 0
+    valid = .true.
+
+    do
+      call read_binary_header(this%input_unit, this%iout, this%array_name, nvals)
+      valid = check_binary_size(nvals, nval, size(this%dbl1d), this%array_name, &
+                                this%input_unit)
+      if (valid .eqv. .false.) exit
+      read (this%input_unit, iostat=istat, iomsg=errmsg) &
+        (this%dbl1d(i), i=nval + 1, nval + nvals)
+      if (istat /= 0) then
+        errmsg = "Error reading data for array '"// &
+                 trim(this%array_name)//"'. "//trim(errmsg)
+        call store_error(errmsg)
+        call store_error_unit(this%input_unit)
+      end if
+      nval = nval + nvals
+      if (nval == size(this%dbl1d)) exit
+    end do
+
   end subroutine read_binary
 
   subroutine set_factor(this)
