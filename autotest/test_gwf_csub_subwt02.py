@@ -582,6 +582,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         check=check_output,
         targets=targets,
         htol=htol[idx],
-        comparison="mf6_regression",
+        compare="mf6_regression",
     )
     test.run()

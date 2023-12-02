@@ -636,7 +636,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         build=lambda t: build_models(idx, t),
         check=lambda t: check_output(idx, t),
         htol=htol[idx],
-        comparison="mf6_regression",
-        cmp_verbose=False,
+        compare="mf6_regression",
+        verbose=False,
     )
     test.run()

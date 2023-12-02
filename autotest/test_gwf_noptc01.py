@@ -122,7 +122,7 @@ def get_model(idx, dir, no_ptcrecord):
 
 
 # water table recharge problem
-def build_model(idx, test):
+def build_models(idx, test):
     sim = get_model(idx, test.workspace, no_ptcrecords[idx])
 
     # build MODFLOW-6 without no_ptc option
@@ -141,6 +141,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         name=name,
         workspace=function_tmpdir,
         targets=targets,
-        build=lambda t: build_model(idx, t),
+        build=lambda t: build_models(idx, t),
     )
     test.run()

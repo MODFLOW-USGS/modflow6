@@ -435,6 +435,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         build=lambda t: build_models(idx, t, gridgen),
         check=lambda t: check_output(idx, t),
         targets=targets,
-        cmp_verbose=False,
+        verbose=False,
     )
     test.run()

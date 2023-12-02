@@ -48,7 +48,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        make_comparison=False,
+        compare=None,
         parallel=True,
         ncpus=ncpus,
     )

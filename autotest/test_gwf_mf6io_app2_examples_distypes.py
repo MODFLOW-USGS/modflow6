@@ -566,7 +566,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         targets=targets,
         build=lambda t: build_model(idx, t, targets.gridgen),
         check=lambda t: eval_head(idx, t),
-        cmp_verbose=False,
-        make_comparison=True,
+        verbose=False,
     )
     test.run()

@@ -111,11 +111,10 @@ def test_model(
         name=model_name,
         workspace=model_path,
         targets=targets,
-        comparison="compare" if original_regression else "mf6_regression",
-        cmp_verbose=False,
-        make_comparison=should_compare(
+        compare="compare" if original_regression else "mf6_regression" if should_compare(
             model_name, excluded_comparisons, targets
-        ),
+        ) else None,
+        verbose=False,
     )
 
     # Run the MODFLOW 6 simulation and compare to results generated using

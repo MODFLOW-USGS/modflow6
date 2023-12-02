@@ -65,11 +65,10 @@ def test_scenario(function_tmpdir, example_scenario, targets):
             name=model_name,
             workspace=model_path,
             targets=targets,
-            comparison="mf6_regression",
-            cmp_verbose=False,
-            make_comparison=should_compare(
+            compare="mf6_regression" if should_compare(
                 name, excluded_comparisons, targets
-            ),
+            ) else None,
+            verbose=False,
         )
 
         # Run the MODFLOW 6 simulation and compare to existing head file or

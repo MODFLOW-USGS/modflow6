@@ -309,7 +309,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         targets=targets,
         build=lambda t: build_models(idx, t),
         check=check_output,
-        make_comparison=False,
-        run_comparison=True,
+        compare="run_only",
     )
     test.run()

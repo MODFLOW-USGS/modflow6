@@ -245,8 +245,7 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         workspace=function_tmpdir,
         targets=targets,
         build=lambda t: build_models(idx, t),
-        make_comparison=should_compare(name, comparisons, targets),
-        comparison="mf6_regression",
-        cmp_verbose=False,
+        compare="mf6_regression" if should_compare(name, comparisons, targets) else "compare",
+        verbose=False,
     )
     test.run()

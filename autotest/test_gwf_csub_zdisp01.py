@@ -560,6 +560,6 @@ def test_mf6model(idx, name, function_tmpdir, targets):
         build=lambda t: build_models(idx, t),
         check=check_output,
         htol=htol[idx],
-        cmp_verbose=False,
+        verbose=False,
     )
     test.run()

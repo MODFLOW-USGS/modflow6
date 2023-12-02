@@ -1,7 +1,9 @@
 import os
+from pathlib import Path
 import shutil
 import time
 from subprocess import PIPE, STDOUT, Popen
+from typing import Iterable
 from warnings import warn
 
 import flopy
@@ -17,7 +19,7 @@ from flopy.utils.compare import compare_heads
 from modflow_devtools.executables import Executables
 from modflow_devtools.misc import get_ostag, is_in_ci
 
-COMPARE_OPTIONS = [
+COMPARISONS = [
     "compare",
     ".cmp",
     "mf2005",
@@ -52,12 +54,12 @@ def api_return(success, model_ws):
     return success, open(fpth).readlines()
 
 
-def get_dvclose(dir_pth):
+def get_dvclose(workspace):
     """Get outer_dvclose value from MODFLOW 6 ims file"""
     dvclose = None
-    files = os.listdir(dir_pth)
+    files = os.listdir(workspace)
     for file_name in files:
-        pth = os.path.join(dir_pth, file_name)
+        pth = os.path.join(workspace, file_name)
         if os.path.isfile(pth):
             if file_name.lower().endswith(".ims"):
                 with open(pth) as f:
@@ -75,12 +77,12 @@ def get_dvclose(dir_pth):
     return dvclose
 
 
-def get_rclose(dir_pth):
+def get_rclose(workspace):
     """Get inner_rclose value from MODFLOW 6 ims file"""
     rclose = None
-    files = os.listdir(dir_pth)
+    files = os.listdir(workspace)
     for file_name in files:
-        pth = os.path.join(dir_pth, file_name)
+        pth = os.path.join(workspace, file_name)
         if os.path.isfile(pth):
             if file_name.lower().endswith(".ims"):
                 with open(pth) as f:
@@ -98,14 +100,14 @@ def get_rclose(dir_pth):
     return rclose
 
 
-def write_models(sims, verbose=True):
+def write_models(*sims, verbose=True):
     """
-    Write simulation/model input files.
+    Write input files for `flopy.mf6.MFSimulation` or `flopy.mbase.BaseModel`.
 
     Parameters
     ----------
 
-    sims : list or array-like
+    sims : arbitrary list
         simulations or models
     verbose : bool
         whether to show verbose output
@@ -113,10 +115,6 @@ def write_models(sims, verbose=True):
 
     if sims is None:
         raise ValueError(f"Simulations or models required")
-
-    # make sure we have a list
-    if not isinstance(sims, (tuple, list, np.ndarray)):
-        sims = [sims]
 
     # write input files for each model or simulation
     for sim in sims:
@@ -144,13 +142,11 @@ class TestFramework:
     __test__ = False
 
     """
-    Test harness for MODFLOW 6.
-
-    Supports:
-     * custom hooks to build models/simulations at test time
-     * custom hooks to check model/simulation result correctness
-     * testing some modflow6 extended features (currently: parallel)
-     * comparing MODFLOW 6 with MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR
+    Test harness for MODFLOW 6. Use flopy and modflow-devtools (todo:
+    in future only flopy?) to define and run test models. Supports:
+     * custom hooks to build models/simulations and check results
+     * testing some modflow6 extended features (currently only parallel)
+     * comparing MF6 with MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, MODFLOW-LGR
 
     Parameters
     ----------
@@ -164,20 +160,34 @@ class TestFramework:
         found, comparisons and regression tests will be skipped).
     build : function, optional
         User defined function returning one or more simulations/models.
+        Takes `self` as input. This is the place to build simulations.
         The first simulation is taken to be the reference, any further
         simulations/models are for comparison. If no build function is
-        provided the build step is skipped (in this case model input
-        files must be written manually before `run()` is invoked).
+        provided, input files must be written before calling `run()`.
     check : function, optional
         User defined function to evaluate results of the simulation.
         Takes `self` as input. This is a good place for assertions.
-        If no check function is provided, evaluations are skipped.
     parallel : bool, optional
         Whether to test mf6 parallel capabilities.
     ncpus : int, optional
         Number of CPUs for mf6 parallel testing.
-    htol : float
+    htol : float, optional
         Tolerance for result comparisons.
+    pdtol : float, optional
+        Percent difference tolerance for result comparisons.
+    rclose : float, optional
+        Residual tolerance for convergence
+    verbose: bool, optional
+        Whether to show verbose output
+    xfail : bool, optional
+        Whether the test is expected to fail
+    api_func: function, optional
+        User defined function invoking the MODFLOW API, accepting
+        the MF6 library path and the test workspace as parameters
+    comparison: str, optional
+        String selecting the comparison action to perform, which
+        may be indicated by a file of the same name in the model
+        working directory, accepted values are in `COMPARISONS`
     """
 
     # builtins
@@ -194,15 +204,22 @@ class TestFramework:
         htol=None,
         pdtol=None,
         rclose=None,
-        cmp_verbose=True,
+        verbose=True,
         xfail=None,
         api_func=None,
-        comparison="compare",
-        make_comparison=True,
-        run_comparison=None,
+        compare="compare",
     ):
-        msg = SFMT.format("Initializing test", name)
-        print(msg)
+        # make sure workspace exists
+        assert (
+            workspace.is_dir()
+        ), f"{workspace} is not a valid directory"
+        if verbose:
+            from pprint import pprint
+            print("Initializing test", name, "in workspace", workspace)
+            contents = list(workspace.glob('*'))
+            if any(contents):
+                print(f"Workspace is non-empty:")
+                pprint(contents)
 
         self.name = name
         self.workspace = workspace
@@ -212,59 +229,15 @@ class TestFramework:
         self.parallel = parallel
         self.ncpus = ncpus
         self.api_func = api_func
-        self.comparison = comparison
-        self.make_comparison = make_comparison
-        if run_comparison is None:
-            self.run_comparison = make_comparison
-        else:
-            self.run_comparison = run_comparison
-
+        self.compare = compare
         self.inpt = None
         self.outp = None
         self.coutp = None
-
-        # make sure workspace exists
-        assert (
-            self.workspace.is_dir()
-        ), f"{self.workspace} is not a valid directory"
-
-        # set htol for comparisons
-        if htol is None:
-            htol = 0.001
-        else:
-            msg = SFMT.format("User specified comparison htol", htol)
-            print(msg)
-
-        self.htol = htol
-
-        # set pdtol for comparisons
-        if pdtol is None:
-            pdtol = 0.001
-        else:
-            msg = SFMT.format(
-                "User specified percent difference comparison pdtol", pdtol
-            )
-            print(msg)
-
-        self.pdtol = pdtol
-
-        # set rclose for comparisons
-        if rclose is None:
-            rclose = 0.001
-        else:
-            msg = SFMT.format(
-                "User specified percent difference comparison rclose", rclose
-            )
-            print(msg)
-
-        self.rclose = rclose
-
-        # set compare verbosity
-        self.cmp_verbose = cmp_verbose
-
-        # set allow failure
+        self.htol = 0.001 if htol is None else htol
+        self.pdtol = 0.001 if pdtol is None else pdtol
+        self.rclose = 0.001 if rclose is None else rclose
+        self.verbose = verbose
         self.xfail = xfail
-
         self.success = False
 
     def __repr__(self):
@@ -447,7 +420,7 @@ class TestFramework:
                     htol=self.htol,
                     difftol=True,
                     # Change to true to have list of all nodes exceeding htol
-                    verbose=self.cmp_verbose,
+                    verbose=self.verbose,
                     exfile=exfile,
                 )
                 msg = SFMT.format(
@@ -480,7 +453,7 @@ class TestFramework:
                 outfile=outfile,
                 files1=fpth0,
                 files2=fpth1,
-                verbose=self.cmp_verbose,
+                verbose=self.verbose,
             )
             msg = SFMT.format(
                 f"{EXTS[extension]} comparison {ipos + 1}",
@@ -515,7 +488,7 @@ class TestFramework:
                 outfile=outfile,
                 files1=fpth0,
                 files2=fpth1,
-                verbose=self.cmp_verbose,
+                verbose=self.verbose,
             )
             msg = SFMT.format(
                 f"{EXTS[extension]} comparison {ipos + 1}",
@@ -565,10 +538,10 @@ class TestFramework:
 
         # open the files
         cbc0 = flopy.utils.CellBudgetFile(
-            fpth0, precision="double", verbose=self.cmp_verbose
+            fpth0, precision="double", verbose=self.verbose
         )
         cbc1 = flopy.utils.CellBudgetFile(
-            fpth1, precision="double", verbose=self.cmp_verbose
+            fpth1, precision="double", verbose=self.verbose
         )
 
         # build list of cbc data to retrieve
@@ -632,7 +605,7 @@ class TestFramework:
                         + f"at time {t} "
                     )
                     fcmp.write(f"{msg}\n")
-                    if self.cmp_verbose:
+                    if self.verbose:
                         print(msg)
 
         msg = SFMT.format(
@@ -676,15 +649,15 @@ class TestFramework:
             rclose *= 5.0
         self.rclose = rclose
 
-        if self.comparison == "mf6_regression":
-            pth = os.path.join(dst, self.comparison)
+        if self.compare == "mf6_regression":
+            pth = os.path.join(dst, self.compare)
             if os.path.isdir(pth):
                 shutil.rmtree(pth)
             shutil.copytree(dst, pth)
         else:
             # get the type of comparison to use
-            self.comparison = get_mf6_comparison(src)
-            setup_mf6_comparison(src, dst, self.comparison, overwrite=True)
+            self.compare = get_mf6_comparison(src)
+            setup_mf6_comparison(src, dst, self.compare, overwrite=True)
 
     def run_main_model(self):
         """
@@ -739,67 +712,54 @@ class TestFramework:
 
         return success
 
-    def run_comparison_model(self, comparison="compare"):
+    def run_comparison_model(self, workspace, exe="mf6"):
         """
         Run comparison model(s).
 
-        comparison : str
-            The comparison type
+        workspace : str or path-like
+            The comparison workspace
+        exe : str or path-like
+            The comparison executable
         """
 
-        if comparison is None:
-            raise ValueError(f"Comparison must be provided")
+        if exe is None:
+            raise ValueError(f"Comparison type not specified")
 
-        # if default comparison (reference files), no way to tell which program to use, skip model run
-        if comparison.lower() == "compare":
-            warn(
-                f"Comparison files provided separately, skipping model run for {self.name}",
-            )
-            return
-
-        cmp_workspace = self.workspace / comparison
-        cmp_key = comparison.lower().replace(".cmp", "")
-        cmp_exe = str(self.targets[cmp_key].absolute())
-        cmp_listfile = cmp_workspace / "mfsim.lst"
+        cmp_key = str(exe)
+        cmp_lst = Path(workspace) / "mfsim.lst"
         self.cmp_namefile = (
             None
             if "mf6" in cmp_key
             or "libmf6" in cmp_key
             or "mf6_regression" in cmp_key
-            else os.path.basename(get_namefiles(cmp_workspace)[0])
+            else os.path.basename(get_namefiles(workspace)[0])
         )
-        print(SFMT.format("comparison executable", cmp_exe))
-        print(SFMT.format("comparison run", self.name + "/" + cmp_key))
+        if self.verbose:
+            print("Running comparison model", self.name, "in workspace", workspace, "with executable", exe)
 
         # run the model via API or per usual
         try:
             success, _ = (
-                self.api_func(cmp_exe, cmp_workspace)
+                self.api_func(exe, workspace)
                 if self.api_func
                 else flopy.run_model(
-                    cmp_exe,
+                    exe,
                     self.cmp_namefile,
-                    cmp_workspace,
+                    workspace,
                 )
             )
 
-            if not success and cmp_listfile.is_file():
+            if not success and cmp_lst.is_file():
                 # print end of mfsim.lst
                 if "mf6" in cmp_key:
                     warn(
                         "Comparison model run failed:\n"
-                        + self._get_mfsim_listing(cmp_listfile)
+                        + self._get_mfsim_listing(cmp_lst)
                     )
         except:
             success = False
-            warn(
-                SFMT.format(
-                    "Unhandled error in comparison model run ",
-                    self.name + "/" + cmp_key,
-                )
-            )
+            warn(f"Unhandled error in comparison model run {self.name}")
             import traceback
-
             traceback.print_exc()
 
         return success
@@ -813,7 +773,9 @@ class TestFramework:
         """
 
         if comparison is None:
-            raise ValueError(f"No comparison action")
+            raise ValueError(f"Comparison type not specified")
+        elif comparison == "run_only":
+            raise ValueError(f"Comparison type 'run_only' specified, skipping comparison")
 
         print(SFMT.format("Comparison test", self.name))
 
@@ -854,14 +816,16 @@ class TestFramework:
 
         # build model(s) and write input files
         if self.build:
-            write_models(self.build(self))
+            built = self.build(self)
+            if not isinstance(built, Iterable): built = [built]
+            write_models(*built)
 
         # run main model(s) and get expected output files
         assert self.run_main_model(), "main model(s) failed"
         _, self.outp = get_mf6_files(self.workspace / "mfsim.nam")
 
         # setup and run comparison model(s), if enabled
-        if self.run_comparison:
+        if self.compare:
             # adjust htol if it is smaller than IMS outer_dvclose
             dvclose = get_dvclose(self.workspace)
             if dvclose is not None:
@@ -878,29 +842,26 @@ class TestFramework:
             self.rclose = rclose
 
             # copy mf6 regression files if needed
-            if self.comparison == "mf6_regression":
-                cmp_path = self.workspace / self.comparison
+            if self.compare == "mf6_regression":
+                cmp_path = self.workspace / self.compare
                 if os.path.isdir(cmp_path):
                     shutil.rmtree(cmp_path)
                 shutil.copytree(self.workspace, cmp_path)
             # detect comparison type if enabled
-            else:
-                self.comparison = get_mf6_comparison(self.workspace)
+            elif self.compare == "compare":
+                self.compare = get_mf6_comparison(self.workspace)
 
-            # run comparison model if enabled
-            if self.comparison:
-                assert self.run_comparison_model(
-                    self.comparison
-                ), "comparison model(s) failed"
-                if "mf6" in self.comparison:
+            # run comparison model, if we have a valid executable
+            if self.compare:
+                cmp_exe = self.targets.get(self.compare.lower().replace(".cmp", ""), self.targets.mf6)
+                cmp_ws = self.workspace / "mf6" if self.compare == "run_only" else self.workspace / self.compare
+                assert self.run_comparison_model(cmp_ws, cmp_exe), "comparison model(s) failed"
+                if cmp_exe.stem == "mf6":
                     _, self.coutp = get_mf6_files(self.workspace / "mfsim.nam")
 
-        # compare model results, if enabled
-        if self.make_comparison:
-            if self.comparison:
-                self.compare_output(self.comparison)
-            else:
-                warn(f"Comparison enabled but no action specified")
+            if self.compare and self.compare != "run_only":
+                # compare model results
+                self.compare_output(self.compare)
 
         # check results, if enabled
         if self.check:

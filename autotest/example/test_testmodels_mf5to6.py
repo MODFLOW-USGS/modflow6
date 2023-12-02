@@ -73,11 +73,10 @@ def test_model(
         name=model_path.name,
         workspace=model_path,
         targets=targets,
-        comparison="compare" if original_regression else "mf6_regression",
-        cmp_verbose=False,
-        make_comparison=should_compare(
+        compare="compare" if original_regression else "mf6_regression" if should_compare(
             model_name, excluded_comparisons, targets
-        ),
+        ) else None,
+        verbose=False,
     )
 
     # run the mf5to6 converter
@@ -100,4 +99,4 @@ def test_model(
     mf6_workspace = function_tmpdir / "mf6"
     test.setup(mf5to6_workspace, mf6_workspace)
     test.run()
-    test.compare_output(test.comparison)
+    test.compare_output(test.compare)
