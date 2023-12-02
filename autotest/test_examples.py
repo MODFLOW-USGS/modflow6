@@ -64,13 +64,15 @@ def test_scenario(function_tmpdir, example_scenario, targets):
             name=model_name,
             workspace=model_path,
             targets=targets,
-            compare="mf6_regression" if should_compare(
-                name, excluded_comparisons, targets
-            ) else None,
+            compare="mf6_regression"
+            if should_compare(name, excluded_comparisons, targets)
+            else None,
             verbose=False,
         )
 
+        # setup temp dir as test workspace
+        test.setup(model_path, workspace)
+
         # Run the MODFLOW 6 simulation and compare to existing head file or
         # appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
-        test.setup(model_path, workspace)
         test.run()

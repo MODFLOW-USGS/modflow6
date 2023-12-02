@@ -29,7 +29,6 @@ def test_model(
 ):
     model_path = large_test_model.parent
     model_name = model_path.name
-    workspace = function_tmpdir
 
     if model_name in excluded_models:
         pytest.skip(f"Excluding large mf6 model '{model_name}'")
@@ -43,10 +42,18 @@ def test_model(
         name=model_name,
         workspace=model_path,
         targets=targets,
-        compare="compare" if original_regression else "mf6_regression" if should_compare(
-            model_name, excluded_comparisons, targets
-        ) else None,
+        compare="compare"
+        if original_regression
+        else "mf6_regression"
+        if should_compare(model_name, excluded_comparisons, targets)
+        else None,
         verbose=False,
     )
-    test.setup(model_path, workspace)
+
+    # setup temp dir as test workspace
+    test.setup(model_path, function_tmpdir)
+
+    # Run the MODFLOW 6 simulation and compare to results generated using
+    # 1) the current MODFLOW 6 release, 2) an existing head file, or 3) or
+    # appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
     test.run()

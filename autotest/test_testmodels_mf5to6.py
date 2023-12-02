@@ -73,9 +73,11 @@ def test_model(
         name=model_path.name,
         workspace=model_path,
         targets=targets,
-        compare="compare" if original_regression else "mf6_regression" if should_compare(
-            model_name, excluded_comparisons, targets
-        ) else None,
+        compare="compare"
+        if original_regression
+        else "mf6_regression"
+        if should_compare(model_name, excluded_comparisons, targets)
+        else None,
         verbose=False,
     )
 
@@ -94,9 +96,10 @@ def test_model(
     )
     assert success
 
-    # Run the MODFLOW 6 simulation and compare to existing head file or
-    # appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
+    # setup temp dir as test workspace
     mf6_workspace = function_tmpdir / "mf6"
     test.setup(mf5to6_workspace, mf6_workspace)
+
+    # Run the MODFLOW 6 simulation and compare to existing head file or
+    # appropriate MODFLOW-2005, MODFLOW-NWT, MODFLOW-USG, or MODFLOW-LGR run.
     test.run()
-    test.compare_output(test.compare)

@@ -43,7 +43,6 @@ EXTS = {
     "ucn": "concentration",
     "cbc": "cell-by-cell",
 }
-SFMT = "{:25s} - {}"
 
 
 def api_return(success, model_ws):
@@ -190,7 +189,7 @@ class TestFramework:
         working directory, accepted values are in `COMPARISONS`
     """
 
-    # builtins
+    # builtin
 
     def __init__(
         self,
@@ -210,20 +209,21 @@ class TestFramework:
         compare="compare",
     ):
         # make sure workspace exists
-        assert (
-            workspace.is_dir()
-        ), f"{workspace} is not a valid directory"
+        assert workspace.is_dir(), f"{workspace} is not a valid directory"
         if verbose:
             from pprint import pprint
+
             print("Initializing test", name, "in workspace", workspace)
-            contents = list(workspace.glob('*'))
+            contents = list(workspace.glob("*"))
             if any(contents):
                 print(f"Workspace is non-empty:")
                 pprint(contents)
 
         self.name = name
         self.workspace = workspace
-        self.targets = Executables(**targets) if isinstance(targets, dict) else targets
+        self.targets = (
+            Executables(**targets) if isinstance(targets, dict) else targets
+        )
         self.build = build
         self.check = check
         self.parallel = parallel
@@ -361,11 +361,10 @@ class TestFramework:
                             idx = files_cmp.index(file1 + ".cmp")
                             pth = os.path.join(cpth, files_cmp[idx])
                             files2.append(pth)
-                            txt = SFMT.format(
+                            print(
                                 f"Comparison file {ipos + 1}",
                                 os.path.basename(pth),
                             )
-                            print(txt)
                     else:
                         if self.coutp is not None:
                             for file2 in self.coutp:
@@ -402,11 +401,10 @@ class TestFramework:
                     if len(exfiles) > 0:
                         exfile = exfiles[ipos]
                         if exfile is not None:
-                            txt = SFMT.format(
+                            print(
                                 f"Exclusion file {ipos + 1}",
                                 os.path.basename(exfile),
                             )
-                            print(txt)
 
                 # make comparison
                 success = compare_heads(
@@ -423,11 +421,7 @@ class TestFramework:
                     verbose=self.verbose,
                     exfile=exfile,
                 )
-                msg = SFMT.format(
-                    f"{EXTS[ext]} comparison {ipos + 1}",
-                    self.name,
-                )
-                print(msg)
+                print(f"{EXTS[ext]} comparison {ipos + 1}", self.name)
 
                 if not success:
                     break
@@ -455,9 +449,9 @@ class TestFramework:
                 files2=fpth1,
                 verbose=self.verbose,
             )
-            msg = SFMT.format(
-                f"{EXTS[extension]} comparison {ipos + 1}",
-                f"{self.name} ({os.path.basename(fpth0)})",
+            msg = (
+                f"{EXTS[extension]} comparison {ipos + 1}"
+                + f"{self.name} ({os.path.basename(fpth0)})"
             )
             ipos += 1
             print(msg)
@@ -490,9 +484,9 @@ class TestFramework:
                 files2=fpth1,
                 verbose=self.verbose,
             )
-            msg = SFMT.format(
-                f"{EXTS[extension]} comparison {ipos + 1}",
-                f"{self.name} ({os.path.basename(fpth0)})",
+            msg = (
+                f"{EXTS[extension]} comparison {ipos + 1}"
+                + f"{self.name} ({os.path.basename(fpth0)})",
             )
             ipos += 1
             print(msg)
@@ -608,11 +602,10 @@ class TestFramework:
                     if self.verbose:
                         print(msg)
 
-        msg = SFMT.format(
+        print(
             f"{EXTS[extension]} comparison {ipos + 1}",
             f"{self.name} ({os.path.basename(fpth0)})",
         )
-        print(msg)
         fcmp.close()
 
         return success, msg
@@ -620,14 +613,10 @@ class TestFramework:
     # public
 
     def setup(self, src, dst):
-        print(
-            SFMT.format(
-                "Setting up MF6 test", self.name, "from existing model"
-            )
-        )
+        print("Setting up MF6 test", self.name)
+        print("  Source:", src)
+        print("  Destination:", dst)
         self.workspace = dst
-        print(f"source:      {src}")
-        print(f"destination: {dst}")
 
         # setup expected input and output files
         self.inpt, self.outp = setup_mf6(src=src, dst=dst)
@@ -678,22 +667,18 @@ class TestFramework:
             try:
                 success, _ = self._run_parallel(exe)
             except Exception as exc:
-                print(
-                    SFMT.format("MODFLOW 6 parallel test", self.name, "failed")
-                )
+                print("MODFLOW 6 parallel test", self.name, "failed")
                 print(exc)
                 success = False
         else:
             # otherwise serial run
             try:
-                print(SFMT.format("MODFLOW 6 test", self.name))
+                print("MODFLOW 6 test", self.name)
                 success, _ = flopy.run_model(
                     exe, nam_file, model_ws=self.workspace
                 )
             except Exception as exc:
-                print(
-                    SFMT.format("MODFLOW 6 serial test", self.name, "failed")
-                )
+                print("MODFLOW 6 serial test", self.name, "failed")
                 print(exc)
                 success = False
 
@@ -735,7 +720,14 @@ class TestFramework:
             else os.path.basename(get_namefiles(workspace)[0])
         )
         if self.verbose:
-            print("Running comparison model", self.name, "in workspace", workspace, "with executable", exe)
+            print(
+                "Running comparison model",
+                self.name,
+                "in workspace",
+                workspace,
+                "with executable",
+                exe,
+            )
 
         # run the model via API or per usual
         try:
@@ -758,8 +750,9 @@ class TestFramework:
                     )
         except:
             success = False
-            warn(f"Unhandled error in comparison model run {self.name}")
+            warn(f"Unhandled error in comparison model {self.name}")
             import traceback
+
             traceback.print_exc()
 
         return success
@@ -775,9 +768,11 @@ class TestFramework:
         if comparison is None:
             raise ValueError(f"Comparison type not specified")
         elif comparison == "run_only":
-            raise ValueError(f"Comparison type 'run_only' specified, skipping comparison")
+            raise ValueError(
+                f"Comparison type 'run_only' specified, skipping comparison"
+            )
 
-        print(SFMT.format("Comparison test", self.name))
+        print("Comparison test", self.name)
 
         hds_ext = (
             "hds",
@@ -817,7 +812,8 @@ class TestFramework:
         # build model(s) and write input files
         if self.build:
             built = self.build(self)
-            if not isinstance(built, Iterable): built = [built]
+            if not isinstance(built, Iterable):
+                built = [built]
             write_input(*built)
 
         # run main model(s) and get expected output files
@@ -853,9 +849,17 @@ class TestFramework:
 
             # run comparison model, if we have a valid executable
             if self.compare:
-                cmp_exe = self.targets.get(self.compare.lower().replace(".cmp", ""), self.targets.mf6)
-                cmp_ws = self.workspace / "mf6" if self.compare == "run_only" else self.workspace / self.compare
-                assert self.run_comparison_model(cmp_ws, cmp_exe), "comparison model(s) failed"
+                cmp_exe = self.targets.get(
+                    self.compare.lower().replace(".cmp", ""), self.targets.mf6
+                )
+                cmp_ws = (
+                    self.workspace / "mf6"
+                    if self.compare == "run_only"
+                    else self.workspace / self.compare
+                )
+                assert self.run_comparison_model(
+                    cmp_ws, cmp_exe
+                ), "comparison model(s) failed"
                 if cmp_exe.stem == "mf6":
                     _, self.coutp = get_mf6_files(self.workspace / "mfsim.nam")
 
