@@ -504,7 +504,7 @@ class TestFramework:
         extension = "cbc"
         ipos = 0
         for idx, (fpth0, fpth1) in enumerate(zip(files0, files1)):
-            success, msg = self._compare_budget_files(
+            success = self._compare_budget_files(
                 ipos,
                 extension,
                 fpth0,
@@ -608,7 +608,7 @@ class TestFramework:
         )
         fcmp.close()
 
-        return success, msg
+        return success
 
     # public
 
