@@ -3,7 +3,7 @@ from pathlib import Path
 import shutil
 import time
 from subprocess import PIPE, STDOUT, Popen
-from typing import Iterable, Union
+from typing import Callable, Iterable, Optional, Union
 from warnings import warn
 
 import flopy
@@ -19,22 +19,6 @@ from flopy.utils.compare import compare_heads
 from modflow_devtools.executables import Executables
 from modflow_devtools.misc import get_ostag, is_in_ci
 
-COMPARISONS = [
-    "compare",
-    ".cmp",
-    "mf2005",
-    "mf2005.cmp",
-    "mfnwt",
-    "mfnwt.cmp",
-    "mfusg",
-    "mfusg.cmp",
-    "mflgr",
-    "mflgr.cmp",
-    "libmf6",
-    "libmf6.cmp",
-    "mf6",
-    "mf6.cmp",
-]
 DNODATA = 3.0e30
 EXTS = {
     "hds": "head",
@@ -183,10 +167,9 @@ class TestFramework:
     api_func: function, optional
         User defined function invoking the MODFLOW API, accepting
         the MF6 library path and the test workspace as parameters
-    comparison: str, optional
-        String selecting the comparison action to perform, which
-        may be indicated by a file of the same name in the model
-        working directory, accepted values are in `COMPARISONS`
+    compare: str, optional
+        String selecting the comparison type to perform: 'auto',
+        'mf6_regression', or 'run_only'
     """
 
     # builtin
@@ -194,21 +177,22 @@ class TestFramework:
     def __init__(
         self,
         name: str,
-        workspace: os.PathLike,
+        workspace: Union[str, os.PathLike],
         targets: Union[dict, Executables],
-        build=None,
-        check=None,
+        api_func: Optional[Callable] = None,
+        build: Optional[Callable] = None,
+        check: Optional[Callable] = None,
+        compare: Optional[str] = "auto",
         parallel=False,
         ncpus=1,
         htol=None,
         pdtol=None,
         rclose=None,
-        verbose=True,
-        xfail=None,
-        api_func=None,
-        compare="compare",
+        verbose=False,
+        xfail=False,
     ):
         # make sure workspace exists
+        workspace = Path(workspace).expanduser().absolute()
         assert workspace.is_dir(), f"{workspace} is not a valid directory"
         if verbose:
             from pprint import pprint
@@ -216,7 +200,7 @@ class TestFramework:
             print("Initializing test", name, "in workspace", workspace)
             contents = list(workspace.glob("*"))
             if any(contents):
-                print(f"Workspace is non-empty:")
+                print(f"Workspace is not empty:")
                 pprint(contents)
 
         self.name = name
@@ -238,7 +222,6 @@ class TestFramework:
         self.rclose = 0.001 if rclose is None else rclose
         self.verbose = verbose
         self.xfail = xfail
-        self.success = False
 
     def __repr__(self):
         return self.name
@@ -329,7 +312,7 @@ class TestFramework:
         # if a comparison path is provided, compare with the reference model results
         if cpth:
             files_cmp = None
-            if comparison is not None and comparison.lower() == "compare":
+            if comparison is not None and comparison.lower() == "auto":
                 files_cmp = []
                 files = os.listdir(cpth)
                 for file in files:
@@ -503,7 +486,7 @@ class TestFramework:
         files0, files1 = self._regression_files(extensions)
         extension = "cbc"
         ipos = 0
-        for idx, (fpth0, fpth1) in enumerate(zip(files0, files1)):
+        for fpth0, fpth1 in zip(files0, files1):
             success = self._compare_budget_files(
                 ipos,
                 extension,
@@ -564,7 +547,6 @@ class TestFramework:
         times = cbc0.get_times()
 
         # process data
-        success_tst = True
         for key, key1 in zip(cbc_keys0, cbc_keys1):
             for idx, (k, t) in enumerate(zip(kk, times)):
                 v0 = cbc0.get_data(kstpkper=k, text=key)[0]
@@ -757,17 +739,17 @@ class TestFramework:
 
         return success
 
-    def compare_output(self, comparison="compare"):
+    def compare_output(self, compare="auto"):
         """
         Compare the main model's output with a reference or regression model's output.
 
         comparison : str
-            The comparison type
+            The comparison type: "auto", "mf6", "mf6_regression", etc
         """
 
-        if comparison is None:
+        if compare is None:
             raise ValueError(f"Comparison type not specified")
-        elif comparison == "run_only":
+        elif compare == "run_only":
             raise ValueError(
                 f"Comparison type 'run_only' specified, skipping comparison"
             )
@@ -785,10 +767,10 @@ class TestFramework:
             "cbc",
             "bud",
         )
-        cmp_path = self.workspace / comparison
-        if "mf6" in comparison:
+        cmp_path = self.workspace / compare
+        if "mf6" in compare:
             _, self.coutp = get_mf6_files(cmp_path / "mfsim.nam")
-        if "mf6_regression" in comparison:
+        if "mf6_regression" in compare:
             assert self._compare_heads(
                 extensions=hds_ext
             ), "head comparison failed"
@@ -800,7 +782,7 @@ class TestFramework:
             ), "concentration comparison failed"
         else:
             assert self._compare_heads(
-                comparison=comparison, cpth=cmp_path, extensions=hds_ext
+                comparison=compare, cpth=cmp_path, extensions=hds_ext
             ), "head comparison failed"
 
     def run(self):
@@ -812,9 +794,7 @@ class TestFramework:
         # build model(s) and write input files
         if self.build:
             built = self.build(self)
-            if not isinstance(built, Iterable):
-                built = [built]
-            write_input(*built)
+            write_input(*([built] if not isinstance(built, Iterable) else built))
 
         # run main model(s) and get expected output files
         assert self.run_main_model(), "main model(s) failed"
@@ -837,34 +817,53 @@ class TestFramework:
                 rclose *= 5.0
             self.rclose = rclose
 
-            # copy mf6 regression files if needed
+            # try to autodetect comparison type if enabled
+            if self.compare == "auto":
+                self.compare = get_mf6_comparison(self.workspace)
+            if not self.compare:
+                warn("Could not detect comparison type, aborting comparison")
+                return
+
+            # copy reference model files if mf6 regression test
             if self.compare == "mf6_regression":
                 cmp_path = self.workspace / self.compare
                 if os.path.isdir(cmp_path):
                     shutil.rmtree(cmp_path)
                 shutil.copytree(self.workspace, cmp_path)
-            # detect comparison type if enabled
-            elif self.compare == "compare":
-                self.compare = get_mf6_comparison(self.workspace)
 
-            # run comparison model, if we have a valid executable
-            if self.compare:
-                cmp_exe = self.targets.get(
-                    self.compare.lower().replace(".cmp", ""), self.targets.mf6
-                )
-                cmp_ws = (
-                    self.workspace / "mf6"
-                    if self.compare == "run_only"
-                    else self.workspace / self.compare
-                )
-                assert self.run_comparison_model(
-                    cmp_ws, cmp_exe
-                ), "comparison model(s) failed"
-                if cmp_exe.stem == "mf6":
+            # sometimes want to run comparison model, but not compare results
+            run_only = self.compare == "run_only"
+
+            # todo: don't hardcode workspace / assume agreement with test case
+            # simulation workspace, store/access sim/model workspaces directly
+            workspace = (self.workspace / "mf6"
+                if run_only
+                else self.workspace / self.compare)
+            
+            # look up the target executable, can be
+            #   - mf2005
+            #   - mfnwt
+            #   - mfusg
+            #   - mflgr
+            #   - libmf6
+            #   - mf6
+            #   - mf6_regression
+            exe = self.targets.get(
+                self.compare.lower().replace(".cmp", ""),
+                self.targets.mf6,
+            )
+
+            # run the comparison model, todo: support any number of such
+            assert self.run_comparison_model(
+                workspace=workspace,
+                exe=exe,
+            ), "comparison model(s) failed"
+
+            # compare model results, if enabled
+            if not run_only:
+                # if mf6 or mf6 regression test, get output files
+                if "mf6" in self.compare:
                     _, self.coutp = get_mf6_files(self.workspace / "mfsim.nam")
-
-            if self.compare and self.compare != "run_only":
-                # compare model results
                 self.compare_output(self.compare)
 
         # check results, if enabled

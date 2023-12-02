@@ -445,8 +445,8 @@ def get_mf6_comparison(src):
 
     """
     # Possible comparison - the order matters
-    optcomp = (
-        "compare",
+    OPTCOMP = (
+        "auto",
         ".cmp",
         "mf2005",
         "mf2005.cmp",
@@ -464,26 +464,30 @@ def get_mf6_comparison(src):
     # Construct src pth from namefile
     for _, dirs, _ in os.walk(src):
         dl = [d.lower() for d in dirs]
-        for oc in optcomp:
+        for oc in OPTCOMP:
             if any(oc in s for s in dl):
                 return oc
 
 
 def setup_mf6_comparison(
-    src, dst, action="compare", overwrite=True, verbose=False
+    src, dst, compare="auto", overwrite=True, verbose=False
 ):
     """Setup comparison for MODFLOW 6 simulation.
 
     Parameters
     ----------
     src : path-like
-        directory with original MODFLOW 6 input files
+        Directory with original MODFLOW 6 input files.
     dst : path-like
-        directory to copy MODFLOW 6 input files to
-    action : str
-        type of comparison to use (compare, mf2005, etc)
-    overwrite : bool
-        whether to overwrite the destination directory if it exists (default is True)
+        Directory to copy MODFLOW 6 input files to.
+    compare : str, optional
+        Type of comparison to use: 'auto', 'mf6', 'mf2005'. Use "auto" to include all
+        files in the source folder whose name includes "cmp". If not "auto", selects
+        the subdirectory of `src` containing reference files (default is "auto").
+    overwrite : bool, optional
+        Whether to overwrite the destination directory if it exists (default is True).
+    verbose : bool, optional
+        Whether to show verbose output
 
     Returns
     -------
@@ -492,12 +496,12 @@ def setup_mf6_comparison(
 
     """
 
-    if action is None:
+    if compare is None:
         warn(f"No action provided, aborting")
         return
 
     # create and/or clean dest dir if needed
-    dst = Path(dst) / action
+    dst = Path(dst) / compare
     dst.mkdir(exist_ok=True)
     dls = list(os.walk(dst))
     if overwrite and any(dls):
@@ -518,10 +522,10 @@ def setup_mf6_comparison(
         raise ValueError(f"Destination exists but overwrite disabled: {dst}")
 
     # copy files
-    cmppth = os.path.join(src, action)
+    cmppth = os.path.join(src, compare)
     files = os.listdir(cmppth)
     files2copy = []
-    if action.lower() == "compare" or action.lower() == ".cmp":
+    if compare.lower() == "auto":
         for file in files:
             if ".cmp" in os.path.splitext(file)[1].lower():
                 files2copy.append(os.path.join(cmppth, file))
@@ -534,12 +538,12 @@ def setup_mf6_comparison(
             else:
                 print(srcf + " does not exist")
     else:
-        if "mf6" in action.lower():
+        if "mf6" in compare.lower():
             for file in files:
                 if "mfsim.nam" in file.lower():
                     srcf = os.path.join(cmppth, os.path.basename(file))
                     files2copy.append(srcf)
-                    srcdir = os.path.join(src, action)
+                    srcdir = os.path.join(src, compare)
                     setup_mf6(srcdir, dst, remove_existing=overwrite)
                     break
         else:
@@ -547,7 +551,7 @@ def setup_mf6_comparison(
                 if ".nam" in os.path.splitext(file)[1].lower():
                     srcf = os.path.join(cmppth, os.path.basename(file))
                     files2copy.append(srcf)
-                    nf = os.path.join(src, action, os.path.basename(file))
+                    nf = os.path.join(src, compare, os.path.basename(file))
                     model_setup(nf, dst, remove_existing=overwrite)
                     break
 
