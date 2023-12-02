@@ -113,4 +113,4 @@ jobs:
 
       - name: Run tests
         working-directory: modflow6/autotest
-        run: pytest -v -n auto --durations 0 example/test_${{ matrix.repo }}.py
+        run: pytest -v -n auto --durations 0 test_${{ matrix.repo }}.py

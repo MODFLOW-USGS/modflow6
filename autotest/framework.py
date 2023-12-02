@@ -3,7 +3,7 @@ from pathlib import Path
 import shutil
 import time
 from subprocess import PIPE, STDOUT, Popen
-from typing import Iterable
+from typing import Iterable, Union
 from warnings import warn
 
 import flopy
@@ -100,7 +100,7 @@ def get_rclose(workspace):
     return rclose
 
 
-def write_models(*sims, verbose=True):
+def write_input(*sims, verbose=True):
     """
     Write input files for `flopy.mf6.MFSimulation` or `flopy.mbase.BaseModel`.
 
@@ -196,7 +196,7 @@ class TestFramework:
         self,
         name: str,
         workspace: os.PathLike,
-        targets: Executables,
+        targets: Union[dict, Executables],
         build=None,
         check=None,
         parallel=False,
@@ -223,7 +223,7 @@ class TestFramework:
 
         self.name = name
         self.workspace = workspace
-        self.targets = targets
+        self.targets = Executables(**targets) if isinstance(targets, dict) else targets
         self.build = build
         self.check = check
         self.parallel = parallel
@@ -818,7 +818,7 @@ class TestFramework:
         if self.build:
             built = self.build(self)
             if not isinstance(built, Iterable): built = [built]
-            write_models(*built)
+            write_input(*built)
 
         # run main model(s) and get expected output files
         assert self.run_main_model(), "main model(s) failed"

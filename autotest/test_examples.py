@@ -53,11 +53,10 @@ excluded_comparisons = {
 @pytest.mark.slow
 def test_scenario(function_tmpdir, example_scenario, targets):
     name, namefiles = example_scenario
-    model_paths = [nf.parent for nf in namefiles]
-
     if name in excluded_models:
         pytest.skip(f"Excluding mf6 model: {name}")
 
+    model_paths = [nf.parent for nf in namefiles]
     for model_path in model_paths:
         model_name = f"{name}_{model_path.name}"
         workspace = function_tmpdir / model_name
