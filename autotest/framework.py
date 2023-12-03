@@ -1,23 +1,20 @@
 import os
-from pathlib import Path
 import shutil
 import time
+import traceback
+from pathlib import Path
 from subprocess import PIPE, STDOUT, Popen
 from typing import Callable, Iterable, Optional, Union
 from warnings import warn
 
 import flopy
 import numpy as np
-from common_regression import (
-    get_mf6_comparison,
-    get_mf6_files,
-    get_namefiles,
-    setup_mf6,
-    setup_mf6_comparison,
-)
 from flopy.utils.compare import compare_heads
 from modflow_devtools.executables import Executables
 from modflow_devtools.misc import get_ostag, is_in_ci
+
+from common_regression import (get_mf6_comparison, get_mf6_files,
+                               get_namefiles, setup_mf6, setup_mf6_comparison)
 
 DNODATA = 3.0e30
 EXTS = {
@@ -305,14 +302,14 @@ class TestFramework:
                         break
         return files0, files1
 
-    def _compare_heads(self, comparison=None, cpth=None, extensions="hds"):
+    def _compare_heads(self, compare=None, cpth=None, extensions="hds"):
         if isinstance(extensions, str):
             extensions = [extensions]
 
         # if a comparison path is provided, compare with the reference model results
         if cpth:
             files_cmp = None
-            if comparison is not None and comparison.lower() == "auto":
+            if compare is not None and compare.lower() == "auto":
                 files_cmp = []
                 files = os.listdir(cpth)
                 for file in files:
@@ -732,10 +729,9 @@ class TestFramework:
                     )
         except:
             success = False
-            warn(f"Unhandled error in comparison model {self.name}")
-            import traceback
-
-            traceback.print_exc()
+            warn(
+                f"Unhandled error in comparison model {self.name}:\n{traceback.format_exc()}"
+            )
 
         return success
 
@@ -782,7 +778,7 @@ class TestFramework:
             ), "concentration comparison failed"
         else:
             assert self._compare_heads(
-                comparison=compare, cpth=cmp_path, extensions=hds_ext
+                compare=compare, cpth=cmp_path, extensions=hds_ext
             ), "head comparison failed"
 
     def run(self):
@@ -791,10 +787,21 @@ class TestFramework:
 
         """
 
-        # build model(s) and write input files
+        # build/store models andd simulations and write input files
         if self.build:
-            built = self.build(self)
-            write_input(*([built] if not isinstance(built, Iterable) else built))
+            sims = self.build(self)
+            sims = [sims] if not isinstance(sims, Iterable) else sims
+            sims = [sim for sim in sims if sim]
+            assert len(sims) <= 2, "expected at most 2 simulations/models"
+            self.sims = {
+                (
+                    sim.sim_path
+                    if isinstance(sim, flopy.mf6.MFSimulation)
+                    else sim.model_ws
+                ): sim
+                for sim in sims
+            }
+            write_input(*sims)
 
         # run main model(s) and get expected output files
         assert self.run_main_model(), "main model(s) failed"
@@ -802,14 +809,14 @@ class TestFramework:
 
         # setup and run comparison model(s), if enabled
         if self.compare:
-            # adjust htol if it is smaller than IMS outer_dvclose
+            # adjust htol if < IMS outer_dvclose
             dvclose = get_dvclose(self.workspace)
             if dvclose is not None:
                 dvclose *= 5.0
                 if self.htol < dvclose:
                     self.htol = dvclose
 
-            # get rclose to use with budget comparisons
+            # adjust rclose for budget comparisons
             rclose = get_rclose(self.workspace)
             if rclose is None:
                 rclose = 0.5
@@ -824,22 +831,24 @@ class TestFramework:
                 warn("Could not detect comparison type, aborting comparison")
                 return
 
-            # copy reference model files if mf6 regression test
+            # copy reference model files if mf6 regression
             if self.compare == "mf6_regression":
                 cmp_path = self.workspace / self.compare
                 if os.path.isdir(cmp_path):
                     shutil.rmtree(cmp_path)
                 shutil.copytree(self.workspace, cmp_path)
 
-            # sometimes want to run comparison model, but not compare results
+            # run comparison model, don't compare results
             run_only = self.compare == "run_only"
 
             # todo: don't hardcode workspace / assume agreement with test case
             # simulation workspace, store/access sim/model workspaces directly
-            workspace = (self.workspace / "mf6"
+            workspace = (
+                self.workspace / "mf6"
                 if run_only
-                else self.workspace / self.compare)
-            
+                else self.workspace / self.compare
+            )
+
             # look up the target executable, can be
             #   - mf2005
             #   - mfnwt
@@ -853,7 +862,7 @@ class TestFramework:
                 self.targets.mf6,
             )
 
-            # run the comparison model, todo: support any number of such
+            # run comparison model
             assert self.run_comparison_model(
                 workspace=workspace,
                 exe=exe,
