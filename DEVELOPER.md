@@ -446,8 +446,6 @@ Tests using models from external repositories can be selected with the `repo` ma
 pytest -v -n auto -m "repo"
 ```
 
-All tests using models from external repositories are in `autotest/example`.
-
 The `large` marker is a subset of the `repo` marker. To test models excluded from commit-triggered CI and only run on GitHub Actions nightly:
 
 ```shell
