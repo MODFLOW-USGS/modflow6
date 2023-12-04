@@ -505,11 +505,7 @@ jobs:
       - name: Update PKG_CONFIG_PATH
         working-directory: modflow6
         run: |
-          if [ "$RUNNER_OS" == "Linux" ]; then
-            echo "PKG_CONFIG_PATH=/home/runner/micromamba/envs/modflow6/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
-          elif [ "$RUNNER_OS" == "macOS" ]; then
-            echo "PKG_CONFIG_PATH=/Users/runner/micromamba/envs/modflow6/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
-          fi
+          echo "PKG_CONFIG_PATH=$CONDA_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
       - name: Build modflow6
         working-directory: modflow6
