@@ -38,7 +38,9 @@ module TimeSeriesManagerModule
     type(HashTableType), pointer, private :: BndTsHashTable => null() ! hash of ts to tsobj
     type(TimeSeriesContainerType), allocatable, dimension(:), &
       private :: TsContainers
+
   contains
+
     ! -- Public procedures
     procedure, public :: tsmanager_df
     procedure, public :: ad => tsmgr_ad
@@ -55,20 +57,15 @@ module TimeSeriesManagerModule
 
 contains
 
+  !> @brief Create the tsmanager
+  !<
   subroutine tsmanager_cr(this, iout, removeTsLinksOnCompletion, &
                           extendTsToEndOfSimulation)
-! ******************************************************************************
-! tsmanager_cr -- create the tsmanager
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     type(TimeSeriesManagerType) :: this
     integer(I4B), intent(in) :: iout
     logical, intent(in), optional :: removeTsLinksOnCompletion
     logical, intent(in), optional :: extendTsToEndOfSimulation
-! ------------------------------------------------------------------------------
     !
     this%iout = iout
     if (present(removeTsLinksOnCompletion)) then
@@ -82,36 +79,27 @@ contains
     allocate (this%tsfileList)
     allocate (this%tsfiles(1000))
     !
+    ! -- Return
     return
   end subroutine tsmanager_cr
 
+  !> @brief Define time series manager object
+  !<
   subroutine tsmanager_df(this)
-! ******************************************************************************
-! tsmanager_df -- define
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(TimeSeriesManagerType) :: this
-! ------------------------------------------------------------------------------
     !
     if (this%numtsfiles > 0) then
       call this%HashBndTimeSeries()
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine tsmanager_df
 
+  !> @brief Add a time series file to this manager
+  !<
   subroutine add_tsfile(this, fname, inunit)
-! ******************************************************************************
-! add_tsfile -- add a time series file to this manager
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: store_error, store_error_unit
     use ArrayHandlersModule, only: ExpandArray
@@ -123,7 +111,6 @@ contains
     integer(I4B) :: isize
     integer(I4B) :: i
     class(TimeSeriesFileType), pointer :: tsfile => null()
-! ------------------------------------------------------------------------------
     !
     ! -- Check for fname duplicates
     if (this%numtsfiles > 0) then
@@ -146,17 +133,14 @@ contains
     ! --
     call this%tsfileList%Add(fname, this%iout, tsfile)
     !
+    ! -- Return
     return
   end subroutine add_tsfile
 
+  !> @brief Time step (or subtime step) advance. Call this each time step or
+  !! subtime step
+  !<
   subroutine tsmgr_ad(this)
-! ******************************************************************************
-! tsmgr_ad -- time step (or subtime step) advance. Call this each time step or
-!   subtime step.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesManagerType) :: this
     ! -- local
@@ -165,7 +149,7 @@ contains
     integer(I4B) :: i, nlinks, nauxlinks
     real(DP) :: begintime, endtime, tsendtime
     character(len=LENPACKAGENAME + 2) :: pkgID
-    ! formats
+    ! -- formats
     character(len=*), parameter :: fmt5 = &
       "(/,'Time-series controlled values in stress period: ', i0, &
       &', time step ', i0, ':')"
@@ -177,7 +161,6 @@ contains
            ' value from time series "', a, '" = ', g12.5)
 25  format(a, ' package: Boundary ', i0, ', ', a, &
            ' value from time series "', a, '" = ', g12.5, ' (', a, ')')
-! ------------------------------------------------------------------------------
     !
     ! -- Initialize time variables
     begintime = totimc
@@ -323,20 +306,16 @@ contains
       end if
     end if
     !
+    ! -- Return
     return
   end subroutine tsmgr_ad
 
+  !> @brief Deallocate memory
+  !<
   subroutine tsmgr_da(this)
-! ******************************************************************************
-! tsmgr_da -- deallocate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesManagerType) :: this
     ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- Deallocate time-series links in boundTsLinks
     call this%boundTsLinks%Clear(.true.)
@@ -357,24 +336,21 @@ contains
     !
     deallocate (this%tsfiles)
     !
+    ! -- Return
     return
   end subroutine tsmgr_da
 
+  !> @brief Call this when a new BEGIN PERIOD block is read for a new stress
+  !! period
+  !<
   subroutine Reset(this, pkgName)
-! ******************************************************************************
-! reset -- Call this when a new BEGIN PERIOD block is read for a new stress
-!    period.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesManagerType) :: this
     character(len=*), intent(in) :: pkgName
     ! -- local
     integer(I4B) :: i, nlinks
     type(TimeSeriesLinkType), pointer :: tslink
-! ------------------------------------------------------------------------------
+    !
     ! Zero out values for time-series controlled stresses.
     ! Also deallocate all tslinks too.
     ! Then when time series are
@@ -412,17 +388,14 @@ contains
       end if
     end do
     !
+    ! -- Return
     return
   end subroutine Reset
 
+  !> @brief Make link
+  !<
   subroutine make_link(this, timeSeries, pkgName, auxOrBnd, bndElem, &
                        irow, jcol, iprpak, tsLink, text, bndName)
-! ******************************************************************************
-! make_link --
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesManagerType), intent(inout) :: this
     type(TimeSeriesType), pointer, intent(inout) :: timeSeries
@@ -434,8 +407,6 @@ contains
     type(TimeSeriesLinkType), pointer, intent(inout) :: tsLink
     character(len=*), intent(in) :: text
     character(len=*), intent(in) :: bndName
-    ! -- local
-! ------------------------------------------------------------------------------
     !
     tsLink => null()
     call ConstructTimeSeriesLink(tsLink, timeSeries, pkgName, &
@@ -452,16 +423,13 @@ contains
       tsLink%BndName = bndName
     end if
     !
+    ! -- Return
     return
   end subroutine make_link
 
+  !> @brief Get link
+  !<
   function GetLink(this, auxOrBnd, indx) result(tsLink)
-! ******************************************************************************
-! GetLink --
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesManagerType) :: this
     character(len=3), intent(in) :: auxOrBnd
@@ -469,7 +437,6 @@ contains
     type(TimeSeriesLinkType), pointer :: tsLink
     ! -- local
     type(ListType), pointer :: list
-! ------------------------------------------------------------------------------
     !
     list => null()
     tsLink => null()
@@ -485,22 +452,18 @@ contains
       tsLink => GetTimeSeriesLinkFromList(list, indx)
     end if
     !
+    ! -- Return
     return
   end function GetLink
 
+  !> @brief Count links
+  !<
   function CountLinks(this, auxOrBnd)
-! ******************************************************************************
-! CountLinks --
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- return
     integer(I4B) :: CountLinks
     ! -- dummy
     class(TimeSeriesManagerType) :: this
     character(len=3), intent(in) :: auxOrBnd
-! ------------------------------------------------------------------------------
     !
     CountLinks = 0
     if (auxOrBnd == 'BND') then
@@ -509,16 +472,13 @@ contains
       CountLinks = this%auxvarTsLinks%count()
     end if
     !
+    ! -- Return
     return
   end function CountLinks
 
+  !> @brief Get time series
+  !<
   function get_time_series(this, name) result(res)
-! ******************************************************************************
-! get_time_series --
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesManagerType) :: this
     character(len=*), intent(in) :: name
@@ -526,7 +486,6 @@ contains
     type(TimeSeriesType), pointer :: res
     ! -- local
     integer(I4B) :: indx
-! ------------------------------------------------------------------------------
     !
     ! Get index from hash table, get time series from TsContainers,
     !     and assign result to time series contained in link.
@@ -536,25 +495,20 @@ contains
       res => this%TsContainers(indx)%timeSeries
     end if
     !
+    ! -- Return
     return
   end function get_time_series
 
+  !> @brief Store all boundary (stress) time series links in TsContainers
+  !! and construct hash table BndTsHashTable
+  !<
   subroutine HashBndTimeSeries(this)
-! ******************************************************************************
-! HashBndTimeSeries --
-!   Store all boundary (stress) time series links in
-!   TsContainers and construct hash table BndTsHashTable.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesManagerType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i, j, k, numtsfiles, numts
     character(len=LENTIMESERIESNAME) :: name
     type(TimeSeriesFileType), pointer :: tsfile => null()
-! ------------------------------------------------------------------------------
     !
     ! Initialize the hash table
     call hash_table_cr(this%BndTsHashTable)
@@ -580,20 +534,16 @@ contains
       end do
     end do
     !
+    ! -- Return
     return
   end subroutine HashBndTimeSeries
 
   ! -- Non-type-bound procedures
 
+  !> @brief Call this subroutine if the time-series link is available or needed
+  !<
   subroutine read_value_or_time_series(textInput, ii, jj, bndElem, pkgName, &
                                        auxOrBnd, tsManager, iprpak, tsLink)
-! ******************************************************************************
-! read_value_or_time_series --
-!   Call this subroutine if the time-series link is available or needed.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     character(len=*), intent(in) :: textInput
     integer(I4B), intent(in) :: ii
@@ -612,7 +562,6 @@ contains
     character(len=LINELENGTH) :: errmsg
     character(len=LENTIMESERIESNAME) :: tsNameTemp
     logical :: found
-! ------------------------------------------------------------------------------
     !
     read (textInput, *, iostat=istat) r
     if (istat == 0) then
@@ -658,30 +607,28 @@ contains
         call store_error(errmsg)
       end if
     end if
+    !
+    ! -- Return
+    return
   end subroutine read_value_or_time_series
 
+  !> @brief Call this subroutine from advanced packages to define timeseries
+  !! link for a variable (varName).
+  !!
+  !! Arguments are as follows:
+  !!    textInput    : string that is either a float or a string name
+  !!    ii           : column number
+  !!    jj           : row number
+  !!    bndElem      : pointer to a position in an array in package pkgName
+  !!    pkgName      : package name
+  !!    auxOrBnd     : 'AUX' or 'BND' keyword
+  !!    tsManager    : timeseries manager object for package
+  !!    iprpak       : integer flag indicating if interpolated timeseries values
+  !!                   should be printed to package iout during TsManager%ad()
+  !!    varName      : variable name
+  !<
   subroutine read_value_or_time_series_adv(textInput, ii, jj, bndElem, pkgName, &
                                            auxOrBnd, tsManager, iprpak, varName)
-! ******************************************************************************
-! read_value_or_time_series_adv -- Call this subroutine from advanced
-!    packages to define timeseries link for a variable (varName).
-!
-! -- Arguments are as follows:
-!       textInput    : string that is either a float or a string name
-!       ii           : column number
-!       jj           : row number
-!       bndElem      : pointer to a position in an array in package pkgName
-!       pkgName      : package name
-!       auxOrBnd     : 'AUX' or 'BND' keyword
-!       tsManager    : timeseries manager object for package
-!       iprpak       : integer flag indicating if interpolated timeseries values
-!                      should be printed to package iout during TsManager%ad()
-!       varName      : variable name
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     character(len=*), intent(in) :: textInput
     integer(I4B), intent(in) :: ii
@@ -700,7 +647,6 @@ contains
     logical :: found
     type(TimeSeriesType), pointer :: timeseries => null()
     type(TimeSeriesLinkType), pointer :: tsLink => null()
-! ------------------------------------------------------------------------------
     !
     ! -- attempt to read textInput as a real value
     read (textInput, *, iostat=istat) v
@@ -751,28 +697,26 @@ contains
         call store_error(errmsg)
       end if
     end if
+    !
+    ! -- Return
     return
   end subroutine read_value_or_time_series_adv
-!
+
 ! -- private subroutines
+
+  !> @brief Remove an existing timeseries link if it is defined.
+  !!
+  !! Arguments are as follows:
+  !!    tsManager    : timeseries manager object for package
+  !!    ii           : column number
+  !!    jj           : row number
+  !!    pkgName      : package name
+  !!    auxOrBnd     : 'AUX' or 'BND' keyword
+  !!    varName      : variable name
+  !<
   function remove_existing_link(tsManager, ii, jj, &
                                 pkgName, auxOrBnd, varName) result(found)
-! ******************************************************************************
-! remove_existing_link -- remove an existing timeseries link if it is defined.
-!
-! -- Arguments are as follows:
-!       tsManager    : timeseries manager object for package
-!       ii           : column number
-!       jj           : row number
-!       pkgName      : package name
-!       auxOrBnd     : 'AUX' or 'BND' keyword
-!       varName      : variable name
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- return variable
+    ! -- return
     logical :: found
     ! -- dummy
     type(TimeSeriesManagerType), intent(inout) :: tsManager
@@ -786,7 +730,6 @@ contains
     integer(I4B) :: nlinks
     integer(I4B) :: removeLink
     type(TimeSeriesLinkType), pointer :: tslTemp => null()
-! ------------------------------------------------------------------------------
     !
     ! -- determine if link exists
     nlinks = tsManager%CountLinks(auxOrBnd)
@@ -818,25 +761,20 @@ contains
       end if
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end function remove_existing_link
 
+  !> @brief Determine if a timeseries link with varName is defined.
+  !!
+  !! Arguments are as follows:
+  !!    tsManager    : timeseries manager object for package
+  !!    pkgName      : package name
+  !!    varName      : variable name
+  !!    auxOrBnd     : optional 'AUX' or 'BND' keyword
+  !<
   function var_timeseries(tsManager, pkgName, varName, auxOrBnd) result(tsexists)
-! ******************************************************************************
-! var_timeseries -- determine if a timeseries link with varName is defined.
-!
-! -- Arguments are as follows:
-!       tsManager    : timeseries manager object for package
-!       pkgName      : package name
-!       varName      : variable name
-!       auxOrBnd     : optional 'AUX' or 'BND' keyword
-!
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- return variable
+    ! -- return
     logical :: tsexists
     ! -- dummy
     type(TimeSeriesManagerType), intent(inout) :: tsManager
@@ -848,7 +786,6 @@ contains
     integer(I4B) :: i
     integer(I4B) :: nlinks
     type(TimeSeriesLinkType), pointer :: tslTemp => null()
-! ------------------------------------------------------------------------------
     !
     ! -- process optional variables
     if (present(auxOrBnd)) then
@@ -874,7 +811,7 @@ contains
       end if
     end do csearchlinks
     !
-    ! -- return
+    ! -- Return
     return
   end function var_timeseries
 

@@ -31,7 +31,9 @@ module TimeSeriesModule
     logical, public :: autoDeallocate = .true.
     type(ListType), pointer, private :: list => null()
     class(TimeSeriesFileType), pointer, private :: tsfile => null()
+
   contains
+
     ! -- Public procedures
     procedure, public :: AddTimeSeriesRecord
     procedure, public :: Clear
@@ -66,7 +68,9 @@ module TimeSeriesModule
     type(TimeSeriesType), dimension(:), &
       pointer, contiguous, public :: timeSeries => null()
     type(BlockParserType), pointer, public :: parser
+
   contains
+
     ! -- Public procedures
     procedure, public :: Count
     procedure, public :: Initializetsfile
@@ -85,35 +89,26 @@ contains
 
   ! -- non-type-bound procedures
 
+  !> @brief Construct time series file
+  !<
   subroutine ConstructTimeSeriesFile(newTimeSeriesFile)
-! ******************************************************************************
-! ConstructTimeSeriesFile -- construct ts tsfile
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     type(TimeSeriesFileType), pointer, intent(inout) :: newTimeSeriesFile
-! ------------------------------------------------------------------------------
     !
     allocate (newTimeSeriesFile)
     allocate (newTimeSeriesFile%parser)
+    !
+    ! -- Return
     return
   end subroutine ConstructTimeSeriesFile
 
+  !> @brief Cast an unlimited polymorphic object as class(TimeSeriesFileType)
+  !<
   function CastAsTimeSeriesFileType(obj) result(res)
-! ******************************************************************************
-! CastAsTimeSeriesFileType -- Cast an unlimited polymorphic object as
-!   class(TimeSeriesFileType)
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(*), pointer, intent(inout) :: obj
     ! -- return
     type(TimeSeriesFileType), pointer :: res
-! ------------------------------------------------------------------------------
     !
     res => null()
     if (.not. associated(obj)) return
@@ -122,22 +117,18 @@ contains
     type is (TimeSeriesFileType)
       res => obj
     end select
+    !
+    ! -- Return
     return
   end function CastAsTimeSeriesFileType
 
+  !> @brief Cast an unlimited polymorphic object as class(TimeSeriesFileType)
+  !<
   function CastAsTimeSeriesFileClass(obj) result(res)
-! ******************************************************************************
-! CastAsTimeSeriesFileClass -- Cast an unlimited polymorphic object as
-!   class(TimeSeriesFileType)
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(*), pointer, intent(inout) :: obj
     ! -- return
     type(TimeSeriesFileType), pointer :: res
-! ------------------------------------------------------------------------------
     !
     res => null()
     if (.not. associated(obj)) return
@@ -146,43 +137,37 @@ contains
     class is (TimeSeriesFileType)
       res => obj
     end select
+    !
+    ! -- Return
     return
   end function CastAsTimeSeriesFileClass
 
+  !> @brief Add time series file to list
+  !<
   subroutine AddTimeSeriesFileToList(list, tsfile)
-! ******************************************************************************
-! AddTimeSeriesFileToList -- add to list
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     type(ListType), intent(inout) :: list
     class(TimeSeriesFileType), pointer, intent(inout) :: tsfile
     ! -- local
     class(*), pointer :: obj => null()
-! ------------------------------------------------------------------------------
     !
     obj => tsfile
     call list%Add(obj)
     !
+    ! -- Return
     return
   end subroutine AddTimeSeriesFileToList
 
+  !> @brief Get time series from list
+  !<
   function GetTimeSeriesFileFromList(list, idx) result(res)
-! ******************************************************************************
-! GetTimeSeriesFileFromList -- get from list
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     type(ListType), intent(inout) :: list
     integer(I4B), intent(in) :: idx
+    ! -- return
     type(TimeSeriesFileType), pointer :: res
     ! -- local
     class(*), pointer :: obj => null()
-! ------------------------------------------------------------------------------
     !
     obj => list%GetItem(idx)
     res => CastAsTimeSeriesFileType(obj)
@@ -191,24 +176,21 @@ contains
       res => CastAsTimeSeriesFileClass(obj)
     end if
     !
+    ! -- Return
     return
   end function GetTimeSeriesFileFromList
 
+  !> @brief Compare two time series; if they are identical, return true
+  !<
   function SameTimeSeries(ts1, ts2) result(same)
-! ******************************************************************************
-! SameTimeSeries -- Compare two time series; if they are identical, return true.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     type(TimeSeriesType), intent(in) :: ts1
     type(TimeSeriesType), intent(in) :: ts2
+    ! -- return
     logical :: same
     ! -- local
     integer :: i, n1, n2
     type(TimeSeriesRecordType), pointer :: tsr1, tsr2
-! ------------------------------------------------------------------------------
     !
     same = .false.
     n1 = ts1%list%Count()
@@ -227,23 +209,21 @@ contains
     !
     same = .true.
     !
+    ! -- Return
     return
   end function SameTimeSeries
 
   ! Type-bound procedures of TimeSeriesType
 
+  !> @brief Get time series value
+  !!
+  !! If iMethod is STEPWISE or LINEAR:
+  !!     Return a time-weighted average value for a specified time span.
+  !! If iMethod is LINEAREND:
+  !!     Return value at time1. Time0 argument is ignored.
+  !! Units: (ts-value-unit)
+  !<
   function GetValue(this, time0, time1, extendToEndOfSimulation)
-! ******************************************************************************
-! GetValue -- get ts value
-!    If iMethod is STEPWISE or LINEAR:
-!        Return a time-weighted average value for a specified time span.
-!    If iMethod is LINEAREND:
-!        Return value at time1. Time0 argument is ignored.
-!    Units: (ts-value-unit)
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- return
     real(DP) :: GetValue
     ! -- dummy
@@ -251,9 +231,8 @@ contains
     real(DP), intent(in) :: time0
     real(DP), intent(in) :: time1
     logical, intent(in), optional :: extendToEndOfSimulation
-    !
+    ! -- local
     logical :: extend
-! ------------------------------------------------------------------------------
     !
     if (present(extendToEndOfSimulation)) then
       extend = extendToEndOfSimulation
@@ -268,17 +247,15 @@ contains
       GetValue = this%get_value_at_time(time1, extend)
     end select
     !
+    ! -- Return
     return
   end function GetValue
 
+  !> @brief Initialize time series
+  !!
+  !! Open time-series file and read options and first time-series record.
+  !<
   subroutine initialize_time_series(this, tsfile, name, autoDeallocate)
-! ******************************************************************************
-! initialize_time_series -- initialize time series
-!    Open time-series file and read options and first time-series record.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesType), intent(inout) :: this
     class(TimeSeriesFileType), target :: tsfile
@@ -286,7 +263,6 @@ contains
     logical, intent(in), optional :: autoDeallocate
     ! -- local
     character(len=LENTIMESERIESNAME) :: tsNameTemp
-! ------------------------------------------------------------------------------
     !
     ! -- Assign the time-series tsfile, name, and autoDeallocate
     this%tsfile => tsfile
@@ -308,16 +284,13 @@ contains
       call store_error(errmsg, terminate=.TRUE.)
     end if
     !
+    ! -- Return
     return
   end subroutine initialize_time_series
 
+  !> @brief Get surrounding records
+  !<
   subroutine get_surrounding_records(this, time, tsrecEarlier, tsrecLater)
-! ******************************************************************************
-! get_surrounding_records -- get surrounding records
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesType), intent(inout) :: this
     real(DP), intent(in) :: time
@@ -331,7 +304,6 @@ contains
     type(TimeSeriesRecordType), pointer :: tsr => null(), tsrec0 => null()
     type(TimeSeriesRecordType), pointer :: tsrec1 => null()
     class(*), pointer :: obj => null()
-! ------------------------------------------------------------------------------
     !
     tsrecEarlier => null()
     tsrecLater => null()
@@ -404,18 +376,16 @@ contains
     if (time0 < time .or. is_same(time0, time)) tsrecEarlier => tsrec0
     if (time1 > time .or. is_same(time1, time)) tsrecLater => tsrec1
     !
+    ! -- Return
     return
   end subroutine get_surrounding_records
 
+  !> @brief Get surrounding nodes
+  !!
+  !! This subroutine is for working with time series already entirely stored
+  !! in memory -- it does not read data from a file.
+  !<
   subroutine get_surrounding_nodes(this, time, nodeEarlier, nodeLater)
-! ******************************************************************************
-! get_surrounding_nodes -- get surrounding nodes
-!   This subroutine is for working with time series already entirely stored
-!   in memory -- it does not read data from a file.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesType), intent(inout) :: this
     real(DP), intent(in) :: time
@@ -431,7 +401,6 @@ contains
     type(TimeSeriesRecordType), pointer :: tsrecEarlier
     type(TimeSeriesRecordType), pointer :: tsrecLater
     class(*), pointer :: obj => null()
-! ------------------------------------------------------------------------------
     !
     tsrecEarlier => null()
     tsrecLater => null()
@@ -507,21 +476,17 @@ contains
       nodeLater => tsNode1
     end if
     !
+    ! -- Return
     return
   end subroutine get_surrounding_nodes
 
+  !> @brief Read next record
+  !!
+  !! Read next time-series record from input file
+  !<
   logical function read_next_record(this)
-! ******************************************************************************
-! read_next_record -- read next record
-!   Read next time-series record from input file.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesType), intent(inout) :: this
-    ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- If we have already encountered the end of the TIMESERIES block, do not try to read any further
     if (this%tsfile%finishedReading) then
@@ -533,18 +498,16 @@ contains
     if (.not. read_next_record) then
       this%tsfile%finishedReading = .true.
     end if
-    return
     !
+    ! -- Return
+    return
   end function read_next_record
 
+  !> @brief Get value for a time
+  !!
+  !! Return a value for a specified time, same units as time-series values
+  !<
   function get_value_at_time(this, time, extendToEndOfSimulation)
-! ******************************************************************************
-! get_value_at_time -- get value for a time
-!   Return a value for a specified time, same units as time-series values.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- return
     real(DP) :: get_value_at_time
     ! -- dummy
@@ -559,7 +522,6 @@ contains
     type(TimeSeriesRecordType), pointer :: tsrLater => null()
     ! -- formats
 10  format('Error getting value at time ', g10.3, ' for time series "', a, '"')
-! ------------------------------------------------------------------------------
     !
     ierr = 0
     call this%get_surrounding_records(time, tsrEarlier, tsrLater)
@@ -622,18 +584,16 @@ contains
       call store_error(errmsg, terminate=.TRUE.)
     end if
     !
+    ! -- Return
     return
   end function get_value_at_time
 
+  !> @brief Get integrated value
+  !!
+  !! Return an integrated value for a specified time span.
+  !! Units: (ts-value-unit)*time
+  !<
   function get_integrated_value(this, time0, time1, extendToEndOfSimulation)
-! ******************************************************************************
-! get_integrated_value -- get integrated value
-!   Return an integrated value for a specified time span.
-!    Units: (ts-value-unit)*time
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- return
     real(DP) :: get_integrated_value
     ! -- dummy
@@ -653,7 +613,6 @@ contains
     ! -- formats
 10  format('Error encountered while performing integration', &
            ' for time series "', a, '" for time interval: ', g12.5, ' to ', g12.5)
-! ------------------------------------------------------------------------------
     !
     value = DZERO
     ldone = .false.
@@ -763,18 +722,17 @@ contains
         end if
       end if
     end if
+    !
+    ! -- Return
     return
   end function get_integrated_value
 
+  !> @brief Get average value
+  !!
+  !! Return a time-weighted average value for a specified time span.
+  !! Units: (ts-value-unit)
+  !<
   function get_average_value(this, time0, time1, extendToEndOfSimulation)
-! ******************************************************************************
-! get_average_value -- get average value
-!   Return a time-weighted average value for a specified time span.
-!    Units: (ts-value-unit)
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- return
     real(DP) :: get_average_value
     ! -- dummy
@@ -784,7 +742,6 @@ contains
     logical, intent(in) :: extendToEndOfSimulation
     ! -- local
     real(DP) :: timediff, value, valueIntegrated
-! ------------------------------------------------------------------------------
     !
     timediff = time1 - time0
     if (timediff > 0) then
@@ -801,18 +758,16 @@ contains
     end if
     get_average_value = value
     !
+    ! -- Return
     return
   end function get_average_value
 
+  !> @brief Get latest preceding node
+  !!
+  !! Return pointer to ListNodeType object for the node representing the
+  !! latest preceding time in the time series
+  !<
   subroutine get_latest_preceding_node(this, time, tslNode)
-! ******************************************************************************
-! get_latest_preceding_node -- get latest preceding node
-!   Return pointer to ListNodeType object for the node
-!   representing the latest preceding time in the time series
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesType), intent(inout) :: this
     real(DP), intent(in) :: time
@@ -824,7 +779,6 @@ contains
     type(TimeSeriesRecordType), pointer :: tsr => null()
     type(TimeSeriesRecordType), pointer :: tsrec0 => null()
     class(*), pointer :: obj => null()
-! ------------------------------------------------------------------------------
     !
     tslNode => null()
     if (associated(this%list%firstNode)) then
@@ -877,62 +831,50 @@ contains
     !
     if (time0 < time .or. is_same(time0, time)) tslNode => tsNode0
     !
+    ! -- Return
     return
   end subroutine get_latest_preceding_node
 
+  !> @brief Deallocate
+  !<
   subroutine ts_da(this)
-! ******************************************************************************
-! ts_da -- deallocate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesType), intent(inout) :: this
-! ------------------------------------------------------------------------------
     !
     if (associated(this%list)) then
       call this%list%Clear(.true.)
       deallocate (this%list)
     end if
     !
+    ! -- Return
     return
   end subroutine ts_da
 
+  !> @brief Add ts record
+  !<
   subroutine AddTimeSeriesRecord(this, tsr)
-! ******************************************************************************
-! AddTimeSeriesRecord -- add ts record
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesType) :: this
     type(TimeSeriesRecordType), pointer, intent(inout) :: tsr
     ! -- local
     class(*), pointer :: obj => null()
-! ------------------------------------------------------------------------------
     !
     obj => tsr
     call this%list%Add(obj)
     !
+    ! -- Return
     return
   end subroutine AddTimeSeriesRecord
 
+  !> @brief Get current ts record
+  !<
   function GetCurrentTimeSeriesRecord(this) result(res)
-! ******************************************************************************
-! GetCurrentTimeSeriesRecord -- get current ts record
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesType) :: this
-    ! result
+    ! -- result
     type(TimeSeriesRecordType), pointer :: res
     ! -- local
     class(*), pointer :: obj => null()
-! ------------------------------------------------------------------------------
     !
     obj => null()
     res => null()
@@ -941,23 +883,19 @@ contains
       res => CastAsTimeSeriesRecordType(obj)
     end if
     !
+    ! -- Return
     return
   end function GetCurrentTimeSeriesRecord
 
+  !> @brief Get previous ts record
+  !<
   function GetPreviousTimeSeriesRecord(this) result(res)
-! ******************************************************************************
-! GetPreviousTimeSeriesRecord -- get previous ts record
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesType) :: this
-    ! result
+    ! -- result
     type(TimeSeriesRecordType), pointer :: res
     ! -- local
     class(*), pointer :: obj => null()
-! ------------------------------------------------------------------------------
     !
     obj => null()
     res => null()
@@ -966,23 +904,19 @@ contains
       res => CastAsTimeSeriesRecordType(obj)
     end if
     !
+    ! -- Return
     return
   end function GetPreviousTimeSeriesRecord
 
+  !> @brief Get next ts record
+  !<
   function GetNextTimeSeriesRecord(this) result(res)
-! ******************************************************************************
-! GetNextTimeSeriesRecord -- get next ts record
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesType) :: this
-    ! result
+    ! -- result
     type(TimeSeriesRecordType), pointer :: res
     ! -- local
     class(*), pointer :: obj => null()
-! ------------------------------------------------------------------------------
     !
     obj => null()
     res => null()
@@ -991,25 +925,21 @@ contains
       res => CastAsTimeSeriesRecordType(obj)
     end if
     !
+    ! -- Return
     return
   end function GetNextTimeSeriesRecord
 
+  !> @brief Get ts record
+  !<
   function GetTimeSeriesRecord(this, time, epsi) result(res)
-! ******************************************************************************
-! GetTimeSeriesRecord -- get ts record
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesType) :: this
     double precision, intent(in) :: time
     double precision, intent(in) :: epsi
-    ! result
+    ! -- result
     type(TimeSeriesRecordType), pointer :: res
     ! -- local
     type(TimeSeriesRecordType), pointer :: tsr
-! ------------------------------------------------------------------------------
     !
     call this%list%Reset()
     res => null()
@@ -1026,32 +956,25 @@ contains
       end if
     end do
     !
+    ! -- Return
     return
   end function GetTimeSeriesRecord
 
+  !> @brief Reset
+  !<
   subroutine Reset(this)
-! ******************************************************************************
-! Reset -- reset
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesType) :: this
-! ------------------------------------------------------------------------------
     !
     call this%list%Reset()
     !
+    ! -- Return
     return
   end subroutine Reset
 
+  !> @brief Insert a time series record
+  !<
   subroutine InsertTsr(this, tsr)
-! ******************************************************************************
-! InsertTsr -- insert ts record
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesType), intent(inout) :: this
     type(TimeSeriesRecordType), pointer, intent(inout) :: tsr
@@ -1060,7 +983,6 @@ contains
     type(TimeSeriesRecordType), pointer :: tsrEarlier, tsrLater
     type(ListNodeType), pointer :: nodeEarlier, nodeLater
     class(*), pointer :: obj => null()
-! ------------------------------------------------------------------------------
     !
     badtime = -9.0d30
     time0 = badtime
@@ -1128,25 +1050,22 @@ contains
       end if
     end if
     !
+    ! -- Return
     return
   end subroutine InsertTsr
 
+  !> @brief Find latest time
+  !<
   function FindLatestTime(this, readToEnd) result(endtime)
-! ******************************************************************************
-! FindLatestTime -- find latest time
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesType), intent(inout) :: this
     logical, intent(in), optional :: readToEnd
     ! -- local
     integer :: nrecords
-    double precision :: endtime
     type(TimeSeriesRecordType), pointer :: tsr
     class(*), pointer :: obj => null()
-! ------------------------------------------------------------------------------
+    ! -- return
+    double precision :: endtime
     !
     ! -- If the caller requested the very last time in the series (readToEnd is true), check that we have first read all records
     if (present(readToEnd)) then
@@ -1161,78 +1080,65 @@ contains
     tsr => CastAsTimeSeriesRecordType(obj)
     endtime = tsr%tsrTime
     !
+    ! -- Return
     return
   end function FindLatestTime
 
+  !> @brief Clear the list of time series records
+  !<
   subroutine Clear(this, destroy)
-! ******************************************************************************
-! Clear -- Clear the list of time series records
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesType), intent(inout) :: this
     logical, optional, intent(in) :: destroy
-! ------------------------------------------------------------------------------
     !
     call this%list%Clear(destroy)
     !
+    ! -- Return
     return
   end subroutine Clear
 
 ! Type-bound procedures of TimeSeriesFileType
 
+  !> @brief Count number of time series
+  !<
   function Count(this)
-! ******************************************************************************
-! Count --count number of time series
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- return
     integer(I4B) :: Count
     ! -- dummy
     class(TimeSeriesFileType) :: this
-! ------------------------------------------------------------------------------
     !
     if (associated(this%timeSeries)) then
       Count = size(this%timeSeries)
     else
       Count = 0
     end if
+    !
+    ! -- Return
     return
   end function Count
 
+  !> @brief Get time series
+  !<
   function GetTimeSeries(this, indx) result(res)
-! ******************************************************************************
-! GetTimeSeries -- get ts
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesFileType) :: this
     integer(I4B), intent(in) :: indx
-    ! result
+    ! -- return
     type(TimeSeriesType), pointer :: res
-! ------------------------------------------------------------------------------
     !
     res => null()
     if (indx > 0 .and. indx <= this%nTimeSeries) then
       res => this%timeSeries(indx)
     end if
+    !
+    ! -- Return
     return
   end function GetTimeSeries
 
+  !> @brief Open time-series tsfile file and read options and first record,
+  !! which may contain data to define multiple time series.
+  !<
   subroutine Initializetsfile(this, filename, iout, autoDeallocate)
-! ******************************************************************************
-! Initializetsfile -- Open time-series tsfile file and read options and first
-!   record, which may contain data to define multiple time series.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesFileType), target, intent(inout) :: this
     character(len=*), intent(in) :: filename
@@ -1248,7 +1154,6 @@ contains
     character(len=40) :: keyword, keyvalue
     character(len=:), allocatable :: line
     character(len=LENTIMESERIESNAME), allocatable, dimension(:) :: words
-! ------------------------------------------------------------------------------
     !
     ! -- Initialize some variables
     if (present(autoDeallocate)) autoDeallocateLocal = autoDeallocate
@@ -1435,16 +1340,12 @@ contains
       call this%parser%StoreErrorUnit()
     end if
     !
+    ! -- Return
     return
   end subroutine Initializetsfile
 
+  !> @brief Read time series file line
   logical function read_tsfile_line(this)
-! ******************************************************************************
-! read_tsfile_line -- read tsfile line
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesFileType), intent(inout) :: this
     ! -- local
@@ -1452,7 +1353,6 @@ contains
     integer(I4B) :: i
     logical :: endOfBlock
     type(TimeSeriesRecordType), pointer :: tsRecord => null()
-! ------------------------------------------------------------------------------
     !
     read_tsfile_line = .false.
     !
@@ -1479,22 +1379,18 @@ contains
     end do tsloop
     read_tsfile_line = .true.
     !
+    ! -- Return
     return
   end function read_tsfile_line
 
+  !> @brief Deallocate memory
+  !<
   subroutine tsf_da(this)
-! ******************************************************************************
-! tsf_da -- deallocate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(TimeSeriesFileType), intent(inout) :: this
     ! -- local
     integer :: i, n
     type(TimeSeriesType), pointer :: ts => null()
-! ------------------------------------------------------------------------------
     !
     n = this%Count()
     do i = 1, n
@@ -1508,6 +1404,7 @@ contains
     deallocate (this%timeSeries)
     deallocate (this%parser)
     !
+    ! -- Return
     return
   end subroutine tsf_da
 
