@@ -3,7 +3,22 @@ import shutil
 from pathlib import Path
 from warnings import warn
 
-ignore_ext = (
+COMPARE_PATTERNS = (
+    ".cmp",
+    "mf2005",
+    "mf2005.cmp",
+    "mfnwt",
+    "mfnwt.cmp",
+    "mfusg",
+    "mfusg.cmp",
+    "mflgr",
+    "mflgr.cmp",
+    "libmf6",
+    "libmf6.cmp",
+    "mf6",
+    "mf6.cmp",
+)
+IGNORE_EXTENSIONS = (
     ".hds",
     ".hed",
     ".bud",
@@ -228,7 +243,7 @@ def get_input_files(namefile):
         if line.strip()[0] in ["#", "!"]:
             continue
         ext = os.path.splitext(ll[2])[1]
-        if ext.lower() not in ignore_ext:
+        if ext.lower() not in IGNORE_EXTENSIONS:
             if len(ll) > 3:
                 if "replace" in ll[3].lower():
                     continue
@@ -445,28 +460,13 @@ def get_mf6_comparison(src):
 
     """
     # Possible comparison - the order matters
-    OPTCOMP = (
-        "auto",
-        ".cmp",
-        "mf2005",
-        "mf2005.cmp",
-        "mfnwt",
-        "mfnwt.cmp",
-        "mfusg",
-        "mfusg.cmp",
-        "mflgr",
-        "mflgr.cmp",
-        "libmf6",
-        "libmf6.cmp",
-        "mf6",
-        "mf6.cmp",
-    )
+
     # Construct src pth from namefile
     for _, dirs, _ in os.walk(src):
         dl = [d.lower() for d in dirs]
-        for oc in OPTCOMP:
-            if any(oc in s for s in dl):
-                return oc
+        for co in COMPARE_PATTERNS:
+            if any(co in s for s in dl):
+                return co
 
 
 def setup_mf6_comparison(
@@ -481,7 +481,7 @@ def setup_mf6_comparison(
     dst : path-like
         Directory to copy MODFLOW 6 input files to.
     compare : str, optional
-        Type of comparison to use: 'auto', 'mf6', 'mf2005'. Use "auto" to include all
+        Type of comparison, e.g. 'auto', 'mf6', 'mf2005'. Use "auto" to include all
         files in the source folder whose name includes "cmp". If not "auto", selects
         the subdirectory of `src` containing reference files (default is "auto").
     overwrite : bool, optional
