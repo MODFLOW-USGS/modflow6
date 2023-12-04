@@ -45,6 +45,7 @@ module GwfHfbModule
     integer(I4B), pointer :: ivsc => null() !< flag indicating if viscosity is active in the model
 
   contains
+
     procedure :: hfb_ar
     procedure :: hfb_rp
     procedure :: hfb_fc
@@ -63,19 +64,14 @@ module GwfHfbModule
 
 contains
 
+  !> @brief Create a new hfb object
+  !<
   subroutine hfb_cr(hfbobj, name_model, inunit, iout)
-! ******************************************************************************
-! hfb_cr -- Create a new hfb object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     type(GwfHfbType), pointer :: hfbobj
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
-! ------------------------------------------------------------------------------
     !
     ! -- Create the object
     allocate (hfbobj)
@@ -97,13 +93,9 @@ contains
     return
   end subroutine hfb_cr
 
+  !> @brief Allocate and read
+  !<
   subroutine hfb_ar(this, ibound, xt3d, dis, invsc, vsc)
-! ******************************************************************************
-! hfb_ar -- Allocate and read
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_setptr
     use MemoryHelperModule, only: create_mem_path
@@ -114,12 +106,10 @@ contains
     class(DisBaseType), pointer, intent(inout) :: dis !< discretization package
     integer(I4B), pointer :: invsc !< indicates if viscosity package is active
     type(GwfVscType), pointer, intent(in) :: vsc !< viscosity package
-    ! -- local
     ! -- formats
     character(len=*), parameter :: fmtheader = &
       "(1x, /1x, 'HFB -- HORIZONTAL FLOW BARRIER PACKAGE, VERSION 8, ', &
       &'4/24/2015 INPUT READ FROM UNIT ', i4, //)"
-! ------------------------------------------------------------------------------
     !
     ! -- Print a message identifying the node property flow package.
     write (this%iout, fmtheader) this%inunit
@@ -128,7 +118,7 @@ contains
     this%dis => dis
     this%ibound => ibound
     this%xt3d => xt3d
-
+    !
     call mem_setptr(this%icelltype, 'ICELLTYPE', &
                     create_mem_path(this%name_model, 'NPF'))
     call mem_setptr(this%ihc, 'IHC', create_mem_path(this%name_model, 'CON'))
@@ -156,17 +146,13 @@ contains
         trim(this%filtyp)//' Package calculations: '//trim(adjustl(this%packName))
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine hfb_ar
 
+  !> @brief Check for new HFB stress period data
+  !<
   subroutine hfb_rp(this)
-! ******************************************************************************
-! hfb_rp -- Check for new hfb stress period data
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, count_errors, store_error_unit
@@ -182,7 +168,6 @@ contains
       &"('Error.  Looking for BEGIN PERIOD iper.  Found ', a, ' instead.')"
     character(len=*), parameter :: fmtlsp = &
       &"(1X,/1X,'REUSING ',A,'S FROM LAST STRESS PERIOD')"
-! ------------------------------------------------------------------------------
     !
     ! -- Set ionper to the stress period number for which a new block of data
     !    will be read.
@@ -220,21 +205,19 @@ contains
       write (this%iout, fmtlsp) 'HFB'
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine hfb_rp
 
+  !> @brief Fill matrix terms
+  !!
+  !! Fill amatsln for the following conditions:
+  !!   1. XT3D
+  !!     OR
+  !!   2. Not Newton, and
+  !!   3. Cell type n is convertible or cell type m is convertible
+  !<
   subroutine hfb_fc(this, kiter, matrix_sln, idxglo, rhs, hnew)
-! ******************************************************************************
-! hfb_fc -- Fill amatsln for the following conditions:
-!   1.  Not Newton, and
-!   2.  Cell type n is convertible or cell type m is convertible
-!  OR
-!   3.  XT3D
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DHALF, DZERO, DONE
     ! -- dummy
@@ -254,7 +237,6 @@ contains
     real(DP) :: fawidth, faheight
     real(DP) :: topn, topm, botn, botm
     real(DP) :: viscratio
-! ------------------------------------------------------------------------------
     !
     ! -- initialize variables
     viscratio = DONE
@@ -373,19 +355,16 @@ contains
       !
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine hfb_fc
 
+  !> @brief flowja will automatically include the effects of the hfb for
+  !! confined and newton cases when xt3d is not used.
+  !!
+  !! This method recalculates flowja for the other cases.
+  !<
   subroutine hfb_cq(this, hnew, flowja)
-! ******************************************************************************
-! hfb_cq -- flowja will automatically include the effects of the hfb
-!   for confined and newton cases when xt3d is not used.  This method
-!   recalculates flowja for the other cases.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DHALF, DZERO, DONE
     ! -- dummy
@@ -402,8 +381,7 @@ contains
     real(DP) :: fawidth, faheight
     real(DP) :: topn, topm, botn, botm
     real(DP) :: viscratio
-! ------------------------------------------------------------------------------
-!
+    !
     ! -- initialize viscratio
     viscratio = DONE
     !
@@ -482,24 +460,17 @@ contains
       !
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine hfb_cq
 
+  !> @brief Deallocate memory
+  !<
   subroutine hfb_da(this)
-! ******************************************************************************
-! hfb_da -- Deallocate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(GwfHfbType) :: this
-! ------------------------------------------------------------------------------
-    !
-    ! -- Strings
     !
     ! -- Scalars
     call mem_deallocate(this%maxhfb)
@@ -535,22 +506,17 @@ contains
     this%hwva => null()
     this%vsc => null()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine hfb_da
 
+  !> @brief Allocate package scalars
+  !<
   subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars -- Allocate scalars
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwfHfbType) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- allocate scalars in NumericalPackageType
     call this%NumericalPackageType%allocate_scalars()
@@ -567,24 +533,19 @@ contains
     this%nhfb = 0
     this%ivsc = 0
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine allocate_scalars
 
+  !> @brief Allocate package arrays
+  !<
   subroutine allocate_arrays(this)
-! ******************************************************************************
-! allocate_arrays -- Allocate arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GwfHfbType) :: this
     ! -- local
     integer(I4B) :: ihfb
-! ------------------------------------------------------------------------------
     !
     call mem_allocate(this%noden, this%maxhfb, 'NODEN', this%memoryPath)
     call mem_allocate(this%nodem, this%maxhfb, 'NODEM', this%memoryPath)
@@ -598,17 +559,13 @@ contains
       this%idxloc(ihfb) = 0
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine allocate_arrays
 
+  !> @brief Read a hfb options block
+  !<
   subroutine read_options(this)
-! ******************************************************************************
-! read_options -- read a hfb options block
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, store_error_unit
@@ -618,7 +575,6 @@ contains
     character(len=LINELENGTH) :: errmsg, keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
-! ------------------------------------------------------------------------------
     !
     ! -- get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, &
@@ -646,17 +602,13 @@ contains
       write (this%iout, '(1x,a)') 'END OF HFB OPTIONS'
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine read_options
 
+  !> @brief Read the dimensions for this package
+  !<
   subroutine read_dimensions(this)
-! ******************************************************************************
-! read_dimensions -- Read the dimensions for this package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, store_error_unit
     ! -- dummy
@@ -665,8 +617,6 @@ contains
     character(len=LINELENGTH) :: errmsg, keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
-    ! -- format
-! ------------------------------------------------------------------------------
     !
     ! -- get dimensions block
     call this%parser%GetBlock('DIMENSIONS', isfound, ierr, &
@@ -705,20 +655,18 @@ contains
       call this%parser%StoreErrorUnit()
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine read_dimensions
 
+  !> @brief Read HFB period block
+  !!
+  !! Data are in form of:
+  !!   L, IROW1, ICOL1, IROW2, ICOL2, HYDCHR
+  !! or for unstructured:
+  !!   N1, N2, HYDCHR
+  !<
   subroutine read_data(this)
-! ******************************************************************************
-! read_data -- Read hfb period block
-!   Data are in form of L, IROW1, ICOL1, IROW2, ICOL2, HYDCHR
-!   or for unstructured
-!                       N1, N2, HYDCHR
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, count_errors, store_error_unit
@@ -731,7 +679,6 @@ contains
     logical :: endOfBlock
     ! -- formats
     character(len=*), parameter :: fmthfb = "(i10, 2a10, 1(1pg15.6))"
-! ------------------------------------------------------------------------------
     !
     write (this%iout, '(//,1x,a)') 'READING HFB DATA'
     if (this%iprpak > 0) then
@@ -786,18 +733,15 @@ contains
     call this%check_data()
     write (this%iout, '(1x,a)') 'END READING HFB DATA'
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine read_data
 
+  !> @brief Check for hfb's between two unconnected cells and write a warning
+  !!
+  !! Store ipos in idxloc
+  !<
   subroutine check_data(this)
-! ******************************************************************************
-! check_data -- Check for hfb's between two unconnected cells and write a
-!   warning.  Store ipos in idxloc.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, count_errors, store_error_unit
@@ -814,7 +758,6 @@ contains
       &' is between two unconnected cells: ', a, ' and ', a)"
     character(len=*), parameter :: fmtverr = "(1x, 'HFB no. ',i0, &
       &' is between two cells not horizontally connected: ', a, ' and ', a)"
-! ------------------------------------------------------------------------------
     !
     do ihfb = 1, this%nhfb
       n = this%noden(ihfb)
@@ -854,43 +797,35 @@ contains
       call store_error_unit(this%inunit)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine check_data
 
+  !> @brief Reset condsat to its value prior to being modified by hfb's
+  !<
   subroutine condsat_reset(this)
-! ******************************************************************************
-! condsat_reset -- Reset condsat to its value prior to being modified by hfb's
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     class(GwfHfbType) :: this
     ! -- local
     integer(I4B) :: ihfb
     integer(I4B) :: ipos
-! ------------------------------------------------------------------------------
     !
     do ihfb = 1, this%nhfb
       ipos = this%idxloc(ihfb)
       this%condsat(this%jas(ipos)) = this%csatsav(ihfb)
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine condsat_reset
 
+  !> @brief Modify condsat
+  !!
+  !! Modify condsat for the following conditions:
+  !!   1.  If Newton is active
+  !!   2.  If icelltype for n and icelltype for m is 0
+  !<
   subroutine condsat_modify(this)
-! ******************************************************************************
-! condsat_modify -- Modify condsat for the following conditions:
-!   1.  If Newton is active
-!   2.  If icelltype for n and icelltype for m is 0
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DHALF, DZERO
     ! -- dummy
@@ -901,7 +836,6 @@ contains
     real(DP) :: cond, condhfb
     real(DP) :: fawidth, faheight
     real(DP) :: topn, topm, botn, botm
-! ------------------------------------------------------------------------------
     !
     do ihfb = 1, this%nhfb
       ipos = this%idxloc(ihfb)
@@ -935,7 +869,7 @@ contains
       end if
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine condsat_modify
 
