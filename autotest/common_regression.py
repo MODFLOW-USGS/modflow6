@@ -61,7 +61,7 @@ def model_setup(namefile, dst, remove_existing=True, extrafiles=None):
     create_dir = False
     if os.path.exists(dst):
         if remove_existing:
-            print("Removing folder ", dst)
+            print(f"Removing directory '{dst}'")
             shutil.rmtree(dst)
             create_dir = True
     else:
@@ -115,105 +115,12 @@ def model_setup(namefile, dst, remove_existing=True, extrafiles=None):
 
         # Now copy the file
         if os.path.exists(srcf):
-            print("Copy file '" + srcf + "' -> '" + dstf + "'")
+            print(f"Copying file '{srcf}' -> '{dstf}'")
             shutil.copy(srcf, dstf)
         else:
-            print(srcf + " does not exist")
+            print(f"{srcf} does not exist")
 
     return
-
-
-def setup_comparison(namefile, dst, remove_existing=True):
-    """Setup a comparison model or comparision file(s) for a MODFLOW-based
-    model.
-
-    Parameters
-    ----------
-    namefile : str
-        MODFLOW-based model name file.
-    dst : str
-        destination path for comparison model or file(s)
-    remove_existing : bool
-        boolean indicating if an existing comparision model or file(s) should
-        be replaced (default is True)
-
-
-    Returns
-    -------
-
-    """
-    # Construct src pth from namefile
-    src = os.path.dirname(namefile)
-    action = None
-    for root, dirs, files in os.walk(src):
-        dl = [d.lower() for d in dirs]
-        if any(".cmp" in s for s in dl):
-            idx = None
-            for jdx, d in enumerate(dl):
-                if ".cmp" in d:
-                    idx = jdx
-                    break
-            if idx is not None:
-                if "mf2005.cmp" in dl[idx] or "mf2005" in dl[idx]:
-                    action = dirs[idx]
-                elif "mfnwt.cmp" in dl[idx] or "mfnwt" in dl[idx]:
-                    action = dirs[idx]
-                elif "mfusg.cmp" in dl[idx] or "mfusg" in dl[idx]:
-                    action = dirs[idx]
-                elif "mf6.cmp" in dl[idx] or "mf6" in dl[idx]:
-                    action = dirs[idx]
-                elif "libmf6.cmp" in dl[idx] or "libmf6" in dl[idx]:
-                    action = dirs[idx]
-                else:
-                    action = dirs[idx]
-                break
-    if action is not None:
-        dst = os.path.join(dst, f"{action}")
-        if not os.path.isdir(dst):
-            try:
-                os.mkdir(dst)
-            except:
-                print("Could not make " + dst)
-        # clean directory
-        else:
-            print("Cleaning ", dst)
-            for root, dirs, files in os.walk(dst):
-                for f in files:
-                    tpth = os.path.join(root, f)
-                    print("Removing ", tpth)
-                    os.remove(tpth)
-                for d in dirs:
-                    tdir = os.path.join(root, d)
-                    print("Removing ", tdir)
-                    shutil.rmtree(tdir)
-        # copy files
-        cmppth = os.path.join(src, action)
-        files = os.listdir(cmppth)
-        files2copy = []
-        if action.lower() == ".cmp":
-            for file in files:
-                if ".cmp" in os.path.splitext(file)[1].lower():
-                    files2copy.append(os.path.join(cmppth, file))
-            for srcf in files2copy:
-                f = os.path.basename(srcf)
-                dstf = os.path.join(dst, f)
-                # Now copy the file
-                if os.path.exists(srcf):
-                    print("Copy file '" + srcf + "' -> '" + dstf + "'")
-                    shutil.copy(srcf, dstf)
-                else:
-                    print(srcf + " does not exist")
-        else:
-            for file in files:
-                if ".nam" in os.path.splitext(file)[1].lower():
-                    files2copy.append(
-                        os.path.join(cmppth, os.path.basename(file))
-                    )
-                    nf = os.path.join(src, action, os.path.basename(file))
-                    model_setup(nf, dst, remove_existing=remove_existing)
-                    break
-
-    return action
 
 
 def get_input_files(namefile):
@@ -274,7 +181,7 @@ def get_input_files(namefile):
                             otherfiles.append(stmp)
                             break
         except:
-            print(fname + " does not exist")
+            print(f"{fname} does not exist")
 
     filelist = filelist + otherfiles
 
@@ -317,46 +224,6 @@ def get_namefiles(pth, exclude=None):
     return namefiles
 
 
-def get_sim_name(namefiles, rootpth=None):
-    """Get simulation name.
-
-    Parameters
-    ----------
-    namefiles : str or list of strings
-        path(s) to MODFLOW-based model name files
-    rootpth : str
-        optional root directory path (default is None)
-
-    Returns
-    -------
-    simname : list
-        list of namefiles without the file extension
-
-    """
-    if isinstance(namefiles, str):
-        namefiles = [namefiles]
-    sim_name = []
-    for namefile in namefiles:
-        t = namefile.split(os.sep)
-        if rootpth is None:
-            idx = -1
-        else:
-            idx = t.index(os.path.split(rootpth)[1])
-
-        # build dst with everything after the rootpth and before
-        # the namefile file name.
-        dst = ""
-        if idx < len(t):
-            for d in t[idx + 1 : -1]:
-                dst += f"{d}_"
-
-        # add namefile basename without extension
-        dst += t[-1].replace(".nam", "")
-        sim_name.append(dst)
-
-    return sim_name
-
-
 def setup_mf6(
     src, dst, mfnamefile="mfsim.nam", extrafiles=None, remove_existing=True
 ):
@@ -390,7 +257,7 @@ def setup_mf6(
     create_dir = False
     if os.path.exists(dst):
         if remove_existing:
-            print("Removing ", dst)
+            print(f"Removing {dst}")
             shutil.rmtree(dst)
             create_dir = True
     else:
@@ -429,24 +296,24 @@ def setup_mf6(
             try:
                 os.mkdir(sf)
             except:
-                print("Could not make " + sf)
+                print(f"Could not create directory '{sf}")
 
         # Now copy the file
         if os.path.exists(srcf):
-            print("Copy file '" + srcf + "' -> '" + dstf + "'")
+            print(f"Copying file '{srcf}' -> '{dstf}'")
             shutil.copy(srcf, dstf)
         else:
-            print(srcf + " does not exist")
+            print(f"{srcf} does not exist")
 
     return mf6inp, mf6outp
 
 
 def get_mf6_comparison(src):
     """
-    Determine the comparison type for a MODFLOW 6 simulation.
-    The comparison type is a function of the files present in
-    the simulation workspace. Some file types take precedence
-    over others.
+    Determine the comparison type for a MODFLOW 6 simulation
+    based on files present in the simulation workspace. Some
+    files take precedence over others according to the order
+    specified in `COMPARE_PATTERNS`.
 
     Parameters
     ----------
@@ -464,9 +331,9 @@ def get_mf6_comparison(src):
     # Construct src pth from namefile
     for _, dirs, _ in os.walk(src):
         dl = [d.lower() for d in dirs]
-        for co in COMPARE_PATTERNS:
-            if any(co in s for s in dl):
-                return co
+        for pattern in COMPARE_PATTERNS:
+            if any(pattern in s for s in dl):
+                return pattern
 
 
 def setup_mf6_comparison(
@@ -506,17 +373,17 @@ def setup_mf6_comparison(
     dls = list(os.walk(dst))
     if overwrite and any(dls):
         if verbose:
-            print("Cleaning ", dst)
+            print(f"Cleaning directory '{dst}'")
         for root, dirs, files in dls:
             for f in files:
                 tpth = os.path.join(root, f)
                 if verbose:
-                    print("Removing ", tpth)
+                    print("Removing file '{tpth}'")
                 os.remove(tpth)
             for d in dirs:
                 tdir = os.path.join(root, d)
                 if verbose:
-                    print("Removing ", tdir)
+                    print("Removing directory '{tdir}'")
                 shutil.rmtree(tdir)
     else:
         raise ValueError(f"Destination exists but overwrite disabled: {dst}")
@@ -533,7 +400,7 @@ def setup_mf6_comparison(
             f = os.path.basename(srcf)
             dstf = os.path.join(dst, f)
             if os.path.exists(srcf):
-                print("Copy file '" + srcf + "' -> '" + dstf + "'")
+                print(f"Copying file '{srcf}' -> '{dstf}'")
                 shutil.copy(srcf, dstf)
             else:
                 print(srcf + " does not exist")
@@ -554,69 +421,6 @@ def setup_mf6_comparison(
                     nf = os.path.join(src, compare, os.path.basename(file))
                     model_setup(nf, dst, remove_existing=overwrite)
                     break
-
-
-def get_mf6_nper(tdisfile):
-    """Return the number of stress periods in the MODFLOW 6 model.
-
-    Parameters
-    ----------
-    tdisfile : str
-        path to the TDIS file
-
-    Returns
-    -------
-    nper : int
-        number of stress periods in the simulation
-
-    """
-    with open(tdisfile, "r") as f:
-        lines = f.readlines()
-    line = [line for line in lines if "NPER" in line.upper()][0]
-    nper = line.strip().split()[1]
-    return nper
-
-
-def get_mf6_mshape(disfile):
-    """Return the shape of the MODFLOW 6 model.
-
-    Parameters
-    ----------
-    disfile : str
-        path to a MODFLOW 6 discretization file
-
-    Returns
-    -------
-    mshape : tuple
-        tuple with the shape of the MODFLOW 6 model.
-
-    """
-    with open(disfile, "r") as f:
-        lines = f.readlines()
-
-    d = {}
-    for line in lines:
-        # Skip over blank and commented lines
-        ll = line.strip().split()
-        if len(ll) < 2:
-            continue
-        if line.strip()[0] in ["#", "!"]:
-            continue
-
-        for key in ["NODES", "NCPL", "NLAY", "NROW", "NCOL"]:
-            if ll[0].upper() in key:
-                d[key] = int(ll[1])
-
-    if "NODES" in d:
-        mshape = (d["NODES"],)
-    elif "NCPL" in d:
-        mshape = (d["NLAY"], d["NCPL"])
-    elif "NLAY" in d:
-        mshape = (d["NLAY"], d["NROW"], d["NCOL"])
-    else:
-        print(d)
-        raise Exception("Could not determine model shape")
-    return mshape
 
 
 def get_mf6_files(namefile):
@@ -688,7 +492,7 @@ def get_mf6_files(namefile):
     flist = pkg_files
     while True:
         olist = []
-        flist, olist = _get_mf6_external_files(srcdir, olist, flist)
+        flist, olist = get_mf6_external_files(srcdir, olist, flist)
         pkg_files += flist
         out_files += olist
         # terminate loop if no additional files
@@ -699,7 +503,7 @@ def get_mf6_files(namefile):
     return pkg_files, out_files
 
 
-def _get_mf6_external_files(srcdir, outplist, files):
+def get_mf6_external_files(srcdir, outplist, files):
     """Get list of external files in a MODFLOW 6 simulation.
 
     Parameters
@@ -831,38 +635,3 @@ def get_mf6_ftypes(namefile, ftypekeys):
                 ftypes.append(ll[0])
 
     return ftypes
-
-
-def get_mf6_blockdata(f, blockstr):
-    """Return list with all non comments between start and end of block
-    specified by blockstr.
-
-    Parameters
-    ----------
-    f : file object
-        open file object
-    blockstr : str
-        name of block to search
-
-    Returns
-    -------
-    data : list
-        list of data in specified block
-
-    """
-    data = []
-
-    # find beginning of block
-    for line in f:
-        if line[0] != "#":
-            t = line.split()
-            if t[0].lower() == "begin" and t[1].lower() == blockstr.lower():
-                break
-    for line in f:
-        if line[0] != "#":
-            t = line.split()
-            if t[0].lower() == "end" and t[1].lower() == blockstr.lower():
-                break
-            else:
-                data.append(line.rstrip())
-    return data
