@@ -32,7 +32,9 @@ module GhostNodeModule
     integer(I4B), dimension(:), pointer, contiguous :: idiagm => null() ! amat diagonal position of m
     integer(I4B), dimension(:, :), pointer, contiguous :: jposinrown => null() ! amat j position in row n
     integer(I4B), dimension(:, :), pointer, contiguous :: jposinrowm => null() ! amat j position in row m
+
   contains
+
     procedure :: gnc_df
     procedure :: gnc_ac
     procedure :: gnc_mc
@@ -53,20 +55,14 @@ module GhostNodeModule
 
 contains
 
+  !> @brief Create new GNC exchange object
+  !<
   subroutine gnc_cr(gncobj, name_parent, inunit, iout)
-! ******************************************************************************
-! gnc_cr -- Create new GNC exchange object
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
-    ! -- modules
     ! -- dummy
     type(GhostNodeType), pointer, intent(inout) :: gncobj
     character(len=*), intent(in) :: name_parent
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
-! ------------------------------------------------------------------------------
     !
     ! -- Allocate the gnc exchange object
     allocate (gncobj)
@@ -82,17 +78,13 @@ contains
     gncobj%inunit = inunit
     gncobj%iout = iout
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gnc_cr
 
+  !> @brief Initialize a gnc object
+  !<
   subroutine gnc_df(this, m1, m2)
-! ******************************************************************************
-! gnc_df -- Initialize a gnc object.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use NumericalModelModule, only: NumericalModelType
     use SimModule, only: store_error, store_error_unit
@@ -101,8 +93,6 @@ contains
     class(GhostNodeType) :: this
     class(NumericalModelType), target :: m1
     class(NumericalModelType), target, optional :: m2
-    ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- Point or set attributes
     this%m1 => m1
@@ -139,18 +129,15 @@ contains
       end if
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gnc_df
 
+  !> @brief Single or Two-Model GNC Add Connections
+  !!
+  !! For implicit GNC, expand the sparse solution matrix
+  !<
   subroutine gnc_ac(this, sparse)
-! ******************************************************************************
-! gnc_ac -- Single or Two-Model GNC Add Connections
-! Subroutine: (1) For implicit GNC, expand the sparse solution matrix
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SparseModule, only: sparsematrix
     ! -- dummy
@@ -158,7 +145,6 @@ contains
     type(sparsematrix), intent(inout) :: sparse
     ! -- local
     integer(I4B) :: ignc, jidx, noden, nodem, nodej
-! ------------------------------------------------------------------------------
     !
     ! -- Expand the sparse matrix for ghost node connections.  No need to add
     !    connection between n and m as they must be connected some other way
@@ -179,23 +165,20 @@ contains
       end do
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gnc_ac
 
+  !> @brief Single or Two-Model GNC Map Connections
+  !!
+  !! Fill the following mapping arrays:
+  !!  this%idiagn, this%idiagm (diagonal positions in solution amat)
+  !!  this%idxglo (nm connection in solution amat)
+  !!  this%idxsymglo (mn connection in solution amat)
+  !!  this%jposinrown (position of j in row n of solution amat)
+  !!  this%jposinrowm (position of j in row m of solution amat)
+  !<
   subroutine gnc_mc(this, matrix_sln)
-! ******************************************************************************
-! gnc_mc -- Single or Two-Model GNC Map Connections
-! Subroutine: (1) Fill the following mapping arrays:
-!                 this%idiagn, this%idiagm (diagonal positions in solution amat)
-!                 this%idxglo (nm connection in solution amat)
-!                 this%idxsymglo (mn connection in solution amat)
-!                 this%jposinrown (position of j in row n of solution amat)
-!                 this%jposinrowm (position of j in row m of solution amat)
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: store_error, store_error_unit, count_errors
     use SimVariablesModule, only: errmsg
@@ -208,7 +191,6 @@ contains
     character(len=*), parameter :: fmterr = &
       "('GHOST NODE ERROR.  Cell ', i0, ' in model ', a, &
         &' is not connected to cell ', i0, ' in model ', a)"
-! ------------------------------------------------------------------------------
     !
     ! -- Find the location of Cnm in the global solution and store it in
     !    this%idxglo
@@ -271,18 +253,14 @@ contains
       end do
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gnc_mc
 
+  !> @brief Store the n-m Picard conductance in cond prior to the Newton terms
+  !! terms being added
+  !<
   subroutine gnc_fmsav(this, kiter, matrix)
-! ******************************************************************************
-! gnc_fmsav -- Store the n-m Picard conductance in cond prior to the Newton
-!   terms being added.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DZERO
     ! -- dummy
@@ -292,7 +270,6 @@ contains
     ! -- local
     integer(I4B) :: ignc, ipos
     real(DP) :: cond
-! ------------------------------------------------------------------------------
     !
     ! -- An ipos value of zero indicates that noden is not connected to
     !    nodem, and therefore the conductance is zero.
@@ -306,19 +283,16 @@ contains
       this%cond(ignc) = cond
     end do gncloop
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gnc_fmsav
 
+  !> @brief Fill matrix terms
+  !!
+  !! Add the GNC terms to the solution matrix or model rhs depending on whether
+  !! whether GNC is implicit or explicit
+  !<
   subroutine gnc_fc(this, kiter, matrix)
-! ******************************************************************************
-! gnc_fc -- Fill matrix terms
-! Subroutine: (1) Add the GNC terms to the solution matrix or model rhs depending
-!                 on whether GNC is implicit or explicit
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DZERO
     ! -- dummy
@@ -328,7 +302,6 @@ contains
     ! -- local
     integer(I4B) :: ignc, j, noden, nodem, ipos, jidx, iposjn, iposjm
     real(DP) :: cond, alpha, aterm, rterm
-! ------------------------------------------------------------------------------
     !
     ! -- If this is a single model gnc (not an exchange across models), then
     !    pull conductances out of the system matrix and store them in this%cond
@@ -364,30 +337,26 @@ contains
       end do jloop
     end do gncloop
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gnc_fc
 
+  !> @brief Fill GNC Newton terms
+  !!
+  !! Required arguments:
+  !!  kiter : outer iteration number
+  !!  matrix_sln: the solution matrix
+  !!  condsat is of size(njas) if single model, otherwise nexg
+  !!
+  !! Optional arguments:
+  !!   ihc_opt : an optional vector of size(nexg), which contains a horizontal
+  !!     connection code (0=vertical, 1=horizontal, 2=vertically staggered)
+  !!   ivarcv_opt : variable vertical conductance flag (default is 0)
+  !!   ictm1_opt : icelltype for model 1 integer vector (default is 1)
+  !!   ictm2_opt : icelltype for model 2 integer vector (default is 1)
+  !<
   subroutine gnc_fn(this, kiter, matrix_sln, condsat, ihc_opt, &
                     ivarcv_opt, ictm1_opt, ictm2_opt)
-! ******************************************************************************
-! gnc_fn -- Fill GNC Newton terms
-!
-!  Required arguments:
-!   kiter : outer iteration number
-!   matrix_sln: the solution matrix
-!   condsat is of size(njas) if single model, otherwise nexg
-!
-!  Optional arguments:
-!    ihc_opt : an optional vector of size(nexg), which contains a horizontal
-!      connection code (0=vertical, 1=horizontal, 2=vertically staggered)
-!    ivarcv_opt : variable vertical conductance flag (default is 0)
-!    ictm1_opt : icelltype for model 1 integer vector (default is 1)
-!    ictm2_opt : icelltype for model 2 integer vector (default is 1)
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DZERO
     use SmoothingModule, only: sQuadraticSaturationDerivative
@@ -406,7 +375,6 @@ contains
     integer(I4B) :: iups, ictup
     real(DP) :: csat, alpha, consterm, term, derv
     real(DP) :: xup, topup, botup
-! ------------------------------------------------------------------------------
     !
     ! -- Set the ivarcv to indicate whether or not the vertical conductance
     !    is a function of water table
@@ -491,18 +459,15 @@ contains
       end do jloop
     end do gncloop
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gnc_fn
 
+  !> @brief Single Model GNC Output
+  !!
+  !! Output GNC deltaQgnc values
+  !<
   subroutine gnc_ot(this, ibudfl)
-! ******************************************************************************
-! gnc_ot -- Single Model GNC Output
-! Subroutine: (1) Output GNC deltaQgnc values
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GhostNodeType) :: this
     integer(I4B), intent(in) :: ibudfl
@@ -512,7 +477,6 @@ contains
     character(len=LINELENGTH) :: nodenstr, nodemstr
     ! -- format
     character(len=*), parameter :: fmtgnc = "(i10, 2a10, 2(1pg15.6))"
-! ------------------------------------------------------------------------------
     !
     ! -- Process each gnc and output deltaQgnc
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
@@ -529,25 +493,19 @@ contains
       end do
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gnc_ot
 
+  !> @brief Add GNC to flowja
+  !<
   subroutine gnc_cq(this, flowja)
-! ******************************************************************************
-! gnc_cq -- Add GNC to flowja
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GhostNodeType) :: this
     real(DP), dimension(:), intent(inout) :: flowja
     ! -- local
     integer(I4B) :: ignc, n1, n2, ipos, isympos
     real(DP) :: deltaQgnc
-    ! -- format
-! ------------------------------------------------------------------------------
     !
     ! -- go through each gnc and add deltagnc to flowja
     do ignc = 1, this%nexg
@@ -567,21 +525,18 @@ contains
       !
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gnc_cq
 
+  !> @brief Single Model deltaQgnc (ghost node correction flux)
+  !!
+  !! Calculate the deltaQgnc value for any GNC in the GNC list
+  !<
   function deltaQgnc(this, ignc)
-! ******************************************************************************
-! deltaQgnc -- Single Model deltaQgnc (ghost node correction flux)
-! Subroutine: (1) Calculate the deltaQgnc value for any GNC in the GNC list
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: DZERO
-    ! -- return
+    ! -- Return
     real(DP) :: deltaQgnc
     ! -- dummy
     class(GhostNodeType) :: this
@@ -589,7 +544,6 @@ contains
     ! -- local
     integer(I4B) :: noden, nodem, nodej, jidx
     real(DP) :: sigalj, alpha, hd, aterm, cond
-! ------------------------------------------------------------------------------
     !
     ! -- initialize values
     deltaQgnc = DZERO
@@ -613,22 +567,17 @@ contains
       deltaQgnc = aterm * cond
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end function deltaQgnc
 
+  !> @brief Allocate gnc scalar variables
+  !<
   subroutine allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars -- allocate gnc scalar variables
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GhostNodeType) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- allocate scalars in NumericalPackageType
     call this%NumericalPackageType%allocate_scalars()
@@ -646,22 +595,17 @@ contains
     this%nexg = 0
     this%numjs = 0
     !
+    ! -- Return
     return
   end subroutine allocate_scalars
 
+  !> @brief Allocate gnc scalar variables
+  !<
   subroutine allocate_arrays(this)
-! ******************************************************************************
-! allocate_arrays -- allocate gnc scalar variables
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate
     ! -- dummy
     class(GhostNodeType) :: this
-    ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- allocate memory for arrays
     call mem_allocate(this%nodem1, this%nexg, 'NODEM1', this%memoryPath)
@@ -689,18 +633,13 @@ contains
     return
   end subroutine allocate_arrays
 
+  !> @brief Deallocate memory
+  !<
   subroutine gnc_da(this)
-! ******************************************************************************
-! gnc_da -- deallocate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(GhostNodeType) :: this
-! ------------------------------------------------------------------------------
     !
     call mem_deallocate(this%smgnc)
     call mem_deallocate(this%implicit)
@@ -730,14 +669,11 @@ contains
     return
   end subroutine gnc_da
 
+  !> @brief Read a gnc options block
+  !!
+  !! Read options from input file
+  !<
   subroutine read_options(this)
-! ******************************************************************************
-! read_options -- read a gnc options block
-! Subroutine: (1) read options from input file
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: store_error
     use SimVariablesModule, only: errmsg
@@ -747,7 +683,6 @@ contains
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
-! ------------------------------------------------------------------------------
     !
     ! -- get options block
     call this%parser%GetBlock('OPTIONS', isfound, ierr, &
@@ -789,18 +724,15 @@ contains
     ! -- Set the iasym flag if the correction is implicit
     if (this%implicit) this%iasym = 1
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine read_options
 
+  !> @brief Single Model GNC Read Dimensions
+  !!
+  !! Read dimensions (size of gnc list) from input file
+  !<
   subroutine read_dimensions(this)
-! ******************************************************************************
-! read_dimensions -- Single Model GNC Read Dimensions
-! Subroutine: (1) read dimensions (size of gnc list) from input file
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: store_error
     use SimVariablesModule, only: errmsg
@@ -810,7 +742,6 @@ contains
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
-! ------------------------------------------------------------------------------
     !
     ! -- get options block
     call this%parser%GetBlock('DIMENSIONS', isfound, ierr, &
@@ -842,18 +773,15 @@ contains
       call store_error('Required DIMENSIONS block not found.', terminate=.TRUE.)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine read_dimensions
 
+  !> @brief Read a GNCDATA block
+  !!
+  !! Read list of GNCs from input file
+  !<
   subroutine read_data(this)
-! ******************************************************************************
-! read_data -- Read a GNCDATA block
-! Subroutine: (1) read list of GNCs from input file
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use SimModule, only: store_error, count_errors
     use SimVariablesModule, only: errmsg
@@ -866,8 +794,6 @@ contains
     integer(I4B) :: ignc, jidx, nodeun, nodeum, nerr
     integer(I4B), dimension(:), allocatable :: nodesuj
     logical :: isfound, endOfBlock
-    ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- Construct the fmtgnc format
     write (fmtgnc, '("(2i10,",i0,"i10,",i0, "(1pg15.6))")') this%numjs, &
@@ -981,17 +907,13 @@ contains
     ! -- deallocate nodesuj array
     deallocate (nodesuj)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine read_data
 
+  !> @brief Convert the user-based node number into a reduced number
+  !<
   subroutine nodeu_to_noder(this, nodeu, noder, model)
-! ******************************************************************************
-! nodeu_to_noder -- Convert the user-based node number into a reduced number
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use NumericalModelModule, only: NumericalModelType
     use SimModule, only: store_error
@@ -1001,8 +923,6 @@ contains
     integer(I4B), intent(in) :: nodeu
     integer(I4B), intent(inout) :: noder
     class(NumericalModelType), intent(in) :: model
-    ! -- local
-! ------------------------------------------------------------------------------
     !
     if (nodeu < 1 .or. nodeu > model%dis%nodesuser) then
       write (errmsg, *) &

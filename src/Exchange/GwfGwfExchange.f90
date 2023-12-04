@@ -43,7 +43,6 @@ module GwfGwfExchangeModule
   !!
   !! This derived type contains information and methods for
   !! connecting two GWF models.
-  !!
   !<
   type, extends(DisConnExchangeType) :: GwfExchangeType
     class(GwfModelType), pointer :: gwfmodel1 => null() !< pointer to GWF Model 1
@@ -119,7 +118,8 @@ contains
 
   !> @ brief Create GWF GWF exchange
   !!
-  !< Create a new GWF to GWF exchange object.
+  !! Create a new GWF to GWF exchange object.
+  !<
   subroutine gwfexchange_create(filename, name, id, m1_id, m2_id)
     ! -- modules
     use ConstantsModule, only: LINELENGTH
@@ -199,14 +199,13 @@ contains
     ! -- Create the obs package
     call obs_cr(exchange%obs, exchange%inobs)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwfexchange_create
 
   !> @ brief Define GWF GWF exchange
   !!
   !! Define GWF to GWF exchange object.
-  !!
   !<
   subroutine gwf_gwf_df(this)
     ! -- modules
@@ -280,17 +279,18 @@ contains
     ! -- validate
     call this%validate_exchange()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwf_gwf_df
 
   !> @brief validate exchange data after reading
   !<
   subroutine validate_exchange(this)
+    ! -- modules
     class(GwfExchangeType) :: this !<  GwfExchangeType
-    ! local
+    ! -- local
     logical(LGP) :: has_k22, has_spdis, has_vsc
-
+    !
     ! Periodic boundary condition in exchange don't allow XT3D (=interface model)
     if (associated(this%model1, this%model2)) then
       if (this%ixt3d > 0) then
@@ -300,7 +300,7 @@ contains
         call store_error(errmsg, terminate=.TRUE.)
       end if
     end if
-
+    !
     ! XT3D needs angle information
     if (this%ixt3d > 0 .and. this%ianglex == 0) then
       write (errmsg, '(3a)') 'GWF-GWF exchange ', trim(this%name), &
@@ -308,7 +308,7 @@ contains
         ' auxiliary variable because XT3D is enabled'
       call store_error(errmsg, terminate=.TRUE.)
     end if
-
+    !
     ! determine if specific functionality is demanded,
     ! in model 1 or model 2 (in parallel, only one of
     ! the models is checked, but the exchange is duplicated)
@@ -325,7 +325,7 @@ contains
       has_spdis = has_spdis .or. (this%gwfmodel2%npf%icalcspdis /= 0)
       has_vsc = has_vsc .or. (this%gwfmodel2%npf%invsc /= 0)
     end if
-
+    !
     ! If horizontal anisotropy is in either model1 or model2,
     ! ANGLDEGX must be provided as an auxiliary variable for this
     ! GWF-GWF exchange (this%ianglex > 0).
@@ -338,7 +338,7 @@ contains
         call store_error(errmsg, terminate=.TRUE.)
       end if
     end if
-
+    !
     ! If specific discharge is needed for model1 or model2,
     ! ANGLDEGX must be provided as an auxiliary variable for this
     ! GWF-GWF exchange (this%ianglex > 0).
@@ -360,7 +360,7 @@ contains
         call store_error(errmsg, terminate=.TRUE.)
       end if
     end if
-
+    !
     ! If viscosity is on in either model, then terminate with an
     ! error as viscosity package doesn't work yet with exchanges.
     if (has_vsc) then
@@ -369,13 +369,14 @@ contains
         ' in both of the connected models.'
       call store_error(errmsg, terminate=.TRUE.)
     end if
-
+    !
+    ! -- Return
+    return
   end subroutine validate_exchange
 
   !> @ brief Add connections
   !!
-  !! override parent exg_ac so that gnc can add connections here.
-  !!
+  !! Override parent exg_ac so that gnc can add connections here.
   !<
   subroutine gwf_gwf_ac(this, sparse)
     ! -- modules
@@ -406,7 +407,6 @@ contains
   !> @ brief Map connections
   !!
   !! Map the connections in the global matrix
-  !!
   !<
   subroutine gwf_gwf_mc(this, matrix_sln)
     ! -- modules
@@ -437,10 +437,8 @@ contains
   !> @ brief Allocate and read
   !!
   !! Allocated and read and calculate saturated conductance
-  !!
   !<
   subroutine gwf_gwf_ar(this)
-    ! -- modules
     ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
     !
@@ -460,7 +458,6 @@ contains
   !> @ brief Read and prepare
   !!
   !! Read new data for mover and obs
-  !!
   !<
   subroutine gwf_gwf_rp(this)
     ! -- modules
@@ -484,13 +481,10 @@ contains
   !> @ brief Advance
   !!
   !! Advance mover and obs
-  !!
   !<
   subroutine gwf_gwf_ad(this)
-    ! -- modules
     ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
-    ! -- local
     !
     ! -- Advance mover
     if (this%inmvr > 0) call this%mvr%mvr_ad()
@@ -505,13 +499,11 @@ contains
   !> @ brief Calculate coefficients
   !!
   !! Rewet as necessary
-  !!
   !<
   subroutine gwf_gwf_cf(this, kiter)
     ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
     integer(I4B), intent(in) :: kiter
-    ! -- local
     !
     ! -- Rewet cells across models using the wetdry parameters in each model's
     !    npf package, and the head in the connected model.
@@ -524,7 +516,6 @@ contains
   !> @ brief Fill coefficients
   !!
   !! Calculate conductance and fill coefficient matrix
-  !!
   !<
   subroutine gwf_gwf_fc(this, kiter, matrix_sln, rhs_sln, inwtflag)
     ! -- modules
@@ -596,7 +587,6 @@ contains
   !> @ brief Fill Newton
   !!
   !! Fill amatsln with Newton terms
-  !!
   !<
   subroutine gwf_gwf_fn(this, kiter, matrix_sln)
     ! -- modules
@@ -707,16 +697,13 @@ contains
   !!
   !! Calculate flow between two cells and store in simvals, also set
   !! information needed for specific discharge calculation
-  !!
   !<
   subroutine gwf_gwf_cq(this, icnvg, isuppress_output, isolnid)
-    ! -- modules
     ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
     integer(I4B), intent(inout) :: icnvg
     integer(I4B), intent(in) :: isuppress_output
     integer(I4B), intent(in) :: isolnid
-    ! -- local
     !
     ! -- calculate flow and store in simvals
     call this%gwf_gwf_calc_simvals()
@@ -727,21 +714,24 @@ contains
     ! -- add exchange flows to model's flowja diagonal
     call this%gwf_gwf_add_to_flowja()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwf_gwf_cq
 
-  !> @brief Calculate flow rates for the exchanges and
-  !< store them in a member array
+  !> @brief Calculate flow rates for the exchanges and store them in a member
+  !! array
+  !<
   subroutine gwf_gwf_calc_simvals(this)
+    ! -- modules
     use ConstantsModule, only: DZERO
+    ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
-    ! local
+    ! -- local
     integer(I4B) :: i
     integer(I4B) :: n1, n2
     integer(I4B) :: ibdn1, ibdn2
     real(DP) :: rrate
-
+    !
     do i = 1, this%nexg
       rrate = DZERO
       n1 = this%nodem1(i)
@@ -756,48 +746,54 @@ contains
       end if
       this%simvals(i) = rrate
     end do
-
+    !
+    ! -- Return
     return
   end subroutine gwf_gwf_calc_simvals
 
-  !> @brief Add exchange flow to each model flowja diagonal
-  !< position so that residual is calculated correctly.
+  !> @brief Add exchange flow to each model flowja diagonal position so that
+  !! residual is calculated correctly.
+  !<
   subroutine gwf_gwf_add_to_flowja(this)
+    ! -- modules
     class(GwfExchangeType) :: this !<  GwfExchangeType
-    ! local
+    ! -- local
     integer(I4B) :: i
     integer(I4B) :: n
     integer(I4B) :: idiag
     real(DP) :: flow
-
+    !
     do i = 1, this%nexg
-
+      !
       if (associated(this%gwfmodel1)) then
         flow = this%simvals(i)
         n = this%nodem1(i)
         idiag = this%gwfmodel1%ia(n)
         this%gwfmodel1%flowja(idiag) = this%gwfmodel1%flowja(idiag) + flow
       end if
-
+      !
       if (associated(this%gwfmodel2)) then
         flow = -this%simvals(i)
         n = this%nodem2(i)
         idiag = this%gwfmodel2%ia(n)
         this%gwfmodel2%flowja(idiag) = this%gwfmodel2%flowja(idiag) + flow
       end if
-
+      !
     end do
-
+    !
+    ! -- Return
     return
   end subroutine gwf_gwf_add_to_flowja
 
   !> @brief Set flow rates to the edges in the models
   !<
   subroutine gwf_gwf_set_flow_to_npf(this)
+    ! -- modules
     use ConstantsModule, only: DZERO, DPIO180
     use GwfNpfModule, only: thksatnm
+    ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
-    ! local
+    ! -- local
     integer(I4B) :: iusg
     integer(I4B) :: i
     integer(I4B) :: n1, n2
@@ -816,7 +812,7 @@ contains
     real(DP) :: area
     real(DP) :: thksat
     real(DP) :: angle
-
+    !
     ! -- Return if there neither model needs to calculate specific discharge
     if (this%gwfmodel1%npf%icalcspdis == 0 .and. &
         this%gwfmodel2%npf%icalcspdis == 0) return
@@ -901,13 +897,13 @@ contains
       !
     end do
     !
+    ! -- Return
     return
   end subroutine gwf_gwf_set_flow_to_npf
 
   !> @ brief Budget
   !!
   !! Accumulate budget terms
-  !!
   !<
   subroutine gwf_gwf_bd(this, icnvg, isuppress_output, isolnid)
     ! -- modules
@@ -922,7 +918,6 @@ contains
     character(len=LENBUDTXT), dimension(1) :: budtxt
     real(DP), dimension(2, 1) :: budterm
     real(DP) :: ratin, ratout
-    ! -- formats
     !
     ! -- initialize
     budtxt(1) = '    FLOW-JA-FACE'
@@ -947,17 +942,15 @@ contains
     ! -- Call mvr bd routine
     if (this%inmvr > 0) call this%mvr%mvr_bd()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwf_gwf_bd
 
   !> @ brief Budget save
   !!
   !! Output individual flows to listing file and binary budget files
-  !!
   !<
   subroutine gwf_gwf_bdsav(this)
-    ! -- modules
     ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
     ! -- local
@@ -986,16 +979,18 @@ contains
       call this%gwf_gwf_save_simvals()
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwf_gwf_bdsav
 
   subroutine gwf_gwf_bdsav_model(this, model)
+    ! -- modules
     use ConstantsModule, only: DZERO, LENBUDTXT, LENPACKAGENAME
     use TdisModule, only: kstp, kper
+    ! -- dummy
     class(GwfExchangeType) :: this !< this exchange
     class(GwfModelType), pointer :: model !< the model to save budget for
-    ! local
+    ! -- local
     character(len=LENPACKAGENAME + 4) :: packname
     character(len=LENBUDTXT), dimension(1) :: budtxt
     type(TableType), pointer :: output_tab
@@ -1008,7 +1003,7 @@ contains
     integer(I4B) :: ibinun
     real(DP) :: ratin, ratout, rrate
     logical(LGP) :: is_for_model1
-
+    !
     budtxt(1) = '    FLOW-JA-FACE'
     packname = 'EXG '//this%name
     packname = adjustr(packname)
@@ -1140,13 +1135,14 @@ contains
       end if
       !
     end do
-
+    !
+    ! -- Return
+    return
   end subroutine gwf_gwf_bdsav_model
 
   !> @ brief Output
   !!
   !! Write output
-  !!
   !<
   subroutine gwf_gwf_ot(this)
     ! -- modules
@@ -1214,14 +1210,13 @@ contains
     ! -- OBS output
     call this%obs%obs_ot()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwf_gwf_ot
 
   !> @ brief Read options
   !!
   !! Read the options block
-  !!
   !<
   subroutine read_options(this, iout)
     ! -- modules
@@ -1250,23 +1245,23 @@ contains
           exit
         end if
         call this%parser%GetStringCaps(keyword)
-
+        !
         ! first parse option in base
         if (this%DisConnExchangeType%parse_option(keyword, iout)) then
           cycle
         end if
-
+        !
         ! it's probably ours
         if (this%parse_option(keyword, iout)) then
           cycle
         end if
-
+        !
         ! unknown option
         errmsg = "Unknown GWF-GWF exchange option '"//trim(keyword)//"'."
         call store_error(errmsg)
         call this%parser%StoreErrorUnit()
       end do
-
+      !
       write (iout, '(1x,a)') 'END OF GWF-GWF EXCHANGE OPTIONS'
     end if
     !
@@ -1275,26 +1270,28 @@ contains
       this%satomega = DEM6
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine read_options
 
   !> @brief parse option from exchange file
   !<
   function parse_option(this, keyword, iout) result(parsed)
+    ! -- modules
     use InputOutputModule, only: getunit, openfile
+    ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
     character(len=LINELENGTH), intent(in) :: keyword !< the option name
     integer(I4B), intent(in) :: iout !< for logging
     logical(LGP) :: parsed !< true when parsed
-    ! local
+    ! -- local
     character(len=LINELENGTH) :: fname
     integer(I4B) :: inobs
     character(len=LINELENGTH) :: subkey
     character(len=:), allocatable :: line
-
+    !
     parsed = .true.
-
+    !
     sel_opt:select case(keyword)
     case ('PRINT_FLOWS')
     this%iprflow = 1
@@ -1388,13 +1385,14 @@ contains
     case default
     parsed = .false.
     end select sel_opt
-
+    !
+    ! -- Return
+    return
   end function parse_option
 
   !> @ brief Read ghost nodes
   !!
   !! Read and process ghost nodes
-  !!
   !<
   subroutine read_gnc(this)
     ! -- modules
@@ -1446,14 +1444,13 @@ contains
     ! -- close the file
     close (this%ingnc)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine read_gnc
 
   !> @ brief Read mover
   !!
   !! Read and process movers
-  !!
   !<
   subroutine read_mvr(this, iout)
     ! -- modules
@@ -1461,7 +1458,6 @@ contains
     ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
     integer(I4B), intent(in) :: iout
-    ! -- local
     !
     ! -- Create and initialize the mover object  Here, dis is set to the one
     !    for gwfmodel1 so that a call to save flows has an associated dis
@@ -1479,7 +1475,6 @@ contains
   !> @ brief Rewet
   !!
   !! Check if rewetting should propagate from one model to another
-  !!
   !<
   subroutine rewet(this, kiter)
     ! -- modules
@@ -1548,7 +1543,7 @@ contains
     real(DP) :: csat
     real(DP) :: fawidth
     real(DP), dimension(3) :: vg
-
+    !
     do iexg = 1, this%nexg
       !
       ihc = this%ihc(iexg)
@@ -1616,13 +1611,14 @@ contains
       ! -- store csat in condsat
       this%condsat(iexg) = csat
     end do
-
+    !
+    ! -- Return
+    return
   end subroutine calc_cond_sat
 
   !> @ brief Calculate the conductance
   !!
   !! Calculate the conductance based on state
-  !!
   !<
   subroutine condcalc(this)
     ! -- modules
@@ -1717,7 +1713,6 @@ contains
   !> @ brief Allocate scalars
   !!
   !! Allocate scalar variables
-  !!
   !<
   subroutine allocate_scalars(this)
     ! -- modules
@@ -1725,7 +1720,6 @@ contains
     use ConstantsModule, only: DZERO
     ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
-    ! -- local
     !
     call this%DisConnExchangeType%allocate_scalars()
     !
@@ -1752,21 +1746,19 @@ contains
     this%inobs = 0
     this%satomega = DZERO
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine allocate_scalars
 
   !> @ brief Deallocate
   !!
   !! Deallocate memory associated with this object
-  !!
   !<
   subroutine gwf_gwf_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
-    ! -- local
     !
     ! -- objects
     if (this%ingnc > 0) then
@@ -1816,14 +1808,13 @@ contains
     ! -- deallocate base
     call this%DisConnExchangeType%disconnex_da()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwf_gwf_da
 
   !> @ brief Allocate arrays
   !!
   !! Allocate arrays
-  !!
   !<
   subroutine allocate_arrays(this)
     ! -- modules
@@ -1891,14 +1882,13 @@ contains
       end if
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine allocate_arrays
 
   !> @ brief Define observations
   !!
   !! Define the observations associated with this object
-  !!
   !<
   subroutine gwf_gwf_df_obs(this)
     ! -- dummy
@@ -1911,14 +1901,13 @@ contains
     call this%obs%StoreObsType('flow-ja-face', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => gwf_gwf_process_obsID
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwf_gwf_df_obs
 
   !> @ brief Read and prepare observations
   !!
   !! Handle observation exchanges exchange-boundary names.
-  !!
   !<
   subroutine gwf_gwf_rp_obs(this)
     ! -- modules
@@ -1993,19 +1982,18 @@ contains
   !> @ brief Final processing
   !!
   !! Conduct any final processing
-  !!
   !<
   subroutine gwf_gwf_fp(this)
     ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
     !
+    ! -- Return
     return
   end subroutine gwf_gwf_fp
 
   !> @ brief Calculate flow
   !!
   !! Calculate the flow for the specified exchange and node numbers
-  !!
   !<
   function qcalc(this, iexg, n1, n2)
     ! -- return
@@ -2020,7 +2008,7 @@ contains
     ! -- Calculate flow between nodes in the two models
     qcalc = this%cond(iexg) * (this%gwfmodel2%x(n2) - this%gwfmodel1%x(n1))
     !
-    ! -- return
+    ! -- Return
     return
   end function qcalc
 
@@ -2028,7 +2016,6 @@ contains
   !!
   !! Return flag indicating whether or not this exchange will cause the
   !! coefficient matrix to be asymmetric.
-  !!
   !<
   function gwf_gwf_get_iasym(this) result(iasym)
     ! -- dummy
@@ -2047,7 +2034,7 @@ contains
       if (this%gnc%iasym /= 0) iasym = 1
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end function gwf_gwf_get_iasym
 
@@ -2055,11 +2042,14 @@ contains
   !! coefficients for solving @param model
   !<
   function gwf_gwf_connects_model(this, model) result(is_connected)
+    ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
     class(BaseModelType), pointer, intent(in) :: model !< the model to which the exchange might hold a connection
+    ! -- return
     logical(LGP) :: is_connected !< true, when connected
-
+    !
     is_connected = .false.
+    !
     ! only connected when model is GwfModelType of course
     select type (model)
     class is (GwfModelType)
@@ -2069,31 +2059,37 @@ contains
         is_connected = .true.
       end if
     end select
-
+    !
+    ! -- Return
+    return
   end function gwf_gwf_connects_model
 
   !> @brief Should interface model be used for this exchange
   !<
   function use_interface_model(this) result(use_im)
+    ! -- dummy
     class(GwfExchangeType) :: this !<  GwfExchangeType
+    ! -- return
     logical(LGP) :: use_im !< true when interface model should be used
-
+    !
     use_im = this%DisConnExchangeType%use_interface_model()
     use_im = use_im .or. (this%ixt3d > 0)
-
+    !
+    ! -- Return
+    return
   end function
 
   !> @ brief Save simulated flow observations
   !!
   !! Save the simulated flows for each exchange
-  !!
   !<
   subroutine gwf_gwf_save_simvals(this)
-    ! -- dummy
+    ! -- modules
     use SimModule, only: store_error, store_error_unit
     use SimVariablesModule, only: errmsg
     use ConstantsModule, only: DZERO
     use ObserveModule, only: ObserveType
+    ! -- dummy
     class(GwfExchangeType), intent(inout) :: this
     ! -- local
     integer(I4B) :: i
@@ -2128,13 +2124,13 @@ contains
       end do
     end if
     !
+    ! -- Return
     return
   end subroutine gwf_gwf_save_simvals
 
   !> @ brief Obs ID processer
   !!
   !! Process observations for this exchange
-  !!
   !<
   subroutine gwf_gwf_process_obsID(obsrv, dis, inunitobs, iout)
     ! -- modules
@@ -2170,17 +2166,19 @@ contains
       obsrv%intPak1 = NAMEDBOUNDFLAG
     end if
     !
+    ! -- Return
     return
   end subroutine gwf_gwf_process_obsID
 
   !> @ brief Cast polymorphic object as exchange
   !!
   !! Cast polymorphic object as exchange
-  !!
   !<
   function CastAsGwfExchange(obj) result(res)
     implicit none
+    ! -- dummy
     class(*), pointer, intent(inout) :: obj
+    ! -- return
     class(GwfExchangeType), pointer :: res
     !
     res => null()
@@ -2190,19 +2188,21 @@ contains
     class is (GwfExchangeType)
       res => obj
     end select
+    !
+    ! -- Return
     return
   end function CastAsGwfExchange
 
   !> @ brief Get exchange from list
   !!
   !! Return an exchange from the list for specified index
-  !!
   !<
   function GetGwfExchangeFromList(list, idx) result(res)
     implicit none
     ! -- dummy
     type(ListType), intent(inout) :: list
     integer(I4B), intent(in) :: idx
+    ! -- return
     class(GwfExchangeType), pointer :: res
     ! -- local
     class(*), pointer :: obj
@@ -2210,6 +2210,7 @@ contains
     obj => list%GetItem(idx)
     res => CastAsGwfExchange(obj)
     !
+    ! -- Return
     return
   end function GetGwfExchangeFromList
 

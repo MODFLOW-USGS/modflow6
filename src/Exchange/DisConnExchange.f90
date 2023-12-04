@@ -75,24 +75,25 @@ contains
   !> @brief Parse option from exchange file
   !<
   function parse_option(this, keyword, iout) result(parsed)
+    ! -- modules
     use ArrayHandlersModule, only: ifind
     use InputOutputModule, only: urdaux
+    ! -- dummy
     class(DisConnExchangeType) :: this !< instance of exchange object
     character(len=LINELENGTH), intent(in) :: keyword !< the option name
     integer(I4B), intent(in) :: iout !< for logging
     logical(LGP) :: parsed !< true when parsed
-    ! local
+    ! -- local
     integer(I4B) :: istart
     integer(I4B) :: istop
     integer(I4B) :: lloc
     integer(I4B) :: n
     integer(I4B) :: ival
-
     character(len=:), allocatable :: line
     character(len=LENAUXNAME), dimension(:), allocatable :: caux
-
+    !
     parsed = .true.
-
+    !
     select case (keyword)
     case ('AUXILIARY')
       call this%parser%GetRemainingLine(line)
@@ -138,25 +139,29 @@ contains
       ! not parsed here, assuming it is in derived type
       parsed = .false.
     end select
-
+    !
+    ! -- Return
+    return
   end function parse_option
 
   !> @brief Read dimensions from file
   !<
   subroutine read_dimensions(this, iout)
+    ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error
+    ! -- dummy
     class(DisConnExchangeType) :: this !< instance of exchange object
     integer(I4B), intent(in) :: iout !< output file unit
-    ! local
+    ! -- local
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
-
+    !
     ! get dimensions block
     call this%parser%GetBlock('DIMENSIONS', isfound, ierr, &
                               supportOpenClose=.true.)
-
+    !
     ! parse NEXG
     if (isfound) then
       write (iout, '(1x,a)') 'PROCESSING EXCHANGE DIMENSIONS'
@@ -179,29 +184,32 @@ contains
       call store_error('Required dimensions block not found.')
       call this%parser%StoreErrorUnit()
     end if
-
+    !
+    ! -- Return
     return
   end subroutine read_dimensions
 
   !> @brief Read exchange data block from file
   !<
   subroutine read_data(this, iout)
+    ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, store_error_unit, count_errors
+    ! -- dummy
     class(DisConnExchangeType) :: this !< instance of exchange object
     integer(I4B), intent(in) :: iout !< the output file unit
-    ! local
+    ! -- local
     character(len=20) :: cellid1, cellid2
     character(len=2) :: cnfloat
     integer(I4B) :: lloc, ierr, nerr, iaux
     integer(I4B) :: iexg, nodem1, nodem2
     logical :: isfound, endOfBlock
-
+    ! -- format
     character(len=*), parameter :: fmtexglabel = "(5x, 3a10, 50(a16))"
     character(len=*), parameter :: fmtexgdata = &
                                    "(5x, a, 1x, a ,I10, 50(1pg16.6))"
     character(len=40) :: fmtexgdata2
-
+    !
     ! get data block
     call this%parser%GetBlock('EXCHANGEDATA', isfound, ierr, &
                               supportOpenClose=.true.)
@@ -316,19 +324,21 @@ contains
       call this%parser%StoreErrorUnit()
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine read_data
 
   !> @brief Allocate scalars and initialize to defaults
   !<
   subroutine allocate_scalars(this)
+    ! -- modules
     use MemoryManagerModule, only: mem_allocate
+    ! -- dummy
     class(DisConnExchangeType) :: this !< instance of exchange object
-
+    !
     allocate (this%filename)
     this%filename = ''
-
+    !
     call mem_allocate(this%nexg, 'NEXG', this%memoryPath)
     call mem_allocate(this%naux, 'NAUX', this%memoryPath)
     call mem_allocate(this%ianglex, 'IANGLEX', this%memoryPath)
@@ -341,24 +351,27 @@ contains
                       'AUXNAME', this%memoryPath)
     call mem_allocate(this%auxname_cst, LENAUXNAME, 0, &
                       'AUXNAME_CST', this%memoryPath)
-
+    !
     this%nexg = 0
     this%naux = 0
     this%ianglex = 0
     this%icdist = 0
     this%ixt3d = 0
     this%inamedbound = 0
-
+    !
     this%dev_ifmod_on = .false.
-
+    !
+    ! -- Return
+    return
   end subroutine allocate_scalars
 
   !> @brief Allocate array data, using the number of
   !! connected nodes @param nexg
   !<
   subroutine allocate_arrays(this)
+    ! -- dummy
     class(DisConnExchangeType) :: this !< instance of exchange object
-
+    !
     call mem_allocate(this%nodem1, this%nexg, 'NODEM1', this%memoryPath)
     call mem_allocate(this%nodem2, this%nexg, 'NODEM2', this%memoryPath)
     call mem_allocate(this%ihc, this%nexg, 'IHC', this%memoryPath)
@@ -368,7 +381,7 @@ contains
     ! NB: auxname array is allocated while parsing
     call mem_allocate(this%auxvar, this%naux, this%nexg, &
                       'AUXVAR', this%memoryPath)
-
+    !
     ! allocate boundname
     if (this%inamedbound == 1) then
       allocate (this%boundname(this%nexg))
@@ -376,28 +389,36 @@ contains
       allocate (this%boundname(1))
     end if
     this%boundname(:) = ''
-
+    !
+    ! -- Return
+    return
   end subroutine allocate_arrays
 
   !> @brief Should interface model be used to handle these
   !! exchanges, to be overridden for inheriting types
   !<
   function use_interface_model(this) result(use_im)
+    ! -- dummy
     class(DisConnExchangeType) :: this !< instance of exchange object
+    ! -- return
     logical(LGP) :: use_im !< flag whether interface model should be used
                           !! for this exchange instead
-
+    !
     ! use im when one of the models is not local
     use_im = .not. (this%v_model1%is_local .and. this%v_model2%is_local)
-
+    !
+    ! -- Return
+    return
   end function use_interface_model
 
   !> @brief Clean up all scalars and arrays
   !<
   subroutine disconnex_da(this)
+    ! -- modules
     use MemoryManagerModule, only: mem_deallocate
+    ! -- dummy
     class(DisConnExchangeType) :: this !< instance of exchange object
-
+    !
     ! arrays
     call mem_deallocate(this%nodem1)
     call mem_deallocate(this%nodem2)
@@ -406,9 +427,9 @@ contains
     call mem_deallocate(this%cl2)
     call mem_deallocate(this%hwva)
     call mem_deallocate(this%auxvar)
-
+    !
     deallocate (this%boundname)
-
+    !
     ! scalars
     call mem_deallocate(this%nexg)
     call mem_deallocate(this%naux)
@@ -419,12 +440,16 @@ contains
     call mem_deallocate(this%ixt3d)
     call mem_deallocate(this%iprpak)
     call mem_deallocate(this%inamedbound)
-
+    !
+    ! -- Return
+    return
   end subroutine disconnex_da
 
   function CastAsDisConnExchangeClass(obj) result(res)
     implicit none
+    ! -- dummy
     class(*), pointer, intent(inout) :: obj
+    ! -- return
     class(DisConnExchangeType), pointer :: res
     !
     res => null()
@@ -434,6 +459,8 @@ contains
     class is (DisConnExchangeType)
       res => obj
     end select
+    !
+    ! -- Return
     return
   end function CastAsDisConnExchangeClass
 
@@ -448,6 +475,7 @@ contains
     obj => exchange
     call list%Add(obj)
     !
+    ! -- Return
     return
   end subroutine AddDisConnExchangeToList
 
@@ -456,6 +484,7 @@ contains
     ! -- dummy
     type(ListType), intent(inout) :: list
     integer(I4B), intent(in) :: idx
+    ! -- return
     class(DisConnExchangeType), pointer :: res
     ! -- local
     class(*), pointer :: obj
@@ -463,6 +492,7 @@ contains
     obj => list%GetItem(idx)
     res => CastAsDisConnExchangeClass(obj)
     !
+    ! -- Return
     return
   end function GetDisConnExchangeFromList
 

@@ -45,7 +45,6 @@ module GwtGwtExchangeModule
   !!
   !! This derived type contains information and methods for
   !! connecting two GWT models.
-  !!
   !<
   type, extends(DisConnExchangeType) :: GwtExchangeType
     !
@@ -112,7 +111,6 @@ contains
   !> @ brief Create GWT GWT exchange
   !!
   !! Create a new GWT to GWT exchange object.
-  !!
   !<
   subroutine gwtexchange_create(filename, name, id, m1_id, m2_id)
     ! -- modules
@@ -193,14 +191,13 @@ contains
     ! -- Create the obs package
     call obs_cr(exchange%obs, exchange%inobs)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwtexchange_create
 
   !> @ brief Define GWT GWT exchange
   !!
   !! Define GWT to GWT exchange object.
-  !!
   !<
   subroutine gwt_gwt_df(this)
     ! -- modules
@@ -261,16 +258,16 @@ contains
     ! -- validate
     call this%validate_exchange()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwt_gwt_df
 
   !> @brief validate exchange data after reading
   !<
   subroutine validate_exchange(this)
+    ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
-    ! local
-
+    !
     ! Ensure gwfmodel names were entered
     if (this%gwfmodelname1 == '') then
       write (errmsg, '(3a)') 'GWT-GWT exchange ', trim(this%name), &
@@ -284,7 +281,7 @@ contains
                             &OPTIONS block.'
       call store_error(errmsg)
     end if
-
+    !
     ! Periodic boundary condition in exchange don't allow XT3D (=interface model)
     if (associated(this%model1, this%model2)) then
       if (this%ixt3d > 0) then
@@ -294,7 +291,7 @@ contains
         call store_error(errmsg)
       end if
     end if
-
+    !
     ! Check to see if dispersion is on in either model1 or model2.
     ! If so, then ANGLDEGX must be provided as an auxiliary variable for this
     ! GWT-GWT exchange (this%ianglex > 0).
@@ -309,30 +306,29 @@ contains
         end if
       end if
     end if
-
+    !
     if (this%ixt3d > 0 .and. this%ianglex == 0) then
       write (errmsg, '(3a)') 'GWT-GWT exchange ', trim(this%name), &
         ' requires that ANGLDEGX be specified as an'// &
         ' auxiliary variable because XT3D is enabled'
       call store_error(errmsg)
     end if
-
+    !
     if (count_errors() > 0) then
       call ustop()
     end if
-
+    !
+    ! -- Return
+    return
   end subroutine validate_exchange
 
   !> @ brief Allocate and read
   !!
   !! Allocated and read and calculate saturated conductance
-  !!
   !<
   subroutine gwt_gwt_ar(this)
-    ! -- modules
     ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
-    ! -- local
     !
     ! -- If mover is active, then call ar routine
     if (this%inmvt > 0) call this%mvt%mvt_ar()
@@ -347,7 +343,6 @@ contains
   !> @ brief Read and prepare
   !!
   !! Read new data for mover and obs
-  !!
   !<
   subroutine gwt_gwt_rp(this)
     ! -- modules
@@ -371,13 +366,10 @@ contains
   !> @ brief Advance
   !!
   !! Advance mover and obs
-  !!
   !<
   subroutine gwt_gwt_ad(this)
-    ! -- modules
     ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
-    ! -- local
     !
     ! -- Advance mover
     !if(this%inmvt > 0) call this%mvt%mvt_ad()
@@ -392,17 +384,14 @@ contains
   !> @ brief Fill coefficients
   !!
   !! Calculate conductance and fill coefficient matrix
-  !!
   !<
   subroutine gwt_gwt_fc(this, kiter, matrix_sln, rhs_sln, inwtflag)
-    ! -- modules
     ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
     integer(I4B), intent(in) :: kiter
     class(MatrixBaseType), pointer :: matrix_sln
     real(DP), dimension(:), intent(inout) :: rhs_sln
     integer(I4B), optional, intent(in) :: inwtflag
-    ! -- local
     !
     ! -- Call mvt fc routine
     if (this%inmvt > 0) call this%mvt%mvt_fc(this%gwtmodel1%x, this%gwtmodel2%x)
@@ -414,7 +403,6 @@ contains
   !> @ brief Budget
   !!
   !! Accumulate budget terms
-  !!
   !<
   subroutine gwt_gwt_bd(this, icnvg, isuppress_output, isolnid)
     ! -- modules
@@ -429,7 +417,6 @@ contains
     character(len=LENBUDTXT), dimension(1) :: budtxt
     real(DP), dimension(2, 1) :: budterm
     real(DP) :: ratin, ratout
-    ! -- formats
     !
     ! -- initialize
     budtxt(1) = '    FLOW-JA-FACE'
@@ -454,17 +441,15 @@ contains
     ! -- Call mvt bd routine
     if (this%inmvt > 0) call this%mvt%mvt_bd(this%gwtmodel1%x, this%gwtmodel2%x)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwt_gwt_bd
 
   !> @ brief Budget save
   !!
   !! Output individual flows to listing file and binary budget files
-  !!
   !<
   subroutine gwt_gwt_bdsav(this)
-    ! -- modules
     ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
     ! -- local
@@ -493,14 +478,13 @@ contains
       call this%gwt_gwt_save_simvals()
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwt_gwt_bdsav
 
   !> @ brief Budget save
   !!
   !! Output individual flows to listing file and binary budget files
-  !!
   !<
   subroutine gwt_gwt_bdsav_model(this, model)
     ! -- modules
@@ -523,7 +507,6 @@ contains
     real(DP) :: ratin, ratout, rrate
     logical(LGP) :: is_for_model1
     integer(I4B) :: isuppress_output
-    ! -- formats
     !
     ! -- initialize local variables
     isuppress_output = 0
@@ -662,14 +645,13 @@ contains
       !
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwt_gwt_bdsav_model
 
   !> @ brief Output
   !!
   !! Write output
-  !!
   !<
   subroutine gwt_gwt_ot(this)
     ! -- modules
@@ -720,14 +702,13 @@ contains
     ! -- OBS output
     call this%obs%obs_ot()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwt_gwt_ot
 
   !> @ brief Read options
   !!
   !! Read the options block
-  !!
   !<
   subroutine read_options(this, iout)
     ! -- modules
@@ -756,45 +737,47 @@ contains
           exit
         end if
         call this%parser%GetStringCaps(keyword)
-
+        !
         ! first parse option in base
         if (this%DisConnExchangeType%parse_option(keyword, iout)) then
           cycle
         end if
-
+        !
         ! it's probably ours
         if (this%parse_option(keyword, iout)) then
           cycle
         end if
-
+        !
         ! unknown option
         errmsg = "Unknown GWT-GWT exchange option '"//trim(keyword)//"'."
         call store_error(errmsg)
         call this%parser%StoreErrorUnit()
       end do
-
+      !
       write (iout, '(1x,a)') 'END OF GWT-GWT EXCHANGE OPTIONS'
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine read_options
 
   !> @brief parse option from exchange file
   !<
   function parse_option(this, keyword, iout) result(parsed)
+    ! -- modules
     use InputOutputModule, only: getunit, openfile
+    ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
     character(len=LINELENGTH), intent(in) :: keyword !< the option name
     integer(I4B), intent(in) :: iout !< for logging
     logical(LGP) :: parsed !< true when parsed
-    ! local
+    ! -- local
     character(len=LINELENGTH) :: fname
     integer(I4B) :: inobs, ilen
     character(len=LINELENGTH) :: subkey
-
+    !
     parsed = .true.
-
+    !
     select case (keyword)
     case ('GWFMODELNAME1')
       call this%parser%GetStringCaps(subkey)
@@ -908,13 +891,14 @@ contains
     case default
       parsed = .false.
     end select
-
+    !
+    ! -- Return
+    return
   end function parse_option
 
   !> @ brief Read mover
   !!
   !! Read and process movers
-  !!
   !<
   subroutine read_mvt(this, iout)
     ! -- modules
@@ -922,7 +906,6 @@ contains
     ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
     integer(I4B), intent(in) :: iout
-    ! -- local
     !
     ! -- Create and initialize the mover object  Here, fmi is set to the one
     !    for gwtmodel1 so that a call to save flows has an associated dis
@@ -940,7 +923,6 @@ contains
   !> @ brief Allocate scalars
   !!
   !! Allocate scalar variables
-  !!
   !<
   subroutine allocate_scalars(this)
     ! -- modules
@@ -948,7 +930,6 @@ contains
     use ConstantsModule, only: DZERO
     ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
-    ! -- local
     !
     call this%DisConnExchangeType%allocate_scalars()
     !
@@ -967,21 +948,19 @@ contains
     call mem_allocate(this%inmvt, 'INMVT', this%memoryPath)
     this%inmvt = 0
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine allocate_scalars
 
   !> @ brief Deallocate
   !!
   !! Deallocate memory associated with this object
-  !!
   !<
   subroutine gwt_gwt_da(this)
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
-    ! -- local
     !
     ! -- objects
     if (this%inmvt > 0) then
@@ -1020,14 +999,13 @@ contains
     ! -- deallocate base
     call this%DisConnExchangeType%disconnex_da()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwt_gwt_da
 
   !> @ brief Allocate arrays
   !!
   !! Allocate arrays
-  !!
   !<
   subroutine allocate_arrays(this)
     ! -- modules
@@ -1092,14 +1070,13 @@ contains
       end if
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine allocate_arrays
 
   !> @ brief Define observations
   !!
   !! Define the observations associated with this object
-  !!
   !<
   subroutine gwt_gwt_df_obs(this)
     ! -- dummy
@@ -1112,14 +1089,13 @@ contains
     call this%obs%StoreObsType('flow-ja-face', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => gwt_gwt_process_obsID
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine gwt_gwt_df_obs
 
   !> @ brief Read and prepare observations
   !!
   !! Handle observation exchanges exchange-boundary names.
-  !!
   !<
   subroutine gwt_gwt_rp_obs(this)
     ! -- modules
@@ -1194,24 +1170,27 @@ contains
   !> @ brief Final processing
   !!
   !! Conduct any final processing
-  !!
   !<
   subroutine gwt_gwt_fp(this)
     ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
     !
+    ! -- Return
     return
   end subroutine gwt_gwt_fp
 
-  !> @brief Return true when this exchange provides matrix
-  !! coefficients for solving @param model
+  !> @brief Return true when this exchange provides matrix coefficients for
+  !! solving @param model
   !<
   function gwt_gwt_connects_model(this, model) result(is_connected)
+    ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
     class(BaseModelType), pointer, intent(in) :: model !< the model to which the exchange might hold a connection
+    ! -- return
     logical(LGP) :: is_connected !< true, when connected
-
+    !
     is_connected = .false.
+    !
     ! only connected when model is GwtModelType of course
     select type (model)
     class is (GwtModelType)
@@ -1221,7 +1200,9 @@ contains
         is_connected = .true.
       end if
     end select
-
+    !
+    ! -- Return
+    return
   end function gwt_gwt_connects_model
 
   !> @brief Should interface model be used for this exchange
@@ -1233,19 +1214,22 @@ contains
   !! set the return accordingly.
   !<
   function use_interface_model(this) result(use_im)
+    ! -- dummy
     class(GwtExchangeType) :: this !<  GwtExchangeType
+    ! -- return
     logical(LGP) :: use_im !< true when interface model should be used
-
+    !
     ! For now set use_im to .true. since the interface model approach
     ! must currently be used for any GWT-GWT exchange.
     use_im = .true.
-
+    !
+    ! -- Return
+    return
   end function
 
   !> @ brief Save simulated flow observations
   !!
   !! Save the simulated flows for each exchange
-  !!
   !<
   subroutine gwt_gwt_save_simvals(this)
     ! -- dummy
@@ -1287,13 +1271,13 @@ contains
       end do
     end if
     !
+    ! -- Return
     return
   end subroutine gwt_gwt_save_simvals
 
   !> @ brief Obs ID processer
   !!
   !! Process observations for this exchange
-  !!
   !<
   subroutine gwt_gwt_process_obsID(obsrv, dis, inunitobs, iout)
     ! -- modules
@@ -1329,17 +1313,19 @@ contains
       obsrv%intPak1 = NAMEDBOUNDFLAG
     end if
     !
+    ! -- Return
     return
   end subroutine gwt_gwt_process_obsID
 
   !> @ brief Cast polymorphic object as exchange
   !!
   !! Cast polymorphic object as exchange
-  !!
   !<
   function CastAsGwtExchange(obj) result(res)
     implicit none
+    ! -- dummy
     class(*), pointer, intent(inout) :: obj
+    ! -- return
     class(GwtExchangeType), pointer :: res
     !
     res => null()
@@ -1349,19 +1335,21 @@ contains
     class is (GwtExchangeType)
       res => obj
     end select
+    !
+    ! -- Return
     return
   end function CastAsGwtExchange
 
   !> @ brief Get exchange from list
   !!
   !! Return an exchange from the list for specified index
-  !!
   !<
   function GetGwtExchangeFromList(list, idx) result(res)
     implicit none
     ! -- dummy
     type(ListType), intent(inout) :: list
     integer(I4B), intent(in) :: idx
+    ! -- return
     class(GwtExchangeType), pointer :: res
     ! -- local
     class(*), pointer :: obj
@@ -1369,6 +1357,7 @@ contains
     obj => list%GetItem(idx)
     res => CastAsGwtExchange(obj)
     !
+    ! -- Return
     return
   end function GetGwtExchangeFromList
 
