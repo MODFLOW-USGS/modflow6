@@ -41,16 +41,10 @@ module ghbmodule
 
 contains
 
+  !> @brief Create a New Ghb Package and point bndobj to the new package
+  !<
   subroutine ghb_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         mempath)
-! ******************************************************************************
-! ghb_create -- Create a New Ghb Package
-! Subroutine: (1) create new-style package
-!             (2) point bndobj to the new package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
@@ -62,7 +56,6 @@ contains
     character(len=*), intent(in) :: mempath
     ! -- local
     type(GhbType), pointer :: ghbobj
-! ------------------------------------------------------------------------------
     !
     ! -- allocate the object and assign values to object variables
     allocate (ghbobj)
@@ -86,22 +79,17 @@ contains
     packobj%iscloc = 2
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine ghb_create
 
+  !> @brief Deallocate memory
+  !<
   subroutine ghb_da(this)
-! ******************************************************************************
-! ghb_da -- deallocate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(GhbType) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- Deallocate parent package
     call this%BndExtType%bnd_da()
@@ -110,17 +98,14 @@ contains
     call mem_deallocate(this%bhead, 'BHEAD', this%memoryPath)
     call mem_deallocate(this%cond, 'COND', this%memoryPath)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine ghb_da
 
+  !> @brief Set options specific to GhbType
+  !<
   subroutine ghb_options(this)
-! ******************************************************************************
-! ghb_options -- set options specific to GhbType
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use MemoryManagerExtModule, only: mem_set_value
     use CharacterStringModule, only: CharacterStringType
     use GwfGhbInputModule, only: GwfGhbParamFoundType
@@ -128,7 +113,6 @@ contains
     class(GhbType), intent(inout) :: this
     ! -- local
     type(GwfGhbParamFoundType) :: found
-! ------------------------------------------------------------------------------
     !
     ! -- source base class options
     call this%BndExtType%source_options()
@@ -139,23 +123,18 @@ contains
     ! -- log ghb specific options
     call this%log_ghb_options(found)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine ghb_options
 
+  !> @brief Log options specific to GhbType
+  !<
   subroutine log_ghb_options(this, found)
-! ******************************************************************************
-! log_ghb_options -- log options specific to GhbType
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use GwfGhbInputModule, only: GwfGhbParamFoundType
-    ! -- dummy variables
+    ! -- dummy
     class(GhbType), intent(inout) :: this !< BndExtType object
     type(GwfGhbParamFoundType), intent(in) :: found
-    ! -- local variables
-    ! -- format
     !
     ! -- log found options
     write (this%iout, '(/1x,a)') 'PROCESSING '//trim(adjustl(this%text)) &
@@ -169,25 +148,19 @@ contains
     write (this%iout, '(1x,a)') &
       'END OF '//trim(adjustl(this%text))//' OPTIONS'
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine log_ghb_options
 
+  !> @brief Allocate arrays
+  !<
   subroutine ghb_allocate_arrays(this, nodelist, auxvar)
-! ******************************************************************************
-! ghb_allocate_arrays -- allocate arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr, mem_checkin
     ! -- dummy
     class(GhbType) :: this
     integer(I4B), dimension(:), pointer, contiguous, optional :: nodelist
     real(DP), dimension(:, :), pointer, contiguous, optional :: auxvar
-    ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- call base type allocate arrays
     call this%BndExtType%allocate_arrays(nodelist, auxvar)
@@ -202,22 +175,18 @@ contains
     call mem_checkin(this%cond, 'COND', this%memoryPath, &
                      'COND', this%input_mempath)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine ghb_allocate_arrays
 
+  !> @brief Read and prepare
+  !<
   subroutine ghb_rp(this)
-! ******************************************************************************
-! ghb_rp -- Read and prepare
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- modules
     use TdisModule, only: kper
     ! -- dummy
     class(GhbType), intent(inout) :: this
-    ! -- local
-! ------------------------------------------------------------------------------
+    !
     if (this%iper /= kper) return
     !
     ! -- Call the parent class read and prepare
@@ -233,17 +202,13 @@ contains
       call this%write_list()
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine ghb_rp
 
+  !> @brief Check ghb boundary condition data
+  !<
   subroutine ghb_ck(this)
-! ******************************************************************************
-! ghb_ck -- Check ghb boundary condition data
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
     use SimModule, only: store_error, count_errors, store_error_unit
@@ -258,7 +223,6 @@ contains
     character(len=*), parameter :: fmtghberr = &
       "('GHB BOUNDARY (',i0,') HEAD (',f10.3,') IS LESS THAN CELL &
       &BOTTOM (',f10.3,')')"
-! ------------------------------------------------------------------------------
     !
     ! -- check stress period data
     do i = 1, this%nbound
@@ -276,24 +240,19 @@ contains
       call store_error_unit(this%inunit)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine ghb_ck
 
+  !> @brief Formulate the HCOF and RHS terms
+  !!
+  !! Skip if no GHBs
+  !<
   subroutine ghb_cf(this)
-! ******************************************************************************
-! ghb_cf -- Formulate the HCOF and RHS terms
-! Subroutine: (1) skip if no ghbs
-!             (2) calculate hcof and rhs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(GhbType) :: this
     ! -- local
     integer(I4B) :: i, node
-! ------------------------------------------------------------------------------
     !
     ! -- Return if no ghbs
     if (this%nbound .eq. 0) return
@@ -310,17 +269,13 @@ contains
       this%rhs(i) = -this%cond_mult(i) * this%bhead(i)
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine ghb_cf
 
+  !> @brief Copy rhs and hcof into solution rhs and amat
+  !<
   subroutine ghb_fc(this, rhs, ia, idxglo, matrix_sln)
-! **************************************************************************
-! ghb_fc -- Copy rhs and hcof into solution rhs and amat
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     ! -- dummy
     class(GhbType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
@@ -330,7 +285,6 @@ contains
     ! -- local
     integer(I4B) :: i, n, ipos
     real(DP) :: cond, bhead, qghb
-! --------------------------------------------------------------------------
     !
     ! -- pakmvrobj fc
     if (this%imover == 1) then
@@ -354,20 +308,16 @@ contains
       end if
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine ghb_fc
 
+  !> @brief Define the list heading that is written to iout when PRINT_INPUT
+  !! option is used
+  !<
   subroutine define_listlabel(this)
-! ******************************************************************************
-! define_listlabel -- Define the list heading that is written to iout when
-!   PRINT_INPUT option is used.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy
     class(GhbType), intent(inout) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- create the header list label
     this%listlabel = trim(this%filtyp)//' NO.'
@@ -387,43 +337,38 @@ contains
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine define_listlabel
 
   ! -- Procedures related to observations
 
+  !> @brief Return true because GHB package supports observations
+  !!
+  !! Overrides BndType%bnd_obs_supported()
+  !<
   logical function ghb_obs_supported(this)
-    ! ******************************************************************************
-    ! ghb_obs_supported
-    !   -- Return true because GHB package supports observations.
-    !   -- Overrides BndType%bnd_obs_supported()
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
     implicit none
+    ! -- dummy
     class(GhbType) :: this
-    ! ------------------------------------------------------------------------------
+    !
     ghb_obs_supported = .true.
+    !
+    ! -- Return
     return
   end function ghb_obs_supported
 
+  !> @brief Store observation type supported by GHB package
+  !!
+  !! Overrides BndType%bnd_df_obs
+  !<
   subroutine ghb_df_obs(this)
-    ! ******************************************************************************
-    ! ghb_df_obs (implements bnd_df_obs)
-    !   -- Store observation type supported by GHB package.
-    !   -- Overrides BndType%bnd_df_obs
-    ! ******************************************************************************
-    !
-    !    SPECIFICATIONS:
-    ! ------------------------------------------------------------------------------
     implicit none
     ! -- dummy
     class(GhbType) :: this
     ! -- local
     integer(I4B) :: indx
-    ! ------------------------------------------------------------------------------
+    !
     call this%obs%StoreObsType('ghb', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
     !
@@ -432,15 +377,16 @@ contains
     call this%obs%StoreObsType('to-mvr', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine ghb_df_obs
 
+  !> @brief Store user-specified conductance for GHB boundary type
+  !<
   subroutine ghb_store_user_cond(this)
-    ! -- modules
-    ! -- dummy variables
+    ! -- dummy
     class(GhbType), intent(inout) :: this !< BndExtType object
-    ! -- local variables
+    ! -- local
     integer(I4B) :: n
     !
     ! -- store backup copy of conductance values
@@ -448,10 +394,12 @@ contains
       this%condinput(n) = this%cond_mult(n)
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine ghb_store_user_cond
 
+  !> @brief Apply multiplier to GHB conductance if option AUXMULTCOL is used
+  !<
   function cond_mult(this, row) result(cond)
     ! -- modules
     use ConstantsModule, only: DZERO
@@ -467,20 +415,16 @@ contains
       cond = this%cond(row)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end function cond_mult
 
-! ******************************************************************************
-! ghb_bound_value -- return requested boundary value
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Return requested boundary value
+  !<
   function ghb_bound_value(this, col, row) result(bndval)
     ! -- modules
     use ConstantsModule, only: DZERO
-    ! -- dummy variables
+    ! -- dummy
     class(GhbType), intent(inout) :: this !< BndExtType object
     integer(I4B), intent(in) :: col
     integer(I4B), intent(in) :: row
@@ -499,7 +443,7 @@ contains
       call store_error_filename(this%input_fname)
     end select
     !
-    ! -- return
+    ! -- Return
     return
   end function ghb_bound_value
 
