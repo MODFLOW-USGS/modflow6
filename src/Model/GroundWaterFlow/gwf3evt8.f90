@@ -61,16 +61,11 @@ module EvtModule
 
 contains
 
+  !> @brief Create a new Evapotranspiration Segments Package and point pakobj
+  !! to the new package
+  !<
   subroutine evt_create(packobj, id, ibcnum, inunit, iout, namemodel, pakname, &
                         mempath)
-! ******************************************************************************
-! evt_create -- Create a new Evapotranspiration Segments Package
-! Subroutine: (1) create new-style package
-!             (2) point packobj to the new package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(BndType), pointer :: packobj
     integer(I4B), intent(in) :: id
@@ -82,7 +77,6 @@ contains
     character(len=*), intent(in) :: mempath
     ! -- local
     type(EvtType), pointer :: evtobj
-! ------------------------------------------------------------------------------
     !
     ! -- allocate evt object and scalar variables
     allocate (evtobj)
@@ -106,22 +100,17 @@ contains
     packobj%iscloc = 2 ! sfac applies to max. ET rate
     packobj%ictMemPath = create_mem_path(namemodel, 'NPF')
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine evt_create
 
+  !> @brief Allocate package scalar members
+  !<
   subroutine evt_allocate_scalars(this)
-! ******************************************************************************
-! allocate_scalars -- allocate scalar members
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr
     ! -- dummy
     class(EvtType), intent(inout) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- call standard BndType allocate scalars
     call this%BndExtType%allocate_scalars()
@@ -142,25 +131,19 @@ contains
     this%read_as_arrays = .false.
     this%surfratespecified = .false.
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine evt_allocate_scalars
 
+  !> @brief Allocate package arrays
+  !<
   subroutine evt_allocate_arrays(this, nodelist, auxvar)
-! ******************************************************************************
-! chd_allocate_arrays -- allocate arrays
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_allocate, mem_setptr, mem_checkin
     ! -- dummy
     class(EvtType) :: this
     integer(I4B), dimension(:), pointer, contiguous, optional :: nodelist
     real(DP), dimension(:, :), pointer, contiguous, optional :: auxvar
-    ! -- local
-! ------------------------------------------------------------------------------
     !
     ! -- call standard BndType allocate scalars
     call this%BndExtType%allocate_arrays(nodelist, auxvar)
@@ -204,17 +187,13 @@ contains
       end if
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine evt_allocate_arrays
 
+  !> @brief Source options specific to EvtType
+  !<
   subroutine evt_source_options(this)
-! ******************************************************************************
-! evt_source_options -- source options specific to EvtType
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerExtModule, only: mem_set_value
     ! -- dummy
@@ -223,7 +202,6 @@ contains
     logical(LGP) :: found_fixed_cell = .false.
     logical(LGP) :: found_readasarrays = .false.
     logical(LGP) :: found_surfratespec = .false.
-! ------------------------------------------------------------------------------
     !
     ! -- source common bound options
     call this%BndExtType%source_options()
@@ -260,18 +238,14 @@ contains
     call this%evt_log_options(found_fixed_cell, found_readasarrays, &
                               found_surfratespec)
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine evt_source_options
 
+  !> @brief Source options specific to EvtType
+  !<
   subroutine evt_log_options(this, found_fixed_cell, found_readasarrays, &
                              found_surfratespec)
-! ******************************************************************************
-! evt_log_options -- source options specific to EvtType
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_reallocate, mem_setptr
     use MemoryManagerExtModule, only: mem_set_value
@@ -281,7 +255,6 @@ contains
     logical(LGP), intent(in) :: found_fixed_cell
     logical(LGP), intent(in) :: found_readasarrays
     logical(LGP), intent(in) :: found_surfratespec
-    ! -- local
     ! -- formats
     character(len=*), parameter :: fmtihact = &
       &"(4x, 'EVAPOTRANSPIRATION WILL BE APPLIED TO HIGHEST ACTIVE CELL.')"
@@ -293,7 +266,6 @@ contains
       &"(4x, 'ET RATE AT SURFACE WILL BE ZERO.')"
     character(len=*), parameter :: fmtsrs = &
       &"(4x, 'ET RATE AT SURFACE WILL BE AS SPECIFIED BY PETM0.')"
-! ------------------------------------------------------------------------------
     !
     ! -- log found options
     write (this%iout, '(/1x,a)') 'PROCESSING '//trim(adjustl(this%text)) &
@@ -315,18 +287,13 @@ contains
     write (this%iout, '(1x,a)') &
       'END OF '//trim(adjustl(this%text))//' OPTIONS'
     !
-    ! -- return
+    ! -- Return
     return
-
   end subroutine evt_log_options
 
+  !> @brief Source the dimensions for this package
+  !<
   subroutine evt_source_dimensions(this)
-! ******************************************************************************
-! bnd_source_dimensions -- Source the dimensions for this package
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerExtModule, only: mem_set_value
     ! -- dummy
@@ -336,7 +303,6 @@ contains
     ! -- format
     character(len=*), parameter :: fmtnsegerr = &
       &"('Error: In EVT, NSEG must be > 0 but is specified as ',i0)"
-! ------------------------------------------------------------------------------
     !
     ! Dimensions block is not required if:
     !   (1) discretization is DIS or DISV, and
@@ -406,18 +372,15 @@ contains
     !    when PRINT_INPUT option is used.
     call this%define_listlabel()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine evt_source_dimensions
 
+  !> @brief Part of allocate and read
+  !!
+  !! If READASARRAYS has been specified, assign default IEVT = 1
+  !<
   subroutine evt_read_initial_attr(this)
-! ******************************************************************************
-! evt_read_initial_attr -- Part of allocate and read
-! If READASARRAYS has been specified, assign default IEVT = 1
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(EvtType), intent(inout) :: this
     !
@@ -425,24 +388,19 @@ contains
       call this%default_nodelist()
     end if
     !
+    ! -- Return
     return
   end subroutine evt_read_initial_attr
 
+  !> @brief Read and Prepare
+  !!
+  !! Read itmp and new boundaries if itmp > 0
+  !<
   subroutine evt_rp(this)
-! ******************************************************************************
-! evt_rp -- Read and Prepare
-! Subroutine: (1) read itmp
-!             (2) read new boundaries if itmp>0
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     use TdisModule, only: kper
     implicit none
     ! -- dummy
     class(EvtType), intent(inout) :: this
-    ! -- local
-! ------------------------------------------------------------------------------
     !
     if (this%iper /= kper) return
     !
@@ -472,7 +430,7 @@ contains
     ! -- copy nodelist to nodesontop if not fixed cell
     if (.not. this%fixed_cell) call this%set_nodesontop()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine evt_rp
 
@@ -481,7 +439,6 @@ contains
   !! If the number of EVT segments (nseg) is greater than one, then
   !! pxdp must be monotically increasing from zero to one.  Check
   !! to make sure this is the case.
-  !!
   !<
   subroutine check_pxdp(this)
     ! -- dummy
@@ -539,23 +496,17 @@ contains
       call this%parser%StoreErrorUnit()
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine check_pxdp
 
+  !> @brief Store nodelist in nodesontop
+  !<
   subroutine set_nodesontop(this)
-! ******************************************************************************
-! set_nodesontop -- store nodelist in nodesontop
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(EvtType), intent(inout) :: this
     ! -- local
     integer(I4B) :: n
-    ! -- formats
-! ------------------------------------------------------------------------------
     !
     ! -- allocate if necessary
     if (.not. associated(this%nodesontop)) then
@@ -567,17 +518,13 @@ contains
       this%nodesontop(n) = this%nodelist(n)
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine set_nodesontop
 
+  !> @brief Formulate the HCOF and RHS terms
+  !<
   subroutine evt_cf(this)
-! ******************************************************************************
-! evt_cf -- Formulate the HCOF and RHS terms
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(EvtType) :: this
     ! -- local
@@ -586,7 +533,6 @@ contains
     real(DP) :: c, d, h, s, x
     real(DP) :: petm0
     real(DP) :: petm1, petm2, pxdp1, pxdp2, thcof, trhs
-! ------------------------------------------------------------------------------
     !
     ! -- Return if no ET nodes
     if (this%nbound == 0) return
@@ -714,17 +660,13 @@ contains
       !
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine evt_cf
 
+  !> @brief Copy rhs and hcof into solution rhs and amat
+  !<
   subroutine evt_fc(this, rhs, ia, idxglo, matrix_sln)
-! **************************************************************************
-! evt_fc -- Copy rhs and hcof into solution rhs and amat
-! **************************************************************************
-!
-!    SPECIFICATIONS:
-! --------------------------------------------------------------------------
     ! -- dummy
     class(EvtType) :: this
     real(DP), dimension(:), intent(inout) :: rhs
@@ -733,7 +675,6 @@ contains
     class(MatrixBaseType), pointer :: matrix_sln
     ! -- local
     integer(I4B) :: i, n, ipos
-! --------------------------------------------------------------------------
     !
     ! -- Copy package rhs and hcof into solution rhs and amat
     do i = 1, this%nbound
@@ -750,22 +691,17 @@ contains
       call matrix_sln%add_value_pos(idxglo(ipos), this%hcof(i))
     end do
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine evt_fc
 
+  !> @brief Deallocate
+  !<
   subroutine evt_da(this)
-! ******************************************************************************
-! evt_da -- deallocate
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use MemoryManagerModule, only: mem_deallocate
     ! -- dummy
     class(EvtType) :: this
-! ------------------------------------------------------------------------------
     !
     ! -- arrays
     if (associated(this%nodesontop)) deallocate (this%nodesontop)
@@ -794,21 +730,18 @@ contains
     ! -- Deallocate parent package
     call this%BndExtType%bnd_da()
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine evt_da
 
+  !> @brief Define the list heading that is written to iout when PRINT_INPUT
+  !! option is used
+  !<
   subroutine evt_define_listlabel(this)
-! ******************************************************************************
-! define_listlabel -- Define the list heading that is written to iout when
-!   PRINT_INPUT option is used.
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+    ! -- dummy
     class(EvtType), intent(inout) :: this
+    ! -- local
     integer(I4B) :: nsegm1, i
-! ------------------------------------------------------------------------------
     !
     ! -- create the header list label
     this%listlabel = trim(this%filtyp)//' NO.'
@@ -851,18 +784,15 @@ contains
       write (this%listlabel, '(a, a16)') trim(this%listlabel), 'BOUNDARY NAME'
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine evt_define_listlabel
 
+  !> @brief Assign default nodelist when READASARRAYS is specified.
+  !!
+  !! Equivalent to reading IEVT as CONSTANT 1
+  !<
   subroutine default_nodelist(this)
-! ******************************************************************************
-! default_nodelist -- Assign default nodelist when READASARRAYS is specified.
-!                     Equivalent to reading IEVT as CONSTANT 1
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- modules
     use InputOutputModule, only: get_node
     use SimModule, only: store_error
@@ -871,7 +801,6 @@ contains
     class(EvtType) :: this
     ! -- local
     integer(I4B) :: il, ir, ic, ncol, nrow, nlay, nodeu, noder, ipos
-! ------------------------------------------------------------------------------
     !
     ! -- set variables
     if (this%dis%ndim == 3) then
@@ -903,56 +832,45 @@ contains
     !    in the nodesontop array
     if (.not. this%fixed_cell) call this%set_nodesontop()
     !
-    ! -- return
+    ! -- Return
+    return
   end subroutine default_nodelist
 
   ! -- Procedures related to observations
 
+  !> @brief Return true because EVT package supports observations
+  !!
+  !! Overrides BndType%bnd_obs_supported()
+  !<
   logical function evt_obs_supported(this)
-! ******************************************************************************
-! evt_obs_supported
-!   -- Return true because EVT package supports observations.
-!   -- Overrides BndType%bnd_obs_supported()
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(EvtType) :: this
-! ------------------------------------------------------------------------------
+    !
     evt_obs_supported = .true.
     !
-    ! -- return
+    ! -- Return
     return
   end function evt_obs_supported
 
+  !> @brief Store observation type supported by EVT package
+  !!
+  !! Overrides BndType%bnd_df_obs
+  !<
   subroutine evt_df_obs(this)
-! ******************************************************************************
-! evt_df_obs (implements bnd_df_obs)
-!   -- Store observation type supported by EVT package.
-!   -- Overrides BndType%bnd_df_obs
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
     ! -- dummy
     class(EvtType) :: this
     ! -- local
     integer(I4B) :: indx
-! ------------------------------------------------------------------------------
+    !
     call this%obs%StoreObsType('evt', .true., indx)
     this%obs%obsData(indx)%ProcessIdPtr => DefaultObsIdProcessor
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine evt_df_obs
 
-! ******************************************************************************
-! evt_bound_value -- return requested boundary value
-! ******************************************************************************
-!
-!    SPECIFICATIONS:
-! ------------------------------------------------------------------------------
+  !> @brief Return requested boundary value
+  !<
   function evt_bound_value(this, col, row) result(bndval)
     ! -- modules
     use ConstantsModule, only: DZERO
@@ -1013,19 +931,16 @@ contains
       !
     end select
     !
-    ! -- return
+    ! -- Return
     return
   end function evt_bound_value
 
   !> @brief Update the nodelist based on IEVT input
   !!
-  !! This is a module scoped routine to check for IEVT
-  !! input. If array input was provided, INIEVT and IEVT
-  !! will be allocated in the input context.  If the read
-  !! state variable INIEVT is set to 1 during this period
-  !! update, IEVT input was read and is used here to update
-  !! the nodelist.
-  !!
+  !! This is a module scoped routine to check for IEVT input. If array input
+  !! was provided, INIEVT and IEVT will be allocated in the input context.
+  !! If the read state variable INIEVT is set to 1 during this period update,
+  !! IEVT input was read and is used here to update the nodelist.
   !<
   subroutine nodelist_update(nodelist, nbound, maxbound, &
                              dis, input_mempath)
@@ -1039,10 +954,10 @@ contains
     character(len=*), intent(in) :: input_mempath
     integer(I4B), intent(inout) :: nbound
     integer(I4B), intent(in) :: maxbound
+    ! -- format
     character(len=24) :: aname = '     LAYER OR NODE INDEX'
     ! -- local
-    integer(I4B), dimension(:), contiguous, &
-      pointer :: ievt => null()
+    integer(I4B), dimension(:), contiguous, pointer :: ievt => null()
     integer(I4B), pointer :: inievt => NULL()
     !
     ! -- set pointer to input context INIEVT
@@ -1060,7 +975,7 @@ contains
                                    maxbound, nbound, aname)
     end if
     !
-    ! -- return
+    ! -- Return
     return
   end subroutine nodelist_update
 
