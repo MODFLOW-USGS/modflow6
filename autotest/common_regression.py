@@ -636,8 +636,8 @@ def get_mf6_files(namefile):
     mdl_files = []
     pkg_files = []
     out_files = []
-    pkg_keys = ["TDIS6", "GWF6", "GWT", "GWF6-GWF6", "GWF-GWT", "IMS6"]
-    mdl_keys = ["GWF6", "GWT"]
+    pkg_keys = ["TDIS6", "GWF6", "GWT6", "GWF6-GWF6", "GWF-GWT", "IMS6"]
+    model_keys = ["GWF6", "GWT"]
 
     # find model and simulation-level package input files in simulation namefile
     for line in open(namefile).readlines():
@@ -653,7 +653,7 @@ def get_mf6_files(namefile):
                 fname = ll[1]
                 pkg_files.append(fname)
 
-        for key in mdl_keys:
+        for key in model_keys:
             if key in ll[0].upper():
                 fname = ll[1]
                 mdl_files.append(fname)
